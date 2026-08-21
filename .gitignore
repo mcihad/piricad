@@ -49,3 +49,7 @@ Thumbs.db
 # Agent worktrees. `git worktree add` puts a live checkout here; sweeping one in
 # with `git add -A` commits it as a gitlink to a commit no clone can resolve.
 .claude/worktrees/
+
+# MPYY kaynak ekleri. Resmî Gazete'den indirilen .docx/.xlsx dosyaları depoya
+# girmez; katalog scripts/mpyy-cikar.py ile bunlardan üretilir.
+/.mpyy-kaynak/

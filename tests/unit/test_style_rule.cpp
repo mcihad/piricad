@@ -709,14 +709,15 @@ TEST_CASE("VERİ: sevk edilen plan gösterim paketi künyesiyle birlikte yüklen
     CHECK(!catalog.value().published().empty());
     CHECK(!catalog.value().licence().empty());
 
-    // THIS ASSERTION IS A PLACEHOLDER FOR MISSING DATA, NOT A DESIGN.
-    //
-    // The package ships with no rows at all: the EK-1a/1b/1c/1ç/1d gösterim
-    // codes, colours, paper widths and hatches cannot be entered without reading
-    // the official annex, and an invented row would put a wrong colour on a plan
-    // that somebody signs. When the rows land — with the domain-expert sign-off
-    // CLAUDE.md 6.11 requires — this expectation flips to a positive one and the
-    // /tests/golden case gains the reference values.
-    CHECK_EQ(catalog.value().entries().size(), std::size_t{0});
+    // The rows have landed: they are extracted from the official annexes by
+    // scripts/mpyy-cikar.py. This assertion is deliberately a THRESHOLD and not a
+    // count, and it names no colour, code or width — a regulatory value may not
+    // live in C++ (CLAUDE.md 5.13). The exact row count and the reference values
+    // are asserted against the shipped package by scripts/ci-gate-mpyy.sh, which
+    // reads them from /tests/golden/mpyy, where a data change is reviewed as data.
+    CHECK(catalog.value().entries().size() > 0);
+
+    // The mapping rules stay empty on purpose: which feature earns which row is
+    // not stated by the annex, and a guessed rule paints a signed plan wrong.
     CHECK_EQ(catalog.value().rules().size(), std::size_t{0});
 }

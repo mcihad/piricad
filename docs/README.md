@@ -44,6 +44,7 @@ Tek tek komutlar:
 | [Betik yazma](betik/README.md) | JSON betik biçimi, toplu işlem, kum havuzu |
 | [Komut günlüğü](mimari/gunluk.md) | Yaptığınız işi geri izleme, makro, oturum kaydı |
 | [Koordinat sistemleri](veri/koordinat-sistemleri.md) | TUREF/TM30, TM 3° dilimleri, milimetre depolama |
+| [MPYY plan gösterimleri](veri/mpyy-gosterimleri.md) | Gösterim veri paketi: hangi RG sürümü, ne çıkarıldı, ne eksik, nasıl yeniden üretilir |
 | [Sürüm ve uyumluluk politikası](api-stability.md) | Neyin sabit kaldığı, neyin değişebileceği |
 
 ## Başvuru

@@ -13,6 +13,14 @@ produced them.
 | `senaryolar/*.json` | A command script, replayed through `script::JsonRunner` |
 | `senaryolar/*.txt` | One command line per run, replayed through `Bus::execute_line` |
 | `beklenen/<ad>.txt` | The expected deterministic dump of the resulting document |
+| `mpyy/beklenen.txt` | The expected summary of the shipped MPYY catalogues — row counts per annex, reference colours, the `belirsiz` roster and the SHA-256 of each generated file |
+
+`mpyy/beklenen.txt` is checked by `scripts/ci-gate-mpyy.sh`, not by
+`piricad_tests`: a regulation catalogue is data, and it is diffed as data. The gate
+also re-runs `scripts/mpyy-cikar.py` and compares byte for byte when the source
+annexes are present (`PIRICAD_MPYY_KAYNAK`), which is the determinism proof for the
+extraction itself. Regenerate it, after reading the diff, with
+`PIRICAD_GOLDEN_UPDATE=1 bash scripts/ci-gate-mpyy.sh`.
 
 The `.txt` scenarios exist because only the command line exercises the parser's
 metre-to-millimetre conversion and the polar form, which is the one place

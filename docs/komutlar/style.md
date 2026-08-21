@@ -32,20 +32,23 @@ gösterimi vermek tabloya bir satır ekler, on bin satır değil.
 Plan gösterimleri koda gömülmez; `data/catalogs/` altında veri olarak durur. Bir yönetmelik
 değişikliği veri paketinin güncellenmesidir, programın yeniden derlenmesi değildir.
 
-Mekânsal Planlar Yapım Yönetmeliği'nin (MPYY, yayım tarihi 14.06.2014) gösterim ekleri
-EK-1a (mekânsal strateji planı), EK-1b (çevre düzeni planı), EK-1c (nazım imar planı),
-EK-1ç (uygulama imar planı), EK-1d (ortak gösterimler) ve EK-1e (detay kataloğu) olarak
-paketlenir. PiriCAD'in bu paketi `data/catalogs/mpyy/plan-gosterim.json` dosyasındadır.
+Mekânsal Planlar Yapım Yönetmeliği'nin (MPYY) gösterim ekleri EK-1a (ortak gösterimler),
+EK-1b (mekânsal strateji planı), EK-1c (çevre düzeni planı), EK-1ç (nazım imar planı),
+EK-1d (uygulama imar planı) ve EK-1e (detay kataloğu) olarak paketlenir. PiriCAD'in bu
+paketi `data/catalogs/mpyy/plan-gosterim.json` dosyasındadır ve **476 gösterim satırı**
+içerir. Paketin hangi Resmî Gazete sürümüne dayandığı, ne çıkarıldığı ve neyin eksik
+kaldığı [MPYY plan gösterimleri](../veri/mpyy-gosterimleri.md) sayfasında yazılıdır.
 
-**Bu sürümde paketin gösterim satırları BOŞTUR.** Paketin yapısı, şeması, ölçek penceresi
-ve kural dili tamamdır; satırların kendisi girilmemiştir. Sebebi dosyanın `kapsam` bloğunda
-yazılıdır: gösterim kodları, renkleri ve çizgi kalınlıkları resmî ek metninden birebir
-okunmadan ve harita mühendisi / şehir plancısı onayından geçmeden girilmez. Uydurulmuş bir
-gösterim satırı, boş bırakılmış bir satırdan çok daha zararlıdır — imzalanan bir imar
-planına yanlış renk yazar.
+**Paketin eşleme kuralları BOŞTUR ve uzman onayı BEKLİYOR.** Satırların kendisi resmî ek
+metninden çıkarılmıştır, ama hangi nesnenin hangi satırı alacağını söyleyen `kurallar`
+dizisi boştur: bu, ek metninden okunabilecek bir şey değil, plan türü ve öznitelik
+şemasıyla birlikte verilen bir uzman kararıdır. Bu yüzden bugün satırı `kod=` ile adıyla
+seçersiniz; `paket=` tek başına verildiğinde komut `Stil kataloğunda bu nesneye uyan kural
+yok` hatasını verir.
 
-Satırlar **Faz 3'te**, resmî ek metninden okunarak ve uzman onayıyla eklenecektir. O güne
-kadar `paket=` ile kendi stil kataloğunuzu verebilirsiniz; biçim
+Paket harita mühendisi / şehir plancısı onayından geçmeden resmî bir plan paftasında
+kullanılmaz. Kurallar ve onay **Faz 3'te** gelecektir. Dilediğiniz zaman `paket=` ile kendi
+stil kataloğunuzu verebilirsiniz; biçim
 `data/catalogs/schema/plan-gosterim.schema.json` dosyasında tanımlıdır.
 
 ## Adlar
@@ -142,16 +145,21 @@ KATMAN ad="YOL KENARI"
 STİL katman="YOL KENARI" renk=4284310640
 ```
 
-Bir katalog paketinden gösterim uygulamak, paket satırları içerdiğinde şöyle görünür:
+MPYY paketinden bir gösterim satırını adıyla uygulamak şöyle görünür:
 
 ```text
-STİL katman=IMAR paket=data/catalogs/mpyy/plan-gosterim.json olcek=1000
-3 nesneye stil yazıldı: 'IMAR', katalog satırı 'Konut Alanı', stil kimliği 4.
+STİL katman=IMAR paket=<depo kökü>/data/catalogs/mpyy/plan-gosterim.json kod=uip-ticaret-alani
+1 nesneye stil yazıldı: 'IMAR', katalog satırı 'TİCARET ALANI', stil kimliği 4.
 ```
 
-Bu blok çalıştırılabilir bir örnek değildir: sevk edilen pakette gösterim satırı yoktur ve
-komut `Stil kataloğunda bu nesneye uyan kural yok` hatasını verir. Satırlar **Faz 3'te**
-eklendiğinde bu örnek çalıştırılabilir hâle gelecek ve bu uyarı kaldırılacaktır.
+Bu blok bir iskelettir, olduğu gibi çalıştırılamaz: `paket=` yolu çalışma dizinine göre
+çözülür, bu yüzden `<depo kökü>` yerine kendi yolunuzu yazmanız gerekir. Satır kimlikleri
+`<ek kısaltması>-<ad>` biçimindedir: `ortak-` (EK-1a), `msp-` (EK-1b), `cdp-` (EK-1c),
+`nip-` (EK-1ç), `uip-` (EK-1d).
+
+`kod=` vermeden yalnız `paket=` verirseniz komut `Stil kataloğunda bu nesneye uyan kural
+yok` hatasını verir: pakette eşleme kuralı yoktur. **Faz 3'te** kurallar eklendiğinde
+katmanı tek tek kodlamak gerekmeyecektir.
 
 ### Arayüz
 
@@ -229,7 +237,7 @@ Ayrıntı: [Betik yazma](../betik/README.md).
 | `Stil kataloğu okunamadı: '...'. Dosya yolunu denetleyin; göreli yol çalışma dizinine göre çözülür.` | Dosya yok veya okunamıyor | Yolu denetleyin, tam yol yazın |
 | `Stil kataloğu geçerli JSON değil: '...'` | Paket bozuk | Dosyayı bir JSON doğrulayıcıdan geçirin |
 | `Stil kataloğu: zorunlu 'published' alanı eksik veya boş. Beklenen: metin.` | Paket künyesi eksik | `schema_version`, `package_version`, `id`, `source`, `published`, `licence` alanlarının hepsini yazın |
-| `Stil kataloğunda 'K' kimlikli satır yok. Katalog: mpyy-plan-gosterimleri 0.1.0.` | `kod` katalogda yok | Katalogdaki satır kimliklerini denetleyin |
+| `Stil kataloğunda 'K' kimlikli satır yok. Katalog: mpyy-plan-gosterimleri 0.2.0.` | `kod` katalogda yok | Katalogdaki satır kimliklerini denetleyin |
 | `Stil kataloğunda bu nesneye uyan kural yok.` | Hiçbir eşleme kuralı nesneye uymadı | Katalogda koşulsuz bir "kalan hepsi" kuralı tanımlayın veya `kod=` ile satırı doğrudan seçin |
 | `Stil kataloğu: 'k1' kuralı 'yok-boyle' satırını gösteriyor, ama katalogda böyle bir satır yok.` | Katalogda kural ile satır kimliği tutmuyor | Kuraldaki `stil` alanını düzeltin |
 | `Renk '#RRGGBB' veya '#AARRGGBB' biçiminde olmalı. Girilen: 'kirmizi'` | Katalogdaki renk metni bozuk | Rengi onaltılık yazın |
