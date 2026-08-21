@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "package_version": "0.1.0",
+  "id": "turkiye-tm3-dilimleri",
+  "source": "BÖHHBÜY — Büyük Ölçekli Harita ve Harita Bilgileri Üretim Yönetmeliği, koordinat sistemleri bölümü",
+  "published": "2018-05-26",
+  "licence": "resmi-mevzuat-metni",
+  "aciklama": "Türkiye TM 3 derece dilim orta meridyenleri. Ölçek katsayısı 1.0, yalancı doğu 500000 m + dilim numarası öneki.",
+
+  "projeksiyon": {
+    "tip": "Transverse Mercator",
+    "olcek_katsayisi": 1.0,
+    "yalanci_dogu_m": 500000,
+    "yalanci_kuzey_m": 0,
+    "datum": "TUREF (ITRF96)"
+  },
+
+  "dilimler": [
+    { "orta_meridyen_derece": 27, "ad": "TM27", "epsg": 5253 },
+    { "orta_meridyen_derece": 30, "ad": "TM30", "epsg": 5254 },
+    { "orta_meridyen_derece": 33, "ad": "TM33", "epsg": 5255 },
+    { "orta_meridyen_derece": 36, "ad": "TM36", "epsg": 5256 },
+    { "orta_meridyen_derece": 39, "ad": "TM39", "epsg": 5257 },
+    { "orta_meridyen_derece": 42, "ad": "TM42", "epsg": 5258 },
+    { "orta_meridyen_derece": 45, "ad": "TM45", "epsg": 5259 }
+  ]
+}

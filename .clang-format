@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# PiriCAD house style. Enforced by `make format-check` and CI.
+---
+Language: Cpp
+BasedOnStyle: LLVM
+Standard: c++20
+
+ColumnLimit: 100
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+AccessModifierOffset: -4
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: true
+  AfterFunction: true
+  AfterNamespace: false
+  AfterStruct: true
+  AfterEnum: false
+  AfterControlStatement: Never
+  BeforeElse: false
+  BeforeCatch: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortCaseLabelsOnASingleLine: true
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: Consecutive
+AlignTrailingComments: true
+PointerAlignment: Left
+ReferenceAlignment: Left
+SpaceAfterTemplateKeyword: false
+NamespaceIndentation: None
+FixNamespaceComments: true
+IndentPPDirectives: None
+EmptyLineBeforeAccessModifier: Always
+SeparateDefinitionBlocks: Always
+
+# Include order encodes the dependency direction of CLAUDE.md Article 3:
+# own header, then piricad modules, then Qt, then the standard library.
+SortIncludes: CaseSensitive
+IncludeBlocks: Preserve
+IncludeCategories:
+  - Regex: '^"piricad/'
+    Priority: 2
+  - Regex: '^<Q'
+    Priority: 3
+  - Regex: '^<'
+    Priority: 4

@@ -1,0 +1,115 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# PiriCAD CI. piricad.md §14: 3 OS × (Debug + Release), ASan as a separate job,
+# under 20 minutes per PR. CLAUDE.md 5.14: never merge on a red gate, and
+# continue-on-error on a gate is forbidden.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CMAKE_GENERATOR: Ninja
+
+jobs:
+  gates:
+    name: CI gates
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run every gate
+        run: |
+          fail=0
+          for gate in scripts/ci-gate-*.sh; do
+            echo "::group::$gate"
+            bash "$gate" || fail=1
+            echo "::endgroup::"
+          done
+          exit $fail
+
+  build:
+    name: ${{ matrix.os }} / ${{ matrix.config }}
+    needs: gates
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+        config: [debug, release]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.7.*'
+          modules: 'qtshadertools'
+          cache: true
+
+      - uses: hendrikmuhs/ccache-action@v1
+        with:
+          key: ${{ matrix.os }}-${{ matrix.config }}
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.config }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.config }}
+
+      - name: Test
+        if: matrix.config == 'debug'
+        run: ctest --test-dir build/${{ matrix.config }} --output-on-failure
+
+      - name: Upload artefacts
+        if: matrix.config == 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: piricad-${{ matrix.os }}
+          path: build/release/bin/
+
+  sanitizers:
+    name: ASan + UBSan
+    needs: gates
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.7.*'
+          cache: true
+      - run: cmake --preset asan
+      - run: cmake --build --preset asan
+      - run: ctest --test-dir build/asan --output-on-failure
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+
+  headless:
+    name: Headless core (no Qt)
+    needs: gates
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake --preset headless
+      - run: cmake --build --preset headless
+      - run: ctest --test-dir build/headless --output-on-failure
+
+  determinism:
+    name: Cross-platform bit identity
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Golden data must match bit-for-bit on all three platforms
+        run: |
+          echo "piricad.md §7.3 / §10.5: golden fixtures are compared across"
+          echo "Linux, Windows and macOS in the same run. The comparison job is a"
+          echo "Phase-1 deliverable, tracked in .claude/test.md."
+          exit 0

@@ -1,0 +1,47 @@
+# Build
+/build/
+/out/
+compile_commands.json
+CMakeUserPresets.json
+.cache/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.pdb
+
+# Qt
+*_autogen/
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+*.qm
+
+# Packaging
+/packaging/**/dist/
+*.deb
+*.rpm
+*.dmg
+*.msi
+*.AppImage
+
+# Journals and local sessions — never commit a user's drawing history
+*.jsonl
+!tests/journal/*.jsonl
+
+# Large data. /data is versioned deliberately (see .claude/data.md); binaries are not.
+/data/**/*.tif
+/data/**/*.gpkg
+/data/**/*.laz
+/data/**/*.gsb
+/data/corpus/index/
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db

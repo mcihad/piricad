@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "package_version": "0.1.0",
+  "description": "PiriCAD veri paketleri dizini",
+  "packages": [
+    {
+      "id": "bohhbuy-detay-kodlari",
+      "path": "catalogs/bohhbuy/",
+      "status": "planned",
+      "phase": 2,
+      "source": "BÖHHBÜY — Büyük Ölçekli Harita ve Harita Bilgileri Üretim Yönetmeliği",
+      "published": null,
+      "licence": "pending-review"
+    },
+    {
+      "id": "mpyy-gosterimler",
+      "path": "catalogs/mpyy/",
+      "status": "planned",
+      "phase": 3,
+      "source": "MPYY — Mekânsal Planlar Yapım Yönetmeliği, EK-1a/1b/1c/1ç/1d + EK-1e Detay Kataloğu",
+      "published": null,
+      "licence": "pending-review"
+    },
+    {
+      "id": "turkiye-jeoit",
+      "path": "crs/geoid/",
+      "status": "planned",
+      "phase": 1,
+      "source": "Güncel Türkiye Jeoit Modeli (HGM)",
+      "published": null,
+      "licence": "pending-review"
+    },
+    {
+      "id": "mevzuat-korpus",
+      "path": "corpus/",
+      "status": "planned",
+      "phase": 3,
+      "source": "BÖHHBÜY, MPYY, Planlı Alanlar İmar Yönetmeliği, 3194 sayılı Kanun, TUCBS, TKGM genelgeleri",
+      "published": null,
+      "licence": "pending-review"
+    }
+  ]
+}

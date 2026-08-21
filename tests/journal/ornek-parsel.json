@@ -1,0 +1,19 @@
+{
+  "ad": "Örnek parsel çizimi",
+  "aciklama": "Bu betik komut veri yolunu kullanır. Arayüzden çizmekle tamamen aynı yoldur; tamamı tek bir GERİAL adımıdır.",
+  "crs": "TUREF/TM30",
+  "komutlar": [
+    { "cmd": "core.layer", "args": { "ad": "PARSEL", "renk": 4281236786 } },
+    { "cmd": "core.line",  "args": { "noktalar": [[485300000,4310200000],[485360000,4310200000],[485360000,4310245000],[485300000,4310245000],[485300000,4310200000]] } },
+
+    { "cmd": "core.layer", "args": { "ad": "YOL", "renk": 4284310640 } },
+    { "cmd": "core.line",  "args": { "noktalar": [[485280000,4310255000],[485420000,4310255000]] } },
+    { "cmd": "core.line",  "args": { "noktalar": [[485280000,4310265000],[485420000,4310265000]] } },
+
+    { "cmd": "core.layer", "args": { "ad": "BINA", "renk": 4292897792 } },
+    { "cmd": "core.line",  "args": { "noktalar": [[485315000,4310212000],[485345000,4310212000],[485345000,4310232000],[485315000,4310232000],[485315000,4310212000]] } },
+
+    { "cmd": "core.layer", "args": { "ad": "SINIR", "renk": 4281944491 } },
+    { "cmd": "core.line",  "args": { "noktalar": [[485370000,4310200000],[485410000,4310200000],[485410000,4310245000],[485370000,4310245000],[485370000,4310200000]] } }
+  ]
+}

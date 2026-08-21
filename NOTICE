@@ -1,0 +1,73 @@
+PiriCAD — Türkiye Odaklı CBS + CAD Harita Yazılımı
+Copyright (C) 2026 PiriCAD contributors
+
+This program is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. See LICENSE for the full text.
+
+--------------------------------------------------------------------------------
+THIRD-PARTY COMPONENTS
+--------------------------------------------------------------------------------
+
+CLAUDE.md 5.12 and Article 9 ("To add a dependency") require that a dependency is
+listed here, with its exact pinned version and the licence text that was actually
+read, before it may be linked. The CycloneDX SBOM is regenerated in the same
+change (piricad.md §9.11 — SBOM production is a GPL-compliance obligation, not a
+nice-to-have).
+
+Currently linked
+----------------
+
+  Qt 6                    LGPLv3 / GPLv2+       6.10.2
+                          Used under LGPLv3. Qt is dynamically linked; the
+                          relinking right is preserved. Qt Charts and
+                          Qt DataVisualization are GPLv3-only and are NOT used.
+
+Bundled in-tree
+---------------
+
+  (none)
+
+Approved but not yet enabled
+----------------------------
+
+Each of these is gated behind a PIRICAD_WITH_<NAME> CMake option that defaults to
+OFF (CLAUDE.md Article 8.2). The licence column records the compatibility finding;
+the exact version is pinned in vcpkg.json when the option is first enabled.
+
+  GDAL/OGR                MIT                   format I/O
+  PROJ                    MIT                   coordinate transformation
+  GEOS                    LGPL 2.1              overlay operations
+  CGAL                    GPLv3+                exact arithmetic, straight skeleton
+  Clipper2                BSL-1.0               polygon boolean and offset
+  CDT                     MPL 2.0               constrained Delaunay
+  Boost (Geometry, PFR)   BSL-1.0               R-tree index
+  Eigen                   MPL 2.0               linear algebra, adjustment
+  Shewchuk predicates     public domain         robust orientation / incircle
+  Lua + sol2              MIT                   hot-path script layer
+  CPython + pybind11      PSF / BSD-3           optional ecosystem module
+  llama.cpp               MIT                   local LLM inference
+  ONNX Runtime            MIT                   embedding models
+  sqlite-vec              Apache 2.0            vector search for the mevzuat RAG
+  libdxfrw                GPLv2+                DXF
+  LibreDWG                GPLv3+                DWG read
+  Qt Advanced Docking     LGPLv2.1              CAD-grade docking
+  doctest                 MIT                   test framework
+  Tracy                   BSD-3                 frame profiling
+  Crashpad                Apache 2.0            crash reporting
+
+Refused
+-------
+
+  Triangle (Shewchuk triangulator)   Commercial use restricted; GPL-incompatible.
+                                     Use CDT or CGAL. Shewchuk's predicates.c is a
+                                     separate, freely usable file and IS required.
+
+  ODA Drawings SDK                   Closed source; GPL-incompatible. DWG support
+                                     is bounded by LibreDWG quality, and that is
+                                     recorded as the project's largest technical
+                                     risk (piricad.md §9.8, §15).
+
+  Any GPLv2-only dependency          Incompatible with the Apache-2.0 components
+                                     this project depends on (piricad.md §1).
