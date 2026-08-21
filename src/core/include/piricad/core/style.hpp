@@ -29,22 +29,23 @@ namespace piricad::core {
 /// this enum; the wire sentinels (DXF 62 == 256, 370 == -1, "BYLAYER") exist
 /// only inside /src/io (R19).
 enum class Source : std::uint8_t {
-    Explicit = 0,  ///< the value in this record
-    ByLayer  = 1,  ///< take the layer's value
-    ByBlock  = 2,  ///< take the containing block reference's value
+    Explicit = 0, ///< the value in this record
+    ByLayer  = 1, ///< take the layer's value
+    ByBlock  = 2, ///< take the containing block reference's value
 };
 
 /// One resolved appearance. POD, trivially copyable, deduplicated in a table.
 /// Carries line AND area symbology: MPYY EK-1 plan gösterim is overwhelmingly
 /// area symbology, and a line-only record cannot represent an imar planı (R18).
-struct Appearance {
-    std::uint32_t rgba{0xFF6C7686u};  ///< 0xAARRGGBB, stroke colour
-    std::int32_t  width_um{0};        ///< PAPER micrometres, 1 µm = 1/1000 mm (R20)
-    std::uint16_t dash{0};            ///< index into the dash table, from /data
-    std::uint16_t symbol{0};          ///< index into the MPYY/BÖHHBÜY symbol atlas
-    std::uint32_t fill_rgba{0};       ///< 0 = no fill
-    std::uint16_t hatch{0};           ///< index into the hatch table, from /data
-    std::int16_t  z_order{0};         ///< MPYY prescribes a draw order
+struct Appearance
+{
+    std::uint32_t rgba{0xFF6C7686u}; ///< 0xAARRGGBB, stroke colour
+    std::int32_t width_um{0};        ///< PAPER micrometres, 1 µm = 1/1000 mm (R20)
+    std::uint16_t dash{0};           ///< index into the dash table, from /data
+    std::uint16_t symbol{0};         ///< index into the MPYY/BÖHHBÜY symbol atlas
+    std::uint32_t fill_rgba{0};      ///< 0 = no fill
+    std::uint16_t hatch{0};          ///< index into the hatch table, from /data
+    std::int16_t z_order{0};         ///< MPYY prescribes a draw order
 
     Source src_colour{Source::ByLayer};
     Source src_width{Source::ByLayer};
@@ -68,7 +69,8 @@ inline constexpr StyleId kByLayerStyle = 0;
 /// ByCatalog, so interning collapses millions of entities onto a handful of
 /// distinct values. That is what keeps the batch key `(layer, style, kind)`
 /// bounded and the draw-call count under the §10.3 target of 100 per frame.
-class StyleTable {
+class StyleTable
+{
 public:
     StyleTable();
 
@@ -78,8 +80,10 @@ public:
     StyleId intern(const Appearance& a);
 
     const Appearance& at(StyleId id) const;
-    bool              contains(StyleId id) const noexcept { return id < entries_.size(); }
-    std::size_t       size() const noexcept { return entries_.size(); }
+
+    bool contains(StyleId id) const noexcept { return id < entries_.size(); }
+
+    std::size_t size() const noexcept { return entries_.size(); }
 
     const std::vector<Appearance>& entries() const noexcept { return entries_; }
 
@@ -87,12 +91,13 @@ public:
     std::uint64_t fold(std::uint64_t seed) const;
 
 private:
-    struct Hash {
+    struct Hash
+    {
         std::size_t operator()(const Appearance& a) const noexcept;
     };
 
-    std::vector<Appearance>                        entries_;
-    std::unordered_map<Appearance, StyleId, Hash>  intern_;
+    std::vector<Appearance> entries_;
+    std::unordered_map<Appearance, StyleId, Hash> intern_;
 };
 
 /// Applies the cascade to produce the appearance actually drawn. Called at

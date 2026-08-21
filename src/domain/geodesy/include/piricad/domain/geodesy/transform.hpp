@@ -30,7 +30,8 @@ namespace piricad::domain::geodesy {
 /// Construction is expensive and thread-unsafe; application is cheap. Build one
 /// per (source, target) pair and reuse it — a per-point construction turns a
 /// parcel import into a minute.
-class Transform {
+class Transform
+{
 public:
     /// `source` and `target` are anything PROJ accepts: "EPSG:5254",
     /// "TUREF/TM30" once the catalogue maps it, a PROJ string, or WKT.
@@ -61,12 +62,14 @@ public:
 
     /// True when the far side of the transform is expressed in degrees.
     bool target_is_angular() const noexcept { return target_angular_; }
+
     bool source_is_angular() const noexcept { return source_angular_; }
 
     /// True when both sides are projected, i.e. the span overloads are usable.
     bool projected_both_ways() const noexcept { return !source_angular_ && !target_angular_; }
 
     const std::string& source() const noexcept { return source_; }
+
     const std::string& target() const noexcept { return target_; }
 
     /// True when PROJ was compiled in. When false, `between()` fails with a
@@ -83,10 +86,10 @@ private:
 
     struct Impl;
     std::unique_ptr<Impl> impl_;
-    std::string           source_;
-    std::string           target_;
-    bool                  source_angular_{false};
-    bool                  target_angular_{false};
+    std::string source_;
+    std::string target_;
+    bool source_angular_{false};
+    bool target_angular_{false};
 };
 
 } // namespace piricad::domain::geodesy

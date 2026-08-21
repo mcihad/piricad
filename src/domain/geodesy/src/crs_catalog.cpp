@@ -17,8 +17,7 @@ using core::Json;
 core::Result<Json> read_json(const std::string& path)
 {
     std::ifstream in(path, std::ios::binary);
-    if (!in)
-        return core::err(ErrorCode::IoFailure, "CRS veri dosyası açılamadı: " + path);
+    if (!in) return core::err(ErrorCode::IoFailure, "CRS veri dosyası açılamadı: " + path);
 
     std::ostringstream buf;
     buf << in.rdbuf();
@@ -41,14 +40,14 @@ core::Result<CrsCatalog> CrsCatalog::load(const std::string& crs_dir)
     if (!parsed) return parsed.error();
 
     const Json& doc = parsed.value();
-    CrsCatalog  out;
+    CrsCatalog out;
 
     // Provenance is not optional: domain.md R23 requires an error message to cite
     // the catalogue version, and a regulatory claim without its source and date is
     // a liability rather than documentation (.claude/docs.md R12).
-    const Json* source = doc.find("source");
+    const Json* source    = doc.find("source");
     const Json* published = doc.find("published");
-    const Json* version = doc.find("package_version");
+    const Json* version   = doc.find("package_version");
     if (!source || !source->is_string()) return missing("source");
     if (!published || !published->is_string()) return missing("published");
     if (!version || !version->is_string()) return missing("package_version");
@@ -89,7 +88,7 @@ core::Result<CrsCatalog> CrsCatalog::load(const std::string& crs_dir)
 const Tm3Zone* CrsCatalog::zone_for_longitude(double longitude_deg) const
 {
     const Tm3Zone* best = nullptr;
-    double         best_gap = 0.0;
+    double best_gap     = 0.0;
 
     for (const auto& z : zones_) {
         const double gap = std::abs(longitude_deg - static_cast<double>(z.central_meridian));

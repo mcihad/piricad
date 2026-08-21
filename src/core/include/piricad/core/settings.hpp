@@ -98,6 +98,21 @@ const char* setting_type_label(SettingType t);
 /// Text settings are short by construction — a CRS id, a language tag, a package
 /// version. A fixed buffer keeps SettingValue trivially copyable and byte-hashable,
 /// and keeps the eventual file record fixed width (model.md "New stored field").
+///
+/// R42 SPLIT, stated once so the two halves are not confused. `SettingValue::text`
+/// REJECTS a value that does not fit, and that is right for INTERACTIVE input: a
+/// user who typed too long a CRS id must be told, not silently given a truncated
+/// one — a silently shortened CRS id is a coordinate that is plausibly wrong.
+///
+/// It is NOT right for a value arriving from a FILE written by another version.
+/// R42 says such a value is clamped with a recorded warning, never a hard failure
+/// that makes the file unopenable, and two Project settings are Text
+/// (`core.crs.id`, `core.katalog.paket_surumu`), so a future version that
+/// lengthens either id would otherwise stop an old build from opening the file at
+/// all. The loading path will therefore record a SettingWarning and fall back to
+/// the declared default for that one setting rather than failing the load. That
+/// path does not exist yet — nothing reads settings from a file in Phase 0 — and
+/// it lands with the /src/io reader.
 inline constexpr std::size_t kSettingTextCapacity = 48;
 
 /// A small POD variant. Two members rather than a union: the scalar carries Bool,

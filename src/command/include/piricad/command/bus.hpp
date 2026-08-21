@@ -18,6 +18,7 @@
 #include "piricad/command/transaction.hpp"
 #include "piricad/command/validation.hpp"
 #include "piricad/core/document.hpp"
+#include "piricad/core/settings.hpp"
 
 #include <functional>
 #include <memory>
@@ -86,6 +87,31 @@ public:
 
     void set_active_layer(core::LayerId l) { active_layer_ = l; }
 
+    // ---- settings, one store per SCOPE (model.md R39, R41) ----
+    //
+    // PHASE-0 SEAM. R39 puts the PROJECT store inside the document: it travels
+    // with the file, it is undoable, and it is part of content_hash(). That needs
+    // `Document::settings()`, an `Op::SetSetting` variant and
+    // `Transaction::set_setting()`, none of which exist yet — so the store lives
+    // one level out, on the bus that owns exactly one document.
+    //
+    // What it must NOT be is a process-wide static, which is what it was: every
+    // bus in the process shared one store, so the project CRS set in one drawing
+    // leaked into the next File > New, and the AYAR tests were order-coupled
+    // through a hidden global rather than isolated by their fixtures.
+    //
+    // The APP store is per user and machine (R39) and stays here permanently; the
+    // application shell reads and writes it through this accessor so that
+    // `TERCİH tema koyu` and the Görünüm menu are the same write (R38, CLAUDE.md
+    // 5.10 — there is no second settings list).
+    core::Settings& project_settings() noexcept { return project_settings_; }
+
+    const core::Settings& project_settings() const noexcept { return project_settings_; }
+
+    core::Settings& app_settings() noexcept { return app_settings_; }
+
+    const core::Settings& app_settings() const noexcept { return app_settings_; }
+
     // ---- observers. The UI subscribes; it never reaches around the bus. ----
     std::function<void(std::string_view)> on_echo;
     std::function<void(const Prompt&)> on_prompt;
@@ -113,6 +139,9 @@ private:
     UndoStack& undo_;
     Validator validator_;
     core::LayerId active_layer_{0};
+
+    core::Settings project_settings_{core::builtin_settings(), core::SettingScopeMask::Project};
+    core::Settings app_settings_{core::builtin_settings(), core::SettingScopeMask::App};
 
     std::unique_ptr<Transaction> batch_;
     std::string batch_label_;

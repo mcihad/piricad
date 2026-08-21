@@ -221,8 +221,35 @@ TEST_CASE("çok parçalı parselin alanı yüzlerinin toplamı")
 
     const Box2 b = g.bounds_of(slot);
     CHECK_EQ(b.min_x, Mm{0});
+    CHECK_EQ(b.min_y, Mm{0});
     CHECK_EQ(b.max_x, Mm{60000});
     CHECK_EQ(b.max_y, Mm{20000});
+}
+
+TEST_CASE("R9: sınır kutusu başlangıç noktasından uzakta da doğru")
+{
+    // Both bounds_of assertions elsewhere are over geometry touching the origin,
+    // so the interesting failure — Box2 encodes empty as min > max and extend()
+    // special-cases the first point, so a mishandled seed clamps a far-from-origin
+    // parcel back toward 0 — was never probed, even with TM30 fixtures at hand.
+    RingGeometry g;
+
+    const auto yuz0 = rect(kTmX, kTmY, 20000, 20000);
+    const auto bos0 = rect(kTmX + 5000, kTmY + 5000, 5000, 5000);
+    const auto yuz1 = rect(kTmX + 50000, kTmY - 10000, 10000, 10000);
+
+    const std::uint32_t slot =
+        must_add(g, {ring(yuz0, RingRole::Exterior, 0), ring(bos0, RingRole::Interior, 0),
+                     ring(yuz1, RingRole::Exterior, 1)});
+
+    const Box2 b = g.bounds_of(slot);
+    CHECK_EQ(b.min_x, kTmX);
+    CHECK_EQ(b.min_y, kTmY - 10000);
+    CHECK_EQ(b.max_x, kTmX + 60000);
+    CHECK_EQ(b.max_y, kTmY + 20000);
+    CHECK(!b.empty());
+    CHECK_EQ(b.width(), Mm{60000});
+    CHECK_EQ(b.height(), Mm{30000});
 }
 
 TEST_CASE("çok parçalı parselin her parçası kendi boşluğunu taşır")
@@ -251,7 +278,7 @@ TEST_CASE("kabul edilen en küçük halkalar: üç köşeli parsel, iki köşeli
     const std::vector<Point2> ucgen{{0, 0}, {30000, 0}, {0, 40000}};
     const std::uint32_t parsel = must_add(g, {ring(ucgen, RingRole::Exterior)});
     CHECK_EQ(g.ring_count[g.rings_of(parsel).first], std::uint32_t{3});
-    CHECK_EQ(g.area_of(parsel), Mm2{600000000});         // 30 x 40 / 2 = 600 m²
+    CHECK_EQ(g.area_of(parsel), Mm2{600000000});                 // 30 x 40 / 2 = 600 m²
     CHECK_EQ(g.perimeter_of(parsel), Mm{30000 + 40000 + 50000}); // 3-4-5
 
     const std::vector<Point2> iki{{0, 0}, {0, 12000}};
@@ -312,10 +339,10 @@ TEST_CASE("R12: tek sayılı iki kat alan sıfırdan uzağa yuvarlanır, iki sar
     // And the halving happens ONCE over the whole slot, not per ring: both rings
     // round on their own, the net does not.
     RingGeometry h;
-    const std::vector<Point2> dis{{0, 0}, {4001, 0}, {0, 4001}};    // 2A = 16008001
+    const std::vector<Point2> dis{{0, 0}, {4001, 0}, {0, 4001}};        // 2A = 16008001
     const std::vector<Point2> ic{{100, 100}, {1101, 100}, {100, 1101}}; // 2A = 1002001
-    const std::uint32_t net = must_add(h, {ring(dis, RingRole::Exterior),
-                                           ring(ic, RingRole::Interior)});
+    const std::uint32_t net =
+        must_add(h, {ring(dis, RingRole::Exterior), ring(ic, RingRole::Interior)});
     CHECK_EQ(h.area_of(net), Mm2{7503000}); // (16008001 - 1002001) / 2, exact
 }
 
@@ -387,11 +414,17 @@ TEST_CASE("TM30 koordinatlarında altı köşeli parsel: alan tam ve ötelemeden
 {
     // Six corners at ~4.85e8 / ~4.31e9 mm. A shoelace that multiplies the raw
     // coordinates sums six terms of ~2.1e18 and runs past int64's 9.2e18 ceiling.
-    // Two's complement happens to wrap back to the right number here, so this
-    // case pins the contract rather than the arithmetic: the area is exact and it
-    // does not depend on where the parcel sits. The dilim-prefixed case below is
-    // the one where the overflow is not recoverable, and the UBSan job is what
-    // turns either into a failure.
+    //
+    // What this case can and cannot catch, stated so nobody over-trusts it: the
+    // shoelace sum is exactly translation-invariant in ℤ, and twice_area_acc
+    // accumulates in uint64 where wraparound is defined, so deleting the
+    // translation would NOT change either number here — this pins the CONTRACT
+    // (exact, and independent of where the parcel sits), not the arithmetic. What
+    // the translation buys is small intermediates, so that narrowing the
+    // accumulator, or reintroducing a signed one, is a compile-time-visible change
+    // rather than silent UB. The can-fail witness for the overflow class is
+    // "R9: iki dilimi kapsayan kenar tam ölçülür", where the old code reported a
+    // 3100 km side as zero.
     const auto sekil = [](Mm x, Mm y) {
         return std::vector<Point2>{{x, y},
                                    {x + 60000, y},
@@ -418,9 +451,10 @@ TEST_CASE("dilim ön ekli sağa değerde alan hesabı tam kalır")
 {
     // TUREF/TM3 sağa değer with the dilim number in front: 30 485 320,150 m.
     // Stored in millimetres that is 3.05e10, and a single raw x*y term against a
-    // 4.31e9 mm yukarı değer is 1.3e20 — fourteen times int64's ceiling. This is
-    // the coordinate range where a shoelace without the translation is not merely
-    // undefined but unrecoverable.
+    // 4.31e9 mm yukarı değer is 1.3e20 — fourteen times int64's ceiling. The area
+    // is exact anyway, because the accumulator is unsigned and the sum is taken
+    // modulo 2^64; the perimeter over the same coordinates is the half that used
+    // to overflow, and it is pinned in its own case below.
     constexpr Mm kPrefixedX = 30485320150;
 
     RingGeometry g;
@@ -487,6 +521,124 @@ TEST_CASE("açık halka en az 2, kapalı halka en az 3 tepe noktası ister")
     // closure normalisation, and two corners are not a polygon.
     const std::vector<Point2> yalanci{{0, 0}, {1000, 0}, {0, 0}};
     reject(g, {ring(yalanci, RingRole::Exterior)}, "kapanış noktası düşüldükten sonra");
+}
+
+TEST_CASE("R11: iki kez kapatılmış halka, bir kez kapatılmışla bit bit aynı saklanır")
+{
+    // stored_count used to drop exactly ONE trailing repeat, so the same parcel
+    // stored as 4 corners when closed once and 5 when closed twice — identical
+    // area, identical perimeter, DIFFERENT xs/ys and ring_count, i.e. a
+    // permanently forked content hash decided by which writer produced the file.
+    // Real DXF and GeoJSON writers do emit double-closed rings.
+    RingGeometry g;
+
+    const auto clean         = rect(kTmX, kTmY, 30000, 45000);
+    std::vector<Point2> once = clean;
+    once.push_back(once.front());
+    std::vector<Point2> twice = once;
+    twice.push_back(twice.front());
+
+    const std::uint32_t a = must_add(g, {ring(clean, RingRole::Exterior)});
+    const std::uint32_t b = must_add(g, {ring(once, RingRole::Exterior)});
+    const std::uint32_t c = must_add(g, {ring(twice, RingRole::Exterior)});
+
+    for (const std::uint32_t slot : {a, b, c})
+        CHECK_EQ(g.ring_count[g.rings_of(slot).first], std::uint32_t{4});
+
+    CHECK_EQ(g.vertex_count(), std::size_t{12}); // 3 x 4, not 4 + 4 + 5
+
+    // Vertex for vertex, not merely area for area: the hash is over the arrays.
+    const std::uint32_t ra = g.rings_of(a).first, rc = g.rings_of(c).first;
+    for (std::uint32_t v = 0; v < 4; ++v) {
+        CHECK_EQ(g.xs[g.ring_start[ra] + v], g.xs[g.ring_start[rc] + v]);
+        CHECK_EQ(g.ys[g.ring_start[ra] + v], g.ys[g.ring_start[rc] + v]);
+    }
+}
+
+TEST_CASE("R12: sıfır alanlı kapalı halka reddedilir")
+{
+    RingGeometry g;
+
+    // Three collinear corners: accepted before, stored as a parsel of 0 m².
+    const std::vector<Point2> dogrusal{{0, 0}, {1000, 0}, {2000, 0}};
+    reject(g, {ring(dogrusal, RingRole::Exterior)}, "sıfır alanlı");
+
+    // The commonest digitising blunder: two middle corners of a rectangle
+    // swapped. The two lobes of the resulting bowtie cancel exactly, so the
+    // shoelace is 0 and a 1350 m² parcel used to be stored as 0 m².
+    const std::vector<Point2> papyon{{0, 0}, {30000, 0}, {0, 45000}, {30000, 45000}};
+    reject(g, {ring(papyon, RingRole::Exterior)}, "sıfır alanlı");
+
+    // A double-closed degenerate ring: normalisation no longer smuggles it in
+    // with a corner count that depends on the writer.
+    const std::vector<Point2> katlanmis{{0, 0}, {1000, 0}, {0, 0}, {0, 0}};
+    reject(g, {ring(katlanmis, RingRole::Exterior)}, "en az 3 tepe noktası");
+
+    const std::vector<Point2> geri{{0, 0}, {1000, 0}, {1000, 0}, {0, 0}};
+    reject(g, {ring(geri, RingRole::Exterior)}, "sıfır alanlı");
+
+    // An Open ring is a polyline and encloses nothing by definition, so the rule
+    // does not touch it: a survey traverse doubling back on itself is legal data.
+    const std::uint32_t cizgi = must_add(g, {ring(dogrusal, RingRole::Open)});
+    CHECK_EQ(g.perimeter_of(cizgi), Mm{2000});
+}
+
+TEST_CASE("R12: dış halkasının dışına taşan boşluk reddedilir")
+{
+    // area_of subtracts a hole by its ROLE, so a hole bigger than its exterior
+    // subtracts more than there is: a 10 m x 10 m parcel with a 40 m x 30 m
+    // "hole" used to report -1100.000 m². A negative alan is not a number a
+    // harita mühendisi can sign, and nobody was told anything went wrong.
+    RingGeometry g;
+
+    const auto kucuk_dis = rect(0, 0, 10000, 10000);
+    const auto buyuk_ic  = rect(0, 0, 40000, 30000);
+    reject(g, {ring(kucuk_dis, RingRole::Exterior), ring(buyuk_ic, RingRole::Interior)},
+           "dışına taşıyor");
+
+    // Wholly outside, same size: a hole belonging to another parcel.
+    const auto uzak_ic = rect(90000, 90000, 1000, 1000);
+    reject(g,
+           {ring(rect(0, 0, 40000, 30000), RingRole::Exterior), ring(uzak_ic, RingRole::Interior)},
+           "dışına taşıyor");
+
+    // A hole flush against the exterior's own boundary is legal: containment is
+    // inclusive, because a yola terk boşluğu commonly shares an edge.
+    const std::uint32_t slot = must_add(g, {ring(rect(0, 0, 40000, 30000), RingRole::Exterior),
+                                            ring(rect(0, 0, 10000, 10000), RingRole::Interior)});
+    CHECK_EQ(g.area_of(slot), Mm2{1200000000 - 100000000});
+}
+
+TEST_CASE("okunamayan ya da temsil edilemeyen koordinat depoya giremez")
+{
+    RingGeometry g;
+
+    // kMmInvalid is units.hpp's "no value" sentinel (INT64_MIN). It used to be
+    // accepted as an ordinary coordinate, and then EVERY delta taken against it
+    // overflowed: segment_length, twice_area and Box2::extend alike.
+    const std::vector<Point2> yok{{0, 0}, {1000, 0}, {1000, kMmInvalid}};
+    reject(g, {ring(yok, RingRole::Exterior)}, "'değer yok'");
+
+    const std::vector<Point2> tasan{{0, 0}, {kMmCoordinateLimit + 1, 0}, {0, 1000}};
+    reject(g, {ring(tasan, RingRole::Exterior)}, "temsil edilebilir aralığın dışında");
+
+    const std::vector<Point2> eksi{{0, 0}, {1000, 0}, {0, -kMmCoordinateLimit - 1}};
+    reject(g, {ring(eksi, RingRole::Exterior)}, "temsil edilebilir aralığın dışında");
+
+    // The message names WHICH vertex, because a five-million-vertex import is
+    // unfixable without it.
+    auto r = g.append(std::vector<RingGeometry::RingInput>{ring(yok, RingRole::Exterior)});
+    CHECK(!r.ok());
+    CHECK(r.error().message.find("3. tepe noktası") != std::string::npos);
+
+    // The limit itself is inside the store: it is a bound on the COORDINATE, not
+    // a taboo. A parcel-sized ring sitting exactly on it is stored and measured
+    // exactly, because every intermediate is translated to the first vertex.
+    const Mm L = kMmCoordinateLimit;
+    const std::vector<Point2> sinirda{{L, L}, {L - 3000, L}, {L, L - 4000}};
+    const std::uint32_t slot = must_add(g, {ring(sinirda, RingRole::Exterior)});
+    CHECK_EQ(g.area_of(slot), Mm2{6000000});
+    CHECK_EQ(g.perimeter_of(slot), Mm{3000 + 4000 + 5000});
 }
 
 TEST_CASE("dış halkası olmayan iç halka reddedilir")

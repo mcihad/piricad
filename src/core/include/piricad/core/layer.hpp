@@ -25,22 +25,23 @@ namespace piricad::core {
 /// Scale denominator, as in 1:`value`. Zero means unbounded.
 using ScaleDenominator = std::uint32_t;
 
-struct Layer {
+struct Layer
+{
     LayerKey key{LayerKey::None};
 
-    std::string name;         ///< free text, what the user typed
-    std::string folded;       ///< turkish_upper(name), the uniqueness key
+    std::string name;   ///< free text, what the user typed
+    std::string folded; ///< turkish_upper(name), the uniqueness key
     std::string description;
 
     bool visible{true};
     bool locked{false};
-    bool plottable{true};     ///< off = draw on screen, omit from the pafta
+    bool plottable{true}; ///< off = draw on screen, omit from the pafta
 
-    Appearance appearance{};  ///< the ByLayer source for this layer's entities
+    Appearance appearance{}; ///< the ByLayer source for this layer's entities
 
-    ScaleDenominator min_scale{0};  ///< hide when zoomed out past 1:min_scale
-    ScaleDenominator max_scale{0};  ///< hide when zoomed in past 1:max_scale
-    std::uint8_t     opacity{255};
+    ScaleDenominator min_scale{0}; ///< hide when zoomed out past 1:min_scale
+    ScaleDenominator max_scale{0}; ///< hide when zoomed in past 1:max_scale
+    std::uint8_t opacity{255};
 
     /// Default catalogue reference applied to entities drawn on this layer. The
     /// canonical per-entity value lives in the attribute column; this is the
@@ -55,7 +56,8 @@ struct Layer {
 /// Slots stay dense and stable for the lifetime of the in-memory document; a
 /// layer is never removed from the middle, only marked. That keeps `layer[e]` in
 /// the entity table valid without a rewrite.
-class LayerTable {
+class LayerTable
+{
 public:
     LayerTable();
 
@@ -71,10 +73,11 @@ public:
     LayerKey key_of(LayerId slot) const noexcept;
 
     const Layer* at(LayerId slot) const noexcept;
-    Layer*       at(LayerId slot) noexcept;
+    Layer* at(LayerId slot) noexcept;
 
     const std::vector<Layer>& all() const noexcept { return layers_; }
-    std::size_t               size() const noexcept { return layers_.size(); }
+
+    std::size_t size() const noexcept { return layers_.size(); }
 
     /// Renames without touching any entity. Fails if the new folded name is taken.
     Status rename(LayerId slot, std::string name);
@@ -85,9 +88,9 @@ public:
     std::uint64_t fold(std::uint64_t seed) const;
 
 private:
-    std::vector<Layer>                             layers_;
-    std::unordered_map<std::string, LayerId>       by_folded_;
-    std::unordered_map<std::uint64_t, LayerId>     by_key_;
+    std::vector<Layer> layers_;
+    std::unordered_map<std::string, LayerId> by_folded_;
+    std::unordered_map<std::uint64_t, LayerId> by_key_;
 };
 
 } // namespace piricad::core

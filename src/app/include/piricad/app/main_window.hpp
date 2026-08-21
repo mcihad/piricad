@@ -95,6 +95,15 @@ private:
     void applyTheme();
     void refreshStatus();
 
+    /// R38: persistence, validation, UI and documentation all come from the one
+    /// SettingSpec declaration. QSettings is the backing FILE and nothing more —
+    /// it is keyed by SettingSpec::id and its contents are validated by
+    /// core::parse_setting, so the shell cannot hold an opinion the catalogue does
+    /// not know about (CLAUDE.md 5.10: there is no second settings list).
+    void loadPreferences();
+    void savePreferences();
+    ThemeMode themeFromPreferences() const;
+
     Controller* controller_{nullptr};
     MapCanvas* canvas_{nullptr};
     CommandLine* commandLine_{nullptr};

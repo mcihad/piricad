@@ -16,32 +16,38 @@
 namespace piricad::domain::geodesy {
 
 /// One TM 3° zone as declared in data/crs/tm3-dilimleri.json.
-struct Tm3Zone {
-    int         central_meridian{0};  ///< degrees east
-    std::string name;                 ///< "TM30"
-    int         epsg{0};              ///< 5253..5259
+struct Tm3Zone
+{
+    int central_meridian{0}; ///< degrees east
+    std::string name;        ///< "TM30"
+    int epsg{0};             ///< 5253..5259
 };
 
 /// Projection parameters shared by every Turkish TM 3° zone.
-struct Tm3Parameters {
-    double      scale_factor{1.0};
-    long        false_easting_m{500000};
-    long        false_northing_m{0};
+struct Tm3Parameters
+{
+    double scale_factor{1.0};
+    long false_easting_m{500000};
+    long false_northing_m{0};
     std::string datum;
 };
 
 /// The loaded catalogue, with the provenance a regulatory statement needs
 /// (.claude/data.md, domain.md R23).
-class CrsCatalog {
+class CrsCatalog
+{
 public:
     /// Loads from a data package directory, e.g. "<repo>/data/crs".
     static core::Result<CrsCatalog> load(const std::string& crs_dir);
 
     const std::vector<Tm3Zone>& zones() const noexcept { return zones_; }
-    const Tm3Parameters&        parameters() const noexcept { return params_; }
+
+    const Tm3Parameters& parameters() const noexcept { return params_; }
 
     const std::string& source() const noexcept { return source_; }
+
     const std::string& published() const noexcept { return published_; }
+
     const std::string& package_version() const noexcept { return package_version_; }
 
     /// Zone whose central meridian is nearest to `longitude_deg`, or nullptr when
@@ -53,10 +59,10 @@ public:
 
 private:
     std::vector<Tm3Zone> zones_;
-    Tm3Parameters        params_;
-    std::string          source_;
-    std::string          published_;
-    std::string          package_version_;
+    Tm3Parameters params_;
+    std::string source_;
+    std::string published_;
+    std::string package_version_;
 };
 
 } // namespace piricad::domain::geodesy

@@ -239,10 +239,19 @@ std::uint64_t AttrColumn::fold(std::uint64_t seed) const
             h = fnv1a_int(kAbsentMarker, h);
             continue;
         }
-        if (is_text_shaped(spec_.type))
-            h = fnv1a(pool_[codes_[row]], h);
-        else
+        if (is_text_shaped(spec_.type)) {
+            // The LENGTH first, then the bytes. fnv1a mixes no length and no
+            // terminator, so folding adjacent rows' bytes straight into the same
+            // chain made {"Bostan", "lı"} and {"Bostanlı", ""} — two different
+            // mahalle assignments over two parcels — produce one fingerprint. A
+            // content hash that cannot tell those apart cannot tell a save that
+            // shifted a column boundary from a save that changed nothing.
+            const std::string& text = pool_[codes_[row]];
+            h                       = fnv1a_int(static_cast<std::int64_t>(text.size()), h);
+            h                       = fnv1a(text, h);
+        } else {
             h = fnv1a_int(numbers_[row], h);
+        }
     }
     return h;
 }

@@ -9,9 +9,10 @@ namespace piricad::domain::geodesy {
 
 #ifdef PIRICAD_HAVE_PROJ
 
-struct Transform::Impl {
+struct Transform::Impl
+{
     PJ_CONTEXT* ctx{nullptr};
-    PJ*         pj{nullptr};
+    PJ* pj{nullptr};
 
     ~Impl()
     {
@@ -20,7 +21,10 @@ struct Transform::Impl {
     }
 };
 
-bool Transform::available() noexcept { return true; }
+bool Transform::available() noexcept
+{
+    return true;
+}
 
 std::string Transform::backend_version()
 {
@@ -32,16 +36,15 @@ core::Result<Transform> Transform::between(const std::string& source, const std:
     auto impl = std::make_unique<Impl>();
 
     impl->ctx = proj_context_create();
-    if (!impl->ctx)
-        return core::err(core::ErrorCode::Internal, "PROJ bağlamı oluşturulamadı");
+    if (!impl->ctx) return core::err(core::ErrorCode::Internal, "PROJ bağlamı oluşturulamadı");
 
     PJ* raw = proj_create_crs_to_crs(impl->ctx, source.c_str(), target.c_str(), nullptr);
     if (!raw) {
-        const int  code = proj_context_errno(impl->ctx);
+        const int code  = proj_context_errno(impl->ctx);
         const char* why = proj_context_errno_string(impl->ctx, code);
         return core::err(core::ErrorCode::InvalidArgument,
-                         "'" + source + "' -> '" + target + "' dönüşümü kurulamadı: " +
-                             (why ? why : "bilinmeyen PROJ hatası"));
+                         "'" + source + "' -> '" + target +
+                             "' dönüşümü kurulamadı: " + (why ? why : "bilinmeyen PROJ hatası"));
     }
 
     // THE line. Without it EPSG:5254 expects (northing, easting) because that is
@@ -60,19 +63,19 @@ core::Result<Transform> Transform::between(const std::string& source, const std:
     // radians, so proj_degree_* is the right question — proj_angular_* asks about
     // radians and answers 0 here, which would let a degree value be rounded to the
     // nearest millimetre and move the point a hundred metres.
-    t.source_angular_ = proj_degree_input(impl->pj, PJ_FWD) != 0 ||
-                        proj_angular_input(impl->pj, PJ_FWD) != 0;
-    t.target_angular_ = proj_degree_output(impl->pj, PJ_FWD) != 0 ||
-                        proj_angular_output(impl->pj, PJ_FWD) != 0;
-    t.impl_           = std::move(impl);
-    t.source_         = source;
-    t.target_         = target;
+    t.source_angular_ =
+        proj_degree_input(impl->pj, PJ_FWD) != 0 || proj_angular_input(impl->pj, PJ_FWD) != 0;
+    t.target_angular_ =
+        proj_degree_output(impl->pj, PJ_FWD) != 0 || proj_angular_output(impl->pj, PJ_FWD) != 0;
+    t.impl_   = std::move(impl);
+    t.source_ = source;
+    t.target_ = target;
     return t;
 }
 
 bool Transform::forward(double& easting, double& northing) const
 {
-    PJ_COORD in = proj_coord(easting, northing, 0.0, 0.0);
+    PJ_COORD in  = proj_coord(easting, northing, 0.0, 0.0);
     PJ_COORD out = proj_trans(impl_->pj, PJ_FWD, in);
     if (out.xyzt.x == HUGE_VAL || out.xyzt.y == HUGE_VAL) return false;
     easting  = out.xyzt.x;
@@ -82,7 +85,7 @@ bool Transform::forward(double& easting, double& northing) const
 
 bool Transform::inverse(double& easting, double& northing) const
 {
-    PJ_COORD in = proj_coord(easting, northing, 0.0, 0.0);
+    PJ_COORD in  = proj_coord(easting, northing, 0.0, 0.0);
     PJ_COORD out = proj_trans(impl_->pj, PJ_INV, in);
     if (out.xyzt.x == HUGE_VAL || out.xyzt.y == HUGE_VAL) return false;
     easting  = out.xyzt.x;
@@ -92,29 +95,44 @@ bool Transform::inverse(double& easting, double& northing) const
 
 #else // ---------------------------------------------------------------------
 
-struct Transform::Impl {};
+struct Transform::Impl
+{};
 
-bool Transform::available() noexcept { return false; }
+bool Transform::available() noexcept
+{
+    return false;
+}
 
-std::string Transform::backend_version() { return "PROJ yok"; }
+std::string Transform::backend_version()
+{
+    return "PROJ yok";
+}
 
 core::Result<Transform> Transform::between(const std::string& source, const std::string& target)
 {
     // Never an identity fallback. A transform that silently does nothing produces
     // a document whose coordinates are in the wrong system and look right (§12).
     return core::err(core::ErrorCode::Unsupported,
-                     "'" + source + "' -> '" + target + "' dönüşümü yapılamıyor: PROJ "
-                     "derlenmemiş. -DPIRICAD_WITH_PROJ=ON ile yapılandırın "
-                     "(Debian/Ubuntu: libproj-dev).");
+                     "'" + source + "' -> '" + target +
+                         "' dönüşümü yapılamıyor: PROJ "
+                         "derlenmemiş. -DPIRICAD_WITH_PROJ=ON ile yapılandırın "
+                         "(Debian/Ubuntu: libproj-dev).");
 }
 
-bool Transform::forward(double&, double&) const { return false; }
-bool Transform::inverse(double&, double&) const { return false; }
+bool Transform::forward(double&, double&) const
+{
+    return false;
+}
+
+bool Transform::inverse(double&, double&) const
+{
+    return false;
+}
 
 #endif
 
-Transform::~Transform()                            = default;
-Transform::Transform(Transform&&) noexcept         = default;
+Transform::~Transform()                               = default;
+Transform::Transform(Transform&&) noexcept            = default;
 Transform& Transform::operator=(Transform&&) noexcept = default;
 
 namespace {
@@ -122,7 +140,7 @@ namespace {
 /// Millimetres in, metres through PROJ, millimetres out. The rounding is
 /// `core::mm_from_metres`, the same round-half-away-from-zero used everywhere
 /// else, so a transform does not introduce a second rounding convention.
-template <class Fn>
+template<class Fn>
 core::Status apply(std::span<core::Point2> points, Fn&& op, const char* direction)
 {
     for (std::size_t i = 0; i < points.size(); ++i) {
@@ -144,8 +162,7 @@ core::Status apply(std::span<core::Point2> points, Fn&& op, const char* directio
 
 namespace {
 
-core::Error angular_refusal(const std::string& source, const std::string& target,
-                            const char* which)
+core::Error angular_refusal(const std::string& source, const std::string& target, const char* which)
 {
     return core::err(core::ErrorCode::InvalidArgument,
                      "'" + source + "' -> '" + target + "' dönüşümünün " + which +

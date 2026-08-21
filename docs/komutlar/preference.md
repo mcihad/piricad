@@ -4,9 +4,15 @@ PiriCAD'i kendi çalışma alışkanlığına göre ayarlayan herkes için; bu s
 bitirdiğinizde tema, dil, otomatik kayıt ve tuval rengi gibi **kullanıcıya ait**
 tercihleri listelemeyi, okumayı ve değiştirmeyi bileceksiniz.
 
-> **Faz 0 durumu.** Tercihler bugün yalnızca açık olan oturum boyunca yaşar. Kullanıcı
-> profiline yazılmaları ve program yeniden açıldığında geri gelmeleri **Faz 1'de**
-> gelecek; ayrıntısı `CLAUDE.md` Article 8 ve `.claude/model.md` R39'dadır.
+> **Faz 0 durumu.** Tercihler artık kullanıcı profiline yazılıyor: `TERCİH` ile
+> değiştirdiğiniz her tercih, programı kapatırken kaydediliyor ve yeniden açtığınızda
+> geri geliyor. Kaydedilen dosya, işletim sisteminizin standart uygulama ayarları
+> dosyasıdır ve her tercih kendi kimliğiyle (`core.arayuz.tema` gibi) yazılır.
+>
+> Tema, `TERCİH tema koyu` yazdığınızda da, **Görünüm > Koyu Tema** menüsünü
+> işaretlediğinizde de aynı yoldan geçer: menü de komut yolunun bir istemcisidir, ikinci
+> bir tercih listesi yoktur. Arayüz dilinin değişmesi için programın yeniden başlatılması
+> **Faz 1'de** kalkacaktır; ayrıntısı `.claude/model.md` R38 ve R39'dadır.
 
 ## Ne yapar
 

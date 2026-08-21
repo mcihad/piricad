@@ -28,7 +28,7 @@ using EntityId = std::uint32_t;
 using LayerId  = std::uint32_t;
 
 inline constexpr EntityId kNoEntity = std::numeric_limits<EntityId>::max();
-inline constexpr LayerId  kNoLayer  = std::numeric_limits<LayerId>::max();
+inline constexpr LayerId kNoLayer   = std::numeric_limits<LayerId>::max();
 
 // ----------------------------------------------------------------- keys -----
 
@@ -37,8 +37,15 @@ inline constexpr LayerId  kNoLayer  = std::numeric_limits<LayerId>::max();
 enum class EntityKey : std::uint64_t { None = 0 };
 enum class LayerKey : std::uint64_t { None = 0 };
 
-constexpr std::uint64_t raw(EntityKey k) noexcept { return static_cast<std::uint64_t>(k); }
-constexpr std::uint64_t raw(LayerKey k) noexcept { return static_cast<std::uint64_t>(k); }
+constexpr std::uint64_t raw(EntityKey k) noexcept
+{
+    return static_cast<std::uint64_t>(k);
+}
+
+constexpr std::uint64_t raw(LayerKey k) noexcept
+{
+    return static_cast<std::uint64_t>(k);
+}
 
 /// R3: `command::Value::Kind::IdList` is `std::vector<std::int64_t>`, so a key
 /// above 2^63-1 becomes negative the moment it is journalled. The allocator
@@ -48,7 +55,8 @@ inline constexpr std::uint64_t kMaxKey = (std::uint64_t{1} << 63) - 1;
 /// Mints keys for one document. Monotonic and never reusing, because "which
 /// parcel was this?" is a legal question and a reused key makes it unanswerable
 /// (R4, §12).
-class KeyAllocator {
+class KeyAllocator
+{
 public:
     /// Returns the next key, or `None` once the space is exhausted. Exhaustion is
     /// reported rather than wrapped: silently reusing a key is worse than failing.
@@ -66,18 +74,52 @@ public:
 
     /// After loading a file, the allocator must not hand out a key the file
     /// already used. Called once per key array with the highest value seen.
-    void adopt_entity(EntityKey highest) noexcept
+    ///
+    /// The clamp is not defensive tidiness. A key above kMaxKey is exactly the
+    /// value R3 exists to make impossible, and it arrives from UNTRUSTED input —
+    /// a file, a hostile payload, a table written by a build that got this wrong.
+    /// `next = raw(highest) + 1` on 2^64-1 wrapped the counter to 0, so the next
+    /// mint returned EntityKey{0}, which is indistinguishable from
+    /// EntityKey::None (a false exhaustion report), and every mint after that
+    /// handed out 1, 2, 3 — keys the file had already used. That is silent key
+    /// REUSE reached from a file, and R4/P5 make "which parcel was this?"
+    /// unanswerable the moment it happens.
+    ///
+    /// Saturating at kMaxKey + 1 rather than wrapping means the allocator reports
+    /// exhaustion (mint returns None) instead of reissuing. Returns false when the
+    /// adopted key was out of range, so a loader can refuse the file rather than
+    /// carry an id it can never journal.
+    bool adopt_entity(EntityKey highest) noexcept
     {
-        if (raw(highest) >= next_entity_) next_entity_ = raw(highest) + 1;
+        const std::uint64_t v      = raw(highest);
+        const std::uint64_t capped = v > kMaxKey ? kMaxKey : v;
+        if (capped >= next_entity_) next_entity_ = capped + 1;
+        return v <= kMaxKey;
     }
 
-    void adopt_layer(LayerKey highest) noexcept
+    bool adopt_layer(LayerKey highest) noexcept
     {
-        if (raw(highest) >= next_layer_) next_layer_ = raw(highest) + 1;
+        const std::uint64_t v      = raw(highest);
+        const std::uint64_t capped = v > kMaxKey ? kMaxKey : v;
+        if (capped >= next_layer_) next_layer_ = capped + 1;
+        return v <= kMaxKey;
     }
 
     std::uint64_t peek_entity() const noexcept { return next_entity_; }
+
     std::uint64_t peek_layer() const noexcept { return next_layer_; }
+
+    /// Test and recovery hook: positions the counter without minting. Clamped the
+    /// same way adopt_* is, so no caller can install a counter that wraps.
+    void seek_entity(std::uint64_t next) noexcept
+    {
+        next_entity_ = next > kMaxKey + 1 ? kMaxKey + 1 : next;
+    }
+
+    void seek_layer(std::uint64_t next) noexcept
+    {
+        next_layer_ = next > kMaxKey + 1 ? kMaxKey + 1 : next;
+    }
 
 private:
     // Zero is reserved for "none", so minting starts at one.

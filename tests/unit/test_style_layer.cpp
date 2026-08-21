@@ -137,6 +137,23 @@ TEST_CASE("StyleTable: every Appearance field is part of the identity")
 
     // Sentinel + base + one id per varied field, none of them collapsed.
     CHECK_EQ(t.size(), std::size_t{2} + variants.size());
+
+    // The loop above proves nothing about the HASH: intern() looks the appearance
+    // up in an unordered_map, so a distinct id comes from operator==, not from
+    // fold_appearance. A fold that hashed only rgba would still hand out twelve
+    // distinct ids — pure collisions — and pass every assertion above, while a
+    // document whose çizgi kalınlığı, dolgu rengi or tarama deseni changed would
+    // fingerprint identically. So drive the coverage through fold(), in separate
+    // tables so the id is the same on both sides and only the content differs.
+    for (std::size_t i = 0; i < variants.size(); ++i) {
+        StyleTable only_base;
+        StyleTable only_variant;
+        only_base.intern(base);
+        only_variant.intern(variants[i]);
+        if (only_base.fold(0) == only_variant.fold(0))
+            ::microtest::report(__FILE__, __LINE__, "Appearance alanı parmak izine girmiyor",
+                                std::string("varyant #") + std::to_string(i));
+    }
 }
 
 TEST_CASE("StyleTable: an out-of-range id degrades to entry 0, it does not crash")
@@ -181,6 +198,102 @@ TEST_CASE("StyleTable: fold reacts to content and to id order, and to nothing el
     StyleTable one;
     one.intern(a);
     CHECK(one.fold(0) != forward.fold(0));
+}
+
+// ----------------------------------------------------------- KeyAllocator ---
+//
+// model.md Enforcement names "key monotonicity and non-reuse" as a /tests/unit
+// responsibility. The allocator had no direct test at all: it appeared only as an
+// argument to LayerTable::add, and an allocator that started at 0, that wrapped
+// past 2^63-1, or that reissued after adopt_* passed the whole suite. A reused key
+// makes "which parcel was this?" unanswerable, and R4 calls that a legal question.
+
+TEST_CASE("R4: anahtarlar kesin artan, hiçbiri None değil")
+{
+    KeyAllocator keys;
+
+    std::uint64_t previous = 0;
+    for (int i = 0; i < 1000; ++i) {
+        const EntityKey e = keys.mint_entity();
+        CHECK(e != EntityKey::None);
+        CHECK(raw(e) > previous);
+        previous = raw(e);
+    }
+    // Zero is reserved for "none", so minting starts at one and never returns it.
+    CHECK_EQ(previous, std::uint64_t{1000});
+
+    // The two spaces are independent: an entity key and a layer key may collide
+    // numerically because they are different types and never compared.
+    KeyAllocator other;
+    CHECK_EQ(raw(other.mint_layer()), std::uint64_t{1});
+    CHECK_EQ(raw(other.mint_entity()), std::uint64_t{1});
+}
+
+TEST_CASE("R4: adopt ileri sarar, geri sarmaz")
+{
+    KeyAllocator keys;
+    CHECK(keys.adopt_entity(static_cast<EntityKey>(5000)));
+    CHECK_EQ(raw(keys.mint_entity()), std::uint64_t{5001});
+
+    // A LOWER adopted value must not rewind the counter, or the next mint would
+    // reissue a key the document is already using.
+    CHECK(keys.adopt_entity(static_cast<EntityKey>(12)));
+    CHECK_EQ(raw(keys.mint_entity()), std::uint64_t{5002});
+
+    CHECK(keys.adopt_layer(static_cast<LayerKey>(9)));
+    CHECK_EQ(raw(keys.mint_layer()), std::uint64_t{10});
+}
+
+TEST_CASE("R3: anahtar alanı 2^63-1'de biter — tükenme bildirilir, sarılmaz")
+{
+    // R3 caps the space because command::Value::Kind::IdList is
+    // std::vector<std::int64_t>: a key above this silently becomes NEGATIVE in the
+    // journal. The cap is pinned here so a later "u64 is u64" simplification has
+    // to argue with the journal.
+    CHECK_EQ(kMaxKey, (std::uint64_t{1} << 63) - 1);
+
+    KeyAllocator keys;
+    keys.seek_entity(kMaxKey);
+    const EntityKey last = keys.mint_entity();
+    CHECK_EQ(raw(last), kMaxKey); // the last valid key IS handed out
+    CHECK(keys.mint_entity() == EntityKey::None);
+    CHECK(keys.mint_entity() == EntityKey::None); // and stays exhausted
+
+    keys.seek_layer(kMaxKey);
+    CHECK_EQ(raw(keys.mint_layer()), kMaxKey);
+    CHECK(keys.mint_layer() == LayerKey::None);
+}
+
+TEST_CASE("R3/R4: aralık dışı bir anahtar benimsenmez, sayaç sarılmaz")
+{
+    // The failure this pins: adopt_entity(0xFFFFFFFFFFFFFFFF) used to set the
+    // counter to 0, so the next mint returned EntityKey{0} — indistinguishable
+    // from None, i.e. a FALSE exhaustion report — and every mint after that handed
+    // out 1, 2, 3: keys the file had already used. Reached from untrusted input.
+    KeyAllocator keys;
+    CHECK(!keys.adopt_entity(static_cast<EntityKey>(0xFFFFFFFFFFFFFFFFull)));
+    CHECK(keys.mint_entity() == EntityKey::None); // exhausted, not wrapped to 0
+
+    KeyAllocator at_cap;
+    CHECK(at_cap.adopt_entity(static_cast<EntityKey>(kMaxKey))); // kMaxKey is legal
+    CHECK(at_cap.mint_entity() == EntityKey::None);
+
+    KeyAllocator layers;
+    CHECK(!layers.adopt_layer(static_cast<LayerKey>(kMaxKey + 1)));
+    CHECK(layers.mint_layer() == LayerKey::None);
+}
+
+TEST_CASE("R4: anahtarı tükenmiş tabloya katman eklenemez, uydurulmaz")
+{
+    LayerTable t;
+    KeyAllocator keys;
+    keys.seek_layer(kMaxKey + 1);
+
+    const auto refused = t.add(named("parsel"), keys);
+    CHECK(!refused.ok());
+    if (!refused.ok())
+        CHECK_EQ(static_cast<int>(refused.error().code), static_cast<int>(ErrorCode::Internal));
+    CHECK_EQ(t.size(), std::size_t{1}); // nothing was added under a bogus key
 }
 
 // ------------------------------------------------------ resolve_appearance ---
@@ -263,6 +376,46 @@ TEST_CASE("resolve_appearance: the result is resolved, so every Source is Explic
     // R14: resolving twice is a no-op, so a style column can be re-resolved by a
     // later transaction without drifting.
     CHECK_EQ(resolve_appearance(r, layer_base()), r);
+
+    // And the result is MATERIALISED, not merely consistent: re-resolving it
+    // against a DIFFERENT layer must change nothing. Re-resolving against the same
+    // layer, as the line above does, cannot tell a materialised value from a
+    // resolver that is still consulting the layer every time — which is exactly
+    // the difference R14 exists to make: the renderer reads one u32 and evaluates
+    // no cascade.
+    Appearance other = layer_base();
+    other.rgba       = 0xFF000001u;
+    other.width_um   = 4321;
+    other.dash       = 31;
+    other.fill_rgba  = 0x11223344u;
+    other.hatch      = 29;
+    CHECK_EQ(resolve_appearance(r, other), r);
+}
+
+TEST_CASE("R14: sınıflandırma kuralı adımı henüz yok — sıra iki adımla sınanıyor")
+{
+    // R14 declares a THREE-step order: explicit style[e], else the LAYER'S
+    // CLASSIFICATION RULE over the entity's attributes (the GIS renderer), else
+    // the layer's own appearance. The cases above test steps 1 and 3 only.
+    //
+    // Step 2 has no implementation to test: R32 lists a "classification rule
+    // reference" among a layer's fields and `Layer` carries none, so there is
+    // nothing for a rule to be attached to. This case exists so the gap is
+    // VISIBLE in the suite instead of being implied by a green file that reads as
+    // if R14 were covered. It will assert the middle step when the rule reference
+    // lands on the layer record (CLAUDE.md 11.8: future tense, phase named).
+    //
+    // What can be pinned today is the boundary that already holds: with no rule,
+    // an entity with no explicit style takes the layer's appearance and nothing
+    // else, and kByLayerStyle{0} is what makes that the free case.
+    CHECK_EQ(kByLayerStyle, StyleId{0});
+
+    StyleTable t;
+    CHECK_EQ(t.intern(Appearance{}), kByLayerStyle);
+
+    const Appearance inherited = resolve_appearance(t.at(kByLayerStyle), layer_base());
+    CHECK_EQ(inherited.rgba, layer_base().rgba);
+    CHECK_EQ(inherited.width_um, layer_base().width_um);
 }
 
 // ------------------------------------------------------------- LayerTable ---
@@ -274,8 +427,8 @@ TEST_CASE("LayerTable: yeni tablo '0' katmanıyla açılır")
     CHECK_EQ(t.find("0"), LayerId{0});
 
     const Layer* zero = t.at(0);
-    CHECK(zero != nullptr);
-    if (zero != nullptr) {
+    REQUIRE(zero != nullptr);
+    {
         CHECK_EQ(zero->name, std::string("0"));
         CHECK_EQ(zero->folded, std::string("0"));
         CHECK(zero->key != LayerKey::None);
@@ -288,14 +441,14 @@ TEST_CASE("LayerTable: anahtarlar tekrar kullanılmaz, '0' katmanının anahtar�
     KeyAllocator keys;
 
     const auto parsel = t.add(named("parsel"), keys);
-    CHECK(parsel.ok());
+    REQUIRE(parsel.ok());
 
     // R4: the default layer already holds the first key a fresh allocator would
     // mint, so add() must step over it rather than issue it twice.
     CHECK(t.key_of(parsel.value()) != t.key_of(0));
 
     const auto bina = t.add(named("bina"), keys);
-    CHECK(bina.ok());
+    REQUIRE(bina.ok());
     CHECK(raw(t.key_of(bina.value())) > raw(t.key_of(parsel.value())));
 }
 
@@ -305,7 +458,7 @@ TEST_CASE("LayerTable: slot ve anahtar çevirisi gidip gelir")
     KeyAllocator keys;
 
     const auto added = t.add(named("yol"), keys);
-    CHECK(added.ok());
+    REQUIRE(added.ok());
     const LayerId slot = added.value();
     const LayerKey key = t.key_of(slot);
 
@@ -324,7 +477,7 @@ TEST_CASE("LayerTable: katman adı Türkçe katlanır — ışık/IŞIK aynı, i
     KeyAllocator keys;
 
     const auto isik = t.add(named("ışık"), keys);
-    CHECK(isik.ok());
+    REQUIRE(isik.ok());
     const LayerId slot = isik.value();
 
     CHECK_EQ(t.find("ışık"), slot);
@@ -389,13 +542,15 @@ TEST_CASE("LayerTable: rename yalnızca adı değiştirir — anahtar ve kayıt 
     l.appearance  = layer_base();
 
     const auto added = t.add(std::move(l), keys);
-    CHECK(added.ok());
-    const LayerId slot   = added.value();
+    REQUIRE(added.ok());
+    const LayerId slot = added.value();
+    REQUIRE(t.at(slot) != nullptr);
     const Layer before   = *t.at(slot);
     const std::size_t sz = t.size();
 
     CHECK(t.rename(slot, "Ada/Parsel").ok());
 
+    REQUIRE(t.at(slot) != nullptr);
     const Layer after = *t.at(slot);
 
     // R30: the identity is the key, and renaming must not disturb anything an
@@ -428,8 +583,9 @@ TEST_CASE("LayerTable: rename hata yolları")
 
     const LayerId a = t.add(named("parsel"), keys).value_or(kNoLayer);
     const LayerId b = t.add(named("bina"), keys).value_or(kNoLayer);
-    CHECK(a != kNoLayer);
-    CHECK(b != kNoLayer);
+    REQUIRE(a != kNoLayer);
+    REQUIRE(b != kNoLayer);
+    REQUIRE(t.at(a) != nullptr && t.at(b) != nullptr);
 
     const Status taken = t.rename(b, "PARSEL");
     CHECK(!taken.ok());
@@ -531,8 +687,20 @@ TEST_CASE("LayerTable: fold her saklanan alana tepki verir")
         {"visible", [](Layer& l) { l.visible = false; }},
         {"locked", [](Layer& l) { l.locked = true; }},
         {"plottable", [](Layer& l) { l.plottable = false; }},
-        {"appearance", [](Layer& l) { l.appearance.rgba = 0xFF010203u; }},
-        {"z_order", [](Layer& l) { l.appearance.z_order = 9; }},
+        // Every Appearance field, not just two of them: the layer's default
+        // appearance is a stored record, and a stored field left out of the
+        // fingerprint is a field a save can change without the document noticing.
+        {"appearance.rgba", [](Layer& l) { l.appearance.rgba = 0xFF010203u; }},
+        {"appearance.width_um", [](Layer& l) { l.appearance.width_um = 777; }},
+        {"appearance.dash", [](Layer& l) { l.appearance.dash = 6; }},
+        {"appearance.symbol", [](Layer& l) { l.appearance.symbol = 13; }},
+        {"appearance.fill_rgba", [](Layer& l) { l.appearance.fill_rgba = 0x80010203u; }},
+        {"appearance.hatch", [](Layer& l) { l.appearance.hatch = 3; }},
+        {"appearance.z_order", [](Layer& l) { l.appearance.z_order = 9; }},
+        {"appearance.src_colour", [](Layer& l) { l.appearance.src_colour = Source::Explicit; }},
+        {"appearance.src_width", [](Layer& l) { l.appearance.src_width = Source::Explicit; }},
+        {"appearance.src_dash", [](Layer& l) { l.appearance.src_dash = Source::Explicit; }},
+        {"appearance.src_fill", [](Layer& l) { l.appearance.src_fill = Source::Explicit; }},
         {"min_scale", [](Layer& l) { l.min_scale = 25000; }},
         {"max_scale", [](Layer& l) { l.max_scale = 500; }},
         {"opacity", [](Layer& l) { l.opacity = 128; }},

@@ -71,7 +71,7 @@ TEST_CASE("KATALOG: dilim boylamdan, EPSG'den ve addan bulunuyor")
         CHECK_EQ(tm30->name, std::string("TM30"));
     }
 
-    CHECK(cat.zone_by_name("tm33") != nullptr);   // Turkish-folded lookup
+    CHECK(cat.zone_by_name("tm33") != nullptr); // Turkish-folded lookup
     CHECK(cat.zone_by_name("TM33") != nullptr);
     CHECK(cat.zone_by_name("TM31") == nullptr);
 
@@ -87,21 +87,21 @@ TEST_CASE("KATALOG: dilim boylamdan, EPSG'den ve addan bulunuyor")
     // The zones are three degrees apart and each reaches 1.5 degrees either side,
     // so they tile continuously from 25.5 E to 46.5 E with no gap. Only a longitude
     // outside that span has no zone.
-    CHECK(cat.zone_for_longitude(31.5) != nullptr);   // exactly on a boundary
-    CHECK(cat.zone_for_longitude(31.6) != nullptr);   // inside TM33's half-width
-    CHECK(cat.zone_for_longitude(25.4) == nullptr);   // west of TM27's reach
-    CHECK(cat.zone_for_longitude(46.6) == nullptr);   // east of TM45's reach
+    CHECK(cat.zone_for_longitude(31.5) != nullptr); // exactly on a boundary
+    CHECK(cat.zone_for_longitude(31.6) != nullptr); // inside TM33's half-width
+    CHECK(cat.zone_for_longitude(25.4) == nullptr); // west of TM27's reach
+    CHECK(cat.zone_for_longitude(46.6) == nullptr); // east of TM45's reach
 }
 
 TEST_CASE("DÖNÜŞÜM: eksen sırası doğru — nokta Türkiye'ye düşüyor")
 {
-    if (!Transform::available()) return;   // PROJ kapalıysa sessizce atla
+    if (!Transform::available()) return; // PROJ kapalıysa sessizce atla
 
     auto tf = Transform::between("EPSG:5254", "EPSG:4326");
     CHECK(tf.ok());
     if (!tf.ok()) return;
 
-    double easting = core::mm_to_metres(kUsak.x);
+    double easting  = core::mm_to_metres(kUsak.x);
     double northing = core::mm_to_metres(kUsak.y);
     CHECK(tf.value().forward(easting, northing));
 
@@ -135,7 +135,7 @@ TEST_CASE("DÖNÜŞÜM: coğrafi hedefte milimetre API'si reddediyor")
     if (!st.ok()) CHECK(st.error().message.find("coğrafi") != std::string::npos);
 
     // The scalar path is the sanctioned one for degrees, and still works.
-    double easting = core::mm_to_metres(kUsak.x);
+    double easting  = core::mm_to_metres(kUsak.x);
     double northing = core::mm_to_metres(kUsak.y);
     CHECK(tf.value().forward(easting, northing));
 }
@@ -184,8 +184,8 @@ TEST_CASE("DÖNÜŞÜM: dilimler arası TM30 -> TM33")
     // The point sits ~3.17 degrees WEST of TM33's central meridian, so its easting
     // must fall well below the 500 000 m false easting. A wrapper with the axes
     // crossed produces a number in the millions here.
-    CHECK(p[0].x > 200000000);   // 200 km
-    CHECK(p[0].x < 300000000);   // 300 km
+    CHECK(p[0].x > 200000000); // 200 km
+    CHECK(p[0].x < 300000000); // 300 km
     CHECK(p[0].y > 4300000000);
     CHECK(p[0].y < 4330000000);
 }
@@ -201,7 +201,6 @@ TEST_CASE("DÖNÜŞÜM: PROJ yokken sessizce birim dönüşüm yapmıyor")
     if (!Transform::available()) {
         auto any = Transform::between("EPSG:5254", "EPSG:4326");
         CHECK(!any.ok());
-        if (!any.ok())
-            CHECK(any.error().message.find("PIRICAD_WITH_PROJ") != std::string::npos);
+        if (!any.ok()) CHECK(any.error().message.find("PIRICAD_WITH_PROJ") != std::string::npos);
     }
 }

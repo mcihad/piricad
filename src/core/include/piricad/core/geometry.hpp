@@ -41,36 +41,40 @@ using Mm2 = std::int64_t;
 inline constexpr Mm kMmCoordinateLimit = Mm{1} << 61;
 
 enum class RingRole : std::uint8_t {
-    Open = 0,      ///< a polyline: first and last vertex are not joined
-    Exterior = 1,  ///< the outer boundary of a face
-    Interior = 2,  ///< a hole inside the exterior of the same part
+    Open     = 0, ///< a polyline: first and last vertex are not joined
+    Exterior = 1, ///< the outer boundary of a face
+    Interior = 2, ///< a hole inside the exterior of the same part
 };
 
 /// One geometry slot's ring range, as returned by the store.
-struct RingSpan {
+struct RingSpan
+{
     std::uint32_t first{0};
     std::uint32_t count{0};
 };
 
 /// Ring-structured geometry for one entity kind. Indexed by SLOT, never by key.
-class RingGeometry {
+class RingGeometry
+{
 public:
     // ---- vertices: the hot block, never read by attribute code ----
     std::vector<Mm> xs;
     std::vector<Mm> ys;
 
     // ---- rings ----
-    std::vector<std::uint32_t> ring_start;  ///< first vertex of the ring
-    std::vector<std::uint32_t> ring_count;  ///< vertex count of the ring
-    std::vector<std::uint16_t> ring_part;   ///< multipart grouping
-    std::vector<RingRole>      ring_role;
+    std::vector<std::uint32_t> ring_start; ///< first vertex of the ring
+    std::vector<std::uint32_t> ring_count; ///< vertex count of the ring
+    std::vector<std::uint16_t> ring_part;  ///< multipart grouping
+    std::vector<RingRole> ring_role;
 
     // ---- slot -> rings ----
     std::vector<std::uint32_t> first_ring;
     std::vector<std::uint32_t> ring_total;
 
     std::size_t slot_count() const noexcept { return first_ring.size(); }
+
     std::size_t ring_count_total() const noexcept { return ring_start.size(); }
+
     std::size_t vertex_count() const noexcept { return xs.size(); }
 
     RingSpan rings_of(std::uint32_t slot) const noexcept
@@ -95,10 +99,11 @@ public:
     }
 
     /// One ring of a new slot. Rings MUST be appended in R11 order.
-    struct RingInput {
+    struct RingInput
+    {
         std::span<const Point2> points;
-        RingRole                role{RingRole::Open};
-        std::uint16_t           part{0};
+        RingRole role{RingRole::Open};
+        std::uint16_t part{0};
     };
 
     /// Appends a slot built from `rings` and returns its index. Validates R11
@@ -136,8 +141,8 @@ private:
 /// Square millimetres to square metres, for display only. Never a stored value.
 constexpr double mm2_to_m2(Mm2 v) noexcept
 {
-    return static_cast<double>(v) / (static_cast<double>(kMmPerMetre) *
-                                     static_cast<double>(kMmPerMetre));
+    return static_cast<double>(v) /
+           (static_cast<double>(kMmPerMetre) * static_cast<double>(kMmPerMetre));
 }
 
 } // namespace piricad::core

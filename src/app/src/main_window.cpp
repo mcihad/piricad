@@ -9,6 +9,9 @@
 #include "piricad/app/toolbox.hpp"
 #include "piricad/render/backend.hpp"
 
+#include "piricad/command/bus.hpp"
+#include "piricad/core/settings.hpp"
+
 #include <QAction>
 #include <QApplication>
 #include <QComboBox>
@@ -92,12 +95,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     // command it accepts is still reachable from a script and from the AI.
     commandLine_->setVisible(false);
 
-    QSettings settings;
-    theme_ = settings.value(QStringLiteral("ui/theme"), QStringLiteral("light")).toString() ==
-                     QLatin1String("dark")
-                 ? ThemeMode::Dark
-                 : ThemeMode::Light;
-    actTheme_->setChecked(theme_ == ThemeMode::Dark);
+    loadPreferences();
+    theme_ = themeFromPreferences();
+    {
+        // Setting the action fires toggled(), which would write the value straight
+        // back through the bus; block it while the shell is only catching up with
+        // what the store already says.
+        QSignalBlocker block(actTheme_);
+        actTheme_->setChecked(theme_ == ThemeMode::Dark);
+    }
     applyTheme();
 
     connect(controller_, &Controller::echoed, this, &MainWindow::onEcho);
@@ -123,11 +129,65 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 
 MainWindow::~MainWindow()
 {
+    savePreferences();
+
+    // Window geometry and dock layout are not declared settings and deliberately
+    // so: they are opaque per-machine blobs with no SettingSpec, no range and no
+    // meaning to a user typing TERCİH. They stay raw QSettings keys.
     QSettings settings;
-    settings.setValue(QStringLiteral("ui/theme"),
-                      theme_ == ThemeMode::Dark ? QStringLiteral("dark") : QStringLiteral("light"));
     settings.setValue(QStringLiteral("ui/geometry"), saveGeometry());
     settings.setValue(QStringLiteral("ui/state"), saveState());
+}
+
+void MainWindow::loadPreferences()
+{
+    // Generated from the catalogue, never a hand-written key list: a new App-scope
+    // SettingSpec is persisted by this loop the day it is declared.
+    core::Settings& store = controller_->bus().app_settings();
+    QSettings file;
+
+    for (const auto& spec : store.catalogue().all()) {
+        if (spec.scope != core::SettingScope::App) continue;
+
+        const QString key    = QString::fromStdString(spec.id);
+        const QVariant saved = file.value(key);
+        if (!saved.isValid()) continue;
+
+        // R42: a value the running build cannot honour is clamped with a recorded
+        // warning, never a hard failure — a preferences file written by another
+        // version must not stop the application from opening.
+        auto parsed = core::parse_setting(spec, saved.toString().toStdString());
+        if (!parsed) continue;
+        (void)store.set(spec.id, parsed.value());
+    }
+}
+
+void MainWindow::savePreferences()
+{
+    const core::Settings& store = controller_->bus().app_settings();
+    QSettings file;
+
+    // Only what the user actually set. Writing the defaults too would freeze
+    // today's default into every profile and make changing one a no-op.
+    for (const std::string& id : store.explicit_ids()) {
+        const std::uint32_t index = store.catalogue().find(id);
+        if (index == core::kNoSetting) continue;
+
+        const core::SettingSpec& spec = store.catalogue().at(index);
+        file.setValue(QString::fromStdString(spec.id),
+                      QString::fromStdString(core::format_setting(spec, store.get(id))));
+    }
+}
+
+ThemeMode MainWindow::themeFromPreferences() const
+{
+    // "sistem" is the declared default and has no detection behind it yet, so it
+    // resolves to the day theme — the same answer the old hard-coded default gave.
+    const core::Settings& store = controller_->bus().app_settings();
+    return core::format_setting(store.catalogue().at(store.catalogue().find("core.arayuz.tema")),
+                                store.get("core.arayuz.tema")) == "koyu"
+               ? ThemeMode::Dark
+               : ThemeMode::Light;
 }
 
 QAction* MainWindow::commandAction(Glyph glyph, const QString& text, const QString& line,
@@ -576,9 +636,17 @@ void MainWindow::applyTheme()
 
 void MainWindow::toggleTheme(bool dark)
 {
-    theme_ = dark ? ThemeMode::Dark : ThemeMode::Light;
+    // The menu item is a client of the command bus, not a second way to set a
+    // preference. `TERCİH tema koyu` typed into the command line and this toggle
+    // are now literally the same write, which is what R38 asks for and what
+    // CLAUDE.md 5.10 forbids duplicating — before this, TERCİH reported success
+    // and changed nothing, and the theme in force was invisible to TERCİH.
+    auto written = controller_->bus().execute_line(dark ? "TERCİH tema koyu" : "TERCİH tema acik",
+                                                   command::Origin::Gui);
+    if (!written) onEcho(QString::fromStdString(written.error().message));
+
+    theme_ = themeFromPreferences();
     applyTheme();
-    onEcho(dark ? tr("Koyu tema.") : tr("Gündüz teması."));
 }
 
 void MainWindow::showCommandLine(bool visible)

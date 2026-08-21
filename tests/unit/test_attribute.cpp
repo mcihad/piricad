@@ -195,11 +195,23 @@ TEST_CASE("çokluçizgi türü isabet testi toleransa uyar")
     const std::array<std::uint32_t, 1> slots{line};
     std::array<std::uint8_t, 1> hits{};
 
-    // 100 mm off the first segment.
+    // 100 mm off the first segment, probed against tolerances that bracket the
+    // distance tightly. One probe against 150 and 50 pinned the threshold only to
+    // within a factor of two: a `limit` computed as 2*tol² or tol²/2 passed both.
     pl->hit(g, slots, Point2{5 * kMmPerMetre, 100}, 150, hits);
     CHECK_EQ(hits[0], std::uint8_t{1});
 
+    pl->hit(g, slots, Point2{5 * kMmPerMetre, 100}, 101, hits);
+    CHECK_EQ(hits[0], std::uint8_t{1});
+
+    pl->hit(g, slots, Point2{5 * kMmPerMetre, 100}, 99, hits);
+    CHECK_EQ(hits[0], std::uint8_t{0});
+
     pl->hit(g, slots, Point2{5 * kMmPerMetre, 100}, 50, hits);
+    CHECK_EQ(hits[0], std::uint8_t{0});
+
+    // A negative tolerance is clamped to zero rather than inverting the test.
+    pl->hit(g, slots, Point2{5 * kMmPerMetre, 100}, -1000, hits);
     CHECK_EQ(hits[0], std::uint8_t{0});
 
     // The parcel's implied closing segment is part of it: a probe on the left
@@ -227,7 +239,81 @@ TEST_CASE("çokluçizgi türü çizim akışını halka halka üretir")
     CHECK_EQ(buf.run_count[1], std::uint32_t{3});
     CHECK_EQ(buf.run_closed[1], std::uint8_t{0});
     CHECK_EQ(buf.xs.size(), std::size_t{7});
-    CHECK_EQ(buf.xs[buf.run_start[1]], Mm{0});
+
+    // The whole emitted sequence, in order. Asserting one coordinate out of
+    // fourteen let an emit that wrote the right counts with reordered or wrong
+    // vertices pass, and the draw list is what the user actually sees.
+    const Mm expect_xs[7]{0, k10m, k10m, 0, 0, k10m, k10m};
+    const Mm expect_ys[7]{0, 0, k10m, k10m, 0, 0, k10m};
+    for (std::size_t v = 0; v < 7; ++v) {
+        CHECK_EQ(buf.xs[v], expect_xs[v]);
+        CHECK_EQ(buf.ys[v], expect_ys[v]);
+    }
+    CHECK_EQ(buf.run_start[0], std::uint32_t{0});
+    CHECK_EQ(buf.run_start[1], std::uint32_t{4});
+}
+
+TEST_CASE("R26: çok parçalı ve boşluklu yük parça ve rolüyle birlikte geri okunur")
+{
+    // The plain round trip below moves two single-ring, part-0 entities, so a
+    // reader that ignored `part` entirely (assigning 0) or mapped Interior onto
+    // Exterior passed it AND the byte-identity re-write check: every field it
+    // could lose was already zero in the source. R26 promises the payload comes
+    // back byte-identically, so the shape has to have something to lose.
+    const KindSpec* pl = builtin_kinds().find(1);
+    CHECK(pl != nullptr);
+    if (pl == nullptr) return;
+
+    const Point2 yuz0[4]{{0, 0}, {k10m * 2, 0}, {k10m * 2, k10m * 2}, {0, k10m * 2}};
+    const Point2 bos0[4]{{k10m / 2, k10m / 2}, {k10m, k10m / 2}, {k10m, k10m}, {k10m / 2, k10m}};
+    const Point2 yuz1[4]{{k10m * 5, 0}, {k10m * 6, 0}, {k10m * 6, k10m}, {k10m * 5, k10m}};
+    const Point2 bos1[4]{{k10m * 5 + 1000, 1000},
+                         {k10m * 5 + 2000, 1000},
+                         {k10m * 5 + 2000, 2000},
+                         {k10m * 5 + 1000, 2000}};
+
+    RingGeometry g;
+    const RingGeometry::RingInput rings[4]{
+        {yuz0, RingRole::Exterior, 0},
+        {bos0, RingRole::Interior, 0},
+        {yuz1, RingRole::Exterior, 3},
+        {bos1, RingRole::Interior, 3},
+    };
+    auto built = g.append(rings);
+    CHECK(built.ok());
+    if (!built) return;
+    const std::uint32_t slot = built.value();
+
+    const std::array<std::uint32_t, 1> slots{slot};
+    std::vector<std::uint8_t> bytes;
+    std::vector<std::uint32_t> ends;
+    pl->write(g, slots, bytes, ends);
+
+    RingGeometry back;
+    auto read = pl->read(back, bytes);
+    CHECK(read.ok());
+    if (!read) return;
+
+    CHECK_EQ(back.ring_total[0], g.ring_total[slot]);
+    CHECK_EQ(back.area_of(0), g.area_of(slot));
+    CHECK_EQ(back.perimeter_of(0), g.perimeter_of(slot));
+    CHECK(back.bounds_of(0) == g.bounds_of(slot));
+
+    const RingSpan src = g.rings_of(slot);
+    const RingSpan dst = back.rings_of(0);
+    CHECK_EQ(dst.count, src.count);
+    for (std::uint32_t k = 0; k < src.count && k < dst.count; ++k) {
+        CHECK_EQ(back.ring_part[dst.first + k], g.ring_part[src.first + k]);
+        CHECK_EQ(static_cast<int>(back.ring_role[dst.first + k]),
+                 static_cast<int>(g.ring_role[src.first + k]));
+        CHECK_EQ(back.ring_count[dst.first + k], g.ring_count[src.first + k]);
+    }
+
+    std::vector<std::uint8_t> again;
+    std::vector<std::uint32_t> again_ends;
+    const std::array<std::uint32_t, 1> back_slots{0};
+    pl->write(back, back_slots, again, again_ends);
+    CHECK(again == bytes);
 }
 
 TEST_CASE("çokluçizgi yükü aynen geri okunur")
@@ -282,20 +368,37 @@ TEST_CASE("bozuk çokluçizgi yükü hata döndürür")
     CHECK(!empty.ok());
     CHECK_EQ(static_cast<int>(empty.error().code), static_cast<int>(ErrorCode::ParseError));
 
+    // Every rejection below asserts its CODE and that the message names the
+    // specific defect. `!ok()` alone passed for an ErrorCode::Internal with an
+    // empty message, and the hostile-DWG path is where a useless message costs
+    // the most: it is the one a support call arrives about.
+    const auto refused = [&](std::span<const std::uint8_t> payload, ErrorCode code,
+                             const char* needle) {
+        auto r = pl->read(g, payload);
+        CHECK(!r.ok());
+        if (r.ok()) return;
+        CHECK_EQ(static_cast<int>(r.error().code), static_cast<int>(code));
+        if (r.error().message.find(needle) == std::string::npos)
+            ::microtest::report(__FILE__, __LINE__, "hata iletisi sorunu adlandırmıyor",
+                                std::string("beklenen: ") + needle +
+                                    "\n        alınan : " + r.error().message);
+    };
+
     // A ring count no file could satisfy — refused before anything is reserved
-    // for it, because a hostile DWG will claim four billion rings.
+    // for it, because a hostile DWG will claim four billion rings. The message
+    // must name the declared count, or nobody can tell this from a truncation.
     const std::array<std::uint8_t, 4> huge{0xFF, 0xFF, 0xFF, 0xFF};
-    CHECK(!pl->read(g, huge).ok());
+    refused(huge, ErrorCode::ParseError, "4294967295");
 
     // One ring declaring more vertices than the payload holds.
     std::vector<std::uint8_t> truncated{1, 0, 0, 0,  // ring count
                                         1, 0, 0,     // role Exterior, part 0
                                         4, 0, 0, 0}; // 4 vertices, none present
-    CHECK(!pl->read(g, truncated).ok());
+    refused(truncated, ErrorCode::ParseError, "Halka 0");
 
     // An unknown ring role is a format the running build does not understand.
     std::vector<std::uint8_t> bad_role{1, 0, 0, 0, 77, 0, 0, 0, 0, 0, 0};
-    CHECK(!pl->read(g, bad_role).ok());
+    refused(bad_role, ErrorCode::ParseError, "77");
 
     CHECK_EQ(g.slot_count(), std::size_t{0});
 }
@@ -396,6 +499,30 @@ TEST_CASE("boy değiştirme silinen hücreyi geri getirmez")
     CHECK(!ada.get(99).value().present);
 }
 
+TEST_CASE("R27: sözcük içinde küçültmek de hücreyi öldürür")
+{
+    // 100 -> 10 -> 100 above drops present_ word 1 outright, so the tail-MASKING
+    // branch in AttrColumn::resize is never observed: deleting it leaves that case
+    // green. The bug it exists to prevent needs a stale bit inside a RETAINED
+    // word, and a resurrected attribute cell is silent data invention on a parcel.
+    AttrColumn ada(spec_from_data("ada_no", "Ada numarası", AttrType::Int64, false));
+
+    for (const std::size_t row : {std::size_t{63}, std::size_t{64}, std::size_t{70}}) {
+        ada.resize(100);
+        CHECK(ada.set(row, attr_int64(4242)).ok());
+        CHECK(ada.present(row));
+
+        ada.resize(65); // word 1 survives; rows 65..99 must not
+        ada.resize(100);
+
+        CHECK_EQ(ada.present(row), row < 65);
+        CHECK_EQ(ada.get(row).value().present, row < 65);
+        if (row < 65) CHECK_EQ(ada.get(row).value().number, std::int64_t{4242});
+
+        ada.resize(0);
+    }
+}
+
 TEST_CASE("zorunlu öznitelik boşsa satır geçersizdir")
 {
     AttrTable t;
@@ -452,20 +579,50 @@ TEST_CASE("katalog kodu çalışma anında yüklenen katalogla doğrulanır")
     CHECK(!no_catalogue.ok());
     CHECK_EQ(static_cast<int>(no_catalogue.error().code), static_cast<int>(ErrorCode::NotFound));
 
-    // A retired code is still a valid code: a withdrawal must not retroactively
-    // invalidate a signed document (data.md R5).
-    Catalogue with_retired = catalogue_from_data({"3110", "3120", "3200"});
-    with_retired.add_code("3120"); // duplicate load is a no-op
-    CHECK_EQ(with_retired.size(), std::size_t{3});
+    // Loading the same code twice is idempotent, and that is ALL this asserts.
+    // It used to be labelled "a retired code is still a valid code (data.md R5)",
+    // which promised coverage of a rule nothing implements: `Catalogue` has no
+    // notion of retirement, no valid_from/valid_until, and therefore no way for a
+    // withdrawal to retroactively invalidate a signed document — nor to fail to.
+    // Retirement arrives with the /data catalogue loader; until then this test
+    // says only what it checks.
+    Catalogue twice_loaded = catalogue_from_data({"3110", "3120", "3200"});
+    twice_loaded.add_code("3120");
+    CHECK_EQ(twice_loaded.size(), std::size_t{3});
 }
 
 TEST_CASE("katalog kodu sütunu kataloğunu bildirmek zorunda")
 {
     AttrTable t;
-    CHECK(!t.add(spec_from_data("kod", "Katalog kodu", AttrType::CodeRef, true)).ok());
-    CHECK(!t.add(spec_from_data("", "Adsız", AttrType::Int64, false)).ok());
+
+    // Each rejection asserts its code and that the message names the offending
+    // column, because `!ok()` alone passed for a column refused for the wrong
+    // reason — and "why did my şema not load?" is unanswerable without the id.
+    const auto no_catalog = t.add(spec_from_data("kod", "Katalog kodu", AttrType::CodeRef, true));
+    CHECK(!no_catalog.ok());
+    if (!no_catalog.ok()) {
+        CHECK_EQ(static_cast<int>(no_catalog.error().code),
+                 static_cast<int>(ErrorCode::InvalidArgument));
+        CHECK(no_catalog.error().message.find("kod") != std::string::npos);
+        CHECK(no_catalog.error().message.find("katalog") != std::string::npos);
+    }
+
+    const auto no_id = t.add(spec_from_data("", "Adsız", AttrType::Int64, false));
+    CHECK(!no_id.ok());
+    if (!no_id.ok())
+        CHECK_EQ(static_cast<int>(no_id.error().code),
+                 static_cast<int>(ErrorCode::InvalidArgument));
+
     CHECK(t.add(spec_from_data("ada_no", "Ada numarası", AttrType::Int64, false)).ok());
-    CHECK(!t.add(spec_from_data("ada_no", "Ada numarası (kopya)", AttrType::Int64, false)).ok());
+
+    const auto duplicate =
+        t.add(spec_from_data("ada_no", "Ada numarası (kopya)", AttrType::Int64, false));
+    CHECK(!duplicate.ok());
+    if (!duplicate.ok()) {
+        CHECK_EQ(static_cast<int>(duplicate.error().code),
+                 static_cast<int>(ErrorCode::ValidationFailed));
+        CHECK(duplicate.error().message.find("ada_no") != std::string::npos);
+    }
     CHECK_EQ(t.columns(), std::size_t{1});
     CHECK_EQ(t.find("ada_no"), AttrId{0});
     CHECK_EQ(t.find("parsel_no"), kNoAttr);
@@ -519,6 +676,58 @@ TEST_CASE("öznitelik parmak izi içerikten belirlenir")
     CHECK(one.set(0, attr_bool(true)).ok());
     CHECK(seven.set(0, raw).ok());
     CHECK_EQ(one.fold(0), seven.fold(0));
+
+    // Where a row ENDS is part of the content. fnv1a mixes no length and no
+    // terminator, so chaining adjacent rows' bytes straight into the same hash
+    // made {"Bostan", "lı"} and {"Bostanlı", ""} — two different mahalle
+    // assignments over two parcels — fold identically.
+    AttrColumn split(spec), joined(spec);
+    split.resize(2);
+    joined.resize(2);
+    CHECK(split.set(0, attr_text("Bostan")).ok());
+    CHECK(split.set(1, attr_text("lı")).ok());
+    CHECK(joined.set(0, attr_text("Bostanlı")).ok());
+    CHECK(joined.set(1, attr_text("")).ok());
+    CHECK(split.fold(0) != joined.fold(0));
+}
+
+TEST_CASE("öznitelik tablosunun parmak izi sütun sırasını ve satır sayısını sayar")
+{
+    // AttrTable::fold — the entry point a document hash would actually call — was
+    // reached by no test at all: an implementation returning `seed` unchanged, or
+    // one blind to column order, passed the whole suite.
+    const auto build = [](std::initializer_list<AttrSpec> specs, std::size_t rows) {
+        AttrTable t;
+        for (const auto& s : specs)
+            CHECK(t.add(s).ok());
+        t.resize(rows);
+        return t;
+    };
+
+    const AttrSpec ada    = spec_from_data("ada_no", "Ada numarası", AttrType::Int64, false);
+    const AttrSpec parsel = spec_from_data("parsel_no", "Parsel numarası", AttrType::Int64, false);
+
+    const AttrTable a = build({ada, parsel}, 4);
+    const AttrTable b = build({ada, parsel}, 4);
+    CHECK_EQ(a.fold(0), b.fold(0)); // identically built tables agree
+
+    // Declaration order is content: the column index is what a row's value is
+    // stored under, so two tables holding the same columns under swapped ids are
+    // two different schemas.
+    const AttrTable swapped = build({parsel, ada}, 4);
+    CHECK(a.fold(0) != swapped.fold(0));
+
+    // Row count is content: a table with five rows, the fifth empty, is not the
+    // same document as a table with four.
+    const AttrTable longer = build({ada, parsel}, 5);
+    CHECK(a.fold(0) != longer.fold(0));
+
+    // And a value change moves it.
+    AttrTable written = build({ada, parsel}, 4);
+    CHECK(written.set(0, 2, attr_int64(1234)).ok());
+    CHECK(a.fold(0) != written.fold(0));
+
+    CHECK(a.fold(0) != a.fold(1)); // the seed is honoured
 }
 
 TEST_CASE("öznitelik tablosu satır sayısını sütunlara yayar")

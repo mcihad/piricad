@@ -86,12 +86,18 @@ gates: ## Run every CI gate script
 check: gates build test format-check tidy-if-present iwyu-if-present ## Everything CI runs, in CI's order
 
 tidy-if-present:
-	@command -v clang-tidy >/dev/null && $(MAKE) tidy || echo "check: clang-tidy not installed — SKIPPED"
+	@if command -v clang-tidy >/dev/null; then \
+	    $(MAKE) tidy; \
+	else \
+	    echo "check: clang-tidy not installed — SKIPPED"; \
+	fi
 
 iwyu-if-present:
-	@command -v include-what-you-use >/dev/null \
-	  && iwyu_tool.py -p $(BUILD) src \
-	  || echo "check: include-what-you-use not installed — SKIPPED"
+	@if command -v include-what-you-use >/dev/null; then \
+	    iwyu_tool.py -p $(BUILD) src; \
+	else \
+	    echo "check: include-what-you-use not installed — SKIPPED"; \
+	fi
 
 ## --------------------------------------------------------------- tools ----
 

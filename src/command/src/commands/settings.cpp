@@ -31,28 +31,22 @@ using core::SettingValue;
 // model.md R39 puts the PROJECT store inside the document: it travels with the
 // file, it is undoable, and it is part of content_hash(). That requires three
 // things this file does not own — `Document::settings()`, an `Op::SetSetting`
-// variant, and `Transaction::set_setting()`. Until they land, the two stores live
-// here so the commands, the catalogue and the manual can be finished and proved.
+// variant, and `Transaction::set_setting()`. Until they land, the project store
+// lives on the BUS, which owns exactly one document, and the write is therefore
+// still not undoable and still outside content_hash().
+//
+// It is deliberately NOT a process-wide static any more. As a static it was one
+// store shared by every bus in the process, so a project CRS set in one drawing
+// leaked into the next File > New, and every test that read a project setting was
+// coupled to whichever case had run before it.
 //
 // Everything else is already final: the scope masks are the real ones, so a
 // project setting cannot be written through TERCİH and an application setting
 // cannot be written through AYAR, and that boundary is tested. When the document
-// gains its store, `project_store()` becomes `ctx.transaction().settings()` and
-// `app_store()` becomes an application-owned member; nothing else in this file
-// changes.
+// gains its store, `bus.project_settings()` becomes `ctx.transaction().settings()`
+// and nothing else in this file changes; the APP store stays on the bus, which is
+// where R39 puts a per-user, per-machine value.
 // ---------------------------------------------------------------------------
-
-Settings& project_store()
-{
-    static Settings store{core::builtin_settings(), SettingScopeMask::Project};
-    return store;
-}
-
-Settings& app_store()
-{
-    static Settings store{core::builtin_settings(), SettingScopeMask::App};
-    return store;
-}
 
 std::string with_unit(const SettingSpec& spec, const SettingValue& v)
 {
@@ -181,12 +175,12 @@ Task<void> run_setting(Context& ctx)
     // When the document owns the store, the write inside run_scope becomes
     // ctx.transaction().set_setting(...) — one undo step, one entry in
     // content_hash(). See the PHASE-0 SEAM note above.
-    co_await run_scope(ctx, project_store(), SettingScope::Project);
+    co_await run_scope(ctx, ctx.session().bus().project_settings(), SettingScope::Project);
 }
 
 Task<void> run_preference(Context& ctx)
 {
-    co_await run_scope(ctx, app_store(), SettingScope::App);
+    co_await run_scope(ctx, ctx.session().bus().app_settings(), SettingScope::App);
 }
 
 } // namespace

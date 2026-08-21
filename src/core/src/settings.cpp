@@ -436,16 +436,27 @@ PIRICAD_SETTING(metin_yuksekligi)
 PIRICAD_SETTING(veri_paketi_surumu)
 {
     return SettingSpec{
-        .id       = "core.katalog.paket_surumu",
-        .names    = {"paket_sürümü", "paket_surumu", "katalog", "package"},
-        .type     = SettingType::Text,
-        .scope    = SettingScope::Project,
-        .fallback = text_value("0.1.0"),
+        .id    = "core.katalog.paket_surumu",
+        .names = {"paket_sürümü", "paket_surumu", "katalog", "package"},
+        .type  = SettingType::Text,
+        .scope = SettingScope::Project,
+        // R35: the package version stamp is a CRITICAL part of the document, and a
+        // file whose regulatory basis is unknown MUST NOT open silently. A usable
+        // default made "this document declares 0.1.0" and "this document declares
+        // nothing" read identically through get(), and only is_explicit() could
+        // tell them apart — which no caller checked. The default is therefore
+        // EMPTY: an empty package version is the visible statement "unknown",
+        // which the loader can refuse, rather than a plausible answer it cannot
+        // distinguish from a real one. attribute.hpp says the same thing about
+        // Catalogue: never defaulted.
+        .fallback = text_value(""),
         .range    = SettingRange::unbounded(),
         .values   = {},
         .unit     = "",
         .summary  = "Nesne referanslarının okunduğu veri paketi sürümü. Çizimin hangi "
-                    "sürüme dayandığı belgenin kendisine ait bir bilgidir.",
+                    "mevzuat sürümüne dayandığı belgenin kendi bilgisidir, bu yüzden "
+                    "proje kapsamındadır; varsayılanı yoktur, boş bir değer "
+                    "'dayanağı bilinmiyor' demektir.",
     };
 }
 

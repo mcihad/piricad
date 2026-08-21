@@ -15,6 +15,8 @@
 #include "piricad/core/text.hpp"
 #include "piricad/script/json_runner.hpp"
 
+#include <cstdint>
+#include <optional>
 #include <string>
 
 using namespace piricad;
@@ -117,7 +119,18 @@ TEST_CASE("R40: dışa aktarılan belgenin baytını değiştiren her ayar proje
 {
     const SettingCatalog& cat = builtin_settings();
 
-    const auto scope_of = [&](const char* id) { return cat.at(cat.find(id)).scope; };
+    // std::optional, not a bare at(): SettingCatalog::at indexes its vector, and
+    // cat.find() returns kNoSetting (0xFFFFFFFF) for an id that has been renamed
+    // or removed — so an unguarded at(find(id)) reads specs_[0xFFFFFFFF]. A
+    // missing id must FAIL this case, not corrupt the run that reports it.
+    const auto scope_of = [&](const char* id) -> std::optional<SettingScope> {
+        const std::uint32_t index = cat.find(id);
+        if (index == kNoSetting) {
+            ::microtest::report(__FILE__, __LINE__, "bildirilmemiş ayar kimliği", id);
+            return std::nullopt;
+        }
+        return cat.at(index).scope;
+    };
 
     // These five reach the paper, the koordinat cetveli or the file. R40 is applied
     // literally: display precision LOOKS like a preference and is not one.
@@ -139,6 +152,50 @@ TEST_CASE("R40: dışa aktarılan belgenin baytını değiştiren her ayar proje
     CHECK(scope_of("core.yakalama.modlar") == SettingScope::Session);
     CHECK(scope_of("core.yakalama.dik_mod") == SettingScope::Session);
     CHECK(scope_of("core.yakalama.kutupsal_aci") == SettingScope::Session);
+
+    // The list above is a snapshot: it locks today's fourteen answers but applies
+    // R40 to nothing new, so a fifteenth setting gets no scrutiny from it. This
+    // does: every spec's summary must state WHY its scope is what it is, so the
+    // R40 answer is written down where the reviewer of the new spec sees it.
+    for (const auto& spec : cat.all()) {
+        // The summary must NAME the scope it claims — "proje", "uygulama" or
+        // "oturum" — so the sentence a reviewer reads is the R40 answer and not a
+        // description of the value. All fourteen already do; a fifteenth cannot be
+        // added without writing its answer down.
+        if (spec.summary.find(setting_scope_label(spec.scope)) == std::string::npos)
+            ::microtest::report(__FILE__, __LINE__,
+                                "R40 gerekçesi özet metninde yazılmamış: özet kapsamı "
+                                "adlandırmıyor",
+                                spec.id + " (" + setting_scope_label(spec.scope) + ")");
+    }
+}
+
+TEST_CASE("R35: veri paketi sürümünün kullanılabilir bir varsayılanı yoktur")
+{
+    // R35 makes the package version stamp a CRITICAL part of the document: a file
+    // whose regulatory basis is unknown must not open silently. It used to fall
+    // back to "0.1.0", so a document that recorded NOTHING reported a plausible
+    // version and only is_explicit() could tell the two apart — which no caller
+    // checked. An empty value is the visible statement "dayanağı bilinmiyor".
+    const SettingCatalog& cat = builtin_settings();
+    const std::uint32_t index = cat.find("core.katalog.paket_surumu");
+    CHECK(index != kNoSetting);
+    if (index == kNoSetting) return;
+
+    CHECK(cat.at(index).fallback.as_text().empty());
+
+    Settings project{cat, SettingScopeMask::Project};
+    CHECK(!project.is_explicit("core.katalog.paket_surumu"));
+    CHECK(project.get("core.katalog.paket_surumu").as_text().empty());
+
+    // A document that DOES declare one is distinguishable from one that does not.
+    auto stamped = parse_setting(cat.at(index), "2024.1");
+    CHECK(stamped.ok());
+    if (!stamped) return;
+    CHECK(project.set("core.katalog.paket_surumu", stamped.value()).ok());
+    CHECK(project.is_explicit("core.katalog.paket_surumu"));
+    CHECK_EQ(std::string(project.get("core.katalog.paket_surumu").as_text()),
+             std::string("2024.1"));
 }
 
 TEST_CASE("R21/P8: hiçbir ayar kayan nokta değil — ondalık istek bildirilmiş birimle karşılanır")
@@ -493,7 +550,12 @@ TEST_CASE("Her tür metne çevrilip geri okunur")
     const SettingCatalog& cat = builtin_settings();
 
     const auto round_trip = [&](const char* id, const char* typed, const char* shown) {
-        const SettingSpec& spec = cat.at(cat.find(id));
+        const std::uint32_t index = cat.find(id);
+        if (index == kNoSetting) {
+            ::microtest::report(__FILE__, __LINE__, "bildirilmemiş ayar kimliği", id);
+            return;
+        }
+        const SettingSpec& spec = cat.at(index);
         auto parsed             = parse_setting(spec, typed);
         CHECK(parsed.ok());
         if (!parsed.ok()) return;
@@ -631,12 +693,43 @@ TEST_CASE("AYAR: geçersiz değer reddedilir, eski değer yerinde kalır")
 {
     Rig rig;
 
-    CHECK(rig.line("AYAR cizim_birimi metre").ok());
+    // The old value has to be a NON-default one, or the case cannot tell "the
+    // rejection preserved what was there" from "nothing was ever written". This
+    // used to set metre, which IS the declared default (enumerated(2)), so an
+    // AYAR path that stored nothing at all passed.
+    CHECK(rig.line("AYAR cizim_birimi santimetre").ok());
+    CHECK(mentions(rig.echoed, "= santimetre"));
+    CHECK(rig.bus.project_settings().is_explicit("core.cizim.birim"));
+
     CHECK(rig.line("AYAR cizim_birimi fersah").ok());
     CHECK(mentions(rig.echoed, "milimetre, santimetre, metre"));
 
     CHECK(rig.line("AYAR cizim_birimi").ok());
-    CHECK(mentions(rig.echoed, "= metre"));
+    CHECK(mentions(rig.echoed, "= santimetre"));
+    CHECK_EQ(rig.bus.project_settings().get("core.cizim.birim").as_enum(), std::uint16_t{1});
+}
+
+TEST_CASE("R41: her Rig kendi ayar kutusunu taşır — komşu case bulaşmaz")
+{
+    // The two stores used to be function-local statics in commands/settings.cpp,
+    // so every bus in the process shared one. That made the bus-level cases here
+    // order-coupled: "R41" read back "= 5" from state a neighbouring case had
+    // written, running a case in isolation changed its result, and a project CRS
+    // set in one drawing leaked into the next File > New. The stores now belong to
+    // the bus, so Rig construction is the isolation boundary.
+    Rig first;
+    CHECK(first.line("AYAR koordinat_hassasiyeti 6").ok());
+    CHECK(first.bus.project_settings().is_explicit("core.crs.hassasiyet"));
+
+    Rig second;
+    CHECK(!second.bus.project_settings().is_explicit("core.crs.hassasiyet"));
+    CHECK(second.line("AYAR koordinat_hassasiyeti").ok());
+    CHECK(mentions(second.echoed, "varsayılan"));
+
+    // The application store is per user and machine, not per document — but it is
+    // still per bus here, because a process-wide one is what leaked.
+    CHECK(first.line("TERCIH tema koyu").ok());
+    CHECK(!second.bus.app_settings().is_explicit("core.arayuz.tema"));
 }
 
 TEST_CASE("AYAR komut satırından, betikten ve arayüzden aynı sonucu verir")
@@ -673,10 +766,32 @@ TEST_CASE("AYAR komut satırından, betikten ve arayüzden aynı sonucu verir")
     CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
     CHECK_EQ(what_happened(gui.journal), what_happened(script.journal));
 
-    // No client touched the geometry. Once the document owns the project store this
-    // same line starts asserting that all three moved the hash identically.
+    // Assert the CHANGE, not the equality of two constants. Each Rig now owns its
+    // stores, so the fingerprint below is of what THAT client wrote — before this,
+    // all three read one process-wide store and the comparison was between three
+    // views of the same object.
+    const std::uint64_t untouched = Settings{builtin_settings(), SettingScopeMask::Project}.fold(0);
+    CHECK(gui.bus.project_settings().fold(0) != untouched); // the write moved it
+    CHECK_EQ(gui.bus.project_settings().fold(0), cli.bus.project_settings().fold(0));
+    CHECK_EQ(gui.bus.project_settings().fold(0), script.bus.project_settings().fold(0));
+
+    // R39/P15: an App-scope write is not document content and must NOT move it.
+    CHECK(gui.bus.app_settings().set("core.arayuz.tema", SettingValue::enumerated(2)).ok());
+    CHECK_EQ(gui.bus.project_settings().fold(0), cli.bus.project_settings().fold(0));
+
+    // No client touched the geometry. content_hash() is compared too, but it is
+    // deliberately NOT the assertion that carries R39 here: Document::content_hash()
+    // does not fold any Settings store yet (the PHASE-0 SEAM in
+    // commands/settings.cpp), so over three empty documents it would pass even if
+    // no client had written anything. That half of R39 lands with Document::settings().
     CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
     CHECK_EQ(gui.doc.content_hash(), script.doc.content_hash());
+
+    // R39 says a Project setting is undoable and the command declares
+    // UndoPolicy::SingleTransaction, but the write does not go through the
+    // transaction yet, so it produces no Op and the bus pushes no undo entry. This
+    // pins the SEAM, not the contract: when Transaction::set_setting() lands this
+    // becomes 1 and undoing it must restore the previous value.
     CHECK_EQ(gui.undo.undo_depth(), std::size_t{0});
 }
 

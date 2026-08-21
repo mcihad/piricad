@@ -64,7 +64,8 @@ const char* role_name(RingRole r) noexcept
 // not used: MSVC does not have it and CLAUDE.md 6.1 requires the same numbers on
 // all three platforms, so the two limbs are carried by hand.
 
-struct U128 {
+struct U128
+{
     std::uint64_t hi{0};
     std::uint64_t lo{0};
 };
@@ -186,15 +187,15 @@ template<class Get> std::uint64_t twice_area_acc(Get get, std::size_t n) noexcep
 {
     if (n < 3) return 0;
 
-    const Point2 origin  = get(0);
+    const Point2 origin    = get(0);
     const std::uint64_t x0 = static_cast<std::uint64_t>(origin.x);
     const std::uint64_t y0 = static_cast<std::uint64_t>(origin.y);
 
     std::uint64_t acc = 0;
     for (std::size_t i = 0; i < n; ++i) {
         const std::size_t j = (i + 1 == n) ? 0 : i + 1;
-        const Point2 p = get(i);
-        const Point2 q = get(j);
+        const Point2 p      = get(i);
+        const Point2 q      = get(j);
 
         const std::uint64_t ax = static_cast<std::uint64_t>(p.x) - x0;
         const std::uint64_t ay = static_cast<std::uint64_t>(p.y) - y0;
@@ -267,14 +268,14 @@ Box2 input_bounds(std::span<const Point2> pts, std::size_t n) noexcept
 constexpr bool box_contains(const Box2& outer, const Box2& inner) noexcept
 {
     if (outer.empty() || inner.empty()) return false;
-    return outer.min_x <= inner.min_x && outer.min_y <= inner.min_y &&
-           outer.max_x >= inner.max_x && outer.max_y >= inner.max_y;
+    return outer.min_x <= inner.min_x && outer.min_y <= inner.min_y && outer.max_x >= inner.max_x &&
+           outer.max_y >= inner.max_y;
 }
 
 constexpr bool out_of_range(Point2 p) noexcept
 {
-    return p.x > kMmCoordinateLimit || p.x < -kMmCoordinateLimit ||
-           p.y > kMmCoordinateLimit || p.y < -kMmCoordinateLimit;
+    return p.x > kMmCoordinateLimit || p.x < -kMmCoordinateLimit || p.y > kMmCoordinateLimit ||
+           p.y < -kMmCoordinateLimit;
 }
 
 } // namespace
@@ -311,7 +312,7 @@ Result<std::uint32_t> RingGeometry::append(std::span<const RingInput> rings)
         // overflows, and kMmCoordinateLimit is what keeps dx² + dy² inside 128
         // bits and its square root inside Mm (see segment_length).
         for (std::size_t v = 0; v < r.points.size(); ++v) {
-            const Point2 p = r.points[v];
+            const Point2 p   = r.points[v];
             const auto where = [&] {
                 return ordinal(i) + ", " + std::to_string(v + 1) + ". tepe noktası";
             };
@@ -322,8 +323,8 @@ Result<std::uint32_t> RingGeometry::append(std::span<const RingInput> rings)
             if (out_of_range(p))
                 return err(ErrorCode::ValidationFailed,
                            where() + " temsil edilebilir aralığın dışında: (" +
-                               std::to_string(p.x) + ", " + std::to_string(p.y) +
-                               ") mm. Sınır ±" + std::to_string(kMmCoordinateLimit) + " mm.");
+                               std::to_string(p.x) + ", " + std::to_string(p.y) + ") mm. Sınır ±" +
+                               std::to_string(kMmCoordinateLimit) + " mm.");
         }
 
         // R11: part ascending, and therefore a part's rings are contiguous.
@@ -360,8 +361,7 @@ Result<std::uint32_t> RingGeometry::append(std::span<const RingInput> rings)
         // the Shewchuk predicate wrapper core.md R8 mandates; until it exists this
         // catches the degenerate cases, and it catches them at the boundary rather
         // than on a tapu.
-        if (r.role != RingRole::Open &&
-            twice_area_u(r.points, stored) == 0)
+        if (r.role != RingRole::Open && twice_area_u(r.points, stored) == 0)
             return err(ErrorCode::ValidationFailed,
                        ordinal(i) + " " + role_name(r.role) +
                            " halka sıfır alanlı: noktalar doğrusal, çakışık ya da halka "
@@ -475,8 +475,8 @@ Mm2 RingGeometry::ring_area(std::uint32_t ring) const
 
 Mm2 RingGeometry::area_of(std::uint32_t slot) const
 {
-    const RingSpan span  = rings_of(slot);
-    std::uint64_t twice  = 0;
+    const RingSpan span = rings_of(slot);
+    std::uint64_t twice = 0;
 
     for (std::uint32_t k = 0; k < span.count; ++k) {
         const std::uint32_t r = span.first + k;
