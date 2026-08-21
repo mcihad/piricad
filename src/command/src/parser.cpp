@@ -42,7 +42,8 @@ struct ExprParser
         skip();
         if (!failed && i != s.size()) {
             failed = true;
-            why    = "unexpected '" + std::string(1, s[i]) + "' at offset " + std::to_string(i);
+            why    = "beklenmeyen '" + std::string(1, s[i]) + "' karakteri (konum " +
+                  std::to_string(i) + ")";
         }
         return v;
     }
@@ -77,7 +78,7 @@ struct ExprParser
                 const double d = power();
                 if (d == 0.0) {
                     failed = true;
-                    why    = "division by zero";
+                    why    = "sıfıra bölme";
                     return 0.0;
                 }
                 v /= d;
@@ -86,7 +87,7 @@ struct ExprParser
                 const double d = power();
                 if (d == 0.0) {
                     failed = true;
-                    why    = "modulo by zero";
+                    why    = "sıfıra göre mod";
                     return 0.0;
                 }
                 v = std::fmod(v, d);
@@ -126,7 +127,7 @@ struct ExprParser
         skip();
         if (i >= s.size()) {
             failed = true;
-            why    = "unexpected end of expression";
+            why    = "ifade beklenmedik yerde bitti";
             return 0.0;
         }
 
@@ -136,7 +137,7 @@ struct ExprParser
             skip();
             if (i >= s.size() || s[i] != ')') {
                 failed = true;
-                why    = "missing ')'";
+                why    = "kapanmamış parantez";
                 return 0.0;
             }
             ++i;
@@ -148,7 +149,7 @@ struct ExprParser
             ++i;
         if (i == start) {
             failed = true;
-            why    = "expected a number at offset " + std::to_string(i);
+            why    = "sayı bekleniyordu (konum " + std::to_string(i) + ")";
             return 0.0;
         }
         return std::strtod(std::string(s.substr(start, i - start)).c_str(), nullptr);
@@ -226,8 +227,8 @@ core::Result<Token> classify(std::string_view raw)
             const double d = pa.parse();
             ExprParser pb(b);
             const double ang = pb.parse();
-            if (pa.failed) return err(ErrorCode::ParseError, "Polar distance: " + pa.why);
-            if (pb.failed) return err(ErrorCode::ParseError, "Polar angle: " + pb.why);
+            if (pa.failed) return err(ErrorCode::ParseError, "Kutupsal mesafe: " + pa.why);
+            if (pb.failed) return err(ErrorCode::ParseError, "Kutupsal açı: " + pb.why);
             t.kind = Token::Kind::Polar;
             t.a    = d;
             t.b    = ang;
@@ -239,8 +240,8 @@ core::Result<Token> classify(std::string_view raw)
             const double dx = pa.parse();
             ExprParser pb(b);
             const double dy = pb.parse();
-            if (pa.failed) return err(ErrorCode::ParseError, "Relative dx: " + pa.why);
-            if (pb.failed) return err(ErrorCode::ParseError, "Relative dy: " + pb.why);
+            if (pa.failed) return err(ErrorCode::ParseError, "Göreli dx: " + pa.why);
+            if (pb.failed) return err(ErrorCode::ParseError, "Göreli dy: " + pb.why);
             t.kind = Token::Kind::Relative;
             t.a    = dx;
             t.b    = dy;
@@ -248,7 +249,7 @@ core::Result<Token> classify(std::string_view raw)
         }
 
         return err(ErrorCode::ParseError,
-                   "Expected '@dx,dy' or '@distance<angle'; got '" + std::string(raw) + "'");
+                   "Beklenen: '@dx,dy' veya '@mesafe<açı'. Girilen: '" + std::string(raw) + "'");
     }
 
     // Absolute point: x,y
@@ -259,8 +260,8 @@ core::Result<Token> classify(std::string_view raw)
             const double x = pa.parse();
             ExprParser pb(b);
             const double y = pb.parse();
-            if (pa.failed) return err(ErrorCode::ParseError, "Coordinate X: " + pa.why);
-            if (pb.failed) return err(ErrorCode::ParseError, "Coordinate Y: " + pb.why);
+            if (pa.failed) return err(ErrorCode::ParseError, "X koordinatı: " + pa.why);
+            if (pb.failed) return err(ErrorCode::ParseError, "Y koordinatı: " + pb.why);
             t.kind = Token::Kind::Absolute;
             t.a    = x;
             t.b    = y;
@@ -296,7 +297,7 @@ core::Result<double> evaluate_expression(std::string_view expr)
     ExprParser p(expr);
     const double v = p.parse();
     if (p.failed)
-        return err(ErrorCode::ParseError, "Expression '" + std::string(expr) + "': " + p.why);
+        return err(ErrorCode::ParseError, "'" + std::string(expr) + "' ifadesi: " + p.why);
     return v;
 }
 
@@ -319,27 +320,49 @@ core::Result<ParsedLine> parse_line(std::string_view line)
                 text += line[i++];
             }
             if (i >= line.size())
-                return err(ErrorCode::ParseError, "Unterminated quoted text in command line");
+                return err(ErrorCode::ParseError, "Komut satırında kapanmamış tırnak var.");
             ++i;
             raw.emplace_back(std::move(text), true);
             continue;
         }
 
-        const std::size_t start = i;
-        int depth               = 0;
+        // A bare token ends at whitespace, but a quoted run inside it — the value
+        // of `ad="YOL KENARI"` — is absorbed whole, quotes stripped.
+        std::string token;
+        int depth   = 0;
+        bool quoted = false;
+
         while (i < line.size()) {
-            if (line[i] == '(')
+            const char c = line[i];
+
+            if (c == '"') {
+                ++i;
+                quoted = true;
+                while (i < line.size() && line[i] != '"') {
+                    if (line[i] == '\\' && i + 1 < line.size()) ++i;
+                    token += line[i++];
+                }
+                if (i >= line.size())
+                    return err(ErrorCode::ParseError, "Komut satırında kapanmamış tırnak var.");
+                ++i;
+                continue;
+            }
+
+            if (c == '(')
                 ++depth;
-            else if (line[i] == ')')
+            else if (c == ')')
                 --depth;
-            else if (is_space(line[i]) && depth == 0)
+            else if (is_space(c) && depth == 0)
                 break;
+
+            token += c;
             ++i;
         }
-        raw.emplace_back(std::string(line.substr(start, i - start)), false);
+        raw.emplace_back(std::move(token), false);
+        (void)quoted;
     }
 
-    if (raw.empty()) return err(ErrorCode::ParseError, "Empty command line");
+    if (raw.empty()) return err(ErrorCode::ParseError, "Boş komut satırı.");
 
     out.command = raw.front().first;
     out.tokens.reserve(raw.size() - 1);
@@ -378,7 +401,7 @@ core::Result<Point2> resolve_point(const Token& t, Point2 last)
     }
     default:
         return err(ErrorCode::InvalidArgument,
-                   "Expected a coordinate (x,y | @dx,dy | @d<a); got " + describe(t));
+                   "Beklenen: koordinat (x,y | @dx,dy | @mesafe<açı). Girilen: " + describe(t));
     }
 }
 

@@ -1,33 +1,56 @@
-# API Stability Policy
+# Sürüm ve Uyumluluk Politikası
 
-PiriCAD follows [Semantic Versioning](https://semver.org). This document states
-what each surface guarantees, which is a world-standard checklist item
-(piricad.md §13) and a merge requirement for `/src/plugin-api` changes
-(CLAUDE.md 6.10).
+PiriCAD üzerine iş kuran, eklenti yazan veya çıktı biçimlerine bağımlı sistem geliştiren
+herkes için; bu sayfayı bitirdiğinizde neyin sabit kalacağını, neyin ne zaman
+değişebileceğini bileceksiniz.
 
-## Surfaces and their guarantees
+PiriCAD [Semantik Sürümleme](https://semver.org) kullanır: `BÜYÜK.KÜÇÜK.YAMA`.
 
-| Surface | Guarantee | Breaks on |
+## Neyin garantisi var
+
+| Yüzey | Garanti | Ne zaman kırılabilir |
 |---|---|---|
-| Plugin C ABI (`/src/plugin-api`) | Additive-only within a major version; version handshake on load | major only |
-| Command ids (`core.line`, …) | Stable forever once released; renamed ids keep an alias | never |
-| Command names (`ÇİZGİ`, `LINE`, `Ç`) | Additive; a released name is never repurposed | never |
-| Command parameters | Additive; a released parameter keeps its name, type and meaning | major |
-| Journal JSONL schema | Forward-compatible; unknown fields are ignored on replay | major |
-| Project file format | Versioned; an older build opening a newer file gives an explanatory message, never a crash | major |
-| C++ headers under `piricad/` | Internal. No guarantee between minor versions | any |
-| Script API (`h.komut`, read APIs) | Additive within a major version | major |
+| Eklenti C arayüzü | Bir büyük sürüm içinde yalnız ekleme yapılır; yüklemede sürüm el sıkışması olur | Yalnız büyük sürümde |
+| Komut kimlikleri (`core.line`) | Yayımlandıktan sonra sonsuza kadar sabit; adı değişen komut takma ad olarak korunur | Asla |
+| Komut adları (`ÇİZGİ`, `LINE`, `Ç`) | Yalnız ekleme yapılır; yayımlanmış bir ad başka bir komuta devredilmez | Asla |
+| Komut parametreleri | Yalnız ekleme yapılır; yayımlanmış parametre adını, tipini ve anlamını korur | Yalnız büyük sürümde |
+| Komut günlüğü biçimi | İleriye uyumlu; bilinmeyen alanlar oynatmada yok sayılır | Yalnız büyük sürümde |
+| Proje dosyası biçimi | Sürümlenir; eski sürüm yeni dosyayı açarken açıklayıcı mesaj verir, çökmez | Yalnız büyük sürümde |
+| Betik API'si | Bir büyük sürüm içinde yalnız ekleme yapılır | Yalnız büyük sürümde |
+| C++ başlıkları (`piricad/`) | İç kullanım. Küçük sürümler arasında garanti yoktur | Her sürümde |
 
-## Deprecation
+## Komut kimlikleri neden kalıcı
 
-1. Mark the surface deprecated in the same release that ships its replacement.
-2. Keep it working for **two minor versions** minimum, with a runtime warning.
-3. Record the removal in `CHANGELOG.md` under a `### Kaldırıldı` heading.
-4. A command id is never removed — it becomes an alias for its successor.
+Komut günlüğü aynı anda geri almanın, makro kaydının, regresyon testinin, oturum
+kurtarmanın ve uzak API'nin kaynağıdır. Üç yıl önce kaydedilmiş bir oturumun bugün
+oynatılabilmesi gerekir.
 
-## Why command ids are permanent
+Bu, bir komut kimliğini uygulama ayrıntısı değil, **veri biçimi** yapar. Yayımlanmış bir
+kimlik hiçbir zaman kaldırılmaz; komut yeniden adlandırılırsa eski kimlik yenisinin takma
+adı olur.
 
-The journal is the project's undo, macro, regression, crash-recovery and remote
-API mechanism at once (piricad.md §2.2). A recorded session from three years ago
-must still replay. That makes a command id a data format, not an implementation
-detail.
+## Kullanımdan kaldırma
+
+Bir yüzey kullanımdan kaldırılırken şu sıra izlenir:
+
+1. Yerine geçecek yüzey hangi sürümde geliyorsa, eskisi aynı sürümde "kullanımdan
+   kaldırılacak" olarak işaretlenir.
+2. En az **iki küçük sürüm** boyunca çalışmaya devam eder; kullanıldığında uyarı verir.
+3. Kaldırılışı `CHANGELOG.md` dosyasında `### Kaldırıldı` başlığı altında kaydedilir.
+4. Komut kimliği kaldırılmaz — halefinin takma adı olur.
+
+## Sürüm numarası ne anlatır
+
+| Değişiklik | Örnek |
+|---|---|
+| **YAMA** (`0.1.0` → `0.1.1`) | Hata düzeltmesi; davranış değişmez |
+| **KÜÇÜK** (`0.1.0` → `0.2.0`) | Yeni komut, yeni parametre, yeni özellik; eskisi çalışmaya devam eder |
+| **BÜYÜK** (`0.1.0` → `1.0.0`) | Yukarıdaki tablodaki garantilerden birinin kırılması |
+
+`0.x` sürümleri henüz kararlılık taahhüdü altında değildir; ilk kararlı taahhüt `1.0.0`
+ile başlar.
+
+## Sırada ne var
+
+- [Komut sistemi](komutlar/README.md) — komut kimliklerinin nerede göründüğü
+- [Komut günlüğü](mimari/gunluk.md) — kalıcılığın neden önemli olduğu

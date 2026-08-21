@@ -40,7 +40,8 @@ core::Result<JournalEntry> JournalEntry::from_json(const core::Json& j)
 
     const core::Json* cmd = j.find("cmd");
     if (!cmd || !cmd->is_string())
-        return core::err(ErrorCode::ParseError, "Journal entry has no string \"cmd\" field");
+        return core::err(ErrorCode::ParseError,
+                         "Günlük satırında metin türünde \"cmd\" alanı yok.");
 
     JournalEntry e;
     e.command_id = cmd->as_string();
@@ -111,7 +112,8 @@ core::Status Journal::open_sink(const std::string& path)
 
     std::ofstream probe(path, std::ios::out | std::ios::app | std::ios::binary);
     if (!probe)
-        return core::err(core::ErrorCode::IoFailure, "Cannot open journal sink '" + path + "'");
+        return core::err(core::ErrorCode::IoFailure,
+                         "Günlük dosyası yazmak için açılamadı: '" + path + "'");
     probe.close();
 
     {
@@ -184,7 +186,8 @@ void Journal::writer_loop()
 core::Result<std::vector<JournalEntry>> Journal::read_jsonl(const std::string& path)
 {
     std::ifstream in(path, std::ios::in | std::ios::binary);
-    if (!in) return core::err(core::ErrorCode::IoFailure, "Cannot read journal '" + path + "'");
+    if (!in)
+        return core::err(core::ErrorCode::IoFailure, "Günlük dosyası okunamadı: '" + path + "'");
 
     std::vector<JournalEntry> out;
     std::string line;
@@ -196,11 +199,11 @@ core::Result<std::vector<JournalEntry>> Journal::read_jsonl(const std::string& p
         auto j = core::Json::parse(line);
         if (!j)
             return core::err(core::ErrorCode::ParseError,
-                             "Journal line " + std::to_string(lineno) + ": " + j.error().message);
+                             "Günlük satırı " + std::to_string(lineno) + ": " + j.error().message);
         auto e = JournalEntry::from_json(j.value());
         if (!e)
             return core::err(e.error().code,
-                             "Journal line " + std::to_string(lineno) + ": " + e.error().message);
+                             "Günlük satırı " + std::to_string(lineno) + ": " + e.error().message);
         out.push_back(std::move(e.value()));
     }
     return out;

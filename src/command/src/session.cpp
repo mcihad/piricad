@@ -55,11 +55,11 @@ void Session::resume_once()
         task_.resume();
     } catch (const std::exception& e) {
         fail(core::err(core::ErrorCode::Internal,
-                       std::string("Command '") + spec_->id + "' threw: " + e.what()));
+                       std::string("'") + spec_->id + "' komutu istisna fırlattı: " + e.what()));
         return;
     } catch (...) {
         fail(core::err(core::ErrorCode::Internal,
-                       std::string("Command '") + spec_->id + "' threw an unknown exception"));
+                       std::string("'") + spec_->id + "' komutu bilinmeyen bir istisna fırlattı."));
         return;
     }
 
@@ -90,9 +90,8 @@ core::Status Session::supply(Value v)
 {
     if (state_ != SessionState::Waiting)
         return core::err(core::ErrorCode::InvalidArgument,
-                         std::string("Command '") + spec_->id +
-                             "' is not waiting for input (state: " + session_state_name(state_) +
-                             ")");
+                         std::string("'") + spec_->id + "' komutu girdi beklemiyor (durum: " +
+                             session_state_name(state_) + ")");
 
     supplied_ = std::move(v);
     state_    = SessionState::Running;
@@ -103,8 +102,9 @@ core::Status Session::supply(Value v)
         try {
             h.resume();
         } catch (const std::exception& e) {
-            fail(core::err(core::ErrorCode::Internal,
-                           std::string("Command '") + spec_->id + "' threw: " + e.what()));
+            fail(
+                core::err(core::ErrorCode::Internal,
+                          std::string("'") + spec_->id + "' komutu istisna fırlattı: " + e.what()));
             return error_;
         }
         if (task_.done() && state_ == SessionState::Running) state_ = SessionState::Completed;

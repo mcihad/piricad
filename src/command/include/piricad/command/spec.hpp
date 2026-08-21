@@ -40,7 +40,11 @@ enum class ParamKind : std::uint8_t {
     Selection,
 };
 
+/// Stable machine name for schemas and JSON. Not user-facing.
 const char* param_kind_name(ParamKind k);
+
+/// Turkish label for messages the user reads (piricad.md §3, §13).
+const char* param_kind_label(ParamKind k);
 
 struct Arity
 {

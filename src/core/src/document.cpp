@@ -99,12 +99,13 @@ LayerId Document::ensure_layer(std::string_view name)
 Result<EntityId> Document::add_polyline(LayerId lyr, std::span<const Point2> pts, Op& undo_out)
 {
     if (lyr >= layers_.size())
-        return err(ErrorCode::NotFound, "Unknown layer id " + std::to_string(lyr));
+        return err(ErrorCode::NotFound, "Bilinmeyen katman kimliği: " + std::to_string(lyr));
     if (layers_[lyr].locked)
-        return err(ErrorCode::ValidationFailed, "Layer '" + layers_[lyr].name + "' is locked");
+        return err(ErrorCode::ValidationFailed, "'" + layers_[lyr].name + "' katmanı kilitli.");
     if (pts.size() < 2)
         return err(ErrorCode::InvalidArgument,
-                   "A polyline needs at least 2 vertices, got " + std::to_string(pts.size()));
+                   "Bir çoklu çizgi en az 2 tepe noktası ister, verilen: " +
+                       std::to_string(pts.size()));
 
     const auto start = static_cast<std::uint32_t>(poly_.xs.size());
     poly_.xs.reserve(poly_.xs.size() + pts.size());
@@ -131,7 +132,7 @@ Result<EntityId> Document::add_polyline(LayerId lyr, std::span<const Point2> pts
 Status Document::set_entity_alive(EntityId e, bool a, Op& undo_out)
 {
     if (e >= poly_.size())
-        return err(ErrorCode::NotFound, "Unknown entity id " + std::to_string(e));
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
 
     const bool was = poly_.alive[e] != 0;
     poly_.alive[e] = a ? 1 : 0;
@@ -147,7 +148,7 @@ Status Document::set_entity_alive(EntityId e, bool a, Op& undo_out)
 Status Document::set_layer_visible(LayerId l, bool v, Op& undo_out)
 {
     if (l >= layers_.size())
-        return err(ErrorCode::NotFound, "Unknown layer id " + std::to_string(l));
+        return err(ErrorCode::NotFound, "Bilinmeyen katman kimliği: " + std::to_string(l));
 
     const bool was     = layers_[l].visible;
     layers_[l].visible = v;
@@ -163,7 +164,7 @@ Status Document::set_layer_visible(LayerId l, bool v, Op& undo_out)
 Status Document::set_layer_locked(LayerId l, bool v, Op& undo_out)
 {
     if (l >= layers_.size())
-        return err(ErrorCode::NotFound, "Unknown layer id " + std::to_string(l));
+        return err(ErrorCode::NotFound, "Bilinmeyen katman kimliği: " + std::to_string(l));
 
     const bool was    = layers_[l].locked;
     layers_[l].locked = v;
@@ -179,7 +180,7 @@ Status Document::set_layer_locked(LayerId l, bool v, Op& undo_out)
 Status Document::set_layer_style(LayerId l, LayerStyle s, Op& undo_out)
 {
     if (l >= layers_.size())
-        return err(ErrorCode::NotFound, "Unknown layer id " + std::to_string(l));
+        return err(ErrorCode::NotFound, "Bilinmeyen katman kimliği: " + std::to_string(l));
 
     const LayerStyle was = layers_[l].style;
     layers_[l].style     = s;
@@ -194,7 +195,7 @@ Status Document::set_layer_style(LayerId l, LayerStyle s, Op& undo_out)
 
 Status Document::set_crs(std::string id, Op& undo_out)
 {
-    if (id.empty()) return err(ErrorCode::InvalidArgument, "CRS id must not be empty");
+    if (id.empty()) return err(ErrorCode::InvalidArgument, "Koordinat sistemi kimliği boş olamaz.");
 
     std::string was = crs_.id();
     crs_            = Crs(std::move(id));
@@ -219,7 +220,7 @@ Status Document::apply(const Op& op, Op* undo_out)
     case Op::Kind::SetLayerStyle: return set_layer_style(op.layer, op.style_arg, inverse);
     case Op::Kind::SetCrs: return set_crs(op.str_arg, inverse);
     }
-    return err(ErrorCode::Internal, "Unhandled Op::Kind");
+    return err(ErrorCode::Internal, "İşlenmemiş Op::Kind");
 }
 
 } // namespace piricad::core

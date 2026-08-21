@@ -11,24 +11,24 @@ core::Status Registry::add(CommandSpec spec)
 {
     using core::ErrorCode;
 
-    if (spec.id.empty())
-        return core::err(ErrorCode::InvalidArgument, "Command id must not be empty");
+    if (spec.id.empty()) return core::err(ErrorCode::InvalidArgument, "Komut kimliği boş olamaz.");
     if (spec.names.empty())
-        return core::err(ErrorCode::InvalidArgument, "Command '" + spec.id + "' declares no name");
+        return core::err(ErrorCode::InvalidArgument,
+                         "'" + spec.id + "' komutu hiç ad tanımlamıyor.");
     if (!spec.run)
         return core::err(ErrorCode::InvalidArgument,
-                         "Command '" + spec.id + "' has no run function");
+                         "'" + spec.id + "' komutunun çalıştırma işlevi yok.");
     if (by_id_.contains(spec.id))
-        return core::err(ErrorCode::InvalidArgument, "Duplicate command id '" + spec.id + "'");
+        return core::err(ErrorCode::InvalidArgument, "Yinelenen komut kimliği: '" + spec.id + "'");
 
     std::vector<std::string> folded;
     folded.reserve(spec.names.size());
     for (const auto& n : spec.names) {
         std::string f = core::turkish_upper(n);
         if (auto it = by_name_.find(f); it != by_name_.end()) {
-            return core::err(ErrorCode::InvalidArgument, "Command name '" + n +
-                                                             "' is already claimed by '" +
-                                                             specs_[it->second].id + "'");
+            return core::err(ErrorCode::InvalidArgument, "'" + n + "' komut adı zaten '" +
+                                                             specs_[it->second].id +
+                                                             "' komutuna ait.");
         }
         folded.push_back(std::move(f));
     }

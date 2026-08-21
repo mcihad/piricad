@@ -44,28 +44,29 @@ core::Status Validator::check_against_spec(const CommandSpec& spec, const Args& 
         if (!v || v->empty()) {
             if (p.arity.min == 0) continue;
             return core::err(ErrorCode::ValidationFailed,
-                             "'" + spec.id + "': required parameter '" + p.name +
-                                 "' is missing. Expected: " + param_kind_name(p.kind));
+                             "'" + spec.id + "': zorunlu '" + p.name +
+                                 "' parametresi eksik. Beklenen: " + param_kind_label(p.kind));
         }
 
         if (!kind_accepts(p.kind, *v)) {
             return core::err(ErrorCode::ValidationFailed,
-                             "'" + spec.id + "': parameter '" + p.name + "' expects " +
-                                 param_kind_name(p.kind) + ", got a different value type");
+                             "'" + spec.id + "': '" + p.name + "' parametresi " +
+                                 param_kind_label(p.kind) +
+                                 " bekliyor, başka türde bir değer geldi.");
         }
 
         const std::size_t n = multiplicity(*v);
         if (n < p.arity.min) {
             return core::err(ErrorCode::ValidationFailed,
-                             "'" + spec.id + "': parameter '" + p.name + "' needs at least " +
-                                 std::to_string(p.arity.min) + " value(s), got " +
-                                 std::to_string(n));
+                             "'" + spec.id + "': '" + p.name + "' parametresi en az " +
+                                 std::to_string(p.arity.min) + " değer istiyor, " +
+                                 std::to_string(n) + " değer geldi.");
         }
         if (p.arity.max != 0xFFFFFFFFu && n > p.arity.max) {
             return core::err(ErrorCode::ValidationFailed,
-                             "'" + spec.id + "': parameter '" + p.name + "' accepts at most " +
-                                 std::to_string(p.arity.max) + " value(s), got " +
-                                 std::to_string(n));
+                             "'" + spec.id + "': '" + p.name + "' parametresi en fazla " +
+                                 std::to_string(p.arity.max) + " değer alır, " + std::to_string(n) +
+                                 " değer geldi.");
         }
     }
 
@@ -85,8 +86,8 @@ core::Status Validator::check_against_spec(const CommandSpec& spec, const Args& 
                 known += p.name;
             }
             return core::err(ErrorCode::ValidationFailed,
-                             "'" + spec.id + "': unknown parameter '" + name +
-                                 "'. Declared parameters: " + (known.empty() ? "(none)" : known));
+                             "'" + spec.id + "': bilinmeyen parametre '" + name +
+                                 "'. Tanımlı parametreler: " + (known.empty() ? "(yok)" : known));
         }
     }
     return core::ok();

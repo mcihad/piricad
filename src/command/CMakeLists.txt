@@ -31,3 +31,12 @@ find_package(Threads REQUIRED)
 target_link_libraries(piricad_command PUBLIC Threads::Threads)
 
 add_library(PiriCAD::command ALIAS piricad_command)
+
+# The command reference is generated from the registry, never hand-written
+# (CLAUDE.md 5.10). The generator lives with the module that owns the registry,
+# so no new top-level directory is needed (Article 3.1).
+add_executable(piricad_docgen tools/docgen.cpp)
+target_link_libraries(piricad_docgen PRIVATE piricad_command piricad_flags)
+set_target_properties(piricad_docgen PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)

@@ -34,7 +34,7 @@ core::Result<Point2> point_from_json(const core::Json& j)
 {
     if (!j.is_array() || j.as_array().size() != 2)
         return core::err(core::ErrorCode::ParseError,
-                         "Expected a point as [x_mm, y_mm]; got " + j.dump());
+                         "Nokta [x_mm, y_mm] biçiminde olmalı. Girilen: " + j.dump());
     return Point2{j.as_array()[0].as_int(), j.as_array()[1].as_int()};
 }
 
@@ -187,8 +187,7 @@ core::Result<Value> Value::from_json(const core::Json& j)
     case Json::Type::Double: return Value::number(j.as_double());
     case Json::Type::String: return Value::text(j.as_string());
     case Json::Type::Object:
-        return core::err(ErrorCode::ParseError,
-                         "A command argument may not be an object: " + j.dump());
+        return core::err(ErrorCode::ParseError, "Komut argümanı nesne olamaz: " + j.dump());
     case Json::Type::Array: break;
     }
 
@@ -215,7 +214,7 @@ core::Result<Value> Value::from_json(const core::Json& j)
     for (const auto& item : a) {
         if (!item.is_number())
             return core::err(ErrorCode::ParseError,
-                             "Expected a number in id list, got " + item.dump());
+                             "Kimlik listesinde sayı bekleniyordu, gelen: " + item.dump());
         out.push_back(item.as_int());
     }
     return Value::ids(std::move(out));
@@ -273,7 +272,7 @@ core::Json Args::to_json() const
 core::Result<Args> Args::from_json(const core::Json& j)
 {
     if (!j.is_object())
-        return core::err(core::ErrorCode::ParseError, "Command arguments must be a JSON object");
+        return core::err(core::ErrorCode::ParseError, "Komut argümanları bir JSON nesnesi olmalı.");
 
     Args a;
     for (const auto& [k, v] : j.as_object()) {

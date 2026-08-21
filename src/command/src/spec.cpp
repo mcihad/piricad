@@ -18,6 +18,8 @@ const char* category_name(Category c)
     return "?";
 }
 
+/// Stable machine name, used by the generated AI tool schema and the JSON
+/// documents. Never shown to a user — see param_kind_label for that.
 const char* param_kind_name(ParamKind k)
 {
     switch (k) {
@@ -28,6 +30,20 @@ const char* param_kind_name(ParamKind k)
     case ParamKind::Text: return "text";
     case ParamKind::Bool: return "bool";
     case ParamKind::Selection: return "selection";
+    }
+    return "?";
+}
+
+const char* param_kind_label(ParamKind k)
+{
+    switch (k) {
+    case ParamKind::Point: return "nokta";
+    case ParamKind::PointList: return "nokta listesi";
+    case ParamKind::Number: return "sayı";
+    case ParamKind::Integer: return "tam sayı";
+    case ParamKind::Text: return "metin";
+    case ParamKind::Bool: return "evet/hayır";
+    case ParamKind::Selection: return "nesne seçimi";
     }
     return "?";
 }

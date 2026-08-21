@@ -86,9 +86,9 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
         case ParamKind::Point:
         case ParamKind::PointList: break;
         }
-        return core::err(ErrorCode::ParseError, "'" + spec.id + "': parameter '" + p.name +
-                                                    "' expects " + param_kind_name(p.kind) +
-                                                    ". Got: " + describe(t));
+        return core::err(ErrorCode::ParseError, "'" + spec.id + "': '" + p.name + "' parametresi " +
+                                                    param_kind_label(p.kind) +
+                                                    " bekliyor. Girilen: " + describe(t));
     };
 
     for (const auto& t : tokens) {
@@ -100,12 +100,14 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
                     if (!known.empty()) known += ", ";
                     known += q.name;
                 }
-                return core::err(ErrorCode::ParseError, "'" + spec.id + "': unknown parameter '" +
-                                                            t.word + "'. Declared parameters: " +
-                                                            (known.empty() ? "(none)" : known));
+                return core::err(
+                    ErrorCode::ParseError,
+                    "'" + spec.id + "': bilinmeyen parametre '" + t.word +
+                        "'. Tanımlı parametreler: " + (known.empty() ? "(yok)" : known));
             }
             if (t.nested.empty())
-                return core::err(ErrorCode::ParseError, "'" + t.word + "=' has no value");
+                return core::err(ErrorCode::ParseError,
+                                 "'" + t.word + "=' anahtarına değer verilmemiş.");
             auto v = value_from_token(*p, t.nested.front());
             if (!v) return v.error();
             append(*p, std::move(v.value()));
@@ -126,7 +128,8 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
         }
         if (positional >= spec.params.size()) {
             return core::err(ErrorCode::ParseError,
-                             "'" + spec.id + "' takes no further arguments; got " + describe(t));
+                             "'" + spec.id +
+                                 "' daha fazla argüman almıyor. Fazlalık: " + describe(t));
         }
 
         const Param& p = spec.params[positional];
@@ -213,7 +216,7 @@ core::Result<DispatchResult> Bus::run_to_completion(Session& session)
     if (!session.finished())
         return core::err(ErrorCode::Internal,
                          "'" + session.spec().id +
-                             "' suspended although every argument was supplied up front");
+                             "' komutu bütün argümanlar verilmiş olmasına rağmen girdi bekledi.");
 
     return finish(session);
 }

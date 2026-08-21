@@ -116,6 +116,22 @@ TEST_CASE("keyword arguments bind out of order and reject unknown names")
     CHECK(bad.error().message.find("yokboyle") != std::string::npos);
 }
 
+TEST_CASE("a quoted value survives after a keyword")
+{
+    // `ad="YOL KENARI"` opens its quote mid-token; the tokeniser must absorb the
+    // quoted run into the same token instead of splitting on the inner space.
+    Fixture f;
+
+    CHECK(f.bus.execute_line("KATMAN ad=\"YOL KENARI\"", Origin::Test).ok());
+    CHECK(f.doc.find_layer("YOL KENARI") != core::kNoLayer);
+
+    auto parsed = parse_line("KATMAN ad=\"YOL KENARI\" gorunur=evet");
+    CHECK(parsed.ok());
+    if (parsed.ok()) CHECK_EQ(parsed.value().tokens.size(), std::size_t{2});
+
+    CHECK(!f.bus.execute_line("KATMAN ad=\"kapanmamış", Origin::Test).ok());
+}
+
 TEST_CASE("validation rejects a polyline with fewer than two points")
 {
     Fixture f;
@@ -126,7 +142,7 @@ TEST_CASE("validation rejects a polyline with fewer than two points")
     CHECK(!bad.ok());
     if (!bad.ok()) {
         CHECK(bad.error().message.find("noktalar") != std::string::npos);
-        CHECK(bad.error().message.find("at least 2") != std::string::npos);
+        CHECK(bad.error().message.find("en az 2") != std::string::npos);
     }
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
 }
@@ -258,4 +274,38 @@ TEST_CASE("read-only commands never become an undo step")
     CHECK_EQ(f.undo.undo_depth(), std::size_t{0});
     CHECK(f.bus.execute_line("YAKINLAŞ KAPSAM", Origin::Test).ok());
     CHECK_EQ(f.undo.undo_depth(), std::size_t{0});
+}
+
+TEST_CASE("user-facing error messages are Turkish")
+{
+    // piricad.md §3 and §13: the users are Turkish surveying engineers, so an
+    // error they can hit must be Turkish and actionable. A message that leaks an
+    // English phrase from the implementation is a defect, and the user manual
+    // quotes these strings verbatim (.claude/docs.md R11).
+    Fixture f;
+
+    const char* english[] = {"expects",  "is missing", "unknown parameter",
+                             "at least", "at most",    "Unknown",
+                             "Expected", "Empty",      "Duplicate"};
+
+    const char* lines[] = {
+        "YOKBÖYLEKOMUT",            // bilinmeyen komut
+        "ÇİZGİ 100,100",            // yetersiz nokta
+        "ÇİZGİ",                    // eksik zorunlu parametre
+        "KATMAN ad=YOL yokboyle=1", // bilinmeyen parametre
+        "ÇİZGİ abc",                // yanlış tip
+        "ÇİZGİ @1,2,3",             // ayrıştırma hatası
+        "YAKINLAŞ mod=OLMAYAN",     // geçersiz mod (transkripte gider)
+    };
+
+    for (const char* line : lines) {
+        auto r = f.bus.execute_line(line, Origin::Test);
+        if (r.ok()) continue;
+        for (const char* word : english) {
+            if (r.error().message.find(word) != std::string::npos) {
+                ::microtest::report(__FILE__, __LINE__, line,
+                                    "İngilizce sızıntı: \"" + r.error().message + "\"");
+            }
+        }
+    }
 }

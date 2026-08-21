@@ -30,6 +30,33 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   betiğinden çalıştırıldığında tıpatıp aynı dokümanı ve tıpatıp aynı günlüğü
   üretiyor (piricad.md §16.5). `tests/unit/test_proof.cpp`.
 
+### Eklendi — kullanıcı dokümantasyonu
+
+- **Kati kural.** Kullanıcının yapabildiği her şeyin `/docs` altında, Markdown
+  biçiminde, Türkçe ve yayımlanabilir kalitede bir sayfası olacak — komut sistemi
+  dahil. Belgelenmemiş özellik yayımlanmamış sayılır (`CLAUDE.md` Article 11,
+  5.16–5.17, 6.12; `.claude/docs.md`).
+- **Kılavuz.** Kurulum, ilk adımlar, arayüz turu, komut sistemi, komut satırı,
+  sekiz komut sayfası, betik yazma, komut günlüğü, koordinat sistemleri, sözlük ve
+  sorun giderme.
+- **Üretilmiş komut referansı.** `piricad_docgen` komut kaydından
+  `docs/komutlar/referans.md` üretir; elle düzenlenirse CI kapısı fark eder
+  (`make reference`).
+- **`scripts/ci-gate-docs.sh`.** Belgesiz komut, eksik zorunlu bölüm, dizine
+  bağlanmamış sayfa, ölü bağlantı, TODO kalıntısı ve bayat referans derlemeyi kırar.
+- **`tests/unit/test_docs.cpp`.** Kılavuzdaki her komut satırını ve her JSON betiğini
+  doğrudan Markdown'dan okuyup çalıştırır. Örneklerin ikinci bir kopyası yoktur.
+
+### Düzeltildi
+
+- Kullanıcıya görünen bütün hata mesajları Türkçeleştirildi; doğrulama, ayrıştırıcı,
+  doküman ve kayıt katmanlarında İngilizce metin kalmamıştı. Yeni bir test İngilizce
+  sızıntısını yakalıyor.
+- Komut satırında anahtar sonrası tırnaklı değer (`KATMAN ad="YOL KENARI"`)
+  ayrıştırılamıyordu; kılavuz örneğini çalıştıran test bunu ortaya çıkardı.
+- BÖHHBÜY TM 3° dilim tablosu C++ içinden `data/crs/tm3-dilimleri.json` dosyasına
+  taşındı — mevzuat verisi koda gömülmez (`CLAUDE.md` 5.13).
+
 ### Bilinen sapmalar
 
 Üçü de CLAUDE.md Article 8'de kayıtlı ve kaldırma koşulu yazılı:

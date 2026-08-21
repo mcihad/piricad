@@ -12,7 +12,15 @@ add_executable(piricad_tests
     unit/main.cpp
     unit/test_core.cpp
     unit/test_command.cpp
+    unit/test_docs.cpp
     unit/test_proof.cpp
+)
+
+# The manual's examples are executed straight out of the Markdown, so there is no
+# second copy of them to drift (.claude/docs.md R10).
+target_compile_definitions(piricad_tests PRIVATE
+    PIRICAD_DOCS_DIR="${CMAKE_SOURCE_DIR}/docs"
+    PIRICAD_JOURNAL_DIR="${CMAKE_SOURCE_DIR}/tests/journal"
 )
 
 target_include_directories(piricad_tests PRIVATE support)
