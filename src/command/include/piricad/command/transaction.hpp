@@ -45,6 +45,13 @@ public:
     Status set_layer_locked(LayerId l, bool locked);
     Status set_layer_appearance(LayerId l, const Appearance& a);
     Status set_entity_style(EntityId e, StyleId style);
+
+    /// Interns an appearance and returns its id, for a command that resolves a
+    /// style at commit time (model.md R14). Deliberately NOT an undo step: the
+    /// StyleTable only ever grows, an id once handed out stays valid for the
+    /// document's lifetime, and rolling an intern back would renumber ids that
+    /// other entities — and the journal's previous values — already point at.
+    StyleId intern_style(const Appearance& a);
     Status set_entity_hidden(EntityId e, bool hidden);
     Status set_crs(std::string id);
 

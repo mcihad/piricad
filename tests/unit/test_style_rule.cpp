@@ -1,0 +1,722 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// The style catalogue and its rule evaluator — .claude/model.md R13–R19.
+//
+// Two things are under test and they are not the same thing:
+//
+//   1. the ENGINE — a closed, declarative rule set that turns a feature and a map
+//      scale into one catalogue row, deterministically;
+//   2. the COMMAND — `STİL`, which is the only way that row ever reaches
+//      `style[e]`, because a GIS renderer is a command (R14).
+//
+// The catalogue used by the engine tests is a synthetic fixture written inline.
+// It is deliberately NOT a regulation: no test in this file may become the place
+// a gösterim value lives, because that value belongs in /data (CLAUDE.md 5.13).
+// The one test that reads /data asserts the shipped package's PROVENANCE, not its
+// contents.
+#include "microtest.hpp"
+
+#include "piricad/command/bus.hpp"
+#include "piricad/command/registry.hpp"
+#include "piricad/core/json.hpp"
+#include "piricad/core/style_rule.hpp"
+#include "piricad/script/json_runner.hpp"
+
+#include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <vector>
+
+using namespace piricad;
+using namespace piricad::command;
+
+namespace {
+
+namespace fs = std::filesystem;
+
+/// A synthetic package. Every value here is invented for the test and says so.
+const char* kFixture = R"({
+  "schema_version": 1,
+  "package_version": "9.9.9",
+  "id": "test-stil-paketi",
+  "source": "PiriCAD sınama paketi — mevzuat metni DEĞİLDİR",
+  "published": "2026-01-01",
+  "licence": "test",
+
+  "cizgi_desenleri": [
+    { "id": "surekli", "indeks": 0 },
+    { "id": "kesik",   "indeks": 1 }
+  ],
+  "tarama_desenleri": [
+    { "id": "yok",   "indeks": 0 },
+    { "id": "capraz", "indeks": 5 }
+  ],
+
+  "stiller": [
+    { "id": "alan-buyuk",
+      "ad": "Büyük alan",
+      "kaynak": "sınama",
+      "cizgi":  { "renk": "#FF203040", "kalinlik_um": 500, "desen": "surekli" },
+      "dolgu":  { "renk": "#80A0B0C0", "tarama": "capraz" },
+      "simge": 3,
+      "sira": 20,
+      "olcek": { "en_kucuk_payda": 0, "en_buyuk_payda": 5000 } },
+
+    { "id": "alan-kucuk",
+      "ad": "Küçük alan",
+      "cizgi":  { "renk": "#FF112233", "kalinlik_um": 250, "desen": "kesik" },
+      "dolgu":  { "renk": "#FF445566" },
+      "sira": 10 },
+
+    { "id": "cizgi-genel",
+      "ad": "Genel çizgi",
+      "cizgi": { "renk": "#FF7F0000" } },
+
+    { "id": "kalan",
+      "ad": "Sınıflanmamış",
+      "cizgi": { "renk": "#FF808080", "kalinlik_um": 100 } }
+  ],
+
+  "kurallar": [
+    { "id": "k-alan-buyuk",
+      "stil": "alan-buyuk",
+      "kosullar": [
+        { "alan": "geometri", "esittir": "alan" },
+        { "alan": "alan_mm2", "aralik": { "en_az": 1000000000 } }
+      ] },
+
+    { "id": "k-alan-kucuk",
+      "stil": "alan-kucuk",
+      "kosullar": [ { "alan": "geometri", "esittir": "alan" } ] },
+
+    { "id": "k-cizgi",
+      "stil": "cizgi-genel",
+      "kosullar": [ { "alan": "geometri", "biri": ["cizgi", "nokta"] } ],
+      "olcek": { "en_buyuk_payda": 25000 } },
+
+    { "id": "k-kalan", "stil": "kalan" }
+  ]
+})";
+
+core::StyleCatalog load_fixture()
+{
+    auto json = core::Json::parse(kFixture);
+    if (!json) return core::StyleCatalog{};
+    auto catalog = core::StyleCatalog::from_json(json.value());
+    if (!catalog) return core::StyleCatalog{};
+    return std::move(catalog.value());
+}
+
+core::Result<core::StyleCatalog> parse_catalog(const std::string& text)
+{
+    auto json = core::Json::parse(text);
+    if (!json) return json.error();
+    return core::StyleCatalog::from_json(json.value());
+}
+
+core::FeatureView area_feature(std::int64_t area_mm2)
+{
+    core::FeatureView f;
+    f.set_text("geometri", "alan");
+    f.set_number("alan_mm2", area_mm2);
+    return f;
+}
+
+/// Writes the fixture where the command can read it. A catalogue is loaded from
+/// DISK at runtime and is never compiled in (data.md P10), so the command's path
+/// has to be exercised through a real file.
+fs::path fixture_file()
+{
+    const fs::path path = fs::temp_directory_path() / "piricad-stil-fixture.json";
+    std::ofstream out(path, std::ios::binary);
+    out << kFixture;
+    return path;
+}
+
+struct Rig
+{
+    core::Document doc;
+    Registry reg;
+    Journal journal;
+    UndoStack undo;
+    Bus bus{doc, reg, journal, undo};
+
+    Rig()
+    {
+        register_builtin_commands(reg);
+        bus.on_echo = [](std::string_view) {};
+    }
+
+    /// One layer, one three-vertex polyline and one square parcel on it.
+    void draw_fixture_document()
+    {
+        CHECK(bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+        CHECK(bus.execute_line("ÇİZGİ 485300.000,4310200.000 485360.000,4310200.000 "
+                               "485360.000,4310240.000",
+                               Origin::Test)
+                  .ok());
+    }
+};
+
+std::string what_happened(const Journal& j)
+{
+    std::string out;
+    for (const auto& e : j.entries()) {
+        out += e.command_id;
+        out += ' ';
+        out += e.args.to_json().dump();
+        out += '\n';
+    }
+    return out;
+}
+
+std::string style_column(const core::Document& doc)
+{
+    std::string out;
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+        if (!doc.entities().alive(e)) continue;
+        out += std::to_string(doc.entities().style[e]);
+        out += ' ';
+    }
+    return out;
+}
+
+/// What `style_column` reads on a document nothing has styled: every live entity
+/// still inherits from its layer (model.md R13, StyleId{0}).
+std::string all_by_layer(const core::Document& doc)
+{
+    std::string out;
+    for (std::size_t i = 0; i < doc.live_entity_count(); ++i)
+        out += "0 ";
+    return out;
+}
+
+} // namespace
+
+// ------------------------------------------------------------------ colour ----
+
+TEST_CASE("STİL: renk metni '#AARRGGBB' ve '#RRGGBB' biçimlerini çözer")
+{
+    auto opaque = core::parse_rgba("#112233");
+    REQUIRE(opaque.ok());
+    CHECK_EQ(opaque.value(), 0xFF112233u);
+
+    auto alpha = core::parse_rgba("#80112233");
+    REQUIRE(alpha.ok());
+    CHECK_EQ(alpha.value(), 0x80112233u);
+
+    // Case is irrelevant for hex digits; the folding table is not involved.
+    auto upper = core::parse_rgba("#ABCDEF");
+    REQUIRE(upper.ok());
+    CHECK_EQ(upper.value(), 0xFFABCDEFu);
+
+    CHECK(!core::parse_rgba("#12345").ok());
+    CHECK(!core::parse_rgba("#1122GG").ok());
+    CHECK(!core::parse_rgba("").ok());
+
+    // The message names what was expected and what arrived (§3, R19).
+    auto bad = core::parse_rgba("kirmizi");
+    REQUIRE(!bad.ok());
+    CHECK(bad.error().message.find("#AARRGGBB") != std::string::npos);
+    CHECK(bad.error().message.find("kirmizi") != std::string::npos);
+}
+
+// ------------------------------------------------------------ package load ----
+
+TEST_CASE("STİL: paket künyesi eksiksiz olmadan yüklenmez")
+{
+    auto complete = parse_catalog(kFixture);
+    REQUIRE(complete.ok());
+    CHECK_EQ(complete.value().id(), std::string{"test-stil-paketi"});
+    CHECK_EQ(complete.value().package_version(), std::string{"9.9.9"});
+    CHECK_EQ(complete.value().published(), std::string{"2026-01-01"});
+    CHECK_EQ(complete.value().licence(), std::string{"test"});
+    CHECK_EQ(complete.value().entries().size(), std::size_t{4});
+    CHECK_EQ(complete.value().rules().size(), std::size_t{4});
+
+    // data.md R2: each header field is required, and the message says which one.
+    for (const char* missing : {"package_version", "source", "published", "licence"}) {
+        std::string text         = R"({"schema_version":1,"package_version":"1.0.0","id":"x",
+                               "source":"s","published":"2026-01-01","licence":"l"})";
+        const std::string needle = std::string("\"") + missing + "\"";
+        const auto at            = text.find(needle);
+        REQUIRE(at != std::string::npos);
+        text.replace(at, needle.size(), "\"kaldirildi\"");
+
+        auto result = parse_catalog(text);
+        REQUIRE(!result.ok());
+        CHECK(result.error().message.find(missing) != std::string::npos);
+    }
+}
+
+TEST_CASE("STİL: bozuk paket sessizce değil, sebebini söyleyerek reddedilir")
+{
+    const auto rejects = [](const char* text, const char* needle) {
+        auto result = parse_catalog(text);
+        if (result.ok()) {
+            ::microtest::report(__FILE__, __LINE__, text, "paket kabul edildi, reddedilmeliydi");
+            return;
+        }
+        if (result.error().message.find(needle) == std::string::npos)
+            ::microtest::report(__FILE__, __LINE__, needle, result.error().message);
+    };
+
+    const std::string head =
+        R"({"schema_version":1,"package_version":"1.0.0","id":"x","source":"s",
+            "published":"2026-01-01","licence":"l",)";
+
+    // A rule pointing at a row that is not there fails at LOAD, not years later
+    // when the feature that matches it finally turns up.
+    rejects((head + R"("stiller":[{"id":"a"}],
+                      "kurallar":[{"id":"k","stil":"yok-boyle"}]})")
+                .c_str(),
+            "yok-boyle");
+
+    // A catalogue id is permanent; the same id twice means one of them is lost.
+    rejects((head + R"("stiller":[{"id":"a"},{"id":"a"}]})").c_str(), "iki kez");
+
+    // Two tests on one condition would need an operator precedence — that is the
+    // expression evaluator CLAUDE.md 5.11 refuses.
+    rejects((head + R"("stiller":[{"id":"a"}],
+                      "kurallar":[{"id":"k","stil":"a",
+                        "kosullar":[{"alan":"g","esittir":"x","var":true}]}]})")
+                .c_str(),
+            "tek bir sınama");
+
+    // No test at all is a condition that means nothing.
+    rejects((head + R"("stiller":[{"id":"a"}],
+                      "kurallar":[{"id":"k","stil":"a","kosullar":[{"alan":"g"}]}]})")
+                .c_str(),
+            "hiçbir sınama");
+
+    // A float bound would be a stored floating-point value (model.md R21/P8).
+    rejects((head + R"("stiller":[{"id":"a"}],
+                      "kurallar":[{"id":"k","stil":"a",
+                        "kosullar":[{"alan":"g","aralik":{"en_az":1.5}}]}]})")
+                .c_str(),
+            "tam sayı");
+
+    // An unknown dash name must not quietly become dash 0.
+    rejects((head + R"("cizgi_desenleri":[{"id":"surekli","indeks":0}],
+                      "stiller":[{"id":"a","cizgi":{"desen":"boyle-bir-desen-yok"}}]})")
+                .c_str(),
+            "boyle-bir-desen-yok");
+
+    // An inverted scale window is a typo that would silently never match.
+    rejects((head + R"("stiller":[{"id":"a",
+                        "olcek":{"en_kucuk_payda":25000,"en_buyuk_payda":1000}}]})")
+                .c_str(),
+            "ters");
+}
+
+// ------------------------------------------------------------- conditions ----
+
+TEST_CASE("STİL: kural dili dört sınamadan ibarettir ve dördü de çalışır")
+{
+    const core::StyleCatalog catalog = load_fixture();
+    REQUIRE(catalog.entries().size() == 4);
+
+    // Equality + range: a big face takes the first rule.
+    auto big = catalog.classify(area_feature(2'400'000'000), 1000);
+    REQUIRE(big.ok());
+    CHECK_EQ(big.value()->id, std::string{"alan-buyuk"});
+
+    // Same geometry, below the range: the second rule catches it.
+    auto small = catalog.classify(area_feature(12), 1000);
+    REQUIRE(small.ok());
+    CHECK_EQ(small.value()->id, std::string{"alan-kucuk"});
+
+    // Set membership.
+    core::FeatureView line;
+    line.set_text("geometri", "cizgi");
+    auto as_line = catalog.classify(line, 1000);
+    REQUIRE(as_line.ok());
+    CHECK_EQ(as_line.value()->id, std::string{"cizgi-genel"});
+
+    core::FeatureView point;
+    point.set_text("geometri", "nokta");
+    auto as_point = catalog.classify(point, 1000);
+    REQUIRE(as_point.ok());
+    CHECK_EQ(as_point.value()->id, std::string{"cizgi-genel"});
+
+    // A field the feature does not carry matches nothing, so the catch-all wins.
+    core::FeatureView bare;
+    bare.set_text("baska", "deger");
+    auto rest = catalog.classify(bare, 1000);
+    REQUIRE(rest.ok());
+    CHECK_EQ(rest.value()->id, std::string{"kalan"});
+
+    // Presence, tested directly.
+    core::StyleCondition present;
+    present.field = "ada_no";
+    present.test  = core::StyleCondition::Test::Present;
+    CHECK(!present.matches(bare));
+    core::FeatureView with_ada;
+    with_ada.set_number("ada_no", 0);
+    CHECK(present.matches(with_ada));
+
+    // A numeric cell compares as its exact decimal rendering, so equality on a
+    // number is possible without a second syntax for it.
+    core::StyleCondition equals_number;
+    equals_number.field = "ada_no";
+    equals_number.values.push_back("0");
+    CHECK(equals_number.matches(with_ada));
+}
+
+TEST_CASE("STİL: ölçek penceresi kuralı hem açar hem kapatır")
+{
+    const core::StyleCatalog catalog = load_fixture();
+
+    core::FeatureView line;
+    line.set_text("geometri", "cizgi");
+
+    // 1:25000 is the inclusive far edge of the line rule.
+    auto inside = catalog.classify(line, 25000);
+    REQUIRE(inside.ok());
+    CHECK_EQ(inside.value()->id, std::string{"cizgi-genel"});
+
+    // One step further out and the rule no longer applies, so the catch-all does.
+    auto outside = catalog.classify(line, 25001);
+    REQUIRE(outside.ok());
+    CHECK_EQ(outside.value()->id, std::string{"kalan"});
+
+    const core::ScaleWindow unbounded{};
+    CHECK(unbounded.covers(0));
+    CHECK(unbounded.covers(4294967295u));
+
+    const core::ScaleWindow band{1000, 5000};
+    CHECK(!band.covers(999));
+    CHECK(band.covers(1000));
+    CHECK(band.covers(5000));
+    CHECK(!band.covers(5001));
+}
+
+TEST_CASE("STİL: eşleşme dosya sırasına göredir ve ilk uyan kazanır")
+{
+    const core::StyleCatalog catalog = load_fixture();
+
+    // The big-area rule is declared first, so a feature that satisfies BOTH area
+    // rules takes it. Reversing the file order would reverse the answer — which is
+    // exactly why the order is part of the package's content hash.
+    auto both = catalog.classify(area_feature(1'000'000'000), 1000);
+    REQUIRE(both.ok());
+    CHECK_EQ(both.value()->id, std::string{"alan-buyuk"});
+}
+
+TEST_CASE("STİL: bilinmeyen satır kimliği sessiz varsayılana değil, hataya düşer")
+{
+    const core::StyleCatalog catalog = load_fixture();
+
+    auto known = catalog.entry("alan-kucuk");
+    REQUIRE(known.ok());
+    CHECK_EQ(known.value()->appearance.width_um, 250);
+    CHECK_EQ(known.value()->appearance.dash, 1);
+    CHECK_EQ(known.value()->appearance.rgba, 0xFF112233u);
+
+    auto unknown = catalog.entry("yok-boyle-bir-satir");
+    REQUIRE(!unknown.ok());
+    CHECK(unknown.error().code == core::ErrorCode::NotFound);
+    // model.md R35: the answer names the package version it came from.
+    CHECK(unknown.error().message.find("9.9.9") != std::string::npos);
+
+    // A catalogue with rules but no match reports it rather than inventing a grey
+    // line: an unclassified feature is a fact the caller must decide about.
+    auto rules_only = parse_catalog(R"({"schema_version":1,"package_version":"1.0.0","id":"x",
+        "source":"s","published":"2026-01-01","licence":"l",
+        "stiller":[{"id":"a"}],
+        "kurallar":[{"id":"k","stil":"a","kosullar":[{"alan":"yok","var":true}]}]})");
+    REQUIRE(rules_only.ok());
+    core::FeatureView empty;
+    CHECK(!rules_only.value().classify(empty, 0).ok());
+}
+
+// --------------------------------------------------------------- cascade ----
+
+TEST_CASE("STİL: satır yalnız bildirdiği özelliği yazar, gerisi ByLayer kalır")
+{
+    const core::StyleCatalog catalog = load_fixture();
+
+    core::Appearance base;
+    base.rgba      = 0xFF010203u;
+    base.width_um  = 1234;
+    base.dash      = 7;
+    base.fill_rgba = 0xFF040506u;
+    base.hatch     = 9;
+
+    auto row = catalog.entry("cizgi-genel"); // declares a colour and nothing else
+    REQUIRE(row.ok());
+
+    const core::Appearance out = core::apply_entry(*row.value(), base);
+
+    CHECK_EQ(out.rgba, 0xFF7F0000u);
+    CHECK(out.src_colour == core::Source::Explicit);
+
+    // Everything the row is silent about keeps the layer's value AND its source —
+    // that is the R19 cascade surviving a catalogue application.
+    CHECK_EQ(out.width_um, 1234);
+    CHECK(out.src_width == core::Source::ByLayer);
+    CHECK_EQ(out.dash, 7);
+    CHECK(out.src_dash == core::Source::ByLayer);
+    CHECK_EQ(out.fill_rgba, 0xFF040506u);
+    CHECK_EQ(out.hatch, 9);
+    CHECK(out.src_fill == core::Source::ByLayer);
+}
+
+// ---------------------------------------------------------- determinism ----
+
+TEST_CASE("STİL: aynı katalog iki kez yüklenince bit-birebir aynıdır")
+{
+    const core::StyleCatalog a = load_fixture();
+    const core::StyleCatalog b = load_fixture();
+    CHECK_EQ(a.content_hash(), b.content_hash());
+
+    // Rule ORDER decides the answer, so two packages differing only in order are
+    // two different packages and must hash differently.
+    auto reordered = parse_catalog(R"({"schema_version":1,"package_version":"1.0.0","id":"x",
+        "source":"s","published":"2026-01-01","licence":"l",
+        "stiller":[{"id":"a","cizgi":{"renk":"#FF000000"}},
+                   {"id":"b","cizgi":{"renk":"#FFFFFFFF"}}],
+        "kurallar":[{"id":"k2","stil":"b"},{"id":"k1","stil":"a"}]})");
+    auto straight  = parse_catalog(R"({"schema_version":1,"package_version":"1.0.0","id":"x",
+        "source":"s","published":"2026-01-01","licence":"l",
+        "stiller":[{"id":"a","cizgi":{"renk":"#FF000000"}},
+                   {"id":"b","cizgi":{"renk":"#FFFFFFFF"}}],
+        "kurallar":[{"id":"k1","stil":"a"},{"id":"k2","stil":"b"}]})");
+    REQUIRE(reordered.ok());
+    REQUIRE(straight.ok());
+    CHECK(reordered.value().content_hash() != straight.value().content_hash());
+}
+
+TEST_CASE("STİL: aynı katalog + aynı belge = aynı StyleId dizisi ve aynı içerik özeti")
+{
+    const fs::path package = fixture_file();
+
+    const auto run_once = [&](std::string& styles, std::uint64_t& hash) {
+        Rig rig;
+        rig.draw_fixture_document();
+        CHECK(
+            rig.bus
+                .execute_line("STİL katman=PARSEL paket=\"" + package.string() + "\"", Origin::Test)
+                .ok());
+        styles = style_column(rig.doc);
+        hash   = rig.doc.content_hash();
+    };
+
+    std::string styles_a;
+    std::string styles_b;
+    std::uint64_t hash_a = 0;
+    std::uint64_t hash_b = 0;
+    run_once(styles_a, hash_a);
+    run_once(styles_b, hash_b);
+
+    CHECK_EQ(styles_a, styles_b);
+    CHECK_EQ(hash_a, hash_b);
+    // Not the empty answer: the entity really did get a resolved style.
+    CHECK(styles_a != all_by_layer(core::Document{}));
+}
+
+TEST_CASE("STİL: aynı görünüm iki kez istenirse tek StyleId'ye toplanır")
+{
+    Rig rig;
+    rig.draw_fixture_document();
+
+    CHECK(
+        rig.bus.execute_line("STİL katman=PARSEL renk=4281236786 kalinlik=350", Origin::Test).ok());
+    const std::string first       = style_column(rig.doc);
+    const std::size_t after_first = rig.doc.styles().size();
+
+    CHECK(rig.bus.execute_line("STİL katman=PARSEL sifirla=evet", Origin::Test).ok());
+    CHECK_EQ(style_column(rig.doc), all_by_layer(rig.doc));
+
+    CHECK(
+        rig.bus.execute_line("STİL katman=PARSEL renk=4281236786 kalinlik=350", Origin::Test).ok());
+
+    // Interning is what keeps the batch key (layer, style, kind) bounded: the same
+    // appearance asked for twice is one row in the table, not two.
+    CHECK_EQ(style_column(rig.doc), first);
+    CHECK_EQ(rig.doc.styles().size(), after_first);
+}
+
+// ------------------------------------------------------- the equality proof ----
+
+TEST_CASE("STİL: arayüz, komut satırı ve betik aynı belgeyi ve aynı günlüğü üretir")
+{
+    // Client 1 — the GUI, as a toolbar button that starts the command and a
+    // dialog that answers its one prompt.
+    Rig gui;
+    gui.draw_fixture_document();
+    {
+        auto started = gui.bus.begin_interactive("STİL");
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+
+        CHECK(session.waiting());
+        CHECK_EQ(session.prompt().message, std::string{"Katman adı"});
+        CHECK(session.supply(Value::text("PARSEL")).ok());
+        CHECK(gui.bus.finish(session).ok());
+    }
+
+    // Client 2 — the command line.
+    Rig cli;
+    cli.draw_fixture_document();
+    CHECK(cli.bus.execute_line("STİL katman=PARSEL", Origin::CommandLine).ok());
+
+    // Client 3 — a JSON script.
+    Rig scr;
+    scr.draw_fixture_document();
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        CHECK(runner
+                  .run_text(R"({"ad":"Stil","komutlar":[
+                                 {"cmd":"core.style","args":{"katman":"PARSEL"}}]})")
+                  .ok());
+    }
+
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+
+    CHECK(gui.journal.entries().back().origin == Origin::Gui);
+    CHECK(cli.journal.entries().back().origin == Origin::CommandLine);
+    CHECK(scr.journal.entries().back().origin == Origin::Script);
+}
+
+TEST_CASE("STİL: katalog yolu verilen çağrı da üç istemcide aynı sonucu verir")
+{
+    const fs::path package = fixture_file();
+
+    Args args;
+    args.set("katman", Value::text("PARSEL"));
+    args.set("paket", Value::text(package.string()));
+    args.set("olcek", Value::integer(1000));
+
+    // The GUI's non-interactive path: a panel or dialog dispatches a full
+    // invocation, exactly as the layer panel does for KATMAN.
+    Rig gui;
+    gui.draw_fixture_document();
+    CHECK(gui.bus.dispatch(Invocation{"core.style", args, Origin::Gui}).ok());
+
+    Rig cli;
+    cli.draw_fixture_document();
+    CHECK(cli.bus
+              .execute_line("STİL katman=PARSEL paket=\"" + package.string() + "\" olcek=1000",
+                            Origin::CommandLine)
+              .ok());
+
+    Rig scr;
+    scr.draw_fixture_document();
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        const std::string text = R"({"ad":"Stil","komutlar":[{"cmd":"core.style","args":{
+            "katman":"PARSEL","paket":")" +
+                                 package.string() + R"(","olcek":1000}}]})";
+        auto r = runner.run_text(text);
+        CHECK(r.ok());
+    }
+
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+}
+
+// ------------------------------------------------------ rollback and undo ----
+
+TEST_CASE("STİL: tek komut tek geri alma adımıdır")
+{
+    Rig rig;
+    rig.draw_fixture_document();
+    const std::size_t before = rig.undo.undo_depth();
+
+    CHECK(rig.bus.execute_line("STİL katman=PARSEL renk=4292897792", Origin::Test).ok());
+    CHECK_EQ(rig.undo.undo_depth(), before + 1);
+    CHECK(style_column(rig.doc) != "0 ");
+
+    CHECK(rig.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_EQ(style_column(rig.doc), all_by_layer(rig.doc));
+}
+
+TEST_CASE("STİL: iptal edilen komut geri alma yığınını büyütmez")
+{
+    Rig rig;
+    rig.draw_fixture_document();
+    const std::size_t before = rig.undo.undo_depth();
+
+    auto started = rig.bus.begin_interactive("STİL");
+    REQUIRE(started.ok());
+    started.value()->cancel(); // ESC before answering the prompt
+    CHECK(rig.bus.finish(*started.value()).ok());
+
+    CHECK_EQ(rig.undo.undo_depth(), before);
+    CHECK_EQ(style_column(rig.doc), all_by_layer(rig.doc));
+}
+
+TEST_CASE("STİL: hata belgeye hiç dokunmadan döner")
+{
+    Rig rig;
+    rig.draw_fixture_document();
+    const std::uint64_t before = rig.doc.content_hash();
+    const std::size_t depth    = rig.undo.undo_depth();
+
+    // Unknown layer.
+    auto missing = rig.bus.execute_line("STİL katman=YOKBOYLE", Origin::Test);
+    REQUIRE(!missing.ok());
+    CHECK(missing.error().message.find("YOKBOYLE") != std::string::npos);
+
+    // A code with no package to read it from.
+    auto orphan = rig.bus.execute_line("STİL katman=PARSEL kod=K", Origin::Test);
+    REQUIRE(!orphan.ok());
+    CHECK(orphan.error().message.find("paket") != std::string::npos);
+
+    // A package that is not there.
+    auto absent =
+        rig.bus.execute_line("STİL katman=PARSEL paket=/yok/boyle/paket.json", Origin::Test);
+    REQUIRE(!absent.ok());
+    CHECK(absent.error().code == core::ErrorCode::IoFailure);
+
+    // A code that the package does not carry: the failure happens while deciding,
+    // before a single style is written.
+    const fs::path package = fixture_file();
+    auto bad_code          = rig.bus.execute_line(
+        "STİL katman=PARSEL paket=\"" + package.string() + "\" kod=YOKBOYLE", Origin::Test);
+    REQUIRE(!bad_code.ok());
+
+    CHECK_EQ(rig.doc.content_hash(), before);
+    CHECK_EQ(rig.undo.undo_depth(), depth);
+    CHECK_EQ(style_column(rig.doc), all_by_layer(rig.doc));
+}
+
+// ------------------------------------------------- the shipped data package ----
+
+TEST_CASE("VERİ: sevk edilen plan gösterim paketi künyesiyle birlikte yüklenir")
+{
+    const fs::path path = fs::path{PIRICAD_DATA_DIR} / "catalogs" / "mpyy" / "plan-gosterim.json";
+    REQUIRE(fs::exists(path));
+
+    std::ifstream in(path, std::ios::binary);
+    std::ostringstream buffer;
+    buffer << in.rdbuf();
+
+    auto catalog = parse_catalog(buffer.str());
+    REQUIRE(catalog.ok());
+
+    // data.md R2 — the header is what makes a data release auditable.
+    CHECK_EQ(catalog.value().id(), std::string{"mpyy-plan-gosterimleri"});
+    CHECK(!catalog.value().package_version().empty());
+    CHECK(!catalog.value().source().empty());
+    CHECK(!catalog.value().published().empty());
+    CHECK(!catalog.value().licence().empty());
+
+    // THIS ASSERTION IS A PLACEHOLDER FOR MISSING DATA, NOT A DESIGN.
+    //
+    // The package ships with no rows at all: the EK-1a/1b/1c/1ç/1d gösterim
+    // codes, colours, paper widths and hatches cannot be entered without reading
+    // the official annex, and an invented row would put a wrong colour on a plan
+    // that somebody signs. When the rows land — with the domain-expert sign-off
+    // CLAUDE.md 6.11 requires — this expectation flips to a positive one and the
+    // /tests/golden case gains the reference values.
+    CHECK_EQ(catalog.value().entries().size(), std::size_t{0});
+    CHECK_EQ(catalog.value().rules().size(), std::size_t{0});
+}

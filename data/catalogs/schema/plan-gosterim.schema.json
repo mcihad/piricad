@@ -1,0 +1,269 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://piricad.org/data/catalogs/schema/plan-gosterim.schema.json",
+  "title": "PiriCAD stil (gösterim) kataloğu paketi",
+  "description": "Bir plan gösterim paketinin biçimi. Paket, görünüm satırlarını ve bu satırları nesnelere bağlayan bildirimsel eşleme kurallarını taşır. Kural dili bilerek kapalıdır: eşitlik, küme üyeliği, tam sayı aralığı ve varlık sınaması. İfade, öncelik, olumsuzlama ve aritmetik YOKTUR — projede tek gramer piricad/command/parser.hpp'dir (CLAUDE.md 5.11). Motor karşılığı: src/core/include/piricad/core/style_rule.hpp.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "package_version",
+    "id",
+    "source",
+    "published",
+    "licence"
+  ],
+  "additionalProperties": false,
+
+  "properties": {
+    "schema_version": {
+      "description": "Bu dosyanın uyduğu şema sürümü.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "package_version": {
+      "description": "Paket sürümü. Her içerik değişikliğinde artırılır (data.md R4).",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "id": {
+      "description": "Paketin kalıcı kimliği.",
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "description": "Yönetmelik adı, ek ve madde atfı (data.md R2).",
+      "type": "string",
+      "minLength": 1
+    },
+    "published": {
+      "description": "Kaynak metnin yayım tarihi, ISO-8601.",
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "licence": {
+      "description": "Yeniden yayım koşulu; data/LICENCES.md ile çapraz atıflıdır.",
+      "type": "string",
+      "minLength": 1
+    },
+    "aciklama": { "type": "string" },
+
+    "kapsam": {
+      "description": "Paketin neyi kapsadığı, neyi bilerek kapsamadığı ve onay durumu. Yalnız insanlar içindir; motor okumaz.",
+      "type": "object",
+      "properties": {
+        "durum": { "type": "string" },
+        "iceren": { "type": "array", "items": { "type": "string" } },
+        "eksikler": { "type": "array", "items": { "type": "string" } },
+        "onay": { "type": "string" },
+        "sonraki_surum": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "plan_turleri": {
+      "description": "Paketin kapsadığı plan türleri ve her birinin gösterim eki.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "ad", "ek"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "ad": { "type": "string", "minLength": 1 },
+          "ek": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "cizgi_desenleri": {
+      "description": "Çizgi deseni sembol tablosu. Satırlar deseni adıyla anar; motor indeksi kullanır (core/style.hpp Appearance::dash).",
+      "$ref": "#/$defs/sembolTablosu"
+    },
+    "tarama_desenleri": {
+      "description": "Tarama deseni sembol tablosu (core/style.hpp Appearance::hatch).",
+      "$ref": "#/$defs/sembolTablosu"
+    },
+
+    "stiller": {
+      "description": "Görünüm satırları. Bir satırın kimliği kalıcıdır: yürürlükten kalkan satır silinmez, 'deprecated' ile işaretlenir (data.md R5).",
+      "type": "array",
+      "items": { "$ref": "#/$defs/stil" }
+    },
+
+    "kurallar": {
+      "description": "Eşleme kuralları. Dosyadaki SIRA anlamlıdır: bir nesneye ilk uyan kural kazanır, sonrakiler denenmez. Sıra paketin kimliğinin parçasıdır ve içerik özetine girer.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/kural" }
+    }
+  },
+
+  "$defs": {
+    "sembolTablosu": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "indeks"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "ad": { "type": "string" },
+          "indeks": { "type": "integer", "minimum": 0, "maximum": 65535 }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "renk": {
+      "description": "'#RRGGBB' veya '#AARRGGBB'. Onaltılık metindir, çünkü bir lejantı onaylayan mühendis 4281236786 sayısını denetleyemez.",
+      "type": "string",
+      "pattern": "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+    },
+
+    "desenAtfi": {
+      "description": "Sembol tablosundaki bir ad veya doğrudan indeks. Bilinmeyen ad hatadır; sessizce 0'a düşmez (domain.md P11).",
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "integer", "minimum": 0, "maximum": 65535 }
+      ]
+    },
+
+    "olcekPenceresi": {
+      "description": "Ölçek paydası aralığı (1:N). Payda uzaklaştıkça BÜYÜR, bu yüzden 'en_kucuk_payda' en yakın, 'en_buyuk_payda' en uzak sınırdır. İkisi de dahildir; 0 = o yönde sınırsız.",
+      "type": "object",
+      "properties": {
+        "en_kucuk_payda": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        "en_buyuk_payda": { "type": "integer", "minimum": 0, "maximum": 4294967295 }
+      },
+      "additionalProperties": false
+    },
+
+    "stil": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Satırın kalıcı kimliği. Asla silinmez, asla yeniden kullanılmaz.",
+          "type": "string",
+          "minLength": 1
+        },
+        "ad": {
+          "description": "Kullanıcının lejantta okuduğu Türkçe ad.",
+          "type": "string"
+        },
+        "kaynak": {
+          "description": "Bu satırın hangi ek ve maddeden geldiği, birebir. Mevzuata dair her ifade atfını taşır (docs.md R12).",
+          "type": "string"
+        },
+        "deprecated": {
+          "description": "Yürürlükten kalkmış satır. Yüklenmeye devam eder; eski bir plan hâlâ ona atıf yapıyor olabilir.",
+          "type": "boolean"
+        },
+        "valid_from": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "valid_until": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "geometri": {
+          "description": "Satırın hangi geometri türü için tanımlandığı. Belgeleyicidir; eşleme 'kurallar' üzerinden yapılır.",
+          "type": "string",
+          "enum": ["nokta", "cizgi", "alan"]
+        },
+        "cizgi": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "renk": { "$ref": "#/$defs/renk" },
+            "kalinlik_um": {
+              "description": "KÂĞIT mikrometresi, 1000 = 1 mm. Piksel değildir: mevzuat çizgi kalınlığını paftada mm olarak verir (model.md R20).",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2147483647
+            },
+            "desen": { "$ref": "#/$defs/desenAtfi" }
+          }
+        },
+        "dolgu": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "renk": { "$ref": "#/$defs/renk" },
+            "tarama": { "$ref": "#/$defs/desenAtfi" }
+          }
+        },
+        "simge": {
+          "description": "Sembol atlasındaki indeks.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "sira": {
+          "description": "Çizim sırası; büyük olan üste gelir.",
+          "type": "integer",
+          "minimum": -32768,
+          "maximum": 32767
+        },
+        "olcek": { "$ref": "#/$defs/olcekPenceresi" }
+      }
+    },
+
+    "kural": {
+      "type": "object",
+      "required": ["id", "stil"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "stil": {
+          "description": "Uyduğunda yazılacak satırın kimliği. Katalogda bulunmayan bir kimlik yükleme anında hatadır.",
+          "type": "string",
+          "minLength": 1
+        },
+        "aciklama": { "type": "string" },
+        "olcek": { "$ref": "#/$defs/olcekPenceresi" },
+        "kosullar": {
+          "description": "Koşullar 've' ile bağlıdır. Boş liste her nesneye uyar ve son satırda yazılan bilinçli 'kalan hepsi' kuralıdır.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/kosul" }
+        }
+      }
+    },
+
+    "kosul": {
+      "description": "Tek alan üzerinde TEK sınama. Birden fazla sınama bildirmek hatadır: iki sınamayı birleştirmek bir işlem önceliği gerektirirdi, o da yasak olan ifade değerlendiricisidir.",
+      "type": "object",
+      "required": ["alan"],
+      "additionalProperties": false,
+      "oneOf": [
+        { "required": ["esittir"] },
+        { "required": ["biri"] },
+        { "required": ["aralik"] },
+        { "required": ["var"] }
+      ],
+      "properties": {
+        "alan": {
+          "description": "Sınanacak alanın adı. Bugün motorun sunduğu alanlar: 'geometri', 'katman', 'katman_kodu', 'halka_sayisi', 'tepe_sayisi', 'alan_mm2', 'cevre_mm'. Belge öznitelik sütunlarını taşımaya başladığında sütun kimlikleri de aynı adla sınanır (model.md R27).",
+          "type": "string",
+          "minLength": 1
+        },
+        "esittir": { "type": "string" },
+        "biri": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "aralik": {
+          "description": "Tam sayı aralığı, bildirilen her uçta dahil. Kayan nokta yoktur: kayıtlı hiçbir alan kayan noktalı değildir (model.md R21).",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "en_az": { "type": "integer" },
+            "en_cok": { "type": "integer" }
+          }
+        },
+        "var": {
+          "description": "Alanın dolu olması. Yalnız true yazılabilir; olumsuzlama yoktur.",
+          "type": "boolean",
+          "const": true
+        }
+      }
+    }
+  }
+}

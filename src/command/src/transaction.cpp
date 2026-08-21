@@ -80,6 +80,11 @@ Status Transaction::set_entity_style(EntityId e, StyleId style)
     return core::ok();
 }
 
+StyleId Transaction::intern_style(const Appearance& a)
+{
+    return doc_.intern_style(a);
+}
+
 Status Transaction::set_entity_hidden(EntityId e, bool hidden)
 {
     core::Op undo;

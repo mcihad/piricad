@@ -27,6 +27,7 @@ Tek tek komutlar:
 | `ÇİZGİ` | [Çizgi çizme](komutlar/line.md) |
 | `SİL` | [Nesne silme](komutlar/erase.md) |
 | `KATMAN` | [Katman yönetimi](komutlar/layer.md) |
+| `STİL` | [Nesne stili ve gösterim kataloğu](komutlar/style.md) |
 | `YAKINLAŞ` | [Görünüm ayarlama](komutlar/zoom.md) |
 | `GERİAL` | [Geri alma](komutlar/undo.md) |
 | `YİNELE` | [Yineleme](komutlar/redo.md) |

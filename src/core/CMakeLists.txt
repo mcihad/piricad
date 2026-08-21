@@ -13,6 +13,7 @@ add_library(piricad_core STATIC
     src/settings.cpp
     src/spatial_index.cpp
     src/style.cpp
+    src/style_rule.cpp
     src/text.cpp
 )
 

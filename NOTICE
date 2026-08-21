@@ -94,6 +94,20 @@ are the recorded exceptions, each with its reason.
       itself. ~110 lines implementing QLayout::heightForWidth. Replaced the day
       Qt promotes it to API.
 
+  piricad/core/style_rule.hpp — the style catalogue and rule evaluator
+      Article 2.7 was applied and found no candidate. Every mature symbology
+      engine ships as part of a whole renderer, not as a library: Mapnik, QGIS
+      and MapLibre all bind their style model to their own geometry store and
+      draw pipeline, and PiriCAD's style column is resolved at COMMIT time into
+      an interned StyleId rather than evaluated per frame, which is the opposite
+      of what those engines are built to do. QGIS is additionally GPLv2-only in
+      parts and therefore refused outright (piricad.md §1). OGC SLD/SE 1.1 is a
+      wire format, not an engine, and is planned as an import/export boundary
+      behind PIRICAD_WITH_LIBXML2, converted to this table on the way in.
+      What is NOT hand-written: JSON parsing (piricad/core/json.hpp, itself
+      slated for replacement by the pinned library), and the hatch clipping the
+      renderer will need, which is Clipper2's job when the fill path lands.
+
   piricad/core/json.hpp, tests/support/microtest.hpp, piricad/core/log.hpp
       Standing in for nlohmann/json, doctest and spdlog until the section above
       is genuinely wired. These are not the decision — the decision is the SHA —

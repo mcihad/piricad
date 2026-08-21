@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "package_version": "0.1.0",
+  "id": "mpyy-plan-gosterimleri",
+  "source": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1 Gösterimler: EK-1a Mekânsal Strateji Planı Gösterimleri, EK-1b Çevre Düzeni Planı Gösterimleri, EK-1c Nazım İmar Planı Gösterimleri, EK-1ç Uygulama İmar Planı Gösterimleri, EK-1d Ortak Gösterimler, EK-1e Detay Kataloğu. Her gösterim satırının kendi madde/ek atfı, satırın 'kaynak' alanında verilir.",
+  "published": "2014-06-14",
+  "licence": "resmi-mevzuat-metni",
+
+  "aciklama": "MPYY plan gösterimlerinin PiriCAD stil paketi. Paketin yapısı (satır biçimi, kural dili, ölçek penceresi, çizgi ve tarama tabloları) tamamlanmıştır; gösterim satırlarının kendisi bu sürümde BOŞTUR. Motor tarafında karşılığı piricad/core/style_rule.hpp'dir; renk, kalınlık, tarama ve çizim sırası yalnız bu dosyadan okunur, C++ içinde hiçbir mevzuat değeri yoktur (CLAUDE.md 5.13).",
+
+  "kapsam": {
+    "durum": "yapi-hazir-satirlar-eksik",
+    "iceren": [
+      "Paket künyesi: yönetmelik adı, ek listesi, yayım tarihi, lisans.",
+      "MPYY plan türleri ve her birinin gösterim eki.",
+      "Çizgi deseni ve tarama deseni sembol tabloları (paketin kendi sembol uzayı).",
+      "Gösterim satırı ve eşleme kuralı şeması — bkz. ../schema/plan-gosterim.schema.json."
+    ],
+    "eksikler": [
+      "Gösterim satırlarının hiçbiri girilmemiştir. 'stiller' ve 'kurallar' dizileri bilerek boştur.",
+      "Sebep: EK-1a/1b/1c/1ç/1d gösterimlerinin kodları, renkleri (RGB), çizgi kalınlıkları, tarama ve simge tanımları resmî ek metninden birebir okunmadan girilemez. Uydurulmuş bir gösterim satırı, boş bırakılmış bir satırdan çok daha zararlıdır: imzalanan bir imar planına yanlış renk yazar.",
+      "14/6/2014 sonrası MPYY değişiklikleri ve gösterim eki güncellemeleri henüz taranmamıştır; satırlar girilirken yürürlükteki ek metni esas alınacak, süresi dolan satırlar 'deprecated' ve 'valid_until' ile korunacaktır (data.md R5).",
+      "EK-1e Detay Kataloğu ile eşleme (detay kimliği -> stil) ayrı bir paket olarak gelecektir."
+    ],
+    "onay": "Gösterim satırları eklenmeden önce harita mühendisi / şehir plancısı onayı zorunludur (CLAUDE.md 6.11, domain.md R25). Onay olmadan satır eklenmez.",
+    "sonraki_surum": "0.2.0 — EK-1d Ortak Gösterimler satırları, resmî ek metninden okunarak ve uzman onayıyla."
+  },
+
+  "plan_turleri": [
+    {
+      "id": "mekansal-strateji",
+      "ad": "Mekânsal Strateji Planı",
+      "ek": "EK-1a"
+    },
+    {
+      "id": "cevre-duzeni",
+      "ad": "Çevre Düzeni Planı",
+      "ek": "EK-1b"
+    },
+    {
+      "id": "nazim-imar",
+      "ad": "Nazım İmar Planı",
+      "ek": "EK-1c"
+    },
+    {
+      "id": "uygulama-imar",
+      "ad": "Uygulama İmar Planı",
+      "ek": "EK-1ç"
+    }
+  ],
+
+  "cizgi_desenleri": [
+    { "id": "surekli", "ad": "Sürekli çizgi", "indeks": 0 },
+    { "id": "kesik", "ad": "Kesik çizgi", "indeks": 1 },
+    { "id": "noktali", "ad": "Noktalı çizgi", "indeks": 2 },
+    { "id": "kesik-noktali", "ad": "Kesik-noktalı çizgi", "indeks": 3 }
+  ],
+
+  "tarama_desenleri": [
+    { "id": "yok", "ad": "Taramasız (düz dolgu)", "indeks": 0 }
+  ],
+
+  "stiller": [],
+
+  "kurallar": []
+}
