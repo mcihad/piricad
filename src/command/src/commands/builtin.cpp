@@ -12,6 +12,7 @@ namespace piricad::command {
 
 #define PIRICAD_BUILTIN_COMMANDS(X)                                                                \
     X(line)                                                                                        \
+    X(area)                                                                                        \
     X(erase)                                                                                       \
     X(select)                                                                                      \
     X(layer)                                                                                       \

@@ -30,6 +30,7 @@ Tek tek komutlar:
 | `İÇEAKTAR` | [Dış veri alma](komutlar/import.md) |
 | `DIŞAAKTAR` | [Dış biçime yazma](komutlar/export.md) |
 | `ÇİZGİ` | [Çizgi çizme](komutlar/line.md) |
+| `ALAN` | [Kapalı alan çizme](komutlar/area.md) |
 | `SEÇ` | [Nesne seçme](komutlar/select.md) |
 | `SİL` | [Nesne silme](komutlar/erase.md) |
 | `KATMAN` | [Katman yönetimi](komutlar/layer.md) |

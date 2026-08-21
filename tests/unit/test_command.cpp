@@ -312,3 +312,109 @@ TEST_CASE("user-facing error messages are Turkish")
         }
     }
 }
+
+// ------------------------------------------------------------------ ALAN ----
+
+TEST_CASE("ALAN kapalı bir yüzey üretir ve kapanış noktasını tekrarlatmaz")
+{
+    // Before this command existed, Transaction::add_area was written, exercised
+    // through the io layer, and reachable from no client at all: the only draw
+    // command produced open polylines, so the document could hold a face that
+    // nothing could create. A cadastral program that cannot say "this parcel
+    // encloses an area" cannot say the one thing a parcel says.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+
+    auto drawn = f.bus.execute_line(
+        "ALAN 485300,4310200 485360,4310200 485360,4310245 485300,4310245", Origin::Test);
+    if (!drawn) ::microtest::report(__FILE__, __LINE__, "ALAN", drawn.error().message);
+    REQUIRE(drawn.ok());
+    REQUIRE(f.doc.live_entity_count() == std::size_t{1});
+
+    // Four corners in, four vertices stored. The closing edge is implied, not a
+    // repeated vertex: storing it twice would count it twice in the perimeter and
+    // write it twice into every exported file.
+    const core::RingSpan span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+    REQUIRE(span.count == std::uint32_t{1});
+    CHECK(f.doc.geometry().ring_role[span.first] == core::RingRole::Exterior);
+    CHECK_EQ(f.doc.geometry().ring_xs(span.first).size(), std::size_t{4});
+
+    // 60 m x 45 m = 2700 m², in square millimetres.
+    CHECK_EQ(f.doc.geometry().area_of(f.doc.entities().slot[0]),
+             core::Mm2{60000} * core::Mm2{45000});
+}
+
+TEST_CASE("ALAN deliği dış sınırla tek nesne yapar")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=AVLULU", Origin::Test).ok());
+
+    // Eight corners, split 4 + 4: the first ring is the boundary, the second is a
+    // courtyard inside it.
+    auto drawn = f.bus.execute_line(
+        "ALAN 485300,4310200 485360,4310200 485360,4310245 485300,4310245 "
+        "485315,4310212 485345,4310212 485345,4310232 485315,4310232 bolum=4 bolum=4",
+        Origin::Test);
+    if (!drawn) ::microtest::report(__FILE__, __LINE__, "ALAN delik", drawn.error().message);
+    REQUIRE(drawn.ok());
+
+    // ONE entity, two rings. A hole is not a separate object: it is selected,
+    // moved and erased with the boundary it belongs to.
+    REQUIRE(f.doc.live_entity_count() == std::size_t{1});
+    const core::RingSpan span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+    REQUIRE(span.count == std::uint32_t{2});
+    CHECK(f.doc.geometry().ring_role[span.first] == core::RingRole::Exterior);
+    CHECK(f.doc.geometry().ring_role[span.first + 1] == core::RingRole::Interior);
+
+    // The hole comes OUT of the area. 2700 m² minus 30 m x 20 m = 2100 m².
+    CHECK_EQ(f.doc.geometry().area_of(f.doc.entities().slot[0]),
+             core::Mm2{60000} * core::Mm2{45000} - core::Mm2{30000} * core::Mm2{20000});
+}
+
+TEST_CASE("ALAN: üç köşeden az reddedilir, yarım alan bırakmaz")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+
+    // Two points are a line, not an area, and the message says so rather than
+    // silently drawing something.
+    f.bus.execute_line("ALAN 485300,4310200 485360,4310200", Origin::Test);
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+}
+
+TEST_CASE("ALAN: 'bolum' nokta listesini tam kapatmazsa hiçbir şey çizilmez")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+
+    // Eight points, rings declared as 4 + 3: one point is left over. Drawing the
+    // first ring and dropping the rest would be the worst answer — a parcel with
+    // a silently missing courtyard is a parcel with the wrong area on it.
+    f.bus.execute_line("ALAN 485300,4310200 485360,4310200 485360,4310245 485300,4310245 "
+                       "485315,4310212 485345,4310212 485345,4310232 485315,4310232 "
+                       "bolum=4 bolum=3",
+                       Origin::Test);
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+}
+
+TEST_CASE("PROOF: ALAN arayüzden, komut satırından ve betikten aynı belgeyi bırakır")
+{
+    // Article 6.4 for the new command. Three clients, one document fingerprint.
+    Fixture gui;
+    Args args;
+    Value::Points pts{core::Point2{485300000, 4310200000}, core::Point2{485360000, 4310200000},
+                      core::Point2{485360000, 4310245000}, core::Point2{485300000, 4310245000}};
+    REQUIRE(gui.bus.execute_line("KATMAN ad=PARSEL", Origin::Gui).ok());
+    args.set("noktalar", Value::points(pts));
+    REQUIRE(gui.bus.dispatch(Invocation{"core.area", args, Origin::Gui}).ok());
+
+    Fixture cli;
+    REQUIRE(cli.bus.execute_line("KATMAN ad=PARSEL", Origin::CommandLine).ok());
+    REQUIRE(cli.bus
+                .execute_line("ALAN 485300,4310200 485360,4310200 485360,4310245 485300,4310245",
+                              Origin::CommandLine)
+                .ok());
+
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(gui.doc.live_entity_count(), cli.doc.live_entity_count());
+}

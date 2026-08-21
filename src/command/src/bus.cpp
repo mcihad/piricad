@@ -48,10 +48,19 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
             for (auto pt : v.as_points())
                 pts.push_back(pt);
             args.set(p.name, Value::points(std::move(pts)));
-        } else if (p.kind == ParamKind::Selection) {
+        } else if (p.kind == ParamKind::Selection ||
+                   (p.kind == ParamKind::Integer && p.arity.max > 1)) {
+            // An Integer parameter whose arity allows more than one IS a list, and
+            // it accumulates for the same reason a selection does. `ALAN … bolum=4
+            // bolum=4` means two rings; keeping only the last one would draw the
+            // boundary and silently drop the courtyard, which puts the wrong area
+            // on the parcel.
             Value::Ints ids = args.get(p.name).as_ids();
-            for (auto id : v.as_ids())
-                ids.push_back(id);
+            if (v.kind() == Value::Kind::Int)
+                ids.push_back(v.as_int());
+            else
+                for (auto id : v.as_ids())
+                    ids.push_back(id);
             args.set(p.name, Value::ids(std::move(ids)));
         } else {
             args.set(p.name, std::move(v));
@@ -184,7 +193,11 @@ core::Result<DispatchResult> Bus::dispatch(const Invocation& inv)
     Args repaired;
     const Args* args = &inv.args;
     for (const auto& p : spec->params) {
-        if (p.kind != ParamKind::Selection) continue;
+        // Selection is a list of integers, and so is an Integer parameter whose
+        // arity allows more than one. Both are written `[4, 4]` in a script, and
+        // both are read as a Point before a spec is in hand.
+        const bool int_list = p.kind == ParamKind::Integer && p.arity.max > 1;
+        if (p.kind != ParamKind::Selection && !int_list) continue;
         const Value* v = args->find(p.name);
         if (!v || v->kind() != Value::Kind::Point) continue;
 

@@ -11,6 +11,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | Komut | Adlar | Kategori | Geri alma | Özellikler | Açıklama |
 |---|---|---|---|---|---|
 | [`core.line`](line.md) | `ÇİZGİ`, `CIZGI`, `LINE`, `Ç`, `L` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki veya daha fazla nokta arasında doğru parçaları çizer. |
+| [`core.area`](area.md) | `ALAN`, `AREA`, `POLİGON`, `POLIGON`, `AL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alan çizer; istenirse içine delik açar. |
 | [`core.erase`](erase.md) | `SİL`, `SIL`, `ERASE`, `E` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Seçilen nesneleri siler. |
 | [`core.select`](select.md) | `SEÇ`, `SEC`, `SELECT`, `S` | Düzenleme | geri alınmaz | betiklenebilir, salt okunur | Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta. |
 | [`core.layer`](layer.md) | `KATMAN`, `LAYER`, `KAT` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
@@ -40,6 +41,17 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | `noktalar` | point_list | en az 2 | Ardışık doğru parçalarının köşe noktaları |
 
 Ayrıntılı kullanım: [ÇİZGİ](line.md)
+
+### `core.area` — ALAN
+
+Kapalı bir alan çizer; istenirse içine delik açar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `noktalar` | point_list | en az 3 | Alanın köşe noktaları; kapanış noktası tekrarlanmaz |
+| `bolum` | integer | en az 0 | Halka uzunlukları: ilki dış sınır, sonrakiler delik |
+
+Ayrıntılı kullanım: [ALAN](area.md)
 
 ### `core.erase` — SİL
 
@@ -257,6 +269,42 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "max": -1,
           "required": true,
           "help": "Ardışık doğru parçalarının köşe noktaları"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.area",
+      "names": [
+        "ALAN",
+        "AREA",
+        "POLİGON",
+        "POLIGON",
+        "AL"
+      ],
+      "category": "Çizim",
+      "summary": "Kapalı bir alan çizer; istenirse içine delik açar.",
+      "params": [
+        {
+          "name": "noktalar",
+          "type": "point_list",
+          "min": 3,
+          "max": -1,
+          "required": true,
+          "help": "Alanın köşe noktaları; kapanış noktası tekrarlanmaz"
+        },
+        {
+          "name": "bolum",
+          "type": "integer",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Halka uzunlukları: ilki dış sınır, sonrakiler delik"
         }
       ],
       "flags": [
