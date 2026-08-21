@@ -30,6 +30,46 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   betiğinden çalıştırıldığında tıpatıp aynı dokümanı ve tıpatıp aynı günlüğü
   üretiyor (piricad.md §16.5). `tests/unit/test_proof.cpp`.
 
+### Eklendi — stil / gösterim motoru ve MPYY gösterim paketi
+
+- **Stil kademesi çalışır hâlde.** `model.md` R13–R19'un tarif ettiği çözüm artık
+  gerçek: görünüm çerçeve başında türetilmiyor, komut işlem içinde çözüyor,
+  `StyleTable`'a intern ediyor ve nesne başına tek bir `StyleId` yazıyor. Çizici
+  bir `u32` okuyor, kural işletmiyor.
+- **`STİL` komutu (`core.style`).** Bir katmandaki nesnelerin stilini stil
+  kataloğu paketinden veya doğrudan verilen renk/kalınlık/dolgu/sıra
+  değerlerinden yazar; `sifirla=evet` ile katman varsayılanına döndürür. Arayüz,
+  komut satırı ve betikten aynı belgeyi ve aynı günlüğü üretiyor
+  (`tests/unit/test_style_rule.cpp`).
+- **Bildirimsel kural değerlendirici** (`piricad/core/style_rule.hpp`). Kural dili
+  bilerek kapalı: eşitlik, küme üyeliği, tam sayı aralığı, varlık. İfade, öncelik,
+  olumsuzlama ve aritmetik yok — projede tek gramer `command/parser.hpp`'dir
+  (CLAUDE.md 5.11). Kurallar dosya sırasına göre denenir, ilk uyan kazanır; sıra
+  paketin içerik özetinin parçasıdır.
+- **Ölçek penceresi.** Satır ve kural bazında `1:N` payda aralığı, iki ucu dahil,
+  `0` = sınırsız. Ölçeğe bağlı gösterim nesne başına değil, tablo başına çözülür
+  (`model.md` R16).
+- **Kâğıt mikrometresi.** Katalogdaki `kalinlik_um` doğrudan `Appearance::width_um`
+  alanına gidiyor; piksel hiçbir yerde saklanmıyor (`model.md` R20).
+- **MPYY plan gösterim paketi** — `data/catalogs/mpyy/plan-gosterim.json` ve
+  şeması `data/catalogs/schema/plan-gosterim.schema.json`. Kaynak: Mekânsal
+  Planlar Yapım Yönetmeliği, EK-1 Gösterimler (EK-1a/1b/1c/1ç/1d + EK-1e Detay
+  Kataloğu), yayım 14.06.2014.
+- **Paketin gösterim satırları BİLEREK BOŞTUR.** Paket künyesi, şeması, plan türü
+  eşlemesi, çizgi ve tarama sembol tabloları tamdır; `stiller` ve `kurallar`
+  dizileri boştur. Sebebi dosyanın `kapsam` bloğunda yazılıdır: EK-1 gösterim
+  kodları, renkleri ve çizgi kalınlıkları resmî ek metninden birebir okunmadan ve
+  harita mühendisi / şehir plancısı onayından geçmeden girilmez (CLAUDE.md 6.11).
+  Uydurulmuş bir gösterim satırı, boş bırakılmış bir satırdan çok daha zararlıdır.
+  Satırlar Faz 3'te, `package_version` artırılarak ve bu günlüğe hangi ek ve madde
+  yüzünden eklendikleri yazılarak gelecektir.
+- **Determinizm sınandı.** Aynı katalog + aynı belge = aynı `StyleId` dizisi ve
+  aynı `content_hash()`; aynı görünüm iki kez istendiğinde stil tablosu
+  büyümüyor. Golden senaryosu `tests/golden/senaryolar/stil.txt`.
+- **Belge.** [`docs/komutlar/style.md`](docs/komutlar/style.md), sekiz bölüm,
+  üç istemci yolu, gösterim satırlarının eksikliği ilk paragrafta ve gelecek
+  zamanla yazılı (Article 11.8).
+
 ### Eklendi — kullanıcı dokümantasyonu
 
 - **Kati kural.** Kullanıcının yapabildiği her şeyin `/docs` altında, Markdown

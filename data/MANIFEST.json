@@ -15,11 +15,12 @@
     {
       "id": "mpyy-gosterimler",
       "path": "catalogs/mpyy/",
-      "status": "planned",
+      "status": "partial",
       "phase": 3,
       "source": "MPYY — Mekânsal Planlar Yapım Yönetmeliği, EK-1a/1b/1c/1ç/1d + EK-1e Detay Kataloğu",
-      "published": null,
-      "licence": "pending-review"
+      "published": "2014-06-14",
+      "licence": "resmi-mevzuat-metni",
+      "note": "Paket yapısı ve şeması hazır; gösterim satırları (stiller, kurallar) bilerek boş. Sebebi ve doldurma koşulu dosyanın 'kapsam' bloğundadır."
     },
     {
       "id": "turkiye-jeoit",

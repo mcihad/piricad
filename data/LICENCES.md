@@ -6,7 +6,8 @@ Coğrafi Veri İzin Belgesi status. A data file with no entry here fails
 
 | Path | Dataset | Source | Licence | Permit | Status |
 |---|---|---|---|---|---|
-| `catalogs/` | (none yet) | — | — | — | Phase 2–3 |
+| `catalogs/mpyy/` | MPYY plan gösterim stil paketi (yapı; gösterim satırları henüz boş) | Mekânsal Planlar Yapım Yönetmeliği, EK-1 Gösterimler, 2014-06-14 | Resmî mevzuat metni, serbestçe yeniden yayımlanabilir (public domain) | Coğrafi Veri İzin Belgesi gerekmiyor — yönetmelik eki gösterim tanımı, coğrafi veri değil. Hukuk onayı BEKLİYOR; gösterim satırları eklenmeden önce alınacak (hedef 2026-09-30). | Yayımda (satırlar eksik) |
+| `catalogs/bohhbuy/` | (none yet) | — | — | — | Phase 2 |
 | `crs/tm3-dilimleri.json` | Türkiye TM 3° dilim orta meridyenleri | BÖHHBÜY, 2018-05-26 | Resmî mevzuat metni, serbestçe yeniden yayımlanabilir (public domain) | Coğrafi Veri İzin Belgesi gerekmiyor — mevzuat metnindeki parametre tablosu, coğrafi veri değil. Hukuk onayı 2026-08-21. | Yayımda |
 | `crs/` (jeoit gridleri) | Jeoit gridleri, dönüşüm parametreleri | HGM / TKGM | — | Coğrafi Veri İzin Belgesi süreci beklemede — grid dosyası eklenmeden önce alınır | Faz 1 |
 | `corpus/` | (none yet) | — | — | — | Phase 3 |

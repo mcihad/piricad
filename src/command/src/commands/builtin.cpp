@@ -14,6 +14,7 @@ namespace piricad::command {
     X(line)                                                                                        \
     X(erase)                                                                                       \
     X(layer)                                                                                       \
+    X(style)                                                                                       \
     X(zoom)                                                                                        \
     X(undo)                                                                                        \
     X(redo)                                                                                        \

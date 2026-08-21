@@ -1,0 +1,23 @@
+# Stil sütununun kesin hâli: hangi nesne hangi StyleId'yi alıyor, tablo kaç satır
+# tutuyor ve aynı görünüm ikinci kez istendiğinde yeni satır açılıyor mu.
+#
+# model.md R13/R14: stil çerçeve başında türetilmez; komut, işlem içinde çözer ve
+# nesne başına tek bir u32 yazar. Bu senaryo o u32 dizisini kilitler.
+#
+# Katalog paketi yolu bilerek yok: golden senaryosu çalışma dizininden bağımsız
+# olmak zorunda. Katalog yolunun kendisi tests/unit/test_style_rule.cpp içinde,
+# geçici dizine yazılan bir paketle sınanıyor.
+KATMAN ad=PARSEL
+KATMAN ad=YOL renk=4284310640
+KATMAN ad=PARSEL
+ÇİZGİ 485300,4310200 485360,4310200 485360,4310240
+KATMAN ad=YOL
+ÇİZGİ 485300,4310260 485360,4310260
+# Parsel katmanı: dolgulu alan görünümü, üstte çizilsin.
+STİL katman=PARSEL renk=4281236786 kalinlik=350 dolgu=4294703769 sira=20
+# Yol katmanı: yalnız çizgi, altta.
+STİL katman=YOL renk=4292897792 kalinlik=500 sira=10
+# Aynı görünüm ikinci kez: StyleTable büyümemeli, aynı kimlik dönmeli.
+STİL katman=PARSEL renk=4281236786 kalinlik=350 dolgu=4294703769 sira=20
+# Sıfırlama: nesneler katman varsayılanına döner, tablo yerinde kalır.
+STİL katman=YOL sifirla=evet

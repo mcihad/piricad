@@ -22,6 +22,11 @@ hizmetler için parsellerden kesilen pay.
 **İhdas** — Kadastroda kayıtlı olmayan bir alanın tescil edilerek yeni parsel
 oluşturulması.
 
+**Gösterim** — Bir plan veya haritada bir arazi kullanımının, sınırın ya da tesisin
+çizimde nasıl gösterileceğini belirleyen kural: rengi, çizgi kalınlığı, çizgi deseni,
+taraması ve simgesi. Mekânsal Planlar Yapım Yönetmeliği'nin EK-1 ekleri plan gösterimlerini
+tanımlar. Bkz. [Nesne stili ve gösterim kataloğu](komutlar/style.md).
+
 **İrtifak** — Bir taşınmaz üzerinde başka bir taşınmaz veya kişi lehine kurulan sınırlı
 ayni hak; geçit hakkı ve enerji nakil hattı irtifakı yaygın örnekleridir.
 
@@ -155,3 +160,17 @@ yürütülmesi. Betikler böyle çalışır.
 panelinde görünür.
 
 **Transkript** — Komutların kullanıcıya yazdığı mesajların akışı.
+
+**Stil** — Bir nesnenin çizilirken kullanılacak görünümü: çizgi rengi, kâğıt kalınlığı,
+çizgi deseni, dolgu rengi, tarama, simge ve çizim sırası. Her nesne tek bir stil numarası
+taşır; görünüm çizim anında hesaplanmaz. Bkz. [Nesne stili](komutlar/style.md).
+
+**Stil kataloğu** — Gösterim satırlarını ve bu satırları nesnelere bağlayan eşleme
+kurallarını taşıyan veri paketi. `data/catalogs/` altında durur; mevzuat değişikliği
+paketin güncellenmesidir, programın yeniden derlenmesi değil.
+
+**Ölçek paydası** — `1:N` gösteriminde `N`. Uzaklaştıkça büyür: 1:25000, 1:1000'den daha
+uzak bir görünümdür. Ölçeğe bağlı gösterimler bu sayıya göre seçilir.
+
+**Kâğıt mikrometresi** — Çizgi kalınlığının saklandığı birim; 1000 mikrometre paftada
+1 mm eder. Piksel değildir, çünkü piksel karşılığı ölçek ve ekran çözünürlüğüyle değişir.

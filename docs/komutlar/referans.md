@@ -13,6 +13,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.line`](line.md) | `ÇİZGİ`, `CIZGI`, `LINE`, `Ç`, `L` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki veya daha fazla nokta arasında doğru parçaları çizer. |
 | [`core.erase`](erase.md) | `SİL`, `SIL`, `ERASE`, `E` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Seçilen nesneleri siler. |
 | [`core.layer`](layer.md) | `KATMAN`, `LAYER`, `KAT` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
+| [`core.style`](style.md) | `STİL`, `STIL`, `STYLE`, `ST` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar. |
 | [`core.zoom`](zoom.md) | `YAKINLAŞ`, `YAKINLAS`, `ZOOM`, `Z` | Görünüm | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü çizim kapsamına veya verilen çarpana ayarlar. |
 | [`core.undo`](undo.md) | `GERİAL`, `GERIAL`, `UNDO`, `U` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Son işlemi geri alır. |
 | [`core.redo`](redo.md) | `YİNELE`, `YINELE`, `REDO` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Geri alınan işlemi yineler. |
@@ -56,6 +57,24 @@ Katman oluşturur, aktif yapar ve özelliklerini değiştirir.
 | `renk` | integer | isteğe bağlı | Çizim rengi, 0xAARRGGBB |
 
 Ayrıntılı kullanım: [KATMAN](layer.md)
+
+### `core.style` — STİL
+
+Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `katman` | text | 1 | Stilin yazılacağı katmanın adı; katman var olmalı |
+| `paket` | text | isteğe bağlı | Stil kataloğu paketinin dosya yolu |
+| `kod` | text | isteğe bağlı | Katalogdaki satırın kimliği; verilmezse katalog kuralları eşleşir |
+| `olcek` | integer | isteğe bağlı | Ölçek paydası (1:N); 0 = ölçekten bağımsız |
+| `renk` | integer | isteğe bağlı | Çizgi rengi, 0xAARRGGBB |
+| `kalinlik` | integer | isteğe bağlı | Çizgi kalınlığı, kâğıt mikrometresi (1000 = 1 mm) |
+| `dolgu` | integer | isteğe bağlı | Dolgu rengi, 0xAARRGGBB; 0 = dolgusuz |
+| `sira` | integer | isteğe bağlı | Çizim sırası; büyük olan üste gelir |
+| `sifirla` | bool | isteğe bağlı | Stili siler; nesneler katman varsayılanına döner |
+
+Ayrıntılı kullanım: [STİL](style.md)
 
 ### `core.zoom` — YAKINLAŞ
 
@@ -242,6 +261,97 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "max": 1,
           "required": false,
           "help": "Çizim rengi, 0xAARRGGBB"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.style",
+      "names": [
+        "STİL",
+        "STIL",
+        "STYLE",
+        "ST"
+      ],
+      "category": "Katman",
+      "summary": "Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar.",
+      "params": [
+        {
+          "name": "katman",
+          "type": "text",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Stilin yazılacağı katmanın adı; katman var olmalı"
+        },
+        {
+          "name": "paket",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Stil kataloğu paketinin dosya yolu"
+        },
+        {
+          "name": "kod",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Katalogdaki satırın kimliği; verilmezse katalog kuralları eşleşir"
+        },
+        {
+          "name": "olcek",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Ölçek paydası (1:N); 0 = ölçekten bağımsız"
+        },
+        {
+          "name": "renk",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Çizgi rengi, 0xAARRGGBB"
+        },
+        {
+          "name": "kalinlik",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Çizgi kalınlığı, kâğıt mikrometresi (1000 = 1 mm)"
+        },
+        {
+          "name": "dolgu",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Dolgu rengi, 0xAARRGGBB; 0 = dolgusuz"
+        },
+        {
+          "name": "sira",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Çizim sırası; büyük olan üste gelir"
+        },
+        {
+          "name": "sifirla",
+          "type": "bool",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Stili siler; nesneler katman varsayılanına döner"
         }
       ],
       "flags": [

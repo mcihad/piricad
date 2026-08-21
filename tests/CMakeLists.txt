@@ -21,6 +21,7 @@ add_executable(piricad_tests
     unit/test_jitter.cpp
     unit/test_settings.cpp
     unit/test_style_layer.cpp
+    unit/test_style_rule.cpp
     unit/test_proof.cpp
 )
 
