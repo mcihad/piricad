@@ -29,6 +29,17 @@ namespace piricad::core {
 /// Square millimetres. A 100 km x 100 km area is 1e16 mm², well inside int64.
 using Mm2 = std::int64_t;
 
+/// The largest coordinate magnitude `RingGeometry::append` accepts, ±2^61 mm.
+///
+/// This is an ENFORCED invariant, not a comment: every length and area below is
+/// exact only while it holds. Within it, a segment's dx² + dy² fits in 128 bits
+/// and its square root fits in `Mm`, so no perimeter can overflow and no side can
+/// be silently reported short. It is 2.3e18 mm ≈ 2.3e12 km — eight orders of
+/// magnitude past a dilim-prefixed TUREF/TM3 sağa değer (3.05e10 mm), so no
+/// legitimate Turkish coordinate is anywhere near it, and a value beyond it is a
+/// corrupt import rather than a place.
+inline constexpr Mm kMmCoordinateLimit = Mm{1} << 61;
+
 enum class RingRole : std::uint8_t {
     Open = 0,      ///< a polyline: first and last vertex are not joined
     Exterior = 1,  ///< the outer boundary of a face
@@ -97,7 +108,12 @@ public:
     /// Bounding box over every ring of the slot.
     Box2 bounds_of(std::uint32_t slot) const;
 
-    /// Signed area of one ring by the shoelace formula, in square millimetres.
+    /// Signed area of one ring by the shoelace formula, in square millimetres —
+    /// counter-clockwise positive, with the sign of the WINDING, not of the role.
+    /// An Open ring encloses nothing and returns 0, exactly as `area_of` treats
+    /// it: R10 says a polyline's first and last vertex are not joined, so an
+    /// implied-closure area would be a figure for a shape that does not exist.
+    ///
     /// Coordinates are translated to the ring's first vertex before multiplying:
     /// a raw shoelace on 1e9-magnitude TM3 coordinates overflows int64, and a
     /// wrong area is a wrong legal document (§12).
