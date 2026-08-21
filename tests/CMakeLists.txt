@@ -18,6 +18,7 @@ add_executable(piricad_tests
     unit/test_geometry.cpp
     unit/test_golden.cpp
     unit/test_index.cpp
+    unit/test_io.cpp
     unit/test_jitter.cpp
     unit/test_settings.cpp
     unit/test_snap.cpp
@@ -33,12 +34,14 @@ target_compile_definitions(piricad_tests PRIVATE
     PIRICAD_JOURNAL_DIR="${CMAKE_SOURCE_DIR}/tests/journal"
     PIRICAD_GOLDEN_DIR="${CMAKE_SOURCE_DIR}/tests/golden"
     PIRICAD_DATA_DIR="${CMAKE_SOURCE_DIR}/data"
+    PIRICAD_FUZZ_DIR="${CMAKE_SOURCE_DIR}/tests/fuzz"
 )
 
 target_include_directories(piricad_tests PRIVATE support)
 target_link_libraries(piricad_tests PRIVATE
     piricad_core
     piricad_command
+    piricad_io
     piricad_domain_geodesy
     piricad_render
     piricad_script
@@ -75,6 +78,7 @@ add_executable(piricad_bench
     bench/main.cpp
     bench/support.cpp
     bench/bench_command.cpp
+    bench/bench_io.cpp
     bench/bench_pending.cpp
     bench/bench_render.cpp
     bench/bench_snap.cpp
@@ -87,6 +91,7 @@ target_compile_definitions(piricad_bench PRIVATE
 target_link_libraries(piricad_bench PRIVATE
     piricad_core
     piricad_command
+    piricad_io
     piricad_render
     piricad_script
     piricad_flags
@@ -98,3 +103,9 @@ set_target_properties(piricad_bench PROPERTIES
 if(PIRICAD_BUILD_BENCH)
     add_test(NAME bench COMMAND piricad_bench)
 endif()
+
+# ------------------------------------------------------------------- fuzz ----
+# .claude/io.md R19: every parser has a libFuzzer target. Off by default and
+# Clang-only; the seed corpora are replayed by piricad_tests regardless, so they
+# defend the reader on every build (tests/unit/test_io.cpp).
+add_subdirectory(fuzz)

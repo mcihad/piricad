@@ -49,3 +49,6 @@ Thumbs.db
 # Agent worktrees. `git worktree add` puts a live checkout here; sweeping one in
 # with `git add -A` commits it as a gitlink to a commit no clone can resolve.
 .claude/worktrees/
+
+# MPYY ek dosyalarının çalışma kopyası — kaynak metin, depoya girmez.
+.mpyy-kaynak/

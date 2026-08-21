@@ -38,6 +38,7 @@ target_compile_definitions(piricad PRIVATE PIRICAD_VERSION="${PROJECT_VERSION}")
 target_link_libraries(piricad PRIVATE
     piricad_core
     piricad_command
+    piricad_io
     piricad_render
     piricad_script
     piricad_flags

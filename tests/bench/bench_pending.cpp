@@ -10,7 +10,8 @@ PIRICAD_BENCH(open_dwg){bench::Case{
     .title   = "200 MB DWG açılışı",
     .budget  = 3000.0,
     .unit    = "ms",
-    .pending = "/src/io boş; LibreDWG + gerçek müşteri dosyaları gerekiyor (§9.8, §15)",
+    .pending = "DWG okuyucusu yok; io.md R13/R14 önce lisansı temizlenmiş 50+ dosyalık kapsam "
+               "raporunu istiyor (§9.8, §15)",
 }};
 
 PIRICAD_BENCH(first_paint_laz){bench::Case{
@@ -18,7 +19,7 @@ PIRICAD_BENCH(first_paint_laz){bench::Case{
     .title   = "50M noktalı LAZ ilk görüntüleme",
     .budget  = 5000.0,
     .unit    = "ms",
-    .pending = "/src/io boş; laz-perf ve nokta bulutu boru hattı gerekiyor (§9.10)",
+    .pending = "LAS/LAZ okuyucusu yok; laz-perf ve nokta bulutu boru hattı gerekiyor (§9.10)",
 }};
 
 PIRICAD_BENCH(topology_validation){bench::Case{

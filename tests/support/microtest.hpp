@@ -47,6 +47,28 @@ struct Registrar
     }
 };
 
+/// Reason the current case could not run, or empty when it did.
+///
+/// `.claude/data.md` Enforcement and CLAUDE.md Article 8.2: a test gated behind a
+/// PIRICAD_WITH_* option "MUST report as pending, never as passing". Printing
+/// `ok` beside a case that did nothing is exactly the passing report that rule
+/// forbids, so a pending case gets its own verdict and its own line in the
+/// summary. Pending is NOT a failure and does not change the exit code — an
+/// absent optional dependency is not a broken build (test.md R8b, same idea as
+/// the benchmark harness's BEKLEMEDE).
+inline std::string& pending_reason()
+{
+    static std::string reason;
+    return reason;
+}
+
+/// Marks the running case as pending and returns; the caller returns immediately
+/// after, because a pending case must not go on to assert anything.
+inline void pending(const std::string& why)
+{
+    pending_reason() = why;
+}
+
 inline void report(const char* file, int line, const char* expr, const std::string& detail)
 {
     ++failures();
@@ -58,10 +80,12 @@ inline void report(const char* file, int line, const char* expr, const std::stri
 inline int run(const char* suite)
 {
     std::fprintf(stdout, "== %s : %zu case(s) ==\n", suite, cases().size());
-    int failed_cases = 0;
+    int failed_cases  = 0;
+    int pending_cases = 0;
 
     for (auto& c : cases()) {
         current()        = c.name;
+        pending_reason() = {};
         const int before = failures();
 
         // A case that throws is a FAILED case, not a dead run. Result::value() is
@@ -79,11 +103,21 @@ inline int run(const char* suite)
 
         const bool ok = failures() == before;
         if (!ok) ++failed_cases;
+
+        // A case that reported a reason AND then failed is a failure: the reason
+        // does not excuse an assertion that actually ran and did not hold.
+        if (ok && !pending_reason().empty()) {
+            ++pending_cases;
+            std::fprintf(stdout, "  BEKL  %s\n        %s\n", c.name.c_str(),
+                         pending_reason().c_str());
+            continue;
+        }
         std::fprintf(stdout, "  %s  %s\n", ok ? "ok  " : "FAIL", c.name.c_str());
     }
 
-    std::fprintf(stdout, "== %d/%zu passed, %d assertion failure(s) ==\n",
-                 static_cast<int>(cases().size()) - failed_cases, cases().size(), failures());
+    const int passed = static_cast<int>(cases().size()) - failed_cases - pending_cases;
+    std::fprintf(stdout, "== %d/%zu passed, %d pending, %d assertion failure(s) ==\n", passed,
+                 cases().size(), pending_cases, failures());
     return failures() == 0 ? 0 : 1;
 }
 
@@ -113,6 +147,14 @@ inline int run(const char* suite)
             ::microtest::report(__FILE__, __LINE__, "REQUIRE " #expr, {});                         \
             return;                                                                                \
         }                                                                                          \
+    } while (false)
+
+/// Reports the case as pending and leaves it. The reason is printed beside the
+/// case, so a run that skipped half its coverage says so out loud.
+#define PENDING(why)                                                                               \
+    do {                                                                                           \
+        ::microtest::pending(why);                                                                 \
+        return;                                                                                    \
     } while (false)
 
 #define CHECK_EQ(a, b)                                                                             \

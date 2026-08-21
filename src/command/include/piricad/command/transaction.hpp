@@ -12,6 +12,7 @@
 
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace piricad::command {
@@ -33,6 +34,22 @@ class Transaction
 {
 public:
     Transaction(Document& doc, std::string label);
+
+    /// Returns the slot of the layer with this name, creating it if absent.
+    ///
+    /// NOT undoable, and deliberately so — the same decision `Document` records:
+    /// an empty layer is inert, and removing it on undo would invalidate every
+    /// stored slot in `entity.layer`. It lives here anyway because a caller
+    /// outside /src/command must have ONE sanctioned handle for document work
+    /// (Article 5.9) rather than reaching past the transaction for this one call.
+    LayerId ensure_layer(std::string_view name);
+
+    /// Interns an appearance and returns its id.
+    ///
+    /// Also not undoable: the style table is a deduplicated pool, adding to it
+    /// changes nothing that is drawn until an entity's style column points at the
+    /// new entry, and that write IS undoable (`set_entity_style`).
+    StyleId intern_style(const Appearance& a);
 
     Result<EntityId> add_polyline(LayerId layer, std::span<const Point2> pts);
 

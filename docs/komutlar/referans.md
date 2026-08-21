@@ -18,6 +18,11 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.zoom`](zoom.md) | `YAKINLAŞ`, `YAKINLAS`, `ZOOM`, `Z` | Görünüm | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü çizim kapsamına veya verilen çarpana ayarlar. |
 | [`core.undo`](undo.md) | `GERİAL`, `GERIAL`, `UNDO`, `U` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Son işlemi geri alır. |
 | [`core.redo`](redo.md) | `YİNELE`, `YINELE`, `REDO` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Geri alınan işlemi yineler. |
+| [`core.open`](open.md) | `AÇ`, `AC`, `OPEN` | Dosya | geri alınmaz | etkileşimli, betiklenebilir | Bir PiriCAD proje dosyasını açar ve çizimin yerine koyar. |
+| [`core.save`](save.md) | `KAYDET`, `SAVE`, `KYD` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi bağlı olduğu PiriCAD proje dosyasına kaydeder. |
+| [`core.saveas`](saveas.md) | `FARKLIKAYDET`, `SAVEAS`, `FKAYDET` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi yeni bir PiriCAD proje dosyasına kaydeder ve ona bağlar. |
+| [`core.import`](import.md) | `İÇEAKTAR`, `ICEAKTAR`, `IMPORT`, `IAKTAR` | Dosya | tek işlem | etkileşimli, betiklenebilir | Dış bir veri dosyasını çizime ekler. |
+| [`core.export`](export.md) | `DIŞAAKTAR`, `DISAAKTAR`, `EXPORT`, `DAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi dış bir veri biçimine yazar. |
 | [`core.script`](script.md) | `BETİK`, `BETIK`, `SCRIPT` | Betik | komuta özel | etkileşimli, betiklenebilir, salt okunur | Bir betik dosyasını komut veri yolu üzerinden çalıştırır. |
 | [`core.setting`](setting.md) | `AYAR`, `SETTING`, `AY` | Sistem | tek işlem | betiklenebilir | Proje ayarlarını listeler, okur ve değiştirir. |
 | [`core.preference`](preference.md) | `TERCİH`, `TERCIH`, `PREFERENCE`, `PREF` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Uygulama tercihlerini listeler, okur ve değiştirir. |
@@ -117,6 +122,58 @@ Geri alınan işlemi yineler.
 Parametre almaz.
 
 Ayrıntılı kullanım: [YİNELE](redo.md)
+
+### `core.open` — AÇ
+
+Bir PiriCAD proje dosyasını açar ve çizimin yerine koyar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `dosya` | text | 1 | Açılacak PiriCAD proje dosyasının yolu (.pcad) |
+
+Ayrıntılı kullanım: [AÇ](open.md)
+
+### `core.save` — KAYDET
+
+Çizimi bağlı olduğu PiriCAD proje dosyasına kaydeder.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `dosya` | text | isteğe bağlı | Hedef yol; verilmezse çizimin bağlı olduğu dosyaya yazılır |
+
+Ayrıntılı kullanım: [KAYDET](save.md)
+
+### `core.saveas` — FARKLIKAYDET
+
+Çizimi yeni bir PiriCAD proje dosyasına kaydeder ve ona bağlar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `dosya` | text | 1 | Yeni proje dosyasının yolu (.pcad) |
+
+Ayrıntılı kullanım: [FARKLIKAYDET](saveas.md)
+
+### `core.import` — İÇEAKTAR
+
+Dış bir veri dosyasını çizime ekler.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `dosya` | text | 1 | İçe aktarılacak dosyanın yolu |
+| `bicim` | text | isteğe bağlı | Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur |
+
+Ayrıntılı kullanım: [İÇEAKTAR](import.md)
+
+### `core.export` — DIŞAAKTAR
+
+Çizimi dış bir veri biçimine yazar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `dosya` | text | 1 | Yazılacak dosyanın yolu |
+| `bicim` | text | isteğe bağlı | Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur |
+
+Ayrıntılı kullanım: [DIŞAAKTAR](export.md)
 
 ### `core.script` — BETİK
 

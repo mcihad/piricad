@@ -359,6 +359,114 @@ paketlerini kurun. Ubuntu/Debian'da `sudo apt install qt6-base-dev`.
 **Çözüm.** `make gates` yalnız kapıları çalıştırır ve hangisinin ne sebeple durduğunu
 dosya ve satır numarasıyla yazar.
 
+## Dosya açma ve kaydetme
+
+### `io.not_a_project: '...' bir PiriCAD proje dosyası değil.`
+
+**Sebep.** `AÇ` yalnızca PiriCAD proje dosyalarını (`.pcad`) açar; verdiğiniz dosya
+başka bir biçim.
+
+**Çözüm.** DXF, GeoPackage gibi dış biçimler için `İÇEAKTAR` kullanın.
+Bkz. [Dış veri alma](komutlar/import.md).
+
+### `io.format_too_new: '...' en az N. sürüm biçim okuyucusu istiyor`
+
+**Sebep.** Dosyayı, bu yapının okuyamayacağı daha yeni bir PiriCAD yazmış.
+
+**Çözüm.** Mesajda adı geçen sürüme yükseltin. PiriCAD dosyayı yarım açmaz; yarım
+açılmış bir proje, açılmamış bir projeden tehlikelidir.
+
+### `io.truncated: '...' N bayt olduğunu bildiriyor, ama M bayt.`
+
+**Sebep.** Dosya yarım kopyalanmış, aktarım kesilmiş ya da disk hatası olmuş.
+
+**Çözüm.** Yedeğinizden geri alın ve kopyalamayı yeniden yapın. PiriCAD bozuk bir
+dosyayı kendiliğinden onarmaz; sessizce "düzeltilmiş" bir kadastro dosyası, bozuk
+olduğu bilinen bir dosyadan kötüdür.
+
+### `io.bad_block: ...` · `io.inconsistent: ...` · `io.key_mismatch: ...`
+
+**Sebep.** Dosyanın iç yerleşimi bozulmuş: bir bloğun yeri, uzunluğu ya da nesne
+anahtarlarının sırası tutmuyor.
+
+**Çözüm.** Yedeğinizden geri alın. Bu üç mesajdan biri görünüyorsa dosya güvenilir
+değildir. Bkz. [PiriCAD proje dosyası](veri/proje-dosyasi.md).
+
+### `io.unknown_kind: ... bu yapı yalnız 0 numaralı türü tanıyor.`
+
+**Sebep.** Dosyada bu sürümün tanımadığı bir nesne türü var.
+
+**Çözüm.** Dosyayı yazan PiriCAD sürümüne yükseltin. Nesneyi düşürerek açmak veri
+kaybı olurdu, bu yüzden dosya açılmıyor.
+
+### `Bu çizim henüz bir dosyaya bağlı değil. FARKLIKAYDET ile bir ad verin.`
+
+**Sebep.** `KAYDET` hiç kaydedilmemiş bir çizimde çalıştırıldı.
+
+**Çözüm.** `FARKLIKAYDET` ile bir ad verin. PiriCAD ad uydurmaz.
+
+### `'...' yazılırken hata oluştu; disk dolu olabilir. Önceki dosya değiştirilmedi.`
+
+**Sebep.** Kaydetme sırasında disk doldu ya da yazma kesildi.
+
+**Çözüm.** Yer açıp yeniden kaydedin. Son cümle önemlidir: PiriCAD önce yanına
+geçici bir dosya yazıp ancak tamamlandığında yerine koyduğu için **bir önceki
+kaydınız yerinde durur**.
+
+### `Dosya motoru bağlı değil; bu ortamda dosya açılıp kaydedilemez.`
+
+**Sebep.** Dosya motoru kurulmamış bir ortamda (örneğin başsız bir sınama) çalışılıyor.
+
+**Çözüm.** Komutu uygulama içinden çalıştırın.
+
+## Dış veri biçimleri
+
+### `io.no_driver: Dış biçim desteği KAPALI.`
+
+**Sebep.** Bu yapı `PIRICAD_WITH_GDAL=OFF` ile derlenmiş.
+
+**Çözüm.** Mesaj kurulum komutunu içerir: Debian/Ubuntu'da
+`sudo apt install libgdal-dev`, sonra `-DPIRICAD_WITH_GDAL=ON` ile yapılandırın.
+`make doctor` durumu özetler.
+
+### `io.no_driver: '...' için sürücü bulunamadı.`
+
+**Sebep.** Dosyanın uzantısı izin listesinde değil. PiriCAD, altındaki kütüphanenin
+tanıdığı yüzden fazla biçimin yalnızca açıkça izin verilenlerini açar.
+
+**Çözüm.** `bicim` parametresiyle sürücüyü söyleyin ya da dosyayı desteklenen bir
+biçime çevirin. Bkz. [Dış veri biçimleri](veri/dis-formatlar.md).
+
+### `'...' katmanı hiçbir koordinat sistemi bildirmiyor.`
+
+**Sebep.** İçe aktarılan veri kümesi koordinat sistemini bildirmiyor. DXF biçiminin
+koordinat sistemi için yeri yoktur.
+
+**Çözüm.** Dosyanın yanına aynı adlı bir `.prj` dosyası koyun. PiriCAD "herhâlde
+TUREF/TM30'dur" varsayımı yapmaz: TM30 ile TM33 karışması sessizdir ve ancak tapuya
+gittiğinde ortaya çıkar.
+
+### `Çizimin koordinat sistemi '...' dışa aktarım için çözülemedi.`
+
+**Sebep.** Projenin koordinat sistemi ayarı, dışa aktarımın çözebileceği bir kod değil.
+
+**Çözüm.** `AYAR koordinat_sistemi EPSG:5254` gibi bir EPSG kodu verin.
+
+### `'...' sanal dosya sistemi yolu.`
+
+**Sebep.** Yol `/vsicurl/`, `/vsis3/` ya da `/vsizip/` ile başlıyor.
+
+**Çözüm.** Dosyayı diske indirip yerel yolunu verin. Bir veri dosyasının adı ağ
+isteğine dönüşemez — komut satırından, betikten ya da yapay zekâ önerisinden gelmiş
+olması fark etmez.
+
+### `'...' okunabilir çizgi ya da alan içermiyor`
+
+**Sebep.** Dosyada desteklenen geometri yok.
+
+**Çözüm.** Bu sürüm çizgi ve alan okur; nokta, çoklu nokta ve eğriler okunmaz.
+Atlanan öğe sayısı transkriptte söylenir.
+
 ## Yardım alamadığınızda
 
 Sorununuzu tarif etmek yerine oturum günlüğünüzü paylaşın: dosya, sorunun ortaya çıktığı

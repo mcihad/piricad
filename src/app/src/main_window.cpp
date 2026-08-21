@@ -7,6 +7,8 @@
 #include "piricad/app/map_canvas.hpp"
 #include "piricad/app/panels.hpp"
 #include "piricad/app/toolbox.hpp"
+
+#include "piricad/io/vector.hpp"
 #include "piricad/render/backend.hpp"
 
 #include "piricad/command/bus.hpp"
@@ -17,6 +19,7 @@
 #include <QComboBox>
 #include <QDockWidget>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QFrame>
 #include <QKeySequence>
 #include <QLabel>
@@ -226,11 +229,36 @@ QAction* MainWindow::placeholder(Glyph glyph, const QString& text, const QString
 void MainWindow::buildActions()
 {
     // ---- dosya ----
-    actNew_  = placeholder(Glyph::New, tr("Yeni"), QStringLiteral("YENİ"), tr("Faz 1"));
-    actOpen_ = placeholder(Glyph::Open, tr("Aç"), QStringLiteral("AÇ"), tr("Faz 1"));
-    actSave_ = placeholder(Glyph::Save, tr("Kaydet"), QStringLiteral("KAYDET"), tr("Faz 1"));
-    actExport_ =
-        placeholder(Glyph::Export, tr("Dışa Aktar"), QStringLiteral("DIŞAAKTAR"), tr("Faz 2"));
+    actNew_ = placeholder(Glyph::New, tr("Yeni"), QStringLiteral("YENİ"), tr("Faz 1"));
+
+    actOpen_ = new QAction(tr("Aç…"), this);
+    actOpen_->setShortcut(QKeySequence::Open);
+    actOpen_->setToolTip(tr("AÇ — bir PiriCAD proje dosyası açar"));
+    actOpen_->setData(static_cast<int>(Glyph::Open));
+    connect(actOpen_, &QAction::triggered, this, &MainWindow::openProject);
+
+    actSave_ = new QAction(tr("Kaydet"), this);
+    actSave_->setShortcut(QKeySequence::Save);
+    actSave_->setToolTip(tr("KAYDET — çizimi bağlı olduğu dosyaya yazar"));
+    actSave_->setData(static_cast<int>(Glyph::Save));
+    connect(actSave_, &QAction::triggered, this, &MainWindow::saveProject);
+
+    actSaveAs_ = new QAction(tr("Farklı Kaydet…"), this);
+    actSaveAs_->setShortcut(QKeySequence::SaveAs);
+    actSaveAs_->setToolTip(tr("FARKLIKAYDET — çizimi yeni bir dosyaya yazar"));
+    actSaveAs_->setData(static_cast<int>(Glyph::Save));
+    connect(actSaveAs_, &QAction::triggered, this, &MainWindow::saveProjectAs);
+
+    actImport_ = new QAction(tr("İçe Aktar…"), this);
+    actImport_->setToolTip(tr("İÇEAKTAR — dış bir veri dosyasını çizime ekler"));
+    actImport_->setData(static_cast<int>(Glyph::Open));
+    connect(actImport_, &QAction::triggered, this, &MainWindow::importData);
+
+    actExport_ = new QAction(tr("Dışa Aktar…"), this);
+    actExport_->setToolTip(tr("DIŞAAKTAR — çizimi dış bir veri biçimine yazar"));
+    actExport_->setData(static_cast<int>(Glyph::Export));
+    connect(actExport_, &QAction::triggered, this, &MainWindow::exportData);
+
     actPrint_ = placeholder(Glyph::Print, tr("Yazdır"), QStringLiteral("YAZDIR"), tr("Faz 2"));
 
     actScript_ = new QAction(tr("Betik Çalıştır…"), this);
@@ -422,6 +450,7 @@ void MainWindow::buildToolBars()
     tbFile_->addAction(actOpen_);
     tbFile_->addAction(actSave_);
     tbFile_->addSeparator();
+    tbFile_->addAction(actImport_);
     tbFile_->addAction(actExport_);
     tbFile_->addAction(actPrint_);
     tbFile_->addSeparator();
@@ -477,7 +506,9 @@ void MainWindow::buildMenus()
     file->addAction(actNew_);
     file->addAction(actOpen_);
     file->addAction(actSave_);
+    file->addAction(actSaveAs_);
     file->addSeparator();
+    file->addAction(actImport_);
     file->addAction(actExport_);
     file->addAction(actPrint_);
     file->addSeparator();
@@ -917,6 +948,88 @@ void MainWindow::runScriptFile(const QString& path)
     // Bring the result into view. A second command on the same bus, not a special
     // case reaching into the canvas (CLAUDE.md Article 1).
     controller_->runLine(QStringLiteral("YAKINLAŞ KAPSAM"), command::Origin::Gui);
+}
+
+QString MainWindow::externalFormatFilter(bool for_writing) const
+{
+    QStringList entries;
+    for (const io::VectorFormat& f : io::vector_formats()) {
+        if (for_writing ? !f.write : !f.read) continue;
+        entries << QStringLiteral("%1 (*%2)")
+                       .arg(QString::fromStdString(f.label), QString::fromStdString(f.extension));
+    }
+    entries << tr("Tüm dosyalar (*)");
+    return entries.join(QStringLiteral(";;"));
+}
+
+void MainWindow::refreshWindowTitle()
+{
+    const QString file = controller_->currentFile();
+    setWindowTitle(file.isEmpty() ? tr("PiriCAD")
+                                  : tr("%1 — PiriCAD").arg(QFileInfo(file).fileName()));
+}
+
+void MainWindow::openProject()
+{
+    const QString path = QFileDialog::getOpenFileName(
+        this, tr("Proje aç"), QFileInfo(controller_->currentFile()).absolutePath(),
+        tr("PiriCAD projesi (*.pcad);;Tüm dosyalar (*)"));
+    if (path.isEmpty()) return;
+
+    controller_->runLine(QStringLiteral("AÇ \"%1\"").arg(path), command::Origin::Gui);
+    controller_->runLine(QStringLiteral("YAKINLAŞ KAPSAM"), command::Origin::Gui);
+    refreshWindowTitle();
+}
+
+void MainWindow::saveProject()
+{
+    // A drawing with no file yet has nothing to save TO, and the command says so.
+    // The window turns that into the dialog a user expects rather than showing
+    // them an error they cannot act on from a menu.
+    if (controller_->currentFile().isEmpty()) {
+        saveProjectAs();
+        return;
+    }
+    controller_->runLine(QStringLiteral("KAYDET"), command::Origin::Gui);
+    refreshWindowTitle();
+}
+
+void MainWindow::saveProjectAs()
+{
+    QString path = QFileDialog::getSaveFileName(
+        this, tr("Farklı kaydet"), controller_->currentFile(), tr("PiriCAD projesi (*.pcad)"));
+    if (path.isEmpty()) return;
+    if (QFileInfo(path).suffix().isEmpty()) path += QStringLiteral(".pcad");
+
+    controller_->runLine(QStringLiteral("FARKLIKAYDET \"%1\"").arg(path), command::Origin::Gui);
+    refreshWindowTitle();
+}
+
+void MainWindow::importData()
+{
+    if (!io::vector_backend_available()) {
+        onEcho(QString::fromStdString(io::vector_backend_status()));
+        return;
+    }
+    const QString path =
+        QFileDialog::getOpenFileName(this, tr("İçe aktar"), QString(), externalFormatFilter(false));
+    if (path.isEmpty()) return;
+
+    controller_->runLine(QStringLiteral("İÇEAKTAR \"%1\"").arg(path), command::Origin::Gui);
+    controller_->runLine(QStringLiteral("YAKINLAŞ KAPSAM"), command::Origin::Gui);
+}
+
+void MainWindow::exportData()
+{
+    if (!io::vector_backend_available()) {
+        onEcho(QString::fromStdString(io::vector_backend_status()));
+        return;
+    }
+    const QString path =
+        QFileDialog::getSaveFileName(this, tr("Dışa aktar"), QString(), externalFormatFilter(true));
+    if (path.isEmpty()) return;
+
+    controller_->runLine(QStringLiteral("DIŞAAKTAR \"%1\"").arg(path), command::Origin::Gui);
 }
 
 void MainWindow::openScript()

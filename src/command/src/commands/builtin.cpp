@@ -19,6 +19,11 @@ namespace piricad::command {
     X(zoom)                                                                                        \
     X(undo)                                                                                        \
     X(redo)                                                                                        \
+    X(open)                                                                                        \
+    X(save)                                                                                        \
+    X(saveas)                                                                                      \
+    X(import)                                                                                      \
+    X(exportfile)                                                                                  \
     X(script)                                                                                      \
     X(setting)                                                                                     \
     X(preference)                                                                                  \

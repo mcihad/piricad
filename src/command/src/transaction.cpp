@@ -7,6 +7,19 @@ namespace piricad::command {
 
 Transaction::Transaction(Document& doc, std::string label) : doc_(doc), label_(std::move(label)) {}
 
+LayerId Transaction::ensure_layer(std::string_view name)
+{
+    // No inverse is recorded: see the header. Creating a layer is additive and
+    // slot-stable, and an undo that removed it would leave `entity.layer` values
+    // pointing at nothing.
+    return doc_.ensure_layer(name);
+}
+
+StyleId Transaction::intern_style(const Appearance& a)
+{
+    return doc_.intern_style(a);
+}
+
 Result<EntityId> Transaction::add_polyline(LayerId layer, std::span<const Point2> pts)
 {
     core::Op undo;

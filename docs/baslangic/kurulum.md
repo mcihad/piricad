@@ -159,7 +159,8 @@ kökündeki `CLAUDE.md` Article 8'dedir.
 | Eksik | Sonucu | Ne zaman gelecek |
 |---|---|---|
 | `qsb` (qt6-shadertools) | Harita GPU yerine `QPainter` ile çizilir | Faz 1'de GPU canvas'ı devreye girecek |
-| GDAL / PROJ / GEOS / CGAL | Dosya okuma-yazma ve koordinat dönüşümü yok | Faz 1–2 |
+| GDAL | DXF ve GeoPackage okunup yazılamaz; `İÇEAKTAR` ve `DIŞAAKTAR` hangi paketin gerektiğini söyleyerek hata döndürür. PiriCAD'in kendi `.pcad` proje dosyası GDAL olmadan da çalışır | Kurulduğunda kendiliğinden açılır |
+| PROJ / GEOS / CGAL | Koordinat dönüşümü ve geometri işlemleri sınırlı | Faz 1–2 |
 | Lua / Python | Betik motoru yalnız JSON | Faz 2 |
 
 Bunların hepsi `PIRICAD_WITH_<AD>` yapılandırma seçeneğinin arkasındadır. Örneğin

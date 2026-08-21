@@ -6,6 +6,48 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — dosya açma ve kaydetme
+
+- **`piricad_io` modülü.** Biçim okuma-yazmanın tamamı `/src/io` altında; Qt yok,
+  GDAL başlıkları yalnız `.cpp` dosyalarında, dışa açılan başlıklarda yalnız core
+  ve command tipleri (`.claude/io.md` R1–R3, P2).
+- **Yerel proje biçimi `.pcad`.** Sütunlu (SoA), 8 bayt hizalı, `u64` konumla
+  adreslenen, belleğe eşlenebilir tek dosya. Koordinatların tamamı `int64`
+  milimetre; dosyada hiçbir yerde ondalıklı sayı yok (io.md R5, R7; model.md R21).
+- **Sürümleme ve ileri uyumluluk.** İlk 32 baytta imza, yazan sürüm ve gereken en
+  düşük okuyucu sürümü. Tanınmayan blok uzunluğuna bakılarak atlanır ve ölümcül
+  değildir; okunamayacak kadar yeni bir dosya, gereken sürümü söyleyerek
+  reddedilir ve yarım yüklenmez (io.md R8, R9, R10).
+- **Kalıcı kimlikler korunuyor.** Nesne ve katman anahtarları, silinmiş nesnelerin
+  satırları dahil dosyaya yazılır ve okunurken birebir doğrulanır. Anahtar
+  boşlukları sıkıştırılmaz: emekli bir anahtarın başka bir parsele verilmesi
+  "bu parsel hangisiydi?" sorusunu cevapsız bırakırdı (model.md R4, P5).
+- **Proje ayarları dosyayla gidiyor.** Proje kapsamlı ayarlar `.pcad` içinde
+  taşınır ve belgenin parmak izinin parçasıdır; uygulama ve oturum kapsamlıları
+  dosyaya girmez (model.md R39, R40).
+- **Kesintiye dayanıklı kaydetme.** Önce yanına geçici dosya yazılır, ancak son
+  bayt diske indikten sonra yerine konur. Yarıda kesilen bir kaydetme bir önceki
+  kaydı bozmaz.
+- **Güvenilmeyen girdi savunması.** Dosyadaki her uzunluk, konum, sayaç ve çapraz
+  dizin gerçek dosya boyutuna karşı denetlenir; taşan toplama, çakışan blok,
+  yuva dışı gösterim ve sıra dışı anahtar reddedilir (io.md R18, P6).
+- **Beş dosya komutu.** `AÇ`, `KAYDET`, `FARKLIKAYDET`, `İÇEAKTAR`, `DIŞAAKTAR` —
+  `Registry`'de kayıtlı, başsız çalışabilen, arayüz-komut satırı-betik eşitliği
+  sınanan komutlar. Dosya seçme penceresi yalnız argümanı toplar (Article 1.2).
+- **GDAL/OGR ile DXF ve GeoPackage.** `PIRICAD_WITH_GDAL` arkasında; sürücüler
+  `cmake/PiriCADGdalDrivers.cmake` içindeki açık izin listesinden gelir, tam
+  sürücü kümesi asla açılmaz (io.md P7). `/vsicurl` gibi sanal dosya sistemi
+  yolları reddedilir (P14). Kapalıyken komutlar hangi paketin gerektiğini söyler,
+  sessizce başarılı olmaz.
+- **Etiketsiz koordinat reddediliyor.** Koordinat sistemi bildirmeyen veri kümesi
+  içe aktarılmaz; DXF'in yeri olmadığı için `.prj` yardımcı dosyası yazılır ve
+  okunur (io.md R20).
+- **libFuzzer koşumları ve tohum korpusu.** `piricad_fuzz_proje` ve
+  `piricad_fuzz_dxf`, ASan + UBSan altında; tohumlar Clang olmayan yapılarda da
+  `piricad_tests` tarafından aynı okuyucudan geçirilir (io.md R19, CLAUDE.md 6.7).
+- **Belgeler.** `docs/veri/proje-dosyasi.md`, `docs/veri/dis-formatlar.md` ve beş
+  komut sayfası; sözlük ve sorun giderme genişletildi.
+
 ### Eklendi — seçim ve nesne yakalama motoru
 
 - **Nesne yakalama.** Uç nokta, orta nokta, merkez, kesişim, dik ayak, en yakın,

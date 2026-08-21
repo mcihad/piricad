@@ -24,6 +24,11 @@ Tek tek komutlar:
 
 | Komut | Sayfa |
 |---|---|
+| `AÇ` | [Proje dosyası açma](komutlar/open.md) |
+| `KAYDET` | [Çizimi kaydetme](komutlar/save.md) |
+| `FARKLIKAYDET` | [Yeni ada kaydetme](komutlar/saveas.md) |
+| `İÇEAKTAR` | [Dış veri alma](komutlar/import.md) |
+| `DIŞAAKTAR` | [Dış biçime yazma](komutlar/export.md) |
 | `ÇİZGİ` | [Çizgi çizme](komutlar/line.md) |
 | `SEÇ` | [Nesne seçme](komutlar/select.md) |
 | `SİL` | [Nesne silme](komutlar/erase.md) |
@@ -45,6 +50,8 @@ Tek tek komutlar:
 | [Betik yazma](betik/README.md) | JSON betik biçimi, toplu işlem, kum havuzu |
 | [Komut günlüğü](mimari/gunluk.md) | Yaptığınız işi geri izleme, makro, oturum kaydı |
 | [Koordinat sistemleri](veri/koordinat-sistemleri.md) | TUREF/TM30, TM 3° dilimleri, milimetre depolama |
+| [PiriCAD proje dosyası](veri/proje-dosyasi.md) | `.pcad` ne taşır, sürüm politikası, bozuk dosya |
+| [Dış veri biçimleri](veri/dis-formatlar.md) | DXF ve GeoPackage, koordinat sistemi, `.prj` dosyası |
 | [Sürüm ve uyumluluk politikası](api-stability.md) | Neyin sabit kaldığı, neyin değişebileceği |
 
 ## Başvuru
