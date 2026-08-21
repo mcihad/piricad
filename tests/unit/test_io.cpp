@@ -680,6 +680,56 @@ TEST_CASE("IO: DXF dışa aktar -> içe aktar gidiş dönüşü")
     CHECK_EQ(target.doc.live_entity_count(), std::size_t{0});
 }
 
+TEST_CASE("IO: DXF birden çok katmanı taşır — dışa aktarım ilk katmanda durmaz")
+{
+    // The regression this locks. DXF holds exactly ONE OGR layer, named
+    // `entities`, and a drawing's layers live there as a `Layer` attribute. The
+    // export asked OGR for a layer per PiriCAD layer, so the second call failed
+    // with "Unable to have more than one OGR entities layer in a DXF file": the
+    // first layer was written, the command reported the GDAL message, and the file
+    // left on disk held a fraction of the drawing.
+    //
+    // The case above this one draws on a single layer, which is exactly why the
+    // bug survived it. A cadastral drawing is never one layer.
+    if (!io::vector_backend_available())
+        PENDING("PIRICAD_WITH_GDAL=OFF; çok katmanlı DXF sınanamıyor.");
+    TempDir tmp("dxf-katman");
+    const std::string path = tmp.file("cok-katman.dxf");
+
+    Rig source;
+    REQUIRE(source.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    for (const char* name : {"PARSEL", "YOL", "BINA"}) {
+        REQUIRE(source.bus.execute_line(std::string("KATMAN ad=") + name, Origin::Test).ok());
+        REQUIRE(
+            source.bus
+                .execute_line("ÇİZGİ 485320.150,4310220.400 485370.150,4310250.400", Origin::Test)
+                .ok());
+    }
+    REQUIRE(source.doc.live_entity_count() == std::size_t{3});
+
+    auto exported = source.bus.execute_line("DIŞAAKTAR \"" + path + "\"", Origin::Test);
+    if (!exported) ::microtest::report(__FILE__, __LINE__, "DIŞAAKTAR", exported.error().message);
+    REQUIRE(exported.ok());
+
+    // Read it back through our own importer: every entity has to come home, not
+    // just the one whose layer happened to be created first.
+    Rig target;
+    REQUIRE(target.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(target.bus.execute_line("İÇEAKTAR \"" + path + "\"", Origin::Test).ok());
+    CHECK_EQ(target.doc.live_entity_count(), std::size_t{3});
+
+    // And the layer names survive the trip, because a DXF that lost them is a
+    // drawing a surveyor has to re-sort by hand.
+    std::vector<std::string> names;
+    for (core::LayerId l = 0; l < target.doc.layers().size(); ++l)
+        if (target.doc.layer_entity_count(l) > 0) names.push_back(target.doc.layers()[l].name);
+    std::sort(names.begin(), names.end());
+    REQUIRE(names.size() == std::size_t{3});
+    CHECK_EQ(names[0], std::string("BINA"));
+    CHECK_EQ(names[1], std::string("PARSEL"));
+    CHECK_EQ(names[2], std::string("YOL"));
+}
+
 TEST_CASE("IO: GeoPackage dışa aktar -> içe aktar gidiş dönüşü, koordinat mm cinsinden korunur")
 {
     if (!io::vector_backend_available())

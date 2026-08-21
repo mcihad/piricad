@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <fstream>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -415,6 +416,7 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
     std::vector<core::Point2> points;
     std::vector<core::RingGeometry::RingInput> rings;
     std::vector<std::vector<core::Point2>> ring_store;
+    std::set<std::string> seen_layers; // so report.layers counts names, not features
 
     for (int li = 0; li < data.ptr->GetLayerCount(); ++li) {
         OGRLayer* layer = data.ptr->GetLayer(li);
@@ -440,11 +442,23 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                               report.crs + " ve " + crs.value() +
                               "). Tek bir sisteme dönüştürüp yeniden deneyin.");
 
-        const core::LayerId slot = tx.ensure_layer(layer_name);
-        if (slot == core::kNoLayer)
-            co_return err(ErrorCode::ValidationFailed,
-                          "'" + layer_name + "' katmanı oluşturulamadı.");
-        ++report.layers;
+        // The other half of the DXF single-layer story. On the way out we write
+        // every drawing layer into the one OGR layer DXF allows and carry the name
+        // in a `Layer` attribute; on the way back in, the OGR layer is called
+        // `entities` and the names are on the features. Reading the OGR layer name
+        // alone would land a whole cadastral drawing in one layer called
+        // `entities` — the export would look fixed and the import would still lose
+        // the drawing's structure.
+        const int layer_field = layer->GetLayerDefn()->GetFieldIndex("Layer");
+
+        core::LayerId slot = core::kNoLayer;
+        if (layer_field < 0) {
+            slot = tx.ensure_layer(layer_name);
+            if (slot == core::kNoLayer)
+                co_return err(ErrorCode::ValidationFailed,
+                              "'" + layer_name + "' katmanı oluşturulamadı.");
+            ++report.layers;
+        }
 
         layer->ResetReading();
         while (OGRFeature* raw_feature = layer->GetNextFeature()) {
@@ -459,6 +473,23 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
 
             const OGRGeometry* geometry = feature->GetGeometryRef();
             if (!geometry) continue;
+
+            core::LayerId target = slot;
+            if (layer_field >= 0) {
+                const char* named = feature->IsFieldSetAndNotNull(layer_field)
+                                        ? feature->GetFieldAsString(layer_field)
+                                        : nullptr;
+                const std::string want =
+                    named && *named ? std::string(named) : std::string(layer_name);
+                target = tx.ensure_layer(want);
+                if (target == core::kNoLayer)
+                    co_return err(ErrorCode::ValidationFailed,
+                                  "'" + want + "' katmanı oluşturulamadı.");
+                if (!seen_layers.contains(want)) {
+                    seen_layers.insert(want);
+                    ++report.layers;
+                }
+            }
 
             const OGRwkbGeometryType type = wkbFlatten(geometry->getGeometryType());
             rings.clear();
@@ -523,8 +554,8 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                 rings[r].points = ring_store[r];
 
             const bool polyline = rings.size() == 1 && rings.front().role == core::RingRole::Open;
-            auto added =
-                polyline ? tx.add_polyline(slot, rings.front().points) : tx.add_area(slot, rings);
+            auto added          = polyline ? tx.add_polyline(target, rings.front().points)
+                                           : tx.add_area(target, rings);
             if (!added)
                 co_return err(added.error().code, "'" + path + "' içindeki " +
                                                       std::to_string(report.features) +
@@ -631,14 +662,44 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
     const core::EntityTable& ents = doc.entities();
     const core::RingGeometry& geo = doc.geometry();
 
+    // DXF holds exactly ONE OGR layer, named `entities`; a drawing's layers live
+    // there as a `Layer` attribute on each feature. Asking OGR for a second layer
+    // fails with "Unable to have more than one OGR entities layer in a DXF file",
+    // and before this the export wrote the first PiriCAD layer and then stopped —
+    // a cadastral DXF with one layer in it is not a cadastral DXF.
+    //
+    // This is a fact about a GDAL driver, not about a regulation, so it lives in
+    // /src/io next to the code it governs. If a second single-layer driver is ever
+    // allow-listed, this moves into cmake/PiriCADGdalDrivers.cmake as a field —
+    // that file is where per-driver facts belong.
+    const bool one_layer_only = format->driver == "DXF";
+
+    OGRLayer* shared = nullptr;
+    if (one_layer_only) {
+        shared = data.ptr->CreateLayer("entities", &srs, wkbUnknown, nullptr);
+        if (!shared)
+            co_return err(ErrorCode::IoFailure,
+                          "'" + path + "' içinde katman oluşturulamadı: " + gdal_reason());
+
+        OGRFieldDefn field("Layer", OFTString);
+        field.SetWidth(255);
+        if (shared->CreateField(&field) != OGRERR_NONE)
+            co_return err(ErrorCode::IoFailure,
+                          "'" + path +
+                              "' içinde katman adı alanı oluşturulamadı: " + gdal_reason());
+    }
+
     for (core::LayerId l = 0; l < doc.layers().size(); ++l) {
         const core::Layer& layer = doc.layers()[l];
         if (doc.layer_entity_count(l) == 0) continue;
 
-        OGRLayer* out = data.ptr->CreateLayer(layer.name.c_str(), &srs, wkbUnknown, nullptr);
-        if (!out)
-            co_return err(ErrorCode::IoFailure,
-                          "'" + layer.name + "' katmanı yazılamadı: " + gdal_reason());
+        OGRLayer* out = shared;
+        if (out == nullptr) {
+            out = data.ptr->CreateLayer(layer.name.c_str(), &srs, wkbUnknown, nullptr);
+            if (!out)
+                co_return err(ErrorCode::IoFailure,
+                              "'" + layer.name + "' katmanı yazılamadı: " + gdal_reason());
+        }
         ++report.layers;
 
         for (core::EntityId e = 0; e < ents.size(); ++e) {
@@ -677,6 +738,7 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
                 OGRFeature::CreateFeature(out->GetLayerDefn()),
                 [](OGRFeature* f) { OGRFeature::DestroyFeature(f); });
             feature->SetGeometry(geometry.get());
+            if (one_layer_only) feature->SetField("Layer", layer.name.c_str());
 
             if (out->CreateFeature(feature.get()) != OGRERR_NONE)
                 co_return err(ErrorCode::IoFailure,

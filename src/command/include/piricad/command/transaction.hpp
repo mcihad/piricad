@@ -44,11 +44,16 @@ public:
     /// (Article 5.9) rather than reaching past the transaction for this one call.
     LayerId ensure_layer(std::string_view name);
 
-    /// Interns an appearance and returns its id.
+    /// Interns an appearance and returns its id, for a command — or a file reader
+    /// — that resolves a style at commit time (model.md R14).
     ///
-    /// Also not undoable: the style table is a deduplicated pool, adding to it
-    /// changes nothing that is drawn until an entity's style column points at the
-    /// new entry, and that write IS undoable (`set_entity_style`).
+    /// Also not undoable, for two reasons that reinforce each other. The style
+    /// table is a deduplicated pool: adding to it changes nothing that is drawn
+    /// until an entity's style column points at the new entry, and that write IS
+    /// undoable (`set_entity_style`). And the table only ever grows, so an id once
+    /// handed out stays valid for the document's lifetime — rolling an intern back
+    /// would renumber ids that other entities, and the journal's recorded previous
+    /// values, already point at.
     StyleId intern_style(const Appearance& a);
 
     Result<EntityId> add_polyline(LayerId layer, std::span<const Point2> pts);
@@ -63,12 +68,6 @@ public:
     Status set_layer_appearance(LayerId l, const Appearance& a);
     Status set_entity_style(EntityId e, StyleId style);
 
-    /// Interns an appearance and returns its id, for a command that resolves a
-    /// style at commit time (model.md R14). Deliberately NOT an undo step: the
-    /// StyleTable only ever grows, an id once handed out stays valid for the
-    /// document's lifetime, and rolling an intern back would renumber ids that
-    /// other entities — and the journal's previous values — already point at.
-    StyleId intern_style(const Appearance& a);
     Status set_entity_hidden(EntityId e, bool hidden);
     Status set_crs(std::string id);
 
