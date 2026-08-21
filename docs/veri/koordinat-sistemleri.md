@@ -115,25 +115,36 @@ indirgenirse çizim metrelerce titrer. PiriCAD bunu, koordinatları ekrana gönd
 görünüm merkezine göre kaydırarak önler; bu yüzden yakınlaştırdığınızda çizgiler yerinde
 durur.
 
-## Bu sürümde yapılabilenler ve yapılamayanlar
+## Koordinat dönüşümü
 
-Bugün PiriCAD koordinat sistemini bir **kimlik** olarak taşır: çizimin hangi sistemde
-olduğunu bilir, gösterir ve günlüğe yazar. Gerçek koordinat **dönüşümü** henüz yoktur.
+PiriCAD dönüşüm için **PROJ** kullanır — otuz yıldır bu işi yapan, üç platformda da
+çalışan standart kütüphane. Yedi TUREF dilimi de tanınır (EPSG:5253–5259) ve
+dilimler arası dönüşüm çalışır.
 
-Yapılamayanlar ve ne zaman geleceği:
+Ölçülen gidiş-dönüş hatası milimetrenin çok altındadır; sakladığımız birim
+milimetre olduğu için dönüşüm pratikte kayıpsızdır.
+
+### İki tuzak, ikisi de kapatıldı
+
+**Eksen sırası.** EPSG:5254 koordinatı *yukarı değer önce* bekler. PiriCAD sağa
+değeri önce saklar. Dönüşüm bu çevrimi sınırda kendisi yapar; siz bir şey yapmazsınız.
+Bu çevrim atlanırsa nokta Kuzey Denizi'ne düşer — testle tutuluyor.
+
+**Derece ve milimetre.** Hedef coğrafi bir sistemse (WGS84 gibi) sonuç derecedir.
+Dereceyi milimetre olarak saklamak noktayı yüz metre kaydırır, o yüzden PiriCAD bu
+durumda çizim geometrisini dönüştürmeyi **reddeder** ve açık bir hata verir.
+Coğrafi okuma ekranda ve dışa aktarımda kullanılır, çizimin içinde değil.
+
+### Henüz gelmemiş olanlar
 
 | Yetenek | Ne zaman |
 |---|---|
-| Dilimler arası dönüşüm (TM30 ↔ TM33 gibi) | Faz 1, PROJ ile |
-| ED50 / UTM 6° ve ITRF ↔ ED50 bölgesel dönüşüm | Faz 1 |
 | Türkiye Jeoit Modeli ile ortometrik yükseklik | Faz 1 |
+| ED50 / UTM 6° ve ITRF ↔ ED50 bölgesel dönüşüm | Faz 1 |
+| TKGM referans koordinatlarıyla doğrulama | referans veri geldiğinde |
 | TUSAGA-Aktif / CORS-TR, RINEX, NTRIP | Faz 2 |
 | Epok ve hız alanı yönetimi | Faz 2 |
 | Poligon, nirengi ve GNSS baz dengelemesi | Faz 2 |
-
-Dönüşüm kütüphanesi PROJ'dur ve `PIRICAD_WITH_PROJ` seçeneğinin arkasındadır; bugün
-kapalıdır. Devreye girdiğinde doğruluğu TKGM referans koordinatlarıyla karşılaştırılarak
-sınanacak. Ayrıntı: `CLAUDE.md` Article 8.2.
 
 ## Sırada ne var
 

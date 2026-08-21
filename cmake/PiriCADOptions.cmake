@@ -9,7 +9,21 @@ option(PIRICAD_BUILD_TESTS   "Build the test suite"           ON)
 option(PIRICAD_BUILD_BENCH   "Build the benchmark suite"      OFF)
 
 option(PIRICAD_WITH_GDAL     "Enable GDAL/OGR format support"        OFF)
-option(PIRICAD_WITH_PROJ     "Enable PROJ coordinate transformation" OFF)
+# PROJ is the one dependency the product cannot fake: §12 opens with TUREF/TM3.
+# Default to ON when it is installed, so a machine that has it never silently
+# builds a PiriCAD that cannot transform a coordinate.
+find_package(PROJ QUIET)
+if(NOT PROJ_FOUND)
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(PIRICAD_PROJ_PROBE QUIET proj)
+    endif()
+endif()
+if(PROJ_FOUND OR PIRICAD_PROJ_PROBE_FOUND)
+    option(PIRICAD_WITH_PROJ "Enable PROJ coordinate transformation" ON)
+else()
+    option(PIRICAD_WITH_PROJ "Enable PROJ coordinate transformation" OFF)
+endif()
 option(PIRICAD_WITH_GEOS     "Enable GEOS overlay operations"        OFF)
 option(PIRICAD_WITH_CGAL     "Enable CGAL exact arithmetic"          OFF)
 option(PIRICAD_WITH_LUA      "Enable the embedded Lua hot path"      OFF)

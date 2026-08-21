@@ -35,6 +35,7 @@ add_subdirectory(src/core)
 add_subdirectory(src/command)
 add_subdirectory(src/script)
 add_subdirectory(src/render)
+add_subdirectory(src/domain/geodesy)
 
 if(PIRICAD_BUILD_APP)
     add_subdirectory(src/app)

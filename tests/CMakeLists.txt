@@ -14,6 +14,7 @@ add_executable(piricad_tests
     unit/test_command.cpp
     unit/test_attribute.cpp
     unit/test_docs.cpp
+    unit/test_geodesy.cpp
     unit/test_geometry.cpp
     unit/test_golden.cpp
     unit/test_index.cpp
@@ -29,12 +30,14 @@ target_compile_definitions(piricad_tests PRIVATE
     PIRICAD_DOCS_DIR="${CMAKE_SOURCE_DIR}/docs"
     PIRICAD_JOURNAL_DIR="${CMAKE_SOURCE_DIR}/tests/journal"
     PIRICAD_GOLDEN_DIR="${CMAKE_SOURCE_DIR}/tests/golden"
+    PIRICAD_DATA_DIR="${CMAKE_SOURCE_DIR}/data"
 )
 
 target_include_directories(piricad_tests PRIVATE support)
 target_link_libraries(piricad_tests PRIVATE
     piricad_core
     piricad_command
+    piricad_domain_geodesy
     piricad_render
     piricad_script
     piricad_flags
