@@ -2,6 +2,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # GATE: no regulatory value hard-coded in C++.
+#
+# The exemptions, both annotated at the offending line so a reviewer sees the
+# claim rather than a silent pass:
+#   catalog-key  the line is a lookup key into /data/catalogs, not the value
+#   ui-label     the line NAMES something the user types or reads (a command
+#                alias, a menu string) and carries no regulatory value
 # piricad.md §15: "Mevzuat sık değişiyor -> Veri odaklı katalog mimarisi" — a
 # legislation update must be a data package swap, never a rebuild (§12, §8).
 # Constitution 5.13, .claude/domain.md R1/P1, .claude/data.md P1: every TAKS/KAKS
@@ -36,6 +42,15 @@ for dir in src/core src/command src/domain src/ai src/app; do
         if grep -qE '#[[:space:]]*include' <<<"$code"; then continue; fi
         # .claude/domain.md: an annotated catalogue lookup key is the sanctioned form.
         if grep -q 'catalog-key' <<<"$hit"; then continue; fi
+        # A NAME is not a VALUE. CLAUDE.md 5.13 bans a gösterim, a detay kodu or a
+        # TAKS row from being baked into C++; CLAUDE.md 2.6 requires every command
+        # to carry its Turkish primary name, and some of those names are the same
+        # words. Without this exemption a command called GÖSTERİM is unwritable —
+        # the `.names` line trips the gate — and the rule meant to keep regulation
+        # in /data ends up dictating what the user is allowed to type. The
+        # annotation is deliberate and visible in review: it is a claim by the
+        # author that the line names an affordance and carries no regulatory value.
+        if grep -q 'ui-label' <<<"$hit"; then continue; fi
         if ! grep -qiE "$regulatory" <<<"$code"; then continue; fi
         if grep -qE "$literal" <<<"$code"; then
             echo "hardcoded-thresholds: regulatory value baked into C++ -> $hit" >&2

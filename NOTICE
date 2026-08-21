@@ -24,13 +24,24 @@ Currently linked
                           relinking right is preserved. Qt Charts and
                           Qt DataVisualization are GPLv3-only and are NOT used.
 
-Pinned by commit, built from source
------------------------------------
+Pinned but NOT YET BUILT OR LINKED
+----------------------------------
 
-Small, pure-C++ libraries acquired by CMake FetchContent against an exact commit
-SHA, so a fresh checkout builds identically on Windows, macOS and Linux with
-nothing installed. The SHAs live in cmake/PiriCADDependencies.cmake; a tag can be
-moved, a SHA cannot (CLAUDE.md 5.12).
+Read this heading literally. cmake/PiriCADDependencies.cmake holds an exact
+commit SHA for each library below, and nothing include()s that file — not the
+root CMakeLists.txt, not a module. No FetchContent runs, no archive is
+downloaded, and not one line of any library below is compiled into any PiriCAD
+binary today.
+
+This section previously said these were "acquired by CMake FetchContent against
+an exact commit SHA", which was false. A NOTICE file is a licence compliance
+record, so a claim about what is linked has to be checkable against the build
+rather than against the intention. The SHAs are the decision, already reviewed
+for licence compatibility; the wiring is the library migration workstream. When
+each is genuinely linked it moves to "Currently linked" in the same change.
+
+A moved tag cannot silently change what these resolve to, which is why they are
+recorded as SHAs (CLAUDE.md 5.12).
 
   nlohmann/json           MIT                   v3.11.3   9cca280a
                           JSON for the journal, scripts and catalogues.
@@ -82,6 +93,13 @@ are the recorded exceptions, each with its reason.
       third-party package that is more mature than the documented pattern
       itself. ~110 lines implementing QLayout::heightForWidth. Replaced the day
       Qt promotes it to API.
+
+  piricad/core/json.hpp, tests/support/microtest.hpp, piricad/core/log.hpp
+      Standing in for nlohmann/json, doctest and spdlog until the section above
+      is genuinely wired. These are not the decision — the decision is the SHA —
+      they are what the code calls in the meantime, and they are listed here so
+      that "what does PiriCAD actually contain" has one honest answer.
+      core/log.hpp additionally carries the CLAUDE.md Article 8.4 waiver.
 
   the command bus, registry, parser, journal, document model
       No library provides these. They are the product.
