@@ -314,9 +314,11 @@ std::string SettingCatalog::suggest(std::string_view typed) const
 namespace {
 
 // Fixed-point conventions, so that no setting ever needs a double (R21, P8).
-constexpr std::int64_t kPerMille   = 1000;    // 1.000 as a per-mille ratio
-constexpr std::int64_t kMicroDeg   = 1000000; // one degree in micro-degrees
-constexpr std::int64_t kFullCircle = 360 * kMicroDeg;
+// The angle constants are the ones units.hpp declares: the snap engine reads the
+// same values, and a second definition of "one degree" is a second list.
+constexpr std::int64_t kPerMille   = 1000; // 1.000 as a per-mille ratio
+constexpr std::int64_t kMicroDeg   = kUDegPerDegree;
+constexpr std::int64_t kFullCircle = kUDegFullCircle;
 
 } // namespace
 
@@ -970,6 +972,7 @@ Result<SettingChange> Settings::set(std::string_view id, SettingValue v)
     else
         values_.insert(it, {index, v});
 
+    ++revision_;
     return change;
 }
 
@@ -993,6 +996,7 @@ Status Settings::revert(const SettingChange& change)
     } else if (present) {
         values_.erase(it);
     }
+    ++revision_;
     return ok();
 }
 
@@ -1007,12 +1011,14 @@ Status Settings::reset(std::string_view id)
     const auto it = std::lower_bound(values_.begin(), values_.end(), index,
                                      [](const auto& e, std::uint32_t k) { return e.first < k; });
     if (it != values_.end() && it->first == index) values_.erase(it);
+    ++revision_;
     return ok();
 }
 
 void Settings::clear()
 {
     values_.clear();
+    ++revision_;
 }
 
 std::uint64_t Settings::fold(std::uint64_t seed) const

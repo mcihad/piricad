@@ -82,6 +82,15 @@ inline bool regressed(double value, double baseline, double spread)
     return value > baseline * 1.10 && (value - baseline) > spread;
 }
 
+/// Keeps a computed value alive so the optimiser cannot delete the work that
+/// produced it. A benchmark measuring a call the compiler removed measures nothing.
+inline volatile double keep_sink = 0.0;
+
+inline void keep(double value)
+{
+    keep_sink = value;
+}
+
 /// Resident set size in MB, or -1 where the platform is not supported.
 double resident_mb();
 

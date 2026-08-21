@@ -22,6 +22,21 @@ namespace piricad::command {
 
 class Session;
 
+/// Applies the input aids — object snap, dik mod, kutupsal izleme, ızgaraya
+/// yakalama — to a point value on its way into a command body.
+///
+/// THIS IS THE ONE PLACE IT HAPPENS, and it sits on the path every `co_await
+/// ctx.point(...)` takes, so a mouse click, a typed coordinate, a script argument
+/// and an AI-produced point are aided identically (piricad.md §2.4, Article 1.2).
+/// It does not ask, and cannot ask, which client supplied the value
+/// (`.claude/command.md` P10) — it is handed a `Value` and a `Prompt`, and the
+/// prompt's rubber-band origin is the previous point every direction constraint
+/// measures from.
+///
+/// A non-point value is returned untouched. See `piricad/command/aids.hpp` for
+/// why a client with no view gets no object snap.
+Value apply_input_aids(Session& session, const Prompt& prompt, Value v);
+
 /// Awaits one input value. Fast path: if the source already holds the value
 /// (script / CLI / AI / batch) the coroutine never suspends and never allocates.
 template<class T> class InputAwaiter

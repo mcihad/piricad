@@ -34,6 +34,47 @@ bool to_bool(const Value& v)
 
 } // namespace
 
+Value apply_input_aids(Session& session, const Prompt& prompt, Value v)
+{
+    // Only a point is aimed; a number, a name or a flag is typed exactly.
+    if (v.kind() != Value::Kind::Point && v.kind() != Value::Kind::PointList) return v;
+
+    Bus& bus               = session.bus();
+    const AidSettings& set = bus.aid_settings();
+
+    const bool object_snap = set.snap_radius > 0 && (set.modes & core::SnapObjectMask) != 0;
+    const bool grid        = set.grid_step > 0 && (set.modes & core::SnapGrid) != 0;
+    const bool direction =
+        prompt.has_rubber_band &&
+        (set.ortho || (set.polar_step > 0 && (set.modes & core::SnapPolar) != 0));
+    if (!object_snap && !grid && !direction) return v;
+
+    const core::Document& doc = bus.document();
+
+    const auto resolve = [&](core::Point2 aim, bool has_base, core::Point2 base) {
+        const core::SnapResult r = bus.aids().resolve(doc, set, aim, has_base, base);
+        bus.aids().remember(r);
+        return r.point;
+    };
+
+    if (v.kind() == Value::Kind::Point)
+        return Value::point(resolve(v.as_point(), prompt.has_rubber_band, prompt.rubber_origin));
+
+    // A whole point list arrives when a script hands one over at once. Each point
+    // is resolved against the one before it, exactly as an interactive run would,
+    // so a scripted polyline and a drawn polyline agree vertex for vertex.
+    Value::Points points = v.as_points();
+    bool has_base        = prompt.has_rubber_band;
+    core::Point2 base    = prompt.rubber_origin;
+
+    for (auto& p : points) {
+        p        = resolve(p, has_base, base);
+        base     = p;
+        has_base = true;
+    }
+    return Value::points(std::move(points));
+}
+
 Context::Context(Session& session, Transaction& tx, const core::Document& doc)
     : session_(session), tx_(tx), doc_(doc)
 {}

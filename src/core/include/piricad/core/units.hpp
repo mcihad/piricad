@@ -22,37 +22,68 @@ using Mm = std::int64_t;
 inline constexpr Mm kMmPerMetre = 1000;
 inline constexpr Mm kMmInvalid  = std::numeric_limits<Mm>::min();
 
-/// Deterministic round-half-away-from-zero. Identical on every platform;
-/// std::llround is not constexpr and std::round's mode is not pinned.
+/// THE rounding helper (core.md R20). Deterministic round-half-away-from-zero,
+/// identical on every platform: std::llround is not constexpr and std::round's
+/// mode is not pinned. Every transient `double` that becomes an `Mm` goes through
+/// this one function, so there is exactly one rounding rule in the product.
 ///
-/// The obvious `(int)(x + 0.5)` breaks its own contract, because the addition can
-/// round before the truncation ever runs. Two cases, measured rather than argued:
+/// It does NOT compute `(v + 0.5)`, because that breaks its own contract: the
+/// addition can round before the truncation ever runs. Two cases, measured rather
+/// than argued:
 ///
 ///   * `(long long)(0x1.fffffffffffffp-2 + 0.5)` is 1. That input is the largest
 ///     double below one half, so the answer must be 0; the sum lands exactly on a
 ///     midpoint and ties-to-even carries it to 1.0.
-///   * Reachable through this function at `mm_from_metres(4503599627370.497)`,
-///     where the scaled value is already the integer 4503599627370497 and the
-///     `+ 0.5` pushes it to ...498 — a whole millimetre invented at an input that
-///     needed no rounding at all. Above 2^52 the gap between doubles is 1, so
-///     adding a half can only sit on a tie.
+///   * Reachable through mm_from_metres at 4503599627370.497 metres, where the
+///     scaled value is already the integer 4503599627370497 and the `+ 0.5` pushes
+///     it to ...498 — a whole millimetre invented at an input that needed no
+///     rounding at all. Above 2^52 the gap between doubles is 1, so adding a half
+///     can only sit on a tie.
 ///
 /// That magnitude is 4.5e12 metres, far past anything terrestrial, so this is a
-/// contract the old code broke rather than a pafta it got wrong. It is fixed
-/// because a rounding primitive that is right only within the range someone
-/// remembered to check is not a rounding primitive.
+/// contract the old code broke rather than a pafta it got wrong. It is written
+/// this way because a rounding primitive that is right only within the range
+/// someone remembered to check is not a rounding primitive — and because R20 makes
+/// this the single place every coordinate in the product is rounded.
 ///
 /// Comparing the fraction against one half never adds anything, so nothing can
 /// round on the way. The subtraction is exact for every input in range.
-constexpr Mm mm_from_metres(double metres) noexcept
+constexpr Mm mm_round(double v) noexcept
 {
-    const double scaled  = metres * static_cast<double>(kMmPerMetre);
-    const auto truncated = static_cast<Mm>(scaled); // toward zero
-    const double frac    = scaled - static_cast<double>(truncated);
+    const auto truncated = static_cast<Mm>(v); // toward zero
+    const double frac    = v - static_cast<double>(truncated);
 
     if (frac >= 0.5) return truncated + 1;
     if (frac <= -0.5) return truncated - 1;
     return truncated;
+}
+
+/// Metres to millimetres, rounded by the R20 helper above.
+constexpr Mm mm_from_metres(double metres) noexcept
+{
+    return mm_round(metres * static_cast<double>(kMmPerMetre));
+}
+
+// ------------------------------------------------------------- angles ------
+//
+// model.md R21: no stored field is floating point, and an angle IS a stored field
+// the moment a setting carries it (core.yakalama.kutupsal_aci). Angles are
+// therefore MICRO-DEGREES, int64: 45 degrees is 45'000'000, and a full circle
+// divides exactly by 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 18, 20, 24, 30, 36, 40,
+// 45, 60, 72 and 90 with no remainder, so every polar step a surveyor asks for is
+// representable exactly.
+
+/// One degree in micro-degrees.
+inline constexpr std::int64_t kUDegPerDegree = 1000000;
+
+/// A full turn in micro-degrees.
+inline constexpr std::int64_t kUDegFullCircle = 360 * kUDegPerDegree;
+
+/// Micro-degrees to radians. Transient computation type only — never storage.
+constexpr double udeg_to_radians(std::int64_t udeg) noexcept
+{
+    return static_cast<double>(udeg) *
+           (3.14159265358979323846 / (180.0 * static_cast<double>(kUDegPerDegree)));
 }
 
 /// Millimetres back to metres. Transient computation type only — never storage.

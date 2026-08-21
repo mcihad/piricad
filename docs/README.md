@@ -25,6 +25,7 @@ Tek tek komutlar:
 | Komut | Sayfa |
 |---|---|
 | `ÇİZGİ` | [Çizgi çizme](komutlar/line.md) |
+| `SEÇ` | [Nesne seçme](komutlar/select.md) |
 | `SİL` | [Nesne silme](komutlar/erase.md) |
 | `KATMAN` | [Katman yönetimi](komutlar/layer.md) |
 | `STİL` | [Nesne stili ve gösterim kataloğu](komutlar/style.md) |

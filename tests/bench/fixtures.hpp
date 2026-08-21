@@ -40,4 +40,17 @@ inline void build_cadastral_grid(piricad::core::Document& doc, std::size_t parce
     }
 }
 
+/// The five-million-parcel document, built once per process and shared by every
+/// scenario that needs it. Building it costs half a second and a gigabyte, so a
+/// second copy would measure the allocator rather than the code under test.
+inline piricad::core::Document& cadastral_5m()
+{
+    static piricad::core::Document document = [] {
+        piricad::core::Document doc;
+        build_cadastral_grid(doc, 5'000'000);
+        return doc;
+    }();
+    return document;
+}
+
 } // namespace bench

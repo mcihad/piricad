@@ -20,6 +20,7 @@ add_executable(piricad_tests
     unit/test_index.cpp
     unit/test_jitter.cpp
     unit/test_settings.cpp
+    unit/test_snap.cpp
     unit/test_style_layer.cpp
     unit/test_style_rule.cpp
     unit/test_proof.cpp
@@ -76,6 +77,7 @@ add_executable(piricad_bench
     bench/bench_command.cpp
     bench/bench_pending.cpp
     bench/bench_render.cpp
+    bench/bench_snap.cpp
 )
 
 target_include_directories(piricad_bench PRIVATE support bench)

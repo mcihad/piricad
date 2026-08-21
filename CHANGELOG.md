@@ -6,6 +6,37 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — seçim ve nesne yakalama motoru
+
+- **Nesne yakalama.** Uç nokta, orta nokta, merkez, kesişim, dik ayak, en yakın,
+  ızgara ve kutupsal; hepsi `core.yakalama.modlar` bit maskesinden sürülüyor.
+  `piricad/core/snap.hpp` istemciyi bilmez: bir nişan `Point2`, bir tolerans
+  mesafedir.
+- **Yardımlar tek yolda uygulanıyor.** `co_await ctx.point(...)` ne fareyi ne
+  betiği tanır; yakalama, dik mod ve kutupsal izleme `InputAwaiter` içinde,
+  değerin kaynağı sorulmadan çalışır (piricad.md §2.4, `CLAUDE.md` 1.2).
+- **Seçim.** `EntityKey` kümesi, oturum kapsamında; `content_hash()`'e dokunmaz,
+  geri alınmaz, belge değişikliği olarak günlüğe girmez (`model.md` R43, R44).
+- **`SEÇ` komutu.** Tümü, kimlik, pencere, kesen, yön okuyan kutu ve tek nokta;
+  ekle/çıkar/tersine işlemleri. Fareyle çizilen kutu ile komut satırına yazılan
+  `SEÇ KUTU` aynı komuttur.
+- **Tuvalde geri bildirim.** Her yakalama modu için ayrı işaret ve adı, seçili
+  nesne vurgusu, pencere/kesen kutusunun ayırt edilebilir çerçevesi.
+- **Kısayollar.** **F3** nesne yakalama, **F8** dik mod, **F9** ızgaraya yakalama,
+  **Ctrl+A** / **Ctrl+Shift+A** tümünü seç / seçimi temizle. Her biri `MOD` veya
+  `SEÇ` gönderir; ikinci bir mod listesi yok.
+
+### Düzeltildi
+
+- **`SİL` artık kalıcı anahtar konuşuyor.** `nesneler` parametresi yoğun slot
+  yerine `EntityKey` alıyor (`model.md` R5/P4): günlüğe giren bir slot, tekrar
+  oynatıldığında komşu parsele düşerdi. Kimlikler `1`'den başlar. Argümansız
+  `SİL` etkin seçimi siler.
+- **Liste parametreleri artık birikiyor.** `SİL nesneler=1 nesneler=2` iki nesneyi
+  siliyor; önceden ikinci değer birinciyi sessizce eziyordu (`command.md` P15).
+- **İki elemanlı JSON dizisi.** `{"nesneler": [1, 2]}` artık kimlik çifti olarak
+  okunuyor; ayrımı komut bildirimi yapıyor, JSON'un biçimi değil.
+
 ### Eklendi — Faz 0 iskeleti
 
 - **Komut veri yolu.** `Bus` → doğrulama → `Transaction` → `Journal`. Arayüz,

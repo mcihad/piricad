@@ -39,9 +39,18 @@ void Controller::wireBus()
     bus_.on_echo = [this](std::string_view text) {
         emit echoed(QString::fromUtf8(text.data(), static_cast<int>(text.size())));
     };
-    bus_.on_document_changed = [this] { emit documentChanged(); };
-    bus_.on_prompt           = [this](const command::Prompt& p) {
+    bus_.on_document_changed = [this] {
+        // An erase retires slots and an undo brings them back, so the resolved
+        // list is rebuilt with the document rather than only with the selection.
+        refreshSelection();
+        emit documentChanged();
+    };
+    bus_.on_prompt = [this](const command::Prompt& p) {
         emit promptChanged(QString::fromStdString(p.message));
+    };
+    bus_.on_selection_changed = [this] {
+        refreshSelection();
+        emit selectionChanged();
     };
     bus_.on_setting_changed = [this](std::string_view id, core::SettingScope) {
         emit settingChanged(QString::fromUtf8(id.data(), static_cast<int>(id.size())));
@@ -87,6 +96,32 @@ void Controller::runLine(const QString& line, command::Origin origin)
         emit echoed(QString::fromStdString(result.value().message));
     }
     settle();
+}
+
+void Controller::runInvocation(const command::Invocation& invocation)
+{
+    auto result = bus_.dispatch(invocation);
+    if (!result) {
+        emit echoed(tr("Hata: %1").arg(QString::fromStdString(result.error().message)));
+    } else if (!result.value().message.empty()) {
+        emit echoed(QString::fromStdString(result.value().message));
+    }
+    settle();
+}
+
+void Controller::refreshSelection()
+{
+    // Key -> slot is a binary search over a column the document already keeps, and
+    // it runs once per selection change rather than once per frame (model.md R2).
+    const command::Selection& selection = bus_.selection();
+
+    selected_slots_.clear();
+    selected_slots_.reserve(selection.size());
+    for (core::EntityKey key : selection.keys()) {
+        const core::EntityId slot = document_.slot_of(key);
+        if (slot != core::kNoEntity && document_.alive(slot)) selected_slots_.push_back(slot);
+    }
+    selection_revision_ = selection.revision();
 }
 
 void Controller::runCommand(const QString& name)

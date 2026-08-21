@@ -153,8 +153,22 @@ Depoda çalışan bir örnek daha var: [`tests/journal/ornek-parsel.json`](../..
 }
 ```
 
-Nesne kimliklerini **Komut Günlüğü** panelinden okursunuz; kimlikler sıfırdan başlar ve
-yaratılış sırasına göre artar. Grafik seçim Faz 2'de gelecek.
+Nesne kimliklerini **Komut Günlüğü** panelinden ya da [`SEÇ`](../komutlar/select.md)
+komutundan okursunuz; kimlikler **1'den** başlar, yaratılış sırasına göre artar ve
+hiçbir zaman yeniden kullanılmaz.
+
+Kimlik saymaktan daha sağlamı seçmektir — argümansız `core.erase` etkin seçimi siler:
+
+```json
+{
+  "ad": "Kutuya değen her şeyi sil",
+  "komutlar": [
+    { "cmd": "core.line",   "args": { "noktalar": [[0,0],[10000,0]] } },
+    { "cmd": "core.select", "args": { "mod": "KESEN", "noktalar": [[-1000,-1000],[11000,1000]] } },
+    { "cmd": "core.erase",  "args": {} }
+  ]
+}
+```
 
 ## Kum havuzu
 

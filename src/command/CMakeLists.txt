@@ -3,12 +3,14 @@
 # Constitution Article 1: every state mutation passes through this library.
 
 add_library(piricad_command STATIC
+    src/aids.cpp
     src/bus.cpp
     src/context.cpp
     src/input.cpp
     src/journal.cpp
     src/parser.cpp
     src/registry.cpp
+    src/selection.cpp
     src/session.cpp
     src/spec.cpp
     src/transaction.cpp
@@ -18,6 +20,7 @@ add_library(piricad_command STATIC
     src/commands/edit.cpp
     src/commands/layer.cpp
     src/commands/line.cpp
+    src/commands/pick.cpp
     src/commands/settings.cpp
     src/commands/style.cpp
     src/commands/system.cpp

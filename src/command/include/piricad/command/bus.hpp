@@ -12,8 +12,10 @@
 // No client on that diagram has a privilege over any other.
 #pragma once
 
+#include "piricad/command/aids.hpp"
 #include "piricad/command/journal.hpp"
 #include "piricad/command/registry.hpp"
+#include "piricad/command/selection.hpp"
 #include "piricad/command/session.hpp"
 #include "piricad/command/transaction.hpp"
 #include "piricad/command/validation.hpp"
@@ -123,11 +125,39 @@ public:
 
     const core::Settings& session_settings() const noexcept { return session_settings_; }
 
+    // ---- selection and input aids: session state, never document state ----
+    //
+    // model.md R43 keeps both out of `content_hash()` and out of the journal as
+    // document mutations, and R44 stores the selection as `EntityKey` so it
+    // survives a save, a reorder and a reload. They live on the bus rather than
+    // in the canvas for the same reason the session settings do: a script and the
+    // AI select and aim with the same machinery the hand does (Article 1.2).
+    Selection& selection() noexcept { return selection_; }
+
+    const Selection& selection() const noexcept { return selection_; }
+
+    InputAids& aids() noexcept { return aids_; }
+
+    const InputAids& aids() const noexcept { return aids_; }
+
+    /// The aid settings in force, assembled from the app and session stores and
+    /// memoised against their revision counters (see `aids.hpp`). The reference is
+    /// valid until the next settings write or view-scale change.
+    const AidSettings& aid_settings() const
+    {
+        return aids_.settings(app_settings_, session_settings_);
+    }
+
     // ---- observers. The UI subscribes; it never reaches around the bus. ----
     std::function<void(std::string_view)> on_echo;
     std::function<void(const Prompt&)> on_prompt;
     std::function<void()> on_document_changed;
     std::function<void(const DispatchResult&)> on_command_finished;
+
+    /// The selection changed. The canvas listens so that selecting from the
+    /// command line, from a script or from a rubber-band drag all light the same
+    /// entities up — the mouse is not a privileged client (Article 1.2).
+    std::function<void()> on_selection_changed;
 
     /// A setting changed. The shell listens so that writing a preference from the
     /// command line, from a script or from the AI has the same visible effect as
@@ -159,6 +189,9 @@ private:
     core::Settings project_settings_{core::builtin_settings(), core::SettingScopeMask::Project};
     core::Settings app_settings_{core::builtin_settings(), core::SettingScopeMask::App};
     core::Settings session_settings_{core::builtin_settings(), core::SettingScopeMask::Session};
+
+    Selection selection_{};
+    InputAids aids_{};
 
     std::unique_ptr<Transaction> batch_;
     std::string batch_label_;

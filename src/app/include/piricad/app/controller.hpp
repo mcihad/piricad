@@ -18,7 +18,9 @@
 #include <QObject>
 #include <QString>
 
+#include <cstdint>
 #include <memory>
+#include <vector>
 
 namespace piricad::app {
 
@@ -33,9 +35,22 @@ public:
     // ---- the only ways a widget may act on the document ----
     void runLine(const QString& line, command::Origin origin = command::Origin::CommandLine);
     void runCommand(const QString& name); ///< toolbar / menu — same road as a script
+
+    /// Dispatches a fully built invocation. This is `Bus::dispatch`, the same
+    /// overload the JSON runner and the AI use (`.claude/command.md` R2): the
+    /// canvas needs it because a rubber-band box carries `Point2` values that must
+    /// not be round-tripped through formatted text to become a command line.
+    void runInvocation(const command::Invocation& invocation);
     void beginInteractive(const QString& name);
     void supplyPoint(core::Point2 world);
     void cancelInteractive();
+
+    /// The selection, resolved to dense slots for one frame. Recomputed only when
+    /// the selection or the document changes, never per frame: model.md R2 keeps
+    /// keys out of the frame path, and R44 keeps slots out of the selection.
+    const std::vector<core::EntityId>& selectedSlots() const noexcept { return selected_slots_; }
+
+    void refreshSelection();
 
     command::Session* session() const noexcept { return session_.get(); }
 
@@ -60,6 +75,7 @@ public:
 signals:
     void echoed(const QString& text);
     void documentChanged();
+    void selectionChanged();
     void promptChanged(const QString& prompt);
     void undoStateChanged(bool canUndo, bool canRedo);
     void viewRequested(const QString& mode, double factor);
@@ -77,6 +93,9 @@ private:
     script::JsonRunner runner_;
 
     std::unique_ptr<command::Session> session_;
+
+    std::vector<core::EntityId> selected_slots_;
+    std::uint64_t selection_revision_{0};
 };
 
 } // namespace piricad::app

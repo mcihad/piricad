@@ -22,6 +22,13 @@ const Palette kLight{
     /* crosshair  */ QColor(0x1F, 0x6F, 0xEB, 120),
     /* rubberBand */ QColor(0xD9, 0x73, 0x06),
     /* hud        */ QColor(0x8A, 0x93, 0xA1),
+
+    // Selection and snap read against the drawing, not against the chrome: a
+    // surveyor decides what is highlighted while looking at black linework.
+    /* selection    */ QColor(0x00, 0x8C, 0xFF),
+    /* selectWindow */ QColor(0x2E, 0x7D, 0x32),
+    /* selectCross  */ QColor(0x2E, 0x7D, 0x32),
+    /* snapMarker   */ QColor(0xE0, 0x8A, 0x00),
 };
 
 const Palette kDark{
@@ -42,6 +49,11 @@ const Palette kDark{
     /* crosshair  */ QColor(0x78, 0xC8, 0xFF, 110),
     /* rubberBand */ QColor(0xFF, 0xBE, 0x50),
     /* hud        */ QColor(0x96, 0xA0, 0xAF),
+
+    /* selection    */ QColor(0x4F, 0xC3, 0xF7),
+    /* selectWindow */ QColor(0x7C, 0xD3, 0x7F),
+    /* selectCross  */ QColor(0x7C, 0xD3, 0x7F),
+    /* snapMarker   */ QColor(0xFF, 0xC1, 0x07),
 };
 
 QString hex(const QColor& c)

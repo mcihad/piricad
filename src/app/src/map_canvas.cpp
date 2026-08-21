@@ -37,6 +37,15 @@ MapCanvas::MapCanvas(Controller& controller, QWidget* parent)
     view_.set_centre(core::Point2{485350000, 4310235000}, 40.0); // TUREF/TM30, 30. dilim
 
     reloadGridSettings();
+    publishViewScale();
+}
+
+void MapCanvas::publishViewScale()
+{
+    // The only number the aid layer cannot work out for itself. Everything else
+    // about snapping — modes, ortho, polar step, grid — lives in the settings and
+    // is readable by every client (piricad/command/aids.hpp).
+    controller_.bus().aids().set_view_scale(view_.mm_per_pixel());
 }
 
 void MapCanvas::setDebugHud(bool on)
@@ -65,6 +74,7 @@ void MapCanvas::zoomToExtents()
         return;
     }
     view_.fit(box, 0.08);
+    publishViewScale();
     emit viewChanged();
     update();
 }
@@ -72,6 +82,7 @@ void MapCanvas::zoomToExtents()
 void MapCanvas::zoomBy(double factor)
 {
     view_.zoom_at(render::ScreenPoint{width() * 0.5, height() * 0.5}, factor);
+    publishViewScale();
     emit viewChanged();
     update();
 }
@@ -79,6 +90,7 @@ void MapCanvas::zoomBy(double factor)
 void MapCanvas::resetView()
 {
     view_.set_centre(core::Point2{485350000, 4310235000}, 40.0);
+    publishViewScale();
     emit viewChanged();
     update();
 }
@@ -86,6 +98,7 @@ void MapCanvas::resetView()
 void MapCanvas::resizeEvent(QResizeEvent* event)
 {
     view_.set_viewport(width(), height());
+    publishViewScale();
     QWidget::resizeEvent(event);
     emit viewChanged();
 }
@@ -178,6 +191,203 @@ void MapCanvas::drawGrid(QPainter& painter) const
     }
 }
 
+void MapCanvas::reloadSnapSettings()
+{
+    updateSnapPreview();
+    update();
+}
+
+void MapCanvas::updateSnapPreview()
+{
+    snap_preview_valid_ = false;
+    if (!cursor_valid_) return;
+
+    // The marker is only meaningful while a command is asking for a point: it
+    // promises "click here and this is what you get", and there is nothing to
+    // promise when nothing is being drawn.
+    command::Session* session = controller_.session();
+    if (!session || !session->waiting()) return;
+
+    command::Bus& bus                = controller_.bus();
+    const command::AidSettings& aids = bus.aid_settings();
+    const core::Point2 aim = view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
+
+    const command::Prompt& prompt = session->prompt();
+    const core::SnapResult r      = bus.aids().resolve(controller_.document(), aids, aim,
+                                                       prompt.has_rubber_band, prompt.rubber_origin);
+    if (r.mode == core::SnapNone) return;
+
+    snap_preview_       = r;
+    snap_preview_valid_ = true;
+}
+
+void MapCanvas::dispatchSelection(const QPointF& from, const QPointF& to,
+                                  Qt::KeyboardModifiers mods)
+{
+    const core::Point2 a = view_.to_world(render::ScreenPoint{from.x(), from.y()});
+    const core::Point2 b = view_.to_world(render::ScreenPoint{to.x(), to.y()});
+
+    // A drag shorter than the pick box is a click, not a box. The threshold is the
+    // declared seçim toleransı, so the mouse obeys the same preference the command
+    // line does rather than a number invented here.
+    const double slack =
+        static_cast<double>(controller_.bus().app_settings().get("core.secim.tolerans").as_int());
+    const bool is_box = std::abs(to.x() - from.x()) > slack || std::abs(to.y() - from.y()) > slack;
+
+    command::Args args;
+    args.set("mod", command::Value::text(is_box ? "KUTU" : "NOKTA"));
+    args.set("noktalar", is_box ? command::Value::points({a, b}) : command::Value::points({a}));
+
+    // QGIS keys, because that is where the CBS half of this product's users come
+    // from: Shift adds, Ctrl removes, a plain click replaces.
+    if (mods.testFlag(Qt::ShiftModifier))
+        args.set("islem", command::Value::text("EKLE"));
+    else if (mods.testFlag(Qt::ControlModifier))
+        args.set("islem", command::Value::text("ÇIKAR"));
+
+    controller_.runInvocation(
+        command::Invocation{"core.select", std::move(args), command::Origin::Gui});
+}
+
+void MapCanvas::drawSelected(QPainter& painter) const
+{
+    // Not named `slots`: Qt defines that as a macro (qobjectdefs.h).
+    const auto& selected = controller_.selectedSlots();
+    if (selected.empty()) return;
+
+    const core::Document& doc      = controller_.document();
+    const core::EntityTable& table = doc.entities();
+    const core::RingGeometry& geom = doc.geometry();
+
+    QPen pen(palette_.selection);
+    pen.setWidthF(3.0);
+    pen.setCapStyle(Qt::RoundCap);
+    pen.setJoinStyle(Qt::RoundJoin);
+    painter.setPen(pen);
+
+    // Walked per selected entity, never per document entity: a selection is
+    // O(hundreds) and the frame budget belongs to the drawing (§10.1).
+    for (core::EntityId e : selected) {
+        if (e >= table.size() || !table.visible(e)) continue;
+
+        const core::RingSpan span = geom.rings_of(table.slot[e]);
+        QPainterPath path;
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+            const auto xs = geom.ring_xs(r);
+            const auto ys = geom.ring_ys(r);
+            if (xs.size() < 2) continue;
+
+            const auto at = [&](std::size_t v) {
+                const auto q = view_.to_screen(core::Point2{xs[v], ys[v]});
+                return QPointF(q.x, q.y);
+            };
+            path.moveTo(at(0));
+            for (std::size_t v = 1; v < xs.size(); ++v)
+                path.lineTo(at(v));
+            if (geom.ring_role[r] != core::RingRole::Open) path.closeSubpath();
+        }
+        painter.drawPath(path);
+    }
+}
+
+void MapCanvas::drawSelectionBox(QPainter& painter) const
+{
+    if (!selecting_ || !cursor_valid_) return;
+
+    // Left to right is PENCERE (solid outline, what is wholly inside); right to
+    // left is KESEN (dashed, whatever the box touches). The two look different on
+    // screen because they behave differently, and every CAD user reads that shape
+    // before they read any label.
+    const bool crossing = cursor_.x() < select_anchor_.x();
+
+    QPen pen(crossing ? palette_.selectCross : palette_.selectWindow);
+    pen.setWidth(1);
+    pen.setStyle(crossing ? Qt::DashLine : Qt::SolidLine);
+    painter.setPen(pen);
+
+    QColor fill = crossing ? palette_.selectCross : palette_.selectWindow;
+    fill.setAlpha(38);
+    painter.setBrush(fill);
+    painter.drawRect(QRectF(select_anchor_, cursor_).normalized());
+    painter.setBrush(Qt::NoBrush);
+}
+
+void MapCanvas::drawSnapMarker(QPainter& painter) const
+{
+    if (!snap_preview_valid_) return;
+
+    const auto p = view_.to_screen(snap_preview_.point);
+    const QPointF at(p.x, p.y);
+    const double h = 6.0; // half size, layout units
+
+    QPen pen(palette_.snapMarker);
+    pen.setWidthF(1.8);
+    painter.setPen(pen);
+    painter.setBrush(Qt::NoBrush);
+
+    // One glyph per mode, the shapes CAD users already read without a legend.
+    switch (snap_preview_.mode) {
+    case core::SnapEndpoint: // square
+        painter.drawRect(QRectF(at.x() - h, at.y() - h, 2 * h, 2 * h));
+        break;
+    case core::SnapMidpoint: { // triangle
+        QPainterPath tri;
+        tri.moveTo(at.x(), at.y() - h);
+        tri.lineTo(at.x() + h, at.y() + h);
+        tri.lineTo(at.x() - h, at.y() + h);
+        tri.closeSubpath();
+        painter.drawPath(tri);
+        break;
+    }
+    case core::SnapCenter: // circle
+        painter.drawEllipse(at, h, h);
+        break;
+    case core::SnapIntersection: // cross
+        painter.drawLine(QPointF(at.x() - h, at.y() - h), QPointF(at.x() + h, at.y() + h));
+        painter.drawLine(QPointF(at.x() - h, at.y() + h), QPointF(at.x() + h, at.y() - h));
+        break;
+    case core::SnapPerpendicular: // the right-angle mark
+        painter.drawLine(QPointF(at.x() - h, at.y() - h), QPointF(at.x() - h, at.y() + h));
+        painter.drawLine(QPointF(at.x() - h, at.y() + h), QPointF(at.x() + h, at.y() + h));
+        painter.drawLine(QPointF(at.x(), at.y() + h), QPointF(at.x(), at.y()));
+        painter.drawLine(QPointF(at.x(), at.y()), QPointF(at.x() - h, at.y()));
+        break;
+    case core::SnapNearest: { // bowtie
+        QPainterPath bow;
+        bow.moveTo(at.x() - h, at.y() - h);
+        bow.lineTo(at.x() + h, at.y() - h);
+        bow.lineTo(at.x() - h, at.y() + h);
+        bow.lineTo(at.x() + h, at.y() + h);
+        bow.closeSubpath();
+        painter.drawPath(bow);
+        break;
+    }
+    case core::SnapGrid: // lattice cell with its centre marked
+        painter.drawLine(QPointF(at.x() - h, at.y()), QPointF(at.x() + h, at.y()));
+        painter.drawLine(QPointF(at.x(), at.y() - h), QPointF(at.x(), at.y() + h));
+        painter.drawRect(QRectF(at.x() - h, at.y() - h, 2 * h, 2 * h));
+        break;
+    case core::SnapPolar:
+    case core::SnapOrtho: { // diamond: the point is on a locked direction
+        QPainterPath diamond;
+        diamond.moveTo(at.x(), at.y() - h);
+        diamond.lineTo(at.x() + h, at.y());
+        diamond.lineTo(at.x(), at.y() + h);
+        diamond.lineTo(at.x() - h, at.y());
+        diamond.closeSubpath();
+        painter.drawPath(diamond);
+        break;
+    }
+    default: break;
+    }
+
+    // The label says which aid fired. Without it a user cannot tell an endpoint
+    // from an intersection when both glyphs sit under the cursor.
+    painter.setPen(palette_.snapMarker);
+    painter.drawText(QPointF(at.x() + h + 4.0, at.y() - h - 2.0),
+                     QString::fromUtf8(core::snap_mode_label(snap_preview_.mode)));
+}
+
 void MapCanvas::drawCrosshair(QPainter& painter) const
 {
     if (!cursor_valid_) return;
@@ -227,7 +437,10 @@ void MapCanvas::paintEvent(QPaintEvent*)
         painter.drawPath(path);
     }
 
-    // Rubber band for the running interactive command.
+    drawSelected(painter);
+
+    // Rubber band for the running interactive command. It runs to the SNAPPED
+    // point when an aid has fired, because that is where the segment will land.
     if (auto* s = controller_.session();
         s && s->waiting() && s->prompt().has_rubber_band && cursor_valid_) {
         const auto a = view_.to_screen(s->prompt().rubber_origin);
@@ -235,10 +448,18 @@ void MapCanvas::paintEvent(QPaintEvent*)
         pen.setStyle(Qt::DashLine);
         pen.setWidth(1);
         painter.setPen(pen);
-        painter.drawLine(QPointF(a.x, a.y), cursor_);
+
+        QPointF to = cursor_;
+        if (snap_preview_valid_) {
+            const auto b = view_.to_screen(snap_preview_.point);
+            to           = QPointF(b.x, b.y);
+        }
+        painter.drawLine(QPointF(a.x, a.y), to);
     }
 
+    drawSelectionBox(painter);
     drawCrosshair(painter);
+    drawSnapMarker(painter);
 
     last_frame_us_ = static_cast<int>(timer.nsecsElapsed() / 1000);
 
@@ -267,11 +488,25 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
     }
 
     if (event->button() == Qt::LeftButton) {
-        // A click is one input value for the running command. Where that value
-        // came from is invisible to the command body (piricad.md §2.4).
-        const core::Point2 world =
-            view_.to_world(render::ScreenPoint{event->position().x(), event->position().y()});
-        controller_.supplyPoint(world);
+        if (controller_.awaitingInput()) {
+            // A click is one input value for the running command, and it is the RAW
+            // world point. Snapping is not applied here: it happens once, inside
+            // the command layer, on the path every client takes (piricad.md §2.4,
+            // piricad/command/aids.hpp). A canvas that snapped first would be a
+            // client with a private route.
+            const core::Point2 world =
+                view_.to_world(render::ScreenPoint{event->position().x(), event->position().y()});
+            controller_.supplyPoint(world);
+            snap_preview_valid_ = false;
+            update();
+            return;
+        }
+
+        // No command is asking for a point, so the drag is a selection.
+        selecting_     = true;
+        select_anchor_ = event->position();
+        cursor_        = event->position();
+        cursor_valid_  = true;
         update();
         return;
     }
@@ -294,6 +529,8 @@ void MapCanvas::mouseMoveEvent(QMouseEvent* event)
         emit viewChanged();
     }
 
+    updateSnapPreview();
+
     emit cursorMoved(view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()}));
     update();
 }
@@ -303,6 +540,13 @@ void MapCanvas::mouseReleaseEvent(QMouseEvent* event)
     if (event->button() == Qt::MiddleButton) {
         panning_ = false;
         unsetCursor();
+        return;
+    }
+
+    if (event->button() == Qt::LeftButton && selecting_) {
+        selecting_ = false;
+        dispatchSelection(select_anchor_, event->position(), event->modifiers());
+        update();
     }
 }
 
@@ -313,6 +557,8 @@ void MapCanvas::wheelEvent(QWheelEvent* event)
 
     view_.zoom_at(render::ScreenPoint{event->position().x(), event->position().y()},
                   std::pow(1.2, steps));
+    publishViewScale();
+    updateSnapPreview();
     emit viewChanged();
     update();
 }
@@ -320,7 +566,25 @@ void MapCanvas::wheelEvent(QWheelEvent* event)
 void MapCanvas::keyPressEvent(QKeyEvent* event)
 {
     if (event->key() == Qt::Key_Escape) {
-        controller_.cancelInteractive();
+        if (selecting_) {
+            selecting_ = false;
+            update();
+            return;
+        }
+        if (controller_.session()) {
+            controller_.cancelInteractive();
+            snap_preview_valid_ = false;
+            update();
+            return;
+        }
+        // Nothing running: ESC clears the selection, and it does so by sending the
+        // command, not by reaching into the bus (Article 1.2).
+        if (!controller_.bus().selection().empty()) {
+            command::Args args;
+            args.set("mod", command::Value::text("TEMİZLE"));
+            controller_.runInvocation(
+                command::Invocation{"core.select", std::move(args), command::Origin::Gui});
+        }
         update();
         return;
     }

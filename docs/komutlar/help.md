@@ -47,14 +47,18 @@ YARDIM
 Çıktı:
 
 ```text
-Komutlar (8):
+Komutlar (12):
     ÇİZGİ, CIZGI, LINE, Ç, L  — İki veya daha fazla nokta arasında doğru parçaları çizer.
     SİL, SIL, ERASE, E  — Seçilen nesneleri siler.
+    SEÇ, SEC, SELECT, S  — Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta.
     KATMAN, LAYER, KAT  — Katman oluşturur, aktif yapar ve özelliklerini değiştirir.
     YAKINLAŞ, YAKINLAS, ZOOM, Z  — Görünümü çizim kapsamına veya verilen çarpana ayarlar.
     GERİAL, GERIAL, UNDO, U  — Son işlemi geri alır.
     YİNELE, YINELE, REDO  — Geri alınan işlemi yineler.
     BETİK, BETIK, SCRIPT  — Bir betik dosyasını komut veri yolu üzerinden çalıştırır.
+    AYAR, SETTING, AY  — Proje ayarlarını listeler, okur ve değiştirir.
+    TERCİH, TERCIH, PREFERENCE, PREF  — Uygulama tercihlerini listeler, okur ve değiştirir.
+    MOD, MODE, MD  — Oturum modlarını (yakalama, dik mod, kutupsal izleme) listeler, okur ve değiştirir.
     YARDIM, HELP, ?  — Komut listesini veya tek bir komutun ayrıntısını gösterir.
 ```
 

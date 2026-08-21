@@ -154,17 +154,48 @@ panelinde **Kilit** sütununa çift tıklayın, veya başka bir katmana geçin.
 **Çözüm.** Kimliği **Komut Günlüğü** panelinden denetleyin. Bu durumda **hiçbir nesne
 silinmez**; komut çizime dokunmadan durur.
 
-### `Geçersiz nesne kimliği: -1`
+### `Geçersiz nesne kimliği: 0. Kimlikler 1'den başlar.`
 
-**Sebep.** Negatif kimlik verilmiş.
+**Sebep.** Sıfır ya da negatif kimlik verilmiş.
 
-**Çözüm.** Kimlikler sıfır veya daha büyüktür.
+**Çözüm.** Nesne kimlikleri `1`'den başlar. Kimlikleri [`SEÇ`](komutlar/select.md) ile
+ya da **Komut Günlüğü** panelinden okuyun.
 
-### `Silinecek nesne belirtilmedi. Örnek: SİL nesneler=0`
+### `Silinecek nesne belirtilmedi ve seçim boş. Örnek: SİL nesneler=1`
 
-**Sebep.** `SİL` komutu kimliksiz çağrılmış.
+**Sebep.** `SİL` kimliksiz çağrılmış ve etkin seçim de boş.
 
-**Çözüm.** En az bir kimlik verin.
+**Çözüm.** Önce [`SEÇ`](komutlar/select.md) ile nesne seçin ya da `nesneler=` ile en az
+bir kimlik verin.
+
+## Seçim
+
+### `Beklenen mod: TÜMÜ | TEMİZLE | NESNE | PENCERE | KESEN | KUTU | NOKTA. Girilen: 'OLMAYAN'`
+
+**Sebep.** `SEÇ` komutuna tanınmayan bir mod adı verilmiş.
+
+**Çözüm.** Mesajdaki listeden birini yazın. İngilizce ve karaktersiz karşılıkları da
+kabul edilir: `ALL`, `CLEAR`, `WINDOW`, `CROSSING`, `BOX`, `POINT`.
+
+### `Beklenen işlem: DEĞİŞTİR | EKLE | ÇIKAR | TERSİNE. Girilen: 'BİLİNMEYEN'`
+
+**Sebep.** `islem=` parametresine tanınmayan bir değer verilmiş.
+
+**Çözüm.** `EKLE`, `ÇIKAR` veya `TERSİNE` yazın; hiç yazmazsanız seçim değiştirilir.
+
+### `'PENCERE' 2 nokta bekliyor. Girilen: 1 nokta.`
+
+**Sebep.** Kutu seçimine tek köşe verilmiş.
+
+**Çözüm.** İki köşe verin: `SEÇ PENCERE 0,0 100,100`.
+
+### `Bu aramada nesne bulunamadı. Seçimde 0 nesne var.`
+
+**Sebep.** Kutu ya da nokta boş yere düşmüş.
+
+**Çözüm.** Hata değildir. Kutuyu büyütün, ya da `SEÇ NOKTA` kullanıyorsanız `tolerans=`
+ile metre cinsinden bir yarıçap verin. Ekranı olmayan bir betikte piksel toleransı
+yoktur; `tolerans=` bunun içindir.
 
 ## Geri alma
 

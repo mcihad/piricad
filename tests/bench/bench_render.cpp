@@ -15,18 +15,18 @@ namespace {
 using namespace piricad;
 
 /// The 5M fixture costs half a second to build, so it is built once and shared by
-/// every render scenario.
+/// every render scenario — and, through `bench::cadastral_5m()`, by the snap and
+/// selection scenarios too.
 struct Cadastral5M
 {
-    core::Document doc;
+    core::Document& doc;
     render::ViewTransform view;
     render::DrawList draw;
     render::SceneOptions options;
     core::Box2 extent;
 
-    Cadastral5M()
+    Cadastral5M() : doc(bench::cadastral_5m())
     {
-        bench::build_cadastral_grid(doc, 5'000'000);
         extent = doc.extent();
         view.set_viewport(1920, 1080);
     }
