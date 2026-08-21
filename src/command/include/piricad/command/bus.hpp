@@ -118,6 +118,11 @@ public:
     std::function<void()> on_document_changed;
     std::function<void(const DispatchResult&)> on_command_finished;
 
+    /// A setting changed. The shell listens so that writing a preference from the
+    /// command line, from a script or from the AI has the same visible effect as
+    /// using the menu — the menu is not a privileged client (Article 1.2).
+    std::function<void(std::string_view id, core::SettingScope scope)> on_setting_changed;
+
     /// View state is not document state, so it is not undoable and does not go
     /// through a transaction. The command still travels the bus, so a script and
     /// a toolbar button reach the viewport by the same route.

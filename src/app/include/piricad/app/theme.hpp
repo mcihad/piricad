@@ -24,6 +24,7 @@ struct Palette
     QColor accent;
     QColor accentSoft;
     QColor hover;
+    QColor alternate; ///< alternating row background; unset it and dark rows wash out
 
     QColor canvas; ///< drawing background
     QColor grid;

@@ -63,6 +63,7 @@ signals:
     void promptChanged(const QString& prompt);
     void undoStateChanged(bool canUndo, bool canRedo);
     void viewRequested(const QString& mode, double factor);
+    void settingChanged(const QString& id);
 
 private:
     void wireBus();

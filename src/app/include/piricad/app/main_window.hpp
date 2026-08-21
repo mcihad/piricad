@@ -59,6 +59,7 @@ private slots:
     void onUndoStateChanged(bool canUndo, bool canRedo);
     void onCursorMoved(core::Point2 world);
     void onViewRequested(const QString& mode, double factor);
+    void onSettingChanged(const QString& id);
     void onCommandSubmitted(const QString& line);
 
     void showCommandReference();

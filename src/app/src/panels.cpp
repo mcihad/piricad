@@ -45,7 +45,11 @@ LayerPanel::LayerPanel(Controller& controller, QWidget* parent)
     tree_->setColumnCount(4);
     tree_->setHeaderLabels({tr("Katman"), tr("Gör."), tr("Kilit"), tr("Nesne")});
     tree_->setRootIsDecorated(false);
-    tree_->setAlternatingRowColors(true);
+    // Off deliberately: a Qt stylesheet's background rule outranks both the
+    // alternate-background-color property and QPalette::AlternateBase, so the
+    // alternating row washes out in the dark theme. The colour swatch and the bold
+    // active layer already separate the rows.
+    tree_->setAlternatingRowColors(false);
     tree_->setUniformRowHeights(true);
     tree_->header()->setStretchLastSection(false);
     tree_->header()->setSectionResizeMode(0, QHeaderView::Stretch);

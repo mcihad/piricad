@@ -155,6 +155,12 @@ Task<void> run_scope(Context& ctx, Settings& store, SettingScope scope)
 
     store.clear_warnings();
     auto change = store.set(spec.id, parsed.value());
+    if (change) {
+        // Tell the shell before reporting to the user, so the change is on screen
+        // by the time the transcript line appears.
+        if (Bus& bus = ctx.session().bus(); bus.on_setting_changed)
+            bus.on_setting_changed(spec.id, scope);
+    }
     if (!change) {
         ctx.echo(change.error().message);
         co_return;

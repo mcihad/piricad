@@ -23,6 +23,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPainter>
+#include <QPalette>
 #include <QPixmap>
 #include <QPlainTextEdit>
 #include <QSettings>
@@ -111,6 +112,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(controller_, &Controller::promptChanged, this, &MainWindow::onPromptChanged);
     connect(controller_, &Controller::undoStateChanged, this, &MainWindow::onUndoStateChanged);
     connect(controller_, &Controller::viewRequested, this, &MainWindow::onViewRequested);
+    connect(controller_, &Controller::settingChanged, this, &MainWindow::onSettingChanged);
     connect(canvas_, &MapCanvas::cursorMoved, this, &MainWindow::onCursorMoved);
     connect(canvas_, &MapCanvas::viewChanged, this, &MainWindow::refreshStatus);
     connect(commandLine_, &CommandLine::submitted, this, &MainWindow::onCommandSubmitted);
@@ -621,6 +623,18 @@ void MainWindow::applyTheme()
     const Palette& p = themePalette(theme_);
     qApp->setStyleSheet(themeStyleSheet(theme_));
 
+    // AlternateBase comes from the palette, not the stylesheet: a stylesheet rule
+    // for it loses to the more specific background rule on the same widget, and
+    // the alternating rows then wash out in the dark theme.
+    QPalette palette = qApp->palette();
+    palette.setColor(QPalette::Base, p.field);
+    palette.setColor(QPalette::AlternateBase, p.alternate);
+    palette.setColor(QPalette::Text, p.text);
+    palette.setColor(QPalette::WindowText, p.text);
+    palette.setColor(QPalette::Highlight, p.accent);
+    palette.setColor(QPalette::HighlightedText, QColor(Qt::white));
+    qApp->setPalette(palette);
+
     // Icons are drawn, not loaded, so they re-tint with the palette. Each action
     // carries its glyph in data(), which keeps this loop from being a second list
     // of actions to maintain.
@@ -632,6 +646,23 @@ void MainWindow::applyTheme()
 
     toolBox_->applyTheme(theme_);
     canvas_->applyTheme(theme_);
+}
+
+void MainWindow::onSettingChanged(const QString& id)
+{
+    // A preference written from the command line, a script or the AI must land on
+    // screen exactly as the menu item does. Reading the value back from the store
+    // rather than trusting the caller keeps one source of truth.
+    if (id != QLatin1String("core.arayuz.tema")) return;
+
+    const ThemeMode wanted = themeFromPreferences();
+    if (wanted == theme_) return;
+
+    theme_ = wanted;
+    applyTheme();
+
+    QSignalBlocker block(actTheme_);
+    actTheme_->setChecked(theme_ == ThemeMode::Dark);
 }
 
 void MainWindow::toggleTheme(bool dark)

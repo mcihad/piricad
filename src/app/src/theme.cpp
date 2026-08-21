@@ -14,6 +14,7 @@ const Palette kLight{
     /* accent     */ QColor(0x1F, 0x6F, 0xEB),
     /* accentSoft */ QColor(0xDC, 0xE9, 0xFD),
     /* hover      */ QColor(0xE6, 0xEA, 0xF0),
+    /* alternate  */ QColor(0xF4, 0xF6, 0xF8),
 
     /* canvas     */ QColor(0xFC, 0xFC, 0xFB),
     /* grid       */ QColor(0x00, 0x00, 0x00, 18),
@@ -33,6 +34,7 @@ const Palette kDark{
     /* accent     */ QColor(0x5A, 0x9C, 0xF8),
     /* accentSoft */ QColor(0x25, 0x3A, 0x57),
     /* hover      */ QColor(0x2F, 0x36, 0x41),
+    /* alternate  */ QColor(0x1A, 0x1E, 0x24),
 
     /* canvas     */ QColor(0x18, 0x1B, 0x20),
     /* grid       */ QColor(0xFF, 0xFF, 0xFF, 16),
@@ -87,6 +89,7 @@ QString themeStyleSheet(ThemeMode mode)
             selection-background-color: %7; selection-color: #ffffff;
         }
         QTreeWidget::item, QListWidget::item { padding: 3px 2px; }
+        QTreeWidget::item:selected, QListWidget::item:selected { background: %7; }
         QHeaderView::section            { background: %2; color: %6; border: none;
                                           border-bottom: 1px solid %4; padding: 5px 6px;
                                           font-weight: 600; }
