@@ -929,10 +929,16 @@ Result<SettingChange> Settings::set(std::string_view id, SettingValue v)
                    quote(spec.id) + " ayarı " + setting_type_label(spec.type) +
                        " bekliyor. Verilen tür: " + setting_type_label(v.type()) + ".");
 
+    // One lookup, not two. The pair of calls was not only a wasted search: the
+    // second one is what an analyser has to assume might return null after the
+    // first said otherwise, and it is right to — nothing in the signature promises
+    // the two calls agree.
+    const SettingValue* current = find_explicit(index);
+
     SettingChange change;
     change.id           = spec.id;
-    change.was_explicit = find_explicit(index) != nullptr;
-    change.before       = change.was_explicit ? *find_explicit(index) : spec.fallback;
+    change.was_explicit = current != nullptr;
+    change.before       = current != nullptr ? *current : spec.fallback;
 
     // R42: out of range is CLAMPED with a recorded warning. Not silently accepted,
     // because a document must never carry a value the build cannot honour; and not

@@ -141,28 +141,39 @@ void MapCanvas::drawGrid(QPainter& painter) const
     QPen major(palette_.gridMajor);
     major.setWidth(1);
 
-    const auto first = [step_mm](core::Mm v) {
-        return std::floor(static_cast<double>(v) / step_mm) * step_mm;
+    // The loop counts grid lines; it does not accumulate a position. The `x += step`
+    // version it replaces was in fact exact for every step this code can produce —
+    // measured over 200000 steps at a TUREF northing, the running sum never left
+    // the closed form — because both the origin and the step are integers far below
+    // 2^53. That is the problem with it: it was correct by an argument about the
+    // inputs, not by construction, and the argument stops holding the moment a
+    // fractional step arrives. Counting is exact without needing the argument.
+    const auto line_index = [step_mm](core::Mm v) {
+        return static_cast<long long>(std::floor(static_cast<double>(v) / step_mm));
+    };
+    const auto position = [step_mm](long long index) {
+        return static_cast<double>(index) * step_mm;
     };
 
-    // Which lines are major is decided in world coordinates, not by counting from
-    // the left edge: counting from the edge would make the dark lines crawl as the
-    // user pans, and a grid whose emphasis moves is worse than one without any.
-    const auto is_major = [this, step_mm](double world) {
-        const double index = std::floor(world / step_mm + 0.5);
-        const auto n       = static_cast<long long>(index);
-        const auto m       = static_cast<long long>(grid_.major);
-        return ((n % m) + m) % m == 0;
-    };
+    // Which lines are major is decided by the index, not by counting from the left
+    // edge: counting from the edge would make the dark lines crawl as the user
+    // pans, and a grid whose emphasis moves is worse than one without any.
+    const auto m        = static_cast<long long>(grid_.major);
+    const auto is_major = [m](long long index) { return ((index % m) + m) % m == 0; };
 
-    for (double x = first(vis.min_x); x <= static_cast<double>(vis.max_x); x += step_mm) {
-        painter.setPen(is_major(x) ? major : minor);
-        const double sx = view_.to_screen(core::Point2{static_cast<core::Mm>(x), vis.min_y}).x;
+    const long long last_x = line_index(vis.max_x);
+    for (long long i = line_index(vis.min_x); i <= last_x; ++i) {
+        painter.setPen(is_major(i) ? major : minor);
+        const auto wx   = static_cast<core::Mm>(position(i));
+        const double sx = view_.to_screen(core::Point2{wx, vis.min_y}).x;
         painter.drawLine(QPointF(sx, 0), QPointF(sx, height()));
     }
-    for (double y = first(vis.min_y); y <= static_cast<double>(vis.max_y); y += step_mm) {
-        painter.setPen(is_major(y) ? major : minor);
-        const double sy = view_.to_screen(core::Point2{vis.min_x, static_cast<core::Mm>(y)}).y;
+
+    const long long last_y = line_index(vis.max_y);
+    for (long long i = line_index(vis.min_y); i <= last_y; ++i) {
+        painter.setPen(is_major(i) ? major : minor);
+        const auto wy   = static_cast<core::Mm>(position(i));
+        const double sy = view_.to_screen(core::Point2{vis.min_x, wy}).y;
         painter.drawLine(QPointF(0, sy), QPointF(width(), sy));
     }
 }

@@ -43,7 +43,14 @@ void escape_into(std::string& out, std::string_view s)
         default:
             if (c < 0x20) {
                 char buf[8];
-                std::snprintf(buf, sizeof buf, "\\u%04x", c);
+                // Six characters and a terminator, so it fits — but "it fits" is an
+                // argument, not a guarantee, and a truncated escape is malformed
+                // JSON that only shows up in the file nobody can reopen.
+                const int written = std::snprintf(buf, sizeof buf, "\\u%04x", c);
+                if (written < 0 || static_cast<std::size_t>(written) >= sizeof buf) {
+                    out += "\\ufffd"; // replacement character: lossy, but valid
+                    continue;
+                }
                 out += buf;
             } else {
                 out += static_cast<char>(c); // UTF-8 passes through verbatim
@@ -62,7 +69,11 @@ void number_into(std::string& out, double v)
     }
     char buf[40];
     for (int prec = 1; prec <= 17; ++prec) {
-        std::snprintf(buf, sizeof buf, "%.*g", prec, v);
+        const int written = std::snprintf(buf, sizeof buf, "%.*g", prec, v);
+        if (written < 0 || static_cast<std::size_t>(written) >= sizeof buf) {
+            out += "null"; // unrepresentable in the space we allow; never a truncation
+            return;
+        }
         if (std::strtod(buf, nullptr) == v) break;
     }
     // %g may emit a locale decimal separator; normalise to '.'
@@ -400,7 +411,7 @@ void Json::dump_to(std::string& out, int indent, int depth) const
     const auto newline = [&](int d) {
         if (!pretty) return;
         out += '\n';
-        out.append(static_cast<std::size_t>(indent * d), ' ');
+        out.append(static_cast<std::size_t>(indent) * static_cast<std::size_t>(d), ' ');
     };
 
     switch (type_) {

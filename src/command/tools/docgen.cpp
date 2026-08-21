@@ -119,7 +119,7 @@ std::string build(const Registry& reg)
 int main(int argc, char** argv)
 {
     if (argc < 2) {
-        std::fprintf(stderr, "kullanım: piricad_docgen <cikti.md>\n");
+        (void)std::fprintf(stderr, "kullanım: piricad_docgen <cikti.md>\n");
         return 2;
     }
 
@@ -128,11 +128,11 @@ int main(int argc, char** argv)
 
     std::ofstream out(argv[1], std::ios::out | std::ios::binary);
     if (!out) {
-        std::fprintf(stderr, "docgen: '%s' yazılamadı\n", argv[1]);
+        (void)std::fprintf(stderr, "docgen: '%s' yazılamadı\n", argv[1]);
         return 1;
     }
 
     out << build(reg);
-    std::fprintf(stdout, "docgen: %zu komut -> %s\n", reg.size(), argv[1]);
+    (void)std::fprintf(stdout, "docgen: %zu komut -> %s\n", reg.size(), argv[1]);
     return 0;
 }

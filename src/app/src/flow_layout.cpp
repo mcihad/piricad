@@ -13,7 +13,10 @@ FlowLayout::FlowLayout(QWidget* parent, int margin, int hspacing, int vspacing)
 
 FlowLayout::~FlowLayout()
 {
-    while (QLayoutItem* item = takeAt(0))
+    // Qualified, because a virtual call in a destructor does not dispatch to an
+    // override anyway — it silently resolves here. Writing the resolution the
+    // compiler is going to pick removes the pretence that a subclass gets a say.
+    while (QLayoutItem* item = FlowLayout::takeAt(0))
         delete item;
 }
 

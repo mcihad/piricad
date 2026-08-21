@@ -24,10 +24,35 @@ inline constexpr Mm kMmInvalid  = std::numeric_limits<Mm>::min();
 
 /// Deterministic round-half-away-from-zero. Identical on every platform;
 /// std::llround is not constexpr and std::round's mode is not pinned.
+///
+/// The obvious `(int)(x + 0.5)` breaks its own contract, because the addition can
+/// round before the truncation ever runs. Two cases, measured rather than argued:
+///
+///   * `(long long)(0x1.fffffffffffffp-2 + 0.5)` is 1. That input is the largest
+///     double below one half, so the answer must be 0; the sum lands exactly on a
+///     midpoint and ties-to-even carries it to 1.0.
+///   * Reachable through this function at `mm_from_metres(4503599627370.497)`,
+///     where the scaled value is already the integer 4503599627370497 and the
+///     `+ 0.5` pushes it to ...498 — a whole millimetre invented at an input that
+///     needed no rounding at all. Above 2^52 the gap between doubles is 1, so
+///     adding a half can only sit on a tie.
+///
+/// That magnitude is 4.5e12 metres, far past anything terrestrial, so this is a
+/// contract the old code broke rather than a pafta it got wrong. It is fixed
+/// because a rounding primitive that is right only within the range someone
+/// remembered to check is not a rounding primitive.
+///
+/// Comparing the fraction against one half never adds anything, so nothing can
+/// round on the way. The subtraction is exact for every input in range.
 constexpr Mm mm_from_metres(double metres) noexcept
 {
-    const double scaled = metres * static_cast<double>(kMmPerMetre);
-    return scaled >= 0.0 ? static_cast<Mm>(scaled + 0.5) : static_cast<Mm>(scaled - 0.5);
+    const double scaled  = metres * static_cast<double>(kMmPerMetre);
+    const auto truncated = static_cast<Mm>(scaled); // toward zero
+    const double frac    = scaled - static_cast<double>(truncated);
+
+    if (frac >= 0.5) return truncated + 1;
+    if (frac <= -0.5) return truncated - 1;
+    return truncated;
 }
 
 /// Millimetres back to metres. Transient computation type only — never storage.

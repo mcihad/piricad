@@ -17,8 +17,10 @@ LogSink& sink()
 {
     static LogSink s = [](LogLevel lvl, std::string_view msg) {
         static const char* kTag[] = {"TRACE", "DEBUG", "INFO ", "WARN ", "ERROR"};
-        std::fprintf(lvl >= LogLevel::Warn ? stderr : stdout, "[piricad][%s] %.*s\n",
-                     kTag[static_cast<int>(lvl)], static_cast<int>(msg.size()), msg.data());
+        // Diagnostics. A failed write to the console has no recovery that is not
+        // another failed write to the console, so the result is discarded on purpose.
+        (void)std::fprintf(lvl >= LogLevel::Warn ? stderr : stdout, "[piricad][%s] %.*s\n",
+                           kTag[static_cast<int>(lvl)], static_cast<int>(msg.size()), msg.data());
     };
     return s;
 }

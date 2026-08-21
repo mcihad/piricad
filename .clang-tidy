@@ -22,7 +22,8 @@ Checks: >
   -readability-function-cognitive-complexity,
   -portability-avoid-pragma-once,
   -readability-braces-around-statements,
-  -misc-include-cleaner
+  -misc-include-cleaner,
+  -clang-analyzer-optin.core.EnumCastOutOfRange
 
 # Three checks are switched off because they contradict a decision recorded
 # elsewhere, and a linter arguing with the house style teaches everyone to ignore
@@ -40,6 +41,19 @@ Checks: >
 #                                     step in `make check`. Two tools giving
 #                                     different advice about the same line is worse
 #                                     than one.
+#   clang-analyzer-optin.core.EnumCastOutOfRange
+#                                     PiriCAD uses `enum class` for two things this
+#                                     check reads as a mistake, both of them
+#                                     deliberate and both recorded in
+#                                     `.claude/model.md`. EntityKey and LayerKey are
+#                                     strong typedefs over an integer id (R1-R5): the
+#                                     valid values are every id ever minted, and
+#                                     naming them as enumerators is not possible.
+#                                     CommandSpec::Flags is a bit mask: a combination
+#                                     of two flags is by construction not a named
+#                                     enumerator. Keeping the check on would mean
+#                                     giving up type safety on identifiers to satisfy
+#                                     a checker, which is the trade backwards.
 
 WarningsAsErrors: 'bugprone-*,cert-*,clang-analyzer-*'
 HeaderFilterRegex: '.*/piricad/.*'
@@ -58,3 +72,12 @@ CheckOptions:
     value: lower_case
   - key: readability-identifier-naming.EnumConstantCase
     value: CamelCase
+  # cert-err33-c is bugprone-unused-return-value with a fixed function list. An
+  # explicit `(void)` cast is not a suppression: it is the author stating at the
+  # call site that the result was considered and discarded, which is exactly what
+  # the check exists to force. Without this option the only way to satisfy it is a
+  # `// NOLINT`, and that is the suppression CLAUDE.md 5.14 forbids.
+  - key: cert-err33-c.AllowCastToVoid
+    value: true
+  - key: bugprone-unused-return-value.AllowCastToVoid
+    value: true

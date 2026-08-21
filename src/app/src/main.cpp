@@ -43,8 +43,9 @@ int main(int argc, char** argv)
     parser.process(app);
 
     piricad::core::set_log_sink([](piricad::core::LogLevel level, std::string_view message) {
-        std::fprintf(level >= piricad::core::LogLevel::Warn ? stderr : stdout, "[piricad] %.*s\n",
-                     static_cast<int>(message.size()), message.data());
+        // Diagnostics; see core/log.cpp for why the result is discarded.
+        (void)std::fprintf(level >= piricad::core::LogLevel::Warn ? stderr : stdout,
+                           "[piricad] %.*s\n", static_cast<int>(message.size()), message.data());
     });
 
     piricad::app::MainWindow window;

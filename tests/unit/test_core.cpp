@@ -20,6 +20,47 @@ TEST_CASE("mm fixed point is exact and symmetric")
     CHECK_EQ(mm_to_metres(485320150), 485320.150);
 }
 
+TEST_CASE("mm rounding never rounds twice")
+{
+    // The regression this locks. mm_from_metres used to compute (scaled + 0.5) and
+    // truncate, which lets the ADDITION round before the truncation runs.
+    //
+    // 4503599627370.497 metres scales to exactly 4503599627370497 — an integer, so
+    // rounding has nothing to do. Above 2^52 consecutive doubles are one apart, so
+    // adding a half lands on a tie and ties-to-even carries it to ...498. The old
+    // code invented a millimetre at an input that needed no rounding.
+    CHECK_EQ(mm_from_metres(4503599627370.497), Mm{4503599627370497});
+    CHECK_EQ(mm_from_metres(-4503599627370.497), Mm{-4503599627370497});
+
+    // The magnitude above is 4.5e12 metres and nothing terrestrial reaches it, so
+    // no drawing was ever wrong because of this. It is fixed because a rounding
+    // primitive that holds only inside the range someone remembered to check is
+    // not a rounding primitive, and because the same expression is wrong at the
+    // small end too: (long long)(0x1.fffffffffffffp-2 + 0.5) is 1 where the answer
+    // is 0. That value cannot be produced by metres * 1000, so it is asserted here
+    // as the arithmetic it is rather than as an input.
+    CHECK_EQ(static_cast<Mm>(0x1.fffffffffffffp-2 + 0.5), Mm{1}); // the old rule
+    CHECK_EQ(static_cast<Mm>(0x1.fffffffffffffp-2), Mm{0});       // the right answer
+
+    // The declared contract, at the boundary and on both sides of zero.
+    CHECK_EQ(mm_from_metres(0.5 / 1000.0), Mm{1});
+    CHECK_EQ(mm_from_metres(-0.5 / 1000.0), Mm{-1});
+    CHECK_EQ(mm_from_metres(0.4999 / 1000.0), Mm{0});
+    CHECK_EQ(mm_from_metres(-0.4999 / 1000.0), Mm{0});
+    CHECK_EQ(mm_from_metres(1.5 / 1000.0), Mm{2});
+    CHECK_EQ(mm_from_metres(-1.5 / 1000.0), Mm{-2});
+
+    // A TUREF northing rounds by the same rule as everything else.
+    CHECK_EQ(mm_from_metres(4310200.0004), Mm{4310200000});
+    CHECK_EQ(mm_from_metres(4310200.0005), Mm{4310200001});
+
+    // constexpr, because units.hpp promises it: a coordinate folded at compile time
+    // must agree with one computed at run time.
+    static_assert(mm_from_metres(0.0005) == Mm{1});
+    static_assert(mm_from_metres(-0.0005) == Mm{-1});
+    static_assert(mm_from_metres(4503599627370.497) == Mm{4503599627370497});
+}
+
 TEST_CASE("mm addition is order independent")
 {
     // The reason coordinates are integers: a cadastral area computed in a
