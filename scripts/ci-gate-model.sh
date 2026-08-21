@@ -219,18 +219,31 @@ scene="$legacy_scene"
 cull_allowed='^(min_x|min_y|max_x|max_y|flags|alive|layer)$'   # `layer`: Phase-0 carve-out
 if [[ -f "$scene" ]]; then
     bbox_line="$(grep -nE '\.(min_x|min_y|max_x|max_y)[[:space:]]*\[' "$scene" | head -1 | cut -d: -f1 || true)"
-    if [[ -n "${bbox_line:-}" ]]; then
+    if [[ -z "${bbox_line:-}" ]]; then
+        # Never let the check vanish because the scene builder was restructured.
+        echo "model: R6 cull-block check found no bounding-box read in $scene — the heuristic no longer locates the cull region; re-anchor it" >&2
+        fail=1
+    else
+        # Nearest enclosing block: walk back to the last line that opens a brace at
+        # a strictly smaller indent than the bbox read. That is the cull function or
+        # lambda; anything nested tighter is already past the decision.
         region_start="$(awk -v end="$bbox_line" '
-            NR > end { exit }
+            NR == end { want = match($0, /[^ \t]/) - 1 }
+            NR > end  { exit }
             {
                 line = $0
                 sub(/\/\/.*/, "", line)
                 if (line !~ /\{[[:space:]]*$/) next
                 indent = match(line, /[^ \t]/) - 1
                 if (indent < 0) indent = 0
-                open_ln = NR; open_indent = indent
+                lines[NR] = indent
             }
-            END { print open_ln+0 }' "$scene")"
+            END {
+                best = 0
+                for (n = 1; n < end; n++)
+                    if (n in lines && lines[n] < want) best = n
+                print best
+            }' "$scene")"
         [[ "${region_start:-0}" -gt 0 ]] || region_start=1
         while IFS= read -r hit; do
             ln="${hit%%:*}"
