@@ -1,17 +1,21 @@
 # SİL — Nesne Silme
 
-Çiziminden nesne çıkarmak isteyen kullanıcı için; bu sayfayı bitirdiğinizde nesne
-kimliğiyle silmeyi ve silmeyi geri almayı bileceksiniz.
+Çiziminden nesne çıkarmak isteyen kullanıcı için; bu sayfayı bitirdiğinizde seçerek
+ve nesne kimliğiyle silmeyi, silmeyi geri almayı bileceksiniz.
 
 ## Ne yapar
 
-Kimliği verilen nesneleri çizimden kaldırır. Birden fazla nesne tek komutta silinebilir
-ve hepsi **tek bir geri alma adımı** olur.
+Etkin seçimdeki ya da kimliği verilen nesneleri çizimden kaldırır. Birden fazla nesne
+tek komutta silinebilir ve hepsi **tek bir geri alma adımı** olur.
 
 Silme geri alınabilirdir: `GERİAL` nesneleri olduğu gibi geri getirir.
 
 Verilen kimliklerden biri bile geçersizse **hiçbiri silinmez.** Yarım uygulanmış bir
 silme kabul edilmez.
+
+Silinen nesneler seçimden de düşer. Silinen bir nesnenin kimliği emekliye ayrılır ve
+hiçbir zaman başka bir nesneye verilmez — "bu parsel hangisiydi?" hukuki bir sorudur
+ve cevapsız kalamaz.
 
 ## Adlar
 
@@ -25,45 +29,64 @@ silme kabul edilmez.
 
 ## Sözdizimi
 
-```
+```text
+SİL
 SİL nesneler=<kimlik>
 SİL nesneler=<kimlik> nesneler=<kimlik> ...
 ```
 
+Argümansız `SİL`, [`SEÇ`](select.md) ile belirlediğiniz etkin seçimi siler.
+
 ## Parametreler
 
-Tek parametresi vardır: **`nesneler`** — silinecek nesnelerin kimlikleri. En az bir
-kimlik gerekir.
+Tek parametresi vardır: **`nesneler`** — silinecek nesnelerin kimlikleri. Verilmezse
+etkin seçim kullanılır.
 
 Tipi ve adedi için üretilmiş [komut referansına](referans.md) bakın.
 
 ### Nesne kimliğini nereden bulursunuz
 
-Bu sürümde grafik seçim aracı henüz yoktur; nesne kimliğini iki yerden okursunuz:
+Kimlikler **1'den başlar** ve yaratılış sırasına göre artar. Hiçbir kimlik yeniden
+kullanılmaz: bir nesne silinince kimliği emekli olur.
 
-- **Komut Günlüğü** panelinden — nesneleri hangi sırayla yarattığınızı görürsünüz.
-  Kimlikler sıfırdan başlar ve yaratılış sırasına göre artar.
-- Bir betikten çiziyorsanız, kaçıncı segmenti yarattığınızı biliyorsunuzdur.
+Kimliği üç yerden okursunuz:
 
-Fareyle seçim ve seçime göre silme Faz 2'de gelecek.
+- [`SEÇ`](select.md) komutundan — seçtiğiniz nesnelerin kimliklerini transkripte yazar
+- **Komut Günlüğü** panelinden — nesneleri hangi sırayla yarattığınızı görürsünüz
+- Bir betikten çiziyorsanız, kaçıncı segmenti yarattığınızı biliyorsunuzdur
+
+En pratik yolu kimlik okumamaktır: nesneyi seçip argümansız `SİL` yazın.
 
 ## Örnekler
 
 ### Komut satırı
 
-Tek nesne sil:
+Önce silinecek bir şey çizin:
 
 ```
-SİL nesneler=0
+ÇİZGİ 0,0 10,0
 ```
 
-Üç nesne birden sil:
+Seçip silin — CAD'de olağan sıra budur:
 
 ```
-SİL nesneler=0 nesneler=1 nesneler=2
+SEÇ NOKTA 5,0 tolerans=1
+SİL
 ```
 
-Silmeyi geri al:
+Tek nesneyi kimliğiyle silin:
+
+```
+SİL nesneler=1
+```
+
+Üç nesne birden silin:
+
+```
+SİL nesneler=1 nesneler=2 nesneler=3
+```
+
+Silmeyi geri alın:
 
 ```
 GERİAL
@@ -71,16 +94,15 @@ GERİAL
 
 ### Arayüz
 
-Araç kutusundaki veya **Düzen** araç çubuğundaki **Sil** düğmesi, ya da
-**Düzen > Sil** menüsü, komut satırını açıp `SİL nesneler=` metniyle hazırlar ve odağı
-oraya taşır; kimliği yazıp **Enter**'a basmanız yeterlidir. Transkriptte hatırlatma
-görürsünüz:
+Nesneleri fareyle seçin (tek tık ya da kutu sürükleyin), sonra araç kutusundaki veya
+**Düzen** araç çubuğundaki **Sil** düğmesine basın — ya da **Düzen > Sil** menüsünü
+kullanın. Seçim boşsa transkriptte hatırlatma görürsünüz:
 
 ```text
-SİL komutu nesne kimliği ister. Örnek:  SİL nesneler=0
+Silinecek nesne seçili değil. Nesneleri seçin ya da SİL nesneler=1 yazın.
 ```
 
-Grafik seçim Faz 2'de geldiğinde bu düğme doğrudan seçili nesneleri silecek.
+Seçim yapmayı [`SEÇ`](select.md) sayfası anlatır.
 
 ### Betik
 
@@ -88,12 +110,18 @@ Grafik seçim Faz 2'de geldiğinde bu düğme doğrudan seçili nesneleri silece
 {
   "ad": "Yardımcı çizgileri temizle",
   "komutlar": [
-    { "cmd": "core.erase", "args": { "nesneler": [12, 13, 14] } }
+    { "cmd": "core.line",  "args": { "noktalar": [[0,0],[10000,0]] } },
+    { "cmd": "core.line",  "args": { "noktalar": [[0,5000],[10000,5000]] } },
+    { "cmd": "core.erase", "args": { "nesneler": [1, 2] } }
   ]
 }
 ```
 
-Betikte `nesneler` bir kimlik dizisidir.
+Betikte `nesneler` bir kimlik dizisidir. Boş bırakılırsa etkin seçim silinir.
+
+İki kimlikli bir dizi — `[1, 2]` — JSON'da bir noktayla aynı görünür. `nesneler`
+parametresinde kimlik olarak okunur; ayrımı komutun bildirimi yapar, dosyanın biçimi
+değil.
 
 ## Geri alma
 
@@ -105,6 +133,7 @@ GERİAL
 ```
 
 Nesneler kimlikleriyle birlikte geri gelir, yani daha sonra tekrar silebilirsiniz.
+Seçim geri gelmez: seçim çizimin verisi değildir.
 
 Bkz. [Geri alma](undo.md).
 
@@ -114,8 +143,18 @@ Bkz. [Geri alma](undo.md).
 
 Bir betik içinde silme yaparken, kimliklerin betiğin kendisinin yarattığı nesnelere ait
 olduğundan emin olun. Kimlikler yaratılış sırasına göre verilir: betiğin ilk `core.line`
-komutu iki nokta alırsa `0` kimlikli tek nesne, üç nokta alırsa `0` ve `1` kimlikli iki
+komutu iki nokta alırsa `1` kimlikli tek nesne, üç nokta alırsa `1` ve `2` kimlikli iki
 nesne yaratır.
+
+Daha sağlamı, kimlik saymak yerine seçmektir:
+
+```json
+[
+  { "cmd": "core.line",   "args": { "noktalar": [[0,0],[10000,0]] } },
+  { "cmd": "core.select", "args": { "mod": "PENCERE", "noktalar": [[-1000,-1000],[11000,1000]] } },
+  { "cmd": "core.erase",  "args": {} }
+]
+```
 
 Betik çalışırken bir silme başarısız olursa **betiğin tamamı geri alınır.**
 
@@ -123,11 +162,10 @@ Betik çalışırken bir silme başarısız olursa **betiğin tamamı geri alın
 
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
-| `Silinecek nesne belirtilmedi. Örnek: SİL nesneler=0` | `nesneler` boş geçilmiş | Bir kimlik verin |
+| `Silinecek nesne belirtilmedi ve seçim boş. Örnek: SİL nesneler=1` | `nesneler` verilmemiş ve seçim boş | Önce [`SEÇ`](select.md) ile seçin ya da bir kimlik verin |
 | `Nesne bulunamadı veya zaten silinmiş: 99` | Kimlik yok ya da nesne zaten silinmiş | Kimliği denetleyin; hiçbir şey silinmedi |
-| `Geçersiz nesne kimliği: -1` | Negatif kimlik verilmiş | Kimlikler sıfır veya daha büyüktür |
-| `'core.erase': zorunlu 'nesneler' parametresi eksik. Beklenen: nesne seçimi` | Parametre hiç verilmemiş | `nesneler=` ile kimlik verin |
-| `Bilinmeyen nesne kimliği: 99` | Betikten var olmayan kimlik gelmiş | Kimlikleri denetleyin |
+| `Geçersiz nesne kimliği: 0. Kimlikler 1'den başlar.` | Sıfır ya da negatif kimlik verilmiş | Kimlikler `1`'den başlar |
+| `'core.erase': 'nesneler' parametresi nesne seçimi bekliyor, başka türde bir değer geldi.` | Kimlik yerine metin gelmiş | Tam sayı kimlik verin |
 
 Bulunamayan kimlik verdiğinizde komut hata döndürmez; transkripte açıklama yazar ve
 çizime dokunmaz.

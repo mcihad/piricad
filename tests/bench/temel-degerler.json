@@ -2,14 +2,18 @@
   "makine": "13th Gen Intel(R) Core(TM) i5-13500 | gcc 202002 | optimize",
   "aciklama": "PiriCAD performans temel değerleri. Yalnız aynı makinede regresyon kapısı olarak kullanılır (piricad.md §10.1).",
   "olcumler": {
-    "komut.betikten_gonderim": 0.9669595499999999,
-    "komut.ayristir_ve_gonder": 2.1959338,
-    "komut.toplu_is_100k": 158.142909,
-    "render.pan_zoom_5m": 0.003692,
-    "render.pan_zoom_5m_tam_kapsam": 78.025081,
-    "core.toplu_yukleme_1m": 89.435127,
-    "core.indeks_kurulumu_1m": 114.088076,
-    "render.duzenleme_sonrasi_kare": 0.003606,
-    "bellek.5m_parsel": 959.28515625
+    "komut.betikten_gonderim": 1.0583759,
+    "komut.ayristir_ve_gonder": 2.3498777000000004,
+    "komut.toplu_is_100k": 164.769693,
+    "render.pan_zoom_5m": 0.003516,
+    "render.pan_zoom_5m_tam_kapsam": 78.898561,
+    "core.toplu_yukleme_1m": 99.306199,
+    "core.indeks_kurulumu_1m": 115.780762,
+    "render.duzenleme_sonrasi_kare": 0.003665,
+    "bellek.5m_parsel": 962.390625,
+    "yakalama.imlec_5m": 0.001506,
+    "secim.tek_tik_5m": 0.001171,
+    "secim.pencere_5m": 0.003093,
+    "render.kare_ve_yakalama_5m": 0.004974
   }
 }

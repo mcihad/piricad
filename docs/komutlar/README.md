@@ -72,7 +72,8 @@ Her komutun Türkçe birincil adı, İngilizce karşılığı ve kısaltmaları 
 ```text
 ÇİZGİ = CIZGI = LINE = Ç = L
 KATMAN = LAYER = KAT
-SİL = SIL = ERASE = E
+SEÇ  = SEC = SELECT = S
+SİL  = SIL = ERASE = E
 ```
 
 Büyük/küçük harf farkı yoktur ve dönüşüm Türkçe kurallarına göre yapılır: `çizgi` yazmak
@@ -90,7 +91,11 @@ Bazı komutlar başka bir komut çalışırken araya girebilir. `YAKINLAŞ` böy
 ## Salt okunur komutlar
 
 Çizimi değiştirmeyen komutlar salt okunur işaretlidir: `YAKINLAŞ`, `GERİAL`, `YİNELE`,
-`YARDIM`. Geri alma yığınına girmezler.
+`YARDIM`, `SEÇ`, `MOD` ve `TERCİH`. Geri alma yığınına girmezler ve komut günlüğüne
+belge değişikliği olarak yazılmazlar.
+
+Seçim, görünüm, oturum modları ve uygulama tercihleri çizimin verisi değildir; bu
+yüzden dosyaya yazılmaz, içerik özetine girmez ve `GERİAL` ile geri alınmaz.
 
 ## Toplu iş
 
@@ -101,7 +106,7 @@ alma adımı. Bu yüzden büyük betikler hızlı çalışır ve tek hamlede ger
 ## Komutu iptal etmek
 
 Girdi bekleyen bir komut **Esc**, sağ tık veya araç kutusundaki **Seç** düğmesiyle
-iptal edilir. Hiçbir şey çizilmeden iptal edilen komut sanki hiç çalışmamış gibidir:
+iptal edilir. Hiçbir komut çalışmıyorken **Esc** seçimi temizler. Hiçbir şey çizilmeden iptal edilen komut sanki hiç çalışmamış gibidir:
 geri alma adımı bırakmaz, günlüğe de yazılmaz. Transkriptte görürsünüz:
 
 ```text

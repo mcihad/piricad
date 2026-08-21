@@ -229,7 +229,10 @@ TEST_CASE("erase is undoable and reports a missing entity")
     Fixture f;
 
     CHECK(f.bus.execute_line("ÇİZGİ 0,0 10,10", Origin::Test).ok());
-    CHECK(f.bus.execute_line("SİL nesneler=0", Origin::Test).ok());
+
+    // `nesneler` carries persistent KEYS (model.md R5/P4), and keys start at 1
+    // because EntityKey{0} is "none". Slot 0 of a fresh document is key 1.
+    CHECK(f.bus.execute_line("SİL nesneler=1", Origin::Test).ok());
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
 
     CHECK(f.bus.execute_line("GERİAL", Origin::Test).ok());

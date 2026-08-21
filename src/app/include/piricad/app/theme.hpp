@@ -32,6 +32,11 @@ struct Palette
     QColor crosshair;
     QColor rubberBand;
     QColor hud;
+
+    QColor selection;    ///< highlight on a selected entity
+    QColor selectWindow; ///< PENCERE box: what is wholly inside
+    QColor selectCross;  ///< KESEN box: whatever the box touches
+    QColor snapMarker;   ///< object-snap glyph and its label
 };
 
 const Palette& themePalette(ThemeMode mode);

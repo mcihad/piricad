@@ -62,6 +62,11 @@ private slots:
     void onSettingChanged(const QString& id);
     void onCommandSubmitted(const QString& line);
 
+    /// Re-reads the session modes and re-checks the F3 / F8 / F9 items. Every
+    /// client writes those modes through `MOD`, so the toolbar state is derived
+    /// from the store and never held separately (CLAUDE.md 5.10).
+    void refreshAidActions();
+
     void showCommandReference();
     void openScript();
     void showAbout();
@@ -144,6 +149,10 @@ private:
     QAction* actUndo_{nullptr};
     QAction* actRedo_{nullptr};
     QAction* actScript_{nullptr};
+    QAction* actSelectAll_{nullptr};
+    QAction* actSelectNone_{nullptr};
+    QAction* actOrtho_{nullptr};
+    QAction* actGridSnap_{nullptr};
 
     // ---- sonraki fazlarda gelecek eylemler, pasif ----
     QAction* actNew_{nullptr};
@@ -176,6 +185,12 @@ private:
     QAction* actQuit_{nullptr};
 
     ThemeMode theme_{ThemeMode::Light}; ///< day mode is the default
+
+    /// The object-snap mask to restore when F3 switches snapping back on. The
+    /// value in force is always `core.yakalama.modlar`; this only remembers what
+    /// to put back, so turning snapping off and on does not silently reset a
+    /// carefully chosen set of modes.
+    int snapMaskMemory_{0x7};
 };
 
 } // namespace piricad::app

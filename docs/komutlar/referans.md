@@ -12,6 +12,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 |---|---|---|---|---|---|
 | [`core.line`](line.md) | `ÇİZGİ`, `CIZGI`, `LINE`, `Ç`, `L` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki veya daha fazla nokta arasında doğru parçaları çizer. |
 | [`core.erase`](erase.md) | `SİL`, `SIL`, `ERASE`, `E` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Seçilen nesneleri siler. |
+| [`core.select`](select.md) | `SEÇ`, `SEC`, `SELECT`, `S` | Düzenleme | geri alınmaz | betiklenebilir, salt okunur | Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta. |
 | [`core.layer`](layer.md) | `KATMAN`, `LAYER`, `KAT` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
 | [`core.zoom`](zoom.md) | `YAKINLAŞ`, `YAKINLAS`, `ZOOM`, `Z` | Görünüm | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü çizim kapsamına veya verilen çarpana ayarlar. |
 | [`core.undo`](undo.md) | `GERİAL`, `GERIAL`, `UNDO`, `U` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Son işlemi geri alır. |
@@ -40,9 +41,23 @@ Seçilen nesneleri siler.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `nesneler` | selection | en az 1 | Silinecek nesnelerin kimlikleri |
+| `nesneler` | selection | en az 0 | Silinecek nesnelerin kimlikleri; yoksa etkin seçim |
 
 Ayrıntılı kullanım: [SİL](erase.md)
+
+### `core.select` — SEÇ
+
+Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `mod` | text | isteğe bağlı | TÜMÜ | TEMİZLE | NESNE | PENCERE | KESEN | KUTU | NOKTA |
+| `noktalar` | point_list | 0–2 | Kutu köşeleri (iki nokta) veya tek tıklama noktası |
+| `nesneler` | selection | en az 0 | NESNE modunda nesne kimlikleri |
+| `islem` | text | isteğe bağlı | DEĞİŞTİR | EKLE | ÇIKAR | TERSİNE |
+| `tolerans` | number | isteğe bağlı | NOKTA modunda arama yarıçapı, metre; yoksa seçim toleransı |
+
+Ayrıntılı kullanım: [SEÇ](select.md)
 
 ### `core.layer` — KATMAN
 
@@ -189,10 +204,10 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         {
           "name": "nesneler",
           "type": "selection",
-          "min": 1,
+          "min": 0,
           "max": -1,
-          "required": true,
-          "help": "Silinecek nesnelerin kimlikleri"
+          "required": false,
+          "help": "Silinecek nesnelerin kimlikleri; yoksa etkin seçim"
         }
       ],
       "flags": [

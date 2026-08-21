@@ -113,6 +113,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(controller_, &Controller::undoStateChanged, this, &MainWindow::onUndoStateChanged);
     connect(controller_, &Controller::viewRequested, this, &MainWindow::onViewRequested);
     connect(controller_, &Controller::settingChanged, this, &MainWindow::onSettingChanged);
+    connect(controller_, &Controller::selectionChanged, canvas_,
+            QOverload<>::of(&MapCanvas::update));
     connect(canvas_, &MapCanvas::cursorMoved, this, &MainWindow::onCursorMoved);
     connect(canvas_, &MapCanvas::viewChanged, this, &MainWindow::refreshStatus);
     connect(commandLine_, &CommandLine::submitted, this, &MainWindow::onCommandSubmitted);
@@ -125,6 +127,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     onEcho(tr("Başlamak için: ÇİZGİ  ·  ÇİZGİ 485320,4310220 @50,30 @100<45  ·  YARDIM"));
 
     syncDockTitles();
+    refreshAidActions();
     onDocumentChanged();
     commandLine_->setFocus();
 }
@@ -268,7 +271,15 @@ void MainWindow::buildActions()
     actErase_->setToolTip(tr("SİL — seçilen nesneleri siler"));
     actErase_->setData(static_cast<int>(Glyph::Erase));
     connect(actErase_, &QAction::triggered, this, [this] {
-        onEcho(tr("SİL komutu nesne kimliği ister. Örnek:  SİL nesneler=0"));
+        // With a selection the button IS the command, exactly as typing `SİL`
+        // would be. With nothing selected there is nothing to name, so the button
+        // opens the command line rather than doing something silently.
+        if (!controller_->bus().selection().empty()) {
+            controller_->runCommand(QStringLiteral("SİL"));
+            return;
+        }
+        onEcho(tr("Silinecek nesne seçili değil. Nesneleri seçin ya da "
+                  "SİL nesneler=1 yazın."));
         showCommandLine(true);
         commandLine_->setText(QStringLiteral("SİL nesneler="));
         commandLine_->setFocus();
@@ -306,8 +317,52 @@ void MainWindow::buildActions()
 
     actPan_ = placeholder(Glyph::Pan, tr("Kaydır"), QStringLiteral("KAYDIR"), tr("Faz 2"));
     actPan_->setToolTip(tr("Kaydır — orta fare tuşu basılı sürükleme her zaman çalışır"));
-    actSnap_ =
-        placeholder(Glyph::Snap, tr("Nesne Yakalama"), QStringLiteral("YAKALAMA"), tr("Faz 2"));
+
+    // ---- girdi yardımları ----
+    //
+    // Each of these writes a SESSION setting through `MOD`. They are not a second
+    // way to change a mode: the value lives in one store, the menu item reads it
+    // back, and typing `MOD dik_mod evet` moves the tick exactly as F8 does
+    // (model.md R38, R41; CLAUDE.md 5.10).
+    actSnap_ = new QAction(tr("Nesne Yakalama"), this);
+    actSnap_->setCheckable(true);
+    actSnap_->setShortcut(QKeySequence(Qt::Key_F3));
+    actSnap_->setData(static_cast<int>(Glyph::Snap));
+    actSnap_->setToolTip(tr("MOD yakalama_modları — nesne yakalamayı açar/kapatır (F3)"));
+    connect(actSnap_, &QAction::toggled, this, [this](bool on) {
+        controller_->runLine(
+            QStringLiteral("MOD yakalama_modları %1").arg(on ? snapMaskMemory_ : 0),
+            command::Origin::Gui);
+    });
+
+    actOrtho_ = new QAction(tr("Dik Mod"), this);
+    actOrtho_->setCheckable(true);
+    actOrtho_->setShortcut(QKeySequence(Qt::Key_F8));
+    actOrtho_->setToolTip(tr("MOD dik_mod — imleci yatay ve düşey eksene kilitler (F8)"));
+    connect(actOrtho_, &QAction::toggled, this, [this](bool on) {
+        controller_->runLine(QStringLiteral("MOD dik_mod %1")
+                                 .arg(on ? QStringLiteral("evet") : QStringLiteral("hayır")),
+                             command::Origin::Gui);
+    });
+
+    actGridSnap_ = new QAction(tr("Izgaraya Yakala"), this);
+    actGridSnap_->setCheckable(true);
+    actGridSnap_->setShortcut(QKeySequence(Qt::Key_F9));
+    actGridSnap_->setToolTip(
+        tr("MOD ızgaraya_yakala — noktayı en yakın ızgara kesişimine oturtur (F9)"));
+    connect(actGridSnap_, &QAction::toggled, this, [this](bool on) {
+        controller_->runLine(QStringLiteral("MOD ızgaraya_yakala %1")
+                                 .arg(on ? QStringLiteral("evet") : QStringLiteral("hayır")),
+                             command::Origin::Gui);
+    });
+
+    // ---- seçim ----
+    actSelectAll_  = commandAction(Glyph::Select, tr("Tümünü Seç"), QStringLiteral("SEÇ TÜMÜ"),
+                                   tr("SEÇ TÜMÜ — görünür bütün nesneleri seçer"),
+                                   QKeySequence(Qt::CTRL | Qt::Key_A));
+    actSelectNone_ = commandAction(
+        Glyph::Select, tr("Seçimi Temizle"), QStringLiteral("SEÇ TEMİZLE"),
+        tr("SEÇ TEMİZLE — seçimi boşaltır"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
 
     // ---- katman ve CBS ----
     actLayer_ = new QAction(tr("Katman"), this);
@@ -434,6 +489,9 @@ void MainWindow::buildMenus()
     edit->addAction(actUndo_);
     edit->addAction(actRedo_);
     edit->addSeparator();
+    edit->addAction(actSelectAll_);
+    edit->addAction(actSelectNone_);
+    edit->addSeparator();
     edit->addAction(actErase_);
     edit->addAction(actMove_);
     edit->addAction(actCopy_);
@@ -463,6 +521,10 @@ void MainWindow::buildMenus()
     view->addAction(actZoomExtents_);
     view->addAction(actZoomIn_);
     view->addAction(actZoomOut_);
+    view->addSeparator();
+    view->addAction(actSnap_);
+    view->addAction(actOrtho_);
+    view->addAction(actGridSnap_);
     view->addSeparator();
 
     auto* bars = view->addMenu(tr("Araç Çubukları"));
@@ -658,6 +720,16 @@ void MainWindow::onSettingChanged(const QString& id)
     // rather than trusting the caller keeps one source of truth.
     if (id.startsWith(QLatin1String("core.izgara."))) {
         canvas_->reloadGridSettings();
+        canvas_->reloadSnapSettings();
+        refreshAidActions();
+        canvas_->update();
+        return;
+    }
+
+    if (id.startsWith(QLatin1String("core.yakalama.")) ||
+        id.startsWith(QLatin1String("core.secim."))) {
+        canvas_->reloadSnapSettings();
+        refreshAidActions();
         canvas_->update();
         return;
     }
@@ -672,6 +744,30 @@ void MainWindow::onSettingChanged(const QString& id)
 
     QSignalBlocker block(actTheme_);
     actTheme_->setChecked(theme_ == ThemeMode::Dark);
+}
+
+void MainWindow::refreshAidActions()
+{
+    const core::Settings& session = controller_->bus().session_settings();
+
+    const int mask        = static_cast<int>(session.get("core.yakalama.modlar").as_int());
+    const bool objectSnap = (mask & static_cast<int>(core::SnapObjectMask)) != 0;
+    if (objectSnap) snapMaskMemory_ = mask;
+
+    // Blocked because the tick is DERIVED from the store: writing it back would
+    // dispatch the command again and fight whichever client just changed it.
+    {
+        QSignalBlocker block(actSnap_);
+        actSnap_->setChecked(objectSnap);
+    }
+    {
+        QSignalBlocker block(actOrtho_);
+        actOrtho_->setChecked(session.get("core.yakalama.dik_mod").as_bool());
+    }
+    {
+        QSignalBlocker block(actGridSnap_);
+        actGridSnap_->setChecked(session.get("core.yakalama.izgara").as_bool());
+    }
 }
 
 void MainWindow::toggleTheme(bool dark)

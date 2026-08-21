@@ -10,6 +10,7 @@
 #pragma once
 
 #include "piricad/app/theme.hpp"
+#include "piricad/core/snap.hpp"
 #include "piricad/render/drawlist.hpp"
 #include "piricad/render/scene.hpp"
 #include "piricad/render/view.hpp"
@@ -37,6 +38,11 @@ public:
     /// client writes one — the menu, the command line, a script or the AI, which
     /// is the whole point of routing the write through the bus (CLAUDE.md 1.2).
     void reloadGridSettings();
+
+    /// Re-reads the aid settings and re-evaluates the marker under the cursor.
+    /// Called whenever any client writes `core.yakalama.*` — the F-keys, the
+    /// command line, a script or the AI (Article 1.2).
+    void reloadSnapSettings();
     void setDebugHud(bool on);
     void zoomToExtents();
     void zoomBy(double factor);
@@ -60,6 +66,18 @@ protected:
 private:
     void rebuildScene();
     void drawGrid(QPainter& painter) const;
+    void drawSelected(QPainter& painter) const;
+    void drawSelectionBox(QPainter& painter) const;
+    void drawSnapMarker(QPainter& painter) const;
+
+    /// Re-runs the aid pipeline for the current cursor so the marker on screen is
+    /// the point a click would actually produce. Reads the document; never writes.
+    void updateSnapPreview();
+
+    /// Turns one finished left-drag into a `SEÇ` invocation. The box, the single
+    /// pick and the Shift/Ctrl modifiers all become arguments — there is no
+    /// selection path that does not go through the bus (Article 1.2).
+    void dispatchSelection(const QPointF& from, const QPointF& to, Qt::KeyboardModifiers mods);
 
     /// Grid shape, cached from the preferences so paintEvent does no lookups.
     struct GridSetup
@@ -72,6 +90,11 @@ private:
 
     void drawCrosshair(QPainter& painter) const;
 
+    /// Publishes the view scale to the bus. The snap and pick tolerances are
+    /// declared in screen pixels, and turning pixels into millimetres is the one
+    /// thing only the view knows (`piricad/command/aids.hpp`).
+    void publishViewScale();
+
     Controller& controller_;
     Palette palette_{themePalette(ThemeMode::Light)};
     render::ViewTransform view_;
@@ -83,6 +106,16 @@ private:
     QPointF pan_anchor_{};
     QPointF cursor_{};
     bool cursor_valid_{false};
+
+    /// Rubber-band selection gesture. Session state, drawn only (model.md R43).
+    bool selecting_{false};
+    QPointF select_anchor_{};
+
+    /// The aid that would fire if the user clicked now. A preview, never an input:
+    /// the value a click supplies is the raw world point, and the aids are applied
+    /// once, inside the command layer, for every client alike.
+    core::SnapResult snap_preview_{};
+    bool snap_preview_valid_{false};
     int last_frame_us_{0};
     bool debug_hud_{false};
 };

@@ -313,6 +313,13 @@ public:
 
     std::size_t explicit_count() const noexcept { return values_.size(); }
 
+    /// Bumped by every successful write, revert, reset and clear. A reader that
+    /// must not pay for a lookup on a hot path caches its answer against this
+    /// number: the command bus resolves the input aids once per dispatch and the
+    /// §10.4 budget is 10 microseconds, which a Turkish-folded catalogue scan per
+    /// point does not fit inside.
+    std::uint64_t revision() const noexcept { return revision_; }
+
     /// Ids that carry an explicit value, sorted by id so every caller — the UI, the
     /// writer, a diff — sees the same order (core.md P11).
     std::vector<std::string> explicit_ids() const;
@@ -357,6 +364,7 @@ private:
     SettingScopeMask accepted_;
     std::vector<std::pair<std::uint32_t, SettingValue>> values_; ///< sorted by index
     std::vector<SettingWarning> warnings_;
+    std::uint64_t revision_{0};
 };
 
 } // namespace piricad::core

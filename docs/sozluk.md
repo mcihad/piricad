@@ -133,7 +133,32 @@ küme. Bkz. [Katman yönetimi](komutlar/layer.md).
 **Aktif katman** — Yeni çizilen nesnelerin gideceği katman. Durum çubuğunda yazar.
 
 **Nesne** — Çizimdeki tek bir geometri parçası; bugün bir doğru parçası. Her nesnenin
-sıfırdan başlayan bir kimliği vardır.
+**1'den** başlayan kalıcı bir kimliği vardır; kimlik hiçbir zaman yeniden kullanılmaz.
+
+**Seçim** — Üzerinde işlem yapılacak nesneler kümesi. Çizimin verisi değildir: dosyaya
+yazılmaz, geri alınmaz, içerik özetine girmez. Bkz. [Nesne seçme](komutlar/select.md).
+
+**Pencere seçim** — Kutunun içinde **tamamen** kalan nesneleri alan seçim. Fareyle
+soldan sağa sürüklenir.
+
+**Kesen seçim** — Kutuya **değen** her nesneyi alan seçim. Fareyle sağdan sola
+sürüklenir.
+
+**Nesne yakalama** — Girilen noktayı yakınındaki gerçek geometriye oturtan girdi
+yardımı: uç nokta, orta nokta, merkez, kesişim, dik ayak, en yakın. Bkz.
+[Oturum modları](komutlar/mode.md).
+
+**Yakalama toleransı** — Nesne yakalamanın arama yarıçapı, **ekran pikseli**. Zemin
+metresi değildir: nişan alan göz ekrana bakar.
+
+**Dik mod** — İmleci önceki noktadan geçen yatay ve düşey eksene kilitleyen girdi
+yardımı. Kısayolu **F8**.
+
+**Kutupsal izleme** — İmleci önceki noktadan çıkan, belirli açı adımlarındaki ışınlara
+oturtan girdi yardımı.
+
+**Girdi yardımı** — Çizerken imlecin nereye oturacağını belirleyen, çizimin verisi
+olmayan ayar: nesne yakalama, dik mod, kutupsal izleme, ızgaraya yakalama.
 
 **Kapsam** — Çizimdeki görünür nesnelerin tamamını çevreleyen dikdörtgen. `YAKINLAŞ
 KAPSAM` görünümü buna sığdırır.

@@ -136,6 +136,12 @@ template<class T> std::optional<T> InputAwaiter<T>::await_resume()
     Value v = ready_ ? std::move(*ready_) : session_.take_supplied();
     if (v.empty()) return std::nullopt;
 
+    // The input aids run BEFORE the value is recorded, so the journal keeps the
+    // point that was actually drawn rather than the one that was aimed at. A
+    // replay then re-supplies a resolved point, and every rule in the snap engine
+    // is idempotent so re-resolving it changes nothing (core/snap.hpp).
+    v = apply_input_aids(session_, prompt_, std::move(v));
+
     session_.record(param_.name, v);
     return conv_(v);
 }

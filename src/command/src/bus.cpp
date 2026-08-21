@@ -37,12 +37,22 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
         return nullptr;
     };
 
+    // A LIST parameter accumulates; a scalar one is replaced. Both point lists
+    // and selections are lists, and before this only point lists accumulated —
+    // `SİL nesneler=1 nesneler=2` silently kept the last id and deleted one
+    // object where the user asked for two. Dropping an argument on the floor is
+    // exactly what `.claude/command.md` P15 forbids.
     const auto append = [&](const Param& p, Value v) {
         if (p.kind == ParamKind::PointList) {
             Value::Points pts = args.get(p.name).as_points();
             for (auto pt : v.as_points())
                 pts.push_back(pt);
             args.set(p.name, Value::points(std::move(pts)));
+        } else if (p.kind == ParamKind::Selection) {
+            Value::Ints ids = args.get(p.name).as_ids();
+            for (auto id : v.as_ids())
+                ids.push_back(id);
+            args.set(p.name, Value::ids(std::move(ids)));
         } else {
             args.set(p.name, std::move(v));
         }
@@ -163,13 +173,34 @@ core::Result<DispatchResult> Bus::dispatch(const Invocation& inv)
         return core::err(ErrorCode::NotFound, "Bilinmeyen komut: '" + inv.name +
                                                   "'. YARDIM yazarak komut listesini görün.");
 
+    // A two-element JSON array is genuinely ambiguous: `[485320, 4310220]` is a
+    // point and `[1, 2]` is a pair of object ids. `Value::from_json` has no spec
+    // and reads both as a point, so a script that wrote `{"nesneler": [1, 2]}`
+    // was told its ids were the wrong type. The SPEC settles it, and this is the
+    // first place that has one.
+    //
+    // The copy happens only when the ambiguous form is actually present, so the
+    // §10.4 dispatch budget pays a parameter-kind comparison and nothing else.
+    Args repaired;
+    const Args* args = &inv.args;
+    for (const auto& p : spec->params) {
+        if (p.kind != ParamKind::Selection) continue;
+        const Value* v = args->find(p.name);
+        if (!v || v->kind() != Value::Kind::Point) continue;
+
+        if (args != &repaired) repaired = inv.args;
+        const core::Point2 pair = v->as_point();
+        repaired.set(p.name, Value::ids({pair.x, pair.y}));
+        args = &repaired;
+    }
+
     // Validation runs on the bus, for every client, with no opt-out (§2.6).
-    ValidationRequest req{*spec, inv.args, inv.origin, doc_};
+    ValidationRequest req{*spec, *args, inv.origin, doc_};
     if (auto st = validator_.run(req); !st) return st.error();
 
     const bool borrow = batch_ && spec->undo == UndoPolicy::SingleTransaction;
 
-    Session session(*this, *spec, std::make_unique<ArgInputSource>(inv.args, inv.origin),
+    Session session(*this, *spec, std::make_unique<ArgInputSource>(*args, inv.origin),
                     borrow ? nullptr
                            : std::make_unique<Transaction>(
                                  doc_, spec->summary.empty() ? spec->id : spec->summary),

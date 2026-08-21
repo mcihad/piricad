@@ -2,7 +2,7 @@
 KATMAN ad=CIZIM
 ÇİZGİ 0,0 10,0 20,0 30,0
 ÇİZGİ 0,10 10,10
-SİL nesneler=1
+SİL nesneler=2
 GERİAL
-SİL nesneler=0 nesneler=3
+SİL nesneler=1 nesneler=4
 KATMAN ad=CIZIM kilitli=evet

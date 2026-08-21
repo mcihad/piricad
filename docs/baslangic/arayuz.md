@@ -35,9 +35,9 @@ Bu ayrım AutoCAD ve QGIS'in ortak düzenidir.
 | Menü | İçerik |
 |---|---|
 | **Dosya** | Yeni, Aç, Kaydet, Dışa Aktar, Yazdır (Faz 1–2), Betik Çalıştır… (**Ctrl+R**), Çıkış |
-| **Düzen** | Geri Al (**Ctrl+Z**), Yinele (**Ctrl+Shift+Z**), Sil |
+| **Düzen** | Geri Al (**Ctrl+Z**), Yinele (**Ctrl+Shift+Z**), Sil, Tümünü Seç (**Ctrl+A**), Seçimi Temizle (**Ctrl+Shift+A**) |
 | **Çizim** | Çizgi, Çoklu Çizgi, Yay, Daire, Dikdörtgen, Nokta, Metin, Katman, Katman Yöneticisi |
-| **Görünüm** | Kapsama Yakınlaş (**Ctrl+0**), Yakınlaştır, Uzaklaştır, Araç Çubukları, Paneller, Koyu Tema, Geliştirici Bilgisi (**F12**) |
+| **Görünüm** | Kapsama Yakınlaş (**Ctrl+0**), Yakınlaştır, Uzaklaştır, Nesne Yakalama (**F3**), Dik Mod (**F8**), Izgaraya Yakala (**F9**), Araç Çubukları, Paneller, Koyu Tema, Geliştirici Bilgisi (**F12**) |
 | **CBS** | Sorgula, Öznitelik Tablosu, Ölç, AI Asistan — hepsi sonraki fazlarda |
 | **Yardım** | Komut Listesi, Hakkında |
 
@@ -63,7 +63,7 @@ Menü çubuğunun altında beş araç çubuğu vardır. Hepsi taşınabilir ve
 |---|---|---|
 | Geri Al | `GERİAL` | **Ctrl+Z** |
 | Yinele | `YİNELE` | **Ctrl+Shift+Z** |
-| Sil | `SİL` | Komut satırını `SİL nesneler=` ile hazırlar |
+| Sil | `SİL` | Seçili nesneleri siler; seçim boşsa komut satırını hazırlar |
 | Taşı, Kopyala, Döndür, Ofset | — | Faz 2'de gelecek, şimdilik pasif |
 
 ### Görünüm
@@ -74,7 +74,7 @@ Menü çubuğunun altında beş araç çubuğu vardır. Hepsi taşınabilir ve
 | Kapsama Yakınlaş | `YAKINLAŞ KAPSAM` | **Ctrl+0** |
 | Yakınlaştır | `YAKINLAŞ ÇARPAN carpan=1.25` | **Ctrl++** |
 | Uzaklaştır | `YAKINLAŞ ÇARPAN carpan=0.8` | **Ctrl+-** |
-| Nesne Yakalama | — | Faz 2'de gelecek, şimdilik pasif |
+| Nesne Yakalama | `MOD yakalama_modları ...` | **F3**, **Görünüm** menüsünde |
 
 ### Katman
 
@@ -110,12 +110,12 @@ hangi araçların birlikte olduğu her genişlikte okunur kalır.
 
 | Araç | Gönderdiği komut | Durum |
 |---|---|---|
-| Seç | — | Çalışan komutu iptal eder (**Esc**) |
+| Seç | — | Çalışan komutu iptal eder (**Esc**); komut yokken fare zaten seçim yapar |
 | Çizgi | `ÇİZGİ` | [Çizgi çizme](../komutlar/line.md) |
 | Çoklu Çizgi, Yay, Daire, Dikdörtgen, Nokta, Metin | — | Faz 2'de gelecek |
 | Sil | `SİL` | [Nesne silme](../komutlar/erase.md) |
 | Taşı, Kopyala, Döndür, Ofset | — | Faz 2'de gelecek |
-| Ölç, Sorgula, Nesne Yakalama | — | Faz 2'de gelecek |
+| Ölç, Sorgula | — | Faz 2'de gelecek |
 
 Her düğmenin ipucu balonunda komut adı ve varsa kısayolu yazar.
 
@@ -129,14 +129,54 @@ Fabrika yerleşimine dönmek için **Görünüm > Paneller > Düzeni Sıfırla**
 
 | Etkileşim | Sonuç |
 |---|---|
-| Sol tık | Çalışan komuta bir nokta verir |
+| Sol tık, komut çalışırken | Çalışan komuta bir nokta verir |
+| Sol tık, komut yokken | İmlecin yakınındaki nesneyi seçer |
+| Sol tuş basılı sürükle, komut yokken | Seçim kutusu çizer |
+| **Shift** + tık/sürükle | Seçime ekler |
+| **Ctrl** + tık/sürükle | Seçimden çıkarır |
 | Sağ tık | Çalışan komutu iptal eder |
 | Orta tuş basılı sürükle | Görünümü kaydırır |
 | Fare tekerleği | İmlecin bulunduğu noktaya yakınlaştırır/uzaklaştırır |
-| **Esc** | Çalışan komutu iptal eder |
+| **Esc** | Çalışan komutu iptal eder; komut yoksa seçimi temizler |
 
 İmleç konumu artı işaretiyle gösterilir ve koordinatı durum çubuğunda yazar. Bir komut
 nokta beklerken son noktadan imlece kesikli bir kılavuz çizgi uzanır.
+
+### Seçim
+
+Hiçbir komut çalışmıyorken sol fare tuşu seçim yapar. **Soldan sağa** sürüklerseniz
+kutuya **tamamen giren** nesneler seçilir ve çerçeve düz çizilir; **sağdan sola**
+sürüklerseniz kutuya **değen** her nesne seçilir ve çerçeve kesik çizilir. Bu, CAD
+dünyasının kırk yıllık ayrımıdır ve PiriCAD'de de aynıdır.
+
+Seçili nesneler kalın ve renkli çizilir. Seçim çizimin verisi değildir: dosyaya
+yazılmaz, `GERİAL` ile geri alınmaz ve komut günlüğüne belge değişikliği olarak
+düşmez.
+
+Fareyle yaptığınız her seçim, komut satırına `SEÇ ...` yazmakla aynı komuttur.
+Ayrıntı: [Nesne seçme](../komutlar/select.md).
+
+### Nesne yakalama
+
+Bir komut nokta beklerken imleç, yakınındaki gerçek geometriye **oturur**: bir köşeye,
+bir kenarın ortasına, kapalı bir halkanın merkezine, iki kenarın kesişimine, önceki
+noktadan indirilen dikin ayağına ya da en yakın kenar noktasına.
+
+Hangi modun tuttuğu ekranda görünür: imlecin altında o moda ait bir işaret ve adı
+belirir. Kesikli kılavuz çizgi de yakalanan noktaya uzanır, çünkü çizgi oraya
+düşecektir.
+
+| Kısayol | Ne yapar |
+|---|---|
+| **F3** | Nesne yakalamayı açar/kapatır |
+| **F8** | Dik modu açar/kapatır — imleci yatay ve düşey eksene kilitler |
+| **F9** | Izgaraya yakalamayı açar/kapatır |
+
+Arama yarıçapı `yakalama_toleransı`, seçme kutusu `seçim_toleransı` tercihidir ve
+ikisi de **ekran pikselidir**: nişan alan göz ekrana bakar, bu yüzden tolerans
+yakınlaştırmayla birlikte değişir.
+
+Modların tamamı ve bit maskesi: [Oturum modları](../komutlar/mode.md).
 
 ### Kılavuz ızgara
 
@@ -267,6 +307,8 @@ yapabilecekleriniz:
 | **Yukarı / Aşağı** | Komut geçmişi |
 | **Esc** | Satırı temizler; satır boşsa komutu iptal eder |
 | **Ctrl+Z** / **Ctrl+Shift+Z** | Geri al / yinele |
+| **Ctrl+A** / **Ctrl+Shift+A** | Tümünü seç / seçimi temizle |
+| **F3** / **F8** / **F9** | Nesne yakalama / dik mod / ızgaraya yakalama |
 | **Ctrl+0** | Kapsama yakınlaş |
 | **Ctrl++** / **Ctrl+-** | Yakınlaştır / uzaklaştır |
 | **Ctrl+R** | Betik çalıştır |
@@ -284,3 +326,5 @@ Ekran okuyucu desteği (NVDA, VoiceOver, Orca) Faz 1'de tamamlanacak.
 
 - [Komut sistemi](../komutlar/README.md)
 - [Komut satırı](../komutlar/komut-satiri.md)
+- [Nesne seçme](../komutlar/select.md)
+- [Oturum modları](../komutlar/mode.md)
