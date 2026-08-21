@@ -673,7 +673,7 @@ void MainWindow::refreshLayerCombo()
 
     for (std::size_t i = 0; i < doc.layers().size(); ++i) {
         const auto& l = doc.layers()[i];
-        layerCombo_->addItem(swatchIcon(l.style.rgba), QString::fromStdString(l.name));
+        layerCombo_->addItem(swatchIcon(l.appearance.rgba), QString::fromStdString(l.name));
         if (!l.visible) layerCombo_->setItemData(static_cast<int>(i), tr("gizli"), Qt::ToolTipRole);
     }
 

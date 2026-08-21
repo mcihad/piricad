@@ -40,9 +40,10 @@ Task<void> run(Context& ctx)
     }
 
     if (const Value v = ctx.argument("renk"); !v.empty()) {
-        core::LayerStyle style = bus.document().layer(id)->style;
-        style.rgba = static_cast<std::uint32_t>(v.as_int(static_cast<std::int64_t>(style.rgba)));
-        auto st    = ctx.transaction().set_layer_style(id, style);
+        core::Appearance appearance = bus.document().layer(id)->appearance;
+        appearance.rgba =
+            static_cast<std::uint32_t>(v.as_int(static_cast<std::int64_t>(appearance.rgba)));
+        auto st = ctx.transaction().set_layer_appearance(id, appearance);
         if (!st) {
             ctx.echo(st.error().message);
             co_return;

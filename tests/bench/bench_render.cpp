@@ -80,7 +80,7 @@ double index_build()
 
     core::SpatialIndex index;
     const auto start = bench::Clock::now();
-    index.build(doc.polylines());
+    index.build(doc.entities());
     return bench::since(start);
 }
 

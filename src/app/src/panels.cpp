@@ -111,7 +111,7 @@ void LayerPanel::refresh()
         auto* item    = new QTreeWidgetItem(tree_);
 
         item->setText(0, QString::fromStdString(l.name));
-        item->setIcon(0, swatch(l.style.rgba));
+        item->setIcon(0, swatch(l.appearance.rgba));
         item->setData(0, Qt::UserRole, static_cast<uint>(i));
 
         item->setText(1, l.visible ? QStringLiteral("●") : QStringLiteral("○"));
@@ -213,8 +213,9 @@ void PropertyPanel::refresh()
         addRow(tr("Görünür"), l->visible ? tr("evet") : tr("hayır"));
         addRow(tr("Kilitli"), l->locked ? tr("evet") : tr("hayır"));
         addRow(tr("Renk"),
-               QStringLiteral("#%1").arg(l->style.rgba, 8, 16, QLatin1Char('0')).toUpper());
-        addRow(tr("Çizgi kalınlığı"), QStringLiteral("%1 px").arg(double(l->style.width_px)));
+               QStringLiteral("#%1").arg(l->appearance.rgba, 8, 16, QLatin1Char('0')).toUpper());
+        addRow(tr("Çizgi kalınlığı"),
+               QStringLiteral("%1 mm").arg(l->appearance.width_um / 1000.0, 0, 'f', 2));
         addRow(tr("Nesne"), QString::number(doc.layer_entity_count(layer_)));
     }
 

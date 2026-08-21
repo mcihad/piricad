@@ -35,22 +35,21 @@
 #   * the P4 signature test reads one declaration line, not a continuation.
 #
 # ---------------------------------------------------------------------------
-# PHASE-0 CARVE-OUTS. Three files predate model.md and are superseded by it. Each
-# is named here with its removal condition so the exemption cannot go unnoticed;
-# the gate reports the count on every run. Nothing else may be added without a
-# matching entry in CLAUDE.md Article 8.
+# PHASE-0 CARVE-OUT. One file predates model.md and is superseded by it. It is
+# named here with its removal condition so the exemption cannot go unnoticed; the
+# gate reports it on every run. Nothing else may be added without a matching row
+# in CLAUDE.md Article 8.
 #
-#   src/core/include/piricad/core/document.hpp
-#       LayerStyle::width_px (P9, P8) and PolylineStore's (start, count) run (P6).
-#       Superseded by style.hpp's Appearance::width_um, layer.hpp's Layer and
-#       geometry.hpp's RingGeometry. Dies when Document is rebuilt on them.
-#   src/render/src/scene.cpp
-#       Reads poly.layer[e] before the bbox test (R6). The Phase-0 PolylineStore
-#       carries no R7 flags byte, so layer_hidden cannot be mirrored and the layer
-#       visibility test cannot fold into flags. Dies with the flags byte.
 #   src/core/src/log.cpp
 #       A mutable process-wide sink and level (P10). core.md P9 bans a logging sink
-#       in core outright; dies when logging moves out of /src/core.
+#       in core outright; dies when logging moves to spdlog outside /src/core
+#       (CLAUDE.md Article 2.7, 8.6).
+#
+# REMOVED, because the condition in their Article 8 row was met:
+#   document.hpp        rebuilt on RingGeometry, StyleTable, LayerTable and the
+#                       EntityKey column; LayerStyle::width_px is gone.
+#   render/scene.cpp    the cull test now reads entities.visible(e) — the R7 flags
+#                       byte — and the four bbox arrays, and nothing else.
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
@@ -58,8 +57,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fail=0
 core_inc="$root/src/core/include/piricad/core"
 
-legacy_doc="$core_inc/document.hpp"
-legacy_scene="$root/src/render/src/scene.cpp"
+scene_file="$root/src/render/src/scene.cpp"
 legacy_log="$root/src/core/src/log.cpp"
 
 # A shell gate cannot parse C++, but it can refuse to read a comment as code.
@@ -79,7 +77,6 @@ fp_container='(vector|array|span|deque|optional|pair|tuple)[[:space:]]*<[^;]*\b(
 for h in identity geometry style layer attribute settings entity_kind crs units; do
     f="$core_inc/$h.hpp"
     [[ -f "$f" ]] || continue
-    [[ "$f" == "$legacy_doc" ]] && continue
     while IFS= read -r hit; do
         ln="${hit%%:*}"
         code="$(strip "${hit#*:}")"
@@ -98,7 +95,6 @@ done
 # pixel by construction.
 while IFS= read -r hit; do
     f="${hit%%:*}"; rest="${hit#*:}"; ln="${rest%%:*}"
-    [[ "$f" == "$legacy_doc" ]] && continue
     code="$(strip "${rest#*:}")"
     if grep -qE '\b[A-Za-z_][A-Za-z0-9_]*_px\b' <<<"$code"; then
         echo "model: line width stored in pixels, not paper µm (R20/P9) -> $f:$ln" >&2
@@ -215,10 +211,15 @@ done < <(find "$root/src/core" -name '*.hpp' -o -name '*.cpp' | sort)
 # line that opens a block at a strictly smaller indent. Inside that region only the
 # four bbox arrays and the flags/alive byte may be read from the entity store; layer,
 # kind, style, order and key are read only for the entities the index returned (R6).
-scene="$legacy_scene"
-cull_allowed='^(min_x|min_y|max_x|max_y|flags|alive|layer)$'   # `layer`: Phase-0 carve-out
+scene="$scene_file"
+# The extractor strips a trailing `_of(...)`, so box_of(e) arrives here as `box`.
+cull_allowed='^(min_x|min_y|max_x|max_y|flags|visible|alive|box|box_of)$'
 if [[ -f "$scene" ]]; then
-    bbox_line="$(grep -nE '\.(min_x|min_y|max_x|max_y)[[:space:]]*\[' "$scene" | head -1 | cut -d: -f1 || true)"
+    # The bounding box may be read as the four arrays or through box_of(); both
+    # are the cull read, and the anchor accepts either so a refactor of the scene
+    # builder cannot silently delete this check.
+    bbox_line="$(grep -nE '\.(min_x|min_y|max_x|max_y)[[:space:]]*\[|\.box_of[[:space:]]*\(' \
+                 "$scene" | head -1 | cut -d: -f1 || true)"
     if [[ -z "${bbox_line:-}" ]]; then
         # Never let the check vanish because the scene builder was restructured.
         echo "model: R6 cull-block check found no bounding-box read in $scene — the heuristic no longer locates the cull region; re-anchor it" >&2
@@ -266,7 +267,6 @@ fi
 # per entity. RingGeometry spells its ring arrays ring_start/ring_count/first_ring/
 # ring_total precisely so that this check has a distinctive shape to look for.
 while IFS= read -r f; do
-    [[ "$f" == "$legacy_doc" ]] && continue
     s="$(grep -nE '^[[:space:]]+[A-Za-z_][A-Za-z0-9_:<>,[:space:]]*[[:space:]]start[[:space:]]*[{;=]' "$f" | head -1 || true)"
     [[ -n "$s" ]] || continue
     grep -qE '^[[:space:]]+[A-Za-z_][A-Za-z0-9_:<>,[:space:]]*[[:space:]]count[[:space:]]*[{;=]' "$f" || continue
@@ -276,6 +276,6 @@ done < <(find "$root/src/core" -name '*.hpp' | sort)
 
 if [[ $fail -eq 0 ]]; then
     echo "model: OK — no floating-point or *_px field in a stored record, no vptr/std::function/owning pointer in an entity, style, layer or attribute record, no dense slot in a persistence or selection signature, no mutable global in /src/core, cull block closed to the R6 columns (enclosing-block heuristic), no (start, count) vertex run outside RingGeometry"
-    echo "model: note — 3 Phase-0 carve-outs exempted, each named with its removal condition in this script's header: document.hpp, render/src/scene.cpp, core/src/log.cpp"
+    echo "model: note — 1 Phase-0 carve-out exempted with its removal condition in this script's header: core/src/log.cpp"
 fi
 exit $fail

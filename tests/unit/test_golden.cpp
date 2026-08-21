@@ -65,22 +65,39 @@ std::string dump(const core::Document& doc, const Journal& journal)
         out += "katman " + l.name;
         out += " gorunur=" + std::string(l.visible ? "1" : "0");
         out += " kilitli=" + std::string(l.locked ? "1" : "0");
-        out += " renk=" + hex64(l.style.rgba).substr(8);
+        out += " renk=" + hex64(l.appearance.rgba).substr(8);
+        out += " kalinlik_um=" + std::to_string(l.appearance.width_um);
         out += " nesne=" + std::to_string(doc.layer_entity_count(static_cast<core::LayerId>(i)));
         out += "\n";
     }
 
-    const auto& poly = doc.polylines();
-    for (core::EntityId e = 0; e < poly.size(); ++e) {
-        if (!poly.alive[e]) continue;
+    const auto& entities = doc.entities();
+    const auto& geometry = doc.geometry();
 
-        out += "nesne " + std::to_string(e) + " katman=" + doc.layers()[poly.layer[e]].name +
-               " tepe=" + std::to_string(poly.count[e]) + "\n";
+    for (core::EntityId e = 0; e < entities.size(); ++e) {
+        if (!entities.alive(e)) continue;
 
-        const auto xs = poly.xs_of(e);
-        const auto ys = poly.ys_of(e);
-        for (std::size_t v = 0; v < xs.size(); ++v)
-            out += "  " + std::to_string(xs[v]) + " " + std::to_string(ys[v]) + "\n";
+        const core::RingSpan span = geometry.rings_of(entities.slot[e]);
+        out += "nesne " + std::to_string(e) + " katman=" + doc.layers()[entities.layer[e]].name +
+               " stil=" + std::to_string(entities.style[e]) +
+               " halka=" + std::to_string(span.count) + "\n";
+
+        // Ring role, part and vertex run are all part of the identity of the
+        // geometry: a parcel and the same outline digitised as a polyline are
+        // different documents (model.md R11).
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+            out += "  halka rol=" + std::to_string(static_cast<int>(geometry.ring_role[r])) +
+                   " parca=" + std::to_string(geometry.ring_part[r]) +
+                   " tepe=" + std::to_string(geometry.ring_count[r]) + "\n";
+
+            const auto xs = geometry.ring_xs(r);
+            const auto ys = geometry.ring_ys(r);
+            for (std::size_t v = 0; v < xs.size(); ++v)
+                out += "    " + std::to_string(xs[v]) + " " + std::to_string(ys[v]) + "\n";
+        }
+
+        out += "  alan_mm2 " + std::to_string(doc.entity_area(e)) + "  cevre_mm " +
+               std::to_string(doc.entity_perimeter(e)) + "\n";
     }
 
     const core::Box2 box = doc.extent();

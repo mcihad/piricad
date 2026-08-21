@@ -45,10 +45,10 @@ Document make_grid(std::size_t columns, std::size_t rows)
 std::vector<EntityId> brute_force(const Document& doc, const Box2& box)
 {
     std::vector<EntityId> out;
-    const auto& poly = doc.polylines();
+    const auto& poly = doc.entities();
 
     for (EntityId e = 0; e < poly.size(); ++e) {
-        if (!poly.alive[e]) continue;
+        if (!poly.alive(e)) continue;
         const Box2 b = poly.box_of(e);
         if (b.max_x < box.min_x || b.min_x > box.max_x) continue;
         if (b.max_y < box.min_y || b.min_y > box.max_y) continue;
@@ -61,15 +61,15 @@ std::vector<EntityId> brute_force(const Document& doc, const Box2& box)
 std::vector<EntityId> via_index(const Document& doc, const Box2& box)
 {
     SpatialIndex index;
-    index.build(doc.polylines());
+    index.build(doc.entities());
 
     std::vector<EntityId> candidates;
     index.query(box, candidates);
 
-    const auto& poly = doc.polylines();
+    const auto& poly = doc.entities();
     std::vector<EntityId> out;
     for (EntityId e : candidates) {
-        if (!poly.alive[e]) continue;
+        if (!poly.alive(e)) continue;
         const Box2 b = poly.box_of(e);
         if (b.max_x < box.min_x || b.min_x > box.max_x) continue;
         if (b.max_y < box.min_y || b.min_y > box.max_y) continue;
@@ -108,7 +108,7 @@ TEST_CASE("index candidate set is a superset, never a subset")
     const Document doc = make_grid(40, 40);
 
     SpatialIndex index;
-    index.build(doc.polylines());
+    index.build(doc.entities());
 
     const Box2 q{485150000, 4310150000, 485350000, 4310350000};
 
@@ -131,7 +131,7 @@ TEST_CASE("index skips erased entities and reports its shape")
         CHECK(doc.set_entity_alive(e, false, op).ok());
 
     SpatialIndex index;
-    index.build(doc.polylines());
+    index.build(doc.entities());
 
     CHECK_EQ(index.entity_count(), std::size_t{300});
     CHECK(!index.empty());
@@ -143,7 +143,7 @@ TEST_CASE("empty document produces an empty index")
 {
     Document doc;
     SpatialIndex index;
-    index.build(doc.polylines());
+    index.build(doc.entities());
 
     CHECK(index.empty());
     CHECK_EQ(index.entity_count(), std::size_t{0});
@@ -162,8 +162,8 @@ TEST_CASE("index packing is deterministic")
     const Document b = make_grid(30, 30);
 
     SpatialIndex ia, ib;
-    ia.build(a.polylines());
-    ib.build(b.polylines());
+    ia.build(a.entities());
+    ib.build(b.entities());
 
     CHECK_EQ(ia.node_count(), ib.node_count());
     CHECK_EQ(ia.depth(), ib.depth());

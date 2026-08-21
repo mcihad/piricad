@@ -16,14 +16,16 @@
 
 namespace piricad::command {
 
+using core::Appearance;
 using core::Document;
 using core::EntityId;
 using core::LayerId;
-using core::LayerStyle;
 using core::Op;
 using core::Point2;
 using core::Result;
+using core::RingGeometry;
 using core::Status;
+using core::StyleId;
 
 /// Collects the inverse of every primitive edit made through it.
 /// The ONLY sanctioned route to Document mutation (Constitution Article 1).
@@ -33,11 +35,17 @@ public:
     Transaction(Document& doc, std::string label);
 
     Result<EntityId> add_polyline(LayerId layer, std::span<const Point2> pts);
+
+    /// A face: one exterior ring, optionally with holes, optionally multipart.
+    /// This is what a parcel is (model.md R9).
+    Result<EntityId> add_area(LayerId layer, std::span<const RingGeometry::RingInput> rings);
     Status erase_entity(EntityId e);
     Status restore_entity(EntityId e);
     Status set_layer_visible(LayerId l, bool visible);
     Status set_layer_locked(LayerId l, bool locked);
-    Status set_layer_style(LayerId l, LayerStyle s);
+    Status set_layer_appearance(LayerId l, const Appearance& a);
+    Status set_entity_style(EntityId e, StyleId style);
+    Status set_entity_hidden(EntityId e, bool hidden);
     Status set_crs(std::string id);
 
     /// Reverts every edit made through this transaction, newest first.

@@ -19,7 +19,27 @@ Checks: >
   -modernize-use-trailing-return-type,
   -readability-identifier-length,
   -readability-magic-numbers,
-  -readability-function-cognitive-complexity
+  -readability-function-cognitive-complexity,
+  -portability-avoid-pragma-once,
+  -readability-braces-around-statements,
+  -misc-include-cleaner
+
+# Three checks are switched off because they contradict a decision recorded
+# elsewhere, and a linter arguing with the house style teaches everyone to ignore
+# the linter — which is how a real finding gets missed (CLAUDE.md 5.14).
+#
+#   portability-avoid-pragma-once     `#pragma once` is deliberate. MSVC 19.40,
+#                                     GCC 13+, Clang 17+ and AppleClang all
+#                                     support it; the compiler floor is Article 2.
+#   readability-braces-around-statements
+#                                     `.clang-format` sets
+#                                     AllowShortIfStatementsOnASingleLine, so this
+#                                     check would fight the formatter on every
+#                                     early return.
+#   misc-include-cleaner              IWYU owns include hygiene and runs as its own
+#                                     step in `make check`. Two tools giving
+#                                     different advice about the same line is worse
+#                                     than one.
 
 WarningsAsErrors: 'bugprone-*,cert-*,clang-analyzer-*'
 HeaderFilterRegex: '.*/piricad/.*'

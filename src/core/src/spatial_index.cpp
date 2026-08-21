@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/core/spatial_index.hpp"
 
+#include "piricad/core/document.hpp"
+
 #include <algorithm>
 #include <cmath>
 
@@ -28,13 +30,13 @@ void SpatialIndex::clear()
     depth_ = 0;
 }
 
-void SpatialIndex::build(const PolylineStore& store)
+void SpatialIndex::build(const EntityTable& store)
 {
     clear();
 
     order_.reserve(store.size());
     for (EntityId e = 0; e < store.size(); ++e)
-        if (store.alive[e]) order_.push_back(e);
+        if (store.alive(e)) order_.push_back(e);
 
     if (order_.empty()) return;
 

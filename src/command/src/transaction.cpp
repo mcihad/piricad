@@ -16,6 +16,16 @@ Result<EntityId> Transaction::add_polyline(LayerId layer, std::span<const Point2
     return id;
 }
 
+Result<EntityId> Transaction::add_area(LayerId layer,
+                                       std::span<const RingGeometry::RingInput> rings)
+{
+    core::Op undo;
+    auto id = doc_.add_area(layer, rings, undo);
+    if (!id) return id;
+    inverse_.push_back(std::move(undo));
+    return id;
+}
+
 Status Transaction::erase_entity(EntityId e)
 {
     core::Op undo;
@@ -52,10 +62,28 @@ Status Transaction::set_layer_locked(LayerId l, bool locked)
     return core::ok();
 }
 
-Status Transaction::set_layer_style(LayerId l, LayerStyle s)
+Status Transaction::set_layer_appearance(LayerId l, const Appearance& a)
 {
     core::Op undo;
-    auto st = doc_.set_layer_style(l, s, undo);
+    auto st = doc_.set_layer_appearance(l, a, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
+Status Transaction::set_entity_style(EntityId e, StyleId style)
+{
+    core::Op undo;
+    auto st = doc_.set_entity_style(e, style, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
+Status Transaction::set_entity_hidden(EntityId e, bool hidden)
+{
+    core::Op undo;
+    auto st = doc_.set_entity_hidden(e, hidden, undo);
     if (!st) return st;
     inverse_.push_back(std::move(undo));
     return core::ok();

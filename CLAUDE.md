@@ -140,7 +140,7 @@ CI gates, not aspirations. A benchmark more than **10% worse than the stored bas
 
 ## Article 8 — Phase-0 Deviations
 
-Three deviations from this constitution exist today. Each is documented, time-boxed and removed on its stated condition. Nothing else may be added to this list without amending it.
+Four deviations from this constitution exist today. Two more were removed when their condition was met: `Document` now sits on `RingGeometry`, `StyleTable`, `LayerTable` and the `EntityKey` column, and the cull test reads only the R7 flags byte and the bounding box. Each is documented, time-boxed and removed on its stated condition. Nothing else may be added to this list without amending it.
 
 | # | Deviation | Why | Removal condition |
 |---|---|---|---|
@@ -148,13 +148,11 @@ Three deviations from this constitution exist today. Each is documented, time-bo
 | 8.2 | Partly lifted. **PROJ is wired and on** (`piricad_domain_geodesy`), and eight pure-C++ libraries are pinned by commit SHA in `cmake/PiriCADDependencies.cmake`. GDAL, GEOS, CGAL and libxml2 are installed but not yet linked; Lua is absent | Article 2.7 now requires the mature library wherever one exists, so this row shrinks with every integration rather than expiring at once | Each remaining library stays behind `PIRICAD_WITH_<NAME>`, hard-failing with an actionable message when ON but missing, and defaulting ON once found. The row is deleted when GDAL, GEOS and CGAL are linked. A gated test reports **pending**, never passing (`data.md` Enforcement) |
 | 8.3 | Script engine is a JSON command-array runner (`script/json_runner.hpp`) | Lua (sol2) and Python (pybind11) are Phase 2 | Lua lands in Phase 2 behind `PIRICAD_WITH_LUA`; Python lands in Phase 2 as an optional downloadable module behind `PIRICAD_WITH_PYTHON`. Both replay through the same `Bus` and the same `Parser` — the JSON runner is not a precedent for a second grammar |
 
-| 8.4 | `Document` still holds the pre-`model.md` shapes: `LayerStyle::width_px` as a `float` in pixels (waives P8, P9, R20, R21) and `PolylineStore`'s single `(start, count)` vertex run (waives P6, R9) | `geometry.hpp`, `style.hpp` and `layer.hpp` landed beside `Document` rather than inside it, so the hardened ring arithmetic is not yet reachable from a drawing | Rebuild `Document` on `RingGeometry`, `StyleTable` and `LayerTable`, add the `EntityKey` column and the R7 `flags` byte, then delete the matching carve-out from `scripts/ci-gate-model.sh` |
-| 8.5 | `render/src/scene.cpp` reads `alive`, `layer` and an indirect layer-visibility lookup inside the cull loop (waives R6, R7, P3) | The Phase-0 entity store carries no `flags` byte, so `layer_hidden` cannot be mirrored into it | Lands with the R7 `flags` byte; then remove `layer` from the gate's `cull_allowed` list and re-record `render.pan_zoom_5m` |
-| 8.6 | `core/src/log.cpp` keeps a mutable process-wide sink and level (waives P10, `core.md` P8/P9) | Logging predates the library-first rule; `core.md` P9 bans a logging sink in core outright | Dies when logging moves to spdlog outside `/src/core` (Article 2.7) |
+| 8.4 | `core/src/log.cpp` keeps a mutable process-wide sink and level (waives P10, `core.md` P8/P9) | Logging predates the library-first rule; `core.md` P9 bans a logging sink in core outright | Dies when logging moves to spdlog outside `/src/core` (Article 2.7) |
 
-8.7 Because of 8.1, `piricad_render` links no Qt today: the scene builder, view transform and backend interface are Qt-free, and the `QPainter` implementation of `render::Backend` lives in `/src/app`. The QRhi backend restores the `render -> Qt Gui` edge of Article 3.2.
+8.5 Because of 8.1, `piricad_render` links no Qt today: the scene builder, view transform and backend interface are Qt-free, and the `QPainter` implementation of `render::Backend` lives in `/src/app`. The QRhi backend restores the `render -> Qt Gui` edge of Article 3.2.
 
-8.8 Every rule in every rulebook is written against the target design and binds the stand-in too. A rule is waived for a stand-in only by a row in the table above naming that rule id.
+8.6 Every rule in every rulebook is written against the target design and binds the stand-in too. A rule is waived for a stand-in only by a row in the table above naming that rule id.
 
 ## Article 9 — Working Agreement
 

@@ -1,53 +1,81 @@
 crs TUREF/TM30
 katman-sayisi 3
 nesne-sayisi 14
-katman 0 gorunur=1 kilitli=0 renk=ff6c7686 nesne=0
-katman SINIR gorunur=1 kilitli=0 renk=ff3949ab nesne=13
-katman YOL gorunur=1 kilitli=0 renk=ff5d6470 nesne=1
-nesne 0 katman=SINIR tepe=2
-  485320150 4310220400
-  485370150 4310250400
-nesne 1 katman=SINIR tepe=2
-  485370150 4310250400
-  485440861 4310321111
-nesne 2 katman=SINIR tepe=2
-  485300000 4310200000
-  485600000 4310200000
-nesne 3 katman=SINIR tepe=2
-  485600000 4310200000
-  485657750 4310240000
-nesne 4 katman=SINIR tepe=2
-  485400000 4310400000
-  485500000 4310400000
-nesne 5 katman=SINIR tepe=2
-  485500000 4310400000
-  485500000 4310500000
-nesne 6 katman=SINIR tepe=2
-  485500000 4310500000
-  485400000 4310500000
-nesne 7 katman=SINIR tepe=2
-  485400000 4310500000
-  485400000 4310400000
-nesne 8 katman=SINIR tepe=2
-  485500000 4310500000
-  485586603 4310550000
-nesne 9 katman=SINIR tepe=2
-  485586603 4310550000
-  485636603 4310636603
-nesne 10 katman=SINIR tepe=2
-  485636603 4310636603
-  485586603 4310723206
-nesne 11 katman=SINIR tepe=2
-  485586603 4310723206
-  485500000 4310673206
-nesne 12 katman=SINIR tepe=2
-  485500000 4310673206
-  485586603 4310623206
-nesne 13 katman=YOL tepe=2
-  485280125 4310255875
-  485420875 4310255125
+katman 0 gorunur=1 kilitli=0 renk=ff6c7686 kalinlik_um=0 nesne=0
+katman SINIR gorunur=1 kilitli=0 renk=ff3949ab kalinlik_um=0 nesne=13
+katman YOL gorunur=1 kilitli=0 renk=ff5d6470 kalinlik_um=0 nesne=1
+nesne 0 katman=SINIR stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485320150 4310220400
+    485370150 4310250400
+  alan_mm2 0  cevre_mm 58310
+nesne 1 katman=SINIR stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485370150 4310250400
+    485440861 4310321111
+  alan_mm2 0  cevre_mm 100000
+nesne 2 katman=SINIR stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485300000 4310200000
+    485600000 4310200000
+  alan_mm2 0  cevre_mm 300000
+nesne 3 katman=SINIR stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485600000 4310200000
+    485657750 4310240000
+  alan_mm2 0  cevre_mm 70250
+nesne 4 katman=SINIR stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485400000 4310400000
+    485500000 4310400000
+  alan_mm2 0  cevre_mm 100000
+nesne 5 katman=SINIR stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485500000 4310400000
+    485500000 4310500000
+  alan_mm2 0  cevre_mm 100000
+nesne 6 katman=SINIR stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485500000 4310500000
+    485400000 4310500000
+  alan_mm2 0  cevre_mm 100000
+nesne 7 katman=SINIR stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485400000 4310500000
+    485400000 4310400000
+  alan_mm2 0  cevre_mm 100000
+nesne 8 katman=SINIR stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485500000 4310500000
+    485586603 4310550000
+  alan_mm2 0  cevre_mm 100000
+nesne 9 katman=SINIR stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485586603 4310550000
+    485636603 4310636603
+  alan_mm2 0  cevre_mm 100000
+nesne 10 katman=SINIR stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485636603 4310636603
+    485586603 4310723206
+  alan_mm2 0  cevre_mm 100000
+nesne 11 katman=SINIR stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485586603 4310723206
+    485500000 4310673206
+  alan_mm2 0  cevre_mm 100000
+nesne 12 katman=SINIR stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485500000 4310673206
+    485586603 4310623206
+  alan_mm2 0  cevre_mm 100000
+nesne 13 katman=YOL stil=0 halka=1
+  halka rol=0 parca=0 tepe=2
+    485280125 4310255875
+    485420875 4310255125
+  alan_mm2 0  cevre_mm 140752
 kapsam 485280125 4310200000 485657750 4310723206
-icerik-ozeti 66140490747ebaec
+icerik-ozeti 0b65c129bc047037
 gunluk
   {"seq":1,"cmd":"core.layer","args":{"ad":"SINIR","renk":4281944491},"origin":"test","crs":"TUREF/TM30","katman":"SINIR"}
   {"seq":2,"cmd":"core.line","args":{"noktalar":[[485320150,4310220400],[485370150,4310250400],[485440861,4310321111]]},"origin":"test","crs":"TUREF/TM30","katman":"SINIR"}

@@ -14,12 +14,15 @@
 // traversal reads only the four box arrays — never the geometry.
 #pragma once
 
-#include "piricad/core/document.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/units.hpp"
 
 #include <cstdint>
 #include <vector>
 
 namespace piricad::core {
+
+class EntityTable;
 
 class SpatialIndex
 {
@@ -28,10 +31,13 @@ public:
     /// most a single traversal step should touch.
     static constexpr std::uint32_t kFanout = 16;
 
-    /// Bulk-builds over every live entity in `store`. Any previous contents are
+    /// Bulk-builds over every live entity in `table`. Any previous contents are
     /// discarded. Deterministic: ties in the sort are broken on entity id, so the
     /// same document always produces the same tree (§7.3).
-    void build(const PolylineStore& store);
+    ///
+    /// Reads the cull block and nothing else — the four bbox arrays and the flags
+    /// byte (model.md R6).
+    void build(const EntityTable& table);
 
     void clear();
 

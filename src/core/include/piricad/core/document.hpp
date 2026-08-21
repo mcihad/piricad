@@ -1,22 +1,31 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // PiriCAD — core: the document model.
 //
-// Layout rules (piricad.md §10.2, .claude/core.md):
-//   * struct-of-arrays, never std::vector<Point2>
-//   * 32-bit indices, never pointers
-//   * hot (geometry) and cold (attributes) blocks kept apart
+// Built on .claude/model.md. The three tiers, and the frame path only ever
+// touches tier 1:
 //
-// The Document exposes ONLY primitive, inverse-producing mutators. Higher layers
-// must reach them through a Transaction, which the command bus owns.
+//   Tier 1  EntityTable    one flat SoA row per entity. No kind-specific data,
+//                          no pointers. Read by cull, index build, hit-test
+//                          prefilter and the layer panel.
+//   Tier 2  RingGeometry   the per-kind store. Referenced from tier 1 by `slot`.
+//                          Read by vertex emit, geometry operations and I/O.
+//   Tier 3  attributes     named typed columns declared from /data. Read by
+//                          domain rules, reports and export. NEVER by the frame.
+//
+// The Document exposes only primitive, inverse-producing mutators. Higher layers
+// reach them through a Transaction, which the command bus owns (Article 1).
 #pragma once
 
 #include "piricad/core/crs.hpp"
+#include "piricad/core/geometry.hpp"
+#include "piricad/core/identity.hpp"
+#include "piricad/core/layer.hpp"
 #include "piricad/core/result.hpp"
+#include "piricad/core/style.hpp"
 #include "piricad/core/units.hpp"
 
-#include <memory>
-
 #include <cstdint>
+#include <memory>
 #include <span>
 #include <string>
 #include <string_view>
@@ -26,87 +35,70 @@ namespace piricad::core {
 
 class SpatialIndex;
 
-using EntityId = std::uint32_t;
-using LayerId  = std::uint32_t;
-
-inline constexpr EntityId kNoEntity = 0xFFFFFFFFu;
-inline constexpr LayerId kNoLayer   = 0xFFFFFFFFu;
-
-struct LayerStyle
-{
-    /// 0xAARRGGBB. The default is a mid grey that reads against both the light and
-    /// the dark canvas; a real layer carries the colour its catalogue gives it.
-    std::uint32_t rgba{0xFF6C7686u};
-    float width_px{1.0f};
-
-    friend bool operator==(const LayerStyle&, const LayerStyle&) = default;
+/// Per-entity flag bits. The cull test reads this byte and the four bbox arrays,
+/// and nothing else (model.md R6, R7).
+enum EntityFlag : std::uint8_t {
+    FlagAlive       = 1u << 0,
+    FlagHidden      = 1u << 1, ///< hidden on its own
+    FlagLayerHidden = 1u << 2, ///< mirrored from the layer, refreshed on toggle
 };
 
-struct Layer
-{
-    std::string name;
-    std::string folded; ///< turkish_upper(name), for lookup
-    bool visible{true};
-    bool locked{false};
-    LayerStyle style{};
-};
-
-/// Structure-of-arrays polyline store. All vertices of all entities live in one
-/// pair of coordinate arrays; an entity is a (start, count) window into them.
-class PolylineStore
+/// Tier 1. One row per entity: POD, mmap-able, no pointers, no kind-specific data.
+class EntityTable
 {
 public:
-    // ---- hot block: geometry only, never touched by attribute code ----
-    std::vector<Mm> xs;
-    std::vector<Mm> ys;
-
-    // ---- cold block: per-entity records ----
-    std::vector<std::uint32_t> start;
-    std::vector<std::uint32_t> count;
-    std::vector<LayerId> layer;
-    std::vector<std::uint8_t> alive;
-
-    // ---- cull block: per-entity bounding box, computed once at insertion ----
-    // Culling reads only these four contiguous arrays and never touches the vertex
-    // data. That is the difference between a linear scan that fits the frame
-    // budget and one that does not (piricad.md §10.5, "önce bbox").
+    // ---- cull block: the ONLY arrays the frame path reads (R6) ----
     std::vector<Mm> min_x;
     std::vector<Mm> min_y;
     std::vector<Mm> max_x;
     std::vector<Mm> max_y;
+    std::vector<std::uint8_t> flags;
 
-    std::size_t size() const noexcept { return start.size(); }
+    // ---- resolution block: read only for entities the index returned ----
+    std::vector<LayerId> layer;
+    std::vector<StyleId> style; ///< interned; kByLayerStyle means inherit
+    std::vector<std::uint16_t> kind;
+    std::vector<std::uint32_t> slot; ///< row in the per-kind store
 
-    std::span<const Mm> xs_of(EntityId e) const { return {xs.data() + start[e], count[e]}; }
+    // ---- identity: cold. Culling never reads it, and it is 8 bytes (R1) ----
+    std::vector<EntityKey> key;
 
-    std::span<const Mm> ys_of(EntityId e) const { return {ys.data() + start[e], count[e]}; }
+    std::size_t size() const noexcept { return flags.size(); }
 
-    Box2 box_of(EntityId e) const { return Box2{min_x[e], min_y[e], max_x[e], max_y[e]}; }
+    bool alive(EntityId e) const noexcept { return (flags[e] & FlagAlive) != 0; }
 
-    Point2 vertex(EntityId e, std::uint32_t i) const
+    /// Drawn only when alive and hidden by neither itself nor its layer. One byte,
+    /// one test — that is the whole point of mirroring the layer bit.
+    bool visible(EntityId e) const noexcept
     {
-        const std::uint32_t k = start[e] + i;
-        return Point2{xs[k], ys[k]};
+        return (flags[e] & (FlagAlive | FlagHidden | FlagLayerHidden)) == FlagAlive;
     }
+
+    Box2 box_of(EntityId e) const noexcept { return Box2{min_x[e], min_y[e], max_x[e], max_y[e]}; }
 };
 
-/// A reversible primitive edit. Produced by Document mutators, consumed by Transaction.
+/// A reversible primitive edit. Produced by Document mutators, consumed by
+/// Transaction. Trivially copyable except for the CRS string, which is the one
+/// variable-length payload the document has today.
 struct Op
 {
     enum class Kind : std::uint8_t {
         None,
-        SetEntityAlive,  ///< entity, bool_arg  (covers both create-undo and erase)
-        SetLayerVisible, ///< layer,  bool_arg
-        SetLayerLocked,  ///< layer,  bool_arg
-        SetLayerStyle,   ///< layer,  style_arg
-        SetCrs,          ///< str_arg
+        SetEntityAlive,     ///< entity, bool_arg
+        SetEntityHidden,    ///< entity, bool_arg
+        SetEntityStyle,     ///< entity, style_arg
+        SetLayerVisible,    ///< layer,  bool_arg
+        SetLayerLocked,     ///< layer,  bool_arg
+        SetLayerAppearance, ///< layer,  appearance_arg
+        SetCrs,             ///< str_arg
     };
 
     Kind kind{Kind::None};
     EntityId entity{kNoEntity};
     LayerId layer{kNoLayer};
     bool bool_arg{false};
-    LayerStyle style_arg{};
+    StyleId style_arg{kByLayerStyle};
+    Appearance appearance_arg{};
     std::string str_arg;
 };
 
@@ -114,81 +106,127 @@ class Document
 {
 public:
     Document();
-
-    // Out of line because the spatial index is only forward declared here: the
-    // index is a cache of the document, so the document must not include it.
     ~Document();
+
     Document(Document&&) noexcept;
     Document& operator=(Document&&) noexcept;
+    Document(const Document&)            = delete;
+    Document& operator=(const Document&) = delete;
 
     // ---- read API: rich and direct (performance), never mutating ----
     const Crs& crs() const noexcept { return crs_; }
 
-    const PolylineStore& polylines() const noexcept { return poly_; }
+    const EntityTable& entities() const noexcept { return entities_; }
 
-    const std::vector<Layer>& layers() const noexcept { return layers_; }
+    const RingGeometry& geometry() const noexcept { return geometry_; }
+
+    const LayerTable& layer_table() const noexcept { return layers_; }
+
+    const StyleTable& styles() const noexcept { return styles_; }
 
     std::uint64_t revision() const noexcept { return revision_; }
 
-    LayerId find_layer(std::string_view name) const;
-    const Layer* layer(LayerId id) const;
-    bool alive(EntityId e) const;
+    const std::vector<Layer>& layers() const noexcept { return layers_.all(); }
 
-    /// Maintained incrementally: this is read on every document change by the
-    /// layer panel and must not walk the entity array.
+    const Layer* layer(LayerId slot) const noexcept { return layers_.at(slot); }
+
+    LayerId find_layer(std::string_view name) const;
+
+    bool alive(EntityId e) const noexcept { return e < entities_.size() && entities_.alive(e); }
+
+    /// Maintained incrementally: the layer panel asks on every document change and
+    /// must not walk five million rows to answer.
     std::size_t live_entity_count() const noexcept { return live_count_; }
 
-    /// Live entities on one layer. Maintained incrementally for the same reason
-    /// as live_entity_count(): the layer panel asks for it on every document
-    /// change, and walking five million entities to answer is not acceptable.
-    std::size_t layer_entity_count(LayerId l) const noexcept
-    {
-        return l < layer_live_.size() ? layer_live_[l] : 0;
-    }
-
-    /// Spatial index over the entities present when it was last built. Rebuilt
-    /// lazily and only when the document has grown or shrunk enough to be worth
-    /// it, so drawing one line does not repack five million parcels.
-    /// Entities from `indexed_upto()` onward are NOT in it — the caller scans that
-    /// short tail directly (piricad.md §10.5).
-    const SpatialIndex& spatial_index() const;
-
-    EntityId indexed_upto() const noexcept { return indexed_upto_; }
+    std::size_t layer_entity_count(LayerId l) const noexcept;
 
     Box2 extent() const;
     Box2 entity_extent(EntityId e) const;
 
-    /// Order-independent, platform-independent content fingerprint.
-    /// Two documents with the same fingerprint hold the same data.
+    /// Net area of one entity: exterior rings add, interior rings subtract.
+    /// This is alan hesabı (model.md R12).
+    Mm2 entity_area(EntityId e) const;
+    Mm entity_perimeter(EntityId e) const;
+
+    /// Order-independent, platform-independent content fingerprint. Covers CRS,
+    /// layers, styles and geometry — not keys, so two documents built the same way
+    /// from the same input agree (§7.3).
     std::uint64_t content_hash() const;
 
-    // ---- mutators: PRIMITIVE ONLY. Each returns the Op that undoes it. ----
-    // Reaching these outside a Transaction is a constitution violation
-    // (Article 1) and is caught by scripts/ci-gate-command-mutation.sh.
+    // ---- identity: translation happens at the bus boundary only (R2) ----
+    EntityKey key_of(EntityId e) const noexcept;
+    EntityId slot_of(EntityKey k) const noexcept;
+    LayerKey layer_key_of(LayerId l) const noexcept;
+    LayerId layer_slot_of(LayerKey k) const noexcept;
 
-    /// Creates the layer if absent. Layer creation is not undoable by design:
-    /// an empty layer is inert and removing it would invalidate stored ids.
+    /// Highest key handed out so far, for the file writer.
+    const KeyAllocator& keys() const noexcept { return keys_; }
+
+    // ---- spatial index: a cache, rebuilt lazily (R6, §10.5) ----
+    const SpatialIndex& spatial_index() const;
+
+    EntityId indexed_upto() const noexcept { return indexed_upto_; }
+
+    // ---- mutators: PRIMITIVE ONLY, each returns the Op that undoes it ----
+    // Reaching these outside a Transaction violates Article 1 and is caught by
+    // scripts/ci-gate-command-mutation.sh.
+
+    /// Creates the layer if absent. Not undoable by design: an empty layer is
+    /// inert, and removing it would invalidate stored slots.
     LayerId ensure_layer(std::string_view name);
 
+    /// One open ring — a polyline. The common CAD case.
     Result<EntityId> add_polyline(LayerId lyr, std::span<const Point2> pts, Op& undo_out);
+
+    /// A face: one exterior ring, optionally with interior rings, optionally
+    /// multipart. This is what a parcel is, and what `(start, count)` could not
+    /// express (R9).
+    Result<EntityId> add_area(LayerId lyr, std::span<const RingGeometry::RingInput> rings,
+                              Op& undo_out);
+
     Status set_entity_alive(EntityId e, bool alive, Op& undo_out);
+    Status set_entity_hidden(EntityId e, bool hidden, Op& undo_out);
+    Status set_entity_style(EntityId e, StyleId style, Op& undo_out);
+
     Status set_layer_visible(LayerId l, bool visible, Op& undo_out);
     Status set_layer_locked(LayerId l, bool locked, Op& undo_out);
-    Status set_layer_style(LayerId l, LayerStyle s, Op& undo_out);
+    Status set_layer_appearance(LayerId l, const Appearance& a, Op& undo_out);
     Status set_crs(std::string id, Op& undo_out);
 
+    /// Interns an appearance and returns its id, for a command building a style.
+    StyleId intern_style(const Appearance& a);
+
     /// Applies a previously produced Op. Used only by Transaction rollback and by
-    /// the undo stack. When `undo_out` is non-null it receives the Op that reverses
-    /// this one, which is how undo builds its redo record.
+    /// the undo stack; `undo_out` receives the Op that reverses this one.
     Status apply(const Op& op, Op* undo_out = nullptr);
 
 private:
+    Result<EntityId> push_entity(LayerId lyr, std::uint32_t geometry_slot);
+    void mirror_layer_visibility(LayerId l, bool visible);
+
     Crs crs_{};
-    PolylineStore poly_{};
-    std::vector<Layer> layers_{};
+    EntityTable entities_{};
+    RingGeometry geometry_{};
+    LayerTable layers_{};
+    StyleTable styles_{};
+    KeyAllocator keys_{};
+
+    /// INVARIANT: `entities_.key` is strictly increasing in slot order, because
+    /// keys are minted monotonically and rows are only ever appended. `slot_of`
+    /// is therefore a binary search over a column that already exists.
+    ///
+    /// The obvious alternative, an unordered_map<u64, EntityId>, measured at
+    /// ~240 MB on the five-million-parcel benchmark — a third of the document —
+    /// to answer a question the key column already answers.
+    ///
+    /// A future file reader that inserts keys out of order must restore the
+    /// invariant (sort on load) or replace this with an explicit index.
+    bool keys_sorted_{true};
+
+    std::vector<std::size_t> layer_live_{};
+
     std::uint64_t revision_{0};
     std::size_t live_count_{0};
-    std::vector<std::size_t> layer_live_{};
 
     // A cache, not state: rebuilding it never changes what the document contains.
     mutable std::unique_ptr<SpatialIndex> index_{};
