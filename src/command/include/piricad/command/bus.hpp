@@ -112,6 +112,17 @@ public:
 
     const core::Settings& app_settings() const noexcept { return app_settings_; }
 
+    // The SESSION store holds the input aids — snap modes, ortho, polar step,
+    // snap-to-grid. R39 makes them transient: never written to the file, never
+    // written to the preferences file, gone when the process exits. They live on
+    // the bus rather than in the canvas because R43 does not make them private to
+    // the mouse: a script and the AI aim with the same aids the hand does
+    // (CLAUDE.md 1.2). Before this they were declared with nowhere to live, so no
+    // client at all could read or write them.
+    core::Settings& session_settings() noexcept { return session_settings_; }
+
+    const core::Settings& session_settings() const noexcept { return session_settings_; }
+
     // ---- observers. The UI subscribes; it never reaches around the bus. ----
     std::function<void(std::string_view)> on_echo;
     std::function<void(const Prompt&)> on_prompt;
@@ -147,6 +158,7 @@ private:
 
     core::Settings project_settings_{core::builtin_settings(), core::SettingScopeMask::Project};
     core::Settings app_settings_{core::builtin_settings(), core::SettingScopeMask::App};
+    core::Settings session_settings_{core::builtin_settings(), core::SettingScopeMask::Session};
 
     std::unique_ptr<Transaction> batch_;
     std::string batch_label_;

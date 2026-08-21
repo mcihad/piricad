@@ -519,6 +519,9 @@ void MainWindow::buildToolBox()
     toolBox_->addTool(actSnap_);
 
     addDockWidget(Qt::LeftDockWidgetArea, toolBox_);
+    // Two columns to start with. The palette reflows, so this is a starting shape
+    // and not a constraint: dragging the splitter turns it into three, four or one.
+    resizeDocks({toolBox_}, {74}, Qt::Horizontal);
 }
 
 void MainWindow::buildPanels()
@@ -653,6 +656,12 @@ void MainWindow::onSettingChanged(const QString& id)
     // A preference written from the command line, a script or the AI must land on
     // screen exactly as the menu item does. Reading the value back from the store
     // rather than trusting the caller keeps one source of truth.
+    if (id.startsWith(QLatin1String("core.izgara."))) {
+        canvas_->reloadGridSettings();
+        canvas_->update();
+        return;
+    }
+
     if (id != QLatin1String("core.arayuz.tema")) return;
 
     const ThemeMode wanted = themeFromPreferences();

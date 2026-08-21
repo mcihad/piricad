@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // PiriCAD — app: the tool palette.
 //
-// A narrow, dockable, floatable icon column: left by default, draggable to the
-// right edge or out of the window entirely. Every button triggers a QAction that
-// dispatches a command — the palette holds no logic of its own and buys the GUI
-// no privilege over any other client (CLAUDE.md Article 1).
+// A dockable, floatable icon palette: left by default, draggable to the right
+// edge or out of the window entirely. The buttons reflow — left to right, then
+// down — so widening the dock turns the column into a grid instead of leaving a
+// band of dead space beside a single file of icons. Every button triggers a
+// QAction that dispatches a command; the palette holds no logic of its own and
+// buys the GUI no privilege over any other client (CLAUDE.md Article 1).
 #pragma once
 
+#include "piricad/app/flow_layout.hpp"
 #include "piricad/app/theme.hpp"
 
 #include <QDockWidget>
@@ -16,7 +19,6 @@
 class QAction;
 class QFrame;
 class QToolButton;
-class QVBoxLayout;
 
 namespace piricad::app {
 
@@ -36,7 +38,7 @@ public:
     void applyTheme(ThemeMode mode);
 
 private:
-    QVBoxLayout* column_{nullptr};
+    FlowLayout* flow_{nullptr};
     QVector<QToolButton*> buttons_;
     QVector<QFrame*> separators_;
 };

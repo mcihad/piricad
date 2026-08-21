@@ -14,6 +14,7 @@ qt_standard_project_setup()
 qt_add_executable(piricad
     src/command_line.cpp
     src/controller.cpp
+    src/flow_layout.cpp
     src/icons.cpp
     src/main.cpp
     src/main_window.cpp
@@ -27,6 +28,7 @@ qt_add_executable(piricad
     include/piricad/app/main_window.hpp
     include/piricad/app/map_canvas.hpp
     include/piricad/app/panels.hpp
+    include/piricad/app/flow_layout.hpp
     include/piricad/app/toolbox.hpp
 )
 

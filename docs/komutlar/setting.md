@@ -221,7 +221,7 @@ Ayrıntı: [Betik yazma](../betik/README.md).
 
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
-| `Bilinmeyen ayar: 'hasasiyet'. Beklenen: tanımlı bir ayar kimliği veya adı (14 tanımlı ayar).` | Ayar adı yanlış yazılmış | Mesajın devamındaki `Bunu mu demek istediniz:` önerisine bakın veya `AYAR` yazıp listeyi görün |
+| `Bilinmeyen ayar: 'hasasiyet'. Beklenen: tanımlı bir ayar kimliği veya adı (23 tanımlı ayar).` | Ayar adı yanlış yazılmış | Mesajın devamındaki `Bunu mu demek istediniz:` önerisine bakın veya `AYAR` yazıp listeyi görün |
 | `'core.arayuz.tema' ayarı uygulama kapsamındadır; bu komut proje ayarlarını yönetir.` | Uygulama tercihi `AYAR` ile değiştirilmeye çalışılmış | [`TERCİH`](preference.md) komutunu kullanın |
 | `'core.yakalama.dik_mod' ayarı oturum kapsamındadır; bu komut proje ayarlarını yönetir.` | Oturum ayarı `AYAR` ile değiştirilmeye çalışılmış | Dik mod ve yakalama çizimin verisi değildir, kaydedilmezler; oturum ayarlarının kendi komutu **Faz 1'de** gelecek |
 | `'core.crs.hassasiyet' ayarı tam sayı bekliyor. Girilen: '0.500000'` | Tam sayı isteyen bir ayara ondalık verilmiş | Bildirilen birimde tam sayı yazın; oran isteyen ayarlarda binde kullanın |

@@ -19,6 +19,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.script`](script.md) | `BETİK`, `BETIK`, `SCRIPT` | Betik | komuta özel | etkileşimli, betiklenebilir, salt okunur | Bir betik dosyasını komut veri yolu üzerinden çalıştırır. |
 | [`core.setting`](setting.md) | `AYAR`, `SETTING`, `AY` | Sistem | tek işlem | betiklenebilir | Proje ayarlarını listeler, okur ve değiştirir. |
 | [`core.preference`](preference.md) | `TERCİH`, `TERCIH`, `PREFERENCE`, `PREF` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Uygulama tercihlerini listeler, okur ve değiştirir. |
+| [`core.mode`](mode.md) | `MOD`, `MODE`, `MD` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Oturum modlarını (yakalama, dik mod, kutupsal izleme) listeler, okur ve değiştirir. |
 | [`core.help`](help.md) | `YARDIM`, `HELP`, `?` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Komut listesini veya tek bir komutun ayrıntısını gösterir. |
 
 ## Parametreler
@@ -114,6 +115,17 @@ Uygulama tercihlerini listeler, okur ve değiştirir.
 | `deger` | text | isteğe bağlı | Yeni değer; yoksa yalnızca okur |
 
 Ayrıntılı kullanım: [TERCİH](preference.md)
+
+### `core.mode` — MOD
+
+Oturum modlarını (yakalama, dik mod, kutupsal izleme) listeler, okur ve değiştirir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `ad` | text | isteğe bağlı | Mod adı veya kimliği; yoksa liste |
+| `deger` | text | isteğe bağlı | Yeni değer; yoksa yalnızca okur |
+
+Ayrıntılı kullanım: [MOD](mode.md)
 
 ### `core.help` — YARDIM
 

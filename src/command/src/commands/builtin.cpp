@@ -20,6 +20,7 @@ namespace piricad::command {
     X(script)                                                                                      \
     X(setting)                                                                                     \
     X(preference)                                                                                  \
+    X(mode)                                                                                        \
     X(help)
 
 #define PIRICAD_DECLARE(sym) PIRICAD_COMMAND(sym);

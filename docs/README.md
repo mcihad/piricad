@@ -33,6 +33,7 @@ Tek tek komutlar:
 | `BETİK` | [Betik çalıştırma](komutlar/script.md) |
 | `AYAR` | [Proje ayarları](komutlar/setting.md) |
 | `TERCİH` | [Uygulama tercihleri](komutlar/preference.md) |
+| `MOD` | [Oturum modları](komutlar/mode.md) |
 | `YARDIM` | [Yardım](komutlar/help.md) |
 
 ## İleri konular

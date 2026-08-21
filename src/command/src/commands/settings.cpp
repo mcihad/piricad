@@ -189,6 +189,11 @@ Task<void> run_preference(Context& ctx)
     co_await run_scope(ctx, ctx.session().bus().app_settings(), SettingScope::App);
 }
 
+Task<void> run_mode(Context& ctx)
+{
+    co_await run_scope(ctx, ctx.session().bus().session_settings(), SettingScope::Session);
+}
+
 } // namespace
 
 PIRICAD_COMMAND(setting)
@@ -211,6 +216,31 @@ PIRICAD_COMMAND(setting)
         .flags   = Flags::Scriptable,
         .summary = "Proje ayarlarını listeler, okur ve değiştirir.",
         .run     = &run_setting,
+    };
+}
+
+// R41 asks for one command per scope, and there are three scopes. Without this
+// one the session settings were declared and unreachable: the snap modes, ortho,
+// polar step and snap-to-grid had no store and no way in from any client. A
+// setting nobody can write is not a setting.
+PIRICAD_COMMAND(mode)
+{
+    return CommandSpec{
+        .id       = "core.mode",
+        .names    = {"MOD", "MODE", "MD"},
+        .category = Category::System,
+        .params =
+            {
+                Param::text("ad", Arity::optional(), "Mod adı veya kimliği; yoksa liste"),
+                Param::text("deger", Arity::optional(), "Yeni değer; yoksa yalnızca okur"),
+            },
+        // Transient by R39: not undoable, not journalled as a document mutation.
+        // ReadOnly is the flag that says so to the bus, exactly as TERCİH does.
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Scriptable | Flags::ReadOnly,
+        .summary = "Oturum modlarını (yakalama, dik mod, kutupsal izleme) listeler, okur "
+                   "ve değiştirir.",
+        .run     = &run_mode,
     };
 }
 

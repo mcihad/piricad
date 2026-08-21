@@ -3,15 +3,17 @@
 
 #include <QAction>
 #include <QFrame>
+#include <QResizeEvent>
 #include <QToolButton>
-#include <QVBoxLayout>
 
 namespace piricad::app {
 namespace {
 
-/// A single narrow column, sized like a tool palette rather than a toolbar.
+/// Sized like a tool palette rather than a toolbar.
 constexpr int kButton = 30;
 constexpr int kIcon   = 20;
+constexpr int kMargin = 4;
+constexpr int kGap    = 2;
 
 } // namespace
 
@@ -30,12 +32,13 @@ ToolBox::ToolBox(QWidget* parent) : QDockWidget(parent)
     auto* body = new QWidget(this);
     body->setObjectName(QStringLiteral("toolBoxBody"));
 
-    column_ = new QVBoxLayout(body);
-    column_->setContentsMargins(4, 4, 4, 4);
-    column_->setSpacing(2);
-    column_->addStretch(1);
+    flow_ = new FlowLayout(body, kMargin, kGap, kGap);
 
-    body->setFixedWidth(kButton + 2 * 4);
+    // A minimum of one button wide, and no maximum: the palette starts as a
+    // column and becomes a grid as the user drags the splitter, which is how a
+    // CAD tool palette behaves. Fixing the width here is what left the wide dock
+    // with one file of icons and a band of empty panel beside it.
+    body->setMinimumWidth(kButton + 2 * kMargin);
     setWidget(body);
 }
 
@@ -56,7 +59,7 @@ void ToolBox::addTool(QAction* action)
                            ? action->toolTip()
                            : QStringLiteral("%1  (%2)").arg(action->toolTip(), shortcut));
 
-    column_->insertWidget(column_->count() - 1, button, 0, Qt::AlignHCenter);
+    flow_->addWidget(button);
     buttons_.push_back(button);
 }
 
@@ -66,9 +69,10 @@ void ToolBox::addSeparator()
     line->setFrameShape(QFrame::HLine);
     line->setFrameShadow(QFrame::Plain);
     line->setFixedHeight(1);
-    line->setFixedWidth(kButton - 8);
 
-    column_->insertWidget(column_->count() - 1, line, 0, Qt::AlignHCenter);
+    // A separator spans the row: in a wrapping palette a short rule would drift
+    // into the middle of a line and stop reading as a group boundary.
+    flow_->addFullWidth(line);
     separators_.push_back(line);
 }
 

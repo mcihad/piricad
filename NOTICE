@@ -75,6 +75,14 @@ are the recorded exceptions, each with its reason.
       it when those land; pulling in ~30 MB of ICU for seven pairs is not the
       trade today. The table is exact for its domain and is tested.
 
+  piricad/app/flow_layout.hpp — FlowLayout
+      Qt ships no wrapping layout as API. The reflowing layout every Qt
+      application needs is published as an example (Qt Widgets "Flow Layout"),
+      not as a QFlowLayout class, so there is nothing to link against and no
+      third-party package that is more mature than the documented pattern
+      itself. ~110 lines implementing QLayout::heightForWidth. Replaced the day
+      Qt promotes it to API.
+
   the command bus, registry, parser, journal, document model
       No library provides these. They are the product.
 

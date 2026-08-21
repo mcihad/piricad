@@ -100,8 +100,13 @@ yapmayan düğme göstermez.
 
 ## Araç kutusu
 
-Sol kenardaki dar sütun. Çizim ve düzenleme araçlarını taşır. Her düğme bir komut
+Sol kenardaki palet. Çizim ve düzenleme araçlarını taşır. Her düğme bir komut
 gönderir — düğmeye basmakla komutu yazmak arasında hiçbir fark yoktur.
+
+**Araçlar paletin genişliğine göre dizilir:** soldan sağa doldurur, satır dolunca alta
+geçer. Paleti dar bıraktığınızda tek sütun olur, kenarından tutup genişlettiğinizde iki,
+üç, dört sütunlu bir ızgaraya dönüşür. Grup ayraçları satırın tamamını kaplar, böylece
+hangi araçların birlikte olduğu her genişlikte okunur kalır.
 
 | Araç | Gönderdiği komut | Durum |
 |---|---|---|
@@ -133,8 +138,33 @@ Fabrika yerleşimine dönmek için **Görünüm > Paneller > Düzeni Sıfırla**
 İmleç konumu artı işaretiyle gösterilir ve koordinatı durum çubuğunda yazar. Bir komut
 nokta beklerken son noktadan imlece kesikli bir kılavuz çizgi uzanır.
 
-Arka plandaki kılavuz ızgara, yakınlaştırma düzeyine göre 1 / 2 / 5 × 10ⁿ metre
-aralıklarına oturur.
+### Kılavuz ızgara
+
+Arka plandaki kılavuz ızgara varsayılan olarak **uyarlanır**: yakınlaştırma düzeyine göre
+1 / 2 / 5 x 10^n metre aralıklarından okunabilir olanı seçer. Her beşinci çizgi koyu
+çizilir, böylece sayıları okumadan kaç aralık geçtiğinizi görebilirsiniz.
+
+Izgaranın dördü de tercihtir ve [`TERCİH`](../komutlar/preference.md) ile değişir:
+
+| Tercih | Ne yapar | Varsayılan |
+|---|---|---|
+| `ızgara` | Izgarayı açar/kapatır | `evet` |
+| `ızgara_modu` | `uyarlanır` veya `sabit` | `uyarlanır` |
+| `ızgara_adımı` | Sabit moddaki aralık, zeminde milimetre | `10000` (10 m) |
+| `ana_çizgi` | Kaç ara çizgide bir koyu çizgi | `5` |
+
+Kadastro paftasında metrekare defteriyle çakışan sabit bir ağ isterseniz:
+
+```
+TERCIH ızgara_modu sabit
+TERCIH ızgara_adımı 10000
+```
+
+Ekrandaki aralık 2 pikselin altına düşerse ızgara o ölçekte çizilmez; aksi hâlde ekran
+düz bir renge dönerdi.
+
+Izgara ekranda görünür, **paftaya basılmaz**: bir görünüm yardımıdır, çizimin verisi
+değildir. Bu yüzden çizim dosyasına da yazılmaz.
 
 **F12** geliştirici bilgisini açar: etkin çizim arka ucu, çizilen nesne ve tepe noktası
 sayısı, görünüm dışında kaldığı için elenen nesne sayısı, kare süresi. Bu bir geliştirici

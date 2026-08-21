@@ -2,6 +2,7 @@
 #include "piricad/app/map_canvas.hpp"
 
 #include "piricad/app/controller.hpp"
+#include "piricad/core/settings.hpp"
 #include "piricad/render/backend.hpp"
 
 #include <QElapsedTimer>
@@ -34,6 +35,8 @@ MapCanvas::MapCanvas(Controller& controller, QWidget* parent)
 
     view_.set_viewport(width(), height());
     view_.set_centre(core::Point2{485350000, 4310235000}, 40.0); // TUREF/TM30, 30. dilim
+
+    reloadGridSettings();
 }
 
 void MapCanvas::setDebugHud(bool on)
@@ -92,32 +95,73 @@ void MapCanvas::rebuildScene()
     render::build_scene(controller_.document(), view_, options_, draw_);
 }
 
+void MapCanvas::reloadGridSettings()
+{
+    const core::Settings& store = controller_.bus().app_settings();
+
+    grid_.visible  = store.get("core.izgara.gorunur").as_bool();
+    grid_.adaptive = store.get("core.izgara.mod").as_enum() == 0;
+    grid_.step     = store.get("core.izgara.adim").as_length();
+    grid_.major    = static_cast<int>(store.get("core.izgara.ana_cizgi").as_int());
+
+    // The declared ranges already exclude zero, and R42 clamps a file written by
+    // another version into range. The floors here are the last line: a zero step
+    // is a non-terminating loop below and a zero major interval is a division by
+    // zero, and neither may depend on a catalogue staying correct.
+    if (grid_.step < 1) grid_.step = 1;
+    if (grid_.major < 1) grid_.major = 1;
+}
+
 void MapCanvas::drawGrid(QPainter& painter) const
 {
-    // Grid spacing snaps to 1/2/5 x 10^n metres so the label stays readable.
-    const double target_px = 90.0;
-    double step_mm         = target_px * view_.mm_per_pixel();
-    const double magnitude = std::pow(10.0, std::floor(std::log10(std::max(step_mm, 1.0))));
-    const double norm      = step_mm / magnitude;
-    step_mm                = (norm < 2.0 ? 1.0 : norm < 5.0 ? 2.0 : 5.0) * magnitude;
+    if (!grid_.visible) return;
+
+    double step_mm = static_cast<double>(grid_.step);
+    if (grid_.adaptive) {
+        // Adaptive spacing snaps to 1/2/5 x 10^n metres so the label stays readable.
+        const double target_px = 90.0;
+        step_mm                = target_px * view_.mm_per_pixel();
+        const double magnitude = std::pow(10.0, std::floor(std::log10(std::max(step_mm, 1.0))));
+        const double norm      = step_mm / magnitude;
+        step_mm                = (norm < 2.0 ? 1.0 : norm < 5.0 ? 2.0 : 5.0) * magnitude;
+    }
     if (step_mm < 1.0) return;
+
+    // A fixed step the user chose is still subject to the screen: below a couple of
+    // pixels the lines merge into a flat wash that hides the drawing. Refusing to
+    // draw is the honest answer; silently substituting another step would make the
+    // grid lie about the distance it represents.
+    if (step_mm / view_.mm_per_pixel() < 2.0) return;
 
     const core::Box2 vis = view_.visible_box();
     if (vis.empty()) return;
 
     QPen minor(palette_.grid);
     minor.setWidth(1);
-    painter.setPen(minor);
+    QPen major(palette_.gridMajor);
+    major.setWidth(1);
 
     const auto first = [step_mm](core::Mm v) {
         return std::floor(static_cast<double>(v) / step_mm) * step_mm;
     };
 
+    // Which lines are major is decided in world coordinates, not by counting from
+    // the left edge: counting from the edge would make the dark lines crawl as the
+    // user pans, and a grid whose emphasis moves is worse than one without any.
+    const auto is_major = [this, step_mm](double world) {
+        const double index = std::floor(world / step_mm + 0.5);
+        const auto n       = static_cast<long long>(index);
+        const auto m       = static_cast<long long>(grid_.major);
+        return ((n % m) + m) % m == 0;
+    };
+
     for (double x = first(vis.min_x); x <= static_cast<double>(vis.max_x); x += step_mm) {
+        painter.setPen(is_major(x) ? major : minor);
         const double sx = view_.to_screen(core::Point2{static_cast<core::Mm>(x), vis.min_y}).x;
         painter.drawLine(QPointF(sx, 0), QPointF(sx, height()));
     }
     for (double y = first(vis.min_y); y <= static_cast<double>(vis.max_y); y += step_mm) {
+        painter.setPen(is_major(y) ? major : minor);
         const double sy = view_.to_screen(core::Point2{vis.min_x, static_cast<core::Mm>(y)}).y;
         painter.drawLine(QPointF(0, sy), QPointF(width(), sy));
     }

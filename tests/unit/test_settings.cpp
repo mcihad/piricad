@@ -101,7 +101,7 @@ struct Rig
 TEST_CASE("SettingSpec: her bildirim eksiksiz ve kataloğa kabul edilmiş")
 {
     const SettingCatalog& cat = builtin_settings();
-    CHECK(cat.size() == 14); // her X-makro satırı kabul edildi
+    CHECK(cat.size() == 23); // her X-makro satırı kabul edildi
 
     for (const auto& spec : cat.all()) {
         CHECK(!spec.id.empty());
@@ -140,6 +140,10 @@ TEST_CASE("R40: dışa aktarılan belgenin baytını değiştiren her ayar proje
     CHECK(scope_of("core.cizim.cizgi_tipi_olcegi") == SettingScope::Project);
     CHECK(scope_of("core.cizim.metin_yuksekligi") == SettingScope::Project);
     CHECK(scope_of("core.katalog.paket_surumu") == SettingScope::Project);
+    // R40 harfiyen: tolerans iki köşeyi aynı nokta yapar, ifraz sonucundaki
+    // koordinatı değiştirir, tapuya giden baytı değiştirir. Makine tercihi olamaz.
+    CHECK(scope_of("core.topoloji.dugum_toleransi") == SettingScope::Project);
+    CHECK(scope_of("core.topoloji.en_kucuk_alan") == SettingScope::Project);
 
     // These reach the screen and the user's machine, and nothing else.
     CHECK(scope_of("core.arayuz.tema") == SettingScope::App);
@@ -147,21 +151,29 @@ TEST_CASE("R40: dışa aktarılan belgenin baytını değiştiren her ayar proje
     CHECK(scope_of("core.dosya.otomatik_kayit") == SettingScope::App);
     CHECK(scope_of("core.dosya.son_dosya_sayisi") == SettingScope::App);
     CHECK(scope_of("core.tuval.arkaplan") == SettingScope::App);
+    CHECK(scope_of("core.izgara.gorunur") == SettingScope::App);
+    CHECK(scope_of("core.izgara.mod") == SettingScope::App);
+    CHECK(scope_of("core.izgara.adim") == SettingScope::App);
+    CHECK(scope_of("core.izgara.ana_cizgi") == SettingScope::App);
+    // Piksel cinsindendir, zemin metresi değil: kullanıcının eline ve ekranına ait.
+    CHECK(scope_of("core.yakalama.tolerans") == SettingScope::App);
+    CHECK(scope_of("core.secim.tolerans") == SettingScope::App);
 
     // R43: input aids are not document state.
     CHECK(scope_of("core.yakalama.modlar") == SettingScope::Session);
     CHECK(scope_of("core.yakalama.dik_mod") == SettingScope::Session);
     CHECK(scope_of("core.yakalama.kutupsal_aci") == SettingScope::Session);
+    CHECK(scope_of("core.yakalama.izgara") == SettingScope::Session);
 
-    // The list above is a snapshot: it locks today's fourteen answers but applies
+    // The list above is a snapshot: it locks today's twenty-three answers but applies
     // R40 to nothing new, so a fifteenth setting gets no scrutiny from it. This
     // does: every spec's summary must state WHY its scope is what it is, so the
     // R40 answer is written down where the reviewer of the new spec sees it.
     for (const auto& spec : cat.all()) {
         // The summary must NAME the scope it claims — "proje", "uygulama" or
         // "oturum" — so the sentence a reviewer reads is the R40 answer and not a
-        // description of the value. All fourteen already do; a fifteenth cannot be
-        // added without writing its answer down.
+        // description of the value. All twenty-three already do; the next one
+        // cannot be added without writing its answer down.
         if (spec.summary.find(setting_scope_label(spec.scope)) == std::string::npos)
             ::microtest::report(__FILE__, __LINE__,
                                 "R40 gerekçesi özet metninde yazılmamış: özet kapsamı "
@@ -804,4 +816,102 @@ TEST_CASE("AYAR iptal edilirse hiçbir şey olmaz")
     CHECK(rig.line("AYAR").ok());
     CHECK_EQ(rig.undo.undo_depth(), std::size_t{0});
     CHECK_EQ(rig.journal.size(), before + 1); // it ran, it changed nothing
+}
+
+// ------------------------------------------------- oturum modları ve ızgara ----
+
+TEST_CASE("R41: her kapsamın bir komutu var — oturum ayarları artık ulaşılabilir")
+{
+    // The gap this closes: yakalama.modlar, dik_mod and kutupsal_aci were declared
+    // Session and had no store and no command. Every client could read the spec and
+    // no client could write the value. R38 says the interface is generated from the
+    // declaration; a declaration nobody can act on is not one.
+    Rig r;
+    CHECK(r.line("MOD dik_mod evet").ok());
+    CHECK(r.bus.session_settings().get("core.yakalama.dik_mod").as_bool());
+
+    CHECK(r.line("MOD ızgaraya_yakala evet").ok());
+    CHECK(r.bus.session_settings().get("core.yakalama.izgara").as_bool());
+
+    // The scope box refuses a foreign scope in both directions (R39): MOD may not
+    // write a project setting and AYAR may not write a session one. The refusal is
+    // a guiding message rather than a dropped command — the same deliberate choice
+    // "AYAR: bilinmeyen ayar adı komutu düşürmez" records above — so the assertion
+    // is that nothing was written and the message names the right scope.
+    CHECK(r.line("MOD koordinat_sistemi TUREF/TM33").ok());
+    CHECK(mentions(r.echoed, "proje"));
+    CHECK(!r.bus.project_settings().is_explicit("core.crs.id"));
+
+    // kutupsal_aci is untouched above, so is_explicit here reports the refusal and
+    // not the legitimate MOD write two lines up.
+    CHECK(r.line("AYAR kutupsal_açı 30000000").ok());
+    CHECK(mentions(r.echoed, "oturum"));
+    CHECK(!r.bus.session_settings().is_explicit("core.yakalama.kutupsal_aci"));
+
+    CHECK(r.line("TERCİH ızgaraya_yakala evet").ok());
+    CHECK(mentions(r.echoed, "oturum"));
+}
+
+TEST_CASE("R39: oturum modu ne belgeye ne tercih dosyasına sızar")
+{
+    Rig r;
+    const std::uint64_t before = r.doc.content_hash();
+    const std::uint64_t app    = r.bus.app_settings().fold(0);
+    const std::uint64_t proj   = r.bus.project_settings().fold(0);
+
+    CHECK(r.line("MOD kutupsal_açı 30000000").ok());
+
+    CHECK_EQ(r.doc.content_hash(), before);      // belgeye girmez
+    CHECK_EQ(r.bus.app_settings().fold(0), app); // tercihe girmez
+    CHECK_EQ(r.bus.project_settings().fold(0), proj);
+    CHECK(r.journal.entries().empty() ||
+          r.journal.entries().back().command_id != "core.mode"); // belge mutasyonu değil
+}
+
+TEST_CASE("R40: tolerans proje kapsamındadır — ifraz sonucunu değiştirir")
+{
+    // The literal application of R40. A node tolerance stored per machine would
+    // make the same drawing produce two different parcel areas on two computers,
+    // and the parcel area is what goes on the tapu.
+    Rig r;
+    const std::uint64_t untouched = Settings{builtin_settings(), SettingScopeMask::Project}.fold(0);
+
+    CHECK(r.line("AYAR düğüm_toleransı 20").ok());
+    CHECK_EQ(r.bus.project_settings().get("core.topoloji.dugum_toleransi").as_length(), 20);
+    CHECK(r.bus.project_settings().fold(0) != untouched);
+
+    // Aynı ayar makineye ait bir tercih olarak yazılamaz: TERCİH proje kutusuna
+    // uzanamaz, uzanabilseydi tolerans makineye göre değişirdi.
+    CHECK(r.line("TERCİH düğüm_toleransı 20").ok());
+    CHECK(mentions(r.echoed, "proje"));
+    CHECK(!r.bus.app_settings().is_explicit("core.topoloji.dugum_toleransi"));
+}
+
+TEST_CASE("Izgara ve seçme toleransı piksel cinsindendir, zemin metresi değil")
+{
+    // A tolerance in ground metres would shrink on screen as the user zooms in,
+    // which is backwards: the hand does not get steadier at 1/100. Recorded as a
+    // test because it is the kind of unit that gets 'fixed' into metres later.
+    const SettingCatalog& cat = builtin_settings();
+    for (const char* id : {"core.yakalama.tolerans", "core.secim.tolerans"}) {
+        const SettingSpec& spec = cat.at(cat.find(id));
+        CHECK_EQ(spec.unit, std::string("piksel"));
+        CHECK(spec.type == SettingType::Int);
+    }
+    // Izgara adımı ise zemindedir: metrekare defteriyle çakışması gereken bir ağ.
+    const SettingSpec& adim = cat.at(cat.find("core.izgara.adim"));
+    CHECK(adim.type == SettingType::Length);
+    CHECK_EQ(adim.unit, std::string("mm"));
+}
+
+TEST_CASE("Izgara adımı ve ana çizgi aralığı sıfır olamaz")
+{
+    // A zero step is an infinite loop in the canvas and a zero major interval is a
+    // division by zero. R42 clamps rather than failing, so the clamp is the guard.
+    Rig r;
+    CHECK(r.line("TERCİH ızgara_adımı 0").ok());
+    CHECK(r.bus.app_settings().get("core.izgara.adim").as_length() >= 1);
+
+    CHECK(r.line("TERCİH ana_çizgi 0").ok());
+    CHECK(r.bus.app_settings().get("core.izgara.ana_cizgi").as_int() >= 1);
 }

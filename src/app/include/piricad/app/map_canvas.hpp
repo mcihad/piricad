@@ -32,6 +32,11 @@ public:
     const render::ViewTransform& view() const noexcept { return view_; }
 
     void applyTheme(ThemeMode mode);
+
+    /// Re-reads the ızgara.* preferences. Called at start-up and whenever any
+    /// client writes one — the menu, the command line, a script or the AI, which
+    /// is the whole point of routing the write through the bus (CLAUDE.md 1.2).
+    void reloadGridSettings();
     void setDebugHud(bool on);
     void zoomToExtents();
     void zoomBy(double factor);
@@ -55,6 +60,16 @@ protected:
 private:
     void rebuildScene();
     void drawGrid(QPainter& painter) const;
+
+    /// Grid shape, cached from the preferences so paintEvent does no lookups.
+    struct GridSetup
+    {
+        bool visible{true};
+        bool adaptive{true};
+        core::Mm step{10000};
+        int major{5};
+    };
+
     void drawCrosshair(QPainter& painter) const;
 
     Controller& controller_;
@@ -62,6 +77,7 @@ private:
     render::ViewTransform view_;
     render::DrawList draw_;
     render::SceneOptions options_{};
+    GridSetup grid_{};
 
     bool panning_{false};
     QPointF pan_anchor_{};

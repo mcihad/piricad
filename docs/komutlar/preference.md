@@ -111,6 +111,32 @@ Tuval arka planını onaltılık `0xAARRGGBB` ile verin:
 TERCIH arkaplan 0xFF101418
 ```
 
+Kılavuz ızgarayı kapatın:
+
+```
+TERCIH ızgara hayır
+```
+
+Izgarayı sabit 10 metrelik bir ağa oturtun:
+
+```
+TERCIH ızgara_modu sabit
+TERCIH ızgara_adımı 10000
+```
+
+Nesne yakalama nişan alanını genişletin — değer **ekran pikselidir**, zemin metresi
+değil, çünkü el 1/100 ölçekte daha sabit olmaz:
+
+```
+TERCIH yakalama_toleransı 16
+```
+
+Seçme kutusunu daraltın:
+
+```
+TERCIH seçim_toleransı 4
+```
+
 Bir tercihi varsayılanına döndürün:
 
 ```
@@ -180,7 +206,7 @@ Ayrıntı: [Betik yazma](../betik/README.md).
 
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
-| `Bilinmeyen ayar: 'temaa'. Beklenen: tanımlı bir ayar kimliği veya adı (14 tanımlı ayar).` | Tercih adı yanlış yazılmış | Mesajın devamındaki `Bunu mu demek istediniz:` önerisine bakın veya `TERCİH` yazıp listeyi görün |
+| `Bilinmeyen ayar: 'temaa'. Beklenen: tanımlı bir ayar kimliği veya adı (23 tanımlı ayar).` | Tercih adı yanlış yazılmış | Mesajın devamındaki `Bunu mu demek istediniz:` önerisine bakın veya `TERCİH` yazıp listeyi görün |
 | `'core.crs.hassasiyet' ayarı proje kapsamındadır; bu komut uygulama ayarlarını yönetir.` | Proje ayarı `TERCİH` ile değiştirilmeye çalışılmış | [`AYAR`](setting.md) komutunu kullanın |
 | `'core.arayuz.tema' ayarı şu seçeneklerden birini bekliyor: sistem, acik, koyu. Girilen: 'karanlik'` | Listede olmayan bir seçenek yazılmış | Mesajın saydığı seçeneklerden birini yazın |
 | `'core.dosya.otomatik_kayit' ayarı tam sayı bekliyor. Girilen: 'on dakika'` | Sayı isteyen bir tercihe metin verilmiş | Saniye cinsinden tam sayı yazın |

@@ -342,14 +342,23 @@ PIRICAD_SETTING(kutupsal_aci);
     X(cizgi_tipi_olcegi)                                                                           \
     X(metin_yuksekligi)                                                                            \
     X(veri_paketi_surumu)                                                                          \
+    X(dugum_toleransi)                                                                             \
+    X(en_kucuk_alan)                                                                               \
     X(tema)                                                                                        \
     X(dil)                                                                                         \
     X(otomatik_kayit)                                                                              \
     X(son_dosya_sayisi)                                                                            \
     X(tuval_arkaplani)                                                                             \
+    X(izgara_gorunur)                                                                              \
+    X(izgara_modu)                                                                                 \
+    X(izgara_adimi)                                                                                \
+    X(izgara_ana_cizgi)                                                                            \
+    X(yakalama_toleransi)                                                                          \
+    X(secim_toleransi)                                                                             \
     X(yakalama_modlari)                                                                            \
     X(dik_mod)                                                                                     \
-    X(kutupsal_aci)
+    X(kutupsal_aci)                                                                                \
+    X(izgaraya_yakala)
 
 // ---- proje kapsamı: dışa aktarılan belgenin baytını değiştirebilenler --------
 
@@ -460,6 +469,47 @@ PIRICAD_SETTING(veri_paketi_surumu)
     };
 }
 
+// Toleranslar proje kapsamındadır ve bu bir tercih değil, model.md R40'\''ın
+// harfiyen uygulanmasıdır: düğüm toleransı iki köşeyi aynı nokta sayar, ifraz ve
+// tevhit sonucundaki koordinatı değiştirir, dolayısıyla dışa aktarılan tapu
+// belgesinin baytını değiştirir. Makineye ait bir tercih olsaydı aynı çizim iki
+// bilgisayarda iki farklı parsel alanı verirdi.
+
+PIRICAD_SETTING(dugum_toleransi)
+{
+    return SettingSpec{
+        .id       = "core.topoloji.dugum_toleransi",
+        .names    = {"düğüm_toleransı", "dugum_toleransi", "tolerans", "tolerance"},
+        .type     = SettingType::Length,
+        .scope    = SettingScope::Project,
+        .fallback = SettingValue::length(10),
+        .range    = SettingRange::between(0, 10000),
+        .values   = {},
+        .unit     = "mm",
+        .summary  = "Topoloji düğüm toleransı, zeminde milimetre. Birbirine bu mesafeden "
+                    "yakın iki köşe aynı nokta sayılır; ifraz, tevhit ve topoloji "
+                    "denetiminin sonucunu değiştirdiği için proje kapsamındadır. "
+                    "Varsayılan 10 mm = 1 cm.",
+    };
+}
+
+PIRICAD_SETTING(en_kucuk_alan)
+{
+    return SettingSpec{
+        .id       = "core.topoloji.en_kucuk_alan",
+        .names    = {"en_küçük_alan", "en_kucuk_alan", "kirpinti", "sliver"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::Project,
+        .fallback = SettingValue::integer(500000),
+        .range    = SettingRange::between(0, 1000000000),
+        .values   = {},
+        .unit     = "mm²",
+        .summary  = "Kırpıntı poligon eşiği, milimetrekare (500000 = 0,5 m²). Bu alandan "
+                    "küçük artık yüzeyler topoloji denetiminde kırpıntı olarak raporlanır. "
+                    "Denetim çıktısını değiştirdiği için proje kapsamındadır.",
+    };
+}
+
 // ---- uygulama kapsamı: kullanıcıya ve makineye ait, belgeye girmeyenler ------
 
 PIRICAD_SETTING(tema)
@@ -542,6 +592,116 @@ PIRICAD_SETTING(tuval_arkaplani)
     };
 }
 
+// Izgara görünüm tercihidir, yakalama girdi yardımıdır. Sınır şu: gözle
+// gördüğün ama tıklamanın nereye düştüğünü değiştirmeyen şey uygulama
+// kapsamında kalıcıdır (tema, arka plan gibi); imleci oynatan şey oturumluktur.
+
+PIRICAD_SETTING(izgara_gorunur)
+{
+    return SettingSpec{
+        .id       = "core.izgara.gorunur",
+        .names    = {"ızgara", "izgara", "ızgara_görünür", "izgara_gorunur", "gridmode"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::boolean(true),
+        .range    = SettingRange::between(0, 1),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Izgaranın çizilip çizilmeyeceği. Ekranda görünür, paftaya basılmaz; "
+                    "kullanıcıya ait bir görünüm tercihi olduğu için uygulama "
+                    "kapsamındadır. Kısayol: F7.",
+    };
+}
+
+PIRICAD_SETTING(izgara_modu)
+{
+    return SettingSpec{
+        .id       = "core.izgara.mod",
+        .names    = {"ızgara_modu", "izgara_modu", "gridmod"},
+        .type     = SettingType::Enum,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::enumerated(0),
+        .range    = SettingRange::between(0, 1),
+        .values   = {"uyarlanır", "sabit"},
+        .unit     = "",
+        .summary  = "Izgara adımının seçilme biçimi. 'uyarlanır' ölçeğe göre 1/2/5×10ⁿ "
+                    "adımlarından okunabilir olanı seçer; 'sabit' her ölçekte "
+                    "ızgara_adımı değerini kullanır. Paftaya basılmayan bir görünüm "
+                    "tercihi olduğu için uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(izgara_adimi)
+{
+    return SettingSpec{
+        .id       = "core.izgara.adim",
+        .names    = {"ızgara_adımı", "izgara_adimi", "gridunit"},
+        .type     = SettingType::Length,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::length(10000),
+        .range    = SettingRange::between(1, 1000000000),
+        .values   = {},
+        .unit     = "mm",
+        .summary  = "Sabit ızgara adımı, zeminde milimetre (10000 = 10 m). Yalnızca "
+                    "ızgara_modu 'sabit' iken kullanılır. Ekrandaki aralık 2 pikselin "
+                    "altına düşerse ızgara o ölçekte çizilmez. Çizime girmediği için "
+                    "uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(izgara_ana_cizgi)
+{
+    return SettingSpec{
+        .id       = "core.izgara.ana_cizgi",
+        .names    = {"ana_çizgi", "ana_cizgi", "ızgara_ana_çizgi", "gridmajor"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(5),
+        .range    = SettingRange::between(1, 100),
+        .values   = {},
+        .unit     = "adet",
+        .summary  = "Kaç ara çizgide bir koyu ana çizgi çizileceği (5 = her beşinci). "
+                    "1 verilirse bütün çizgiler ana çizgi olur. Yalnızca ekranı "
+                    "ilgilendirdiği için uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(yakalama_toleransi)
+{
+    return SettingSpec{
+        .id       = "core.yakalama.tolerans",
+        .names    = {"yakalama_toleransı", "yakalama_toleransi", "aperture"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(12),
+        .range    = SettingRange::between(1, 100),
+        .values   = {},
+        .unit     = "piksel",
+        .summary  = "Nesne yakalama arama yarıçapı, ekran pikseli. Zemin metresi değil "
+                    "pikseldir: kullanıcı ekrana bakarak nişan alır, bu yüzden tolerans "
+                    "yakınlaştırma ile birlikte değişmelidir. Ele ve ekrana ait bir "
+                    "büyüklük olduğu için uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(secim_toleransi)
+{
+    return SettingSpec{
+        .id       = "core.secim.tolerans",
+        .names    = {"seçim_toleransı", "secim_toleransi", "pickbox"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(6),
+        .range    = SettingRange::between(1, 100),
+        .values   = {},
+        .unit     = "piksel",
+        .summary  = "Seçme kutusunun yarı boyu, ekran pikseli. İmlecin bu kadar "
+                    "yakınındaki nesne tıklamayla seçilir. Yakalama toleransından ayrı "
+                    "tutulur: nişan almak seçmekten daha geniş bir alan ister. Ele ve "
+                    "ekrana ait bir büyüklük olduğu için uygulama kapsamındadır.",
+    };
+}
+
 // ---- oturum kapsamı: geçici, kaydedilmez, özete girmez ----------------------
 
 PIRICAD_SETTING(yakalama_modlari)
@@ -589,6 +749,24 @@ PIRICAD_SETTING(kutupsal_aci)
         .unit     = "µderece",
         .summary  = "Kutupsal izleme açı adımı, mikro derece (45000000 = 45°). Girdi "
                     "yardımıdır, kaydedilmez; oturum kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(izgaraya_yakala)
+{
+    return SettingSpec{
+        .id       = "core.yakalama.izgara",
+        .names    = {"ızgaraya_yakala", "izgaraya_yakala", "snapmode"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::Session,
+        .fallback = SettingValue::boolean(false),
+        .range    = SettingRange::between(0, 1),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Izgaraya yakalama: girilen noktayı en yakın ızgara kesişimine "
+                    "oturtur. Izgaranın görünür olması şart değildir. Girdi yardımıdır, "
+                    "dik mod ve kutupsal izleme ile aynı sırada oturum kapsamındadır. "
+                    "Kısayol: F9.",
     };
 }
 
