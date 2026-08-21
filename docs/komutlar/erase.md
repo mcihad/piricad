@@ -71,9 +71,10 @@ GERİAL
 
 ### Arayüz
 
-Araç kutusundaki **Sil** düğmesi veya **Düzen > Sil** menüsü komut satırını
-`SİL nesneler=` metniyle hazırlar ve odağı oraya taşır; kimliği yazıp **Enter**'a
-basmanız yeterlidir. Transkriptte hatırlatma görürsünüz:
+Araç kutusundaki veya **Düzen** araç çubuğundaki **Sil** düğmesi, ya da
+**Düzen > Sil** menüsü, komut satırını açıp `SİL nesneler=` metniyle hazırlar ve odağı
+oraya taşır; kimliği yazıp **Enter**'a basmanız yeterlidir. Transkriptte hatırlatma
+görürsünüz:
 
 ```text
 SİL komutu nesne kimliği ister. Örnek:  SİL nesneler=0

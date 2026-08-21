@@ -11,6 +11,7 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QComboBox>
 #include <QDockWidget>
 #include <QFileDialog>
 #include <QFrame>
@@ -18,13 +19,31 @@
 #include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPainter>
+#include <QPixmap>
 #include <QPlainTextEdit>
 #include <QSettings>
+#include <QSignalBlocker>
 #include <QStatusBar>
+#include <QToolBar>
 #include <QVBoxLayout>
 
 namespace piricad::app {
 namespace {
+
+/// The same swatch the layer panel draws, so the combo and the panel agree.
+QIcon swatchIcon(std::uint32_t rgba)
+{
+    QPixmap pm(24, 12);
+    pm.fill(Qt::transparent);
+
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    p.setBrush(QColor::fromRgba(static_cast<QRgb>(rgba)));
+    p.setPen(QPen(QColor(0, 0, 0, 60), 1));
+    p.drawRoundedRect(QRectF(0.5, 0.5, 23.0, 11.0), 2, 2);
+    return QIcon(pm);
+}
 
 QString format_metres(core::Mm v)
 {
@@ -52,20 +71,26 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 
     commandLine_ = new CommandLine(*controller_, central);
 
-    auto* rule = new QFrame(central);
-    rule->setFrameShape(QFrame::HLine);
-    rule->setFrameShadow(QFrame::Plain);
+    commandLineRule_ = new QFrame(central);
+    commandLineRule_->setFrameShape(QFrame::HLine);
+    commandLineRule_->setFrameShadow(QFrame::Plain);
 
     layout->addWidget(canvas_, 1);
-    layout->addWidget(rule);
+    layout->addWidget(commandLineRule_);
     layout->addWidget(commandLine_);
     setCentralWidget(central);
 
     buildActions();
+    buildToolBars();
     buildToolBox();
     buildPanels();
     buildMenus();
     buildStatusBar();
+
+    // The command line is hidden in this build; the tool bars carry the work.
+    // Nothing was removed — Ctrl+9 or Görünüm > Paneller brings it back, and every
+    // command it accepts is still reachable from a script and from the AI.
+    commandLine_->setVisible(false);
 
     QSettings settings;
     theme_ = settings.value(QStringLiteral("ui/theme"), QStringLiteral("light")).toString() ==
@@ -105,81 +130,141 @@ MainWindow::~MainWindow()
     settings.setValue(QStringLiteral("ui/state"), saveState());
 }
 
+QAction* MainWindow::commandAction(Glyph glyph, const QString& text, const QString& line,
+                                   const QString& tip, const QKeySequence& shortcut)
+{
+    auto* action = new QAction(text, this);
+    action->setToolTip(tip);
+    action->setStatusTip(tip);
+    action->setData(static_cast<int>(glyph));
+    if (!shortcut.isEmpty()) action->setShortcut(shortcut);
+
+    connect(action, &QAction::triggered, this,
+            [this, line] { controller_->runLine(line, command::Origin::Gui); });
+    return action;
+}
+
+QAction* MainWindow::placeholder(Glyph glyph, const QString& text, const QString& command,
+                                 const QString& phase)
+{
+    auto* action = new QAction(text, this);
+    action->setEnabled(false);
+    action->setData(static_cast<int>(glyph));
+
+    const QString tip = command.isEmpty() ? tr("%1 — %2'de gelecek").arg(text, phase)
+                                          : tr("%1 — %2'de gelecek").arg(command, phase);
+    action->setToolTip(tip);
+    action->setStatusTip(tip);
+    return action;
+}
+
 void MainWindow::buildActions()
 {
-    const auto command = [this](const QString& name) {
-        return [this, name] { controller_->runCommand(name); };
-    };
-    const auto line = [this](const QString& text) {
-        return [this, text] { controller_->runLine(text, command::Origin::Gui); };
-    };
-
-    actSelect_ = new QAction(tr("Seç"), this);
-    actSelect_->setCheckable(true);
-    actSelect_->setChecked(true);
-    actSelect_->setToolTip(tr("Seçim aracı — çalışan komutu iptal eder (Esc)"));
-    connect(actSelect_, &QAction::triggered, this, [this] { controller_->cancelInteractive(); });
-
-    actLine_ = new QAction(tr("Çizgi"), this);
-    actLine_->setToolTip(tr("ÇİZGİ — ardışık doğru parçaları çizer  ·  kısaltma: Ç, L"));
-    connect(actLine_, &QAction::triggered, this, command(QStringLiteral("ÇİZGİ")));
-
-    actErase_ = new QAction(tr("Sil"), this);
-    actErase_->setToolTip(tr("SİL — seçilen nesneleri siler"));
-    connect(actErase_, &QAction::triggered, this, [this] {
-        onEcho(tr("SİL komutu nesne kimliği ister. Örnek:  SİL nesneler=0"));
-        commandLine_->setText(QStringLiteral("SİL nesneler="));
-        commandLine_->setFocus();
-    });
-
-    actLayer_ = new QAction(tr("Katman"), this);
-    actLayer_->setToolTip(tr("KATMAN — katman oluşturur ve aktif yapar"));
-    connect(actLayer_, &QAction::triggered, this, command(QStringLiteral("KATMAN")));
-
-    actMeasure_ = new QAction(tr("Ölç"), this);
-    actMeasure_->setEnabled(false);
-    actMeasure_->setToolTip(tr("ÖLÇ — mesafe ve alan ölçümü (Faz 2)"));
-
-    actPan_ = new QAction(tr("Kaydır"), this);
-    actPan_->setToolTip(tr("Görünümü kaydır — orta fare tuşuyla her zaman çalışır"));
-    actPan_->setEnabled(false);
-
-    actZoomExtents_ = new QAction(tr("Kapsama Yakınlaş"), this);
-    actZoomExtents_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_0));
-    actZoomExtents_->setToolTip(tr("YAKINLAŞ KAPSAM — çizimin tamamını göster"));
-    connect(actZoomExtents_, &QAction::triggered, this, line(QStringLiteral("YAKINLAŞ KAPSAM")));
-
-    actZoomIn_ = new QAction(tr("Yakınlaştır"), this);
-    actZoomIn_->setShortcut(QKeySequence::ZoomIn);
-    actZoomIn_->setToolTip(tr("YAKINLAŞ ÇARPAN carpan=1.25"));
-    connect(actZoomIn_, &QAction::triggered, this,
-            line(QStringLiteral("YAKINLAŞ ÇARPAN carpan=1.25")));
-
-    actZoomOut_ = new QAction(tr("Uzaklaştır"), this);
-    actZoomOut_->setShortcut(QKeySequence::ZoomOut);
-    actZoomOut_->setToolTip(tr("YAKINLAŞ ÇARPAN carpan=0.8"));
-    connect(actZoomOut_, &QAction::triggered, this,
-            line(QStringLiteral("YAKINLAŞ ÇARPAN carpan=0.8")));
-
-    actUndo_ = new QAction(tr("Geri Al"), this);
-    actUndo_->setShortcut(QKeySequence::Undo);
-    actUndo_->setToolTip(tr("GERİAL — son işlemi geri alır"));
-    connect(actUndo_, &QAction::triggered, this, command(QStringLiteral("GERİAL")));
-
-    actRedo_ = new QAction(tr("Yinele"), this);
-    actRedo_->setShortcut(QKeySequence::Redo);
-    actRedo_->setToolTip(tr("YİNELE — geri alınan işlemi yineler"));
-    connect(actRedo_, &QAction::triggered, this, command(QStringLiteral("YİNELE")));
+    // ---- dosya ----
+    actNew_  = placeholder(Glyph::New, tr("Yeni"), QStringLiteral("YENİ"), tr("Faz 1"));
+    actOpen_ = placeholder(Glyph::Open, tr("Aç"), QStringLiteral("AÇ"), tr("Faz 1"));
+    actSave_ = placeholder(Glyph::Save, tr("Kaydet"), QStringLiteral("KAYDET"), tr("Faz 1"));
+    actExport_ =
+        placeholder(Glyph::Export, tr("Dışa Aktar"), QStringLiteral("DIŞAAKTAR"), tr("Faz 2"));
+    actPrint_ = placeholder(Glyph::Print, tr("Yazdır"), QStringLiteral("YAZDIR"), tr("Faz 2"));
 
     actScript_ = new QAction(tr("Betik Çalıştır…"), this);
     actScript_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
     actScript_->setToolTip(tr("BETİK — bir JSON betiğini komut veri yolundan çalıştırır"));
+    actScript_->setData(static_cast<int>(Glyph::Script));
     connect(actScript_, &QAction::triggered, this, &MainWindow::openScript);
 
-    actAi_ = new QAction(tr("AI Asistan"), this);
-    actAi_->setEnabled(false);
+    actQuit_ = new QAction(tr("Çıkış"), this);
+    actQuit_->setShortcut(QKeySequence::Quit);
+    connect(actQuit_, &QAction::triggered, qApp, &QApplication::quit);
+
+    // ---- seçim ve çizim ----
+    actSelect_ = new QAction(tr("Seç"), this);
+    actSelect_->setCheckable(true);
+    actSelect_->setChecked(true);
+    actSelect_->setToolTip(tr("Seçim aracı — çalışan komutu iptal eder (Esc)"));
+    actSelect_->setData(static_cast<int>(Glyph::Select));
+    connect(actSelect_, &QAction::triggered, this, [this] { controller_->cancelInteractive(); });
+
+    actLine_ = new QAction(tr("Çizgi"), this);
+    actLine_->setToolTip(tr("ÇİZGİ — ardışık doğru parçaları çizer  ·  kısaltma: Ç, L"));
+    actLine_->setData(static_cast<int>(Glyph::Line));
+    connect(actLine_, &QAction::triggered, this,
+            [this] { controller_->runCommand(QStringLiteral("ÇİZGİ")); });
+
+    actPolyline_ =
+        placeholder(Glyph::Polyline, tr("Çoklu Çizgi"), QStringLiteral("ÇOKLUÇİZGİ"), tr("Faz 2"));
+    actArc_    = placeholder(Glyph::Arc, tr("Yay"), QStringLiteral("YAY"), tr("Faz 2"));
+    actCircle_ = placeholder(Glyph::Circle, tr("Daire"), QStringLiteral("DAİRE"), tr("Faz 2"));
+    actRectangle_ =
+        placeholder(Glyph::Rectangle, tr("Dikdörtgen"), QStringLiteral("DİKDÖRTGEN"), tr("Faz 2"));
+    actPoint_ = placeholder(Glyph::Point, tr("Nokta"), QStringLiteral("NOKTA"), tr("Faz 2"));
+    actText_  = placeholder(Glyph::Text, tr("Metin"), QStringLiteral("METİN"), tr("Faz 2"));
+
+    // ---- düzenleme ----
+    actErase_ = new QAction(tr("Sil"), this);
+    actErase_->setToolTip(tr("SİL — seçilen nesneleri siler"));
+    actErase_->setData(static_cast<int>(Glyph::Erase));
+    connect(actErase_, &QAction::triggered, this, [this] {
+        onEcho(tr("SİL komutu nesne kimliği ister. Örnek:  SİL nesneler=0"));
+        showCommandLine(true);
+        commandLine_->setText(QStringLiteral("SİL nesneler="));
+        commandLine_->setFocus();
+    });
+
+    actMove_   = placeholder(Glyph::Move, tr("Taşı"), QStringLiteral("TAŞI"), tr("Faz 2"));
+    actCopy_   = placeholder(Glyph::Copy, tr("Kopyala"), QStringLiteral("KOPYALA"), tr("Faz 2"));
+    actRotate_ = placeholder(Glyph::Rotate, tr("Döndür"), QStringLiteral("DÖNDÜR"), tr("Faz 2"));
+    actOffset_ = placeholder(Glyph::Offset, tr("Ofset"), QStringLiteral("OFSET"), tr("Faz 2"));
+
+    actUndo_ = new QAction(tr("Geri Al"), this);
+    actUndo_->setShortcut(QKeySequence::Undo);
+    actUndo_->setToolTip(tr("GERİAL — son işlemi geri alır"));
+    actUndo_->setData(static_cast<int>(Glyph::Undo));
+    connect(actUndo_, &QAction::triggered, this,
+            [this] { controller_->runCommand(QStringLiteral("GERİAL")); });
+
+    actRedo_ = new QAction(tr("Yinele"), this);
+    actRedo_->setShortcut(QKeySequence::Redo);
+    actRedo_->setToolTip(tr("YİNELE — geri alınan işlemi yineler"));
+    actRedo_->setData(static_cast<int>(Glyph::Redo));
+    connect(actRedo_, &QAction::triggered, this,
+            [this] { controller_->runCommand(QStringLiteral("YİNELE")); });
+
+    // ---- görünüm ----
+    actZoomExtents_ = commandAction(
+        Glyph::ZoomExtents, tr("Kapsama Yakınlaş"), QStringLiteral("YAKINLAŞ KAPSAM"),
+        tr("YAKINLAŞ KAPSAM — çizimin tamamını göster"), QKeySequence(Qt::CTRL | Qt::Key_0));
+    actZoomIn_  = commandAction(Glyph::ZoomIn, tr("Yakınlaştır"),
+                                QStringLiteral("YAKINLAŞ ÇARPAN carpan=1.25"),
+                                tr("YAKINLAŞ ÇARPAN carpan=1.25"), QKeySequence::ZoomIn);
+    actZoomOut_ = commandAction(Glyph::ZoomOut, tr("Uzaklaştır"),
+                                QStringLiteral("YAKINLAŞ ÇARPAN carpan=0.8"),
+                                tr("YAKINLAŞ ÇARPAN carpan=0.8"), QKeySequence::ZoomOut);
+
+    actPan_ = placeholder(Glyph::Pan, tr("Kaydır"), QStringLiteral("KAYDIR"), tr("Faz 2"));
+    actPan_->setToolTip(tr("Kaydır — orta fare tuşu basılı sürükleme her zaman çalışır"));
+    actSnap_ =
+        placeholder(Glyph::Snap, tr("Nesne Yakalama"), QStringLiteral("YAKALAMA"), tr("Faz 2"));
+
+    // ---- katman ve CBS ----
+    actLayer_ = new QAction(tr("Katman"), this);
+    actLayer_->setToolTip(tr("KATMAN — katman oluşturur ve aktif yapar"));
+    actLayer_->setData(static_cast<int>(Glyph::Layer));
+    connect(actLayer_, &QAction::triggered, this,
+            [this] { controller_->runCommand(QStringLiteral("KATMAN")); });
+
+    actLayerManager_ = placeholder(Glyph::LayerManager, tr("Katman Yöneticisi"),
+                                   QStringLiteral("KATMANYÖNETİCİSİ"), tr("Faz 1"));
+    actMeasure_      = placeholder(Glyph::Measure, tr("Ölç"), QStringLiteral("ÖLÇ"), tr("Faz 2"));
+    actIdentify_ =
+        placeholder(Glyph::Identify, tr("Sorgula"), QStringLiteral("SORGULA"), tr("Faz 2"));
+    actTable_ = placeholder(Glyph::Table, tr("Öznitelik Tablosu"),
+                            QStringLiteral("ÖZNİTELİKTABLOSU"), tr("Faz 2"));
+    actAi_    = placeholder(Glyph::Ai, tr("AI Asistan"), QString(), tr("Faz 3"));
     actAi_->setToolTip(tr("AI komut önerisi — önizleme ve onay ile (Faz 3)"));
 
+    // ---- arayüz ----
     actTheme_ = new QAction(tr("Koyu Tema"), this);
     actTheme_->setCheckable(true);
     connect(actTheme_, &QAction::toggled, this, &MainWindow::toggleTheme);
@@ -191,14 +276,94 @@ void MainWindow::buildActions()
     actHud_->setShortcut(QKeySequence(Qt::Key_F12));
     connect(actHud_, &QAction::toggled, this, [this](bool on) { canvas_->setDebugHud(on); });
 
-    actQuit_ = new QAction(tr("Çıkış"), this);
-    actQuit_->setShortcut(QKeySequence::Quit);
-    connect(actQuit_, &QAction::triggered, qApp, &QApplication::quit);
+    // The command line is hidden by default in this build. Ctrl+9 matches the
+    // shortcut CAD users already have in their fingers.
+    actCommandLine_ = new QAction(tr("Komut Satırı"), this);
+    actCommandLine_->setCheckable(true);
+    actCommandLine_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_9));
+    connect(actCommandLine_, &QAction::toggled, this, &MainWindow::showCommandLine);
+}
+
+void MainWindow::buildToolBars()
+{
+    // Two surfaces, two jobs — the layout professional CAD and GIS users expect.
+    // The left tool box holds the modal DRAWING tools; these horizontal bars hold
+    // ACTIONS. Every one of them dispatches a command; none reaches the document
+    // directly (CLAUDE.md Article 1).
+    const auto makeBar = [this](const QString& title, const QString& name) {
+        auto* bar = addToolBar(title);
+        bar->setObjectName(name);
+        bar->setIconSize(QSize(20, 20));
+        bar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        bar->setFloatable(true);
+        bar->setMovable(true);
+        return bar;
+    };
+
+    tbFile_ = makeBar(tr("Dosya"), QStringLiteral("tbFile"));
+    tbFile_->addAction(actNew_);
+    tbFile_->addAction(actOpen_);
+    tbFile_->addAction(actSave_);
+    tbFile_->addSeparator();
+    tbFile_->addAction(actExport_);
+    tbFile_->addAction(actPrint_);
+    tbFile_->addSeparator();
+    tbFile_->addAction(actScript_);
+
+    tbEdit_ = makeBar(tr("Düzen"), QStringLiteral("tbEdit"));
+    tbEdit_->addAction(actUndo_);
+    tbEdit_->addAction(actRedo_);
+    tbEdit_->addSeparator();
+    tbEdit_->addAction(actErase_);
+    tbEdit_->addAction(actMove_);
+    tbEdit_->addAction(actCopy_);
+    tbEdit_->addAction(actRotate_);
+    tbEdit_->addAction(actOffset_);
+
+    tbView_ = makeBar(tr("Görünüm"), QStringLiteral("tbView"));
+    tbView_->addAction(actPan_);
+    tbView_->addAction(actZoomExtents_);
+    tbView_->addAction(actZoomIn_);
+    tbView_->addAction(actZoomOut_);
+    tbView_->addSeparator();
+    tbView_->addAction(actSnap_);
+
+    // The layer combo is the signature CAD control: it shows the current layer and
+    // switching it is a KATMAN command, exactly as if it had been typed.
+    tbLayer_ = makeBar(tr("Katman"), QStringLiteral("tbLayer"));
+    tbLayer_->addAction(actLayerManager_);
+    tbLayer_->addAction(actLayer_);
+
+    layerCombo_ = new QComboBox(tbLayer_);
+    layerCombo_->setMinimumWidth(190);
+    layerCombo_->setToolTip(tr("Aktif katman — değiştirmek KATMAN komutunu gönderir"));
+    layerCombo_->setSizeAdjustPolicy(QComboBox::AdjustToContentsOnFirstShow);
+    tbLayer_->addWidget(layerCombo_);
+
+    connect(layerCombo_, &QComboBox::activated, this, [this](int index) {
+        const QString name = layerCombo_->itemText(index);
+        if (name.isEmpty()) return;
+        controller_->runLine(QStringLiteral("KATMAN ad=\"%1\"").arg(name), command::Origin::Gui);
+    });
+
+    tbGis_ = makeBar(tr("CBS"), QStringLiteral("tbGis"));
+    tbGis_->addAction(actIdentify_);
+    tbGis_->addAction(actTable_);
+    tbGis_->addAction(actMeasure_);
+    tbGis_->addSeparator();
+    tbGis_->addAction(actAi_);
 }
 
 void MainWindow::buildMenus()
 {
     auto* file = menuBar()->addMenu(tr("&Dosya"));
+    file->addAction(actNew_);
+    file->addAction(actOpen_);
+    file->addAction(actSave_);
+    file->addSeparator();
+    file->addAction(actExport_);
+    file->addAction(actPrint_);
+    file->addSeparator();
     file->addAction(actScript_);
     file->addSeparator();
     file->addAction(actQuit_);
@@ -208,11 +373,29 @@ void MainWindow::buildMenus()
     edit->addAction(actRedo_);
     edit->addSeparator();
     edit->addAction(actErase_);
+    edit->addAction(actMove_);
+    edit->addAction(actCopy_);
+    edit->addAction(actRotate_);
+    edit->addAction(actOffset_);
 
     auto* draw = menuBar()->addMenu(tr("Çi&zim"));
     draw->addAction(actLine_);
+    draw->addAction(actPolyline_);
+    draw->addAction(actArc_);
+    draw->addAction(actCircle_);
+    draw->addAction(actRectangle_);
+    draw->addAction(actPoint_);
+    draw->addAction(actText_);
+    draw->addSeparator();
     draw->addAction(actLayer_);
-    draw->addAction(actMeasure_);
+    draw->addAction(actLayerManager_);
+
+    auto* gis = menuBar()->addMenu(tr("&CBS"));
+    gis->addAction(actIdentify_);
+    gis->addAction(actTable_);
+    gis->addAction(actMeasure_);
+    gis->addSeparator();
+    gis->addAction(actAi_);
 
     auto* view = menuBar()->addMenu(tr("&Görünüm"));
     view->addAction(actZoomExtents_);
@@ -220,11 +403,17 @@ void MainWindow::buildMenus()
     view->addAction(actZoomOut_);
     view->addSeparator();
 
+    auto* bars = view->addMenu(tr("Araç Çubukları"));
+    for (QToolBar* bar : {tbFile_, tbEdit_, tbView_, tbLayer_, tbGis_})
+        if (bar) bars->addAction(bar->toggleViewAction());
+
     auto* panels = view->addMenu(tr("Paneller"));
     for (QDockWidget* dock : {static_cast<QDockWidget*>(toolBox_), layerDock_, propertyDock_,
                               transcriptDock_, journalDock_}) {
         if (dock) panels->addAction(dock->toggleViewAction());
     }
+    panels->addSeparator();
+    panels->addAction(actCommandLine_);
     panels->addSeparator();
     auto* reset = panels->addAction(tr("Düzeni Sıfırla"));
     connect(reset, &QAction::triggered, this, &MainWindow::resetLayout);
@@ -243,25 +432,29 @@ void MainWindow::buildMenus()
 
 void MainWindow::buildToolBox()
 {
+    // The modal drawing tools only. File, edit, view, layer and GIS actions live
+    // in the horizontal tool bars, the way AutoCAD and QGIS both arrange them.
     toolBox_ = new ToolBox(this);
 
     toolBox_->addTool(actSelect_);
     toolBox_->addSeparator();
     toolBox_->addTool(actLine_);
-    toolBox_->addTool(actLayer_);
-    toolBox_->addTool(actMeasure_);
+    toolBox_->addTool(actPolyline_);
+    toolBox_->addTool(actArc_);
+    toolBox_->addTool(actCircle_);
+    toolBox_->addTool(actRectangle_);
+    toolBox_->addTool(actPoint_);
+    toolBox_->addTool(actText_);
     toolBox_->addSeparator();
     toolBox_->addTool(actErase_);
-    toolBox_->addTool(actUndo_);
-    toolBox_->addTool(actRedo_);
+    toolBox_->addTool(actMove_);
+    toolBox_->addTool(actCopy_);
+    toolBox_->addTool(actRotate_);
+    toolBox_->addTool(actOffset_);
     toolBox_->addSeparator();
-    toolBox_->addTool(actPan_);
-    toolBox_->addTool(actZoomExtents_);
-    toolBox_->addTool(actZoomIn_);
-    toolBox_->addTool(actZoomOut_);
-    toolBox_->addSeparator();
-    toolBox_->addTool(actScript_);
-    toolBox_->addTool(actAi_);
+    toolBox_->addTool(actMeasure_);
+    toolBox_->addTool(actIdentify_);
+    toolBox_->addTool(actSnap_);
 
     addDockWidget(Qt::LeftDockWidgetArea, toolBox_);
 }
@@ -368,20 +561,14 @@ void MainWindow::applyTheme()
     const Palette& p = themePalette(theme_);
     qApp->setStyleSheet(themeStyleSheet(theme_));
 
-    // Icons are drawn, not loaded, so they re-tint with the palette.
-    actSelect_->setIcon(icon(Glyph::Select, p.text, p.accent));
-    actLine_->setIcon(icon(Glyph::Line, p.text, p.accent));
-    actLayer_->setIcon(icon(Glyph::Layer, p.text, p.accent));
-    actMeasure_->setIcon(icon(Glyph::Measure, p.text, p.accent));
-    actErase_->setIcon(icon(Glyph::Erase, p.text, p.accent));
-    actUndo_->setIcon(icon(Glyph::Undo, p.text, p.accent));
-    actRedo_->setIcon(icon(Glyph::Redo, p.text, p.accent));
-    actPan_->setIcon(icon(Glyph::Pan, p.text, p.accent));
-    actZoomExtents_->setIcon(icon(Glyph::ZoomExtents, p.text, p.accent));
-    actZoomIn_->setIcon(icon(Glyph::ZoomIn, p.text, p.accent));
-    actZoomOut_->setIcon(icon(Glyph::ZoomOut, p.text, p.accent));
-    actScript_->setIcon(icon(Glyph::Script, p.text, p.accent));
-    actAi_->setIcon(icon(Glyph::Ai, p.text, p.accent));
+    // Icons are drawn, not loaded, so they re-tint with the palette. Each action
+    // carries its glyph in data(), which keeps this loop from being a second list
+    // of actions to maintain.
+    for (QAction* action : findChildren<QAction*>()) {
+        const QVariant glyph = action->data();
+        if (!glyph.isValid()) continue;
+        action->setIcon(icon(static_cast<Glyph>(glyph.toInt()), p.text, p.accent));
+    }
 
     toolBox_->applyTheme(theme_);
     canvas_->applyTheme(theme_);
@@ -392,6 +579,38 @@ void MainWindow::toggleTheme(bool dark)
     theme_ = dark ? ThemeMode::Dark : ThemeMode::Light;
     applyTheme();
     onEcho(dark ? tr("Koyu tema.") : tr("Gündüz teması."));
+}
+
+void MainWindow::showCommandLine(bool visible)
+{
+    commandLine_->setVisible(visible);
+    commandLineRule_->setVisible(visible);
+
+    if (actCommandLine_->isChecked() != visible) {
+        QSignalBlocker block(actCommandLine_);
+        actCommandLine_->setChecked(visible);
+    }
+    if (visible) commandLine_->setFocus();
+}
+
+void MainWindow::refreshLayerCombo()
+{
+    if (!layerCombo_) return;
+
+    const auto& doc      = controller_->document();
+    const QString active = controller_->activeLayerName();
+
+    QSignalBlocker block(layerCombo_);
+    layerCombo_->clear();
+
+    for (std::size_t i = 0; i < doc.layers().size(); ++i) {
+        const auto& l = doc.layers()[i];
+        layerCombo_->addItem(swatchIcon(l.style.rgba), QString::fromStdString(l.name));
+        if (!l.visible) layerCombo_->setItemData(static_cast<int>(i), tr("gizli"), Qt::ToolTipRole);
+    }
+
+    const int index = layerCombo_->findText(active);
+    if (index >= 0) layerCombo_->setCurrentIndex(index);
 }
 
 void MainWindow::resetLayout()
@@ -411,6 +630,7 @@ void MainWindow::onEcho(const QString& text)
 
 void MainWindow::onDocumentChanged()
 {
+    refreshLayerCombo();
     layerPanel_->refresh();
     propertyPanel_->refresh();
     refreshStatus();

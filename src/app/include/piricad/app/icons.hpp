@@ -13,18 +13,42 @@
 namespace piricad::app {
 
 enum class Glyph {
+    // seçim ve çizim
     Select,
     Line,
     Polyline,
+    Arc,
+    Circle,
+    Rectangle,
+    Text,
+    Point,
+    // düzenleme
     Erase,
+    Move,
+    Copy,
+    Rotate,
+    Offset,
+    Undo,
+    Redo,
+    // katman ve öznitelik
     Layer,
+    LayerManager,
+    Table,
+    Identify,
+    // görünüm ve ölçüm
     Measure,
     ZoomExtents,
     ZoomIn,
     ZoomOut,
     Pan,
-    Undo,
-    Redo,
+    Snap,
+    // dosya
+    New,
+    Open,
+    Save,
+    Export,
+    Print,
+    // diğer
     Script,
     Ai,
 };

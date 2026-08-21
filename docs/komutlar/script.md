@@ -61,8 +61,8 @@ Betik tamamlandı: tests/journal/ornek-parsel.json
 
 ### Arayüz
 
-**Dosya > Betik Çalıştır…** menüsü, araç kutusundaki **Betik Çalıştır** düğmesi veya
-**Ctrl+R** bir dosya seçme penceresi açar. Seçtiğiniz betik çalışır ve sonuç
+**Dosya > Betik Çalıştır…** menüsü, **Dosya** araç çubuğundaki **Betik Çalıştır**
+düğmesi veya **Ctrl+R** bir dosya seçme penceresi açar. Seçtiğiniz betik çalışır ve sonuç
 kendiliğinden görünüme sığdırılır.
 
 ### Betik

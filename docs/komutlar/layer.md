@@ -107,8 +107,11 @@ KATMAN ad=0
 
 ### Arayüz
 
-Araç kutusundaki **Katman** düğmesi veya **Çizim > Katman** menüsü komutu başlatır ve
-katman adını sorar.
+**Katman** araç çubuğundaki **Katman** düğmesi veya **Çizim > Katman** menüsü komutu
+başlatır ve katman adını sorar.
+
+Aynı araç çubuğundaki **aktif katman listesi** doğrudan çalışır: renk kutucuklarıyla
+katmanları gösterir, seçtiğinizde `KATMAN ad="..."` komutunu gönderir.
 
 Sağdaki **Katmanlar** panelinden de yönetilir:
 

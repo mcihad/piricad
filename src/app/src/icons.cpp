@@ -189,6 +189,180 @@ void draw(QPainter& p, Glyph g, const QColor& c)
         grip(p, QPointF(12.0, 12.0), c);
         break;
 
+    case Glyph::Arc:
+        p.drawArc(QRectF(3.6, 6.0, 16.8, 16.8), 20 * 16, 140 * 16);
+        grip(p, QPointF(5.2, 17.0), c);
+        grip(p, QPointF(18.8, 17.0), c);
+        break;
+
+    case Glyph::Circle:
+        p.drawEllipse(QPointF(12.0, 12.0), 8.4, 8.4);
+        grip(p, QPointF(12.0, 12.0), c);
+        break;
+
+    case Glyph::Rectangle:
+        p.drawRect(QRectF(4.2, 6.4, 15.6, 11.2));
+        grip(p, QPointF(4.2, 6.4), c);
+        grip(p, QPointF(19.8, 17.6), c);
+        break;
+
+    case Glyph::Text: {
+        p.setPen(stroke(c, 2.1));
+        p.drawLine(QPointF(4.6, 6.0), QPointF(19.4, 6.0));
+        p.drawLine(QPointF(12.0, 6.0), QPointF(12.0, 18.6));
+        p.setPen(stroke(c, 1.6));
+        p.drawLine(QPointF(8.6, 18.6), QPointF(15.4, 18.6));
+        break;
+    }
+    case Glyph::Point:
+        p.setPen(stroke(c, 1.6));
+        p.drawLine(QPointF(12.0, 4.4), QPointF(12.0, 19.6));
+        p.drawLine(QPointF(4.4, 12.0), QPointF(19.6, 12.0));
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        p.drawEllipse(QPointF(12.0, 12.0), 3.0, 3.0);
+        break;
+
+    case Glyph::Move:
+        // Four-way arrows around a held object.
+        p.setPen(stroke(c, 1.6));
+        p.drawRect(QRectF(8.6, 8.6, 6.8, 6.8));
+        p.drawLine(QPointF(12.0, 8.0), QPointF(12.0, 4.4));
+        p.drawLine(QPointF(12.0, 16.0), QPointF(12.0, 19.6));
+        p.drawLine(QPointF(8.0, 12.0), QPointF(4.4, 12.0));
+        p.drawLine(QPointF(16.0, 12.0), QPointF(19.6, 12.0));
+        arrowHead(p, QPointF(12.0, 3.0), QPointF(12.0, 8.0), c, 3.4);
+        arrowHead(p, QPointF(12.0, 21.0), QPointF(12.0, 16.0), c, 3.4);
+        arrowHead(p, QPointF(3.0, 12.0), QPointF(8.0, 12.0), c, 3.4);
+        arrowHead(p, QPointF(21.0, 12.0), QPointF(16.0, 12.0), c, 3.4);
+        break;
+
+    case Glyph::Copy:
+        // Two offset outlines: the original and its duplicate.
+        p.setPen(stroke(c, 1.5));
+        p.drawRect(QRectF(3.6, 3.6, 12.0, 12.0));
+        p.setPen(stroke(c, 1.9));
+        p.drawRect(QRectF(8.4, 8.4, 12.0, 12.0));
+        break;
+
+    case Glyph::Rotate: {
+        QPainterPath sweep;
+        sweep.arcMoveTo(QRectF(4.2, 4.2, 15.6, 15.6), 60);
+        sweep.arcTo(QRectF(4.2, 4.2, 15.6, 15.6), 60, 260);
+        p.drawPath(sweep);
+        arrowHead(p, QPointF(16.4, 5.4), QPointF(12.6, 8.6), c, 4.6);
+        grip(p, QPointF(12.0, 12.0), c);
+        break;
+    }
+    case Glyph::Offset:
+        // A shape and its parallel copy: the setback operation.
+        p.setPen(stroke(c, 1.8));
+        p.drawPolyline(QPolygonF({QPointF(3.8, 17.4), QPointF(3.8, 8.0), QPointF(12.0, 3.4),
+                                  QPointF(20.2, 8.0), QPointF(20.2, 17.4)}));
+        p.setPen(QPen(c, 1.5, Qt::DashLine, Qt::RoundCap, Qt::RoundJoin));
+        p.drawPolyline(QPolygonF({QPointF(7.0, 20.6), QPointF(7.0, 10.2), QPointF(12.0, 7.4),
+                                  QPointF(17.0, 10.2), QPointF(17.0, 20.6)}));
+        break;
+
+    case Glyph::LayerManager: {
+        const auto sheet = [&](qreal dy) {
+            return QPolygonF({QPointF(10.0, 3.6 + dy), QPointF(17.4, 7.4 + dy),
+                              QPointF(10.0, 11.2 + dy), QPointF(2.6, 7.4 + dy)});
+        };
+        p.drawPolygon(sheet(7.6));
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        p.drawPolygon(sheet(0.0));
+        // The settings mark that turns a stack into a manager.
+        p.setPen(stroke(c, 1.6));
+        p.setBrush(Qt::NoBrush);
+        p.drawEllipse(QPointF(18.4, 17.6), 3.4, 3.4);
+        p.drawLine(QPointF(18.4, 13.6), QPointF(18.4, 21.6));
+        p.drawLine(QPointF(14.4, 17.6), QPointF(22.4, 17.6));
+        break;
+    }
+    case Glyph::Table:
+        p.setPen(stroke(c, 1.6));
+        p.drawRect(QRectF(3.2, 5.0, 17.6, 14.0));
+        p.drawLine(QPointF(3.2, 9.6), QPointF(20.8, 9.6));
+        p.drawLine(QPointF(3.2, 14.3), QPointF(20.8, 14.3));
+        p.drawLine(QPointF(9.1, 5.0), QPointF(9.1, 19.0));
+        p.drawLine(QPointF(15.0, 5.0), QPointF(15.0, 19.0));
+        break;
+
+    case Glyph::Identify:
+        // Cursor over a feature: "what is this?"
+        p.setPen(stroke(c, 1.6));
+        p.drawPolygon(QPolygonF({QPointF(3.4, 12.0), QPointF(9.6, 4.2), QPointF(17.0, 7.6),
+                                 QPointF(14.6, 15.4), QPointF(6.0, 16.2)}));
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        {
+            QPainterPath arrow;
+            arrow.moveTo(12.4, 11.2);
+            arrow.lineTo(12.4, 21.6);
+            arrow.lineTo(15.0, 19.0);
+            arrow.lineTo(16.8, 22.4);
+            arrow.lineTo(18.6, 21.4);
+            arrow.lineTo(16.9, 18.1);
+            arrow.lineTo(20.4, 17.7);
+            arrow.closeSubpath();
+            p.drawPath(arrow);
+        }
+        break;
+
+    case Glyph::Snap:
+        // The osnap marker: a square on a vertex where two lines meet.
+        p.setPen(stroke(c, 1.6));
+        p.drawLine(QPointF(3.4, 18.6), QPointF(12.0, 8.0));
+        p.drawLine(QPointF(12.0, 8.0), QPointF(20.6, 18.6));
+        p.setPen(stroke(c, 1.8));
+        p.drawRect(QRectF(8.4, 4.4, 7.2, 7.2));
+        break;
+
+    case Glyph::New:
+        p.setPen(stroke(c, 1.7));
+        p.drawPolyline(QPolygonF({QPointF(13.6, 3.4), QPointF(5.4, 3.4), QPointF(5.4, 20.6),
+                                  QPointF(18.6, 20.6), QPointF(18.6, 8.4)}));
+        p.drawPolyline(QPolygonF(
+            {QPointF(13.6, 3.4), QPointF(18.6, 8.4), QPointF(13.6, 8.4), QPointF(13.6, 3.4)}));
+        break;
+
+    case Glyph::Open: {
+        p.setPen(stroke(c, 1.7));
+        p.drawPolyline(QPolygonF({QPointF(2.8, 19.4), QPointF(2.8, 5.4), QPointF(9.4, 5.4),
+                                  QPointF(11.6, 8.2), QPointF(18.0, 8.2), QPointF(18.0, 11.0)}));
+        p.drawPolyline(QPolygonF({QPointF(2.8, 19.4), QPointF(6.6, 11.6), QPointF(21.6, 11.6),
+                                  QPointF(17.8, 19.4), QPointF(2.8, 19.4)}));
+        break;
+    }
+    case Glyph::Save:
+        p.setPen(stroke(c, 1.7));
+        p.drawPolyline(QPolygonF({QPointF(4.0, 20.2), QPointF(4.0, 3.8), QPointF(16.6, 3.8),
+                                  QPointF(20.0, 7.2), QPointF(20.0, 20.2), QPointF(4.0, 20.2)}));
+        p.drawRect(QRectF(7.6, 3.8, 8.4, 5.6));
+        p.drawRect(QRectF(7.0, 13.0, 10.0, 7.2));
+        break;
+
+    case Glyph::Export:
+        p.setPen(stroke(c, 1.7));
+        p.drawPolyline(QPolygonF({QPointF(13.4, 3.6), QPointF(5.0, 3.6), QPointF(5.0, 20.4),
+                                  QPointF(18.4, 20.4), QPointF(18.4, 13.6)}));
+        p.drawLine(QPointF(11.6, 11.8), QPointF(21.0, 3.6));
+        arrowHead(p, QPointF(21.6, 3.0), QPointF(15.0, 8.8), c, 5.2);
+        break;
+
+    case Glyph::Print:
+        p.setPen(stroke(c, 1.6));
+        p.drawPolyline(QPolygonF(
+            {QPointF(6.4, 8.6), QPointF(6.4, 3.6), QPointF(17.6, 3.6), QPointF(17.6, 8.6)}));
+        p.drawRoundedRect(QRectF(3.2, 8.6, 17.6, 7.6), 1.6, 1.6);
+        p.drawRect(QRectF(6.4, 13.4, 11.2, 7.0));
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        p.drawEllipse(QPointF(17.2, 11.4), 1.2, 1.2);
+        break;
+
     case Glyph::Ai: {
         // A four-point sparkle: the conventional "assisted" mark.
         const auto spark = [&](qreal cx, qreal cy, qreal r, qreal waist) {

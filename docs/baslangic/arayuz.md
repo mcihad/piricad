@@ -6,59 +6,117 @@ bileceksiniz.
 
 ## Pencere düzeni
 
-```
+```text
 ┌ menü çubuğu ──────────────────────────────────────────────────────┐
+│ Dosya │ Düzen │ Görünüm │ Katman [aktif katman ▾] │ CBS          │
+├───────────────────────────────────────────────────────────────────┤
 │ ┌────┐ ┌──────────────────────────────┐ ┌─────────────────────┐ │
 │ │Araç│ │                              │ │ Katmanlar │ Öznitel.│ │
 │ │kutu│ │      Harita alanı            │ │      (sekmeli)      │ │
 │ │ su │ │                              │ │                     │ │
 │ │    │ ├──────────────────────────────┤ │                     │ │
-│ │    │ │  Komut satırı                │ │                     │ │
+│ │    │ │  Komut satırı (gizli)        │ │                     │ │
 │ └────┘ └──────────────────────────────┘ └─────────────────────┘ │
 │ ┌ Transkript │ Komut Günlüğü ───────────────────────────────────┐│
 └ durum çubuğu ─────────────────────────────────────────────────────┘
 ```
 
+İki ayrı araç yüzeyi vardır ve işleri farklıdır:
+
+- **Araç kutusu** (sol, dikey) — çizim ve düzenleme araçları. Bir araca basınca komut
+  başlar ve sizden girdi ister.
+- **Araç çubukları** (üst, yatay) — eylemler: dosya, geri alma, görünüm, katman ve
+  CBS. Bir düğmeye basmak komutu hemen çalıştırır.
+
+Bu ayrım AutoCAD ve QGIS'in ortak düzenidir.
+
 ## Menü çubuğu
 
 | Menü | İçerik |
 |---|---|
-| **Dosya** | Betik Çalıştır… (**Ctrl+R**), Çıkış |
+| **Dosya** | Yeni, Aç, Kaydet, Dışa Aktar, Yazdır (Faz 1–2), Betik Çalıştır… (**Ctrl+R**), Çıkış |
 | **Düzen** | Geri Al (**Ctrl+Z**), Yinele (**Ctrl+Shift+Z**), Sil |
-| **Çizim** | Çizgi, Katman, Ölç |
-| **Görünüm** | Kapsama Yakınlaş (**Ctrl+0**), Yakınlaştır, Uzaklaştır, Paneller, Koyu Tema, Geliştirici Bilgisi (**F12**) |
+| **Çizim** | Çizgi, Çoklu Çizgi, Yay, Daire, Dikdörtgen, Nokta, Metin, Katman, Katman Yöneticisi |
+| **Görünüm** | Kapsama Yakınlaş (**Ctrl+0**), Yakınlaştır, Uzaklaştır, Araç Çubukları, Paneller, Koyu Tema, Geliştirici Bilgisi (**F12**) |
+| **CBS** | Sorgula, Öznitelik Tablosu, Ölç, AI Asistan — hepsi sonraki fazlarda |
 | **Yardım** | Komut Listesi, Hakkında |
 
-**Görünüm > Paneller** her paneli tek tek gizleyip gösterir ve **Düzeni Sıfırla** ile
-panelleri fabrika yerleşimine döndürür.
+**Görünüm > Araç Çubukları** her araç çubuğunu, **Görünüm > Paneller** her paneli tek
+tek gizleyip gösterir. **Düzeni Sıfırla** fabrika yerleşimine döndürür.
 
-## Araç kutusu
+## Araç çubukları
 
-Sol kenardaki dar sütun. Her düğme bir komut gönderir — düğmeye basmakla komut satırına
-komutu yazmak arasında hiçbir fark yoktur.
+Menü çubuğunun altında beş araç çubuğu vardır. Hepsi taşınabilir ve
+**Görünüm > Araç Çubukları** menüsünden tek tek gizlenebilir.
 
-| Araç | Gönderdiği komut | Not |
+### Dosya
+
+| Düğme | Komut | Durum |
 |---|---|---|
-| Seç | — | Çalışan komutu iptal eder (**Esc**) |
-| Çizgi | `ÇİZGİ` | [Çizgi çizme](../komutlar/line.md) |
-| Katman | `KATMAN` | [Katman yönetimi](../komutlar/layer.md) |
-| Ölç | — | Faz 2'de gelecek, şimdilik pasif |
-| Sil | `SİL` | Komut satırını `SİL nesneler=` ile hazırlar |
+| Yeni, Aç, Kaydet | — | Faz 1'de gelecek, şimdilik pasif |
+| Dışa Aktar, Yazdır | — | Faz 2'de gelecek, şimdilik pasif |
+| Betik Çalıştır | `BETİK` | **Ctrl+R** |
+
+### Düzen
+
+| Düğme | Komut | Durum |
+|---|---|---|
 | Geri Al | `GERİAL` | **Ctrl+Z** |
 | Yinele | `YİNELE` | **Ctrl+Shift+Z** |
-| Kaydır | — | Faz 2'de gelecek; orta fare tuşu her zaman kaydırır |
+| Sil | `SİL` | Komut satırını `SİL nesneler=` ile hazırlar |
+| Taşı, Kopyala, Döndür, Ofset | — | Faz 2'de gelecek, şimdilik pasif |
+
+### Görünüm
+
+| Düğme | Komut | Durum |
+|---|---|---|
+| Kaydır | — | Faz 2; orta fare tuşu her zaman kaydırır |
 | Kapsama Yakınlaş | `YAKINLAŞ KAPSAM` | **Ctrl+0** |
 | Yakınlaştır | `YAKINLAŞ ÇARPAN carpan=1.25` | **Ctrl++** |
 | Uzaklaştır | `YAKINLAŞ ÇARPAN carpan=0.8` | **Ctrl+-** |
-| Betik Çalıştır | `BETİK` | **Ctrl+R** |
+| Nesne Yakalama | — | Faz 2'de gelecek, şimdilik pasif |
+
+### Katman
+
+| Düğme | Komut | Durum |
+|---|---|---|
+| Katman Yöneticisi | — | Faz 1'de gelecek, şimdilik pasif |
+| Katman | `KATMAN` | Katman adını sorar |
+| **Aktif katman listesi** | `KATMAN ad="..."` | Çalışıyor |
+
+Aktif katman listesi CAD'in imza denetimidir: renk kutucuğuyla birlikte katmanları
+gösterir, seçtiğiniz katman aktif olur. Listeden seçim yapmak `KATMAN` komutunu
+gönderir — yani günlüğe yazılır ve **Ctrl+Z** ile geri alınabilir.
+
+### CBS
+
+| Düğme | Komut | Durum |
+|---|---|---|
+| Sorgula, Öznitelik Tablosu, Ölç | — | Faz 2'de gelecek, şimdilik pasif |
 | AI Asistan | — | Faz 3'te gelecek, şimdilik pasif |
+
+Pasif düğmelerin ipucu balonu hangi fazda geleceğini yazar. PiriCAD sessizce hiçbir şey
+yapmayan düğme göstermez.
+
+## Araç kutusu
+
+Sol kenardaki dar sütun. Çizim ve düzenleme araçlarını taşır. Her düğme bir komut
+gönderir — düğmeye basmakla komutu yazmak arasında hiçbir fark yoktur.
+
+| Araç | Gönderdiği komut | Durum |
+|---|---|---|
+| Seç | — | Çalışan komutu iptal eder (**Esc**) |
+| Çizgi | `ÇİZGİ` | [Çizgi çizme](../komutlar/line.md) |
+| Çoklu Çizgi, Yay, Daire, Dikdörtgen, Nokta, Metin | — | Faz 2'de gelecek |
+| Sil | `SİL` | [Nesne silme](../komutlar/erase.md) |
+| Taşı, Kopyala, Döndür, Ofset | — | Faz 2'de gelecek |
+| Ölç, Sorgula, Nesne Yakalama | — | Faz 2'de gelecek |
 
 Her düğmenin ipucu balonunda komut adı ve varsa kısayolu yazar.
 
 **Araç kutusu taşınabilir.** Üstündeki tutamaktan sürükleyerek pencerenin sağ kenarına
-taşıyabilir ya da pencereden koparıp serbest bir palet hâline getirebilirsiniz. Sağ
-üstündeki küçük düğme de aynı işi yapar. Fabrika yerleşimine dönmek için
-**Görünüm > Paneller > Düzeni Sıfırla**.
+taşıyabilir ya da pencereden koparıp serbest bir palet hâline getirebilirsiniz.
+Fabrika yerleşimine dönmek için **Görünüm > Paneller > Düzeni Sıfırla**.
 
 ## Harita alanı
 
@@ -87,7 +145,14 @@ Bu sürümde harita `QPainter` ile çizilir; GPU çizimi Faz 1'de devreye girece
 
 ## Komut satırı
 
-Harita alanının hemen altındaki tek satırlık alan. PiriCAD'in birincil giriş yüzeyidir.
+Harita alanının hemen altındaki tek satırlık alan. **Bu sürümde varsayılan olarak
+gizlidir**; işi araç çubukları devraldı.
+
+Açmak için **Ctrl+9** veya **Görünüm > Paneller > Komut Satırı**. Kapatmak için aynı
+kısayol.
+
+Gizli olması hiçbir şeyi kaldırmaz: komut satırından yazabildiğiniz her komut betikten
+de çalışır ve araç çubuğu düğmeleri de aynı komutları gönderir.
 
 - Komut adı yazarken satır içi tamamlama önerir
 - **Yukarı/Aşağı ok** komut geçmişinde gezinir
@@ -167,7 +232,8 @@ yapabilecekleriniz:
 
 | Tuş | İşlev |
 |---|---|
-| Doğrudan yazmak | Komut satırına komut girmek |
+| **Ctrl+9** | Komut satırını açar veya kapatır |
+| Komut satırı açıkken yazmak | Komut girmek |
 | **Yukarı / Aşağı** | Komut geçmişi |
 | **Esc** | Satırı temizler; satır boşsa komutu iptal eder |
 | **Ctrl+Z** / **Ctrl+Shift+Z** | Geri al / yinele |

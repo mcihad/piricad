@@ -19,14 +19,18 @@
 // perspectives (piricad.md §6.3, .claude/ui.md).
 #pragma once
 
+#include "piricad/app/icons.hpp"
 #include "piricad/app/theme.hpp"
 #include "piricad/core/units.hpp"
 
 #include <QMainWindow>
 
+class QComboBox;
+class QFrame;
 class QDockWidget;
 class QLabel;
 class QPlainTextEdit;
+class QToolBar;
 
 namespace piricad::app {
 
@@ -61,10 +65,25 @@ private slots:
     void openScript();
     void showAbout();
     void toggleTheme(bool dark);
+    void showCommandLine(bool visible);
     void resetLayout();
 
 private:
     void buildActions();
+    void buildToolBars();
+
+    /// Creates a disabled action for a command that does not exist yet. The
+    /// tooltip names the phase it arrives in, so the interface never shows a
+    /// button that silently does nothing (.claude/ui.md).
+    QAction* placeholder(Glyph glyph, const QString& text, const QString& command,
+                         const QString& phase);
+
+    /// Creates an action that dispatches `line` through the bus. The GUI is a
+    /// client of the command bus and gets no private path (CLAUDE.md Article 1).
+    QAction* commandAction(Glyph glyph, const QString& text, const QString& line,
+                           const QString& tip, const QKeySequence& shortcut = {});
+
+    void refreshLayerCombo();
     /// A tabified dock shows its name on the tab, so its own title bar would say
     /// it twice. Hidden while tabbed, restored when the dock is floated or torn
     /// out — dragging the tab still detaches it.
@@ -85,6 +104,14 @@ private:
     QPlainTextEdit* transcript_{nullptr};
     QPlainTextEdit* journalView_{nullptr};
 
+    QToolBar* tbFile_{nullptr};
+    QToolBar* tbEdit_{nullptr};
+    QToolBar* tbView_{nullptr};
+    QToolBar* tbLayer_{nullptr};
+    QToolBar* tbGis_{nullptr};
+    QComboBox* layerCombo_{nullptr};
+    QFrame* commandLineRule_{nullptr};
+
     QDockWidget* layerDock_{nullptr};
     QDockWidget* propertyDock_{nullptr};
     QDockWidget* transcriptDock_{nullptr};
@@ -96,21 +123,46 @@ private:
     QLabel* statusLayer_{nullptr};
     QLabel* statusCrs_{nullptr};
 
+    // ---- komuta karşılık gelen eylemler ----
     QAction* actSelect_{nullptr};
     QAction* actLine_{nullptr};
     QAction* actErase_{nullptr};
     QAction* actLayer_{nullptr};
-    QAction* actMeasure_{nullptr};
-    QAction* actPan_{nullptr};
     QAction* actZoomExtents_{nullptr};
     QAction* actZoomIn_{nullptr};
     QAction* actZoomOut_{nullptr};
     QAction* actUndo_{nullptr};
     QAction* actRedo_{nullptr};
     QAction* actScript_{nullptr};
+
+    // ---- sonraki fazlarda gelecek eylemler, pasif ----
+    QAction* actNew_{nullptr};
+    QAction* actOpen_{nullptr};
+    QAction* actSave_{nullptr};
+    QAction* actExport_{nullptr};
+    QAction* actPrint_{nullptr};
+    QAction* actPolyline_{nullptr};
+    QAction* actArc_{nullptr};
+    QAction* actCircle_{nullptr};
+    QAction* actRectangle_{nullptr};
+    QAction* actPoint_{nullptr};
+    QAction* actText_{nullptr};
+    QAction* actMove_{nullptr};
+    QAction* actCopy_{nullptr};
+    QAction* actRotate_{nullptr};
+    QAction* actOffset_{nullptr};
+    QAction* actMeasure_{nullptr};
+    QAction* actPan_{nullptr};
+    QAction* actSnap_{nullptr};
+    QAction* actIdentify_{nullptr};
+    QAction* actTable_{nullptr};
+    QAction* actLayerManager_{nullptr};
     QAction* actAi_{nullptr};
+
+    // ---- arayüz eylemleri ----
     QAction* actTheme_{nullptr};
     QAction* actHud_{nullptr};
+    QAction* actCommandLine_{nullptr};
     QAction* actQuit_{nullptr};
 
     ThemeMode theme_{ThemeMode::Light}; ///< day mode is the default

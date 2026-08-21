@@ -19,7 +19,10 @@ Aynı komut arayüzden, komut satırından ve betikten tıpatıp aynı yolu izle
 Başlamak için: ÇİZGİ  ·  ÇİZGİ 485320,4310220 @50,30 @100<45  ·  YARDIM
 ```
 
-İmleç doğrudan komut satırındadır. Yazmaya başlayabilirsiniz.
+Üstte beş araç çubuğu, solda araç kutusu, sağda katman ve öznitelik panelleri vardır.
+
+Bu sürümde komut satırı varsayılan olarak gizlidir. Aşağıdaki adımların bir kısmı onu
+kullanıyor; açmak için **Ctrl+9**'a basın (kapatmak için de aynı kısayol).
 
 ## 2. Fareyle çizgi çizin
 
@@ -32,7 +35,7 @@ sonra **Esc**'e basın veya sağ tıklayın.
 
 ## 3. Klavyeyle çizgi çizin
 
-Komut satırına yazın:
+**Ctrl+9** ile komut satırını açın ve yazın:
 
 ```
 ÇİZGİ 485320.150,4310220.400 @50,30 @100<45
@@ -60,7 +63,8 @@ Aktif katman: PARSEL
 ```
 
 Sağdaki **Katmanlar** sekmesinde yeni katman, renk kutucuğu ve nesne sayısıyla belirir.
-Durum çubuğunun sağında da aktif katman adı yazar. Bundan sonra çizdiğiniz her şey bu
+Üstteki **Katman** araç çubuğundaki liste de artık `PARSEL` gösterir; oradan başka bir
+katman seçmek aynı komutu gönderir. Durum çubuğunun sağında da aktif katman adı yazar. Bundan sonra çizdiğiniz her şey bu
 katmana gider.
 
 `renk` değeri `0xAARRGGBB` biçiminde bir tam sayıdır; `4281236786` yeşile karşılık

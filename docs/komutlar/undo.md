@@ -48,7 +48,8 @@ Arka arkaya birkaç kez yazarak birkaç işlem geri gidebilirsiniz.
 
 ### Arayüz
 
-**Ctrl+Z**, araç kutusundaki **Geri Al** düğmesi veya **Düzen > Geri Al** menüsü.
+**Ctrl+Z**, **Düzen** araç çubuğundaki **Geri Al** düğmesi veya **Düzen > Geri Al**
+menüsü.
 
 Geri alınacak bir şey kalmadığında düğme ve menü öğesi pasifleşir.
 

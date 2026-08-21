@@ -89,8 +89,8 @@ uzanır. İstediğiniz kadar nokta tıklayın.
 
 Bitirmek için **Esc**'e basın veya sağ tıklayın.
 
-Fareyle tıklamak yerine, komut çalışırken komut satırına koordinat da yazabilirsiniz.
-Komutun bakış açısından ikisi arasında hiçbir fark yoktur.
+Fareyle tıklamak yerine, komut çalışırken komut satırına koordinat da yazabilirsiniz
+(**Ctrl+9** ile açılır). Komutun bakış açısından ikisi arasında hiçbir fark yoktur.
 
 ### Betik
 
