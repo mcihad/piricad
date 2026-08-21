@@ -57,6 +57,38 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 - BÖHHBÜY TM 3° dilim tablosu C++ içinden `data/crs/tm3-dilimleri.json` dosyasına
   taşındı — mevzuat verisi koda gömülmez (`CLAUDE.md` 5.13).
 
+### Eklendi — performans ve determinizm altyapısı (Faz 0)
+
+- **Benchmark kapısı.** `make bench` §10.1 bütçelerini ölçer ve aşılırsa derlemeyi
+  kırar. `make bench-baseline` makineye özel temel değer kaydeder. Regresyon,
+  hem %10'u hem de ölçümün kendi yayılımını aşmak zorundadır — sıfıra yakın bir
+  ölçümde göreli eşik tek başına gürültüyü regresyon sanır.
+- **Ölçülemeyen bütçeler listelenir.** DWG, LAZ, topoloji, soğuk açılış, boş proje
+  RAM'i ve tuş gecikmesi `BEKLEMEDE` olarak sebebiyle raporlanır; hiçbir zaman
+  "geçti" saymaz. Sessizce kaybolan bütçenin sahibi olmaz.
+- **Golden data altyapısı.** `tests/golden/senaryolar` altındaki senaryolar
+  oynatılır ve belgenin deterministik dökümüyle karşılaştırılır. Fark hangi tepe
+  noktasının kaydığını söyler, yalnız "özet değişti" demez.
+- **Jitter testi (§11 Faz 0).** 30. dilim TM3 koordinatlarında 1000 ardışık
+  milimetrenin float'ta yalnız ~32 farklı değere çöktüğü, `ViewTransform`'un
+  origin offset'iyle bin ayrı değer kaldığı ölçülerek kanıtlandı.
+- **Mekânsal indeks.** `core::SpatialIndex` — §10.5'in tarif ettiği toplu
+  yüklenen STR R-tree. Kaba kuvvetle karşılaştıran altı testi var.
+- **Nesne başına önbelleklenmiş sınır kutusu.** Ayrı bir SoA bloğu; eleme artık
+  tepe noktalarına hiç dokunmuyor.
+
+### Düzeltildi — ölçümün ortaya çıkardıkları
+
+- **5M poligonda kare süresi 41 ms → 0,003 ms.** 16 ms bütçesi artık beş bin kat
+  payla karşılanıyor. Aynı düzenlemeden sonraki kare de bütçe içinde: bir çizgi
+  çizmek katmanı yeniden paketlemiyor.
+- **Toplu yüklemede O(n²).** `add_polyline` her çağrıda tam boyutla `reserve`
+  ediyor, vektörün geometrik büyümesini bozuyordu. 1M parsel kurulumu 2 dakikadan
+  63 ms'ye indi.
+- **Arayüzde üç ayrı O(n) tarama.** Canlı nesne sayısı ve katman başına nesne
+  sayısı artık artımlı tutuluyor; katman ve öznitelik panelleri her doküman
+  değişiminde bütün nesneleri dolaşmıyor.
+
 ### Bilinen sapmalar
 
 Üçü de CLAUDE.md Article 8'de kayıtlı ve kaldırma koşulu yazılı:

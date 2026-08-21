@@ -14,6 +14,8 @@
 #include "piricad/core/result.hpp"
 #include "piricad/core/units.hpp"
 
+#include <memory>
+
 #include <cstdint>
 #include <span>
 #include <string>
@@ -21,6 +23,8 @@
 #include <vector>
 
 namespace piricad::core {
+
+class SpatialIndex;
 
 using EntityId = std::uint32_t;
 using LayerId  = std::uint32_t;
@@ -30,7 +34,9 @@ inline constexpr LayerId kNoLayer   = 0xFFFFFFFFu;
 
 struct LayerStyle
 {
-    std::uint32_t rgba{0xFFD0D0D0u}; ///< 0xAARRGGBB
+    /// 0xAARRGGBB. The default is a mid grey that reads against both the light and
+    /// the dark canvas; a real layer carries the colour its catalogue gives it.
+    std::uint32_t rgba{0xFF6C7686u};
     float width_px{1.0f};
 
     friend bool operator==(const LayerStyle&, const LayerStyle&) = default;
@@ -60,11 +66,22 @@ public:
     std::vector<LayerId> layer;
     std::vector<std::uint8_t> alive;
 
+    // ---- cull block: per-entity bounding box, computed once at insertion ----
+    // Culling reads only these four contiguous arrays and never touches the vertex
+    // data. That is the difference between a linear scan that fits the frame
+    // budget and one that does not (piricad.md §10.5, "önce bbox").
+    std::vector<Mm> min_x;
+    std::vector<Mm> min_y;
+    std::vector<Mm> max_x;
+    std::vector<Mm> max_y;
+
     std::size_t size() const noexcept { return start.size(); }
 
     std::span<const Mm> xs_of(EntityId e) const { return {xs.data() + start[e], count[e]}; }
 
     std::span<const Mm> ys_of(EntityId e) const { return {ys.data() + start[e], count[e]}; }
+
+    Box2 box_of(EntityId e) const { return Box2{min_x[e], min_y[e], max_x[e], max_y[e]}; }
 
     Point2 vertex(EntityId e, std::uint32_t i) const
     {
@@ -98,6 +115,12 @@ class Document
 public:
     Document();
 
+    // Out of line because the spatial index is only forward declared here: the
+    // index is a cache of the document, so the document must not include it.
+    ~Document();
+    Document(Document&&) noexcept;
+    Document& operator=(Document&&) noexcept;
+
     // ---- read API: rich and direct (performance), never mutating ----
     const Crs& crs() const noexcept { return crs_; }
 
@@ -110,7 +133,28 @@ public:
     LayerId find_layer(std::string_view name) const;
     const Layer* layer(LayerId id) const;
     bool alive(EntityId e) const;
-    std::size_t live_entity_count() const;
+
+    /// Maintained incrementally: this is read on every document change by the
+    /// layer panel and must not walk the entity array.
+    std::size_t live_entity_count() const noexcept { return live_count_; }
+
+    /// Live entities on one layer. Maintained incrementally for the same reason
+    /// as live_entity_count(): the layer panel asks for it on every document
+    /// change, and walking five million entities to answer is not acceptable.
+    std::size_t layer_entity_count(LayerId l) const noexcept
+    {
+        return l < layer_live_.size() ? layer_live_[l] : 0;
+    }
+
+    /// Spatial index over the entities present when it was last built. Rebuilt
+    /// lazily and only when the document has grown or shrunk enough to be worth
+    /// it, so drawing one line does not repack five million parcels.
+    /// Entities from `indexed_upto()` onward are NOT in it — the caller scans that
+    /// short tail directly (piricad.md §10.5).
+    const SpatialIndex& spatial_index() const;
+
+    EntityId indexed_upto() const noexcept { return indexed_upto_; }
+
     Box2 extent() const;
     Box2 entity_extent(EntityId e) const;
 
@@ -143,6 +187,13 @@ private:
     PolylineStore poly_{};
     std::vector<Layer> layers_{};
     std::uint64_t revision_{0};
+    std::size_t live_count_{0};
+    std::vector<std::size_t> layer_live_{};
+
+    // A cache, not state: rebuilding it never changes what the document contains.
+    mutable std::unique_ptr<SpatialIndex> index_{};
+    mutable std::size_t indexed_live_{0};
+    mutable EntityId indexed_upto_{0};
 };
 
 } // namespace piricad::core

@@ -1,0 +1,8 @@
+# Silme, geri alma ve yineleme sonrası belgenin kesin hâli.
+KATMAN ad=CIZIM
+ÇİZGİ 0,0 10,0 20,0 30,0
+ÇİZGİ 0,10 10,10
+SİL nesneler=1
+GERİAL
+SİL nesneler=0 nesneler=3
+KATMAN ad=CIZIM kilitli=evet

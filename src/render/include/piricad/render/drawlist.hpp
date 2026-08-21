@@ -5,6 +5,7 @@
 // backend for the QRhi backend must not touch anything above this header.
 #pragma once
 
+#include "piricad/core/document.hpp"
 #include "piricad/core/units.hpp"
 
 #include <cstdint>
@@ -33,9 +34,15 @@ struct DrawList
     float preview_x0{0.0f}, preview_y0{0.0f};
     float preview_x1{0.0f}, preview_y1{0.0f};
 
+    /// Scratch buffer for the spatial index query. Lives here so its capacity
+    /// survives between frames and the draw loop allocates nothing (§10.4).
+    std::vector<core::EntityId> candidates;
+
     std::size_t vertex_count{0};
     std::size_t entity_count{0};
     std::size_t culled_count{0};
+    std::size_t indexed_count{0}; ///< candidates the index returned
+    std::size_t tail_count{0};    ///< entities scanned outside the index
 
     void clear();
 };

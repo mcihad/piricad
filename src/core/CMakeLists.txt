@@ -6,6 +6,7 @@ add_library(piricad_core STATIC
     src/document.cpp
     src/json.cpp
     src/log.cpp
+    src/spatial_index.cpp
     src/text.cpp
 )
 

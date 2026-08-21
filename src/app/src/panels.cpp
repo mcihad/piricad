@@ -101,13 +101,9 @@ void LayerPanel::refresh()
     tree_->blockSignals(true);
     tree_->clear();
 
-    const auto& doc  = controller_.document();
-    const auto& poly = doc.polylines();
-
-    std::vector<std::size_t> counts(doc.layers().size(), 0);
-    for (core::EntityId e = 0; e < poly.size(); ++e)
-        if (poly.alive[e] && poly.layer[e] < counts.size()) ++counts[poly.layer[e]];
-
+    // Counts come from the document, which maintains them incrementally. Walking
+    // the entity array here would put an O(n) pass on every document change.
+    const auto& doc            = controller_.document();
     const core::LayerId active = controller_.bus().active_layer();
 
     for (std::size_t i = 0; i < doc.layers().size(); ++i) {
@@ -126,7 +122,7 @@ void LayerPanel::refresh()
         item->setData(2, Qt::UserRole, l.locked);
         item->setTextAlignment(2, Qt::AlignCenter);
 
-        item->setText(3, QString::number(counts[i]));
+        item->setText(3, QString::number(doc.layer_entity_count(static_cast<core::LayerId>(i))));
         item->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
 
         if (static_cast<core::LayerId>(i) == active) {
@@ -213,24 +209,13 @@ void PropertyPanel::refresh()
     }
 
     if (const core::Layer* l = doc.layer(layer_)) {
-        const auto& poly     = doc.polylines();
-        std::size_t count    = 0;
-        std::size_t vertices = 0;
-        for (core::EntityId e = 0; e < poly.size(); ++e) {
-            if (poly.alive[e] && poly.layer[e] == layer_) {
-                ++count;
-                vertices += poly.count[e];
-            }
-        }
-
         addGroup(tr("Katman — %1").arg(QString::fromStdString(l->name)));
         addRow(tr("Görünür"), l->visible ? tr("evet") : tr("hayır"));
         addRow(tr("Kilitli"), l->locked ? tr("evet") : tr("hayır"));
         addRow(tr("Renk"),
                QStringLiteral("#%1").arg(l->style.rgba, 8, 16, QLatin1Char('0')).toUpper());
         addRow(tr("Çizgi kalınlığı"), QStringLiteral("%1 px").arg(double(l->style.width_px)));
-        addRow(tr("Nesne"), QString::number(count));
-        addRow(tr("Tepe noktası"), QString::number(vertices));
+        addRow(tr("Nesne"), QString::number(doc.layer_entity_count(layer_)));
     }
 
     addGroup(tr("Oturum"));

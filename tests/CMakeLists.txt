@@ -13,6 +13,9 @@ add_executable(piricad_tests
     unit/test_core.cpp
     unit/test_command.cpp
     unit/test_docs.cpp
+    unit/test_golden.cpp
+    unit/test_index.cpp
+    unit/test_jitter.cpp
     unit/test_proof.cpp
 )
 
@@ -21,6 +24,7 @@ add_executable(piricad_tests
 target_compile_definitions(piricad_tests PRIVATE
     PIRICAD_DOCS_DIR="${CMAKE_SOURCE_DIR}/docs"
     PIRICAD_JOURNAL_DIR="${CMAKE_SOURCE_DIR}/tests/journal"
+    PIRICAD_GOLDEN_DIR="${CMAKE_SOURCE_DIR}/tests/golden"
 )
 
 target_include_directories(piricad_tests PRIVATE support)
@@ -51,4 +55,36 @@ endforeach()
 
 if(NOT PIRICAD_GATES)
     message(FATAL_ERROR "No CI gate scripts found in ${CMAKE_SOURCE_DIR}/scripts")
+endif()
+
+# ---------------------------------------------------------------- benchmarks --
+# piricad.md §10.1 budgets as gates. Kept out of `ctest` by default because the
+# 5M-parcel fixture takes seconds and a baseline is machine-specific; CI runs it
+# as its own job. `make bench` is the local entry point.
+
+add_executable(piricad_bench
+    bench/main.cpp
+    bench/support.cpp
+    bench/bench_command.cpp
+    bench/bench_pending.cpp
+    bench/bench_render.cpp
+)
+
+target_include_directories(piricad_bench PRIVATE support bench)
+target_compile_definitions(piricad_bench PRIVATE
+    PIRICAD_BENCH_DIR="${CMAKE_SOURCE_DIR}/tests/bench"
+)
+target_link_libraries(piricad_bench PRIVATE
+    piricad_core
+    piricad_command
+    piricad_render
+    piricad_script
+    piricad_flags
+)
+set_target_properties(piricad_bench PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
+
+if(PIRICAD_BUILD_BENCH)
+    add_test(NAME bench COMMAND piricad_bench)
 endif()

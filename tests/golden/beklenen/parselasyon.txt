@@ -1,0 +1,73 @@
+crs TUREF/TM30
+katman-sayisi 4
+nesne-sayisi 18
+katman 0 gorunur=1 kilitli=0 renk=ff6c7686 nesne=0
+katman PARSEL gorunur=1 kilitli=0 renk=ff2e7d32 nesne=16
+katman YOL gorunur=1 kilitli=0 renk=ff5d6470 nesne=1
+katman KAPALI gorunur=0 kilitli=0 renk=ffa0a0a0 nesne=1
+nesne 0 katman=PARSEL tepe=2
+  485300000 4310200000
+  485330000 4310200000
+nesne 1 katman=PARSEL tepe=2
+  485330000 4310200000
+  485330000 4310230000
+nesne 2 katman=PARSEL tepe=2
+  485330000 4310230000
+  485300000 4310230000
+nesne 3 katman=PARSEL tepe=2
+  485300000 4310230000
+  485300000 4310200000
+nesne 4 katman=PARSEL tepe=2
+  485340000 4310200000
+  485370000 4310200000
+nesne 5 katman=PARSEL tepe=2
+  485370000 4310200000
+  485370000 4310230000
+nesne 6 katman=PARSEL tepe=2
+  485370000 4310230000
+  485340000 4310230000
+nesne 7 katman=PARSEL tepe=2
+  485340000 4310230000
+  485340000 4310200000
+nesne 8 katman=PARSEL tepe=2
+  485300000 4310240000
+  485330000 4310240000
+nesne 9 katman=PARSEL tepe=2
+  485330000 4310240000
+  485330000 4310270000
+nesne 10 katman=PARSEL tepe=2
+  485330000 4310270000
+  485300000 4310270000
+nesne 11 katman=PARSEL tepe=2
+  485300000 4310270000
+  485300000 4310240000
+nesne 12 katman=PARSEL tepe=2
+  485340000 4310240000
+  485370000 4310240000
+nesne 13 katman=PARSEL tepe=2
+  485370000 4310240000
+  485370000 4310270000
+nesne 14 katman=PARSEL tepe=2
+  485370000 4310270000
+  485340000 4310270000
+nesne 15 katman=PARSEL tepe=2
+  485340000 4310270000
+  485340000 4310240000
+nesne 16 katman=YOL tepe=2
+  485290000 4310235000
+  485380000 4310235000
+nesne 17 katman=KAPALI tepe=2
+  485290000 4310190000
+  485380000 4310190000
+kapsam 485290000 4310200000 485380000 4310270000
+icerik-ozeti 82361c1800b02788
+gunluk
+  {"seq":1,"cmd":"core.layer","args":{"ad":"PARSEL","renk":4281236786},"origin":"script","crs":"TUREF/TM30","katman":"PARSEL"}
+  {"seq":2,"cmd":"core.line","args":{"noktalar":[[485300000,4310200000],[485330000,4310200000],[485330000,4310230000],[485300000,4310230000],[485300000,4310200000]]},"origin":"script","crs":"TUREF/TM30","katman":"PARSEL"}
+  {"seq":3,"cmd":"core.line","args":{"noktalar":[[485340000,4310200000],[485370000,4310200000],[485370000,4310230000],[485340000,4310230000],[485340000,4310200000]]},"origin":"script","crs":"TUREF/TM30","katman":"PARSEL"}
+  {"seq":4,"cmd":"core.line","args":{"noktalar":[[485300000,4310240000],[485330000,4310240000],[485330000,4310270000],[485300000,4310270000],[485300000,4310240000]]},"origin":"script","crs":"TUREF/TM30","katman":"PARSEL"}
+  {"seq":5,"cmd":"core.line","args":{"noktalar":[[485340000,4310240000],[485370000,4310240000],[485370000,4310270000],[485340000,4310270000],[485340000,4310240000]]},"origin":"script","crs":"TUREF/TM30","katman":"PARSEL"}
+  {"seq":6,"cmd":"core.layer","args":{"ad":"YOL","renk":4284310640},"origin":"script","crs":"TUREF/TM30","katman":"YOL"}
+  {"seq":7,"cmd":"core.line","args":{"noktalar":[[485290000,4310235000],[485380000,4310235000]]},"origin":"script","crs":"TUREF/TM30","katman":"YOL"}
+  {"seq":8,"cmd":"core.layer","args":{"ad":"KAPALI","renk":4288716960,"gorunur":false},"origin":"script","crs":"TUREF/TM30","katman":"KAPALI"}
+  {"seq":9,"cmd":"core.line","args":{"noktalar":[[485290000,4310190000],[485380000,4310190000]]},"origin":"script","crs":"TUREF/TM30","katman":"KAPALI"}

@@ -106,15 +106,50 @@ make PRESET=release build
 ## Kullanışlı hedefler
 
 ```bash
-make help          # bütün hedefleri listeler
-make test          # testleri ve CI kapılarını çalıştırır
-make gates         # yalnız CI kapılarını çalıştırır
-make format        # kaynak biçimlendirmesini uygular
-make reference     # komut referansını yeniden üretir
-make docs          # belgeleri üretir ve denetler
-make clean         # derleme çıktısını siler
-make distclean     # bütün derleme ağacını siler
+make help            # bütün hedefleri listeler
+make test            # testleri ve CI kapılarını çalıştırır
+make gates           # yalnız CI kapılarını çalıştırır
+make bench           # performans bütçelerini ölçer
+make bench-baseline  # bu makinenin temel değerlerini kaydeder
+make format          # kaynak biçimlendirmesini uygular
+make reference       # komut referansını yeniden üretir
+make docs            # belgeleri üretir ve denetler
+make clean           # derleme çıktısını siler
+make distclean       # bütün derleme ağacını siler
 ```
+
+## Performans bütçelerini ölçmek
+
+```bash
+make bench
+```
+
+PiriCAD'in karşılamak zorunda olduğu hız hedefleri sabittir ve ölçülür. Örnek çıktı:
+
+```text
+senaryo                          ölçüm    bütçe      temel  durum
+------------------------------------------------------------------------------
+komut.betikten_gonderim          1.00 µs      10.00        —  tamam
+render.pan_zoom_5m                0.00 ms      16.00        —  tamam
+io.dwg_200mb_acilis                   —       3000        —  BEKLEMEDE  ...
+```
+
+İki ayrı denetim vardır ve karıştırılmamalıdır:
+
+- **Bütçe** — ürünün karşılamak zorunda olduğu mutlak hedef. Her zaman denetlenir.
+  Aşılırsa derleme kırılır ve bütçe, ölçüm geçsin diye gevşetilmez.
+- **Temel** — aynı makinede en son kaydedilen ölçüm. Yalnız regresyon içindir ve
+  yalnız aynı makinede kaydedilmişse denetlenir; başka bir makinenin değeri kodu
+  değil o makineyi ölçer.
+
+Kendi makinenizin temel değerlerini kaydetmek için:
+
+```bash
+make bench-baseline
+```
+
+`BEKLEMEDE` yazan satırlar henüz ölçülemeyen hedeflerdir; sebebi satırın sonunda
+yazar ve bu satırlar hiçbir zaman "geçti" saymaz.
 
 ## Bu sürümde eksik olanlar
 

@@ -17,7 +17,7 @@ CTEST   ?= ctest
 .DEFAULT_GOAL := help
 .PHONY: help setup build rebuild run run-script test bench check gates \
         format format-check tidy tidy-if-present iwyu-if-present doctor reference \
-        clean distclean install package asan headless app docs
+        clean distclean install package asan headless app docs bench-baseline
 
 ## ---------------------------------------------------------------- help ----
 
@@ -72,8 +72,13 @@ run-script: build ## Launch PiriCAD and run SCRIPT=<path> on startup
 test: build ## Run the test suite and the CI gates
 	$(CTEST) --test-dir $(BUILD) --output-on-failure
 
-bench: ## Run the performance budget gates (Phase 1)
-	@echo "bench: the §10.1 budgets are a Phase-1 deliverable — see .claude/test.md"
+bench: $(BUILD)/CMakeCache.txt ## Run the §10.1 performance budgets
+	@$(CMAKE) --build $(BUILD) --target piricad_bench --parallel $(JOBS) >/dev/null
+	@$(BIN)/piricad_bench
+
+bench-baseline: $(BUILD)/CMakeCache.txt ## Record this machine's baseline for the regression gate
+	@$(CMAKE) --build $(BUILD) --target piricad_bench --parallel $(JOBS) >/dev/null
+	@PIRICAD_BENCH_RECORD=1 $(BIN)/piricad_bench
 
 gates: ## Run every CI gate script
 	@fail=0; for g in scripts/ci-gate-*.sh; do bash "$$g" || fail=1; done; exit $$fail

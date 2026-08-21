@@ -1,0 +1,9 @@
+# Komut satırının bütün koordinat biçimleri. Kutupsal biçim std::cos/std::sin
+# kullanır; milimetre yuvarlaması platformlar arası libm farkını yutmalıdır.
+KATMAN ad=SINIR renk=4281944491
+ÇİZGİ 485320.150,4310220.400 @50,30 @100<45
+ÇİZGİ 485300,4310200 @(100*3),0 @(45.5+12.25),(80/2)
+ÇİZGİ 485400,4310400 @100<0 @100<90 @100<180 @100<270
+ÇİZGİ 485500,4310500 @100<30 @100<60 @100<120 @100<210 @100<330
+KATMAN ad=YOL renk=4284310640
+ÇİZGİ 485280.125,4310255.875 485420.875,4310255.125

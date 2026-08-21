@@ -12,10 +12,13 @@ void DrawList::clear()
         batch.ys.clear();
         batch.runs.clear();
     }
-    has_preview  = false;
-    vertex_count = 0;
-    entity_count = 0;
-    culled_count = 0;
+    candidates.clear();
+    has_preview   = false;
+    vertex_count  = 0;
+    entity_count  = 0;
+    culled_count  = 0;
+    indexed_count = 0;
+    tail_count    = 0;
 }
 
 } // namespace piricad::render
