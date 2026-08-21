@@ -20,8 +20,15 @@
 
   "features": {
     "gdal": {
-      "description": "Format I/O — PIRICAD_WITH_GDAL",
-      "dependencies": [{ "name": "gdal", "version>=": "3.9.0" }]
+      "$comment": "default-features off on purpose: the network drivers are what io.md P14 refuses, and every driver is parser attack surface /tests/fuzz does not cover. The runtime allow-list is cmake/PiriCADGdalDrivers.cmake.",
+      "description": "Vector format I/O (DXF, GeoPackage) — PIRICAD_WITH_GDAL. Linked; licence recorded in /NOTICE.",
+      "dependencies": [
+        {
+          "name": "gdal",
+          "version>=": "3.9.0",
+          "default-features": false
+        }
+      ]
     },
     "proj": {
       "description": "Coordinate transformation, TUREF/TM3 and geoid grids — PIRICAD_WITH_PROJ",

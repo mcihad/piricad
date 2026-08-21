@@ -9,7 +9,7 @@
 namespace piricad::app {
 
 Controller::Controller(QObject* parent)
-    : QObject(parent), bus_(document_, registry_, journal_, undo_),
+    : QObject(parent), bus_(document_, registry_, journal_, undo_), files_(bus_),
       runner_(bus_, script::Sandbox::Project)
 {
     command::register_builtin_commands(registry_);
@@ -172,6 +172,11 @@ void Controller::cancelInteractive()
     emit promptChanged(QString());
     settle();
     emit documentChanged();
+}
+
+QString Controller::currentFile() const
+{
+    return QString::fromStdString(files_.current_path());
 }
 
 QString Controller::activeLayerName() const

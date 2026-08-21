@@ -241,7 +241,13 @@ core::Result<DispatchResult> Bus::finish(Session& session)
     // journalled or undoable. A command that merely produced no geometry is NOT
     // this case — it still validates and still appears in the journal, because a
     // state change such as the active layer must survive a replay.
-    if (!read_only && ops == 0 && session.state() == SessionState::Cancelled) {
+    //
+    // ReadOnly commands are in this case too, and used not to be. Pressing ESC at
+    // the file dialog of AÇ or FARKLIKAYDET left `resolved()` empty, so the
+    // post-run validation below reported "'dosya' parametresi 1 değer istiyor" —
+    // a validation error for a user who simply changed their mind. Cancelling is
+    // not a failure, whatever the command does to the document.
+    if (ops == 0 && session.state() == SessionState::Cancelled) {
         result.mutated = false;
         result.message = "İptal edildi";
         if (on_command_finished) on_command_finished(result);

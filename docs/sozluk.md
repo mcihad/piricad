@@ -138,6 +138,27 @@ sıfırdan başlayan bir kimliği vardır.
 **Kapsam** — Çizimdeki görünür nesnelerin tamamını çevreleyen dikdörtgen. `YAKINLAŞ
 KAPSAM` görünümü buna sığdırır.
 
+**Proje dosyası** — PiriCAD'in kendi kayıt biçimi, uzantısı `.pcad`. Çizimi kayıpsız
+taşır: geometri, katman, stil, nesne anahtarları ve proje ayarları.
+Bkz. [PiriCAD proje dosyası](veri/proje-dosyasi.md).
+
+**Nesne anahtarı** — Bir nesnenin kalıcı kimliği. Kaydetmeden, yeniden yüklemeden ve
+sıralamadan etkilenmez, silinse bile başka bir nesneye verilmez. "Bu parsel hangisiydi?"
+sorusunun cevabı budur.
+
+**İçe aktarma** — Dış bir veri dosyasının var olan çizime eklenmesi. Açmaktan farkı,
+ekrandaki çizimin yerine geçmemesidir. Bkz. [Dış veri alma](komutlar/import.md).
+
+**Dışa aktarma** — Çizimin dış bir veri biçimine yazılması. Kayıplıdır: öznitelik ve stil
+aktarılmaz. Bkz. [Dış biçime yazma](komutlar/export.md).
+
+**Sürücü** — Bir dış veri biçimini okuyup yazan bileşen; `DXF` ve `GPKG` gibi bir adı
+vardır. PiriCAD yalnızca izin verilen sürücüleri açar.
+Bkz. [Dış veri biçimleri](veri/dis-formatlar.md).
+
+**`.prj` dosyası** — Bir veri dosyasının koordinat sistemini yanında taşıyan metin
+dosyası. DXF'in kendi içinde koordinat sistemi için yeri olmadığından gereklidir.
+
 **Şeffaf komut** — Başka bir komut çalışırken araya girebilen komut. `YAKINLAŞ` böyledir.
 
 **Salt okunur komut** — Çizimi değiştirmeyen, bu yüzden geri alma yığınına girmeyen

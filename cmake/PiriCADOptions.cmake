@@ -8,7 +8,23 @@ option(PIRICAD_BUILD_APP     "Build the Qt application shell" ON)
 option(PIRICAD_BUILD_TESTS   "Build the test suite"           ON)
 option(PIRICAD_BUILD_BENCH   "Build the benchmark suite"      OFF)
 
-option(PIRICAD_WITH_GDAL     "Enable GDAL/OGR format support"        OFF)
+# GDAL follows the PROJ precedent above, and for the reason CLAUDE.md Article 8.2
+# gives: "defaulting ON once found". A machine that has GDAL must not silently
+# build a PiriCAD that cannot open a DXF, because the failure mode is a user who
+# thinks the format is unsupported rather than uninstalled. Absent, it stays OFF
+# and İÇEAKTAR/DIŞAAKTAR say exactly which package would change that.
+find_package(GDAL 3.8 QUIET)
+if(NOT GDAL_FOUND)
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(PIRICAD_GDAL_PROBE QUIET gdal>=3.8)
+    endif()
+endif()
+if(GDAL_FOUND OR PIRICAD_GDAL_PROBE_FOUND)
+    option(PIRICAD_WITH_GDAL "Enable GDAL/OGR format support" ON)
+else()
+    option(PIRICAD_WITH_GDAL "Enable GDAL/OGR format support" OFF)
+endif()
 # PROJ is the one dependency the product cannot fake: §12 opens with TUREF/TM3.
 # Default to ON when it is installed, so a machine that has it never silently
 # builds a PiriCAD that cannot transform a coordinate.

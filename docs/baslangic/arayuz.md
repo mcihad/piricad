@@ -34,7 +34,7 @@ Bu ayrım AutoCAD ve QGIS'in ortak düzenidir.
 
 | Menü | İçerik |
 |---|---|
-| **Dosya** | Yeni, Aç, Kaydet, Dışa Aktar, Yazdır (Faz 1–2), Betik Çalıştır… (**Ctrl+R**), Çıkış |
+| **Dosya** | Aç (**Ctrl+O**), Kaydet (**Ctrl+S**), Farklı Kaydet… (**Ctrl+Shift+S**), İçe Aktar…, Dışa Aktar…, Betik Çalıştır… (**Ctrl+R**), Çıkış; Yeni ve Yazdır sonraki fazlarda |
 | **Düzen** | Geri Al (**Ctrl+Z**), Yinele (**Ctrl+Shift+Z**), Sil |
 | **Çizim** | Çizgi, Çoklu Çizgi, Yay, Daire, Dikdörtgen, Nokta, Metin, Katman, Katman Yöneticisi |
 | **Görünüm** | Kapsama Yakınlaş (**Ctrl+0**), Yakınlaştır, Uzaklaştır, Araç Çubukları, Paneller, Koyu Tema, Geliştirici Bilgisi (**F12**) |
@@ -53,9 +53,19 @@ Menü çubuğunun altında beş araç çubuğu vardır. Hepsi taşınabilir ve
 
 | Düğme | Komut | Durum |
 |---|---|---|
-| Yeni, Aç, Kaydet | — | Faz 1'de gelecek, şimdilik pasif |
-| Dışa Aktar, Yazdır | — | Faz 2'de gelecek, şimdilik pasif |
+| Aç | `AÇ` | **Ctrl+O** |
+| Kaydet | `KAYDET` | **Ctrl+S** — çizim henüz bir dosyaya bağlı değilse Farklı Kaydet penceresini açar |
+| Farklı Kaydet | `FARKLIKAYDET` | **Ctrl+Shift+S**, menüde |
+| İçe Aktar | `İÇEAKTAR` | DXF ve GeoPackage okur |
+| Dışa Aktar | `DIŞAAKTAR` | DXF ve GeoPackage yazar |
 | Betik Çalıştır | `BETİK` | **Ctrl+R** |
+| Yeni, Yazdır | — | Faz 1–2'de gelecek, şimdilik pasif |
+
+Dosya seçme pencereleri yalnızca komutun argümanını toplar: aynı işi komut
+satırından ve betikten de yapabilirsiniz, ve üçü de aynı komuta gider.
+Bkz. [Proje dosyası açma](../komutlar/open.md),
+[Çizimi kaydetme](../komutlar/save.md),
+[Dış veri alma](../komutlar/import.md).
 
 ### Düzen
 

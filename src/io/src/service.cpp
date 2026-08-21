@@ -1,0 +1,212 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "piricad/io/service.hpp"
+
+#include "piricad/io/project.hpp"
+#include "piricad/io/vector.hpp"
+
+#include <string>
+#include <utility>
+
+namespace piricad::io {
+namespace {
+
+using core::err;
+using core::ErrorCode;
+
+std::string join_warnings(const std::vector<Warning>& warnings)
+{
+    std::string out;
+    for (const Warning& w : warnings) {
+        out += "\n  uyarı: ";
+        out += w.message;
+    }
+    return out;
+}
+
+std::string join_notes(const std::vector<std::string>& notes)
+{
+    std::string out;
+    for (const std::string& n : notes) {
+        out += "\n  not: ";
+        out += n;
+    }
+    return out;
+}
+
+/// The coordinate system a user can actually set.
+///
+/// A NOTE ON A DUPLICATION THIS MODULE DID NOT CREATE. model.md R36/R37 put the
+/// CRS on the document, and `core::Document::crs()` is where `content_hash()`
+/// folds it from. But the only CRS a client can write today is the project-scope
+/// setting `core.crs.id`: `Transaction::set_crs` exists and no command calls it,
+/// so `Document::crs()` is stuck at its "TUREF/TM30" default in every drawing the
+/// application can produce.
+///
+/// The project file carries BOTH faithfully, so nothing is lost either way. For
+/// an EXPORT there has to be one answer, and it is the setting — that is the
+/// value the user set, the value model.md R40 calls part of the exported legal
+/// document, and the value AYAR journals. When the two are unified this function
+/// becomes `bus.document().crs().id()` and nothing else changes.
+std::string effective_crs(const command::Bus& bus)
+{
+    const std::string setting(bus.project_settings().get("core.crs.id").as_text());
+    if (!setting.empty()) return setting;
+    return bus.document().crs().id();
+}
+
+} // namespace
+
+FileService::FileService(command::Bus& bus) : bus_(bus)
+{
+    // `request` is captured BY VALUE into the coroutine below for the reason
+    // `project.hpp` gives: a coroutine does not copy its reference parameters.
+    bus_.on_file_request =
+        [this](const command::FileRequest& request) -> command::Task<core::Result<std::string>> {
+        return this->handle(request);
+    };
+
+    bus_.on_current_file = [this] { return current_path_; };
+}
+
+FileService::~FileService()
+{
+    // Clearing beats leaving a dangling `this` behind: a Bus that outlives its
+    // file service must report "no file engine", not call into freed memory.
+    bus_.on_file_request = nullptr;
+    bus_.on_current_file = nullptr;
+    stop_.request_stop();
+}
+
+void FileService::request_stop()
+{
+    stop_.request_stop();
+    stop_ = std::stop_source{}; // ready for the next operation
+}
+
+command::Task<core::Result<std::string>> FileService::handle(command::FileRequest request)
+{
+    switch (request.verb) {
+    case command::FileRequest::Verb::Open: co_return co_await open(std::move(request.path));
+
+    case command::FileRequest::Verb::Save:
+    case command::FileRequest::Verb::SaveAs: {
+        const bool as = request.verb == command::FileRequest::Verb::SaveAs;
+        co_return save(request.path, as);
+    }
+
+    case command::FileRequest::Verb::Import:
+        co_return co_await import_into(request.tx, std::move(request.path),
+                                       std::move(request.format));
+
+    case command::FileRequest::Verb::Export:
+        co_return co_await export_out(std::move(request.path), std::move(request.format));
+    }
+    co_return err(ErrorCode::Internal, "Bilinmeyen dosya işlemi.");
+}
+
+// -------------------------------------------------------------------- AÇ ----
+
+command::Task<core::Result<std::string>> FileService::open(std::string path)
+{
+    // Read into a FRESH document and a FRESH settings store, and put them in
+    // place only once the whole file has been read. A failed open therefore costs
+    // the user nothing: the drawing on screen is untouched until the last byte is
+    // in (io.md P11).
+    core::Document loaded;
+    core::Settings loaded_settings{core::builtin_settings(), core::SettingScopeMask::Project};
+
+    // Every edit the reader makes goes through this transaction, so a failure
+    // half-way unwinds cleanly rather than leaving a half-built document behind
+    // (Article 5.9, io.md R17).
+    command::Transaction tx(loaded, "Proje dosyası okuma");
+
+    auto report = co_await read_project(tx, path, loaded_settings, stop_.get_token());
+    if (!report) {
+        tx.rollback();
+        co_return report.error();
+    }
+
+    bus_.document()         = std::move(loaded);
+    bus_.project_settings() = std::move(loaded_settings);
+    current_path_           = std::move(path);
+
+    // Opening is not undoable and the stack's slots belong to a document that no
+    // longer exists, so it goes. This is the same thing every CAD and GIS
+    // application the users know does on File > Open.
+    bus_.undo_stack().clear();
+    bus_.set_active_layer(0);
+
+    if (bus_.on_document_changed) bus_.on_document_changed();
+
+    const ProjectReport& r = report.value();
+    co_return "Açıldı: " + current_path_ + "  (" + std::to_string(r.entities) + " nesne, " +
+        std::to_string(r.layers) + " katman, " + std::to_string(r.vertices) + " nokta, biçim " +
+        std::to_string(r.format_version) + ")" + join_warnings(r.warnings);
+}
+
+// -------------------------------------------- KAYDET / FARKLIKAYDET ---------
+
+core::Result<std::string> FileService::save(const std::string& path, bool save_as)
+{
+    if (path.empty())
+        return err(ErrorCode::InvalidArgument,
+                   "Bu çizim henüz bir dosyaya bağlı değil. FARKLIKAYDET ile bir ad verin.");
+
+    auto report = save_project(bus_.document(), bus_.project_settings(), path);
+    if (!report) return report.error();
+
+    current_path_ = path;
+
+    const ProjectReport& r = report.value();
+    return std::string(save_as ? "Farklı kaydedildi: " : "Kaydedildi: ") + path + "  (" +
+           std::to_string(r.entities) + " nesne, " + std::to_string(r.bytes) + " bayt)";
+}
+
+// -------------------------------------------------------------- İÇEAKTAR ----
+
+command::Task<core::Result<std::string>>
+FileService::import_into(command::Transaction* tx, std::string path, std::string format)
+{
+    if (!tx)
+        co_return err(ErrorCode::Internal,
+                      "İçe aktarma bir işlem (transaction) olmadan istendi; bu bir program "
+                      "hatasıdır.");
+
+    if (is_project_path(path))
+        co_return err(ErrorCode::InvalidArgument,
+                      "'" + path +
+                          "' bir PiriCAD proje dosyası. Proje dosyası açılır, içe aktarılmaz: "
+                          "AÇ komutunu kullanın.");
+
+    auto report = co_await import_vector(*tx, std::move(path), std::move(format),
+                                         effective_crs(bus_), stop_.get_token());
+    if (!report) co_return report.error();
+
+    const VectorReport& r = report.value();
+    co_return "İçe aktarıldı: " + std::to_string(r.entities) + " nesne, " +
+        std::to_string(r.layers) + " katman (" + r.driver + ", " + r.crs + ")" +
+        join_notes(r.notes);
+}
+
+// ------------------------------------------------------------- DIŞAAKTAR ----
+
+command::Task<core::Result<std::string>> FileService::export_out(std::string path,
+                                                                 std::string format)
+{
+    if (is_project_path(path))
+        co_return err(ErrorCode::InvalidArgument,
+                      "'" + path +
+                          "' bir PiriCAD proje dosyası uzantısı taşıyor. Proje kaydetmek için "
+                          "FARKLIKAYDET kullanın.");
+
+    const std::string target = path;
+    auto report = co_await export_vector(bus_.document(), std::move(path), std::move(format),
+                                         effective_crs(bus_), stop_.get_token());
+    if (!report) co_return report.error();
+
+    const VectorReport& r = report.value();
+    co_return "Dışa aktarıldı: " + target + "  (" + std::to_string(r.features) + " öğe, " +
+        std::to_string(r.layers) + " katman, " + r.driver + ")" + join_notes(r.notes);
+}
+
+} // namespace piricad::io

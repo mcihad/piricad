@@ -24,6 +24,31 @@ Currently linked
                           relinking right is preserved. Qt Charts and
                           Qt DataVisualization are GPLv3-only and are NOT used.
 
+  GDAL/OGR                MIT (X11) + others    >= 3.8   (PIRICAD_WITH_GDAL)
+                          Vector format I/O for /src/io: DXF and GeoPackage
+                          today, from the allow-list in
+                          cmake/PiriCADGdalDrivers.cmake.
+
+                          LICENCE FINDING, from the copyright file of the linked
+                          build (GDAL 3.12.2, Debian libgdal-dev): the core is
+                          MIT/X11 ("Expat"). The tree additionally carries
+                          BSD-2/3-Clause, Apache-2.0, BSL-1.0, MPL-2.0, ISC,
+                          Info-ZIP, several HPND variants, public-domain files,
+                          some LGPL-2+ files, and two GPL-3+ files carrying the
+                          Bison exception. Every one of those is GPLv3-compatible.
+
+                          No GPLv2-ONLY component was found, which is the finding
+                          that matters: CLAUDE.md 5.5 and 2.1 refuse a GPLv2-only
+                          dependency outright, because Apache-2.0 components this
+                          project already depends on are incompatible with it.
+
+                          GDAL is dynamically linked. Its own third-party
+                          components (PROJ, libgeotiff, libtiff, GEOS, SQLite,
+                          expat, zlib, libjpeg, libpng, curl) are the
+                          distribution's, and their licences are recorded in that
+                          package rather than restated here; the SBOM resolves
+                          them transitively.
+
 Pinned by commit, built from source
 -----------------------------------
 
@@ -93,7 +118,6 @@ Each of these is gated behind a PIRICAD_WITH_<NAME> CMake option that defaults t
 OFF (CLAUDE.md Article 8.2). The licence column records the compatibility finding;
 the exact version is pinned in vcpkg.json when the option is first enabled.
 
-  GDAL/OGR                MIT                   format I/O
   PROJ                    MIT                   coordinate transformation
   GEOS                    LGPL 2.1              overlay operations
   CGAL                    GPLv3+                exact arithmetic, straight skeleton

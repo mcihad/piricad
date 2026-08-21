@@ -34,6 +34,35 @@ struct Invocation
     Origin origin{Origin::Test};
 };
 
+/// One file operation, asked for by a file command and carried out by /src/io.
+///
+/// The seam exists for the reason `on_run_script` exists: Article 3.2 lets io
+/// depend on command and never the reverse, but io.md R4 wants every import and
+/// export to be a registered command, and the registry — with the CLI help, the
+/// AI schema and `piricad_docgen` behind it — lives here. So the `CommandSpec`
+/// and the body live in `commands/file.cpp`, and the work arrives through
+/// `Bus::on_file_request`, which `io::FileService` installs. `Category::File` was
+/// reserved in `spec.hpp` from the start for exactly these commands.
+struct FileRequest
+{
+    enum class Verb : std::uint8_t {
+        Open,   ///< replace the document with a native project file
+        Save,   ///< write the native project file the document belongs to
+        SaveAs, ///< write it somewhere else and belong there from now on
+        Import, ///< merge an external dataset into the current document
+        Export, ///< write the current document out in an external format
+    };
+
+    Verb verb{Verb::Open};
+    std::string path;   ///< empty on Save when the document already has a path
+    std::string format; ///< driver id for Import/Export; empty = infer from the path
+
+    /// The calling command's own transaction, so an import is ONE undo step and
+    /// rolls back whole (io.md R17). Null for the verbs that do not mutate the
+    /// document through a transaction.
+    Transaction* tx{nullptr};
+};
+
 struct DispatchResult
 {
     std::string command_id;
@@ -142,6 +171,18 @@ public:
     /// Installed by the script layer. Keeps the dependency direction intact:
     /// script depends on command, never the reverse (Constitution Article 3).
     std::function<core::Status(const std::string& path)> on_run_script;
+
+    /// Installed by `io::FileService`, for the same reason and in the same shape.
+    /// Returns the Turkish line the command echoes, or the error the user sees.
+    /// Unset means no file engine is attached, and the file commands say so
+    /// rather than pretending the save happened.
+    std::function<Task<core::Result<std::string>>(const FileRequest&)> on_file_request;
+
+    /// Asked by `core.saveas` and `core.export` before they build their request:
+    /// the file the document currently belongs to, so the transcript and the GUI
+    /// dialog can start where the user last was. NOT document state (model.md
+    /// R43) — never hashed, never journalled, never undoable.
+    std::function<std::string()> on_current_file;
 
     void echo(std::string_view message) const;
 

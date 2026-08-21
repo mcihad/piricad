@@ -13,6 +13,7 @@
 #include "piricad/command/session.hpp"
 #include "piricad/command/transaction.hpp"
 #include "piricad/core/document.hpp"
+#include "piricad/io/service.hpp"
 #include "piricad/script/json_runner.hpp"
 
 #include <QObject>
@@ -55,6 +56,12 @@ public:
 
     script::JsonRunner& scriptRunner() noexcept { return runner_; }
 
+    /// The file the drawing currently belongs to, or empty when it has never been
+    /// saved. Read by the window title and by the Save dialog's starting folder.
+    /// NOT document state: never hashed, never journalled, never undoable
+    /// (.claude/model.md R43).
+    QString currentFile() const;
+
     QString activeLayerName() const;
 
 signals:
@@ -74,6 +81,11 @@ private:
     command::Journal journal_;
     command::UndoStack undo_;
     command::Bus bus_;
+
+    // Installs Bus::on_file_request, exactly as `runner_` installs
+    // Bus::on_run_script. Declared after `bus_` so it is constructed after it and
+    // destroyed before it — a file service must never outlive the bus it points at.
+    io::FileService files_;
     script::JsonRunner runner_;
 
     std::unique_ptr<command::Session> session_;

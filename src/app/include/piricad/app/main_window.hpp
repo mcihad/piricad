@@ -64,6 +64,14 @@ private slots:
 
     void showCommandReference();
     void openScript();
+
+    // The five file actions. Each one collects a path and dispatches the SAME
+    // command a user could type; the dialog is not the feature (Article 1.2).
+    void openProject();
+    void saveProject();
+    void saveProjectAs();
+    void importData();
+    void exportData();
     void showAbout();
     void toggleTheme(bool dark);
     void showCommandLine(bool visible);
@@ -83,6 +91,15 @@ private:
     /// client of the command bus and gets no private path (CLAUDE.md Article 1).
     QAction* commandAction(Glyph glyph, const QString& text, const QString& line,
                            const QString& tip, const QKeySequence& shortcut = {});
+
+    /// The file dialog filter, generated from the io module's driver allow-list.
+    /// There is no second list of formats to keep in step (CLAUDE.md 5.10 in
+    /// spirit): adding a driver in /cmake changes this dialog too.
+    QString externalFormatFilter(bool for_writing) const;
+
+    /// Puts the current project file in the title bar, so a user always knows
+    /// which drawing they are about to overwrite.
+    void refreshWindowTitle();
 
     void refreshLayerCombo();
     /// A tabified dock shows its name on the tab, so its own title bar would say
@@ -145,11 +162,15 @@ private:
     QAction* actRedo_{nullptr};
     QAction* actScript_{nullptr};
 
-    // ---- sonraki fazlarda gelecek eylemler, pasif ----
-    QAction* actNew_{nullptr};
+    // ---- dosya ----
     QAction* actOpen_{nullptr};
     QAction* actSave_{nullptr};
+    QAction* actSaveAs_{nullptr};
+    QAction* actImport_{nullptr};
     QAction* actExport_{nullptr};
+
+    // ---- sonraki fazlarda gelecek eylemler, pasif ----
+    QAction* actNew_{nullptr};
     QAction* actPrint_{nullptr};
     QAction* actPolyline_{nullptr};
     QAction* actArc_{nullptr};
