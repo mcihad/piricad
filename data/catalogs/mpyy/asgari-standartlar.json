@@ -1,0 +1,1334 @@
+{
+  "schema_version": 1,
+  "package_version": "0.2.0",
+  "id": "mpyy-asgari-standartlar",
+  "source": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 FARKLI NÜFUS GRUPLARINDA ASGARİ SOSYAL VE TEKNİK ALTYAPI ALANLARINA İLİŞKİN STANDARTLAR VE ASGARİ ALAN BÜYÜKLÜKLERİ TABLOSU (RG-17/5/2017-30069)",
+  "published": "2017-05-17",
+  "licence": "resmi-mevzuat-metni",
+  "aciklama": "MPYY EK-2 tablosu: nüfus gruplarına göre asgari sosyal ve teknik altyapı alanı standartları. TAKS/KAKS komşusu mevzuat değerleridir ve C++'a giremez (CLAUDE.md 5.13). m²/kişi değerleri binde tam sayı olarak saklanır (0.5 -> 500); kayan nokta saklanmaz.",
+  "kapsam": {
+    "durum": "tablo-cikarildi-uzman-onayi-bekliyor",
+    "iceren": [
+      "33 altyapı kalemi, 4 nüfus grubu.",
+      "Kaynak metin her değerin yanında ('m2_kisi_metin', 'asgari_alan_metin') saklanır; çevrilmiş değer denetlenebilir.",
+      "Tablonun 13 maddelik açıklama bloğu birebir."
+    ],
+    "eksikler": [
+      "'Ünit başına (110) m²', 'Yatak başına (130) m²' gibi birim bağımlı hücreler sayıya çevrilmemiştir; ham metin olarak durur ve satır 'belirsiz' işaretlidir.",
+      "Kaynak tabloda '150.001 - 500.000' ile '501.000 +' grupları arasında 500.001-500.999 aralığı tanımsızdır. Bu kaynağın kendi yazımıdır, düzeltilmemiştir.",
+      "'belirsiz' işaretli 6 kalem vardır."
+    ],
+    "onay": "BEKLİYOR",
+    "sonraki_surum": "0.3.0 — birim bağımlı hücrelerin uzman onaylı çevirisi."
+  },
+  "nufus_gruplari": [
+    {
+      "id": "nufus-0-75-000",
+      "etiket": "0 - 75.000"
+    },
+    {
+      "id": "nufus-75-001-150-000",
+      "etiket": "75.001- 150.000"
+    },
+    {
+      "id": "nufus-150-001-500-000",
+      "etiket": "150.001 - 500.000"
+    },
+    {
+      "id": "nufus-501-000",
+      "etiket": "501.000 +"
+    }
+  ],
+  "kalemler": [
+    {
+      "id": "ek2-anaokulu",
+      "ad": "Anaokulu",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "EĞİTİM TESİSLERİ ALANI",
+      "satir": 5,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "0.5",
+          "m2_kisi_binde": 500,
+          "asgari_alan_metin": "1.500-3.000",
+          "asgari_alan_m2_en_az": 1500,
+          "asgari_alan_m2_en_cok": 3000
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "0.5",
+          "m2_kisi_binde": 500,
+          "asgari_alan_metin": "1.500-3.000",
+          "asgari_alan_m2_en_az": 1500,
+          "asgari_alan_m2_en_cok": 3000
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "0.6",
+          "m2_kisi_binde": 600,
+          "asgari_alan_metin": "1.500-3.000",
+          "asgari_alan_m2_en_az": 1500,
+          "asgari_alan_m2_en_cok": 3000
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "0.6",
+          "m2_kisi_binde": 600,
+          "asgari_alan_metin": "2.000-4.000",
+          "asgari_alan_m2_en_az": 2000,
+          "asgari_alan_m2_en_cok": 4000
+        }
+      ]
+    },
+    {
+      "id": "ek2-ilkokul",
+      "ad": "İlkokul",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "EĞİTİM TESİSLERİ ALANI",
+      "satir": 6,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "asgari_alan_metin": "5.000-8.000",
+          "asgari_alan_m2_en_az": 5000,
+          "asgari_alan_m2_en_cok": 8000
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "asgari_alan_metin": "5.000-8.000",
+          "asgari_alan_m2_en_az": 5000,
+          "asgari_alan_m2_en_cok": 8000
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "asgari_alan_metin": "5.000-8.000",
+          "asgari_alan_m2_en_az": 5000,
+          "asgari_alan_m2_en_cok": 8000
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "asgari_alan_metin": "5.000-8.000",
+          "asgari_alan_m2_en_az": 5000,
+          "asgari_alan_m2_en_cok": 8000
+        }
+      ]
+    },
+    {
+      "id": "ek2-ortaokul",
+      "ad": "Ortaokul",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "EĞİTİM TESİSLERİ ALANI",
+      "satir": 7,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "asgari_alan_metin": "6.000-10.000",
+          "asgari_alan_m2_en_az": 6000,
+          "asgari_alan_m2_en_cok": 10000
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "asgari_alan_metin": "6.000-10.000",
+          "asgari_alan_m2_en_az": 6000,
+          "asgari_alan_m2_en_cok": 10000
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "asgari_alan_metin": "6.000-10.000",
+          "asgari_alan_m2_en_az": 6000,
+          "asgari_alan_m2_en_cok": 10000
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "asgari_alan_metin": "6.000-10.000",
+          "asgari_alan_m2_en_az": 6000,
+          "asgari_alan_m2_en_cok": 10000
+        }
+      ]
+    },
+    {
+      "id": "ek2-gunduzlu-lise",
+      "ad": "Gündüzlü Lise",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "EĞİTİM TESİSLERİ ALANI",
+      "satir": 8,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "asgari_alan_metin": "6.000-10.000",
+          "asgari_alan_m2_en_az": 6000,
+          "asgari_alan_m2_en_cok": 10000
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "asgari_alan_metin": "6.000-10.000",
+          "asgari_alan_m2_en_az": 6000,
+          "asgari_alan_m2_en_cok": 10000
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "2.00",
+          "m2_kisi_binde": 2000,
+          "asgari_alan_metin": "6.000-10.000",
+          "asgari_alan_m2_en_az": 6000,
+          "asgari_alan_m2_en_cok": 10000
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "2.00",
+          "m2_kisi_binde": 2000,
+          "asgari_alan_metin": "6.000-10.000",
+          "asgari_alan_m2_en_az": 6000,
+          "asgari_alan_m2_en_cok": 10000
+        }
+      ]
+    },
+    {
+      "id": "ek2-yatili-lise",
+      "ad": "Yatılı Lise",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "EĞİTİM TESİSLERİ ALANI",
+      "satir": 9,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "m2_kisi_birlesik_hucre": "D8",
+          "asgari_alan_metin": "10.000-15.000",
+          "asgari_alan_m2_en_az": 10000,
+          "asgari_alan_m2_en_cok": 15000
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "m2_kisi_birlesik_hucre": "F8",
+          "asgari_alan_metin": "10.000-15.000",
+          "asgari_alan_m2_en_az": 10000,
+          "asgari_alan_m2_en_cok": 15000
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "2.00",
+          "m2_kisi_binde": 2000,
+          "m2_kisi_birlesik_hucre": "H8",
+          "asgari_alan_metin": "10.000-15.000",
+          "asgari_alan_m2_en_az": 10000,
+          "asgari_alan_m2_en_cok": 15000
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "2.00",
+          "m2_kisi_binde": 2000,
+          "m2_kisi_birlesik_hucre": "J8",
+          "asgari_alan_metin": "10.000-15.000",
+          "asgari_alan_m2_en_az": 10000,
+          "asgari_alan_m2_en_cok": 15000
+        }
+      ]
+    },
+    {
+      "id": "ek2-endustri-meslek-lisesi-cok-programli-lise",
+      "ad": "Endüstri Meslek Lisesi, Çok Programlı Lise",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "EĞİTİM TESİSLERİ ALANI",
+      "satir": 10,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "m2_kisi_birlesik_hucre": "D8",
+          "asgari_alan_metin": "10.000-25.000",
+          "asgari_alan_m2_en_az": 10000,
+          "asgari_alan_m2_en_cok": 25000
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "m2_kisi_birlesik_hucre": "F8",
+          "asgari_alan_metin": "10.000-25.000",
+          "asgari_alan_m2_en_az": 10000,
+          "asgari_alan_m2_en_cok": 25000
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "2.00",
+          "m2_kisi_binde": 2000,
+          "m2_kisi_birlesik_hucre": "H8",
+          "asgari_alan_metin": "10.000-25.000",
+          "asgari_alan_m2_en_az": 10000,
+          "asgari_alan_m2_en_cok": 25000
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "2.00",
+          "m2_kisi_binde": 2000,
+          "m2_kisi_birlesik_hucre": "J8",
+          "asgari_alan_metin": "10.000-25.000",
+          "asgari_alan_m2_en_az": 10000,
+          "asgari_alan_m2_en_cok": 25000
+        }
+      ]
+    },
+    {
+      "id": "ek2-ozel-egitim-rehabilitasyon-ve-rehberlik-merkezleri",
+      "ad": "Özel Eğitim, Rehabilitasyon ve Rehberlik Merkezleri",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "EĞİTİM TESİSLERİ ALANI",
+      "satir": 11,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "m2_kisi_birlesik_hucre": "D8",
+          "asgari_alan_metin": "2.000-4.000",
+          "asgari_alan_m2_en_az": 2000,
+          "asgari_alan_m2_en_cok": 4000
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "m2_kisi_birlesik_hucre": "F8",
+          "asgari_alan_metin": "2.000-4.000",
+          "asgari_alan_m2_en_az": 2000,
+          "asgari_alan_m2_en_cok": 4000
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "2.00",
+          "m2_kisi_binde": 2000,
+          "m2_kisi_birlesik_hucre": "H8",
+          "asgari_alan_metin": "2.000-4.000",
+          "asgari_alan_m2_en_az": 2000,
+          "asgari_alan_m2_en_cok": 4000
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "2.00",
+          "m2_kisi_binde": 2000,
+          "m2_kisi_birlesik_hucre": "J8",
+          "asgari_alan_metin": "2.000-4.000",
+          "asgari_alan_m2_en_az": 2000,
+          "asgari_alan_m2_en_cok": 4000
+        }
+      ]
+    },
+    {
+      "id": "ek2-halk-egitim-merkezi-olgunlasma-enstitusu",
+      "ad": "Halk Eğitim Merkezi Olgunlaşma Enstitüsü",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "EĞİTİM TESİSLERİ ALANI",
+      "satir": 12,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "m2_kisi_birlesik_hucre": "D8",
+          "asgari_alan_metin": "3.000-5.000",
+          "asgari_alan_m2_en_az": 3000,
+          "asgari_alan_m2_en_cok": 5000
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000,
+          "m2_kisi_birlesik_hucre": "F8",
+          "asgari_alan_metin": "3.000-5.000",
+          "asgari_alan_m2_en_az": 3000,
+          "asgari_alan_m2_en_cok": 5000
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "2.00",
+          "m2_kisi_binde": 2000,
+          "m2_kisi_birlesik_hucre": "H8",
+          "asgari_alan_metin": "3.000-5.000",
+          "asgari_alan_m2_en_az": 3000,
+          "asgari_alan_m2_en_cok": 5000
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "2.00",
+          "m2_kisi_binde": 2000,
+          "m2_kisi_birlesik_hucre": "J8",
+          "asgari_alan_metin": "3.000-5.000",
+          "asgari_alan_m2_en_az": 3000,
+          "asgari_alan_m2_en_cok": 5000
+        }
+      ]
+    },
+    {
+      "id": "ek2-cocuk-bahcesi",
+      "ad": "Çocuk Bahçesi",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "AÇIK VE YEŞİL ALANLAR",
+      "ara_grup": "İLÇE SINIRLARI DAHİLİNDE YAPILAN PLANLAMALARDA",
+      "satir": 13,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000
+        }
+      ]
+    },
+    {
+      "id": "ek2-park",
+      "ad": "Park",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "AÇIK VE YEŞİL ALANLAR",
+      "ara_grup": "İLÇE SINIRLARI DAHİLİNDE YAPILAN PLANLAMALARDA",
+      "satir": 14,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "D13"
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "F13"
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "H13"
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "J13"
+        }
+      ]
+    },
+    {
+      "id": "ek2-meydan",
+      "ad": "Meydan",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "AÇIK VE YEŞİL ALANLAR",
+      "ara_grup": "İLÇE SINIRLARI DAHİLİNDE YAPILAN PLANLAMALARDA",
+      "satir": 15,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "D13"
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "F13"
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "H13"
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "J13"
+        }
+      ]
+    },
+    {
+      "id": "ek2-semt-spor-alani",
+      "ad": "Semt Spor Alanı",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "AÇIK VE YEŞİL ALANLAR",
+      "ara_grup": "İLÇE SINIRLARI DAHİLİNDE YAPILAN PLANLAMALARDA",
+      "satir": 16,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "D13"
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "F13"
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "H13"
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "J13"
+        }
+      ]
+    },
+    {
+      "id": "ek2-botanik-parki",
+      "ad": "Botanik Parkı",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "AÇIK VE YEŞİL ALANLAR",
+      "ara_grup": "İLÇE SINIRLARI DAHİLİNDE YAPILAN PLANLAMALARDA",
+      "satir": 17,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "D13"
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "F13"
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "H13"
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "J13"
+        }
+      ]
+    },
+    {
+      "id": "ek2-mesire-yeri",
+      "ad": "Mesire Yeri",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "AÇIK VE YEŞİL ALANLAR",
+      "ara_grup": "İLÇE SINIRLARI DAHİLİNDE YAPILAN PLANLAMALARDA",
+      "satir": 18,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "D13"
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "F13"
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "H13"
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "J13"
+        }
+      ]
+    },
+    {
+      "id": "ek2-rekreasyon",
+      "ad": "Rekreasyon",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "AÇIK VE YEŞİL ALANLAR",
+      "ara_grup": "İLÇE SINIRLARI DAHİLİNDE YAPILAN PLANLAMALARDA",
+      "satir": 19,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "D13"
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "F13"
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "H13"
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "10,00",
+          "m2_kisi_binde": 10000,
+          "m2_kisi_birlesik_hucre": "J13"
+        }
+      ]
+    },
+    {
+      "id": "ek2-hayvanat-bahcesi",
+      "ad": "Hayvanat Bahçesi",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "AÇIK VE YEŞİL ALANLAR",
+      "ara_grup": "İL SINIRLARI BÜTÜNÜNDE YAPILAN PLANLAMALARDA",
+      "satir": 20,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000
+        }
+      ]
+    },
+    {
+      "id": "ek2-kent-ormani",
+      "ad": "Kent Ormanı",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "AÇIK VE YEŞİL ALANLAR",
+      "ara_grup": "İL SINIRLARI BÜTÜNÜNDE YAPILAN PLANLAMALARDA",
+      "satir": 21,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000,
+          "m2_kisi_birlesik_hucre": "D20"
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000,
+          "m2_kisi_birlesik_hucre": "F20"
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000,
+          "m2_kisi_birlesik_hucre": "H20"
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000,
+          "m2_kisi_birlesik_hucre": "J20"
+        }
+      ]
+    },
+    {
+      "id": "ek2-agaclandirilacak-alan",
+      "ad": "Ağaçlandırılacak Alan",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "AÇIK VE YEŞİL ALANLAR",
+      "ara_grup": "İL SINIRLARI BÜTÜNÜNDE YAPILAN PLANLAMALARDA",
+      "satir": 22,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000,
+          "m2_kisi_birlesik_hucre": "D20"
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000,
+          "m2_kisi_birlesik_hucre": "F20"
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000,
+          "m2_kisi_birlesik_hucre": "H20"
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000,
+          "m2_kisi_birlesik_hucre": "J20"
+        }
+      ]
+    },
+    {
+      "id": "ek2-fuar-panayir-ve-festival-alani",
+      "ad": "Fuar, Panayır ve Festival Alanı",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "AÇIK VE YEŞİL ALANLAR",
+      "ara_grup": "İL SINIRLARI BÜTÜNÜNDE YAPILAN PLANLAMALARDA",
+      "satir": 23,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000,
+          "m2_kisi_birlesik_hucre": "D20"
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000,
+          "m2_kisi_birlesik_hucre": "F20"
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000,
+          "m2_kisi_birlesik_hucre": "H20"
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000,
+          "m2_kisi_birlesik_hucre": "J20"
+        }
+      ]
+    },
+    {
+      "id": "ek2-hipodrom",
+      "ad": "Hipodrom",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "AÇIK VE YEŞİL ALANLAR",
+      "ara_grup": "İL SINIRLARI BÜTÜNÜNDE YAPILAN PLANLAMALARDA",
+      "satir": 24,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000,
+          "m2_kisi_birlesik_hucre": "D20"
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000,
+          "m2_kisi_birlesik_hucre": "F20"
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000,
+          "m2_kisi_birlesik_hucre": "H20"
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "5",
+          "m2_kisi_binde": 5000,
+          "m2_kisi_birlesik_hucre": "J20"
+        }
+      ]
+    },
+    {
+      "id": "ek2-aile-saglik-merkezi",
+      "ad": "Aile Sağlık Merkezi",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "SAĞLIK TESİSLERİ ALANI",
+      "satir": 25,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "asgari_alan_metin": "750-2.000",
+          "asgari_alan_m2_en_az": 750,
+          "asgari_alan_m2_en_cok": 2000
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "asgari_alan_metin": "750-2.000",
+          "asgari_alan_m2_en_az": 750,
+          "asgari_alan_m2_en_cok": 2000
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "asgari_alan_metin": "750-2.000",
+          "asgari_alan_m2_en_az": 750,
+          "asgari_alan_m2_en_cok": 2000
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "1.6",
+          "m2_kisi_binde": 1600,
+          "asgari_alan_metin": "750-2.000",
+          "asgari_alan_m2_en_az": 750,
+          "asgari_alan_m2_en_cok": 2000
+        }
+      ]
+    },
+    {
+      "id": "ek2-basamak-saglik-tesisleri",
+      "ad": "Basamak Sağlık Tesisleri",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "SAĞLIK TESİSLERİ ALANI",
+      "satir": 26,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "D25",
+          "asgari_alan_metin": "3000",
+          "asgari_alan_m2_en_az": 3000,
+          "asgari_alan_m2_en_cok": 3000
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "F25",
+          "asgari_alan_metin": "3000",
+          "asgari_alan_m2_en_az": 3000,
+          "asgari_alan_m2_en_cok": 3000
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "H25",
+          "asgari_alan_metin": "3000",
+          "asgari_alan_m2_en_az": 3000,
+          "asgari_alan_m2_en_cok": 3000
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "1.6",
+          "m2_kisi_binde": 1600,
+          "m2_kisi_birlesik_hucre": "J25",
+          "asgari_alan_metin": "3000",
+          "asgari_alan_m2_en_az": 3000,
+          "asgari_alan_m2_en_cok": 3000
+        }
+      ]
+    },
+    {
+      "id": "ek2-agiz-ve-dis-sagligi-merkezi",
+      "ad": "Ağız ve Diş Sağlığı Merkezi",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "SAĞLIK TESİSLERİ ALANI",
+      "satir": 27,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "D25",
+          "asgari_alan_metin": "Ünit başına (110) m²"
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "F25",
+          "asgari_alan_metin": "Ünit başına (110) m²"
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "H25",
+          "asgari_alan_metin": "Ünit başına (110) m²"
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "1.6",
+          "m2_kisi_binde": 1600,
+          "m2_kisi_birlesik_hucre": "J25",
+          "asgari_alan_metin": "Ünit başına (110) m²"
+        }
+      ],
+      "belirsiz": true,
+      "belirsiz_nedeni": [
+        "asgari-alan-sayiya-cevrilemedi"
+      ]
+    },
+    {
+      "id": "ek2-dogum-ve-cocuk-bakim-evleri",
+      "ad": "Doğum ve Çocuk Bakım Evleri",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "SAĞLIK TESİSLERİ ALANI",
+      "satir": 28,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "D25",
+          "asgari_alan_metin": "Yatak başına (130) m²"
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "F25",
+          "asgari_alan_metin": "Yatak başına (130) m²"
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "H25",
+          "asgari_alan_metin": "Yatak başına (130) m²"
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "1.6",
+          "m2_kisi_binde": 1600,
+          "m2_kisi_birlesik_hucre": "J25",
+          "asgari_alan_metin": "Yatak başına (130) m²"
+        }
+      ],
+      "belirsiz": true,
+      "belirsiz_nedeni": [
+        "asgari-alan-sayiya-cevrilemedi"
+      ]
+    },
+    {
+      "id": "ek2-devlet-hastaneleri",
+      "ad": "Devlet Hastaneleri",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "SAĞLIK TESİSLERİ ALANI",
+      "satir": 29,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "D25",
+          "asgari_alan_metin": "Yatak başına (130) m²",
+          "asgari_alan_birlesik_hucre": "E28"
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "F25",
+          "asgari_alan_metin": "Yatak başına (130) m²",
+          "asgari_alan_birlesik_hucre": "G28"
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "H25",
+          "asgari_alan_metin": "Yatak başına (130) m²",
+          "asgari_alan_birlesik_hucre": "I28"
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "1.6",
+          "m2_kisi_binde": 1600,
+          "m2_kisi_birlesik_hucre": "J25",
+          "asgari_alan_metin": "Yatak başına (130) m²",
+          "asgari_alan_birlesik_hucre": "K28"
+        }
+      ],
+      "belirsiz": true,
+      "belirsiz_nedeni": [
+        "asgari-alan-sayiya-cevrilemedi"
+      ]
+    },
+    {
+      "id": "ek2-ihtisas-egitim-ve-arastirma-hastaneleri",
+      "ad": "İhtisas/Eğitim ve Araştırma Hastaneleri",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "SAĞLIK TESİSLERİ ALANI",
+      "satir": 30,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "D25",
+          "asgari_alan_metin": "Yatak başına (130) m²",
+          "asgari_alan_birlesik_hucre": "E28"
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "F25",
+          "asgari_alan_metin": "Yatak başına (130) m²",
+          "asgari_alan_birlesik_hucre": "G28"
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "H25",
+          "asgari_alan_metin": "Yatak başına (130) m²",
+          "asgari_alan_birlesik_hucre": "I28"
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "1.6",
+          "m2_kisi_binde": 1600,
+          "m2_kisi_birlesik_hucre": "J25",
+          "asgari_alan_metin": "Yatak başına (130) m²",
+          "asgari_alan_birlesik_hucre": "K28"
+        }
+      ],
+      "belirsiz": true,
+      "belirsiz_nedeni": [
+        "asgari-alan-sayiya-cevrilemedi"
+      ]
+    },
+    {
+      "id": "ek2-fizik-tedavi-ve-rehabilitasyon-hastaneleri",
+      "ad": "Fizik Tedavi ve Rehabilitasyon Hastaneleri",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "SAĞLIK TESİSLERİ ALANI",
+      "satir": 31,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "D25",
+          "asgari_alan_metin": "Yatak başına (130) m²",
+          "asgari_alan_birlesik_hucre": "E28"
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "F25",
+          "asgari_alan_metin": "Yatak başına (130) m²",
+          "asgari_alan_birlesik_hucre": "G28"
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "H25",
+          "asgari_alan_metin": "Yatak başına (130) m²",
+          "asgari_alan_birlesik_hucre": "I28"
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "1.6",
+          "m2_kisi_binde": 1600,
+          "m2_kisi_birlesik_hucre": "J25",
+          "asgari_alan_metin": "Yatak başına (130) m²",
+          "asgari_alan_birlesik_hucre": "K28"
+        }
+      ],
+      "belirsiz": true,
+      "belirsiz_nedeni": [
+        "asgari-alan-sayiya-cevrilemedi"
+      ]
+    },
+    {
+      "id": "ek2-saglik-kampusleri",
+      "ad": "Sağlık Kampüsleri",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "SAĞLIK TESİSLERİ ALANI",
+      "satir": 32,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "D25",
+          "asgari_alan_metin": "Yatak başına (220) m²"
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "F25",
+          "asgari_alan_metin": "Yatak başına (220) m²"
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500,
+          "m2_kisi_birlesik_hucre": "H25",
+          "asgari_alan_metin": "Yatak başına (220) m²"
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "1.6",
+          "m2_kisi_binde": 1600,
+          "m2_kisi_birlesik_hucre": "J25",
+          "asgari_alan_metin": "Yatak başına (220) m²"
+        }
+      ],
+      "belirsiz": true,
+      "belirsiz_nedeni": [
+        "asgari-alan-sayiya-cevrilemedi"
+      ]
+    },
+    {
+      "id": "ek2-sosyal-ve-kulturel-tesisler-alani",
+      "ad": "SOSYAL ve KÜLTÜREL TESİSLER ALANI",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "satir": 33,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "0.75",
+          "m2_kisi_binde": 750
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "1",
+          "m2_kisi_binde": 1000
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "1.25",
+          "m2_kisi_binde": 1250
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500
+        }
+      ]
+    },
+    {
+      "id": "ek2-kucuk-ibadet-yeri",
+      "ad": "Küçük ibadet yeri",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "İBADET YERİ",
+      "satir": 34,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "0.5",
+          "m2_kisi_binde": 500,
+          "asgari_alan_metin": "1000",
+          "asgari_alan_m2_en_az": 1000,
+          "asgari_alan_m2_en_cok": 1000
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "0.5",
+          "m2_kisi_binde": 500,
+          "asgari_alan_metin": "1000",
+          "asgari_alan_m2_en_az": 1000,
+          "asgari_alan_m2_en_cok": 1000
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "0.75",
+          "m2_kisi_binde": 750,
+          "asgari_alan_metin": "1000",
+          "asgari_alan_m2_en_az": 1000,
+          "asgari_alan_m2_en_cok": 1000
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "0.75",
+          "m2_kisi_binde": 750,
+          "asgari_alan_metin": "1000",
+          "asgari_alan_m2_en_az": 1000,
+          "asgari_alan_m2_en_cok": 1000
+        }
+      ]
+    },
+    {
+      "id": "ek2-orta-ibadet-yeri",
+      "ad": "Orta ibadet yeri",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "İBADET YERİ",
+      "satir": 35,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "0.5",
+          "m2_kisi_binde": 500,
+          "m2_kisi_birlesik_hucre": "D34",
+          "asgari_alan_metin": "2500",
+          "asgari_alan_m2_en_az": 2500,
+          "asgari_alan_m2_en_cok": 2500
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "0.5",
+          "m2_kisi_binde": 500,
+          "m2_kisi_birlesik_hucre": "F34",
+          "asgari_alan_metin": "2500",
+          "asgari_alan_m2_en_az": 2500,
+          "asgari_alan_m2_en_cok": 2500
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "0.75",
+          "m2_kisi_binde": 750,
+          "m2_kisi_birlesik_hucre": "H34",
+          "asgari_alan_metin": "2500",
+          "asgari_alan_m2_en_az": 2500,
+          "asgari_alan_m2_en_cok": 2500
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "0.75",
+          "m2_kisi_binde": 750,
+          "m2_kisi_birlesik_hucre": "J34",
+          "asgari_alan_metin": "2500",
+          "asgari_alan_m2_en_az": 2500,
+          "asgari_alan_m2_en_cok": 2500
+        }
+      ]
+    },
+    {
+      "id": "ek2-buyuk-ibadet-yeri-ve-kulliyesi",
+      "ad": "Büyük ibadet yeri ve külliyesi",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "ust_grup": "İBADET YERİ",
+      "satir": 36,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "0.5",
+          "m2_kisi_binde": 500,
+          "m2_kisi_birlesik_hucre": "D34",
+          "asgari_alan_metin": "10000",
+          "asgari_alan_m2_en_az": 10000,
+          "asgari_alan_m2_en_cok": 10000
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "0.5",
+          "m2_kisi_binde": 500,
+          "m2_kisi_birlesik_hucre": "F34",
+          "asgari_alan_metin": "10000",
+          "asgari_alan_m2_en_az": 10000,
+          "asgari_alan_m2_en_cok": 10000
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "0.75",
+          "m2_kisi_binde": 750,
+          "m2_kisi_birlesik_hucre": "H34",
+          "asgari_alan_metin": "15000",
+          "asgari_alan_m2_en_az": 15000,
+          "asgari_alan_m2_en_cok": 15000
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "0.75",
+          "m2_kisi_binde": 750,
+          "m2_kisi_birlesik_hucre": "J34",
+          "asgari_alan_metin": "15000",
+          "asgari_alan_m2_en_az": 15000,
+          "asgari_alan_m2_en_cok": 15000
+        }
+      ]
+    },
+    {
+      "id": "ek2-teknik-altyapi-yol-ve-otopark-haric",
+      "ad": "TEKNİK ALTYAPI (Yol ve Otopark hariç)",
+      "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-2 (RG-17/5/2017-30069)",
+      "satir": 37,
+      "degerler": [
+        {
+          "nufus_grubu": "nufus-0-75-000",
+          "m2_kisi_metin": "1",
+          "m2_kisi_binde": 1000
+        },
+        {
+          "nufus_grubu": "nufus-75-001-150-000",
+          "m2_kisi_metin": "1.25",
+          "m2_kisi_binde": 1250
+        },
+        {
+          "nufus_grubu": "nufus-150-001-500-000",
+          "m2_kisi_metin": "1.5",
+          "m2_kisi_binde": 1500
+        },
+        {
+          "nufus_grubu": "nufus-501-000",
+          "m2_kisi_metin": "2",
+          "m2_kisi_binde": 2000
+        }
+      ]
+    }
+  ],
+  "aciklamalar": [
+    "1. Standartlara ilişkin alan hesabında; öncelikle varsa üst kademe mekansal planlarda belirlenen ilçe projeksiyon nüfusunun yer aldığı veya kent bütününe yönelik nazım imar planında belirlenen ilçe projeksiyon nüfusunun bulunduğu nüfus grubundaki standartlara uyulur.",
+    "2. Büyükşehir belediye sınırları içerisinde yerleşme bütünlüğü gösteren, komşu ilçe belediyeleri ile bütünleşen ilçe belediyelerinde altyapı alanları bir bütün olarak hesaplanabilir.",
+    "3. Lise, Anadolu Lisesi, Ticaret Lisesi, Kız Meslek Lisesi, İmam Hatip Lisesi gündüzlü liseler kapsamındadır",
+    "4. Fen Lisesi, Anadolu Öğretmen Lisesi, Sosyal Bilimler Lisesi, Otelcilik ve Turizm Meslek Lisesi Güzel Sanatlar Lisesi ve Spor Lisesi yatılı liseler kapsamındadır.",
+    "5. İş Uygulama Okulu, Mesleki Eğitim ve Rehberlik ve Araştırma Merkezleri özel eğitim, rehabilitasyon ve rehberlik merkezleri kapsamındadır.",
+    "6. Aile Sağlık Merkezi 1. Basamak Sağlık Tesisi olarak değerlendirilecektir.",
+    "7. Toplum Sağlığı Merkezi, Acil Sağlık Merkezi,112 Acil Sağlık Merkezi ve İstasyonları Basamak Sağlık Tesisleri içinde yer alır.",
+    "8. İmar planlarında ayrılmış bulunan ve kamu niteliği taşıyan Kreş + Anaokulu, İlköğretim, Ortaöğretim, Sağlık Tesisi, Kültürel Tesis, Sosyal Tesis Alanları; imar planı değişikliği yapılmak suretiyle bu kullanımların başına \"ÖZEL\" ibaresi getirilmek, kamu ve özel altyapı oranları ilgili yatırımcı Bakanlık veya kamu kuruluşunca belirlenmek kaydıyla, bu tabloda belirtilen kişi başına asgari standart değerinin içinde yer alır.",
+    "9. İlçe sınırları dahilinde; komşuluk, mahalle, semt ölçeğinde veya kent bütünü ile yerleşme alanlarında açık ve yeşil alan standartları; çocuk bahçesi, oyun alanı, park, meydan, semt spor alanı, botanik parkı, mesire yeri ve rekreasyon için 10 m²/kişi olarak uygulanacak olup, bu standardın uygulanmasında kamuya ait; düzenleme ortaklık payına tabi çocuk bahçesi, oyun alanı, park, meydan ve semt spor alanları oranı toplamı %75'in altına düşürülemez.",
+    "10. İl bütününde olmak üzere; açık ve yeşil alanlar standardına hayvanat bahçesi, kent ormanı, ağaçlandırılacak alan, fuar-panayır-festival alanı ve hipodrom alanı için 5 m²/kişi ilave edilmek suretiyle açık ve yeşil alanlar standardı toplam 15 m²/kişi olarak hesap edilerek uygulanır. İmar planı değişikliklerinde bu kullanımların kaldırılması halinde eşdeğerlik aranmaz, ancak bu kullanımlar, aynı açık ve yeşil alanlar donatı grubu içindeki diğer kullanımlara dönüştürülebilir.",
+    "11. 6306 sayılı Afet Riski Altındaki Alanların Dönüştürülmesi Hakkında Kanun uyarınca yapılacak planlarda, plan kararı ile tayin edilen standartlar ve gösterimler, planda veya ilgili yönetmeliğinde tayin edilmemiş ise gerekli görülmesi halinde bu standartlar uygulanır.",
+    "12. Teknik altyapı alanlarının büyüklükleri ilgili idarelerce belirlenecektir.",
+    "13. Sosyal ve teknik altyapı alanları; ilgili Bakanlıkların yönetmelik, yönerge, genelge, tebliğ gibi düzenlemelerinde belirlenen asgari alan büyüklükleri dikkate alınmak kaydı ile bu Yönetmelikteki standartlarda belirlenen asgari alan büyüklüklerine tabi olmaksızın imar planlarında belirlenebilir."
+  ]
+}

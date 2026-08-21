@@ -52,6 +52,7 @@ Tek tek komutlar:
 | [Koordinat sistemleri](veri/koordinat-sistemleri.md) | TUREF/TM30, TM 3° dilimleri, milimetre depolama |
 | [PiriCAD proje dosyası](veri/proje-dosyasi.md) | `.pcad` ne taşır, sürüm politikası, bozuk dosya |
 | [Dış veri biçimleri](veri/dis-formatlar.md) | DXF ve GeoPackage, koordinat sistemi, `.prj` dosyası |
+| [MPYY plan gösterimleri](veri/mpyy-gosterimleri.md) | Gösterim veri paketi: hangi RG sürümü, ne çıkarıldı, ne eksik, nasıl yeniden üretilir |
 | [Sürüm ve uyumluluk politikası](api-stability.md) | Neyin sabit kaldığı, neyin değişebileceği |
 
 ## Başvuru

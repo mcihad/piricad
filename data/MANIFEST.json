@@ -1,7 +1,8 @@
 {
   "schema_version": 1,
-  "package_version": "0.1.0",
+  "package_version": "0.2.0",
   "description": "PiriCAD veri paketleri dizini",
+  "worktree_size_cap_mb": 250,
   "packages": [
     {
       "id": "bohhbuy-detay-kodlari",
@@ -14,13 +15,47 @@
     },
     {
       "id": "mpyy-gosterimler",
-      "path": "catalogs/mpyy/",
+      "path": "catalogs/mpyy/plan-gosterim.json",
       "status": "partial",
       "phase": 3,
-      "source": "MPYY — Mekânsal Planlar Yapım Yönetmeliği, EK-1a/1b/1c/1ç/1d + EK-1e Detay Kataloğu",
-      "published": "2014-06-14",
+      "source": "MPYY — Mekânsal Planlar Yapım Yönetmeliği, EK-1a Ortak Gösterimler, EK-1b Mekânsal Strateji Planı, EK-1c Çevre Düzeni Planı, EK-1ç Nazım İmar Planı, EK-1d Uygulama İmar Planı. EK-1a/1c/1ç/1d: RG-22/1/2026-33145 ile değişik. EK-1b: değişiklik damgası yok, RG-14/6/2014-29030 sayılı ilk hâl.",
+      "published": "2026-01-22",
       "licence": "resmi-mevzuat-metni",
-      "note": "Paket yapısı ve şeması hazır; gösterim satırları (stiller, kurallar) bilerek boş. Sebebi ve doldurma koşulu dosyanın 'kapsam' bloğundadır."
+      "generator": "scripts/mpyy-cikar.py",
+      "note": "476 gösterim satırı çıkarıldı. Eşleme kuralları ('kurallar') bilerek boş: hangi nesnenin hangi satırı alacağı ek metninden okunamaz. Uzman onayı BEKLİYOR — dosyanın 'kapsam' bloğuna bakın."
+    },
+    {
+      "id": "mpyy-detay-katalogu",
+      "path": "catalogs/mpyy/detay-katalogu.json",
+      "status": "partial",
+      "phase": 3,
+      "source": "MPYY — Mekânsal Planlar Yapım Yönetmeliği, EK-1e Mekânsal Planlar Detay Katalogları (RG-22/1/2026-33145)",
+      "published": "2026-01-22",
+      "licence": "resmi-mevzuat-metni",
+      "generator": "scripts/mpyy-cikar.py",
+      "note": "379 detay kartı. EK-1e resmî metni detaylara sayısal kod vermez; kimlikler kart adından türetilmiştir. Uzman onayı BEKLİYOR."
+    },
+    {
+      "id": "mpyy-asgari-standartlar",
+      "path": "catalogs/mpyy/asgari-standartlar.json",
+      "status": "partial",
+      "phase": 3,
+      "source": "MPYY — Mekânsal Planlar Yapım Yönetmeliği, EK-2 Farklı Nüfus Gruplarında Asgari Sosyal ve Teknik Altyapı Alanlarına İlişkin Standartlar ve Asgari Alan Büyüklükleri Tablosu (RG-17/5/2017-30069)",
+      "published": "2017-05-17",
+      "licence": "resmi-mevzuat-metni",
+      "generator": "scripts/mpyy-cikar.py",
+      "note": "33 altyapı kalemi, 4 nüfus grubu, 13 açıklama maddesi. m²/kişi değerleri binde tam sayı. Uzman onayı BEKLİYOR."
+    },
+    {
+      "id": "mpyy-semboller",
+      "path": "catalogs/mpyy/semboller/",
+      "status": "partial",
+      "phase": 3,
+      "source": "MPYY EK-1a/1b/1c/1ç/1d/1e eklerinin gömülü gösterim görselleri",
+      "published": "2026-01-22",
+      "licence": "resmi-mevzuat-metni",
+      "generator": "scripts/mpyy-cikar.py",
+      "note": "608 ayrık görsel, toplam 6,6 MB; dosya adı içerik SHA-256'sının ilk 16 basamağı. En büyük dosya 287 KB — data.md R15'in 10 MB sınırının altında, LFS gerekmiyor."
     },
     {
       "id": "turkiye-jeoit",

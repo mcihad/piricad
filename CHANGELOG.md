@@ -128,20 +128,63 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   şeması `data/catalogs/schema/plan-gosterim.schema.json`. Kaynak: Mekânsal
   Planlar Yapım Yönetmeliği, EK-1 Gösterimler (EK-1a/1b/1c/1ç/1d + EK-1e Detay
   Kataloğu), yayım 14.06.2014.
-- **Paketin gösterim satırları BİLEREK BOŞTUR.** Paket künyesi, şeması, plan türü
-  eşlemesi, çizgi ve tarama sembol tabloları tamdır; `stiller` ve `kurallar`
-  dizileri boştur. Sebebi dosyanın `kapsam` bloğunda yazılıdır: EK-1 gösterim
-  kodları, renkleri ve çizgi kalınlıkları resmî ek metninden birebir okunmadan ve
-  harita mühendisi / şehir plancısı onayından geçmeden girilmez (CLAUDE.md 6.11).
-  Uydurulmuş bir gösterim satırı, boş bırakılmış bir satırdan çok daha zararlıdır.
-  Satırlar Faz 3'te, `package_version` artırılarak ve bu günlüğe hangi ek ve madde
-  yüzünden eklendikleri yazılarak gelecektir.
+- **Paketin gösterim satırları 0.1.0'da BİLEREK BOŞTU.** Paket künyesi, şeması,
+  plan türü eşlemesi, çizgi ve tarama sembol tabloları tamdı; `stiller` ve
+  `kurallar` dizileri boştu, çünkü EK-1 gösterim kodları, renkleri ve çizgi
+  kalınlıkları resmî ek metninden birebir okunmadan girilmez. Bu boşluk aşağıdaki
+  0.2.0 kaydıyla kapandı; `kurallar` hâlâ ve bilerek boştur.
 - **Determinizm sınandı.** Aynı katalog + aynı belge = aynı `StyleId` dizisi ve
   aynı `content_hash()`; aynı görünüm iki kez istendiğinde stil tablosu
   büyümüyor. Golden senaryosu `tests/golden/senaryolar/stil.txt`.
 - **Belge.** [`docs/komutlar/style.md`](docs/komutlar/style.md), sekiz bölüm,
   üç istemci yolu, gösterim satırlarının eksikliği ilk paragrafta ve gelecek
   zamanla yazılı (Article 11.8).
+
+### Eklendi — MPYY gösterim ekleri veri paketi (`mpyy` katalogları 0.1.0 → 0.2.0)
+
+Sebebi olan mevzuat: **Mekânsal Planlar Yapım Yönetmeliği**, EK-1 Gösterimler ve
+EK-2 asgari altyapı standartları tablosu. EK-1a, EK-1c, EK-1ç, EK-1d ve EK-1e
+metinlerinde **(Değişik:RG-22/1/2026-33145)** damgası vardır; paket bu hâli esas
+alır. EK-1b'de değişiklik damgası **yoktur**, yönetmeliğin **RG-14/6/2014-29030**
+sayılı ilk hâli esas alınmıştır ve bu tespit paketin `source` alanında yazılıdır.
+EK-2 **(Değişik:RG-17/5/2017-30069)** ile değişik hâldedir.
+
+- **`data/catalogs/mpyy/plan-gosterim.json` 0.2.0** — 476 gösterim satırı: EK-1a
+  Ortak Gösterimler 89, EK-1b Mekânsal Strateji Planı 30, EK-1c Çevre Düzeni Planı
+  37, EK-1ç Nazım İmar Planı 115, EK-1d Uygulama İmar Planı 205. 297 satırda alan
+  renk kodu, 48 satırda `ŞEFFAF` hükmü, 8 satırda çizgi rengi, 17 satırda simge
+  rengi çözüldü.
+- **`data/catalogs/mpyy/detay-katalogu.json` 0.2.0** — EK-1e Detay Kataloğu'nun
+  379 detay kartı; 338 kartta renk, 311 kartta plan türü başına çizgi kalınlığı
+  (kâğıt mikrometresi, 1000 = 1 mm) çözüldü. Şeması
+  `data/catalogs/schema/detay-katalogu.schema.json`.
+- **`data/catalogs/mpyy/asgari-standartlar.json` 0.2.0** — EK-2'nin 33 altyapı
+  kalemi, 4 nüfus grubu ve 13 maddelik açıklama bloğu. m²/kişi değerleri binde tam
+  sayı olarak saklanır (0.5 → 500); kayan nokta saklanmaz (CLAUDE.md 2.4). Şeması
+  `data/catalogs/schema/asgari-standartlar.schema.json`.
+- **608 sembol görseli** `data/catalogs/mpyy/semboller/` altında, dosya adı içerik
+  SHA-256'sının ilk 16 basamağı. Aynı sembol kaç satırda geçerse geçsin tek
+  dosyadır; toplam 6,6 MB, en büyüğü 287 KB — `data.md` R15'in 10 MB dosya ve
+  250 MB ağaç sınırlarının altında, LFS gerekmez.
+- **`plan-gosterim.schema.json` `schema_version` 1 → 2.** Yalnız ALAN EKLENDİ; hiçbir
+  alanın anlamı değişmedi (CLAUDE.md 0.2a). Yeni alanlar satırın kaynak izini
+  taşır: `sutunlar` (ham hücreler), `gorsel`, `sutun_metinleri`, `bolum`, `grup`,
+  `renk_secenekleri`, `simge_renk`, `dolgu.seffaf`, `dolgu.saydamlik_yuzde`,
+  `belirsiz` / `belirsiz_nedeni` ve paket düzeyinde `gorseller` tablosu.
+- **`scripts/mpyy-cikar.py`.** Katalogları resmî ek dosyalarından üretir; yalnız
+  Python standart kütüphanesi. Elle düzenlenmiş bir katalog kabul edilmez: aynı
+  kaynaktan iki koşum bayt birebir aynı JSON'u verir.
+- **Hiçbir değer uydurulmadı.** Okunamayan renk, çözülemeyen satır ve belirsiz ad
+  `belirsiz: true` ve bir gerekçe koduyla işaretlendi: 14 gösterim satırı, 15 detay
+  kartı, 6 standart kalemi. Gerekçeler `kapsam.eksikler` bloklarında sayılıdır.
+- **`kurallar` hâlâ boş.** Hangi nesnenin hangi gösterim satırını alacağı ek
+  metninden okunamaz; plan türü ve öznitelik şemasıyla birlikte uzman kararıdır.
+- **Uzman onayı BEKLİYOR.** Üç katalogun da `kapsam.onay` alanı `BEKLİYOR`
+  yazıyor; harita mühendisi / şehir plancısı imzası olmadan bu paket bir plana
+  uygulanmaz (CLAUDE.md 6.11).
+- **`scripts/ci-gate-mpyy.sh`.** Katalog özetini `tests/golden/mpyy/beklenen.txt`
+  ile karşılaştırır, üç dosyanın SHA-256'sını sabitler ve kaynak ekler mevcutsa
+  çıkarımı yeniden koşup bayt birebir karşılaştırır.
 
 ### Eklendi — kullanıcı dokümantasyonu
 

@@ -50,5 +50,6 @@ Thumbs.db
 # with `git add -A` commits it as a gitlink to a commit no clone can resolve.
 .claude/worktrees/
 
-# MPYY ek dosyalarının çalışma kopyası — kaynak metin, depoya girmez.
-.mpyy-kaynak/
+# MPYY kaynak ekleri. Resmî Gazete'den indirilen .docx/.xlsx dosyaları depoya
+# girmez; katalog scripts/mpyy-cikar.py ile bunlardan üretilir.
+/.mpyy-kaynak/

@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://piricad.org/data/catalogs/schema/asgari-standartlar.schema.json",
+  "title": "PiriCAD MPYY EK-2 asgari altyapı standartları paketi",
+  "description": "MPYY EK-2: farklı nüfus gruplarında asgari sosyal ve teknik altyapı alanlarına ilişkin standartlar ve asgari alan büyüklükleri tablosu. Bunlar TAKS/KAKS komşusu mevzuat değerleridir; C++ içinde hiçbir satırı bulunamaz (CLAUDE.md 5.13, data.md P1). m²/kişi değerleri BİNDE tam sayı olarak saklanır (0.5 -> 500): projede kayan nokta bir ara değerdir, saklanan biçim değildir (CLAUDE.md 2.4). Çevrilmiş her değerin yanında kaynak metni durur, ki onaylayan plancı çeviriyi denetleyebilsin.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "package_version",
+    "id",
+    "source",
+    "published",
+    "licence"
+  ],
+  "additionalProperties": false,
+
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "package_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "id": { "type": "string", "minLength": 1 },
+    "source": { "type": "string", "minLength": 1 },
+    "published": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "licence": { "type": "string", "minLength": 1 },
+    "aciklama": { "type": "string" },
+
+    "kapsam": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "durum": { "type": "string" },
+        "iceren": { "type": "array", "items": { "type": "string" } },
+        "eksikler": { "type": "array", "items": { "type": "string" } },
+        "onay": { "type": "string" },
+        "sonraki_surum": { "type": "string" }
+      }
+    },
+
+    "nufus_gruplari": {
+      "description": "Tablonun nüfus grubu sütunları, kaynaktaki etiketleriyle. Etiketler AYNEN taşınır: kaynakta '150.001 - 500.000' ile '501.000 +' arasında tanımsız bir aralık vardır ve bu boşluk düzeltilmez.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "etiket"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "etiket": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+
+    "kalemler": {
+      "description": "Altyapı kalemleri, tablodaki sırayla.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/kalem" }
+    },
+
+    "aciklamalar": {
+      "description": "Tablonun AÇIKLAMALAR bloğu, birebir ve numaralı hâliyle. data.md R12: resmî metin aynen taşınır.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+
+  "$defs": {
+    "kalem": {
+      "type": "object",
+      "required": ["id", "ad", "kaynak"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Kalıcı kimlik; asla silinmez, asla yeniden kullanılmaz (data.md R5).",
+          "type": "string",
+          "minLength": 1
+        },
+        "ad": { "type": "string", "minLength": 1 },
+        "ust_grup": {
+          "description": "Tablonun A sütunundaki başlık, ör. 'EĞİTİM TESİSLERİ ALANI'.",
+          "type": "string"
+        },
+        "ara_grup": {
+          "description": "Tablonun B sütunundaki ara başlık, ör. 'İLÇE SINIRLARI DAHİLİNDE YAPILAN PLANLAMALARDA'.",
+          "type": "string"
+        },
+        "kaynak": { "type": "string", "minLength": 1 },
+        "satir": {
+          "description": "Kaynak çalışma sayfasındaki satır numarası. Denetim izidir; kaldırılırsa çeviri kaynağına karşı doğrulanamaz.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "deprecated": { "type": "boolean" },
+        "valid_from": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "valid_until": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "degerler": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/deger" }
+        },
+        "belirsiz": { "type": "boolean" },
+        "belirsiz_nedeni": {
+          "description": "Gerekçe kodları: 'kalem-adi-bos', 'deger-yok', 'm2-kisi-sayiya-cevrilemedi', 'asgari-alan-sayiya-cevrilemedi'.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+
+    "deger": {
+      "type": "object",
+      "required": ["nufus_grubu"],
+      "additionalProperties": false,
+      "properties": {
+        "nufus_grubu": { "type": "string", "minLength": 1 },
+        "m2_kisi_metin": {
+          "description": "Kaynak hücrenin metni, birebir ('0.5', '10,00', '2.00').",
+          "type": "string"
+        },
+        "m2_kisi_binde": {
+          "description": "m²/kişi, binde tam sayı: 0.5 -> 500, 10,00 -> 10000. Kayan nokta saklanmaz.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "m2_kisi_birlesik_hucre": {
+          "description": "Değer bu satıra ait değil, kaynaktaki birleşik hücreden geliyorsa o hücrenin çapası (ör. 'D13'). Grup değeridir; satır başına ayrı bir standart DEĞİLDİR.",
+          "type": "string"
+        },
+        "asgari_alan_metin": {
+          "description": "Kaynak hücrenin metni, birebir ('1.500-3.000', '3000', 'Yatak başına (130) m²').",
+          "type": "string"
+        },
+        "asgari_alan_m2_en_az": {
+          "description": "Asgari birim alan alt sınırı, m². Kaynakta '.' BİNLER ayırıcısıdır: '1.500-3.000' = 1500-3000 m².",
+          "type": "integer",
+          "minimum": 0
+        },
+        "asgari_alan_m2_en_cok": { "type": "integer", "minimum": 0 },
+        "asgari_alan_birlesik_hucre": { "type": "string" }
+      }
+    }
+  }
+}

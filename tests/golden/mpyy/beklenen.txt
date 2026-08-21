@@ -1,0 +1,95 @@
+paket mpyy-plan-gosterimleri 0.2.0 sema=2
+paket-published 2026-01-22
+gosterim-satir 476
+gosterim-ek EK-1a 89
+gosterim-ek EK-1b 30
+gosterim-ek EK-1c 37
+gosterim-ek EK-1d 205
+gosterim-ek EK-1ç 115
+gosterim-dolgu-renk 297
+gosterim-seffaf 48
+gosterim-cizgi-renk 8
+gosterim-simge-renk 17
+gosterim-gorsel 451
+gosterim-kural 0
+gosterim-belirsiz 14
+gosterim-belirsiz-neden alan-renk-coklu 4
+gosterim-belirsiz-neden gosterim-sutunlari-bos 9
+gosterim-belirsiz-neden simge-renk-coklu 1
+gosterim-belirsiz-satir msp-yerlesmeler-arasi-iliskiler gosterim-sutunlari-bos
+gosterim-belirsiz-satir msp-ulasim-odagi gosterim-sutunlari-bos
+gosterim-belirsiz-satir msp-karayolu-agi gosterim-sutunlari-bos
+gosterim-belirsiz-satir msp-demiryolu-agi gosterim-sutunlari-bos
+gosterim-belirsiz-satir msp-enerji-uretim-alanlari simge-renk-coklu
+gosterim-belirsiz-satir msp-ekonomik-gelisme-alanlari gosterim-sutunlari-bos
+gosterim-belirsiz-satir cdp-erisme-kontrollu-karayolu-otoyol alan-renk-coklu
+gosterim-belirsiz-satir cdp-birinci-derece-yol alan-renk-coklu
+gosterim-belirsiz-satir cdp-ikinci-derece-yol alan-renk-coklu
+gosterim-belirsiz-satir cdp-ucuncu-derece-yol alan-renk-coklu
+gosterim-belirsiz-satir nip-yapi-sinirlamasi-getirilerek-korunacak-alanlar gosterim-sutunlari-bos
+gosterim-belirsiz-satir uip-kentsel-tasarim-projesi-siniri gosterim-sutunlari-bos
+gosterim-belirsiz-satir uip-yapi-yaklasma-siniri gosterim-sutunlari-bos
+gosterim-belirsiz-satir uip-yapi-sinirlamasi-getirilerek-korunacak-alanlar gosterim-sutunlari-bos
+gosterim-referans ortak-ulke-siniri ad=ÜLKE SINIRI ek=EK-1a dolgu=- seffaf=0 saydamlik=- cizgi=- simge=- cizgi_tipi=gorsel-b6fa10827df6e90c sembol=- tarama=- belirsiz=0
+gosterim-referans ortak-organize-sanayi-bolgesi ad=ORGANİZE SANAYİ BÖLGESİ ek=EK-1a dolgu=#AA66CD seffaf=0 saydamlik=- cizgi=- simge=- cizgi_tipi=gorsel-5eb0cd52a1d0fa90 sembol=gorsel-113ff1bf43f9b15c tarama=gorsel-1de155a3f7ed45b3 belirsiz=0
+gosterim-referans ortak-orman-alani ad=ORMAN ALANI ek=EK-1a dolgu=#228B22 seffaf=0 saydamlik=- cizgi=- simge=- cizgi_tipi=- sembol=- tarama=gorsel-4dc8ed6c82c5c973 belirsiz=0
+gosterim-referans msp-yerlesmeler-ve-kademelenmesi ad=YERLEŞMELER VE KADEMELENMESI ek=EK-1b dolgu=#E1A564 seffaf=0 saydamlik=- cizgi=- simge=#FFAA00 cizgi_tipi=- sembol=gorsel-122172c751163b35 tarama=- belirsiz=0
+gosterim-referans msp-yerlesmeler-ve-kademelenmesi-2 ad=YERLEŞMELER VE KADEMELENMESI ek=EK-1b dolgu=#B46E00 seffaf=0 saydamlik=- cizgi=- simge=#FFAA00 cizgi_tipi=- sembol=gorsel-122172c751163b35 tarama=- belirsiz=0
+gosterim-referans msp-yerlesmeler-ve-kademelenmesi-3 ad=YERLEŞMELER VE KADEMELENMESI ek=EK-1b dolgu=#8C5519 seffaf=0 saydamlik=- cizgi=- simge=#FFAA00 cizgi_tipi=- sembol=gorsel-122172c751163b35 tarama=- belirsiz=0
+gosterim-referans cdp-kentsel-meskun-yerlesik-alan ad=KENTSEL MESKûN (YERLEŞİK) ALAN ek=EK-1c dolgu=#8C541A seffaf=0 saydamlik=- cizgi=- simge=- cizgi_tipi=- sembol=- tarama=gorsel-62db91a80c9a022b belirsiz=0
+gosterim-referans cdp-erisme-kontrollu-karayolu-otoyol ad=ERİŞME KONTROLLÜ KARAYOLU (OTOYOL) ek=EK-1c dolgu=- seffaf=0 saydamlik=- cizgi=- simge=- cizgi_tipi=gorsel-d40951e0d6591277 sembol=- tarama=- belirsiz=1
+gosterim-referans nip-merkezi-is-alani-mia ad=MERKEZİ İŞ ALANI (MİA) ek=EK-1ç dolgu=#E00021 seffaf=0 saydamlik=- cizgi=- simge=- cizgi_tipi=- sembol=gorsel-ad0eea58223237a3 tarama=gorsel-b6c1799160c5e742 belirsiz=0
+gosterim-referans nip-mevcut-konut-alani-brut-yogunluguna-gore ad=MEVCUT KONUT ALANI (BRÜT YOĞUNLUĞUNA GÖRE) ek=EK-1ç dolgu=#8C541A seffaf=0 saydamlik=- cizgi=- simge=- cizgi_tipi=- sembol=- tarama=gorsel-62db91a80c9a022b belirsiz=0
+gosterim-referans uip-ticaret-alani ad=TİCARET ALANI ek=EK-1d dolgu=#E00021 seffaf=0 saydamlik=- cizgi=- simge=- cizgi_tipi=- sembol=- tarama=gorsel-b6c1799160c5e742 belirsiz=0
+gosterim-referans uip-anaokulu-alani ad=ANAOKULU ALANI ek=EK-1d dolgu=#008FFF seffaf=0 saydamlik=- cizgi=- simge=- cizgi_tipi=- sembol=- tarama=gorsel-e549ed6bcdaf5922 belirsiz=0
+gosterim-referans uip-park ad=PARK ek=EK-1d dolgu=#249C22 seffaf=0 saydamlik=- cizgi=- simge=- cizgi_tipi=- sembol=- tarama=gorsel-db368232a1d4ea99 belirsiz=0
+gosterim-referans uip-akaryakit-ve-servis-istasyonu-alani ad=AKARYAKIT VE SERVİS İSTASYONU ALANI ek=EK-1d dolgu=#FF3800 seffaf=0 saydamlik=- cizgi=- simge=- cizgi_tipi=- sembol=gorsel-6b90c15b9ba19d90 tarama=gorsel-35e4c33f6eaa47bb belirsiz=0
+detay-paket mpyy-detay-katalogu 0.2.0 sema=1
+detay-kart 379
+detay-gorsel 354
+detay-renkli 338
+detay-kalinlikli 311
+detay-belirsiz 15
+detay-belirsiz-kart ek1e-ozel-kanunlarla-belirlenen-alan-ve-sinirlar ad-paragrafi-yok
+detay-belirsiz-kart ek1e-teknoloji-gelistirme-bolgesi-serbest-bolge ad-paragraf-sayisi-belirsiz
+detay-belirsiz-kart ek1e-organize-sanayi-bolgesi-hizmet-ve-destek-alanlari ad-paragrafi-yok
+detay-belirsiz-kart ek1e-organize-sanayi-bolgesi-hizmet-ve-destek-alani-hda-endustri-bolgesi ad-paragraf-sayisi-belirsiz
+detay-belirsiz-kart ek1e-yerlesim-alanlari ad-paragrafi-yok
+detay-belirsiz-kart ek1e-baglik-bahcelik-alan-mevcut-konut-alani-brut-yogunluguna-gore-cok ad-paragraf-sayisi-belirsiz
+detay-belirsiz-kart ek1e-mevcut-konut-alani-brut-yogunluguna-gore-yuksek-301-600-kisi-ha ad-paragraf-sayisi-belirsiz
+detay-belirsiz-kart ek1e-mevcut-konut-alani-brut-yogunluguna-gore-orta-151-300-kisi-ha ad-paragraf-sayisi-belirsiz
+detay-belirsiz-kart ek1e-mevcut-konut-alani-brut-yogunluguna-gore-dusuk-51-150-kisi-ha ad-paragraf-sayisi-belirsiz
+detay-belirsiz-kart ek1e-mevcut-konut-alani-brut-yogunluguna-gore-seyrek-50-kisi-ha-altinda ad-paragraf-sayisi-belirsiz
+detay-belirsiz-kart ek1e-toplu-isyerleri cozulmemis-satir
+detay-belirsiz-kart ek1e-kentsel-toplu-tasima-guzergahlari ad-paragrafi-yok
+detay-belirsiz-kart ek1e-havaray-istasyonu-toplutasim-turleri-arasi-degisim-ve-aktarma-alani ad-paragraf-sayisi-belirsiz
+detay-belirsiz-kart ek1e-afet-tehlikeli-alanlar ad-paragrafi-yok
+detay-belirsiz-kart ek1e-kentsel-risk-alani-tsunami-riskli-alan ad-paragraf-sayisi-belirsiz
+detay-referans ek1e-plan-siniri planlar=MSP renkler=SINIR/RGB=#000000 kalinlik=MSP/SINIR TİPİ AÇIKLAMASI=1000
+detay-referans ek1e-aile-sagligi-merkezi planlar=UİP,NİP,ÇDP renkler=ALAN/RGB=#00A9E6 kalinlik=UİP/TARAMA TİPİ AÇIKLAMASI=800
+detay-referans ek1e-cami planlar=UİP,NİP,ÇDP renkler=ALAN/RGB=#73D4FF kalinlik=UİP/TARAMA TİPİ AÇIKLAMASI=1200
+standart-paket mpyy-asgari-standartlar 0.2.0 sema=1
+standart-published 2017-05-17
+standart-kalem 33
+standart-nufus-grubu 4
+standart-grup nufus-0-75-000 0 - 75.000
+standart-grup nufus-75-001-150-000 75.001- 150.000
+standart-grup nufus-150-001-500-000 150.001 - 500.000
+standart-grup nufus-501-000 501.000 +
+standart-aciklama 13
+standart-belirsiz 6
+standart-belirsiz-kalem ek2-agiz-ve-dis-sagligi-merkezi asgari-alan-sayiya-cevrilemedi
+standart-belirsiz-kalem ek2-dogum-ve-cocuk-bakim-evleri asgari-alan-sayiya-cevrilemedi
+standart-belirsiz-kalem ek2-devlet-hastaneleri asgari-alan-sayiya-cevrilemedi
+standart-belirsiz-kalem ek2-ihtisas-egitim-ve-arastirma-hastaneleri asgari-alan-sayiya-cevrilemedi
+standart-belirsiz-kalem ek2-fizik-tedavi-ve-rehabilitasyon-hastaneleri asgari-alan-sayiya-cevrilemedi
+standart-belirsiz-kalem ek2-saglik-kampusleri asgari-alan-sayiya-cevrilemedi
+standart-referans ek2-anaokulu nufus-0-75-000:500/1500-3000;nufus-75-001-150-000:500/1500-3000;nufus-150-001-500-000:600/1500-3000;nufus-501-000:600/2000-4000
+standart-referans ek2-park nufus-0-75-000:10000/---;nufus-75-001-150-000:10000/---;nufus-150-001-500-000:10000/---;nufus-501-000:10000/---
+standart-referans ek2-teknik-altyapi-yol-ve-otopark-haric nufus-0-75-000:1000/---;nufus-75-001-150-000:1250/---;nufus-150-001-500-000:1500/---;nufus-501-000:2000/---
+sha256 plan-gosterim.json f6dfdfa67924198f5d56abb6064fc920f49c2cca85e759f32c483fae15756d2d
+sha256 detay-katalogu.json 82c6713a606917fa5657f5aac36317a0219caf0e787dc1c6110f804fa54e73dd
+sha256 asgari-standartlar.json e224822a1c3c1f7e34b6c8522b9ccda2f8e33080b8c9ee2aaa58554203ab74a1
+sembol-dosya 608
+sembol-bayt 6923730
+sembol-liste-sha256 8a1e79db56ea7a983ea769eef51eb760ac21684b857779f7824cfd413e6ad420

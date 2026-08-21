@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://piricad.org/data/catalogs/schema/detay-katalogu.schema.json",
+  "title": "PiriCAD MPYY EK-1e detay kataloğu paketi",
+  "description": "MPYY EK-1e Mekânsal Planlar Detay Katalogları'nın makine okunur hâli. Bir 'detay', yönetmeliğin kart biçiminde tarif ettiği bir plan öğesidir: detay sınıfı, alt sınıfı, gösterim matrisi ve plan türü (MSP/ÇDP/NİP/UİP) başına geometri tipi, tarama ve sınır açıklaması. Paket BİLEREK ham kalır: kaynağın sütun düzeni ve hücre metinleri olduğu gibi taşınır, çünkü bir gösterim tarifini yoruma çevirmek uzman kararıdır (CLAUDE.md 6.11). Türetilmiş alanlar yalnız tek anlamlı olduklarında yazılır.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "package_version",
+    "id",
+    "source",
+    "published",
+    "licence"
+  ],
+  "additionalProperties": false,
+
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "package_version": {
+      "description": "Her içerik değişikliğinde artırılır (data.md R4).",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "id": { "type": "string", "minLength": 1 },
+    "source": {
+      "description": "Yönetmelik adı, ek ve Resmî Gazete atfı (data.md R2).",
+      "type": "string",
+      "minLength": 1
+    },
+    "published": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "licence": { "type": "string", "minLength": 1 },
+    "aciklama": { "type": "string" },
+
+    "kapsam": {
+      "description": "Paketin neyi kapsadığı, neyi bilerek kapsamadığı ve onay durumu. Yalnız insanlar içindir.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "durum": { "type": "string" },
+        "iceren": { "type": "array", "items": { "type": "string" } },
+        "eksikler": { "type": "array", "items": { "type": "string" } },
+        "onay": { "type": "string" },
+        "sonraki_surum": { "type": "string" }
+      }
+    },
+
+    "gorseller": {
+      "description": "Kartlarda geçen sembol, tarama ve çizgi tipi görselleri. Dosya adı içerik SHA-256'sından türer.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/gorsel" }
+    },
+
+    "detaylar": {
+      "description": "Detay kartları, kaynaktaki sırayla. Sıra anlamlıdır: katalog bölüm bölüm okunur.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/detay" }
+    }
+  },
+
+  "$defs": {
+    "renk": {
+      "description": "'#RRGGBB'. Onaltılık metindir, çünkü bir lejantı onaylayan mühendis 4281236786 sayısını denetleyemez.",
+      "type": "string",
+      "pattern": "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+    },
+
+    "gorsel": {
+      "type": "object",
+      "required": ["id", "dosya", "sha256", "bayt", "tur"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^gorsel-[0-9a-f]{16}$" },
+        "dosya": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "bayt": { "type": "integer", "minimum": 0 },
+        "tur": { "type": "string", "minLength": 1 },
+        "ekler": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "hucre": {
+      "description": "Kaynak tablonun bir hücresi: metni ve gömülü görselleri, olduğu gibi.",
+      "type": "object",
+      "required": ["metin", "gorseller"],
+      "additionalProperties": false,
+      "properties": {
+        "metin": { "type": "string" },
+        "gorseller": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^gorsel-[0-9a-f]{16}$" }
+        }
+      }
+    },
+
+    "detay": {
+      "type": "object",
+      "required": ["id", "ad", "ek", "kaynak"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Kalıcı kimlik. EK-1e resmî metni detaylara SAYISAL KOD VERMEZ; kimlik detay adından türetilmiştir ve bir kez yayımlandıktan sonra değişmez (data.md R5).",
+          "type": "string",
+          "minLength": 1
+        },
+        "ad": {
+          "description": "Kartın başlığı: kart tablosunun kendi ad satırı ya da tablodan hemen önceki paragraf. Kaynakta ikisi de yoksa boştur ve satır 'belirsiz' işaretlidir.",
+          "type": "string"
+        },
+        "ad_adaylari": {
+          "description": "Ad tek anlamlı çıkmadığında, kaynakta o kartın çevresinde bulunan paragraflar. Betik SEÇİM YAPMAZ; kararı uzman verir.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "ek": { "type": "string", "minLength": 1 },
+        "bolum": {
+          "description": "Katalog bölümü, ör. 'I- MEKÂNSAL STRATEJİ PLANI DETAY KATALOĞU'.",
+          "type": "string"
+        },
+        "detay_sinifi": {
+          "description": "Kaynağın DETAY SINIFI satırı. Kaynakta boş bırakılmışsa bir önceki karttan devralınır — kaynağın kendi yazım alışkanlığıdır.",
+          "type": "string"
+        },
+        "detay_alt_sinifi": { "type": "string" },
+        "kaynak": {
+          "description": "Bu kartın hangi ek ve bölümden geldiği, birebir (docs.md R12).",
+          "type": "string",
+          "minLength": 1
+        },
+        "deprecated": { "type": "boolean" },
+        "valid_from": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "valid_until": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+
+        "gosterim": {
+          "description": "Gösterim matrisi, kaynaktaki hâliyle. Sütun başlıkları geometri grubuyla nitelenmiştir ('ALAN/RGB', 'SINIR/RGB'); iki ayrı RGB sütunu ancak böyle ayrılır ve niteleme kaynağın kendi hücre birleşimlerinden okunur.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["sutunlar", "satirlar"],
+            "additionalProperties": false,
+            "properties": {
+              "geometri": {
+                "description": "Bloğun geometri grubu etiketleri: ALAN, NOKTA, ÇİZGİ, SINIR.",
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "sutunlar": { "type": "array", "items": { "type": "string" } },
+              "satirlar": {
+                "type": "array",
+                "items": { "type": "array", "items": { "$ref": "#/$defs/hucre" } }
+              }
+            }
+          }
+        },
+
+        "plan_notlari": {
+          "description": "Kartın alt bloğu: plan türü başına geometri tipi, tarama tipi açıklaması ve sınır tipi açıklaması. Serbest metindir ve öyle kalır.",
+          "type": "object",
+          "required": ["sutunlar", "satirlar"],
+          "additionalProperties": false,
+          "properties": {
+            "sutunlar": { "type": "array", "items": { "type": "string" } },
+            "satirlar": {
+              "type": "array",
+              "items": { "type": "array", "items": { "$ref": "#/$defs/hucre" } }
+            }
+          }
+        },
+
+        "planlar": {
+          "description": "Kartın geçerli olduğu plan türleri, kaynağın kendi kodlarıyla: MSP, ÇDP, NİP, UİP.",
+          "type": "array",
+          "items": { "type": "string", "enum": ["MSP", "ÇDP", "NİP", "UİP"] }
+        },
+
+        "renkler": {
+          "description": "Gösterim matrisinde okunan bütün RGB üçlüleri, hangi sütunda geçtiğiyle ve kaynak metniyle birlikte.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["rol", "renk", "kaynak_metin"],
+            "additionalProperties": false,
+            "properties": {
+              "rol": { "type": "string", "minLength": 1 },
+              "renk": { "$ref": "#/$defs/renk" },
+              "kaynak_metin": { "type": "string" },
+              "saydamlik_yuzde": { "type": "integer", "minimum": 0, "maximum": 100 }
+            }
+          }
+        },
+
+        "seffaf": {
+          "description": "Kartın bir RGB hücresi 'ŞEFFAF' diyor: o alan boyanmaz.",
+          "type": "boolean"
+        },
+
+        "cizgi_kalinliklari": {
+          "description": "Yalnız hücre 'ÇİZGİ KALINLIĞI: <sayı> mm' ile BAŞLIYORSA çevrilmiştir. Birden çok kalınlık sayan açıklamalar ('Cephe Çizgisi 2.5 mm, Kaldırım 0.3 mm') bilerek çevrilmez; hangi kalınlığın hangi çizgiye ait olduğu uzman kararıdır.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["plan", "rol", "kalinlik_um", "kaynak_metin"],
+            "additionalProperties": false,
+            "properties": {
+              "plan": { "type": "string" },
+              "rol": { "type": "string" },
+              "kalinlik_um": {
+                "description": "KÂĞIT mikrometresi, 1000 = 1 mm (model.md R20).",
+                "type": "integer",
+                "minimum": 0
+              },
+              "kaynak_metin": { "type": "string" }
+            }
+          }
+        },
+
+        "cozulmemis_satirlar": {
+          "description": "Kart içinde hiçbir bilinen satır türüne uymayan satırlar, ham hâliyle. Atılmazlar: kaynakta bir şey yazıyorsa katalogda da yazar.",
+          "type": "array",
+          "items": { "type": "array", "items": { "$ref": "#/$defs/hucre" } }
+        },
+
+        "belirsiz": { "type": "boolean" },
+        "belirsiz_nedeni": {
+          "description": "Gerekçe kodları: 'ad-paragrafi-yok', 'ad-paragraf-sayisi-belirsiz', 'cozulmemis-satir', 'gosterim-blogu-yok'.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}
