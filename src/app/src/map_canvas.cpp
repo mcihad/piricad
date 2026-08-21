@@ -5,6 +5,7 @@
 #include "piricad/core/settings.hpp"
 #include "piricad/render/backend.hpp"
 
+#include <QBrush>
 #include <QElapsedTimer>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -414,6 +415,43 @@ void MapCanvas::paintEvent(QPaintEvent*)
 
     const double cx = width() * 0.5;
     const double cy = height() * 0.5;
+
+    // Fills first, strokes on top. A boundary drawn under its own fill is a
+    // boundary the user cannot see, and in a plan the boundary is the legal edge.
+    for (const auto& batch : draw_.polygons) {
+        if (batch.runs.empty() || batch.rgba == 0) continue;
+
+        // Odd-even winding is what punches the holes out: a courtyard ring inside
+        // its parcel ring cancels, without the backend having to know which ring
+        // was declared a hole. The flag is still carried in the draw list because
+        // the GPU backend will need it explicitly.
+        QPainterPath path;
+        path.setFillRule(Qt::OddEvenFill);
+
+        std::size_t offset = 0;
+        for (std::uint32_t run : batch.runs) {
+            path.moveTo(cx + static_cast<double>(batch.xs[offset]),
+                        cy - static_cast<double>(batch.ys[offset]));
+            for (std::uint32_t v = 1; v < run; ++v)
+                path.lineTo(cx + static_cast<double>(batch.xs[offset + v]),
+                            cy - static_cast<double>(batch.ys[offset + v]));
+            path.closeSubpath();
+            offset += run;
+        }
+
+        // The hatch index selects a Qt brush pattern for now. The real MPYY hatch
+        // atlas is a /data asset and lands with the symbol atlas in Phase 1; until
+        // then a patterned fill is drawn patterned rather than silently solid, so
+        // nobody mistakes a hatched gösterim for a solid one.
+        QBrush brush(from_rgba(batch.rgba));
+        if (batch.hatch != 0) {
+            static const Qt::BrushStyle kPatterns[] = {
+                Qt::SolidPattern, Qt::Dense4Pattern, Qt::HorPattern,   Qt::VerPattern,
+                Qt::CrossPattern, Qt::BDiagPattern,  Qt::FDiagPattern, Qt::DiagCrossPattern};
+            brush.setStyle(kPatterns[batch.hatch % (sizeof kPatterns / sizeof kPatterns[0])]);
+        }
+        painter.fillPath(path, brush);
+    }
 
     for (const auto& batch : draw_.polylines) {
         if (batch.runs.empty()) continue;

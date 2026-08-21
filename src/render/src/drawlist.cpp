@@ -12,8 +12,15 @@ void DrawList::clear()
         batch.ys.clear();
         batch.runs.clear();
     }
+    for (auto& batch : polygons) {
+        batch.xs.clear();
+        batch.ys.clear();
+        batch.runs.clear();
+        batch.is_hole.clear();
+    }
     candidates.clear();
     has_preview   = false;
+    fill_count    = 0;
     vertex_count  = 0;
     entity_count  = 0;
     culled_count  = 0;

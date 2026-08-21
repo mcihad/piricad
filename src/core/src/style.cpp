@@ -10,6 +10,7 @@ namespace {
 /// collide with folding a layer or an attribute record that happens to carry the
 /// same integers.
 constexpr std::uint64_t kAppearanceSeed = fnv1a("piricad.core.appearance");
+constexpr std::uint64_t kSymbolSeed     = fnv1a("piricad.core.symbol");
 
 } // namespace
 
@@ -42,6 +43,36 @@ std::size_t StyleTable::Hash::operator()(const Appearance& a) const noexcept
     return static_cast<std::size_t>(fold_appearance(a, kAppearanceSeed));
 }
 
+const char* stroke_kind_name(StrokeKind k) noexcept
+{
+    switch (k) {
+    case StrokeKind::Fill: return "dolgu";
+    case StrokeKind::Stroke: return "kontur";
+    case StrokeKind::Marker: return "isaretci";
+    }
+    return "?";
+}
+
+std::uint64_t fold_symbol(const Symbol& sym, std::uint64_t seed)
+{
+    // Order matters and is folded: a fill under a stroke and a stroke under a
+    // fill are two different symbols, and the second one hides the first.
+    std::uint64_t h = fnv1a_int(static_cast<std::int64_t>(sym.layers.size()), seed);
+    for (const SymbolLayer& l : sym.layers) {
+        h = fnv1a_int(static_cast<std::int64_t>(l.kind), h);
+        h = fnv1a_int(static_cast<std::int64_t>(l.offset_um), h);
+        h = fold_appearance(l.look, h);
+    }
+    h = fnv1a_int(static_cast<std::int64_t>(sym.min_scale), h);
+    h = fnv1a_int(static_cast<std::int64_t>(sym.max_scale), h);
+    return h;
+}
+
+std::size_t StyleTable::SymbolHash::operator()(const Symbol& s) const noexcept
+{
+    return static_cast<std::size_t>(fold_symbol(s, kSymbolSeed));
+}
+
 StyleTable::StyleTable()
 {
     // Entry 0 is the kByLayerStyle sentinel and exists before anything is
@@ -50,7 +81,9 @@ StyleTable::StyleTable()
     // (R13).
     const Appearance by_layer{};
     entries_.push_back(by_layer);
+    symbols_.push_back(Symbol::of(by_layer));
     intern_.emplace(by_layer, kByLayerStyle);
+    symbol_intern_.emplace(symbols_.front(), kByLayerStyle);
 }
 
 StyleId StyleTable::intern(const Appearance& a)
@@ -63,8 +96,37 @@ StyleId StyleTable::intern(const Appearance& a)
     // golden fixtures record (.claude/core.md P11).
     const auto id = static_cast<StyleId>(entries_.size());
     entries_.push_back(a);
+    symbols_.push_back(Symbol::of(a));
     intern_.emplace(a, id);
+    symbol_intern_.emplace(symbols_.back(), id);
     return id;
+}
+
+StyleId StyleTable::intern(const Symbol& sym)
+{
+    if (const auto it = symbol_intern_.find(sym); it != symbol_intern_.end()) return it->second;
+
+    // A one-layer stack IS its Appearance. Routing it through the same table
+    // keeps a drawing that never uses a stack byte for byte the drawing it was
+    // before stacks existed — the golden fixtures say so and they are right to.
+    if (sym.layers.size() == 1 && sym.layers.front().kind == StrokeKind::Stroke &&
+        sym.layers.front().offset_um == 0 && sym.min_scale == 0 && sym.max_scale == 0)
+        return intern(sym.layers.front().look);
+
+    const auto id = static_cast<StyleId>(entries_.size());
+    entries_.push_back(sym.primary());
+    symbols_.push_back(sym);
+    symbol_intern_.emplace(sym, id);
+
+    // Deliberately NOT added to intern_: the resolved appearance of a stack is a
+    // summary, not the thing itself, and letting a bare Appearance intern back to
+    // a stacked id would silently give an entity a symbol it never asked for.
+    return id;
+}
+
+const Symbol& StyleTable::symbol_at(StyleId id) const
+{
+    return id < symbols_.size() ? symbols_[id] : symbols_[kByLayerStyle];
 }
 
 const Appearance& StyleTable::at(StyleId id) const
@@ -84,6 +146,11 @@ std::uint64_t StyleTable::fold(std::uint64_t seed) const
     for (std::size_t i = 0; i < entries_.size(); ++i) {
         h = fnv1a_int(static_cast<std::int64_t>(i), h);
         h = fold_appearance(entries_[i], h);
+
+        // A stack folds its EXTRA layers only. A single-layer stroke stack is
+        // exactly the appearance already folded above, so folding it again would
+        // change the fingerprint of every drawing that has no stacks at all.
+        if (i < symbols_.size() && symbols_[i].layers.size() > 1) h = fold_symbol(symbols_[i], h);
     }
     return h;
 }

@@ -724,3 +724,89 @@ TEST_CASE("LayerTable: fold her saklanan alana tepki verir")
     CHECK(renamed.rename(1, "Parsel").ok());
     CHECK(renamed.fold(0) != reference);
 }
+
+// ----------------------------------------------------------- symbol stack ----
+
+TEST_CASE("Symbol: tek katmanlı yığın Appearance ile AYNI kimliğe intern edilir")
+{
+    // The migration guarantee, asserted rather than assumed: a drawing that never
+    // uses a stack must be byte for byte the drawing it was before stacks existed.
+    // If a one-layer stack took a fresh id, every golden fixture and every .pcad
+    // file would have needed rewriting to record a capability nobody used.
+    StyleTable t;
+    Appearance a{};
+    a.rgba = 0xFF8C541Au;
+
+    const StyleId direct  = t.intern(a);
+    const StyleId wrapped = t.intern(Symbol::of(a));
+    CHECK_EQ(direct, wrapped);
+    CHECK_EQ(t.size(), std::size_t{2}); // ByLayer sentinel + this one
+}
+
+TEST_CASE("Symbol: çok katmanlı yığın kendi kimliğini alır ve geri okunur")
+{
+    StyleTable t;
+
+    // A plan gösterim: an area fill, a heavier boundary of a different colour on
+    // top of it. One colour and one width cannot state this, and 476 rows in
+    // /data are waiting to be stated.
+    Symbol sym;
+    Appearance fill{};
+    fill.fill_rgba = 0xFF8C541Au;
+    Appearance edge{};
+    edge.rgba     = 0xFF202020u;
+    edge.width_um = 700;
+
+    sym.layers.push_back(SymbolLayer{fill, StrokeKind::Fill, 0});
+    sym.layers.push_back(SymbolLayer{edge, StrokeKind::Stroke, 0});
+
+    const StyleId id = t.intern(sym);
+    CHECK(id != kByLayerStyle);
+    CHECK_EQ(t.symbol_at(id).layers.size(), std::size_t{2});
+
+    // The resolved single-layer appearance names the STROKE, because that is what
+    // the CAD cascade and every file-format colour field mean by "the style of
+    // this entity".
+    CHECK_EQ(t.at(id).rgba, 0xFF202020u);
+    CHECK_EQ(t.at(id).width_um, 700);
+
+    // Interning the same stack twice is the same id, on every platform and in
+    // every run — golden fixtures depend on it.
+    CHECK_EQ(t.intern(sym), id);
+}
+
+TEST_CASE("Symbol: katman SIRASI kimliği değiştirir")
+{
+    // A fill under a stroke and a stroke under a fill are two different symbols,
+    // and the second one hides the first. Order has to fold into the hash or the
+    // table would deduplicate two drawings that do not look alike.
+    StyleTable t;
+    Appearance fill{};
+    fill.fill_rgba = 0xFF8C541Au;
+    Appearance edge{};
+    edge.rgba = 0xFF202020u;
+
+    Symbol under;
+    under.layers.push_back(SymbolLayer{fill, StrokeKind::Fill, 0});
+    under.layers.push_back(SymbolLayer{edge, StrokeKind::Stroke, 0});
+
+    Symbol over;
+    over.layers.push_back(SymbolLayer{edge, StrokeKind::Stroke, 0});
+    over.layers.push_back(SymbolLayer{fill, StrokeKind::Fill, 0});
+
+    CHECK(t.intern(under) != t.intern(over));
+}
+
+TEST_CASE("Symbol: yığınsız belge özetini değiştirmez")
+{
+    // The other half of the migration guarantee, from the hash side.
+    StyleTable plain;
+    Appearance a{};
+    a.rgba = 0xFF8C541Au;
+    plain.intern(a);
+
+    StyleTable viaStack;
+    viaStack.intern(Symbol::of(a));
+
+    CHECK_EQ(plain.fold(0), viaStack.fold(0));
+}
