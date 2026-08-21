@@ -3,10 +3,16 @@
 # Constitution Article 3: no reverse dependency, and no <Q...> include ever.
 
 add_library(piricad_core STATIC
+    src/attribute.cpp
     src/document.cpp
+    src/entity_kind.cpp
+    src/geometry.cpp
     src/json.cpp
+    src/layer.cpp
     src/log.cpp
+    src/settings.cpp
     src/spatial_index.cpp
+    src/style.cpp
     src/text.cpp
 )
 

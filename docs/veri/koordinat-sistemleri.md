@@ -73,8 +73,34 @@ yayım tarihi 2018-05-26 olarak kayıtlıdır.
 ondalıkla gösterir:
 
 ```text
-X 485337.433   Y 4310246.714
+Sağa (Y) 485337.433   Yukarı (X) 4310246.714
 ```
+
+## Y sağa, X yukarı
+
+Türk haritacılık konvansiyonunda **Y sağa değer, X yukarı değerdir** — matematikteki
+alışkanlığın tersi. Bu bir tercih değil, koordinat sisteminin kendi tanımıdır:
+EPSG:5254 (TUREF/TM30) eksenlerini şöyle bildirir:
+
+```text
+AXIS["northing (X)", ORDER 1]
+AXIS["easting (Y)",  ORDER 2]
+```
+
+PiriCAD bu konvansiyona uyar: gördüğünüz her etikette Y sağa değeri, X yukarı değeri
+gösterir.
+
+Komut satırına ve betiğe **sağa değer önce** yazılır:
+
+```text
+ÇİZGİ 485320.150,4310220.400
+      ─────┬────  ─────┬─────
+        sağa (Y)    yukarı (X)
+```
+
+Bu sıra yaygın Türk CAD pratiğiyle aynıdır. Dönüşüm yapan kütüphaneler
+(PROJ, EPSG:5254) koordinatı **yukarı değer önce** bekler; PiriCAD bu çevrimi sınırda
+kendisi yapar, sizin bir şey yapmanız gerekmez.
 
 Yanındaki bölme ölçeği verir: bir ekran pikselinin kaç metreye karşılık geldiği.
 

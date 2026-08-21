@@ -95,6 +95,13 @@ Türkiye'de büyük ölçekli harita üretiminin standart projeksiyonudur.
 **Orta meridyen** — Bir dilimin ölçek bozulmasının en az olduğu boylam; dilim buna göre
 adlandırılır (TM30 = 30° orta meridyen).
 
+**Sağa değer (Y)** — Doğu-batı yönündeki koordinat bileşeni. TM 3° dilimlerinde 500 000 m
+yalancı doğu eklenmiştir, bu yüzden Türkiye'de tipik olarak 300 000–700 000 m arasındadır.
+
+**Yukarı değer (X)** — Kuzey-güney yönündeki koordinat bileşeni; ekvatordan itibaren ölçülür,
+Türkiye'de tipik olarak 4 000 000–4 700 000 m arasındadır. Türk konvansiyonunda X yukarı
+değerdir, matematikteki kullanımın tersine.
+
 **Jeoit** — Ortalama deniz seviyesini temsil eden eşpotansiyelli yüzey; elipsoit
 yüksekliğinden ortometrik yüksekliğe geçmek için gerekir.
 

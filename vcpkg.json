@@ -7,15 +7,15 @@
   "license": "GPL-3.0-or-later",
 
   "$comment": [
-    "Manifest mode with a pinned baseline (CLAUDE.md 5.12: no unpinned dependency).",
-    "Phase 0 builds with nothing but Qt 6 (CLAUDE.md Article 8.2), so every entry",
-    "below is a FEATURE, not a base dependency. A feature is enabled only together",
-    "with its PIRICAD_WITH_<NAME> CMake option.",
+    "Manifest mode against a real pinned baseline (CLAUDE.md 5.12).",
+    "This file covers the libraries with native dependencies. Small pure-C++",
+    "libraries are pinned by commit SHA in cmake/PiriCADDependencies.cmake instead,",
+    "so a fresh checkout builds on all three platforms with nothing installed.",
     "Before enabling any of these: read its LICENSE, confirm GPLv3 compatibility,",
     "record it in NOTICE and regenerate the CycloneDX SBOM in the same PR."
   ],
 
-  "builtin-baseline": "0000000000000000000000000000000000000000",
+  "builtin-baseline": "6f29f12e82a8293156836ad81cc9bf5af41fe836",
   "dependencies": [],
 
   "features": {

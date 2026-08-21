@@ -1,0 +1,238 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// core.setting — AYAR, and core.preference — TERCİH.
+//
+// .claude/model.md R41: ONE command per SCOPE, never one command per setting.
+// Fourteen settings do not become fourteen commands; they become two commands and
+// a catalogue, so adding a setting adds a SettingSpec and nothing else — no menu
+// entry to hand-write, no CLI table to sync, no docs table to forget
+// (CLAUDE.md 5.10, model.md R38).
+#include "piricad/command/bus.hpp"
+#include "piricad/command/context.hpp"
+#include "piricad/command/session.hpp"
+#include "piricad/command/spec.hpp"
+
+#include "piricad/core/settings.hpp"
+#include "piricad/core/text.hpp"
+
+#include <string>
+
+namespace piricad::command {
+namespace {
+
+using core::Settings;
+using core::SettingScope;
+using core::SettingScopeMask;
+using core::SettingSpec;
+using core::SettingValue;
+
+// ---------------------------------------------------------------------------
+// PHASE-0 SEAM — the one thing in this file that is not its final shape.
+//
+// model.md R39 puts the PROJECT store inside the document: it travels with the
+// file, it is undoable, and it is part of content_hash(). That requires three
+// things this file does not own — `Document::settings()`, an `Op::SetSetting`
+// variant, and `Transaction::set_setting()`. Until they land, the two stores live
+// here so the commands, the catalogue and the manual can be finished and proved.
+//
+// Everything else is already final: the scope masks are the real ones, so a
+// project setting cannot be written through TERCİH and an application setting
+// cannot be written through AYAR, and that boundary is tested. When the document
+// gains its store, `project_store()` becomes `ctx.transaction().settings()` and
+// `app_store()` becomes an application-owned member; nothing else in this file
+// changes.
+// ---------------------------------------------------------------------------
+
+Settings& project_store()
+{
+    static Settings store{core::builtin_settings(), SettingScopeMask::Project};
+    return store;
+}
+
+Settings& app_store()
+{
+    static Settings store{core::builtin_settings(), SettingScopeMask::App};
+    return store;
+}
+
+std::string with_unit(const SettingSpec& spec, const SettingValue& v)
+{
+    std::string out = core::format_setting(spec, v);
+    if (!spec.unit.empty()) out += " " + spec.unit;
+    return out;
+}
+
+void list_scope(Context& ctx, const Settings& store, SettingScope scope)
+{
+    ctx.echo(std::string(core::setting_scope_label(scope)) + " ayarları:");
+
+    // Generated from the catalogue, in declaration order. There is no second list.
+    for (const auto& spec : store.catalogue().all()) {
+        if (spec.scope != scope) continue;
+        ctx.echo("    " + spec.names.front() + " = " + with_unit(spec, store.get(spec.id)) +
+                 (store.is_explicit(spec.id) ? "   (ayarlanmış)" : "   (varsayılan)"));
+    }
+}
+
+/// "Why is this like this?" is the most common support question, so a bare query
+/// answers it: the value, where it came from, and what the declaration allows.
+void report_one(Context& ctx, const Settings& store, const SettingSpec& spec)
+{
+    ctx.echo(spec.names.front() + " = " + with_unit(spec, store.get(spec.id)));
+    ctx.echo("    kaynak      : " +
+             std::string(store.is_explicit(spec.id) ? "açıkça ayarlandı" : "varsayılan"));
+    ctx.echo("    kimlik      : " + spec.id);
+    ctx.echo("    kapsam      : " + std::string(core::setting_scope_label(spec.scope)));
+    ctx.echo("    tür         : " + std::string(core::setting_type_label(spec.type)));
+    ctx.echo("    varsayılan  : " + with_unit(spec, spec.fallback));
+
+    if (spec.type == core::SettingType::Enum) {
+        std::string values;
+        for (std::size_t i = 0; i < spec.values.size(); ++i) {
+            if (i) values += ", ";
+            values += spec.values[i];
+        }
+        ctx.echo("    seçenekler  : " + values);
+    } else if (spec.type != core::SettingType::Text && spec.range.bounded()) {
+        ctx.echo("    aralık      : " + std::to_string(spec.range.min) + " .. " +
+                 std::to_string(spec.range.max));
+    }
+
+    ctx.echo("    " + spec.summary);
+}
+
+/// The whole body of both commands. They differ in the store they reach and in
+/// whether the change is document state — never in what a user can do (Article 1.2).
+Task<void> run_scope(Context& ctx, Settings& store, SettingScope scope)
+{
+    const Value name = ctx.argument("ad");
+    if (name.empty()) {
+        list_scope(ctx, store, scope);
+        co_return;
+    }
+
+    const std::uint32_t index = store.catalogue().find(name.as_text());
+    if (index == core::kNoSetting) {
+        // One unknown-setting message, written once, in core.
+        auto probe = store.lookup(name.as_text());
+        ctx.echo(probe.error().message);
+        co_return;
+    }
+
+    const SettingSpec& spec = store.catalogue().at(index);
+    if (spec.scope != scope) {
+        ctx.echo("'" + spec.id + "' ayarı " + core::setting_scope_label(spec.scope) +
+                 " kapsamındadır; bu komut " + core::setting_scope_label(scope) +
+                 " ayarlarını yönetir.");
+        co_return;
+    }
+
+    // The canonical id, not the alias that was typed, so a replay of this journal
+    // line resolves the same setting whatever the user's keyboard did (§2.2).
+    ctx.record("ad", Value::text(spec.id));
+
+    const Value value = ctx.argument("deger");
+    if (value.empty()) {
+        report_one(ctx, store, spec);
+        co_return;
+    }
+
+    // "varsayılan" is a value word, not a setting value: it drops the explicit entry
+    // so the declared default is in force again. It is how a user undoes a setting
+    // in a script, where Ctrl+Z is not available.
+    if (core::turkish_iequals(value.as_text(), "varsayılan") ||
+        core::turkish_iequals(value.as_text(), "varsayilan") ||
+        core::turkish_iequals(value.as_text(), "default")) {
+        const SettingValue before = store.get(spec.id);
+        if (auto st = store.reset(spec.id); !st) {
+            ctx.echo(st.error().message);
+            co_return;
+        }
+        ctx.record("deger", Value::text("varsayılan"));
+        ctx.echo(spec.names.front() + " = " + with_unit(spec, store.get(spec.id)) +
+                 "   (varsayılana döndü, önceki: " + with_unit(spec, before) + ")");
+        co_return;
+    }
+
+    auto parsed = core::parse_setting(spec, value.as_text());
+    if (!parsed) {
+        ctx.echo(parsed.error().message);
+        co_return;
+    }
+
+    store.clear_warnings();
+    auto change = store.set(spec.id, parsed.value());
+    if (!change) {
+        ctx.echo(change.error().message);
+        co_return;
+    }
+
+    // R42: an out-of-range value is clamped and the user is told, never silently
+    // accepted and never a failure that would leave a file unopenable.
+    for (const auto& w : store.warnings())
+        ctx.echo(w.message);
+
+    ctx.record("deger", Value::text(core::format_setting(spec, change.value().after)));
+    ctx.echo(spec.names.front() + " = " + with_unit(spec, change.value().after) +
+             "   (önceki: " + with_unit(spec, change.value().before) + ")");
+}
+
+Task<void> run_setting(Context& ctx)
+{
+    // When the document owns the store, the write inside run_scope becomes
+    // ctx.transaction().set_setting(...) — one undo step, one entry in
+    // content_hash(). See the PHASE-0 SEAM note above.
+    co_await run_scope(ctx, project_store(), SettingScope::Project);
+}
+
+Task<void> run_preference(Context& ctx)
+{
+    co_await run_scope(ctx, app_store(), SettingScope::App);
+}
+
+} // namespace
+
+PIRICAD_COMMAND(setting)
+{
+    return CommandSpec{
+        .id       = "core.setting",
+        .names    = {"AYAR", "SETTING", "AY"},
+        .category = Category::System,
+        .params =
+            {
+                Param::text("ad", Arity::optional(), "Ayar adı veya kimliği; yoksa liste"),
+                Param::text("deger", Arity::optional(), "Yeni değer; yoksa yalnızca okur"),
+            },
+        // One command = one undo step (§2.5). Declared here so the policy is right
+        // the day the document owns the store; today the store is the seam above.
+        .undo = UndoPolicy::SingleTransaction,
+        // Deliberately NOT AiAccessible: changing the project CRS reinterprets every
+        // coordinate in the document, and .claude/ai.md keeps that out of reach of a
+        // suggestion. A licensed engineer sets it (piricad.md §5.1).
+        .flags   = Flags::Scriptable,
+        .summary = "Proje ayarlarını listeler, okur ve değiştirir.",
+        .run     = &run_setting,
+    };
+}
+
+PIRICAD_COMMAND(preference)
+{
+    return CommandSpec{
+        .id       = "core.preference",
+        .names    = {"TERCİH", "TERCIH", "PREFERENCE", "PREF"},
+        .category = Category::System,
+        .params =
+            {
+                Param::text("ad", Arity::optional(), "Tercih adı veya kimliği; yoksa liste"),
+                Param::text("deger", Arity::optional(), "Yeni değer; yoksa yalnızca okur"),
+            },
+        // R43: an application preference is not document state, so it is not
+        // undoable and not journalled as a document mutation. ReadOnly says exactly
+        // that to the bus — the same flag core.zoom carries for view state.
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Scriptable | Flags::ReadOnly,
+        .summary = "Uygulama tercihlerini listeler, okur ve değiştirir.",
+        .run     = &run_preference,
+    };
+}
+
+} // namespace piricad::command

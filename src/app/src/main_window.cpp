@@ -544,7 +544,7 @@ void MainWindow::buildStatusBar()
     statusLayer_  = new QLabel(QStringLiteral("0"), this);
     statusCrs_    = new QLabel(QStringLiteral("TUREF/TM30"), this);
 
-    statusCoords_->setMinimumWidth(240);
+    statusCoords_->setMinimumWidth(330);
     statusScale_->setMinimumWidth(140);
     statusLayer_->setMinimumWidth(110);
 
@@ -660,7 +660,11 @@ void MainWindow::onUndoStateChanged(bool canUndo, bool canRedo)
 
 void MainWindow::onCursorMoved(core::Point2 world)
 {
-    statusCoords_->setText(tr("X %1   Y %2").arg(format_metres(world.x), format_metres(world.y)));
+    // Turkish surveying convention, which EPSG:5254 itself declares: Y is the
+    // easting (sağa değer) and X is the northing (yukarı değer). Storage is
+    // unaffected — Point2::x holds the easting either way (.claude/model.md R37a).
+    statusCoords_->setText(
+        tr("Sağa (Y) %1   Yukarı (X) %2").arg(format_metres(world.x), format_metres(world.y)));
 }
 
 void MainWindow::onViewRequested(const QString& mode, double factor)

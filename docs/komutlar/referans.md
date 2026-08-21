@@ -17,6 +17,8 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.undo`](undo.md) | `GERİAL`, `GERIAL`, `UNDO`, `U` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Son işlemi geri alır. |
 | [`core.redo`](redo.md) | `YİNELE`, `YINELE`, `REDO` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Geri alınan işlemi yineler. |
 | [`core.script`](script.md) | `BETİK`, `BETIK`, `SCRIPT` | Betik | komuta özel | etkileşimli, betiklenebilir, salt okunur | Bir betik dosyasını komut veri yolu üzerinden çalıştırır. |
+| [`core.setting`](setting.md) | `AYAR`, `SETTING`, `AY` | Sistem | tek işlem | betiklenebilir | Proje ayarlarını listeler, okur ve değiştirir. |
+| [`core.preference`](preference.md) | `TERCİH`, `TERCIH`, `PREFERENCE`, `PREF` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Uygulama tercihlerini listeler, okur ve değiştirir. |
 | [`core.help`](help.md) | `YARDIM`, `HELP`, `?` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Komut listesini veya tek bir komutun ayrıntısını gösterir. |
 
 ## Parametreler
@@ -90,6 +92,28 @@ Bir betik dosyasını komut veri yolu üzerinden çalıştırır.
 | `dosya` | text | 1 | Çalıştırılacak betik dosyasının yolu |
 
 Ayrıntılı kullanım: [BETİK](script.md)
+
+### `core.setting` — AYAR
+
+Proje ayarlarını listeler, okur ve değiştirir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `ad` | text | isteğe bağlı | Ayar adı veya kimliği; yoksa liste |
+| `deger` | text | isteğe bağlı | Yeni değer; yoksa yalnızca okur |
+
+Ayrıntılı kullanım: [AYAR](setting.md)
+
+### `core.preference` — TERCİH
+
+Uygulama tercihlerini listeler, okur ve değiştirir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `ad` | text | isteğe bağlı | Tercih adı veya kimliği; yoksa liste |
+| `deger` | text | isteğe bağlı | Yeni değer; yoksa yalnızca okur |
+
+Ayrıntılı kullanım: [TERCİH](preference.md)
 
 ### `core.help` — YARDIM
 

@@ -215,7 +215,7 @@ Ayrıntı: [Komut günlüğü](../mimari/gunluk.md).
 |---|---|
 | Sol | Çalışan komutun isteği, komut yoksa `Hazır` |
 | Katman | Aktif katman adı |
-| X / Y | İmlecin harita koordinatı, metre, üç ondalık |
+| Sağa (Y) / Yukarı (X) | İmlecin harita koordinatı, metre, üç ondalık. Türk haritacılık konvansiyonu: **Y sağa değer, X yukarı değer** |
 | Ölçek | Bir ekran pikselinin kaç metreye karşılık geldiği |
 | Sağ | Dokümanın koordinat sistemi, örneğin `TUREF/TM30` |
 

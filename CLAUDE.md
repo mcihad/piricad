@@ -6,6 +6,7 @@ PiriCAD is a Turkey-focused GIS + CAD mapping application: a native desktop syst
 
 0.1 This file is the highest law of the repository. Where any document, comment, commit message, issue or agent instruction conflicts with it, this file wins.
 0.2 `/.claude/<engine>.md` rulebooks are binding inside their declared scope. They refine this constitution; they may not contradict it.
+0.2a `.claude/model.md` is the document model's settled law. Its shapes may gain fields; they may not change meaning. A change there is a data migration, not a refactor.
 0.3 `piricad.md` (Turkish, v2) is the source of intent. Every rule here and in every rulebook traces to a `§` reference in it.
 0.4 Conflicts resolve upward: rulebook → constitution → `piricad.md`. A real contradiction is a defect — fix the document, never route around it in code.
 0.5 Amending this file takes the same review as a source change and must name what it supersedes.
@@ -31,7 +32,8 @@ PiriCAD is a Turkey-focused GIS + CAD mapping application: a native desktop syst
 | 2.4 | Coordinate storage | `Mm` = `int64` fixed-point millimetres; `Point2`/`Box2` hold `Mm` members only | Exact and deterministic; `double` is a transient local, never a stored format (§10.2) |
 | 2.5 | Floating point | `-fno-fast-math -ffp-contract=off` (MSVC `/fp:precise`) on every TU in every config, Debug and ASan included | FMA does not round the intermediate; x86 and Apple Silicon must agree bit-for-bit in official documents (§7.3) |
 | 2.6 | Turkish-first | `.names` = Turkish primary, ASCII-folded Turkish, English, abbreviations (`ÇİZGİ, CIZGI, LINE, Ç, L`); casing via `QLocale` | The users are Turkish surveying engineers and planners; the Turkish domain language is the product (§5.6, §13) |
-| 2.7 | AI scope | AI emits commands only — preview, explicit approval, one undo step, full audit record; coordinates only from tool-call results | Cadastral and zoning output is a legal document that only a licensed engineer can sign (§5.1, §5.2) |
+| 2.7 | Dependencies | A mature, excellent, cross-platform library is used; it is never reimplemented. Hand-rolled code is permitted only where no such library exists, or where §7.1 names the hand-rolled version as the decision | Reimplementing a solved problem costs correctness, portability and every bug the library already fixed. "Multiplatform" is part of the test: a Linux-only package is not a candidate (§9) |
+| 2.8 | AI scope | AI emits commands only — preview, explicit approval, one undo step, full audit record; coordinates only from tool-call results | Cadastral and zoning output is a legal document that only a licensed engineer can sign (§5.1, §5.2) |
 
 ## Article 3 — Module Map and Dependency Direction
 
@@ -77,6 +79,7 @@ plugin-api -> stable C ABI only (core types by value, bus via handle)
 | `.claude/ui.md` | `/src/app` | Widgets shell, command line widget, `Registry`-driven actions, i18n, accessibility, latency and cold-start budgets |
 | `.claude/plugin-api.md` | `/src/plugin-api` | C99 ABI, version handshake, additive-only evolution, capability sandbox, signing, crash isolation, GPLv3-compatible licences |
 | `.claude/build.md` | CMake, presets, Makefile, vcpkg, packaging, CI | Presets and targets, compiler floors, flag strings, pinned deps, warnings-as-errors, SBOM, reproducible signed releases |
+| `.claude/model.md` | the document model, everywhere it is stored or rendered | Slot vs key identity, the closed cull block, ring geometry, the interned style column, units, kind registration, attributes, layers, catalogue provenance, CRS + epoch, setting scopes |
 | `.claude/docs.md` | `/docs` | Turkish user manual, per-command pages, generated reference, examples that run, glossary, dead-link and TODO bans |
 | `.claude/test.md` | `/tests/*`, `/scripts` gates | Six test kinds, the GUI=CLI=script equality proof, golden bit-identity, bench gates, fuzzing, sanitizers, determinism |
 
@@ -99,8 +102,9 @@ Project-wide. A violation is a build failure or a merge block, never a discussio
 5.13 NEVER hard-code a regulatory value in C++ — no detail code, gösterim, symbol, colour, TAKS/KAKS row, threshold or TUCBS theme id as literal, `constexpr` or enum (§15).
 5.14 NEVER silence a warning (`-Wno-*`, `#pragma warning(disable)`, `/WX-`, `-w`), and never merge on a red CI or with `continue-on-error` on a gate (§9.11, §14).
 5.15 NEVER give one client a capability another lacks, and never ship a feature reachable only by mouse (§2.1, §13).
-5.16 NEVER ship a user-facing feature — command, script API, sandbox level, file format, CLI flag, panel or dialog — without its Turkish Markdown page under `/docs`, linked from `docs/README.md`. Undocumented is unshipped (Article 11).
-5.17 NEVER hand-edit `docs/komutlar/referans.md`, and never hand-write a second command or parameter table anywhere in `/docs` — it is generated from `Registry` by `piricad_docgen` (§2.3).
+5.16 NEVER hand-roll what a mature, cross-platform library already does well — JSON, testing, benchmarking, spatial indexing, Unicode casing, logging, formatting, hashing, compression, geometry predicates, polygon boolean, triangulation, coordinate transformation, format I/O, linear algebra. Reach for `/vcpkg.json` or a pinned `FetchContent` entry first, and justify in the PR why a hand-rolled version is the exception (Article 2.7, §9).
+5.17 NEVER ship a user-facing feature — command, script API, sandbox level, file format, CLI flag, panel or dialog — without its Turkish Markdown page under `/docs`, linked from `docs/README.md`. Undocumented is unshipped (Article 11).
+5.18 NEVER hand-edit `docs/komutlar/referans.md`, and never hand-write a second command or parameter table anywhere in `/docs` — it is generated from `Registry` by `piricad_docgen` (§2.3).
 
 ## Article 6 — Definition of Done
 
@@ -156,6 +160,12 @@ Three deviations from this constitution exist today. Each is documented, time-bo
 3. Declare argument arity, type and range as `Param` so `Bus` validates before the body runs.
 4. Regenerate CLI help, script bindings, AI schema and docs from `Registry` — never hand-edit a file to match.
 5. Land the equality proof (Article 6.4), a cancellation test with an empty undo delta, and a `Value` round-trip test.
+
+**Before writing any non-trivial algorithm** — ask whether a mature library already does it.
+1. Check §9 of `piricad.md`: it already names the chosen library for most problems this product has.
+2. The test is three-part: **mature** (used in production by others, maintained), **excellent** (the best available answer, not merely the first), and **cross-platform** (Windows, macOS and Linux — a Linux-only package fails).
+3. If one exists, use it. If none does, say so in the PR and in a comment on the hand-rolled code.
+4. `piricad/command/task.hpp` is the standing exception, because §7.1 makes writing it the decision.
 
 **To add a dependency** — read `.claude/build.md`, and `.claude/io.md` if it is a format library.
 1. Read its LICENSE first and confirm GPLv3 compatibility; GPLv2-only, Triangle and ODA SDK are refused outright.
@@ -214,7 +224,7 @@ CMake presets are the only sanctioned build entry points, and they are platform-
 11.2 `/docs` is the single home of user documentation. `README.md` at the repository root is a signpost into it; directory `README.md` files are one-line pointers. Nothing else.
 11.3 `docs/README.md` is the index and links every page. An orphan page or a dead link fails the build.
 11.4 Every command in `Registry` has a page at `docs/komutlar/<slug>.md` carrying all eight sections named in `.claude/docs.md` R7, and shows the command invoked from the command line, from the GUI and from a script — because those three are equal clients (Article 1.2).
-11.5 `docs/komutlar/referans.md` is generated by `piricad_docgen` from `Registry` and regenerated in the same commit as any registry change. Hand-editing it is a defect (Article 5.17).
+11.5 `docs/komutlar/referans.md` is generated by `piricad_docgen` from `Registry` and regenerated in the same commit as any registry change. Hand-editing it is a defect (Article 5.18).
 11.6 Every example in the manual runs exactly as printed. Every error message a user can hit is listed with its cause and its fix.
 11.7 Every regulatory statement cites its regulation, annex, madde and publication date (§5.5).
 11.8 Behaviour that does not exist yet is written in the future tense and names its phase. Aspirational present tense is forbidden.

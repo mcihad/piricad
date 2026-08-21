@@ -200,9 +200,9 @@ void PropertyPanel::refresh()
     if (box.empty()) {
         addRow(tr("Durum"), tr("boş çizim"));
     } else {
-        addRow(QStringLiteral("X min / max"),
+        addRow(tr("Sağa (Y) min / max"),
                QStringLiteral("%1  /  %2").arg(metres(box.min_x), metres(box.max_x)));
-        addRow(QStringLiteral("Y min / max"),
+        addRow(tr("Yukarı (X) min / max"),
                QStringLiteral("%1  /  %2").arg(metres(box.min_y), metres(box.max_y)));
         addRow(tr("Genişlik × Yükseklik"),
                QStringLiteral("%1 × %2 m").arg(metres(box.width()), metres(box.height())));

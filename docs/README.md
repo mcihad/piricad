@@ -31,6 +31,8 @@ Tek tek komutlar:
 | `GERİAL` | [Geri alma](komutlar/undo.md) |
 | `YİNELE` | [Yineleme](komutlar/redo.md) |
 | `BETİK` | [Betik çalıştırma](komutlar/script.md) |
+| `AYAR` | [Proje ayarları](komutlar/setting.md) |
+| `TERCİH` | [Uygulama tercihleri](komutlar/preference.md) |
 | `YARDIM` | [Yardım](komutlar/help.md) |
 
 ## İleri konular

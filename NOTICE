@@ -24,10 +24,59 @@ Currently linked
                           relinking right is preserved. Qt Charts and
                           Qt DataVisualization are GPLv3-only and are NOT used.
 
+Pinned by commit, built from source
+-----------------------------------
+
+Small, pure-C++ libraries acquired by CMake FetchContent against an exact commit
+SHA, so a fresh checkout builds identically on Windows, macOS and Linux with
+nothing installed. The SHAs live in cmake/PiriCADDependencies.cmake; a tag can be
+moved, a SHA cannot (CLAUDE.md 5.12).
+
+  nlohmann/json           MIT                   v3.11.3   9cca280a
+                          JSON for the journal, scripts and catalogues.
+  doctest                 MIT                   v2.4.11   ae7a1353
+                          Test framework. Chosen over Catch2 for compile time
+                          (piricad.md §9.11).
+  Google Benchmark        Apache 2.0            v1.9.1    c58e6d07
+                          The §10.1 budget harness.
+  fmt                     MIT                   11.0.2    0c9fce2f
+                          Formatting.
+  spdlog                  MIT                   v1.14.1   27cb4c76
+                          Asynchronous logging.
+  xxHash                  BSD-2-Clause          v0.8.3    e626a72b
+                          Fast hashing.
+  Clipper2                BSL-1.0               1.4.0     736ddb0b
+                          Polygon boolean and offset — ifraz, tevhit and
+                          çekme mesafesi are built on it (§9.2).
+  CDT                     MPL 2.0               1.4.1     21fae3ba
+                          Constrained Delaunay for TIN and kırıklık hatları.
+
 Bundled in-tree
 ---------------
 
-  (none)
+  (none yet — Shewchuk predicates.c will be vendored here; public domain,
+   single file, and §9.2 marks it as required rather than optional.)
+
+Deliberately hand-written
+-------------------------
+
+Article 2.7 requires a mature cross-platform library wherever one exists. These
+are the recorded exceptions, each with its reason.
+
+  piricad/command/task.hpp
+      The C++20 coroutine Task<T>. piricad.md §7.1 makes writing it the decision:
+      "cppcoro (MIT, bakımı yavaş) veya kendi minimal Task<T> tipinizi yazın —
+      komut altyapısı için 300 satır yeterlidir ve tam kontrol sağlar.
+      Öneri: kendiniz yazın."
+
+  piricad/core/text.hpp — turkish_upper
+      Seven cased pairs (i/İ, ı/I, ç, ğ, ö, ş, ü) as an exact table. ICU is the
+      right answer for collation, normalisation and search, and casing moves onto
+      it when those land; pulling in ~30 MB of ICU for seven pairs is not the
+      trade today. The table is exact for its domain and is tested.
+
+  the command bus, registry, parser, journal, document model
+      No library provides these. They are the product.
 
 Approved but not yet enabled
 ----------------------------

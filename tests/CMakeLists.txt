@@ -12,10 +12,14 @@ add_executable(piricad_tests
     unit/main.cpp
     unit/test_core.cpp
     unit/test_command.cpp
+    unit/test_attribute.cpp
     unit/test_docs.cpp
+    unit/test_geometry.cpp
     unit/test_golden.cpp
     unit/test_index.cpp
     unit/test_jitter.cpp
+    unit/test_settings.cpp
+    unit/test_style_layer.cpp
     unit/test_proof.cpp
 )
 

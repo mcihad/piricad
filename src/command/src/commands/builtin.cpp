@@ -18,6 +18,8 @@ namespace piricad::command {
     X(undo)                                                                                        \
     X(redo)                                                                                        \
     X(script)                                                                                      \
+    X(setting)                                                                                     \
+    X(preference)                                                                                  \
     X(help)
 
 #define PIRICAD_DECLARE(sym) PIRICAD_COMMAND(sym);
