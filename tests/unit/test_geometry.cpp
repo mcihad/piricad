@@ -81,14 +81,17 @@ TEST_CASE("çoklu çizginin alanı sıfır, çevresi kenarlarının toplamı")
     CHECK_EQ(g.area_of(a), Mm2{0});
     CHECK_EQ(g.perimeter_of(a), Mm{5000}); // 3-4-5
 
-    // A zigzag whose implied closure has a non-zero shoelace: an Open ring must
-    // still contribute nothing to alan hesabı.
+    // A zigzag whose IMPLIED closure would have a non-zero shoelace. R10 says a
+    // polyline's first and last vertex are not joined, so both area functions
+    // must report nothing: an implied-closure figure for this shape (3 m², as the
+    // old ring_area returned) is an area for something that does not exist, and
+    // the two public area functions must never disagree about the same ring.
     const std::vector<Point2> five{{0, 0}, {1000, 0}, {1000, 1000}, {2000, 1000}, {2000, 4000}};
     const std::uint32_t b = must_add(g, {ring(five, RingRole::Open)});
 
     CHECK_EQ(g.area_of(b), Mm2{0});
     CHECK_EQ(g.perimeter_of(b), Mm{6000});
-    CHECK(g.ring_area(g.rings_of(b).first) != 0); // the shoelace itself is not zero
+    CHECK_EQ(g.ring_area(g.rings_of(b).first), Mm2{0});
 }
 
 TEST_CASE("açık halkanın ilk ve son noktası çakışsa bile kırpılmaz")
@@ -236,6 +239,146 @@ TEST_CASE("çok parçalı parselin her parçası kendi boşluğunu taşır")
                      ring(yuz1, RingRole::Exterior, 1), ring(bos1, RingRole::Interior, 1)});
 
     CHECK_EQ(g.area_of(slot), Mm2{400000000 - 25000000 + 100000000 - 1000000});
+}
+
+TEST_CASE("kabul edilen en küçük halkalar: üç köşeli parsel, iki köşeli çoklu çizgi")
+{
+    // Only the REJECTION side of the vertex-count boundary was tested, so an
+    // off-by-one that refused a legitimate üçgen parsel (`stored <= needed`)
+    // passed the whole file: every other accepted ring here has four corners.
+    RingGeometry g;
+
+    const std::vector<Point2> ucgen{{0, 0}, {30000, 0}, {0, 40000}};
+    const std::uint32_t parsel = must_add(g, {ring(ucgen, RingRole::Exterior)});
+    CHECK_EQ(g.ring_count[g.rings_of(parsel).first], std::uint32_t{3});
+    CHECK_EQ(g.area_of(parsel), Mm2{600000000});         // 30 x 40 / 2 = 600 m²
+    CHECK_EQ(g.perimeter_of(parsel), Mm{30000 + 40000 + 50000}); // 3-4-5
+
+    const std::vector<Point2> iki{{0, 0}, {0, 12000}};
+    const std::uint32_t cizgi = must_add(g, {ring(iki, RingRole::Open)});
+    CHECK_EQ(g.ring_count[g.rings_of(cizgi).first], std::uint32_t{2});
+    CHECK_EQ(g.area_of(cizgi), Mm2{0});
+    CHECK_EQ(g.perimeter_of(cizgi), Mm{12000});
+}
+
+TEST_CASE("R10/R11: parça ve rol sütunları yazıldıkları gibi okunur")
+{
+    // ring_part and ring_role are written by append and were read by nothing the
+    // suite asserted: `ring_part.push_back(0)` would have passed every case.
+    RingGeometry g;
+
+    const auto yuz0 = rect(0, 0, 20000, 20000);
+    const auto bos0 = rect(5000, 5000, 5000, 5000);
+    const auto yuz1 = rect(50000, 0, 10000, 10000);
+    const auto bos1 = rect(52000, 2000, 1000, 1000);
+
+    const std::uint32_t slot =
+        must_add(g, {ring(yuz0, RingRole::Exterior, 0), ring(bos0, RingRole::Interior, 0),
+                     ring(yuz1, RingRole::Exterior, 7), ring(bos1, RingRole::Interior, 7)});
+
+    const RingSpan span = g.rings_of(slot);
+    CHECK_EQ(span.count, std::uint32_t{4});
+
+    const std::uint16_t parts[4]{0, 0, 7, 7};
+    const RingRole roles[4]{RingRole::Exterior, RingRole::Interior, RingRole::Exterior,
+                            RingRole::Interior};
+    for (std::uint32_t k = 0; k < 4; ++k) {
+        CHECK_EQ(g.ring_part[span.first + k], parts[k]);
+        CHECK_EQ(static_cast<int>(g.ring_role[span.first + k]), static_cast<int>(roles[k]));
+    }
+}
+
+// ------------------------------------------------------------- yuvarlama ----
+
+TEST_CASE("R12: tek sayılı iki kat alan sıfırdan uzağa yuvarlanır, iki sarımda da aynı")
+{
+    // Every other area here is a rectangle, so twice_area is always EVEN and
+    // halve()'s round-half-away-from-zero branch never runs: plain `twice / 2`
+    // passed all sixteen assertions. A yola terk slivi is a triangle, and its
+    // doubled shoelace is routinely odd.
+    RingGeometry g;
+
+    const std::vector<Point2> ccw{{0, 0}, {1001, 0}, {0, 1001}}; // 2A = 1002001
+    const std::vector<Point2> cw{{0, 0}, {0, 1001}, {1001, 0}};
+
+    const std::uint32_t a = must_add(g, {ring(ccw, RingRole::Exterior)});
+    const std::uint32_t b = must_add(g, {ring(cw, RingRole::Exterior)});
+
+    CHECK_EQ(g.ring_area(g.rings_of(a).first), Mm2{501001});  // 1002001 -> +501001
+    CHECK_EQ(g.ring_area(g.rings_of(b).first), Mm2{-501001}); // symmetric in sign
+    CHECK_EQ(g.area_of(a), Mm2{501001});
+    CHECK_EQ(g.area_of(b), g.area_of(a));
+
+    // And the halving happens ONCE over the whole slot, not per ring: both rings
+    // round on their own, the net does not.
+    RingGeometry h;
+    const std::vector<Point2> dis{{0, 0}, {4001, 0}, {0, 4001}};    // 2A = 16008001
+    const std::vector<Point2> ic{{100, 100}, {1101, 100}, {100, 1101}}; // 2A = 1002001
+    const std::uint32_t net = must_add(h, {ring(dis, RingRole::Exterior),
+                                           ring(ic, RingRole::Interior)});
+    CHECK_EQ(h.area_of(net), Mm2{7503000}); // (16008001 - 1002001) / 2, exact
+}
+
+TEST_CASE("R21: kenar uzunluğu en yakın milimetreye yuvarlanır, hiçbir yerde kayan nokta yok")
+{
+    // Every perimeter asserted elsewhere is axis-aligned or 3-4-5, i.e. an exact
+    // integer root: round_sqrt returning floor() passed all of them. A kenar
+    // uzunluğu printed on a röper krokisi that is systematically 1 mm short is a
+    // wrong figure on a legal document.
+    RingGeometry g;
+
+    // sqrt(2) = 1.41 -> 1;  sqrt(5) = 2.24 -> 2;  sqrt(13) = 3.61 -> 4.
+    const std::vector<Point2> kirik{{0, 0}, {1, 1}, {3, 2}, {5, 5}};
+    const std::uint32_t a = must_add(g, {ring(kirik, RingRole::Open)});
+    CHECK_EQ(g.perimeter_of(a), Mm{1 + 2 + 4});
+
+    // Both sides of the half-way point, at full TM30 width: 3162² = 9998244 and
+    // 3163² = 10004569, and 10000000 is nearer 3162.
+    const std::vector<Point2> uzun{{kTmX, kTmY}, {kTmX + 3000, kTmY + 1000}};
+    const std::uint32_t b = must_add(g, {ring(uzun, RingRole::Open)});
+    CHECK_EQ(g.perimeter_of(b), Mm{3162});
+
+    // 5² = 25 and the next square is 36; 30 is nearer 5 than 6, 31 is nearer 6.
+    const std::vector<Point2> asagi{{0, 0}, {5, 5}}; // 50 -> 7.07 -> 7
+    CHECK_EQ(g.perimeter_of(must_add(g, {ring(asagi, RingRole::Open)})), Mm{7});
+}
+
+TEST_CASE("R9: iki dilimi kapsayan kenar tam ölçülür, sıfır bildirmez")
+{
+    // The old segment_length squared the deltas in signed int64 on the strength
+    // of a comment. A 3100 km side overflowed, round_sqrt's `v <= 0 return 0`
+    // turned the overflow into the sentinel 0, and the çevre came back SHORT with
+    // no word to the user. Verified against the old code: this ring reported
+    // 1000 mm instead of ~6 200 001 000 mm.
+    RingGeometry g;
+
+    const std::vector<Point2> genis{{0, 0}, {3100000000, 0}, {3100000000, 1000}};
+    const std::uint32_t slot = must_add(g, {ring(genis, RingRole::Open)});
+    CHECK_EQ(g.perimeter_of(slot), Mm{3100000000 + 1000});
+
+    // A dilim-prefixed sağa değer beside an unprefixed neighbour — one vertex that
+    // kept its prefix — is 3.05e10 mm apart, and dx² is 9.3e20.
+    constexpr Mm kPrefixedX = 30485320150;
+    const std::vector<Point2> dilimler{{kPrefixedX, kTmY}, {150, kTmY}};
+    const std::uint32_t iki = must_add(g, {ring(dilimler, RingRole::Open)});
+    CHECK_EQ(g.perimeter_of(iki), Mm{30485320000});
+}
+
+TEST_CASE("dilim ön ekli sağa değerde çevre de tam kalır")
+{
+    // The dilim-prefixed AREA was pinned; the dilim-prefixed PERIMETER was not,
+    // and the perimeter is the half that used to overflow.
+    constexpr Mm kPrefixedX = 30485320150;
+
+    RingGeometry g;
+    const auto dilimde  = rect(kPrefixedX, kTmY, 30000, 45000);
+    const auto merkezde = rect(0, 0, 30000, 45000);
+
+    const std::uint32_t a = must_add(g, {ring(dilimde, RingRole::Exterior)});
+    const std::uint32_t b = must_add(g, {ring(merkezde, RingRole::Exterior)});
+
+    CHECK_EQ(g.perimeter_of(a), Mm{150000});
+    CHECK_EQ(g.perimeter_of(a), g.perimeter_of(b));
 }
 
 // -------------------------------------------------------------- taşma testi --
