@@ -21,6 +21,7 @@ add_library(piricad_command STATIC
     src/commands/file.cpp
     src/commands/layer.cpp
     src/commands/area.cpp
+    src/commands/attribute.cpp
     src/commands/line.cpp
     src/commands/pick.cpp
     src/commands/settings.cpp

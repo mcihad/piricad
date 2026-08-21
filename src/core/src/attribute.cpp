@@ -365,6 +365,17 @@ Status AttrTable::validate_row(std::size_t row, const CatalogueSet& catalogues) 
 
 std::uint64_t AttrTable::fold(std::uint64_t seed) const
 {
+    // A document with no columns folds to the seed UNCHANGED, and that is a
+    // decision rather than an optimisation. A drawing that carries no attributes
+    // is the same drawing it was before attributes existed, so every .pcad file
+    // and every golden fixture written before this table was attached must keep
+    // its fingerprint. Mixing a row count into an empty table would have changed
+    // the hash of every drawing in the world to record the absence of something.
+    //
+    // Row count IS mixed once a column exists, because then "three rows, all
+    // absent" and "two rows, all absent" are different documents.
+    if (columns_.empty()) return seed;
+
     std::uint64_t h = fnv1a_int(static_cast<std::int64_t>(rows_), seed);
     for (const auto& c : columns_)
         h = c.fold(h);

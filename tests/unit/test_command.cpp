@@ -378,7 +378,8 @@ TEST_CASE("ALAN: üç köşeden az reddedilir, yarım alan bırakmaz")
 
     // Two points are a line, not an area, and the message says so rather than
     // silently drawing something.
-    f.bus.execute_line("ALAN 485300,4310200 485360,4310200", Origin::Test);
+    // The refusal is the point; what is asserted is that nothing changed.
+    (void)f.bus.execute_line("ALAN 485300,4310200 485360,4310200", Origin::Test);
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
 }
 
@@ -390,10 +391,11 @@ TEST_CASE("ALAN: 'bolum' nokta listesini tam kapatmazsa hiçbir şey çizilmez")
     // Eight points, rings declared as 4 + 3: one point is left over. Drawing the
     // first ring and dropping the rest would be the worst answer — a parcel with
     // a silently missing courtyard is a parcel with the wrong area on it.
-    f.bus.execute_line("ALAN 485300,4310200 485360,4310200 485360,4310245 485300,4310245 "
-                       "485315,4310212 485345,4310212 485345,4310232 485315,4310232 "
-                       "bolum=4 bolum=3",
-                       Origin::Test);
+    // The refusal is the point; what is asserted is that nothing changed.
+    (void)f.bus.execute_line("ALAN 485300,4310200 485360,4310200 485360,4310245 485300,4310245 "
+                             "485315,4310212 485345,4310212 485345,4310232 485315,4310232 "
+                             "bolum=4 bolum=3",
+                             Origin::Test);
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
 }
 
@@ -417,4 +419,98 @@ TEST_CASE("PROOF: ALAN arayüzden, komut satırından ve betikten aynı belgeyi 
 
     CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
     CHECK_EQ(gui.doc.live_entity_count(), cli.doc.live_entity_count());
+}
+
+// ------------------------------------------------------------ ÖZNİTELİK ----
+
+TEST_CASE("ÖZNİTELİK: şema bildirilir, değer yazılır, kalıcı kimlikle okunur")
+{
+    // Before this, core::AttrTable existed, was tested in isolation and was
+    // attached to nothing: the document could not say what a parcel IS, only
+    // where its corners are. The 476 MPYY gösterim rows in /data had nothing to
+    // match against, which is why the catalogue shipped with zero rules.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("SÜTUN ada_no tam_sayi", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SÜTUN gosterim metin", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(
+        f.bus.execute_line("ALAN 485300,4310200 485360,4310200 485360,4310245", Origin::Test).ok());
+
+    const auto col = f.doc.attributes().find("gosterim");
+    REQUIRE(col != core::kNoAttr);
+
+    // Addressed by the PERSISTENT key, not the dense slot (R5). A journalled slot
+    // replays onto whatever entity holds that index next, which in cadastre is
+    // the neighbouring parcel.
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK gosterim 1 \"TOPLU KONUT ALANI\"", Origin::Test).ok());
+
+    auto read = f.doc.attribute(col, 0);
+    REQUIRE(read.ok());
+    CHECK(read.value().present);
+    CHECK_EQ(read.value().text, std::string("TOPLU KONUT ALANI"));
+}
+
+TEST_CASE("ÖZNİTELİK belge içeriğidir: content_hash() değişir")
+{
+    // R39/R40: an ada number is not a view preference, it is what the parcel is.
+    // If it did not fold into the hash, two documents that disagree about which
+    // parcel is which would fingerprint identically.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("SÜTUN ada_no tam_sayi", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(
+        f.bus.execute_line("ALAN 485300,4310200 485360,4310200 485360,4310245", Origin::Test).ok());
+
+    const std::uint64_t before = f.doc.content_hash();
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK ada_no 1 1234", Origin::Test).ok());
+    const std::uint64_t after = f.doc.content_hash();
+    CHECK(before != after);
+
+    // And an absent cell folds differently from a present zero: "no ada number
+    // recorded" and "ada number 0" are different facts about a parcel.
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK ada_no 1 0", Origin::Test).ok());
+    const std::uint64_t zero = f.doc.content_hash();
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK ada_no 1 yok", Origin::Test).ok());
+    CHECK(zero != f.doc.content_hash());
+}
+
+TEST_CASE("ÖZNİTELİK geri alınabilir, sütun bildirimi alınamaz")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("SÜTUN ada_no tam_sayi", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(
+        f.bus.execute_line("ALAN 485300,4310200 485360,4310200 485360,4310245", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK ada_no 1 1234", Origin::Test).ok());
+
+    const auto col = f.doc.attributes().find("ada_no");
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+
+    // The value goes back; the COLUMN stays. Undoing a declaration would
+    // invalidate every row index the journal already holds, which is the same
+    // reason an emptied layer is not removed on undo.
+    auto read = f.doc.attribute(col, 0);
+    REQUIRE(read.ok());
+    CHECK(!read.value().present);
+    CHECK_EQ(f.doc.attributes().columns(), std::size_t{1});
+}
+
+TEST_CASE("ÖZNİTELİK: tür uymayan değer reddedilir, hücre olduğu gibi kalır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("SÜTUN ada_no tam_sayi", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(
+        f.bus.execute_line("ALAN 485300,4310200 485360,4310200 485360,4310245", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK ada_no 1 1234", Origin::Test).ok());
+
+    // The schema said this column holds an integer. A value that is not one is
+    // refused with the type named, never silently coerced to zero.
+    // The refusal is the point; what is asserted is that nothing changed.
+    (void)f.bus.execute_line("ÖZNİTELİK ada_no 1 \"bin iki yüz\"", Origin::Test);
+
+    const auto col = f.doc.attributes().find("ada_no");
+    auto read      = f.doc.attribute(col, 0);
+    REQUIRE(read.ok());
+    CHECK_EQ(read.value().number, std::int64_t{1234});
 }

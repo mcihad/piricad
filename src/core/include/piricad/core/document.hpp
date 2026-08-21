@@ -16,6 +16,7 @@
 // reach them through a Transaction, which the command bus owns (Article 1).
 #pragma once
 
+#include "piricad/core/attribute.hpp"
 #include "piricad/core/crs.hpp"
 #include "piricad/core/geometry.hpp"
 #include "piricad/core/identity.hpp"
@@ -91,6 +92,7 @@ struct Op
         SetLayerLocked,     ///< layer,  bool_arg
         SetLayerAppearance, ///< layer,  appearance_arg
         SetCrs,             ///< str_arg
+        SetAttribute,       ///< attr_col, entity (as the row), attr_arg
     };
 
     Kind kind{Kind::None};
@@ -100,6 +102,13 @@ struct Op
     StyleId style_arg{kByLayerStyle};
     Appearance appearance_arg{};
     std::string str_arg;
+
+    // R28 is why there is ONE attribute variant and not one per type: an
+    // attribute write is a column, a row and a value. A new column adds no Op
+    // kind, no journal case and no migration — which is the whole point of a
+    // schema that lives in /data rather than in this enum.
+    AttrId attr_col{kNoAttr};
+    AttrValue attr_arg{};
 };
 
 class Document
@@ -123,6 +132,20 @@ public:
     const LayerTable& layer_table() const noexcept { return layers_; }
 
     const StyleTable& styles() const noexcept { return styles_; }
+
+    /// The attribute columns of this document, indexed by entity SLOT.
+    ///
+    /// R29/P29: **the frame path never reads these.** The renderer reads one
+    /// StyleId per entity, resolved at commit time by the command that changed
+    /// the data (R14). A draw call that needs a value from here is a missing
+    /// style class, not a lookup — the hot/cold split is why five million
+    /// parcels pan inside 16 ms.
+    const AttrTable& attributes() const noexcept { return attributes_; }
+
+    /// The catalogues a CodeRef column validates against (R34).
+    const CatalogueSet& catalogues() const noexcept { return catalogues_; }
+
+    CatalogueSet& catalogues() noexcept { return catalogues_; }
 
     std::uint64_t revision() const noexcept { return revision_; }
 
@@ -193,6 +216,18 @@ public:
     Status set_layer_appearance(LayerId l, const Appearance& a, Op& undo_out);
     Status set_crs(std::string id, Op& undo_out);
 
+    /// Declares a column. NOT undoable and deliberately so, for the same reason
+    /// a layer is not: the schema is what rows are addressed against, and undoing
+    /// a declaration would invalidate every row index the journal already holds.
+    /// A schema comes from /data, and reloading a package is its own command.
+    Result<AttrId> declare_attribute(AttrSpec spec);
+
+    /// R28's one generic write: column, row, value in; the previous value out,
+    /// which is exactly what undo needs and all it needs.
+    Status set_attribute(AttrId col, EntityId e, const AttrValue& v, Op& undo_out);
+
+    Result<AttrValue> attribute(AttrId col, EntityId e) const;
+
     /// Interns an appearance and returns its id, for a command building a style.
     StyleId intern_style(const Appearance& a);
 
@@ -209,6 +244,8 @@ private:
     RingGeometry geometry_{};
     LayerTable layers_{};
     StyleTable styles_{};
+    AttrTable attributes_{};
+    CatalogueSet catalogues_{};
     KeyAllocator keys_{};
 
     /// INVARIANT: `entities_.key` is strictly increasing in slot order, because

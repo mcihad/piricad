@@ -12,6 +12,8 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 |---|---|---|---|---|---|
 | [`core.line`](line.md) | `ÇİZGİ`, `CIZGI`, `LINE`, `Ç`, `L` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki veya daha fazla nokta arasında doğru parçaları çizer. |
 | [`core.area`](area.md) | `ALAN`, `AREA`, `POLİGON`, `POLIGON`, `AL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alan çizer; istenirse içine delik açar. |
+| [`core.attribute`](attribute.md) | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
+| [`core.column`](column.md) | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Belgeye öznitelik sütunu tanımlar ve tanımlı sütunları listeler. |
 | [`core.erase`](erase.md) | `SİL`, `SIL`, `ERASE`, `E` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Seçilen nesneleri siler. |
 | [`core.select`](select.md) | `SEÇ`, `SEC`, `SELECT`, `S` | Düzenleme | geri alınmaz | betiklenebilir, salt okunur | Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta. |
 | [`core.layer`](layer.md) | `KATMAN`, `LAYER`, `KAT` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
@@ -52,6 +54,29 @@ Kapalı bir alan çizer; istenirse içine delik açar.
 | `bolum` | integer | en az 0 | Halka uzunlukları: ilki dış sınır, sonrakiler delik |
 
 Ayrıntılı kullanım: [ALAN](area.md)
+
+### `core.attribute` — ÖZNİTELİK
+
+Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `ad` | text | isteğe bağlı | Öznitelik kimliği; yoksa tanımlı sütunlar listelenir |
+| `nesne` | integer | isteğe bağlı | Nesnenin kalıcı kimliği |
+| `deger` | text | isteğe bağlı | Yeni değer; yoksa yalnızca okur. 'yok' hücreyi boşaltır |
+
+Ayrıntılı kullanım: [ÖZNİTELİK](attribute.md)
+
+### `core.column` — SÜTUN
+
+Belgeye öznitelik sütunu tanımlar ve tanımlı sütunları listeler.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `kimlik` | text | isteğe bağlı | Sütun kimliği; yoksa tanımlı sütunlar listelenir |
+| `tur` | text | isteğe bağlı | tam_sayi, uzunluk, evet_hayir veya metin |
+
+Ayrıntılı kullanım: [SÜTUN](column.md)
 
 ### `core.erase` — SİL
 
@@ -309,6 +334,49 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
       ],
       "flags": [
         "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.attribute",
+      "names": [
+        "ÖZNİTELİK",
+        "OZNITELIK",
+        "ATTRIBUTE",
+        "ÖZN",
+        "OZN"
+      ],
+      "category": "Düzenleme",
+      "summary": "Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar.",
+      "params": [
+        {
+          "name": "ad",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Öznitelik kimliği; yoksa tanımlı sütunlar listelenir"
+        },
+        {
+          "name": "nesne",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Nesnenin kalıcı kimliği"
+        },
+        {
+          "name": "deger",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Yeni değer; yoksa yalnızca okur. 'yok' hücreyi boşaltır"
+        }
+      ],
+      "flags": [
         "scriptable",
         "ai_accessible"
       ],

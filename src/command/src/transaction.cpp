@@ -93,6 +93,20 @@ Status Transaction::set_entity_style(EntityId e, StyleId style)
     return core::ok();
 }
 
+Status Transaction::set_attribute(core::AttrId col, EntityId e, const core::AttrValue& v)
+{
+    core::Op undo;
+    auto st = doc_.set_attribute(col, e, v, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
+core::Result<core::AttrId> Transaction::declare_attribute(core::AttrSpec spec)
+{
+    return doc_.declare_attribute(std::move(spec));
+}
+
 Status Transaction::set_entity_hidden(EntityId e, bool hidden)
 {
     core::Op undo;

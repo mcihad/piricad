@@ -71,6 +71,14 @@ public:
     Status set_entity_hidden(EntityId e, bool hidden);
     Status set_crs(std::string id);
 
+    /// R28's generic attribute write, and the only sanctioned way to reach one.
+    /// Undoable: an ada number typed wrong is exactly the kind of mistake Ctrl+Z
+    /// exists for, and the previous value is what the document hands back.
+    Status set_attribute(core::AttrId col, EntityId e, const core::AttrValue& v);
+
+    /// Declares a column. NOT undoable — see Document::declare_attribute.
+    core::Result<core::AttrId> declare_attribute(core::AttrSpec spec);
+
     /// Reverts every edit made through this transaction, newest first.
     void rollback();
 

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/command/bus.hpp"
 
+#include <cmath>
+
 #include "piricad/command/parser.hpp"
 #include "piricad/core/log.hpp"
 #include "piricad/core/text.hpp"
@@ -97,7 +99,22 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
         case ParamKind::Text:
             if (t.kind == Token::Kind::Text) return Value::text(t.text);
             if (t.kind == Token::Kind::Word) return Value::text(t.word);
-            if (t.kind == Token::Kind::Number) return Value::text(std::to_string(t.a));
+            if (t.kind == Token::Kind::Number) {
+                // `ÖZNİTELİK ada_no 1 1234` must put "1234" in the cell, not
+                // "1234.000000". std::to_string on a double formats six decimals
+                // unconditionally, so a whole number typed by a user arrived as a
+                // decimal it never typed, and a schema expecting an integer then
+                // refused the user's own input. An integral value is written
+                // without a fractional part; a genuine decimal keeps its digits
+                // but loses the trailing zeros that carry no information.
+                if (t.a == std::floor(t.a) && std::abs(t.a) < 9.0e15)
+                    return Value::text(std::to_string(static_cast<std::int64_t>(t.a)));
+                std::string out = std::to_string(t.a);
+                while (out.size() > 1 && out.back() == '0')
+                    out.pop_back();
+                if (!out.empty() && out.back() == '.') out.pop_back();
+                return Value::text(out);
+            }
             break;
         case ParamKind::Selection:
             if (t.kind == Token::Kind::Number) return Value::ids({static_cast<std::int64_t>(t.a)});

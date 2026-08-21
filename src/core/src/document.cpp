@@ -88,6 +88,13 @@ std::uint64_t Document::content_hash() const
     h               = layers_.fold(h);
     h               = styles_.fold(h);
 
+    // Attributes ARE document content: an ada number is not a view preference,
+    // it is what the parcel is. Folding the table once here rather than per
+    // entity keeps the loop below reading only the hot columns, and folds the
+    // SCHEMA too — declaring a column changes what the document says it holds
+    // even before a single cell is written.
+    h = attributes_.fold(h);
+
     for (EntityId e = 0; e < entities_.size(); ++e) {
         if (!entities_.alive(e)) continue;
 
@@ -334,6 +341,70 @@ Status Document::set_entity_style(EntityId e, StyleId style, Op& undo_out)
     return ok();
 }
 
+// ------------------------------------------------------------ attributes ----
+
+Result<AttrId> Document::declare_attribute(AttrSpec spec)
+{
+    // A CodeRef column must name a catalogue this document actually holds, or
+    // its codes cannot be validated — and an unvalidatable regulatory reference
+    // on a parcel is worse than no reference at all (R34).
+    if (spec.type == AttrType::CodeRef && catalogues_.find(spec.catalog) == nullptr)
+        return err(ErrorCode::InvalidArgument,
+                   "'" + spec.id + "' özniteliği '" + spec.catalog +
+                       "' kataloğuna dayanıyor ama belge o kataloğu taşımıyor.");
+
+    auto col = attributes_.add(std::move(spec));
+    if (!col) return col;
+
+    // Rows follow slots, always. A column declared after the drawing was made
+    // still has a cell for every entity in it, all of them absent.
+    attributes_.resize(geometry_.slot_count());
+    ++revision_;
+    return col;
+}
+
+Status Document::set_attribute(AttrId col, EntityId e, const AttrValue& v, Op& undo_out)
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+
+    const AttrColumn* column = attributes_.column(col);
+    if (column == nullptr)
+        return err(ErrorCode::NotFound, "Bilinmeyen öznitelik sütunu: " + std::to_string(col));
+
+    // A CodeRef cell may only carry a code the catalogue knows. This is where a
+    // detay kodu is checked, and it is checked against /data rather than against
+    // anything written here (CLAUDE.md 5.13).
+    if (column->type() == AttrType::CodeRef && v.present) {
+        const Catalogue* cat = catalogues_.find(column->spec().catalog);
+        if (cat == nullptr || !cat->contains(v.text))
+            return err(ErrorCode::InvalidArgument,
+                       "'" + v.text + "' kodu '" + column->spec().catalog +
+                           "' kataloğunda yok. Katalog sürümünü ve kodu denetleyin.");
+    }
+
+    attributes_.resize(geometry_.slot_count());
+
+    auto was = attributes_.set(col, entities_.slot[e], v);
+    if (!was) return was.error();
+
+    ++revision_;
+
+    undo_out          = Op{};
+    undo_out.kind     = Op::Kind::SetAttribute;
+    undo_out.entity   = e;
+    undo_out.attr_col = col;
+    undo_out.attr_arg = was.value();
+    return ok();
+}
+
+Result<AttrValue> Document::attribute(AttrId col, EntityId e) const
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+    return attributes_.get(col, entities_.slot[e]);
+}
+
 void Document::mirror_layer_visibility(LayerId l, bool visible)
 {
     // One pass per toggle instead of an indirect load per entity per frame (R7).
@@ -424,6 +495,7 @@ Status Document::apply(const Op& op, Op* undo_out)
     case Op::Kind::SetEntityAlive: return set_entity_alive(op.entity, op.bool_arg, inverse);
     case Op::Kind::SetEntityHidden: return set_entity_hidden(op.entity, op.bool_arg, inverse);
     case Op::Kind::SetEntityStyle: return set_entity_style(op.entity, op.style_arg, inverse);
+    case Op::Kind::SetAttribute: return set_attribute(op.attr_col, op.entity, op.attr_arg, inverse);
     case Op::Kind::SetLayerVisible: return set_layer_visible(op.layer, op.bool_arg, inverse);
     case Op::Kind::SetLayerLocked: return set_layer_locked(op.layer, op.bool_arg, inverse);
     case Op::Kind::SetLayerAppearance:
