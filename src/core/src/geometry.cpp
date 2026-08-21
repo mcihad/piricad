@@ -148,9 +148,10 @@ constexpr std::uint64_t round_sqrt_u128(U128 v) noexcept
         rest.lo |= (v.hi >> 62) & 0x3u;
         v = shl2_u128(v);
 
-        // Trial divisor 2*root + 1, in 128 bits because root reaches 2^63.
-        const std::uint64_t twice_root = root << 1;
-        U128 trial{root >> 63, twice_root | 1u};
+        // Trial divisor 4*root + 1: the remainder holds prefix - root², the
+        // prefix has just grown by two bits, and (2·root + 1)² - (2·root)² is
+        // 4·root + 1. Carried in 128 bits because root reaches 2^63.
+        const U128 trial{root >> 62, (root << 2) | 1u};
 
         root <<= 1;
         if (cmp_u128(rest, trial) >= 0) {
@@ -259,6 +260,21 @@ Box2 input_bounds(std::span<const Point2> pts, std::size_t n) noexcept
     for (std::size_t i = 0; i < n; ++i)
         box.extend(pts[i]);
     return box;
+}
+
+/// Inclusive containment. An empty box contains nothing and is contained by
+/// nothing, so a degenerate ring cannot pass by accident.
+constexpr bool box_contains(const Box2& outer, const Box2& inner) noexcept
+{
+    if (outer.empty() || inner.empty()) return false;
+    return outer.min_x <= inner.min_x && outer.min_y <= inner.min_y &&
+           outer.max_x >= inner.max_x && outer.max_y >= inner.max_y;
+}
+
+constexpr bool out_of_range(Point2 p) noexcept
+{
+    return p.x > kMmCoordinateLimit || p.x < -kMmCoordinateLimit ||
+           p.y > kMmCoordinateLimit || p.y < -kMmCoordinateLimit;
 }
 
 } // namespace
@@ -445,16 +461,22 @@ Box2 RingGeometry::bounds_of(std::uint32_t slot) const
 
 Mm2 RingGeometry::ring_area(std::uint32_t ring) const
 {
-    // The role is deliberately not consulted: this is the ring's own signed
-    // shoelace area, counter-clockwise positive. `area_of` applies the role
-    // signs (R12).
-    return halve(twice_area(ring_xs(ring), ring_ys(ring)));
+    // R10: an Open ring is a polyline; its first and last vertex are NOT joined,
+    // so it has no area. Reporting the shoelace of its implied closure gave a
+    // non-zero figure for a shape that encloses nothing, and made the two public
+    // area functions disagree about the same ring — a footgun on a number that
+    // ends up on a legal document (§12).
+    if (ring_role[ring] == RingRole::Open) return 0;
+
+    // The WINDING sign is kept: this is the ring's own signed shoelace,
+    // counter-clockwise positive. `area_of` applies the role signs (R12).
+    return halve(twice_area_u(ring_xs(ring), ring_ys(ring)));
 }
 
 Mm2 RingGeometry::area_of(std::uint32_t slot) const
 {
-    const RingSpan span = rings_of(slot);
-    std::int64_t twice  = 0;
+    const RingSpan span  = rings_of(slot);
+    std::uint64_t twice  = 0;
 
     for (std::uint32_t k = 0; k < span.count; ++k) {
         const std::uint32_t r = span.first + k;
@@ -464,8 +486,16 @@ Mm2 RingGeometry::area_of(std::uint32_t slot) const
         // counter-clockwise must still be subtracted: imported data is wound
         // whichever way the source system felt like, and DXF, GeoJSON and TKGM
         // exports disagree with each other.
-        const std::int64_t area = magnitude(twice_area(ring_xs(r), ring_ys(r)));
-        twice += (ring_role[r] == RingRole::Interior) ? -area : area;
+        //
+        // Accumulated unsigned for the same reason twice_area_acc is: the running
+        // sum is the only remaining place in the area path where a signed
+        // intermediate could overflow, and signed overflow is UB the optimiser is
+        // entitled to assume away.
+        const std::uint64_t area = magnitude_u(twice_area_u(ring_xs(r), ring_ys(r)));
+        if (ring_role[r] == RingRole::Interior)
+            twice -= area;
+        else
+            twice += area;
     }
 
     // Halved once, over the whole slot, so exterior-minus-hole is exact rather
