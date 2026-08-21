@@ -49,7 +49,11 @@ target_compile_definitions(piricad_io PRIVATE
 )
 
 if(PIRICAD_WITH_GDAL)
-    find_package(GDAL 3.8 QUIET)
+    find_package(GDAL 3.8 CONFIG QUIET)
+    if(NOT GDAL_FOUND)
+        # Deprecated upstream, but still the only route on older distributions.
+        find_package(GDAL 3.8 MODULE QUIET)
+    endif()
     if(NOT GDAL_FOUND)
         find_package(PkgConfig QUIET)
         if(PkgConfig_FOUND)

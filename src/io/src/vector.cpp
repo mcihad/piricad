@@ -84,15 +84,19 @@ std::vector<VectorFormat> parse_allow_list()
     return out;
 }
 
+#ifdef PIRICAD_HAVE_GDAL
+
 /// GDAL's virtual filesystem prefixes reach the network, an archive or another
 /// process's memory. io.md P14: a path that arrived in a command argument, a
 /// script or an AI suggestion never gets to be one of those.
+///
+/// Inside the guard because it guards GDAL and nothing else: without the backend
+/// there is no path to protect, and a function nobody calls is a warning in a
+/// build that treats warnings as defects (CLAUDE.md 6.3).
 bool is_virtual_path(const std::string& path)
 {
     return path.rfind("/vsi", 0) == 0;
 }
-
-#ifdef PIRICAD_HAVE_GDAL
 
 /// GDAL's last error, so a failure says what GDAL said rather than "olmadı".
 std::string gdal_reason()

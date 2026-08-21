@@ -631,20 +631,16 @@ TEST_CASE("IO: dış biçim arka ucu durumunu her hâlükârda bildirir")
     CHECK(io::vector_format_for_path("/veri/pafta.dwg") == nullptr); // io.md R13/R14
 
     if (!io::vector_backend_available()) {
-        std::fprintf(stdout,
-                     "  BEKLEMEDE  DXF/GeoPackage gidiş-dönüşü: PIRICAD_WITH_GDAL=OFF.\n"
-                     "             %s\n",
-                     status.c_str());
+        // The status has to name the option, or a user cannot tell an unsupported
+        // format from an uninstalled one.
         CHECK(status.find("PIRICAD_WITH_GDAL") != std::string::npos);
     }
 }
 
 TEST_CASE("IO: GDAL kapalıyken İÇEAKTAR sessizce başarılı olmaz")
 {
-    if (io::vector_backend_available()) {
-        std::fprintf(stdout, "  (GDAL açık; kapalı hâl bu makinede sınanamıyor)\n");
-        return;
-    }
+    if (io::vector_backend_available())
+        PENDING("GDAL açık; kapalı hâlin davranışı bu yapıda sınanamıyor.");
     Rig rig;
     auto r = rig.bus.execute_line("İÇEAKTAR \"/veri/pafta.dxf\"", Origin::Test);
     REQUIRE(!r.ok());
@@ -653,10 +649,8 @@ TEST_CASE("IO: GDAL kapalıyken İÇEAKTAR sessizce başarılı olmaz")
 
 TEST_CASE("IO: DXF dışa aktar -> içe aktar gidiş dönüşü")
 {
-    if (!io::vector_backend_available()) {
-        std::fprintf(stdout, "  BEKLEMEDE  DXF gidiş-dönüşü: PIRICAD_WITH_GDAL=OFF.\n");
-        return;
-    }
+    if (!io::vector_backend_available())
+        PENDING("PIRICAD_WITH_GDAL=OFF; DXF gidiş-dönüşü sınanamıyor.");
     TempDir tmp("dxf");
     const std::string path = tmp.file("cizim.dxf");
 
@@ -688,10 +682,8 @@ TEST_CASE("IO: DXF dışa aktar -> içe aktar gidiş dönüşü")
 
 TEST_CASE("IO: GeoPackage dışa aktar -> içe aktar gidiş dönüşü, koordinat mm cinsinden korunur")
 {
-    if (!io::vector_backend_available()) {
-        std::fprintf(stdout, "  BEKLEMEDE  GeoPackage gidiş-dönüşü: PIRICAD_WITH_GDAL=OFF.\n");
-        return;
-    }
+    if (!io::vector_backend_available())
+        PENDING("PIRICAD_WITH_GDAL=OFF; GeoPackage gidiş-dönüşü sınanamıyor.");
     TempDir tmp("gpkg");
     const std::string path = tmp.file("parseller.gpkg");
 
@@ -726,10 +718,7 @@ TEST_CASE("IO: GeoPackage dışa aktar -> içe aktar gidiş dönüşü, koordina
 
 TEST_CASE("IO: sanal dosya sistemi yolları reddedilir")
 {
-    if (!io::vector_backend_available()) {
-        std::fprintf(stdout, "  BEKLEMEDE  /vsi reddi: PIRICAD_WITH_GDAL=OFF.\n");
-        return;
-    }
+    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF; /vsi reddi sınanamıyor.");
     // io.md P14: a dataset path must not become a network fetch or an archive
     // traversal, whoever typed it — a user, a script or the AI.
     Rig rig;
@@ -763,10 +752,7 @@ TEST_CASE("IO: fuzz tohum korpusundaki her dosya çökmeden ele alınır")
     // target in /tests/fuzz needs Clang; this replays the same seeds through the
     // same reader on every build, so the corpus is never dead weight.
     const fs::path corpus = fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "proje";
-    if (!fs::exists(corpus)) {
-        std::fprintf(stdout, "  BEKLEMEDE  fuzz korpusu yok: %s\n", corpus.string().c_str());
-        return;
-    }
+    if (!fs::exists(corpus)) PENDING("Fuzz tohum korpusu bulunamadı: " + corpus.string());
 
     std::vector<fs::path> seeds;
     for (const auto& entry : fs::directory_iterator(corpus))

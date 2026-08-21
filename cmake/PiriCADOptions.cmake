@@ -13,7 +13,12 @@ option(PIRICAD_BUILD_BENCH   "Build the benchmark suite"      OFF)
 # build a PiriCAD that cannot open a DXF, because the failure mode is a user who
 # thinks the format is unsupported rather than uninstalled. Absent, it stays OFF
 # and İÇEAKTAR/DIŞAAKTAR say exactly which package would change that.
-find_package(GDAL 3.8 QUIET)
+find_package(GDAL 3.8 CONFIG QUIET)
+if(NOT GDAL_FOUND)
+    # Older distributions ship no CMake package config; the module is deprecated
+    # upstream but is still the only way to find those.
+    find_package(GDAL 3.8 MODULE QUIET)
+endif()
 if(NOT GDAL_FOUND)
     find_package(PkgConfig QUIET)
     if(PkgConfig_FOUND)
