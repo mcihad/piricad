@@ -19,6 +19,7 @@
 #include "piricad/command/session.hpp"
 #include "piricad/command/transaction.hpp"
 #include "piricad/command/validation.hpp"
+#include "piricad/core/crs.hpp"
 #include "piricad/core/document.hpp"
 #include "piricad/core/settings.hpp"
 
@@ -207,6 +208,14 @@ public:
     /// command line, from a script or from the AI has the same visible effect as
     /// using the menu — the menu is not a privileged client (Article 1.2).
     std::function<void(std::string_view id, core::SettingScope scope)> on_setting_changed;
+
+    /// Resolves a CRS id into a populated `core::Crs`.
+    ///
+    /// Installed by the geodesy module, which owns the zone catalogue; the same
+    /// shape as `on_file_request`, and for the same reason. Without it a CRS keeps
+    /// its id and stays unresolved, which is honest: a build with no geodesy module
+    /// genuinely does not know that TM30 is EPSG:5254.
+    std::function<core::Crs(std::string_view id)> on_crs_resolve;
 
     /// View state is not document state, so it is not undoable and does not go
     /// through a transaction. The command still travels the bus, so a script and

@@ -39,6 +39,7 @@ target_link_libraries(piricad PRIVATE
     piricad_core
     piricad_command
     piricad_io
+    piricad_domain_geodesy
     piricad_render
     piricad_script
     piricad_flags

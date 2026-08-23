@@ -6,12 +6,16 @@
 
 add_library(piricad_domain_geodesy STATIC
     src/crs_catalog.cpp
+    src/crs_service.cpp
     src/transform.cpp
 )
 
 target_include_directories(piricad_domain_geodesy PUBLIC include)
+# piricad_command is PUBLIC because crs_service.hpp exposes command::Bus in its
+# interface. Article 3.2 allows domain -> core, command; the arrow that would be
+# a build failure is the reverse one.
 target_link_libraries(piricad_domain_geodesy
-    PUBLIC  piricad_core
+    PUBLIC  piricad_core piricad_command
     PRIVATE piricad_flags
 )
 

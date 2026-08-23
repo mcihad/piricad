@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/app/controller.hpp"
 
+#include "piricad/command/log.hpp"
+
 #include "piricad/command/parser.hpp"
 
 #include <QDir>
@@ -13,6 +15,23 @@ Controller::Controller(QObject* parent)
       runner_(bus_, script::Sandbox::Project)
 {
     command::register_builtin_commands(registry_);
+
+    // The CRS resolver, so a drawing knows that TUREF/TM30 is EPSG:5254 without
+    // the user restating it. A missing or unreadable /data/crs package leaves the
+    // hook uninstalled: an unresolved CRS keeps its id and says so, which is the
+    // truthful state, and guessing a zone would move every coordinate by
+    // kilometres while still looking like Turkish coordinates.
+    if (auto catalogue = domain::geodesy::CrsCatalog::load("data/crs"); catalogue) {
+        crs_.emplace(bus_, std::move(catalogue.value()));
+
+        // Resolve the CRS the document was CONSTRUCTED with. The document exists
+        // before the resolver does, so without this a fresh drawing would carry an
+        // unresolved default forever and `DIŞAAKTAR` would refuse it — which is
+        // exactly the bug this change is here to fix, reintroduced one step later.
+        core::Op discard;
+        if (auto st = document_.set_crs(crs_->resolve(document_.crs().id()), discard); !st)
+            command::log_warn("başlangıç koordinat sistemi çözülemedi: " + st.error().message);
+    }
     script::install(bus_, runner_);
     wireBus();
 

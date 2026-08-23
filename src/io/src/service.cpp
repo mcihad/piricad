@@ -50,11 +50,22 @@ std::string join_notes(const std::vector<std::string>& notes)
 /// value the user set, the value model.md R40 calls part of the exported legal
 /// document, and the value AYAR journals. When the two are unified this function
 /// becomes `bus.document().crs().id()` and nothing else changes.
+/// What a driver should be told the coordinates are in.
+///
+/// ONE source: the document. The project setting used to be consulted first and
+/// the document second, which meant the two could disagree — and they did, because
+/// nothing wrote the document's copy. `AYAR koordinat_sistemi` now sets the
+/// document through a transaction, so the setting is the interface and the
+/// document is the truth (model.md R36, R37).
+///
+/// A resolved CRS reports its EPSG code, which is what GDAL wants; an unresolved
+/// one falls back to its id, so a build with no geodesy module still exports
+/// whatever the user typed rather than nothing.
 std::string effective_crs(const command::Bus& bus)
 {
-    const std::string setting(bus.project_settings().get("core.crs.id").as_text());
-    if (!setting.empty()) return setting;
-    return bus.document().crs().id();
+    const core::Crs& crs = bus.document().crs();
+    if (crs.resolved()) return "EPSG:" + std::to_string(crs.epsg());
+    return crs.id();
 }
 
 } // namespace
@@ -190,6 +201,19 @@ command::Task<core::Result<std::string>> FileService::open(std::string path)
     if (!report) {
         tx.rollback();
         co_return report.error();
+    }
+
+    // Resolve the CRS the file named. The reader could not: it has no bus, and the
+    // zone catalogue lives in a module /src/io may not reach (Article 3.2). Doing
+    // it here means a drawing opened from disk knows its EPSG code exactly as one
+    // typed by hand does, and `DIŞAAKTAR` works on it without the user restating
+    // something the file already said.
+    if (bus_.on_crs_resolve && !loaded.crs().id().empty()) {
+        core::Op discard;
+        const core::Crs resolved = bus_.on_crs_resolve(loaded.crs().id());
+        if (auto st = loaded.set_crs(resolved, discard); !st)
+            report.value().warnings.push_back(Warning{
+                "io.crs_resolve", "Dosyadaki koordinat sistemi çözülemedi: " + st.error().message});
     }
 
     bus_.document()         = std::move(loaded);

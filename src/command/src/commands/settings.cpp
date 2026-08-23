@@ -7,9 +7,11 @@
 // entry to hand-write, no CLI table to sync, no docs table to forget
 // (CLAUDE.md 5.10, model.md R38).
 #include "piricad/command/bus.hpp"
+
 #include "piricad/command/context.hpp"
 #include "piricad/command/session.hpp"
 #include "piricad/command/spec.hpp"
+#include "piricad/core/crs.hpp"
 
 #include "piricad/core/settings.hpp"
 #include "piricad/core/text.hpp"
@@ -155,6 +157,29 @@ Task<void> run_scope(Context& ctx, Settings& store, SettingScope scope)
 
     store.clear_warnings();
     auto change = store.set(spec.id, parsed.value());
+
+    // The CRS is DOCUMENT state (model.md R36, R37), and the setting is the
+    // interface to it rather than a second copy of it. Before this, writing
+    // `AYAR koordinat_sistemi` moved the setting and left `Document::crs()` at its
+    // constructed default forever — `Transaction::set_crs` existed and no command
+    // called it — so a drawing reported one CRS to the exporter and another to its
+    // own file. Two stores that disagree about what a coordinate means is exactly
+    // the field blunder R36 is written against.
+    //
+    // Resolution goes through the bus hook because the zone catalogue lives in
+    // /src/domain/geodesy and /src/command may not reach it (Article 3.2). With no
+    // geodesy module the CRS keeps its id and stays unresolved, which is the
+    // truthful state rather than a guess.
+    if (change && spec.id == "core.crs.id") {
+        Bus& bus           = ctx.session().bus();
+        core::Crs resolved = bus.on_crs_resolve ? bus.on_crs_resolve(parsed.value().as_text())
+                                                : core::Crs(std::string(parsed.value().as_text()));
+        if (auto st = ctx.transaction().set_crs(resolved); !st) {
+            ctx.echo(st.error().message);
+            co_return;
+        }
+    }
+
     if (change) {
         // Tell the shell before reporting to the user, so the change is on screen
         // by the time the transcript line appears.

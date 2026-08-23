@@ -131,10 +131,10 @@ Status Transaction::set_entity_hidden(EntityId e, bool hidden)
     return core::ok();
 }
 
-Status Transaction::set_crs(std::string id)
+Status Transaction::set_crs(core::Crs crs)
 {
     core::Op undo;
-    auto st = doc_.set_crs(std::move(id), undo);
+    auto st = doc_.set_crs(std::move(crs), undo);
     if (!st) return st;
     inverse_.push_back(std::move(undo));
     return core::ok();

@@ -11,6 +11,12 @@
 // failure this product has (.claude/model.md R37a).
 #include "microtest.hpp"
 
+#include "piricad/command/registry.hpp"
+
+#include "piricad/command/bus.hpp"
+
+#include "piricad/domain/geodesy/crs_service.hpp"
+
 #include "piricad/domain/geodesy/crs_catalog.hpp"
 #include "piricad/domain/geodesy/transform.hpp"
 
@@ -204,4 +210,60 @@ TEST_CASE("DÖNÜŞÜM: PROJ yokken sessizce birim dönüşüm yapmıyor")
         CHECK(!any.ok());
         if (!any.ok()) CHECK(any.error().message.find("PIRICAD_WITH_PROJ") != std::string::npos);
     }
+}
+
+// ------------------------------------------------------------ CRS resolver ----
+
+TEST_CASE("CRS: kimlik çözülür ve belge tek doğruyu taşır")
+{
+    // The conflict this closes. `Document::crs()` and the `core.crs.id` setting
+    // were two stores for one fact, and nothing wrote the first: `AYAR
+    // koordinat_sistemi` moved the setting while the document stayed at its
+    // constructed default forever. A drawing therefore reported one CRS to the
+    // exporter and another to its own file — which is the field blunder model.md
+    // R36 is written against.
+    auto catalogue = domain::geodesy::CrsCatalog::load("data/crs");
+    REQUIRE(catalogue.ok());
+
+    core::Document doc;
+    command::Registry reg;
+    command::Journal journal;
+    command::UndoStack undo;
+    command::Bus bus{doc, reg, journal, undo};
+    command::register_builtin_commands(reg);
+
+    domain::geodesy::CrsService service(bus, std::move(catalogue.value()));
+
+    // Every spelling a user or a file might actually produce resolves to the same
+    // zone. Refusing three of the four would push a mistake onto somebody who did
+    // not make one.
+    for (const char* id : {"TUREF/TM30", "TM30", "EPSG:5254", "5254"}) {
+        const core::Crs crs = service.resolve(id);
+        CHECK_EQ(crs.epsg(), 5254);
+        CHECK_EQ(crs.central_meridian_deg(), 30);
+        if (crs.epsg() != 5254) ::microtest::report(__FILE__, __LINE__, "çözülemedi", id);
+    }
+
+    // An unknown id keeps its name and reports itself unresolved. NOT a fallback:
+    // a CRS guessed wrong moves every coordinate by kilometres while the numbers
+    // still look like Turkish coordinates.
+    const core::Crs unknown = service.resolve("BÖYLE-BİR-SİSTEM-YOK");
+    CHECK(!unknown.resolved());
+    CHECK_EQ(unknown.id(), std::string("BÖYLE-BİR-SİSTEM-YOK"));
+
+    // And the write path: AYAR moves the DOCUMENT, not only the setting.
+    REQUIRE(bus.execute_line("AYAR koordinat_sistemi TUREF/TM33", command::Origin::Test).ok());
+    CHECK_EQ(doc.crs().id(), std::string("TUREF/TM33"));
+    CHECK_EQ(doc.crs().epsg(), 5255);
+    CHECK_EQ(doc.crs().central_meridian_deg(), 33);
+
+    // The CRS is document content, so changing it changes the fingerprint.
+    const std::uint64_t after33 = doc.content_hash();
+    REQUIRE(bus.execute_line("AYAR koordinat_sistemi TUREF/TM30", command::Origin::Test).ok());
+    CHECK(doc.content_hash() != after33);
+
+    // And it is undoable, because it is a document change like any other.
+    REQUIRE(bus.execute_line("GERİAL", command::Origin::Test).ok());
+    CHECK_EQ(doc.crs().id(), std::string("TUREF/TM33"));
+    CHECK_EQ(doc.crs().epsg(), 5255); // the resolved metadata came back too
 }

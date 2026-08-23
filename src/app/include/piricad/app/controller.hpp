@@ -13,6 +13,7 @@
 #include "piricad/command/session.hpp"
 #include "piricad/command/transaction.hpp"
 #include "piricad/core/document.hpp"
+#include "piricad/domain/geodesy/crs_service.hpp"
 #include "piricad/io/service.hpp"
 #include "piricad/script/json_runner.hpp"
 
@@ -21,6 +22,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace piricad::app {
@@ -108,6 +110,11 @@ private:
     // Bus::on_run_script. Declared after `bus_` so it is constructed after it and
     // destroyed before it — a file service must never outlive the bus it points at.
     io::FileService files_;
+
+    /// Resolves a CRS id into its EPSG code and zone. Held as an optional because
+    /// a build whose /data/crs package is missing has no catalogue to answer from,
+    /// and answering wrong is worse than not answering (see crs_service.hpp).
+    std::optional<piricad::domain::geodesy::CrsService> crs_;
     script::JsonRunner runner_;
 
     std::unique_ptr<command::Session> session_;

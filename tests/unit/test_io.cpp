@@ -670,6 +670,13 @@ TEST_CASE("IO: DXF dışa aktar -> içe aktar gidiş dönüşü")
 
     Rig target;
     REQUIRE(target.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+
+    // Measured as a DELTA, not as an absolute depth. Setting the CRS is itself an
+    // undoable document change — it moves `Document::crs()`, which folds into
+    // content_hash() — so counting from zero here would be counting the setup.
+    // R17's claim is about the import: one import, ONE step.
+    const std::size_t before = target.undo.undo_depth();
+
     auto imported = target.bus.execute_line("İÇEAKTAR \"" + path + "\"", Origin::Test);
     if (!imported) ::microtest::report(__FILE__, __LINE__, "İÇEAKTAR", imported.error().message);
     REQUIRE(imported.ok());
@@ -677,7 +684,7 @@ TEST_CASE("IO: DXF dışa aktar -> içe aktar gidiş dönüşü")
     CHECK(target.doc.live_entity_count() >= 1);
 
     // io.md R17: one import, one undo step, and undoing it leaves nothing.
-    CHECK_EQ(target.undo.undo_depth(), std::size_t{1});
+    CHECK_EQ(target.undo.undo_depth() - before, std::size_t{1});
     REQUIRE(target.bus.execute_line("GERİAL", Origin::Test).ok());
     CHECK_EQ(target.doc.live_entity_count(), std::size_t{0});
 }

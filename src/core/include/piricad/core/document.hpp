@@ -98,7 +98,7 @@ struct Op
         SetLayerVisible,    ///< layer,  bool_arg
         SetLayerLocked,     ///< layer,  bool_arg
         SetLayerAppearance, ///< layer,  appearance_arg
-        SetCrs,             ///< str_arg
+        SetCrs,             ///< crs_arg
         SetAttribute,       ///< attr_col, entity (as the row), attr_arg
         SetText,            ///< entity, str_arg, text_height, text_anchor
     };
@@ -117,6 +117,11 @@ struct Op
     // schema that lives in /data rather than in this enum.
     AttrId attr_col{kNoAttr};
     AttrValue attr_arg{};
+
+    /// The whole previous CRS, not just its id: undoing a CRS change has to
+    /// restore the metadata the geodesy module resolved, and re-resolving it here
+    /// is impossible because core does not know what a zone is.
+    Crs crs_arg{};
 
     Mm text_height{0}; ///< 0 = the slot carries no text
     TextAnchor text_anchor{TextAnchor::BaselineLeft};
@@ -237,7 +242,10 @@ public:
     Status set_layer_visible(LayerId l, bool visible, Op& undo_out);
     Status set_layer_locked(LayerId l, bool locked, Op& undo_out);
     Status set_layer_appearance(LayerId l, const Appearance& a, Op& undo_out);
-    Status set_crs(std::string id, Op& undo_out);
+    /// Sets the document's CRS. Takes a whole `Crs` rather than an id, because a
+    /// resolved CRS carries the epoch and the zone meridian and dropping them here
+    /// would leave the document naming a system it cannot describe (R36).
+    Status set_crs(Crs crs, Op& undo_out);
 
     /// Declares a column. NOT undoable and deliberately so, for the same reason
     /// a layer is not: the schema is what rows are addressed against, and undoing

@@ -301,7 +301,10 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                        ": dosya bir koordinat sistemi bildirmiyor. Etiketsiz koordinat kabul "
                        "edilmez; dosyayı yazan programda projeksiyonu ayarlayıp yeniden "
                        "kaydedin.");
-    if (auto st = tx.set_crs(crs.value()); !st) return st.error();
+    // Set by ID only. The reader has no bus and therefore no way to resolve, so
+    // the metadata is filled in by `FileService::open` once the load succeeds —
+    // the layer that does hold the seam.
+    if (auto st = tx.set_crs(core::Crs(crs.value())); !st) return st.error();
 
     // ---- layers ----
     auto layer_rows = view.column<LayerRecord>(kBlkLayers, dr.layer_count, "katmanlar");

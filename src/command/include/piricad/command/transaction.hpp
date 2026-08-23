@@ -77,7 +77,9 @@ public:
     Status set_entity_style(EntityId e, StyleId style);
 
     Status set_entity_hidden(EntityId e, bool hidden);
-    Status set_crs(std::string id);
+    /// Sets the document's CRS. The whole record, so undo restores the metadata
+    /// the geodesy module resolved along with the id.
+    Status set_crs(core::Crs crs);
 
     /// R28's generic attribute write, and the only sanctioned way to reach one.
     /// Undoable: an ada number typed wrong is exactly the kind of mistake Ctrl+Z
