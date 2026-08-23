@@ -90,7 +90,38 @@ core::FeatureView feature_of(const core::Document& doc, core::EntityId e, const 
     view.set_number("alan_mm2", doc.entity_area(e));
     view.set_number("cevre_mm", doc.entity_perimeter(e));
 
+    // The declared attribute columns, layered ON TOP of the derived fields above.
+    // The comment on this function used to say this would happen the day Document
+    // grew attribute columns and that no rule, catalogue or test would change; it
+    // grew them, and none did.
+    //
+    // Attributes win over derived names on a collision, because a column the user
+    // declared is a statement about the parcel and `geometri` is an observation
+    // about its rings. A drawing that declares a column called `katman` means
+    // that column.
+    const core::AttrTable& attrs = doc.attributes();
+    if (attrs.columns() > 0) {
+        const core::FeatureView row = core::FeatureView::from_row(attrs, doc.entities().slot[e]);
+        for (const auto& [name, value] : row.fields())
+            view.set(name, value);
+    }
+
     return view;
+}
+
+/// Finds a catalogue row by its id, and failing that by its label.
+///
+/// Both are offered because a drawing is tagged by a person. `nip-toplu-konut-
+/// alani-siniri` is what the package calls the row; `TOPLU KONUT ALANI` is what a
+/// planner writes in an attribute cell, and refusing the second would make the
+/// feature unusable by the people it is for. The id is tried first, so a package
+/// whose ids and labels collide resolves to the id — the stable one.
+const core::StyleEntry* row_for(const core::StyleCatalog& catalog, const std::string& value)
+{
+    if (auto by_id = catalog.entry(value); by_id) return by_id.value();
+    for (const core::StyleEntry& e : catalog.entries())
+        if (e.label == value) return &e;
+    return nullptr;
 }
 
 Task<void> run(Context& ctx)
@@ -135,6 +166,32 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
+    const Value classify_by = ctx.argument("sinifla");
+    if (!classify_by.empty() && package.empty()) {
+        ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                     "'sinifla' verildi ama 'paket' verilmedi: hangi katalogla "
+                                     "eşleşeceği belirsiz. 'paket=' ile katalog dosyasını verin."));
+        co_return;
+    }
+    if (!classify_by.empty() && !code.empty()) {
+        ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                     "'sinifla' ile 'kod' aynı komutta kullanılamaz: biri her "
+                                     "nesneyi kendi özniteliğine göre sınıflar, diğeri hepsine "
+                                     "aynı satırı yazar."));
+        co_return;
+    }
+
+    core::AttrId classify_col = core::kNoAttr;
+    if (!classify_by.empty()) {
+        classify_col = bus.document().attributes().find(classify_by.as_text());
+        if (classify_col == core::kNoAttr) {
+            ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                         "Bilinmeyen öznitelik: '" + classify_by.as_text() +
+                                             "'. Tanımlı sütunları SÜTUN ile görebilirsiniz."));
+            co_return;
+        }
+    }
+
     std::optional<core::StyleCatalog> catalog;
     if (!package.empty()) {
         auto loaded = load_catalog(package.as_text());
@@ -151,6 +208,8 @@ Task<void> run(Context& ctx)
     std::vector<core::EntityId> targets;
     std::vector<core::Appearance> resolved;
     std::string row_label;
+    std::size_t classified   = 0;
+    std::size_t unclassified = 0;
     {
         const auto& entities = bus.document().entities();
         for (core::EntityId e = 0; e < entities.size(); ++e) {
@@ -159,7 +218,46 @@ Task<void> run(Context& ctx)
 
             core::Appearance appearance = record.appearance;
 
-            if (catalog.has_value()) {
+            if (catalog.has_value() && classify_col != core::kNoAttr) {
+                // The CATEGORIZED renderer: every entity is styled by what its own
+                // attribute says. The binding lives HERE and not in the package,
+                // because what a drawing calls its column is a project decision;
+                // the regulation states what a gösterim looks like, never what
+                // your attribute is named (CLAUDE.md 5.13, data.md R6).
+                auto cell = bus.document().attribute(classify_col, e);
+                if (!cell) {
+                    ctx.session().fail(cell.error());
+                    co_return;
+                }
+                if (!cell.value().present) {
+                    // An untagged entity keeps the layer default and is counted.
+                    // Guessing a gösterim for a parcel that declares none is
+                    // exactly the invention a legal drawing must not contain.
+                    ++unclassified;
+                    targets.push_back(e);
+                    resolved.push_back(appearance);
+                    continue;
+                }
+
+                const std::string value = cell.value().type == core::AttrType::Text ||
+                                                  cell.value().type == core::AttrType::CodeRef
+                                              ? cell.value().text
+                                              : std::to_string(cell.value().number);
+
+                const core::StyleEntry* row = row_for(*catalog, value);
+                if (row == nullptr) {
+                    ctx.session().fail(core::err(
+                        core::ErrorCode::NotFound,
+                        "'" + value + "' değeri '" + catalog->id() + "' (" +
+                            catalog->package_version() +
+                            ") kataloğunda ne kimlik ne ad olarak bulundu. Katalog sürümünü ve "
+                            "öznitelik değerini denetleyin."));
+                    co_return;
+                }
+                appearance = core::apply_entry(*row, appearance);
+                ++classified;
+                if (row_label.empty()) row_label = row->label.empty() ? row->id : row->label;
+            } else if (catalog.has_value()) {
                 auto entry = code.empty()
                                  ? catalog->classify(feature_of(bus.document(), e, record), scale)
                                  : catalog->entry(code.as_text());
@@ -207,7 +305,7 @@ Task<void> run(Context& ctx)
 
     // Recorded so a replay resolves the same rows whichever client typed them.
     for (const char* name :
-         {"paket", "kod", "olcek", "renk", "kalinlik", "dolgu", "sira", "sifirla"}) {
+         {"paket", "kod", "sinifla", "olcek", "renk", "kalinlik", "dolgu", "sira", "sifirla"}) {
         if (const Value v = ctx.argument(name); !v.empty()) ctx.record(name, v);
     }
 
@@ -218,7 +316,12 @@ Task<void> run(Context& ctx)
 
     std::string message =
         std::to_string(targets.size()) + " nesneye stil yazıldı: '" + record.name + "'";
-    if (!row_label.empty()) message += ", katalog satırı '" + row_label + "'";
+    if (!classify_by.empty())
+        message += ", '" + classify_by.as_text() + "' özniteliğine göre sınıflandı (" +
+                   std::to_string(classified) + " eşleşti, " + std::to_string(unclassified) +
+                   " öznitelik taşımıyor)";
+    else if (!row_label.empty())
+        message += ", katalog satırı '" + row_label + "'";
     message +=
         clear ? ", katman varsayılanına döndü." : ", stil kimliği " + std::to_string(last) + ".";
     ctx.echo(message);
@@ -237,6 +340,9 @@ PIRICAD_COMMAND(style)
                 Param::text("katman", Arity::exactly(1),
                             "Stilin yazılacağı katmanın adı; katman var olmalı"),
                 Param::text("paket", Arity::optional(), "Stil kataloğu paketinin dosya yolu"),
+                Param::text("sinifla", Arity::optional(),
+                            "Sınıflandırmada kullanılacak öznitelik; her nesne kendi "
+                            "değerine göre stillenir"),
                 Param::text("kod", Arity::optional(),
                             "Katalogdaki satırın kimliği; verilmezse katalog kuralları eşleşir"),
                 Param::integer("olcek", Arity::optional(),

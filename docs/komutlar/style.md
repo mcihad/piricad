@@ -81,6 +81,7 @@ verilir.
 | `katman` | Stilin yazılacağı katmanın adı. Zorunlu. Katman var olmalıdır |
 | `paket` | Stil kataloğu paketinin dosya yolu. Göreli yol çalışma dizinine göre çözülür |
 | `kod` | Katalogdaki satırın kimliği. Verilmezse katalogdaki eşleme kuralları çalışır |
+| `sinifla` | Sınıflandırmada kullanılacak öznitelik. Her nesne KENDİ değerine göre stillenir |
 | `olcek` | Ölçek paydası (1:N). Ölçeğe bağlı satır ve kuralların hangisinin geçerli olduğunu belirler. `0` = ölçekten bağımsız |
 | `renk` | Çizgi rengi, `0xAARRGGBB` düzeninde tam sayı |
 | `kalinlik` | Çizgi kalınlığı, **kâğıt mikrometresi**. `1000` = paftada 1 mm |
@@ -106,6 +107,38 @@ kalınlık kâğıt mikrometresinde saklanır ve piksel karşılığı her kared
 | 0,35 mm | `350` |
 | 0,50 mm | `500` |
 | 1,00 mm | `1000` |
+
+### Kategorize çizici
+
+Bir katmandaki nesneleri, hepsine aynı stili yazmak yerine **her birinin kendi
+özniteliğine göre** stillemek `sinifla` ile yapılır:
+
+```
+KATMAN ad=PLAN
+SÜTUN gosterim metin
+STİL katman=PLAN paket=data/catalogs/mpyy/plan-gosterim.json sinifla=gosterim
+```
+
+Bu tek komut, `PLAN` katmanındaki her nesnenin `gosterim` özniteliğini okur, o değeri
+katalogda kimlik ya da ad olarak arar ve bulduğu satırın rengini, kalınlığını ve
+dolgusunu o nesneye yazar. Aynı katmandaki iki parsel farklı gösterim taşıyorsa farklı
+görünür: **katman üyeliği görünümü belirlemez, nesnenin kendi verisi belirler.**
+
+Değer önce kimlik olarak aranır, bulunamazsa ad olarak. İkisi de kabul edilir çünkü
+çizimi etiketleyen bir insandır: `nip-toplu-konut-alani-siniri` paketin satıra verdiği
+addır, `TOPLU KONUT ALANI` ise bir plancının öznitelik hücresine yazdığıdır.
+
+Özniteliği olmayan bir nesne **katman varsayılanında kalır** ve sayılır. Gösterimini
+bildirmeyen bir parsele gösterim uydurmak, hukuki bir çizimin taşımaması gereken tam
+olarak o icattır; komut kaç nesnenin eşleştiğini ve kaçının öznitelik taşımadığını
+söyler.
+
+Bağlamanın komutta durması kasıtlıdır: yönetmelik bir gösterimin **neye benzediğini**
+söyler, sizin öznitelik sütununuzun **adını** asla söylemez. O yüzden "hangi sütun
+gösterim tutuyor" bilgisi katalog paketine değil, çağrı yerine aittir.
+
+Sayısal bir sütunla aralık kuralları da aynı yoldan çalışır — nüfus yoğunluğuna göre
+beş kademeli konut lekesi, beş aralık penceresi demektir.
 
 ## Örnekler
 

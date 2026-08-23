@@ -721,3 +721,86 @@ TEST_CASE("VERİ: sevk edilen plan gösterim paketi künyesiyle birlikte yüklen
     // not stated by the annex, and a guessed rule paints a signed plan wrong.
     CHECK_EQ(catalog.value().rules().size(), std::size_t{0});
 }
+
+// -------------------------------------------------- categorized rendering ----
+
+TEST_CASE("FeatureView öznitelik satırını sınıflandırmaya taşır")
+{
+    // The link that was missing. The rule engine could test a field; nothing put
+    // a real attribute row in front of it, because Document had no columns. It
+    // has them now, and from_row is the bridge the style command uses.
+    core::AttrTable table;
+    core::AttrSpec spec;
+    spec.id   = "gosterim";
+    spec.type = core::AttrType::Text;
+    REQUIRE(table.add(spec).ok());
+    table.resize(2);
+    REQUIRE(table.set(0, 0, core::attr_text("TOPLU KONUT ALANI")).ok());
+
+    const core::FeatureView row = core::FeatureView::from_row(table, 0);
+    const core::AttrValue* seen = row.find("gosterim");
+    REQUIRE(seen != nullptr);
+    CHECK_EQ(seen->text, std::string("TOPLU KONUT ALANI"));
+
+    // A condition written against that field now matches a real parcel.
+    core::StyleCondition cond;
+    cond.field = "gosterim";
+    cond.test  = core::StyleCondition::Test::Equals;
+    cond.values.push_back("TOPLU KONUT ALANI");
+    CHECK(cond.matches(row));
+
+    // And an untagged row matches nothing — no silent default (data.md R6).
+    CHECK(!cond.matches(core::FeatureView::from_row(table, 1)));
+}
+
+TEST_CASE("Sınıflandırma: aynı katmandaki iki nesne farklı stil alır")
+{
+    // The whole point of a categorized renderer, stated as an assertion: layer
+    // membership does not decide appearance, the entity's own data does.
+    core::AttrTable table;
+    core::AttrSpec spec;
+    spec.id   = "gosterim";
+    spec.type = core::AttrType::Text;
+    REQUIRE(table.add(spec).ok());
+    table.resize(2);
+    REQUIRE(table.set(0, 0, core::attr_text("ORGANİZE SANAYİ BÖLGESİ")).ok());
+    REQUIRE(table.set(0, 1, core::attr_text("SERBEST BÖLGE")).ok());
+
+    core::StyleCondition sanayi;
+    sanayi.field = "gosterim";
+    sanayi.test  = core::StyleCondition::Test::Equals;
+    sanayi.values.push_back("ORGANİZE SANAYİ BÖLGESİ");
+
+    const core::FeatureView a = core::FeatureView::from_row(table, 0);
+    const core::FeatureView b = core::FeatureView::from_row(table, 1);
+    CHECK(sanayi.matches(a));
+    CHECK(!sanayi.matches(b));
+}
+
+TEST_CASE("Sınıflandırma sayısal aralıkla da çalışır — kademeli çizici")
+{
+    // A graduated renderer is the Range test over a numeric column, and it needs
+    // no new machinery: nüfus yoğunluğuna göre beş kademeli konut lekesi is five
+    // rules with five windows.
+    core::AttrTable table;
+    core::AttrSpec spec;
+    spec.id   = "yogunluk";
+    spec.type = core::AttrType::Int64;
+    REQUIRE(table.add(spec).ok());
+    table.resize(3);
+    REQUIRE(table.set(0, 0, core::attr_int64(80)).ok());
+    REQUIRE(table.set(0, 1, core::attr_int64(250)).ok());
+    REQUIRE(table.set(0, 2, core::attr_int64(600)).ok());
+
+    core::StyleCondition orta;
+    orta.field    = "yogunluk";
+    orta.test     = core::StyleCondition::Test::Range;
+    orta.low      = 100;
+    orta.high     = 400;
+    orta.has_low  = true;
+    orta.has_high = true;
+
+    CHECK(!orta.matches(core::FeatureView::from_row(table, 0)));
+    CHECK(orta.matches(core::FeatureView::from_row(table, 1)));
+    CHECK(!orta.matches(core::FeatureView::from_row(table, 2)));
+}
