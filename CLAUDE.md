@@ -110,7 +110,7 @@ Project-wide. A violation is a build failure or a merge block, never a discussio
 
 A change is finished only when every clause holds.
 
-6.1 `cmake --preset release && cmake --build --preset release` is clean; the CI matrix (3 OS × Debug/Release, plus the ASan/UBSan and headless jobs) is green.
+6.1 `cmake --preset release && cmake --build --preset release` is clean; `make check` is green locally; the CI matrix (3 OS × Debug/Release, plus the ASan/UBSan and headless jobs) is green. CI is triggered manually, so a green matrix is something the change's author asks for and waits on — not something that happens to the branch later.
 6.2 `make check` is green: every `scripts/ci-gate-*.sh`, the full build, `piricad_tests`, and clang-format. clang-tidy and IWYU run when installed and are skipped with a printed notice when they are not — a skipped tool is reported, never silently passed.
 6.3 Zero warnings, zero new suppressions in the diff.
 6.4 A new or changed command carries the equality proof: identical `Document` **and** byte-identical `Journal` JSONL from GUI, command line and JSON script; plus a journal-replay case reproducing the golden document (§16.5, §11 Faz 0).

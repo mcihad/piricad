@@ -5,10 +5,16 @@
 # continue-on-error on a gate is forbidden.
 name: CI
 
+# MANUAL ONLY, by the maintainer's decision. `push` and `pull_request` triggers
+# are deliberately absent: this runs when somebody asks for it, from the Actions
+# tab or `gh workflow run ci.yml`, and never on its own.
+#
+# What this does NOT change: CLAUDE.md 5.14 still forbids merging on a red gate,
+# and 6.1/6.2 still make a green `make check` part of being finished. The gates
+# did not become optional — they moved from "a robot runs them on every push" to
+# "they are run before the work is called done", which on this project is `make
+# check` locally.
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 
 concurrency:

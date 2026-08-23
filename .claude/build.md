@@ -20,7 +20,7 @@ R12a. The mandatory dependencies — Qt 6, Qt Advanced Docking System (§9.4), H
 R13. ccache (Linux/macOS) and sccache (Windows) MUST be wired through `CMAKE_<LANG>_COMPILER_LAUNCHER` in the presets and cached in CI (§8).
 R14. All `piricad_*` targets MUST build with `/W4 /WX` (MSVC) or `-Wall -Wextra -Wpedantic -Werror` (GCC/Clang).
 R15. clang-tidy, clang-format and IWYU MUST run as blocking CI jobs against `.clang-tidy`, `.clang-format` and the IWYU mapping file committed at the repo root (§9.11).
-R16. The CI matrix MUST be 3 OS × {Debug, Release} plus a separate ASan+UBSan job, and MUST finish under 20 minutes per PR (§14).
+R16. The CI matrix MUST be 3 OS × {Debug, Release} plus a separate ASan+UBSan job, and MUST finish under 20 minutes per run (§14). It is triggered MANUALLY (`workflow_dispatch`) and not on push or pull request — the maintainer decides when the fleet runs. This changes who starts it, not what it means: Article 6.1 still requires a green matrix before a change is finished, so the run is part of finishing the work rather than something a robot does afterwards, and `make check` is the local gate that stands in for it between runs.
 R17. Packaging MUST go through CPack only — MSI (WiX), DMG, DEB, RPM, AppImage, Flatpak — with recipes under `/packaging/{windows,macos,linux}` (§8, §14).
 R18. Every release job MUST emit a CycloneDX SBOM artifact `piricad-<version>-sbom.cdx.json` listing each linked dependency with resolved version and SPDX license id (GPL compliance requires it) (§9.11, §13).
 R19. Release builds MUST be reproducible: `SOURCE_DATE_EPOCH` set, `-ffile-prefix-map` stripping absolute paths, no `__DATE__`/`__TIME__` in sources; two builds of one tag MUST hash identically (§13).
