@@ -9,6 +9,7 @@
 #include <QElapsedTimer>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QPaintDevice>
 #include <QWheelEvent>
 
 #include <cmath>
@@ -475,7 +476,10 @@ void MapCanvas::paintEvent(QPaintEvent*)
     ctx.width_px           = width();
     ctx.height_px          = height();
     ctx.device_pixel_ratio = static_cast<float>(devicePixelRatioF());
-    ctx.target             = this;
+    // Cast HERE, not in the backend: QWidget inherits QObject and QPaintDevice
+    // both, and passing a QWidget* through a void* to be read as a QPaintDevice*
+    // hands over the wrong address.
+    ctx.target = static_cast<QPaintDevice*>(this);
 
     backend_->render(draw_, overlay_, ctx);
 

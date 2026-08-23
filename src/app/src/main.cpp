@@ -76,10 +76,24 @@ int main(int argc, char** argv)
     // to sit in front of the machine. Under QT_QPA_PLATFORM=offscreen this
     // produces the picture without a display, which is what makes a rendering
     // change reviewable.
+    // Opens the style designer on one layer, so its own frame can be dumped.
+    // Same category as PIRICAD_FRAME_DUMP: developer tooling, not a feature.
+    if (const QByteArray layer = qgetenv("PIRICAD_OPEN_DESIGNER"); !layer.isEmpty()) {
+        const QString name = QString::fromLocal8Bit(layer);
+        QTimer::singleShot(kFrameDumpSettleMs / 2, &window,
+                           [&window, name] { window.openStyleDesigner(name); });
+    }
+
     if (const QByteArray dump = qgetenv("PIRICAD_FRAME_DUMP"); !dump.isEmpty()) {
         const QString path = QString::fromLocal8Bit(dump);
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window, path] {
-            const bool saved = window.grab().save(path);
+            // The ACTIVE window, not the main one: a dialog under review is the
+            // thing to photograph, and a modal `exec()` runs a nested event loop
+            // so this timer still fires while it is up.
+            QWidget* subject = QApplication::activeWindow();
+            if (subject == nullptr) subject = &window;
+
+            const bool saved = subject->grab().save(path);
             (void)std::fprintf(saved ? stdout : stderr, "[piricad] kare %s: %s\n",
                                saved ? "yazıldı" : "YAZILAMADI", qPrintable(path));
             QApplication::exit(saved ? 0 : 1);

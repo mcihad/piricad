@@ -51,6 +51,40 @@ float to_pixels(const core::Measure& m, double mm_per_pixel)
 
 } // namespace
 
+float stroke_width_px(const core::SymbolLayer& layer)
+{
+    return std::max(1.0f, static_cast<float>(layer.look.width_um) / 1000.0f);
+}
+
+PassStyle pass_of(const core::SymbolLayer& sl, const core::ImageStore& images, double mm_per_pixel)
+{
+    PassStyle ps;
+    ps.type          = sl.type;
+    ps.shape         = sl.shape;
+    ps.placement     = sl.placement;
+    ps.cap           = sl.cap;
+    ps.join          = sl.join;
+    ps.size_px       = to_pixels(sl.size, mm_per_pixel);
+    ps.interval_px   = to_pixels(sl.interval, mm_per_pixel);
+    ps.spacing_y_px  = to_pixels(sl.spacing_y, mm_per_pixel);
+    ps.offset_px     = to_pixels(sl.offset, mm_per_pixel);
+    ps.angle_udeg    = sl.angle_udeg;
+    ps.opacity       = sl.opacity;
+    ps.line_rgba     = sl.look.rgba;
+    ps.image         = images.bytes(sl.image);
+    ps.image_key     = images.content_key(sl.image);
+    ps.dash          = sl.look.dash;
+    ps.line_width_px = stroke_width_px(sl);
+
+    // A marker pass needs the line to walk along; a centroid marker needs the ring
+    // to find a centre in. A published sembol sits INSIDE the lekesi it labels, so
+    // its ring reaches the polygon batch even though the layer places a glyph.
+    ps.wants_stroke = core::draws_stroke(sl.type) || core::draws_marker(sl.type);
+    ps.wants_fill   = core::draws_fill(sl.type) || sl.type == core::SymbolLayerType::CentroidFill ||
+                    sl.type == core::SymbolLayerType::RasterMarker;
+    return ps;
+}
+
 void build_scene(const core::Document& doc, const ViewTransform& view, const SceneOptions& options,
                  DrawList& out)
 {
@@ -103,41 +137,14 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
 
     std::size_t next    = 0;
     const auto add_pass = [&](const core::SymbolLayer& sl) {
-        PassStyle& ps    = out.passes[next];
-        ps.type          = sl.type;
-        ps.shape         = sl.shape;
-        ps.placement     = sl.placement;
-        ps.cap           = sl.cap;
-        ps.join          = sl.join;
-        ps.size_px       = to_pixels(sl.size, mm_per_pixel);
-        ps.interval_px   = to_pixels(sl.interval, mm_per_pixel);
-        ps.spacing_y_px  = to_pixels(sl.spacing_y, mm_per_pixel);
-        ps.offset_px     = to_pixels(sl.offset, mm_per_pixel);
-        ps.angle_udeg    = sl.angle_udeg;
-        ps.opacity       = sl.opacity;
-        ps.line_rgba     = sl.look.rgba;
-        ps.image         = doc.images().bytes(sl.image);
-        ps.image_key     = doc.images().content_key(sl.image);
-        ps.dash          = sl.look.dash;
-        ps.line_width_px = std::max(1.0f, static_cast<float>(sl.look.width_um) / 1000.0f);
-
-        // A marker pass needs the line to walk along; a centroid marker needs the
-        // ring to find a centre in. Decided here, once per pass.
-        ps.wants_stroke = core::draws_stroke(sl.type) || core::draws_marker(sl.type);
-        // A published sembol sits INSIDE the lekesi it labels, so its ring has to
-        // reach the polygon batch even though the layer places a glyph.
-        ps.wants_fill = core::draws_fill(sl.type) ||
-                        sl.type == core::SymbolLayerType::CentroidFill ||
-                        sl.type == core::SymbolLayerType::RasterMarker;
+        out.passes[next] = pass_of(sl, doc.images(), mm_per_pixel);
 
         PolylineBatch& stroke = out.polylines[next];
         PolygonBatch& fill    = out.polygons[next];
         stroke.rgba           = sl.look.rgba;
-        // Paper micrometres to screen pixels, and never below one: a line the
-        // renderer rounds away is a boundary the user cannot see.
-        stroke.width_px = std::max(1.0f, static_cast<float>(sl.look.width_um) / 1000.0f);
-        fill.rgba       = sl.look.fill_rgba;
-        fill.hatch      = sl.look.hatch;
+        stroke.width_px       = stroke_width_px(sl);
+        fill.rgba             = sl.look.fill_rgba;
+        fill.hatch            = sl.look.hatch;
 
         out.z_keys.push_back(DrawList::ZKey{sl.look.z_order, static_cast<std::uint32_t>(next)});
         ++next;

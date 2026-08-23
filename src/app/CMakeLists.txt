@@ -20,6 +20,8 @@ qt_add_executable(piricad
     src/main_window.cpp
     src/map_canvas.cpp
     src/painter_backend.cpp
+    src/style_designer.cpp
+    src/symbol_preview.cpp
     src/panels.cpp
     src/theme.cpp
     src/toolbox.cpp
@@ -29,6 +31,7 @@ qt_add_executable(piricad
     include/piricad/app/main_window.hpp
     include/piricad/app/map_canvas.hpp
     include/piricad/app/panels.hpp
+    include/piricad/app/style_designer.hpp
     include/piricad/app/flow_layout.hpp
     include/piricad/app/toolbox.hpp
 )

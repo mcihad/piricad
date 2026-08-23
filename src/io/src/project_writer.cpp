@@ -260,6 +260,11 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
         layers.push_back(r);
     }
 
+    std::vector<std::uint32_t> layer_groups;
+    layer_groups.reserve(doc.layers().size());
+    for (const core::Layer& l : doc.layers())
+        layer_groups.push_back(pool.intern(l.group));
+
     // ---- styles ----
     std::vector<AppearanceRecord> styles;
     styles.reserve(doc.styles().size());
@@ -452,6 +457,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     blocks.push_back(p_doc);
 
     blocks.push_back(column(kBlkLayers, layers));
+    blocks.push_back(column(kBlkLayerGroups, layer_groups));
     blocks.push_back(column(kBlkStyles, styles));
     blocks.push_back(column(kBlkSymbols, symbols));
     blocks.push_back(column(kBlkSymbolLayers, symbol_layers));

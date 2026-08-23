@@ -21,6 +21,15 @@ Task<void> run(Context& ctx)
                                  ? bus.document().find_layer(*name)
                                  : bus.document().ensure_layer(*name);
 
+    if (const Value v = ctx.argument("grup"); !v.empty()) {
+        auto st = ctx.transaction().set_layer_group(id, v.as_text());
+        if (!st) {
+            ctx.echo(st.error().message);
+            co_return;
+        }
+        ctx.record("grup", v);
+    }
+
     if (const Value v = ctx.argument("gorunur"); !v.empty()) {
         auto st = ctx.transaction().set_layer_visible(id, v.as_bool());
         if (!st) {
@@ -67,6 +76,8 @@ PIRICAD_COMMAND(layer)
             {
                 Param::text("ad", Arity::exactly(1),
                             "Katman adı; yoksa oluşturulur ve aktif yapılır"),
+                Param::text("grup", Arity::optional(),
+                            "Katman ağacındaki yer, düzeyler '>' ile ayrılır; boş = kök"),
                 Param::boolean("gorunur", Arity::optional(), "Katmanın görünürlüğü"),
                 Param::boolean("kilitli", Arity::optional(), "Katmanın kilit durumu"),
                 Param::integer("renk", Arity::optional(), "Çizim rengi, 0xAARRGGBB"),

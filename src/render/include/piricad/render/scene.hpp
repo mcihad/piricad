@@ -8,6 +8,24 @@
 
 namespace piricad::render {
 
+/// Turns one symbol layer into a pass, converting every measure to pixels.
+///
+/// SHARED between the scene builder and the symbol previews in the layer tree and
+/// the style designer, and that is the whole reason it is a function. A preview
+/// drawn by its own code is a second implementation of one picture, and the day
+/// they disagree the shelf shows a symbol the canvas will not draw.
+///
+/// `images` supplies the bytes a raster layer needs; it is BORROWED for as long
+/// as the returned pass is used, which is the frame.
+PassStyle pass_of(const core::SymbolLayer& layer, const core::ImageStore& images,
+                  double mm_per_pixel);
+
+/// The stroke width one symbol layer draws with, in this frame's pixels.
+///
+/// Never below one: a line the renderer rounds away is a boundary the user cannot
+/// see, and on a cadastral sheet a boundary is the legal edge.
+float stroke_width_px(const core::SymbolLayer& layer);
+
 struct SceneOptions
 {
     bool cull{true}; ///< frustum cull against the visible box (§10.3)

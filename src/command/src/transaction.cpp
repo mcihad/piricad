@@ -75,6 +75,15 @@ Status Transaction::set_layer_locked(LayerId l, bool locked)
     return core::ok();
 }
 
+Status Transaction::set_layer_group(LayerId l, std::string group)
+{
+    core::Op undo;
+    auto st = doc_.set_layer_group(l, std::move(group), undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
 Status Transaction::set_layer_appearance(LayerId l, const Appearance& a)
 {
     core::Op undo;

@@ -509,6 +509,23 @@ Status Document::set_layer_appearance(LayerId l, const Appearance& a, Op& undo_o
     return ok();
 }
 
+Status Document::set_layer_group(LayerId l, std::string group, Op& undo_out)
+{
+    Layer* record = layers_.at(l);
+    if (record == nullptr)
+        return err(ErrorCode::NotFound, "Katman bulunamadı: " + std::to_string(l) + ".");
+
+    std::string was = record->group;
+    record->group   = std::move(group);
+    ++revision_;
+
+    undo_out         = Op{};
+    undo_out.kind    = Op::Kind::SetLayerGroup;
+    undo_out.layer   = l;
+    undo_out.str_arg = std::move(was);
+    return ok();
+}
+
 Status Document::set_crs(Crs crs, Op& undo_out)
 {
     if (crs.id().empty())
@@ -556,6 +573,7 @@ Status Document::apply(const Op& op, Op* undo_out)
     case Op::Kind::SetLayerLocked: return set_layer_locked(op.layer, op.bool_arg, inverse);
     case Op::Kind::SetLayerAppearance:
         return set_layer_appearance(op.layer, op.appearance_arg, inverse);
+    case Op::Kind::SetLayerGroup: return set_layer_group(op.layer, op.str_arg, inverse);
     case Op::Kind::SetCrs: return set_crs(op.crs_arg, inverse);
     }
     return err(ErrorCode::Internal, "İşlenmemiş Op::Kind");

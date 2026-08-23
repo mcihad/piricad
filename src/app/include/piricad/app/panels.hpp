@@ -8,6 +8,8 @@
 
 #include "piricad/core/document.hpp"
 
+#include <QIcon>
+#include <QPoint>
 #include <QWidget>
 
 /// Qt widgets this header only holds pointers to.
@@ -42,8 +44,24 @@ signals:
     /// Emitted when the user picks a row, so the property panel can follow.
     void layerSelected(core::LayerId layer);
 
+    /// Emitted when the user asks to edit a layer's style, so the shell can open
+    /// the designer. The panel does not own the dialog: a panel that opened a
+    /// window would be a panel that has to know what is in it.
+    void styleRequested(const QString& layerName);
+
 private:
     void onItemActivated(QTreeWidgetItem* item, int column);
+
+    /// The right-click menu. Every entry leaves through the command bus, so a
+    /// script can do the same things (Article 1.2).
+    void showContextMenu(const QPoint& where);
+
+    /// A small preview of what this layer draws, rendered by the CANVAS backend
+    /// so the swatch and the map cannot disagree.
+    ///
+    /// `used` is the style its entities carry, or `kByLayerStyle` when they carry
+    /// none — in which case the layer's own default is what it draws.
+    QIcon layerIcon(const core::Layer& layer, core::StyleId used) const;
 
     Controller& controller_;
     QTreeWidget* tree_{nullptr};

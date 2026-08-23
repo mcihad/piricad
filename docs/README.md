@@ -10,6 +10,7 @@ Daha önce PiriCAD kullanmadıysanız sırayla okuyun:
 1. [Kurulum ve derleme](baslangic/kurulum.md) — programı çalışır hâle getirin
 2. [İlk adımlar](baslangic/ilk-adimlar.md) — on dakikada ilk çiziminiz
 3. [Arayüz](baslangic/arayuz.md) — pencerede ne nerede
+4. [Stil tasarımcısı](baslangic/stil-tasarimcisi.md) — bir katmanın nasıl çizileceğini tasarlayın
 4. [Komut sistemi](komutlar/README.md) — PiriCAD'in çalışma mantığı
 
 ## Komutlar

@@ -6,6 +6,7 @@
 #include "piricad/app/icons.hpp"
 #include "piricad/app/map_canvas.hpp"
 #include "piricad/app/panels.hpp"
+#include "piricad/app/style_designer.hpp"
 #include "piricad/app/toolbox.hpp"
 
 #include "piricad/io/vector.hpp"
@@ -122,6 +123,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(canvas_, &MapCanvas::viewChanged, this, &MainWindow::refreshStatus);
     connect(commandLine_, &CommandLine::submitted, this, &MainWindow::onCommandSubmitted);
     connect(layerPanel_, &LayerPanel::layerSelected, propertyPanel_, &PropertyPanel::setLayer);
+    connect(layerPanel_, &LayerPanel::styleRequested, this, &MainWindow::openStyleDesigner);
 
     onEcho(tr("PiriCAD %1 — komut merkezli mimari, GPLv3.").arg(QStringLiteral(PIRICAD_VERSION)));
     onEcho(tr("Aynı komut arayüzden, komut satırından ve betikten tıpatıp aynı yolu izler."));
@@ -675,6 +677,15 @@ void MainWindow::buildPanels()
         restoreGeometry(settings.value(QStringLiteral("ui/geometry")).toByteArray());
         restoreState(settings.value(QStringLiteral("ui/state")).toByteArray());
     }
+}
+
+void MainWindow::openStyleDesigner(const QString& layerName)
+{
+    // The shell owns the window; the panel that asked for it does not have to know
+    // what is in it. Everything the dialog changes leaves as a command, so what a
+    // user designs here a script can write and the AI can be taught (Article 1.2).
+    StyleDesigner designer(*controller_, layerName, this);
+    designer.exec();
 }
 
 void MainWindow::loadSymbolLibrary()

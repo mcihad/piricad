@@ -87,11 +87,15 @@ Var olan bir katmanı gizle:
 KATMAN ad=YOL gorunur=hayır
 ```
 
-Kilitle, böylece yanlışlıkla üzerine çizilmesin:
+Kilitle, böylece yanlışlıkla üzerine çizilmesin — ve işiniz bitince aç:
 
 ```
 KATMAN ad=SINIR kilitli=evet
+KATMAN ad=SINIR kilitli=hayır
 ```
+
+Kilitli bir katmana yeni nesne çizilemez. Kilidi açmayı unutursanız çizim komutu
+sizi reddeder ve sebebini söyler.
 
 Adında boşluk olan katman:
 
@@ -103,6 +107,28 @@ Aktif katmanı geri değiştir:
 
 ```
 KATMAN ad=0
+```
+
+### Katman ağacı
+
+Katmanlar bir ağaçta gruplanabilir ve grup çizimin parçasıdır: dosyaya yazılır,
+başka makinede geri gelir, paftayı beş yıl sonra açan kişinin ilk okuduğu şeydir.
+
+```
+KATMAN ad=PARSEL grup=KADASTRO
+KATMAN ad=BINA grup=KADASTRO
+KATMAN ad=YOL grup="ULASIM > KARAYOLU"
+KATMAN ad=DEMIRYOLU grup="ULASIM > RAYLI"
+```
+
+Katmanlar paneli bu ağacı gösterir. Ayraç `>`, sembol rafındakiyle aynı sebeple:
+MPYY kendi bölüm yollarını böyle yazıyor ve pakette hiçbir ad bu karakteri
+içermiyor.
+
+Bir katmanı kökten çıkarmak için grubu boş verin:
+
+```
+KATMAN ad=NOT grup=""
 ```
 
 ### Arayüz
@@ -144,11 +170,19 @@ aktif katmanı belirler.
 
 ## Geri alma
 
-Görünürlük, kilit ve renk değişiklikleri geri alınabilir:
+Görünürlük, kilit ve renk değişiklikleri geri alınabilir. `GERİAL` **son** komutu
+geri alır, o yüzden örnek neyi geri aldığını kendisi yazar — ve daha önce hangi
+durumda olduğunuza bağlı kalmasın diye kendi katmanını kullanır:
 
 ```
+KATMAN ad=ÖLÇÜ kilitli=evet
 GERİAL
+KATMAN ad=0
 ```
+
+`GERİAL`'den sonra `ÖLÇÜ` yeniden düzenlenebilir. Son satır aktif katmanı geri
+alır; **aktif katman değişikliği geri alınmaz**, çünkü aktif katman görünüm
+durumudur, çizimin verisi değildir.
 
 **Boş bir katman yaratmak geri alınmaz.** Bunun sebebi şudur: boş katman hiçbir şeyi
 etkilemez, ama katmanı silmek ona bağlı nesne kimliklerini geçersiz kılardı. Yarattığınız

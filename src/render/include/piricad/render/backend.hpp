@@ -23,17 +23,24 @@ struct FrameContext
     /// Every pixel-space constant is scaled by this (render.md R19).
     float device_pixel_ratio{1.0f};
 
-    /// The platform surface to draw into, opaque to /src/render.
+    /// The surface to draw into, opaque to /src/render.
     ///
     /// A `void*` because this header may not name a Qt type: `piricad_render`
     /// links no Qt (CLAUDE.md 3.4, Article 8.5) and the whole point of the
     /// interface is that nothing above it knows which backend is live. The
-    /// backend that receives it is the only code that knows what it is — a
-    /// `QWidget*` for the QPainter backend, a command buffer for the GPU one.
+    /// backend that receives it is the only code that knows what it is — a paint
+    /// device for the QPainter backend, a command buffer for the GPU one.
     ///
-    /// The alternative was for the canvas to construct the target and hand over
-    /// a typed pointer, and that puts the target's type in the canvas, which is
-    /// exactly what render.md R1 forbids.
+    /// WHATEVER IT IS, THE CALLER MUST HAND OVER THE ALREADY-CAST POINTER. The
+    /// QPainter backend reads it as a `QPaintDevice*`, and a `QWidget*` shoved
+    /// through `void*` is not that: QWidget inherits QObject and QPaintDevice
+    /// both, so the two pointers have different addresses and the round trip
+    /// silently produces garbage.
+    ///
+    /// A device rather than a widget on purpose: the symbol previews in the layer
+    /// tree and the style designer render through the SAME backend into an image,
+    /// so what a user sees on the shelf is what the canvas will draw. A second
+    /// preview renderer is two implementations of one picture, and they diverge.
     void* target{nullptr};
 };
 

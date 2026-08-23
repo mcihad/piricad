@@ -28,13 +28,13 @@
 #include <QFont>
 #include <QFontMetricsF>
 #include <QImage>
+#include <QPaintDevice>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPen>
 #include <QRectF>
 #include <QString>
 #include <QTransform>
-#include <QWidget>
 
 #include <algorithm>
 #include <cmath>
@@ -203,7 +203,7 @@ public:
     void render(const render::DrawList& list, const render::Overlay& overlay,
                 const render::FrameContext& ctx) override
     {
-        auto* device = static_cast<QWidget*>(ctx.target);
+        auto* device = static_cast<QPaintDevice*>(ctx.target);
         if (device == nullptr) return;
 
         QPainter painter(device);

@@ -35,6 +35,19 @@ struct Layer
     std::string folded;      ///< turkish_upper(name), the uniqueness key
     std::string description; ///< free text, shown in the property panel
 
+    /// Where this layer sits in the layer TREE, levels separated by `>`.
+    ///
+    /// Empty means the root. A drawing organises its layers the way its author
+    /// thinks about the work — `PLAN > SINIRLAR`, `KADASTRO > PARSEL` — and that
+    /// grouping is part of the drawing rather than of the window: it is written
+    /// to the file, it comes back on another machine, and it is what somebody
+    /// opening the sheet in five years reads first.
+    ///
+    /// Same separator as the symbol shelf's group path, and for the same reason:
+    /// `>` is what MPYY prints between the levels of its own section paths, and no
+    /// name in the package contains it.
+    std::string group;
+
     bool visible{true};
     bool locked{false};   ///< entities on it are drawn but cannot be selected
     bool plottable{true}; ///< off = draw on screen, omit from the pafta

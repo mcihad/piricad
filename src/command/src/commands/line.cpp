@@ -27,8 +27,19 @@ Task<void> run(Context& ctx)
 
         auto created = ctx.transaction().add_polyline(ctx.active_layer(), segment);
         if (!created) {
-            ctx.echo(created.error().message);
-            break; // transaction rolls back on the bus
+            // FAIL, not echo-and-break. Two things were wrong with breaking.
+            //
+            // The whole transaction has to roll back (Article 1.6): a run that
+            // drew four segments and was refused the fifth left the four
+            // committed, which is a half-applied command.
+            //
+            // And the user was told twice. The refusal was echoed, the loop
+            // ended with one point in hand, and the invocation was then reported
+            // as `'noktalar' wants at least 2 values, 1 came` — a second message
+            // about the shape of the arguments, when what actually happened is
+            // that the layer is locked.
+            ctx.session().fail(created.error());
+            co_return;
         }
 
         drawn.push_back(*p2);

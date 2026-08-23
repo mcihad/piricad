@@ -69,6 +69,7 @@ meaningful (§7.3).
 | `PIRICAD_BENCH_RECORD` | Ölçümleri bu makinenin temel değeri olarak kaydeder |
 | `PIRICAD_BENCH_BASELINE` | Temel değer dosyasının yolunu değiştirir |
 | `PIRICAD_FRAME_DUMP` | `piricad` uygulaması bir kare çizip verilen PNG yoluna yazar ve çıkar. `QT_QPA_PLATFORM=offscreen` ile ekransız çalışır; tuvalin doğruluğu bir resim olduğu için bir çizim değişikliğini gözden geçirilebilir kılan şey budur |
+| `PIRICAD_OPEN_DESIGNER` | Verilen katmanda stil tasarımcısını açar; `PIRICAD_FRAME_DUMP` etkin pencereyi çektiği için tasarımcının kendi karesi alınabilir |
 
 Hiçbiri kullanıcıya dönük değildir; bu yüzden komut satırı seçeneği değil ortam
 değişkenidirler (CLAUDE.md 5.17 bir CLI bayrağı için kendi `/docs` sayfasını

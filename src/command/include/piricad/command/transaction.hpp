@@ -80,6 +80,9 @@ public:
     Status set_layer_visible(LayerId l, bool visible);
     Status set_layer_locked(LayerId l, bool locked);
     Status set_layer_appearance(LayerId l, const Appearance& a);
+
+    /// Moves a layer in the layer tree. An empty path puts it at the root.
+    Status set_layer_group(LayerId l, std::string group);
     Status set_entity_style(EntityId e, StyleId style);
 
     Status set_entity_hidden(EntityId e, bool hidden);

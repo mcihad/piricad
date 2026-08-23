@@ -99,6 +99,7 @@ struct Op
         SetLayerVisible,    ///< layer,  bool_arg
         SetLayerLocked,     ///< layer,  bool_arg
         SetLayerAppearance, ///< layer,  appearance_arg
+        SetLayerGroup,      ///< layer,  str_arg
         SetCrs,             ///< crs_arg
         SetAttribute,       ///< attr_col, entity (as the row), attr_arg
         SetText,            ///< entity, str_arg, text_height, text_anchor
@@ -243,6 +244,9 @@ public:
     Status set_layer_visible(LayerId l, bool visible, Op& undo_out);
     Status set_layer_locked(LayerId l, bool locked, Op& undo_out);
     Status set_layer_appearance(LayerId l, const Appearance& a, Op& undo_out);
+
+    /// Moves a layer in the layer tree. An empty path puts it at the root.
+    Status set_layer_group(LayerId l, std::string group, Op& undo_out);
     /// Sets the document's CRS. Takes a whole `Crs` rather than an id, because a
     /// resolved CRS carries the epoch and the zone meridian and dropping them here
     /// would leave the document naming a system it cannot describe (R36).

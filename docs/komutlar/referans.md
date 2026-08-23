@@ -137,6 +137,7 @@ Katman oluşturur, aktif yapar ve özelliklerini değiştirir.
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `ad` | text | 1 | Katman adı; yoksa oluşturulur ve aktif yapılır |
+| `grup` | text | isteğe bağlı | Katman ağacındaki yer, düzeyler '>' ile ayrılır; boş = kök |
 | `gorunur` | bool | isteğe bağlı | Katmanın görünürlüğü |
 | `kilitli` | bool | isteğe bağlı | Katmanın kilit durumu |
 | `renk` | integer | isteğe bağlı | Çizim rengi, 0xAARRGGBB |
@@ -541,6 +542,14 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "max": 1,
           "required": true,
           "help": "Katman adı; yoksa oluşturulur ve aktif yapılır"
+        },
+        {
+          "name": "grup",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Katman ağacındaki yer, düzeyler '>' ile ayrılır; boş = kök"
         },
         {
           "name": "gorunur",

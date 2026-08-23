@@ -176,6 +176,7 @@ std::uint64_t LayerTable::fold(std::uint64_t seed) const
         h = fnv1a_int(static_cast<std::int64_t>(l.max_scale), h);
         h = fnv1a_int(static_cast<std::int64_t>(l.opacity), h);
         h = fnv1a(l.catalog_ref, h);
+        h = fnv1a(l.group, h);
     }
     return h;
 }

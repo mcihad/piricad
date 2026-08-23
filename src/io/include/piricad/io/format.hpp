@@ -149,6 +149,14 @@ enum BlockId : std::uint32_t {
     /// from the document record, which has no reserved field left; the directory
     /// entry is the same authority that bounds the block, and `BlockView::column`
     /// already refuses a length that disagrees with count × stride.
+    /// Where each layer sits in the layer tree, one string index per layer.
+    ///
+    /// A separate OPTIONAL block rather than a field on `LayerRecord`, because
+    /// that record is exactly 64 bytes with nothing spare and growing it would
+    /// make every file written so far unreadable — `BlockView::column` refuses a
+    /// block whose element size disagrees with the type.
+    kBlkLayerGroups = 0x0021, ///< u32[], index into kBlkStringSpans
+
     kBlkImages     = 0x0033, ///< ImageRecord[]
     kBlkImageBytes = 0x0034, ///< u8[], the payloads back to back
 

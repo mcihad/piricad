@@ -330,6 +330,16 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
     auto layer_rows = view.column<LayerRecord>(kBlkLayers, dr.layer_count, "katmanlar");
     if (!layer_rows) return layer_rows.error();
 
+    // Where each layer sits in the tree. OPTIONAL: a file written before the tree
+    // existed has no such block and every layer reads back at the root, which is
+    // what that file meant.
+    std::span<const std::uint32_t> group_rows;
+    if (view.has(kBlkLayerGroups) && dr.layer_count > 0) {
+        auto rows = view.column<std::uint32_t>(kBlkLayerGroups, dr.layer_count, "katman gruplari");
+        if (!rows) return rows.error();
+        group_rows = rows.value();
+    }
+
     const core::Layer kDefaults{};
     std::vector<bool> locked(static_cast<std::size_t>(dr.layer_count), false);
 
@@ -368,6 +378,13 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         const core::Appearance appearance = from_record(r.appearance);
         if (!(live->appearance == appearance))
             if (auto st = tx.set_layer_appearance(slot, appearance); !st) return st.error();
+
+        if (!group_rows.empty()) {
+            auto group = strings.at(group_rows[static_cast<std::size_t>(i)], "katman grubu");
+            if (!group) return group.error();
+            if (live->group != group.value())
+                if (auto st = tx.set_layer_group(slot, group.value()); !st) return st.error();
+        }
 
         // Locking is deferred: a locked layer refuses new geometry, and the
         // entities on it have not been created yet.

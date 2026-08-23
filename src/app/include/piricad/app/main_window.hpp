@@ -62,6 +62,10 @@ public:
     /// Runs a script file through the bus, exactly as the BETİK command does.
     void runScriptFile(const QString& path);
 
+    /// Opens the style designer on one layer. Owned by the shell rather than by
+    /// the panel that asked, so a panel never has to know what is in a window.
+    void openStyleDesigner(const QString& layerName);
+
 private slots:
     /// Bus observers. The shell SUBSCRIBES to the command bus and never reaches
     /// around it: a value on screen is there because a command put it there, so
