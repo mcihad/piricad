@@ -35,7 +35,18 @@ enum class PreviewShape {
     /// A zig-zag across the box. What a line type, a marker line and a hash line
     /// are read on: a straight line hides what a corner does to the pattern.
     Line,
+    /// A single point in the middle. What a marker is read on, and the only shape
+    /// on which a marker's size means what it says.
+    Point,
 };
+
+/// The shape a symbol should be previewed on, from what its layers draw.
+///
+/// A guess, and an honest one: a symbol that fills is shown on an area, one that
+/// only places glyphs on a point, everything else on a line. The user overrides it
+/// with the geometry tabs, because a symbol built for parcels can perfectly well
+/// be applied to a boundary and they are the ones who know which.
+PreviewShape natural_shape(const core::Symbol& symbol);
 
 /// Renders `symbol` into an image of `size`, on `background`.
 ///

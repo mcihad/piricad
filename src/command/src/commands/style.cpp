@@ -165,62 +165,26 @@ core::Result<core::ImageId> intern_picture(Context& ctx, const std::filesystem::
 
 /// Builds the symbol a catalogue row's own pictures describe.
 ///
-/// The stack is bottom to top and the order is what a plan sheet reads like: the
-/// row's fill colour, the hatch the annex printed over it, the row's boundary,
-/// the published line type, and the glyph last so nothing covers it.
+/// The stack itself is `core::symbol_of_entry`, shared with the symbol shelf, so
+/// what a gallery thumbnail shows is what this applies. Only the resolver differs:
+/// here the bytes are interned into the DOCUMENT, because a drawing carries the
+/// pictures it uses.
 core::Result<core::Symbol> build_from_row(Context& ctx, const core::StyleEntry& row,
-                                          const std::filesystem::path& dir,
-                                          const core::Appearance& look)
+                                          const std::filesystem::path& dir)
 {
-    core::Symbol sym;
+    core::Status failure = core::ok();
 
-    const auto add = [&](const std::string& file, core::SymbolLayerType type,
-                         std::int32_t size_um) -> core::Status {
-        if (file.empty()) return core::ok();
-
+    auto resolve = [&](const std::string& file) -> core::ImageId {
         auto image = intern_picture(ctx, dir, file, row.id + " · " + row.source_ref);
-        if (!image) return image.error();
-
-        core::SymbolLayer layer;
-        layer.look  = look;
-        layer.type  = type;
-        layer.image = image.value();
-
-        // A size in PAPER micrometres, because a published symbol is printed at a
-        // size the annex fixes and it stays that size whatever the plot scale is.
-        // Whoever wants it to follow the ground can say so with `birim=zemin`.
-        layer.size = core::Measure{size_um, core::Unit::Paper};
-        sym.layers.push_back(layer);
-        return core::ok();
+        if (!image) {
+            failure = image.error();
+            return core::kNoImage;
+        }
+        return image.value();
     };
 
-    if (look.fill_rgba != 0) {
-        core::SymbolLayer base;
-        base.look = look;
-        base.type = core::SymbolLayerType::SimpleFill;
-        sym.layers.push_back(base);
-    }
-
-    // Sizes chosen for legibility on screen, not from the regulation: the annex
-    // prints a picture and states no millimetre for it. They are a starting point
-    // the user or the designer changes, never a claim about what MPYY requires.
-    if (auto st = add(row.image_hatch, core::SymbolLayerType::RasterFill, 24000); !st)
-        return st.error();
-
-    if (!row.image_line.empty()) {
-        if (auto st = add(row.image_line, core::SymbolLayerType::RasterLine, 8000); !st)
-            return st.error();
-    } else {
-        core::SymbolLayer stroke;
-        stroke.look = look;
-        stroke.type = core::SymbolLayerType::SimpleLine;
-        sym.layers.push_back(stroke);
-    }
-
-    if (auto st = add(row.image_symbol, core::SymbolLayerType::RasterMarker, 12000); !st)
-        return st.error();
-
-    if (sym.layers.empty()) sym = core::Symbol::of(look);
+    core::Symbol sym = core::symbol_of_entry(row, resolve);
+    if (!failure) return failure.error();
     return sym;
 }
 
@@ -534,7 +498,7 @@ Task<void> run(Context& ctx)
             } else if (row_pictures) {
                 // The row was published WITH PICTURES, so the symbol is what the
                 // regulation printed rather than a colour standing in for it.
-                auto built = build_from_row(ctx, *rows[i], package_dir, resolved[i]);
+                auto built = build_from_row(ctx, *rows[i], package_dir);
                 if (!built) {
                     ctx.session().fail(built.error());
                     co_return;

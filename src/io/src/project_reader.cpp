@@ -433,6 +433,15 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         symbol_layer_rows = rows.value();
     }
 
+    // Whether each symbol layer is drawn. OPTIONAL: absent means every layer is.
+    std::span<const std::uint8_t> symbol_layer_flags;
+    if (view.has(kBlkSymbolLayerFlags) && dr.symbol_layer_count > 0) {
+        auto rows = view.column<std::uint8_t>(kBlkSymbolLayerFlags, dr.symbol_layer_count,
+                                              "sembol katmani bayraklari");
+        if (!rows) return rows.error();
+        symbol_layer_flags = rows.value();
+    }
+
     for (std::uint64_t i = 0; i < dr.style_count; ++i) {
         const core::Appearance a = from_record(style_rows.value()[static_cast<std::size_t>(i)]);
 
@@ -453,8 +462,12 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
 
             sym.min_scale = r.min_scale;
             sym.max_scale = r.max_scale;
-            for (std::uint32_t k = 0; k < r.layer_count; ++k)
-                sym.layers.push_back(from_record(symbol_layer_rows[r.first_layer + k]));
+            for (std::uint32_t k = 0; k < r.layer_count; ++k) {
+                core::SymbolLayer layer = from_record(symbol_layer_rows[r.first_layer + k]);
+                if (r.first_layer + k < symbol_layer_flags.size())
+                    layer.enabled = symbol_layer_flags[r.first_layer + k] != 0;
+                sym.layers.push_back(layer);
+            }
         }
 
         // Interned through the SAME road a command takes, so a stack that is one

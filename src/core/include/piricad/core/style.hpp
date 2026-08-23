@@ -264,6 +264,14 @@ struct SymbolLayer
     /// rewriting the catalogue colour a regulation prescribes.
     std::uint8_t opacity{255};
 
+    /// Whether this layer is drawn at all.
+    ///
+    /// A designer needs to switch one layer off and see what the rest look like
+    /// without losing it — QGIS puts a checkbox on every symbol layer for exactly
+    /// this. A disabled layer is still STORED, still round-trips and still folds
+    /// into the fingerprint: it is part of the symbol, it is simply not painted.
+    bool enabled{true};
+
     /// The picture a raster type draws, as an index into the document's
     /// `ImageStore`. `kNoImage` for every other type.
     ///

@@ -13,21 +13,64 @@ taşıyorsa o, taşımıyorsa katmanın kendi görünümü.
 
 ## Pencerede ne nerede
 
-Düzen QGIS'in sembol seçicisinin aynısıdır ve bu bilerek böyledir — QGIS
-kullanmış bir plancı pencereyi tanır.
-
 | Yer | Ne |
 |---|---|
-| Üst | Bütün sembolün önizlemesi |
-| Sol | **Sembol katmanları** yığını, üstteki en son çizilen |
-| Sağ | Seçili katmanın özellikleri |
-| Alt | Uygula, kütüphaneye kaydet, vazgeç |
+| En üst | **Geometri sekmeleri**: Alan · Çizgi · Nokta |
+| Üst | Bütün sembolün önizlemesi, seçili geometri üzerinde |
+| Sol | **Hazır gösterimler** — mevzuatın kendi ağacı, arama ve küçük resimler |
+| Sağ üst | **Sembol katmanları** yığını, aç/kapa kutusuyla |
+| Sağ alt | Seçili katmanın özellikleri |
+| Alt | Uygula · Kütüphaneye kaydet · Vazgeç |
 
-Yığın listesi **üstten alta** okunur: listedeki ilk satır en son çizilen, yani
-ekranda en üstte görünen katmandır. `▲` ve `▼` düğmeleri satırı gördüğünüz yöne
-taşır.
+### Geometri sekmeleri
 
-Önizlemeler tuvalin **kendi arka ucundan** geçer. Yani soldaki küçük resim,
+İlk karar bu: sembol hangi geometri için. Sekme iki şeyi birden belirler —
+önizlemenin hangi şekil üzerinde çizileceğini ve soldaki rafın hangi çekmecesinin
+açık olduğunu. `Çizgi` sekmesindeyken raf size alan gösterimi vermez.
+
+Önizleme şekli de bilerek seçilmiştir: alan için dikdörtgen, çizgi için **zikzak**
+(düz çizgi bir desenin köşede ne yaptığını gizler), nokta için tek nokta.
+
+### Hazır gösterimler
+
+Soldaki raf, mevzuatın yayımladığı gösterim setidir ve ağacı da mevzuatın
+kendisinindir: EK-1a ortak, EK-1b MSP, EK-1c ÇDP, EK-1ç NİP, EK-1d UİP, her ekin
+altında kendi bölüm yolu.
+
+- Ağaçtan bir bölüm seçin, ya da
+- Arama kutusuna yazın — arama **ağacı dinlemez**, bir kelimeyi nerede olursa
+  bulur.
+
+Küçük resimler taramanın, çizgi tipinin ve simgenin **gerçek görselleridir**;
+renk değil. `Seçileni al` ya da çift tıklama, o gösterimi yığına **koyar** —
+üstüne eklemez, çünkü yayımlanmış bir gösterimi seçmek "bu böyle görünmeli"
+demektir.
+
+Raf çok kalabalıksa altındaki not kaç tanesinin gösterildiğini yazar. Sessizce
+kesilmez.
+
+### Sembol katmanları
+
+Liste **üstten alta** okunur: ilk satır en son çizilen, yani ekranda en üstte
+görünen katmandır. `▲` ve `▼` satırı gördüğünüz yöne taşır.
+
+Her satırın başındaki kutu o katmanı **kapatır**. Kapalı katman silinmez —
+sembolde durur, dosyaya yazılır, parmak izine girer — sadece çizilmez. Bir
+katmanın ne kattığını görmek için kapatıp açmak en hızlı yoldur.
+
+`⧉` seçili katmanı kopyalar; iki farklı kalınlıkta aynı çizgi (yol kaplaması)
+böyle kurulur.
+
+### Katman özellikleri
+
+Sağ alt yalnız **seçili tipin okuduğu** alanları gösterir. Bir `dolgu` katmanının
+işaretçi yerleşimi yoktur, o yüzden o satır orada değildir — soluk değil, yok.
+Görmediğiniz bir alan, çizicinin yok sayacağı bir alan değildir.
+
+Her ölçünün **kendi birim kutusu** vardır: boyut kâğıtta, aralık zeminde
+olabilir. İkisi aynı sembolde farklı birimlerde durabilir ve bu normaldir.
+
+Önizlemeler tuvalin **kendi arka ucundan** geçer. Yani gördüğünüz küçük resim,
 çizimde göreceğiniz şeyin aynısıdır — ayrı bir önizleme çizicisi olsaydı ikisi
 er geç ayrışırdı.
 
@@ -38,14 +81,14 @@ Her alan `STİL` komutunun bir parametresidir; hangisi olduğu
 
 | Alan | `STİL` parametresi |
 |---|---|
-| Tip | `tip` |
+| Katman tipi | `tip` |
 | Çizgi rengi | `renk` |
 | Çizgi kalınlığı | `kalinlik` |
 | Dolgu rengi | `dolgu` |
-| Ölçü birimi | `birim` |
-| Boyut | `boyut` |
+| Boyut + birim | `boyut`, `birim` |
 | Aralık | `aralik` |
 | İkinci eksen | `aralik_y` |
+| Kaydırma | `kaydirma` |
 | Açı | `aci` |
 | Şekil | `sekil` |
 | Yerleşim | `yerlesim` |
@@ -56,9 +99,9 @@ komut satırına yazacağınız şeydir.
 
 ## Uygula
 
-**OK** yığındaki her sembol katmanı için bir `STİL` satırı gönderir: ilki sembolü
-kurar, kalanlar `ekle=evet` ile üstüne biner. Komut günlüğünde satırların
-kendisini görürsünüz.
+**Uygula** yığındaki her **açık** sembol katmanı için bir `STİL` satırı gönderir:
+ilki sembolü kurar, kalanlar `ekle=evet` ile üstüne biner. Kapalı katmanlar
+gönderilmez. Komut günlüğünde satırların kendisini görürsünüz.
 
 Tek bir geri alma adımıdır: `GERİAL` tasarımı bütünüyle geri alır.
 
@@ -96,4 +139,7 @@ Lisans engel değil — QGIS GPL-2.0-or-later ve uyumlu. Engeller ölçülebilir
   ise baytları ve künyesini belgenin içinde taşır — çizim e-postayla gittiğinde
   ayakta kalmasını sağlayan şey bu.
 
-Alınabilecek olan alındı: **düzenin kendisi**.
+Alınabilecek olan alındı: **düzenin kendisi** — ve sadeleştirilerek. QGIS bunu iki
+pencereye bölüyor (sembol seçici ve Stil Yöneticisi) ve seçili tipin okumadığı
+alanları da soluk hâlde gösteriyor. Burada tek pencere var ve görünmeyen alan yok
+sayılan alan değildir.

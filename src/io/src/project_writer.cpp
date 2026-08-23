@@ -279,6 +279,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     // fingerprint said so on the next open.
     std::vector<SymbolRecord> symbols;
     std::vector<SymbolLayerRecord> symbol_layers;
+    std::vector<std::uint8_t> symbol_layer_flags;
     symbols.reserve(doc.styles().size());
 
     for (std::size_t i = 0; i < doc.styles().size(); ++i) {
@@ -311,6 +312,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
             sl.opacity         = l.opacity;
             sl.image           = l.image;
             symbol_layers.push_back(sl);
+            symbol_layer_flags.push_back(l.enabled ? 1u : 0u);
         }
     }
 
@@ -461,6 +463,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     blocks.push_back(column(kBlkStyles, styles));
     blocks.push_back(column(kBlkSymbols, symbols));
     blocks.push_back(column(kBlkSymbolLayers, symbol_layers));
+    blocks.push_back(column(kBlkSymbolLayerFlags, symbol_layer_flags));
     blocks.push_back(column(kBlkImages, images));
     blocks.push_back(column(kBlkImageBytes, image_bytes));
 

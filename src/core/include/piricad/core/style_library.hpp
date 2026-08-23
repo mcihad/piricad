@@ -24,8 +24,11 @@
 // indexes it (CLAUDE.md 5.13, data.md R1).
 #pragma once
 
+#include "piricad/core/image_store.hpp"
 #include "piricad/core/style.hpp"
 #include "piricad/core/style_rule.hpp"
+
+#include <functional>
 
 #include <cstdint>
 #include <span>
@@ -35,6 +38,24 @@
 
 namespace piricad::core {
 
+/// What kind of geometry a shelf entry is drawn on.
+///
+/// The shelf is browsed by this before anything else, the way QGIS's style
+/// manager separates Marker, Line and Fill: a planner looking for a boundary does
+/// not want to scroll past four hundred area gösterim to find it.
+///
+/// Read from what the PACKAGE says about the row — a hatch or a fill colour makes
+/// it an area, a published line type makes it a line, a bare glyph makes it a
+/// point — never guessed from the symbol after the fact.
+enum class SymbolKind : std::uint8_t {
+    Area = 0,
+    Line,
+    Point,
+};
+
+/// Stable machine name, for a file, a message or a test.
+const char* symbol_kind_name(SymbolKind k) noexcept;
+
 /// One browsable symbol.
 ///
 /// A superset of `StyleEntry`: the same identity and provenance, plus the group
@@ -43,15 +64,35 @@ namespace piricad::core {
 /// show what will actually be drawn.
 struct LibraryEntry
 {
-    std::string id;                 ///< stable forever; a retired id is never reused (R5)
-    std::string label;              ///< Turkish, what a user reads on the shelf
-    std::vector<std::string> group; ///< hierarchical path, outermost first
-    std::vector<std::string> tags;  ///< free labels, searched across groups
-    std::string source_ref;         ///< the annex and madde this row encodes
-    Symbol symbol{};                ///< what it draws
-    ScaleWindow scale{};            ///< the scales it applies at
-    bool deprecated{false};         ///< retained and still loadable, never dropped (R5)
+    std::string id;                    ///< stable forever; a retired id is never reused (R5)
+    std::string label;                 ///< Turkish, what a user reads on the shelf
+    std::vector<std::string> group;    ///< hierarchical path, outermost first
+    std::vector<std::string> tags;     ///< free labels, searched across groups
+    std::string source_ref;            ///< the annex and madde this row encodes
+    SymbolKind kind{SymbolKind::Area}; ///< which geometry it belongs to
+    Symbol symbol{};                   ///< what it draws
+    ScaleWindow scale{};               ///< the scales it applies at
+    bool deprecated{false};            ///< retained and still loadable, never dropped (R5)
 };
+
+/// Turns a package-relative image path into an id, or `kNoImage`.
+///
+/// Supplied by the CALLER because core does no I/O (core.md P9). The command layer
+/// reads the file and interns it into the document; the shelf reads it and interns
+/// it into its own store. Both go through the same builder below, so what a
+/// gallery thumbnail shows is what the command will apply.
+using ImageResolver = std::function<ImageId(const std::string& package_relative_path)>;
+
+/// Builds the symbol a catalogue row describes.
+///
+/// The stack is bottom to top and the order is what a plan sheet reads like: the
+/// row's fill colour, the hatch the annex printed over it, the row's boundary or
+/// its published line type, and the glyph last so nothing covers it.
+///
+/// ONE implementation, shared by the shelf and by `STİL`. Two would be two answers
+/// to "what does this gösterim look like", and the day they differ the thumbnail
+/// stops predicting the drawing.
+Symbol symbol_of_entry(const StyleEntry& row, const ImageResolver& resolve);
 
 /// A shelf of named symbols, organised by the group path they arrived with.
 ///
@@ -72,7 +113,19 @@ public:
     /// Returns how many were added. The catalogue keeps its own copy of the rows;
     /// this is a projection of them, so reloading a newer package version replaces
     /// what it declares and leaves anything else alone.
-    std::size_t add_catalog(const StyleCatalog& catalog);
+    /// `resolve` supplies the bytes of the pictures a row was published with; pass
+    /// an empty function to load a package without them, in which case every row
+    /// keeps its colours and loses its hatch.
+    std::size_t add_catalog(const StyleCatalog& catalog, const ImageResolver& resolve = {});
+
+    /// The pictures the shelf's own symbols draw. Borrowed by a preview.
+    const ImageStore& images() const noexcept { return images_; }
+
+    /// Adds a picture to the shelf's store, for a resolver to hand back an id.
+    Result<ImageId> intern_image(std::span<const std::byte> bytes, std::string_view origin)
+    {
+        return images_.intern(bytes, origin);
+    }
 
     std::size_t size() const noexcept { return entries_.size(); }
 
@@ -89,6 +142,9 @@ public:
     /// which is the honest answer rather than an error: a shelf can be asked about
     /// a drawer that does not exist.
     std::vector<std::string> children(std::span<const std::string> path) const;
+
+    /// Entries of one kind, in shelf order. The first thing a browser filters by.
+    std::vector<const LibraryEntry*> of_kind(SymbolKind kind) const;
 
     /// Entries whose group is EXACTLY `path` — not its descendants.
     ///
@@ -122,6 +178,7 @@ public:
 private:
     std::vector<LibraryEntry> entries_;
     std::vector<std::uint8_t> favourite_; ///< parallel to entries_
+    ImageStore images_{};                 ///< the pictures the shelf's symbols draw
 };
 
 } // namespace piricad::core

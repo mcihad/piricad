@@ -250,6 +250,7 @@ std::uint64_t fold_symbol(const Symbol& sym, std::uint64_t seed)
         h = fnv1a_int(static_cast<std::int64_t>(l.join), h);
         h = fnv1a_int(static_cast<std::int64_t>(l.opacity), h);
         h = fnv1a_int(static_cast<std::int64_t>(l.image), h);
+        h = fnv1a_int(l.enabled ? 1 : 0, h);
         h = fold_appearance(l.look, h);
     }
     h = fnv1a_int(static_cast<std::int64_t>(sym.min_scale), h);

@@ -2,7 +2,6 @@
 #include "piricad/app/style_designer.hpp"
 
 #include "piricad/app/controller.hpp"
-#include "piricad/app/symbol_preview.hpp"
 
 #include "piricad/command/bus.hpp"
 #include "piricad/core/document.hpp"
@@ -12,7 +11,6 @@
 #include <QDate>
 #include <QDialogButtonBox>
 #include <QDir>
-#include <QFileInfo>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -27,38 +25,44 @@
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QSpinBox>
+#include <QSplitter>
 #include <QStandardPaths>
+#include <QTabBar>
 #include <QToolButton>
+#include <QTreeWidget>
 #include <QVBoxLayout>
 
+#include <algorithm>
 #include <array>
 
 namespace piricad::app {
 namespace {
 
-/// The symbol layer types offered, in the order the property side lists them.
+using core::SymbolLayerType;
+
+/// The symbol layer types offered, grouped by what they draw.
 ///
-/// Machine names, not translations: they are what `STİL tip=` takes, so what the
-/// dialog shows is what a script would write. Turkish labels next to them because
-/// the machine name is a token and a token is not a legend.
+/// Both names are shown: the Turkish one is the legend, the machine one in
+/// brackets is what `STİL tip=` takes. A user who learns the dialog has learned
+/// the command line, which is the point of them being the same road.
 struct TypeRow
 {
-    core::SymbolLayerType type;
+    SymbolLayerType type;
     const char* label;
 };
 
 constexpr std::array<TypeRow, 11> kTypes{{
-    {core::SymbolLayerType::SimpleLine, "Çizgi"},
-    {core::SymbolLayerType::MarkerLine, "İşaretçi çizgi"},
-    {core::SymbolLayerType::HashLine, "Tarak çizgi"},
-    {core::SymbolLayerType::SimpleFill, "Dolgu"},
-    {core::SymbolLayerType::LinePatternFill, "Çizgi desen dolgu"},
-    {core::SymbolLayerType::PointPatternFill, "Nokta desen dolgu"},
-    {core::SymbolLayerType::CentroidFill, "Merkez işaretçi"},
-    {core::SymbolLayerType::SimpleMarker, "İşaretçi"},
-    {core::SymbolLayerType::RasterFill, "Görsel dolgu"},
-    {core::SymbolLayerType::RasterMarker, "Görsel işaretçi"},
-    {core::SymbolLayerType::RasterLine, "Görsel çizgi"},
+    {SymbolLayerType::SimpleLine, "Çizgi"},
+    {SymbolLayerType::MarkerLine, "İşaretçi çizgi"},
+    {SymbolLayerType::HashLine, "Tarak çizgi"},
+    {SymbolLayerType::RasterLine, "Görsel çizgi"},
+    {SymbolLayerType::SimpleFill, "Dolgu"},
+    {SymbolLayerType::LinePatternFill, "Çizgi desen dolgu"},
+    {SymbolLayerType::PointPatternFill, "Nokta desen dolgu"},
+    {SymbolLayerType::RasterFill, "Görsel dolgu"},
+    {SymbolLayerType::CentroidFill, "Merkez işaretçi"},
+    {SymbolLayerType::SimpleMarker, "İşaretçi"},
+    {SymbolLayerType::RasterMarker, "Görsel işaretçi"},
 }};
 
 constexpr std::array<core::MarkerShape, 12> kShapes{
@@ -75,6 +79,26 @@ constexpr std::array<core::MarkerPlacement, 5> kPlacements{
 constexpr std::array<core::Unit, 3> kUnits{
     {core::Unit::Paper, core::Unit::Ground, core::Unit::Pixel}};
 
+constexpr std::array<core::LineCap, 3> kCaps{
+    {core::LineCap::Butt, core::LineCap::Round, core::LineCap::Square}};
+
+constexpr std::array<core::LineJoin, 3> kJoins{
+    {core::LineJoin::Miter, core::LineJoin::Round, core::LineJoin::Bevel}};
+
+/// How many gallery thumbnails are rendered at once.
+///
+/// Every thumbnail is a real render through the canvas backend, so a drawer of
+/// four hundred would cost a visible pause on every click. The cap is SAID OUT
+/// LOUD under the grid rather than applied quietly: a list that silently stops at
+/// a hundred reads as a list of a hundred.
+constexpr int kGalleryCap = 120;
+
+/// The stack index a valid row names.
+std::size_t at(int row)
+{
+    return static_cast<std::size_t>(row);
+}
+
 QColor from_rgba(std::uint32_t rgba)
 {
     return QColor::fromRgba(static_cast<QRgb>(rgba));
@@ -83,31 +107,19 @@ QColor from_rgba(std::uint32_t rgba)
 /// Paints a button's face with the colour it stands for.
 void show_colour(QToolButton* button, std::uint32_t rgba)
 {
-    QPixmap swatch(36, 18);
+    QPixmap swatch(40, 18);
     swatch.fill(rgba == 0 ? Qt::transparent : from_rgba(rgba));
 
     QPainter painter(&swatch);
     painter.setPen(QPen(QColor(0, 0, 0, 90)));
     painter.drawRect(0, 0, swatch.width() - 1, swatch.height() - 1);
-    if (rgba == 0) {
-        // "No fill" has to look like nothing rather than like white, which is a
-        // colour a plan sheet uses.
-        painter.drawLine(0, swatch.height() - 1, swatch.width() - 1, 0);
-    }
+    // "No fill" has to look like nothing rather than like white, which is a colour
+    // a plan sheet uses.
+    if (rgba == 0) painter.drawLine(0, swatch.height() - 1, swatch.width() - 1, 0);
     painter.end();
 
     button->setIcon(QIcon(swatch));
     button->setIconSize(swatch.size());
-}
-
-/// The stack index a valid `currentLayer()` names.
-///
-/// The list widget counts in `int` and a vector in `size_t`, so the conversion has
-/// to happen somewhere; here, once, guarded by the caller having already checked
-/// the row is valid.
-std::size_t at(int row)
-{
-    return static_cast<std::size_t>(row);
 }
 
 /// The symbol a layer currently draws: what its entities carry, or its default.
@@ -126,6 +138,26 @@ core::Symbol symbol_of_layer(const core::Document& doc, core::LayerId layer)
     return core::Symbol::of(record ? record->appearance : core::Appearance{});
 }
 
+PreviewShape shape_of(core::SymbolKind kind)
+{
+    switch (kind) {
+    case core::SymbolKind::Area: return PreviewShape::Area;
+    case core::SymbolKind::Line: return PreviewShape::Line;
+    case core::SymbolKind::Point: return PreviewShape::Point;
+    }
+    return PreviewShape::Area;
+}
+
+core::SymbolKind kind_of(PreviewShape shape)
+{
+    switch (shape) {
+    case PreviewShape::Area: return core::SymbolKind::Area;
+    case PreviewShape::Line: return core::SymbolKind::Line;
+    case PreviewShape::Point: return core::SymbolKind::Point;
+    }
+    return core::SymbolKind::Area;
+}
+
 } // namespace
 
 StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget* parent)
@@ -133,79 +165,353 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
 {
     setWindowTitle(tr("Stil tasarımcısı — %1").arg(layerName_));
     setModal(true);
-    resize(760, 520);
+    resize(1020, 680);
 
     const core::LayerId layer = controller_.document().find_layer(layerName_.toStdString());
     symbol_                   = layer == core::kNoLayer ? core::Symbol::of(core::Appearance{})
                                                         : symbol_of_layer(controller_.document(), layer);
     if (symbol_.layers.empty()) symbol_ = core::Symbol::of(core::Appearance{});
 
-    // ---- the whole symbol, big, at the top ----
+    // ---- geometry tabs and the big preview ----
+    //
+    // The tabs come FIRST because they are the first decision: what geometry is
+    // this symbol for. They choose the shape the preview is drawn on AND the
+    // drawer of the shelf that is open — the classification QGIS puts in a
+    // separate window's tab bar.
+    geometry_ = new QTabBar(this);
+    geometry_->addTab(tr("Alan"));
+    geometry_->addTab(tr("Çizgi"));
+    geometry_->addTab(tr("Nokta"));
+    geometry_->setCurrentIndex(static_cast<int>(natural_shape(symbol_)));
+    connect(geometry_, &QTabBar::currentChanged, this, [this](int) {
+        refreshGalleryItems();
+        refresh();
+    });
+
     preview_ = new QLabel(this);
     preview_->setAlignment(Qt::AlignCenter);
-    preview_->setMinimumHeight(90);
+    preview_->setMinimumHeight(96);
     preview_->setFrameShape(QFrame::StyledPanel);
 
-    // ---- the stack, left ----
-    stack_ = new QListWidget(this);
-    stack_->setIconSize(QSize(40, 24));
+    auto* top = new QVBoxLayout;
+    top->addWidget(geometry_);
+    top->addWidget(preview_);
+
+    // ---- the two panes ----
+    auto* split = new QSplitter(Qt::Horizontal, this);
+    split->addWidget(buildGallery());
+
+    auto* right       = new QWidget(this);
+    auto* rightLayout = new QVBoxLayout(right);
+    rightLayout->setContentsMargins(0, 0, 0, 0);
+    rightLayout->addWidget(buildStack(), 1);
+    rightLayout->addWidget(buildProperties(), 2);
+    split->addWidget(right);
+
+    split->setStretchFactor(0, 2);
+    split->setStretchFactor(1, 3);
+
+    // ---- buttons ----
+    auto* buttons      = new QDialogButtonBox(this);
+    QPushButton* apply = buttons->addButton(tr("Uygula"), QDialogButtonBox::AcceptRole);
+    buttons->addButton(tr("Vazgeç"), QDialogButtonBox::RejectRole);
+    QPushButton* save = buttons->addButton(tr("Kütüphaneye kaydet…"), QDialogButtonBox::ActionRole);
+    apply->setDefault(true);
+
+    connect(save, &QPushButton::clicked, this, &StyleDesigner::saveToLibrary);
+    connect(buttons, &QDialogButtonBox::accepted, this, [this] {
+        applyToDocument();
+        accept();
+    });
+    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+
+    auto* root = new QVBoxLayout(this);
+    root->addLayout(top);
+    root->addWidget(split, 1);
+    root->addWidget(buttons);
+
+    refreshGalleryTree();
+    refreshGalleryItems();
+    refresh();
+    stack_->setCurrentRow(0);
+}
+
+PreviewShape StyleDesigner::shape() const
+{
+    return static_cast<PreviewShape>(std::clamp(geometry_->currentIndex(), 0, 2));
+}
+
+// ------------------------------------------------------------- the shelf ----
+
+QWidget* StyleDesigner::buildGallery()
+{
+    auto* box    = new QGroupBox(tr("Hazır gösterimler"), this); // ui-label
+    auto* layout = new QVBoxLayout(box);
+
+    groups_ = new QTreeWidget(box);
+    groups_->setHeaderHidden(true);
+    groups_->setMinimumHeight(150);
+    connect(groups_, &QTreeWidget::currentItemChanged, this,
+            [this](QTreeWidgetItem*, QTreeWidgetItem*) { refreshGalleryItems(); });
+
+    search_ = new QLineEdit(box);
+    search_->setPlaceholderText(tr("Ara — etiket, kimlik ve grup yolu"));
+    search_->setClearButtonEnabled(true);
+    connect(search_, &QLineEdit::textChanged, this,
+            [this](const QString&) { refreshGalleryItems(); });
+
+    gallery_ = new QListWidget(box);
+    gallery_->setViewMode(QListView::IconMode);
+    gallery_->setIconSize(QSize(56, 40));
+    gallery_->setGridSize(QSize(88, 82));
+    gallery_->setResizeMode(QListView::Adjust);
+    gallery_->setMovement(QListView::Static);
+    gallery_->setWordWrap(true);
+    connect(gallery_, &QListWidget::itemDoubleClicked, this,
+            [this](QListWidgetItem*) { applyGalleryPick(); });
+
+    galleryNote_ = new QLabel(box);
+    galleryNote_->setWordWrap(true);
+    QFont small = galleryNote_->font();
+    small.setPointSizeF(small.pointSizeF() - 1.0);
+    galleryNote_->setFont(small);
+
+    auto* use = new QPushButton(tr("Seçileni al"), box);
+    connect(use, &QPushButton::clicked, this, &StyleDesigner::applyGalleryPick);
+
+    layout->addWidget(groups_, 1);
+    layout->addWidget(search_);
+    layout->addWidget(gallery_, 2);
+    layout->addWidget(galleryNote_);
+    layout->addWidget(use);
+    return box;
+}
+
+void StyleDesigner::refreshGalleryTree()
+{
+    const core::StyleLibrary& shelf = controller_.bus().style_library();
+
+    groups_->clear();
+
+    auto* all = new QTreeWidgetItem(groups_);
+    all->setText(0, tr("Tümü"));
+    all->setData(0, Qt::UserRole, QStringList{});
+
+    // The regulation's own tree, two levels deep. Four hundred rows over five
+    // annexes is not a package big enough to need lazy expansion, and a tree that
+    // is all there is a tree you can search by eye.
+    const std::vector<std::string> root;
+    for (const std::string& annex : shelf.children(root)) {
+        auto* node = new QTreeWidgetItem(groups_);
+        node->setText(0, QString::fromStdString(annex));
+        node->setData(0, Qt::UserRole, QStringList{QString::fromStdString(annex)});
+
+        const std::vector<std::string> level{annex};
+        for (const std::string& section : shelf.children(level)) {
+            auto* leaf = new QTreeWidgetItem(node);
+            leaf->setText(0, QString::fromStdString(section));
+            leaf->setData(
+                0, Qt::UserRole,
+                QStringList{QString::fromStdString(annex), QString::fromStdString(section)});
+        }
+    }
+    groups_->setCurrentItem(all);
+}
+
+void StyleDesigner::refreshGalleryItems()
+{
+    const core::StyleLibrary& shelf = controller_.bus().style_library();
+    const std::uint32_t paper       = palette().color(QPalette::Base).rgba();
+    const core::SymbolKind kind     = kind_of(shape());
+
+    // The SHELF's pictures, not the document's: a gösterim on the shelf has not
+    // been applied to anything yet, so its hatch lives in the library's own store.
+    const core::ImageStore& images = shelf.images();
+
+    gallery_->clear();
+
+    if (shelf.empty()) {
+        galleryNote_->setText(
+            tr("Raf boş. 'SEMBOL paket=<yol>' ile bir gösterim paketi yükleyin.")); // ui-label
+        return;
+    }
+
+    // Search wins over the tree: somebody typing a word wants it found wherever it
+    // is, which is why the box does not narrow to the open drawer.
+    std::vector<const core::LibraryEntry*> rows;
+    const QString needle = search_->text().trimmed();
+
+    if (!needle.isEmpty()) {
+        rows = shelf.search(needle.toStdString());
+    } else if (QTreeWidgetItem* item = groups_->currentItem()) {
+        const QStringList path = item->data(0, Qt::UserRole).toStringList();
+        if (path.isEmpty()) {
+            rows = shelf.of_kind(kind);
+        } else {
+            std::vector<std::string> where;
+            for (const QString& part : path)
+                where.push_back(part.toStdString());
+
+            // An annex node has its sections below it and no rows of its own, so
+            // opening one shows what is under it rather than nothing.
+            rows = shelf.in_group(where);
+            if (rows.empty()) {
+                for (const std::string& child : shelf.children(where)) {
+                    std::vector<std::string> deeper = where;
+                    deeper.push_back(child);
+                    const auto found = shelf.in_group(deeper);
+                    rows.insert(rows.end(), found.begin(), found.end());
+                }
+            }
+        }
+    }
+
+    // Filtered by GEOMETRY, always: the tabs are the first decision, and a drawer
+    // opened under `Çizgi` must not hand back an area gösterim.
+    std::vector<const core::LibraryEntry*> matching;
+    for (const core::LibraryEntry* e : rows)
+        if (e->kind == kind) matching.push_back(e);
+
+    const int shown = std::min(static_cast<int>(matching.size()), kGalleryCap);
+    for (int i = 0; i < shown; ++i) {
+        const core::LibraryEntry* e = matching[at(i)];
+
+        auto* item = new QListWidgetItem(gallery_);
+        item->setText(QString::fromStdString(e->label.empty() ? e->id : e->label));
+        item->setIcon(symbol_icon(e->symbol, images, QSize(56, 40), paper, shape_of(e->kind)));
+        item->setData(Qt::UserRole, QString::fromStdString(e->id));
+        item->setToolTip(QString::fromStdString(e->id + "\n" + e->source_ref));
+    }
+
+    if (matching.empty())
+        galleryNote_->setText(tr("Bu geometride eşleşen gösterim yok.")); // ui-label
+    else if (shown < static_cast<int>(matching.size()))
+        galleryNote_->setText(tr("%1 gösterimden ilk %2 tanesi. Aramayı daraltın.") // ui-label
+                                  .arg(matching.size())
+                                  .arg(shown));
+    else
+        galleryNote_->setText(tr("%1 gösterim.").arg(matching.size())); // ui-label
+}
+
+void StyleDesigner::applyGalleryPick()
+{
+    QListWidgetItem* item = gallery_->currentItem();
+    if (item == nullptr) return;
+
+    const core::LibraryEntry* e =
+        controller_.bus().style_library().find(item->data(Qt::UserRole).toString().toStdString());
+    if (e == nullptr || e->symbol.layers.empty()) return;
+
+    // REPLACES the stack rather than merging into it. Picking a published gösterim
+    // means "this is what it should look like", and layering it over whatever was
+    // there would produce a symbol neither the user nor the regulation asked for.
+    symbol_ = e->symbol;
+    geometry_->setCurrentIndex(static_cast<int>(shape_of(e->kind)));
+    refresh();
+    stack_->setCurrentRow(0);
+}
+
+// ------------------------------------------------------------- the stack ----
+
+QWidget* StyleDesigner::buildStack()
+{
+    auto* box    = new QGroupBox(tr("Sembol katmanları — üstteki en son çizilir"), this);
+    auto* layout = new QVBoxLayout(box);
+
+    stack_ = new QListWidget(box);
+    stack_->setIconSize(QSize(44, 26));
     connect(stack_, &QListWidget::currentRowChanged, this, [this](int) { loadSelected(); });
+    connect(stack_, &QListWidget::itemChanged, this, [this](QListWidgetItem* item) {
+        if (loading_ || item == nullptr) return;
 
-    auto* add = new QToolButton(this);
-    add->setText(QStringLiteral("+"));
-    add->setToolTip(tr("Katman ekle"));
-    connect(add, &QToolButton::clicked, this, &StyleDesigner::addLayer);
+        const int index = item->data(Qt::UserRole).toInt();
+        if (index < 0 || index >= static_cast<int>(symbol_.layers.size())) return;
 
-    auto* remove = new QToolButton(this);
-    remove->setText(QStringLiteral("−"));
-    remove->setToolTip(tr("Katmanı sil"));
-    connect(remove, &QToolButton::clicked, this, &StyleDesigner::removeLayer);
+        symbol_.layers[at(index)].enabled = item->checkState() == Qt::Checked;
+        refresh();
+    });
 
-    auto* up = new QToolButton(this);
-    up->setText(QStringLiteral("▲"));
-    up->setToolTip(tr("Yukarı taşı — üstteki en son çizilir"));
-    // The list runs top first, so moving a row UP means moving the layer LATER in
-    // the stack. The arrow means what it points at, not what the vector does.
-    connect(up, &QToolButton::clicked, this, [this] { moveLayer(+1); });
+    const auto button = [&](const QString& text, const QString& tip, auto slot) {
+        auto* b = new QToolButton(box);
+        b->setText(text);
+        b->setToolTip(tip);
+        connect(b, &QToolButton::clicked, this, slot);
+        return b;
+    };
 
-    auto* down = new QToolButton(this);
-    down->setText(QStringLiteral("▼"));
-    down->setToolTip(tr("Aşağı taşı"));
-    connect(down, &QToolButton::clicked, this, [this] { moveLayer(-1); });
+    auto* bar = new QHBoxLayout;
+    bar->addWidget(button(QStringLiteral("+"), tr("Katman ekle"), &StyleDesigner::addLayer));
+    bar->addWidget(
+        button(QStringLiteral("⧉"), tr("Katmanı kopyala"), &StyleDesigner::duplicateLayer));
+    bar->addWidget(button(QStringLiteral("−"), tr("Katmanı sil"), &StyleDesigner::removeLayer));
+    bar->addStretch(1);
+    bar->addWidget(button(QStringLiteral("▲"), tr("Yukarı"), [this] { moveLayer(+1); }));
+    bar->addWidget(button(QStringLiteral("▼"), tr("Aşağı"), [this] { moveLayer(-1); }));
 
-    auto* stackButtons = new QHBoxLayout;
-    stackButtons->addWidget(add);
-    stackButtons->addWidget(remove);
-    stackButtons->addStretch(1);
-    stackButtons->addWidget(up);
-    stackButtons->addWidget(down);
+    layout->addWidget(stack_, 1);
+    layout->addLayout(bar);
+    return box;
+}
 
-    auto* stackBox    = new QGroupBox(tr("Sembol katmanları"), this);
-    auto* stackLayout = new QVBoxLayout(stackBox);
-    stackLayout->addWidget(stack_, 1);
-    stackLayout->addLayout(stackButtons);
+// -------------------------------------------------------- the properties ----
 
-    // ---- the selected layer's properties, right ----
-    type_ = new QComboBox(this);
+void StyleDesigner::addProperty(QFormLayout* form, const QString& label, QWidget* editor,
+                                QWidget* unit, std::vector<SymbolLayerType> types)
+{
+    auto* text   = new QLabel(label, this);
+    QWidget* row = editor;
+
+    if (unit != nullptr) {
+        row          = new QWidget(this);
+        auto* layout = new QHBoxLayout(row);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->addWidget(editor, 3);
+        layout->addWidget(unit, 2);
+    }
+
+    form->addRow(text, row);
+    properties_.push_back(Property{text, row, unit, std::move(types)});
+}
+
+QWidget* StyleDesigner::buildProperties()
+{
+    auto* box  = new QGroupBox(tr("Katman özellikleri"), this);
+    auto* form = new QFormLayout(box);
+
+    type_ = new QComboBox(box);
     for (const TypeRow& row : kTypes)
         type_->addItem(
             QStringLiteral("%1  (%2)")
                 .arg(tr(row.label), QString::fromUtf8(core::symbol_layer_type_name(row.type))));
+    connect(type_, &QComboBox::currentIndexChanged, this, [this](int) { applyToSelected(); });
+    form->addRow(tr("Katman tipi"), type_);
 
-    shape_ = new QComboBox(this);
-    for (const core::MarkerShape s : kShapes)
-        shape_->addItem(QString::fromUtf8(core::marker_shape_name(s)));
+    const auto unitCombo = [&] {
+        auto* c = new QComboBox(box);
+        for (const core::Unit u : kUnits)
+            c->addItem(QString::fromUtf8(core::unit_name(u)));
+        connect(c, &QComboBox::currentIndexChanged, this, [this](int) { applyToSelected(); });
+        return c;
+    };
 
-    placement_ = new QComboBox(this);
-    for (const core::MarkerPlacement p : kPlacements)
-        placement_->addItem(QString::fromUtf8(core::marker_placement_name(p)));
+    const auto spin = [&](int max, int step) {
+        auto* s = new QSpinBox(box);
+        s->setRange(0, max);
+        s->setSingleStep(step);
+        connect(s, &QSpinBox::valueChanged, this, [this](int) { applyToSelected(); });
+        return s;
+    };
 
-    unit_ = new QComboBox(this);
-    for (const core::Unit u : kUnits)
-        unit_->addItem(QString::fromUtf8(core::unit_name(u)));
+    const auto namedCombo = [&](auto items, auto namer) {
+        auto* c = new QComboBox(box);
+        for (const auto value : items)
+            c->addItem(QString::fromUtf8(namer(value)));
+        connect(c, &QComboBox::currentIndexChanged, this, [this](int) { applyToSelected(); });
+        return c;
+    };
 
-    stroke_ = new QToolButton(this);
-    stroke_->setToolTip(tr("Çizgi rengi"));
+    stroke_ = new QToolButton(box);
+    stroke_->setToolTip(tr("Çizgi ve simge rengi"));
     connect(stroke_, &QToolButton::clicked, this, [this] {
         const int i = currentLayer();
         if (i < 0) return;
@@ -218,7 +524,7 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
         refresh();
     });
 
-    fill_ = new QToolButton(this);
+    fill_ = new QToolButton(box);
     fill_->setToolTip(tr("Dolgu rengi — iptal edilirse dolgusuz"));
     connect(fill_, &QToolButton::clicked, this, [this] {
         const int i = currentLayer();
@@ -231,78 +537,88 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
         refresh();
     });
 
-    const auto spin = [this](int max, const QString& suffix) {
-        auto* box = new QSpinBox(this);
-        box->setRange(0, max);
-        box->setSuffix(suffix);
-        box->setSingleStep(100);
-        connect(box, &QSpinBox::valueChanged, this, [this](int) { applyToSelected(); });
-        return box;
-    };
+    width_    = spin(100000, 100);
+    size_     = spin(1000000, 500);
+    interval_ = spin(1000000, 500);
+    spacingY_ = spin(1000000, 500);
+    offset_   = spin(1000000, 100);
+    angle_    = spin(359, 5);
+    opacity_  = spin(255, 5);
 
-    width_    = spin(100000, tr(" µm"));
-    size_     = spin(1000000, QString());
-    interval_ = spin(1000000, QString());
-    spacingY_ = spin(1000000, QString());
+    sizeUnit_     = unitCombo();
+    intervalUnit_ = unitCombo();
+    spacingYUnit_ = unitCombo();
+    offsetUnit_   = unitCombo();
 
-    angle_ = new QSpinBox(this);
-    angle_->setRange(0, 359);
-    angle_->setSuffix(QStringLiteral("°"));
-    connect(angle_, &QSpinBox::valueChanged, this, [this](int) { applyToSelected(); });
-
-    opacity_ = new QSpinBox(this);
-    opacity_->setRange(0, 255);
-    connect(opacity_, &QSpinBox::valueChanged, this, [this](int) { applyToSelected(); });
-
-    connect(type_, &QComboBox::currentIndexChanged, this, [this](int) { applyToSelected(); });
-    connect(shape_, &QComboBox::currentIndexChanged, this, [this](int) { applyToSelected(); });
-    connect(placement_, &QComboBox::currentIndexChanged, this, [this](int) { applyToSelected(); });
-    connect(unit_, &QComboBox::currentIndexChanged, this, [this](int) { applyToSelected(); });
-
-    auto* propertyBox = new QGroupBox(tr("Katman özellikleri"), this);
-    auto* form        = new QFormLayout(propertyBox);
-    form->addRow(tr("Tip"), type_);
-    form->addRow(tr("Çizgi rengi"), stroke_);
-    form->addRow(tr("Çizgi kalınlığı"), width_);
-    form->addRow(tr("Dolgu rengi"), fill_);
-    form->addRow(tr("Ölçü birimi"), unit_);
-    form->addRow(tr("Boyut"), size_);
-    form->addRow(tr("Aralık"), interval_);
-    form->addRow(tr("İkinci eksen"), spacingY_);
-    form->addRow(tr("Açı"), angle_);
-    form->addRow(tr("Şekil"), shape_);
-    form->addRow(tr("Yerleşim"), placement_);
-    form->addRow(tr("Saydamlık"), opacity_);
-
-    // ---- buttons ----
-    auto* buttons     = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-    QPushButton* save = buttons->addButton(tr("Kütüphaneye kaydet…"), QDialogButtonBox::ActionRole);
-    connect(save, &QPushButton::clicked, this, &StyleDesigner::saveToLibrary);
-    connect(buttons, &QDialogButtonBox::accepted, this, [this] {
-        applyToDocument();
-        accept();
+    shape_     = namedCombo(kShapes, core::marker_shape_name);
+    placement_ = namedCombo(kPlacements, core::marker_placement_name);
+    cap_       = namedCombo(kCaps, [](core::LineCap c) {
+        switch (c) {
+        case core::LineCap::Butt: return "duz";
+        case core::LineCap::Round: return "yuvarlak";
+        case core::LineCap::Square: return "kare";
+        }
+        return "?";
     });
-    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+    join_      = namedCombo(kJoins, [](core::LineJoin j) {
+        switch (j) {
+        case core::LineJoin::Miter: return "kose";
+        case core::LineJoin::Round: return "yuvarlak";
+        case core::LineJoin::Bevel: return "pah";
+        }
+        return "?";
+    });
 
-    auto* columns = new QHBoxLayout;
-    columns->addWidget(stackBox, 2);
-    columns->addWidget(propertyBox, 3);
+    // The visibility table. Each row names the types that READ it; a type not
+    // listed does not show the row at all rather than showing it greyed, because a
+    // `dolgu` layer has no marker placement and a dialog that offers one is
+    // offering something the renderer will ignore.
+    using T = SymbolLayerType;
 
-    auto* root = new QVBoxLayout(this);
-    root->addWidget(preview_);
-    root->addLayout(columns, 1);
-    root->addWidget(buttons);
+    const std::vector<T> strokes{T::SimpleLine,      T::MarkerLine,       T::HashLine,
+                                 T::LinePatternFill, T::PointPatternFill, T::CentroidFill,
+                                 T::SimpleMarker};
+    const std::vector<T> fills{T::SimpleFill, T::LinePatternFill, T::PointPatternFill,
+                               T::SimpleMarker};
+    const std::vector<T> markers{T::MarkerLine, T::PointPatternFill, T::CentroidFill,
+                                 T::SimpleMarker};
+    const std::vector<T> sized{T::MarkerLine,   T::HashLine,   T::PointPatternFill, T::CentroidFill,
+                               T::SimpleMarker, T::RasterFill, T::RasterMarker,     T::RasterLine};
+    const std::vector<T> spaced{T::MarkerLine, T::HashLine, T::LinePatternFill, T::PointPatternFill,
+                                T::RasterLine};
+    const std::vector<T> angled{T::MarkerLine,       T::HashLine,     T::LinePatternFill,
+                                T::PointPatternFill, T::SimpleMarker, T::RasterFill};
 
-    refresh();
-    stack_->setCurrentRow(0);
+    addProperty(form, tr("Çizgi rengi"), stroke_, nullptr, strokes);
+    addProperty(form, tr("Çizgi kalınlığı (µm)"), width_, nullptr, strokes);
+    addProperty(form, tr("Dolgu rengi"), fill_, nullptr, fills);
+    addProperty(form, tr("Boyut"), size_, sizeUnit_, sized);
+    addProperty(form, tr("Aralık"), interval_, intervalUnit_, spaced);
+    addProperty(form, tr("İkinci eksen"), spacingY_, spacingYUnit_, {T::PointPatternFill});
+    addProperty(form, tr("Kaydırma"), offset_, offsetUnit_,
+                {T::SimpleLine, T::MarkerLine, T::HashLine, T::RasterLine});
+    addProperty(form, tr("Açı (°)"), angle_, nullptr, angled);
+    addProperty(form, tr("Şekil"), shape_, nullptr, markers);
+    addProperty(form, tr("Yerleşim"), placement_, nullptr, {T::MarkerLine, T::HashLine});
+    addProperty(form, tr("Uç biçimi"), cap_, nullptr, {T::SimpleLine});
+    addProperty(form, tr("Birleşim"), join_, nullptr, {T::SimpleLine});
+
+    // Opacity is read by every type, so it lists them all and is always shown.
+    std::vector<T> everything;
+    for (const TypeRow& row : kTypes)
+        everything.push_back(row.type);
+    addProperty(form, tr("Saydamlık (0-255)"), opacity_, nullptr, everything);
+
+    return box;
 }
+
+// ------------------------------------------------------------- the model ----
 
 int StyleDesigner::currentLayer() const
 {
     // Through the item's stored index, NOT through the row. The list is drawn top
     // first — the layer drawn last is the one seen on top — so a row and a stack
-    // index run in opposite directions, and reading one as the other edits the
-    // mirrored layer.
+    // index run in opposite directions.
     const QListWidgetItem* item = stack_->currentItem();
     if (item == nullptr) return -1;
 
@@ -316,32 +632,30 @@ void StyleDesigner::refresh()
     const std::uint32_t paper      = palette().color(QPalette::Base).rgba();
 
     const int keep = stack_->currentRow();
-    stack_->blockSignals(true);
+
+    loading_ = true;
     stack_->clear();
 
-    // Listed TOP FIRST, because that is the order they are seen in: the last
-    // layer is drawn last and therefore sits on top. A list in storage order
-    // would put the thing the user sees at the bottom of the list.
     for (std::size_t i = symbol_.layers.size(); i-- > 0;) {
         const core::SymbolLayer& sl = symbol_.layers[i];
 
         core::Symbol one;
         one.layers.push_back(sl);
+        one.layers.front().enabled = true; // the row shows what it WOULD draw
 
         auto* item = new QListWidgetItem(stack_);
         item->setText(QString::fromUtf8(core::symbol_layer_type_name(sl.type)));
-        item->setIcon(
-            symbol_icon(one, images, QSize(40, 24), paper,
-                        core::draws_fill(sl.type) ? PreviewShape::Area : PreviewShape::Line));
+        item->setIcon(symbol_icon(one, images, QSize(44, 26), paper, shape()));
         item->setData(Qt::UserRole, static_cast<int>(i));
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(sl.enabled ? Qt::Checked : Qt::Unchecked);
     }
-    stack_->blockSignals(false);
+    loading_ = false;
 
     if (keep >= 0 && keep < stack_->count()) stack_->setCurrentRow(keep);
 
-    const QImage whole =
-        symbol_preview(symbol_, images, QSize(static_cast<int>(preview_->width()) - 8, 80), paper,
-                       PreviewShape::Area);
+    const QImage whole = symbol_preview(
+        symbol_, images, QSize(std::max(160, preview_->width() - 8), 84), paper, shape());
     preview_->setPixmap(QPixmap::fromImage(whole));
 
     loadSelected();
@@ -353,23 +667,26 @@ void StyleDesigner::loadSelected()
     const bool have = i >= 0;
 
     loading_ = true;
-    const std::array<QWidget*, 12> editors{type_,     shape_,    placement_, unit_,
-                                           stroke_,   fill_,     width_,     size_,
-                                           interval_, spacingY_, angle_,     opacity_};
-    for (QWidget* w : editors)
-        w->setEnabled(have);
 
     if (have) {
         const core::SymbolLayer& sl = symbol_.layers[at(i)];
 
+        const auto select = [](QComboBox* box, const auto& table, auto value) {
+            for (int k = 0; k < static_cast<int>(table.size()); ++k)
+                if (table[at(k)] == value) box->setCurrentIndex(k);
+        };
+
         for (int k = 0; k < static_cast<int>(kTypes.size()); ++k)
             if (kTypes[at(k)].type == sl.type) type_->setCurrentIndex(k);
-        for (int k = 0; k < static_cast<int>(kShapes.size()); ++k)
-            if (kShapes[at(k)] == sl.shape) shape_->setCurrentIndex(k);
-        for (int k = 0; k < static_cast<int>(kPlacements.size()); ++k)
-            if (kPlacements[at(k)] == sl.placement) placement_->setCurrentIndex(k);
-        for (int k = 0; k < static_cast<int>(kUnits.size()); ++k)
-            if (kUnits[at(k)] == sl.size.unit) unit_->setCurrentIndex(k);
+
+        select(shape_, kShapes, sl.shape);
+        select(placement_, kPlacements, sl.placement);
+        select(cap_, kCaps, sl.cap);
+        select(join_, kJoins, sl.join);
+        select(sizeUnit_, kUnits, sl.size.unit);
+        select(intervalUnit_, kUnits, sl.interval.unit);
+        select(spacingYUnit_, kUnits, sl.spacing_y.unit);
+        select(offsetUnit_, kUnits, sl.offset.unit);
 
         show_colour(stroke_, sl.look.rgba);
         show_colour(fill_, sl.look.fill_rgba);
@@ -378,9 +695,22 @@ void StyleDesigner::loadSelected()
         size_->setValue(sl.size.value);
         interval_->setValue(sl.interval.value);
         spacingY_->setValue(sl.spacing_y.value);
+        offset_->setValue(sl.offset.value);
         angle_->setValue(sl.angle_udeg / 1000000);
         opacity_->setValue(sl.opacity);
     }
+
+    // Only the rows this type reads. A property nobody reads is a promise the
+    // renderer does not keep.
+    const SymbolLayerType type = have ? symbol_.layers[at(i)].type : SymbolLayerType::SimpleLine;
+
+    type_->setEnabled(have);
+    for (const Property& p : properties_) {
+        const bool shown = have && std::find(p.types.begin(), p.types.end(), type) != p.types.end();
+        p.label->setVisible(shown);
+        p.editor->setVisible(shown);
+    }
+
     loading_ = false;
 }
 
@@ -393,14 +723,16 @@ void StyleDesigner::applyToSelected()
 
     core::SymbolLayer& sl = symbol_.layers[at(i)];
 
-    sl.type      = kTypes[static_cast<std::size_t>(type_->currentIndex())].type;
-    sl.shape     = kShapes[static_cast<std::size_t>(shape_->currentIndex())];
-    sl.placement = kPlacements[static_cast<std::size_t>(placement_->currentIndex())];
+    sl.type      = kTypes[at(type_->currentIndex())].type;
+    sl.shape     = kShapes[at(shape_->currentIndex())];
+    sl.placement = kPlacements[at(placement_->currentIndex())];
+    sl.cap       = kCaps[at(cap_->currentIndex())];
+    sl.join      = kJoins[at(join_->currentIndex())];
 
-    const core::Unit unit = kUnits[static_cast<std::size_t>(unit_->currentIndex())];
-    sl.size               = core::Measure{size_->value(), unit};
-    sl.interval           = core::Measure{interval_->value(), unit};
-    sl.spacing_y          = core::Measure{spacingY_->value(), unit};
+    sl.size      = core::Measure{size_->value(), kUnits[at(sizeUnit_->currentIndex())]};
+    sl.interval  = core::Measure{interval_->value(), kUnits[at(intervalUnit_->currentIndex())]};
+    sl.spacing_y = core::Measure{spacingY_->value(), kUnits[at(spacingYUnit_->currentIndex())]};
+    sl.offset    = core::Measure{offset_->value(), kUnits[at(offsetUnit_->currentIndex())]};
 
     sl.look.width_um  = width_->value();
     sl.look.src_width = core::Source::Explicit;
@@ -412,11 +744,21 @@ void StyleDesigner::applyToSelected()
 
 void StyleDesigner::addLayer()
 {
-    // A plain stroke, which is the layer a CAD entity has always had and the one
-    // a user is least surprised to get.
+    // A plain stroke, which is the layer a CAD entity has always had and the one a
+    // user is least surprised to get.
     symbol_.layers.push_back(core::SymbolLayer{});
     refresh();
     stack_->setCurrentRow(0); // the list is top first, so the new layer is row 0
+}
+
+void StyleDesigner::duplicateLayer()
+{
+    const int i = currentLayer();
+    if (i < 0) return;
+
+    symbol_.layers.push_back(symbol_.layers[at(i)]);
+    refresh();
+    stack_->setCurrentRow(0);
 }
 
 void StyleDesigner::removeLayer()
@@ -438,7 +780,13 @@ void StyleDesigner::moveLayer(int delta)
 
     std::swap(symbol_.layers[at(i)], symbol_.layers[at(to)]);
     refresh();
+
+    // Follow the LAYER, not the row: the list runs top first, so the row the layer
+    // now occupies is counted from the other end.
+    stack_->setCurrentRow(static_cast<int>(symbol_.layers.size()) - 1 - to);
 }
+
+// ------------------------------------------------------------- the exits ----
 
 void StyleDesigner::applyToDocument()
 {
@@ -447,14 +795,16 @@ void StyleDesigner::applyToDocument()
     // One `STİL` per symbol layer, the first replacing and the rest appending.
     // Exactly the lines a script would write, because they ARE the lines a script
     // would write: the designer has no private road to the style column (Article
-    // 1.1, 1.2), and that is also what makes it teachable to the AI.
-    for (std::size_t i = 0; i < symbol_.layers.size(); ++i) {
-        const core::SymbolLayer& sl = symbol_.layers[i];
+    // 1.1, 1.2), and that is what makes it teachable to the AI.
+    bool first = true;
+    for (const core::SymbolLayer& sl : symbol_.layers) {
+        if (!sl.enabled) continue; // switched off is not applied
 
         QString line =
             QStringLiteral("STİL katman=\"%1\" tip=%2")
                 .arg(layerName_, QString::fromUtf8(core::symbol_layer_type_name(sl.type)));
-        if (i > 0) line += QStringLiteral(" ekle=evet");
+        if (!first) line += QStringLiteral(" ekle=evet");
+        first = false;
 
         line += QStringLiteral(" birim=%1").arg(QString::fromUtf8(core::unit_name(sl.size.unit)));
         line += QStringLiteral(" renk=%1").arg(sl.look.rgba);
@@ -463,6 +813,7 @@ void StyleDesigner::applyToDocument()
         line += QStringLiteral(" boyut=%1").arg(sl.size.value);
         line += QStringLiteral(" aralik=%1").arg(sl.interval.value);
         line += QStringLiteral(" aralik_y=%1").arg(sl.spacing_y.value);
+        line += QStringLiteral(" kaydirma=%1").arg(sl.offset.value);
         line += QStringLiteral(" aci=%1").arg(sl.angle_udeg);
         line += QStringLiteral(" saydamlik=%1").arg(sl.opacity);
         line +=
@@ -505,8 +856,8 @@ void StyleDesigner::saveToLibrary()
     }
 
     // Written as a gösterim PACKAGE rather than as a private blob, so `SEMBOL
-    // paket=` loads it back onto the shelf beside the MPYY set. A user style and
-    // a published one are the same kind of thing to everything downstream.
+    // paket=` loads it back onto the shelf beside the MPYY set. A user style and a
+    // published one are the same kind of thing to everything downstream.
     const QString slug = name.trimmed().toLower().replace(
         QRegularExpression(QStringLiteral("[^a-z0-9]+")), QStringLiteral("-"));
     const QString path = dir.filePath(QStringLiteral("stiller/%1.json").arg(slug));

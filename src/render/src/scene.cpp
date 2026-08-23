@@ -137,6 +137,11 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
 
     std::size_t next    = 0;
     const auto add_pass = [&](const core::SymbolLayer& sl) {
+        // A layer switched off in the designer produces NO PASS. Kept in the
+        // symbol, kept in the file, kept in the fingerprint — just not painted,
+        // and therefore costing nothing per frame.
+        if (!sl.enabled) return;
+
         out.passes[next] = pass_of(sl, doc.images(), mm_per_pixel);
 
         PolylineBatch& stroke = out.polylines[next];
@@ -180,7 +185,11 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
     // Draw order: by z_order, ties broken by pass index so a symbol's own stack
     // stays bottom layer first. std::stable_sort rather than sort, because the tie
     // break IS the stack order and losing it would put a fill over its boundary.
-    out.order.resize(pass_count);
+    // Sized to the passes ACTUALLY BUILT, not to the upper bound reserved for
+    // them. A disabled symbol layer builds no pass, so the two differ — and a
+    // trailing zero in this array is not an empty slot, it is a second draw of
+    // pass 0.
+    out.order.resize(out.z_keys.size());
     std::stable_sort(out.z_keys.begin(), out.z_keys.end(),
                      [](const DrawList::ZKey& a, const DrawList::ZKey& b) { return a.z < b.z; });
     for (std::size_t i = 0; i < out.z_keys.size(); ++i)

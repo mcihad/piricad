@@ -33,7 +33,14 @@ render::DrawList build(const core::Symbol& symbol, const core::ImageStore& image
     render::DrawList list;
     if (symbol.layers.empty()) return list;
 
-    const auto count = symbol.layers.size();
+    // A layer switched off is not previewed, for the same reason it is not drawn.
+    std::vector<const core::SymbolLayer*> drawn;
+    drawn.reserve(symbol.layers.size());
+    for (const core::SymbolLayer& l : symbol.layers)
+        if (l.enabled) drawn.push_back(&l);
+    if (drawn.empty()) return list;
+
+    const auto count = drawn.size();
     list.passes.resize(count);
     list.polylines.resize(count);
     list.polygons.resize(count);
@@ -46,7 +53,7 @@ render::DrawList build(const core::Symbol& symbol, const core::ImageStore& image
     const float h = static_cast<float>(size.height()) * 0.5f - 3.0f;
 
     for (std::size_t i = 0; i < count; ++i) {
-        const core::SymbolLayer& sl = symbol.layers[i];
+        const core::SymbolLayer& sl = *drawn[i];
 
         list.passes[i] = render::pass_of(sl, images, kPreviewMmPerPixel);
         list.order[i]  = static_cast<std::uint32_t>(i);
@@ -78,19 +85,40 @@ render::DrawList build(const core::Symbol& symbol, const core::ImageStore& image
                 push(fill, {{-w, -h}, {w, -h}, {w, h}, {-w, h}}, true);
                 fill.is_hole.push_back(0);
             }
-        } else {
+        } else if (shape == PreviewShape::Line) {
             // A zig-zag: a straight line hides what a corner does to a pattern,
             // and a corner is where the two placement defects showed up.
             const float q = w * 0.5f;
             if (list.passes[i].wants_stroke)
                 push(stroke, {{-w, -h * 0.6f}, {-q, h * 0.6f}, {q, -h * 0.6f}, {w, h * 0.6f}},
                      false);
+        } else {
+            // A point is a degenerate run of two coincident vertices, which is what
+            // the marker path already walks. A single vertex would be dropped: the
+            // scene builder emits nothing for a run of one.
+            if (list.passes[i].wants_stroke) push(stroke, {{0.0f, 0.0f}, {0.0f, 0.0f}}, false);
         }
     }
     return list;
 }
 
 } // namespace
+
+PreviewShape natural_shape(const core::Symbol& symbol)
+{
+    bool any_fill   = false;
+    bool any_stroke = false;
+
+    for (const core::SymbolLayer& l : symbol.layers) {
+        if (!l.enabled) continue;
+        if (core::draws_fill(l.type)) any_fill = true;
+        if (core::draws_stroke(l.type)) any_stroke = true;
+    }
+
+    if (any_fill) return PreviewShape::Area;
+    if (any_stroke) return PreviewShape::Line;
+    return PreviewShape::Point;
+}
 
 QImage symbol_preview(const core::Symbol& symbol, const core::ImageStore& images, QSize size,
                       std::uint32_t background, PreviewShape shape)

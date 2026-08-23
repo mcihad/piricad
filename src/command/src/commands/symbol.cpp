@@ -23,7 +23,10 @@
 #include "piricad/core/json.hpp"
 #include "piricad/core/style_library.hpp"
 
+#include <filesystem>
 #include <fstream>
+#include <iterator>
+#include <span>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -109,7 +112,32 @@ Task<void> run(Context& ctx)
             co_return;
         }
 
-        const std::size_t added = shelf.add_catalog(catalog.value());
+        // The pictures the rows were published with, read from beside the package
+        // and interned into the SHELF's own store. Without this a gallery
+        // thumbnail shows a colour where the annex prints a hatch, which is the
+        // one thing a person browsing a gösterim set is looking at.
+        const std::filesystem::path dir = std::filesystem::path(package.as_text()).parent_path();
+
+        auto resolve = [&](const std::string& file) -> core::ImageId {
+            std::ifstream image(dir / file, std::ios::binary);
+            if (!image) return core::kNoImage;
+
+            // Read as chars and viewed as bytes: an istreambuf_iterator yields
+            // `char`, and a vector<byte> cannot be built from one.
+            const std::string raw((std::istreambuf_iterator<char>(image)),
+                                  std::istreambuf_iterator<char>());
+            if (raw.empty()) return core::kNoImage;
+
+            const std::span<const std::byte> bytes{reinterpret_cast<const std::byte*>(raw.data()),
+                                                   raw.size()};
+
+            // A picture the package lists but cannot be read is not fatal: the row
+            // keeps its colours and its place on the shelf, and the drawer opens.
+            auto id = shelf.intern_image(bytes, file);
+            return id ? id.value() : core::kNoImage;
+        };
+
+        const std::size_t added = shelf.add_catalog(catalog.value(), resolve);
         ctx.echo("Sembol paketi yüklendi: " + catalog.value().id() + " " +
                  catalog.value().package_version() + " — " + std::to_string(added) +
                  " gösterim, rafta toplam " + std::to_string(shelf.size()) + "."); // ui-label

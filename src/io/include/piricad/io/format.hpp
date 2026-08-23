@@ -157,6 +157,14 @@ enum BlockId : std::uint32_t {
     /// block whose element size disagrees with the type.
     kBlkLayerGroups = 0x0021, ///< u32[], index into kBlkStringSpans
 
+    /// Whether each symbol layer is drawn, one byte per symbol layer.
+    ///
+    /// A separate OPTIONAL block for the same reason the layer tree is one:
+    /// `SymbolLayerRecord` is exactly 64 bytes with nothing spare. A file written
+    /// before the flag existed has no such block and every layer reads back
+    /// enabled, which is what that file meant.
+    kBlkSymbolLayerFlags = 0x0035, ///< u8[], 1 = drawn
+
     kBlkImages     = 0x0033, ///< ImageRecord[]
     kBlkImageBytes = 0x0034, ///< u8[], the payloads back to back
 

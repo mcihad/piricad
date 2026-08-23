@@ -49,7 +49,55 @@ void StyleLibrary::add(LibraryEntry entry)
     favourite_.push_back(0);
 }
 
-std::size_t StyleLibrary::add_catalog(const StyleCatalog& catalog)
+Symbol symbol_of_entry(const StyleEntry& row, const ImageResolver& resolve)
+{
+    Symbol sym;
+
+    const auto add = [&](const std::string& file, SymbolLayerType type, std::int32_t size_um) {
+        if (file.empty() || !resolve) return false;
+
+        const ImageId image = resolve(file);
+        if (image == kNoImage) return false;
+
+        SymbolLayer layer;
+        layer.look  = row.appearance;
+        layer.type  = type;
+        layer.image = image;
+
+        // A size in PAPER micrometres, because a published symbol is printed at a
+        // size the annex fixes and it stays that size whatever the plot scale is.
+        // Whoever wants it to follow the ground says so in the designer.
+        layer.size = Measure{size_um, Unit::Paper};
+        sym.layers.push_back(layer);
+        return true;
+    };
+
+    if (row.appearance.fill_rgba != 0) {
+        SymbolLayer base;
+        base.look = row.appearance;
+        base.type = SymbolLayerType::SimpleFill;
+        sym.layers.push_back(base);
+    }
+
+    // Sizes chosen for legibility, not from the regulation: the annex prints a
+    // picture and states no millimetre for it. They are a starting point the
+    // designer changes, never a claim about what MPYY requires.
+    add(row.image_hatch, SymbolLayerType::RasterFill, 24000);
+
+    if (!add(row.image_line, SymbolLayerType::RasterLine, 8000)) {
+        SymbolLayer stroke;
+        stroke.look = row.appearance;
+        stroke.type = SymbolLayerType::SimpleLine;
+        sym.layers.push_back(stroke);
+    }
+
+    add(row.image_symbol, SymbolLayerType::RasterMarker, 12000);
+
+    if (sym.layers.empty()) sym = Symbol::of(row.appearance);
+    return sym;
+}
+
+std::size_t StyleLibrary::add_catalog(const StyleCatalog& catalog, const ImageResolver& resolve)
 {
     std::size_t added = 0;
     for (const StyleEntry& row : catalog.entries()) {
@@ -62,15 +110,45 @@ std::size_t StyleLibrary::add_catalog(const StyleCatalog& catalog)
         entry.scale      = row.scale;
         entry.deprecated = row.deprecated;
 
-        // A catalogue row carries one resolved appearance today. It becomes the
-        // one-layer symbol a CAD entity has always had, and a row that grows a
-        // stack in a later package version replaces it without this code changing.
-        entry.symbol = Symbol::of(row.appearance);
+        // The SAME builder `STİL` uses, so a gallery thumbnail is a prediction of
+        // what applying the row will draw rather than an approximation of it.
+        entry.symbol = symbol_of_entry(row, resolve);
+
+        // From what the PACKAGE says, in the order a gösterim is actually read: a
+        // hatch or a fill colour makes it an area, a published line type makes it
+        // a line, a bare glyph makes it a point. A row with none of those is a
+        // stroke, which is what a plain colour has always meant in CAD.
+        if (!row.image_hatch.empty() || row.appearance.fill_rgba != 0)
+            entry.kind = SymbolKind::Area;
+        else if (!row.image_line.empty())
+            entry.kind = SymbolKind::Line;
+        else if (!row.image_symbol.empty())
+            entry.kind = SymbolKind::Point;
+        else
+            entry.kind = SymbolKind::Line;
 
         add(std::move(entry));
         ++added;
     }
     return added;
+}
+
+const char* symbol_kind_name(SymbolKind k) noexcept
+{
+    switch (k) {
+    case SymbolKind::Area: return "alan";
+    case SymbolKind::Line: return "cizgi";
+    case SymbolKind::Point: return "nokta";
+    }
+    return "?";
+}
+
+std::vector<const LibraryEntry*> StyleLibrary::of_kind(SymbolKind kind) const
+{
+    std::vector<const LibraryEntry*> out;
+    for (const LibraryEntry& e : entries_)
+        if (e.kind == kind) out.push_back(&e);
+    return out;
 }
 
 const LibraryEntry* StyleLibrary::find(std::string_view id) const
@@ -156,6 +234,7 @@ std::uint64_t StyleLibrary::content_hash() const
             h = fnv1a(g, h);
         for (const std::string& t : e.tags)
             h = fnv1a(t, h);
+        h = fnv1a_int(static_cast<std::int64_t>(e.kind), h);
         h = fold_symbol(e.symbol, h);
         h = fnv1a_int(static_cast<std::int64_t>(e.scale.low), h);
         h = fnv1a_int(static_cast<std::int64_t>(e.scale.high), h);
