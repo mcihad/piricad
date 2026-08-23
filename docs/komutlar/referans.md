@@ -138,6 +138,8 @@ Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden
 |---|---|---|---|
 | `katman` | text | 1 | Stilin yazılacağı katmanın adı; katman var olmalı |
 | `paket` | text | isteğe bağlı | Stil kataloğu paketinin dosya yolu |
+| `olcek_min` | integer | isteğe bağlı | Bu ölçek paydasından daha yakında çizilmez (1:N'deki N) |
+| `olcek_max` | integer | isteğe bağlı | Bu ölçek paydasından daha uzakta çizilmez |
 | `sinifla` | text | isteğe bağlı | Sınıflandırmada kullanılacak öznitelik; her nesne kendi değerine göre stillenir |
 | `kod` | text | isteğe bağlı | Katalogdaki satırın kimliği; verilmezse katalog kuralları eşleşir |
 | `olcek` | integer | isteğe bağlı | Ölçek paydası (1:N); 0 = ölçekten bağımsız |
@@ -560,6 +562,22 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "max": 1,
           "required": false,
           "help": "Stil kataloğu paketinin dosya yolu"
+        },
+        {
+          "name": "olcek_min",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Bu ölçek paydasından daha yakında çizilmez (1:N'deki N)"
+        },
+        {
+          "name": "olcek_max",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Bu ölçek paydasından daha uzakta çizilmez"
         },
         {
           "name": "sinifla",

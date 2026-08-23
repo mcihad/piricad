@@ -82,6 +82,8 @@ verilir.
 | `paket` | Stil kataloğu paketinin dosya yolu. Göreli yol çalışma dizinine göre çözülür |
 | `kod` | Katalogdaki satırın kimliği. Verilmezse katalogdaki eşleme kuralları çalışır |
 | `sinifla` | Sınıflandırmada kullanılacak öznitelik. Her nesne KENDİ değerine göre stillenir |
+| `olcek_min` | Bu ölçek paydasından daha yakında çizilmez (1:N'deki N) |
+| `olcek_max` | Bu ölçek paydasından daha uzakta çizilmez |
 | `olcek` | Ölçek paydası (1:N). Ölçeğe bağlı satır ve kuralların hangisinin geçerli olduğunu belirler. `0` = ölçekten bağımsız |
 | `renk` | Çizgi rengi, `0xAARRGGBB` düzeninde tam sayı |
 | `kalinlik` | Çizgi kalınlığı, **kâğıt mikrometresi**. `1000` = paftada 1 mm |
@@ -139,6 +141,33 @@ gösterim tutuyor" bilgisi katalog paketine değil, çağrı yerine aittir.
 
 Sayısal bir sütunla aralık kuralları da aynı yoldan çalışır — nüfus yoğunluğuna göre
 beş kademeli konut lekesi, beş aralık penceresi demektir.
+
+### Ölçeğe bağlı görünürlük
+
+Bir stil yalnız belirli ölçek aralığında çizilebilir:
+
+```
+KATMAN ad=CDP_LEKE
+STİL katman=CDP_LEKE renk=0xFF6A1B9A dolgu=0xFFD7B8E8 olcek_min=3000
+```
+
+Bu leke yalnız 1/3000'den **uzakta** görünür; yakınlaştıkça kaybolur ve altındaki
+uygulama imar planı parselleri okunur hâle gelir. Tersi de olur:
+
+```
+KATMAN ad=UIP_PARSEL
+STİL katman=UIP_PARSEL renk=0xFF2E7D32 dolgu=0xFFE1DFB3 olcek_max=3000
+```
+
+Değerler 1:N gösteriminin **N**'idir; büyüyen N uzaklaşmak demektir. Biri
+verilmezse o yönde sınır yoktur.
+
+Bu planlama işinde süs değildir: 1/100000 ölçekli bir çevre düzeni planı bir leke
+gösterir, 1/1000 ölçekli uygulama imar planı o lekenin parsellerini gösterir, ve
+ikisini aynı anda çizmek kimsenin okuyamayacağı bir pafta üretir.
+
+Pencere sembolün üstünde saklanır, yani kare yolunda bir dizi araması ve bir
+karşılaştırmadır — hiçbir kural değerlendirilmez.
 
 ## Örnekler
 

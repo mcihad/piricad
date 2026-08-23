@@ -56,6 +56,11 @@ public:
     /// values, already point at.
     StyleId intern_style(const Appearance& a);
 
+    /// Interns a full symbol stack. A one-layer stroke stack with no scale window
+    /// returns the same id `intern_style` would, so nothing changes for a drawing
+    /// that uses neither.
+    StyleId intern_symbol(const core::Symbol& sym);
+
     Result<EntityId> add_polyline(LayerId layer, std::span<const Point2> pts);
 
     /// A face: one exterior ring, optionally with holes, optionally multipart.

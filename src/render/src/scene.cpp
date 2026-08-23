@@ -69,6 +69,9 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         out.polygons[b].hatch        = look.hatch;
     }
 
+    // One denominator for the whole frame: the view does not change mid-build.
+    const double denominator = view.scale_denominator();
+
     const Box2 visible   = view.visible_box();
     const auto& entities = doc.entities();
     const auto& geometry = doc.geometry();
@@ -159,6 +162,23 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         const core::StyleId sid = entities.style[e];
         const std::size_t slot =
             sid == core::kByLayerStyle || sid >= styles.size() ? layer_batch(lid) : sid;
+
+        // Scale-dependent visibility. Not decoration in planning work: a çevre
+        // düzeni planı at 1/100000 shows a lekesi where the uygulama imar planı
+        // at 1/1000 shows its parcels, and drawing both at both scales produces a
+        // sheet nobody can read. The window is stored on the symbol, so this is
+        // an array lookup and a comparison — no rule is evaluated (R14).
+        if (sid != core::kByLayerStyle && sid < styles.size()) {
+            const core::Symbol& sym = styles.symbol_at(sid);
+            if (sym.min_scale != 0 && denominator < static_cast<double>(sym.min_scale)) {
+                ++out.culled_count;
+                return;
+            }
+            if (sym.max_scale != 0 && denominator > static_cast<double>(sym.max_scale)) {
+                ++out.culled_count;
+                return;
+            }
+        }
 
         PolylineBatch& batch      = out.polylines[slot];
         PolygonBatch& fill        = out.polygons[slot];

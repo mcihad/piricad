@@ -93,6 +93,11 @@ Status Transaction::set_entity_style(EntityId e, StyleId style)
     return core::ok();
 }
 
+StyleId Transaction::intern_symbol(const core::Symbol& sym)
+{
+    return doc_.intern_symbol(sym);
+}
+
 Status Transaction::set_attribute(core::AttrId col, EntityId e, const core::AttrValue& v)
 {
     core::Op undo;

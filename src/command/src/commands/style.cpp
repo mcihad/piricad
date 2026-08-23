@@ -292,10 +292,25 @@ Task<void> run(Context& ctx)
     }
 
     // ---- pass 2: write ----
+    // A scale window turns the write into a one-layer SYMBOL rather than a bare
+    // appearance, because the window lives on the symbol. Without a window the
+    // appearance is interned directly and the id is identical to what it always
+    // was — a drawing that declares no scale range is byte for byte unchanged.
+    const Value scale_min = ctx.argument("olcek_min");
+    const Value scale_max = ctx.argument("olcek_max");
+    const bool windowed   = !scale_min.empty() || !scale_max.empty();
+
     core::StyleId last = core::kByLayerStyle;
     for (std::size_t i = 0; i < targets.size(); ++i) {
-        const core::StyleId style =
-            clear ? core::kByLayerStyle : ctx.transaction().intern_style(resolved[i]);
+        core::StyleId style = core::kByLayerStyle;
+        if (!clear && windowed) {
+            core::Symbol sym = core::Symbol::of(resolved[i]);
+            sym.min_scale = static_cast<std::uint32_t>(scale_min.empty() ? 0 : scale_min.as_int());
+            sym.max_scale = static_cast<std::uint32_t>(scale_max.empty() ? 0 : scale_max.as_int());
+            style         = ctx.transaction().intern_symbol(sym);
+        } else if (!clear) {
+            style = ctx.transaction().intern_style(resolved[i]);
+        }
         if (auto st = ctx.transaction().set_entity_style(targets[i], style); !st) {
             ctx.session().fail(st.error());
             co_return;
@@ -304,8 +319,8 @@ Task<void> run(Context& ctx)
     }
 
     // Recorded so a replay resolves the same rows whichever client typed them.
-    for (const char* name :
-         {"paket", "kod", "sinifla", "olcek", "renk", "kalinlik", "dolgu", "sira", "sifirla"}) {
+    for (const char* name : {"paket", "kod", "sinifla", "olcek", "olcek_min", "olcek_max", "renk",
+                             "kalinlik", "dolgu", "sira", "sifirla"}) {
         if (const Value v = ctx.argument(name); !v.empty()) ctx.record(name, v);
     }
 
@@ -340,6 +355,10 @@ PIRICAD_COMMAND(style)
                 Param::text("katman", Arity::exactly(1),
                             "Stilin yazılacağı katmanın adı; katman var olmalı"),
                 Param::text("paket", Arity::optional(), "Stil kataloğu paketinin dosya yolu"),
+                Param::integer("olcek_min", Arity::optional(),
+                               "Bu ölçek paydasından daha yakında çizilmez (1:N'deki N)"),
+                Param::integer("olcek_max", Arity::optional(),
+                               "Bu ölçek paydasından daha uzakta çizilmez"),
                 Param::text("sinifla", Arity::optional(),
                             "Sınıflandırmada kullanılacak öznitelik; her nesne kendi "
                             "değerine göre stillenir"),

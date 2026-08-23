@@ -245,6 +245,8 @@ public:
     /// Interns an appearance and returns its id, for a command building a style.
     StyleId intern_style(const Appearance& a);
 
+    StyleId intern_symbol(const Symbol& sym);
+
     /// Applies a previously produced Op. Used only by Transaction rollback and by
     /// the undo stack; `undo_out` receives the Op that reverses this one.
     Status apply(const Op& op, Op* undo_out = nullptr);

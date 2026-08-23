@@ -810,3 +810,31 @@ TEST_CASE("Symbol: yığınsız belge özetini değiştirmez")
 
     CHECK_EQ(plain.fold(0), viaStack.fold(0));
 }
+
+TEST_CASE("Symbol: ölçek penceresi kimliğin parçasıdır")
+{
+    // Two symbols identical in every colour and width but visible at different
+    // scales are two different symbols, and interning them together would make a
+    // çevre düzeni lekesi and an uygulama imar parseli share one style column
+    // entry — after which no scale could tell them apart.
+    StyleTable t;
+    Appearance a{};
+    a.rgba = 0xFF2E7D32u;
+
+    Symbol yakin    = Symbol::of(a);
+    yakin.max_scale = 1000;
+
+    Symbol uzak    = Symbol::of(a);
+    uzak.min_scale = 1000;
+
+    const StyleId id_yakin = t.intern(yakin);
+    const StyleId id_uzak  = t.intern(uzak);
+    CHECK(id_yakin != id_uzak);
+    CHECK_EQ(t.symbol_at(id_yakin).max_scale, std::uint32_t{1000});
+    CHECK_EQ(t.symbol_at(id_uzak).min_scale, std::uint32_t{1000});
+
+    // A window-less stack still interns to the bare appearance, so a drawing that
+    // declares no scale range is unchanged.
+    CHECK_EQ(t.intern(Symbol::of(a)), t.intern(a));
+    CHECK(t.intern(a) != id_yakin);
+}

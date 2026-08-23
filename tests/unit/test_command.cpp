@@ -615,3 +615,26 @@ TEST_CASE("METİN: sıfır yükseklik reddedilir, taban çizgisi de kalmaz")
     for (core::EntityId e = 0; e < f.doc.entities().size(); ++e)
         if (f.doc.entities().alive(e)) CHECK(f.doc.texts().has(f.doc.entities().slot[e]));
 }
+
+TEST_CASE("Ayrıştırıcı onaltılık sayıyı okur — renk her yerde 0xAARRGGBB yazılır")
+{
+    // The wart this closes: the settings parser accepted `0xFF101418` and the
+    // command tokenizer did not, so `TERCİH arkaplan 0xFF101418` worked while
+    // `STİL renk=0xFF2E7D32` was refused as "not an integer". The same kind of
+    // value, two notations, one of them silently wrong.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL renk=0xFF2E7D32", Origin::Test).ok());
+
+    const core::LayerId l = f.doc.find_layer("PARSEL");
+    REQUIRE(l != core::kNoLayer);
+    CHECK_EQ(f.doc.layer(l)->appearance.rgba, 0xFF2E7D32u);
+
+    // Decimal still means what it always meant, and the two spellings agree.
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL renk=4281236786", Origin::Test).ok());
+    CHECK_EQ(f.doc.layer(f.doc.find_layer("YOL"))->appearance.rgba, 0xFF2E7D32u);
+
+    // Upper case, and a bare 0x with no digits is refused rather than read as 0.
+    REQUIRE(f.bus.execute_line("KATMAN ad=BINA renk=0XFF2E7D32", Origin::Test).ok());
+    CHECK_EQ(f.doc.layer(f.doc.find_layer("BINA"))->appearance.rgba, 0xFF2E7D32u);
+    CHECK(!f.bus.execute_line("KATMAN ad=BOS renk=0x", Origin::Test).ok());
+}

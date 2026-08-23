@@ -144,6 +144,47 @@ struct ExprParser
             return v;
         }
 
+        // Hexadecimal, because a colour is written 0xAARRGGBB everywhere a user
+        // meets one — in TERCİH, in the settings file, in the catalogue, in every
+        // CAD manual. The settings parser already accepted it and this one did
+        // not, so `STİL renk=0xFF2E7D32` failed while `TERCİH arkaplan
+        // 0xFF101418` worked: the same kind of value, two notations, one of them
+        // silently wrong. There is still ONE parser (CLAUDE.md 5.11); it just
+        // reads one more spelling of a number.
+        if (i + 1 < s.size() && s[i] == '0' && (s[i + 1] == 'x' || s[i + 1] == 'X')) {
+            const std::size_t digits = i + 2;
+            std::uint64_t value      = 0;
+            std::size_t j            = digits;
+            for (; j < s.size(); ++j) {
+                const char c = s[j];
+                int d        = -1;
+                if (c >= '0' && c <= '9')
+                    d = c - '0';
+                else if (c >= 'a' && c <= 'f')
+                    d = c - 'a' + 10;
+                else if (c >= 'A' && c <= 'F')
+                    d = c - 'A' + 10;
+                else
+                    break;
+
+                // 0xAARRGGBB is eight digits; refusing past sixteen keeps the
+                // shift below defined rather than wrapping into a silent colour.
+                if (j - digits >= 16) {
+                    failed = true;
+                    why    = "onaltılık sayı çok uzun (en fazla 16 basamak)";
+                    return 0.0;
+                }
+                value = (value << 4) | static_cast<std::uint64_t>(d);
+            }
+            if (j == digits) {
+                failed = true;
+                why    = "'0x' sonrası onaltılık basamak bekleniyordu";
+                return 0.0;
+            }
+            i = j;
+            return static_cast<double>(value);
+        }
+
         const std::size_t start = i;
         while (i < s.size() && ((s[i] >= '0' && s[i] <= '9') || s[i] == '.'))
             ++i;

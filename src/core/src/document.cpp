@@ -516,6 +516,11 @@ StyleId Document::intern_style(const Appearance& a)
     return styles_.intern(a);
 }
 
+StyleId Document::intern_symbol(const Symbol& sym)
+{
+    return styles_.intern(sym);
+}
+
 Status Document::apply(const Op& op, Op* undo_out)
 {
     Op scratch;
