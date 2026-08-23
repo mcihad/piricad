@@ -759,8 +759,18 @@ TEST_CASE("Symbol: çok katmanlı yığın kendi kimliğini alır ve geri okunur
     edge.rgba     = 0xFF202020u;
     edge.width_um = 700;
 
-    sym.layers.push_back(SymbolLayer{fill, SymbolLayerType::SimpleFill});
-    sym.layers.push_back(SymbolLayer{edge, SymbolLayerType::SimpleLine});
+    sym.layers.push_back([&] {
+        SymbolLayer l;
+        l.look = fill;
+        l.type = SymbolLayerType::SimpleFill;
+        return l;
+    }());
+    sym.layers.push_back([&] {
+        SymbolLayer l;
+        l.look = edge;
+        l.type = SymbolLayerType::SimpleLine;
+        return l;
+    }());
 
     const StyleId id = t.intern(sym);
     CHECK(id != kByLayerStyle);
@@ -789,12 +799,32 @@ TEST_CASE("Symbol: katman SIRASI kimliği değiştirir")
     edge.rgba = 0xFF202020u;
 
     Symbol under;
-    under.layers.push_back(SymbolLayer{fill, SymbolLayerType::SimpleFill});
-    under.layers.push_back(SymbolLayer{edge, SymbolLayerType::SimpleLine});
+    under.layers.push_back([&] {
+        SymbolLayer l;
+        l.look = fill;
+        l.type = SymbolLayerType::SimpleFill;
+        return l;
+    }());
+    under.layers.push_back([&] {
+        SymbolLayer l;
+        l.look = edge;
+        l.type = SymbolLayerType::SimpleLine;
+        return l;
+    }());
 
     Symbol over;
-    over.layers.push_back(SymbolLayer{edge, SymbolLayerType::SimpleLine});
-    over.layers.push_back(SymbolLayer{fill, SymbolLayerType::SimpleFill});
+    over.layers.push_back([&] {
+        SymbolLayer l;
+        l.look = edge;
+        l.type = SymbolLayerType::SimpleLine;
+        return l;
+    }());
+    over.layers.push_back([&] {
+        SymbolLayer l;
+        l.look = fill;
+        l.type = SymbolLayerType::SimpleFill;
+        return l;
+    }());
 
     CHECK(t.intern(under) != t.intern(over));
 }

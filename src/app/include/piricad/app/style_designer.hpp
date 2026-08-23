@@ -163,6 +163,7 @@ private:
     QSpinBox* offset_{nullptr};
     QSpinBox* angle_{nullptr};
     QSpinBox* opacity_{nullptr};
+    QLineEdit* text_{nullptr};
     QComboBox* sizeUnit_{nullptr};
     QComboBox* intervalUnit_{nullptr};
     QComboBox* spacingYUnit_{nullptr};

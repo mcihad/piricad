@@ -9,6 +9,35 @@
 namespace piricad::command {
 namespace {
 
+/// Appends the character an escape sequence names, and returns how far to advance.
+///
+/// `\n` is a NEWLINE, not the letter n. The lexer used to drop the backslash and
+/// keep whatever followed, so `bicim="{taks}\n{kaks}"` silently produced the
+/// letter `n` between two numbers — a plan sheet with `0,30n1,50` written in its
+/// `yapılaşma` circle. Every quoting convention in the world reads these two
+/// characters as a line break and so does this one now.
+///
+/// An unrecognised escape keeps the character that follows it, which is what lets
+/// `\"` and `\\` work without a table of every letter.
+std::size_t append_escape(std::string& out, std::string_view line, std::size_t at)
+{
+    if (at + 1 >= line.size()) {
+        out += line[at];
+        return 1;
+    }
+
+    switch (line[at + 1]) {
+    case 'n': out += '\n'; break;
+    case 't': out += '\t'; break;
+    default: out += line[at + 1]; break;
+    }
+    return 2;
+}
+
+} // namespace
+
+namespace {
+
 using core::err;
 using core::ErrorCode;
 using core::Point2;
@@ -357,7 +386,10 @@ core::Result<ParsedLine> parse_line(std::string_view line)
             ++i;
             std::string text;
             while (i < line.size() && line[i] != '"') {
-                if (line[i] == '\\' && i + 1 < line.size()) ++i;
+                if (line[i] == '\\') {
+                    i += append_escape(text, line, i);
+                    continue;
+                }
                 text += line[i++];
             }
             if (i >= line.size())
@@ -380,7 +412,10 @@ core::Result<ParsedLine> parse_line(std::string_view line)
                 ++i;
                 quoted = true;
                 while (i < line.size() && line[i] != '"') {
-                    if (line[i] == '\\' && i + 1 < line.size()) ++i;
+                    if (line[i] == '\\') {
+                        i += append_escape(token, line, i);
+                        continue;
+                    }
                     token += line[i++];
                 }
                 if (i >= line.size())

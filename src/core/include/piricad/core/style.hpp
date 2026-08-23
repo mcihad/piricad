@@ -143,6 +143,19 @@ enum class SymbolLayerType : std::uint8_t {
     RasterFill,   ///< the image tiled into the interior — a MPYY tarama
     RasterMarker, ///< the image as a glyph — a MPYY sembol
     RasterLine,   ///< the image repeated along the line — a MPYY çizgi tipi
+
+    /// FIXED text at the centre of the geometry.
+    ///
+    /// The word that belongs to the SYMBOL rather than to the feature. MPYY's
+    /// `yapılaşma koşulu` gösterim is a circle with `TAKS` written above a rule
+    /// and `KAKS` below it: those two words are the same on every parcel in
+    /// Turkey, so they are part of the symbol. Only the numbers beside them come
+    /// from the feature, and those are a label written by `ETİKET`.
+    ///
+    /// A symbol layer may NOT read an attribute — model.md P29 keeps the frame
+    /// path out of the attribute columns — which is exactly why the fixed half
+    /// and the data half are two different mechanisms.
+    TextMarker,
 };
 
 /// Stable machine name, for a file, a message or a test.
@@ -271,6 +284,14 @@ struct SymbolLayer
     /// this. A disabled layer is still STORED, still round-trips and still folds
     /// into the fingerprint: it is part of the symbol, it is simply not painted.
     bool enabled{true};
+
+    /// What a `TextMarker` writes. Empty for every other type.
+    ///
+    /// The one field on a symbol layer that is not a number, and it is here rather
+    /// than in a pool because a symbol layer is compared, hashed and written whole;
+    /// a handle into a side table would make two symbols equal that draw different
+    /// words whenever the table was rebuilt in another order.
+    std::string text;
 
     /// The picture a raster type draws, as an index into the document's
     /// `ImageStore`. `kNoImage` for every other type.

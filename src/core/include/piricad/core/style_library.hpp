@@ -73,6 +73,14 @@ struct LibraryEntry
     Symbol symbol{};                   ///< what it draws
     ScaleWindow scale{};               ///< the scales it applies at
     bool deprecated{false};            ///< retained and still loadable, never dropped (R5)
+
+    /// The package could not read this row's appearance with confidence.
+    ///
+    /// Fourteen MPYY rows are flagged this way. Carried onto the shelf so every
+    /// surface that offers one can say so: a row shown as certain when the package
+    /// says otherwise is the program asserting something the annex did not print.
+    bool uncertain{false};
+    std::vector<std::string> uncertain_reasons; ///< why, verbatim from the package
 };
 
 /// Turns a package-relative image path into an id, or `kNoImage`.
@@ -127,10 +135,12 @@ public:
         return images_.intern(bytes, origin);
     }
 
+    /// How many symbols are on the shelf.
     std::size_t size() const noexcept { return entries_.size(); }
 
     bool empty() const noexcept { return entries_.empty(); }
 
+    /// Every entry, in shelf order.
     const std::vector<LibraryEntry>& entries() const noexcept { return entries_; }
 
     /// The entry with this id, or null. Exact, byte-wise: an id is a machine name.

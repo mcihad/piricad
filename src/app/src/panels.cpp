@@ -283,13 +283,21 @@ void LayerPanel::showContextMenu(const QPoint& where)
             bool ok = false;
             const QString format =
                 QInputDialog::getText(this, tr("Özniteliklerden etiketle"),
-                                      tr("Biçim — {sutun} o sütunun değeriyle değişir:"),
+                                      tr("Biçim — {sutun} değeriyle değişir, \\n satır kırar:"),
                                       QLineEdit::Normal, QStringLiteral("{ada}/{parsel}"), &ok);
             if (!ok || format.trimmed().isEmpty()) return;
 
-            controller_.runLine(
-                QStringLiteral("ETİKET katman=\"%1\" bicim=\"%2\"").arg(name, format.trimmed()),
-                command::Origin::Gui);
+            // The size is ASKED FOR rather than assumed: a label on a 1/1000 pafta
+            // and one on a 1/25000 `çevre düzeni planı` are different heights, and
+            // there is no figure this program can pick for both.
+            const int height = QInputDialog::getInt(
+                this, tr("Yazı yüksekliği"), tr("Zemin milimetresi:"), 2000, 1, 1000000, 100, &ok);
+            if (!ok) return;
+
+            controller_.runLine(QStringLiteral("ETİKET katman=\"%1\" bicim=\"%2\" yukseklik=%3")
+                                    .arg(name, format.trimmed())
+                                    .arg(height),
+                                command::Origin::Gui);
         });
 
         menu.addSeparator();

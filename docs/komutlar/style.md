@@ -101,6 +101,7 @@ verilir.
 | `aci` | Desen açısı ya da işaretçi dönüklüğü, **mikro derece** (45° = `45000000`) |
 | `kaydirma` | Geometriden dik kaydırma |
 | `saydamlik` | Katman saydamlığı `0`–`255`. `255` tam opak |
+| `yazi` | `yazi-isaretci` katmanının yazdığı sabit metin |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -127,6 +128,7 @@ o yüzden bir stil **sembol katmanlarından** oluşan bir yığındır ve alttan
 | `gorsel-dolgu` | Görseli yüzeye döşer | MPYY `tarama` |
 | `gorsel-isaretci` | Görseli lekenin ortasına koyar | MPYY `sembol` |
 | `gorsel-cizgi` | Görseli çizgi boyunca tekrarlar | MPYY `çizgi tipi` |
+| `yazi-isaretci` | Sembolün **kendi** sabit yazısı | `TAKS`, `KAKS`, `E`, `h` |
 
 Yığın **tek tek** kurulur: ilk `STİL` sembolü kurar, `ekle=evet` ile gelen her
 `STİL` üstüne bir katman ekler. Stil tasarımcısı da tam olarak bunu yapar, bir
@@ -157,6 +159,25 @@ depo içeriğe göre tekilleştirir.
 
 Görsellerin künyesi de belgeyle gider: her görsel hangi katalog satırından ve
 hangi ekten geldiğini taşır.
+
+### Sembolün yazısı ile nesnenin yazısı ayrı şeylerdir
+
+MPYY'nin `yapılaşma koşulu` gösterimi bir dairedir: içinde yatay bir çizgi, çizginin
+üstünde `TAKS`, altında `KAKS`, ve her birinin yanında o parselin değeri.
+
+Bu iki yazı **farklı kaynaklardan** gelir ve bu bir tasarım kararıdır:
+
+| Yazı | Nereden | Nasıl |
+|---|---|---|
+| `TAKS`, `KAKS` | **Sembolden** — Türkiye'deki her parselde aynı | `tip=yazi-isaretci yazi=TAKS` |
+| `0,30`, `1,50` | **Nesneden** — her parselde farklı | [`ETİKET`](label.md) |
+
+Sebebi `.claude/model.md` P29: kare yolu öznitelik sütunu okuyamaz. Bir sembol
+katmanı her karede çizilir, dolayısıyla sabit olanı taşıyabilir; değişeni taşıyan
+şey `ETİKET`'in yazdığı yazı nesnesidir.
+
+`kaydirma` yazıyı merkezden yukarı (artı) ya da aşağı (eksi) alır, `boyut` da
+punto yerine geçer — ikisi de `birim` ile kâğıt ya da zemin olabilir.
 
 ### Birim: kâğıt mı, zemin mi
 
@@ -340,6 +361,31 @@ STİL katman=OSB paket=data/catalogs/mpyy/plan-gosterim.json kod=ortak-organize-
 EK-1a'nın ORGANİZE SANAYİ BÖLGESİ satırı: taraması yüzeye döşenir, çizgi tipi
 sınıra, simgesi lekenin ortasına. Hangi satırın olduğunu
 [`SEMBOL`](symbol.md) ile bulabilirsiniz.
+
+### Yapılaşma koşulu — sıfırdan
+
+Hazır görsel kullanmadan, tasarımcının kendi parçalarıyla:
+
+```
+KATMAN ad=PARSEL
+ALAN 485300000,4310200000 485370000,4310200000 485370000,4310252000 485300000,4310252000
+STİL katman=PARSEL tip=dolgu dolgu=584376224
+STİL katman=PARSEL ekle=evet tip=cizgi renk=4282203457 kalinlik=500
+STİL katman=PARSEL ekle=evet tip=merkez-isaretci sekil=daire birim=zemin boyut=26000 renk=4278190080 kalinlik=350 dolgu=0
+STİL katman=PARSEL ekle=evet tip=merkez-isaretci sekil=cizik aci=90000000 birim=zemin boyut=22000 renk=4278190080 kalinlik=300
+STİL katman=PARSEL ekle=evet tip=yazi-isaretci yazi=TAKS birim=zemin boyut=2600 kaydirma=9500 renk=4286611584
+STİL katman=PARSEL ekle=evet tip=yazi-isaretci yazi=KAKS birim=zemin boyut=2600 kaydirma=-9500 renk=4286611584
+```
+
+Altı sembol katmanı: dolgu, sınır, daire, ortadaki yatay çizgi, üstteki `TAKS`,
+alttaki `KAKS`. Değerler [`ETİKET`](label.md) ile gelir:
+
+```
+ETİKET katman=PARSEL bicim="{taks}\n{kaks}" yukseklik=3800 hedef=YAPILAŞMA
+```
+
+`aci=90000000` mikro derece, yani 90° — `cizik` şekli dik çizilir, doksan derece
+onu yatay yapar.
 
 ### Betik
 

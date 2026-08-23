@@ -138,7 +138,7 @@ Katmandaki nesneleri özniteliklerinden okuyarak etiketler.
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `katman` | text | 1 | Etiketlenecek katmanın adı |
-| `bicim` | text | 1 | Etiket biçimi; {sutun} o sütunun değeriyle değişir |
+| `bicim` | text | 1 | Etiket biçimi; {sutun} o sütunun değeriyle değişir, \n satır kırar |
 | `hedef` | text | isteğe bağlı | Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET' |
 | `yukseklik` | integer | isteğe bağlı | Yazı yüksekliği, zemin milimetresi |
 
@@ -188,6 +188,7 @@ Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden
 | `kaydirma` | integer | isteğe bağlı | Geometriden dik kaydırma, `birim` cinsinden |
 | `saydamlik` | integer | isteğe bağlı | Katman saydamlığı 0-255; 255 tam opak |
 | `desen` | text | isteğe bağlı | Çizgi deseni tablosundaki satır |
+| `yazi` | text | isteğe bağlı | yazi-isaretci katmanının yazdığı sabit metin |
 
 Ayrıntılı kullanım: [STİL](style.md)
 
@@ -564,7 +565,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "min": 1,
           "max": 1,
           "required": true,
-          "help": "Etiket biçimi; {sutun} o sütunun değeriyle değişir"
+          "help": "Etiket biçimi; {sutun} o sütunun değeriyle değişir, \\n satır kırar"
         },
         {
           "name": "hedef",
@@ -850,6 +851,14 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "max": 1,
           "required": false,
           "help": "Çizgi deseni tablosundaki satır"
+        },
+        {
+          "name": "yazi",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "yazi-isaretci katmanının yazdığı sabit metin"
         }
       ],
       "flags": [

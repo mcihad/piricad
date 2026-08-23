@@ -69,7 +69,8 @@ constexpr NameOf<SymbolLayerType> kLayerTypes[] = {
     {"isaretci", SymbolLayerType::SimpleMarker},
     {"gorsel-dolgu", SymbolLayerType::RasterFill},
     {"gorsel-isaretci", SymbolLayerType::RasterMarker},
-    {"gorsel-cizgi", SymbolLayerType::RasterLine}};
+    {"gorsel-cizgi", SymbolLayerType::RasterLine},
+    {"yazi-isaretci", SymbolLayerType::TextMarker}};
 
 constexpr NameOf<MarkerShape> kShapes[] = {{"daire", MarkerShape::Circle},
                                            {"kare", MarkerShape::Square},
@@ -176,7 +177,7 @@ bool draws_marker(SymbolLayerType t) noexcept
     return t == SymbolLayerType::MarkerLine || t == SymbolLayerType::HashLine ||
            t == SymbolLayerType::PointPatternFill || t == SymbolLayerType::CentroidFill ||
            t == SymbolLayerType::SimpleMarker || t == SymbolLayerType::RasterMarker ||
-           t == SymbolLayerType::RasterLine;
+           t == SymbolLayerType::RasterLine || t == SymbolLayerType::TextMarker;
 }
 
 std::optional<Unit> unit_from_name(std::string_view name) noexcept
@@ -251,6 +252,7 @@ std::uint64_t fold_symbol(const Symbol& sym, std::uint64_t seed)
         h = fnv1a_int(static_cast<std::int64_t>(l.opacity), h);
         h = fnv1a_int(static_cast<std::int64_t>(l.image), h);
         h = fnv1a_int(l.enabled ? 1 : 0, h);
+        h = fnv1a(l.text, h);
         h = fold_appearance(l.look, h);
     }
     h = fnv1a_int(static_cast<std::int64_t>(sym.min_scale), h);

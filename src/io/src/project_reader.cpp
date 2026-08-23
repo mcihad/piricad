@@ -442,6 +442,14 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         symbol_layer_flags = rows.value();
     }
 
+    std::span<const std::uint32_t> symbol_layer_text;
+    if (view.has(kBlkSymbolLayerText) && dr.symbol_layer_count > 0) {
+        auto rows = view.column<std::uint32_t>(kBlkSymbolLayerText, dr.symbol_layer_count,
+                                               "sembol katmani yazilari");
+        if (!rows) return rows.error();
+        symbol_layer_text = rows.value();
+    }
+
     for (std::uint64_t i = 0; i < dr.style_count; ++i) {
         const core::Appearance a = from_record(style_rows.value()[static_cast<std::size_t>(i)]);
 
@@ -466,6 +474,12 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                 core::SymbolLayer layer = from_record(symbol_layer_rows[r.first_layer + k]);
                 if (r.first_layer + k < symbol_layer_flags.size())
                     layer.enabled = symbol_layer_flags[r.first_layer + k] != 0;
+                if (r.first_layer + k < symbol_layer_text.size()) {
+                    auto text =
+                        strings.at(symbol_layer_text[r.first_layer + k], "sembol katmani yazisi");
+                    if (!text) return text.error();
+                    layer.text = std::move(text.value());
+                }
                 sym.layers.push_back(layer);
             }
         }

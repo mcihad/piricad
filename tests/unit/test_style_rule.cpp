@@ -23,6 +23,7 @@
 #include "piricad/core/style_rule.hpp"
 #include "piricad/script/json_runner.hpp"
 
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -957,4 +958,78 @@ TEST_CASE("ETİKET: tanınmayan sütun adı silinmiyor, görünür kalıyor")
         CHECK_EQ(std::string(f.doc.texts().text(f.doc.entities().slot[e])),
                  std::string("1234/{parsell}"));
     }
+}
+
+TEST_CASE("STİL: MPYY yapılaşma koşulu göstermi sıfırdan kurulabiliyor")
+{
+    // The point this proves: the designer's own parts are enough to PRODUCE the
+    // published gösterim, not only to apply its picture. MPYY prints a circle with
+    // a horizontal rule, TAKS above it and KAKS below, and each parcel's own two
+    // numbers stacked around the rule.
+    Rig f;
+    REQUIRE(f.bus.execute_line("KATMAN PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN 0,0 70000,0 70000,52000 0,52000", Origin::Test).ok());
+
+    const std::array<const char*, 6> stack{
+        "STİL katman=PARSEL tip=dolgu dolgu=584376224",
+        "STİL katman=PARSEL ekle=evet tip=cizgi renk=4282203457 kalinlik=500",
+        "STİL katman=PARSEL ekle=evet tip=merkez-isaretci sekil=daire birim=zemin boyut=26000",
+        "STİL katman=PARSEL ekle=evet tip=merkez-isaretci sekil=cizik aci=90000000 "
+        "birim=zemin boyut=22000",
+        "STİL katman=PARSEL ekle=evet tip=yazi-isaretci yazi=TAKS birim=zemin boyut=2600 "
+        "kaydirma=9500",
+        "STİL katman=PARSEL ekle=evet tip=yazi-isaretci yazi=KAKS birim=zemin boyut=2600 "
+        "kaydirma=-9500"};
+
+    for (const char* line : stack) {
+        auto applied = f.bus.execute_line(line, Origin::Test);
+        if (!applied) FAIL_WITH(line, applied.error().message);
+        REQUIRE(applied.ok());
+    }
+
+    const core::StyleId sid = f.doc.entities().style[0];
+    REQUIRE(sid != core::kByLayerStyle);
+
+    const core::Symbol sym = f.doc.styles().symbol_at(sid);
+    REQUIRE(sym.layers.size() == std::size_t{6});
+
+    // The rule is the one turned on its side; without the rotation reaching the
+    // renderer it cut the two numbers in half instead of separating them.
+    CHECK(sym.layers[3].shape == core::MarkerShape::Tick);
+    CHECK_EQ(sym.layers[3].angle_udeg, 90000000);
+
+    // The two words belong to the SYMBOL, one above the centre and one below.
+    CHECK(sym.layers[4].type == core::SymbolLayerType::TextMarker);
+    CHECK_EQ(sym.layers[4].text, std::string("TAKS"));
+    CHECK_EQ(sym.layers[4].offset.value, 9500);
+    CHECK(sym.layers[4].offset.unit == core::Unit::Ground);
+    CHECK_EQ(sym.layers[5].text, std::string("KAKS"));
+    CHECK_EQ(sym.layers[5].offset.value, -9500);
+}
+
+TEST_CASE("ETİKET: iki satır noktanın etrafına yığılıyor")
+{
+    Rig f;
+    REQUIRE(f.bus.execute_line("KATMAN PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SÜTUN kimlik=taks tur=metin", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SÜTUN kimlik=kaks tur=metin", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN 0,0 70000,0 70000,52000 0,52000", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK taks 1 \"0,30\"", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK kaks 1 \"1,50\"", Origin::Test).ok());
+
+    // The two-character escape is what lets a command line ask for two lines.
+    REQUIRE(
+        f.bus.execute_line("ETİKET katman=PARSEL bicim=\"{taks}\\n{kaks}\"", Origin::Test).ok());
+
+    const core::LayerId target = f.doc.find_layer("PARSEL ETİKET");
+    REQUIRE(target != core::kNoLayer);
+
+    bool found = false;
+    for (core::EntityId e = 0; e < f.doc.entities().size(); ++e) {
+        if (!f.doc.entities().alive(e) || f.doc.entities().layer[e] != target) continue;
+        CHECK_EQ(std::string(f.doc.texts().text(f.doc.entities().slot[e])),
+                 std::string("0,30\n1,50"));
+        found = true;
+    }
+    CHECK(found);
 }

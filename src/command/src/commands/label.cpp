@@ -166,6 +166,11 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
+    // Line breaks arrive already decoded: the command-line lexer turns `\n` into
+    // a newline and a JSON script writes one directly. Nothing to do here, which
+    // is the point — there is one lexer in this program (CLAUDE.md 5.11).
+    const std::string& lines = *format;
+
     // ---- pass 1: decide. Nothing below this point may fail. ----
     //
     // Every text is rendered and every position computed before the first write,
@@ -179,7 +184,7 @@ Task<void> run(Context& ctx)
         for (core::EntityId e = 0; e < entities.size(); ++e) {
             if (!entities.alive(e) || entities.layer[e] != source) continue;
 
-            auto text = render(bus.document(), *format, e);
+            auto text = render(bus.document(), lines, e);
             if (!text) {
                 ctx.session().fail(text.error());
                 co_return;
@@ -251,7 +256,7 @@ PIRICAD_COMMAND(label)
             {
                 Param::text("katman", Arity::exactly(1), "Etiketlenecek katmanın adı"),
                 Param::text("bicim", Arity::exactly(1),
-                            "Etiket biçimi; {sutun} o sütunun değeriyle değişir"),
+                            "Etiket biçimi; {sutun} o sütunun değeriyle değişir, \\n satır kırar"),
                 Param::text("hedef", Arity::optional(),
                             "Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET'"),
                 Param::integer("yukseklik", Arity::optional(),

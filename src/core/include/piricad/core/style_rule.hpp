@@ -199,17 +199,30 @@ struct StyleEntry
     Appearance appearance{}; ///< what the regulation says this looks like
     ScaleWindow scale{};     ///< the scales it applies at; unbounded by default
     bool deprecated{false};  ///< retained, still loadable, never silently dropped (R5)
+
+    /// The extraction could not read this row's appearance with confidence.
+    ///
+    /// The MPYY package flags fourteen rows this way — the annex printed them with
+    /// empty gösterim columns, or in a form the extraction could not resolve.
+    /// Carrying the flag is the point: a row shown as certain when the package
+    /// says otherwise is the program asserting something the regulation did not.
+    /// Every surface that offers the row has to say so (data.md, CLAUDE.md 11.7).
+    bool uncertain{false};
+
+    /// Why, verbatim from the package. Empty when `uncertain` is false.
+    std::vector<std::string> uncertain_reasons;
 };
 
 /// One classification rule. Conditions are conjunctive; an empty condition list
 /// matches every feature and is the sanctioned way to write a catch-all last row.
 struct StyleRule
 {
-    std::string id;
-    std::string entry; ///< StyleEntry::id this rule selects
-    std::vector<StyleCondition> conditions;
-    ScaleWindow scale{};
+    std::string id;                         ///< stable, for a message and a test
+    std::string entry;                      ///< StyleEntry::id this rule selects
+    std::vector<StyleCondition> conditions; ///< conjunctive; empty matches everything
+    ScaleWindow scale{};                    ///< the scales it applies at
 
+    /// Whether every condition holds and the scale window covers `denominator`.
     bool matches(const FeatureView& feature, ScaleDenominator denominator) const;
 };
 

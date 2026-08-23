@@ -74,6 +74,7 @@ PassStyle pass_of(const core::SymbolLayer& sl, const core::ImageStore& images, d
     ps.fill_rgba     = sl.look.fill_rgba;
     ps.image         = images.bytes(sl.image);
     ps.image_key     = images.content_key(sl.image);
+    ps.text          = sl.text;
     ps.dash          = sl.look.dash;
     ps.line_width_px = stroke_width_px(sl);
 
@@ -83,6 +84,13 @@ PassStyle pass_of(const core::SymbolLayer& sl, const core::ImageStore& images, d
     ps.wants_stroke = core::draws_stroke(sl.type) || core::draws_marker(sl.type);
     ps.wants_fill   = core::draws_fill(sl.type) || sl.type == core::SymbolLayerType::CentroidFill ||
                     sl.type == core::SymbolLayerType::RasterMarker;
+
+    // A fixed word needs neither the line nor the ring: it is placed from the
+    // entity's own bounding box, which the cull test already has.
+    if (sl.type == core::SymbolLayerType::TextMarker) {
+        ps.wants_stroke = false;
+        ps.wants_fill   = false;
+    }
     return ps;
 }
 
@@ -350,6 +358,33 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
             const PassStyle& ps  = out.passes[p];
             PolylineBatch& batch = out.polylines[p];
             PolygonBatch& fill   = out.polygons[p];
+
+            // A fixed word is placed from the entity's own bounding box, not from
+            // its rings: the box is what the cull test already read, and the
+            // centre of it is where a plan puts a gösterim's own lettering.
+            if (ps.type == core::SymbolLayerType::TextMarker) {
+                if (ps.text.empty()) continue;
+
+                const core::Box2 box      = entities.box_of(e);
+                const core::Point2 centre = box.centre();
+
+                TextItem item;
+                item.rgba      = ps.line_rgba;
+                item.x0        = view.offset_x_f(centre.x);
+                item.y0        = view.offset_y_f(centre.y) + ps.offset_px;
+                item.x1        = item.x0 + 1.0f; // horizontal; the baseline IS the rotation
+                item.y1        = item.y0;
+                item.height_px = ps.size_px > 0.5f ? ps.size_px : 10.0f;
+
+                // Centred both ways, because a word inside a circle sits in the
+                // middle of it and the offset is what moves it off centre.
+                item.anchor = static_cast<std::uint8_t>(core::TextAnchor::MiddleCentre);
+                item.text.assign(ps.text);
+
+                out.texts.push_back(std::move(item));
+                ++out.text_count;
+                continue;
+            }
 
             // A plain fill with no colour paints nothing, so its rings are not
             // worth collecting; a pattern fill paints whatever its own ink is.

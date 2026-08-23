@@ -280,6 +280,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     std::vector<SymbolRecord> symbols;
     std::vector<SymbolLayerRecord> symbol_layers;
     std::vector<std::uint8_t> symbol_layer_flags;
+    std::vector<std::uint32_t> symbol_layer_text;
     symbols.reserve(doc.styles().size());
 
     for (std::size_t i = 0; i < doc.styles().size(); ++i) {
@@ -313,6 +314,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
             sl.image           = l.image;
             symbol_layers.push_back(sl);
             symbol_layer_flags.push_back(l.enabled ? 1u : 0u);
+            symbol_layer_text.push_back(pool.intern(l.text));
         }
     }
 
@@ -464,6 +466,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     blocks.push_back(column(kBlkSymbols, symbols));
     blocks.push_back(column(kBlkSymbolLayers, symbol_layers));
     blocks.push_back(column(kBlkSymbolLayerFlags, symbol_layer_flags));
+    blocks.push_back(column(kBlkSymbolLayerText, symbol_layer_text));
     blocks.push_back(column(kBlkImages, images));
     blocks.push_back(column(kBlkImageBytes, image_bytes));
 

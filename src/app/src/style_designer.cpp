@@ -52,7 +52,7 @@ struct TypeRow
     const char* label;
 };
 
-constexpr std::array<TypeRow, 11> kTypes{{
+constexpr std::array<TypeRow, 12> kTypes{{
     {SymbolLayerType::SimpleLine, "Çizgi"},
     {SymbolLayerType::MarkerLine, "İşaretçi çizgi"},
     {SymbolLayerType::HashLine, "Tarak çizgi"},
@@ -64,6 +64,7 @@ constexpr std::array<TypeRow, 11> kTypes{{
     {SymbolLayerType::CentroidFill, "Merkez işaretçi"},
     {SymbolLayerType::SimpleMarker, "İşaretçi"},
     {SymbolLayerType::RasterMarker, "Görsel işaretçi"},
+    {SymbolLayerType::TextMarker, "Yazı"},
 }};
 
 constexpr std::array<core::MarkerShape, 12> kShapes{
@@ -426,7 +427,20 @@ void StyleDesigner::showProvenance()
     // The citation, verbatim from the package. Not paraphrased and not shortened:
     // a regulatory statement carries its regulation, annex, madde and publication
     // date, and a shortened one is a different statement (CLAUDE.md 11.7).
-    provenance_->setText(QString::fromStdString(e->source_ref));
+    QString text = QString::fromStdString(e->source_ref);
+
+    // Said where the choice is made, not in a log. A row the package could not
+    // read with confidence must not look like one it could.
+    if (e->uncertain) {
+        QStringList why;
+        for (const std::string& reason : e->uncertain_reasons)
+            why << QString::fromStdString(reason);
+        text = tr("⚠ Bu satırın görünümü pakette kesin değil (%1).\n%2")
+                   .arg(why.join(QStringLiteral(", ")), text);
+    }
+    if (e->deprecated) text = tr("⚠ Yürürlükten kalkmış.\n") + text;
+
+    provenance_->setText(text);
     provenance_->setToolTip(QString::fromStdString(e->id));
 }
 
@@ -601,6 +615,11 @@ QWidget* StyleDesigner::buildProperties()
     angle_    = spin(359, 5);
     opacity_  = spin(255, 5);
 
+    text_              = new QLineEdit(box);
+    const QString hint = tr("Sembolün kendi yazısı, örnek: TAKS"); // ui-label
+    text_->setPlaceholderText(hint);
+    connect(text_, &QLineEdit::textEdited, this, [this](const QString&) { applyToSelected(); });
+
     sizeUnit_     = unitCombo();
     intervalUnit_ = unitCombo();
     spacingYUnit_ = unitCombo();
@@ -638,13 +657,16 @@ QWidget* StyleDesigner::buildProperties()
                                T::SimpleMarker};
     const std::vector<T> markers{T::MarkerLine, T::PointPatternFill, T::CentroidFill,
                                  T::SimpleMarker};
-    const std::vector<T> sized{T::MarkerLine,   T::HashLine,   T::PointPatternFill, T::CentroidFill,
-                               T::SimpleMarker, T::RasterFill, T::RasterMarker,     T::RasterLine};
+    const std::vector<T> sized{T::MarkerLine,   T::HashLine,     T::PointPatternFill,
+                               T::CentroidFill, T::SimpleMarker, T::RasterFill,
+                               T::RasterMarker, T::RasterLine,   T::TextMarker};
     const std::vector<T> spaced{T::MarkerLine, T::HashLine, T::LinePatternFill, T::PointPatternFill,
                                 T::RasterLine};
     const std::vector<T> angled{T::MarkerLine,       T::HashLine,     T::LinePatternFill,
                                 T::PointPatternFill, T::SimpleMarker, T::RasterFill};
 
+    addProperty(form, tr("Yazı"), text_, nullptr, {T::TextMarker});
+    addProperty(form, tr("Yazı rengi"), stroke_, nullptr, {T::TextMarker});
     addProperty(form, tr("Çizgi rengi"), stroke_, nullptr, strokes);
     addProperty(form, tr("Çizgi kalınlığı (µm)"), width_, nullptr, strokes);
     addProperty(form, tr("Dolgu rengi"), fill_, nullptr, fills);
@@ -652,7 +674,7 @@ QWidget* StyleDesigner::buildProperties()
     addProperty(form, tr("Aralık"), interval_, intervalUnit_, spaced);
     addProperty(form, tr("İkinci eksen"), spacingY_, spacingYUnit_, {T::PointPatternFill});
     addProperty(form, tr("Kaydırma"), offset_, offsetUnit_,
-                {T::SimpleLine, T::MarkerLine, T::HashLine, T::RasterLine});
+                {T::SimpleLine, T::MarkerLine, T::HashLine, T::RasterLine, T::TextMarker});
     addProperty(form, tr("Açı (°)"), angle_, nullptr, angled);
     addProperty(form, tr("Şekil"), shape_, nullptr, markers);
     addProperty(form, tr("Yerleşim"), placement_, nullptr, {T::MarkerLine, T::HashLine});
@@ -755,6 +777,7 @@ void StyleDesigner::loadSelected()
         show_colour(stroke_, sl.look.rgba);
         show_colour(fill_, sl.look.fill_rgba);
 
+        text_->setText(QString::fromStdString(sl.text));
         width_->setValue(sl.look.width_um);
         size_->setValue(sl.size.value);
         interval_->setValue(sl.interval.value);
@@ -798,6 +821,7 @@ void StyleDesigner::applyToSelected()
     sl.spacing_y = core::Measure{spacingY_->value(), kUnits[at(spacingYUnit_->currentIndex())]};
     sl.offset    = core::Measure{offset_->value(), kUnits[at(offsetUnit_->currentIndex())]};
 
+    sl.text           = text_->text().toStdString();
     sl.look.width_um  = width_->value();
     sl.look.src_width = core::Source::Explicit;
     sl.angle_udeg     = angle_->value() * 1000000;
@@ -884,6 +908,8 @@ void StyleDesigner::applyToDocument()
             QStringLiteral(" sekil=%1").arg(QString::fromUtf8(core::marker_shape_name(sl.shape)));
         line += QStringLiteral(" yerlesim=%1")
                     .arg(QString::fromUtf8(core::marker_placement_name(sl.placement)));
+        if (!sl.text.empty())
+            line += QStringLiteral(" yazi=\"%1\"").arg(QString::fromStdString(sl.text));
 
         controller_.runLine(line, command::Origin::Gui);
     }

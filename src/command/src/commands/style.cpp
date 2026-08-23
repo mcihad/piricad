@@ -443,6 +443,10 @@ Task<void> run(Context& ctx)
         described.angle_udeg = static_cast<std::int32_t>(v.as_int());
         has_layer            = true;
     }
+    if (const Value v = ctx.argument("yazi"); !v.empty()) {
+        described.text = v.as_text();
+        has_layer      = true;
+    }
     if (const Value v = ctx.argument("saydamlik"); !v.empty()) {
         described.opacity = static_cast<std::uint8_t>(std::clamp<std::int64_t>(v.as_int(), 0, 255));
         has_layer         = true;
@@ -606,6 +610,8 @@ PIRICAD_COMMAND(style)
                 Param::integer("saydamlik", Arity::optional(),
                                "Katman saydamlığı 0-255; 255 tam opak"),
                 Param::text("desen", Arity::optional(), "Çizgi deseni tablosundaki satır"),
+                Param::text("yazi", Arity::optional(),
+                            "yazi-isaretci katmanının yazdığı sabit metin"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

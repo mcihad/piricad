@@ -102,13 +102,15 @@ std::size_t StyleLibrary::add_catalog(const StyleCatalog& catalog, const ImageRe
     std::size_t added = 0;
     for (const StyleEntry& row : catalog.entries()) {
         LibraryEntry entry;
-        entry.id         = row.id;
-        entry.label      = row.label;
-        entry.group      = row.group;
-        entry.tags       = row.tags;
-        entry.source_ref = row.source_ref;
-        entry.scale      = row.scale;
-        entry.deprecated = row.deprecated;
+        entry.id                = row.id;
+        entry.label             = row.label;
+        entry.group             = row.group;
+        entry.tags              = row.tags;
+        entry.source_ref        = row.source_ref;
+        entry.scale             = row.scale;
+        entry.deprecated        = row.deprecated;
+        entry.uncertain         = row.uncertain;
+        entry.uncertain_reasons = row.uncertain_reasons;
 
         // The SAME builder `STİL` uses, so a gallery thumbnail is a prediction of
         // what applying the row will draw rather than an approximation of it.
@@ -239,6 +241,9 @@ std::uint64_t StyleLibrary::content_hash() const
         h = fnv1a_int(static_cast<std::int64_t>(e.scale.low), h);
         h = fnv1a_int(static_cast<std::int64_t>(e.scale.high), h);
         h = fnv1a_int(e.deprecated ? 1 : 0, h);
+        h = fnv1a_int(e.uncertain ? 1 : 0, h);
+        for (const std::string& why : e.uncertain_reasons)
+            h = fnv1a(why, h);
     }
     return h;
 }

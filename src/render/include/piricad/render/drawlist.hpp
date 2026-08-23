@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace piricad::render {
@@ -71,6 +72,14 @@ struct PassStyle
     /// Cache key for the decoded form of `image`, 0 when there is none. See
     /// `core::ImageStore::content_key` for why it is not an address.
     std::uint64_t image_key{0};
+
+    /// What a `TextMarker` writes, BORROWED from the symbol for this frame.
+    ///
+    /// A view rather than a copy, for the same reason `image` is one: the pass
+    /// table is rebuilt every frame and the words have not changed. Valid exactly
+    /// as long as the frame, because render never mutates the document
+    /// (render.md P7) and the draw list is consumed inside the same paint.
+    std::string_view text;
 
     /// Whether this pass wants the geometry as a line, as a face, or both.
     ///

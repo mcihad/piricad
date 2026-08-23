@@ -46,6 +46,24 @@ ETİKET katman=<ad> bicim=<biçim> [hedef=<ad>] [yukseklik=<tam sayı>]
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
+### Satır kırma
+
+`\n` iki karakteri satır kırar, çünkü MPYY'nin `yapılaşma koşulu` gösterimi iki
+satırdır: çizginin üstünde TAKS değeri, altında KAKS değeri.
+
+```
+ETİKET katman=PARSEL bicim="{taks}\n{kaks}" yukseklik=3800
+```
+
+Betikte gerçek satır sonu yazılabildiği için kaçışa gerek yoktur; bu, satır
+sonunun yazılamadığı tek yer olan komut satırı içindir.
+
+**Tek kaçış, başka yok.** İkincisi bir dilbilgisi olmaya başlardı.
+
+Satırlar noktanın **etrafına** yığılır: iki satırlı bir etiket noktanın altına
+sarkmaz, ortasında durur. Daireyi ve ortadaki çizgiyi katmanın kendi sembolü
+çizer; bkz. [STİL](style.md).
+
 ### Biçim bir dil değildir
 
 `{sutun}` o sütunun değeriyle değişir ve **başka hiçbir şey olmaz**: işleç yok,

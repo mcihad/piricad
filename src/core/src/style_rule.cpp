@@ -12,49 +12,54 @@ namespace {
 // Every key this file reads is a STRUCTURAL key of the package format, never a
 // regulatory identifier: the rows, their codes and their colours arrive as data
 // (CLAUDE.md 5.13). Collecting them here keeps that claim checkable at a glance.
-constexpr const char* kKeyId         = "id";
-constexpr const char* kKeyVersion    = "package_version";
-constexpr const char* kKeySource     = "source";
-constexpr const char* kKeyPublished  = "published";
-constexpr const char* kKeyLicence    = "licence";
-constexpr const char* kKeyEntries    = "stiller";
-constexpr const char* kKeyRules      = "kurallar";
-constexpr const char* kKeyDashTable  = "cizgi_desenleri";
-constexpr const char* kKeyHatchTable = "tarama_desenleri";
-constexpr const char* kKeyIndex      = "indeks";
-constexpr const char* kKeyLabel      = "ad";
-constexpr const char* kKeyRef        = "kaynak";
-constexpr const char* kKeyRetired    = "deprecated";
-constexpr const char* kKeyStroke     = "cizgi";
-constexpr const char* kKeyFill       = "dolgu";
-constexpr const char* kKeyColour     = "renk";
-constexpr const char* kKeyWidth      = "kalinlik_um";
-constexpr const char* kKeyDash       = "desen";
-constexpr const char* kKeyHatch      = "tarama";
-constexpr const char* kKeySymbol     = "simge";
-constexpr const char* kKeyAnnex      = "ek";
-constexpr const char* kKeySection    = "bolum";
-constexpr const char* kKeyPlanTypes  = "plan_turleri";
-constexpr const char* kKeyGroup      = "grup";
-constexpr const char* kKeyImages     = "gorseller";
-constexpr const char* kKeyImage      = "gorsel";
-constexpr const char* kKeyImageFile  = "dosya";
-constexpr const char* kKeyImageLine  = "cizgi_tipi";
-constexpr const char* kKeyImageHatch = "tarama";
-constexpr const char* kKeyImageGlyph = "sembol";
-constexpr const char* kKeyOrder      = "sira";
-constexpr const char* kKeyScale      = "olcek";
-constexpr const char* kKeyScaleLow   = "en_kucuk_payda";
-constexpr const char* kKeyScaleHigh  = "en_buyuk_payda";
-constexpr const char* kKeyEntryRef   = "stil";
-constexpr const char* kKeyConditions = "kosullar";
-constexpr const char* kKeyField      = "alan";
-constexpr const char* kKeyEquals     = "esittir";
-constexpr const char* kKeyOneOf      = "biri";
-constexpr const char* kKeyRange      = "aralik";
-constexpr const char* kKeyRangeLow   = "en_az";
-constexpr const char* kKeyRangeHigh  = "en_cok";
-constexpr const char* kKeyPresent    = "var";
+constexpr const char* kKeyId          = "id";
+constexpr const char* kKeyVersion     = "package_version";
+constexpr const char* kKeySource      = "source";
+constexpr const char* kKeyPublished   = "published";
+constexpr const char* kKeyLicence     = "licence";
+constexpr const char* kKeyEntries     = "stiller";
+constexpr const char* kKeyRules       = "kurallar";
+constexpr const char* kKeyDashTable   = "cizgi_desenleri";
+constexpr const char* kKeyHatchTable  = "tarama_desenleri";
+constexpr const char* kKeyIndex       = "indeks";
+constexpr const char* kKeyLabel       = "ad";
+constexpr const char* kKeyRef         = "kaynak";
+constexpr const char* kKeyRetired     = "deprecated";
+constexpr const char* kKeyStroke      = "cizgi";
+constexpr const char* kKeyFill        = "dolgu";
+constexpr const char* kKeyColour      = "renk";
+constexpr const char* kKeyWidth       = "kalinlik_um";
+constexpr const char* kKeyDash        = "desen";
+constexpr const char* kKeyHatch       = "tarama";
+constexpr const char* kKeySymbol      = "simge";
+constexpr const char* kKeyAnnex       = "ek";
+constexpr const char* kKeySection     = "bolum";
+constexpr const char* kKeyPlanTypes   = "plan_turleri";
+constexpr const char* kKeyGroup       = "grup";
+constexpr const char* kKeyImages      = "gorseller";
+constexpr const char* kKeyImage       = "gorsel";
+constexpr const char* kKeyImageFile   = "dosya";
+constexpr const char* kKeyImageLine   = "cizgi_tipi";
+constexpr const char* kKeyImageHatch  = "tarama";
+constexpr const char* kKeyImageGlyph  = "sembol";
+constexpr const char* kKeyClear       = "seffaf";
+constexpr const char* kKeyOpacityPct  = "saydamlik_yuzde";
+constexpr const char* kKeyGlyphColour = "simge_renk";
+constexpr const char* kKeyUncertain   = "belirsiz";
+constexpr const char* kKeyWhy         = "belirsiz_nedeni";
+constexpr const char* kKeyOrder       = "sira";
+constexpr const char* kKeyScale       = "olcek";
+constexpr const char* kKeyScaleLow    = "en_kucuk_payda";
+constexpr const char* kKeyScaleHigh   = "en_buyuk_payda";
+constexpr const char* kKeyEntryRef    = "stil";
+constexpr const char* kKeyConditions  = "kosullar";
+constexpr const char* kKeyField       = "alan";
+constexpr const char* kKeyEquals      = "esittir";
+constexpr const char* kKeyOneOf       = "biri";
+constexpr const char* kKeyRange       = "aralik";
+constexpr const char* kKeyRangeLow    = "en_az";
+constexpr const char* kKeyRangeHigh   = "en_cok";
+constexpr const char* kKeyPresent     = "var";
 
 /// A named table of symbolic indices — the dash table and the hatch table have
 /// the same shape, and both exist so that a catalogue row can say `"surekli"`
@@ -502,6 +507,24 @@ Result<StyleEntry> parse_entry(const Json& j, const AnnexNames& annexes, const I
     if (const Json* v = j.find(kKeyGroup); v != nullptr && v->is_string())
         entry.tags.push_back(v->as_string());
 
+    // The colour the annex prints its GLYPH in, which may differ from the area's.
+    // Kept as the stroke colour, because a glyph is drawn with the stroke.
+    if (const Json* glyph = j.find(kKeyGlyphColour); glyph != nullptr && glyph->is_string()) {
+        auto rgba = parse_rgba(glyph->as_string());
+        if (!rgba) return rgba.error();
+        entry.appearance.rgba       = rgba.value();
+        entry.appearance.src_colour = Source::Explicit;
+    }
+
+    // Carried, never smoothed over. The package flags a row whose gösterim columns
+    // it could not read; offering it as certain would be this program asserting
+    // something the regulation did not print.
+    if (const Json* flag = j.find(kKeyUncertain); flag != nullptr && flag->is_bool())
+        entry.uncertain = flag->as_bool();
+    if (const Json* why = j.find(kKeyWhy); why != nullptr && why->is_array())
+        for (const Json& reason : why->as_array())
+            if (reason.is_string()) entry.uncertain_reasons.push_back(reason.as_string());
+
     // ---- the pictures this row was published with ----
     if (const Json* pictures = j.find(kKeyImage); pictures != nullptr && pictures->is_object()) {
         entry.image_line   = first_image(*pictures, images, kKeyImageLine);
@@ -550,6 +573,28 @@ Result<StyleEntry> parse_entry(const Json& j, const AnnexNames& annexes, const I
             entry.appearance.fill_rgba = rgba.value();
             entry.appearance.src_fill  = Source::Explicit;
         }
+        // A row the annex prints WITHOUT a fill is transparent, not white: white is
+        // a colour a plan sheet uses and would hide what is under the area.
+        if (const Json* clear = fill->find(kKeyClear);
+            clear != nullptr && clear->is_bool() && clear->as_bool()) {
+            entry.appearance.fill_rgba = 0;
+            entry.appearance.src_fill  = Source::Explicit;
+        }
+
+        // A declared percentage multiplies into the fill's alpha. The package
+        // states it as a whole percent, which is how the annex writes it.
+        if (const Json* percent = fill->find(kKeyOpacityPct);
+            percent != nullptr && percent->is_number() && entry.appearance.fill_rgba != 0) {
+            const double value = percent->as_double(100.0);
+            const auto scaled  = static_cast<std::uint32_t>((entry.appearance.fill_rgba >> 24) *
+                                                            (value < 0     ? 0
+                                                             : value > 100 ? 100
+                                                                           : value) /
+                                                            100.0);
+            entry.appearance.fill_rgba =
+                (entry.appearance.fill_rgba & 0x00FFFFFFu) | (scaled << 24);
+        }
+
         if (const Json* hatch = fill->find(kKeyHatch); hatch != nullptr) {
             auto resolved = hatches.resolve(*hatch, row + " '" + kKeyHatch + "'");
             if (!resolved) return resolved.error();
@@ -767,6 +812,9 @@ std::uint64_t StyleCatalog::content_hash() const
         h = fnv1a(e.image_line, h);
         h = fnv1a(e.image_hatch, h);
         h = fnv1a(e.image_symbol, h);
+        h = fnv1a_int(e.uncertain ? 1 : 0, h);
+        for (const std::string& why : e.uncertain_reasons)
+            h = fnv1a(why, h);
         h = fnv1a_int(static_cast<std::int64_t>(e.appearance.fill_rgba), h);
         h = fnv1a_int(e.appearance.hatch, h);
         h = fnv1a_int(e.appearance.z_order, h);

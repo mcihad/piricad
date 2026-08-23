@@ -34,6 +34,7 @@
 #include <QPen>
 #include <QRectF>
 #include <QString>
+#include <QStringList>
 #include <QTransform>
 
 #include <algorithm>
@@ -281,6 +282,11 @@ private:
                 drawRasterAlong(painter, stroke, ps, cx, cy);
             break;
         case SymbolLayerType::RasterLine: drawRasterAlong(painter, stroke, ps, cx, cy); break;
+        case SymbolLayerType::TextMarker:
+            // Nothing here: the scene builder turned it into a TextItem, so it is
+            // drawn with the captions, over every fill and stroke. A word inside a
+            // gösterim that a later pass could paint over is a word nobody reads.
+            break;
         }
     }
 
@@ -382,11 +388,18 @@ private:
 
         // Anchored to the world grid rather than to the bounding box, so the
         // glyphs do not crawl across the face as the user pans.
-        const double x0 = std::floor(box.left() / step_x) * step_x;
-        const double y0 = std::floor(box.top() / step_y) * step_y;
-        for (double y = y0; y <= box.bottom() + step_y; y += step_y)
-            for (double x = x0; x <= box.right() + step_x; x += step_x)
-                painter.drawPath(markerPath(ps.shape, size).translated(x, y));
+        const double x0      = std::floor(box.left() / step_x) * step_x;
+        const double y0      = std::floor(box.top() / step_y) * step_y;
+        const double degrees = static_cast<double>(ps.angle_udeg) / 1'000'000.0;
+        for (double y = y0; y <= box.bottom() + step_y; y += step_y) {
+            for (double x = x0; x <= box.right() + step_x; x += step_x) {
+                painter.save();
+                painter.translate(x, y);
+                painter.rotate(degrees);
+                painter.drawPath(markerPath(ps.shape, size));
+                painter.restore();
+            }
+        }
 
         painter.setBrush(Qt::NoBrush);
         painter.restore();
@@ -417,8 +430,15 @@ private:
                 min_y          = std::min(min_y, y);
                 max_y          = std::max(max_y, y);
             }
-            painter.drawPath(markerPath(ps.shape, size)
-                                 .translated((min_x + max_x) * 0.5, (min_y + max_y) * 0.5));
+            // ROTATED, which it was not: the angle was read into the pass and then
+            // ignored here, so a `cizik` asked to lie ACROSS a circle — the rule in
+            // MPYY's `yapılaşma koşulu` gösterim — stayed upright and cut the two
+            // numbers in half instead of separating them.
+            painter.save();
+            painter.translate((min_x + max_x) * 0.5, (min_y + max_y) * 0.5);
+            painter.rotate(static_cast<double>(ps.angle_udeg) / 1'000'000.0);
+            painter.drawPath(markerPath(ps.shape, size));
+            painter.restore();
             offset += run;
         }
         painter.setBrush(Qt::NoBrush);
@@ -793,6 +813,11 @@ private:
 
     /// Captions last, over both fills and strokes: a parcel number under its own
     /// boundary is a parcel number nobody can read.
+    ///
+    /// MULTI-LINE. A newline stacks the lines centred on the baseline, which is
+    /// what MPYY's `yapılaşma koşulu` gösterim needs: a circle with TAKS over a
+    /// rule and KAKS under it is two lines and a stroke, not one string with a
+    /// slash in it.
     static void drawTexts(QPainter& painter, const render::DrawList& list, double cx, double cy)
     {
         for (const auto& item : list.texts) {
@@ -814,29 +839,43 @@ private:
             painter.setFont(font);
             painter.setPen(from_rgba(item.rgba));
 
-            const QString label = QString::fromStdString(item.text);
             const QFontMetricsF metrics(font);
-            const double advance = metrics.horizontalAdvance(label);
+            const QStringList lines =
+                QString::fromStdString(item.text).split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+            if (lines.isEmpty()) continue;
+
+            // A quarter of the height between lines: tight enough that two numbers
+            // read as one fraction, loose enough that they do not touch.
+            const double step = metrics.height() * 1.25;
 
             painter.save();
             painter.translate(start);
             painter.rotate(degrees);
 
-            // The anchor decides where the baseline sits under the glyphs.
-            // Measured from the real font rather than from the advance guess the
-            // command used for the bounding box.
-            double shift_x = 0.0;
-            double shift_y = 0.0;
-            switch (item.anchor) {
-            case 1: shift_x = -advance * 0.5; break; // baseline centre
-            case 2: shift_x = -advance; break;       // baseline right
-            case 3:                                  // middle centre
-                shift_x = -advance * 0.5;
-                shift_y = metrics.capHeight() * 0.5;
-                break;
-            default: break; // baseline left
+            for (int line = 0; line < lines.size(); ++line) {
+                const double advance = metrics.horizontalAdvance(lines[line]);
+
+                // The anchor decides where the baseline sits under the glyphs.
+                // Measured from the real font rather than from the advance guess
+                // the command used for the bounding box.
+                double shift_x = 0.0;
+                double shift_y = 0.0;
+                switch (item.anchor) {
+                case 1: shift_x = -advance * 0.5; break; // baseline centre
+                case 2: shift_x = -advance; break;       // baseline right
+                case 3:                                  // middle centre
+                    shift_x = -advance * 0.5;
+                    shift_y = metrics.capHeight() * 0.5;
+                    break;
+                default: break; // baseline left
+                }
+
+                // Stacked around the anchor, so a two-line label sits centred on
+                // the point rather than hanging below it.
+                shift_y += (line - (static_cast<int>(lines.size()) - 1) / 2.0) * step;
+
+                painter.drawText(QPointF(shift_x, shift_y), lines[line]);
             }
-            painter.drawText(QPointF(shift_x, shift_y), label);
             painter.restore();
         }
     }
