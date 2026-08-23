@@ -35,15 +35,8 @@
 #   * the P4 signature test reads one declaration line, not a continuation.
 #
 # ---------------------------------------------------------------------------
-# PHASE-0 CARVE-OUT. One file predates model.md and is superseded by it. It is
-# named here with its removal condition so the exemption cannot go unnoticed; the
-# gate reports it on every run. Nothing else may be added without a matching row
-# in CLAUDE.md Article 8.
-#
-#   src/core/src/log.cpp
-#       A mutable process-wide sink and level (P10). core.md P9 bans a logging sink
-#       in core outright; dies when logging moves to spdlog outside /src/core
-#       (CLAUDE.md Article 2.7, 8.6).
+# NO PHASE-0 CARVE-OUT REMAINS. Nothing may be added without a matching row in
+# CLAUDE.md Article 8.
 #
 # REMOVED, because the condition in their Article 8 row was met:
 #   document.hpp        rebuilt on RingGeometry, StyleTable, LayerTable and the
@@ -58,7 +51,6 @@ fail=0
 core_inc="$root/src/core/include/piricad/core"
 
 scene_file="$root/src/render/src/scene.cpp"
-legacy_log="$root/src/core/src/log.cpp"
 
 # A shell gate cannot parse C++, but it can refuse to read a comment as code.
 # Strips a // tail; a line that is nothing but comment comes back empty.
@@ -181,7 +173,6 @@ ns_var='^[A-Za-z_][A-Za-z0-9_:<>,*&[:space:]]*[[:space:]]+[A-Za-z_][A-Za-z0-9_]*
 ns_keyword='^[[:space:]]*(using|namespace|struct|class|enum|template|typedef|friend|return|extern|export|import|public|private|protected)\b'
 
 while IFS= read -r f; do
-    [[ "$f" == "$legacy_log" ]] && continue
     while IFS= read -r hit; do
         ln="${hit%%:*}"
         code="$(strip "${hit#*:}")"
@@ -276,6 +267,5 @@ done < <(find "$root/src/core" -name '*.hpp' | sort)
 
 if [[ $fail -eq 0 ]]; then
     echo "model: OK — no floating-point or *_px field in a stored record, no vptr/std::function/owning pointer in an entity, style, layer or attribute record, no dense slot in a persistence or selection signature, no mutable global in /src/core, cull block closed to the R6 columns (enclosing-block heuristic), no (start, count) vertex run outside RingGeometry"
-    echo "model: note — 1 Phase-0 carve-out exempted with its removal condition in this script's header: core/src/log.cpp"
 fi
 exit $fail

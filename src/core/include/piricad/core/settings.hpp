@@ -29,6 +29,7 @@
 #include <array>
 #include <cstdint>
 #include <limits>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -215,6 +216,16 @@ inline constexpr std::uint32_t kNoSetting = 0xFFFFFFFFu;
 class SettingCatalog
 {
 public:
+    /// Records a registration failure, and is the ONLY reason this object is not
+    /// const from birth. core.md P9 bans a logging sink in core, so a built-in
+    /// setting that will not register cannot be whispered to a stream at
+    /// static-init time; it is kept here, inside the object that failed to take
+    /// it, where a test can assert the list is empty.
+    void record_failure(std::string message);
+
+    /// Empty in a correct build.
+    std::span<const std::string> failures() const noexcept { return failures_; }
+
     /// Rejects an empty id, a duplicate id or alias, an Enum without values, a
     /// default whose type disagrees with the declaration, and a default outside the
     /// declared range — a spec that cannot be satisfied is a defect, not a warning.
@@ -233,6 +244,7 @@ public:
     std::string suggest(std::string_view typed) const;
 
 private:
+    std::vector<std::string> failures_;
     // Three parallel alias arrays rather than a hash map: the catalogue is O(tens),
     // a linear scan beats a hash lookup at this size, and iteration order is fixed
     // instead of depending on the hash function (core.md P11).
@@ -245,6 +257,12 @@ private:
 /// The built-in catalogue. Built once, never mutated, so it is not the
 /// "process-wide mutable registry" core.md P8 bans — there is nothing to mutate.
 const SettingCatalog& builtin_settings();
+
+/// Anything that failed to register, empty in a correct build. Recorded rather
+/// than logged: core.md P9 bans a logging sink here, and a built-in setting that
+/// will not register is a build defect a test should fail on, not a line in a
+/// stream nobody is reading at static-init time.
+std::span<const std::string> builtin_setting_failures();
 
 // ---------------------------------------------------- value conversion ------
 

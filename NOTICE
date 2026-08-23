@@ -33,6 +33,18 @@ Currently linked
                           Header-only, linked PRIVATE into piricad_core so the
                           facade is what the rest of the product sees.
 
+  spdlog                  MIT                   v1.14.1   27cb4c76
+  fmt                     MIT                   11.0.2    0c9fce2f
+                          Logging, behind piricad/command/log.hpp. It lives in
+                          /src/command and not /src/core because core.md P9 bans
+                          a logging sink in core outright; that move is what
+                          CLAUDE.md Article 8.4 named as its removal condition,
+                          and the row is now deleted. fmt is taken as an external
+                          dependency of spdlog rather than its bundled copy: two
+                          copies of fmt in one binary is an ODR violation that
+                          surfaces as a crash in a formatting call nobody touched.
+                          Both linked PRIVATE into piricad_command.
+
   GDAL/OGR                MIT (X11) + others    >= 3.8   (PIRICAD_WITH_GDAL)
                           Vector format I/O for /src/io: DXF and GeoPackage
                           today, from the allow-list in
@@ -82,10 +94,6 @@ recorded as SHAs (CLAUDE.md 5.12).
                           (piricad.md §9.11).
   Google Benchmark        Apache 2.0            v1.9.1    c58e6d07
                           The §10.1 budget harness.
-  fmt                     MIT                   11.0.2    0c9fce2f
-                          Formatting.
-  spdlog                  MIT                   v1.14.1   27cb4c76
-                          Asynchronous logging.
   xxHash                  BSD-2-Clause          v0.8.3    e626a72b
                           Fast hashing.
   Clipper2                BSL-1.0               1.4.0     736ddb0b

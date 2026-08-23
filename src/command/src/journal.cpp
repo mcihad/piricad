@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/command/journal.hpp"
 
-#include "piricad/core/log.hpp"
+#include "piricad/command/log.hpp"
 
 #include <fstream>
 #include <sstream>
@@ -158,7 +158,7 @@ void Journal::writer_loop()
         out.open(sink_path_, std::ios::out | std::ios::app | std::ios::binary);
     }
     if (!out) {
-        core::log_error("journal: sink could not be opened for writing");
+        log_error("journal: sink could not be opened for writing");
         return;
     }
 

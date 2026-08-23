@@ -6,7 +6,7 @@
 // command means adding one factory and one line here. There is no other list.
 #include "piricad/command/registry.hpp"
 
-#include "piricad/core/log.hpp"
+#include "piricad/command/log.hpp"
 
 namespace piricad::command {
 
@@ -45,7 +45,7 @@ void register_builtin_commands(Registry& r)
 
 #define PIRICAD_REGISTER(sym)                                                                      \
     if (auto st = r.add(piricad_command_##sym()); !st)                                             \
-        core::log_error("command registration failed: " + st.error().message);
+        log_error("command registration failed: " + st.error().message);
     PIRICAD_BUILTIN_COMMANDS(PIRICAD_REGISTER)
 #undef PIRICAD_REGISTER
 }

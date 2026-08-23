@@ -114,3 +114,26 @@ if(PIRICAD_WITH_JSON)
         PACKAGE nlohmann_json
         VERSION 3.11.0)
 endif()
+
+option(PIRICAD_WITH_SPDLOG "Use spdlog for logging" ON)
+
+if(PIRICAD_WITH_SPDLOG)
+    # fmt as an external dependency of spdlog rather than its bundled copy: two
+    # copies of fmt in one binary is the ODR violation that shows up as a crash in
+    # a formatting call nobody changed.
+    set(SPDLOG_FMT_EXTERNAL ON CACHE INTERNAL "")
+    set(SPDLOG_BUILD_EXAMPLE OFF CACHE INTERNAL "")
+    set(SPDLOG_INSTALL OFF CACHE INTERNAL "")
+    set(FMT_INSTALL OFF CACHE INTERNAL "")
+    set(FMT_TEST OFF CACHE INTERNAL "")
+    piricad_dependency(fmt
+        REPO ${PIRICAD_DEP_FMT_REPO}
+        SHA  ${PIRICAD_DEP_FMT_SHA}
+        PACKAGE fmt
+        VERSION 10.0)
+    piricad_dependency(spdlog
+        REPO ${PIRICAD_DEP_SPDLOG_REPO}
+        SHA  ${PIRICAD_DEP_SPDLOG_SHA}
+        PACKAGE spdlog
+        VERSION 1.12)
+endif()

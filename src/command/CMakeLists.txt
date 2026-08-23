@@ -8,6 +8,7 @@ add_library(piricad_command STATIC
     src/context.cpp
     src/input.cpp
     src/journal.cpp
+    src/log.cpp
     src/parser.cpp
     src/registry.cpp
     src/selection.cpp
@@ -38,6 +39,13 @@ target_link_libraries(piricad_command
 )
 find_package(Threads REQUIRED)
 target_link_libraries(piricad_command PUBLIC Threads::Threads)
+
+# PRIVATE: spdlog is an implementation detail of command/log.cpp. The facade in
+# command/log.hpp is what the rest of the product sees, so swapping the backend
+# again touches one file (Article 9).
+if(PIRICAD_WITH_SPDLOG)
+    target_link_libraries(piricad_command PRIVATE spdlog::spdlog)
+endif()
 
 add_library(PiriCAD::command ALIAS piricad_command)
 

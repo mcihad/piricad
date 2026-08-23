@@ -2,7 +2,6 @@
 // PiriCAD — core: settings.
 #include "piricad/core/settings.hpp"
 
-#include "piricad/core/log.hpp"
 #include "piricad/core/text.hpp"
 
 #include <algorithm>
@@ -772,6 +771,11 @@ PIRICAD_SETTING(izgaraya_yakala)
     };
 }
 
+void SettingCatalog::record_failure(std::string message)
+{
+    failures_.push_back(std::move(message));
+}
+
 const SettingCatalog& builtin_settings()
 {
     // Built once and never mutated. It describes the product, not the state of a
@@ -779,13 +783,17 @@ const SettingCatalog& builtin_settings()
     static const SettingCatalog catalogue = [] {
         SettingCatalog c;
 #define PIRICAD_REGISTER(sym)                                                                      \
-    if (auto st = c.add(piricad_setting_##sym()); !st)                                             \
-        log_error("setting registration failed: " + st.error().message);
+    if (auto st = c.add(piricad_setting_##sym()); !st) c.record_failure(st.error().message);
         PIRICAD_BUILTIN_SETTINGS(PIRICAD_REGISTER)
 #undef PIRICAD_REGISTER
         return c;
     }();
     return catalogue;
+}
+
+std::span<const std::string> builtin_setting_failures()
+{
+    return builtin_settings().failures();
 }
 
 #undef PIRICAD_BUILTIN_SETTINGS

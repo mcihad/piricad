@@ -3,8 +3,8 @@
 
 #include <cmath>
 
+#include "piricad/command/log.hpp"
 #include "piricad/command/parser.hpp"
-#include "piricad/core/log.hpp"
 #include "piricad/core/text.hpp"
 
 #include <chrono>
@@ -189,7 +189,7 @@ void Bus::echo(std::string_view message) const
     if (on_echo)
         on_echo(message);
     else
-        core::log_info(message);
+        log_info(message);
 }
 
 core::Result<DispatchResult> Bus::dispatch(const Invocation& inv)

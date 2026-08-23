@@ -9,7 +9,6 @@ add_library(piricad_core STATIC
     src/geometry.cpp
     src/json.cpp
     src/layer.cpp
-    src/log.cpp
     src/pick.cpp
     src/settings.cpp
     src/snap.cpp

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // PiriCAD — application entry point.
 #include "piricad/app/main_window.hpp"
-#include "piricad/core/log.hpp"
+#include "piricad/command/log.hpp"
 
 #include <QApplication>
 #include <QCommandLineParser>
@@ -42,9 +42,9 @@ int main(int argc, char** argv)
     parser.addOption(scriptOption);
     parser.process(app);
 
-    piricad::core::set_log_sink([](piricad::core::LogLevel level, std::string_view message) {
+    piricad::command::set_log_sink([](piricad::command::LogLevel level, std::string_view message) {
         // Diagnostics; see core/log.cpp for why the result is discarded.
-        (void)std::fprintf(level >= piricad::core::LogLevel::Warn ? stderr : stdout,
+        (void)std::fprintf(level >= piricad::command::LogLevel::Warn ? stderr : stdout,
                            "[piricad] %.*s\n", static_cast<int>(message.size()), message.data());
     });
 
