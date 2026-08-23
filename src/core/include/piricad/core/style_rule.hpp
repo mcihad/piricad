@@ -180,6 +180,22 @@ struct StyleEntry
     /// word having to become part of the tree.
     std::vector<std::string> tags;
 
+    /// Package-relative paths to the pictures the regulation PUBLISHED for this
+    /// row, empty when it published none of that kind.
+    ///
+    /// MPYY's EK-1 annexes are Word documents and their symbology is pictures: a
+    /// hatch for `orman`, a glyph for `cami`, a line type for `il sınırı`. The
+    /// package lists them by id and maps each id to a file beside it; these are
+    /// those files, resolved relative to the package.
+    ///
+    /// A row may list SEVERAL pictures of one kind — variants of the same
+    /// gösterim. The FIRST is taken, because it is the one the annex prints first
+    /// and choosing among the rest is a regulatory judgement a program does not
+    /// get to make (CLAUDE.md 6.11).
+    std::string image_line;   ///< `gorsel/cizgi_tipi` — repeated along the line
+    std::string image_hatch;  ///< `gorsel/tarama` — tiled into the interior
+    std::string image_symbol; ///< `gorsel/sembol` — placed as a glyph
+
     Appearance appearance{}; ///< what the regulation says this looks like
     ScaleWindow scale{};     ///< the scales it applies at; unbounded by default
     bool deprecated{false};  ///< retained, still loadable, never silently dropped (R5)

@@ -64,6 +64,12 @@ public:
     /// that uses neither.
     StyleId intern_symbol(const core::Symbol& sym);
 
+    /// Adds a picture to the drawing. Additive only, like style interning: an id
+    /// handed out stays valid for the document's lifetime, so there is nothing to
+    /// undo and no inverse Op is recorded.
+    core::Result<core::ImageId> intern_image(std::span<const std::byte> bytes,
+                                             std::string_view origin);
+
     Result<EntityId> add_polyline(LayerId layer, std::span<const Point2> pts);
 
     /// A face: one exterior ring, optionally with holes, optionally multipart.
@@ -117,8 +123,8 @@ private:
 
 struct UndoEntry
 {
-    std::string label;
-    std::vector<Op> inverse;
+    std::string label;       ///< what the user reads on the GERİAL menu item
+    std::vector<Op> inverse; ///< the Ops that undo the command, newest last
 };
 
 class UndoStack

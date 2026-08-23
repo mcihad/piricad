@@ -304,6 +304,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
             sl.cap             = static_cast<std::uint8_t>(l.cap);
             sl.join            = static_cast<std::uint8_t>(l.join);
             sl.opacity         = l.opacity;
+            sl.image           = l.image;
             symbol_layers.push_back(sl);
         }
     }
@@ -394,12 +395,36 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
 
     // ---- the document record ----
     DocumentRecord dr{};
-    dr.crs_string         = crs_id;
-    dr.catalog_string     = catalog_id;
-    dr.next_entity_key    = doc.keys().peek_entity();
-    dr.next_layer_key     = doc.keys().peek_layer();
-    dr.entity_count       = static_cast<std::uint64_t>(ents.size());
-    dr.layer_count        = static_cast<std::uint64_t>(layers.size());
+    dr.crs_string      = crs_id;
+    dr.catalog_string  = catalog_id;
+    dr.next_entity_key = doc.keys().peek_entity();
+    dr.next_layer_key  = doc.keys().peek_layer();
+    dr.entity_count    = static_cast<std::uint64_t>(ents.size());
+    dr.layer_count     = static_cast<std::uint64_t>(layers.size());
+    // ---- embedded pictures ----
+    //
+    // MPYY publishes its symbology as images, so a drawing that uses a gösterim
+    // carries the picture rather than a path to it: a path breaks when the file
+    // moves, when the data package is not installed, when the drawing is emailed
+    // to the belediye that has to check it.
+    //
+    // Written from id 1: slot 0 is the "no image" sentinel and holds nothing.
+    std::vector<ImageRecord> images;
+    std::vector<std::byte> image_bytes;
+
+    for (core::ImageId id = 1; id < static_cast<core::ImageId>(doc.images().size()); ++id) {
+        const std::span<const std::byte> payload = doc.images().bytes(id);
+
+        ImageRecord r{};
+        r.offset = static_cast<std::uint64_t>(image_bytes.size());
+        r.bytes  = static_cast<std::uint64_t>(payload.size());
+        r.origin = pool.intern(std::string(doc.images().origin(id)));
+        r.format = static_cast<std::uint8_t>(doc.images().format(id));
+        images.push_back(r);
+
+        image_bytes.insert(image_bytes.end(), payload.begin(), payload.end());
+    }
+
     dr.style_count        = static_cast<std::uint64_t>(styles.size());
     dr.symbol_layer_count = static_cast<std::uint64_t>(symbol_layers.size());
     dr.slot_count         = static_cast<std::uint64_t>(geo.slot_count());
@@ -430,6 +455,8 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     blocks.push_back(column(kBlkStyles, styles));
     blocks.push_back(column(kBlkSymbols, symbols));
     blocks.push_back(column(kBlkSymbolLayers, symbol_layers));
+    blocks.push_back(column(kBlkImages, images));
+    blocks.push_back(column(kBlkImageBytes, image_bytes));
 
     blocks.push_back(column(kBlkEntityMinX, ents.min_x));
     blocks.push_back(column(kBlkEntityMinY, ents.min_y));

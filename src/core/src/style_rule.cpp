@@ -36,6 +36,12 @@ constexpr const char* kKeyAnnex      = "ek";
 constexpr const char* kKeySection    = "bolum";
 constexpr const char* kKeyPlanTypes  = "plan_turleri";
 constexpr const char* kKeyGroup      = "grup";
+constexpr const char* kKeyImages     = "gorseller";
+constexpr const char* kKeyImage      = "gorsel";
+constexpr const char* kKeyImageFile  = "dosya";
+constexpr const char* kKeyImageLine  = "cizgi_tipi";
+constexpr const char* kKeyImageHatch = "tarama";
+constexpr const char* kKeyImageGlyph = "sembol";
 constexpr const char* kKeyOrder      = "sira";
 constexpr const char* kKeyScale      = "olcek";
 constexpr const char* kKeyScaleLow   = "en_kucuk_payda";
@@ -406,6 +412,35 @@ Result<StyleCondition> parse_condition(const Json& j, std::string_view where)
 /// a planner calls it.
 using AnnexNames = std::vector<std::pair<std::string, std::string>>;
 
+/// Image id to the package-relative file it names.
+using ImageFiles = std::vector<std::pair<std::string, std::string>>;
+
+/// The file an image id names, or empty when the package does not list it.
+///
+/// Empty rather than an error: a row referring to a picture the package left out
+/// still has its colour, its identity and its place in the tree, and refusing the
+/// whole catalogue over one missing file would take the other 475 rows with it.
+std::string image_file(const ImageFiles& files, const std::string& id)
+{
+    for (const auto& [key, file] : files)
+        if (key == id) return file;
+    return {};
+}
+
+/// The first picture of one role, resolved to its file.
+std::string first_image(const Json& images, const ImageFiles& files, const char* role)
+{
+    const Json* list = images.find(role);
+    if (list == nullptr || !list->is_array()) return {};
+
+    for (const Json& item : list->as_array())
+        if (item.is_string()) {
+            std::string file = image_file(files, item.as_string());
+            if (!file.empty()) return file;
+        }
+    return {};
+}
+
 /// The declared name of an annex, or the annex code itself when the package does
 /// not name it. Never an error: a package with no `plan_turleri` block still has
 /// a usable tree, one level of which is spelled the way the annex is.
@@ -416,8 +451,9 @@ std::string annex_label(const AnnexNames& names, const std::string& annex)
     return annex;
 }
 
-Result<StyleEntry> parse_entry(const Json& j, const AnnexNames& annexes, const IndexTable& dashes,
-                               const IndexTable& hatches, std::size_t index)
+Result<StyleEntry> parse_entry(const Json& j, const AnnexNames& annexes, const ImageFiles& images,
+                               const IndexTable& dashes, const IndexTable& hatches,
+                               std::size_t index)
 {
     const std::string where =
         "Stil kataloğu: " + std::string(kKeyEntries) + "[" + std::to_string(index) + "]";
@@ -465,6 +501,13 @@ Result<StyleEntry> parse_entry(const Json& j, const AnnexNames& annexes, const I
     // it is an identifier for rows that belong together, not a name anybody reads.
     if (const Json* v = j.find(kKeyGroup); v != nullptr && v->is_string())
         entry.tags.push_back(v->as_string());
+
+    // ---- the pictures this row was published with ----
+    if (const Json* pictures = j.find(kKeyImage); pictures != nullptr && pictures->is_object()) {
+        entry.image_line   = first_image(*pictures, images, kKeyImageLine);
+        entry.image_hatch  = first_image(*pictures, images, kKeyImageHatch);
+        entry.image_symbol = first_image(*pictures, images, kKeyImageGlyph);
+    }
 
     const std::string row = where + " '" + entry.id + "'";
 
@@ -606,6 +649,21 @@ Result<StyleCatalog> StyleCatalog::from_json(const Json& j)
         }
     }
 
+    // The picture table, read before the rows so every row can resolve the ids it
+    // names. The package lists each picture once with its file, its size and its
+    // sha256; only the file is needed here, and the digest is the data package's
+    // own integrity check (data.md).
+    ImageFiles images;
+    if (const Json* table = j.find(kKeyImages); table != nullptr && table->is_array()) {
+        for (const Json& item : table->as_array()) {
+            if (!item.is_object()) continue;
+            const Json* id   = item.find(kKeyId);
+            const Json* file = item.find(kKeyImageFile);
+            if (id != nullptr && id->is_string() && file != nullptr && file->is_string())
+                images.emplace_back(id->as_string(), file->as_string());
+        }
+    }
+
     IndexTable dashes;
     if (auto st = dashes.load(j, kKeyDashTable); !st) return st.error();
     IndexTable hatches;
@@ -616,7 +674,7 @@ Result<StyleCatalog> StyleCatalog::from_json(const Json& j)
             return err(ErrorCode::ParseError, where + ": '" + kKeyEntries + "' bir dizi olmalı.");
         std::size_t index = 0;
         for (const Json& item : entries->as_array()) {
-            auto entry = parse_entry(item, annexes, dashes, hatches, index);
+            auto entry = parse_entry(item, annexes, images, dashes, hatches, index);
             if (!entry) return entry.error();
             for (const auto& existing : catalog.entries_) {
                 if (existing.id == entry.value().id)
@@ -706,6 +764,9 @@ std::uint64_t StyleCatalog::content_hash() const
             h = fnv1a(g, h);
         for (const std::string& t : e.tags)
             h = fnv1a(t, h);
+        h = fnv1a(e.image_line, h);
+        h = fnv1a(e.image_hatch, h);
+        h = fnv1a(e.image_symbol, h);
         h = fnv1a_int(static_cast<std::int64_t>(e.appearance.fill_rgba), h);
         h = fnv1a_int(e.appearance.hatch, h);
         h = fnv1a_int(e.appearance.z_order, h);

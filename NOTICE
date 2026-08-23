@@ -154,7 +154,11 @@ are the recorded exceptions, each with its reason.
       and MapLibre all bind their style model to their own geometry store and
       draw pipeline, and PiriCAD's style column is resolved at COMMIT time into
       an interned StyleId rather than evaluated per frame, which is the opposite
-      of what those engines are built to do. QGIS is NOT refused on licence:
+      of what those engines are built to do. What is NOT hand-written any more:
+      the symbol layer model itself now follows QGIS's — typed layers with
+      per-property units, stacked and drawn back to front — because that model is
+      the right one and was reached by the same reasoning twice. QGIS is NOT
+      refused on licence:
       it is GPL-2.0-or-later, which is GPLv3-compatible; an earlier revision of
       this file said otherwise and was wrong. The objection is architectural and
       is stated above. OGC SLD/SE 1.1 is a

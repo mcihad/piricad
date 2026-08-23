@@ -142,6 +142,16 @@ enum BlockId : std::uint32_t {
     kBlkSymbols      = 0x0031, ///< SymbolRecord[], one per style id
     kBlkSymbolLayers = 0x0032, ///< SymbolLayerRecord[]
 
+    /// The pictures the drawing carries, and their bytes.
+    ///
+    /// Both OPTIONAL and both absent from every file written before raster
+    /// symbology existed. The COUNT comes from the block directory rather than
+    /// from the document record, which has no reserved field left; the directory
+    /// entry is the same authority that bounds the block, and `BlockView::column`
+    /// already refuses a length that disagrees with count × stride.
+    kBlkImages     = 0x0033, ///< ImageRecord[]
+    kBlkImageBytes = 0x0034, ///< u8[], the payloads back to back
+
     // ---- entity table, one block per column (model.md R6 cull block first) --
     kBlkEntityMinX  = 0x0040, ///< i64[]
     kBlkEntityMinY  = 0x0041, ///< i64[]
@@ -252,6 +262,25 @@ struct SymbolRecord
 
 static_assert(sizeof(SymbolRecord) == 16, "wire record");
 
+/// One embedded picture: where its bytes are, what they encode, and where the
+/// picture was published.
+///
+/// The bytes are in a separate block rather than inline, for the reason every
+/// column in this format is separate: a reader that wants the record table does
+/// not have to walk megabytes of JPEG to find the next record.
+struct ImageRecord
+{
+    std::uint64_t offset; ///< into kBlkImageBytes
+    std::uint64_t bytes;  ///< payload length; bounded against the block, not this number
+    std::uint32_t origin; ///< index into kBlkStringSpans — provenance (model.md R35)
+    std::uint8_t format;  ///< core::ImageFormat
+
+    /// Padding to a round size, zero-filled on write.
+    std::uint8_t reserved[3];
+};
+
+static_assert(sizeof(ImageRecord) == 24, "wire record");
+
 /// One layer of a symbol, field by field.
 ///
 /// Laid out four-byte fields first and single bytes after, so the record has NO
@@ -282,9 +311,11 @@ struct SymbolLayerRecord
     std::uint8_t join;           ///< core::LineJoin
     std::uint8_t opacity;        ///< 0 transparent to 255 opaque
 
-    /// Padding to a round size, zero-filled on write. Reserved bytes are how a
-    /// later version adds a field without moving every record that follows.
-    std::uint8_t reserved[2];
+    /// The picture a raster type draws, as an index into kBlkImages. Zero for
+    /// every other type. This WAS the two reserved bytes, and it reads as zero in
+    /// every file written before raster symbology existed — which is the right
+    /// answer for those files.
+    std::uint16_t image;
 };
 
 static_assert(sizeof(SymbolLayerRecord) == 64, "wire record");

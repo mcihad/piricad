@@ -124,6 +124,9 @@ o yüzden bir stil **sembol katmanlarından** oluşan bir yığındır ve alttan
 | `nokta-desen-dolgu` | Simge ızgarası | Orman, mezarlık, bataklık |
 | `merkez-isaretci` | Yüzeyin ortasında tek simge | Tesis simgesi |
 | `isaretci` | Her tepe noktasında simge | Nokta gösterimleri |
+| `gorsel-dolgu` | Görseli yüzeye döşer | MPYY `tarama` |
+| `gorsel-isaretci` | Görseli lekenin ortasına koyar | MPYY `sembol` |
+| `gorsel-cizgi` | Görseli çizgi boyunca tekrarlar | MPYY `çizgi tipi` |
 
 Yığın **tek tek** kurulur: ilk `STİL` sembolü kurar, `ekle=evet` ile gelen her
 `STİL` üstüne bir katman ekler. Stil tasarımcısı da tam olarak bunu yapar, bir
@@ -131,6 +134,29 @@ betik de aynı satırları yazar — üçü de aynı yoldan geçer.
 
 `isaretci-cizgi` ve `tarak-cizgi` **yalnız simgelerini** çizer, çizgiyi çizmez.
 Bir demiryolu bu yüzden iki katmandır: altta düz çizgi, üstünde dişler.
+
+### Mevzuatın kendi görseli
+
+MPYY sembolojisini **resim olarak** yayımlıyor: EK-1 ekleri Word belgesi ve
+gösterimlerin taraması, simgesi ve çizgi tipi orada birer görsel. 476 satırın
+439'u en az bir görselle geliyor.
+
+`STİL kod=` bir satırı uygularken o satırın **yayımlanmış görsellerini** okur ve
+sembolü onlardan kurar: taramayı `gorsel-dolgu`, çizgi tipini `gorsel-cizgi`,
+simgeyi `gorsel-isaretci` katmanı olarak. Yani ekranda gördüğünüz, mevzuatın
+bastığı şeyin kendisidir — ona benzemesi için seçilmiş bir renk değil.
+
+Bunları vektöre çevirmek 476 kez "bu resim aslında 9 metre aralıklı üçgen ızgara"
+demektir; bu düzenleyici bir yorumdur ve harita mühendisi imzası ister. Program
+uydurmuyor.
+
+**Görseller belgenin içine gömülür**, yola bağlanmaz. Bir yol dosya taşınınca,
+veri paketi kurulu olmayınca, çizim denetleyecek belediyeye e-postayla gidince
+kırılır. Aynı tarama dokuz plan türünde kullanılsa bile **tek kopya** saklanır;
+depo içeriğe göre tekilleştirir.
+
+Görsellerin künyesi de belgeyle gider: her görsel hangi katalog satırından ve
+hangi ekten geldiğini taşır.
 
 ### Birim: kâğıt mı, zemin mi
 
@@ -302,6 +328,18 @@ STİL katman=DEMIRYOLU ekle=evet tip=tarak-cizgi birim=zemin boyut=4000 aralik=5
 ```
 
 Altta siyah çizgi, üstünde 5 metrede bir 4 metre boyunda dişler.
+
+### Mevzuatın yayımladığı gösterim
+
+```
+KATMAN OSB
+ALAN 485300000,4310200000 485385000,4310200000 485385000,4310260000 485300000,4310260000
+STİL katman=OSB paket=data/catalogs/mpyy/plan-gosterim.json kod=ortak-organize-sanayi-bolgesi
+```
+
+EK-1a'nın ORGANİZE SANAYİ BÖLGESİ satırı: taraması yüzeye döşenir, çizgi tipi
+sınıra, simgesi lekenin ortasına. Hangi satırın olduğunu
+[`SEMBOL`](symbol.md) ile bulabilirsiniz.
 
 ### Betik
 

@@ -95,6 +95,7 @@ std::uint64_t Document::content_hash() const
     // even before a single cell is written.
     h = attributes_.fold(h);
     h = texts_.fold(h);
+    h = images_.fold(h);
 
     for (EntityId e = 0; e < entities_.size(); ++e) {
         if (!entities_.alive(e)) continue;
@@ -526,6 +527,11 @@ Status Document::set_crs(Crs crs, Op& undo_out)
 StyleId Document::intern_style(const Appearance& a)
 {
     return styles_.intern(a);
+}
+
+Result<ImageId> Document::intern_image(std::span<const std::byte> bytes, std::string_view origin)
+{
+    return images_.intern(bytes, origin);
 }
 
 StyleId Document::intern_symbol(const Symbol& sym)

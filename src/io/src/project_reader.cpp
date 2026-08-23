@@ -127,6 +127,7 @@ core::SymbolLayer from_record(const SymbolLayerRecord& r)
     l.cap        = static_cast<core::LineCap>(r.cap);
     l.join       = static_cast<core::LineJoin>(r.join);
     l.opacity    = r.opacity;
+    l.image      = r.image;
     return l;
 }
 
@@ -449,6 +450,53 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                            std::to_string(id) +
                            " kimliğine düştü. Stil tablosu tekilleştirilmiştir; dosyada "
                            "yinelenen stil var ve nesnelerin stil sütunu yanlış yere bakardı.");
+    }
+
+    // ---- embedded pictures ----
+    //
+    // Read BEFORE the entities so a symbol layer that names one finds it there.
+    // The count comes from the directory rather than from the document record,
+    // which has no reserved field left; `column` already refuses a block whose
+    // length disagrees with count × stride.
+    if (view.has(kBlkImages)) {
+        auto rows = view.column<ImageRecord>(kBlkImages, view.count_of(kBlkImages), "gorseller");
+        if (!rows) return rows.error();
+
+        auto payload = view.column<std::byte>(kBlkImageBytes, view.count_of(kBlkImageBytes),
+                                              "gorsel baytlari");
+        if (!payload) return payload.error();
+
+        for (std::uint64_t i = 0; i < rows.value().size(); ++i) {
+            const ImageRecord& r = rows.value()[static_cast<std::size_t>(i)];
+
+            // Bounded against the block that is ACTUALLY THERE. A truncated file
+            // has a record claiming a megabyte and a block holding nothing, and
+            // checking the claim rather than the block is how a bounds check that
+            // reads like one lets a hostile file walk off the end.
+            if (r.offset > payload.value().size() || r.bytes > payload.value().size() - r.offset)
+                return err(ErrorCode::ParseError,
+                           std::string(kErrConsist) + ": " + std::to_string(i) +
+                               ". görsel, bayt tablosunun dışını gösteriyor.");
+
+            auto origin = strings.at(r.origin, "gorsel kaynagi");
+            if (!origin) return origin.error();
+
+            auto id = tx.intern_image(payload.value().subspan(static_cast<std::size_t>(r.offset),
+                                                              static_cast<std::size_t>(r.bytes)),
+                                      origin.value());
+            if (!id) return id.error();
+
+            // Slot 0 is the sentinel, so record i is id i+1. A mismatch means the
+            // file holds two identical pictures under different ids, and every
+            // symbol layer pointing at the second one would silently draw the
+            // first.
+            if (id.value() != static_cast<core::ImageId>(i + 1))
+                return err(ErrorCode::ParseError,
+                           std::string(kErrConsist) + ": " + std::to_string(i) + ". görsel kaydı " +
+                               std::to_string(id.value()) +
+                               " kimliğine düştü. Görsel tablosu tekilleştirilmiştir; "
+                               "dosyada yinelenen görsel var.");
+        }
     }
 
     // ---- entities ----

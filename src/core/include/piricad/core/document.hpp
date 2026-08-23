@@ -20,6 +20,7 @@
 #include "piricad/core/crs.hpp"
 #include "piricad/core/geometry.hpp"
 #include "piricad/core/identity.hpp"
+#include "piricad/core/image_store.hpp"
 #include "piricad/core/layer.hpp"
 #include "piricad/core/result.hpp"
 #include "piricad/core/style.hpp"
@@ -268,6 +269,19 @@ public:
 
     StyleId intern_symbol(const Symbol& sym);
 
+    /// Adds a picture to the drawing and returns its id.
+    ///
+    /// Like style interning and unlike everything else on this class, this is
+    /// ADDITIVE ONLY: an image is never removed, because an id handed out stays
+    /// valid for the document's lifetime and the journal already holds it. A
+    /// drawing that stops using a hatch keeps the bytes, which is a few kilobytes
+    /// and the price of an id that never lies.
+    Result<ImageId> intern_image(std::span<const std::byte> bytes, std::string_view origin);
+
+    /// The pictures this drawing carries. Read by the renderer, which needs the
+    /// bytes, and by a size report.
+    const ImageStore& images() const noexcept { return images_; }
+
     /// Applies a previously produced Op. Used only by Transaction rollback and by
     /// the undo stack; `undo_out` receives the Op that reverses this one.
     Status apply(const Op& op, Op* undo_out = nullptr);
@@ -284,6 +298,7 @@ private:
     AttrTable attributes_{};
     CatalogueSet catalogues_{};
     TextTable texts_{};
+    ImageStore images_{};
     KeyAllocator keys_{};
 
     /// INVARIANT: `entities_.key` is strictly increasing in slot order, because

@@ -116,13 +116,19 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         ps.angle_udeg    = sl.angle_udeg;
         ps.opacity       = sl.opacity;
         ps.line_rgba     = sl.look.rgba;
+        ps.image         = doc.images().bytes(sl.image);
+        ps.image_key     = doc.images().content_key(sl.image);
         ps.dash          = sl.look.dash;
         ps.line_width_px = std::max(1.0f, static_cast<float>(sl.look.width_um) / 1000.0f);
 
         // A marker pass needs the line to walk along; a centroid marker needs the
         // ring to find a centre in. Decided here, once per pass.
         ps.wants_stroke = core::draws_stroke(sl.type) || core::draws_marker(sl.type);
-        ps.wants_fill = core::draws_fill(sl.type) || sl.type == core::SymbolLayerType::CentroidFill;
+        // A published sembol sits INSIDE the lekesi it labels, so its ring has to
+        // reach the polygon batch even though the layer places a glyph.
+        ps.wants_fill = core::draws_fill(sl.type) ||
+                        sl.type == core::SymbolLayerType::CentroidFill ||
+                        sl.type == core::SymbolLayerType::RasterMarker;
 
         PolylineBatch& stroke = out.polylines[next];
         PolygonBatch& fill    = out.polygons[next];

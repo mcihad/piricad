@@ -66,7 +66,10 @@ constexpr NameOf<SymbolLayerType> kLayerTypes[] = {
     {"cizgi-desen-dolgu", SymbolLayerType::LinePatternFill},
     {"nokta-desen-dolgu", SymbolLayerType::PointPatternFill},
     {"merkez-isaretci", SymbolLayerType::CentroidFill},
-    {"isaretci", SymbolLayerType::SimpleMarker}};
+    {"isaretci", SymbolLayerType::SimpleMarker},
+    {"gorsel-dolgu", SymbolLayerType::RasterFill},
+    {"gorsel-isaretci", SymbolLayerType::RasterMarker},
+    {"gorsel-cizgi", SymbolLayerType::RasterLine}};
 
 constexpr NameOf<MarkerShape> kShapes[] = {{"daire", MarkerShape::Circle},
                                            {"kare", MarkerShape::Square},
@@ -158,20 +161,22 @@ bool draws_fill(SymbolLayerType t) noexcept
     // A pattern fill paints the interior too: what varies is whether the paint is
     // a colour or a texture, and the caller that clips to the ring needs both.
     return t == SymbolLayerType::SimpleFill || t == SymbolLayerType::LinePatternFill ||
-           t == SymbolLayerType::PointPatternFill;
+           t == SymbolLayerType::PointPatternFill || t == SymbolLayerType::RasterFill;
 }
 
 bool draws_stroke(SymbolLayerType t) noexcept
 {
     return t == SymbolLayerType::SimpleLine || t == SymbolLayerType::MarkerLine ||
-           t == SymbolLayerType::HashLine || t == SymbolLayerType::LinePatternFill;
+           t == SymbolLayerType::HashLine || t == SymbolLayerType::LinePatternFill ||
+           t == SymbolLayerType::RasterLine;
 }
 
 bool draws_marker(SymbolLayerType t) noexcept
 {
     return t == SymbolLayerType::MarkerLine || t == SymbolLayerType::HashLine ||
            t == SymbolLayerType::PointPatternFill || t == SymbolLayerType::CentroidFill ||
-           t == SymbolLayerType::SimpleMarker;
+           t == SymbolLayerType::SimpleMarker || t == SymbolLayerType::RasterMarker ||
+           t == SymbolLayerType::RasterLine;
 }
 
 std::optional<Unit> unit_from_name(std::string_view name) noexcept
@@ -244,6 +249,7 @@ std::uint64_t fold_symbol(const Symbol& sym, std::uint64_t seed)
         h = fnv1a_int(static_cast<std::int64_t>(l.cap), h);
         h = fnv1a_int(static_cast<std::int64_t>(l.join), h);
         h = fnv1a_int(static_cast<std::int64_t>(l.opacity), h);
+        h = fnv1a_int(static_cast<std::int64_t>(l.image), h);
         h = fold_appearance(l.look, h);
     }
     h = fnv1a_int(static_cast<std::int64_t>(sym.min_scale), h);

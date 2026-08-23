@@ -98,6 +98,12 @@ StyleId Transaction::intern_symbol(const core::Symbol& sym)
     return doc_.intern_symbol(sym);
 }
 
+core::Result<core::ImageId> Transaction::intern_image(std::span<const std::byte> bytes,
+                                                      std::string_view origin)
+{
+    return doc_.intern_image(bytes, origin);
+}
+
 Status Transaction::set_attribute(core::AttrId col, EntityId e, const core::AttrValue& v)
 {
     core::Op undo;

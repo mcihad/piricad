@@ -8,7 +8,9 @@
 #include "piricad/core/document.hpp"
 #include "piricad/core/units.hpp"
 
+#include <cstddef>
 #include <cstdint>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -47,6 +49,20 @@ struct PassStyle
     std::uint32_t line_rgba{0xFF000000u};
     float line_width_px{1.0f}; ///< width of those glyph and pattern strokes
     std::uint16_t dash{0};     ///< index into the dash table, from /data
+
+    /// The picture a raster type draws, BORROWED from the document's image store.
+    ///
+    /// A view rather than a copy: a hatch is kilobytes and the pass table is
+    /// rebuilt every frame, so copying would be a per-frame allocation for data
+    /// that has not changed. Valid for exactly as long as the frame is: the
+    /// document does not move while it is being drawn, because render never
+    /// mutates it (render.md P7) and the draw list is consumed inside the same
+    /// paint.
+    std::span<const std::byte> image;
+
+    /// Cache key for the decoded form of `image`, 0 when there is none. See
+    /// `core::ImageStore::content_key` for why it is not an address.
+    std::uint64_t image_key{0};
 
     /// Whether this pass wants the geometry as a line, as a face, or both.
     ///

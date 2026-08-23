@@ -27,17 +27,20 @@
 #include <QColor>
 #include <QFont>
 #include <QFontMetricsF>
+#include <QImage>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPen>
 #include <QRectF>
 #include <QString>
+#include <QTransform>
 #include <QWidget>
 
 #include <algorithm>
 #include <cmath>
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 namespace piricad::app {
 namespace {
@@ -227,9 +230,12 @@ public:
 
 private:
     /// One symbol layer of one style: whatever it paints, in its own order.
-    static void drawPass(QPainter& painter, const render::PassStyle& ps,
-                         const render::PolylineBatch& stroke, const render::PolygonBatch& fill,
-                         double cx, double cy)
+    ///
+    /// Not static, unlike the vector paths below: a raster pass reads the decoded
+    /// picture cache, which belongs to this backend and outlives the frame.
+    void drawPass(QPainter& painter, const render::PassStyle& ps,
+                  const render::PolylineBatch& stroke, const render::PolygonBatch& fill, double cx,
+                  double cy)
     {
         using core::SymbolLayerType;
 
@@ -252,6 +258,17 @@ private:
         case SymbolLayerType::SimpleMarker:
             drawMarkerLine(painter, stroke, ps, cx, cy, /*hash=*/false);
             break;
+        case SymbolLayerType::RasterFill: drawRasterFill(painter, fill, ps, cx, cy); break;
+        case SymbolLayerType::RasterMarker:
+            // A published sembol sits INSIDE the lekesi it labels, which is what
+            // MPYY prints. Only a run that is not a face — an open line — puts it
+            // on the geometry itself.
+            if (!fill.runs.empty())
+                drawRasterCentres(painter, fill, ps, cx, cy);
+            else
+                drawRasterAlong(painter, stroke, ps, cx, cy);
+            break;
+        case SymbolLayerType::RasterLine: drawRasterAlong(painter, stroke, ps, cx, cy); break;
         }
     }
 
@@ -397,6 +414,214 @@ private:
         painter.setBrush(Qt::NoBrush);
     }
 
+    /// The decoded form of an embedded picture, or a null image.
+    ///
+    /// Cached by the store's CONTENT key, not by an address: a document closes,
+    /// its memory is reused by the next one, and a cache keyed on the pointer
+    /// would serve the old picture for the new address.
+    ///
+    /// A picture that fails to decode is cached as a NULL image so the failure
+    /// costs one attempt rather than one attempt per frame. It draws nothing,
+    /// which is the honest result: the drawing says there is a picture and this
+    /// build cannot read it.
+    const QImage& decoded(const render::PassStyle& ps)
+    {
+        static const QImage kNone;
+        if (ps.image.empty() || ps.image_key == 0) return kNone;
+
+        const auto it = images_.find(ps.image_key);
+        if (it != images_.end()) return it->second;
+
+        QImage image;
+        image.loadFromData(reinterpret_cast<const uchar*>(ps.image.data()),
+                           static_cast<int>(ps.image.size()));
+        return images_.emplace(ps.image_key, std::move(image)).first->second;
+    }
+
+    /// The picture tiled into the face — a MPYY `tarama`.
+    ///
+    /// Tiled at a declared size rather than at its pixel size, because a hatch
+    /// extracted from a Word annex has whatever resolution the annex had, and a
+    /// plan whose hatch spacing follows the scan resolution says the wrong thing.
+    void drawRasterFill(QPainter& painter, const render::PolygonBatch& batch,
+                        const render::PassStyle& ps, double cx, double cy)
+    {
+        if (batch.runs.empty()) return;
+
+        const QImage& source = decoded(ps);
+        if (source.isNull()) return;
+
+        const double tile  = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 24.0;
+        const double ratio = source.height() > 0 ? double(source.height()) / source.width() : 1.0;
+
+        QImage scaled = source.scaled(std::max(1, int(tile)), std::max(1, int(tile * ratio)),
+                                      Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+
+        QBrush brush(scaled);
+        if (ps.angle_udeg != 0) {
+            QTransform rotation;
+            rotation.rotate(-static_cast<double>(ps.angle_udeg) / 1'000'000.0);
+            brush.setTransform(rotation);
+        }
+
+        painter.save();
+        if (ps.opacity < 255) painter.setOpacity(double(ps.opacity) / 255.0);
+        painter.fillPath(fillPath(batch, cx, cy), brush);
+        painter.restore();
+    }
+
+    /// The picture once at the centre of each face — a MPYY `sembol` in its lekesi.
+    void drawRasterCentres(QPainter& painter, const render::PolygonBatch& batch,
+                           const render::PassStyle& ps, double cx, double cy)
+    {
+        if (batch.runs.empty()) return;
+
+        const QImage& source = decoded(ps);
+        if (source.isNull()) return;
+
+        const double height = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 16.0;
+        const double width =
+            source.height() > 0 ? height * source.width() / source.height() : height;
+        const QImage scaled = source.scaled(std::max(1, int(width)), std::max(1, int(height)),
+                                            Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+
+        painter.save();
+        applyInkComposition(painter, ps);
+
+        std::size_t offset = 0;
+        for (std::uint32_t run : batch.runs) {
+            double min_x = 1e30, max_x = -1e30, min_y = 1e30, max_y = -1e30;
+            for (std::uint32_t v = 0; v < run; ++v) {
+                const double x = cx + static_cast<double>(batch.xs[offset + v]);
+                const double y = cy - static_cast<double>(batch.ys[offset + v]);
+                min_x          = std::min(min_x, x);
+                max_x          = std::max(max_x, x);
+                min_y          = std::min(min_y, y);
+                max_y          = std::max(max_y, y);
+            }
+            painter.drawImage(QPointF((min_x + max_x) * 0.5 - scaled.width() * 0.5,
+                                      (min_y + max_y) * 0.5 - scaled.height() * 0.5),
+                              scaled);
+            offset += run;
+        }
+        painter.restore();
+    }
+
+    /// Draws a scanned picture so its PAPER does not hide what is under it.
+    ///
+    /// MPYY's annex images are JPEG, which has no alpha, so every glyph and line
+    /// type arrives on an opaque white rectangle. Stamped as-is, a `sembol`
+    /// punches a white hole in the lekesi it is supposed to label.
+    ///
+    /// Multiply is the answer rather than keying white out: it darkens by the
+    /// picture, so white leaves the background untouched and every grey the
+    /// scanner produced still darkens by exactly as much as it is dark. Keying
+    /// would need a threshold, and a threshold on a scanned regulation is a
+    /// decision about which greys are ink — which nobody has authority to make
+    /// here.
+    static void applyInkComposition(QPainter& painter, const render::PassStyle& ps)
+    {
+        painter.setCompositionMode(QPainter::CompositionMode_Multiply);
+        if (ps.opacity < 255) painter.setOpacity(double(ps.opacity) / 255.0);
+    }
+
+    /// The picture placed along the geometry — a MPYY `sembol` or `çizgi tipi`.
+    ///
+    /// One code path for both, because they differ only in where the stamps go
+    /// and that is already what `placement` says: a sembol is one stamp in the
+    /// middle, a çizgi tipi is a stamp every interval along the run.
+    void drawRasterAlong(QPainter& painter, const render::PolylineBatch& batch,
+                         const render::PassStyle& ps, double cx, double cy)
+    {
+        if (batch.runs.empty()) return;
+
+        const QImage& source = decoded(ps);
+        if (source.isNull()) return;
+
+        const double height = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 16.0;
+        const double width =
+            source.height() > 0 ? height * source.width() / source.height() : height;
+
+        const QImage scaled = source.scaled(std::max(1, int(width)), std::max(1, int(height)),
+                                            Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+
+        // A line type tiles edge to edge unless a spacing was asked for; a symbol
+        // is placed once and does not tile.
+        const double interval =
+            ps.interval_px > 0.5f
+                ? static_cast<double>(ps.interval_px)
+                : (ps.type == core::SymbolLayerType::RasterLine ? width : width * 2.0);
+
+        painter.save();
+        applyInkComposition(painter, ps);
+
+        std::size_t offset = 0;
+        for (std::uint32_t run : batch.runs) {
+            stampAlongRun(painter, batch, offset, run, ps, cx, cy, interval, scaled);
+            offset += run;
+        }
+        painter.restore();
+    }
+
+    /// Walks one run and stamps the picture where the placement says.
+    ///
+    /// The same walk `placeAlongRun` does for a vector glyph. Kept separate rather
+    /// than templated on the stamp, because a picture is drawn centred on its own
+    /// rectangle and a path is drawn centred on the origin, and folding the two
+    /// would put an offset in a place a reader has to hold in their head.
+    static void stampAlongRun(QPainter& painter, const render::PolylineBatch& batch,
+                              std::size_t offset, std::uint32_t run, const render::PassStyle& ps,
+                              double cx, double cy, double interval, const QImage& picture)
+    {
+        if (run < 2 || interval <= 0.0) return;
+
+        const auto at = [&](std::uint32_t v) {
+            return QPointF(cx + static_cast<double>(batch.xs[offset + v]),
+                           cy - static_cast<double>(batch.ys[offset + v]));
+        };
+
+        const auto stamp = [&](QPointF p, double degrees) {
+            painter.save();
+            painter.translate(p);
+            painter.rotate(degrees + static_cast<double>(ps.angle_udeg) / 1'000'000.0);
+            painter.drawImage(QPointF(-picture.width() * 0.5, -picture.height() * 0.5), picture);
+            painter.restore();
+        };
+
+        double total = 0.0;
+        for (std::uint32_t v = 1; v < run; ++v)
+            total += lengthOf(at(v - 1), at(v));
+        if (total <= 0.0) return;
+
+        // A raster marker with no placement of its own sits in the middle of the
+        // run, which is where a plan puts a `sembol` inside its lekesi.
+        const bool once = ps.type == core::SymbolLayerType::RasterMarker &&
+                          ps.placement == core::MarkerPlacement::Interval;
+
+        double walked = 0.0;
+        double next   = once ? total * 0.5 : interval * 0.5;
+
+        for (std::uint32_t v = 1; v < run; ++v) {
+            const QPointF a  = at(v - 1);
+            const QPointF b  = at(v);
+            const double len = lengthOf(a, b);
+            if (len <= 0.0) continue;
+
+            // A raster marker does NOT turn with the line: a mosque glyph lying
+            // on its side is not the glyph the regulation printed.
+            const double degrees =
+                ps.type == core::SymbolLayerType::RasterLine ? segmentDegrees(a, b) : 0.0;
+
+            while (next <= walked + len) {
+                const double t = (next - walked) / len;
+                stamp(QPointF(a.x() + (b.x() - a.x()) * t, a.y() + (b.y() - a.y()) * t), degrees);
+                if (once) return;
+                next += interval;
+            }
+            walked += len;
+        }
+    }
+
     static void drawSimpleLine(QPainter& painter, const render::PolylineBatch& batch,
                                const render::PassStyle& ps, double cx, double cy)
     {
@@ -525,6 +750,11 @@ private:
     {
         return std::atan2(b.y() - a.y(), b.x() - a.x()) * 180.0 / M_PI;
     }
+
+    /// Decoded pictures, keyed by content. Grows with the pictures a session
+    /// actually draws and is never pruned: the whole MPYY set is eight megabytes
+    /// of source and a session draws a handful of them.
+    std::unordered_map<std::uint64_t, QImage> images_;
 
     /// Captions last, over both fills and strokes: a parcel number under its own
     /// boundary is a parcel number nobody can read.

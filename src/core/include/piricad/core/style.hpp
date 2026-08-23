@@ -17,6 +17,7 @@
 #pragma once
 
 #include "piricad/core/identity.hpp"
+#include "piricad/core/image_store.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -131,6 +132,17 @@ enum class SymbolLayerType : std::uint8_t {
     PointPatternFill, ///< a grid of glyphs
     CentroidFill,     ///< one glyph at the centre of the face
     SimpleMarker,     ///< a shape at a point
+
+    /// The three that draw a PICTURE the drawing carries.
+    ///
+    /// MPYY publishes its symbology as images — a hatch for `orman`, a glyph for
+    /// `cami`, a line type for `il sınırı` — and drawing the published picture is
+    /// the only faithful answer until each one has a vector definition a harita
+    /// mühendisi has signed off (CLAUDE.md 6.11). The bytes travel inside the
+    /// document; see `piricad/core/image_store.hpp` for why.
+    RasterFill,   ///< the image tiled into the interior — a MPYY tarama
+    RasterMarker, ///< the image as a glyph — a MPYY sembol
+    RasterLine,   ///< the image repeated along the line — a MPYY çizgi tipi
 };
 
 /// Stable machine name, for a file, a message or a test.
@@ -251,6 +263,15 @@ struct SymbolLayer
     /// from the alpha in `look.rgba` so a whole layer can be faded without
     /// rewriting the catalogue colour a regulation prescribes.
     std::uint8_t opacity{255};
+
+    /// The picture a raster type draws, as an index into the document's
+    /// `ImageStore`. `kNoImage` for every other type.
+    ///
+    /// Deliberately NOT `Appearance::symbol`, which is a u16 index into the
+    /// symbol atlas published in /data — a different thing that resolves against
+    /// a package rather than against the document, and conflating them would make
+    /// a drawing's appearance depend on what happens to be installed.
+    ImageId image{kNoImage};
 
     friend bool operator==(const SymbolLayer&, const SymbolLayer&) = default;
 };

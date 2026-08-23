@@ -1068,3 +1068,84 @@ TEST_CASE("IO: sembolsüz eski dosya parmak izini koruyor")
     REQUIRE(reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
     CHECK_EQ(reloaded.doc.content_hash(), hash);
 }
+
+TEST_CASE("IO: gömülü görsel dosyayla gidip geliyor")
+{
+    // MPYY publishes its symbology as pictures, so a drawing that uses a gösterim
+    // carries the picture. A path would break the moment the drawing is emailed to
+    // the belediye that has to check it, which is the case this format exists for.
+    TempDir tmp("gorsel");
+    const std::string path = tmp.file("gorsel.pcad");
+    const std::string pack = std::string(PIRICAD_DATA_DIR) + "/catalogs/mpyy/plan-gosterim.json";
+
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("KATMAN OSB", Origin::Test).ok());
+    REQUIRE(rig.bus
+                .execute_line("ALAN 485300000,4310200000 485385000,4310200000 "
+                              "485385000,4310260000 485300000,4310260000",
+                              Origin::Test)
+                .ok());
+
+    auto styled = rig.bus.execute_line(
+        "STİL katman=OSB paket=\"" + pack + "\" kod=ortak-organize-sanayi-bolgesi", Origin::Test);
+    if (!styled) FAIL_WITH("STİL", styled.error().message);
+    REQUIRE(styled.ok());
+
+    // The row is published with a hatch, a line type and a glyph, so the symbol is
+    // a stack of raster layers rather than a colour standing in for them.
+    const core::StyleId sid = rig.doc.entities().style[0];
+    REQUIRE(sid != core::kByLayerStyle);
+    const core::Symbol before = rig.doc.styles().symbol_at(sid);
+    CHECK(before.layers.size() >= std::size_t{2});
+
+    bool has_raster = false;
+    for (const core::SymbolLayer& l : before.layers)
+        if (l.image != core::kNoImage) has_raster = true;
+    CHECK(has_raster);
+
+    REQUIRE(rig.doc.images().size() >= std::size_t{2}); // the sentinel plus at least one picture
+    CHECK(rig.doc.images().total_bytes() > std::size_t{0});
+
+    // Provenance travels with the bytes: a plan sheet that cannot say which annex
+    // its symbols came from cannot be checked (model.md R35, CLAUDE.md 11.7).
+    CHECK(rig.doc.images().origin(1).find("ortak-organize-sanayi-bolgesi") !=
+          std::string_view::npos);
+
+    const std::uint64_t hash = rig.doc.content_hash();
+    REQUIRE(rig.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    REQUIRE(opened.ok());
+
+    CHECK_EQ(reloaded.doc.content_hash(), hash);
+    CHECK_EQ(reloaded.doc.images().size(), rig.doc.images().size());
+    CHECK_EQ(reloaded.doc.images().total_bytes(), rig.doc.images().total_bytes());
+
+    const core::Symbol after = reloaded.doc.styles().symbol_at(reloaded.doc.entities().style[0]);
+    CHECK(after == before);
+}
+
+TEST_CASE("IO: aynı görsel iki kez eklenince tek kopya saklanıyor")
+{
+    // A hatch shared by nine plan types is stored once. Without content
+    // deduplication a sheet using twenty gösterim from one annex would carry
+    // twenty copies of the same scan.
+    Rig rig;
+    const std::string pack = std::string(PIRICAD_DATA_DIR) + "/catalogs/mpyy/plan-gosterim.json";
+
+    REQUIRE(rig.bus.execute_line("KATMAN A", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("KATMAN B", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("ÇİZGİ 0,0 1000,0 1000,1000 0,1000 0,0", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("KATMAN A", Origin::Test).ok());
+
+    const std::string style =
+        "STİL katman=A paket=\"" + pack + "\" kod=ortak-organize-sanayi-bolgesi";
+    REQUIRE(rig.bus.execute_line(style, Origin::Test).ok());
+    const std::size_t after_first = rig.doc.images().size();
+
+    // The same row again: every picture it names is already there.
+    REQUIRE(rig.bus.execute_line(style, Origin::Test).ok());
+    CHECK_EQ(rig.doc.images().size(), after_first);
+}

@@ -27,6 +27,7 @@
 #include "piricad/core/style_rule.hpp"
 #include <algorithm>
 
+#include <filesystem>
 #include <fstream>
 #include <optional>
 #include <sstream>
@@ -125,6 +126,104 @@ const core::StyleEntry* row_for(const core::StyleCatalog& catalog, const std::st
     return nullptr;
 }
 
+/// Whether the catalogue row names any picture at all.
+bool has_pictures(const core::StyleEntry& row)
+{
+    return !row.image_hatch.empty() || !row.image_symbol.empty() || !row.image_line.empty();
+}
+
+/// Reads one published picture and adds it to the drawing.
+///
+/// The bytes travel INSIDE the document from here on. A path would break the
+/// moment the drawing is emailed to the belediye that has to check it; see
+/// `piricad/core/image_store.hpp`.
+core::Result<core::ImageId> intern_picture(Context& ctx, const std::filesystem::path& dir,
+                                           const std::string& file, const std::string& origin)
+{
+    const std::filesystem::path path = dir / file;
+
+    std::ifstream in(path, std::ios::binary);
+    if (!in) {
+        const std::string missing = "Gösterim görseli açılamadı: '"; // ui-label
+        return core::err(core::ErrorCode::NotFound,
+                         missing + path.string() + "'. Paket eksik kurulmuş olabilir.");
+    }
+
+    std::vector<std::byte> bytes;
+    in.seekg(0, std::ios::end);
+    const auto size = in.tellg();
+    if (size <= 0) {
+        const std::string empty = "Gösterim görseli boş: '"; // ui-label
+        return core::err(core::ErrorCode::ValidationFailed, empty + path.string() + "'.");
+    }
+    bytes.resize(static_cast<std::size_t>(size));
+    in.seekg(0, std::ios::beg);
+    in.read(reinterpret_cast<char*>(bytes.data()), size);
+
+    return ctx.transaction().intern_image(bytes, origin);
+}
+
+/// Builds the symbol a catalogue row's own pictures describe.
+///
+/// The stack is bottom to top and the order is what a plan sheet reads like: the
+/// row's fill colour, the hatch the annex printed over it, the row's boundary,
+/// the published line type, and the glyph last so nothing covers it.
+core::Result<core::Symbol> build_from_row(Context& ctx, const core::StyleEntry& row,
+                                          const std::filesystem::path& dir,
+                                          const core::Appearance& look)
+{
+    core::Symbol sym;
+
+    const auto add = [&](const std::string& file, core::SymbolLayerType type,
+                         std::int32_t size_um) -> core::Status {
+        if (file.empty()) return core::ok();
+
+        auto image = intern_picture(ctx, dir, file, row.id + " · " + row.source_ref);
+        if (!image) return image.error();
+
+        core::SymbolLayer layer;
+        layer.look  = look;
+        layer.type  = type;
+        layer.image = image.value();
+
+        // A size in PAPER micrometres, because a published symbol is printed at a
+        // size the annex fixes and it stays that size whatever the plot scale is.
+        // Whoever wants it to follow the ground can say so with `birim=zemin`.
+        layer.size = core::Measure{size_um, core::Unit::Paper};
+        sym.layers.push_back(layer);
+        return core::ok();
+    };
+
+    if (look.fill_rgba != 0) {
+        core::SymbolLayer base;
+        base.look = look;
+        base.type = core::SymbolLayerType::SimpleFill;
+        sym.layers.push_back(base);
+    }
+
+    // Sizes chosen for legibility on screen, not from the regulation: the annex
+    // prints a picture and states no millimetre for it. They are a starting point
+    // the user or the designer changes, never a claim about what MPYY requires.
+    if (auto st = add(row.image_hatch, core::SymbolLayerType::RasterFill, 24000); !st)
+        return st.error();
+
+    if (!row.image_line.empty()) {
+        if (auto st = add(row.image_line, core::SymbolLayerType::RasterLine, 8000); !st)
+            return st.error();
+    } else {
+        core::SymbolLayer stroke;
+        stroke.look = look;
+        stroke.type = core::SymbolLayerType::SimpleLine;
+        sym.layers.push_back(stroke);
+    }
+
+    if (auto st = add(row.image_symbol, core::SymbolLayerType::RasterMarker, 12000); !st)
+        return st.error();
+
+    if (sym.layers.empty()) sym = core::Symbol::of(look);
+    return sym;
+}
+
 Task<void> run(Context& ctx)
 {
     auto layer_name = co_await ctx.text("katman", "Katman adı");
@@ -208,6 +307,13 @@ Task<void> run(Context& ctx)
     // ---- pass 1: decide. Nothing below this point may fail. ----
     std::vector<core::EntityId> targets;
     std::vector<core::Appearance> resolved;
+
+    /// The catalogue row each target resolved to, or null.
+    ///
+    /// Kept because the row is where the REGULATION'S OWN PICTURES are named, and
+    /// those cannot be read until pass 2 where the transaction is. Borrowed from
+    /// the catalogue, which outlives both passes.
+    std::vector<const core::StyleEntry*> rows;
     std::string row_label;
     std::size_t classified   = 0;
     std::size_t unclassified = 0;
@@ -217,7 +323,8 @@ Task<void> run(Context& ctx)
             if (!entities.alive(e)) continue;
             if (entities.layer[e] != layer) continue;
 
-            core::Appearance appearance = record.appearance;
+            core::Appearance appearance         = record.appearance;
+            const core::StyleEntry* picture_row = nullptr;
 
             if (catalog.has_value() && classify_col != core::kNoAttr) {
                 // The CATEGORIZED renderer: every entity is styled by what its own
@@ -255,7 +362,8 @@ Task<void> run(Context& ctx)
                             "öznitelik değerini denetleyin."));
                     co_return;
                 }
-                appearance = core::apply_entry(*row, appearance);
+                appearance  = core::apply_entry(*row, appearance);
+                picture_row = row;
                 ++classified;
                 if (row_label.empty()) row_label = row->label.empty() ? row->id : row->label;
             } else if (catalog.has_value()) {
@@ -266,7 +374,8 @@ Task<void> run(Context& ctx)
                     ctx.session().fail(entry.error());
                     co_return;
                 }
-                appearance = core::apply_entry(*entry.value(), appearance);
+                appearance  = core::apply_entry(*entry.value(), appearance);
+                picture_row = entry.value();
                 if (row_label.empty())
                     row_label =
                         entry.value()->label.empty() ? entry.value()->id : entry.value()->label;
@@ -289,6 +398,7 @@ Task<void> run(Context& ctx)
 
             targets.push_back(e);
             resolved.push_back(appearance);
+            rows.push_back(picture_row);
         }
     }
 
@@ -376,6 +486,14 @@ Task<void> run(Context& ctx)
 
     const bool append = ctx.argument("ekle").as_bool();
 
+    // The directory the package was read from. The pictures a row names are
+    // published beside it, so this is what resolves them — a package-relative
+    // path rather than an absolute one, because a data package is moved and
+    // copied as a unit.
+    std::filesystem::path package_dir;
+    if (const Value v = ctx.argument("paket"); !v.empty())
+        package_dir = std::filesystem::path(v.as_text()).parent_path();
+
     // ---- pass 2: write ----
     // A scale window turns the write into a one-layer SYMBOL rather than a bare
     // appearance, because the window lives on the symbol. Without a window the
@@ -389,8 +507,14 @@ Task<void> run(Context& ctx)
 
     core::StyleId last = core::kByLayerStyle;
     for (std::size_t i = 0; i < targets.size(); ++i) {
+        // A row the regulation published WITH PICTURES is a symbol, not a colour.
+        // Without this the branch below was entered only for a scale window or a
+        // hand-written layer, so `STİL kod=` applied the row's fill and dropped
+        // the hatch and the glyph the annex prints.
+        const bool row_pictures = i < rows.size() && rows[i] != nullptr && has_pictures(*rows[i]);
+
         core::StyleId style = core::kByLayerStyle;
-        if (!clear && (windowed || has_layer)) {
+        if (!clear && (windowed || has_layer || row_pictures)) {
             core::Symbol sym;
 
             // `ekle` stacks onto what this entity already carries. Reading the
@@ -407,6 +531,15 @@ Task<void> run(Context& ctx)
                 core::SymbolLayer added = described;
                 added.look              = resolved[i];
                 sym.layers.push_back(added);
+            } else if (row_pictures) {
+                // The row was published WITH PICTURES, so the symbol is what the
+                // regulation printed rather than a colour standing in for it.
+                auto built = build_from_row(ctx, *rows[i], package_dir, resolved[i]);
+                if (!built) {
+                    ctx.session().fail(built.error());
+                    co_return;
+                }
+                sym.layers = std::move(built.value().layers);
             } else if (sym.layers.empty()) {
                 sym = core::Symbol::of(resolved[i]);
             }
