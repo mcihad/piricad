@@ -57,5 +57,34 @@ int main(int argc, char** argv)
         QTimer::singleShot(0, &window, [&window, path] { window.runScriptFile(path); });
     }
 
+    // Long enough for the start-up script to finish and the canvas to paint once.
+    // A fixed delay rather than a signal, because "the drawing has settled" is not
+    // a thing the application knows: a script can open a file, and a coroutine
+    // command can still be waiting for input.
+    constexpr int kFrameDumpSettleMs = 600;
+
+    // Headless frame proof, for a developer and for CI.
+    //
+    // With PIRICAD_FRAME_DUMP set, the window paints once, is written to that PNG
+    // path and the process exits. An ENVIRONMENT VARIABLE and not a command-line
+    // option on purpose: a CLI flag is a user-facing feature and CLAUDE.md 5.17
+    // would require its own /docs page, and this is not a feature a surveyor has
+    // any use for. It is the same category as PIRICAD_BENCH_RECORD.
+    //
+    // Why it exists at all: the canvas is the one part of this program whose
+    // correctness is a picture, and until now the only way to see that picture was
+    // to sit in front of the machine. Under QT_QPA_PLATFORM=offscreen this
+    // produces the picture without a display, which is what makes a rendering
+    // change reviewable.
+    if (const QByteArray dump = qgetenv("PIRICAD_FRAME_DUMP"); !dump.isEmpty()) {
+        const QString path = QString::fromLocal8Bit(dump);
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window, path] {
+            const bool saved = window.grab().save(path);
+            (void)std::fprintf(saved ? stdout : stderr, "[piricad] kare %s: %s\n",
+                               saved ? "yazıldı" : "YAZILAMADI", qPrintable(path));
+            QApplication::exit(saved ? 0 : 1);
+        });
+    }
+
     return QApplication::exec();
 }

@@ -8,7 +8,7 @@ The `QPainter`-backed `MapCanvas` stand-in, its reason and its removal condition
 
 ## Hard Rules
 
-R1. All drawing MUST go through `render::Backend`. Only the backend factory may name a backend implementation type; the `MapCanvas` widget's own header and source may name nothing beyond its `QRhiWidget` base class. Verify: `grep -rE 'QPainter|QRhiCommandBuffer|QSGNode' /src/app` returns hits only in the factory file.
+R1. All drawing MUST go through `render::Backend`, INCLUDING the overlay — grid, selection, rubber band, snap glyph, crosshair, developer HUD. The canvas widget decides WHAT is on screen and fills a `render::Overlay` in widget pixels; the backend decides how any of it is drawn. Everything else in this rule follows from that: Only the backend factory may name a backend implementation type; the `MapCanvas` widget's own header and source may name nothing beyond its `QRhiWidget` base class. Verify: `grep -rE 'QPainter|QRhiCommandBuffer|QSGNode' /src/app` returns hits only in the factory file.
 R2. **Origin offset (§10.3).** Subtract the view-centre origin from every `Point2`/`Mm` value in `double`, and only then narrow to `float`. Every float vertex attribute reaching the GPU SHALL be origin-relative.
 R3. The render frame state MUST carry its origin explicitly, and MUST re-anchor when the view centre drifts more than 1 km from it; all live GPU buffers are rebuilt or re-offset on re-anchor.
 R4. LOD MUST be precomputed: 4-5 Douglas-Peucker levels baked into quadtree tiles at load time (§10.3). Level selection per frame is a lookup, never a simplification pass.

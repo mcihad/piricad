@@ -6,6 +6,11 @@
 
 namespace piricad::render {
 
+ScreenPointF to_f(ScreenPoint p) noexcept
+{
+    return ScreenPointF{static_cast<float>(p.x), static_cast<float>(p.y)};
+}
+
 void ViewTransform::set_viewport(int width_px, int height_px)
 {
     width_  = std::max(1, width_px);

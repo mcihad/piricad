@@ -28,6 +28,28 @@ struct ScreenPoint
     double y{0.0};
 };
 
+/// A screen point already narrowed to float, ready for a vertex buffer or an
+/// overlay batch.
+struct ScreenPointF
+{
+    float x{0.0f}; ///< pixels from the left edge
+    float y{0.0f}; ///< pixels from the top edge, y down
+};
+
+/// The ONE narrowing of a screen coordinate to float.
+///
+/// It takes a `ScreenPoint` and nothing else, and that is the whole guarantee: a
+/// `ScreenPoint` is what `to_screen()` produces, so the origin offset has already
+/// removed the six leading digits a TUREF coordinate carries and what is left is a
+/// pixel — bounded by the window and exact in a float.
+///
+/// It exists as a NAMED function so `scripts/ci-gate-render.sh` can tell this
+/// narrowing from the one it is hunting: a `Mm` written straight into a float
+/// vertex attribute, which is the metre-scale shimmer bug and a build-breaking
+/// defect (P1). Defined in view.cpp, where the gate already knows the sanctioned
+/// conversions live.
+ScreenPointF to_f(ScreenPoint p) noexcept;
+
 class ViewTransform
 {
 public:

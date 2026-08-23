@@ -11,11 +11,15 @@
 
 #include "piricad/app/theme.hpp"
 #include "piricad/core/snap.hpp"
+#include "piricad/render/backend.hpp"
 #include "piricad/render/drawlist.hpp"
 #include "piricad/render/scene.hpp"
 #include "piricad/render/view.hpp"
 
 #include <QWidget>
+
+#include <initializer_list>
+#include <memory>
 
 namespace piricad::app {
 
@@ -82,10 +86,38 @@ protected:
 
 private:
     void rebuildScene();
-    void drawGrid(QPainter& painter) const;
-    void drawSelected(QPainter& painter) const;
-    void drawSelectionBox(QPainter& painter) const;
-    void drawSnapMarker(QPainter& painter) const;
+
+    /// Builds the screen-space overlay for this frame: grid, selection, rubber
+    /// band, selection box, crosshair, snap glyph, developer HUD.
+    ///
+    /// This widget decides WHAT is drawn over the document, because it is what
+    /// knows where the cursor is and what is selected. It decides nothing about
+    /// HOW — that is the backend's, and keeping the line there is what render.md
+    /// R1 is about.
+    void buildOverlay();
+    void buildGrid();
+    void buildSelection();
+    void buildSelectionBox();
+    void buildSnapMarker();
+    void buildCrosshair();
+
+    /// Takes the next overlay batch, reusing the one that position held on the
+    /// previous frame so the draw path allocates nothing (render.md R20).
+    render::OverlayBatch& nextBatch(std::uint32_t rgba, float width_px, bool dashed,
+                                    std::uint32_t fill_rgba = 0);
+
+    /// Appends one run of widget-space points.
+    static void addRun(render::OverlayBatch& batch,
+                       std::initializer_list<render::ScreenPointF> points, bool closed);
+
+    /// Narrows a widget-space Qt point through the render module's one sanctioned
+    /// conversion, so the canvas has exactly one place where a coordinate becomes
+    /// a float (render.md P1).
+    static render::ScreenPointF toScreenF(const QPointF& p);
+
+    /// Appends a circle as a closed polygon: the overlay carries runs of points
+    /// and nothing else, so no backend needs an ellipse call of its own.
+    static void addCircle(render::OverlayBatch& batch, float cx, float cy, float radius);
 
     /// Re-runs the aid pipeline for the current cursor so the marker on screen is
     /// the point a click would actually produce. Reads the document; never writes.
@@ -105,17 +137,24 @@ private:
         int major{5};
     };
 
-    void drawCrosshair(QPainter& painter) const;
-
     /// Publishes the view scale to the bus. The snap and pick tolerances are
     /// declared in screen pixels, and turning pixels into millimetres is the one
     /// thing only the view knows (`piricad/command/aids.hpp`).
     void publishViewScale();
 
     Controller& controller_;
+
+    /// The one road from this widget to a pixel. Created by the factory, never
+    /// named by type here (render.md R1).
+    std::unique_ptr<render::Backend> backend_;
+
     Palette palette_{themePalette(ThemeMode::Light)};
     render::ViewTransform view_;
     render::DrawList draw_;
+    render::Overlay overlay_;
+
+    /// How many overlay batches this frame has claimed. See `nextBatch`.
+    std::size_t overlay_used_{0};
     render::SceneOptions options_{};
     GridSetup grid_{};
 

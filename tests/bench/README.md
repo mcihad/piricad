@@ -62,6 +62,18 @@ parcel layer is far too large to commit, and the same code produces the same
 document on every machine, which is what makes a cross-platform comparison
 meaningful (§7.3).
 
+## Geliştirici ortam değişkenleri
+
+| Değişken | Ne yapar |
+|---|---|
+| `PIRICAD_BENCH_RECORD` | Ölçümleri bu makinenin temel değeri olarak kaydeder |
+| `PIRICAD_BENCH_BASELINE` | Temel değer dosyasının yolunu değiştirir |
+| `PIRICAD_FRAME_DUMP` | `piricad` uygulaması bir kare çizip verilen PNG yoluna yazar ve çıkar. `QT_QPA_PLATFORM=offscreen` ile ekransız çalışır; tuvalin doğruluğu bir resim olduğu için bir çizim değişikliğini gözden geçirilebilir kılan şey budur |
+
+Hiçbiri kullanıcıya dönük değildir; bu yüzden komut satırı seçeneği değil ortam
+değişkenidirler (CLAUDE.md 5.17 bir CLI bayrağı için kendi `/docs` sayfasını
+ister ve bunların bir haritacıya faydası yoktur).
+
 ## Bir senaryo yazarken
 
 `iterations = 0` varsayılandır ve yineleme sayısını Google Benchmark seçer. Bir

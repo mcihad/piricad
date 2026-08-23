@@ -1,34 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/app/map_canvas.hpp"
 
+#include "piricad/app/backend_factory.hpp"
 #include "piricad/app/controller.hpp"
 #include "piricad/core/settings.hpp"
 #include "piricad/render/backend.hpp"
 
-#include <QBrush>
 #include <QElapsedTimer>
-#include <QFont>
-#include <QFontMetricsF>
 #include <QKeyEvent>
 #include <QMouseEvent>
-#include <QPainter>
-#include <QPainterPath>
 #include <QWheelEvent>
 
 #include <cmath>
+#include <string>
 
 namespace piricad::app {
-namespace {
-
-QColor from_rgba(std::uint32_t rgba)
-{
-    return QColor::fromRgba(static_cast<QRgb>(rgba));
-}
-
-} // namespace
 
 MapCanvas::MapCanvas(Controller& controller, QWidget* parent)
-    : QWidget(parent), controller_(controller)
+    : QWidget(parent), controller_(controller), backend_(make_canvas_backend())
 {
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
@@ -65,8 +54,7 @@ void MapCanvas::applyTheme(ThemeMode mode)
 
 QString MapCanvas::backendName() const
 {
-    return render::gpu_backend_status().empty() ? QStringLiteral("QRhi (GPU)")
-                                                : QStringLiteral("QPainter (Faz 0)");
+    return QString::fromStdString(backend_->name());
 }
 
 void MapCanvas::zoomToExtents()
@@ -128,7 +116,7 @@ void MapCanvas::reloadGridSettings()
     if (grid_.major < 1) grid_.major = 1;
 }
 
-void MapCanvas::drawGrid(QPainter& painter) const
+void MapCanvas::buildGrid()
 {
     if (!grid_.visible) return;
 
@@ -152,11 +140,6 @@ void MapCanvas::drawGrid(QPainter& painter) const
     const core::Box2 vis = view_.visible_box();
     if (vis.empty()) return;
 
-    QPen minor(palette_.grid);
-    minor.setWidth(1);
-    QPen major(palette_.gridMajor);
-    major.setWidth(1);
-
     // The loop counts grid lines; it does not accumulate a position. The `x += step`
     // version it replaces was in fact exact for every step this code can produce —
     // measured over 200000 steps at a TUREF northing, the running sum never left
@@ -177,20 +160,26 @@ void MapCanvas::drawGrid(QPainter& painter) const
     const auto m        = static_cast<long long>(grid_.major);
     const auto is_major = [m](long long index) { return ((index % m) + m) % m == 0; };
 
+    // Two batches, minor first: the darker lines are drawn over the lighter ones
+    // so a major line stays a major line where they cross.
+    render::OverlayBatch& minor = nextBatch(palette_.grid.rgba(), 1.0f, false);
+    render::OverlayBatch& major = nextBatch(palette_.gridMajor.rgba(), 1.0f, false);
+
+    const auto h = static_cast<float>(height());
+    const auto w = static_cast<float>(width());
+
     const long long last_x = line_index(vis.max_x);
     for (long long i = line_index(vis.min_x); i <= last_x; ++i) {
-        painter.setPen(is_major(i) ? major : minor);
-        const auto wx   = static_cast<core::Mm>(position(i));
-        const double sx = view_.to_screen(core::Point2{wx, vis.min_y}).x;
-        painter.drawLine(QPointF(sx, 0), QPointF(sx, height()));
+        const auto wx  = static_cast<core::Mm>(position(i));
+        const float sx = render::to_f(view_.to_screen(core::Point2{wx, vis.min_y})).x;
+        addRun(is_major(i) ? major : minor, {{sx, 0.0f}, {sx, h}}, false);
     }
 
     const long long last_y = line_index(vis.max_y);
     for (long long i = line_index(vis.min_y); i <= last_y; ++i) {
-        painter.setPen(is_major(i) ? major : minor);
-        const auto wy   = static_cast<core::Mm>(position(i));
-        const double sy = view_.to_screen(core::Point2{vis.min_x, wy}).y;
-        painter.drawLine(QPointF(0, sy), QPointF(width(), sy));
+        const auto wy  = static_cast<core::Mm>(position(i));
+        const float sy = render::to_f(view_.to_screen(core::Point2{vis.min_x, wy})).y;
+        addRun(is_major(i) ? major : minor, {{0.0f, sy}, {w, sy}}, false);
     }
 }
 
@@ -252,7 +241,7 @@ void MapCanvas::dispatchSelection(const QPointF& from, const QPointF& to,
         command::Invocation{"core.select", std::move(args), command::Origin::Gui});
 }
 
-void MapCanvas::drawSelected(QPainter& painter) const
+void MapCanvas::buildSelection()
 {
     // Not named `slots`: Qt defines that as a macro (qobjectdefs.h).
     const auto& selected = controller_.selectedSlots();
@@ -262,11 +251,7 @@ void MapCanvas::drawSelected(QPainter& painter) const
     const core::EntityTable& table = doc.entities();
     const core::RingGeometry& geom = doc.geometry();
 
-    QPen pen(palette_.selection);
-    pen.setWidthF(3.0);
-    pen.setCapStyle(Qt::RoundCap);
-    pen.setJoinStyle(Qt::RoundJoin);
-    painter.setPen(pen);
+    render::OverlayBatch& batch = nextBatch(palette_.selection.rgba(), 3.0f, false);
 
     // Walked per selected entity, never per document entity: a selection is
     // O(hundreds) and the frame budget belongs to the drawing (§10.1).
@@ -274,26 +259,25 @@ void MapCanvas::drawSelected(QPainter& painter) const
         if (e >= table.size() || !table.visible(e)) continue;
 
         const core::RingSpan span = geom.rings_of(table.slot[e]);
-        QPainterPath path;
         for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
             const auto xs = geom.ring_xs(r);
             const auto ys = geom.ring_ys(r);
             if (xs.size() < 2) continue;
 
-            const auto at = [&](std::size_t v) {
-                const auto q = view_.to_screen(core::Point2{xs[v], ys[v]});
-                return QPointF(q.x, q.y);
-            };
-            path.moveTo(at(0));
-            for (std::size_t v = 1; v < xs.size(); ++v)
-                path.lineTo(at(v));
-            if (geom.ring_role[r] != core::RingRole::Open) path.closeSubpath();
+            const auto before = static_cast<std::uint32_t>(batch.xs.size());
+            for (std::size_t v = 0; v < xs.size(); ++v) {
+                const render::ScreenPointF q =
+                    render::to_f(view_.to_screen(core::Point2{xs[v], ys[v]}));
+                batch.xs.push_back(q.x);
+                batch.ys.push_back(q.y);
+            }
+            batch.runs.push_back(static_cast<std::uint32_t>(batch.xs.size()) - before);
+            batch.closed.push_back(geom.ring_role[r] != core::RingRole::Open ? 1 : 0);
         }
-        painter.drawPath(path);
     }
 }
 
-void MapCanvas::drawSelectionBox(QPainter& painter) const
+void MapCanvas::buildSelectionBox()
 {
     if (!selecting_ || !cursor_valid_) return;
 
@@ -302,104 +286,177 @@ void MapCanvas::drawSelectionBox(QPainter& painter) const
     // screen because they behave differently, and every CAD user reads that shape
     // before they read any label.
     const bool crossing = cursor_.x() < select_anchor_.x();
-
-    QPen pen(crossing ? palette_.selectCross : palette_.selectWindow);
-    pen.setWidth(1);
-    pen.setStyle(crossing ? Qt::DashLine : Qt::SolidLine);
-    painter.setPen(pen);
-
-    QColor fill = crossing ? palette_.selectCross : palette_.selectWindow;
+    QColor line         = crossing ? palette_.selectCross : palette_.selectWindow;
+    QColor fill         = line;
     fill.setAlpha(38);
-    painter.setBrush(fill);
-    painter.drawRect(QRectF(select_anchor_, cursor_).normalized());
-    painter.setBrush(Qt::NoBrush);
+
+    render::OverlayBatch& batch = nextBatch(line.rgba(), 1.0f, crossing, fill.rgba());
+
+    const render::ScreenPointF a = toScreenF(select_anchor_);
+    const render::ScreenPointF b = toScreenF(cursor_);
+    const float x0 = a.x, y0 = a.y, x1 = b.x, y1 = b.y;
+    addRun(batch, {{x0, y0}, {x1, y0}, {x1, y1}, {x0, y1}}, true);
 }
 
-void MapCanvas::drawSnapMarker(QPainter& painter) const
+void MapCanvas::buildSnapMarker()
 {
     if (!snap_preview_valid_) return;
 
-    const auto p = view_.to_screen(snap_preview_.point);
-    const QPointF at(p.x, p.y);
-    const double h = 6.0; // half size, layout units
+    const render::ScreenPointF p = render::to_f(view_.to_screen(snap_preview_.point));
+    const float x                = p.x;
+    const float y                = p.y;
+    const float h                = 6.0f; // half size, layout units
 
-    QPen pen(palette_.snapMarker);
-    pen.setWidthF(1.8);
-    painter.setPen(pen);
-    painter.setBrush(Qt::NoBrush);
+    render::OverlayBatch& batch = nextBatch(palette_.snapMarker.rgba(), 1.8f, false);
 
-    // One glyph per mode, the shapes CAD users already read without a legend.
+    // One glyph per mode, the shapes CAD users already read without a legend. The
+    // SHAPE is chosen here rather than in the backend because which glyph means
+    // which aid is a decision about the product, and every backend would otherwise
+    // have to make the same one and agree.
     switch (snap_preview_.mode) {
     case core::SnapEndpoint: // square
-        painter.drawRect(QRectF(at.x() - h, at.y() - h, 2 * h, 2 * h));
+        addRun(batch, {{x - h, y - h}, {x + h, y - h}, {x + h, y + h}, {x - h, y + h}}, true);
         break;
-    case core::SnapMidpoint: { // triangle
-        QPainterPath tri;
-        tri.moveTo(at.x(), at.y() - h);
-        tri.lineTo(at.x() + h, at.y() + h);
-        tri.lineTo(at.x() - h, at.y() + h);
-        tri.closeSubpath();
-        painter.drawPath(tri);
+    case core::SnapMidpoint: // triangle
+        addRun(batch, {{x, y - h}, {x + h, y + h}, {x - h, y + h}}, true);
         break;
-    }
-    case core::SnapCenter: // circle
-        painter.drawEllipse(at, h, h);
-        break;
+    case core::SnapCenter: addCircle(batch, x, y, h); break;
     case core::SnapIntersection: // cross
-        painter.drawLine(QPointF(at.x() - h, at.y() - h), QPointF(at.x() + h, at.y() + h));
-        painter.drawLine(QPointF(at.x() - h, at.y() + h), QPointF(at.x() + h, at.y() - h));
+        addRun(batch, {{x - h, y - h}, {x + h, y + h}}, false);
+        addRun(batch, {{x - h, y + h}, {x + h, y - h}}, false);
         break;
     case core::SnapPerpendicular: // the right-angle mark
-        painter.drawLine(QPointF(at.x() - h, at.y() - h), QPointF(at.x() - h, at.y() + h));
-        painter.drawLine(QPointF(at.x() - h, at.y() + h), QPointF(at.x() + h, at.y() + h));
-        painter.drawLine(QPointF(at.x(), at.y() + h), QPointF(at.x(), at.y()));
-        painter.drawLine(QPointF(at.x(), at.y()), QPointF(at.x() - h, at.y()));
+        addRun(batch, {{x - h, y - h}, {x - h, y + h}, {x + h, y + h}}, false);
+        addRun(batch, {{x, y + h}, {x, y}, {x - h, y}}, false);
         break;
-    case core::SnapNearest: { // bowtie
-        QPainterPath bow;
-        bow.moveTo(at.x() - h, at.y() - h);
-        bow.lineTo(at.x() + h, at.y() - h);
-        bow.lineTo(at.x() - h, at.y() + h);
-        bow.lineTo(at.x() + h, at.y() + h);
-        bow.closeSubpath();
-        painter.drawPath(bow);
+    case core::SnapNearest: // bowtie
+        addRun(batch, {{x - h, y - h}, {x + h, y - h}, {x - h, y + h}, {x + h, y + h}}, true);
         break;
-    }
     case core::SnapGrid: // lattice cell with its centre marked
-        painter.drawLine(QPointF(at.x() - h, at.y()), QPointF(at.x() + h, at.y()));
-        painter.drawLine(QPointF(at.x(), at.y() - h), QPointF(at.x(), at.y() + h));
-        painter.drawRect(QRectF(at.x() - h, at.y() - h, 2 * h, 2 * h));
+        addRun(batch, {{x - h, y}, {x + h, y}}, false);
+        addRun(batch, {{x, y - h}, {x, y + h}}, false);
+        addRun(batch, {{x - h, y - h}, {x + h, y - h}, {x + h, y + h}, {x - h, y + h}}, true);
         break;
     case core::SnapPolar:
-    case core::SnapOrtho: { // diamond: the point is on a locked direction
-        QPainterPath diamond;
-        diamond.moveTo(at.x(), at.y() - h);
-        diamond.lineTo(at.x() + h, at.y());
-        diamond.lineTo(at.x(), at.y() + h);
-        diamond.lineTo(at.x() - h, at.y());
-        diamond.closeSubpath();
-        painter.drawPath(diamond);
+    case core::SnapOrtho: // diamond: the point is on a locked direction
+        addRun(batch, {{x, y - h}, {x + h, y}, {x, y + h}, {x - h, y}}, true);
         break;
-    }
     default: break;
     }
 
     // The label says which aid fired. Without it a user cannot tell an endpoint
     // from an intersection when both glyphs sit under the cursor.
-    painter.setPen(palette_.snapMarker);
-    painter.drawText(QPointF(at.x() + h + 4.0, at.y() - h - 2.0),
-                     QString::fromUtf8(core::snap_mode_label(snap_preview_.mode)));
+    overlay_.labels.push_back(
+        render::OverlayLabel{palette_.snapMarker.rgba(), x + h + 4.0f, y - h - 2.0f, 0.0f,
+                             std::string(core::snap_mode_label(snap_preview_.mode))});
 }
 
-void MapCanvas::drawCrosshair(QPainter& painter) const
+void MapCanvas::buildCrosshair()
 {
     if (!cursor_valid_) return;
 
-    QPen pen(palette_.crosshair);
-    pen.setWidth(1);
-    painter.setPen(pen);
-    painter.drawLine(QPointF(cursor_.x(), 0), QPointF(cursor_.x(), height()));
-    painter.drawLine(QPointF(0, cursor_.y()), QPointF(width(), cursor_.y()));
+    render::OverlayBatch& batch  = nextBatch(palette_.crosshair.rgba(), 1.0f, false);
+    const render::ScreenPointF c = toScreenF(cursor_);
+    const float x = c.x, y = c.y;
+    addRun(batch, {{x, 0.0f}, {x, static_cast<float>(height())}}, false);
+    addRun(batch, {{0.0f, y}, {static_cast<float>(width()), y}}, false);
+}
+
+render::OverlayBatch& MapCanvas::nextBatch(std::uint32_t rgba, float width_px, bool dashed,
+                                           std::uint32_t fill_rgba)
+{
+    // Reuses the batch this position held on the previous frame, buffers and all.
+    // The overlay is rebuilt on EVERY MOUSE MOVE, so allocating here would allocate
+    // on every mouse move (render.md R20, P6).
+    if (overlay_used_ == overlay_.batches.size()) overlay_.batches.emplace_back();
+
+    render::OverlayBatch& batch = overlay_.batches[overlay_used_++];
+    batch.rgba                  = rgba;
+    batch.fill_rgba             = fill_rgba;
+    batch.width_px              = width_px;
+    batch.dashed                = dashed;
+    return batch;
+}
+
+render::ScreenPointF MapCanvas::toScreenF(const QPointF& p)
+{
+    // A widget-space QPointF is already a pixel — a cursor position, a drag
+    // anchor. It goes through the same one narrowing as everything else so there
+    // is exactly one place in the canvas where a coordinate becomes a float.
+    return render::to_f(render::ScreenPoint{p.x(), p.y()});
+}
+
+void MapCanvas::addRun(render::OverlayBatch& batch,
+                       std::initializer_list<render::ScreenPointF> points, bool closed)
+{
+    for (const render::ScreenPointF& p : points) {
+        batch.xs.push_back(p.x);
+        batch.ys.push_back(p.y);
+    }
+    batch.runs.push_back(static_cast<std::uint32_t>(points.size()));
+    batch.closed.push_back(closed ? 1 : 0);
+}
+
+void MapCanvas::addCircle(render::OverlayBatch& batch, float cx, float cy, float radius)
+{
+    // A polygon, not a circle primitive: the overlay carries runs of points and
+    // nothing else, so every backend draws the same shape without needing an
+    // ellipse call of its own. Twenty-four segments is smooth at the six-pixel
+    // radius this is used at and is not worth making adaptive.
+    constexpr int kSegments = 24;
+    const auto before       = static_cast<std::uint32_t>(batch.xs.size());
+    for (int i = 0; i < kSegments; ++i) {
+        const double a = 2.0 * M_PI * i / kSegments;
+        batch.xs.push_back(cx + radius * static_cast<float>(std::cos(a)));
+        batch.ys.push_back(cy + radius * static_cast<float>(std::sin(a)));
+    }
+    batch.runs.push_back(static_cast<std::uint32_t>(batch.xs.size()) - before);
+    batch.closed.push_back(1);
+}
+
+void MapCanvas::buildOverlay()
+{
+    overlay_.clear();
+    overlay_used_            = 0;
+    overlay_.background_rgba = palette_.canvas.rgba();
+
+    buildGrid();
+    buildSelection();
+
+    // Rubber band for the running interactive command. It runs to the SNAPPED
+    // point when an aid has fired, because that is where the segment will land.
+    if (auto* session = controller_.session();
+        session && session->waiting() && session->prompt().has_rubber_band && cursor_valid_) {
+        const auto from = view_.to_screen(session->prompt().rubber_origin);
+
+        QPointF to = cursor_;
+        if (snap_preview_valid_) {
+            const auto snapped = view_.to_screen(snap_preview_.point);
+            to                 = QPointF(snapped.x, snapped.y);
+        }
+
+        render::OverlayBatch& batch = nextBatch(palette_.rubberBand.rgba(), 1.0f, true);
+        addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+    }
+
+    buildSelectionBox();
+    buildCrosshair();
+    buildSnapMarker();
+
+    // Developer HUD. Dear ImGui replaces this once the GPU canvas lands; it is a
+    // debug layer and never a user-facing feature (piricad.md §6.3), so it is off
+    // unless the developer asks for it.
+    if (!debug_hud_) return;
+
+    overlay_.labels.push_back(
+        render::OverlayLabel{palette_.hud.rgba(), 8.0f, 22.0f, 0.0f,
+                             QStringLiteral("%1  |  %2 nesne  |  %3 tepe  |  %4 elenen  |  %5 µs")
+                                 .arg(backendName())
+                                 .arg(draw_.entity_count)
+                                 .arg(draw_.vertex_count)
+                                 .arg(draw_.culled_count)
+                                 .arg(last_frame_us_)
+                                 .toStdString()});
 }
 
 void MapCanvas::paintEvent(QPaintEvent*)
@@ -408,159 +465,21 @@ void MapCanvas::paintEvent(QPaintEvent*)
     timer.start();
 
     rebuildScene();
+    buildOverlay();
 
-    QPainter painter(this);
-    painter.fillRect(rect(), palette_.canvas);
-    painter.setRenderHint(QPainter::Antialiasing, true);
+    // Everything below this line is the backend's. This widget knows WHAT is on
+    // screen; it does not know how any of it is drawn, which is what lets the GPU
+    // backend replace the painter one without touching this file (render.md R1,
+    // CLAUDE.md Article 8.1).
+    render::FrameContext ctx;
+    ctx.width_px           = width();
+    ctx.height_px          = height();
+    ctx.device_pixel_ratio = static_cast<float>(devicePixelRatioF());
+    ctx.target             = this;
 
-    drawGrid(painter);
-
-    const double cx = width() * 0.5;
-    const double cy = height() * 0.5;
-
-    // Fills first, strokes on top. A boundary drawn under its own fill is a
-    // boundary the user cannot see, and in a plan the boundary is the legal edge.
-    for (const auto& batch : draw_.polygons) {
-        if (batch.runs.empty() || batch.rgba == 0) continue;
-
-        // Odd-even winding is what punches the holes out: a courtyard ring inside
-        // its parcel ring cancels, without the backend having to know which ring
-        // was declared a hole. The flag is still carried in the draw list because
-        // the GPU backend will need it explicitly.
-        QPainterPath path;
-        path.setFillRule(Qt::OddEvenFill);
-
-        std::size_t offset = 0;
-        for (std::uint32_t run : batch.runs) {
-            path.moveTo(cx + static_cast<double>(batch.xs[offset]),
-                        cy - static_cast<double>(batch.ys[offset]));
-            for (std::uint32_t v = 1; v < run; ++v)
-                path.lineTo(cx + static_cast<double>(batch.xs[offset + v]),
-                            cy - static_cast<double>(batch.ys[offset + v]));
-            path.closeSubpath();
-            offset += run;
-        }
-
-        // The hatch index selects a Qt brush pattern for now. The real MPYY hatch
-        // atlas is a /data asset and lands with the symbol atlas in Phase 1; until
-        // then a patterned fill is drawn patterned rather than silently solid, so
-        // nobody mistakes a hatched `gösterim` for a solid one.
-        QBrush brush(from_rgba(batch.rgba));
-        if (batch.hatch != 0) {
-            static const Qt::BrushStyle kPatterns[] = {
-                Qt::SolidPattern, Qt::Dense4Pattern, Qt::HorPattern,   Qt::VerPattern,
-                Qt::CrossPattern, Qt::BDiagPattern,  Qt::FDiagPattern, Qt::DiagCrossPattern};
-            brush.setStyle(kPatterns[batch.hatch % (sizeof kPatterns / sizeof kPatterns[0])]);
-        }
-        painter.fillPath(path, brush);
-    }
-
-    for (const auto& batch : draw_.polylines) {
-        if (batch.runs.empty()) continue;
-
-        QPen pen(from_rgba(batch.rgba));
-        pen.setWidthF(batch.width_px);
-        pen.setCapStyle(Qt::RoundCap);
-        pen.setJoinStyle(Qt::RoundJoin);
-        painter.setPen(pen);
-
-        std::size_t offset = 0;
-        QPainterPath path;
-        for (std::uint32_t run : batch.runs) {
-            path.moveTo(cx + static_cast<double>(batch.xs[offset]),
-                        cy - static_cast<double>(batch.ys[offset]));
-            for (std::uint32_t v = 1; v < run; ++v)
-                path.lineTo(cx + static_cast<double>(batch.xs[offset + v]),
-                            cy - static_cast<double>(batch.ys[offset + v]));
-            offset += run;
-        }
-        painter.drawPath(path);
-    }
-
-    // Captions last, over both fills and strokes: a parcel number under its own
-    // boundary is a parcel number nobody can read.
-    for (const auto& item : draw_.texts) {
-        if (item.text.empty() || item.height_px < 3.0f) continue; // unreadable, so not drawn
-
-        const QPointF start(cx + static_cast<double>(item.x0), cy - static_cast<double>(item.y0));
-        const QPointF end(cx + static_cast<double>(item.x1), cy - static_cast<double>(item.y1));
-
-        // Rotation comes from the baseline direction — the document stores no
-        // angle, so there is none to disagree with the geometry.
-        const double dx      = end.x() - start.x();
-        const double dy      = end.y() - start.y();
-        const double degrees = (dx == 0.0 && dy == 0.0) ? 0.0 : std::atan2(dy, dx) * 180.0 / M_PI;
-
-        QFont font = painter.font();
-        font.setPixelSize(std::max(3, static_cast<int>(item.height_px)));
-        painter.setFont(font);
-        painter.setPen(from_rgba(item.rgba));
-
-        const QString label = QString::fromStdString(item.text);
-        const QFontMetricsF metrics(font);
-        const double advance = metrics.horizontalAdvance(label);
-
-        painter.save();
-        painter.translate(start);
-        painter.rotate(degrees);
-
-        // The anchor decides where the baseline sits under the glyphs. Measured
-        // from the real font rather than from the advance guess the command used
-        // for the bounding box.
-        double shift_x = 0.0;
-        double shift_y = 0.0;
-        switch (item.anchor) {
-        case 1: shift_x = -advance * 0.5; break; // baseline centre
-        case 2: shift_x = -advance; break;       // baseline right
-        case 3:                                  // middle centre
-            shift_x = -advance * 0.5;
-            shift_y = metrics.capHeight() * 0.5;
-            break;
-        default: break; // baseline left
-        }
-        painter.drawText(QPointF(shift_x, shift_y), label);
-        painter.restore();
-    }
-
-    drawSelected(painter);
-
-    // Rubber band for the running interactive command. It runs to the SNAPPED
-    // point when an aid has fired, because that is where the segment will land.
-    if (auto* s = controller_.session();
-        s && s->waiting() && s->prompt().has_rubber_band && cursor_valid_) {
-        const auto a = view_.to_screen(s->prompt().rubber_origin);
-        QPen pen(palette_.rubberBand);
-        pen.setStyle(Qt::DashLine);
-        pen.setWidth(1);
-        painter.setPen(pen);
-
-        QPointF to = cursor_;
-        if (snap_preview_valid_) {
-            const auto b = view_.to_screen(snap_preview_.point);
-            to           = QPointF(b.x, b.y);
-        }
-        painter.drawLine(QPointF(a.x, a.y), to);
-    }
-
-    drawSelectionBox(painter);
-    drawCrosshair(painter);
-    drawSnapMarker(painter);
+    backend_->render(draw_, overlay_, ctx);
 
     last_frame_us_ = static_cast<int>(timer.nsecsElapsed() / 1000);
-
-    // Developer HUD. Dear ImGui replaces this once the GPU canvas lands; it is a
-    // debug layer and never a user-facing feature (piricad.md §6.3), so it is off
-    // unless the developer asks for it.
-    if (!debug_hud_) return;
-
-    painter.setPen(palette_.hud);
-    painter.drawText(QRect(8, 8, width() - 16, 60), Qt::AlignLeft | Qt::AlignTop,
-                     QStringLiteral("%1  |  %2 nesne  |  %3 tepe  |  %4 elenen  |  %5 µs")
-                         .arg(backendName())
-                         .arg(draw_.entity_count)
-                         .arg(draw_.vertex_count)
-                         .arg(draw_.culled_count)
-                         .arg(last_frame_us_));
 }
 
 void MapCanvas::mousePressEvent(QMouseEvent* event)

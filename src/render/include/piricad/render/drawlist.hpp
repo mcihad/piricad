@@ -70,6 +70,61 @@ struct TextItem
     std::string text;                ///< copied, not borrowed — see the note above
 };
 
+/// Screen-space lines that are NOT document geometry: the grid, the crosshair, a
+/// selection outline, the rubber band, a snap glyph.
+///
+/// WIDGET COORDINATES, and the difference from the batches above is deliberate.
+/// A document batch is centre-relative with y UP, because that is what the origin
+/// offset of R2 produces and what a GPU vertex buffer wants. An overlay is
+/// computed by the widget from a cursor position and a viewport, both of which are
+/// already widget pixels with y DOWN, and converting them into the other
+/// convention only to convert them back would be two chances to get a sign wrong.
+struct OverlayBatch
+{
+    std::uint32_t rgba{0xFFFFFFFFu}; ///< line colour
+    std::uint32_t fill_rgba{0};      ///< 0 = not filled; used by the selection box
+    float width_px{1.0f};            ///< stroke width in logical pixels
+    bool dashed{false};              ///< KESEN selection reads as dashed before any label does
+
+    /// Widget-space vertices of every run in the batch.
+    std::vector<float> xs;
+    std::vector<float> ys;
+    std::vector<std::uint32_t> runs;  ///< vertex count of each run
+    std::vector<std::uint8_t> closed; ///< parallel to runs: close this run
+};
+
+/// One short screen-space string: the snap-mode label, the developer HUD.
+///
+/// Separate from `TextItem` because it is not a drawing: it has no ground height,
+/// no rotation and no anchor measured from the document. It is UI text at a pixel
+/// position, and giving it the drawing type would invite one of them to be
+/// measured in the other's units.
+struct OverlayLabel
+{
+    std::uint32_t rgba{0xFFFFFFFFu}; ///< ink colour
+    float x{0.0f}, y{0.0f};          ///< widget pixels; y is the text baseline
+    float px{0.0f};                  ///< 0 = the backend's default UI font size
+    std::string text;                ///< copied, like every string in a draw list
+};
+
+/// Everything drawn over the document that the document does not contain.
+///
+/// Built by the canvas widget, which is what knows where the cursor is and what is
+/// selected, and drawn by the backend, which is what knows how to draw. Before
+/// this existed the widget drew them itself with QPainter, and `render::Backend`
+/// had no implementation at all — so the interface Article 8.1 promises to swap
+/// the GPU backend behind was an interface nothing went through.
+struct Overlay
+{
+    std::uint32_t background_rgba{0xFF000000u}; ///< cleared to this before anything
+
+    std::vector<OverlayBatch> batches; ///< drawn in order; empty ones are skipped
+    std::vector<OverlayLabel> labels;  ///< drawn over the batches
+
+    /// Resets the sizes and KEEPS the buffers, exactly like `DrawList::clear()`.
+    void clear();
+};
+
 struct DrawList
 {
     /// One entry per style id that has something to stroke, in id order.

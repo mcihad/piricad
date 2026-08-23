@@ -19,6 +19,7 @@ qt_add_executable(piricad
     src/main.cpp
     src/main_window.cpp
     src/map_canvas.cpp
+    src/painter_backend.cpp
     src/panels.cpp
     src/theme.cpp
     src/toolbox.cpp

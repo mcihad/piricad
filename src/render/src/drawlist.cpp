@@ -3,6 +3,20 @@
 
 namespace piricad::render {
 
+void Overlay::clear()
+{
+    // Same contract as DrawList::clear(): the sizes go, the capacity stays. The
+    // overlay is rebuilt on every mouse move, so a frame that allocates here
+    // allocates on every mouse move.
+    for (auto& batch : batches) {
+        batch.xs.clear();
+        batch.ys.clear();
+        batch.runs.clear();
+        batch.closed.clear();
+    }
+    labels.clear();
+}
+
 void DrawList::clear()
 {
     // Buffers are kept, only their sizes reset: the draw loop must not allocate
