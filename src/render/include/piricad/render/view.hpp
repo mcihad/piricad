@@ -21,6 +21,9 @@ using core::Point2;
 
 struct ScreenPoint
 {
+    /// SCREEN-space coordinates, in pixels, after the origin offset. Double here
+    /// and float in the draw list: the offset has already removed the six leading
+    /// digits a TUREF coordinate carries, so the narrowing is safe by then (§10.3).
     double x{0.0};
     double y{0.0};
 };

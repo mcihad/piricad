@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// piricad.md §11 Faz 0: "`double` jitter testi: 30. dilim TM3 koordinatlarıyla zoom".
+// piricad.md §11 Faz 0: "`double` jitter testi: 30. `dilim` TM3 koordinatlarıyla zoom".
 //
 // §10.3 states the trap: TUREF/TM3 coordinates are seven digits, so writing one
 // straight into a float vertex attribute shimmers by metres. This test proves

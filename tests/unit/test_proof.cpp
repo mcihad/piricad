@@ -2,8 +2,8 @@
 //
 // THE PHASE-0 KEYSTONE PROOF (piricad.md §16.5).
 //
-// "ÇİZGİ komutu hem butondan hem komut satırından hem de bir JSON dosyasından
-//  çalışsın — bu, Faz 0'ın en önemli kanıtı."
+// The Phase-0 proof piricad.md asks for: `ÇİZGİ` must run from the button, from
+// the command line and from a JSON file, and leave the same document behind.
 //
 // Three clients — a GUI button feeding mouse clicks, a typed command line, and a
 // JSON script — run the same command. This test asserts that all three produce a

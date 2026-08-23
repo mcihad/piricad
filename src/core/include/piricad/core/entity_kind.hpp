@@ -46,14 +46,21 @@ using SlotSpan = std::span<const std::uint32_t>;
 /// point of batch dispatch is that no per-entity indirect call survives.
 struct EmitBuffer
 {
+    /// Flat coordinate arrays, in DOCUMENT millimetres. The screen-space
+    /// conversion happens later, in the scene builder, because a kind must not
+    /// need to know the view to describe itself.
     std::vector<Mm> xs;
     std::vector<Mm> ys;
+
     std::vector<std::uint32_t> run_start; ///< first vertex of the run
-    std::vector<std::uint32_t> run_count;
+    std::vector<std::uint32_t> run_count; ///< how many vertices the run holds
     std::vector<std::uint8_t> run_closed; ///< 1 = the closing segment is implied
 
+    /// How many runs have been emitted.
     std::size_t run_total() const noexcept { return run_start.size(); }
 
+    /// Starts a run. `closed` says the segment back to the first vertex is
+    /// implied rather than stored — the ring convention the geometry uses.
     void begin_run(bool closed)
     {
         run_start.push_back(static_cast<std::uint32_t>(xs.size()));
@@ -61,6 +68,8 @@ struct EmitBuffer
         run_closed.push_back(closed ? std::uint8_t{1} : std::uint8_t{0});
     }
 
+    /// Appends one vertex to the run in progress. Undefined before `begin_run`,
+    /// which is a programming error rather than a data condition.
     void push_vertex(Mm x, Mm y)
     {
         xs.push_back(x);
@@ -68,6 +77,8 @@ struct EmitBuffer
         ++run_count.back();
     }
 
+    /// Empties the buffer and KEEPS its capacity: this is reused every frame and
+    /// the draw path must not allocate (§10.4).
     void clear()
     {
         xs.clear();
@@ -90,7 +101,7 @@ using EmitFn = void (*)(const RingGeometry& geom, SlotSpan slots, EmitBuffer& in
 using HitFn = void (*)(const RingGeometry& geom, SlotSpan slots, Point2 probe, Mm tolerance,
                        std::span<std::uint8_t> out);
 
-/// Net area per slot in square millimetres — alan hesabı, the legal output (R12).
+/// Net area per slot in square millimetres — `alan hesabı`, the legal output (R12).
 using AreaFn = void (*)(const RingGeometry& geom, SlotSpan slots, std::span<Mm2> out);
 
 /// Appends one slot decoded from `payload` and returns its index. Payloads come
@@ -113,10 +124,16 @@ using WriteFn = void (*)(const RingGeometry& geom, SlotSpan slots, std::vector<s
 /// out-of-process plugin can hand over by value.
 struct KindSpec
 {
+    /// How many aliases one kind may declare — Turkish, ASCII-folded, English and
+    /// abbreviations. Fixed so the record stays a POD with no allocation.
     static constexpr std::size_t kMaxNames = 6;
 
+    /// The record's own size, FIRST, so a later version can append fields and an
+    /// older reader can still tell how much of the struct it understands.
     std::uint32_t size{sizeof(KindSpec)};
 
+    /// Dense index, assigned at registration. Not persisted — `stable_id` is what
+    /// reaches the file, because an index is an allocation detail (R22–R26).
     KindId id{kNoKind};
     const char* stable_id{""};  ///< "core.polyline", "cadastre.parsel" — never renamed
     const char* summary_tr{""}; ///< one line, Turkish, shown in help and docs
@@ -175,6 +192,8 @@ const KindTable& builtin_kinds();
 /// two (R25).
 #define PIRICAD_KIND(sym) ::piricad::core::KindSpec piricad_kind_##sym()
 
+/// The one built-in kind today: an open or closed run of vertices. Arcs, circles,
+/// text and points are Phase 2 and each will add one line here.
 PIRICAD_KIND(polyline);
 
 } // namespace piricad::core

@@ -361,7 +361,7 @@ PIRICAD_SETTING(kutupsal_aci);
     X(kutupsal_aci)                                                                                \
     X(izgaraya_yakala)
 
-// ---- proje kapsamı: dışa aktarılan belgenin baytını değiştirebilenler --------
+// ---- PROJECT scope: anything that can change a byte of the exported document --
 
 PIRICAD_SETTING(koordinat_sistemi)
 {
@@ -470,11 +470,11 @@ PIRICAD_SETTING(veri_paketi_surumu)
     };
 }
 
-// Toleranslar proje kapsamındadır ve bu bir tercih değil, model.md R40'\''ın
-// harfiyen uygulanmasıdır: düğüm toleransı iki köşeyi aynı nokta sayar, ifraz ve
-// tevhit sonucundaki koordinatı değiştirir, dolayısıyla dışa aktarılan tapu
-// belgesinin baytını değiştirir. Makineye ait bir tercih olsaydı aynı çizim iki
-// bilgisayarda iki farklı parsel alanı verirdi.
+// Tolerances are PROJECT scope, and that is model.md R40 applied literally rather
+// than a preference: a node tolerance decides that two corners are one point, which
+// changes the coordinate an ifraz or a tevhit produces, which changes a byte of the
+// tapu document that gets exported. Were it a per-machine preference, the same
+// drawing would report two different parcel areas on two computers.
 
 PIRICAD_SETTING(dugum_toleransi)
 {
@@ -511,7 +511,7 @@ PIRICAD_SETTING(en_kucuk_alan)
     };
 }
 
-// ---- uygulama kapsamı: kullanıcıya ve makineye ait, belgeye girmeyenler ------
+// ---- APP scope: per user and machine, and never written into the document ----
 
 PIRICAD_SETTING(tema)
 {
@@ -593,9 +593,10 @@ PIRICAD_SETTING(tuval_arkaplani)
     };
 }
 
-// Izgara görünüm tercihidir, yakalama girdi yardımıdır. Sınır şu: gözle
-// gördüğün ama tıklamanın nereye düştüğünü değiştirmeyen şey uygulama
-// kapsamında kalıcıdır (tema, arka plan gibi); imleci oynatan şey oturumluktur.
+// The grid is a display preference; snapping is an input aid. The line between
+// them: something you SEE but which does not change where your click lands is
+// persistent and App scope, like the theme and the canvas colour; something that
+// MOVES the cursor is transient and Session scope.
 
 PIRICAD_SETTING(izgara_gorunur)
 {
@@ -703,7 +704,7 @@ PIRICAD_SETTING(secim_toleransi)
     };
 }
 
-// ---- oturum kapsamı: geçici, kaydedilmez, özete girmez ----------------------
+// ---- SESSION scope: transient, never persisted, never hashed ----------------
 
 PIRICAD_SETTING(yakalama_modlari)
 {

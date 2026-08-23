@@ -95,17 +95,30 @@ constexpr double mm_to_metres(Mm v) noexcept
 /// Planar point in the document CRS, fixed-point millimetres.
 struct Point2
 {
+    /// Easting. In Turkish surveying this is the `sağa değer` and it is called
+    /// Y on a pafta, not X — EPSG:5254 declares that axis order. The member is
+    /// named `x` because it is the first Cartesian axis in code; the labelling is
+    /// a presentation concern and lives in /src/app (model.md R37a).
     Mm x{0};
+
+    /// Northing — the `yukarı değer`, labelled X on a pafta. Same reasoning.
     Mm y{0};
 
+    /// Ordering and equality, both exact because both members are integers. A
+    /// point is a map key and a sort key in several places, and a floating-point
+    /// coordinate could not be either safely.
     friend constexpr auto operator<=>(const Point2&, const Point2&) = default;
 };
 
+/// Vector addition and subtraction, exact in fixed point. Overflow is the
+/// caller's concern: `RingGeometry` refuses any coordinate beyond
+/// `kMmCoordinateLimit` precisely so that these stay in range.
 constexpr Point2 operator+(Point2 a, Point2 b) noexcept
 {
     return {a.x + b.x, a.y + b.y};
 }
 
+/// Vector subtraction; see the addition above.
 constexpr Point2 operator-(Point2 a, Point2 b) noexcept
 {
     return {a.x - b.x, a.y - b.y};
@@ -122,13 +135,20 @@ constexpr double distance_metres(Point2 a, Point2 b) noexcept
 /// Axis-aligned bounding box. Empty is encoded as min > max.
 struct Box2
 {
+    /// Defaults encode EMPTY as min > max, so a freshly constructed box extends to
+    /// exactly the first point given to it. A box defaulting to all-zero would
+    /// silently include the origin, and in TUREF the origin is a thousand
+    /// kilometres from any Turkish parcel — every bounding box would span the
+    /// country and every cull test would pass.
     Mm min_x{1};
     Mm min_y{1};
     Mm max_x{0};
     Mm max_y{0};
 
+    /// Whether this box contains nothing at all.
     constexpr bool empty() const noexcept { return min_x > max_x || min_y > max_y; }
 
+    /// Grows the box to include `p`. An empty box becomes exactly that point.
     constexpr void extend(Point2 p) noexcept
     {
         if (empty()) {
@@ -142,6 +162,8 @@ struct Box2
         if (p.y > max_y) max_y = p.y;
     }
 
+    /// Grows the box to include another. An empty argument is ignored rather than
+    /// collapsing this box, so folding over a list with gaps in it works.
     constexpr void extend(const Box2& o) noexcept
     {
         if (o.empty()) return;
@@ -149,15 +171,22 @@ struct Box2
         extend(Point2{o.max_x, o.max_y});
     }
 
+    /// Extent along each axis, zero for an empty box — never the negative number
+    /// the sentinel defaults would otherwise produce.
     constexpr Mm width() const noexcept { return empty() ? 0 : max_x - min_x; }
 
     constexpr Mm height() const noexcept { return empty() ? 0 : max_y - min_y; }
 
+    /// The middle, rounded toward the lower corner by integer division. Exact and
+    /// identical on every platform, which a floating-point midpoint would not be.
     constexpr Point2 centre() const noexcept
     {
         return empty() ? Point2{} : Point2{min_x + width() / 2, min_y + height() / 2};
     }
 
+    /// Exact equality. Two empty boxes with different sentinel values are NOT
+    /// equal, which is deliberate: the encoding is data and comparing it is how a
+    /// round-trip test catches a reader that invented its own empty.
     friend constexpr bool operator==(const Box2&, const Box2&) = default;
 };
 

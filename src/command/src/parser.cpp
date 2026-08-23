@@ -147,8 +147,8 @@ struct ExprParser
         // Hexadecimal, because a colour is written 0xAARRGGBB everywhere a user
         // meets one — in TERCİH, in the settings file, in the catalogue, in every
         // CAD manual. The settings parser already accepted it and this one did
-        // not, so `STİL renk=0xFF2E7D32` failed while `TERCİH arkaplan
-        // 0xFF101418` worked: the same kind of value, two notations, one of them
+        // not, so `STİL renk=0xFF2E7D32` failed while `TERCİH arkaplan 0xFF101418`
+        // worked: the same kind of value, two notations, one of them
         // silently wrong. There is still ONE parser (CLAUDE.md 5.11); it just
         // reads one more spelling of a number.
         if (i + 1 < s.size() && s[i] == '0' && (s[i + 1] == 'x' || s[i + 1] == 'X')) {

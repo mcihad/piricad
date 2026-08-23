@@ -40,8 +40,10 @@ enum class TextAnchor : std::uint8_t {
     MiddleCentre, ///< centred both ways — what a parcel number wants
 };
 
+/// Stable machine name for a file, a message or a test.
 const char* text_anchor_name(TextAnchor a) noexcept;
 
+/// "This slot carries no text", the value every slot starts at.
 inline constexpr std::uint32_t kNoText = 0xFFFFFFFFu;
 
 /// One text per entity slot: content, height and anchor.

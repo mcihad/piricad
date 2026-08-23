@@ -20,10 +20,12 @@
 
 namespace piricad::command {
 
+/// One running command; see session.hpp. Declared rather than included so this
+/// header stays cheap for every command body that includes it.
 class Session;
 
-/// Applies the input aids — object snap, dik mod, kutupsal izleme, ızgaraya
-/// yakalama — to a point value on its way into a command body.
+/// Applies the input aids — object snap, `dik mod`, `kutupsal izleme` and
+/// `ızgaraya yakalama` — to a point value on its way into a command body.
 ///
 /// THIS IS THE ONE PLACE IT HAPPENS, and it sits on the path every `co_await
 /// ctx.point(...)` takes, so a mouse click, a typed coordinate, a script argument
@@ -42,14 +44,28 @@ Value apply_input_aids(Session& session, const Prompt& prompt, Value v);
 template<class T> class InputAwaiter
 {
 public:
+    /// Turns the serialisable `Value` the source supplied into the type the
+    /// command body asked for. A function pointer, not a closure: there is one
+    /// conversion per type and nothing to capture.
     using Convert = T (*)(const Value&);
 
+    /// Built by `Context::point()` and friends; never constructed directly.
     InputAwaiter(Session& s, Param param, Prompt prompt, Convert conv)
         : session_(s), param_(std::move(param)), prompt_(std::move(prompt)), conv_(conv)
     {}
 
+    /// True when the value is ALREADY available — a script argument, a typed
+    /// coordinate, an AI tool result. The coroutine then never suspends and never
+    /// allocates, which is what keeps script dispatch inside the 10 µs budget.
     bool await_ready();
+
+    /// Parks the command until the value arrives. Only the interactive path
+    /// reaches this.
     void await_suspend(std::coroutine_handle<> h);
+
+    /// The converted value, or `nullopt` when the user cancelled. A command reads
+    /// this as "stop" and returns; it never asks WHY, because ESC from a mouse and
+    /// an exhausted argument list are the same fact to the body (piricad.md §2.4).
     std::optional<T> await_resume();
 
 private:
@@ -61,15 +77,22 @@ private:
     bool cancelled_{false};
 };
 
+/// How a point request should be presented, for the clients that present.
+///
+/// Purely a hint: a headless replay ignores it entirely, and the command body is
+/// identical either way. It lives on the request rather than in the canvas so the
+/// canvas does not have to know which command is running.
 struct PointOptions
 {
-    bool rubber_band{false};
-    Point2 rubber_origin{};
+    bool rubber_band{false}; ///< draw a preview line while the user aims
+    Point2 rubber_origin{};  ///< where that line starts
 };
 
 class Context
 {
 public:
+    /// Built by the bus for one command run. Everything is held by reference:
+    /// a context lives exactly as long as the command it serves.
     Context(Session& session, Transaction& tx, const core::Document& doc);
 
     // ---- input, source-agnostic ----

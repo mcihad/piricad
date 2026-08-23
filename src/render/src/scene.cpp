@@ -37,7 +37,7 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
     // `layers[i].appearance` and ignored `entities.style[e]` entirely, so the
     // style column — the whole point of resolving symbology at commit time
     // (model.md R14) — reached the screen nowhere. A per-entity override, an
-    // MPYY gösterim and a categorized renderer all write that column, and all
+    // MPYY `gösterim` and a categorized renderer all write that column, and all
     // three were invisible.
     //
     // One batch per style id, plus one per layer for entities that carry the
@@ -163,8 +163,8 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         const std::size_t slot =
             sid == core::kByLayerStyle || sid >= styles.size() ? layer_batch(lid) : sid;
 
-        // Scale-dependent visibility. Not decoration in planning work: a çevre
-        // düzeni planı at 1/100000 shows a lekesi where the uygulama imar planı
+        // Scale-dependent visibility. Not decoration in planning work: a
+        // `çevre düzeni planı` at 1/100000 shows a `lekesi` where the `uygulama imar planı`
         // at 1/1000 shows its parcels, and drawing both at both scales produces a
         // sheet nobody can read. The window is stored on the symbol, so this is
         // an array lookup and a comparison — no rule is evaluated (R14).

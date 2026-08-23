@@ -2,7 +2,8 @@
 // PiriCAD — the benchmark harness.
 //
 // piricad.md §10.1: "CI'da benchmark kapısı kurun; %10'dan fazla regresyon build'i
-// kırsın." Two different things are checked here and they must not be confused:
+// kırsın."
+// Two different things are checked here and they must not be confused:
 //
 //   BÜTÇE     — the absolute §10.1 numbers. A product requirement. Always checked.
 //   TEMEL     — the last recorded measurement on THIS machine. A regression guard.

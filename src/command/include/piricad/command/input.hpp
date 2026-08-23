@@ -17,6 +17,12 @@
 
 namespace piricad::command {
 
+/// Which client started a command.
+///
+/// RECORDED, never branched on. Article 1.2 makes every client equal, so a
+/// command body that asked this question would be the privilege the architecture
+/// exists to prevent; the journal keeps it because an audit record should say who
+/// did something, not because the code behaves differently.
 enum class Origin : std::uint8_t {
     Gui, ///< toolbar button / menu — no privileges over any other client
     CommandLine,
@@ -26,16 +32,17 @@ enum class Origin : std::uint8_t {
     Test,
 };
 
+/// Stable machine name, for the journal and for tests.
 const char* origin_name(Origin o);
 
 /// A request the running command has made and is suspended on.
 struct Prompt
 {
-    std::string message; ///< Turkish, user-facing
-    ParamKind kind{ParamKind::Point};
-    std::string param; ///< the declared parameter name being filled
-    bool has_rubber_band{false};
-    Point2 rubber_origin{};
+    std::string message;              ///< Turkish, user-facing
+    ParamKind kind{ParamKind::Point}; ///< what kind of value would satisfy it
+    std::string param;                ///< the declared parameter name being filled
+    bool has_rubber_band{false};      ///< whether a preview line should be drawn
+    Point2 rubber_origin{};           ///< where that line starts
 };
 
 /// Supplies values to a running command. Implementations: queued arguments
@@ -43,8 +50,11 @@ struct Prompt
 class InputSource
 {
 public:
+    /// Virtual: a source is owned polymorphically by the session.
     virtual ~InputSource() = default;
 
+    /// Which client this source speaks for. Recorded in the journal; never used to
+    /// decide behaviour.
     virtual Origin origin() const = 0;
 
     /// Returns the next value for `param` if one is already available.
@@ -92,10 +102,14 @@ private:
 class InteractiveInputSource final : public InputSource
 {
 public:
+    /// A live user at a mouse and keyboard. Recorded in the journal; it buys this
+    /// source no privilege (Article 1.2).
     Origin origin() const override { return Origin::Gui; }
 
     std::optional<Value> take(const Param&) override { return std::nullopt; }
 
+    /// An interactive source runs out only when the user cancels — ESC — because
+    /// there is always another click available until then.
     bool exhausted() const override { return cancelled_; }
 
     void cancel() { cancelled_ = true; }

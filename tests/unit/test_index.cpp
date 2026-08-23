@@ -85,7 +85,7 @@ TEST_CASE("index matches brute force over many query boxes")
 {
     const Document doc = make_grid(60, 40); // 2400 parsel
 
-    // Bir nokta, tek parsel, birkaç parsel, bir şerit, tamamı, ve dışarısı.
+    // A point, one parcel, a few parcels, a strip, everything, and nothing.
     const std::vector<Box2> queries{
         Box2{485000000, 4310000000, 485000000, 4310000000},
         Box2{485000000, 4310000000, 485020000, 4310020000},

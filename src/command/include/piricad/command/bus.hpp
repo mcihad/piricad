@@ -29,11 +29,16 @@
 
 namespace piricad::command {
 
+/// One request to run one command: what, with which arguments, from whom.
+///
+/// This IS the serialisable form Article 1.4 requires — a journal line, a script
+/// step and an AI tool call are all this struct — which is why undo, replay,
+/// scripting and audit come out of one mechanism rather than four.
 struct Invocation
 {
-    std::string name; ///< command id or any declared alias
-    Args args;
-    Origin origin{Origin::Test};
+    std::string name;            ///< command id or any declared alias
+    Args args;                   ///< arguments, validated before the body runs
+    Origin origin{Origin::Test}; ///< recorded in the journal, never branched on
 };
 
 /// One file operation, asked for by a file command and carried out by /src/io.
@@ -47,6 +52,7 @@ struct Invocation
 /// reserved in `spec.hpp` from the start for exactly these commands.
 struct FileRequest
 {
+    /// What kind of file operation this is.
     enum class Verb : std::uint8_t {
         Open,        ///< replace the document with a native project file
         Save,        ///< write the native project file the document belongs to
@@ -56,10 +62,10 @@ struct FileRequest
         ExportStyle, ///< write ONE layer's symbology as a QGIS QML style file
     };
 
-    Verb verb{Verb::Open};
-    std::string path;   ///< empty on Save when the document already has a path
-    std::string format; ///< driver id for Import/Export; empty = infer from the path
-    std::string layer;  ///< ExportStyle: which layer's symbology to write
+    Verb verb{Verb::Open}; ///< which operation to carry out
+    std::string path;      ///< empty on Save when the document already has a path
+    std::string format;    ///< driver id for Import/Export; empty = infer from the path
+    std::string layer;     ///< ExportStyle: which layer's symbology to write
 
     /// The calling command's own transaction, so an import is ONE undo step and
     /// rolls back whole (io.md R17). Null for the verbs that do not mutate the
@@ -67,18 +73,25 @@ struct FileRequest
     Transaction* tx{nullptr};
 };
 
+/// What happened when a command ran.
+///
+/// Returned to every client identically. `mutated` is what the shell watches to
+/// know whether to repaint, and `ops` is what the undo stack watches to know
+/// whether there is anything to undo.
 struct DispatchResult
 {
-    std::string command_id;
-    std::string label;
-    std::size_t ops{0}; ///< primitive edits recorded
-    bool mutated{false};
-    std::string message; ///< user-facing summary, Turkish
+    std::string command_id; ///< canonical id of what ran
+    std::string label;      ///< the label the undo entry will carry
+    std::size_t ops{0};     ///< primitive edits recorded
+    bool mutated{false};    ///< whether the document changed at all
+    std::string message;    ///< user-facing summary, Turkish
 };
 
 class Bus
 {
 public:
+    /// Builds the bus over the four things every command needs. All held by
+    /// reference: the controller owns them and outlives the bus.
     Bus(core::Document& doc, Registry& reg, Journal& journal, UndoStack& undo);
 
     // ---- the single entry point for every client ----

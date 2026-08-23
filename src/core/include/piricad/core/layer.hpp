@@ -27,21 +27,23 @@ using ScaleDenominator = std::uint32_t;
 
 struct Layer
 {
+    /// PERSISTENT identity. The slot a layer sits at is an allocation detail; this
+    /// is what a file and a journal refer to (model.md R1-R5).
     LayerKey key{LayerKey::None};
 
-    std::string name;   ///< free text, what the user typed
-    std::string folded; ///< turkish_upper(name), the uniqueness key
-    std::string description;
+    std::string name;        ///< free text, what the user typed
+    std::string folded;      ///< turkish_upper(name), the uniqueness key
+    std::string description; ///< free text, shown in the property panel
 
     bool visible{true};
-    bool locked{false};
+    bool locked{false};   ///< entities on it are drawn but cannot be selected
     bool plottable{true}; ///< off = draw on screen, omit from the pafta
 
     Appearance appearance{}; ///< the ByLayer source for this layer's entities
 
     ScaleDenominator min_scale{0}; ///< hide when zoomed out past 1:min_scale
     ScaleDenominator max_scale{0}; ///< hide when zoomed in past 1:max_scale
-    std::uint8_t opacity{255};
+    std::uint8_t opacity{255};     ///< screen only; a pafta is plotted opaque
 
     /// Default catalogue reference applied to entities drawn on this layer. The
     /// canonical per-entity value lives in the attribute column; this is the
@@ -59,6 +61,8 @@ struct Layer
 class LayerTable
 {
 public:
+    /// Builds a table already holding layer 0, which every CAD document has and
+    /// which cannot be removed.
     LayerTable();
 
     /// Creates a layer and returns its slot. Fails if the folded name is taken.

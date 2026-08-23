@@ -10,11 +10,13 @@
 
 #include <QWidget>
 
+/// Qt widgets this header only holds pointers to.
 class QTreeWidget;
 class QTreeWidgetItem;
 
 namespace piricad::app {
 
+/// The one road from a widget to the document; see controller.hpp.
 class Controller;
 
 /// Layer list: name, visibility, lock, colour swatch, entity count.
@@ -23,12 +25,21 @@ class LayerPanel : public QWidget
     Q_OBJECT
 
 public:
+    /// Builds the panel over a controller, which outlives it.
     explicit LayerPanel(Controller& controller, QWidget* parent = nullptr);
 
+    /// Rebuilds the list from the document. Called on every document change
+    /// rather than patched incrementally: a layer list is tens of rows, and a
+    /// panel that maintained its own copy could disagree with the document — which
+    /// is the class of bug a single source of truth exists to prevent.
     void refresh();
+
+    /// The layer the user has picked, or `kNoLayer`. This is SELECTION state and
+    /// therefore not document state (model.md R43).
     core::LayerId selectedLayer() const;
 
 signals:
+    /// Emitted when the user picks a row, so the property panel can follow.
     void layerSelected(core::LayerId layer);
 
 private:
@@ -45,9 +56,13 @@ class PropertyPanel : public QWidget
     Q_OBJECT
 
 public:
+    /// Builds the panel over a controller, which outlives it.
     explicit PropertyPanel(Controller& controller, QWidget* parent = nullptr);
 
+    /// Shows the properties of one layer. `kNoLayer` shows the document's own.
     void setLayer(core::LayerId layer);
+
+    /// Rebuilds the sheet from whatever it is currently showing.
     void refresh();
 
 private:

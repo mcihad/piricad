@@ -12,6 +12,9 @@ struct SceneOptions
 {
     bool cull{true}; ///< frustum cull against the visible box (§10.3)
     bool lod{true};  ///< drop vertices below one pixel of separation (§10.3)
+    /// A vertex closer than this to its predecessor cannot be told apart on
+    /// screen and is dropped. Strokes only — a face keeps every vertex, because
+    /// dropping one changes the shape being coloured.
     double lod_pixels{0.75};
 };
 

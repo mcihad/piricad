@@ -11,7 +11,7 @@
 //   relative point                @50,30
 //   polar point                   @100<45                          (metres, degrees CCW)
 //   inline expression             @(100*3),0
-//   keyword argument              katman=SINIR   mesafe=-3.0
+//   keyword argument              `katman`=SINIR   mesafe=-3.0
 //   text                          "yol kenarı"
 #pragma once
 
@@ -25,8 +25,17 @@
 
 namespace piricad::command {
 
+/// One lexical unit of a command line.
+///
+/// There is exactly ONE parser in this product (CLAUDE.md 5.11), and this is its
+/// output: the command line and the script engine both go through it, so a
+/// coordinate typed by a surveyor and a coordinate in a JSON file are read by the
+/// same code and cannot disagree.
 struct Token
 {
+    /// What the token turned out to be. Coordinates are their own kinds rather
+    /// than a pair of numbers, because `@50,30` means something the numbers alone
+    /// do not: it is relative to the previous point.
     enum class Kind : std::uint8_t {
         Word,     ///< bare identifier (command name, keyword, layer name)
         Number,   ///< 42  /  -3.5  /  (100*3)
@@ -37,7 +46,7 @@ struct Token
         KeyValue, ///< key=<nested token>
     };
 
-    Kind kind{Kind::Word};
+    Kind kind{Kind::Word};     ///< which of the fields below carry meaning
     std::string word;          ///< Word text, or the key of a KeyValue
     double a{0.0};             ///< Number value, x, dx, or distance
     double b{0.0};             ///< y, dy, or angle in degrees

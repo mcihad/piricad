@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// piricad.md §11 Faz 0: "PROJ ile TUREF dönüşüm doğruluğunun TKGM referans
-// verisiyle karşılaştırması" and §12's opening requirement.
+// piricad.md §11, Phase 0 asks for a comparison of PROJ's TUREF accuracy against
+// TKGM reference data — comparing PROJ's TUREF accuracy against TKGM
+// reference data — and §12's opening requirement.
 //
 // The thing being tested is not PROJ's mathematics — PROJ is correct and has been
 // for thirty years. What is tested is the wrapper's ONE job: axis order. EPSG:5254

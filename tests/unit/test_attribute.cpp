@@ -176,7 +176,7 @@ TEST_CASE("çokluçizgi türü sınır kutusunu ve alanı geometriyle aynı hesa
     CHECK_EQ(areas[0], g.area_of(parcel));
     CHECK_EQ(areas[1], g.area_of(line));
 
-    // 10 m x 10 m = 100 m² = 1e8 mm². Alan hesabı is the legal output (R12).
+    // 10 m x 10 m = 100 m² = 1e8 mm². `Alan hesabı` is the legal output (R12).
     CHECK_EQ(areas[0], Mm2{100} * kMmPerMetre * kMmPerMetre);
     // An open ring encloses nothing.
     CHECK_EQ(areas[1], Mm2{0});

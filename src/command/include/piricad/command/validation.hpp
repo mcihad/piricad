@@ -16,12 +16,18 @@
 
 namespace piricad::command {
 
+/// Everything a rule needs to judge one invocation.
+///
+/// Assembled by the bus and passed to every rule, so a rule cannot reach for
+/// state nobody handed it — which is what keeps validation the same for a mouse
+/// click, a script line and an AI suggestion (Article 1.3).
 struct ValidationRequest
 {
-    const CommandSpec& spec;
-    const Args& args;
-    Origin origin;
-    const core::Document& document;
+    const CommandSpec& spec;        ///< what the command declared it accepts
+    const Args& args;               ///< the resolved arguments
+    Origin origin;                  ///< recorded; a rule that BRANCHED on this
+                                    ///< would be giving one client a privilege
+    const core::Document& document; ///< read-only: validation never mutates
 };
 
 /// A pluggable rule. Domain modules register topology and regulatory rules here;
@@ -29,8 +35,15 @@ struct ValidationRequest
 class Rule
 {
 public:
-    virtual ~Rule()                                                = default;
-    virtual std::string name() const                               = 0;
+    /// Virtual: rules are owned polymorphically by the validator.
+    virtual ~Rule() = default;
+
+    /// A stable name, for the message when this rule is the one that refused.
+    virtual std::string name() const = 0;
+
+    /// Judges one invocation. Failing here rolls the WHOLE transaction back
+    /// (Article 1.6): a half-applied ifraz is the failure mode this exists to
+    /// prevent, so a rule must not have written anything by the time it answers.
     virtual core::Status check(const ValidationRequest& req) const = 0;
 };
 

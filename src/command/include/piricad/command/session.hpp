@@ -20,6 +20,11 @@
 
 namespace piricad::command {
 
+/// Where one running command is in its life.
+///
+/// `Waiting` is the state that makes an interactive CAD command possible at all:
+/// the coroutine is parked on a prompt, the editor is responsive, and the same
+/// body would have run straight through had the arguments been supplied up front.
 enum class SessionState : std::uint8_t {
     Ready, ///< created, not started
     Running,
@@ -29,8 +34,11 @@ enum class SessionState : std::uint8_t {
     Failed,
 };
 
+/// Stable machine name, for messages and tests.
 const char* session_state_name(SessionState s);
 
+/// The command bus; see bus.hpp. Declared rather than included because the bus
+/// includes this header.
 class Bus;
 
 class Session
@@ -124,11 +132,14 @@ template<class T> bool InputAwaiter<T>::await_ready()
     return false;
 }
 
+/// Parks the command on its prompt. Only the interactive path reaches this: a
+/// script, the command line and the AI all answered `await_ready` with true.
 template<class T> void InputAwaiter<T>::await_suspend(std::coroutine_handle<> h)
 {
     session_.park(h, prompt_);
 }
 
+/// Hands the command its value, aids applied, or `nullopt` when it was cancelled.
 template<class T> std::optional<T> InputAwaiter<T>::await_resume()
 {
     if (cancelled_) return std::nullopt;

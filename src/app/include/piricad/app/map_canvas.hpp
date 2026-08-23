@@ -19,6 +19,7 @@
 
 namespace piricad::app {
 
+/// The one road from a widget to the document; see controller.hpp.
 class Controller;
 
 class MapCanvas : public QWidget
@@ -26,15 +27,22 @@ class MapCanvas : public QWidget
     Q_OBJECT
 
 public:
+    /// Builds the canvas over a controller. The controller outlives it — the main
+    /// window owns both — so it is held by reference rather than by pointer.
     explicit MapCanvas(Controller& controller, QWidget* parent = nullptr);
 
+    /// The view transform: centre, scale and the origin offset that keeps a TUREF
+    /// coordinate out of a float (§10.3). View state is NOT document state
+    /// (model.md R43), which is why it lives here and not in the document.
     render::ViewTransform& view() noexcept { return view_; }
 
     const render::ViewTransform& view() const noexcept { return view_; }
 
+    /// Re-reads the palette. Called when any client writes the theme preference,
+    /// not only when the menu item is toggled.
     void applyTheme(ThemeMode mode);
 
-    /// Re-reads the ızgara.* preferences. Called at start-up and whenever any
+    /// Re-reads the `ızgara`.* preferences. Called at start-up and whenever any
     /// client writes one — the menu, the command line, a script or the AI, which
     /// is the whole point of routing the write through the bus (CLAUDE.md 1.2).
     void reloadGridSettings();
@@ -51,10 +59,19 @@ public:
     QString backendName() const;
 
 signals:
+    /// Emitted as the pointer moves, in DOCUMENT coordinates. The status bar
+    /// labels them `sağa değer` (Y) and `yukarı değer` (X), which is the Turkish
+    /// convention and the reverse of the member names (model.md R37a).
     void cursorMoved(core::Point2 world);
+
+    /// Emitted after a pan or a zoom, so the scale readout can follow.
     void viewChanged();
 
 protected:
+    /// Qt event handlers. Every one of them either changes the VIEW — which is
+    /// not document state — or feeds a point to the running command through the
+    /// controller. None of them edits the document, because a mouse is a client
+    /// like any other and gets no private road (Article 1.2, 5.9).
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;

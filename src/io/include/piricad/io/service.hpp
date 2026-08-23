@@ -40,9 +40,13 @@ namespace piricad::io {
 class FileService
 {
 public:
+    /// Installs `Bus::on_file_request` and clears it on destruction. That hook is
+    /// the seam that lets /src/command own the file COMMANDS while /src/io owns
+    /// the file WORK, without command including io (Article 3.2).
     explicit FileService(command::Bus& bus);
     ~FileService();
 
+    /// Non-copyable: it owns the bus hook, and two services would fight over it.
     FileService(const FileService&)            = delete;
     FileService& operator=(const FileService&) = delete;
 

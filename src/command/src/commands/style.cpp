@@ -222,7 +222,7 @@ Task<void> run(Context& ctx)
                 // The CATEGORIZED renderer: every entity is styled by what its own
                 // attribute says. The binding lives HERE and not in the package,
                 // because what a drawing calls its column is a project decision;
-                // the regulation states what a gösterim looks like, never what
+                // the regulation states what a `gösterim` looks like, never what
                 // your attribute is named (CLAUDE.md 5.13, data.md R6).
                 auto cell = bus.document().attribute(classify_col, e);
                 if (!cell) {
@@ -231,7 +231,7 @@ Task<void> run(Context& ctx)
                 }
                 if (!cell.value().present) {
                     // An untagged entity keeps the layer default and is counted.
-                    // Guessing a gösterim for a parcel that declares none is
+                    // Guessing a `gösterim` for a parcel that declares none is
                     // exactly the invention a legal drawing must not contain.
                     ++unclassified;
                     targets.push_back(e);

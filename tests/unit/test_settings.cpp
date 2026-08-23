@@ -140,8 +140,9 @@ TEST_CASE("R40: dışa aktarılan belgenin baytını değiştiren her ayar proje
     CHECK(scope_of("core.cizim.cizgi_tipi_olcegi") == SettingScope::Project);
     CHECK(scope_of("core.cizim.metin_yuksekligi") == SettingScope::Project);
     CHECK(scope_of("core.katalog.paket_surumu") == SettingScope::Project);
-    // R40 harfiyen: tolerans iki köşeyi aynı nokta yapar, ifraz sonucundaki
-    // koordinatı değiştirir, tapuya giden baytı değiştirir. Makine tercihi olamaz.
+    // R40 applied literally: a tolerance makes two corners one point, which changes
+    // the coordinate an ifraz produces, which changes a byte of the tapu. It cannot
+    // be a per-machine preference.
     CHECK(scope_of("core.topoloji.dugum_toleransi") == SettingScope::Project);
     CHECK(scope_of("core.topoloji.en_kucuk_alan") == SettingScope::Project);
 
@@ -155,7 +156,7 @@ TEST_CASE("R40: dışa aktarılan belgenin baytını değiştiren her ayar proje
     CHECK(scope_of("core.izgara.mod") == SettingScope::App);
     CHECK(scope_of("core.izgara.adim") == SettingScope::App);
     CHECK(scope_of("core.izgara.ana_cizgi") == SettingScope::App);
-    // Piksel cinsindendir, zemin metresi değil: kullanıcının eline ve ekranına ait.
+    // In pixels, not ground metres: it belongs to the user's hand and screen.
     CHECK(scope_of("core.yakalama.tolerans") == SettingScope::App);
     CHECK(scope_of("core.secim.tolerans") == SettingScope::App);
 
@@ -818,7 +819,7 @@ TEST_CASE("AYAR iptal edilirse hiçbir şey olmaz")
     CHECK_EQ(rig.journal.size(), before + 1); // it ran, it changed nothing
 }
 
-// ------------------------------------------------- oturum modları ve ızgara ----
+// ------------------------------------------------ session modes and the grid ----
 
 TEST_CASE("R41: her kapsamın bir komutu var — oturum ayarları artık ulaşılabilir")
 {
@@ -880,8 +881,8 @@ TEST_CASE("R40: tolerans proje kapsamındadır — ifraz sonucunu değiştirir")
     CHECK_EQ(r.bus.project_settings().get("core.topoloji.dugum_toleransi").as_length(), 20);
     CHECK(r.bus.project_settings().fold(0) != untouched);
 
-    // Aynı ayar makineye ait bir tercih olarak yazılamaz: TERCİH proje kutusuna
-    // uzanamaz, uzanabilseydi tolerans makineye göre değişirdi.
+    // The same setting cannot be written as a per-machine preference: `TERCİH` cannot
+    // reach into the project box, and if it could the tolerance would vary by machine.
     CHECK(r.line("TERCİH düğüm_toleransı 20").ok());
     CHECK(mentions(r.echoed, "proje"));
     CHECK(!r.bus.app_settings().is_explicit("core.topoloji.dugum_toleransi"));
@@ -898,7 +899,8 @@ TEST_CASE("Izgara ve seçme toleransı piksel cinsindendir, zemin metresi değil
         CHECK_EQ(spec.unit, std::string("piksel"));
         CHECK(spec.type == SettingType::Int);
     }
-    // Izgara adımı ise zemindedir: metrekare defteriyle çakışması gereken bir ağ.
+    // The grid step is on the GROUND: a mesh that has to line up with the metrekare
+    // defteri.
     const SettingSpec& adim = cat.at(cat.find("core.izgara.adim"));
     CHECK(adim.type == SettingType::Length);
     CHECK_EQ(adim.unit, std::string("mm"));

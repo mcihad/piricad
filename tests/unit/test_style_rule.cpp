@@ -11,7 +11,7 @@
 //
 // The catalogue used by the engine tests is a synthetic fixture written inline.
 // It is deliberately NOT a regulation: no test in this file may become the place
-// a gösterim value lives, because that value belongs in /data (CLAUDE.md 5.13).
+// a `gösterim` value lives, because that value belongs in /data (CLAUDE.md 5.13).
 // The one test that reads /data asserts the shipped package's PROVENANCE, not its
 // contents.
 #include "microtest.hpp"
@@ -780,7 +780,7 @@ TEST_CASE("Sınıflandırma: aynı katmandaki iki nesne farklı stil alır")
 TEST_CASE("Sınıflandırma sayısal aralıkla da çalışır — kademeli çizici")
 {
     // A graduated renderer is the Range test over a numeric column, and it needs
-    // no new machinery: nüfus yoğunluğuna göre beş kademeli konut lekesi is five
+    // no new machinery: a five-band housing `lekesi` graded by population density is
     // rules with five windows.
     core::AttrTable table;
     core::AttrSpec spec;

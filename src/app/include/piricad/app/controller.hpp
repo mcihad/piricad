@@ -30,6 +30,8 @@ class Controller : public QObject
     Q_OBJECT
 
 public:
+    /// Builds the document, registry, journal, undo stack and bus, and registers
+    /// every built-in command. One controller is one open drawing.
     explicit Controller(QObject* parent = nullptr);
     ~Controller() override;
 
@@ -80,6 +82,10 @@ public:
     QString activeLayerName() const;
 
 signals:
+    /// Qt signals mirroring the bus observers, so widgets can connect the way Qt
+    /// widgets expect while the bus stays free of Qt (Article 3.3). Everything the
+    /// interface shows arrives through one of these, which is why a change made
+    /// from the command line updates the screen exactly as a menu click does.
     void echoed(const QString& text);
     void documentChanged();
     void selectionChanged();

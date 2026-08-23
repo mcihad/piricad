@@ -35,8 +35,8 @@ enum class Source : std::uint8_t {
 };
 
 /// One resolved appearance. POD, trivially copyable, deduplicated in a table.
-/// Carries line AND area symbology: MPYY EK-1 plan gösterim is overwhelmingly
-/// area symbology, and a line-only record cannot represent an imar planı (R18).
+/// Carries line AND area symbology: MPYY EK-1 plan `gösterim` is overwhelmingly
+/// area symbology, and a line-only record cannot represent an `imar planı` (R18).
 struct Appearance
 {
     std::uint32_t rgba{0xFF6C7686u}; ///< 0xAARRGGBB, stroke colour
@@ -47,6 +47,13 @@ struct Appearance
     std::uint16_t hatch{0};          ///< index into the hatch table, from /data
     std::int16_t z_order{0};         ///< MPYY prescribes a draw order
 
+    /// Where each property gets its value. `ByLayer` by default, which is what an
+    /// ordinary cadastral entity carries and what makes the default Appearance
+    /// intern back to the sentinel at id 0 for free (R13).
+    ///
+    /// There is no `src_hatch`: hatch is the pattern half of the fill property, so
+    /// resolving a fill colour while leaving the pattern unresolved would draw an
+    /// `imar lekesi` in the layer's colour with the entity's empty pattern.
     Source src_colour{Source::ByLayer};
     Source src_width{Source::ByLayer};
     Source src_dash{Source::ByLayer};
@@ -70,13 +77,14 @@ inline constexpr StyleId kByLayerStyle = 0;
 /// distinct values. That is what keeps the batch key `(layer, style, kind)`
 /// bounded and the draw-call count under the §10.3 target of 100 per frame.
 /// What one layer of a symbol draws. A CAD entity needs one of these; a plan
-/// gösterim usually needs several stacked.
+/// `gösterim` usually needs several stacked.
 enum class StrokeKind : std::uint8_t {
     Fill = 0, ///< the interior: colour, hatch, opacity
     Stroke,   ///< the boundary: colour, width, dash
     Marker,   ///< a repeated glyph: along a line, or at the centroid of a face
 };
 
+/// Stable machine name, for a file, a message or a test.
 const char* stroke_kind_name(StrokeKind k) noexcept;
 
 /// One layer of a symbol.
@@ -89,8 +97,8 @@ const char* stroke_kind_name(StrokeKind k) noexcept;
 /// record keeping its shape (R18).
 struct SymbolLayer
 {
-    Appearance look{};
-    StrokeKind kind{StrokeKind::Stroke};
+    Appearance look{};                   ///< the colours and widths this layer draws with
+    StrokeKind kind{StrokeKind::Stroke}; ///< what it draws: interior, boundary or glyph
 
     /// Perpendicular offset from the geometry, in PAPER micrometres (R20). A
     /// road casing is two strokes at the same offset with different widths; a
@@ -104,7 +112,7 @@ struct SymbolLayer
 /// An ordered stack of symbol layers, drawn back to front.
 ///
 /// This is the shape QGIS reaches with QgsSymbol and its symbol layer list, and
-/// the reason it is needed here is MPYY: a plan gösterim is routinely a fill, a
+/// the reason it is needed here is MPYY: a plan `gösterim` is routinely a fill, a
 /// boundary stroke of a different colour, and a repeated glyph on top. A single
 /// colour-and-width record cannot state one, and 476 of them are sitting in
 /// /data waiting to be stated.
@@ -115,11 +123,13 @@ struct SymbolLayer
 /// else in the style column.
 struct Symbol
 {
+    /// Drawn back to front. One layer is the common case and costs one vector
+    /// element; a plan gösterim is routinely three.
     std::vector<SymbolLayer> layers;
 
     /// Below this scale denominator the symbol is not drawn; zero means always.
-    /// Scale-dependent symbology is not decoration in planning work — an imar
-    /// planı at 1/25000 shows a lekesi where 1/1000 shows its parcels.
+    /// Scale-dependent symbology is not decoration in planning work: an
+    /// `imar planı` at 1/25000 shows a `lekesi` where 1/1000 shows its parcels.
     std::uint32_t min_scale{0};
     std::uint32_t max_scale{0}; ///< above this, not drawn; zero means always
 
@@ -151,6 +161,8 @@ std::uint64_t fold_symbol(const Symbol& sym, std::uint64_t seed);
 class StyleTable
 {
 public:
+    /// Builds a table whose entry 0 is already the ByLayer sentinel, so an entity
+    /// that declares nothing costs no interning at all.
     StyleTable();
 
     /// Returns the id of `a`, adding it if new. Deterministic: the same sequence

@@ -42,6 +42,7 @@ constexpr std::uint64_t raw(EntityKey k) noexcept
     return static_cast<std::uint64_t>(k);
 }
 
+/// The same, for a layer key.
 constexpr std::uint64_t raw(LayerKey k) noexcept
 {
     return static_cast<std::uint64_t>(k);
@@ -66,6 +67,7 @@ public:
         return static_cast<EntityKey>(next_entity_++);
     }
 
+    /// The next unused layer key, or `None` when the space is exhausted.
     LayerKey mint_layer() noexcept
     {
         if (next_layer_ > kMaxKey) return LayerKey::None;
@@ -97,6 +99,8 @@ public:
         return v <= kMaxKey;
     }
 
+    /// Moves the layer counter past a key read from a file. Same clamping and
+    /// same reason as `adopt_entity`.
     bool adopt_layer(LayerKey highest) noexcept
     {
         const std::uint64_t v      = raw(highest);
@@ -105,6 +109,8 @@ public:
         return v <= kMaxKey;
     }
 
+    /// Where each counter stands, WITHOUT minting. Written into the file so a
+    /// reopened drawing cannot hand a new entity a key a dead one already used.
     std::uint64_t peek_entity() const noexcept { return next_entity_; }
 
     std::uint64_t peek_layer() const noexcept { return next_layer_; }
@@ -116,6 +122,7 @@ public:
         next_entity_ = next > kMaxKey + 1 ? kMaxKey + 1 : next;
     }
 
+    /// The same, for layers.
     void seek_layer(std::uint64_t next) noexcept
     {
         next_layer_ = next > kMaxKey + 1 ? kMaxKey + 1 : next;

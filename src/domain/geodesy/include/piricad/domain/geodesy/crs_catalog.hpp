@@ -26,10 +26,10 @@ struct Tm3Zone
 /// Projection parameters shared by every Turkish TM 3° zone.
 struct Tm3Parameters
 {
-    double scale_factor{1.0};
-    long false_easting_m{500000};
-    long false_northing_m{0};
-    std::string datum;
+    double scale_factor{1.0};     ///< 1.0 for TM3; TM6 and UTM differ
+    long false_easting_m{500000}; ///< the offset that keeps eastings positive
+    long false_northing_m{0};     ///< zero in the northern hemisphere
+    std::string datum;            ///< "TUREF", "ED50" — what the coordinates mean
 };
 
 /// The loaded catalogue, with the provenance a regulatory statement needs

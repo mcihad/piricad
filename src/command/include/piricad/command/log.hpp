@@ -21,29 +21,46 @@
 
 namespace piricad::command {
 
+/// Severity, in the order spdlog uses.
 enum class LogLevel : std::uint8_t { Trace, Debug, Info, Warn, Error };
 
+/// A destination for log lines. The shell installs one so that lines land in the
+/// transcript widget the user is actually reading.
 using LogSink = std::function<void(LogLevel, std::string_view)>;
 
+/// Installs a sink, REPLACING spdlog rather than adding to it. A line written to
+/// both would appear twice in the one place a user looks. Pass an empty sink to
+/// go back to spdlog's own output.
 void set_log_sink(LogSink sink);
+
+/// Sets the threshold below which messages are dropped.
 void set_log_level(LogLevel level);
+
+/// Logs one message. The message is passed as an ARGUMENT and never as a format
+/// string: a log line carries user text — a layer name, a file path — and any of
+/// those may contain a brace.
 void log_message(LogLevel level, std::string_view message);
 
+/// Shorthands, one per level. Inline so a dropped message costs a comparison and
+/// no call.
 inline void log_info(std::string_view m)
 {
     log_message(LogLevel::Info, m);
 }
 
+/// See `log_info`.
 inline void log_warn(std::string_view m)
 {
     log_message(LogLevel::Warn, m);
 }
 
+/// See `log_info`.
 inline void log_error(std::string_view m)
 {
     log_message(LogLevel::Error, m);
 }
 
+/// See `log_info`.
 inline void log_debug(std::string_view m)
 {
     log_message(LogLevel::Debug, m);

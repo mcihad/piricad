@@ -24,26 +24,43 @@
 
 namespace piricad::command {
 
+/// One line of the journal: everything needed to replay one command.
+///
+/// The journal is the audit record of a legal document, so an entry carries the
+/// CONTEXT a replay needs and not only the call: which CRS the coordinates were
+/// in and which layer was active, because both change what the same arguments
+/// mean (piricad.md §2.2).
 struct JournalEntry
 {
-    std::uint64_t seq{0};
-    std::string command_id;
-    Args args;
-    Origin origin{Origin::Test};
-    std::string crs;
-    std::string layer;
+    std::uint64_t seq{0};         ///< position in the journal, from 1
+    std::string command_id;       ///< canonical id, never the alias that was typed
+    Args args;                    ///< the RESOLVED arguments, after any defaults
+    Origin origin{Origin::Test};  ///< which client ran it; not compared in the proof
+    std::string crs;              ///< the CRS the coordinates were expressed in
+    std::string layer;            ///< the active layer at the time
     std::int64_t timestamp_ms{0}; ///< excluded from the canonical form
 
+    /// Canonical serialisation. `with_timestamp` is false for the byte-identity
+    /// proof (CLAUDE.md 6.4): three clients running the same command produce the
+    /// same line, and a clock is the one thing they cannot agree on.
     core::Json to_json(bool with_timestamp) const;
+
+    /// The inverse, for replaying a journal file.
     static core::Result<JournalEntry> from_json(const core::Json& j);
 };
 
 class Journal
 {
 public:
+    /// An empty in-memory journal with no file sink.
     Journal();
+
+    /// Flushes and closes the sink. A journal that lost its tail on exit would be
+    /// an audit record with a hole in it.
     ~Journal();
 
+    /// Non-copyable: a journal owns a file handle and a writer thread, and two
+    /// journals appending to one file would interleave lines.
     Journal(const Journal&)            = delete;
     Journal& operator=(const Journal&) = delete;
 

@@ -2,7 +2,8 @@
 // PiriCAD — command: the input aids, and where they are applied.
 //
 // An "input aid" is anything that moves a point the user aimed at to the point
-// they meant: object snap, dik mod, kutupsal izleme, ızgaraya yakalama. The
+// they meant: object snap, `dik mod`, `kutupsal izleme` and `ızgaraya yakalama`.
+// The
 // engine lives in `piricad/core/snap.hpp` and knows no client; this file is the
 // seam that gives it a tolerance and a document.
 //
@@ -35,8 +36,10 @@
 #include <cstdint>
 
 namespace piricad::core {
+/// Forward-declared: the aids read a document to snap against, and this header
+/// must stay includable from anywhere in /src/command.
 class Document;
-}
+} // namespace piricad::core
 
 namespace piricad::command {
 
@@ -44,12 +47,12 @@ namespace piricad::command {
 /// that own them. Assembled in one place so no caller reads a setting id twice.
 struct AidSettings
 {
-    std::uint16_t modes{core::SnapNone};
-    core::Mm snap_radius{0}; ///< object-snap aperture in document millimetres
-    core::Mm pick_radius{0}; ///< single-click pick box in document millimetres
-    core::Mm grid_step{0};   ///< lattice spacing in document millimetres
-    bool ortho{false};
-    std::int64_t polar_step{0}; ///< micro-degrees
+    std::uint16_t modes{core::SnapNone}; ///< which object snaps are enabled
+    core::Mm snap_radius{0};             ///< object-snap aperture in document millimetres
+    core::Mm pick_radius{0};             ///< single-click pick box in document millimetres
+    core::Mm grid_step{0};               ///< lattice spacing in document millimetres
+    bool ortho{false};                   ///< `dik mod`: lock the cursor to the two axes
+    std::int64_t polar_step{0};          ///< micro-degrees
 };
 
 class InputAids

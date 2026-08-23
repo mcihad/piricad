@@ -43,11 +43,11 @@ struct Warning
 /// command that asked has to be able to tell the user.
 struct ProjectReport
 {
-    std::uint64_t entities{0};
-    std::uint64_t layers{0};
-    std::uint64_t vertices{0};
-    std::uint64_t bytes{0};
-    std::uint32_t format_version{0};
+    std::uint64_t entities{0};       ///< entities read or written
+    std::uint64_t layers{0};         ///< layers read or written
+    std::uint64_t vertices{0};       ///< vertices, for the transcript line
+    std::uint64_t bytes{0};          ///< file size
+    std::uint32_t format_version{0}; ///< the version the file declares
 
     /// The fingerprint the WRITER recorded. The reader recomputes it after the
     /// load and compares; a mismatch is reported as a warning rather than a

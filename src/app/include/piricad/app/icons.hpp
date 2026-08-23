@@ -12,6 +12,8 @@
 
 namespace piricad::app {
 
+/// Every icon the shell draws. Drawn as paths rather than shipped as bitmaps, so
+/// they stay crisp at any DPI and re-tint with the theme.
 enum class Glyph {
     // seçim ve çizim
     Select,
@@ -30,7 +32,7 @@ enum class Glyph {
     Offset,
     Undo,
     Redo,
-    // katman ve öznitelik
+    // `katman` ve öznitelik
     Layer,
     LayerManager,
     Table,
@@ -48,7 +50,7 @@ enum class Glyph {
     Save,
     Export,
     Print,
-    // diğer
+    // other
     Script,
     Ai,
 };

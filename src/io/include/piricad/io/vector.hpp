@@ -57,13 +57,17 @@ bool vector_backend_available();
 /// a status nobody can read is not a status.
 std::string vector_backend_status();
 
+/// What an import or an export actually did, for the transcript line.
 struct VectorReport
 {
-    std::string driver;
+    std::string driver;        ///< the OGR driver that handled it
     std::uint64_t features{0}; ///< features read or written
     std::uint64_t entities{0}; ///< entities created in the document
-    std::uint64_t layers{0};
-    std::string crs; ///< the CRS the dataset declared (io.md R20)
+    std::uint64_t layers{0};   ///< layers read or written
+    std::string crs;           ///< the CRS the dataset declared (io.md R20)
+    /// Anything the user should know that is not a failure — a dropped field, a
+    /// sidecar written, a driver limitation worked around. Reported, never
+    /// swallowed: a silent lossy export is how a wrong pafta gets delivered.
     std::vector<std::string> notes;
 };
 

@@ -31,6 +31,9 @@ constexpr std::uint64_t fnv1a(std::string_view s, std::uint64_t seed = 146959810
     return h;
 }
 
+/// Folds an integer, byte by byte in a FIXED order. Never a memcpy of the value:
+/// the byte order of an int64 differs between platforms and a hash that inherited
+/// it could not produce identical golden output (core.md R9, §7.3).
 constexpr std::uint64_t fnv1a_int(std::int64_t v, std::uint64_t seed)
 {
     std::uint64_t h = seed;

@@ -231,7 +231,7 @@ void MapCanvas::dispatchSelection(const QPointF& from, const QPointF& to,
     const core::Point2 b = view_.to_world(render::ScreenPoint{to.x(), to.y()});
 
     // A drag shorter than the pick box is a click, not a box. The threshold is the
-    // declared seçim toleransı, so the mouse obeys the same preference the command
+    // declared `seçim toleransı`, so the mouse obeys the same preference the command
     // line does rather than a number invented here.
     const double slack =
         static_cast<double>(controller_.bus().app_settings().get("core.secim.tolerans").as_int());
@@ -444,7 +444,7 @@ void MapCanvas::paintEvent(QPaintEvent*)
         // The hatch index selects a Qt brush pattern for now. The real MPYY hatch
         // atlas is a /data asset and lands with the symbol atlas in Phase 1; until
         // then a patterned fill is drawn patterned rather than silently solid, so
-        // nobody mistakes a hatched gösterim for a solid one.
+        // nobody mistakes a hatched `gösterim` for a solid one.
         QBrush brush(from_rgba(batch.rgba));
         if (batch.hatch != 0) {
             static const Qt::BrushStyle kPatterns[] = {

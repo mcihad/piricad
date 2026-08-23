@@ -36,6 +36,8 @@
 
 namespace piricad::core {
 
+/// Forward-declared: picking searches a document, and core headers avoid
+/// including one another where a declaration will do.
 class Document;
 
 /// How a box selection treats an entity it only partly contains. The two names
@@ -49,7 +51,7 @@ enum class PickMode : std::uint8_t {
 
 /// The local extent past which the integer box test would overflow int64 and
 /// degrades to the bounding-box answer. 2^29 mm is 536 km: four times the width
-/// of a 3-degree TM dilim, and eight thousand times the longest segment any
+/// of a 3-degree TM `dilim`, and eight thousand times the longest segment any
 /// cadastral or zoning drawing contains.
 inline constexpr Mm kPickExactLimit = Mm{1} << 29;
 

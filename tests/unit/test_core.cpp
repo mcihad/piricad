@@ -175,7 +175,7 @@ TEST_CASE("json numbers are locale independent and round trip")
 // ---------------------------------------------------------------------------
 // The payoff of the ring model: a parcel that a single (start, count) vertex run
 // could not represent. Yola terk and irtifak produce these routinely, and alan
-// hesabı over them is the legal output (.claude/model.md R9, R12).
+// `alan hesabı` over them is the legal output (.claude/model.md R9, R12).
 // ---------------------------------------------------------------------------
 
 namespace {
@@ -195,7 +195,7 @@ TEST_CASE("parsel: delikli parselin net alanı doğru")
     Document doc;
     const LayerId parsel = doc.ensure_layer("PARSEL");
 
-    // 60 m x 45 m dış sınır = 2700 m², içinde 20 m x 15 m irtifak = 300 m².
+    // A 60 m x 45 m exterior of 2700 m², with a 20 m x 15 m easement of 300 m² in it.
     // Net alan 2400 m² = 2 400 000 000 mm².
     const Point2 outer[4] = {{485300000, 4310200000},
                              {485360000, 4310200000},
@@ -228,7 +228,7 @@ TEST_CASE("parsel: iki parçalı parselin alanı parçaların toplamı")
     Document doc;
     const LayerId parsel = doc.ensure_layer("PARSEL");
 
-    // İfraz sonrası yolla ikiye bölünmüş bir parsel: iki ayrı yüz, tek tapu.
+    // A parcel split in two by a road after an ifraz: two separate faces, one title.
     const Point2 a[4] = {{0, 0}, {30000, 0}, {30000, 20000}, {0, 20000}};         //  600 m²
     const Point2 b[4] = {{40000, 0}, {60000, 0}, {60000, 20000}, {40000, 20000}}; // 400 m²
 
@@ -246,7 +246,7 @@ TEST_CASE("parsel: dışına taşan boşluk reddediliyor")
     Document doc;
     const LayerId parsel = doc.ensure_layer("PARSEL");
 
-    // A hole bigger than its parcel would make alan hesabı NEGATIVE — the routine
+    // A hole bigger than its parcel would make `alan hesabı` NEGATIVE — the routine
     // outcome of a malformed yola terk import, and unsignable.
     const Point2 outer[4] = {{0, 0}, {10000, 0}, {10000, 10000}, {0, 10000}};
     const Point2 hole[4]  = {{-5000, -5000}, {40000, -5000}, {40000, 30000}, {-5000, 30000}};

@@ -134,7 +134,7 @@ constexpr std::uint64_t delta(Mm a, Mm b) noexcept
 
 /// Square root of a 128-bit value, rounded to the nearest integer, digit by digit.
 ///
-/// No floating point anywhere: a kenar uzunluğu ends up printed on a röper
+/// No floating point anywhere: a `kenar uzunluğu` ends up printed on a röper
 /// krokisi, and seeding this from `std::sqrt` would make the answer depend on the
 /// platform's rounding of the seed (§7.3). The restoring loop leaves the
 /// remainder v - root², which is exactly what the rounding test needs.
@@ -172,10 +172,10 @@ constexpr std::uint64_t round_sqrt_u128(U128 v) noexcept
 /// and halving once at the end of `area_of` keeps a parcel-minus-hole result
 /// exact instead of rounding each ring on its own.
 ///
-/// Translating to the first vertex is not an optimisation. In TUREF/TM3 the sağa
-/// değer routinely carries the dilim number in front — 30 485 320 m, i.e. 3.05e10
-/// mm — and one raw x*y term against a 4.3e9 mm yukarı değer is 1.3e20, fourteen
-/// times past int64's 9.2e18 ceiling. Even inside one dilim, summing the two
+/// Translating to the first vertex is not an optimisation. In TUREF/TM3 the
+/// `sağa değer` carries the `dilim` number in front — 30 485 320 m, i.e. 3.05e10
+/// mm — and one raw x*y term against a 4.3e9 mm `yukarı değer` is 1.3e20, fourteen
+/// times past int64's 9.2e18 ceiling. Even inside one `dilim`, summing the two
 /// halves of the shoelace separately passes it after four vertices.
 ///
 /// Accumulated as unsigned: two's-complement wraparound is defined behaviour,
@@ -240,8 +240,8 @@ constexpr Mm2 halve(std::uint64_t twice) noexcept
 ///
 /// The old form squared the deltas in signed int64 on the strength of a comment
 /// asserting that "dx and dy stay under ~1e9 mm". Nothing enforced it, and the
-/// file's own test declares a dilim-prefixed sağa değer of 3.05e10 mm supported:
-/// one vertex that kept its dilim prefix while its neighbour lost it made
+/// file's own test declares a `dilim`-prefixed `sağa değer` of 3.05e10 mm supported:
+/// one vertex that kept its `dilim` prefix while its neighbour lost it made
 /// dx² + dy² overflow, which is UB, traps under the ASan/UBSan job, and — through
 /// the old `v <= 0 return 0` guard — reported a 3100 km side as a length of ZERO,
 /// silently shortening a çevre printed on a röper krokisi. The bound is now an
@@ -351,7 +351,7 @@ Result<std::uint32_t> RingGeometry::append(std::span<const RingInput> rings)
         }
 
         // R12: a closed ring whose shoelace is zero encloses nothing, and alan
-        // hesabı is the legal output. Three collinear corners, a ring folded back
+        // `alan hesabı` is the legal output. Three collinear corners, a ring folded back
         // on itself and the symmetric bowtie — swapping two corners of a
         // rectangle, the commonest digitising blunder — all land here, and all of
         // them would otherwise be stored as a parcel of 0 m² that can be signed.
@@ -515,7 +515,7 @@ Mm RingGeometry::perimeter_of(std::uint32_t slot) const
         const std::size_t n   = rx.size();
 
         // Each side is rounded to the millimetre before it is added, because a
-        // kenar uzunluğu is itself a reported figure: the perimeter on the
+        // `kenar uzunluğu` is itself a reported figure: the perimeter on the
         // document must equal the sum of the side lengths printed beside it.
         for (std::size_t i = 0; i + 1 < n; ++i)
             total += segment_length(rx[i], ry[i], rx[i + 1], ry[i + 1]);

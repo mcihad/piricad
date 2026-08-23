@@ -47,6 +47,7 @@ enum class AttrType : std::uint8_t {
     CodeRef, ///< a code drawn from a named /data catalogue
 };
 
+/// Stable machine name for schemas, files and messages.
 const char* attr_type_name(AttrType t) noexcept;
 
 /// One column's declaration, as read from /data. All-runtime by construction:
@@ -54,10 +55,14 @@ const char* attr_type_name(AttrType t) noexcept;
 /// the regulation baked into the binary.
 struct AttrSpec
 {
-    std::string id;         ///< stable, lowercase, from the catalogue package
-    std::string name_tr;    ///< what the user sees in the attribute panel
-    std::string summary_tr; ///< one line, Turkish
-    AttrType type{AttrType::Int64};
+    std::string id;                 ///< stable, lowercase, from the catalogue package
+    std::string name_tr;            ///< what the user sees in the attribute panel
+    std::string summary_tr;         ///< one line, Turkish
+    AttrType type{AttrType::Int64}; ///< what the cells of this column hold
+
+    /// Whether every row must carry a value. Checked by `validate_required`, not
+    /// on write: a parcel is often drawn before its ada number is known, and
+    /// refusing the geometry until the paperwork arrives would be the wrong order.
     bool required{false};
 
     /// Catalogue this column's codes are drawn from. Meaningful only when
@@ -73,14 +78,20 @@ struct AttrSpec
 /// attribute would add an Op variant and a journal case.
 struct AttrValue
 {
-    AttrType type{AttrType::Int64};
-    bool present{false};    ///< false = the cell is empty, OGR's IsFieldSet
-    std::int64_t number{0}; ///< Int64, Length, Bool
-    std::string text;       ///< Text, CodeRef
+    AttrType type{AttrType::Int64}; ///< must match the column's declared type
+    bool present{false};            ///< false = the cell is empty, OGR's IsFieldSet
+    std::int64_t number{0};         ///< Int64, Length, Bool
+    std::string text;               ///< Text, CodeRef
 
+    /// Exact equality, `present` included: an empty cell and a cell holding zero
+    /// are different facts about a parcel, and an undo record has to tell them
+    /// apart to restore the right one.
     friend bool operator==(const AttrValue&, const AttrValue&) = default;
 };
 
+/// Constructors, one per type, plus the empty case. Free functions so the TYPE is
+/// written at the call site: an `Int64` and a `Length` are both integers and
+/// storing one as the other silently changes what the number means.
 AttrValue attr_absent(AttrType t);
 AttrValue attr_int64(std::int64_t v);
 AttrValue attr_mm(Mm v);
@@ -96,8 +107,13 @@ AttrValue attr_code(std::string code);
 class Catalogue
 {
 public:
+    /// An empty catalogue with no id. Exists so a document can hold a slot for
+    /// one before /src/io has loaded the package.
     Catalogue() = default;
 
+    /// A catalogue identified by its package id and version, both required: R35
+    /// makes the regulatory basis of a document a fact it must carry, never a
+    /// default somebody supplied later.
     Catalogue(std::string id, std::string package_version);
 
     /// R35: a document whose regulatory basis is unknown must not open silently,
@@ -157,12 +173,20 @@ private:
 class AttrColumn
 {
 public:
+    /// Builds an empty column from its declaration. The spec is copied and then
+    /// fixed: a column's type cannot change under the rows already written to it.
     explicit AttrColumn(AttrSpec spec);
 
+    /// The declaration this column was built from.
     const AttrSpec& spec() const noexcept { return spec_; }
 
+    /// What the cells hold. A shorthand for `spec().type`, which the read and
+    /// write paths both need on every call.
     AttrType type() const noexcept { return spec_.type; }
 
+    /// How many cells this column has. Always equal to the document's slot count:
+    /// the tables grow with the geometry, so `content_hash()` cannot depend on the
+    /// ORDER in which a session wrote its attributes.
     std::size_t rows() const noexcept { return rows_; }
 
     /// Grows with every new cell absent; shrinking drops the tail. The pool is

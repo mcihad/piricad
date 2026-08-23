@@ -142,7 +142,7 @@ TEST_CASE("StyleTable: every Appearance field is part of the identity")
     // up in an unordered_map, so a distinct id comes from operator==, not from
     // fold_appearance. A fold that hashed only rgba would still hand out twelve
     // distinct ids — pure collisions — and pass every assertion above, while a
-    // document whose çizgi kalınlığı, dolgu rengi or tarama deseni changed would
+    // document whose `çizgi kalınlığı`, dolgu rengi or tarama deseni changed would
     // fingerprint identically. So drive the coverage through fold(), in separate
     // tables so the id is the same on both sides and only the content differs.
     for (std::size_t i = 0; i < variants.size(); ++i) {
@@ -509,7 +509,7 @@ TEST_CASE("LayerTable: aynı ad büyük/küçük harfe bakılmadan reddedilir")
     }
     CHECK_EQ(t.size(), before);
 
-    // Noktalı ve noktasız i ayrı harflerdir: "imar" ve "IMAR" çakışmaz.
+    // Dotted and dotless i are different letters: "imar" and "IMAR" do not collide.
     CHECK(t.add(named("imar"), keys).ok());
     CHECK(t.add(named("IMAR"), keys).ok());
     CHECK(t.find("imar") != t.find("IMAR"));
@@ -747,7 +747,7 @@ TEST_CASE("Symbol: çok katmanlı yığın kendi kimliğini alır ve geri okunur
 {
     StyleTable t;
 
-    // A plan gösterim: an area fill, a heavier boundary of a different colour on
+    // A plan `gösterim`: an area fill, a heavier boundary of a different colour on
     // top of it. One colour and one width cannot state this, and 476 rows in
     // /data are waiting to be stated.
     Symbol sym;

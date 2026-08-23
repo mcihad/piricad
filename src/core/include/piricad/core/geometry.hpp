@@ -4,7 +4,7 @@
 // .claude/model.md R9–R12. A cadastral parcel is a ring, may have interior
 // rings, and may be multipart. `(start, count)` — a single open vertex run —
 // cannot express a parcel with a hole, and yola terk and irtifak routinely
-// produce one. Alan hesabı over such a parcel is the legal output (§12).
+// produce one. `Alan hesabı` over such a parcel is the legal output (§12).
 //
 // Structure-of-arrays throughout, three levels:
 //
@@ -35,7 +35,7 @@ using Mm2 = std::int64_t;
 /// exact only while it holds. Within it, a segment's dx² + dy² fits in 128 bits
 /// and its square root fits in `Mm`, so no perimeter can overflow and no side can
 /// be silently reported short. It is 2.3e18 mm ≈ 2.3e12 km — eight orders of
-/// magnitude past a dilim-prefixed TUREF/TM3 sağa değer (3.05e10 mm), so no
+/// magnitude past a `dilim`-prefixed TUREF/TM3 `sağa değer` (3.05e10 mm), so no
 /// legitimate Turkish coordinate is anywhere near it, and a value beyond it is a
 /// corrupt import rather than a place.
 inline constexpr Mm kMmCoordinateLimit = Mm{1} << 61;
@@ -49,8 +49,8 @@ enum class RingRole : std::uint8_t {
 /// One geometry slot's ring range, as returned by the store.
 struct RingSpan
 {
-    std::uint32_t first{0};
-    std::uint32_t count{0};
+    std::uint32_t first{0}; ///< index of the entity's first ring
+    std::uint32_t count{0}; ///< how many rings it has; 0 means no geometry
 };
 
 /// Ring-structured geometry for one entity kind. Indexed by SLOT, never by key.
@@ -65,9 +65,13 @@ public:
     std::vector<std::uint32_t> ring_start; ///< first vertex of the ring
     std::vector<std::uint32_t> ring_count; ///< vertex count of the ring
     std::vector<std::uint16_t> ring_part;  ///< multipart grouping
+    /// What each ring is. R11 fixes the ORDER — an exterior is followed by its own
+    /// holes — so a reader never has to work out which hole belongs to which face.
     std::vector<RingRole> ring_role;
 
     // ---- slot -> rings ----
+    /// Slot to rings. Indexed by geometry SLOT, which is the same index the
+    /// attribute and text tables use, so all three grow together with the document.
     std::vector<std::uint32_t> first_ring;
     std::vector<std::uint32_t> ring_total;
 
@@ -82,16 +86,21 @@ public:
         return RingSpan{first_ring[slot], ring_total[slot]};
     }
 
+    /// One ring's eastings, as a view into the column. No copy and no bounds
+    /// check on the hot path: the caller got `ring` from `rings_of`, which is the
+    /// only sanctioned way to obtain one.
     std::span<const Mm> ring_xs(std::uint32_t ring) const
     {
         return {xs.data() + ring_start[ring], ring_count[ring]};
     }
 
+    /// The matching northings.
     std::span<const Mm> ring_ys(std::uint32_t ring) const
     {
         return {ys.data() + ring_start[ring], ring_count[ring]};
     }
 
+    /// One vertex, for a caller that wants a point rather than two spans.
     Point2 vertex(std::uint32_t ring, std::uint32_t index) const
     {
         const std::uint32_t k = ring_start[ring] + index;
@@ -101,9 +110,13 @@ public:
     /// One ring of a new slot. Rings MUST be appended in R11 order.
     struct RingInput
     {
+        /// The vertices, WITHOUT a repeated closing point: the geometry closes a
+        /// ring itself, so storing the duplicate would count it twice in every
+        /// perimeter and write it twice into every exported file.
         std::span<const Point2> points;
-        RingRole role{RingRole::Open};
-        std::uint16_t part{0};
+
+        RingRole role{RingRole::Open}; ///< open, exterior, or a hole in one
+        std::uint16_t part{0};         ///< which face of a multi-part entity
     };
 
     /// Appends a slot built from `rings` and returns its index. Validates R11
@@ -125,7 +138,7 @@ public:
     Mm2 ring_area(std::uint32_t ring) const;
 
     /// Net area of a slot: exterior rings positive, interior rings subtracted.
-    /// Open rings contribute nothing. This is alan hesabı.
+    /// Open rings contribute nothing. This is `alan hesabı`.
     Mm2 area_of(std::uint32_t slot) const;
 
     /// Total length of every ring in the slot, in millimetres. Closed rings

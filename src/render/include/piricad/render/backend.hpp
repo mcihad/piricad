@@ -17,10 +17,15 @@ namespace piricad::render {
 class Backend
 {
 public:
+    /// Virtual: a backend is owned polymorphically by the canvas.
     virtual ~Backend() = default;
 
+    /// What this backend is, for the F12 overlay and the startup note.
     virtual std::string name() const = 0;
-    virtual bool gpu() const         = 0;
+
+    /// Whether drawing happens on the GPU. False for the Phase-0 QPainter
+    /// backend, which is why the transcript says so on startup (Article 8.1).
+    virtual bool gpu() const = 0;
 
     /// Draws one frame. Called on the render surface's thread.
     virtual void render(const DrawList& list) = 0;

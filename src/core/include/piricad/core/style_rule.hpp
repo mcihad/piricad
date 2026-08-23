@@ -70,9 +70,13 @@ namespace piricad::core {
 /// per entity (model.md R16); this type is what the baking reads.
 struct ScaleWindow
 {
+    /// Inclusive bounds on the 1:N denominator. ZERO MEANS UNBOUNDED on that side,
+    /// not "1:0": a gösterim that applies at every scale declares neither, and a
+    /// sentinel is cheaper to read from /data than an optional.
     ScaleDenominator low{0};
     ScaleDenominator high{0};
 
+    /// Whether this window includes `denominator`.
     bool covers(ScaleDenominator denominator) const noexcept
     {
         if (low != 0 && denominator < low) return false;
@@ -124,6 +128,10 @@ private:
 /// CLAUDE.md 5.11 forbids.
 struct StyleCondition
 {
+    /// The four tests, and there will not casually be a fifth: `Equals` and
+    /// `OneOf` give a categorized renderer, `Range` gives a graduated one, and
+    /// `Present` covers "tagged at all". Anything beyond this starts to be a
+    /// language.
     enum class Test : std::uint8_t {
         Equals,  ///< text equality against `values.front()`
         OneOf,   ///< text equality against any of `values`
@@ -131,9 +139,12 @@ struct StyleCondition
         Present, ///< the field carries a value at all
     };
 
-    std::string field;
-    Test test{Test::Equals};
-    std::vector<std::string> values;
+    std::string field;               ///< the attribute or derived field to read
+    Test test{Test::Equals};         ///< which comparison to make
+    std::vector<std::string> values; ///< Equals uses the first; OneOf uses all
+
+    /// Range bounds, each present only when its flag is set. Two flags rather
+    /// than sentinels, because zero is a legal density, area and parcel number.
     std::int64_t low{0};
     std::int64_t high{0};
     bool has_low{false};
@@ -151,12 +162,12 @@ const char* style_test_name(StyleCondition::Test t) noexcept;
 /// One catalogue row: an appearance with an identity and a provenance.
 struct StyleEntry
 {
-    std::string id;         ///< stable forever; a retired id is never reused (data.md R5)
-    std::string label;      ///< Turkish, what a user reads in the legend
-    std::string source_ref; ///< the annex/article this row encodes, verbatim from /data
-    Appearance appearance{};
-    ScaleWindow scale{};
-    bool deprecated{false}; ///< retained, still loadable, never silently dropped (R5)
+    std::string id;          ///< stable forever; a retired id is never reused (data.md R5)
+    std::string label;       ///< Turkish, what a user reads in the legend
+    std::string source_ref;  ///< the annex/article this row encodes, verbatim from /data
+    Appearance appearance{}; ///< what the regulation says this looks like
+    ScaleWindow scale{};     ///< the scales it applies at; unbounded by default
+    bool deprecated{false};  ///< retained, still loadable, never silently dropped (R5)
 };
 
 /// One classification rule. Conditions are conjunctive; an empty condition list

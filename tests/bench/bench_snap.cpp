@@ -80,7 +80,7 @@ double snap_all_modes()
     return ms;
 }
 
-/// A single click, resolved with the declared seçim toleransı.
+/// A single click, resolved with the declared `seçim toleransı`.
 double pick_single()
 {
     Fixture& f = fixture();

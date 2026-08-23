@@ -15,12 +15,17 @@ namespace piricad::core {
 class Crs
 {
 public:
+    /// An unset CRS. A document must declare one before anything is exported:
+    /// unlabelled coordinates mean nothing to whoever receives them (io.md R20).
     Crs() = default;
 
+    /// A CRS named by its id — `TUREF/TM30`, `EPSG:5254`. Explicit so a bare
+    /// string cannot become a coordinate system by accident.
     explicit Crs(std::string id) : id_(std::move(id)) {}
 
     const std::string& id() const noexcept { return id_; }
 
+    /// Whether this document has declared a CRS at all.
     bool empty() const noexcept { return id_.empty(); }
 
     friend bool operator==(const Crs& a, const Crs& b) { return a.id_ == b.id_; }

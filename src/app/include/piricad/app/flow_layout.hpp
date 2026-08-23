@@ -21,9 +21,13 @@ namespace piricad::app {
 class FlowLayout : public QLayout
 {
 public:
+    /// Builds the layout on `parent`. Spacing is in device-independent pixels;
+    /// the defaults are what a tool palette wants.
     explicit FlowLayout(QWidget* parent, int margin = 4, int hspacing = 2, int vspacing = 2);
     ~FlowLayout() override;
 
+    /// Takes ownership of an item. Called by Qt through `addWidget`, and by
+    /// `addFullWidth` below.
     void addItem(QLayoutItem* item) override;
 
     /// Adds `widget` on a row of its own, spanning the full width — the shape a

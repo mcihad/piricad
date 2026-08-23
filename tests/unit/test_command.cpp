@@ -428,7 +428,7 @@ TEST_CASE("ÖZNİTELİK: şema bildirilir, değer yazılır, kalıcı kimlikle o
 {
     // Before this, core::AttrTable existed, was tested in isolation and was
     // attached to nothing: the document could not say what a parcel IS, only
-    // where its corners are. The 476 MPYY gösterim rows in /data had nothing to
+    // where its corners are. The 476 MPYY `gösterim` rows in /data had nothing to
     // match against, which is why the catalogue shipped with zero rules.
     Fixture f;
     REQUIRE(f.bus.execute_line("SÜTUN ada_no tam_sayi", Origin::Test).ok());

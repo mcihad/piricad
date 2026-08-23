@@ -2,7 +2,7 @@
 //
 // Ring geometry — .claude/model.md R9-R12.
 //
-// Alan hesabı is the legal output of this product (§12), so the numbers below are
+// `Alan hesabı` is the legal output of this product (§12), so the numbers below are
 // asserted as exact integers in square millimetres. A tolerance here would be a
 // tolerance on a cadastral area, and there is no such thing.
 #include "microtest.hpp"
@@ -69,7 +69,7 @@ constexpr Mm kTmY = 4310220400;
 
 } // namespace
 
-// ------------------------------------------------------------------ açık ----
+// ------------------------------------------------------------- open rings ----
 
 TEST_CASE("çoklu çizginin alanı sıfır, çevresi kenarlarının toplamı")
 {
@@ -108,7 +108,7 @@ TEST_CASE("açık halkanın ilk ve son noktası çakışsa bile kırpılmaz")
     CHECK_EQ(g.perimeter_of(slot), Mm{4000});
 }
 
-// ------------------------------------------------------------- alan hesabı --
+// ------------------------------------------------------------- `alan hesabı` --
 
 TEST_CASE("30 m x 45 m kare parselin alanı tam 1350 m²")
 {
@@ -350,7 +350,7 @@ TEST_CASE("R21: kenar uzunluğu en yakın milimetreye yuvarlanır, hiçbir yerde
 {
     // Every perimeter asserted elsewhere is axis-aligned or 3-4-5, i.e. an exact
     // integer root: round_sqrt returning floor() passed all of them. A kenar
-    // uzunluğu printed on a röper krokisi that is systematically 1 mm short is a
+    // A `kenar uzunluğu` printed on a röper krokisi that is systematically 1 mm short is a
     // wrong figure on a legal document.
     RingGeometry g;
 
@@ -383,7 +383,7 @@ TEST_CASE("R9: iki dilimi kapsayan kenar tam ölçülür, sıfır bildirmez")
     const std::uint32_t slot = must_add(g, {ring(genis, RingRole::Open)});
     CHECK_EQ(g.perimeter_of(slot), Mm{3100000000 + 1000});
 
-    // A dilim-prefixed sağa değer beside an unprefixed neighbour — one vertex that
+    // A `dilim`-prefixed `sağa değer` beside an unprefixed neighbour — one vertex that
     // kept its prefix — is 3.05e10 mm apart, and dx² is 9.3e20.
     constexpr Mm kPrefixedX = 30485320150;
     const std::vector<Point2> dilimler{{kPrefixedX, kTmY}, {150, kTmY}};
@@ -393,7 +393,7 @@ TEST_CASE("R9: iki dilimi kapsayan kenar tam ölçülür, sıfır bildirmez")
 
 TEST_CASE("dilim ön ekli sağa değerde çevre de tam kalır")
 {
-    // The dilim-prefixed AREA was pinned; the dilim-prefixed PERIMETER was not,
+    // The `dilim`-prefixed AREA was pinned; the `dilim`-prefixed PERIMETER was not,
     // and the perimeter is the half that used to overflow.
     constexpr Mm kPrefixedX = 30485320150;
 
@@ -408,7 +408,7 @@ TEST_CASE("dilim ön ekli sağa değerde çevre de tam kalır")
     CHECK_EQ(g.perimeter_of(a), g.perimeter_of(b));
 }
 
-// -------------------------------------------------------------- taşma testi --
+// ----------------------------------------------------------- overflow tests --
 
 TEST_CASE("TM30 koordinatlarında altı köşeli parsel: alan tam ve ötelemeden bağımsız")
 {
@@ -449,9 +449,9 @@ TEST_CASE("TM30 koordinatlarında altı köşeli parsel: alan tam ve ötelemeden
 
 TEST_CASE("dilim ön ekli sağa değerde alan hesabı tam kalır")
 {
-    // TUREF/TM3 sağa değer with the dilim number in front: 30 485 320,150 m.
+    // TUREF/TM3 `sağa değer` with the `dilim` number in front: 30 485 320,150 m.
     // Stored in millimetres that is 3.05e10, and a single raw x*y term against a
-    // 4.31e9 mm yukarı değer is 1.3e20 — fourteen times int64's ceiling. The area
+    // 4.31e9 mm `yukarı değer` is 1.3e20 — fourteen times int64's ceiling. The area
     // is exact anyway, because the accumulator is unsigned and the sum is taken
     // modulo 2^64; the perimeter over the same coordinates is the half that used
     // to overflow, and it is pinned in its own case below.
@@ -603,7 +603,7 @@ TEST_CASE("R12: dış halkasının dışına taşan boşluk reddedilir")
            "dışına taşıyor");
 
     // A hole flush against the exterior's own boundary is legal: containment is
-    // inclusive, because a yola terk boşluğu commonly shares an edge.
+    // inclusive, because a `yola terk boşluğu` commonly shares an edge.
     const std::uint32_t slot = must_add(g, {ring(rect(0, 0, 40000, 30000), RingRole::Exterior),
                                             ring(rect(0, 0, 10000, 10000), RingRole::Interior)});
     CHECK_EQ(g.area_of(slot), Mm2{1200000000 - 100000000});

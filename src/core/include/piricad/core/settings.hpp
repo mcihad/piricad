@@ -57,12 +57,14 @@ enum class SettingScopeMask : std::uint8_t {
     All     = 0x7,
 };
 
+/// Combines two scope masks, so a store can be declared to accept more than one.
 constexpr SettingScopeMask operator|(SettingScopeMask a, SettingScopeMask b) noexcept
 {
     return static_cast<SettingScopeMask>(static_cast<std::uint8_t>(a) |
                                          static_cast<std::uint8_t>(b));
 }
 
+/// The single-bit mask for one scope.
 constexpr SettingScopeMask mask_of(SettingScope s) noexcept
 {
     return s == SettingScope::App       ? SettingScopeMask::App
@@ -70,6 +72,11 @@ constexpr SettingScopeMask mask_of(SettingScope s) noexcept
                                         : SettingScopeMask::Session;
 }
 
+/// Whether a store declared with mask `m` may hold a setting of scope `s`.
+///
+/// This is the check that keeps `AYAR` out of the preferences file and `TERCİH`
+/// out of the document: three scopes, three boxes, and no command reaching into
+/// another's (model.md R39, R41).
 constexpr bool accepts(SettingScopeMask m, SettingScope s) noexcept
 {
     return (static_cast<std::uint8_t>(m) & static_cast<std::uint8_t>(mask_of(s))) != 0;
@@ -93,7 +100,10 @@ enum class SettingType : std::uint8_t {
     Enum,   ///< u16 index into SettingSpec::values
 };
 
+/// Stable machine name for schemas, files and tests. Not user-facing.
 const char* setting_type_name(SettingType t);
+
+/// Turkish label for a message the user reads (piricad.md §13).
 const char* setting_type_label(SettingType t);
 
 /// Text settings are short by construction — a CRS id, a language tag, a package
@@ -122,8 +132,13 @@ inline constexpr std::size_t kSettingTextCapacity = 48;
 class SettingValue
 {
 public:
+    /// A `Bool` holding false. Every setting has a declared default, so a
+    /// default-constructed value is a placeholder rather than a meaningful state.
     SettingValue() = default;
 
+    /// Constructors, one per type. Free functions rather than overloads because
+    /// the TYPE has to be visible at the call site: an `Enum` index and an `Int`
+    /// are both integers and confusing them writes a valid-looking wrong setting.
     static SettingValue boolean(bool v);
     static SettingValue integer(std::int64_t v);
     static SettingValue length(Mm v);
@@ -163,25 +178,39 @@ private:
 
 // ---------------------------------------------------------------- range -----
 
+/// The inclusive range a scalar setting accepts.
+///
+/// R42 makes this a CLAMP rather than a rejection: a value out of range in a file
+/// written by another version is clamped with a recorded warning, never silently
+/// accepted and never a hard failure that would make the file unopenable.
 struct SettingRange
 {
+    /// Inclusive bounds. The defaults are the widest an int64 has, which is what
+    /// `unbounded()` means.
     std::int64_t min{std::numeric_limits<std::int64_t>::min()};
     std::int64_t max{std::numeric_limits<std::int64_t>::max()};
 
+    /// No limit in either direction.
     static constexpr SettingRange unbounded() noexcept { return {}; }
 
+    /// A closed range. Both ends are legal values, because a declared minimum a
+    /// user cannot actually enter would be a lie in the message that names it.
     static constexpr SettingRange between(std::int64_t lo, std::int64_t hi) noexcept
     {
         return {lo, hi};
     }
 
+    /// Whether `v` is inside, both ends included.
     constexpr bool contains(std::int64_t v) const noexcept { return v >= min && v <= max; }
 
+    /// `v` pulled to the nearest end. R42's mechanism.
     constexpr std::int64_t clamp(std::int64_t v) const noexcept
     {
         return v < min ? min : (v > max ? max : v);
     }
 
+    /// Whether either end was actually declared, for a caller that wants to print
+    /// the range only when there is one worth printing.
     constexpr bool bounded() const noexcept
     {
         return min != std::numeric_limits<std::int64_t>::min() ||
@@ -193,15 +222,15 @@ struct SettingRange
 
 struct SettingSpec
 {
-    std::string id;                 ///< stable, lowercase, namespaced: "core.crs.id"
-    std::vector<std::string> names; ///< Turkish primary, ASCII-folded, English, abbreviations
-    SettingType type{SettingType::Bool};
-    SettingScope scope{SettingScope::App};
-    SettingValue fallback{};         ///< the declared default; "default" is a keyword
-    SettingRange range{};            ///< scalar range; ignored for Text
-    std::vector<std::string> values; ///< Enum value names, index order
-    std::string unit;                ///< "mm", "µderece", "‰", "sn" — empty when unitless
-    std::string summary;             ///< one line, Turkish, and it justifies the scope (R40)
+    std::string id;                      ///< stable, lowercase, namespaced: "core.crs.id"
+    std::vector<std::string> names;      ///< Turkish primary, ASCII-folded, English, abbreviations
+    SettingType type{SettingType::Bool}; ///< what the value holds
+    SettingScope scope{SettingScope::App}; ///< which of the three boxes owns it
+    SettingValue fallback{};               ///< the declared default; "default" is a keyword
+    SettingRange range{};                  ///< scalar range; ignored for Text
+    std::vector<std::string> values;       ///< Enum value names, index order
+    std::string unit;                      ///< "mm", "µderece", "‰", "sn" — empty when unitless
+    std::string summary;                   ///< one line, Turkish, and it justifies the scope (R40)
 };
 
 /// Declares the factory for one built-in setting. The body returns its SettingSpec.
@@ -209,6 +238,7 @@ struct SettingSpec
 /// are registered in commands/builtin.cpp (model.md R25).
 #define PIRICAD_SETTING(sym) ::piricad::core::SettingSpec piricad_setting_##sym()
 
+/// "No such setting", returned by `SettingCatalog::find`.
 inline constexpr std::uint32_t kNoSetting = 0xFFFFFFFFu;
 
 /// The declared settings. Immutable once built: it is a description of the product,
@@ -266,7 +296,7 @@ std::span<const std::string> builtin_setting_failures();
 
 // ---------------------------------------------------- value conversion ------
 
-/// Canonical text form: an Enum renders as its value name, a Bool as evet/hayır,
+/// Canonical text form: an Enum renders as its value name, a Bool as `evet`/`hayır`,
 /// everything else as its integer. Used by the AYAR/TERCİH transcript and by the
 /// generated documentation, so both say exactly the same thing.
 std::string format_setting(const SettingSpec& spec, const SettingValue& v);
@@ -284,8 +314,8 @@ Result<SettingValue> parse_setting(const SettingSpec& spec, std::string_view tex
 /// changed under them.
 struct SettingWarning
 {
-    std::string id;
-    std::string message;
+    std::string id;      ///< the setting this happened to
+    std::string message; ///< Turkish, and it names the old value and the new one
 };
 
 /// Everything an undo step needs to reverse one write, and everything a journal
@@ -294,11 +324,11 @@ struct SettingWarning
 /// which is the difference between restoring a value and removing one.
 struct SettingChange
 {
-    std::string id;
-    SettingValue before{};
-    SettingValue after{};
-    bool was_explicit{false};
-    bool clamped{false};
+    std::string id;           ///< canonical id, never the alias that was typed
+    SettingValue before{};    ///< the value that was in force
+    SettingValue after{};     ///< what it is now, after any clamping
+    bool was_explicit{false}; ///< whether `before` was set, or was the default
+    bool clamped{false};      ///< whether R42 pulled the value into range
 };
 
 /// The value store. The document owns one masked to Project; the application owns
@@ -307,11 +337,19 @@ struct SettingChange
 class Settings
 {
 public:
+    /// Builds a store over a catalogue, accepting the scopes in `accepted`.
+    ///
+    /// The catalogue is held BY REFERENCE and must outlive the store; in practice
+    /// it is always the process-wide `builtin_settings()`, which is a description
+    /// of the product rather than state and therefore has static lifetime.
     explicit Settings(const SettingCatalog& catalogue = builtin_settings(),
                       SettingScopeMask accepted       = SettingScopeMask::All);
 
+    /// The declarations this store validates against.
     const SettingCatalog& catalogue() const noexcept { return *cat_; }
 
+    /// Which scopes this store will hold. A write of any other scope is refused
+    /// with a message naming both — see `accepts()` above.
     SettingScopeMask accepted() const noexcept { return accepted_; }
 
     // ---- read ----

@@ -35,6 +35,7 @@
 
 namespace piricad::core {
 
+/// The STR-packed R-tree the document rebuilds lazily; see spatial_index.hpp.
 class SpatialIndex;
 
 /// Per-entity flag bits. The cull test reads this byte and the four bbox arrays,
@@ -59,6 +60,8 @@ public:
     // ---- resolution block: read only for entities the index returned ----
     std::vector<LayerId> layer;
     std::vector<StyleId> style; ///< interned; kByLayerStyle means inherit
+    /// Entity kind index, dense and not persisted — `KindSpec::stable_id` is what
+    /// reaches the file (R22-R26).
     std::vector<std::uint16_t> kind;
     std::vector<std::uint32_t> slot; ///< row in the per-kind store
 
@@ -76,6 +79,9 @@ public:
         return (flags[e] & (FlagAlive | FlagHidden | FlagLayerHidden)) == FlagAlive;
     }
 
+    /// The cached bounding box. Assembled from the four columns rather than
+    /// stored as a struct, because the CULL TEST reads the columns and a
+    /// struct-of-boxes layout would pull cache lines it does not need (R6, R7).
     Box2 box_of(EntityId e) const noexcept { return Box2{min_x[e], min_y[e], max_x[e], max_y[e]}; }
 };
 
@@ -119,11 +125,18 @@ struct Op
 class Document
 {
 public:
+    /// An empty document with layer 0 already present, a CRS of `TUREF/TM30` and
+    /// the key allocators at their start.
     Document();
     ~Document();
 
+    /// Movable, so a file reader can build a document and hand it over.
     Document(Document&&) noexcept;
     Document& operator=(Document&&) noexcept;
+
+    /// NOT copyable. A document is tens of columns and, at cadastral scale,
+    /// hundreds of megabytes; an accidental copy would be a pause the user feels.
+    /// A caller that genuinely wants a second one replays the journal.
     Document(const Document&)            = delete;
     Document& operator=(const Document&) = delete;
 
@@ -177,7 +190,7 @@ public:
     Box2 entity_extent(EntityId e) const;
 
     /// Net area of one entity: exterior rings add, interior rings subtract.
-    /// This is alan hesabı (model.md R12).
+    /// This is `alan hesabı` (model.md R12).
     Mm2 entity_area(EntityId e) const;
     Mm entity_perimeter(EntityId e) const;
 

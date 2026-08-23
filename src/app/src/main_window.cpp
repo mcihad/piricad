@@ -346,7 +346,7 @@ void MainWindow::buildActions()
     actPan_ = placeholder(Glyph::Pan, tr("Kaydır"), QStringLiteral("KAYDIR"), tr("Faz 2"));
     actPan_->setToolTip(tr("Kaydır — orta fare tuşu basılı sürükleme her zaman çalışır"));
 
-    // ---- girdi yardımları ----
+    // ---- input aids ----
     //
     // Each of these writes a SESSION setting through `MOD`. They are not a second
     // way to change a mode: the value lives in one store, the menu item reads it
@@ -392,7 +392,7 @@ void MainWindow::buildActions()
         Glyph::Select, tr("Seçimi Temizle"), QStringLiteral("SEÇ TEMİZLE"),
         tr("SEÇ TEMİZLE — seçimi boşaltır"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
 
-    // ---- katman ve CBS ----
+    // ---- `katman` ve CBS ----
     actLayer_ = new QAction(tr("Katman"), this);
     actLayer_->setToolTip(tr("KATMAN — katman oluşturur ve aktif yapar"));
     actLayer_->setData(static_cast<int>(Glyph::Layer));
@@ -896,7 +896,7 @@ void MainWindow::onUndoStateChanged(bool canUndo, bool canRedo)
 void MainWindow::onCursorMoved(core::Point2 world)
 {
     // Turkish surveying convention, which EPSG:5254 itself declares: Y is the
-    // easting (sağa değer) and X is the northing (yukarı değer). Storage is
+    // easting (`sağa değer`) and X is the northing (`yukarı değer`). Storage is
     // unaffected — Point2::x holds the easting either way (.claude/model.md R37a).
     statusCoords_->setText(
         tr("Sağa (Y) %1   Yukarı (X) %2").arg(format_metres(world.x), format_metres(world.y)));

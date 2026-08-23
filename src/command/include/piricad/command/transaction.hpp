@@ -33,6 +33,9 @@ using core::StyleId;
 class Transaction
 {
 public:
+    /// Opens a transaction over a document. `label` is what the undo entry will
+    /// be called — the user reads it in the Düzen menu, so it names the ACTION
+    /// rather than the command id.
     Transaction(Document& doc, std::string label);
 
     /// Returns the slot of the layer with this name, creating it if absent.
@@ -119,8 +122,12 @@ struct UndoEntry
 class UndoStack
 {
 public:
+    /// Puts a completed transaction on the stack and CLEARS the redo side: once
+    /// the user edits after undoing, the branch they undid is gone, which is what
+    /// every editor does and what any other answer would make unpredictable.
     void push(UndoEntry e);
 
+    /// Whether there is anything to undo or redo, for the menu items.
     bool can_undo() const noexcept { return !undo_.empty(); }
 
     bool can_redo() const noexcept { return !redo_.empty(); }
@@ -140,6 +147,8 @@ public:
         return undo_.empty() ? std::string{} : undo_.back().label;
     }
 
+    /// The label of what would be redone, or empty. Shown in the menu so the item
+    /// reads "Yinele: Katman ekle" rather than a bare "Yinele".
     std::string next_redo_label() const
     {
         return redo_.empty() ? std::string{} : redo_.back().label;

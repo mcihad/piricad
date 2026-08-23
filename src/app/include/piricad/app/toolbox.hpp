@@ -16,6 +16,7 @@
 #include <QList>
 #include <QVector>
 
+/// Qt types this header only holds pointers to.
 class QAction;
 class QFrame;
 class QToolButton;
@@ -27,6 +28,8 @@ class ToolBox : public QDockWidget
     Q_OBJECT
 
 public:
+    /// Builds an empty palette. Tools are added by the main window, each bound to
+    /// an action that dispatches a command.
     explicit ToolBox(QWidget* parent = nullptr);
 
     /// Adds a tool button bound to `action`. Checkable actions render as a

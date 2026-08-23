@@ -22,6 +22,7 @@
 
 namespace piricad::core {
 
+/// Forward-declared: the index is built from the entity columns.
 class EntityTable;
 
 class SpatialIndex

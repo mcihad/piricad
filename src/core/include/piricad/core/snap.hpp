@@ -43,6 +43,8 @@
 
 namespace piricad::core {
 
+/// Forward-declared: the engine searches a document, and core headers avoid
+/// including one another where a declaration will do.
 class Document;
 
 /// Bits of `core.yakalama.modlar`. The mask IS the engine's input, so the MOD
@@ -87,21 +89,21 @@ const std::uint16_t* snap_mode_bits();
 /// One aim, and everything the engine may use to resolve it.
 struct SnapQuery
 {
-    Point2 aim{}; ///< where the client pointed, in document millimetres
-    Mm radius{0}; ///< object-snap search radius; 0 disables object snap
-    std::uint16_t modes{SnapNone};
-    Mm grid_step{0};            ///< lattice spacing; 0 disables the grid even if the bit is set
-    bool ortho{false};          ///< dik mod
-    std::int64_t polar_step{0}; ///< micro-degrees; 0 disables polar even if the bit is set
-    bool has_base{false};       ///< a previous point exists (rubber-band origin)
-    Point2 base{};              ///< that previous point — ortho, polar and DİK measure from it
+    Point2 aim{};                  ///< where the client pointed, in document millimetres
+    Mm radius{0};                  ///< object-snap search radius; 0 disables object snap
+    std::uint16_t modes{SnapNone}; ///< bit mask of the enabled object snaps
+    Mm grid_step{0};               ///< lattice spacing; 0 disables the grid even if the bit is set
+    bool ortho{false};             ///< dik mod
+    std::int64_t polar_step{0};    ///< micro-degrees; 0 disables polar even if the bit is set
+    bool has_base{false};          ///< a previous point exists (rubber-band origin)
+    Point2 base{};                 ///< that previous point — ortho, polar and DİK measure from it
 };
 
 /// What the engine decided, and why. `mode` is SnapNone when nothing applied and
 /// the aim is returned untouched — which is the answer a headless replay gets.
 struct SnapResult
 {
-    Point2 point{};
+    Point2 point{};               ///< where the point ended up
     std::uint16_t mode{SnapNone}; ///< the single bit that produced the point
     EntityId entity{kNoEntity};   ///< the entity snapped to, for the canvas marker
     bool constrained{false};      ///< ortho or polar moved the point along a direction

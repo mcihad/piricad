@@ -191,10 +191,15 @@ enum BlockId : std::uint32_t {
 
 // ------------------------------------------------------- block records -----
 
+/// Where one interned string lives inside the string-bytes block.
+///
+/// Offset and length rather than a NUL terminator, because the block is MAPPED
+/// and a reader must be able to hand out a `string_view` into it without scanning
+/// for an end that a corrupt file may not contain.
 struct StringSpan
 {
     std::uint64_t offset; ///< into kBlkStringBytes
-    std::uint64_t bytes;
+    std::uint64_t bytes;  ///< length in bytes, not characters: the pool is UTF-8
 };
 
 static_assert(sizeof(StringSpan) == 16, "wire record");
@@ -204,17 +209,24 @@ static_assert(sizeof(StringSpan) == 16, "wire record");
 /// is a file that differs between compilers (model.md, core.md R9).
 struct AppearanceRecord
 {
-    std::uint32_t rgba;
-    std::int32_t width_um; ///< PAPER micrometres, never pixels (model.md R20/P9)
-    std::uint16_t dash;
-    std::uint16_t symbol;
-    std::uint32_t fill_rgba;
-    std::uint16_t hatch;
-    std::int16_t z_order;
+    std::uint32_t rgba;      ///< stroke colour, 0xAARRGGBB
+    std::int32_t width_um;   ///< PAPER micrometres, never pixels (model.md R20/P9)
+    std::uint16_t dash;      ///< index into the dash table, which lives in /data
+    std::uint16_t symbol;    ///< index into the symbol atlas, also /data
+    std::uint32_t fill_rgba; ///< 0 means no fill, which is not the same as clear
+    std::uint16_t hatch;     ///< index into the hatch table
+    std::int16_t z_order;    ///< draw order, which MPYY prescribes for plan sheets
+
+    /// Where each property gets its value: explicit, ByLayer or ByBlock
+    /// (`core::Source`). Stored as bytes rather than as the enum so the file does
+    /// not depend on the enum's underlying type.
     std::uint8_t src_colour;
     std::uint8_t src_width;
     std::uint8_t src_dash;
     std::uint8_t src_fill;
+
+    /// Padding to a round size, zero-filled on write. Reserved bytes are how a
+    /// later version adds a field without moving every record that follows.
     std::uint8_t reserved[8];
 };
 
@@ -244,11 +256,11 @@ static_assert(sizeof(LayerRecord) == 64, "wire record");
 /// so a Text setting cannot make the record length depend on its content.
 struct SettingRecord
 {
-    std::uint32_t id_string;
-    std::uint8_t type; ///< core::SettingType
-    std::uint8_t reserved[3];
-    std::int64_t scalar; ///< Bool / Int / Length / Enum
-    char text[48];       ///< core::kSettingTextCapacity
+    std::uint32_t id_string;  ///< the setting's stable id, into the string pool
+    std::uint8_t type;        ///< core::SettingType
+    std::uint8_t reserved[3]; ///< alignment, zero-filled
+    std::int64_t scalar;      ///< Bool / Int / Length / Enum
+    char text[48];            ///< core::kSettingTextCapacity, NOT NUL-terminated
 };
 
 static_assert(sizeof(SettingRecord) == 64, "wire record");
@@ -263,8 +275,8 @@ struct AttrColumnRecord
     std::uint32_t summary_string; ///< one-line description
     std::uint32_t catalog_string; ///< catalogue id, or 0
     std::uint8_t type;            ///< core::AttrType
-    std::uint8_t required;
-    std::uint8_t reserved[6];
+    std::uint8_t required;        ///< 1 when every row must carry a value
+    std::uint8_t reserved[6];     ///< alignment, zero-filled
 };
 
 static_assert(sizeof(AttrColumnRecord) == 24, "wire record");
@@ -274,11 +286,11 @@ static_assert(sizeof(AttrColumnRecord) == 24, "wire record");
 /// key to place a value.
 struct AttrCellRecord
 {
-    std::uint32_t column;
-    std::uint32_t row;
+    std::uint32_t column;      ///< index into the schema block, in file order
+    std::uint32_t row;         ///< entity slot, the same index geometry uses
     std::int64_t number;       ///< Int64 / Length / Bool
     std::uint32_t text_string; ///< Text / CodeRef, into the pool; 0 otherwise
-    std::uint32_t reserved;
+    std::uint32_t reserved;    ///< alignment, zero-filled
 };
 
 static_assert(sizeof(AttrCellRecord) == 24, "wire record");
@@ -287,11 +299,11 @@ static_assert(sizeof(AttrCellRecord) == 24, "wire record");
 /// file; the baseline lives in the ordinary geometry blocks.
 struct TextRecord
 {
-    std::uint32_t row; ///< entity slot
-    std::uint32_t content_string;
-    std::int64_t height_mm;
-    std::uint8_t anchor; ///< core::TextAnchor
-    std::uint8_t reserved[7];
+    std::uint32_t row;            ///< entity slot
+    std::uint32_t content_string; ///< the caption itself, into the string pool
+    std::int64_t height_mm;       ///< GROUND millimetres, like every other length
+    std::uint8_t anchor;          ///< core::TextAnchor
+    std::uint8_t reserved[7];     ///< alignment, zero-filled
 };
 
 static_assert(sizeof(TextRecord) == 24, "wire record");
@@ -303,14 +315,24 @@ struct DocumentRecord
 {
     std::uint32_t crs_string;     ///< core::Crs::id(), never empty (io.md R20)
     std::uint32_t catalog_string; ///< catalogue package version (model.md R34/R35)
+
+    /// Where the key allocators stood when the file was written. Restored on load
+    /// so a reopened drawing cannot hand a NEW entity a key a dead one already
+    /// used — which would make the journal's history ambiguous (model.md R4).
     std::uint64_t next_entity_key;
     std::uint64_t next_layer_key;
+
+    /// Row counts, cross-checked against the directory on load. A column whose
+    /// length disagrees with these is a corrupt file rather than a hint.
     std::uint64_t entity_count;
     std::uint64_t layer_count;
     std::uint64_t style_count;
     std::uint64_t slot_count;
     std::uint64_t ring_count;
     std::uint64_t vertex_count;
+
+    /// Zero-filled. Space for a count a later version needs, without moving the
+    /// fields above it.
     std::uint64_t reserved;
 };
 

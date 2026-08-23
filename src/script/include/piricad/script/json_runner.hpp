@@ -23,9 +23,9 @@ namespace piricad::script {
 
 struct RunReport
 {
-    std::size_t commands{0};
-    std::size_t ops{0};
-    std::string label;
+    std::size_t commands{0}; ///< how many commands ran
+    std::size_t ops{0};      ///< primitive edits across all of them
+    std::string label;       ///< the script's own name, for the undo entry
 };
 
 /// Sandbox level. Phase 0 implements the boundary; the filesystem and network
@@ -39,6 +39,9 @@ enum class Sandbox : std::uint8_t {
 class JsonRunner
 {
 public:
+    /// Builds a runner over a bus. The sandbox defaults to the SAFE level: a
+    /// script from an unknown source gets no filesystem, and widening that is a
+    /// deliberate act at the call site rather than a default nobody noticed.
     JsonRunner(command::Bus& bus, Sandbox sandbox = Sandbox::Safe);
 
     /// Runs a JSON document of the form

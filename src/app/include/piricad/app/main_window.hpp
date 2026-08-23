@@ -25,6 +25,9 @@
 
 #include <QMainWindow>
 
+/// Qt widgets this header only holds pointers to. Forward-declared rather than
+/// included so that touching a widget's header does not rebuild everything that
+/// includes the main window.
 class QComboBox;
 class QFrame;
 class QDockWidget;
@@ -34,6 +37,7 @@ class QToolBar;
 
 namespace piricad::app {
 
+/// PiriCAD's own widgets and the controller, forward-declared for the same reason.
 class CommandLine;
 class Controller;
 class LayerPanel;
@@ -46,13 +50,23 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
+    /// Builds the shell: canvas, docks, toolbars, menus and the command line,
+    /// then connects them to the controller. Every action created here dispatches
+    /// a command; none of them touches the document directly (Article 1.2, 5.9).
     explicit MainWindow(QWidget* parent = nullptr);
+
+    /// Saves the window geometry and dock layout, which are not declared settings
+    /// and deliberately not part of the document.
     ~MainWindow() override;
 
     /// Runs a script file through the bus, exactly as the BETİK command does.
     void runScriptFile(const QString& path);
 
 private slots:
+    /// Bus observers. The shell SUBSCRIBES to the command bus and never reaches
+    /// around it: a value on screen is there because a command put it there, so
+    /// the same change made from the command line, a script or the AI updates the
+    /// interface identically (Article 1.2).
     void onEcho(const QString& text);
     void onDocumentChanged();
     void onPromptChanged(const QString& prompt);
@@ -155,7 +169,7 @@ private:
     QLabel* statusLayer_{nullptr};
     QLabel* statusCrs_{nullptr};
 
-    // ---- komuta karşılık gelen eylemler ----
+    // ---- actions, each of which dispatches one command ----
     QAction* actSelect_{nullptr};
     QAction* actLine_{nullptr};
     QAction* actErase_{nullptr};

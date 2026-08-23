@@ -562,8 +562,8 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                                                     "öznitelik şeması");
         if (!schema) return schema.error();
 
-        std::vector<core::AttrId> mapped;
-        mapped.reserve(schema.value().size());
+        std::vector<core::AttrId> columns;
+        columns.reserve(schema.value().size());
 
         for (const AttrColumnRecord& r : schema.value()) {
             auto id = strings.at(r.id_string, "öznitelik kimliği");
@@ -580,7 +580,7 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                     Warning{"io.attr_type", "'" + id.value() +
                                                 "' özniteliğinin türü bu sürümde tanınmıyor; "
                                                 "sütun ve hücreleri yüklenmedi."});
-                mapped.push_back(core::kNoAttr);
+                columns.push_back(core::kNoAttr);
                 continue;
             }
 
@@ -597,10 +597,10 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                 report.warnings.push_back(Warning{
                     "io.attr_column",
                     "'" + id.value() + "' özniteliği yüklenemedi: " + made.error().message});
-                mapped.push_back(core::kNoAttr);
+                columns.push_back(core::kNoAttr);
                 continue;
             }
-            mapped.push_back(made.value());
+            columns.push_back(made.value());
         }
 
         auto cells = view.column<AttrCellRecord>(kBlkAttrCells, view.count_of(kBlkAttrCells),
@@ -608,7 +608,7 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         if (!cells) return cells.error();
 
         for (const AttrCellRecord& c : cells.value()) {
-            if (c.column >= mapped.size() || mapped[c.column] == core::kNoAttr) continue;
+            if (c.column >= columns.size() || columns[c.column] == core::kNoAttr) continue;
             if (c.row >= doc.entities().size()) {
                 report.warnings.push_back(Warning{"io.attr_row",
                                                   "Dosyadaki bir öznitelik hücresi var olmayan bir "
@@ -616,7 +616,7 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                 continue;
             }
 
-            const core::AttrColumn* col = doc.attributes().column(mapped[c.column]);
+            const core::AttrColumn* col = doc.attributes().column(columns[c.column]);
             if (col == nullptr) continue;
 
             core::AttrValue v{};
@@ -631,7 +631,8 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
 
             // The row IS the entity slot, and slots are dense and in order here,
             // so the slot is its own entity id at load time.
-            if (auto st = tx.set_attribute(mapped[c.column], static_cast<core::EntityId>(c.row), v);
+            if (auto st =
+                    tx.set_attribute(columns[c.column], static_cast<core::EntityId>(c.row), v);
                 !st)
                 report.warnings.push_back(Warning{
                     "io.attr_cell", "Bir öznitelik değeri yüklenemedi: " + st.error().message});
