@@ -129,6 +129,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
         onEcho(tr("Not: %1").arg(QString::fromStdString(status)));
     onEcho(tr("Başlamak için: ÇİZGİ  ·  ÇİZGİ 485320,4310220 @50,30 @100<45  ·  YARDIM"));
 
+    loadSymbolLibrary();
+
     syncDockTitles();
     refreshAidActions();
     onDocumentChanged();
@@ -673,6 +675,28 @@ void MainWindow::buildPanels()
         restoreGeometry(settings.value(QStringLiteral("ui/geometry")).toByteArray());
         restoreState(settings.value(QStringLiteral("ui/state")).toByteArray());
     }
+}
+
+void MainWindow::loadSymbolLibrary()
+{
+    // Through the BUS, as a command, exactly like every other client (Article
+    // 1.2). The shell gets no private road to the shelf: what it does here, a
+    // script or the AI can do with the same line.
+    const std::string path =
+        std::string(controller_->bus().app_settings().get("core.stil.kutuphane").as_text());
+    if (path.empty()) return;
+
+    // Quoted, because a package path may contain a space and the parser is the
+    // one parser (CLAUDE.md 5.11) rather than a second one written here.
+    const auto result =
+        controller_->bus().execute_line("SEMBOL paket=\"" + path + "\"", command::Origin::Gui);
+
+    // A missing package is NOT an error the user has to dismiss. A fresh machine
+    // may not have the data package installed yet, and the drawing still opens:
+    // a document carries the symbols it uses in its own style table. The note
+    // says what happened and the application carries on.
+    if (!result)
+        onEcho(tr("Sembol rafı boş: %1").arg(QString::fromStdString(result.error().message)));
 }
 
 void MainWindow::syncDockTitles()

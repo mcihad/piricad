@@ -21,6 +21,7 @@ namespace piricad::command {
     X(select)                                                                                      \
     X(layer)                                                                                       \
     X(style)                                                                                       \
+    X(symbol)                                                                                      \
     X(zoom)                                                                                        \
     X(undo)                                                                                        \
     X(redo)                                                                                        \

@@ -22,6 +22,7 @@
 #include "piricad/core/crs.hpp"
 #include "piricad/core/document.hpp"
 #include "piricad/core/settings.hpp"
+#include "piricad/core/style_library.hpp"
 
 #include <functional>
 #include <memory>
@@ -177,6 +178,16 @@ public:
     // survives a save, a reorder and a reload. They live on the bus rather than
     // in the canvas for the same reason the session settings do: a script and the
     // AI select and aim with the same machinery the hand does (Article 1.2).
+    /// The browsable symbol shelf, for as long as this session lives.
+    ///
+    /// SESSION state, not document state (model.md R43): which symbols a user can
+    /// pick from is a property of what they have installed, not of the drawing.
+    /// A drawing carries the symbols it actually uses, interned in its own style
+    /// table, so it opens the same on a machine with no library at all.
+    core::StyleLibrary& style_library() noexcept { return style_library_; }
+
+    const core::StyleLibrary& style_library() const noexcept { return style_library_; }
+
     Selection& selection() noexcept { return selection_; }
 
     const Selection& selection() const noexcept { return selection_; }
@@ -257,6 +268,7 @@ private:
 
     Selection selection_{};
     InputAids aids_{};
+    core::StyleLibrary style_library_{};
 
     std::unique_ptr<Transaction> batch_;
     std::string batch_label_;

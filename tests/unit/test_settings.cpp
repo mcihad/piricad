@@ -101,7 +101,7 @@ struct Rig
 TEST_CASE("SettingSpec: her bildirim eksiksiz ve kataloğa kabul edilmiş")
 {
     const SettingCatalog& cat = builtin_settings();
-    CHECK(cat.size() == 23); // her X-makro satırı kabul edildi
+    CHECK(cat.size() == 24); // her X-makro satırı kabul edildi
 
     for (const auto& spec : cat.all()) {
         CHECK(!spec.id.empty());
@@ -173,7 +173,7 @@ TEST_CASE("R40: dışa aktarılan belgenin baytını değiştiren her ayar proje
     for (const auto& spec : cat.all()) {
         // The summary must NAME the scope it claims — "proje", "uygulama" or
         // "oturum" — so the sentence a reviewer reads is the R40 answer and not a
-        // description of the value. All twenty-three already do; the next one
+        // description of the value. All twenty-four already do; the next one
         // cannot be added without writing its answer down.
         if (spec.summary.find(setting_scope_label(spec.scope)) == std::string::npos)
             FAIL_WITH("R40 gerekçesi özet metninde yazılmamış: özet kapsamı "

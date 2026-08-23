@@ -162,9 +162,24 @@ const char* style_test_name(StyleCondition::Test t) noexcept;
 /// One catalogue row: an appearance with an identity and a provenance.
 struct StyleEntry
 {
-    std::string id;          ///< stable forever; a retired id is never reused (data.md R5)
-    std::string label;       ///< Turkish, what a user reads in the legend
-    std::string source_ref;  ///< the annex/article this row encodes, verbatim from /data
+    std::string id;         ///< stable forever; a retired id is never reused (data.md R5)
+    std::string label;      ///< Turkish, what a user reads in the legend
+    std::string source_ref; ///< the annex/article this row encodes, verbatim from /data
+
+    /// Where this row sits in the package's OWN tree, outermost name first.
+    ///
+    /// MPYY EK-1 organises its 476 gösterim by annex and then by a section path
+    /// such as SINIRLAR > İDARİ SINIRLAR, and that is the tree a planner already
+    /// navigates on paper. Nothing here invents a taxonomy: the path arrives in
+    /// the package (CLAUDE.md 5.13, data.md R1), and an empty one is a row the
+    /// package filed nowhere.
+    std::vector<std::string> group;
+
+    /// Free labels, searched across groups. A row can be reached by a word that
+    /// is in none of its names — its annex code, its plan type — without that
+    /// word having to become part of the tree.
+    std::vector<std::string> tags;
+
     Appearance appearance{}; ///< what the regulation says this looks like
     ScaleWindow scale{};     ///< the scales it applies at; unbounded by default
     bool deprecated{false};  ///< retained, still loadable, never silently dropped (R5)

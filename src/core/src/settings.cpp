@@ -335,6 +335,7 @@ PIRICAD_SETTING(tuval_arkaplani);
 PIRICAD_SETTING(yakalama_modlari);
 PIRICAD_SETTING(dik_mod);
 PIRICAD_SETTING(kutupsal_aci);
+PIRICAD_SETTING(sembol_kutuphanesi);
 
 #define PIRICAD_BUILTIN_SETTINGS(X)                                                                \
     X(koordinat_sistemi)                                                                           \
@@ -358,10 +359,31 @@ PIRICAD_SETTING(kutupsal_aci);
     X(secim_toleransi)                                                                             \
     X(yakalama_modlari)                                                                            \
     X(dik_mod)                                                                                     \
+    X(sembol_kutuphanesi)                                                                          \
     X(kutupsal_aci)                                                                                \
     X(izgaraya_yakala)
 
 // ---- PROJECT scope: anything that can change a byte of the exported document --
+
+PIRICAD_SETTING(sembol_kutuphanesi)
+{
+    return SettingSpec{
+        .id       = "core.stil.kutuphane",
+        .names    = {"sembol_kütüphanesi", "sembol_kutuphanesi", "style_library", "kütüphane"},
+        .type     = SettingType::Text,
+        .scope    = SettingScope::App,
+        .fallback = text_value(
+            "data/catalogs/mpyy/plan-gosterim.json"), // catalog-key: a path into /data/catalogs,
+                                                      // not a value out of it
+        .range   = SettingRange::unbounded(),
+        .values  = {},
+        .unit    = "",
+        .summary = "Açılışta sembol rafına yüklenecek gösterim paketinin yolu. Kapsamı " // ui-label
+                   "uygulama, çünkü hangi paketin kurulu olduğu makineye aittir, çizime "
+                   "değil: bir çizim kullandığı sembolleri kendi içinde taşır ve rafı boş "
+                   "bir makinede de aynı açılır. Boş bırakılırsa raf boş başlar.",
+    };
+}
 
 PIRICAD_SETTING(koordinat_sistemi)
 {

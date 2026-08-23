@@ -32,6 +32,10 @@ constexpr const char* kKeyWidth      = "kalinlik_um";
 constexpr const char* kKeyDash       = "desen";
 constexpr const char* kKeyHatch      = "tarama";
 constexpr const char* kKeySymbol     = "simge";
+constexpr const char* kKeyAnnex      = "ek";
+constexpr const char* kKeySection    = "bolum";
+constexpr const char* kKeyPlanTypes  = "plan_turleri";
+constexpr const char* kKeyGroup      = "grup";
 constexpr const char* kKeyOrder      = "sira";
 constexpr const char* kKeyScale      = "olcek";
 constexpr const char* kKeyScaleLow   = "en_kucuk_payda";
@@ -395,8 +399,25 @@ Result<StyleCondition> parse_condition(const Json& j, std::string_view where)
     return condition;
 }
 
-Result<StyleEntry> parse_entry(const Json& j, const IndexTable& dashes, const IndexTable& hatches,
-                               std::size_t index)
+/// Annex code to the plan type it names, e.g. `EK-1a` -> `ORTAK GÖSTERİMLER`.
+///
+/// Read from the package's own `plan_turleri` block. Without it the tree's top
+/// level would be a bare `EK-1a`, which is the annex's file name rather than what
+/// a planner calls it.
+using AnnexNames = std::vector<std::pair<std::string, std::string>>;
+
+/// The declared name of an annex, or the annex code itself when the package does
+/// not name it. Never an error: a package with no `plan_turleri` block still has
+/// a usable tree, one level of which is spelled the way the annex is.
+std::string annex_label(const AnnexNames& names, const std::string& annex)
+{
+    for (const auto& [code, label] : names)
+        if (code == annex) return annex + " — " + label;
+    return annex;
+}
+
+Result<StyleEntry> parse_entry(const Json& j, const AnnexNames& annexes, const IndexTable& dashes,
+                               const IndexTable& hatches, std::size_t index)
 {
     const std::string where =
         "Stil kataloğu: " + std::string(kKeyEntries) + "[" + std::to_string(index) + "]";
@@ -415,6 +436,35 @@ Result<StyleEntry> parse_entry(const Json& j, const IndexTable& dashes, const In
                        where + " '" + entry.id + "': '" + kKeyRetired + "' true/false olmalı.");
         entry.deprecated = v->as_bool();
     }
+
+    // ---- the group path and the tags ----
+    //
+    // Both come from the package. `ek` names the annex and `bolum` the section
+    // path inside it, which together are exactly how MPYY EK-1 is printed; a row
+    // that declares neither is filed nowhere and shows up at the tree's root.
+    std::string annex;
+    if (const Json* v = j.find(kKeyAnnex); v != nullptr && v->is_string()) {
+        annex = v->as_string();
+        entry.group.push_back(annex_label(annexes, annex));
+        entry.tags.push_back(annex);
+    }
+
+    if (const Json* v = j.find(kKeySection); v != nullptr) {
+        if (v->is_string()) {
+            entry.group.push_back(v->as_string());
+        } else if (v->is_array()) {
+            for (const Json& part : v->as_array())
+                if (part.is_string()) entry.group.push_back(part.as_string());
+        } else {
+            return err(ErrorCode::ParseError, where + " '" + entry.id + "': '" + kKeySection +
+                                                  "' metin ya da metin dizisi olmalı.");
+        }
+    }
+
+    // The package's own grouping key, kept as a TAG rather than as a tree level:
+    // it is an identifier for rows that belong together, not a name anybody reads.
+    if (const Json* v = j.find(kKeyGroup); v != nullptr && v->is_string())
+        entry.tags.push_back(v->as_string());
 
     const std::string row = where + " '" + entry.id + "'";
 
@@ -543,6 +593,19 @@ Result<StyleCatalog> StyleCatalog::from_json(const Json& j)
         *slot = std::move(value.value());
     }
 
+    // The annex names, read before the rows so every row can be filed under the
+    // name its annex actually has.
+    AnnexNames annexes;
+    if (const Json* types = j.find(kKeyPlanTypes); types != nullptr && types->is_array()) {
+        for (const Json& item : types->as_array()) {
+            if (!item.is_object()) continue;
+            const Json* code  = item.find(kKeyAnnex);
+            const Json* label = item.find(kKeyLabel);
+            if (code != nullptr && code->is_string() && label != nullptr && label->is_string())
+                annexes.emplace_back(code->as_string(), label->as_string());
+        }
+    }
+
     IndexTable dashes;
     if (auto st = dashes.load(j, kKeyDashTable); !st) return st.error();
     IndexTable hatches;
@@ -553,7 +616,7 @@ Result<StyleCatalog> StyleCatalog::from_json(const Json& j)
             return err(ErrorCode::ParseError, where + ": '" + kKeyEntries + "' bir dizi olmalı.");
         std::size_t index = 0;
         for (const Json& item : entries->as_array()) {
-            auto entry = parse_entry(item, dashes, hatches, index);
+            auto entry = parse_entry(item, annexes, dashes, hatches, index);
             if (!entry) return entry.error();
             for (const auto& existing : catalog.entries_) {
                 if (existing.id == entry.value().id)
@@ -639,6 +702,10 @@ std::uint64_t StyleCatalog::content_hash() const
         h = fnv1a_int(e.appearance.width_um, h);
         h = fnv1a_int(e.appearance.dash, h);
         h = fnv1a_int(e.appearance.symbol, h);
+        for (const std::string& g : e.group)
+            h = fnv1a(g, h);
+        for (const std::string& t : e.tags)
+            h = fnv1a(t, h);
         h = fnv1a_int(static_cast<std::int64_t>(e.appearance.fill_rgba), h);
         h = fnv1a_int(e.appearance.hatch, h);
         h = fnv1a_int(e.appearance.z_order, h);

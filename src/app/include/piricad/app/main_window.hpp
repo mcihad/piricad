@@ -124,6 +124,10 @@ private:
     /// A tabified dock shows its name on the tab, so its own title bar would say
     /// it twice. Hidden while tabbed, restored when the dock is floated or torn
     /// out — dragging the tab still detaches it.
+    /// Loads the gösterim package named by `core.stil.kutuphane` onto the session's
+    /// symbol shelf, through the bus like any other client.
+    void loadSymbolLibrary();
+
     void syncDockTitles();
     void buildMenus();
     void buildToolBox();

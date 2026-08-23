@@ -20,6 +20,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.select`](select.md) | `SEÇ`, `SEC`, `SELECT`, `S` | Düzenleme | geri alınmaz | betiklenebilir, salt okunur | Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta. |
 | [`core.layer`](layer.md) | `KATMAN`, `LAYER`, `KAT` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
 | [`core.style`](style.md) | `STİL`, `STIL`, `STYLE`, `ST` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar. |
+| [`core.symbol`](symbol.md) | `SEMBOL`, `SEMBOLLER`, `SYMBOL`, `SMB` | Katman | geri alınmaz | betiklenebilir, AI erişimli | Gösterim rafını yükler, ağacında gezer ve içinde arar. |
 | [`core.zoom`](zoom.md) | `YAKINLAŞ`, `YAKINLAS`, `ZOOM`, `Z` | Görünüm | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü çizim kapsamına veya verilen çarpana ayarlar. |
 | [`core.undo`](undo.md) | `GERİAL`, `GERIAL`, `UNDO`, `U` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Son işlemi geri alır. |
 | [`core.redo`](redo.md) | `YİNELE`, `YINELE`, `REDO` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Geri alınan işlemi yineler. |
@@ -174,6 +175,19 @@ Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden
 | `desen` | text | isteğe bağlı | Çizgi deseni tablosundaki satır |
 
 Ayrıntılı kullanım: [STİL](style.md)
+
+### `core.symbol` — SEMBOL
+
+Gösterim rafını yükler, ağacında gezer ve içinde arar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `paket` | text | isteğe bağlı | Yüklenecek gösterim paketinin dosya yolu |
+| `grup` | text | isteğe bağlı | Gezilecek grup yolu, düzeyler '>' ile ayrılır |
+| `ara` | text | isteğe bağlı | Etikette, kimlikte ve grup yolunda arar |
+| `kod` | text | isteğe bağlı | Tek bir gösterimin ayrıntısı |
+
+Ayrıntılı kullanım: [SEMBOL](symbol.md)
 
 ### `core.zoom` — YAKINLAŞ
 
@@ -770,6 +784,56 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         "ai_accessible"
       ],
       "undo": "single_transaction"
+    },
+    {
+      "id": "core.symbol",
+      "names": [
+        "SEMBOL",
+        "SEMBOLLER",
+        "SYMBOL",
+        "SMB"
+      ],
+      "category": "Katman",
+      "summary": "Gösterim rafını yükler, ağacında gezer ve içinde arar.",
+      "params": [
+        {
+          "name": "paket",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Yüklenecek gösterim paketinin dosya yolu"
+        },
+        {
+          "name": "grup",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Gezilecek grup yolu, düzeyler '>' ile ayrılır"
+        },
+        {
+          "name": "ara",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Etikette, kimlikte ve grup yolunda arar"
+        },
+        {
+          "name": "kod",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Tek bir gösterimin ayrıntısı"
+        }
+      ],
+      "flags": [
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "none"
     },
     {
       "id": "core.zoom",

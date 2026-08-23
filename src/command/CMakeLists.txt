@@ -28,6 +28,7 @@ add_library(piricad_command STATIC
     src/commands/pick.cpp
     src/commands/settings.cpp
     src/commands/style.cpp
+    src/commands/symbol.cpp
     src/commands/system.cpp
     src/commands/view.cpp
 )

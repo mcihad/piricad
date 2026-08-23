@@ -14,6 +14,7 @@ add_library(piricad_core STATIC
     src/snap.cpp
     src/spatial_index.cpp
     src/style.cpp
+    src/style_library.cpp
     src/style_rule.cpp
     src/text.cpp
     src/text_store.cpp

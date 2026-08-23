@@ -19,6 +19,7 @@
 #include "piricad/command/bus.hpp"
 #include "piricad/command/registry.hpp"
 #include "piricad/core/json.hpp"
+#include "piricad/core/style_library.hpp"
 #include "piricad/core/style_rule.hpp"
 #include "piricad/script/json_runner.hpp"
 
@@ -803,4 +804,91 @@ TEST_CASE("Sınıflandırma sayısal aralıkla da çalışır — kademeli çizi
     CHECK(!orta.matches(core::FeatureView::from_row(table, 0)));
     CHECK(orta.matches(core::FeatureView::from_row(table, 1)));
     CHECK(!orta.matches(core::FeatureView::from_row(table, 2)));
+}
+
+// ------------------------------------------------------- the symbol shelf ----
+
+TEST_CASE("SEMBOL: MPYY paketi kendi ağacıyla rafa giriyor")
+{
+    // The tree is the REGULATION's, not ours. MPYY EK-1 files its rows by annex
+    // and then by a section path, and the shelf indexes that path rather than
+    // inventing a taxonomy (CLAUDE.md 5.13).
+    const std::string path = std::string(PIRICAD_DATA_DIR) + "/catalogs/mpyy/plan-gosterim.json";
+    std::ifstream in(path, std::ios::binary);
+    REQUIRE(in.good());
+
+    std::ostringstream buffer;
+    buffer << in.rdbuf();
+    auto parsed = core::Json::parse(buffer.str());
+    REQUIRE(parsed.ok());
+
+    auto catalog = core::StyleCatalog::from_json(parsed.value());
+    if (!catalog) FAIL_WITH("katalog", catalog.error().message);
+    REQUIRE(catalog.ok());
+
+    core::StyleLibrary shelf;
+    const std::size_t added = shelf.add_catalog(catalog.value());
+    CHECK(added >= std::size_t{400});
+    CHECK_EQ(shelf.size(), added);
+
+    // Five annexes at the top, each named the way the package names it.
+    const std::vector<std::string> root;
+    const auto top = shelf.children(root);
+    CHECK_EQ(top.size(), std::size_t{5});
+    CHECK(top[0].find("EK-1a") != std::string::npos);
+
+    // One level down is the section list, and two levels down are rows.
+    const std::vector<std::string> annex{top[0]};
+    CHECK(!shelf.children(annex).empty());
+
+    // Turkish folding on BOTH sides: a lower-case query finds an upper-case
+    // label. `std::tolower` cannot do this and CLAUDE.md 5.6 bans it outright.
+    const auto hits = shelf.search("orman");
+    CHECK(!hits.empty());
+    bool found_upper = false;
+    for (const core::LibraryEntry* e : hits)
+        if (e->label.find("ORMAN") != std::string::npos) found_upper = true;
+    CHECK(found_upper);
+
+    // A group nobody declared is empty, not an error: a shelf can be asked about
+    // a drawer that does not exist.
+    const std::vector<std::string> nowhere{"BÖYLE BİR EK YOK"};
+    CHECK(shelf.in_group(nowhere).empty());
+    CHECK(shelf.children(nowhere).empty());
+}
+
+TEST_CASE("SEMBOL: aynı kimlik yerinde değişir, rafın sonuna eklenmez")
+{
+    // A newer package version restating a row is an update to that row. Appending
+    // instead would leave two entries under one id and make `find` depend on which
+    // one was asked for.
+    core::StyleLibrary shelf;
+
+    core::LibraryEntry first;
+    first.id    = "x";
+    first.label = "ESKİ";
+    first.group = {"A"};
+    shelf.add(first);
+
+    core::LibraryEntry other;
+    other.id    = "y";
+    other.label = "ÖTEKİ";
+    other.group = {"A"};
+    shelf.add(other);
+
+    core::LibraryEntry updated;
+    updated.id    = "x";
+    updated.label = "YENİ";
+    updated.group = {"A"};
+    shelf.add(updated);
+
+    CHECK_EQ(shelf.size(), std::size_t{2});
+    REQUIRE(shelf.find("x") != nullptr);
+    CHECK_EQ(shelf.find("x")->label, std::string("YENİ"));
+
+    // ...and in its original position, so the shelf's order is the package's.
+    const std::vector<std::string> group{"A"};
+    const auto rows = shelf.in_group(group);
+    REQUIRE(rows.size() == std::size_t{2});
+    CHECK_EQ(rows[0]->id, std::string("x"));
 }
