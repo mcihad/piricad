@@ -8,7 +8,7 @@
 // deterministic text dump, which is diffed against the stored fixture. The dump
 // is readable on purpose: when a platform disagrees, the diff must say which
 // vertex moved, not merely that a hash changed.
-#include "microtest.hpp"
+#include "piricad_test.hpp"
 
 #include "piricad/command/bus.hpp"
 #include "piricad/command/registry.hpp"
@@ -194,8 +194,7 @@ TEST_CASE("GOLDEN: her senaryo kayıtlı çıktısıyla bit-birebir eşleşir")
         const std::string actual = replay(scenario, error);
 
         if (actual.empty()) {
-            ::microtest::report(__FILE__, __LINE__, scenario.filename().string().c_str(),
-                                "senaryo çalışmadı: " + error);
+            FAIL_WITH(scenario.filename().string().c_str(), "senaryo çalışmadı: " + error);
             continue;
         }
 
@@ -208,9 +207,9 @@ TEST_CASE("GOLDEN: her senaryo kayıtlı çıktısıyla bit-birebir eşleşir")
         }
 
         if (!fs::exists(expected_path)) {
-            ::microtest::report(__FILE__, __LINE__, scenario.filename().string().c_str(),
-                                "kayıtlı çıktı yok: " + expected_path.string() +
-                                    "  (PIRICAD_GOLDEN_UPDATE=1 ile üretin)");
+            FAIL_WITH(scenario.filename().string().c_str(),
+                      "kayıtlı çıktı yok: " + expected_path.string() +
+                          "  (PIRICAD_GOLDEN_UPDATE=1 ile üretin)");
             continue;
         }
 
@@ -240,7 +239,7 @@ TEST_CASE("GOLDEN: her senaryo kayıtlı çıktısıyla bit-birebir eşleşir")
                 break;
             }
         }
-        ::microtest::report(__FILE__, __LINE__, scenario.filename().string().c_str(), detail);
+        FAIL_WITH(scenario.filename().string().c_str(), detail);
     }
 }
 

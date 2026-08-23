@@ -14,6 +14,8 @@
 #include "piricad/core/snap.hpp"
 #include "piricad/render/scene.hpp"
 
+#include <vector>
+
 namespace {
 
 using namespace piricad;
@@ -68,97 +70,93 @@ core::SnapQuery working_query()
 
 /// Every object-snap mode on at once. A user with a full aperture pays this on
 /// every mouse move, so it is the figure that has to stay small.
-double snap_all_modes()
+void snap_all_modes(benchmark::State& state)
 {
     Fixture& f              = fixture();
     const core::SnapQuery q = working_query();
 
-    const auto start         = bench::Clock::now();
-    const core::SnapResult r = core::snap(f.doc, q);
-    const double ms          = bench::since(start);
-    bench::keep(static_cast<double>(r.point.x));
-    return ms;
+    for (auto _ : state) {
+        core::SnapResult r = core::snap(f.doc, q);
+        benchmark::DoNotOptimize(r);
+    }
 }
 
 /// A single click, resolved with the declared `seçim toleransı`.
-double pick_single()
+void pick_single(benchmark::State& state)
 {
     Fixture& f = fixture();
 
-    const auto start = bench::Clock::now();
-    const core::EntityId hit =
-        core::pick_nearest(f.doc, f.aim, static_cast<core::Mm>(6 * kWorkingScale));
-    const double ms = bench::since(start);
-    bench::keep(static_cast<double>(hit));
-    return ms;
+    for (auto _ : state) {
+        core::EntityId hit =
+            core::pick_nearest(f.doc, f.aim, static_cast<core::Mm>(6 * kWorkingScale));
+        benchmark::DoNotOptimize(hit);
+    }
 }
 
 /// A crossing box over the whole viewport: the worst box a user can drag without
 /// zooming out, and the one that touches the most geometry.
-double pick_viewport_box()
+void pick_viewport_box(benchmark::State& state)
 {
     Fixture& f = fixture();
-    static std::vector<core::EntityId> hits;
-    hits.clear();
+    std::vector<core::EntityId> hits;
 
-    const auto start = bench::Clock::now();
-    core::pick_in_box(f.doc, f.view.visible_box(), core::PickMode::Crossing, hits);
-    const double ms = bench::since(start);
-    bench::keep(static_cast<double>(hits.size()));
-    return ms;
+    for (auto _ : state) {
+        hits.clear();
+        core::pick_in_box(f.doc, f.view.visible_box(), core::PickMode::Crossing, hits);
+        benchmark::DoNotOptimize(hits);
+    }
 }
 
 /// What one mouse move really costs while a command is asking for a point: the
 /// scene is rebuilt and the snap marker is resolved. This is the scenario that
 /// must fit inside the §10.1 frame budget, and the reason the two above are
 /// measured separately is so a regression says which half moved.
-double frame_with_snap()
+void frame_with_snap(benchmark::State& state)
 {
     Fixture& f              = fixture();
     const core::SnapQuery q = working_query();
 
-    const auto start = bench::Clock::now();
-    render::build_scene(f.doc, f.view, f.options, f.draw);
-    const core::SnapResult r = core::snap(f.doc, q);
-    const double ms          = bench::since(start);
-    bench::keep(static_cast<double>(r.point.y));
-    return ms;
+    for (auto _ : state) {
+        render::build_scene(f.doc, f.view, f.options, f.draw);
+        core::SnapResult r = core::snap(f.doc, q);
+        benchmark::DoNotOptimize(r);
+    }
 }
 
 } // namespace
 
 PIRICAD_BENCH(snap_all){bench::Case{
-    .id     = "yakalama.imlec_5m",
-    .title  = "5M parselde bütün yakalama modlarıyla tek imleç sorgusu",
-    .budget = 16.0,
-    .unit   = "ms",
-    .runs   = 9,
-    .run    = &snap_all_modes,
+    .id          = "yakalama.imlec_5m",
+    .title       = "5M parselde bütün yakalama modlarıyla tek imleç sorgusu",
+    .budget      = 16.0,
+    .unit        = "ms",
+    .repetitions = 9,
+    .body        = &snap_all_modes,
 }};
 
 PIRICAD_BENCH(pick_click){bench::Case{
-    .id     = "secim.tek_tik_5m",
-    .title  = "5M parselde tek tıklamayla seçim",
-    .budget = 16.0,
-    .unit   = "ms",
-    .runs   = 9,
-    .run    = &pick_single,
+    .id          = "secim.tek_tik_5m",
+    .title       = "5M parselde tek tıklamayla seçim",
+    .budget      = 16.0,
+    .unit        = "ms",
+    .repetitions = 9,
+    .body        = &pick_single,
 }};
 
 PIRICAD_BENCH(pick_box){bench::Case{
-    .id     = "secim.pencere_5m",
-    .title  = "5M parselde ekran boyu kesen kutu (bilgilendirme)",
-    .budget = 0.0,
-    .unit   = "ms",
-    .runs   = 5,
-    .run    = &pick_viewport_box,
+    .id          = "secim.pencere_5m",
+    .title       = "5M parselde ekran boyu kesen kutu (bilgilendirme)",
+    .budget      = 0.0,
+    .unit        = "ms",
+    .repetitions = 5,
+    .body        = &pick_viewport_box,
 }};
 
 PIRICAD_BENCH(frame_and_snap){bench::Case{
-    .id     = "render.kare_ve_yakalama_5m",
-    .title  = "Bir fare hareketi: sahne kurulumu + yakalama",
-    .budget = 16.0,
-    .unit   = "ms",
-    .runs   = 7,
-    .run    = &frame_with_snap,
+    .id          = "render.kare_ve_yakalama_5m",
+    .title       = "Bir fare hareketi: sahne kurulumu + yakalama",
+    .budget      = 16.0,
+    .unit        = "ms",
+    .repetitions = 7,
+    .body        = &frame_with_snap,
 }};

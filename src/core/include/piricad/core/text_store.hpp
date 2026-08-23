@@ -53,14 +53,27 @@ inline constexpr std::uint32_t kNoText = 0xFFFFFFFFu;
 class TextTable
 {
 public:
-    /// Grows with every new slot empty. Slots follow RingGeometry slots exactly,
-    /// so a document with no text pays one u32 per entity and nothing else.
+    /// Follows the geometry: every entity slot is a text slot, occupied or not.
+    ///
+    /// ALLOCATES NOTHING until the first `set()`. Only the count is recorded here;
+    /// the three columns are materialised on first write. The eager version cost
+    /// thirteen bytes per entity and seventeen per cent of a bulk load in EVERY
+    /// document, including the overwhelming majority that carry no text at all —
+    /// measured, not guessed: `make bench` reported it against the recorded
+    /// baseline the day it was introduced.
+    ///
+    /// Still dense once materialised, which is the right trade while a text
+    /// entity's slot sits among other text entities' slots. A drawing that mixes
+    /// five million parcels with fifty thousand labels would want a sparse table
+    /// keyed by slot; nothing measures that case yet, and building for it now
+    /// would be a structure chosen from a guess.
+    ///
     /// The parameter is NOT called `slots`: Qt defines `slots` as a macro, so any
     /// translation unit that sees both this header and Qt expands it to nothing.
     /// Core is Qt-free, but /src/app is not and it includes both.
     void resize(std::size_t count);
 
-    std::size_t slot_count() const noexcept { return ref_.size(); }
+    std::size_t slot_count() const noexcept { return count_; }
 
     /// Attaches text to `slot`. Returns the previous state, which is what the undo
     /// record needs and all it needs.
@@ -94,7 +107,12 @@ public:
 private:
     std::uint32_t intern(std::string_view s);
 
-    std::vector<std::uint32_t> ref_; ///< index into pool_, or kNoText
+    /// Allocates the three columns on first write. Doing it here rather than in
+    /// `resize` is what keeps a text-free document free of them.
+    void materialise();
+
+    std::size_t count_{0};           ///< logical slots, whether or not allocated
+    std::vector<std::uint32_t> ref_; ///< index into pool_, or kNoText; empty until first set()
     std::vector<Mm> height_;
     std::vector<std::uint8_t> anchor_;
     std::vector<std::string> pool_; ///< insertion-ordered, never compacted

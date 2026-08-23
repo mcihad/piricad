@@ -3,9 +3,14 @@
 
 #include "piricad/core/json.hpp"
 
+#include <algorithm>
+#include <cstdio>
 #include <cstdlib>
 #include <fstream>
+#include <map>
 #include <sstream>
+#include <string>
+#include <vector>
 
 namespace bench {
 namespace {
@@ -60,6 +65,66 @@ const char* build_type()
 #endif
 }
 
+/// The Google Benchmark time unit a scenario's `unit` string asks for.
+///
+/// The scenario declares its unit in the terms the budget is written in, so the
+/// number in the report and the number in Article 7 are the same number and no
+/// reader has to convert one to compare them.
+benchmark::TimeUnit time_unit_for(const std::string& unit)
+{
+    if (unit == "µs") return benchmark::kMicrosecond;
+    if (unit == "s") return benchmark::kSecond;
+    if (unit == "ns") return benchmark::kNanosecond;
+    return benchmark::kMillisecond;
+}
+
+/// What one repetition produced, in the scenario's own unit.
+double value_of(const benchmark::BenchmarkReporter::Run& run, Metric metric)
+{
+    if (metric == Metric::Gauge) {
+        const auto it = run.counters.find(kGaugeCounter);
+        return it == run.counters.end() ? 0.0 : it->second.value;
+    }
+    return run.GetAdjustedRealTime();
+}
+
+/// Collects every repetition Google Benchmark runs, and prints nothing.
+///
+/// A reporter rather than the JSON output file: the gate has to compare against a
+/// baseline and an Article 7 budget in the same process that measured, and going
+/// through a temporary file would add a parse step and a failure mode for no gain.
+class Collector : public benchmark::BenchmarkReporter
+{
+public:
+    bool ReportContext(const Context&) override { return true; }
+
+    void ReportRuns(const std::vector<Run>& runs) override
+    {
+        for (const auto& run : runs) {
+            // Google Benchmark also emits mean/median/stddev rows. They are
+            // skipped: the gate's own definition of spread is max minus min, and
+            // that is computed from the raw repetitions below.
+            if (run.run_type != Run::RT_Iteration) continue;
+            if (run.skipped) continue;
+            samples_[run.run_name.function_name].push_back(run);
+        }
+    }
+
+    /// The raw repetitions of one scenario, or an empty span when it did not run.
+    const std::vector<Run>& runs_of(const std::string& id) const
+    {
+        static const std::vector<Run> none;
+        const auto it = samples_.find(id);
+        return it == samples_.end() ? none : it->second;
+    }
+
+private:
+    // Keyed by `function_name` rather than `benchmark_name()`: the latter carries
+    // the /repeats: and /iterations: suffixes Google Benchmark appends, and the
+    // baseline file is keyed by the scenario id alone.
+    std::map<std::string, std::vector<Run>> samples_;
+};
+
 /// A regression is only meaningful against a run on the same hardware, the same
 /// compiler and the same optimisation level.
 struct Report
@@ -76,6 +141,23 @@ struct Report
 };
 
 } // namespace
+
+std::vector<Case>& cases()
+{
+    static std::vector<Case> c;
+    return c;
+}
+
+Registrar::Registrar(Case c)
+{
+    cases().push_back(std::move(c));
+}
+
+bool regressed(double value, double baseline, double spread)
+{
+    if (baseline <= 0) return false;
+    return value > baseline * 1.10 && (value - baseline) > spread;
+}
 
 double resident_mb()
 {
@@ -98,8 +180,12 @@ std::string machine_id()
 
 int run_all(int argc, char** argv)
 {
+    // The baseline path comes from the environment, not from argv: argv belongs to
+    // Google Benchmark now, so `--benchmark_filter=render.*` works while a
+    // scenario is being tuned.
+    const char* baseline_env = std::getenv("PIRICAD_BENCH_BASELINE");
     const std::string baseline_path =
-        argc > 1 ? argv[1] : std::string(PIRICAD_BENCH_DIR) + "/temel-degerler.json";
+        baseline_env ? baseline_env : std::string(PIRICAD_BENCH_DIR) + "/temel-degerler.json";
     const bool record = std::getenv("PIRICAD_BENCH_RECORD") != nullptr;
 
     // ---- load the baseline, if it belongs to this machine ----
@@ -129,6 +215,32 @@ int run_all(int argc, char** argv)
         std::printf("temel:  %zu ölçüm, regresyon kapısı açık (>%%10 kırar)\n", baseline.size());
     std::printf("\n");
 
+    // ---- hand every implemented scenario to Google Benchmark ----
+    for (const auto& c : cases()) {
+        if (!c.body) continue;
+
+        auto* registered = benchmark::RegisterBenchmark(c.id, c.body)
+                               ->Unit(time_unit_for(c.unit))
+                               ->Repetitions(c.repetitions)
+                               // Wall clock, not CPU time: a frame budget is what
+                               // the user waits for, and CPU time hides a stall
+                               // that blocked on memory or on the disk.
+                               ->UseRealTime();
+
+        // A Gauge reads a number rather than timing a loop, so repeating inside
+        // one repetition would measure the same reading again.
+        if (c.iterations > 0 || c.metric == Metric::Gauge)
+            registered->Iterations(c.metric == Metric::Gauge ? 1 : c.iterations);
+    }
+
+    benchmark::Initialize(&argc, argv);
+    if (benchmark::ReportUnrecognizedArguments(argc, argv)) return 2;
+
+    Collector collector;
+    benchmark::RunSpecifiedBenchmarks(&collector);
+    benchmark::Shutdown();
+
+    // ---- gate ----
     std::vector<Report> reports;
     int budget_failures     = 0;
     int regression_failures = 0;
@@ -140,16 +252,26 @@ int run_all(int argc, char** argv)
         r.unit   = c.unit;
         r.budget = c.budget;
 
-        if (!c.run) {
-            r.pending     = true;
-            r.pending_why = c.pending;
+        const auto& runs = collector.runs_of(c.id);
+        if (!c.body || runs.empty()) {
+            r.pending = true;
+            // An implemented scenario with no runs was filtered out by
+            // --benchmark_filter, which is a deliberate act and not a gap.
+            r.pending_why = c.body ? "bu koşumda süzgeç dışında kaldı" : c.pending;
             reports.push_back(std::move(r));
             continue;
         }
 
-        const Measurement m = measure(c);
-        r.value             = m.median;
-        r.spread            = m.spread;
+        std::vector<double> samples;
+        samples.reserve(runs.size());
+        for (const auto& run : runs)
+            samples.push_back(value_of(run, c.metric));
+        std::sort(samples.begin(), samples.end());
+
+        // The median, not the mean: the first repetition pays for page faults and
+        // a cold cache, and a mean would carry that into every later comparison.
+        r.value  = samples[samples.size() / 2];
+        r.spread = samples.back() - samples.front();
 
         for (const auto& [k, v] : baseline)
             if (k == c.id) r.baseline = v;

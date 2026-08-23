@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "microtest.hpp"
+#include "piricad_test.hpp"
 
 #include <algorithm>
 
@@ -277,7 +277,8 @@ TEST_CASE("parsel: kalıcı anahtar yuvadan bağımsız ve tekrar edilmiyor")
 
     auto a = doc.add_polyline(lyr, pts, op);
     auto b = doc.add_polyline(lyr, pts, op);
-    CHECK(a.ok() && b.ok());
+    CHECK(a.ok());
+    CHECK(b.ok());
     if (!a.ok() || !b.ok()) return;
 
     const EntityKey ka = doc.key_of(a.value());
@@ -343,7 +344,7 @@ TEST_CASE("JSON: bozuk girdi reddedilir, çökmez")
           "{\"a\" \"b\"}", "1e999999", "[[[[[[[[[[[[[[[[", "{\"a\":\"\\uD800\"}", ""}) {
         auto parsed = Json::parse(bad);
         CHECK(!parsed.ok());
-        if (parsed.ok()) ::microtest::report(__FILE__, __LINE__, "kabul edildi", bad);
+        if (parsed.ok()) FAIL_WITH("kabul edildi", bad);
     }
 }
 
@@ -401,8 +402,7 @@ TEST_CASE("TRIG: kendi sinüs ve kosinüsümüz libm ile aynı sayıyı veriyor"
         worst                = std::max(worst, std::abs(ours.cos - std::cos(radians)));
     }
     CHECK(worst < 1.0e-14);
-    if (worst >= 1.0e-14)
-        ::microtest::report(__FILE__, __LINE__, "libm'den sapma", std::to_string(worst));
+    if (worst >= 1.0e-14) FAIL_WITH("libm'den sapma", std::to_string(worst));
 
     // The quarter angles are exact by construction — the fold and the quadrant
     // switch are sign flips, not arithmetic — so they are asserted exactly.

@@ -28,9 +28,24 @@ const char* text_anchor_name(TextAnchor a) noexcept
 
 void TextTable::resize(std::size_t count)
 {
+    count_ = count;
+
+    // Nothing is stored yet, so there is nothing to grow. This branch is the whole
+    // saving: `resize` runs once per entity created, and a document with no text
+    // now pays a comparison instead of three vector resizes and thirteen bytes.
+    if (ref_.empty()) return;
+
     ref_.resize(count, kNoText);
     height_.resize(count, 0);
     anchor_.resize(count, static_cast<std::uint8_t>(TextAnchor::BaselineLeft));
+}
+
+void TextTable::materialise()
+{
+    if (!ref_.empty() || count_ == 0) return;
+    ref_.assign(count_, kNoText);
+    height_.assign(count_, 0);
+    anchor_.assign(count_, static_cast<std::uint8_t>(TextAnchor::BaselineLeft));
 }
 
 std::uint32_t TextTable::intern(std::string_view s)
@@ -49,7 +64,7 @@ std::uint32_t TextTable::intern(std::string_view s)
 
 Status TextTable::set(std::size_t slot, std::string_view content, Mm height, TextAnchor anchor)
 {
-    if (slot >= ref_.size())
+    if (slot >= count_)
         return err(ErrorCode::NotFound, "Bilinmeyen metin yuvası: " + std::to_string(slot));
 
     if (height <= 0 || height > kMaxTextHeight)
@@ -57,6 +72,7 @@ Status TextTable::set(std::size_t slot, std::string_view content, Mm height, Tex
                    "Yazı yüksekliği " + std::to_string(height) +
                        " mm geçersiz; sıfırdan büyük olmalı ve zemin sınırını aşmamalı.");
 
+    materialise();
     ref_[slot]    = intern(content);
     height_[slot] = height;
     anchor_[slot] = static_cast<std::uint8_t>(anchor);
@@ -106,7 +122,7 @@ std::uint64_t TextTable::fold(std::uint64_t seed) const
         }
     if (!any) return seed;
 
-    std::uint64_t h = fnv1a_int(static_cast<std::int64_t>(ref_.size()), seed ^ kTextSeed);
+    std::uint64_t h = fnv1a_int(static_cast<std::int64_t>(count_), seed ^ kTextSeed);
     for (std::size_t i = 0; i < ref_.size(); ++i) {
         if (ref_[i] == kNoText) {
             // Folded distinctly from an empty string: "this entity is not text"

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Style interning and the layer table — .claude/model.md R13–R19, R30–R34.
-#include "microtest.hpp"
+#include "piricad_test.hpp"
 
 #include "piricad/core/layer.hpp"
 #include "piricad/core/style.hpp"
@@ -151,8 +151,8 @@ TEST_CASE("StyleTable: every Appearance field is part of the identity")
         only_base.intern(base);
         only_variant.intern(variants[i]);
         if (only_base.fold(0) == only_variant.fold(0))
-            ::microtest::report(__FILE__, __LINE__, "Appearance alanı parmak izine girmiyor",
-                                std::string("varyant #") + std::to_string(i));
+            FAIL_WITH("Appearance alanı parmak izine girmiyor",
+                      std::string("varyant #") + std::to_string(i));
     }
 }
 
@@ -585,7 +585,8 @@ TEST_CASE("LayerTable: rename hata yolları")
     const LayerId b = t.add(named("bina"), keys).value_or(kNoLayer);
     REQUIRE(a != kNoLayer);
     REQUIRE(b != kNoLayer);
-    REQUIRE(t.at(a) != nullptr && t.at(b) != nullptr);
+    REQUIRE(t.at(a) != nullptr);
+    REQUIRE(t.at(b) != nullptr);
 
     const Status taken = t.rename(b, "PARSEL");
     CHECK(!taken.ok());
@@ -713,8 +714,7 @@ TEST_CASE("LayerTable: fold her saklanan alana tepki verir")
         Layer l = named("parsel");
         c.apply(l);
         CHECK(t.add(std::move(l), keys).ok());
-        if (t.fold(0) == reference)
-            ::microtest::report(__FILE__, __LINE__, "fold() ignored a stored field", c.what);
+        if (t.fold(0) == reference) FAIL_WITH("fold() ignored a stored field", c.what);
     }
 
     // A rename is a document change: the file keeps the casing the user typed.

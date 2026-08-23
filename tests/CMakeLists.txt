@@ -39,6 +39,7 @@ target_compile_definitions(piricad_tests PRIVATE
 
 target_include_directories(piricad_tests PRIVATE support)
 target_link_libraries(piricad_tests PRIVATE
+    doctest::doctest
     piricad_core
     piricad_command
     piricad_io
@@ -52,7 +53,12 @@ set_target_properties(piricad_tests PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
-add_test(NAME unit COMMAND piricad_tests)
+# WORKING_DIRECTORY, not the build tree ctest would otherwise pick: test_docs.cpp
+# executes the manual's examples exactly as printed (.claude/docs.md R10), and the
+# manual writes catalogue paths the way a user types them — relative to the project
+# root that holds /data. Running them from elsewhere would test a working directory
+# rather than the example.
+add_test(NAME unit COMMAND piricad_tests WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
 # Every gate script runs as a test, so a violation fails `ctest`, not only CI.
 # Discovered rather than listed: a new gate is picked up by re-running CMake, and
@@ -89,6 +95,7 @@ target_compile_definitions(piricad_bench PRIVATE
     PIRICAD_BENCH_DIR="${CMAKE_SOURCE_DIR}/tests/bench"
 )
 target_link_libraries(piricad_bench PRIVATE
+    benchmark::benchmark
     piricad_core
     piricad_command
     piricad_io

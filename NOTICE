@@ -45,6 +45,25 @@ Currently linked
                           surfaces as a crash in a formatting call nobody touched.
                           Both linked PRIVATE into piricad_command.
 
+  doctest                 MIT                   v2.4.12   1da23a3e
+                          The unit-test framework, linked into piricad_tests.
+                          Chosen over Catch2 and GoogleTest for compile time
+                          (piricad.md §9.11): the suite is one binary of ~280
+                          cases that every `make check` rebuilds.
+
+                          v2.4.12 rather than the v2.4.11 that had been pinned
+                          and never built: 2.4.11 declares
+                          cmake_minimum_required(VERSION 3.0), and CMake 4
+                          removed compatibility below 3.5. An unexercised pin
+                          cannot report that it does not build.
+
+  Google Benchmark        Apache 2.0            v1.9.1    c58e6d07
+                          Times the Article 7 budgets, linked into piricad_bench.
+                          It MEASURES; it does not gate. The budget table and the
+                          per-machine baseline stay in tests/bench/support.cpp,
+                          because no library knows that 16 ms is a product
+                          requirement rather than a number.
+
   GDAL/OGR                MIT (X11) + others    >= 3.8   (PIRICAD_WITH_GDAL)
                           Vector format I/O for /src/io: DXF and GeoPackage
                           today, from the allow-list in
@@ -89,11 +108,6 @@ each is genuinely linked it moves to "Currently linked" in the same change.
 A moved tag cannot silently change what these resolve to, which is why they are
 recorded as SHAs (CLAUDE.md 5.12).
 
-  doctest                 MIT                   v2.4.11   ae7a1353
-                          Test framework. Chosen over Catch2 for compile time
-                          (piricad.md §9.11).
-  Google Benchmark        Apache 2.0            v1.9.1    c58e6d07
-                          The §10.1 budget harness.
   xxHash                  BSD-2-Clause          v0.8.3    e626a72b
                           Fast hashing.
   Clipper2                BSL-1.0               1.4.0     736ddb0b
@@ -140,21 +154,26 @@ are the recorded exceptions, each with its reason.
       and MapLibre all bind their style model to their own geometry store and
       draw pipeline, and PiriCAD's style column is resolved at COMMIT time into
       an interned StyleId rather than evaluated per frame, which is the opposite
-      of what those engines are built to do. QGIS is additionally GPLv2-only in
-      parts and therefore refused outright (piricad.md §1). OGC SLD/SE 1.1 is a
+      of what those engines are built to do. QGIS is NOT refused on licence:
+      it is GPL-2.0-or-later, which is GPLv3-compatible; an earlier revision of
+      this file said otherwise and was wrong. The objection is architectural and
+      is stated above. OGC SLD/SE 1.1 is a
       wire format, not an engine, and is planned as an import/export boundary
       behind PIRICAD_WITH_LIBXML2, converted to this table on the way in.
       What is NOT hand-written: JSON parsing (piricad/core/json.hpp, itself
       slated for replacement by the pinned library), and the hatch clipping the
       renderer will need, which is Clipper2's job when the fill path lands.
 
-  tests/support/microtest.hpp, piricad/core/log.hpp
-      Standing in for doctest and spdlog until the section above is genuinely
-      wired. piricad/core/json.hpp is no longer on this list: it is now a facade
-      over nlohmann/json rather than a hand-rolled parser. These are not the decision — the decision is the SHA —
-      they are what the code calls in the meantime, and they are listed here so
-      that "what does PiriCAD actually contain" has one honest answer.
-      core/log.hpp additionally carries the CLAUDE.md Article 8.4 waiver.
+  tests/support/piricad_test.hpp — PENDING and FAIL_WITH
+      Two macros on top of doctest, not a framework. PENDING marks a case that
+      CANNOT RUN because an optional dependency is off, which .claude/data.md
+      requires to report as pending and never as passing; doctest's own skip is
+      a compile-time decorator and cannot express a fact this binary discovers
+      at run time. FAIL_WITH puts a failure's two halves on two lines.
+
+      This entry used to name microtest.hpp and core/log.hpp as stand-ins for
+      doctest and spdlog. Both stand-ins are gone: logging is spdlog behind
+      piricad/command/log.hpp, and the tests are doctest.
 
   piricad/core/trig.hpp — sin_cos_udeg
       Sine and cosine over micro-degrees. Article 2.7 was applied and found no
@@ -201,7 +220,6 @@ the exact version is pinned in vcpkg.json when the option is first enabled.
   libdxfrw                GPLv2+                DXF
   LibreDWG                GPLv3+                DWG read
   Qt Advanced Docking     LGPLv2.1              CAD-grade docking
-  doctest                 MIT                   test framework
   Tracy                   BSD-3                 frame profiling
   Crashpad                Apache 2.0            crash reporting
 

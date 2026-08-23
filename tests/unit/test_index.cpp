@@ -2,7 +2,7 @@
 //
 // The spatial index answers a question the renderer trusts every frame, so it is
 // checked against brute force rather than against itself.
-#include "microtest.hpp"
+#include "piricad_test.hpp"
 
 #include "piricad/core/document.hpp"
 #include "piricad/core/spatial_index.hpp"

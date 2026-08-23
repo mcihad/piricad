@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "microtest.hpp"
+#include "piricad_test.hpp"
 
 #include "piricad/command/bus.hpp"
 #include "piricad/command/parser.hpp"
@@ -307,8 +307,7 @@ TEST_CASE("user-facing error messages are Turkish")
         if (r.ok()) continue;
         for (const char* word : english) {
             if (r.error().message.find(word) != std::string::npos) {
-                ::microtest::report(__FILE__, __LINE__, line,
-                                    "İngilizce sızıntı: \"" + r.error().message + "\"");
+                FAIL_WITH(line, "İngilizce sızıntı: \"" + r.error().message + "\"");
             }
         }
     }
@@ -328,7 +327,7 @@ TEST_CASE("ALAN kapalı bir yüzey üretir ve kapanış noktasını tekrarlatmaz
 
     auto drawn = f.bus.execute_line(
         "ALAN 485300,4310200 485360,4310200 485360,4310245 485300,4310245", Origin::Test);
-    if (!drawn) ::microtest::report(__FILE__, __LINE__, "ALAN", drawn.error().message);
+    if (!drawn) FAIL_WITH("ALAN", drawn.error().message);
     REQUIRE(drawn.ok());
     REQUIRE(f.doc.live_entity_count() == std::size_t{1});
 
@@ -356,7 +355,7 @@ TEST_CASE("ALAN deliği dış sınırla tek nesne yapar")
         "ALAN 485300,4310200 485360,4310200 485360,4310245 485300,4310245 "
         "485315,4310212 485345,4310212 485345,4310232 485315,4310232 bolum=4 bolum=4",
         Origin::Test);
-    if (!drawn) ::microtest::report(__FILE__, __LINE__, "ALAN delik", drawn.error().message);
+    if (!drawn) FAIL_WITH("ALAN delik", drawn.error().message);
     REQUIRE(drawn.ok());
 
     // ONE entity, two rings. A hole is not a separate object: it is selected,
@@ -527,7 +526,7 @@ TEST_CASE("METİN yazıyı belgeye koyar; geometrisi taban çizgisidir")
     REQUIRE(f.bus.execute_line("KATMAN ad=NUMARA", Origin::Test).ok());
 
     auto made = f.bus.execute_line("METİN 485330,4310225 \"1234/7\" 2000", Origin::Test);
-    if (!made) ::microtest::report(__FILE__, __LINE__, "METİN", made.error().message);
+    if (!made) FAIL_WITH("METİN", made.error().message);
     REQUIRE(made.ok());
     REQUIRE(f.doc.live_entity_count() == std::size_t{1});
 

@@ -8,5 +8,7 @@
                      identical journal. If this stops holding, the architecture is
                      broken and the build must fail.
 
-The harness is `tests/support/microtest.hpp`, 60 lines standing in for doctest
-until the dependency set lands (CLAUDE.md Article 8.2).
+The harness is doctest, pinned in `cmake/PiriCADDependencies.cmake`.
+`tests/support/piricad_test.hpp` adds one macro doctest has no concept of —
+`PENDING(reason)`, for a case an optional dependency makes unrunnable, which
+`.claude/data.md` requires to report as pending and never as passing.

@@ -48,6 +48,10 @@ inline piricad::core::Document& cadastral_5m()
     static piricad::core::Document document = [] {
         piricad::core::Document doc;
         build_cadastral_grid(doc, 5'000'000);
+        // Force the lazily-built spatial index HERE, where it belongs to fixture
+        // construction. Left to the first query, it lands inside the first timed
+        // iteration and is reported as the cost of drawing one frame.
+        (void)doc.spatial_index();
         return doc;
     }();
     return document;

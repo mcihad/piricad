@@ -9,7 +9,7 @@
 // JSON script — run the same command. This test asserts that all three produce a
 // byte-identical document and a byte-identical journal entry. If that ever stops
 // being true, the architecture has been broken and the build must fail.
-#include "microtest.hpp"
+#include "piricad_test.hpp"
 
 #include "piricad/command/bus.hpp"
 #include "piricad/command/registry.hpp"

@@ -6,7 +6,7 @@
 // straight into a float vertex attribute shimmers by metres. This test proves
 // three things — that the hazard is real, that ViewTransform's origin offset
 // removes it, and that the screen mapping round-trips exactly.
-#include "microtest.hpp"
+#include "piricad_test.hpp"
 
 #include "piricad/render/view.hpp"
 

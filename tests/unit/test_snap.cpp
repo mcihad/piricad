@@ -12,7 +12,7 @@
 //   SOURCE-BLINDNESS — the same aim through a GUI session, through the command
 //   line and through a JSON script must land on the same millimetre, because the
 //   aids are applied on the one path all three take (piricad.md §2.4).
-#include "microtest.hpp"
+#include "piricad_test.hpp"
 
 #include "piricad/command/bus.hpp"
 #include "piricad/command/registry.hpp"
@@ -115,12 +115,14 @@ TEST_CASE("YAKALAMA: kutupsal izleme açıyı adıma yuvarlar, uzaklığı korur
     // 10 m out at ~5 degrees snaps onto the east axis with its length intact.
     const Point2 east = core::apply_polar(base, Point2{9962, 872}, step);
     CHECK(east.y == 0);
-    CHECK(east.x > 9990 && east.x < 10010);
+    CHECK(east.x > 9990);
+    CHECK(east.x < 10010);
 
     // ~93 degrees snaps onto north.
     const Point2 north = core::apply_polar(base, Point2{-523, 9986}, step);
     CHECK(north.x == 0);
-    CHECK(north.y > 9990 && north.y < 10010);
+    CHECK(north.y > 9990);
+    CHECK(north.y < 10010);
 
     // A 45-degree step keeps a 45-degree aim where it is, to the millimetre.
     const std::int64_t step45 = 45 * core::kUDegPerDegree;

@@ -14,7 +14,7 @@
 //
 // test.md P9: nothing here mutates a Document except through a command dispatched
 // on the Bus. Tests are a client of the bus with no privileges (Article 1.2).
-#include "microtest.hpp"
+#include "piricad_test.hpp"
 
 #include <iterator>
 
@@ -99,7 +99,7 @@ void draw_fixture(Rig& rig)
 {
     const auto run = [&](const std::string& line) {
         auto r = rig.bus.execute_line(line, Origin::Test);
-        if (!r) ::microtest::report(__FILE__, __LINE__, line.c_str(), r.error().message);
+        if (!r) FAIL_WITH(line.c_str(), r.error().message);
     };
 
     run("KATMAN ad=PARSEL renk=4281236786");
@@ -195,7 +195,7 @@ TEST_CASE("IO: belge -> dosya -> belge, içerik parmak izi birebir aynı")
 
     Rig reloaded;
     auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
-    if (!opened) ::microtest::report(__FILE__, __LINE__, "AÇ", opened.error().message);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
     REQUIRE(opened.ok());
 
     // THE assertion. Everything else in this file protects it.
@@ -236,7 +236,7 @@ TEST_CASE("IO: boş belge de gidip geliyor")
 
     Rig reloaded;
     auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
-    if (!opened) ::microtest::report(__FILE__, __LINE__, "AÇ", opened.error().message);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
     CHECK_EQ(reloaded.doc.content_hash(), written.doc.content_hash());
     CHECK_EQ(reloaded.doc.live_entity_count(), std::size_t{0});
     CHECK_EQ(reloaded.doc.layers().size(), std::size_t{1}); // katman "0"
@@ -355,7 +355,7 @@ TEST_CASE("IO: tanınmayan blok atlanır, dosya yine açılır")
 
     Rig reloaded;
     auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
-    if (!opened) ::microtest::report(__FILE__, __LINE__, "AÇ", opened.error().message);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
     REQUIRE(opened.ok());
     CHECK_EQ(reloaded.doc.content_hash(), hash);
     // ...and the user is told there was more in the file than they can see.
@@ -399,7 +399,7 @@ TEST_CASE("IO: kesilmiş dosya her uzunlukta düzgün reddedilir")
         if (!opened) ++rejected;
         // Whether it was rejected or (impossibly) accepted, nothing may be left
         // half-loaded and nothing may crash — reaching this line is the assertion.
-        CHECK(opened.ok() || victim.doc.live_entity_count() == 0);
+        CHECK((opened.ok() || victim.doc.live_entity_count() == 0));
     }
     CHECK(rejected > 0);
 }
@@ -542,7 +542,7 @@ TEST_CASE("IO: arayüz, komut satırı ve betik aynı dosyayı ve aynı günlü�
         script::JsonRunner runner(scr.bus, script::Sandbox::Project);
         auto r =
             runner.run_text(R"([{"cmd":"core.saveas","args":{"dosya":")" + scr_path + R"("}}])");
-        if (!r) ::microtest::report(__FILE__, __LINE__, "betik", r.error().message);
+        if (!r) FAIL_WITH("betik", r.error().message);
         REQUIRE(r.ok());
     }
 
@@ -664,7 +664,7 @@ TEST_CASE("IO: DXF dışa aktar -> içe aktar gidiş dönüşü")
             .ok());
 
     auto exported = source.bus.execute_line("DIŞAAKTAR \"" + path + "\"", Origin::Test);
-    if (!exported) ::microtest::report(__FILE__, __LINE__, "DIŞAAKTAR", exported.error().message);
+    if (!exported) FAIL_WITH("DIŞAAKTAR", exported.error().message);
     REQUIRE(exported.ok());
     REQUIRE(fs::exists(path));
 
@@ -678,7 +678,7 @@ TEST_CASE("IO: DXF dışa aktar -> içe aktar gidiş dönüşü")
     const std::size_t before = target.undo.undo_depth();
 
     auto imported = target.bus.execute_line("İÇEAKTAR \"" + path + "\"", Origin::Test);
-    if (!imported) ::microtest::report(__FILE__, __LINE__, "İÇEAKTAR", imported.error().message);
+    if (!imported) FAIL_WITH("İÇEAKTAR", imported.error().message);
     REQUIRE(imported.ok());
 
     CHECK(target.doc.live_entity_count() >= 1);
@@ -717,7 +717,7 @@ TEST_CASE("IO: DXF birden çok katmanı taşır — dışa aktarım ilk katmanda
     REQUIRE(source.doc.live_entity_count() == std::size_t{3});
 
     auto exported = source.bus.execute_line("DIŞAAKTAR \"" + path + "\"", Origin::Test);
-    if (!exported) ::microtest::report(__FILE__, __LINE__, "DIŞAAKTAR", exported.error().message);
+    if (!exported) FAIL_WITH("DIŞAAKTAR", exported.error().message);
     REQUIRE(exported.ok());
 
     // Read it back through our own importer: every entity has to come home, not
@@ -761,7 +761,7 @@ TEST_CASE("IO: GeoPackage dışa aktar -> içe aktar gidiş dönüşü, koordina
     Rig target;
     REQUIRE(target.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
     auto imported = target.bus.execute_line("İÇEAKTAR \"" + path + "\"", Origin::Test);
-    if (!imported) ::microtest::report(__FILE__, __LINE__, "İÇEAKTAR", imported.error().message);
+    if (!imported) FAIL_WITH("İÇEAKTAR", imported.error().message);
     REQUIRE(imported.ok());
     REQUIRE(target.doc.live_entity_count() >= 1);
 

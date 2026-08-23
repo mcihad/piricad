@@ -6,7 +6,7 @@
 // the shipped Markdown pages, extracts the fenced blocks, and executes them
 // through the same command bus a user would. There is no second copy of the
 // examples anywhere — the pages are the source.
-#include "microtest.hpp"
+#include "piricad_test.hpp"
 
 #include "piricad/command/bus.hpp"
 #include "piricad/command/registry.hpp"
@@ -189,10 +189,9 @@ TEST_CASE("DOKÜMAN: kılavuzda yazan her komut satırı çalışır")
 
                 auto result = rig.bus.execute_line(line, Origin::Test);
                 if (!result) {
-                    ::microtest::report(__FILE__, __LINE__, line.c_str(),
-                                        page.filename().string() + ":" +
-                                            std::to_string(block.line + offset - 1) + " — " +
-                                            result.error().message);
+                    FAIL_WITH(line.c_str(), page.filename().string() + ":" +
+                                                std::to_string(block.line + offset - 1) + " — " +
+                                                result.error().message);
                 }
                 ++checked;
             }
@@ -214,9 +213,9 @@ TEST_CASE("DOKÜMAN: kılavuzdaki her JSON betiği geçerli ve çalışır")
 
             auto json = core::Json::parse(block.body);
             if (!json) {
-                ::microtest::report(__FILE__, __LINE__, "JSON parse",
-                                    page.filename().string() + ":" + std::to_string(block.line) +
-                                        " — " + json.error().message);
+                FAIL_WITH("JSON parse", page.filename().string() + ":" +
+                                            std::to_string(block.line) + " — " +
+                                            json.error().message);
                 continue;
             }
             ++parsed;
@@ -252,9 +251,8 @@ TEST_CASE("DOKÜMAN: kılavuzdaki her JSON betiği geçerli ve çalışır")
 
             auto run = runner.run_text(block.body);
             if (!run) {
-                ::microtest::report(__FILE__, __LINE__, "betik",
-                                    page.filename().string() + ":" + std::to_string(block.line) +
-                                        " — " + run.error().message);
+                FAIL_WITH("betik", page.filename().string() + ":" + std::to_string(block.line) +
+                                       " — " + run.error().message);
             }
             ++executed;
         }
@@ -280,8 +278,7 @@ TEST_CASE("DOKÜMAN: örnek betik dosyaları çalışır")
 
         auto run = runner.run_file(entry.path().string());
         if (!run) {
-            ::microtest::report(__FILE__, __LINE__, entry.path().filename().string().c_str(),
-                                run.error().message);
+            FAIL_WITH(entry.path().filename().string().c_str(), run.error().message);
         } else {
             CHECK(rig.doc.live_entity_count() > 0);
             CHECK(rig.undo.undo_depth() == 1); // bir betik = tek geri alma adımı

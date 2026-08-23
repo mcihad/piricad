@@ -5,7 +5,7 @@
 // `Alan hesabı` is the legal output of this product (§12), so the numbers below are
 // asserted as exact integers in square millimetres. A tolerance here would be a
 // tolerance on a cadastral area, and there is no such thing.
-#include "microtest.hpp"
+#include "piricad_test.hpp"
 
 #include "piricad/core/geometry.hpp"
 
@@ -32,8 +32,7 @@ std::uint32_t must_add(RingGeometry& g, std::vector<RingGeometry::RingInput> rin
 {
     auto r = g.append(rings);
     if (!r.ok()) {
-        ::microtest::report(__FILE__, __LINE__, "append beklenmedik şekilde reddedildi",
-                            r.error().message);
+        FAIL_WITH("append beklenmedik şekilde reddedildi", r.error().message);
         return 0;
     }
     return r.value();
@@ -48,14 +47,13 @@ void reject(RingGeometry& g, std::vector<RingGeometry::RingInput> rings, const c
 
     auto r = g.append(rings);
     if (r.ok()) {
-        ::microtest::report(__FILE__, __LINE__, "append kabul edildi ama reddedilmeliydi",
-                            std::string("beklenen ileti parçası: ") + needle);
+        FAIL_WITH("append kabul edildi ama reddedilmeliydi",
+                  std::string("beklenen ileti parçası: ") + needle);
         return;
     }
     if (r.error().message.find(needle) == std::string::npos)
-        ::microtest::report(__FILE__, __LINE__, "hata iletisi sorunu adlandırmıyor",
-                            std::string("beklenen: ") + needle +
-                                "\n        alınan : " + r.error().message);
+        FAIL_WITH("hata iletisi sorunu adlandırmıyor",
+                  std::string("beklenen: ") + needle + "\n        alınan : " + r.error().message);
 
     // A rejected append leaves the store exactly as it was (Article 1.6).
     CHECK_EQ(g.vertex_count(), vertices_before);

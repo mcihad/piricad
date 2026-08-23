@@ -14,7 +14,7 @@
 // a `gösterim` value lives, because that value belongs in /data (CLAUDE.md 5.13).
 // The one test that reads /data asserts the shipped package's PROVENANCE, not its
 // contents.
-#include "microtest.hpp"
+#include "piricad_test.hpp"
 
 #include "piricad/command/bus.hpp"
 #include "piricad/command/registry.hpp"
@@ -255,11 +255,11 @@ TEST_CASE("STİL: bozuk paket sessizce değil, sebebini söyleyerek reddedilir")
     const auto rejects = [](const char* text, const char* needle) {
         auto result = parse_catalog(text);
         if (result.ok()) {
-            ::microtest::report(__FILE__, __LINE__, text, "paket kabul edildi, reddedilmeliydi");
+            FAIL_WITH(text, "paket kabul edildi, reddedilmeliydi");
             return;
         }
         if (result.error().message.find(needle) == std::string::npos)
-            ::microtest::report(__FILE__, __LINE__, needle, result.error().message);
+            FAIL_WITH(needle, result.error().message);
     };
 
     const std::string head =

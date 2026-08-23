@@ -9,6 +9,18 @@ make bench            # ölç ve bütçelere karşı denetle
 make bench-baseline   # bu makinenin temel değerlerini kaydet
 ```
 
+Ölçümü **Google Benchmark** yapar; kapı bize aittir. Kütüphane yineleme sayısını
+seçer, zamanlayıcıyı kurulumun dışında tutar ve tekrarları yürütür. Bütçe ile
+temel karşılaştırması `support.cpp` içindedir, çünkü 16 ms'nin bir ürün
+gereksinimi olduğunu hiçbir kütüphane bilmez.
+
+Google Benchmark'ın kendi bayrakları da geçerlidir; bir senaryo üzerinde
+çalışırken en çok işe yarayan şudur:
+
+```bash
+./build/dev/bin/piricad_bench --benchmark_filter='yakalama.*'
+```
+
 ## Two different checks
 
 | | Ne | Ne zaman denetlenir |
@@ -50,5 +62,17 @@ parcel layer is far too large to commit, and the same code produces the same
 document on every machine, which is what makes a cross-platform comparison
 meaningful (§7.3).
 
-Google Benchmark replaces this harness when the dependency set lands (§9.11); the
-scenario definitions do not change.
+## Bir senaryo yazarken
+
+`iterations = 0` varsayılandır ve yineleme sayısını Google Benchmark seçer. Bir
+gövde **kendi düzeneğini değiştiriyorsa** — belgeye nesne ekliyor, dosya
+yazıyor, ya da tek başına bir saniye sürüyorsa — `iterations = 1` verilir.
+Verilmezse gövde binlerce kez koşar ve ölçtüğü şey artık senaryonun tarif ettiği
+şey olmaz: bu göç sırasında tam olarak bu oldu, `render.duzenleme_sonrasi_kare`
+paylaşılan 5M düzeneği şişirdi ve ardından koşan bütün yakalama senaryoları on
+kat yavaş göründü.
+
+Zamanlayıcı dışında kalması gereken yıkım işi `state.PauseTiming()` içinde
+**açıkça** serbest bırakılır. Nesneyi döngü gövdesinde tanımlayıp duraklatma
+çağırmak işe yaramaz: yıkıcı kapanış ayracında, yani `ResumeTiming()`'den sonra
+çalışır.

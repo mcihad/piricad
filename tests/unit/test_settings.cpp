@@ -7,7 +7,7 @@
 // legal export that changes because someone switched to the dark theme. So every
 // case here asks one of three questions: does the boundary hold, is an out-of-range
 // value clamped and reported, and can a user find out why a value is what it is.
-#include "microtest.hpp"
+#include "piricad_test.hpp"
 
 #include "piricad/command/bus.hpp"
 #include "piricad/command/registry.hpp"
@@ -126,7 +126,7 @@ TEST_CASE("R40: dışa aktarılan belgenin baytını değiştiren her ayar proje
     const auto scope_of = [&](const char* id) -> std::optional<SettingScope> {
         const std::uint32_t index = cat.find(id);
         if (index == kNoSetting) {
-            ::microtest::report(__FILE__, __LINE__, "bildirilmemiş ayar kimliği", id);
+            FAIL_WITH("bildirilmemiş ayar kimliği", id);
             return std::nullopt;
         }
         return cat.at(index).scope;
@@ -176,10 +176,9 @@ TEST_CASE("R40: dışa aktarılan belgenin baytını değiştiren her ayar proje
         // description of the value. All twenty-three already do; the next one
         // cannot be added without writing its answer down.
         if (spec.summary.find(setting_scope_label(spec.scope)) == std::string::npos)
-            ::microtest::report(__FILE__, __LINE__,
-                                "R40 gerekçesi özet metninde yazılmamış: özet kapsamı "
-                                "adlandırmıyor",
-                                spec.id + " (" + setting_scope_label(spec.scope) + ")");
+            FAIL_WITH("R40 gerekçesi özet metninde yazılmamış: özet kapsamı "
+                      "adlandırmıyor",
+                      spec.id + " (" + setting_scope_label(spec.scope) + ")");
     }
 }
 
@@ -215,9 +214,9 @@ TEST_CASE("R21/P8: hiçbir ayar kayan nokta değil — ondalık istek bildirilmi
 {
     const SettingCatalog& cat = builtin_settings();
     for (const auto& spec : cat.all())
-        CHECK(spec.type == SettingType::Bool || spec.type == SettingType::Int ||
-              spec.type == SettingType::Length || spec.type == SettingType::Text ||
-              spec.type == SettingType::Enum);
+        CHECK((spec.type == SettingType::Bool || spec.type == SettingType::Int ||
+               spec.type == SettingType::Length || spec.type == SettingType::Text ||
+               spec.type == SettingType::Enum));
 
     // "Çizgi tipi ölçeği 0,5 olsun" is expressed as 500 per-mille, not as a double.
     const SettingSpec& scale = cat.at(cat.find("core.cizim.cizgi_tipi_olcegi"));
@@ -565,7 +564,7 @@ TEST_CASE("Her tür metne çevrilip geri okunur")
     const auto round_trip = [&](const char* id, const char* typed, const char* shown) {
         const std::uint32_t index = cat.find(id);
         if (index == kNoSetting) {
-            ::microtest::report(__FILE__, __LINE__, "bildirilmemiş ayar kimliği", id);
+            FAIL_WITH("bildirilmemiş ayar kimliği", id);
             return;
         }
         const SettingSpec& spec = cat.at(index);
@@ -865,8 +864,8 @@ TEST_CASE("R39: oturum modu ne belgeye ne tercih dosyasına sızar")
     CHECK_EQ(r.doc.content_hash(), before);      // belgeye girmez
     CHECK_EQ(r.bus.app_settings().fold(0), app); // tercihe girmez
     CHECK_EQ(r.bus.project_settings().fold(0), proj);
-    CHECK(r.journal.entries().empty() ||
-          r.journal.entries().back().command_id != "core.mode"); // belge mutasyonu değil
+    CHECK((r.journal.entries().empty() ||
+           r.journal.entries().back().command_id != "core.mode")); // belge mutasyonu değil
 }
 
 TEST_CASE("R40: tolerans proje kapsamındadır — ifraz sonucunu değiştirir")

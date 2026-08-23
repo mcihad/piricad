@@ -20,6 +20,7 @@
 #include "piricad/io/service.hpp"
 
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -71,22 +72,27 @@ fs::path scratch()
     return fs::temp_directory_path() / "piricad-bench-io.pcad";
 }
 
-double save_project()
+/// Writing the native format. One iteration per repetition: the fixture is a
+/// twenty-thousand-parcel document and the file has to be removed between passes.
+void save_project(benchmark::State& state)
 {
     Rig rig;
     fill(rig, kParcels);
+    const auto path = scratch();
 
-    const auto path  = scratch();
-    const auto start = bench::Clock::now();
-    (void)rig.bus.execute_line("FARKLIKAYDET \"" + path.string() + "\"", Origin::Batch);
-    const double ms = bench::since(start);
+    for (auto _ : state) {
+        auto result = rig.bus.execute_line("FARKLIKAYDET \"" + path.string() + "\"", Origin::Batch);
+        benchmark::DoNotOptimize(result);
 
-    std::error_code ec;
-    fs::remove(path, ec);
-    return ms;
+        state.PauseTiming();
+        std::error_code ec;
+        fs::remove(path, ec);
+        state.ResumeTiming();
+    }
 }
 
-double open_project()
+/// Reading it back. The file is written once, outside the timer.
+void open_project(benchmark::State& state)
 {
     const auto path = scratch();
     {
@@ -95,32 +101,43 @@ double open_project()
         (void)source.bus.execute_line("FARKLIKAYDET \"" + path.string() + "\"", Origin::Batch);
     }
 
-    Rig target;
-    const auto start = bench::Clock::now();
-    (void)target.bus.execute_line("AÇ \"" + path.string() + "\"", Origin::Batch);
-    const double ms = bench::since(start);
+    for (auto _ : state) {
+        state.PauseTiming();
+        auto target = std::make_unique<Rig>();
+        state.ResumeTiming();
+
+        auto result = target->bus.execute_line("AÇ \"" + path.string() + "\"", Origin::Batch);
+        benchmark::DoNotOptimize(result);
+
+        // Destroying a twenty-thousand-parcel document is not the read path. Held
+        // by pointer so the release happens inside the paused region.
+        state.PauseTiming();
+        target.reset();
+        state.ResumeTiming();
+    }
 
     std::error_code ec;
     fs::remove(path, ec);
-    return ms;
 }
 
 } // namespace
 
 PIRICAD_BENCH(pcad_save){bench::Case{
-    .id     = "io.pcad_20k_kaydet",
-    .title  = "20k parselli projeyi kaydetme",
-    .budget = 0, // informational: §10.1 sets no number for the native format
-    .unit   = "ms",
-    .runs   = 3,
-    .run    = &save_project,
+    .id          = "io.pcad_20k_kaydet",
+    .title       = "20k parselli projeyi kaydetme",
+    .budget      = 0, // informational: §10.1 sets no number for the native format
+    .unit        = "ms",
+    .repetitions = 3,
+    .iterations  = 1,
+    .body        = &save_project,
 }};
 
 PIRICAD_BENCH(pcad_open){bench::Case{
-    .id     = "io.pcad_20k_ac",
-    .title  = "20k parselli projeyi açma",
-    .budget = 0,
-    .unit   = "ms",
-    .runs   = 3,
-    .run    = &open_project,
+    .id          = "io.pcad_20k_ac",
+    .title       = "20k parselli projeyi açma",
+    .budget      = 0,
+    .unit        = "ms",
+    .repetitions = 3,
+    .iterations  = 1,
+    .body        = &open_project,
 }};

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Entity kinds (.claude/model.md R22–R26) and attribute columns (R27–R29).
-#include "microtest.hpp"
+#include "piricad_test.hpp"
 
 #include "piricad/core/attribute.hpp"
 #include "piricad/core/entity_kind.hpp"
@@ -79,8 +79,12 @@ TEST_CASE("nesne türü kimliğe göre bulunur")
 
     // R22: six function pointers, all present. A null one is an indirect call
     // through zero in the middle of a frame.
-    CHECK(pl->bbox != nullptr && pl->emit != nullptr && pl->hit != nullptr);
-    CHECK(pl->area != nullptr && pl->read != nullptr && pl->write != nullptr);
+    CHECK(pl->bbox != nullptr);
+    CHECK(pl->emit != nullptr);
+    CHECK(pl->hit != nullptr);
+    CHECK(pl->area != nullptr);
+    CHECK(pl->read != nullptr);
+    CHECK(pl->write != nullptr);
 
     CHECK(builtin_kinds().find(9999) == nullptr);
 }
@@ -379,9 +383,9 @@ TEST_CASE("bozuk çokluçizgi yükü hata döndürür")
         if (r.ok()) return;
         CHECK_EQ(static_cast<int>(r.error().code), static_cast<int>(code));
         if (r.error().message.find(needle) == std::string::npos)
-            ::microtest::report(__FILE__, __LINE__, "hata iletisi sorunu adlandırmıyor",
-                                std::string("beklenen: ") + needle +
-                                    "\n        alınan : " + r.error().message);
+            FAIL_WITH("hata iletisi sorunu adlandırmıyor",
+                      std::string("beklenen: ") + needle +
+                          "\n        alınan : " + r.error().message);
     };
 
     // A ring count no file could satisfy — refused before anything is reserved

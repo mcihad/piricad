@@ -36,7 +36,10 @@ set(PIRICAD_DEP_JSON_REPO      https://github.com/nlohmann/json.git)
 set(PIRICAD_DEP_JSON_SHA       9cca280a4d0ccf0c08f47a99aa71d1b0e52f8d03)  # v3.11.3
 
 set(PIRICAD_DEP_DOCTEST_REPO   https://github.com/doctest/doctest.git)
-set(PIRICAD_DEP_DOCTEST_SHA    ae7a13539fb71f270b87eb2e874fbac80bc8dda2)  # v2.4.11
+# v2.4.12, not the v2.4.11 that sat here unused: 2.4.11 declares
+# `cmake_minimum_required(VERSION 3.0)`, and CMake 4 removed compatibility with
+# anything below 3.5. The pin was never exercised, so the breakage was invisible.
+set(PIRICAD_DEP_DOCTEST_SHA    1da23a3e8119ec5cce4f9388e91b065e20bf06f5)  # v2.4.12
 
 set(PIRICAD_DEP_BENCHMARK_REPO https://github.com/google/benchmark.git)
 set(PIRICAD_DEP_BENCHMARK_SHA  c58e6d0710581e3a08d65c349664128a8d9a2461)  # v1.9.1
@@ -54,7 +57,13 @@ set(PIRICAD_DEP_FMT_REPO       https://github.com/fmtlib/fmt.git)
 set(PIRICAD_DEP_FMT_SHA        0c9fce2ffefecfdce794e1859584e25877b7b592)  # 11.0.2
 
 set(PIRICAD_DEP_SPDLOG_REPO    https://github.com/gabime/spdlog.git)
-set(PIRICAD_DEP_SPDLOG_SHA     27cb4c76708608465c413f6d0e6b8d99a4d84302)  # v1.14.1
+# v1.15.3, not the v1.14.1 that was pinned first: 1.14.1 predates fmt 11 and its
+# SPDLOG_LOGGER_CATCH macro calls FMT_STRING, whose lambda trips fmt 11's consteval
+# format-string constructor. GCC accepts it; clang REJECTS it, so the pairing built
+# here and would have broken the macOS and clang CI jobs Article 6.1 requires.
+# Found by clang-tidy, which parses with clang on a GCC build — the one tool in the
+# pipeline that sees the other compiler's opinion.
+set(PIRICAD_DEP_SPDLOG_SHA     6fa36017cfd5731d617e1a934f0e5ea9c4445b13)  # v1.15.3
 
 # ------------------------------------------------------------------ helpers --
 
@@ -136,4 +145,45 @@ if(PIRICAD_WITH_SPDLOG)
         SHA  ${PIRICAD_DEP_SPDLOG_SHA}
         PACKAGE spdlog
         VERSION 1.12)
+endif()
+
+option(PIRICAD_WITH_DOCTEST "Use doctest as the unit-test framework" ON)
+
+if(PIRICAD_WITH_DOCTEST)
+    # Header-only and self-registering, so a test file needs no CMake entry beyond
+    # its source line. The reason it is doctest rather than Catch2 or GoogleTest is
+    # compile time: this suite is one binary of ~280 cases that every `make check`
+    # rebuilds, and doctest's headers cost a fraction of the alternatives'.
+    set(DOCTEST_WITH_TESTS OFF CACHE INTERNAL "")
+    set(DOCTEST_NO_INSTALL ON CACHE INTERNAL "")
+    piricad_dependency(doctest
+        REPO ${PIRICAD_DEP_DOCTEST_REPO}
+        SHA  ${PIRICAD_DEP_DOCTEST_SHA}
+        PACKAGE doctest
+        VERSION 2.4)
+endif()
+
+option(PIRICAD_WITH_BENCHMARK "Use Google Benchmark to time the Article 7 budgets" ON)
+
+if(PIRICAD_WITH_BENCHMARK)
+    # Google Benchmark MEASURES; it does not gate. The Article 7 budgets and the
+    # per-machine baseline stay ours (tests/support/benchmark.hpp), because no
+    # library knows that 16 ms is a product requirement. What it replaces is the
+    # part that is genuinely hard and that we had hand-rolled: choosing an
+    # iteration count, discarding warm-up, and reporting a statistic that is not
+    # an artefact of the scheduler.
+    set(BENCHMARK_ENABLE_TESTING OFF CACHE INTERNAL "")
+    set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE INTERNAL "")
+    set(BENCHMARK_ENABLE_INSTALL OFF CACHE INTERNAL "")
+    set(BENCHMARK_INSTALL_DOCS OFF CACHE INTERNAL "")
+    set(BENCHMARK_DOWNLOAD_DEPENDENCIES OFF CACHE INTERNAL "")
+    # Its warnings are not our warnings, and -Werror inside a dependency turns a
+    # compiler upgrade into a broken build of code we do not own (CLAUDE.md 5.14
+    # is about OUR warnings, which stay fatal).
+    set(BENCHMARK_ENABLE_WERROR OFF CACHE INTERNAL "")
+    piricad_dependency(benchmark
+        REPO ${PIRICAD_DEP_BENCHMARK_REPO}
+        SHA  ${PIRICAD_DEP_BENCHMARK_SHA}
+        PACKAGE benchmark
+        VERSION 1.8)
 endif()

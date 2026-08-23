@@ -39,14 +39,6 @@ Mm abs_mm(Mm v) noexcept
     return v < 0 ? -v : v;
 }
 
-/// Round-half-away-from-zero for an angle in micro-degrees. `mm_round` is the
-/// coordinate helper (core.md R20) and is deliberately not reused for an angle:
-/// same arithmetic, different unit, and confusing the two is how a bug hides.
-std::int64_t round_udeg(double v) noexcept
-{
-    return v >= 0.0 ? static_cast<std::int64_t>(v + 0.5) : static_cast<std::int64_t>(v - 0.5);
-}
-
 Mm snap_axis(Mm v, Mm step) noexcept
 {
     if (step <= 0) return v;
@@ -210,7 +202,6 @@ Point2 apply_polar(Point2 base, Point2 p, std::int64_t step_udeg) noexcept
     const std::int64_t candidates = kUDegFullCircle / step_udeg;
     if (candidates <= 0) return p;
 
-    std::int64_t best_udeg = 0;
     double best_projection = -1.0e308;
     SinCos best_direction{};
 
@@ -224,7 +215,6 @@ Point2 apply_polar(Point2 base, Point2 p, std::int64_t step_udeg) noexcept
         const double projection = dx * dir.cos + dy * dir.sin;
         if (projection > best_projection) {
             best_projection = projection;
-            best_udeg       = angle;
             best_direction  = dir;
         }
     }

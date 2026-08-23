@@ -9,7 +9,7 @@
 // declares northing first; PiriCAD stores easting first. A wrapper that gets this
 // wrong returns a coordinate that is plausible and wrong, which is the worst
 // failure this product has (.claude/model.md R37a).
-#include "microtest.hpp"
+#include "piricad_test.hpp"
 
 #include "piricad/command/registry.hpp"
 
@@ -116,8 +116,10 @@ TEST_CASE("DÖNÜŞÜM: eksen sırası doğru — nokta Türkiye'ye düşüyor")
     // because the wrapper normalised the axis order. Turkey is 26..45 E, 36..42 N.
     // If the wrapper had NOT normalised, EPSG:5254 would have read 485320 as a
     // northing and this point would land near 62 N, 3 E — in the North Sea.
-    CHECK(easting > 26.0 && easting < 45.0);
-    CHECK(northing > 36.0 && northing < 42.0);
+    CHECK(easting > 26.0);
+    CHECK(easting < 45.0);
+    CHECK(northing > 36.0);
+    CHECK(northing < 42.0);
 
     CHECK(near_deg(easting, 29.830716));
     CHECK(near_deg(northing, 38.925260));
@@ -222,7 +224,7 @@ TEST_CASE("CRS: kimlik çözülür ve belge tek doğruyu taşır")
     // constructed default forever. A drawing therefore reported one CRS to the
     // exporter and another to its own file — which is the field blunder model.md
     // R36 is written against.
-    auto catalogue = domain::geodesy::CrsCatalog::load("data/crs");
+    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(PIRICAD_DATA_DIR) + "/crs");
     REQUIRE(catalogue.ok());
 
     core::Document doc;
@@ -241,7 +243,7 @@ TEST_CASE("CRS: kimlik çözülür ve belge tek doğruyu taşır")
         const core::Crs crs = service.resolve(id);
         CHECK_EQ(crs.epsg(), 5254);
         CHECK_EQ(crs.central_meridian_deg(), 30);
-        if (crs.epsg() != 5254) ::microtest::report(__FILE__, __LINE__, "çözülemedi", id);
+        if (crs.epsg() != 5254) FAIL_WITH("çözülemedi", id);
     }
 
     // An unknown id keeps its name and reports itself unresolved. NOT a fallback:
