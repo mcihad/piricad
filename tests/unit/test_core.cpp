@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "microtest.hpp"
 
+#include <algorithm>
+
+#include <cmath>
+
+#include "piricad/core/trig.hpp"
+
 #include "piricad/core/document.hpp"
 #include "piricad/core/json.hpp"
 #include "piricad/core/text.hpp"
@@ -378,4 +384,44 @@ TEST_CASE("JSON: tam sayı ile ondalık ayrı kalır")
     CHECK(!oran->is_int());
 
     CHECK_EQ(parsed.value().dump(), std::string(R"({"mm":485320150,"oran":0.5})"));
+}
+
+TEST_CASE("TRIG: kendi sinüs ve kosinüsümüz libm ile aynı sayıyı veriyor")
+{
+    // Why this test exists rather than a comment claiming accuracy: the first two
+    // versions of trig.hpp were WRONG and both claimed not to be. One had a
+    // mistyped cosine coefficient (5e-12 off), the next had the right ones and too
+    // few of them (4e-13 off, exactly the truncation error at π/4). Neither is
+    // visible in a drawing; both would have moved a golden fixture.
+    double worst = 0.0;
+    for (std::int64_t udeg = 0; udeg < kUDegFullCircle; udeg += 7919) { // prime step
+        const SinCos ours    = sin_cos_udeg(udeg);
+        const double radians = static_cast<double>(udeg) * (kPi / (180.0 * 1000000.0));
+        worst                = std::max(worst, std::abs(ours.sin - std::sin(radians)));
+        worst                = std::max(worst, std::abs(ours.cos - std::cos(radians)));
+    }
+    CHECK(worst < 1.0e-14);
+    if (worst >= 1.0e-14)
+        ::microtest::report(__FILE__, __LINE__, "libm'den sapma", std::to_string(worst));
+
+    // The quarter angles are exact by construction — the fold and the quadrant
+    // switch are sign flips, not arithmetic — so they are asserted exactly.
+    CHECK_EQ(sin_cos_udeg(0).sin, 0.0);
+    CHECK_EQ(sin_cos_udeg(0).cos, 1.0);
+    CHECK_EQ(sin_cos_udeg(90 * kUDegPerDegree).sin, 1.0);
+    CHECK_EQ(sin_cos_udeg(180 * kUDegPerDegree).cos, -1.0);
+    CHECK_EQ(sin_cos_udeg(270 * kUDegPerDegree).sin, -1.0);
+
+    // A full turn and a negative angle land where they should, because the
+    // reduction is integer and cannot drift.
+    CHECK_EQ(sin_cos_udeg(360 * kUDegPerDegree).cos, sin_cos_udeg(0).cos);
+    CHECK_EQ(sin_cos_udeg(-90 * kUDegPerDegree).sin, sin_cos_udeg(270 * kUDegPerDegree).sin);
+
+    // sin² + cos² = 1, to a double's precision, everywhere.
+    double pythagoras = 0.0;
+    for (std::int64_t udeg = 0; udeg < kUDegFullCircle; udeg += 104729) {
+        const SinCos v = sin_cos_udeg(udeg);
+        pythagoras     = std::max(pythagoras, std::abs(v.sin * v.sin + v.cos * v.cos - 1.0));
+    }
+    CHECK(pythagoras < 1.0e-14);
 }

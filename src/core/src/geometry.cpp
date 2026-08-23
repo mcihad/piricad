@@ -236,24 +236,6 @@ constexpr Mm2 halve(std::uint64_t twice) noexcept
     return negative ? -static_cast<std::int64_t>(h) : static_cast<std::int64_t>(h);
 }
 
-/// Segment length in millimetres, exact for every coordinate append() accepts.
-///
-/// The old form squared the deltas in signed int64 on the strength of a comment
-/// asserting that "dx and dy stay under ~1e9 mm". Nothing enforced it, and the
-/// file's own test declares a `dilim`-prefixed `sağa değer` of 3.05e10 mm supported:
-/// one vertex that kept its `dilim` prefix while its neighbour lost it made
-/// dx² + dy² overflow, which is UB, traps under the ASan/UBSan job, and — through
-/// the old `v <= 0 return 0` guard — reported a 3100 km side as a length of ZERO,
-/// silently shortening a çevre printed on a röper krokisi. The bound is now an
-/// enforced invariant (kMmCoordinateLimit) and the arithmetic is 128-bit.
-Mm segment_length(Mm ax, Mm ay, Mm bx, Mm by) noexcept
-{
-    const std::uint64_t dx = delta(ax, bx);
-    const std::uint64_t dy = delta(ay, by);
-    const U128 sum         = add_u128(mul_u64(dx, dx), mul_u64(dy, dy));
-    return static_cast<Mm>(round_sqrt_u128(sum));
-}
-
 /// Bounding box of the first `n` points of a ring input.
 Box2 input_bounds(std::span<const Point2> pts, std::size_t n) noexcept
 {
@@ -279,6 +261,24 @@ constexpr bool out_of_range(Point2 p) noexcept
 }
 
 } // namespace
+
+/// Segment length in millimetres, exact for every coordinate append() accepts.
+///
+/// The old form squared the deltas in signed int64 on the strength of a comment
+/// asserting that "dx and dy stay under ~1e9 mm". Nothing enforced it, and the
+/// file's own test declares a `dilim`-prefixed `sağa değer` of 3.05e10 mm supported:
+/// one vertex that kept its `dilim` prefix while its neighbour lost it made
+/// dx² + dy² overflow, which is UB, traps under the ASan/UBSan job, and — through
+/// the old `v <= 0 return 0` guard — reported a 3100 km side as a length of ZERO,
+/// silently shortening a çevre printed on a röper krokisi. The bound is now an
+/// enforced invariant (kMmCoordinateLimit) and the arithmetic is 128-bit.
+Mm segment_length(Mm ax, Mm ay, Mm bx, Mm by) noexcept
+{
+    const std::uint64_t dx = delta(ax, bx);
+    const std::uint64_t dy = delta(ay, by);
+    const U128 sum         = add_u128(mul_u64(dx, dx), mul_u64(dy, dy));
+    return static_cast<Mm>(round_sqrt_u128(sum));
+}
 
 Result<std::uint32_t> RingGeometry::append(std::span<const RingInput> rings)
 {

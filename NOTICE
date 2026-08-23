@@ -156,6 +156,25 @@ are the recorded exceptions, each with its reason.
       that "what does PiriCAD actually contain" has one honest answer.
       core/log.hpp additionally carries the CLAUDE.md Article 8.4 waiver.
 
+  piricad/core/trig.hpp — sin_cos_udeg
+      Sine and cosine over micro-degrees. Article 2.7 was applied and found no
+      candidate: IEEE-754 does not specify the transcendentals, every libm
+      implements them differently, and two conforming platforms may disagree by
+      an ulp — which is invisible on screen and fatal to a golden fixture that
+      §7.3 requires to be bit-identical across three operating systems.
+
+      This is not a claim of being better than libm; libm is faster and at least
+      as accurate. It is a claim of REPRODUCIBILITY: the file uses nothing but
+      the four operations IEEE-754 does specify exactly, with -ffp-contract=off
+      already mandated by CLAUDE.md 2.5.
+
+      crlibm and core-math are correctly rounded and would replace this outright.
+      Neither is packaged for Windows, macOS and Linux today, which is the
+      cross-platform half of Article 2.7's test; when one is, this file is
+      deleted rather than kept. Accuracy is measured against glibc by a test
+      rather than asserted in a comment — the first two versions of it were wrong
+      and both claimed not to be.
+
   the command bus, registry, parser, journal, document model
       No library provides these. They are the product.
 

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/core/snap.hpp"
 
+#include "piricad/core/trig.hpp"
+
 #include "piricad/core/document.hpp"
 #include "piricad/core/pick.hpp"
 
@@ -184,31 +186,59 @@ Point2 apply_polar(Point2 base, Point2 p, std::int64_t step_udeg) noexcept
 {
     if (step_udeg <= 0) return p;
 
-    const double dx       = static_cast<double>(p.x - base.x);
-    const double dy       = static_cast<double>(p.y - base.y);
-    const double distance = std::sqrt(dx * dx + dy * dy);
-    if (distance == 0.0) return p;
+    const Mm dx_mm = p.x - base.x;
+    const Mm dy_mm = p.y - base.y;
+    if (dx_mm == 0 && dy_mm == 0) return p;
 
-    // std::atan2/sin/cos are the one place in this engine that is not exact. They
-    // are within one ulp on every conforming libm, and one ulp of a direction
-    // cosine over a ten-kilometre radius is a nanometre — far below the stored
-    // millimetre, so the rounded result agrees across platforms in practice. It
-    // is stated here rather than hidden because §7.3 asks for bit-identity and
-    // this is the single approximation the input aids contain. Polar tracking is
-    // off by default, and the point it produces is journalled as an exact
-    // integer, so a replay never re-derives it.
-    const double degrees = std::atan2(dy, dx) * (180.0 / 3.14159265358979323846);
+    // NO atan2, NO libm. §7.3 and core.md R9 ask for bit-identical results across
+    // three platforms, and IEEE-754 does not specify the transcendentals: two
+    // conforming libms may answer one ulp apart, which is invisible on screen and
+    // fatal to a golden fixture.
+    //
+    // The candidate directions depend only on `step_udeg`, never on where the user
+    // aimed, so the nearest one can be found by COMPARING against each candidate
+    // rather than by measuring the aim's own angle. The comparison is a dot
+    // product: the candidate whose unit vector has the largest projection onto the
+    // aim is the nearest one, and that is a multiply and an add.
+    //
+    // `core::sin_cos_udeg` supplies the unit vectors and uses nothing but the four
+    // operations IEEE-754 does specify exactly, so every machine walks the same
+    // comparisons in the same order and reaches the same candidate.
+    const double dx = static_cast<double>(dx_mm);
+    const double dy = static_cast<double>(dy_mm);
 
-    std::int64_t udeg = round_udeg(degrees * static_cast<double>(kUDegPerDegree));
-    udeg %= kUDegFullCircle;
-    if (udeg < 0) udeg += kUDegFullCircle;
+    const std::int64_t candidates = kUDegFullCircle / step_udeg;
+    if (candidates <= 0) return p;
 
-    const std::int64_t steps   = (udeg + step_udeg / 2) / step_udeg;
-    const std::int64_t snapped = (steps * step_udeg) % kUDegFullCircle;
+    std::int64_t best_udeg = 0;
+    double best_projection = -1.0e308;
+    SinCos best_direction{};
 
-    const double radians = udeg_to_radians(snapped);
-    return Point2{base.x + mm_round(distance * std::cos(radians)),
-                  base.y + mm_round(distance * std::sin(radians))};
+    for (std::int64_t k = 0; k < candidates; ++k) {
+        const std::int64_t angle = k * step_udeg;
+        const SinCos dir         = sin_cos_udeg(angle);
+
+        // Projection of the aim onto this direction. Largest wins; ties go to the
+        // lower angle because the loop runs upward and the comparison is strict,
+        // which makes the choice reproducible rather than dependent on order.
+        const double projection = dx * dir.cos + dy * dir.sin;
+        if (projection > best_projection) {
+            best_projection = projection;
+            best_udeg       = angle;
+            best_direction  = dir;
+        }
+    }
+
+    // The distance is preserved exactly along the chosen direction: the point
+    // slides around the circle rather than moving toward or away from the base,
+    // which is what polar tracking means to a surveyor holding a measured length.
+    //
+    // Distance uses the exact integer length the geometry module computes, not a
+    // sqrt of doubles, so a 100 m aim lands at exactly 100 m.
+    const double distance = static_cast<double>(segment_length(base, p));
+
+    return Point2{base.x + mm_round(distance * best_direction.cos),
+                  base.y + mm_round(distance * best_direction.sin)};
 }
 
 // ----------------------------------------------------------------- engine ---

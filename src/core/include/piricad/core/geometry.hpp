@@ -46,6 +46,22 @@ enum class RingRole : std::uint8_t {
     Interior = 2, ///< a hole inside the exterior of the same part
 };
 
+/// Exact distance between two points, in millimetres, rounded to the nearest.
+///
+/// Integer throughout, on 128-bit intermediates. A `std::hypot` of two doubles
+/// would be shorter to write and would not be exact: a `kenar uzunluğu` printed
+/// on a röper krokisi is a reported figure, and one that is systematically a
+/// millimetre short is a wrong figure on a signed document, not a rounding
+/// detail. The 128-bit path also survives a `dilim`-prefixed easting, where the
+/// obvious `dx*dx + dy*dy` in int64 overflows.
+Mm segment_length(Mm ax, Mm ay, Mm bx, Mm by) noexcept;
+
+/// The same, for two points.
+inline Mm segment_length(Point2 a, Point2 b) noexcept
+{
+    return segment_length(a.x, a.y, b.x, b.y);
+}
+
 /// One geometry slot's ring range, as returned by the store.
 struct RingSpan
 {
