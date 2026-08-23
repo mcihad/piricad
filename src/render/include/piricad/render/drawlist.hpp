@@ -48,7 +48,15 @@ struct PassStyle
     /// stroke one, and a backend should not have to hold both to draw one thing.
     std::uint32_t line_rgba{0xFF000000u};
     float line_width_px{1.0f}; ///< width of those glyph and pattern strokes
-    std::uint16_t dash{0};     ///< index into the dash table, from /data
+
+    /// The interior of a glyph, 0 for outline-only.
+    ///
+    /// A marker has two colours the way every drawn shape does — an outline and an
+    /// interior — and they are the layer's stroke and fill. Carried here for the
+    /// same reason `line_rgba` is: a centroid marker's geometry is in the polygon
+    /// batch and its ink in the stroke one.
+    std::uint32_t fill_rgba{0};
+    std::uint16_t dash{0}; ///< index into the dash table, from /data
 
     /// The picture a raster type draws, BORROWED from the document's image store.
     ///

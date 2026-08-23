@@ -114,12 +114,21 @@ private:
     void applyToDocument();
     void saveToLibrary();
 
+    /// Puts the symbol back to what the layer draws right now.
+    void resetToLayer();
+
+    /// Shows where the highlighted gallery entry was published.
+    void showProvenance();
+
     /// The geometry the preview and the gallery are showing.
     PreviewShape shape() const;
 
     Controller& controller_;
     QString layerName_;
     core::Symbol symbol_{};
+
+    /// What the layer drew when the dialog opened, for `Sıfırla`.
+    core::Symbol original_{};
 
     /// Guards the property widgets while they are being filled from the model, so
     /// a programmatic `setValue` does not read straight back as a user edit.
@@ -132,6 +141,11 @@ private:
     QLineEdit* search_{nullptr};
     QListWidget* gallery_{nullptr};
     QLabel* galleryNote_{nullptr};
+
+    /// Where the highlighted gösterim was published. A plan sheet is a legal
+    /// document and its symbology has a citation (CLAUDE.md 11.7); showing it
+    /// while the user is choosing is cheaper than making them look it up after.
+    QLabel* provenance_{nullptr};
 
     QListWidget* stack_{nullptr};
 

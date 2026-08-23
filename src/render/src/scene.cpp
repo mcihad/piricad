@@ -71,6 +71,7 @@ PassStyle pass_of(const core::SymbolLayer& sl, const core::ImageStore& images, d
     ps.angle_udeg    = sl.angle_udeg;
     ps.opacity       = sl.opacity;
     ps.line_rgba     = sl.look.rgba;
+    ps.fill_rgba     = sl.look.fill_rgba;
     ps.image         = images.bytes(sl.image);
     ps.image_key     = images.content_key(sl.image);
     ps.dash          = sl.look.dash;

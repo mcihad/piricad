@@ -18,6 +18,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.column`](column.md) | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Belgeye öznitelik sütunu tanımlar ve tanımlı sütunları listeler. |
 | [`core.erase`](erase.md) | `SİL`, `SIL`, `ERASE`, `E` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Seçilen nesneleri siler. |
 | [`core.select`](select.md) | `SEÇ`, `SEC`, `SELECT`, `S` | Düzenleme | geri alınmaz | betiklenebilir, salt okunur | Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta. |
+| [`core.label`](label.md) | `ETİKET`, `ETIKET`, `LABEL`, `ETK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmandaki nesneleri özniteliklerinden okuyarak etiketler. |
 | [`core.layer`](layer.md) | `KATMAN`, `LAYER`, `KAT` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
 | [`core.style`](style.md) | `STİL`, `STIL`, `STYLE`, `ST` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar. |
 | [`core.symbol`](symbol.md) | `SEMBOL`, `SEMBOLLER`, `SYMBOL`, `SMB` | Katman | geri alınmaz | betiklenebilir, AI erişimli | Gösterim rafını yükler, ağacında gezer ve içinde arar. |
@@ -129,6 +130,19 @@ Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta.
 | `tolerans` | number | isteğe bağlı | NOKTA modunda arama yarıçapı, metre; yoksa seçim toleransı |
 
 Ayrıntılı kullanım: [SEÇ](select.md)
+
+### `core.label` — ETİKET
+
+Katmandaki nesneleri özniteliklerinden okuyarak etiketler.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `katman` | text | 1 | Etiketlenecek katmanın adı |
+| `bicim` | text | 1 | Etiket biçimi; {sutun} o sütunun değeriyle değişir |
+| `hedef` | text | isteğe bağlı | Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET' |
+| `yukseklik` | integer | isteğe bağlı | Yazı yüksekliği, zemin milimetresi |
+
+Ayrıntılı kullanım: [ETİKET](label.md)
 
 ### `core.layer` — KATMAN
 
@@ -520,6 +534,57 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         }
       ],
       "flags": [
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.label",
+      "names": [
+        "ETİKET",
+        "ETIKET",
+        "LABEL",
+        "ETK"
+      ],
+      "category": "Çizim",
+      "summary": "Katmandaki nesneleri özniteliklerinden okuyarak etiketler.",
+      "params": [
+        {
+          "name": "katman",
+          "type": "text",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Etiketlenecek katmanın adı"
+        },
+        {
+          "name": "bicim",
+          "type": "text",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Etiket biçimi; {sutun} o sütunun değeriyle değişir"
+        },
+        {
+          "name": "hedef",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET'"
+        },
+        {
+          "name": "yukseklik",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Yazı yüksekliği, zemin milimetresi"
+        }
+      ],
+      "flags": [
+        "interactive",
         "scriptable",
         "ai_accessible"
       ],

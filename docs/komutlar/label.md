@@ -1,0 +1,141 @@
+# ETİKET — Özniteliklerden Yazı
+
+Bir katmandaki nesneleri, kendi özniteliklerini okuyarak etiketler.
+
+## Ne yapar
+
+Bir paftada TAKS ve KAKS bir daire içinde yazar, cephe genişliği yapı çizgisinin
+yanında durur, ada/parsel numarası parselin ortasındadır. Bunların hepsi nesnenin
+**özniteliği** ve kâğıdın **yazısıdır**; `ETİKET` birini öbürüne taşır.
+
+Her etiket, bildiğiniz bir **yazı nesnesidir**. Taşınabilir, stili
+değiştirilebilir, kendi katmanına konup kapatılabilir; `.pcad` ve DXF ile hiçbir
+şey eklemeden gidip gelir. CAD'de etiket zaten hep böyle olmuştur.
+
+Bunun bedeli şudur: etiket, sonradan değişen bir özniteliği **takip etmez**.
+Komutu yeniden çalıştırmak hepsini tazeler ve bu, her CAD açıklamasının yaptığı
+pazarlıktır.
+
+### Neden bir sembol katmanı değil
+
+`.claude/model.md` P29, kare yolunun öznitelik sütunu okumasını yasaklıyor —
+haklı olarak: her nesne için her karede bir sütun araması, 16 ms bütçesinin içine
+bir arama koyar. Aynı kural, bu programda bir CBS çizicisinin "stil sütununa
+yazan bir komut" olmasının da sebebi. Etiketleyici de aynı biçimdedir:
+
+> **Etiketleyici, yazı nesnesi yazan bir komuttur.**
+
+## Adlar
+
+`ETİKET` · `ETIKET` · `LABEL` · `ETK`
+
+## Sözdizimi
+
+```
+ETİKET katman=<ad> bicim=<biçim> [hedef=<ad>] [yukseklik=<tam sayı>]
+```
+
+## Parametreler
+
+| Parametre | Ne yapar |
+|---|---|
+| `katman` | Etiketlenecek katmanın adı. Zorunlu |
+| `bicim` | Etiket biçimi. `{sutun}` o sütunun değeriyle değişir. Zorunlu |
+| `hedef` | Etiketlerin yazılacağı katman. Verilmezse `<katman> ETİKET` |
+| `yukseklik` | Yazı yüksekliği, **zemin milimetresi**. Verilmezse 2000 (2 m) |
+
+Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
+
+### Biçim bir dil değildir
+
+`{sutun}` o sütunun değeriyle değişir ve **başka hiçbir şey olmaz**: işleç yok,
+iç içe yazım yok, fonksiyon yok, koşul yok, sayı biçimlendirme yok.
+
+CLAUDE.md 5.11 bu projeye tam olarak bir dilbilgisi tanıyor
+(`piricad/command/parser.hpp`) ve bunların herhangi biri ikinci bir dilbilgisi
+olurdu. Bunu genişletmek bir yama değil, bir anayasa değişikliğidir.
+
+Tanımlı olmayan bir sütun adı **olduğu gibi kalır**, süslü parantezleriyle
+birlikte. Sessizce silinseydi, basılmak üzere olan bir paftadaki yazım hatası
+görünmez olurdu.
+
+### Değerler nasıl yazılır
+
+| Sütun türü | Kâğıtta |
+|---|---|
+| `metin`, `kod` | Olduğu gibi |
+| `tam_sayi` | Olduğu gibi |
+| `uzunluk` | **Metre** olarak, sondaki sıfırlar atılmış (`1500` → `1,5`) |
+| `evet_hayir` | `evet` / `hayır` |
+| Boş hücre | **Hiçbir şey** — ölçülmemiş bir cephe ile sıfır cephe aynı şey değildir |
+
+## Örnekler
+
+### Komut satırı
+
+Ada/parsel numarası:
+
+```
+KATMAN ad=PARSEL
+SÜTUN kimlik=ada tur=tam_sayi
+SÜTUN kimlik=parsel tur=tam_sayi
+ETİKET katman=PARSEL bicim="{ada}/{parsel}"
+```
+
+TAKS ve KAKS, bir dairenin içinde. Daireyi parselin **kendi sembolü** çizer,
+yazıyı `ETİKET` yazar; ikisi de nesnenin ortasına geldiği için üst üste düşerler:
+
+```
+SÜTUN kimlik=taks tur=metin
+SÜTUN kimlik=kaks tur=metin
+STİL katman=PARSEL ekle=evet tip=merkez-isaretci sekil=daire birim=zemin boyut=22000 renk=4289396768 kalinlik=400
+ETİKET katman=PARSEL bicim="{taks}/{kaks}" yukseklik=3000
+```
+
+Etiketleri ayrı bir katmana:
+
+```
+ETİKET katman=PARSEL bicim="{ada}/{parsel}" hedef=NUMARALAR
+```
+
+### Arayüz
+
+Katmanlar panelinde katmana **sağ tık → Özniteliklerden etiketle…**, biçimi yazın.
+
+### Betik
+
+Betik kendi kendine yeter — betik bloğu kendi belgesinde çalışır, o yüzden
+katmanı, sütunu ve nesneyi de kendisi kurar:
+
+```json
+[
+  { "cmd": "core.layer",  "args": { "ad": "PARSEL" } },
+  { "cmd": "core.column", "args": { "kimlik": "ada", "tur": "tam_sayi" } },
+  { "cmd": "core.area",   "args": { "noktalar": [[0,0],[40000,0],[40000,30000],[0,30000]] } },
+  { "cmd": "core.attribute", "args": { "ad": "ada", "nesne": 1, "deger": "1234" } },
+  { "cmd": "core.label",  "args": { "katman": "PARSEL", "bicim": "Ada {ada}", "yukseklik": 2500 } }
+]
+```
+
+## Geri alma
+
+Tek bir geri alma adımıdır: `GERİAL` bütün etiketleri birlikte kaldırır.
+
+Komut **iki geçişlidir**: her yazı üretilir ve her konum hesaplanır, ancak ondan
+sonra ilk yazma yapılır. Yani okunamayan bir sütun adı çizimi yarı etiketli
+bırakmaz, hiç dokunmaz (Article 1.6).
+
+## Betikten kullanım
+
+Komut kimliği `core.label`. Betikten ve yapay zekâdan erişilebilir.
+
+Etiket katmanı yoksa oluşturulur; varsa üstüne eklenir. Tazelemek için önce eski
+etiketleri silin (`SEÇ` + `SİL`) ya da `GERİAL` ile geri alın.
+
+## Hatalar
+
+| İleti | Sebep | Çözüm |
+|---|---|---|
+| `Katman bulunamadı: '<ad>'` | Etiketlenecek katman yok | Önce `KATMAN` ile oluşturun |
+| `Etiket yüksekliği sıfırdan büyük olmalı.` | `yukseklik=0` ya da eksi | Zemin milimetresi olarak pozitif bir değer verin |
+| `'<ad>' katmanında etiketlenecek bir şey bulunamadı.` | Katman boş, ya da biçim her nesne için boş metin üretti | Sütun adlarını `SÜTUN` ile listeleyip denetleyin |

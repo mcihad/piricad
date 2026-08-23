@@ -892,3 +892,69 @@ TEST_CASE("SEMBOL: aynı kimlik yerinde değişir, rafın sonuna eklenmez")
     REQUIRE(rows.size() == std::size_t{2});
     CHECK_EQ(rows[0]->id, std::string("x"));
 }
+
+// --------------------------------------------------------------- ETİKET ----
+
+TEST_CASE("ETİKET: parselin kendi öznitelikleri kendi ortasına yazılıyor")
+{
+    // The case this command exists for: MPYY prints TAKS and KAKS inside a circle
+    // on a `yapılaşma koşulu` island. The circle is the layer's own symbol; the
+    // values are the feature's attributes; this is what carries one to the other.
+    Rig f;
+    REQUIRE(f.bus.execute_line("KATMAN PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SÜTUN kimlik=taks tur=metin", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SÜTUN kimlik=cephe tur=uzunluk", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN 0,0 40000,0 40000,30000 0,30000", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK taks 1 \"0,30\"", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK cephe 1 12500", Origin::Test).ok());
+
+    const std::size_t before = f.doc.live_entity_count();
+
+    auto labelled = f.bus.execute_line(
+        "ETİKET katman=PARSEL bicim=\"TAKS {taks} · Cephe {cephe} m\"", Origin::Test);
+    if (!labelled) FAIL_WITH("ETİKET", labelled.error().message);
+    REQUIRE(labelled.ok());
+
+    // One label entity, on its own layer so a sheet can be plotted without them.
+    CHECK_EQ(f.doc.live_entity_count(), before + 1);
+    const core::LayerId target = f.doc.find_layer("PARSEL ETİKET");
+    REQUIRE(target != core::kNoLayer);
+
+    // A `uzunluk` column is stored in millimetres and printed in METRES, because
+    // that is the unit a plan sheet writes.
+    bool found = false;
+    for (core::EntityId e = 0; e < f.doc.entities().size(); ++e) {
+        if (!f.doc.entities().alive(e) || f.doc.entities().layer[e] != target) continue;
+        const std::string_view text = f.doc.texts().text(f.doc.entities().slot[e]);
+        CHECK_EQ(std::string(text), std::string("TAKS 0,30 · Cephe 12,5 m"));
+        found = true;
+    }
+    CHECK(found);
+
+    // One undo step takes every label back together.
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_EQ(f.doc.live_entity_count(), before);
+}
+
+TEST_CASE("ETİKET: tanınmayan sütun adı silinmiyor, görünür kalıyor")
+{
+    // Silently deleting it would hide a typo in a format string that a plan sheet
+    // is about to be printed from.
+    Rig f;
+    REQUIRE(f.bus.execute_line("KATMAN PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SÜTUN kimlik=ada tur=tam_sayi", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN 0,0 40000,0 40000,30000 0,30000", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK ada 1 1234", Origin::Test).ok());
+
+    REQUIRE(
+        f.bus.execute_line("ETİKET katman=PARSEL bicim=\"{ada}/{parsell}\"", Origin::Test).ok());
+
+    const core::LayerId target = f.doc.find_layer("PARSEL ETİKET");
+    REQUIRE(target != core::kNoLayer);
+
+    for (core::EntityId e = 0; e < f.doc.entities().size(); ++e) {
+        if (!f.doc.entities().alive(e) || f.doc.entities().layer[e] != target) continue;
+        CHECK_EQ(std::string(f.doc.texts().text(f.doc.entities().slot[e])),
+                 std::string("1234/{parsell}"));
+    }
+}

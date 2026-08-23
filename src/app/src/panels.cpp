@@ -271,6 +271,27 @@ void LayerPanel::showContextMenu(const QPoint& where)
         QAction* style = menu.addAction(tr("Stili düzenle…"));
         connect(style, &QAction::triggered, this, [this, name] { emit styleRequested(name); });
 
+        QAction* clear = menu.addAction(tr("Stili temizle"));
+        clear->setToolTip(tr("Nesneler katman görünümüne döner"));
+        connect(clear, &QAction::triggered, this, [this, name] {
+            controller_.runLine(QStringLiteral("STİL katman=\"%1\" sifirla=evet").arg(name),
+                                command::Origin::Gui);
+        });
+
+        QAction* label = menu.addAction(tr("Özniteliklerden etiketle…"));
+        connect(label, &QAction::triggered, this, [this, name] {
+            bool ok = false;
+            const QString format =
+                QInputDialog::getText(this, tr("Özniteliklerden etiketle"),
+                                      tr("Biçim — {sutun} o sütunun değeriyle değişir:"),
+                                      QLineEdit::Normal, QStringLiteral("{ada}/{parsel}"), &ok);
+            if (!ok || format.trimmed().isEmpty()) return;
+
+            controller_.runLine(
+                QStringLiteral("ETİKET katman=\"%1\" bicim=\"%2\"").arg(name, format.trimmed()),
+                command::Origin::Gui);
+        });
+
         menu.addSeparator();
 
         const bool visible = item->data(1, Qt::UserRole).toBool();

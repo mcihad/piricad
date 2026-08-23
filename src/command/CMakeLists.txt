@@ -20,6 +20,7 @@ add_library(piricad_command STATIC
     src/commands/builtin.cpp
     src/commands/edit.cpp
     src/commands/file.cpp
+    src/commands/label.cpp
     src/commands/layer.cpp
     src/commands/area.cpp
     src/commands/attribute.cpp

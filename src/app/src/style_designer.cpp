@@ -24,6 +24,7 @@
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QShortcut>
 #include <QSpinBox>
 #include <QSplitter>
 #include <QStandardPaths>
@@ -171,6 +172,7 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     symbol_                   = layer == core::kNoLayer ? core::Symbol::of(core::Appearance{})
                                                         : symbol_of_layer(controller_.document(), layer);
     if (symbol_.layers.empty()) symbol_ = core::Symbol::of(core::Appearance{});
+    original_ = symbol_;
 
     // ---- geometry tabs and the big preview ----
     //
@@ -216,6 +218,9 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     QPushButton* apply = buttons->addButton(tr("Uygula"), QDialogButtonBox::AcceptRole);
     buttons->addButton(tr("Vazgeç"), QDialogButtonBox::RejectRole);
     QPushButton* save = buttons->addButton(tr("Kütüphaneye kaydet…"), QDialogButtonBox::ActionRole);
+    QPushButton* reset = buttons->addButton(tr("Sıfırla"), QDialogButtonBox::ResetRole);
+    reset->setToolTip(tr("Katmanın şu an çizdiğine geri döner"));
+    connect(reset, &QPushButton::clicked, this, &StyleDesigner::resetToLayer);
     apply->setDefault(true);
 
     connect(save, &QPushButton::clicked, this, &StyleDesigner::saveToLibrary);
@@ -276,6 +281,15 @@ QWidget* StyleDesigner::buildGallery()
     small.setPointSizeF(small.pointSizeF() - 1.0);
     galleryNote_->setFont(small);
 
+    provenance_ = new QLabel(box);
+    provenance_->setWordWrap(true);
+    provenance_->setFont(small);
+    provenance_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    provenance_->setMinimumHeight(46);
+
+    connect(gallery_, &QListWidget::currentItemChanged, this,
+            [this](QListWidgetItem*, QListWidgetItem*) { showProvenance(); });
+
     auto* use = new QPushButton(tr("Seçileni al"), box);
     connect(use, &QPushButton::clicked, this, &StyleDesigner::applyGalleryPick);
 
@@ -283,6 +297,7 @@ QWidget* StyleDesigner::buildGallery()
     layout->addWidget(search_);
     layout->addWidget(gallery_, 2);
     layout->addWidget(galleryNote_);
+    layout->addWidget(provenance_);
     layout->addWidget(use);
     return box;
 }
@@ -393,6 +408,36 @@ void StyleDesigner::refreshGalleryItems()
         galleryNote_->setText(tr("%1 gösterim.").arg(matching.size())); // ui-label
 }
 
+void StyleDesigner::showProvenance()
+{
+    QListWidgetItem* item = gallery_->currentItem();
+    if (item == nullptr) {
+        provenance_->clear();
+        return;
+    }
+
+    const core::LibraryEntry* e =
+        controller_.bus().style_library().find(item->data(Qt::UserRole).toString().toStdString());
+    if (e == nullptr) {
+        provenance_->clear();
+        return;
+    }
+
+    // The citation, verbatim from the package. Not paraphrased and not shortened:
+    // a regulatory statement carries its regulation, annex, madde and publication
+    // date, and a shortened one is a different statement (CLAUDE.md 11.7).
+    provenance_->setText(QString::fromStdString(e->source_ref));
+    provenance_->setToolTip(QString::fromStdString(e->id));
+}
+
+void StyleDesigner::resetToLayer()
+{
+    symbol_ = original_;
+    geometry_->setCurrentIndex(static_cast<int>(natural_shape(symbol_)));
+    refresh();
+    stack_->setCurrentRow(0);
+}
+
 void StyleDesigner::applyGalleryPick()
 {
     QListWidgetItem* item = gallery_->currentItem();
@@ -447,6 +492,17 @@ QWidget* StyleDesigner::buildStack()
     bar->addStretch(1);
     bar->addWidget(button(QStringLiteral("▲"), tr("Yukarı"), [this] { moveLayer(+1); }));
     bar->addWidget(button(QStringLiteral("▼"), tr("Aşağı"), [this] { moveLayer(-1); }));
+
+    // The two things a stack is used for most, on the keys a user already presses
+    // for them elsewhere. Scoped to the LIST so they do not fire while a spin box
+    // has focus and the user is deleting a digit.
+    auto* remove = new QShortcut(QKeySequence::Delete, stack_);
+    remove->setContext(Qt::WidgetShortcut);
+    connect(remove, &QShortcut::activated, this, &StyleDesigner::removeLayer);
+
+    auto* copy = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_D), stack_);
+    copy->setContext(Qt::WidgetShortcut);
+    connect(copy, &QShortcut::activated, this, &StyleDesigner::duplicateLayer);
 
     layout->addWidget(stack_, 1);
     layout->addLayout(bar);
@@ -643,8 +699,16 @@ void StyleDesigner::refresh()
         one.layers.push_back(sl);
         one.layers.front().enabled = true; // the row shows what it WOULD draw
 
+        // The Turkish name on the row, the machine name in the tooltip: the row is
+        // read at a glance and the token is what a script would write.
+        QString label = QString::fromUtf8(core::symbol_layer_type_name(sl.type));
+        for (const TypeRow& row : kTypes)
+            if (row.type == sl.type) label = tr(row.label);
+
         auto* item = new QListWidgetItem(stack_);
-        item->setText(QString::fromUtf8(core::symbol_layer_type_name(sl.type)));
+        item->setText(label);
+        item->setToolTip(QStringLiteral("%1  ·  %2")
+                             .arg(label, QString::fromUtf8(core::symbol_layer_type_name(sl.type))));
         item->setIcon(symbol_icon(one, images, QSize(44, 26), paper, shape()));
         item->setData(Qt::UserRole, static_cast<int>(i));
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);

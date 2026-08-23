@@ -19,6 +19,7 @@ namespace piricad::command {
     X(column)                                                                                      \
     X(erase)                                                                                       \
     X(select)                                                                                      \
+    X(label)                                                                                       \
     X(layer)                                                                                       \
     X(style)                                                                                       \
     X(symbol)                                                                                      \

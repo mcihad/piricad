@@ -229,6 +229,18 @@ public:
     }
 
 private:
+    /// The brush a glyph is painted with: the layer's FILL colour, or none.
+    ///
+    /// A marker has two colours the way every drawn shape does — an outline and an
+    /// interior — and they are the layer's stroke and fill. Painting the interior
+    /// with the STROKE colour, which an earlier version did, makes an
+    /// outline-only circle impossible to ask for: a `yapılaşma koşulu` ring around
+    /// a KAKS value came out as a solid disc with the value hidden under it.
+    static QBrush glyph_brush(const render::PassStyle& ps)
+    {
+        return ps.fill_rgba == 0 ? QBrush(Qt::NoBrush) : QBrush(faded(ps.fill_rgba, ps.opacity));
+    }
+
     /// One symbol layer of one style: whatever it paints, in its own order.
     ///
     /// Not static, unlike the vector paths below: a raster pass reads the decoded
@@ -365,9 +377,8 @@ private:
         painter.setClipPath(path, Qt::IntersectClip);
         if (batch.rgba != 0) painter.fillRect(box, faded(batch.rgba, ps.opacity));
 
-        const QColor ink = faded(ps.line_rgba, ps.opacity);
-        painter.setPen(QPen(ink, ps.line_width_px));
-        painter.setBrush(QBrush(ink));
+        painter.setPen(QPen(faded(ps.line_rgba, ps.opacity), ps.line_width_px));
+        painter.setBrush(glyph_brush(ps));
 
         // Anchored to the world grid rather than to the bounding box, so the
         // glyphs do not crawl across the face as the user pans.
@@ -388,9 +399,8 @@ private:
         if (batch.runs.empty()) return;
 
         const double size = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 6.0;
-        const QColor ink  = faded(ps.line_rgba, ps.opacity);
-        painter.setPen(QPen(ink, ps.line_width_px));
-        painter.setBrush(QBrush(ink));
+        painter.setPen(QPen(faded(ps.line_rgba, ps.opacity), ps.line_width_px));
+        painter.setBrush(glyph_brush(ps));
 
         std::size_t offset = 0;
         for (std::uint32_t run : batch.runs) {
@@ -685,10 +695,9 @@ private:
         const double size = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 5.0;
         const double interval =
             ps.interval_px > 0.5f ? static_cast<double>(ps.interval_px) : size * 3.0;
-        const QColor ink = faded(ps.line_rgba, ps.opacity);
-
-        painter.setPen(QPen(ink, ps.line_width_px));
-        painter.setBrush(hash ? QBrush(Qt::NoBrush) : QBrush(ink));
+        painter.setPen(QPen(faded(ps.line_rgba, ps.opacity), ps.line_width_px));
+        // A hash tick is a stroke and has no interior to fill.
+        painter.setBrush(hash ? QBrush(Qt::NoBrush) : glyph_brush(ps));
 
         const QPainterPath glyph = markerPath(hash ? core::MarkerShape::Tick : ps.shape, size);
 
