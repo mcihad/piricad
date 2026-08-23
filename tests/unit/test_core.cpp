@@ -324,3 +324,58 @@ TEST_CASE("katman görünürlüğü nesne bayrağına yansıyor")
     CHECK(doc.set_layer_visible(lyr, true, op).ok());
     CHECK(!doc.entities().visible(id.value()));
 }
+
+TEST_CASE("JSON: bozuk girdi reddedilir, çökmez")
+{
+    // Parsing is the dangerous half of a JSON facade: a hostile script, a corrupt
+    // catalogue and a truncated journal all reach it first. This is nlohmann's
+    // parser now rather than a hand-rolled scanner, and the point of the change is
+    // this list — every one of these was a shape our own scanner had to be trusted
+    // to handle.
+    for (const char* bad :
+         {"{", "[1,2", "{\"a\":}", "\"kapanmamis", "{\"a\":1,}", "[1,]", "nan", "01",
+          "{\"a\" \"b\"}", "1e999999", "[[[[[[[[[[[[[[[[", "{\"a\":\"\\uD800\"}", ""}) {
+        auto parsed = Json::parse(bad);
+        CHECK(!parsed.ok());
+        if (parsed.ok()) ::microtest::report(__FILE__, __LINE__, "kabul edildi", bad);
+    }
+}
+
+TEST_CASE("JSON: nesne anahtar SIRASI korunur")
+{
+    // ordered_json, not json. The default container sorts keys, and the journal is
+    // compared byte for byte across three clients (CLAUDE.md 6.4). Sorted keys
+    // would rewrite every golden fixture and make the file's key order an accident
+    // of the alphabet rather than a decision.
+    auto parsed = Json::parse(R"({"zeta":1,"alpha":2,"mu":3})");
+    REQUIRE(parsed.ok());
+
+    const JsonObject& fields = parsed.value().as_object();
+    REQUIRE(fields.size() == std::size_t{3});
+    CHECK_EQ(fields[0].first, std::string("zeta"));
+    CHECK_EQ(fields[1].first, std::string("alpha"));
+    CHECK_EQ(fields[2].first, std::string("mu"));
+
+    // And the round trip writes them back in the same order.
+    CHECK_EQ(parsed.value().dump(), std::string(R"({"zeta":1,"alpha":2,"mu":3})"));
+}
+
+TEST_CASE("JSON: tam sayı ile ondalık ayrı kalır")
+{
+    // A coordinate is an integer count of millimetres. Collapsing it to a double
+    // would write 485320150.0 back into the journal and make a replay disagree
+    // with the run it replays (model.md R21).
+    auto parsed = Json::parse(R"({"mm":485320150,"oran":0.5})");
+    REQUIRE(parsed.ok());
+
+    const Json* mm = parsed.value().find("mm");
+    REQUIRE(mm != nullptr);
+    CHECK(mm->is_int());
+    CHECK_EQ(mm->as_int(), std::int64_t{485320150});
+
+    const Json* oran = parsed.value().find("oran");
+    REQUIRE(oran != nullptr);
+    CHECK(!oran->is_int());
+
+    CHECK_EQ(parsed.value().dump(), std::string(R"({"mm":485320150,"oran":0.5})"));
+}

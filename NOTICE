@@ -24,6 +24,15 @@ Currently linked
                           relinking right is preserved. Qt Charts and
                           Qt DataVisualization are GPLv3-only and are NOT used.
 
+  nlohmann/json           MIT                   v3.11.3   9cca280a
+                          The JSON parser and writer behind piricad/core/json.hpp,
+                          used by the journal, the script runner and every /data
+                          catalogue. `ordered_json`, not `json`: the default
+                          container sorts object keys and the journal is compared
+                          byte for byte across three clients (CLAUDE.md 6.4).
+                          Header-only, linked PRIVATE into piricad_core so the
+                          facade is what the rest of the product sees.
+
   GDAL/OGR                MIT (X11) + others    >= 3.8   (PIRICAD_WITH_GDAL)
                           Vector format I/O for /src/io: DXF and GeoPackage
                           today, from the allow-list in
@@ -68,8 +77,6 @@ each is genuinely linked it moves to "Currently linked" in the same change.
 A moved tag cannot silently change what these resolve to, which is why they are
 recorded as SHAs (CLAUDE.md 5.12).
 
-  nlohmann/json           MIT                   v3.11.3   9cca280a
-                          JSON for the journal, scripts and catalogues.
   doctest                 MIT                   v2.4.11   ae7a1353
                           Test framework. Chosen over Catch2 for compile time
                           (piricad.md §9.11).
@@ -133,9 +140,10 @@ are the recorded exceptions, each with its reason.
       slated for replacement by the pinned library), and the hatch clipping the
       renderer will need, which is Clipper2's job when the fill path lands.
 
-  piricad/core/json.hpp, tests/support/microtest.hpp, piricad/core/log.hpp
-      Standing in for nlohmann/json, doctest and spdlog until the section above
-      is genuinely wired. These are not the decision — the decision is the SHA —
+  tests/support/microtest.hpp, piricad/core/log.hpp
+      Standing in for doctest and spdlog until the section above is genuinely
+      wired. piricad/core/json.hpp is no longer on this list: it is now a facade
+      over nlohmann/json rather than a hand-rolled parser. These are not the decision — the decision is the SHA —
       they are what the code calls in the meantime, and they are listed here so
       that "what does PiriCAD actually contain" has one honest answer.
       core/log.hpp additionally carries the CLAUDE.md Article 8.4 waiver.

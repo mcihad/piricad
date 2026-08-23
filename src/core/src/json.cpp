@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/core/json.hpp"
 
+#include <nlohmann/json.hpp>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -27,262 +29,59 @@ const JsonObject& empty_object()
     return o;
 }
 
-void escape_into(std::string& out, std::string_view s)
+/// Our tree to nlohmann's, for dumping.
+nlohmann::ordered_json to_nlohmann(const Json& v)
 {
-    out += '"';
-    for (char ch : s) {
-        const auto c = static_cast<unsigned char>(ch);
-        switch (c) {
-        case '"': out += "\\\""; break;
-        case '\\': out += "\\\\"; break;
-        case '\n': out += "\\n"; break;
-        case '\r': out += "\\r"; break;
-        case '\t': out += "\\t"; break;
-        case '\b': out += "\\b"; break;
-        case '\f': out += "\\f"; break;
-        default:
-            if (c < 0x20) {
-                char buf[8];
-                // Six characters and a terminator, so it fits — but "it fits" is an
-                // argument, not a guarantee, and a truncated escape is malformed
-                // JSON that only shows up in the file nobody can reopen.
-                const int written = std::snprintf(buf, sizeof buf, "\\u%04x", c);
-                if (written < 0 || static_cast<std::size_t>(written) >= sizeof buf) {
-                    out += "\\ufffd"; // replacement character: lossy, but valid
-                    continue;
-                }
-                out += buf;
-            } else {
-                out += static_cast<char>(c); // UTF-8 passes through verbatim
-            }
-        }
-    }
-    out += '"';
-}
-
-/// Locale-independent shortest round-trip formatting.
-void number_into(std::string& out, double v)
-{
-    if (!std::isfinite(v)) {
-        out += "null";
-        return;
-    }
-    char buf[40];
-    for (int prec = 1; prec <= 17; ++prec) {
-        const int written = std::snprintf(buf, sizeof buf, "%.*g", prec, v);
-        if (written < 0 || static_cast<std::size_t>(written) >= sizeof buf) {
-            out += "null"; // unrepresentable in the space we allow; never a truncation
-            return;
-        }
-        if (std::strtod(buf, nullptr) == v) break;
-    }
-    // %g may emit a locale decimal separator; normalise to '.'
-    for (char& c : buf) {
-        if (c == ',') c = '.';
-        if (c == '\0') break;
-    }
-    out += buf;
-}
-
-struct Parser
-{
-    std::string_view s;
-    std::size_t i{0};
-
-    void skip_ws()
-    {
-        while (i < s.size() && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n' || s[i] == '\r'))
-            ++i;
-    }
-
-    Error fail(std::string what) const
-    {
-        return err(ErrorCode::ParseError,
-                   "JSON parse error at offset " + std::to_string(i) + ": " + std::move(what));
-    }
-
-    Result<Json> parse_value(int depth)
-    {
-        if (depth > 64) return fail("nesting deeper than 64 levels");
-        skip_ws();
-        if (i >= s.size()) return fail("unexpected end of input");
-
-        switch (s[i]) {
-        case '{': return parse_object(depth);
-        case '[': return parse_array(depth);
-        case '"': {
-            auto r = parse_string();
-            if (!r) return r.error();
-            return Json::string(std::move(r.value()));
-        }
-        case 't':
-            if (s.compare(i, 4, "true") == 0) {
-                i += 4;
-                return Json::boolean(true);
-            }
-            return fail("expected 'true'");
-        case 'f':
-            if (s.compare(i, 5, "false") == 0) {
-                i += 5;
-                return Json::boolean(false);
-            }
-            return fail("expected 'false'");
-        case 'n':
-            if (s.compare(i, 4, "null") == 0) {
-                i += 4;
-                return Json::null();
-            }
-            return fail("expected 'null'");
-        default: return parse_number();
-        }
-    }
-
-    Result<std::string> parse_string()
-    {
-        if (i >= s.size() || s[i] != '"') return fail("expected '\"'");
-        ++i;
-        std::string out;
-        while (i < s.size() && s[i] != '"') {
-            if (s[i] == '\\') {
-                ++i;
-                if (i >= s.size()) return fail("unterminated escape");
-                switch (s[i]) {
-                case '"': out += '"'; break;
-                case '\\': out += '\\'; break;
-                case '/': out += '/'; break;
-                case 'n': out += '\n'; break;
-                case 'r': out += '\r'; break;
-                case 't': out += '\t'; break;
-                case 'b': out += '\b'; break;
-                case 'f': out += '\f'; break;
-                case 'u': {
-                    if (i + 4 >= s.size()) return fail("truncated \\u escape");
-                    unsigned cp = 0;
-                    for (std::size_t k = 1; k <= 4; ++k) {
-                        const char c = s[i + k];
-                        cp <<= 4;
-                        if (c >= '0' && c <= '9')
-                            cp |= unsigned(c - '0');
-                        else if (c >= 'a' && c <= 'f')
-                            cp |= unsigned(c - 'a' + 10);
-                        else if (c >= 'A' && c <= 'F')
-                            cp |= unsigned(c - 'A' + 10);
-                        else
-                            return fail("bad hex digit in \\u escape");
-                    }
-                    i += 4;
-                    const auto emit = [&out](unsigned byte) {
-                        out += static_cast<char>(static_cast<unsigned char>(byte));
-                    };
-                    if (cp < 0x80) {
-                        emit(cp);
-                    } else if (cp < 0x800) {
-                        emit(0xC0u | (cp >> 6));
-                        emit(0x80u | (cp & 0x3Fu));
-                    } else {
-                        emit(0xE0u | (cp >> 12));
-                        emit(0x80u | ((cp >> 6) & 0x3Fu));
-                        emit(0x80u | (cp & 0x3Fu));
-                    }
-                    break;
-                }
-                default: return fail("unknown escape");
-                }
-                ++i;
-            } else {
-                out += s[i++];
-            }
-        }
-        if (i >= s.size()) return fail("unterminated string");
-        ++i;
+    switch (v.type()) {
+    case Json::Type::Null: return nullptr;
+    case Json::Type::Bool: return v.as_bool();
+    case Json::Type::Int: return v.as_int();
+    case Json::Type::Double: return v.as_double();
+    case Json::Type::String: return v.as_string();
+    case Json::Type::Array: {
+        auto out = nlohmann::ordered_json::array();
+        for (const Json& e : v.as_array())
+            out.push_back(to_nlohmann(e));
         return out;
     }
-
-    Result<Json> parse_number()
-    {
-        const std::size_t start = i;
-        if (i < s.size() && (s[i] == '-' || s[i] == '+')) ++i;
-        bool is_double = false;
-        while (i < s.size()) {
-            const char c = s[i];
-            if (c >= '0' && c <= '9') {
-                ++i;
-                continue;
-            }
-            if (c == '.' || c == 'e' || c == 'E' || c == '+' || c == '-') {
-                is_double = true;
-                ++i;
-                continue;
-            }
-            break;
-        }
-        if (i == start) return fail("expected a value");
-
-        const std::string tok(s.substr(start, i - start));
-        if (is_double) return Json::number(std::strtod(tok.c_str(), nullptr));
-        return Json::integer(std::strtoll(tok.c_str(), nullptr, 10));
+    case Json::Type::Object: {
+        auto out = nlohmann::ordered_json::object();
+        for (const auto& [key, value] : v.as_object())
+            out[key] = to_nlohmann(value);
+        return out;
     }
+    }
+    return nullptr;
+}
 
-    Result<Json> parse_array(int depth)
-    {
-        ++i; // '['
+/// nlohmann's tree to ours, after parsing.
+Json from_nlohmann(const nlohmann::ordered_json& j)
+{
+    if (j.is_null()) return Json::null();
+    if (j.is_boolean()) return Json::boolean(j.get<bool>());
+
+    // The integer/double distinction is kept, not collapsed. A coordinate is an
+    // integer count of millimetres and writing it back as 485320150.0 would make
+    // the journal disagree with itself across a round trip (model.md R21).
+    if (j.is_number_integer() || j.is_number_unsigned())
+        return Json::integer(j.get<std::int64_t>());
+    if (j.is_number_float()) return Json::number(j.get<double>());
+    if (j.is_string()) return Json::string(j.get<std::string>());
+
+    if (j.is_array()) {
         JsonArray items;
-        skip_ws();
-        if (i < s.size() && s[i] == ']') {
-            ++i;
-            return Json::array(std::move(items));
-        }
-        while (true) {
-            auto v = parse_value(depth + 1);
-            if (!v) return v.error();
-            items.push_back(std::move(v.value()));
-            skip_ws();
-            if (i < s.size() && s[i] == ',') {
-                ++i;
-                continue;
-            }
-            if (i < s.size() && s[i] == ']') {
-                ++i;
-                break;
-            }
-            return fail("expected ',' or ']'");
-        }
+        items.reserve(j.size());
+        for (const auto& e : j)
+            items.push_back(from_nlohmann(e));
         return Json::array(std::move(items));
     }
 
-    Result<Json> parse_object(int depth)
-    {
-        ++i; // '{'
-        JsonObject members;
-        skip_ws();
-        if (i < s.size() && s[i] == '}') {
-            ++i;
-            return Json::object(std::move(members));
-        }
-        while (true) {
-            skip_ws();
-            auto k = parse_string();
-            if (!k) return k.error();
-            skip_ws();
-            if (i >= s.size() || s[i] != ':') return fail("expected ':'");
-            ++i;
-            auto v = parse_value(depth + 1);
-            if (!v) return v.error();
-            members.emplace_back(std::move(k.value()), std::move(v.value()));
-            skip_ws();
-            if (i < s.size() && s[i] == ',') {
-                ++i;
-                continue;
-            }
-            if (i < s.size() && s[i] == '}') {
-                ++i;
-                break;
-            }
-            return fail("expected ',' or '}'");
-        }
-        return Json::object(std::move(members));
-    }
-};
+    JsonObject fields;
+    fields.reserve(j.size());
+    for (auto it = j.begin(); it != j.end(); ++it)
+        fields.emplace_back(it.key(), from_nlohmann(it.value()));
+    return Json::object(std::move(fields));
+}
 
 } // namespace
 
@@ -405,77 +204,40 @@ void Json::push(Json value)
     a_.push_back(std::move(value));
 }
 
-void Json::dump_to(std::string& out, int indent, int depth) const
-{
-    const bool pretty  = indent > 0;
-    const auto newline = [&](int d) {
-        if (!pretty) return;
-        out += '\n';
-        out.append(static_cast<std::size_t>(indent) * static_cast<std::size_t>(d), ' ');
-    };
-
-    switch (type_) {
-    case Type::Null: out += "null"; break;
-    case Type::Bool: out += b_ ? "true" : "false"; break;
-    case Type::Int: out += std::to_string(i_); break;
-    case Type::Double: number_into(out, d_); break;
-    case Type::String: escape_into(out, s_); break;
-    case Type::Array:
-        if (a_.empty()) {
-            out += "[]";
-            break;
-        }
-        out += '[';
-        for (std::size_t k = 0; k < a_.size(); ++k) {
-            if (k) out += ',';
-            newline(depth + 1);
-            a_[k].dump_to(out, indent, depth + 1);
-        }
-        newline(depth);
-        out += ']';
-        break;
-    case Type::Object:
-        if (o_.empty()) {
-            out += "{}";
-            break;
-        }
-        out += '{';
-        for (std::size_t k = 0; k < o_.size(); ++k) {
-            if (k) out += ',';
-            newline(depth + 1);
-            escape_into(out, o_[k].first);
-            out += ':';
-            if (pretty) out += ' ';
-            o_[k].second.dump_to(out, indent, depth + 1);
-        }
-        newline(depth);
-        out += '}';
-        break;
-    }
-}
-
 std::string Json::dump() const
 {
-    std::string out;
-    dump_to(out, 0, 0);
-    return out;
+    return to_nlohmann(*this).dump();
 }
 
 std::string Json::dump_pretty(int indent) const
 {
-    std::string out;
-    dump_to(out, indent, 0);
-    return out;
+    return to_nlohmann(*this).dump(indent);
 }
 
 Result<Json> Json::parse(std::string_view text)
 {
-    Parser p{text, 0};
-    auto v = p.parse_value(0);
-    if (!v) return v;
-    p.skip_ws();
-    if (p.i != text.size()) return p.fail("trailing content after value");
-    return v;
+    // nlohmann's parser, not ours. Parsing is the dangerous half of a JSON
+    // facade: it is what a hostile .json script, a corrupt catalogue and a
+    // truncated journal all reach first, and a hand-rolled scanner is exactly the
+    // kind of code CLAUDE.md 5.16 says not to write when a hardened one exists.
+    // The dumper follows it so that what we write is what it reads.
+    //
+    // ordered_json, NOT json: the default container sorts object keys, and the
+    // journal is compared byte for byte across three clients (6.4). Verified
+    // before the migration that the output is identical to the hand-rolled
+    // dumper's, so no golden fixture moved.
+    //
+    // Exceptions are caught here and turned into a Result. Nothing above this
+    // line throws, and core::Result is how core reports failure (core.md).
+    try {
+        const auto parsed = nlohmann::ordered_json::parse(text, nullptr, true, false);
+        return from_nlohmann(parsed);
+    } catch (const nlohmann::ordered_json::parse_error& e) {
+        return err(ErrorCode::ParseError,
+                   "JSON ayrıştırma hatası, " + std::to_string(e.byte) + ". bayt: " + e.what());
+    } catch (const std::exception& e) {
+        return err(ErrorCode::ParseError, std::string("JSON okunamadı: ") + e.what());
+    }
 }
 
 } // namespace piricad::core

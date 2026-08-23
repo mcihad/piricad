@@ -23,6 +23,14 @@ add_library(piricad_core STATIC
 target_include_directories(piricad_core PUBLIC include)
 target_link_libraries(piricad_core PRIVATE piricad_flags)
 
+# PRIVATE, deliberately: the JSON library is an implementation detail of
+# core/json.cpp and must not reach anything that links piricad_core. The facade
+# in core/json.hpp is what the rest of the product sees (Article 9: keep a
+# dependency's headers inside the owning module's .cpp files).
+if(PIRICAD_WITH_JSON)
+    target_link_libraries(piricad_core PRIVATE nlohmann_json::nlohmann_json)
+endif()
+
 set_target_properties(piricad_core PROPERTIES
     EXPORT_NAME core
     OUTPUT_NAME piricad_core

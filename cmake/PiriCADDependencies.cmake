@@ -90,3 +90,27 @@ function(piricad_dependency name)
 endfunction()
 
 message(STATUS "PiriCAD bağımlılıkları:")
+
+# ------------------------------------------------------------- acquisition --
+#
+# Only what is actually LINKED is fetched. A SHA sitting in this file and nothing
+# asking for it is what the eight entries above were until now: reviewed, recorded
+# in /NOTICE as though they shipped, and compiled into nothing. Each library moves
+# down here in the change that starts using it, and /NOTICE moves with it.
+
+option(PIRICAD_WITH_JSON "Use nlohmann/json for the JSON facade" ON)
+
+if(PIRICAD_WITH_JSON)
+    # ordered_json, NOT json. The default container sorts object keys, and the
+    # journal is compared byte for byte across three clients (CLAUDE.md 6.4) with
+    # golden fixtures recording the exact bytes. Sorted keys would rewrite every
+    # fixture and, worse, would make the file format's key order an accident of
+    # the alphabet rather than a decision.
+    set(JSON_BuildTests OFF CACHE INTERNAL "")
+    set(JSON_Install OFF CACHE INTERNAL "")
+    piricad_dependency(nlohmann_json
+        REPO ${PIRICAD_DEP_JSON_REPO}
+        SHA  ${PIRICAD_DEP_JSON_SHA}
+        PACKAGE nlohmann_json
+        VERSION 3.11.0)
+endif()
