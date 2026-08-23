@@ -169,6 +169,47 @@ public:
     // client at all could read or write them.
     core::Settings& session_settings() noexcept { return session_settings_; }
 
+    // ---- the settings service -------------------------------------------
+    //
+    // ONE road to a setting, whatever its scope. Before this every caller had to
+    // know which of the three stores held the id it wanted, so adding a setting
+    // meant finding every reader and telling it which drawer to open — and a
+    // reader that guessed wrong read a default and reported it as a value.
+    //
+    // The scope is not the caller's business. It is DECLARED on the SettingSpec
+    // (R39-R42) and the declaration is what decides where the value lives, so
+    // this resolves it and the caller states only what it wants.
+
+    /// The store a declared setting lives in, or null when nothing declares `id`.
+    core::Settings* store_for(std::string_view id) noexcept;
+
+    const core::Settings* store_for(std::string_view id) const noexcept;
+
+    /// The value of a declared setting. An undeclared id returns an empty value —
+    /// the same answer `Settings::get` gives, because a typo in an id is a caller
+    /// bug and not a reason to take the program down mid-frame.
+    core::SettingValue setting(std::string_view id) const;
+
+    /// Writes a declared setting into whichever store its scope names.
+    ///
+    /// Calls `on_settings_changed` with that scope afterwards, so whoever owns
+    /// persistence writes it out. Nothing here knows what a preferences file is:
+    /// the APP store is per user and machine and the shell owns the file, exactly
+    /// as `io::FileService` owns the ones under /src/io.
+    /// Returns what actually changed — the canonical id, the value before, the
+    /// value after any R42 clamping, and whether it was clamped. A caller that
+    /// echoed the value it asked for would report a number the store refused.
+    core::Result<core::SettingChange> set_setting(std::string_view id,
+                                                  const core::SettingValue& value);
+
+    /// Fired after a setting changes, with the scope that changed.
+    ///
+    /// The seam that fixes an asymmetry Article 1.2 forbids: preferences used to
+    /// be written only when the main window was destroyed, so `TERCİH` from a
+    /// SCRIPT changed the value for that run and lost it. Every client now
+    /// persists the same way, because none of them does it — the owner does.
+    std::function<void(core::SettingScope)> on_settings_changed;
+
     const core::Settings& session_settings() const noexcept { return session_settings_; }
 
     // ---- selection and input aids: session state, never document state ----

@@ -916,3 +916,77 @@ TEST_CASE("Izgara adımı ve ana çizgi aralığı sıfır olamaz")
     CHECK(r.line("TERCİH ana_çizgi 0").ok());
     CHECK(r.bus.app_settings().get("core.izgara.ana_cizgi").as_int() >= 1);
 }
+
+// ------------------------------------------------------ the settings service --
+
+TEST_CASE("Ayar servisi: kapsamı bildirim belirler, çağıran değil")
+{
+    // The gap this closes: every caller used to pick a store by hand, so adding a
+    // setting meant finding every reader and telling it which drawer to open — and
+    // a reader that guessed wrong read a default and reported it as a value.
+    Rig r;
+
+    // One id from each scope, resolved from the declaration alone.
+    CHECK(r.bus.store_for("core.arayuz.tema") == &r.bus.app_settings());
+    CHECK(r.bus.store_for("core.crs.id") == &r.bus.project_settings());
+    CHECK(r.bus.store_for("core.yakalama.dik_mod") == &r.bus.session_settings());
+
+    // An id nobody declares resolves to nothing rather than to a wrong drawer.
+    CHECK(r.bus.store_for("core.boyle.bir.ayar.yok") == nullptr);
+}
+
+TEST_CASE("Ayar servisi: yazma kapsamı bildirir, her istemci aynı yoldan geçer")
+{
+    Rig r;
+
+    std::vector<core::SettingScope> heard;
+    r.bus.on_settings_changed = [&heard](core::SettingScope scope) { heard.push_back(scope); };
+
+    // An App-scope write reports App, and lands in the App store.
+    // The theme is an ENUM, so its value is an index into the declared options —
+    // `koyu` is the third. Writing it as text is what the parser does for a user.
+    const core::SettingSpec& theme =
+        core::builtin_settings().at(core::builtin_settings().find("core.arayuz.tema"));
+    auto dark = core::parse_setting(theme, "koyu");
+    REQUIRE(dark.ok());
+    auto changed = r.bus.set_setting("core.arayuz.tema", dark.value());
+    if (!changed) FAIL_WITH("tema", changed.error().message);
+    REQUIRE(changed.ok());
+    REQUIRE(heard.size() == std::size_t{1});
+    CHECK(heard.front() == core::SettingScope::App);
+    CHECK_EQ(core::format_setting(theme, r.bus.setting("core.arayuz.tema")), std::string("koyu"));
+
+    // A Project-scope write reports Project. The caller said neither.
+    auto zone = core::SettingValue::text("TUREF/TM33");
+    REQUIRE(zone.ok());
+    REQUIRE(r.bus.set_setting("core.crs.id", zone.value()).ok());
+    REQUIRE(heard.size() == std::size_t{2});
+    CHECK(heard.back() == core::SettingScope::Project);
+
+    // An undeclared id is refused by NAME, not silently written somewhere.
+    auto refused = r.bus.set_setting("core.yok", core::SettingValue::integer(1));
+    CHECK(!refused);
+    CHECK(refused.error().message.find("core.yok") != std::string::npos);
+    CHECK_EQ(heard.size(), std::size_t{2});
+}
+
+TEST_CASE("TERCİH betikten de kalıcıdır — kapsam bildirimi her istemciye gider")
+{
+    // The asymmetry Article 1.2 forbids: preferences were written only when the
+    // main window was destroyed, so the same line survived from the menu and was
+    // lost from a script. The command now goes through the service, so the owner
+    // of persistence hears about every client's write.
+    Rig r;
+
+    int app_writes            = 0;
+    r.bus.on_settings_changed = [&app_writes](core::SettingScope scope) {
+        if (scope == core::SettingScope::App) ++app_writes;
+    };
+
+    REQUIRE(r.bus.execute_line("TERCİH tema koyu", command::Origin::Script).ok());
+    CHECK_EQ(app_writes, 1);
+
+    // ...and a reset is a change too, or the old value comes back on next start.
+    REQUIRE(r.bus.execute_line("TERCİH tema varsayılan", command::Origin::Script).ok());
+    CHECK_EQ(app_writes, 2);
+}

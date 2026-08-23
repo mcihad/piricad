@@ -143,6 +143,11 @@ Task<void> run_scope(Context& ctx, Settings& store, SettingScope scope)
             ctx.echo(st.error().message);
             co_return;
         }
+        // A reset is a change like any other, so whoever owns persistence has to
+        // hear about it — otherwise the old value comes back on the next start.
+        if (Bus& bus = ctx.session().bus(); bus.on_settings_changed)
+            bus.on_settings_changed(spec.scope);
+
         ctx.record("deger", Value::text("varsayılan"));
         ctx.echo(spec.names.front() + " = " + with_unit(spec, store.get(spec.id)) +
                  "   (varsayılana döndü, önceki: " + with_unit(spec, before) + ")");
@@ -156,7 +161,13 @@ Task<void> run_scope(Context& ctx, Settings& store, SettingScope scope)
     }
 
     store.clear_warnings();
-    auto change = store.set(spec.id, parsed.value());
+
+    // Through the BUS, not straight into the store. The bus resolves the scope
+    // from the declaration and fires `on_settings_changed`, which is what
+    // persists an App-scope value. Writing the store directly is what made
+    // `TERCİH` from a script change a preference for that run and lose it, while
+    // the same line from the menu survived — an asymmetry Article 1.2 forbids.
+    auto change = ctx.session().bus().set_setting(spec.id, parsed.value());
 
     // The CRS is DOCUMENT state (model.md R36, R37), and the setting is the
     // interface to it rather than a second copy of it. Before this, writing

@@ -131,6 +131,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
         onEcho(tr("Not: %1").arg(QString::fromStdString(status)));
     onEcho(tr("Başlamak için: ÇİZGİ  ·  ÇİZGİ 485320,4310220 @50,30 @100<45  ·  YARDIM"));
 
+    // Persistence is installed as a HOOK rather than done in the destructor. It
+    // used to run only when the main window closed, so `TERCİH` from a script
+    // changed the value for that run and lost it while the same line from the
+    // menu survived. Now every client's write persists, because none of them
+    // does it — this does (Article 1.2).
+    controller_->bus().on_settings_changed = [this](core::SettingScope scope) {
+        if (scope == core::SettingScope::App) savePreferences();
+    };
+
     loadSymbolLibrary();
 
     syncDockTitles();

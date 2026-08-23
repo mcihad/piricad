@@ -10,6 +10,52 @@
 #include <chrono>
 
 namespace piricad::command {
+
+core::Settings* Bus::store_for(std::string_view id) noexcept
+{
+    return const_cast<core::Settings*>(std::as_const(*this).store_for(id));
+}
+
+const core::Settings* Bus::store_for(std::string_view id) const noexcept
+{
+    const core::SettingCatalog& catalogue = core::builtin_settings();
+
+    const std::uint32_t index = catalogue.find(id);
+    if (index == core::kNoSetting) return nullptr;
+
+    switch (catalogue.at(index).scope) {
+    case core::SettingScope::App: return &app_settings_;
+    case core::SettingScope::Project: return &project_settings_;
+    case core::SettingScope::Session: return &session_settings_;
+    }
+    return nullptr;
+}
+
+core::SettingValue Bus::setting(std::string_view id) const
+{
+    const core::Settings* store = store_for(id);
+    return store == nullptr ? core::SettingValue{} : store->get(id);
+}
+
+core::Result<core::SettingChange> Bus::set_setting(std::string_view id,
+                                                   const core::SettingValue& value)
+{
+    core::Settings* store = store_for(id);
+    if (store == nullptr)
+        return core::err(core::ErrorCode::NotFound,
+                         "Bilinmeyen ayar: '" + std::string(id) +
+                             "'. Tanımlı ayarları AYAR ya da TERCİH ile listeleyin.");
+
+    auto changed = store->set(id, value);
+    if (!changed) return changed;
+
+    if (on_settings_changed) {
+        const std::uint32_t index = core::builtin_settings().find(id);
+        on_settings_changed(core::builtin_settings().at(index).scope);
+    }
+    return changed;
+}
+
 namespace {
 
 using core::ErrorCode;
