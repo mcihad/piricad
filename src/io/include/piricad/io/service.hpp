@@ -61,6 +61,12 @@ private:
     /// whose argument is a temporary at every GUI call site.
     command::Task<core::Result<std::string>> handle(command::FileRequest request);
 
+private:
+    /// Writes one layer's symbology as a QGIS QML style file. Not a coroutine:
+    /// it touches one layer and a few dozen lines of XML, so there is nothing to
+    /// suspend for.
+    core::Result<std::string> export_style(std::string path, std::string layer_name);
+
     command::Task<core::Result<std::string>> open(std::string path);
     core::Result<std::string> save(const std::string& path, bool save_as);
 

@@ -16,6 +16,8 @@
 // on the Bus. Tests are a client of the bus with no privileges (Article 1.2).
 #include "microtest.hpp"
 
+#include <iterator>
+
 #include "piricad/command/bus.hpp"
 #include "piricad/command/registry.hpp"
 #include "piricad/core/text.hpp"
@@ -819,4 +821,98 @@ TEST_CASE("IO: fuzz tohum korpusundaki her dosya çökmeden ele alınır")
     }
     CHECK(handled == seeds.size());
     CHECK(handled >= 4);
+}
+
+namespace {
+
+/// Reads a whole file. The io tests otherwise work through the document, so this
+/// is the one place that looks at the bytes a writer produced.
+std::string slurp(const std::string& path)
+{
+    std::ifstream in(path, std::ios::in | std::ios::binary);
+    return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+}
+
+} // namespace
+
+// ----------------------------------------------------------------- QML ----
+
+TEST_CASE("QML: sayılar yerel ayara değil biçime aittir")
+{
+    // The bug this locks. width_mm used snprintf("%.3f"), which writes the decimal
+    // separator of the CURRENT LOCALE — and on the Turkish system this was built
+    // on that is a comma. The first export wrote outline_width="0,700" and QGIS
+    // reads that as zero: a hairline where a 0.7 mm cadastral boundary belongs.
+    // Verified by loading the file back through QGIS itself.
+    TempDir tmp("qml");
+    const std::string path = tmp.file("katman.qml");
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=KONUT renk=0xFF8C541A", Origin::Test).ok());
+    REQUIRE(
+        r.bus.execute_line("ALAN 485300,4310200 485360,4310200 485360,4310245", Origin::Test).ok());
+    REQUIRE(r.bus
+                .execute_line("STİL katman=KONUT renk=0xFF5D3A12 kalinlik=700 dolgu=0xFF8C541A",
+                              Origin::Test)
+                .ok());
+    REQUIRE(r.bus.execute_line("STİLAKTAR KONUT \"" + path + "\"", Origin::Test).ok());
+
+    const std::string body = slurp(path);
+    CHECK(body.find("outline_width\" v=\"0.700\"") != std::string::npos);
+    CHECK(body.find("0,700") == std::string::npos); // never a comma, on any machine
+
+    // Colours reach QGIS as r,g,b,a decimal — written the PiriCAD way they would
+    // load as black and the user would blame the export.
+    CHECK(body.find("140,84,26,255") != std::string::npos); // fill  #8C541A
+    CHECK(body.find("93,58,18,255") != std::string::npos);  // stroke #5D3A12
+}
+
+TEST_CASE("QML: ölçek penceresi Rendering kategorisini de bildirir")
+{
+    // QGIS loads ONLY the style categories the file names, and a scale window is
+    // in Rendering, not Symbology. Declaring symbology alone made QGIS read the
+    // colours and silently drop the range — the export looked correct and the
+    // drawing behaved differently over there.
+    TempDir tmp("qml-olcek");
+    const std::string windowed = tmp.file("pencereli.qml");
+    const std::string plain    = tmp.file("penceresiz.qml");
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=LEKE", Origin::Test).ok());
+    REQUIRE(
+        r.bus.execute_line("ALAN 485300,4310200 485360,4310200 485360,4310245", Origin::Test).ok());
+    REQUIRE(
+        r.bus.execute_line("STİL katman=LEKE renk=0xFF6A1B9A olcek_max=5000", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("STİLAKTAR LEKE \"" + windowed + "\"", Origin::Test).ok());
+
+    const std::string with = slurp(windowed);
+    CHECK(with.find("styleCategories=\"Symbology|Rendering\"") != std::string::npos);
+    CHECK(with.find("hasScaleBasedVisibilityFlag=\"1\"") != std::string::npos);
+    CHECK(with.find("minScale=\"5000\"") != std::string::npos);
+
+    // A layer with no window says Symbology only, so loading it cannot reset a
+    // scale range the target layer already had.
+    REQUIRE(r.bus.execute_line("KATMAN ad=DUZ", Origin::Test).ok());
+    REQUIRE(
+        r.bus.execute_line("ALAN 485400,4310200 485460,4310200 485460,4310245", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("STİLAKTAR DUZ \"" + plain + "\"", Origin::Test).ok());
+
+    const std::string without = slurp(plain);
+    CHECK(without.find("styleCategories=\"Symbology\"") != std::string::npos);
+    CHECK(without.find("hasScaleBasedVisibilityFlag") == std::string::npos);
+}
+
+TEST_CASE("QML: katman adındaki XML karakterleri kaçırılır")
+{
+    TempDir tmp("qml-xml");
+    const std::string path = tmp.file("kacis.qml");
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=\"A & B\"", Origin::Test).ok());
+    REQUIRE(
+        r.bus.execute_line("ALAN 485300,4310200 485360,4310200 485360,4310245", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("STİLAKTAR \"A & B\" \"" + path + "\"", Origin::Test).ok());
+
+    const std::string body = slurp(path);
+    CHECK(body.find("A &amp; B") != std::string::npos);
 }

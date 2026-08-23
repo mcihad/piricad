@@ -160,7 +160,51 @@ Task<void> run_export(Context& ctx)
     co_await submit(ctx, bus, request);
 }
 
+/// STİLAKTAR — one layer's symbology as a QGIS QML style file.
+///
+/// Separate from DIŞAAKTAR because they export different things: one writes the
+/// GEOMETRY out in another format, the other writes how it LOOKS. Folding them
+/// into one verb would mean a `bicim=QML` that silently ignores every entity in
+/// the drawing, which is the kind of surprise a file command must not hold.
+Task<void> run_export_style(Context& ctx)
+{
+    auto layer = co_await ctx.text("katman", "Stili aktarılacak katman");
+    if (!layer || layer->empty()) co_return;
+
+    auto path = co_await ctx.text("dosya", "Yazılacak QML dosyası");
+    if (!path || path->empty()) co_return;
+
+    Bus& bus = ctx.session().bus();
+    if (engine_missing(ctx, bus)) co_return;
+
+    FileRequest request;
+    request.verb  = FileRequest::Verb::ExportStyle;
+    request.path  = *path;
+    request.layer = *layer;
+    co_await submit(ctx, bus, request);
+}
+
 } // namespace
+
+PIRICAD_COMMAND(exportstyle)
+{
+    return CommandSpec{
+        .id       = "core.exportstyle",
+        .names    = {"STİLAKTAR", "STILAKTAR", "EXPORTSTYLE", "STAKTAR"},
+        .category = Category::File,
+        .params =
+            {
+                Param::text("katman", Arity::exactly(1), "Stili aktarılacak katmanın adı"),
+                Param::text("dosya", Arity::exactly(1), "Yazılacak .qml dosyasının yolu"),
+            },
+        // Writes a file and touches no entity, so there is nothing to undo and
+        // nothing to journal as a document mutation.
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
+        .summary = "Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar.",
+        .run     = &run_export_style,
+    };
+}
 
 PIRICAD_COMMAND(open)
 {

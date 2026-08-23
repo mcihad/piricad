@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/io/service.hpp"
 
+#include "qgis_style.hpp"
+
 #include "piricad/io/project.hpp"
 #include "piricad/io/vector.hpp"
 
+#include <fstream>
 #include <string>
 #include <utility>
 
@@ -100,8 +103,71 @@ command::Task<core::Result<std::string>> FileService::handle(command::FileReques
 
     case command::FileRequest::Verb::Export:
         co_return co_await export_out(std::move(request.path), std::move(request.format));
+
+    case command::FileRequest::Verb::ExportStyle:
+        co_return export_style(std::move(request.path), std::move(request.layer));
     }
     co_return err(ErrorCode::Internal, "Bilinmeyen dosya işlemi.");
+}
+
+// ------------------------------------------------------------- QML STİLİ ----
+
+core::Result<std::string> FileService::export_style(std::string path, std::string layer_name)
+{
+    const core::Document& doc = bus_.document();
+
+    const core::LayerId l = doc.find_layer(layer_name);
+    if (l == core::kNoLayer)
+        return err(ErrorCode::NotFound,
+                   "Katman bulunamadı: '" + layer_name + "'. Önce KATMAN komutuyla oluşturun.");
+
+    const core::Layer& layer = *doc.layer(l);
+
+    // Which symbol describes this layer? The one its entities actually carry, if
+    // they agree; the layer default otherwise. Exporting the layer default while
+    // every parcel on it carries something else would hand QGIS a style that
+    // matches nothing on screen here.
+    core::StyleId chosen = core::kByLayerStyle;
+    bool agreed          = true;
+    bool area            = false;
+    std::size_t counted  = 0;
+
+    const auto& entities = doc.entities();
+    for (core::EntityId e = 0; e < entities.size(); ++e) {
+        if (!entities.alive(e) || entities.layer[e] != l) continue;
+        ++counted;
+
+        const core::RingSpan span = doc.geometry().rings_of(entities.slot[e]);
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r)
+            if (doc.geometry().ring_role[r] != core::RingRole::Open) area = true;
+
+        if (counted == 1)
+            chosen = entities.style[e];
+        else if (entities.style[e] != chosen)
+            agreed = false;
+    }
+
+    // A layer whose entities carry no explicit style exports its own default —
+    // which is exactly what the screen shows for them.
+    const core::Symbol effective = chosen == core::kByLayerStyle
+                                       ? core::Symbol::of(layer.appearance)
+                                       : doc.styles().symbol_at(chosen);
+
+    const std::string body = build_qml(layer, effective, area);
+
+    std::ofstream out(path, std::ios::out | std::ios::binary | std::ios::trunc);
+    if (!out)
+        return err(ErrorCode::IoFailure,
+                   "'" + path + "' yazılamadı. Dizin izinlerini ve boş alanı denetleyin.");
+    out << body;
+    if (!out) return err(ErrorCode::IoFailure, "'" + path + "' yazılırken hata oluştu.");
+
+    std::string note = "'" + layer.name + "' stili QML olarak yazıldı: " + path;
+    if (!agreed)
+        note += ". Uyarı: bu katmandaki nesneler tek bir stil taşımıyor; QML tek sembol "
+                "biçiminde yazıldı ve ilk nesnenin stilini taşıyor. Kategorize dışa aktarım "
+                "Faz 1'de gelecek.";
+    return note;
 }
 
 // -------------------------------------------------------------------- AÇ ----

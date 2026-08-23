@@ -12,6 +12,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 |---|---|---|---|---|---|
 | [`core.line`](line.md) | `ÇİZGİ`, `CIZGI`, `LINE`, `Ç`, `L` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki veya daha fazla nokta arasında doğru parçaları çizer. |
 | [`core.text`](text.md) | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
+| [`core.exportstyle`](exportstyle.md) | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
 | [`core.area`](area.md) | `ALAN`, `AREA`, `POLİGON`, `POLIGON`, `AL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alan çizer; istenirse içine delik açar. |
 | [`core.attribute`](attribute.md) | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
 | [`core.column`](column.md) | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Belgeye öznitelik sütunu tanımlar ve tanımlı sütunları listeler. |
@@ -58,6 +59,17 @@ Ayrıntılı kullanım: [ÇİZGİ](line.md)
 | `hizalama` | text | isteğe bağlı | sol, orta, sag veya merkez |
 
 Ayrıntılı kullanım: [METİN](text.md)
+
+### `core.exportstyle` — STİLAKTAR
+
+Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `katman` | text | 1 | Stili aktarılacak katmanın adı |
+| `dosya` | text | 1 | Yazılacak .qml dosyasının yolu |
+
+Ayrıntılı kullanım: [STİLAKTAR](exportstyle.md)
 
 ### `core.area` — ALAN
 

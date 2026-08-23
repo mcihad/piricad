@@ -48,16 +48,18 @@ struct Invocation
 struct FileRequest
 {
     enum class Verb : std::uint8_t {
-        Open,   ///< replace the document with a native project file
-        Save,   ///< write the native project file the document belongs to
-        SaveAs, ///< write it somewhere else and belong there from now on
-        Import, ///< merge an external dataset into the current document
-        Export, ///< write the current document out in an external format
+        Open,        ///< replace the document with a native project file
+        Save,        ///< write the native project file the document belongs to
+        SaveAs,      ///< write it somewhere else and belong there from now on
+        Import,      ///< merge an external dataset into the current document
+        Export,      ///< write the current document out in an external format
+        ExportStyle, ///< write ONE layer's symbology as a QGIS QML style file
     };
 
     Verb verb{Verb::Open};
     std::string path;   ///< empty on Save when the document already has a path
     std::string format; ///< driver id for Import/Export; empty = infer from the path
+    std::string layer;  ///< ExportStyle: which layer's symbology to write
 
     /// The calling command's own transaction, so an import is ONE undo step and
     /// rolls back whole (io.md R17). Null for the verbs that do not mutate the

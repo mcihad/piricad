@@ -125,7 +125,17 @@ bool is_illustration(const std::string& line)
 /// left to the script pages' own tests.
 bool is_out_of_scope(const CommandSpec& spec)
 {
-    return spec.id == "core.script";
+    if (spec.id == "core.script") return true;
+
+    // File commands need a FileService, and this rig deliberately has none: a doc
+    // check must not write to the working directory, and a manual page should be
+    // able to say `STİLAKTAR KONUT konut.qml` — which is what a user types —
+    // rather than dressing the path in angle brackets to hide from the checker.
+    //
+    // Their examples are not unchecked: /tests/unit/test_io.cpp runs the same
+    // commands against a temp directory with the engine attached, which is where
+    // a file command can actually be verified.
+    return spec.category == Category::File;
 }
 
 /// A bare command name is a syntax skeleton when the command needs an argument —
@@ -218,6 +228,24 @@ TEST_CASE("DOKÜMAN: kılavuzdaki her JSON betiği geçerli ve çalışır")
                                    (json.value().is_array() && !json.value().as_array().empty() &&
                                     json.value().as_array().front().find("cmd"));
             if (!is_script) continue;
+
+            // Same reason as is_out_of_scope above: this rig has no FileService,
+            // so a script whose commands need one is checked by /tests/unit/
+            // test_io.cpp against a temp directory instead. The block is still
+            // PARSED here, so a malformed example is still caught.
+            Rig probe;
+            bool needs_files = false;
+            for (const core::Json& step : json.value().is_array() ? json.value().as_array()
+                                          : json.value().find("komutlar")
+                                              ? json.value().find("komutlar")->as_array()
+                                              : json.value().find("commands")->as_array()) {
+                const core::Json* cmd = step.find("cmd");
+                if (cmd == nullptr || !cmd->is_string()) continue;
+                if (const CommandSpec* spec = probe.reg.resolve(cmd->as_string());
+                    spec != nullptr && spec->category == Category::File)
+                    needs_files = true;
+            }
+            if (needs_files) continue;
 
             Rig rig;
             script::JsonRunner runner(rig.bus, script::Sandbox::Project);

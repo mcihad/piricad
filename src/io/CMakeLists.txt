@@ -15,6 +15,7 @@ add_library(piricad_io STATIC
     src/mapped_file.cpp
     src/project_reader.cpp
     src/project_writer.cpp
+    src/qgis_style.cpp
     src/service.cpp
     src/vector.cpp
 )
