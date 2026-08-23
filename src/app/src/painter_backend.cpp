@@ -627,14 +627,22 @@ private:
             const QPointF b  = at(v);
             const double len = lengthOf(a, b);
 
-            // An edge shorter than one stamp gets none. Drawing it anyway is what
-            // produced the overshoot: the picture cannot fit and the difference
-            // goes outside the geometry.
-            if (len < picture.width()) continue;
+            // DISTRIBUTED, not marched. Stepping by a fixed interval from the
+            // start leaves whatever the division did not use as a gap before the
+            // corner — which is the same corner defect as the overshoot, in the
+            // other direction: the boundary now stops short of the parcel instead
+            // of running past it.
+            //
+            // So the edge decides the spacing. The count is the one nearest the
+            // requested interval, and the stamps are spread to land exactly on
+            // both margins. Every edge is then closed at both ends and the
+            // spacing differs from the request by less than half a step, which no
+            // reader can see and which is what a printed annex does anyway.
+            const render::EdgeStamps plan = render::distribute_along(len, interval, margin);
 
             const double degrees = segmentDegrees(a, b);
-            for (double along = margin; along <= len - margin + 0.001; along += interval) {
-                const double t = along / len;
+            for (int i = 0; i < plan.count; ++i) {
+                const double t = (plan.first + i * plan.step) / len;
                 stamp(QPointF(a.x() + (b.x() - a.x()) * t, a.y() + (b.y() - a.y()) * t), degrees);
             }
         }

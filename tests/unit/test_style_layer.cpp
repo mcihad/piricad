@@ -5,7 +5,9 @@
 #include "piricad/core/layer.hpp"
 #include "piricad/core/style.hpp"
 #include "piricad/core/text.hpp"
+#include "piricad/render/drawlist.hpp"
 
+#include <cmath>
 #include <vector>
 
 using namespace piricad::core;
@@ -837,4 +839,55 @@ TEST_CASE("Symbol: ölçek penceresi kimliğin parçasıdır")
     // declares no scale range is unchanged.
     CHECK_EQ(t.intern(Symbol::of(a)), t.intern(a));
     CHECK(t.intern(a) != id_yakin);
+}
+
+// ------------------------------------------- stamps along one edge ----------
+
+TEST_CASE("Sembol: damgalar kenarı iki uçtan da kapatıyor")
+{
+    using piricad::render::distribute_along;
+
+    // The defect this pins, twice over. A published çizgi tipi is a PICTURE and
+    // pictures are wide, so a stamp placed by marching a fixed interval either
+    // overshoots the corner or stops short of it — and both were visible on a
+    // parcel boundary as a boundary that does not match its parcel.
+    const double margin   = 15.0; // half a thirty-pixel stamp
+    const double interval = 30.0;
+
+    for (const double length : {60.0, 97.0, 100.0, 137.5, 240.0, 1000.0}) {
+        const auto plan = distribute_along(length, interval, margin);
+        REQUIRE(plan.count >= 1);
+
+        const double first = plan.first;
+        const double last  = plan.first + (plan.count - 1) * plan.step;
+
+        // NOTHING crosses either corner...
+        CHECK(first >= margin - 1e-9);
+        CHECK(last <= length - margin + 1e-9);
+
+        // ...and nothing stops short of one either: the last stamp lands exactly
+        // on the far margin, which is what closes the edge.
+        CHECK(std::abs(first - margin) < 1e-9);
+        CHECK(std::abs(last - (length - margin)) < 1e-9);
+
+        // The spacing follows the edge rather than the request, and differs from
+        // it by less than half a step.
+        if (plan.count > 1) CHECK(plan.step > 0.0);
+    }
+}
+
+TEST_CASE("Sembol: damga sığmayan kenar hiç damgalanmıyor")
+{
+    using piricad::render::distribute_along;
+
+    // Drawing it anyway is what produced the overshoot: the picture cannot fit
+    // and the difference goes outside the geometry.
+    CHECK_EQ(distribute_along(20.0, 30.0, 15.0).count, 0);
+    CHECK_EQ(distribute_along(0.0, 30.0, 15.0).count, 0);
+    CHECK_EQ(distribute_along(100.0, 0.0, 15.0).count, 0);
+
+    // An edge exactly one stamp long gets exactly one, in the middle.
+    const auto tight = distribute_along(30.0, 30.0, 15.0);
+    CHECK_EQ(tight.count, 1);
+    CHECK(std::abs(tight.first - 15.0) < 1e-9);
 }

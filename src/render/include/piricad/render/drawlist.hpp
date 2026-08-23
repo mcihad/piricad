@@ -186,6 +186,39 @@ struct Overlay
     void clear();
 };
 
+/// How many stamps go on one edge, and how far apart.
+///
+/// The answer to a question that produced two visible defects in a row, in
+/// opposite directions. Marching by a fixed interval from the start of an edge
+/// leaves the remainder as a GAP before the corner; letting a stamp land wherever
+/// the interval falls lets a wide one OVERSHOOT the corner. A published çizgi
+/// tipi is a picture and pictures are wide, so both are visible on a parcel
+/// boundary: one draws a boundary that stops short of the parcel, the other one
+/// that runs past it.
+///
+/// Lives here, in Qt-free render, rather than in the backend that draws: it is
+/// arithmetic about geometry, it is what went wrong twice, and a backend is not
+/// somewhere a test can reach.
+struct EdgeStamps
+{
+    int count{0};      ///< how many stamps; 0 when none fits
+    double first{0.0}; ///< distance along the edge to the first stamp centre
+    double step{0.0};  ///< distance between consecutive centres; 0 when count is 1
+};
+
+/// Distributes stamps along one edge so both ends are closed.
+///
+/// `margin` is half the stamp's own length: the first centre sits exactly that
+/// far from the start and the last exactly that far from the end, so nothing
+/// crosses either corner and nothing stops short of one. The count is the one
+/// nearest `interval`, and the resulting spacing differs from it by less than
+/// half a step — which no reader can see and which is what a printed annex does.
+///
+/// An edge shorter than one whole stamp gets NONE. Drawing it anyway is what
+/// produced the overshoot: the picture cannot fit and the difference goes outside
+/// the geometry.
+EdgeStamps distribute_along(double length, double interval, double margin) noexcept;
+
 struct DrawList
 {
     /// What each batch index draws. Parallel to `polylines` and `polygons`: one

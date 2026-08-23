@@ -3,6 +3,24 @@
 
 namespace piricad::render {
 
+EdgeStamps distribute_along(double length, double interval, double margin) noexcept
+{
+    if (length <= 0.0 || interval <= 0.0 || margin < 0.0) return {};
+    if (length < 2.0 * margin) return {};
+
+    const double usable = length - 2.0 * margin;
+
+    // At least one, always: an edge long enough to hold a stamp gets a stamp, and
+    // rounding a short-but-adequate edge down to zero would leave a corner bare.
+    const auto count = static_cast<int>(usable / interval + 0.5) + 1;
+
+    EdgeStamps out;
+    out.count = count < 1 ? 1 : count;
+    out.first = margin;
+    out.step  = out.count > 1 ? usable / (out.count - 1) : 0.0;
+    return out;
+}
+
 void Overlay::clear()
 {
     // Same contract as DrawList::clear(): the sizes go, the capacity stays. The
