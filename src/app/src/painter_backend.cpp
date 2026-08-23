@@ -565,10 +565,17 @@ private:
 
     /// Walks one run and stamps the picture where the placement says.
     ///
-    /// The same walk `placeAlongRun` does for a vector glyph. Kept separate rather
-    /// than templated on the stamp, because a picture is drawn centred on its own
-    /// rectangle and a path is drawn centred on the origin, and folding the two
-    /// would put an offset in a place a reader has to hold in their head.
+    /// SEGMENT BY SEGMENT, with a half-stamp margin at each end, and that margin is
+    /// the whole point. A published çizgi tipi is a PICTURE and pictures are wide —
+    /// thirty pixels where a vector dot is four — so a stamp placed near the end of
+    /// an edge rotates with that edge and hangs out past the corner, drawing a
+    /// parcel boundary that visibly overshoots the parcel. A corner now gets a small
+    /// gap instead, which is what the printed annex shows anyway.
+    ///
+    /// The phase restarts on each edge rather than marching around the ring. For a
+    /// closed boundary that is the better answer: every edge begins and ends with a
+    /// whole stamp, instead of one edge inheriting whatever fraction the previous
+    /// one left over.
     static void stampAlongRun(QPainter& painter, const render::PolylineBatch& batch,
                               std::size_t offset, std::uint32_t run, const render::PassStyle& ps,
                               double cx, double cy, double interval, const QImage& picture)
@@ -588,37 +595,48 @@ private:
             painter.restore();
         };
 
-        double total = 0.0;
-        for (std::uint32_t v = 1; v < run; ++v)
-            total += lengthOf(at(v - 1), at(v));
-        if (total <= 0.0) return;
+        // A raster marker on an OPEN line sits once, in the middle of the whole run:
+        // that is where a plan puts a sembol on a linear feature. On a face it never
+        // reaches here — `drawRasterCentres` places it in the lekesi.
+        if (ps.type == core::SymbolLayerType::RasterMarker) {
+            double total = 0.0;
+            for (std::uint32_t v = 1; v < run; ++v)
+                total += lengthOf(at(v - 1), at(v));
+            if (total <= 0.0) return;
 
-        // A raster marker with no placement of its own sits in the middle of the
-        // run, which is where a plan puts a `sembol` inside its lekesi.
-        const bool once = ps.type == core::SymbolLayerType::RasterMarker &&
-                          ps.placement == core::MarkerPlacement::Interval;
+            double walked = 0.0;
+            for (std::uint32_t v = 1; v < run; ++v) {
+                const QPointF a  = at(v - 1);
+                const QPointF b  = at(v);
+                const double len = lengthOf(a, b);
+                if (walked + len < total * 0.5) {
+                    walked += len;
+                    continue;
+                }
+                const double t = len > 0.0 ? (total * 0.5 - walked) / len : 0.0;
+                stamp(QPointF(a.x() + (b.x() - a.x()) * t, a.y() + (b.y() - a.y()) * t), 0.0);
+                return;
+            }
+            return;
+        }
 
-        double walked = 0.0;
-        double next   = once ? total * 0.5 : interval * 0.5;
+        const double margin = picture.width() * 0.5;
 
         for (std::uint32_t v = 1; v < run; ++v) {
             const QPointF a  = at(v - 1);
             const QPointF b  = at(v);
             const double len = lengthOf(a, b);
-            if (len <= 0.0) continue;
 
-            // A raster marker does NOT turn with the line: a mosque glyph lying
-            // on its side is not the glyph the regulation printed.
-            const double degrees =
-                ps.type == core::SymbolLayerType::RasterLine ? segmentDegrees(a, b) : 0.0;
+            // An edge shorter than one stamp gets none. Drawing it anyway is what
+            // produced the overshoot: the picture cannot fit and the difference
+            // goes outside the geometry.
+            if (len < picture.width()) continue;
 
-            while (next <= walked + len) {
-                const double t = (next - walked) / len;
+            const double degrees = segmentDegrees(a, b);
+            for (double along = margin; along <= len - margin + 0.001; along += interval) {
+                const double t = along / len;
                 stamp(QPointF(a.x() + (b.x() - a.x()) * t, a.y() + (b.y() - a.y()) * t), degrees);
-                if (once) return;
-                next += interval;
             }
-            walked += len;
         }
     }
 
