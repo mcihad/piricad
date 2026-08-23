@@ -31,6 +31,7 @@ Tek tek komutlar:
 | `DIŞAAKTAR` | [Dış biçime yazma](komutlar/export.md) |
 | `ÇİZGİ` | [Çizgi çizme](komutlar/line.md) |
 | `ALAN` | [Kapalı alan çizme](komutlar/area.md) |
+| `METİN` | [Çizime yazı yazma](komutlar/text.md) |
 | `ÖZNİTELİK` | [Nesnelerin verisi](komutlar/attribute.md) |
 | `SÜTUN` | [Öznitelik sütunu tanımlama](komutlar/column.md) |
 | `SEÇ` | [Nesne seçme](komutlar/select.md) |

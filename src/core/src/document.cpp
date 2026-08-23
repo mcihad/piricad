@@ -94,6 +94,7 @@ std::uint64_t Document::content_hash() const
     // SCHEMA too — declaring a column changes what the document says it holds
     // even before a single cell is written.
     h = attributes_.fold(h);
+    h = texts_.fold(h);
 
     for (EntityId e = 0; e < entities_.size(); ++e) {
         if (!entities_.alive(e)) continue;
@@ -405,6 +406,36 @@ Result<AttrValue> Document::attribute(AttrId col, EntityId e) const
     return attributes_.get(col, entities_.slot[e]);
 }
 
+Status Document::set_text(EntityId e, std::string content, Mm height, TextAnchor anchor,
+                          Op& undo_out)
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+
+    texts_.resize(geometry_.slot_count());
+    const std::uint32_t slot = entities_.slot[e];
+
+    // The inverse is built BEFORE the write, from what is there now. An empty
+    // string with a zero height is how "there was no text here" is expressed, and
+    // undo therefore detaches rather than writing an empty caption.
+    undo_out             = Op{};
+    undo_out.kind        = Op::Kind::SetText;
+    undo_out.entity      = e;
+    undo_out.str_arg     = std::string(texts_.text(slot));
+    undo_out.text_height = texts_.has(slot) ? texts_.height(slot) : 0;
+    undo_out.text_anchor = texts_.anchor(slot);
+
+    if (content.empty() || height <= 0) {
+        texts_.clear(slot);
+        ++revision_;
+        return ok();
+    }
+
+    if (auto st = texts_.set(slot, content, height, anchor); !st) return st;
+    ++revision_;
+    return ok();
+}
+
 void Document::mirror_layer_visibility(LayerId l, bool visible)
 {
     // One pass per toggle instead of an indirect load per entity per frame (R7).
@@ -496,6 +527,8 @@ Status Document::apply(const Op& op, Op* undo_out)
     case Op::Kind::SetEntityHidden: return set_entity_hidden(op.entity, op.bool_arg, inverse);
     case Op::Kind::SetEntityStyle: return set_entity_style(op.entity, op.style_arg, inverse);
     case Op::Kind::SetAttribute: return set_attribute(op.attr_col, op.entity, op.attr_arg, inverse);
+    case Op::Kind::SetText:
+        return set_text(op.entity, op.str_arg, op.text_height, op.text_anchor, inverse);
     case Op::Kind::SetLayerVisible: return set_layer_visible(op.layer, op.bool_arg, inverse);
     case Op::Kind::SetLayerLocked: return set_layer_locked(op.layer, op.bool_arg, inverse);
     case Op::Kind::SetLayerAppearance:

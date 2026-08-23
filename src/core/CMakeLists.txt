@@ -17,6 +17,7 @@ add_library(piricad_core STATIC
     src/style.cpp
     src/style_rule.cpp
     src/text.cpp
+    src/text_store.cpp
 )
 
 target_include_directories(piricad_core PUBLIC include)

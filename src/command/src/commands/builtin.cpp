@@ -12,6 +12,7 @@ namespace piricad::command {
 
 #define PIRICAD_BUILTIN_COMMANDS(X)                                                                \
     X(line)                                                                                        \
+    X(text)                                                                                        \
     X(area)                                                                                        \
     X(attribute)                                                                                   \
     X(column)                                                                                      \

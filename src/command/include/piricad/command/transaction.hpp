@@ -79,6 +79,10 @@ public:
     /// Declares a column. NOT undoable — see Document::declare_attribute.
     core::Result<core::AttrId> declare_attribute(core::AttrSpec spec);
 
+    /// Attaches or replaces the text on an entity. Height is ground millimetres;
+    /// an empty `content` detaches it. Undoable like any other edit.
+    Status set_text(EntityId e, std::string content, core::Mm height, core::TextAnchor anchor);
+
     /// Reverts every edit made through this transaction, newest first.
     void rollback();
 

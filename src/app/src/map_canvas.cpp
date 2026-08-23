@@ -7,6 +7,8 @@
 
 #include <QBrush>
 #include <QElapsedTimer>
+#include <QFont>
+#include <QFontMetricsF>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
@@ -473,6 +475,51 @@ void MapCanvas::paintEvent(QPaintEvent*)
             offset += run;
         }
         painter.drawPath(path);
+    }
+
+    // Captions last, over both fills and strokes: a parcel number under its own
+    // boundary is a parcel number nobody can read.
+    for (const auto& item : draw_.texts) {
+        if (item.text.empty() || item.height_px < 3.0f) continue; // unreadable, so not drawn
+
+        const QPointF start(cx + static_cast<double>(item.x0), cy - static_cast<double>(item.y0));
+        const QPointF end(cx + static_cast<double>(item.x1), cy - static_cast<double>(item.y1));
+
+        // Rotation comes from the baseline direction — the document stores no
+        // angle, so there is none to disagree with the geometry.
+        const double dx      = end.x() - start.x();
+        const double dy      = end.y() - start.y();
+        const double degrees = (dx == 0.0 && dy == 0.0) ? 0.0 : std::atan2(dy, dx) * 180.0 / M_PI;
+
+        QFont font = painter.font();
+        font.setPixelSize(std::max(3, static_cast<int>(item.height_px)));
+        painter.setFont(font);
+        painter.setPen(from_rgba(item.rgba));
+
+        const QString label = QString::fromStdString(item.text);
+        const QFontMetricsF metrics(font);
+        const double advance = metrics.horizontalAdvance(label);
+
+        painter.save();
+        painter.translate(start);
+        painter.rotate(degrees);
+
+        // The anchor decides where the baseline sits under the glyphs. Measured
+        // from the real font rather than from the advance guess the command used
+        // for the bounding box.
+        double shift_x = 0.0;
+        double shift_y = 0.0;
+        switch (item.anchor) {
+        case 1: shift_x = -advance * 0.5; break; // baseline centre
+        case 2: shift_x = -advance; break;       // baseline right
+        case 3:                                  // middle centre
+            shift_x = -advance * 0.5;
+            shift_y = metrics.capHeight() * 0.5;
+            break;
+        default: break; // baseline left
+        }
+        painter.drawText(QPointF(shift_x, shift_y), label);
+        painter.restore();
     }
 
     drawSelected(painter);

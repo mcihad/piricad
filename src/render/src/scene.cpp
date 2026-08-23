@@ -31,6 +31,7 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
 
     const auto& layers = doc.layers();
     const auto& styles = doc.styles();
+    const auto& texts  = doc.texts();
 
     // Batching is by STYLE, not by layer. Before this the scene builder read
     // `layers[i].appearance` and ignored `entities.style[e]` entirely, so the
@@ -162,6 +163,36 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         PolylineBatch& batch      = out.polylines[slot];
         PolygonBatch& fill        = out.polygons[slot];
         const core::RingSpan span = geometry.rings_of(entities.slot[e]);
+
+        // A text entity is its baseline plus a string. The baseline is an ordinary
+        // open ring, so it is culled, snapped and hit-tested by the same code every
+        // other entity uses; only the drawing differs.
+        if (texts.has(entities.slot[e]) && span.count > 0) {
+            const auto xs = geometry.ring_xs(span.first);
+            const auto ys = geometry.ring_ys(span.first);
+            if (xs.size() >= 2) {
+                TextItem item;
+                item.rgba = out.polylines[slot].rgba;
+                item.x0   = view.offset_x_f(xs.front());
+                item.y0   = view.offset_y_f(ys.front());
+                item.x1   = view.offset_x_f(xs.back());
+                item.y1   = view.offset_y_f(ys.back());
+
+                // Ground millimetres to pixels, like every other length on screen.
+                // A height in paper units would change what the drawing SAYS when
+                // the plot scale changes, and on a pafta the height of a parcel
+                // number is part of the drawing (R20).
+                item.height_px = static_cast<float>(
+                    static_cast<double>(texts.height(entities.slot[e])) / view.mm_per_pixel());
+                item.anchor = static_cast<std::uint8_t>(texts.anchor(entities.slot[e]));
+                item.text.assign(texts.text(entities.slot[e]));
+
+                out.texts.push_back(std::move(item));
+                ++out.text_count;
+                ++out.entity_count;
+                return; // the baseline itself is construction, not ink
+            }
+        }
 
         for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
             emit_ring(batch, r);

@@ -102,6 +102,16 @@ Status Transaction::set_attribute(core::AttrId col, EntityId e, const core::Attr
     return core::ok();
 }
 
+Status Transaction::set_text(EntityId e, std::string content, core::Mm height,
+                             core::TextAnchor anchor)
+{
+    core::Op undo;
+    auto st = doc_.set_text(e, std::move(content), height, anchor, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
 core::Result<core::AttrId> Transaction::declare_attribute(core::AttrSpec spec)
 {
     return doc_.declare_attribute(std::move(spec));

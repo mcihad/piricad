@@ -38,12 +38,33 @@ struct PolygonBatch
     std::vector<std::uint8_t> is_hole; ///< parallel to runs
 };
 
+/// One caption, resolved to screen space.
+///
+/// The string is COPIED rather than borrowed from the document. A view into the
+/// text pool would be valid only until the next edit, and a draw list that is
+/// safe to hold for one frame and unsafe to hold for two is a crash waiting for
+/// a slow repaint. A sheet's captions are thousands of short strings, not
+/// millions, so the copy is measured in microseconds.
+struct TextItem
+{
+    std::uint32_t rgba{0xFFFFFFFFu};
+    float x0{0.0f}, y0{0.0f}; ///< baseline start, screen space
+    float x1{0.0f}, y1{0.0f}; ///< baseline end — its direction IS the rotation
+    float height_px{0.0f};
+    std::uint8_t anchor{0};
+    std::string text;
+};
+
 struct DrawList
 {
     std::vector<PolylineBatch> polylines;
 
     /// One entry per style id that has something to fill, in id order.
     std::vector<PolygonBatch> polygons;
+
+    /// Captions, in entity order. Not batched: text is drawn one string at a
+    /// time by every backend that exists, so grouping would buy nothing.
+    std::vector<TextItem> texts;
 
     /// Rubber band from a running interactive command, if any.
     bool has_preview{false};
@@ -55,6 +76,7 @@ struct DrawList
     std::vector<core::EntityId> candidates;
 
     std::size_t fill_count{0}; ///< filled rings emitted
+    std::size_t text_count{0};
 
     std::size_t vertex_count{0};
     std::size_t entity_count{0};

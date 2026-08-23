@@ -18,9 +18,11 @@ void DrawList::clear()
         batch.runs.clear();
         batch.is_hole.clear();
     }
+    texts.clear();
     candidates.clear();
     has_preview   = false;
     fill_count    = 0;
+    text_count    = 0;
     vertex_count  = 0;
     entity_count  = 0;
     culled_count  = 0;

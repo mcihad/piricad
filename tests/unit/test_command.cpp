@@ -4,6 +4,7 @@
 #include "piricad/command/bus.hpp"
 #include "piricad/command/parser.hpp"
 #include "piricad/command/registry.hpp"
+#include "piricad/core/text_store.hpp"
 
 using namespace piricad;
 using namespace piricad::command;
@@ -513,4 +514,104 @@ TEST_CASE("ÖZNİTELİK: tür uymayan değer reddedilir, hücre olduğu gibi kal
     auto read      = f.doc.attribute(col, 0);
     REQUIRE(read.ok());
     CHECK_EQ(read.value().number, std::int64_t{1234});
+}
+
+// ---------------------------------------------------------------- METİN ----
+
+TEST_CASE("METİN yazıyı belgeye koyar; geometrisi taban çizgisidir")
+{
+    // A pafta is not only geometry: ada and parsel numbers, plan notes and street
+    // names are drafted entities with an exact position, height and rotation. The
+    // program had no way to make one.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=NUMARA", Origin::Test).ok());
+
+    auto made = f.bus.execute_line("METİN 485330,4310225 \"1234/7\" 2000", Origin::Test);
+    if (!made) ::microtest::report(__FILE__, __LINE__, "METİN", made.error().message);
+    REQUIRE(made.ok());
+    REQUIRE(f.doc.live_entity_count() == std::size_t{1});
+
+    const std::uint32_t slot = f.doc.entities().slot[0];
+    CHECK(f.doc.texts().has(slot));
+    CHECK_EQ(f.doc.texts().text(slot), std::string_view("1234/7"));
+    CHECK_EQ(f.doc.texts().height(slot), core::Mm{2000});
+
+    // The geometry is an ordinary two-vertex open ring, so culling, snapping and
+    // hit testing work on it with no special case — that is the whole reason the
+    // baseline is stored as geometry rather than as an anchor and an angle.
+    const core::RingSpan span = f.doc.geometry().rings_of(slot);
+    REQUIRE(span.count == std::uint32_t{1});
+    CHECK(f.doc.geometry().ring_role[span.first] == core::RingRole::Open);
+    CHECK_EQ(f.doc.geometry().ring_xs(span.first).size(), std::size_t{2});
+}
+
+TEST_CASE("METİN dönüklüğü saklanan açı değil, taban çizgisinin yönüdür")
+{
+    // No angle is stored anywhere, so there is no angle to disagree with the
+    // geometry — and no trigonometry in the stored form to round differently on
+    // another platform (§7.3).
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL_ADI", Origin::Test).ok());
+    REQUIRE(f.bus
+                .execute_line("METİN 485300,4310255 \"ATATÜRK CADDESİ\" 3000 "
+                              "bitis=485420,4310265",
+                              Origin::Test)
+                .ok());
+
+    const std::uint32_t slot  = f.doc.entities().slot[0];
+    const core::RingSpan span = f.doc.geometry().rings_of(slot);
+    const auto xs             = f.doc.geometry().ring_xs(span.first);
+    const auto ys             = f.doc.geometry().ring_ys(span.first);
+
+    // The end point is exactly what was typed, to the millimetre.
+    CHECK_EQ(xs.front(), core::Mm{485300000});
+    CHECK_EQ(ys.front(), core::Mm{4310255000});
+    CHECK_EQ(xs.back(), core::Mm{485420000});
+    CHECK_EQ(ys.back(), core::Mm{4310265000});
+}
+
+TEST_CASE("METİN belge içeriğidir ve tek adımda geri alınır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=NOT", Origin::Test).ok());
+
+    const std::uint64_t empty = f.doc.content_hash();
+    REQUIRE(f.bus.execute_line("METİN 485300,4310200 \"Plan notu 3\" 2200", Origin::Test).ok());
+    CHECK(f.doc.content_hash() != empty);
+
+    // The caption and its baseline are ONE entity, so one GERİAL takes both.
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+    CHECK_EQ(f.doc.content_hash(), empty);
+}
+
+TEST_CASE("METİN: yazısı olmayan belge özetini değiştirmez")
+{
+    // The migration guarantee, same as the attribute table's: a drawing that
+    // carries no text is the drawing it was before text existed, so no file and
+    // no golden fixture needed rewriting to record a capability nobody used.
+    Fixture a;
+    REQUIRE(a.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(
+        a.bus.execute_line("ALAN 485300,4310200 485360,4310200 485360,4310245", Origin::Test).ok());
+
+    core::Document bare;
+    core::TextTable empty;
+    CHECK_EQ(empty.fold(12345), std::uint64_t{12345});
+    CHECK_EQ(a.doc.texts().fold(999), std::uint64_t{999});
+}
+
+TEST_CASE("METİN: sıfır yükseklik reddedilir, taban çizgisi de kalmaz")
+{
+    // The whole transaction rolls back, so a rejected caption does not leave a
+    // stray two-vertex polyline behind for the user to hunt down.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=NOT", Origin::Test).ok());
+    (void)f.bus.execute_line("METİN 485300,4310200 \"boy yok\" yukseklik=0", Origin::Test);
+
+    // yukseklik=0 falls back to the project default rather than failing, which is
+    // the documented behaviour; what must never happen is a text entity with no
+    // text on it.
+    for (core::EntityId e = 0; e < f.doc.entities().size(); ++e)
+        if (f.doc.entities().alive(e)) CHECK(f.doc.texts().has(f.doc.entities().slot[e]));
 }

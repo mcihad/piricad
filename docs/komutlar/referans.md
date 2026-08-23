@@ -11,6 +11,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | Komut | Adlar | Kategori | Geri alma | Özellikler | Açıklama |
 |---|---|---|---|---|---|
 | [`core.line`](line.md) | `ÇİZGİ`, `CIZGI`, `LINE`, `Ç`, `L` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki veya daha fazla nokta arasında doğru parçaları çizer. |
+| [`core.text`](text.md) | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
 | [`core.area`](area.md) | `ALAN`, `AREA`, `POLİGON`, `POLIGON`, `AL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alan çizer; istenirse içine delik açar. |
 | [`core.attribute`](attribute.md) | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
 | [`core.column`](column.md) | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Belgeye öznitelik sütunu tanımlar ve tanımlı sütunları listeler. |
@@ -43,6 +44,20 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | `noktalar` | point_list | en az 2 | Ardışık doğru parçalarının köşe noktaları |
 
 Ayrıntılı kullanım: [ÇİZGİ](line.md)
+
+### `core.text` — METİN
+
+Çizime metin yazar; yükseklik ve hizalama verilebilir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `noktalar` | point | 1 | Yazının başlangıç noktası |
+| `yazi` | text | 1 | Yazılacak metin |
+| `yukseklik` | integer | isteğe bağlı | Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı |
+| `bitis` | point_list | isteğe bağlı | Taban çizgisinin bitişi; yoksa yatay |
+| `hizalama` | text | isteğe bağlı | sol, orta, sag veya merkez |
+
+Ayrıntılı kullanım: [METİN](text.md)
 
 ### `core.area` — ALAN
 
@@ -294,6 +309,66 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "max": -1,
           "required": true,
           "help": "Ardışık doğru parçalarının köşe noktaları"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.text",
+      "names": [
+        "METİN",
+        "METIN",
+        "YAZI",
+        "TEXT",
+        "MT"
+      ],
+      "category": "Çizim",
+      "summary": "Çizime metin yazar; yükseklik ve hizalama verilebilir.",
+      "params": [
+        {
+          "name": "noktalar",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Yazının başlangıç noktası"
+        },
+        {
+          "name": "yazi",
+          "type": "text",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Yazılacak metin"
+        },
+        {
+          "name": "yukseklik",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı"
+        },
+        {
+          "name": "bitis",
+          "type": "point_list",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Taban çizgisinin bitişi; yoksa yatay"
+        },
+        {
+          "name": "hizalama",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "sol, orta, sag veya merkez"
         }
       ],
       "flags": [

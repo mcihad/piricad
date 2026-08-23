@@ -23,6 +23,7 @@
 #include "piricad/core/layer.hpp"
 #include "piricad/core/result.hpp"
 #include "piricad/core/style.hpp"
+#include "piricad/core/text_store.hpp"
 #include "piricad/core/units.hpp"
 
 #include <cstdint>
@@ -93,6 +94,7 @@ struct Op
         SetLayerAppearance, ///< layer,  appearance_arg
         SetCrs,             ///< str_arg
         SetAttribute,       ///< attr_col, entity (as the row), attr_arg
+        SetText,            ///< entity, str_arg, text_height, text_anchor
     };
 
     Kind kind{Kind::None};
@@ -109,6 +111,9 @@ struct Op
     // schema that lives in /data rather than in this enum.
     AttrId attr_col{kNoAttr};
     AttrValue attr_arg{};
+
+    Mm text_height{0}; ///< 0 = the slot carries no text
+    TextAnchor text_anchor{TextAnchor::BaselineLeft};
 };
 
 class Document
@@ -144,6 +149,11 @@ public:
 
     /// The catalogues a CodeRef column validates against (R34).
     const CatalogueSet& catalogues() const noexcept { return catalogues_; }
+
+    /// The text carried by entity slots. Read by the frame path, unlike attribute
+    /// columns — drawing a caption means reading its string every frame, so text
+    /// lives here rather than in a column R29 forbids the renderer to touch.
+    const TextTable& texts() const noexcept { return texts_; }
 
     CatalogueSet& catalogues() noexcept { return catalogues_; }
 
@@ -228,6 +238,10 @@ public:
 
     Result<AttrValue> attribute(AttrId col, EntityId e) const;
 
+    /// Attaches or replaces the text on an entity. Height is ground millimetres.
+    /// An empty `content` detaches it.
+    Status set_text(EntityId e, std::string content, Mm height, TextAnchor anchor, Op& undo_out);
+
     /// Interns an appearance and returns its id, for a command building a style.
     StyleId intern_style(const Appearance& a);
 
@@ -246,6 +260,7 @@ private:
     StyleTable styles_{};
     AttrTable attributes_{};
     CatalogueSet catalogues_{};
+    TextTable texts_{};
     KeyAllocator keys_{};
 
     /// INVARIANT: `entities_.key` is strictly increasing in slot order, because
