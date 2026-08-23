@@ -133,6 +133,15 @@ enum BlockId : std::uint32_t {
     kBlkLayers   = 0x0020, ///< LayerRecord[]
     kBlkStyles   = 0x0030, ///< AppearanceRecord[]
 
+    /// The symbol behind each style id, and its stack of layers.
+    ///
+    /// Both OPTIONAL: a file written before symbols existed, or by a drawing where
+    /// every style is a plain colour and width, carries neither and every style
+    /// reads back as a single default layer. That is exactly what such a drawing
+    /// meant, so an old file keeps its fingerprint.
+    kBlkSymbols      = 0x0031, ///< SymbolRecord[], one per style id
+    kBlkSymbolLayers = 0x0032, ///< SymbolLayerRecord[]
+
     // ---- entity table, one block per column (model.md R6 cull block first) --
     kBlkEntityMinX  = 0x0040, ///< i64[]
     kBlkEntityMinY  = 0x0041, ///< i64[]
@@ -232,22 +241,70 @@ struct AppearanceRecord
 
 static_assert(sizeof(AppearanceRecord) == 32, "wire record");
 
+/// One interned symbol: where its layers live and the scales it draws at.
+struct SymbolRecord
+{
+    std::uint32_t first_layer; ///< index into kBlkSymbolLayers
+    std::uint32_t layer_count; ///< 0 means this style is a bare appearance
+    std::uint32_t min_scale;   ///< 1:N denominator; 0 = unbounded
+    std::uint32_t max_scale;   ///< 1:N denominator; 0 = unbounded
+};
+
+static_assert(sizeof(SymbolRecord) == 16, "wire record");
+
+/// One layer of a symbol, field by field.
+///
+/// Laid out four-byte fields first and single bytes after, so the record has NO
+/// padding on any platform. A record whose size depended on the compiler's
+/// padding choices is a file that differs between compilers (core.md R9), and
+/// with a `static_assert` on the size that is checked rather than hoped for.
+///
+/// Each measure is a value and a UNIT, stored apart: two millimetres on paper and
+/// two millimetres on the ground are different symbols, and at 1/1000 they differ
+/// by a factor of a thousand.
+struct SymbolLayerRecord
+{
+    AppearanceRecord look;        ///< the colours and widths this layer draws with
+    std::int32_t offset_value;    ///< perpendicular offset from the geometry
+    std::int32_t size_value;      ///< marker diameter, or hash tick length
+    std::int32_t interval_value;  ///< spacing along a line, or the first pattern axis
+    std::int32_t spacing_y_value; ///< the second pattern axis; 0 means square
+    std::int32_t angle_udeg;      ///< pattern angle or glyph rotation, micro-degrees
+
+    std::uint8_t offset_unit;    ///< core::Unit for offset_value
+    std::uint8_t size_unit;      ///< core::Unit for size_value
+    std::uint8_t interval_unit;  ///< core::Unit for interval_value
+    std::uint8_t spacing_y_unit; ///< core::Unit for spacing_y_value
+    std::uint8_t type;           ///< core::SymbolLayerType
+    std::uint8_t shape;          ///< core::MarkerShape
+    std::uint8_t placement;      ///< core::MarkerPlacement
+    std::uint8_t cap;            ///< core::LineCap
+    std::uint8_t join;           ///< core::LineJoin
+    std::uint8_t opacity;        ///< 0 transparent to 255 opaque
+
+    /// Padding to a round size, zero-filled on write. Reserved bytes are how a
+    /// later version adds a field without moving every record that follows.
+    std::uint8_t reserved[2];
+};
+
+static_assert(sizeof(SymbolLayerRecord) == 64, "wire record");
+
 /// model.md R32, every stored field of a layer record. `folded` is deliberately
 /// absent: it is `turkish_upper(name)` and is recomputed on load, so a file can
 /// never disagree with the running build's folding table (io.md P16).
 struct LayerRecord
 {
-    std::uint64_t key; ///< LayerKey — persistent, never a slot (model.md R1/P4)
-    std::uint32_t name_string;
-    std::uint32_t description_string;
-    std::uint32_t catalog_ref_string;
-    std::uint8_t visible;
-    std::uint8_t locked;
-    std::uint8_t plottable;
-    std::uint8_t opacity;
-    std::uint32_t min_scale;
-    std::uint32_t max_scale;
-    AppearanceRecord appearance;
+    std::uint64_t key;                ///< LayerKey — persistent, never a slot (R1/P4)
+    std::uint32_t name_string;        ///< index into kBlkStringSpans
+    std::uint32_t description_string; ///< index into kBlkStringSpans; may be empty
+    std::uint32_t catalog_ref_string; ///< which catalogue row this layer follows (R34)
+    std::uint8_t visible;             ///< drawn at all
+    std::uint8_t locked;              ///< editable
+    std::uint8_t plottable;           ///< printed; a guide layer is visible and not plotted
+    std::uint8_t opacity;             ///< 0 transparent to 255 opaque
+    std::uint32_t min_scale;          ///< 1:N denominator; 0 = unbounded
+    std::uint32_t max_scale;          ///< 1:N denominator; 0 = unbounded
+    AppearanceRecord appearance;      ///< the layer default the ByLayer cascade resolves to
 };
 
 static_assert(sizeof(LayerRecord) == 64, "wire record");
@@ -331,9 +388,13 @@ struct DocumentRecord
     std::uint64_t ring_count;
     std::uint64_t vertex_count;
 
-    /// Zero-filled. Space for a count a later version needs, without moving the
-    /// fields above it.
-    std::uint64_t reserved;
+    /// Rows in kBlkSymbolLayers. There is no separate symbol count: a symbol
+    /// belongs to exactly one style id, so kBlkSymbols has `style_count` rows.
+    ///
+    /// This field WAS the reserved u64, and it reads as zero in every file written
+    /// before symbols were persisted — which is the right answer for those files,
+    /// because they hold no stacks.
+    std::uint64_t symbol_layer_count;
 };
 
 static_assert(sizeof(DocumentRecord) == 80, "wire record");

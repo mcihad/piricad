@@ -149,7 +149,7 @@ std::string build_qml(const core::Layer& layer, const core::Symbol& symbol, bool
     // A stacked symbol writes every layer it has. QGIS draws them in the same
     // back-to-front order, which is the whole reason the stack is ordered.
     for (std::size_t i = 1; i < symbol.layers.size(); ++i)
-        symbol_layer(out, symbol.layers[i].look, symbol.layers[i].kind == core::StrokeKind::Fill);
+        symbol_layer(out, symbol.layers[i].look, core::draws_fill(symbol.layers[i].type));
 
     out += "      </symbol>\n";
     out += "    </symbols>\n";

@@ -32,6 +32,8 @@ void DrawList::clear()
         batch.runs.clear();
         batch.is_hole.clear();
     }
+    passes.clear();
+    order.clear();
     texts.clear();
     candidates.clear();
     has_preview   = false;

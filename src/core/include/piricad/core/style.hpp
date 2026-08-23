@@ -20,6 +20,9 @@
 
 #include <cstdint>
 #include <functional>
+#include <optional>
+#include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -76,35 +79,178 @@ inline constexpr StyleId kByLayerStyle = 0;
 /// ByCatalog, so interning collapses millions of entities onto a handful of
 /// distinct values. That is what keeps the batch key `(layer, style, kind)`
 /// bounded and the draw-call count under the §10.3 target of 100 per frame.
-/// What one layer of a symbol draws. A CAD entity needs one of these; a plan
-/// `gösterim` usually needs several stacked.
-enum class StrokeKind : std::uint8_t {
-    Fill = 0, ///< the interior: colour, hatch, opacity
-    Stroke,   ///< the boundary: colour, width, dash
-    Marker,   ///< a repeated glyph: along a line, or at the centroid of a face
+/// The unit a symbol's size is expressed in.
+///
+/// QGIS carries a unit on nearly every size property and it is not decoration; in
+/// Turkish planning work the distinction decides what the sheet says. A boundary
+/// width is PAPER: MPYY prescribes 0,5 mm on the plot and it stays 0,5 mm whether
+/// the sheet is 1/1000 or 1/5000. A hatch spacing for an `imar lekesi` is often
+/// GROUND: the pattern belongs to the area, and letting it shrink with the plot
+/// scale turns a legible texture into a grey wash.
+enum class Unit : std::uint8_t {
+    Paper = 0, ///< micrometres on the printed sheet, 1 µm = 1/1000 mm (R20)
+    Ground,    ///< millimetres on the ground — scales with the drawing
+    Pixel,     ///< screen pixels; never plotted at a fixed size
 };
 
 /// Stable machine name, for a file, a message or a test.
-const char* stroke_kind_name(StrokeKind k) noexcept;
+const char* unit_name(Unit u) noexcept;
+
+/// A size and the unit it is measured in.
+///
+/// Integer, like every stored length in this program (CLAUDE.md 2.4): a symbol
+/// size is written into a file, compared in a golden fixture and hashed into the
+/// document fingerprint, so it obeys the same rule a coordinate does.
+struct Measure
+{
+    std::int32_t value{0};  ///< in `unit`
+    Unit unit{Unit::Paper}; ///< what `value` counts
+
+    /// Whether anything was declared. Zero is a legal offset but not a legal
+    /// size, so each caller decides what an unset measure means for its property.
+    bool empty() const noexcept { return value == 0; }
+
+    friend bool operator==(const Measure&, const Measure&) = default;
+};
+
+/// What a symbol layer draws — QGIS calls this the symbol layer type.
+///
+/// The list is the subset of QGIS's that MPYY EK-1 actually needs, and each entry
+/// earns its place from a gösterim in /data: a `demiryolu` is a HashLine, an
+/// `orman alanı` is a PointPatternFill, a `sit alanı` boundary is a MarkerLine,
+/// a `tarım alanı` is a LinePatternFill. What is NOT here is what QGIS has and
+/// this product has no use for yet — gradient and shapeburst fills, vector field
+/// markers, animated markers — and what needs an asset pipeline that has not
+/// landed: the raster fills and markers that carry MPYY's 451 görsel images.
+enum class SymbolLayerType : std::uint8_t {
+    SimpleLine = 0,   ///< a stroke: colour, width, dash, cap, join, offset
+    MarkerLine,       ///< a glyph repeated along the line
+    HashLine,         ///< short ticks across the line — demiryolu, şev
+    SimpleFill,       ///< a solid or hatched interior
+    LinePatternFill,  ///< parallel lines at an angle
+    PointPatternFill, ///< a grid of glyphs
+    CentroidFill,     ///< one glyph at the centre of the face
+    SimpleMarker,     ///< a shape at a point
+};
+
+/// Stable machine name, for a file, a message or a test.
+const char* symbol_layer_type_name(SymbolLayerType t) noexcept;
+
+/// Whether this type paints the interior of a face.
+bool draws_fill(SymbolLayerType t) noexcept;
+
+/// Whether this type paints a line along the geometry.
+bool draws_stroke(SymbolLayerType t) noexcept;
+
+/// Whether this type places glyphs.
+bool draws_marker(SymbolLayerType t) noexcept;
+
+/// The glyph a marker draws.
+///
+/// Shapes rather than images, for the same reason CAD has always drawn point
+/// symbols this way: a shape is exact at every zoom, plots at any scale, and
+/// carries no asset to lose. The MPYY images are a separate mechanism and land
+/// with the atlas.
+enum class MarkerShape : std::uint8_t {
+    Circle = 0,
+    Square,
+    Triangle,
+    Diamond,
+    Star,
+    Cross,      ///< a plus
+    XCross,     ///< a diagonal cross
+    Arrow,      ///< a filled head pointing along the line
+    HalfCircle, ///< the flat side on the line — used for şev and kıyı
+    Pentagon,
+    Hexagon,
+    Tick, ///< a bare stroke across the line, which is what a hash line places
+};
+
+/// Stable machine name, for a file, a message or a test.
+const char* marker_shape_name(MarkerShape s) noexcept;
+
+/// Where along a line a marker line puts its glyphs.
+enum class MarkerPlacement : std::uint8_t {
+    Interval = 0, ///< every `interval` of length
+    Vertex,       ///< one on each vertex
+    FirstVertex,  ///< one, at the start — an arrow tail
+    LastVertex,   ///< one, at the end — an arrow head
+    Centre,       ///< one, at the middle of the whole run
+};
+
+/// Stable machine name, for a file, a message or a test.
+const char* marker_placement_name(MarkerPlacement p) noexcept;
+
+/// How a stroke ends.
+enum class LineCap : std::uint8_t {
+    Butt = 0,
+    Round,
+    Square,
+};
+
+/// How two stroke segments meet.
+enum class LineJoin : std::uint8_t {
+    Miter = 0,
+    Round,
+    Bevel,
+};
 
 /// One layer of a symbol.
 ///
-/// This is `Appearance` plus the two fields that make stacking meaningful: WHAT
-/// this layer draws, and where it sits relative to the geometry. A symbol of one
-/// Stroke layer is exactly what CAD has always had, which is why `Appearance`
-/// remains the resolved single-layer form and this wraps it rather than replacing
-/// it — 77 call sites, a file format and every golden fixture depend on that
+/// This is `Appearance` — the colours and widths — plus everything that makes a
+/// STACK meaningful: what this layer draws, where it sits relative to the
+/// geometry, and the parameters its type reads.
+///
+/// The parameters are FLAT rather than polymorphic, and that is a decision about
+/// what this type is for. A symbol layer is interned, hashed into the document
+/// fingerprint, written to a file record and compared in a golden fixture; a
+/// polymorphic hierarchy behind a pointer is none of those things cheaply, and
+/// QGIS pays for its class-per-type design with a serialisation layer that reads
+/// and writes a property map by string key. A closed set of named fields costs
+/// some unused bytes per layer and buys value semantics everywhere else.
+///
+/// A symbol of one SimpleLine layer is exactly what CAD has always had, which is
+/// why `Appearance` stays the resolved single-layer form and this wraps it rather
+/// than replacing it — a file format and every golden fixture depend on that
 /// record keeping its shape (R18).
 struct SymbolLayer
 {
-    Appearance look{};                   ///< the colours and widths this layer draws with
-    StrokeKind kind{StrokeKind::Stroke}; ///< what it draws: interior, boundary or glyph
+    Appearance look{}; ///< the colours and widths this layer draws with
 
-    /// Perpendicular offset from the geometry, in PAPER micrometres (R20). A
-    /// road casing is two strokes at the same offset with different widths; a
-    /// boundary with an inner hatch band is a stroke and a fill at different
-    /// ones.
-    std::int32_t offset_um{0};
+    /// What it draws. The default is the CAD case: one stroke along the geometry.
+    SymbolLayerType type{SymbolLayerType::SimpleLine};
+
+    /// Perpendicular offset from the geometry. A road casing is two strokes at
+    /// the same offset with different widths; a boundary with an inner hatch band
+    /// is a stroke and a fill at different ones.
+    Measure offset{};
+
+    /// Marker diameter, or the length of a hash tick. Unread by the line and fill
+    /// types that place no glyph.
+    Measure size{};
+
+    /// Spacing ALONG a line for MarkerLine and HashLine, and the first axis of a
+    /// PointPatternFill or LinePatternFill.
+    Measure interval{};
+
+    /// The second axis of a PointPatternFill. Zero means square: use `interval`
+    /// on both axes, which is what a regular glyph grid wants.
+    Measure spacing_y{};
+
+    /// Pattern angle for the fill types, glyph rotation for the marker types, in
+    /// MICRO-DEGREES — the same unit every stored angle in this program uses, and
+    /// for the same reason (model.md R21).
+    std::int32_t angle_udeg{0};
+
+    MarkerShape shape{MarkerShape::Circle};               ///< which glyph
+    MarkerPlacement placement{MarkerPlacement::Interval}; ///< where on the line
+    LineCap cap{LineCap::Round};                          ///< how a stroke ends
+    LineJoin join{LineJoin::Round};                       ///< how segments meet
+
+    /// 0 transparent to 255 opaque, multiplied into this layer's colours. Separate
+    /// from the alpha in `look.rgba` so a whole layer can be faded without
+    /// rewriting the catalogue colour a regulation prescribes.
+    std::uint8_t opacity{255};
 
     friend bool operator==(const SymbolLayer&, const SymbolLayer&) = default;
 };
@@ -139,21 +285,45 @@ struct Symbol
     static Symbol of(const Appearance& a)
     {
         Symbol s;
-        s.layers.push_back(SymbolLayer{a, StrokeKind::Stroke, 0});
+        SymbolLayer l;
+        l.look = a;
+        s.layers.push_back(l);
         return s;
     }
 
-    /// The layer the CAD cascade resolves to — the first Stroke, or the first
+    /// The layer the CAD cascade resolves to — the first stroke, or the first
     /// layer at all. `Appearance` is what a per-entity override and every file
     /// format field talks about, so a stack has to be able to name one.
     const Appearance& primary() const noexcept
     {
         for (const SymbolLayer& l : layers)
-            if (l.kind == StrokeKind::Stroke) return l.look;
+            if (draws_stroke(l.type)) return l.look;
         static const Appearance fallback{};
         return layers.empty() ? fallback : layers.front().look;
     }
 };
+
+/// Parses a machine name back to its enum.
+///
+/// Empty on an unknown name, NEVER a default. A symbol layer type nobody
+/// recognised is a symbol the user meant and did not get, and defaulting it to a
+/// plain line would draw a `demiryolu` as an ordinary boundary — wrong, and
+/// wrong quietly. Every caller reports the name it could not place along with
+/// the list of names that are valid.
+std::optional<Unit> unit_from_name(std::string_view name) noexcept;
+std::optional<SymbolLayerType> symbol_layer_type_from_name(std::string_view name) noexcept;
+std::optional<MarkerShape> marker_shape_from_name(std::string_view name) noexcept;
+std::optional<MarkerPlacement> marker_placement_from_name(std::string_view name) noexcept;
+std::optional<LineCap> line_cap_from_name(std::string_view name) noexcept;
+std::optional<LineJoin> line_join_from_name(std::string_view name) noexcept;
+
+/// Every valid name for one of the enums above, comma separated, for an error
+/// message. Built from the same switch the parser uses, so a name added in one
+/// place cannot go missing from the other.
+std::string symbol_layer_type_names();
+std::string marker_shape_names();
+std::string marker_placement_names();
+std::string unit_names();
 
 /// Folds a stack into a content hash, layer order included.
 std::uint64_t fold_symbol(const Symbol& sym, std::uint64_t seed);

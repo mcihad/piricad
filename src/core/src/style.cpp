@@ -43,14 +43,185 @@ std::size_t StyleTable::Hash::operator()(const Appearance& a) const noexcept
     return static_cast<std::size_t>(fold_appearance(a, kAppearanceSeed));
 }
 
-const char* stroke_kind_name(StrokeKind k) noexcept
+namespace {
+
+/// One entry of a name table: the machine name and the value it stands for.
+template<class T> struct NameOf
 {
-    switch (k) {
-    case StrokeKind::Fill: return "dolgu";
-    case StrokeKind::Stroke: return "kontur";
-    case StrokeKind::Marker: return "isaretci";
-    }
+    const char* name; ///< the machine name, as it appears in a file and a command
+    T value;          ///< what it means
+};
+
+/// The tables the parsers and the "valid names" messages both read. One table per
+/// enum, so a name added here appears in the parser and in the error message
+/// without either being edited.
+constexpr NameOf<Unit> kUnits[] = {
+    {"kagit", Unit::Paper}, {"zemin", Unit::Ground}, {"piksel", Unit::Pixel}};
+
+constexpr NameOf<SymbolLayerType> kLayerTypes[] = {
+    {"cizgi", SymbolLayerType::SimpleLine},
+    {"isaretci-cizgi", SymbolLayerType::MarkerLine},
+    {"tarak-cizgi", SymbolLayerType::HashLine},
+    {"dolgu", SymbolLayerType::SimpleFill},
+    {"cizgi-desen-dolgu", SymbolLayerType::LinePatternFill},
+    {"nokta-desen-dolgu", SymbolLayerType::PointPatternFill},
+    {"merkez-isaretci", SymbolLayerType::CentroidFill},
+    {"isaretci", SymbolLayerType::SimpleMarker}};
+
+constexpr NameOf<MarkerShape> kShapes[] = {{"daire", MarkerShape::Circle},
+                                           {"kare", MarkerShape::Square},
+                                           {"ucgen", MarkerShape::Triangle},
+                                           {"baklava", MarkerShape::Diamond},
+                                           {"yildiz", MarkerShape::Star},
+                                           {"arti", MarkerShape::Cross},
+                                           {"carpi", MarkerShape::XCross},
+                                           {"ok", MarkerShape::Arrow},
+                                           {"yarim-daire", MarkerShape::HalfCircle},
+                                           {"besgen", MarkerShape::Pentagon},
+                                           {"altigen", MarkerShape::Hexagon},
+                                           {"cizik", MarkerShape::Tick}};
+
+constexpr NameOf<MarkerPlacement> kPlacements[] = {{"aralik", MarkerPlacement::Interval},
+                                                   {"tepe", MarkerPlacement::Vertex},
+                                                   {"ilk", MarkerPlacement::FirstVertex},
+                                                   {"son", MarkerPlacement::LastVertex},
+                                                   {"orta", MarkerPlacement::Centre}};
+
+constexpr NameOf<LineCap> kCaps[] = {
+    {"duz", LineCap::Butt}, {"yuvarlak", LineCap::Round}, {"kare", LineCap::Square}};
+
+constexpr NameOf<LineJoin> kJoins[] = {
+    {"kose", LineJoin::Miter}, {"yuvarlak", LineJoin::Round}, {"pah", LineJoin::Bevel}};
+
+/// Byte-exact lookup. Deliberately NOT case folded: these are machine names that
+/// appear in files and in golden fixtures, and folding Turkish text here would
+/// need the table core is forbidden to own (core.md P6). The command layer folds
+/// what a user typed before it gets here.
+template<class T, std::size_t N>
+std::optional<T> lookup(const NameOf<T> (&table)[N], std::string_view name) noexcept
+{
+    for (const auto& row : table)
+        if (name == row.name) return row.value;
+    return std::nullopt;
+}
+
+/// The machine name of a value. Same table as the parser, so a name can never
+/// exist in one direction and not the other.
+template<class T, std::size_t N> const char* name_in(const NameOf<T> (&table)[N], T value) noexcept
+{
+    for (const auto& row : table)
+        if (row.value == value) return row.name;
     return "?";
+}
+
+template<class T, std::size_t N> std::string names_of(const NameOf<T> (&table)[N])
+{
+    std::string out;
+    for (const auto& row : table) {
+        if (!out.empty()) out += ", ";
+        out += row.name;
+    }
+    return out;
+}
+
+/// A measure folds its unit with its value, never the value alone.
+std::uint64_t fold_measure(const Measure& m, std::uint64_t seed)
+{
+    return fnv1a_int(static_cast<std::int64_t>(m.unit),
+                     fnv1a_int(static_cast<std::int64_t>(m.value), seed));
+}
+
+} // namespace
+
+const char* unit_name(Unit u) noexcept
+{
+    return name_in(kUnits, u);
+}
+
+const char* symbol_layer_type_name(SymbolLayerType t) noexcept
+{
+    return name_in(kLayerTypes, t);
+}
+
+const char* marker_shape_name(MarkerShape sh) noexcept
+{
+    return name_in(kShapes, sh);
+}
+
+const char* marker_placement_name(MarkerPlacement p) noexcept
+{
+    return name_in(kPlacements, p);
+}
+
+bool draws_fill(SymbolLayerType t) noexcept
+{
+    // A pattern fill paints the interior too: what varies is whether the paint is
+    // a colour or a texture, and the caller that clips to the ring needs both.
+    return t == SymbolLayerType::SimpleFill || t == SymbolLayerType::LinePatternFill ||
+           t == SymbolLayerType::PointPatternFill;
+}
+
+bool draws_stroke(SymbolLayerType t) noexcept
+{
+    return t == SymbolLayerType::SimpleLine || t == SymbolLayerType::MarkerLine ||
+           t == SymbolLayerType::HashLine || t == SymbolLayerType::LinePatternFill;
+}
+
+bool draws_marker(SymbolLayerType t) noexcept
+{
+    return t == SymbolLayerType::MarkerLine || t == SymbolLayerType::HashLine ||
+           t == SymbolLayerType::PointPatternFill || t == SymbolLayerType::CentroidFill ||
+           t == SymbolLayerType::SimpleMarker;
+}
+
+std::optional<Unit> unit_from_name(std::string_view name) noexcept
+{
+    return lookup(kUnits, name);
+}
+
+std::optional<SymbolLayerType> symbol_layer_type_from_name(std::string_view name) noexcept
+{
+    return lookup(kLayerTypes, name);
+}
+
+std::optional<MarkerShape> marker_shape_from_name(std::string_view name) noexcept
+{
+    return lookup(kShapes, name);
+}
+
+std::optional<MarkerPlacement> marker_placement_from_name(std::string_view name) noexcept
+{
+    return lookup(kPlacements, name);
+}
+
+std::optional<LineCap> line_cap_from_name(std::string_view name) noexcept
+{
+    return lookup(kCaps, name);
+}
+
+std::optional<LineJoin> line_join_from_name(std::string_view name) noexcept
+{
+    return lookup(kJoins, name);
+}
+
+std::string symbol_layer_type_names()
+{
+    return names_of(kLayerTypes);
+}
+
+std::string marker_shape_names()
+{
+    return names_of(kShapes);
+}
+
+std::string marker_placement_names()
+{
+    return names_of(kPlacements);
+}
+
+std::string unit_names()
+{
+    return names_of(kUnits);
 }
 
 std::uint64_t fold_symbol(const Symbol& sym, std::uint64_t seed)
@@ -59,8 +230,20 @@ std::uint64_t fold_symbol(const Symbol& sym, std::uint64_t seed)
     // fill are two different symbols, and the second one hides the first.
     std::uint64_t h = fnv1a_int(static_cast<std::int64_t>(sym.layers.size()), seed);
     for (const SymbolLayer& l : sym.layers) {
-        h = fnv1a_int(static_cast<std::int64_t>(l.kind), h);
-        h = fnv1a_int(static_cast<std::int64_t>(l.offset_um), h);
+        // Every field, and each measure's UNIT beside its value: a two-millimetre
+        // spacing on paper and a two-millimetre spacing on the ground are two
+        // different symbols, and at 1/1000 they differ by a factor of a thousand.
+        h = fnv1a_int(static_cast<std::int64_t>(l.type), h);
+        h = fold_measure(l.offset, h);
+        h = fold_measure(l.size, h);
+        h = fold_measure(l.interval, h);
+        h = fold_measure(l.spacing_y, h);
+        h = fnv1a_int(static_cast<std::int64_t>(l.angle_udeg), h);
+        h = fnv1a_int(static_cast<std::int64_t>(l.shape), h);
+        h = fnv1a_int(static_cast<std::int64_t>(l.placement), h);
+        h = fnv1a_int(static_cast<std::int64_t>(l.cap), h);
+        h = fnv1a_int(static_cast<std::int64_t>(l.join), h);
+        h = fnv1a_int(static_cast<std::int64_t>(l.opacity), h);
         h = fold_appearance(l.look, h);
     }
     h = fnv1a_int(static_cast<std::int64_t>(sym.min_scale), h);
@@ -109,9 +292,15 @@ StyleId StyleTable::intern(const Symbol& sym)
     // A one-layer stack IS its Appearance. Routing it through the same table
     // keeps a drawing that never uses a stack byte for byte the drawing it was
     // before stacks existed — the golden fixtures say so and they are right to.
-    if (sym.layers.size() == 1 && sym.layers.front().kind == StrokeKind::Stroke &&
-        sym.layers.front().offset_um == 0 && sym.min_scale == 0 && sym.max_scale == 0)
-        return intern(sym.layers.front().look);
+    if (sym.layers.size() == 1 && sym.min_scale == 0 && sym.max_scale == 0) {
+        // A DEFAULT layer carrying nothing but this appearance. Compared as a
+        // whole rather than field by field, so a field added to SymbolLayer later
+        // cannot quietly fall out of this test and start collapsing stacks that
+        // are no longer plain.
+        SymbolLayer plain;
+        plain.look = sym.layers.front().look;
+        if (sym.layers.front() == plain) return intern(plain.look);
+    }
 
     const auto id = static_cast<StyleId>(entries_.size());
     entries_.push_back(sym.primary());

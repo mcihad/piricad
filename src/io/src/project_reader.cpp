@@ -35,6 +35,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -109,6 +110,24 @@ core::Appearance from_record(const AppearanceRecord& r)
     a.src_dash   = src(r.src_dash);
     a.src_fill   = src(r.src_fill);
     return a;
+}
+
+core::SymbolLayer from_record(const SymbolLayerRecord& r)
+{
+    core::SymbolLayer l;
+    l.look       = from_record(r.look);
+    l.offset     = core::Measure{r.offset_value, static_cast<core::Unit>(r.offset_unit)};
+    l.size       = core::Measure{r.size_value, static_cast<core::Unit>(r.size_unit)};
+    l.interval   = core::Measure{r.interval_value, static_cast<core::Unit>(r.interval_unit)};
+    l.spacing_y  = core::Measure{r.spacing_y_value, static_cast<core::Unit>(r.spacing_y_unit)};
+    l.angle_udeg = r.angle_udeg;
+    l.type       = static_cast<core::SymbolLayerType>(r.type);
+    l.shape      = static_cast<core::MarkerShape>(r.shape);
+    l.placement  = static_cast<core::MarkerPlacement>(r.placement);
+    l.cap        = static_cast<core::LineCap>(r.cap);
+    l.join       = static_cast<core::LineJoin>(r.join);
+    l.opacity    = r.opacity;
+    return l;
 }
 
 /// Everything the reader needs from the file, already bounded.
@@ -378,9 +397,52 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
     auto style_rows = view.column<AppearanceRecord>(kBlkStyles, dr.style_count, "stiller");
     if (!style_rows) return style_rows.error();
 
+    // The stack behind each style, when the file carries one. OPTIONAL: a file
+    // written before symbols were persisted has neither block and every style is
+    // a plain colour and width — which is what such a drawing meant.
+    std::span<const SymbolRecord> symbol_rows;
+    std::span<const SymbolLayerRecord> symbol_layer_rows;
+
+    if (view.has(kBlkSymbols) && dr.style_count > 0) {
+        auto rows = view.column<SymbolRecord>(kBlkSymbols, dr.style_count, "semboller");
+        if (!rows) return rows.error();
+        symbol_rows = rows.value();
+    }
+    if (view.has(kBlkSymbolLayers) && dr.symbol_layer_count > 0) {
+        auto rows = view.column<SymbolLayerRecord>(kBlkSymbolLayers, dr.symbol_layer_count,
+                                                   "sembol katmanlari");
+        if (!rows) return rows.error();
+        symbol_layer_rows = rows.value();
+    }
+
     for (std::uint64_t i = 0; i < dr.style_count; ++i) {
         const core::Appearance a = from_record(style_rows.value()[static_cast<std::size_t>(i)]);
-        const core::StyleId id   = tx.intern_style(a);
+
+        core::Symbol sym;
+        if (!symbol_rows.empty()) {
+            const SymbolRecord& r = symbol_rows[static_cast<std::size_t>(i)];
+            // Bounded against the block that is ACTUALLY THERE, not against the
+            // count the header claims. A truncated file has a header saying a
+            // hundred symbol layers and a block holding none, and checking the
+            // claim rather than the block is how a bounds check that reads like
+            // one lets a hostile file walk off the end. The truncation test in
+            // /tests/unit caught exactly that, on the first run.
+            if (static_cast<std::uint64_t>(r.first_layer) + r.layer_count >
+                symbol_layer_rows.size())
+                return err(ErrorCode::ParseError,
+                           std::string(kErrConsist) + ": " + std::to_string(i) +
+                               ". sembol, katman tablosunun dışını gösteriyor.");
+
+            sym.min_scale = r.min_scale;
+            sym.max_scale = r.max_scale;
+            for (std::uint32_t k = 0; k < r.layer_count; ++k)
+                sym.layers.push_back(from_record(symbol_layer_rows[r.first_layer + k]));
+        }
+
+        // Interned through the SAME road a command takes, so a stack that is one
+        // plain layer collapses back onto its bare appearance exactly as it did
+        // when it was written — which is what keeps the ids in step.
+        const core::StyleId id = sym.layers.empty() ? tx.intern_style(a) : tx.intern_symbol(sym);
         if (id != static_cast<core::StyleId>(i))
             return err(ErrorCode::ParseError,
                        std::string(kErrConsist) + ": " + std::to_string(i) + ". stil kaydı " +

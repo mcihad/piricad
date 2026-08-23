@@ -266,6 +266,48 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     for (const core::Appearance& a : doc.styles().entries())
         styles.push_back(to_record(a));
 
+    // ---- symbols ----
+    //
+    // The stack behind each style id. Without this block a saved drawing kept its
+    // colours and lost its symbology: a `gösterim` declared as a fill under a
+    // boundary under a glyph came back as the boundary alone, and the document
+    // fingerprint said so on the next open.
+    std::vector<SymbolRecord> symbols;
+    std::vector<SymbolLayerRecord> symbol_layers;
+    symbols.reserve(doc.styles().size());
+
+    for (std::size_t i = 0; i < doc.styles().size(); ++i) {
+        const core::Symbol& sym = doc.styles().symbol_at(static_cast<core::StyleId>(i));
+
+        SymbolRecord r{};
+        r.first_layer = static_cast<std::uint32_t>(symbol_layers.size());
+        r.layer_count = static_cast<std::uint32_t>(sym.layers.size());
+        r.min_scale   = sym.min_scale;
+        r.max_scale   = sym.max_scale;
+        symbols.push_back(r);
+
+        for (const core::SymbolLayer& l : sym.layers) {
+            SymbolLayerRecord sl{};
+            sl.look            = to_record(l.look);
+            sl.offset_value    = l.offset.value;
+            sl.size_value      = l.size.value;
+            sl.interval_value  = l.interval.value;
+            sl.spacing_y_value = l.spacing_y.value;
+            sl.angle_udeg      = l.angle_udeg;
+            sl.offset_unit     = static_cast<std::uint8_t>(l.offset.unit);
+            sl.size_unit       = static_cast<std::uint8_t>(l.size.unit);
+            sl.interval_unit   = static_cast<std::uint8_t>(l.interval.unit);
+            sl.spacing_y_unit  = static_cast<std::uint8_t>(l.spacing_y.unit);
+            sl.type            = static_cast<std::uint8_t>(l.type);
+            sl.shape           = static_cast<std::uint8_t>(l.shape);
+            sl.placement       = static_cast<std::uint8_t>(l.placement);
+            sl.cap             = static_cast<std::uint8_t>(l.cap);
+            sl.join            = static_cast<std::uint8_t>(l.join);
+            sl.opacity         = l.opacity;
+            symbol_layers.push_back(sl);
+        }
+    }
+
     // ---- project settings (model.md R39) ----
     std::vector<SettingRecord> setting_rows;
     for (const std::string& id : settings.explicit_ids()) {
@@ -352,16 +394,17 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
 
     // ---- the document record ----
     DocumentRecord dr{};
-    dr.crs_string      = crs_id;
-    dr.catalog_string  = catalog_id;
-    dr.next_entity_key = doc.keys().peek_entity();
-    dr.next_layer_key  = doc.keys().peek_layer();
-    dr.entity_count    = static_cast<std::uint64_t>(ents.size());
-    dr.layer_count     = static_cast<std::uint64_t>(layers.size());
-    dr.style_count     = static_cast<std::uint64_t>(styles.size());
-    dr.slot_count      = static_cast<std::uint64_t>(geo.slot_count());
-    dr.ring_count      = static_cast<std::uint64_t>(geo.ring_count_total());
-    dr.vertex_count    = static_cast<std::uint64_t>(geo.vertex_count());
+    dr.crs_string         = crs_id;
+    dr.catalog_string     = catalog_id;
+    dr.next_entity_key    = doc.keys().peek_entity();
+    dr.next_layer_key     = doc.keys().peek_layer();
+    dr.entity_count       = static_cast<std::uint64_t>(ents.size());
+    dr.layer_count        = static_cast<std::uint64_t>(layers.size());
+    dr.style_count        = static_cast<std::uint64_t>(styles.size());
+    dr.symbol_layer_count = static_cast<std::uint64_t>(symbol_layers.size());
+    dr.slot_count         = static_cast<std::uint64_t>(geo.slot_count());
+    dr.ring_count         = static_cast<std::uint64_t>(geo.ring_count_total());
+    dr.vertex_count       = static_cast<std::uint64_t>(geo.vertex_count());
 
     // ---- the block list, in id order so a hex dump reads like the spec ----
     std::vector<Pending> blocks;
@@ -385,6 +428,8 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
 
     blocks.push_back(column(kBlkLayers, layers));
     blocks.push_back(column(kBlkStyles, styles));
+    blocks.push_back(column(kBlkSymbols, symbols));
+    blocks.push_back(column(kBlkSymbolLayers, symbol_layers));
 
     blocks.push_back(column(kBlkEntityMinX, ents.min_x));
     blocks.push_back(column(kBlkEntityMinY, ents.min_y));

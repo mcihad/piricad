@@ -90,11 +90,56 @@ verilir.
 | `dolgu` | Dolgu rengi, `0xAARRGGBB`. `0` = dolgusuz |
 | `sira` | Çizim sırası. Büyük olan üste gelir |
 | `sifirla` | `evet` yazılırsa stili siler; nesneler katman görünümüne döner |
+| `tip` | Sembol katmanının tipi. Aşağıdaki tabloya bakın |
+| `ekle` | `evet` yazılırsa katman mevcut sembolün **üstüne** eklenir; yoksa sembolü değiştirir |
+| `sekil` | İşaretçi şekli: `daire`, `kare`, `ucgen`, `baklava`, `yildiz`, `arti`, `carpi`, `ok`, `yarim-daire`, `besgen`, `altigen`, `cizik` |
+| `yerlesim` | İşaretçinin çizgi üzerindeki yeri: `aralik`, `tepe`, `ilk`, `son`, `orta` |
+| `birim` | Aşağıdaki ölçülerin birimi: `kagit` (µm), `zemin` (mm), `piksel` |
+| `boyut` | İşaretçi çapı ya da tarak dişinin boyu |
+| `aralik` | Çizgi boyunca ya da desende birinci eksende aralık |
+| `aralik_y` | Nokta deseninde ikinci eksen. Verilmezse desen karedir |
+| `aci` | Desen açısı ya da işaretçi dönüklüğü, **mikro derece** (45° = `45000000`) |
+| `kaydirma` | Geometriden dik kaydırma |
+| `saydamlik` | Katman saydamlığı `0`–`255`. `255` tam opak |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
 `renk` ve `dolgu` değerleri `KATMAN` komutundakiyle aynı düzendedir; hazır değerler için
 [Katman yönetimi](layer.md) sayfasındaki renk tablosuna bakın.
+
+### Sembol katmanları — bir gösterim tek çizgi değildir
+
+Bir MPYY gösterimi çoğu zaman üst üste birkaç şeydir: bir dolgu, başka renkte bir
+sınır, üstünde tekrar eden bir simge. Tek renk-ve-kalınlık kaydı bunu söyleyemez,
+o yüzden bir stil **sembol katmanlarından** oluşan bir yığındır ve alttan üste
+çizilir.
+
+| `tip` | Ne çizer | Nerede işe yarar |
+|---|---|---|
+| `cizgi` | Geometri boyunca düz kontur | Sınır, yol, kıyı |
+| `isaretci-cizgi` | Çizgi boyunca tekrar eden simge | Sit alanı sınırı, koruma sınırı |
+| `tarak-cizgi` | Çizgiyi dik kesen kısa dişler | Demiryolu, şev |
+| `dolgu` | Yüzeyin içi: renk ve tarama | İmar lekesi |
+| `cizgi-desen-dolgu` | Açılı paralel çizgiler | Tarım alanı, jeolojik sakıncalı alan |
+| `nokta-desen-dolgu` | Simge ızgarası | Orman, mezarlık, bataklık |
+| `merkez-isaretci` | Yüzeyin ortasında tek simge | Tesis simgesi |
+| `isaretci` | Her tepe noktasında simge | Nokta gösterimleri |
+
+Yığın **tek tek** kurulur: ilk `STİL` sembolü kurar, `ekle=evet` ile gelen her
+`STİL` üstüne bir katman ekler. Stil tasarımcısı da tam olarak bunu yapar, bir
+betik de aynı satırları yazar — üçü de aynı yoldan geçer.
+
+`isaretci-cizgi` ve `tarak-cizgi` **yalnız simgelerini** çizer, çizgiyi çizmez.
+Bir demiryolu bu yüzden iki katmandır: altta düz çizgi, üstünde dişler.
+
+### Birim: kâğıt mı, zemin mi
+
+Bir sınırın kalınlığı **kâğıda** aittir — MPYY paftada 0,5 mm der ve pafta ister
+1/1000 ister 1/5000 olsun 0,5 mm kalır. Bir orman deseninin sıklığı çoğu zaman
+**zemine** aittir: desen alana aittir ve ölçekle küçülmesine izin vermek okunur
+bir dokuyu gri bir lekeye çevirir.
+
+`birim` bu ayrımı söyler ve varsayılan `kagit`'tır.
 
 ### Kalınlık neden mikrometre
 
@@ -235,6 +280,28 @@ Komut satırına `STİL` yazıp **Enter**'a basarsanız katman adı sorulur; ad�
 **Katmanlar** panelinde bir katmana sağ tıklayarak açılan **Stil** iletişim kutusu ve
 gösterim kataloğu seçici **Faz 1'de** gelecek; ikisi de bu komutu gönderecek, ikinci bir
 stil listesi olmayacak.
+
+### Yığılmış gösterim — orman
+
+```
+KATMAN ORMAN
+ALAN 485300000,4310200000 485370000,4310200000 485370000,4310250000 485300000,4310250000
+STİL katman=ORMAN tip=dolgu dolgu=805568546
+STİL katman=ORMAN ekle=evet tip=nokta-desen-dolgu sekil=ucgen birim=zemin boyut=3000 aralik=9000 renk=4280645666
+```
+
+Önce soluk yeşil bir dolgu, üstüne zeminde 9 metre aralıklı üçgen ızgara.
+
+### Yığılmış gösterim — demiryolu
+
+```
+KATMAN DEMIRYOLU
+ÇİZGİ 485300000,4310200000 485400000,4310200000
+STİL katman=DEMIRYOLU tip=cizgi renk=4278190080 kalinlik=900
+STİL katman=DEMIRYOLU ekle=evet tip=tarak-cizgi birim=zemin boyut=4000 aralik=5000 renk=4278190080 kalinlik=250
+```
+
+Altta siyah çizgi, üstünde 5 metrede bir 4 metre boyunda dişler.
 
 ### Betik
 

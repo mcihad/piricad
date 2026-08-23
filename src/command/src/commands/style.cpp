@@ -25,6 +25,7 @@
 #include "piricad/command/spec.hpp"
 #include "piricad/core/json.hpp"
 #include "piricad/core/style_rule.hpp"
+#include <algorithm>
 
 #include <fstream>
 #include <optional>
@@ -291,6 +292,90 @@ Task<void> run(Context& ctx)
         }
     }
 
+    // ---- the symbol layer, when one was described ----
+    //
+    // Reads the layer parameters into a `core::SymbolLayer`. Every name is
+    // resolved against the table in core and an unknown one is an ERROR naming
+    // what is valid: a symbol layer type nobody recognised is a symbol the user
+    // meant and did not get, and defaulting it would draw a `demiryolu` as an
+    // ordinary boundary — wrong, and wrong quietly.
+    core::SymbolLayer described;
+    bool has_layer = false;
+
+    if (const Value v = ctx.argument("tip"); !v.empty()) {
+        const auto type = core::symbol_layer_type_from_name(v.as_text());
+        if (!type) {
+            ctx.session().fail(
+                core::err(core::ErrorCode::ValidationFailed,
+                          "Bilinmeyen sembol katmanı tipi: '" + v.as_text() +
+                              "'. Geçerli olanlar: " + core::symbol_layer_type_names() + "."));
+            co_return;
+        }
+        described.type = *type;
+        has_layer      = true;
+    }
+
+    core::Unit unit = core::Unit::Paper;
+    if (const Value v = ctx.argument("birim"); !v.empty()) {
+        const auto parsed = core::unit_from_name(v.as_text());
+        if (!parsed) {
+            ctx.session().fail(core::err(core::ErrorCode::ValidationFailed,
+                                         "Bilinmeyen birim: '" + v.as_text() +
+                                             "'. Geçerli olanlar: " + core::unit_names() + "."));
+            co_return;
+        }
+        unit      = *parsed;
+        has_layer = true;
+    }
+
+    if (const Value v = ctx.argument("sekil"); !v.empty()) {
+        const auto shape = core::marker_shape_from_name(v.as_text());
+        if (!shape) {
+            ctx.session().fail(core::err(core::ErrorCode::ValidationFailed,
+                                         "Bilinmeyen işaretçi şekli: '" + v.as_text() +
+                                             "'. Geçerli olanlar: " + core::marker_shape_names() +
+                                             "."));
+            co_return;
+        }
+        described.shape = *shape;
+        has_layer       = true;
+    }
+
+    if (const Value v = ctx.argument("yerlesim"); !v.empty()) {
+        const auto placement = core::marker_placement_from_name(v.as_text());
+        if (!placement) {
+            ctx.session().fail(
+                core::err(core::ErrorCode::ValidationFailed,
+                          "Bilinmeyen işaretçi yerleşimi: '" + v.as_text() +
+                              "'. Geçerli olanlar: " + core::marker_placement_names() + "."));
+            co_return;
+        }
+        described.placement = *placement;
+        has_layer           = true;
+    }
+
+    const auto measure = [&](const char* name, core::Measure& out) {
+        if (const Value v = ctx.argument(name); !v.empty()) {
+            out       = core::Measure{static_cast<std::int32_t>(v.as_int()), unit};
+            has_layer = true;
+        }
+    };
+    measure("boyut", described.size);
+    measure("aralik", described.interval);
+    measure("aralik_y", described.spacing_y);
+    measure("kaydirma", described.offset);
+
+    if (const Value v = ctx.argument("aci"); !v.empty()) {
+        described.angle_udeg = static_cast<std::int32_t>(v.as_int());
+        has_layer            = true;
+    }
+    if (const Value v = ctx.argument("saydamlik"); !v.empty()) {
+        described.opacity = static_cast<std::uint8_t>(std::clamp<std::int64_t>(v.as_int(), 0, 255));
+        has_layer         = true;
+    }
+
+    const bool append = ctx.argument("ekle").as_bool();
+
     // ---- pass 2: write ----
     // A scale window turns the write into a one-layer SYMBOL rather than a bare
     // appearance, because the window lives on the symbol. Without a window the
@@ -300,11 +385,32 @@ Task<void> run(Context& ctx)
     const Value scale_max = ctx.argument("olcek_max");
     const bool windowed   = !scale_min.empty() || !scale_max.empty();
 
+    const core::StyleTable& table = bus.document().styles();
+
     core::StyleId last = core::kByLayerStyle;
     for (std::size_t i = 0; i < targets.size(); ++i) {
         core::StyleId style = core::kByLayerStyle;
-        if (!clear && windowed) {
-            core::Symbol sym = core::Symbol::of(resolved[i]);
+        if (!clear && (windowed || has_layer)) {
+            core::Symbol sym;
+
+            // `ekle` stacks onto what this entity already carries. Reading the
+            // existing symbol rather than the layer default is what makes a stack
+            // buildable one invocation at a time — which is how the designer
+            // drives it, and how a script writes the same thing.
+            if (append) {
+                const core::StyleId current = bus.document().entities().style[targets[i]];
+                if (current != core::kByLayerStyle && table.contains(current))
+                    sym = table.symbol_at(current);
+            }
+
+            if (has_layer) {
+                core::SymbolLayer added = described;
+                added.look              = resolved[i];
+                sym.layers.push_back(added);
+            } else if (sym.layers.empty()) {
+                sym = core::Symbol::of(resolved[i]);
+            }
+
             sym.min_scale = static_cast<std::uint32_t>(scale_min.empty() ? 0 : scale_min.as_int());
             sym.max_scale = static_cast<std::uint32_t>(scale_max.empty() ? 0 : scale_max.as_int());
             style         = ctx.transaction().intern_symbol(sym);
@@ -373,6 +479,36 @@ PIRICAD_COMMAND(style)
                 Param::integer("sira", Arity::optional(), "Çizim sırası; büyük olan üste gelir"),
                 Param::boolean("sifirla", Arity::optional(),
                                "Stili siler; nesneler katman varsayılanına döner"),
+
+                // The symbol layer. Every parameter below describes ONE layer of
+                // a symbol; `ekle` is what turns a series of invocations into a
+                // stack, which is how a plan gösterim is actually built — a fill,
+                // a boundary of another colour, and a repeated glyph on top.
+                Param::text("tip", Arity::optional(),
+                            "Sembol katmanı tipi: cizgi, isaretci-cizgi, tarak-cizgi, dolgu, "
+                            "cizgi-desen-dolgu, nokta-desen-dolgu, merkez-isaretci, isaretci"),
+                Param::boolean("ekle", Arity::optional(),
+                               "Katmanı mevcut sembolün üstüne ekler; yoksa sembolü değiştirir"),
+                Param::text("sekil", Arity::optional(),
+                            "İşaretçi şekli: daire, kare, ucgen, baklava, yildiz, arti, carpi, "
+                            "ok, yarim-daire, besgen, altigen, cizik"),
+                Param::text("yerlesim", Arity::optional(),
+                            "İşaretçinin çizgi üzerindeki yeri: aralik, tepe, ilk, son, orta"),
+                Param::text("birim", Arity::optional(),
+                            "Ölçülerin birimi: kagit (µm), zemin (mm), piksel"),
+                Param::integer("boyut", Arity::optional(),
+                               "İşaretçi çapı ya da tarak dişinin boyu, `birim` cinsinden"),
+                Param::integer("aralik", Arity::optional(),
+                               "Çizgi boyunca ya da desende birinci eksende aralık"),
+                Param::integer("aralik_y", Arity::optional(),
+                               "Nokta deseninde ikinci eksen; verilmezse kare desen"),
+                Param::integer("aci", Arity::optional(),
+                               "Desen açısı ya da işaretçi dönüklüğü, mikro derece"),
+                Param::integer("kaydirma", Arity::optional(),
+                               "Geometriden dik kaydırma, `birim` cinsinden"),
+                Param::integer("saydamlik", Arity::optional(),
+                               "Katman saydamlığı 0-255; 255 tam opak"),
+                Param::text("desen", Arity::optional(), "Çizgi deseni tablosundaki satır"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

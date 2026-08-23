@@ -987,3 +987,84 @@ TEST_CASE("IO: öznitelik ve metin dosyayla gider ve parmak izi tutar")
     // would have caught the loss on its own.
     CHECK_EQ(back.doc.content_hash(), saved_hash);
 }
+
+TEST_CASE("IO: yığılmış sembol dosyayla gidip geliyor")
+{
+    // The regression this locks down. `.pcad` wrote only the resolved appearance
+    // of each style, so a drawing whose gösterim was a fill under a boundary under
+    // a glyph came back as the boundary alone. Everything else about the document
+    // survived, which is what made it hard to see: the colours were right, the
+    // pattern was gone, and the only thing that said so was the fingerprint.
+    TempDir tmp("sembol");
+    const std::string path = tmp.file("sembol.pcad");
+
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("KATMAN ORMAN", Origin::Test).ok());
+    REQUIRE(rig.bus
+                .execute_line("ALAN 485300000,4310200000 485370000,4310200000 "
+                              "485370000,4310250000 485300000,4310250000",
+                              Origin::Test)
+                .ok());
+
+    // A stack built one invocation at a time, which is how the designer drives it
+    // and how a script writes the same thing.
+    REQUIRE(rig.bus.execute_line("STİL katman=ORMAN tip=dolgu dolgu=805568546", Origin::Test).ok());
+    REQUIRE(rig.bus
+                .execute_line("STİL katman=ORMAN ekle=evet tip=nokta-desen-dolgu sekil=ucgen "
+                              "birim=zemin boyut=3000 aralik=9000 aci=15000000 renk=4280645666",
+                              Origin::Test)
+                .ok());
+
+    const core::StyleId sid = rig.doc.entities().style[0];
+    REQUIRE(sid != core::kByLayerStyle);
+
+    const core::Symbol before = rig.doc.styles().symbol_at(sid);
+    REQUIRE(before.layers.size() == std::size_t{2});
+    CHECK(before.layers[1].type == core::SymbolLayerType::PointPatternFill);
+    CHECK(before.layers[1].shape == core::MarkerShape::Triangle);
+    CHECK(before.layers[1].interval.unit == core::Unit::Ground);
+    CHECK_EQ(before.layers[1].interval.value, 9000);
+    CHECK_EQ(before.layers[1].angle_udeg, 15000000);
+
+    const std::uint64_t hash = rig.doc.content_hash();
+    REQUIRE(rig.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    REQUIRE(opened.ok());
+
+    // The fingerprint is the whole assertion: it folds every symbol layer, so a
+    // document that hashes the same cannot have lost one.
+    CHECK_EQ(reloaded.doc.content_hash(), hash);
+
+    const core::StyleId reopened = reloaded.doc.entities().style[0];
+    CHECK_EQ(reopened, sid);
+    const core::Symbol after = reloaded.doc.styles().symbol_at(reopened);
+    REQUIRE(after.layers.size() == std::size_t{2});
+    CHECK(after == before);
+}
+
+TEST_CASE("IO: sembolsüz eski dosya parmak izini koruyor")
+{
+    // A file written before symbols were persisted carries neither block, and
+    // reads back as a plain colour and width per style — which is exactly what it
+    // meant. Simulated by saving a drawing that declares no stack: the writer
+    // still emits the blocks, and every symbol in them is one plain layer, so the
+    // ids and the fingerprint have to come back unchanged.
+    TempDir tmp("duz-sembol");
+    const std::string path = tmp.file("duz.pcad");
+
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("KATMAN YOL", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("ÇİZGİ 0,0 10000,0 10000,10000", Origin::Test).ok());
+    REQUIRE(
+        rig.bus.execute_line("STİL katman=YOL renk=4278190335 kalinlik=700", Origin::Test).ok());
+
+    const std::uint64_t hash = rig.doc.content_hash();
+    REQUIRE(rig.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig reloaded;
+    REQUIRE(reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
+    CHECK_EQ(reloaded.doc.content_hash(), hash);
+}

@@ -14,6 +14,51 @@
 
 namespace piricad::render {
 
+/// One symbol layer of one style, resolved to this frame's pixels.
+///
+/// The scene builder walks each symbol's stack and produces one PASS per layer;
+/// this is what a pass draws. Every size arrives already converted from its
+/// `core::Measure` — paper micrometres, ground millimetres or screen pixels are
+/// three different conversions and the backend performs none of them, because a
+/// backend that converted units would have to know the view scale, and a backend
+/// that knows the view scale is a backend that can disagree with the scene about
+/// what the drawing looks like.
+struct PassStyle
+{
+    core::SymbolLayerType type{core::SymbolLayerType::SimpleLine};    ///< what it draws
+    core::MarkerShape shape{core::MarkerShape::Circle};               ///< which glyph
+    core::MarkerPlacement placement{core::MarkerPlacement::Interval}; ///< where on the line
+    core::LineCap cap{core::LineCap::Round};                          ///< how a stroke ends
+    core::LineJoin join{core::LineJoin::Round};                       ///< how segments meet
+
+    float size_px{0.0f};      ///< marker diameter, or hash tick length
+    float interval_px{0.0f};  ///< spacing along a line, or the first pattern axis
+    float spacing_y_px{0.0f}; ///< the second pattern axis; 0 means square
+    float offset_px{0.0f};    ///< perpendicular offset from the geometry
+
+    std::int32_t angle_udeg{0}; ///< pattern angle, or glyph rotation
+    std::uint8_t opacity{255};  ///< multiplied into this layer's colours
+
+    /// Ink for the glyphs of a marker type and the lines of a pattern fill.
+    ///
+    /// The layer's STROKE colour, carried here as well as on the stroke batch
+    /// because a pattern fill has geometry in the polygon batch and its ink in the
+    /// stroke one, and a backend should not have to hold both to draw one thing.
+    std::uint32_t line_rgba{0xFF000000u};
+    float line_width_px{1.0f}; ///< width of those glyph and pattern strokes
+    std::uint16_t dash{0};     ///< index into the dash table, from /data
+
+    /// Whether this pass wants the geometry as a line, as a face, or both.
+    ///
+    /// Derived from `type` and stored, because the emit loop asks the question
+    /// once per RING per ENTITY — five million times on the cadastral bench — and
+    /// the answer depends only on the pass. Asking `core::draws_stroke()` there
+    /// cost thirteen per cent of the full-extent frame; the pass table is built
+    /// once, so this is the place for it.
+    bool wants_stroke{true};
+    bool wants_fill{false};
+};
+
 /// Every stroke that shares one appearance, in one buffer.
 ///
 /// Batched by STYLE rather than by entity: a cadastral sheet has millions of
@@ -127,11 +172,30 @@ struct Overlay
 
 struct DrawList
 {
-    /// One entry per style id that has something to stroke, in id order.
+    /// What each batch index draws. Parallel to `polylines` and `polygons`: one
+    /// entry per PASS, where a pass is one symbol layer of one style.
+    ///
+    /// Before this, a batch was one STYLE and the renderer read only the stack's
+    /// primary layer — so a gösterim declared as a fill under a boundary under a
+    /// glyph reached the screen as the boundary alone, and the other two layers
+    /// were carried through the document, the file and the hash to be dropped in
+    /// the last step.
+    std::vector<PassStyle> passes;
+
+    /// Stroke geometry per pass, parallel to `passes`.
     std::vector<PolylineBatch> polylines;
 
-    /// One entry per style id that has something to fill, in id order.
+    /// Fill geometry per pass, parallel to `passes`.
     std::vector<PolygonBatch> polygons;
+
+    /// Batch indices in DRAW ORDER, back to front.
+    ///
+    /// Not the same as index order, and the difference is the point: MPYY
+    /// prescribes a draw order for plan sheets (`Appearance::z_order`), and within
+    /// one symbol the stack is drawn bottom layer first. A renderer that drew
+    /// batches in id order would put a road under the block it crosses whenever
+    /// the road's style happened to be interned first.
+    std::vector<std::uint32_t> order;
 
     /// Captions, in entity order. Not batched: text is drawn one string at a
     /// time by every backend that exists, so grouping would buy nothing.
@@ -145,6 +209,22 @@ struct DrawList
     /// Scratch buffer for the spatial index query. Lives here so its capacity
     /// survives between frames and the draw loop allocates nothing (§10.4).
     std::vector<core::EntityId> candidates;
+
+    /// Where each style's passes begin, and how many it has. Indexed by style id,
+    /// with the layer defaults in the tail. Scratch, kept here for the same reason
+    /// `candidates` is: the capacity survives between frames.
+    std::vector<std::uint32_t> pass_first;
+    std::vector<std::uint32_t> pass_count;
+
+    /// One pass and the depth it draws at, for building `order`.
+    struct ZKey
+    {
+        std::int16_t z{0};     ///< Appearance::z_order of the symbol layer
+        std::uint32_t pass{0}; ///< index into `passes`
+    };
+
+    /// Sort scratch for `order`. Also kept between frames.
+    std::vector<ZKey> z_keys;
 
     /// Frame statistics, for the F12 developer overlay and the bench harness.
     /// They are the cheapest evidence there is that the cull and the index are

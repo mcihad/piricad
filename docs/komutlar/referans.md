@@ -160,6 +160,18 @@ Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden
 | `dolgu` | integer | isteğe bağlı | Dolgu rengi, 0xAARRGGBB; 0 = dolgusuz |
 | `sira` | integer | isteğe bağlı | Çizim sırası; büyük olan üste gelir |
 | `sifirla` | bool | isteğe bağlı | Stili siler; nesneler katman varsayılanına döner |
+| `tip` | text | isteğe bağlı | Sembol katmanı tipi: cizgi, isaretci-cizgi, tarak-cizgi, dolgu, cizgi-desen-dolgu, nokta-desen-dolgu, merkez-isaretci, isaretci |
+| `ekle` | bool | isteğe bağlı | Katmanı mevcut sembolün üstüne ekler; yoksa sembolü değiştirir |
+| `sekil` | text | isteğe bağlı | İşaretçi şekli: daire, kare, ucgen, baklava, yildiz, arti, carpi, ok, yarim-daire, besgen, altigen, cizik |
+| `yerlesim` | text | isteğe bağlı | İşaretçinin çizgi üzerindeki yeri: aralik, tepe, ilk, son, orta |
+| `birim` | text | isteğe bağlı | Ölçülerin birimi: kagit (µm), zemin (mm), piksel |
+| `boyut` | integer | isteğe bağlı | İşaretçi çapı ya da tarak dişinin boyu, `birim` cinsinden |
+| `aralik` | integer | isteğe bağlı | Çizgi boyunca ya da desende birinci eksende aralık |
+| `aralik_y` | integer | isteğe bağlı | Nokta deseninde ikinci eksen; verilmezse kare desen |
+| `aci` | integer | isteğe bağlı | Desen açısı ya da işaretçi dönüklüğü, mikro derece |
+| `kaydirma` | integer | isteğe bağlı | Geometriden dik kaydırma, `birim` cinsinden |
+| `saydamlik` | integer | isteğe bağlı | Katman saydamlığı 0-255; 255 tam opak |
+| `desen` | text | isteğe bağlı | Çizgi deseni tablosundaki satır |
 
 Ayrıntılı kullanım: [STİL](style.md)
 
@@ -654,6 +666,102 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "max": 1,
           "required": false,
           "help": "Stili siler; nesneler katman varsayılanına döner"
+        },
+        {
+          "name": "tip",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Sembol katmanı tipi: cizgi, isaretci-cizgi, tarak-cizgi, dolgu, cizgi-desen-dolgu, nokta-desen-dolgu, merkez-isaretci, isaretci"
+        },
+        {
+          "name": "ekle",
+          "type": "bool",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Katmanı mevcut sembolün üstüne ekler; yoksa sembolü değiştirir"
+        },
+        {
+          "name": "sekil",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "İşaretçi şekli: daire, kare, ucgen, baklava, yildiz, arti, carpi, ok, yarim-daire, besgen, altigen, cizik"
+        },
+        {
+          "name": "yerlesim",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "İşaretçinin çizgi üzerindeki yeri: aralik, tepe, ilk, son, orta"
+        },
+        {
+          "name": "birim",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Ölçülerin birimi: kagit (µm), zemin (mm), piksel"
+        },
+        {
+          "name": "boyut",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "İşaretçi çapı ya da tarak dişinin boyu, `birim` cinsinden"
+        },
+        {
+          "name": "aralik",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Çizgi boyunca ya da desende birinci eksende aralık"
+        },
+        {
+          "name": "aralik_y",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Nokta deseninde ikinci eksen; verilmezse kare desen"
+        },
+        {
+          "name": "aci",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Desen açısı ya da işaretçi dönüklüğü, mikro derece"
+        },
+        {
+          "name": "kaydirma",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Geometriden dik kaydırma, `birim` cinsinden"
+        },
+        {
+          "name": "saydamlik",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Katman saydamlığı 0-255; 255 tam opak"
+        },
+        {
+          "name": "desen",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Çizgi deseni tablosundaki satır"
         }
       ],
       "flags": [

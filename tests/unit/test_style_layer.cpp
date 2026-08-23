@@ -757,8 +757,8 @@ TEST_CASE("Symbol: çok katmanlı yığın kendi kimliğini alır ve geri okunur
     edge.rgba     = 0xFF202020u;
     edge.width_um = 700;
 
-    sym.layers.push_back(SymbolLayer{fill, StrokeKind::Fill, 0});
-    sym.layers.push_back(SymbolLayer{edge, StrokeKind::Stroke, 0});
+    sym.layers.push_back(SymbolLayer{fill, SymbolLayerType::SimpleFill});
+    sym.layers.push_back(SymbolLayer{edge, SymbolLayerType::SimpleLine});
 
     const StyleId id = t.intern(sym);
     CHECK(id != kByLayerStyle);
@@ -787,12 +787,12 @@ TEST_CASE("Symbol: katman SIRASI kimliği değiştirir")
     edge.rgba = 0xFF202020u;
 
     Symbol under;
-    under.layers.push_back(SymbolLayer{fill, StrokeKind::Fill, 0});
-    under.layers.push_back(SymbolLayer{edge, StrokeKind::Stroke, 0});
+    under.layers.push_back(SymbolLayer{fill, SymbolLayerType::SimpleFill});
+    under.layers.push_back(SymbolLayer{edge, SymbolLayerType::SimpleLine});
 
     Symbol over;
-    over.layers.push_back(SymbolLayer{edge, StrokeKind::Stroke, 0});
-    over.layers.push_back(SymbolLayer{fill, StrokeKind::Fill, 0});
+    over.layers.push_back(SymbolLayer{edge, SymbolLayerType::SimpleLine});
+    over.layers.push_back(SymbolLayer{fill, SymbolLayerType::SimpleFill});
 
     CHECK(t.intern(under) != t.intern(over));
 }

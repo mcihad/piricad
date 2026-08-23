@@ -28,6 +28,8 @@ std::string known_block_name(std::uint32_t id)
     case kBlkDocument: return "belge kaydı";
     case kBlkLayers: return "katmanlar";
     case kBlkStyles: return "stiller";
+    case kBlkSymbols: return "semboller";
+    case kBlkSymbolLayers: return "sembol katmanlari";
     case kBlkEntityMinX:
     case kBlkEntityMinY:
     case kBlkEntityMaxX:
