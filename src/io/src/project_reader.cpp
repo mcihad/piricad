@@ -551,6 +551,116 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             report.warnings.push_back(Warning{"io.setting_clamped", w.message});
     }
 
+    // ---- attributes (model.md R27-R29) ----
+    //
+    // The schema first, in file order, because the order IS the AttrId every cell
+    // refers to. A column this build cannot construct is a warning and not a
+    // failure: the cells that point at it are then dropped by index, which is
+    // lossy and said out loud, rather than shifting every later column by one.
+    {
+        auto schema = view.column<AttrColumnRecord>(kBlkAttrSchema, view.count_of(kBlkAttrSchema),
+                                                    "öznitelik şeması");
+        if (!schema) return schema.error();
+
+        std::vector<core::AttrId> mapped;
+        mapped.reserve(schema.value().size());
+
+        for (const AttrColumnRecord& r : schema.value()) {
+            auto id = strings.at(r.id_string, "öznitelik kimliği");
+            if (!id) return id.error();
+            auto name = strings.at(r.name_string, "öznitelik adı");
+            if (!name) return name.error();
+            auto summary = strings.at(r.summary_string, "öznitelik açıklaması");
+            if (!summary) return summary.error();
+            auto catalog = strings.at(r.catalog_string, "öznitelik kataloğu");
+            if (!catalog) return catalog.error();
+
+            if (r.type > static_cast<std::uint8_t>(core::AttrType::CodeRef)) {
+                report.warnings.push_back(
+                    Warning{"io.attr_type", "'" + id.value() +
+                                                "' özniteliğinin türü bu sürümde tanınmıyor; "
+                                                "sütun ve hücreleri yüklenmedi."});
+                mapped.push_back(core::kNoAttr);
+                continue;
+            }
+
+            core::AttrSpec spec;
+            spec.id         = id.value();
+            spec.name_tr    = name.value();
+            spec.summary_tr = summary.value();
+            spec.catalog    = catalog.value();
+            spec.type       = static_cast<core::AttrType>(r.type);
+            spec.required   = r.required != 0;
+
+            auto made = tx.declare_attribute(std::move(spec));
+            if (!made) {
+                report.warnings.push_back(Warning{
+                    "io.attr_column",
+                    "'" + id.value() + "' özniteliği yüklenemedi: " + made.error().message});
+                mapped.push_back(core::kNoAttr);
+                continue;
+            }
+            mapped.push_back(made.value());
+        }
+
+        auto cells = view.column<AttrCellRecord>(kBlkAttrCells, view.count_of(kBlkAttrCells),
+                                                 "öznitelik hücreleri");
+        if (!cells) return cells.error();
+
+        for (const AttrCellRecord& c : cells.value()) {
+            if (c.column >= mapped.size() || mapped[c.column] == core::kNoAttr) continue;
+            if (c.row >= doc.entities().size()) {
+                report.warnings.push_back(Warning{"io.attr_row",
+                                                  "Dosyadaki bir öznitelik hücresi var olmayan bir "
+                                                  "nesneye işaret ediyor; yok sayıldı."});
+                continue;
+            }
+
+            const core::AttrColumn* col = doc.attributes().column(mapped[c.column]);
+            if (col == nullptr) continue;
+
+            core::AttrValue v{};
+            v.type    = col->type();
+            v.present = true;
+            v.number  = c.number;
+            if (v.type == core::AttrType::Text || v.type == core::AttrType::CodeRef) {
+                auto text = strings.at(c.text_string, "öznitelik değeri");
+                if (!text) return text.error();
+                v.text = text.value();
+            }
+
+            // The row IS the entity slot, and slots are dense and in order here,
+            // so the slot is its own entity id at load time.
+            if (auto st = tx.set_attribute(mapped[c.column], static_cast<core::EntityId>(c.row), v);
+                !st)
+                report.warnings.push_back(Warning{
+                    "io.attr_cell", "Bir öznitelik değeri yüklenemedi: " + st.error().message});
+        }
+    }
+
+    // ---- text ----
+    {
+        auto rows = view.column<TextRecord>(kBlkTexts, view.count_of(kBlkTexts), "metinler");
+        if (!rows) return rows.error();
+
+        for (const TextRecord& r : rows.value()) {
+            if (r.row >= doc.entities().size()) {
+                report.warnings.push_back(
+                    Warning{"io.text_row", "Dosyadaki bir metin var olmayan bir nesneye işaret "
+                                           "ediyor; yok sayıldı."});
+                continue;
+            }
+            auto content = strings.at(r.content_string, "metin içeriği");
+            if (!content) return content.error();
+
+            if (auto st = tx.set_text(static_cast<core::EntityId>(r.row), content.value(),
+                                      r.height_mm, static_cast<core::TextAnchor>(r.anchor));
+                !st)
+                report.warnings.push_back(
+                    Warning{"io.text", "Bir metin yüklenemedi: " + st.error().message});
+        }
+    }
+
     // ---- the allocator must not hand out a key the file already used ----
     if (doc.keys().peek_entity() != dr.next_entity_key ||
         doc.keys().peek_layer() != dr.next_layer_key)

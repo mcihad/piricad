@@ -47,6 +47,9 @@ std::string known_block_name(std::uint32_t id)
     case kBlkVertexX:
     case kBlkVertexY: return "tepe noktası sütunu";
     case kBlkSettings: return "proje ayarları";
+    case kBlkAttrSchema: return "öznitelik şeması";
+    case kBlkAttrCells: return "öznitelik hücreleri";
+    case kBlkTexts: return "metinler";
     default: return {};
     }
 }

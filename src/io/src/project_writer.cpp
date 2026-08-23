@@ -289,6 +289,67 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
         setting_rows.push_back(r);
     }
 
+    // ---- attributes (model.md R27-R29) ----
+    //
+    // Attributes and text fold into content_hash(), so a file that dropped them
+    // would reopen as a DIFFERENT document — and the reader's own fingerprint
+    // check would say so on every load. It did, which is how this gap was found.
+    std::vector<AttrColumnRecord> attr_columns;
+    std::vector<AttrCellRecord> attr_cells;
+    {
+        const core::AttrTable& table = doc.attributes();
+        attr_columns.reserve(table.columns());
+
+        for (core::AttrId c = 0; c < table.columns(); ++c) {
+            const core::AttrColumn* col = table.column(c);
+            const core::AttrSpec& spec  = col->spec();
+
+            AttrColumnRecord r{};
+            r.id_string      = pool.intern(spec.id);
+            r.name_string    = pool.intern(spec.name_tr);
+            r.summary_string = pool.intern(spec.summary_tr);
+            r.catalog_string = pool.intern(spec.catalog);
+            r.type           = static_cast<std::uint8_t>(spec.type);
+            r.required       = spec.required ? 1u : 0u;
+            attr_columns.push_back(r);
+
+            // Only cells that carry a value. A cadastral layer is mostly empty
+            // columns; a record per empty cell would be the biggest block in the
+            // file and would say nothing.
+            for (std::size_t row = 0; row < col->rows(); ++row) {
+                if (!col->present(row)) continue;
+
+                auto cell = table.get(c, row);
+                if (!cell) continue;
+
+                AttrCellRecord cr{};
+                cr.column = c;
+                cr.row    = static_cast<std::uint32_t>(row);
+                cr.number = cell.value().number;
+                if (cell.value().type == core::AttrType::Text ||
+                    cell.value().type == core::AttrType::CodeRef)
+                    cr.text_string = pool.intern(cell.value().text);
+                attr_cells.push_back(cr);
+            }
+        }
+    }
+
+    // ---- text ----
+    std::vector<TextRecord> text_rows;
+    {
+        const core::TextTable& texts = doc.texts();
+        for (std::size_t row = 0; row < texts.slot_count(); ++row) {
+            if (!texts.has(row)) continue;
+
+            TextRecord r{};
+            r.row            = static_cast<std::uint32_t>(row);
+            r.content_string = pool.intern(std::string(texts.text(row)));
+            r.height_mm      = texts.height(row);
+            r.anchor         = static_cast<std::uint8_t>(texts.anchor(row));
+            text_rows.push_back(r);
+        }
+    }
+
     // ---- the document record ----
     DocumentRecord dr{};
     dr.crs_string      = crs_id;
@@ -346,6 +407,9 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     blocks.push_back(column(kBlkVertexY, geo.ys));
 
     blocks.push_back(column(kBlkSettings, setting_rows));
+    blocks.push_back(column(kBlkAttrSchema, attr_columns));
+    blocks.push_back(column(kBlkAttrCells, attr_cells));
+    blocks.push_back(column(kBlkTexts, text_rows));
 
     // An empty column carries no information a reader needs and its absence is
     // the encoding of "zero of these" (BlockView::column accepts that), so an

@@ -244,6 +244,17 @@ Result<EntityId> Document::push_entity(LayerId lyr, std::uint32_t geometry_slot)
     if (!entities_.key.empty() && raw(entities_.key.back()) >= raw(key)) keys_sorted_ = false;
     entities_.key.push_back(key);
 
+    // The slot-indexed side tables follow the geometry, ALWAYS.
+    //
+    // Growing them lazily — on the first write to each — made content_hash()
+    // depend on the ORDER of a session rather than on its result: a drawing whose
+    // ada number was typed before its caption hashed differently from the same
+    // drawing typed the other way round, and reloading either of them produced a
+    // third answer. Two documents that hold the same facts must fingerprint the
+    // same, or the fingerprint is not about the document.
+    attributes_.resize(geometry_.slot_count());
+    texts_.resize(geometry_.slot_count());
+
     ++live_count_;
     ++layer_live_[lyr];
     ++revision_;

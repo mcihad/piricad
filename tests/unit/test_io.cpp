@@ -916,3 +916,67 @@ TEST_CASE("QML: katman adındaki XML karakterleri kaçırılır")
     const std::string body = slurp(path);
     CHECK(body.find("A &amp; B") != std::string::npos);
 }
+
+TEST_CASE("IO: öznitelik ve metin dosyayla gider ve parmak izi tutar")
+{
+    // The regression this locks, and it is a data-loss one: attributes and text
+    // fold into content_hash(), so a file that dropped them reopened as a
+    // DIFFERENT document. The reader's own fingerprint check said so on every
+    // load — which is how the gap was found, and is exactly what that check is
+    // for.
+    TempDir tmp("kalicilik");
+    const std::string path = tmp.file("t.pcad");
+
+    std::uint64_t saved_hash = 0;
+    {
+        Rig r;
+        REQUIRE(r.bus.execute_line("SÜTUN ada_no tam_sayi", Origin::Test).ok());
+        REQUIRE(r.bus.execute_line("SÜTUN gosterim metin", Origin::Test).ok());
+        REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+        REQUIRE(
+            r.bus.execute_line("ALAN 485300,4310200 485360,4310200 485360,4310245", Origin::Test)
+                .ok());
+        REQUIRE(r.bus.execute_line("ÖZNİTELİK ada_no 1 1234", Origin::Test).ok());
+        REQUIRE(
+            r.bus.execute_line("ÖZNİTELİK gosterim 1 \"TOPLU KONUT ALANI\"", Origin::Test).ok());
+        REQUIRE(r.bus.execute_line("METİN 485310,4310210 \"1234/7\" 2000", Origin::Test).ok());
+
+        saved_hash = r.doc.content_hash();
+        REQUIRE(r.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+    }
+
+    Rig back;
+    REQUIRE(back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
+
+    // The schema comes back, in order, with its types.
+    REQUIRE(back.doc.attributes().columns() == std::size_t{2});
+    const auto ada = back.doc.attributes().find("ada_no");
+    const auto gos = back.doc.attributes().find("gosterim");
+    REQUIRE(ada != core::kNoAttr);
+    REQUIRE(gos != core::kNoAttr);
+
+    auto number = back.doc.attribute(ada, 0);
+    REQUIRE(number.ok());
+    CHECK(number.value().present);
+    CHECK_EQ(number.value().number, std::int64_t{1234});
+
+    auto text = back.doc.attribute(gos, 0);
+    REQUIRE(text.ok());
+    CHECK_EQ(text.value().text, std::string("TOPLU KONUT ALANI"));
+
+    // The caption comes back with its height, and on the right entity.
+    bool found_caption = false;
+    for (core::EntityId e = 0; e < back.doc.entities().size(); ++e) {
+        if (!back.doc.entities().alive(e)) continue;
+        const std::uint32_t slot = back.doc.entities().slot[e];
+        if (!back.doc.texts().has(slot)) continue;
+        found_caption = true;
+        CHECK_EQ(back.doc.texts().text(slot), std::string_view("1234/7"));
+        CHECK_EQ(back.doc.texts().height(slot), core::Mm{2000});
+    }
+    CHECK(found_caption);
+
+    // And the whole document is the same document. This is the assertion that
+    // would have caught the loss on its own.
+    CHECK_EQ(back.doc.content_hash(), saved_hash);
+}

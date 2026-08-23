@@ -161,6 +161,20 @@ enum BlockId : std::uint32_t {
     /// per run and MUST NOT reach the file.
     kBlkSettings = 0x0070, ///< SettingRecord[]
 
+    // ---- attributes (model.md R27-R29) --------------------------------------
+    /// The declared schema: one record per column, in declaration order. The
+    /// order IS the AttrId, so it is written and read as a sequence rather than
+    /// keyed — an id that moved would repoint every cell in the file.
+    kBlkAttrSchema = 0x0072, ///< AttrColumnRecord[]
+    /// Cells, one record per non-absent value. Absent cells are NOT written: a
+    /// cadastral layer is mostly empty columns, and a record per empty cell would
+    /// be the largest block in the file for no information.
+    kBlkAttrCells = 0x0073, ///< AttrCellRecord[]
+
+    // ---- text (a caption is geometry-adjacent, not an attribute) ------------
+    /// One record per slot that carries text. Same reasoning as the cells above.
+    kBlkTexts = 0x0074, ///< TextRecord[]
+
     // ---- reserved. Declared here so the ids can never be re-meant. ----------
     /// Payload of an entity kind this build does not understand, kept so that
     /// model.md R26 ("preserved, non-editable, byte-identical round trip") can be
@@ -238,6 +252,49 @@ struct SettingRecord
 };
 
 static_assert(sizeof(SettingRecord) == 64, "wire record");
+
+/// One declared attribute column. The catalogue name is present even for a
+/// non-CodeRef column so that a package reference survives a round trip through a
+/// build that does not hold that catalogue (model.md R34).
+struct AttrColumnRecord
+{
+    std::uint32_t id_string;      ///< column id, into the string pool
+    std::uint32_t name_string;    ///< Turkish display name
+    std::uint32_t summary_string; ///< one-line description
+    std::uint32_t catalog_string; ///< catalogue id, or 0
+    std::uint8_t type;            ///< core::AttrType
+    std::uint8_t required;
+    std::uint8_t reserved[6];
+};
+
+static_assert(sizeof(AttrColumnRecord) == 24, "wire record");
+
+/// One cell. `column` is the index into the schema block, `row` is the entity
+/// SLOT — the same index geometry uses, so a reader does not have to resolve a
+/// key to place a value.
+struct AttrCellRecord
+{
+    std::uint32_t column;
+    std::uint32_t row;
+    std::int64_t number;       ///< Int64 / Length / Bool
+    std::uint32_t text_string; ///< Text / CodeRef, into the pool; 0 otherwise
+    std::uint32_t reserved;
+};
+
+static_assert(sizeof(AttrCellRecord) == 24, "wire record");
+
+/// One caption. Height is ground millimetres, like every other length in the
+/// file; the baseline lives in the ordinary geometry blocks.
+struct TextRecord
+{
+    std::uint32_t row; ///< entity slot
+    std::uint32_t content_string;
+    std::int64_t height_mm;
+    std::uint8_t anchor; ///< core::TextAnchor
+    std::uint8_t reserved[7];
+};
+
+static_assert(sizeof(TextRecord) == 24, "wire record");
 
 /// The one document-level record. Counts here are cross-checked against the
 /// directory: a column whose length disagrees with this record is a corrupt file,
