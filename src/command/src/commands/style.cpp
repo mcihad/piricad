@@ -185,7 +185,11 @@ core::Result<core::Symbol> build_from_row(Context& ctx, const core::StyleEntry& 
         return image.value();
     };
 
-    core::Symbol sym = core::symbol_of_entry(row, resolve);
+    core::Symbol sym = core::symbol_of_entry(
+        row, resolve, [&ctx](const core::DashPattern& p, std::string_view origin) {
+            auto id = ctx.transaction().intern_dash(p, origin);
+            return id ? id.value() : core::kSolidDash;
+        });
     if (!failure) return failure.error();
     return sym;
 }

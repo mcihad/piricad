@@ -12,36 +12,54 @@ namespace {
 // Every key this file reads is a STRUCTURAL key of the package format, never a
 // regulatory identifier: the rows, their codes and their colours arrive as data
 // (CLAUDE.md 5.13). Collecting them here keeps that claim checkable at a glance.
-constexpr const char* kKeyId          = "id";
-constexpr const char* kKeyVersion     = "package_version";
-constexpr const char* kKeySource      = "source";
-constexpr const char* kKeyPublished   = "published";
-constexpr const char* kKeyLicence     = "licence";
-constexpr const char* kKeyEntries     = "stiller";
-constexpr const char* kKeyRules       = "kurallar";
-constexpr const char* kKeyDashTable   = "cizgi_desenleri";
-constexpr const char* kKeyHatchTable  = "tarama_desenleri";
-constexpr const char* kKeyIndex       = "indeks";
-constexpr const char* kKeyLabel       = "ad";
-constexpr const char* kKeyRef         = "kaynak";
-constexpr const char* kKeyRetired     = "deprecated";
-constexpr const char* kKeyStroke      = "cizgi";
-constexpr const char* kKeyFill        = "dolgu";
-constexpr const char* kKeyColour      = "renk";
-constexpr const char* kKeyWidth       = "kalinlik_um";
-constexpr const char* kKeyDash        = "desen";
-constexpr const char* kKeyHatch       = "tarama";
-constexpr const char* kKeySymbol      = "simge";
-constexpr const char* kKeyAnnex       = "ek";
-constexpr const char* kKeySection     = "bolum";
-constexpr const char* kKeyPlanTypes   = "plan_turleri";
-constexpr const char* kKeyGroup       = "grup";
-constexpr const char* kKeyImages      = "gorseller";
-constexpr const char* kKeyImage       = "gorsel";
-constexpr const char* kKeyImageFile   = "dosya";
-constexpr const char* kKeyImageLine   = "cizgi_tipi";
-constexpr const char* kKeyImageHatch  = "tarama";
-constexpr const char* kKeyImageGlyph  = "sembol";
+constexpr const char* kKeyId         = "id";
+constexpr const char* kKeyVersion    = "package_version";
+constexpr const char* kKeySource     = "source";
+constexpr const char* kKeyPublished  = "published";
+constexpr const char* kKeyLicence    = "licence";
+constexpr const char* kKeyEntries    = "stiller";
+constexpr const char* kKeyRules      = "kurallar";
+constexpr const char* kKeyDashTable  = "cizgi_desenleri";
+constexpr const char* kKeyHatchTable = "tarama_desenleri";
+constexpr const char* kKeyIndex      = "indeks";
+constexpr const char* kKeyLabel      = "ad";
+constexpr const char* kKeyRef        = "kaynak";
+constexpr const char* kKeyRetired    = "deprecated";
+constexpr const char* kKeyStroke     = "cizgi";
+constexpr const char* kKeyFill       = "dolgu";
+constexpr const char* kKeyColour     = "renk";
+constexpr const char* kKeyWidth      = "kalinlik_um";
+constexpr const char* kKeyDash       = "desen";
+constexpr const char* kKeyHatch      = "tarama";
+constexpr const char* kKeySymbol     = "simge";
+constexpr const char* kKeyAnnex      = "ek";
+constexpr const char* kKeySection    = "bolum";
+constexpr const char* kKeyPlanTypes  = "plan_turleri";
+constexpr const char* kKeyGroup      = "grup";
+constexpr const char* kKeyImages     = "gorseller";
+constexpr const char* kKeyImage      = "gorsel";
+constexpr const char* kKeyImageFile  = "dosya";
+constexpr const char* kKeyImageLine  = "cizgi_tipi";
+constexpr const char* kKeyImageHatch = "tarama";
+constexpr const char* kKeyImageGlyph = "sembol";
+
+/// The declared symbol-layer stack, and the names inside one.
+constexpr const char* kKeyLayers      = "katmanlar";
+constexpr const char* kKeyLayerType   = "tip";
+constexpr const char* kKeyLayerShape  = "sekil";
+constexpr const char* kKeyLayerPlace  = "yerlesim";
+constexpr const char* kKeyLayerUnit   = "birim";
+constexpr const char* kKeyLayerSize   = "boyut";
+constexpr const char* kKeyLayerGap    = "aralik";
+constexpr const char* kKeyLayerGapY   = "aralik_y";
+constexpr const char* kKeyLayerOffset = "kaydirma";
+constexpr const char* kKeyLayerAngle  = "aci";
+constexpr const char* kKeyLayerInk    = "renk";
+constexpr const char* kKeyLayerFill   = "dolgu_renk";
+constexpr const char* kKeyLayerWidth  = "kalinlik";
+constexpr const char* kKeyLayerDash   = "desen";
+constexpr const char* kKeyLayerText   = "yazi";
+constexpr const char* kKeyLayerLock   = "renk_kilidi";
 constexpr const char* kKeyClear       = "seffaf";
 constexpr const char* kKeyOpacityPct  = "saydamlik_yuzde";
 constexpr const char* kKeyGlyphColour = "simge_renk";
@@ -525,6 +543,159 @@ Result<StyleEntry> parse_entry(const Json& j, const AnnexNames& annexes, const I
         for (const Json& reason : why->as_array())
             if (reason.is_string()) entry.uncertain_reasons.push_back(reason.as_string());
 
+    // ---- the symbol this row DRAWS, when it declares one ----
+    //
+    // Every name below is the one the `STİL` command takes, letter for letter.
+    // That is deliberate and it is the same rule CLAUDE.md 5.10 puts on the
+    // command list: a catalogue that invented its own spelling for `isaretci-
+    // cizgi` would be a second vocabulary for one idea, and the day the two
+    // disagree a published gösterim silently becomes a different one.
+    if (const Json* layers = j.find(kKeyLayers); layers != nullptr) {
+        if (!layers->is_array())
+            return err(ErrorCode::ParseError,
+                       where + " '" + entry.id + "': '" + kKeyLayers + "' bir dizi olmalı.");
+
+        for (const Json& declared : layers->as_array()) {
+            const std::string at = where + " '" + entry.id + "' katmanı";
+            if (!declared.is_object()) return err(ErrorCode::ParseError, at + " bir nesne olmalı.");
+
+            DeclaredLayer declared_layer;
+            SymbolLayer& layer = declared_layer.layer;
+
+            const Json* type = declared.find(kKeyLayerType);
+            if (type == nullptr || !type->is_string())
+                return err(ErrorCode::ParseError,
+                           at + ": zorunlu '" + kKeyLayerType + "' alanı eksik veya metin değil.");
+
+            const auto kind = symbol_layer_type_from_name(type->as_string());
+            if (!kind)
+                return err(ErrorCode::ValidationFailed,
+                           at + ": bilinmeyen tip '" + type->as_string() +
+                               "'. Geçerli olanlar: " + symbol_layer_type_names() + ".");
+            layer.type = *kind;
+
+            Unit unit = Unit::Paper;
+            if (const Json* u = declared.find(kKeyLayerUnit); u != nullptr) {
+                if (!u->is_string())
+                    return err(ErrorCode::ParseError,
+                               at + ": '" + kKeyLayerUnit + "' metin olmalı.");
+                const auto parsed = unit_from_name(u->as_string());
+                if (!parsed)
+                    return err(ErrorCode::ValidationFailed,
+                               at + ": bilinmeyen birim '" + u->as_string() +
+                                   "'. Geçerli olanlar: " + unit_names() + ".");
+                unit = *parsed;
+            }
+
+            if (const Json* shape = declared.find(kKeyLayerShape); shape != nullptr) {
+                if (!shape->is_string())
+                    return err(ErrorCode::ParseError,
+                               at + ": '" + kKeyLayerShape + "' metin olmalı.");
+                const auto parsed = marker_shape_from_name(shape->as_string());
+                if (!parsed)
+                    return err(ErrorCode::ValidationFailed,
+                               at + ": bilinmeyen şekil '" + shape->as_string() +
+                                   "'. Geçerli olanlar: " + marker_shape_names() + ".");
+                layer.shape = *parsed;
+            }
+
+            if (const Json* place = declared.find(kKeyLayerPlace); place != nullptr) {
+                if (!place->is_string())
+                    return err(ErrorCode::ParseError,
+                               at + ": '" + kKeyLayerPlace + "' metin olmalı.");
+                const auto parsed = marker_placement_from_name(place->as_string());
+                if (!parsed)
+                    return err(ErrorCode::ValidationFailed,
+                               at + ": bilinmeyen yerleşim '" + place->as_string() +
+                                   "'. Geçerli olanlar: " + marker_placement_names() + ".");
+                layer.placement = *parsed;
+            }
+
+            const auto measure = [&](const char* key, Measure& out) -> Status {
+                const Json* v = declared.find(key);
+                if (v == nullptr) return ok();
+                if (!v->is_number())
+                    return err(ErrorCode::ParseError, at + ": '" + key + "' sayı olmalı.");
+                out = Measure{static_cast<std::int32_t>(v->as_double()), unit};
+                return ok();
+            };
+            if (auto st = measure(kKeyLayerSize, layer.size); !st) return st.error();
+            if (auto st = measure(kKeyLayerGap, layer.interval); !st) return st.error();
+            if (auto st = measure(kKeyLayerGapY, layer.spacing_y); !st) return st.error();
+            if (auto st = measure(kKeyLayerOffset, layer.offset); !st) return st.error();
+
+            if (const Json* a = declared.find(kKeyLayerAngle); a != nullptr) {
+                if (!a->is_number())
+                    return err(ErrorCode::ParseError,
+                               at + ": '" + kKeyLayerAngle + "' sayı olmalı.");
+                layer.angle_udeg = static_cast<std::int32_t>(a->as_double());
+            }
+            if (const Json* w = declared.find(kKeyLayerWidth); w != nullptr) {
+                if (!w->is_number())
+                    return err(ErrorCode::ParseError,
+                               at + ": '" + kKeyLayerWidth + "' sayı olmalı.");
+                layer.look.width_um  = static_cast<std::int32_t>(w->as_double());
+                layer.look.src_width = Source::Explicit;
+            }
+            if (const Json* t = declared.find(kKeyLayerText); t != nullptr) {
+                if (!t->is_string())
+                    return err(ErrorCode::ParseError,
+                               at + ": '" + kKeyLayerText + "' metin olmalı.");
+                layer.text = t->as_string();
+            }
+            if (const Json* l = declared.find(kKeyLayerLock); l != nullptr) {
+                if (!l->is_bool())
+                    return err(ErrorCode::ParseError,
+                               at + ": '" + kKeyLayerLock + "' evet/hayır olmalı.");
+                layer.colour_locked = l->as_bool();
+            }
+
+            const auto colour = [&](const char* key, std::uint32_t& out, Source& src) -> Status {
+                const Json* v = declared.find(key);
+                if (v == nullptr) return ok();
+                if (!v->is_string())
+                    return err(ErrorCode::ParseError,
+                               at + ": '" + key + "' '#AARRGGBB' biçiminde metin olmalı.");
+                auto parsed = parse_rgba(v->as_string());
+                if (!parsed) return parsed.error();
+                out = parsed.value();
+                src = Source::Explicit;
+                return ok();
+            };
+            if (auto st = colour(kKeyLayerInk, layer.look.rgba, layer.look.src_colour); !st)
+                return st.error();
+            if (auto st = colour(kKeyLayerFill, layer.look.fill_rgba, layer.look.src_fill); !st)
+                return st.error();
+
+            // The dash pattern, in multiples of the stroke's own width, mark
+            // first. Read here and INTERNED by whoever applies the row: a
+            // catalogue holds no document and a dash id belongs to one.
+            if (const Json* dash = declared.find(kKeyLayerDash); dash != nullptr) {
+                if (!dash->is_array())
+                    return err(ErrorCode::ParseError,
+                               at + ": '" + kKeyLayerDash + "' dizi olmalı.");
+
+                const auto& parts = dash->as_array();
+                if (parts.size() > kMaxDashSegments || parts.size() % 2 != 0)
+                    return err(ErrorCode::ValidationFailed,
+                               at + ": '" + std::string(kKeyLayerDash) +
+                                   "' çizgi ve boşluk çiftlerinden oluşur ve en çok " +
+                                   std::to_string(kMaxDashSegments) + " parça taşır.");
+
+                declared_layer.dash.count = static_cast<std::uint8_t>(parts.size());
+                for (std::size_t k = 0; k < parts.size(); ++k) {
+                    if (!parts[k].is_number())
+                        return err(ErrorCode::ParseError,
+                                   at + ": '" + kKeyLayerDash + "' yalnız sayı taşır.");
+                    declared_layer.dash.lengths[k] =
+                        static_cast<std::uint16_t>(parts[k].as_double() * 100.0);
+                }
+            }
+
+            entry.layers.push_back(declared_layer);
+        }
+    }
+
     // ---- the pictures this row was published with ----
     if (const Json* pictures = j.find(kKeyImage); pictures != nullptr && pictures->is_object()) {
         entry.image_line   = first_image(*pictures, images, kKeyImageLine);
@@ -812,6 +983,16 @@ std::uint64_t StyleCatalog::content_hash() const
         h = fnv1a(e.image_line, h);
         h = fnv1a(e.image_hatch, h);
         h = fnv1a(e.image_symbol, h);
+        // Folded through the one symbol fold there is, so a declared layer and
+        // the same layer in a document hash the same way.
+        for (const DeclaredLayer& d : e.layers) {
+            Symbol one;
+            one.layers.push_back(d.layer);
+            h = fold_symbol(one, h);
+            h = fnv1a(std::string_view(reinterpret_cast<const char*>(d.dash.lengths),
+                                       sizeof(d.dash.lengths)),
+                      h);
+        }
         h = fnv1a_int(e.uncertain ? 1 : 0, h);
         for (const std::string& why : e.uncertain_reasons)
             h = fnv1a(why, h);

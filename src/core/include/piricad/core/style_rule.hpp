@@ -46,6 +46,7 @@
 #pragma once
 
 #include "piricad/core/attribute.hpp"
+#include "piricad/core/dash_store.hpp"
 #include "piricad/core/json.hpp"
 #include "piricad/core/layer.hpp"
 #include "piricad/core/result.hpp"
@@ -160,6 +161,21 @@ struct StyleCondition
 const char* style_test_name(StyleCondition::Test t) noexcept;
 
 /// One catalogue row: an appearance with an identity and a provenance.
+/// One declared symbol layer, and the line type it asks for.
+///
+/// The PATTERN rides here rather than on `SymbolLayer`, which carries a `dash`
+/// ID into a document's `DashStore`. A catalogue holds no document and cannot
+/// hand out an id; whoever applies the row interns the pattern and writes the id
+/// it gets. Putting the pattern on the layer instead would push a catalogue's
+/// concern into the document model and into the file format, where it does not
+/// belong.
+struct DeclaredLayer
+{
+    /// Everything but the line type: what the layer draws and how.
+    SymbolLayer layer{};
+    DashPattern dash{}; ///< count 0 means the layer draws a solid stroke
+};
+
 struct StyleEntry
 {
     std::string id;         ///< stable forever; a retired id is never reused (data.md R5)
@@ -195,6 +211,23 @@ struct StyleEntry
     std::string image_line;   ///< `gorsel/cizgi_tipi` — repeated along the line
     std::string image_hatch;  ///< `gorsel/tarama` — tiled into the interior
     std::string image_symbol; ///< `gorsel/sembol` — placed as a glyph
+
+    /// The symbol this row draws, DECLARED rather than pictured.
+    ///
+    /// The three fields above name pictures, which is how the annex publishes its
+    /// gösterimler and all a row could say until now: one appearance and up to
+    /// three bitmaps. That is not enough to carry what the regulation actually
+    /// prints. MPYY's İL SINIRI is a dash and a dot; its BELEDİYE SINIRI is a dash
+    /// with a filled circle at each end; its PLAN ONAMA SINIRI is a row of open
+    /// circles and no line at all. Each of those is a STACK of symbol layers, and
+    /// a stack said in numbers turns a corner, recolours and exports as a line
+    /// type — none of which a stamped picture does.
+    ///
+    /// Empty for a row that only has pictures, and `symbol_of_entry` then builds
+    /// what it always built. A row that declares layers uses them and keeps its
+    /// pictures as provenance: the annex's own drawing is what the declaration was
+    /// read from and it stays beside it (CLAUDE.md 11.7).
+    std::vector<DeclaredLayer> layers;
 
     Appearance appearance{}; ///< what the regulation says this looks like
     ScaleWindow scale{};     ///< the scales it applies at; unbounded by default

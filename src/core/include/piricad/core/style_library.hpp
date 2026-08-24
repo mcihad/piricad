@@ -93,6 +93,15 @@ struct LibraryEntry
 /// gallery thumbnail shows is what the command will apply.
 using ImageResolver = std::function<ImageId(const std::string& package_relative_path)>;
 
+/// Interns a declared line type wherever the caller keeps its patterns, and hands
+/// back the id to write into `Appearance::dash`.
+///
+/// A catalogue holds no document and cannot mint an id; whoever applies the row
+/// does, and this is how it says so. Empty when the caller has nowhere to put one
+/// — the row's strokes are then solid, which is what a caller with no dash store
+/// can honestly draw.
+using DashResolver = std::function<DashId(const DashPattern& pattern, std::string_view origin)>;
+
 /// Builds the symbol a catalogue row describes.
 ///
 /// The stack is bottom to top and the order is what a plan sheet reads like: the
@@ -102,7 +111,8 @@ using ImageResolver = std::function<ImageId(const std::string& package_relative_
 /// ONE implementation, shared by the shelf and by `STİL`. Two would be two answers
 /// to "what does this gösterim look like", and the day they differ the thumbnail
 /// stops predicting the drawing.
-Symbol symbol_of_entry(const StyleEntry& row, const ImageResolver& resolve);
+Symbol symbol_of_entry(const StyleEntry& row, const ImageResolver& resolve,
+                       const DashResolver& intern_dash = {});
 
 /// A shelf of named symbols, organised by the group path they arrived with.
 ///

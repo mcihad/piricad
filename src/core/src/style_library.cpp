@@ -49,8 +49,23 @@ void StyleLibrary::add(LibraryEntry entry)
     favourite_.push_back(0);
 }
 
-Symbol symbol_of_entry(const StyleEntry& row, const ImageResolver& resolve)
+Symbol symbol_of_entry(const StyleEntry& row, const ImageResolver& resolve,
+                       const DashResolver& intern_dash)
 {
+    // A DECLARED stack wins over the pictures. The pictures stay on the row as
+    // provenance — they are what the declaration was read from — but a symbol
+    // said in numbers is the one that turns a corner, recolours and exports as a
+    // line type, and that is the whole reason a row may declare one.
+    if (!row.layers.empty()) {
+        Symbol declared;
+        for (const DeclaredLayer& d : row.layers) {
+            SymbolLayer layer = d.layer;
+            if (d.dash.count > 0 && intern_dash) layer.look.dash = intern_dash(d.dash, row.id);
+            declared.layers.push_back(layer);
+        }
+        return declared;
+    }
+
     Symbol sym;
 
     const auto add = [&](const std::string& file, SymbolLayerType type, std::int32_t size_um) {
@@ -116,7 +131,11 @@ std::size_t StyleLibrary::add_catalog(const StyleCatalog& catalog, const ImageRe
 
         // The SAME builder `STİL` uses, so a gallery thumbnail is a prediction of
         // what applying the row will draw rather than an approximation of it.
-        entry.symbol = symbol_of_entry(row, resolve);
+        entry.symbol =
+            symbol_of_entry(row, resolve, [this](const DashPattern& p, std::string_view origin) {
+                auto id = dashes_.intern(p, origin);
+                return id ? id.value() : kSolidDash;
+            });
 
         // From what the PACKAGE says, in the order a gösterim is actually read: a
         // hatch or a fill colour makes it an area, a published line type makes it
