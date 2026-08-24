@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/io/service.hpp"
 
+#include "adopt.hpp"
 #include "qgis_style.hpp"
 
 #include "piricad/io/project.hpp"
@@ -185,48 +186,15 @@ core::Result<std::string> FileService::export_style(std::string path, std::strin
 
 command::Task<core::Result<std::string>> FileService::open(std::string path)
 {
-    // Read into a FRESH document and a FRESH settings store, and put them in
-    // place only once the whole file has been read. A failed open therefore costs
-    // the user nothing: the drawing on screen is untouched until the last byte is
-    // in (io.md P11).
-    core::Document loaded;
-    core::Settings loaded_settings{core::builtin_settings(), core::SettingScopeMask::Project};
+    // The read, the CRS resolution and the swap all live in `adopt_project`,
+    // because `VERİTABANI projeac` does exactly the same thing from a different
+    // source and a second copy of that sequence is a second place for it to go
+    // wrong. What is left here is what is specific to a FILE: remembering which
+    // one the document now belongs to, and saying so.
+    auto report = co_await adopt_project(bus_, path, stop_.get_token());
+    if (!report) co_return report.error();
 
-    // Every edit the reader makes goes through this transaction, so a failure
-    // half-way unwinds cleanly rather than leaving a half-built document behind
-    // (Article 5.9, io.md R17).
-    command::Transaction tx(loaded, "Proje dosyası okuma");
-
-    auto report = co_await read_project(tx, path, loaded_settings, stop_.get_token());
-    if (!report) {
-        tx.rollback();
-        co_return report.error();
-    }
-
-    // Resolve the CRS the file named. The reader could not: it has no bus, and the
-    // zone catalogue lives in a module /src/io may not reach (Article 3.2). Doing
-    // it here means a drawing opened from disk knows its EPSG code exactly as one
-    // typed by hand does, and `DIŞAAKTAR` works on it without the user restating
-    // something the file already said.
-    if (bus_.on_crs_resolve && !loaded.crs().id().empty()) {
-        core::Op discard;
-        const core::Crs resolved = bus_.on_crs_resolve(loaded.crs().id());
-        if (auto st = loaded.set_crs(resolved, discard); !st)
-            report.value().warnings.push_back(Warning{
-                "io.crs_resolve", "Dosyadaki koordinat sistemi çözülemedi: " + st.error().message});
-    }
-
-    bus_.document()         = std::move(loaded);
-    bus_.project_settings() = std::move(loaded_settings);
-    current_path_           = std::move(path);
-
-    // Opening is not undoable and the stack's slots belong to a document that no
-    // longer exists, so it goes. This is the same thing every CAD and GIS
-    // application the users know does on File > Open.
-    bus_.undo_stack().clear();
-    bus_.set_active_layer(0);
-
-    if (bus_.on_document_changed) bus_.on_document_changed();
+    current_path_ = std::move(path);
 
     const ProjectReport& r = report.value();
     co_return "Açıldı: " + current_path_ + "  (" + std::to_string(r.entities) + " nesne, " +

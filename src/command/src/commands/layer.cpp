@@ -17,9 +17,9 @@ Task<void> run(Context& ctx)
 
     // Creating an empty layer is inert and would invalidate stored ids if undone,
     // so it is deliberately not an undo step (see .claude/core.md).
-    const core::LayerId id = bus.document().find_layer(*name) != core::kNoLayer
-                                 ? bus.document().find_layer(*name)
-                                 : bus.document().ensure_layer(*name);
+    const core::LayerId existing = bus.document().find_layer(*name);
+    const core::LayerId id =
+        existing != core::kNoLayer ? existing : ctx.transaction().ensure_layer(*name);
 
     if (const Value v = ctx.argument("grup"); !v.empty()) {
         auto st = ctx.transaction().set_layer_group(id, v.as_text());

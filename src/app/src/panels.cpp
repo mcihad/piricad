@@ -231,12 +231,15 @@ QIcon LayerPanel::layerIcon(const core::Layer& layer, core::StyleId used) const
     // Drawn as an AREA because that is what a layer of parcels, a plan lekesi and
     // a cadastral sheet mostly are; a line-only layer still reads correctly,
     // because a rectangle shows a stroke as well as a line does at this size.
-    const core::Symbol symbol = used != core::kByLayerStyle && doc.styles().contains(used)
-                                    ? doc.styles().symbol_at(used)
+    const core::StyleId style = layer.style != core::kByLayerStyle ? layer.style
+                                : used != core::kByLayerStyle      ? used
+                                                                   : core::kByLayerStyle;
+    const core::Symbol symbol = doc.styles().contains(style) && style != core::kByLayerStyle
+                                    ? doc.styles().symbol_at(style)
                                     : core::Symbol::of(layer.appearance);
 
-    return symbol_icon(symbol, doc.images(), QSize(28, 18), palette().color(QPalette::Base).rgba(),
-                       PreviewShape::Area);
+    return symbol_icon(symbol, doc.images(), doc.dashes(), QSize(28, 18),
+                       palette().color(QPalette::Base).rgba(), PreviewShape::Area);
 }
 
 void LayerPanel::showContextMenu(const QPoint& where)

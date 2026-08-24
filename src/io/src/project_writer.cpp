@@ -265,6 +265,14 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     for (const core::Layer& l : doc.layers())
         layer_groups.push_back(pool.intern(l.group));
 
+    std::vector<core::StyleId> layer_styles;
+    layer_styles.reserve(doc.layers().size());
+    bool has_layer_styles = false;
+    for (const core::Layer& l : doc.layers()) {
+        layer_styles.push_back(l.style);
+        has_layer_styles = has_layer_styles || l.style != core::kByLayerStyle;
+    }
+
     // ---- styles ----
     std::vector<AppearanceRecord> styles;
     styles.reserve(doc.styles().size());
@@ -434,6 +442,20 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
         image_bytes.insert(image_bytes.end(), payload.begin(), payload.end());
     }
 
+    // The line types, written from id 1 for the same reason images are: slot 0 is
+    // the solid sentinel and holds nothing.
+    std::vector<DashRecord> dashes;
+    for (core::DashId id = 1; id < static_cast<core::DashId>(doc.dashes().size()); ++id) {
+        const core::DashPattern& p = doc.dashes().at(id);
+
+        DashRecord r{};
+        for (std::size_t i = 0; i < core::kMaxDashSegments; ++i)
+            r.lengths[i] = p.lengths[i];
+        r.origin = pool.intern(std::string(doc.dashes().origin(id)));
+        r.count  = p.count;
+        dashes.push_back(r);
+    }
+
     dr.style_count        = static_cast<std::uint64_t>(styles.size());
     dr.symbol_layer_count = static_cast<std::uint64_t>(symbol_layers.size());
     dr.slot_count         = static_cast<std::uint64_t>(geo.slot_count());
@@ -462,6 +484,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
 
     blocks.push_back(column(kBlkLayers, layers));
     blocks.push_back(column(kBlkLayerGroups, layer_groups));
+    if (has_layer_styles) blocks.push_back(column(kBlkLayerStyles, layer_styles));
     blocks.push_back(column(kBlkStyles, styles));
     blocks.push_back(column(kBlkSymbols, symbols));
     blocks.push_back(column(kBlkSymbolLayers, symbol_layers));
@@ -469,6 +492,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     blocks.push_back(column(kBlkSymbolLayerText, symbol_layer_text));
     blocks.push_back(column(kBlkImages, images));
     blocks.push_back(column(kBlkImageBytes, image_bytes));
+    if (!dashes.empty()) blocks.push_back(column(kBlkDashes, dashes));
 
     blocks.push_back(column(kBlkEntityMinX, ents.min_x));
     blocks.push_back(column(kBlkEntityMinY, ents.min_y));

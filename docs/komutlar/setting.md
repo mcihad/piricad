@@ -158,8 +158,21 @@ aynı komut aynı yolu izler. Sonuç **Transkript** panelinde görünür.
 Koordinat sistemi durum çubuğunun sağ ucunda yazar; `AYAR koordinat_sistemi` ile
 değiştirdiğinizde oradan doğrular.
 
-Katalogdan üretilen **Ayarlar** iletişim kutusu **Faz 1'de** gelecek: her ayar için
-alanı, aralığı ve açıklaması bildiriminden üretilecek, elle yazılmayacak.
+**Ayarlar** penceresi (menüde `Düzen > Ayarlar…`, kısayolu **Ctrl+,**) bildirilen her
+ayarı gösterir. Pencerenin tamamı ayar kataloğundan **üretilir**: satırın adı ayarın
+kendi birincil adı, alanı bildirilen tipinden, sınırları bildirilen aralığından,
+üzerine gelince çıkan açıklaması bildirilen özetinden gelir. Kataloğa eklenen bir ayar
+bu pencereye kendiliğinden düşer.
+
+Üç sekme, üç kapsam: **Proje** çizimle birlikte giden ayarlar, **Uygulama** bu
+bilgisayardaki tercihleriniz, **Oturum** yalnız bu açık pencere için geçerli olanlar.
+Her satırın sağında değerin sizin mi yoksa programın mı olduğu (`ayarlanmış` /
+`varsayılan`) ve varsayılana döndüren bir düğme vardır. Üstteki arama kutusu ad,
+kimlik ve açıklama üzerinde birden arar.
+
+Penceredeki her değişiklik komut yolundan geçer: kapsamına göre `AYAR`, `TERCİH` ya da
+`MOD` komutu kurulup çalıştırılır. Yani transkriptte, günlükte ve yeniden oynatmada
+pencereden yapılanla komut satırına yazılan arasında hiçbir fark yoktur.
 
 ### Betik
 

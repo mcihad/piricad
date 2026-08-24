@@ -11,10 +11,13 @@
 # header off the include path of everything that links piricad_io.
 
 add_library(piricad_io STATIC
+    src/adopt.cpp
     src/block_view.cpp
+    src/database.cpp
     src/mapped_file.cpp
     src/project_reader.cpp
     src/project_writer.cpp
+    src/postgis.cpp
     src/qgis_style.cpp
     src/service.cpp
     src/vector.cpp
@@ -80,4 +83,12 @@ if(PIRICAD_WITH_GDAL)
     message(STATUS "  GDAL ..... etkin (izinli sürücüler: ${PIRICAD_GDAL_DRIVERS_STRING})")
 else()
     message(STATUS "  GDAL ..... kapalı (İÇEAKTAR/DIŞAAKTAR hata döndürecek)")
+endif()
+
+if(PIRICAD_WITH_POSTGIS)
+    # PRIVATE, like every format library here: a pqxx header must not reach the
+    # include path of everything that links piricad_io (io.md R2/P2). The whole
+    # dependency lives inside src/postgis.cpp, behind the pimpl in its header.
+    target_link_libraries(piricad_io PRIVATE libpqxx::pqxx)
+    target_compile_definitions(piricad_io PRIVATE PIRICAD_HAVE_POSTGIS=1)
 endif()

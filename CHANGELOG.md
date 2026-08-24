@@ -6,6 +6,361 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — PostGIS veritabanı desteği
+
+- **`VERİTABANI` komutu (`core.database`).** Bir PostGIS sunucusuna bağlanır;
+  `baglan`, `kes`, `tablolar`, `katmanyaz`, `projekaydet`, `projeac`, `projeler`
+  ve `projesil` işlemleri. Diğer her şey gibi komut yolundan geçer: farede olan
+  betikte de vardır (Article 1.1, 1.2).
+- **Katman → mekansal tablo.** `katmanyaz`, katmanı nesne başına bir satır, çizimin
+  SRID'iyle bir `geom` sütunu ve tanımlı her öznitelik için bir sütun olacak
+  şekilde yazar. QGIS, `ogr2ogr` ve düz `SELECT` okur. Satırlar `COPY` ile yazılır
+  ve sonrasında GIST dizini kurulur; tablo eklenmez, **yerine yazılır**.
+- **Proje → kayıt.** `projekaydet`, çizimin tamamını `.pcad` baytları olarak
+  saklar — stil tablosu, gömülü gösterim resimleri, katman ağacı, ayarlar ve
+  koordinat sistemi dâhil. Gidiş-dönüş `content_hash()` ile sınanır
+  (`tests/unit/test_database.cpp`).
+- **`io::PostgisStore` ve `io::DatabaseService`.** libpqxx 7.9.2 (BSD-3),
+  `PIRICAD_WITH_POSTGIS` arkasında, commit SHA ile sabitlenmiş. libpqxx başlıkları
+  yalnız `src/io/src/postgis.cpp` içinde, açık başlıkta pimpl arkasında (io.md
+  R2/P2). Bütün yazma tek işlemde; yarıda kalan bir yazma yoktur (Article 1.6).
+- **Dosya > Veritabanı… penceresi (`Ctrl+Shift+D`).** Modsuz; bağlantı alanları,
+  mekansal tablolar ve kayıtlı projeler. Her düğme bir `VERİTABANI …` satırı kurup
+  komut yolundan çalıştırır; pencereden belgeye başka yol yoktur.
+- **Parola iki bağlantı biçiminden de siliniyor.** `command::redact_conninfo`
+  tektir ve hem günlüğe yazan komut hem de ekranda gösteren pencere onu kullanır.
+  İlk hâli yalnız `password=...` alanını biliyordu; libpq'nun URI biçiminde
+  (`postgresql://kullanici:PAROLA@sunucu/db`) parola başka yerdedir ve olduğu
+  gibi günlüğe düşerdi.
+- **Dört uygulama ayarı:** `veritabani_sunucu`, `veritabani_port`,
+  `veritabani_adi`, `veritabani_kullanici`. **Parola ayarı yoktur ve olmayacaktır**
+  — ayar dosyası düz metindir. libpq'nun `~/.pgpass` ve `PGPASSWORD` mekanizmaları
+  kullanılır; komut satırına yazılan parola günlüğe `password=***` olarak düşer.
+- **[Kullanım kılavuzu](docs/komutlar/database.md).** Kurulum, parola, tablo
+  şeması, arayüz, betik ve her hata mesajı.
+- **Bu sürümde katman yazılır, okunmaz.** Proje için asimetri yok (`projekaydet`
+  ile yazılan `projeac` ile aynen döner); katman için var. Tabloyu katman olarak
+  okuyan `katmanoku`, Madde 2.9'un "read, write and edit" cümlesinin kalan yarısı
+  olarak Faz 1'e kaldı ve kılavuzda gelecek zamanla yazıldı (Madde 11.8).
+
+### Düzeltildi — stil tasarımcısı çöküyordu ve stili katmana yazmıyordu
+
+- **Yarı kurulmuş satır kendi kendini düzenliyordu.** `refresh()`, sembol katmanı
+  listesini kurarken satırı önce listeye ekleyip sonra dolduruyordu. Her `setText`,
+  `setIcon`, `setData` çağrısı ayrı bir `itemChanged` yayıyor; ilki, satırın yığın
+  sırası daha yazılmadan geliyordu. İşleyici bunu kullanıcı düzenlemesi sanıp
+  `layers[0]`'ı okuyor, henüz kurulmamış onay kutusunu **kapalı** görüyor ve
+  sembolün ilk katmanını sessizce kapatıyordu — Uygula'nın "katman varsayılanına
+  döndü" demesinin sebebi buydu. Ardından `refresh()`'i yeniden çağırıyor, oradaki
+  `clear()` dış döngünün elindeki satırı siliyor ve döngü **silinmiş belleğe**
+  yazmaya devam ediyordu: `make run` segfault'u. ASan raporu `heap-use-after-free`
+  olarak doğruladı.
+  Satırlar artık listeden **bağımsız** kurulup bütün hâlde ekleniyor, liste kurulum
+  boyunca sessiz ve `refresh()` kendi içinden çağrılamıyor.
+- **Koruma bayrağı artık iç içe geçiyor.** `loadSelected()` işini `loading_ = false`
+  ile bitiriyordu; `refresh()` onu `true` yapıp `loadSelected()`'ı çağırdığı için
+  koruma, çağıranın ortasında düşüyordu. Bayrak artık **önceki değeri** geri koyan
+  bir kapsam nesnesiyle tutuluyor.
+- **Aynı renk düğmesi iki form satırına konuyordu.** `stroke_`, hem "Yazı rengi"
+  hem "Çizgi rengi" olarak ekleniyordu; bir widget'ı tek `QFormLayout`'un iki
+  gözüne koymak Qt'de tanımsızdır ve iki satır görünürlük konusunda birbiriyle
+  çelişiyordu — `yazi-isaretci` katmanında renk düğmesi hiç görünmüyordu. Tek satır
+  kaldı; tipe göre adı değişiyor.
+- **Seçili öğesi olmayan bir açılır kutu -1 bildirir** ve bu sayı bir satır sonra
+  tabloya indis olarak giriyordu. Artık kırpılıyor.
+
+### Değiştirildi — stil tasarımcısının görünümü
+
+- **Üst sekmeler sekmeye benziyor.** Pencere genişliğine yayılmış üç düz gri çubuk,
+  ilk kararı taşıyan denetim için kötü bir görünümdü ("orada sekme olduğu bile belli
+  değil"). Sekmeler artık etiketleri kadar geniş, kenarlıklı, geometrisinin küçük
+  bir simgesini taşıyor ve seçili olan altındaki ön izleme panosuna **yapışıyor**.
+- **Ön izleme, gösterildiği genişlikte çiziliyor.** Pencere kurulurken ölçülen 160
+  piksellik etikete çizilip sonra esnetilmiyor; etiketin kendi boyut değişimi
+  izleniyor.
+- **Zemin birimli semboller artık görünüyor.** Ön izleme sabit 40 mm/piksel
+  çalışma ölçeğindeydi; MPYY yapılaşma koşulunun 26 m'lik dairesi bu ölçekte 650
+  piksel oluyor ve 44 piksellik kutuyu tamamen ıskalıyordu — satır boş çiziliyor ve
+  bozuk gibi duruyordu. Ölçek artık yalnız **gevşiyor**: kâğıt birimli her ön
+  izleme piksel piksel aynı kaldı.
+- **Raf boşken sol taraf üç boş kutu göstermiyor,** tek cümle gösteriyor. Sembol
+  katmanı listesi kaydırmadan beş satır alıyor.
+
+### Eklendi — her ölçünün kendi birimi
+
+- **`STİL` komutuna `boyut_birim`, `aralik_birim`, `aralik_y_birim` ve
+  `kaydirma_birim`.** Tek bir sembol katmanı iki ayrımı birden taşır: bir il sınırı
+  işaretçisinin **çapı** paftaya (2,6 mm), **aralığı** zemine (15 m) aittir.
+  Komutun tek bir `birim`i vardı; tasarımcı ise her ölçünün yanında bir birim
+  kutusu gösteriyordu ve çıkışta dördünü birine indiriyordu — yani ekranda yazan
+  sembol ile çizime yazılan sembol farklı olabiliyordu. `birim`, kendi birimini
+  söylemeyen ölçüler için varsayılan olarak duruyor. Tanınmayan bir birim adı
+  sessizce `birim`'e düşmez; komut hangi parametrenin hatalı olduğunu adıyla
+  söyleyip durur ve çizime dokunmaz.
+
+### Eklendi — ayar sistemi, harita yardımcıları ve zengin nesne yakalama
+
+**Yakalama: çizimde olmayan, ama çizimin ima ettiği noktalar.** Üç yeni mod, üçü de
+kadastro ve imar işinin günlük hâli için:
+
+- **UZANTI** (`1024`) — bir kenarın kendi doğrultusu, kenarın ötesinde. Köşe taşı
+  kaybolmuş bir sınır, ayakta kalan kenardan yeniden kurulur; istenen nokta kenarın
+  üzerinde değildir ve YAKIN oraya erişemez.
+- **PARALEL** (`2048`) — önceki noktadan çıkan, bir kenara paralel ışın. Çekme
+  mesafesi, yol kenarı ve ifraz hattı böyle çizilir. Önceki noktadan uzaklık
+  korunur, yani yönden sonra yazılan ölçülmüş uzunluk aynen oturur.
+- **UZATILMIŞ KESİŞİM** (`4096`) — iki kenarın uzatılsalar buluşacakları köşe.
+  KESİŞİM burada hiçbir şey bulmaz, çünkü kenarlar gerçekten kesişmez.
+
+Üçü de öncelik sıralamasında **YAKIN'ın da altındadır**: motorun kurduğu bir nokta,
+kullanıcının elindeki gerçek bir köşeyi asla kapmaz — bu yüzden üçünü de açık
+bırakmak güvenlidir. Üçü de imlecin altında olmayan bir kenardan nokta ürettiği için
+`uzantı_çarpanı` tercihi açıklığın kaç katı ötesine bakılacağını söyler; `0` yazılırsa
+maskede açık olsalar bile çalışmazlar — motorun `grid_step` ve `polar_step` için zaten
+tuttuğu sözleşmenin aynısı. İşaretleri **açık** biçimlerdir (uçları birleşmeyen
+şekiller), böylece kurulmuş bir nokta bir bakışta gerçek bir köşe sanılmaz.
+
+`core::line_intersection` ve `core::closest_point_on_line` eklendi; `segment_intersection`
+artık birincinin üzerine yazılıyor, yani iki kod yolu bozuk girdide ayrışamaz.
+
+**DÜĞÜM yazıldı ve aynı gün geri alındı.** Bu belge modeli tek noktalı nesne tutamıyor:
+açık halka en az iki tepe ister (model.md R9-R12), `İÇEAKTAR` nokta katmanını "bu sürüm
+çizgi ve alan okur" diyerek atlıyor ve nokta çizen komut yok. Var olmayan bir şeye oturan
+yakalama modu, programın tutmadığı bir sözdür. 9. bit boş bırakıldı ve `test_snap.cpp`'de
+sebebini sabitleyen bir vaka var: nokta nesneleri geldiğinde önce o vaka değişir.
+
+**Yirmi iki yeni ayar.** Uygulama kapsamında: yakalama işaretinin boyu, rengi, ipucu ve
+uzantı çarpanı; ızgara rengi, ana çizgi rengi ve ikinci eksen adımı; cetvelin
+görünürlüğü, kalınlığı ve birimi; ölçek çubuğu, kuzey oku, koordinat göstergesi, imleç
+biçimi ve boyu, yakınlaştırma adımı, ters tekerlek; seçim ve vurgu renkleri. Proje
+kapsamında üç tane, üçü de belgenin kendi sayılarının nasıl okunacağını söylediği için:
+**plan ölçeği** (1:N), **açı birimi** (varsayılan GRAD — Türkiye'de nirengi, poligon ve
+aplikasyon hesapları grad ile yürür) ve **alan birimi** (metrekare / dekar / hektar).
+`tuval_arkaplanı` da birimini `0xAARRGGBB` olarak bildiriyor artık, yani renk olduğunu
+kendisi söylüyor.
+
+**Harita yardımcıları.** Tuvale cetvel (üstte ve solda, 1-2-5 merdivenine oturan
+rakamlarla), ölçek çubuğu, kuzey oku ve koordinat göstergesi eklendi. Gösterge, bir
+yakalama tuttuğunda **yakalanmış** noktayı yazar: tıklamanın üreteceği koordinat odur.
+Nişan imleci artık tam ekran, kısa ya da kapalı olabiliyor; tekerlek adımı yüzde olarak
+ayarlanıyor ve ters çevrilebiliyor.
+
+**Ayarlar penceresi (`Düzen > Ayarlar…`, Ctrl+,).** Tamamı ayar kataloğundan üretilir:
+satırın adı ayarın birincil adı, alanı bildirilen tipinden, sınırları aralığından,
+ipucu özetinden. Kataloğa eklenen bir ayar pencereye kendiliğinden düşer — CLAUDE.md
+5.10'un komut listesine koyduğu kuralın aynısı, aynı gerekçeyle: kendi kopyasını taşıyan
+bir pencere, kataloğla er geç ayrışacak ikinci bir listedir. Üç sekme üç kapsamdır ve
+her sekme kapsamının ne demek olduğunu kullanıcının kendi diliyle yazar. Her satırda
+değerin kimin olduğu (`ayarlanmış` / `varsayılan`) ve varsayılana döndüren bir düğme
+var; birimi `0xAARRGGBB` olan ayarlar renk seçici alır.
+
+Satır etiketleri **okunmak için** yazılır, yazılmak için değil: `ızgara_adımı`
+bildirimi pencerede `Izgara adımı` olur — ayarın kendi adı, alt çizgisi boşluğa
+çevrilmiş ve ilk harfi Türkçe kurallarıyla büyütülmüş (`ızgara` → `Izgara`,
+`imleç` → `İmleç`; ASCII bir sınıflandırıcı ikisini de yanlış yapar, CLAUDE.md 5.6).
+Etiket ayrıca yazılmaz, addan **türetilir** — ikisi ayrışamasın diye. Yazılacak ad ve
+makine kimliği ipucunda durur, çünkü pencerenin ikinci bir işi vardır: burada bir
+ayarı bulan kişi onu ayarlayan satırı da yazabilmelidir. Arama kutusu etiketi, her
+takma adı, kimliği ve açıklamayı birden tarar.
+
+Grup başlıkları da Türkçedir. Kimlikler ASCII olduğu için `core.cizim` başlığı `Cizim`
+diye okunurdu; başlıklar bir tablodadır, tıpkı yakalama işaretinin şekli gibi
+(`map_canvas.cpp`) — ikisi de üründe verilmiş kararlardır ve türetilecekleri bir
+bildirim yoktur. Tabloda satırı olmayan bir grup yine de okunur bir başlık alır.
+
+`ızgara_görünür` ve `ızgara_dikey_adımı` artık birincil adlar; eski `ızgara` ve
+`ızgara_adımı_y` takma ad olarak duruyor, yani yazılmış hiçbir betik bozulmadı.
+
+Penceredeki her değişiklik
+kapsamına göre `AYAR`, `TERCİH` ya da `MOD` komutu kurup çalıştırır — transkript, günlük
+ve yeniden oynatma pencereden yapılanı komut satırından yazılandan ayırt edemez.
+
+### Eklendi — QGIS semboloji motoru bağlandı
+
+Madde 2.7 ve 5.16: olgun, mükemmel, çok platformlu bir kütüphane kullanılır, yeniden
+yazılmaz. Semboloji motoru tam olarak böyle bir şeydir ve QGIS'inki bu alandaki en iyi
+özgür motordur — gerçek yerleşim kurallarıyla işaretçi çizgileri, kendi kaydırma ve
+dönüklüğü olan çizgi/nokta desen dolguları, parametre yerine koymalı SVG semboller,
+gradyan, shapeburst. `painter_backend.cpp`'deki elle yazılmış hâl bunların hepsinde
+daha kötü.
+
+**Bağlamama gerekçesi ölçülmeden yazılmıştı; ölçtüm:** `libqgis_core.so` 45 MB ve 246
+paylaşımlı nesne, `QgsApplication::initQgis()` **soğuk 517 ms, sıcak 44 ms**. Madde
+7'nin iki saniyelik açılış bütçesinin rahat içinde — eski itirazın "bunu kırar" dediği
+sayı buydu. Lisans da engel değil: QGIS **GPL-2.0-or-later**, GPLv3 ile uyumlu (yalnız
+GPL-2.0-**only** olsaydı Madde 5.5 gereği reddedilirdi).
+
+- **`app::QgisBackend`**, `render::Backend` arayüzünün arkasında. Dikiş orası ve başka
+  yer değil: Madde 3.4 `piricad_render`'ı Qt'siz tutuyor, QGIS ise Qt — bu yüzden dosya
+  `QPainter` arka ucunun yanında `/src/app` içinde, tam da Madde 8.5'in tarif ettiği
+  gibi. Kabuğun altındaki hiçbir katman QGIS'in var olduğunu öğrenmiyor.
+- **Çizim listesi sözleşme olarak kalıyor.** Her `PassStyle`, aynı anlama gelen QGIS
+  sembol katmanına çevriliyor; geometri, `QPainter` arka ucunun aldığı ekran uzayı
+  yığınlarının aynısı. İki motor aynı belgeyi aynı sayılardan çiziyor — karşılaştırmayı
+  mümkün kılan şey bu. `PIRICAD_BACKEND=dahili` ile yan yana bakılabiliyor.
+- **Sistemden alınıyor, vcpkg'den değil:** QGIS altında GDAL, PROJ, GEOS ve SpatiaLite
+  olan bir masaüstü yığını; onu manifestten kurmak QGIS'i kurmak olurdu.
+- **QGIS başlıkları `SYSTEM` olarak dâhil ediliyor.** Bu bir susturma değil (CLAUDE.md
+  5.14): derleyiciye hangi başlıkların *bizim* olduğunu söylüyor. QGIS'in kendi
+  başlıklarındaki dönüşüm ve gölgeleme uyarıları bu depodaki hiçbir düzenlemeyle
+  giderilemez, ve bir uyarı duvarı kendi kodumuzdaki gerçek bir bulgunun kaydırılıp
+  geçilme biçimidir.
+
+Çeviride bir hata çıktı ve ölçümle yakalandı: kesik deseni sayıları çizgi kalınlığının
+katıdır, QGIS'in `setCustomDashVector`'ü ise verildiği birimde uzunluk ister. Ham
+sayıları piksel diye vermek sekiz kalınlıklık çizgiyi sekiz piksel çiziyordu — iki motor
+yan yana konunca görülüyor.
+
+### Eklendi — gösterimler SVG olabiliyor
+
+- **`ImageStore` SVG tanıyor**, uzantıdan değil imzadan: `<svg` kökü aranıyor, prolog ve
+  yorum toleranslı, ilk 1 KB'la sınırlı (düşmanca bir dosya megabaytlarca yorumla
+  gelmesin).
+- **Boyayıcı SVG'yi `QSvgRenderer` ile çiziyor** — QGIS'in de SVG için kullandığı motor.
+  **Çizileceği boyutta** rasterleştiriliyor ve önbellek anahtarı o boyutu da içeriyor:
+  rasterin tek çözünürlükte açılıp her yakınlaştırmada yeniden örneklenmesi, mevzuatın
+  keskin çizdiği çizgiyi her seferinde biraz daha yumuşatan şeydi.
+- **`data/catalogs/mpyy-vektor/` paketi kuruldu.** Çıkarılan pakete karıştırılmadı:
+  elle çizilen şey kaynaktan yeniden üretilemez ve `ci-gate-mpyy` bunu haklı olarak
+  denetliyor. İzin belgesi satırı **türetilmiş eser** diyor, her satır `belirsiz: true`
+  ve `cizim-yorumu` ile işaretli, ve uzman onayı olmadan pakete bir plan uygulanmıyor.
+  İlk dört sembol çizildi ve tuvalde doğrulandı.
+
+**Otomatik izleme denendi ve bırakıldı.** Tarama karolarını Radon izdüşümü ve bağlı
+bileşen analiziyle okuyup açı/aralık/kalınlık çıkarmayı denedim; okumayı geri çizip
+aslıyla yan yana koyunca **altı örnekten ikisi** doğru çıktı. Kalınlık 104 piksel
+okunup siyah blok çiziliyor, JPEG'de parçalanmış daire konturu 2×1 glif sanılıyor,
+seyrek bir sembol 3 piksellik kafes okunuyor. Aile sınıflandırması (tarama / nokta
+deseni) altıda beş doğru ama **sayılar katalog kalitesinde değil** — ve yanlış bir açı
+imzalanan bir plana yanlış gösterim yazar. Çıkarıcının kendi doktrini uydurmayı
+yasaklıyor; bu yüzden semboller **çiziliyor**, izlenmiyor.
+
+### Eklendi — çizgi tipi artık bir desen, resim değil
+
+MPYY il sınırını bir çizgi, bir boşluk, bir nokta ve bir boşluk olarak basar. Bu dört
+sayıdır; program onu JPEG kırpması olarak taşıyordu ve bir resmin veremediği her şeyi
+kaybediyordu — yeniden renklendirilemez, yeniden ölçeklenirken yeniden örneklenir,
+DWG/DXF/GML'e çizgi tipi olarak yazılamaz ve hepsinden önemlisi **köşe dönemez**.
+Damgalanan resim katı bir dikdörtgendir; bir kenarın açısına döner ve her kıvrımın
+dışında kama biçiminde bir boşluk bırakır.
+
+- **`core::DashStore`.** Çizimin taşıdığı çizgi tipleri, içerikle tekilleştirilmiş —
+  `ImageStore` ile birebir aynı biçim ve aynı gerekçe: desenler **çizimin içinde
+  gider**. `Appearance.dash` zaten "desen tablosuna indeks" diye bildirilmişti; eksik
+  olan tablonun kendisiydi. Yalnız katalog paketinde yaşayan bir tablo, paketin kurulu
+  olmadığı bir bilgisayarda paftanın başka çizilmesi demekti — pafta hukuki bir belge.
+- **Birim, çizginin kendi kalınlığıdır.** Desen kalınlığın katı olarak saklanır; bu, tek
+  bir tanımın 0,2 mm'de de 1,0 mm'de de doğru kalmasını sağlar ve `QPen::setDashPattern`
+  zaten bu birimi ister. Ekin bastığı örnek de bunu söyler.
+- **`STİL desen=` parametresi bağlandı.** Bildirilmiş ama kullanılmıyordu.
+  `desen="8 1 1 1"` kesik-noktalı, `desen=sürekli` düz. Tek sayıda parça, sekizden çok
+  parça ve sayı olmayan bir sözcük **reddedilir** — hiçbiri sessizce düz çizgiye
+  dönmez, çünkü düz çizilen bir sınır paftada farklı bir hukuki beyandır.
+- **Dosya formatına `kBlkDashes` bloğu.** İsteğe bağlı olduğu için sürüm yükseltmesi
+  değil (io.md R10): çizgi tipleri var olmadan yazılmış her dosya boş tabloyla okunur ve
+  içindeki her çizgi düz kalır — zaten öyleydi.
+- **Desenli çizgi düz uçla çizilir.** Qt ucu her çizgi parçasına uygular; yuvarlak uçta
+  her parça iki ucundan yarım kalınlık uzar ve bir kalınlık genişliğindeki boşluk tamamen
+  kapanır. Yayımlanmış kesik-noktalı bir sınır **düz çizgi olarak** çıkıyordu. Bildirilen
+  uç biçimi çizginin iki gerçek ucunu anlatır, içindeki her parçayı değil.
+
+Beş yeni test: desenin çizime yazılması, tekilleştirme, `sürekli`, bozuk desenin
+reddi ve çizime dokunmaması, dosya gidiş-dönüşü ve desensiz eski dosyanın okunması.
+
+### Düzeltildi — damgalanan gösterimlerde kâğıt lekesi ve köşe deliği
+
+- **JPEG'in kâğıdı artık çözümleme anında saydamlaşıyor.** Damgalar çarpma kipiyle
+  çiziliyordu; çarpma beyazı olduğu gibi bırakır ama JPEG'in beyazı 255 değil ~250'dir
+  ve her çizginin çevresinde halkalanma vardır — ekrana ulaşan şey, her damganın altında
+  **soluk gri bir kutu** oldu. Alfa artık pikselin kendisinden geliyor:
+  `alfa = 255 - min(r,g,b)`. **Süreklidir**, yani hangi grinin mürekkep olduğuna dair bir
+  karar vermez — eşiklemeye yapılan haklı itiraz buydu. En küçük kanala bakması, doygun
+  bir rengin opak kalmasını sağlar: MPYY'nin kırmızı sınır noktaları yarı-koyu sayılmak
+  yerine tam güçte kırmızı kalır. Damga artık yalnız koyulaştırmıyor, **boyuyor** — koyu
+  bir dolgu üzerine beyaz bir glif bunu gerektirir.
+- **Damgalar halkanın tamamı boyunca, yay uzunluğuyla yürüyor.** Önceki hâl her kenarı
+  ayrı yürüyor, iki ucunda yarım damgalık pay bırakıyor ve fazı her köşede sıfırlıyordu.
+  Üçü de tek başına savunulabilirdi; birlikte, kullanıcının bildirdiği resmi ürettiler:
+  **her parselin her köşesinde bir delik**, kenardan kenara değişen bir aralık, ve
+  kenarları bir damgadan kısa olan bir sınırda **hiçbir şey**. Artık adım bütün koşu için
+  bir kez seçiliyor, köşe yürüyüş için özel bir yer değil.
+
+**Kalan kusur bitmap'in kendisindedir.** Altmış piksel eninde katı bir dikdörtgen köşe
+dönemez; damga bir kenarın açısına göre döner ve dönüşün dışında bir kama boşluk kalır.
+QGIS'in raster çizgi sembollerinde de aynı sınır vardır — QGIS kesik-noktalı çizgi için
+raster kullanmaz, vektör kesik deseni kullanır ve köşeyi gerçek bir birleşimle döner.
+`Appearance.dash` alanı çizimde **vardır ve bağlı değildir**: boyayıcı, ölçülü segment
+uzunlukları yerine sabit bir `Qt::PenStyle` dizisini vekil olarak kullanıyor. Eksik olan
+yarı budur.
+
+### Düzeltildi — MPYY gösterimleri artık mevzuatın bastığı gibi çiziliyor
+
+- **Kâğıt milimetresi bir ekran pikseli sayılıyordu.** `render/scene.cpp` içindeki
+  `kPixelsPerPaperMm = 1.0` — dosyanın kendi yorumunda "PLACEHOLDER" diye
+  işaretliydi. Mevzuatın 8 mm bastığı bir gösterim tuvale **8 piksel** olarak
+  geliyordu; 96 dpi'da 8 mm otuz pikseldir. Kâğıt birimli her şey yaklaşık dört kat
+  küçüktü. Çizgi kalınlığı da aynı yerden geliyordu: 0,5 mm'lik bir sınır yarım
+  piksel istiyor, tabandan 1'e yuvarlanıyordu — yönetmeliğin 0,2 / 0,5 / 1,0 mm
+  ayrımı tek bir saç teline çöküyordu. Çözünürlük artık `SceneOptions`'tan geliyor
+  ve `MapCanvas` onu bulunduğu ekrandan okuyor; QGIS de render bağlamının DPI'ını
+  aynı şekilde kullanır.
+- **Tarama karosunun beyaz kâğıdı, satırın dolgu rengini siliyordu.**
+  `drawRasterFill`, diğer iki raster yolunun (`drawRasterAlong`,
+  `drawRasterCentres`) kullandığı çarpma kipini kullanmıyor, düz doku fırçasıyla
+  boyuyordu. MPYY görselleri JPEG olduğu için alfası yoktur ve opak beyaz üstünde
+  gelir; sonuç, MEVCUT KONUT ALANI'nın kahverengi yerine bembeyaz çıkmasıydı.
+  **Paketin 476 satırından 277'si bu yoldan geçiyor.**
+
+### Değiştirildi — ön izleme sembolü kutuya sığdırıyor
+
+- **Tek yakınlaştırma, iki birim ailesine birden.** Ön izleme yalnız küçültür: kutuya
+  zaten sığan bir sembol tuvaldeki ölçeğiyle çizilir, ki bir örneklik ancak o zaman
+  çizim hakkında bir söz olur. İkisine birden, çünkü kâğıt ve zemin ölçülerini
+  karıştıran bir sembolün oranları yalnız birini küçültmekle bozulurdu.
+- **Görselin en-boy oranı hesaba katılıyor.** Damgalanan bir çizgi tipi bildirdiği
+  boyut kadar değil, kendi resmi kadar geniştir (MPYY sınır görselleri iki-bire
+  yakın) ve bir damganın parçaya sığıp sığmadığına **eni** karar verir;
+  `render::distribute_along`, damgadan kısa bir kenara hiç damga koymaz. Oran
+  `QImageReader` ile yalnız başlıktan okunur, çözme maliyeti yoktur.
+- **Dar bir örneklikte zikzak düzleşiyor.** Zikzak, desenin köşede ne yaptığını
+  göstermek için vardır ve büyük ön izlemede yerini hak eder; 44 piksellik bir liste
+  simgesinde ise koşuyu üç güdük parçaya bölüyor ve hiçbiri yayımlanmış bir çizgi
+  tipinin tek damgasını taşıyamıyordu — simge boş çıkıyordu. 120 pikselin altında
+  örneklik köşeyi değil deseni gösteriyor.
+
+### Düzeltildi — iki yüzlü parsel artık delikli parsel sanılmıyor
+
+- **Çok parçalı yüz `MULTIPOLYGON` olarak yazılıyor.** Nesnenin halkaları düz bir
+  listedir ve onları gruplayan şey rolleridir. Kodun ilk hâli listeyi "ilk halka
+  sınır, gerisi delik" diye okuyordu; **yolla ikiye bölünmüş bir parselin ikinci
+  yüzü delik oluyordu**. Sonuç, alanları yanlış olan ve buna rağmen `ST_IsValid`
+  dâhil hiçbir denetimin şikâyet etmediği bir tablo. Böyle bir parsel PiriCAD'e
+  `İÇEAKTAR` ile, TKGM'den gelen bir GeoPackage'ın `MULTIPOLYGON` kaydı olarak
+  girer; yani hata canlıydı. Açık halkalar için `MULTILINESTRING` de aynı anda
+  eklendi.
+- **`io::entity_ewkb` açık başlığa çıkarıldı.** Sunucu gerektirmeyen saf aritmetik
+  olduğu için PostGIS kapalı derlenmiş bir yapıda da derleniyor ve sınanıyor —
+  doğru olması gereken parça, çalışan bir veritabanı isteyen bir testle
+  korunamaz.
+- **`PIRICAD_WITH_POSTGIS=OFF` yapısı derlenmiyordu.** `postgis.cpp` koşulsuz
+  olarak `<pqxx/pqxx>` içeriyordu. Artık `vector.cpp`'nin GDAL için kullandığı
+  kalıpta: bağlantı yarısı korumalı, kodlama yarısı her yapıda derleniyor,
+  `PostgisStore` her giriş noktasında desteğin kapalı olduğunu söylüyor.
+
+### Düzeltildi — tırnak içindeki değer artık gerçekten değişmez
+
+- **Tırnaklı bir değer ikinci kez ayrıştırılıyordu.** `hedef="host=localhost
+  dbname=x"` yazıldığında ayrıştırıcı, tırnakların kaybolduğunu unutup değeri
+  kendi `=` işaretinden yeniden bölüyor ve komut "metin bekliyor" diyerek
+  reddediyordu. Aynı hata `=` içeren her yol, katman adı ve biçim dizesini de
+  vururdu. Tek dilbilgisi (CLAUDE.md 5.11) artık tırnaklı bir değeri **harfi
+  harfine** alıyor: kendi `=` işaretinden bölünmez, virgül taşıyor diye koordinat
+  sanılmaz, sayıya benziyor diye sayıya çevrilmez.
+- **Tırnak sınırlar, tür değiştirmez.** `ÖLÇEK "500"` artık `ÖLÇEK 500` ile aynı
+  şeyi, `gorunur="evet"` de `gorunur=evet` ile aynı şeyi yapıyor. Sayı,
+  ayrıştırıcının kendi ifade değerlendiricisiyle okunuyor — ikinci bir sayı
+  ayrıştırması eklenmedi.
+
 ### Eklendi — dosya açma ve kaydetme
 
 - **`piricad_io` modülü.** Biçim okuma-yazmanın tamamı `/src/io` altında; Qt yok,

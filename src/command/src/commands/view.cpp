@@ -19,7 +19,7 @@ Task<void> run(Context& ctx)
     double factor    = 1.0;
 
     if (const Value v = ctx.argument("mod"); !v.empty()) {
-        mode = core::turkish_upper(v.as_text());
+        mode = core::turkish_fold_key(v.as_text());
         ctx.record("mod", Value::text(mode));
     }
     if (const Value v = ctx.argument("carpan"); !v.empty()) {

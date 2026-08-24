@@ -30,6 +30,7 @@ Tek tek komutlar:
 | `FARKLIKAYDET` | [Yeni ada kaydetme](komutlar/saveas.md) |
 | `İÇEAKTAR` | [Dış veri alma](komutlar/import.md) |
 | `DIŞAAKTAR` | [Dış biçime yazma](komutlar/export.md) |
+| `VERİTABANI` | [PostGIS ile çalışma](komutlar/database.md) |
 | `ÇİZGİ` | [Çizgi çizme](komutlar/line.md) |
 | `ALAN` | [Kapalı alan çizme](komutlar/area.md) |
 | `METİN` | [Çizime yazı yazma](komutlar/text.md) |

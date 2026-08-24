@@ -29,10 +29,10 @@ core::Result<RunReport> JsonRunner::run_text(std::string_view json, std::string 
         if (const core::Json* n = doc.find("ad"); n && n->is_string() && !n->as_string().empty())
             label = n->as_string();
         list = doc.find("komutlar");
-        if (!list) list = doc.find("commands");
+        if (list == nullptr) list = doc.find("commands");
     }
 
-    if (!list || !list->is_array())
+    if (list == nullptr || !list->is_array())
         return core::err(
             ErrorCode::ParseError,
             "Betik ya bir komut dizisi ya da \"komutlar\" alanı olan bir nesne olmalı");
@@ -51,8 +51,8 @@ core::Result<RunReport> JsonRunner::run_text(std::string_view json, std::string 
         }
 
         const core::Json* cmd = item.find("cmd");
-        if (!cmd) cmd = item.find("komut");
-        if (!cmd || !cmd->is_string()) {
+        if (cmd == nullptr) cmd = item.find("komut");
+        if (cmd == nullptr || !cmd->is_string()) {
             (void)bus_.end_batch();
             return core::err(ErrorCode::ParseError,
                              "Betik satırında \"cmd\" alanı yok: " + item.dump());
@@ -102,7 +102,7 @@ core::Result<RunReport> JsonRunner::run_file(const std::string& path)
                          "Betik dosya erişimi 'güvenli' kum havuzunda kapalıdır. "
                          "Gerekli seviye: 'proje' veya 'tam'.");
 
-    std::ifstream in(path, std::ios::in | std::ios::binary);
+    const std::ifstream in(path, std::ios::in | std::ios::binary);
     if (!in) return core::err(ErrorCode::IoFailure, "Betik dosyası açılamadı: " + path);
 
     std::ostringstream buf;

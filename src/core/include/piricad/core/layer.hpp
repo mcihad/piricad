@@ -54,6 +54,11 @@ struct Layer
 
     Appearance appearance{}; ///< the ByLayer source for this layer's entities
 
+    /// The full ByLayer symbol. `appearance` remains the fixed-width cascade
+    /// baseline; this id retains a fill/boundary/marker stack selected for the
+    /// layer even before it owns an entity.
+    StyleId style{kByLayerStyle};
+
     ScaleDenominator min_scale{0}; ///< hide when zoomed out past 1:min_scale
     ScaleDenominator max_scale{0}; ///< hide when zoomed in past 1:max_scale
     std::uint8_t opacity{255};     ///< screen only; a pafta is plotted opaque

@@ -375,7 +375,21 @@ core::Result<ParsedLine> parse_line(std::string_view line)
 {
     ParsedLine out;
 
-    std::vector<std::pair<std::string, bool>> raw; // (text, was_quoted)
+    /// One raw token as the scanner found it, plus what the QUOTES did to it.
+    ///
+    /// `quote_at` is where the first quoted run began INSIDE the assembled token,
+    /// and it is the whole reason this struct exists. Losing it is what made
+    /// `hedef="host=localhost dbname=x"` come apart: `classify` re-split the
+    /// value at its own `=` because, by then, nothing remembered the user had
+    /// quoted it. A quoted value is LITERAL — that is what quoting means here,
+    /// in every shell, and in AutoCAD's command line.
+    struct Raw
+    {
+        std::string text;
+        std::size_t quote_at{std::string::npos};
+    };
+
+    std::vector<Raw> raw;
     std::size_t i = 0;
     while (i < line.size()) {
         while (i < line.size() && is_space(line[i]))
@@ -395,22 +409,22 @@ core::Result<ParsedLine> parse_line(std::string_view line)
             if (i >= line.size())
                 return err(ErrorCode::ParseError, "Komut satırında kapanmamış tırnak var.");
             ++i;
-            raw.emplace_back(std::move(text), true);
+            raw.push_back(Raw{std::move(text), 0});
             continue;
         }
 
         // A bare token ends at whitespace, but a quoted run inside it — the value
         // of `ad="YOL KENARI"` — is absorbed whole, quotes stripped.
         std::string token;
-        int depth   = 0;
-        bool quoted = false;
+        int depth            = 0;
+        std::size_t quote_at = std::string::npos;
 
         while (i < line.size()) {
             const char c = line[i];
 
             if (c == '"') {
                 ++i;
-                quoted = true;
+                if (quote_at == std::string::npos) quote_at = token.size();
                 while (i < line.size() && line[i] != '"') {
                     if (line[i] == '\\') {
                         i += append_escape(token, line, i);
@@ -434,26 +448,60 @@ core::Result<ParsedLine> parse_line(std::string_view line)
             token += c;
             ++i;
         }
-        raw.emplace_back(std::move(token), false);
-        (void)quoted;
+        raw.push_back(Raw{std::move(token), quote_at});
     }
 
     if (raw.empty()) return err(ErrorCode::ParseError, "Boş komut satırı.");
 
-    out.command = raw.front().first;
+    out.command = raw.front().text;
     out.tokens.reserve(raw.size() - 1);
 
     for (std::size_t k = 1; k < raw.size(); ++k) {
-        if (raw[k].second) {
+        const std::string& text    = raw[k].text;
+        const std::size_t quote_at = raw[k].quote_at;
+
+        // Nothing was quoted: classify it as written.
+        if (quote_at == std::string::npos) {
+            auto t = classify(text);
+            if (!t) return t.error();
+            out.tokens.push_back(std::move(t.value()));
+            continue;
+        }
+
+        // The whole token was quoted: it is text, exactly as typed.
+        if (quote_at == 0) {
             Token t;
             t.kind = Token::Kind::Text;
-            t.text = raw[k].first;
+            t.text = text;
             out.tokens.push_back(std::move(t));
             continue;
         }
-        auto t = classify(raw[k].first);
-        if (!t) return t.error();
-        out.tokens.push_back(std::move(t.value()));
+
+        // `key="value"` — a bare key and a quoted value. The KEY still means what
+        // a key means, and the VALUE is literal: it is not re-split at its own
+        // `=`, not read as a coordinate pair because it holds a comma, and not
+        // turned into a number because it looks like one. That is what a
+        // connection string, a Windows path and a format string all need.
+        const std::size_t eq = text.find('=');
+        if (eq != std::string::npos && eq > 0 && eq < quote_at) {
+            Token value;
+            value.kind = Token::Kind::Text;
+            value.text = text.substr(eq + 1);
+
+            Token t;
+            t.kind = Token::Kind::KeyValue;
+            t.word = text.substr(0, eq);
+            t.nested.push_back(std::move(value));
+            out.tokens.push_back(std::move(t));
+            continue;
+        }
+
+        // A quoted run somewhere else in a bare token — `abc"def"` and the like.
+        // Rare, and the honest reading is still "the user meant this text".
+        Token t;
+        t.kind = Token::Kind::Text;
+        t.text = text;
+        out.tokens.push_back(std::move(t));
     }
     return out;
 }

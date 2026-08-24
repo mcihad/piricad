@@ -137,7 +137,7 @@ Task<void> run(Context& ctx)
             return id ? id.value() : core::kNoImage;
         };
 
-        const std::size_t added = shelf.add_catalog(catalog.value(), resolve);
+        const std::size_t added = shelf.add_catalog(catalog.value(), resolve, package.as_text());
         ctx.echo("Sembol paketi yüklendi: " + catalog.value().id() + " " +
                  catalog.value().package_version() + " — " + std::to_string(added) +
                  " gösterim, rafta toplam " + std::to_string(shelf.size()) + "."); // ui-label

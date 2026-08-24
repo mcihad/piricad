@@ -56,6 +56,9 @@ set(PIRICAD_DEP_CDT_SHA        21fae3ba957551b46130349c318b030f85451be4)  # 1.4.
 set(PIRICAD_DEP_FMT_REPO       https://github.com/fmtlib/fmt.git)
 set(PIRICAD_DEP_FMT_SHA        0c9fce2ffefecfdce794e1859584e25877b7b592)  # 11.0.2
 
+set(PIRICAD_DEP_LIBPQXX_REPO   https://github.com/jtv/libpqxx.git)
+set(PIRICAD_DEP_LIBPQXX_SHA    1ca80b0e638f6182426c5b11255069cae4fbd542)  # 7.9.2
+
 set(PIRICAD_DEP_SPDLOG_REPO    https://github.com/gabime/spdlog.git)
 # v1.15.3, not the v1.14.1 that was pinned first: 1.14.1 predates fmt 11 and its
 # SPDLOG_LOGGER_CATCH macro calls FMT_STRING, whose lambda trips fmt 11's consteval
@@ -186,4 +189,87 @@ if(PIRICAD_WITH_BENCHMARK)
         SHA  ${PIRICAD_DEP_BENCHMARK_SHA}
         PACKAGE benchmark
         VERSION 1.8)
+endif()
+
+option(PIRICAD_WITH_POSTGIS "Read and write layers against a live PostGIS database" ON)
+
+if(PIRICAD_WITH_POSTGIS)
+    # CLAUDE.md Article 2.9: PostGIS is a first-class store, not an export target,
+    # because Turkish municipalities and TKGM run their corporate data on it.
+    #
+    # libpqxx is the C++ layer over libpq and nothing more — no ORM, no schema
+    # generator, no connection pool. That is what makes it the right dependency
+    # under Article 2.7: the hard part it solves is escaping, binary parameters,
+    # notice handling and transaction lifetime, and every one of those is a place
+    # a hand-rolled version leaks or corrupts.
+    #
+    # libpq itself comes from the system. It is the client half of the database
+    # the user already runs, it ships with every PostgreSQL install on all three
+    # platforms, and vendoring it would mean vendoring an SSL stack.
+    find_package(PostgreSQL 13)
+
+    if(NOT PostgreSQL_FOUND)
+        message(WARNING
+            "PIRICAD_WITH_POSTGIS=ON but libpq was not found; PostGIS support is off.\n"
+            "  Debian/Ubuntu: sudo apt install libpq-dev\n"
+            "  macOS:         brew install libpq\n"
+            "  vcpkg:         vcpkg install libpq")
+        set(PIRICAD_WITH_POSTGIS OFF CACHE BOOL "" FORCE)
+    else()
+        set(SKIP_BUILD_TEST ON CACHE INTERNAL "")
+        set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
+        piricad_dependency(libpqxx
+            REPO ${PIRICAD_DEP_LIBPQXX_REPO}
+            SHA  ${PIRICAD_DEP_LIBPQXX_SHA}
+            PACKAGE libpqxx
+            VERSION 7.7)
+    endif()
+endif()
+
+
+option(PIRICAD_WITH_QGIS "Draw symbols through the QGIS symbology engine" ON)
+
+if(PIRICAD_WITH_QGIS)
+    # CLAUDE.md Article 2.7 and 5.16: a mature, excellent, cross-platform library
+    # is used and never reimplemented. A symbology engine is exactly such a thing,
+    # and QGIS has the best free one there is — marker lines with real placement
+    # rules, line and point pattern fills, SVG symbols with parameter
+    # substitution, gradients, shapeburst. Hand-rolling that is years of work and
+    # the hand-rolled version is worse on the first day and every day after.
+    #
+    # WHAT WAS MEASURED before deciding, because the objection to linking it used
+    # to be asserted rather than checked:
+    #
+    #   libqgis_core.so   45 MB, 246 shared objects
+    #   QgsApplication::initQgis()   517 ms cold, 44 ms warm
+    #
+    # The startup cost sits well inside the two-second cold start of Article 7,
+    # which is what the old objection claimed it would break. The size is a real
+    # packaging cost and it is the price of the engine.
+    #
+    # LICENCE: QGIS is GPL-2.0-or-later, which is GPLv3-compatible, so it may be
+    # linked into a GPL-3.0-or-later program (CLAUDE.md 2.1, 9).
+    #
+    # WHERE IT MAY BE USED: `/src/app` only. Article 3.4 keeps `piricad_render`
+    # Qt-free, and QGIS is Qt; the QGIS backend therefore sits beside the QPainter
+    # one, behind the same `render::Backend` interface, exactly as Article 8.5
+    # describes. Nothing below `/src/app` learns that QGIS exists.
+    #
+    # It comes from the SYSTEM rather than from vcpkg: QGIS is a 45 MB desktop
+    # application stack with GDAL, PROJ, GEOS, SpatiaLite and Qt underneath it,
+    # and building that from a manifest would be building QGIS.
+    find_path(QGIS_INCLUDE_DIR qgssymbol.h PATH_SUFFIXES qgis)
+    find_library(QGIS_CORE_LIBRARY NAMES qgis_core)
+
+    if(NOT QGIS_INCLUDE_DIR OR NOT QGIS_CORE_LIBRARY)
+        message(WARNING
+            "PIRICAD_WITH_QGIS=ON but the QGIS development files were not found; "
+            "the QGIS symbology backend is off and the built-in one is used.\n"
+            "  Debian/Ubuntu: sudo apt install libqgis-dev\n"
+            "  Fedora:        sudo dnf install qgis-devel\n"
+            "  macOS:         brew install qgis")
+        set(PIRICAD_WITH_QGIS OFF CACHE BOOL "" FORCE)
+    else()
+        message(STATUS "QGIS symbology: ${QGIS_CORE_LIBRARY}")
+    endif()
 endif()

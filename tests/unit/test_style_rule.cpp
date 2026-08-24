@@ -21,6 +21,8 @@
 #include "piricad/core/json.hpp"
 #include "piricad/core/style_library.hpp"
 #include "piricad/core/style_rule.hpp"
+#include "piricad/render/scene.hpp"
+#include "piricad/render/view.hpp"
 #include "piricad/script/json_runner.hpp"
 
 #include <array>
@@ -540,6 +542,115 @@ TEST_CASE("STİL: aynı görünüm iki kez istenirse tek StyleId'ye toplanır")
     CHECK_EQ(rig.doc.styles().size(), after_first);
 }
 
+TEST_CASE("STİL: boş katmanın varsayılan görünümünü günceller")
+{
+    Rig rig;
+    CHECK(rig.bus.execute_line("KATMAN ad=BOS", Origin::Test).ok());
+
+    const core::LayerId layer = rig.doc.find_layer("BOS");
+    REQUIRE(layer != core::kNoLayer);
+    CHECK_EQ(rig.doc.layer_entity_count(layer), std::size_t{0});
+
+    auto styled = rig.bus.execute_line(
+        "STİL katman=BOS renk=4281236786 kalinlik=350 dolgu=2168724224", Origin::Test);
+    REQUIRE(styled.ok());
+    CHECK(styled.value().mutated);
+
+    const core::Appearance& appearance = rig.doc.layer(layer)->appearance;
+    CHECK_EQ(appearance.rgba, 4281236786u);
+    CHECK_EQ(appearance.width_um, 350);
+    CHECK_EQ(appearance.fill_rgba, 2168724224u);
+    CHECK_EQ(appearance.src_colour, core::Source::Explicit);
+    CHECK_EQ(appearance.src_width, core::Source::Explicit);
+    CHECK_EQ(appearance.src_fill, core::Source::Explicit);
+}
+
+TEST_CASE("STİL: boş katmanda sembol yığınını saklar")
+{
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("KATMAN ad=BOS", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("STİL katman=BOS tip=dolgu dolgu=2168724224", Origin::Test).ok());
+    REQUIRE(
+        rig.bus.execute_line("STİL katman=BOS ekle=evet tip=cizgi renk=4281236786", Origin::Test)
+            .ok());
+
+    const core::LayerId layer = rig.doc.find_layer("BOS");
+    REQUIRE(layer != core::kNoLayer);
+    const core::StyleId style = rig.doc.layer(layer)->style;
+    REQUIRE(style != core::kByLayerStyle);
+
+    const core::Symbol symbol = rig.doc.styles().symbol_at(style);
+    REQUIRE(symbol.layers.size() == std::size_t{2});
+    CHECK(symbol.layers[0].type == core::SymbolLayerType::SimpleFill);
+    CHECK(symbol.layers[1].type == core::SymbolLayerType::SimpleLine);
+}
+
+TEST_CASE("STİL: katalog satırı boş katmana tam sembol olarak yazılır")
+{
+    const fs::path package = fixture_file();
+
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("KATMAN ad=BOS", Origin::Test).ok());
+    REQUIRE(rig.bus
+                .execute_line("STİL katman=BOS paket=\"" + package.string() + "\" kod=alan-buyuk",
+                              Origin::Test)
+                .ok());
+
+    const core::LayerId layer = rig.doc.find_layer("BOS");
+    REQUIRE(layer != core::kNoLayer);
+    const core::StyleId style = rig.doc.layer(layer)->style;
+    REQUIRE(style != core::kByLayerStyle);
+
+    const auto row = load_fixture().entry("alan-buyuk");
+    REQUIRE(row.ok());
+    const core::Symbol& symbol = rig.doc.styles().symbol_at(style);
+    CHECK(symbol == core::symbol_of_entry(*row.value(), {}));
+    CHECK(symbol.primary() == rig.doc.layer(layer)->appearance);
+}
+
+TEST_CASE("STİL: seçilen MPYY sembolü boş katmandan tuvale görselleriyle ulaşır")
+{
+    const std::string package = std::string(PIRICAD_DATA_DIR) + "/catalogs/mpyy/plan-gosterim.json";
+
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("KATMAN ad=OSB", Origin::Test).ok());
+    REQUIRE(rig.bus
+                .execute_line("STİL katman=OSB paket=\"" + package +
+                                  "\" kod=ortak-organize-sanayi-bolgesi",
+                              Origin::Test)
+                .ok());
+
+    const core::LayerId layer = rig.doc.find_layer("OSB");
+    REQUIRE(layer != core::kNoLayer);
+    const core::StyleId style = rig.doc.layer(layer)->style;
+    REQUIRE(style != core::kByLayerStyle);
+
+    const core::Symbol& symbol = rig.doc.styles().symbol_at(style);
+    bool has_document_image    = false;
+    for (const core::SymbolLayer& symbol_layer : symbol.layers)
+        has_document_image = has_document_image || symbol_layer.image != core::kNoImage;
+    CHECK(has_document_image);
+    CHECK(rig.doc.images().size() > std::size_t{1});
+
+    REQUIRE(rig.bus.execute_line("ALAN 0,0 10000,0 10000,10000 0,10000", Origin::Test).ok());
+    CHECK_EQ(rig.doc.entities().style[0], core::kByLayerStyle);
+
+    render::ViewTransform view;
+    view.set_viewport(800, 600);
+    view.fit(rig.doc.extent());
+    render::DrawList draw;
+    render::build_scene(rig.doc, view, {}, draw);
+
+    bool canvas_has_raster = false;
+    for (const render::PassStyle& pass : draw.passes)
+        if ((pass.type == core::SymbolLayerType::RasterFill ||
+             pass.type == core::SymbolLayerType::RasterLine ||
+             pass.type == core::SymbolLayerType::RasterMarker) &&
+            !pass.image.empty())
+            canvas_has_raster = true;
+    CHECK(canvas_has_raster);
+}
+
 // ------------------------------------------------------- the equality proof ----
 
 TEST_CASE("STİL: arayüz, komut satırı ve betik aynı belgeyi ve aynı günlüğü üretir")
@@ -1005,6 +1116,139 @@ TEST_CASE("STİL: MPYY yapılaşma koşulu göstermi sıfırdan kurulabiliyor")
     CHECK(sym.layers[4].offset.unit == core::Unit::Ground);
     CHECK_EQ(sym.layers[5].text, std::string("KAKS"));
     CHECK_EQ(sym.layers[5].offset.value, -9500);
+}
+
+TEST_CASE("STİL: çizgi tipi bir desendir, resim değil")
+{
+    // The line MPYY prints for a province boundary is a dash, a gap, a dot and a
+    // gap — four numbers. Carried as a picture it could not be recoloured, could
+    // not be written into DWG as a line type, and above all could not TURN A
+    // CORNER: a
+    // stamped rectangle rotates to one edge and leaves a wedge of nothing on the
+    // outside of every bend. Carried as a pattern the renderer joins it.
+    Rig f;
+    REQUIRE(f.bus.execute_line("KATMAN PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN 0,0 60,0 60,45 0,45", Origin::Test).ok());
+
+    auto applied = f.bus.execute_line("STİL katman=PARSEL tip=cizgi kalinlik=500 desen=\"8 1 1 1\"",
+                                      Origin::Test);
+    if (!applied) FAIL_WITH("desenli STİL", applied.error().message);
+    REQUIRE(applied.ok());
+
+    // The pattern reached the drawing's own store, in hundredths of a stroke width.
+    REQUIRE(f.doc.dashes().size() == std::size_t{2}); // the solid sentinel, and this
+    const core::DashPattern& p = f.doc.dashes().at(1);
+    CHECK_EQ(static_cast<int>(p.count), 4);
+    CHECK_EQ(static_cast<int>(p.lengths[0]), 800);
+    CHECK_EQ(static_cast<int>(p.lengths[1]), 100);
+    CHECK_EQ(static_cast<int>(p.lengths[2]), 100);
+    CHECK_EQ(static_cast<int>(p.lengths[3]), 100);
+
+    // ...and the entities point at it.
+    const core::StyleId sid = f.doc.entities().style[0];
+    REQUIRE(sid != core::kByLayerStyle);
+    const core::Symbol sym = f.doc.styles().symbol_at(sid);
+    REQUIRE(!sym.layers.empty());
+    CHECK_EQ(static_cast<int>(sym.layers.front().look.dash), 1);
+
+    // Interning is deduplicated: the same pattern twice is one entry.
+    REQUIRE(f.bus
+                .execute_line("STİL katman=PARSEL tip=cizgi kalinlik=700 desen=\"8 1 1 1\"",
+                              Origin::Test)
+                .ok());
+    CHECK_EQ(f.doc.dashes().size(), std::size_t{2});
+
+    // `sürekli` is the solid stroke, and it is not a new entry either.
+    REQUIRE(f.bus.execute_line("STİL katman=PARSEL tip=cizgi desen=sürekli", Origin::Test).ok());
+    CHECK_EQ(f.doc.dashes().size(), std::size_t{2});
+    const core::Symbol solid = f.doc.styles().symbol_at(f.doc.entities().style[0]);
+    CHECK_EQ(static_cast<int>(solid.layers.front().look.dash), 0);
+}
+
+TEST_CASE("STİL: bozuk bir desen sessizce düz çizgiye dönmüyor")
+{
+    // Each of these is a catalogue or a typing defect, and drawing something
+    // plausible instead would hide it. A boundary silently drawn solid is a
+    // different legal statement from the one that was asked for.
+    Rig f;
+    REQUIRE(f.bus.execute_line("KATMAN PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 60,0", Origin::Test).ok());
+
+    // An odd number of parts leaves a mark with no gap after it.
+    const auto odd =
+        f.bus.execute_line("STİL katman=PARSEL tip=cizgi desen=\"8 1 1\"", Origin::Test);
+    REQUIRE(!odd);
+    CHECK(odd.error().message.find("çift") != std::string::npos);
+
+    // More parts than the store can hold.
+    const auto many = f.bus.execute_line(
+        "STİL katman=PARSEL tip=cizgi desen=\"1 1 1 1 1 1 1 1 1 1\"", Origin::Test);
+    REQUIRE(!many);
+
+    // Something that is not a number at all.
+    const auto words =
+        f.bus.execute_line("STİL katman=PARSEL tip=cizgi desen=\"uzun kısa\"", Origin::Test);
+    REQUIRE(!words);
+    CHECK(words.error().message.find("okunamayan") != std::string::npos);
+
+    // None of them touched the drawing (§2.5).
+    CHECK_EQ(style_column(f.doc), all_by_layer(f.doc));
+    CHECK_EQ(f.doc.dashes().size(), std::size_t{1});
+}
+
+TEST_CASE("STİL: her ölçü kendi birimini taşıyabiliyor")
+{
+    // The defect this pins down: the style designer shows a unit combo beside
+    // every measure, and the command had one `birim` for all four. A marker sized
+    // on the ground and repeated at a paper interval — how a boundary glyph is
+    // specified — came back with both measures in whichever unit the size was in,
+    // so the applied symbol was not the symbol the dialog displayed.
+    Rig f;
+    REQUIRE(f.bus.execute_line("KATMAN PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 60000,0", Origin::Test).ok());
+
+    auto applied = f.bus.execute_line(
+        "STİL katman=PARSEL tip=isaretci-cizgi sekil=daire birim=zemin boyut=26000 "
+        "aralik=1500 aralik_birim=kagit kaydirma=400 kaydirma_birim=piksel",
+        Origin::Test);
+    if (!applied) FAIL_WITH("karma birimli STİL", applied.error().message);
+    REQUIRE(applied.ok());
+
+    const core::StyleId sid = f.doc.entities().style[0];
+    REQUIRE(sid != core::kByLayerStyle);
+
+    const core::Symbol sym = f.doc.styles().symbol_at(sid);
+    REQUIRE(sym.layers.size() == std::size_t{1});
+
+    const core::SymbolLayer& sl = sym.layers.front();
+
+    // `birim` still governs the measure that names no unit of its own.
+    CHECK_EQ(sl.size.value, 26000);
+    CHECK(sl.size.unit == core::Unit::Ground);
+
+    // ...and the two that do keep theirs.
+    CHECK_EQ(sl.interval.value, 1500);
+    CHECK(sl.interval.unit == core::Unit::Paper);
+    CHECK_EQ(sl.offset.value, 400);
+    CHECK(sl.offset.unit == core::Unit::Pixel);
+}
+
+TEST_CASE("STİL: tanınmayan ölçü birimi sessizce başka bir birime dönmüyor")
+{
+    // Silently falling back to `birim` would be the same defect wearing a
+    // different hat: the drawing would carry a measure the user never wrote.
+    Rig f;
+    REQUIRE(f.bus.execute_line("KATMAN PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 60000,0", Origin::Test).ok());
+
+    const auto refused = f.bus.execute_line(
+        "STİL katman=PARSEL tip=cizgi boyut=100 boyut_birim=fersah", Origin::Test);
+    REQUIRE(!refused);
+    CHECK(refused.error().message.find("fersah") != std::string::npos);
+    CHECK(refused.error().message.find("boyut_birim") != std::string::npos);
+
+    // And it left the drawing alone (§2.5).
+    CHECK_EQ(style_column(f.doc), all_by_layer(f.doc));
 }
 
 TEST_CASE("ETİKET: iki satır noktanın etrafına yığılıyor")

@@ -3,9 +3,11 @@
 
 #include "piricad/app/command_line.hpp"
 #include "piricad/app/controller.hpp"
+#include "piricad/app/database_dialog.hpp"
 #include "piricad/app/icons.hpp"
 #include "piricad/app/map_canvas.hpp"
 #include "piricad/app/panels.hpp"
+#include "piricad/app/settings_dialog.hpp"
 #include "piricad/app/style_designer.hpp"
 #include "piricad/app/toolbox.hpp"
 
@@ -16,6 +18,7 @@
 #include "piricad/core/settings.hpp"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QApplication>
 #include <QComboBox>
 #include <QDockWidget>
@@ -280,6 +283,19 @@ void MainWindow::buildActions()
     actScript_->setData(static_cast<int>(Glyph::Script));
     connect(actScript_, &QAction::triggered, this, &MainWindow::openScript);
 
+    actDatabase_ = new QAction(tr("Veritabanı…"), this);
+    actDatabase_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D));
+    actDatabase_->setToolTip(tr("VERİTABANI — PostGIS sunucusuna bağlanır, katmanları tablo, "
+                                "projeleri kayıt olarak yazar"));
+    actDatabase_->setData(static_cast<int>(Glyph::Open));
+    connect(actDatabase_, &QAction::triggered, this, &MainWindow::openDatabase);
+
+    actSettings_ = new QAction(tr("Ayarlar…"), this);
+    actSettings_->setShortcut(QKeySequence::Preferences);
+    actSettings_->setToolTip(tr("Bildirilen her ayarı kapsamına göre gösterir; her "
+                                "değişiklik AYAR, TERCİH ya da MOD komutu olarak geçer"));
+    connect(actSettings_, &QAction::triggered, this, &MainWindow::openSettings);
+
     actQuit_ = new QAction(tr("Çıkış"), this);
     actQuit_->setShortcut(QKeySequence::Quit);
     connect(actQuit_, &QAction::triggered, qApp, &QApplication::quit);
@@ -293,10 +309,16 @@ void MainWindow::buildActions()
     connect(actSelect_, &QAction::triggered, this, [this] { controller_->cancelInteractive(); });
 
     actLine_ = new QAction(tr("Çizgi"), this);
+    actLine_->setCheckable(true);
     actLine_->setToolTip(tr("ÇİZGİ — ardışık doğru parçaları çizer  ·  kısaltma: Ç, L"));
     actLine_->setData(static_cast<int>(Glyph::Line));
     connect(actLine_, &QAction::triggered, this,
             [this] { controller_->runCommand(QStringLiteral("ÇİZGİ")); });
+
+    auto* drawingTools = new QActionGroup(this);
+    drawingTools->setExclusive(true);
+    drawingTools->addAction(actSelect_);
+    drawingTools->addAction(actLine_);
 
     actPolyline_ =
         placeholder(Glyph::Polyline, tr("Çoklu Çizgi"), QStringLiteral("ÇOKLUÇİZGİ"), tr("Faz 2"));
@@ -525,6 +547,7 @@ void MainWindow::buildMenus()
     file->addAction(actExport_);
     file->addAction(actPrint_);
     file->addSeparator();
+    file->addAction(actDatabase_);
     file->addAction(actScript_);
     file->addSeparator();
     file->addAction(actQuit_);
@@ -541,6 +564,9 @@ void MainWindow::buildMenus()
     edit->addAction(actCopy_);
     edit->addAction(actRotate_);
     edit->addAction(actOffset_);
+
+    edit->addSeparator();
+    edit->addAction(actSettings_);
 
     auto* draw = menuBar()->addMenu(tr("Çi&zim"));
     draw->addAction(actLine_);
@@ -695,6 +721,38 @@ void MainWindow::openStyleDesigner(const QString& layerName)
     // user designs here a script can write and the AI can be taught (Article 1.2).
     StyleDesigner designer(*controller_, layerName, this);
     designer.exec();
+}
+
+void MainWindow::openSettings()
+{
+    // MODELESS, for the reason the database window is: a user changes an aid and
+    // then wants to see what it did to the drawing, without the window that
+    // changed it standing in front of the drawing. `settingChanged` keeps it in
+    // step, so a value typed at the command line while it is open shows through.
+    if (settings_ == nullptr) {
+        settings_ = new SettingsDialog(*controller_, this);
+        settings_->setAttribute(Qt::WA_DeleteOnClose);
+        connect(settings_, &QObject::destroyed, this, [this] { settings_ = nullptr; });
+    }
+    settings_->show();
+    settings_->raise();
+    settings_->activateWindow();
+}
+
+void MainWindow::openDatabase()
+{
+    // MODELESS, unlike the style designer: a user connects once and then keeps
+    // drawing, writing a layer out whenever a piece of the work is finished.
+    // Parented to the window so it closes with it, and `DeleteOnClose` so a
+    // second Ctrl+Shift+D does not stack a second connection behind the first.
+    if (database_ == nullptr) {
+        database_ = new DatabaseDialog(*controller_, this);
+        database_->setAttribute(Qt::WA_DeleteOnClose);
+        connect(database_, &QObject::destroyed, this, [this] { database_ = nullptr; });
+    }
+    database_->show();
+    database_->raise();
+    database_->activateWindow();
 }
 
 void MainWindow::loadSymbolLibrary()

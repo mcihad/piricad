@@ -14,6 +14,7 @@
 #include "piricad/command/transaction.hpp"
 
 #include <coroutine>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -84,6 +85,14 @@ public:
 
     Bus& bus() noexcept { return bus_; }
 
+    /// The document version observed before this command began. Some sanctioned
+    /// additive edits (such as creating a layer) deliberately have no inverse
+    /// Op, but the shell must still refresh when they change the document.
+    std::uint64_t document_revision_at_start() const noexcept
+    {
+        return document_revision_at_start_;
+    }
+
     /// Arguments as actually resolved, in declaration order. This is what the
     /// journal records, so a replay reproduces the run bit for bit.
     const Args& resolved() const noexcept { return resolved_; }
@@ -115,6 +124,7 @@ private:
     std::optional<Value> supplied_{};
     Args resolved_{};
     core::Error error_{};
+    std::uint64_t document_revision_at_start_{0};
 };
 
 // ---- InputAwaiter, defined here because it needs the full Session ----

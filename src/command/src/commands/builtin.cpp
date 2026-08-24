@@ -32,6 +32,7 @@ namespace piricad::command {
     X(import)                                                                                      \
     X(exportfile)                                                                                  \
     X(script)                                                                                      \
+    X(database)                                                                                    \
     X(setting)                                                                                     \
     X(preference)                                                                                  \
     X(mode)                                                                                        \

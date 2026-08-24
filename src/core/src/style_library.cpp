@@ -28,7 +28,7 @@ bool group_starts_with(const std::vector<std::string>& group, std::span<const st
 /// differ only in the dot stay different (CLAUDE.md 5.6).
 bool contains_folded(std::string_view haystack, const std::string& folded_needle)
 {
-    return turkish_upper(haystack).find(folded_needle) != std::string::npos;
+    return turkish_fold_key(haystack).find(folded_needle) != std::string::npos;
 }
 
 } // namespace
@@ -97,7 +97,8 @@ Symbol symbol_of_entry(const StyleEntry& row, const ImageResolver& resolve)
     return sym;
 }
 
-std::size_t StyleLibrary::add_catalog(const StyleCatalog& catalog, const ImageResolver& resolve)
+std::size_t StyleLibrary::add_catalog(const StyleCatalog& catalog, const ImageResolver& resolve,
+                                      std::string_view package_path)
 {
     std::size_t added = 0;
     for (const StyleEntry& row : catalog.entries()) {
@@ -107,6 +108,7 @@ std::size_t StyleLibrary::add_catalog(const StyleCatalog& catalog, const ImageRe
         entry.group             = row.group;
         entry.tags              = row.tags;
         entry.source_ref        = row.source_ref;
+        entry.package_path      = std::string(package_path);
         entry.scale             = row.scale;
         entry.deprecated        = row.deprecated;
         entry.uncertain         = row.uncertain;
@@ -186,7 +188,7 @@ std::vector<const LibraryEntry*> StyleLibrary::search(std::string_view needle) c
     std::vector<const LibraryEntry*> out;
     if (needle.empty()) return out;
 
-    const std::string folded = turkish_upper(needle);
+    const std::string folded = turkish_fold_key(needle);
 
     for (const LibraryEntry& e : entries_) {
         // Label first because that is what a user typed at, then id, then the
@@ -232,6 +234,7 @@ std::uint64_t StyleLibrary::content_hash() const
         h = fnv1a(e.id, h);
         h = fnv1a(e.label, h);
         h = fnv1a(e.source_ref, h);
+        h = fnv1a(e.package_path, h);
         for (const std::string& g : e.group)
             h = fnv1a(g, h);
         for (const std::string& t : e.tags)

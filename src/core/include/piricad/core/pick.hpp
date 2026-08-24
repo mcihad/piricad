@@ -72,6 +72,26 @@ bool segment_touches_box(Point2 a, Point2 b, const Box2& box) noexcept;
 /// intersection: it has no single point, and a snap must produce one point.
 bool segment_intersection(Point2 a, Point2 b, Point2 c, Point2 d, Point2& out) noexcept;
 
+/// The point of the INFINITE line through `a` and `b` nearest to `p`, with the
+/// parameter that locates it: `t` is 0 at `a`, 1 at `b`, and outside [0,1] beyond
+/// the ends. False for a degenerate segment, which names no line.
+///
+/// The unclamped twin of `closest_point_on_segment`. A boundary being re-
+/// established runs PAST the last monument that survived, so the useful point is
+/// the one the segment does not contain, and the caller needs `t` to tell the two
+/// apart.
+bool closest_point_on_line(Point2 a, Point2 b, Point2 p, Point2& out, double& t) noexcept;
+
+/// Intersection of the INFINITE lines through [a,b] and [c,d], with the parameters
+/// that locate it on each. False when the lines are parallel or either is
+/// degenerate.
+///
+/// `t` and `u` are the segment parameters: a crossing with both inside [0,1] is a
+/// real intersection, and one outside is the corner two boundaries WOULD make —
+/// which is the point an ifraz needs when the corner monument is gone.
+bool line_intersection(Point2 a, Point2 b, Point2 c, Point2 d, Point2& out, double& t,
+                       double& u) noexcept;
+
 /// Appends every visible entity whose bounding box overlaps `box`, in ascending
 /// slot order. This is the shared narrowing step: the index for what it has
 /// packed, then the short unindexed tail, exactly as the frame path does. `out`

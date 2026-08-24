@@ -53,3 +53,7 @@ Thumbs.db
 # MPYY kaynak ekleri. Resmî Gazete'den indirilen .docx/.xlsx dosyaları depoya
 # girmez; katalog scripts/mpyy-cikar.py ile bunlardan üretilir.
 /.mpyy-kaynak/
+
+# Python bytecode from the /scripts extractors and gates.
+__pycache__/
+*.pyc

@@ -4,7 +4,7 @@
 # Shell: Qt Widgets. Canvas: render::Backend (QRhiWidget target, QPainter in Phase 0).
 # Docking: QDockWidget in Phase 0; Qt Advanced Docking System in Phase 1 (§6.3).
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Widgets)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Widgets Svg Xml)
 
 qt_standard_project_setup()
 
@@ -14,23 +14,29 @@ qt_standard_project_setup()
 qt_add_executable(piricad
     src/command_line.cpp
     src/controller.cpp
+    src/database_dialog.cpp
     src/flow_layout.cpp
     src/icons.cpp
     src/main.cpp
     src/main_window.cpp
     src/map_canvas.cpp
     src/painter_backend.cpp
+    src/qgis_backend.cpp
     src/style_designer.cpp
     src/symbol_preview.cpp
     src/panels.cpp
+    src/settings_dialog.cpp
     src/theme.cpp
     src/toolbox.cpp
 
     include/piricad/app/command_line.hpp
     include/piricad/app/controller.hpp
+    include/piricad/app/database_dialog.hpp
     include/piricad/app/main_window.hpp
     include/piricad/app/map_canvas.hpp
     include/piricad/app/panels.hpp
+    include/piricad/app/qgis_backend.hpp
+    include/piricad/app/settings_dialog.hpp
     include/piricad/app/style_designer.hpp
     include/piricad/app/flow_layout.hpp
     include/piricad/app/toolbox.hpp
@@ -49,6 +55,7 @@ target_link_libraries(piricad PRIVATE
     piricad_flags
     Qt6::Core
     Qt6::Gui
+    Qt6::Svg
     Qt6::Widgets
 )
 
@@ -62,3 +69,16 @@ install(TARGETS piricad
     BUNDLE  DESTINATION .
     RUNTIME DESTINATION bin
 )
+
+if(PIRICAD_WITH_QGIS)
+    # QGIS lives in /src/app alone (Article 3.4, 8.5): nothing below the shell
+    # learns that it exists, and the canvas reaches it through render::Backend.
+    # SYSTEM, and this is not a suppression. CLAUDE.md 5.14 forbids silencing a
+    # warning; what this does is tell the compiler which headers are OURS. QGIS's
+    # own headers carry conversion and shadow warnings that no edit of this
+    # repository can fix, and a wall of them is how a real finding in our own code
+    # gets scrolled past.
+    target_include_directories(piricad SYSTEM PRIVATE ${QGIS_INCLUDE_DIR})
+    target_link_libraries(piricad PRIVATE ${QGIS_CORE_LIBRARY} Qt6::Xml)
+    target_compile_definitions(piricad PRIVATE PIRICAD_HAVE_QGIS=1)
+endif()

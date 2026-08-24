@@ -33,7 +33,7 @@ Currently linked
                           Header-only, linked PRIVATE into piricad_core so the
                           facade is what the rest of the product sees.
 
-  spdlog                  MIT                   v1.14.1   27cb4c76
+  spdlog                  MIT                   v1.15.3   6fa36017
   fmt                     MIT                   11.0.2    0c9fce2f
                           Logging, behind piricad/command/log.hpp. It lives in
                           /src/command and not /src/core because core.md P9 bans
@@ -63,6 +63,63 @@ Currently linked
                           per-machine baseline stay in tests/bench/support.cpp,
                           because no library knows that 16 ms is a product
                           requirement rather than a number.
+
+  QGIS (libqgis_core)     GPL-2.0-or-later      4.2.1     system    (PIRICAD_WITH_QGIS)
+                          The symbology engine behind
+                          piricad/app/qgis_backend.cpp. Article 2.7 and 5.16 say
+                          a mature, excellent, cross-platform library is used and
+                          never reimplemented, and a symbology engine is exactly
+                          such a thing: marker lines with real placement rules,
+                          line and point pattern fills with their own offsets and
+                          rotations, SVG symbols with parameter substitution,
+                          gradients and shapeburst. The built-in QPainter backend
+                          is the stand-in and stays for builds without QGIS.
+
+                          LICENCE FINDING: GPL-2.0-or-later. The "or later" is
+                          what matters and it is in the header of every file:
+                          GPL-2.0-or-later may be used under GPLv3, so linking it
+                          into a GPL-3.0-or-later program is permitted (CLAUDE.md
+                          2.1). A GPL-2.0-ONLY dependency would be refused
+                          outright by Article 5.5 — this is not one.
+
+                          MEASURED before linking, because the objection to it
+                          used to be asserted rather than checked: 45 MB, 246
+                          shared objects, and QgsApplication::initQgis() at
+                          517 ms cold / 44 ms warm — inside the two-second cold
+                          start of Article 7.
+
+                          Taken from the SYSTEM, not from vcpkg: QGIS is a
+                          desktop application stack with GDAL, PROJ, GEOS and
+                          SpatiaLite underneath it, and building that from a
+                          manifest would be building QGIS. It is confined to
+                          /src/app by Article 3.4 — nothing below the shell
+                          learns that it exists.
+
+  libpqxx                 BSD-3-Clause          7.9.2     1ca80b0e  (PIRICAD_WITH_POSTGIS)
+                          The PostgreSQL/PostGIS client behind
+                          piricad/io/postgis.hpp. Article 2.9 makes PostGIS a
+                          first-class store rather than an export target, and
+                          libpqxx is what carries that: a transaction object
+                          whose lifetime a command can span, which GDAL's PG
+                          driver cannot express.
+
+                          LICENCE FINDING, read from COPYING of the pinned tree:
+                          three-clause BSD — retain the notice in source,
+                          reproduce it in binary distributions, and no
+                          endorsement use of the author's name. GPLv3-compatible
+                          (no advertising clause, no further restriction). The
+                          notice is reproduced by this file.
+
+                          Links against libpq, which is the PostgreSQL client
+                          library under the PostgreSQL Licence (an ISC-style
+                          permissive licence, GPLv3-compatible). libpq is taken
+                          from the system rather than vendored:
+                          find_package(PostgreSQL 13) is the floor, because
+                          libpqxx 7.9 needs the pipeline API that landed in 14
+                          only for features PiriCAD does not use.
+
+                          Headers appear ONLY in src/io/src/postgis.cpp, behind
+                          the pimpl in its public header (io.md R2/P2).
 
   GDAL/OGR                MIT (X11) + others    >= 3.8   (PIRICAD_WITH_GDAL)
                           Vector format I/O for /src/io: DXF and GeoPackage

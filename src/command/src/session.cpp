@@ -22,8 +22,9 @@ Session::Session(Bus& bus, const CommandSpec& spec, std::unique_ptr<InputSource>
                  std::unique_ptr<Transaction> owned_tx, Transaction* borrowed_tx)
     : bus_(bus), spec_(&spec), input_(std::move(input)), owned_tx_(std::move(owned_tx))
 {
-    tx_  = owned_tx_ ? owned_tx_.get() : borrowed_tx;
-    ctx_ = std::make_unique<Context>(*this, *tx_, bus.document());
+    tx_                         = owned_tx_ ? owned_tx_.get() : borrowed_tx;
+    ctx_                        = std::make_unique<Context>(*this, *tx_, bus.document());
+    document_revision_at_start_ = bus.document().revision();
 
     // Start from whatever the client supplied up front. A command that answers a
     // prompt overwrites the entry; a command that reads an argument directly

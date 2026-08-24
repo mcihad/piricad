@@ -37,6 +37,10 @@ class QToolBar;
 
 namespace piricad::app {
 
+/// The PostGIS window, opened from the File menu; see database_dialog.hpp.
+class DatabaseDialog;
+class SettingsDialog;
+
 /// PiriCAD's own widgets and the controller, forward-declared for the same reason.
 class CommandLine;
 class Controller;
@@ -87,6 +91,10 @@ private slots:
 
     void showCommandReference();
     void openScript();
+    void openDatabase();
+
+    /// Opens the settings window: every declared setting, grouped by who owns it.
+    void openSettings();
 
     // The five file actions. Each one collects a path and dispatches the SAME
     // command a user could type; the dialog is not the feature (Article 1.2).
@@ -188,6 +196,13 @@ private:
     QAction* actUndo_{nullptr};
     QAction* actRedo_{nullptr};
     QAction* actScript_{nullptr};
+    QAction* actDatabase_{nullptr};
+    QAction* actSettings_{nullptr};
+
+    /// The PostGIS window, kept because it is modeless: a user connects once and
+    /// goes on drawing. Null when it has never been opened or has been closed.
+    DatabaseDialog* database_{nullptr};
+    SettingsDialog* settings_{nullptr};
     QAction* actSelectAll_{nullptr};
     QAction* actSelectNone_{nullptr};
     QAction* actOrtho_{nullptr};

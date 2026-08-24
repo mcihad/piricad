@@ -18,6 +18,7 @@ add_library(piricad_command STATIC
     src/validation.cpp
     src/value.cpp
     src/commands/builtin.cpp
+    src/commands/database.cpp
     src/commands/edit.cpp
     src/commands/file.cpp
     src/commands/label.cpp

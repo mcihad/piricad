@@ -302,13 +302,21 @@ Status KindTable::add(const KindSpec& spec)
     std::vector<std::pair<std::string, KindId>> pending;
     for (const char* n : spec.names) {
         if (n == nullptr || *n == '\0') continue;
-        std::string folded = turkish_upper(n);
+        std::string folded = turkish_fold_key(n);
         if (find_name(folded) != nullptr)
             return err(ErrorCode::ValidationFailed, "Nesne türü adı zaten kullanılıyor: " + folded);
+
+        // A repeat WITHIN one spec is not a defect and must not be one: the names
+        // are declared as a Turkish spelling and its ASCII fold (CLAUDE.md 2.6),
+        // and a lookup key folds the two alphabets together on purpose, so
+        // `ÇOKLUÇİZGİ` and `COKLUCIZGI` arrive as the same key. They name the same
+        // kind, so the second is simply already accounted for. Across two specs it
+        // is still an error, and that is the check above.
+        bool already = false;
         for (const auto& p : pending)
-            if (p.first == folded)
-                return err(ErrorCode::ValidationFailed,
-                           "Nesne türü adı kendi içinde tekrar ediyor: " + folded);
+            if (p.first == folded) already = true;
+        if (already) continue;
+
         pending.emplace_back(std::move(folded), spec.id);
     }
 
@@ -331,7 +339,7 @@ const KindSpec* KindTable::find(KindId id) const noexcept
 
 const KindSpec* KindTable::find_name(std::string_view name) const
 {
-    const std::string folded = turkish_upper(name);
+    const std::string folded = turkish_fold_key(name);
     const auto at =
         std::lower_bound(folded_.begin(), folded_.end(), folded,
                          [](const auto& e, const std::string& k) { return e.first < k; });

@@ -89,17 +89,54 @@ kabul edilmez; bildirilen birim yeterince incedir.
 | 5 | `32` | En yakın | Bir kenarın imlece en yakın noktasına |
 | 6 | `64` | Izgara | En yakın ızgara kesişimine — `ızgaraya_yakala` da bu biti açar |
 | 7 | `128` | Kutupsal | Önceki noktadan çıkan en yakın kutupsal ışına |
+| 10 | `1024` | Uzantı | Bir kenarın kendi doğrultusuna, kenarın **ötesinde** |
+| 11 | `2048` | Paralel | Önceki noktadan çıkan, bir kenara **paralel** ışına |
+| 12 | `4096` | Uzatılmış kesişim | İki kenarın uzatılsalar **buluşacakları** köşeye |
 
 Varsayılan `7` = uç nokta + orta nokta + merkez. Onaltılık de yazabilirsiniz:
 `MOD yakalama_modları 0x2F`.
 
 `0` bütün nesne yakalamayı kapatır. Kısayolu **F3**'tür.
 
+8. ve 9. bitler kullanılmaz. 8 sonuçta dik modu bildirir ve maskeye yazılmaz;
+9 DÜĞÜM için ayrılmıştı ve şimdilik boştur — gerekçesi aşağıdadır.
+
+### Çizimde olmayan, ama çizimin ima ettiği noktalar
+
+Son üç mod, yakalanacak şey **çizili değilken** işe yarar. Kadastro ve imar işinin
+günlük hâli budur:
+
+- **Uzantı** — köşe taşı kaybolmuş bir sınırı, ayakta kalan kenarın kendi
+  doğrultusundan yeniden kurarsınız. İstenen nokta kenarın üzerinde değil,
+  ucundan ötededir; *En yakın* oraya erişemez.
+- **Paralel** — çekme mesafesi, yol kenarı ve ifraz hattı böyle çizilir: "şu
+  sınırla aynı doğrultuda, buradan başlayarak". Doğrultuyu hiçbir yerden okumanız
+  gerekmez. Önceki noktadan uzaklık korunur, yani yönü verdikten sonra
+  yazacağınız ölçülmüş uzunluk aynen oturur.
+- **Uzatılmış kesişim** — iki sınır birbirine yetişmeden kesiliyorsa, uzatılsalar
+  buluşacakları köşeyi verir. *Kesişim* burada hiçbir şey bulmaz, çünkü kenarlar
+  gerçekten kesişmez; köşe yine de parselin ihtiyacı olan noktadır.
+
+Bu üç mod, **çizimde gerçekten olan hiçbir noktayı yenemez.** Öncelik sıralamasında
+*En yakın*'ın da altındadırlar: motorun kurduğu bir nokta, kullanıcının elindeki
+gerçek bir köşeyi asla kapmaz. Bu yüzden üçünü de açık bırakmak güvenlidir.
+
+Üçü de imlecin altında olmayan bir kenardan nokta ürettiği için, açıklık tek başına
+o kenarı bulamaz. `uzantı_çarpanı` tercihi, açıklığın kaç katı ötesine bakılacağını
+söyler (varsayılan `10`). `0` yazılırsa üç mod da maskede açık olsa bile çalışmaz.
+
+**DÜĞÜM (nirengi/poligon noktası) neden yok.** Bu sürümde çizimde nokta nesnesi
+tutulamıyor: açık halka en az iki tepe noktası ister, `İÇEAKTAR` nokta katmanını
+"bu sürüm çizgi ve alan okur" diyerek atlar ve nokta çizen bir komut yoktur. Var
+olmayan bir şeye oturan bir yakalama modu, programın tutmadığı bir sözdür. DÜĞÜM,
+nokta nesneleriyle birlikte gelecektir — öncesinde değil.
+
 ### Hangi yardım önce uygulanır
 
 Sıra sabittir ve bilerek böyledir:
 
 1. **Nesne yakalama** — gerçek bir nesnenin gerçek bir noktası her şeyi yener
+   (kurulmuş noktalar bunun en altındadır; yukarıya bakın)
 2. **Dik mod / kutupsal izleme** — önceki noktadan gelen yön kilidi
 3. **Izgara** — geriye kalan hâlde en yakın kafes kesişimi
 
@@ -163,6 +200,22 @@ Bir modu varsayılanına döndürün:
 ```
 MOD dik_mod varsayilan
 ```
+
+**Ayarlar** penceresi (menüde `Düzen > Ayarlar…`, kısayolu **Ctrl+,**) bildirilen her
+ayarı gösterir. Pencerenin tamamı ayar kataloğundan **üretilir**: satırın adı ayarın
+kendi birincil adı, alanı bildirilen tipinden, sınırları bildirilen aralığından,
+üzerine gelince çıkan açıklaması bildirilen özetinden gelir. Kataloğa eklenen bir ayar
+bu pencereye kendiliğinden düşer.
+
+Üç sekme, üç kapsam: **Proje** çizimle birlikte giden ayarlar, **Uygulama** bu
+bilgisayardaki tercihleriniz, **Oturum** yalnız bu açık pencere için geçerli olanlar.
+Her satırın sağında değerin sizin mi yoksa programın mı olduğu (`ayarlanmış` /
+`varsayılan`) ve varsayılana döndüren bir düğme vardır. Üstteki arama kutusu ad,
+kimlik ve açıklama üzerinde birden arar.
+
+Penceredeki her değişiklik komut yolundan geçer: kapsamına göre `AYAR`, `TERCİH` ya da
+`MOD` komutu kurulup çalıştırılır. Yani transkriptte, günlükte ve yeniden oynatmada
+pencereden yapılanla komut satırına yazılan arasında hiçbir fark yoktur.
 
 Denemeyi bitirince açtığınız yardımları kapatın; oturum modları siz kapatana kadar
 açık kalır:

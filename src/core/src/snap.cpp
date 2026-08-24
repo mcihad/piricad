@@ -30,8 +30,13 @@ constexpr std::size_t kMaxNearSegments = 48;
 /// Priority, highest first. A corner beats a crossing beats a middle: this is the
 /// order every CAD user already has in their fingers, and it is what makes an
 /// aperture that covers several features still land where they meant.
+///
+/// The three CONSTRUCTED modes sit at the bottom, below even YAKIN, and that
+/// placement is the rule that keeps them safe: a point this engine invented must
+/// never win against a point the drawing actually contains.
 constexpr std::uint16_t kPriority[] = {
-    SnapEndpoint, SnapIntersection, SnapMidpoint, SnapCenter, SnapPerpendicular, SnapNearest,
+    SnapEndpoint, SnapIntersection, SnapMidpoint, SnapCenter,    SnapPerpendicular,
+    SnapNearest,  SnapApparent,     SnapParallel, SnapExtension,
 };
 
 Mm abs_mm(Mm v) noexcept
@@ -120,8 +125,8 @@ std::size_t priority_index(std::uint16_t bit)
 const std::uint16_t* snap_mode_bits()
 {
     static const std::uint16_t bits[] = {
-        SnapEndpoint, SnapMidpoint, SnapCenter, SnapIntersection, SnapPerpendicular,
-        SnapNearest,  SnapGrid,     SnapPolar,  SnapNone,
+        SnapEndpoint, SnapMidpoint, SnapCenter,    SnapIntersection, SnapPerpendicular, SnapNearest,
+        SnapGrid,     SnapPolar,    SnapExtension, SnapParallel,     SnapApparent,      SnapNone,
     };
     return bits;
 }
@@ -137,6 +142,9 @@ const char* snap_mode_id(std::uint16_t single_bit)
     case SnapNearest: return "yakin";
     case SnapGrid: return "izgara";
     case SnapPolar: return "kutupsal";
+    case SnapExtension: return "uzanti";
+    case SnapParallel: return "paralel";
+    case SnapApparent: return "uzatilmis_kesisim";
     case SnapOrtho: return "dik_mod";
     default: return "yok";
     }
@@ -153,6 +161,9 @@ const char* snap_mode_label(std::uint16_t single_bit)
     case SnapNearest: return "en yakın";
     case SnapGrid: return "ızgara";
     case SnapPolar: return "kutupsal";
+    case SnapExtension: return "uzantı";
+    case SnapParallel: return "paralel";
+    case SnapApparent: return "uzatılmış kesişim";
     case SnapOrtho: return "dik mod";
     default: return "yok";
     }
@@ -239,10 +250,24 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
     result.point = q.aim;
 
     // ---- 1. object snap ----
-    const std::uint16_t object_modes = q.modes & SnapObjectMask;
+    std::uint16_t object_modes = q.modes & SnapObjectMask;
+
+    // A constructed mode with no reach is a mode that cannot see the edge it
+    // would build from, so it is switched off here rather than searching for
+    // nothing — the same contract `grid_step` and `polar_step` already keep.
+    if (q.reach <= 0)
+        object_modes = static_cast<std::uint16_t>(object_modes & ~SnapConstructedMask);
+
     if (q.radius > 0 && object_modes != 0) {
-        const Box2 box{q.aim.x - q.radius, q.aim.y - q.radius, q.aim.x + q.radius,
-                       q.aim.y + q.radius};
+        // The APERTURE is what a snap must land inside; the SEARCH BOX is how far
+        // the engine looks for the geometry that implies a point. They are the
+        // same box for a real feature and a wider one for a constructed point,
+        // whose edge is by definition somewhere the cursor is not.
+        const Mm look = (object_modes & SnapConstructedMask) != 0 ? q.radius + q.reach : q.radius;
+
+        const Box2 aperture{q.aim.x - q.radius, q.aim.y - q.radius, q.aim.x + q.radius,
+                            q.aim.y + q.radius};
+        const Box2 box{q.aim.x - look, q.aim.y - look, q.aim.x + look, q.aim.y + look};
         const double limit = static_cast<double>(q.radius) * static_cast<double>(q.radius);
 
         std::vector<EntityId> candidates;
@@ -251,6 +276,12 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
         Best best[sizeof(kPriority) / sizeof(kPriority[0])]{};
         std::vector<NearSegment> near;
         near.reserve(kMaxNearSegments);
+
+        // Edges kept for the constructed modes. Separate from `near`, which holds
+        // only edges that actually cross the aperture, because an extension and an
+        // apparent corner are built from edges that do not.
+        std::vector<NearSegment> reachable;
+        if ((object_modes & SnapConstructedMask) != 0) reachable.reserve(kMaxNearSegments);
 
         const EntityTable& entities  = doc.entities();
         const RingGeometry& geometry = doc.geometry();
@@ -287,6 +318,25 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
 
                     if (!segment_touches_box(a, b, box)) continue;
 
+                    if ((object_modes & SnapConstructedMask) != 0 &&
+                        reachable.size() < kMaxNearSegments)
+                        reachable.push_back(NearSegment{a, b, e});
+
+                    // UZANTI: the aim dropped onto the edge's LINE, accepted only
+                    // where the edge itself is not. Inside the span it would be
+                    // the same point YAKIN already offers, at a priority that
+                    // would then depend on which mode happened to be on.
+                    if ((object_modes & SnapExtension) != 0) {
+                        Point2 on_line{};
+                        double t = 0.0;
+                        if (closest_point_on_line(a, b, q.aim, on_line, t) && (t < 0.0 || t > 1.0))
+                            offer(best[priority_index(SnapExtension)], on_line, e, q.aim, limit);
+                    }
+
+                    // Everything below is about the edge itself, so an edge that
+                    // only the widened box reached has nothing more to say.
+                    if (!segment_touches_box(a, b, aperture)) continue;
+
                     if ((object_modes & SnapMidpoint) != 0)
                         offer(best[priority_index(SnapMidpoint)],
                               Point2{(a.x + b.x) / 2, (a.y + b.y) / 2}, e, q.aim, limit);
@@ -302,6 +352,63 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
 
                     if ((object_modes & SnapIntersection) != 0 && near.size() < kMaxNearSegments)
                         near.push_back(NearSegment{a, b, e});
+                }
+            }
+        }
+
+        // PARALEL: a ray leaving the last point in the direction of a nearby edge.
+        //
+        // This is how a çekme mesafesi, a road edge and an ifraz cut are actually
+        // drawn — "the same bearing as that boundary, from here" — and the whole
+        // value of it is that the user never has to read the bearing off anything.
+        // The distance from the base is preserved, exactly as polar tracking
+        // preserves it, so a measured length typed after the direction is the
+        // length that lands.
+        if ((object_modes & SnapParallel) != 0 && q.has_base) {
+            for (const NearSegment& edge : reachable) {
+                const double dx   = static_cast<double>(edge.b.x - edge.a.x);
+                const double dy   = static_cast<double>(edge.b.y - edge.a.y);
+                const double len2 = dx * dx + dy * dy;
+                if (len2 <= 0.0) continue;
+
+                const double px = static_cast<double>(q.aim.x - q.base.x);
+                const double py = static_cast<double>(q.aim.y - q.base.y);
+
+                const double t = (px * dx + py * dy) / len2;
+                offer(best[priority_index(SnapParallel)],
+                      Point2{q.base.x + mm_round(t * dx), q.base.y + mm_round(t * dy)}, edge.entity,
+                      q.aim, limit);
+            }
+        }
+
+        // UZATILMIŞ KESİŞİM: the corner two boundaries WOULD make.
+        //
+        // Accepted only where the crossing is off at least one of the two edges;
+        // on both it is a real crossing and KESİŞİM owns it at a higher priority.
+        // This is the mode an ifraz needs when the corner monument is gone and the
+        // two surviving edges are all there is to rebuild it from.
+        if ((object_modes & SnapApparent) != 0) {
+            for (std::size_t i = 0; i + 1 < reachable.size(); ++i) {
+                for (std::size_t j = i + 1; j < reachable.size(); ++j) {
+                    // Two edges meeting at a shared vertex already have their
+                    // corner, and it is an endpoint.
+                    if (reachable[i].a == reachable[j].a || reachable[i].a == reachable[j].b ||
+                        reachable[i].b == reachable[j].a || reachable[i].b == reachable[j].b)
+                        continue;
+
+                    Point2 corner{};
+                    double t = 0.0;
+                    double u = 0.0;
+                    if (!line_intersection(reachable[i].a, reachable[i].b, reachable[j].a,
+                                           reachable[j].b, corner, t, u))
+                        continue;
+
+                    const bool on_first  = t >= 0.0 && t <= 1.0;
+                    const bool on_second = u >= 0.0 && u <= 1.0;
+                    if (on_first && on_second) continue;
+
+                    offer(best[priority_index(SnapApparent)], corner, reachable[i].entity, q.aim,
+                          limit);
                 }
             }
         }

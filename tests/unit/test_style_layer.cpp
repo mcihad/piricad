@@ -704,6 +704,7 @@ TEST_CASE("LayerTable: fold her saklanan alana tepki verir")
         {"appearance.src_width", [](Layer& l) { l.appearance.src_width = Source::Explicit; }},
         {"appearance.src_dash", [](Layer& l) { l.appearance.src_dash = Source::Explicit; }},
         {"appearance.src_fill", [](Layer& l) { l.appearance.src_fill = Source::Explicit; }},
+        {"style", [](Layer& l) { l.style = StyleId{7}; }},
         {"min_scale", [](Layer& l) { l.min_scale = 25000; }},
         {"max_scale", [](Layer& l) { l.max_scale = 500; }},
         {"opacity", [](Layer& l) { l.opacity = 128; }},

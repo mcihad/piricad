@@ -101,7 +101,7 @@ struct Rig
 TEST_CASE("SettingSpec: her bildirim eksiksiz ve kataloğa kabul edilmiş")
 {
     const SettingCatalog& cat = builtin_settings();
-    CHECK(cat.size() == 24); // her X-makro satırı kabul edildi
+    CHECK(cat.size() == 50); // her X-makro satırı kabul edildi
 
     for (const auto& spec : cat.all()) {
         CHECK(!spec.id.empty());
@@ -138,6 +138,25 @@ TEST_CASE("R40: dışa aktarılan belgenin baytını değiştiren her ayar proje
     CHECK(scope_of("core.crs.hassasiyet") == SettingScope::Project);
     CHECK(scope_of("core.cizim.birim") == SettingScope::Project);
     CHECK(scope_of("core.cizim.cizgi_tipi_olcegi") == SettingScope::Project);
+
+    // The plot scale turns every paper measure into a ground one, the angle unit
+    // decides whether 100 is a right angle or a bit over a quarter of one, and the
+    // area unit decides whether a parcel is 1200 or 1,2. All three are statements
+    // about how the DOCUMENT's own numbers are read, so all three travel with it.
+    CHECK(scope_of("core.plan.olcek") == SettingScope::Project);
+    CHECK(scope_of("core.aci.birim") == SettingScope::Project);
+    CHECK(scope_of("core.alan.birim") == SettingScope::Project);
+
+    // ...and the aids are not. A ruler, a snap marker and a north arrow change
+    // what the screen shows and not one byte of what is exported.
+    for (const char* aid :
+         {"core.yakalama.uzanti_carpani", "core.yakalama.isaret_boyu", "core.yakalama.isaret_rengi",
+          "core.yakalama.ipucu", "core.izgara.renk", "core.izgara.ana_renk", "core.izgara.adim_y",
+          "core.cetvel.gorunur", "core.cetvel.kalinlik", "core.cetvel.birim",
+          "core.harita.olcek_cubugu", "core.harita.kuzey_oku", "core.harita.koordinat_gostergesi",
+          "core.harita.imlec", "core.harita.imlec_boyu", "core.harita.yakinlastirma_adimi",
+          "core.harita.tekerlek_ters", "core.secim.renk", "core.secim.vurgu_renk"})
+        CHECK(scope_of(aid) == SettingScope::App);
     CHECK(scope_of("core.cizim.metin_yuksekligi") == SettingScope::Project);
     CHECK(scope_of("core.katalog.paket_surumu") == SettingScope::Project);
     // R40 applied literally: a tolerance makes two corners one point, which changes
@@ -166,14 +185,14 @@ TEST_CASE("R40: dışa aktarılan belgenin baytını değiştiren her ayar proje
     CHECK(scope_of("core.yakalama.kutupsal_aci") == SettingScope::Session);
     CHECK(scope_of("core.yakalama.izgara") == SettingScope::Session);
 
-    // The list above is a snapshot: it locks today's twenty-three answers but applies
-    // R40 to nothing new, so a fifteenth setting gets no scrutiny from it. This
+    // The list above is a snapshot: it locks today's named answers but applies
+    // R40 to nothing new, so a later setting gets no scrutiny from it. This
     // does: every spec's summary must state WHY its scope is what it is, so the
     // R40 answer is written down where the reviewer of the new spec sees it.
     for (const auto& spec : cat.all()) {
         // The summary must NAME the scope it claims — "proje", "uygulama" or
         // "oturum" — so the sentence a reviewer reads is the R40 answer and not a
-        // description of the value. All twenty-four already do; the next one
+        // description of the value. Every one already does; the next one
         // cannot be added without writing its answer down.
         if (spec.summary.find(setting_scope_label(spec.scope)) == std::string::npos)
             FAIL_WITH("R40 gerekçesi özet metninde yazılmamış: özet kapsamı "
@@ -585,6 +604,15 @@ TEST_CASE("Her tür metne çevrilip geri okunur")
     round_trip("core.crs.id", "TUREF/TM33", "TUREF/TM33");
     round_trip("core.cizim.birim", "metre", "metre");
     round_trip("core.arayuz.tema", "koyu", "koyu");
+
+    // The database connection. Round-tripping through text is exactly what
+    // `MainWindow::savePreferences` and `loadPreferences` do, so this is the
+    // check that these four survive a restart. A host name with a dot in it is
+    // the case worth naming: it must not be read as a number.
+    round_trip("core.veritabani.sunucu", "sunucu.belediye.gov.tr", "sunucu.belediye.gov.tr");
+    round_trip("core.veritabani.port", "5433", "5433");
+    round_trip("core.veritabani.ad", "piricad", "piricad");
+    round_trip("core.veritabani.kullanici", "harita", "harita");
 
     // A mask is readable in hexadecimal, which is how a user thinks about it.
     const SettingSpec& mask = cat.at(cat.find("core.yakalama.modlar"));

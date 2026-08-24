@@ -75,6 +75,59 @@ struct FileRequest
     Transaction* tx{nullptr};
 };
 
+/// One database operation, asked for by `VERİTABANI` and carried out by /src/io.
+///
+/// A SEPARATE STRUCT FROM `FileRequest`, not extra verbs on it, because the two
+/// address different things and sharing a field would mean naming one `path` and
+/// meaning "table" half the time. A database target is a connection string, a
+/// table, or a stored project's name; a file target is a path. Same seam, same
+/// reason (Article 3.2), different nouns.
+struct DatabaseRequest
+{
+    /// What to do. Deliberately small: this is the command surface a script and
+    /// the AI see, and each verb is one sentence a user would say out loud.
+    enum class Verb : std::uint8_t {
+        Connect,     ///< open a connection and report what the server is
+        Disconnect,  ///< close it
+        Tables,      ///< list the spatial tables the connection can see
+        WriteLayer,  ///< write one layer out as an ordinary spatial table
+        SaveProject, ///< store the whole drawing under a name
+        OpenProject, ///< replace the drawing with a stored one
+        Projects,    ///< list what is stored
+        DropProject, ///< remove one stored project
+    };
+
+    Verb verb{Verb::Connect}; ///< which operation to carry out
+
+    /// Connect: the libpq connection string. WriteLayer: the table to write.
+    /// SaveProject / OpenProject: the name to store under or read back.
+    std::string target;
+
+    /// WriteLayer: which layer. Empty means the active one.
+    std::string layer;
+
+    /// The calling command's transaction, for the verbs that mutate the document.
+    /// Null for everything else, exactly as `FileRequest` uses it.
+    Transaction* tx{nullptr};
+};
+
+/// A PostgreSQL connection string with its password taken out.
+///
+/// ONE implementation, shared by everything that shows or stores a connection
+/// string: `VERİTABANI` before it journals, and the database window before it
+/// displays. A journal is a plain JSONL file that gets attached to bug reports
+/// and committed beside projects, and a screenshot travels further than either.
+///
+/// Handles both forms libpq accepts, because the second one is easy to forget:
+///
+///   `host=x password=SECRET`            -> `password=***`
+///   `host=x password='SEC RET'`         -> `password=***`
+///   `postgresql://user:SECRET@host/db`  -> `postgresql://user:***@host/db`
+///
+/// Replaces the VALUE and keeps the FIELD. A replay that silently dropped the
+/// password would look like a connection that never needed one.
+std::string redact_conninfo(std::string_view conninfo);
+
 /// What happened when a command ran.
 ///
 /// Returned to every client identically. `mutated` is what the shell watches to
@@ -115,6 +168,9 @@ public:
     // ---- batch mode (§10.4): one validation pass, one undo step ----
     core::Status begin_batch(std::string label);
     core::Result<DispatchResult> end_batch();
+    /// Discards every edit made since begin_batch(). Used when a GUI composite
+    /// edit cannot finish, so Apply is all-or-nothing rather than half a symbol.
+    void abort_batch();
 
     bool in_batch() const noexcept { return batch_ != nullptr; }
 
@@ -278,6 +334,11 @@ public:
     /// script depends on command, never the reverse (Constitution Article 3).
     std::function<core::Status(const std::string& path)> on_run_script;
 
+    /// Installed by `io::DatabaseService`. Unset means this build has no database
+    /// engine attached — either it was compiled without PostGIS or nothing wired
+    /// the service — and `VERİTABANI` says so rather than pretending it connected.
+    std::function<Task<core::Result<std::string>>(const DatabaseRequest&)> on_database_request;
+
     /// Installed by `io::FileService`, for the same reason and in the same shape.
     /// Returns the Turkish line the command echoes, or the error the user sees.
     /// Unset means no file engine is attached, and the file commands say so
@@ -314,6 +375,7 @@ private:
     std::unique_ptr<Transaction> batch_;
     std::string batch_label_;
     std::size_t batch_commands_{0};
+    std::uint64_t batch_revision_at_start_{0};
 };
 
 } // namespace piricad::command

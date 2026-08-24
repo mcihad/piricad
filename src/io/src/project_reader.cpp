@@ -340,6 +340,13 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         group_rows = rows.value();
     }
 
+    std::span<const core::StyleId> layer_style_rows;
+    if (view.has(kBlkLayerStyles) && dr.layer_count > 0) {
+        auto rows = view.column<core::StyleId>(kBlkLayerStyles, dr.layer_count, "katman stilleri");
+        if (!rows) return rows.error();
+        layer_style_rows = rows.value();
+    }
+
     const core::Layer kDefaults{};
     std::vector<bool> locked(static_cast<std::size_t>(dr.layer_count), false);
 
@@ -496,6 +503,20 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                            "yinelenen stil var ve nesnelerin stil sütunu yanlış yere bakardı.");
     }
 
+    // Styles are interned only now, so resolve layer defaults after the table is
+    // complete. Older files have no block and retain their Appearance fallback.
+    for (std::size_t i = 0; i < layer_style_rows.size(); ++i) {
+        const core::StyleId style = layer_style_rows[i];
+        if (style != core::kByLayerStyle && !doc.styles().contains(style))
+            return err(ErrorCode::ParseError, std::string(kErrConsist) + ": " + std::to_string(i) +
+                                                  ". katman, olmayan stil kimliği " +
+                                                  std::to_string(style) + " kullanıyor.");
+        if (style != core::kByLayerStyle) {
+            if (auto st = tx.set_layer_style(static_cast<core::LayerId>(i), style); !st)
+                return st.error();
+        }
+    }
+
     // ---- embedded pictures ----
     //
     // Read BEFORE the entities so a symbol layer that names one finds it there.
@@ -540,6 +561,44 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                                std::to_string(id.value()) +
                                " kimliğine düştü. Görsel tablosu tekilleştirilmiştir; "
                                "dosyada yinelenen görsel var.");
+        }
+    }
+
+    // ---- line types ----
+    //
+    // OPTIONAL, and its absence is not a defect: every file written before line
+    // types existed has no such block and every stroke in it was solid, which is
+    // exactly what an empty store draws (io.md R10).
+    if (view.has(kBlkDashes)) {
+        auto rows = view.column<DashRecord>(kBlkDashes, view.count_of(kBlkDashes), "cizgi tipleri");
+        if (!rows) return rows.error();
+
+        for (std::uint64_t i = 0; i < rows.value().size(); ++i) {
+            const DashRecord& r = rows.value()[static_cast<std::size_t>(i)];
+
+            core::DashPattern pattern;
+            pattern.count = r.count;
+            for (std::size_t k = 0; k < core::kMaxDashSegments; ++k)
+                pattern.lengths[k] = r.lengths[k];
+
+            auto origin = strings.at(r.origin, "cizgi tipi kaynagi");
+            if (!origin) return origin.error();
+
+            // `intern_dash` is where the shape rules live — even count, no zero
+            // segment, within the cap — so a hostile or corrupt file is refused
+            // by the same check a catalogue is, and this loop restates none of it.
+            auto id = tx.intern_dash(pattern, origin.value());
+            if (!id) return id.error();
+
+            // Slot 0 is the sentinel, so record i is id i+1. A mismatch means the
+            // file holds one pattern twice and every stroke pointing at the second
+            // would silently draw the first.
+            if (id.value() != static_cast<core::DashId>(i + 1))
+                return err(ErrorCode::ParseError,
+                           std::string(kErrConsist) + ": " + std::to_string(i) +
+                               ". çizgi tipi kaydı " + std::to_string(id.value()) +
+                               " kimliğine düştü. Çizgi tipi tablosu tekilleştirilmiştir; "
+                               "dosyada yinelenen desen var.");
         }
     }
 

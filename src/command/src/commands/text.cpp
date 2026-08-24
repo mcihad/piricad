@@ -28,10 +28,10 @@ namespace {
 
 core::TextAnchor anchor_from(const std::string& word)
 {
-    if (core::turkish_iequals(word, "orta")) return core::TextAnchor::BaselineCentre;
-    if (core::turkish_iequals(word, "sağ") || core::turkish_iequals(word, "sag"))
+    if (core::turkish_key_equals(word, "orta")) return core::TextAnchor::BaselineCentre;
+    if (core::turkish_key_equals(word, "sağ") || core::turkish_key_equals(word, "sag"))
         return core::TextAnchor::BaselineRight;
-    if (core::turkish_iequals(word, "merkez")) return core::TextAnchor::MiddleCentre;
+    if (core::turkish_key_equals(word, "merkez")) return core::TextAnchor::MiddleCentre;
     return core::TextAnchor::BaselineLeft;
 }
 

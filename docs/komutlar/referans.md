@@ -31,6 +31,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.import`](import.md) | `İÇEAKTAR`, `ICEAKTAR`, `IMPORT`, `IAKTAR` | Dosya | tek işlem | etkileşimli, betiklenebilir | Dış bir veri dosyasını çizime ekler. |
 | [`core.export`](export.md) | `DIŞAAKTAR`, `DISAAKTAR`, `EXPORT`, `DAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi dış bir veri biçimine yazar. |
 | [`core.script`](script.md) | `BETİK`, `BETIK`, `SCRIPT` | Betik | komuta özel | etkileşimli, betiklenebilir, salt okunur | Bir betik dosyasını komut veri yolu üzerinden çalıştırır. |
+| [`core.database`](database.md) | `VERİTABANI`, `VERITABANI`, `DATABASE`, `VT` | Dosya | geri alınmaz | etkileşimli, betiklenebilir | PostGIS veritabanına bağlanır; katmanları tablo, projeleri kayıt olarak yazar. |
 | [`core.setting`](setting.md) | `AYAR`, `SETTING`, `AY` | Sistem | tek işlem | betiklenebilir | Proje ayarlarını listeler, okur ve değiştirir. |
 | [`core.preference`](preference.md) | `TERCİH`, `TERCIH`, `PREFERENCE`, `PREF` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Uygulama tercihlerini listeler, okur ve değiştirir. |
 | [`core.mode`](mode.md) | `MOD`, `MODE`, `MD` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Oturum modlarını (yakalama, dik mod, kutupsal izleme) listeler, okur ve değiştirir. |
@@ -181,13 +182,17 @@ Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden
 | `sekil` | text | isteğe bağlı | İşaretçi şekli: daire, kare, ucgen, baklava, yildiz, arti, carpi, ok, yarim-daire, besgen, altigen, cizik |
 | `yerlesim` | text | isteğe bağlı | İşaretçinin çizgi üzerindeki yeri: aralik, tepe, ilk, son, orta |
 | `birim` | text | isteğe bağlı | Ölçülerin birimi: kagit (µm), zemin (mm), piksel |
+| `boyut_birim` | text | isteğe bağlı | Yalnız `boyut` için birim; verilmezse `birim` geçerlidir |
+| `aralik_birim` | text | isteğe bağlı | Yalnız `aralik` için birim; verilmezse `birim` geçerlidir |
+| `aralik_y_birim` | text | isteğe bağlı | Yalnız `aralik_y` için birim; verilmezse `birim` geçerlidir |
+| `kaydirma_birim` | text | isteğe bağlı | Yalnız `kaydirma` için birim; verilmezse `birim` geçerlidir |
 | `boyut` | integer | isteğe bağlı | İşaretçi çapı ya da tarak dişinin boyu, `birim` cinsinden |
 | `aralik` | integer | isteğe bağlı | Çizgi boyunca ya da desende birinci eksende aralık |
 | `aralik_y` | integer | isteğe bağlı | Nokta deseninde ikinci eksen; verilmezse kare desen |
 | `aci` | integer | isteğe bağlı | Desen açısı ya da işaretçi dönüklüğü, mikro derece |
 | `kaydirma` | integer | isteğe bağlı | Geometriden dik kaydırma, `birim` cinsinden |
 | `saydamlik` | integer | isteğe bağlı | Katman saydamlığı 0-255; 255 tam opak |
-| `desen` | text | isteğe bağlı | Çizgi deseni tablosundaki satır |
+| `desen` | text | isteğe bağlı | Çizgi tipi: sürekli, ya da çizgi kalınlığının katı olarak çizgi/boşluk uzunlukları — '8 1 1 1' gibi (kesik-nokta) |
 | `yazi` | text | isteğe bağlı | yazi-isaretci katmanının yazdığı sabit metin |
 
 Ayrıntılı kullanım: [STİL](style.md)
@@ -293,6 +298,18 @@ Bir betik dosyasını komut veri yolu üzerinden çalıştırır.
 | `dosya` | text | 1 | Çalıştırılacak betik dosyasının yolu |
 
 Ayrıntılı kullanım: [BETİK](script.md)
+
+### `core.database` — VERİTABANI
+
+PostGIS veritabanına bağlanır; katmanları tablo, projeleri kayıt olarak yazar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `islem` | text | 1 | baglan | kes | tablolar | katmanyaz | projekaydet | projeac | projeler | projesil |
+| `hedef` | text | isteğe bağlı | baglan: bağlantı dizesi; katmanyaz: tablo adı; proje işlemleri: proje adı |
+| `katman` | text | isteğe bağlı | katmanyaz: yazılacak katman; yoksa etkin katman |
+
+Ayrıntılı kullanım: [VERİTABANI](database.md)
 
 ### `core.setting` — AYAR
 
@@ -797,6 +814,38 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "help": "Ölçülerin birimi: kagit (µm), zemin (mm), piksel"
         },
         {
+          "name": "boyut_birim",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Yalnız `boyut` için birim; verilmezse `birim` geçerlidir"
+        },
+        {
+          "name": "aralik_birim",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Yalnız `aralik` için birim; verilmezse `birim` geçerlidir"
+        },
+        {
+          "name": "aralik_y_birim",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Yalnız `aralik_y` için birim; verilmezse `birim` geçerlidir"
+        },
+        {
+          "name": "kaydirma_birim",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Yalnız `kaydirma` için birim; verilmezse `birim` geçerlidir"
+        },
+        {
           "name": "boyut",
           "type": "integer",
           "min": 0,
@@ -850,7 +899,7 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "min": 0,
           "max": 1,
           "required": false,
-          "help": "Çizgi deseni tablosundaki satır"
+          "help": "Çizgi tipi: sürekli, ya da çizgi kalınlığının katı olarak çizgi/boşluk uzunlukları — '8 1 1 1' gibi (kesik-nokta)"
         },
         {
           "name": "yazi",

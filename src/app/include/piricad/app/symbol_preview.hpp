@@ -15,6 +15,7 @@
 // parcel happens to look like.
 #pragma once
 
+#include "piricad/core/dash_store.hpp"
 #include "piricad/core/image_store.hpp"
 #include "piricad/core/style.hpp"
 #include "piricad/render/backend.hpp"
@@ -53,11 +54,13 @@ PreviewShape natural_shape(const core::Symbol& symbol);
 /// `images` supplies the bytes a raster layer needs and is borrowed for the call.
 /// An empty symbol produces an empty image rather than a blank one, so a caller
 /// can tell "nothing declared" from "declared and invisible".
-QImage symbol_preview(const core::Symbol& symbol, const core::ImageStore& images, QSize size,
-                      std::uint32_t background, PreviewShape shape);
+QImage symbol_preview(const core::Symbol& symbol, const core::ImageStore& images,
+                      const core::DashStore& dashes, QSize size, std::uint32_t background,
+                      PreviewShape shape);
 
 /// The same picture as an icon, for a tree row or a list item.
-QIcon symbol_icon(const core::Symbol& symbol, const core::ImageStore& images, QSize size,
-                  std::uint32_t background, PreviewShape shape);
+QIcon symbol_icon(const core::Symbol& symbol, const core::ImageStore& images,
+                  const core::DashStore& dashes, QSize size, std::uint32_t background,
+                  PreviewShape shape);
 
 } // namespace piricad::app

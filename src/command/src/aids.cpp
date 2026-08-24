@@ -45,6 +45,14 @@ const AidSettings& InputAids::settings(const core::Settings& app,
     out.polar_step = session.get("core.yakalama.kutupsal_aci").as_int();
 
     out.snap_radius = radius_from_pixels(app.get("core.yakalama.tolerans").as_int(), mm_per_pixel_);
+
+    // A multiple of the aperture, not a fixed distance. The reach then follows the
+    // zoom the way a user expects: an extension worth offering at 1:1000 covers
+    // tens of metres, and the same gesture at 1:100 covers tens of centimetres.
+    // Zero switches the constructed modes off, which is the contract the engine
+    // already keeps for `grid_step` and `polar_step`.
+    const std::int64_t factor = app.get("core.yakalama.uzanti_carpani").as_int();
+    out.reach                 = factor > 0 ? static_cast<core::Mm>(out.snap_radius * factor) : 0;
     out.pick_radius = radius_from_pixels(app.get("core.secim.tolerans").as_int(), mm_per_pixel_);
     out.grid_step   = app.get("core.izgara.adim").as_length();
 
@@ -67,6 +75,7 @@ core::SnapResult InputAids::resolve(const core::Document& doc, const AidSettings
     q.polar_step = s.polar_step;
     q.has_base   = has_base;
     q.base       = base;
+    q.reach      = s.reach;
 
     return core::snap(doc, q);
 }

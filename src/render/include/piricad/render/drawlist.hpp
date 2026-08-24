@@ -57,7 +57,17 @@ struct PassStyle
     /// same reason `line_rgba` is: a centroid marker's geometry is in the polygon
     /// batch and its ink in the stroke one.
     std::uint32_t fill_rgba{0};
-    std::uint16_t dash{0}; ///< index into the dash table, from /data
+    std::uint16_t dash{0}; ///< index into the document's DashStore
+
+    /// The line type's own segment lengths, resolved out of the store so a
+    /// backend needs no document. Mark first, in hundredths of the stroke width;
+    /// `dash_count` of them are meaningful and zero means solid.
+    ///
+    /// Copied into the pass rather than reached for through a pointer because a
+    /// draw list outlives the call that built it by a frame and a backend that
+    /// followed a pointer into a document being edited would read a freed table.
+    std::uint16_t dash_lengths[8]{};
+    std::uint8_t dash_count{0};
 
     /// The picture a raster type draws, BORROWED from the document's image store.
     ///

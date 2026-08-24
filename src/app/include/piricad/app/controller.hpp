@@ -14,6 +14,7 @@
 #include "piricad/command/transaction.hpp"
 #include "piricad/core/document.hpp"
 #include "piricad/domain/geodesy/crs_service.hpp"
+#include "piricad/io/database.hpp"
 #include "piricad/io/service.hpp"
 #include "piricad/script/json_runner.hpp"
 
@@ -39,6 +40,11 @@ public:
 
     // ---- the only ways a widget may act on the document ----
     void runLine(const QString& line, command::Origin origin = command::Origin::CommandLine);
+
+    /// Runs one command line and returns its bus result to an interaction that
+    /// must keep its dialog open on failure. Other UI clients use `runLine()`.
+    core::Result<command::DispatchResult>
+    runLineResult(const QString& line, command::Origin origin = command::Origin::CommandLine);
     void runCommand(const QString& name); ///< toolbar / menu — same road as a script
 
     /// Dispatches a fully built invocation. This is `Bus::dispatch`, the same
@@ -110,6 +116,12 @@ private:
     // Bus::on_run_script. Declared after `bus_` so it is constructed after it and
     // destroyed before it — a file service must never outlive the bus it points at.
     io::FileService files_;
+
+    // Installs Bus::on_database_request, for the same reason and with the same
+    // lifetime rule. Constructing it costs nothing and opens no connection: it
+    // only puts the hook in place, so `VERİTABANI` can answer instead of the bus
+    // reporting that no engine is attached.
+    io::DatabaseService database_;
 
     /// Resolves a CRS id into its EPSG code and zone. Held as an optional because
     /// a build whose /data/crs package is missing has no catalogue to answer from,
