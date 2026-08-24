@@ -321,7 +321,11 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
             sl.opacity         = l.opacity;
             sl.image           = l.image;
             symbol_layers.push_back(sl);
-            symbol_layer_flags.push_back(l.enabled ? 1u : 0u);
+            // Bit 0 drawn, bit 1 colour locked. Additive: a file written before
+            // the lock existed has the bit clear, which reads back unlocked — and
+            // unlocked is what that file meant.
+            symbol_layer_flags.push_back(
+                static_cast<std::uint8_t>((l.enabled ? 1u : 0u) | (l.colour_locked ? 2u : 0u)));
             symbol_layer_text.push_back(pool.intern(l.text));
         }
     }

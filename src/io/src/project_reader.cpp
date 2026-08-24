@@ -479,8 +479,11 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             sym.max_scale = r.max_scale;
             for (std::uint32_t k = 0; k < r.layer_count; ++k) {
                 core::SymbolLayer layer = from_record(symbol_layer_rows[r.first_layer + k]);
-                if (r.first_layer + k < symbol_layer_flags.size())
-                    layer.enabled = symbol_layer_flags[r.first_layer + k] != 0;
+                if (r.first_layer + k < symbol_layer_flags.size()) {
+                    const std::uint8_t flags = symbol_layer_flags[r.first_layer + k];
+                    layer.enabled            = (flags & 1u) != 0;
+                    layer.colour_locked      = (flags & 2u) != 0;
+                }
                 if (r.first_layer + k < symbol_layer_text.size()) {
                     auto text =
                         strings.at(symbol_layer_text[r.first_layer + k], "sembol katmani yazisi");

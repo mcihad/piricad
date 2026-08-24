@@ -30,6 +30,8 @@
 // document from the same numbers, which is what makes them comparable at all.
 #include "piricad/app/qgis_backend.hpp"
 
+#include "piricad/app/backend_factory.hpp"
+
 #include "piricad/core/style.hpp"
 
 #include <qgsapplication.h>
@@ -215,6 +217,10 @@ public:
                 const render::FrameContext& ctx) override;
 
 private:
+    /// True when every pass in `list` has a QGIS translation. See the comment on
+    /// the definition: an unfinished port says so rather than drawing short.
+    static bool handles(const render::DrawList& list);
+
     void drawPass(QgsRenderContext& rc, const render::DrawList& list, std::size_t i, double cx,
                   double cy);
 
@@ -222,6 +228,9 @@ private:
                             double cx, double cy);
     static QPolygonF ring_of(const render::PolygonBatch& b, std::size_t offset, std::uint32_t run,
                              double cx, double cy);
+
+    /// Built on first need, for the frames this engine cannot draw whole.
+    std::unique_ptr<render::Backend> fallback_;
 };
 
 QPolygonF QgisBackend::run_of(const render::PolylineBatch& b, std::size_t offset, std::uint32_t run,
@@ -337,8 +346,9 @@ void QgisBackend::drawPass(QgsRenderContext& rc, const render::DrawList& list, s
         case SymbolLayerType::SimpleMarker:
         case SymbolLayerType::CentroidFill:
         case SymbolLayerType::TextMarker:
-            // Placed from the geometry rather than drawn along it; left to the
-            // built-in backend until the centroid and text paths are ported.
+            // Handled by the frame-level fallback, never dropped here; see
+            // `handles()` and `render()`. Reaching this point would mean the two
+            // lists had drifted apart.
             return;
         default:
             line = std::make_unique<QgsLineSymbol>(QgsSymbolLayerList()
@@ -356,9 +366,39 @@ void QgisBackend::drawPass(QgsRenderContext& rc, const render::DrawList& list, s
     }
 }
 
+bool QgisBackend::handles(const render::DrawList& list)
+{
+    // The port is not finished, and an unfinished port must SAY SO rather than
+    // draw a symbol short. Three layer types are placed from the geometry rather
+    // than drawn along it — a glyph at a ring's centroid, a marker on a point, a
+    // fixed word — and this backend has no translation for them yet. Skipping
+    // them quietly is what made the style designer's preview lose the circle of
+    // an MPYY building-condition symbol the moment QGIS became the default.
+    //
+    // So the FRAME goes to the built-in backend instead. Mixing the two inside
+    // one frame would put two different renderers' idea of a pixel next to each
+    // other; handing the whole frame over keeps one engine per picture, and the
+    // list of what is missing stays in one place.
+    for (const render::PassStyle& ps : list.passes) {
+        switch (ps.type) {
+        case core::SymbolLayerType::SimpleMarker:
+        case core::SymbolLayerType::CentroidFill:
+        case core::SymbolLayerType::TextMarker: return false;
+        default: break;
+        }
+    }
+    return true;
+}
+
 void QgisBackend::render(const render::DrawList& list, const render::Overlay& overlay,
                          const render::FrameContext& ctx)
 {
+    if (!handles(list)) {
+        if (!fallback_) fallback_ = make_builtin_backend();
+        fallback_->render(list, overlay, ctx);
+        return;
+    }
+
     auto* device = static_cast<QPaintDevice*>(ctx.target);
     if (device == nullptr) return;
 

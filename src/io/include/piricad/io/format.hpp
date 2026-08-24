@@ -167,7 +167,7 @@ enum BlockId : std::uint32_t {
     /// `SymbolLayerRecord` is exactly 64 bytes with nothing spare. A file written
     /// before the flag existed has no such block and every layer reads back
     /// enabled, which is what that file meant.
-    kBlkSymbolLayerFlags = 0x0035, ///< u8[], 1 = drawn
+    kBlkSymbolLayerFlags = 0x0035, ///< u8[], bit 0 = drawn, bit 1 = colour locked
 
     /// What each `TextMarker` symbol layer writes, one string index per layer.
     ///

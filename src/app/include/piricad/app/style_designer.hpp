@@ -50,6 +50,7 @@ class QFormLayout;
 class QLabel;
 class QLineEdit;
 class QListWidget;
+class QStackedWidget;
 class QSpinBox;
 class QTabBar;
 class QToolButton;
@@ -89,7 +90,8 @@ private:
 
     // ---- building ----
     QWidget* buildGallery();
-    QWidget* buildStack();
+    QWidget* buildTree();
+    QWidget* buildGlobal();
     QWidget* buildProperties();
 
     /// Declares one property row and records which layer types show it.
@@ -105,7 +107,26 @@ private:
     void refresh();
     void loadSelected();
     void applyToSelected();
+
+    /// The stack index the tree has selected, or -1 when the ROOT is selected —
+    /// which is a selection, not an absence: the root is where the properties of
+    /// the whole symbol live, exactly as it is in QGIS.
     int currentLayer() const;
+
+    /// True when the tree's selection is the symbol itself rather than a layer.
+    bool rootSelected() const;
+
+    /// Selects the layer drawn last, which is the tree's first child.
+    void selectTopLayer();
+
+    /// Fills the whole-symbol editors from `symbol_`.
+    void loadGlobal();
+
+    /// Writes one whole-symbol property across every layer that accepts it.
+    void applyGlobal();
+
+    /// Re-reads the tree rows' check boxes and lock buttons into the symbol.
+    void syncTreeState();
 
     void addLayer();
     void duplicateLayer();
@@ -182,7 +203,21 @@ private:
     /// while the user is choosing is cheaper than making them look it up after.
     QLabel* provenance_{nullptr};
 
-    QListWidget* stack_{nullptr};
+    /// The symbol as a TREE: the symbol itself at the root, its layers under it.
+    ///
+    /// A flat list cannot say what the root says. Selecting the symbol is how a
+    /// user reaches the properties that belong to ALL of it — the unit every
+    /// measure is read in, the colour every unlocked layer takes, the opacity of
+    /// the whole thing — and QGIS puts them there for the same reason.
+    QTreeWidget* tree_{nullptr};
+
+    /// The whole-symbol editors, shown when the root is selected.
+    QStackedWidget* pages_{nullptr};
+    QComboBox* globalUnit_{nullptr};
+    QToolButton* globalColour_{nullptr};
+    QSpinBox* globalWidth_{nullptr};
+    QSpinBox* globalOpacity_{nullptr};
+    QLabel* globalUnitNote_{nullptr};
 
     QComboBox* type_{nullptr};
     QComboBox* shape_{nullptr};
@@ -197,6 +232,9 @@ private:
     /// contradicting each other about whether it was visible.
     QLabel* strokeLabel_{nullptr};
     QToolButton* fill_{nullptr};
+
+    /// Keeps this layer's colour when the whole symbol's colour is set.
+    QCheckBox* lock_{nullptr};
     QSpinBox* width_{nullptr};
     QSpinBox* size_{nullptr};
     QSpinBox* interval_{nullptr};

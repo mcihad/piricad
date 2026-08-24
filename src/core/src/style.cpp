@@ -251,7 +251,10 @@ std::uint64_t fold_symbol(const Symbol& sym, std::uint64_t seed)
         h = fnv1a_int(static_cast<std::int64_t>(l.join), h);
         h = fnv1a_int(static_cast<std::int64_t>(l.opacity), h);
         h = fnv1a_int(static_cast<std::int64_t>(l.image), h);
+        // Both flags fold. A locked layer and an unlocked one are two symbols:
+        // the next whole-symbol colour change makes them draw differently.
         h = fnv1a_int(l.enabled ? 1 : 0, h);
+        h = fnv1a_int(l.colour_locked ? 1 : 0, h);
         h = fnv1a(l.text, h);
         h = fold_appearance(l.look, h);
     }

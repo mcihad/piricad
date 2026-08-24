@@ -6,6 +6,7 @@
 #include "piricad/command/bus.hpp"
 #include "piricad/core/document.hpp"
 
+#include <QCheckBox>
 #include <QColorDialog>
 #include <QComboBox>
 #include <QDate>
@@ -29,6 +30,7 @@
 #include <QSignalBlocker>
 #include <QSpinBox>
 #include <QSplitter>
+#include <QStackedWidget>
 #include <QStandardPaths>
 #include <QTabBar>
 #include <QToolButton>
@@ -343,8 +345,16 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     auto* rightLayout = new QVBoxLayout(right);
     rightLayout->setContentsMargins(0, 0, 0, 0);
     rightLayout->setSpacing(10);
-    rightLayout->addWidget(buildStack(), 2);
-    rightLayout->addWidget(buildProperties(), 3);
+    rightLayout->addWidget(buildTree(), 2);
+
+    // TWO PAGES, one selection. Selecting the symbol shows what belongs to all of
+    // it; selecting a layer shows what belongs to that layer. Showing both at once
+    // is what makes a symbol editor confusing — a user cannot tell which colour
+    // they are about to change.
+    pages_ = new QStackedWidget(this);
+    pages_->addWidget(buildGlobal());
+    pages_->addWidget(buildProperties());
+    rightLayout->addWidget(pages_, 3);
     split->addWidget(right);
 
     split->setStretchFactor(0, 2);
@@ -436,7 +446,7 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     refreshGalleryTree();
     refreshGalleryItems();
     refresh();
-    stack_->setCurrentRow(0);
+    selectTopLayer();
     updateHeaderNote();
 }
 
@@ -687,7 +697,7 @@ void StyleDesigner::resetToLayer()
     galleryPackage_.clear();
     geometry_->setCurrentIndex(static_cast<int>(natural_shape(symbol_)));
     refresh();
-    stack_->setCurrentRow(0);
+    selectTopLayer();
 }
 
 void StyleDesigner::applyGalleryPick()
@@ -707,32 +717,35 @@ void StyleDesigner::applyGalleryPick()
     galleryPackage_ = QString::fromStdString(e->package_path);
     geometry_->setCurrentIndex(static_cast<int>(shape_of(e->kind)));
     refresh();
-    stack_->setCurrentRow(0);
+    selectTopLayer();
 }
 
 // ------------------------------------------------------------- the stack ----
 
-QWidget* StyleDesigner::buildStack()
+QWidget* StyleDesigner::buildTree()
 {
-    auto* box    = new QGroupBox(tr("Sembol katmanları — üstteki en son çizilir"), this);
+    auto* box    = new QGroupBox(tr("Sembol — üstteki en son çizilir"), this);
     auto* layout = new QVBoxLayout(box);
 
-    stack_ = new QListWidget(box);
-    stack_->setIconSize(QSize(44, 26));
-    // Five rows without scrolling: a published gösterim is routinely a fill, a
-    // boundary, a glyph and two words, and a list that shows three of them makes
-    // the user scroll to find out what their own symbol is made of.
-    stack_->setMinimumHeight(172);
-    stack_->setAlternatingRowColors(true);
-    stack_->setAccessibleName(tr("Sembol katmanları"));
-    connect(stack_, &QListWidget::currentRowChanged, this, [this](int) { loadSelected(); });
-    connect(stack_, &QListWidget::itemChanged, this, [this](QListWidgetItem* item) {
+    tree_ = new QTreeWidget(box);
+    tree_->setHeaderHidden(true);
+    tree_->setIconSize(QSize(44, 26));
+    tree_->setRootIsDecorated(true);
+    tree_->setMinimumHeight(190);
+    tree_->setAlternatingRowColors(true);
+    tree_->setAccessibleName(tr("Sembol katmanları"));
+
+    connect(tree_, &QTreeWidget::currentItemChanged, this,
+            [this](QTreeWidgetItem*, QTreeWidgetItem*) { loadSelected(); });
+
+    connect(tree_, &QTreeWidget::itemChanged, this, [this](QTreeWidgetItem* item, int) {
         if (loading_ || item == nullptr) return;
 
-        // The stack index the row carries, not the row. A row whose index has not
-        // been written yet is a row this dialog is building, and answering it as
-        // an edit is what used to switch symbol layer 0 off behind the user.
-        const QVariant carried = item->data(Qt::UserRole);
+        // The stack index the row CARRIES, not the row it sits on. A row whose
+        // index has not been written yet is a row this dialog is still building,
+        // and answering it as a user edit is what used to switch symbol layer 0
+        // off behind the user's back.
+        const QVariant carried = item->data(0, Qt::UserRole);
         if (!carried.isValid()) return;
 
         const int index = carried.toInt();
@@ -740,8 +753,18 @@ QWidget* StyleDesigner::buildStack()
 
         galleryCode_.clear();
         galleryPackage_.clear();
-        symbol_.layers[at(index)].enabled = item->checkState() == Qt::Checked;
-        refresh();
+        symbol_.layers[at(index)].enabled = item->checkState(0) == Qt::Checked;
+
+        // QUEUED, and this is a correctness fix rather than a nicety. Qt is still
+        // inside `QTreeWidgetItem::setCheckState` when this runs; `refresh()`
+        // clears the tree, which deletes that very item, and the call Qt is in
+        // the middle of then returns into freed memory. The list version of this
+        // dialog survived it by luck and the tree does not — it segfaults on the
+        // first click of a check box.
+        //
+        // A slot that rebuilds the model it was notified about has to do it after
+        // the notification has unwound. That is what a queued call is for.
+        QMetaObject::invokeMethod(this, &StyleDesigner::refresh, Qt::QueuedConnection);
     });
 
     const auto button = [&](const QString& text, const QString& tip, auto slot) {
@@ -762,18 +785,86 @@ QWidget* StyleDesigner::buildStack()
     bar->addWidget(button(QStringLiteral("▼"), tr("Aşağı"), [this] { moveLayer(-1); }));
 
     // The two things a stack is used for most, on the keys a user already presses
-    // for them elsewhere. Scoped to the LIST so they do not fire while a spin box
+    // for them elsewhere. Scoped to the TREE so they do not fire while a spin box
     // has focus and the user is deleting a digit.
-    auto* remove = new QShortcut(QKeySequence::Delete, stack_);
+    auto* remove = new QShortcut(QKeySequence::Delete, tree_);
     remove->setContext(Qt::WidgetShortcut);
     connect(remove, &QShortcut::activated, this, &StyleDesigner::removeLayer);
 
-    auto* copy = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_D), stack_);
+    auto* copy = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_D), tree_);
     copy->setContext(Qt::WidgetShortcut);
     connect(copy, &QShortcut::activated, this, &StyleDesigner::duplicateLayer);
 
-    layout->addWidget(stack_, 1);
+    layout->addWidget(tree_, 1);
     layout->addLayout(bar);
+    return box;
+}
+
+// ------------------------------------------------- the symbol as a whole ----
+
+QWidget* StyleDesigner::buildGlobal()
+{
+    auto* box  = new QGroupBox(tr("Sembol özellikleri"), this);
+    auto* form = new QFormLayout(box);
+
+    // ---- THE UNIT, and it is the first row on purpose ----
+    //
+    // This is the question a CAD user actually asks about a symbol, and until now
+    // this dialog answered it in a combo box beside a number with no explanation:
+    // does this stay the same size when I zoom, or does it grow with the drawing?
+    // Both are right and which one is right depends on what the symbol MEANS. A
+    // boundary's thickness belongs to the SHEET — MPYY says 0,5 mm and it is
+    // 0,5 mm at 1/1000 and at 1/5000 — so it must not move when the view does. A
+    // forest hatch belongs to the GROUND: it covers an area, and letting it shrink
+    // with the zoom turns a legible texture into a grey wash.
+    globalUnit_ = new QComboBox(box);
+    globalUnit_->addItem(tr("Kâğıt — yakınlaştırınca boyu DEĞİŞMEZ"), // ui-label
+                         static_cast<int>(core::Unit::Paper));
+    globalUnit_->addItem(tr("Zemin — çizimle birlikte BÜYÜR ve küçülür"), // ui-label
+                         static_cast<int>(core::Unit::Ground));
+    globalUnit_->addItem(tr("Piksel — ham ekran pikseli"), // ui-label
+                         static_cast<int>(core::Unit::Pixel));
+    connect(globalUnit_, &QComboBox::currentIndexChanged, this, [this](int) { applyGlobal(); });
+
+    globalUnitNote_ = new QLabel(box);
+    globalUnitNote_->setObjectName(QStringLiteral("quiet"));
+    globalUnitNote_->setWordWrap(true);
+
+    globalColour_ = new QToolButton(box);
+    globalColour_->setToolTip(tr("Kilitli olmayan bütün katmanların rengini birden değiştirir"));
+    connect(globalColour_, &QToolButton::clicked, this, [this] {
+        const QColor picked =
+            QColorDialog::getColor(from_rgba(symbol_.primary().rgba), this, tr("Sembol rengi"),
+                                   QColorDialog::ShowAlphaChannel);
+        if (!picked.isValid()) return;
+
+        galleryCode_.clear();
+        galleryPackage_.clear();
+        for (core::SymbolLayer& l : symbol_.layers) {
+            if (l.colour_locked) continue; // a locked layer keeps its own
+            l.look.rgba       = picked.rgba();
+            l.look.src_colour = core::Source::Explicit;
+        }
+        refresh();
+    });
+
+    globalWidth_ = new QSpinBox(box);
+    globalWidth_->setRange(0, 100000);
+    globalWidth_->setSingleStep(100);
+    globalWidth_->setSuffix(tr(" µm"));
+    connect(globalWidth_, &QSpinBox::valueChanged, this, [this](int) { applyGlobal(); });
+
+    globalOpacity_ = new QSpinBox(box);
+    globalOpacity_->setRange(0, 255);
+    globalOpacity_->setSingleStep(5);
+    connect(globalOpacity_, &QSpinBox::valueChanged, this, [this](int) { applyGlobal(); });
+
+    form->addRow(tr("Ölçü birimi"), globalUnit_);
+    form->addRow(QString(), globalUnitNote_);
+    form->addRow(tr("Renk"), globalColour_);
+    form->addRow(tr("Çizgi kalınlığı"), globalWidth_);
+    form->addRow(tr("Saydamlık (0-255)"), globalOpacity_);
+
     return box;
 }
 
@@ -927,6 +1018,23 @@ QWidget* StyleDesigner::buildProperties()
     std::vector<T> coloured = strokes;
     coloured.push_back(T::TextMarker);
 
+    // The lock, on every layer, because every layer can be the one the regulation
+    // fixes. Listed against `everything` below so it never disappears.
+    lock_ = new QCheckBox(box);
+    lock_->setText(tr("Sembolün rengi bu katmanı değiştirmesin"));
+    lock_->setToolTip(tr("MPYY bir lekesinin dolgusunu plancıya bırakır, sınırını ve " // ui-label
+                         "glifini siyah basar. Kilitli bir katman, sembolün rengi "
+                         "değiştiğinde kendi rengini korur."));
+    connect(lock_, &QCheckBox::toggled, this, [this](bool on) {
+        if (loading_) return;
+        const int i = currentLayer();
+        if (i < 0) return;
+        galleryCode_.clear();
+        galleryPackage_.clear();
+        symbol_.layers[at(i)].colour_locked = on;
+        refresh();
+    });
+
     addProperty(form, tr("Yazı"), text_, nullptr, {T::TextMarker});
     addProperty(form, tr("Çizgi rengi"), stroke_, nullptr, coloured);
     strokeLabel_ = properties_.back().label;
@@ -948,6 +1056,7 @@ QWidget* StyleDesigner::buildProperties()
     for (const TypeRow& row : kTypes)
         everything.push_back(row.type);
     addProperty(form, tr("Saydamlık (0-255)"), opacity_, nullptr, everything);
+    addProperty(form, tr("Renk kilidi"), lock_, nullptr, everything);
 
     return box;
 }
@@ -956,14 +1065,35 @@ QWidget* StyleDesigner::buildProperties()
 
 int StyleDesigner::currentLayer() const
 {
-    // Through the item's stored index, NOT through the row. The list is drawn top
+    // Through the item's stored index, NOT through the row. The tree is drawn top
     // first — the layer drawn last is the one seen on top — so a row and a stack
     // index run in opposite directions.
-    const QListWidgetItem* item = stack_->currentItem();
+    const QTreeWidgetItem* item = tree_->currentItem();
     if (item == nullptr) return -1;
 
-    const int index = item->data(Qt::UserRole).toInt();
+    const QVariant carried = item->data(0, Qt::UserRole);
+    if (!carried.isValid()) return -1; // the root carries no index
+
+    const int index = carried.toInt();
     return index >= 0 && index < static_cast<int>(symbol_.layers.size()) ? index : -1;
+}
+
+void StyleDesigner::selectTopLayer()
+{
+    // The row a new or duplicated layer lands on. The tree is drawn top first, so
+    // the layer drawn LAST is the first child of the root.
+    if (tree_->topLevelItemCount() == 0) return;
+    QTreeWidgetItem* root = tree_->topLevelItem(0);
+    tree_->setCurrentItem(root->childCount() > 0 ? root->child(0) : root);
+}
+
+bool StyleDesigner::rootSelected() const
+{
+    const QTreeWidgetItem* item = tree_->currentItem();
+    // Nothing selected reads as the root too: the symbol is what this window is
+    // about, and a properties pane showing nothing at all is a worse answer than
+    // showing the thing being edited.
+    return item == nullptr || !item->data(0, Qt::UserRole).isValid();
 }
 
 void StyleDesigner::refresh()
@@ -985,13 +1115,16 @@ void StyleDesigner::refresh()
                                          : controller_.bus().style_library().dashes();
     const std::uint32_t paper      = palette().color(QPalette::Base).rgba();
 
-    const int keep = stack_->currentRow();
+    // What was selected, as a STACK INDEX rather than a row, so it survives a
+    // rebuild that reorders the tree. -1 means the root, which is a selection.
+    const int keep       = currentLayer();
+    const bool keep_root = rootSelected();
 
     {
-        // The rows are built DETACHED and inserted whole, and the list is silent
+        // The rows are built DETACHED and inserted whole, and the tree is silent
         // while that happens.
         //
-        // Both halves are load bearing. A row added to the list first and filled
+        // Both halves are load bearing. A row added to the tree first and filled
         // afterwards emits `itemChanged` once per property, the first time before
         // its stack index has been written — so the handler read index 0, saw an
         // unset check box, and switched off symbol layer 0 of whatever symbol was
@@ -1000,9 +1133,21 @@ void StyleDesigner::refresh()
         // `clear()` freed the very row this loop was still filling: a
         // use-after-free that ASan reports at the next `setToolTip`.
         const Held quiet(loading_);
-        const QSignalBlocker silent(stack_);
+        const QSignalBlocker silent(tree_);
 
-        stack_->clear();
+        tree_->clear();
+
+        // THE ROOT IS THE SYMBOL. It carries no stack index, which is how every
+        // reader here tells it from a layer, and its picture is the whole symbol
+        // rather than any one part of it.
+        auto* root = new QTreeWidgetItem;
+        root->setText(0, tr("Sembol"));
+        root->setToolTip(0, tr("Bütün sembole ait özellikler: birim, renk, "
+                               "kalınlık, saydamlık"));
+        root->setIcon(0, symbol_icon(symbol_, images, dashes, QSize(44, 26), paper, shape()));
+        tree_->addTopLevelItem(root);
+
+        QTreeWidgetItem* chosen = keep_root ? root : nullptr;
 
         for (std::size_t i = symbol_.layers.size(); i-- > 0;) {
             const core::SymbolLayer& sl = symbol_.layers[i];
@@ -1016,20 +1161,24 @@ void StyleDesigner::refresh()
             QString label = QString::fromUtf8(core::symbol_layer_type_name(sl.type));
             for (const TypeRow& row : kTypes)
                 if (row.type == sl.type) label = tr(row.label);
+            if (sl.colour_locked) label += tr("   · rengi kilitli"); // ui-label
 
-            auto* item = new QListWidgetItem;
-            item->setText(label);
+            auto* item = new QTreeWidgetItem;
+            item->setText(0, label);
             item->setToolTip(
-                QStringLiteral("%1  ·  %2")
-                    .arg(label, QString::fromUtf8(core::symbol_layer_type_name(sl.type))));
-            item->setIcon(symbol_icon(one, images, dashes, QSize(44, 26), paper, shape()));
-            item->setData(Qt::UserRole, static_cast<int>(i));
+                0, QStringLiteral("%1  ·  %2")
+                       .arg(label, QString::fromUtf8(core::symbol_layer_type_name(sl.type))));
+            item->setIcon(0, symbol_icon(one, images, dashes, QSize(44, 26), paper, shape()));
+            item->setData(0, Qt::UserRole, static_cast<int>(i));
             item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-            item->setCheckState(sl.enabled ? Qt::Checked : Qt::Unchecked);
-            stack_->addItem(item);
+            item->setCheckState(0, sl.enabled ? Qt::Checked : Qt::Unchecked);
+            root->addChild(item);
+
+            if (!keep_root && static_cast<int>(i) == keep) chosen = item;
         }
 
-        if (keep >= 0 && keep < stack_->count()) stack_->setCurrentRow(keep);
+        root->setExpanded(true);
+        tree_->setCurrentItem(chosen != nullptr ? chosen : root);
     }
 
     updatePreview();
@@ -1079,6 +1228,13 @@ void StyleDesigner::loadSelected()
 
     const Held quiet(loading_);
 
+    // Page 0 is the symbol, page 1 is one of its layers.
+    if (pages_ != nullptr) pages_->setCurrentIndex(have ? 1 : 0);
+    if (!have) {
+        loadGlobal();
+        return;
+    }
+
     if (have) {
         const core::SymbolLayer& sl = symbol_.layers[at(i)];
 
@@ -1102,6 +1258,7 @@ void StyleDesigner::loadSelected()
         show_colour(stroke_, sl.look.rgba);
         show_colour(fill_, sl.look.fill_rgba);
 
+        lock_->setChecked(sl.colour_locked);
         text_->setText(QString::fromStdString(sl.text));
         width_->setValue(sl.look.width_um);
         size_->setValue(sl.size.value);
@@ -1127,6 +1284,87 @@ void StyleDesigner::loadSelected()
         p.label->setVisible(shown);
         p.editor->setVisible(shown);
     }
+}
+
+void StyleDesigner::loadGlobal()
+{
+    if (globalUnit_ == nullptr) return;
+
+    // The symbol's unit is the one its measures agree on; when they disagree the
+    // FIRST layer's is shown, and the note below says so. Inventing a fourth
+    // "mixed" entry would let a user pick it, which means nothing.
+    const core::Unit unit =
+        symbol_.layers.empty() ? core::Unit::Paper : symbol_.layers.front().size.unit;
+    bool mixed = false;
+    for (const core::SymbolLayer& l : symbol_.layers)
+        if (l.size.unit != unit) mixed = true;
+
+    for (int i = 0; i < globalUnit_->count(); ++i)
+        if (globalUnit_->itemData(i).toInt() == static_cast<int>(unit))
+            globalUnit_->setCurrentIndex(i);
+
+    QString note;
+    switch (unit) {
+    case core::Unit::Paper:
+        note = tr("Paftaya ait ölçü. MPYY bir sınırın kalınlığını paftada milimetre " // ui-label
+                  "verir ve o kalınlık 1/1000'de de 1/5000'de de aynıdır — ekranda "
+                  "yakınlaştırdığınızda değişmez."); // ui-label
+        break;
+    case core::Unit::Ground:
+        note = tr("Zemine ait ölçü. Orman deseninin sıklığı alana aittir; ölçekle "
+                  "küçülmesine izin vermek okunur bir dokuyu gri bir lekeye "
+                  "çevirir — çizimle birlikte büyür."); // ui-label
+        break;
+    case core::Unit::Pixel:
+        note = tr("Ham ekran pikseli. Ne paftaya ne zemine bağlıdır; ekran "
+                  "yardımcıları dışında ender kullanılır."); // ui-label
+        break;
+    }
+    if (mixed)
+        note = tr("Katmanlar farklı birimler kullanıyor; ilkininki gösteriliyor. "
+                  "Burada bir seçim yapmak hepsini birden değiştirir.") // ui-label
+               + QStringLiteral("\n") + note;
+    globalUnitNote_->setText(note);
+
+    show_colour(globalColour_, symbol_.primary().rgba);
+    globalWidth_->setValue(symbol_.primary().width_um);
+    globalOpacity_->setValue(symbol_.layers.empty() ? 255 : symbol_.layers.front().opacity);
+}
+
+void StyleDesigner::applyGlobal()
+{
+    if (loading_ || symbol_.layers.empty()) return;
+
+    galleryCode_.clear();
+    galleryPackage_.clear();
+
+    const auto unit = static_cast<core::Unit>(globalUnit_->currentData().toInt());
+
+    for (core::SymbolLayer& l : symbol_.layers) {
+        // EVERY measure, not just the size. A symbol whose marker is read on
+        // paper and whose interval is read on the ground would come apart the
+        // moment the view moved, and the whole point of the symbol's own unit is
+        // that it answers the question once for all of it. A measure that wants
+        // its own unit still has the box beside it on the layer's own page.
+        l.size.unit      = unit;
+        l.interval.unit  = unit;
+        l.spacing_y.unit = unit;
+        l.offset.unit    = unit;
+
+        l.opacity = static_cast<std::uint8_t>(globalOpacity_->value());
+
+        if (l.colour_locked) continue; // a locked layer keeps its own weight too
+        l.look.width_um  = globalWidth_->value();
+        l.look.src_width = core::Source::Explicit;
+    }
+
+    refresh();
+}
+
+void StyleDesigner::syncTreeState()
+{
+    // Nothing to do while the tree is the only writer of these flags; kept as the
+    // one place that would change if a second editor of them appeared.
 }
 
 void StyleDesigner::applyToSelected()
@@ -1168,7 +1406,7 @@ void StyleDesigner::addLayer()
     galleryPackage_.clear();
     symbol_.layers.push_back(core::SymbolLayer{});
     refresh();
-    stack_->setCurrentRow(0); // the list is top first, so the new layer is row 0
+    selectTopLayer(); // the tree is top first, so the new layer is the first child
 }
 
 void StyleDesigner::duplicateLayer()
@@ -1180,7 +1418,7 @@ void StyleDesigner::duplicateLayer()
     galleryPackage_.clear();
     symbol_.layers.push_back(symbol_.layers[at(i)]);
     refresh();
-    stack_->setCurrentRow(0);
+    selectTopLayer();
 }
 
 void StyleDesigner::removeLayer()
@@ -1209,7 +1447,14 @@ void StyleDesigner::moveLayer(int delta)
 
     // Follow the LAYER, not the row: the list runs top first, so the row the layer
     // now occupies is counted from the other end.
-    stack_->setCurrentRow(static_cast<int>(symbol_.layers.size()) - 1 - to);
+    // Follow the LAYER, not the row: `refresh()` already put the selection back
+    // on the stack index it had, and the move changed which index that is.
+    if (tree_->topLevelItemCount() > 0) {
+        QTreeWidgetItem* root = tree_->topLevelItem(0);
+        for (int c = 0; c < root->childCount(); ++c)
+            if (root->child(c)->data(0, Qt::UserRole).toInt() == to)
+                tree_->setCurrentItem(root->child(c));
+    }
 }
 
 // ------------------------------------------------------------- the exits ----
