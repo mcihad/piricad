@@ -24,6 +24,7 @@
 // indexes it (CLAUDE.md 5.13, data.md R1).
 #pragma once
 
+#include "piricad/core/dash_store.hpp"
 #include "piricad/core/image_store.hpp"
 #include "piricad/core/style.hpp"
 #include "piricad/core/style_rule.hpp"
@@ -69,6 +70,7 @@ struct LibraryEntry
     std::vector<std::string> group;    ///< hierarchical path, outermost first
     std::vector<std::string> tags;     ///< free labels, searched across groups
     std::string source_ref;            ///< the annex and madde this row encodes
+    std::string package_path;          ///< catalogue file that supplied this row
     SymbolKind kind{SymbolKind::Area}; ///< which geometry it belongs to
     Symbol symbol{};                   ///< what it draws
     ScaleWindow scale{};               ///< the scales it applies at
@@ -91,6 +93,15 @@ struct LibraryEntry
 /// gallery thumbnail shows is what the command will apply.
 using ImageResolver = std::function<ImageId(const std::string& package_relative_path)>;
 
+/// Interns a declared line type wherever the caller keeps its patterns, and hands
+/// back the id to write into `Appearance::dash`.
+///
+/// A catalogue holds no document and cannot mint an id; whoever applies the row
+/// does, and this is how it says so. Empty when the caller has nowhere to put one
+/// — the row's strokes are then solid, which is what a caller with no dash store
+/// can honestly draw.
+using DashResolver = std::function<DashId(const DashPattern& pattern, std::string_view origin)>;
+
 /// Builds the symbol a catalogue row describes.
 ///
 /// The stack is bottom to top and the order is what a plan sheet reads like: the
@@ -100,7 +111,8 @@ using ImageResolver = std::function<ImageId(const std::string& package_relative_
 /// ONE implementation, shared by the shelf and by `STİL`. Two would be two answers
 /// to "what does this gösterim look like", and the day they differ the thumbnail
 /// stops predicting the drawing.
-Symbol symbol_of_entry(const StyleEntry& row, const ImageResolver& resolve);
+Symbol symbol_of_entry(const StyleEntry& row, const ImageResolver& resolve,
+                       const DashResolver& intern_dash = {});
 
 /// A shelf of named symbols, organised by the group path they arrived with.
 ///
@@ -124,10 +136,22 @@ public:
     /// `resolve` supplies the bytes of the pictures a row was published with; pass
     /// an empty function to load a package without them, in which case every row
     /// keeps its colours and loses its hatch.
-    std::size_t add_catalog(const StyleCatalog& catalog, const ImageResolver& resolve = {});
+    std::size_t add_catalog(const StyleCatalog& catalog, const ImageResolver& resolve = {},
+                            std::string_view package_path = {});
 
     /// The pictures the shelf's own symbols draw. Borrowed by a preview.
     const ImageStore& images() const noexcept { return images_; }
+
+    /// The line types the shelf's own symbols draw, for the same reason and
+    /// borrowed the same way: a gallery swatch has to show the dash the row
+    /// declares, and the row has not reached any document yet.
+    const DashStore& dashes() const noexcept { return dashes_; }
+
+    /// Adds a line type to the shelf's store.
+    Result<DashId> intern_dash(const DashPattern& pattern, std::string_view origin)
+    {
+        return dashes_.intern(pattern, origin);
+    }
 
     /// Adds a picture to the shelf's store, for a resolver to hand back an id.
     Result<ImageId> intern_image(std::span<const std::byte> bytes, std::string_view origin)
@@ -189,6 +213,7 @@ private:
     std::vector<LibraryEntry> entries_;
     std::vector<std::uint8_t> favourite_; ///< parallel to entries_
     ImageStore images_{};                 ///< the pictures the shelf's symbols draw
+    DashStore dashes_{};                  ///< the line types the shelf's symbols draw
 };
 
 } // namespace piricad::core

@@ -50,6 +50,14 @@ namespace piricad::core {
 enum class ImageFormat : std::uint8_t {
     Png = 0,
     Jpeg,
+
+    /// A vector picture. What a published gösterim SHOULD be: it recolours, it
+    /// scales without resampling, it carries no scanner's paper, and a marker
+    /// drawn from one is the same shape at 1/1000 and at 1/5000. The annex
+    /// publishes rasters, so these are authored against the printed symbol
+    /// rather than traced off it — a traced JPEG circle is a wobbly polygon and
+    /// the regulation says circle.
+    Svg,
 };
 
 /// Stable machine name, for a file, a message or a test.

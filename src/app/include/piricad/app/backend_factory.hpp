@@ -24,4 +24,8 @@ namespace piricad::app {
 /// pretended away.
 std::unique_ptr<render::Backend> make_canvas_backend();
 
+/// The built-in QPainter backend, named so the two can be compared. Used by the
+/// factory and by a test that renders one document through both.
+std::unique_ptr<render::Backend> make_builtin_backend();
+
 } // namespace piricad::app

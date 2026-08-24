@@ -76,6 +76,10 @@ Bkz. [Proje dosyası açma](../komutlar/open.md),
 | Sil | `SİL` | Seçili nesneleri siler; seçim boşsa komut satırını hazırlar |
 | Taşı, Kopyala, Döndür, Ofset | — | Faz 2'de gelecek, şimdilik pasif |
 
+`Düzen` menüsünün altında ayrıca **Ayarlar…** (**Ctrl+,**) vardır: bildirilen her ayarı
+kapsamına göre gösteren pencereyi açar. Ayrıntısı [AYAR](../komutlar/setting.md)
+sayfasındadır.
+
 ### Görünüm
 
 | Düğme | Komut | Durum |
@@ -151,6 +155,27 @@ Fabrika yerleşimine dönmek için **Görünüm > Paneller > Düzeni Sıfırla**
 
 İmleç konumu artı işaretiyle gösterilir ve koordinatı durum çubuğunda yazar. Bir komut
 nokta beklerken son noktadan imlece kesikli bir kılavuz çizgi uzanır.
+
+### Harita üzerindeki yardımcılar
+
+Çizimin üzerinde, çizime ait olmayan dört şey durur. Dördü de `Ayarlar > Uygulama >
+Harita` ve `Cetvel` altından kapatılabilir; hiçbiri dosyaya girmez.
+
+| Yardımcı | Ne söyler | Ayarı |
+|---|---|---|
+| **Cetvel** | Tuvalin üstünde ve solunda, zemin ölçüsünü rakamla | `cetvel_görünür`, `cetvel_kalınlığı`, `cetvel_birimi` |
+| **Ölçek çubuğu** | Sol altta, o anki yakınlaştırmanın yuvarlak bir zemin uzunluğu karşılığını | `ölçek_çubuğu` |
+| **Kuzey oku** | Sağ üstte, kuzeyin yönünü | `kuzey_oku` |
+| **Koordinat göstergesi** | Sol altta, imlecin sağa/yukarı değerini | `koordinat_göstergesi` |
+
+Koordinat göstergesi, bir yakalama tuttuğunda **yakalanmış** noktayı yazar; tıklamanın
+üreteceği koordinat odur, imlecin durduğu ham nokta değil.
+
+Cetvelin ve ölçek çubuğunun rakamları 1-2-5 merdivenine oturur (1, 2, 5, 10, 20, 50 …):
+aralıkları 137 metre olan bir cetvelden kimse mesafe okuyamaz.
+
+Nişan imleci `imleç` tercihiyle üç hâlde olabilir — tuvali baştan başa geçen çizgiler
+(`tam_ekran`), kısa bir artı (`kısa`, uzunluğu `imleç_boyu` ile) ya da hiç (`yok`).
 
 ### Seçim
 

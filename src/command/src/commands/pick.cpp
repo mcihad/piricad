@@ -44,7 +44,7 @@ enum class Op : std::uint8_t { Replace, Add, Remove, Toggle };
 bool matches(const std::string& folded, std::initializer_list<const char*> names)
 {
     for (const char* n : names)
-        if (core::turkish_iequals(folded, n)) return true;
+        if (core::turkish_key_equals(folded, n)) return true;
     return false;
 }
 

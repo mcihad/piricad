@@ -96,11 +96,16 @@ verilir.
 | `yerlesim` | İşaretçinin çizgi üzerindeki yeri: `aralik`, `tepe`, `ilk`, `son`, `orta` |
 | `birim` | Aşağıdaki ölçülerin birimi: `kagit` (µm), `zemin` (mm), `piksel` |
 | `boyut` | İşaretçi çapı ya da tarak dişinin boyu |
+| `boyut_birim` | Yalnız `boyut` için birim. Verilmezse `birim` geçerlidir |
 | `aralik` | Çizgi boyunca ya da desende birinci eksende aralık |
+| `aralik_birim` | Yalnız `aralik` için birim. Verilmezse `birim` geçerlidir |
 | `aralik_y` | Nokta deseninde ikinci eksen. Verilmezse desen karedir |
+| `aralik_y_birim` | Yalnız `aralik_y` için birim. Verilmezse `birim` geçerlidir |
 | `aci` | Desen açısı ya da işaretçi dönüklüğü, **mikro derece** (45° = `45000000`) |
 | `kaydirma` | Geometriden dik kaydırma |
+| `kaydirma_birim` | Yalnız `kaydirma` için birim. Verilmezse `birim` geçerlidir |
 | `saydamlik` | Katman saydamlığı `0`–`255`. `255` tam opak |
+| `desen` | Çizgi tipi: `sürekli`, ya da çizgi/boşluk uzunlukları — `"8 1 1 1"` |
 | `yazi` | `yazi-isaretci` katmanının yazdığı sabit metin |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
@@ -133,6 +138,11 @@ o yüzden bir stil **sembol katmanlarından** oluşan bir yığındır ve alttan
 Yığın **tek tek** kurulur: ilk `STİL` sembolü kurar, `ekle=evet` ile gelen her
 `STİL` üstüne bir katman ekler. Stil tasarımcısı da tam olarak bunu yapar, bir
 betik de aynı satırları yazar — üçü de aynı yoldan geçer.
+
+Doğrudan verilen görünüm değerleri katmanın **varsayılan görünümünü** de günceller.
+Bu nedenle henüz nesne içermeyen bir katmanda bile renk, dolgu ve çizgi kalınlığı
+hemen katman listesinde görünür; daha sonra çizilen nesneler bu temel görünümü
+devralır. Var olan nesnelerin sembol yığını ayrıca kendi stil sütununa yazılır.
 
 `isaretci-cizgi` ve `tarak-cizgi` **yalnız simgelerini** çizer, çizgiyi çizmez.
 Bir demiryolu bu yüzden iki katmandır: altta düz çizgi, üstünde dişler.
@@ -187,6 +197,56 @@ Bir sınırın kalınlığı **kâğıda** aittir — MPYY paftada 0,5 mm der ve
 bir dokuyu gri bir lekeye çevirir.
 
 `birim` bu ayrımı söyler ve varsayılan `kagit`'tır.
+
+#### Aynı katmanda karışık birim
+
+Tek bir sembol katmanı çoğu zaman iki ayrımı birden taşır. Bir il sınırı gösterimini
+düşünün: işaretçinin **çapı** paftaya aittir — mevzuat "paftada 2,6 mm" der ve ölçek ne
+olursa olsun 2,6 mm kalır — ama işaretçilerin **aralığı** zemine aittir, çünkü aralık
+sınırın kendi uzunluğuyla ilgilidir.
+
+Bunun için her ölçünün kendi birimi olabilir. `birim` birimini söylemeyen ölçüler için
+geçerli kalır:
+
+```
+KATMAN ad=IL_SINIRI
+STİL katman=IL_SINIRI tip=isaretci-cizgi sekil=daire birim=kagit boyut=2600 aralik=15000 aralik_birim=zemin
+```
+
+Burada `boyut` kâğıt mikrometresinde (2,6 mm), `aralik` zemin milimetresinde (15 m)
+okunur. Stil tasarımcısındaki her ölçünün yanında duran birim kutusu tam olarak bu
+parametreleri yazar.
+
+Tanınmayan bir birim adı sessizce `birim`'e düşmez: komut hangi parametrenin hatalı
+olduğunu adıyla söyleyerek durur ve çizime dokunmaz. Mesajın kendisi aşağıdaki
+[Hatalar](#hatalar) tablosundadır.
+
+### Çizgi tipi bir desendir, resim değil
+
+MPYY il sınırını bir çizgi, bir boşluk, bir nokta ve bir boşluk olarak basar. Bu dört
+sayıdır ve `desen` onları alır:
+
+```
+KATMAN ad=IL_SINIRI
+STİL katman=IL_SINIRI tip=cizgi kalinlik=500 desen="8 1 1 1"
+```
+
+Sayılar **çizgi kalınlığının katıdır**, milimetre değil. Bunun sebebi bir desenin her
+kalınlıkta doğru kalmasıdır: yukarıdaki satır 0,5 mm'lik bir sınırda da 1,0 mm'lik bir
+sınırda da aynı oranları çizer, ikinci bir tanım gerekmez. Sıra çizgiyle başlar ve
+çizgi/boşluk çiftleri hâlinde gider; tek sayıda parça, arkasında boşluk olmayan bir
+çizgi bırakacağı için reddedilir. En çok sekiz parça yazılabilir.
+
+`desen=sürekli` düz çizgidir ve varsayılandır.
+
+Desen **çizimin içinde taşınır**, katalog paketinde değil. Gömülü görsellerle aynı
+gerekçe: paketin kurulu olmadığı bir bilgisayarda açılan pafta aynı çizilmelidir.
+
+Desenli bir çizgi **düz uçla** çizilir, katman `uc` biçimi ne derse desin. Qt ucu her
+çizgi parçasına uygular; yuvarlak uçta her çizgi iki ucundan yarım kalınlık uzar ve bir
+kalınlık genişliğindeki boşluk tamamen kapanır — kesik-noktalı bir sınır düz çizgi
+olarak çıkardı, ki paftada bu farklı bir hukuki beyandır. Bildirilen uç biçimi çizginin
+**iki gerçek ucunu** anlatır; içindeki her çizgiyi değil.
 
 ### Kalınlık neden mikrometre
 
@@ -454,6 +514,10 @@ Ayrıntı: [Betik yazma](../betik/README.md).
 | `Stil kataloğunda bu nesneye uyan kural yok.` | Hiçbir eşleme kuralı nesneye uymadı | Katalogda koşulsuz bir "kalan hepsi" kuralı tanımlayın veya `kod=` ile satırı doğrudan seçin |
 | `Stil kataloğu: 'k1' kuralı 'yok-boyle' satırını gösteriyor, ama katalogda böyle bir satır yok.` | Katalogda kural ile satır kimliği tutmuyor | Kuraldaki `stil` alanını düzeltin |
 | `Renk '#RRGGBB' veya '#AARRGGBB' biçiminde olmalı. Girilen: 'kirmizi'` | Katalogdaki renk metni bozuk | Rengi onaltılık yazın |
+| `Bilinmeyen birim: 'metre'. Geçerli olanlar: kagit, zemin, piksel.` | `birim` değeri tanınmadı | `kagit`, `zemin` veya `piksel` yazın |
+| `Bilinmeyen birim: boyut_birim='fersah'. Geçerli olanlar: kagit, zemin, piksel.` | Bir ölçünün kendi birimi tanınmadı | Hatalı parametre mesajda adıyla yazılıdır; değerini düzeltin |
+| `'desen' çizgi ve boşluk çiftlerinden oluşur ve en çok 8 parça taşır. Verilen parça sayısı: 3.` | Tek sayıda ya da sekizden çok parça | Çizgi/boşluk çiftleri hâlinde, en çok sekiz parça yazın |
+| `'desen' çizgi kalınlığının katı olarak sayılardan oluşur; okunamayan parça: 'uzun'.` | Desende sayı olmayan bir sözcük | Sayı yazın; düz çizgi için `desen=sürekli` |
 | `'core.style': bilinmeyen parametre 'renkler'. Tanımlı parametreler: katman, paket, kod, olcek, renk, kalinlik, dolgu, sira, sifirla` | Parametre adı yanlış yazılmış | Doğru adı kullanın |
 
 Katmanda hiç nesne yoksa hata olmaz; transkriptte `'IMAR' katmanında nesne yok; stil

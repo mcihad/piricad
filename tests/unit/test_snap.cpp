@@ -229,6 +229,184 @@ TEST_CASE("YAKALAMA: dik ayak önceki noktadan indirilen dikin ayağıdır")
     CHECK(r.point == (Point2{3000, 0}));
 }
 
+TEST_CASE("YAKALAMA: bu belge modeli tek noktalı nesne tutamaz")
+{
+    // Pins the reason DÜĞÜM is not among the modes. A survey monument has nowhere
+    // to live in this document yet: an open ring wants two vertices,
+    // `İÇEAKTAR` says in as many words that it reads lines and areas,
+    // and no command draws a point. When point entities land, this case is the
+    // one that has to change first — and the snap mode follows it, not the other
+    // way round.
+    core::Document doc;
+    core::Op op;
+    const std::array<Point2, 1> lone{Point2{5000, 5000}};
+
+    const auto refused = doc.add_polyline(doc.ensure_layer("NIRENGI"), lone, op);
+    REQUIRE(!refused);
+    CHECK(refused.error().message.find("2 tepe") != std::string::npos);
+}
+
+TEST_CASE("YAKALAMA: uzantı kenarın kendi doğrultusunu ucundan öteye taşır")
+{
+    // Re-establishing a boundary whose corner monument is gone: the point wanted
+    // is on the line of the surviving edge and past its end, which is exactly
+    // where YAKIN cannot reach.
+    core::Document doc;
+    core::Op op;
+    const std::array<Point2, 2> edge{Point2{0, 0}, Point2{10000, 0}};
+    (void)doc.add_polyline(doc.ensure_layer("SINIR"), edge, op);
+
+    core::SnapQuery q;
+    q.aim    = Point2{14000, 120};
+    q.radius = 500;
+    q.modes  = core::SnapExtension;
+    q.reach  = 10000; // the edge itself is 4 m behind the aim
+
+    const core::SnapResult r = core::snap(doc, q);
+    CHECK_EQ(static_cast<int>(r.mode), static_cast<int>(core::SnapExtension));
+    CHECK(r.point == (Point2{14000, 0}));
+
+    q.aim = r.point;
+    CHECK(core::snap(doc, q).point == (Point2{14000, 0}));
+
+    // Without reach the mode is inert however the mask is set: the engine will not
+    // go looking outside the aperture for an edge nobody gave it permission to
+    // find.
+    q.aim   = Point2{14000, 120};
+    q.reach = 0;
+    CHECK_EQ(static_cast<int>(core::snap(doc, q).mode), static_cast<int>(core::SnapNone));
+}
+
+TEST_CASE("YAKALAMA: uzantı kenarın ÜZERİNDE nokta üretmez")
+{
+    // Inside the span the answer is the one YAKIN already gives, and offering it
+    // under two names would make the priority depend on which mode happened to be
+    // on rather than on what the user pointed at.
+    core::Document doc;
+    core::Op op;
+    const std::array<Point2, 2> edge{Point2{0, 0}, Point2{10000, 0}};
+    (void)doc.add_polyline(doc.ensure_layer("SINIR"), edge, op);
+
+    core::SnapQuery q;
+    q.aim    = Point2{5000, 100};
+    q.radius = 500;
+    q.modes  = core::SnapExtension;
+    q.reach  = 10000;
+
+    CHECK_EQ(static_cast<int>(core::snap(doc, q).mode), static_cast<int>(core::SnapNone));
+}
+
+TEST_CASE("YAKALAMA: paralel önceki noktadan bir kenarın doğrultusunu alır")
+{
+    // A çekme mesafesi and a road edge are drawn this way: the same bearing as
+    // that boundary, starting here. The distance from the base is preserved, so a
+    // measured length typed after the direction is the length that lands.
+    core::Document doc;
+    core::Op op;
+    const std::array<Point2, 2> edge{Point2{0, 0}, Point2{10000, 10000}}; // 45°
+    (void)doc.add_polyline(doc.ensure_layer("YOL"), edge, op);
+
+    core::SnapQuery q;
+    q.aim      = Point2{23000, 22600}; // near, but not on, the 45° ray from the base
+    q.radius   = 600;
+    q.modes    = core::SnapParallel;
+    q.reach    = 40000;
+    q.has_base = true;
+    q.base     = Point2{20000, 20000};
+
+    const core::SnapResult r = core::snap(doc, q);
+    CHECK_EQ(static_cast<int>(r.mode), static_cast<int>(core::SnapParallel));
+
+    // On the ray: equal run and rise from the base.
+    CHECK_EQ(r.point.x - q.base.x, r.point.y - q.base.y);
+
+    q.aim = r.point;
+    CHECK(core::snap(doc, q).point == r.point);
+
+    // With no previous point there is no ray to be parallel to.
+    q.aim      = Point2{23000, 22600};
+    q.has_base = false;
+    CHECK_EQ(static_cast<int>(core::snap(doc, q).mode), static_cast<int>(core::SnapNone));
+}
+
+TEST_CASE("YAKALAMA: uzatılmış kesişim iki kenarın buluşacağı köşeyi kurar")
+{
+    // The ifraz case: the corner monument is gone and the two surviving edges stop
+    // short of each other. KESİŞİM finds nothing — they do not cross — and the
+    // corner is still the point the parcel needs.
+    core::Document doc;
+    core::Op op;
+    const core::LayerId layer = doc.ensure_layer("SINIR");
+
+    const std::array<Point2, 2> along{Point2{0, 0}, Point2{6000, 0}};
+    const std::array<Point2, 2> up{Point2{10000, 4000}, Point2{10000, 12000}};
+    (void)doc.add_polyline(layer, along, op);
+    (void)doc.add_polyline(layer, up, op);
+
+    core::SnapQuery q;
+    q.aim    = Point2{10100, 150};
+    q.radius = 600;
+    q.reach  = 20000;
+
+    // A real crossing does not exist here, so KESİŞİM alone answers nothing.
+    q.modes = core::SnapIntersection;
+    CHECK_EQ(static_cast<int>(core::snap(doc, q).mode), static_cast<int>(core::SnapNone));
+
+    q.modes                  = core::SnapApparent;
+    const core::SnapResult r = core::snap(doc, q);
+    CHECK_EQ(static_cast<int>(r.mode), static_cast<int>(core::SnapApparent));
+    CHECK(r.point == (Point2{10000, 0}));
+
+    q.aim = r.point;
+    CHECK(core::snap(doc, q).point == (Point2{10000, 0}));
+}
+
+TEST_CASE("YAKALAMA: kurulmuş nokta, çizimde gerçekten olan noktayı yenemez")
+{
+    // The rule that makes the constructed modes safe to leave switched on. A point
+    // this engine invented must never take a corner the drawing actually contains
+    // away from the user, whatever the distances are.
+    core::Document doc;
+    core::Op op;
+    const std::array<Point2, 2> edge{Point2{0, 0}, Point2{10000, 0}};
+    (void)doc.add_polyline(doc.ensure_layer("SINIR"), edge, op);
+
+    core::SnapQuery q;
+    q.aim    = Point2{10400, 60}; // the extension is nearer than the corner behind it
+    q.radius = 900;
+    q.reach  = 20000;
+    q.modes  = core::SnapEndpoint | core::SnapExtension;
+
+    const core::SnapResult r = core::snap(doc, q);
+    CHECK_EQ(static_cast<int>(r.mode), static_cast<int>(core::SnapEndpoint));
+    CHECK(r.point == (Point2{10000, 0}));
+}
+
+TEST_CASE("YAKALAMA: her mod bir kimlik, bir etiket ve maskede bir bit taşır")
+{
+    // CLAUDE.md 5.10: the bit list IS the mode list. A mode added to the enum and
+    // forgotten in `snap_mode_bits()` would be unreachable from MOD, from the
+    // generated reference and from the canvas marker table at once.
+    std::uint16_t seen = 0;
+    int count          = 0;
+
+    for (const std::uint16_t* bit = core::snap_mode_bits(); *bit != core::SnapNone; ++bit) {
+        CHECK((seen & *bit) == 0); // declared once
+        seen = static_cast<std::uint16_t>(seen | *bit);
+        ++count;
+
+        const std::string id    = core::snap_mode_id(*bit);
+        const std::string label = core::snap_mode_label(*bit);
+        CHECK(!id.empty());
+        CHECK(id != "yok");
+        CHECK(!label.empty());
+        CHECK(label != "yok");
+    }
+
+    CHECK_EQ(count, 11);
+    CHECK_EQ(static_cast<int>(seen), static_cast<int>(core::SnapAllMask));
+}
+
 TEST_CASE("YAKALAMA: yarıçap sıfırken nesne yakalama devre dışıdır")
 {
     // This is what keeps a headless journal replay honest: no view, no pixels, no

@@ -163,8 +163,12 @@ bool segment_touches_box(Point2 a, Point2 b, const Box2& box) noexcept
     return abs_mm(cross) <= hx * abs_mm(dy) + hy * abs_mm(dx);
 }
 
-bool segment_intersection(Point2 a, Point2 b, Point2 c, Point2 d, Point2& out) noexcept
+bool line_intersection(Point2 a, Point2 b, Point2 c, Point2 d, Point2& out, double& t,
+                       double& u) noexcept
 {
+    // Translated to `a` before multiplying, for the reason
+    // `closest_point_on_segment` gives: a raw cross product on TM3 coordinates
+    // loses every digit that matters.
     const double r_x = static_cast<double>(b.x - a.x);
     const double r_y = static_cast<double>(b.y - a.y);
     const double s_x = static_cast<double>(d.x - c.x);
@@ -176,12 +180,35 @@ bool segment_intersection(Point2 a, Point2 b, Point2 c, Point2 d, Point2& out) n
     const double q_x = static_cast<double>(c.x - a.x);
     const double q_y = static_cast<double>(c.y - a.y);
 
-    const double t = (q_x * s_y - q_y * s_x) / denom;
-    const double u = (q_x * r_y - q_y * r_x) / denom;
-
-    if (t < 0.0 || t > 1.0 || u < 0.0 || u > 1.0) return false;
+    t = (q_x * s_y - q_y * s_x) / denom;
+    u = (q_x * r_y - q_y * r_x) / denom;
 
     out = Point2{a.x + mm_round(t * r_x), a.y + mm_round(t * r_y)};
+    return true;
+}
+
+bool segment_intersection(Point2 a, Point2 b, Point2 c, Point2 d, Point2& out) noexcept
+{
+    // The segment case IS the line case with both parameters inside their span.
+    // Written once so the two can never drift apart on a degenerate input.
+    double t = 0.0;
+    double u = 0.0;
+    if (!line_intersection(a, b, c, d, out, t, u)) return false;
+    return t >= 0.0 && t <= 1.0 && u >= 0.0 && u <= 1.0;
+}
+
+bool closest_point_on_line(Point2 a, Point2 b, Point2 p, Point2& out, double& t) noexcept
+{
+    const double dx   = static_cast<double>(b.x - a.x);
+    const double dy   = static_cast<double>(b.y - a.y);
+    const double len2 = dx * dx + dy * dy;
+    if (len2 <= 0.0) return false;
+
+    const double px = static_cast<double>(p.x - a.x);
+    const double py = static_cast<double>(p.y - a.y);
+
+    t   = (px * dx + py * dy) / len2;
+    out = Point2{a.x + mm_round(t * dx), a.y + mm_round(t * dy)};
     return true;
 }
 

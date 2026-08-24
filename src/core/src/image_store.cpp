@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <string_view>
 #include <utility>
 
 namespace piricad::core {
@@ -53,19 +54,51 @@ const char* image_format_name(ImageFormat f) noexcept
     switch (f) {
     case ImageFormat::Png: return "png";
     case ImageFormat::Jpeg: return "jpeg";
+    case ImageFormat::Svg: return "svg";
     }
     return "?";
 }
+
+namespace {
+
+/// True when the bytes open an SVG document.
+///
+/// SVG has no magic number — it is XML — so the check is for the root element,
+/// skipping whatever prolog, doctype or comment precedes it. Read from the BYTES
+/// like the other two: a file named `.svg` that holds a JPEG is a JPEG, and the
+/// renderer that trusted the name would draw nothing and say nothing.
+///
+/// Bounded to the first kilobyte. A hostile file with a megabyte of comments
+/// before its root element is not a picture this program has to accept.
+bool looks_like_svg(std::span<const std::byte> bytes)
+{
+    const std::size_t look = bytes.size() < 1024 ? bytes.size() : 1024;
+    const std::string_view head(reinterpret_cast<const char*>(bytes.data()), look);
+
+    const std::size_t at = head.find("<svg");
+    if (at == std::string_view::npos) return false;
+
+    // Only a prolog may precede it. Anything else means the `<svg` found is a
+    // string inside some other document rather than this document's root.
+    const std::string_view before = head.substr(0, at);
+    return before.find_first_not_of(" \t\r\n") == std::string_view::npos ||
+           before.find("<?xml") != std::string_view::npos ||
+           before.find("<!DOCTYPE") != std::string_view::npos ||
+           before.find("<!--") != std::string_view::npos;
+}
+
+} // namespace
 
 Result<ImageFormat> sniff_image_format(std::span<const std::byte> bytes)
 {
     if (starts_with(bytes, kPngSignature, sizeof kPngSignature)) return ImageFormat::Png;
     if (starts_with(bytes, kJpegSignature, sizeof kJpegSignature)) return ImageFormat::Jpeg;
+    if (looks_like_svg(bytes)) return ImageFormat::Svg;
 
     return err(ErrorCode::ValidationFailed,
-               "Görsel tanınmadı: baytlar ne PNG ne JPEG imzasıyla başlıyor. "
-               "Dosya uzantısına bakılmaz; imza dosyayı yazanın beyanıdır, uzantı "
-               "ise adını koyanın.");
+               "Görsel tanınmadı: baytlar ne PNG, ne JPEG, ne de SVG imzasıyla "
+               "başlıyor. Dosya uzantısına bakılmaz; imza dosyayı yazanın "
+               "beyanıdır, uzantı ise adını koyanın.");
 }
 
 ImageStore::ImageStore()

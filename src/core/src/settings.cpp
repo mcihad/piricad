@@ -260,7 +260,7 @@ Status SettingCatalog::add(SettingSpec s)
     std::vector<std::string> kept;
     std::vector<std::string> folded;
     for (const auto& a : aliases) {
-        std::string f = turkish_upper(a);
+        std::string f = turkish_fold_key(a);
         // A Turkish name that is already ASCII has no separate folded twin; listing
         // it twice is not an error, it is just the same alias.
         if (std::find(folded.begin(), folded.end(), f) != folded.end()) continue;
@@ -284,7 +284,7 @@ Status SettingCatalog::add(SettingSpec s)
 std::uint32_t SettingCatalog::find(std::string_view id_or_name) const
 {
     if (id_or_name.empty()) return kNoSetting;
-    const std::string f = turkish_upper(id_or_name);
+    const std::string f = turkish_fold_key(id_or_name);
     for (std::size_t i = 0; i < folded_.size(); ++i)
         if (folded_[i] == f) return owner_[i];
     return kNoSetting;
@@ -293,7 +293,7 @@ std::uint32_t SettingCatalog::find(std::string_view id_or_name) const
 std::string SettingCatalog::suggest(std::string_view typed) const
 {
     if (typed.empty()) return {};
-    const std::string f = turkish_upper(typed);
+    const std::string f = turkish_fold_key(typed);
 
     for (std::size_t i = 0; i < folded_.size(); ++i)
         if (folded_[i].starts_with(f)) return alias_[i];
@@ -336,6 +336,32 @@ PIRICAD_SETTING(yakalama_modlari);
 PIRICAD_SETTING(dik_mod);
 PIRICAD_SETTING(kutupsal_aci);
 PIRICAD_SETTING(sembol_kutuphanesi);
+PIRICAD_SETTING(veritabani_sunucu);
+PIRICAD_SETTING(veritabani_port);
+PIRICAD_SETTING(veritabani_ad);
+PIRICAD_SETTING(veritabani_kullanici);
+PIRICAD_SETTING(yakalama_uzanti);
+PIRICAD_SETTING(yakalama_isaret_boyu);
+PIRICAD_SETTING(yakalama_isaret_rengi);
+PIRICAD_SETTING(yakalama_ipucu);
+PIRICAD_SETTING(izgara_rengi);
+PIRICAD_SETTING(izgara_ana_rengi);
+PIRICAD_SETTING(izgara_adimi_y);
+PIRICAD_SETTING(cetvel_gorunur);
+PIRICAD_SETTING(cetvel_kalinligi);
+PIRICAD_SETTING(cetvel_birimi);
+PIRICAD_SETTING(harita_olcek_cubugu);
+PIRICAD_SETTING(harita_kuzey_oku);
+PIRICAD_SETTING(harita_koordinat);
+PIRICAD_SETTING(harita_imlec);
+PIRICAD_SETTING(harita_imlec_boyu);
+PIRICAD_SETTING(harita_yakinlastirma);
+PIRICAD_SETTING(harita_tekerlek_ters);
+PIRICAD_SETTING(secim_rengi);
+PIRICAD_SETTING(secim_vurgu_rengi);
+PIRICAD_SETTING(plan_olcegi);
+PIRICAD_SETTING(aci_birimi);
+PIRICAD_SETTING(alan_birimi);
 
 #define PIRICAD_BUILTIN_SETTINGS(X)                                                                \
     X(koordinat_sistemi)                                                                           \
@@ -361,9 +387,410 @@ PIRICAD_SETTING(sembol_kutuphanesi);
     X(dik_mod)                                                                                     \
     X(sembol_kutuphanesi)                                                                          \
     X(kutupsal_aci)                                                                                \
-    X(izgaraya_yakala)
+    X(izgaraya_yakala)                                                                             \
+    X(veritabani_sunucu)                                                                           \
+    X(veritabani_port)                                                                             \
+    X(veritabani_ad)                                                                               \
+    X(veritabani_kullanici)                                                                        \
+    X(yakalama_uzanti)                                                                             \
+    X(yakalama_isaret_boyu)                                                                        \
+    X(yakalama_isaret_rengi)                                                                       \
+    X(yakalama_ipucu)                                                                              \
+    X(izgara_rengi)                                                                                \
+    X(izgara_ana_rengi)                                                                            \
+    X(izgara_adimi_y)                                                                              \
+    X(cetvel_gorunur)                                                                              \
+    X(cetvel_kalinligi)                                                                            \
+    X(cetvel_birimi)                                                                               \
+    X(harita_olcek_cubugu)                                                                         \
+    X(harita_kuzey_oku)                                                                            \
+    X(harita_koordinat)                                                                            \
+    X(harita_imlec)                                                                                \
+    X(harita_imlec_boyu)                                                                           \
+    X(harita_yakinlastirma)                                                                        \
+    X(harita_tekerlek_ters)                                                                        \
+    X(secim_rengi)                                                                                 \
+    X(secim_vurgu_rengi)                                                                           \
+    X(plan_olcegi)                                                                                 \
+    X(aci_birimi)                                                                                  \
+    X(alan_birimi)
+
+// ---- SNAP: what the aid layer looks for, and what the canvas draws when it ----
+
+PIRICAD_SETTING(yakalama_uzanti)
+{
+    return SettingSpec{
+        .id       = "core.yakalama.uzanti_carpani",
+        .names    = {"uzantı_çarpanı", "uzanti_carpani", "extensionreach", "uzantı"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(10),
+        .range    = SettingRange::between(0, 200),
+        .values   = {},
+        .unit     = "× açıklık",
+        .summary  = "UZANTI, PARALEL ve UZATILMIŞ KESİŞİM modlarının, yakalama açıklığının "
+                    "kaç katı ötesindeki kenarlardan nokta kurabileceği. Bu üç mod "
+                    "imlecin altında olmayan bir kenardan nokta üretir, açıklık tek "
+                    "başına o kenarı hiç bulamaz. 0 yazılırsa üç mod da maskede açık "
+                    "olsa bile çalışmaz. Görüşe bağlı bir tercih olduğu için uygulama "
+                    "kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(yakalama_isaret_boyu)
+{
+    return SettingSpec{
+        .id       = "core.yakalama.isaret_boyu",
+        .names    = {"yakalama_işareti_boyu", "yakalama_isareti_boyu", "snapmarkersize"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(12),
+        .range    = SettingRange::between(4, 48),
+        .values   = {},
+        .unit     = "piksel",
+        .summary  = "Yakalama işaretinin kenar uzunluğu, ekran pikseli. Ekrana ait bir "
+                    "ölçü olduğu için uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(yakalama_isaret_rengi)
+{
+    return SettingSpec{
+        .id       = "core.yakalama.isaret_rengi",
+        .names    = {"yakalama_işareti_rengi", "yakalama_isareti_rengi", "snapmarkercolour"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(0),
+        .range    = SettingRange::between(0, 0xFFFFFFFFLL),
+        .values   = {},
+        .unit     = "0xAARRGGBB",
+        .summary  = "Yakalama işaretinin rengi. 0 yazılırsa temanın kendi rengi kullanılır. "
+                    "Ekrana ait olduğu için uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(yakalama_ipucu)
+{
+    return SettingSpec{
+        .id       = "core.yakalama.ipucu",
+        .names    = {"yakalama_ipucu", "snaptip"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::boolean(true),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Yakalama işaretinin yanında hangi modun tuttuğunu yazar ('uç nokta', "
+                    "'uzantı'). Kapatılırsa yalnızca işaret çizilir. Ekrana ait olduğu "
+                    "için uygulama kapsamındadır.",
+    };
+}
+
+// ---- GRID: the lattice's own appearance --------------------------------------
+
+PIRICAD_SETTING(izgara_rengi)
+{
+    return SettingSpec{
+        .id       = "core.izgara.renk",
+        .names    = {"ızgara_rengi", "izgara_rengi", "gridcolour"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(0),
+        .range    = SettingRange::between(0, 0xFFFFFFFFLL),
+        .values   = {},
+        .unit     = "0xAARRGGBB",
+        .summary  = "Ara ızgara çizgilerinin rengi. 0 yazılırsa temanın kendi rengi "
+                    "kullanılır. Çizime girmediği için uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(izgara_ana_rengi)
+{
+    return SettingSpec{
+        .id       = "core.izgara.ana_renk",
+        .names    = {"ızgara_ana_rengi", "izgara_ana_rengi", "gridmajorcolour"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(0),
+        .range    = SettingRange::between(0, 0xFFFFFFFFLL),
+        .values   = {},
+        .unit     = "0xAARRGGBB",
+        .summary  = "Ana ızgara çizgilerinin rengi. 0 yazılırsa temanın kendi rengi "
+                    "kullanılır. Çizime girmediği için uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(izgara_adimi_y)
+{
+    return SettingSpec{
+        .id       = "core.izgara.adim_y",
+        .names    = {"ızgara_dikey_adımı", "izgara_dikey_adimi", "ızgara_adımı_y", "izgara_adimi_y",
+                     "gridunity"},
+        .type     = SettingType::Length,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::length(0),
+        .range    = SettingRange::between(0, 1000000000),
+        .values   = {},
+        .unit     = "mm",
+        .summary  = "İkinci eksende ızgara adımı, zeminde milimetre. 0 yazılırsa ızgara "
+                    "karedir ve 'ızgara_adımı' iki eksende de geçerlidir. Çizime "
+                    "girmediği için uygulama kapsamındadır.",
+    };
+}
+
+// ---- RULER ------------------------------------------------------------------
+
+PIRICAD_SETTING(cetvel_gorunur)
+{
+    return SettingSpec{
+        .id       = "core.cetvel.gorunur",
+        .names    = {"cetvel_görünür", "cetvel_gorunur", "ruler"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::boolean(true),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Tuvalin üstünde ve solunda cetvel şeridi çizilir. Çizime girmediği "
+                    "için uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(cetvel_kalinligi)
+{
+    return SettingSpec{
+        .id       = "core.cetvel.kalinlik",
+        .names    = {"cetvel_kalınlığı", "cetvel_kalinligi", "rulersize"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(22),
+        .range    = SettingRange::between(12, 64),
+        .values   = {},
+        .unit     = "piksel",
+        .summary  = "Cetvel şeridinin kalınlığı, ekran pikseli. Ekrana ait bir ölçü "
+                    "olduğu için uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(cetvel_birimi)
+{
+    return SettingSpec{
+        .id       = "core.cetvel.birim",
+        .names    = {"cetvel_birimi", "rulerunit"},
+        .type     = SettingType::Enum,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::enumerated(0),
+        .range    = SettingRange::unbounded(),
+        .values   = {"metre", "santimetre", "kilometre"},
+        .unit     = "",
+        .summary  = "Cetvelin rakamlarının birimi. Zemin ölçüsünü nasıl okuduğunuzla "
+                    "ilgilidir, çizimin kendi birimini değiştirmez; bu yüzden uygulama "
+                    "kapsamındadır.",
+    };
+}
+
+// ---- MAP: what sits on top of the drawing ------------------------------------
+
+PIRICAD_SETTING(harita_olcek_cubugu)
+{
+    return SettingSpec{
+        .id       = "core.harita.olcek_cubugu",
+        .names    = {"ölçek_çubuğu", "olcek_cubugu", "scalebar"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::boolean(true),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Tuvalin köşesinde, o anki yakınlaştırmaya göre bir ölçek çubuğu "
+                    "çizilir. Çizime girmediği için uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(harita_kuzey_oku)
+{
+    return SettingSpec{
+        .id       = "core.harita.kuzey_oku",
+        .names    = {"kuzey_oku", "northarrow"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::boolean(true),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Tuvalin köşesinde kuzey oku çizilir. Çizime girmediği için uygulama "
+                    "kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(harita_koordinat)
+{
+    return SettingSpec{
+        .id       = "core.harita.koordinat_gostergesi",
+        .names    = {"koordinat_göstergesi", "koordinat_gostergesi", "coordreadout"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::boolean(true),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "İmlecin bulunduğu noktanın sağa/yukarı değeri tuvalde gösterilir. "
+                    "Çizime girmediği için uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(harita_imlec)
+{
+    return SettingSpec{
+        .id       = "core.harita.imlec",
+        .names    = {"imleç", "imlec", "cursor"},
+        .type     = SettingType::Enum,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::enumerated(0),
+        .range    = SettingRange::unbounded(),
+        .values   = {"tam_ekran", "kisa", "yok"},
+        .unit     = "",
+        .summary  = "Nişan imlecinin biçimi: tuvali baştan başa geçen çizgiler, kısa bir "
+                    "artı, ya da hiç. Ekrana ait olduğu için uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(harita_imlec_boyu)
+{
+    return SettingSpec{
+        .id       = "core.harita.imlec_boyu",
+        .names    = {"imleç_boyu", "imlec_boyu", "cursorsize"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(30),
+        .range    = SettingRange::between(4, 400),
+        .values   = {},
+        .unit     = "piksel",
+        .summary  = "Kısa imlecin kol uzunluğu, ekran pikseli. 'imleç' ayarı 'kısa' iken "
+                    "kullanılır. Ekrana ait olduğu için uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(harita_yakinlastirma)
+{
+    return SettingSpec{
+        .id       = "core.harita.yakinlastirma_adimi",
+        .names    = {"yakınlaştırma_adımı", "yakinlastirma_adimi", "zoomstep"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(20),
+        .range    = SettingRange::between(2, 100),
+        .values   = {},
+        .unit     = "%",
+        .summary  = "Farenin her tekerlek çentiğinde ölçeğin yüzde kaç değişeceği. "
+                    "Ekrana ait bir tercih olduğu için uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(harita_tekerlek_ters)
+{
+    return SettingSpec{
+        .id       = "core.harita.tekerlek_ters",
+        .names    = {"tekerlek_ters", "invertwheel"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::boolean(false),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Tekerleği ileri itmek uzaklaştırır. Ekrana ait bir tercih olduğu için "
+                    "uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(secim_rengi)
+{
+    return SettingSpec{
+        .id       = "core.secim.renk",
+        .names    = {"seçim_rengi", "secim_rengi", "selectioncolour"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(0),
+        .range    = SettingRange::between(0, 0xFFFFFFFFLL),
+        .values   = {},
+        .unit     = "0xAARRGGBB",
+        .summary  = "Seçili nesnelerin vurgulanma rengi. 0 yazılırsa temanın kendi rengi "
+                    "kullanılır. Çizime girmediği için uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(secim_vurgu_rengi)
+{
+    return SettingSpec{
+        .id       = "core.secim.vurgu_renk",
+        .names    = {"vurgu_rengi", "vurgu_renk", "highlightcolour"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(0),
+        .range    = SettingRange::between(0, 0xFFFFFFFFLL),
+        .values   = {},
+        .unit     = "0xAARRGGBB",
+        .summary  = "İmlecin üzerinde durduğu nesnenin vurgulanma rengi. 0 yazılırsa "
+                    "temanın kendi rengi kullanılır. Çizime girmediği için uygulama "
+                    "kapsamındadır.",
+    };
+}
 
 // ---- PROJECT scope: anything that can change a byte of the exported document --
+
+PIRICAD_SETTING(plan_olcegi)
+{
+    return SettingSpec{
+        .id       = "core.plan.olcek",
+        .names    = {"plan_ölçeği", "plan_olcegi", "pafta_ölçeği", "plotscale"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::Project,
+        .fallback = SettingValue::integer(1000),
+        .range    = SettingRange::between(1, 1000000),
+        .values   = {},
+        .unit     = "1:N",
+        .summary  = "Paftanın ölçek paydası (1000 = 1/1000). Kâğıt biriminde bildirilen "
+                    "her ölçünün zeminde ne kadar yer kapladığını bu belirler: 0,5 mm'lik "
+                    "bir sınır 1/1000'de 0,5 m, 1/5000'de 2,5 m'dir. Çizimin kendi "
+                    "özelliğidir ve dosyayla birlikte gider, bu yüzden proje "
+                    "kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(aci_birimi)
+{
+    return SettingSpec{
+        .id       = "core.aci.birim",
+        .names    = {"açı_birimi", "aci_birimi", "angleunit"},
+        .type     = SettingType::Enum,
+        .scope    = SettingScope::Project,
+        .fallback = SettingValue::enumerated(0),
+        .range    = SettingRange::unbounded(),
+        .values   = {"grad", "derece", "radyan"},
+        .unit     = "",
+        .summary  = "Açıların yazıldığı ve okunduğu birim. Varsayılan GRAD'dır: Türkiye'de "
+                    "nirengi, poligon ve aplikasyon hesapları grad ile yürür ve tam daire "
+                    "400'dür. Belgenin sayılarının nasıl okunacağını söylediği için proje "
+                    "kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(alan_birimi)
+{
+    return SettingSpec{
+        .id       = "core.alan.birim",
+        .names    = {"alan_birimi", "areaunit"},
+        .type     = SettingType::Enum,
+        .scope    = SettingScope::Project,
+        .fallback = SettingValue::enumerated(0),
+        .range    = SettingRange::unbounded(),
+        .values   = {"metrekare", "dekar", "hektar"},
+        .unit     = "",
+        .summary  = "Alanların yazıldığı birim. Tapu ve kadastro metrekare yazar, imar "
+                    "uygulamaları dekar ile konuşur (1 dekar = 1000 m²). Belgenin "
+                    "sayılarının nasıl okunacağını söylediği için proje kapsamındadır.",
+    };
+}
 
 PIRICAD_SETTING(sembol_kutuphanesi)
 {
@@ -609,7 +1036,7 @@ PIRICAD_SETTING(tuval_arkaplani)
         .fallback = SettingValue::integer(0xFF1E2128),
         .range    = SettingRange::between(0, 0xFFFFFFFF),
         .values   = {},
-        .unit     = "",
+        .unit     = "0xAARRGGBB",
         .summary  = "Tuval arka plan rengi, 0xAARRGGBB düzeninde tam sayı (onaltılık de "
                     "yazılabilir). Ekranda görünür, paftaya basılmaz; uygulama kapsamındadır.",
     };
@@ -624,7 +1051,7 @@ PIRICAD_SETTING(izgara_gorunur)
 {
     return SettingSpec{
         .id       = "core.izgara.gorunur",
-        .names    = {"ızgara", "izgara", "ızgara_görünür", "izgara_gorunur", "gridmode"},
+        .names    = {"ızgara_görünür", "izgara_gorunur", "ızgara", "izgara", "gridmode"},
         .type     = SettingType::Bool,
         .scope    = SettingScope::App,
         .fallback = SettingValue::boolean(true),
@@ -797,6 +1224,95 @@ PIRICAD_SETTING(izgaraya_yakala)
 void SettingCatalog::record_failure(std::string message)
 {
     failures_.push_back(std::move(message));
+}
+
+// ---- The PostGIS connection, WITHOUT its password -------------------------
+//
+// Four settings and not one connection string, because a person types four
+// things and a program should ask for what a person has. `VERİTABANI baglan`
+// still takes a whole libpq string for a script that needs `sslmode` or a
+// service file; these are what the window remembers between sessions.
+//
+// THERE IS NO PASSWORD SETTING AND THERE WILL NOT BE ONE. A settings file is
+// plain text in the user's profile, it gets copied into backups and pasted into
+// bug reports, and a stored database password is a credential leak with a
+// convenience story attached. libpq already solves this properly: `~/.pgpass`
+// (`%APPDATA%\postgresql\pgpass.conf` on Windows) is the file it reads, and
+// `PGPASSWORD` is the environment variable. `docs/komutlar/veritabani.md` says
+// so where a user will read it.
+//
+// APP scope on all four: which server this machine talks to is a property of the
+// machine, not of the drawing. A project mailed to a colleague must not carry a
+// pointer at a database they cannot reach — and must not carry a pointer at one
+// they CAN.
+
+PIRICAD_SETTING(veritabani_sunucu)
+{
+    return SettingSpec{
+        .id       = "core.veritabani.sunucu",
+        .names    = {"veritabanı_sunucu", "veritabani_sunucu", "db_host"},
+        .type     = SettingType::Text,
+        .scope    = SettingScope::App,
+        .fallback = text_value("localhost"),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "PostGIS sunucusunun adresi. Hangi sunucuya bağlanıldığı makineye ait "
+                    "bir bilgidir, çizime değil; bu yüzden uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(veritabani_port)
+{
+    return SettingSpec{
+        .id       = "core.veritabani.port",
+        .names    = {"veritabanı_port", "veritabani_port", "db_port"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(5432),
+        .range    = SettingRange::between(1, 65535),
+        .values   = {},
+        .unit     = "",
+        .summary  = "PostgreSQL sunucusunun portu. Öntanımlı 5432, PostgreSQL'in kendi "
+                    "öntanımlı portudur. Sunucu adresiyle birlikte makineye ait olduğu "
+                    "için uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(veritabani_ad)
+{
+    return SettingSpec{
+        .id       = "core.veritabani.ad",
+        .names    = {"veritabanı_adı", "veritabani_adi", "db_name"},
+        .type     = SettingType::Text,
+        .scope    = SettingScope::App,
+        .fallback = text_value(""),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Bağlanılacak veritabanının adı. Boş bırakılırsa kullanıcı adıyla aynı "
+                    "kabul edilir; libpq'nun kendi kuralıdır. Hangi veritabanına "
+                    "bağlanıldığı çizimin verisi değil kurulumun bilgisidir, bu yüzden "
+                    "uygulama kapsamındadır.",
+    };
+}
+
+PIRICAD_SETTING(veritabani_kullanici)
+{
+    return SettingSpec{
+        .id       = "core.veritabani.kullanici",
+        .names    = {"veritabanı_kullanıcı", "veritabani_kullanici", "db_user"},
+        .type     = SettingType::Text,
+        .scope    = SettingScope::App,
+        .fallback = text_value(""),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Veritabanı kullanıcı adı. Kim olarak bağlanıldığı kullanıcıya ve "
+                    "makineye aittir, çizime değil; bu yüzden uygulama kapsamındadır. "
+                    "Parola BURADA TUTULMAZ: ayar dosyası düz metindir. Parolayı "
+                    "~/.pgpass dosyasına ya da PGPASSWORD ortam değişkenine koyun.",
+    };
 }
 
 const SettingCatalog& builtin_settings()

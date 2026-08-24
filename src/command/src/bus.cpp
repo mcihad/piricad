@@ -124,24 +124,45 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
             return p.kind == ParamKind::PointList ? Value::points({pt.value()})
                                                   : Value::point(pt.value());
         }
+        // QUOTING DELIMITS, IT DOES NOT RETYPE. `ÖLÇEK "500"` means what
+        // `ÖLÇEK 500` means, and `KATMAN gorunur="evet"` means what
+        // `gorunur=evet` means. A user quotes to keep a space, a comma or an `=`
+        // out of the tokeniser's hands, and being told the value is now the wrong
+        // KIND is a trap with no lesson in it.
+        //
+        // The number is read by `evaluate_expression`, which is the one grammar
+        // this project has (CLAUDE.md 5.11) — not a second numeric parse that
+        // could disagree with it about what `1e3` means.
+        const auto numeric = [&t]() -> core::Result<double> {
+            if (t.kind == Token::Kind::Number) return t.a;
+            if (t.kind == Token::Kind::Text) return evaluate_expression(t.text);
+            return core::err(ErrorCode::ParseError, "sayı değil");
+        };
+
         switch (p.kind) {
         case ParamKind::Number:
-            if (t.kind == Token::Kind::Number) return Value::number(t.a);
+            if (auto n = numeric(); n) return Value::number(n.value());
             break;
         case ParamKind::Integer:
-            if (t.kind == Token::Kind::Number)
-                return Value::integer(static_cast<std::int64_t>(t.a >= 0 ? t.a + 0.5 : t.a - 0.5));
+            if (auto n = numeric(); n)
+                return Value::integer(
+                    static_cast<std::int64_t>(n.value() >= 0 ? n.value() + 0.5 : n.value() - 0.5));
             break;
-        case ParamKind::Bool:
+        case ParamKind::Bool: {
             if (t.kind == Token::Kind::Number) return Value::boolean(t.a != 0.0);
-            if (t.kind == Token::Kind::Word) {
-                const std::string f = core::turkish_upper(t.word);
+            if (t.kind == Token::Kind::Word || t.kind == Token::Kind::Text) {
+                // A declared keyword, so it folds like one: `hayır` and its ASCII
+                // spelling `hayir` are the same word to a user and were not the
+                // same word to `turkish_upper`, which raises the two i's apart.
+                const std::string f =
+                    core::turkish_fold_key(t.kind == Token::Kind::Word ? t.word : t.text);
                 if (f == "EVET" || f == "YES" || f == "TRUE" || f == "1")
                     return Value::boolean(true);
                 if (f == "HAYIR" || f == "NO" || f == "FALSE" || f == "0")
                     return Value::boolean(false);
             }
             break;
+        }
         case ParamKind::Text:
             if (t.kind == Token::Kind::Text) return Value::text(t.text);
             if (t.kind == Token::Kind::Word) return Value::text(t.word);
@@ -229,6 +250,63 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
 Bus::Bus(core::Document& doc, Registry& reg, Journal& journal, UndoStack& undo)
     : doc_(doc), reg_(reg), journal_(journal), undo_(undo)
 {}
+
+std::string redact_conninfo(std::string_view conninfo)
+{
+    static constexpr std::string_view kKey    = "password=";
+    static constexpr std::string_view kHidden = "***";
+
+    std::string out;
+    out.reserve(conninfo.size());
+
+    // ---- the URI form: scheme://user:SECRET@host/... ----
+    //
+    // The password sits between the first `:` after the scheme and the LAST `@`
+    // before the authority ends. Last, not first: a password may itself contain
+    // an `@`, and libpq's own parser takes the final one.
+    if (const std::size_t scheme = conninfo.find("://"); scheme != std::string_view::npos) {
+        const std::size_t authority = scheme + 3;
+        std::size_t stop            = conninfo.find('/', authority);
+        if (stop == std::string_view::npos) stop = conninfo.size();
+
+        const std::size_t at = conninfo.rfind('@', stop);
+        if (at != std::string_view::npos && at > authority) {
+            if (const std::size_t colon = conninfo.find(':', authority);
+                colon != std::string_view::npos && colon < at) {
+                out.append(conninfo.substr(0, colon + 1));
+                out.append(kHidden);
+                out.append(conninfo.substr(at));
+                return out;
+            }
+        }
+    }
+
+    // ---- the keyword form: `password=SECRET` or `password='SEC RET'` ----
+    for (std::size_t i = 0; i < conninfo.size();) {
+        // Only at a field boundary: a `dbname=my_password=thing` is one value and
+        // must not be cut in half.
+        const bool boundary = i == 0 || conninfo[i - 1] == ' ';
+        if (!boundary || conninfo.compare(i, kKey.size(), kKey) != 0) {
+            out += conninfo[i++];
+            continue;
+        }
+
+        out.append(kKey);
+        out.append(kHidden);
+        i += kKey.size();
+
+        if (i < conninfo.size() && conninfo[i] == '\'') {
+            ++i;
+            while (i < conninfo.size() && conninfo[i] != '\'')
+                ++i;
+            if (i < conninfo.size()) ++i;
+        } else {
+            while (i < conninfo.size() && conninfo[i] != ' ')
+                ++i;
+        }
+    }
+    return out;
+}
 
 void Bus::echo(std::string_view message) const
 {
@@ -369,8 +447,12 @@ core::Result<DispatchResult> Bus::finish(Session& session)
         return st.error();
     }
 
-    result.ops     = session.owns_transaction() ? ops : 0;
-    result.mutated = ops > 0;
+    result.ops = session.owns_transaction() ? ops : 0;
+    // A borrowed transaction belongs to a batch. Its single visible mutation is
+    // reported by end_batch(), not once per nested command, so the canvas and
+    // layer panel repaint only after the whole edit is coherent.
+    result.mutated =
+        session.owns_transaction() && doc_.revision() != session.document_revision_at_start();
 
     if (result.mutated && spec.undo == UndoPolicy::SingleTransaction &&
         session.owns_transaction()) {
@@ -402,9 +484,10 @@ core::Status Bus::begin_batch(std::string label)
     if (batch_)
         return core::err(ErrorCode::InvalidArgument, "Toplu iş zaten açık: '" + batch_label_ + "'");
 
-    batch_label_    = std::move(label);
-    batch_commands_ = 0;
-    batch_          = std::make_unique<Transaction>(doc_, batch_label_);
+    batch_label_             = std::move(label);
+    batch_commands_          = 0;
+    batch_revision_at_start_ = doc_.revision();
+    batch_                   = std::make_unique<Transaction>(doc_, batch_label_);
     return core::ok();
 }
 
@@ -416,16 +499,27 @@ core::Result<DispatchResult> Bus::end_batch()
     result.command_id = "core.batch";
     result.label      = batch_label_;
     result.ops        = batch_->size();
-    result.mutated    = result.ops > 0;
+    result.mutated    = doc_.revision() != batch_revision_at_start_;
 
     if (result.mutated) undo_.push(UndoEntry{batch_label_, batch_->release()});
 
     batch_.reset();
+    batch_revision_at_start_ = 0;
     result.message =
         batch_label_ + ": " + std::to_string(batch_commands_) + " komut, tek geri alma adımı";
 
     if (result.mutated && on_document_changed) on_document_changed();
     return result;
+}
+
+void Bus::abort_batch()
+{
+    if (!batch_) return;
+
+    batch_->rollback();
+    batch_.reset();
+    batch_commands_          = 0;
+    batch_revision_at_start_ = 0;
 }
 
 } // namespace piricad::command

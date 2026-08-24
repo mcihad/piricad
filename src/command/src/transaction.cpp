@@ -93,6 +93,15 @@ Status Transaction::set_layer_appearance(LayerId l, const Appearance& a)
     return core::ok();
 }
 
+Status Transaction::set_layer_style(LayerId l, StyleId style)
+{
+    core::Op undo;
+    auto st = doc_.set_layer_style(l, style, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
 Status Transaction::set_entity_style(EntityId e, StyleId style)
 {
     core::Op undo;
@@ -111,6 +120,12 @@ core::Result<core::ImageId> Transaction::intern_image(std::span<const std::byte>
                                                       std::string_view origin)
 {
     return doc_.intern_image(bytes, origin);
+}
+
+core::Result<core::DashId> Transaction::intern_dash(const core::DashPattern& pattern,
+                                                    std::string_view origin)
+{
+    return doc_.intern_dash(pattern, origin);
 }
 
 Status Transaction::set_attribute(core::AttrId col, EntityId e, const core::AttrValue& v)

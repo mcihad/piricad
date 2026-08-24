@@ -19,6 +19,9 @@
 // atlas shaped with HarfBuzz. Those are the GPU backend's problems, and keeping
 // them out of the interface is what makes them replaceable.
 #include "piricad/app/backend_factory.hpp"
+#if PIRICAD_HAVE_QGIS
+#include "piricad/app/qgis_backend.hpp"
+#endif
 
 #include "piricad/core/style.hpp"
 #include "piricad/render/backend.hpp"
@@ -35,11 +38,13 @@
 #include <QRectF>
 #include <QString>
 #include <QStringList>
+#include <QSvgRenderer>
 #include <QTransform>
 
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <span>
 #include <string>
 #include <unordered_map>
 
@@ -95,17 +100,40 @@ Qt::PenJoinStyle qt_join(core::LineJoin join)
     return Qt::RoundJoin;
 }
 
-/// Pen styles standing in for the dash table.
+/// Puts the pass's own line type on a pen.
 ///
-/// Like the hatch patterns above, the real dash definitions are a /data asset
-/// with prescribed segment lengths. A dashed gösterim is drawn dashed rather than
-/// silently solid, because a `plan onama sınırı` and a `mülkiyet sınırı` differ on
-/// a plan by exactly that.
-Qt::PenStyle dash_pattern(std::uint16_t dash)
+/// The lengths arrive already resolved out of the document's `DashStore` and are
+/// in hundredths of the stroke's width, which is the unit `QPen::setDashPattern`
+/// wants — so a pattern declared once is right at every weight the same boundary
+/// is ever drawn at.
+///
+/// This used to be five `Qt::PenStyle` constants indexed by the dash id: a
+/// stand-in, and it drew every published line type as one of five generic
+/// dashes. MPYY distinguishes a province boundary from a municipal one by the
+/// number of dots between the dashes, and five constants cannot say that.
+void apply_dash(QPen& pen, const render::PassStyle& ps)
 {
-    static const Qt::PenStyle kStyles[] = {Qt::SolidLine, Qt::DashLine, Qt::DotLine,
-                                           Qt::DashDotLine, Qt::DashDotDotLine};
-    return kStyles[dash % (sizeof kStyles / sizeof kStyles[0])];
+    if (ps.dash_count == 0) return;
+
+    QList<qreal> pattern;
+    pattern.reserve(ps.dash_count);
+    for (std::uint8_t i = 0; i < ps.dash_count; ++i)
+        pattern.push_back(static_cast<qreal>(ps.dash_lengths[i]) / 100.0);
+
+    pen.setDashPattern(pattern);
+
+    // FLAT CAPS, whatever the layer declared, and this is not a liberty.
+    //
+    // Qt puts the cap on EVERY DASH, not on the ends of the line: with a round
+    // cap each mark grows by half a pen width at both ends. A pattern declaring a
+    // one-width gap then has no gap left at all, and the line this program drew
+    // for a published dash-dot boundary came out SOLID — indistinguishable from a
+    // property boundary, which on a plan sheet is a different legal statement.
+    //
+    // The declared cap describes how the STROKE ends, and a dashed stroke still
+    // ends the way it says at its two real ends; what it cannot also mean is
+    // every mark inside it. Every CAD line type is flat-capped for this reason.
+    pen.setCapStyle(Qt::FlatCap);
 }
 
 /// One marker glyph, centred on the origin, `size` across.
@@ -454,18 +482,104 @@ private:
     /// costs one attempt rather than one attempt per frame. It draws nothing,
     /// which is the honest result: the drawing says there is a picture and this
     /// build cannot read it.
-    const QImage& decoded(const render::PassStyle& ps)
+    const QImage& decoded(const render::PassStyle& ps, int wanted_px = 0)
     {
         static const QImage kNone;
         if (ps.image.empty() || ps.image_key == 0) return kNone;
 
-        const auto it = images_.find(ps.image_key);
+        // A VECTOR picture is rasterised at the size it will be drawn at, so the
+        // cache is keyed on that size too. This is the whole reason for shipping
+        // symbology as SVG: a raster is decoded once and then resampled to
+        // whatever the zoom asks for, and every resampling of a 176 px annex crop
+        // is a softer, greyer version of a line the regulation drew crisp.
+        const bool vector       = looks_like_svg(ps.image);
+        const int bucket        = vector ? std::clamp(wanted_px, 8, 512) : 0;
+        const std::uint64_t key = ps.image_key ^ (static_cast<std::uint64_t>(bucket) << 48);
+
+        const auto it = images_.find(key);
         if (it != images_.end()) return it->second;
+
+        if (vector) return images_.emplace(key, rasterise(ps.image, bucket)).first->second;
 
         QImage image;
         image.loadFromData(reinterpret_cast<const uchar*>(ps.image.data()),
                            static_cast<int>(ps.image.size()));
-        return images_.emplace(ps.image_key, std::move(image)).first->second;
+        return images_.emplace(key, keyed(std::move(image))).first->second;
+    }
+
+    /// True when the bytes open an SVG document; see `core::sniff_image_format`,
+    /// which asks the same question of the same bytes when they are interned.
+    static bool looks_like_svg(std::span<const std::byte> bytes)
+    {
+        const std::size_t look = bytes.size() < 512 ? bytes.size() : 512;
+        const QByteArray head(reinterpret_cast<const char*>(bytes.data()),
+                              static_cast<qsizetype>(look));
+        return head.contains("<svg");
+    }
+
+    /// Draws an SVG at `size` pixels tall, on transparency.
+    ///
+    /// `QSvgRenderer` is Qt's own SVG engine and it is the one QGIS rasterises its
+    /// SVG markers through as well, so a symbol authored for one draws the same in
+    /// the other. Nothing is hand-rolled here and nothing needs to be.
+    static QImage rasterise(std::span<const std::byte> bytes, int size)
+    {
+        const QByteArray data(reinterpret_cast<const char*>(bytes.data()),
+                              static_cast<qsizetype>(bytes.size()));
+
+        QSvgRenderer renderer;
+        if (!renderer.load(data)) return QImage();
+
+        const QSizeF box = renderer.defaultSize();
+        if (box.isEmpty()) return QImage();
+
+        const double ratio = box.width() / box.height();
+        const int h        = std::max(1, size);
+        const int w        = std::max(1, static_cast<int>(std::lround(h * ratio)));
+
+        QImage out(w, h, QImage::Format_ARGB32_Premultiplied);
+        out.fill(Qt::transparent);
+
+        QPainter painter(&out);
+        painter.setRenderHint(QPainter::Antialiasing);
+        renderer.render(&painter, QRectF(0, 0, w, h));
+        painter.end();
+        return out;
+    }
+
+    /// Gives a picture with no alpha channel one, from how WHITE each pixel is.
+    ///
+    /// MPYY's annex pictures are JPEG, which cannot carry alpha, so every glyph
+    /// and line type arrives sitting on an opaque white rectangle. The first
+    /// answer to that was to draw them in Multiply, which leaves white alone —
+    /// but JPEG's white is not 255, it is 250 with ringing around every stroke,
+    /// so what actually reached the canvas was a faint grey box at every stamp.
+    /// They are visible along both boundaries of any real drawing.
+    ///
+    /// `alpha = 255 - min(r,g,b)` and nothing else. It is CONTINUOUS, so it makes
+    /// no decision about which greys are ink — which was the objection to keying
+    /// white out, and it is a fair objection to a THRESHOLD. Paper goes fully
+    /// transparent, a black stroke fully opaque, JPEG's ringing fades in
+    /// proportion to how close to paper it is. Keying on the smallest channel
+    /// rather than on luminance keeps a saturated colour opaque: MPYY's red
+    /// boundary dots stay red at full strength instead of being read as half-dark.
+    ///
+    /// The picture can then be drawn normally, so a symbol PAINTS instead of only
+    /// darkening — which is what a white glyph on a dark fill needs.
+    static QImage keyed(QImage image)
+    {
+        if (image.isNull() || image.hasAlphaChannel()) return image;
+
+        QImage out = image.convertToFormat(QImage::Format_ARGB32);
+        for (int y = 0; y < out.height(); ++y) {
+            auto* row = reinterpret_cast<QRgb*>(out.scanLine(y));
+            for (int x = 0; x < out.width(); ++x) {
+                const QRgb p    = row[x];
+                const int paper = std::min({qRed(p), qGreen(p), qBlue(p)});
+                row[x]          = qRgba(qRed(p), qGreen(p), qBlue(p), 255 - paper);
+            }
+        }
+        return out;
     }
 
     /// The picture tiled into the face — a MPYY `tarama`.
@@ -478,10 +592,11 @@ private:
     {
         if (batch.runs.empty()) return;
 
-        const QImage& source = decoded(ps);
+        const double tile = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 24.0;
+
+        const QImage& source = decoded(ps, static_cast<int>(std::lround(tile)));
         if (source.isNull()) return;
 
-        const double tile  = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 24.0;
         const double ratio = source.height() > 0 ? double(source.height()) / source.width() : 1.0;
 
         QImage scaled = source.scaled(std::max(1, int(tile)), std::max(1, int(tile * ratio)),
@@ -494,8 +609,15 @@ private:
             brush.setTransform(rotation);
         }
 
+        // Composited like every other scanned picture, and it was not.
+        //
+        // A tarama tile is black lines on OPAQUE WHITE — the annex's paper. Poured
+        // through a plain texture brush that paper covers the fill colour the same
+        // row declares, so a MEVCUT KONUT ALANI came out white-on-white instead of
+        // brown hatched black. The other two raster paths already multiplied; this
+        // one did not, and 277 of the package's 476 rows go through it.
         painter.save();
-        if (ps.opacity < 255) painter.setOpacity(double(ps.opacity) / 255.0);
+        applyInkComposition(painter, ps);
         painter.fillPath(fillPath(batch, cx, cy), brush);
         painter.restore();
     }
@@ -506,10 +628,11 @@ private:
     {
         if (batch.runs.empty()) return;
 
-        const QImage& source = decoded(ps);
+        const double height = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 16.0;
+
+        const QImage& source = decoded(ps, static_cast<int>(std::lround(height)));
         if (source.isNull()) return;
 
-        const double height = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 16.0;
         const double width =
             source.height() > 0 ? height * source.width() / source.height() : height;
         const QImage scaled = source.scaled(std::max(1, int(width)), std::max(1, int(height)),
@@ -537,21 +660,11 @@ private:
         painter.restore();
     }
 
-    /// Draws a scanned picture so its PAPER does not hide what is under it.
-    ///
-    /// MPYY's annex images are JPEG, which has no alpha, so every glyph and line
-    /// type arrives on an opaque white rectangle. Stamped as-is, a `sembol`
-    /// punches a white hole in the lekesi it is supposed to label.
-    ///
-    /// Multiply is the answer rather than keying white out: it darkens by the
-    /// picture, so white leaves the background untouched and every grey the
-    /// scanner produced still darkens by exactly as much as it is dark. Keying
-    /// would need a threshold, and a threshold on a scanned regulation is a
-    /// decision about which greys are ink — which nobody has authority to make
-    /// here.
+    /// Sets a picture pass's opacity. The paper is already gone by now — see
+    /// `keyed()`, which turns it into transparency at decode time rather than
+    /// leaving every stamp to darken its way around it.
     static void applyInkComposition(QPainter& painter, const render::PassStyle& ps)
     {
-        painter.setCompositionMode(QPainter::CompositionMode_Multiply);
         if (ps.opacity < 255) painter.setOpacity(double(ps.opacity) / 255.0);
     }
 
@@ -565,10 +678,11 @@ private:
     {
         if (batch.runs.empty()) return;
 
-        const QImage& source = decoded(ps);
+        const double height = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 16.0;
+
+        const QImage& source = decoded(ps, static_cast<int>(std::lround(height)));
         if (source.isNull()) return;
 
-        const double height = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 16.0;
         const double width =
             source.height() > 0 ? height * source.width() / source.height() : height;
 
@@ -595,17 +709,25 @@ private:
 
     /// Walks one run and stamps the picture where the placement says.
     ///
-    /// SEGMENT BY SEGMENT, with a half-stamp margin at each end, and that margin is
-    /// the whole point. A published çizgi tipi is a PICTURE and pictures are wide —
-    /// thirty pixels where a vector dot is four — so a stamp placed near the end of
-    /// an edge rotates with that edge and hangs out past the corner, drawing a
-    /// parcel boundary that visibly overshoots the parcel. A corner now gets a small
-    /// gap instead, which is what the printed annex shows anyway.
+    /// ALONG THE WHOLE RUN, by arc length, and not edge by edge.
     ///
-    /// The phase restarts on each edge rather than marching around the ring. For a
-    /// closed boundary that is the better answer: every edge begins and ends with a
-    /// whole stamp, instead of one edge inheriting whatever fraction the previous
-    /// one left over.
+    /// The earlier version walked each edge on its own, kept a half-stamp margin at
+    /// both of its ends, and restarted the phase at every vertex. Each of those was
+    /// defensible alone and together they produced the picture a user reported: a
+    /// visible HOLE at every corner of every parcel, a spacing that changed from
+    /// edge to edge because each edge divided its own length, and — on a boundary
+    /// whose edges are shorter than one stamp — nothing drawn at all, because
+    /// `distribute_along` refuses an edge it cannot fit a stamp inside.
+    ///
+    /// A boundary is one line, so it is walked as one line. The pitch is constant
+    /// all the way round, a stamp that lands on a vertex is drawn there, and each
+    /// stamp takes the direction of the edge it lands on. Corners close.
+    ///
+    /// The overshoot the margin was protecting against is real — a picture is wide
+    /// and a stamp near a corner leans past it — but it is a property of stamping
+    /// pictures, not of walking them, and it does not survive the move to vector
+    /// line types. Trading a certain hole at every corner for an occasional lean at
+    /// a sharp one is the better of the two.
     static void stampAlongRun(QPainter& painter, const render::PolylineBatch& batch,
                               std::size_t offset, std::uint32_t run, const render::PassStyle& ps,
                               double cx, double cy, double interval, const QImage& picture)
@@ -650,31 +772,40 @@ private:
             return;
         }
 
-        const double margin = picture.width() * 0.5;
+        // The pitch is chosen ONCE for the whole run: the multiple of the requested
+        // interval that divides the run's own length most evenly. The pattern then
+        // closes on a ring instead of leaving whatever the last division did not
+        // use as a gap beside the first stamp.
+        double total = 0.0;
+        for (std::uint32_t v = 1; v < run; ++v)
+            total += lengthOf(at(v - 1), at(v));
+        if (total <= 0.0) return;
+
+        const auto steps   = static_cast<long long>(total / interval + 0.5);
+        const double pitch = steps >= 1 ? total / static_cast<double>(steps) : total;
+        if (pitch <= 0.0) return;
+
+        // Walked, not indexed: `walked` accumulates along the polyline and the
+        // next stamp is placed wherever that crosses the next multiple of `pitch`.
+        // A vertex is nothing special to the walk, which is exactly why the corner
+        // stops being a hole.
+        double walked = 0.0;
+        double next   = 0.0;
 
         for (std::uint32_t v = 1; v < run; ++v) {
             const QPointF a  = at(v - 1);
             const QPointF b  = at(v);
             const double len = lengthOf(a, b);
-
-            // DISTRIBUTED, not marched. Stepping by a fixed interval from the
-            // start leaves whatever the division did not use as a gap before the
-            // corner — which is the same corner defect as the overshoot, in the
-            // other direction: the boundary now stops short of the parcel instead
-            // of running past it.
-            //
-            // So the edge decides the spacing. The count is the one nearest the
-            // requested interval, and the stamps are spread to land exactly on
-            // both margins. Every edge is then closed at both ends and the
-            // spacing differs from the request by less than half a step, which no
-            // reader can see and which is what a printed annex does anyway.
-            const render::EdgeStamps plan = render::distribute_along(len, interval, margin);
+            if (len <= 0.0) continue;
 
             const double degrees = segmentDegrees(a, b);
-            for (int i = 0; i < plan.count; ++i) {
-                const double t = (plan.first + i * plan.step) / len;
+
+            while (next <= walked + len + 1.0e-9) {
+                const double t = (next - walked) / len;
                 stamp(QPointF(a.x() + (b.x() - a.x()) * t, a.y() + (b.y() - a.y()) * t), degrees);
+                next += pitch;
             }
+            walked += len;
         }
     }
 
@@ -687,7 +818,7 @@ private:
         pen.setWidthF(batch.width_px);
         pen.setCapStyle(qt_cap(ps.cap));
         pen.setJoinStyle(qt_join(ps.join));
-        if (ps.dash != 0) pen.setStyle(dash_pattern(ps.dash));
+        apply_dash(pen, ps);
         painter.setPen(pen);
 
         std::size_t offset = 0;
@@ -937,12 +1068,25 @@ private:
 
 } // namespace
 
+std::unique_ptr<render::Backend> make_builtin_backend()
+{
+    return std::make_unique<PainterBackend>();
+}
+
 std::unique_ptr<render::Backend> make_canvas_backend()
 {
-    // One `return` today. When the QRhi backend lands it is chosen here, and the
-    // canvas is not edited — which is the whole claim CLAUDE.md Article 8.1 makes
-    // about its own removal.
-    return std::make_unique<PainterBackend>();
+    // THE ONE PLACE A BACKEND IS NAMED (render.md R1), and the canvas is not
+    // edited when the choice changes — the same claim Article 8.1 makes about the
+    // QRhi backend's arrival.
+    //
+    // QGIS when this build has it: a symbology engine is a thing Article 2.7 says
+    // is used rather than reimplemented, and the built-in one is the stand-in.
+    // The environment override is for looking at the two side by side while the
+    // port finishes, and it names the built-in one rather than hiding it.
+#if PIRICAD_HAVE_QGIS
+    if (qgetenv("PIRICAD_BACKEND") != "dahili") return make_qgis_backend();
+#endif
+    return make_builtin_backend();
 }
 
 } // namespace piricad::app

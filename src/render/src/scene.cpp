@@ -22,25 +22,22 @@ bool boxes_overlap(const Box2& a, const Box2& b)
     return !(a.max_x < b.min_x || a.min_x > b.max_x || a.max_y < b.min_y || a.min_y > b.max_y);
 }
 
-/// One paper millimetre is one screen pixel.
-///
-/// A PLACEHOLDER, and it is the same one the previous code carried unnamed as
-/// `width_um / 1000.0`. What it stands in for is the plot scale: a symbol declared
-/// in paper units is 0,5 mm on the sheet whatever the drawing scale, and turning
-/// that into pixels needs the sheet's own resolution, which arrives with the
-/// layout and plotting work. Naming it is what makes it findable when that lands.
-constexpr double kPixelsPerPaperMm = 1.0;
-
 /// A measure in this frame's pixels.
 ///
 /// Three units, three conversions, and the difference is visible on screen: a
 /// paper size holds still while the user zooms, a ground size grows with the
 /// drawing, a pixel size is already what it is.
-float to_pixels(const core::Measure& m, double mm_per_pixel)
+///
+/// `pixels_per_paper_mm` is the OUTPUT RESOLUTION and it used to be the literal
+/// 1.0 — one paper millimetre drawn as one screen pixel. A gösterim the annex
+/// prints at 8 mm therefore reached the canvas 8 px tall, about a quarter of the
+/// size it is printed at, and every published symbol in the program looked like a
+/// smudge. It is a resolution, so it comes from the screen.
+float to_pixels(const core::Measure& m, double mm_per_pixel, double pixels_per_paper_mm)
 {
     switch (m.unit) {
     case core::Unit::Paper:
-        return static_cast<float>(static_cast<double>(m.value) / 1000.0 * kPixelsPerPaperMm);
+        return static_cast<float>(static_cast<double>(m.value) / 1000.0 * pixels_per_paper_mm);
     case core::Unit::Ground:
         return mm_per_pixel > 0.0 ? static_cast<float>(static_cast<double>(m.value) / mm_per_pixel)
                                   : 0.0f;
@@ -51,32 +48,47 @@ float to_pixels(const core::Measure& m, double mm_per_pixel)
 
 } // namespace
 
-float stroke_width_px(const core::SymbolLayer& layer)
+float stroke_width_px(const core::SymbolLayer& layer, double pixels_per_paper_mm)
 {
-    return std::max(1.0f, static_cast<float>(layer.look.width_um) / 1000.0f);
+    // Width is declared in PAPER micrometres because the regulation declares it
+    // on the sheet, so it converts at the output resolution like every other
+    // paper measure. At the old one-pixel-per-millimetre it did not: an MPYY
+    // 0,5 mm boundary asked for half a pixel, hit the floor below, and every
+    // weight in the annex — 0,2 mm, 0,5 mm, 1,0 mm — came out as the same hairline.
+    const double px = static_cast<double>(layer.look.width_um) / 1000.0 * pixels_per_paper_mm;
+    return std::max(1.0f, static_cast<float>(px));
 }
 
-PassStyle pass_of(const core::SymbolLayer& sl, const core::ImageStore& images, double mm_per_pixel)
+PassStyle pass_of(const core::SymbolLayer& sl, const core::ImageStore& images,
+                  const core::DashStore& dashes, double mm_per_pixel, double pixels_per_paper_mm)
 {
     PassStyle ps;
-    ps.type          = sl.type;
-    ps.shape         = sl.shape;
-    ps.placement     = sl.placement;
-    ps.cap           = sl.cap;
-    ps.join          = sl.join;
-    ps.size_px       = to_pixels(sl.size, mm_per_pixel);
-    ps.interval_px   = to_pixels(sl.interval, mm_per_pixel);
-    ps.spacing_y_px  = to_pixels(sl.spacing_y, mm_per_pixel);
-    ps.offset_px     = to_pixels(sl.offset, mm_per_pixel);
-    ps.angle_udeg    = sl.angle_udeg;
-    ps.opacity       = sl.opacity;
-    ps.line_rgba     = sl.look.rgba;
-    ps.fill_rgba     = sl.look.fill_rgba;
-    ps.image         = images.bytes(sl.image);
-    ps.image_key     = images.content_key(sl.image);
-    ps.text          = sl.text;
-    ps.dash          = sl.look.dash;
-    ps.line_width_px = stroke_width_px(sl);
+    ps.type         = sl.type;
+    ps.shape        = sl.shape;
+    ps.placement    = sl.placement;
+    ps.cap          = sl.cap;
+    ps.join         = sl.join;
+    ps.size_px      = to_pixels(sl.size, mm_per_pixel, pixels_per_paper_mm);
+    ps.interval_px  = to_pixels(sl.interval, mm_per_pixel, pixels_per_paper_mm);
+    ps.spacing_y_px = to_pixels(sl.spacing_y, mm_per_pixel, pixels_per_paper_mm);
+    ps.offset_px    = to_pixels(sl.offset, mm_per_pixel, pixels_per_paper_mm);
+    ps.angle_udeg   = sl.angle_udeg;
+    ps.opacity      = sl.opacity;
+    ps.line_rgba    = sl.look.rgba;
+    ps.fill_rgba    = sl.look.fill_rgba;
+    ps.image        = images.bytes(sl.image);
+    ps.image_key    = images.content_key(sl.image);
+    ps.text         = sl.text;
+    ps.dash         = sl.look.dash;
+
+    // Resolved HERE, once per pass, not in the backend: the backend has no
+    // document and every backend would otherwise have to find one.
+    const core::DashPattern& pattern = dashes.at(sl.look.dash);
+    ps.dash_count                    = pattern.count;
+    for (std::size_t i = 0; i < core::kMaxDashSegments; ++i)
+        ps.dash_lengths[i] = pattern.lengths[i];
+
+    ps.line_width_px = stroke_width_px(sl, pixels_per_paper_mm);
 
     // A marker pass needs the line to walk along; a centroid marker needs the ring
     // to find a centre in. A published sembol sits INSIDE the lekesi it labels, so
@@ -151,12 +163,13 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         // and therefore costing nothing per frame.
         if (!sl.enabled) return;
 
-        out.passes[next] = pass_of(sl, doc.images(), mm_per_pixel);
+        out.passes[next] =
+            pass_of(sl, doc.images(), doc.dashes(), mm_per_pixel, options.pixels_per_paper_mm);
 
         PolylineBatch& stroke = out.polylines[next];
         PolygonBatch& fill    = out.polygons[next];
         stroke.rgba           = sl.look.rgba;
-        stroke.width_px       = stroke_width_px(sl);
+        stroke.width_px       = stroke_width_px(sl, options.pixels_per_paper_mm);
         fill.rgba             = sl.look.fill_rgba;
         fill.hatch            = sl.look.hatch;
 
@@ -294,17 +307,22 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         // carries the ByLayer sentinel. This is the one lookup the frame path
         // does, and it is an array index — never a rule, an expression or a
         // cascade (R14, P29).
-        const core::StyleId sid = entities.style[e];
+        const core::StyleId own_style = entities.style[e];
+        const bool has_own_style = own_style != core::kByLayerStyle && own_style < styles.size();
+        const core::StyleId layer_style = layers[lid].style;
+        const bool has_layer_style =
+            layer_style != core::kByLayerStyle && layer_style < styles.size();
+        const core::StyleId effective_style = has_own_style ? own_style : layer_style;
         const std::size_t slot =
-            sid == core::kByLayerStyle || sid >= styles.size() ? layer_slot(lid) : sid;
+            has_own_style || has_layer_style ? effective_style : layer_slot(lid);
 
         // Scale-dependent visibility. Not decoration in planning work: a
         // `çevre düzeni planı` at 1/100000 shows a `lekesi` where the `uygulama imar planı`
         // at 1/1000 shows its parcels, and drawing both at both scales produces a
         // sheet nobody can read. The window is stored on the symbol, so this is
         // an array lookup and a comparison — no rule is evaluated (R14).
-        if (sid != core::kByLayerStyle && sid < styles.size()) {
-            const core::Symbol& sym = styles.symbol_at(sid);
+        if (has_own_style || has_layer_style) {
+            const core::Symbol& sym = styles.symbol_at(effective_style);
             if (sym.min_scale != 0 && denominator < static_cast<double>(sym.min_scale)) {
                 ++out.culled_count;
                 return;

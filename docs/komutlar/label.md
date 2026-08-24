@@ -43,6 +43,7 @@ ETİKET katman=<ad> bicim=<biçim> [hedef=<ad>] [yukseklik=<tam sayı>]
 | `bicim` | Etiket biçimi. `{sutun}` o sütunun değeriyle değişir. Zorunlu |
 | `hedef` | Etiketlerin yazılacağı katman. Verilmezse `<katman> ETİKET` |
 | `yukseklik` | Yazı yüksekliği, **zemin milimetresi**. Verilmezse 2000 (2 m) |
+| `kaydirma` | Nesnenin ortasından dikey kaydırma, **zemin milimetresi**. Artı yukarı |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -76,6 +77,42 @@ olurdu. Bunu genişletmek bir yama değil, bir anayasa değişikliğidir.
 Tanımlı olmayan bir sütun adı **olduğu gibi kalır**, süslü parantezleriyle
 birlikte. Sessizce silinseydi, basılmak üzere olan bir paftadaki yazım hatası
 görünmez olurdu.
+
+### MPYY yapılaşma koşulu — çemberin içindeki iki sayı
+
+Yönetmeliğin yapılaşma koşulu için bastığı gösterim, içinden yatay bir çizgi geçen bir
+çemberdir: **çizginin üstünde kat alanı katsayısı, altında taban alanı katsayısı.** Her
+ikisi de parselin **özniteliğidir**, yani aynı sembolü taşıyan iki parsel farklı sayılar
+gösterir.
+
+İş ikiye bölünür ve bu bölünme bilinçlidir:
+
+- **Sembol** çemberi ve çizgiyi çizer. Bunlar hiçbir parsel hakkında bir şey söylemez,
+  bu yüzden kaç parsel taşırsa taşısın stil sütununda **tek** kayıttır.
+- **`ETİKET`** sayıları yazar. Her sayı sıradan bir yazı nesnesi olur: taşınır,
+  yeniden stillenir, kendi katmanında kapatılır, `.pcad` ve DXF'e olduğu gibi gider.
+
+```
+KATMAN ad=IMAR
+SÜTUN kimlik=taks tur=metin
+SÜTUN kimlik=kaks tur=metin
+
+STİL katman=IMAR tip=merkez-isaretci sekil=daire birim=zemin boyut=26000
+STİL katman=IMAR ekle=evet tip=merkez-isaretci sekil=cizik aci=90000000 birim=zemin boyut=22000
+
+ETİKET katman=IMAR bicim="{kaks}" hedef=KOSUL_UST yukseklik=3200 kaydirma=4500
+ETİKET katman=IMAR bicim="{taks}" hedef=KOSUL_ALT yukseklik=3200 kaydirma=-7000
+```
+
+`kaydirma` olmadan iki sayı da nesnenin ortasına, yani aralarındaki çizginin üstüne
+düşer. Her sayının kendi `ETİKET` satırı ve kendi kaydırması vardır.
+
+**Neden sembolün kendisi özniteliği okumuyor.** `.claude/model.md` R29 ve P7:
+öznitelik sütunları çerçeve yolunda asla okunmaz ve çerçeve yolunda asla ifade
+değerlendirilmez. Kare başına nesne başına bir sütun araması, 16 ms bütçesinin içine
+bir tablo araması koymak demektir. Bunun karşılığında bir şey kaybedilir ve söylenmesi
+gerekir: **etiket, sonradan değişen bir özniteliği takip etmez.** Komutu yeniden
+çalıştırmak onları tazeler; bu, her CAD açıklamasının yaptığı pazarlığın aynısıdır.
 
 ### Değerler nasıl yazılır
 

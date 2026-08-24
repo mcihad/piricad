@@ -96,6 +96,7 @@ std::uint64_t Document::content_hash() const
     h = attributes_.fold(h);
     h = texts_.fold(h);
     h = images_.fold(h);
+    h = dashes_.fold(h);
 
     for (EntityId e = 0; e < entities_.size(); ++e) {
         if (!entities_.alive(e)) continue;
@@ -509,6 +510,24 @@ Status Document::set_layer_appearance(LayerId l, const Appearance& a, Op& undo_o
     return ok();
 }
 
+Status Document::set_layer_style(LayerId l, StyleId style, Op& undo_out)
+{
+    Layer* layer = layers_.at(l);
+    if (!layer) return err(ErrorCode::NotFound, "Bilinmeyen katman kimliği: " + std::to_string(l));
+    if (style != kByLayerStyle && !styles_.contains(style))
+        return err(ErrorCode::NotFound, "Bilinmeyen stil kimliği: " + std::to_string(style));
+
+    const StyleId was = layer->style;
+    layer->style      = style;
+    ++revision_;
+
+    undo_out           = Op{};
+    undo_out.kind      = Op::Kind::SetLayerStyle;
+    undo_out.layer     = l;
+    undo_out.style_arg = was;
+    return ok();
+}
+
 Status Document::set_layer_group(LayerId l, std::string group, Op& undo_out)
 {
     Layer* record = layers_.at(l);
@@ -551,6 +570,11 @@ Result<ImageId> Document::intern_image(std::span<const std::byte> bytes, std::st
     return images_.intern(bytes, origin);
 }
 
+Result<DashId> Document::intern_dash(const DashPattern& pattern, std::string_view origin)
+{
+    return dashes_.intern(pattern, origin);
+}
+
 StyleId Document::intern_symbol(const Symbol& sym)
 {
     return styles_.intern(sym);
@@ -573,6 +597,7 @@ Status Document::apply(const Op& op, Op* undo_out)
     case Op::Kind::SetLayerLocked: return set_layer_locked(op.layer, op.bool_arg, inverse);
     case Op::Kind::SetLayerAppearance:
         return set_layer_appearance(op.layer, op.appearance_arg, inverse);
+    case Op::Kind::SetLayerStyle: return set_layer_style(op.layer, op.style_arg, inverse);
     case Op::Kind::SetLayerGroup: return set_layer_group(op.layer, op.str_arg, inverse);
     case Op::Kind::SetCrs: return set_crs(op.crs_arg, inverse);
     }

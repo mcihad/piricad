@@ -157,13 +157,17 @@ enum BlockId : std::uint32_t {
     /// block whose element size disagrees with the type.
     kBlkLayerGroups = 0x0021, ///< u32[], index into kBlkStringSpans
 
+    /// The full default symbol for each layer. OPTIONAL: absent from older files
+    /// means every layer falls back to its Appearance, which is what they stored.
+    kBlkLayerStyles = 0x0022, ///< StyleId[], one row per layer
+
     /// Whether each symbol layer is drawn, one byte per symbol layer.
     ///
     /// A separate OPTIONAL block for the same reason the layer tree is one:
     /// `SymbolLayerRecord` is exactly 64 bytes with nothing spare. A file written
     /// before the flag existed has no such block and every layer reads back
     /// enabled, which is what that file meant.
-    kBlkSymbolLayerFlags = 0x0035, ///< u8[], 1 = drawn
+    kBlkSymbolLayerFlags = 0x0035, ///< u8[], bit 0 = drawn, bit 1 = colour locked
 
     /// What each `TextMarker` symbol layer writes, one string index per layer.
     ///
@@ -173,6 +177,12 @@ enum BlockId : std::uint32_t {
 
     kBlkImages     = 0x0033, ///< ImageRecord[]
     kBlkImageBytes = 0x0034, ///< u8[], the payloads back to back
+
+    /// The line types the drawing carries; `AppearanceRecord::dash` indexes them.
+    /// An OPTIONAL block, so a file written before line types existed reads with
+    /// an empty store and every stroke in it stays solid — which is what it was
+    /// (io.md R10, and the reason adding a block is not a version bump).
+    kBlkDashes = 0x0037, ///< DashRecord[]
 
     // ---- entity table, one block per column (model.md R6 cull block first) --
     kBlkEntityMinX  = 0x0040, ///< i64[]
@@ -290,6 +300,21 @@ static_assert(sizeof(SymbolRecord) == 16, "wire record");
 /// The bytes are in a separate block rather than inline, for the reason every
 /// column in this format is separate: a reader that wants the record table does
 /// not have to walk megabytes of JPEG to find the next record.
+/// One line type: its segment lengths and where it was published.
+///
+/// Fixed width rather than a length-prefixed run, because `core::kMaxDashSegments`
+/// caps a pattern at eight and a fixed record needs no second block to index into
+/// — the same trade `AppearanceRecord` makes for its own small fields.
+struct DashRecord
+{
+    std::uint16_t lengths[8]; ///< hundredths of a stroke width, mark first
+    std::uint32_t origin;     ///< index into kBlkStringSpans — provenance (model.md R35)
+    std::uint8_t count;       ///< meaningful entries in `lengths`; always even
+
+    /// Padding to a round size, zero-filled on write.
+    std::uint8_t reserved[3];
+};
+
 struct ImageRecord
 {
     std::uint64_t offset; ///< into kBlkImageBytes
@@ -302,6 +327,7 @@ struct ImageRecord
 };
 
 static_assert(sizeof(ImageRecord) == 24, "wire record");
+static_assert(sizeof(DashRecord) == 24, "wire record");
 
 /// One layer of a symbol, field by field.
 ///

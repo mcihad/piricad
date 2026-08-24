@@ -70,6 +70,11 @@ public:
     core::Result<core::ImageId> intern_image(std::span<const std::byte> bytes,
                                              std::string_view origin);
 
+    /// Adds a line type to the drawing. Additive for the same reason and with the
+    /// same consequence: no inverse Op, and an id stays valid for the document.
+    core::Result<core::DashId> intern_dash(const core::DashPattern& pattern,
+                                           std::string_view origin);
+
     Result<EntityId> add_polyline(LayerId layer, std::span<const Point2> pts);
 
     /// A face: one exterior ring, optionally with holes, optionally multipart.
@@ -80,6 +85,7 @@ public:
     Status set_layer_visible(LayerId l, bool visible);
     Status set_layer_locked(LayerId l, bool locked);
     Status set_layer_appearance(LayerId l, const Appearance& a);
+    Status set_layer_style(LayerId l, StyleId style);
 
     /// Moves a layer in the layer tree. An empty path puts it at the root.
     Status set_layer_group(LayerId l, std::string group);

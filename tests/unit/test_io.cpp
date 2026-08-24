@@ -1045,6 +1045,40 @@ TEST_CASE("IO: yığılmış sembol dosyayla gidip geliyor")
     CHECK(after == before);
 }
 
+TEST_CASE("IO: boş katmanın varsayılan sembolü dosyayla gidip geliyor")
+{
+    TempDir tmp("katman-sembolu");
+    const std::string path = tmp.file("katman-sembolu.pcad");
+
+    Rig written;
+    REQUIRE(written.bus.execute_line("KATMAN ORMAN", Origin::Test).ok());
+    REQUIRE(
+        written.bus.execute_line("STİL katman=ORMAN tip=dolgu dolgu=805568546", Origin::Test).ok());
+    REQUIRE(written.bus
+                .execute_line("STİL katman=ORMAN ekle=evet tip=cizgi renk=4280645666", Origin::Test)
+                .ok());
+
+    const core::LayerId layer = written.doc.find_layer("ORMAN");
+    REQUIRE(layer != core::kNoLayer);
+    const core::StyleId style = written.doc.layer(layer)->style;
+    REQUIRE(style != core::kByLayerStyle);
+    const core::Symbol before = written.doc.styles().symbol_at(style);
+    REQUIRE(before.layers.size() == std::size_t{2});
+
+    const std::uint64_t hash = written.doc.content_hash();
+    REQUIRE(written.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig reloaded;
+    REQUIRE(reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
+    CHECK_EQ(reloaded.doc.content_hash(), hash);
+
+    const core::LayerId reopened_layer = reloaded.doc.find_layer("ORMAN");
+    REQUIRE(reopened_layer != core::kNoLayer);
+    const core::StyleId reopened_style = reloaded.doc.layer(reopened_layer)->style;
+    CHECK_EQ(reopened_style, style);
+    CHECK(reloaded.doc.styles().symbol_at(reopened_style) == before);
+}
+
 TEST_CASE("IO: sembolsüz eski dosya parmak izini koruyor")
 {
     // A file written before symbols were persisted carries neither block, and
@@ -1067,6 +1101,73 @@ TEST_CASE("IO: sembolsüz eski dosya parmak izini koruyor")
     Rig reloaded;
     REQUIRE(reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
     CHECK_EQ(reloaded.doc.content_hash(), hash);
+}
+
+TEST_CASE("IO: çizgi tipi dosyayla gidip geliyor")
+{
+    // A line type is four numbers and the drawing carries them, for exactly the
+    // reason it carries the bytes of a raster symbol: a table that lived only in
+    // the catalogue package would mean a plan sheet renders differently on a
+    // machine where the package is not installed, and a plan sheet is a legal
+    // document.
+    TempDir tmp("cizgitipi");
+    const std::string path = tmp.file("cizgitipi.pcad");
+
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("KATMAN SINIR", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("ÇİZGİ 0,0 60,0 60,45", Origin::Test).ok());
+    REQUIRE(rig.bus
+                .execute_line("STİL katman=SINIR tip=cizgi kalinlik=500 desen=\"8 1 1 1\"",
+                              Origin::Test)
+                .ok());
+
+    REQUIRE(rig.doc.dashes().size() == std::size_t{2});
+    CHECK(rig.doc.dashes().origin(1).find("STİL") != std::string_view::npos);
+
+    const std::uint64_t hash = rig.doc.content_hash();
+    REQUIRE(rig.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig back;
+    REQUIRE(back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
+
+    // R38/§16: the fingerprint folds the line types, so an equal hash is already
+    // the proof that the pattern survived. The fields are checked too, because a
+    // hash says "the same" and a reader wants to know "the same WHAT".
+    CHECK_EQ(back.doc.content_hash(), hash);
+    REQUIRE(back.doc.dashes().size() == std::size_t{2});
+
+    const core::DashPattern& p = back.doc.dashes().at(1);
+    CHECK_EQ(static_cast<int>(p.count), 4);
+    CHECK_EQ(static_cast<int>(p.lengths[0]), 800);
+    CHECK_EQ(static_cast<int>(p.lengths[3]), 100);
+    CHECK(back.doc.dashes().origin(1).find("STİL") != std::string_view::npos);
+
+    const core::Symbol sym = back.doc.styles().symbol_at(back.doc.entities().style[0]);
+    REQUIRE(!sym.layers.empty());
+    CHECK_EQ(static_cast<int>(sym.layers.front().look.dash), 1);
+}
+
+TEST_CASE("IO: çizgi tipi olmayan dosya eskisi gibi okunuyor")
+{
+    // The block is OPTIONAL and its absence is not a defect: every file written
+    // before line types existed has none, every stroke in it was solid, and that
+    // is exactly what an empty store draws. This pins io.md R10 — which is also
+    // why adding the block was not a format version bump.
+    TempDir tmp("desensiz");
+    const std::string path = tmp.file("desensiz.pcad");
+
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("KATMAN SINIR", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("ÇİZGİ 0,0 60,0", Origin::Test).ok());
+    CHECK_EQ(rig.doc.dashes().size(), std::size_t{1}); // the sentinel alone
+
+    const std::uint64_t hash = rig.doc.content_hash();
+    REQUIRE(rig.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig back;
+    REQUIRE(back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
+    CHECK_EQ(back.doc.dashes().size(), std::size_t{1});
+    CHECK_EQ(back.doc.content_hash(), hash);
 }
 
 TEST_CASE("IO: gömülü görsel dosyayla gidip geliyor")

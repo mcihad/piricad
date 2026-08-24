@@ -25,7 +25,9 @@
 #include "piricad/command/spec.hpp"
 #include "piricad/core/json.hpp"
 #include "piricad/core/style_rule.hpp"
+#include "piricad/core/text.hpp"
 #include <algorithm>
+#include <cmath>
 
 #include <filesystem>
 #include <fstream>
@@ -183,7 +185,11 @@ core::Result<core::Symbol> build_from_row(Context& ctx, const core::StyleEntry& 
         return image.value();
     };
 
-    core::Symbol sym = core::symbol_of_entry(row, resolve);
+    core::Symbol sym = core::symbol_of_entry(
+        row, resolve, [&ctx](const core::DashPattern& p, std::string_view origin) {
+            auto id = ctx.transaction().intern_dash(p, origin);
+            return id ? id.value() : core::kSolidDash;
+        });
     if (!failure) return failure.error();
     return sym;
 }
@@ -266,7 +272,119 @@ Task<void> run(Context& ctx)
         catalog = std::move(loaded.value());
     }
 
+    // Resolve a direct catalogue row once, before walking the entity table. The
+    // same row is also the layer renderer for an empty layer selected from the
+    // gallery, so it cannot depend on finding a first entity.
+    const core::StyleEntry* direct_entry = nullptr;
+    if (catalog.has_value() && !code.empty()) {
+        auto entry = catalog->entry(code.as_text());
+        if (!entry) {
+            ctx.session().fail(entry.error());
+            co_return;
+        }
+        direct_entry = entry.value();
+    }
+
+    const std::filesystem::path package_dir =
+        package.empty() ? std::filesystem::path{}
+                        : std::filesystem::path(package.as_text()).parent_path();
+
     const core::Layer& record = *bus.document().layer(layer);
+
+    // A layer is the ByLayer source for current and future entities. STİL still
+    // materialises one StyleId per existing entity (model.md R14), but a direct
+    // style must also update that source: otherwise choosing a style on an empty
+    // layer visibly does nothing and the next entity reverts to the old default.
+    // The complete stack is stored on the layer too. Existing entities still get
+    // their resolved styles, while an empty layer and future ByLayer entities use
+    // the same symbol rather than falling back to a plain appearance.
+
+    // ---- the line type ----
+    //
+    // Read as LENGTHS, not as a row in a table somebody has to install: a
+    // published line type is four numbers and the drawing carries them, exactly
+    // as it carries the bytes of a raster symbol (dash_store.hpp). `sürekli` and
+    // an empty value both mean the solid stroke every drawing had before line
+    // types existed.
+    core::DashPattern dash_pattern;
+    bool has_dash = false;
+
+    if (const Value v = ctx.argument("desen"); !v.empty()) {
+        const std::string text = v.as_text();
+        if (!core::turkish_key_equals(text, "sürekli") && !core::turkish_key_equals(text, "duz")) {
+            std::vector<double> parts;
+            std::istringstream words(text);
+            std::string word;
+            while (words >> word) {
+                try {
+                    parts.push_back(std::stod(word));
+                } catch (const std::exception&) {
+                    ctx.session().fail(core::err(
+                        core::ErrorCode::ParseError,
+                        "'desen' çizgi kalınlığının katı olarak sayılardan oluşur; "
+                        "okunamayan parça: '" +
+                            word + "'. Örnek: desen=\"8 1 1 1\" (kesik-nokta), desen=sürekli."));
+                    co_return;
+                }
+            }
+
+            if (parts.size() > core::kMaxDashSegments || parts.size() % 2 != 0 || parts.empty()) {
+                ctx.session().fail(core::err(
+                    core::ErrorCode::ValidationFailed,
+                    "'desen' çizgi ve boşluk çiftlerinden oluşur ve en çok " +
+                        std::to_string(core::kMaxDashSegments) +
+                        " parça taşır. Verilen parça sayısı: " + std::to_string(parts.size()) +
+                        "."));
+                co_return;
+            }
+
+            dash_pattern.count = static_cast<std::uint8_t>(parts.size());
+            for (std::size_t i = 0; i < parts.size(); ++i)
+                dash_pattern.lengths[i] = static_cast<std::uint16_t>(
+                    std::lround(std::clamp(parts[i], 0.01, 650.0) * 100.0));
+        }
+        has_dash = true;
+    }
+
+    core::DashId dash_id = core::kSolidDash;
+    if (has_dash && dash_pattern.count > 0) {
+        // Interned in the DECIDE phase, where a failure is still allowed to stop
+        // the command. Additive and deduplicated, exactly like a picture: an id
+        // handed out stays valid and there is no inverse Op to record.
+        auto interned = ctx.transaction().intern_dash(dash_pattern, "STİL komutu");
+        if (!interned) {
+            ctx.session().fail(interned.error());
+            co_return;
+        }
+        dash_id = interned.value();
+    }
+
+    const auto apply_appearance_arguments = [&ctx, has_dash,
+                                             dash_id](core::Appearance& appearance) {
+        if (const Value v = ctx.argument("renk"); !v.empty()) {
+            appearance.rgba       = static_cast<std::uint32_t>(v.as_int());
+            appearance.src_colour = core::Source::Explicit;
+        }
+        if (const Value v = ctx.argument("kalinlik"); !v.empty()) {
+            appearance.width_um  = static_cast<std::int32_t>(v.as_int());
+            appearance.src_width = core::Source::Explicit;
+        }
+        if (const Value v = ctx.argument("dolgu"); !v.empty()) {
+            appearance.fill_rgba = static_cast<std::uint32_t>(v.as_int());
+            appearance.src_fill  = core::Source::Explicit;
+        }
+        if (const Value v = ctx.argument("sira"); !v.empty())
+            appearance.z_order = static_cast<std::int16_t>(v.as_int());
+
+        // Applied HERE, with the other appearance arguments, and not on the
+        // described symbol layer: the layer's `look` is overwritten wholesale by
+        // the resolved appearance a few lines later, so a dash written onto the
+        // layer alone never reached the drawing.
+        if (has_dash) {
+            appearance.dash     = dash_id;
+            appearance.src_dash = core::Source::Explicit;
+        }
+    };
 
     // ---- pass 1: decide. Nothing below this point may fail. ----
     std::vector<core::EntityId> targets;
@@ -331,34 +449,21 @@ Task<void> run(Context& ctx)
                 ++classified;
                 if (row_label.empty()) row_label = row->label.empty() ? row->id : row->label;
             } else if (catalog.has_value()) {
-                auto entry = code.empty()
-                                 ? catalog->classify(feature_of(bus.document(), e, record), scale)
-                                 : catalog->entry(code.as_text());
-                if (!entry) {
-                    ctx.session().fail(entry.error());
-                    co_return;
+                const core::StyleEntry* entry = direct_entry;
+                if (code.empty()) {
+                    auto matched = catalog->classify(feature_of(bus.document(), e, record), scale);
+                    if (!matched) {
+                        ctx.session().fail(matched.error());
+                        co_return;
+                    }
+                    entry = matched.value();
                 }
-                appearance  = core::apply_entry(*entry.value(), appearance);
-                picture_row = entry.value();
-                if (row_label.empty())
-                    row_label =
-                        entry.value()->label.empty() ? entry.value()->id : entry.value()->label;
+                appearance  = core::apply_entry(*entry, appearance);
+                picture_row = entry;
+                if (row_label.empty()) row_label = entry->label.empty() ? entry->id : entry->label;
             }
 
-            if (const Value v = ctx.argument("renk"); !v.empty()) {
-                appearance.rgba       = static_cast<std::uint32_t>(v.as_int());
-                appearance.src_colour = core::Source::Explicit;
-            }
-            if (const Value v = ctx.argument("kalinlik"); !v.empty()) {
-                appearance.width_um  = static_cast<std::int32_t>(v.as_int());
-                appearance.src_width = core::Source::Explicit;
-            }
-            if (const Value v = ctx.argument("dolgu"); !v.empty()) {
-                appearance.fill_rgba = static_cast<std::uint32_t>(v.as_int());
-                appearance.src_fill  = core::Source::Explicit;
-            }
-            if (const Value v = ctx.argument("sira"); !v.empty())
-                appearance.z_order = static_cast<std::int16_t>(v.as_int());
+            apply_appearance_arguments(appearance);
 
             targets.push_back(e);
             resolved.push_back(appearance);
@@ -374,7 +479,9 @@ Task<void> run(Context& ctx)
     // meant and did not get, and defaulting it would draw a `demiryolu` as an
     // ordinary boundary — wrong, and wrong quietly.
     core::SymbolLayer described;
-    bool has_layer = false;
+    // A `desen` on its own describes a symbol layer, so the stroke it belongs to
+    // is built rather than the bare appearance being written.
+    bool has_layer = has_dash;
 
     if (const Value v = ctx.argument("tip"); !v.empty()) {
         const auto type = core::symbol_layer_type_from_name(v.as_text());
@@ -428,16 +535,41 @@ Task<void> run(Context& ctx)
         has_layer           = true;
     }
 
-    const auto measure = [&](const char* name, core::Measure& out) {
-        if (const Value v = ctx.argument(name); !v.empty()) {
-            out       = core::Measure{static_cast<std::int32_t>(v.as_int()), unit};
-            has_layer = true;
+    // Each measure may name its OWN unit; `birim` is the default for the ones that
+    // do not. A gösterim routinely mixes them — a marker sized in paper
+    // micrometres repeated at a ground interval is how a boundary glyph is
+    // specified — and one unit for the whole layer cannot say that. The style
+    // designer shows a unit beside every measure for the same reason, and had no
+    // way to send three of them.
+    std::string bad_unit;
+    const auto measure = [&](const char* value_name, const char* unit_name, core::Measure& out) {
+        const Value v = ctx.argument(value_name);
+        if (v.empty()) return;
+
+        core::Unit measured = unit;
+        if (const Value named = ctx.argument(unit_name); !named.empty()) {
+            const auto parsed = core::unit_from_name(named.as_text());
+            if (!parsed) {
+                bad_unit = std::string(unit_name) + "='" + named.as_text() + "'";
+                return;
+            }
+            measured = *parsed;
         }
+
+        out       = core::Measure{static_cast<std::int32_t>(v.as_int()), measured};
+        has_layer = true;
     };
-    measure("boyut", described.size);
-    measure("aralik", described.interval);
-    measure("aralik_y", described.spacing_y);
-    measure("kaydirma", described.offset);
+    measure("boyut", "boyut_birim", described.size);
+    measure("aralik", "aralik_birim", described.interval);
+    measure("aralik_y", "aralik_y_birim", described.spacing_y);
+    measure("kaydirma", "kaydirma_birim", described.offset);
+
+    if (!bad_unit.empty()) {
+        ctx.session().fail(core::err(core::ErrorCode::ValidationFailed,
+                                     "Bilinmeyen birim: " + bad_unit +
+                                         ". Geçerli olanlar: " + core::unit_names() + "."));
+        co_return;
+    }
 
     if (const Value v = ctx.argument("aci"); !v.empty()) {
         described.angle_udeg = static_cast<std::int32_t>(v.as_int());
@@ -454,14 +586,6 @@ Task<void> run(Context& ctx)
 
     const bool append = ctx.argument("ekle").as_bool();
 
-    // The directory the package was read from. The pictures a row names are
-    // published beside it, so this is what resolves them — a package-relative
-    // path rather than an absolute one, because a data package is moved and
-    // copied as a unit.
-    std::filesystem::path package_dir;
-    if (const Value v = ctx.argument("paket"); !v.empty())
-        package_dir = std::filesystem::path(v.as_text()).parent_path();
-
     // ---- pass 2: write ----
     // A scale window turns the write into a one-layer SYMBOL rather than a bare
     // appearance, because the window lives on the symbol. Without a window the
@@ -472,6 +596,76 @@ Task<void> run(Context& ctx)
     const bool windowed   = !scale_min.empty() || !scale_max.empty();
 
     const core::StyleTable& table = bus.document().styles();
+
+    core::Appearance layer_appearance = record.appearance;
+    apply_appearance_arguments(layer_appearance);
+
+    // A row chosen directly from the gallery is a whole QGIS-style symbol, not
+    // just its stroke colour. Build it with document-owned images so raster
+    // hatches, line types and marker images reach the canvas and travel in the
+    // project file. This has to happen even for an empty layer.
+    std::optional<core::Symbol> direct_symbol;
+    if (!clear && classify_by.empty() && direct_entry != nullptr) {
+        auto built = build_from_row(ctx, *direct_entry, package_dir);
+        if (!built) {
+            ctx.session().fail(built.error());
+            co_return;
+        }
+        direct_symbol = std::move(built.value());
+        for (core::SymbolLayer& symbol_layer : direct_symbol->layers)
+            apply_appearance_arguments(symbol_layer.look);
+        layer_appearance = direct_symbol->primary();
+    }
+
+    // A classified catalogue command can intentionally resolve different rows
+    // per entity, so it has no single honest layer default. All other requests do
+    // have one: direct arguments cover an empty layer and a non-classified row
+    // shares the appearance resolved for its first entity.
+    const bool direct_layer_style = has_layer || !ctx.argument("renk").empty() ||
+                                    !ctx.argument("kalinlik").empty() ||
+                                    !ctx.argument("dolgu").empty() || !ctx.argument("sira").empty();
+    if (!clear && classify_by.empty() && !direct_symbol.has_value() && !targets.empty())
+        layer_appearance = resolved.front();
+    const bool write_layer_appearance =
+        !clear && classify_by.empty() &&
+        (direct_layer_style || direct_symbol.has_value() || !targets.empty());
+
+    if (write_layer_appearance && layer_appearance != record.appearance) {
+        if (auto st = ctx.transaction().set_layer_appearance(layer, layer_appearance); !st) {
+            ctx.session().fail(st.error());
+            co_return;
+        }
+    }
+
+    // A described symbol is the layer's default renderer. Appending starts from
+    // the layer default, not from an arbitrary first entity, so it works on an
+    // empty layer and stays stable when entities have individual overrides.
+    const bool changes_layer_symbol =
+        !clear && classify_by.empty() &&
+        (has_layer || direct_layer_style || direct_symbol.has_value());
+    if (clear || changes_layer_symbol) {
+        core::StyleId layer_style = core::kByLayerStyle;
+        if (!clear && direct_symbol.has_value()) {
+            layer_style = ctx.transaction().intern_symbol(*direct_symbol);
+        } else if (!clear && has_layer) {
+            core::Symbol symbol;
+            if (append && record.style != core::kByLayerStyle && table.contains(record.style))
+                symbol = table.symbol_at(record.style);
+            else if (append)
+                symbol = core::Symbol::of(record.appearance);
+
+            core::SymbolLayer added = described;
+            added.look              = layer_appearance;
+            symbol.layers.push_back(std::move(added));
+            layer_style = ctx.transaction().intern_symbol(symbol);
+        }
+        if (layer_style != record.style) {
+            if (auto st = ctx.transaction().set_layer_style(layer, layer_style); !st) {
+                ctx.session().fail(st.error());
+                co_return;
+            }
+        }
+    }
 
     core::StyleId last = core::kByLayerStyle;
     for (std::size_t i = 0; i < targets.size(); ++i) {
@@ -527,12 +721,15 @@ Task<void> run(Context& ctx)
 
     // Recorded so a replay resolves the same rows whichever client typed them.
     for (const char* name : {"paket", "kod", "sinifla", "olcek", "olcek_min", "olcek_max", "renk",
-                             "kalinlik", "dolgu", "sira", "sifirla"}) {
+                             "kalinlik", "dolgu", "sira", "sifirla", "desen"}) {
         if (const Value v = ctx.argument(name); !v.empty()) ctx.record(name, v);
     }
 
     if (targets.empty()) {
-        ctx.echo("'" + record.name + "' katmanında nesne yok; stil yazılmadı.");
+        ctx.echo(write_layer_appearance
+                     ? "'" + record.name +
+                           "' katmanında nesne yok; varsayılan katman görünümü güncellendi."
+                     : "'" + record.name + "' katmanında nesne yok; stil yazılmadı.");
         co_return;
     }
 
@@ -597,6 +794,14 @@ PIRICAD_COMMAND(style)
                             "İşaretçinin çizgi üzerindeki yeri: aralik, tepe, ilk, son, orta"),
                 Param::text("birim", Arity::optional(),
                             "Ölçülerin birimi: kagit (µm), zemin (mm), piksel"),
+                Param::text("boyut_birim", Arity::optional(),
+                            "Yalnız `boyut` için birim; verilmezse `birim` geçerlidir"),
+                Param::text("aralik_birim", Arity::optional(),
+                            "Yalnız `aralik` için birim; verilmezse `birim` geçerlidir"),
+                Param::text("aralik_y_birim", Arity::optional(),
+                            "Yalnız `aralik_y` için birim; verilmezse `birim` geçerlidir"),
+                Param::text("kaydirma_birim", Arity::optional(),
+                            "Yalnız `kaydirma` için birim; verilmezse `birim` geçerlidir"),
                 Param::integer("boyut", Arity::optional(),
                                "İşaretçi çapı ya da tarak dişinin boyu, `birim` cinsinden"),
                 Param::integer("aralik", Arity::optional(),
@@ -609,7 +814,9 @@ PIRICAD_COMMAND(style)
                                "Geometriden dik kaydırma, `birim` cinsinden"),
                 Param::integer("saydamlik", Arity::optional(),
                                "Katman saydamlığı 0-255; 255 tam opak"),
-                Param::text("desen", Arity::optional(), "Çizgi deseni tablosundaki satır"),
+                Param::text("desen", Arity::optional(),
+                            "Çizgi tipi: sürekli, ya da çizgi kalınlığının katı olarak "
+                            "çizgi/boşluk uzunlukları — '8 1 1 1' gibi (kesik-nokta)"),
                 Param::text("yazi", Arity::optional(),
                             "yazi-isaretci katmanının yazdığı sabit metin"),
             },

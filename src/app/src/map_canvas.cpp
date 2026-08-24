@@ -10,6 +10,7 @@
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPaintDevice>
+#include <QScreen>
 #include <QWheelEvent>
 
 #include <cmath>
@@ -97,6 +98,14 @@ void MapCanvas::resizeEvent(QResizeEvent* event)
 
 void MapCanvas::rebuildScene()
 {
+    // The screen this widget is on decides how big a paper millimetre is. A
+    // gösterim the annex prints at 8 mm has to arrive 8 mm tall, and only the
+    // screen knows how many pixels that is; asking it here rather than caching it
+    // is what makes the symbol keep its size when the window is dragged onto a
+    // second monitor with a different resolution.
+    if (const QScreen* on = screen(); on != nullptr && on->logicalDotsPerInch() > 0.0)
+        options_.pixels_per_paper_mm = on->logicalDotsPerInch() / 25.4;
+
     render::build_scene(controller_.document(), view_, options_, draw_);
 }
 
@@ -108,6 +117,32 @@ void MapCanvas::reloadGridSettings()
     grid_.adaptive = store.get("core.izgara.mod").as_enum() == 0;
     grid_.step     = store.get("core.izgara.adim").as_length();
     grid_.major    = static_cast<int>(store.get("core.izgara.ana_cizgi").as_int());
+
+    // Read once, here, and never in `paintEvent`. A setting lookup is a folded
+    // Turkish string compare against a catalogue; doing forty of them inside the
+    // 16 ms frame budget (Article 7) would be paying for a preference on every
+    // mouse move.
+    const auto colour = [&](const char* id) {
+        return static_cast<std::uint32_t>(store.get(id).as_int());
+    };
+
+    look_.ruler        = store.get("core.cetvel.gorunur").as_bool();
+    look_.ruler_px     = static_cast<int>(store.get("core.cetvel.kalinlik").as_int());
+    look_.ruler_unit   = static_cast<int>(store.get("core.cetvel.birim").as_enum());
+    look_.scale_bar    = store.get("core.harita.olcek_cubugu").as_bool();
+    look_.north        = store.get("core.harita.kuzey_oku").as_bool();
+    look_.readout      = store.get("core.harita.koordinat_gostergesi").as_bool();
+    look_.cursor       = static_cast<int>(store.get("core.harita.imlec").as_enum());
+    look_.cursor_px    = static_cast<int>(store.get("core.harita.imlec_boyu").as_int());
+    look_.zoom_percent = static_cast<int>(store.get("core.harita.yakinlastirma_adimi").as_int());
+    look_.invert_wheel = store.get("core.harita.tekerlek_ters").as_bool();
+    look_.marker_px    = static_cast<int>(store.get("core.yakalama.isaret_boyu").as_int());
+    look_.snap_tip     = store.get("core.yakalama.ipucu").as_bool();
+
+    look_.marker_rgba     = colour("core.yakalama.isaret_rengi");
+    look_.grid_rgba       = colour("core.izgara.renk");
+    look_.grid_major_rgba = colour("core.izgara.ana_renk");
+    look_.selection_rgba  = colour("core.secim.renk");
 
     // The declared ranges already exclude zero, and R42 clamps a file written by
     // another version into range. The floors here are the last line: a zero step
@@ -163,8 +198,10 @@ void MapCanvas::buildGrid()
 
     // Two batches, minor first: the darker lines are drawn over the lighter ones
     // so a major line stays a major line where they cross.
-    render::OverlayBatch& minor = nextBatch(palette_.grid.rgba(), 1.0f, false);
-    render::OverlayBatch& major = nextBatch(palette_.gridMajor.rgba(), 1.0f, false);
+    render::OverlayBatch& minor =
+        nextBatch(chosen(look_.grid_rgba, palette_.grid.rgba()), 1.0f, false);
+    render::OverlayBatch& major =
+        nextBatch(chosen(look_.grid_major_rgba, palette_.gridMajor.rgba()), 1.0f, false);
 
     const auto h = static_cast<float>(height());
     const auto w = static_cast<float>(width());
@@ -306,9 +343,10 @@ void MapCanvas::buildSnapMarker()
     const render::ScreenPointF p = render::to_f(view_.to_screen(snap_preview_.point));
     const float x                = p.x;
     const float y                = p.y;
-    const float h                = 6.0f; // half size, layout units
+    const float h = static_cast<float>(look_.marker_px) * 0.5f; // half size, layout units
 
-    render::OverlayBatch& batch = nextBatch(palette_.snapMarker.rgba(), 1.8f, false);
+    const std::uint32_t ink     = chosen(look_.marker_rgba, palette_.snapMarker.rgba());
+    render::OverlayBatch& batch = nextBatch(ink, 1.8f, false);
 
     // One glyph per mode, the shapes CAD users already read without a legend. The
     // SHAPE is chosen here rather than in the backend because which glyph means
@@ -342,25 +380,228 @@ void MapCanvas::buildSnapMarker()
     case core::SnapOrtho: // diamond: the point is on a locked direction
         addRun(batch, {{x, y - h}, {x + h, y}, {x, y + h}, {x - h, y}}, true);
         break;
+
+    // The constructed points get OPEN glyphs — a shape with a gap in it — so a
+    // point this engine built is never mistaken at a glance for a corner the
+    // drawing actually contains.
+    case core::SnapExtension: // an arrow continuing to the right
+        addRun(batch, {{x - h, y}, {x + h, y}}, false);
+        addRun(batch, {{x, y - h * 0.6f}, {x + h, y}, {x, y + h * 0.6f}}, false);
+        break;
+    case core::SnapParallel: // the two strokes of the parallel sign
+        addRun(batch, {{x - h * 0.3f, y - h}, {x - h, y + h}}, false);
+        addRun(batch, {{x + h, y - h}, {x + h * 0.3f, y + h}}, false);
+        break;
+    case core::SnapApparent: // a cross with an open corner
+        addRun(batch, {{x - h, y - h}, {x + h, y + h}}, false);
+        addRun(batch, {{x - h, y + h}, {x, y}}, false);
+        break;
+
     default: break;
     }
 
     // The label says which aid fired. Without it a user cannot tell an endpoint
-    // from an intersection when both glyphs sit under the cursor.
+    // from an intersection when both glyphs sit under the cursor — and with the
+    // constructed modes on there is more to tell apart, not less.
+    if (look_.snap_tip)
+        overlay_.labels.push_back(
+            render::OverlayLabel{ink, x + h + 4.0f, y - h - 2.0f, 0.0f,
+                                 std::string(core::snap_mode_label(snap_preview_.mode))});
+}
+
+/// The ruler's numbers, in the unit the preference names.
+namespace {
+
+/// One tick's label, and the divisor that turns document millimetres into it.
+struct RulerUnit
+{
+    double per_unit; ///< millimetres in one unit
+    const char* suffix;
+};
+
+RulerUnit ruler_unit_of(int index) noexcept
+{
+    switch (index) {
+    case 1: return RulerUnit{10.0, "cm"};
+    case 2: return RulerUnit{1000000.0, "km"};
+    default: return RulerUnit{1000.0, "m"};
+    }
+}
+
+/// A round step of about `target` millimetres: 1, 2 or 5 times a power of ten.
+///
+/// The same 1-2-5 ladder every map scale uses, and for the same reason: a ruler
+/// whose ticks are 137 m apart is a ruler nobody can read a distance off.
+double nice_step(double target) noexcept
+{
+    if (target <= 0.0) return 1.0;
+
+    double decade = 1.0;
+    while (decade * 10.0 <= target)
+        decade *= 10.0;
+    while (decade > target)
+        decade /= 10.0;
+
+    const double ratio = target / decade;
+    if (ratio >= 5.0) return decade * 5.0;
+    if (ratio >= 2.0) return decade * 2.0;
+    return decade;
+}
+
+/// `value` with at most `places` decimals and no trailing zeroes, because a ruler
+/// reading "120.000" is three characters of noise on every tick.
+std::string trimmed(double value, int places)
+{
+    std::string out = QString::number(value, 'f', places).toStdString();
+    if (out.find('.') == std::string::npos) return out;
+    while (!out.empty() && out.back() == '0')
+        out.pop_back();
+    if (!out.empty() && out.back() == '.') out.pop_back();
+    return out;
+}
+
+} // namespace
+
+void MapCanvas::buildRuler()
+{
+    if (!look_.ruler) return;
+
+    const auto band = static_cast<float>(look_.ruler_px);
+    const auto w    = static_cast<float>(width());
+    const auto h    = static_cast<float>(height());
+    if (w <= band || h <= band) return;
+
+    const RulerUnit unit = ruler_unit_of(look_.ruler_unit);
+
+    // A tick every ~80 px, rounded to the 1-2-5 ladder.
+    const double step_mm = nice_step(view_.mm_per_pixel() * 80.0);
+    if (step_mm <= 0.0) return;
+
+    const core::Box2 seen = view_.visible_box();
+
+    render::OverlayBatch& frame = nextBatch(palette_.gridMajor.rgba(), 1.0f, false);
+    addRun(frame, {{0.0f, band}, {w, band}}, false);
+    addRun(frame, {{band, 0.0f}, {band, h}}, false);
+
+    render::OverlayBatch& ticks = nextBatch(palette_.grid.rgba(), 1.0f, false);
+
+    // The loop counts ticks rather than accumulating a position, exactly as
+    // `buildGrid` does: adding a step a thousand times drifts, and a ruler that
+    // drifts is a ruler that lies about the distance it is measuring.
+    const auto first_x =
+        static_cast<long long>(std::floor(static_cast<double>(seen.min_x) / step_mm));
+    const auto last_x =
+        static_cast<long long>(std::ceil(static_cast<double>(seen.max_x) / step_mm));
+    for (long long i = first_x; i <= last_x; ++i) {
+        const double mm = static_cast<double>(i) * step_mm;
+        const float x = static_cast<float>(view_.to_screen(core::Point2{core::mm_round(mm), 0}).x);
+        if (x < band || x > w) continue;
+
+        addRun(ticks, {{x, band * 0.45f}, {x, band}}, false);
+        overlay_.labels.push_back(render::OverlayLabel{palette_.gridMajor.rgba(), x + 2.0f,
+                                                       band * 0.42f, 0.0f,
+                                                       trimmed(mm / unit.per_unit, 3)});
+    }
+
+    const auto first_y =
+        static_cast<long long>(std::floor(static_cast<double>(seen.min_y) / step_mm));
+    const auto last_y =
+        static_cast<long long>(std::ceil(static_cast<double>(seen.max_y) / step_mm));
+    for (long long i = first_y; i <= last_y; ++i) {
+        const double mm = static_cast<double>(i) * step_mm;
+        const float y = static_cast<float>(view_.to_screen(core::Point2{0, core::mm_round(mm)}).y);
+        if (y < band || y > h) continue;
+
+        addRun(ticks, {{band * 0.45f, y}, {band, y}}, false);
+        // Along the left band, written horizontally: a rotated string costs the
+        // backend a transform and buys nothing a surveyor reading a northing wants.
+        overlay_.labels.push_back(render::OverlayLabel{palette_.gridMajor.rgba(), 2.0f, y - 2.0f,
+                                                       0.0f, trimmed(mm / unit.per_unit, 3)});
+    }
+
+    overlay_.labels.push_back(render::OverlayLabel{palette_.gridMajor.rgba(), 3.0f, band - 4.0f,
+                                                   0.0f, std::string(unit.suffix)});
+}
+
+void MapCanvas::buildScaleBar()
+{
+    if (!look_.scale_bar) return;
+
+    // A round ground distance about 140 px long, so the bar says a number a user
+    // can hold in their head rather than "this much".
+    const double span_mm = nice_step(view_.mm_per_pixel() * 140.0);
+    const double px      = span_mm / (view_.mm_per_pixel() > 0.0 ? view_.mm_per_pixel() : 1.0);
+    if (px < 20.0 || px > static_cast<double>(width())) return;
+
+    const auto left   = static_cast<float>(look_.ruler ? look_.ruler_px + 12 : 12);
+    const auto bottom = static_cast<float>(height() - 18);
+    const auto right  = left + static_cast<float>(px);
+
+    render::OverlayBatch& bar = nextBatch(palette_.gridMajor.rgba(), 1.6f, false);
+    addRun(bar, {{left, bottom}, {right, bottom}}, false);
+    addRun(bar, {{left, bottom - 5.0f}, {left, bottom + 5.0f}}, false);
+    addRun(bar, {{right, bottom - 5.0f}, {right, bottom + 5.0f}}, false);
+
+    const RulerUnit unit = ruler_unit_of(look_.ruler_unit);
     overlay_.labels.push_back(
-        render::OverlayLabel{palette_.snapMarker.rgba(), x + h + 4.0f, y - h - 2.0f, 0.0f,
-                             std::string(core::snap_mode_label(snap_preview_.mode))});
+        render::OverlayLabel{palette_.gridMajor.rgba(), left, bottom - 8.0f, 0.0f,
+                             trimmed(span_mm / unit.per_unit, 3) + " " + unit.suffix});
+}
+
+void MapCanvas::buildNorthArrow()
+{
+    if (!look_.north) return;
+
+    // Up IS north. The view has no rotation yet, so the arrow is drawn straight
+    // and this comment is the note that will need changing the day it does.
+    const auto x = static_cast<float>(width() - 26);
+    const auto y = static_cast<float>(look_.ruler ? look_.ruler_px + 30 : 30);
+
+    render::OverlayBatch& arrow = nextBatch(palette_.gridMajor.rgba(), 1.4f, false);
+    addRun(arrow, {{x, y - 14.0f}, {x - 6.0f, y + 10.0f}, {x, y + 4.0f}, {x + 6.0f, y + 10.0f}},
+           true);
+    overlay_.labels.push_back(
+        render::OverlayLabel{palette_.gridMajor.rgba(), x - 4.0f, y + 24.0f, 0.0f, "K"});
+}
+
+void MapCanvas::buildReadout()
+{
+    if (!look_.readout || !cursor_valid_) return;
+
+    // The SNAPPED point when an aid has fired, because that is the coordinate the
+    // click will produce. Showing the raw cursor there would be showing a number
+    // the drawing is never going to contain.
+    const core::Point2 at = snap_preview_valid_
+                                ? snap_preview_.point
+                                : view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
+
+    const std::string text = "S " + trimmed(static_cast<double>(at.x) / 1000.0, 3) + "   Y " +
+                             trimmed(static_cast<double>(at.y) / 1000.0, 3);
+
+    overlay_.labels.push_back(render::OverlayLabel{palette_.gridMajor.rgba(), 12.0f,
+                                                   static_cast<float>(height() - 4), 0.0f, text});
 }
 
 void MapCanvas::buildCrosshair()
 {
-    if (!cursor_valid_) return;
+    if (!cursor_valid_ || look_.cursor == 2) return;
 
     render::OverlayBatch& batch  = nextBatch(palette_.crosshair.rgba(), 1.0f, false);
     const render::ScreenPointF c = toScreenF(cursor_);
     const float x = c.x, y = c.y;
-    addRun(batch, {{x, 0.0f}, {x, static_cast<float>(height())}}, false);
-    addRun(batch, {{0.0f, y}, {static_cast<float>(width()), y}}, false);
+
+    // Full screen or a short cross, which is the choice every CAD offers and the
+    // one people hold opinions about: the long lines line a point up against
+    // something far away, the short one keeps the drawing legible.
+    if (look_.cursor == 0) {
+        addRun(batch, {{x, 0.0f}, {x, static_cast<float>(height())}}, false);
+        addRun(batch, {{0.0f, y}, {static_cast<float>(width()), y}}, false);
+        return;
+    }
+
+    const auto arm = static_cast<float>(look_.cursor_px);
+    addRun(batch, {{x - arm, y}, {x + arm, y}}, false);
+    addRun(batch, {{x, y - arm}, {x, y + arm}}, false);
 }
 
 render::OverlayBatch& MapCanvas::nextBatch(std::uint32_t rgba, float width_px, bool dashed,
@@ -441,6 +682,10 @@ void MapCanvas::buildOverlay()
     }
 
     buildSelectionBox();
+    buildRuler();
+    buildScaleBar();
+    buildNorthArrow();
+    buildReadout();
     buildCrosshair();
     buildSnapMarker();
 
@@ -560,11 +805,17 @@ void MapCanvas::mouseReleaseEvent(QMouseEvent* event)
 
 void MapCanvas::wheelEvent(QWheelEvent* event)
 {
-    const double steps = event->angleDelta().y() / 120.0;
+    double steps = event->angleDelta().y() / 120.0;
     if (steps == 0.0) return;
+    if (look_.invert_wheel) steps = -steps;
 
+    // The step is a PERCENTAGE of the current scale, so every notch feels the same
+    // at every zoom. 20 % is the default and the range is wide on purpose: the
+    // people who want three notches per decade and the people who want thirty are
+    // both right about their own hands.
+    const double factor = 1.0 + static_cast<double>(look_.zoom_percent) / 100.0;
     view_.zoom_at(render::ScreenPoint{event->position().x(), event->position().y()},
-                  std::pow(1.2, steps));
+                  std::pow(factor, steps));
     publishViewScale();
     updateSnapPreview();
     emit viewChanged();

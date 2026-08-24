@@ -50,9 +50,11 @@ class QFormLayout;
 class QLabel;
 class QLineEdit;
 class QListWidget;
+class QStackedWidget;
 class QSpinBox;
 class QTabBar;
 class QToolButton;
+class QPushButton;
 class QTreeWidget;
 
 namespace piricad::app {
@@ -88,7 +90,8 @@ private:
 
     // ---- building ----
     QWidget* buildGallery();
-    QWidget* buildStack();
+    QWidget* buildTree();
+    QWidget* buildGlobal();
     QWidget* buildProperties();
 
     /// Declares one property row and records which layer types show it.
@@ -104,14 +107,33 @@ private:
     void refresh();
     void loadSelected();
     void applyToSelected();
+
+    /// The stack index the tree has selected, or -1 when the ROOT is selected —
+    /// which is a selection, not an absence: the root is where the properties of
+    /// the whole symbol live, exactly as it is in QGIS.
     int currentLayer() const;
+
+    /// True when the tree's selection is the symbol itself rather than a layer.
+    bool rootSelected() const;
+
+    /// Selects the layer drawn last, which is the tree's first child.
+    void selectTopLayer();
+
+    /// Fills the whole-symbol editors from `symbol_`.
+    void loadGlobal();
+
+    /// Writes one whole-symbol property across every layer that accepts it.
+    void applyGlobal();
+
+    /// Re-reads the tree rows' check boxes and lock buttons into the symbol.
+    void syncTreeState();
 
     void addLayer();
     void duplicateLayer();
     void removeLayer();
     void moveLayer(int delta);
 
-    void applyToDocument();
+    bool applyToDocument();
     void saveToLibrary();
 
     /// Puts the symbol back to what the layer draws right now.
@@ -123,6 +145,15 @@ private:
     /// The geometry the preview and the gallery are showing.
     PreviewShape shape() const;
 
+    /// Says, beside the preview, what the chosen geometry tab is drawing on.
+    void updateHeaderNote();
+
+    /// Redraws the big preview at the width the label currently has.
+    void updatePreview();
+
+    /// Re-renders the preview when its label is resized; see `updatePreview()`.
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
     Controller& controller_;
     QString layerName_;
     core::Symbol symbol_{};
@@ -130,24 +161,63 @@ private:
     /// What the layer drew when the dialog opened, for `Sıfırla`.
     core::Symbol original_{};
 
+    /// The catalogue row currently represented by `symbol_`. Keeping this until
+    /// the user edits a property lets Apply import the row's embedded raster
+    /// assets into the document instead of reducing a QGIS-style symbol to the
+    /// handful of scalar command parameters.
+    QString galleryCode_;
+    QString galleryPackage_;
+
     /// Guards the property widgets while they are being filled from the model, so
     /// a programmatic `setValue` does not read straight back as a user edit.
+    ///
+    /// Set through a scope guard that restores the PREVIOUS value rather than
+    /// `false`: `refresh()` calls `loadSelected()`, and a nested clear that ended
+    /// with a bare `loading_ = false` used to unguard the caller mid-rebuild.
     bool loading_{false};
+
+    /// Guards `refresh()` against being entered from a widget it is rebuilding.
+    bool refreshing_{false};
+
+    /// The width the preview was last rendered at, so a resize that does not
+    /// change it does not redraw.
+    int previewWidth_{0};
 
     QTabBar* geometry_{nullptr};
     QLabel* preview_{nullptr};
+
+    /// What the header says about the geometry the tabs have chosen.
+    QLabel* headerNote_{nullptr};
 
     QTreeWidget* groups_{nullptr};
     QLineEdit* search_{nullptr};
     QListWidget* gallery_{nullptr};
     QLabel* galleryNote_{nullptr};
 
+    /// Takes the highlighted gösterim into the stack. Disabled while the shelf
+    /// has nothing on it to take.
+    QPushButton* use_{nullptr};
+
     /// Where the highlighted gösterim was published. A plan sheet is a legal
     /// document and its symbology has a citation (CLAUDE.md 11.7); showing it
     /// while the user is choosing is cheaper than making them look it up after.
     QLabel* provenance_{nullptr};
 
-    QListWidget* stack_{nullptr};
+    /// The symbol as a TREE: the symbol itself at the root, its layers under it.
+    ///
+    /// A flat list cannot say what the root says. Selecting the symbol is how a
+    /// user reaches the properties that belong to ALL of it — the unit every
+    /// measure is read in, the colour every unlocked layer takes, the opacity of
+    /// the whole thing — and QGIS puts them there for the same reason.
+    QTreeWidget* tree_{nullptr};
+
+    /// The whole-symbol editors, shown when the root is selected.
+    QStackedWidget* pages_{nullptr};
+    QComboBox* globalUnit_{nullptr};
+    QToolButton* globalColour_{nullptr};
+    QSpinBox* globalWidth_{nullptr};
+    QSpinBox* globalOpacity_{nullptr};
+    QLabel* globalUnitNote_{nullptr};
 
     QComboBox* type_{nullptr};
     QComboBox* shape_{nullptr};
@@ -155,7 +225,16 @@ private:
     QComboBox* cap_{nullptr};
     QComboBox* join_{nullptr};
     QToolButton* stroke_{nullptr};
+
+    /// The stroke row's label. One button, one row: a `yazi-isaretci` layer's
+    /// stroke IS its text colour, so the row is renamed rather than duplicated —
+    /// the same widget in two form rows is undefined in Qt and left the two rows
+    /// contradicting each other about whether it was visible.
+    QLabel* strokeLabel_{nullptr};
     QToolButton* fill_{nullptr};
+
+    /// Keeps this layer's colour when the whole symbol's colour is set.
+    QCheckBox* lock_{nullptr};
     QSpinBox* width_{nullptr};
     QSpinBox* size_{nullptr};
     QSpinBox* interval_{nullptr};

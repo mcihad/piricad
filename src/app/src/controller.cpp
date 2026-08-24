@@ -11,7 +11,7 @@
 namespace piricad::app {
 
 Controller::Controller(QObject* parent)
-    : QObject(parent), bus_(document_, registry_, journal_, undo_), files_(bus_),
+    : QObject(parent), bus_(document_, registry_, journal_, undo_), files_(bus_), database_(bus_),
       runner_(bus_, script::Sandbox::Project)
 {
     command::register_builtin_commands(registry_);
@@ -86,8 +86,15 @@ void Controller::settle()
 
 void Controller::runLine(const QString& line, command::Origin origin)
 {
+    (void)runLineResult(line, origin);
+}
+
+core::Result<command::DispatchResult> Controller::runLineResult(const QString& line,
+                                                                command::Origin origin)
+{
     const QString trimmed = line.trimmed();
-    if (trimmed.isEmpty()) return;
+    if (trimmed.isEmpty())
+        return core::err(core::ErrorCode::InvalidArgument, "Komut satırı boş olamaz.");
 
     // A running interactive command gets the typed value first, unless the typed
     // text names a transparent command such as ZOOM (piricad.md §3).
@@ -102,7 +109,7 @@ void Controller::runLine(const QString& line, command::Origin origin)
                                                  session_->prompt().rubber_origin);
                 if (pt) {
                     supplyPoint(pt.value());
-                    return;
+                    return command::DispatchResult{};
                 }
             }
         }
@@ -115,6 +122,7 @@ void Controller::runLine(const QString& line, command::Origin origin)
         emit echoed(QString::fromStdString(result.value().message));
     }
     settle();
+    return result;
 }
 
 void Controller::runInvocation(const command::Invocation& invocation)

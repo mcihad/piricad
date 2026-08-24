@@ -108,6 +108,16 @@ def has_doc(lines, index):
             j -= 1
             continue
 
+        # So does a return type clang-format put on its own line, for exactly the
+        # same reason. `core::Result<command::DispatchResult>` above the name it
+        # returns is half of one declaration, not a neighbour of it, and the doc
+        # comment sits above the pair. Recognised by being an unfinished
+        # statement that opens nothing: no parameter list, no terminator, no
+        # brace, no label.
+        if '(' not in text and not text.endswith((';', ',', '{', '}', ')', ':')):
+            j -= 1
+            continue
+
         if siblings < 24 and text.endswith((';', ',', '}')):
             siblings += 1
             j -= 1

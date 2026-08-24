@@ -45,7 +45,7 @@ public:
 private:
     std::vector<CommandSpec> specs_;
     std::unordered_map<std::string, std::size_t> by_id_;
-    std::unordered_map<std::string, std::size_t> by_name_; ///< keyed on turkish_upper(name)
+    std::unordered_map<std::string, std::size_t> by_name_; ///< keyed on turkish_fold_key(name)
 };
 
 /// The process-wide registry, populated once by register_builtin_commands().

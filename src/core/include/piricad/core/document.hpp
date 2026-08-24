@@ -18,6 +18,7 @@
 
 #include "piricad/core/attribute.hpp"
 #include "piricad/core/crs.hpp"
+#include "piricad/core/dash_store.hpp"
 #include "piricad/core/geometry.hpp"
 #include "piricad/core/identity.hpp"
 #include "piricad/core/image_store.hpp"
@@ -99,6 +100,7 @@ struct Op
         SetLayerVisible,    ///< layer,  bool_arg
         SetLayerLocked,     ///< layer,  bool_arg
         SetLayerAppearance, ///< layer,  appearance_arg
+        SetLayerStyle,      ///< layer,  style_arg
         SetLayerGroup,      ///< layer,  str_arg
         SetCrs,             ///< crs_arg
         SetAttribute,       ///< attr_col, entity (as the row), attr_arg
@@ -244,6 +246,7 @@ public:
     Status set_layer_visible(LayerId l, bool visible, Op& undo_out);
     Status set_layer_locked(LayerId l, bool locked, Op& undo_out);
     Status set_layer_appearance(LayerId l, const Appearance& a, Op& undo_out);
+    Status set_layer_style(LayerId l, StyleId style, Op& undo_out);
 
     /// Moves a layer in the layer tree. An empty path puts it at the root.
     Status set_layer_group(LayerId l, std::string group, Op& undo_out);
@@ -282,9 +285,18 @@ public:
     /// and the price of an id that never lies.
     Result<ImageId> intern_image(std::span<const std::byte> bytes, std::string_view origin);
 
+    /// Adds a line type to the drawing, or returns the id an identical one has.
+    /// Additive only, exactly like image and style interning.
+    Result<DashId> intern_dash(const DashPattern& pattern, std::string_view origin);
+
     /// The pictures this drawing carries. Read by the renderer, which needs the
     /// bytes, and by a size report.
     const ImageStore& images() const noexcept { return images_; }
+
+    /// The line types this drawing carries; `Appearance.dash` indexes it.
+    const DashStore& dashes() const noexcept { return dashes_; }
+
+    DashStore& dashes() noexcept { return dashes_; }
 
     /// Applies a previously produced Op. Used only by Transaction rollback and by
     /// the undo stack; `undo_out` receives the Op that reverses this one.
@@ -303,6 +315,7 @@ private:
     CatalogueSet catalogues_{};
     TextTable texts_{};
     ImageStore images_{};
+    DashStore dashes_{};
     KeyAllocator keys_{};
 
     /// INVARIANT: `entities_.key` is strictly increasing in slot order, because

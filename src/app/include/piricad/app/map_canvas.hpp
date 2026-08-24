@@ -100,6 +100,16 @@ private:
     void buildSelectionBox();
     void buildSnapMarker();
     void buildCrosshair();
+    void buildRuler();
+    void buildScaleBar();
+    void buildNorthArrow();
+    void buildReadout();
+
+    /// The colour a setting names, or the theme's own when the setting is zero.
+    static std::uint32_t chosen(std::uint32_t declared, std::uint32_t fallback) noexcept
+    {
+        return declared != 0 ? declared : fallback;
+    }
 
     /// Takes the next overlay batch, reusing the one that position held on the
     /// previous frame so the draw path allocates nothing (render.md R20).
@@ -127,6 +137,29 @@ private:
     /// pick and the Shift/Ctrl modifiers all become arguments — there is no
     /// selection path that does not go through the bus (Article 1.2).
     void dispatchSelection(const QPointF& from, const QPointF& to, Qt::KeyboardModifiers mods);
+
+    /// Everything the aids look like, cached from the preferences so paintEvent
+    /// does no setting lookups. Refreshed by `reloadGridSettings()` whenever the
+    /// bus reports that a store moved.
+    struct AidLook
+    {
+        bool ruler{true};     ///< the two scales along the top and the left
+        int ruler_px{22};     ///< their thickness
+        int ruler_unit{0};    ///< 0 metre, 1 santimetre, 2 kilometre
+        bool scale_bar{true}; ///< the bar that says what the zoom means
+        bool north{true};     ///< the north arrow
+        bool readout{true};   ///< the cursor's own easting and northing
+        int cursor{0};        ///< 0 full screen, 1 short, 2 none
+        int cursor_px{30};    ///< arm length of the short cursor
+        int zoom_percent{20}; ///< how much one wheel notch changes the scale
+        bool invert_wheel{false};
+        int marker_px{12};                ///< half size of the snap marker
+        bool snap_tip{true};              ///< name the mode beside the marker
+        std::uint32_t marker_rgba{0};     ///< 0 = take the theme's own colour
+        std::uint32_t grid_rgba{0};       ///< 0 = the theme's
+        std::uint32_t grid_major_rgba{0}; ///< 0 = the theme's
+        std::uint32_t selection_rgba{0};  ///< 0 = the theme's
+    };
 
     /// Grid shape, cached from the preferences so paintEvent does no lookups.
     struct GridSetup
@@ -157,6 +190,7 @@ private:
     std::size_t overlay_used_{0};
     render::SceneOptions options_{};
     GridSetup grid_{};
+    AidLook look_{};
 
     bool panning_{false};
     QPointF pan_anchor_{};

@@ -28,7 +28,7 @@ bool group_starts_with(const std::vector<std::string>& group, std::span<const st
 /// differ only in the dot stay different (CLAUDE.md 5.6).
 bool contains_folded(std::string_view haystack, const std::string& folded_needle)
 {
-    return turkish_upper(haystack).find(folded_needle) != std::string::npos;
+    return turkish_fold_key(haystack).find(folded_needle) != std::string::npos;
 }
 
 } // namespace
@@ -49,8 +49,23 @@ void StyleLibrary::add(LibraryEntry entry)
     favourite_.push_back(0);
 }
 
-Symbol symbol_of_entry(const StyleEntry& row, const ImageResolver& resolve)
+Symbol symbol_of_entry(const StyleEntry& row, const ImageResolver& resolve,
+                       const DashResolver& intern_dash)
 {
+    // A DECLARED stack wins over the pictures. The pictures stay on the row as
+    // provenance — they are what the declaration was read from — but a symbol
+    // said in numbers is the one that turns a corner, recolours and exports as a
+    // line type, and that is the whole reason a row may declare one.
+    if (!row.layers.empty()) {
+        Symbol declared;
+        for (const DeclaredLayer& d : row.layers) {
+            SymbolLayer layer = d.layer;
+            if (d.dash.count > 0 && intern_dash) layer.look.dash = intern_dash(d.dash, row.id);
+            declared.layers.push_back(layer);
+        }
+        return declared;
+    }
+
     Symbol sym;
 
     const auto add = [&](const std::string& file, SymbolLayerType type, std::int32_t size_um) {
@@ -97,7 +112,8 @@ Symbol symbol_of_entry(const StyleEntry& row, const ImageResolver& resolve)
     return sym;
 }
 
-std::size_t StyleLibrary::add_catalog(const StyleCatalog& catalog, const ImageResolver& resolve)
+std::size_t StyleLibrary::add_catalog(const StyleCatalog& catalog, const ImageResolver& resolve,
+                                      std::string_view package_path)
 {
     std::size_t added = 0;
     for (const StyleEntry& row : catalog.entries()) {
@@ -107,6 +123,7 @@ std::size_t StyleLibrary::add_catalog(const StyleCatalog& catalog, const ImageRe
         entry.group             = row.group;
         entry.tags              = row.tags;
         entry.source_ref        = row.source_ref;
+        entry.package_path      = std::string(package_path);
         entry.scale             = row.scale;
         entry.deprecated        = row.deprecated;
         entry.uncertain         = row.uncertain;
@@ -114,7 +131,11 @@ std::size_t StyleLibrary::add_catalog(const StyleCatalog& catalog, const ImageRe
 
         // The SAME builder `STİL` uses, so a gallery thumbnail is a prediction of
         // what applying the row will draw rather than an approximation of it.
-        entry.symbol = symbol_of_entry(row, resolve);
+        entry.symbol =
+            symbol_of_entry(row, resolve, [this](const DashPattern& p, std::string_view origin) {
+                auto id = dashes_.intern(p, origin);
+                return id ? id.value() : kSolidDash;
+            });
 
         // From what the PACKAGE says, in the order a gösterim is actually read: a
         // hatch or a fill colour makes it an area, a published line type makes it
@@ -186,7 +207,7 @@ std::vector<const LibraryEntry*> StyleLibrary::search(std::string_view needle) c
     std::vector<const LibraryEntry*> out;
     if (needle.empty()) return out;
 
-    const std::string folded = turkish_upper(needle);
+    const std::string folded = turkish_fold_key(needle);
 
     for (const LibraryEntry& e : entries_) {
         // Label first because that is what a user typed at, then id, then the
@@ -232,6 +253,7 @@ std::uint64_t StyleLibrary::content_hash() const
         h = fnv1a(e.id, h);
         h = fnv1a(e.label, h);
         h = fnv1a(e.source_ref, h);
+        h = fnv1a(e.package_path, h);
         for (const std::string& g : e.group)
             h = fnv1a(g, h);
         for (const std::string& t : e.tags)

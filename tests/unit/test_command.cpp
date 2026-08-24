@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad_test.hpp"
 
+#include "piricad/core/text.hpp"
+
+#include <map>
+
 #include "piricad/command/bus.hpp"
 #include "piricad/command/parser.hpp"
 #include "piricad/command/registry.hpp"
@@ -35,6 +39,102 @@ TEST_CASE("registry resolves turkish names, english names and abbreviations")
     CHECK(f.reg.resolve("core.line") != nullptr);
     CHECK_EQ(f.reg.resolve("Ç")->id, std::string("core.line"));
     CHECK(f.reg.resolve("YOKBÖYLEKOMUT") == nullptr);
+}
+
+TEST_CASE("registry: bir adın HER yazımı aynı komuta ulaşır")
+{
+    // The defect this pins down, and it was live: `turkish_upper` raises Turkish's
+    // two i's APART — `i` to `İ`, `ı` to `I` — which is right for a word being
+    // written in capitals and wrong for matching a name somebody typed. `LINE` is
+    // declared beside `ÇİZGİ` so an ASCII keyboard can reach the command, but
+    // `turkish_upper("line")` is `LİNE` and `turkish_upper("LINE")` is `LINE`, so
+    // typing `line` in lower case found nothing. Neither did `cizgi`, `import` or
+    // `iceaktar` — the everyday spellings of the everyday commands.
+    Fixture f;
+
+    struct Case
+    {
+        const char* typed;
+        const char* id;
+    };
+
+    // Every spelling of one name: Turkish, ASCII-folded, English, and each of
+    // those in lower, upper and mixed case.
+    const Case cases[] = {
+        {"ÇİZGİ", "core.line"},      {"çizgi", "core.line"},      {"Çizgi", "core.line"},
+        {"CIZGI", "core.line"},      {"cizgi", "core.line"},      {"Cizgi", "core.line"},
+        {"LINE", "core.line"},       {"line", "core.line"},       {"Line", "core.line"},
+        {"İÇEAKTAR", "core.import"}, {"içeaktar", "core.import"}, {"ICEAKTAR", "core.import"},
+        {"iceaktar", "core.import"}, {"IMPORT", "core.import"},   {"import", "core.import"},
+        {"STİL", "core.style"},      {"stil", "core.style"},      {"STYLE", "core.style"},
+        {"style", "core.style"},     {"SEÇ", "core.select"},      {"sec", "core.select"},
+        {"select", "core.select"},
+    };
+
+    for (const Case& c : cases) {
+        const CommandSpec* found = f.reg.resolve(c.typed);
+        if (found == nullptr) FAIL_WITH("çözülemedi", c.typed);
+        REQUIRE(found != nullptr);
+        CHECK_EQ(found->id, std::string(c.id));
+    }
+}
+
+TEST_CASE("registry: katlanmış anahtarlar iki ayrı komutu birbirine karıştırmıyor")
+{
+    // Folding case and alphabet together is only safe while no two DECLARED names
+    // land on one key. That is a property of the names, so it is checked over the
+    // real ones rather than argued about.
+    Registry r;
+    register_builtin_commands(r);
+
+    std::map<std::string, std::string> owner;
+    for (const CommandSpec& spec : r.all())
+        for (const std::string& name : spec.names) {
+            const std::string key = core::turkish_fold_key(name);
+            const auto it         = owner.find(key);
+            if (it != owner.end() && it->second != spec.id)
+                FAIL_WITH("iki komut aynı anahtara düşüyor",
+                          key + ": " + it->second + " / " + spec.id);
+            owner[key] = spec.id;
+        }
+    CHECK(!owner.empty());
+}
+
+TEST_CASE("METİN: 'hayır' ve ASCII yazımı 'hayir' aynı boole değeri")
+{
+    // The same fold, reached through the argument binder rather than the registry.
+    // `turkish_upper("hayir")` is `HAYİR`, which matched nothing, so the ASCII
+    // spelling of the word half the keyboards in the country can type silently
+    // failed to be a boolean.
+    CHECK(core::turkish_key_equals("hayır", "HAYIR"));
+    CHECK(core::turkish_key_equals("hayir", "HAYIR"));
+    CHECK(core::turkish_key_equals("Hayır", "hayir"));
+    CHECK(core::turkish_key_equals("evet", "EVET"));
+
+    // ...and the display fold still keeps them apart, because writing a word in
+    // capitals is a different question from matching a name.
+    CHECK(core::turkish_upper("hayır") == std::string("HAYIR"));
+    CHECK(core::turkish_upper("hayir") == std::string("HAYİR"));
+}
+
+TEST_CASE("METİN: anahtar katlaması alfabeyi de büyük/küçüğü de katlar")
+{
+    // Both i's, both cases, to one letter; and the five other Turkish letters to
+    // their ASCII counterparts.
+    for (const char* spelling : {"i", "I", "ı", "İ"})
+        CHECK(core::turkish_fold_key(spelling) == std::string("I"));
+
+    CHECK(core::turkish_fold_key("çğöşü") == std::string("CGOSU"));
+    CHECK(core::turkish_fold_key("ÇĞÖŞÜ") == std::string("CGOSU"));
+    CHECK(core::turkish_fold_key("ızgara_adımı") == core::turkish_fold_key("IZGARA_ADIMI"));
+    CHECK(core::turkish_fold_key("izgara_adimi") == core::turkish_fold_key("IZGARA_ADIMI"));
+
+    // A LAYER NAME is not a declared name and keeps the display fold, so two
+    // layers differing only by the two i's stay two layers: one rises to a dotted
+    // capital and the other to a dotless one, which are different names to the
+    // layer table and the same key to a command.
+    CHECK(core::turkish_upper("imar") != core::turkish_upper("ımar"));
+    CHECK(core::turkish_fold_key("imar") == core::turkish_fold_key("ımar"));
 }
 
 TEST_CASE("registry refuses duplicate ids and shadowed names")
@@ -117,6 +217,23 @@ TEST_CASE("keyword arguments bind out of order and reject unknown names")
     CHECK(bad.error().message.find("yokboyle") != std::string::npos);
 }
 
+TEST_CASE("a newly created layer reports a document change without an undo record")
+{
+    Fixture f;
+    bool notified             = false;
+    f.bus.on_document_changed = [&notified] { notified = true; };
+
+    auto created = f.bus.execute_line("KATMAN ad=ANLIK", Origin::Test);
+    REQUIRE(created.ok());
+    CHECK(created.value().mutated);
+    CHECK(notified);
+    CHECK(f.doc.find_layer("ANLIK") != core::kNoLayer);
+
+    // Layer slots are intentionally additive and remain stable, so creation does
+    // not create an undo record. The UI notification is independent of that.
+    CHECK_EQ(f.undo.undo_depth(), std::size_t{0});
+}
+
 TEST_CASE("a quoted value survives after a keyword")
 {
     // `ad="YOL KENARI"` opens its quote mid-token; the tokeniser must absorb the
@@ -131,6 +248,63 @@ TEST_CASE("a quoted value survives after a keyword")
     if (parsed.ok()) CHECK_EQ(parsed.value().tokens.size(), std::size_t{2});
 
     CHECK(!f.bus.execute_line("KATMAN ad=\"kapanmamış", Origin::Test).ok());
+}
+
+TEST_CASE("tırnak içindeki değer harfi harfine alınır, ikinci kez ayrıştırılmaz")
+{
+    // THE BUG THIS LOCKS DOWN. The tokeniser strips the quotes and then handed the
+    // bare text back to `classify`, which knew nothing about them — so a value
+    // holding its own `=` was split a second time. A connection string passed as
+    // a quoted argument became a nested key/value, and the command was told its
+    // text parameter had been given something that was not text.
+    //
+    // The same hole swallowed every Windows path with an `=` in it, every format
+    // string, and every layer name a user chose badly. Quoting means literal.
+    Fixture f;
+
+    auto parsed = parse_line("VERİTABANI baglan hedef=\"host=localhost dbname=piricad\"");
+    REQUIRE(parsed.ok());
+    REQUIRE_EQ(parsed.value().tokens.size(), std::size_t{2});
+
+    const Token& value = parsed.value().tokens[1];
+    CHECK_EQ(value.kind, Token::Kind::KeyValue);
+    CHECK_EQ(value.word, std::string("hedef"));
+    REQUIRE_EQ(value.nested.size(), std::size_t{1});
+    CHECK_EQ(value.nested.front().kind, Token::Kind::Text);
+    CHECK_EQ(value.nested.front().text, std::string("host=localhost dbname=piricad"));
+
+    // A comma inside quotes is a comma, not a coordinate pair.
+    auto comma = parse_line("KATMAN ad=\"ADA 12, PARSEL 5\"");
+    REQUIRE(comma.ok());
+    REQUIRE_EQ(comma.value().tokens.size(), std::size_t{1});
+    REQUIRE_EQ(comma.value().tokens[0].nested.size(), std::size_t{1});
+    CHECK_EQ(comma.value().tokens[0].nested.front().text, std::string("ADA 12, PARSEL 5"));
+
+    // And it reaches the document intact.
+    CHECK(f.bus.execute_line("KATMAN ad=\"ADA 12, PARSEL 5\"", Origin::Test).ok());
+    CHECK(f.doc.find_layer("ADA 12, PARSEL 5") != core::kNoLayer);
+}
+
+TEST_CASE("tırnak sınırlar, türü değiştirmez")
+{
+    // A user quotes to keep a space, a comma or an `=` away from the tokeniser.
+    // Being told the value is now the wrong KIND is a trap with no lesson in it,
+    // so a quoted number is still a number and a quoted evet is still true.
+    Fixture f;
+
+    CHECK(f.bus.execute_line("KATMAN ad=GİZLİ gorunur=\"hayır\"", Origin::Test).ok());
+    const core::LayerId hidden = f.doc.find_layer("GİZLİ");
+    REQUIRE(hidden != core::kNoLayer);
+    CHECK_FALSE(f.doc.layer(hidden)->visible);
+
+    // A quoted integer reaching an integer parameter.
+    CHECK(f.bus.execute_line("KATMAN ad=RENKLİ renk=\"4281236786\"", Origin::Test).ok());
+    const core::LayerId coloured = f.doc.find_layer("RENKLİ");
+    REQUIRE(coloured != core::kNoLayer);
+    CHECK_EQ(f.doc.layer(coloured)->appearance.rgba, 0xFF2E7D32u);
+
+    // What is NOT a number still fails, and says so.
+    CHECK(!f.bus.execute_line("KATMAN ad=BOZUK renk=\"mavi filan\"", Origin::Test).ok());
 }
 
 TEST_CASE("validation rejects a polyline with fewer than two points")

@@ -280,7 +280,7 @@ private:
     // instead of depending on the hash function (core.md P11).
     std::vector<SettingSpec> specs_;
     std::vector<std::string> alias_;   ///< as declared, for suggestions
-    std::vector<std::string> folded_;  ///< turkish_upper(alias_), for lookup
+    std::vector<std::string> folded_;  ///< turkish_fold_key(alias_), for lookup
     std::vector<std::uint32_t> owner_; ///< spec index of each alias
 };
 

@@ -13,6 +13,7 @@ add_executable(piricad_tests
     unit/test_core.cpp
     unit/test_command.cpp
     unit/test_attribute.cpp
+    unit/test_database.cpp
     unit/test_docs.cpp
     unit/test_geodesy.cpp
     unit/test_geometry.cpp

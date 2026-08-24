@@ -24,7 +24,7 @@ core::Status Registry::add(CommandSpec spec)
     std::vector<std::string> folded;
     folded.reserve(spec.names.size());
     for (const auto& n : spec.names) {
-        std::string f = core::turkish_upper(n);
+        std::string f = core::turkish_fold_key(n);
         if (auto it = by_name_.find(f); it != by_name_.end()) {
             return core::err(ErrorCode::InvalidArgument, "'" + n + "' komut adı zaten '" +
                                                              specs_[it->second].id +
@@ -36,7 +36,7 @@ core::Status Registry::add(CommandSpec spec)
     const std::size_t index = specs_.size();
     by_id_.emplace(spec.id, index);
     // The id itself always resolves, so scripts and the AI can use it directly.
-    by_name_.emplace(core::turkish_upper(spec.id), index);
+    by_name_.emplace(core::turkish_fold_key(spec.id), index);
     for (auto& f : folded)
         by_name_.emplace(std::move(f), index);
 
@@ -53,18 +53,18 @@ const CommandSpec* Registry::by_id(std::string_view id) const
 const CommandSpec* Registry::resolve(std::string_view typed) const
 {
     if (typed.empty()) return nullptr;
-    auto it = by_name_.find(core::turkish_upper(typed));
+    auto it = by_name_.find(core::turkish_fold_key(typed));
     return it == by_name_.end() ? nullptr : &specs_[it->second];
 }
 
 std::vector<std::string> Registry::complete(std::string_view prefix, std::size_t limit) const
 {
-    const std::string folded = core::turkish_upper(prefix);
+    const std::string folded = core::turkish_fold_key(prefix);
     std::vector<std::string> out;
 
     for (const auto& spec : specs_) {
         for (const auto& n : spec.names) {
-            if (core::turkish_upper(n).starts_with(folded)) {
+            if (core::turkish_fold_key(n).starts_with(folded)) {
                 out.push_back(n);
                 break; // one suggestion per command; aliases would drown the list
             }

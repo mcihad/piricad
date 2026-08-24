@@ -62,17 +62,43 @@ enum SnapMode : std::uint16_t {
     SnapGrid          = 1u << 6, ///< IZGARA  — the nearest grid intersection
     SnapPolar         = 1u << 7, ///< KUTUPSAL— the nearest polar ray from the last point
 
-    /// The modes that need geometry to snap to. Grid and polar need none.
-    SnapObjectMask = SnapEndpoint | SnapMidpoint | SnapCenter | SnapIntersection |
-                     SnapPerpendicular | SnapNearest,
-
-    /// Every mode a user may switch on.
-    SnapAllMask = SnapObjectMask | SnapGrid | SnapPolar,
-
     /// RESULT ONLY, never requested: dik mod (core.yakalama.dik_mod) moved the
     /// point. It is a separate boolean setting, not a bit of the mask, because a
     /// surveyor turns it on and off with F8 twenty times an hour.
     SnapOrtho = 1u << 8,
+
+    // ---- constructed points: not on the drawing, but implied by it -----------
+    //
+    // The three below are what a cadastral or zoning job needs when the thing to
+    // snap to IS NOT DRAWN. A corner monument is gone and the boundary has to be
+    // re-established from the two edges that survive; a çekme mesafesi runs
+    // parallel to a road nobody has drawn an offset for yet. They are ranked
+    // BELOW every real feature, so a constructed point can never take a corner
+    // that actually exists away from the user.
+
+    // Bit 9 is deliberately unused. It was written for DÜĞÜM — a lone surveyed
+    // point, the survey monument a cadastral job works from — and taken
+    // out again the same day, because this document model cannot hold one: an
+    // open ring needs two vertices (model.md R9-R12), `İÇEAKTAR` says in as many
+    // words that it reads lines and areas, and no command draws a point. A snap
+    // mode for a thing that cannot exist is a promise the program does not keep.
+    // DÜĞÜM lands with point entities, not before them.
+
+    SnapExtension = 1u << 10, ///< UZANTI  — the line of a segment, past its own end
+    SnapParallel  = 1u << 11, ///< PARALEL — a ray from the last point, parallel to an edge
+    SnapApparent  = 1u << 12, ///< UZATILMIŞ KESİŞİM — where two edges' lines would cross
+
+    /// The modes that need geometry to snap to. Grid and polar need none.
+    SnapObjectMask = SnapEndpoint | SnapMidpoint | SnapCenter | SnapIntersection |
+                     SnapPerpendicular | SnapNearest | SnapExtension | SnapParallel | SnapApparent,
+
+    /// The modes that look BEYOND the aperture, because the point they build is
+    /// not where the geometry that implies it is. They are the only reason
+    /// `SnapQuery::reach` exists, and they are off unless the user asks.
+    SnapConstructedMask = SnapExtension | SnapParallel | SnapApparent,
+
+    /// Every mode a user may switch on.
+    SnapAllMask = SnapObjectMask | SnapGrid | SnapPolar,
 };
 
 /// Stable machine name of ONE mode bit — "uc", "orta", "izgara". Used by the MOD
@@ -97,6 +123,18 @@ struct SnapQuery
     std::int64_t polar_step{0};    ///< micro-degrees; 0 disables polar even if the bit is set
     bool has_base{false};          ///< a previous point exists (rubber-band origin)
     Point2 base{};                 ///< that previous point — ortho, polar and DİK measure from it
+
+    /// How far past the aperture the constructed modes may look, in millimetres.
+    ///
+    /// UZANTI, PARALEL and UZATILMIŞ KESİŞİM build a point from an edge that is
+    /// NOT under the cursor — that is the whole point of them — so the aperture
+    /// alone would never find the edge. Zero switches all three off however the
+    /// mask is set, which is the same "no view, no aid" contract `radius`,
+    /// `grid_step` and `polar_step` already keep.
+    ///
+    /// It also bounds the cost: the search box grows by this much and no more, so
+    /// a mode that reads more of the drawing still reads a fixed amount of it.
+    Mm reach{0};
 };
 
 /// What the engine decided, and why. `mode` is SnapNone when nothing applied and

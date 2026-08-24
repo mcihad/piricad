@@ -285,6 +285,17 @@ struct SymbolLayer
     /// into the fingerprint: it is part of the symbol, it is simply not painted.
     bool enabled{true};
 
+    /// Keeps this layer's own colour when the SYMBOL's colour is set.
+    ///
+    /// A published gösterim is routinely one colour the user is meant to choose
+    /// and one the regulation fixes: a lekesi whose fill a planner picks, with a
+    /// black boundary and a black glyph that MPYY prints black and that must stay
+    /// black whatever the fill becomes. Without a lock, setting the symbol's
+    /// colour repaints the boundary too and the row stops being the published
+    /// one. QGIS calls this locking the layer's colours and it is what makes a
+    /// whole-symbol colour usable at all.
+    bool colour_locked{false};
+
     /// What a `TextMarker` writes. Empty for every other type.
     ///
     /// The one field on a symbol layer that is not a number, and it is here rather

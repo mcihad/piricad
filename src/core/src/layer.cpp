@@ -172,6 +172,10 @@ std::uint64_t LayerTable::fold(std::uint64_t seed) const
         h = fnv1a_int(l.locked ? 1 : 0, h);
         h = fnv1a_int(l.plottable ? 1 : 0, h);
         h = fold_appearance(l.appearance, h);
+        // The zero sentinel predates full layer symbols. Leaving it out preserves
+        // every legacy document fingerprint; a real layer symbol is content and
+        // must change it.
+        if (l.style != kByLayerStyle) h = fnv1a_int(static_cast<std::int64_t>(l.style), h);
         h = fnv1a_int(static_cast<std::int64_t>(l.min_scale), h);
         h = fnv1a_int(static_cast<std::int64_t>(l.max_scale), h);
         h = fnv1a_int(static_cast<std::int64_t>(l.opacity), h);

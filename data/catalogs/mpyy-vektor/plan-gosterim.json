@@ -1,0 +1,387 @@
+{
+ "schema_version": 2,
+ "package_version": "0.2.0",
+ "id": "mpyy-vektor",
+ "source": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1 Gösterimler",
+ "published": "2026-01-22",
+ "licence": "resmi-mevzuat-metni",
+ "aciklama": "MPYY gösterimlerinin VEKTÖR hâli. Bu paket kaynaktan çıkarılmaz, ELLE ÇİZİLİR: yönetmelik gösterimlerini resim olarak yayımlar ve bir JPEG kırpması yeniden renklendirilemez, keskin ölçeklenemez, DWG'ye çizgi tipi olarak yazılamaz ve köşe dönemez. Buradaki her sembol, ekin BASTIĞI şekle bakılarak çizilmiştir; taranmış görüntünün otomatik izlenmesiyle değil. Her satır bu yüzden 'belirsiz: true' ve 'cizim-yorumu' gerekçesiyle işaretlidir.",
+ "kapsam": "MPYY EK-1 gösterimleri, vektör",
+ "cizgi_desenleri": [],
+ "tarama_desenleri": [],
+ "gorseller": [
+  {
+   "id": "gorsel-c816a081aa21256e",
+   "dosya": "semboller/tarim-alani.svg",
+   "sha256": "c816a081aa21256e8f11a00c7f49f31db7407695915a5081e2f50347c5d90967",
+   "bayt": 360,
+   "tur": "svg"
+  },
+  {
+   "id": "gorsel-6bf4e0c626592dba",
+   "dosya": "semboller/kent-ormani.svg",
+   "sha256": "6bf4e0c626592dbad09ad584d4b697afc2c66cca39366ea3fb8922790c70bd66",
+   "bayt": 501,
+   "tur": "svg"
+  },
+  {
+   "id": "gorsel-55498e5259f3dc44",
+   "dosya": "semboller/yuksek-ogretim.svg",
+   "sha256": "55498e5259f3dc440aa1e79dc607594a6b37520706eb106367300795eb733057",
+   "bayt": 262,
+   "tur": "svg"
+  },
+  {
+   "id": "gorsel-31d41af7ca5b1428",
+   "dosya": "semboller/il-siniri.svg",
+   "sha256": "31d41af7ca5b1428149ec3062be26ad0d2dc217b4762198fd8b2f923ca18accd",
+   "bayt": 495,
+   "tur": "svg"
+  }
+ ],
+ "stiller": [
+  {
+   "id": "nip-tarim-alani",
+   "ad": "TARIM ALANI",
+   "ek": "EK-1",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1ç (RG-22/1/2026-33145), TARIM VE ORMAN",
+   "bolum": [
+    "VEKTÖR"
+   ],
+   "gorsel": {
+    "tarama": [
+     "gorsel-c816a081aa21256e"
+    ]
+   },
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ],
+   "dolgu": {
+    "renk": "#FFFFFF"
+   }
+  },
+  {
+   "id": "nip-kent-ormani",
+   "ad": "KENT ORMANI",
+   "ek": "EK-1",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1ç (RG-22/1/2026-33145), TARIM VE ORMAN",
+   "bolum": [
+    "VEKTÖR"
+   ],
+   "gorsel": {
+    "tarama": [
+     "gorsel-6bf4e0c626592dba"
+    ]
+   },
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ],
+   "dolgu": {
+    "renk": "#E8F3E2"
+   }
+  },
+  {
+   "id": "nip-yuksek-ogretim",
+   "ad": "YÜKSEK ÖĞRETİM TESİSİ ALANI",
+   "ek": "EK-1",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1ç (RG-22/1/2026-33145), SOSYAL ALTYAPI",
+   "bolum": [
+    "VEKTÖR"
+   ],
+   "gorsel": {
+    "tarama": [
+     "gorsel-55498e5259f3dc44"
+    ]
+   },
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ],
+   "dolgu": {
+    "renk": "#FFFFFF"
+   }
+  },
+  {
+   "id": "ortak-ulke-siniri",
+   "ad": "ÜLKE SINIRI",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > İDARİ SINIRLAR",
+   "bolum": [
+    "SINIRLAR"
+   ],
+   "katmanlar": [
+    {
+     "tip": "cizgi",
+     "renk": "#FF000000",
+     "kalinlik": 1800,
+     "desen": [
+      7.0,
+      4.0
+     ]
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 3000,
+     "aralik": 19800,
+     "renk": "#FF000000",
+     "kalinlik": 300,
+     "dolgu_renk": "#00000000"
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-il-siniri",
+   "ad": "İL SINIRI",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > İDARİ SINIRLAR",
+   "bolum": [
+    "SINIRLAR"
+   ],
+   "katmanlar": [
+    {
+     "tip": "cizgi",
+     "renk": "#FF000000",
+     "kalinlik": 1400,
+     "desen": [
+      13.7,
+      1.6,
+      1.1,
+      1.6
+     ]
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-ilce-siniri",
+   "ad": "İLÇE SINIRI",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > İDARİ SINIRLAR",
+   "bolum": [
+    "SINIRLAR"
+   ],
+   "katmanlar": [
+    {
+     "tip": "cizgi",
+     "renk": "#FF000000",
+     "kalinlik": 1400,
+     "desen": [
+      13.0,
+      1.6,
+      1.1,
+      1.6,
+      1.1,
+      1.6
+     ]
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-belediye-siniri",
+   "ad": "BELEDİYE SINIRI",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > İDARİ SINIRLAR",
+   "bolum": [
+    "SINIRLAR"
+   ],
+   "katmanlar": [
+    {
+     "tip": "cizgi",
+     "renk": "#FF000000",
+     "kalinlik": 1400,
+     "desen": [
+      10.0,
+      1.4,
+      1.0,
+      1.4,
+      1.0,
+      1.4
+     ]
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 2800,
+     "aralik": 21600,
+     "renk": "#FF000000",
+     "kalinlik": 200,
+     "dolgu_renk": "#FF000000"
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-mucavir-alan-siniri",
+   "ad": "MÜCAVİR ALAN SINIRI",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > İDARİ SINIRLAR",
+   "bolum": [
+    "SINIRLAR"
+   ],
+   "katmanlar": [
+    {
+     "tip": "cizgi",
+     "renk": "#FF000000",
+     "kalinlik": 1400,
+     "desen": [
+      9.0,
+      1.4,
+      1.0,
+      1.4,
+      1.0,
+      1.4,
+      1.0,
+      1.4
+     ]
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 2800,
+     "aralik": 21000,
+     "renk": "#FF000000",
+     "kalinlik": 200,
+     "dolgu_renk": "#FF000000"
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-plan-onama-siniri",
+   "ad": "PLAN ONAMA SINIRI",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > PLANLAMA SINIRLARI",
+   "bolum": [
+    "SINIRLAR"
+   ],
+   "katmanlar": [
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 3400,
+     "aralik": 5100,
+     "renk": "#FF1E6BC8",
+     "kalinlik": 300,
+     "dolgu_renk": "#00000000"
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-etaplama-siniri",
+   "ad": "ETAPLAMA SINIRI",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > PLANLAMA SINIRLARI",
+   "bolum": [
+    "SINIRLAR"
+   ],
+   "katmanlar": [
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 3400,
+     "aralik": 10200,
+     "renk": "#FF1E6BC8",
+     "kalinlik": 300,
+     "dolgu_renk": "#FF1E6BC8"
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu",
+    "eksik-dolu-bos-siralamasi"
+   ]
+  },
+  {
+   "id": "ortak-ozel-proje-alani-siniri",
+   "ad": "ÖZEL PROJE ALANI SINIRI",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > PLANLAMA SINIRLARI",
+   "bolum": [
+    "SINIRLAR"
+   ],
+   "katmanlar": [
+    {
+     "tip": "cizgi",
+     "renk": "#FF1E6BC8",
+     "kalinlik": 600
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 4000,
+     "aralik": 6400,
+     "renk": "#FF1E6BC8",
+     "kalinlik": 200,
+     "dolgu_renk": "#FF1E6BC8"
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-plan-degisikligi-onama-siniri",
+   "ad": "PLAN DEĞİŞİKLİĞİ ONAMA SINIRI",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > PLANLAMA SINIRLARI",
+   "bolum": [
+    "SINIRLAR"
+   ],
+   "katmanlar": [
+    {
+     "tip": "cizgi",
+     "renk": "#FF000000",
+     "kalinlik": 1400,
+     "desen": [
+      13.7,
+      1.6,
+      1.1,
+      1.6
+     ]
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  }
+ ],
+ "kurallar": []
+}

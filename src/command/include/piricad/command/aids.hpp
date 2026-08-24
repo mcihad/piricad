@@ -53,6 +53,10 @@ struct AidSettings
     core::Mm grid_step{0};               ///< lattice spacing in document millimetres
     bool ortho{false};                   ///< `dik mod`: lock the cursor to the two axes
     std::int64_t polar_step{0};          ///< micro-degrees
+
+    /// How far past the aperture UZANTI, PARALEL and UZATILMIŞ KESİŞİM may look
+    /// for the edge they build from; see `core::SnapQuery::reach`.
+    core::Mm reach{0};
 };
 
 class InputAids
