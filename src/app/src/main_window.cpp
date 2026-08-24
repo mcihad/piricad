@@ -3,6 +3,7 @@
 
 #include "piricad/app/command_line.hpp"
 #include "piricad/app/controller.hpp"
+#include "piricad/app/data_root.hpp"
 #include "piricad/app/database_dialog.hpp"
 #include "piricad/app/icons.hpp"
 #include "piricad/app/map_canvas.hpp"
@@ -760,8 +761,12 @@ void MainWindow::loadSymbolLibrary()
     // Through the BUS, as a command, exactly like every other client (Article
     // 1.2). The shell gets no private road to the shelf: what it does here, a
     // script or the AI can do with the same line.
-    const std::string path =
-        std::string(controller_->bus().app_settings().get("core.stil.kutuphane").as_text());
+    // Resolved against the SHIPPED data tree. The setting names its package the
+    // way the documentation prints it — `data/catalogs/...` — and a relative path
+    // is otherwise resolved against the working directory, which is the one place
+    // it is guaranteed not to be. See data_root.hpp.
+    const std::string path = data_path(
+        std::string(controller_->bus().app_settings().get("core.stil.kutuphane").as_text()));
     if (path.empty()) return;
 
     // Quoted, because a package path may contain a space and the parser is the

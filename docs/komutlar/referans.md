@@ -142,6 +142,7 @@ Katmandaki nesneleri özniteliklerinden okuyarak etiketler.
 | `bicim` | text | 1 | Etiket biçimi; {sutun} o sütunun değeriyle değişir, \n satır kırar |
 | `hedef` | text | isteğe bağlı | Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET' |
 | `yukseklik` | integer | isteğe bağlı | Yazı yüksekliği, zemin milimetresi |
+| `kaydirma` | integer | isteğe bağlı | Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı |
 
 Ayrıntılı kullanım: [ETİKET](label.md)
 
@@ -599,6 +600,14 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "max": 1,
           "required": false,
           "help": "Yazı yüksekliği, zemin milimetresi"
+        },
+        {
+          "name": "kaydirma",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı"
         }
       ],
       "flags": [

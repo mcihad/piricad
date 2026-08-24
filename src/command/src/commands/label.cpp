@@ -166,6 +166,17 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
+    // THE OFFSET, and the MPYY building-condition symbol is why it exists.
+    //
+    // That symbol is a circle with a horizontal rule across it, one figure above
+    // the rule and the other below. Both are attributes of the same parcel and
+    // both are placed from the same bounding-box centre, so without an offset the
+    // two land on top of each other and on the rule between them. One `ETİKET`
+    // per figure, each with its own offset, is how the published symbol is built
+    // — and it is the same shape as the two `yazi-isaretci` layers that draw the
+    // fixed words, which carry an offset for exactly the same reason.
+    const core::Mm offset = static_cast<core::Mm>(ctx.argument("kaydirma").as_int(0));
+
     // Line breaks arrive already decoded: the command-line lexer turns `\n` into
     // a newline and a JSON script writes one directly. Nothing to do here, which
     // is the point — there is one lexer in this program (CLAUDE.md 5.11).
@@ -194,7 +205,9 @@ Task<void> run(Context& ctx)
             // The bounding-box centre, which is where a plan puts a number inside
             // its lekesi. The area centroid of a ring with holes is a different
             // computation and belongs in core rather than in a command.
-            where.push_back(entities.box_of(e).centre());
+            core::Point2 at = entities.box_of(e).centre();
+            at.y += offset;
+            where.push_back(at);
             texts.push_back(std::move(text.value()));
         }
     }
@@ -240,6 +253,7 @@ Task<void> run(Context& ctx)
     ctx.record("bicim", Value::text(*format));
     ctx.record("hedef", Value::text(target_name));
     ctx.record("yukseklik", Value::integer(height));
+    ctx.record("kaydirma", Value::integer(offset));
 
     ctx.echo(std::to_string(texts.size()) + " etiket yazıldı: '" + target_name + "' katmanına.");
 }
@@ -261,6 +275,9 @@ PIRICAD_COMMAND(label)
                             "Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET'"),
                 Param::integer("yukseklik", Arity::optional(),
                                "Yazı yüksekliği, zemin milimetresi"),
+                Param::integer("kaydirma", Arity::optional(),
+                               "Nesnenin ortasından dikey kaydırma, zemin milimetresi; "
+                               "artı yukarı"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

@@ -14,6 +14,7 @@ qt_standard_project_setup()
 qt_add_executable(piricad
     src/command_line.cpp
     src/controller.cpp
+    src/data_root.cpp
     src/database_dialog.cpp
     src/flow_layout.cpp
     src/icons.cpp
@@ -31,6 +32,7 @@ qt_add_executable(piricad
 
     include/piricad/app/command_line.hpp
     include/piricad/app/controller.hpp
+    include/piricad/app/data_root.hpp
     include/piricad/app/database_dialog.hpp
     include/piricad/app/main_window.hpp
     include/piricad/app/map_canvas.hpp
@@ -43,7 +45,9 @@ qt_add_executable(piricad
 )
 
 target_include_directories(piricad PRIVATE include)
-target_compile_definitions(piricad PRIVATE PIRICAD_VERSION="${PROJECT_VERSION}")
+target_compile_definitions(piricad PRIVATE
+    PIRICAD_VERSION="${PROJECT_VERSION}"
+    PIRICAD_SOURCE_DATA_DIR="${CMAKE_SOURCE_DIR}/data")
 
 target_link_libraries(piricad PRIVATE
     piricad_core
@@ -68,6 +72,18 @@ set_target_properties(piricad PROPERTIES
 install(TARGETS piricad
     BUNDLE  DESTINATION .
     RUNTIME DESTINATION bin
+)
+
+# THE CATALOGUES SHIP WITH THE PROGRAM. Installing the binary alone leaves every
+# machine but the build host with an empty gösterim shelf — MPYY's symbology, the
+# TM3 dilim table and the corpus are what make this a Turkish planning program
+# (CLAUDE.md 3.5, §12), and they are data the application reads at runtime rather
+# than anything compiled in.
+#
+# `data_root()` looks here first among the installed layouts; see data_root.hpp.
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/data/"
+    DESTINATION share/piricad/data
+    PATTERN "*.md" EXCLUDE
 )
 
 if(PIRICAD_WITH_QGIS)

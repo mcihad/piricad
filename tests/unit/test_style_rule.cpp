@@ -16,6 +16,8 @@
 // contents.
 #include "piricad_test.hpp"
 
+#include <algorithm>
+
 #include "piricad/command/bus.hpp"
 #include "piricad/command/registry.hpp"
 #include "piricad/core/json.hpp"
@@ -1249,6 +1251,94 @@ TEST_CASE("STİL: tanınmayan ölçü birimi sessizce başka bir birime dönmüy
 
     // And it left the drawing alone (§2.5).
     CHECK_EQ(style_column(f.doc), all_by_layer(f.doc));
+}
+
+TEST_CASE("ETİKET: MPYY yapılaşma koşulu, her parselin KENDİ sayılarıyla")
+{
+    // The symbol the regulation prints for a building condition is a circle with
+    // a horizontal rule across it: the floor area ratio above the rule and the
+    // building coverage ratio below. Both figures are ATTRIBUTES of the parcel, so
+    // two parcels wear the same symbol and show different numbers.
+    //
+    // The split between the two halves is model.md R29 and P7: attribute columns
+    // are never read by the frame path and no expression is evaluated inside it.
+    // The SYMBOL draws the circle and the rule — the same for every parcel, one
+    // entry in the style column. The COMMAND writes the numbers, as text entities
+    // that carry, move, snap and export like any other object.
+    Rig f;
+    REQUIRE(f.bus.execute_line("KATMAN IMAR", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SÜTUN kimlik=taks tur=metin", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SÜTUN kimlik=kaks tur=metin", Origin::Test).ok());
+
+    REQUIRE(f.bus.execute_line("ALAN 0,0 70,0 70,52 0,52", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN 80,0 150,0 150,52 80,52", Origin::Test).ok());
+
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK taks 1 \"0,40\"", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK kaks 1 \"1,20\"", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK taks 2 \"0,30\"", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK kaks 2 \"0,90\"", Origin::Test).ok());
+
+    REQUIRE(f.bus
+                .execute_line("STİL katman=IMAR tip=merkez-isaretci sekil=daire birim=zemin "
+                              "boyut=26000",
+                              Origin::Test)
+                .ok());
+    REQUIRE(f.bus
+                .execute_line("STİL katman=IMAR ekle=evet tip=merkez-isaretci sekil=cizik "
+                              "aci=90000000 birim=zemin boyut=22000",
+                              Origin::Test)
+                .ok());
+
+    // ONE STYLE for both parcels: the circle and the rule say nothing about a
+    // particular parcel, so they cost one entry in the style column however many
+    // parcels wear them.
+    CHECK_EQ(f.doc.entities().style[0], f.doc.entities().style[1]);
+
+    // The two figures, each with its own offset from the parcel's centre. Without
+    // an offset both land on the rule between them, which is what this case was
+    // written after seeing.
+    auto up = f.bus.execute_line(
+        "ETİKET katman=IMAR bicim=\"{kaks}\" hedef=KOSUL_UST yukseklik=3200 kaydirma=4500",
+        Origin::Test);
+    if (!up) FAIL_WITH("üst etiket", up.error().message);
+    REQUIRE(up.ok());
+
+    REQUIRE(f.bus
+                .execute_line("ETİKET katman=IMAR bicim=\"{taks}\" hedef=KOSUL_ALT "
+                              "yukseklik=3200 kaydirma=-7000",
+                              Origin::Test)
+                .ok());
+
+    // Two parcels, two labels each.
+    std::vector<std::string> written;
+    std::vector<core::Mm> heights;
+    const auto& entities = f.doc.entities();
+    for (core::EntityId e = 0; e < entities.size(); ++e) {
+        if (!entities.alive(e)) continue;
+        const std::string_view text = f.doc.texts().text(entities.slot[e]);
+        if (text.empty()) continue;
+        written.emplace_back(text);
+
+        // The baseline's own y, which is where the label was placed.
+        const core::RingSpan span = f.doc.geometry().rings_of(entities.slot[e]);
+        heights.push_back(f.doc.geometry().ring_ys(span.first)[0]);
+    }
+    CHECK_EQ(written.size(), std::size_t{4});
+
+    // Each parcel says its OWN numbers, not the layer's.
+    const auto has = [&](const char* what) {
+        return std::find(written.begin(), written.end(), std::string(what)) != written.end();
+    };
+    CHECK(has("1,20"));
+    CHECK(has("0,40"));
+    CHECK(has("0,90"));
+    CHECK(has("0,30"));
+
+    // ...and the floor area figure sits ABOVE the coverage one.
+    REQUIRE(heights.size() == std::size_t{4});
+    const core::Mm highest = *std::max_element(heights.begin(), heights.end());
+    const core::Mm lowest  = *std::min_element(heights.begin(), heights.end());
+    CHECK(highest > lowest);
 }
 
 TEST_CASE("ETİKET: iki satır noktanın etrafına yığılıyor")

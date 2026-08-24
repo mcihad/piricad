@@ -175,6 +175,44 @@ Penceredeki her değişiklik
 kapsamına göre `AYAR`, `TERCİH` ya da `MOD` komutu kurup çalıştırır — transkript, günlük
 ve yeniden oynatma pencereden yapılanı komut satırından yazılandan ayırt edemez.
 
+### Eklendi — MPYY yapılaşma koşulu gösterimi, parselin kendi sayılarıyla
+
+Yönetmeliğin bastığı gösterim: içinden yatay bir çizgi geçen çember, üstte **kat alanı
+katsayısı**, altta **taban alanı katsayısı**. İkisi de parselin özniteliğidir, yani aynı
+sembolü taşıyan iki parsel farklı sayılar gösterir.
+
+- **`ETİKET kaydirma=`** eklendi. Bu olmadan iki sayı da nesnenin ortasına, yani
+  aralarındaki çizginin üstüne düşüyordu — resmi çekince görülüyor. Her sayının kendi
+  `ETİKET` satırı ve kendi kaydırması var; sabit kelimeleri yazan iki `yazi-isaretci`
+  katmanının kaydırma taşımasıyla aynı biçim.
+- **İş bilinçli olarak ikiye bölünüyor.** Sembol çemberi ve çizgiyi çizer — bunlar
+  hiçbir parsel hakkında bir şey söylemez, bu yüzden kaç parsel taşırsa taşısın stil
+  sütununda **tek kayıttır** (testte doğrulanıyor). `ETİKET` sayıları yazar ve her sayı
+  sıradan bir yazı nesnesi olur: taşınır, yeniden stillenir, kendi katmanında kapatılır,
+  `.pcad` ve DXF'e olduğu gibi gider.
+- **Sembolün kendisi özniteliği okumuyor** ve okumayacak: `.claude/model.md` R29
+  "öznitelik sütunları çerçeve yolunda asla okunmaz" ve P7 "çerçeve yolunda asla ifade
+  değerlendirilmez". Kare başına nesne başına bir sütun araması, 16 ms bütçesinin içine
+  bir tablo araması koymak demektir. Karşılığında kaybedilen şey söylenmelidir:
+  **etiket, sonradan değişen bir özniteliği takip etmez**; komutu yeniden çalıştırmak
+  onları tazeler.
+
+### Düzeltildi — veri paketleri dağıtımla birlikte gitmiyordu
+
+Kurulum yalnız ikili dosyayı kuruyordu. MPYY gösterimleri, TM3 dilim tablosu ve `/data`
+altındaki her şey — yani bu programı bir çizim düzenleyicisi değil bir Türkiye planlama
+programı yapan şeyler — derlendiği makine dışında **hiçbir yerde** yoktu. Üstelik
+`core.stil.kutuphane` ayarının varsayılanı `data/catalogs/...` diye **göreli** bir yol
+ve göreli yol çalışma dizinine göre çözülür; yani tam da bulunmayacağı yere.
+
+- `install(DIRECTORY data/ ...)` eklendi; paket `share/piricad/data` altına gidiyor.
+- **`app::data_root()`** sırayla bakıyor: `$PIRICAD_DATA`, `<exe>/../share/piricad/data`,
+  `<exe>/data`, sonra yapılandırıldığı kaynak ağacı. Bir dizin ancak içinde gerçekten
+  `catalogs` varsa kabul ediliyor — yarım kurulmuş bir ağacı bulmuş saymak, taze bir
+  makinede sessizce boş raf demektir. Derleme zamanında gömülü bir yol değil, çünkü
+  paket başka makinede kurulur, taşınır, taşınabilir dizinden çalıştırılır.
+- Kurulup ilgisiz bir dizinden çalıştırılarak denendi.
+
 ### Eklendi — QGIS semboloji motoru bağlandı
 
 Madde 2.7 ve 5.16: olgun, mükemmel, çok platformlu bir kütüphane kullanılır, yeniden
