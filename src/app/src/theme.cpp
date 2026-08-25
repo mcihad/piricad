@@ -290,6 +290,8 @@ QString themeStyleSheet(ThemeMode mode)
         QWidget#settingsSidebar,
         QWidget#designerSidebar          { background: %(strip)s;
                                            border-right: 1px solid %(lineHard)s; }
+        QWidget#symbolColumn             { background: %(panel)s;
+                                           border-left: 1px solid %(lineHard)s; }
         QLineEdit#settingsSearch         { background: %(input)s; border: 1px solid %(border)s;
                                            border-radius: 4px; padding: 4px 8px;
                                            min-height: 20px; font-size: 11.5px; }

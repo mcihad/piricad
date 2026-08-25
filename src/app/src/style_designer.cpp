@@ -340,21 +340,49 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     tabRow->addWidget(geometry_);
     tabRow->addStretch(1);
 
-    auto* top = new QVBoxLayout;
-    top->setContentsMargins(0, 0, 0, 0);
-    top->setSpacing(0);
-    top->addLayout(tabRow);
-    top->addWidget(previewFrame);
+    // ---- TWO COLUMNS, not four stacked bands -------------------------------
+    //
+    // This page used to be a vertical stack: the renderer row, the geometry
+    // tabs, a full-width preview band, and then a splitter holding everything
+    // else. Inside a 756 px dialog that left about 300 px for the shelf AND the
+    // symbol stack AND the property form, and Qt does what Qt does when a layout
+    // is starved — it squeezes children past their minimums until they overlap.
+    // The search field sat on top of the shelf's tree, the thumbnails were a
+    // 60 px band, and `Katman özellikleri` showed one row with the rest below
+    // the bottom of the window and no way to reach it.
+    //
+    // design.md §8 puts the symbol's own controls in a 352 px column on the
+    // right and gives the rest of the width to what the user is choosing FROM.
+    // The preview belongs at the top of that column, not across the page: it is
+    // a property of the symbol being edited, not a banner over the whole screen.
+    auto* left       = new QWidget(this);
+    auto* leftColumn = new QVBoxLayout(left);
+    leftColumn->setContentsMargins(0, 0, 0, 0);
+    leftColumn->setSpacing(0);
+    leftColumn->addLayout(tabRow);
+    leftColumn->addWidget(buildGallery(), 1);
 
-    // ---- the two panes ----
-    auto* split = new QSplitter(Qt::Horizontal, this);
-    split->addWidget(buildGallery());
-
-    auto* right       = new QWidget(this);
+    auto* right = new QWidget(this);
+    right->setObjectName(QStringLiteral("symbolColumn"));
+    right->setFixedWidth(352);
     auto* rightLayout = new QVBoxLayout(right);
-    rightLayout->setContentsMargins(0, 0, 0, 0);
+    rightLayout->setContentsMargins(12, 10, 8, 10);
     rightLayout->setSpacing(10);
-    rightLayout->addWidget(buildTree(), 2);
+    // FIXED HEIGHTS ON THE TWO SMALL THINGS, and the form takes what is left.
+    //
+    // With stretch factors the preview and the stack grew with the window and the
+    // property form — the thing a user is actually editing — stayed a strip with
+    // one visible row. The reference sizes it the other way: a 92 px preview, a
+    // short layer list, and the properties filling the rest of the column.
+    previewFrame->setFixedHeight(158);
+    QWidget* stack = buildTree();
+    // 150 for the list plus the row of marks under it plus the box's own title.
+    // It was 178 with a tree asking for 190, so the marks had nowhere to go and
+    // drew straight over the last symbol layer.
+    stack->setFixedHeight(228);
+
+    rightLayout->addWidget(previewFrame);
+    rightLayout->addWidget(stack);
 
     // TWO PAGES, one selection. Selecting the symbol shows what belongs to all of
     // it; selecting a layer shows what belongs to that layer. Showing both at once
@@ -368,19 +396,23 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     // a marker line carries placement, phase, angle and offset that a plain
     // stroke does not — and without this the last rows were simply cut off at
     // the bottom of the dialog with no way to reach them.
+    // Room for the scrollbar, which otherwise sits ON the editors: the widget
+    // gets the viewport's width and the bar is drawn over its right edge.
+    pages_->setContentsMargins(0, 0, 14, 0);
+
     auto* scroll = new QScrollArea(this);
     scroll->setWidget(pages_);
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    rightLayout->addWidget(scroll, 3);
-    split->addWidget(right);
+    rightLayout->addWidget(scroll, 1);
 
-    split->setStretchFactor(0, 2);
-    split->setStretchFactor(1, 3);
-    split->setSizes({430, 650});
-    split->setChildrenCollapsible(false);
-    split->setHandleWidth(10);
+    auto* panes   = new QWidget(this);
+    auto* paneRow = new QHBoxLayout(panes);
+    paneRow->setContentsMargins(0, 0, 0, 0);
+    paneRow->setSpacing(0);
+    paneRow->addWidget(left, 1);
+    paneRow->addWidget(right);
 
     // ---- the page this section shows ----
     auto* renderer       = new QWidget(this);
@@ -388,8 +420,7 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     rendererLayout->setContentsMargins(0, 0, 0, 0);
     rendererLayout->setSpacing(0);
     rendererLayout->addWidget(buildRendererRow());
-    rendererLayout->addLayout(top);
-    rendererLayout->addWidget(split, 1);
+    rendererLayout->addWidget(panes, 1);
 
     // ---- the left section list, design.md §8 ----
     //
@@ -781,9 +812,12 @@ QWidget* StyleDesigner::buildGallery()
     use_->setToolTip(tr("Seçili gösterimi düzenlenebilir sembol yığını olarak alır")); // ui-label
     connect(use_, &QPushButton::clicked, this, &StyleDesigner::applyGalleryPick);
 
-    layout->addWidget(groups_, 1);
+    // The search goes ABOVE the tree it filters. Between the tree and the
+    // thumbnails it read as belonging to neither, and when the box was starved
+    // for height it was the row that overlapped its neighbours.
     layout->addWidget(search_);
-    layout->addWidget(gallery_, 2);
+    layout->addWidget(groups_, 1);
+    layout->addWidget(gallery_, 3);
     layout->addWidget(galleryNote_);
     layout->addWidget(provenance_);
     layout->addWidget(use_);
@@ -988,7 +1022,7 @@ QWidget* StyleDesigner::buildTree()
     tree_->setHeaderHidden(true);
     tree_->setIconSize(QSize(44, 26));
     tree_->setRootIsDecorated(true);
-    tree_->setMinimumHeight(190);
+    tree_->setMinimumHeight(150);
     tree_->setAlternatingRowColors(true);
     tree_->setAccessibleName(tr("Sembol katmanları"));
 
@@ -1130,15 +1164,23 @@ QWidget* StyleDesigner::buildGlobal()
 void StyleDesigner::addProperty(QFormLayout* form, const QString& label, QWidget* editor,
                                 QWidget* unit, std::vector<SymbolLayerType> types)
 {
-    auto* text   = new QLabel(label, this);
-    QWidget* row = editor;
+    auto* text = new QLabel(label, this);
+    text->setWordWrap(true);
 
+    // The form lives in a 352 px column now, and a label that takes half of it
+    // leaves the value and its unit fighting over the rest — the unit combo was
+    // clipped mid-word, reading `zer` where it said `zemin`. A fixed, narrow
+    // label column is what makes the two fit.
+    text->setFixedWidth(86);
+
+    QWidget* row = editor;
     if (unit != nullptr) {
         row          = new QWidget(this);
         auto* layout = new QHBoxLayout(row);
         layout->setContentsMargins(0, 0, 0, 0);
-        layout->addWidget(editor, 3);
-        layout->addWidget(unit, 2);
+        layout->setSpacing(6);
+        layout->addWidget(editor, 5);
+        layout->addWidget(unit, 4);
     }
 
     form->addRow(text, row);
@@ -1477,7 +1519,7 @@ void StyleDesigner::updatePreview()
     // Rendered at the DEVICE ratio and on a checkerboard: a translucent fill over
     // a flat ground is indistinguishable from an opaque paler one, and half of
     // what a designer is judging here is exactly that.
-    constexpr int kSwatch = 168;
+    constexpr int kSwatch = 116;
     previewWidth_         = kSwatch;
 
     const QImage swatch =
