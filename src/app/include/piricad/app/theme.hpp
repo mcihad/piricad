@@ -7,8 +7,8 @@
 #pragma once
 
 #include <QColor>
-#include <QWidget>
 #include <QString>
+#include <QWidget>
 
 namespace piricad::app {
 
@@ -81,10 +81,14 @@ public:
     virtual void applyTheme(ThemeMode mode) = 0;
 };
 
-/// Hands `mode` to every painted descendant of `root`, and to `root` itself.
+/// Hands `mode` to every painted DESCENDANT of `root` — never to `root` itself.
 ///
-/// One walk, so a window cannot theme half of itself. Widgets that do not
-/// implement `Themed` are skipped — they are styled by the sheet instead.
+/// One walk, so a window cannot theme half of itself. Objects that do not
+/// implement `Themed` are skipped; they are styled by the sheet instead.
+///
+/// Not `root`, and that is the whole contract: every caller reaches this from
+/// inside its own `applyTheme`, so including the root turns the walk into
+/// unbounded recursion. It did, once, and the program died on the stack.
 void applyThemeToChildren(QWidget* root, ThemeMode mode);
 
 /// Installs `Fusion` under the one behaviour change the specification needs.

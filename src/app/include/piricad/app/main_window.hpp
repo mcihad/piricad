@@ -77,6 +77,14 @@ public:
     /// the panel that asked, so a panel never has to know what is in a window.
     void openStyleDesigner(const QString& layerName);
 
+    /// The other three windows, public for the same reason as the designer:
+    /// `PIRICAD_SMOKE` opens every one of them in turn, so a dialog that crashes
+    /// on construction fails a test rather than a user. A window nothing
+    /// constructs is a window nothing is checking.
+    void openSettings();
+    void openAttributeTable();
+    void openCommandSearch();
+
 private slots:
     /// Bus observers. The shell SUBSCRIBES to the command bus and never reaches
     /// around it: a value on screen is there because a command put it there, so
@@ -100,9 +108,6 @@ private slots:
     void openScript();
     void openDatabase();
 
-    /// Opens the settings window: every declared setting, grouped by who owns it.
-    void openSettings();
-
     // The five file actions. Each one collects a path and dispatches the SAME
     // command a user could type; the dialog is not the feature (Article 1.2).
     void openProject();
@@ -114,10 +119,6 @@ private slots:
     void toggleTheme(bool dark);
     void showCommandLine(bool visible);
     void resetLayout();
-    void openCommandSearch();
-
-    /// Opens the attribute table on the active layer (`design.md` §9).
-    void openAttributeTable();
 
 private:
     void buildActions();

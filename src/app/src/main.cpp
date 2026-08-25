@@ -112,6 +112,44 @@ int main(int argc, char** argv)
     // change reviewable.
     // Opens the style designer on one layer, so its own frame can be dumped.
     // Same category as PIRICAD_FRAME_DUMP: developer tooling, not a feature.
+    // Opens every window the shell has, one after another, and closes each.
+    //
+    // Developer tooling, same category as PIRICAD_FRAME_DUMP: not a feature a
+    // surveyor has any use for, so an environment variable rather than a CLI flag
+    // (a flag would be user-facing and CLAUDE.md 5.17 would want a /docs page).
+    //
+    // WHY IT EXISTS. `shell-starts` proved the main window comes up, and a
+    // dialog that crashed the moment it opened still passed it — twice. A window
+    // that is never constructed in any test is a window nothing is checking.
+    if (qEnvironmentVariableIsSet("PIRICAD_SMOKE")) {
+        int at           = 0;
+        const auto later = [&window, &at](auto&& step) {
+            at += 120;
+            QTimer::singleShot(at, &window, step);
+        };
+
+        later([&window] { window.openStyleDesigner(QStringLiteral("0")); });
+        later([] {
+            if (QWidget* top = QApplication::activeModalWidget()) top->close();
+        });
+        later([&window] { window.openAttributeTable(); });
+        later([] {
+            if (QWidget* top = QApplication::activeWindow()) top->close();
+        });
+        later([&window] { window.openSettings(); });
+        later([] {
+            if (QWidget* top = QApplication::activeWindow()) top->close();
+        });
+        later([&window] { window.openCommandSearch(); });
+        later([] {
+            if (QWidget* top = QApplication::activePopupWidget()) top->close();
+        });
+        later([] {
+            (void)std::fprintf(stdout, "[piricad] duman testi: bütün pencereler açıldı\n");
+            QApplication::exit(0);
+        });
+    }
+
     if (const QByteArray layer = qgetenv("PIRICAD_OPEN_DESIGNER"); !layer.isEmpty()) {
         const QString name = QString::fromLocal8Bit(layer);
         QTimer::singleShot(kFrameDumpSettleMs / 2, &window,

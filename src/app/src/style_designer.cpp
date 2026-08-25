@@ -415,8 +415,7 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
         {Glyph::Text, "Etiketler", "Faz 2",
          "Etiket yerleşimi, çakışma çözümü ve ölçek aralıkları buraya gelecek. "
          "Bugün etiketler ETİKET komutuyla yazılır; bkz. docs/komutlar/label.md."},
-        {Glyph::Terrain, "3B Görünüm", "Faz 3",
-         "Yükseklik, cephe ve çatı çizimi buraya gelecek."},
+        {Glyph::Terrain, "3B Görünüm", "Faz 3", "Yükseklik, cephe ve çatı çizimi buraya gelecek."},
         {Glyph::EyeOff, "Şeffaflık", "Faz 2", "Katman saydamlığı ve karışım kipi buraya gelecek."},
         {Glyph::Measure, "Ölçek", "Faz 2",
          "Katmanın hangi ölçek aralığında çizileceği buraya gelecek."},
@@ -754,8 +753,12 @@ QWidget* StyleDesigner::buildGallery()
 
     galleryNote_ = new QLabel(box);
     galleryNote_->setWordWrap(true);
+    // PIXELS, not points. The application font is set with `setPixelSize`, so
+    // `pointSizeF()` returns -1 on it and `-1 - 1` asked Qt for a font of -2 pt —
+    // which it refuses with a warning and then draws at some size nobody chose.
+    // design.md §3 is written in pixels throughout; this follows it.
     QFont small = galleryNote_->font();
-    small.setPointSizeF(small.pointSizeF() - 1.0);
+    small.setPixelSize(11);
     galleryNote_->setFont(small);
 
     provenance_ = new QLabel(box);

@@ -82,6 +82,19 @@ if(TARGET piricad)
                 "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
                 $<TARGET_FILE:piricad>)
     set_tests_properties(shell-starts PROPERTIES TIMEOUT 120)
+
+    # And every WINDOW, not only the shell. A dialog that crashes the moment it
+    # opens passed `shell-starts` twice — once when a null was connected to, and
+    # once when a theme walk recursed into itself — because nothing in the suite
+    # had ever constructed one. `PIRICAD_SMOKE` opens the style designer, the
+    # attribute table, the settings window and the command palette in turn.
+    add_test(NAME windows-open
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                PIRICAD_SMOKE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
+    set_tests_properties(windows-open PROPERTIES TIMEOUT 120)
 endif()
 
 # Every gate script runs as a test, so a violation fails `ctest`, not only CI.

@@ -121,9 +121,16 @@ void applyThemeToChildren(QWidget* root, ThemeMode mode)
 {
     if (root == nullptr) return;
 
-    // QObject, not QWidget: an item delegate paints rows from tokens and is not
-    // a widget, so a widget-only walk would leave every layer row in one theme.
-    if (auto* self = dynamic_cast<Themed*>(root)) self->applyTheme(mode);
+    // CHILDREN ONLY — never `root` itself, and the name is the contract.
+    //
+    // This walked `root` too for about ten minutes, and the result was a stack
+    // overflow: `DialogFrame::applyTheme` calls this with `this`, so the walk
+    // called `applyTheme` on the dialog, which called the walk, forever. Anything
+    // that IS themed and calls this is calling it from inside its own
+    // `applyTheme`; applying to itself again can only recurse.
+    //
+    // QObject, not QWidget: an item delegate paints rows from tokens and is not a
+    // widget, so a widget-only walk would leave every layer row in one theme.
     for (QObject* child : root->findChildren<QObject*>())
         if (auto* themed = dynamic_cast<Themed*>(child)) themed->applyTheme(mode);
 }
