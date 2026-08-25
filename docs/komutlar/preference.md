@@ -65,6 +65,38 @@ Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 Değer yazımı [`AYAR`](setting.md) ile aynıdır: evet/hayır, tam sayı, onaltılık (`0x…`),
 metin ve seçenek adı. Ondalık sayı hiçbir ayarda kabul edilmez.
 
+### Sembol rafı: iki paket, üstüne yazarak
+
+Raf açılışta **iki paket** yükler ve sıra bilinçlidir:
+
+| Ayar | Ne yükler |
+|---|---|
+| `sembol_kütüphanesi` | Yönetmeliğin kendi paketi. Her satırı, ekin **bastığı resimle** taşır |
+| `vektör_paketi` | Yeniden **çizilmiş** gösterimler. Resimli olanların **üstüne** yazılır |
+
+Raf her kimlikten bir satır tutar ve aynı kimliği yeniden bildiren paket öncekinin
+yerine geçer. Yani vektörü çizilmiş bir gösterim vektör olarak, çizilmemiş olan ekin
+resmiyle görünür — hiçbiri eksilmez.
+
+Bu ayrım neden var: bir resim yeniden renklendirilemez, keskin ölçeklenemez, DWG'ye
+çizgi tipi olarak yazılamaz ve **köşe dönemez**. Vektörü bunların hepsini yapar.
+Yönetmelik gösterimlerini resim olarak yayımladığı için vektör hâli elle çizilir ve her
+satırı `belirsiz: true` ile işaretlidir.
+
+İkisinin ayrı ayar olmasının sebebi teknik: bir metin ayarı 48 bayt alır ve iki yol
+birlikte sığmaz.
+
+```
+TERCİH vektör_paketi
+TERCİH vektör_paketi varsayilan
+```
+
+Vektör paketini kapatıp yalnız ekin resimlerini görmek için boş bırakın:
+
+```
+TERCİH vektör_paketi ""
+```
+
 ## Örnekler
 
 ### Komut satırı

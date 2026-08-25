@@ -321,6 +321,32 @@ constexpr std::int64_t kFullCircle = kUDegFullCircle;
 
 } // namespace
 
+PIRICAD_SETTING(vektor_kutuphanesi)
+{
+    return SettingSpec{
+        .id       = "core.stil.vektor",
+        .names    = {"vektör_paketi", "vektor_paketi", "vector_library", "vektör"},
+        .type     = SettingType::Text,
+        .scope    = SettingScope::App,
+        .fallback = text_value(
+            "data/catalogs/mpyy-vektor/plan-gosterim.json"), // catalog-key: a path into
+                                                             // /data/catalogs, not a value
+        .range   = SettingRange::unbounded(),
+        .values  = {},
+        .unit    = "",
+        .summary = "Resimli paketin ÜSTÜNE yüklenecek vektör gösterim paketi. Raf her " // ui-label
+                   "kimlikten bir satır tutar ve aynı kimliği yeniden bildiren paket "
+                   "öncekinin yerine geçer: burada yeniden çizilmiş bir satır "
+                   "ekin resmini değiştirir, çizilmemiş olan resmiyle kalır ve eksilmez. "
+                   "Bir resim yeniden renklendirilemez, keskin ölçeklenemez, DWG'ye "
+                   "çizgi tipi olarak yazılamaz ve köşe dönemez — vektörü bunların "
+                   "hepsini yapar. Ayrı bir ayardır çünkü bir metin ayarı 48 bayt alır "
+                   "ve iki yol birlikte sığmaz. Boş bırakılırsa yalnız resimli paket "
+                   "yüklenir. Hangi paketin kurulu olduğu makineye ait olduğu için "
+                   "uygulama kapsamındadır.",
+    };
+}
+
 PIRICAD_SETTING(koordinat_sistemi);
 PIRICAD_SETTING(koordinat_hassasiyeti);
 PIRICAD_SETTING(cizim_birimi);
@@ -336,6 +362,7 @@ PIRICAD_SETTING(yakalama_modlari);
 PIRICAD_SETTING(dik_mod);
 PIRICAD_SETTING(kutupsal_aci);
 PIRICAD_SETTING(sembol_kutuphanesi);
+PIRICAD_SETTING(vektor_kutuphanesi);
 PIRICAD_SETTING(veritabani_sunucu);
 PIRICAD_SETTING(veritabani_port);
 PIRICAD_SETTING(veritabani_ad);
@@ -386,6 +413,7 @@ PIRICAD_SETTING(alan_birimi);
     X(yakalama_modlari)                                                                            \
     X(dik_mod)                                                                                     \
     X(sembol_kutuphanesi)                                                                          \
+    X(vektor_kutuphanesi)                                                                          \
     X(kutupsal_aci)                                                                                \
     X(izgaraya_yakala)                                                                             \
     X(veritabani_sunucu)                                                                           \
@@ -805,10 +833,12 @@ PIRICAD_SETTING(sembol_kutuphanesi)
         .range   = SettingRange::unbounded(),
         .values  = {},
         .unit    = "",
-        .summary = "Açılışta sembol rafına yüklenecek gösterim paketinin yolu. Kapsamı " // ui-label
-                   "uygulama, çünkü hangi paketin kurulu olduğu makineye aittir, çizime "
-                   "değil: bir çizim kullandığı sembolleri kendi içinde taşır ve rafı boş "
-                   "bir makinede de aynı açılır. Boş bırakılırsa raf boş başlar.",
+        .summary = "Açılışta sembol rafına yüklenecek gösterim paketinin yolu. " // ui-label
+                   "Yönetmeliğin kendi paketidir ve satırlarını ekin BASTIĞI resimlerle "
+                   "taşır; vektör hâli 'vektör_paketi' ayarıyla bunun üstüne yazılır. "
+                   "Kapsamı uygulama, çünkü hangi paketin kurulu olduğu makineye aittir, "
+                   "çizime değil: bir çizim kullandığı sembolleri kendi içinde taşır ve "
+                   "rafı boş bir makinede de aynı açılır. Boş bırakılırsa raf boş başlar.",
     };
 }
 

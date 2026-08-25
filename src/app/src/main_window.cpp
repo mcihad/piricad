@@ -761,25 +761,40 @@ void MainWindow::loadSymbolLibrary()
     // Through the BUS, as a command, exactly like every other client (Article
     // 1.2). The shell gets no private road to the shelf: what it does here, a
     // script or the AI can do with the same line.
-    // Resolved against the SHIPPED data tree. The setting names its package the
-    // way the documentation prints it — `data/catalogs/...` — and a relative path
-    // is otherwise resolved against the working directory, which is the one place
-    // it is guaranteed not to be. See data_root.hpp.
-    const std::string path = data_path(
-        std::string(controller_->bus().app_settings().get("core.stil.kutuphane").as_text()));
-    if (path.empty()) return;
+    //
+    // TWO PACKAGES, IN THIS ORDER, and the order is the whole point. The annex's
+    // own package carries every published row as the picture the regulation
+    // printed; the vector package is loaded OVER it and replaces the rows that
+    // have been redrawn — the shelf keeps one entry per id and a later package
+    // restating a row updates it in place. A row nobody has redrawn yet keeps its
+    // picture rather than going missing.
+    const core::Settings& app = controller_->bus().app_settings();
+    const QStringList declared{
+        QString::fromStdString(std::string(app.get("core.stil.kutuphane").as_text())),
+        QString::fromStdString(std::string(app.get("core.stil.vektor").as_text())),
+    };
 
-    // Quoted, because a package path may contain a space and the parser is the
-    // one parser (CLAUDE.md 5.11) rather than a second one written here.
-    const auto result =
-        controller_->bus().execute_line("SEMBOL paket=\"" + path + "\"", command::Origin::Gui);
+    for (const QString& one : declared) {
+        if (one.trimmed().isEmpty()) continue;
+        // Resolved against the SHIPPED data tree. The setting names its package
+        // the way the documentation prints it — `data/catalogs/...` — and a
+        // relative path is otherwise resolved against the working directory,
+        // which is the one place it is guaranteed not to be. See data_root.hpp.
+        const std::string path = data_path(one.trimmed().toStdString());
+        if (path.empty()) continue;
 
-    // A missing package is NOT an error the user has to dismiss. A fresh machine
-    // may not have the data package installed yet, and the drawing still opens:
-    // a document carries the symbols it uses in its own style table. The note
-    // says what happened and the application carries on.
-    if (!result)
-        onEcho(tr("Sembol rafı boş: %1").arg(QString::fromStdString(result.error().message)));
+        // Quoted, because a package path may contain a space and the parser is
+        // the one parser (CLAUDE.md 5.11) rather than a second one written here.
+        const auto result =
+            controller_->bus().execute_line("SEMBOL paket=\"" + path + "\"", command::Origin::Gui);
+
+        // A missing package is NOT an error the user has to dismiss. A fresh
+        // machine may not have the data package installed yet, and the drawing
+        // still opens: a document carries the symbols it uses in its own style
+        // table. The note says what happened and the application carries on.
+        if (!result)
+            onEcho(tr("Sembol rafı eksik: %1").arg(QString::fromStdString(result.error().message)));
+    }
 }
 
 void MainWindow::syncDockTitles()

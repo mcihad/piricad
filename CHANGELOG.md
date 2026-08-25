@@ -175,6 +175,29 @@ Penceredeki her değişiklik
 kapsamına göre `AYAR`, `TERCİH` ya da `MOD` komutu kurup çalıştırır — transkript, günlük
 ve yeniden oynatma pencereden yapılanı komut satırından yazılandan ayırt edemez.
 
+### Düzeltildi — arayüz vektör paketi yüklemiyordu, hep resim çiziyordu
+
+Bir önceki turda motor tarafını düzelttim ve "476 satırın 464'ünde iki motor aynı
+çiziyor" dedim. Ölçüm doğruydu ama **yanlış soruya** cevap veriyordu: ikisi de RESİM
+çiziyordu. Kullanıcının gördüğü buydu.
+
+Sebep: `core.stil.kutuphane` tek bir paket adı alıyor ve arayüz yalnız onu yüklüyordu.
+O paket yönetmeliğin kendi paketi — **476 satırının 439'u resimli, sıfırı vektör.**
+Elle çizdiğim vektör satırları ayrı bir pakette duruyordu ve rafa hiç girmiyordu.
+
+- **`core.stil.vektor` ayarı eklendi.** Arayüz iki paketi SIRAYLA yüklüyor: önce
+  yönetmeliğin resimli paketi, sonra vektör paketi. Raf her kimlikten bir satır tutar
+  ve aynı kimliği yeniden bildiren paket öncekinin yerine geçer — yani vektörü çizilmiş
+  bir gösterim vektör olarak, çizilmemiş olan ekin resmiyle görünür ve **hiçbiri
+  eksilmez**.
+- Tek ayara iki yol sığdırmayı denedim ve **olmadı**: bir metin ayarı 48 bayt alır, iki
+  yol 82 bayt. `text_value` sessizce boş bir değer döndürüyor, ayar da "evet/hayır" tipi
+  sanılıp kayıt sırasında reddediliyordu. `builtin_setting_failures()` bunu söyledi.
+  Ayrı ayar doğru çözüm.
+
+Ölçüldü: açılışta rafta **422 resimli, 27 vektör yığın, 28 düz** satır var. Vektörlerin
+azlığı beklenen — 476 satırın 12'si çizildi.
+
 ### Düzeltildi — QGIS motoru raster gösterimleri sessizce atlıyordu
 
 Semboloji "komple bozuk, sadece çizgi çiziyor ve sadece rengi değişiyor" hâline geldi.
