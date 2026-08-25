@@ -256,6 +256,25 @@ QString themeStyleSheet(ThemeMode mode)
         QDockWidget > QWidget            { background: %(panel)s; }
         QMainWindow::separator:hover     { background: %(accent)s; }
 
+        /* ---- dialogs, §8–§10 ----------------------------------------------- */
+        QDialog#dialogFrame              { background: %(window)s; }
+        QWidget#dialogFooter             { background: %(raised)s;
+                                           border-top: 1px solid %(lineHard)s; }
+        QWidget#settingsSidebar          { background: %(strip)s;
+                                           border-right: 1px solid %(lineHard)s; }
+        QLineEdit#settingsSearch         { background: %(input)s; border: 1px solid %(border)s;
+                                           border-radius: 4px; padding: 4px 8px;
+                                           min-height: 20px; font-size: 11.5px; }
+        QLabel#settingsProfile           { background: transparent; color: %(textFaint)s;
+                                           font-size: 11px;
+                                           border-top: 1px solid %(lineSoft)s; }
+        QLabel#settingsHeading           { background: transparent; color: %(text)s;
+                                           font-size: 16px; font-weight: 600; }
+        QLabel#rowName                   { background: transparent; color: %(text)s;
+                                           font-size: 12px; }
+        QLabel#rowHelp                   { background: transparent; color: %(textFaint)s;
+                                           font-size: 11px; }
+
         /* ---- layers panel, §7 ---------------------------------------------- */
         /* The row is painted by LayerRowDelegate; the view must add nothing. */
         QTreeWidget#layerTree            { background: %(panel)s; border: none;

@@ -10,12 +10,14 @@
 #pragma once
 
 #include "piricad/app/theme.hpp"
+#include "piricad/app/tokens.hpp"
 #include "piricad/core/snap.hpp"
 #include "piricad/render/backend.hpp"
 #include "piricad/render/drawlist.hpp"
 #include "piricad/render/scene.hpp"
 #include "piricad/render/view.hpp"
 
+#include <QRectF>
 #include <QWidget>
 
 #include <initializer_list>
@@ -108,6 +110,7 @@ private:
     void buildRuler();
     void buildScaleBar();
     void buildNorthArrow();
+    void buildZoomStack();
     void buildReadout();
 
     /// The colour a setting names, or the theme's own when the setting is zero.
@@ -187,6 +190,16 @@ private:
     std::unique_ptr<render::Backend> backend_;
 
     Palette palette_{themePalette(ThemeMode::Light)};
+
+    /// The same theme in its NAMED form. The overlay reaches for tokens the
+    /// legacy `Palette` has no field for — the ruler's sunken ground, its
+    /// division mark, the scale bar's fill — and duplicating them into `Palette`
+    /// would be a second colour table (`tokens.hpp` is the only one).
+    Tokens tokens_{darkTokens()};
+
+    /// The zoom stack's screen box, so a click on it can be told from a click on
+    /// the drawing. Rebuilt every frame by `buildZoomStack`.
+    QRectF zoom_stack_;
     render::ViewTransform view_;
     render::DrawList draw_;
     render::Overlay overlay_;

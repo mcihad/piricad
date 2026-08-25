@@ -20,6 +20,8 @@
 
 #include "piricad/core/settings.hpp"
 
+#include "piricad/app/dialog_chrome.hpp"
+
 #include <QDialog>
 #include <QString>
 
@@ -27,7 +29,7 @@
 
 class QLabel;
 class QLineEdit;
-class QTabWidget;
+class QStackedWidget;
 class QVBoxLayout;
 class QWidget;
 
@@ -38,12 +40,12 @@ class Controller;
 
 /// Shows every declared setting, grouped by who owns it, and writes changes
 /// through the command bus.
-class SettingsDialog : public QDialog
+class SettingsDialog : public DialogFrame
 {
     Q_OBJECT
 
 public:
-    /// Opens on the Project page, with every declared setting already listed.
+    /// Opens on the first section, with every declared setting already listed.
     explicit SettingsDialog(Controller& controller, QWidget* parent = nullptr);
 
 private:
@@ -56,11 +58,28 @@ private:
         QWidget* editor{nullptr}; ///< the type's own widget
     };
 
-    /// Builds the page for one scope and returns it, or null when the scope
-    /// declares nothing.
-    QWidget* buildScope(core::SettingScope scope);
+    /// One section of the left-hand list: a group of the catalogue, its page,
+    /// and whether anything in it has been changed since the window opened.
+    struct Section
+    {
+        std::string group;      ///< the id's second component: `yakalama`, `izgara`
+        QString title;          ///< what the section list and the page heading say
+        QWidget* page{nullptr}; ///< the scroll area shown when it is chosen
+    };
+
+    /// Builds the page for one group and returns it. Never null: a group only
+    /// exists because a setting declared it.
+    QWidget* buildGroup(const std::string& section, const QString& title);
+
+    /// Builds the page of a section that has no settings yet: the phase it
+    /// arrives in and one line saying what will be on it.
+    QWidget* buildPending(const QString& phase, const QString& note);
 
     /// Adds one setting's row to `into`, and records it for the search.
+    ///
+    /// The row is `design.md` §10's: the name and its one-line help on the left,
+    /// the control right-aligned, and the reset mark after it. A `Bool` gets a
+    /// `ToggleSwitch` rather than a tick box, because §10 draws a switch.
     void addRow(QVBoxLayout* into, const core::SettingSpec& spec);
 
     /// Reads the store for `spec`'s scope. The dialog never caches a value: a
@@ -81,8 +100,15 @@ private:
     void applyFilter();
 
     Controller& controller_;
-    QTabWidget* tabs_{nullptr};
+    /// §10's left column: a search field over a list of sections, with the
+    /// pages themselves in a stack the list switches.
+    SectionList* sections_{nullptr};
+    QStackedWidget* pages_{nullptr};
     QLineEdit* search_{nullptr};
+    QLabel* heading_{nullptr};
+    QLabel* summary_{nullptr};
+    QLabel* profile_{nullptr};
+    std::vector<Section> order_;
 
     /// Guards the editors while `refresh()` fills them, so a programmatic write
     /// does not read straight back as a user edit.

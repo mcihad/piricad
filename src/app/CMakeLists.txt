@@ -17,6 +17,7 @@ qt_add_executable(piricad
     src/command_palette.cpp
     src/controller.cpp
     src/data_root.cpp
+    src/dialog_chrome.cpp
     src/database_dialog.cpp
     src/flow_layout.cpp
     src/icons.cpp
@@ -40,6 +41,7 @@ qt_add_executable(piricad
     include/piricad/app/command_palette.hpp
     include/piricad/app/controller.hpp
     include/piricad/app/data_root.hpp
+    include/piricad/app/dialog_chrome.hpp
     include/piricad/app/database_dialog.hpp
     include/piricad/app/main_window.hpp
     include/piricad/app/map_canvas.hpp

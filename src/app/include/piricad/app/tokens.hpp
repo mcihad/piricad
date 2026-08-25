@@ -103,6 +103,7 @@ struct Tokens
     QColor readout;      ///< a mono value the user reads but cannot edit
     QColor readoutDim;   ///< the same, one step back: status coordinates, scale bar
     QColor bgSunken;     ///< command line, canvas rulers, the zoom stack
+    QColor rulerTick;    ///< the division mark on a ruler, and its hairline
 
     // ---- what the canvas draws that the chrome does not ----
     QColor crosshair;

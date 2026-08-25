@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/app/settings_dialog.hpp"
 
+#include "piricad/app/icons.hpp"
+
 #include "piricad/app/controller.hpp"
 
 #include "piricad/command/bus.hpp"
 
-#include <QCheckBox>
 #include <QColorDialog>
 #include <QComboBox>
 #include <QDialogButtonBox>
@@ -17,10 +18,14 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QLocale>
+#include <QMenu>
+#include <QMessageBox>
 #include <QPainter>
 #include <QPixmap>
+#include <QPushButton>
 #include <QScrollArea>
 #include <QSpinBox>
+#include <QStackedWidget>
 #include <QTabWidget>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -130,126 +135,299 @@ QString quoted(const QString& raw)
 /// millimetre in that span exactly.
 constexpr double kLengthCeiling = 1.0e9;
 
+/// The namespace whose glyph stands for a whole page.
+///
+/// A page holds several namespaces and the list shows one icon, so this names
+/// the one that carries the page's meaning. Unknown titles fall through to the
+/// settings glyph, which is what a page declared tomorrow gets.
+std::string section_group(const std::string& title)
+{
+    static const std::pair<const char*, const char*> kFaces[] = {
+        {"Genel", "dosya"},
+        {"Görünüm ve Tema", "arayuz"},
+        {"Çizim ve Yakalama", "yakalama"},
+        {"Koordinat Sistemleri", "crs"},
+        {"Veri Kaynakları", "veritabani"},
+        {"Plot ve Çıktı", "plan"},
+        {"Etiketleme", "cizim"},
+        {"Kısayollar", "secim"},
+        {"Performans ve GPU", "tuval"},
+        {"Ağ ve Kimlik", "veritabani"},
+    };
+    for (const auto& [name, group] : kFaces)
+        if (title == name) return group;
+    return {};
+}
+
+/// The glyph a section wears in the list. Chosen from the group's own id, so a
+/// new group arrives with an icon rather than with a blank.
+Glyph group_glyph(const std::string& group)
+{
+    static const std::pair<const char*, Glyph> kGlyphs[] = {
+        {"crs", Glyph::Globe},         {"cizim", Glyph::Polyline},   {"katalog", Glyph::Table},
+        {"topoloji", Glyph::Topology}, {"plan", Glyph::Print},       {"aci", Glyph::Rotate},
+        {"alan", Glyph::MeasureArea},  {"arayuz", Glyph::Palette},   {"dosya", Glyph::Open},
+        {"tuval", Glyph::Grid},        {"izgara", Glyph::Grid},      {"yakalama", Glyph::Snap},
+        {"secim", Glyph::Select},      {"stil", Glyph::Layer},       {"cetvel", Glyph::Measure},
+        {"harita", Glyph::Terrain},    {"veritabani", Glyph::Cloud},
+    };
+    for (const auto& [id, glyph] : kGlyphs)
+        if (group == id) return glyph;
+    return Glyph::Settings;
+}
+
+/// What a section's page says under its heading.
+///
+/// Derived from the SCOPES the group's settings actually declare, not written
+/// out per group: the sentence a user needs is "does this travel with the file",
+/// and only the scope answers it (model.md R39, R40).
+QString scope_summary(bool project, bool app, bool session)
+{
+    // ONE line, and it answers the only question the heading leaves open: does
+    // this travel with the file. A paragraph here pushes the first setting off
+    // the top of the page, which is the opposite of what a heading is for; the
+    // per-setting summary under each name carries the detail.
+    if (project && !app && !session)
+        return SettingsDialog::tr("Bu ayarlar çizimin kendisine aittir: dosyayla birlikte gider "
+                                  "ve başka bir bilgisayarda açıldığında aynı kalır.");
+    if (app && !project && !session)
+        return SettingsDialog::tr("Bu ayarlar yalnızca geçerli profil için geçerlidir; çizimin "
+                                  "tek baytını değiştirmez.");
+    if (session && !project && !app)
+        return SettingsDialog::tr("Bu ayarlar yalnız bu oturum için geçerlidir ve program "
+                                  "kapanınca varsayılana döner.");
+    return SettingsDialog::tr("Bu bölümde hem çizime hem bu bilgisayara ait ayarlar var; her "
+                              "satırın altındaki açıklama hangisi olduğunu söyler.");
+}
+
 } // namespace
 
 SettingsDialog::SettingsDialog(Controller& controller, QWidget* parent)
-    : QDialog(parent), controller_(controller)
+    : DialogFrame(parent), controller_(controller)
 {
-    setWindowTitle(tr("Ayarlar"));
-    setMinimumSize(760, 620);
-    resize(880, 700);
+    // design.md §10 measures this window at 1180 × 740, with a 232 px left
+    // column and a 52 px footer. Every one of those numbers is the reference's.
+    setHeading(Glyph::Settings, tr("Seçenekler"));
+    setFooterHeight(52);
+    setModal(true);
+    resize(1180, 740);
 
-    search_ = new QLineEdit(this);
-    search_->setPlaceholderText(tr("Ara — ayar adı, kimlik ve açıklama")); // ui-label
+    auto* body = new QWidget(this);
+    auto* row  = new QHBoxLayout(body);
+    row->setContentsMargins(0, 0, 0, 0);
+    row->setSpacing(0);
+
+    // ---- the left column ----
+    auto* sidebar = new QWidget(body);
+    sidebar->setObjectName(QStringLiteral("settingsSidebar"));
+    sidebar->setFixedWidth(232);
+
+    auto* column = new QVBoxLayout(sidebar);
+    column->setContentsMargins(0, 0, 1, 0);
+    column->setSpacing(0);
+
+    search_ = new QLineEdit(sidebar);
+    search_->setObjectName(QStringLiteral("settingsSearch"));
+    search_->setPlaceholderText(tr("Ayarlarda ara…")); // ui-label
     search_->setClearButtonEnabled(true);
-    connect(search_, &QLineEdit::textChanged, this, [this](const QString&) { applyFilter(); });
 
-    tabs_ = new QTabWidget(this);
+    auto* searchRow = new QWidget(sidebar);
+    auto* searchBox = new QHBoxLayout(searchRow);
+    searchBox->setContentsMargins(12, 12, 12, 10);
+    searchBox->addWidget(search_);
+    column->addWidget(searchRow);
 
-    // One page per scope, in the order a user meets them: what belongs to the
-    // drawing, what belongs to the machine, what belongs to this sitting.
-    struct Page
-    {
-        SettingScope scope;
-        QString title;
-        QString help;
-    };
+    sections_ = new SectionList(sidebar);
+    column->addWidget(sections_);
+    column->addStretch(1);
 
-    const Page pages[] = {
-        {SettingScope::Project, tr("Proje"),
-         tr("Çizimin kendi özellikleri. Dosyayla birlikte gider ve başka bir "
-            "bilgisayarda açıldığında aynı kalır.")},
-        {SettingScope::App, tr("Uygulama"),
-         tr("Bu bilgisayardaki tercihleriniz. Çizimin tek baytını değiştirmez; "
-            "dosyayı paylaştığınızda karşı tarafa geçmez.")},
-        {SettingScope::Session, tr("Oturum"),
-         tr("Yalnız bu açık pencere için geçerli. Program kapanınca varsayılana "
-            "döner; çizim yaparken sık sık değiştirilen anahtarlar buradadır.")},
-    };
+    // §10 puts the profile at the foot of the column, because "which profile am
+    // I editing" is the question every one of these answers belongs to.
+    profile_ = new QLabel(sidebar);
+    profile_->setObjectName(QStringLiteral("settingsProfile"));
+    profile_->setContentsMargins(12, 0, 12, 0);
+    profile_->setFixedHeight(34);
+    column->addWidget(profile_);
 
-    for (const Page& page : pages) {
-        QWidget* body = buildScope(page.scope);
-        if (body == nullptr) continue;
+    row->addWidget(sidebar);
 
-        auto* wrap   = new QWidget(tabs_);
-        auto* layout = new QVBoxLayout(wrap);
-        layout->setContentsMargins(0, 8, 0, 0);
+    // ---- the page ----
+    auto* right = new QWidget(body);
+    auto* stack = new QVBoxLayout(right);
+    stack->setContentsMargins(24, 18, 24, 0);
+    stack->setSpacing(0);
 
-        // The scope, said in the user's own words at the top of its own page.
-        // "Proje kapsamı" means nothing until somebody explains that it travels
-        // with the file, and every summary in the catalogue has to repeat the
-        // sentence because nowhere else says it.
-        auto* help = new QLabel(page.help, wrap);
-        help->setWordWrap(true);
-        help->setObjectName(QStringLiteral("quiet"));
-        layout->addWidget(help);
-        layout->addWidget(body, 1);
+    heading_ = new QLabel(right);
+    heading_->setObjectName(QStringLiteral("settingsHeading"));
+    stack->addWidget(heading_);
 
-        tabs_->addTab(wrap, page.title);
+    summary_ = new QLabel(right);
+    summary_->setObjectName(QStringLiteral("quiet"));
+    summary_->setWordWrap(true);
+    summary_->setContentsMargins(0, 4, 0, 14);
+    stack->addWidget(summary_);
+
+    pages_ = new QStackedWidget(right);
+    stack->addWidget(pages_, 1);
+    row->addWidget(right, 1);
+
+    setBody(body);
+
+    // One page per DECLARED SECTION, in the catalogue's own order. Not a list
+    // kept here: `settings.cpp` declares the pages beside the settings, so a new
+    // page arrives with no edit to this file (CLAUDE.md 5.10, the same rule the
+    // command list lives under).
+    for (const core::SettingSection& declared : core::builtin_settings().sections()) {
+        Section section;
+        section.group = declared.title;
+        section.title = QString::fromStdString(declared.title);
+        section.page  = declared.phase.empty() ? buildGroup(declared.title, section.title)
+                                               : buildPending(QString::fromStdString(declared.phase),
+                                                              QString::fromStdString(declared.note));
+        pages_->addWidget(section.page);
+        sections_->addSection(group_glyph(section_group(declared.title)), section.title);
+        order_.push_back(section);
     }
 
-    auto* buttons = new QDialogButtonBox(this);
-    buttons->addButton(tr("Kapat"), QDialogButtonBox::RejectRole);
-    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+    connect(sections_, &SectionList::currentChanged, this, [this](int index) {
+        if (index < 0 || index >= static_cast<int>(order_.size())) return;
+        const auto at = static_cast<std::size_t>(index);
+        pages_->setCurrentIndex(index);
+        heading_->setText(order_[at].title);
 
-    auto* root = new QVBoxLayout(this);
-    root->setContentsMargins(14, 14, 14, 12);
-    root->setSpacing(10);
-    root->addWidget(search_);
-    root->addWidget(tabs_, 1);
-    root->addWidget(buttons);
-    // NO STYLESHEET HERE. This dialog used to carry its own, with its own greys
-    // and its own radii, and that is exactly why it matched neither the shell nor
-    // the other dialog. There is one sheet for the application (`theme.cpp`), it
-    // is built from `tokens.hpp`, and a widget that needs a role asks for it by
-    // object name — `sectionTitle`, `quiet`, `mono` — rather than restating the
-    // colour. `ci-gate-theme.sh` keeps this true.
+        bool project = false, app = false, session = false;
+        for (const SettingSpec& spec : core::builtin_settings().all()) {
+            if (spec.section != order_[at].group) continue;
+            project |= spec.scope == SettingScope::Project;
+            app |= spec.scope == SettingScope::App;
+            session |= spec.scope == SettingScope::Session;
+        }
+        summary_->setText(scope_summary(project, app, session));
+    });
+
+    connect(search_, &QLineEdit::textChanged, this, [this](const QString& text) {
+        sections_->setFilter(text);
+        applyFilter();
+    });
+
+    // ---- the footer ----
+    const auto footerButton = [this](const QString& text, bool primary) {
+        auto* button = new QPushButton(text, this);
+        button->setObjectName(primary ? QStringLiteral("primary") : QString());
+        button->setDefault(primary);
+        return button;
+    };
+
+    auto* defaults = footerButton(tr("Varsayılanlara dön"), false);
+    connect(defaults, &QPushButton::clicked, this, [this] {
+        for (const Row& r : rows_)
+            write(*r.spec, QStringLiteral("varsayılan"));
+    });
+
+    auto* exportProfile = footerButton(tr("Profili dışa aktar"), false);
+    connect(exportProfile, &QPushButton::clicked, this, [this] {
+        // Phase 2. Said in the window rather than in a tooltip, because a button
+        // that does nothing silently is worse than one that says why.
+        QMessageBox::information(this, tr("Profili dışa aktar"),
+                                 tr("Profil dışa aktarma Faz 2'de gelecek. Şimdilik her ayar "
+                                    "TERCİH, AYAR ve MOD komutlarıyla yazılabilir ve komut "
+                                    "günlüğü zaten taşınabilir bir kayıttır."));
+    });
+
+    auto* cancel = footerButton(tr("İptal"), false);
+    connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
+
+    // EVERY EDIT IS ALREADY WRITTEN. A setting changes the moment its control
+    // does, through the bus — so `Uygula` has nothing left to apply and `Tamam`
+    // only closes. Both are here because §10 draws them and because a user who
+    // does not see them wonders whether anything was saved; neither pretends to
+    // do work it does not do, and the tooltip says so.
+    auto* apply = footerButton(tr("Uygula"), false);
+    apply->setToolTip(tr("Her değişiklik yazıldığı anda uygulanır; bu düğme pencereyi açık "
+                         "bırakır."));
+    connect(apply, &QPushButton::clicked, this, [this] {
+        for (Section& section : order_)
+            (void)section;
+        refresh();
+    });
+
+    auto* ok = footerButton(tr("Tamam"), true);
+    connect(ok, &QPushButton::clicked, this, &QDialog::accept);
+
+    QHBoxLayout* bar = footer();
+    bar->insertWidget(0, defaults);
+    bar->insertWidget(1, exportProfile);
+    bar->addWidget(cancel);
+    bar->addWidget(apply);
+    bar->addWidget(ok);
 
     // A setting written from the command line while this window is open has to
     // show through: the store is the truth and this window is one of its readers.
     connect(&controller_, &Controller::settingChanged, this, [this](const QString&) { refresh(); });
 
+    if (!order_.empty()) {
+        sections_->setCurrent(0);
+        pages_->setCurrentIndex(0);
+        heading_->setText(order_.front().title);
+        emit sections_->currentChanged(0);
+    }
+
     refresh();
 }
 
-QWidget* SettingsDialog::buildScope(SettingScope scope)
+QWidget* SettingsDialog::buildPending(const QString& phase, const QString& note)
 {
-    const core::SettingCatalog& catalogue = core::builtin_settings();
-
-    // Grouped by the id's own second component, in the order the catalogue
-    // declares them, so a group's rows keep the order somebody chose.
-    std::vector<std::string> order;
-    std::vector<QVBoxLayout*> bodies;
-
+    // A page that holds nothing YET. §11.8 forbids the aspirational present
+    // tense, so it says what will be here and which phase brings it, in the
+    // future tense, rather than showing an empty box.
     auto* page   = new QWidget(this);
     auto* layout = new QVBoxLayout(page);
-    layout->setContentsMargins(4, 4, 4, 4);
-    layout->setSpacing(10);
+    layout->setContentsMargins(0, 24, 12, 12);
+    layout->setSpacing(8);
 
-    for (const SettingSpec& spec : catalogue.all()) {
-        if (spec.scope != scope) continue;
+    auto* badge = new QLabel(phase, page);
+    badge->setObjectName(QStringLiteral("sectionTitle"));
+    layout->addWidget(badge);
+
+    auto* words = new QLabel(note, page);
+    words->setObjectName(QStringLiteral("quiet"));
+    words->setWordWrap(true);
+    words->setMaximumWidth(560);
+    layout->addWidget(words);
+    layout->addStretch(1);
+
+    auto* scroll = new QScrollArea(this);
+    scroll->setWidget(page);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    return scroll;
+}
+
+QWidget* SettingsDialog::buildGroup(const std::string& section, const QString& title)
+{
+    auto* page   = new QWidget(this);
+    auto* layout = new QVBoxLayout(page);
+    layout->setContentsMargins(0, 0, 12, 12);
+    layout->setSpacing(0);
+
+    (void)title;
+
+    // Inside a page the settings keep their NAMESPACE grouping, which is the
+    // second axis: `Çizim ve Yakalama` holds a YAKALAMA block and a TOPOLOJİ
+    // block, exactly as the reference draws it.
+    std::string open_group;
+    for (const SettingSpec& spec : core::builtin_settings().all()) {
+        if (spec.section != section) continue;
 
         const std::string group = group_of(spec.id);
-
-        QVBoxLayout* body = nullptr;
-        for (std::size_t i = 0; i < order.size(); ++i)
-            if (order[i] == group) body = bodies[i];
-
-        if (body == nullptr) {
-            auto* box = new QGroupBox(group_title(group), page);
-            body      = new QVBoxLayout(box);
-            body->setSpacing(6);
-            layout->addWidget(box);
-            order.push_back(group);
-            bodies.push_back(body);
+        if (group != open_group) {
+            auto* caption = new QLabel(group_title(group).toUpper(), page);
+            caption->setObjectName(QStringLiteral("sectionTitle"));
+            caption->setContentsMargins(0, open_group.empty() ? 0 : 18, 0, 6);
+            layout->addWidget(caption);
+            open_group = group;
         }
-
-        addRow(body, spec);
-    }
-
-    if (order.empty()) {
-        delete page;
-        return nullptr;
+        addRow(layout, spec);
     }
 
     layout->addStretch(1);
@@ -263,29 +441,45 @@ QWidget* SettingsDialog::buildScope(SettingScope scope)
 
 void SettingsDialog::addRow(QVBoxLayout* into, const SettingSpec& spec)
 {
+    // §10's row: the name over its one-line help on the left, the control
+    // right-aligned, and the reset mark after it. The help is the SETTING'S OWN
+    // summary — the sentence the catalogue already carries — so a row explains
+    // itself without this file knowing what any of them mean.
     auto* line   = new QWidget(into->parentWidget());
     auto* layout = new QHBoxLayout(line);
-    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setContentsMargins(0, 7, 0, 7);
     layout->setSpacing(8);
 
-    // The setting's own name, read rather than typed; `row_label` says how. Both
-    // the typed name and the machine id go in the tooltip, because the window has
-    // a second job: somebody who finds a setting here has to be able to write the
-    // line that sets it. A script writes the id, a person types the name, and this
-    // row shows neither until asked.
+    auto* words = new QVBoxLayout;
+    words->setContentsMargins(0, 0, 0, 0);
+    words->setSpacing(2);
+
     auto* label = new QLabel(row_label(spec), line);
-    label->setMinimumWidth(230);
-    label->setToolTip(QStringLiteral("%1\n%2\n\n%3")
-                          .arg(QString::fromStdString(spec.names.front()),
-                               QString::fromStdString(spec.id),
-                               QString::fromStdString(spec.summary)));
+    label->setObjectName(QStringLiteral("rowName"));
+
+    // Both the typed name and the machine id go in the tooltip, because the
+    // window has a second job: somebody who finds a setting here has to be able
+    // to write the line that sets it. A script writes the id, a person types the
+    // name, and the row shows neither until asked.
+    label->setToolTip(QStringLiteral("%1\n%2").arg(QString::fromStdString(spec.names.front()),
+                                                   QString::fromStdString(spec.id)));
+    words->addWidget(label);
+
+    if (!spec.summary.empty()) {
+        auto* help = new QLabel(QString::fromStdString(spec.summary), line);
+        help->setObjectName(QStringLiteral("rowHelp"));
+        help->setWordWrap(true);
+        words->addWidget(help);
+    }
 
     QWidget* editor = nullptr;
 
     switch (spec.type) {
     case SettingType::Bool: {
-        auto* box = new QCheckBox(line);
-        connect(box, &QCheckBox::toggled, this, [this, &spec](bool on) {
+        // §10 draws a pill switch, not a tick box: the fill AND the knob's side
+        // both say the state, which is what §13 asks of a yes/no control.
+        auto* box = new ToggleSwitch(line);
+        connect(box, &ToggleSwitch::toggled, this, [this, &spec](bool on) {
             if (!loading_) write(spec, on ? QStringLiteral("evet") : QStringLiteral("hayır"));
         });
         editor = box;
@@ -366,10 +560,39 @@ void SettingsDialog::addRow(QVBoxLayout* into, const SettingSpec& spec)
     connect(reset, &QToolButton::clicked, this,
             [this, &spec] { write(spec, QStringLiteral("varsayılan")); });
 
-    layout->addWidget(label);
-    layout->addWidget(editor, 1);
-    layout->addWidget(state);
-    layout->addWidget(reset);
+    // §10's proportions: the words take the left two thirds and the control sits
+    // at a fixed width against the right margin, so every control in the page
+    // starts at the same x. A ragged column of controls reads as a mistake.
+    auto* words_host = new QWidget(line);
+    words_host->setLayout(words);
+    words_host->setMinimumWidth(360);
+    words_host->setMaximumWidth(560);
+
+    layout->addWidget(words_host, 1);
+    layout->addStretch(1);
+    if (editor) {
+        editor->setFixedWidth(qobject_cast<ToggleSwitch*>(editor) ? 38 : 250);
+        layout->addWidget(editor, 0, Qt::AlignRight | Qt::AlignVCenter);
+    }
+
+    // NO PER-ROW RESET MARK AND NO STATE TAG. The reference has neither, and both
+    // were noise beside every row. The capability stays: the row's context menu
+    // offers the reset and names the current state, which is where a user looks
+    // for "put this back" and nowhere near where they look for the value.
+    line->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(line, &QWidget::customContextMenuRequested, this,
+            [this, &spec, line](const QPoint& at) {
+                QMenu menu(line);
+                menu.addAction(tr("Kimlik: %1").arg(QString::fromStdString(spec.id)))
+                    ->setEnabled(false);
+                menu.addSeparator();
+                QAction* reset_to_default = menu.addAction(tr("Bildirilen varsayılana döndür"));
+                if (menu.exec(line->mapToGlobal(at)) == reset_to_default)
+                    write(spec, QStringLiteral("varsayılan"));
+            });
+
+    state->setVisible(false);
+    reset->setVisible(false);
     into->addWidget(line);
 
     rows_.push_back(Row{&spec, line, state, editor});
@@ -418,11 +641,15 @@ void SettingsDialog::refresh()
 
         switch (row.spec->type) {
         case SettingType::Bool:
-            qobject_cast<QCheckBox*>(row.editor)->setChecked(value.as_bool());
+            // A `ToggleSwitch` now, not a `QCheckBox`. The cast was unchecked and
+            // the null it returned after the control changed was dereferenced
+            // straight away — the window did not fail to draw, it crashed.
+            if (auto* box = qobject_cast<ToggleSwitch*>(row.editor))
+                box->setChecked(value.as_bool());
             break;
         case SettingType::Enum: {
             auto* box = qobject_cast<QComboBox*>(row.editor);
-            if (value.as_enum() < row.spec->values.size())
+            if (box && value.as_enum() < row.spec->values.size())
                 box->setCurrentIndex(static_cast<int>(value.as_enum()));
             break;
         }

@@ -51,6 +51,7 @@ void MapCanvas::setDebugHud(bool on)
 void MapCanvas::applyTheme(ThemeMode mode)
 {
     palette_ = themePalette(mode);
+    tokens_  = mode == ThemeMode::Dark ? darkTokens() : lightTokens();
     update();
 }
 
@@ -405,7 +406,7 @@ void MapCanvas::buildSnapMarker()
     // constructed modes on there is more to tell apart, not less.
     if (look_.snap_tip)
         overlay_.labels.push_back(
-            render::OverlayLabel{ink, x + h + 4.0f, y - h - 2.0f, 0.0f,
+            render::OverlayLabel{ink, x + h + 4.0f, y - h - 2.0f, 0.0f, false,
                                  std::string(core::snap_mode_label(snap_preview_.mode))});
 }
 
@@ -450,6 +451,20 @@ double nice_step(double target) noexcept
 
 /// `value` with at most `places` decimals and no trailing zeroes, because a ruler
 /// reading "120.000" is three characters of noise on every tick.
+/// `458 000` — thousands separated by a space, the way a Turkish map sheet
+/// prints a coordinate. Not `QLocale`: tr_TR puts a full stop there, and a full
+/// stop in a coordinate is a decimal point to every reader of that sheet.
+std::string spaced(double value)
+{
+    const auto whole   = static_cast<long long>(std::llround(value));
+    std::string digits = std::to_string(whole < 0 ? -whole : whole);
+    for (std::size_t at = digits.size(); at > 3;) {
+        at -= 3;
+        digits.insert(at, 1, ' ');
+    }
+    return whole < 0 ? "-" + digits : digits;
+}
+
 std::string trimmed(double value, int places)
 {
     std::string out = QString::number(value, 'f', places).toStdString();
@@ -473,17 +488,29 @@ void MapCanvas::buildRuler()
 
     const RulerUnit unit = ruler_unit_of(look_.ruler_unit);
 
-    // A tick every ~80 px, rounded to the 1-2-5 ladder.
-    const double step_mm = nice_step(view_.mm_per_pixel() * 80.0);
+    // design.md §7: a 20 px band along the top and the left, a division line
+    // every ~100 px, and the reading printed in mono to the right of it. The
+    // band is FILLED rather than outlined — the reference draws it as a sunken
+    // strip the drawing sits inside, not as two rules over the canvas.
+    render::OverlayBatch& ground = nextBatch(0, 0.0f, false, tokens_.bgSunken.rgba());
+    addRun(ground, {{0.0f, 0.0f}, {w, 0.0f}, {w, band}, {0.0f, band}}, true);
+    addRun(ground, {{0.0f, band}, {band, band}, {band, h}, {0.0f, h}}, true);
+
+    render::OverlayBatch& edge = nextBatch(tokens_.lineHard.rgba(), 1.0f, false);
+    addRun(edge, {{0.0f, band}, {w, band}}, false);
+    addRun(edge, {{band, band}, {band, h}}, false);
+
+    // The division step rides the 1-2-5 ladder so the reading is a round number
+    // a surveyor can hold in their head, and lands near the reference's 100 px.
+    const double step_mm = nice_step(view_.mm_per_pixel() * 100.0);
     if (step_mm <= 0.0) return;
 
     const core::Box2 seen = view_.visible_box();
 
-    render::OverlayBatch& frame = nextBatch(palette_.gridMajor.rgba(), 1.0f, false);
-    addRun(frame, {{0.0f, band}, {w, band}}, false);
-    addRun(frame, {{band, 0.0f}, {band, h}}, false);
+    render::OverlayBatch& ticks = nextBatch(tokens_.rulerTick.rgba(), 1.0f, false);
 
-    render::OverlayBatch& ticks = nextBatch(palette_.grid.rgba(), 1.0f, false);
+    constexpr float kTick  = 9.0f; ///< the division mark's length
+    constexpr float kLabel = 8.5f; ///< §3's `cetvel, mikro etiket` size
 
     // The loop counts ticks rather than accumulating a position, exactly as
     // `buildGrid` does: adding a step a thousand times drifts, and a ruler that
@@ -497,10 +524,10 @@ void MapCanvas::buildRuler()
         const float x = static_cast<float>(view_.to_screen(core::Point2{core::mm_round(mm), 0}).x);
         if (x < band || x > w) continue;
 
-        addRun(ticks, {{x, band * 0.45f}, {x, band}}, false);
-        overlay_.labels.push_back(render::OverlayLabel{palette_.gridMajor.rgba(), x + 2.0f,
-                                                       band * 0.42f, 0.0f,
-                                                       trimmed(mm / unit.per_unit, 3)});
+        addRun(ticks, {{x, band - kTick}, {x, band}}, false);
+        overlay_.labels.push_back(render::OverlayLabel{tokens_.textFaint.rgba(), x + 4.0f,
+                                                       band - kTick - 1.0f, kLabel, true,
+                                                       spaced(mm / unit.per_unit)});
     }
 
     const auto first_y =
@@ -512,56 +539,168 @@ void MapCanvas::buildRuler()
         const float y = static_cast<float>(view_.to_screen(core::Point2{0, core::mm_round(mm)}).y);
         if (y < band || y > h) continue;
 
-        addRun(ticks, {{band * 0.45f, y}, {band, y}}, false);
-        // Along the left band, written horizontally: a rotated string costs the
-        // backend a transform and buys nothing a surveyor reading a northing wants.
-        overlay_.labels.push_back(render::OverlayLabel{palette_.gridMajor.rgba(), 2.0f, y - 2.0f,
-                                                       0.0f, trimmed(mm / unit.per_unit, 3)});
+        // DIVISIONS ONLY, no number. A northing is nine digits and the band is
+        // 20 px, so a horizontal string spills onto the drawing and a rotated one
+        // costs the backend a transform for something nobody reads off a ruler.
+        // The reference leaves it bare too, and the northing under the cursor is
+        // already in the status strip where a surveyor looks for it.
+        addRun(ticks, {{band - kTick, y}, {band, y}}, false);
     }
 
-    overlay_.labels.push_back(render::OverlayLabel{palette_.gridMajor.rgba(), 3.0f, band - 4.0f,
-                                                   0.0f, std::string(unit.suffix)});
+    overlay_.labels.push_back(render::OverlayLabel{tokens_.textFaint.rgba(), 3.0f, band - 4.0f,
+                                                   kLabel, true, std::string(unit.suffix)});
 }
 
 void MapCanvas::buildScaleBar()
 {
     if (!look_.scale_bar) return;
 
-    // A round ground distance about 140 px long, so the bar says a number a user
-    // can hold in their head rather than "this much".
-    const double span_mm = nice_step(view_.mm_per_pixel() * 140.0);
-    const double px      = span_mm / (view_.mm_per_pixel() > 0.0 ? view_.mm_per_pixel() : 1.0);
-    if (px < 20.0 || px > static_cast<double>(width())) return;
+    // design.md §7: 180 px, four divisions, `0 / 100 / 200 m` beneath. The bar is
+    // a FIXED width and the ground distance it stands for is what changes, which
+    // is the opposite of the usual "round distance, whatever width" bar — and it
+    // is what the reference draws, because a bar that never changes size never
+    // moves the labels under it.
+    constexpr float kBarWidth  = 180.0f;
+    constexpr float kBarHeight = 7.0f;
+    constexpr int kCells       = 4;
+    constexpr float kInset     = 16.0f; ///< from the canvas's own left and bottom
+    constexpr float kFromFoot  = 32.0f;
 
-    const auto left   = static_cast<float>(look_.ruler ? look_.ruler_px + 12 : 12);
-    const auto bottom = static_cast<float>(height() - 18);
-    const auto right  = left + static_cast<float>(px);
+    const double mm_per_px = view_.mm_per_pixel();
+    if (mm_per_px <= 0.0) return;
 
-    render::OverlayBatch& bar = nextBatch(palette_.gridMajor.rgba(), 1.6f, false);
-    addRun(bar, {{left, bottom}, {right, bottom}}, false);
-    addRun(bar, {{left, bottom - 5.0f}, {left, bottom + 5.0f}}, false);
-    addRun(bar, {{right, bottom - 5.0f}, {right, bottom + 5.0f}}, false);
+    const auto band  = static_cast<float>(look_.ruler ? look_.ruler_px : 0);
+    const float left = band + kInset;
+    const float top  = static_cast<float>(height()) - kFromFoot - kBarHeight;
+    const float cell = kBarWidth / static_cast<float>(kCells);
+
+    if (top <= band || left + kBarWidth > static_cast<float>(width())) return;
+
+    // Alternating cells, filled and empty, so a distance can be counted off the
+    // bar rather than estimated against it.
+    for (int i = 0; i < kCells; i += 2) {
+        // INSIDE the frame by one pixel: the reference draws a 1 px outline
+        // around the divisions, not through them, and a fill that reaches the
+        // outline swallows it on the two filled cells.
+        render::OverlayBatch& fill = nextBatch(0, 0.0f, false, tokens_.readoutDim.rgba());
+        const float x0             = left + static_cast<float>(i) * cell + 1.0f;
+        addRun(fill,
+               {{x0, top + 1.0f},
+                {x0 + cell - 1.0f, top + 1.0f},
+                {x0 + cell - 1.0f, top + kBarHeight - 1.0f},
+                {x0, top + kBarHeight - 1.0f}},
+               true);
+    }
+
+    render::OverlayBatch& frame = nextBatch(tokens_.hud.rgba(), 1.0f, false);
+    addRun(frame,
+           {{left, top},
+            {left + kBarWidth, top},
+            {left + kBarWidth, top + kBarHeight},
+            {left, top + kBarHeight}},
+           true);
 
     const RulerUnit unit = ruler_unit_of(look_.ruler_unit);
+    const double whole   = static_cast<double>(kBarWidth) * mm_per_px / unit.per_unit;
+
+    // Three readings under the bar: nothing, half, and all of it — with the unit
+    // written once, at the right end, the way a map sheet prints it.
+    const float baseline = top + kBarHeight + 12.0f;
     overlay_.labels.push_back(
-        render::OverlayLabel{palette_.gridMajor.rgba(), left, bottom - 8.0f, 0.0f,
-                             trimmed(span_mm / unit.per_unit, 3) + " " + unit.suffix});
+        render::OverlayLabel{tokens_.textFaint.rgba(), left, baseline, 9.5f, true, "0"});
+    overlay_.labels.push_back(render::OverlayLabel{tokens_.textFaint.rgba(),
+                                                   left + kBarWidth * 0.5f - 8.0f, baseline, 9.5f,
+                                                   true, trimmed(whole * 0.5, 3)});
+    overlay_.labels.push_back(
+        render::OverlayLabel{tokens_.textFaint.rgba(), left + kBarWidth - 26.0f, baseline, 9.5f,
+                             true, trimmed(whole, 3) + " " + std::string(unit.suffix)});
 }
 
 void MapCanvas::buildNorthArrow()
 {
     if (!look_.north) return;
 
-    // Up IS north. The view has no rotation yet, so the arrow is drawn straight
-    // and this comment is the note that will need changing the day it does.
-    const auto x = static_cast<float>(width() - 26);
-    const auto y = static_cast<float>(look_.ruler ? look_.ruler_px + 30 : 30);
+    // design.md §7: a 74 px disc at the bottom right of the drawing. Up IS north
+    // — the view has no rotation yet, so the arrow is drawn straight and this
+    // comment is the note that will need changing the day it does.
+    constexpr float kRadius   = 37.0f;
+    constexpr float kFromEdge = 15.0f;
+    constexpr float kFromFoot = 53.0f;
 
-    render::OverlayBatch& arrow = nextBatch(palette_.gridMajor.rgba(), 1.4f, false);
-    addRun(arrow, {{x, y - 14.0f}, {x - 6.0f, y + 10.0f}, {x, y + 4.0f}, {x + 6.0f, y + 10.0f}},
+    const float cx  = static_cast<float>(width()) - kFromEdge - kRadius;
+    const float cy  = static_cast<float>(height()) - kFromFoot - kRadius;
+    const auto band = static_cast<float>(look_.ruler ? look_.ruler_px : 0);
+    if (cx - kRadius < band || cy - kRadius < band) return;
+
+    render::OverlayBatch& disc = nextBatch(
+        tokens_.border.rgba(), 1.0f, false,
+        QColor(tokens_.bgSunken.red(), tokens_.bgSunken.green(), tokens_.bgSunken.blue(), 90)
+            .rgba());
+    addCircle(disc, cx, cy, kRadius);
+
+    // A slim needle with a notched tail: the cartographic north mark, not a
+    // solid triangle, so it reads as an instrument rather than as a cursor.
+    render::OverlayBatch& needle = nextBatch(tokens_.readoutDim.rgba(), 1.4f, false);
+    addRun(needle,
+           {{cx, cy - 17.0f}, {cx + 8.0f, cy + 9.0f}, {cx, cy + 3.0f}, {cx - 8.0f, cy + 9.0f}},
            true);
+
     overlay_.labels.push_back(
-        render::OverlayLabel{palette_.gridMajor.rgba(), x - 4.0f, y + 24.0f, 0.0f, "K"});
+        render::OverlayLabel{tokens_.textFaint.rgba(), cx - 3.0f, cy + 24.0f, 10.0f, false, "K"});
+}
+
+void MapCanvas::buildZoomStack()
+{
+    // design.md §7: three 28 px marks at the top right of the drawing — in, out,
+    // fit. They are DRAWN rather than made of buttons because they sit over the
+    // canvas: a widget there would take the wheel and the drag away from it.
+    constexpr float kBox      = 28.0f;
+    constexpr float kFromEdge = 16.0f;
+
+    const auto band  = static_cast<float>(look_.ruler ? look_.ruler_px : 0);
+    const float left = static_cast<float>(width()) - kFromEdge - kBox;
+    const float top  = band + kFromEdge;
+    if (left <= band) return;
+
+    zoom_stack_ = QRectF(static_cast<double>(left), static_cast<double>(top),
+                         static_cast<double>(kBox), static_cast<double>(kBox * 3.0f));
+
+    render::OverlayBatch& panel = nextBatch(
+        tokens_.border.rgba(), 1.0f, false,
+        QColor(tokens_.bgSunken.red(), tokens_.bgSunken.green(), tokens_.bgSunken.blue(), 230)
+            .rgba());
+    addRun(panel,
+           {{left, top},
+            {left + kBox, top},
+            {left + kBox, top + kBox * 3.0f},
+            {left, top + kBox * 3.0f}},
+           true);
+
+    render::OverlayBatch& rules = nextBatch(tokens_.lineSoft.rgba(), 1.0f, false);
+    for (int i = 1; i < 3; ++i) {
+        const float y = top + kBox * static_cast<float>(i);
+        addRun(rules, {{left, y}, {left + kBox, y}}, false);
+    }
+
+    // `+`, `−` and a frame: three marks a user recognises without a tooltip.
+    render::OverlayBatch& marks = nextBatch(tokens_.readoutDim.rgba(), 1.3f, false);
+    const float cx              = left + kBox * 0.5f;
+
+    const float in = top + kBox * 0.5f;
+    addRun(marks, {{cx - 5.0f, in}, {cx + 5.0f, in}}, false);
+    addRun(marks, {{cx, in - 5.0f}, {cx, in + 5.0f}}, false);
+
+    const float out = top + kBox * 1.5f;
+    addRun(marks, {{cx - 5.0f, out}, {cx + 5.0f, out}}, false);
+
+    const float fit = top + kBox * 2.5f;
+    for (int q = 0; q < 4; ++q) {
+        const float sx = (q & 1) ? -1.0f : 1.0f;
+        const float sy = (q & 2) ? -1.0f : 1.0f;
+        const float ox = cx + sx * 6.0f;
+        const float oy = fit + sy * 5.0f;
+        addRun(marks, {{ox - sx * 3.0f, oy}, {ox, oy}, {ox, oy - sy * 3.0f}}, false);
+    }
 }
 
 void MapCanvas::buildReadout()
@@ -578,8 +717,8 @@ void MapCanvas::buildReadout()
     const std::string text = "S " + trimmed(static_cast<double>(at.x) / 1000.0, 3) + "   Y " +
                              trimmed(static_cast<double>(at.y) / 1000.0, 3);
 
-    overlay_.labels.push_back(render::OverlayLabel{palette_.gridMajor.rgba(), 12.0f,
-                                                   static_cast<float>(height() - 4), 0.0f, text});
+    overlay_.labels.push_back(render::OverlayLabel{
+        palette_.gridMajor.rgba(), 12.0f, static_cast<float>(height() - 4), 0.0f, true, text});
 }
 
 void MapCanvas::buildCrosshair()
@@ -685,6 +824,7 @@ void MapCanvas::buildOverlay()
     buildRuler();
     buildScaleBar();
     buildNorthArrow();
+    buildZoomStack();
     buildReadout();
     buildCrosshair();
     buildSnapMarker();
@@ -695,7 +835,7 @@ void MapCanvas::buildOverlay()
     if (!debug_hud_) return;
 
     overlay_.labels.push_back(
-        render::OverlayLabel{palette_.hud.rgba(), 8.0f, 22.0f, 0.0f,
+        render::OverlayLabel{palette_.hud.rgba(), 8.0f, 22.0f, 0.0f, true,
                              QStringLiteral("%1  |  %2 nesne  |  %3 tepe  |  %4 elenen  |  %5 µs")
                                  .arg(backendName())
                                  .arg(draw_.entity_count)

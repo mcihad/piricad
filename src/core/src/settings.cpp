@@ -223,6 +223,11 @@ std::uint64_t SettingValue::fold(std::uint64_t seed) const
 
 // -------------------------------------------------------------- catalog -----
 
+void SettingCatalog::add_section(SettingSection s)
+{
+    sections_.push_back(std::move(s));
+}
+
 Status SettingCatalog::add(SettingSpec s)
 {
     if (s.id.empty()) return err(ErrorCode::InvalidArgument, "Ayar kimliği boş olamaz.");
@@ -344,6 +349,7 @@ PIRICAD_SETTING(vektor_kutuphanesi)
                    "ve iki yol birlikte sığmaz. Boş bırakılırsa yalnız resimli paket "
                    "yüklenir. Hangi paketin kurulu olduğu makineye ait olduğu için "
                    "uygulama kapsamındadır.",
+        .section = "Veri Kaynakları", // ui-label
     };
 }
 
@@ -462,6 +468,7 @@ PIRICAD_SETTING(yakalama_uzanti)
                     "başına o kenarı hiç bulamaz. 0 yazılırsa üç mod da maskede açık "
                     "olsa bile çalışmaz. Görüşe bağlı bir tercih olduğu için uygulama "
                     "kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -478,6 +485,7 @@ PIRICAD_SETTING(yakalama_isaret_boyu)
         .unit     = "piksel",
         .summary  = "Yakalama işaretinin kenar uzunluğu, ekran pikseli. Ekrana ait bir "
                     "ölçü olduğu için uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -494,6 +502,7 @@ PIRICAD_SETTING(yakalama_isaret_rengi)
         .unit     = "0xAARRGGBB",
         .summary  = "Yakalama işaretinin rengi. 0 yazılırsa temanın kendi rengi kullanılır. "
                     "Ekrana ait olduğu için uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -511,6 +520,7 @@ PIRICAD_SETTING(yakalama_ipucu)
         .summary  = "Yakalama işaretinin yanında hangi modun tuttuğunu yazar ('uç nokta', "
                     "'uzantı'). Kapatılırsa yalnızca işaret çizilir. Ekrana ait olduğu "
                     "için uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -529,6 +539,7 @@ PIRICAD_SETTING(izgara_rengi)
         .unit     = "0xAARRGGBB",
         .summary  = "Ara ızgara çizgilerinin rengi. 0 yazılırsa temanın kendi rengi "
                     "kullanılır. Çizime girmediği için uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -545,6 +556,7 @@ PIRICAD_SETTING(izgara_ana_rengi)
         .unit     = "0xAARRGGBB",
         .summary  = "Ana ızgara çizgilerinin rengi. 0 yazılırsa temanın kendi rengi "
                     "kullanılır. Çizime girmediği için uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -563,6 +575,7 @@ PIRICAD_SETTING(izgara_adimi_y)
         .summary  = "İkinci eksende ızgara adımı, zeminde milimetre. 0 yazılırsa ızgara "
                     "karedir ve 'ızgara_adımı' iki eksende de geçerlidir. Çizime "
                     "girmediği için uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -581,22 +594,25 @@ PIRICAD_SETTING(cetvel_gorunur)
         .unit     = "",
         .summary  = "Tuvalin üstünde ve solunda cetvel şeridi çizilir. Çizime girmediği "
                     "için uygulama kapsamındadır.",
+        .section  = "Görünüm ve Tema", // ui-label
     };
 }
 
 PIRICAD_SETTING(cetvel_kalinligi)
 {
     return SettingSpec{
-        .id       = "core.cetvel.kalinlik",
-        .names    = {"cetvel_kalınlığı", "cetvel_kalinligi", "rulersize"},
-        .type     = SettingType::Int,
-        .scope    = SettingScope::App,
-        .fallback = SettingValue::integer(22),
+        .id    = "core.cetvel.kalinlik",
+        .names = {"cetvel_kalınlığı", "cetvel_kalinligi", "rulersize"},
+        .type  = SettingType::Int,
+        .scope = SettingScope::App,
+        // 20, which is what design.md 7 draws and what the reference measures.
+        .fallback = SettingValue::integer(20),
         .range    = SettingRange::between(12, 64),
         .values   = {},
         .unit     = "piksel",
         .summary  = "Cetvel şeridinin kalınlığı, ekran pikseli. Ekrana ait bir ölçü "
                     "olduğu için uygulama kapsamındadır.",
+        .section  = "Görünüm ve Tema", // ui-label
     };
 }
 
@@ -614,6 +630,7 @@ PIRICAD_SETTING(cetvel_birimi)
         .summary  = "Cetvelin rakamlarının birimi. Zemin ölçüsünü nasıl okuduğunuzla "
                     "ilgilidir, çizimin kendi birimini değiştirmez; bu yüzden uygulama "
                     "kapsamındadır.",
+        .section  = "Görünüm ve Tema", // ui-label
     };
 }
 
@@ -632,6 +649,7 @@ PIRICAD_SETTING(harita_olcek_cubugu)
         .unit     = "",
         .summary  = "Tuvalin köşesinde, o anki yakınlaştırmaya göre bir ölçek çubuğu "
                     "çizilir. Çizime girmediği için uygulama kapsamındadır.",
+        .section  = "Görünüm ve Tema", // ui-label
     };
 }
 
@@ -648,6 +666,7 @@ PIRICAD_SETTING(harita_kuzey_oku)
         .unit     = "",
         .summary  = "Tuvalin köşesinde kuzey oku çizilir. Çizime girmediği için uygulama "
                     "kapsamındadır.",
+        .section  = "Görünüm ve Tema", // ui-label
     };
 }
 
@@ -664,6 +683,7 @@ PIRICAD_SETTING(harita_koordinat)
         .unit     = "",
         .summary  = "İmlecin bulunduğu noktanın sağa/yukarı değeri tuvalde gösterilir. "
                     "Çizime girmediği için uygulama kapsamındadır.",
+        .section  = "Görünüm ve Tema", // ui-label
     };
 }
 
@@ -680,6 +700,7 @@ PIRICAD_SETTING(harita_imlec)
         .unit     = "",
         .summary  = "Nişan imlecinin biçimi: tuvali baştan başa geçen çizgiler, kısa bir "
                     "artı, ya da hiç. Ekrana ait olduğu için uygulama kapsamındadır.",
+        .section  = "Görünüm ve Tema", // ui-label
     };
 }
 
@@ -696,6 +717,7 @@ PIRICAD_SETTING(harita_imlec_boyu)
         .unit     = "piksel",
         .summary  = "Kısa imlecin kol uzunluğu, ekran pikseli. 'imleç' ayarı 'kısa' iken "
                     "kullanılır. Ekrana ait olduğu için uygulama kapsamındadır.",
+        .section  = "Görünüm ve Tema", // ui-label
     };
 }
 
@@ -712,6 +734,7 @@ PIRICAD_SETTING(harita_yakinlastirma)
         .unit     = "%",
         .summary  = "Farenin her tekerlek çentiğinde ölçeğin yüzde kaç değişeceği. "
                     "Ekrana ait bir tercih olduğu için uygulama kapsamındadır.",
+        .section  = "Görünüm ve Tema", // ui-label
     };
 }
 
@@ -728,6 +751,7 @@ PIRICAD_SETTING(harita_tekerlek_ters)
         .unit     = "",
         .summary  = "Tekerleği ileri itmek uzaklaştırır. Ekrana ait bir tercih olduğu için "
                     "uygulama kapsamındadır.",
+        .section  = "Görünüm ve Tema", // ui-label
     };
 }
 
@@ -744,6 +768,7 @@ PIRICAD_SETTING(secim_rengi)
         .unit     = "0xAARRGGBB",
         .summary  = "Seçili nesnelerin vurgulanma rengi. 0 yazılırsa temanın kendi rengi "
                     "kullanılır. Çizime girmediği için uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -761,6 +786,7 @@ PIRICAD_SETTING(secim_vurgu_rengi)
         .summary  = "İmlecin üzerinde durduğu nesnenin vurgulanma rengi. 0 yazılırsa "
                     "temanın kendi rengi kullanılır. Çizime girmediği için uygulama "
                     "kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -782,6 +808,7 @@ PIRICAD_SETTING(plan_olcegi)
                     "bir sınır 1/1000'de 0,5 m, 1/5000'de 2,5 m'dir. Çizimin kendi "
                     "özelliğidir ve dosyayla birlikte gider, bu yüzden proje "
                     "kapsamındadır.",
+        .section  = "Plot ve Çıktı", // ui-label
     };
 }
 
@@ -800,6 +827,7 @@ PIRICAD_SETTING(aci_birimi)
                     "nirengi, poligon ve aplikasyon hesapları grad ile yürür ve tam daire "
                     "400'dür. Belgenin sayılarının nasıl okunacağını söylediği için proje "
                     "kapsamındadır.",
+        .section  = "Genel", // ui-label
     };
 }
 
@@ -817,6 +845,7 @@ PIRICAD_SETTING(alan_birimi)
         .summary  = "Alanların yazıldığı birim. Tapu ve kadastro metrekare yazar, imar "
                     "uygulamaları dekar ile konuşur (1 dekar = 1000 m²). Belgenin "
                     "sayılarının nasıl okunacağını söylediği için proje kapsamındadır.",
+        .section  = "Genel", // ui-label
     };
 }
 
@@ -839,6 +868,7 @@ PIRICAD_SETTING(sembol_kutuphanesi)
                    "Kapsamı uygulama, çünkü hangi paketin kurulu olduğu makineye aittir, "
                    "çizime değil: bir çizim kullandığı sembolleri kendi içinde taşır ve "
                    "rafı boş bir makinede de aynı açılır. Boş bırakılırsa raf boş başlar.",
+        .section = "Veri Kaynakları", // ui-label
     };
 }
 
@@ -855,6 +885,7 @@ PIRICAD_SETTING(koordinat_sistemi)
         .unit     = "",
         .summary  = "Projenin koordinat sistemi. Dışa aktarılan her koordinat bu sisteme "
                     "göre yazıldığı için proje kapsamındadır.",
+        .section  = "Koordinat Sistemleri", // ui-label
     };
 }
 
@@ -871,6 +902,7 @@ PIRICAD_SETTING(koordinat_hassasiyeti)
         .unit     = "hane",
         .summary  = "Koordinat cetvellerinde yazılan ondalık hane sayısı. Görüntüleme gibi "
                     "durur ama imzalanan cetvelin baytını değiştirir, bu yüzden projededir.",
+        .section  = "Koordinat Sistemleri", // ui-label
     };
 }
 
@@ -887,6 +919,7 @@ PIRICAD_SETTING(cizim_birimi)
         .unit     = "",
         .summary  = "Uzunlukların yazıldığı birim. Dışa aktarılan dosyadaki sayıların "
                     "anlamını belirlediği için proje kapsamındadır.",
+        .section  = "Genel", // ui-label
     };
 }
 
@@ -903,6 +936,7 @@ PIRICAD_SETTING(cizgi_tipi_olcegi)
         .unit     = "‰",
         .summary  = "Kesikli çizgi deseninin ölçeği, binde cinsinden (1000 = 1,000 kat). "
                     "Paftadaki çizgi görünümünü değiştirdiği için proje kapsamındadır.",
+        .section  = "Genel", // ui-label
     };
 }
 
@@ -919,6 +953,7 @@ PIRICAD_SETTING(metin_yuksekligi)
         .unit     = "mm",
         .summary  = "Varsayılan yazı yüksekliği, zeminde milimetre. Paftaya basılan her "
                     "yazının boyu olduğu için proje kapsamındadır.",
+        .section  = "Genel", // ui-label
     };
 }
 
@@ -946,6 +981,7 @@ PIRICAD_SETTING(veri_paketi_surumu)
                     "mevzuat sürümüne dayandığı belgenin kendi bilgisidir, bu yüzden "
                     "proje kapsamındadır; varsayılanı yoktur, boş bir değer "
                     "'dayanağı bilinmiyor' demektir.",
+        .section  = "Veri Kaynakları", // ui-label
     };
 }
 
@@ -970,6 +1006,7 @@ PIRICAD_SETTING(dugum_toleransi)
                     "yakın iki köşe aynı nokta sayılır; ifraz, tevhit ve topoloji "
                     "denetiminin sonucunu değiştirdiği için proje kapsamındadır. "
                     "Varsayılan 10 mm = 1 cm.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -987,6 +1024,7 @@ PIRICAD_SETTING(en_kucuk_alan)
         .summary  = "Kırpıntı poligon eşiği, milimetrekare (500000 = 0,5 m²). Bu alandan "
                     "küçük artık yüzeyler topoloji denetiminde kırpıntı olarak raporlanır. "
                     "Denetim çıktısını değiştirdiği için proje kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -1005,6 +1043,7 @@ PIRICAD_SETTING(tema)
         .unit     = "",
         .summary  = "Arayüz teması. Yalnızca ekranı etkiler, dışa aktarılan hiçbir baytı "
                     "değiştirmez; bu yüzden uygulama kapsamındadır.",
+        .section  = "Görünüm ve Tema", // ui-label
     };
 }
 
@@ -1021,6 +1060,7 @@ PIRICAD_SETTING(dil)
         .unit     = "",
         .summary  = "Arayüz dili. Kullanıcıya ait bir tercihtir; çizimin verisiyle ilgisi "
                     "olmadığı için uygulama kapsamındadır.",
+        .section  = "Görünüm ve Tema", // ui-label
     };
 }
 
@@ -1037,6 +1077,7 @@ PIRICAD_SETTING(otomatik_kayit)
         .unit     = "sn",
         .summary  = "Otomatik kayıt aralığı, saniye; 0 kapatır. Ne zaman kaydedildiği "
                     "belgenin içeriğini değiştirmediği için uygulama kapsamındadır.",
+        .section  = "Genel", // ui-label
     };
 }
 
@@ -1053,6 +1094,7 @@ PIRICAD_SETTING(son_dosya_sayisi)
         .unit     = "adet",
         .summary  = "Dosya menüsünde tutulan son dosya sayısı. Makineye ait bir listedir, "
                     "bu yüzden uygulama kapsamındadır.",
+        .section  = "Genel", // ui-label
     };
 }
 
@@ -1069,6 +1111,7 @@ PIRICAD_SETTING(tuval_arkaplani)
         .unit     = "0xAARRGGBB",
         .summary  = "Tuval arka plan rengi, 0xAARRGGBB düzeninde tam sayı (onaltılık de "
                     "yazılabilir). Ekranda görünür, paftaya basılmaz; uygulama kapsamındadır.",
+        .section  = "Görünüm ve Tema", // ui-label
     };
 }
 
@@ -1091,6 +1134,7 @@ PIRICAD_SETTING(izgara_gorunur)
         .summary  = "Izgaranın çizilip çizilmeyeceği. Ekranda görünür, paftaya basılmaz; "
                     "kullanıcıya ait bir görünüm tercihi olduğu için uygulama "
                     "kapsamındadır. Kısayol: F7.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -1109,6 +1153,7 @@ PIRICAD_SETTING(izgara_modu)
                     "adımlarından okunabilir olanı seçer; 'sabit' her ölçekte "
                     "ızgara_adımı değerini kullanır. Paftaya basılmayan bir görünüm "
                     "tercihi olduğu için uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -1127,6 +1172,7 @@ PIRICAD_SETTING(izgara_adimi)
                     "ızgara_modu 'sabit' iken kullanılır. Ekrandaki aralık 2 pikselin "
                     "altına düşerse ızgara o ölçekte çizilmez. Çizime girmediği için "
                     "uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -1144,6 +1190,7 @@ PIRICAD_SETTING(izgara_ana_cizgi)
         .summary  = "Kaç ara çizgide bir koyu ana çizgi çizileceği (5 = her beşinci). "
                     "1 verilirse bütün çizgiler ana çizgi olur. Yalnızca ekranı "
                     "ilgilendirdiği için uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -1162,6 +1209,7 @@ PIRICAD_SETTING(yakalama_toleransi)
                     "pikseldir: kullanıcı ekrana bakarak nişan alır, bu yüzden tolerans "
                     "yakınlaştırma ile birlikte değişmelidir. Ele ve ekrana ait bir "
                     "büyüklük olduğu için uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -1180,6 +1228,7 @@ PIRICAD_SETTING(secim_toleransi)
                     "yakınındaki nesne tıklamayla seçilir. Yakalama toleransından ayrı "
                     "tutulur: nişan almak seçmekten daha geniş bir alan ister. Ele ve "
                     "ekrana ait bir büyüklük olduğu için uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -1198,6 +1247,7 @@ PIRICAD_SETTING(yakalama_modlari)
         .unit     = "bit maskesi",
         .summary  = "Etkin nesne yakalama modları, bit maskesi. Yakalama çizimi değil "
                     "çizme biçimini etkilediği için oturum kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -1214,6 +1264,7 @@ PIRICAD_SETTING(dik_mod)
         .unit     = "",
         .summary  = "Dik mod: imleci yatay ve düşey eksene kilitler. Girdi yardımıdır, "
                     "kaydedilmez; oturum kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -1230,6 +1281,7 @@ PIRICAD_SETTING(kutupsal_aci)
         .unit     = "µderece",
         .summary  = "Kutupsal izleme açı adımı, mikro derece (45000000 = 45°). Girdi "
                     "yardımıdır, kaydedilmez; oturum kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -1248,6 +1300,7 @@ PIRICAD_SETTING(izgaraya_yakala)
                     "oturtur. Izgaranın görünür olması şart değildir. Girdi yardımıdır, "
                     "dik mod ve kutupsal izleme ile aynı sırada oturum kapsamındadır. "
                     "Kısayol: F9.",
+        .section  = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -1289,6 +1342,7 @@ PIRICAD_SETTING(veritabani_sunucu)
         .unit     = "",
         .summary  = "PostGIS sunucusunun adresi. Hangi sunucuya bağlanıldığı makineye ait "
                     "bir bilgidir, çizime değil; bu yüzden uygulama kapsamındadır.",
+        .section  = "Veri Kaynakları", // ui-label
     };
 }
 
@@ -1306,6 +1360,7 @@ PIRICAD_SETTING(veritabani_port)
         .summary  = "PostgreSQL sunucusunun portu. Öntanımlı 5432, PostgreSQL'in kendi "
                     "öntanımlı portudur. Sunucu adresiyle birlikte makineye ait olduğu "
                     "için uygulama kapsamındadır.",
+        .section  = "Veri Kaynakları", // ui-label
     };
 }
 
@@ -1324,6 +1379,7 @@ PIRICAD_SETTING(veritabani_ad)
                     "kabul edilir; libpq'nun kendi kuralıdır. Hangi veritabanına "
                     "bağlanıldığı çizimin verisi değil kurulumun bilgisidir, bu yüzden "
                     "uygulama kapsamındadır.",
+        .section  = "Veri Kaynakları", // ui-label
     };
 }
 
@@ -1342,7 +1398,43 @@ PIRICAD_SETTING(veritabani_kullanici)
                     "makineye aittir, çizime değil; bu yüzden uygulama kapsamındadır. "
                     "Parola BURADA TUTULMAZ: ayar dosyası düz metindir. Parolayı "
                     "~/.pgpass dosyasına ya da PGPASSWORD ortam değişkenine koyun.",
+        .section  = "Veri Kaynakları", // ui-label
     };
+}
+
+// ---- the pages of the settings window, design.md 10 --------------------------
+//
+// Declared HERE, beside the settings, because the window is generated from the
+// catalogue and a page list kept in the dialog would be a second list (5.10).
+// A page with no settings yet is still declared: 11.8 forbids pretending, so it
+// names its phase and says on its own page what will be on it.
+void register_sections(SettingCatalog& into)
+{
+    into.add_section({"Genel", "", ""});
+    into.add_section({"Görünüm ve Tema", "", ""});
+    into.add_section({"Çizim ve Yakalama", "", ""});
+    into.add_section({"Koordinat Sistemleri", "", ""});
+    into.add_section({"Veri Kaynakları", "", ""});
+    into.add_section({"Plot ve Çıktı", "", ""});
+    into.add_section({"Etiketleme", "Faz 2",
+                      "Etiket yerleşimi, çakışma çözümü ve ölçek aralıkları buraya gelecek. "
+                      "Bugün etiketler ETİKET komutuyla yazılır."});
+    into.add_section({"Kısayollar", "Faz 2",
+                      "Her komuta klavye kısayolu atama buraya gelecek. Bugün kısayollar "
+                      "menülerde yazılıdır ve komut satırı her komuta zaten adıyla erişir."});
+    into.add_section({"Eklentiler", "Faz 3",
+                      "C99 ABI eklenti yöneticisi buraya gelecek; imza doğrulama ve yetenek "
+                      "kısıtları dahil (plugin-api.md)."});
+    into.add_section({"Performans ve GPU", "Faz 1",
+                      "QRhi arka ucu, kare bütçesi ve LOD eşikleri buraya gelecek. Bugün çizim "
+                      "QPainter ile yapılıyor (CLAUDE.md 8.1)."});
+    into.add_section({"Klasörler ve Şablonlar", "Faz 2",
+                      "Varsayılan proje klasörü, şablon ve pafta çerçevesi yolları buraya "
+                      "gelecek."});
+    into.add_section({"Ağ ve Kimlik", "Faz 3",
+                      "Kurumsal servis kimlikleri ve vekil sunucu ayarları buraya gelecek. "
+                      "Hangi servislerin destekleneceği veri paketlerinde bildirilir, burada "
+                      "değil."});
 }
 
 const SettingCatalog& builtin_settings()
@@ -1355,6 +1447,7 @@ const SettingCatalog& builtin_settings()
     if (auto st = c.add(piricad_setting_##sym()); !st) c.record_failure(st.error().message);
         PIRICAD_BUILTIN_SETTINGS(PIRICAD_REGISTER)
 #undef PIRICAD_REGISTER
+        register_sections(c);
         return c;
     }();
     return catalogue;

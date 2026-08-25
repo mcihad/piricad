@@ -1101,14 +1101,19 @@ private:
             painter.setBrush(Qt::NoBrush);
         }
 
+        const QFont uiFace = painter.font();
         for (const auto& label : overlay.labels) {
             if (label.text.empty()) continue;
 
-            if (label.px > 0.0f) {
-                QFont font = painter.font();
-                font.setPixelSize(static_cast<int>(label.px));
-                painter.setFont(font);
-            }
+            // A ruler division, a coordinate and a measurement are all NUMBERS,
+            // and design.md §3 puts every number in the monospaced face — digits
+            // that line up column-wise are what makes a coordinate readable at a
+            // glance. The label says which face it wants; the backend obeys.
+            QFont font = label.mono ? QFont(QStringLiteral("IBM Plex Mono")) : uiFace;
+            if (label.mono) font.setStyleHint(QFont::Monospace);
+            if (label.px > 0.0f) font.setPixelSize(static_cast<int>(label.px));
+            painter.setFont(font);
+
             painter.setPen(from_rgba(label.rgba));
             painter.drawText(QPointF(static_cast<double>(label.x), static_cast<double>(label.y)),
                              QString::fromStdString(label.text));

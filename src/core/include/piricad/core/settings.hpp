@@ -231,6 +231,33 @@ struct SettingSpec
     std::vector<std::string> values;       ///< Enum value names, index order
     std::string unit;                      ///< "mm", "µderece", "‰", "sn" — empty when unitless
     std::string summary;                   ///< one line, Turkish, and it justifies the scope (R40)
+
+    /// The page of the settings window this belongs on, in Turkish.
+    ///
+    /// DECLARED HERE, NOT MAPPED IN THE DIALOG. `design.md` §10 groups settings
+    /// by what a user is trying to do — "Çizim ve Yakalama" holds both the grid
+    /// and the object snap — and the id's own namespace groups them by what owns
+    /// them. Those are different questions and neither answers the other, so the
+    /// page is stated on the setting and the window is generated from it
+    /// (CLAUDE.md 5.10: no second list anywhere).
+    ///
+    /// Empty means "put it on the page its namespace names", which is what every
+    /// setting did before this field existed.
+    std::string section;
+};
+
+/// One page of the settings window, declared beside the settings themselves.
+///
+/// The window is generated from this list, so the pages a user sees are the
+/// pages the catalogue declares — including the ones that hold nothing yet. A
+/// page with no settings is not hidden: `design.md` §10 draws it and §11.8
+/// forbids pretending a feature exists, so it names the phase it arrives in and
+/// says so on its own page.
+struct SettingSection
+{
+    std::string title; ///< Turkish, as the list and the page heading print it
+    std::string phase; ///< empty when the page has settings today
+    std::string note;  ///< one line, Turkish: what will be here, and when
 };
 
 /// Declares the factory for one built-in setting. The body returns its SettingSpec.
@@ -246,6 +273,12 @@ inline constexpr std::uint32_t kNoSetting = 0xFFFFFFFFu;
 class SettingCatalog
 {
 public:
+    /// The pages of the settings window, in the order they are shown.
+    const std::vector<SettingSection>& sections() const noexcept { return sections_; }
+
+    /// Declares one page. Called once, from the same list the settings are.
+    void add_section(SettingSection s);
+
     /// Records a registration failure, and is the ONLY reason this object is not
     /// const from birth. core.md P9 bans a logging sink in core, so a built-in
     /// setting that will not register cannot be whispered to a stream at
@@ -279,6 +312,7 @@ private:
     // a linear scan beats a hash lookup at this size, and iteration order is fixed
     // instead of depending on the hash function (core.md P11).
     std::vector<SettingSpec> specs_;
+    std::vector<SettingSection> sections_;
     std::vector<std::string> alias_;   ///< as declared, for suggestions
     std::vector<std::string> folded_;  ///< turkish_fold_key(alias_), for lookup
     std::vector<std::uint32_t> owner_; ///< spec index of each alias

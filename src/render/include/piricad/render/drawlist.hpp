@@ -193,6 +193,7 @@ struct OverlayLabel
     std::uint32_t rgba{0xFFFFFFFFu}; ///< ink colour
     float x{0.0f}, y{0.0f};          ///< widget pixels; y is the text baseline
     float px{0.0f};                  ///< 0 = the backend's default UI font size
+    bool mono{false};                ///< draw in the monospaced face, not the UI one
     std::string text;                ///< copied, like every string in a draw list
 };
 
