@@ -8,6 +8,7 @@
 #include <QByteArray>
 #include <QImageReader>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPixmap>
 
 #include <algorithm>
@@ -168,10 +169,18 @@ render::DrawList build(const core::Symbol& symbol, const core::ImageStore& image
     list.order.resize(count);
 
     // Centre-relative with y UP, which is what a draw list holds; the backend
-    // turns it into widget pixels. The inset keeps a wide stroke inside the
-    // swatch instead of clipped at its edge.
-    const float w = static_cast<float>(size.width()) * 0.5f - 3.0f;
-    const float h = static_cast<float>(size.height()) * 0.5f - 3.0f;
+    // turns it into widget pixels.
+    //
+    // INSET TO TWO THIRDS in a swatch big enough to be looked at, which is what
+    // the reference draws. Edge to edge, an area gösterim is a rectangle of
+    // colour filling the whole box — indistinguishable from a background, and
+    // with no ground visible around it there is nothing to read a translucent
+    // fill against. A list icon keeps the old tight inset: at 44 px there is no
+    // room to give any of it away.
+    const bool roomy  = size.width() >= 120;
+    const float inset = roomy ? 0.68f : 1.0f;
+    const float w     = static_cast<float>(size.width()) * 0.5f * inset - 3.0f;
+    const float h     = static_cast<float>(size.height()) * 0.5f * inset - 3.0f;
 
     // A CORNER OR A LENGTH, whichever the swatch has room for.
     //
@@ -262,24 +271,69 @@ PreviewShape natural_shape(const core::Symbol& symbol)
     return PreviewShape::Point;
 }
 
+/// The two-tone lattice a translucent fill is read against.
+///
+/// Eight logical pixels, which is fine enough to read as a texture and coarse
+/// enough that a hatch at any plausible spacing is still distinguishable from it.
+void paint_checker(QImage& canvas, std::uint32_t background, qreal dpr)
+{
+    const QColor base  = QColor::fromRgba(static_cast<QRgb>(background));
+    const QColor other = base.lightnessF() > 0.5f ? base.darker(106) : base.lighter(118);
+
+    QPainter p(&canvas);
+    p.setRenderHint(QPainter::Antialiasing, false);
+    p.scale(dpr, dpr);
+    p.fillRect(QRect(0, 0, canvas.width(), canvas.height()), base);
+
+    constexpr int kCell = 8;
+    const int w         = static_cast<int>(canvas.width() / dpr);
+    const int h         = static_cast<int>(canvas.height() / dpr);
+
+    // Clipped to the rounded panel, so the lattice stops where the swatch does
+    // rather than running into the dialog behind it.
+    QPainterPath panel;
+    panel.addRoundedRect(QRectF(0.5, 0.5, w - 1.0, h - 1.0), 5.0, 5.0);
+    p.setClipPath(panel);
+
+    p.setPen(Qt::NoPen);
+    p.setBrush(other);
+    for (int y = 0; y < h; y += kCell)
+        for (int x = (y / kCell % 2) * kCell; x < w; x += kCell * 2)
+            p.drawRect(x, y, kCell, kCell);
+
+    // The outline the reference draws around the swatch: without it a dark
+    // checkerboard on a dark dialog has no edge and the preview has no shape.
+    p.setClipping(false);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    p.setBrush(Qt::NoBrush);
+    p.setPen(QPen(base.lightnessF() > 0.5f ? base.darker(118) : base.lighter(150), 1.0));
+    p.drawPath(panel);
+}
+
 QImage symbol_preview(const core::Symbol& symbol, const core::ImageStore& images,
                       const core::DashStore& dashes, QSize size, std::uint32_t background,
-                      PreviewShape shape)
+                      PreviewShape shape, PreviewGround ground, qreal dpr)
 {
     if (symbol.layers.empty() || size.isEmpty()) return {};
 
-    QImage canvas(size, QImage::Format_ARGB32_Premultiplied);
+    QImage canvas(size * dpr, QImage::Format_ARGB32_Premultiplied);
+    canvas.setDevicePixelRatio(dpr);
     canvas.fill(Qt::transparent);
+
+    if (ground == PreviewGround::Checker) paint_checker(canvas, background, dpr);
 
     render::DrawList list = build(symbol, images, dashes, size, shape);
 
     render::Overlay overlay;
-    overlay.background_rgba = background;
+
+    // A checkerboard is already down; asking the backend to clear would paint
+    // over it. Zero alpha means "leave what is there".
+    overlay.background_rgba = ground == PreviewGround::Checker ? 0u : background;
 
     render::FrameContext ctx;
     ctx.width_px           = size.width();
     ctx.height_px          = size.height();
-    ctx.device_pixel_ratio = 1.0f;
+    ctx.device_pixel_ratio = static_cast<float>(dpr);
     ctx.target             = static_cast<QPaintDevice*>(&canvas);
 
     // A fresh backend per call rather than one kept alive: a preview is drawn when

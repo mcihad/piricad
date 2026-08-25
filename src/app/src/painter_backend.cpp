@@ -236,7 +236,13 @@ public:
         if (device == nullptr) return;
 
         QPainter painter(device);
-        painter.fillRect(0, 0, ctx.width_px, ctx.height_px, from_rgba(overlay.background_rgba));
+
+        // A FULLY TRANSPARENT background means "leave what is already there", and
+        // the symbol preview relies on it: it paints its own checkerboard first
+        // and a clear here would cover it. Every other caller passes an opaque
+        // colour, so the canvas still starts from a known ground each frame.
+        if ((overlay.background_rgba >> 24) != 0)
+            painter.fillRect(0, 0, ctx.width_px, ctx.height_px, from_rgba(overlay.background_rgba));
         painter.setRenderHint(QPainter::Antialiasing, true);
 
         // Document coordinates arrive centre-relative with y UP; widget pixels run

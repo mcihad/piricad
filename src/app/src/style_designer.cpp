@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/app/style_designer.hpp"
 
+#include "piricad/app/tokens.hpp"
+
 #include "piricad/app/controller.hpp"
 
 #include "piricad/command/bus.hpp"
@@ -322,7 +324,7 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
 
     preview_ = new QLabel(previewFrame);
     preview_->setAlignment(Qt::AlignCenter);
-    preview_->setMinimumHeight(96);
+    preview_->setMinimumHeight(180);
     preview_->setObjectName(QStringLiteral("stylePreviewImage"));
     preview_->setAccessibleName(tr("Katman stili ön izlemesi"));
     preview_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
@@ -532,6 +534,11 @@ void StyleDesigner::applyTheme(ThemeMode mode)
 {
     DialogFrame::applyTheme(mode);
     if (sections_) sections_->applyTheme(mode);
+
+    // The swatch's checkerboard is drawn from the tokens, so it has to be drawn
+    // again when they change — a dark lattice under a light dialog is exactly the
+    // kind of leftover a theme switch is meant not to produce.
+    if (preview_) updatePreview();
 }
 
 void StyleDesigner::updateHeaderNote()
@@ -1457,19 +1464,28 @@ void StyleDesigner::updatePreview()
                                          ? controller_.document().images()
                                          : controller_.bus().style_library().images();
 
-    // Rendered at the width it is SHOWN at, not at whatever the label measured
-    // while the dialog was still being laid out. A preview drawn once at 160 px
-    // and then stretched across a 1100 px window is a picture of a symbol at the
-    // wrong scale, and scale is most of what a hatch or a marker interval says.
-    previewWidth_ = std::max(200, preview_->width() - 12);
-
     const core::DashStore& dashes = galleryCode_.isEmpty()
                                         ? controller_.document().dashes()
                                         : controller_.bus().style_library().dashes();
 
-    const QImage whole = symbol_preview(symbol_, images, dashes, QSize(previewWidth_, 88),
-                                        palette().color(QPalette::Base).rgba(), shape());
-    preview_->setPixmap(QPixmap::fromImage(whole));
+    // A SWATCH, not a band. This used to render across the whole width of the
+    // dialog at 88 px tall, which turned an area gösterim into a stripe of flat
+    // colour a thousand pixels wide — the one control whose job is to show what
+    // the symbol does, showing almost nothing. The reference draws a square, and
+    // a square is what a fill, a hatch and a marker interval are read on.
+    //
+    // Rendered at the DEVICE ratio and on a checkerboard: a translucent fill over
+    // a flat ground is indistinguishable from an opaque paler one, and half of
+    // what a designer is judging here is exactly that.
+    constexpr int kSwatch = 168;
+    previewWidth_         = kSwatch;
+
+    const QImage swatch =
+        symbol_preview(symbol_, images, dashes, QSize(kSwatch, kSwatch),
+                       (theme() == ThemeMode::Dark ? darkTokens() : lightTokens()).bgInput.rgba(),
+                       shape(), PreviewGround::Checker, devicePixelRatioF());
+
+    preview_->setPixmap(QPixmap::fromImage(swatch));
 }
 
 bool StyleDesigner::eventFilter(QObject* watched, QEvent* event)
@@ -1480,9 +1496,9 @@ bool StyleDesigner::eventFilter(QObject* watched, QEvent* event)
     //
     // Only when the width actually moved: `setPixmap` feeds the layout a new size
     // hint, and re-rendering on every pass of that would be a loop.
-    if (watched == preview_ && event->type() == QEvent::Resize &&
-        std::abs(preview_->width() - 12 - previewWidth_) > 2)
-        updatePreview();
+    // The swatch is a fixed size now, so a resize no longer changes what is
+    // drawn — only where it sits, which the label's own alignment handles.
+    (void)watched;
 
     return QDialog::eventFilter(watched, event);
 }

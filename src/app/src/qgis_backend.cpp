@@ -430,8 +430,10 @@ void QgisBackend::render(const render::DrawList& list, const render::Overlay& ov
 
     QPainter painter(device);
     painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.fillRect(0, 0, ctx.width_px, ctx.height_px,
-                     QColor::fromRgba(static_cast<QRgb>(overlay.background_rgba)));
+    // Transparent means "leave what is there" — see the painter backend.
+    if ((overlay.background_rgba >> 24) != 0)
+        painter.fillRect(0, 0, ctx.width_px, ctx.height_px,
+                         QColor::fromRgba(static_cast<QRgb>(overlay.background_rgba)));
 
     QgsRenderContext rc = QgsRenderContext::fromQPainter(&painter);
     rc.setScaleFactor(1.0); // every measure in a pass is already in pixels

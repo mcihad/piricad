@@ -54,9 +54,28 @@ PreviewShape natural_shape(const core::Symbol& symbol);
 /// `images` supplies the bytes a raster layer needs and is borrowed for the call.
 /// An empty symbol produces an empty image rather than a blank one, so a caller
 /// can tell "nothing declared" from "declared and invisible".
+/// What the symbol is drawn ON.
+///
+/// A flat ground is right for a list icon, where the row's own colour is the
+/// context. It is wrong for the DESIGNER's preview: a translucent fill over a
+/// flat ground looks exactly like an opaque paler fill, so the one control that
+/// is supposed to show what the symbol does hides the thing a user most needs to
+/// see. A checkerboard shows through, which is why every image editor has one.
+enum class PreviewGround {
+    Flat,   ///< a single colour; list icons and small swatches
+    Checker ///< a fine two-tone lattice; the designer's own preview
+};
+
+/// Draws the symbol on `shape`, on `ground`.
+///
+/// `dpr` is the device pixel ratio to render at. A preview drawn at 1.0 and shown
+/// on a 2x display is a blurred picture of a symbol whose whole job is to be
+/// looked at closely; this renders at the ratio and tags the image with it, so
+/// Qt maps it one device pixel per rendered pixel.
 QImage symbol_preview(const core::Symbol& symbol, const core::ImageStore& images,
                       const core::DashStore& dashes, QSize size, std::uint32_t background,
-                      PreviewShape shape);
+                      PreviewShape shape, PreviewGround ground = PreviewGround::Flat,
+                      qreal dpr = 1.0);
 
 /// The same picture as an icon, for a tree row or a list item.
 QIcon symbol_icon(const core::Symbol& symbol, const core::ImageStore& images,

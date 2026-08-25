@@ -60,6 +60,9 @@ public:
 
     void applyTheme(ThemeMode mode) override;
 
+    /// The theme this frame is painting in, for a subclass that paints too.
+    ThemeMode theme() const noexcept { return theme_; }
+
 signals:
     /// The help mark in the title bar was pressed.
     void helpRequested();
@@ -93,6 +96,7 @@ class SectionList : public QWidget, public Themed
     Q_INTERFACES(piricad::app::Themed)
 
 public:
+    /// Builds an empty list. Sections are added by the window that owns it.
     explicit SectionList(QWidget* parent = nullptr);
 
     /// Appends a row and returns its index.
