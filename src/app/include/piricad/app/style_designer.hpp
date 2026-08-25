@@ -36,8 +36,11 @@
 #include "piricad/core/style.hpp"
 #include "piricad/core/style_library.hpp"
 
+#include "piricad/app/dialog_chrome.hpp"
+
 #include <QDialog>
 #include <QString>
+#include <QVector>
 
 #include <vector>
 
@@ -63,13 +66,15 @@ namespace piricad::app {
 class Controller;
 
 /// Designs one symbol and applies it to a layer through the command bus.
-class StyleDesigner : public QDialog
+class StyleDesigner : public DialogFrame
 {
     Q_OBJECT
 
 public:
     /// Opens the designer on `layerName`, starting from what that layer draws.
     StyleDesigner(Controller& controller, QString layerName, QWidget* parent = nullptr);
+
+    void applyTheme(ThemeMode mode);
 
     /// The symbol as the user left it.
     const core::Symbol& symbol() const noexcept { return symbol_; }
@@ -90,6 +95,16 @@ private:
 
     // ---- building ----
     QWidget* buildGallery();
+
+    /// design.md §8's renderer row: kind, driving value, and size unit.
+    QWidget* buildRendererRow();
+
+    /// The `Bilgi` page: what this layer is, read from the document.
+    QWidget* buildInfoPage();
+
+    /// A page with nothing behind it yet: the phase it arrives in and one
+    /// line saying what will be on it (§11.8 forbids the present tense).
+    QWidget* buildPendingPage(const QString& phase, const QString& note);
     QWidget* buildTree();
     QWidget* buildGlobal();
     QWidget* buildProperties();
@@ -213,6 +228,14 @@ private:
 
     /// The whole-symbol editors, shown when the root is selected.
     QStackedWidget* pages_{nullptr};
+
+    /// design.md 8's left column and the pages it switches. The renderer page
+    /// holds everything this window used to be; the rest name their phase.
+    SectionList* sections_{nullptr};
+    QComboBox* renderKind_{nullptr};
+    QComboBox* renderValue_{nullptr};
+    QVector<QPushButton*> unitButtons_;
+    QStackedWidget* pageStack_{nullptr};
     QComboBox* globalUnit_{nullptr};
     QToolButton* globalColour_{nullptr};
     QSpinBox* globalWidth_{nullptr};

@@ -874,6 +874,7 @@ void MainWindow::openStyleDesigner(const QString& layerName)
     // what is in it. Everything the dialog changes leaves as a command, so what a
     // user designs here a script can write and the AI can be taught (Article 1.2).
     StyleDesigner designer(*controller_, layerName, this);
+    designer.applyTheme(theme_);
     designer.exec();
 }
 

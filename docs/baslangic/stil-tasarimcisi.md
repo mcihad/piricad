@@ -6,21 +6,62 @@ kurduğunuz her sembolü bir betik de yazabilir.
 
 ## Nasıl açılır
 
-Katmanlar panelinde katmana **sağ tıklayın → Stili düzenle…**
+- Katmanlar panelinde katmana **sağ tıklayın → Stili düzenle…**
+- Araç çubuğunda *pencereler* grubundaki **palet** düğmesi
+- **Katman ▸ Stil Tasarımcısı**
 
 Pencere seçili katmanın şu an ne çizdiğiyle açılır: nesneleri bir gösterim
 taşıyorsa o, taşımıyorsa katmanın kendi görünümü.
 
 ## Pencerede ne nerede
 
-| Yer | Ne |
+```text
+┌ 🎨 Katman Özellikleri — Kadastro Parselleri ────────── ? ✕ ┐
+│ Bilgi        │ SİMGELEYİCİ  DEĞER        SEMBOL BOYUT BİRİMİ│
+│ Kaynak       │ [Tek Sembol] [—]      [Milimetre|Harita|Piksel]│
+│ ▸Simgeleyici │─────────────────────────────────────────────│
+│ Etiketler    │ [Alan] [Çizgi] [Nokta]                      │
+│ 3B Görünüm   │ ┌ önizleme ─────────────────────────────┐   │
+│ Şeffaflık    │ └───────────────────────────────────────┘   │
+│ Ölçek        │ ┌ hazır gösterimler ┐ ┌ sembol katmanları ┐ │
+│ Öznitelik F. │ │  raf / arama      │ │  ✓ Basit dolgu    │ │
+│ Geçerlilik   │ │                   │ │  ✓ Çizgi dolgu    │ │
+│ Eylemler     │ │                   │ ├───────────────────┤ │
+│ Bağlantılar  │ │                   │ │ katman özellikleri│ │
+│ Sürüm        │ └───────────────────┘ └───────────────────┘ │
+├────────────────────────────────────────────────────────────┤
+│ Stil ▾  Sembolü kütüphaneye kaydet   İptal  Uygula  [Tamam] │
+└────────────────────────────────────────────────────────────┘
+```
+
+Soldaki liste on iki bölüm taşır. Bugün **Bilgi** ve **Simgeleyici** doludur;
+kalan onu hangi fazda geleceğini kendi sayfasında yazar. Gizlenmiş bir bölüm,
+kullanıcının varlığından haberdar olamayacağı bir yetenektir; adı yazılmış bir
+bölüm ise tarihi belli bir sözdür.
+
+### Simgeleyici satırı
+
+| Alan | Ne yapar |
 |---|---|
-| En üst | **Geometri sekmeleri**: Alan · Çizgi · Nokta |
-| Üst | Bütün sembolün önizlemesi, seçili geometri üzerinde |
-| Sol | **Hazır gösterimler** — mevzuatın kendi ağacı, arama ve küçük resimler |
-| Sağ üst | **Sembol katmanları** yığını, aç/kapa kutusuyla |
-| Sağ alt | Seçili katmanın özellikleri |
-| Alt | Uygula · Kütüphaneye kaydet · Vazgeç |
+| **SİMGELEYİCİ** | Katmanın nasıl çizileceği. Bugün **Tek Sembol**; kategorize ve aralıklı Faz 2 |
+| **DEĞER** | Kategorize simgeleyicinin hangi sütuna bakacağı — Faz 2'de etkinleşir |
+| **SEMBOL BOYUT BİRİMİ** | Sembolün ölçülerinin birimi: **Milimetre** · **Harita birimi** · **Piksel** |
+
+### Sembol boyut birimi — en çok kullanacağınız denetim
+
+Üç düğme, üç farklı davranış:
+
+- **Milimetre** — pafta ölçüsü. MPYY bir sınırın kalınlığını paftada milimetre
+  verir ve o kalınlık 1/1000'de de 1/5000'de de aynıdır. Ekranda
+  **yakınlaştırdığınızda sembol büyümez.**
+- **Harita birimi** — zemin ölçüsü. Orman deseninin sıklığı alana aittir; ölçekle
+  küçülmesine izin vermek okunur bir dokuyu gri bir lekeye çevirir. **Çizimle
+  birlikte büyür.**
+- **Piksel** — ham ekran pikseli. Ne paftaya ne zemine bağlıdır; ekran
+  yardımcıları dışında ender kullanılır.
+
+Seçim sembolün **bütün** katmanlarını birden değiştirir. Katmanlar farklı
+birimler kullanıyorsa hiçbiri işaretli görünmez ve alttaki not bunu söyler.
 
 ### Geometri sekmeleri
 

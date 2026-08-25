@@ -26,16 +26,19 @@
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QScrollArea>
 #include <QShortcut>
 #include <QSignalBlocker>
 #include <QSpinBox>
 #include <QSplitter>
+
 #include <QStackedWidget>
 #include <QStandardPaths>
 #include <QTabBar>
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QVBoxLayout>
+#include <cstring>
 
 #include <algorithm>
 #include <array>
@@ -245,12 +248,16 @@ core::SymbolKind kind_of(PreviewShape shape)
 } // namespace
 
 StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget* parent)
-    : QDialog(parent), controller_(controller), layerName_(std::move(layerName))
+    : DialogFrame(parent), controller_(controller), layerName_(std::move(layerName))
 {
-    setWindowTitle(tr("Stil tasarımcısı — %1").arg(layerName_));
+    // design.md §8 measures this window at 1280 × 756 with a 186 px left column
+    // and a 48 px footer. Every one of those numbers is the reference's.
+    setHeading(Glyph::Palette, tr("Katman Özellikleri"), tr("— %1").arg(layerName_));
+    setHelpVisible(true);
+    setFooterHeight(48);
     setModal(true);
-    setMinimumSize(980, 660);
-    resize(1120, 740);
+    setMinimumSize(1040, 680);
+    resize(1280, 756);
 
     const core::LayerId layer = controller_.document().find_layer(layerName_.toStdString());
     symbol_                   = layer == core::kNoLayer ? core::Symbol::of(core::Appearance{})
@@ -354,7 +361,17 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     pages_ = new QStackedWidget(this);
     pages_->addWidget(buildGlobal());
     pages_->addWidget(buildProperties());
-    rightLayout->addWidget(pages_, 3);
+
+    // INSIDE A SCROLL AREA. A symbol layer's property list grows with its type —
+    // a marker line carries placement, phase, angle and offset that a plain
+    // stroke does not — and without this the last rows were simply cut off at
+    // the bottom of the dialog with no way to reach them.
+    auto* scroll = new QScrollArea(this);
+    scroll->setWidget(pages_);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    rightLayout->addWidget(scroll, 3);
     split->addWidget(right);
 
     split->setStretchFactor(0, 2);
@@ -363,31 +380,135 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     split->setChildrenCollapsible(false);
     split->setHandleWidth(10);
 
-    // ---- buttons ----
-    auto* buttons      = new QDialogButtonBox(this);
-    QPushButton* apply = buttons->addButton(tr("Uygula"), QDialogButtonBox::AcceptRole);
-    buttons->addButton(tr("Vazgeç"), QDialogButtonBox::RejectRole);
-    QPushButton* save = buttons->addButton(tr("Kütüphaneye kaydet…"), QDialogButtonBox::ActionRole);
-    QPushButton* reset = buttons->addButton(tr("Sıfırla"), QDialogButtonBox::ResetRole);
-    reset->setToolTip(tr("Katmanın şu an çizdiğine geri döner"));
-    connect(reset, &QPushButton::clicked, this, &StyleDesigner::resetToLayer);
-    apply->setDefault(true);
-    apply->setObjectName(QStringLiteral("primary"));
-    apply->setToolTip(tr("Sembolü STİL komutlarına çevirip katmana yazar"));
-    save->setToolTip(tr("Sembolü kendi gösterim paketiniz olarak diske yazar")); // ui-label
+    // ---- the page this section shows ----
+    auto* renderer       = new QWidget(this);
+    auto* rendererLayout = new QVBoxLayout(renderer);
+    rendererLayout->setContentsMargins(0, 0, 0, 0);
+    rendererLayout->setSpacing(0);
+    rendererLayout->addWidget(buildRendererRow());
+    rendererLayout->addLayout(top);
+    rendererLayout->addWidget(split, 1);
 
+    // ---- the left section list, design.md §8 ----
+    //
+    // Twelve sections, and the ones with nothing behind them yet say which phase
+    // brings them rather than being hidden (§11.8). A hidden section is a
+    // capability a user cannot find out about; a named one is a promise with a
+    // date on it.
+    sections_  = new SectionList(this);
+    pageStack_ = new QStackedWidget(this);
+
+    struct Page
+    {
+        Glyph glyph;
+        const char* title;
+        const char* phase;
+        const char* note;
+    };
+
+    static const Page kPages[] = {
+        {Glyph::Help, "Bilgi", "", ""},
+        {Glyph::Open, "Kaynak", "Faz 2",
+         "Katmanın verisinin nereden geldiği — dosya yolu, PostGIS bağlantısı, "
+         "koordinat sistemi ve kodlama — buraya gelecek."},
+        {Glyph::Palette, "Simgeleyici", "", ""},
+        {Glyph::Text, "Etiketler", "Faz 2",
+         "Etiket yerleşimi, çakışma çözümü ve ölçek aralıkları buraya gelecek. "
+         "Bugün etiketler ETİKET komutuyla yazılır; bkz. docs/komutlar/label.md."},
+        {Glyph::Terrain, "3B Görünüm", "Faz 3",
+         "Yükseklik, cephe ve çatı çizimi buraya gelecek."},
+        {Glyph::EyeOff, "Şeffaflık", "Faz 2", "Katman saydamlığı ve karışım kipi buraya gelecek."},
+        {Glyph::Measure, "Ölçek", "Faz 2",
+         "Katmanın hangi ölçek aralığında çizileceği buraya gelecek."},
+        {Glyph::Table, "Öznitelik Formu", "Faz 2",
+         "Tek kaydın form görünümü ve alan denetimleri buraya gelecek."},
+        {Glyph::Topology, "Geçerlilik", "Faz 2",
+         "Geometri ve öznitelik geçerlilik kuralları buraya gelecek."},
+        {Glyph::Script, "Eylemler", "Faz 3",
+         "Nesneye bağlı eylemler — belge aç, servis çağır — buraya gelecek."},
+        {Glyph::Union, "Bağlantılar", "Faz 3",
+         "Başka katman ve tablolarla ilişkilendirme buraya gelecek."},
+        {Glyph::History, "Sürüm", "Faz 3",
+         "Katmanın sürüm geçmişi ve geri alma noktaları buraya gelecek."},
+    };
+
+    for (const Page& page : kPages) {
+        const QString title = tr(page.title);
+        sections_->addSection(page.glyph, title);
+
+        if (std::strlen(page.phase) == 0) {
+            pageStack_->addWidget(std::strcmp(page.title, "Simgeleyici") == 0 ? renderer
+                                                                              : buildInfoPage());
+            continue;
+        }
+        pageStack_->addWidget(buildPendingPage(tr(page.phase), tr(page.note)));
+    }
+
+    connect(sections_, &SectionList::currentChanged, pageStack_, &QStackedWidget::setCurrentIndex);
+
+    auto* body = new QWidget(this);
+    auto* row  = new QHBoxLayout(body);
+    row->setContentsMargins(0, 0, 0, 0);
+    row->setSpacing(0);
+
+    auto* sidebar = new QWidget(body);
+    sidebar->setObjectName(QStringLiteral("designerSidebar"));
+    sidebar->setFixedWidth(186);
+    auto* column = new QVBoxLayout(sidebar);
+    column->setContentsMargins(0, 8, 1, 8);
+    column->setSpacing(0);
+    column->addWidget(sections_);
+    column->addStretch(1);
+
+    row->addWidget(sidebar);
+
+    auto* pageHost   = new QWidget(body);
+    auto* pageLayout = new QVBoxLayout(pageHost);
+    pageLayout->setContentsMargins(0, 0, 0, 0);
+    pageLayout->setSpacing(0);
+    pageLayout->addWidget(pageStack_, 1);
+    row->addWidget(pageHost, 1);
+
+    setBody(body);
+    sections_->setCurrent(2); // Simgeleyici
+    pageStack_->setCurrentIndex(2);
+
+    // ---- the footer, §8 ----
+    const auto footerButton = [this](const QString& text, bool primary) {
+        auto* button = new QPushButton(text, this);
+        if (primary) {
+            button->setObjectName(QStringLiteral("primary"));
+            button->setDefault(true);
+        }
+        return button;
+    };
+
+    auto* styleMenu = footerButton(tr("Stil ▾"), false);
+    styleMenu->setToolTip(tr("Katmanın şu an çizdiğine geri döner"));
+    connect(styleMenu, &QPushButton::clicked, this, &StyleDesigner::resetToLayer);
+
+    auto* save = footerButton(tr("Sembolü kütüphaneye kaydet"), false);
+    save->setToolTip(tr("Sembolü kendi gösterim paketiniz olarak diske yazar")); // ui-label
     connect(save, &QPushButton::clicked, this, &StyleDesigner::saveToLibrary);
-    connect(buttons, &QDialogButtonBox::accepted, this, [this] {
+
+    auto* cancel = footerButton(tr("İptal"), false);
+    connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
+
+    auto* apply = footerButton(tr("Uygula"), false);
+    apply->setToolTip(tr("Sembolü STİL komutlarına çevirip katmana yazar; pencere açık kalır"));
+    connect(apply, &QPushButton::clicked, this, [this] { (void)applyToDocument(); });
+
+    auto* ok = footerButton(tr("Tamam"), true);
+    connect(ok, &QPushButton::clicked, this, [this] {
         if (applyToDocument()) accept();
     });
-    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-    auto* root = new QVBoxLayout(this);
-    root->setContentsMargins(14, 14, 14, 12);
-    root->setSpacing(10);
-    root->addLayout(top);
-    root->addWidget(split, 1);
-    root->addWidget(buttons);
+    QHBoxLayout* bar = footer();
+    bar->insertWidget(0, styleMenu);
+    bar->insertWidget(1, save);
+    bar->addWidget(cancel);
+    bar->addWidget(apply);
+    bar->addWidget(ok);
 
     // The look, in one place. Written against PALETTE ROLES rather than fixed
     // colours so a dark desktop theme gets a dark dialog: this window is opened
@@ -406,6 +527,12 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     refresh();
     selectTopLayer();
     updateHeaderNote();
+}
+
+void StyleDesigner::applyTheme(ThemeMode mode)
+{
+    DialogFrame::applyTheme(mode);
+    if (sections_) sections_->applyTheme(mode);
 }
 
 void StyleDesigner::updateHeaderNote()
@@ -433,6 +560,168 @@ PreviewShape StyleDesigner::shape() const
 }
 
 // ------------------------------------------------------------- the shelf ----
+
+QWidget* StyleDesigner::buildRendererRow()
+{
+    // design.md §8's top row: what KIND of renderer, what it is driven by, and
+    // what unit its sizes are in. The unit control is the one a user reaches for
+    // most — "stay the same size when I zoom" versus "grow with the drawing" —
+    // so it sits at the right end where the eye lands last and stays.
+    auto* bar = new QWidget(this);
+    bar->setObjectName(QStringLiteral("rendererRow"));
+
+    auto* row = new QHBoxLayout(bar);
+    row->setContentsMargins(14, 11, 14, 11);
+    row->setSpacing(18);
+
+    const auto field = [&](const QString& caption, QWidget* editor) {
+        auto* cell   = new QWidget(bar);
+        auto* column = new QVBoxLayout(cell);
+        column->setContentsMargins(0, 0, 0, 0);
+        column->setSpacing(4);
+
+        auto* label = new QLabel(caption, cell);
+        label->setObjectName(QStringLiteral("sectionTitle"));
+        column->addWidget(label);
+        column->addWidget(editor);
+        row->addWidget(cell);
+        return cell;
+    };
+
+    renderKind_ = new QComboBox(bar);
+    renderKind_->addItem(tr("Tek Sembol"));
+    renderKind_->addItem(tr("Kategorize Edilmiş"));
+    renderKind_->addItem(tr("Aralıklı"));
+    renderKind_->setMinimumWidth(190);
+    connect(renderKind_, &QComboBox::currentIndexChanged, this, [this](int index) {
+        if (index == 0) return;
+        // §11.8: say which phase, do not pretend. A categorised renderer needs a
+        // per-value symbol column in the document, which is a model change and
+        // not a widget.
+        QMessageBox::information(
+            this, tr("Simgeleyici"),
+            tr("Kategorize ve aralıklı simgeleyiciler Faz 2'de gelecek: her değere kendi "
+               "sembolünü veren bir sütun, belgede tanımlanmayı bekliyor. Bugün bir katman "
+               "tek sembol çizer; değere göre ayırmak için katmanı bölün ya da ETİKET ile "
+               "yazın."));
+        renderKind_->setCurrentIndex(0);
+    });
+    field(tr("SİMGELEYİCİ"), renderKind_);
+
+    renderValue_ = new QComboBox(bar);
+    renderValue_->setMinimumWidth(190);
+    renderValue_->setEnabled(false);
+    renderValue_->addItem(tr("— tek sembolde kullanılmaz"));
+    for (std::size_t c = 0; c < controller_.document().attributes().columns(); ++c) {
+        const core::AttrColumn* column =
+            controller_.document().attributes().column(static_cast<core::AttrId>(c));
+        if (column) renderValue_->addItem(QString::fromStdString(column->spec().id));
+    }
+    field(tr("DEĞER"), renderValue_);
+
+    row->addStretch(1);
+
+    // The unit, as three buttons rather than a combo: three choices that a user
+    // switches between constantly read faster side by side than in a list, and
+    // the reference draws them that way.
+    auto* units       = new QWidget(bar);
+    auto* unitsLayout = new QHBoxLayout(units);
+    unitsLayout->setContentsMargins(0, 0, 0, 0);
+    unitsLayout->setSpacing(0);
+
+    static const std::pair<core::Unit, const char*> kUnitButtons[] = {
+        {core::Unit::Paper, "Milimetre"},
+        {core::Unit::Ground, "Harita birimi"},
+        {core::Unit::Pixel, "Piksel"},
+    };
+    for (const auto& [unit, label] : kUnitButtons) {
+        auto* button = new QPushButton(tr(label), units);
+        button->setObjectName(QStringLiteral("segment"));
+        button->setCheckable(true);
+        button->setProperty("unit", static_cast<int>(unit));
+        unitButtons_.push_back(button);
+        connect(button, &QPushButton::clicked, this, [this, unit] {
+            for (core::SymbolLayer& l : symbol_.layers) {
+                l.size.unit     = unit;
+                l.interval.unit = unit;
+                l.offset.unit   = unit;
+            }
+            refresh();
+            updatePreview();
+        });
+        unitsLayout->addWidget(button);
+    }
+    field(tr("SEMBOL BOYUT BİRİMİ"), units);
+
+    return bar;
+}
+
+QWidget* StyleDesigner::buildInfoPage()
+{
+    // Read from the document, never stored: a panel that cached would disagree
+    // with a layer renamed from the command line while this window was open.
+    auto* page   = new QWidget(this);
+    auto* layout = new QVBoxLayout(page);
+    layout->setContentsMargins(24, 20, 24, 20);
+    layout->setSpacing(6);
+
+    auto* caption = new QLabel(tr("KATMAN"), page);
+    caption->setObjectName(QStringLiteral("sectionTitle"));
+    layout->addWidget(caption);
+
+    const core::Document& doc = controller_.document();
+    const core::LayerId id    = doc.find_layer(layerName_.toStdString());
+    const core::Layer* layer  = doc.layer(id);
+
+    const auto row = [&](const QString& key, const QString& value) {
+        auto* line = new QWidget(page);
+        auto* box  = new QHBoxLayout(line);
+        box->setContentsMargins(0, 5, 0, 5);
+
+        auto* name = new QLabel(key, line);
+        name->setObjectName(QStringLiteral("rowName"));
+        name->setMinimumWidth(200);
+
+        auto* shown = new QLabel(value, line);
+        shown->setObjectName(QStringLiteral("mono"));
+
+        box->addWidget(name);
+        box->addWidget(shown, 1);
+        layout->addWidget(line);
+    };
+
+    row(tr("ad"), layerName_);
+    row(tr("nesne"), layer ? QString::number(doc.layer_entity_count(id)) : QStringLiteral("—"));
+    row(tr("gorunur"), layer ? (layer->visible ? tr("evet") : tr("hayır")) : QStringLiteral("—"));
+    row(tr("kilitli"), layer ? (layer->locked ? tr("evet") : tr("hayır")) : QStringLiteral("—"));
+    row(tr("grup"), layer && !layer->group.empty() ? QString::fromStdString(layer->group)
+                                                   : QStringLiteral("—"));
+    row(tr("koordinat_sistemi"), QString::fromStdString(doc.crs().id()));
+    row(tr("sembol_katmani"), QString::number(symbol_.layers.size()));
+
+    layout->addStretch(1);
+    return page;
+}
+
+QWidget* StyleDesigner::buildPendingPage(const QString& phase, const QString& note)
+{
+    auto* page   = new QWidget(this);
+    auto* layout = new QVBoxLayout(page);
+    layout->setContentsMargins(24, 24, 24, 24);
+    layout->setSpacing(8);
+
+    auto* badge = new QLabel(phase, page);
+    badge->setObjectName(QStringLiteral("sectionTitle"));
+    layout->addWidget(badge);
+
+    auto* words = new QLabel(note, page);
+    words->setObjectName(QStringLiteral("quiet"));
+    words->setWordWrap(true);
+    words->setMaximumWidth(520);
+    layout->addWidget(words);
+    layout->addStretch(1);
+    return page;
+}
 
 QWidget* StyleDesigner::buildGallery()
 {
@@ -1278,6 +1567,11 @@ void StyleDesigner::loadGlobal()
     for (int i = 0; i < globalUnit_->count(); ++i)
         if (globalUnit_->itemData(i).toInt() == static_cast<int>(unit))
             globalUnit_->setCurrentIndex(i);
+
+    // The renderer row's three buttons say the same thing as the combo below,
+    // and they must never disagree: both read the symbol, neither remembers.
+    for (QPushButton* button : unitButtons_)
+        button->setChecked(!mixed && button->property("unit").toInt() == static_cast<int>(unit));
 
     QString note;
     switch (unit) {

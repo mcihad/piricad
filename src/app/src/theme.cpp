@@ -260,7 +260,8 @@ QString themeStyleSheet(ThemeMode mode)
         QDialog#dialogFrame              { background: %(window)s; }
         QWidget#dialogFooter             { background: %(raised)s;
                                            border-top: 1px solid %(lineHard)s; }
-        QWidget#settingsSidebar          { background: %(strip)s;
+        QWidget#settingsSidebar,
+        QWidget#designerSidebar          { background: %(strip)s;
                                            border-right: 1px solid %(lineHard)s; }
         QLineEdit#settingsSearch         { background: %(input)s; border: 1px solid %(border)s;
                                            border-radius: 4px; padding: 4px 8px;
@@ -276,6 +277,8 @@ QString themeStyleSheet(ThemeMode mode)
                                            font-size: 11px; }
 
         /* ---- attribute table, §9 -------------------------------------------- */
+        QWidget#rendererRow              { background: %(raised)s;
+                                           border-bottom: 1px solid %(lineHard)s; }
         QWidget#tableToolRow             { background: %(raised)s;
                                            border-bottom: 1px solid %(lineHard)s; }
         QWidget#tableFilterBar           { background: %(window)s;
