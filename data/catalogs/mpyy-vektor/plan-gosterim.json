@@ -1,6 +1,6 @@
 {
  "schema_version": 2,
- "package_version": "0.3.0",
+ "package_version": "0.4.0",
  "id": "mpyy-vektor",
  "source": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1 Gösterimler",
  "published": "2026-01-22",
@@ -36,6 +36,20 @@
    "dosya": "semboller/il-siniri.svg",
    "sha256": "31d41af7ca5b1428149ec3062be26ad0d2dc217b4762198fd8b2f923ca18accd",
    "bayt": 495,
+   "tur": "svg"
+  },
+  {
+   "id": "gorsel-83d85153651e095c",
+   "dosya": "semboller/cim-demeti.svg",
+   "sha256": "83d85153651e095ccfa2d00216b62febddddcb9009429abfa9db5c9b5df8e184",
+   "bayt": 626,
+   "tur": "svg"
+  },
+  {
+   "id": "gorsel-d6aef1d49145aebe",
+   "dosya": "semboller/mercan.svg",
+   "sha256": "d6aef1d49145aebe94da2090a6a3ad87d699a66c88fcf1dbc3745f3bf38ad2f1",
+   "bayt": 612,
    "tur": "svg"
   }
  ],
@@ -412,6 +426,171 @@
      ]
     }
    ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-orman-alani",
+   "ad": "ORMAN ALANI",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), KORUNACAK ALANLAR > BUGÜNKÜ ARAZİ KULLANIMI DEVAM ETTİRİLEREK KORUNACAK ALANLAR",
+   "bolum": [
+    "KORUNACAK ALANLAR",
+    "BUGÜNKÜ ARAZİ KULLANIMI DEVAM ETTİRİLEREK KORUNACAK ALANLAR"
+   ],
+   "katmanlar": [
+    {
+     "tip": "dolgu",
+     "dolgu_renk": "#FF228B22"
+    },
+    {
+     "tip": "nokta-desen-dolgu",
+     "sekil": "ucgen",
+     "birim": "kagit",
+     "boyut": 3000,
+     "aralik": 7000,
+     "aralik_y": 7000,
+     "renk": "#FF000000",
+     "kalinlik": 200,
+     "dolgu_renk": "#FF000000",
+     "renk_kilidi": true
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-zeytinlik-alan",
+   "ad": "ZEYTİNLİK ALAN",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), KORUNACAK ALANLAR > BUGÜNKÜ ARAZİ KULLANIMI DEVAM ETTİRİLEREK KORUNACAK ALANLAR",
+   "bolum": [
+    "KORUNACAK ALANLAR",
+    "BUGÜNKÜ ARAZİ KULLANIMI DEVAM ETTİRİLEREK KORUNACAK ALANLAR"
+   ],
+   "katmanlar": [
+    {
+     "tip": "dolgu",
+     "dolgu_renk": "#FFE9FABE"
+    },
+    {
+     "tip": "nokta-desen-dolgu",
+     "sekil": "daire",
+     "birim": "kagit",
+     "boyut": 2600,
+     "aralik": 9000,
+     "aralik_y": 9000,
+     "renk": "#FF000000",
+     "kalinlik": 200,
+     "dolgu_renk": "#FF000000",
+     "renk_kilidi": true
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-mera-alani",
+   "ad": "MERA ALANI",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), KORUNACAK ALANLAR > BUGÜNKÜ ARAZİ KULLANIMI DEVAM ETTİRİLEREK KORUNACAK ALANLAR",
+   "bolum": [
+    "KORUNACAK ALANLAR",
+    "BUGÜNKÜ ARAZİ KULLANIMI DEVAM ETTİRİLEREK KORUNACAK ALANLAR"
+   ],
+   "katmanlar": [
+    {
+     "tip": "dolgu",
+     "dolgu_renk": "#FF70B800"
+    },
+    {
+     "tip": "nokta-desen-dolgu",
+     "sekil": "arti",
+     "birim": "kagit",
+     "boyut": 3400,
+     "aralik": 8000,
+     "aralik_y": 8000,
+     "renk": "#FF000000",
+     "kalinlik": 500,
+     "dolgu_renk": "#00000000",
+     "renk_kilidi": true
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-dogal-karakteri-korunacak-alan",
+   "ad": "DOĞAL KARAKTERİ KORUNACAK ALAN",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), KORUNACAK ALANLAR > BUGÜNKÜ ARAZİ KULLANIMI DEVAM ETTİRİLEREK KORUNACAK ALANLAR",
+   "bolum": [
+    "KORUNACAK ALANLAR",
+    "BUGÜNKÜ ARAZİ KULLANIMI DEVAM ETTİRİLEREK KORUNACAK ALANLAR"
+   ],
+   "gorsel": {
+    "tarama": [
+     "gorsel-83d85153651e095c"
+    ],
+    "tarama_boyut": 3200,
+    "tarama_aralik": 8000
+   },
+   "dolgu": {
+    "renk": "#B4D79E"
+   },
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-dogal-ve-ekolojik-yapisi-korunacak-alan",
+   "ad": "DOĞAL VE EKOLOJİK YAPISI KORUNACAK ALAN",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), KORUNACAK ALANLAR > BUGÜNKÜ ARAZİ KULLANIMI DEVAM ETTİRİLEREK KORUNACAK ALANLAR",
+   "bolum": [
+    "KORUNACAK ALANLAR",
+    "BUGÜNKÜ ARAZİ KULLANIMI DEVAM ETTİRİLEREK KORUNACAK ALANLAR"
+   ],
+   "gorsel": {
+    "tarama": [
+     "gorsel-83d85153651e095c"
+    ],
+    "tarama_boyut": 2600,
+    "tarama_aralik": 6000
+   },
+   "dolgu": {
+    "renk": "#D1FF9B"
+   },
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-ekolojik-oneme-sahip-alan",
+   "ad": "EKOLOJİK ÖNEME SAHİP ALAN",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), KORUNACAK ALANLAR > BUGÜNKÜ ARAZİ KULLANIMI DEVAM ETTİRİLEREK KORUNACAK ALANLAR",
+   "bolum": [
+    "KORUNACAK ALANLAR",
+    "BUGÜNKÜ ARAZİ KULLANIMI DEVAM ETTİRİLEREK KORUNACAK ALANLAR"
+   ],
+   "gorsel": {
+    "tarama": [
+     "gorsel-d6aef1d49145aebe"
+    ],
+    "tarama_boyut": 3400,
+    "tarama_aralik": 14000
+   },
    "belirsiz": true,
    "belirsiz_nedeni": [
     "cizim-yorumu"

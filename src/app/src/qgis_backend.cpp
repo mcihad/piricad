@@ -83,8 +83,12 @@ Qgis::MarkerShape shape_of(core::MarkerShape s)
     case core::MarkerShape::Triangle: return Qgis::MarkerShape::Triangle;
     case core::MarkerShape::Diamond: return Qgis::MarkerShape::Diamond;
     case core::MarkerShape::Star: return Qgis::MarkerShape::Star;
-    case core::MarkerShape::Cross: return Qgis::MarkerShape::Cross2;
-    case core::MarkerShape::XCross: return Qgis::MarkerShape::Cross;
+    // QGIS names these the other way round from the way they read: its `Cross`
+    // is the upright one and its `Cross2` is the rotated 'x'. Mapping them by
+    // the similarity of the NAMES drew MPYY's MERA ALANI — a grid of upright
+    // crosses — as a grid of saltires.
+    case core::MarkerShape::Cross: return Qgis::MarkerShape::Cross;
+    case core::MarkerShape::XCross: return Qgis::MarkerShape::Cross2;
     case core::MarkerShape::Arrow: return Qgis::MarkerShape::ArrowHead;
     case core::MarkerShape::HalfCircle: return Qgis::MarkerShape::HalfSquare;
     case core::MarkerShape::Pentagon: return Qgis::MarkerShape::Pentagon;

@@ -43,6 +43,12 @@ constexpr const char* kKeyImageLine  = "cizgi_tipi";
 constexpr const char* kKeyImageHatch = "tarama";
 constexpr const char* kKeyImageGlyph = "sembol";
 
+/// How big a published picture is drawn, and how far apart a hatch repeats.
+constexpr const char* kKeyImageSize    = "boyut";
+constexpr const char* kKeyImageHatchSz = "tarama_boyut";
+constexpr const char* kKeyImageGlyphSz = "sembol_boyut";
+constexpr const char* kKeyImageGap     = "tarama_aralik";
+
 /// The declared symbol-layer stack, and the names inside one.
 constexpr const char* kKeyLayers      = "katmanlar";
 constexpr const char* kKeyLayerType   = "tip";
@@ -703,6 +709,17 @@ Result<StyleEntry> parse_entry(const Json& j, const AnnexNames& annexes, const I
         entry.image_line   = first_image(*pictures, images, kKeyImageLine);
         entry.image_hatch  = first_image(*pictures, images, kKeyImageHatch);
         entry.image_symbol = first_image(*pictures, images, kKeyImageGlyph);
+
+        // Optional, and read from the PICTURE block because they describe the
+        // pictures. A row that names none keeps the built-in starting point.
+        const auto micrometres = [&](const char* key, std::int32_t& out) {
+            if (const Json* v = pictures->find(key); v != nullptr && v->is_number())
+                out = static_cast<std::int32_t>(v->as_double());
+        };
+        micrometres(kKeyImageSize, entry.image_line_um);
+        micrometres(kKeyImageHatchSz, entry.image_hatch_um);
+        micrometres(kKeyImageGlyphSz, entry.image_symbol_um);
+        micrometres(kKeyImageGap, entry.image_hatch_gap_um);
     }
 
     const std::string row = where + " '" + entry.id + "'";

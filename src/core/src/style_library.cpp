@@ -68,7 +68,8 @@ Symbol symbol_of_entry(const StyleEntry& row, const ImageResolver& resolve,
 
     Symbol sym;
 
-    const auto add = [&](const std::string& file, SymbolLayerType type, std::int32_t size_um) {
+    const auto add = [&](const std::string& file, SymbolLayerType type, std::int32_t size_um,
+                         std::int32_t gap_um = 0) {
         if (file.empty() || !resolve) return false;
 
         const ImageId image = resolve(file);
@@ -83,6 +84,7 @@ Symbol symbol_of_entry(const StyleEntry& row, const ImageResolver& resolve,
         // size the annex fixes and it stays that size whatever the plot scale is.
         // Whoever wants it to follow the ground says so in the designer.
         layer.size = Measure{size_um, Unit::Paper};
+        if (gap_um > 0) layer.interval = Measure{gap_um, Unit::Paper};
         sym.layers.push_back(layer);
         return true;
     };
@@ -96,17 +98,24 @@ Symbol symbol_of_entry(const StyleEntry& row, const ImageResolver& resolve,
 
     // Sizes chosen for legibility, not from the regulation: the annex prints a
     // picture and states no millimetre for it. They are a starting point the
-    // designer changes, never a claim about what MPYY requires.
-    add(row.image_hatch, SymbolLayerType::RasterFill, 24000);
+    // designer changes, never a claim about what MPYY requires — and a row that
+    // names its own size overrides them, because a picture somebody DREW has a
+    // size that is part of the drawing.
+    const auto sized = [](std::int32_t declared, std::int32_t fallback) {
+        return declared > 0 ? declared : fallback;
+    };
 
-    if (!add(row.image_line, SymbolLayerType::RasterLine, 8000)) {
+    add(row.image_hatch, SymbolLayerType::RasterFill, sized(row.image_hatch_um, 24000),
+        row.image_hatch_gap_um);
+
+    if (!add(row.image_line, SymbolLayerType::RasterLine, sized(row.image_line_um, 8000))) {
         SymbolLayer stroke;
         stroke.look = row.appearance;
         stroke.type = SymbolLayerType::SimpleLine;
         sym.layers.push_back(stroke);
     }
 
-    add(row.image_symbol, SymbolLayerType::RasterMarker, 12000);
+    add(row.image_symbol, SymbolLayerType::RasterMarker, sized(row.image_symbol_um, 12000));
 
     if (sym.layers.empty()) sym = Symbol::of(row.appearance);
     return sym;

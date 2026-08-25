@@ -601,6 +601,29 @@ private:
         QImage scaled = source.scaled(std::max(1, int(tile)), std::max(1, int(tile * ratio)),
                                       Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 
+        // SPACED, when the pass asks for it. A brush tiles its picture edge to
+        // edge, which is right for a scanned hatch — the crop already contains
+        // whatever spacing the annex printed. It is wrong for a symbol somebody
+        // DREW: a drawn glyph fills its own box, so tiling it edge to edge puts
+        // one glyph hard against the next and the pattern reads as a solid mat.
+        // The picture is padded into a larger transparent cell instead, and the
+        // cell is what tiles.
+        const double gap = static_cast<double>(ps.interval_px);
+        if (gap > scaled.width() || gap > scaled.height()) {
+            const int cell_w = std::max(scaled.width(), static_cast<int>(std::lround(gap)));
+            const int cell_h =
+                std::max(scaled.height(), static_cast<int>(std::lround(gap * ratio)));
+
+            QImage cell(cell_w, cell_h, QImage::Format_ARGB32_Premultiplied);
+            cell.fill(Qt::transparent);
+
+            QPainter into(&cell);
+            into.drawImage(
+                QPointF((cell_w - scaled.width()) * 0.5, (cell_h - scaled.height()) * 0.5), scaled);
+            into.end();
+            scaled = cell;
+        }
+
         QBrush brush(scaled);
         if (ps.angle_udeg != 0) {
             QTransform rotation;

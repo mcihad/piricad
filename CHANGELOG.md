@@ -175,6 +175,27 @@ Penceredeki her değişiklik
 kapsamına göre `AYAR`, `TERCİH` ya da `MOD` komutu kurup çalıştırır — transkript, günlük
 ve yeniden oynatma pencereden yapılanı komut satırından yazılandan ayırt edemez.
 
+### Eklendi — EK-1a arazi kullanımı gösterimleri, ve satırın kendi resim boyutu
+
+**Altı gösterim çizildi:** ORMAN ALANI (üçgen), ZEYTİNLİK (daire), MERA (artı), DOĞAL
+KARAKTERİ KORUNACAK ve DOĞAL VE EKOLOJİK YAPISI KORUNACAK (çim demeti SVG), EKOLOJİK
+ÖNEME SAHİP (mercan SVG). İlk üçü mevcut işaretçilerle, son üçü elle çizilmiş SVG ile.
+
+- **Satır artık kendi resminin boyutunu bildirebiliyor** (`boyut`, `tarama_boyut`,
+  `sembol_boyut`, `tarama_aralik`). Boyut kodda sabitti ve her satır aynısını alıyordu.
+  Bu, taranmış bir kırpma için doğru — boyutu bir şey ifade etmez; **çizilmiş** bir
+  sembol için yanlış, çünkü orada boyut çizimin parçasıdır.
+- **`gorsel-dolgu` artık aralık okuyor.** Bir fırça resmini uç uca döşer, ki taranmış
+  bir tarama için doğrudur: kırpma zaten ekin bastığı aralığı içerir. Çizilmiş bir glif
+  için yanlıştır — kendi kutusunu doldurur, uç uca döşenince desen katı bir hasıra
+  döner. Resim artık daha büyük saydam bir hücreye yerleştiriliyor ve döşenen o hücre.
+
+**QGIS çeviri hatası:** `Cross` ↔ `Cross2` ters eşlenmişti. QGIS'te `Cross` dik artı,
+`Cross2` döndürülmüş çarpı; adların benzerliğine göre eşlemek MERA ALANI'nın artı
+ızgarasını çarpı ızgarası olarak çizdiriyordu.
+
+Rafta şu an: 419 resimli, **30 vektör yığın**, 28 düz.
+
 ### Düzeltildi — stil düzenleyicisinde bir gösterim seçince form eksik kalıyordu
 
 Galeriden bir satır seçilince form "bozuluyordu": `Görsel işaretçi` katmanı yalnız Boyut

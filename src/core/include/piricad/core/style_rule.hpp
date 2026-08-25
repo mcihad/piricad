@@ -212,6 +212,22 @@ struct StyleEntry
     std::string image_hatch;  ///< `gorsel/tarama` — tiled into the interior
     std::string image_symbol; ///< `gorsel/sembol` — placed as a glyph
 
+    /// How big each of those is drawn, in PAPER micrometres. Zero takes the
+    /// built-in starting point.
+    ///
+    /// The annex prints a picture and states no millimetre for it, so a default
+    /// was hard-coded and every row got the same one. That is right for a scanned
+    /// crop, whose size means nothing; it is wrong for a picture somebody DREW,
+    /// where the size is part of the drawing. A row that names its own size is
+    /// saying something the regulation's own picture could not.
+    std::int32_t image_line_um{0};
+    std::int32_t image_hatch_um{0};
+    std::int32_t image_symbol_um{0};
+
+    /// The spacing a tiled hatch repeats at, in paper micrometres. Zero tiles the
+    /// picture edge to edge, which is what a scanned hatch wants.
+    std::int32_t image_hatch_gap_um{0};
+
     /// The symbol this row draws, DECLARED rather than pictured.
     ///
     /// The three fields above name pictures, which is how the annex publishes its
