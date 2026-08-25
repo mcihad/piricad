@@ -122,12 +122,23 @@ private:
 
     /// Takes the next overlay batch, reusing the one that position held on the
     /// previous frame so the draw path allocates nothing (render.md R20).
-    render::OverlayBatch& nextBatch(std::uint32_t rgba, float width_px, bool dashed,
-                                    std::uint32_t fill_rgba = 0);
+    /// AN INDEX, NOT A REFERENCE, and that is the whole point.
+    ///
+    /// The batches live in a `std::vector` that this grows, so a reference handed
+    /// out before a later call is a reference into freed memory the moment the
+    /// vector reallocates. It DID: `buildGrid` held the minor-grid batch across
+    /// the call that made the major-grid one, and every frame that needed a new
+    /// batch wrote its grid lines into a dangling pointer. AddressSanitizer found
+    /// it; nothing else could, because a vector with spare capacity does not
+    /// reallocate and the bug slept until the overlay grew.
+    ///
+    /// An index cannot dangle. `addRun` and `addCircle` take one and look the
+    /// batch up, which is one indexed load per call and no way to get it wrong.
+    std::size_t nextBatch(std::uint32_t rgba, float width_px, bool dashed,
+                          std::uint32_t fill_rgba = 0);
 
     /// Appends one run of widget-space points.
-    static void addRun(render::OverlayBatch& batch,
-                       std::initializer_list<render::ScreenPointF> points, bool closed);
+    void addRun(std::size_t batch, std::initializer_list<render::ScreenPointF> points, bool closed);
 
     /// Narrows a widget-space Qt point through the render module's one sanctioned
     /// conversion, so the canvas has exactly one place where a coordinate becomes
@@ -136,7 +147,7 @@ private:
 
     /// Appends a circle as a closed polygon: the overlay carries runs of points
     /// and nothing else, so no backend needs an ellipse call of its own.
-    static void addCircle(render::OverlayBatch& batch, float cx, float cy, float radius);
+    void addCircle(std::size_t batch, float cx, float cy, float radius);
 
     /// Re-runs the aid pipeline for the current cursor so the marker on screen is
     /// the point a click would actually produce. Reads the document; never writes.
@@ -196,7 +207,17 @@ private:
     /// legacy `Palette` has no field for — the ruler's sunken ground, its
     /// division mark, the scale bar's fill — and duplicating them into `Palette`
     /// would be a second colour table (`tokens.hpp` is the only one).
-    Tokens tokens_{darkTokens()};
+    ///
+    /// A POINTER, not a value, and the reason is a build failure rather than a
+    /// preference. `darkTokens()` returns a reference to a static that outlives
+    /// everything, so there is nothing to copy — and a `Tokens` MEMBER makes the
+    /// size of this class depend on the size of that struct, so every
+    /// translation unit that includes this header has to be rebuilt the day a
+    /// token is added. When one is not, two translation units disagree about how
+    /// big a `MapCanvas` is and the heap is quietly corrupted; glibc noticed at
+    /// shutdown, in an unrelated destructor, with nothing in the trace pointing
+    /// here. A pointer cannot go stale.
+    const Tokens* tokens_{&darkTokens()};
 
     /// The zoom stack's screen box, so a click on it can be told from a click on
     /// the drawing. Rebuilt every frame by `buildZoomStack`.

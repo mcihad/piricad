@@ -62,7 +62,21 @@ while IFS= read -r hit; do
 done < <(grep -rnE "QColor\(0x[0-9A-Fa-f]{2}|#[0-9A-Fa-f]{6}\b" "$app/src" "$app/include" |
          grep -viE "ui-label|design\.md|//" | cut -d: -f1,2)
 
+# ---- 4. every placeholder in the sheet is substituted ------------------------
+#
+# `themeStyleSheet` is a template with `%(name)s` holes and a chain of `.replace`
+# calls that fill them. A hole with no matching call reaches Qt verbatim, and Qt
+# does not shrug: it refuses the WHOLE sheet with "Could not parse application
+# stylesheet" and every window falls back to unstyled Fusion. One missing line,
+# the entire application wrong.
+#
+# It is invisible in review — the rule reads correctly — and invisible at run
+# time until somebody notices the program is grey.
+if ! python3 "$root/scripts/check-theme-placeholders.py" "$app/src/theme.cpp"; then
+    fail=1
+fi
+
 if [[ $fail -eq 0 ]]; then
-    echo "theme: OK — Fusion forced, one stylesheet, every colour from tokens.hpp"
+    echo "theme: OK — Fusion forced, one sheet, colours from tokens.hpp, every placeholder filled"
 fi
 exit $fail

@@ -51,7 +51,7 @@ void MapCanvas::setDebugHud(bool on)
 void MapCanvas::applyTheme(ThemeMode mode)
 {
     palette_ = themePalette(mode);
-    tokens_  = mode == ThemeMode::Dark ? darkTokens() : lightTokens();
+    tokens_  = mode == ThemeMode::Dark ? &darkTokens() : &lightTokens();
     update();
 }
 
@@ -199,9 +199,8 @@ void MapCanvas::buildGrid()
 
     // Two batches, minor first: the darker lines are drawn over the lighter ones
     // so a major line stays a major line where they cross.
-    render::OverlayBatch& minor =
-        nextBatch(chosen(look_.grid_rgba, palette_.grid.rgba()), 1.0f, false);
-    render::OverlayBatch& major =
+    const std::size_t minor = nextBatch(chosen(look_.grid_rgba, palette_.grid.rgba()), 1.0f, false);
+    const std::size_t major =
         nextBatch(chosen(look_.grid_major_rgba, palette_.gridMajor.rgba()), 1.0f, false);
 
     const auto h = static_cast<float>(height());
@@ -290,7 +289,10 @@ void MapCanvas::buildSelection()
     const core::EntityTable& table = doc.entities();
     const core::RingGeometry& geom = doc.geometry();
 
-    render::OverlayBatch& batch = nextBatch(palette_.selection.rgba(), 3.0f, false);
+    // Taken by reference AFTER the last `nextBatch` of this function, which is
+    // the only shape in which that is safe: nothing below grows the vector.
+    render::OverlayBatch& batch =
+        overlay_.batches[nextBatch(palette_.selection.rgba(), 3.0f, false)];
 
     // Walked per selected entity, never per document entity: a selection is
     // O(hundreds) and the frame budget belongs to the drawing (§10.1).
@@ -329,7 +331,7 @@ void MapCanvas::buildSelectionBox()
     QColor fill         = line;
     fill.setAlpha(38);
 
-    render::OverlayBatch& batch = nextBatch(line.rgba(), 1.0f, crossing, fill.rgba());
+    const std::size_t batch = nextBatch(line.rgba(), 1.0f, crossing, fill.rgba());
 
     const render::ScreenPointF a = toScreenF(select_anchor_);
     const render::ScreenPointF b = toScreenF(cursor_);
@@ -346,8 +348,8 @@ void MapCanvas::buildSnapMarker()
     const float y                = p.y;
     const float h = static_cast<float>(look_.marker_px) * 0.5f; // half size, layout units
 
-    const std::uint32_t ink     = chosen(look_.marker_rgba, palette_.snapMarker.rgba());
-    render::OverlayBatch& batch = nextBatch(ink, 1.8f, false);
+    const std::uint32_t ink = chosen(look_.marker_rgba, palette_.snapMarker.rgba());
+    const std::size_t batch = nextBatch(ink, 1.8f, false);
 
     // One glyph per mode, the shapes CAD users already read without a legend. The
     // SHAPE is chosen here rather than in the backend because which glyph means
@@ -492,11 +494,11 @@ void MapCanvas::buildRuler()
     // every ~100 px, and the reading printed in mono to the right of it. The
     // band is FILLED rather than outlined — the reference draws it as a sunken
     // strip the drawing sits inside, not as two rules over the canvas.
-    render::OverlayBatch& ground = nextBatch(0, 0.0f, false, tokens_.bgSunken.rgba());
+    const std::size_t ground = nextBatch(0, 0.0f, false, tokens_->bgSunken.rgba());
     addRun(ground, {{0.0f, 0.0f}, {w, 0.0f}, {w, band}, {0.0f, band}}, true);
     addRun(ground, {{0.0f, band}, {band, band}, {band, h}, {0.0f, h}}, true);
 
-    render::OverlayBatch& edge = nextBatch(tokens_.lineHard.rgba(), 1.0f, false);
+    const std::size_t edge = nextBatch(tokens_->lineHard.rgba(), 1.0f, false);
     addRun(edge, {{0.0f, band}, {w, band}}, false);
     addRun(edge, {{band, band}, {band, h}}, false);
 
@@ -507,7 +509,7 @@ void MapCanvas::buildRuler()
 
     const core::Box2 seen = view_.visible_box();
 
-    render::OverlayBatch& ticks = nextBatch(tokens_.rulerTick.rgba(), 1.0f, false);
+    const std::size_t ticks = nextBatch(tokens_->rulerTick.rgba(), 1.0f, false);
 
     constexpr float kTick  = 9.0f; ///< the division mark's length
     constexpr float kLabel = 8.5f; ///< §3's `cetvel, mikro etiket` size
@@ -525,7 +527,7 @@ void MapCanvas::buildRuler()
         if (x < band || x > w) continue;
 
         addRun(ticks, {{x, band - kTick}, {x, band}}, false);
-        overlay_.labels.push_back(render::OverlayLabel{tokens_.textFaint.rgba(), x + 4.0f,
+        overlay_.labels.push_back(render::OverlayLabel{tokens_->textFaint.rgba(), x + 4.0f,
                                                        band - kTick - 1.0f, kLabel, true,
                                                        spaced(mm / unit.per_unit)});
     }
@@ -547,7 +549,7 @@ void MapCanvas::buildRuler()
         addRun(ticks, {{band - kTick, y}, {band, y}}, false);
     }
 
-    overlay_.labels.push_back(render::OverlayLabel{tokens_.textFaint.rgba(), 3.0f, band - 4.0f,
+    overlay_.labels.push_back(render::OverlayLabel{tokens_->textFaint.rgba(), 3.0f, band - 4.0f,
                                                    kLabel, true, std::string(unit.suffix)});
 }
 
@@ -582,8 +584,8 @@ void MapCanvas::buildScaleBar()
         // INSIDE the frame by one pixel: the reference draws a 1 px outline
         // around the divisions, not through them, and a fill that reaches the
         // outline swallows it on the two filled cells.
-        render::OverlayBatch& fill = nextBatch(0, 0.0f, false, tokens_.readoutDim.rgba());
-        const float x0             = left + static_cast<float>(i) * cell + 1.0f;
+        const std::size_t fill = nextBatch(0, 0.0f, false, tokens_->readoutDim.rgba());
+        const float x0         = left + static_cast<float>(i) * cell + 1.0f;
         addRun(fill,
                {{x0, top + 1.0f},
                 {x0 + cell - 1.0f, top + 1.0f},
@@ -592,7 +594,7 @@ void MapCanvas::buildScaleBar()
                true);
     }
 
-    render::OverlayBatch& frame = nextBatch(tokens_.hud.rgba(), 1.0f, false);
+    const std::size_t frame = nextBatch(tokens_->hud.rgba(), 1.0f, false);
     addRun(frame,
            {{left, top},
             {left + kBarWidth, top},
@@ -607,12 +609,12 @@ void MapCanvas::buildScaleBar()
     // written once, at the right end, the way a map sheet prints it.
     const float baseline = top + kBarHeight + 12.0f;
     overlay_.labels.push_back(
-        render::OverlayLabel{tokens_.textFaint.rgba(), left, baseline, 9.5f, true, "0"});
-    overlay_.labels.push_back(render::OverlayLabel{tokens_.textFaint.rgba(),
+        render::OverlayLabel{tokens_->textFaint.rgba(), left, baseline, 9.5f, true, "0"});
+    overlay_.labels.push_back(render::OverlayLabel{tokens_->textFaint.rgba(),
                                                    left + kBarWidth * 0.5f - 8.0f, baseline, 9.5f,
                                                    true, trimmed(whole * 0.5, 3)});
     overlay_.labels.push_back(
-        render::OverlayLabel{tokens_.textFaint.rgba(), left + kBarWidth - 26.0f, baseline, 9.5f,
+        render::OverlayLabel{tokens_->textFaint.rgba(), left + kBarWidth - 26.0f, baseline, 9.5f,
                              true, trimmed(whole, 3) + " " + std::string(unit.suffix)});
 }
 
@@ -632,21 +634,21 @@ void MapCanvas::buildNorthArrow()
     const auto band = static_cast<float>(look_.ruler ? look_.ruler_px : 0);
     if (cx - kRadius < band || cy - kRadius < band) return;
 
-    render::OverlayBatch& disc = nextBatch(
-        tokens_.border.rgba(), 1.0f, false,
-        QColor(tokens_.bgSunken.red(), tokens_.bgSunken.green(), tokens_.bgSunken.blue(), 90)
+    const std::size_t disc = nextBatch(
+        tokens_->border.rgba(), 1.0f, false,
+        QColor(tokens_->bgSunken.red(), tokens_->bgSunken.green(), tokens_->bgSunken.blue(), 90)
             .rgba());
     addCircle(disc, cx, cy, kRadius);
 
     // A slim needle with a notched tail: the cartographic north mark, not a
     // solid triangle, so it reads as an instrument rather than as a cursor.
-    render::OverlayBatch& needle = nextBatch(tokens_.readoutDim.rgba(), 1.4f, false);
+    const std::size_t needle = nextBatch(tokens_->readoutDim.rgba(), 1.4f, false);
     addRun(needle,
            {{cx, cy - 17.0f}, {cx + 8.0f, cy + 9.0f}, {cx, cy + 3.0f}, {cx - 8.0f, cy + 9.0f}},
            true);
 
     overlay_.labels.push_back(
-        render::OverlayLabel{tokens_.textFaint.rgba(), cx - 3.0f, cy + 24.0f, 10.0f, false, "K"});
+        render::OverlayLabel{tokens_->textFaint.rgba(), cx - 3.0f, cy + 24.0f, 10.0f, false, "K"});
 }
 
 void MapCanvas::buildZoomStack()
@@ -665,9 +667,9 @@ void MapCanvas::buildZoomStack()
     zoom_stack_ = QRectF(static_cast<double>(left), static_cast<double>(top),
                          static_cast<double>(kBox), static_cast<double>(kBox * 3.0f));
 
-    render::OverlayBatch& panel = nextBatch(
-        tokens_.border.rgba(), 1.0f, false,
-        QColor(tokens_.bgSunken.red(), tokens_.bgSunken.green(), tokens_.bgSunken.blue(), 230)
+    const std::size_t panel = nextBatch(
+        tokens_->border.rgba(), 1.0f, false,
+        QColor(tokens_->bgSunken.red(), tokens_->bgSunken.green(), tokens_->bgSunken.blue(), 230)
             .rgba());
     addRun(panel,
            {{left, top},
@@ -676,15 +678,15 @@ void MapCanvas::buildZoomStack()
             {left, top + kBox * 3.0f}},
            true);
 
-    render::OverlayBatch& rules = nextBatch(tokens_.lineSoft.rgba(), 1.0f, false);
+    const std::size_t rules = nextBatch(tokens_->lineSoft.rgba(), 1.0f, false);
     for (int i = 1; i < 3; ++i) {
         const float y = top + kBox * static_cast<float>(i);
         addRun(rules, {{left, y}, {left + kBox, y}}, false);
     }
 
     // `+`, `−` and a frame: three marks a user recognises without a tooltip.
-    render::OverlayBatch& marks = nextBatch(tokens_.readoutDim.rgba(), 1.3f, false);
-    const float cx              = left + kBox * 0.5f;
+    const std::size_t marks = nextBatch(tokens_->readoutDim.rgba(), 1.3f, false);
+    const float cx          = left + kBox * 0.5f;
 
     const float in = top + kBox * 0.5f;
     addRun(marks, {{cx - 5.0f, in}, {cx + 5.0f, in}}, false);
@@ -725,7 +727,7 @@ void MapCanvas::buildCrosshair()
 {
     if (!cursor_valid_ || look_.cursor == 2) return;
 
-    render::OverlayBatch& batch  = nextBatch(palette_.crosshair.rgba(), 1.0f, false);
+    const std::size_t batch      = nextBatch(palette_.crosshair.rgba(), 1.0f, false);
     const render::ScreenPointF c = toScreenF(cursor_);
     const float x = c.x, y = c.y;
 
@@ -743,20 +745,21 @@ void MapCanvas::buildCrosshair()
     addRun(batch, {{x, y - arm}, {x, y + arm}}, false);
 }
 
-render::OverlayBatch& MapCanvas::nextBatch(std::uint32_t rgba, float width_px, bool dashed,
-                                           std::uint32_t fill_rgba)
+std::size_t MapCanvas::nextBatch(std::uint32_t rgba, float width_px, bool dashed,
+                                 std::uint32_t fill_rgba)
 {
     // Reuses the batch this position held on the previous frame, buffers and all.
     // The overlay is rebuilt on EVERY MOUSE MOVE, so allocating here would allocate
     // on every mouse move (render.md R20, P6).
     if (overlay_used_ == overlay_.batches.size()) overlay_.batches.emplace_back();
 
-    render::OverlayBatch& batch = overlay_.batches[overlay_used_++];
+    const std::size_t at        = overlay_used_++;
+    render::OverlayBatch& batch = overlay_.batches[at];
     batch.rgba                  = rgba;
     batch.fill_rgba             = fill_rgba;
     batch.width_px              = width_px;
     batch.dashed                = dashed;
-    return batch;
+    return at;
 }
 
 render::ScreenPointF MapCanvas::toScreenF(const QPointF& p)
@@ -767,9 +770,10 @@ render::ScreenPointF MapCanvas::toScreenF(const QPointF& p)
     return render::to_f(render::ScreenPoint{p.x(), p.y()});
 }
 
-void MapCanvas::addRun(render::OverlayBatch& batch,
-                       std::initializer_list<render::ScreenPointF> points, bool closed)
+void MapCanvas::addRun(std::size_t index, std::initializer_list<render::ScreenPointF> points,
+                       bool closed)
 {
+    render::OverlayBatch& batch = overlay_.batches[index];
     for (const render::ScreenPointF& p : points) {
         batch.xs.push_back(p.x);
         batch.ys.push_back(p.y);
@@ -778,8 +782,9 @@ void MapCanvas::addRun(render::OverlayBatch& batch,
     batch.closed.push_back(closed ? 1 : 0);
 }
 
-void MapCanvas::addCircle(render::OverlayBatch& batch, float cx, float cy, float radius)
+void MapCanvas::addCircle(std::size_t index, float cx, float cy, float radius)
 {
+    render::OverlayBatch& batch = overlay_.batches[index];
     // A polygon, not a circle primitive: the overlay carries runs of points and
     // nothing else, so every backend draws the same shape without needing an
     // ellipse call of its own. Twenty-four segments is smooth at the six-pixel
@@ -816,7 +821,7 @@ void MapCanvas::buildOverlay()
             to                 = QPointF(snapped.x, snapped.y);
         }
 
-        render::OverlayBatch& batch = nextBatch(palette_.rubberBand.rgba(), 1.0f, true);
+        const std::size_t batch = nextBatch(palette_.rubberBand.rgba(), 1.0f, true);
         addRun(batch, {render::to_f(from), toScreenF(to)}, false);
     }
 

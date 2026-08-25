@@ -67,7 +67,23 @@ struct Tokens
     QColor accentHi;   ///< text and icons ON the accent
     QColor accentWash; ///< the background of a selected row
     QColor warn;       ///< snap marker, edited cell, lock
+    QColor warnWash;   ///< the ground of a field changed but not yet saved
     QColor ok;         ///< connection state
+
+    // A fourth meaning, and the only one that is not in §2's original four:
+    // DANGER. `bileşen_standardı.png` gives destructive actions and invalid
+    // fields their own hue, because "this cannot be undone" and "this is wrong"
+    // are not the same statement as "look here" (accent) or "be careful" (warn).
+    QColor danger;     ///< the ink of a destructive action and an invalid value
+    QColor dangerEdge; ///< its outline, a step back from the ink
+    QColor dangerWash; ///< the ground of an invalid field
+
+    // The two accent edges the component sheet distinguishes: a PRIMARY button
+    // carries a lighter rim than its fill, and an ACTIVE control carries a
+    // darker one. One token for both made the mode toggle look pressed and the
+    // primary button look flat.
+    QColor accentLift; ///< the rim of a filled accent surface
+    QColor accentEdge; ///< the outline of an active or checked control
 
     // ---- states, §11 ----
     QColor onAccent;  ///< text and icons ON a filled accent surface, §11

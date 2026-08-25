@@ -76,6 +76,21 @@ int main(int argc, char** argv)
     parser.addOption(scriptOption);
     parser.process(app);
 
+    // Under the smoke test, a REFUSED STYLESHEET is a failure and not a warning.
+    //
+    // Qt answers an unparseable sheet with one line on stderr and then draws the
+    // whole application in unstyled Fusion — every window wrong, and the process
+    // still exits 0. `ci-gate-theme.sh` catches the cause statically; this
+    // catches anything that reaches Qt by another road.
+    static bool sheet_refused = false;
+    if (qEnvironmentVariableIsSet("PIRICAD_SMOKE")) {
+        static QtMessageHandler chained = qInstallMessageHandler(
+            [](QtMsgType type, const QMessageLogContext& where, const QString& text) {
+                if (text.contains(QLatin1String("stylesheet"))) sheet_refused = true;
+                if (chained) chained(type, where, text);
+            });
+    }
+
     piricad::command::set_log_sink([](piricad::command::LogLevel level, std::string_view message) {
         // Diagnostics; see core/log.cpp for why the result is discarded.
         (void)std::fprintf(level >= piricad::command::LogLevel::Warn ? stderr : stdout,
@@ -145,6 +160,11 @@ int main(int argc, char** argv)
             if (QWidget* top = QApplication::activePopupWidget()) top->close();
         });
         later([] {
+            if (sheet_refused) {
+                (void)std::fprintf(stderr, "[piricad] duman testi: stil sayfası REDDEDİLDİ\n");
+                QApplication::exit(2);
+                return;
+            }
             (void)std::fprintf(stdout, "[piricad] duman testi: bütün pencereler açıldı\n");
             QApplication::exit(0);
         });

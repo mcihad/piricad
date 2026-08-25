@@ -406,16 +406,60 @@ QString themeStyleSheet(ThemeMode mode)
                                            selection-background-color: %(accent)s;
                                            selection-color: %(onAccent)s; }
 
+        /* ---- inputs, `bileşen_standardı.png` -------------------------------- */
+        /*
+         * 30 px tall, 4 px radius, 1 px `--border`. Seven states, and each of
+         * them says a DIFFERENT thing:
+         *
+         *   default    the value is what it was
+         *   focus      the caret is here — 1 px accent plus a 2 px ring
+         *   changed    edited and not yet saved — warn
+         *   invalid    the value is not acceptable — danger
+         *   read-only  it can be read and not written
+         *   disabled   it is not available at all
+         *   derived    it is computed; editing it is meaningless
+         *
+         * `changed` and `invalid` are the pair worth stating plainly: warn means
+         * "you changed this", danger means "this is wrong". A dialog that used
+         * one colour for both would tell a user their own edit was invalid.
+         */
         QLineEdit, QPlainTextEdit, QTextEdit, QSpinBox, QDoubleSpinBox, QComboBox {
             background: %(input)s; color: %(text)s;
             border: 1px solid %(border)s; border-radius: 4px;
-            padding: 5px 8px; min-height: 24px; selection-background-color: %(accent)s;
-            selection-color: %(onAccent)s;
+            padding: 4px 9px; min-height: 22px; max-height: 22px;
+            selection-background-color: %(accent)s; selection-color: %(onAccent)s;
         }
+        QPlainTextEdit, QTextEdit         { max-height: 16777215px; }
+
+        QLineEdit:hover, QSpinBox:hover,
+        QDoubleSpinBox:hover, QComboBox:hover { border: 1px solid %(separator)s; }
+
         QLineEdit:focus, QPlainTextEdit:focus, QSpinBox:focus,
-        QDoubleSpinBox:focus, QComboBox:focus { border: 1px solid %(accent)s; }
-        QLineEdit:disabled, QSpinBox:disabled,
-        QComboBox:disabled                { color: %(textFaint)s; }
+        QDoubleSpinBox:focus, QComboBox:focus,
+        QLineEdit[state="focus"]          { border: 1px solid %(accent)s;
+                                            background: %(input)s; }
+
+        QLineEdit[state="changed"], QComboBox[state="changed"],
+        QSpinBox[state="changed"], QDoubleSpinBox[state="changed"] {
+                                            border: 1px solid %(warn)s; color: %(warn)s;
+                                            background: %(warnWash)s; }
+
+        QLineEdit[state="invalid"], QComboBox[state="invalid"],
+        QSpinBox[state="invalid"], QDoubleSpinBox[state="invalid"] {
+                                            border: 1px solid %(dangerEdge)s; color: %(danger)s;
+                                            background: %(dangerWash)s; }
+
+        QLineEdit[state="derived"], QSpinBox[state="derived"],
+        QDoubleSpinBox[state="derived"]   { border: 1px solid %(accentEdge)s;
+                                            color: %(accentHi)s; }
+
+        QLineEdit[readOnly="true"]        { background: transparent; color: %(textDim)s;
+                                            border: 1px solid transparent; }
+
+        QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled,
+        QComboBox:disabled                { color: %(textFaint)s; background: transparent;
+                                            border: 1px solid transparent; }
+
         QComboBox::drop-down              { border: none; width: 22px; }
         QComboBox QAbstractItemView       { background: %(panel)s; color: %(text)s;
                                             border: 1px solid %(border)s;
@@ -424,27 +468,93 @@ QString themeStyleSheet(ThemeMode mode)
         QDoubleSpinBox::up-button, QDoubleSpinBox::down-button { width: 15px; border: none;
                                             background: transparent; }
 
-        /* ---- buttons: §4 asks 32 px on a primary --------------------------- */
-        QPushButton                       { background: %(raised)s; color: %(text)s;
+        /* ---- buttons: six kinds, one hierarchy ----------------------------- */
+        /*
+         * `bileşen_standardı.png` measures 32 px and names the rule that matters
+         * more than any measurement: ONE PRIMARY BUTTON PER SCREEN. A screen with
+         * two primaries has told the user nothing about which one to press.
+         *
+         *   primary      the single action that closes the dialog — accent fill
+         *   secondary    a non-destructive second action — outline
+         *   ghost        low priority; toolbars and inline actions — no chrome
+         *   destructive  cannot be undone — danger outline, always confirms
+         *   mode         carries an on/off state — reads as pressed
+         *   icon         32x32, 16 px glyph, tooltip only
+         */
+        QPushButton                       { background: transparent; color: %(textDim)s;
                                             border: 1px solid %(border)s; border-radius: 4px;
-                                            padding: 6px 14px; min-height: 30px; }
-        QPushButton:hover                 { background: %(hoverIcon)s; }
+                                            padding: 0px 16px; min-height: 30px; max-height: 30px;
+                                            font-size: 12px; }
+        QPushButton:hover                 { background: %(hoverIcon)s; color: %(text)s; }
         QPushButton:pressed               { background: %(header)s; }
-        QPushButton:disabled              { color: %(textFaint)s; }
-        QPushButton:default,
-        QPushButton[primary="true"]       { background: %(accent)s; color: %(onAccent)s;
-                                            border: 1px solid %(accent)s; min-height: 32px;
-                                            font-weight: 500; }
-        QPushButton:default:hover,
-        QPushButton[primary="true"]:hover { background: %(accentHi)s; }
+        QPushButton:disabled              { color: %(textFaint)s; border-color: %(lineSoft)s; }
 
-        QCheckBox, QRadioButton           { color: %(text)s; spacing: 7px; }
+        QPushButton#primary,
+        QPushButton[primary="true"]       { background: %(accent)s; color: %(onAccent)s;
+                                            border: 1px solid %(accentLift)s;
+                                            font-weight: 500; }
+        QPushButton#primary:hover,
+        QPushButton[primary="true"]:hover { background: %(accentHi)s; }
+        QPushButton#primary:disabled,
+        QPushButton[primary="true"]:disabled { background: %(wash)s; color: %(textFaint)s;
+                                            border: 1px solid %(accentEdge)s; }
+
+        QPushButton#ghost                 { border: 1px solid transparent;
+                                            background: transparent; }
+        QPushButton#ghost:hover           { background: %(hoverIcon)s; }
+
+        QPushButton#danger                { border: 1px solid %(dangerEdge)s; color: %(danger)s; }
+        QPushButton#danger:hover          { background: %(dangerWash)s; }
+        QPushButton#danger:disabled       { color: %(textFaint)s;
+                                            border-color: %(lineSoft)s; }
+
+        QPushButton#mode:checked          { background: %(wash)s; color: %(accentHi)s;
+                                            border: 1px solid %(accentEdge)s; }
+
+        QPushButton#iconButton            { min-width: 32px; max-width: 32px;
+                                            min-height: 32px; max-height: 32px;
+                                            padding: 0px; }
+
+        /* ---- selection controls -------------------------------------------- */
+        /*
+         * 14 px, and the same accent everywhere. §13 forbids stating anything
+         * with colour alone, so each of these carries a SHAPE as well: the tick,
+         * the dash, the dot, the knob's side.
+         */
+        QCheckBox, QRadioButton           { color: %(text)s; spacing: 8px;
+                                            font-size: 12px; }
         QCheckBox::indicator,
-        QRadioButton::indicator           { width: 15px; height: 15px;
+        QRadioButton::indicator           { width: 14px; height: 14px;
                                             border: 1px solid %(border)s; border-radius: 3px;
                                             background: %(input)s; }
-        QCheckBox::indicator:checked      { background: %(accent)s; border-color: %(accent)s; }
-        QRadioButton::indicator           { border-radius: 8px; }
+        QCheckBox::indicator:hover,
+        QRadioButton::indicator:hover     { border: 1px solid %(separator)s; }
+        QCheckBox::indicator:checked      { background: %(accent)s;
+                                            border: 1px solid %(accentLift)s; }
+        QCheckBox::indicator:indeterminate { background: %(accent)s;
+                                            border: 1px solid %(accentLift)s; }
+        QCheckBox::indicator:disabled,
+        QRadioButton::indicator:disabled  { background: transparent;
+                                            border: 1px solid %(lineSoft)s; }
+        QCheckBox:disabled, QRadioButton:disabled { color: %(textFaint)s; }
+        QRadioButton::indicator           { border-radius: 7px; }
+        QRadioButton::indicator:checked   { background: %(input)s;
+                                            border: 4px solid %(accent)s; }
+
+        /* ---- segment, slider ------------------------------------------------ */
+        QPushButton#segment               { background: transparent; color: %(textDim)s;
+                                            border: 1px solid %(border)s; border-radius: 0px;
+                                            padding: 0px 14px; min-height: 24px;
+                                            max-height: 24px; font-size: 11.5px; }
+        QPushButton#segment:checked       { background: %(wash)s; color: %(accentHi)s;
+                                            border: 1px solid %(accentEdge)s; }
+        QPushButton#segment:hover         { background: %(hoverIcon)s; }
+
+        QSlider::groove:horizontal        { height: 4px; background: %(lineSoft)s;
+                                            border-radius: 2px; }
+        QSlider::sub-page:horizontal      { background: %(accent)s; border-radius: 2px; }
+        QSlider::handle:horizontal        { width: 12px; height: 12px; margin: -5px 0px;
+                                            border-radius: 6px; background: %(readout)s; }
 
         QGroupBox                         { background: transparent; border: 1px solid %(lineSoft)s;
                                             border-radius: 4px; margin-top: 10px;
@@ -504,7 +614,7 @@ QString themeStyleSheet(ThemeMode mode)
         .replace(QStringLiteral("%(textFaint)s"), t.textFaint.name())
         .replace(QStringLiteral("%(accent)s"), t.accent.name())
         .replace(QStringLiteral("%(accentHi)s"), t.accentHi.name())
-        .replace(QStringLiteral("%(accentEdge)s"), t.accent.darker(130).name())
+        .replace(QStringLiteral("%(accentEdge)s"), t.accentEdge.name())
         .replace(QStringLiteral("%(wash)s"), rgba(t.accentWash))
         .replace(QStringLiteral("%(onAccent)s"), t.onAccent.name())
         .replace(QStringLiteral("%(onHover)s"), t.onHover.name())
@@ -516,6 +626,13 @@ QString themeStyleSheet(ThemeMode mode)
         .replace(QStringLiteral("%(separator)s"), t.separator.name())
         .replace(QStringLiteral("%(readout)s"), t.readout.name())
         .replace(QStringLiteral("%(hint)s"), t.hint.name())
+        .replace(QStringLiteral("%(warnWash)s"), rgba(t.warnWash))
+        .replace(QStringLiteral("%(warn)s"), t.warn.name())
+        .replace(QStringLiteral("%(ok)s"), t.ok.name())
+        .replace(QStringLiteral("%(danger)s"), t.danger.name())
+        .replace(QStringLiteral("%(dangerEdge)s"), t.dangerEdge.name())
+        .replace(QStringLiteral("%(dangerWash)s"), rgba(t.dangerWash))
+        .replace(QStringLiteral("%(accentLift)s"), t.accentLift.name())
         .replace(QStringLiteral("%(sunken)s"), t.bgSunken.name())
         .replace(QStringLiteral("%(hoverRow)s"), t.hoverRow.name())
         .replace(QStringLiteral("%(rowOdd)s"), t.rowOdd.name())

@@ -49,7 +49,47 @@ tüm çizim uygulama tarafından yapılır, yerel tema devre dışıdır (`Fusio
 | `--accent-hi` | `#6CC0EE` | Vurgu üzerindeki metin/ikon |
 | `--accent-wash` | `rgba(47,155,216,.12)` | Seçili satır zemini |
 | `--warn` | `#D98A2F` | Yakalama işaretçisi, düzenlenmiş hücre, kilit |
+| `--warn-wash` | `rgba(217,138,47,.12)` | Kaydedilmemiş bir alanın zemini |
 | `--ok` | `#4CAF7D` | Bağlantı durumu |
+| `--danger` | `#D28484` | Yıkıcı eylemin ve geçersiz değerin mürekkebi |
+| `--danger-edge` | `#874645` | Onun konturu, mürekkepten bir adım geri |
+| `--danger-wash` | `rgba(210,132,132,.10)` | Geçersiz bir alanın zemini |
+| `--accent-lift` | `#50ABDC` | Dolu bir vurgu yüzeyinin üst kenarı (birincil buton) |
+| `--accent-edge` | `#3B799F` | Aktif ya da basılı bir denetimin konturu |
+
+### Kabuk jetonları
+
+Ana pencerenin kendi yüzeyleri. §7'nin bantları bunlarla boyanır; mockup'ta hepsi
+harfi harfine geçer.
+
+| Jeton | Değer | Kullanım |
+|---|---|---|
+| `--bg-shell-bar` | `#23282D → #1E2226` | Ana pencere başlık çubuğu (2 duraklı) |
+| `--bg-strip` | `#191D21` | Sekme şeridi, durum çubuğu, panel başlığı — en koyu krom |
+| `--bg-sunken` | `#1B1F23` | Komut satırı, tuval cetvelleri, zoom yığını |
+| `--bg-tab-active` | `#22262A` | Seçili doküman sekmesi |
+| `--window-edge` | `#2C3237` | Çerçevesiz pencerenin 1 px konturu |
+| `--separator` | `#2E343A` | Araç çubuğu grupları arasındaki 1×22 çizgi |
+| `--ruler-tick` | `#3A4147` | Cetveldeki bölme çizgisi |
+| `--hover-chip` | `#2F353B` | İmlecin altındaki menü başlığı ya da çip |
+| `--menu-text` | `#AEB6BD` | On menü başlığı, gövde metninden bir adım geri |
+| `--dot` | `#3B4248` | Pencere düğmeleri; her platformda aynı çizilir |
+| `--title-text` | `#767F87` | Başlık çubuğunun ortasındaki doküman adı |
+| `--hint` | `#5F686F` | Arama alanındaki yer tutucu |
+| `--hint-faint` | `#4C545B` | Yanındaki klavye kısayolu |
+| `--readout` | `#D8DEE4` | Okunan ama düzenlenemeyen mono değer |
+| `--readout-dim` | `#C4CCD3` | Aynısı bir adım geri: durum koordinatı, ölçek çubuğu |
+| `--on-accent-dark` | `#0B1116` | Vurgu üzerine KOYU glif isteyen rozetin yazısı |
+
+**Dördüncü anlam: DANGER.** §2'nin ilk dört anlamı — vurgu, uyarı, onay, sükûnet —
+"bu geri alınamaz" ve "bu değer yanlış" cümlelerini söyleyemiyordu. `--danger`
+yalnızca bu iki iş için vardır: yıkıcı bir eylemin konturu ve geçersiz bir alanın
+konturu. Bir uyarı değildir; uyarı "dikkat et" der, bu "olmaz" der.
+
+**İki vurgu kenarı.** Dolu bir vurgu yüzeyi (birincil buton) kendinden AÇIK bir üst
+kenar taşır; aktif bir denetim (kip anahtarı, seçili segment) kendinden KOYU bir
+kontur taşır. Tek jetonla ikisi yapılınca birincil buton düz, kip anahtarı basılı
+görünüyordu.
 
 **Seçili satır kalıbı** (tüm listelerde aynı): `background: --accent-wash` +
 `box-shadow: inset 2px 0 0 --accent`. Hover: `#23282C`. Bu iki durum asla birbirine benzemez.
