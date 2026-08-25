@@ -381,7 +381,16 @@ private:
 
         painter.save();
         painter.setClipPath(path, Qt::IntersectClip);
-        if (batch.rgba != 0) painter.fillRect(box, faded(batch.rgba, ps.opacity));
+        // NO GROUND WASH HERE, and the reason is that there is only one fill
+        // colour on a layer. `dolgu_renk` is the GLYPH's fill — the black of a
+        // forest triangle, the red of a coral tuft — and washing the face with it
+        // painted the whole parcel that colour with the glyphs invisible inside
+        // it. The MPYY forest and cemetery rows came out as solid blocks.
+        //
+        // Washing the area is a `dolgu` layer's job, and a catalogue row that
+        // wants one says so: the MPYY package puts the annex's ALAN RENK KODU in
+        // a `dolgu` layer underneath the pattern, which is what draws the green
+        // under the forest triangles. A pattern layer paints its pattern.
 
         QPen pen(faded(ps.line_rgba, ps.opacity));
         pen.setWidthF(ps.line_width_px);
@@ -418,7 +427,16 @@ private:
 
         painter.save();
         painter.setClipPath(path, Qt::IntersectClip);
-        if (batch.rgba != 0) painter.fillRect(box, faded(batch.rgba, ps.opacity));
+        // NO GROUND WASH HERE, and the reason is that there is only one fill
+        // colour on a layer. `dolgu_renk` is the GLYPH's fill — the black of a
+        // forest triangle, the red of a coral tuft — and washing the face with it
+        // painted the whole parcel that colour with the glyphs invisible inside
+        // it. The MPYY forest and cemetery rows came out as solid blocks.
+        //
+        // Washing the area is a `dolgu` layer's job, and a catalogue row that
+        // wants one says so: the MPYY package puts the annex's ALAN RENK KODU in
+        // a `dolgu` layer underneath the pattern, which is what draws the green
+        // under the forest triangles. A pattern layer paints its pattern.
 
         painter.setPen(QPen(faded(ps.line_rgba, ps.opacity), ps.line_width_px));
         painter.setBrush(glyph_brush(ps));

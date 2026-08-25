@@ -61,9 +61,22 @@ Symbol symbol_of_entry(const StyleEntry& row, const ImageResolver& resolve,
         for (const DeclaredLayer& d : row.layers) {
             SymbolLayer layer = d.layer;
             if (d.dash.count > 0 && intern_dash) layer.look.dash = intern_dash(d.dash, row.id);
+
+            // A `gorsel-*` layer names a file; the id belongs to the document
+            // that is about to carry the bytes, so it is minted here and not by
+            // the parser. A layer whose picture will not resolve is DROPPED
+            // rather than drawn empty: an image layer with no image paints
+            // nothing, and a stack silently one layer short is easier to see
+            // than a stack with an invisible member in it.
+            if (!d.image.empty()) {
+                if (!resolve) continue;
+                const ImageId image = resolve(d.image);
+                if (image == kNoImage) continue;
+                layer.image = image;
+            }
             declared.layers.push_back(layer);
         }
-        return declared;
+        if (!declared.layers.empty()) return declared;
     }
 
     Symbol sym;

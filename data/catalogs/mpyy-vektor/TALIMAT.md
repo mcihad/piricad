@@ -1,20 +1,26 @@
-# MPYY Gösterimlerinin Vektörleştirilmesi — Çalışma Talimatı
+# MPYY gösterimlerinin vektör dili
 
-Bu belge, Mekânsal Planlar Yapım Yönetmeliği'nin (MPYY) EK-1 gösterimlerini
-resimden **sayıya** çeviren işin tarifidir. İş bittiğinde 476 gösterimin
-tamamının ya bir sembol katmanı yığını ya da bir SVG karşılığı olacaktır.
+Bu belge, Mekânsal Planlar Yapım Yönetmeliği'nin (MPYY) EK-1 gösterimlerinin resimden
+**sayıya** nasıl yazıldığını anlatır: hangi katman tipi neyi çizer, hangi alan hangi
+birimdedir, bir satır ne zaman SVG ister.
 
-Birlikte kullanılan üç dosya:
+**İş bitmiştir.** 476 gösterimin 467'si yazıldı, 9'u gerekçesiyle atlandı. Bu belge
+artık bir iş emri değil, paketin **sözlüğüdür**: yönetmelik yeni bir gösterim
+yayımladığında ya da yazılmış bir satır düzeltileceğinde okunacak yer burasıdır.
+Sayıların hangi ölçümden geldiği `docs/veri/mpyy-gosterimleri.md` sayfasındadır.
+
+Yanındaki dosyalar:
 
 | Dosya | Ne işe yarar |
 |---|---|
-| `TALIMAT.md` | Bu belge. Nasıl çevrileceğini söyler |
-| `YAPILACAKLAR.md` | 476 satırın listesi. Hangi gösterim, hangi görsel dosya |
-| `dogrula.py` | Yazılanı denetler ve listenin doğru söylediğini kanıtlar |
+| `TALIMAT.md` | Bu belge. Katman dilini tarif eder |
+| `YAPILACAKLAR.md` | 476 satırın listesi ve hangisinin yazıldığı |
+| `ATLANANLAR.md` | Çizilmeyen dokuz satır ve her birinin gerekçesi |
+| `scripts/ci-gate-mpyy-vektor.py` | Paketi denetler ve listenin doğru söylediğini kanıtlar |
 
 ---
 
-## 1. İşin tarifi
+## 1. Bu paket neden var
 
 `data/catalogs/mpyy/plan-gosterim.json` yönetmelik eklerinden çıkarılmış **476
 gösterim** taşır. Her gösterimin karşılığı, ekten kesilmiş bir **JPEG ya da PNG**
@@ -245,12 +251,12 @@ stat -c %s data/catalogs/mpyy-vektor/semboller/tarim-alani.svg
 
 ---
 
-## 4. Bir gösterimin çevrilme sırası
+## 4. Yeni bir gösterim nasıl yazılır
 
 Her satır için, sırayla:
 
-1. **`YAPILACAKLAR.md`'den sıradaki işaretsiz satırı al.** Listenin sırası
-   yönetmeliğin sırasıdır; atlanmaz.
+1. **Resmî katalogdaki satırı bul.** `data/catalogs/mpyy/plan-gosterim.json`
+   satırın kimliğini, adını, ekini ve gömülü görsellerini taşır.
 2. **Adı geçen görsel dosyayı aç ve bak.** Ne çizildiğini yaz: kaç çizgi, hangi
    şekil, hangi aralık, dolu mu boş mu.
 3. **Şekli katmanlara ayır.** "Kesikli bir çizgi ve üzerinde üçgenler" iki
@@ -261,7 +267,7 @@ Her satır için, sırayla:
    değil — resim ne diyorsa o yazılır.
 5. **Satırı `plan-gosterim.json` içindeki `stiller` dizisine ekle.** Kimliği ve
    kaynağı resmî katalogdan kopyala.
-6. **`dogrula.py`'yi çalıştır.** Kusur varsa düzelt; kusur bitmeden ilerleme.
+6. **`scripts/ci-gate-mpyy-vektor.py`'yi çalıştır.** Kusur varsa düzelt; kusur bitmeden ilerleme.
 7. **`YAPILACAKLAR.md`'de o satırın kutusunu işaretle** (`- [x]`).
 
 **Bir gösterim çizilemiyorsa** kutusu boş bırakılır ve `ATLANANLAR.md` dosyasına
@@ -282,7 +288,7 @@ sıkıştırma bozuk; şeklin üçgen mi ok mu olduğu ayırt edilemiyor"_.
 Depo kökünden:
 
 ```bash
-python3 data/catalogs/mpyy-vektor/dogrula.py
+python3 scripts/ci-gate-mpyy-vektor.py
 ```
 
 Üç şey söyler:
@@ -306,19 +312,18 @@ Denetlediği şeyler:
 
 Son madde, bu işin en önemli denetimidir. `YAPILACAKLAR.md`'de bir kutuyu
 işaretlemek bir **iddiadır**: "bu gösterime baktım ve karşılığını yazdım".
-`dogrula.py` her iddiayı pakete karşı sınar. Bu yüzden kutu, satır yazıldıktan
+`scripts/ci-gate-mpyy-vektor.py` her iddiayı pakete karşı sınar. Bu yüzden kutu, satır yazıldıktan
 **sonra** işaretlenir — önce değil.
 
 ---
 
-## 6. Teslim
+## 6. Paket ne zaman tutarlıdır
 
-İş, `dogrula.py` **çıkış kodu 0** verdiğinde biter. O ana kadar:
+Kapı **çıkış kodu 0** verdiğinde paket tutarlıdır. Bunun anlamı:
 
-- 476 satırın her biri ya vektörleşmiş ya `ATLANANLAR.md`'de gerekçelenmiştir,
+- 476 satırın her biri ya vektörleşmiştir ya `ATLANANLAR.md`'de gerekçelenmiştir,
 - `YAPILACAKLAR.md`'deki her işaret pakette karşılığını bulur,
 - `semboller/` altında raster dosya yoktur.
 
-Ara teslim yoktur ve toplu işaretleme yoktur: satırlar tek tek ilerler, her adımda
-doğrulama geçer. `dogrula.py` `2` dönerken iş "bitmiş" değildir; kaç gösterim
-kaldığını kendisi yazar.
+Toplu işaretleme yoktur: bir kutu, satırı yazdıktan **sonra** işaretlenir. Kapı
+`2` dönerken paket eksiktir ve kaç gösterimin kaldığını kendisi yazar.

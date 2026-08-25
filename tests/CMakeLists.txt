@@ -101,12 +101,23 @@ endif()
 # Discovered rather than listed: a new gate is picked up by re-running CMake, and
 # there is no second list to keep in sync (CLAUDE.md 5.10, in spirit).
 file(GLOB PIRICAD_GATES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/scripts/ci-gate-*.sh")
+file(GLOB PIRICAD_GATES_PY CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/scripts/ci-gate-*.py")
 foreach(_gate IN LISTS PIRICAD_GATES)
     get_filename_component(_name "${_gate}" NAME_WE)
     add_test(NAME ${_name}
         COMMAND "${CMAKE_COMMAND}" -E env bash "${_gate}"
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 endforeach()
+
+# A gate that has to read a catalogue is written in Python rather than bent into
+# shell. It runs the same way and fails the same way; only the interpreter differs.
+foreach(_gate IN LISTS PIRICAD_GATES_PY)
+    get_filename_component(_name "${_gate}" NAME_WE)
+    add_test(NAME ${_name}
+        COMMAND "${CMAKE_COMMAND}" -E env python3 "${_gate}"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+endforeach()
+list(APPEND PIRICAD_GATES ${PIRICAD_GATES_PY})
 
 if(NOT PIRICAD_GATES)
     message(FATAL_ERROR "No CI gate scripts found in ${CMAKE_SOURCE_DIR}/scripts")

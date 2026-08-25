@@ -1,13 +1,1 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- MPYY EK-1a · DOĞAL KARAKTERİ KORUNACAK ALAN and DOĞAL VE EKOLOJİK YAPISI
-     KORUNACAK ALAN. A tuft of grass: five blades fanning from one root, drawn
-     from the printed symbol rather than traced off the scan. -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
-  <g fill="none" stroke="#000000" stroke-width="1.4" stroke-linecap="round">
-    <path d="M 8 14 C 8 10 6 6 3 3"/>
-    <path d="M 8 14 C 8 10 7 6 6 2"/>
-    <path d="M 8 14 L 8 2"/>
-    <path d="M 8 14 C 8 10 9 6 10 2"/>
-    <path d="M 8 14 C 8 10 10 6 13 3"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><g fill="none" stroke="#000" stroke-width="9" stroke-linecap="round"><path d="M50 96 L50 40 M50 96 L28 44 M50 96 L14 58 M50 96 L72 44 M50 96 L86 58"/></g></svg>

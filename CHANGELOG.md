@@ -6,6 +6,41 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — MPYY gösterimlerinin vektör paketi tamamlandı
+
+Sebep: **Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1 Gösterimler**
+(RG-22/1/2026-33145; EK-1b için RG-14/6/2014-29030).
+
+- **`data/catalogs/mpyy-vektor` 30 satırdan 467 satıra çıktı.** Yönetmeliğin 476
+  gösteriminin tamamı ele alındı: 467'si çizildi, 9'u gerekçesiyle atlandı.
+  Toplam 1 574 sembol katmanı ve 98 SVG çizim, 431 KB.
+- **Sayılar ölçüldü, tahmin edilmedi.** Her kırpma gömülü DPI'sıyla mikrometreye
+  çevrildi; çizgi kalınlığı, tekrar adımı, işaretçi aralığı, kesik/boşluk yapısı
+  ve mürekkep rengi izdüşüm ölçümünden okundu. Eğik taramalarda projeksiyon adımı
+  dik aralığın √2 katıdır; ölçüm bunu böler.
+- **17 satırda kaynak kusuru bulundu ve yazıldı.** Yönetmelik ekinin bazı
+  hücrelerine gösterim yerine program ekran görüntüsü konmuş; AYRIK, BİTİŞİK,
+  BLOK DÜZEN ve KAT ADEDİ satırları aynı düz siyah lekeyle basılmış. Kusur
+  satırın `kaynak_kusuru` alanına gerekçesiyle geçti.
+- **Dokuz satır çizilmedi** çünkü ekin kendisi o satırların bütün gösterim
+  sütunlarını boş basmıştır; gerekçeleri `ATLANANLAR.md` dosyasında.
+- **`scripts/ci-gate-mpyy-vektor.py`** paketi ve iş listesini denetler; `ctest`
+  ve `make check` içinden çalışır. İş listesinde işaretli ama pakette olmayan bir
+  satır kusurdur.
+
+### Düzeltildi — bildirilen katman bir görseli çağırabiliyor
+
+- **`katmanlar` içindeki `gorsel` alanı okunmuyordu.** Şema onu sayıyordu, C++
+  ayrıştırıcısı sessizce atıyordu: `gorsel-cizgi`, `gorsel-isaretci` ve
+  `gorsel-dolgu` katmanları resimsiz kalıyor, hiçbir şey çizmiyordu. Artık
+  paketin `gorseller` tablosundan çözülüyor ve satır uygulanırken kimliğe
+  dönüştürülüyor — böylece bir sınır çizgisi sayılarla yazılıp üzerine çark
+  basılabiliyor.
+- **Desen dolguları kendi alanını glif rengiyle boyuyordu.** `nokta-desen-dolgu`
+  ve `cizgi-desen-dolgu`, `dolgu_renk` ile bütün yüzeyi doldurup glifleri onun
+  içinde görünmez bırakıyordu; MPYY'nin orman ve mezarlık gösterimleri düz siyah
+  blok olarak çiziliyordu. Alanı boyamak `dolgu` katmanının işidir.
+
 ### Eklendi — PostGIS veritabanı desteği
 
 - **`VERİTABANI` komutu (`core.database`).** Bir PostGIS sunucusuna bağlanır;

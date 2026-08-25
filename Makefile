@@ -81,7 +81,8 @@ bench-baseline: $(BUILD)/CMakeCache.txt ## Record this machine's baseline for th
 	@PIRICAD_BENCH_RECORD=1 $(BIN)/piricad_bench
 
 gates: ## Run every CI gate script
-	@fail=0; for g in scripts/ci-gate-*.sh; do bash "$$g" || fail=1; done; exit $$fail
+	@fail=0; for g in scripts/ci-gate-*.sh; do bash "$$g" || fail=1; done; \
+	for g in scripts/ci-gate-*.py; do python3 "$$g" || fail=1; done; exit $$fail
 
 check: gates build test format-check tidy-if-present iwyu-if-present ## Everything CI runs, in CI's order
 

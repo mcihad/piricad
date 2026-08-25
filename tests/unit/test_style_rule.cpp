@@ -1415,3 +1415,60 @@ TEST_CASE("ETİKET: iki satır noktanın etrafına yığılıyor")
     }
     CHECK(found);
 }
+
+TEST_CASE("SEMBOL: vektör paketinin her satırı katmanlarıyla rafa giriyor")
+{
+    // The vector package is the one that has to SURVIVE a corner, a recolour and
+    // a DWG export, so it is the one whose declared stacks are checked here. It
+    // is loaded on top of the picture package in the shell, and a row it restates
+    // replaces the picture — see main_window.cpp.
+    const std::string path =
+        std::string(PIRICAD_DATA_DIR) + "/catalogs/mpyy-vektor/plan-gosterim.json";
+    std::ifstream in(path, std::ios::binary);
+    REQUIRE(in.good());
+
+    std::ostringstream buffer;
+    buffer << in.rdbuf();
+    auto parsed = core::Json::parse(buffer.str());
+    REQUIRE(parsed.ok());
+
+    auto catalog = core::StyleCatalog::from_json(parsed.value());
+    if (!catalog) FAIL_WITH("vektör kataloğu", catalog.error().message);
+    REQUIRE(catalog.ok());
+
+    // Every picture the package names, resolved to a DIFFERENT id per file so a
+    // layer pointing at the wrong one is visible as a wrong id and not as a
+    // coincidence.
+    std::unordered_map<std::string, core::ImageId> minted;
+    const auto resolve = [&minted](const std::string& file) -> core::ImageId {
+        auto [it, fresh] = minted.emplace(file, core::ImageId{});
+        if (fresh) it->second = core::ImageId{static_cast<std::uint32_t>(minted.size())};
+        return it->second;
+    };
+
+    core::StyleLibrary shelf;
+    const std::size_t added = shelf.add_catalog(catalog.value(), resolve);
+    CHECK(added >= std::size_t{460});
+
+    // WHAT THIS TEST IS FOR. A declared layer may name a picture — a cogwheel on
+    // a boundary, a wave on a shoreline, a bolt inside a frame — and for a while
+    // the parser read every other field of a layer and silently dropped that one.
+    // The package parsed, the shelf filled, and the glyphs drew nothing.
+    std::size_t with_image = 0;
+    std::size_t layers     = 0;
+    for (const core::StyleEntry& row : catalog.value().entries()) {
+        for (const core::DeclaredLayer& d : row.layers) {
+            ++layers;
+            if (!d.image.empty()) ++with_image;
+        }
+    }
+    CHECK(layers >= std::size_t{900});
+    CHECK(with_image >= std::size_t{50});
+
+    // And the id survives all the way onto the symbol the shelf hands out.
+    std::size_t drawn = 0;
+    for (const core::LibraryEntry& e : shelf.entries())
+        for (const core::SymbolLayer& l : e.symbol.layers)
+            if (l.image != core::kNoImage) ++drawn;
+    CHECK(drawn >= with_image);
+}

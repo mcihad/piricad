@@ -104,8 +104,78 @@ SHA-256 özetinin** ilk 16 basamağıdır. Aynı sembol kaç satırda geçerse g
 dosyadır: 897 gönderme, 608 ayrık dosya, toplam 6,6 MB.
 
 Görseller yönetmeliğin kendi bitmap ve metafile çizimleridir (PNG, JPEG, EMF, TIFF).
-Bunlar **henüz motorun sembol atlasına çevrilmemiştir**: hiçbir satırda `simge`
-(atlas indeksi) alanı yoktur. Atlas üretimi ayrı bir sürümün işidir.
+Bu paket onları olduğu gibi taşır; çizilebilir hâlleri bir sonraki bölümdeki **vektör
+paketindedir**.
+
+## Vektör paketi
+
+`data/catalogs/mpyy-vektor/plan-gosterim.json`, aynı 476 gösterimin **çizilebilir**
+hâlidir. Resimli paketin ÜSTÜNE yüklenir ve aynı kimliği yeniden bildiren satır
+öncekinin yerine geçer; program açılışta ikisini bu sırayla yükler.
+
+**Neden ayrı bir paket.** Bir JPEG kırpması yeniden renklendirilemez, keskin
+ölçeklenemez, DWG'ye çizgi tipi olarak yazılamaz ve köşe dönemez. Yönetmelik
+gösterimi resim olarak yayımlar; imzalanan bir plan ise bunların hepsini ister.
+
+| | |
+|---|---|
+| Vektörleşen satır | **467** / 476 |
+| Gerekçeli atlanan | **9** — `ATLANANLAR.md` |
+| Sembol katmanı | 1 574 (satır başına ortalama 3,4) |
+| Katman tipiyle anlatılan | 1 436 katman |
+| SVG çizim | 98 dosya, 107 KB |
+| Paket boyutu | 431 KB |
+
+Katman tipi dağılımı: 325 çizgi desen dolgusu, 297 düz dolgu, 197 işaretçi-çizgi,
+193 çizgi, 177 işaretçi, 135 görsel işaretçi, 114 nokta desen dolgusu, 107 yazı
+işaretçisi, 23 görsel çizgi, 3 tarak-çizgi, 3 görsel dolgu.
+
+### Sayılar nereden geldi
+
+Her satır ekin **bastığı şekle bakılarak** yazıldı; taranmış görüntünün otomatik
+izlenmesiyle değil. Ama gözle tahmin de edilmedi: her kırpma önce ölçüldü.
+
+Kırpmaların içinde **gömülü DPI** vardır (çoğunda 220 dpi). Bir piksel böylece
+mikrometreye çevrilebilir, ve mürekkep dört yönde izdüşürülüp çizgi kalınlığı,
+tekrar adımı, işaretçi aralığı ve kesik/boşluk yapısı **sayı olarak** okunur.
+Renkler de ölçülür: JPEG pusunu geçmek için mürekkepli piksellerin en koyu ve en
+doygun yüzde onu alınır.
+
+Eğik taramalarda bir tuzak vardır ve bu pakette ona düşülmemiştir: `y+x` ekseninde
+bir adım, iki çizgi arasındaki **dik** mesafenin √2 katıdır. Ölçüm bunu böler;
+bölmeyen bir okuma bütün eğik taramaları %41 seyrek yazardı.
+
+Buna rağmen her satır `belirsiz: true` ve `cizim-yorumu` gerekçelidir: ölçülen şey
+bir **resimdir**, yönetmeliğin verdiği bir sayı değil. Onay veren mühendis için bu
+ayrım esastır.
+
+### Kaynağın kendi kusurları
+
+Ekin bastığı şey her zaman bir gösterim değildir. **17 satırda** kaynak kusuru
+bulundu ve satıra `kaynak_kusuru` alanı olarak, gerekçesiyle yazıldı:
+
+- ÇİZGİ TİPİ / SEMBOL / TARAMA sütununa gösterim yerine bir **program ekran
+  görüntüsü** konmuş satırlar (ArcMap ve siyah zeminli bir çizim penceresi).
+  Deseni ekranın harita bölmesinden ölçülebilenler bu paketin ev ölçeğiyle çizildi
+  ve ölçeğin okunamadığı satıra yazıldı; okunamayan çizilmedi.
+- AYRIK, BİTİŞİK ve BLOK DÜZEN ile KAT ADEDİ satırları ekte **aynı düz siyah
+  lekeyle** basılmış; dördü birbirinden ayırt edilemiyor.
+
+Dokuz satır hiç çizilmedi: yönetmelik o satırların bütün gösterim sütunlarını boş
+basmıştır. Gerekçeleri satır satır `ATLANANLAR.md` dosyasındadır. Uydurmak,
+olmayan bir kuralı gösterim diye yayımlamak olurdu.
+
+### SVG ne zaman kullanılır
+
+Bir daire, bir üçgen, bir çapraz tarama **katmanlarla** yazılır — döner,
+renklendirilir, çizgi tipi olarak dışa aktarılır. SVG yalnız katman tiplerinin
+ifade edemediği şekiller içindir: bir kaplumbağa, bir çapa, bir hilal, bir çark.
+Bir SVG bir katmanın içinde `gorsel` alanıyla çağrılır, yani bir sınır çizgisi
+sayılarla yazılıp üzerine çark basılabilir.
+
+Ekin **EMF olarak** bastığı on iki çizim zaten vektördür; bunların altısı
+dönüştürülerek pakete alınmıştır. Kalan altısı düz desendi ve katmanlarla yazıldı:
+döşenen bir resim kendi dikişini gösterir.
 
 ## Bilerek eksik bırakılanlar
 
@@ -204,8 +274,11 @@ Bugün gösterim satırlarına [`STİL`](../komutlar/style.md) komutunun `paket=
 `kod=` parametreleriyle erişilir:
 
 ```text
-STİL katman=PARSEL paket=<depo kökü>/data/catalogs/mpyy/plan-gosterim.json kod=uip-ticaret-alani
+STİL katman=PARSEL paket=<depo kökü>/data/catalogs/mpyy-vektor/plan-gosterim.json kod=uip-ticaret-alani
 ```
+
+Vektör paketi yerine resimli paketin yolu da verilebilir; o zaman satır yönetmeliğin
+bastığı resimle çizilir.
 
 Yol çalışma dizinine göre çözülür; `<depo kökü>` yerine kendi yolunuzu yazın. Satır
 kimlikleri `<ek kısaltması>-<ad>` biçimindedir: `ortak-` (EK-1a), `msp-` (EK-1b),
@@ -218,7 +291,16 @@ uygulanabilecektir; bu Faz 3'ün işidir.
 
 ## Neyin denetlendiği
 
-`scripts/ci-gate-mpyy.sh` üç şeyi denetler:
+İki kapı vardır. `scripts/ci-gate-mpyy-vektor.py` vektör paketini denetler:
+
+1. Yazılan her katman şemanın sözlüğüne uyuyor mu — tip, şekil, yerleşim, birim
+   tanınıyor mu, renkler `#AARRGGBB` mi, ölçüler tam sayı mı;
+2. Her satır `belirsiz: true` ve `cizim-yorumu` taşıyor mu;
+3. Her `gorsel` göndermesi pakette gerçekten duran bir SVG'yi gösteriyor mu;
+4. `YAPILACAKLAR.md` **doğru mu söylüyor** — işaretli ama pakette olmayan bir satır
+   kusurdur, çünkü kaçamağın alacağı biçim tam olarak budur.
+
+`scripts/ci-gate-mpyy.sh` resimli paket için üç şeyi denetler:
 
 1. Katalog özeti — ek başına satır sayısı, referans satırların renkleri, `belirsiz`
    listesi — `tests/golden/mpyy/beklenen.txt` ile birebir eşleşiyor mu;

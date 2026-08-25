@@ -651,6 +651,17 @@ Result<StyleEntry> parse_entry(const Json& j, const AnnexNames& annexes, const I
                                at + ": '" + kKeyLayerText + "' metin olmalı.");
                 layer.text = t->as_string();
             }
+            // The picture a `gorsel-*` layer draws, named by its id in this
+            // package's own `gorseller` table and stored as the file that table
+            // points at. Unknown ids leave it empty rather than failing the
+            // catalogue, for the reason `image_file` gives: one missing picture
+            // must not take the other 475 rows down with it.
+            if (const Json* g = declared.find(kKeyImage); g != nullptr) {
+                if (!g->is_string())
+                    return err(ErrorCode::ParseError,
+                               at + ": '" + kKeyImage + "' bir görsel kimliği olmalı.");
+                declared_layer.image = image_file(images, g->as_string());
+            }
             if (const Json* l = declared.find(kKeyLayerLock); l != nullptr) {
                 if (!l->is_bool())
                     return err(ErrorCode::ParseError,

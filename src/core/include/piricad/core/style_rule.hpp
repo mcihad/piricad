@@ -174,6 +174,22 @@ struct DeclaredLayer
     /// Everything but the line type: what the layer draws and how.
     SymbolLayer layer{};
     DashPattern dash{}; ///< count 0 means the layer draws a solid stroke
+
+    /// The package-relative file this layer draws, for the three `gorsel-*` layer
+    /// types, and empty for every other type.
+    ///
+    /// A path rather than an `ImageId` because a CATALOGUE HOLDS NO DOCUMENT and
+    /// cannot mint one — the same reason `dash` is interned by whoever applies
+    /// the row rather than by the parser. The declaration names the picture; the
+    /// `ImageResolver` handed to `StyleLibrary::add_catalog` turns the name into
+    /// an id in the document that is about to carry the bytes.
+    ///
+    /// Without this a declared stack could not reference a picture at all, and a
+    /// gösterim that is mostly numbers with one drawn glyph in it — a boundary
+    /// line carrying a cogwheel, a wavy shoreline, a lightning bolt in a frame —
+    /// would have to be published as a picture whole, losing the recolouring,
+    /// the corners and the line-type export that the numbers exist to give.
+    std::string image;
 };
 
 struct StyleEntry
