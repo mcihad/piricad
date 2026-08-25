@@ -175,6 +175,24 @@ Penceredeki her değişiklik
 kapsamına göre `AYAR`, `TERCİH` ya da `MOD` komutu kurup çalıştırır — transkript, günlük
 ve yeniden oynatma pencereden yapılanı komut satırından yazılandan ayırt edemez.
 
+### Düzeltildi — stil düzenleyicisinde bir gösterim seçince form eksik kalıyordu
+
+Galeriden bir satır seçilince form "bozuluyordu": `Görsel işaretçi` katmanı yalnız Boyut
+ve Saydamlık gösteriyor, Açı satırı hiç görünmüyordu.
+
+Sebep, iki listenin birbirinden habersiz olması. Düzenleyici hangi satırı göstereceğine
+yanlarında elle yazılmış bir tipler tablosundan karar veriyor; boyayıcı hangi özelliği
+okuyacağına kendi `switch`inden. İkisini eşleşik tutan hiçbir şey yoktu ve ayrıştılar:
+`gorsel-dolgu` fırçasını `angle_udeg` ile döndürüyor ve pencerede o satır yoktu — yani
+**boyayıcının okuduğu bir değere kullanıcı ne bakabiliyor ne değiştirebiliyordu.**
+
+- Tablo, boyayıcının gerçekten ne okuduğuna **bakılarak** düzeltildi: `gorsel-dolgu`,
+  `gorsel-cizgi`, `gorsel-isaretci` ve `merkez-isaretci` artık açı satırını görüyor.
+- **`faz`** satırı da eklendi. Motora geçen tur eklenmişti ama pencerede yoktu.
+- **`ci-gate-designer.sh`** eklendi: boyayıcının her katman tipi için okuduğu özellik,
+  düzenleyicinin o özelliği yöneten listesinde de olmak zorunda. Kapının yakaladığı, bir
+  tip listeden geçici olarak çıkarılıp doğrulandı.
+
 ### Düzeltildi — arayüz vektör paketi yüklemiyordu, hep resim çiziyordu
 
 Bir önceki turda motor tarafını düzelttim ve "476 satırın 464'ünde iki motor aynı

@@ -240,6 +240,9 @@ private:
     QSpinBox* interval_{nullptr};
     QSpinBox* spacingY_{nullptr};
     QSpinBox* offset_{nullptr};
+
+    /// How far along the line the first marker sits; see `core::SymbolLayer::phase`.
+    QSpinBox* phase_{nullptr};
     QSpinBox* angle_{nullptr};
     QSpinBox* opacity_{nullptr};
     QLineEdit* text_{nullptr};
@@ -247,6 +250,7 @@ private:
     QComboBox* intervalUnit_{nullptr};
     QComboBox* spacingYUnit_{nullptr};
     QComboBox* offsetUnit_{nullptr};
+    QComboBox* phaseUnit_{nullptr};
 
     std::vector<Property> properties_;
 };

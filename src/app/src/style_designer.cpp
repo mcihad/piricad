@@ -957,6 +957,7 @@ QWidget* StyleDesigner::buildProperties()
     interval_ = spin(1000000, 500);
     spacingY_ = spin(1000000, 500);
     offset_   = spin(1000000, 100);
+    phase_    = spin(1000000, 100);
     angle_    = spin(359, 5);
     opacity_  = spin(255, 5);
 
@@ -969,6 +970,7 @@ QWidget* StyleDesigner::buildProperties()
     intervalUnit_ = unitCombo();
     spacingYUnit_ = unitCombo();
     offsetUnit_   = unitCombo();
+    phaseUnit_    = unitCombo();
 
     shape_     = namedCombo(kShapes, core::marker_shape_name);
     placement_ = namedCombo(kPlacements, core::marker_placement_name);
@@ -1007,8 +1009,21 @@ QWidget* StyleDesigner::buildProperties()
                                T::RasterMarker, T::RasterLine,   T::TextMarker};
     const std::vector<T> spaced{T::MarkerLine, T::HashLine, T::LinePatternFill, T::PointPatternFill,
                                 T::RasterLine};
+
+    // READ OFF THE BACKEND, not guessed. Every type below is one whose draw path
+    // actually reads `angle_udeg`: the two marker walks rotate the glyph by it,
+    // the pattern fills rotate the pattern, and `drawRasterFill` rotates its
+    // brush. `gorsel-dolgu` was missing from this list and its rotation was
+    // therefore unreachable from the dialog — a property the renderer reads and
+    // nobody can set is worse than one that does not exist, because the drawing
+    // can hold a value the user cannot see or change.
     const std::vector<T> angled{T::MarkerLine,       T::HashLine,     T::LinePatternFill,
-                                T::PointPatternFill, T::SimpleMarker, T::RasterFill};
+                                T::PointPatternFill, T::SimpleMarker, T::RasterFill,
+                                T::RasterLine,       T::RasterMarker, T::CentroidFill};
+
+    // The phase is read by both marker walks — the vector one and the stamped
+    // one — so every type that places something ALONG a line offers it.
+    const std::vector<T> phased{T::MarkerLine, T::HashLine, T::RasterLine};
 
     // ONE row for the colour button, listing every type that reads it. Declaring
     // it twice under two labels put the same widget in two cells of one
@@ -1046,6 +1061,7 @@ QWidget* StyleDesigner::buildProperties()
     addProperty(form, tr("Kaydırma"), offset_, offsetUnit_,
                 {T::SimpleLine, T::MarkerLine, T::HashLine, T::RasterLine, T::TextMarker});
     addProperty(form, tr("Açı (°)"), angle_, nullptr, angled);
+    addProperty(form, tr("Faz"), phase_, phaseUnit_, phased);
     addProperty(form, tr("Şekil"), shape_, nullptr, markers);
     addProperty(form, tr("Yerleşim"), placement_, nullptr, {T::MarkerLine, T::HashLine});
     addProperty(form, tr("Uç biçimi"), cap_, nullptr, {T::SimpleLine});
@@ -1254,6 +1270,7 @@ void StyleDesigner::loadSelected()
         select(intervalUnit_, kUnits, sl.interval.unit);
         select(spacingYUnit_, kUnits, sl.spacing_y.unit);
         select(offsetUnit_, kUnits, sl.offset.unit);
+        select(phaseUnit_, kUnits, sl.phase.unit);
 
         show_colour(stroke_, sl.look.rgba);
         show_colour(fill_, sl.look.fill_rgba);
@@ -1265,6 +1282,7 @@ void StyleDesigner::loadSelected()
         interval_->setValue(sl.interval.value);
         spacingY_->setValue(sl.spacing_y.value);
         offset_->setValue(sl.offset.value);
+        phase_->setValue(sl.phase.value);
         angle_->setValue(sl.angle_udeg / 1000000);
         opacity_->setValue(sl.opacity);
     }
@@ -1388,6 +1406,7 @@ void StyleDesigner::applyToSelected()
     sl.interval  = core::Measure{interval_->value(), pick(kUnits, intervalUnit_)};
     sl.spacing_y = core::Measure{spacingY_->value(), pick(kUnits, spacingYUnit_)};
     sl.offset    = core::Measure{offset_->value(), pick(kUnits, offsetUnit_)};
+    sl.phase     = core::Measure{phase_->value(), pick(kUnits, phaseUnit_)};
 
     sl.text           = text_->text().toStdString();
     sl.look.width_um  = width_->value();
