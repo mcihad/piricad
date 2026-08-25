@@ -80,6 +80,12 @@ SKIP_PREFIX = (
     'namespace', 'using namespace', 'extern "C"', 'public:', 'private:',
     'protected:', 'return', 'friend bool operator', 'friend auto operator',
     'static_assert', '#', 'operator', 'default:', 'case ',
+    # Qt's own macros are not declarations. `Q_OBJECT` never matched because it
+    # carries no `(`, but `Q_INTERFACES(...)` and `Q_PROPERTY(...)` do — and
+    # asking a contributor to write a doc comment above a macro that means
+    # "moc, generate the usual" teaches nothing and is noise above every class.
+    'Q_OBJECT', 'Q_INTERFACES', 'Q_PROPERTY', 'Q_ENUM', 'Q_FLAG', 'Q_GADGET',
+    'Q_DECLARE_', 'Q_INVOKABLE', 'Q_SIGNALS', 'Q_SLOTS',
 )
 
 

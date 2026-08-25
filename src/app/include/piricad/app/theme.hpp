@@ -69,6 +69,8 @@ QString themeStyleSheet(ThemeMode mode);
 class Themed
 {
 public:
+    /// An interface, so it owns nothing and copies nowhere: the widget that
+    /// implements it is a `QObject` and Qt already forbids copying one.
     Themed()          = default;
     virtual ~Themed() = default;
 
