@@ -68,11 +68,20 @@ add_test(NAME unit COMMAND piricad_tests WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 # happened when `installShellStyle()` and `loadShellFonts()` were called before
 # `QApplication` existed. This starts the real binary offscreen and requires it
 # to exit cleanly.
+#
+# `--version` IS NOT ENOUGH, and that is not a guess: it was the first version of
+# this test and it passed while `make run` segfaulted. QCommandLineParser answers
+# --version and exits before `MainWindow` is ever constructed, so the test proved
+# only that the parser worked. `PIRICAD_FRAME_DUMP` builds the whole shell, paints
+# one frame and exits — which is the thing that has to keep working.
 if(TARGET piricad)
     add_test(NAME shell-starts
-        COMMAND "${CMAKE_COMMAND}" -E env QT_QPA_PLATFORM=offscreen
-                $<TARGET_FILE:piricad> --version)
-    set_tests_properties(shell-starts PROPERTIES TIMEOUT 60)
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                "PIRICAD_FRAME_DUMP=${CMAKE_CURRENT_BINARY_DIR}/shell-starts.png"
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
+    set_tests_properties(shell-starts PROPERTIES TIMEOUT 120)
 endif()
 
 # Every gate script runs as a test, so a violation fails `ctest`, not only CI.

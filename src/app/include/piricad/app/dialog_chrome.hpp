@@ -27,9 +27,10 @@ class QVBoxLayout;
 namespace piricad::app {
 
 /// A dialog with the §7–§10 chrome: outline, title bar, body, footer.
-class DialogFrame : public QDialog
+class DialogFrame : public QDialog, public Themed
 {
     Q_OBJECT
+    Q_INTERFACES(piricad::app::Themed)
 
     /// The title bar hands the drag back to the frame; it is part of it.
     friend class DialogTitleBar;
@@ -57,7 +58,7 @@ public:
     /// window; both are measured off the reference rather than chosen.
     void setFooterHeight(int px);
 
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
 signals:
     /// The help mark in the title bar was pressed.
@@ -86,9 +87,10 @@ private:
 /// §2 selected pattern — accent wash plus a 2 px accent edge — and may carry a
 /// warn dot at its right end, which is how the settings window says "you changed
 /// something in here and have not applied it yet".
-class SectionList : public QWidget
+class SectionList : public QWidget, public Themed
 {
     Q_OBJECT
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     explicit SectionList(QWidget* parent = nullptr);
@@ -107,7 +109,7 @@ public:
     /// An empty needle shows them all.
     void setFilter(const QString& needle);
 
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
     QSize sizeHint() const override;
 
@@ -147,15 +149,16 @@ private:
 ///
 /// NOT A `QCheckBox`. §13 forbids stating anything with colour alone, and this
 /// states it twice — the fill AND the knob's side — which a tick box cannot do.
-class ToggleSwitch : public QAbstractButton
+class ToggleSwitch : public QAbstractButton, public Themed
 {
     Q_OBJECT
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an off switch, checkable and keyboard-reachable.
     explicit ToggleSwitch(QWidget* parent = nullptr);
 
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
     /// Always 38 x 20; the size is part of the specification, not of the text.
     QSize sizeHint() const override;

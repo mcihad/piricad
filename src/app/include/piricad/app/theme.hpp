@@ -7,6 +7,7 @@
 #pragma once
 
 #include <QColor>
+#include <QWidget>
 #include <QString>
 
 namespace piricad::app {
@@ -55,6 +56,35 @@ const Palette& themePalette(ThemeMode mode);
 /// The whole application stylesheet for a mode.
 QString themeStyleSheet(ThemeMode mode);
 
+/// Anything that paints from `tokens.hpp` and must be told when the theme moves.
+///
+/// WHY AN INTERFACE AND NOT A CONVENTION. Every painted widget needs the same
+/// call, and the shell got it wrong exactly the way conventions get gotten wrong:
+/// `SettingsDialog` never told its `SectionList`, so the settings window kept a
+/// black sidebar in the light theme — the widget was still painting `darkTokens()`
+/// because nobody had said otherwise. A window can now hand the theme to every
+/// painted child it contains without knowing what any of them are, and a class
+/// that forgets to declare this is a class the compiler cannot help with but the
+/// eye can: it simply does not change colour.
+class Themed
+{
+public:
+    Themed()          = default;
+    virtual ~Themed() = default;
+
+    Themed(const Themed&)            = delete;
+    Themed& operator=(const Themed&) = delete;
+
+    /// Re-reads the tokens and repaints.
+    virtual void applyTheme(ThemeMode mode) = 0;
+};
+
+/// Hands `mode` to every painted descendant of `root`, and to `root` itself.
+///
+/// One walk, so a window cannot theme half of itself. Widgets that do not
+/// implement `Themed` are skipped — they are styled by the sheet instead.
+void applyThemeToChildren(QWidget* root, ThemeMode mode);
+
 /// Installs `Fusion` under the one behaviour change the specification needs.
 ///
 /// design.md 7 shows ten menu titles with NO mnemonic underline, and every Qt
@@ -74,3 +104,5 @@ void installShellStyle();
 bool loadShellFonts(QString* whereLooked = nullptr);
 
 } // namespace piricad::app
+
+Q_DECLARE_INTERFACE(piricad::app::Themed, "org.piricad.app.Themed")

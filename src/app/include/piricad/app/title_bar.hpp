@@ -33,9 +33,10 @@ class UserChip;
 class WindowButtons;
 
 /// The 34 px bar across the top of the shell.
-class TitleBar : public QWidget
+class TitleBar : public QWidget, public Themed
 {
     Q_OBJECT
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an empty bar. The menus are hung on it by the main window.
@@ -50,7 +51,7 @@ public:
     /// The initials in the round chip at the right end.
     void setUserInitials(const QString& initials);
 
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
     QSize sizeHint() const override;
 

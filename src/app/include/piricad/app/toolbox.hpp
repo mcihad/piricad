@@ -25,9 +25,10 @@ namespace piricad::app {
 
 /// The two colour chips at the foot of the column: draw colour over fill colour,
 /// the pair every CAD program has had at the bottom of its tool palette.
-class ColourChips : public QWidget
+class ColourChips : public QWidget, public Themed
 {
     Q_OBJECT
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the pair. Colours arrive from the theme until a document sets them.
@@ -37,7 +38,7 @@ public:
     /// has meant on a CAD tool palette since the beginning.
     void setColours(const QColor& stroke, const QColor& fill);
 
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
 signals:
     /// The user clicked a chip: 0 is the stroke, 1 is the fill.
@@ -54,9 +55,10 @@ private:
     ThemeMode theme_ = ThemeMode::Dark;
 };
 
-class ToolBox : public QWidget
+class ToolBox : public QWidget, public Themed
 {
     Q_OBJECT
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an empty column. Tools are added by the main window, each bound to
@@ -71,7 +73,7 @@ public:
     ColourChips* chips() const noexcept { return chips_; }
 
     /// Re-tints every button when the theme changes.
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
 protected:
     /// Fills the column and draws the 1 px rule along its right edge.
@@ -82,6 +84,10 @@ private:
     QVector<QToolButton*> buttons_;
     QVector<QWidget*> separators_;
     ColourChips* chips_{nullptr};
+
+    /// Where the next tool goes: the index the stretch and the chips sit at, so
+    /// everything added later lands ABOVE them and they stay at the foot.
+    int chipsSpacer_{0};
     ThemeMode theme_ = ThemeMode::Dark;
 };
 

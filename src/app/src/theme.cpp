@@ -117,6 +117,17 @@ public:
 
 } // namespace
 
+void applyThemeToChildren(QWidget* root, ThemeMode mode)
+{
+    if (root == nullptr) return;
+
+    // QObject, not QWidget: an item delegate paints rows from tokens and is not
+    // a widget, so a widget-only walk would leave every layer row in one theme.
+    if (auto* self = dynamic_cast<Themed*>(root)) self->applyTheme(mode);
+    for (QObject* child : root->findChildren<QObject*>())
+        if (auto* themed = dynamic_cast<Themed*>(child)) themed->applyTheme(mode);
+}
+
 bool loadShellFonts(QString* whereLooked)
 {
     const QString dir = QString::fromStdString(data_root()) + QStringLiteral("/fonts");

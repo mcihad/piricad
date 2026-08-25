@@ -25,9 +25,10 @@ class Registry;
 namespace piricad::app {
 
 /// A centred overlay listing every command, filtered as the user types.
-class CommandPalette : public QWidget
+class CommandPalette : public QWidget, public Themed
 {
     Q_OBJECT
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the palette over a registry, which outlives it.
@@ -36,7 +37,7 @@ public:
     /// Clears the query and shows the palette centred over its parent.
     void reveal();
 
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
 signals:
     /// The chosen command's primary name, ready for the command line.

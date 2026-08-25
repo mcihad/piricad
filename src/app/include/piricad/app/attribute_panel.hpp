@@ -39,9 +39,10 @@ struct AttributeGroup
     bool open = true;           ///< collapsed groups keep their rows, just unpainted
 };
 
-class AttributePanel : public QWidget
+class AttributePanel : public QWidget, public Themed
 {
     Q_OBJECT
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the panel over a controller, which outlives it.
@@ -58,7 +59,7 @@ public:
     /// than in two panels that can disagree about what is being looked at.
     void setLayer(core::LayerId layer);
 
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
 protected:
     /// Painted rather than laid out, for the reason the file header gives: the

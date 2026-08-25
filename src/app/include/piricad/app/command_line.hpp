@@ -20,9 +20,10 @@ namespace piricad::app {
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
 
-class CommandLine : public QLineEdit
+class CommandLine : public QLineEdit, public Themed
 {
     Q_OBJECT
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the line over a controller, which outlives it. Completion comes
@@ -33,7 +34,7 @@ public:
     /// Shows what the running command is waiting for. Empty when none is.
     void setPrompt(const QString& prompt);
 
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
 signals:
     /// Emitted on Enter, with the raw line. The controller parses it — this

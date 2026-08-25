@@ -20,9 +20,10 @@ namespace piricad::app {
 
 /// The two read-only readings at the right end of the tool bar: the plot scale
 /// and the coordinate reference system (`design.md` §7).
-class ReadoutStrip : public QWidget
+class ReadoutStrip : public QWidget, public Themed
 {
     Q_OBJECT
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the strip with both cells showing a dash until asked otherwise.
@@ -34,7 +35,7 @@ public:
     /// The coordinate system, already formatted: `EPSG:5254 · ITRF96 / TM30`.
     void setCrs(const QString& text);
 
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
     /// As wide as the two cells actually need, so the strip sits flush right.
     QSize sizeHint() const override;
@@ -58,9 +59,10 @@ private:
 };
 
 /// The 30 px document tab strip above the canvas (`design.md` §7).
-class DocumentTabs : public QWidget
+class DocumentTabs : public QWidget, public Themed
 {
     Q_OBJECT
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an empty strip. `setDocuments` fills it.
@@ -69,7 +71,7 @@ public:
     /// Replaces the whole strip. `active` indexes `names`.
     void setDocuments(const QStringList& names, int active);
 
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
     QSize sizeHint() const override;
 
@@ -127,9 +129,10 @@ private:
 /// low and clipped at the bottom of the window. With no items there is no
 /// reformat, and `setStatusBar()` puts this in the one slot that already spans
 /// the full width beneath the docks.
-class StatusStrip : public QStatusBar
+class StatusStrip : public QStatusBar, public Themed
 {
     Q_OBJECT
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds an empty strip. The shell adds its toggles and its readings.
@@ -143,7 +146,7 @@ public:
     void setConnection(const QString& text, bool connected);
     void setPerformance(const QString& text);
 
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
     QSize sizeHint() const override;
 
@@ -190,9 +193,10 @@ private:
 /// ONE ROW, NOT TWO. Qt gives a tabified dock a tab bar AND a title bar, which is
 /// 58 px where the reference has 29. So the tabs and the panel buttons are drawn
 /// here together and the dock's own title bar is replaced by this widget.
-class PanelHeader : public QWidget
+class PanelHeader : public QWidget, public Themed
 {
     Q_OBJECT
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// `buttons` names which of the four §6 marks this header carries, in the
@@ -209,7 +213,7 @@ public:
 
     int current() const noexcept { return current_; }
 
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
     QSize sizeHint() const override;
 

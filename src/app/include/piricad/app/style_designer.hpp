@@ -32,6 +32,8 @@
 // what makes the designer teachable to the AI.
 #pragma once
 
+#include "piricad/app/theme.hpp"
+
 #include "piricad/app/symbol_preview.hpp"
 #include "piricad/core/style.hpp"
 #include "piricad/core/style_library.hpp"
@@ -74,7 +76,7 @@ public:
     /// Opens the designer on `layerName`, starting from what that layer draws.
     StyleDesigner(Controller& controller, QString layerName, QWidget* parent = nullptr);
 
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
     /// The symbol as the user left it.
     const core::Symbol& symbol() const noexcept { return symbol_; }

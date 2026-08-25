@@ -889,6 +889,7 @@ void MainWindow::openSettings()
         settings_->setAttribute(Qt::WA_DeleteOnClose);
         connect(settings_, &QObject::destroyed, this, [this] { settings_ = nullptr; });
     }
+    settings_->applyTheme(theme_);
     settings_->show();
     settings_->raise();
     settings_->activateWindow();
@@ -1022,18 +1023,12 @@ void MainWindow::applyTheme()
         action->setIcon(icon(static_cast<Glyph>(glyph.toInt()), p.text, p.accent));
     }
 
-    titleBar_->applyTheme(theme_);
-    docTabs_->applyTheme(theme_);
-    commandLine_->applyTheme(theme_);
-    statusStrip_->applyTheme(theme_);
-    readout_->applyTheme(theme_);
-    attributePanel_->applyTheme(theme_);
-    layerPanel_->applyTheme(theme_);
-    for (PanelHeader* header : {propertyHeader_, layerHeader_, journalHeader_})
-        if (header) header->applyTheme(theme_);
+    // ONE WALK, not a list of calls. A list is a thing to forget an entry in,
+    // and the settings window's sidebar proved it: every painted widget declares
+    // `Themed` and this hands the theme to all of them at once.
+    applyThemeToChildren(this, theme_);
     if (palette_) palette_->applyTheme(theme_);
-    toolBox_->applyTheme(theme_);
-    canvas_->applyTheme(theme_);
+    if (settings_) settings_->applyTheme(theme_);
 }
 
 void MainWindow::onSettingChanged(const QString& id)

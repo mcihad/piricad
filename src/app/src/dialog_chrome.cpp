@@ -234,6 +234,13 @@ void DialogFrame::applyTheme(ThemeMode mode)
 {
     theme_ = mode;
     static_cast<DialogTitleBar*>(titleBar_)->setTokens(tokensOf(mode));
+
+    // EVERY painted child, in one walk. A dialog that themed only itself is how
+    // the settings window kept a black sidebar in the light theme: the section
+    // list was still painting `darkTokens()` because nobody had told it. Nothing
+    // here needs to know what those children are.
+    applyThemeToChildren(this, mode);
+
     update();
 }
 

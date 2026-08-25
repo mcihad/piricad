@@ -32,9 +32,10 @@ class Controller;
 /// and let the user drag the boundaries, and the reference has neither: the row
 /// is a fixed composition and the eye and the lock are at fixed offsets from the
 /// two edges. Painting it is how those offsets become the numbers in the file.
-class LayerRowDelegate : public QStyledItemDelegate
+class LayerRowDelegate : public QStyledItemDelegate, public Themed
 {
     Q_OBJECT
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Which mark the pointer is over, so the row can answer a click.
@@ -49,7 +50,7 @@ public:
     /// Where `at` falls inside a row of `width`.
     static Hit hitTest(int x, int width);
 
-    void applyTheme(ThemeMode mode) { theme_ = mode; }
+    void applyTheme(ThemeMode mode) override { theme_ = mode; }
 
 signals:
     /// The eye was clicked on `layer`; the panel turns it into a `KATMAN` call.
@@ -63,9 +64,10 @@ private:
 };
 
 /// Layer list: name, visibility, lock, colour swatch, entity count.
-class LayerPanel : public QWidget
+class LayerPanel : public QWidget, public Themed
 {
     Q_OBJECT
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the panel over a controller, which outlives it.
@@ -77,7 +79,7 @@ public:
     /// is the class of bug a single source of truth exists to prevent.
     void refresh();
 
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
     /// The layer the user has picked, or `kNoLayer`. This is SELECTION state and
     /// therefore not document state (model.md R43).

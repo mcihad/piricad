@@ -13,6 +13,8 @@
 // grammar in this product and an attribute filter is not an exception to it.
 #pragma once
 
+#include "piricad/app/theme.hpp"
+
 #include "piricad/app/dialog_chrome.hpp"
 #include "piricad/core/attribute.hpp"
 #include "piricad/core/identity.hpp"
@@ -88,7 +90,7 @@ public:
     /// Opens on `layerName`, or on the whole document when it is empty.
     AttributeTable(Controller& controller, QString layerName, QWidget* parent = nullptr);
 
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
 private:
     /// Builds the 44 px tool row above the filter bar.

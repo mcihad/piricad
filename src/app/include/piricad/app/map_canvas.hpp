@@ -28,9 +28,10 @@ namespace piricad::app {
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
 
-class MapCanvas : public QWidget
+class MapCanvas : public QWidget, public Themed
 {
     Q_OBJECT
+    Q_INTERFACES(piricad::app::Themed)
 
 public:
     /// Builds the canvas over a controller. The controller outlives it — the main
@@ -51,7 +52,7 @@ public:
 
     /// Re-reads the palette. Called when any client writes the theme preference,
     /// not only when the menu item is toggled.
-    void applyTheme(ThemeMode mode);
+    void applyTheme(ThemeMode mode) override;
 
     /// Re-reads the `ızgara`.* preferences. Called at start-up and whenever any
     /// client writes one — the menu, the command line, a script or the AI, which

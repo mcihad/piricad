@@ -94,6 +94,19 @@ ToolBox::ToolBox(QWidget* parent) : QWidget(parent)
     column_->setContentsMargins(0, kTopPad, 1, kChipsPad);
     column_->setSpacing(kGap);
     column_->setAlignment(Qt::AlignHCenter);
+
+    // BUILT HERE, not on the first theme pass. They used to be created lazily in
+    // `applyTheme`, which runs after the shell has already asked for `chips()` to
+    // connect to it — so the connect got a null and the program died on the next
+    // line. A widget the caller can ask for must exist as soon as the object does.
+    //
+    // The stretch goes in first so the chips stay pinned to the foot of the
+    // column whatever tools are added above them.
+    chipsSpacer_ = column_->count();
+    column_->addStretch(1);
+
+    chips_ = new ColourChips(this);
+    column_->addWidget(chips_, 0, Qt::AlignHCenter);
 }
 
 void ToolBox::addTool(QAction* action)
@@ -107,7 +120,7 @@ void ToolBox::addTool(QAction* action)
     button->setFocusPolicy(Qt::NoFocus);
 
     buttons_.push_back(button);
-    column_->addWidget(button, 0, Qt::AlignHCenter);
+    column_->insertWidget(chipsSpacer_++, button, 0, Qt::AlignHCenter);
 }
 
 void ToolBox::addSeparator()
@@ -120,23 +133,14 @@ void ToolBox::addSeparator()
 
     // The rule carries its own air rather than relying on the layout's spacing,
     // so the 51 px pitch across a group boundary is exactly the reference's.
-    column_->addSpacing(kRuleAir - kGap);
-    column_->addWidget(rule, 0, Qt::AlignHCenter);
-    column_->addSpacing(kRuleAir - kGap);
+    column_->insertSpacing(chipsSpacer_++, kRuleAir - kGap);
+    column_->insertWidget(chipsSpacer_++, rule, 0, Qt::AlignHCenter);
+    column_->insertSpacing(chipsSpacer_++, kRuleAir - kGap);
 }
 
 void ToolBox::applyTheme(ThemeMode mode)
 {
     theme_ = mode;
-
-    // The chips are built on the first theme pass so they sit under the stretch,
-    // which is what pins them to the foot of the column whatever else is in it.
-    if (!chips_) {
-        column_->addStretch(1);
-        chips_ = new ColourChips(this);
-        column_->addWidget(chips_, 0, Qt::AlignHCenter);
-    }
-    chips_->applyTheme(mode);
 
     const Tokens& t = tokensOf(mode);
     for (QWidget* rule : separators_) {
