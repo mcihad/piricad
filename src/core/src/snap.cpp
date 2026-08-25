@@ -171,6 +171,33 @@ const char* snap_mode_label(std::uint16_t single_bit)
 
 // ------------------------------------------------------------------ rules ---
 
+Mm grid_step_in_force(Mm declared, bool adaptive, double mm_per_pixel) noexcept
+{
+    if (mm_per_pixel <= 0.0) return declared;
+
+    double step_mm = static_cast<double>(declared);
+    if (adaptive) {
+        // The 1-2-5 ladder, so the reading beside a line stays a round number a
+        // surveyor can hold in their head. 90 px is the target spacing.
+        constexpr double kTargetPx = 90.0;
+        step_mm                    = kTargetPx * mm_per_pixel;
+
+        const double magnitude = std::pow(10.0, std::floor(std::log10(std::max(step_mm, 1.0))));
+        const double norm      = step_mm / magnitude;
+        step_mm                = (norm < 2.0 ? 1.0 : norm < 5.0 ? 2.0 : 5.0) * magnitude;
+    }
+
+    if (step_mm < 1.0) return 0;
+
+    // Below a couple of pixels the lines merge into a flat wash that hides the
+    // drawing, so nothing is drawn — and nothing is snapped to either. Snapping
+    // to a lattice the user cannot see is how a click lands somewhere they did
+    // not ask for.
+    if (step_mm / mm_per_pixel < 2.0) return 0;
+
+    return mm_round(step_mm);
+}
+
 Point2 apply_grid(Point2 p, Mm step) noexcept
 {
     if (step <= 0) return p;

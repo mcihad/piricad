@@ -211,6 +211,21 @@ struct Overlay
     std::vector<OverlayBatch> batches; ///< drawn in order; empty ones are skipped
     std::vector<OverlayLabel> labels;  ///< drawn over the batches
 
+    /// How many of `batches` are drawn UNDER the document.
+    ///
+    /// The grid is not an annotation over the drawing; it is the paper the
+    /// drawing is on. Painted after the passes it sat on top of every parcel —
+    /// a lattice of grey lines across the map — which is what a user sees
+    /// immediately and reports. Everything else in the overlay belongs above:
+    /// a selection outline, a rubber band, a snap marker and a ruler all have to
+    /// be visible over whatever they are pointing at.
+    ///
+    /// The first `beneath` batches go down first, the rest after the document.
+    /// A count rather than a flag per batch, because the canvas builds them in
+    /// that order anyway and a count costs one comparison instead of one per
+    /// batch.
+    std::size_t beneath{0};
+
     /// Resets the sizes and KEEPS the buffers, exactly like `DrawList::clear()`.
     void clear();
 };
@@ -289,16 +304,20 @@ struct DrawList
     std::vector<core::EntityId> candidates;
 
     /// Where each style's passes begin, and how many it has. Indexed by style id,
-    /// with the layer defaults in the tail. Scratch, kept here for the same reason
-    /// `candidates` is: the capacity survives between frames.
+    /// with the layer defaults in the tail. Indexed by `layer * stride + slot`,
+    /// where `stride` is styles + layers: a pass belongs to one LAYER as well as
+    /// one style, because two layers sharing a gösterim must still be able to
+    /// cover one another. Scratch, kept here for the same reason `candidates` is:
+    /// the capacity survives between frames.
     std::vector<std::uint32_t> pass_first;
     std::vector<std::uint32_t> pass_count;
 
     /// One pass and the depth it draws at, for building `order`.
     struct ZKey
     {
-        std::int16_t z{0};     ///< Appearance::z_order of the symbol layer
-        std::uint32_t pass{0}; ///< index into `passes`
+        std::uint32_t layer{0}; ///< the layer this pass belongs to; the outer sort key
+        std::int16_t z{0};      ///< Appearance::z_order of the symbol layer
+        std::uint32_t pass{0};  ///< index into `passes`
     };
 
     /// Sort scratch for `order`. Also kept between frames.

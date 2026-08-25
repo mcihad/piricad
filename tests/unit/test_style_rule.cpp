@@ -653,6 +653,54 @@ TEST_CASE("STİL: seçilen MPYY sembolü boş katmandan tuvale görselleriyle ul
     CHECK(canvas_has_raster);
 }
 
+TEST_CASE("layer order decides what covers what, even when two layers share a style")
+{
+    // The defect this pins: passes were keyed by STYLE alone, so two layers
+    // drawing the same gösterim shared one batch. One of them could not be drawn
+    // over the other, and the layer list — which is the user's own statement of
+    // what is on top — said nothing about the result.
+    //
+    // Everything here goes through the bus, like every other client: a scene the
+    // test built by hand would prove something about a document nobody can make.
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("KATMAN ad=ALT renk=4282348748", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("ALAN 0,0 10000,0 10000,10000 0,10000", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("KATMAN ad=UST renk=4282348748", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("ALAN 0,0 10000,0 10000,10000 0,10000", Origin::Test).ok());
+
+    const core::LayerId under = rig.doc.find_layer("ALT");
+    const core::LayerId over  = rig.doc.find_layer("UST");
+    REQUIRE(under != core::kNoLayer);
+    REQUIRE(over != core::kNoLayer);
+    REQUIRE(under < over);
+
+    render::ViewTransform view;
+    view.set_viewport(800, 600);
+    view.fit(rig.doc.extent());
+
+    render::DrawList draw;
+    render::build_scene(rig.doc, view, {}, draw);
+
+    // TWO batches carry ink, not one. Two layers with the same appearance used to
+    // share a pass, and a shared pass cannot be ordered against itself.
+    std::size_t with_ink = 0;
+    for (std::uint32_t p : draw.order)
+        if (p < draw.polylines.size() && !draw.polylines[p].runs.empty()) ++with_ink;
+    CHECK_EQ(with_ink, 2);
+
+    // And they are drawn in LAYER order, so a layer further down the list covers
+    // the one above it — which is what the panel promises.
+    std::vector<std::uint32_t> drawn;
+    for (std::uint32_t p : draw.order)
+        for (const render::DrawList::ZKey& key : draw.z_keys)
+            if (key.pass == p) drawn.push_back(key.layer);
+
+    REQUIRE(drawn.size() >= 2);
+    CHECK(std::is_sorted(drawn.begin(), drawn.end()));
+    CHECK(drawn.front() <= under);
+    CHECK(drawn.back() >= over);
+}
+
 // ------------------------------------------------------- the equality proof ----
 
 TEST_CASE("STİL: arayüz, komut satırı ve betik aynı belgeyi ve aynı günlüğü üretir")

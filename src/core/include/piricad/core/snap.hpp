@@ -155,6 +155,22 @@ SnapResult snap(const Document& doc, const SnapQuery& query);
 /// Nearest lattice intersection. `step <= 0` returns `p` unchanged.
 Point2 apply_grid(Point2 p, Mm step) noexcept;
 
+/// The lattice spacing that is ACTUALLY IN FORCE at this zoom.
+///
+/// ONE ANSWER FOR TWO READERS, and that is the whole reason this exists. The
+/// canvas draws the grid and the snap engine snaps to it, and they used to
+/// compute the spacing separately: the canvas rounded it to the 1-2-5 ladder
+/// from the zoom when the mode is `uyarlanır`, and the snap read the declared
+/// step regardless. With adaptive spacing on — the default — the lines a user
+/// could see were 50 m apart and their clicks landed on a 10 m lattice that was
+/// nowhere on screen. It looked like snapping to a grid from some earlier moment,
+/// which is exactly what it was: the one the setting still named.
+///
+/// `declared` is `core.izgara.adim`, `adaptive` is `core.izgara.mod == uyarlanır`,
+/// and `mm_per_pixel` is the view's. Returns 0 when nothing should be drawn or
+/// snapped to, which both callers already treat as "no grid".
+Mm grid_step_in_force(Mm declared, bool adaptive, double mm_per_pixel) noexcept;
+
 /// Locks `p` onto the horizontal or vertical axis through `base`, whichever the
 /// aim is already closer to. This is dik mod.
 Point2 apply_ortho(Point2 base, Point2 p) noexcept;

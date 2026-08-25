@@ -197,7 +197,7 @@ ve **KOORDİNAT SİSTEMİ** `EPSG:5254 · ITRF96 / TM30`. Araç çubuğu taşars
 `»` taşma menüsüne girer, asla satır kırmaz.
 
 **Sol araç kutusu (46 px).** 5 grup, toplam 20 araç:
-seçim (nesne, alan, kaydır) · oluşturma (polyline, poligon, dikdörtgen, daire/yay, nokta, metin) ·
+seçim (nesne, alan, kaydır) · oluşturma (çizgi, polyline, poligon, dikdörtgen, daire/yay, nokta, metin) ·
 düzenleme (böl/trim, birleştir, parsel böl, taşı/döndür, ofset) · ölçüm (uzunluk, alan, koordinat) ·
 yardımcı (stil kopyala, topoloji denetimi). Aktif araç: `--accent-wash` zemin +
 `inset 0 0 0 1px #3F7FA5`.

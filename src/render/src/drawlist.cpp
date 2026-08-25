@@ -33,6 +33,7 @@ void Overlay::clear()
         batch.closed.clear();
     }
     labels.clear();
+    beneath = 0;
 }
 
 void DrawList::clear()

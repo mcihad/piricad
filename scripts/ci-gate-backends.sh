@@ -37,6 +37,17 @@ fi
 for file in "${backends[@]}"; do
     name="$(basename "$file")"
 
+    # BOTH halves. The overlay is drawn in two places — the grid under the
+    # document, everything else over it — and a backend that calls only the
+    # second draws the grid on top of the map. A backend that calls only the
+    # first loses the ruler, the selection, the snap marker and the crosshair.
+    if ! grep -q "paint_frame_ground\|paint_ground" "$file"; then
+        echo "backends: $(basename "$file") never draws the overlay's GROUND -> $file:1" >&2
+        echo "backends:   the grid goes UNDER the document. Call paint_frame_ground()" >&2
+        echo "backends:   before the passes, or the grid covers the drawing." >&2
+        fail=1
+    fi
+
     if ! grep -q "paint_frame_aids\|paint_aids" "$file"; then
         echo "backends: $name implements render::Backend but never paints the overlay -> ${file#$root/}:1" >&2
         echo "backends:   the grid, ruler, scale bar, north arrow, snap marker and crosshair" >&2

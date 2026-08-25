@@ -42,6 +42,13 @@ std::unique_ptr<render::Backend> make_builtin_backend();
 ///
 /// `painter` must be active on the frame's device, and `cx`/`cy` are the widget
 /// centre the draw list's coordinates are relative to.
+/// The part of the overlay that goes UNDER the document: the grid.
+///
+/// Every backend owes the user this too, and in this order — the grid is the
+/// paper the drawing sits on. Drawn after the passes it covers the map with a
+/// lattice of grey lines, which is what a user sees first and reports first.
+void paint_frame_ground(QPainter& painter, const render::Overlay& overlay);
+
 void paint_frame_aids(QPainter& painter, const render::DrawList& list,
                       const render::Overlay& overlay, double cx, double cy);
 

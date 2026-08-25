@@ -442,6 +442,9 @@ void QgisBackend::render(const render::DrawList& list, const render::Overlay& ov
     const double cx = ctx.width_px * 0.5;
     const double cy = ctx.height_px * 0.5;
 
+    // The grid first: it is the paper, not a layer over the drawing.
+    paint_frame_ground(painter, overlay);
+
     for (std::uint32_t index : list.order)
         if (index < list.passes.size()) drawPass(rc, list, index, cx, cy);
 

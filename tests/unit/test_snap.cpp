@@ -803,3 +803,46 @@ TEST_CASE("YAKALAMA: günlük tekrar oynatıldığında belge değişmez")
     }
     CHECK_EQ(replay.doc.content_hash(), original.doc.content_hash());
 }
+
+TEST_CASE("the drawn grid and the snapped grid are the same lattice")
+{
+    // The defect this pins: the canvas rounded the spacing to the 1-2-5 ladder
+    // from the zoom, the snap engine read the declared step, and with adaptive
+    // spacing on the two were different lattices. A user saw lines 50 m apart and
+    // their clicks landed on 10 m — a grid from no moment they could see.
+    constexpr core::Mm kDeclared = 10 * core::kMmPerMetre;
+
+    // Adaptive: the step follows the zoom, on the 1-2-5 ladder, and is NOT the
+    // declared one once they diverge.
+    const core::Mm coarse = core::grid_step_in_force(kDeclared, true, 500.0); // 0.5 m per pixel
+    CHECK(coarse > 0);
+    CHECK(coarse != kDeclared);
+    CHECK(coarse % core::kMmPerMetre == 0); // a whole number of metres
+
+    // Every rung of the ladder is 1, 2 or 5 times a power of ten.
+    for (double mm_per_px : {1.0, 7.0, 40.0, 250.0, 1300.0, 9000.0}) {
+        const core::Mm step = core::grid_step_in_force(kDeclared, true, mm_per_px);
+        if (step <= 0) continue;
+
+        double norm = static_cast<double>(step);
+        while (norm >= 10.0)
+            norm /= 10.0;
+        CHECK((norm == 1.0 || norm == 2.0 || norm == 5.0));
+
+        // And it is drawable: never finer than two pixels, which is the rule the
+        // canvas refuses to draw below.
+        CHECK(static_cast<double>(step) / mm_per_px >= 2.0);
+    }
+
+    // Fixed: the declared step, whatever the zoom — until it is too fine to see,
+    // and then NOTHING, so a click cannot land on a lattice nobody can see.
+    CHECK_EQ(core::grid_step_in_force(kDeclared, false, 100.0), kDeclared);
+    CHECK_EQ(core::grid_step_in_force(kDeclared, false, 1.0), kDeclared);
+    CHECK_EQ(core::grid_step_in_force(kDeclared, false, 90000.0), 0);
+
+    // A point already on the lattice rounds to itself, at whatever step.
+    const core::Mm step = core::grid_step_in_force(kDeclared, true, 500.0);
+    const core::Point2 on{step * 3, step * -2};
+    CHECK_EQ(core::apply_grid(on, step).x, on.x);
+    CHECK_EQ(core::apply_grid(on, step).y, on.y);
+}

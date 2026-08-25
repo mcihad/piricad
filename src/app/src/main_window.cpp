@@ -744,6 +744,10 @@ void MainWindow::buildToolBox()
     toolBox_->addSeparator();
 
     // creation
+    // ÇİZGİ FIRST, and it was missing entirely. It is the one command in this
+    // program that works today end to end — the tool box listed the five that do
+    // not and left out the one that does, which is the opposite of useful.
+    toolBox_->addTool(actLine_);
     toolBox_->addTool(actPolyline_);
     toolBox_->addTool(actPolygon_);
     toolBox_->addTool(actRectangle_);

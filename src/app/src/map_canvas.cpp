@@ -157,22 +157,20 @@ void MapCanvas::buildGrid()
 {
     if (!grid_.visible) return;
 
-    double step_mm = static_cast<double>(grid_.step);
-    if (grid_.adaptive) {
-        // Adaptive spacing snaps to 1/2/5 x 10^n metres so the label stays readable.
-        const double target_px = 90.0;
-        step_mm                = target_px * view_.mm_per_pixel();
-        const double magnitude = std::pow(10.0, std::floor(std::log10(std::max(step_mm, 1.0))));
-        const double norm      = step_mm / magnitude;
-        step_mm                = (norm < 2.0 ? 1.0 : norm < 5.0 ? 2.0 : 5.0) * magnitude;
-    }
-    if (step_mm < 1.0) return;
+    // THE SAME FUNCTION THE SNAP ENGINE CALLS. Computing it here and again there
+    // is how the drawn grid and the snapped grid came apart: the lines were 50 m
+    // apart and the clicks landed on 10 m. `grid_step_in_force` is the one answer
+    // and both readers ask it.
+    //
+    // It returns 0 when nothing should be drawn — a step below one millimetre, or
+    // one so fine the lines merge into a flat wash that hides the drawing.
+    // Refusing is the honest answer; silently substituting another step would make
+    // the grid lie about the distance it represents.
+    const core::Mm step =
+        core::grid_step_in_force(grid_.step, grid_.adaptive, view_.mm_per_pixel());
+    if (step <= 0) return;
 
-    // A fixed step the user chose is still subject to the screen: below a couple of
-    // pixels the lines merge into a flat wash that hides the drawing. Refusing to
-    // draw is the honest answer; silently substituting another step would make the
-    // grid lie about the distance it represents.
-    if (step_mm / view_.mm_per_pixel() < 2.0) return;
+    const auto step_mm = static_cast<double>(step);
 
     const core::Box2 vis = view_.visible_box();
     if (vis.empty()) return;
@@ -806,7 +804,11 @@ void MapCanvas::buildOverlay()
     overlay_used_            = 0;
     overlay_.background_rgba = palette_.canvas.rgba();
 
+    // THE GRID FIRST, and the count that follows is what puts it under the
+    // drawing. It is the paper, not an annotation over the map.
     buildGrid();
+    overlay_.beneath = overlay_used_;
+
     buildSelection();
 
     // Rubber band for the running interactive command. It runs to the SNAPPED

@@ -137,86 +137,97 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
     // path still evaluates nothing (model.md R14).
     const double mm_per_pixel = view.mm_per_pixel();
 
-    out.pass_first.assign(styles.size() + layers.size(), 0);
-    out.pass_count.assign(styles.size() + layers.size(), 0);
+    // PASSES ARE KEYED BY (LAYER, STYLE), NOT BY STYLE, and that is what makes
+    // the layer order mean something. Keyed by style alone, two layers sharing a
+    // gösterim shared one batch — so one of them could not be drawn over the
+    // other and the layer list said nothing about what covered what. A user turns
+    // a layer on expecting it on top; it appeared underneath.
+    //
+    // Built LAZILY, when an entity on that layer with that style first appears.
+    // The alternative — a pass for every combination — is layers x styles, and
+    // with the MPYY shelf loaded that is nine thousand batches for a document
+    // that uses nine. The vectors keep their capacity between frames, so after
+    // the first frame this allocates nothing (render.md R20).
+    const std::size_t stride = styles.size() + layers.size();
+    out.pass_first.assign(stride * std::max<std::size_t>(1, layers.size()), 0);
+    out.pass_count.assign(stride * std::max<std::size_t>(1, layers.size()), 0);
 
-    std::size_t pass_count = 0;
-    for (std::size_t i = 0; i < styles.size(); ++i)
-        pass_count +=
-            std::max<std::size_t>(1, styles.symbol_at(static_cast<core::StyleId>(i)).layers.size());
-    pass_count += layers.size();
-
-    if (out.passes.size() < pass_count) out.passes.resize(pass_count);
-    if (out.polylines.size() < pass_count) out.polylines.resize(pass_count);
-    if (out.polygons.size() < pass_count) out.polygons.resize(pass_count);
-    out.passes.resize(pass_count);
-    out.order.reserve(pass_count);
-
-    // Each pass records the z_order it is drawn at, so the order array can be
-    // built without a second walk of the style table.
+    out.passes.clear();
     out.z_keys.clear();
-    out.z_keys.reserve(pass_count);
 
-    std::size_t next    = 0;
+    // Each pass records the layer and the z_order it is drawn at, so the order
+    // array can be built without a second walk of the style table.
+    core::LayerId building = 0;
+
     const auto add_pass = [&](const core::SymbolLayer& sl) {
         // A layer switched off in the designer produces NO PASS. Kept in the
         // symbol, kept in the file, kept in the fingerprint — just not painted,
         // and therefore costing nothing per frame.
         if (!sl.enabled) return;
 
-        out.passes[next] =
-            pass_of(sl, doc.images(), doc.dashes(), mm_per_pixel, options.pixels_per_paper_mm);
+        const std::size_t at = out.passes.size();
+        out.passes.push_back(
+            pass_of(sl, doc.images(), doc.dashes(), mm_per_pixel, options.pixels_per_paper_mm));
 
-        PolylineBatch& stroke = out.polylines[next];
-        PolygonBatch& fill    = out.polygons[next];
-        stroke.rgba           = sl.look.rgba;
-        stroke.width_px       = stroke_width_px(sl, options.pixels_per_paper_mm);
-        fill.rgba             = sl.look.fill_rgba;
-        fill.hatch            = sl.look.hatch;
+        // Grown, not indexed into a pre-sized table: how many passes a frame
+        // needs is not known until its entities are walked. The capacity survives
+        // the frame, so this stops allocating after the first one.
+        if (out.polylines.size() <= at) out.polylines.resize(at + 1);
+        if (out.polygons.size() <= at) out.polygons.resize(at + 1);
 
-        out.z_keys.push_back(DrawList::ZKey{sl.look.z_order, static_cast<std::uint32_t>(next)});
-        ++next;
+        PolylineBatch& stroke = out.polylines[at];
+        PolygonBatch& fill    = out.polygons[at];
+        stroke.xs.clear();
+        stroke.ys.clear();
+        stroke.runs.clear();
+        fill.xs.clear();
+        fill.ys.clear();
+        fill.runs.clear();
+        fill.is_hole.clear();
+        stroke.rgba     = sl.look.rgba;
+        stroke.width_px = stroke_width_px(sl, options.pixels_per_paper_mm);
+        fill.rgba       = sl.look.fill_rgba;
+        fill.hatch      = sl.look.hatch;
+
+        out.z_keys.push_back(
+            DrawList::ZKey{building, sl.look.z_order, static_cast<std::uint32_t>(at)});
     };
 
-    for (std::size_t i = 0; i < styles.size(); ++i) {
-        const core::Symbol& sym = styles.symbol_at(static_cast<core::StyleId>(i));
-        out.pass_first[i]       = static_cast<std::uint32_t>(next);
-        if (sym.layers.empty()) {
-            core::SymbolLayer only;
-            only.look = styles.entries()[i];
-            add_pass(only);
-        } else {
-            for (const core::SymbolLayer& sl : sym.layers)
-                add_pass(sl);
-        }
-        out.pass_count[i] = static_cast<std::uint32_t>(next) - out.pass_first[i];
-    }
-
-    // Layer passes occupy the tail: an entity carrying the ByLayer sentinel draws
-    // its layer's own appearance, which is a single plain stroke-and-fill.
+    // The slot an entity's style resolves to. Layer slots occupy the tail: an
+    // entity carrying the ByLayer sentinel draws its layer's own appearance,
+    // which is a single plain stroke-and-fill.
     const auto layer_slot = [&](core::LayerId l) {
         return static_cast<std::size_t>(styles.size()) + l;
     };
-    for (core::LayerId l = 0; l < layers.size(); ++l) {
-        out.pass_first[layer_slot(l)] = static_cast<std::uint32_t>(next);
-        core::SymbolLayer only;
-        only.look = layers[l].appearance;
-        add_pass(only);
-        out.pass_count[layer_slot(l)] = 1;
-    }
 
-    // Draw order: by z_order, ties broken by pass index so a symbol's own stack
-    // stays bottom layer first. std::stable_sort rather than sort, because the tie
-    // break IS the stack order and losing it would put a fill over its boundary.
-    // Sized to the passes ACTUALLY BUILT, not to the upper bound reserved for
-    // them. A disabled symbol layer builds no pass, so the two differ — and a
-    // trailing zero in this array is not an empty slot, it is a second draw of
-    // pass 0.
-    out.order.resize(out.z_keys.size());
-    std::stable_sort(out.z_keys.begin(), out.z_keys.end(),
-                     [](const DrawList::ZKey& a, const DrawList::ZKey& b) { return a.z < b.z; });
-    for (std::size_t i = 0; i < out.z_keys.size(); ++i)
-        out.order[i] = out.z_keys[i].pass;
+    // Builds the passes for one (layer, slot) the first time an entity needs
+    // them, and answers with where they start and how many there are.
+    const auto passes_for = [&](core::LayerId l, std::size_t slot) {
+        const std::size_t key = static_cast<std::size_t>(l) * stride + slot;
+        if (out.pass_count[key] != 0) return key;
+
+        building            = l;
+        out.pass_first[key] = static_cast<std::uint32_t>(out.passes.size());
+
+        if (slot >= styles.size()) {
+            core::SymbolLayer only;
+            only.look = layers[slot - styles.size()].appearance;
+            add_pass(only);
+        } else {
+            const core::Symbol& sym = styles.symbol_at(static_cast<core::StyleId>(slot));
+            if (sym.layers.empty()) {
+                core::SymbolLayer only;
+                only.look = styles.entries()[slot];
+                add_pass(only);
+            } else {
+                for (const core::SymbolLayer& sl : sym.layers)
+                    add_pass(sl);
+            }
+        }
+
+        out.pass_count[key] = static_cast<std::uint32_t>(out.passes.size()) - out.pass_first[key];
+        return key;
+    };
 
     // One denominator for the whole frame: the view does not change mid-build.
     const double denominator = view.scale_denominator();
@@ -334,8 +345,11 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
             }
         }
 
-        const std::uint32_t first = out.pass_first[slot];
-        const std::uint32_t count = out.pass_count[slot];
+        // Built on first use for THIS layer, so two layers sharing a gösterim
+        // get their own batches and can cover one another.
+        const std::size_t key     = passes_for(lid, slot);
+        const std::uint32_t first = out.pass_first[key];
+        const std::uint32_t count = out.pass_count[key];
         if (count == 0) return;
 
         const core::RingSpan span = geometry.rings_of(entities.slot[e]);
@@ -422,9 +436,35 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         ++out.entity_count;
     };
 
+    // THE SORT RUNS LAST, after every entity has been walked, and it has to:
+    // the passes are built on first use now, so at the top of this function
+    // `z_keys` is empty and sorting it there produced an EMPTY draw order —
+    // a document that rendered nothing at all.
+    const auto finish = [&] {
+        // DRAW ORDER: by LAYER first, then by z_order, ties broken by pass index so
+        // a symbol's own stack stays bottom layer first.
+        //
+        // The layer comes first because that is what a user is arranging when they
+        // arrange the layer list, and it is the promise the list makes: a layer
+        // further down the document covers the one above it. `z_order` refines
+        // WITHIN a layer — MPYY prescribes a draw order for the parts of a gösterim,
+        // and that order is about one symbol, not about which layer wins.
+        //
+        // std::stable_sort rather than sort, because the tie break IS the stack order
+        // and losing it would put a fill over its own boundary.
+        out.order.resize(out.z_keys.size());
+        std::stable_sort(out.z_keys.begin(), out.z_keys.end(),
+                         [](const DrawList::ZKey& a, const DrawList::ZKey& b) {
+                             return a.layer != b.layer ? a.layer < b.layer : a.z < b.z;
+                         });
+        for (std::size_t i = 0; i < out.z_keys.size(); ++i)
+            out.order[i] = out.z_keys[i].pass;
+    };
+
     if (!options.cull) {
         for (core::EntityId e = 0; e < entities.size(); ++e)
             emit(e);
+        finish();
         return;
     }
 
@@ -440,6 +480,7 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         for (core::EntityId e = 0; e < entities.size(); ++e)
             emit(e);
         out.tail_count = entities.size();
+        finish();
         return;
     }
 
@@ -452,6 +493,8 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
     out.tail_count            = entities.size() - tail;
     for (core::EntityId e = tail; e < entities.size(); ++e)
         emit(e);
+
+    finish();
 }
 
 } // namespace piricad::render

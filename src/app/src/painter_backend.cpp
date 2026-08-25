@@ -244,6 +244,10 @@ public:
         const double cx = ctx.width_px * 0.5;
         const double cy = ctx.height_px * 0.5;
 
+        // The grid goes down BEFORE the document: it is the paper the drawing is
+        // on, not a layer over it (`Overlay::beneath`).
+        paint_ground(painter, overlay);
+
         // IN DRAW ORDER, which is not index order: MPYY prescribes a draw order
         // for plan sheets, and within one symbol the stack runs bottom layer
         // first. The scene builder sorted it; this loop obeys it.
@@ -1059,17 +1063,25 @@ public:
     /// symbology, and there is no reason for a second engine to carry a second
     /// copy of them — a second copy is a second thing to keep in step, which is
     /// the objection CLAUDE.md 5.10 makes about lists.
+    static void paint_ground(QPainter& painter, const render::Overlay& overlay)
+    {
+        drawOverlay(painter, overlay, 0, overlay.beneath);
+    }
+
     static void paint_aids(QPainter& painter, const render::DrawList& list,
                            const render::Overlay& overlay, double cx, double cy)
     {
         drawTexts(painter, list, cx, cy);
-        drawOverlay(painter, overlay);
+        drawOverlay(painter, overlay, overlay.beneath, overlay.batches.size());
     }
 
 private:
-    static void drawOverlay(QPainter& painter, const render::Overlay& overlay)
+    /// Draws `[from, to)` of the overlay's batches.
+    static void drawOverlay(QPainter& painter, const render::Overlay& overlay, std::size_t from,
+                            std::size_t to)
     {
-        for (const auto& batch : overlay.batches) {
+        for (std::size_t i = from; i < to && i < overlay.batches.size(); ++i) {
+            const auto& batch = overlay.batches[i];
             if (batch.runs.empty()) continue;
 
             QPen pen(from_rgba(batch.rgba));
@@ -1122,6 +1134,11 @@ private:
 };
 
 } // namespace
+
+void paint_frame_ground(QPainter& painter, const render::Overlay& overlay)
+{
+    PainterBackend::paint_ground(painter, overlay);
+}
 
 void paint_frame_aids(QPainter& painter, const render::DrawList& list,
                       const render::Overlay& overlay, double cx, double cy)

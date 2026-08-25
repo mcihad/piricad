@@ -54,7 +54,13 @@ const AidSettings& InputAids::settings(const core::Settings& app,
     const std::int64_t factor = app.get("core.yakalama.uzanti_carpani").as_int();
     out.reach                 = factor > 0 ? static_cast<core::Mm>(out.snap_radius * factor) : 0;
     out.pick_radius = radius_from_pixels(app.get("core.secim.tolerans").as_int(), mm_per_pixel_);
-    out.grid_step   = app.get("core.izgara.adim").as_length();
+    // The step ACTUALLY IN FORCE at this zoom, not the declared one. With
+    // adaptive spacing on — the default — the lines on screen are the 1-2-5
+    // ladder's and the declared step is not among them; snapping to the declared
+    // one puts the point on a lattice nowhere on the canvas.
+    out.grid_step =
+        core::grid_step_in_force(app.get("core.izgara.adim").as_length(),
+                                 app.get("core.izgara.mod").as_enum() == 0, mm_per_pixel_);
 
     cache_                   = out;
     cached_scale_            = mm_per_pixel_;
