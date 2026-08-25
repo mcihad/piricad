@@ -45,7 +45,32 @@ for file in "${backends[@]}"; do
     fi
 done
 
+# ---- what a backend claims it can draw ---------------------------------------
+#
+# A backend that cannot draw every layer type must say which ones it CAN, and say
+# it as a whitelist. The QGIS backend first listed what it could NOT draw and let
+# everything else fall through to "yes"; every type nobody had taught it was then
+# silently claimed and silently skipped. Three raster types went out that door —
+# which is most of what MPYY publishes — so a hatched lekesi came out as a flat
+# colour and a published line type as a plain stroke.
+#
+# A whitelist cannot fail that way: a type nobody has translated reaches the
+# default and is refused, which sends the frame to a backend that can draw it.
+for file in "${backends[@]}"; do
+    name="$(basename "$file")"
+    grep -q "handles" "$file" || continue
+
+    # The `default:` of the switch inside handles() has to REFUSE. Read from the
+    # last default: in the function, whichever way the cases are ordered.
+    if ! awk '/bool .*::handles/,/^\}/' "$file" | grep -qE "default:[[:space:]]*return false"; then
+        echo "backends: $name decides what it can draw by exclusion -> ${file#$root/}:1" >&2
+        echo "backends:   handles() must list what it CAN draw and refuse the rest," >&2
+        echo "backends:   or a layer type nobody taught it is claimed and then skipped." >&2
+        fail=1
+    fi
+done
+
 if [[ $fail -eq 0 ]]; then
-    echo "backends: OK — ${#backends[@]} backend(s), each one paints the overlay"
+    echo "backends: OK — ${#backends[@]} backend(s), each paints the overlay and refuses by default"
 fi
 exit $fail

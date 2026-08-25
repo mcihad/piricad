@@ -390,10 +390,23 @@ bool QgisBackend::handles(const render::DrawList& list)
     // list of what is missing stays in one place.
     for (const render::PassStyle& ps : list.passes) {
         switch (ps.type) {
-        case core::SymbolLayerType::SimpleMarker:
-        case core::SymbolLayerType::CentroidFill:
-        case core::SymbolLayerType::TextMarker: return false;
-        default: break;
+        // WHAT THIS BACKEND CAN DRAW, listed positively. The first version listed
+        // what it could NOT draw and defaulted the rest to "yes" — so every layer
+        // type it had never been taught was silently claimed and silently skipped.
+        // The three raster types went out that door, which is most of what MPYY
+        // publishes: a hatched lekesi came out as a flat colour and a published
+        // line type as a plain stroke. A whitelist cannot fail that way, because
+        // a type nobody has translated yet falls to the default and is refused.
+        case core::SymbolLayerType::SimpleLine:
+        case core::SymbolLayerType::MarkerLine:
+        case core::SymbolLayerType::HashLine:
+        case core::SymbolLayerType::SimpleFill:
+        case core::SymbolLayerType::LinePatternFill:
+        case core::SymbolLayerType::PointPatternFill: break;
+
+        // Everything else — the three raster types, the centroid marker, the
+        // point marker and the fixed word — has no translation here yet.
+        default: return false;
         }
     }
     return true;

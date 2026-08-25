@@ -175,6 +175,25 @@ Penceredeki her değişiklik
 kapsamına göre `AYAR`, `TERCİH` ya da `MOD` komutu kurup çalıştırır — transkript, günlük
 ve yeniden oynatma pencereden yapılanı komut satırından yazılandan ayırt edemez.
 
+### Düzeltildi — QGIS motoru raster gösterimleri sessizce atlıyordu
+
+Semboloji "komple bozuk, sadece çizgi çiziyor ve sadece rengi değişiyor" hâline geldi.
+Sebebi: `QgisBackend::handles()` **çizemediklerini** listeliyor, gerisini "evet"
+sayıyordu. Yani hiç öğretilmemiş her katman tipi sessizce sahipleniliyor ve sessizce
+atlanıyordu. Üç raster tipi — `gorsel-cizgi`, `gorsel-dolgu`, `gorsel-isaretci` — o
+kapıdan çıktı, ki MPYY'nin yayımladığının neredeyse tamamı bunlar: taramalı bir lekesi
+düz renk, yayımlanmış bir çizgi tipi düpedüz çizgi olarak çıkıyordu.
+
+Liste artık **beyaz liste**: motorun çizebildikleri sayılıyor, gerisi `default`'a düşüp
+reddediliyor ve kare onu çizebilen motora gidiyor. Bir beyaz liste bu şekilde
+başarısız olamaz — çevirisi yazılmamış bir tip sahiplenilemez.
+
+Ölçüldü: paketin **476 satırının 464'ünde iki motor birebir aynı mürekkebi koyuyor**,
+ayrılan satır yok.
+
+`ci-gate-backends.sh` genişletildi: `handles()`'ın `default` dalının **reddetmesi**
+şart. Kapının yakaladığı, dal geçici olarak "kabul et"e çevrilip doğrulandı.
+
 ### Düzeltildi — QGIS motoru bindirmeyi hiç çizmiyordu
 
 Izgara, cetvel, ölçek çubuğu, kuzey oku, yakalama işareti, nişan imleci, seçim kutusu
