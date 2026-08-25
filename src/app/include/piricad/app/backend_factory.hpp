@@ -15,6 +15,8 @@
 
 #include <memory>
 
+class QPainter;
+
 namespace piricad::app {
 
 /// Creates the canvas backend for this build.
@@ -27,5 +29,20 @@ std::unique_ptr<render::Backend> make_canvas_backend();
 /// The built-in QPainter backend, named so the two can be compared. Used by the
 /// factory and by a test that renders one document through both.
 std::unique_ptr<render::Backend> make_builtin_backend();
+
+/// Draws the OVERLAY — grid, ruler, scale bar, north arrow, snap marker,
+/// crosshair, selection box — and the document's own captions, over a frame that
+/// something else has already painted.
+///
+/// Every backend needs these and none of them is symbology: they are the
+/// program's own furniture. A backend that carried its own copy would be a second
+/// list to keep in step, and the day the two disagree the user sees one grid on
+/// one engine and another on the other. The QGIS backend draws symbols and calls
+/// this; the built-in one calls it too, at the same point in the frame.
+///
+/// `painter` must be active on the frame's device, and `cx`/`cy` are the widget
+/// centre the draw list's coordinates are relative to.
+void paint_frame_aids(QPainter& painter, const render::DrawList& list,
+                      const render::Overlay& overlay, double cx, double cy);
 
 } // namespace piricad::app

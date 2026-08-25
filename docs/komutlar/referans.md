@@ -192,6 +192,8 @@ Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden
 | `aralik_y` | integer | isteğe bağlı | Nokta deseninde ikinci eksen; verilmezse kare desen |
 | `aci` | integer | isteğe bağlı | Desen açısı ya da işaretçi dönüklüğü, mikro derece |
 | `kaydirma` | integer | isteğe bağlı | Geometriden dik kaydırma, `birim` cinsinden |
+| `faz` | integer | isteğe bağlı | İlk işaretçinin çizgi boyunca kaç birim ileride başlayacağı; verilmezse aralığın yarısı |
+| `faz_birim` | text | isteğe bağlı | Yalnız `faz` için birim; verilmezse `birim` geçerlidir |
 | `saydamlik` | integer | isteğe bağlı | Katman saydamlığı 0-255; 255 tam opak |
 | `desen` | text | isteğe bağlı | Çizgi tipi: sürekli, ya da çizgi kalınlığının katı olarak çizgi/boşluk uzunlukları — '8 1 1 1' gibi (kesik-nokta) |
 | `yazi` | text | isteğe bağlı | yazi-isaretci katmanının yazdığı sabit metin |
@@ -893,6 +895,22 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "max": 1,
           "required": false,
           "help": "Geometriden dik kaydırma, `birim` cinsinden"
+        },
+        {
+          "name": "faz",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "İlk işaretçinin çizgi boyunca kaç birim ileride başlayacağı; verilmezse aralığın yarısı"
+        },
+        {
+          "name": "faz_birim",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Yalnız `faz` için birim; verilmezse `birim` geçerlidir"
         },
         {
           "name": "saydamlik",

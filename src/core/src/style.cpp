@@ -255,6 +255,7 @@ std::uint64_t fold_symbol(const Symbol& sym, std::uint64_t seed)
         // the next whole-symbol colour change makes them draw differently.
         h = fnv1a_int(l.enabled ? 1 : 0, h);
         h = fnv1a_int(l.colour_locked ? 1 : 0, h);
+        h = fold_measure(l.phase, h);
         h = fnv1a(l.text, h);
         h = fold_appearance(l.look, h);
     }

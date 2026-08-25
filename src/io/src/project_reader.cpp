@@ -449,6 +449,14 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         symbol_layer_flags = rows.value();
     }
 
+    std::span<const std::int32_t> symbol_layer_phase;
+    if (view.has(kBlkSymbolLayerPhase) && dr.symbol_layer_count > 0) {
+        auto rows = view.column<std::int32_t>(kBlkSymbolLayerPhase, dr.symbol_layer_count,
+                                              "sembol katmani fazlari");
+        if (!rows) return rows.error();
+        symbol_layer_phase = rows.value();
+    }
+
     std::span<const std::uint32_t> symbol_layer_text;
     if (view.has(kBlkSymbolLayerText) && dr.symbol_layer_count > 0) {
         auto rows = view.column<std::uint32_t>(kBlkSymbolLayerText, dr.symbol_layer_count,
@@ -479,6 +487,10 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             sym.max_scale = r.max_scale;
             for (std::uint32_t k = 0; k < r.layer_count; ++k) {
                 core::SymbolLayer layer = from_record(symbol_layer_rows[r.first_layer + k]);
+                if (r.first_layer + k < symbol_layer_phase.size())
+                    layer.phase =
+                        core::Measure{symbol_layer_phase[r.first_layer + k], layer.interval.unit};
+
                 if (r.first_layer + k < symbol_layer_flags.size()) {
                     const std::uint8_t flags = symbol_layer_flags[r.first_layer + k];
                     layer.enabled            = (flags & 1u) != 0;

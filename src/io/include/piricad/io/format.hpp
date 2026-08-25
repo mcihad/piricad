@@ -175,6 +175,13 @@ enum BlockId : std::uint32_t {
     /// existed has no such block and every layer reads back with none.
     kBlkSymbolLayerText = 0x0036, ///< u32[], index into kBlkStringSpans
 
+    /// How far along the line each symbol layer's first marker sits, in the unit
+    /// that layer's other measures are read in. `SymbolLayerRecord` is full to the
+    /// byte, so this is its own OPTIONAL block: a file written before the phase
+    /// existed has none and every layer reads back at zero, which is what that
+    /// file meant (io.md R10).
+    kBlkSymbolLayerPhase = 0x0038, ///< i32[], one per symbol layer
+
     kBlkImages     = 0x0033, ///< ImageRecord[]
     kBlkImageBytes = 0x0034, ///< u8[], the payloads back to back
 

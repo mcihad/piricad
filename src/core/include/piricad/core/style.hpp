@@ -250,6 +250,20 @@ struct SymbolLayer
     /// is a stroke and a fill at different ones.
     Measure offset{};
 
+    /// How far ALONG the line the first marker sits, before the interval starts.
+    ///
+    /// The one thing a marker line could not say, and MPYY needs it twice on the
+    /// first page of its own annex. An ETAPLAMA SINIRI alternates a filled circle
+    /// with an open one: two marker lines at the same interval, the second half a
+    /// step along. A ÜLKE SINIRI is a heavy bar with a perpendicular tick at each
+    /// END of it: two marker lines at the bar's repeat, one at the bar's start and
+    /// one at its finish. Without a phase both pairs land on top of each other and
+    /// the symbol loses half of what it says.
+    ///
+    /// Zero is the old behaviour and every drawing written before this reads it,
+    /// so nothing that used to draw one way now draws another.
+    Measure phase{};
+
     /// Marker diameter, or the length of a hash tick. Unread by the line and fill
     /// types that place no glyph.
     Measure size{};

@@ -53,6 +53,7 @@ constexpr const char* kKeyLayerSize   = "boyut";
 constexpr const char* kKeyLayerGap    = "aralik";
 constexpr const char* kKeyLayerGapY   = "aralik_y";
 constexpr const char* kKeyLayerOffset = "kaydirma";
+constexpr const char* kKeyLayerPhase  = "faz";
 constexpr const char* kKeyLayerAngle  = "aci";
 constexpr const char* kKeyLayerInk    = "renk";
 constexpr const char* kKeyLayerFill   = "dolgu_renk";
@@ -623,6 +624,7 @@ Result<StyleEntry> parse_entry(const Json& j, const AnnexNames& annexes, const I
             if (auto st = measure(kKeyLayerGap, layer.interval); !st) return st.error();
             if (auto st = measure(kKeyLayerGapY, layer.spacing_y); !st) return st.error();
             if (auto st = measure(kKeyLayerOffset, layer.offset); !st) return st.error();
+            if (auto st = measure(kKeyLayerPhase, layer.phase); !st) return st.error();
 
             if (const Json* a = declared.find(kKeyLayerAngle); a != nullptr) {
                 if (!a->is_number())

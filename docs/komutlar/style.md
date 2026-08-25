@@ -104,6 +104,8 @@ verilir.
 | `aci` | Desen açısı ya da işaretçi dönüklüğü, **mikro derece** (45° = `45000000`) |
 | `kaydirma` | Geometriden dik kaydırma |
 | `kaydirma_birim` | Yalnız `kaydirma` için birim. Verilmezse `birim` geçerlidir |
+| `faz` | İlk işaretçinin çizgi boyunca kaç birim ileride başlayacağı. Verilmezse aralığın yarısı |
+| `faz_birim` | Yalnız `faz` için birim. Verilmezse `birim` geçerlidir |
 | `saydamlik` | Katman saydamlığı `0`–`255`. `255` tam opak |
 | `desen` | Çizgi tipi: `sürekli`, ya da çizgi/boşluk uzunlukları — `"8 1 1 1"` |
 | `yazi` | `yazi-isaretci` katmanının yazdığı sabit metin |
@@ -247,6 +249,28 @@ Desenli bir çizgi **düz uçla** çizilir, katman `uc` biçimi ne derse desin. 
 kalınlık genişliğindeki boşluk tamamen kapanır — kesik-noktalı bir sınır düz çizgi
 olarak çıkardı, ki paftada bu farklı bir hukuki beyandır. Bildirilen uç biçimi çizginin
 **iki gerçek ucunu** anlatır; içindeki her çizgiyi değil.
+
+### Faz: aynı aralıkta iki farklı şey söylemek
+
+`faz`, çizgi boyunca **ilk işaretçiye kadar** olan mesafedir. Verilmezse aralığın
+yarısıdır, çünkü ilk tepe noktasının tam üstüne oturan bir işaretçi bir dizinin parçası
+değil köşenin bir parçası gibi okunur.
+
+Bunun ne işe yaradığı MPYY'nin kendi ekinin ilk sayfasında iki kez görünür:
+
+**ETAPLAMA SINIRI** dolu bir daireyle boş bir daireyi sırayla dizer. Bu, aynı aralıkta
+**iki işaretçi çizgisidir**; ikincisi yarım adım ileride başlar:
+
+```
+KATMAN ad=ETAP
+STİL katman=ETAP tip=isaretci-cizgi sekil=daire birim=kagit boyut=3400 aralik=10400 faz=0 dolgu=4280249800
+STİL katman=ETAP ekle=evet tip=isaretci-cizgi sekil=daire birim=kagit boyut=3400 aralik=10400 faz=5200 dolgu=0
+```
+
+**ÜLKE SINIRI** kalın bir çubuğun **iki ucuna** dik birer tik koyar. Bu da aynı
+aralıkta iki tarak çizgisidir: biri çubuğun başında, öteki sonunda.
+
+`faz` olmadan iki katman da aynı yere düşer ve sembol söylediğinin yarısını kaybeder.
 
 ### Kalınlık neden mikrometre
 

@@ -253,8 +253,7 @@ public:
                      cy);
         }
 
-        drawTexts(painter, list, cx, cy);
-        drawOverlay(painter, overlay);
+        paint_aids(painter, list, overlay, cx, cy);
     }
 
 private:
@@ -908,7 +907,18 @@ private:
 
         const double target = ps.placement == MarkerPlacement::Centre ? total * 0.5 : interval;
         double walked       = 0.0;
-        double next         = ps.placement == MarkerPlacement::Centre ? target : interval * 0.5;
+
+        // THE PHASE. Where the first marker sits, measured along the line, before
+        // the interval takes over. Half an interval is the old behaviour and stays
+        // the default, because a marker that starts ON the first vertex reads as
+        // part of the corner rather than as one of a series.
+        //
+        // It is what lets two marker lines at one interval say different things:
+        // MPYY's ETAPLAMA SINIRI alternates a filled circle with an open one, and
+        // its ÜLKE SINIRI puts a tick at each END of a heavy bar. Both are two
+        // lines at the same spacing, half a step and a whole bar apart.
+        const double phase = ps.phase_px > 0.0f ? static_cast<double>(ps.phase_px) : interval * 0.5;
+        double next        = ps.placement == MarkerPlacement::Centre ? target : phase;
 
         for (std::uint32_t v = 1; v < run; ++v) {
             const QPointF a  = at(v - 1);
@@ -1017,6 +1027,23 @@ private:
     /// four lines whatever it is drawing. The shapes — a square for an endpoint, a
     /// bowtie for nearest — are chosen by the canvas, because which glyph means
     /// which aid is a decision about the product and not about the renderer.
+
+public:
+    /// Draws the aids over a frame someone else painted.
+    ///
+    /// Public so the QGIS backend can call it. The grid, the ruler, the scale bar,
+    /// the snap marker and the crosshair are the PROGRAM's own furniture, not
+    /// symbology, and there is no reason for a second engine to carry a second
+    /// copy of them — a second copy is a second thing to keep in step, which is
+    /// the objection CLAUDE.md 5.10 makes about lists.
+    static void paint_aids(QPainter& painter, const render::DrawList& list,
+                           const render::Overlay& overlay, double cx, double cy)
+    {
+        drawTexts(painter, list, cx, cy);
+        drawOverlay(painter, overlay);
+    }
+
+private:
     static void drawOverlay(QPainter& painter, const render::Overlay& overlay)
     {
         for (const auto& batch : overlay.batches) {
@@ -1067,6 +1094,12 @@ private:
 };
 
 } // namespace
+
+void paint_frame_aids(QPainter& painter, const render::DrawList& list,
+                      const render::Overlay& overlay, double cx, double cy)
+{
+    PainterBackend::paint_aids(painter, list, overlay, cx, cy);
+}
 
 std::unique_ptr<render::Backend> make_builtin_backend()
 {

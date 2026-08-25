@@ -175,6 +175,47 @@ Penceredeki her değişiklik
 kapsamına göre `AYAR`, `TERCİH` ya da `MOD` komutu kurup çalıştırır — transkript, günlük
 ve yeniden oynatma pencereden yapılanı komut satırından yazılandan ayırt edemez.
 
+### Düzeltildi — QGIS motoru bindirmeyi hiç çizmiyordu
+
+Izgara, cetvel, ölçek çubuğu, kuzey oku, yakalama işareti, nişan imleci, seçim kutusu
+ve çizimin kendi yazıları **tuvalden tamamen kayboldu** — QGIS motoru varsayılan olduğu
+anda. Çizim duruyordu, etrafındaki her şey gitmişti.
+
+Sebep: `QgisBackend::render`, bindirmeden yalnız arkaplan rengini okuyordu. Bunları
+yazarken atladım ve hiçbir şey fark etmedi, çünkü **bindirmenin hiç testi yoktu**.
+
+- `paint_frame_aids()` ortak fonksiyon oldu ve iki motor da onu çağırıyor. İkinci bir
+  kopya, birbiriyle uyumlu tutulacak ikinci bir liste demekti (5.10'un itirazı).
+- **`ci-gate-backends.sh`** eklendi: `render::Backend` uygulayan her dosyayı **bularak**
+  (listeleyerek değil — listeye eklenmeyi unutulan bir motor, kimsenin denetlemediği bir
+  motordur) bindirmeyi çizip çizmediğine bakıyor. Kapının gerçekten yakaladığı, çağrı
+  geçici olarak silinip doğrulandı.
+
+Testte değil kapıda, çünkü `/tests` Qt bağlamıyor ve bir arka uç tanımı gereği Qt'dir
+(Madde 3.4 `piricad_render`'ı Qt'siz tutuyor, bu yüzden iki motor da `/src/app` içinde).
+
+### Eklendi — işaretçi çizgide FAZ
+
+`faz`, çizgi boyunca ilk işaretçiye kadar olan mesafe. Verilmezse aralığın yarısı, ki
+eski davranış budur — yazılmış hiçbir çizim başka türlü çizilmiyor.
+
+Bunun ne işe yaradığı MPYY'nin kendi ekinin ilk sayfasında iki kez görünüyor.
+**ETAPLAMA SINIRI** dolu ve boş daireyi sırayla dizer: aynı aralıkta iki işaretçi
+çizgisi, ikincisi yarım adım ileride. **ÜLKE SINIRI** kalın bir çubuğun iki **ucuna**
+dik birer tik koyar: aynı aralıkta iki tarak çizgisi, biri çubuğun başında öteki
+sonunda. Faz olmadan iki katman da aynı yere düşüyor ve sembol söylediğinin yarısını
+kaybediyordu — bir önceki turda ikisi de "eksik" diye işaretlenmişti, artık çiziliyorlar.
+
+Faz `SymbolLayer`'da, dosyada (`kBlkSymbolLayerPhase`, isteğe bağlı blok — faz
+kullanmayan bir çizim bayt birebir eskisi gibi yazılıyor), `STİL faz=` parametresinde ve
+katalog satırında.
+
+İki kayıp daha bulundu ve kapatıldı: faz `pass_of`'a hiç ulaşmıyordu (biçimlendirme
+sonrası satır kaydığı için düzenlemem tutmamış), ve QGIS işaretçisinde dolgusu sıfır
+olan bir daire çizgi rengiyle doldurulyordu — dolu/boş ayrımı kayboluyordu. `STİL`'in
+`has_pictures` denetimi de `has_symbol` oldu: bildirilmiş katmanı olup resmi olmayan bir
+satır düz renk yoluna düşüyordu.
+
 ### Eklendi — MPYY yapılaşma koşulu gösterimi, parselin kendi sayılarıyla
 
 Yönetmeliğin bastığı gösterim: içinden yatay bir çizgi geçen çember, üstte **kat alanı

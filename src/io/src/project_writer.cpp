@@ -289,6 +289,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     std::vector<SymbolLayerRecord> symbol_layers;
     std::vector<std::uint8_t> symbol_layer_flags;
     std::vector<std::uint32_t> symbol_layer_text;
+    std::vector<std::int32_t> symbol_layer_phase;
     symbols.reserve(doc.styles().size());
 
     for (std::size_t i = 0; i < doc.styles().size(); ++i) {
@@ -494,6 +495,12 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     blocks.push_back(column(kBlkSymbolLayers, symbol_layers));
     blocks.push_back(column(kBlkSymbolLayerFlags, symbol_layer_flags));
     blocks.push_back(column(kBlkSymbolLayerText, symbol_layer_text));
+
+    // Written only when something asks for it, so a drawing that uses no phase is
+    // byte for byte what it was before the phase existed.
+    if (std::any_of(symbol_layer_phase.begin(), symbol_layer_phase.end(),
+                    [](std::int32_t v) { return v != 0; }))
+        blocks.push_back(column(kBlkSymbolLayerPhase, symbol_layer_phase));
     blocks.push_back(column(kBlkImages, images));
     blocks.push_back(column(kBlkImageBytes, image_bytes));
     if (!dashes.empty()) blocks.push_back(column(kBlkDashes, dashes));

@@ -128,10 +128,17 @@ const core::StyleEntry* row_for(const core::StyleCatalog& catalog, const std::st
     return nullptr;
 }
 
-/// Whether the catalogue row names any picture at all.
-bool has_pictures(const core::StyleEntry& row)
+/// Whether the catalogue row draws a SYMBOL rather than just a colour.
+///
+/// Two ways a row can: it names pictures, or it declares a symbol-layer stack.
+/// Both have to take the same road out of here. A row that declared layers and
+/// named no picture went down the plain-appearance branch instead, so every
+/// entity got a flat colour and only the layer's own default carried the symbol —
+/// which is visible the moment a declared row's second layer stops appearing.
+bool has_symbol(const core::StyleEntry& row)
 {
-    return !row.image_hatch.empty() || !row.image_symbol.empty() || !row.image_line.empty();
+    return !row.layers.empty() || !row.image_hatch.empty() || !row.image_symbol.empty() ||
+           !row.image_line.empty();
 }
 
 /// Reads one published picture and adds it to the drawing.
@@ -563,6 +570,7 @@ Task<void> run(Context& ctx)
     measure("aralik", "aralik_birim", described.interval);
     measure("aralik_y", "aralik_y_birim", described.spacing_y);
     measure("kaydirma", "kaydirma_birim", described.offset);
+    measure("faz", "faz_birim", described.phase);
 
     if (!bad_unit.empty()) {
         ctx.session().fail(core::err(core::ErrorCode::ValidationFailed,
@@ -669,14 +677,15 @@ Task<void> run(Context& ctx)
 
     core::StyleId last = core::kByLayerStyle;
     for (std::size_t i = 0; i < targets.size(); ++i) {
-        // A row the regulation published WITH PICTURES is a symbol, not a colour.
+        // A row that DRAWS A SYMBOL is a symbol, not a colour — whether it says so
+        // with pictures or with a declared stack.
         // Without this the branch below was entered only for a scale window or a
         // hand-written layer, so `STİL kod=` applied the row's fill and dropped
         // the hatch and the glyph the annex prints.
-        const bool row_pictures = i < rows.size() && rows[i] != nullptr && has_pictures(*rows[i]);
+        const bool row_symbol = i < rows.size() && rows[i] != nullptr && has_symbol(*rows[i]);
 
         core::StyleId style = core::kByLayerStyle;
-        if (!clear && (windowed || has_layer || row_pictures)) {
+        if (!clear && (windowed || has_layer || row_symbol)) {
             core::Symbol sym;
 
             // `ekle` stacks onto what this entity already carries. Reading the
@@ -693,7 +702,7 @@ Task<void> run(Context& ctx)
                 core::SymbolLayer added = described;
                 added.look              = resolved[i];
                 sym.layers.push_back(added);
-            } else if (row_pictures) {
+            } else if (row_symbol) {
                 // The row was published WITH PICTURES, so the symbol is what the
                 // regulation printed rather than a colour standing in for it.
                 auto built = build_from_row(ctx, *rows[i], package_dir);
@@ -721,7 +730,7 @@ Task<void> run(Context& ctx)
 
     // Recorded so a replay resolves the same rows whichever client typed them.
     for (const char* name : {"paket", "kod", "sinifla", "olcek", "olcek_min", "olcek_max", "renk",
-                             "kalinlik", "dolgu", "sira", "sifirla", "desen"}) {
+                             "kalinlik", "dolgu", "sira", "sifirla", "desen", "faz"}) {
         if (const Value v = ctx.argument(name); !v.empty()) ctx.record(name, v);
     }
 
@@ -812,6 +821,11 @@ PIRICAD_COMMAND(style)
                                "Desen açısı ya da işaretçi dönüklüğü, mikro derece"),
                 Param::integer("kaydirma", Arity::optional(),
                                "Geometriden dik kaydırma, `birim` cinsinden"),
+                Param::integer("faz", Arity::optional(),
+                               "İlk işaretçinin çizgi boyunca kaç birim ileride "
+                               "başlayacağı; verilmezse aralığın yarısı"),
+                Param::text("faz_birim", Arity::optional(),
+                            "Yalnız `faz` için birim; verilmezse `birim` geçerlidir"),
                 Param::integer("saydamlik", Arity::optional(),
                                "Katman saydamlığı 0-255; 255 tam opak"),
                 Param::text("desen", Arity::optional(),

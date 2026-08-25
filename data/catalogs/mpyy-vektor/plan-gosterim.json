@@ -1,6 +1,6 @@
 {
  "schema_version": 2,
- "package_version": "0.2.0",
+ "package_version": "0.3.0",
  "id": "mpyy-vektor",
  "source": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1 Gösterimler",
  "published": "2026-01-22",
@@ -115,19 +115,42 @@
     {
      "tip": "cizgi",
      "renk": "#FF000000",
-     "kalinlik": 1800,
+     "kalinlik": 1600,
      "desen": [
-      7.0,
-      4.0
+      7.5,
+      6.25
      ]
+    },
+    {
+     "tip": "tarak-cizgi",
+     "sekil": "cizik",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 4600,
+     "aralik": 22000,
+     "faz": 0,
+     "renk": "#FF000000",
+     "kalinlik": 500
+    },
+    {
+     "tip": "tarak-cizgi",
+     "sekil": "cizik",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 4600,
+     "aralik": 22000,
+     "faz": 12000,
+     "renk": "#FF000000",
+     "kalinlik": 500
     },
     {
      "tip": "isaretci-cizgi",
      "sekil": "daire",
      "yerlesim": "aralik",
      "birim": "kagit",
-     "boyut": 3000,
-     "aralik": 19800,
+     "boyut": 3400,
+     "aralik": 22000,
+     "faz": 17000,
      "renk": "#FF000000",
      "kalinlik": 300,
      "dolgu_renk": "#00000000"
@@ -313,16 +336,28 @@
      "yerlesim": "aralik",
      "birim": "kagit",
      "boyut": 3400,
-     "aralik": 10200,
+     "aralik": 10400,
+     "faz": 0,
      "renk": "#FF1E6BC8",
      "kalinlik": 300,
      "dolgu_renk": "#FF1E6BC8"
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 3400,
+     "aralik": 10400,
+     "faz": 5200,
+     "renk": "#FF1E6BC8",
+     "kalinlik": 300,
+     "dolgu_renk": "#00000000"
     }
    ],
    "belirsiz": true,
    "belirsiz_nedeni": [
-    "cizim-yorumu",
-    "eksik-dolu-bos-siralamasi"
+    "cizim-yorumu"
    ]
   },
   {

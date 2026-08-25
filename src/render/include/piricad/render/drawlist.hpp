@@ -38,6 +38,7 @@ struct PassStyle
     float interval_px{0.0f};  ///< spacing along a line, or the first pattern axis
     float spacing_y_px{0.0f}; ///< the second pattern axis; 0 means square
     float offset_px{0.0f};    ///< perpendicular offset from the geometry
+    float phase_px{0.0f};     ///< distance ALONG the line before the first marker
 
     std::int32_t angle_udeg{0}; ///< pattern angle, or glyph rotation
     std::uint8_t opacity{255};  ///< multiplied into this layer's colours

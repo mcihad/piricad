@@ -72,6 +72,7 @@ PassStyle pass_of(const core::SymbolLayer& sl, const core::ImageStore& images,
     ps.interval_px  = to_pixels(sl.interval, mm_per_pixel, pixels_per_paper_mm);
     ps.spacing_y_px = to_pixels(sl.spacing_y, mm_per_pixel, pixels_per_paper_mm);
     ps.offset_px    = to_pixels(sl.offset, mm_per_pixel, pixels_per_paper_mm);
+    ps.phase_px     = to_pixels(sl.phase, mm_per_pixel, pixels_per_paper_mm);
     ps.angle_udeg   = sl.angle_udeg;
     ps.opacity      = sl.opacity;
     ps.line_rgba    = sl.look.rgba;

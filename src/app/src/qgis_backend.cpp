@@ -172,12 +172,17 @@ std::unique_ptr<QgsMarkerSymbol> marker_of(const render::PassStyle& ps)
     auto* glyph = new QgsSimpleMarkerSymbolLayer(
         shape_of(ps.shape), ps.size_px > 0.0f ? static_cast<double>(ps.size_px) : 4.0);
     glyph->setSizeUnit(kPx);
-    glyph->setColor(from_rgba(ps.fill_rgba != 0 ? ps.fill_rgba : ps.line_rgba, ps.opacity));
+    // FILL FIRST, STROKE SECOND, and a fill of zero means NO fill rather than a
+    // fallback to the stroke colour. MPYY alternates a filled circle with an open
+    // one along an ETAPLAMA SINIRI, and reading "no fill" as "fill with the line
+    // colour" drew both halves solid — the alternation the symbol exists for
+    // disappeared and the two lines became one.
+    glyph->setFillColor(ps.fill_rgba != 0 ? from_rgba(ps.fill_rgba, ps.opacity)
+                                          : QColor(Qt::transparent));
     glyph->setStrokeColor(from_rgba(ps.line_rgba, ps.opacity));
     glyph->setStrokeWidth(std::max(0.1, static_cast<double>(ps.line_width_px)));
     glyph->setStrokeWidthUnit(kPx);
     glyph->setAngle(degrees_of(ps.angle_udeg));
-    if (ps.fill_rgba == 0) glyph->setFillColor(QColor(Qt::transparent));
 
     return std::make_unique<QgsMarkerSymbol>(QgsSymbolLayerList() << glyph);
 }
@@ -338,6 +343,10 @@ void QgisBackend::drawPass(QgsRenderContext& rc, const render::DrawList& list, s
             along->setIntervalUnit(kPx);
             along->setOffset(ps.offset_px);
             along->setOffsetUnit(kPx);
+            if (ps.phase_px > 0.0f) {
+                along->setOffsetAlongLine(ps.phase_px);
+                along->setOffsetAlongLineUnit(kPx);
+            }
             along->setRotateSymbols(true);
             along->setSubSymbol(marker_of(ps).release());
             line = std::make_unique<QgsLineSymbol>(QgsSymbolLayerList() << along);
@@ -418,6 +427,15 @@ void QgisBackend::render(const render::DrawList& list, const render::Overlay& ov
 
     for (std::uint32_t index : list.order)
         if (index < list.passes.size()) drawPass(rc, list, index, cx, cy);
+
+    // THE AIDS, and forgetting them is what this line is here to stop happening
+    // again. A backend draws the document; the grid, the ruler, the scale bar,
+    // the north arrow, the snap marker, the crosshair, the selection box and the
+    // drawing's own captions are the program's furniture and every backend owes
+    // the user all of them. Leaving them out took the whole overlay off the
+    // canvas the moment QGIS became the default engine — the drawing was still
+    // there and everything around it was gone.
+    paint_frame_aids(painter, list, overlay, cx, cy);
 
     painter.end();
 }
