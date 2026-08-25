@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#101215;}
+*{box-sizing:border-box;}
+a{color:#3f9fd8;text-decoration:none;}
+a:hover{color:#6fbde9;}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:#1b1f23;}
+::-webkit-scrollbar-thumb{background:#3a4147;border:2px solid #1b1f23;border-radius:6px;}
+::-webkit-scrollbar-thumb:hover{background:#4c555c;}
+</style>
+</helmet>
+<div style="font-family:'IBM Plex Sans',system-ui,sans-serif;background:#101215;color:#d8dee4;min-height:100vh;min-width:1560px;height:1000px;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;">
+
+  <div style="display:flex;align-items:center;gap:2px;padding:10px 14px 0 14px;background:#101215;">
+    <div style="font-size:11px;letter-spacing:1.6px;color:#5d666e;font-weight:600;margin-right:14px;">TERRACAD · UI SPEC</div>
+    <button onClick="{{ go1 }}" style="{{ tab1 }}">1 — Ana Ekran</button>
+    <button onClick="{{ go2 }}" style="{{ tab2 }}">2 — Stil Tasarımcısı</button>
+    <button onClick="{{ go3 }}" style="{{ tab3 }}">3 — Öznitelik Tablosu</button>
+    <button onClick="{{ go4 }}" style="{{ tab4 }}">4 — Ayarlar</button>
+    <div style="flex:1"></div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#4e565d;">1600 × 1000 · Qt6 / QWidget</div>
+  </div>
+
+  <div style="flex:1;padding:10px 14px 14px 14px;display:flex;">
+  <sc-if value="{{ isMain }}" hint-placeholder-val="{{ true }}">
+  <div style="flex:1;display:flex;flex-direction:column;background:#1a1e22;border:1px solid #2c3237;border-radius:6px;overflow:hidden;box-shadow:0 24px 60px -20px #000;">
+
+    <div style="display:flex;align-items:center;height:34px;padding:0 10px;background:linear-gradient(#23282d,#1e2226);border-bottom:1px solid #14171a;flex-shrink:0;">
+      <div style="display:flex;gap:6px;margin-right:14px;">
+        <div style="width:11px;height:11px;border-radius:50%;background:#3b4248;"></div>
+        <div style="width:11px;height:11px;border-radius:50%;background:#3b4248;"></div>
+        <div style="width:11px;height:11px;border-radius:50%;background:#3b4248;"></div>
+      </div>
+      <div style="display:flex;gap:2px;font-size:12.5px;color:#aeb6bd;">
+        <div style="padding:5px 9px;border-radius:4px;" style-hover="background:#2f353b;color:#fff;">Dosya</div>
+        <div style="padding:5px 9px;border-radius:4px;" style-hover="background:#2f353b;color:#fff;">Düzen</div>
+        <div style="padding:5px 9px;border-radius:4px;" style-hover="background:#2f353b;color:#fff;">Görünüm</div>
+        <div style="padding:5px 9px;border-radius:4px;" style-hover="background:#2f353b;color:#fff;">Çizim</div>
+        <div style="padding:5px 9px;border-radius:4px;" style-hover="background:#2f353b;color:#fff;">Değiştir</div>
+        <div style="padding:5px 9px;border-radius:4px;" style-hover="background:#2f353b;color:#fff;">Harita</div>
+        <div style="padding:5px 9px;border-radius:4px;" style-hover="background:#2f353b;color:#fff;">Analiz</div>
+        <div style="padding:5px 9px;border-radius:4px;" style-hover="background:#2f353b;color:#fff;">Katman</div>
+        <div style="padding:5px 9px;border-radius:4px;" style-hover="background:#2f353b;color:#fff;">Pencere</div>
+        <div style="padding:5px 9px;border-radius:4px;" style-hover="background:#2f353b;color:#fff;">Yardım</div>
+      </div>
+      <div style="flex:1"></div>
+      <div style="font-size:12px;color:#767f87;font-weight:500;">kadastro_ada_1284.tcad — TERRACAD 1.0</div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="display:flex;align-items:center;gap:6px;background:#191d21;border:1px solid #2e343a;border-radius:4px;padding:3px 8px;width:190px;">
+          <span style="font-family:'Material Symbols Outlined';font-size:15px;color:#6b747c;">search</span>
+          <span style="font-size:11.5px;color:#5f686f;">Komut ara…</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#4c545b;margin-left:auto;">⌘K</span>
+        </div>
+        <div style="width:22px;height:22px;border-radius:50%;background:#2f9bd8;color:#0b1116;font-size:10.5px;font-weight:600;display:flex;align-items:center;justify-content:center;">MK</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:4px;height:46px;padding:0 8px;background:#1e2226;border-bottom:1px solid #14171a;flex-shrink:0;">
+      <sc-for list="{{ toolbar }}" as="t" hint-placeholder-count="14">
+        <sc-if value="{{ t.sep }}" hint-placeholder-val="{{ false }}">
+          <div style="width:1px;height:22px;background:#2e343a;margin:0 5px;"></div>
+        </sc-if>
+        <sc-if value="{{ t.icon }}" hint-placeholder-val="{{ true }}">
+          <div title="{{ t.label }}" style="{{ t.style }}" style-hover="background:#2b3137;color:#ffffff;">
+            <span style="font-family:'Material Symbols Outlined';font-size:20px;">{{ t.icon }}</span>
+          </div>
+        </sc-if>
+      </sc-for>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:10px;padding-right:4px;">
+        <div style="display:flex;flex-direction:column;gap:1px;">
+          <span style="font-size:9.5px;letter-spacing:.7px;color:#6b747c;">ÖLÇEK</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#d8dee4;">1 : 1 000</span>
+        </div>
+        <div style="width:1px;height:22px;background:#2e343a;"></div>
+        <div style="display:flex;flex-direction:column;gap:1px;">
+          <span style="font-size:9.5px;letter-spacing:.7px;color:#6b747c;">KOORDİNAT SİSTEMİ</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#d8dee4;">EPSG:5254 · ITRF96 / TM30</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1;display:flex;min-height:0;">
+
+      <div style="width:46px;background:#1c2024;border-right:1px solid #14171a;display:flex;flex-direction:column;align-items:center;padding:6px 0;gap:3px;flex-shrink:0;">
+        <sc-for list="{{ toolbox }}" as="t" hint-placeholder-count="18">
+          <sc-if value="{{ t.sep }}" hint-placeholder-val="{{ false }}">
+            <div style="width:24px;height:1px;background:#2e343a;margin:5px 0;"></div>
+          </sc-if>
+          <sc-if value="{{ t.icon }}" hint-placeholder-val="{{ true }}">
+            <div title="{{ t.label }}" style="{{ t.style }}" style-hover="background:#2b3137;color:#ffffff;">
+              <span style="font-family:'Material Symbols Outlined';font-size:19px;">{{ t.icon }}</span>
+              <div style="{{ t.corner }}"></div>
+            </div>
+          </sc-if>
+        </sc-for>
+        <div style="flex:1"></div>
+        <div style="display:flex;flex-direction:column;gap:3px;align-items:center;">
+          <div style="width:22px;height:22px;border-radius:3px;background:#2f9bd8;border:1px solid #55b1e2;"></div>
+          <div style="width:22px;height:22px;border-radius:3px;background:#1e2226;border:1px solid #4a5157;"></div>
+        </div>
+      </div>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+        <div style="display:flex;align-items:stretch;height:30px;background:#191d21;border-bottom:1px solid #14171a;flex-shrink:0;">
+          <div style="display:flex;align-items:center;gap:7px;padding:0 12px;background:#22262a;border-right:1px solid #14171a;border-top:2px solid #2f9bd8;font-size:12px;color:#e6ebef;">
+            <span style="font-family:'Material Symbols Outlined';font-size:14px;color:#2f9bd8;">description</span>
+            kadastro_ada_1284
+            <span style="font-family:'Material Symbols Outlined';font-size:14px;color:#6b747c;margin-left:4px;">close</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;padding:0 12px;border-right:1px solid #14171a;font-size:12px;color:#8b949e;">
+            <span style="font-family:'Material Symbols Outlined';font-size:14px;">public</span>
+            imar_plani_revizyon
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;padding:0 12px;border-right:1px solid #14171a;font-size:12px;color:#8b949e;">
+            <span style="font-family:'Material Symbols Outlined';font-size:14px;">terrain</span>
+            arazi_modeli_3b
+          </div>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:2px;padding:0 8px;color:#6b747c;">
+            <span style="font-family:'Material Symbols Outlined';font-size:16px;">splitscreen</span>
+            <span style="font-family:'Material Symbols Outlined';font-size:16px;">open_in_full</span>
+          </div>
+        </div>
+
+        <div style="flex:1;position:relative;background:#23272b;overflow:hidden;min-height:0;">
+          <div style="position:absolute;inset:0;background-image:linear-gradient(#2a2f34 1px,transparent 1px),linear-gradient(90deg,#2a2f34 1px,transparent 1px);background-size:20px 20px;"></div>
+          <div style="position:absolute;inset:0;background-image:linear-gradient(#31373d 1px,transparent 1px),linear-gradient(90deg,#31373d 1px,transparent 1px);background-size:100px 100px;"></div>
+
+          <div style="position:absolute;top:0;left:0;right:0;height:20px;background:#1b1f23;border-bottom:1px solid #14171a;display:flex;align-items:flex-end;font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:#6b747c;">
+            <sc-for list="{{ rulerX }}" as="v" hint-placeholder-count="10">
+              <div style="width:100px;border-left:1px solid #3a4147;padding-left:3px;height:9px;line-height:9px;flex-shrink:0;">{{ v }}</div>
+            </sc-for>
+          </div>
+          <div style="position:absolute;top:20px;left:0;bottom:0;width:20px;background:#1b1f23;border-right:1px solid #14171a;"></div>
+
+          <svg viewBox="0 0 1100 620" style="position:absolute;top:20px;left:20px;width:calc(100% - 20px);height:calc(100% - 20px);">
+            <g stroke="#8f9aa3" fill="#2b3138" stroke-width="1.2">
+              <polygon points="120,90 340,70 360,220 140,240" fill="#2c3239"></polygon>
+              <polygon points="360,220 140,240 150,380 380,360" fill="#2a3037"></polygon>
+              <polygon points="380,360 150,380 165,500 400,480" fill="#2c3239"></polygon>
+              <polygon points="470,60 700,80 690,230 460,215" fill="#2b3138"></polygon>
+              <polygon points="690,230 460,215 470,370 700,350" fill="#2a3037"></polygon>
+              <polygon points="760,90 980,110 960,300 750,280" fill="#2c3239"></polygon>
+              <polygon points="750,280 960,300 940,470 740,450" fill="#2a3037"></polygon>
+            </g>
+            <g fill="none" stroke="#d98a2f" stroke-width="2.4" opacity="0.85">
+              <path d="M60,540 C260,520 420,545 640,520 C820,500 960,520 1060,500"></path>
+            </g>
+            <g fill="none" stroke="#5a636b" stroke-width="8" stroke-linecap="square" opacity="0.5">
+              <path d="M415,40 L425,600"></path>
+              <path d="M715,40 L725,600"></path>
+            </g>
+            <polygon points="470,60 700,80 690,230 460,215" fill="#2f9bd8" fill-opacity="0.14" stroke="#4fb0e6" stroke-width="1.8"></polygon>
+            <g fill="#0f1418" stroke="#4fb0e6" stroke-width="1.6">
+              <rect x="464" y="54" width="9" height="9"></rect>
+              <rect x="695" y="74" width="9" height="9"></rect>
+              <rect x="685" y="224" width="9" height="9"></rect>
+              <rect x="455" y="209" width="9" height="9"></rect>
+            </g>
+            <g font-family="IBM Plex Mono, monospace" font-size="11" fill="#98a2ab">
+              <text x="205" y="165">1284 / 12</text>
+              <text x="215" y="315">1284 / 13</text>
+              <text x="230" y="440">1284 / 14</text>
+              <text x="530" y="155" fill="#cfe7f6">1284 / 21</text>
+              <text x="540" y="300">1284 / 22</text>
+              <text x="830" y="205">1285 / 3</text>
+              <text x="820" y="380">1285 / 4</text>
+              <text x="70" y="530" fill="#d98a2f">DERE HATTI</text>
+            </g>
+            <g stroke="#4fb0e6" stroke-width="1">
+              <path d="M690,80 L860,80" stroke-dasharray="4 3"></path>
+            </g>
+            <g fill="#4fb0e6" font-family="IBM Plex Mono, monospace" font-size="11">
+              <text x="700" y="72">Δ 231.480 m</text>
+            </g>
+            <g stroke="#e8eef3" stroke-width="1">
+              <path d="M470,60 l-14,0 M470,60 l0,-14"></path>
+            </g>
+          </svg>
+
+          <div style="position:absolute;left:640px;top:200px;display:flex;align-items:center;gap:6px;background:#12171b;border:1px solid #3a4147;border-radius:3px;padding:4px 7px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#cfd6dc;box-shadow:0 6px 18px -6px #000;">
+            <span style="font-family:'Material Symbols Outlined';font-size:14px;color:#d98a2f;">adjust</span>
+            UÇ NOKTA · 458 214.362 , 4 512 908.771
+          </div>
+
+          <div style="position:absolute;right:16px;bottom:52px;width:74px;height:74px;border:1px solid #343b41;border-radius:50%;background:#1b1f2380;display:flex;align-items:center;justify-content:center;">
+            <div style="text-align:center;">
+              <div style="font-family:'Material Symbols Outlined';font-size:26px;color:#c4ccd3;line-height:1;">navigation</div>
+              <div style="font-size:9.5px;letter-spacing:1px;color:#8b949e;margin-top:2px;">K</div>
+            </div>
+          </div>
+
+          <div style="position:absolute;left:36px;bottom:16px;display:flex;flex-direction:column;gap:3px;">
+            <div style="display:flex;height:7px;width:180px;border:1px solid #565f66;">
+              <div style="flex:1;background:#c4ccd3;"></div>
+              <div style="flex:1;background:transparent;"></div>
+              <div style="flex:1;background:#c4ccd3;"></div>
+              <div style="flex:1;background:transparent;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;width:180px;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#8b949e;">
+              <span>0</span><span>100</span><span>200 m</span>
+            </div>
+          </div>
+
+          <div style="position:absolute;right:16px;top:36px;display:flex;flex-direction:column;background:#1b1f23e6;border:1px solid #343b41;border-radius:4px;overflow:hidden;">
+            <div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#c4ccd3;border-bottom:1px solid #2c3237;font-family:'Material Symbols Outlined';font-size:18px;">add</div>
+            <div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#c4ccd3;border-bottom:1px solid #2c3237;font-family:'Material Symbols Outlined';font-size:18px;">remove</div>
+            <div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#c4ccd3;font-family:'Material Symbols Outlined';font-size:17px;">fit_screen</div>
+          </div>
+        </div>
+
+        <div style="height:28px;background:#1b1f23;border-top:1px solid #14171a;display:flex;align-items:center;gap:6px;padding:0 10px;flex-shrink:0;">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#8b949e;">Komut:</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#e6ebef;">_PARSELBOL</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#767f87;">Bölme çizgisinin ilk noktasını seçin veya [Alan/Oran/Cephe] :</span>
+          <span style="width:1px;height:13px;background:#2f9bd8;"></span>
+        </div>
+      </div>
+
+      <div style="width:312px;background:#1c2024;border-left:1px solid #14171a;display:flex;flex-direction:column;flex-shrink:0;">
+
+        <div style="display:flex;align-items:stretch;height:29px;background:#191d21;border-bottom:1px solid #14171a;flex-shrink:0;">
+          <div style="display:flex;align-items:center;gap:6px;padding:0 10px;background:#1c2024;border-top:2px solid #2f9bd8;font-size:11.5px;font-weight:500;color:#e6ebef;">
+            <span style="font-family:'Material Symbols Outlined';font-size:14px;color:#2f9bd8;">table_rows_narrow</span>Öznitelikler
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;padding:0 10px;font-size:11.5px;color:#8b949e;">
+            <span style="font-family:'Material Symbols Outlined';font-size:14px;">history</span>Geçmiş
+          </div>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;padding-right:6px;gap:4px;color:#6b747c;">
+            <span style="font-family:'Material Symbols Outlined';font-size:15px;">drag_indicator</span>
+            <span style="font-family:'Material Symbols Outlined';font-size:15px;">remove</span>
+            <span style="font-family:'Material Symbols Outlined';font-size:15px;">close_fullscreen</span>
+          </div>
+        </div>
+
+        <div style="padding:9px 10px;border-bottom:1px solid #22272b;flex-shrink:0;">
+          <div style="font-size:10px;letter-spacing:1.1px;color:#6b747c;margin-bottom:4px;">SEÇİLİ NESNE</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:26px;height:26px;border-radius:3px;background:#2f9bd826;border:1px solid #3f7fa5;display:flex;align-items:center;justify-content:center;">
+              <span style="font-family:'Material Symbols Outlined';font-size:16px;color:#5cb6ea;">pentagon</span>
+            </div>
+            <div>
+              <div style="font-size:12.5px;color:#e6ebef;font-weight:500;">Parsel 1284 / 21</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#767f87;">POLYGON · fid 4128 · 4 köşe</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex:1;overflow:auto;min-height:0;">
+          <sc-for list="{{ attrGroups }}" as="g" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#20252a;border-bottom:1px solid #14171a;position:sticky;top:0;">
+              <span style="font-family:'Material Symbols Outlined';font-size:14px;color:#8b949e;">expand_more</span>
+              <span style="font-size:10.5px;letter-spacing:.8px;color:#aeb6bd;font-weight:600;">{{ g.title }}</span>
+            </div>
+            <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="4">
+              <div style="display:grid;grid-template-columns:112px 1fr;border-bottom:1px solid #22272b;" style-hover="background:#212629;">
+                <div style="padding:5px 10px;font-size:11.5px;color:#8b949e;border-right:1px solid #22272b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.k }}</div>
+                <div style="padding:5px 8px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#dfe5ea;display:flex;align-items:center;justify-content:space-between;gap:6px;">
+                  <span>{{ r.v }}</span>
+                  <span style="{{ r.badgeStyle }}">{{ r.badge }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </sc-for>
+        </div>
+
+        <div style="height:5px;background:#171b1e;border-top:1px solid #14171a;border-bottom:1px solid #14171a;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <div style="width:26px;height:1px;background:#3a4147;"></div>
+        </div>
+
+        <div style="height:268px;display:flex;flex-direction:column;flex-shrink:0;">
+          <div style="display:flex;align-items:center;height:29px;background:#191d21;border-bottom:1px solid #14171a;padding-left:10px;gap:6px;">
+            <span style="font-family:'Material Symbols Outlined';font-size:14px;color:#2f9bd8;">layers</span>
+            <span style="font-size:11.5px;font-weight:500;color:#e6ebef;">Katmanlar</span>
+            <div style="flex:1"></div>
+            <div style="display:flex;align-items:center;gap:5px;padding-right:8px;color:#6b747c;">
+              <span style="font-family:'Material Symbols Outlined';font-size:15px;">add</span>
+              <span style="font-family:'Material Symbols Outlined';font-size:15px;">filter_alt</span>
+              <span style="font-family:'Material Symbols Outlined';font-size:15px;">drag_indicator</span>
+            </div>
+          </div>
+          <div style="flex:1;overflow:auto;">
+            <sc-for list="{{ layers }}" as="l" hint-placeholder-count="8">
+              <div style="{{ l.rowStyle }}" style-hover="background:#23282c;">
+                <span style="{{ l.eyeStyle }}">{{ l.eye }}</span>
+                <div style="{{ l.swatchStyle }}"></div>
+                <span style="font-size:12px;color:#dfe5ea;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ l.name }}</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6b747c;">{{ l.count }}</span>
+                <span style="{{ l.lockStyle }}">{{ l.lock }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="height:26px;border-top:1px solid #22272b;display:flex;align-items:center;gap:10px;padding:0 10px;font-size:11px;color:#767f87;">
+            <span>9 katman</span><span>·</span><span>2 düzenlenebilir</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:26px;background:#191d21;border-top:1px solid #14171a;display:flex;align-items:center;gap:0;flex-shrink:0;font-size:11px;">
+      <div style="display:flex;align-items:center;gap:7px;padding:0 12px;border-right:1px solid #22272b;height:100%;font-family:'IBM Plex Mono',monospace;color:#c4ccd3;">
+        <span style="font-family:'Material Symbols Outlined';font-size:13px;color:#6b747c;">my_location</span>
+        X 458 214.362  Y 4 512 908.771  Z 812.40
+      </div>
+      <sc-for list="{{ statusToggles }}" as="s" hint-placeholder-count="6">
+        <div style="{{ s.style }}">{{ s.label }}</div>
+      </sc-for>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:7px;padding:0 12px;border-left:1px solid #22272b;height:100%;color:#8b949e;">
+        <span style="font-family:'Material Symbols Outlined';font-size:13px;color:#4caf7d;">cloud_done</span>
+        PostGIS · kadastro@10.0.4.21 bağlı
+      </div>
+      <div style="display:flex;align-items:center;gap:7px;padding:0 12px;border-left:1px solid #22272b;height:100%;font-family:'IBM Plex Mono',monospace;color:#8b949e;">60 fps · 128 MB</div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isStyle }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;background:#191d21;border:1px solid #2c3237;border-radius:6px;background-image:linear-gradient(#1d2226 1px,transparent 1px),linear-gradient(90deg,#1d2226 1px,transparent 1px);background-size:20px 20px;overflow:hidden;">
+    <div style="width:1280px;height:756px;display:flex;flex-direction:column;background:#1c2024;border:1px solid #363d43;border-radius:7px;box-shadow:0 40px 90px -20px #000c,0 0 0 1px #00000060;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:9px;height:38px;padding:0 12px;background:linear-gradient(#262b30,#20252a);border-bottom:1px solid #14171a;flex-shrink:0;">
+        <span style="font-family:'Material Symbols Outlined';font-size:17px;color:#2f9bd8;">palette</span>
+        <span style="font-size:13px;font-weight:600;color:#e6ebef;">Katman Özellikleri</span>
+        <span style="font-size:13px;color:#767f87;">— Kadastro Parselleri</span>
+        <div style="flex:1"></div>
+        <span style="font-family:'Material Symbols Outlined';font-size:17px;color:#8b949e;">help</span>
+        <span style="font-family:'Material Symbols Outlined';font-size:17px;color:#8b949e;">close</span>
+      </div>
+
+      <div style="flex:1;display:flex;min-height:0;">
+        <div style="width:186px;background:#191d21;border-right:1px solid #14171a;padding:8px 0;flex-shrink:0;">
+          <sc-for list="{{ styleTabs }}" as="t" hint-placeholder-count="8">
+            <div style="{{ t.style }}" style-hover="background:#22272b;">
+              <span style="font-family:'Material Symbols Outlined';font-size:17px;">{{ t.icon }}</span>
+              <span style="font-size:12.5px;">{{ t.label }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+          <div style="display:flex;align-items:center;gap:18px;padding:11px 14px;border-bottom:1px solid #14171a;background:#1e2226;flex-shrink:0;">
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <span style="font-size:10px;letter-spacing:1px;color:#6b747c;">SİMGELEYİCİ</span>
+              <div style="display:flex;align-items:center;gap:7px;background:#171b1e;border:1px solid #363d43;border-radius:4px;padding:5px 9px;width:196px;font-size:12.5px;color:#e6ebef;">
+                Kategorize Edilmiş
+                <span style="font-family:'Material Symbols Outlined';font-size:16px;color:#8b949e;margin-left:auto;">expand_more</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <span style="font-size:10px;letter-spacing:1px;color:#6b747c;">DEĞER</span>
+              <div style="display:flex;align-items:center;gap:7px;background:#171b1e;border:1px solid #363d43;border-radius:4px;padding:5px 9px;width:210px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#e6ebef;">
+                <span style="font-family:'Material Symbols Outlined';font-size:15px;color:#6cc0ee;">function</span>
+                plan_fonksiyon
+                <span style="font-family:'Material Symbols Outlined';font-size:16px;color:#8b949e;margin-left:auto;">expand_more</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <span style="font-size:10px;letter-spacing:1px;color:#6b747c;">RENK SKALASI</span>
+              <div style="display:flex;align-items:center;gap:7px;border:1px solid #363d43;border-radius:4px;padding:4px 6px 4px 4px;width:186px;">
+                <div style="flex:1;height:15px;border-radius:2px;background:linear-gradient(90deg,#3f6f9e,#5f9bb8,#a8b98a,#d8a45e,#b06a58);"></div>
+                <span style="font-family:'Material Symbols Outlined';font-size:16px;color:#8b949e;">expand_more</span>
+              </div>
+            </div>
+            <div style="flex:1"></div>
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+              <span style="font-size:10px;letter-spacing:1px;color:#6b747c;">SEMBOL BOYUT BİRİMİ</span>
+              <div style="display:flex;border:1px solid #363d43;border-radius:4px;overflow:hidden;font-size:11.5px;">
+                <div style="padding:5px 11px;background:#2f9bd826;color:#6cc0ee;">Milimetre</div>
+                <div style="padding:5px 11px;color:#8b949e;border-left:1px solid #363d43;">Harita birimi</div>
+                <div style="padding:5px 11px;color:#8b949e;border-left:1px solid #363d43;">Piksel</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="flex:1;display:flex;min-height:0;">
+            <div style="flex:1;display:flex;flex-direction:column;min-width:0;border-right:1px solid #14171a;">
+              <div style="display:grid;grid-template-columns:34px 74px 1fr 1fr 86px;background:#20252a;border-bottom:1px solid #14171a;font-size:10.5px;letter-spacing:.7px;color:#8b949e;flex-shrink:0;">
+                <div style="padding:7px 8px;border-right:1px solid #14171a;"></div>
+                <div style="padding:7px 8px;border-right:1px solid #14171a;">SEMBOL</div>
+                <div style="padding:7px 8px;border-right:1px solid #14171a;">DEĞER</div>
+                <div style="padding:7px 8px;border-right:1px solid #14171a;">GÖSTERİM ADI</div>
+                <div style="padding:7px 8px;text-align:right;">NESNE</div>
+              </div>
+              <div style="flex:1;overflow:auto;">
+                <sc-for list="{{ categories }}" as="c" hint-placeholder-count="7">
+                  <div style="{{ c.rowStyle }}" style-hover="background:#22272b;">
+                    <div style="padding:6px 8px;display:flex;align-items:center;justify-content:center;">
+                      <div style="{{ c.checkStyle }}">
+                        <span style="font-family:'Material Symbols Outlined';font-size:12px;color:#0d1317;">check</span>
+                      </div>
+                    </div>
+                    <div style="padding:5px 8px;display:flex;align-items:center;">
+                      <div style="{{ c.swatchStyle }}"></div>
+                    </div>
+                    <div style="padding:6px 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#dfe5ea;display:flex;align-items:center;">{{ c.value }}</div>
+                    <div style="padding:6px 8px;font-size:12px;color:#c4ccd3;display:flex;align-items:center;">{{ c.label }}</div>
+                    <div style="padding:6px 8px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#8b949e;text-align:right;">{{ c.count }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-top:1px solid #14171a;background:#1e2226;flex-shrink:0;">
+                <div style="padding:5px 12px;border:1px solid #3f7fa5;background:#2f9bd826;border-radius:4px;font-size:11.5px;color:#8ecdf2;cursor:pointer;">Sınıflandır</div>
+                <div style="padding:5px 10px;border:1px solid #363d43;border-radius:4px;font-size:11.5px;color:#c4ccd3;cursor:pointer;">Ekle</div>
+                <div style="padding:5px 10px;border:1px solid #363d43;border-radius:4px;font-size:11.5px;color:#c4ccd3;cursor:pointer;">Sil</div>
+                <div style="padding:5px 10px;border:1px solid #363d43;border-radius:4px;font-size:11.5px;color:#c4ccd3;cursor:pointer;">Tümünü sil</div>
+                <div style="flex:1"></div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#8b949e;">
+                  <div style="width:13px;height:13px;border-radius:2px;border:1px solid #4a5157;background:#171b1e;"></div>
+                  Diğer değerleri birleştir
+                </div>
+                <div style="padding:5px 10px;border:1px solid #363d43;border-radius:4px;font-size:11.5px;color:#c4ccd3;cursor:pointer;">Gelişmiş ▾</div>
+              </div>
+            </div>
+
+            <div style="width:352px;display:flex;flex-direction:column;flex-shrink:0;min-height:0;">
+              <div style="padding:10px 12px;border-bottom:1px solid #14171a;flex-shrink:0;">
+                <div style="font-size:10px;letter-spacing:1px;color:#6b747c;margin-bottom:7px;">SEÇİLİ SEMBOL — Konut</div>
+                <div style="display:flex;gap:10px;">
+                  <div style="width:96px;height:96px;border:1px solid #363d43;border-radius:4px;background-color:#22262a;background-image:linear-gradient(45deg,#1e2225 25%,transparent 25%,transparent 75%,#1e2225 75%),linear-gradient(45deg,#1e2225 25%,transparent 25%,transparent 75%,#1e2225 75%);background-size:12px 12px;background-position:0 0,6px 6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <div style="width:62px;height:62px;background:#d8a45e33;border:2px solid #d8a45e;"></div>
+                  </div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+                    <div style="font-size:10px;letter-spacing:1px;color:#6b747c;">SEMBOL KATMANLARI</div>
+                    <sc-for list="{{ symbolLayers }}" as="s" hint-placeholder-count="3">
+                      <div style="{{ s.style }}">
+                        <span style="font-family:'Material Symbols Outlined';font-size:14px;color:#8b949e;">{{ s.icon }}</span>
+                        <span style="font-size:11.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ s.name }}</span>
+                        <span style="font-family:'Material Symbols Outlined';font-size:13px;color:#6b747c;">visibility</span>
+                      </div>
+                    </sc-for>
+                    <div style="display:flex;gap:3px;margin-top:2px;color:#8b949e;">
+                      <span style="font-family:'Material Symbols Outlined';font-size:16px;">add</span>
+                      <span style="font-family:'Material Symbols Outlined';font-size:16px;">remove</span>
+                      <span style="font-family:'Material Symbols Outlined';font-size:16px;">content_copy</span>
+                      <span style="font-family:'Material Symbols Outlined';font-size:16px;">arrow_upward</span>
+                      <span style="font-family:'Material Symbols Outlined';font-size:16px;">arrow_downward</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="flex:1;overflow:auto;padding:2px 0;">
+                <sc-for list="{{ styleProps }}" as="p" hint-placeholder-count="10">
+                  <sc-if value="{{ p.isHeader }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:9px 12px 5px 12px;font-size:10px;letter-spacing:1px;color:#6b747c;">{{ p.label }}</div>
+                  </sc-if>
+                  <sc-if value="{{ p.isRow }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:grid;grid-template-columns:110px 1fr 22px;align-items:center;gap:8px;padding:4px 12px;" style-hover="background:#20252a;">
+                      <div style="font-size:11.5px;color:#8b949e;">{{ p.label }}</div>
+                      <div style="{{ p.controlStyle }}">
+                        <div style="{{ p.swatchStyle }}"></div>
+                        <span style="{{ p.valueStyle }}">{{ p.value }}</span>
+                        <span style="{{ p.caretStyle }}">expand_more</span>
+                      </div>
+                      <span style="font-family:'Material Symbols Outlined';font-size:15px;color:#5d666e;text-align:center;">data_object</span>
+                    </div>
+                  </sc-if>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;height:48px;padding:0 12px;background:#1e2226;border-top:1px solid #14171a;flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid #363d43;border-radius:4px;font-size:12px;color:#c4ccd3;">
+          <span style="font-family:'Material Symbols Outlined';font-size:15px;">style</span>Stil ▾
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid #363d43;border-radius:4px;font-size:12px;color:#c4ccd3;">
+          <span style="font-family:'Material Symbols Outlined';font-size:15px;">bookmark_add</span>Sembolü kütüphaneye kaydet
+        </div>
+        <div style="flex:1"></div>
+        <div style="padding:7px 18px;border:1px solid #363d43;border-radius:4px;font-size:12.5px;color:#c4ccd3;">İptal</div>
+        <div style="padding:7px 18px;border:1px solid #363d43;border-radius:4px;font-size:12.5px;color:#c4ccd3;">Uygula</div>
+        <div style="padding:7px 22px;border-radius:4px;font-size:12.5px;font-weight:500;background:#2f9bd8;color:#0b1116;border:1px solid #55b1e2;">Tamam</div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isGrid }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;background:#1a1e22;border:1px solid #2c3237;border-radius:6px;overflow:hidden;box-shadow:0 24px 60px -20px #000;">
+    <div style="display:flex;align-items:center;gap:9px;height:36px;padding:0 12px;background:linear-gradient(#23282d,#1e2226);border-bottom:1px solid #14171a;flex-shrink:0;">
+      <span style="font-family:'Material Symbols Outlined';font-size:17px;color:#2f9bd8;">table_chart</span>
+      <span style="font-size:13px;font-weight:600;color:#e6ebef;">Öznitelik Tablosu — Kadastro Parselleri</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#767f87;">1 482 nesne · 3 seçili · 1 düzenlendi</span>
+      <div style="flex:1"></div>
+      <span style="font-family:'Material Symbols Outlined';font-size:16px;color:#8b949e;">drag_indicator</span>
+      <span style="font-family:'Material Symbols Outlined';font-size:16px;color:#8b949e;">open_in_new</span>
+      <span style="font-family:'Material Symbols Outlined';font-size:16px;color:#8b949e;">close</span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:4px;height:42px;padding:0 8px;background:#1e2226;border-bottom:1px solid #14171a;flex-shrink:0;">
+      <sc-for list="{{ gridTools }}" as="t" hint-placeholder-count="16">
+        <sc-if value="{{ t.sep }}" hint-placeholder-val="{{ false }}">
+          <div style="width:1px;height:20px;background:#2e343a;margin:0 5px;"></div>
+        </sc-if>
+        <sc-if value="{{ t.icon }}" hint-placeholder-val="{{ true }}">
+          <div title="{{ t.label }}" style="{{ t.style }}" style-hover="background:#2b3137;color:#ffffff;">
+            <span style="font-family:'Material Symbols Outlined';font-size:19px;">{{ t.icon }}</span>
+          </div>
+        </sc-if>
+      </sc-for>
+      <div style="flex:1"></div>
+      <div style="display:flex;border:1px solid #363d43;border-radius:4px;overflow:hidden;font-size:11.5px;">
+        <div style="padding:5px 11px;background:#2f9bd826;color:#6cc0ee;">Tablo</div>
+        <div style="padding:5px 11px;color:#8b949e;border-left:1px solid #363d43;">Form</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#191d21;border-bottom:1px solid #14171a;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:7px;background:#171b1e;border:1px solid #363d43;border-radius:4px;padding:5px 9px;flex:1;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#dfe5ea;">
+        <span style="font-family:'Material Symbols Outlined';font-size:15px;color:#6cc0ee;">function</span>
+        <span style="color:#8ecdf2;">"alan_m2"</span><span style="color:#e0a55e;">&gt;</span><span>2000</span>
+        <span style="color:#a48fd0;">AND</span>
+        <span style="color:#8ecdf2;">"plan_fonksiyon"</span><span style="color:#e0a55e;">=</span><span style="color:#9dc78a;">'Konut'</span>
+        <span style="width:1px;height:13px;background:#2f9bd8;"></span>
+      </div>
+      <div style="padding:6px 13px;border:1px solid #3f7fa5;background:#2f9bd826;border-radius:4px;font-size:11.5px;color:#8ecdf2;">Filtrele</div>
+      <div style="padding:6px 11px;border:1px solid #363d43;border-radius:4px;font-size:11.5px;color:#c4ccd3;">Kaydet ▾</div>
+      <div style="width:1px;height:22px;background:#2e343a;"></div>
+      <div style="display:flex;align-items:center;gap:7px;background:#171b1e;border:1px solid #363d43;border-radius:4px;padding:5px 9px;width:200px;">
+        <span style="font-family:'Material Symbols Outlined';font-size:15px;color:#6b747c;">search</span>
+        <span style="font-size:11.5px;color:#5f686f;">Tabloda ara…</span>
+      </div>
+    </div>
+
+    <div style="flex:1;display:flex;min-height:0;">
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+        <div style="{{ gridHeaderStyle }}">
+          <div style="padding:8px 8px;border-right:1px solid #14171a;display:flex;align-items:center;justify-content:center;">
+            <div style="width:13px;height:13px;border-radius:2px;border:1px solid #4a5157;background:#171b1e;"></div>
+          </div>
+          <sc-for list="{{ gridCols }}" as="c" hint-placeholder-count="9">
+            <div style="{{ c.headStyle }}" style-hover="background:#272d32;">
+              <span>{{ c.label }}</span>
+              <span style="{{ c.sortStyle }}">{{ c.sort }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="flex:1;overflow:auto;">
+          <sc-for list="{{ gridRows }}" as="row" hint-placeholder-count="18">
+            <div style="{{ row.style }}" style-hover="background:#23282c;">
+              <div style="{{ row.numStyle }}">{{ row.n }}</div>
+              <sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="9">
+                <div style="{{ cell.style }}">{{ cell.v }}</div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <div style="height:30px;background:#1b1f23;border-top:1px solid #14171a;display:flex;align-items:center;gap:14px;padding:0 12px;font-size:11.5px;color:#8b949e;flex-shrink:0;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-family:'Material Symbols Outlined';font-size:15px;">first_page</span>
+            <span style="font-family:'Material Symbols Outlined';font-size:15px;">chevron_left</span>
+            <span style="font-family:'IBM Plex Mono',monospace;color:#dfe5ea;">1 – 18 / 1 482</span>
+            <span style="font-family:'Material Symbols Outlined';font-size:15px;">chevron_right</span>
+            <span style="font-family:'Material Symbols Outlined';font-size:15px;">last_page</span>
+          </div>
+          <div style="width:1px;height:14px;background:#2e343a;"></div>
+          <span>Yalnızca seçiliyi göster</span>
+          <span>·</span>
+          <span>Haritayla eşitle</span>
+          <div style="flex:1"></div>
+          <span style="font-family:'IBM Plex Mono',monospace;">Σ alan_m2 = 5 128 402.16 m²</span>
+          <span style="font-family:'IBM Plex Mono',monospace;">x̄ = 3 460.46 m²</span>
+        </div>
+      </div>
+
+      <div style="width:268px;background:#1c2024;border-left:1px solid #14171a;display:flex;flex-direction:column;flex-shrink:0;">
+        <div style="display:flex;align-items:center;gap:6px;height:29px;padding:0 10px;background:#191d21;border-bottom:1px solid #14171a;">
+          <span style="font-family:'Material Symbols Outlined';font-size:14px;color:#2f9bd8;">bar_chart</span>
+          <span style="font-size:11.5px;font-weight:500;color:#e6ebef;">Alan İstatistikleri</span>
+          <div style="flex:1"></div>
+          <span style="font-family:'Material Symbols Outlined';font-size:15px;color:#6b747c;">drag_indicator</span>
+        </div>
+        <div style="padding:10px;border-bottom:1px solid #22272b;">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#8ecdf2;margin-bottom:9px;">alan_m2 · gerçek</div>
+          <div style="display:flex;align-items:flex-end;gap:3px;height:74px;">
+            <sc-for list="{{ histogram }}" as="h" hint-placeholder-count="14">
+              <div style="{{ h.style }}"></div>
+            </sc-for>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#6b747c;margin-top:5px;">
+            <span>240</span><span>3 460</span><span>18 900</span>
+          </div>
+        </div>
+        <div style="flex:1;overflow:auto;">
+          <sc-for list="{{ stats }}" as="s" hint-placeholder-count="9">
+            <div style="display:flex;justify-content:space-between;padding:5px 10px;border-bottom:1px solid #20252a;font-size:11.5px;">
+              <span style="color:#8b949e;">{{ s.k }}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;color:#dfe5ea;">{{ s.v }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;background:#191d21;border:1px solid #2c3237;border-radius:6px;overflow:hidden;">
+    <div style="width:1180px;height:740px;display:flex;flex-direction:column;background:#1c2024;border:1px solid #363d43;border-radius:7px;box-shadow:0 40px 90px -20px #000c;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:9px;height:38px;padding:0 12px;background:linear-gradient(#262b30,#20252a);border-bottom:1px solid #14171a;flex-shrink:0;">
+        <span style="font-family:'Material Symbols Outlined';font-size:17px;color:#2f9bd8;">tune</span>
+        <span style="font-size:13px;font-weight:600;color:#e6ebef;">Seçenekler</span>
+        <div style="flex:1"></div>
+        <span style="font-family:'Material Symbols Outlined';font-size:17px;color:#8b949e;">close</span>
+      </div>
+
+      <div style="flex:1;display:flex;min-height:0;">
+        <div style="width:232px;background:#191d21;border-right:1px solid #14171a;display:flex;flex-direction:column;flex-shrink:0;">
+          <div style="padding:9px 10px;border-bottom:1px solid #14171a;">
+            <div style="display:flex;align-items:center;gap:7px;background:#171b1e;border:1px solid #363d43;border-radius:4px;padding:5px 9px;">
+              <span style="font-family:'Material Symbols Outlined';font-size:15px;color:#6b747c;">search</span>
+              <span style="font-size:11.5px;color:#5f686f;">Ayarlarda ara…</span>
+            </div>
+          </div>
+          <div style="flex:1;overflow:auto;padding:6px 0;">
+            <sc-for list="{{ settingsCats }}" as="c" hint-placeholder-count="11">
+              <div style="{{ c.style }}" style-hover="background:#22272b;">
+                <span style="font-family:'Material Symbols Outlined';font-size:17px;">{{ c.icon }}</span>
+                <span style="font-size:12.5px;flex:1;">{{ c.label }}</span>
+                <span style="{{ c.dotStyle }}"></span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="padding:9px 12px;border-top:1px solid #14171a;font-size:11px;color:#5d666e;">
+            Profil: <span style="color:#c4ccd3;">Kadastro Üretim</span>
+          </div>
+        </div>
+
+        <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+          <div style="padding:14px 20px 10px 20px;border-bottom:1px solid #14171a;flex-shrink:0;">
+            <div style="font-size:16px;font-weight:600;color:#e6ebef;">Çizim ve Yakalama</div>
+            <div style="font-size:12px;color:#8b949e;margin-top:3px;max-width:640px;text-wrap:pretty;">Yakalama toleransları, dinamik girdi ve topoloji denetimleri. Bu ayarlar yalnızca geçerli profil için geçerlidir.</div>
+          </div>
+          <div style="flex:1;overflow:auto;padding:6px 20px 20px 20px;">
+            <sc-for list="{{ settingsRows }}" as="s" hint-placeholder-count="14">
+              <sc-if value="{{ s.isHeader }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:10px;margin:18px 0 8px 0;">
+                  <span style="font-size:10.5px;letter-spacing:1.2px;color:#6b747c;font-weight:600;">{{ s.label }}</span>
+                  <div style="flex:1;height:1px;background:#282e33;"></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ s.isRow }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;grid-template-columns:1fr 250px;align-items:center;gap:20px;padding:8px 0;border-bottom:1px solid #22272b;">
+                  <div>
+                    <div style="font-size:12.5px;color:#dfe5ea;">{{ s.label }}</div>
+                    <div style="{{ s.hintStyle }}">{{ s.hint }}</div>
+                  </div>
+                  <div style="display:flex;justify-content:flex-end;">
+                    <div style="{{ s.controlStyle }}">
+                      <div style="{{ s.knobStyle }}"></div>
+                      <span style="{{ s.valueStyle }}">{{ s.value }}</span>
+                      <span style="{{ s.unitStyle }}">{{ s.unit }}</span>
+                      <span style="{{ s.caretStyle }}">expand_more</span>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;height:52px;padding:0 20px;background:#1e2226;border-top:1px solid #14171a;flex-shrink:0;">
+            <div style="padding:7px 13px;border:1px solid #363d43;border-radius:4px;font-size:12px;color:#c4ccd3;">Varsayılanlara dön</div>
+            <div style="padding:7px 13px;border:1px solid #363d43;border-radius:4px;font-size:12px;color:#c4ccd3;">Profili dışa aktar</div>
+            <div style="flex:1"></div>
+            <div style="padding:7px 18px;border:1px solid #363d43;border-radius:4px;font-size:12.5px;color:#c4ccd3;">İptal</div>
+            <div style="padding:7px 18px;border:1px solid #363d43;border-radius:4px;font-size:12.5px;color:#c4ccd3;">Uygula</div>
+            <div style="padding:7px 22px;border-radius:4px;font-size:12.5px;font-weight:500;background:#2f9bd8;color:#0b1116;border:1px solid #55b1e2;">Tamam</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1600,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  state = { screen: 1 };
+  tabStyle(n) {
+    const on = this.state.screen === n;
+    return `appearance:none;font-family:inherit;font-size:11.5px;font-weight:500;padding:7px 13px;border:1px solid ${on ? '#3a4a55' : 'transparent'};border-bottom:none;border-radius:5px 5px 0 0;background:${on ? '#1a1e22' : 'transparent'};color:${on ? '#e6ebef' : '#6b747c'};cursor:pointer;`;
+  }
+  toolBtn(active) {
+    return `width:30px;height:30px;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;background:${active ? '#2f9bd826' : 'transparent'};color:${active ? '#5cb6ea' : '#aeb6bd'};`;
+  }
+  boxBtn(active) {
+    return `position:relative;width:32px;height:32px;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;background:${active ? '#2f9bd82e' : 'transparent'};color:${active ? '#6cc0ee' : '#a7afb6'};box-shadow:${active ? 'inset 0 0 0 1px #3f7fa5' : 'none'};`;
+  }
+  renderVals() {
+    const S = (n) => () => this.setState({ screen: n });
+    const tb = (icon, label, active) => ({ icon, label, style: this.toolBtn(active), sep: false });
+    const sep = { sep: true, icon: null, label: '', style: '' };
+    const toolbar = [
+      tb('note_add', 'Yeni'), tb('folder_open', 'Aç'), tb('save', 'Kaydet'), sep,
+      tb('undo', 'Geri al'), tb('redo', 'Yinele'), sep,
+      tb('content_cut', 'Kes'), tb('content_copy', 'Kopyala'), tb('content_paste', 'Yapıştır'), sep,
+      tb('near_me', 'Seç', true), tb('pan_tool', 'Kaydır'), tb('zoom_in', 'Yakınlaştır'), tb('fit_screen', 'Tümünü göster'), sep,
+      tb('grid_on', 'Izgara'), tb('adjust', 'Yakalama'), tb('straighten', 'Ölçüm'), sep,
+      tb('layers', 'Katman yöneticisi'), tb('palette', 'Stil tasarımcısı'), tb('table_chart', 'Öznitelik tablosu'), sep,
+      tb('print', 'Plot / Çıktı'), tb('tune', 'Ayarlar')
+    ];
+    const bx = (icon, label, active, corner) => ({
+      icon, label, sep: false, style: this.boxBtn(active),
+      corner: corner ? 'position:absolute;right:2px;bottom:2px;width:0;height:0;border-left:4px solid transparent;border-bottom:4px solid #7d868d;' : 'display:none;'
+    });
+    const toolbox = [
+      bx('near_me', 'Nesne seç', true, true), bx('highlight_alt', 'Alan seç', false, true), bx('pan_tool', 'Kaydır'), sep,
+      bx('timeline', 'Polyline / Kırıklı çizgi', false, true), bx('pentagon', 'Poligon', false, true), bx('rectangle', 'Dikdörtgen'), bx('circle', 'Daire / Yay', false, true), bx('scatter_plot', 'Nokta'), bx('title', 'Metin / Etiket'), sep,
+      bx('content_cut', 'Böl / Trim', false, true), bx('join_full', 'Birleştir'), bx('call_split', 'Parsel böl'), bx('open_with', 'Taşı / Döndür', false, true), bx('line_axis', 'Ofset / Paralel'), sep,
+      bx('straighten', 'Uzunluk ölç'), bx('square_foot', 'Alan ölç'), bx('my_location', 'Koordinat oku'), sep,
+      bx('colorize', 'Stil kopyala'), bx('topic', 'Topoloji denetimi')
+    ];
+    const rulerX = ['458 000', '458 100', '458 200', '458 300', '458 400', '458 500', '458 600', '458 700', '458 800', '458 900', '459 000'];
+    const badge = (kind) => {
+      if (kind === 'lock') return 'font-family:\'Material Symbols Outlined\';font-size:13px;color:#5d666e;';
+      if (kind === 'calc') return 'font-size:9px;letter-spacing:.5px;padding:1px 4px;border-radius:2px;background:#2f9bd820;color:#6cc0ee;border:1px solid #35586d;';
+      if (kind === 'warn') return 'font-size:9px;letter-spacing:.5px;padding:1px 4px;border-radius:2px;background:#d98a2f20;color:#e0a55e;border:1px solid #6d5535;';
+      return 'display:none;';
+    };
+    const r = (k, v, badgeKind, badgeText) => ({ k, v, badge: badgeText || '', badgeStyle: badge(badgeKind) });
+    const attrGroups = [
+      { title: 'KİMLİK', rows: [ r('ada_no', '1284'), r('parsel_no', '21'), r('uavt_kodu', '4128 9021'), r('pafta', 'G21-b-14-c-2') ] },
+      { title: 'GEOMETRİ', rows: [ r('alan_m2', '3 482.64', 'calc', 'HESAP'), r('cevre_m', '241.08', 'calc', 'HESAP'), r('cephe_m', '48.20'), r('kot_ort', '812.40') ] },
+      { title: 'MÜLKİYET', rows: [ r('malik', 'M. Karaca'), r('hisse', '1/1'), r('nitelik', 'Arsa'), r('tapu_tarih', '14.03.2019'), r('beyan', '—', 'warn', 'BOŞ') ] },
+      { title: 'İMAR', rows: [ r('plan_fonksiyon', 'Konut'), r('taks', '0.30'), r('kaks', '1.50'), r('yapi_nizami', 'Ayrık'), r('kat_adedi', '4') ] }
+    ];
+    const lay = (name, count, color, visible, locked, indent, active) => ({
+      name, count, eye: visible ? 'visibility' : 'visibility_off',
+      lock: locked ? 'lock' : 'lock_open',
+      rowStyle: `display:flex;align-items:center;gap:8px;padding:5px 10px 5px ${10 + indent * 14}px;border-bottom:1px solid #20252a;cursor:pointer;background:${active ? '#2f9bd81f' : 'transparent'};box-shadow:${active ? 'inset 2px 0 0 #2f9bd8' : 'none'};`,
+      eyeStyle: `font-family:'Material Symbols Outlined';font-size:15px;color:${visible ? '#9aa3ab' : '#4a5157'};`,
+      lockStyle: `font-family:'Material Symbols Outlined';font-size:14px;color:${locked ? '#d98a2f' : '#4a5157'};`,
+      swatchStyle: `width:12px;height:12px;border-radius:2px;flex-shrink:0;background:${color};border:1px solid #00000060;`
+    });
+    const layers = [
+      lay('Kadastro Parselleri', '1 482', '#8f9aa3', true, false, 0, true),
+      lay('Ada Sınırları', '96', '#c4ccd3', true, true, 1),
+      lay('Yapı Ayak İzleri', '3 210', '#a86b4c', true, false, 1),
+      lay('İmar Planı — Fonksiyon', '412', '#7f6bb0', true, false, 0),
+      lay('Yol Ağı', '188', '#5a636b', true, true, 0),
+      lay('Hidrografya', '24', '#d98a2f', true, false, 0),
+      lay('Eş Yükselti Eğrileri', '9 640', '#4c6b52', false, true, 0),
+      lay('Nirengi Noktaları', '76', '#2f9bd8', true, false, 0),
+      lay('Ortofoto 2024 (WMTS)', '—', '#3a4147', true, true, 0)
+    ];
+    const st = (label, on) => ({ label, style: `display:flex;align-items:center;height:100%;padding:0 11px;border-right:1px solid #22272b;cursor:pointer;letter-spacing:.4px;font-weight:500;background:${on ? '#2f9bd81f' : 'transparent'};color:${on ? '#6cc0ee' : '#767f87'};` });
+    const statusToggles = [ st('IZGARA', true), st('YAKALAMA', true), st('DİK', false), st('POLAR', true), st('OSNAP', true), st('DİNAMİK GİRDİ', false), st('KALINLIK', false) ];
+    const styleTabs = [
+      ['info', 'Bilgi'], ['storage', 'Kaynak'], ['palette', 'Simgeleyici'], ['label', 'Etiketler'],
+      ['view_in_ar', '3B Görünüm'], ['opacity', 'Şeffaflık'], ['straighten', 'Ölçek'], ['edit_note', 'Öznitelik Formu'],
+      ['fact_check', 'Geçerlilik'], ['bolt', 'Eylemler'], ['schema', 'Bağlantılar'], ['history', 'Sürüm']
+    ].map(([icon, label]) => ({
+      icon, label,
+      style: `display:flex;align-items:center;gap:9px;padding:7px 12px;cursor:pointer;color:${label === 'Simgeleyici' ? '#e6ebef' : '#8b949e'};background:${label === 'Simgeleyici' ? '#2f9bd81f' : 'transparent'};box-shadow:${label === 'Simgeleyici' ? 'inset 2px 0 0 #2f9bd8' : 'none'};`
+    }));
+    const categories = [
+      ['Konut', 'Konut Alanı', '612', '#d8a45e', true],
+      ['Ticaret', 'Ticaret + Hizmet', '138', '#b06a58', true],
+      ['Konut+Ticaret', 'Karma Kullanım', '94', '#c08a6a', true],
+      ['Sanayi', 'Sanayi Alanı', '46', '#8f7ba8', true],
+      ['Yesil', 'Park ve Yeşil Alan', '221', '#6f9a6a', true],
+      ['Egitim', 'Eğitim Tesisi', '38', '#5f9bb8', true],
+      ['Saglik', 'Sağlık Tesisi', '17', '#3f6f9e', true],
+      ['Tarim', 'Tarımsal Nitelikli', '284', '#a8b98a', false],
+      ['', 'diğer değerler', '32', '#4a5157', false]
+    ].map(([value, label, count, color, on], i) => ({
+      value: value || '‹diğer›', label, count, 
+      rowStyle: `display:grid;grid-template-columns:34px 74px 1fr 1fr 86px;border-bottom:1px solid #20252a;cursor:pointer;background:${i === 0 ? '#2f9bd81f' : 'transparent'};box-shadow:${i === 0 ? 'inset 2px 0 0 #2f9bd8' : 'none'};`,
+      checkStyle: `width:13px;height:13px;border-radius:2px;display:flex;align-items:center;justify-content:center;background:${on ? '#2f9bd8' : '#171b1e'};border:1px solid ${on ? '#55b1e2' : '#4a5157'};`,
+      swatchStyle: `width:58px;height:17px;border-radius:2px;background:${color}33;border:1.5px solid ${color};`
+    }));
+    const symbolLayers = [
+      ['Basit dolgu', 'format_color_fill', true],
+      ['Çizgi dolgu 45°', 'grid_goldenratio', false],
+      ['Basit kenar çizgisi', 'border_style', false]
+    ].map(([name, icon, on]) => ({
+      name, icon,
+      style: `display:flex;align-items:center;gap:7px;padding:4px 7px;border-radius:3px;cursor:pointer;background:${on ? '#2f9bd826' : '#171b1e'};color:${on ? '#cfe7f6' : '#c4ccd3'};border:1px solid ${on ? '#3f7fa5' : '#2c3237'};`
+    }));
+    const sp = (label, value, kind, swatch) => ({
+      isHeader: false, isRow: true, label, value,
+      controlStyle: `display:flex;align-items:center;gap:7px;background:#171b1e;border:1px solid #363d43;border-radius:3px;padding:4px 7px;`,
+      swatchStyle: swatch ? `width:34px;height:13px;border-radius:2px;background:${swatch};border:1px solid #00000060;flex-shrink:0;` : 'display:none;',
+      valueStyle: `font-family:${kind === 'num' ? "'IBM Plex Mono',monospace" : 'inherit'};font-size:11.5px;color:#dfe5ea;`,
+      caretStyle: kind === 'select' ? "font-family:'Material Symbols Outlined';font-size:15px;color:#8b949e;margin-left:auto;" : 'display:none;'
+    });
+    const sh = (label) => ({ isHeader: true, isRow: false, label, value: '', controlStyle: '', swatchStyle: '', valueStyle: '', caretStyle: '' });
+    const styleProps = [
+      sh('DOLGU'),
+      sp('Dolgu rengi', '#D8A45E · %85', 'color', '#d8a45e'),
+      sp('Dolgu stili', 'Katı', 'select'),
+      sp('Karışım modu', 'Normal', 'select'),
+      sh('KENAR'),
+      sp('Kenar rengi', '#8F9AA3', 'color', '#8f9aa3'),
+      sp('Kenar kalınlığı', '0.26 mm', 'num'),
+      sp('Kenar stili', 'Kesiksiz', 'select'),
+      sp('Birleşim stili', 'Gönye', 'select'),
+      sh('GEOMETRİ'),
+      sp('Ofset X / Y', '0.00 , 0.00', 'num'),
+      sp('Döndürme', '0.0°', 'num'),
+      sh('GÖRÜNÜRLÜK'),
+      sp('Ölçek aralığı', '1:500 – 1:25 000', 'num'),
+      sp('Katman şeffaflığı', '%15', 'num')
+    ];
+    const gtb = (icon, label, active) => ({ icon, label, style: this.toolBtn(active), sep: false });
+    const gridTools = [
+      gtb('edit', 'Düzenleme modu', true), gtb('save', 'Değişiklikleri kaydet'), gtb('undo', 'Geri al'), gtb('redo', 'Yinele'), sep,
+      gtb('add_box', 'Kayıt ekle'), gtb('delete', 'Seçiliyi sil'), gtb('content_copy', 'Kopyala'), sep,
+      gtb('select_all', 'Tümünü seç'), gtb('deselect', 'Seçimi kaldır'), gtb('flip', 'Seçimi tersle'), gtb('center_focus_strong', 'Seçiliye yakınlaş'), sep,
+      gtb('filter_alt', 'Filtre'), gtb('calculate', 'Alan hesaplayıcı'), gtb('functions', 'İstatistikler', true), gtb('view_column', 'Kolonları düzenle'), sep,
+      gtb('file_download', 'Dışa aktar'), gtb('print', 'Yazdır')
+    ];
+    const colDefs = [
+      ['fid', 62, 'num', ''], ['ada_no', 82, 'num', 'arrow_upward'], ['parsel_no', 84, 'num', ''],
+      ['pafta', 132, 'text', ''], ['alan_m2', 106, 'num', ''], ['nitelik', 104, 'text', ''],
+      ['plan_fonksiyon', 128, 'text', ''], ['taks', 62, 'num', ''], ['kaks', 62, 'num', ''],
+      ['malik', 150, 'text', ''], ['tapu_tarih', 106, 'text', '']
+    ];
+    const gridTemplate = '46px ' + colDefs.map(c => c[1] + 'px').join(' ');
+    const gridHeaderStyle = `display:grid;grid-template-columns:${gridTemplate};background:#20252a;border-bottom:1px solid #14171a;font-size:10.5px;letter-spacing:.6px;color:#8b949e;flex-shrink:0;`;
+    const gridCols = colDefs.map(([label, w, kind, sort]) => ({
+      label,
+      headStyle: `display:flex;align-items:center;gap:4px;padding:8px 8px;border-right:1px solid #14171a;cursor:pointer;font-family:'IBM Plex Mono',monospace;justify-content:${kind === 'num' ? 'flex-end' : 'flex-start'};color:${sort ? '#8ecdf2' : '#8b949e'};`,
+      sort: sort || '',
+      sortStyle: sort ? "font-family:'Material Symbols Outlined';font-size:13px;color:#2f9bd8;" : 'display:none;'
+    }));
+    const data = [
+      [4126, 1284, 19, 'G21-b-14-c-2', '2 940.12', 'Arsa', 'Konut', '0.30', '1.50', 'H. Demirel', '02.11.2016'],
+      [4127, 1284, 20, 'G21-b-14-c-2', '3 105.80', 'Arsa', 'Konut', '0.30', '1.50', 'S. Aydın', '18.06.2018'],
+      [4128, 1284, 21, 'G21-b-14-c-2', '3 482.64', 'Arsa', 'Konut', '0.30', '1.50', 'M. Karaca', '14.03.2019'],
+      [4129, 1284, 22, 'G21-b-14-c-2', '4 018.55', 'Arsa', 'Konut+Ticaret', '0.40', '2.00', 'Karaca İnşaat A.Ş.', '14.03.2019'],
+      [4130, 1284, 23, 'G21-b-14-c-2', '2 764.90', 'Tarla', 'Tarim', '—', '—', 'B. Yıldırım', '07.09.2011'],
+      [4131, 1285, 1, 'G21-b-14-c-3', '5 210.40', 'Arsa', 'Ticaret', '0.50', '2.50', 'Ege Ticaret Ltd.', '23.01.2020'],
+      [4132, 1285, 2, 'G21-b-14-c-3', '6 884.20', 'Arsa', 'Ticaret', '0.50', '2.50', 'Ege Ticaret Ltd.', '23.01.2020'],
+      [4133, 1285, 3, 'G21-b-14-c-3', '3 340.08', 'Arsa', 'Konut', '0.30', '1.50', 'N. Özkan', '11.05.2017'],
+      [4134, 1285, 4, 'G21-b-14-c-3', '3 512.72', 'Arsa', 'Konut', '0.30', '1.50', 'N. Özkan', '11.05.2017'],
+      [4135, 1285, 5, 'G21-b-14-c-3', '18 904.36', 'Arsa', 'Sanayi', '0.60', '1.20', 'Anadolu Metal San.', '30.08.2014'],
+      [4136, 1286, 7, 'G21-b-14-c-4', '1 208.44', 'Arsa', 'Egitim', '0.35', '1.05', 'Milli Emlak', '01.01.2005'],
+      [4137, 1286, 8, 'G21-b-14-c-4', '9 640.10', 'Park', 'Yesil', '—', '—', 'Belediye', '01.01.2005'],
+      [4138, 1286, 9, 'G21-b-14-c-4', '742.16', 'Arsa', 'Saglik', '0.40', '1.20', 'İl Sağlık Md.', '19.04.2009'],
+      [4139, 1287, 2, 'G21-b-14-d-1', '2 486.90', 'Arsa', 'Konut', '0.30', '1.50', 'A. Şahin', '25.07.2021'],
+      [4140, 1287, 3, 'G21-b-14-d-1', '2 512.34', 'Arsa', 'Konut', '0.30', '1.50', 'A. Şahin', '25.07.2021'],
+      [4141, 1287, 4, 'G21-b-14-d-1', '3 890.02', 'Tarla', 'Tarim', '—', '—', 'K. Uçar', '13.02.2013'],
+      [4142, 1288, 11, 'G21-b-14-d-1', '4 402.88', 'Arsa', 'Konut', '0.30', '1.50', 'Y. Toprak', '08.10.2022'],
+      [4143, 1288, 12, 'G21-b-14-d-1', '240.60', 'Arsa', 'Yesil', '—', '—', 'Belediye', '08.10.2022']
+    ];
+    const gridRows = data.map((d, i) => {
+      const selected = i >= 2 && i <= 4;
+      const bg = selected ? '#2f9bd81f' : (i % 2 ? '#1d2125' : '#1a1e22');
+      return {
+        n: i + 1,
+        style: `display:grid;grid-template-columns:${gridTemplate};border-bottom:1px solid #20252a;cursor:default;background:${bg};box-shadow:${selected ? 'inset 2px 0 0 #2f9bd8' : 'none'};`,
+        numStyle: `padding:6px 8px;border-right:1px solid #20252a;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b747c;text-align:right;`,
+        cells: d.map((v, j) => {
+          const kind = colDefs[j][2];
+          const edited = i === 2 && j === 4;
+          return {
+            v,
+            style: `padding:6px 8px;border-right:1px solid #20252a;font-family:${kind === 'num' ? "'IBM Plex Mono',monospace" : 'inherit'};font-size:11.5px;color:${edited ? '#e0a55e' : (selected ? '#eaf1f6' : '#cfd6dc')};text-align:${kind === 'num' ? 'right' : 'left'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:${edited ? '#d98a2f1f' : 'transparent'};box-shadow:${edited ? 'inset 0 0 0 1px #6d5535' : 'none'};`
+          };
+        })
+      };
+    });
+    const histogram = [8, 22, 46, 68, 74, 61, 43, 30, 21, 14, 9, 6, 4, 2].map(h => ({
+      style: `flex:1;height:${h}%;background:linear-gradient(#4fb0e6,#2f7fae);border-radius:1px 1px 0 0;`
+    }));
+    const stats = [
+      ['Nesne sayısı', '1 482'], ['Geçerli değer', '1 476'], ['NULL', '6'],
+      ['Minimum', '240.60'], ['Maksimum', '18 904.36'], ['Ortalama', '3 460.46'],
+      ['Ortanca', '3 118.90'], ['Std. sapma', '1 842.07'], ['Toplam', '5 128 402.16']
+    ].map(([k, v]) => ({ k, v }));
+    const settingsCats = [
+      ['settings', 'Genel', false], ['dark_mode', 'Görünüm ve Tema', false], ['draw', 'Çizim ve Yakalama', true],
+      ['public', 'Koordinat Sistemleri', false], ['storage', 'Veri Kaynakları', false], ['label', 'Etiketleme'],
+      ['keyboard', 'Kısayollar', false], ['print', 'Plot ve Çıktı', false], ['extension', 'Eklentiler', true],
+      ['speed', 'Performans ve GPU', false], ['folder', 'Klasörler ve Şablonlar', false], ['security', 'Ağ ve Kimlik', false]
+    ].map(([icon, label, dot]) => ({
+      icon, label,
+      style: `display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;color:${label === 'Çizim ve Yakalama' ? '#e6ebef' : '#9aa3ab'};background:${label === 'Çizim ve Yakalama' ? '#2f9bd81f' : 'transparent'};box-shadow:${label === 'Çizim ve Yakalama' ? 'inset 2px 0 0 #2f9bd8' : 'none'};`,
+      dotStyle: dot ? 'width:6px;height:6px;border-radius:50%;background:#d98a2f;' : 'display:none;'
+    }));
+    const row = (label, hint, kind, value, unit, on) => ({
+      isHeader: false, isRow: true, label, hint, value: value || '', unit: unit || '',
+      hintStyle: hint ? 'font-size:11px;color:#767f87;margin-top:2px;max-width:520px;' : 'display:none;',
+      controlStyle: kind === 'toggle'
+        ? `width:38px;height:20px;border-radius:10px;background:${on ? '#2f9bd8' : '#20252a'};border:1px solid ${on ? '#55b1e2' : '#3a4147'};display:flex;align-items:center;padding:2px;justify-content:${on ? 'flex-end' : 'flex-start'};cursor:pointer;`
+        : `display:flex;align-items:center;gap:7px;background:#171b1e;border:1px solid #363d43;border-radius:4px;padding:5px 9px;min-width:${kind === 'select' ? '250px' : '128px'};cursor:pointer;`,
+      knobStyle: kind === 'toggle' ? `width:14px;height:14px;border-radius:50%;background:${on ? '#0b1116' : '#8b949e'};` : 'display:none;',
+      valueStyle: kind === 'toggle' ? 'display:none;' : `font-family:${kind === 'num' || kind === 'key' ? "'IBM Plex Mono',monospace" : 'inherit'};font-size:11.5px;color:#dfe5ea;`,
+      unitStyle: unit ? 'font-size:11px;color:#767f87;' : 'display:none;',
+      caretStyle: kind === 'select' ? "font-family:'Material Symbols Outlined';font-size:16px;color:#8b949e;margin-left:auto;" : 'display:none;'
+    });
+    const head = (label) => ({ isHeader: true, isRow: false, label, hint: '', value: '', unit: '', hintStyle: '', controlStyle: '', knobStyle: '', valueStyle: '', unitStyle: '', caretStyle: '' });
+    const settingsRows = [
+      head('YAKALAMA (SNAP)'),
+      row('Yakalama modu', 'Tüm görünür katmanlarda mı, yalnızca aktif katmanda mı arama yapılsın.', 'select', 'Tüm görünür katmanlar'),
+      row('Yakalama toleransı', 'İmleç ile hedef nokta arasındaki en büyük mesafe.', 'num', '12', 'piksel'),
+      row('Köşe noktası', '', 'toggle', '', '', true),
+      row('Segment orta noktası', '', 'toggle', '', '', true),
+      row('Kesişim ve teğet', '', 'toggle', '', '', false),
+      row('Yakalama işaretçisi rengi', '', 'select', '#D98A2F · Turuncu'),
+      head('DİNAMİK GİRDİ'),
+      row('Dinamik girdi kutusu', 'Çizim sırasında uzunluk ve açı değerleri imleç yanında düzenlenebilir.', 'toggle', '', '', true),
+      row('Açı adımı', '', 'num', '15.00', 'derece'),
+      row('Koordinat gösterimi', '', 'select', 'Sağ el (Y, X) · metre'),
+      row('Ondalık hassasiyet', '', 'num', '3', 'basamak'),
+      head('TOPOLOJİ DENETİMİ'),
+      row('Kaydetmede otomatik denetim', 'Boşluk, çakışma ve kapanmayan poligon hatalarını kaydetme öncesi bildirir.', 'toggle', '', '', true),
+      row('Poligon çakışma toleransı', '', 'num', '0.005', 'm²'),
+      row('Ortak kenar düzenleme', 'Bir kenar taşındığında komşu poligonlar birlikte güncellenir.', 'toggle', '', '', true),
+      head('KISAYOLLAR'),
+      row('Parsel böl', '', 'key', 'Ctrl + Shift + B'),
+      row('Alan hesapla', '', 'key', 'Ctrl + Alt + A'),
+      row('Stil tasarımcısını aç', '', 'key', 'F7')
+    ];
+    return {
+      go1: S(1), go2: S(2), go3: S(3), go4: S(4),
+      isMain: this.state.screen === 1, isStyle: this.state.screen === 2,
+      isGrid: this.state.screen === 3, isSettings: this.state.screen === 4,
+      styleTabs, categories, symbolLayers, styleProps,
+      gridTools, gridCols, gridRows, gridHeaderStyle, histogram, stats,
+      settingsCats, settingsRows,
+      tab1: this.tabStyle(1), tab2: this.tabStyle(2), tab3: this.tabStyle(3), tab4: this.tabStyle(4),
+      toolbar, toolbox, rulerX, attrGroups, layers, statusToggles
+    };
+  }
+}
+</script>
+</body>
+</html>

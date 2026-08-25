@@ -55,4 +55,22 @@ const Palette& themePalette(ThemeMode mode);
 /// The whole application stylesheet for a mode.
 QString themeStyleSheet(ThemeMode mode);
 
+/// Installs `Fusion` under the one behaviour change the specification needs.
+///
+/// design.md 7 shows ten menu titles with NO mnemonic underline, and every Qt
+/// style on Linux draws them permanently. Windows shows them only while Alt is
+/// held, which is both what the reference looks like at rest and what keeps the
+/// keyboard path discoverable the moment a user reaches for it (design.md 13) —
+/// so that is the behaviour, on all three platforms.
+void installShellStyle();
+
+/// Loads the bundled IBM Plex faces from `data/fonts` and makes Sans the
+/// application font (`design.md` §3).
+///
+/// Returns false when the files are not where `data_root()` says they are, which
+/// the caller reports rather than swallows: falling back to the platform's own
+/// sans is exactly the "three different applications" §12 forbids, so the user is
+/// told which directory was searched instead of quietly getting the wrong face.
+bool loadShellFonts(QString* whereLooked = nullptr);
+
 } // namespace piricad::app

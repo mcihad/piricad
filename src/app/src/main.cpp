@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // PiriCAD — application entry point.
 #include "piricad/app/main_window.hpp"
+#include "piricad/app/theme.hpp"
 #include "piricad/command/log.hpp"
 
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QGuiApplication>
 #include <QLocale>
 #include <QTimer>
 #include <QTranslator>
@@ -13,6 +15,34 @@
 
 int main(int argc, char** argv)
 {
+    // Before QApplication, which is the only place Qt reads it.
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
+        Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+
+    // FUSION, ON EVERY PLATFORM, BEFORE THE FIRST WIDGET EXISTS.
+    //
+    // `design.md` §12 is explicit and it is the reason this line is here rather
+    // than a preference: the native style is not inherited anywhere, so Windows,
+    // macOS and Linux draw the same program. Without it Qt picks up the desktop's
+    // own style and the same build looks like three different applications — a
+    // Windows 11 combo box, a macOS one and whatever GTK theme the user has.
+    //
+    // Before `QApplication` would be too early (there is no style system yet) and
+    // after the first widget would be too late (it has already been polished), so
+    // it happens here, on the line after construction and before anything else.
+    piricad::app::installShellStyle();
+
+    QString fontDir;
+    if (!piricad::app::loadShellFonts(&fontDir)) {
+        qWarning("PiriCAD: IBM Plex yüklenemedi (%s). Arayüz bu makinede tasarlandığı gibi "
+                 "görünmeyecek; PIRICAD_DATA ile veri dizinini gösterin.",
+                 fontDir.toUtf8().constData());
+    }
+
+    // High DPI: pass the scale factor through rather than rounding it, so a 1.25
+    // or 1.5 display gets the layout at its own scale instead of the nearest
+    // integer one. `design.md` §12 asks for this by name, and the icons are SVG
+    // for the same reason.
     QApplication app(argc, argv);
 
     QApplication::setApplicationName(QStringLiteral("PiriCAD"));

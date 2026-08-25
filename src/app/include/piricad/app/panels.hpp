@@ -8,11 +8,15 @@
 
 #include "piricad/core/document.hpp"
 
+#include "piricad/app/theme.hpp"
+
 #include <QIcon>
 #include <QPoint>
+#include <QStyledItemDelegate>
 #include <QWidget>
 
 /// Qt widgets this header only holds pointers to.
+class QLabel;
 class QTreeWidget;
 class QTreeWidgetItem;
 
@@ -20,6 +24,43 @@ namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
+
+/// Paints one layer row exactly as `design.md` §7 draws it: eye, colour chip,
+/// name, entity count, lock — one row, no columns, no header.
+///
+/// A DELEGATE RATHER THAN FOUR COLUMNS. Four columns put a header on the panel
+/// and let the user drag the boundaries, and the reference has neither: the row
+/// is a fixed composition and the eye and the lock are at fixed offsets from the
+/// two edges. Painting it is how those offsets become the numbers in the file.
+class LayerRowDelegate : public QStyledItemDelegate
+{
+    Q_OBJECT
+
+public:
+    /// Which mark the pointer is over, so the row can answer a click.
+    enum class Hit { None, Eye, Lock, Row };
+
+    explicit LayerRowDelegate(QObject* parent = nullptr);
+
+    void paint(QPainter* painter, const QStyleOptionViewItem& option,
+               const QModelIndex& index) const override;
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+
+    /// Where `at` falls inside a row of `width`.
+    static Hit hitTest(int x, int width);
+
+    void applyTheme(ThemeMode mode) { theme_ = mode; }
+
+signals:
+    /// The eye was clicked on `layer`; the panel turns it into a `KATMAN` call.
+    void toggleVisible(int layer);
+
+    /// The lock was clicked on `layer`.
+    void toggleLocked(int layer);
+
+private:
+    ThemeMode theme_ = ThemeMode::Dark;
+};
 
 /// Layer list: name, visibility, lock, colour swatch, entity count.
 class LayerPanel : public QWidget
@@ -35,6 +76,8 @@ public:
     /// panel that maintained its own copy could disagree with the document — which
     /// is the class of bug a single source of truth exists to prevent.
     void refresh();
+
+    void applyTheme(ThemeMode mode);
 
     /// The layer the user has picked, or `kNoLayer`. This is SELECTION state and
     /// therefore not document state (model.md R43).
@@ -65,32 +108,8 @@ private:
 
     Controller& controller_;
     QTreeWidget* tree_{nullptr};
-};
-
-/// Property sheet for the current selection: the document itself, or the layer
-/// picked in the layer panel.
-class PropertyPanel : public QWidget
-{
-    Q_OBJECT
-
-public:
-    /// Builds the panel over a controller, which outlives it.
-    explicit PropertyPanel(Controller& controller, QWidget* parent = nullptr);
-
-    /// Shows the properties of one layer. `kNoLayer` shows the document's own.
-    void setLayer(core::LayerId layer);
-
-    /// Rebuilds the sheet from whatever it is currently showing.
-    void refresh();
-
-private:
-    void addGroup(const QString& title);
-    void addRow(const QString& key, const QString& value);
-
-    Controller& controller_;
-    QTreeWidget* tree_{nullptr};
-    QTreeWidgetItem* group_{nullptr};
-    core::LayerId layer_{core::kNoLayer};
+    LayerRowDelegate* rows_{nullptr};
+    QLabel* footer_{nullptr};
 };
 
 } // namespace piricad::app

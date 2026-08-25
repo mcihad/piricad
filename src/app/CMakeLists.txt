@@ -12,7 +12,9 @@ qt_standard_project_setup()
 # include/piricad/app/ rather than beside their .cpp, which is the layout the rest
 # of the project uses.
 qt_add_executable(piricad
+    src/attribute_panel.cpp
     src/command_line.cpp
+    src/command_palette.cpp
     src/controller.cpp
     src/data_root.cpp
     src/database_dialog.cpp
@@ -27,10 +29,15 @@ qt_add_executable(piricad
     src/symbol_preview.cpp
     src/panels.cpp
     src/settings_dialog.cpp
+    src/shell_chrome.cpp
     src/theme.cpp
+    src/title_bar.cpp
+    src/tokens.cpp
     src/toolbox.cpp
 
     include/piricad/app/command_line.hpp
+    include/piricad/app/attribute_panel.hpp
+    include/piricad/app/command_palette.hpp
     include/piricad/app/controller.hpp
     include/piricad/app/data_root.hpp
     include/piricad/app/database_dialog.hpp
@@ -39,8 +46,10 @@ qt_add_executable(piricad
     include/piricad/app/panels.hpp
     include/piricad/app/qgis_backend.hpp
     include/piricad/app/settings_dialog.hpp
+    include/piricad/app/shell_chrome.hpp
     include/piricad/app/style_designer.hpp
     include/piricad/app/flow_layout.hpp
+    include/piricad/app/title_bar.hpp
     include/piricad/app/toolbox.hpp
 )
 

@@ -6,6 +6,8 @@
 // implemented here, and what is still owed, is listed in .claude/ui.md.
 #pragma once
 
+#include "piricad/app/theme.hpp"
+
 #include <QLineEdit>
 #include <QStringList>
 
@@ -31,6 +33,8 @@ public:
     /// Shows what the running command is waiting for. Empty when none is.
     void setPrompt(const QString& prompt);
 
+    void applyTheme(ThemeMode mode);
+
 signals:
     /// Emitted on Enter, with the raw line. The controller parses it — this
     /// widget never interprets a command, because the parser is shared and there
@@ -38,6 +42,12 @@ signals:
     void submitted(const QString& line);
 
 protected:
+    /// Draws the permanent `Komut:` prefix `design.md` §7 puts at the left of the
+    /// strip, then lets the line edit draw the text after it. The prefix is a
+    /// PAINTED label rather than part of the text, because it must not be
+    /// selectable, editable or submitted with what the user typed.
+    void paintEvent(QPaintEvent* event) override;
+
     /// Handles history, completion and Esc. Esc cancels the RUNNING COMMAND
     /// rather than clearing the text, which is what a CAD user's hand expects.
     void keyPressEvent(QKeyEvent* event) override;
@@ -53,6 +63,8 @@ private:
     QStringList history_;
     int history_pos_{-1};
     QString prompt_;
+    int prefixWidth_{0};
+    ThemeMode theme_{ThemeMode::Dark};
 };
 
 } // namespace piricad::app

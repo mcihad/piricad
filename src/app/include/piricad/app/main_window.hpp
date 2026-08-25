@@ -29,6 +29,7 @@
 /// included so that touching a widget's header does not rebuild everything that
 /// includes the main window.
 class QComboBox;
+class QStackedWidget;
 class QFrame;
 class QDockWidget;
 class QLabel;
@@ -46,7 +47,13 @@ class CommandLine;
 class Controller;
 class LayerPanel;
 class MapCanvas;
-class PropertyPanel;
+class CommandPalette;
+class AttributePanel;
+class DocumentTabs;
+class PanelHeader;
+class StatusStrip;
+class ReadoutStrip;
+class TitleBar;
 class ToolBox;
 
 class MainWindow : public QMainWindow
@@ -107,6 +114,7 @@ private slots:
     void toggleTheme(bool dark);
     void showCommandLine(bool visible);
     void resetLayout();
+    void openCommandSearch();
 
 private:
     void buildActions();
@@ -159,19 +167,26 @@ private:
 
     Controller* controller_{nullptr};
     MapCanvas* canvas_{nullptr};
+    TitleBar* titleBar_      = nullptr;
+    CommandPalette* palette_ = nullptr;
     CommandLine* commandLine_{nullptr};
     ToolBox* toolBox_{nullptr};
     LayerPanel* layerPanel_{nullptr};
-    PropertyPanel* propertyPanel_{nullptr};
+    AttributePanel* attributePanel_{nullptr};
+    QStackedWidget* propertyStack_{nullptr};
+    PanelHeader* propertyHeader_{nullptr};
+    PanelHeader* layerHeader_{nullptr};
+    PanelHeader* journalHeader_{nullptr};
     QPlainTextEdit* transcript_{nullptr};
     QPlainTextEdit* journalView_{nullptr};
 
-    QToolBar* tbFile_{nullptr};
-    QToolBar* tbEdit_{nullptr};
-    QToolBar* tbView_{nullptr};
-    QToolBar* tbLayer_{nullptr};
-    QToolBar* tbGis_{nullptr};
-    QComboBox* layerCombo_{nullptr};
+    /// design.md 7 draws ONE 46 px strip, so there is one bar. The old five —
+    /// dosya, düzen, görünüm, katman, CBS — are its seven groups, separated by
+    /// 1 px rules rather than by five drag handles.
+    QToolBar* tbMain_{nullptr};
+    ReadoutStrip* readout_{nullptr};
+    StatusStrip* statusStrip_{nullptr};
+    DocumentTabs* docTabs_{nullptr};
     QFrame* commandLineRule_{nullptr};
 
     QDockWidget* layerDock_{nullptr};
@@ -179,14 +194,25 @@ private:
     QDockWidget* transcriptDock_{nullptr};
     QDockWidget* journalDock_{nullptr};
 
-    QLabel* statusPrompt_{nullptr};
-    QLabel* statusCoords_{nullptr};
-    QLabel* statusScale_{nullptr};
-    QLabel* statusLayer_{nullptr};
-    QLabel* statusCrs_{nullptr};
-
     // ---- actions, each of which dispatches one command ----
     QAction* actSelect_{nullptr};
+    QAction* actCut_{nullptr};
+    QAction* actCopyClip_{nullptr};
+    QAction* actPaste_{nullptr};
+    QAction* actStyle_{nullptr};
+
+    /// The five tool-box groups of design.md 7. Several are Phase 2 commands;
+    /// they exist as disabled buttons so the column has the shape the reference
+    /// draws, with the phase named in each tooltip rather than silently absent.
+    QAction* actSelectArea_{nullptr};
+    QAction* actPolygon_{nullptr};
+    QAction* actTrim_{nullptr};
+    QAction* actUnion_{nullptr};
+    QAction* actParcelSplit_{nullptr};
+    QAction* actMeasureArea_{nullptr};
+    QAction* actCoordinate_{nullptr};
+    QAction* actStyleCopy_{nullptr};
+    QAction* actTopology_{nullptr};
     QAction* actLine_{nullptr};
     QAction* actErase_{nullptr};
     QAction* actLayer_{nullptr};

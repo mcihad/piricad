@@ -2,7 +2,9 @@
 #include "piricad/app/panels.hpp"
 
 #include "piricad/app/controller.hpp"
+#include "piricad/app/icons.hpp"
 #include "piricad/app/symbol_preview.hpp"
+#include "piricad/app/tokens.hpp"
 #include "piricad/render/backend.hpp"
 
 #include <algorithm>
@@ -12,46 +14,170 @@
 #include <QHash>
 #include <QHeaderView>
 #include <QInputDialog>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
 #include <QPainter>
 #include <QPixmap>
 #include <QTreeWidget>
+#include <QVBoxLayout>
 
 namespace piricad::app {
+namespace {} // namespace
+
+/// `1 482` — thin-space thousands, the way the reference prints an entity count.
+QString groupedCount(std::size_t value)
+{
+    QString digits = QString::number(static_cast<qulonglong>(value));
+    for (qsizetype at = digits.size() - 3; at > 0; at -= 3)
+        digits.insert(at, QLatin1Char(' '));
+    return digits;
+}
+
+// ----------------------------------------------------------- LayerRowDelegate --
+
 namespace {
 
-QString metres(core::Mm v)
+// `design.md` §7, measured off the reference: a 30 px row, a 14 px eye 10 px in,
+// an 11 px colour chip, the name, then the count and the lock at the right edge.
+constexpr int kLayerRow    = 30;
+constexpr int kLayerPadX   = 10;
+constexpr int kLayerEye    = 14;
+constexpr int kLayerChip   = 11;
+constexpr int kLayerGap    = 9;
+constexpr int kLayerLock   = 14;
+constexpr int kLayerCountW = 52;
+constexpr int kLayerAccent = 2; ///< the left edge of a selected row
+
+const Tokens& layerTokens(ThemeMode mode)
 {
-    return QString::number(core::mm_to_metres(v), 'f', 3);
+    return mode == ThemeMode::Dark ? darkTokens() : lightTokens();
 }
 
 } // namespace
+
+LayerRowDelegate::LayerRowDelegate(QObject* parent) : QStyledItemDelegate(parent) {}
+
+QSize LayerRowDelegate::sizeHint(const QStyleOptionViewItem&, const QModelIndex&) const
+{
+    return QSize(0, kLayerRow);
+}
+
+LayerRowDelegate::Hit LayerRowDelegate::hitTest(int x, int width)
+{
+    if (x >= kLayerPadX && x < kLayerPadX + kLayerEye) return Hit::Eye;
+    if (x >= width - kLayerPadX - kLayerLock && x < width - kLayerPadX) return Hit::Lock;
+    return Hit::Row;
+}
+
+void LayerRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option,
+                             const QModelIndex& index) const
+{
+    const Tokens& t = layerTokens(theme_);
+    const QRect box = option.rect;
+
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, true);
+
+    const bool selected = option.state & QStyle::State_Selected;
+    const bool hovered  = option.state & QStyle::State_MouseOver;
+
+    // §2's selected-row pattern, and it is the SAME everywhere in the shell: an
+    // accent wash plus a 2 px accent edge. Hover is a flat grey and never
+    // resembles it, so "where the pointer is" and "what is chosen" stay distinct.
+    if (selected) {
+        painter->fillRect(box, t.accentWash);
+        painter->fillRect(QRect(box.left(), box.top(), kLayerAccent, box.height()), t.accent);
+    } else if (hovered) {
+        painter->fillRect(box, t.hoverRow);
+    }
+
+    const bool visible  = index.data(Qt::UserRole + 1).toBool();
+    const bool locked   = index.data(Qt::UserRole + 2).toBool();
+    const bool active   = index.data(Qt::UserRole + 3).toBool();
+    const QColor chip   = index.data(Qt::UserRole + 4).value<QColor>();
+    const QString name  = index.data(Qt::DisplayRole).toString();
+    const QString tally = index.data(Qt::UserRole + 5).toString();
+    const int depth     = index.data(Qt::UserRole + 6).toInt();
+
+    int x = box.left() + kLayerPadX + depth * 14;
+    painter->drawPixmap(QRect(x, box.top() + (kLayerRow - kLayerEye) / 2, kLayerEye, kLayerEye),
+                        glyph_pixmap(visible ? Glyph::Eye : Glyph::EyeOff,
+                                     visible ? t.textDim : t.textFaint, kLayerEye,
+                                     option.widget ? option.widget->devicePixelRatioF() : 1.0));
+    x += kLayerEye + kLayerGap;
+
+    if (chip.isValid()) {
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(chip);
+        painter->drawRoundedRect(
+            QRectF(x, box.top() + (kLayerRow - kLayerChip) / 2.0, kLayerChip, kLayerChip), 2.0,
+            2.0);
+    }
+    x += kLayerChip + kLayerGap;
+
+    QFont face(QStringLiteral("IBM Plex Sans"));
+    face.setPixelSize(12);
+    face.setWeight(active ? QFont::DemiBold : QFont::Normal);
+    painter->setFont(face);
+    painter->setPen(visible ? t.text : t.textFaint);
+
+    const int right = box.right() - kLayerPadX - kLayerLock - kLayerGap - kLayerCountW;
+    painter->drawText(QRect(x, box.top(), right - x, kLayerRow), Qt::AlignVCenter | Qt::AlignLeft,
+                      painter->fontMetrics().elidedText(name, Qt::ElideRight, right - x));
+
+    QFont digits(QStringLiteral("IBM Plex Mono"));
+    digits.setPixelSize(11);
+    painter->setFont(digits);
+    painter->setPen(t.textFaint);
+    painter->drawText(QRect(right, box.top(), kLayerCountW, kLayerRow),
+                      Qt::AlignVCenter | Qt::AlignRight, tally);
+
+    // A locked layer is WARN, an open one is faint. §2 gives warn exactly one
+    // meaning — "you cannot edit this yet" — and this is one of its two uses.
+    painter->drawPixmap(QRect(box.right() - kLayerPadX - kLayerLock,
+                              box.top() + (kLayerRow - kLayerLock) / 2, kLayerLock, kLayerLock),
+                        glyph_pixmap(locked ? Glyph::Lock : Glyph::Unlock,
+                                     locked ? t.warn : t.textFaint, kLayerLock,
+                                     option.widget ? option.widget->devicePixelRatioF() : 1.0));
+
+    painter->restore();
+}
 
 // ----------------------------------------------------------------- LayerPanel --
 
 LayerPanel::LayerPanel(Controller& controller, QWidget* parent)
     : QWidget(parent), controller_(controller)
 {
-    auto* layout = new QHBoxLayout(this);
+    auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
 
     tree_ = new QTreeWidget(this);
-    tree_->setColumnCount(4);
-    tree_->setHeaderLabels({tr("Katman"), tr("Gör."), tr("Kilit"), tr("Nesne")});
+    tree_->setObjectName(QStringLiteral("layerTree"));
+    tree_->setColumnCount(1);
+    tree_->setHeaderHidden(true);
     tree_->setRootIsDecorated(false);
+    tree_->setIndentation(0);
+    tree_->setFrameShape(QFrame::NoFrame);
+    tree_->setMouseTracking(true);
     // Off deliberately: a Qt stylesheet's background rule outranks both the
     // alternate-background-color property and QPalette::AlternateBase, so the
-    // alternating row washes out in the dark theme. The colour swatch and the bold
-    // active layer already separate the rows.
+    // alternating row washes out in the dark theme. The delegate draws the row.
     tree_->setAlternatingRowColors(false);
     tree_->setUniformRowHeights(true);
-    tree_->header()->setStretchLastSection(false);
-    tree_->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-    tree_->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    tree_->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
-    tree_->header()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
-    layout->addWidget(tree_);
+
+    rows_ = new LayerRowDelegate(this);
+    tree_->setItemDelegate(rows_);
+    layout->addWidget(tree_, 1);
+
+    // §7's footer: how many layers there are and how many of them can be edited.
+    // A count is what tells a user their filter is on without a second control.
+    footer_ = new QLabel(this);
+    footer_->setObjectName(QStringLiteral("layerFooter"));
+    footer_->setFixedHeight(26);
+    footer_->setContentsMargins(10, 0, 10, 0);
+    layout->addWidget(footer_);
 
     connect(tree_, &QTreeWidget::itemSelectionChanged, this,
             [this] { emit layerSelected(selectedLayer()); });
@@ -171,6 +297,12 @@ std::vector<core::StyleId> layer_styles(const core::Document& doc)
 
 } // namespace
 
+void LayerPanel::applyTheme(ThemeMode mode)
+{
+    rows_->applyTheme(mode);
+    tree_->viewport()->update();
+}
+
 void LayerPanel::refresh()
 {
     const core::LayerId keep = selectedLayer();
@@ -193,31 +325,30 @@ void LayerPanel::refresh()
             group_node(tree_, groups, QString::fromStdString(l.group).trimmed());
         auto* item = parent ? new QTreeWidgetItem(parent) : new QTreeWidgetItem(tree_);
 
+        // Everything the delegate paints, on the ROW rather than in columns.
         item->setText(0, QString::fromStdString(l.name));
-        item->setIcon(0, layerIcon(l, i < styles.size() ? styles[i] : core::kByLayerStyle));
         item->setData(0, Qt::UserRole, static_cast<uint>(i));
+        item->setData(0, Qt::UserRole + 1, l.visible);
+        item->setData(0, Qt::UserRole + 2, l.locked);
+        item->setData(0, Qt::UserRole + 3, static_cast<core::LayerId>(i) == active);
+        item->setData(0, Qt::UserRole + 4, QColor::fromRgba(l.appearance.rgba));
+        item->setData(0, Qt::UserRole + 5,
+                      groupedCount(doc.layer_entity_count(static_cast<core::LayerId>(i))));
+        item->setData(0, Qt::UserRole + 6, parent ? 1 : 0);
+        item->setToolTip(0, static_cast<core::LayerId>(i) == active
+                                ? tr("Aktif katman — %1").arg(QString::fromStdString(l.name))
+                                : QString::fromStdString(l.name));
 
-        item->setText(1, l.visible ? QStringLiteral("●") : QStringLiteral("○"));
-        item->setData(1, Qt::UserRole, l.visible);
-        item->setTextAlignment(1, Qt::AlignCenter);
-
-        item->setText(2, l.locked ? QStringLiteral("🔒") : QStringLiteral("–"));
-        item->setData(2, Qt::UserRole, l.locked);
-        item->setTextAlignment(2, Qt::AlignCenter);
-
-        item->setText(3, QString::number(doc.layer_entity_count(static_cast<core::LayerId>(i))));
-        item->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
-
-        if (static_cast<core::LayerId>(i) == active) {
-            QFont f = item->font(0);
-            f.setBold(true);
-            item->setFont(0, f);
-            item->setToolTip(0, tr("Aktif katman"));
-        }
         if (static_cast<core::LayerId>(i) == keep) item->setSelected(true);
     }
 
+    tree_->expandAll();
     tree_->blockSignals(false);
+
+    std::size_t editable = 0;
+    for (const auto& l : doc.layers())
+        if (l.visible && !l.locked) ++editable;
+    footer_->setText(tr("%1 katman  ·  %2 düzenlenebilir").arg(doc.layers().size()).arg(editable));
 }
 
 QIcon LayerPanel::layerIcon(const core::Layer& layer, core::StyleId used) const
@@ -342,99 +473,6 @@ void LayerPanel::showContextMenu(const QPoint& where)
     // client like any other and gets no private road to the document (Article
     // 1.2, 5.9) — which is also what lets a script do the same things.
     menu.exec(tree_->viewport()->mapToGlobal(where));
-}
-
-// -------------------------------------------------------------- PropertyPanel --
-
-PropertyPanel::PropertyPanel(Controller& controller, QWidget* parent)
-    : QWidget(parent), controller_(controller)
-{
-    auto* layout = new QHBoxLayout(this);
-    layout->setContentsMargins(0, 0, 0, 0);
-
-    tree_ = new QTreeWidget(this);
-    tree_->setColumnCount(2);
-    tree_->setHeaderLabels({tr("Özellik"), tr("Değer")});
-    tree_->setRootIsDecorated(true);
-    tree_->setUniformRowHeights(true);
-    tree_->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    tree_->header()->setStretchLastSection(true);
-    layout->addWidget(tree_);
-}
-
-void PropertyPanel::setLayer(core::LayerId layer)
-{
-    layer_ = layer;
-    refresh();
-}
-
-void PropertyPanel::addGroup(const QString& title)
-{
-    group_ = new QTreeWidgetItem(tree_);
-    group_->setText(0, title);
-    group_->setFirstColumnSpanned(true);
-
-    QFont f = group_->font(0);
-    f.setBold(true);
-    group_->setFont(0, f);
-    group_->setExpanded(true);
-}
-
-void PropertyPanel::addRow(const QString& key, const QString& value)
-{
-    auto* item = group_ ? new QTreeWidgetItem(group_) : new QTreeWidgetItem(tree_);
-    item->setText(0, key);
-    item->setText(1, value);
-    item->setToolTip(1, value);
-}
-
-void PropertyPanel::refresh()
-{
-    tree_->clear();
-    group_ = nullptr;
-
-    const auto& doc = controller_.document();
-
-    addGroup(tr("Doküman"));
-    addRow(tr("Koordinat sistemi"), QString::fromStdString(doc.crs().id()));
-    addRow(tr("Katman"), QString::number(doc.layers().size()));
-    addRow(tr("Nesne"), QString::number(doc.live_entity_count()));
-    addRow(tr("Aktif katman"), controller_.activeLayerName());
-    addRow(tr("Sürüm"), QString::number(doc.revision()));
-
-    const core::Box2 box = doc.extent();
-    addGroup(tr("Kapsam"));
-    if (box.empty()) {
-        addRow(tr("Durum"), tr("boş çizim"));
-    } else {
-        addRow(tr("Sağa (Y) min / max"),
-               QStringLiteral("%1  /  %2").arg(metres(box.min_x), metres(box.max_x)));
-        addRow(tr("Yukarı (X) min / max"),
-               QStringLiteral("%1  /  %2").arg(metres(box.min_y), metres(box.max_y)));
-        addRow(tr("Genişlik × Yükseklik"),
-               QStringLiteral("%1 × %2 m").arg(metres(box.width()), metres(box.height())));
-    }
-
-    if (const core::Layer* l = doc.layer(layer_)) {
-        addGroup(tr("Katman — %1").arg(QString::fromStdString(l->name)));
-        addRow(tr("Görünür"), l->visible ? tr("evet") : tr("hayır"));
-        addRow(tr("Kilitli"), l->locked ? tr("evet") : tr("hayır"));
-        addRow(tr("Renk"),
-               QStringLiteral("#%1").arg(l->appearance.rgba, 8, 16, QLatin1Char('0')).toUpper());
-        addRow(tr("Çizgi kalınlığı"),
-               QStringLiteral("%1 mm").arg(l->appearance.width_um / 1000.0, 0, 'f', 2));
-        addRow(tr("Nesne"), QString::number(doc.layer_entity_count(layer_)));
-    }
-
-    addGroup(tr("Oturum"));
-    addRow(tr("Komut"), QString::number(controller_.registry().size()));
-    addRow(tr("Günlük satırı"), QString::number(controller_.journal().size()));
-    addRow(tr("Geri alma / yineleme"), QStringLiteral("%1 / %2")
-                                           .arg(controller_.undoStack().undo_depth())
-                                           .arg(controller_.undoStack().redo_depth()));
-    addRow(tr("Render arka ucu"), render::gpu_backend_status().empty()
-                                      ? QStringLiteral("QRhi (GPU)")
-                                      : QStringLiteral("QPainter (Faz 0)"));
 }
 
 } // namespace piricad::app

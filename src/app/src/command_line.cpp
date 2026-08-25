@@ -3,8 +3,12 @@
 
 #include "piricad/app/controller.hpp"
 
+#include "piricad/app/theme.hpp"
+#include "piricad/app/tokens.hpp"
+
 #include <QCompleter>
 #include <QKeyEvent>
+#include <QPainter>
 #include <QStringListModel>
 
 namespace piricad::app {
@@ -12,8 +16,21 @@ namespace piricad::app {
 CommandLine::CommandLine(Controller& controller, QWidget* parent)
     : QLineEdit(parent), controller_(controller)
 {
+    setObjectName(QStringLiteral("commandLine"));
     setPlaceholderText(tr("Komut girin — ÇİZGİ, KATMAN, YARDIM …"));
-    setClearButtonEnabled(true);
+
+    // No clear button: the reference's strip carries a prompt and a caret and
+    // nothing else, and Esc already cancels — the running command, which is what
+    // a CAD user's hand expects, rather than the text.
+    setFrame(false);
+
+    QFont face(QStringLiteral("IBM Plex Mono"));
+    face.setPixelSize(12);
+    face.setStyleHint(QFont::Monospace);
+    setFont(face);
+
+    prefixWidth_ = QFontMetrics(face).horizontalAdvance(tr("Komut:")) + 8;
+    setTextMargins(prefixWidth_, 0, 0, 0);
 
     model_     = new QStringListModel(this);
     completer_ = new QCompleter(model_, this);
@@ -24,6 +41,23 @@ CommandLine::CommandLine(Controller& controller, QWidget* parent)
     refreshCompletions();
 
     connect(this, &QLineEdit::returnPressed, this, &CommandLine::submit);
+}
+
+void CommandLine::applyTheme(ThemeMode mode)
+{
+    theme_ = mode;
+    update();
+}
+
+void CommandLine::paintEvent(QPaintEvent* event)
+{
+    QLineEdit::paintEvent(event);
+
+    QPainter p(this);
+    p.setFont(font());
+    p.setPen((theme_ == ThemeMode::Dark ? darkTokens() : lightTokens()).textDim);
+    p.drawText(QRect(12, 0, prefixWidth_, height()), Qt::AlignVCenter | Qt::AlignLeft,
+               tr("Komut:"));
 }
 
 void CommandLine::refreshCompletions()

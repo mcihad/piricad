@@ -42,6 +42,11 @@ public:
 
     const render::ViewTransform& view() const noexcept { return view_; }
 
+    /// Screen pixels per PAPER millimetre, from the screen this canvas is on.
+    /// The plot-scale reading is this number times the ground millimetres one
+    /// pixel covers, which is what "1 : 1 000" on a pafta means.
+    double pixelsPerPaperMm() const noexcept { return options_.pixels_per_paper_mm; }
+
     /// Re-reads the palette. Called when any client writes the theme preference,
     /// not only when the menu item is toggled.
     void applyTheme(ThemeMode mode);

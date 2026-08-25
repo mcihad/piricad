@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/app/main_window.hpp"
 
+#include "piricad/app/attribute_panel.hpp"
 #include "piricad/app/command_line.hpp"
+#include "piricad/app/command_palette.hpp"
 #include "piricad/app/controller.hpp"
 #include "piricad/app/data_root.hpp"
 #include "piricad/app/database_dialog.hpp"
@@ -9,7 +11,9 @@
 #include "piricad/app/map_canvas.hpp"
 #include "piricad/app/panels.hpp"
 #include "piricad/app/settings_dialog.hpp"
+#include "piricad/app/shell_chrome.hpp"
 #include "piricad/app/style_designer.hpp"
+#include "piricad/app/title_bar.hpp"
 #include "piricad/app/toolbox.hpp"
 
 #include "piricad/io/vector.hpp"
@@ -36,6 +40,7 @@
 #include <QPlainTextEdit>
 #include <QSettings>
 #include <QSignalBlocker>
+#include <QStackedWidget>
 #include <QStatusBar>
 #include <QToolBar>
 #include <QVBoxLayout>
@@ -44,18 +49,19 @@ namespace piricad::app {
 namespace {
 
 /// The same swatch the layer panel draws, so the combo and the panel agree.
-QIcon swatchIcon(std::uint32_t rgba)
+/// `1 000 000` — thin-space thousands, the way a Turkish pafta prints a scale.
+/// Not `QLocale::toString`: that puts a full stop in tr_TR, and the reference
+/// (and every map sheet) uses a space.
+QString groupedNumber(qint64 value)
 {
-    QPixmap pm(24, 12);
-    pm.fill(Qt::transparent);
-
-    QPainter p(&pm);
-    p.setRenderHint(QPainter::Antialiasing, true);
-    p.setBrush(QColor::fromRgba(static_cast<QRgb>(rgba)));
-    p.setPen(QPen(QColor(0, 0, 0, 60), 1));
-    p.drawRoundedRect(QRectF(0.5, 0.5, 23.0, 11.0), 2, 2);
-    return QIcon(pm);
+    QString digits = QString::number(value);
+    for (qsizetype at = digits.size() - 3; at > 0; at -= 3)
+        digits.insert(at, QLatin1Char(' '));
+    return digits;
 }
+
+/// Bumped whenever the shell's dock layout changes shape. See `restoreState`.
+constexpr int kLayoutVersion = 2;
 
 QString format_metres(core::Mm v)
 {
@@ -69,40 +75,86 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     controller_ = new Controller(this);
 
     setWindowTitle(tr("PiriCAD — Türkiye Odaklı CBS + CAD"));
-    resize(1560, 960);
+    resize(1560, 1000);
+
+    // design.md 7: the chrome is drawn, never inherited. A native frame is a
+    // different height and a different button order on every platform, which is
+    // the one thing the specification forbids outright.
+    setWindowFlag(Qt::FramelessWindowHint, true);
+
+    titleBar_ = new TitleBar(this);
+    setMenuWidget(titleBar_);
+    connect(titleBar_, &TitleBar::searchRequested, this, &MainWindow::openCommandSearch);
+
+    auto* search = new QAction(this);
+    search->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_K));
+    search->setShortcutContext(Qt::ApplicationShortcut);
+    connect(search, &QAction::triggered, this, &MainWindow::openCommandSearch);
+    addAction(search);
     setDockOptions(QMainWindow::AnimatedDocks | QMainWindow::AllowTabbedDocks |
                    QMainWindow::AllowNestedDocks);
     setTabPosition(Qt::AllDockWidgetAreas, QTabWidget::North);
 
     canvas_ = new MapCanvas(*controller_, this);
 
-    auto* central = new QWidget(this);
-    auto* layout  = new QVBoxLayout(central);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(0);
+    commandLine_ = new CommandLine(*controller_, this);
+    commandLine_->setObjectName(QStringLiteral("commandLine"));
 
-    commandLine_ = new CommandLine(*controller_, central);
+    // design.md 7: the tool box, the canvas column and the right dock sit side by
+    // side inside the body, and the status bar runs under all three. The tool box
+    // is part of the body rather than a dock, so the command line starts at its
+    // right edge exactly as the reference draws it.
+    docTabs_ = new DocumentTabs(this);
+    connect(docTabs_, &DocumentTabs::activated, this, [this](int) { refreshWindowTitle(); });
+    connect(docTabs_, &DocumentTabs::closeRequested, this, [this](int) {
+        onEcho(tr("Birden çok çizim Faz 2'de gelecek; şimdilik tek belge açıktır."));
+    });
+    connect(docTabs_, &DocumentTabs::splitRequested, this,
+            [this] { onEcho(tr("Bölünmüş görünüm Faz 2'de gelecek.")); });
+    connect(docTabs_, &DocumentTabs::expandRequested, this,
+            [this] { isMaximized() ? showNormal() : showMaximized(); });
 
-    commandLineRule_ = new QFrame(central);
+    commandLineRule_ = new QFrame(this);
     commandLineRule_->setFrameShape(QFrame::HLine);
     commandLineRule_->setFrameShadow(QFrame::Plain);
-
-    layout->addWidget(canvas_, 1);
-    layout->addWidget(commandLineRule_);
-    layout->addWidget(commandLine_);
-    setCentralWidget(central);
 
     buildActions();
     buildToolBars();
     buildToolBox();
+
+    auto* column = new QWidget(this);
+    auto* stack  = new QVBoxLayout(column);
+    stack->setContentsMargins(0, 0, 0, 0);
+    stack->setSpacing(0);
+    stack->addWidget(docTabs_);
+    stack->addWidget(canvas_, 1);
+    stack->addWidget(commandLineRule_);
+    stack->addWidget(commandLine_);
+
+    auto* central = new QWidget(this);
+    auto* body    = new QHBoxLayout(central);
+    body->setContentsMargins(0, 0, 0, 0);
+    body->setSpacing(0);
+    body->addWidget(toolBox_);
+    body->addWidget(column, 1);
+    setCentralWidget(central);
+
     buildPanels();
-    buildMenus();
     buildStatusBar();
 
-    // The command line is hidden in this build; the tool bars carry the work.
-    // Nothing was removed — Ctrl+9 or Görünüm > Paneller brings it back, and every
-    // command it accepts is still reachable from a script and from the AI.
-    commandLine_->setVisible(false);
+    // The strip runs under EVERYTHING — tool box, canvas and right dock alike —
+    // and QMainWindow's status bar is the one slot that already does. A bottom
+    // DOCK is a pixel shorter than its widget, because the dock area keeps a
+    // separator between itself and the body; the status bar has no such gap.
+    setStatusBar(statusStrip_);
+    buildMenus();
+
+    // The command line is the shell's conversation and design.md 7 draws it as a
+    // permanent 28 px strip above the status bar. It was hidden while the tool
+    // bars carried the work; the reference puts it back where every CAD user's
+    // hand already reaches for it.
+    commandLine_->setVisible(true);
+    commandLineRule_->setVisible(false);
 
     loadPreferences();
     theme_ = themeFromPreferences();
@@ -114,6 +166,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
         actTheme_->setChecked(theme_ == ThemeMode::Dark);
     }
     applyTheme();
+    refreshWindowTitle();
 
     connect(controller_, &Controller::echoed, this, &MainWindow::onEcho);
     connect(controller_, &Controller::documentChanged, this, &MainWindow::onDocumentChanged);
@@ -121,12 +174,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(controller_, &Controller::undoStateChanged, this, &MainWindow::onUndoStateChanged);
     connect(controller_, &Controller::viewRequested, this, &MainWindow::onViewRequested);
     connect(controller_, &Controller::settingChanged, this, &MainWindow::onSettingChanged);
+    connect(controller_, &Controller::selectionChanged, this,
+            [this] { attributePanel_->refresh(); });
     connect(controller_, &Controller::selectionChanged, canvas_,
             QOverload<>::of(&MapCanvas::update));
     connect(canvas_, &MapCanvas::cursorMoved, this, &MainWindow::onCursorMoved);
     connect(canvas_, &MapCanvas::viewChanged, this, &MainWindow::refreshStatus);
     connect(commandLine_, &CommandLine::submitted, this, &MainWindow::onCommandSubmitted);
-    connect(layerPanel_, &LayerPanel::layerSelected, propertyPanel_, &PropertyPanel::setLayer);
+    connect(layerPanel_, &LayerPanel::layerSelected, attributePanel_, &AttributePanel::setLayer);
     connect(layerPanel_, &LayerPanel::styleRequested, this, &MainWindow::openStyleDesigner);
 
     onEcho(tr("PiriCAD %1 — komut merkezli mimari, GPLv3.").arg(QStringLiteral(PIRICAD_VERSION)));
@@ -161,7 +216,7 @@ MainWindow::~MainWindow()
     // meaning to a user typing TERCİH. They stay raw QSettings keys.
     QSettings settings;
     settings.setValue(QStringLiteral("ui/geometry"), saveGeometry());
-    settings.setValue(QStringLiteral("ui/state"), saveState());
+    settings.setValue(QStringLiteral("ui/state"), saveState(kLayoutVersion));
 }
 
 void MainWindow::loadPreferences()
@@ -292,6 +347,7 @@ void MainWindow::buildActions()
     connect(actDatabase_, &QAction::triggered, this, &MainWindow::openDatabase);
 
     actSettings_ = new QAction(tr("Ayarlar…"), this);
+    actSettings_->setData(static_cast<int>(Glyph::Settings));
     actSettings_->setShortcut(QKeySequence::Preferences);
     actSettings_->setToolTip(tr("Bildirilen her ayarı kapsamına göre gösterir; her "
                                 "değişiklik AYAR, TERCİH ya da MOD komutu olarak geçer"));
@@ -348,6 +404,36 @@ void MainWindow::buildActions()
         commandLine_->setText(QStringLiteral("SİL nesneler="));
         commandLine_->setFocus();
     });
+
+    // The clipboard group. `KES`/`YAPIŞTIR` are Phase 2 commands; the buttons
+    // exist now so the bar has the shape design.md 7 draws, and each is disabled
+    // with the phase named in its tooltip rather than silently absent.
+    actCut_      = placeholder(Glyph::Cut, tr("Kes"), QStringLiteral("KES"), tr("Faz 2"));
+    actCopyClip_ = placeholder(Glyph::Duplicate, tr("Panoya Kopyala"),
+                               QStringLiteral("PANOKOPYALA"), tr("Faz 2"));
+    actPaste_ = placeholder(Glyph::Paste, tr("Yapıştır"), QStringLiteral("YAPIŞTIR"), tr("Faz 2"));
+
+    actSelectArea_ =
+        placeholder(Glyph::SelectArea, tr("Alan Seç"), QStringLiteral("SEÇ pencere="), tr("Faz 2"));
+    actPolygon_ = placeholder(Glyph::Polygon, tr("Poligon"), QStringLiteral("ALAN"), tr("Faz 2"));
+    actTrim_    = placeholder(Glyph::Trim, tr("Böl / Buda"), QStringLiteral("BUDA"), tr("Faz 2"));
+    actUnion_ =
+        placeholder(Glyph::Union, tr("Birleştir — tevhit"), QStringLiteral("TEVHİT"), tr("Faz 2"));
+    actParcelSplit_ = placeholder(Glyph::ParcelSplit, tr("Parsel Böl — ifraz"),
+                                  QStringLiteral("İFRAZ"), tr("Faz 2"));
+    actMeasureArea_ =
+        placeholder(Glyph::MeasureArea, tr("Alan Ölç"), QStringLiteral("ALANÖLÇ"), tr("Faz 2"));
+    actCoordinate_ = placeholder(Glyph::Coordinate, tr("Koordinat Oku"),
+                                 QStringLiteral("KOORDİNAT"), tr("Faz 2"));
+    actStyleCopy_ = placeholder(Glyph::StyleCopy, tr("Stil Kopyala"), QStringLiteral("STİLKOPYALA"),
+                                tr("Faz 2"));
+    actTopology_ = placeholder(Glyph::Topology, tr("Topoloji Denetimi"), QStringLiteral("TOPOLOJİ"),
+                               tr("Faz 2"));
+
+    actStyle_ = new QAction(tr("Stil Tasarımcısı"), this);
+    actStyle_->setData(static_cast<int>(Glyph::Palette));
+    actStyle_->setToolTip(tr("Katmanın çizim stilini düzenle"));
+    connect(actStyle_, &QAction::triggered, this, [this] { openStyleDesigner(QString()); });
 
     actMove_   = placeholder(Glyph::Move, tr("Taşı"), QStringLiteral("TAŞI"), tr("Faz 2"));
     actCopy_   = placeholder(Glyph::Copy, tr("Kopyala"), QStringLiteral("KOPYALA"), tr("Faz 2"));
@@ -410,6 +496,7 @@ void MainWindow::buildActions()
     });
 
     actGridSnap_ = new QAction(tr("Izgaraya Yakala"), this);
+    actGridSnap_->setData(static_cast<int>(Glyph::Grid));
     actGridSnap_->setCheckable(true);
     actGridSnap_->setShortcut(QKeySequence(Qt::Key_F9));
     actGridSnap_->setToolTip(
@@ -467,78 +554,79 @@ void MainWindow::buildActions()
 
 void MainWindow::buildToolBars()
 {
-    // Two surfaces, two jobs — the layout professional CAD and GIS users expect.
-    // The left tool box holds the modal DRAWING tools; these horizontal bars hold
-    // ACTIONS. Every one of them dispatches a command; none reaches the document
-    // directly (CLAUDE.md Article 1).
-    const auto makeBar = [this](const QString& title, const QString& name) {
-        auto* bar = addToolBar(title);
-        bar->setObjectName(name);
-        bar->setIconSize(QSize(20, 20));
-        bar->setToolButtonStyle(Qt::ToolButtonIconOnly);
-        bar->setFloatable(true);
-        bar->setMovable(true);
-        return bar;
-    };
+    // ONE BAR, SEVEN GROUPS. design.md 7 draws a single 46 px strip with 1 px
+    // rules between groups; five draggable QToolBars gave five handles, five
+    // wrap points and a different arrangement on every start. The bar is fixed
+    // because its layout is part of the specification, not a preference.
+    //
+    // Two surfaces, two jobs — the left tool box holds the modal DRAWING tools,
+    // this bar holds ACTIONS. Every button dispatches a command; none reaches
+    // the document directly (CLAUDE.md Article 1).
+    tbMain_ = addToolBar(tr("Araçlar"));
+    tbMain_->setObjectName(QStringLiteral("tbMain"));
+    tbMain_->setIconSize(QSize(20, 20));
+    tbMain_->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    tbMain_->setMovable(false);
+    tbMain_->setFloatable(false);
 
-    tbFile_ = makeBar(tr("Dosya"), QStringLiteral("tbFile"));
-    tbFile_->addAction(actNew_);
-    tbFile_->addAction(actOpen_);
-    tbFile_->addAction(actSave_);
-    tbFile_->addSeparator();
-    tbFile_->addAction(actImport_);
-    tbFile_->addAction(actExport_);
-    tbFile_->addAction(actPrint_);
-    tbFile_->addSeparator();
-    tbFile_->addAction(actScript_);
+    // file
+    tbMain_->addAction(actNew_);
+    tbMain_->addAction(actOpen_);
+    tbMain_->addAction(actSave_);
+    tbMain_->addSeparator();
 
-    tbEdit_ = makeBar(tr("Düzen"), QStringLiteral("tbEdit"));
-    tbEdit_->addAction(actUndo_);
-    tbEdit_->addAction(actRedo_);
-    tbEdit_->addSeparator();
-    tbEdit_->addAction(actErase_);
-    tbEdit_->addAction(actMove_);
-    tbEdit_->addAction(actCopy_);
-    tbEdit_->addAction(actRotate_);
-    tbEdit_->addAction(actOffset_);
+    // undo / redo
+    tbMain_->addAction(actUndo_);
+    tbMain_->addAction(actRedo_);
+    tbMain_->addSeparator();
 
-    tbView_ = makeBar(tr("Görünüm"), QStringLiteral("tbView"));
-    tbView_->addAction(actPan_);
-    tbView_->addAction(actZoomExtents_);
-    tbView_->addAction(actZoomIn_);
-    tbView_->addAction(actZoomOut_);
-    tbView_->addSeparator();
-    tbView_->addAction(actSnap_);
+    // clipboard
+    tbMain_->addAction(actCut_);
+    tbMain_->addAction(actCopyClip_);
+    tbMain_->addAction(actPaste_);
+    tbMain_->addSeparator();
 
-    // The layer combo is the signature CAD control: it shows the current layer and
-    // switching it is a KATMAN command, exactly as if it had been typed.
-    tbLayer_ = makeBar(tr("Katman"), QStringLiteral("tbLayer"));
-    tbLayer_->addAction(actLayerManager_);
-    tbLayer_->addAction(actLayer_);
+    // navigation
+    tbMain_->addAction(actSelect_);
+    tbMain_->addAction(actPan_);
+    tbMain_->addAction(actZoomIn_);
+    tbMain_->addAction(actZoomExtents_);
+    tbMain_->addSeparator();
 
-    layerCombo_ = new QComboBox(tbLayer_);
-    layerCombo_->setMinimumWidth(190);
-    layerCombo_->setToolTip(tr("Aktif katman — değiştirmek KATMAN komutunu gönderir"));
-    layerCombo_->setSizeAdjustPolicy(QComboBox::AdjustToContentsOnFirstShow);
-    tbLayer_->addWidget(layerCombo_);
+    // drawing aids
+    tbMain_->addAction(actGridSnap_);
+    tbMain_->addAction(actSnap_);
+    tbMain_->addAction(actMeasure_);
+    tbMain_->addSeparator();
 
-    connect(layerCombo_, &QComboBox::activated, this, [this](int index) {
-        const QString name = layerCombo_->itemText(index);
-        if (name.isEmpty()) return;
-        controller_->runLine(QStringLiteral("KATMAN ad=\"%1\"").arg(name), command::Origin::Gui);
-    });
+    // windows
+    tbMain_->addAction(actLayerManager_);
+    tbMain_->addAction(actStyle_);
+    tbMain_->addAction(actTable_);
+    tbMain_->addSeparator();
 
-    tbGis_ = makeBar(tr("CBS"), QStringLiteral("tbGis"));
-    tbGis_->addAction(actIdentify_);
-    tbGis_->addAction(actTable_);
-    tbGis_->addAction(actMeasure_);
-    tbGis_->addSeparator();
-    tbGis_->addAction(actAi_);
+    // output
+    tbMain_->addAction(actPrint_);
+    tbMain_->addAction(actSettings_);
+
+    // The two readings sit at the far right, so a spacer eats everything between.
+    auto* gap = new QWidget(tbMain_);
+    gap->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    gap->setAttribute(Qt::WA_NoSystemBackground, true);
+    tbMain_->addWidget(gap);
+
+    readout_ = new ReadoutStrip(tbMain_);
+    tbMain_->addWidget(readout_);
 }
 
 void MainWindow::buildMenus()
 {
-    auto* file = menuBar()->addMenu(tr("&Dosya"));
+    // design.md 7: ten titles, in this order. The order is part of the
+    // specification, not a preference — a user who learned where "Harita" sits
+    // finds it in the same place on every platform because the bar is ours.
+    QMenuBar* bar = titleBar_->menus();
+
+    auto* file = bar->addMenu(tr("&Dosya"));
     file->addAction(actNew_);
     file->addAction(actOpen_);
     file->addAction(actSave_);
@@ -553,42 +641,16 @@ void MainWindow::buildMenus()
     file->addSeparator();
     file->addAction(actQuit_);
 
-    auto* edit = menuBar()->addMenu(tr("&Düzen"));
+    auto* edit = bar->addMenu(tr("D&üzen"));
     edit->addAction(actUndo_);
     edit->addAction(actRedo_);
     edit->addSeparator();
     edit->addAction(actSelectAll_);
     edit->addAction(actSelectNone_);
     edit->addSeparator();
-    edit->addAction(actErase_);
-    edit->addAction(actMove_);
-    edit->addAction(actCopy_);
-    edit->addAction(actRotate_);
-    edit->addAction(actOffset_);
-
-    edit->addSeparator();
     edit->addAction(actSettings_);
 
-    auto* draw = menuBar()->addMenu(tr("Çi&zim"));
-    draw->addAction(actLine_);
-    draw->addAction(actPolyline_);
-    draw->addAction(actArc_);
-    draw->addAction(actCircle_);
-    draw->addAction(actRectangle_);
-    draw->addAction(actPoint_);
-    draw->addAction(actText_);
-    draw->addSeparator();
-    draw->addAction(actLayer_);
-    draw->addAction(actLayerManager_);
-
-    auto* gis = menuBar()->addMenu(tr("&CBS"));
-    gis->addAction(actIdentify_);
-    gis->addAction(actTable_);
-    gis->addAction(actMeasure_);
-    gis->addSeparator();
-    gis->addAction(actAi_);
-
-    auto* view = menuBar()->addMenu(tr("&Görünüm"));
+    auto* view = bar->addMenu(tr("&Görünüm"));
     view->addAction(actZoomExtents_);
     view->addAction(actZoomIn_);
     view->addAction(actZoomOut_);
@@ -598,26 +660,59 @@ void MainWindow::buildMenus()
     view->addAction(actGridSnap_);
     view->addSeparator();
 
-    auto* bars = view->addMenu(tr("Araç Çubukları"));
-    for (QToolBar* bar : {tbFile_, tbEdit_, tbView_, tbLayer_, tbGis_})
-        if (bar) bars->addAction(bar->toggleViewAction());
+    if (tbMain_) view->addAction(tbMain_->toggleViewAction());
 
     auto* panels = view->addMenu(tr("Paneller"));
-    for (QDockWidget* dock : {static_cast<QDockWidget*>(toolBox_), layerDock_, propertyDock_,
-                              transcriptDock_, journalDock_}) {
+    for (QDockWidget* dock : {layerDock_, propertyDock_, transcriptDock_, journalDock_}) {
         if (dock) panels->addAction(dock->toggleViewAction());
     }
     panels->addSeparator();
     panels->addAction(actCommandLine_);
-    panels->addSeparator();
-    auto* reset = panels->addAction(tr("Düzeni Sıfırla"));
-    connect(reset, &QAction::triggered, this, &MainWindow::resetLayout);
 
     view->addSeparator();
     view->addAction(actTheme_);
     view->addAction(actHud_);
 
-    auto* about = menuBar()->addMenu(tr("&Yardım"));
+    auto* draw = bar->addMenu(tr("Çi&zim"));
+    draw->addAction(actLine_);
+    draw->addAction(actPolyline_);
+    draw->addAction(actArc_);
+    draw->addAction(actCircle_);
+    draw->addAction(actRectangle_);
+    draw->addAction(actPoint_);
+    draw->addAction(actText_);
+
+    auto* modify = bar->addMenu(tr("D&eğiştir"));
+    modify->addAction(actErase_);
+    modify->addAction(actMove_);
+    modify->addAction(actCopy_);
+    modify->addAction(actRotate_);
+    modify->addAction(actOffset_);
+
+    auto* map = bar->addMenu(tr("&Harita"));
+    map->addAction(actIdentify_);
+    map->addAction(actMeasure_);
+    map->addSeparator();
+    map->addAction(actDatabase_);
+
+    auto* analyse = bar->addMenu(tr("&Analiz"));
+    analyse->addAction(actTable_);
+    analyse->addSeparator();
+    analyse->addAction(actAi_);
+
+    auto* layer = bar->addMenu(tr("&Katman"));
+    layer->addAction(actLayer_);
+    layer->addAction(actLayerManager_);
+
+    auto* window = bar->addMenu(tr("&Pencere"));
+    for (QDockWidget* dock : {layerDock_, propertyDock_, transcriptDock_, journalDock_}) {
+        if (dock) window->addAction(dock->toggleViewAction());
+    }
+    window->addSeparator();
+    auto* reset = window->addAction(tr("Yerleşimi Sıfırla"));
+    connect(reset, &QAction::triggered, this, &MainWindow::resetLayout);
+
+    auto* about = bar->addMenu(tr("&Yardım"));
     auto* ref   = about->addAction(tr("Komut Listesi"));
     connect(ref, &QAction::triggered, this, &MainWindow::showCommandReference);
     about->addSeparator();
@@ -627,57 +722,74 @@ void MainWindow::buildMenus()
 
 void MainWindow::buildToolBox()
 {
-    // The modal drawing tools only. File, edit, view, layer and GIS actions live
-    // in the horizontal tool bars, the way AutoCAD and QGIS both arrange them.
+    // The modal drawing tools only, in the five groups design.md 7 names. File,
+    // edit, view, layer and GIS actions live in the horizontal bar, the way
+    // AutoCAD and QGIS both arrange them.
     toolBox_ = new ToolBox(this);
 
+    // selection
     toolBox_->addTool(actSelect_);
+    toolBox_->addTool(actSelectArea_);
+    toolBox_->addTool(actPan_);
     toolBox_->addSeparator();
-    toolBox_->addTool(actLine_);
+
+    // creation
     toolBox_->addTool(actPolyline_);
-    toolBox_->addTool(actArc_);
-    toolBox_->addTool(actCircle_);
+    toolBox_->addTool(actPolygon_);
     toolBox_->addTool(actRectangle_);
+    toolBox_->addTool(actCircle_);
     toolBox_->addTool(actPoint_);
     toolBox_->addTool(actText_);
     toolBox_->addSeparator();
-    toolBox_->addTool(actErase_);
+
+    // editing
+    toolBox_->addTool(actTrim_);
+    toolBox_->addTool(actUnion_);
+    toolBox_->addTool(actParcelSplit_);
     toolBox_->addTool(actMove_);
-    toolBox_->addTool(actCopy_);
-    toolBox_->addTool(actRotate_);
     toolBox_->addTool(actOffset_);
     toolBox_->addSeparator();
-    toolBox_->addTool(actMeasure_);
-    toolBox_->addTool(actIdentify_);
-    toolBox_->addTool(actSnap_);
 
-    addDockWidget(Qt::LeftDockWidgetArea, toolBox_);
-    // Two columns to start with. The palette reflows, so this is a starting shape
-    // and not a constraint: dragging the splitter turns it into three, four or one.
-    resizeDocks({toolBox_}, {74}, Qt::Horizontal);
+    // measurement
+    toolBox_->addTool(actMeasure_);
+    toolBox_->addTool(actMeasureArea_);
+    toolBox_->addTool(actCoordinate_);
+    toolBox_->addSeparator();
+
+    // helpers
+    toolBox_->addTool(actStyleCopy_);
+    toolBox_->addTool(actTopology_);
+
+    connect(toolBox_->chips(), &ColourChips::chipActivated, this, [this](int which) {
+        onEcho(which == 0 ? tr("Çizim rengi: katmanın rengi geçerlidir. RENK komutu Faz 2.")
+                          : tr("Dolgu rengi: katmanın dolgusu geçerlidir. RENK komutu Faz 2."));
+    });
 }
 
 void MainWindow::buildPanels()
 {
-    const auto makeDock = [this](const QString& title, const QString& name, QWidget* body) {
-        auto* dock = new QDockWidget(title, this);
+    // design.md 6 and 7: every panel wears ONE 29 px header that carries its tabs
+    // AND its buttons. Qt's tabified docks give a tab bar and a title bar — two
+    // rows, 58 px — so the tabs are drawn by `PanelHeader` and each dock's own
+    // title bar is replaced by it. Switching tabs switches a QStackedWidget
+    // rather than raising another dock.
+    const auto makeDock = [this](const QString& name, PanelHeader* header, QWidget* body) {
+        auto* dock = new QDockWidget(this);
         dock->setObjectName(name);
+        dock->setTitleBarWidget(header);
         dock->setWidget(body);
         dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea |
                               Qt::BottomDockWidgetArea);
+        connect(header, &PanelHeader::buttonPressed, this, [dock](int button) {
+            if (button == PanelHeader::Collapse) dock->hide();
+            if (button == PanelHeader::Float) dock->setFloating(!dock->isFloating());
+            if (button == PanelHeader::Close) dock->hide();
+        });
         return dock;
     };
 
-    layerPanel_    = new LayerPanel(*controller_, this);
-    propertyPanel_ = new PropertyPanel(*controller_, this);
-
-    layerDock_    = makeDock(tr("Katmanlar"), QStringLiteral("layerDock"), layerPanel_);
-    propertyDock_ = makeDock(tr("Öznitelikler"), QStringLiteral("propertyDock"), propertyPanel_);
-
-    addDockWidget(Qt::RightDockWidgetArea, layerDock_);
-    addDockWidget(Qt::RightDockWidgetArea, propertyDock_);
-    tabifyDockWidget(layerDock_, propertyDock_);
-    layerDock_->raise();
+    // ---- the attributes / history panel ----
+    attributePanel_ = new AttributePanel(*controller_, this);
 
     transcript_ = new QPlainTextEdit(this);
     transcript_->setReadOnly(true);
@@ -692,18 +804,50 @@ void MainWindow::buildPanels()
         tr("Her komut buraya JSON olarak yazılır. Bu günlük geri almanın, makro "
            "kaydının, regresyon testinin ve çökme kurtarmanın ortak kaynağıdır."));
 
-    transcriptDock_ = makeDock(tr("Transkript"), QStringLiteral("transcriptDock"), transcript_);
-    journalDock_    = makeDock(tr("Komut Günlüğü"), QStringLiteral("journalDock"), journalView_);
+    propertyStack_ = new QStackedWidget(this);
+    propertyStack_->addWidget(attributePanel_);
+    propertyStack_->addWidget(transcript_);
 
-    addDockWidget(Qt::BottomDockWidgetArea, transcriptDock_);
+    propertyHeader_ = new PanelHeader(this);
+    propertyHeader_->addTab(tr("Öznitelikler"), static_cast<int>(Glyph::Table));
+    propertyHeader_->addTab(tr("Geçmiş"), static_cast<int>(Glyph::History));
+    connect(propertyHeader_, &PanelHeader::tabChanged, propertyStack_,
+            &QStackedWidget::setCurrentIndex);
+
+    propertyDock_ = makeDock(QStringLiteral("propertyDock"), propertyHeader_, propertyStack_);
+    propertyDock_->toggleViewAction()->setText(tr("Öznitelikler"));
+
+    // ---- the layers panel ----
+    layerPanel_ = new LayerPanel(*controller_, this);
+
+    layerHeader_ = new PanelHeader(this);
+    layerHeader_->addTab(tr("Katmanlar"), static_cast<int>(Glyph::Layer));
+    layerHeader_->setButtons(PanelHeader::Grip | PanelHeader::Collapse | PanelHeader::Float);
+
+    layerDock_ = makeDock(QStringLiteral("layerDock"), layerHeader_, layerPanel_);
+    layerDock_->toggleViewAction()->setText(tr("Katmanlar"));
+
+    // ---- the command journal, hidden until asked for ----
+    journalHeader_ = new PanelHeader(this);
+    journalHeader_->addTab(tr("Komut Günlüğü"), static_cast<int>(Glyph::Script));
+    journalHeader_->setButtons(PanelHeader::Grip | PanelHeader::Float | PanelHeader::Close);
+
+    journalDock_ = makeDock(QStringLiteral("journalDock"), journalHeader_, journalView_);
+    journalDock_->toggleViewAction()->setText(tr("Komut Günlüğü"));
+
+    addDockWidget(Qt::RightDockWidgetArea, propertyDock_);
+    addDockWidget(Qt::RightDockWidgetArea, layerDock_);
     addDockWidget(Qt::BottomDockWidgetArea, journalDock_);
-    tabifyDockWidget(transcriptDock_, journalDock_);
-    transcriptDock_->raise();
 
-    resizeDocks({layerDock_}, {330}, Qt::Horizontal);
-    resizeDocks({transcriptDock_}, {170}, Qt::Vertical);
+    // The reference has no bottom panel open: the command line carries the
+    // conversation and the journal is there when a user asks for it.
+    journalDock_->hide();
 
-    for (QDockWidget* dock : {layerDock_, propertyDock_, transcriptDock_, journalDock_}) {
+    // 312 px wide, and the layers panel 268 px tall — both from design.md 7.
+    resizeDocks({propertyDock_, layerDock_}, {312, 312}, Qt::Horizontal);
+    resizeDocks({propertyDock_, layerDock_}, {600, 268}, Qt::Vertical);
+
+    for (QDockWidget* dock : {propertyDock_, layerDock_, journalDock_}) {
         connect(dock, &QDockWidget::topLevelChanged, this, [this] { syncDockTitles(); });
         connect(dock, &QDockWidget::visibilityChanged, this, [this] { syncDockTitles(); });
     }
@@ -711,7 +855,11 @@ void MainWindow::buildPanels()
     QSettings settings;
     if (settings.contains(QStringLiteral("ui/state"))) {
         restoreGeometry(settings.value(QStringLiteral("ui/geometry")).toByteArray());
-        restoreState(settings.value(QStringLiteral("ui/state")).toByteArray());
+        // The VERSION is the point: a layout saved by an older shell names docks
+        // that no longer exist and sizes areas that have moved, and Qt restores it
+        // faithfully — which is how a redesigned window opens looking like the old
+        // one with holes in it. A bumped version makes `restoreState` decline.
+        restoreState(settings.value(QStringLiteral("ui/state")).toByteArray(), kLayoutVersion);
     }
 }
 
@@ -799,41 +947,47 @@ void MainWindow::loadSymbolLibrary()
 
 void MainWindow::syncDockTitles()
 {
-    for (QDockWidget* dock : {layerDock_, propertyDock_, transcriptDock_, journalDock_}) {
-        if (!dock) continue;
-
-        const bool tabbed = !dock->isFloating() && !tabifiedDockWidgets(dock).isEmpty();
-        const bool hidden = dock->titleBarWidget() != nullptr;
-        if (tabbed == hidden) continue;
-
-        if (tabbed) {
-            dock->setTitleBarWidget(new QWidget(dock));
-        } else {
-            QWidget* old = dock->titleBarWidget();
-            dock->setTitleBarWidget(nullptr);
-            delete old;
-        }
-    }
+    // Every dock now wears a `PanelHeader` permanently (design.md 6), so there is
+    // nothing to synchronise. This used to swap Qt's own title bar in and out
+    // depending on whether a dock was tabbed — and with a custom header on every
+    // dock it DELETED that header, which is how the panels lost their 29 px row
+    // and picked up Qt's 19 px one with float and close buttons drawn by Fusion.
+    //
+    // Kept as a no-op rather than removed because the visibility and float
+    // signals still land here; when a panel gains behaviour that depends on being
+    // tabbed, this is where it goes.
 }
 
 void MainWindow::buildStatusBar()
 {
-    statusPrompt_ = new QLabel(tr("Hazır"), this);
-    statusCoords_ = new QLabel(QStringLiteral("—"), this);
-    statusScale_  = new QLabel(QStringLiteral("—"), this);
-    statusLayer_  = new QLabel(QStringLiteral("0"), this);
-    statusCrs_    = new QLabel(QStringLiteral("TUREF/TM30"), this);
+    // design.md 7: one 26 px strip, painted rather than assembled. A QStatusBar
+    // of QLabels reaches the reference's offsets only by accident — each label
+    // brings its own margin and the style its own frame — so the strip draws
+    // itself and the numbers in `shell_chrome.cpp` ARE the specification.
+    statusStrip_ = new StatusStrip(this);
 
-    statusCoords_->setMinimumWidth(330);
-    statusScale_->setMinimumWidth(140);
-    statusLayer_->setMinimumWidth(110);
+    // Each chip is the command it names. The mouse gets no private road: clicking
+    // IZGARA runs `IZGARA`, exactly as typing it would (Article 1.2).
+    statusStrip_->addToggle(tr("IZGARA"), QStringLiteral("core.izgara.gorunur"));
+    statusStrip_->addToggle(tr("YAKALAMA"), QStringLiteral("core.izgara.yakalama"));
+    statusStrip_->addToggle(tr("DİK"), QStringLiteral("core.yakalama.dik"));
+    statusStrip_->addToggle(tr("POLAR"), QStringLiteral("core.yakalama.polar"));
+    statusStrip_->addToggle(tr("OSNAP"), QStringLiteral("core.yakalama.acik"));
+    statusStrip_->addToggle(tr("DİNAMİK GİRDİ"), QStringLiteral("core.arayuz.dinamik_girdi"));
+    statusStrip_->addToggle(tr("KALINLIK"), QStringLiteral("core.harita.kalinlik"));
 
-    statusBar()->addWidget(statusPrompt_, 1);
-    statusBar()->addPermanentWidget(new QLabel(tr("Katman:"), this));
-    statusBar()->addPermanentWidget(statusLayer_);
-    statusBar()->addPermanentWidget(statusCoords_);
-    statusBar()->addPermanentWidget(statusScale_);
-    statusBar()->addPermanentWidget(statusCrs_);
+    connect(statusStrip_, &StatusStrip::toggled, this, [this](const QString& id) {
+        core::Settings& store     = controller_->bus().app_settings();
+        const std::uint32_t index = store.catalogue().find(id.toStdString());
+        if (index == core::kNoSetting) {
+            onEcho(tr("Bu yardımcı henüz bir ayara bağlı değil: %1").arg(id));
+            return;
+        }
+        const bool now = store.get(id.toStdString()).as_bool();
+        controller_->runLine(QStringLiteral("AYAR ad=%1 deger=%2")
+                                 .arg(id, now ? QStringLiteral("hayır") : QStringLiteral("evet")),
+                             command::Origin::Gui);
+    });
 }
 
 void MainWindow::applyTheme()
@@ -862,6 +1016,16 @@ void MainWindow::applyTheme()
         action->setIcon(icon(static_cast<Glyph>(glyph.toInt()), p.text, p.accent));
     }
 
+    titleBar_->applyTheme(theme_);
+    docTabs_->applyTheme(theme_);
+    commandLine_->applyTheme(theme_);
+    statusStrip_->applyTheme(theme_);
+    readout_->applyTheme(theme_);
+    attributePanel_->applyTheme(theme_);
+    layerPanel_->applyTheme(theme_);
+    for (PanelHeader* header : {propertyHeader_, layerHeader_, journalHeader_})
+        if (header) header->applyTheme(theme_);
+    if (palette_) palette_->applyTheme(theme_);
     toolBox_->applyTheme(theme_);
     canvas_->applyTheme(theme_);
 }
@@ -952,27 +1116,32 @@ void MainWindow::showCommandLine(bool visible)
 
 void MainWindow::refreshLayerCombo()
 {
-    if (!layerCombo_) return;
+    // The tool bar combo is gone with design.md 7's single 46 px strip, which has
+    // no combo in it. The active layer is shown and changed in the Katmanlar
+    // panel instead — the same `KATMAN` command either way (Article 1.2), so no
+    // capability moved with the widget.
+    if (layerPanel_) layerPanel_->refresh();
+}
 
-    const auto& doc      = controller_->document();
-    const QString active = controller_->activeLayerName();
-
-    QSignalBlocker block(layerCombo_);
-    layerCombo_->clear();
-
-    for (std::size_t i = 0; i < doc.layers().size(); ++i) {
-        const auto& l = doc.layers()[i];
-        layerCombo_->addItem(swatchIcon(l.appearance.rgba), QString::fromStdString(l.name));
-        if (!l.visible) layerCombo_->setItemData(static_cast<int>(i), tr("gizli"), Qt::ToolTipRole);
+void MainWindow::openCommandSearch()
+{
+    if (!palette_) {
+        palette_ = new CommandPalette(controller_->registry(), this);
+        palette_->applyTheme(theme_);
+        connect(palette_, &CommandPalette::chosen, this, [this](const QString& name) {
+            // Straight to the prompt rather than straight to the bus: a command
+            // with arguments needs them typed, and the command line is where the
+            // shell already asks for them (Article 1.2).
+            showCommandLine(true);
+            commandLine_->setText(name + QLatin1Char(' '));
+            commandLine_->setFocus(Qt::ShortcutFocusReason);
+        });
     }
-
-    const int index = layerCombo_->findText(active);
-    if (index >= 0) layerCombo_->setCurrentIndex(index);
+    palette_->reveal();
 }
 
 void MainWindow::resetLayout()
 {
-    addDockWidget(Qt::LeftDockWidgetArea, toolBox_);
     addDockWidget(Qt::RightDockWidgetArea, layerDock_);
     addDockWidget(Qt::RightDockWidgetArea, propertyDock_);
     tabifyDockWidget(layerDock_, propertyDock_);
@@ -989,7 +1158,7 @@ void MainWindow::onDocumentChanged()
 {
     refreshLayerCombo();
     layerPanel_->refresh();
-    propertyPanel_->refresh();
+    attributePanel_->refresh();
     refreshStatus();
 
     // Mirroring the journal keeps the architecture visible while using the program.
@@ -1003,7 +1172,7 @@ void MainWindow::onDocumentChanged()
 void MainWindow::onPromptChanged(const QString& prompt)
 {
     commandLine_->setPrompt(prompt);
-    statusPrompt_->setText(prompt.isEmpty() ? tr("Hazır") : prompt);
+    commandLine_->setPrompt(prompt);
     actSelect_->setChecked(prompt.isEmpty());
     actLine_->setChecked(!prompt.isEmpty());
     canvas_->update();
@@ -1020,8 +1189,10 @@ void MainWindow::onCursorMoved(core::Point2 world)
     // Turkish surveying convention, which EPSG:5254 itself declares: Y is the
     // easting (`sağa değer`) and X is the northing (`yukarı değer`). Storage is
     // unaffected — Point2::x holds the easting either way (.claude/model.md R37a).
-    statusCoords_->setText(
-        tr("Sağa (Y) %1   Yukarı (X) %2").arg(format_metres(world.x), format_metres(world.y)));
+    // The strip prints it the way a surveyor reads a coordinate off an
+    // instrument: the axis letter, then the number, digit-aligned in mono.
+    statusStrip_->setCoordinate(
+        tr("Y %1  X %2").arg(format_metres(world.x), format_metres(world.y)));
 }
 
 void MainWindow::onViewRequested(const QString& mode, double factor)
@@ -1043,12 +1214,56 @@ void MainWindow::onCommandSubmitted(const QString& line)
 
 void MainWindow::refreshStatus()
 {
-    statusLayer_->setText(controller_->activeLayerName());
-    statusCrs_->setText(QString::fromStdString(controller_->document().crs().id()));
 
-    const double metres_per_pixel =
-        canvas_->view().mm_per_pixel() / static_cast<double>(core::kMmPerMetre);
-    statusScale_->setText(tr("1 px = %1 m").arg(metres_per_pixel, 0, 'f', 4));
+    const core::Crs& crs = controller_->document().crs();
+
+    // design.md 7 prints the reading a surveyor checks before they draw: the EPSG
+    // code, the realisation and the projection zone. An unresolved CRS says so in
+    // words rather than showing a bare id that looks resolved.
+    QString crsText;
+    if (crs.empty()) {
+        crsText = tr("tanımsız");
+    } else if (crs.resolved()) {
+        crsText = tr("EPSG:%1 · %2").arg(crs.epsg()).arg(QString::fromStdString(crs.id()));
+        if (!crs.epoch().empty())
+            crsText =
+                tr("EPSG:%1 · %2 / %3")
+                    .arg(crs.epsg())
+                    .arg(QString::fromStdString(crs.epoch()), QString::fromStdString(crs.id()));
+    } else {
+        crsText = tr("%1 · çözümlenmedi").arg(QString::fromStdString(crs.id()));
+    }
+    readout_->setCrs(crsText);
+
+    // Every chip re-reads its own setting, so the strip agrees with the store
+    // whoever wrote it — the F-keys, the command line, a script or the AI.
+    const core::Settings& store = controller_->bus().app_settings();
+    for (const QString& id :
+         {QStringLiteral("core.izgara.gorunur"), QStringLiteral("core.izgara.yakalama"),
+          QStringLiteral("core.yakalama.dik"), QStringLiteral("core.yakalama.polar"),
+          QStringLiteral("core.yakalama.acik"), QStringLiteral("core.arayuz.dinamik_girdi"),
+          QStringLiteral("core.harita.kalinlik")}) {
+        if (store.catalogue().find(id.toStdString()) == core::kNoSetting) continue;
+        statusStrip_->setToggle(id, store.get(id.toStdString()).as_bool());
+    }
+
+    const io::DatabaseService& db = controller_->database();
+    statusStrip_->setConnection(db.connected()
+                                    ? tr("PostGIS · %1").arg(QString::fromStdString(db.target()))
+                                : io::DatabaseService::available() ? tr("PostGIS · bağlı değil")
+                                                                   : tr("PostGIS · bu yapıda yok"),
+                                db.connected());
+    statusStrip_->setPerformance(canvas_->backendName());
+
+    // The PLOT scale, not a pixel size: how many ground millimetres one paper
+    // millimetre carries. That is the number printed in a pafta's title block and
+    // the number an engineer means by "ölçek".
+    const double ground_mm_per_paper_mm =
+        canvas_->view().mm_per_pixel() * canvas_->pixelsPerPaperMm();
+
+    readout_->setScale(ground_mm_per_paper_mm > 0.0
+                           ? tr("1 : %1").arg(groupedNumber(qRound(ground_mm_per_paper_mm)))
+                           : QStringLiteral("—"));
 }
 
 void MainWindow::showCommandReference()
@@ -1087,8 +1302,10 @@ QString MainWindow::externalFormatFilter(bool for_writing) const
 void MainWindow::refreshWindowTitle()
 {
     const QString file = controller_->currentFile();
-    setWindowTitle(file.isEmpty() ? tr("PiriCAD")
-                                  : tr("%1 — PiriCAD").arg(QFileInfo(file).fileName()));
+    const QString name = file.isEmpty() ? tr("adsız") : QFileInfo(file).fileName();
+    setWindowTitle(tr("%1 — PiriCAD").arg(name));
+    docTabs_->setDocuments({QFileInfo(name).completeBaseName()}, 0);
+    titleBar_->setDocumentName(tr("%1 — PiriCAD %2").arg(name, QStringLiteral(PIRICAD_VERSION)));
 }
 
 void MainWindow::openProject()

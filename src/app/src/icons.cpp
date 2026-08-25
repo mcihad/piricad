@@ -380,6 +380,397 @@ void draw(QPainter& p, Glyph g, const QColor& c)
         p.drawPath(spark(18.0, 17.6, 4.0, 1.0));
         break;
     }
+
+        // ---- shell chrome, design.md 7 ----
+        //
+        // Authored on the same 24x24 grid as everything above so the title bar, the
+        // dock headers and the tool bar read as one set. The mockup names each of
+        // these by its Material Symbols name; the shape is redrawn, not traced, so
+        // the application carries no icon font and every glyph re-tints with the
+        // theme (design.md 5).
+
+    case Glyph::Search:
+        p.setPen(stroke(c, 1.8));
+        p.drawEllipse(QPointF(10.4, 10.4), 5.8, 5.8);
+        p.drawLine(QPointF(14.6, 14.6), QPointF(19.4, 19.4));
+        break;
+
+    case Glyph::Cut:
+        // Scissors: two blades crossing over two finger rings.
+        p.setPen(stroke(c, 1.7));
+        p.drawLine(QPointF(6.6, 3.6), QPointF(16.4, 15.2));
+        p.drawLine(QPointF(17.4, 3.6), QPointF(7.6, 15.2));
+        p.drawEllipse(QPointF(6.2, 18.2), 2.6, 2.6);
+        p.drawEllipse(QPointF(17.8, 18.2), 2.6, 2.6);
+        break;
+
+    case Glyph::Paste:
+        // A clipboard with its clip.
+        p.setPen(stroke(c, 1.7));
+        p.drawRoundedRect(QRectF(5.0, 5.0, 14.0, 15.6), 2.0, 2.0);
+        p.drawRoundedRect(QRectF(9.0, 3.0, 6.0, 4.2), 1.2, 1.2);
+        break;
+
+    case Glyph::Duplicate:
+        // Two offset sheets: the copy mark.
+        p.setPen(stroke(c, 1.7));
+        p.drawRoundedRect(QRectF(8.4, 8.4, 11.6, 11.6), 2.0, 2.0);
+        p.drawPolyline(QPolygonF({QPointF(15.6, 5.2), QPointF(15.6, 4.0), QPointF(4.0, 4.0),
+                                  QPointF(4.0, 15.6), QPointF(5.2, 15.6)}));
+        break;
+
+    case Glyph::Close:
+        p.setPen(stroke(c, 1.8));
+        p.drawLine(QPointF(6.2, 6.2), QPointF(17.8, 17.8));
+        p.drawLine(QPointF(17.8, 6.2), QPointF(6.2, 17.8));
+        break;
+
+    case Glyph::SplitView:
+        p.setPen(stroke(c, 1.7));
+        p.drawRect(QRectF(3.6, 5.2, 16.8, 13.6));
+        p.drawLine(QPointF(12.0, 5.2), QPointF(12.0, 18.8));
+        break;
+
+    case Glyph::Fullscreen:
+        // Four corner brackets opening outward.
+        p.setPen(stroke(c, 1.8));
+        for (int q = 0; q < 4; ++q) {
+            const qreal sx = (q & 1) ? -1.0 : 1.0;
+            const qreal sy = (q & 2) ? -1.0 : 1.0;
+            const QPointF o(12.0 + sx * 8.4, 12.0 + sy * 8.4);
+            p.drawLine(o, QPointF(o.x() - sx * 4.2, o.y()));
+            p.drawLine(o, QPointF(o.x(), o.y() - sy * 4.2));
+        }
+        break;
+
+    case Glyph::Grip:
+        // Two columns of three dots: the drag handle.
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        for (int row = 0; row < 3; ++row)
+            for (int col = 0; col < 2; ++col)
+                p.drawEllipse(QPointF(9.4 + col * 5.2, 6.4 + row * 5.6), 1.35, 1.35);
+        break;
+
+    case Glyph::Collapse:
+        p.setPen(stroke(c, 1.9));
+        p.drawLine(QPointF(5.4, 12.0), QPointF(18.6, 12.0));
+        break;
+
+    case Glyph::Float:
+        // A pane lifting off the one behind it.
+        p.setPen(stroke(c, 1.6));
+        p.drawRect(QRectF(4.0, 7.6, 12.4, 12.4));
+        p.drawPolyline(QPolygonF({QPointF(8.4, 7.6), QPointF(8.4, 4.0), QPointF(20.0, 4.0),
+                                  QPointF(20.0, 15.6), QPointF(16.4, 15.6)}));
+        break;
+
+    case Glyph::Eye:
+        p.setPen(stroke(c, 1.7));
+        {
+            QPainterPath lid;
+            lid.moveTo(2.8, 12.0);
+            lid.quadTo(12.0, 4.2, 21.2, 12.0);
+            lid.quadTo(12.0, 19.8, 2.8, 12.0);
+            p.drawPath(lid);
+        }
+        p.drawEllipse(QPointF(12.0, 12.0), 2.9, 2.9);
+        break;
+
+    case Glyph::EyeOff:
+        p.setPen(stroke(c, 1.7));
+        {
+            QPainterPath lid;
+            lid.moveTo(2.8, 12.0);
+            lid.quadTo(12.0, 4.2, 21.2, 12.0);
+            lid.quadTo(12.0, 19.8, 2.8, 12.0);
+            p.drawPath(lid);
+        }
+        p.drawEllipse(QPointF(12.0, 12.0), 2.9, 2.9);
+        p.drawLine(QPointF(4.4, 19.6), QPointF(19.6, 4.4));
+        break;
+
+    case Glyph::Lock:
+    case Glyph::Unlock:
+        p.setPen(stroke(c, 1.7));
+        p.drawRoundedRect(QRectF(5.6, 10.6, 12.8, 9.4), 1.8, 1.8);
+        // The shackle stands upright when locked and tips open when it is not.
+        {
+            QPainterPath bow;
+            if (g == Glyph::Lock) {
+                bow.moveTo(8.4, 10.6);
+                bow.lineTo(8.4, 7.6);
+                bow.quadTo(8.4, 4.0, 12.0, 4.0);
+                bow.quadTo(15.6, 4.0, 15.6, 7.6);
+                bow.lineTo(15.6, 10.6);
+            } else {
+                bow.moveTo(8.4, 10.6);
+                bow.lineTo(8.4, 7.6);
+                bow.quadTo(8.4, 4.0, 11.6, 4.0);
+                bow.quadTo(15.0, 4.0, 15.0, 7.4);
+            }
+            p.drawPath(bow);
+        }
+        break;
+
+    case Glyph::Filter:
+        p.setPen(stroke(c, 1.8));
+        p.drawPolyline(QPolygonF({QPointF(3.6, 5.0), QPointF(20.4, 5.0), QPointF(13.8, 12.6),
+                                  QPointF(13.8, 19.6), QPointF(10.2, 17.2), QPointF(10.2, 12.6),
+                                  QPointF(3.6, 5.0)}));
+        break;
+
+    case Glyph::Plus:
+        p.setPen(stroke(c, 1.9));
+        p.drawLine(QPointF(12.0, 5.4), QPointF(12.0, 18.6));
+        p.drawLine(QPointF(5.4, 12.0), QPointF(18.6, 12.0));
+        break;
+
+    case Glyph::Minus:
+        p.setPen(stroke(c, 1.9));
+        p.drawLine(QPointF(5.4, 12.0), QPointF(18.6, 12.0));
+        break;
+
+    case Glyph::Fit:
+        // Corner brackets turned inward around a frame: fit to screen.
+        p.setPen(stroke(c, 1.7));
+        p.drawRect(QRectF(4.2, 6.4, 15.6, 11.2));
+        p.setPen(stroke(c, 1.5));
+        p.drawLine(QPointF(8.2, 9.4), QPointF(15.8, 9.4));
+        p.drawLine(QPointF(8.2, 14.6), QPointF(15.8, 14.6));
+        break;
+
+    case Glyph::ChevronDown:
+        p.setPen(stroke(c, 1.9));
+        p.drawPolyline(QPolygonF({QPointF(6.6, 9.6), QPointF(12.0, 15.0), QPointF(17.4, 9.6)}));
+        break;
+
+    case Glyph::ChevronRight:
+        p.setPen(stroke(c, 1.9));
+        p.drawPolyline(QPolygonF({QPointF(9.6, 6.6), QPointF(15.0, 12.0), QPointF(9.6, 17.4)}));
+        break;
+
+    case Glyph::Cloud:
+        p.setPen(stroke(c, 1.7));
+        {
+            QPainterPath cloud;
+            cloud.moveTo(6.6, 18.0);
+            cloud.quadTo(2.6, 18.0, 2.6, 14.2);
+            cloud.quadTo(2.6, 10.8, 6.2, 10.4);
+            cloud.quadTo(7.0, 5.6, 11.8, 5.6);
+            cloud.quadTo(16.0, 5.6, 17.0, 9.6);
+            cloud.quadTo(21.4, 10.0, 21.4, 14.0);
+            cloud.quadTo(21.4, 18.0, 17.4, 18.0);
+            cloud.closeSubpath();
+            p.drawPath(cloud);
+        }
+        break;
+
+    case Glyph::Locate:
+        // The crosshair reticle the status bar uses for the cursor readout.
+        p.setPen(stroke(c, 1.7));
+        p.drawEllipse(QPointF(12.0, 12.0), 5.4, 5.4);
+        p.drawLine(QPointF(12.0, 2.6), QPointF(12.0, 6.0));
+        p.drawLine(QPointF(12.0, 18.0), QPointF(12.0, 21.4));
+        p.drawLine(QPointF(2.6, 12.0), QPointF(6.0, 12.0));
+        p.drawLine(QPointF(18.0, 12.0), QPointF(21.4, 12.0));
+        break;
+
+    case Glyph::Function:
+        // The italic f of an expression field.
+        p.setPen(stroke(c, 1.8));
+        {
+            QPainterPath f;
+            f.moveTo(8.0, 20.0);
+            f.lineTo(11.2, 7.4);
+            f.quadTo(12.0, 4.2, 15.4, 4.2);
+            p.drawPath(f);
+        }
+        p.drawLine(QPointF(7.2, 10.6), QPointF(14.6, 10.6));
+        break;
+
+    case Glyph::Polygon:
+        p.setPen(stroke(c, 1.7));
+        p.drawPolygon(QPolygonF({QPointF(12.0, 3.4), QPointF(20.6, 9.6), QPointF(17.3, 19.8),
+                                 QPointF(6.7, 19.8), QPointF(3.4, 9.6)}));
+        break;
+
+    case Glyph::History:
+        p.setPen(stroke(c, 1.7));
+        {
+            // An open dial with the hands set, and an arrow closing it anti-clockwise.
+            QPainterPath dial;
+            dial.arcMoveTo(QRectF(3.6, 3.6, 16.8, 16.8), 150.0);
+            dial.arcTo(QRectF(3.6, 3.6, 16.8, 16.8), 150.0, -300.0);
+            p.drawPath(dial);
+        }
+        p.drawPolyline(QPolygonF({QPointF(2.6, 4.6), QPointF(3.2, 8.6), QPointF(7.2, 7.4)}));
+        p.drawPolyline(QPolygonF({QPointF(12.0, 7.6), QPointF(12.0, 12.4), QPointF(15.8, 14.4)}));
+        break;
+
+    case Glyph::Palette:
+        p.setPen(stroke(c, 1.6));
+        {
+            QPainterPath pal;
+            pal.moveTo(12.0, 3.4);
+            pal.quadTo(20.6, 3.4, 20.6, 11.2);
+            pal.quadTo(20.6, 15.0, 16.4, 15.0);
+            pal.quadTo(13.6, 15.0, 13.6, 17.2);
+            pal.quadTo(13.6, 20.6, 11.0, 20.6);
+            pal.quadTo(3.4, 20.6, 3.4, 12.0);
+            pal.quadTo(3.4, 3.4, 12.0, 3.4);
+            p.drawPath(pal);
+        }
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        p.drawEllipse(QPointF(8.0, 8.4), 1.5, 1.5);
+        p.drawEllipse(QPointF(13.6, 7.0), 1.5, 1.5);
+        p.drawEllipse(QPointF(7.0, 14.2), 1.5, 1.5);
+        break;
+
+    case Glyph::Help:
+        p.setPen(stroke(c, 1.7));
+        p.drawEllipse(QPointF(12.0, 12.0), 8.6, 8.6);
+        {
+            QPainterPath q;
+            q.moveTo(9.2, 9.6);
+            q.quadTo(9.2, 6.8, 12.0, 6.8);
+            q.quadTo(14.8, 6.8, 14.8, 9.4);
+            q.quadTo(14.8, 11.6, 12.0, 12.6);
+            q.lineTo(12.0, 14.4);
+            p.drawPath(q);
+        }
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        p.drawEllipse(QPointF(12.0, 17.4), 1.25, 1.25);
+        break;
+
+    case Glyph::Document:
+        p.setPen(stroke(c, 1.7));
+        p.drawPolyline(QPolygonF({QPointF(14.2, 3.4), QPointF(5.6, 3.4), QPointF(5.6, 20.6),
+                                  QPointF(18.4, 20.6), QPointF(18.4, 7.6), QPointF(14.2, 3.4),
+                                  QPointF(14.2, 7.6), QPointF(18.4, 7.6)}));
+        p.setPen(stroke(c, 1.4));
+        p.drawLine(QPointF(8.6, 12.4), QPointF(15.4, 12.4));
+        p.drawLine(QPointF(8.6, 16.0), QPointF(15.4, 16.0));
+        break;
+
+    case Glyph::Globe:
+        p.setPen(stroke(c, 1.6));
+        p.drawEllipse(QPointF(12.0, 12.0), 8.6, 8.6);
+        p.drawLine(QPointF(3.4, 12.0), QPointF(20.6, 12.0));
+        p.drawEllipse(QPointF(12.0, 12.0), 4.0, 8.6);
+        break;
+
+    case Glyph::Terrain:
+        p.setPen(stroke(c, 1.7));
+        p.drawPolyline(QPolygonF({QPointF(2.8, 19.2), QPointF(9.0, 8.4), QPointF(13.0, 14.6),
+                                  QPointF(15.6, 10.6), QPointF(21.2, 19.2)}));
+        p.drawLine(QPointF(2.8, 19.2), QPointF(21.2, 19.2));
+        break;
+
+    case Glyph::SelectArea:
+        // A dashed marquee with a pointer inside it.
+        p.setPen(QPen(c, 1.5, Qt::DashLine, Qt::FlatCap));
+        p.drawRect(QRectF(3.4, 3.4, 17.2, 17.2));
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        p.drawPolygon(QPolygonF({QPointF(9.0, 7.6), QPointF(17.4, 13.4), QPointF(13.4, 14.2),
+                                 QPointF(15.4, 18.6), QPointF(13.0, 19.6), QPointF(11.0, 15.2),
+                                 QPointF(8.2, 17.6)}));
+        break;
+
+    case Glyph::Trim:
+        // Scissors over the line they cut.
+        p.setPen(QPen(c, 1.4, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(QPointF(2.8, 12.0), QPointF(21.2, 12.0));
+        p.setPen(stroke(c, 1.6));
+        p.drawLine(QPointF(8.0, 4.2), QPointF(17.0, 13.4));
+        p.drawLine(QPointF(17.0, 4.2), QPointF(8.0, 13.4));
+        p.drawEllipse(QPointF(7.4, 16.4), 2.4, 2.4);
+        p.drawEllipse(QPointF(17.6, 16.4), 2.4, 2.4);
+        break;
+
+    case Glyph::Union:
+        // Two overlapping rings: tevhit.
+        p.setPen(stroke(c, 1.7));
+        p.drawEllipse(QPointF(9.0, 12.0), 6.0, 6.0);
+        p.drawEllipse(QPointF(15.0, 12.0), 6.0, 6.0);
+        break;
+
+    case Glyph::ParcelSplit:
+        // One boundary branching into two: ifraz.
+        p.setPen(stroke(c, 1.7));
+        p.drawPolyline(QPolygonF({QPointF(5.0, 19.4), QPointF(5.0, 12.4), QPointF(12.0, 12.4)}));
+        p.drawLine(QPointF(12.0, 12.4), QPointF(18.6, 5.8));
+        arrowHead(p, QPointF(19.4, 5.0), QPointF(15.0, 9.4), c);
+        arrowHead(p, QPointF(5.0, 20.4), QPointF(5.0, 16.0), c);
+        break;
+
+    case Glyph::MeasureArea:
+        // A set square over a filled corner: the area measure.
+        p.setPen(stroke(c, 1.7));
+        p.drawPolygon(QPolygonF({QPointF(4.0, 20.0), QPointF(20.0, 20.0), QPointF(4.0, 4.0)}));
+        p.setPen(stroke(c, 1.3));
+        p.drawLine(QPointF(4.0, 14.0), QPointF(10.0, 20.0));
+        p.drawLine(QPointF(4.0, 9.0), QPointF(15.0, 20.0));
+        break;
+
+    case Glyph::Coordinate:
+        // A reticle around a filled centre: pick a coordinate.
+        p.setPen(stroke(c, 1.6));
+        p.drawEllipse(QPointF(12.0, 12.0), 7.2, 7.2);
+        p.drawLine(QPointF(12.0, 2.6), QPointF(12.0, 5.6));
+        p.drawLine(QPointF(12.0, 18.4), QPointF(12.0, 21.4));
+        p.drawLine(QPointF(2.6, 12.0), QPointF(5.6, 12.0));
+        p.drawLine(QPointF(18.4, 12.0), QPointF(21.4, 12.0));
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        p.drawEllipse(QPointF(12.0, 12.0), 2.3, 2.3);
+        break;
+
+    case Glyph::StyleCopy:
+        // A pipette: lift a style off one object and put it on another.
+        p.setPen(stroke(c, 1.7));
+        p.drawLine(QPointF(4.2, 19.8), QPointF(13.0, 11.0));
+        p.drawPolyline(QPolygonF({QPointF(11.4, 9.4), QPointF(15.4, 5.4), QPointF(18.6, 8.6),
+                                  QPointF(14.6, 12.6), QPointF(11.4, 9.4)}));
+        p.setPen(stroke(c, 1.4));
+        p.drawLine(QPointF(4.2, 19.8), QPointF(6.4, 19.8));
+        break;
+
+    case Glyph::Topology:
+        // Three nodes wired into a closed loop: the topology check.
+        p.setPen(stroke(c, 1.5));
+        p.drawPolygon(QPolygonF({QPointF(12.0, 4.6), QPointF(19.4, 17.6), QPointF(4.6, 17.6)}));
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        for (QPointF at : {QPointF(12.0, 4.6), QPointF(19.4, 17.6), QPointF(4.6, 17.6)})
+            p.drawEllipse(at, 2.1, 2.1);
+        break;
+
+    case Glyph::Settings:
+        // Three sliders: the settings mark the reference uses, not a cog.
+        p.setPen(stroke(c, 1.7));
+        for (int k = 0; k < 3; ++k) {
+            const qreal y = 6.4 + k * 5.6;
+            p.drawLine(QPointF(3.6, y), QPointF(20.4, y));
+        }
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        p.drawEllipse(QPointF(8.2, 6.4), 2.2, 2.2);
+        p.drawEllipse(QPointF(15.4, 12.0), 2.2, 2.2);
+        p.drawEllipse(QPointF(10.6, 17.6), 2.2, 2.2);
+        break;
+
+    case Glyph::Grid:
+        p.setPen(stroke(c, 1.5));
+        for (int k = 0; k < 4; ++k) {
+            const qreal v = 3.6 + k * 5.6;
+            p.drawLine(QPointF(v, 3.6), QPointF(v, 20.4));
+            p.drawLine(QPointF(3.6, v), QPointF(20.4, v));
+        }
+        break;
     }
 }
 
@@ -397,6 +788,11 @@ QPixmap render(Glyph g, const QColor& colour, int size, qreal dpr)
 }
 
 } // namespace
+
+QPixmap glyph_pixmap(Glyph glyph, const QColor& colour, int size, qreal dpr)
+{
+    return render(glyph, colour, size, dpr);
+}
 
 QIcon icon(Glyph glyph, const QColor& colour, const QColor& accent, int size)
 {

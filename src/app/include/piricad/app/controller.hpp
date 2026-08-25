@@ -75,6 +75,12 @@ public:
 
     command::Registry& registry() noexcept { return registry_; }
 
+    /// What the status strip prints about the spatial database: the redacted
+    /// target when a connection is open, why not when it is not. Article 2.9
+    /// makes PostGIS a store rather than an export target, so whether the
+    /// connection is up belongs on screen next to the frame budget.
+    const io::DatabaseService& database() const noexcept { return database_; }
+
     command::Journal& journal() noexcept { return journal_; }
 
     command::UndoStack& undoStack() noexcept { return undo_; }

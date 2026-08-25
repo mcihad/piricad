@@ -1,0 +1,147 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "piricad/app/tokens.hpp"
+
+namespace piricad::app {
+namespace {
+
+/// `design.md` §2, transcribed. The comment beside each is the specification's
+/// own description of what the token is for, so a reader can check the table
+/// against the document without holding both open.
+const Tokens kDark{
+    /* bgApp         */ QColor(0x10, 0x12, 0x15),
+    /* bgWindow      */ QColor(0x1A, 0x1E, 0x22),
+    /* bgPanel       */ QColor(0x1C, 0x20, 0x24),
+    /* bgRaised      */ QColor(0x1E, 0x22, 0x26),
+    /* bgHeader      */ QColor(0x20, 0x25, 0x2A),
+    /* bgTitlebar    */ QColor(0x26, 0x2B, 0x30),
+    /* bgTitleBottom */ QColor(0x20, 0x25, 0x2A),
+    /* bgShellBar    */ QColor(0x23, 0x28, 0x2D),
+    /* bgShellBottom */ QColor(0x1E, 0x22, 0x26),
+    /* bgInput       */ QColor(0x17, 0x1B, 0x1E),
+    /* bgCanvas      */ QColor(0x23, 0x27, 0x2B),
+
+    /* gridMinor */ QColor(0x2A, 0x2F, 0x34),
+    /* gridMajor */ QColor(0x31, 0x37, 0x3D),
+    /* lineHard  */ QColor(0x14, 0x17, 0x1A),
+    /* lineSoft  */ QColor(0x22, 0x27, 0x2B),
+    /* border    */ QColor(0x36, 0x3D, 0x43),
+
+    /* text      */ QColor(0xDF, 0xE5, 0xEA),
+    /* textDim   */ QColor(0x8B, 0x94, 0x9E),
+    /* textFaint */ QColor(0x6B, 0x74, 0x7C),
+
+    /* accent     */ QColor(0x2F, 0x9B, 0xD8),
+    /* accentHi   */ QColor(0x6C, 0xC0, 0xEE),
+    /* accentWash */ QColor(0x2F, 0x9B, 0xD8, 31), // rgba(47,155,216,.12)
+    /* warn       */ QColor(0xD9, 0x8A, 0x2F),
+    /* ok         */ QColor(0x4C, 0xAF, 0x7D),
+
+    /* onAccent  */ QColor(0xFF, 0xFF, 0xFF),
+    /* onHover   */ QColor(0xFF, 0xFF, 0xFF),
+    /* hoverIcon */ QColor(0x2B, 0x31, 0x37),
+    /* hoverRow  */ QColor(0x23, 0x28, 0x2C),
+    /* rowOdd    */ QColor(0x1D, 0x21, 0x25),
+    /* rowEven   */ QColor(0x1A, 0x1E, 0x22),
+
+    /* bgStrip      */ QColor(0x19, 0x1D, 0x21),
+    /* windowEdge   */ QColor(0x2C, 0x32, 0x37),
+    /* bgTabActive  */ QColor(0x22, 0x26, 0x2A),
+    /* hoverChip    */ QColor(0x2F, 0x35, 0x3B),
+    /* menuText     */ QColor(0xAE, 0xB6, 0xBD),
+    /* dot          */ QColor(0x3B, 0x42, 0x48),
+    /* titleText    */ QColor(0x76, 0x7F, 0x87),
+    /* hint         */ QColor(0x5F, 0x68, 0x6F),
+    /* hintFaint    */ QColor(0x4C, 0x54, 0x5B),
+    /* onAccentDark */ QColor(0x0B, 0x11, 0x16),
+    /* separator    */ QColor(0x2E, 0x34, 0x3A),
+    /* readout      */ QColor(0xD8, 0xDE, 0xE4),
+    /* readoutDim   */ QColor(0xC4, 0xCC, 0xD3),
+    /* bgSunken     */ QColor(0x1B, 0x1F, 0x23),
+
+    /* crosshair    */ QColor(0xE8, 0xEE, 0xF3),
+    /* rubberBand   */ QColor(0x2F, 0x9B, 0xD8),
+    /* hud          */ QColor(0x8B, 0x94, 0x9E),
+    /* selectWindow */ QColor(0x4C, 0xAF, 0x7D),
+    /* selectCross  */ QColor(0x4C, 0xAF, 0x7D),
+};
+
+/// The light theme, produced from the same structure by a second mapping
+/// (`design.md` §12).
+///
+/// NOT the dark values inverted. An inverted dark theme has grey text on white,
+/// which fails the 7:1 body contrast §13 asks for, and an accent that was tuned
+/// against #101215 is too pale against #FFFFFF. The surfaces are re-derived and
+/// the accent is darkened until it carries the same weight on a light ground; the
+/// STRUCTURE — which token means what, and how many steps apart the surfaces are
+/// — is identical, which is what keeps one stylesheet serving both.
+const Tokens kLight{
+    /* bgApp         */ QColor(0xE4, 0xE7, 0xEA),
+    /* bgWindow      */ QColor(0xF4, 0xF6, 0xF8),
+    /* bgPanel       */ QColor(0xEF, 0xF2, 0xF5),
+    /* bgRaised      */ QColor(0xF7, 0xF9, 0xFB),
+    /* bgHeader      */ QColor(0xE8, 0xEC, 0xF0),
+    /* bgTitlebar    */ QColor(0xEE, 0xF1, 0xF4),
+    /* bgTitleBottom */ QColor(0xE6, 0xEA, 0xEE),
+    /* bgShellBar    */ QColor(0xF0, 0xF3, 0xF6),
+    /* bgShellBottom */ QColor(0xE9, 0xED, 0xF1),
+    /* bgInput       */ QColor(0xFF, 0xFF, 0xFF),
+    /* bgCanvas      */ QColor(0xFC, 0xFC, 0xFB),
+
+    /* gridMinor */ QColor(0xDD, 0xE2, 0xE7),
+    /* gridMajor */ QColor(0xC6, 0xCD, 0xD4),
+    /* lineHard  */ QColor(0xC2, 0xC8, 0xCE),
+    /* lineSoft  */ QColor(0xE1, 0xE5, 0xEA),
+    /* border    */ QColor(0xC4, 0xCB, 0xD2),
+
+    /* text      */ QColor(0x15, 0x1A, 0x1F),
+    /* textDim   */ QColor(0x5A, 0x64, 0x6E),
+    /* textFaint */ QColor(0x7C, 0x86, 0x90),
+
+    /* accent     */ QColor(0x1B, 0x74, 0xA8),
+    /* accentHi   */ QColor(0x10, 0x54, 0x7C),
+    /* accentWash */ QColor(0x1B, 0x74, 0xA8, 33),
+    /* warn       */ QColor(0xB0, 0x6A, 0x14),
+    /* ok         */ QColor(0x2E, 0x7D, 0x54),
+
+    /* onAccent  */ QColor(0xFF, 0xFF, 0xFF),
+    /* onHover   */ QColor(0x0D, 0x12, 0x17), // dark ink on a light hover
+    /* hoverIcon */ QColor(0xDF, 0xE4, 0xEA),
+    /* hoverRow  */ QColor(0xE9, 0xEE, 0xF3),
+    /* rowOdd    */ QColor(0xFA, 0xFB, 0xFC),
+    /* rowEven   */ QColor(0xF4, 0xF6, 0xF8),
+
+    /* bgStrip      */ QColor(0xEA, 0xEE, 0xF2),
+    /* windowEdge   */ QColor(0xC9, 0xD0, 0xD6),
+    /* bgTabActive  */ QColor(0xF6, 0xF8, 0xFA),
+    /* hoverChip    */ QColor(0xDD, 0xE3, 0xE9),
+    /* menuText     */ QColor(0x3A, 0x44, 0x4E),
+    /* dot          */ QColor(0xC1, 0xC8, 0xCF),
+    /* titleText    */ QColor(0x6A, 0x73, 0x7B),
+    /* hint         */ QColor(0x8A, 0x93, 0x9B),
+    /* hintFaint    */ QColor(0xA2, 0xAA, 0xB1),
+    /* onAccentDark */ QColor(0xFF, 0xFF, 0xFF),
+    /* separator    */ QColor(0xD7, 0xDC, 0xE1),
+    /* readout      */ QColor(0x26, 0x30, 0x3A),
+    /* readoutDim   */ QColor(0x3B, 0x45, 0x4F),
+    /* bgSunken     */ QColor(0xEC, 0xF0, 0xF4),
+
+    /* crosshair    */ QColor(0x1A, 0x20, 0x26),
+    /* rubberBand   */ QColor(0x1B, 0x74, 0xA8),
+    /* hud          */ QColor(0x5A, 0x64, 0x6E),
+    /* selectWindow */ QColor(0x2E, 0x7D, 0x54),
+    /* selectCross  */ QColor(0x2E, 0x7D, 0x54),
+};
+
+} // namespace
+
+const Tokens& darkTokens()
+{
+    return kDark;
+}
+
+const Tokens& lightTokens()
+{
+    return kLight;
+}
+
+} // namespace piricad::app

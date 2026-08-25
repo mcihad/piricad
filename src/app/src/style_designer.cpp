@@ -394,54 +394,12 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     // from a canvas people keep dark all day, and a sheet of hard-coded #f0f0f0
     // in the middle of it is the thing that makes an application feel bolted
     // together.
-    setStyleSheet(QStringLiteral(R"(
-        QTabBar::tab {
-            padding: 7px 20px 8px 20px;
-            margin-right: 3px;
-            border: 1px solid palette(mid);
-            border-bottom: none;
-            border-top-left-radius: 6px;
-            border-top-right-radius: 6px;
-            background: palette(window);
-            color: palette(text);
-        }
-        QTabBar::tab:!selected  { margin-top: 4px; background: palette(alternate-base); }
-        QTabBar::tab:hover:!selected { background: palette(midlight); }
-        QTabBar::tab:selected   { margin-bottom: -1px; padding-bottom: 9px;
-                                  background: palette(base); font-weight: 600; }
-        QTabBar::tab:focus      { border-color: palette(highlight); }
-
-        QFrame#stylePreview {
-            border: 1px solid palette(mid);
-            border-radius: 6px;
-            border-top-left-radius: 0px;
-            background: palette(base);
-        }
-        QLabel#stylePreviewImage {
-            background: palette(window);
-            border: 1px solid palette(midlight);
-            border-radius: 4px;
-        }
-        QLabel#sectionTitle { font-weight: 600; }
-        QLabel#quiet        { color: palette(dark); }
-
-        QGroupBox {
-            border: 1px solid palette(mid);
-            border-radius: 6px;
-            margin-top: 9px;
-            padding: 10px 10px 9px 10px;
-            font-weight: 600;
-        }
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            subcontrol-position: top left;
-            left: 10px;
-            padding: 0 5px;
-        }
-
-        QListWidget::item { padding: 4px; border-radius: 4px; }
-        QPushButton#primary { font-weight: 600; }
-    )"));
+    // NO STYLESHEET HERE. This dialog used to carry its own, with its own greys
+    // and its own radii, and that is exactly why it matched neither the shell nor
+    // the other dialog. There is one sheet for the application (`theme.cpp`), it
+    // is built from `tokens.hpp`, and a widget that needs a role asks for it by
+    // object name — `sectionTitle`, `quiet`, `mono` — rather than restating the
+    // colour. `ci-gate-theme.sh` keeps this true.
 
     refreshGalleryTree();
     refreshGalleryItems();

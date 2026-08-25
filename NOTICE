@@ -176,8 +176,24 @@ recorded as SHAs (CLAUDE.md 5.12).
 Bundled in-tree
 ---------------
 
-  (none yet — Shewchuk predicates.c will be vendored here; public domain,
-   single file, and §9.2 marks it as required rather than optional.)
+  IBM Plex Sans          SIL OFL 1.1          data/fonts/
+  IBM Plex Mono          SIL OFL 1.1          data/fonts/
+      Five faces: Sans Regular/Medium/SemiBold, Mono Regular/Medium. Reserved
+      font name "Plex"; the full licence travels with them in
+      data/fonts/LICENCE.txt and the files are shipped unmodified.
+
+      NOT a build dependency and not linked — they are loaded at run time with
+      QFontDatabase::addApplicationFont. They are bundled because design.md §3
+      names these two families for the entire interface and §12 requires the
+      same rendering on every platform: a font the application merely HOPES the
+      system has is a different interface on the machine that lacks it.
+
+      OFL-1.1 permits bundling with software under any licence, including
+      GPLv3, provided the font itself stays under OFL and keeps its reserved
+      name. Both hold: the files are unmodified and the licence ships with them.
+
+  (Shewchuk predicates.c will also be vendored here; public domain, single
+   file, and §9.2 marks it as required rather than optional.)
 
 Deliberately hand-written
 -------------------------

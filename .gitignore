@@ -57,3 +57,14 @@ Thumbs.db
 # Python bytecode from the /scripts extractors and gates.
 __pycache__/
 *.pyc
+
+# Desktop and tooling droppings
+.directory
+__pycache__/
+*.pyc
+
+# The design reference lives in /data/design, which is a directory Article 3.1
+# names. `Screenshots/` is not — it is the drop folder the reference arrived in,
+# and it stays local. `scripts/ci-gate-design.sh` fails if the two copies drift,
+# so an edit made in either place is caught rather than silently lost.
+/Screenshots/

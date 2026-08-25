@@ -198,24 +198,12 @@ SettingsDialog::SettingsDialog(Controller& controller, QWidget* parent)
     root->addWidget(search_);
     root->addWidget(tabs_, 1);
     root->addWidget(buttons);
-
-    setStyleSheet(QStringLiteral(R"(
-        QLabel#quiet    { color: palette(dark); }
-        QLabel#stateTag { color: palette(dark); }
-        QGroupBox {
-            border: 1px solid palette(mid);
-            border-radius: 6px;
-            margin-top: 9px;
-            padding: 10px 10px 9px 10px;
-            font-weight: 600;
-        }
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            subcontrol-position: top left;
-            left: 10px;
-            padding: 0 5px;
-        }
-    )"));
+    // NO STYLESHEET HERE. This dialog used to carry its own, with its own greys
+    // and its own radii, and that is exactly why it matched neither the shell nor
+    // the other dialog. There is one sheet for the application (`theme.cpp`), it
+    // is built from `tokens.hpp`, and a widget that needs a role asks for it by
+    // object name — `sectionTitle`, `quiet`, `mono` — rather than restating the
+    // colour. `ci-gate-theme.sh` keeps this true.
 
     // A setting written from the command line while this window is open has to
     // show through: the store is the truth and this window is one of its readers.
