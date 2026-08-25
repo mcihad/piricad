@@ -462,3 +462,129 @@ Qt panel başlığının yüksekliğini widget'tan değil kuraldan hesaplar.
   alan sırası `tokens.hpp` ile aynı mı (`Tokens` konumsal ilklendirilir).
 - `scripts/ci-gate-theme.sh` — Fusion zorunlu, tek stil sayfası, `tokens.cpp`
   dışında renk sabiti yok.
+
+---
+
+## 15. Girdi bileşenleri — tasarım standardı
+
+Kaynak: `bileşen_standardı.png`. Bu bölüm **bütün formlar için bağlayıcıdır**;
+yeni bir pencere buradaki türlerin dışına çıkmaz.
+
+**Üç yükseklik:** 24 px (segment, çip), 30 px (girdi, buton), 36 px (büyük).
+**Yarıçap:** 4 px. **Kenar:** 1 px `--border`.
+
+### 15.1 Butonlar — hiyerarşi
+
+> **Bir ekranda yalnızca tek birincil buton bulunur.** İki birincil taşıyan bir
+> ekran, kullanıcıya hangisine basacağı hakkında hiçbir şey söylememiştir.
+
+| Tür | Görünüm | Ne zaman |
+|---|---|---|
+| **Birincil** | `--accent` dolgu, 1 px `--accent-lift` kenar, `--on-accent` yazı | Diyalogu kapatan tek onay eylemi |
+| **İkincil** | Saydam, 1 px `--border`, `--text-dim` yazı | Yıkıcı olmayan ikinci eylem; iptal, uygula |
+| **Hayalet** | Kenarsız, zeminsiz, `--text-dim` | Düşük öncelik; araç çubuğu ve satır içi eylemler |
+| **Yıkıcı** | 1 px `--danger-edge` kenar, `--danger` yazı, çöp ikonu | Geri alınamayan eylem. **Her zaman onay ister** |
+| **Kip anahtarı** | Basılıyken `--accent-wash` zemin + `--accent-edge` kenar | Açık/kapalı durum taşır |
+| **İkon** | 32 × 32, glif 16 px, yalnızca ipucu | Etiketi olmayan eylem |
+
+Her tür için **devre dışı** hâli vardır: yazı `--text-faint`, kenar `--line-soft`,
+zemin yok. Birincilin devre dışısı `--accent-wash` zemin taşır — dolu kalır ama
+söner, çünkü yeri korunmalıdır.
+
+### 15.2 Metin ve sayı girdileri — yedi durum
+
+30 px, 4 px yarıçap, 1 px kenar. Her durum **farklı** bir şey söyler:
+
+| Durum | Kenar | Zemin | Yazı | Anlamı |
+|---|---|---|---|---|
+| Varsayılan | `--border` | `--bg-input` | `--text` | Değer neyse o |
+| **Odaklı** | `--accent` + 2 px halka | `--bg-input` | `--text` | İmleç burada |
+| **Değiştirilmiş** | `--warn` | `--warn-wash` | `--warn` | Düzenlendi, kaydedilmedi |
+| **Hatalı** | `--danger-edge` | `--danger-wash` | `--danger` | Değer kabul edilemez |
+| Salt okunur | yok | saydam | `--text-dim` | Okunur, yazılamaz |
+| Devre dışı | yok | saydam | `--text-faint` | Erişilebilir değil |
+| **Türetilmiş** | `--accent-edge` | `--bg-input` | `--accent-hi` | Hesaplanır; düzenlemek anlamsız |
+
+**`Değiştirilmiş` ile `hatalı` asla aynı renkte olmaz.** Warn "bunu sen
+değiştirdin" der, danger "bu yanlış" der. Tek renkle yapılan bir pencere,
+kullanıcıya kendi düzenlemesini geçersiz diye göstermiş olur.
+
+Girdinin **solunda** bir ikon (birim tipi, `fx`, kilit), **sağında** birim eki
+(`m`, `m²`, `kat`, `piksel`) durabilir; ikisi de `--text-faint`. Etiketin sağına
+küçük bir rozet konur: `HESAP`, `ZORUNLU`, `SALT OKUNUR`, `KAYDEDİLMEDİ`.
+
+Hatalı bir alanın **altında** tek satır neden yazar; alan adıyla aynı hizada,
+`--danger`.
+
+### 15.3 Seçim bileşenleri
+
+| Bileşen | Ölçü | Durumlar |
+|---|---|---|
+| **Onay kutusu** | 14 × 14, yarıçap 3 | işaretli (tik), belirsiz (tire), boş, devre dışı |
+| **Radyo** | 14 px daire | seçili (4 px `--accent` halka), boş, devre dışı |
+| **Anahtar** | 38 × 20, yarıçap 10 | açık (`--accent`, topuz sağda), kapalı (topuz solda), devre dışı |
+| **Segment** | 24 px, bitişik hücreler | seçili hücre `--accent-wash` + `--accent-edge` |
+| **Kaydırıcı** | 4 px yol, 12 px topuz | dolu kısım `--accent` |
+| **Etiket çipi** | 22 px, yarıçap 11 | `--warn` konturlu; taşanlar `+N` çipinde toplanır |
+
+Hiçbiri durumunu **yalnız renkle** söylemez (§13): onay kutusunda tik ya da tire,
+radyoda nokta, anahtarda topuzun tarafı — her birinde bir **şekil** vardır.
+
+---
+
+## 16. Form yerleşimi — standart
+
+Kaynak: `form_örnek.png`, `form_örnek_2.png`. Bir kaydın tek sayfada düzenlendiği
+her pencere bu yerleşimi kullanır.
+
+### 16.1 Izgara
+
+**Dört sütun, her biri 312 px, aralarında 26 px oluk.** Bir alan bir sütun kaplar;
+uzun bir metin alanı iki sütuna yayılır (650 px). Girdi 30 px, satır adımı 63 px —
+yani etiket, 4 px boşluk, girdi, 29 px nefes.
+
+Alan etiketi girdinin **üstündedir**, solunda değil: dört sütunlu bir ızgarada sol
+etiket, kullanılabilir genişliğin yarısını yer.
+
+Zorunlu alan adının sonuna `*` konur. Etiketin sağ ucuna, satırın sağına dayalı,
+küçük bir rozet: `HESAP`, `SALT OKUNUR`.
+
+### 16.2 Bölümler
+
+Her grup bir **başlık** taşır (`--text-faint`, 10.5 px, büyük harf, izli) ve
+başlığın sağ ucunda o grubun **kaynağını** yazan tek satırlık soluk bir not:
+`TAKBİS'ten çekildi · 14.03.2019`, `Türetilmiş alanlar geometriden hesaplanır`,
+`1/1000 Uygulama İmar Planı · Rev. 2024/3`. Bu not bir süs değildir: bir alanın
+nereden geldiği, değerinin kendisi kadar bilgidir.
+
+### 16.3 Pencerenin parçaları
+
+| Yer | Ne |
+|---|---|
+| Başlık | Simge · ad · `fid` (mono, soluk) · değişiklik rozeti (`✎ 3 ALAN DEĞİŞTİ`) |
+| Araç satırı | Düzenle · kaydet · geri/yinele │ ekle · çoğalt · sil │ … Sağda: kayıt sayfalayıcı ve `Tablo \| Form` |
+| Sol kenar | **FORM BÖLÜMLERİ**, 35 px satır; sağ ucunda sayı ya da ⚠ rozeti. Altta **TAMAMLANMA %78** çubuğu ve `2 zorunlu alan eksik` |
+| Sekme satırı | Genel · Mülkiyet · İmar · Yapı(•) · Ekler |
+| Kayıt kartı | Tip ikonu · ad · tek satır tanım. Sağda üç okuma: ALAN · ÇEVRE · DURUM |
+| Alt tablo | Kendi başlığı, `+ Satır ekle`, satır başına silme işareti, **Toplam** satırı |
+| Uyarı şeridi | ⚠ · `Geçerlilik denetimi: 2 uyarı` · açıklama · `Ayrıntı` |
+| Altlık | `Son değişiklik: … · 3 dk önce` … `Değişiklikleri geri al` · `İptal` · **`Kaydet`** |
+| Sağ panel | **Denetim ve Değişiklikler**: bekleyen değişiklikler (eski → yeni), geçerlilik kuralları (✓ / ⓘ / ⚠), kayıt geçmişi |
+
+### 16.4 Bekleyen değişiklik nasıl gösterilir
+
+`tapu_alani` · ~~`3 482.64`~~ → `3 480.00`
+
+Eski değer **üstü çizili** ve soluk, yeni değer `--warn`. Kullanıcı neyi
+değiştirdiğini kaydetmeden önce görebilmelidir; "3 alan değişti" tek başına bir
+bilgi değildir.
+
+### 16.5 Geçerlilik kuralları üç ayrı şey söyler
+
+| İşaret | Renk | Anlamı |
+|---|---|---|
+| ✓ | `--ok` | Kural sağlanıyor |
+| ⓘ | `--danger` | Kural **ihlal edildi**; kayıt bu hâliyle geçersiz |
+| ⚠ | `--warn` | Şüpheli ama engelleyici değil |
+
+Üçü de metinle birlikte yazılır; işaret tek başına anlam taşımaz (§13).
