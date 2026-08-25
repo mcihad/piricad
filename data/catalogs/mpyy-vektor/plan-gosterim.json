@@ -51,6 +51,41 @@
    "sha256": "d6aef1d49145aebe94da2090a6a3ad87d699a66c88fcf1dbc3745f3bf38ad2f1",
    "bayt": 612,
    "tur": "svg"
+  },
+  {
+   "id": "gorsel-b2babbff67126212",
+   "dosya": "semboller/teknoloji-gelistirme-bolgesi-cark.svg",
+   "sha256": "b2babbff671262129da07dabc85481e6c5d1dc2e816f332249118ee8a13461d1",
+   "bayt": 1682,
+   "tur": "svg"
+  },
+  {
+   "id": "gorsel-5451cc9a24567802",
+   "dosya": "semboller/serbest-bolge-carklar.svg",
+   "sha256": "5451cc9a24567802c911fcaf227ba81f8ddf028c800873d70b2bab2c492ad663",
+   "bayt": 1626,
+   "tur": "svg"
+  },
+  {
+   "id": "gorsel-6757278c291af33d",
+   "dosya": "semboller/organize-sanayi-bolgesi-cark.svg",
+   "sha256": "6757278c291af33de38a0f716113b80f90ef2ea7159626cfef767b56d7427162",
+   "bayt": 1482,
+   "tur": "svg"
+  },
+  {
+   "id": "gorsel-70a16b2f59321517",
+   "dosya": "semboller/organize-sanayi-bolgesi-tarama.svg",
+   "sha256": "70a16b2f59321517b9266ef311b218de2f6aa52d25543caffa4122ef7706744b",
+   "bayt": 496,
+   "tur": "svg"
+  },
+  {
+   "id": "gorsel-41a244a10a29360f",
+   "dosya": "semboller/endustri-bolgesi-carklar.svg",
+   "sha256": "41a244a10a29360f9cbba840ac368c5e28ce305ddeab9d02149caf3892e1e29c",
+   "bayt": 1599,
+   "tur": "svg"
   }
  ],
  "stiller": [
@@ -424,6 +459,771 @@
       1.1,
       1.6
      ]
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-turizm-merkezi-kultur-ve-turizm-koruma-ve-gelisim-alt-bolgesi",
+   "ad": "TURİZM MERKEZİ, KÜLTÜR VE TURİZM KORUMA VE GELİŞİM ALT BÖLGESİ",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI",
+   "bolum": [
+    "SINIRLAR",
+    "ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI"
+   ],
+   "katmanlar": [
+    {
+     "tip": "cizgi",
+     "renk": "#FF1E6BC8",
+     "kalinlik": 250,
+     "desen": [
+      20.0,
+      41.6
+     ]
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 3900,
+     "aralik": 15400,
+     "faz": 8350,
+     "renk": "#FF1E6BC8",
+     "kalinlik": 250,
+     "dolgu_renk": "#00000000"
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 3900,
+     "aralik": 15400,
+     "faz": 12250,
+     "renk": "#FF1E6BC8",
+     "kalinlik": 250,
+     "dolgu_renk": "#00000000"
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "arti",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 3900,
+     "aralik": 15400,
+     "faz": 8350,
+     "renk": "#FF1E6BC8",
+     "kalinlik": 250,
+     "dolgu_renk": "#00000000"
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "arti",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 3900,
+     "aralik": 15400,
+     "faz": 12250,
+     "renk": "#FF1E6BC8",
+     "kalinlik": 250,
+     "dolgu_renk": "#00000000"
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-teknoloji-gelistirme-bolgesi",
+   "ad": "TEKNOLOJİ GELİŞTİRME BÖLGESİ",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI",
+   "bolum": [
+    "SINIRLAR",
+    "ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI"
+   ],
+   "katmanlar": [
+    {
+     "tip": "dolgu",
+     "dolgu_renk": "#FF6699CD"
+    },
+    {
+     "tip": "cizgi",
+     "renk": "#FF000000",
+     "kalinlik": 250,
+     "desen": [
+      37.2,
+      122.8
+     ]
+    },
+    {
+     "tip": "gorsel-cizgi",
+     "gorsel": "gorsel-b2babbff67126212",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 6600,
+     "aralik": 40000,
+     "renk": "#FF000000"
+    },
+    {
+     "tip": "nokta-desen-dolgu",
+     "sekil": "daire",
+     "birim": "kagit",
+     "boyut": 500,
+     "aralik": 5800,
+     "aralik_y": 8000,
+     "renk": "#FF000000",
+     "kalinlik": 100,
+     "dolgu_renk": "#FF000000",
+     "renk_kilidi": true
+    },
+    {
+     "tip": "merkez-isaretci",
+     "sekil": "kare",
+     "birim": "kagit",
+     "boyut": 11300,
+     "renk": "#FF000000",
+     "kalinlik": 350,
+     "dolgu_renk": "#00000000",
+     "renk_kilidi": true
+    },
+    {
+     "tip": "yazi-isaretci",
+     "birim": "kagit",
+     "boyut": 4000,
+     "yazi": "TGB",
+     "renk": "#FF000000",
+     "renk_kilidi": true
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-serbest-bolge",
+   "ad": "SERBEST BÖLGE",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI",
+   "bolum": [
+    "SINIRLAR",
+    "ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI"
+   ],
+   "katmanlar": [
+    {
+     "tip": "dolgu",
+     "dolgu_renk": "#FF6699CD"
+    },
+    {
+     "tip": "cizgi",
+     "renk": "#FF000000",
+     "kalinlik": 300,
+     "desen": [
+      31.7,
+      38.9
+     ]
+    },
+    {
+     "tip": "gorsel-cizgi",
+     "gorsel": "gorsel-5451cc9a24567802",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 6350,
+     "aralik": 42300,
+     "renk": "#FF000000"
+    },
+    {
+     "tip": "nokta-desen-dolgu",
+     "sekil": "daire",
+     "birim": "kagit",
+     "boyut": 500,
+     "aralik": 5800,
+     "aralik_y": 8000,
+     "renk": "#FF000000",
+     "kalinlik": 100,
+     "dolgu_renk": "#FF000000",
+     "renk_kilidi": true
+    },
+    {
+     "tip": "merkez-isaretci",
+     "sekil": "kare",
+     "birim": "kagit",
+     "boyut": 11100,
+     "renk": "#FF000000",
+     "kalinlik": 350,
+     "dolgu_renk": "#00000000",
+     "renk_kilidi": true
+    },
+    {
+     "tip": "yazi-isaretci",
+     "birim": "kagit",
+     "boyut": 8500,
+     "yazi": "P",
+     "renk": "#FF000000",
+     "renk_kilidi": true
+    },
+    {
+     "tip": "yazi-isaretci",
+     "birim": "kagit",
+     "boyut": 3600,
+     "kaydirma": 3800,
+     "yazi": "SB",
+     "renk": "#FF000000",
+     "renk_kilidi": true
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-organize-sanayi-bolgesi",
+   "ad": "ORGANİZE SANAYİ BÖLGESİ",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI",
+   "bolum": [
+    "SINIRLAR",
+    "ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI"
+   ],
+   "katmanlar": [
+    {
+     "tip": "dolgu",
+     "dolgu_renk": "#FFAA66CD"
+    },
+    {
+     "tip": "gorsel-dolgu",
+     "gorsel": "gorsel-70a16b2f59321517",
+     "birim": "kagit",
+     "boyut": 7400,
+     "renk": "#FF000000"
+    },
+    {
+     "tip": "cizgi",
+     "renk": "#FF000000",
+     "kalinlik": 300,
+     "desen": [
+      31.7,
+      38.3
+     ]
+    },
+    {
+     "tip": "gorsel-cizgi",
+     "gorsel": "gorsel-6757278c291af33d",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 7100,
+     "aralik": 21000,
+     "renk": "#FF000000"
+    },
+    {
+     "tip": "merkez-isaretci",
+     "sekil": "kare",
+     "birim": "kagit",
+     "boyut": 11400,
+     "renk": "#FF000000",
+     "kalinlik": 350,
+     "dolgu_renk": "#00000000",
+     "renk_kilidi": true
+    },
+    {
+     "tip": "yazi-isaretci",
+     "birim": "kagit",
+     "boyut": 4600,
+     "yazi": "OSB",
+     "renk": "#FF000000",
+     "renk_kilidi": true
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-endustri-bolgesi",
+   "ad": "ENDÜSTRİ BÖLGESİ",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI",
+   "bolum": [
+    "SINIRLAR",
+    "ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI"
+   ],
+   "katmanlar": [
+    {
+     "tip": "dolgu",
+     "dolgu_renk": "#FFAA66CD"
+    },
+    {
+     "tip": "gorsel-dolgu",
+     "gorsel": "gorsel-70a16b2f59321517",
+     "birim": "kagit",
+     "boyut": 7400,
+     "renk": "#FF000000"
+    },
+    {
+     "tip": "cizgi",
+     "renk": "#FF000000",
+     "kalinlik": 300,
+     "desen": [
+      31.0,
+      71.2
+     ]
+    },
+    {
+     "tip": "gorsel-cizgi",
+     "gorsel": "gorsel-41a244a10a29360f",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 6770,
+     "aralik": 30650,
+     "renk": "#FF000000"
+    },
+    {
+     "tip": "merkez-isaretci",
+     "sekil": "kare",
+     "birim": "kagit",
+     "boyut": 11200,
+     "renk": "#FF000000",
+     "kalinlik": 350,
+     "dolgu_renk": "#00000000",
+     "renk_kilidi": true
+    },
+    {
+     "tip": "yazi-isaretci",
+     "birim": "kagit",
+     "boyut": 5000,
+     "yazi": "EB",
+     "renk": "#FF000000",
+     "renk_kilidi": true
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-bogazici-etkilenme-bolgesi-siniri",
+   "ad": "BOĞAZİÇİ ETKİLENME BÖLGESİ SINIRI",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI",
+   "bolum": [
+    "SINIRLAR",
+    "ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI"
+   ],
+   "katmanlar": [
+    {
+     "tip": "cizgi",
+     "renk": "#FF000000",
+     "kalinlik": 250
+    },
+    {
+     "tip": "tarak-cizgi",
+     "sekil": "cizik",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 2400,
+     "aralik": 10500,
+     "faz": 1000,
+     "renk": "#FF000000",
+     "kalinlik": 1700
+    },
+    {
+     "tip": "tarak-cizgi",
+     "sekil": "cizik",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 2400,
+     "aralik": 10500,
+     "faz": 3000,
+     "renk": "#FF000000",
+     "kalinlik": 1700
+    },
+    {
+     "tip": "tarak-cizgi",
+     "sekil": "cizik",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 2400,
+     "aralik": 10500,
+     "faz": 5000,
+     "renk": "#FF000000",
+     "kalinlik": 1700
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-bogazici-geri-gorunum-bolgesi-siniri",
+   "ad": "BOĞAZİÇİ GERİ GÖRÜNÜM BÖLGESİ SINIRI",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI",
+   "bolum": [
+    "SINIRLAR",
+    "ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI"
+   ],
+   "katmanlar": [
+    {
+     "tip": "cizgi",
+     "renk": "#FF000000",
+     "kalinlik": 250
+    },
+    {
+     "tip": "tarak-cizgi",
+     "sekil": "cizik",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 1800,
+     "aralik": 8200,
+     "faz": 1000,
+     "renk": "#FF000000",
+     "kalinlik": 1700
+    },
+    {
+     "tip": "tarak-cizgi",
+     "sekil": "cizik",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 1800,
+     "aralik": 8200,
+     "faz": 3000,
+     "renk": "#FF000000",
+     "kalinlik": 1700
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-bogazici-on-gorunum-bolgesi-siniri",
+   "ad": "BOĞAZİÇİ ÖN GÖRÜNÜM BÖLGESİ SINIRI",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI",
+   "bolum": [
+    "SINIRLAR",
+    "ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI"
+   ],
+   "katmanlar": [
+    {
+     "tip": "cizgi",
+     "renk": "#FF000000",
+     "kalinlik": 250
+    },
+    {
+     "tip": "tarak-cizgi",
+     "sekil": "cizik",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 1800,
+     "aralik": 9300,
+     "faz": 1000,
+     "renk": "#FF000000",
+     "kalinlik": 1600
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-diger-ozel-kanunlarla-belirlenen-alan-sayili-kanun",
+   "ad": "DİĞER ÖZEL KANUNLARLA BELİRLENEN ALAN (……. Sayılı Kanun)",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), SINIRLAR > ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI",
+   "bolum": [
+    "SINIRLAR",
+    "ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI"
+   ],
+   "katmanlar": [
+    {
+     "tip": "cizgi",
+     "renk": "#FFFF0000",
+     "kalinlik": 250,
+     "desen": [
+      11.6,
+      52.0
+     ]
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "ucgen",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 2800,
+     "aralik": 15900,
+     "faz": 5900,
+     "renk": "#FFFF0000",
+     "kalinlik": 200,
+     "dolgu_renk": "#FFFF0000"
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "ucgen",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 2800,
+     "aralik": 15900,
+     "faz": 9450,
+     "renk": "#FFFF0000",
+     "kalinlik": 200,
+     "dolgu_renk": "#00000000"
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "ucgen",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 2800,
+     "aralik": 15900,
+     "faz": 13000,
+     "renk": "#FFFF0000",
+     "kalinlik": 200,
+     "dolgu_renk": "#FFFF0000"
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-uluslararasi-sozlesmelerle-belirlenen-koruma-alan-siniri",
+   "ad": "ULUSLARARASI SÖZLEŞMELERLE BELİRLENEN KORUMA ALAN SINIRI",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), KORUNACAK ALANLAR > SİT VE KORUNACAK ALANLAR",
+   "bolum": [
+    "KORUNACAK ALANLAR",
+    "SİT VE KORUNACAK ALANLAR"
+   ],
+   "katmanlar": [
+    {
+     "tip": "cizgi",
+     "renk": "#FFFF0000",
+     "kalinlik": 250,
+     "desen": [
+      13.6,
+      27.6
+     ]
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "ucgen",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 4000,
+     "aralik": 10300,
+     "faz": 6950,
+     "renk": "#FFFF0000",
+     "kalinlik": 200,
+     "dolgu_renk": "#00000000"
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 1500,
+     "aralik": 10300,
+     "faz": 6950,
+     "renk": "#FFFF0000",
+     "kalinlik": 150,
+     "dolgu_renk": "#FFFF0000"
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-ozel-cevre-koruma-bolgesi",
+   "ad": "ÖZEL ÇEVRE KORUMA BÖLGESİ",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), KORUNACAK ALANLAR > SİT VE KORUNACAK ALANLAR",
+   "bolum": [
+    "KORUNACAK ALANLAR",
+    "SİT VE KORUNACAK ALANLAR"
+   ],
+   "katmanlar": [
+    {
+     "tip": "cizgi",
+     "renk": "#FFFF0000",
+     "kalinlik": 200,
+     "desen": [
+      23.5,
+      73.9
+     ]
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 4100,
+     "aralik": 19470,
+     "faz": 7900,
+     "renk": "#FFFF0000",
+     "kalinlik": 200,
+     "dolgu_renk": "#00000000"
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 4100,
+     "aralik": 19470,
+     "faz": 11960,
+     "renk": "#FFFF0000",
+     "kalinlik": 200,
+     "dolgu_renk": "#00000000"
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 4100,
+     "aralik": 19470,
+     "faz": 16020,
+     "renk": "#FFFF0000",
+     "kalinlik": 200,
+     "dolgu_renk": "#00000000"
+    }
+   ],
+   "belirsiz": true,
+   "belirsiz_nedeni": [
+    "cizim-yorumu"
+   ]
+  },
+  {
+   "id": "ortak-icme-ve-kullanma-suyu-mutlak-koruma-alani",
+   "ad": "İÇME VE KULLANMA SUYU MUTLAK KORUMA ALANI",
+   "ek": "EK-1a",
+   "kaynak": "Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1a (RG-22/1/2026-33145), KORUNACAK ALANLAR > YAPI SINIRLAMASI GETİRİLEREK KORUNACAK ALANLAR",
+   "bolum": [
+    "KORUNACAK ALANLAR",
+    "YAPI SINIRLAMASI GETİRİLEREK KORUNACAK ALANLAR"
+   ],
+   "katmanlar": [
+    {
+     "tip": "cizgi",
+     "renk": "#FFFF0000",
+     "kalinlik": 200,
+     "desen": [
+      35.0,
+      62.0
+     ]
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 2000,
+     "aralik": 19400,
+     "faz": 9900,
+     "renk": "#FFFF0000",
+     "kalinlik": 180,
+     "dolgu_renk": "#00000000"
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 2000,
+     "aralik": 19400,
+     "faz": 11900,
+     "renk": "#FFFF0000",
+     "kalinlik": 180,
+     "dolgu_renk": "#00000000"
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 2000,
+     "aralik": 19400,
+     "faz": 13900,
+     "renk": "#FFFF0000",
+     "kalinlik": 180,
+     "dolgu_renk": "#00000000"
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 2000,
+     "aralik": 19400,
+     "faz": 15900,
+     "renk": "#FFFF0000",
+     "kalinlik": 180,
+     "dolgu_renk": "#00000000"
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 500,
+     "aralik": 19400,
+     "faz": 9900,
+     "renk": "#FFFF0000",
+     "kalinlik": 100,
+     "dolgu_renk": "#FFFF0000"
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 500,
+     "aralik": 19400,
+     "faz": 11900,
+     "renk": "#FFFF0000",
+     "kalinlik": 100,
+     "dolgu_renk": "#FFFF0000"
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 500,
+     "aralik": 19400,
+     "faz": 13900,
+     "renk": "#FFFF0000",
+     "kalinlik": 100,
+     "dolgu_renk": "#FFFF0000"
+    },
+    {
+     "tip": "isaretci-cizgi",
+     "sekil": "daire",
+     "yerlesim": "aralik",
+     "birim": "kagit",
+     "boyut": 500,
+     "aralik": 19400,
+     "faz": 15900,
+     "renk": "#FFFF0000",
+     "kalinlik": 100,
+     "dolgu_renk": "#FFFF0000"
     }
    ],
    "belirsiz": true,

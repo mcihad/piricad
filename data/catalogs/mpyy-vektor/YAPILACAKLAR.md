@@ -3,7 +3,7 @@
 Bu dosya `data/catalogs/mpyy-vektor/TALIMAT.md` ile birlikte kullanılır. Talimatı
 okumadan buradaki hiçbir satıra dokunulmaz.
 
-**476 gösterim vardır. 18'i bitmiştir, 458'i kalmıştır.**
+**476 gösterim vardır. 30'u bitmiştir, 446'sı kalmıştır.**
 
 Her satırın kutusu, o gösterim için:
 
@@ -39,17 +39,17 @@ seçerek atlanmaz. Bir gösterim çizilemiyorsa kutusu boş bırakılır ve nede
 
 ### SINIRLAR > ÖZEL KANUNLARLA BELİRLENEN ALAN VE SINIRLARI
 
-- [ ] `ortak-turizm-merkezi-kultur-ve-turizm-koruma-ve-gelisim-alt-bolgesi` — **TURİZM MERKEZİ, KÜLTÜR VE TURİZM KORUMA VE GELİŞİM ALT BÖLGESİ**  ·  cizgi_tipi: `semboller/d70bec13d90688cf.jpeg`
-- [ ] `ortak-teknoloji-gelistirme-bolgesi` — **TEKNOLOJİ GELİŞTİRME BÖLGESİ**  ·  cizgi_tipi: `semboller/a74c42fb6b3f6dcb.jpeg` · sembol: `semboller/41083733374a02a2.jpeg` · tarama: `semboller/07bf6cae5d5ed629.jpeg`
-- [ ] `ortak-serbest-bolge` — **SERBEST BÖLGE**  ·  cizgi_tipi: `semboller/100885b7558f0ecd.jpeg` · sembol: `semboller/91a4b4af60e4005b.jpeg` · tarama: `semboller/99038d28a76374c9.jpeg`
-- [ ] `ortak-organize-sanayi-bolgesi` — **ORGANİZE SANAYİ BÖLGESİ**  ·  cizgi_tipi: `semboller/5eb0cd52a1d0fa90.jpeg` · sembol: `semboller/113ff1bf43f9b15c.jpeg` · tarama: `semboller/1de155a3f7ed45b3.jpeg`
-- [ ] `ortak-endustri-bolgesi` — **ENDÜSTRİ BÖLGESİ**  ·  cizgi_tipi: `semboller/3d78f48ecbf9982c.jpeg` · sembol: `semboller/c052f189e93551ff.jpeg` · tarama: `semboller/1de155a3f7ed45b3.jpeg`
+- [x] `ortak-turizm-merkezi-kultur-ve-turizm-koruma-ve-gelisim-alt-bolgesi` — **TURİZM MERKEZİ, KÜLTÜR VE TURİZM KORUMA VE GELİŞİM ALT BÖLGESİ**  ·  cizgi_tipi: `semboller/d70bec13d90688cf.jpeg`
+- [x] `ortak-teknoloji-gelistirme-bolgesi` — **TEKNOLOJİ GELİŞTİRME BÖLGESİ**  ·  cizgi_tipi: `semboller/a74c42fb6b3f6dcb.jpeg` · sembol: `semboller/41083733374a02a2.jpeg` · tarama: `semboller/07bf6cae5d5ed629.jpeg`
+- [x] `ortak-serbest-bolge` — **SERBEST BÖLGE**  ·  cizgi_tipi: `semboller/100885b7558f0ecd.jpeg` · sembol: `semboller/91a4b4af60e4005b.jpeg` · tarama: `semboller/99038d28a76374c9.jpeg`
+- [x] `ortak-organize-sanayi-bolgesi` — **ORGANİZE SANAYİ BÖLGESİ**  ·  cizgi_tipi: `semboller/5eb0cd52a1d0fa90.jpeg` · sembol: `semboller/113ff1bf43f9b15c.jpeg` · tarama: `semboller/1de155a3f7ed45b3.jpeg`
+- [x] `ortak-endustri-bolgesi` — **ENDÜSTRİ BÖLGESİ**  ·  cizgi_tipi: `semboller/3d78f48ecbf9982c.jpeg` · sembol: `semboller/c052f189e93551ff.jpeg` · tarama: `semboller/1de155a3f7ed45b3.jpeg`
 - [ ] `ortak-askeri-yasak-ve-guvenlik-bolgesi` — **ASKERİ YASAK VE GÜVENLİK BÖLGESİ**  ·  cizgi_tipi: `semboller/33b86c32335d1598.png` · sembol: `semboller/f63c3348fcf927ae.jpeg` · tarama: `semboller/1cf89f0dc6c014f2.jpeg`
-- [ ] `ortak-bogazici-etkilenme-bolgesi-siniri` — **BOĞAZİÇİ ETKİLENME BÖLGESİ SINIRI**  ·  cizgi_tipi: `semboller/183e026acd367faa.png`
-- [ ] `ortak-bogazici-geri-gorunum-bolgesi-siniri` — **BOĞAZİÇİ GERİ GÖRÜNÜM BÖLGESİ SINIRI**  ·  cizgi_tipi: `semboller/b8ec81f259df3fda.png`
-- [ ] `ortak-bogazici-on-gorunum-bolgesi-siniri` — **BOĞAZİÇİ ÖN GÖRÜNÜM BÖLGESİ SINIRI**  ·  cizgi_tipi: `semboller/f7bd4d94d1eed16d.png`
+- [x] `ortak-bogazici-etkilenme-bolgesi-siniri` — **BOĞAZİÇİ ETKİLENME BÖLGESİ SINIRI**  ·  cizgi_tipi: `semboller/183e026acd367faa.png`
+- [x] `ortak-bogazici-geri-gorunum-bolgesi-siniri` — **BOĞAZİÇİ GERİ GÖRÜNÜM BÖLGESİ SINIRI**  ·  cizgi_tipi: `semboller/b8ec81f259df3fda.png`
+- [x] `ortak-bogazici-on-gorunum-bolgesi-siniri` — **BOĞAZİÇİ ÖN GÖRÜNÜM BÖLGESİ SINIRI**  ·  cizgi_tipi: `semboller/f7bd4d94d1eed16d.png`
 - [ ] `ortak-sinir-kapisi` — **SINIR KAPISI**  ·  sembol: `semboller/fd046620b594dc7b.png`
-- [ ] `ortak-diger-ozel-kanunlarla-belirlenen-alan-sayili-kanun` — **DİĞER ÖZEL KANUNLARLA BELİRLENEN ALAN (……. Sayılı Kanun)**  ·  cizgi_tipi: `semboller/0903a0589a065663.jpeg`
+- [x] `ortak-diger-ozel-kanunlarla-belirlenen-alan-sayili-kanun` — **DİĞER ÖZEL KANUNLARLA BELİRLENEN ALAN (……. Sayılı Kanun)**  ·  cizgi_tipi: `semboller/0903a0589a065663.jpeg`
 
 ### KORUNACAK ALANLAR > SİT VE KORUNACAK ALANLAR
 
@@ -65,12 +65,12 @@ seçerek atlanmaz. Bir gösterim çizilemiyorsa kutusu boş bırakılır ve nede
 - [ ] `ortak-kentsel-sit-alani` — **KENTSEL SİT ALANI**  ·  cizgi_tipi: `semboller/b60dad3b2639f527.jpeg` · sembol: `semboller/bc294e3266706bc5.jpeg` · tarama: `semboller/b83a8da232c11332.jpeg`
 - [ ] `ortak-kentsel-arkeolojik-sit-alani` — **KENTSEL ARKEOLOJİK SİT ALANI**  ·  cizgi_tipi: `semboller/815c2c8cc0b5f548.jpeg` · tarama: `semboller/1306df98dcd0e412.png`
 - [ ] `ortak-tarihi-sit-alani` — **TARİHİ SİT ALANI**  ·  cizgi_tipi: `semboller/b60dad3b2639f527.jpeg` · sembol: `semboller/7a12c9895c1906c2.jpeg` · tarama: `semboller/b83a8da232c11332.jpeg`
-- [ ] `ortak-uluslararasi-sozlesmelerle-belirlenen-koruma-alan-siniri` — **ULUSLARARASI SÖZLEŞMELERLE BELİRLENEN KORUMA ALAN SINIRI**  ·  cizgi_tipi: `semboller/475de5a7535535ac.jpeg`
+- [x] `ortak-uluslararasi-sozlesmelerle-belirlenen-koruma-alan-siniri` — **ULUSLARARASI SÖZLEŞMELERLE BELİRLENEN KORUMA ALAN SINIRI**  ·  cizgi_tipi: `semboller/475de5a7535535ac.jpeg`
 - [ ] `ortak-milli-park` — **MİLLİ PARK**  ·  cizgi_tipi: `semboller/0483a5d0bfd5cfc8.jpeg` · sembol: `semboller/0bd87e9063f9a7c6.jpeg`
 - [ ] `ortak-tabiat-parki-alani` — **TABİAT PARKI ALANI**  ·  cizgi_tipi: `semboller/f90c4c19823ba115.jpeg` · sembol: `semboller/a76ac52bc754f9d4.jpeg`
 - [ ] `ortak-tabiati-koruma-alani` — **TABİATI KORUMA ALANI**  ·  cizgi_tipi: `semboller/09ecc0ddeb0d4de5.jpeg` · sembol: `semboller/7fdb0e7deea43779.jpeg`
 - [ ] `ortak-yaban-hayati-koruma-ve-gelistirme-alani` — **YABAN HAYATI KORUMA VE GELİŞTİRME ALANI**  ·  cizgi_tipi: `semboller/8fe63b2550bb874a.jpeg` · sembol: `semboller/0f9f69ec8195c37e.jpeg`
-- [ ] `ortak-ozel-cevre-koruma-bolgesi` — **ÖZEL ÇEVRE KORUMA BÖLGESİ**  ·  cizgi_tipi: `semboller/e8f5b3077a3fcbd9.jpeg`
+- [x] `ortak-ozel-cevre-koruma-bolgesi` — **ÖZEL ÇEVRE KORUMA BÖLGESİ**  ·  cizgi_tipi: `semboller/e8f5b3077a3fcbd9.jpeg`
 - [ ] `ortak-ock-bolgesi-hassas-alan-a` — **ÖÇK BÖLGESİ HASSAS ALAN (A)**  ·  cizgi_tipi: `semboller/55cc9782603e4834.jpeg` · sembol: `semboller/06ab59a29c4c4830.jpeg` · tarama: `semboller/2cd3f7fb2af40211.jpeg`
 - [ ] `ortak-ock-bolgesi-hassas-alan-b` — **ÖÇK BÖLGESİ HASSAS ALAN (B)**  ·  cizgi_tipi: `semboller/55cc9782603e4834.jpeg` · sembol: `semboller/75b11ecbd29cab97.jpeg` · tarama: `semboller/3213f8e9554baa2e.jpeg`
 - [ ] `ortak-ock-bolgesi-hassas-alan-c` — **ÖÇK BÖLGESİ HASSAS ALAN (C)**  ·  cizgi_tipi: `semboller/55cc9782603e4834.jpeg` · sembol: `semboller/32f9cb3f09b4d1bd.jpeg` · tarama: `semboller/e064c39ca3d4a840.jpeg`
@@ -90,7 +90,7 @@ seçerek atlanmaz. Bir gösterim çizilemiyorsa kutusu boş bırakılır ve nede
 
 ### KORUNACAK ALANLAR > YAPI SINIRLAMASI GETİRİLEREK KORUNACAK ALANLAR
 
-- [ ] `ortak-icme-ve-kullanma-suyu-mutlak-koruma-alani` — **İÇME VE KULLANMA SUYU MUTLAK KORUMA ALANI**  ·  cizgi_tipi: `semboller/177741c5a3ebe882.jpeg`
+- [x] `ortak-icme-ve-kullanma-suyu-mutlak-koruma-alani` — **İÇME VE KULLANMA SUYU MUTLAK KORUMA ALANI**  ·  cizgi_tipi: `semboller/177741c5a3ebe882.jpeg`
 - [ ] `ortak-icme-ve-kullanma-suyu-kisa-mesafeli-koruma-alani` — **İÇME VE KULLANMA SUYU KISA MESAFELİ KORUMA ALANI**  ·  cizgi_tipi: `semboller/517aba777c6b6b74.jpeg`
 - [ ] `ortak-icme-ve-kullanma-suyu-orta-mesafeli-koruma-alani` — **İÇME VE KULLANMA SUYU ORTA MESAFELİ KORUMA ALANI**  ·  cizgi_tipi: `semboller/7feabe8817edc659.jpeg`
 - [ ] `ortak-icme-ve-kullanma-suyu-uzun-mesafeli-koruma-alani` — **İÇME VE KULLANMA SUYU UZUN MESAFELİ KORUMA ALANI**  ·  cizgi_tipi: `semboller/f8f6fb02d02082c0.jpeg`
