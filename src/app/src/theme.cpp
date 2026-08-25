@@ -110,6 +110,15 @@ public:
         case PM_MenuBarVMargin:
         case PM_MenuBarPanelWidth:
         case PM_MenuBarItemSpacing: return 0;
+
+        // The tool bar's own frame and item margin, for the same reason. Fusion
+        // insets a widget added to a tool bar by eight pixels, so the ÖLÇEK /
+        // KOORDİNAT SİSTEMİ reading started eight pixels down and ran eight
+        // pixels past the bottom of the bar — the value ended one pixel above
+        // the rule with no air under it at all. The bar's padding is the
+        // stylesheet's business; this makes sure the style adds nothing to it.
+        case PM_ToolBarFrameWidth:
+        case PM_ToolBarItemMargin: return 0;
         default: return QProxyStyle::pixelMetric(metric, option, widget);
         }
     }

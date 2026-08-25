@@ -40,11 +40,31 @@ QFont mono(int px, QFont::Weight weight = QFont::Normal)
 // ---- readout strip, §7 -------------------------------------------------------
 constexpr int kReadoutCaptionPx = 10;
 constexpr int kReadoutValuePx   = 12;
-constexpr int kReadoutCapTop    = 11; ///< from the top of the 46 px bar
-constexpr int kReadoutValTop    = 25;
-constexpr int kReadoutGap       = 10; ///< each side of the cell divider
-constexpr int kReadoutRightPad  = 12;
-constexpr int kRuleHeight       = 22;
+
+// BASELINES, not rect tops. `drawText(rect, AlignTop)` places the text by the
+// font's ascent inside a rectangle the layout may have moved, and the two
+// roundings together put this eleven pixels low: the reading ended one pixel
+// above the bottom of the bar with nothing under it. The reference measures the
+// caption's ink at rows 11..17 of the 45 px band and the value's at 26..33, so
+// the baselines are 17 and 33 and `drawText(QPointF, …)` puts them exactly there.
+// And relative to the widget's own CENTRE, not its top. Where a tool bar puts a
+// widget added to it is the tool bar's business — Fusion insets it, a stylesheet
+// changes the inset, and neither is reachable from here. What IS reachable is
+// that the two lines sit centred in whatever height it gets, which is what the
+// reference measures: the pair spans rows 11..33 of a 45 px band, centred on
+// 22 — the band's own centre.
+// AS TALL AS A BUTTON, because the bar treats it like one. Measured rather than
+// assumed: whatever height this widget asks for, the bar puts its top 8 px down
+// — a fixed margin, not centring — so a 45 px strip started 8 px low and ran 8
+// px past the rule, and the value ended one pixel above the bottom of the bar
+// with no air under it. At 30 px it sits in the same 8/7 band as every tool
+// button and the two lines land where the reference measures them.
+constexpr int kReadoutHeight   = 30;
+constexpr int kReadoutCapLift  = 5;  ///< caption baseline, above the centre
+constexpr int kReadoutValDrop  = 12; ///< value baseline, below it
+constexpr int kReadoutGap      = 10; ///< each side of the cell divider
+constexpr int kReadoutRightPad = 12;
+constexpr int kRuleHeight      = 22;
 
 // ---- document tabs, §7 -------------------------------------------------------
 constexpr int kTabHeight  = 30;
@@ -68,7 +88,7 @@ ReadoutStrip::ReadoutStrip(QWidget* parent) : QWidget(parent)
     scale_.value   = QStringLiteral("1 : 1 000");
     crs_.caption   = tr("KOORDİNAT SİSTEMİ");
     crs_.value     = QStringLiteral("—");
-    setFixedHeight(46);
+    setFixedHeight(kReadoutHeight);
 }
 
 void ReadoutStrip::setScale(const QString& text)
@@ -120,13 +140,11 @@ void ReadoutStrip::paintEvent(QPaintEvent*)
     const auto cell = [&](const Cell& c, int left) {
         p.setFont(sans(kReadoutCaptionPx, QFont::DemiBold, 0.7));
         p.setPen(t.textFaint);
-        p.drawText(QRect(left, kReadoutCapTop, width(), kReadoutCaptionPx + 2),
-                   Qt::AlignLeft | Qt::AlignTop, c.caption);
+        p.drawText(QPointF(left, height() / 2.0 - kReadoutCapLift), c.caption);
 
         p.setFont(mono(kReadoutValuePx));
         p.setPen(t.readout);
-        p.drawText(QRect(left, kReadoutValTop, width(), kReadoutValuePx + 3),
-                   Qt::AlignLeft | Qt::AlignTop, c.value);
+        p.drawText(QPointF(left, height() / 2.0 + kReadoutValDrop), c.value);
     };
 
     cell(crs_, x);

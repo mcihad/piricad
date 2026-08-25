@@ -62,7 +62,12 @@ QString groupedNumber(qint64 value)
 }
 
 /// Bumped whenever the shell's dock layout changes shape. See `restoreState`.
-constexpr int kLayoutVersion = 2;
+///
+/// 3: the right dock became one 312 px column with a `PanelHeader` on each
+/// panel. A state saved by version 2 restores the old sizes and leaves a band of
+/// empty window above the Öznitelikler tab — which is what a user saw and
+/// reported. A version bump is how `restoreState` declines it.
+constexpr int kLayoutVersion = 3;
 
 QString format_metres(core::Mm v)
 {
@@ -1286,6 +1291,11 @@ void MainWindow::showCommandReference()
     box.setTextFormat(Qt::MarkdownText);
     box.setText(QString::fromStdString(controller_->registry().markdown_reference()));
     box.exec();
+}
+
+void MainWindow::runScriptLine(const QString& line)
+{
+    controller_->runLine(line, command::Origin::Gui);
 }
 
 void MainWindow::runScriptFile(const QString& path)

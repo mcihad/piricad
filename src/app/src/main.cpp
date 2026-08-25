@@ -6,6 +6,7 @@
 
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QDir>
 #include <QGuiApplication>
 #include <QLocale>
 #include <QTimer>
@@ -168,6 +169,68 @@ int main(int argc, char** argv)
             (void)std::fprintf(stdout, "[piricad] duman testi: bütün pencereler açıldı\n");
             QApplication::exit(0);
         });
+    }
+
+    // Every window, photographed, from the REAL binary.
+    //
+    // `PIRICAD_FRAME_DUMP` grabs one frame of whatever is in front. This opens
+    // each window in turn, grabs it, closes it, and writes a numbered PNG into
+    // the named directory — so a reviewer sees what the program actually draws
+    // rather than what a test harness draws. Same category as the other two:
+    // developer tooling, an environment variable rather than a CLI flag.
+    if (const QByteArray dir = qgetenv("PIRICAD_SHOT_DIR"); !dir.isEmpty()) {
+        const QString into = QString::fromLocal8Bit(dir);
+        QDir().mkpath(into);
+
+        int at          = kFrameDumpSettleMs;
+        const auto shot = [into](const QString& name, QWidget* subject) {
+            if (subject == nullptr) return;
+            const QString path = into + QLatin1Char('/') + name + QStringLiteral(".png");
+            (void)std::fprintf(subject->grab().save(path) ? stdout : stderr, "[piricad] %s\n",
+                               qPrintable(path));
+        };
+        const auto later = [&window, &at](auto&& step) {
+            at += 260;
+            QTimer::singleShot(at, &window, step);
+        };
+
+        // A size worth photographing. The window otherwise restores whatever the
+        // profile last saved, which for a screenshot is somebody else's laptop.
+        later([&window] { window.resize(1880, 1058); });
+        // AFTER the resize. `--betik` fits the drawing to the canvas the moment
+        // the script ends, which in this mode is before the window has its final
+        // size — so the fit was computed against a window nobody will see.
+        later([&window] { window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM")); });
+        later([&window, shot] { shot(QStringLiteral("1-ana-ekran"), &window); });
+
+        later([&window] { window.openStyleDesigner(QStringLiteral("PARSEL")); });
+        later([shot] {
+            shot(QStringLiteral("2-stil-tasarimcisi"), QApplication::activeModalWidget());
+        });
+        later([] {
+            if (QWidget* top = QApplication::activeModalWidget()) top->close();
+        });
+
+        later([&window] { window.openAttributeTable(); });
+        later(
+            [shot] { shot(QStringLiteral("3-oznitelik-tablosu"), QApplication::activeWindow()); });
+        later([] {
+            if (QWidget* top = QApplication::activeWindow()) top->close();
+        });
+
+        later([&window] { window.openSettings(); });
+        later([shot] { shot(QStringLiteral("4-secenekler"), QApplication::activeWindow()); });
+        later([] {
+            if (QWidget* top = QApplication::activeWindow()) top->close();
+        });
+
+        later([&window] { window.openCommandSearch(); });
+        later([shot] { shot(QStringLiteral("5-komut-arama"), QApplication::activePopupWidget()); });
+        later([] {
+            if (QWidget* top = QApplication::activePopupWidget()) top->close();
+        });
+
+        later([] { QApplication::exit(0); });
     }
 
     if (const QByteArray layer = qgetenv("PIRICAD_OPEN_DESIGNER"); !layer.isEmpty()) {

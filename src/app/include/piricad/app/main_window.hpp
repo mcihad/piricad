@@ -77,6 +77,11 @@ public:
     /// the panel that asked, so a panel never has to know what is in a window.
     void openStyleDesigner(const QString& layerName);
 
+    /// Sends one line to the bus, exactly as the command line would. Public for
+    /// `PIRICAD_SHOT_DIR`, which has to re-fit the drawing after it resizes the
+    /// window; it buys no privilege — this IS the command line's own road.
+    void runScriptLine(const QString& line);
+
     /// The other three windows, public for the same reason as the designer:
     /// `PIRICAD_SMOKE` opens every one of them in turn, so a dialog that crashes
     /// on construction fails a test rather than a user. A window nothing
