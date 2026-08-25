@@ -44,6 +44,7 @@ SettingCatalog test_catalogue()
         .values   = {},
         .unit     = "adet",
         .summary  = "Proje kapsamında bir tam sayı.",
+        .section  = "Sınama",
     });
     (void)c.add(SettingSpec{
         .id       = "test.uygulama.bayrak",
@@ -55,6 +56,7 @@ SettingCatalog test_catalogue()
         .values   = {},
         .unit     = "",
         .summary  = "Uygulama kapsamında bir anahtar.",
+        .section  = "Sınama",
     });
     (void)c.add(SettingSpec{
         .id       = "test.oturum.gecici",
@@ -66,6 +68,7 @@ SettingCatalog test_catalogue()
         .values   = {},
         .unit     = "",
         .summary  = "Oturum kapsamında bir sayı.",
+        .section  = "Sınama",
     });
     return c;
 }
@@ -520,6 +523,7 @@ TEST_CASE("Aynı ad iki ayara verilemez")
               .values   = {},
               .unit     = "",
               .summary  = "Çakışan ad.",
+              .section  = "Sınama",
     });
     CHECK(!clash.ok());
     CHECK(mentions(clash.error().message, "test.proje.sayi"));
@@ -540,6 +544,7 @@ TEST_CASE("Bildirimi tutarsız ayar kataloğa giremez")
         .values   = {},
         .unit     = "",
         .summary  = "Aralığın dışında varsayılan.",
+        .section  = "Sınama",
     });
     CHECK(!bad_range.ok());
 
@@ -554,6 +559,7 @@ TEST_CASE("Bildirimi tutarsız ayar kataloğa giremez")
         .values   = {},
         .unit     = "",
         .summary  = "Seçeneksiz seçenek.",
+        .section  = "Sınama",
     });
     CHECK(!bad_enum.ok());
 
@@ -568,6 +574,7 @@ TEST_CASE("Bildirimi tutarsız ayar kataloğa giremez")
         .values   = {},
         .unit     = "",
         .summary  = "Türü tutmayan varsayılan.",
+        .section  = "Sınama",
     });
     CHECK(!bad_type.ok());
 

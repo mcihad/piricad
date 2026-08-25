@@ -97,6 +97,26 @@ AttrValue attr_int64(std::int64_t v);
 AttrValue attr_mm(Mm v);
 AttrValue attr_bool(bool v);
 AttrValue attr_text(std::string v);
+
+/// Which mark separates the whole part of a number from its fraction.
+///
+/// TWO CONVENTIONS, ONE FORMATTER. A plan sheet prints `1,5` because that is
+/// what Turkish typography does; an attribute table prints `1.5` because the
+/// filter grammar, the sort and every export read a point. They are the same
+/// number and the same millimetre-to-metre arithmetic, so they are one function
+/// with a parameter rather than two functions that will drift.
+enum class DecimalMark : std::uint8_t {
+    Comma, ///< paper: `1,5`
+    Point, ///< data: `1.5`
+};
+
+/// One cell as text.
+///
+/// A `Length` is stored in millimetres and printed in metres, because that is
+/// the unit both a plan sheet and an attribute table write. An absent cell
+/// prints as nothing rather than as a zero: an unmeasured frontage and a zero
+/// frontage are different facts about a parcel.
+std::string attr_display(const AttrValue& value, DecimalMark mark = DecimalMark::Comma);
 AttrValue attr_code(std::string code);
 
 /// The part of a /data catalogue package that validating a CodeRef needs.

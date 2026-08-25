@@ -116,6 +116,9 @@ private slots:
     void resetLayout();
     void openCommandSearch();
 
+    /// Opens the attribute table on the active layer (`design.md` §9).
+    void openAttributeTable();
+
 private:
     void buildActions();
     void buildToolBars();

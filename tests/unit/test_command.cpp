@@ -204,6 +204,72 @@ TEST_CASE("expression evaluator respects precedence and reports errors")
     CHECK(!evaluate_expression("abc").ok());
 }
 
+TEST_CASE("filter predicate is one grammar with the expression evaluator")
+{
+    // One parcel's row, as the attribute table would hand it over. `beyan` is
+    // present but unfilled — the case that separates NULL from an empty string.
+    const std::map<std::string, std::optional<std::string>> row{
+        {"alan_m2", "3482.64"},   {"plan_fonksiyon", "Konut"}, {"ada_no", "1284"},
+        {"parsel_no", "21"},      {"nitelik", "Arsa"},         {"beyan", std::nullopt},
+        {"pafta", "G21-b-14-c-2"}};
+
+    const FieldReader field = [&row](std::string_view name) -> std::optional<std::string> {
+        const auto at = row.find(std::string(name));
+        return at == row.end() ? std::nullopt : at->second;
+    };
+
+    const auto yes = [&](const char* expr) {
+        const auto got = evaluate_predicate(expr, field);
+        REQUIRE(got.ok());
+        return got.value();
+    };
+
+    // Comparison, on a text column that holds a number.
+    CHECK(yes("\"alan_m2\" > 2000"));
+    CHECK(!yes("\"alan_m2\" > 5000"));
+    CHECK(yes("\"alan_m2\" >= 3482.64"));
+
+    // Strings in single quotes, columns in double: SQL's convention.
+    CHECK(yes("\"plan_fonksiyon\" = 'Konut'"));
+    CHECK(!yes("\"plan_fonksiyon\" = 'Ticaret'"));
+    CHECK(yes("\"plan_fonksiyon\" != 'Ticaret'"));
+
+    // Boolean layers and precedence: AND binds tighter than OR.
+    CHECK(yes("\"alan_m2\" > 2000 AND \"plan_fonksiyon\" = 'Konut'"));
+    CHECK(!yes("\"alan_m2\" > 9000 AND \"plan_fonksiyon\" = 'Konut'"));
+    CHECK(yes("\"alan_m2\" > 9000 OR \"plan_fonksiyon\" = 'Konut'"));
+    CHECK(yes("\"ada_no\" = 9999 OR \"alan_m2\" > 2000 AND \"nitelik\" = 'Arsa'"));
+    CHECK(!yes("(\"ada_no\" = 9999 OR \"alan_m2\" > 2000) AND \"nitelik\" = 'Tarla'"));
+    CHECK(yes("NOT \"nitelik\" = 'Tarla'"));
+
+    // An unfilled cell is UNKNOWN, so every comparison against it is false —
+    // including `!=`. An unsurveyed parcel must not fall into a filter that asks
+    // for parcels different from something.
+    CHECK(yes("\"beyan\" IS NULL"));
+    CHECK(!yes("\"beyan\" IS NOT NULL"));
+    CHECK(!yes("\"beyan\" = 'x'"));
+    CHECK(!yes("\"beyan\" != 'x'"));
+
+    // A column nobody declared reads as NULL rather than as an error: a filter
+    // written against another layer must not take the table down with it.
+    CHECK(yes("\"yok_boyle_bir_sutun\" IS NULL"));
+
+    // The arithmetic is the SAME evaluator — this is the whole point of 5.11.
+    CHECK(yes("\"alan_m2\" > (1000 * 2)"));
+    CHECK(yes("\"ada_no\" = 1284"));
+
+    // Text comparison when the two sides are not both numbers: `1284/A` sorts
+    // after `1284`, and neither is an error.
+    CHECK(yes("\"pafta\" > 'G21-b-14-c-1'"));
+
+    // An empty filter matches everything; a broken one says why.
+    CHECK(yes(""));
+    CHECK(yes("   "));
+    CHECK(!evaluate_predicate("\"alan_m2\" >", field).ok());
+    CHECK(!evaluate_predicate("\"alan_m2\" 2000", field).ok());
+    CHECK(!evaluate_predicate("\"alan_m2 > 2", field).ok());
+}
+
 TEST_CASE("keyword arguments bind out of order and reject unknown names")
 {
     Fixture f;

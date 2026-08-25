@@ -7,135 +7,129 @@ bileceksiniz.
 ## Pencere düzeni
 
 ```text
-┌ menü çubuğu ──────────────────────────────────────────────────────┐
-│ Dosya │ Düzen │ Görünüm │ Katman [aktif katman ▾] │ CBS          │
-├───────────────────────────────────────────────────────────────────┤
-│ ┌────┐ ┌──────────────────────────────┐ ┌─────────────────────┐ │
-│ │Araç│ │                              │ │ Katmanlar │ Öznitel.│ │
-│ │kutu│ │      Harita alanı            │ │      (sekmeli)      │ │
-│ │ su │ │                              │ │                     │ │
-│ │    │ ├──────────────────────────────┤ │                     │ │
-│ │    │ │  Komut satırı (gizli)        │ │                     │ │
-│ └────┘ └──────────────────────────────┘ └─────────────────────┘ │
-│ ┌ Transkript │ Komut Günlüğü ───────────────────────────────────┐│
-└ durum çubuğu ─────────────────────────────────────────────────────┘
+┌ başlık çubuğu 34 px ──────────────────────────────────────────────────────┐
+│ ● ● ●  Dosya Düzen Görünüm Çizim Değiştir Harita Analiz Katman Pencere    │
+│        Yardım        <belge adı>              [🔍 Komut ara… ⌘K]  (MK)    │
+├ araç çubuğu 46 px ────────────────────────────────────────────────────────┤
+│ 📄📂💾 │ ↶↷ │ ✂⧉📋 │ ➤✋🔍⛶ │ ⊞⊙📏 │ ▤🎨▦ │ 🖨⚙   ÖLÇEK 1:1 000  EPSG… │
+├───────┬───────────────────────────────────────────┬───────────────────────┤
+│ araç  │ ┌ doküman sekmeleri 30 px ──────────────┐ │ Öznitelikler │Geçmiş │
+│ kutusu│ │ 📄 kadastro_ada_1284  ✕ │ 🌐 imar…    │ │ SEÇİLİ NESNE          │
+│ 46 px │ ├───────────────────────────────────────┤ │ ⬠ Parsel 1284 / 21    │
+│       │ │ ┌cetvel 20 px──────────────────────┐  │ │   POLYGON · fid 4128  │
+│ 5 grup│ │ │            tuval                 │  │ ├───────────────────────┤
+│ 19    │ │ │   ızgara · kuzey oku · ölçek     │  │ │ ⌄ KİMLİK              │
+│ araç  │ │ └──────────────────────────────────┘  │ │   ada_no      1284    │
+│       │ ├ komut satırı 28 px ───────────────────┤ ├─ Katmanlar ───────────┤
+│ ▣ ▢   │ │ Komut: _PARSELBOL …                   │ │ 👁 ▪ Kadastro  1 482🔒│
+├───────┴───────────────────────────────────────────┴───────────────────────┤
+│ ⊕ Y 458 214.362  X 4 512 908.771 │IZGARA│YAKALAMA│DİK│…  PostGIS · 60 fps │
+└ durum çubuğu 26 px ───────────────────────────────────────────────────────┘
 ```
+
+Her bandın yüksekliği sabittir ve her platformda aynıdır: başlık 34, araç çubuğu 46,
+doküman sekmeleri 30, komut satırı 28, durum çubuğu 26 piksel. Sol araç kutusu 46,
+sağ panel 312 piksel genişliğindedir. Bu ölçüler tasarım belgesinden gelir ve
+Windows, macOS ve Linux'ta değişmez — pencere çerçevesi de dahil olmak üzere
+uygulamanın kendi çizdiği bir çerçevedir, işletim sisteminin değil.
 
 İki ayrı araç yüzeyi vardır ve işleri farklıdır:
 
-- **Araç kutusu** (sol, dikey) — çizim ve düzenleme araçları. Bir araca basınca komut
-  başlar ve sizden girdi ister.
-- **Araç çubukları** (üst, yatay) — eylemler: dosya, geri alma, görünüm, katman ve
-  CBS. Bir düğmeye basmak komutu hemen çalıştırır.
+- **Araç kutusu** (sol, dikey, 46 px) — çizim ve düzenleme araçları, beş grup.
+  Bir araca basınca komut başlar ve sizden girdi ister. En altta iki renk kutusu:
+  çizim rengi ve dolgu rengi.
+- **Araç çubuğu** (üst, yatay, 46 px) — eylemler, yedi grup: dosya · geri/yinele ·
+  pano · gezinme · yardımcılar · pencereler · çıktı. Bir düğmeye basmak komutu
+  hemen çalıştırır. Sağ ucunda iki salt-okunur okuma vardır: **ÖLÇEK** ve
+  **KOORDİNAT SİSTEMİ**.
 
 Bu ayrım AutoCAD ve QGIS'in ortak düzenidir.
 
+## Başlık çubuğu
+
+Solda üç pencere düğmesi: kapat, küçült, büyüt. Bunlar **çizilir**, işletim
+sisteminden alınmaz — aynı program her yerde aynı görünsün diye.
+
+Ortada açık belgenin adı ve sürüm. Sağda **komut arama** ve kullanıcı baş harfi.
+
+### Komut arama — `Ctrl+K`
+
+Kutucuğa tıklayın ya da **Ctrl+K**'ya basın: bir arama penceresi açılır ve
+yazdıkça komutları süzer. Liste `Registry`'den üretilir; yani bugün var olan her
+komut oradadır ve yarın eklenen komut da hiçbir liste güncellenmeden orada olur.
+
+Arama Türkçe katlamayla çalışır: `cizgi` yazınca `ÇİZGİ`, `olcek` yazınca `ÖLÇEK`
+bulunur. Seçtiğiniz komut komut satırına yazılır, imleç sonuna gelir — çünkü
+argümanı olan bir komutun argümanı yazılmalıdır.
+
 ## Menü çubuğu
+
+On menü, hep bu sırayla: **Dosya · Düzen · Görünüm · Çizim · Değiştir · Harita ·
+Analiz · Katman · Pencere · Yardım**. Sıra tasarımın parçasıdır: `Harita`'nın
+nerede olduğunu öğrenen kullanıcı onu her platformda aynı yerde bulur.
+
+Kısayol altçizgileri yalnızca **Alt** basılıyken görünür. Alt+D hâlâ Dosya'yı
+açar; altçizgi, ekranı boş yere doldurmasın diye gizlidir.
 
 | Menü | İçerik |
 |---|---|
-| **Dosya** | Aç (**Ctrl+O**), Kaydet (**Ctrl+S**), Farklı Kaydet… (**Ctrl+Shift+S**), İçe Aktar…, Dışa Aktar…, Betik Çalıştır… (**Ctrl+R**), Çıkış; Yeni ve Yazdır sonraki fazlarda |
-| **Düzen** | Geri Al (**Ctrl+Z**), Yinele (**Ctrl+Shift+Z**), Sil, Tümünü Seç (**Ctrl+A**), Seçimi Temizle (**Ctrl+Shift+A**) |
-| **Çizim** | Çizgi, Çoklu Çizgi, Yay, Daire, Dikdörtgen, Nokta, Metin, Katman, Katman Yöneticisi |
-| **Görünüm** | Kapsama Yakınlaş (**Ctrl+0**), Yakınlaştır, Uzaklaştır, Nesne Yakalama (**F3**), Dik Mod (**F8**), Izgaraya Yakala (**F9**), Araç Çubukları, Paneller, Koyu Tema, Geliştirici Bilgisi (**F12**) |
-| **CBS** | Sorgula, Öznitelik Tablosu, Ölç, AI Asistan — hepsi sonraki fazlarda |
+| **Dosya** | Yeni, Aç (**Ctrl+O**), Kaydet (**Ctrl+S**), Farklı Kaydet… (**Ctrl+Shift+S**), İçe/Dışa Aktar…, Yazdır, Veritabanı… (**Ctrl+Shift+D**), Betik Çalıştır… (**Ctrl+R**), Çıkış |
+| **Düzen** | Geri Al (**Ctrl+Z**), Yinele (**Ctrl+Shift+Z**), Tümünü Seç (**Ctrl+A**), Seçimi Temizle (**Ctrl+Shift+A**), Ayarlar… |
+| **Görünüm** | Kapsama Yakınlaş (**Ctrl+0**), Yakınlaştır, Uzaklaştır, Nesne Yakalama (**F3**), Dik Mod (**F8**), Izgaraya Yakala (**F9**), Araç Çubuğu, Paneller, Koyu Tema, Geliştirici Bilgisi (**F12**) |
+| **Çizim** | Çizgi, Çoklu Çizgi, Yay, Daire, Dikdörtgen, Nokta, Metin |
+| **Değiştir** | Sil, Taşı, Kopyala, Döndür, Ofset |
+| **Harita** | Sorgula, Ölç, Veritabanı… |
+| **Analiz** | Öznitelik Tablosu (**F6**), Yapay Zekâ Önerisi |
+| **Katman** | Katman, Katman Yöneticisi |
+| **Pencere** | Panellerin açık/kapalı durumu, Yerleşimi Sıfırla |
 | **Yardım** | Komut Listesi, Hakkında |
 
-**Görünüm > Araç Çubukları** her araç çubuğunu, **Görünüm > Paneller** her paneli tek
-tek gizleyip gösterir. **Düzeni Sıfırla** fabrika yerleşimine döndürür.
+## Araç çubuğu
 
-## Araç çubukları
+Yedi grup, aralarında 1 piksellik ayraçlar. Butonlar 30 × 30 piksel, adım 34.
 
-Menü çubuğunun altında beş araç çubuğu vardır. Hepsi taşınabilir ve
-**Görünüm > Araç Çubukları** menüsünden tek tek gizlenebilir.
+| Grup | Düğmeler |
+|---|---|
+| **dosya** | Yeni · Aç · Kaydet |
+| **geri/yinele** | Geri Al · Yinele |
+| **pano** | Kes · Kopyala · Yapıştır (Faz 2) |
+| **gezinme** | Seç · Kaydır · Yakınlaştır · Tümünü Göster |
+| **yardımcılar** | Izgaraya Yakala · Nesne Yakalama · Ölç |
+| **pencereler** | Katman Yöneticisi · Stil Tasarımcısı · Öznitelik Tablosu |
+| **çıktı** | Yazdır · Ayarlar |
 
-### Dosya
+Sağ uçtaki iki okuma değiştirilemez, yalnızca okunur:
 
-| Düğme | Komut | Durum |
-|---|---|---|
-| Aç | `AÇ` | **Ctrl+O** |
-| Kaydet | `KAYDET` | **Ctrl+S** — çizim henüz bir dosyaya bağlı değilse Farklı Kaydet penceresini açar |
-| Farklı Kaydet | `FARKLIKAYDET` | **Ctrl+Shift+S**, menüde |
-| İçe Aktar | `İÇEAKTAR` | DXF ve GeoPackage okur |
-| Dışa Aktar | `DIŞAAKTAR` | DXF ve GeoPackage yazar |
-| Betik Çalıştır | `BETİK` | **Ctrl+R** |
-| Yeni, Yazdır | — | Faz 1–2'de gelecek, şimdilik pasif |
-
-Dosya seçme pencereleri yalnızca komutun argümanını toplar: aynı işi komut
-satırından ve betikten de yapabilirsiniz, ve üçü de aynı komuta gider.
-Bkz. [Proje dosyası açma](../komutlar/open.md),
-[Çizimi kaydetme](../komutlar/save.md),
-[Dış veri alma](../komutlar/import.md).
-
-### Düzen
-
-| Düğme | Komut | Durum |
-|---|---|---|
-| Geri Al | `GERİAL` | **Ctrl+Z** |
-| Yinele | `YİNELE` | **Ctrl+Shift+Z** |
-| Sil | `SİL` | Seçili nesneleri siler; seçim boşsa komut satırını hazırlar |
-| Taşı, Kopyala, Döndür, Ofset | — | Faz 2'de gelecek, şimdilik pasif |
-
-`Düzen` menüsünün altında ayrıca **Ayarlar…** (**Ctrl+,**) vardır: bildirilen her ayarı
-kapsamına göre gösteren pencereyi açar. Ayrıntısı [AYAR](../komutlar/setting.md)
-sayfasındadır.
-
-### Görünüm
-
-| Düğme | Komut | Durum |
-|---|---|---|
-| Kaydır | — | Faz 2; orta fare tuşu her zaman kaydırır |
-| Kapsama Yakınlaş | `YAKINLAŞ KAPSAM` | **Ctrl+0** |
-| Yakınlaştır | `YAKINLAŞ ÇARPAN carpan=1.25` | **Ctrl++** |
-| Uzaklaştır | `YAKINLAŞ ÇARPAN carpan=0.8` | **Ctrl+-** |
-| Nesne Yakalama | `MOD yakalama_modları ...` | **F3**, **Görünüm** menüsünde |
-
-### Katman
-
-| Düğme | Komut | Durum |
-|---|---|---|
-| Katman Yöneticisi | — | Faz 1'de gelecek, şimdilik pasif |
-| Katman | `KATMAN` | Katman adını sorar |
-| **Aktif katman listesi** | `KATMAN ad="..."` | Çalışıyor |
-
-Aktif katman listesi CAD'in imza denetimidir: renk kutucuğuyla birlikte katmanları
-gösterir, seçtiğiniz katman aktif olur. Listeden seçim yapmak `KATMAN` komutunu
-gönderir — yani günlüğe yazılır ve **Ctrl+Z** ile geri alınabilir.
-
-### CBS
-
-| Düğme | Komut | Durum |
-|---|---|---|
-| Sorgula, Öznitelik Tablosu, Ölç | — | Faz 2'de gelecek, şimdilik pasif |
-| AI Asistan | — | Faz 3'te gelecek, şimdilik pasif |
-
-Pasif düğmelerin ipucu balonu hangi fazda geleceğini yazar. PiriCAD sessizce hiçbir şey
-yapmayan düğme göstermez.
+- **ÖLÇEK** — pafta ölçeği, `1 : 1 000` biçiminde. Bir kâğıt milimetresinin kaç
+  zemin milimetresi taşıdığını söyler; yakınlaştırdıkça değişir.
+- **KOORDİNAT SİSTEMİ** — `EPSG:5254 · ITRF96 / TM30` gibi. Çözümlenmemiş bir
+  sistem "çözümlenmedi" yazar; bir mühendisin çizmeye başlamadan önce baktığı
+  okuma budur.
 
 ## Araç kutusu
 
-Sol kenardaki palet. Çizim ve düzenleme araçlarını taşır. Her düğme bir komut
-gönderir — düğmeye basmakla komutu yazmak arasında hiçbir fark yoktur.
+Beş grup, toplam 19 araç. Aktif araç vurgu rengiyle işaretlenir.
 
-**Araçlar paletin genişliğine göre dizilir:** soldan sağa doldurur, satır dolunca alta
-geçer. Paleti dar bıraktığınızda tek sütun olur, kenarından tutup genişlettiğinizde iki,
-üç, dört sütunlu bir ızgaraya dönüşür. Grup ayraçları satırın tamamını kaplar, böylece
-hangi araçların birlikte olduğu her genişlikte okunur kalır.
+| Grup | Araçlar |
+|---|---|
+| **seçim** | Seç · Alan Seç · Kaydır |
+| **oluşturma** | Çoklu Çizgi · Poligon · Dikdörtgen · Daire · Nokta · Metin |
+| **düzenleme** | Böl/Buda · Birleştir (tevhit) · Parsel Böl (ifraz) · Taşı · Ofset |
+| **ölçüm** | Uzunluk Ölç · Alan Ölç · Koordinat Oku |
+| **yardımcı** | Stil Kopyala · Topoloji Denetimi |
 
-| Araç | Gönderdiği komut | Durum |
-|---|---|---|
-| Seç | — | Çalışan komutu iptal eder (**Esc**); komut yokken fare zaten seçim yapar |
-| Çizgi | `ÇİZGİ` | [Çizgi çizme](../komutlar/line.md) |
-| Çoklu Çizgi, Yay, Daire, Dikdörtgen, Nokta, Metin | — | Faz 2'de gelecek |
-| Sil | `SİL` | [Nesne silme](../komutlar/erase.md) |
-| Taşı, Kopyala, Döndür, Ofset | — | Faz 2'de gelecek |
-| Ölç, Sorgula | — | Faz 2'de gelecek |
+Faz 2'de gelecek araçlar pasiftir ve hangi fazda geleceklerini ipucunda yazarlar —
+görünmez olmaları, yokmuş gibi davranmaktan daha kötü olurdu.
 
-Her düğmenin ipucu balonunda komut adı ve varsa kısayolu yazar.
+En altta iki kutu: üstteki **çizim rengi**, alttaki **dolgu rengi**. İçi boş bir
+alt kutu "dolgu yok" demektir.
 
-**Araç kutusu taşınabilir.** Üstündeki tutamaktan sürükleyerek pencerenin sağ kenarına
-taşıyabilir ya da pencereden koparıp serbest bir palet hâline getirebilirsiniz.
-Fabrika yerleşimine dönmek için **Görünüm > Paneller > Düzeni Sıfırla**.
+## Doküman sekmeleri
+
+Tuvalin üstünde, 30 piksel. Her açık çizim bir sekmedir; etkin sekmenin kapatma
+işareti vardır. Sağ uçta bölünmüş görünüm ve tam ekran düğmeleri bulunur.
+
+Birden çok çizimi aynı anda açmak Faz 2'de gelecek; bugün tek sekme görünür.
 
 ## Harita alanı
 
@@ -250,85 +244,100 @@ Bu sürümde harita `QPainter` ile çizilir; GPU çizimi Faz 1'de devreye girece
 
 ## Komut satırı
 
-Harita alanının hemen altındaki tek satırlık alan. **Bu sürümde varsayılan olarak
-gizlidir**; işi araç çubukları devraldı.
+Tuvalin altında, 28 piksellik bir şerit. Solunda değişmeyen bir **`Komut:`** yazısı
+vardır; sağında ne yazdığınız ve çalışan komutun ne beklediği görünür.
 
-Açmak için **Ctrl+9** veya **Görünüm > Paneller > Komut Satırı**. Kapatmak için aynı
-kısayol.
+Her zaman açıktır — bir CAD kullanıcısının eli oraya kendiliğinden gider.
+**Görünüm ▸ Paneller ▸ Komut Satırı** ile gizlenebilir.
 
-Gizli olması hiçbir şeyi kaldırmaz: komut satırından yazabildiğiniz her komut betikten
-de çalışır ve araç çubuğu düğmeleri de aynı komutları gönderir.
+- **Yukarı / Aşağı** — geçmiş
+- **Tab** — tamamlama; adlar `Registry`'den gelir
+- **Esc** — çalışan **komutu** iptal eder, yazıyı silmez
 
-- Komut adı yazarken satır içi tamamlama önerir
-- **Yukarı/Aşağı ok** komut geçmişinde gezinir
-- Bir komut girdi beklerken buraya koordinat yazabilirsiniz
-- **Esc** önce satırı temizler, satır zaten boşsa çalışan komutu iptal eder
+Ayrıntı için bkz. [Komut satırı](../komutlar/komut-satiri.md).
 
-Tam kullanım: [Komut satırı](../komutlar/komut-satiri.md).
+## Sağ panel
+
+312 piksel genişliğinde ve iki panel taşır. Her panelin başlığı 29 pikseldir ve
+başlıkta sekmelerle birlikte üç işaret bulunur: **tutamak** (sürükle), **daralt**
+ve **yüzdür**.
+
+### Öznitelikler
+
+Üstte **seçili nesne kartı**: tip ikonu, adı ve bir satır tanım. Hiçbir şey seçili
+değilse belgenin kendi bilgileri yazılır — boşalan bir panel bozulmuş görünür.
+
+Altında katlanabilir gruplar ve `112 px | 1fr` ızgarasında satırlar: solda alan adı,
+sağda değer. Değer tek aralıklı yazıyla yazılır, çünkü değer veridir ve veri tek
+aralıklı okunur.
+
+İki rozet vardır ve ikisi ayrı şey söyler:
+
+- **HESAP** (turuncu) — bu sayı hesaplanmıştır, elle yazılmaz.
+- **BOŞ** (soluk) — bu hücre henüz doldurulmamıştır.
+
+Katmanlar panelinde bir katman seçtiğinizde bu panel o katmanın özelliklerini
+gösterir: kabuğun **tek** özellik yüzeyi vardır, iki tane değil.
+
+### Geçmiş
+
+Oturumda ne olduğunun metin dökümü. Komut günlüğünün kendisi için
+**Pencere ▸ Komut Günlüğü**'nü açın; bkz. [Komut günlüğü](../mimari/gunluk.md).
 
 ## Katmanlar paneli
 
-Sağ üstteki **Katmanlar** sekmesi. Sütunlar:
+Sağ panelin altında, kendi 29 piksellik başlığıyla. Her satır tek bir satırdır ve
+sütun başlığı yoktur:
 
-| Sütun | İçerik |
+| Kısım | Ne yapar |
 |---|---|
-| Katman | Renk kutucuğu ve ad. Aktif katman kalın yazılır |
-| Gör. | `●` görünür, `○` gizli |
-| Kilit | `🔒` kilitli, `–` açık |
-| Nesne | Katmandaki canlı nesne sayısı |
+| 👁 **göz** | Katmanı gösterir/gizler |
+| ▪ **renk** | Katmanın çizim rengi |
+| **ad** | Aktif katman kalın yazılır |
+| **sayı** | Katmandaki nesne sayısı |
+| 🔒 **kilit** | Kilitli katman turuncu; açık olan soluk |
 
-**Çift tıklama davranışı:**
+Seçili satır vurgu yıkaması ve sol kenarında 2 piksellik vurgu çizgisi taşır. Bu
+kalıp programdaki **her** listede aynıdır; üzerine gelme ise düz bir gridir ve
+seçime hiç benzemez — "farenin nerede olduğu" ile "neyin seçili olduğu" birbirine
+karışmaz.
 
-- **Gör.** sütununa çift tıklamak görünürlüğü ters çevirir — `KATMAN ad="..." gorunur=...` komutunu gönderir
-- **Kilit** sütununa çift tıklamak kilidi ters çevirir — `KATMAN ad="..." kilitli=...` gönderir
-- Diğer sütunlara çift tıklamak katmanı aktif yapar — `KATMAN ad="..."` gönderir
+Altta bir sayaç: kaç katman var ve kaçı düzenlenebilir.
 
-Yani panelden yaptığınız her değişiklik komut veri yolundan geçer, günlüğe yazılır ve
-**Ctrl+Z** ile geri alınabilir.
-
-## Öznitelikler paneli
-
-**Katmanlar** ile aynı sekme grubundaki ikinci sekme. Seçili katmanın ve dokümanın
-özelliklerini gösterir.
-
-| Grup | Alanlar |
-|---|---|
-| Doküman | Koordinat sistemi, katman sayısı, nesne sayısı, aktif katman, sürüm numarası |
-| Kapsam | X min/max, Y min/max, genişlik × yükseklik (metre). Çizim boşsa "boş çizim" |
-| Katman — *ad* | Görünür, kilitli, renk (`#AARRGGBB`), çizgi kalınlığı, nesne sayısı, tepe noktası sayısı |
-| Oturum | Komut sayısı, günlük satırı sayısı, geri alma/yineleme derinliği, render arka ucu |
-
-Katman grubu yalnızca **Katmanlar** panelinden bir katman seçtiğinizde görünür.
-
-**Her iki panel de taşınabilir.** Sekmeyi sürükleyerek sol kenara taşıyabilir, alt
-bölgeye indirebilir veya pencereden koparabilirsiniz.
-
-## Transkript ve Komut Günlüğü
-
-Alttaki sekme grubu.
-
-**Transkript** komutların size söylediklerini gösterir: hangi katmanın aktif olduğu, kaç
-nesne silindiğinin, hataların. Komut satırına yazdığınız her şey `> ` önekiyle burada
-tekrarlanır.
-
-**Komut Günlüğü** aynı oturumu makine biçiminde gösterir — her komut bir JSON satırı.
-Ayrıntı: [Komut günlüğü](../mimari/gunluk.md).
+Sağ tuş menüsü katman komutlarını sunar: adlandır, renk, kilit, stil düzenle. Hepsi
+`KATMAN` komutuyla gider.
 
 ## Durum çubuğu
 
-| Bölme | İçerik |
+26 piksel, pencerenin tamamını kaplar — araç kutusunun ve sağ panelin de altından
+geçer.
+
+| Bölüm | Ne yazar |
 |---|---|
-| Sol | Çalışan komutun isteği, komut yoksa `Hazır` |
-| Katman | Aktif katman adı |
-| Sağa (Y) / Yukarı (X) | İmlecin harita koordinatı, metre, üç ondalık. Türk haritacılık konvansiyonu: **Y sağa değer, X yukarı değer** |
-| Ölçek | Bir ekran pikselinin kaç metreye karşılık geldiği |
-| Sağ | Dokümanın koordinat sistemi, örneğin `TUREF/TM30` |
+| solda | İmlecin koordinatı: `Y <sağa değer>  X <yukarı değer>` |
+| ortada | Yardımcı anahtarları: **IZGARA · YAKALAMA · DİK · POLAR · OSNAP · DİNAMİK GİRDİ · KALINLIK** |
+| sağda | Veritabanı durumu ve çizim motoru |
+
+Anahtarlara tıklamak o ayarı yazar — ve bir **komut** gönderir. Yani F7 ile tıklamak
+aynı şeydir ve ikisi de günlüğe aynı satırı yazar. Açık bir anahtar iki şeyle
+işaretlenir: zemini açılır **ve** yazısı vurgu rengine döner; renk körü bir
+kullanıcı için tek başına renk yeterli değildir.
 
 ## Tema
 
-**Görünüm > Koyu Tema** gündüz ve gece teması arasında geçer. Varsayılan gündüz
-temasıdır. Seçiminiz kaydedilir ve programı yeniden açtığınızda korunur; pencere boyutu
-ve panel yerleşimi de öyle.
+**Görünüm ▸ Koyu Tema** ile ya da **Ayarlar ▸ Görünüm ve Tema ▸ tema** ile
+değiştirilir. Gece ve gündüz olmak üzere iki tema vardır ve ikisi de aynı yapıdan
+üretilir: aynı jetonlar, farklı değerler. Bir panelin gündüz temasında yeri
+değişmez, yalnızca rengi değişir.
+
+Tema tercihi profilinizde saklanır ve program açıldığında geri gelir.
+
+### Neden her platformda aynı görünüyor
+
+Pencere çerçevesi, menü çubuğu ve düğmeler işletim sisteminden alınmaz; uygulama
+kendisi çizer. Yazı tipleri (**IBM Plex Sans** ve **IBM Plex Mono**) programla
+birlikte gelir, sistemde kurulu olmaları gerekmez. Sonuç: Windows, macOS ve
+Linux'ta aynı pencere, aynı ölçüler, aynı renkler.
 
 ## Klavyeyle tam kullanım
 
@@ -337,8 +346,9 @@ yapabilecekleriniz:
 
 | Tuş | İşlev |
 |---|---|
+| **Ctrl+K** | Komut arama — yazdıkça süzülen komut listesi |
 | **Ctrl+9** | Komut satırını açar veya kapatır |
-| Komut satırı açıkken yazmak | Komut girmek |
+| Komut satırına yazmak | Komut girmek |
 | **Yukarı / Aşağı** | Komut geçmişi |
 | **Esc** | Satırı temizler; satır boşsa komutu iptal eder |
 | **Ctrl+Z** / **Ctrl+Shift+Z** | Geri al / yinele |
@@ -347,8 +357,9 @@ yapabilecekleriniz:
 | **Ctrl+0** | Kapsama yakınlaş |
 | **Ctrl++** / **Ctrl+-** | Yakınlaştır / uzaklaştır |
 | **Ctrl+R** | Betik çalıştır |
+| **F6** | [Öznitelik tablosu](../veri/oznitelik-tablosu.md) |
 | **F12** | Geliştirici bilgisi |
-| **Alt+D / Alt+Z / Alt+G / Alt+Y** | Menüleri açar |
+| **Alt** + menünün altçizgili harfi | Menüleri açar; altçizgiler yalnızca Alt basılıyken görünür |
 
 Koordinatlar komut satırından girilebildiği için çizim de tamamen klavyeyle yapılabilir.
 
@@ -363,3 +374,4 @@ Ekran okuyucu desteği (NVDA, VoiceOver, Orca) Faz 1'de tamamlanacak.
 - [Komut satırı](../komutlar/komut-satiri.md)
 - [Nesne seçme](../komutlar/select.md)
 - [Oturum modları](../komutlar/mode.md)
+- [Öznitelik tablosu](../veri/oznitelik-tablosu.md)

@@ -5,6 +5,9 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
+#include <locale>
+#include <sstream>
 
 namespace piricad::command {
 namespace {
@@ -361,6 +364,303 @@ core::Result<Token> classify(std::string_view raw)
 }
 
 } // namespace
+
+// ---- the filter predicate, CLAUDE.md 5.11 -----------------------------------
+//
+// The SAME grammar as `evaluate_expression`, wrapped in comparison and boolean
+// layers. It is here rather than in the attribute table for the reason 5.11
+// gives: a second grammar would drift from this one, and then a filter typed at
+// the prompt would mean something different from the same filter typed in the
+// table — which is exactly the class of defect one parser exists to prevent.
+namespace {
+
+/// A value inside a predicate: a number, a string, or nothing at all.
+///
+/// NULL IS ITS OWN THING. A cell nobody filled is not an empty string and not a
+/// zero; `IS NULL` is how a user asks for it and every comparison against it is
+/// false, which is what SQL does and what every GIS user already expects.
+struct Cell
+{
+    bool null{true};
+    bool numeric{false};
+    double number{0.0};
+    std::string text;
+
+    static Cell of_number(double v) { return Cell{false, true, v, {}}; }
+
+    static Cell of_text(std::string v) { return Cell{false, false, 0.0, std::move(v)}; }
+};
+
+class PredicateParser
+{
+public:
+    PredicateParser(std::string_view src, const FieldReader& field) : s_(src), field_(field) {}
+
+    bool parse_or()
+    {
+        bool value = parse_and();
+        while (keyword("OR")) {
+            const bool rhs = parse_and();
+            value          = value || rhs;
+        }
+        return value;
+    }
+
+    bool failed{false};
+    std::string why;
+
+private:
+    void skip()
+    {
+        while (at_ < s_.size() && (s_[at_] == ' ' || s_[at_] == '\t'))
+            ++at_;
+    }
+
+    /// Consumes `word` when it is the next token, case-insensitively over ASCII.
+    /// The keywords are ASCII by construction (AND, OR, NOT, IS, NULL), so
+    /// `std::toupper` is not reached for Turkish text and 5.6 is not in play.
+    bool keyword(const char* word)
+    {
+        skip();
+        const std::size_t n = std::strlen(word);
+        if (at_ + n > s_.size()) return false;
+        for (std::size_t i = 0; i < n; ++i) {
+            const char c = s_[at_ + i];
+            const char u = (c >= 'a' && c <= 'z') ? static_cast<char>(c - 32) : c;
+            if (u != word[i]) return false;
+        }
+        // A keyword must not run into an identifier: `ORDER` is not `OR`.
+        if (at_ + n < s_.size()) {
+            const char after = s_[at_ + n];
+            if ((after >= 'A' && after <= 'Z') || (after >= 'a' && after <= 'z') || after == '_')
+                return false;
+        }
+        at_ += n;
+        return true;
+    }
+
+    bool parse_and()
+    {
+        bool value = parse_not();
+        while (keyword("AND")) {
+            const bool rhs = parse_not();
+            value          = value && rhs;
+        }
+        return value;
+    }
+
+    bool parse_not()
+    {
+        if (keyword("NOT")) return !parse_not();
+
+        skip();
+        if (at_ < s_.size() && s_[at_] == '(') {
+            ++at_;
+            const bool inner = parse_or();
+            skip();
+            if (at_ < s_.size() && s_[at_] == ')')
+                ++at_;
+            else
+                fail("Kapanmayan parantez");
+            return inner;
+        }
+        return parse_compare();
+    }
+
+    bool parse_compare()
+    {
+        const Cell lhs = parse_cell();
+        skip();
+
+        if (keyword("IS")) {
+            const bool negate = keyword("NOT");
+            if (!keyword("NULL")) {
+                fail("'IS' sonrası beklenen: NULL veya NOT NULL");
+                return false;
+            }
+            return negate ? !lhs.null : lhs.null;
+        }
+
+        static const char* const kOps[] = {"!=", "<>", "<=", ">=", "=", "<", ">"};
+        const char* op                  = nullptr;
+        for (const char* candidate : kOps) {
+            const std::size_t n = std::strlen(candidate);
+            if (s_.compare(at_, n, candidate) == 0) {
+                op = candidate;
+                at_ += n;
+                break;
+            }
+        }
+        if (op == nullptr) {
+            fail("Beklenen bir karşılaştırma: = != < <= > >= veya IS NULL");
+            return false;
+        }
+
+        const Cell rhs = parse_cell();
+
+        // Any comparison against an unfilled cell is false, INCLUDING `!=`. A
+        // measurement nobody took is not "different from 5"; it is unknown, and
+        // saying otherwise would put every unsurveyed parcel into every filter.
+        if (lhs.null || rhs.null) return false;
+
+        const int order = compare(lhs, rhs);
+        if (std::strcmp(op, "=") == 0) return order == 0;
+        if (std::strcmp(op, "!=") == 0 || std::strcmp(op, "<>") == 0) return order != 0;
+        if (std::strcmp(op, "<") == 0) return order < 0;
+        if (std::strcmp(op, "<=") == 0) return order <= 0;
+        if (std::strcmp(op, ">") == 0) return order > 0;
+        return order >= 0;
+    }
+
+    static int compare(const Cell& a, const Cell& b)
+    {
+        if (a.numeric && b.numeric) return a.number < b.number ? -1 : (a.number > b.number ? 1 : 0);
+
+        // Mixed types compare as TEXT, because a cell is text until somebody says
+        // otherwise: an `ada_no` column holding `1284` in one row and `1284/A` in
+        // the next is normal in cadastre, and refusing the comparison would make
+        // the filter fail on the whole layer rather than on the odd row.
+        const std::string left  = a.numeric ? format_number(a.number) : a.text;
+        const std::string right = b.numeric ? format_number(b.number) : b.text;
+        return left.compare(right) < 0 ? -1 : (left == right ? 0 : 1);
+    }
+
+    static std::string format_number(double v)
+    {
+        std::ostringstream out;
+        out.imbue(std::locale::classic());
+        out << v;
+        return out.str();
+    }
+
+    Cell parse_cell()
+    {
+        skip();
+        if (at_ >= s_.size()) {
+            fail("İfade beklenmedik biçimde bitti");
+            return {};
+        }
+
+        // "column" — the double quote is SQL's, and every GIS user has it.
+        if (s_[at_] == '"') {
+            const std::size_t close = s_.find('"', at_ + 1);
+            if (close == std::string_view::npos) {
+                fail("Kapanmayan sütun adı tırnağı");
+                return {};
+            }
+            const std::string name(s_.substr(at_ + 1, close - at_ - 1));
+            at_ = close + 1;
+
+            if (!field_) return {};
+            const std::optional<std::string> got = field_(name);
+            if (!got) return {};
+
+            // A cell that reads as a number IS a number, so `> 2000` works on a
+            // text column of numbers — which is what an attribute table holds.
+            const std::optional<double> numeric = as_number(*got);
+            return numeric ? Cell::of_number(*numeric) : Cell::of_text(*got);
+        }
+
+        // 'string'
+        if (s_[at_] == '\'') {
+            const std::size_t close = s_.find('\'', at_ + 1);
+            if (close == std::string_view::npos) {
+                fail("Kapanmayan metin tırnağı");
+                return {};
+            }
+            Cell cell = Cell::of_text(std::string(s_.substr(at_ + 1, close - at_ - 1)));
+            at_       = close + 1;
+            return cell;
+        }
+
+        // Anything else is arithmetic, read by the one expression parser.
+        const std::size_t start = at_;
+        int depth               = 0;
+        while (at_ < s_.size()) {
+            const char c = s_[at_];
+            if (c == '(') ++depth;
+            if (c == ')') {
+                if (depth == 0) break;
+                --depth;
+            }
+            if (depth == 0 && (c == '=' || c == '<' || c == '>' || c == '!')) break;
+            if (depth == 0 && starts_keyword()) break;
+            ++at_;
+        }
+
+        const std::string_view body = s_.substr(start, at_ - start);
+        ExprParser inner(body);
+        const double value = inner.parse();
+        if (inner.failed) {
+            fail("'" + std::string(body) + "': " + inner.why);
+            return {};
+        }
+        return Cell::of_number(value);
+    }
+
+    /// Whether the cursor is at the start of a boolean keyword, so a bare term
+    /// stops before `AND`, `OR` and `IS` rather than swallowing them.
+    bool starts_keyword() const
+    {
+        if (at_ == 0 || (s_[at_ - 1] != ' ' && s_[at_ - 1] != '\t')) return false;
+        for (const char* word : {"AND", "OR", "NOT", "IS"}) {
+            const std::size_t n = std::strlen(word);
+            if (at_ + n > s_.size()) continue;
+            bool same = true;
+            for (std::size_t i = 0; i < n && same; ++i) {
+                const char c = s_[at_ + i];
+                const char u = (c >= 'a' && c <= 'z') ? static_cast<char>(c - 32) : c;
+                same         = u == word[i];
+            }
+            if (same) return true;
+        }
+        return false;
+    }
+
+    static std::optional<double> as_number(const std::string& text)
+    {
+        if (text.empty()) return std::nullopt;
+
+        std::istringstream in(text);
+        in.imbue(std::locale::classic());
+        double v = 0.0;
+        in >> v;
+        if (in.fail()) return std::nullopt;
+
+        // Trailing anything means it was not a number: `1284/A` must stay text.
+        char extra = 0;
+        if (in >> extra) return std::nullopt;
+        return v;
+    }
+
+    void fail(std::string message)
+    {
+        if (failed) return;
+        failed = true;
+        why    = std::move(message);
+    }
+
+    std::string_view s_;
+    const FieldReader& field_;
+    std::size_t at_{0};
+};
+
+} // namespace
+
+core::Result<bool> evaluate_predicate(std::string_view expr, const FieldReader& field)
+{
+    // An empty filter matches everything. A user who clears the bar means "show
+    // me all of it", not "show me nothing".
+    bool blank = true;
+    for (char c : expr)
+        blank = blank && (c == ' ' || c == '\t');
+    if (blank) return true;
+
+    PredicateParser p(expr, field);
+    const bool value = p.parse_or();
+    if (p.failed) return err(ErrorCode::ParseError, "'" + std::string(expr) + "': " + p.why);
+    return value;
+}
 
 core::Result<double> evaluate_expression(std::string_view expr)
 {

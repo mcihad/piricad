@@ -19,26 +19,6 @@ int main(int argc, char** argv)
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
         Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 
-    // FUSION, ON EVERY PLATFORM, BEFORE THE FIRST WIDGET EXISTS.
-    //
-    // `design.md` §12 is explicit and it is the reason this line is here rather
-    // than a preference: the native style is not inherited anywhere, so Windows,
-    // macOS and Linux draw the same program. Without it Qt picks up the desktop's
-    // own style and the same build looks like three different applications — a
-    // Windows 11 combo box, a macOS one and whatever GTK theme the user has.
-    //
-    // Before `QApplication` would be too early (there is no style system yet) and
-    // after the first widget would be too late (it has already been polished), so
-    // it happens here, on the line after construction and before anything else.
-    piricad::app::installShellStyle();
-
-    QString fontDir;
-    if (!piricad::app::loadShellFonts(&fontDir)) {
-        qWarning("PiriCAD: IBM Plex yüklenemedi (%s). Arayüz bu makinede tasarlandığı gibi "
-                 "görünmeyecek; PIRICAD_DATA ile veri dizinini gösterin.",
-                 fontDir.toUtf8().constData());
-    }
-
     // High DPI: pass the scale factor through rather than rounding it, so a 1.25
     // or 1.5 display gets the layout at its own scale instead of the nearest
     // integer one. `design.md` §12 asks for this by name, and the icons are SVG
@@ -49,6 +29,30 @@ int main(int argc, char** argv)
     QApplication::setApplicationVersion(QStringLiteral(PIRICAD_VERSION));
     QApplication::setOrganizationName(QStringLiteral("PiriCAD"));
     QApplication::setOrganizationDomain(QStringLiteral("piricad.org"));
+
+    // FUSION, ON EVERY PLATFORM, BEFORE THE FIRST WIDGET EXISTS.
+    //
+    // `design.md` §12 is explicit and it is the reason this line is here rather
+    // than a preference: the native style is not inherited anywhere, so Windows,
+    // macOS and Linux draw the same program. Without it Qt picks up the desktop's
+    // own style and the same build looks like three different applications — a
+    // Windows 11 combo box, a macOS one and whatever GTK theme the user has.
+    //
+    // AFTER `QApplication`, and that is not a preference either. `ShellStyle`
+    // builds a `QProxyStyle` and `loadShellFonts` asks `data_root()` where the
+    // executable is; both need an application object to exist. Called before
+    // construction they do not fail politely — the program prints
+    // "Please instantiate the QApplication object first" and dies on the next
+    // line. Before the first widget is still required, which is why they sit
+    // here rather than lower down.
+    piricad::app::installShellStyle();
+
+    QString fontDir;
+    if (!piricad::app::loadShellFonts(&fontDir)) {
+        qWarning("PiriCAD: IBM Plex yüklenemedi (%s). Arayüz bu makinede tasarlandığı gibi "
+                 "görünmeyecek; PIRICAD_DATA ile veri dizinini gösterin.",
+                 fontDir.toUtf8().constData());
+    }
 
     // Turkish is the source language. Case conversion of user-visible text goes
     // through QLocale, never std::toupper — 'i' upper-cases to 'İ', not 'I'

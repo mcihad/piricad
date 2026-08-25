@@ -223,6 +223,36 @@ Result<AttrValue> AttrColumn::get(std::size_t row) const
     return v;
 }
 
+std::string attr_display(const AttrValue& value, DecimalMark mark)
+{
+    if (!value.present) return {};
+
+    switch (value.type) {
+    case AttrType::Text:
+    case AttrType::CodeRef: return value.text;
+    case AttrType::Bool: return value.number != 0 ? "evet" : "hayır";
+    case AttrType::Length: {
+        // Millimetres to metres with three decimals, built from integers so no
+        // locale can put a comma where a golden fixture expects a point (R9).
+        const bool negative          = value.number < 0;
+        const std::int64_t magnitude = negative ? -value.number : value.number;
+
+        std::string out             = std::to_string(magnitude / 1000);
+        const std::int64_t fraction = magnitude % 1000;
+        if (fraction != 0) {
+            std::string digits = std::to_string(fraction);
+            digits.insert(0, static_cast<std::size_t>(3 - digits.size()), '0');
+            while (!digits.empty() && digits.back() == '0')
+                digits.pop_back();
+            out += (mark == DecimalMark::Comma ? "," : ".") + digits;
+        }
+        return negative ? "-" + out : out;
+    }
+    case AttrType::Int64: return std::to_string(value.number);
+    }
+    return {};
+}
+
 std::string_view AttrColumn::text(std::size_t row) const
 {
     if (!is_text_shaped(spec_.type) || !present(row)) return {};

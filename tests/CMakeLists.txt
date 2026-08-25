@@ -61,6 +61,20 @@ set_target_properties(piricad_tests PROPERTIES
 # rather than the example.
 add_test(NAME unit COMMAND piricad_tests WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
+# ------------------------------------------------------------- shell start-up --
+# The application must REACH its first frame. Nothing else in the suite runs the
+# shell: the unit tests link no Qt and the gates read source, so a program that
+# crashed on the line after `main` would pass every one of them — which is what
+# happened when `installShellStyle()` and `loadShellFonts()` were called before
+# `QApplication` existed. This starts the real binary offscreen and requires it
+# to exit cleanly.
+if(TARGET piricad)
+    add_test(NAME shell-starts
+        COMMAND "${CMAKE_COMMAND}" -E env QT_QPA_PLATFORM=offscreen
+                $<TARGET_FILE:piricad> --version)
+    set_tests_properties(shell-starts PROPERTIES TIMEOUT 60)
+endif()
+
 # Every gate script runs as a test, so a violation fails `ctest`, not only CI.
 # Discovered rather than listed: a new gate is picked up by re-running CMake, and
 # there is no second list to keep in sync (CLAUDE.md 5.10, in spirit).

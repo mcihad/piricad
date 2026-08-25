@@ -51,41 +51,12 @@ namespace {
 /// prescribes text heights per plan type and those live in /data, not here.
 constexpr core::Mm kDefaultHeight = 2000;
 
-/// One value as it should read on paper.
-///
-/// A `Length` column is stored in millimetres and printed in metres, because that
-/// is the unit a plan sheet writes; an absent cell prints as nothing rather than
-/// as a zero, since an unmeasured frontage and a zero frontage are different
-/// facts about a parcel.
+/// One value as it should read on paper — the shared formatter, with the mark
+/// a Turkish plan sheet uses. It lives in `core` because the attribute table
+/// needs the same arithmetic with the other mark, and two copies would drift.
 std::string as_text(const core::AttrValue& value)
 {
-    if (!value.present) return {};
-
-    switch (value.type) {
-    case core::AttrType::Text:
-    case core::AttrType::CodeRef: return value.text;
-    case core::AttrType::Bool: return value.number != 0 ? "evet" : "hayır";
-    case core::AttrType::Length: {
-        // Millimetres to metres with three decimals, built from integers so no
-        // locale can put a comma where a golden fixture expects a point
-        // (core.md R9).
-        const bool negative          = value.number < 0;
-        const std::int64_t magnitude = negative ? -value.number : value.number;
-
-        std::string out             = std::to_string(magnitude / 1000);
-        const std::int64_t fraction = magnitude % 1000;
-        if (fraction != 0) {
-            std::string digits = std::to_string(fraction);
-            digits.insert(0, static_cast<std::size_t>(3 - digits.size()), '0');
-            while (!digits.empty() && digits.back() == '0')
-                digits.pop_back();
-            out += "," + digits;
-        }
-        return negative ? "-" + out : out;
-    }
-    case core::AttrType::Int64: return std::to_string(value.number);
-    }
-    return {};
+    return core::attr_display(value, core::DecimalMark::Comma);
 }
 
 /// Replaces every `{sutun}` in `format` with that column's value for `e`.

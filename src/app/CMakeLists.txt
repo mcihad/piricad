@@ -13,6 +13,7 @@ qt_standard_project_setup()
 # of the project uses.
 qt_add_executable(piricad
     src/attribute_panel.cpp
+    src/attribute_table.cpp
     src/command_line.cpp
     src/command_palette.cpp
     src/controller.cpp
@@ -38,6 +39,7 @@ qt_add_executable(piricad
 
     include/piricad/app/command_line.hpp
     include/piricad/app/attribute_panel.hpp
+    include/piricad/app/attribute_table.hpp
     include/piricad/app/command_palette.hpp
     include/piricad/app/controller.hpp
     include/piricad/app/data_root.hpp

@@ -275,6 +275,40 @@ QString themeStyleSheet(ThemeMode mode)
         QLabel#rowHelp                   { background: transparent; color: %(textFaint)s;
                                            font-size: 11px; }
 
+        /* ---- attribute table, §9 -------------------------------------------- */
+        QWidget#tableToolRow             { background: %(raised)s;
+                                           border-bottom: 1px solid %(lineHard)s; }
+        QWidget#tableFilterBar           { background: %(window)s;
+                                           border-bottom: 1px solid %(lineHard)s; }
+        QToolButton#tableTool            { background: transparent; border-radius: 4px;
+                                           border: 1px solid transparent; padding: 0px;
+                                           min-width: 30px; max-width: 30px;
+                                           min-height: 30px; max-height: 30px; }
+        QToolButton#tableTool:hover      { background: %(hoverIcon)s; }
+        QToolButton#tableTool:checked    { background: %(wash)s;
+                                           border: 1px solid %(accentEdge)s; }
+        QLineEdit#expressionBar          { background: %(input)s; border: 1px solid %(border)s;
+                                           border-radius: 4px; padding: 5px 10px;
+                                           font-family: "IBM Plex Mono"; font-size: 12px;
+                                           min-height: 22px; }
+        QLineEdit#tableSearch            { background: %(input)s; border: 1px solid %(border)s;
+                                           border-radius: 4px; padding: 5px 10px;
+                                           font-size: 11.5px; min-height: 22px; }
+        QWidget#statsPanel               { background: %(panel)s;
+                                           border-left: 1px solid %(lineHard)s; }
+        QTableView#attributeGrid         { background: %(window)s; border: none;
+                                           gridline-color: %(lineSoft)s;
+                                           font-family: "IBM Plex Mono"; font-size: 11.5px;
+                                           selection-background-color: %(wash)s;
+                                           selection-color: %(text)s; }
+        QTableView#attributeGrid::item   { padding: 0px 8px; }
+        QPushButton#segment              { background: %(input)s; color: %(textDim)s;
+                                           border: 1px solid %(border)s; border-radius: 4px;
+                                           padding: 4px 14px; min-height: 22px;
+                                           font-size: 11.5px; }
+        QPushButton#segment:checked      { background: %(wash)s; color: %(accentHi)s;
+                                           border: 1px solid %(accentEdge)s; }
+
         /* ---- layers panel, §7 ---------------------------------------------- */
         /* The row is painted by LayerRowDelegate; the view must add nothing. */
         QTreeWidget#layerTree            { background: %(panel)s; border: none;

@@ -2,6 +2,7 @@
 #include "piricad/app/main_window.hpp"
 
 #include "piricad/app/attribute_panel.hpp"
+#include "piricad/app/attribute_table.hpp"
 #include "piricad/app/command_line.hpp"
 #include "piricad/app/command_palette.hpp"
 #include "piricad/app/controller.hpp"
@@ -527,9 +528,13 @@ void MainWindow::buildActions()
     actMeasure_      = placeholder(Glyph::Measure, tr("Ölç"), QStringLiteral("ÖLÇ"), tr("Faz 2"));
     actIdentify_ =
         placeholder(Glyph::Identify, tr("Sorgula"), QStringLiteral("SORGULA"), tr("Faz 2"));
-    actTable_ = placeholder(Glyph::Table, tr("Öznitelik Tablosu"),
-                            QStringLiteral("ÖZNİTELİKTABLOSU"), tr("Faz 2"));
-    actAi_    = placeholder(Glyph::Ai, tr("AI Asistan"), QString(), tr("Faz 3"));
+    actTable_ = new QAction(tr("Öznitelik Tablosu"), this);
+    actTable_->setData(static_cast<int>(Glyph::Table));
+    actTable_->setToolTip(tr("Katmanın satırlarını ve sütunlarını aç"));
+    actTable_->setShortcut(QKeySequence(Qt::Key_F6));
+    connect(actTable_, &QAction::triggered, this, &MainWindow::openAttributeTable);
+
+    actAi_ = placeholder(Glyph::Ai, tr("AI Asistan"), QString(), tr("Faz 3"));
     actAi_->setToolTip(tr("AI komut önerisi — önizleme ve onay ile (Faz 3)"));
 
     // ---- arayüz ----
@@ -1121,6 +1126,17 @@ void MainWindow::refreshLayerCombo()
     // panel instead — the same `KATMAN` command either way (Article 1.2), so no
     // capability moved with the widget.
     if (layerPanel_) layerPanel_->refresh();
+}
+
+void MainWindow::openAttributeTable()
+{
+    // Rebuilt each time rather than kept: the window reads the document through
+    // the controller and holds no copy, so there is nothing to keep alive, and a
+    // stale one is one more thing that can disagree with the drawing.
+    auto* table = new AttributeTable(*controller_, controller_->activeLayerName(), this);
+    table->setAttribute(Qt::WA_DeleteOnClose, true);
+    table->applyTheme(theme_);
+    table->show();
 }
 
 void MainWindow::openCommandSearch()
