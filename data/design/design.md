@@ -516,6 +516,23 @@ küçük bir rozet konur: `HESAP`, `ZORUNLU`, `SALT OKUNUR`, `KAYDEDİLMEDİ`.
 Hatalı bir alanın **altında** tek satır neden yazar; alan adıyla aynı hizada,
 `--danger`.
 
+### 15.2b Renk alanı
+
+Bir renk, formun bir **alanıdır**; yanına iliştirilmiş bir örnek değil. Bu yüzden
+diğer girdilerle aynı genişlikte, aynı yükseklikte durur, değerin kendisiyle
+dolar ve onaltılık karşılığı üstüne yazılır.
+
+| | |
+|---|---|
+| Ölçü | Sütun genişliği × 22 px — komşusu olan açılır kutuyla aynı |
+| Yüzü | Değerin kendisi. Kenarı, değerin `darker(140)` hâli |
+| Yazısı | `#RRGGBB` (saydamsa `#AARRGGBB`), tek aralıklı, ortalanmış |
+| Yazı rengi | Parlaklığa göre siyah ya da beyaz — on altı milyon zeminde de okunur |
+| Dolgusuz | Kesikli kenar, boş yüz, ortada `dolgusuz`. Beyaz **değil**: beyaz bir plan renkidir |
+
+Değer kullanıcının verisidir, temanın değil: jetondan gelmez ve gelemez. Yüzü
+**boyanır**, biçim yaprağıyla verilmez — bu programda tek bir yaprak vardır (§2).
+
 ### 15.3 Seçim bileşenleri
 
 | Bileşen | Ölçü | Durumlar |

@@ -877,3 +877,59 @@ TEST_CASE("Ayrıştırıcı onaltılık sayıyı okur — renk her yerde 0xAARRG
     CHECK_EQ(f.doc.layer(f.doc.find_layer("BINA"))->appearance.rgba, 0xFF2E7D32u);
     CHECK(!f.bus.execute_line("KATMAN ad=BOS renk=0x", Origin::Test).ok());
 }
+
+TEST_CASE("DİKDÖRTGEN: ikinci köşe dörtgen kılavuzu ister ve iki köşe kare olur")
+{
+    Fixture f;
+
+    auto started = f.bus.begin_interactive("DİKDÖRTGEN");
+    REQUIRE(started.ok());
+    Session& session = *started.value();
+
+    // The first corner is asked for with NO guide: there is nothing to preview
+    // between yet.
+    REQUIRE(session.waiting());
+    CHECK_FALSE(session.prompt().has_rubber_band);
+
+    REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+
+    // The second is asked for with a RECTANGLE guide, and this is the assertion
+    // that matters: previewed as a line, the guide shows the diagonal of the
+    // shape instead of the shape, and the user finds out what they drew after
+    // they have drawn it.
+    REQUIRE(session.waiting());
+    CHECK(session.prompt().has_rubber_band);
+    CHECK(session.prompt().rubber_shape == RubberShape::Rectangle);
+    CHECK_EQ(session.prompt().rubber_origin.x, core::Mm{0});
+
+    REQUIRE(session.supply(Value::point(core::Point2{40'000, -25'000})).ok());
+    REQUIRE(session.finished());
+    REQUIRE(f.bus.finish(session).ok());
+
+    // Four corners from two, and the face encloses what the two corners span.
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
+    const core::Box2 box = f.doc.entity_extent(0);
+    CHECK_EQ(box.min_x, core::Mm{0});
+    CHECK_EQ(box.max_x, core::Mm{40'000});
+    CHECK_EQ(box.min_y, core::Mm{-25'000});
+    CHECK_EQ(box.max_y, core::Mm{0});
+}
+
+TEST_CASE("DİKDÖRTGEN: aynı köşeden geçen iki nokta alan kapatmaz")
+{
+    Fixture f;
+
+    auto started = f.bus.begin_interactive("DİKDÖRTGEN");
+    REQUIRE(started.ok());
+    Session& session = *started.value();
+
+    REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+    // Same y: the two corners are on one line and enclose nothing. Refused with a
+    // message naming what to move, rather than handed to the geometry layer to
+    // fail as a degenerate ring.
+    REQUIRE(session.supply(Value::point(core::Point2{40'000, 0})).ok());
+    REQUIRE(session.finished());
+    (void)f.bus.finish(session);
+
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+}

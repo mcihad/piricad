@@ -378,17 +378,39 @@ void MainWindow::buildActions()
     connect(actLine_, &QAction::triggered, this,
             [this] { controller_->runCommand(QStringLiteral("ÇİZGİ")); });
 
+    // A modal draw tool is a CHECKABLE action that runs its command; the command
+    // is the feature and the button is one client of it (Article 1.2). Anything
+    // that only ever echoes "Faz 2" stays a `placeholder`, disabled, so the tool
+    // box never offers a button that does nothing.
+    const auto drawTool = [this](Glyph glyph, const QString& text, const QString& command,
+                                 const QString& tip) {
+        auto* action = new QAction(text, this);
+        action->setCheckable(true);
+        action->setToolTip(tip);
+        action->setData(static_cast<int>(glyph));
+        connect(action, &QAction::triggered, this,
+                [this, command] { controller_->runCommand(command); });
+        return action;
+    };
+
+    actPolygon_ = drawTool(Glyph::Polygon, tr("Poligon"), QStringLiteral("ALAN"),
+                           tr("ALAN — kapalı bir alan çizer  ·  kısaltma: POLİGON, AL"));
+    actRectangle_ =
+        drawTool(Glyph::Rectangle, tr("Dikdörtgen"), QStringLiteral("DİKDÖRTGEN"),
+                 tr("DİKDÖRTGEN — karşılıklı iki köşeden çizer; Ctrl basılıyken kare  ·  "
+                    "kısaltma: DKD"));
+
     auto* drawingTools = new QActionGroup(this);
     drawingTools->setExclusive(true);
     drawingTools->addAction(actSelect_);
     drawingTools->addAction(actLine_);
+    drawingTools->addAction(actPolygon_);
+    drawingTools->addAction(actRectangle_);
 
     actPolyline_ =
         placeholder(Glyph::Polyline, tr("Çoklu Çizgi"), QStringLiteral("ÇOKLUÇİZGİ"), tr("Faz 2"));
     actArc_    = placeholder(Glyph::Arc, tr("Yay"), QStringLiteral("YAY"), tr("Faz 2"));
     actCircle_ = placeholder(Glyph::Circle, tr("Daire"), QStringLiteral("DAİRE"), tr("Faz 2"));
-    actRectangle_ =
-        placeholder(Glyph::Rectangle, tr("Dikdörtgen"), QStringLiteral("DİKDÖRTGEN"), tr("Faz 2"));
     actPoint_ = placeholder(Glyph::Point, tr("Nokta"), QStringLiteral("NOKTA"), tr("Faz 2"));
     actText_  = placeholder(Glyph::Text, tr("Metin"), QStringLiteral("METİN"), tr("Faz 2"));
 
@@ -421,7 +443,6 @@ void MainWindow::buildActions()
 
     actSelectArea_ =
         placeholder(Glyph::SelectArea, tr("Alan Seç"), QStringLiteral("SEÇ pencere="), tr("Faz 2"));
-    actPolygon_ = placeholder(Glyph::Polygon, tr("Poligon"), QStringLiteral("ALAN"), tr("Faz 2"));
     actTrim_    = placeholder(Glyph::Trim, tr("Böl / Buda"), QStringLiteral("BUDA"), tr("Faz 2"));
     actUnion_ =
         placeholder(Glyph::Union, tr("Birleştir — tevhit"), QStringLiteral("TEVHİT"), tr("Faz 2"));

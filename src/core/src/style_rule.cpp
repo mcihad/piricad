@@ -50,6 +50,7 @@ constexpr const char* kKeyImageGlyphSz = "sembol_boyut";
 constexpr const char* kKeyImageGap     = "tarama_aralik";
 
 /// The declared symbol-layer stack, and the names inside one.
+constexpr const char* kKeyAliases     = "takma_adlar";
 constexpr const char* kKeyLayers      = "katmanlar";
 constexpr const char* kKeyLayerType   = "tip";
 constexpr const char* kKeyLayerShape  = "sekil";
@@ -524,6 +525,22 @@ Result<StyleEntry> parse_entry(const Json& j, const AnnexNames& annexes, const I
         } else {
             return err(ErrorCode::ParseError, where + " '" + entry.id + "': '" + kKeySection +
                                                   "' metin ya da metin dizisi olmalı.");
+        }
+    }
+
+    // Other names the regulation publishes this row under. Searched as well as
+    // matched: somebody typing the detail card's wording into the gallery filter
+    // is looking for exactly this row.
+    if (const Json* v = j.find(kKeyAliases); v != nullptr) {
+        if (!v->is_array())
+            return err(ErrorCode::ParseError,
+                       where + " '" + entry.id + "': '" + kKeyAliases + "' bir dizi olmalı.");
+        for (const Json& alias : v->as_array()) {
+            if (!alias.is_string())
+                return err(ErrorCode::ParseError, where + " '" + entry.id + "': '" + kKeyAliases +
+                                                      "' yalnız metin taşır.");
+            entry.aliases.push_back(alias.as_string());
+            entry.tags.push_back(alias.as_string());
         }
     }
 

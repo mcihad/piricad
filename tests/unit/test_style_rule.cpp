@@ -1472,3 +1472,56 @@ TEST_CASE("SEMBOL: vektör paketinin her satırı katmanlarıyla rafa giriyor")
             if (l.image != core::kNoImage) ++drawn;
     CHECK(drawn >= with_image);
 }
+
+TEST_CASE("SEMBOL: yönetmeliğin öteki adı da aynı gösterime çıkıyor")
+{
+    // MPYY names one designation twice. EK-1a…EK-1d print the gösterim and EK-1e
+    // prints the detail card, and 339 of the 379 cards use identical wording —
+    // but forty do not. A dataset tagged from the detail catalogue then matched
+    // nothing and the parcel drew in the layer's default colour with no error
+    // raised anywhere, which on a legal drawing is the worst way to be wrong.
+    const std::string path =
+        std::string(PIRICAD_DATA_DIR) + "/catalogs/mpyy-vektor/plan-gosterim.json";
+    std::ifstream in(path, std::ios::binary);
+    REQUIRE(in.good());
+
+    std::ostringstream buffer;
+    buffer << in.rdbuf();
+    auto parsed = core::Json::parse(buffer.str());
+    REQUIRE(parsed.ok());
+    auto catalog = core::StyleCatalog::from_json(parsed.value());
+    REQUIRE(catalog.ok());
+
+    const auto by_alias = [&](const std::string& name) -> const core::StyleEntry* {
+        for (const core::StyleEntry& e : catalog.value().entries())
+            for (const std::string& alias : e.aliases)
+                if (alias == name) return &e;
+        return nullptr;
+    };
+
+    // The regulation's own other wording, quoted from EK-1e.
+    const core::StyleEntry* liman = by_alias("KRUVAZİYER LİMANI");
+    REQUIRE(liman != nullptr);
+    CHECK_EQ(liman->id, "uip-kruvaziyer-liman");
+    CHECK_EQ(liman->label, "KRUVAZİYER LİMAN"); // the annex spells it without the -I
+
+    const core::StyleEntry* ock = by_alias("ÖZEL ÇEVRE KORUMA BÖLGESİ (ÖÇK)");
+    REQUIRE(ock != nullptr);
+    CHECK_EQ(ock->id, "ortak-ozel-cevre-koruma-bolgesi");
+
+    // AN ALIAS NEVER SHADOWS A REAL NAME. Every alias in the package must be a
+    // name no row already carries as its own label, or a value would resolve to
+    // whichever row the search happened to reach first.
+    std::unordered_map<std::string, std::string> labels;
+    for (const core::StyleEntry& e : catalog.value().entries())
+        labels.emplace(e.label, e.id);
+    std::size_t aliases = 0;
+    for (const core::StyleEntry& e : catalog.value().entries())
+        for (const std::string& alias : e.aliases) {
+            ++aliases;
+            const auto clash = labels.find(alias);
+            if (clash != labels.end())
+                FAIL_WITH("takma ad bir gösterimin kendi adını gölgeliyor", alias);
+        }
+    CHECK(aliases >= std::size_t{13});
+}

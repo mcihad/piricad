@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // PiriCAD — application entry point.
 #include "piricad/app/main_window.hpp"
+#include "piricad/app/map_canvas.hpp"
 #include "piricad/app/theme.hpp"
 #include "piricad/command/log.hpp"
 
@@ -12,7 +13,9 @@
 #include <QTimer>
 #include <QTranslator>
 
+#include <algorithm>
 #include <cstdio>
+#include <vector>
 
 int main(int argc, char** argv)
 {
@@ -237,6 +240,33 @@ int main(int argc, char** argv)
         const QString name = QString::fromLocal8Bit(layer);
         QTimer::singleShot(kFrameDumpSettleMs / 2, &window,
                            [&window, name] { window.openStyleDesigner(name); });
+    }
+
+    // Headless frame timing, for choosing between backends and for judging
+    // whether a new one earns its keep. Same category as PIRICAD_FRAME_DUMP:
+    // developer tooling, no /docs page, no user-facing flag.
+    if (const QByteArray rounds = qgetenv("PIRICAD_FRAME_TIMES"); !rounds.isEmpty()) {
+        const int n = std::max(1, rounds.toInt());
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window, n] {
+            piricad::app::MapCanvas* canvas = window.canvas();
+            if (canvas == nullptr) {
+                (void)std::fprintf(stderr, "[piricad] tuval yok\n");
+                QApplication::exit(1);
+                return;
+            }
+            std::vector<int> costs = canvas->timeFrames(n);
+            std::vector<int> scene = canvas->sceneCosts();
+            std::sort(costs.begin(), costs.end());
+            std::sort(scene.begin(), scene.end());
+            // The MEDIAN and the best, not the mean: a headless run shares the
+            // machine and one descheduled frame drags an average anywhere.
+            (void)std::fprintf(stdout,
+                               "[piricad] %d kare  cizim ortanca %d us  en iyi %d us"
+                               "  |  sahne ortanca %d us\n",
+                               n, costs[costs.size() / 2], costs.front(),
+                               scene.empty() ? 0 : scene[scene.size() / 2]);
+            QApplication::exit(0);
+        });
     }
 
     if (const QByteArray dump = qgetenv("PIRICAD_FRAME_DUMP"); !dump.isEmpty()) {

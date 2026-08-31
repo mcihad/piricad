@@ -14,6 +14,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.text`](text.md) | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
 | [`core.exportstyle`](exportstyle.md) | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
 | [`core.area`](area.md) | `ALAN`, `AREA`, `POLİGON`, `POLIGON`, `AL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alan çizer; istenirse içine delik açar. |
+| [`core.rectangle`](rectangle.md) | `DİKDÖRTGEN`, `DIKDORTGEN`, `RECTANGLE`, `DKD`, `REC` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer. |
 | [`core.attribute`](attribute.md) | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
 | [`core.column`](column.md) | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Belgeye öznitelik sütunu tanımlar ve tanımlı sütunları listeler. |
 | [`core.erase`](erase.md) | `SİL`, `SIL`, `ERASE`, `E` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Seçilen nesneleri siler. |
@@ -84,6 +85,16 @@ Kapalı bir alan çizer; istenirse içine delik açar.
 | `bolum` | integer | en az 0 | Halka uzunlukları: ilki dış sınır, sonrakiler delik |
 
 Ayrıntılı kullanım: [ALAN](area.md)
+
+### `core.rectangle` — DİKDÖRTGEN
+
+Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `noktalar` | point_list | 2 | Karşılıklı iki köşe; kalan ikisi bunlardan türetilir |
+
+Ayrıntılı kullanım: [DİKDÖRTGEN](rectangle.md)
 
 ### `core.attribute` — ÖZNİTELİK
 
@@ -482,6 +493,34 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "max": -1,
           "required": false,
           "help": "Halka uzunlukları: ilki dış sınır, sonrakiler delik"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.rectangle",
+      "names": [
+        "DİKDÖRTGEN",
+        "DIKDORTGEN",
+        "RECTANGLE",
+        "DKD",
+        "REC"
+      ],
+      "category": "Çizim",
+      "summary": "Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer.",
+      "params": [
+        {
+          "name": "noktalar",
+          "type": "point_list",
+          "min": 2,
+          "max": 2,
+          "required": true,
+          "help": "Karşılıklı iki köşe; kalan ikisi bunlardan türetilir"
         }
       ],
       "flags": [

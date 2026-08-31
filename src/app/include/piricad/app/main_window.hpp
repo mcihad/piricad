@@ -73,6 +73,10 @@ public:
     /// Runs a script file through the bus, exactly as the BETİK command does.
     void runScriptFile(const QString& path);
 
+    /// The canvas, for the headless frame-timing hook in `main.cpp`. Developer
+    /// tooling only; nothing user-facing reaches for this.
+    MapCanvas* canvas() const noexcept { return canvas_; }
+
     /// Opens the style designer on one layer. Owned by the shell rather than by
     /// the panel that asked, so a panel never has to know what is in a window.
     void openStyleDesigner(const QString& layerName);

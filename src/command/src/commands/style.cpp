@@ -125,6 +125,12 @@ const core::StyleEntry* row_for(const core::StyleCatalog& catalog, const std::st
     if (auto by_id = catalog.entry(value); by_id) return by_id.value();
     for (const core::StyleEntry& e : catalog.entries())
         if (e.label == value) return &e;
+
+    // Then the other names the regulation publishes the row under. Last, so a
+    // package can never shadow a real id or label with an alias.
+    for (const core::StyleEntry& e : catalog.entries())
+        for (const std::string& alias : e.aliases)
+            if (alias == value) return &e;
     return nullptr;
 }
 

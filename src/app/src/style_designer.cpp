@@ -187,22 +187,100 @@ QColor from_rgba(std::uint32_t rgba)
     return QColor::fromRgba(static_cast<QRgb>(rgba));
 }
 
-/// Paints a button's face with the colour it stands for.
+/// Draws a colour field: the value fills the field and its hex is written across
+/// it, at the width of the column it sits in.
+///
+/// PAINTED, not styled. There is one stylesheet in this program (design.md 2)
+/// and it lives in `theme.cpp`; a widget that writes its own is how two sources
+/// of truth for an appearance start. The colour here is not a theme colour
+/// either — it is the user's DATUM — so it cannot come from a token, and the ink
+/// over it is chosen by luminance so the hex stays legible on all sixteen
+/// million of them.
+///
+/// It used to be a 40x18 icon on a 30 px tool button, which in a column of
+/// full-width spin boxes and combos read as a stray swatch rather than as a
+/// value you can edit. A colour IS a field of this form and looks like one.
 void show_colour(QToolButton* button, std::uint32_t rgba)
 {
-    QPixmap swatch(40, 18);
-    swatch.fill(rgba == 0 ? Qt::transparent : from_rgba(rgba));
+    constexpr int kFieldHeight = 22;
 
-    QPainter painter(&swatch);
-    painter.setPen(QPen(QColor(0, 0, 0, 90)));
-    painter.drawRect(0, 0, swatch.width() - 1, swatch.height() - 1);
-    // "No fill" has to look like nothing rather than like white, which is a colour
-    // a plan sheet uses.
-    if (rgba == 0) painter.drawLine(0, swatch.height() - 1, swatch.width() - 1, 0);
+    // The button is stretched by its cell, so its own width is the column's.
+    // Before the first layout it has none yet, and the floor keeps the field
+    // from starting life as a chip; the next refresh corrects it.
+    const int width = std::max(button->width() - 2, 200);
+    const qreal dpr = button->devicePixelRatioF();
+
+    QPixmap face(QSize(width, kFieldHeight) * dpr);
+    face.setDevicePixelRatio(dpr);
+    face.fill(Qt::transparent);
+
+    QPainter painter(&face);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    const QRectF box(0.5, 0.5, width - 1.0, kFieldHeight - 1.0);
+
+    if (rgba == 0) {
+        // "No fill" must look like NOTHING rather than like white, which is a
+        // colour a plan sheet uses and a planner must be able to choose.
+        const QColor faint = button->palette().color(QPalette::Mid);
+        painter.setPen(QPen(faint, 1, Qt::DashLine));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRoundedRect(box, 3, 3);
+        painter.setPen(faint);
+        painter.drawText(box, Qt::AlignCenter, QObject::tr("dolgusuz")); // ui-label
+    } else {
+        const QColor colour = from_rgba(rgba);
+        painter.setBrush(colour);
+        painter.setPen(QPen(colour.darker(140), 1));
+        painter.drawRoundedRect(box, 3, 3);
+        painter.setPen(colour.lightnessF() > 0.55 ? Qt::black : Qt::white);
+        painter.drawText(box, Qt::AlignCenter,
+                         colour.alpha() == 255 ? colour.name(QColor::HexRgb).toUpper()
+                                               : colour.name(QColor::HexArgb).toUpper());
+    }
     painter.end();
 
-    button->setIcon(QIcon(swatch));
-    button->setIconSize(swatch.size());
+    button->setIcon(QIcon(face));
+    button->setIconSize(QSize(width, kFieldHeight));
+}
+
+/// One field of a form: its caption ABOVE its editor, both the full width of the
+/// column (design.md 16.1).
+///
+/// The panel used to be a `QFormLayout` with the label in a fixed 86 px left
+/// column, and in a 352 px column that is a quarter of the width spent on the
+/// word "Kaydırma". Longer captions wrapped to two lines and made their row
+/// taller than its neighbours, the editor and its unit combo fought over what
+/// was left, and both ran under the scroll bar. Stacking gives every field the
+/// same rhythm and the whole width to be read in.
+///
+/// `caption_out` hands back the label because one row renames itself: the colour
+/// field says "Yazı rengi" on a text marker and "Çizgi rengi" everywhere else.
+QWidget* form_cell(QWidget* parent, const QString& label, QWidget* editor, QWidget* unit,
+                   QLabel** caption_out)
+{
+    auto* cell   = new QWidget(parent);
+    auto* column = new QVBoxLayout(cell);
+    column->setContentsMargins(0, 0, 0, 0);
+    column->setSpacing(4);
+
+    auto* caption = new QLabel(label, cell);
+    caption->setObjectName(QStringLiteral("formCaption"));
+    column->addWidget(caption);
+
+    if (unit == nullptr) {
+        column->addWidget(editor);
+    } else {
+        auto* row    = new QWidget(cell);
+        auto* across = new QHBoxLayout(row);
+        across->setContentsMargins(0, 0, 0, 0);
+        across->setSpacing(6);
+        across->addWidget(editor, 5);
+        across->addWidget(unit, 4);
+        column->addWidget(row);
+    }
+
+    if (caption_out != nullptr) *caption_out = caption;
+    return cell;
 }
 
 /// The symbol a layer currently draws. A configured layer default wins over an
@@ -225,6 +303,46 @@ core::Symbol symbol_of_layer(const core::Document& doc, core::LayerId layer)
     }
 
     return core::Symbol::of(record ? record->appearance : core::Appearance{});
+}
+
+/// What the LAYER holds, read from its entities rather than from its symbol.
+///
+/// The geometry tab used to be chosen by `natural_shape(symbol_)` — that is, by
+/// what the symbol ALREADY draws. A parcel layer whose symbol is one plain
+/// stroke therefore opened on the Çizgi tab, offered the line half of the
+/// gallery and put the fill layer types behind a tab nobody had a reason to
+/// press. The user's own words: "bunlar alan tipleri ama sembolojide alan
+/// dolgusu seçemiyorum."
+///
+/// It is the wrong question. This dialog edits the symbol a layer's PARCELS are
+/// drawn with, so the geometry is the parcels' and not the symbol's; asking the
+/// symbol means a layer can only ever be given more of what it already has.
+///
+/// `nullopt` when the layer is empty — there is nothing to read, and the
+/// symbol's own shape is then the best guess available.
+std::optional<PreviewShape> shape_of_layer(const core::Document& doc, core::LayerId layer)
+{
+    const auto& entities               = doc.entities();
+    const core::RingGeometry& geometry = doc.geometry();
+
+    bool any_closed = false;
+    bool any_open   = false;
+    for (core::EntityId e = 0; e < entities.size(); ++e) {
+        if (!entities.alive(e) || entities.layer[e] != layer) continue;
+        const core::RingSpan span = geometry.rings_of(entities.slot[e]);
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+            if (geometry.ring_role[r] == core::RingRole::Open)
+                any_open = true;
+            else
+                any_closed = true;
+        }
+        // A closed ring settles it; nothing later can make the layer less of an
+        // area layer, so the walk stops rather than touching every parcel.
+        if (any_closed) return PreviewShape::Area;
+    }
+
+    if (any_open) return PreviewShape::Line;
+    return std::nullopt;
 }
 
 PreviewShape shape_of(core::SymbolKind kind)
@@ -294,7 +412,10 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     geometry_->setTabToolTip(1, tr("Sınır, yol ekseni, kanal — çizgiler"));
     geometry_->setTabToolTip(2, tr("Nirengi, poligon, ağaç — noktalar"));
     geometry_->setAccessibleName(tr("Sembolün çizileceği geometri"));
-    geometry_->setCurrentIndex(static_cast<int>(natural_shape(symbol_)));
+    geometry_->setCurrentIndex(
+        static_cast<int>(shape_of_layer(controller_.document(),
+                                        controller_.document().find_layer(layerName_.toStdString()))
+                             .value_or(natural_shape(symbol_))));
     connect(geometry_, &QTabBar::currentChanged, this, [this](int) {
         refreshGalleryItems();
         refresh();
@@ -307,24 +428,33 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     previewLayout->setContentsMargins(14, 11, 14, 12);
     previewLayout->setSpacing(7);
 
-    auto* previewTitle = new QLabel(tr("Katman ön izlemesi — %1").arg(layerName_), previewFrame);
+    // The layer's name is NOT repeated here: the dialog's own title bar already
+    // reads "Katman Özellikleri — PARSEL", and spending the width on it twice is
+    // what pushed this header past the edge of a 352 px column.
+    auto* previewTitle = new QLabel(tr("Katman ön izlemesi"), previewFrame);
     previewTitle->setObjectName(QStringLiteral("sectionTitle"));
 
     // Said, not left to be inferred: the tab above chose the geometry this
     // preview is drawn on, and a user who does not connect the two reads the
     // picture as a claim about their parcels.
+    //
+    // BENEATH the title rather than beside it. A 16 px heading and a sentence of
+    // note do not fit one line in this column, and Qt does not shrink either of
+    // them — it draws both and lets the second run off the edge, which is what
+    // "Kırıklı çizgi üzerinde çiziliyc" was.
     headerNote_ = new QLabel(previewFrame);
     headerNote_->setObjectName(QStringLiteral("quiet"));
+    headerNote_->setWordWrap(true);
 
-    auto* titleRow = new QHBoxLayout;
+    auto* titleRow = new QVBoxLayout;
     titleRow->setContentsMargins(0, 0, 0, 0);
+    titleRow->setSpacing(2);
     titleRow->addWidget(previewTitle);
-    titleRow->addStretch(1);
     titleRow->addWidget(headerNote_);
 
     preview_ = new QLabel(previewFrame);
     preview_->setAlignment(Qt::AlignCenter);
-    preview_->setMinimumHeight(180);
+    preview_->setMinimumHeight(96);
     preview_->setObjectName(QStringLiteral("stylePreviewImage"));
     preview_->setAccessibleName(tr("Katman stili ön izlemesi"));
     preview_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
@@ -374,12 +504,12 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     // property form — the thing a user is actually editing — stayed a strip with
     // one visible row. The reference sizes it the other way: a 92 px preview, a
     // short layer list, and the properties filling the rest of the column.
-    previewFrame->setFixedHeight(158);
+    previewFrame->setFixedHeight(154);
     QWidget* stack = buildTree();
     // 150 for the list plus the row of marks under it plus the box's own title.
     // It was 178 with a tree asking for 190, so the marks had nowhere to go and
     // drew straight over the last symbol layer.
-    stack->setFixedHeight(228);
+    stack->setFixedHeight(186);
 
     rightLayout->addWidget(previewFrame);
     rightLayout->addWidget(stack);
@@ -1095,8 +1225,9 @@ QWidget* StyleDesigner::buildTree()
 
 QWidget* StyleDesigner::buildGlobal()
 {
-    auto* box  = new QGroupBox(tr("Sembol özellikleri"), this);
-    auto* form = new QFormLayout(box);
+    auto* box  = new QGroupBox(tr("SEMBOL ÖZELLİKLERİ"), this); // ui-label
+    auto* form = new QVBoxLayout(box);
+    form->setSpacing(12);
 
     // ---- THE UNIT, and it is the first row on purpose ----
     //
@@ -1122,6 +1253,10 @@ QWidget* StyleDesigner::buildGlobal()
     globalUnitNote_->setWordWrap(true);
 
     globalColour_ = new QToolButton(box);
+    globalColour_->setObjectName(QStringLiteral("colourField"));
+    globalColour_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    globalColour_->setCursor(Qt::PointingHandCursor);
+    globalColour_->installEventFilter(this); // repaint the face at the column's width
     globalColour_->setToolTip(tr("Kilitli olmayan bütün katmanların rengini birden değiştirir"));
     connect(globalColour_, &QToolButton::clicked, this, [this] {
         const QColor picked =
@@ -1150,47 +1285,32 @@ QWidget* StyleDesigner::buildGlobal()
     globalOpacity_->setSingleStep(5);
     connect(globalOpacity_, &QSpinBox::valueChanged, this, [this](int) { applyGlobal(); });
 
-    form->addRow(tr("Ölçü birimi"), globalUnit_);
-    form->addRow(QString(), globalUnitNote_);
-    form->addRow(tr("Renk"), globalColour_);
-    form->addRow(tr("Çizgi kalınlığı"), globalWidth_);
-    form->addRow(tr("Saydamlık (0-255)"), globalOpacity_);
+    form->addWidget(form_cell(box, tr("Ölçü birimi"), globalUnit_, nullptr, nullptr));
+    form->addWidget(globalUnitNote_); // the note belongs to the unit above it
+    form->addWidget(form_cell(box, tr("Renk"), globalColour_, nullptr, nullptr));
+    form->addWidget(form_cell(box, tr("Çizgi kalınlığı"), globalWidth_, nullptr, nullptr));
+    form->addWidget(form_cell(box, tr("Saydamlık (0-255)"), globalOpacity_, nullptr, nullptr));
+    form->addStretch(1);
 
     return box;
 }
 
 // -------------------------------------------------------- the properties ----
 
-void StyleDesigner::addProperty(QFormLayout* form, const QString& label, QWidget* editor,
+void StyleDesigner::addProperty(QVBoxLayout* form, const QString& label, QWidget* editor,
                                 QWidget* unit, std::vector<SymbolLayerType> types)
 {
-    auto* text = new QLabel(label, this);
-    text->setWordWrap(true);
-
-    // The form lives in a 352 px column now, and a label that takes half of it
-    // leaves the value and its unit fighting over the rest — the unit combo was
-    // clipped mid-word, reading `zer` where it said `zemin`. A fixed, narrow
-    // label column is what makes the two fit.
-    text->setFixedWidth(86);
-
-    QWidget* row = editor;
-    if (unit != nullptr) {
-        row          = new QWidget(this);
-        auto* layout = new QHBoxLayout(row);
-        layout->setContentsMargins(0, 0, 0, 0);
-        layout->setSpacing(6);
-        layout->addWidget(editor, 5);
-        layout->addWidget(unit, 4);
-    }
-
-    form->addRow(text, row);
-    properties_.push_back(Property{text, row, unit, std::move(types)});
+    QLabel* caption = nullptr;
+    QWidget* cell   = form_cell(this, label, editor, unit, &caption);
+    form->addWidget(cell);
+    properties_.push_back(Property{caption, cell, unit, std::move(types)});
 }
 
 QWidget* StyleDesigner::buildProperties()
 {
-    auto* box  = new QGroupBox(tr("Katman özellikleri"), this);
-    auto* form = new QFormLayout(box);
+    auto* box  = new QGroupBox(tr("KATMAN ÖZELLİKLERİ"), this); // ui-label
+    auto* form = new QVBoxLayout(box);
+    form->setSpacing(12);
 
     type_ = new QComboBox(box);
     for (const TypeRow& row : kTypes)
@@ -1198,7 +1318,7 @@ QWidget* StyleDesigner::buildProperties()
             QStringLiteral("%1  (%2)")
                 .arg(tr(row.label), QString::fromUtf8(core::symbol_layer_type_name(row.type))));
     connect(type_, &QComboBox::currentIndexChanged, this, [this](int) { applyToSelected(); });
-    form->addRow(tr("Katman tipi"), type_);
+    form->addWidget(form_cell(box, tr("Katman tipi"), type_, nullptr, nullptr));
 
     const auto unitCombo = [&] {
         auto* c = new QComboBox(box);
@@ -1225,6 +1345,10 @@ QWidget* StyleDesigner::buildProperties()
     };
 
     stroke_ = new QToolButton(box);
+    stroke_->setObjectName(QStringLiteral("colourField"));
+    stroke_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    stroke_->setCursor(Qt::PointingHandCursor);
+    stroke_->installEventFilter(this); // repaint the face at the column's width
     stroke_->setToolTip(tr("Çizgi ve simge rengi"));
     connect(stroke_, &QToolButton::clicked, this, [this] {
         const int i = currentLayer();
@@ -1239,6 +1363,10 @@ QWidget* StyleDesigner::buildProperties()
     });
 
     fill_ = new QToolButton(box);
+    fill_->setObjectName(QStringLiteral("colourField"));
+    fill_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    fill_->setCursor(Qt::PointingHandCursor);
+    fill_->installEventFilter(this); // repaint the face at the column's width
     fill_->setToolTip(tr("Dolgu rengi — iptal edilirse dolgusuz"));
     connect(fill_, &QToolButton::clicked, this, [this] {
         const int i = currentLayer();
@@ -1372,6 +1500,7 @@ QWidget* StyleDesigner::buildProperties()
         everything.push_back(row.type);
     addProperty(form, tr("Saydamlık (0-255)"), opacity_, nullptr, everything);
     addProperty(form, tr("Renk kilidi"), lock_, nullptr, everything);
+    form->addStretch(1);
 
     return box;
 }
@@ -1519,7 +1648,7 @@ void StyleDesigner::updatePreview()
     // Rendered at the DEVICE ratio and on a checkerboard: a translucent fill over
     // a flat ground is indistinguishable from an opaque paler one, and half of
     // what a designer is judging here is exactly that.
-    constexpr int kSwatch = 116;
+    constexpr int kSwatch = 96;
     previewWidth_         = kSwatch;
 
     const QImage swatch =
@@ -1540,7 +1669,17 @@ bool StyleDesigner::eventFilter(QObject* watched, QEvent* event)
     // hint, and re-rendering on every pass of that would be a loop.
     // The swatch is a fixed size now, so a resize no longer changes what is
     // drawn — only where it sits, which the label's own alignment handles.
-    (void)watched;
+    //
+    // A COLOUR FIELD does change: it is painted at the width of its column, and
+    // that width is not known until the layout has handed it out. Repainted on
+    // resize, and only on resize, so the first layout does not leave a 200 px
+    // chip in a 312 px field.
+    if (event->type() == QEvent::Resize) {
+        const int i = currentLayer();
+        if (watched == globalColour_) show_colour(globalColour_, symbol_.primary().rgba);
+        if (i >= 0 && watched == stroke_) show_colour(stroke_, symbol_.layers[at(i)].look.rgba);
+        if (i >= 0 && watched == fill_) show_colour(fill_, symbol_.layers[at(i)].look.fill_rgba);
+    }
 
     return QDialog::eventFilter(watched, event);
 }

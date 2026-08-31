@@ -606,6 +606,25 @@ QString themeStyleSheet(ThemeMode mode)
         /* ---- named roles the shell asks for by object name ----------------- */
         QLabel#sectionTitle               { color: %(text)s; font-size: 16px; font-weight: 600; }
         QLabel#quiet                      { color: %(textFaint)s; }
+
+        /* design.md 16.1: the field caption sits ABOVE its editor and stays out
+           of the way — a form column is read down the values, not down the
+           labels. */
+        QLabel#formCaption                { background: transparent; color: %(textFaint)s;
+                                            font-size: 11px; font-weight: 500; }
+
+        /* A colour is a FIELD of the form, so it is the height of one. Its face
+           and its ink are set per value in `show_colour`. */
+        QToolButton#colourField           { border-radius: 4px; padding: 0px;
+                                            min-height: 22px; max-height: 22px;
+                                            /* The base QToolButton rule clamps every tool
+                                               button to a 30 px square, which is right for
+                                               an icon button and wrong for a field: it left
+                                               the colour a chip with its hex elided to
+                                               "#...6". A field is as wide as its column. */
+                                            min-width: 0px; max-width: 16777215px;
+                                            font-family: "IBM Plex Mono", monospace;
+                                            font-size: 11px; }
         QLabel#mono                       { font-family: "IBM Plex Mono", monospace; }
         QWidget#toolBoxBody               { background: %(panel)s;
                                             border-right: 1px solid %(lineHard)s; }

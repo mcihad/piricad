@@ -366,6 +366,7 @@ PIRICAD_SETTING(son_dosya_sayisi);
 PIRICAD_SETTING(tuval_arkaplani);
 PIRICAD_SETTING(yakalama_modlari);
 PIRICAD_SETTING(dik_mod);
+PIRICAD_SETTING(kosegen_kilidi);
 PIRICAD_SETTING(kutupsal_aci);
 PIRICAD_SETTING(sembol_kutuphanesi);
 PIRICAD_SETTING(vektor_kutuphanesi);
@@ -418,6 +419,7 @@ PIRICAD_SETTING(alan_birimi);
     X(secim_toleransi)                                                                             \
     X(yakalama_modlari)                                                                            \
     X(dik_mod)                                                                                     \
+    X(kosegen_kilidi)                                                                              \
     X(sembol_kutuphanesi)                                                                          \
     X(vektor_kutuphanesi)                                                                          \
     X(kutupsal_aci)                                                                                \
@@ -1265,6 +1267,35 @@ PIRICAD_SETTING(dik_mod)
         .summary  = "Dik mod: imleci yatay ve düşey eksene kilitler. Girdi yardımıdır, "
                     "kaydedilmez; oturum kapsamındadır.",
         .section  = "Çizim ve Yakalama", // ui-label
+    };
+}
+
+PIRICAD_SETTING(kosegen_kilidi)
+{
+    return SettingSpec{
+        .id       = "core.yakalama.kosegen",
+        .names    = {"köşegen", "kosegen", "diagonal", "kare"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::Session,
+        .fallback = SettingValue::boolean(false),
+        .range    = SettingRange::between(0, 1),
+        .values   = {},
+        .unit     = "",
+        // WHY THIS IS A MODE AND NOT A MOUSE GESTURE. Holding Ctrl while drawing
+        // a rectangle to get a square is what every drawing program does, and a
+        // modifier key is exactly the kind of capability Article 5.15 refuses to
+        // let exist only for the mouse: a script and the AI must be able to ask
+        // for the same thing. So Ctrl HOLDS THIS MODE DOWN, and
+        // `MOD köşegen=evet` is the same switch typed instead of pressed.
+        //
+        // It is polar tracking at 45°, not a new constraint: a second corner
+        // locked to a 45° diagonal from the first is a square, and the engine
+        // that already locks to a polar step needs nothing new to say so.
+        .summary = "Köşegen kilidi: imleci öncekinden 45°'nin katlarına kilitler. " // ui-label
+                   "DİKDÖRTGEN'in ikinci köşesi böyle kilitlenince kare çıkar. "
+                   "Çizerken Ctrl basılı tutmak da bunu açar. Girdi yardımıdır, "
+                   "kaydedilmez; oturum kapsamındadır.",
+        .section = "Çizim ve Yakalama", // ui-label
     };
 }
 

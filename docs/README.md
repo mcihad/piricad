@@ -33,6 +33,7 @@ Tek tek komutlar:
 | `VERİTABANI` | [PostGIS ile çalışma](komutlar/database.md) |
 | `ÇİZGİ` | [Çizgi çizme](komutlar/line.md) |
 | `ALAN` | [Kapalı alan çizme](komutlar/area.md) |
+| `DİKDÖRTGEN` | [İki köşeden dörtgen ve kare çizme](komutlar/rectangle.md) |
 | `METİN` | [Çizime yazı yazma](komutlar/text.md) |
 | `STİLAKTAR` | [Stili QGIS'e aktarma](komutlar/exportstyle.md) |
 | `ÖZNİTELİK` | [Nesnelerin verisi](komutlar/attribute.md) |

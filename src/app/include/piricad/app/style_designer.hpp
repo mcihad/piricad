@@ -51,7 +51,7 @@
 /// including it wait for them.
 class QCheckBox;
 class QComboBox;
-class QFormLayout;
+class QVBoxLayout;
 class QLabel;
 class QLineEdit;
 class QListWidget;
@@ -112,7 +112,7 @@ private:
     QWidget* buildProperties();
 
     /// Declares one property row and records which layer types show it.
-    void addProperty(QFormLayout* form, const QString& label, QWidget* editor, QWidget* unit,
+    void addProperty(QVBoxLayout* form, const QString& label, QWidget* editor, QWidget* unit,
                      std::vector<core::SymbolLayerType> types);
 
     // ---- the shelf on the left ----

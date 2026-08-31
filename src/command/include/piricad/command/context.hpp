@@ -84,8 +84,12 @@ private:
 /// canvas does not have to know which command is running.
 struct PointOptions
 {
-    bool rubber_band{false}; ///< draw a preview line while the user aims
-    Point2 rubber_origin{};  ///< where that line starts
+    bool rubber_band{false}; ///< draw a preview while the user aims
+    Point2 rubber_origin{};  ///< where that preview starts
+
+    /// What the preview draws. A command that encloses a face with two corners
+    /// says so, and the canvas shows the face rather than its diagonal.
+    RubberShape rubber_shape{RubberShape::Line};
 };
 
 class Context

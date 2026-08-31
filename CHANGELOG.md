@@ -28,6 +28,97 @@ Sebep: **Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1 Gösterimler**
   ve `make check` içinden çalışır. İş listesinde işaretli ama pakette olmayan bir
   satır kusurdur.
 
+### Eklendi — DİKDÖRTGEN komutu, poligon aracı ve köşegen kilidi
+
+- **`DİKDÖRTGEN` (`core.rectangle`).** Karşılıklı iki köşeden dört köşeli kapalı
+  alan çizer; kalan iki köşeyi program hesaplar. Elle tıklanan dört köşe
+  "neredeyse" diktir, ve imzalanan bir paftada neredeyse dik bir kusurdur.
+  Günlüğe iki köşe yazılır, türetilen dördü değil.
+- **Araç kutusunda poligon ve dikdörtgen artık çalışıyor.** İkisi de yer
+  kaplayan ama devre dışı birer `placeholder`'dı; `ALAN` komutu ise baştan beri
+  vardı ve hiçbir düğmeye bağlı değildi.
+- **`core.yakalama.kosegen` — köşegen kilidi.** İmleci öncekinden 45°'nin
+  katlarına kilitler; dikdörtgenin ikinci köşesi böyle kilitlenince **kare**
+  çıkar. Çizerken **Ctrl** basılı tutmak bu modu basılı tutar, `MOD köşegen=evet`
+  aynı anahtarı yazarak açar — Ctrl bir fare hüneri değil, bir modun kısayolu
+  (Article 5.15). Motorda yeni bir kısıt yok: 45° adımlı kutupsal izlemedir.
+- **Kılavuz artık çizilecek şekli gösteriyor.** `Prompt` bir `RubberShape`
+  taşıyor; dikdörtgen çizilirken tuval köşegeni değil **dörtgeni** önizliyor.
+  Çizgi olarak önizlenen bir dikdörtgen, ne çizileceğini tıklamadan önce
+  söylemez — kilit basılıyken kareyi görmekle çizdikten sonra öğrenmek arasındaki
+  fark budur.
+
+### Düzeltildi — alan gösterimleri sembolojide seçilebiliyor
+
+İki ayrı kök neden, ikisi de aynı sonucu veriyordu: bir parsel katmanı için alan
+dolgusu seçilemiyordu.
+
+- **Geometri sekmesi katmanın değil sembolün şeklinden seçiliyordu.** Tek
+  konturlu bir parsel katmanı "çizgi" sayılıp Çizgi sekmesinde açılıyor, galeri
+  de çizgi gösterimlerini listeliyordu. Sekme artık katmanın **nesnelerinden**
+  okunuyor: kapalı halkası olan katman alan katmanıdır.
+- **Bildirilen katman yığını sınıflandırılmıyordu.** Raf, bir satırın alan mı
+  çizgi mi olduğunu yalnız resimli paketin alanlarına (`tarama`, `çizgi_tipi`,
+  `sembol`, alan renk kodu) bakarak karar veriyordu. Vektör paketinin 476
+  satırının hiçbirinde bunlar yok — hepsi `else` dalına düşüp çizgi oluyordu.
+  Artık yığın ne çiziyorsa o: dolduran katman alan, konturlayan çizgi, yalnız
+  glif basan nokta. Alan sekmesi 335 gösterim listeliyor.
+
+### Eklendi — gösterimin öteki adı da aynı satıra çıkıyor
+
+- **`takma_adlar`.** Bir gösterim satırı, yönetmeliğin aynı kullanım için
+  kullandığı öteki yazımları taşıyabiliyor; `STİL sinifla=` bir özniteliği
+  kimliğe, ada **ve** takma ada göre çözüyor. MPYY EK-1e'nin 379 detay kartından
+  40'ı ekteki gösterimden başka yazılmıştır (`KRUVAZİYER LİMANI` / `KRUVAZİYER
+  LİMAN`); detay kataloğundan etiketlenmiş veri o satırlarda hiçbir şeye
+  eşleşmiyor ve parsel varsayılan renkte, hatasız çiziliyordu.
+- **13 satıra takma ad yazıldı.** Her biri yönetmeliğin kendi öteki yazımıdır.
+  Bir değerin hangi gösterime ait olduğuna dair **karar** gerektiren hiçbir
+  eşleme yazılmadı: yoğunluk kademeleri, EK-1e'de iki kartın birleştiği satırlar
+  ve birden çok gösterime yakın duran kartlar `UZMANA.md` dosyasında gerekçesiyle
+  duruyor ve imza bekliyor (Article 6.11).
+- Takma ad bir gösterimin kendi adını gölgeleyemez; test bunu paketin tamamında
+  sınıyor.
+
+### Ölçüldü — çizim arka uçları ve desen dolgusunun bedeli
+
+`PIRICAD_FRAME_TIMES=<n>` eklendi: tuvali n kez boyar, kare maliyetlerinin
+ortancasını yazar ve sahne kurulumunu çizimden ayırır. `PIRICAD_FRAME_DUMP` ile
+aynı kategoride geliştirici kancasıdır — kullanıcıya bakan bir özellik değildir.
+
+576 parselli bir yaprakta (`tests/bench/sahne/`), aynı yakınlıkta:
+
+| Sahne | QGIS | Dahili |
+|---|---|---|
+| MPYY gösterimli (desen dolgusu) | 57,8 ms | 58,7 ms |
+| Düz dolgu | 1,23 ms | 1,07 ms |
+| Sahne kurulumu | 0,065 ms | 0,067 ms |
+
+İki sonuç:
+
+1. **Arka uç seçimi performansla belirlenmiyor**; ikisi desenli sahnede yüzde bir
+   içinde. Dahili olan üstelik deseni yanlış çiziyor — aynı satırda %88,8 mürekkep
+   basıp ormanı siyah bloğa çeviriyor, QGIS %5,0 basıyor. QGIS varsayılan kalır.
+2. **Asıl darboğaz desen dolgusu.** Aynı parsellerde düz dolgu 1,2 ms, desenli
+   58 ms — elli kat. 576 parselde §10.1'in 16 ms bütçesi 3,6 kat aşılıyor ve
+   bütçe 5 milyon poligon için konmuştu. Bu, GPU tuvalinden önce cevaplanacak
+   soru: maliyet parsel başına yeniden döşemede, ve orası CPU'da da düzelebilir.
+
+### Düzeltildi — katman özellikleri paneli form standardına çekildi
+
+- **Etiket girdinin üstüne alındı** (design.md 16.1). Panel 352 px'lik bir sütunda
+  sabit 86 px'lik sol etiket kullanıyordu: uzun etiketler iki satıra sarıp satır
+  yüksekliğini bozuyor, girdi ile birim kutusu kalanı paylaşamıyor ve ikisi de
+  kaydırma çubuğunun altına giriyordu.
+- **Renk artık bir alan.** 30 px'lik araç düğmesine iliştirilmiş 40x18 örnek
+  yerine, komşusuyla aynı genişlikte, değerin kendisiyle dolu ve onaltılığı
+  üstüne yazılı bir alan. Yazı rengi parlaklığa göre seçilir. Biçim yaprağıyla
+  değil **boyanarak** yapılır: bu programda tek yaprak vardır.
+- **Ön izleme başlığı taşmıyordu artık.** Başlık katman adını tekrar etmiyor —
+  pencerenin kendi başlığı zaten yazıyor — ve açıklama notu başlığın altına indi.
+- Sütun bütçesi yeniden paylaşıldı: ön izleme ve katman ağacı kısaldı, özellikler
+  iki alan yerine dördünü birden gösteriyor.
+
 ### Düzeltildi — bildirilen katman bir görseli çağırabiliyor
 
 - **`katmanlar` içindeki `gorsel` alanı okunmuyordu.** Şema onu sayıyordu, C++

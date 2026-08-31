@@ -1,0 +1,7 @@
+[
+ {"cmd": "KATMAN", "args": {"ad": "ORMAN"}},
+ {"cmd": "STİL", "args": {"katman": "ORMAN",
+                          "paket": "data/catalogs/mpyy-vektor/plan-gosterim.json",
+                          "kod": "ortak-orman-alani"}},
+ {"cmd": "ALAN", "args": {"noktalar": [[0, 0], [60000, 0], [60000, -40000], [0, -40000]]}}
+]

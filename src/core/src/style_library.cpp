@@ -159,11 +159,35 @@ std::size_t StyleLibrary::add_catalog(const StyleCatalog& catalog, const ImageRe
                 return id ? id.value() : kSolidDash;
             });
 
-        // From what the PACKAGE says, in the order a gösterim is actually read: a
-        // hatch or a fill colour makes it an area, a published line type makes it
-        // a line, a bare glyph makes it a point. A row with none of those is a
-        // stroke, which is what a plain colour has always meant in CAD.
-        if (!row.image_hatch.empty() || row.appearance.fill_rgba != 0)
+        // FROM THE STACK WHEN THERE IS ONE, and only then from the pictures.
+        //
+        // The picture fields are how a row published as JPEGs says what it is: a
+        // hatch or a fill colour makes it an area, a line type makes it a line, a
+        // bare glyph makes it a point. A row that DECLARES its layers names none
+        // of them — and read by that rule alone, every one of the 476 rows in the
+        // vector package fell through to the `else` and became a line. The
+        // gallery then offered all of them under Çizgi and answered "bu
+        // geometride eşleşen gösterim yok" under Alan, which is how an area
+        // package with 297 fills in it looked like it had none.
+        //
+        // A stack says what it draws far more exactly than a filename does, so it
+        // is asked first: a layer that fills makes an area, one that strokes makes
+        // a line, one that only stamps a glyph makes a point.
+        bool declared_fill   = false;
+        bool declared_stroke = false;
+        bool declared_marker = false;
+        for (const SymbolLayer& l : entry.symbol.layers) {
+            if (!l.enabled) continue;
+            if (draws_fill(l.type)) declared_fill = true;
+            if (draws_stroke(l.type)) declared_stroke = true;
+            if (draws_marker(l.type)) declared_marker = true;
+        }
+
+        if (!row.layers.empty() && (declared_fill || declared_stroke || declared_marker))
+            entry.kind = declared_fill     ? SymbolKind::Area
+                         : declared_stroke ? SymbolKind::Line
+                                           : SymbolKind::Point;
+        else if (!row.image_hatch.empty() || row.appearance.fill_rgba != 0)
             entry.kind = SymbolKind::Area;
         else if (!row.image_line.empty())
             entry.kind = SymbolKind::Line;

@@ -1059,7 +1059,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF005CE6"
+     "dolgu_renk": "#FF005CE6"
     },
     {
      "tip": "cizgi",
@@ -1165,7 +1165,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF6699CD"
+     "dolgu_renk": "#FF6699CD"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -1250,7 +1250,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF6699CD"
+     "dolgu_renk": "#FF6699CD"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -1308,7 +1308,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFAA66CD"
+     "dolgu_renk": "#FFAA66CD"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -1371,7 +1371,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFAA66CD"
+     "dolgu_renk": "#FFAA66CD"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -1442,7 +1442,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFA8A800"
+     "dolgu_renk": "#FFA8A800"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -2580,7 +2580,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "cizgi",
@@ -2651,7 +2651,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "cizgi",
@@ -2722,7 +2722,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "cizgi",
@@ -2769,7 +2769,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "cizgi",
@@ -2871,6 +2871,9 @@
    "belirsiz": true,
    "belirsiz_nedeni": [
     "cizim-yorumu"
+   ],
+   "takma_adlar": [
+    "ÖZEL ÇEVRE KORUMA BÖLGESİ (ÖÇK)"
    ]
   },
   {
@@ -3301,7 +3304,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF228B22"
+     "dolgu_renk": "#FF228B22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -3332,7 +3335,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE9FABE"
+     "dolgu_renk": "#FFE9FABE"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -3363,7 +3366,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF70B800"
+     "dolgu_renk": "#FF70B800"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -3394,7 +3397,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB4D79E"
+     "dolgu_renk": "#FFB4D79E"
     },
     {
      "tip": "gorsel-dolgu",
@@ -3480,7 +3483,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFD1FF9B"
+     "dolgu_renk": "#FFD1FF9B"
     },
     {
      "tip": "gorsel-dolgu",
@@ -3872,7 +3875,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73DFEB"
+     "dolgu_renk": "#FF73DFEB"
     },
     {
      "tip": "isaretci-cizgi",
@@ -4092,7 +4095,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF57A7A"
+     "dolgu_renk": "#FFF57A7A"
     },
     {
      "tip": "cizgi",
@@ -4195,7 +4198,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB8F2F8"
+     "dolgu_renk": "#FFB8F2F8"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -4225,7 +4228,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -4255,7 +4258,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF9ACF19"
+     "dolgu_renk": "#FF9ACF19"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -4291,7 +4294,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFDDDDDD"
+     "dolgu_renk": "#FFDDDDDD"
     },
     {
      "tip": "gorsel-isaretci",
@@ -4303,6 +4306,9 @@
    "belirsiz": true,
    "belirsiz_nedeni": [
     "cizim-yorumu"
+   ],
+   "takma_adlar": [
+    "AFET ARAMA KURTARMA HİZMET LOJİSTİK MERKEZLERİ ALANI"
    ]
   },
   {
@@ -4317,7 +4323,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF3800"
+     "dolgu_renk": "#FFFF3800"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -4465,7 +4471,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -4538,7 +4544,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF828282"
+     "dolgu_renk": "#FF828282"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -4611,7 +4617,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -4659,7 +4665,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFABABC8"
+     "dolgu_renk": "#FFABABC8"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -4761,7 +4767,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -4831,7 +4837,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -4868,7 +4874,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -4905,7 +4911,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -4942,7 +4948,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -4979,7 +4985,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -5016,7 +5022,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -5063,7 +5069,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73DFEB"
+     "dolgu_renk": "#FF73DFEB"
     }
    ],
    "belirsiz": true,
@@ -5083,7 +5089,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE1E1E1"
+     "dolgu_renk": "#FFE1E1E1"
     },
     {
      "tip": "isaretci",
@@ -5119,7 +5125,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -5175,7 +5181,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE1A564"
+     "dolgu_renk": "#FFE1A564"
     },
     {
      "tip": "gorsel-isaretci",
@@ -5200,7 +5206,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB46E00"
+     "dolgu_renk": "#FFB46E00"
     },
     {
      "tip": "gorsel-isaretci",
@@ -5225,7 +5231,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF8C5519"
+     "dolgu_renk": "#FF8C5519"
     },
     {
      "tip": "gorsel-isaretci",
@@ -5298,7 +5304,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#80F0DCDC"
+     "dolgu_renk": "#80F0DCDC"
     }
    ],
    "belirsiz": true,
@@ -5317,12 +5323,15 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#80D7D7D7"
+     "dolgu_renk": "#80D7D7D7"
     }
    ],
    "belirsiz": true,
    "belirsiz_nedeni": [
     "cizim-yorumu"
+   ],
+   "takma_adlar": [
+    "BÖLGELERARASI ULAŞIM KORIDORLARI"
    ]
   },
   {
@@ -5396,6 +5405,9 @@
    "belirsiz": true,
    "belirsiz_nedeni": [
     "cizim-yorumu"
+   ],
+   "takma_adlar": [
+    "LOJİSTİK MERKEZLER"
    ]
   },
   {
@@ -5478,7 +5490,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#80B4A0C8"
+     "dolgu_renk": "#80B4A0C8"
     },
     {
      "tip": "isaretci",
@@ -5554,7 +5566,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#80FA9646"
+     "dolgu_renk": "#80FA9646"
     },
     {
      "tip": "isaretci",
@@ -5569,6 +5581,9 @@
    "belirsiz": true,
    "belirsiz_nedeni": [
     "cizim-yorumu"
+   ],
+   "takma_adlar": [
+    "TURİZM GELİŞİM ODAK VE KORİDORLARI"
    ]
   },
   {
@@ -5582,7 +5597,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#8000A0F0"
+     "dolgu_renk": "#8000A0F0"
     },
     {
      "tip": "isaretci",
@@ -5669,6 +5684,9 @@
    "belirsiz": true,
    "belirsiz_nedeni": [
     "cizim-yorumu"
+   ],
+   "takma_adlar": [
+    "YERLEŞME AÇISINDAN RISKLI ALANLAR"
    ]
   },
   {
@@ -5702,7 +5720,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF78C300"
+     "dolgu_renk": "#FF78C300"
     }
    ],
    "belirsiz": true,
@@ -5721,7 +5739,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB4E11E"
+     "dolgu_renk": "#FFB4E11E"
     }
    ],
    "belirsiz": true,
@@ -5863,7 +5881,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF8C541A"
+     "dolgu_renk": "#FF8C541A"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -5876,6 +5894,9 @@
    "belirsiz": true,
    "belirsiz_nedeni": [
     "cizim-yorumu"
+   ],
+   "takma_adlar": [
+    "KENTSEL MESKUN (YERLEŞİK) ALAN"
    ]
   },
   {
@@ -5889,7 +5910,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFFFA26"
+     "dolgu_renk": "#FFFFFA26"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -5937,7 +5958,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC7EB00"
+     "dolgu_renk": "#FFC7EB00"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -5963,7 +5984,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE00021"
+     "dolgu_renk": "#FFE00021"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -6000,7 +6021,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE00021"
+     "dolgu_renk": "#FFE00021"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -6037,7 +6058,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -6057,6 +6078,9 @@
    "belirsiz": true,
    "belirsiz_nedeni": [
     "cizim-yorumu"
+   ],
+   "takma_adlar": [
+    "LOJİSTİK BÖLGESİ"
    ]
   },
   {
@@ -6070,7 +6094,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFAA66CD"
+     "dolgu_renk": "#FFAA66CD"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -6103,7 +6127,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -6152,7 +6176,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE8BEFF"
+     "dolgu_renk": "#FFE8BEFF"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -6190,7 +6214,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF7300"
+     "dolgu_renk": "#FFFF7300"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -6220,7 +6244,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFA1C272"
+     "dolgu_renk": "#FFA1C272"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -6266,7 +6290,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC86496"
+     "dolgu_renk": "#FFC86496"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -6299,7 +6323,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF5500"
+     "dolgu_renk": "#FFFF5500"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -6332,7 +6356,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF6699CD"
+     "dolgu_renk": "#FF6699CD"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -6362,7 +6386,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -6401,7 +6425,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFABABC8"
+     "dolgu_renk": "#FFABABC8"
     },
     {
      "tip": "gorsel-isaretci",
@@ -6426,7 +6450,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE9FABE"
+     "dolgu_renk": "#FFE9FABE"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -6456,7 +6480,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE9FABE"
+     "dolgu_renk": "#FFE9FABE"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -6541,7 +6565,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF63BA52"
+     "dolgu_renk": "#FF63BA52"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -6578,7 +6602,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -6645,7 +6669,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -6676,7 +6700,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73D4FF"
+     "dolgu_renk": "#FF73D4FF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -6707,7 +6731,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFAAFF00"
+     "dolgu_renk": "#FFAAFF00"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -6747,7 +6771,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF7A8EF5"
+     "dolgu_renk": "#FF7A8EF5"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -6927,7 +6951,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE1E1E1"
+     "dolgu_renk": "#FFE1E1E1"
     },
     {
      "tip": "isaretci",
@@ -7065,6 +7089,9 @@
    "belirsiz": true,
    "belirsiz_nedeni": [
     "cizim-yorumu"
+   ],
+   "takma_adlar": [
+    "MEVCUT PLANDAKİ DURUMU KORUNACAK ALAN SINIRI"
    ]
   },
   {
@@ -7593,7 +7620,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF8C541A"
+     "dolgu_renk": "#FF8C541A"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -7619,7 +7646,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB57F00"
+     "dolgu_renk": "#FFB57F00"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -7645,7 +7672,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE3BA45"
+     "dolgu_renk": "#FFE3BA45"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -7671,7 +7698,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFFD37F"
+     "dolgu_renk": "#FFFFD37F"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -7697,7 +7724,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE1DFB3"
+     "dolgu_renk": "#FFE1DFB3"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -7723,7 +7750,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF2D200"
+     "dolgu_renk": "#FFF2D200"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -7749,7 +7776,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFFEE45"
+     "dolgu_renk": "#FFFFEE45"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -7775,7 +7802,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFFFA70"
+     "dolgu_renk": "#FFFFFA70"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -7801,7 +7828,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFFFEA8"
+     "dolgu_renk": "#FFFFFEA8"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -7827,7 +7854,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFFFFD1"
+     "dolgu_renk": "#FFFFFFD1"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -7853,7 +7880,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE00021"
+     "dolgu_renk": "#FFE00021"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -7906,7 +7933,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE00021"
+     "dolgu_renk": "#FFE00021"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -7943,7 +7970,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE3BA45"
+     "dolgu_renk": "#FFE3BA45"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -7980,7 +8007,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF7300"
+     "dolgu_renk": "#FFFF7300"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -8017,7 +8044,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF7500"
+     "dolgu_renk": "#FFFF7500"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -8054,7 +8081,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF6699CD"
+     "dolgu_renk": "#FF6699CD"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -8084,7 +8111,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF6699CD"
+     "dolgu_renk": "#FF6699CD"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -8114,7 +8141,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE00021"
+     "dolgu_renk": "#FFE00021"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -8163,7 +8190,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF3800"
+     "dolgu_renk": "#FFFF3800"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -8202,7 +8229,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFAA66CD"
+     "dolgu_renk": "#FFAA66CD"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -8235,7 +8262,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE8BEFF"
+     "dolgu_renk": "#FFE8BEFF"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -8273,7 +8300,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFAA66CD"
+     "dolgu_renk": "#FFAA66CD"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -8322,7 +8349,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE00021"
+     "dolgu_renk": "#FFE00021"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -8371,7 +8398,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE00021"
+     "dolgu_renk": "#FFE00021"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -8404,7 +8431,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE00021"
+     "dolgu_renk": "#FFE00021"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -8437,7 +8464,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE9FABE"
+     "dolgu_renk": "#FFE9FABE"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -8470,7 +8497,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFA8A800"
+     "dolgu_renk": "#FFA8A800"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -8510,7 +8537,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE00021"
+     "dolgu_renk": "#FFE00021"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -8559,7 +8586,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF005CE6"
+     "dolgu_renk": "#FF005CE6"
     },
     {
      "tip": "cizgi",
@@ -8593,7 +8620,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFAA66CD"
+     "dolgu_renk": "#FFAA66CD"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -8626,7 +8653,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE0BEE6"
+     "dolgu_renk": "#FFE0BEE6"
     },
     {
      "tip": "yazi-isaretci",
@@ -8652,7 +8679,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF7300"
+     "dolgu_renk": "#FFFF7300"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -8682,7 +8709,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFFAD00"
+     "dolgu_renk": "#FFFFAD00"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -8728,7 +8755,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFA1C272"
+     "dolgu_renk": "#FFA1C272"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -8774,7 +8801,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE9FABE"
+     "dolgu_renk": "#FFE9FABE"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -8804,7 +8831,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB4D79E"
+     "dolgu_renk": "#FFB4D79E"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -8846,7 +8873,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFFE5CF"
+     "dolgu_renk": "#FFFFE5CF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -8882,7 +8909,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF008FFF"
+     "dolgu_renk": "#FF008FFF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -8912,7 +8939,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF008FFF"
+     "dolgu_renk": "#FF008FFF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -8942,7 +8969,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF00A9E6"
+     "dolgu_renk": "#FF00A9E6"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -8972,7 +8999,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73D4FF"
+     "dolgu_renk": "#FF73D4FF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -9029,7 +9056,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73D4FF"
+     "dolgu_renk": "#FF73D4FF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -9065,7 +9092,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF89CD66"
+     "dolgu_renk": "#FF89CD66"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -9101,7 +9128,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF00A9E6"
+     "dolgu_renk": "#FF00A9E6"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -9131,7 +9158,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73D4FF"
+     "dolgu_renk": "#FF73D4FF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -9161,7 +9188,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF89CD66"
+     "dolgu_renk": "#FF89CD66"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -9191,7 +9218,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -9221,7 +9248,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF63BA52"
+     "dolgu_renk": "#FF63BA52"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -9251,7 +9278,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -9287,7 +9314,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -9323,7 +9350,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF63BA52"
+     "dolgu_renk": "#FF63BA52"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -9359,7 +9386,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF63BA52"
+     "dolgu_renk": "#FF63BA52"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -9395,7 +9422,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF63BA52"
+     "dolgu_renk": "#FF63BA52"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -9425,7 +9452,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -9461,7 +9488,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF24BA22"
+     "dolgu_renk": "#FF24BA22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -9546,7 +9573,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF57A7A"
+     "dolgu_renk": "#FFF57A7A"
     },
     {
      "tip": "cizgi",
@@ -9641,7 +9668,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF57A7A"
+     "dolgu_renk": "#FFF57A7A"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -9847,7 +9874,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE1E1E1"
+     "dolgu_renk": "#FFE1E1E1"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -10170,7 +10197,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "isaretci",
@@ -10206,7 +10233,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF3800"
+     "dolgu_renk": "#FFFF3800"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -10274,7 +10301,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "yazi-isaretci",
@@ -10301,7 +10328,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "gorsel-isaretci",
@@ -10313,6 +10340,9 @@
    "belirsiz": true,
    "belirsiz_nedeni": [
     "cizim-yorumu"
+   ],
+   "takma_adlar": [
+    "ELEKTRİKLİ ARAÇ ŞARJ İSTASYONU"
    ]
   },
   {
@@ -10327,7 +10357,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -10367,7 +10397,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFFB7B9"
+     "dolgu_renk": "#FFFFB7B9"
     },
     {
      "tip": "gorsel-isaretci",
@@ -10423,7 +10453,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -10488,7 +10518,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -10536,7 +10566,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -10593,7 +10623,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -10641,7 +10671,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -10689,7 +10719,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -10754,7 +10784,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -10844,7 +10874,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "gorsel-isaretci",
@@ -10870,7 +10900,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "isaretci",
@@ -10951,7 +10981,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -10999,7 +11029,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "gorsel-cizgi",
@@ -11026,7 +11056,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -11074,7 +11104,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -11131,7 +11161,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -11188,7 +11218,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -11245,7 +11275,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -11285,7 +11315,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -11342,7 +11372,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFABABC8"
+     "dolgu_renk": "#FFABABC8"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -11399,7 +11429,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -11491,7 +11521,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73DFEB"
+     "dolgu_renk": "#FF73DFEB"
     }
    ],
    "belirsiz": true,
@@ -12190,7 +12220,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF8C541A"
+     "dolgu_renk": "#FF8C541A"
     }
    ],
    "belirsiz": true,
@@ -12209,7 +12239,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFFFA26"
+     "dolgu_renk": "#FFFFFA26"
     }
    ],
    "belirsiz": true,
@@ -12228,7 +12258,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE00021"
+     "dolgu_renk": "#FFE00021"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12265,7 +12295,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE3BA45"
+     "dolgu_renk": "#FFE3BA45"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12302,7 +12332,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF7300"
+     "dolgu_renk": "#FFFF7300"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12339,7 +12369,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF7500"
+     "dolgu_renk": "#FFFF7500"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12376,7 +12406,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE00021"
+     "dolgu_renk": "#FFE00021"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12413,7 +12443,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE00021"
+     "dolgu_renk": "#FFE00021"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12446,7 +12476,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF6699CD"
+     "dolgu_renk": "#FF6699CD"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -12476,7 +12506,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF6699CD"
+     "dolgu_renk": "#FF6699CD"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -12506,7 +12536,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF6699CD"
+     "dolgu_renk": "#FF6699CD"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -12564,7 +12594,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF3800"
+     "dolgu_renk": "#FFFF3800"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12603,7 +12633,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFAA66CD"
+     "dolgu_renk": "#FFAA66CD"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12636,7 +12666,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE8BEFF"
+     "dolgu_renk": "#FFE8BEFF"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12674,7 +12704,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFAA66CD"
+     "dolgu_renk": "#FFAA66CD"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12723,7 +12753,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12772,7 +12802,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF185E9"
+     "dolgu_renk": "#FFF185E9"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12805,7 +12835,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12838,7 +12868,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE00021"
+     "dolgu_renk": "#FFE00021"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12887,7 +12917,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE9FABE"
+     "dolgu_renk": "#FFE9FABE"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12920,7 +12950,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFA8A800"
+     "dolgu_renk": "#FFA8A800"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12960,7 +12990,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFAA66CD"
+     "dolgu_renk": "#FFAA66CD"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -12993,7 +13023,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF005CE6"
+     "dolgu_renk": "#FF005CE6"
     },
     {
      "tip": "cizgi",
@@ -13027,7 +13057,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE0BEE6"
+     "dolgu_renk": "#FFE0BEE6"
     },
     {
      "tip": "yazi-isaretci",
@@ -13053,7 +13083,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF7300"
+     "dolgu_renk": "#FFFF7300"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -13099,7 +13129,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF7300"
+     "dolgu_renk": "#FFFF7300"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -13145,7 +13175,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF7300"
+     "dolgu_renk": "#FFFF7300"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -13175,7 +13205,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF7300"
+     "dolgu_renk": "#FFFF7300"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -13205,7 +13235,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF7300"
+     "dolgu_renk": "#FFFF7300"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -13235,7 +13265,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF7300"
+     "dolgu_renk": "#FFFF7300"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -13265,7 +13295,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF7300"
+     "dolgu_renk": "#FFFF7300"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -13295,7 +13325,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF7300"
+     "dolgu_renk": "#FFFF7300"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -13325,7 +13355,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFFAD00"
+     "dolgu_renk": "#FFFFAD00"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -13361,7 +13391,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFFAD00"
+     "dolgu_renk": "#FFFFAD00"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -13407,7 +13437,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFA1C272"
+     "dolgu_renk": "#FFA1C272"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -13453,7 +13483,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF7300"
+     "dolgu_renk": "#FFFF7300"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -13489,7 +13519,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF7300"
+     "dolgu_renk": "#FFFF7300"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -13506,6 +13536,9 @@
    "belirsiz": true,
    "belirsiz_nedeni": [
     "cizim-yorumu"
+   ],
+   "takma_adlar": [
+    "EKOTURİZM/KIRSAL TURİZM"
    ]
   },
   {
@@ -13885,7 +13918,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE9FABE"
+     "dolgu_renk": "#FFE9FABE"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -13922,7 +13955,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE9FABE"
+     "dolgu_renk": "#FFE9FABE"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -13973,7 +14006,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE9FABE"
+     "dolgu_renk": "#FFE9FABE"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -14010,7 +14043,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB4D79E"
+     "dolgu_renk": "#FFB4D79E"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -14053,7 +14086,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFFE5CF"
+     "dolgu_renk": "#FFFFE5CF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -14090,7 +14123,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF57A7A"
+     "dolgu_renk": "#FFF57A7A"
     },
     {
      "tip": "gorsel-cizgi",
@@ -14152,7 +14185,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF57A7A"
+     "dolgu_renk": "#FFF57A7A"
     },
     {
      "tip": "cizgi",
@@ -14228,7 +14261,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF57A7A"
+     "dolgu_renk": "#FFF57A7A"
     },
     {
      "tip": "cizgi",
@@ -14304,7 +14337,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF57A7A"
+     "dolgu_renk": "#FFF57A7A"
     },
     {
      "tip": "cizgi",
@@ -14380,7 +14413,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF57A7A"
+     "dolgu_renk": "#FFF57A7A"
     },
     {
      "tip": "cizgi",
@@ -14456,7 +14489,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF57A7A"
+     "dolgu_renk": "#FFF57A7A"
     },
     {
      "tip": "cizgi",
@@ -14532,7 +14565,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF57A7A"
+     "dolgu_renk": "#FFF57A7A"
     },
     {
      "tip": "cizgi",
@@ -14608,7 +14641,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF57A7A"
+     "dolgu_renk": "#FFF57A7A"
     },
     {
      "tip": "cizgi",
@@ -14744,7 +14777,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF57A7A"
+     "dolgu_renk": "#FFF57A7A"
     },
     {
      "tip": "cizgi",
@@ -14820,7 +14853,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF57A7A"
+     "dolgu_renk": "#FFF57A7A"
     },
     {
      "tip": "cizgi",
@@ -14896,7 +14929,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF57A7A"
+     "dolgu_renk": "#FFF57A7A"
     },
     {
      "tip": "cizgi",
@@ -15004,7 +15037,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF57A7A"
+     "dolgu_renk": "#FFF57A7A"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -15052,7 +15085,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF008FFF"
+     "dolgu_renk": "#FF008FFF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15083,7 +15116,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF008FFF"
+     "dolgu_renk": "#FF008FFF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15114,7 +15147,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF008FFF"
+     "dolgu_renk": "#FF008FFF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15145,7 +15178,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF008FFF"
+     "dolgu_renk": "#FF008FFF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15176,7 +15209,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF008FFF"
+     "dolgu_renk": "#FF008FFF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15207,7 +15240,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF008FFF"
+     "dolgu_renk": "#FF008FFF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15238,7 +15271,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF008FFF"
+     "dolgu_renk": "#FF008FFF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15269,7 +15302,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF008FFF"
+     "dolgu_renk": "#FF008FFF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15300,7 +15333,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF00A9E6"
+     "dolgu_renk": "#FF00A9E6"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15331,7 +15364,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF00A9E6"
+     "dolgu_renk": "#FF00A9E6"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15362,7 +15395,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF00A9E6"
+     "dolgu_renk": "#FF00A9E6"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15393,7 +15426,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF00A9E6"
+     "dolgu_renk": "#FF00A9E6"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15424,7 +15457,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73D4FF"
+     "dolgu_renk": "#FF73D4FF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15482,7 +15515,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73D4FF"
+     "dolgu_renk": "#FF73D4FF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15519,7 +15552,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73D4FF"
+     "dolgu_renk": "#FF73D4FF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15550,7 +15583,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF89CD66"
+     "dolgu_renk": "#FF89CD66"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15587,7 +15620,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF89CD66"
+     "dolgu_renk": "#FF89CD66"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15604,6 +15637,9 @@
    "belirsiz": true,
    "belirsiz_nedeni": [
     "cizim-yorumu"
+   ],
+   "takma_adlar": [
+    "KAPALI SPOR TESİSİ ALAN"
    ]
   },
   {
@@ -15618,7 +15654,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73D4FF"
+     "dolgu_renk": "#FF73D4FF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15655,7 +15691,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73D4FF"
+     "dolgu_renk": "#FF73D4FF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15702,7 +15738,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73D4FF"
+     "dolgu_renk": "#FF73D4FF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15733,7 +15769,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73D4FF"
+     "dolgu_renk": "#FF73D4FF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15764,7 +15800,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF89CD66"
+     "dolgu_renk": "#FF89CD66"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15795,7 +15831,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF6699CD"
+     "dolgu_renk": "#FF6699CD"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15842,7 +15878,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73D4FF"
+     "dolgu_renk": "#FF73D4FF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15879,7 +15915,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73D4FF"
+     "dolgu_renk": "#FF73D4FF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15916,7 +15952,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73D4FF"
+     "dolgu_renk": "#FF73D4FF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15953,7 +15989,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73D4FF"
+     "dolgu_renk": "#FF73D4FF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -15990,7 +16026,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73D4FF"
+     "dolgu_renk": "#FF73D4FF"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -16026,7 +16062,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -16056,7 +16092,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -16092,7 +16128,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF63BA52"
+     "dolgu_renk": "#FF63BA52"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -16122,7 +16158,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -16158,7 +16194,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -16194,7 +16230,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -16230,7 +16266,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -16266,7 +16302,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -16302,7 +16338,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFFE5CF"
+     "dolgu_renk": "#FFFFE5CF"
     },
     {
      "tip": "isaretci",
@@ -16348,7 +16384,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -16384,7 +16420,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF63BA52"
+     "dolgu_renk": "#FF63BA52"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -16420,7 +16456,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF249C22"
+     "dolgu_renk": "#FF249C22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -16456,7 +16492,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF63BA52"
+     "dolgu_renk": "#FF63BA52"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -16492,7 +16528,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF63BA52"
+     "dolgu_renk": "#FF63BA52"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -16528,7 +16564,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF63BA52"
+     "dolgu_renk": "#FF63BA52"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -16574,7 +16610,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF24BA22"
+     "dolgu_renk": "#FF24BA22"
     },
     {
      "tip": "nokta-desen-dolgu",
@@ -16670,7 +16706,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFF57A7A"
+     "dolgu_renk": "#FFF57A7A"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -17014,7 +17050,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFE1E1E1"
+     "dolgu_renk": "#FFE1E1E1"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -17418,7 +17454,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "isaretci",
@@ -17454,7 +17490,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFF3800"
+     "dolgu_renk": "#FFFF3800"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -17516,7 +17552,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFFE5CF"
+     "dolgu_renk": "#FFFFE5CF"
     },
     {
      "tip": "gorsel-isaretci",
@@ -17672,7 +17708,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "yazi-isaretci",
@@ -17699,7 +17735,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "gorsel-isaretci",
@@ -17725,7 +17761,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -17758,7 +17794,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFFFB7B9"
+     "dolgu_renk": "#FFFFB7B9"
     },
     {
      "tip": "gorsel-isaretci",
@@ -17814,7 +17850,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -17862,7 +17898,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF828282"
+     "dolgu_renk": "#FF828282"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -17927,7 +17963,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF828282"
+     "dolgu_renk": "#FF828282"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -17978,6 +18014,9 @@
    "belirsiz": true,
    "belirsiz_nedeni": [
     "cizim-yorumu"
+   ],
+   "takma_adlar": [
+    "KRUVAZİYER LİMANI"
    ]
   },
   {
@@ -17992,7 +18031,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF828282"
+     "dolgu_renk": "#FF828282"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -18057,7 +18096,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF828282"
+     "dolgu_renk": "#FF828282"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -18122,7 +18161,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -18170,7 +18209,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -18227,7 +18266,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -18275,7 +18314,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -18323,7 +18362,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -18388,7 +18427,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -18453,7 +18492,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -18518,7 +18557,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -18583,7 +18622,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -18631,7 +18670,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -18696,7 +18735,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -18744,7 +18783,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -18809,7 +18848,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFCCCCCC"
+     "dolgu_renk": "#FFCCCCCC"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -18869,7 +18908,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -18957,7 +18996,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "gorsel-isaretci",
@@ -19017,7 +19056,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "gorsel-isaretci",
@@ -19066,7 +19105,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -19114,7 +19153,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "isaretci",
@@ -19160,7 +19199,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFABABC8"
+     "dolgu_renk": "#FFABABC8"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -19199,7 +19238,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFABABC8"
+     "dolgu_renk": "#FFABABC8"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -19255,7 +19294,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFABABC8"
+     "dolgu_renk": "#FFABABC8"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -19311,7 +19350,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -19360,7 +19399,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -19443,7 +19482,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -19499,7 +19538,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -19555,7 +19594,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -19611,7 +19650,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -19650,7 +19689,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFC29ED7"
+     "dolgu_renk": "#FFC29ED7"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -19770,7 +19809,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FFB2B2B2"
+     "dolgu_renk": "#FFB2B2B2"
     },
     {
      "tip": "cizgi-desen-dolgu",
@@ -19927,7 +19966,7 @@
    "katmanlar": [
     {
      "tip": "dolgu",
-     "renk": "#FF73DFEB"
+     "dolgu_renk": "#FF73DFEB"
     }
    ],
    "belirsiz": true,

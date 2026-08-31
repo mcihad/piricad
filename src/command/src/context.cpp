@@ -88,6 +88,7 @@ InputAwaiter<Point2> Context::point(std::string param, std::string message, Poin
     prompt.param           = param;
     prompt.has_rubber_band = o.rubber_band;
     prompt.rubber_origin   = o.rubber_origin;
+    prompt.rubber_shape    = o.rubber_shape;
     return InputAwaiter<Point2>(session_, std::move(p), std::move(prompt), &to_point);
 }
 

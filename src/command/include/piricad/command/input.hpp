@@ -36,13 +36,25 @@ enum class Origin : std::uint8_t {
 const char* origin_name(Origin o);
 
 /// A request the running command has made and is suspended on.
+/// What the preview between the last point and the cursor looks like.
+///
+/// A guide is not decoration: it is the only thing that tells a user WHAT the
+/// next click will make before they make it. A rectangle previewed as a single
+/// line says nothing about the shape being drawn, and the user finds out what
+/// they built after they have built it.
+enum class RubberShape : std::uint8_t {
+    Line,     ///< the segment about to be drawn: ÇİZGİ, ALAN
+    Rectangle ///< the face two opposite corners enclose: DİKDÖRTGEN
+};
+
 struct Prompt
 {
-    std::string message;              ///< Turkish, user-facing
-    ParamKind kind{ParamKind::Point}; ///< what kind of value would satisfy it
-    std::string param;                ///< the declared parameter name being filled
-    bool has_rubber_band{false};      ///< whether a preview line should be drawn
-    Point2 rubber_origin{};           ///< where that line starts
+    std::string message;                         ///< Turkish, user-facing
+    ParamKind kind{ParamKind::Point};            ///< what kind of value would satisfy it
+    std::string param;                           ///< the declared parameter name being filled
+    bool has_rubber_band{false};                 ///< whether a preview should be drawn
+    Point2 rubber_origin{};                      ///< where that preview starts
+    RubberShape rubber_shape{RubberShape::Line}; ///< what it draws between the two
 };
 
 /// Supplies values to a running command. Implementations: queued arguments

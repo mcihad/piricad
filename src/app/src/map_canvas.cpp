@@ -824,7 +824,17 @@ void MapCanvas::buildOverlay()
         }
 
         const std::size_t batch = nextBatch(palette_.rubberBand.rgba(), 1.0f, true);
-        addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+        if (session->prompt().rubber_shape == command::RubberShape::Rectangle) {
+            // THE FACE, not its diagonal. A rectangle previewed as one line tells
+            // the user nothing about what the next click will make, and with the
+            // diagonal lock held it is the difference between seeing a square and
+            // finding out you drew one.
+            const render::ScreenPointF a = render::to_f(from);
+            const render::ScreenPointF b = toScreenF(to);
+            addRun(batch, {{a.x, a.y}, {b.x, a.y}, {b.x, b.y}, {a.x, b.y}}, true);
+        } else {
+            addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+        }
     }
 
     buildSelectionBox();
@@ -852,6 +862,25 @@ void MapCanvas::buildOverlay()
                                  .toStdString()});
 }
 
+std::vector<int> MapCanvas::timeFrames(int rounds)
+{
+    // Through the real paint path, not a private one: a number measured on a
+    // shortcut is a number about the shortcut. `repaint()` paints synchronously,
+    // so `last_frame_us_` is the round that just finished.
+    std::vector<int> costs;
+    costs.reserve(static_cast<std::size_t>(std::max(0, rounds)));
+    for (int i = 0; i < rounds; ++i) {
+        repaint();
+        // The BACKEND's share. Scene rebuild and overlay run in the same paint
+        // and, on a sheet of patterned parcels, dwarf it — which is a fact about
+        // where the time goes, not about which backend to keep, so the two are
+        // reported apart.
+        costs.push_back(last_draw_us_);
+        scene_costs_.push_back(last_scene_us_);
+    }
+    return costs;
+}
+
 void MapCanvas::paintEvent(QPaintEvent*)
 {
     QElapsedTimer timer;
@@ -859,6 +888,7 @@ void MapCanvas::paintEvent(QPaintEvent*)
 
     rebuildScene();
     buildOverlay();
+    last_scene_us_ = static_cast<int>(timer.nsecsElapsed() / 1000);
 
     // Everything below this line is the backend's. This widget knows WHAT is on
     // screen; it does not know how any of it is drawn, which is what lets the GPU
@@ -876,6 +906,7 @@ void MapCanvas::paintEvent(QPaintEvent*)
     backend_->render(draw_, overlay_, ctx);
 
     last_frame_us_ = static_cast<int>(timer.nsecsElapsed() / 1000);
+    last_draw_us_  = last_frame_us_ - last_scene_us_;
 }
 
 void MapCanvas::mousePressEvent(QMouseEvent* event)
@@ -969,8 +1000,41 @@ void MapCanvas::wheelEvent(QWheelEvent* event)
     update();
 }
 
+void MapCanvas::setDiagonalLock(bool on)
+{
+    if (diagonal_lock_ == on) return;
+    diagonal_lock_ = on;
+
+    // THROUGH THE BUS, as a setting write, because the same lock has to be
+    // reachable by typing `MOD köşegen=evet` and by a script (Article 1.2,
+    // 5.15). Ctrl is a way of holding a mode down, not a capability of its own —
+    // otherwise "draw me a square" would be a thing only a mouse could ask for.
+    command::Args args;
+    args.set("ad", command::Value::text("köşegen"));
+    args.set("deger", command::Value::boolean(on));
+    controller_.runInvocation(
+        command::Invocation{"core.mode", std::move(args), command::Origin::Gui});
+
+    // The preview is what makes the lock legible: the rubber band must snap to
+    // the diagonal the moment the key goes down, not at the next mouse move.
+    updateSnapPreview();
+    update();
+}
+
+void MapCanvas::keyReleaseEvent(QKeyEvent* event)
+{
+    if (event->key() == Qt::Key_Control) setDiagonalLock(false);
+    QWidget::keyReleaseEvent(event);
+}
+
 void MapCanvas::keyPressEvent(QKeyEvent* event)
 {
+    // Held, not toggled: the lock lasts exactly as long as the key does.
+    if (event->key() == Qt::Key_Control) {
+        setDiagonalLock(true);
+        return;
+    }
+
     if (event->key() == Qt::Key_Escape) {
         if (selecting_) {
             selecting_ = false;

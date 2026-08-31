@@ -15,6 +15,7 @@ namespace piricad::command {
     X(text)                                                                                        \
     X(exportstyle)                                                                                 \
     X(area)                                                                                        \
+    X(rectangle)                                                                                   \
     X(attribute)                                                                                   \
     X(column)                                                                                      \
     X(erase)                                                                                       \

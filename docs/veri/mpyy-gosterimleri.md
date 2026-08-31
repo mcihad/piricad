@@ -286,8 +286,38 @@ kimlikleri `<ek kısaltması>-<ad>` biçimindedir: `ortak-` (EK-1a), `msp-` (EK-
 kullanılır, çünkü `EK-1c` ile `EK-1ç` ASCII'ye indirildiğinde aynı yazılır ve
 kimlikler çakışırdı.
 
-Eşleme kuralları eklendiğinde katmanı tek tek kodlamak yerine kural kümesi
-uygulanabilecektir; bu Faz 3'ün işidir.
+### Bütün bir katmanı özniteliğine göre çizdirmek
+
+Katmanı tek tek kodlamaya gerek yok. `sinifla=` bir öznitelik sütunu adı alır ve
+**her nesneyi kendi değerine göre** çizer:
+
+```text
+STİL katman=PLAN paket=<depo kökü>/data/catalogs/mpyy-vektor/plan-gosterim.json sinifla=DETAY
+```
+
+Sütundaki değer şunlardan biri olabilir:
+
+1. gösterimin **kimliği** — `uip-ticaret-alani`
+2. gösterimin **adı** — `TİCARET ALANI`
+3. gösterimin **takma adı** — yönetmeliğin aynı gösterim için kullandığı öteki
+   yazım
+
+Üçüncüsü şunun içindir: MPYY bir kullanımı iki kez adlandırır. EK-1a…EK-1d
+gösterimi basar, EK-1e detay kartını basar, ve 379 kartın 339'u aynı sözcüklerle
+yazılmıştır — kırkı değil. Kartta `KRUVAZİYER LİMANI` yazan satır ekte
+`KRUVAZİYER LİMAN`, `ÖZEL ÇEVRE KORUMA BÖLGESİ (ÖÇK)` ise parantezsizdir. Detay
+kataloğundan etiketlenmiş bir veri o zaman hiçbir şeye eşleşmez ve parsel
+katmanın varsayılan renginde çizilir — hiçbir yerde hata çıkmadan.
+
+Bu yüzden 13 satır `takma_adlar` taşır. Her biri **yönetmeliğin kendi öteki
+yazımıdır**, bir yorum değil; bir değerin hangi gösterime ait olduğuna dair karar
+gerektiren hiçbir eşleme buraya yazılmamıştır. Yazılmayanlar ve gerekçeleri
+`data/catalogs/mpyy-vektor/UZMANA.md` dosyasındadır — başlıcası konut yoğunluğu
+kademeleri: gösterim tarafında beş satır aynı adı taşır, ve hangisinin hangi
+kişi/ha aralığına ait olduğu imza ister.
+
+Koşullu ve ölçeğe bağlı eşleme (`kurallar`) — "TİP=KONUT **ve** YOĞUNLUK
+301–600" gibi — hâlâ boştur; o da aynı imzayı bekler.
 
 ## Neyin denetlendiği
 

@@ -44,6 +44,16 @@ const AidSettings& InputAids::settings(const core::Settings& app,
     out.ortho      = session.get("core.yakalama.dik_mod").as_bool();
     out.polar_step = session.get("core.yakalama.kutupsal_aci").as_int();
 
+    // The diagonal lock is polar tracking at 45°, and it OVERRIDES the configured
+    // step while it is held. A second corner locked to a 45° diagonal from the
+    // first is a square, which is what Ctrl means in a drawing program — so this
+    // needs no new constraint in the engine, only a step it already understands.
+    if (session.get("core.yakalama.kosegen").as_bool()) {
+        constexpr std::int64_t kDiagonal = 45'000'000; // micro-degrees
+        out.polar_step                   = kDiagonal;
+        out.modes = static_cast<std::uint16_t>(out.modes | core::SnapPolar);
+    }
+
     out.snap_radius = radius_from_pixels(app.get("core.yakalama.tolerans").as_int(), mm_per_pixel_);
 
     // A multiple of the aperture, not a fixed distance. The reach then follows the

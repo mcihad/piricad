@@ -212,6 +212,21 @@ struct StyleEntry
     /// word having to become part of the tree.
     std::vector<std::string> tags;
 
+    /// Other names the SAME gösterim is published under, verbatim from /data.
+    ///
+    /// MPYY names one designation twice: EK-1a…EK-1d print the gösterim, EK-1e
+    /// prints the detail card, and 339 of the 379 cards use the identical
+    /// wording — but forty do not. `KRUVAZİYER LİMANI` on the card is
+    /// `KRUVAZİYER LİMAN` in the annex; `ÖZEL ÇEVRE KORUMA BÖLGESİ (ÖÇK)` drops
+    /// its parenthesis. A dataset tagged from the detail catalogue then matches
+    /// nothing, and the parcel draws in the layer's default colour with no error
+    /// anywhere — the worst way to be wrong on a legal drawing.
+    ///
+    /// An alias is a QUOTATION, never a guess: it is a name the regulation itself
+    /// uses for this row. Anything that needs judgement about WHICH row a value
+    /// belongs to is a mapping rule and needs a domain signature (CLAUDE.md 6.11).
+    std::vector<std::string> aliases;
+
     /// Package-relative paths to the pictures the regulation PUBLISHED for this
     /// row, empty when it published none of that kind.
     ///

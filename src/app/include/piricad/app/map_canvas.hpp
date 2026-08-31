@@ -17,6 +17,8 @@
 #include "piricad/render/scene.hpp"
 #include "piricad/render/view.hpp"
 
+#include <vector>
+
 #include <QRectF>
 #include <QWidget>
 
@@ -64,6 +66,23 @@ public:
     /// command line, a script or the AI (Article 1.2).
     void reloadSnapSettings();
     void setDebugHud(bool on);
+
+    /// Turns the 45 degree lock on or off through the bus.
+    void setDiagonalLock(bool on);
+
+    /// Repaints `rounds` times and returns the frame costs, in microseconds.
+    ///
+    /// Developer tooling, the same category as `PIRICAD_FRAME_DUMP`: there is no
+    /// user-facing feature here and so no `/docs` page (CLAUDE.md 5.17). It
+    /// exists because "which backend is faster" and "does the QRhi one earn its
+    /// keep" are questions that must be ANSWERED rather than argued, and the
+    /// number was already measured — it just had nowhere to go but a debug HUD
+    /// nobody can read from a headless run.
+    std::vector<int> timeFrames(int rounds);
+
+    /// Scene-rebuild costs from the last `timeFrames`, in microseconds.
+    const std::vector<int>& sceneCosts() const noexcept { return scene_costs_; }
+
     void zoomToExtents();
     void zoomBy(double factor);
     void resetView();
@@ -91,6 +110,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
+    void keyReleaseEvent(QKeyEvent* event) override;
 
 private:
     void rebuildScene();
@@ -246,7 +266,13 @@ private:
     /// once, inside the command layer, for every client alike.
     core::SnapResult snap_preview_{};
     bool snap_preview_valid_{false};
+    /// Ctrl held: the 45 degree lock is on for as long as it is.
+    bool diagonal_lock_{false};
+
     int last_frame_us_{0};
+    int last_scene_us_{0};
+    int last_draw_us_{0};
+    std::vector<int> scene_costs_; ///< filled beside `timeFrames`
     bool debug_hud_{false};
 };
 

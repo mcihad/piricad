@@ -24,6 +24,7 @@ add_library(piricad_command STATIC
     src/commands/label.cpp
     src/commands/layer.cpp
     src/commands/area.cpp
+    src/commands/rectangle.cpp
     src/commands/attribute.cpp
     src/commands/line.cpp
     src/commands/text.cpp
