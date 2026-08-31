@@ -12,10 +12,14 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fail=0
 licences="$root/data/LICENCES.md"
-mapfile -t datafiles < <(find "$root/data" -mindepth 2 -type f \
-    \( -iname '*.json' -o -iname '*.geojson' -o -iname '*.gpkg' -o -iname '*.tif' \
-       -o -iname '*.gml' -o -iname '*.csv' -o -iname '*.gsb' -o -iname '*.grid' \) \
-    -not -path '*/schema/*' | sort)
+# Bash 3.2 has no `mapfile` (it arrived in 4.0) and macOS ships 3.2 as
+# /bin/bash, which is what `env bash` finds there. Read the list instead.
+datafiles=()
+while IFS= read -r line; do datafiles+=("$line"); done \
+    < <(find "$root/data" -mindepth 2 -type f \
+        \( -iname '*.json' -o -iname '*.geojson' -o -iname '*.gpkg' -o -iname '*.tif' \
+           -o -iname '*.gml' -o -iname '*.csv' -o -iname '*.gsb' -o -iname '*.grid' \) \
+        -not -path '*/schema/*' | sort)
 if [[ ${#datafiles[@]} -eq 0 ]]; then
     state="present"; [[ -f "$licences" ]] || state="not created yet"
     echo "data-permits: skipped — /data holds no data file yet (Phase-0 placeholders only); data/LICENCES.md $state"

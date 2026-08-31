@@ -12,8 +12,12 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fail=0
 
-mapfile -t catalogues < <(find "$root/data/catalogs" -type f -name '*.json' \
-                              -not -path '*/schema/*' 2>/dev/null | sort)
+# Bash 3.2 has no `mapfile` (it arrived in 4.0) and macOS ships 3.2 as
+# /bin/bash, which is what `env bash` finds there. Read the list instead.
+catalogues=()
+while IFS= read -r line; do catalogues+=("$line"); done \
+    < <(find "$root/data/catalogs" -type f -name '*.json' \
+            -not -path '*/schema/*' 2>/dev/null | sort)
 
 if [[ ${#catalogues[@]} -eq 0 ]]; then
     echo "catalogs: skipped — /data/catalogs holds no catalogue *.json outside schema/ (empty in Phase 0)"

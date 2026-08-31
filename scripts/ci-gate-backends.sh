@@ -27,7 +27,11 @@ fail=0
 
 # Every file that implements render::Backend, found rather than listed: a backend
 # added and forgotten here would be a backend nobody checks.
-mapfile -t backends < <(grep -ln "public render::Backend" "$app"/*.cpp 2>/dev/null || true)
+# Bash 3.2 has no `mapfile` (it arrived in 4.0) and macOS ships 3.2 as
+# /bin/bash, which is what `env bash` finds there. Read the list instead.
+backends=()
+while IFS= read -r line; do backends+=("$line"); done \
+    < <(grep -ln "public render::Backend" "$app"/*.cpp 2>/dev/null || true)
 
 if [[ ${#backends[@]} -eq 0 ]]; then
     echo "backends: skipped — no render::Backend implementation found under /src/app"

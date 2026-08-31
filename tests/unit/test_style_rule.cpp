@@ -1442,7 +1442,7 @@ TEST_CASE("SEMBOL: vektör paketinin her satırı katmanlarıyla rafa giriyor")
     std::unordered_map<std::string, core::ImageId> minted;
     const auto resolve = [&minted](const std::string& file) -> core::ImageId {
         auto [it, fresh] = minted.emplace(file, core::ImageId{});
-        if (fresh) it->second = core::ImageId{static_cast<std::uint32_t>(minted.size())};
+        if (fresh) it->second = core::ImageId{static_cast<core::ImageId>(minted.size())};
         return it->second;
     };
 

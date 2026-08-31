@@ -41,16 +41,52 @@ MUREKKEP = (0.02, 0.22)   # trees; a washed face is ~1.00
 ZEMIN    = (0.08, 0.35)   # ground; a fill written to the wrong field is ~0.00
 
 
-def kare(yol):
-    exe = None
-    for aday in ("build/dev/bin/piricad", "build/debug/bin/piricad", "build/release/bin/piricad"):
-        if os.path.isfile(os.path.join(KOK, aday)):
-            exe = os.path.join(KOK, aday)
-            break
-    if exe is None:
-        print("render-desen: piricad çalıştırılabiliri bulunamadı — ATLANDI")
-        sys.exit(0)
+def qgis_motoru_var(exe):
+    """Did the build that produced `exe` link the QGIS symbology engine?
 
+    The ratios below are calibrated against the QGIS backend, because that is the
+    default and therefore the picture a user sees. When QGIS is absent the very
+    same script is drawn by the built-in backend, which the module docstring
+    already records as answering very differently — so asserting the QGIS numbers
+    against it measures the wrong thing and fails an innocent build.
+    """
+    # Walk up to the build tree rather than counting directories: the executable
+    # sits at <build>/bin/piricad on Linux and Windows but three levels deeper
+    # inside <build>/bin/piricad.app on macOS.
+    kok = os.path.dirname(os.path.abspath(exe))
+    while True:
+        onbellek = os.path.join(kok, "CMakeCache.txt")
+        if os.path.isfile(onbellek):
+            with open(onbellek, encoding="utf-8") as f:
+                for satir in f:
+                    if satir.startswith("PIRICAD_WITH_QGIS:"):
+                        return satir.strip().rsplit("=", 1)[-1] == "ON"
+            return None
+        ust = os.path.dirname(kok)
+        if ust == kok:
+            return None
+        kok = ust
+
+
+def bul():
+    exe = None
+    # macOS builds an application BUNDLE, so the executable is not at bin/piricad
+    # but inside bin/piricad.app. Looking only for the bare name meant this gate
+    # skipped itself on every Mac — a built binary it never found, and a pattern
+    # fill nobody was checking.
+    for kok_ad in ("build/dev/bin", "build/debug/bin", "build/release/bin"):
+        for aday in (os.path.join(kok_ad, "piricad"),
+                     os.path.join(kok_ad, "piricad.app", "Contents", "MacOS", "piricad")):
+            mutlak = os.path.join(KOK, aday)
+            if os.path.isfile(mutlak) and os.access(mutlak, os.X_OK):
+                exe = mutlak
+                break
+        if exe:
+            break
+    return exe
+
+
+def kare(exe, yol):
     ortam = dict(os.environ)
     ortam.update({"QT_QPA_PLATFORM": "offscreen",
                   "PIRICAD_DATA": os.path.join(KOK, "data"),
@@ -79,9 +115,24 @@ def olc(yol):
 
 
 def main():
+    exe = bul()
+    if exe is None:
+        print("render-desen: piricad çalıştırılabiliri bulunamadı — ATLANDI "
+              "(uygulama derlenmemiş; `make build` sonrası tekrar çalışır)")
+        return 0
+
+    motor = qgis_motoru_var(exe)
+    if motor is not True:
+        neden = ("PIRICAD_WITH_QGIS=OFF" if motor is False
+                 else "yapı yapılandırması okunamadı")
+        print(f"render-desen: BEKLEMEDE — {neden}. Saklanan oranlar QGIS arka ucuna "
+              f"göre ayarlı; QGIS yokken aynı betiği dahili arka uç çiziyor ve onun "
+              f"oranları ölçülmüş değil. Geçmiş sayılmaz, ölçüm yapılmadı.")
+        return 0
+
     with tempfile.TemporaryDirectory() as tmp:
         yol = os.path.join(tmp, "desen.png")
-        if not kare(yol):
+        if not kare(exe, yol):
             print("render-desen: kare üretilemedi", file=sys.stderr)
             return 1
 

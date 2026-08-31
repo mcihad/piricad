@@ -51,8 +51,12 @@ while IFS= read -r hit; do
 done < <(grep -rnE '\b(TODO|TBD|XXX|FIXME|Lorem ipsum)\b' "$docs" --include='*.md' || true)
 
 # ---- R6/R7/R8: a page per registered command, with all eight sections ---------
-mapfile -t ids < <(grep -rhoE '\.id[[:space:]]*=[[:space:]]*"[a-z0-9_.]+"' \
-                     "$root/src/command/src/commands" | grep -oE '"[^"]+"' | tr -d '"' | sort -u)
+# Bash 3.2 has no `mapfile` (it arrived in 4.0) and macOS ships 3.2 as
+# /bin/bash, which is what `env bash` finds there. Read the list instead.
+ids=()
+while IFS= read -r line; do ids+=("$line"); done \
+    < <(grep -rhoE '\.id[[:space:]]*=[[:space:]]*"[a-z0-9_.]+"' \
+            "$root/src/command/src/commands" | grep -oE '"[^"]+"' | tr -d '"' | sort -u)
 
 if [[ ${#ids[@]} -eq 0 ]]; then
     echo "docs: no command ids found under src/command/src/commands — gate cannot verify coverage" >&2

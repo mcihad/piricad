@@ -14,9 +14,13 @@ fail=0
 narrow='(static_cast<[[:space:]]*float[[:space:]]*>|\bfloat)[[:space:]]*\([^)]*(\bMm\b|xs\[|ys\[|\.x\b|\.y\b)'
 alloc='(\bnew\b|make_unique|make_shared|\.resize\(|\.reserve\()'
 imgui='(ImGui::|ImGui_Impl|include[^;]*imgui)'
-mapfile -t files < <(find "$root/src/render" "$root/src/app" \
-    \( -path '*/render/*' -o -name '*canvas*' -o -name '*overlay*' \) \
-    \( -name '*.cpp' -o -name '*.hpp' \) 2>/dev/null || true)
+# Bash 3.2 has no `mapfile` (it arrived in 4.0) and macOS ships 3.2 as
+# /bin/bash, which is what `env bash` finds there. Read the list instead.
+files=()
+while IFS= read -r line; do files+=("$line"); done \
+    < <(find "$root/src/render" "$root/src/app" \
+        \( -path '*/render/*' -o -name '*canvas*' -o -name '*overlay*' \) \
+        \( -name '*.cpp' -o -name '*.hpp' \) 2>/dev/null || true)
 
 if [[ ${#files[@]} -eq 0 ]]; then
     echo "render: skipped — /src/render and the /src/app canvas hold no sources yet"

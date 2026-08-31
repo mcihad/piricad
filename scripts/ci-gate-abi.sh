@@ -16,7 +16,11 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 inc="$root/src/plugin-api/include"
 fail=0
 
-mapfile -t headers < <(find "$inc" -type f \( -name '*.h' -o -name '*.hpp' \) 2>/dev/null | sort)
+# Bash 3.2 has no `mapfile` (it arrived in 4.0) and macOS ships 3.2 as
+# /bin/bash, which is what `env bash` finds there. Read the list instead.
+headers=()
+while IFS= read -r line; do headers+=("$line"); done \
+    < <(find "$inc" -type f \( -name '*.h' -o -name '*.hpp' \) 2>/dev/null | sort)
 if [[ ${#headers[@]} -eq 0 ]]; then
     echo "abi: skipped — /src/plugin-api/include holds no header yet (Phase 0)"
     exit 0

@@ -206,14 +206,35 @@ if(PIRICAD_WITH_POSTGIS)
     # libpq itself comes from the system. It is the client half of the database
     # the user already runs, it ships with every PostgreSQL install on all three
     # platforms, and vendoring it would mean vendoring an SSL stack.
+    #
+    # On macOS the "system" copy needs a hint. Homebrew keeps libpq keg-only, so
+    # `brew install libpq` — the very fix the failure message below prints —
+    # installs into HOMEBREW_PREFIX/opt/libpq and links nothing into the default
+    # search path. Without this, find_package fails on a machine that did exactly
+    # what it was told. PostgreSQL.app lands outside the prefix entirely.
+    if(APPLE AND NOT PostgreSQL_ROOT)
+        find_program(PIRICAD_BREW_EXECUTABLE brew)
+        if(PIRICAD_BREW_EXECUTABLE)
+            execute_process(
+                COMMAND ${PIRICAD_BREW_EXECUTABLE} --prefix libpq
+                OUTPUT_VARIABLE PIRICAD_LIBPQ_PREFIX
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET)
+            if(PIRICAD_LIBPQ_PREFIX AND EXISTS "${PIRICAD_LIBPQ_PREFIX}")
+                set(PostgreSQL_ROOT "${PIRICAD_LIBPQ_PREFIX}")
+            endif()
+        endif()
+    endif()
+
     find_package(PostgreSQL 13)
 
     if(NOT PostgreSQL_FOUND)
         message(WARNING
             "PIRICAD_WITH_POSTGIS=ON but libpq was not found; PostGIS support is off.\n"
             "  Debian/Ubuntu: sudo apt install libpq-dev\n"
-            "  macOS:         brew install libpq\n"
-            "  vcpkg:         vcpkg install libpq")
+            "  macOS:         brew install libpq   (keg-only; found automatically)\n"
+            "  vcpkg:         vcpkg install libpq\n"
+            "  elsewhere:     configure with -D PostgreSQL_ROOT=<prefix>")
         set(PIRICAD_WITH_POSTGIS OFF CACHE BOOL "" FORCE)
     else()
         set(SKIP_BUILD_TEST ON CACHE INTERNAL "")

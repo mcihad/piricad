@@ -26,7 +26,6 @@ qt_add_executable(piricad
     src/main_window.cpp
     src/map_canvas.cpp
     src/painter_backend.cpp
-    src/qgis_backend.cpp
     src/style_designer.cpp
     src/symbol_preview.cpp
     src/panels.cpp
@@ -107,6 +106,13 @@ if(PIRICAD_WITH_QGIS)
     # own headers carry conversion and shadow warnings that no edit of this
     # repository can fix, and a wall of them is how a real finding in our own code
     # gets scrolled past.
+    # The backend TU is compiled ONLY here. Its call site in painter_backend.cpp
+    # is already behind `#if PIRICAD_HAVE_QGIS`, so on a machine without the QGIS
+    # development files this file has no callers and nothing but unfindable
+    # includes — listing it unconditionally broke the build everywhere QGIS is
+    # absent, which on macOS is everywhere, since Homebrew ships QGIS as an
+    # application cask with no headers.
+    target_sources(piricad PRIVATE src/qgis_backend.cpp)
     target_include_directories(piricad SYSTEM PRIVATE ${QGIS_INCLUDE_DIR})
     target_link_libraries(piricad PRIVATE ${QGIS_CORE_LIBRARY} Qt6::Xml)
     target_compile_definitions(piricad PRIVATE PIRICAD_HAVE_QGIS=1)
