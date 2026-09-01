@@ -504,7 +504,10 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     // property form — the thing a user is actually editing — stayed a strip with
     // one visible row. The reference sizes it the other way: a 92 px preview, a
     // short layer list, and the properties filling the rest of the column.
-    previewFrame->setFixedHeight(154);
+    // Room for the swatch above, plus the title and its note. A frame shorter
+    // than the picture it holds crops the picture, which is how a 168 px preview
+    // came out looking like a 96 px one with its top and bottom shaved off.
+    previewFrame->setFixedHeight(176);
     QWidget* stack = buildTree();
     // 150 for the list plus the row of marks under it plus the box's own title.
     // It was 178 with a tree asking for 190, so the marks had nowhere to go and
@@ -948,7 +951,11 @@ QWidget* StyleDesigner::buildGallery()
     provenance_->setWordWrap(true);
     provenance_->setFont(small);
     provenance_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    provenance_->setMinimumHeight(46);
+    // NO RESERVED BAND. It used to hold 46 px open whether or not anything had
+    // been picked, and with nothing selected that was a strip of blank between the
+    // thumbnails and the button under them — the gap a reader takes for a layout
+    // fault. It takes the height of its own text now, and hides when it has none.
+    provenance_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 
     connect(gallery_, &QListWidget::currentItemChanged, this,
             [this](QListWidgetItem*, QListWidgetItem*) { showProvenance(); });
@@ -1019,7 +1026,9 @@ void StyleDesigner::refreshGalleryItems()
     groups_->setVisible(stocked);
     search_->setVisible(stocked);
     gallery_->setVisible(stocked);
-    provenance_->setVisible(stocked);
+    // Only when there is a citation to show; an empty one is a blank strip
+    // between the thumbnails and the button under them.
+    provenance_->setVisible(stocked && !provenance_->text().isEmpty());
     galleryNote_->setAlignment(stocked ? Qt::AlignLeft | Qt::AlignTop : Qt::AlignCenter);
     use_->setEnabled(stocked);
 
@@ -1100,6 +1109,7 @@ void StyleDesigner::showProvenance()
     QListWidgetItem* item = gallery_->currentItem();
     if (item == nullptr) {
         provenance_->clear();
+        provenance_->setVisible(false);
         return;
     }
 
@@ -1107,6 +1117,7 @@ void StyleDesigner::showProvenance()
         controller_.bus().style_library().find(item->data(Qt::UserRole).toString().toStdString());
     if (e == nullptr) {
         provenance_->clear();
+        provenance_->setVisible(false);
         return;
     }
 
@@ -1127,6 +1138,7 @@ void StyleDesigner::showProvenance()
     if (e->deprecated) text = tr("⚠ Yürürlükten kalkmış.\n") + text;
 
     provenance_->setText(text);
+    provenance_->setVisible(true);
     provenance_->setToolTip(QString::fromStdString(e->id));
 }
 
@@ -1350,12 +1362,6 @@ QWidget* StyleDesigner::buildProperties()
     const auto spin = [&](int max, int step) {
         auto* s = new QSpinBox(box);
         s->setRange(0, max);
-        // WHAT ZERO MEANS, said in the field rather than left to be guessed. A
-        // width of zero is a hairline — the thinnest line the output can draw, one
-        // pixel on screen and one device dot on paper — and it is what a cadastral
-        // boundary is drawn with. A reader who sees a bare `0` reasonably concludes
-        // the layer draws nothing.
-        s->setSpecialValueText(tr("0 — kıl çizgi"));
         s->setSingleStep(step);
         connect(s, &QSpinBox::valueChanged, this, [this](int) { applyToSelected(); });
         return s;
@@ -1404,7 +1410,18 @@ QWidget* StyleDesigner::buildProperties()
         refresh();
     });
 
-    width_    = spin(100000, 100);
+    width_ = spin(100000, 100);
+
+    // WHAT ZERO MEANS, said in the field rather than left to be guessed — and
+    // ONLY in this field. A width of zero is a hairline: the thinnest line the
+    // output can draw, one pixel on screen and one device dot on paper, and it is
+    // what a cadastral boundary is drawn with. A reader who sees a bare `0`
+    // reasonably concludes the layer draws nothing.
+    //
+    // Zero means something different in every other spin box here — no offset, no
+    // phase, no rotation — so saying "kıl çizgi" in all of them, which the first
+    // attempt did, put the word `Kaydırma: 0 — kıl çizgi` on screen.
+    width_->setSpecialValueText(tr("0 — kıl çizgi"));
     size_     = spin(1000000, 500);
     interval_ = spin(1000000, 500);
     spacingY_ = spin(1000000, 500);
@@ -1673,11 +1690,24 @@ void StyleDesigner::updatePreview()
     // Rendered at the DEVICE ratio and on a checkerboard: a translucent fill over
     // a flat ground is indistinguishable from an opaque paler one, and half of
     // what a designer is judging here is exactly that.
-    constexpr int kSwatch = 96;
-    previewWidth_         = kSwatch;
+    // 168, NOT 96, and the number carries two decisions.
+    //
+    // A hairline symbol — a cadastral boundary, which is a width of zero — is one
+    // pixel wide however big the swatch is. On a 96 px checkerboard that one pixel
+    // reads as an empty box, and the one control whose job is to say what the
+    // symbol does said nothing; the pixels were there and nobody could see them.
+    // Room around the line is what makes it legible.
+    //
+    // It is also the threshold `symbol_preview` switches on: below 120 the swatch
+    // straightens the run, so the note beside it — the one that promises a bend —
+    // was describing a corner the preview was not drawing. A caption that
+    // contradicts the picture under it is worse than no caption.
+    constexpr int kSwatchW = 168;
+    constexpr int kSwatchH = 104;
+    previewWidth_          = kSwatchW;
 
     const QImage swatch =
-        symbol_preview(symbol_, images, dashes, QSize(kSwatch, kSwatch),
+        symbol_preview(symbol_, images, dashes, QSize(kSwatchW, kSwatchH),
                        (theme() == ThemeMode::Dark ? darkTokens() : lightTokens()).bgInput.rgba(),
                        shape(), PreviewGround::Checker, devicePixelRatioF());
 
