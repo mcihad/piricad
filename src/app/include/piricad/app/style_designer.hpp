@@ -236,6 +236,13 @@ private:
     SectionList* sections_{nullptr};
     QComboBox* renderKind_{nullptr};
     QComboBox* renderValue_{nullptr};
+
+    /// The cell that holds `renderValue_`, so it can be hidden whole.
+    ///
+    /// Hidden while the renderer is `Tek Sembol`, which is every renderer this
+    /// phase ships. A disabled combo with an em dash in it is a control the reader
+    /// has to work out, and the answer is already written beside it.
+    QWidget* valueCell_{nullptr};
     QVector<QPushButton*> unitButtons_;
     QStackedWidget* pageStack_{nullptr};
     QComboBox* globalUnit_{nullptr};

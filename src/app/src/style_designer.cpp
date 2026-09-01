@@ -777,14 +777,18 @@ QWidget* StyleDesigner::buildRendererRow()
 
     renderValue_ = new QComboBox(bar);
     renderValue_->setMinimumWidth(190);
-    renderValue_->setEnabled(false);
-    renderValue_->addItem(tr("— tek sembolde kullanılmaz"));
     for (std::size_t c = 0; c < controller_.document().attributes().columns(); ++c) {
         const core::AttrColumn* column =
             controller_.document().attributes().column(static_cast<core::AttrId>(c));
         if (column) renderValue_->addItem(QString::fromStdString(column->spec().id));
     }
-    field(tr("DEĞER"), renderValue_);
+
+    // HIDDEN, not shown disabled with an em dash in it. A control that is present
+    // but does nothing is worse than one that is absent: the reader spends the
+    // look working out why it will not open, and the answer — "this renderer has
+    // no value column" — is already said by the renderer beside it.
+    valueCell_ = field(tr("DEĞER"), renderValue_);
+    valueCell_->setVisible(false);
 
     row->addStretch(1);
 
@@ -897,7 +901,14 @@ QWidget* StyleDesigner::buildGallery()
 
     groups_ = new QTreeWidget(box);
     groups_->setHeaderHidden(true);
-    groups_->setMinimumHeight(132);
+    groups_->setUniformRowHeights(true);
+
+    // A WHOLE NUMBER OF ROWS. The box was 132 px against a row of about 36, so it
+    // ended on a half-drawn annex name — which reads as a rendering fault rather
+    // than as a list that scrolls.
+    const int row_px = groups_->fontMetrics().height() + 14;
+    groups_->setMinimumHeight(row_px * 4 + 4);
+    groups_->setMaximumHeight(row_px * 6 + 4);
     connect(groups_, &QTreeWidget::currentItemChanged, this,
             [this](QTreeWidgetItem*, QTreeWidgetItem*) { refreshGalleryItems(); });
 
@@ -910,7 +921,11 @@ QWidget* StyleDesigner::buildGallery()
     gallery_ = new QListWidget(box);
     gallery_->setViewMode(QListView::IconMode);
     gallery_->setIconSize(QSize(56, 40));
-    gallery_->setGridSize(QSize(88, 82));
+    // WIDE ENOUGH FOR TWO LINES of a published name. At 88 px the grid elided
+    // every label to its first word and a drawer of water gösterims read as five
+    // rows of `İÇME VE …` — five different symbols that the list said were the
+    // same thing.
+    gallery_->setGridSize(QSize(118, 104));
     gallery_->setResizeMode(QListView::Adjust);
     gallery_->setMovement(QListView::Static);
     gallery_->setWordWrap(true);
@@ -1063,7 +1078,11 @@ void StyleDesigner::refreshGalleryItems()
         item->setIcon(symbol_icon(e->symbol, images, shelf.dashes(), QSize(56, 40), paper,
                                   shape_of(e->kind)));
         item->setData(Qt::UserRole, QString::fromStdString(e->id));
-        item->setToolTip(QString::fromStdString(e->id + "\n" + e->source_ref));
+        // The FULL name first. The cell shows two lines and a published gösterim
+        // name is often longer than that, so the tooltip has to carry the name and
+        // not only its provenance.
+        item->setToolTip(QString::fromStdString((e->label.empty() ? e->id : e->label) + "\n" +
+                                                e->id + "\n" + e->source_ref));
     }
 
     if (matching.empty())
@@ -1331,6 +1350,12 @@ QWidget* StyleDesigner::buildProperties()
     const auto spin = [&](int max, int step) {
         auto* s = new QSpinBox(box);
         s->setRange(0, max);
+        // WHAT ZERO MEANS, said in the field rather than left to be guessed. A
+        // width of zero is a hairline — the thinnest line the output can draw, one
+        // pixel on screen and one device dot on paper — and it is what a cadastral
+        // boundary is drawn with. A reader who sees a bare `0` reasonably concludes
+        // the layer draws nothing.
+        s->setSpecialValueText(tr("0 — kıl çizgi"));
         s->setSingleStep(step);
         connect(s, &QSpinBox::valueChanged, this, [this](int) { applyToSelected(); });
         return s;

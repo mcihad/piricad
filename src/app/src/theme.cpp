@@ -287,10 +287,10 @@ QString themeStyleSheet(ThemeMode mode)
         QDialog#dialogFrame              { background: %(window)s; }
         QWidget#dialogFooter             { background: %(raised)s;
                                            border-top: 1px solid %(lineHard)s; }
-        QToolButton#dialogHelp           { background: transparent; color: %(textDim)s;
+        QPushButton#dialogHelp          { background: transparent; color: %(textDim)s;
                                            border: 1px solid %(border)s; border-radius: 4px;
                                            padding: 4px 12px; font-size: 12px; }
-        QToolButton#dialogHelp:hover     { color: %(text)s; border-color: %(accent)s; }
+        QPushButton#dialogHelp:hover    { color: %(text)s; border-color: %(accent)s; }
         QWidget#settingsSidebar,
         QWidget#designerSidebar          { background: %(strip)s;
                                            border-right: 1px solid %(lineHard)s; }

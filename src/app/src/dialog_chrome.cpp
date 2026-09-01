@@ -8,7 +8,7 @@
 #include <QIcon>
 #include <QMouseEvent>
 #include <QPainter>
-#include <QToolButton>
+#include <QPushButton>
 #include <QVBoxLayout>
 
 namespace piricad::app {
@@ -69,13 +69,17 @@ DialogFrame::DialogFrame(QWidget* parent) : QDialog(parent)
     // The help button the title bar used to carry, at the left end of the footer
     // and before the stretch, so a caller's own left-hand buttons still land
     // beside it and its right-hand ones still land on the right.
-    auto* help = new QToolButton(footerBar_);
+    // A `QPushButton`, like every other button in this footer.
+    //
+    // It was a `QToolButton`, and a tool button in text-only mode elides its own
+    // label to whatever it decides its content rect is — which produced a footer
+    // reading `Y...m`, a button whose name had been cut in half. Nothing here
+    // needed a tool button: it has no icon, no menu and no auto-raise.
+    auto* help = new QPushButton(tr("Yardım"), footerBar_);
     help->setObjectName(QStringLiteral("dialogHelp"));
-    help->setText(tr("Yardım"));
-    help->setToolButtonStyle(Qt::ToolButtonTextOnly);
     help->setCursor(Qt::PointingHandCursor);
     help->setVisible(false);
-    connect(help, &QToolButton::clicked, this, &DialogFrame::helpRequested);
+    connect(help, &QPushButton::clicked, this, &DialogFrame::helpRequested);
     help_ = help;
     footer_->addWidget(help);
 
