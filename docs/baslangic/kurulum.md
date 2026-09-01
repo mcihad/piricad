@@ -158,25 +158,59 @@ kökündeki `CLAUDE.md` Article 8'dedir.
 
 | Eksik | Sonucu | Ne zaman gelecek |
 |---|---|---|
-| `qsb` (qt6-shadertools) | Harita GPU yerine `QPainter` ile çizilir | Faz 1'de GPU canvas'ı devreye girecek |
+| GPU canvas (`PIRICAD_WITH_RHI`) | Varsayılan yapıda harita GPU yerine `QPainter` ile çizilir. Seçenek açıldığında QRhi arka ucu dolguları, çizgileri ve ızgara/seçim katmanını GPU'da çizer; **metin ve yayımlanmış raster semboller henüz çizilmez** | Metin katmanı (SDF atlası) Faz 1'de |
 | GDAL | DXF ve GeoPackage okunup yazılamaz; `İÇEAKTAR` ve `DIŞAAKTAR` hangi paketin gerektiğini söyleyerek hata döndürür. PiriCAD'in kendi `.pcad` proje dosyası GDAL olmadan da çalışır | Kurulduğunda kendiliğinden açılır |
 | PROJ / GEOS / CGAL | Koordinat dönüşümü ve geometri işlemleri sınırlı | Faz 1–2 |
-| Lua / Python | Betik motoru yalnız JSON | Faz 2 |
+| Python (`PIRICAD_WITH_PYTHON`) | Eklenti ve toplu işleme katmanı yok | Faz 2 |
 
-Bunların hepsi `PIRICAD_WITH_<AD>` yapılandırma seçeneğinin arkasındadır. Örneğin
-GPU canvas'ını denemek isterseniz:
+Lua artık eksik değil: `PIRICAD_WITH_LUA=ON` ile gömülü Lua 5.4 betik motoru derlenir —
+bkz. [Lua betikleri](../betik/lua.md).
+
+## Seçimlik yapılandırma seçenekleri
+
+Hepsi `PIRICAD_WITH_<AD>` biçimindedir ve **varsayılan kapalıdır**. Açık ama gereği
+kurulu değilse yapılandırma, hangi paketin gerektiğini söyleyerek durur — sessizce
+kapanmaz.
+
+| Seçenek | Ne açar | Makinede gereken |
+|---|---|---|
+| `PIRICAD_WITH_LUA` | Gömülü Lua betik motoru | Yok. Lua 5.4 ve sol2 sabitlenmiş commit'lerden indirilir |
+| `PIRICAD_WITH_RHI` | QRhi GPU canvas | Qt 6.7+, Qt Shader Tools (`qsb`) ve Qt Gui'nin **private** başlıkları |
+| `PIRICAD_WITH_GDAL` | DXF / GeoPackage | `libgdal-dev` |
+| `PIRICAD_WITH_PROJ` | Koordinat dönüşümü | `libproj-dev` |
+| `PIRICAD_WITH_POSTGIS` | Canlı PostGIS bağlantısı | `libpq-dev` |
+
+### Lua
+
+```bash
+cmake --preset dev -DPIRICAD_WITH_LUA=ON
+cmake --build --preset dev
+```
+
+Makinede Lua kurulu olması gerekmez: kaynak, sabitlenmiş commit'ten indirilip
+projeyle birlikte derlenir. İlk yapılandırma bu yüzden ağ ister.
+
+### GPU canvas
 
 ```bash
 cmake --preset dev -DPIRICAD_WITH_RHI=ON
 ```
 
-`qsb` kurulu değilse yapılandırma şu hatayla durur:
+QRhi, Qt Gui'nin private başlıklarında yaşar ve dağıtımların çoğu bunları ayrı
+paketler. Eksikse yapılandırma şöyle durur:
 
 ```text
-PIRICAD_WITH_RHI=ON but `qsb` was not found. Install qt6-shadertools
-(Debian/Ubuntu: qt6-shadertools-dev-tools) or configure with
--DPIRICAD_WITH_RHI=OFF to use the QPainter backend.
+PIRICAD_WITH_RHI=ON but <rhi/qrhi.h> was not found. QRhi lives in Qt Gui's
+PRIVATE headers, which most distributions package separately from the public ones.
+  Debian/Ubuntu: sudo apt install qt6-base-private-dev
+  Fedora:        sudo dnf install qt6-qtbase-private-devel
+  Arch:          included in qt6-base
+  vcpkg:         installed with qtbase
+  Or configure with -DPIRICAD_WITH_RHI=OFF to use the QPainter backend.
 ```
+
+Shader paketleri derleme sırasında `qsb` ile pişirilir; çalışma anında hiçbir shader
+derlenmez. `qsb` bulunamazsa hata yine hangi paketin gerektiğini söyler.
 
 ## Sırada ne var
 

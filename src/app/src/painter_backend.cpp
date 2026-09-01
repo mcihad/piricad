@@ -1175,6 +1175,16 @@ std::unique_ptr<render::Backend> make_builtin_backend()
     return std::make_unique<PainterBackend>();
 }
 
+std::unique_ptr<render::Backend> make_preview_backend()
+{
+    // The QPainter backend, always, because a preview's target is a QImage. See
+    // the note on the declaration for why this is not `make_canvas_backend()`.
+#if PIRICAD_HAVE_QGIS
+    if (qgetenv("PIRICAD_BACKEND") != "dahili") return make_qgis_backend();
+#endif
+    return make_builtin_backend();
+}
+
 std::unique_ptr<render::Backend> make_canvas_backend()
 {
     // THE ONE PLACE A BACKEND IS NAMED (render.md R1), and the canvas is not
@@ -1185,10 +1195,19 @@ std::unique_ptr<render::Backend> make_canvas_backend()
     // is used rather than reimplemented, and the built-in one is the stand-in.
     // The environment override is for looking at the two side by side while the
     // port finishes, and it names the built-in one rather than hiding it.
+    // The GPU backend when this build has one, and then WITHOUT an override. The
+    // canvas is a `QRhiWidget` in that build and a QPainter backend has nothing to
+    // paint into there: `PIRICAD_BACKEND=dahili` on a GPU build would hand the
+    // painter a null device, which is a blank canvas rather than a comparison.
+    // Comparing the two engines means configuring with -DPIRICAD_WITH_RHI=OFF.
+#if PIRICAD_HAVE_RHI
+    return make_rhi_backend();
+#else
 #if PIRICAD_HAVE_QGIS
     if (qgetenv("PIRICAD_BACKEND") != "dahili") return make_qgis_backend();
 #endif
     return make_builtin_backend();
+#endif
 }
 
 } // namespace piricad::app

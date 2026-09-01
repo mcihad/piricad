@@ -18,6 +18,10 @@
 #include "piricad/io/service.hpp"
 #include "piricad/script/json_runner.hpp"
 
+#if PIRICAD_HAVE_LUA
+#include "piricad/script/lua_runner.hpp"
+#endif
+
 #include <QObject>
 #include <QString>
 
@@ -134,6 +138,13 @@ private:
     /// and answering wrong is worse than not answering (see crs_service.hpp).
     std::optional<piricad::domain::geodesy::CrsService> crs_;
     script::JsonRunner runner_;
+
+#if PIRICAD_HAVE_LUA
+    // The second host. Both are installed behind one BETİK and chosen by the
+    // file's extension, so a user with a `.lua` and a `.json` beside each other
+    // does not have to tell the program which is which (see script/lua_runner.hpp).
+    script::LuaRunner lua_runner_;
+#endif
 
     std::unique_ptr<command::Session> session_;
 

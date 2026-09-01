@@ -90,9 +90,41 @@ void Journal::append(JournalEntry e)
     }
 }
 
+void Journal::append_meta(const core::Json& record)
+{
+    // `kind` FIRST and written here, so the file always reads
+    // `{"kind":"meta",...}` and no caller can spell it differently. Key order is
+    // insertion order (`core::JsonObject`) and golden fixtures record the exact
+    // bytes, so where this key lands is a decision rather than an accident.
+    core::Json line;
+    line.set("kind", core::Json::string("meta"));
+    if (record.is_object())
+        for (const auto& [key, value] : record.as_object())
+            if (key != "kind") line.set(key, value);
+
+    std::string text;
+    {
+        std::lock_guard lock(mtx_);
+        if (sink_open_) {
+            text = line.dump();
+            text += '\n';
+        }
+    }
+
+    metas_.push_back(std::move(line));
+
+    if (!text.empty()) {
+        std::lock_guard lock(mtx_);
+        queue_.push_back(std::move(text));
+        ++queued_;
+        cv_.notify_one();
+    }
+}
+
 void Journal::clear()
 {
     entries_.clear();
+    metas_.clear();
     next_seq_ = 1;
 }
 
@@ -200,6 +232,16 @@ core::Result<std::vector<JournalEntry>> Journal::read_jsonl(const std::string& p
         if (!j)
             return core::err(core::ErrorCode::ParseError,
                              "Günlük satırı " + std::to_string(lineno) + ": " + j.error().message);
+
+        // The second line kind is not replayed. `.claude/command.md` R20: replay
+        // applies `{cmd,...}` and IGNORES `{kind:"meta",...}` — a sandbox level or
+        // a plugin consent is a record of what was permitted, not an edit to
+        // reapply. Reading it as a command is how a journal with one meta line in
+        // it stops being replayable at all.
+        if (const core::Json* kind = j.value().find("kind");
+            kind != nullptr && kind->is_string() && kind->as_string() == "meta")
+            continue;
+
         auto e = JournalEntry::from_json(j.value());
         if (!e)
             return core::err(e.error().code,

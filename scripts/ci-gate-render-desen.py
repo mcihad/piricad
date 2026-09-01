@@ -41,6 +41,28 @@ MUREKKEP = (0.02, 0.22)   # trees; a washed face is ~1.00
 ZEMIN    = (0.08, 0.35)   # ground; a fill written to the wrong field is ~0.00
 
 
+def yapi_secenegi(exe, ad):
+    """Reads one PIRICAD_WITH_<AD> out of the CMakeCache that produced `exe`.
+
+    Walk up to the build tree rather than counting directories: the executable
+    sits at <build>/bin/piricad on Linux and Windows but three levels deeper
+    inside <build>/bin/piricad.app on macOS.
+    """
+    kok = os.path.dirname(os.path.abspath(exe))
+    while True:
+        onbellek = os.path.join(kok, "CMakeCache.txt")
+        if os.path.isfile(onbellek):
+            with open(onbellek, encoding="utf-8") as f:
+                for satir in f:
+                    if satir.startswith(f"PIRICAD_WITH_{ad}:"):
+                        return satir.strip().rsplit("=", 1)[-1] == "ON"
+            return None
+        ust = os.path.dirname(kok)
+        if ust == kok:
+            return None
+        kok = ust
+
+
 def qgis_motoru_var(exe):
     """Did the build that produced `exe` link the QGIS symbology engine?
 
@@ -119,6 +141,18 @@ def main():
     if exe is None:
         print("render-desen: piricad çalıştırılabiliri bulunamadı — ATLANDI "
               "(uygulama derlenmemiş; `make build` sonrası tekrar çalışır)")
+        return 0
+
+    # THE GPU BACKEND IS NOT THIS GATE'S SUBJECT, twice over. Its first slice
+    # draws geometry and refuses pattern fills outright (`handles()`), so the two
+    # ratios below would measure a picture nobody claimed to draw. And
+    # `PIRICAD_FRAME_DUMP` grabs the window with `QWidget::grab`, which returns
+    # nothing for a `QRhiWidget` — the frame lives on the GPU, not in the backing
+    # store. Reported as PENDING, never as passing (`data.md` Enforcement).
+    if yapi_secenegi(exe, "RHI") is True:
+        print("render-desen: BEKLEMEDE — PIRICAD_WITH_RHI=ON. QRhi arka ucunun ilk "
+              "dilimi desen dolgusu çizmiyor (CLAUDE.md 8.1) ve QRhiWidget karesi "
+              "QWidget::grab ile alınamıyor. Ölçüm yapılmadı; geçmiş sayılmaz.")
         return 0
 
     motor = qgis_motoru_var(exe)

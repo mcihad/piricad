@@ -98,6 +98,84 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/data/"
     PATTERN "*.md" EXCLUDE
 )
 
+if(PIRICAD_WITH_RHI)
+    # THE GPU CANVAS (piricad.md §6.3, CLAUDE.md Article 8.1). Three things must
+    # be present and each fails with the package that supplies it, because "QRhi
+    # is missing" is not an actionable message on any of the three platforms.
+    #
+    # 1. Qt Shader Tools, for `qsb`. Qt does not put its tools on PATH anywhere,
+    #    which is why `find_program(qsb)` reported it missing on a machine that
+    #    had it; the CMake package carries the target and the location both.
+    # 2. Qt Gui's PRIVATE headers, because QRhi lives there. Debian splits them
+    #    into qt6-base-private-dev, and nothing in the public headers hints at it.
+    # 3. Qt 6.7 or newer, which is where QRhiWidget landed.
+    find_package(Qt6 6.7 QUIET COMPONENTS ShaderTools GuiPrivate)
+
+    if(NOT Qt6ShaderTools_FOUND)
+        message(FATAL_ERROR
+            "PIRICAD_WITH_RHI=ON but Qt Shader Tools was not found, so the shader "
+            "packs cannot be baked.\n"
+            "  Debian/Ubuntu: sudo apt install qt6-shadertools-dev\n"
+            "  vcpkg:         qtshadertools\n"
+            "  Or configure with -DPIRICAD_WITH_RHI=OFF to use the QPainter backend.")
+    endif()
+
+    # THE TARGET IS NOT THE HEADERS. `Qt6::GuiPrivate` comes from qt6-base-dev's
+    # CMake files, so `find_package` succeeds on a machine that has no private
+    # headers at all — and the failure then arrives as CMake complaining that an
+    # imported target "includes non-existent path .../QtGui/6.10.2", which names
+    # neither the option that asked for it nor the package that supplies it. Look
+    # for the header itself.
+    set(PIRICAD_QRHI_HEADER_FOUND FALSE)
+    if(TARGET Qt6::GuiPrivate)
+        get_target_property(PIRICAD_QT_GUI_PRIVATE_INC Qt6::GuiPrivate
+                            INTERFACE_INCLUDE_DIRECTORIES)
+
+        # THE PROPERTY IS GENERATOR EXPRESSIONS, not paths. Qt writes each private
+        # include directory as
+        #     $<$<BOOL:$<TARGET_PROPERTY:Qt6::Gui,_qt_module_has_private_headers>>:/usr/...>
+        # which no `if(EXISTS)` can evaluate: generator expressions are resolved
+        # after configure, so testing the raw string always says "missing" — on a
+        # machine that has the headers as readily as on one that does not. Pull the
+        # absolute paths back out. Only the value half of the expression contains a
+        # slash, so matching them is unambiguous.
+        string(REGEX MATCHALL "/[^;>]+" PIRICAD_QT_GUI_PRIVATE_DIRS
+               "${PIRICAD_QT_GUI_PRIVATE_INC}")
+
+        foreach(_dir IN LISTS PIRICAD_QT_GUI_PRIVATE_DIRS)
+            if(EXISTS "${_dir}/rhi/qrhi.h" OR EXISTS "${_dir}/QtGui/rhi/qrhi.h")
+                set(PIRICAD_QRHI_HEADER_FOUND TRUE)
+            endif()
+        endforeach()
+    endif()
+
+    if(NOT PIRICAD_QRHI_HEADER_FOUND)
+        message(FATAL_ERROR
+            "PIRICAD_WITH_RHI=ON but <rhi/qrhi.h> was not found. QRhi lives in Qt "
+            "Gui's PRIVATE headers, which most distributions package separately "
+            "from the public ones.\n"
+            "  Debian/Ubuntu: sudo apt install qt6-base-private-dev\n"
+            "  Fedora:        sudo dnf install qt6-qtbase-private-devel\n"
+            "  Arch:          included in qt6-base\n"
+            "  vcpkg:         installed with qtbase\n"
+            "  Or configure with -DPIRICAD_WITH_RHI=OFF to use the QPainter backend.")
+    endif()
+
+    # NEVER compiled or patched at runtime (render.md P11): the packs are baked
+    # here, at build time, and land in the binary as Qt resources.
+    qt_add_shaders(piricad "piricad_shaders"
+        PREFIX "/piricad"
+        FILES
+            shaders/fill.vert
+            shaders/fill.frag
+            shaders/line.vert
+            shaders/line.frag
+    )
+
+    target_sources(piricad PRIVATE src/rhi_backend.cpp)
+    target_link_libraries(piricad PRIVATE Qt6::GuiPrivate)
+endif()
+
 if(PIRICAD_WITH_QGIS)
     # QGIS lives in /src/app alone (Article 3.4, 8.5): nothing below the shell
     # learns that it exists, and the canvas reaches it through render::Backend.

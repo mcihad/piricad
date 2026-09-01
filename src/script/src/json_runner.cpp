@@ -37,6 +37,11 @@ core::Result<RunReport> JsonRunner::run_text(std::string_view json, std::string 
             ErrorCode::ParseError,
             "Betik ya bir komut dizisi ya da \"komutlar\" alanı olan bir nesne olmalı");
 
+    // The run's own record, BEFORE the first command, so a journal read top to
+    // bottom says what a script was permitted before it says what it did
+    // (`.claude/script.md` R11). Written for every level and every outcome.
+    journal_run(bus_, "json", label, sandbox_, script_identity(json), /*consented=*/false);
+
     // One script block is ONE undo step (§2.5) and ONE validation pass (§10.4).
     if (auto st = bus_.begin_batch(label); !st) return st.error();
 

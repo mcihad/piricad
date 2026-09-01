@@ -205,19 +205,28 @@ Betik dosya erişimi 'güvenli' kum havuzunda kapalıdır. Gerekli seviye: 'proj
 Böylece arayüzde elle yaptığınız bir işi betiğe dönüştürebilirsiniz. Ayrıntı:
 [Komut günlüğü](../mimari/gunluk.md).
 
-## Bu sürümde olmayanlar
+## Değişken, döngü, koşul gerekiyorsa
 
-Bugün betik dili yalnız komut dizisidir: değişken, döngü, koşul ve fonksiyon yoktur.
+Bu sayfanın anlattığı JSON biçimi düz bir komut dizisidir: değişken, döngü, koşul ve
+fonksiyon yoktur. Beş yerine beş yüz çizgi çizmek gerektiğinde beş yüz satır yazmanız
+gerekir.
 
-Faz 2'de iki dil gelecek:
+Bunun için gömülü **Lua** motoru vardır — `PIRICAD_WITH_LUA=ON` ile derlenir ve
+varsayılan yapıda kapalıdır:
 
-| Katman | Dil | Nerede kullanılacak |
-|---|---|---|
-| Hızlı yol | Gömülü **Lua** | Etiket ifadeleri, stil kuralları, alan hesapları, hafif makrolar |
-| Ekosistem | **Python** (isteğe bağlı modül) | Eklentiler, toplu işleme, veri boru hatları, bilimsel analiz |
+```lua
+for i = 0, 4 do
+    h.komut(string.format("ÇİZGİ 485320.150,%.3f 485370.150,%.3f", 4310220.400 + i,
+                          4310220.400 + i))
+end
+```
 
-İkisi de aynı komut veri yolunu kullanacak; bugün yazdığınız komut dizileri geçerliliğini
-koruyacak. Ayrıntı: `CLAUDE.md` Article 8.3.
+Aynı komut veri yolunu kullanır: bu sayfadaki her kural Lua betiği için de geçerlidir.
+Ayrıntı: [Lua betikleri](lua.md).
+
+Üçüncü bir katman, **Python** (isteğe bağlı modül), Faz 2'de gelecek: eklentiler, toplu
+işleme, veri boru hatları ve bilimsel analiz için. Nesne başına çalışan bir ifade orada
+değil Lua'da yazılır. Ayrıntı: `CLAUDE.md` Article 8.3.
 
 ## Sırada ne var
 

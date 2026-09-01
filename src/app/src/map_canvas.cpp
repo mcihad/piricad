@@ -19,7 +19,7 @@
 namespace piricad::app {
 
 MapCanvas::MapCanvas(Controller& controller, QWidget* parent)
-    : QWidget(parent), controller_(controller), backend_(make_canvas_backend())
+    : CanvasSurface(parent), controller_(controller), backend_(make_canvas_backend())
 {
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
@@ -881,7 +881,11 @@ std::vector<int> MapCanvas::timeFrames(int rounds)
     return costs;
 }
 
+#if PIRICAD_HAVE_RHI
+void MapCanvas::render(QRhiCommandBuffer* cb)
+#else
 void MapCanvas::paintEvent(QPaintEvent*)
+#endif
 {
     QElapsedTimer timer;
     timer.start();
@@ -898,10 +902,16 @@ void MapCanvas::paintEvent(QPaintEvent*)
     ctx.width_px           = width();
     ctx.height_px          = height();
     ctx.device_pixel_ratio = static_cast<float>(devicePixelRatioF());
+#if PIRICAD_HAVE_RHI
+    // The GPU frame's handles, packed by the factory. Packing them HERE would put
+    // backend knowledge in the widget, which render.md R1 keeps out of it.
+    ctx.target = rhi_frame_target(rhi(), cb, renderTarget());
+#else
     // Cast HERE, not in the backend: QWidget inherits QObject and QPaintDevice
     // both, and passing a QWidget* through a void* to be read as a QPaintDevice*
     // hands over the wrong address.
     ctx.target = static_cast<QPaintDevice*>(this);
+#endif
 
     backend_->render(draw_, overlay_, ctx);
 

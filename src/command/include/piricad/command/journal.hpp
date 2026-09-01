@@ -11,6 +11,7 @@
 
 #include "piricad/command/input.hpp"
 #include "piricad/command/value.hpp"
+#include "piricad/core/json.hpp"
 #include "piricad/core/result.hpp"
 
 #include <atomic>
@@ -67,7 +68,29 @@ public:
     /// Appends in memory and, when a file sink is open, queues an async write.
     void append(JournalEntry e);
 
+    /// Appends the SECOND line kind: `{kind:"meta", ...}` (`.claude/command.md`
+    /// R20). A non-command record — a script's sandbox level and consent
+    /// (`.claude/script.md` R11, R12), a plugin's id, hash and the user's decision
+    /// (`.claude/plugin-api.md` R10).
+    ///
+    /// Kept in its own list rather than as a `JournalEntry` with a flag, because
+    /// the two are not the same thing: an entry replays and this does not. R20
+    /// says replay applies the first kind and IGNORES the second, and a record
+    /// that cannot be replayed has no `command_id`, no `args` and no `seq` to
+    /// carry. `kind` is written first and set here, so no caller can forget it or
+    /// spell it something else.
+    ///
+    /// NOT part of `canonical()`. That rendering exists for one purpose — the
+    /// byte-identity proof of CLAUDE.md 6.4, where the same command run from the
+    /// GUI, the command line and a script must produce the same bytes. Only the
+    /// script run has a sandbox level, so including it here would make the proof
+    /// fail on a difference that is not a difference in what was done.
+    void append_meta(const core::Json& record);
+
     const std::vector<JournalEntry>& entries() const noexcept { return entries_; }
+
+    /// The `{kind:"meta"}` records, in the order they were appended.
+    const std::vector<core::Json>& meta_records() const noexcept { return metas_; }
 
     std::size_t size() const noexcept { return entries_.size(); }
 
@@ -90,6 +113,7 @@ private:
     void writer_loop();
 
     std::vector<JournalEntry> entries_;
+    std::vector<core::Json> metas_;
     std::uint64_t next_seq_{1};
 
     // ---- async sink ----

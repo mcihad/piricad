@@ -45,6 +45,38 @@ Currently linked
                           surfaces as a crash in a formatting call nobody touched.
                           Both linked PRIVATE into piricad_command.
 
+  Lua                     MIT                   5.4.8     6e22fedb
+                          The embedded script language of piricad.md §4.1, behind
+                          PIRICAD_WITH_LUA. Lua and not Python for the hot path:
+                          an expression that runs per feature runs millions of
+                          times on a cadastral sheet, and .claude/script.md R5
+                          makes a Python evaluator there a defect.
+
+                          Built from the OFFICIAL repository, which ships no
+                          CMakeLists — upstream distributes a makefile and expects
+                          embedders to compile the 32 library sources themselves,
+                          which is what cmake/PiriCADDependencies.cmake does. The
+                          four programs in that tree (lua.c, luac.c, onelua.c,
+                          ltests.c) are excluded by name rather than by glob.
+
+                          Compiled with -fno-fast-math -ffp-contract=off like
+                          everything else: a Lua number is a double, and CLAUDE.md
+                          Article 2.5 has no third-party exception.
+
+  sol2                    MIT                   v3.5.0    9190880c
+                          The C++ binding layer over Lua, header-only, linked
+                          PRIVATE into piricad_script behind the pimpl in
+                          lua_runner.hpp — nothing that includes that header pays
+                          for <sol/sol.hpp>.
+
+                          v3.5.0 and not the v3.3.1 that /vcpkg.json's floor
+                          names: 3.3.1's optional<T&>::emplace calls a `construct`
+                          member the specialisation does not have. Nobody
+                          instantiates it, which is why it shipped — and GCC 15
+                          diagnoses errors in uninstantiated template bodies, so
+                          it stops the build on a current toolchain. CLAUDE.md
+                          5.14 forbids the -Wno- that would hide it.
+
   doctest                 MIT                   v2.4.12   1da23a3e
                           The unit-test framework, linked into piricad_tests.
                           Chosen over Catch2 and GoogleTest for compile time
@@ -289,7 +321,6 @@ the exact version is pinned in vcpkg.json when the option is first enabled.
   Boost (Geometry, PFR)   BSL-1.0               R-tree index
   Eigen                   MPL 2.0               linear algebra, adjustment
   Shewchuk predicates     public domain         robust orientation / incircle
-  Lua + sol2              MIT                   hot-path script layer
   CPython + pybind11      PSF / BSD-3           optional ecosystem module
   llama.cpp               MIT                   local LLM inference
   ONNX Runtime            MIT                   embedding models

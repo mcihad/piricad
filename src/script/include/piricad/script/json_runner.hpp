@@ -15,26 +15,12 @@
 
 #include "piricad/command/bus.hpp"
 #include "piricad/core/result.hpp"
+#include "piricad/script/host.hpp"
 
 #include <string>
 #include <string_view>
 
 namespace piricad::script {
-
-struct RunReport
-{
-    std::size_t commands{0}; ///< how many commands ran
-    std::size_t ops{0};      ///< primitive edits across all of them
-    std::string label;       ///< the script's own name, for the undo entry
-};
-
-/// Sandbox level. Phase 0 implements the boundary; the filesystem and network
-/// capabilities it gates arrive with the Lua and Python hosts (§4.3).
-enum class Sandbox : std::uint8_t {
-    Safe,    ///< güvenli — no filesystem, no network. Default.
-    Project, ///< proje   — project directory only
-    Full,    ///< tam     — requires explicit user consent, never granted implicitly
-};
 
 class JsonRunner
 {

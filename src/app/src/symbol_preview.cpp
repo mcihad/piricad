@@ -339,7 +339,7 @@ QImage symbol_preview(const core::Symbol& symbol, const core::ImageStore& images
     // A fresh backend per call rather than one kept alive: a preview is drawn when
     // a panel refreshes, not per frame, and the decoded-picture cache a backend
     // holds is worth keeping only for a surface that redraws.
-    const std::unique_ptr<render::Backend> backend = make_canvas_backend();
+    const std::unique_ptr<render::Backend> backend = make_preview_backend();
     backend->render(list, overlay, ctx);
     return canvas;
 }

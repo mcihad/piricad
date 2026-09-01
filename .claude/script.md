@@ -6,7 +6,7 @@
 
 R1. Every state mutation from a script MUST go through `h.komut(...)` → `Bus::dispatch` in `piricad/command/bus.hpp`, so undo, validation and journalling run automatically (§4.3).
 R2. `/src/script` MUST link only `piricad_command`. No `/src/app`, `/src/io`, `/src/domain`, `/src/render`, no Qt (canon dependency graph).
-R3. Phase 0 MUST ship exactly one host: `piricad/script/json_runner.hpp`, replaying a JSON command array through the same `Bus`. Lua and Python land in Phase 2.
+R3. Two hosts ship today and they are ONE architecture: `piricad/script/json_runner.hpp` replays a JSON command array, and `piricad/script/lua_runner.hpp` runs a Lua chunk behind `PIRICAD_WITH_LUA`. Both dispatch through the same `Bus`, parse command text with the same `Parser`, run inside one batch and return the same `RunReport`; `BETİK` chooses between them by file extension. Python lands in Phase 2. A third host MUST add a language and nothing else — what is common to all of them lives in `piricad/script/host.hpp` and `piricad/script/sandbox.hpp`, never copied.
 R4. Script text MUST be parsed by the `Parser` object in `piricad/command/parser.hpp` — the same grammar instance the command line uses (§3, implementation note).
 R5. Layer roles are fixed (§4.1): every expression evaluator, style rule, label expression and area calculator MUST be Lua (sol2); plugins, batch processing and data pipelines MUST be Python (pybind11). A hot-path evaluator written in Python is a defect.
 R6. Lua and Python MUST sit behind `PIRICAD_WITH_LUA` / `PIRICAD_WITH_PYTHON`, both defaulting to `OFF`; `piricad` MUST build, start and pass all tests with both OFF (§4.2, "optional module"). Build-option mechanics: see `.claude/build.md`.

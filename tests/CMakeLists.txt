@@ -21,6 +21,7 @@ add_executable(piricad_tests
     unit/test_index.cpp
     unit/test_io.cpp
     unit/test_jitter.cpp
+    unit/test_lua.cpp
     unit/test_settings.cpp
     unit/test_snap.cpp
     unit/test_style_layer.cpp

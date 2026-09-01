@@ -59,6 +59,24 @@ set(PIRICAD_DEP_FMT_SHA        0c9fce2ffefecfdce794e1859584e25877b7b592)  # 11.0
 set(PIRICAD_DEP_LIBPQXX_REPO   https://github.com/jtv/libpqxx.git)
 set(PIRICAD_DEP_LIBPQXX_SHA    1ca80b0e638f6182426c5b11255069cae4fbd542)  # 7.9.2
 
+# Lua and sol2, the hot-path script layer of piricad.md §4.1. Both are MIT, which
+# is GPLv3-compatible; both are recorded in /NOTICE.
+#
+# The OFFICIAL Lua repository, which ships no CMakeLists — the build below is
+# ours, and that is normal for Lua: upstream distributes a makefile and expects
+# embedders to compile the 32 library sources themselves.
+set(PIRICAD_DEP_LUA_REPO       https://github.com/lua/lua.git)
+set(PIRICAD_DEP_LUA_SHA        6e22fedb74cf0c9b6656e9fce8b7331db847c605)  # v5.4.8
+
+set(PIRICAD_DEP_SOL2_REPO      https://github.com/ThePhD/sol2.git)
+# v3.5.0, not the v3.3.1 that vcpkg.json's floor names: 3.3.1's
+# `optional<T&>::emplace` calls a `construct` member the specialisation does not
+# have. It is dead code nobody instantiates, which is why it shipped — and GCC 15
+# diagnoses errors in uninstantiated template bodies, so it stops the build on
+# every modern toolchain. Not silenceable either: CLAUDE.md 5.14 forbids the
+# `-Wno-` that would hide it, and a SYSTEM include suppresses warnings, not errors.
+set(PIRICAD_DEP_SOL2_SHA       9190880c593dfb018ccf5cc9729ab87739709862)  # v3.5.0
+
 set(PIRICAD_DEP_SPDLOG_REPO    https://github.com/gabime/spdlog.git)
 # v1.15.3, not the v1.14.1 that was pinned first: 1.14.1 predates fmt 11 and its
 # SPDLOG_LOGGER_CATCH macro calls FMT_STRING, whose lambda trips fmt 11's consteval
@@ -245,6 +263,101 @@ if(PIRICAD_WITH_POSTGIS)
             PACKAGE libpqxx
             VERSION 7.7)
     endif()
+endif()
+
+
+# ----------------------------------------------------------------- Lua + sol2 --
+#
+# `.claude/script.md` R5 fixes the layer roles: every expression evaluator, style
+# rule, label expression and area calculator is Lua, because those run per feature
+# and a cadastral sheet has millions of them. R6 keeps it behind this option,
+# defaulting OFF, and requires the application to build, start and pass its tests
+# with the option off.
+if(PIRICAD_WITH_LUA)
+    # LUA IS C. The project declares `LANGUAGES CXX` because everything we write
+    # is C++, and a target of `.c` files under that has no linker language at all
+    # — the configure fails with "cannot determine linker language", after the
+    # download. Enabled HERE rather than at the top so a build without the option
+    # still needs no C compiler.
+    enable_language(C)
+
+    # NEITHER PROJECT IS ADDED AS A SUBDIRECTORY, and `SOURCE_SUBDIR` pointing at
+    # a directory that does not exist is the documented way to say so:
+    # FetchContent populates the source and skips `add_subdirectory()`.
+    #
+    #   Lua ships no CMakeLists at all, so there is nothing to add.
+    #   sol2 ships one, but it is a header-only library whose CMakeLists exists to
+    #   build its tests, examples and single-header generator. Adding it would pull
+    #   a Lua search, a Catch2 fetch and a set of options into our build to obtain
+    #   one include directory.
+    if(NOT PIRICAD_FETCH_DEPENDENCIES)
+        message(FATAL_ERROR
+            "PIRICAD_WITH_LUA=ON but PIRICAD_FETCH_DEPENDENCIES=OFF.\n"
+            "  Lua 5.4 and sol2 are fetched from pinned commits; allow the download,\n"
+            "  or configure with -DPIRICAD_WITH_LUA=OFF.")
+    endif()
+
+    message(STATUS "  lua:  sabitlenmiş kaynaktan (${PIRICAD_DEP_LUA_SHA})")
+    FetchContent_Declare(lua
+        GIT_REPOSITORY ${PIRICAD_DEP_LUA_REPO}
+        GIT_TAG        ${PIRICAD_DEP_LUA_SHA}
+        GIT_SHALLOW    FALSE
+        SOURCE_SUBDIR  cmake-yok        # deliberately absent: populate, do not add
+        SYSTEM
+        EXCLUDE_FROM_ALL)
+
+    message(STATUS "  sol2: sabitlenmiş kaynaktan (${PIRICAD_DEP_SOL2_SHA})")
+    FetchContent_Declare(sol2
+        GIT_REPOSITORY ${PIRICAD_DEP_SOL2_REPO}
+        GIT_TAG        ${PIRICAD_DEP_SOL2_SHA}
+        GIT_SHALLOW    FALSE
+        SOURCE_SUBDIR  cmake-yok
+        SYSTEM
+        EXCLUDE_FROM_ALL)
+
+    FetchContent_MakeAvailable(lua sol2)
+
+    # LISTED, not globbed. The repository's root also holds `lua.c`, `luac.c`,
+    # `onelua.c` and `ltests.c`; the first three are separate programs with their
+    # own `main`, and the fourth compiles only with the test harness's `LUA_USER_H`.
+    # A glob picks all four up and the link fails on duplicate symbols — after the
+    # download, which is the worst place to find out.
+    set(PIRICAD_LUA_SOURCES
+        lapi.c lauxlib.c lbaselib.c lcode.c lcorolib.c lctype.c ldblib.c ldebug.c
+        ldo.c ldump.c lfunc.c lgc.c linit.c liolib.c llex.c lmathlib.c lmem.c
+        loadlib.c lobject.c lopcodes.c loslib.c lparser.c lstate.c lstring.c
+        lstrlib.c ltable.c ltablib.c ltm.c lundump.c lutf8lib.c lvm.c lzio.c)
+    list(TRANSFORM PIRICAD_LUA_SOURCES PREPEND "${lua_SOURCE_DIR}/")
+
+    add_library(piricad_lua STATIC ${PIRICAD_LUA_SOURCES})
+    target_include_directories(piricad_lua SYSTEM PUBLIC "${lua_SOURCE_DIR}")
+    set_target_properties(piricad_lua PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+    # CLAUDE.md Article 2.5 says EVERY translation unit in every configuration,
+    # and a Lua number is a double: an interpreter built with contraction on would
+    # be a second arithmetic in the same process, which is exactly what §7.3
+    # forbids. Third-party code is not an exception to a bit-identity requirement.
+    if(NOT MSVC)
+        target_compile_options(piricad_lua PRIVATE -fno-fast-math -ffp-contract=off)
+    else()
+        target_compile_options(piricad_lua PRIVATE /fp:precise)
+    endif()
+
+    if(UNIX)
+        # POSIX gives Lua `os.time` at full resolution and `popen`; `LUA_USE_DLOPEN`
+        # is what `package.loadlib` needs. Neither is reachable below the `tam`
+        # sandbox, which never opens those libraries (`.claude/script.md` P8).
+        target_compile_definitions(piricad_lua PRIVATE LUA_USE_POSIX LUA_USE_DLOPEN)
+        target_link_libraries(piricad_lua PRIVATE ${CMAKE_DL_LIBS} m)
+    endif()
+
+    add_library(piricad_sol2 INTERFACE)
+    target_include_directories(piricad_sol2 SYSTEM INTERFACE "${sol2_SOURCE_DIR}/include")
+    target_link_libraries(piricad_sol2 INTERFACE piricad_lua)
+
+    # sol2 reads Lua's version from the headers, but says so explicitly here so a
+    # mismatch is a configure error rather than a runtime surprise.
+    target_compile_definitions(piricad_sol2 INTERFACE SOL_ALL_SAFETIES_ON=1)
 endif()
 
 

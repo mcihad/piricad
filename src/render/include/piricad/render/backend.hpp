@@ -2,10 +2,10 @@
 // PiriCAD — render: the backend interface.
 //
 // Target (piricad.md §6.3): a GPU pipeline inside QRhiWidget.
-// Phase 0 deviation (CLAUDE.md Article 8): `qsb` from qt6-shadertools is not
-// available on this machine, so shader packs cannot be baked and the QRhi backend
-// cannot be built. The application ships the QPainter backend meanwhile. Nothing
-// above this interface knows which backend is live.
+// Phase 0 deviation (CLAUDE.md Article 8.1): the QRhi backend exists behind
+// `PIRICAD_WITH_RHI`, which is OFF by default while it draws geometry but not yet
+// text; the QPainter backend ships meanwhile. Nothing above this interface knows
+// which one is live — that is the whole point of the interface.
 #pragma once
 
 #include "piricad/render/drawlist.hpp"

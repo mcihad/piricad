@@ -58,6 +58,7 @@ Tek tek komutlar:
 | Sayfa | İçerik |
 |---|---|
 | [Betik yazma](betik/README.md) | JSON betik biçimi, toplu işlem, kum havuzu |
+| [Lua betikleri](betik/lua.md) | Döngü, koşul ve hesapla betik yazma; `h` API'si |
 | [Komut günlüğü](mimari/gunluk.md) | Yaptığınız işi geri izleme, makro, oturum kaydı |
 | [Koordinat sistemleri](veri/koordinat-sistemleri.md) | TUREF/TM30, TM 3° dilimleri, milimetre depolama |
 | [PiriCAD proje dosyası](veri/proje-dosyasi.md) | `.pcad` ne taşır, sürüm politikası, bozuk dosya |

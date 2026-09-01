@@ -6,6 +6,54 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — gömülü Lua betik motoru (`PIRICAD_WITH_LUA`)
+
+- **`piricad::script::LuaRunner`**, sol2 üzerinden gömülü Lua 5.4. JSON
+  çalıştırıcısının yerine geçmez, yanına gelir: `BETİK` hangi motorun çalışacağını
+  dosya uzantısından seçer (`.lua` → Lua, gerisi → JSON).
+- **Tek yazma yolu `h.komut(...)`**, `Bus::execute_line` üzerinden — komut
+  satırıyla aynı ayrıştırıcı, aynı doğrulama, aynı geri alma, aynı günlük.
+  Okuma bağlantıları yalnız değer döndürür; çizime hiçbir tutamak verilmez.
+- **Kum havuzu üç seviye.** `güvenli` seviyede `io`, `os`, `package`, `debug`,
+  `require`, `dofile`, `loadfile` ve `load` hiç açılmaz. `proje` seviyesinde
+  dosya erişimi proje dizinine hapsedilir ve yol `weakly_canonical` ile çözülerek
+  denetlenir, metin öneki karşılaştırılarak değil. `tam` yalnız o betiğin metnine
+  verilmiş onayla çalışır.
+- **İptal edilebilir**: `std::stop_token`, 10 000 komutta bir yoklanan bir Lua
+  hook'uyla; sonsuz döngü de durur.
+- **Bir betik = bir geri alma adımı**; herhangi bir satırın hatası bütün bloğu
+  geri alır.
+- Lua 5.4.8 ve sol2 3.5.0 sabitlenmiş commit'lerden indirilir; makinede kurulu
+  olmaları gerekmez. İkisi de MIT, `/NOTICE`'a işlendi.
+- Belge: [`docs/betik/lua.md`](docs/betik/lua.md).
+
+### Eklendi — günlüğün ikinci satır türü: `{kind:"meta"}`
+
+- `Journal::append_meta()` — komut olmayan kayıtlar için (`.claude/command.md`
+  R20). İlk kullanıcısı betik çalıştırmalarının kum havuzu seviyesi ve `tam`
+  onayıdır (`.claude/script.md` R11, R12); eklenti kimliği ve kullanıcı kararı
+  aynı satır türünü kullanacak.
+- Tekrar oynatma bu satırları **atlar**, çünkü neyin yapıldığını değil neye izin
+  verildiğini anlatırlar. `canonical()` de dışarıda bırakır: üç istemcinin
+  bayt-birebir günlük kanıtı (CLAUDE.md 6.4) yalnız betiğin yazdığı bir satır
+  yüzünden bozulmamalıdır.
+- JSON çalıştırıcısı da artık bu satırı yazıyor; önceden hiçbir konak yazmıyordu.
+
+### Eklendi — QRhi GPU canvas'ının ilk dilimi (`PIRICAD_WITH_RHI`)
+
+- `render::Backend`'in GPU uygulaması: poligon dolguları (stencil ile tek-çift
+  kuralı, üçgenleyici bağımlılığı olmadan), shader'da genişletilen çizgiler
+  (`render.md` R5) ve ızgara/seçim/imleç katmanı. Shader paketleri derleme
+  anında `qsb` ile pişirilir; çalışma anında hiçbir shader derlenmez (P11).
+- **Metin ve yayımlanmış raster semboller bu dilimde çizilmez.** `handles()` bir
+  beyaz listedir ve tanımadığı katman türünü sahiplenmek yerine reddeder — QGIS
+  arka ucunun üç raster türünü sessizce düşürmesi bu yüzden bir kapıya bağlandı.
+- `MapCanvas` seçeneğe göre `QRhiWidget` ya da `QWidget` tabanlıdır; arada kalan
+  her şey aynıdır.
+- `scripts/doctor.sh` artık `qsb`'yi Qt'nin kendi dizinlerinde arıyor. Qt
+  araçlarını hiçbir platformda PATH'e koymaz, dolayısıyla eski yoklama kurulu
+  olan bir makinede "MISSING" diyordu.
+
 ### Eklendi — MPYY gösterimlerinin vektör paketi tamamlandı
 
 Sebep: **Mekânsal Planlar Yapım Yönetmeliği (MPYY), EK-1 Gösterimler**

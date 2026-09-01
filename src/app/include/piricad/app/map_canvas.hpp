@@ -2,11 +2,18 @@
 // PiriCAD — app: the map canvas.
 //
 // Target (piricad.md §6.3): QRhiWidget with our own GPU pipeline.
-// Phase 0 (CLAUDE.md Article 8): a QPainter backend behind render::Backend,
-// because `qsb` is unavailable and shader packs cannot be baked. The scene is
-// already built by piricad_render in exactly the form the GPU path needs —
-// screen-space floats produced after the origin offset (§10.3) — so replacing the
-// backend touches this file only.
+//
+// WHICH SURFACE THIS IS depends on one build option and nothing else. With
+// `PIRICAD_WITH_RHI=ON` the canvas is a `QRhiWidget` and hands the backend a
+// command buffer; without it the canvas is a `QWidget` and hands the backend a
+// paint device — CLAUDE.md Article 8.1, the Phase-0 deviation. Everything between
+// those two lines is identical, because the scene is built by piricad_render in
+// exactly the form the GPU path needs: screen-space floats produced after the
+// origin offset (§10.3).
+//
+// The base class is the ONLY backend fact this file carries, which is what
+// render.md R1 allows it. Nothing here names a backend implementation type; the
+// frame handles are packed by `backend_factory.hpp`.
 #pragma once
 
 #include "piricad/app/theme.hpp"
@@ -20,7 +27,12 @@
 #include <vector>
 
 #include <QRectF>
+
+#if PIRICAD_HAVE_RHI
+#include <QRhiWidget>
+#else
 #include <QWidget>
+#endif
 
 #include <initializer_list>
 #include <memory>
@@ -30,7 +42,15 @@ namespace piricad::app {
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
 
-class MapCanvas : public QWidget, public Themed
+/// The widget the canvas IS. See the header note: one build option, two surfaces,
+/// one set of event handlers above them.
+#if PIRICAD_HAVE_RHI
+using CanvasSurface = QRhiWidget;
+#else
+using CanvasSurface = QWidget;
+#endif
+
+class MapCanvas : public CanvasSurface, public Themed
 {
     Q_OBJECT
     Q_INTERFACES(piricad::app::Themed)
@@ -103,7 +123,16 @@ protected:
     /// not document state — or feeds a point to the running command through the
     /// controller. None of them edits the document, because a mouse is a client
     /// like any other and gets no private road (Article 1.2, 5.9).
+#if PIRICAD_HAVE_RHI
+    /// The GPU frame. `QRhiWidget` calls this with the frame's command buffer
+    /// already open, which is exactly what the backend's `FrameContext::target`
+    /// carries in this build. `paintEvent` belongs to the base class here and is
+    /// not overridden — a widget that painted over its own swapchain would be
+    /// drawing twice.
+    void render(QRhiCommandBuffer* cb) override;
+#else
     void paintEvent(QPaintEvent* event) override;
+#endif
     void resizeEvent(QResizeEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
