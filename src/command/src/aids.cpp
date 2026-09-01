@@ -51,7 +51,7 @@ const AidSettings& InputAids::settings(const core::Settings& app,
     if (session.get("core.yakalama.kosegen").as_bool()) {
         constexpr std::int64_t kDiagonal = 45'000'000; // micro-degrees
         out.polar_step                   = kDiagonal;
-        out.modes = static_cast<std::uint16_t>(out.modes | core::SnapPolar);
+        out.modes                        = static_cast<std::uint16_t>(out.modes | core::SnapPolar);
     }
 
     out.snap_radius = radius_from_pixels(app.get("core.yakalama.tolerans").as_int(), mm_per_pixel_);

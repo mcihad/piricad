@@ -83,11 +83,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     setWindowTitle(tr("PiriCAD — Türkiye Odaklı CBS + CAD"));
     resize(1560, 1000);
 
-    // design.md 7: the chrome is drawn, never inherited. A native frame is a
-    // different height and a different button order on every platform, which is
-    // the one thing the specification forbids outright.
-    setWindowFlag(Qt::FramelessWindowHint, true);
-
+    // design.md 7: the frame belongs to the window manager. The shell used to be
+    // frameless and drew its own buttons; that cost the resize edges, snapping
+    // and the window menu the platform already gives away for free.
     titleBar_ = new TitleBar(this);
     setMenuWidget(titleBar_);
     connect(titleBar_, &TitleBar::searchRequested, this, &MainWindow::openCommandSearch);
@@ -411,8 +409,8 @@ void MainWindow::buildActions()
         placeholder(Glyph::Polyline, tr("Çoklu Çizgi"), QStringLiteral("ÇOKLUÇİZGİ"), tr("Faz 2"));
     actArc_    = placeholder(Glyph::Arc, tr("Yay"), QStringLiteral("YAY"), tr("Faz 2"));
     actCircle_ = placeholder(Glyph::Circle, tr("Daire"), QStringLiteral("DAİRE"), tr("Faz 2"));
-    actPoint_ = placeholder(Glyph::Point, tr("Nokta"), QStringLiteral("NOKTA"), tr("Faz 2"));
-    actText_  = placeholder(Glyph::Text, tr("Metin"), QStringLiteral("METİN"), tr("Faz 2"));
+    actPoint_  = placeholder(Glyph::Point, tr("Nokta"), QStringLiteral("NOKTA"), tr("Faz 2"));
+    actText_   = placeholder(Glyph::Text, tr("Metin"), QStringLiteral("METİN"), tr("Faz 2"));
 
     // ---- düzenleme ----
     actErase_ = new QAction(tr("Sil"), this);
@@ -443,7 +441,7 @@ void MainWindow::buildActions()
 
     actSelectArea_ =
         placeholder(Glyph::SelectArea, tr("Alan Seç"), QStringLiteral("SEÇ pencere="), tr("Faz 2"));
-    actTrim_    = placeholder(Glyph::Trim, tr("Böl / Buda"), QStringLiteral("BUDA"), tr("Faz 2"));
+    actTrim_ = placeholder(Glyph::Trim, tr("Böl / Buda"), QStringLiteral("BUDA"), tr("Faz 2"));
     actUnion_ =
         placeholder(Glyph::Union, tr("Birleştir — tevhit"), QStringLiteral("TEVHİT"), tr("Faz 2"));
     actParcelSplit_ = placeholder(Glyph::ParcelSplit, tr("Parsel Böl — ifraz"),

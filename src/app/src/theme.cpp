@@ -220,7 +220,7 @@ QString themeStyleSheet(ThemeMode mode)
          * gradient before its own paintEvent runs — a pale slab across the two
          * stops, sitting on top of the first menu title.
          */
-        #titleDots, #titleSearch, #titleUser { background: transparent; }
+        #titleSearch, #titleUser        { background: transparent; }
 
         /*
          * NO `min-height` HERE. A minimum on the bar becomes a minimum on each
@@ -287,6 +287,10 @@ QString themeStyleSheet(ThemeMode mode)
         QDialog#dialogFrame              { background: %(window)s; }
         QWidget#dialogFooter             { background: %(raised)s;
                                            border-top: 1px solid %(lineHard)s; }
+        QToolButton#dialogHelp           { background: transparent; color: %(textDim)s;
+                                           border: 1px solid %(border)s; border-radius: 4px;
+                                           padding: 4px 12px; font-size: 12px; }
+        QToolButton#dialogHelp:hover     { color: %(text)s; border-color: %(accent)s; }
         QWidget#settingsSidebar,
         QWidget#designerSidebar          { background: %(strip)s;
                                            border-right: 1px solid %(lineHard)s; }

@@ -4,26 +4,20 @@
 #include "piricad/app/tokens.hpp"
 #include "piricad/core/text.hpp"
 
-#include <QFontMetrics>
 #include <QHBoxLayout>
-#include <QLabel>
+#include <QIcon>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QToolButton>
 #include <QVBoxLayout>
-#include <QWindow>
 
 namespace piricad::app {
 namespace {
 
 // `design.md` §8–§10, measured off `stil.png` and `seçenekler.png`.
-constexpr int kTitleHeight  = 38;
-constexpr int kTitlePadX    = 12;
-constexpr int kTitleGap     = 9;
-constexpr int kTitleIcon    = 16;
-constexpr int kTitlePx      = 13;
-constexpr int kTitleMark    = 24;
+constexpr int kFooterPadX   = 12;
 constexpr int kFooterHeight = 48;
+constexpr int kWindowIcon   = 32;
 
 constexpr int kSectionRow  = 35;
 constexpr int kSectionPadX = 13;
@@ -56,148 +50,35 @@ QFont sans(int px, QFont::Weight weight = QFont::Normal)
 // DialogFrame
 // =============================================================================
 
-/// The title bar of a dialog: icon, name, dim qualifier, help and close.
-class DialogTitleBar : public QWidget
-{
-public:
-    explicit DialogTitleBar(DialogFrame* owner) : QWidget(owner), owner_(owner)
-    {
-        setFixedHeight(kTitleHeight);
-        setMouseTracking(true);
-    }
-
-    void setHeading(Glyph glyph, const QString& title, const QString& subtitle)
-    {
-        glyph_    = glyph;
-        title_    = title;
-        subtitle_ = subtitle;
-        update();
-    }
-
-    void setHelpVisible(bool on)
-    {
-        help_ = on;
-        update();
-    }
-
-    void setTokens(const Tokens& t)
-    {
-        tokens_ = t;
-        update();
-    }
-
-protected:
-    void paintEvent(QPaintEvent*) override
-    {
-        QPainter p(this);
-        p.setRenderHint(QPainter::Antialiasing, true);
-
-        QLinearGradient sky(0, 0, 0, kTitleHeight - 1);
-        sky.setColorAt(0.0, tokens_.bgTitlebar);
-        sky.setColorAt(1.0, tokens_.bgTitleBottom);
-        p.fillRect(QRect(0, 0, width(), kTitleHeight - 1), sky);
-        p.fillRect(QRect(0, kTitleHeight - 1, width(), 1), tokens_.lineHard);
-
-        int x = kTitlePadX;
-        p.drawPixmap(QRect(x, (kTitleHeight - kTitleIcon) / 2, kTitleIcon, kTitleIcon),
-                     glyph_pixmap(glyph_, tokens_.accent, kTitleIcon, devicePixelRatioF()));
-        x += kTitleIcon + kTitleGap;
-
-        p.setFont(sans(kTitlePx, QFont::DemiBold));
-        p.setPen(tokens_.text);
-        const QFontMetrics name(p.font());
-        p.drawText(QRect(x, 0, width(), kTitleHeight - 1), Qt::AlignVCenter | Qt::AlignLeft,
-                   title_);
-        x += static_cast<int>(name.horizontalAdvance(title_)) + kTitleGap;
-
-        if (!subtitle_.isEmpty()) {
-            p.setFont(sans(kTitlePx));
-            p.setPen(tokens_.textDim);
-            p.drawText(QRect(x, 0, width() - x, kTitleHeight - 1), Qt::AlignVCenter | Qt::AlignLeft,
-                       subtitle_);
-        }
-
-        int right = width() - kTitlePadX - kTitleMark;
-        drawMark(p, right, Glyph::Close, hot_ == 1);
-        if (help_) {
-            right -= kTitleMark;
-            drawMark(p, right, Glyph::Help, hot_ == 0);
-        }
-    }
-
-    void mouseMoveEvent(QMouseEvent* event) override
-    {
-        const int was = hot_;
-        hot_          = markAt(event->position().toPoint().x());
-        if (hot_ != was) update();
-        if (hot_ < 0) owner_->DialogFrame::mouseMoveEvent(event);
-    }
-
-    void leaveEvent(QEvent*) override
-    {
-        hot_ = -1;
-        update();
-    }
-
-    void mousePressEvent(QMouseEvent* event) override
-    {
-        switch (markAt(event->position().toPoint().x())) {
-        case 0: emit owner_->helpRequested(); return;
-        case 1: owner_->reject(); return;
-        default: owner_->DialogFrame::mousePressEvent(event); return;
-        }
-    }
-
-private:
-    void drawMark(QPainter& p, int left, Glyph glyph, bool hot)
-    {
-        const QRect box(left, (kTitleHeight - kTitleMark) / 2, kTitleMark, kTitleMark);
-        if (hot) {
-            p.setPen(Qt::NoPen);
-            p.setBrush(tokens_.hoverChip);
-            p.drawRoundedRect(box, 4, 4);
-        }
-        p.drawPixmap(QRect(box.left() + 4, box.top() + 4, kTitleIcon, kTitleIcon),
-                     glyph_pixmap(glyph, hot ? tokens_.text : tokens_.textDim, kTitleIcon,
-                                  devicePixelRatioF()));
-    }
-
-    int markAt(int x) const
-    {
-        const int close = width() - kTitlePadX - kTitleMark;
-        if (x >= close && x < close + kTitleMark) return 1;
-        if (help_ && x >= close - kTitleMark && x < close) return 0;
-        return -1;
-    }
-
-    DialogFrame* owner_;
-    Tokens tokens_{};
-    Glyph glyph_ = Glyph::Settings;
-    QString title_;
-    QString subtitle_;
-    bool help_ = false;
-    int hot_   = -1;
-};
-
 DialogFrame::DialogFrame(QWidget* parent) : QDialog(parent)
 {
-    setWindowFlag(Qt::FramelessWindowHint, true);
     setObjectName(QStringLiteral("dialogFrame"));
 
     stack_ = new QVBoxLayout(this);
-    stack_->setContentsMargins(1, 1, 1, 1);
+    stack_->setContentsMargins(0, 0, 0, 0);
     stack_->setSpacing(0);
-
-    titleBar_ = new DialogTitleBar(this);
-    stack_->addWidget(titleBar_);
 
     footerBar_ = new QWidget(this);
     footerBar_->setObjectName(QStringLiteral("dialogFooter"));
     footerBar_->setFixedHeight(kFooterHeight);
 
     footer_ = new QHBoxLayout(footerBar_);
-    footer_->setContentsMargins(kTitlePadX, 0, kTitlePadX, 0);
+    footer_->setContentsMargins(kFooterPadX, 0, kFooterPadX, 0);
     footer_->setSpacing(8);
+
+    // The help button the title bar used to carry, at the left end of the footer
+    // and before the stretch, so a caller's own left-hand buttons still land
+    // beside it and its right-hand ones still land on the right.
+    auto* help = new QToolButton(footerBar_);
+    help->setObjectName(QStringLiteral("dialogHelp"));
+    help->setText(tr("Yardım"));
+    help->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    help->setCursor(Qt::PointingHandCursor);
+    help->setVisible(false);
+    connect(help, &QToolButton::clicked, this, &DialogFrame::helpRequested);
+    help_ = help;
+    footer_->addWidget(help);
+
     footer_->addStretch(1);
 
     stack_->addWidget(footerBar_);
@@ -205,13 +86,14 @@ DialogFrame::DialogFrame(QWidget* parent) : QDialog(parent)
 
 void DialogFrame::setHeading(Glyph glyph, const QString& title, const QString& subtitle)
 {
-    static_cast<DialogTitleBar*>(titleBar_)->setHeading(glyph, title, subtitle);
+    glyph_ = glyph;
     setWindowTitle(subtitle.isEmpty() ? title : title + QLatin1Char(' ') + subtitle);
+    applyWindowIcon();
 }
 
 void DialogFrame::setHelpVisible(bool on)
 {
-    static_cast<DialogTitleBar*>(titleBar_)->setHelpVisible(on);
+    help_->setVisible(on);
 }
 
 void DialogFrame::setBody(QWidget* body)
@@ -222,7 +104,7 @@ void DialogFrame::setBody(QWidget* body)
     }
     body_ = body;
     body_->setParent(this);
-    stack_->insertWidget(1, body_, 1);
+    stack_->insertWidget(0, body_, 1);
 }
 
 void DialogFrame::setFooterHeight(int px)
@@ -230,10 +112,16 @@ void DialogFrame::setFooterHeight(int px)
     footerBar_->setFixedHeight(px);
 }
 
+void DialogFrame::applyWindowIcon()
+{
+    setWindowIcon(
+        QIcon(glyph_pixmap(glyph_, tokensOf(theme_).accent, kWindowIcon, devicePixelRatioF())));
+}
+
 void DialogFrame::applyTheme(ThemeMode mode)
 {
     theme_ = mode;
-    static_cast<DialogTitleBar*>(titleBar_)->setTokens(tokensOf(mode));
+    applyWindowIcon();
 
     // EVERY painted child, in one walk. A dialog that themed only itself is how
     // the settings window kept a black sidebar in the light theme: the section
@@ -246,25 +134,9 @@ void DialogFrame::applyTheme(ThemeMode mode)
 
 void DialogFrame::paintEvent(QPaintEvent*)
 {
-    const Tokens& t = tokensOf(theme_);
     QPainter p(this);
-    p.fillRect(rect(), t.bgWindow);
-
-    // The 1 px outline the reference draws around every dialog. It is what
-    // separates a frameless window from the desktop behind it, and without it a
-    // dark dialog on a dark desktop has no edge at all.
-    p.setPen(QPen(t.windowEdge, 1.0));
-    p.drawRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5));
+    p.fillRect(rect(), tokensOf(theme_).bgWindow);
 }
-
-void DialogFrame::mousePressEvent(QMouseEvent* event)
-{
-    if (event->button() != Qt::LeftButton) return;
-    if (QWindow* handle = windowHandle())
-        if (handle->startSystemMove()) return;
-}
-
-void DialogFrame::mouseMoveEvent(QMouseEvent*) {}
 
 // =============================================================================
 // SectionList

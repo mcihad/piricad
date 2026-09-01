@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // PiriCAD — app: the chrome every dialog in `design.md` wears.
 //
-// Screens 2, 3 and 4 are the same window with different contents: a 1 px outline,
-// a 38 px gradient title bar carrying an icon, a name and a dim subtitle, a body,
-// and a footer of buttons. Writing that three times is how three windows end up
-// three heights, and the shell already learned that lesson once — the dialogs
-// used to carry their own stylesheets and matched neither each other nor the
-// shell (see `tokens.hpp`).
+// Screens 2, 3 and 4 are the same window with different contents: a body and a
+// footer of buttons under the system's own title bar. Writing that three times is
+// how three windows end up three heights, and the shell already learned that
+// lesson once — the dialogs used to carry their own stylesheets and matched
+// neither each other nor the shell (see `tokens.hpp`).
 //
-// FRAMELESS, for the reason `title_bar.hpp` gives: a native dialog frame is a
-// different height and a different button order on every platform, and §12 asks
-// for one appearance everywhere.
+// SYSTEM-FRAMED, for the reason `title_bar.hpp` gives: the drawn title bar these
+// dialogs used to wear had no resize edges, no window menu and no snapping, and
+// §7 now puts the frame back in the window manager's hands. The heading the
+// caller sets becomes the window's title and icon; the help mark moved to the
+// left end of the footer.
 #pragma once
 
 #include "piricad/app/icons.hpp"
@@ -26,28 +27,26 @@ class QVBoxLayout;
 
 namespace piricad::app {
 
-/// A dialog with the §7–§10 chrome: outline, title bar, body, footer.
+/// A dialog with the §7–§10 chrome: a system frame, a body and a footer.
 class DialogFrame : public QDialog, public Themed
 {
     Q_OBJECT
     Q_INTERFACES(piricad::app::Themed)
 
-    /// The title bar hands the drag back to the frame; it is part of it.
-    friend class DialogTitleBar;
-
 public:
-    /// Builds an empty frame: title bar, nothing between, and a footer holding
-    /// one stretch. The caller sets the heading and the body.
+    /// Builds an empty frame: nothing above a footer holding one stretch. The
+    /// caller sets the heading and the body.
     explicit DialogFrame(QWidget* parent = nullptr);
 
-    /// The icon, the name, and the dim qualifier after it — `Katman Özellikleri`
-    /// then `— Kadastro Parselleri`.
+    /// The window icon, the name, and the qualifier after it — `Katman
+    /// Özellikleri` then `— Kadastro Parselleri`. Both reach the user through
+    /// the system title bar.
     void setHeading(Glyph glyph, const QString& title, const QString& subtitle = QString());
 
-    /// Whether the title bar carries a help mark before the close mark.
+    /// Whether the footer carries a help button at its left end.
     void setHelpVisible(bool on);
 
-    /// Puts `body` between the title bar and the footer. Takes ownership.
+    /// Puts `body` above the footer. Takes ownership.
     void setBody(QWidget* body);
 
     /// The footer's layout, for the caller to add buttons to. Left-hand buttons
@@ -64,24 +63,24 @@ public:
     ThemeMode theme() const noexcept { return theme_; }
 
 signals:
-    /// The help mark in the title bar was pressed.
+    /// The help button in the footer was pressed.
     void helpRequested();
 
 protected:
-    /// Draws the outline and the title bar's two-stop gradient.
+    /// Fills the window ground; the frame around it is the system's.
     void paintEvent(QPaintEvent* event) override;
 
-    /// Drags the dialog by its title bar.
-    void mousePressEvent(QMouseEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
-
 private:
-    QVBoxLayout* stack_  = nullptr;
-    QHBoxLayout* footer_ = nullptr;
-    QWidget* footerBar_  = nullptr;
-    QWidget* titleBar_   = nullptr;
-    QWidget* body_       = nullptr;
-    ThemeMode theme_     = ThemeMode::Dark;
+    /// Repaints the window icon from `glyph_` in the current theme's accent.
+    void applyWindowIcon();
+
+    QVBoxLayout* stack_    = nullptr;
+    QHBoxLayout* footer_   = nullptr;
+    QWidget* footerBar_    = nullptr;
+    QWidget* body_         = nullptr;
+    QAbstractButton* help_ = nullptr;
+    Glyph glyph_           = Glyph::Settings;
+    ThemeMode theme_       = ThemeMode::Dark;
 };
 
 /// The left-hand section list of the style designer and the settings window.

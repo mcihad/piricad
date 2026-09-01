@@ -106,11 +106,9 @@ struct Tokens
     // every value is still a valid colour. `ci-gate-tokens.sh` compares the two
     // sequences name by name for exactly that reason.
     QColor bgStrip;      ///< tab strip, command line, status bar — the darkest chrome
-    QColor windowEdge;   ///< the 1 px outline of the frameless window itself
     QColor bgTabActive;  ///< the selected document tab, a step above the strip
     QColor hoverChip;    ///< a menu title or chip under the pointer
     QColor menuText;     ///< the ten menu titles, a step quieter than body text
-    QColor dot;          ///< the window buttons, drawn identically on every platform
     QColor titleText;    ///< the document name in the middle of the title bar
     QColor hint;         ///< placeholder text inside a search field
     QColor hintFaint;    ///< the keyboard shortcut printed beside it

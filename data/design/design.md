@@ -68,12 +68,10 @@ harfi harfine geçer.
 | `--bg-strip` | `#191D21` | Sekme şeridi, durum çubuğu, panel başlığı — en koyu krom |
 | `--bg-sunken` | `#1B1F23` | Komut satırı, tuval cetvelleri, zoom yığını |
 | `--bg-tab-active` | `#22262A` | Seçili doküman sekmesi |
-| `--window-edge` | `#2C3237` | Çerçevesiz pencerenin 1 px konturu |
 | `--separator` | `#2E343A` | Araç çubuğu grupları arasındaki 1×22 çizgi |
 | `--ruler-tick` | `#3A4147` | Cetveldeki bölme çizgisi |
 | `--hover-chip` | `#2F353B` | İmlecin altındaki menü başlığı ya da çip |
 | `--menu-text` | `#AEB6BD` | On menü başlığı, gövde metninden bir adım geri |
-| `--dot` | `#3B4248` | Pencere düğmeleri; her platformda aynı çizilir |
 | `--title-text` | `#767F87` | Başlık çubuğunun ortasındaki doküman adı |
 | `--hint` | `#5F686F` | Arama alanındaki yer tutucu |
 | `--hint-faint` | `#4C545B` | Yanındaki klavye kısayolu |
@@ -126,7 +124,7 @@ Temel birim **2 px**, bileşen ritmi **4 px**.
 
 | Öğe | Ölçü |
 |---|---|
-| Başlık çubuğu | 34–38 px |
+| Menü şeridi (ana pencere) | 34 px |
 | Araç çubuğu | 46 px (ikon 20 px, buton 30×30, boşluk 4 px) |
 | Sol araç kutusu | 46 px genişlik (buton 32×32) |
 | Doküman sekmesi | 30 px |
@@ -183,12 +181,17 @@ profil başına saklanır; Görünüm ▸ Yerleşim menüsünden *Kadastro Üret
 
 ## 7. Ekran 1 — Ana Ekran
 
-Dikey sıra: başlık çubuğu → araç çubuğu → gövde → durum çubuğu.
+Dikey sıra: sistem başlık çubuğu → menü şeridi → araç çubuğu → gövde → durum çubuğu.
 
-**Başlık çubuğu (34 px).** Solda pencere düğmeleri (macOS'ta yerel, Windows/Linux'ta aynı
-ölçüde çizilir), ardından 10 menü: Dosya, Düzen, Görünüm, Çizim, Değiştir, Harita, Analiz,
-Katman, Pencere, Yardım. Ortada doküman adı + sürüm. Sağda komut arama (`⌘K` / `Ctrl+K`) ve
-kullanıcı baş harfi.
+**Pencere çerçevesi.** Çerçeve, başlık çubuğu ve pencere düğmeleri **işletim sisteminindir**.
+Uygulama kendi çerçevesini çizmez: yeniden boyutlandırma kenarları, kenara yapıştırma
+(snap), pencere menüsü ve gölgelendirme pencere yöneticisinin işidir ve çizili bir çerçeve
+bunların hiçbirini veremez. Pencere başlığı `<doküman> — PiriCAD <sürüm>`, diyaloglarda
+`<ad> <nitelik>`; pencere simgesi diyalogun `Glyph`'inden üretilir.
+
+**Menü şeridi (34 px).** Sistem başlık çubuğunun hemen altında, soldan sağa: 10 menü —
+Dosya, Düzen, Görünüm, Çizim, Değiştir, Harita, Analiz, Katman, Pencere, Yardım. Ortada
+doküman adı + sürüm. Sağda komut arama (`⌘K` / `Ctrl+K`) ve kullanıcı baş harfi.
 
 **Araç çubuğu (46 px).** 1 px ayraçlarla 7 grup: dosya · geri/yinele · pano · gezinme
 (seç, kaydır, yakınlaş, tümünü göster) · yardımcılar (ızgara, yakalama, ölçüm) ·
@@ -234,8 +237,10 @@ zeminli; sağda veri kaynağı durumu (`cloud_done`, yeşil) ve `60 fps · 128 M
 
 ## 8. Ekran 2 — Stil Tasarımcısı (Katman Özellikleri)
 
-QGIS'in katman özellikleri diyalogunun mantığı, TERRACAD dilinde. 1280×756 modal,
-tuval üzerinde ızgaralı zemin ve derin gölge ile yüzer.
+QGIS'in katman özellikleri diyalogunun mantığı, TERRACAD dilinde. 1280×756 modal; çerçevesi
+ve başlığı sistemindir, adı ve niteliği (`Katman Özellikleri — Kadastro Parselleri`) sistem
+başlık çubuğunda okunur. Diyalogun kendi çizdiği tek krom, altındaki 48 px altlıktır;
+*Yardım* düğmesi bu altlığın sol ucundadır.
 
 **Sol dikey sekme şeridi (186 px).** Bilgi, Kaynak, **Simgeleyici**, Etiketler, 3B Görünüm,
 Şeffaflık, Ölçek, Öznitelik Formu, Geçerlilik, Eylemler, Bağlantılar, Sürüm.

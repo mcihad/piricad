@@ -7,9 +7,10 @@ bileceksiniz.
 ## Pencere düzeni
 
 ```text
-┌ başlık çubuğu 34 px ──────────────────────────────────────────────────────┐
-│ ● ● ●  Dosya Düzen Görünüm Çizim Değiştir Harita Analiz Katman Pencere    │
-│        Yardım        <belge adı>              [🔍 Komut ara… ⌘K]  (MK)    │
+┌ sistem başlık çubuğu (işletim sistemi çizer) ─────────────────────── ─ □ ✕ ┐
+├ menü şeridi 34 px ────────────────────────────────────────────────────────┤
+│ Dosya Düzen Görünüm Çizim Değiştir Harita Analiz Katman Pencere Yardım    │
+│                      <belge adı>              [🔍 Komut ara… ⌘K]  (MK)    │
 ├ araç çubuğu 46 px ────────────────────────────────────────────────────────┤
 │ 📄📂💾 │ ↶↷ │ ✂⧉📋 │ ➤✋🔍⛶ │ ⊞⊙📏 │ ▤🎨▦ │ 🖨⚙   ÖLÇEK 1:1 000  EPSG… │
 ├───────┬───────────────────────────────────────────┬───────────────────────┤
@@ -27,11 +28,12 @@ bileceksiniz.
 └ durum çubuğu 26 px ───────────────────────────────────────────────────────┘
 ```
 
-Her bandın yüksekliği sabittir ve her platformda aynıdır: başlık 34, araç çubuğu 46,
+Her bandın yüksekliği sabittir ve her platformda aynıdır: menü şeridi 34, araç çubuğu 46,
 doküman sekmeleri 30, komut satırı 28, durum çubuğu 26 piksel. Sol araç kutusu 46,
 sağ panel 312 piksel genişliğindedir. Bu ölçüler tasarım belgesinden gelir ve
-Windows, macOS ve Linux'ta değişmez — pencere çerçevesi de dahil olmak üzere
-uygulamanın kendi çizdiği bir çerçevedir, işletim sisteminin değil.
+Windows, macOS ve Linux'ta değişmez. **Pencere çerçevesi bu ölçülerin dışındadır:**
+çerçeveyi, başlık çubuğunu ve pencere düğmelerini işletim sistemi çizer, dolayısıyla
+onlar her masaüstünde o masaüstünün alışıldık görünümündedir.
 
 İki ayrı araç yüzeyi vardır ve işleri farklıdır:
 
@@ -45,12 +47,16 @@ uygulamanın kendi çizdiği bir çerçevedir, işletim sisteminin değil.
 
 Bu ayrım AutoCAD ve QGIS'in ortak düzenidir.
 
-## Başlık çubuğu
+## Pencere çerçevesi ve menü şeridi
 
-Solda üç pencere düğmesi: kapat, küçült, büyüt. Bunlar **çizilir**, işletim
-sisteminden alınmaz — aynı program her yerde aynı görünsün diye.
+Pencerenin çerçevesi, başlık çubuğu ve **kapat / küçült / büyüt** düğmeleri işletim
+sistemine aittir. PiriCAD bunları kendisi çizmez: pencereyi kenarlarından tutup
+boyutlandırmak, ekran kenarına yapıştırmak, sağ tıkla pencere menüsünü açmak ve
+çift tıkla büyütmek masaüstünüzün kendi davranışıdır. Başlık çubuğunda
+`<belge adı> — PiriCAD <sürüm>` yazar.
 
-Ortada açık belgenin adı ve sürüm. Sağda **komut arama** ve kullanıcı baş harfi.
+Onun hemen altındaki 34 px'lik **menü şeridi** uygulamanındır: solda on menü,
+ortada açık belgenin adı ve sürümü, sağda **komut arama** ile kullanıcı baş harfi.
 
 ### Komut arama — `Ctrl+K`
 
