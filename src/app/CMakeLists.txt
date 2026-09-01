@@ -27,6 +27,7 @@ qt_add_executable(piricad
     src/map_canvas.cpp
     src/painter_backend.cpp
     src/style_designer.cpp
+    src/symbol_image.cpp
     src/symbol_preview.cpp
     src/panels.cpp
     src/settings_dialog.cpp
@@ -180,6 +181,7 @@ if(PIRICAD_WITH_RHI)
             shaders/line.frag
             shaders/text.vert
             shaders/text.frag
+            shaders/image.frag
     )
 
     target_sources(piricad PRIVATE src/rhi_backend.cpp)

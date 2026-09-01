@@ -19,6 +19,7 @@
 // atlas shaped with HarfBuzz. Those are the GPU backend's problems, and keeping
 // them out of the interface is what makes them replaceable.
 #include "piricad/app/backend_factory.hpp"
+#include "piricad/app/symbol_image.hpp"
 #if PIRICAD_HAVE_QGIS
 #include "piricad/app/qgis_backend.hpp"
 #endif
@@ -509,104 +510,25 @@ private:
     /// costs one attempt rather than one attempt per frame. It draws nothing,
     /// which is the honest result: the drawing says there is a picture and this
     /// build cannot read it.
+    ///
+    /// The decoding itself is `symbol_image.hpp`, shared with the GPU backend —
+    /// the alpha keying is a decision about what counts as paper, and a second
+    /// copy of it is a drawing whose symbols look different depending on which
+    /// engine drew them.
     const QImage& decoded(const render::PassStyle& ps, int wanted_px = 0)
     {
         static const QImage kNone;
         if (ps.image.empty() || ps.image_key == 0) return kNone;
 
         // A VECTOR picture is rasterised at the size it will be drawn at, so the
-        // cache is keyed on that size too. This is the whole reason for shipping
-        // symbology as SVG: a raster is decoded once and then resampled to
-        // whatever the zoom asks for, and every resampling of a 176 px annex crop
-        // is a softer, greyer version of a line the regulation drew crisp.
-        const bool vector       = looks_like_svg(ps.image);
-        const int bucket        = vector ? std::clamp(wanted_px, 8, 512) : 0;
+        // cache is keyed on that size too.
+        const int bucket        = std::clamp(wanted_px, 8, 512);
         const std::uint64_t key = ps.image_key ^ (static_cast<std::uint64_t>(bucket) << 48);
 
         const auto it = images_.find(key);
         if (it != images_.end()) return it->second;
 
-        if (vector) return images_.emplace(key, rasterise(ps.image, bucket)).first->second;
-
-        QImage image;
-        image.loadFromData(reinterpret_cast<const uchar*>(ps.image.data()),
-                           static_cast<int>(ps.image.size()));
-        return images_.emplace(key, keyed(std::move(image))).first->second;
-    }
-
-    /// True when the bytes open an SVG document; see `core::sniff_image_format`,
-    /// which asks the same question of the same bytes when they are interned.
-    static bool looks_like_svg(std::span<const std::byte> bytes)
-    {
-        const std::size_t look = bytes.size() < 512 ? bytes.size() : 512;
-        const QByteArray head(reinterpret_cast<const char*>(bytes.data()),
-                              static_cast<qsizetype>(look));
-        return head.contains("<svg");
-    }
-
-    /// Draws an SVG at `size` pixels tall, on transparency.
-    ///
-    /// `QSvgRenderer` is Qt's own SVG engine and it is the one QGIS rasterises its
-    /// SVG markers through as well, so a symbol authored for one draws the same in
-    /// the other. Nothing is hand-rolled here and nothing needs to be.
-    static QImage rasterise(std::span<const std::byte> bytes, int size)
-    {
-        const QByteArray data(reinterpret_cast<const char*>(bytes.data()),
-                              static_cast<qsizetype>(bytes.size()));
-
-        QSvgRenderer renderer;
-        if (!renderer.load(data)) return QImage();
-
-        const QSizeF box = renderer.defaultSize();
-        if (box.isEmpty()) return QImage();
-
-        const double ratio = box.width() / box.height();
-        const int h        = std::max(1, size);
-        const int w        = std::max(1, static_cast<int>(std::lround(h * ratio)));
-
-        QImage out(w, h, QImage::Format_ARGB32_Premultiplied);
-        out.fill(Qt::transparent);
-
-        QPainter painter(&out);
-        painter.setRenderHint(QPainter::Antialiasing);
-        renderer.render(&painter, QRectF(0, 0, w, h));
-        painter.end();
-        return out;
-    }
-
-    /// Gives a picture with no alpha channel one, from how WHITE each pixel is.
-    ///
-    /// MPYY's annex pictures are JPEG, which cannot carry alpha, so every glyph
-    /// and line type arrives sitting on an opaque white rectangle. The first
-    /// answer to that was to draw them in Multiply, which leaves white alone —
-    /// but JPEG's white is not 255, it is 250 with ringing around every stroke,
-    /// so what actually reached the canvas was a faint grey box at every stamp.
-    /// They are visible along both boundaries of any real drawing.
-    ///
-    /// `alpha = 255 - min(r,g,b)` and nothing else. It is CONTINUOUS, so it makes
-    /// no decision about which greys are ink — which was the objection to keying
-    /// white out, and it is a fair objection to a THRESHOLD. Paper goes fully
-    /// transparent, a black stroke fully opaque, JPEG's ringing fades in
-    /// proportion to how close to paper it is. Keying on the smallest channel
-    /// rather than on luminance keeps a saturated colour opaque: MPYY's red
-    /// boundary dots stay red at full strength instead of being read as half-dark.
-    ///
-    /// The picture can then be drawn normally, so a symbol PAINTS instead of only
-    /// darkening — which is what a white glyph on a dark fill needs.
-    static QImage keyed(QImage image)
-    {
-        if (image.isNull() || image.hasAlphaChannel()) return image;
-
-        QImage out = image.convertToFormat(QImage::Format_ARGB32);
-        for (int y = 0; y < out.height(); ++y) {
-            auto* row = reinterpret_cast<QRgb*>(out.scanLine(y));
-            for (int x = 0; x < out.width(); ++x) {
-                const QRgb p    = row[x];
-                const int paper = std::min({qRed(p), qGreen(p), qBlue(p)});
-                row[x]          = qRgba(qRed(p), qGreen(p), qBlue(p), 255 - paper);
-            }
-        }
-        return out;
+        return images_.emplace(key, decode_symbol_image(ps.image, bucket)).first->second;
     }
 
     /// The picture tiled into the face — a MPYY `tarama`.

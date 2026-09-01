@@ -28,6 +28,8 @@
 #include "piricad/render/drawlist.hpp"
 #include "piricad/render/symbology.hpp"
 
+#include "piricad/app/symbol_image.hpp"
+
 #if PIRICAD_HAVE_TEXT
 #include "piricad/app/data_root.hpp"
 #include "piricad/render/text_atlas.hpp"
@@ -43,6 +45,7 @@
 #include <QMatrix4x4>
 #include <QSize>
 #include <QString>
+#include <QtGlobal>
 
 #include <algorithm>
 #include <bit>
@@ -52,6 +55,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -119,6 +123,21 @@ std::uint32_t faded(std::uint32_t rgba, std::uint8_t opacity) noexcept
     return (a << 24) | (rgba & 0x00FFFFFFu);
 }
 
+/// Straight RGBA (0xAARRGGBB) repacked so the BYTES read R, G, B, A in memory.
+///
+/// `UNormByte4` hands the shader the bytes in address order, and on a
+/// little-endian machine a 0xAARRGGBB word is stored B, G, R, A — so a red label
+/// arrives blue. Packing here rather than swizzling in the shader keeps the
+/// fragment stage identical to every other pipeline's.
+std::uint32_t rgba_bytes(std::uint32_t rgba) noexcept
+{
+    const std::uint32_t a = (rgba >> 24) & 0xFFu;
+    const std::uint32_t r = (rgba >> 16) & 0xFFu;
+    const std::uint32_t g = (rgba >> 8) & 0xFFu;
+    const std::uint32_t b = rgba & 0xFFu;
+    return (a << 24) | (b << 16) | (g << 8) | r;
+}
+
 /// Straight RGBA byte order matching `std::uint32_t` in the draw list: 0xAARRGGBB.
 void unpack(std::uint32_t rgba, float out[4]) noexcept
 {
@@ -149,6 +168,7 @@ struct Cmd
         Line,   ///< instanced segment quads
         Tri,    ///< a triangle list: marker interiors
         Text,   ///< instanced glyph quads against the SDF atlas
+        Image,  ///< instanced textured quads: a published picture
     };
 
     Kind kind{Kind::Line};
@@ -174,8 +194,12 @@ struct Cmd
     /// Binding the vertex buffer at an offset is the portable way to say the same
     /// thing and needs no feature at all.
     std::uint32_t first{0};
-    std::uint32_t count{0}; ///< vertices (Fill) or instances (Line, Text)
+    std::uint32_t count{0}; ///< vertices (Fill) or instances (Line, Text, Image)
     std::uint32_t cover{0}; ///< Fill only: first vertex of its 6-vertex cover quad
+
+    /// Image only: which picture, as an index into this frame's texture list plus
+    /// one. Zero means "no picture", which is every other kind.
+    std::uint32_t image{0};
 };
 
 class RhiBackend final : public render::Backend
@@ -239,6 +263,29 @@ private:
     /// One glyph at the centre of each face.
     void emit_centroid(const render::PolygonBatch& batch, const render::PassStyle& ps, double cx,
                        double cy);
+
+    // ---- published pictures (`symbol_image.hpp`) ----------------------------
+
+    /// Decodes `ps`'s picture at `wanted_px` tall and returns its slot plus one,
+    /// or zero when there is nothing readable. Touches no GPU object: the texture
+    /// is created and uploaded later, inside `ensure_capacity`.
+    std::uint32_t picture_slot(const render::PassStyle& ps, int wanted_px);
+
+    /// Appends one textured quad per stamp, and the command that draws them.
+    void emit_picture_stamps(std::uint32_t slot, float width, float height,
+                             const render::PassStyle& ps, bool clipped);
+
+    /// `gorsel-isaretci` and `gorsel-cizgi`: the picture placed along the geometry.
+    void emit_picture_along(const render::PolylineBatch& batch, const render::PassStyle& ps,
+                            double cx, double cy);
+
+    /// A `gorsel-isaretci` inside the face it labels — one stamp per ring.
+    void emit_picture_centres(const render::PolygonBatch& batch, const render::PassStyle& ps,
+                              double cx, double cy);
+
+    /// `gorsel-dolgu`: the picture tiled into the face, clipped to it.
+    void emit_picture_fill(const render::PolygonBatch& batch, const render::PassStyle& ps,
+                           double cx, double cy);
 
 #if PIRICAD_HAVE_TEXT
     /// The captions in the document and the labels in the overlay, as glyph quads.
@@ -310,6 +357,20 @@ private:
     std::unique_ptr<QRhiSampler> sampler_;
     std::unique_ptr<QRhiShaderResourceBindings> srb_text_;
     std::unique_ptr<QRhiGraphicsPipeline> text_;
+#endif
+
+    std::unique_ptr<QRhiSampler> picture_sampler_;
+    QShader picture_vs_;
+    QShader picture_fs_;
+    QRhiVertexInputLayout picture_input_;
+
+    std::unique_ptr<QRhiBuffer> picture_quad_;
+    std::unique_ptr<QRhiBuffer> picture_instances_;
+    quint32 picture_capacity_{0};
+    bool picture_quad_uploaded_{false};
+    std::vector<float> picture_data_; ///< 13 floats per instance, like the text one
+
+#if PIRICAD_HAVE_TEXT
 
     std::unique_ptr<render::TextAtlas> atlas_;
     bool atlas_tried_{false};
@@ -342,6 +403,38 @@ private:
 
     // Symbology scratch. Members and not locals, because the draw loop must not
     // allocate (render.md R20, P6) and a sheet asks for these once per pass.
+    /// A decoded picture on its way to the GPU, and once there.
+    ///
+    /// Keyed by the image store's CONTENT key combined with the size it was
+    /// rasterised at — a vector source is rendered at the size it will be drawn,
+    /// so the same picture at two zooms is two entries and not one resampling.
+    struct Picture
+    {
+        QImage cpu; ///< kept until the upload lands
+        std::unique_ptr<QRhiTexture> texture;
+        std::unique_ptr<QRhiShaderResourceBindings> srb;
+
+        /// ITS OWN PIPELINES, and that is the point.
+        ///
+        /// The first attempt built two pipelines against a layout-only bindings
+        /// set and swapped a per-picture set in at draw time. QRhi allows a
+        /// layout-compatible swap, but what actually happened was that no picture
+        /// drew at all and the draws that followed came out as a fan of stretched
+        /// quads from the canvas corner. A pipeline per picture removes the
+        /// question: a sheet draws a handful of pictures, and a pipeline that owns
+        /// its own bindings cannot be handed the wrong ones.
+        std::unique_ptr<QRhiGraphicsPipeline> pipe;
+        std::unique_ptr<QRhiGraphicsPipeline> pipe_clip;
+        int width{0};
+        int height{0};
+        bool pending{true}; ///< still to be created/uploaded
+    };
+
+    std::unordered_map<std::uint64_t, Picture> pictures_;
+
+    /// This frame's pictures in draw order; `Cmd::image` indexes it plus one.
+    std::vector<std::uint64_t> picture_keys_;
+
     render::MarkerOutline glyph_;
     std::vector<render::Stamp> stamps_;
     std::vector<float> scratch_;
@@ -379,15 +472,20 @@ bool RhiBackend::handles(core::SymbolLayerType type)
     case core::SymbolLayerType::HashLine:
     case core::SymbolLayerType::CentroidFill:
     case core::SymbolLayerType::LinePatternFill:
-    case core::SymbolLayerType::PointPatternFill: return true;
+    case core::SymbolLayerType::PointPatternFill:
+
+    // The three published PICTURE types. The bytes travel inside the document and
+    // are decoded by `symbol_image.hpp` — the same decoder the QPainter backend
+    // uses, because the alpha keying is a decision about what counts as paper and
+    // a second copy of it is a symbol that looks different per engine.
+    case core::SymbolLayerType::RasterFill:
+    case core::SymbolLayerType::RasterMarker:
+    case core::SymbolLayerType::RasterLine: return true;
 
     // TextMarker is drawn from the caption list rather than from a pass, so
-    // claiming it here would draw it twice.
-    //
-    // The three published PICTURE types need the document's image store on the
-    // GPU as a texture atlas, which this backend does not build yet. Refused
-    // rather than claimed and skipped: the QGIS backend decided what it could
-    // draw by exclusion once, and three raster types went out the door silently.
+    // claiming it here would draw it twice. Nothing else is left, and the default
+    // still REFUSES: the QGIS backend decided what it could draw by exclusion
+    // once, and three raster types went out the door silently.
     case core::SymbolLayerType::TextMarker:
     default: return false;
     }
@@ -751,6 +849,193 @@ void RhiBackend::emit_centroid(const render::PolygonBatch& batch, const render::
                 static_cast<float>(std::sin(radians)), /*clipped=*/false);
 }
 
+std::uint32_t RhiBackend::picture_slot(const render::PassStyle& ps, int wanted_px)
+{
+    if (ps.image.empty() || ps.image_key == 0) return 0;
+
+    const int bucket        = std::clamp(wanted_px, 8, 512);
+    const std::uint64_t key = ps.image_key ^ (static_cast<std::uint64_t>(bucket) << 48);
+
+    auto it = pictures_.find(key);
+    if (it == pictures_.end()) {
+        // Decoded ONCE and cached even when it fails, so a picture this build
+        // cannot read costs one attempt rather than one attempt per frame.
+        Picture entry;
+        entry.cpu = decode_symbol_image(ps.image, bucket);
+        if (!entry.cpu.isNull()) {
+            entry.cpu    = entry.cpu.convertToFormat(QImage::Format_RGBA8888);
+            entry.width  = entry.cpu.width();
+            entry.height = entry.cpu.height();
+        }
+        it = pictures_.emplace(key, std::move(entry)).first;
+    }
+    if (it->second.width <= 0 || it->second.height <= 0) return 0;
+
+    // The FRAME's own list, so a draw names a small index rather than a hash and
+    // the upload pass has exactly the pictures this frame asked for.
+    for (std::size_t i = 0; i < picture_keys_.size(); ++i)
+        if (picture_keys_[i] == key) return static_cast<std::uint32_t>(i + 1);
+
+    picture_keys_.push_back(key);
+    return static_cast<std::uint32_t>(picture_keys_.size());
+}
+
+void RhiBackend::emit_picture_stamps(std::uint32_t slot, float width, float height,
+                                     const render::PassStyle& ps, bool clipped)
+{
+    if (slot == 0 || stamps_.empty()) return;
+
+    const auto first = static_cast<std::uint32_t>(picture_data_.size() * sizeof(float));
+
+    // Only the OPACITY tints a published picture. It is the regulation's own
+    // drawing, and recolouring it would be answering a question the annex has
+    // already answered.
+    const std::uint32_t ink =
+        rgba_bytes(0x00FFFFFFu | (static_cast<std::uint32_t>(ps.opacity) << 24));
+    const float ink_bits = std::bit_cast<float>(ink);
+
+    const double radians = static_cast<double>(ps.angle_udeg) / 1'000'000.0 * kPi / 180.0;
+    const auto extra_cos = static_cast<float>(std::cos(radians));
+    const auto extra_sin = static_cast<float>(std::sin(radians));
+
+    const float hw = width * 0.5f;
+    const float hh = height * 0.5f;
+
+    for (const render::Stamp& stamp : stamps_) {
+        const float ca = stamp.cos_a * extra_cos - stamp.sin_a * extra_sin;
+        const float sa = stamp.cos_a * extra_sin + stamp.sin_a * extra_cos;
+
+        const float instance[13] = {
+            -hw,      -hh,     hw,   hh,   // local rect, centred on the stamp
+            stamp.x,  stamp.y, ca,   sa,   // where, and which way it faces
+            0.0f,     0.0f,    1.0f, 1.0f, // the whole picture
+            ink_bits,
+        };
+        picture_data_.insert(picture_data_.end(), std::begin(instance), std::end(instance));
+    }
+
+    Cmd cmd;
+    cmd.kind    = Cmd::Kind::Image;
+    cmd.clipped = clipped;
+    cmd.image   = slot;
+    cmd.uniform = push_uniform(0xFFFFFFFFu, 0.0f);
+    cmd.first   = first;
+    cmd.count   = static_cast<std::uint32_t>(stamps_.size());
+    cmds_.push_back(cmd);
+}
+
+void RhiBackend::emit_picture_along(const render::PolylineBatch& batch, const render::PassStyle& ps,
+                                    double cx, double cy)
+{
+    if (batch.runs.empty()) return;
+
+    const double height      = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 16.0;
+    const std::uint32_t slot = picture_slot(ps, static_cast<int>(std::lround(height)));
+    if (slot == 0) return;
+
+    const Picture& entry = pictures_.at(picture_keys_[slot - 1]);
+    const double width   = entry.height > 0 ? height * entry.width / entry.height : height;
+
+    // A line type tiles edge to edge unless a spacing was asked for; a symbol is
+    // placed once and does not tile.
+    const double interval =
+        ps.interval_px > 0.5f
+            ? static_cast<double>(ps.interval_px)
+            : (ps.type == core::SymbolLayerType::RasterLine ? width : width * 2.0);
+
+    stamps_.clear();
+
+    std::size_t offset = 0;
+    for (std::uint32_t run : batch.runs) {
+        run_x_.clear();
+        run_y_.clear();
+        for (std::uint32_t v = 0; v < run; ++v) {
+            run_x_.push_back(static_cast<float>(cx + static_cast<double>(batch.xs[offset + v])));
+            run_y_.push_back(static_cast<float>(cy - static_cast<double>(batch.ys[offset + v])));
+        }
+        render::place_along_run(run_x_.data(), run_y_.data(), run, ps.placement, interval,
+                                static_cast<double>(ps.phase_px), stamps_);
+        offset += run;
+    }
+
+    emit_picture_stamps(slot, static_cast<float>(width), static_cast<float>(height), ps,
+                        /*clipped=*/false);
+}
+
+void RhiBackend::emit_picture_centres(const render::PolygonBatch& batch,
+                                      const render::PassStyle& ps, double cx, double cy)
+{
+    if (batch.runs.empty()) return;
+
+    const double height      = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 16.0;
+    const std::uint32_t slot = picture_slot(ps, static_cast<int>(std::lround(height)));
+    if (slot == 0) return;
+
+    const Picture& entry = pictures_.at(picture_keys_[slot - 1]);
+    const double width   = entry.height > 0 ? height * entry.width / entry.height : height;
+
+    stamps_.clear();
+
+    std::size_t offset = 0;
+    for (std::uint32_t run : batch.runs) {
+        float min_x = 1e30f, min_y = 1e30f, max_x = -1e30f, max_y = -1e30f;
+        for (std::uint32_t v = 0; v < run; ++v) {
+            const auto x = static_cast<float>(cx + static_cast<double>(batch.xs[offset + v]));
+            const auto y = static_cast<float>(cy - static_cast<double>(batch.ys[offset + v]));
+            min_x        = std::min(min_x, x);
+            min_y        = std::min(min_y, y);
+            max_x        = std::max(max_x, x);
+            max_y        = std::max(max_y, y);
+        }
+        if (run > 0)
+            stamps_.push_back(
+                render::Stamp{(min_x + max_x) * 0.5f, (min_y + max_y) * 0.5f, 1.0f, 0.0f});
+        offset += run;
+    }
+
+    emit_picture_stamps(slot, static_cast<float>(width), static_cast<float>(height), ps,
+                        /*clipped=*/false);
+}
+
+void RhiBackend::emit_picture_fill(const render::PolygonBatch& batch, const render::PassStyle& ps,
+                                   double cx, double cy)
+{
+    // Tiled at a DECLARED size rather than at its pixel size, because a hatch
+    // extracted from a Word annex has whatever resolution the annex had, and a
+    // plan whose hatch spacing follows the scan resolution says the wrong thing.
+    const double tile        = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 24.0;
+    const std::uint32_t slot = picture_slot(ps, static_cast<int>(std::lround(tile)));
+    if (slot == 0) return;
+
+    const Picture& entry = pictures_.at(picture_keys_[slot - 1]);
+    const double ratio   = entry.width > 0 ? double(entry.height) / entry.width : 1.0;
+    const double cell_w  = tile;
+    const double cell_h  = tile * ratio;
+
+    // SPACED, when the pass asks for it. A scanned hatch already carries whatever
+    // spacing the annex printed and tiles edge to edge; a glyph somebody DREW
+    // fills its own box, so tiling that edge to edge reads as a solid mat.
+    const double gap    = static_cast<double>(ps.interval_px);
+    const double step_x = std::max(cell_w, gap);
+    const double step_y = std::max(cell_h, gap);
+
+    float box[4] = {};
+    if (!emit_face(batch, cx, cy, 0u, /*as_mask=*/true, box)) return;
+
+    scratch_.clear();
+    render::pattern_points(box[0], box[1], box[2], box[3], step_x, step_y, scratch_);
+
+    stamps_.clear();
+    stamps_.reserve(scratch_.size() / 2);
+    for (std::size_t i = 0; i + 1 < scratch_.size(); i += 2)
+        stamps_.push_back(render::Stamp{scratch_[i], scratch_[i + 1], 1.0f, 0.0f});
+
+    emit_picture_stamps(slot, static_cast<float>(cell_w), static_cast<float>(cell_h), ps,
+                        /*clipped=*/true);
+
+    emit_unmask(box);
+}
+
 void RhiBackend::emit_document(const render::DrawList& list, double cx, double cy)
 {
     using core::SymbolLayerType;
@@ -840,15 +1125,25 @@ void RhiBackend::emit_document(const render::DrawList& list, double cx, double c
 
         case SymbolLayerType::CentroidFill: emit_centroid(face, ps, cx, cy); break;
 
-        case SymbolLayerType::TextMarker:
-        case SymbolLayerType::RasterFill:
+        case SymbolLayerType::RasterFill: emit_picture_fill(face, ps, cx, cy); break;
+
         case SymbolLayerType::RasterMarker:
-        case SymbolLayerType::RasterLine:
-            // Nothing here, for two different reasons that `handles()` records.
-            // A TextMarker became a `TextItem` in the scene builder and is drawn
-            // with the captions, over every fill and stroke — a word inside a
-            // gösterim that a later pass could paint over is a word nobody reads.
-            // The three raster types wait on the image store reaching the GPU.
+            // A published sembol sits INSIDE the lekesi it labels, which is what
+            // MPYY prints. Only a run that is not a face — an open line — puts it
+            // on the geometry itself.
+            if (!face.runs.empty())
+                emit_picture_centres(face, ps, cx, cy);
+            else
+                emit_picture_along(line, ps, cx, cy);
+            break;
+
+        case SymbolLayerType::RasterLine: emit_picture_along(line, ps, cx, cy); break;
+
+        case SymbolLayerType::TextMarker:
+            // Nothing here: the scene builder turned it into a `TextItem`, so it
+            // is drawn with the captions, over every fill and stroke. A word
+            // inside a gösterim that a later pass could paint over is a word
+            // nobody reads.
             break;
         }
     }
@@ -931,21 +1226,6 @@ void RhiBackend::emit_overlay(const render::Overlay& overlay, std::size_t from, 
 }
 
 #if PIRICAD_HAVE_TEXT
-
-/// Straight RGBA (0xAARRGGBB) repacked so the BYTES read R, G, B, A in memory.
-///
-/// `UNormByte4` hands the shader the bytes in address order, and on a
-/// little-endian machine a 0xAARRGGBB word is stored B, G, R, A — so a red label
-/// arrives blue. Packing here rather than swizzling in the shader keeps the
-/// fragment stage identical to every other pipeline's.
-std::uint32_t rgba_bytes(std::uint32_t rgba) noexcept
-{
-    const std::uint32_t a = (rgba >> 24) & 0xFFu;
-    const std::uint32_t r = (rgba >> 16) & 0xFFu;
-    const std::uint32_t g = (rgba >> 8) & 0xFFu;
-    const std::uint32_t b = rgba & 0xFFu;
-    return (a << 24) | (b << 16) | (g << 8) | r;
-}
 
 std::uint32_t RhiBackend::emit_line(render::Face face, std::string_view text, float origin_x,
                                     float origin_y, float px, float cos_a, float sin_a,
@@ -1135,6 +1415,13 @@ void RhiBackend::release()
     atlas_uploaded_ = 0;
     quad_uploaded_  = false;
 #endif
+
+    picture_instances_.reset();
+    picture_quad_.reset();
+    picture_sampler_.reset();
+    pictures_.clear();
+    picture_capacity_      = 0;
+    picture_quad_uploaded_ = false;
 
     line_.reset();
     line_clip_.reset();
@@ -1400,6 +1687,51 @@ bool RhiBackend::ensure_resources(QRhi* rhi, QRhiRenderPassDescriptor* rp, int s
         if (!mask_clear_->create()) return false;
     }
 
+    // ---- published pictures: one instanced textured quad per stamp ----------
+    //
+    // The SAME vertex shader the text pipeline uses, because the two draw the same
+    // thing: a rotated quad at a place, with a rectangle of a texture on it. Only
+    // the fragment stage differs — a glyph reconstructs its coverage from a
+    // distance field, a published picture is already a picture.
+    //
+    // The PIPELINES are not built here. Each picture gets its own, beside its own
+    // texture and bindings, once it is known — see `Picture`.
+    {
+        picture_vs_ = load_shader(":/piricad/shaders/text.vert.qsb");
+        picture_fs_ = load_shader(":/piricad/shaders/image.frag.qsb");
+        if (!picture_vs_.isValid() || !picture_fs_.isValid()) return false;
+
+        picture_quad_.reset(
+            rhi->newBuffer(QRhiBuffer::Immutable, QRhiBuffer::VertexBuffer, sizeof(kQuadCorners)));
+        if (!picture_quad_->create()) return false;
+        picture_quad_uploaded_ = false;
+
+        // LINEAR and CLAMP. A published glyph is drawn at whatever size the scale
+        // asks for, so it is almost never sampled one-to-one; nearest sampling
+        // makes the annex's own line work crawl as the user zooms.
+        picture_sampler_.reset(rhi->newSampler(QRhiSampler::Linear, QRhiSampler::Linear,
+                                               QRhiSampler::None, QRhiSampler::ClampToEdge,
+                                               QRhiSampler::ClampToEdge));
+        if (!picture_sampler_->create()) return false;
+
+        picture_input_ = {};
+        picture_input_.setBindings({
+            {2 * sizeof(float)},
+            {13 * sizeof(float), QRhiVertexInputBinding::PerInstance},
+        });
+        picture_input_.setAttributes({
+            {0, 0, QRhiVertexInputAttribute::Float2, 0},
+            {1, 1, QRhiVertexInputAttribute::Float4, 0},
+            {1, 2, QRhiVertexInputAttribute::Float4, 4 * sizeof(float)},
+            {1, 3, QRhiVertexInputAttribute::Float4, 8 * sizeof(float)},
+            {1, 4, QRhiVertexInputAttribute::UNormByte4, 12 * sizeof(float)},
+        });
+
+        // Every cached picture's bindings and pipelines named the old uniform
+        // buffer and the old render pass, so they are dropped rather than reused.
+        pictures_.clear();
+    }
+
 #if PIRICAD_HAVE_TEXT
     // ---- text: one instanced quad per glyph against the SDF atlas (R8) -------
     ensure_atlas();
@@ -1577,6 +1909,97 @@ bool RhiBackend::ensure_capacity(QRhi* rhi, QRhiResourceUpdateBatch* rub)
         corners_uploaded_ = true;
     }
 
+    // ---- published pictures ------------------------------------------------
+    if (!picture_keys_.empty()) {
+        const quint32 bytes = static_cast<quint32>(picture_data_.size() * sizeof(float));
+        if (!grow(picture_instances_, picture_capacity_, bytes)) return false;
+
+        if (!picture_quad_uploaded_ && picture_quad_) {
+            rub->uploadStaticBuffer(picture_quad_.get(), 0, sizeof(kQuadCorners), kQuadCorners);
+            picture_quad_uploaded_ = true;
+        }
+        if (bytes > 0)
+            rub->updateDynamicBuffer(picture_instances_.get(), 0, bytes, picture_data_.data());
+
+        // A texture and its bindings are created ONCE per picture and kept: the
+        // annex set is eight megabytes of source and a sheet draws a handful of
+        // them, so the cache never needs pruning.
+        for (const std::uint64_t key : picture_keys_) {
+            Picture& entry = pictures_.at(key);
+            if (!entry.pending) continue;
+
+            entry.texture.reset(
+                rhi->newTexture(QRhiTexture::RGBA8, QSize(entry.width, entry.height)));
+            if (!entry.texture->create()) {
+                qWarning("[rhi] resim dokusu oluşturulamadı %dx%d", entry.width, entry.height);
+                return false;
+            }
+            rub->uploadTexture(entry.texture.get(), entry.cpu);
+
+            entry.srb.reset(rhi->newShaderResourceBindings());
+            entry.srb->setBindings({
+                QRhiShaderResourceBinding::uniformBufferWithDynamicOffset(
+                    0,
+                    QRhiShaderResourceBinding::VertexStage |
+                        QRhiShaderResourceBinding::FragmentStage,
+                    uniforms_.get(), sizeof(Uniforms)),
+                QRhiShaderResourceBinding::sampledTexture(
+                    1, QRhiShaderResourceBinding::FragmentStage, entry.texture.get(),
+                    picture_sampler_.get()),
+            });
+            if (!entry.srb->create()) {
+                qWarning("[rhi] resim bağlamaları oluşturulamadı");
+                return false;
+            }
+
+            QRhiGraphicsPipeline::TargetBlend blend;
+            blend.enable   = true;
+            blend.srcColor = QRhiGraphicsPipeline::SrcAlpha;
+            blend.dstColor = QRhiGraphicsPipeline::OneMinusSrcAlpha;
+            blend.srcAlpha = QRhiGraphicsPipeline::One;
+            blend.dstAlpha = QRhiGraphicsPipeline::OneMinusSrcAlpha;
+
+            const auto build = [&](std::unique_ptr<QRhiGraphicsPipeline>& into, bool clip) {
+                into.reset(rhi->newGraphicsPipeline());
+                into->setShaderStages({{QRhiShaderStage::Vertex, picture_vs_},
+                                       {QRhiShaderStage::Fragment, picture_fs_}});
+                into->setVertexInputLayout(picture_input_);
+                into->setShaderResourceBindings(entry.srb.get());
+                into->setRenderPassDescriptor(rp_);
+                into->setTopology(QRhiGraphicsPipeline::TriangleStrip);
+                into->setCullMode(QRhiGraphicsPipeline::None);
+                into->setDepthTest(false);
+                into->setDepthWrite(false);
+                into->setSampleCount(samples_);
+                into->setTargetBlends({blend});
+                if (clip) {
+                    QRhiGraphicsPipeline::StencilOpState keep;
+                    keep.failOp      = QRhiGraphicsPipeline::Keep;
+                    keep.depthFailOp = QRhiGraphicsPipeline::Keep;
+                    keep.passOp      = QRhiGraphicsPipeline::Keep;
+                    keep.compareOp   = QRhiGraphicsPipeline::NotEqual;
+                    into->setStencilTest(true);
+                    into->setStencilFront(keep);
+                    into->setStencilBack(keep);
+                    into->setStencilReadMask(0xFF);
+                    into->setStencilWriteMask(0x00);
+                }
+                return into->create();
+            };
+
+            if (!build(entry.pipe, false)) {
+                qWarning("[rhi] resim pipeline'ı oluşturulamadı");
+                return false;
+            }
+            if (!build(entry.pipe_clip, true)) {
+                qWarning("[rhi] kırpmalı resim pipeline'ı oluşturulamadı");
+                return false;
+            }
+
+            entry.pending = false;
+        }
+    }
+
 #if PIRICAD_HAVE_TEXT
     if (atlas_) {
         const quint32 glyph_bytes = static_cast<quint32>(glyph_data_.size() * sizeof(float));
@@ -1640,6 +2063,8 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
     vertex_data_.clear();
     uniform_data_.clear();
     cmds_.clear();
+    picture_data_.clear();
+    picture_keys_.clear();
 #if PIRICAD_HAVE_TEXT
     glyph_data_.clear();
     px_range_ = atlas_ ? atlas_->px_range() : 0.0f;
@@ -1678,6 +2103,18 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
             if (cmd.kind == Cmd::Kind::Line) lines += cmd.count;
             if (cmd.kind == Cmd::Kind::Text) texts += cmd.count;
         }
+        const auto span = [](const std::vector<float>& v) {
+            if (v.empty()) return std::pair<double, double>{0.0, 0.0};
+            auto lo = *std::min_element(v.begin(), v.end());
+            auto hi = *std::max_element(v.begin(), v.end());
+            return std::pair<double, double>{static_cast<double>(lo), static_cast<double>(hi)};
+        };
+        const auto seg = span(segment_data_);
+        const auto vtx = span(vertex_data_);
+        const auto pic = span(picture_data_);
+        qWarning("[rhi] aralıklar: segman [%.0f %.0f] üçgen [%.0f %.0f] resim [%.0f %.0f]",
+                 seg.first, seg.second, vtx.first, vtx.second, pic.first, pic.second);
+
         qWarning("[rhi] geçiş %zu · sıra %zu · komut %zu | dolgu %zu · segman %zu · glif %zu"
                  " | metin öğesi %zu · overlay %zu · tuval %dx%d",
                  list.passes.size(), list.order.size(), cmds_.size(), fills, lines, texts,
@@ -1716,7 +2153,18 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
 
     const QRhiCommandBuffer::VertexInput flat_input[1] = {{vertices_.get(), 0}};
 
+    // BISECTING A FRAME, which is how all three of this backend's drawing defects
+    // were found. `PIRICAD_RHI_ONLY=resim` draws only the published pictures and
+    // `=resimsiz` draws everything else — a batch that never reached the buffer
+    // and a batch drawn off screen look identical in a screenshot, and so does a
+    // pipeline that corrupts the state of the draws after it. Developer tooling,
+    // an environment variable rather than a feature (CLAUDE.md 5.17).
+    const QByteArray only = qgetenv("PIRICAD_RHI_ONLY");
+
     for (const Cmd& cmd : cmds_) {
+        if (only == "resim" && cmd.kind != Cmd::Kind::Image) continue;
+        if (only == "resimsiz" && cmd.kind == Cmd::Kind::Image) continue;
+
         const quint32 offset = cmd.uniform * uniform_stride_;
         const QRhiCommandBuffer::DynamicOffset dyn(0, offset);
 
@@ -1739,6 +2187,21 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
             cb->setVertexInput(0, 1, flat_input);
             if (cmd.clipped) cb->setStencilRef(0);
             cb->draw(cmd.count, 1, cmd.first, 0);
+            continue;
+        }
+
+        if (cmd.kind == Cmd::Kind::Image) {
+            if (cmd.image == 0 || cmd.image > picture_keys_.size()) continue;
+            const Picture& entry = pictures_.at(picture_keys_[cmd.image - 1]);
+            if (!entry.srb || !entry.pipe || !picture_instances_) continue;
+
+            const QRhiCommandBuffer::VertexInput inputs[2] = {
+                {picture_quad_.get(), 0}, {picture_instances_.get(), cmd.first}};
+            cb->setGraphicsPipeline(cmd.clipped ? entry.pipe_clip.get() : entry.pipe.get());
+            cb->setShaderResources(entry.srb.get(), 1, &dyn);
+            cb->setVertexInput(0, 2, inputs);
+            if (cmd.clipped) cb->setStencilRef(0);
+            cb->draw(4, cmd.count);
             continue;
         }
 
