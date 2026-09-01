@@ -77,6 +77,18 @@ set(PIRICAD_DEP_SOL2_REPO      https://github.com/ThePhD/sol2.git)
 # `-Wno-` that would hide it, and a SYSTEM include suppresses warnings, not errors.
 set(PIRICAD_DEP_SOL2_SHA       9190880c593dfb018ccf5cc9729ab87739709862)  # v3.5.0
 
+# The text stack of piricad.md §9.4 and `.claude/render.md` R8. FreeType and
+# HarfBuzz come from the system: both are already on every machine that has Qt,
+# and vendoring a font rasteriser means vendoring its own dependency tree.
+# msdfgen and stb_rect_pack are small and pure, so they are pinned by SHA.
+set(PIRICAD_DEP_MSDFGEN_REPO   https://github.com/Chlumsky/msdfgen.git)
+set(PIRICAD_DEP_MSDFGEN_SHA    1874bcf7d9624ccc85b4bc9a85d78116f690f35b)  # v1.13
+
+# stb has no releases and never has had; upstream's own instruction is to pin a
+# commit, which is what CLAUDE.md 5.12 asks for anyway.
+set(PIRICAD_DEP_STB_REPO       https://github.com/nothings/stb.git)
+set(PIRICAD_DEP_STB_SHA        2c980bb59875b0d32144a71867fbdebb2f77cd20)
+
 set(PIRICAD_DEP_SPDLOG_REPO    https://github.com/gabime/spdlog.git)
 # v1.15.3, not the v1.14.1 that was pinned first: 1.14.1 predates fmt 11 and its
 # SPDLOG_LOGGER_CATCH macro calls FMT_STRING, whose lambda trips fmt 11's consteval
@@ -358,6 +370,76 @@ if(PIRICAD_WITH_LUA)
     # sol2 reads Lua's version from the headers, but says so explicitly here so a
     # mismatch is a configure error rather than a runtime surprise.
     target_compile_definitions(piricad_sol2 INTERFACE SOL_ALL_SAFETIES_ON=1)
+endif()
+
+
+# ------------------------------------------------------------------- text ----
+#
+# `.claude/render.md` R8: labels and published symbols render from an SDF atlas
+# built with msdfgen, and Turkish text is shaped with HarfBuzz + FreeType. The
+# three are one decision and are acquired together, because two of them without
+# the third draw nothing.
+#
+# WHY SHAPING AT ALL, when the strings are Latin. Turkish is not ASCII: `ğ`, `ş`,
+# `ı` and `İ` are ordinary letters here, a dotted capital İ is a different glyph
+# from I, and the fonts carry the kerning pairs that make `AV` in `TAKS/KAKS`
+# readable. A renderer that mapped bytes to glyphs would be wrong on the first
+# cadastral sheet.
+if(PIRICAD_WITH_TEXT)
+    find_package(Freetype 2.10)
+
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(PIRICAD_HARFBUZZ QUIET IMPORTED_TARGET harfbuzz)
+    endif()
+
+    if(NOT FREETYPE_FOUND OR NOT PIRICAD_HARFBUZZ_FOUND)
+        message(FATAL_ERROR
+            "PIRICAD_WITH_TEXT=ON but the text stack is incomplete "
+            "(FreeType: ${FREETYPE_FOUND}, HarfBuzz: ${PIRICAD_HARFBUZZ_FOUND}).\n"
+            "  Debian/Ubuntu: sudo apt install libfreetype-dev libharfbuzz-dev\n"
+            "  Fedora:        sudo dnf install freetype-devel harfbuzz-devel\n"
+            "  macOS:         brew install freetype harfbuzz\n"
+            "  vcpkg:         freetype harfbuzz\n"
+            "  Or configure with -DPIRICAD_WITH_TEXT=OFF.")
+    endif()
+
+    # CORE ONLY. msdfgen's extension half exists to LOAD fonts and SVGs, and
+    # pulls FreeType, libpng and tinyxml2 in to do it. We already have the
+    # outlines: FreeType hands them over as contours and this project turns them
+    # into an `msdfgen::Shape` itself, which is fewer dependencies and the same
+    # picture.
+    set(MSDFGEN_CORE_ONLY ON CACHE BOOL "" FORCE)
+    set(MSDFGEN_BUILD_STANDALONE OFF CACHE BOOL "" FORCE)
+    set(MSDFGEN_USE_VCPKG OFF CACHE BOOL "" FORCE)
+    set(MSDFGEN_INSTALL OFF CACHE BOOL "" FORCE)
+    set(MSDFGEN_DYNAMIC_RUNTIME OFF CACHE BOOL "" FORCE)
+
+    piricad_dependency(msdfgen
+        REPO ${PIRICAD_DEP_MSDFGEN_REPO}
+        SHA  ${PIRICAD_DEP_MSDFGEN_SHA})
+
+    # stb_rect_pack, for laying the glyphs out in the one texture R8 asks for.
+    # A shelf packer is twenty lines and everyone who writes one gets the same
+    # wasted third of the atlas; CLAUDE.md 5.16 is about exactly this.
+    if(NOT PIRICAD_FETCH_DEPENDENCIES)
+        message(FATAL_ERROR
+            "PIRICAD_WITH_TEXT=ON but PIRICAD_FETCH_DEPENDENCIES=OFF; "
+            "msdfgen and stb are fetched from pinned commits.")
+    endif()
+
+    message(STATUS "  stb:  sabitlenmiş kaynaktan (${PIRICAD_DEP_STB_SHA})")
+    FetchContent_Declare(stb
+        GIT_REPOSITORY ${PIRICAD_DEP_STB_REPO}
+        GIT_TAG        ${PIRICAD_DEP_STB_SHA}
+        GIT_SHALLOW    FALSE
+        SOURCE_SUBDIR  cmake-yok        # header drop: populate, do not add
+        SYSTEM
+        EXCLUDE_FROM_ALL)
+    FetchContent_MakeAvailable(stb)
+
+    add_library(piricad_stb INTERFACE)
+    target_include_directories(piricad_stb SYSTEM INTERFACE "${stb_SOURCE_DIR}")
 endif()
 
 

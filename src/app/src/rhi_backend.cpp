@@ -6,17 +6,16 @@
 // above `render::Backend` was edited to make it exist — which is the claim
 // Article 8.1 makes and the one render.md R1 exists to keep true.
 //
-// WHAT THIS IS NOT, YET. The first slice draws GEOMETRY: polygon fills, strokes
-// and the overlay. It does not draw text, published raster symbols, pattern fills
-// or marker lines. Those are `handles()`'s job to refuse rather than claim: the
-// QGIS backend once decided what it could draw by exclusion and silently dropped
-// three raster types that way (`scripts/ci-gate-backends.sh` exists because of
-// it), so this one lists what it CAN draw and refuses everything else.
+// WHAT THIS DOES NOT DRAW YET. Published raster symbols, pattern fills and marker
+// lines. Those are `handles()`'s job to refuse rather than claim: the QGIS backend
+// once decided what it could draw by exclusion and silently dropped three raster
+// types that way (`scripts/ci-gate-backends.sh` exists because of it), so this one
+// lists what it CAN draw and refuses everything else.
 //
-// Text specifically waits on render.md R8 — an msdfgen SDF atlas shaped with
-// HarfBuzz + FreeType. Drawing it with QPainter here is not an option: render.md
-// P5 forbids Qt painting inside the QRhi path, and a second text renderer would
-// disagree with the first about where a caption sits.
+// TEXT IS HERE when `PIRICAD_WITH_TEXT=ON`, through the SDF atlas of render.md R8
+// — msdfgen fields over FreeType outlines, shaped with HarfBuzz. Not QPainter:
+// render.md P5 forbids Qt painting inside the QRhi path, and a second text
+// renderer would disagree with the first about where a caption sits.
 //
 // COORDINATE SPACES, which are two and must not be confused (drawlist.hpp):
 //   * document batches are CENTRE-RELATIVE with y UP — what the origin offset of
@@ -27,20 +26,33 @@
 #include "piricad/app/backend_factory.hpp"
 
 #include "piricad/render/drawlist.hpp"
+#include "piricad/render/symbology.hpp"
+
+#if PIRICAD_HAVE_TEXT
+#include "piricad/app/data_root.hpp"
+#include "piricad/render/text_atlas.hpp"
+#endif
 
 #include <rhi/qrhi.h>
 
 #include <QByteArray>
 #include <QColor>
+#include <QDebug>
 #include <QFile>
+#include <QImage>
 #include <QMatrix4x4>
 #include <QSize>
 #include <QString>
 
 #include <algorithm>
+#include <bit>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 namespace piricad::app {
@@ -55,10 +67,17 @@ struct Uniforms
 {
     float mvp[16]{};   ///< pixels -> clip, clip-space correction folded in
     float colour[4]{}; ///< straight RGBA, 0..1
-    float params[4]{}; ///< x: half line width in device pixels
+
+    /// x: half line width · y: the SDF distance range · z: the dash period in
+    /// pixels · w: how many of `dash` are meaningful.
+    float params[4]{};
+
+    /// Mark and space lengths in pixels, alternating, mark first. Eight is what
+    /// `PassStyle::dash_lengths` carries, which is enough for a dash-dot-dot.
+    float dash[8]{};
 };
 
-static_assert(sizeof(Uniforms) == 96, "the shaders declare mat4 + vec4 + vec4");
+static_assert(sizeof(Uniforms) == 128, "the shaders declare mat4 + vec4 + vec4 + vec4[2]");
 
 /// Unit quad for the line pipeline: x runs along the segment, y picks the side.
 /// Four vertices as a triangle strip, the cheapest quad there is.
@@ -68,6 +87,37 @@ constexpr float kLineCorners[8] = {
     1.0f, -1.0f, //
     1.0f, 1.0f,  //
 };
+
+/// The em size an overlay label gets when it does not ask for one.
+///
+/// 12 px, which is `design.md` §3's body size. A label with `px == 0` means "the
+/// backend's default UI font", and a backend that guessed differently from the
+/// QPainter one would move the status readouts when the engine changed.
+constexpr float kDefaultUiPx = 12.0f;
+
+/// The unit quad for the text pipeline: 0..1 in both axes, as a triangle strip.
+/// Distinct from `kLineCorners`, whose y runs -1..1 because a segment is widened
+/// about its own centre while a glyph is placed from its corner.
+constexpr float kQuadCorners[8] = {
+    0.0f, 0.0f, //
+    0.0f, 1.0f, //
+    1.0f, 0.0f, //
+    1.0f, 1.0f, //
+};
+
+constexpr double kPi = 3.14159265358979323846;
+
+/// A colour with the symbol layer's opacity multiplied into its alpha.
+///
+/// A layer's opacity is not a second colour; it scales the one it has, and a
+/// backend that ignored it would draw MPYY's translucent lekesi as an opaque
+/// block over whatever it is meant to sit on.
+std::uint32_t faded(std::uint32_t rgba, std::uint8_t opacity) noexcept
+{
+    if (rgba == 0 || opacity == 255) return rgba;
+    const std::uint32_t a = ((rgba >> 24) & 0xFFu) * opacity / 255u;
+    return (a << 24) | (rgba & 0x00FFFFFFu);
+}
 
 /// Straight RGBA byte order matching `std::uint32_t` in the draw list: 0xAARRGGBB.
 void unpack(std::uint32_t rgba, float out[4]) noexcept
@@ -93,15 +143,39 @@ QShader load_shader(const char* path)
 struct Cmd
 {
     enum class Kind : std::uint8_t {
-        Fill, ///< stencil the rings, then cover the bounding box
-        Line, ///< instanced segment quads
+        Fill,   ///< stencil the rings, then cover the bounding box with colour
+        Mask,   ///< stencil the rings and stop — a pattern draws inside them next
+        Unmask, ///< clear the mask with the cover quad, writing no colour
+        Line,   ///< instanced segment quads
+        Tri,    ///< a triangle list: marker interiors
+        Text,   ///< instanced glyph quads against the SDF atlas
     };
 
     Kind kind{Kind::Line};
+
+    /// Line and Tri: draw only where the mask is set.
+    ///
+    /// This is how a pattern fill is CLIPPED to its face, and the mask is the
+    /// same even-odd stencil a solid fill uses. A hatch that was not clipped
+    /// would run across the whole bounding box — over the neighbouring parcel
+    /// and out into the sea.
+    bool clipped{false};
     std::uint32_t uniform{0}; ///< slot in the uniform buffer
-    std::uint32_t first{0};   ///< first vertex (Fill) or first instance (Line)
-    std::uint32_t count{0};   ///< vertices (Fill) or instances (Line)
-    std::uint32_t cover{0};   ///< Fill only: first vertex of its 6-vertex cover quad
+
+    /// Fill: the first VERTEX. Line and Text: the BYTE OFFSET of the first
+    /// instance in its buffer.
+    ///
+    /// A byte offset and not a `firstInstance`, and the difference is not a style
+    /// choice. `firstInstance` needs `QRhi::BaseInstance`, which OpenGL ES and
+    /// plain GL without ARB_base_instance do not have — and where it is missing
+    /// the draw is silently wrong rather than refused. That is exactly what it
+    /// looked like: the first stroke batch of the frame drew and every one after
+    /// it vanished, so the grid came out half there and the drawing not at all.
+    /// Binding the vertex buffer at an offset is the portable way to say the same
+    /// thing and needs no feature at all.
+    std::uint32_t first{0};
+    std::uint32_t count{0}; ///< vertices (Fill) or instances (Line, Text)
+    std::uint32_t cover{0}; ///< Fill only: first vertex of its 6-vertex cover quad
 };
 
 class RhiBackend final : public render::Backend
@@ -132,6 +206,55 @@ private:
     void emit_document(const render::DrawList& list, double cx, double cy);
     void emit_overlay(const render::Overlay& overlay, std::size_t from, std::size_t to);
 
+    // ---- published symbology (`symbology.hpp`) ------------------------------
+
+    /// A solid face, or one ring set stencilled as a MASK for a pattern to draw
+    /// inside. Returns false when the batch had nothing to stencil.
+    bool emit_face(const render::PolygonBatch& batch, double cx, double cy, std::uint32_t rgba,
+                   bool as_mask, float box[4]);
+
+    /// Clears a mask left by `emit_face(..., as_mask=true)`.
+    void emit_unmask(const float box[4]);
+
+    /// One glyph at every stamp: interior triangles and outline segments.
+    ///
+    /// `extra_cos`/`extra_sin` is the pass's own rotation, composed with each
+    /// stamp's direction — a `çizik` asked to lie ACROSS a circle carries its
+    /// angle here while the stamp carries the line's.
+    void emit_stamps(const render::MarkerOutline& glyph, const render::PassStyle& ps,
+                     float extra_cos, float extra_sin, bool clipped);
+
+    /// `isaretci-cizgi` and `tarak-cizgi`: glyphs placed along the geometry.
+    void emit_marker_line(const render::PolylineBatch& batch, const render::PassStyle& ps,
+                          double cx, double cy, bool hash);
+
+    /// `cizgi-desen-dolgu`: parallel lines clipped to the face.
+    void emit_line_pattern(const render::PolygonBatch& batch, const render::PassStyle& ps,
+                           double cx, double cy);
+
+    /// `nokta-desen-dolgu`: a grid of glyphs clipped to the face.
+    void emit_point_pattern(const render::PolygonBatch& batch, const render::PassStyle& ps,
+                            double cx, double cy);
+
+    /// One glyph at the centre of each face.
+    void emit_centroid(const render::PolygonBatch& batch, const render::PassStyle& ps, double cx,
+                       double cy);
+
+#if PIRICAD_HAVE_TEXT
+    /// The captions in the document and the labels in the overlay, as glyph quads.
+    void emit_texts(const render::DrawList& list, double cx, double cy);
+    void emit_labels(const render::Overlay& overlay);
+
+    /// Appends one line of text and returns how many glyph instances it added.
+    ///
+    /// `origin` is where the BASELINE starts in widget pixels, `px` the em size,
+    /// and `cos_a`/`sin_a` the baseline direction — a rotation the document never
+    /// stores as an angle, because the two ends of the baseline already say it.
+    std::uint32_t emit_line(render::Face face, std::string_view text, float origin_x,
+                            float origin_y, float px, float cos_a, float sin_a, std::uint32_t rgba,
+                            std::uint8_t anchor);
+#endif
+
     /// Appends one ring as a triangle fan and grows `box`. Returns the vertex count.
     std::uint32_t emit_fan(const float* xs, const float* ys, std::uint32_t count, double cx,
                            double cy, bool flip_y, float box[4]);
@@ -139,17 +262,29 @@ private:
     /// Appends the six vertices of an axis-aligned cover quad.
     std::uint32_t emit_cover(const float box[4]);
 
-    /// Appends one segment instance.
-    void emit_segment(float x0, float y0, float x1, float y1);
+    /// Appends one segment instance. `along0` is the distance from the start of
+    /// the RUN to `x0,y0` — what the dash pattern is measured against.
+    void emit_segment(float x0, float y0, float x1, float y1, float along0 = 0.0f);
 
     /// Reserves a uniform slot and fills it.
-    std::uint32_t push_uniform(std::uint32_t rgba, float half_width);
+    ///
+    /// `dash` is the mark/space ladder in PIXELS, mark first; null means solid.
+    std::uint32_t push_uniform(std::uint32_t rgba, float half_width, const float* dash = nullptr,
+                               int dash_count = 0);
 
     // ---- GPU resources -----------------------------------------------------
 
     bool ensure_resources(QRhi* rhi, QRhiRenderPassDescriptor* rp, int sample_count);
     bool ensure_capacity(QRhi* rhi, QRhiResourceUpdateBatch* rub);
     void release();
+
+#if PIRICAD_HAVE_TEXT
+    /// Opens the atlas once, and keeps the failure so it is not retried per frame.
+    void ensure_atlas();
+
+    /// Creates or re-creates the atlas texture and re-uploads when it changed.
+    bool ensure_atlas_texture(QRhi* rhi, QRhiResourceUpdateBatch* rub);
+#endif
 
     QRhi* rhi_{nullptr};
     QRhiRenderPassDescriptor* rp_{nullptr};
@@ -161,8 +296,36 @@ private:
     std::unique_ptr<QRhiBuffer> uniforms_;
     std::unique_ptr<QRhiShaderResourceBindings> srb_;
     std::unique_ptr<QRhiGraphicsPipeline> line_;
+    std::unique_ptr<QRhiGraphicsPipeline> line_clip_;
+    std::unique_ptr<QRhiGraphicsPipeline> tri_;
+    std::unique_ptr<QRhiGraphicsPipeline> tri_clip_;
     std::unique_ptr<QRhiGraphicsPipeline> fill_stencil_;
     std::unique_ptr<QRhiGraphicsPipeline> fill_cover_;
+    std::unique_ptr<QRhiGraphicsPipeline> mask_clear_;
+
+#if PIRICAD_HAVE_TEXT
+    std::unique_ptr<QRhiBuffer> quad_;   ///< the four static glyph-quad corners
+    std::unique_ptr<QRhiBuffer> glyphs_; ///< per-instance glyph rectangles
+    std::unique_ptr<QRhiTexture> atlas_texture_;
+    std::unique_ptr<QRhiSampler> sampler_;
+    std::unique_ptr<QRhiShaderResourceBindings> srb_text_;
+    std::unique_ptr<QRhiGraphicsPipeline> text_;
+
+    std::unique_ptr<render::TextAtlas> atlas_;
+    bool atlas_tried_{false};
+    int atlas_side_{0}; ///< the side the texture was created at
+    std::uint64_t atlas_uploaded_{0};
+    bool quad_uploaded_{false};
+    quint32 glyph_capacity_{0}; ///< bytes
+
+    std::vector<float> glyph_data_;           ///< 13 floats per instance
+    std::vector<render::PlacedGlyph> shaped_; ///< shaping scratch
+
+    /// The lines of one caption. A member and not a local, because the draw loop
+    /// must not allocate (render.md R20, P6) and a two-line TAKS/KAKS label on
+    /// every parcel of a sheet would be one vector construction per parcel.
+    std::vector<std::string_view> lines_;
+#endif
 
     quint32 segment_capacity_{0}; ///< bytes
     quint32 vertex_capacity_{0};  ///< bytes
@@ -172,10 +335,27 @@ private:
 
     // ---- per-frame CPU buffers, capacity kept between frames ----------------
 
-    std::vector<float> segment_data_; ///< x0,y0,x1,y1 per instance
+    std::vector<float> segment_data_; ///< x0,y0,x1,y1,along0 per instance
     std::vector<float> vertex_data_;  ///< x,y per vertex
     std::vector<char> uniform_data_;  ///< `uniform_stride_` bytes per slot
     std::vector<Cmd> cmds_;
+
+    // Symbology scratch. Members and not locals, because the draw loop must not
+    // allocate (render.md R20, P6) and a sheet asks for these once per pass.
+    render::MarkerOutline glyph_;
+    std::vector<render::Stamp> stamps_;
+    std::vector<float> scratch_;
+    std::vector<float> run_x_;
+    std::vector<float> run_y_;
+
+    /// The frame's atlas distance range, copied into every uniform slot beside the
+    /// matrix. Zero when this build has no text.
+    float px_range_{0.0f};
+
+    /// This frame's widget centre. The captions are emitted from `paint_aids`,
+    /// which runs after the passes and does not carry it — see `render()`.
+    double last_cx_{0.0};
+    double last_cy_{0.0};
 
     Uniforms proto_{}; ///< this frame's mvp, copied into every slot
 };
@@ -187,13 +367,28 @@ private:
 bool RhiBackend::handles(core::SymbolLayerType type)
 {
     switch (type) {
-    // Geometry, which is what the first slice draws.
-    case core::SymbolLayerType::SimpleFill: return true;
-    case core::SymbolLayerType::SimpleLine: return true;
+    // Geometry, and the vector symbology of `/data/catalogs/mpyy-vektor` — 816 of
+    // the annex's 1 574 symbol layers. Markers along a line, glyph grids and
+    // hatches clipped to a face, one glyph at a centroid: all of it is triangles
+    // and segments through the pipelines above, clipped by the same even-odd
+    // stencil a solid fill uses (`symbology.hpp`).
+    case core::SymbolLayerType::SimpleFill:
+    case core::SymbolLayerType::SimpleLine:
+    case core::SymbolLayerType::SimpleMarker:
+    case core::SymbolLayerType::MarkerLine:
+    case core::SymbolLayerType::HashLine:
+    case core::SymbolLayerType::CentroidFill:
+    case core::SymbolLayerType::LinePatternFill:
+    case core::SymbolLayerType::PointPatternFill: return true;
 
-    // Everything below needs something this slice does not have yet: an SDF atlas
-    // for text and glyphs (render.md R8), a pattern pipeline, or the document's
-    // decoded image store on the GPU. Refused rather than claimed and skipped.
+    // TextMarker is drawn from the caption list rather than from a pass, so
+    // claiming it here would draw it twice.
+    //
+    // The three published PICTURE types need the document's image store on the
+    // GPU as a texture atlas, which this backend does not build yet. Refused
+    // rather than claimed and skipped: the QGIS backend decided what it could
+    // draw by exclusion once, and three raster types went out the door silently.
+    case core::SymbolLayerType::TextMarker:
     default: return false;
     }
 }
@@ -202,25 +397,42 @@ bool RhiBackend::handles(core::SymbolLayerType type)
 // frame building
 // -----------------------------------------------------------------------------
 
-std::uint32_t RhiBackend::push_uniform(std::uint32_t rgba, float half_width)
+std::uint32_t RhiBackend::push_uniform(std::uint32_t rgba, float half_width, const float* dash,
+                                       int dash_count)
 {
     const std::size_t slot = uniform_data_.size() / uniform_stride_;
 
     Uniforms u = proto_;
     unpack(rgba, u.colour);
     u.params[0] = half_width;
+    u.params[1] = px_range_;
+
+    if (dash != nullptr && dash_count > 0) {
+        const int count = std::min(dash_count, 8);
+        float period    = 0.0f;
+        for (int i = 0; i < count; ++i) {
+            u.dash[i] = dash[i];
+            period += dash[i];
+        }
+        // An ODD ladder repeats inverted — mark, space, mark / space, mark, space.
+        // Doubling the period is what makes the second repeat land on the space,
+        // which is what a three-entry dash-dot pattern means on paper.
+        u.params[2] = (count % 2 == 0) ? period : period * 2.0f;
+        u.params[3] = static_cast<float>(count);
+    }
 
     uniform_data_.resize(uniform_data_.size() + uniform_stride_, 0);
     std::memcpy(uniform_data_.data() + slot * uniform_stride_, &u, sizeof(u));
     return static_cast<std::uint32_t>(slot);
 }
 
-void RhiBackend::emit_segment(float x0, float y0, float x1, float y1)
+void RhiBackend::emit_segment(float x0, float y0, float x1, float y1, float along0)
 {
     segment_data_.push_back(x0);
     segment_data_.push_back(y0);
     segment_data_.push_back(x1);
     segment_data_.push_back(y1);
+    segment_data_.push_back(along0);
 }
 
 std::uint32_t RhiBackend::emit_fan(const float* xs, const float* ys, std::uint32_t count, double cx,
@@ -267,71 +479,377 @@ std::uint32_t RhiBackend::emit_cover(const float box[4])
     return first;
 }
 
+bool RhiBackend::emit_face(const render::PolygonBatch& batch, double cx, double cy,
+                           std::uint32_t rgba, bool as_mask, float box[4])
+{
+    box[0] = 1e30f;
+    box[1] = 1e30f;
+    box[2] = -1e30f;
+    box[3] = -1e30f;
+
+    if (batch.runs.empty()) return false;
+
+    const std::uint32_t first = static_cast<std::uint32_t>(vertex_data_.size() / 2);
+
+    std::size_t offset  = 0;
+    std::uint32_t total = 0;
+    for (std::uint32_t run : batch.runs) {
+        total += emit_fan(batch.xs.data() + offset, batch.ys.data() + offset, run, cx, cy,
+                          /*flip_y=*/true, box);
+        offset += run;
+    }
+    if (total == 0) return false;
+
+    Cmd cmd;
+    cmd.kind    = as_mask ? Cmd::Kind::Mask : Cmd::Kind::Fill;
+    cmd.uniform = push_uniform(rgba, 0.0f);
+    cmd.first   = first;
+    cmd.count   = total;
+    cmd.cover   = emit_cover(box);
+    cmds_.push_back(cmd);
+    return true;
+}
+
+void RhiBackend::emit_unmask(const float box[4])
+{
+    Cmd cmd;
+    cmd.kind    = Cmd::Kind::Unmask;
+    cmd.uniform = push_uniform(0u, 0.0f);
+    cmd.cover   = emit_cover(box);
+    cmds_.push_back(cmd);
+}
+
+void RhiBackend::emit_stamps(const render::MarkerOutline& glyph, const render::PassStyle& ps,
+                             float extra_cos, float extra_sin, bool clipped)
+{
+    if (stamps_.empty() || glyph.runs.empty()) return;
+
+    const std::uint32_t fill_rgba = faded(ps.fill_rgba, ps.opacity);
+    const std::uint32_t line_rgba = faded(ps.line_rgba, ps.opacity);
+
+    const std::uint32_t tri_first = static_cast<std::uint32_t>(vertex_data_.size() / 2);
+    const std::uint32_t seg_first =
+        static_cast<std::uint32_t>(segment_data_.size() * sizeof(float));
+    std::uint32_t tri_count = 0;
+
+    for (const render::Stamp& stamp : stamps_) {
+        // The stamp's direction composed with the pass's own angle. Two rotations
+        // and not one: the stamp carries where the LINE points, the pass carries
+        // how the GLYPH is turned on it.
+        const float ca = stamp.cos_a * extra_cos - stamp.sin_a * extra_sin;
+        const float sa = stamp.cos_a * extra_sin + stamp.sin_a * extra_cos;
+
+        const auto place = [&](float lx, float ly) {
+            return std::pair<float, float>{stamp.x + lx * ca - ly * sa,
+                                           stamp.y + lx * sa + ly * ca};
+        };
+
+        std::size_t offset = 0;
+        for (std::size_t r = 0; r < glyph.runs.size(); ++r) {
+            const std::uint32_t run = glyph.runs[r];
+            const bool shut         = r < glyph.closed.size() && glyph.closed[r] != 0;
+
+            // The interior, fanned from the glyph's own ORIGIN rather than from a
+            // vertex. Every shape in `symbology.hpp` is star-shaped about the
+            // centre — that is what "a marker centred on its point" means — so
+            // the fan is a correct triangulation of the star's notches and the
+            // arrow's tail without a triangulator.
+            if (shut && fill_rgba != 0 && run >= 3) {
+                const auto centre = place(0.0f, 0.0f);
+                for (std::uint32_t v = 0; v < run; ++v) {
+                    const auto a             = place(glyph.xs[offset + v], glyph.ys[offset + v]);
+                    const std::uint32_t next = (v + 1) % run;
+                    const auto b = place(glyph.xs[offset + next], glyph.ys[offset + next]);
+
+                    vertex_data_.push_back(centre.first);
+                    vertex_data_.push_back(centre.second);
+                    vertex_data_.push_back(a.first);
+                    vertex_data_.push_back(a.second);
+                    vertex_data_.push_back(b.first);
+                    vertex_data_.push_back(b.second);
+                }
+                tri_count += run * 3;
+            }
+
+            if (line_rgba != 0 && ps.line_width_px > 0.0f) {
+                for (std::uint32_t v = 0; v + 1 < run; ++v) {
+                    const auto a = place(glyph.xs[offset + v], glyph.ys[offset + v]);
+                    const auto b = place(glyph.xs[offset + v + 1], glyph.ys[offset + v + 1]);
+                    emit_segment(a.first, a.second, b.first, b.second);
+                }
+                if (shut && run >= 3) {
+                    const auto a = place(glyph.xs[offset + run - 1], glyph.ys[offset + run - 1]);
+                    const auto b = place(glyph.xs[offset], glyph.ys[offset]);
+                    emit_segment(a.first, a.second, b.first, b.second);
+                }
+            }
+
+            offset += run;
+        }
+    }
+
+    if (tri_count > 0) {
+        Cmd cmd;
+        cmd.kind    = Cmd::Kind::Tri;
+        cmd.clipped = clipped;
+        cmd.uniform = push_uniform(fill_rgba, 0.0f);
+        cmd.first   = tri_first;
+        cmd.count   = tri_count;
+        cmds_.push_back(cmd);
+    }
+
+    const std::uint32_t seg_count =
+        static_cast<std::uint32_t>(segment_data_.size() / 5 - seg_first / (5 * sizeof(float)));
+    if (seg_count > 0) {
+        Cmd cmd;
+        cmd.kind    = Cmd::Kind::Line;
+        cmd.clipped = clipped;
+        cmd.uniform = push_uniform(line_rgba, std::max(0.5f, ps.line_width_px * 0.5f));
+        cmd.first   = seg_first;
+        cmd.count   = seg_count;
+        cmds_.push_back(cmd);
+    }
+}
+
+void RhiBackend::emit_marker_line(const render::PolylineBatch& batch, const render::PassStyle& ps,
+                                  double cx, double cy, bool hash)
+{
+    if (batch.runs.empty()) return;
+
+    const double size = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 5.0;
+    const double interval =
+        ps.interval_px > 0.5f ? static_cast<double>(ps.interval_px) : size * 3.0;
+
+    // A hash tick is a STROKE and has no interior to fill, which is why it is
+    // asked for by shape rather than by flag.
+    render::marker_outline(hash ? core::MarkerShape::Tick : ps.shape, size, glyph_);
+
+    stamps_.clear();
+    scratch_.clear();
+
+    std::size_t offset = 0;
+    for (std::uint32_t run : batch.runs) {
+        // The placement walks SCREEN pixels, so the offset and the y flip happen
+        // once, here, rather than inside the shared arithmetic. Two plain arrays
+        // rather than one interleaved buffer, and they are MEMBERS: the draw loop
+        // must not allocate (render.md R20) and a boundary with a marker line on
+        // it has one run per parcel.
+        run_x_.clear();
+        run_y_.clear();
+        for (std::uint32_t v = 0; v < run; ++v) {
+            run_x_.push_back(static_cast<float>(cx + static_cast<double>(batch.xs[offset + v])));
+            run_y_.push_back(static_cast<float>(cy - static_cast<double>(batch.ys[offset + v])));
+        }
+        render::place_along_run(run_x_.data(), run_y_.data(), run, ps.placement, interval,
+                                static_cast<double>(ps.phase_px), stamps_);
+        offset += run;
+    }
+
+    const double radians = static_cast<double>(ps.angle_udeg) / 1'000'000.0 * kPi / 180.0;
+    emit_stamps(glyph_, ps, static_cast<float>(std::cos(radians)),
+                static_cast<float>(std::sin(radians)), /*clipped=*/false);
+}
+
+void RhiBackend::emit_line_pattern(const render::PolygonBatch& batch, const render::PassStyle& ps,
+                                   double cx, double cy)
+{
+    float box[4] = {};
+    // NO GROUND WASH. `dolgu_renk` is the GLYPH's colour — the black of a forest
+    // triangle — and washing the face with it paints the whole parcel that colour
+    // with the pattern invisible inside. Washing is a `dolgu` layer's job and the
+    // MPYY package puts one underneath, which is what draws the green under the
+    // trees.
+    if (!emit_face(batch, cx, cy, 0u, /*as_mask=*/true, box)) return;
+
+    const double spacing = ps.interval_px > 0.5f ? static_cast<double>(ps.interval_px) : 6.0;
+
+    scratch_.clear();
+    render::hatch_lines(box[0], box[1], box[2], box[3], spacing,
+                        static_cast<double>(ps.angle_udeg) / 1'000'000.0, scratch_);
+
+    const std::uint32_t first = static_cast<std::uint32_t>(segment_data_.size() * sizeof(float));
+    for (std::size_t i = 0; i + 3 < scratch_.size(); i += 4)
+        emit_segment(scratch_[i], scratch_[i + 1], scratch_[i + 2], scratch_[i + 3]);
+
+    const std::uint32_t count =
+        static_cast<std::uint32_t>(segment_data_.size() / 5 - first / (5 * sizeof(float)));
+    if (count > 0) {
+        Cmd cmd;
+        cmd.kind    = Cmd::Kind::Line;
+        cmd.clipped = true;
+        cmd.uniform =
+            push_uniform(faded(ps.line_rgba, ps.opacity), std::max(0.5f, ps.line_width_px * 0.5f));
+        cmd.first = first;
+        cmd.count = count;
+        cmds_.push_back(cmd);
+    }
+
+    emit_unmask(box);
+}
+
+void RhiBackend::emit_point_pattern(const render::PolygonBatch& batch, const render::PassStyle& ps,
+                                    double cx, double cy)
+{
+    float box[4] = {};
+    if (!emit_face(batch, cx, cy, 0u, /*as_mask=*/true, box)) return;
+
+    const double step_x = ps.interval_px > 0.5f ? static_cast<double>(ps.interval_px) : 12.0;
+    // Zero means SQUARE, not zero: a glyph grid with no second spacing is a
+    // regular grid, which is what a forest symbol wants.
+    const double step_y = ps.spacing_y_px > 0.5f ? static_cast<double>(ps.spacing_y_px) : step_x;
+    const double size   = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 4.0;
+
+    scratch_.clear();
+    render::pattern_points(box[0], box[1], box[2], box[3], step_x, step_y, scratch_);
+
+    stamps_.clear();
+    stamps_.reserve(scratch_.size() / 2);
+    for (std::size_t i = 0; i + 1 < scratch_.size(); i += 2)
+        stamps_.push_back(render::Stamp{scratch_[i], scratch_[i + 1], 1.0f, 0.0f});
+
+    render::marker_outline(ps.shape, size, glyph_);
+
+    const double radians = static_cast<double>(ps.angle_udeg) / 1'000'000.0 * kPi / 180.0;
+    emit_stamps(glyph_, ps, static_cast<float>(std::cos(radians)),
+                static_cast<float>(std::sin(radians)), /*clipped=*/true);
+
+    emit_unmask(box);
+}
+
+void RhiBackend::emit_centroid(const render::PolygonBatch& batch, const render::PassStyle& ps,
+                               double cx, double cy)
+{
+    if (batch.runs.empty()) return;
+
+    const double size = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 6.0;
+    render::marker_outline(ps.shape, size, glyph_);
+
+    stamps_.clear();
+
+    std::size_t offset = 0;
+    for (std::uint32_t run : batch.runs) {
+        // The bounding-box centre, not the area centroid. For a plan symbol placed
+        // inside a lekesi the difference is invisible, and the area centroid of a
+        // ring with holes is a different computation that belongs in core.
+        float min_x = 1e30f, min_y = 1e30f, max_x = -1e30f, max_y = -1e30f;
+        for (std::uint32_t v = 0; v < run; ++v) {
+            const auto x = static_cast<float>(cx + static_cast<double>(batch.xs[offset + v]));
+            const auto y = static_cast<float>(cy - static_cast<double>(batch.ys[offset + v]));
+            min_x        = std::min(min_x, x);
+            min_y        = std::min(min_y, y);
+            max_x        = std::max(max_x, x);
+            max_y        = std::max(max_y, y);
+        }
+        if (run > 0)
+            stamps_.push_back(
+                render::Stamp{(min_x + max_x) * 0.5f, (min_y + max_y) * 0.5f, 1.0f, 0.0f});
+        offset += run;
+    }
+
+    const double radians = static_cast<double>(ps.angle_udeg) / 1'000'000.0 * kPi / 180.0;
+    emit_stamps(glyph_, ps, static_cast<float>(std::cos(radians)),
+                static_cast<float>(std::sin(radians)), /*clipped=*/false);
+}
+
 void RhiBackend::emit_document(const render::DrawList& list, double cx, double cy)
 {
+    using core::SymbolLayerType;
+
     // IN DRAW ORDER, which is not index order: MPYY prescribes a draw order for
     // plan sheets and a symbol's stack runs bottom layer first. The scene builder
     // sorted it; this loop obeys it, exactly as the QPainter backend does.
     for (std::uint32_t index : list.order) {
         if (index >= list.passes.size()) continue;
 
-        const render::PassStyle& ps = list.passes[index];
-        if (!handles(ps.type)) continue;
+        const render::PassStyle& ps       = list.passes[index];
+        const render::PolylineBatch& line = list.polylines[index];
+        const render::PolygonBatch& face  = list.polygons[index];
 
-        if (ps.wants_fill) {
-            const render::PolygonBatch& batch = list.polygons[index];
-            if (!batch.runs.empty() && batch.rgba != 0) {
-                float box[4]              = {1e30f, 1e30f, -1e30f, -1e30f};
-                const std::uint32_t first = static_cast<std::uint32_t>(vertex_data_.size() / 2);
-
-                std::size_t offset  = 0;
-                std::uint32_t total = 0;
-                for (std::uint32_t run : batch.runs) {
-                    total += emit_fan(batch.xs.data() + offset, batch.ys.data() + offset, run, cx,
-                                      cy, /*flip_y=*/true, box);
-                    offset += run;
-                }
-
-                if (total > 0) {
-                    Cmd cmd;
-                    cmd.kind    = Cmd::Kind::Fill;
-                    cmd.uniform = push_uniform(batch.rgba, 0.0f);
-                    cmd.first   = first;
-                    cmd.count   = total;
-                    cmd.cover   = emit_cover(box);
-                    cmds_.push_back(cmd);
-                }
+        switch (ps.type) {
+        case SymbolLayerType::SimpleFill: {
+            if (face.rgba != 0) {
+                float box[4] = {};
+                (void)emit_face(face, cx, cy, face.rgba, /*as_mask=*/false, box);
             }
+            break;
         }
 
-        if (ps.wants_stroke) {
-            const render::PolylineBatch& batch = list.polylines[index];
-            if (!batch.runs.empty() && batch.rgba != 0) {
-                const std::uint32_t first = static_cast<std::uint32_t>(segment_data_.size() / 4);
+        case SymbolLayerType::SimpleLine: {
+            if (line.runs.empty() || line.rgba == 0) break;
 
-                std::size_t offset = 0;
-                for (std::uint32_t run : batch.runs) {
-                    for (std::uint32_t v = 0; v + 1 < run; ++v) {
-                        const std::size_t a = offset + v;
-                        emit_segment(static_cast<float>(cx + static_cast<double>(batch.xs[a])),
-                                     static_cast<float>(cy - static_cast<double>(batch.ys[a])),
-                                     static_cast<float>(cx + static_cast<double>(batch.xs[a + 1])),
-                                     static_cast<float>(cy - static_cast<double>(batch.ys[a + 1])));
-                    }
-                    offset += run;
-                }
+            const std::uint32_t first =
+                static_cast<std::uint32_t>(segment_data_.size() * sizeof(float));
 
-                const std::uint32_t count =
-                    static_cast<std::uint32_t>(segment_data_.size() / 4) - first;
-                if (count > 0) {
-                    Cmd cmd;
-                    cmd.kind    = Cmd::Kind::Line;
-                    cmd.uniform = push_uniform(batch.rgba, std::max(0.5f, batch.width_px * 0.5f));
-                    cmd.first   = first;
-                    cmd.count   = count;
-                    cmds_.push_back(cmd);
+            std::size_t offset = 0;
+            for (std::uint32_t run : line.runs) {
+                // The dash is measured along the WHOLE run, so the distance is
+                // carried across the vertices rather than restarted at each one.
+                // Restarting it at every corner is what turns a published kesik
+                // çizgi into a row of unequal stubs, one per vertex.
+                float along = 0.0f;
+                for (std::uint32_t v = 0; v + 1 < run; ++v) {
+                    const std::size_t a = offset + v;
+                    const auto x0       = static_cast<float>(cx + static_cast<double>(line.xs[a]));
+                    const auto y0       = static_cast<float>(cy - static_cast<double>(line.ys[a]));
+                    const auto x1 = static_cast<float>(cx + static_cast<double>(line.xs[a + 1]));
+                    const auto y1 = static_cast<float>(cy - static_cast<double>(line.ys[a + 1]));
+                    emit_segment(x0, y0, x1, y1, along);
+                    along += static_cast<float>(std::hypot(x1 - x0, y1 - y0));
                 }
+                offset += run;
             }
+
+            const std::uint32_t count =
+                static_cast<std::uint32_t>(segment_data_.size() / 5 - first / (5 * sizeof(float)));
+            if (count > 0) {
+                // The line type's own ladder, resolved out of the document's dash
+                // store by the scene builder and carried in HUNDREDTHS of the
+                // stroke width — a published kesik çizgi scales with its own
+                // weight, so a heavier boundary gets a proportionally longer mark.
+                float dash[8]{};
+                const int dash_count = std::min<int>(ps.dash_count, 8);
+                for (int i = 0; i < dash_count; ++i)
+                    dash[i] = static_cast<float>(ps.dash_lengths[i]) * 0.01f *
+                              std::max(1.0f, line.width_px);
+
+                Cmd cmd;
+                cmd.kind = Cmd::Kind::Line;
+                cmd.uniform =
+                    push_uniform(line.rgba, std::max(0.5f, line.width_px * 0.5f), dash, dash_count);
+                cmd.first = first;
+                cmd.count = count;
+                cmds_.push_back(cmd);
+            }
+            break;
+        }
+
+        case SymbolLayerType::MarkerLine: emit_marker_line(line, ps, cx, cy, /*hash=*/false); break;
+
+        case SymbolLayerType::HashLine: emit_marker_line(line, ps, cx, cy, /*hash=*/true); break;
+
+        case SymbolLayerType::SimpleMarker:
+            // A marker is a marker line whose placement says where. The scene
+            // builder puts point geometry in the stroke batch, so this is the
+            // same walk with a different default spacing.
+            emit_marker_line(line, ps, cx, cy, /*hash=*/false);
+            break;
+
+        case SymbolLayerType::LinePatternFill: emit_line_pattern(face, ps, cx, cy); break;
+
+        case SymbolLayerType::PointPatternFill: emit_point_pattern(face, ps, cx, cy); break;
+
+        case SymbolLayerType::CentroidFill: emit_centroid(face, ps, cx, cy); break;
+
+        case SymbolLayerType::TextMarker:
+        case SymbolLayerType::RasterFill:
+        case SymbolLayerType::RasterMarker:
+        case SymbolLayerType::RasterLine:
+            // Nothing here, for two different reasons that `handles()` records.
+            // A TextMarker became a `TextItem` in the scene builder and is drawn
+            // with the captions, over every fill and stroke — a word inside a
+            // gösterim that a later pass could paint over is a word nobody reads.
+            // The three raster types wait on the image store reaching the GPU.
+            break;
         }
     }
 }
@@ -366,34 +884,215 @@ void RhiBackend::emit_overlay(const render::Overlay& overlay, std::size_t from, 
             }
         }
 
-        const std::uint32_t first = static_cast<std::uint32_t>(segment_data_.size() / 4);
+        const std::uint32_t first =
+            static_cast<std::uint32_t>(segment_data_.size() * sizeof(float));
 
         std::size_t offset = 0;
         for (std::size_t r = 0; r < batch.runs.size(); ++r) {
             const std::uint32_t run = batch.runs[r];
-            for (std::uint32_t v = 0; v + 1 < run; ++v) {
-                const std::size_t a = offset + v;
-                emit_segment(batch.xs[a], batch.ys[a], batch.xs[a + 1], batch.ys[a + 1]);
-            }
+
+            // The dash is measured along the WHOLE run, so the distance carries
+            // across the vertices rather than restarting at each one.
+            float along     = 0.0f;
+            const auto step = [&](std::size_t a, std::size_t b) {
+                emit_segment(batch.xs[a], batch.ys[a], batch.xs[b], batch.ys[b], along);
+                along += std::hypot(batch.xs[b] - batch.xs[a], batch.ys[b] - batch.ys[a]);
+            };
+
+            for (std::uint32_t v = 0; v + 1 < run; ++v)
+                step(offset + v, offset + v + 1);
+
             // A closed run's seam is a segment like any other; leaving it out is
             // what draws a selection rectangle with one side missing.
             if (run >= 3 && r < batch.closed.size() && batch.closed[r] != 0)
-                emit_segment(batch.xs[offset + run - 1], batch.ys[offset + run - 1],
-                             batch.xs[offset], batch.ys[offset]);
+                step(offset + run - 1, offset);
             offset += run;
         }
 
-        const std::uint32_t count = static_cast<std::uint32_t>(segment_data_.size() / 4) - first;
+        const std::uint32_t count =
+            static_cast<std::uint32_t>(segment_data_.size() / 5 - first / (5 * sizeof(float)));
         if (count > 0) {
+            // The overlay says only WHETHER it is dashed, not with what ladder: a
+            // KESEN selection box reads as dashed before any label does, and four
+            // on two is what Qt's own dash line draws — so the two backends agree
+            // without the widget having to describe a pattern.
+            const float w       = std::max(1.0f, batch.width_px);
+            const float dash[2] = {4.0f * w, 2.0f * w};
+
             Cmd cmd;
             cmd.kind    = Cmd::Kind::Line;
-            cmd.uniform = push_uniform(batch.rgba, std::max(0.5f, batch.width_px * 0.5f));
+            cmd.uniform = push_uniform(batch.rgba, std::max(0.5f, batch.width_px * 0.5f),
+                                       batch.dashed ? dash : nullptr, batch.dashed ? 2 : 0);
             cmd.first   = first;
             cmd.count   = count;
             cmds_.push_back(cmd);
         }
     }
 }
+
+#if PIRICAD_HAVE_TEXT
+
+/// Straight RGBA (0xAARRGGBB) repacked so the BYTES read R, G, B, A in memory.
+///
+/// `UNormByte4` hands the shader the bytes in address order, and on a
+/// little-endian machine a 0xAARRGGBB word is stored B, G, R, A — so a red label
+/// arrives blue. Packing here rather than swizzling in the shader keeps the
+/// fragment stage identical to every other pipeline's.
+std::uint32_t rgba_bytes(std::uint32_t rgba) noexcept
+{
+    const std::uint32_t a = (rgba >> 24) & 0xFFu;
+    const std::uint32_t r = (rgba >> 16) & 0xFFu;
+    const std::uint32_t g = (rgba >> 8) & 0xFFu;
+    const std::uint32_t b = rgba & 0xFFu;
+    return (a << 24) | (b << 16) | (g << 8) | r;
+}
+
+std::uint32_t RhiBackend::emit_line(render::Face face, std::string_view text, float origin_x,
+                                    float origin_y, float px, float cos_a, float sin_a,
+                                    std::uint32_t rgba, std::uint8_t anchor)
+{
+    shaped_.clear();
+    const render::RunMetrics metrics = atlas_->shape(face, text, shaped_);
+    if (shaped_.empty()) return 0;
+
+    // The anchor decides where the baseline sits under the glyphs, and it is
+    // measured from the SHAPED run rather than from the advance the command
+    // guessed for its bounding box — the same rule the QPainter backend follows,
+    // so a caption does not move when the engine changes.
+    float shift_u = 0.0f;
+    float shift_v = 0.0f;
+    switch (anchor) {
+    case 1: shift_u = -metrics.advance * px * 0.5f; break; // baseline centre
+    case 2: shift_u = -metrics.advance * px; break;        // baseline right
+    case 3:                                                // middle centre
+        shift_u = -metrics.advance * px * 0.5f;
+        shift_v = metrics.cap * px * 0.5f;
+        break;
+    default: break; // baseline left
+    }
+
+    const std::uint32_t ink = rgba_bytes(rgba);
+    const float ink_bits    = std::bit_cast<float>(ink);
+
+    for (const render::PlacedGlyph& glyph : shaped_) {
+        const render::GlyphBox& box = atlas_->box(glyph.box);
+
+        // EM, y up -> pixels along the baseline with v growing DOWN.
+        const float u0 = (glyph.x + box.left) * px + shift_u;
+        const float u1 = (glyph.x + box.right) * px + shift_u;
+        const float v0 = -(glyph.y + box.top) * px + shift_v;
+        const float v1 = -(glyph.y + box.bottom) * px + shift_v;
+
+        const float instance[13] = {
+            u0,       v0,       u1,     v1,     // local
+            origin_x, origin_y, cos_a,  sin_a,  // place
+            box.u0,   box.v0,   box.u1, box.v1, // uv
+            ink_bits,
+        };
+        glyph_data_.insert(glyph_data_.end(), std::begin(instance), std::end(instance));
+    }
+
+    return static_cast<std::uint32_t>(shaped_.size());
+}
+
+void RhiBackend::emit_labels(const render::Overlay& overlay)
+{
+    if (!atlas_ || overlay.labels.empty()) return;
+
+    const std::uint32_t first = static_cast<std::uint32_t>(glyph_data_.size() * sizeof(float));
+    std::uint32_t count       = 0;
+
+    for (const render::OverlayLabel& label : overlay.labels) {
+        if (label.text.empty()) continue;
+
+        // A ruler division, a coordinate and a measurement are all NUMBERS, and
+        // design.md §3 puts every number in the monospaced face — digits that line
+        // up column-wise are what makes a coordinate readable at a glance. The
+        // label says which face it wants; the backend obeys.
+        const render::Face face = label.mono ? render::Face::Mono : render::Face::Sans;
+        const float px          = label.px > 0.0f ? label.px : kDefaultUiPx;
+
+        count += emit_line(face, label.text, label.x, label.y, px, 1.0f, 0.0f, label.rgba,
+                           /*anchor=*/0);
+    }
+
+    if (count > 0) {
+        Cmd cmd;
+        cmd.kind    = Cmd::Kind::Text;
+        cmd.uniform = push_uniform(0xFFFFFFFFu, 0.0f);
+        cmd.first   = first;
+        cmd.count   = count;
+        cmds_.push_back(cmd);
+    }
+}
+
+void RhiBackend::emit_texts(const render::DrawList& list, double cx, double cy)
+{
+    if (!atlas_ || list.texts.empty()) return;
+
+    const std::uint32_t first = static_cast<std::uint32_t>(glyph_data_.size() * sizeof(float));
+    std::uint32_t count       = 0;
+
+    for (const render::TextItem& item : list.texts) {
+        // Under three pixels a caption is a smudge rather than a word, and drawing
+        // it costs a glyph quad per character for something nobody can read. The
+        // QPainter backend draws the same line here.
+        if (item.text.empty() || item.height_px < 3.0f) continue;
+
+        const double sx = cx + static_cast<double>(item.x0);
+        const double sy = cy - static_cast<double>(item.y0);
+        const double ex = cx + static_cast<double>(item.x1);
+        const double ey = cy - static_cast<double>(item.y1);
+
+        const double dx  = ex - sx;
+        const double dy  = ey - sy;
+        const double len = std::sqrt(dx * dx + dy * dy);
+
+        // A caption whose baseline has no length has no direction either; it is
+        // written along the page.
+        const float cos_a = len > 0.0 ? static_cast<float>(dx / len) : 1.0f;
+        const float sin_a = len > 0.0 ? static_cast<float>(dy / len) : 0.0f;
+
+        // Stacked around the anchor, so a two-line label sits centred on the point
+        // rather than hanging below it — a TAKS over a KAKS is one fraction.
+        lines_.clear();
+        std::size_t at = 0;
+        while (at <= item.text.size()) {
+            const std::size_t nl = item.text.find('\n', at);
+            const std::size_t to = nl == std::string::npos ? item.text.size() : nl;
+            if (to > at) lines_.emplace_back(item.text.data() + at, to - at);
+            if (nl == std::string::npos) break;
+            at = nl + 1;
+        }
+        if (lines_.empty()) continue;
+
+        const float step = item.height_px * 1.25f;
+
+        for (std::size_t line = 0; line < lines_.size(); ++line) {
+            const float offset =
+                (static_cast<float>(line) - static_cast<float>(lines_.size() - 1) * 0.5f) * step;
+
+            // The stack runs perpendicular to the baseline, which is what keeps a
+            // rotated two-line caption stacked across its own direction.
+            const float ox = static_cast<float>(sx) - sin_a * offset;
+            const float oy = static_cast<float>(sy) + cos_a * offset;
+
+            count += emit_line(render::Face::Sans, lines_[line], ox, oy, item.height_px, cos_a,
+                               sin_a, item.rgba, item.anchor);
+        }
+    }
+
+    if (count > 0) {
+        Cmd cmd;
+        cmd.kind    = Cmd::Kind::Text;
+        cmd.uniform = push_uniform(0xFFFFFFFFu, 0.0f);
+        cmd.first   = first;
+        cmd.count   = count;
+        cmds_.push_back(cmd);
+    }
+}
+
+#endif // PIRICAD_HAVE_TEXT
 
 void RhiBackend::paint_ground(const render::Overlay& overlay)
 {
@@ -402,10 +1101,20 @@ void RhiBackend::paint_ground(const render::Overlay& overlay)
 
 void RhiBackend::paint_aids(const render::DrawList& list, const render::Overlay& overlay)
 {
-    // `list` carries the captions. They wait on the SDF atlas of render.md R8;
-    // taking the argument now keeps the call site the same when they arrive.
+    // The document's own captions go UNDER the aids and over the passes, which is
+    // where the QPainter backend puts them: a parcel number belongs to the drawing,
+    // and a snap marker belongs over whatever it is pointing at.
+#if PIRICAD_HAVE_TEXT
+    emit_texts(list, last_cx_, last_cy_);
+#else
     (void)list;
+#endif
+
     emit_overlay(overlay, overlay.beneath, overlay.batches.size());
+
+#if PIRICAD_HAVE_TEXT
+    emit_labels(overlay);
+#endif
 }
 
 // -----------------------------------------------------------------------------
@@ -414,9 +1123,26 @@ void RhiBackend::paint_aids(const render::DrawList& list, const render::Overlay&
 
 void RhiBackend::release()
 {
+#if PIRICAD_HAVE_TEXT
+    text_.reset();
+    srb_text_.reset();
+    sampler_.reset();
+    atlas_texture_.reset();
+    glyphs_.reset();
+    quad_.reset();
+    glyph_capacity_ = 0;
+    atlas_side_     = 0;
+    atlas_uploaded_ = 0;
+    quad_uploaded_  = false;
+#endif
+
     line_.reset();
+    line_clip_.reset();
+    tri_.reset();
+    tri_clip_.reset();
     fill_stencil_.reset();
     fill_cover_.reset();
+    mask_clear_.reset();
     srb_.reset();
     uniforms_.reset();
     vertices_.reset();
@@ -474,12 +1200,13 @@ bool RhiBackend::ensure_resources(QRhi* rhi, QRhiRenderPassDescriptor* rp, int s
         QRhiVertexInputLayout layout;
         layout.setBindings({
             {2 * sizeof(float)},                                      // corners
-            {4 * sizeof(float), QRhiVertexInputBinding::PerInstance}, // segments
+            {5 * sizeof(float), QRhiVertexInputBinding::PerInstance}, // segments
         });
         layout.setAttributes({
             {0, 0, QRhiVertexInputAttribute::Float2, 0},
             {1, 1, QRhiVertexInputAttribute::Float2, 0},
             {1, 2, QRhiVertexInputAttribute::Float2, 2 * sizeof(float)},
+            {1, 3, QRhiVertexInputAttribute::Float, 4 * sizeof(float)},
         });
 
         line_.reset(rhi->newGraphicsPipeline());
@@ -569,8 +1296,241 @@ bool RhiBackend::ensure_resources(QRhi* rhi, QRhiRenderPassDescriptor* rp, int s
         if (!fill_cover_->create()) return false;
     }
 
+    // ---- the mask, and what draws inside it ---------------------------------
+    //
+    // A pattern fill is the same even-odd stencil as a solid one, used
+    // differently: instead of covering the odd pixels with a colour, the mask is
+    // LEFT STANDING and the hatch or the glyph grid is drawn through it. That is
+    // the whole clipping mechanism, and it needs no clip rectangle, no scissor
+    // and no triangulator — which is the reason a face with a courtyard in it
+    // comes out with the hole unhatched.
+    {
+        QRhiGraphicsPipeline::StencilOpState keep;
+        keep.failOp      = QRhiGraphicsPipeline::Keep;
+        keep.depthFailOp = QRhiGraphicsPipeline::Keep;
+        keep.passOp      = QRhiGraphicsPipeline::Keep;
+        keep.compareOp   = QRhiGraphicsPipeline::NotEqual;
+
+        const auto clipped = [&](std::unique_ptr<QRhiGraphicsPipeline>& into,
+                                 const QRhiVertexInputLayout& layout, const QShader& vs,
+                                 const QShader& fs, QRhiGraphicsPipeline::Topology topology) {
+            into.reset(rhi->newGraphicsPipeline());
+            into->setShaderStages({{QRhiShaderStage::Vertex, vs}, {QRhiShaderStage::Fragment, fs}});
+            into->setVertexInputLayout(layout);
+            into->setShaderResourceBindings(srb_.get());
+            into->setRenderPassDescriptor(rp);
+            into->setTopology(topology);
+            into->setCullMode(QRhiGraphicsPipeline::None);
+            into->setDepthTest(false);
+            into->setDepthWrite(false);
+            into->setStencilTest(true);
+            into->setStencilFront(keep);
+            into->setStencilBack(keep);
+            into->setStencilReadMask(0xFF);
+            into->setStencilWriteMask(0x00); // reads the mask, never disturbs it
+            into->setSampleCount(sample_count);
+            into->setTargetBlends({blend});
+            return into->create();
+        };
+
+        QRhiVertexInputLayout line_layout;
+        line_layout.setBindings({
+            {2 * sizeof(float)},
+            {5 * sizeof(float), QRhiVertexInputBinding::PerInstance},
+        });
+        line_layout.setAttributes({
+            {0, 0, QRhiVertexInputAttribute::Float2, 0},
+            {1, 1, QRhiVertexInputAttribute::Float2, 0},
+            {1, 2, QRhiVertexInputAttribute::Float2, 2 * sizeof(float)},
+            {1, 3, QRhiVertexInputAttribute::Float, 4 * sizeof(float)},
+        });
+
+        if (!clipped(line_clip_, line_layout, line_vs, line_fs,
+                     QRhiGraphicsPipeline::TriangleStrip))
+            return false;
+        if (!clipped(tri_clip_, flat, fill_vs, fill_fs, QRhiGraphicsPipeline::Triangles))
+            return false;
+
+        // The unclipped triangle list: a marker's interior, drawn on the geometry
+        // rather than inside a face.
+        tri_.reset(rhi->newGraphicsPipeline());
+        tri_->setShaderStages(
+            {{QRhiShaderStage::Vertex, fill_vs}, {QRhiShaderStage::Fragment, fill_fs}});
+        tri_->setVertexInputLayout(flat);
+        tri_->setShaderResourceBindings(srb_.get());
+        tri_->setRenderPassDescriptor(rp);
+        tri_->setTopology(QRhiGraphicsPipeline::Triangles);
+        tri_->setCullMode(QRhiGraphicsPipeline::None);
+        tri_->setDepthTest(false);
+        tri_->setDepthWrite(false);
+        tri_->setSampleCount(sample_count);
+        tri_->setTargetBlends({blend});
+        if (!tri_->create()) return false;
+
+        // Clearing the mask afterwards. The same cover quad as a solid fill, with
+        // the colour writes off: a mask left standing would clip the next face's
+        // pattern to the previous face's shape.
+        QRhiGraphicsPipeline::StencilOpState zero;
+        zero.failOp      = QRhiGraphicsPipeline::StencilZero;
+        zero.depthFailOp = QRhiGraphicsPipeline::StencilZero;
+        zero.passOp      = QRhiGraphicsPipeline::StencilZero;
+        zero.compareOp   = QRhiGraphicsPipeline::Always;
+
+        QRhiGraphicsPipeline::TargetBlend silent;
+        silent.enable     = false;
+        silent.colorWrite = {};
+
+        mask_clear_.reset(rhi->newGraphicsPipeline());
+        mask_clear_->setShaderStages(
+            {{QRhiShaderStage::Vertex, fill_vs}, {QRhiShaderStage::Fragment, fill_fs}});
+        mask_clear_->setVertexInputLayout(flat);
+        mask_clear_->setShaderResourceBindings(srb_.get());
+        mask_clear_->setRenderPassDescriptor(rp);
+        mask_clear_->setTopology(QRhiGraphicsPipeline::Triangles);
+        mask_clear_->setCullMode(QRhiGraphicsPipeline::None);
+        mask_clear_->setDepthTest(false);
+        mask_clear_->setDepthWrite(false);
+        mask_clear_->setStencilTest(true);
+        mask_clear_->setStencilFront(zero);
+        mask_clear_->setStencilBack(zero);
+        mask_clear_->setStencilReadMask(0xFF);
+        mask_clear_->setStencilWriteMask(0xFF);
+        mask_clear_->setSampleCount(sample_count);
+        mask_clear_->setTargetBlends({silent});
+        if (!mask_clear_->create()) return false;
+    }
+
+#if PIRICAD_HAVE_TEXT
+    // ---- text: one instanced quad per glyph against the SDF atlas (R8) -------
+    ensure_atlas();
+    if (atlas_) {
+        const QShader text_vs = load_shader(":/piricad/shaders/text.vert.qsb");
+        const QShader text_fs = load_shader(":/piricad/shaders/text.frag.qsb");
+        if (!text_vs.isValid() || !text_fs.isValid()) return false;
+
+        quad_.reset(
+            rhi->newBuffer(QRhiBuffer::Immutable, QRhiBuffer::VertexBuffer, sizeof(kQuadCorners)));
+        if (!quad_->create()) return false;
+
+        // LINEAR, and CLAMP. Linear because the field is meant to be interpolated —
+        // nearest sampling turns the median back into a staircase and undoes the
+        // whole point. Clamp because two glyphs share the sheet: a repeat at the
+        // edge would fetch a neighbour's field and put a sliver of someone else's
+        // letter on this one.
+        sampler_.reset(rhi->newSampler(QRhiSampler::Linear, QRhiSampler::Linear, QRhiSampler::None,
+                                       QRhiSampler::ClampToEdge, QRhiSampler::ClampToEdge));
+        if (!sampler_->create()) return false;
+
+        QRhiResourceUpdateBatch* atlas_rub = rhi->nextResourceUpdateBatch();
+        if (!ensure_atlas_texture(rhi, atlas_rub)) {
+            atlas_rub->release();
+            return false;
+        }
+        // The batch is handed to the first pass of the frame; holding it here would
+        // leak it, so it is submitted with the initial upload the next frame does.
+        atlas_rub->release();
+        atlas_uploaded_ = 0;
+
+        srb_text_.reset(rhi->newShaderResourceBindings());
+        srb_text_->setBindings({
+            QRhiShaderResourceBinding::uniformBufferWithDynamicOffset(
+                0,
+                QRhiShaderResourceBinding::VertexStage | QRhiShaderResourceBinding::FragmentStage,
+                uniforms_.get(), sizeof(Uniforms)),
+            QRhiShaderResourceBinding::sampledTexture(1, QRhiShaderResourceBinding::FragmentStage,
+                                                      atlas_texture_.get(), sampler_.get()),
+        });
+        if (!srb_text_->create()) return false;
+
+        QRhiVertexInputLayout layout;
+        layout.setBindings({
+            {2 * sizeof(float)},                                       // corners
+            {13 * sizeof(float), QRhiVertexInputBinding::PerInstance}, // glyphs
+        });
+        layout.setAttributes({
+            {0, 0, QRhiVertexInputAttribute::Float2, 0},
+            {1, 1, QRhiVertexInputAttribute::Float4, 0},
+            {1, 2, QRhiVertexInputAttribute::Float4, 4 * sizeof(float)},
+            {1, 3, QRhiVertexInputAttribute::Float4, 8 * sizeof(float)},
+            {1, 4, QRhiVertexInputAttribute::UNormByte4, 12 * sizeof(float)},
+        });
+
+        text_.reset(rhi->newGraphicsPipeline());
+        text_->setShaderStages(
+            {{QRhiShaderStage::Vertex, text_vs}, {QRhiShaderStage::Fragment, text_fs}});
+        text_->setVertexInputLayout(layout);
+        text_->setShaderResourceBindings(srb_text_.get());
+        text_->setRenderPassDescriptor(rp);
+        text_->setTopology(QRhiGraphicsPipeline::TriangleStrip);
+        text_->setCullMode(QRhiGraphicsPipeline::None);
+        text_->setDepthTest(false);
+        text_->setDepthWrite(false);
+        text_->setSampleCount(sample_count);
+        text_->setTargetBlends({blend});
+        if (!text_->create()) return false;
+    }
+#endif
+
     return true;
 }
+
+#if PIRICAD_HAVE_TEXT
+
+void RhiBackend::ensure_atlas()
+{
+    // ONCE. A missing font directory is a packaging failure, and retrying it every
+    // frame would turn one report into sixty a second.
+    if (atlas_tried_) return;
+    atlas_tried_ = true;
+
+    auto opened = render::TextAtlas::open(data_path("fonts"));
+    if (!opened) return;
+
+    atlas_ = std::move(opened.value());
+}
+
+bool RhiBackend::ensure_atlas_texture(QRhi* rhi, QRhiResourceUpdateBatch* rub)
+{
+    if (!atlas_) return false;
+
+    const int side = atlas_->width();
+    if (!atlas_texture_ || atlas_side_ != side) {
+        atlas_texture_.reset(rhi->newTexture(QRhiTexture::RGBA8, QSize(side, side)));
+        if (!atlas_->pixels().empty() && !atlas_texture_->create()) return false;
+        atlas_side_     = side;
+        atlas_uploaded_ = 0;
+
+        // The bindings name the texture, so a new texture needs a new set. Same
+        // LAYOUT, which is what lets the pipeline stay as it is.
+        if (srb_text_) {
+            srb_text_->setBindings({
+                QRhiShaderResourceBinding::uniformBufferWithDynamicOffset(
+                    0,
+                    QRhiShaderResourceBinding::VertexStage |
+                        QRhiShaderResourceBinding::FragmentStage,
+                    uniforms_.get(), sizeof(Uniforms)),
+                QRhiShaderResourceBinding::sampledTexture(1,
+                                                          QRhiShaderResourceBinding::FragmentStage,
+                                                          atlas_texture_.get(), sampler_.get()),
+            });
+            if (!srb_text_->create()) return false;
+        }
+    }
+
+    // ONLY WHEN IT MOVED. The atlas fills over the first frames a drawing is on
+    // screen and is static after that; re-uploading a 4 MB sheet every frame would
+    // cost more than everything else in this file put together.
+    if (atlas_->revision() != atlas_uploaded_) {
+        QImage image(atlas_->pixels().data(), side, side, static_cast<qsizetype>(side) * 4,
+                     QImage::Format_RGBA8888);
+        rub->uploadTexture(atlas_texture_.get(), image.copy());
+        atlas_uploaded_ = atlas_->revision();
+    }
+
+    return true;
+}
+
+#endif // PIRICAD_HAVE_TEXT
 
 bool RhiBackend::ensure_capacity(QRhi* rhi, QRhiResourceUpdateBatch* rub)
 {
@@ -616,6 +1576,22 @@ bool RhiBackend::ensure_capacity(QRhi* rhi, QRhiResourceUpdateBatch* rub)
         rub->uploadStaticBuffer(corners_.get(), 0, sizeof(kLineCorners), kLineCorners);
         corners_uploaded_ = true;
     }
+
+#if PIRICAD_HAVE_TEXT
+    if (atlas_) {
+        const quint32 glyph_bytes = static_cast<quint32>(glyph_data_.size() * sizeof(float));
+        if (!grow(glyphs_, glyph_capacity_, glyph_bytes)) return false;
+
+        if (!quad_uploaded_ && quad_) {
+            rub->uploadStaticBuffer(quad_.get(), 0, sizeof(kQuadCorners), kQuadCorners);
+            quad_uploaded_ = true;
+        }
+        if (glyph_bytes > 0)
+            rub->updateDynamicBuffer(glyphs_.get(), 0, glyph_bytes, glyph_data_.data());
+
+        if (!ensure_atlas_texture(rhi, rub)) return false;
+    }
+#endif
     if (seg_bytes > 0)
         rub->updateDynamicBuffer(segments_.get(), 0, seg_bytes, segment_data_.data());
     if (vtx_bytes > 0) rub->updateDynamicBuffer(vertices_.get(), 0, vtx_bytes, vertex_data_.data());
@@ -664,16 +1640,63 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
     vertex_data_.clear();
     uniform_data_.clear();
     cmds_.clear();
+#if PIRICAD_HAVE_TEXT
+    glyph_data_.clear();
+    px_range_ = atlas_ ? atlas_->px_range() : 0.0f;
+#endif
 
     // Document coordinates arrive centre-relative with y UP; the vertex buffer
     // wants widget pixels with y DOWN. One conversion, in one place — the same
     // one the QPainter backend performs.
     const double cx = ctx.width_px * 0.5;
     const double cy = ctx.height_px * 0.5;
+    last_cx_        = cx;
+    last_cy_        = cy;
 
-    paint_ground(overlay);
+    // PIRICAD_RHI_DEBUG=2 draws the DOCUMENT ALONE, with the overlay left out.
+    // Bisecting a frame is the only way to tell "the batch never reached the
+    // buffer" from "the batch was drawn and something later covered it", and from
+    // a screenshot the two look the same.
+    const QByteArray debug = qgetenv("PIRICAD_RHI_DEBUG");
+
+    if (debug != "2") paint_ground(overlay);
     emit_document(list, cx, cy);
-    paint_aids(list, overlay);
+    if (debug != "2" && debug != "3") paint_aids(list, overlay);
+
+    // Developer tooling, the same category as `PIRICAD_FRAME_DUMP`: an environment
+    // variable rather than a feature, and there is no user-facing behaviour here
+    // to document (CLAUDE.md 5.17). What a GPU frame CONTAINS is otherwise
+    // invisible — a batch that never reached the buffer and a batch drawn off
+    // screen look identical, and telling them apart by staring at a screenshot is
+    // how an afternoon goes.
+    if (!qEnvironmentVariableIsEmpty("PIRICAD_RHI_DEBUG")) {
+        std::size_t fills = 0;
+        std::size_t lines = 0;
+        std::size_t texts = 0;
+        for (const Cmd& cmd : cmds_) {
+            if (cmd.kind == Cmd::Kind::Fill) ++fills;
+            if (cmd.kind == Cmd::Kind::Line) lines += cmd.count;
+            if (cmd.kind == Cmd::Kind::Text) texts += cmd.count;
+        }
+        qWarning("[rhi] geçiş %zu · sıra %zu · komut %zu | dolgu %zu · segman %zu · glif %zu"
+                 " | metin öğesi %zu · overlay %zu · tuval %dx%d",
+                 list.passes.size(), list.order.size(), cmds_.size(), fills, lines, texts,
+                 list.texts.size(), overlay.batches.size(), ctx.width_px, ctx.height_px);
+
+        for (std::uint32_t index : list.order) {
+            if (index >= list.passes.size()) continue;
+            const render::PassStyle& ps     = list.passes[index];
+            const render::PolylineBatch& st = list.polylines[index];
+            const render::PolygonBatch& fl  = list.polygons[index];
+            qWarning("[rhi]   geçiş %u tip=%d kabul=%d | çizgi runs=%zu rgba=%08x w=%.2f"
+                     " | dolgu runs=%zu rgba=%08x",
+                     index, static_cast<int>(ps.type), handles(ps.type) ? 1 : 0, st.runs.size(),
+                     st.rgba, static_cast<double>(st.width_px), fl.runs.size(), fl.rgba);
+            if (!st.xs.empty())
+                qWarning("[rhi]     ilk nokta ekranda (%.1f, %.1f)",
+                         cx + static_cast<double>(st.xs[0]), cy - static_cast<double>(st.ys[0]));
+        }
+    }
 
     QRhiResourceUpdateBatch* rub = rhi->nextResourceUpdateBatch();
     if (!ensure_capacity(rhi, rub)) {
@@ -691,21 +1714,66 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
     cb->setViewport(QRhiViewport(0.0f, 0.0f, static_cast<float>(pixels.width()),
                                  static_cast<float>(pixels.height())));
 
-    const QRhiCommandBuffer::VertexInput line_inputs[2] = {{corners_.get(), 0},
-                                                           {segments_.get(), 0}};
-    const QRhiCommandBuffer::VertexInput flat_input[1]  = {{vertices_.get(), 0}};
+    const QRhiCommandBuffer::VertexInput flat_input[1] = {{vertices_.get(), 0}};
 
     for (const Cmd& cmd : cmds_) {
         const quint32 offset = cmd.uniform * uniform_stride_;
         const QRhiCommandBuffer::DynamicOffset dyn(0, offset);
 
         if (cmd.kind == Cmd::Kind::Line) {
-            cb->setGraphicsPipeline(line_.get());
+            // The instance stream starts AT the batch, so every draw asks for
+            // instance zero — see `Cmd::first`.
+            const QRhiCommandBuffer::VertexInput line_inputs[2] = {{corners_.get(), 0},
+                                                                   {segments_.get(), cmd.first}};
+            cb->setGraphicsPipeline(cmd.clipped ? line_clip_.get() : line_.get());
             cb->setShaderResources(srb_.get(), 1, &dyn);
             cb->setVertexInput(0, 2, line_inputs);
-            cb->draw(4, cmd.count, 0, cmd.first);
+            if (cmd.clipped) cb->setStencilRef(0);
+            cb->draw(4, cmd.count);
             continue;
         }
+
+        if (cmd.kind == Cmd::Kind::Tri) {
+            cb->setGraphicsPipeline(cmd.clipped ? tri_clip_.get() : tri_.get());
+            cb->setShaderResources(srb_.get(), 1, &dyn);
+            cb->setVertexInput(0, 1, flat_input);
+            if (cmd.clipped) cb->setStencilRef(0);
+            cb->draw(cmd.count, 1, cmd.first, 0);
+            continue;
+        }
+
+        if (cmd.kind == Cmd::Kind::Mask) {
+            // Stencil the rings and STOP. What draws inside the mask is the next
+            // command; the mask is cleared by the matching Unmask.
+            cb->setGraphicsPipeline(fill_stencil_.get());
+            cb->setShaderResources(srb_.get(), 1, &dyn);
+            cb->setVertexInput(0, 1, flat_input);
+            cb->setStencilRef(0);
+            cb->draw(cmd.count, 1, cmd.first, 0);
+            continue;
+        }
+
+        if (cmd.kind == Cmd::Kind::Unmask) {
+            cb->setGraphicsPipeline(mask_clear_.get());
+            cb->setShaderResources(srb_.get(), 1, &dyn);
+            cb->setVertexInput(0, 1, flat_input);
+            cb->setStencilRef(0);
+            cb->draw(6, 1, cmd.cover, 0);
+            continue;
+        }
+
+#if PIRICAD_HAVE_TEXT
+        if (cmd.kind == Cmd::Kind::Text) {
+            if (!text_ || !glyphs_) continue;
+            const QRhiCommandBuffer::VertexInput text_inputs[2] = {{quad_.get(), 0},
+                                                                   {glyphs_.get(), cmd.first}};
+            cb->setGraphicsPipeline(text_.get());
+            cb->setShaderResources(srb_text_.get(), 1, &dyn);
+            cb->setVertexInput(0, 2, text_inputs);
+            cb->draw(4, cmd.count);
+            continue;
+        }
+#endif
 
         cb->setGraphicsPipeline(fill_stencil_.get());
         cb->setShaderResources(srb_.get(), 1, &dyn);

@@ -45,6 +45,42 @@ Currently linked
                           surfaces as a crash in a formatting call nobody touched.
                           Both linked PRIVATE into piricad_command.
 
+  FreeType                FTL / GPLv2+          system
+                          Glyph OUTLINES for the SDF atlas (render.md R8). Taken
+                          from the system rather than vendored: it is already on
+                          every machine that has Qt, and vendoring a font
+                          rasteriser means vendoring its own dependency tree.
+                          Used under the FreeType Licence, which is GPLv3
+                          compatible.
+
+  HarfBuzz                MIT                   system
+                          Text SHAPING. Not the same thing as mapping characters
+                          to glyphs, and Turkish is where the difference shows:
+                          `ğ`, `ş`, `ı` and the dotted capital `İ` are ordinary
+                          letters here, and the kerning that makes `TAKS`
+                          readable lives in the font's own tables.
+
+  msdfgen                 MIT                   v1.13     1874bcf7
+                          Multi-channel signed distance fields, one per glyph.
+                          Three channels and not one, because a single-channel
+                          field rounds every corner it has: the median of three
+                          edge colourings is what keeps the serif of a `T` and
+                          the cedilla of a `Ş` sharp at the zoom a plan sheet is
+                          read at.
+
+                          MSDFGEN_CORE_ONLY: the extension half exists to LOAD
+                          fonts and SVGs and pulls FreeType, libpng and tinyxml2
+                          in to do it. The outlines are already here, so
+                          text_atlas.cpp turns them into an msdfgen::Shape
+                          itself.
+
+  stb_rect_pack           MIT / public domain   2c980bb5
+                          Lays the glyph cells out in the one texture R8 asks
+                          for. A shelf packer is twenty lines and everyone who
+                          writes one wastes the same third of the atlas
+                          (CLAUDE.md 5.16). stb has no releases and never has
+                          had; upstream's own instruction is to pin a commit.
+
   Lua                     MIT                   5.4.8     6e22fedb
                           The embedded script language of piricad.md §4.1, behind
                           PIRICAD_WITH_LUA. Lua and not Python for the hot path:

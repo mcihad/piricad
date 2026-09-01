@@ -50,6 +50,7 @@ option(PIRICAD_WITH_CGAL     "Enable CGAL exact arithmetic"          OFF)
 option(PIRICAD_WITH_LUA      "Enable the embedded Lua hot path"      OFF)
 option(PIRICAD_WITH_PYTHON   "Enable the optional Python module"     OFF)
 option(PIRICAD_WITH_RHI      "Enable the QRhi GPU canvas backend"    OFF)
+option(PIRICAD_WITH_TEXT     "Enable the msdfgen SDF text atlas"     OFF)
 option(PIRICAD_WITH_TRACY    "Enable Tracy frame profiling"          OFF)
 
 function(piricad_require_dependency option_name package_name hint)

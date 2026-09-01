@@ -39,6 +39,62 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   yüzünden bozulmamalıdır.
 - JSON çalıştırıcısı da artık bu satırı yazıyor; önceden hiçbir konak yazmıyordu.
 
+### Düzeltildi — QRhi tuvalinde çizim çıkmıyordu
+
+Üç kusur, üçü de ekran görüntüsünden görünmeyen cinsten; kare ikiye bölünerek
+bulundu (`PIRICAD_RHI_DEBUG`).
+
+- **`firstInstance` taşınabilir değil.** Örneklenmiş çizimlerde çizgi grupları
+  `cb->draw(..., firstInstance)` ile ayrılıyordu; bu `QRhi::BaseInstance`
+  gerektirir ve OpenGL ES ile ARB_base_instance'sız GL'de yoktur — üstelik
+  eksikse çizim reddedilmez, sessizce yanlış olur. Karenin ilk çizgi grubu
+  çiziliyor, sonrakiler kayboluyordu: ızgara yarım, kuzey oku ve ölçek çubuğu
+  yok. Artık vertex buffer bayt kaydırmasıyla bağlanıyor; hiçbir GPU özelliği
+  gerektirmiyor.
+- **Belge çizgilerinin kaydırması örnek indeksiydi**, bayt değil. Grid'den sonra
+  tampon yarım örnekten okunuyor, çizim ekran dışına düşüyordu. Belge tek başına
+  çizdirilince görünüyor olması kusuru bire bir işaret etti.
+- **Stil tasarımcısı GPU yapısında çöküyordu**: sembol önizlemeleri `QImage`'a
+  çiziyor ama `make_canvas_backend()` GPU arka ucunu döndürünce `QPaintDevice*`
+  işaretçisi `RhiFrameTarget*` diye okunuyordu. Önizlemelerin artık kendi
+  fabrikası var (`make_preview_backend`).
+
+### Düzeltildi — kare dökümü GPU tuvalini boş gösteriyordu
+
+`QWidget::grab()` arka tampon üzerinden yürür; `QRhiWidget`'ın karesi orada
+değil, GPU'dadır. `PIRICAD_FRAME_DUMP` ve `PIRICAD_SHOT_DIR` bu yüzden doğru
+çizen bir tuvali boş gösteriyordu. `MapCanvas::grabCanvas()` kareyi kendi
+yüzeyinden alıyor ve pencere görüntüsüne yerleştiriliyor.
+
+### Düzeltildi — kayıtlı dock yerleşimi kabuğu bozuk gösteriyordu
+
+`kLayoutVersion` 4'e çıktı. Tuval `QRhiWidget` tabanına geçince merkez pencere
+sınıf değiştirdi ve çevresindeki dockların kayıtlı boyutları anlamsız kaldı:
+Öznitelikler paneli otuz piksellik boş bir şerit olarak geri yükleniyordu, yani
+sanki bütün kabuk dağılmış gibi görünüyordu. Bayat olan **durumdu**, çizici
+değil — bunu ayırt etmek bir öğleden sonra aldı, çünkü kayıtlı yerleşim yeniden
+derlemeden sağ çıkar ve yeni bir hata gibi görünür.
+
+### Eklendi — GPU tuvalinde metin: SDF atlası (`PIRICAD_WITH_TEXT`)
+
+- `render::TextAtlas` — FreeType konturu → msdfgen çok kanallı mesafe alanı →
+  stb_rect_pack ile tek dokuya; HarfBuzz `tr` diliyle şekillendirme
+  (`.claude/render.md` R8). Qt'siz, `/src/render` içinde: `/tests` Qt bağlamaz,
+  dolayısıyla arka uç kurulamayan bir süitte bile `İ` ile `I`'nın ayrı glif
+  olduğu doğrulanabiliyor.
+- Ölçek bağımsız: bir 48 px hücre 8 pikselde de 200'de de keskin çıkar, çünkü
+  saklanan şey piksel değil **kontur**. Üç kanalın medyanı köşeleri korur; tek
+  kanallı bir alan her köşeyi yuvarlar.
+- Cetvel sayıları, ölçek çubuğunun rakamları, kuzey okunun `K` harfi ve çizimin
+  kendi başlıkları artık GPU'da. Döndürülmüş taban çizgisi, çok satırlı
+  TAKS/KAKS etiketi ve dört çapa QPainter arka ucuyla aynı kuralları izler.
+- 7 test: beş yüzün açılması, `ÇİĞDEM`'in altı harfinin altı glif olması (bayt
+  sayan bir çizici dokuz üretirdi), `İ` ≠ `I`, boşluğun kalem ilerletip
+  çizmemesi, mono yüzün gerçekten eşaralıklı olması, alanın gradyan taşıması,
+  aynı kelimenin atlası ikinci kez büyütmemesi.
+- Shader hedefleri GLES 3.0 / GL 3.3'e çekildi: qsb'nin varsayılanı ESSL 100 ile
+  başlar ve orada ne `textureSize` ne türev vardır.
+
 ### Eklendi — QRhi GPU canvas'ının ilk dilimi (`PIRICAD_WITH_RHI`)
 
 - `render::Backend`'in GPU uygulaması: poligon dolguları (stencil ile tek-çift

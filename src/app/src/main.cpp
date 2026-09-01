@@ -9,13 +9,42 @@
 #include <QCommandLineParser>
 #include <QDir>
 #include <QGuiApplication>
+#include <QImage>
 #include <QLocale>
+#include <QPainter>
 #include <QTimer>
 #include <QTranslator>
 
 #include <algorithm>
 #include <cstdio>
 #include <vector>
+
+namespace {
+
+/// A window's picture, WITH the canvas frame in it.
+///
+/// `QWidget::grab()` walks the widget tree through the BACKING STORE, and a
+/// `QRhiWidget` has nothing there: its frame lives on the GPU. A plain window grab
+/// of a GPU build therefore comes out with a hole exactly where the drawing is —
+/// which is what made a frame dump report an empty canvas on a canvas that was
+/// drawing correctly. So the canvas is asked for its own frame and composited in.
+QImage window_shot(QWidget* subject)
+{
+    QImage shot = subject->grab().toImage();
+    if (shot.isNull()) return shot;
+
+    auto* canvas = subject->findChild<piricad::app::MapCanvas*>();
+    if (canvas == nullptr || !canvas->isVisible()) return shot;
+
+    const QImage frame = canvas->grabCanvas();
+    if (frame.isNull()) return shot;
+
+    QPainter painter(&shot);
+    painter.drawImage(QRect(canvas->mapTo(subject, QPoint(0, 0)), canvas->size()), frame);
+    return shot;
+}
+
+} // namespace
 
 int main(int argc, char** argv)
 {
@@ -189,7 +218,7 @@ int main(int argc, char** argv)
         const auto shot = [into](const QString& name, QWidget* subject) {
             if (subject == nullptr) return;
             const QString path = into + QLatin1Char('/') + name + QStringLiteral(".png");
-            (void)std::fprintf(subject->grab().save(path) ? stdout : stderr, "[piricad] %s\n",
+            (void)std::fprintf(window_shot(subject).save(path) ? stdout : stderr, "[piricad] %s\n",
                                qPrintable(path));
         };
         const auto later = [&window, &at](auto&& step) {
@@ -278,7 +307,7 @@ int main(int argc, char** argv)
             QWidget* subject = QApplication::activeWindow();
             if (subject == nullptr) subject = &window;
 
-            const bool saved = subject->grab().save(path);
+            const bool saved = window_shot(subject).save(path);
             (void)std::fprintf(saved ? stdout : stderr, "[piricad] kare %s: %s\n",
                                saved ? "yazıldı" : "YAZILAMADI", qPrintable(path));
             QApplication::exit(saved ? 0 : 1);

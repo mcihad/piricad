@@ -26,6 +26,7 @@ add_executable(piricad_tests
     unit/test_snap.cpp
     unit/test_style_layer.cpp
     unit/test_style_rule.cpp
+    unit/test_text_atlas.cpp
     unit/test_proof.cpp
 )
 

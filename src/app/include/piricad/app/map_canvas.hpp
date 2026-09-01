@@ -26,6 +26,7 @@
 
 #include <vector>
 
+#include <QImage>
 #include <QRectF>
 
 #if PIRICAD_HAVE_RHI
@@ -108,6 +109,16 @@ public:
     void resetView();
 
     QString backendName() const;
+
+    /// The canvas frame as an image, whichever surface this build has.
+    ///
+    /// `QWidget::grab()` renders through the BACKING STORE, and a `QRhiWidget`'s
+    /// frame is not there — it is on the GPU. So a window grab of a GPU build
+    /// comes out with a hole exactly where the drawing is, which is what made
+    /// `PIRICAD_FRAME_DUMP` report an empty canvas on a canvas that was drawing
+    /// correctly, and what made `ci-gate-render-desen.py` unable to measure the
+    /// GPU path at all.
+    QImage grabCanvas();
 
 signals:
     /// Emitted as the pointer moves, in DOCUMENT coordinates. The status bar

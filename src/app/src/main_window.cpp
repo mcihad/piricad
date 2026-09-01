@@ -67,7 +67,15 @@ QString groupedNumber(qint64 value)
 /// panel. A state saved by version 2 restores the old sizes and leaves a band of
 /// empty window above the Öznitelikler tab — which is what a user saw and
 /// reported. A version bump is how `restoreState` declines it.
-constexpr int kLayoutVersion = 3;
+///
+/// 4: the canvas can now be a `QRhiWidget` (CLAUDE.md 8.1), and a central widget
+/// that changed class changes the sizes every dock around it was saved against.
+/// The symptom is the same one version 3 was bumped for and it was reported the
+/// same way: the Öznitelikler panel restored collapsed to a blank thirty-pixel
+/// strip, so the drawing looked like the whole shell had come apart. It was the
+/// STATE that was stale, not the renderer — which took an afternoon to establish,
+/// because a saved layout survives a rebuild and looks exactly like a new bug.
+constexpr int kLayoutVersion = 4;
 
 QString format_metres(core::Mm v)
 {

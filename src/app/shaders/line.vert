@@ -21,10 +21,19 @@ layout(location = 0) in vec2 corner;
 layout(location = 1) in vec2 p0;
 layout(location = 2) in vec2 p1;
 
+// Distance from the START OF THE RUN to `p0`, in pixels. A dash pattern is
+// measured along the whole polyline, not along each segment: restarting it at
+// every vertex is what turns a published kesik çizgi into a row of unequal
+// stubs, one per corner.
+layout(location = 3) in float along0;
+
+layout(location = 0) out float vAlong;
+
 layout(std140, binding = 0) uniform buf {
     mat4 mvp;
     vec4 colour;
-    vec4 params;   // x: half width in pixels
+    vec4 params;   // x: half width, z: dash period in px, w: dash entry count
+    vec4 dash[2];  // up to eight mark/space lengths, in pixels
 } ubuf;
 
 void main()
@@ -43,6 +52,10 @@ void main()
 
     vec2 centre = mix(p0, p1, corner.x) + t * (corner.x * 2.0 - 1.0) * half_width;
     vec2 pos    = centre + n * corner.y * half_width;
+
+    // Where this corner sits along the run, including the half-width the quad is
+    // extended by, so the pattern does not jump at a join.
+    vAlong = along0 + corner.x * len + (corner.x * 2.0 - 1.0) * half_width;
 
     gl_Position = ubuf.mvp * vec4(pos, 0.0, 1.0);
 }

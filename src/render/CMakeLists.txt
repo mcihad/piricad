@@ -10,6 +10,7 @@ add_library(piricad_render STATIC
     src/backend.cpp
     src/drawlist.cpp
     src/scene.cpp
+    src/symbology.cpp
     src/view.cpp
 )
 
@@ -18,6 +19,21 @@ target_link_libraries(piricad_render
     PUBLIC  piricad_core
     PRIVATE piricad_flags
 )
+
+if(PIRICAD_WITH_TEXT)
+    # THE ATLAS IS QT-FREE, and that is what makes it testable: /tests links no Qt
+    # (CLAUDE.md 3.4), so a suite that could not construct a backend can still
+    # assert that `ğ` and the dotted `İ` come out of the shaper as their own
+    # glyphs. What this target produces is PIXELS and NUMBERS; putting them on the
+    # GPU is the backend's job, one layer up in /src/app.
+    target_sources(piricad_render PRIVATE src/text_atlas.cpp)
+    target_link_libraries(piricad_render PRIVATE
+        Freetype::Freetype
+        PkgConfig::PIRICAD_HARFBUZZ
+        msdfgen::msdfgen-core
+        piricad_stb)
+    target_compile_definitions(piricad_render PUBLIC PIRICAD_HAVE_TEXT=1)
+endif()
 
 if(PIRICAD_WITH_RHI)
     # The tool and header checks live in src/app, because that is where the shader

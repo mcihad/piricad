@@ -163,13 +163,23 @@ if(PIRICAD_WITH_RHI)
 
     # NEVER compiled or patched at runtime (render.md P11): the packs are baked
     # here, at build time, and land in the binary as Qt resources.
+    # THE TARGETS ARE DELIBERATE. qsb's default set starts at ESSL 100, which is
+    # OpenGL ES 2.0 — a 2007 profile with no `textureSize` and no derivatives, so
+    # the SDF text shader cannot be expressed in it at all. GLES 3.0 / GL 3.3 is
+    # the floor a GPU-canvas CAD program can ask for, and every desktop and mobile
+    # GPU that can run this drawing at 16 ms/frame has had it for a decade.
     qt_add_shaders(piricad "piricad_shaders"
+        GLSL "300es,330"
+        HLSL 50
+        MSL 12
         PREFIX "/piricad"
         FILES
             shaders/fill.vert
             shaders/fill.frag
             shaders/line.vert
             shaders/line.frag
+            shaders/text.vert
+            shaders/text.frag
     )
 
     target_sources(piricad PRIVATE src/rhi_backend.cpp)

@@ -21,6 +21,17 @@ namespace piricad::app {
 MapCanvas::MapCanvas(Controller& controller, QWidget* parent)
     : CanvasSurface(parent), controller_(controller), backend_(make_canvas_backend())
 {
+#if PIRICAD_HAVE_RHI
+    // FOUR SAMPLES. A GPU pipeline rasterises a hard edge, and at a 1.5 px stroke
+    // that lands on two pixel columns or three depending on where the line falls
+    // — so a hatch whose spacing is uniform comes out with one line in every set
+    // looking twice as heavy as its neighbours. QPainter antialiases and the two
+    // engines have to agree about what a published çizgi tipi looks like.
+    //
+    // Four and not eight: the difference is invisible at these widths and the
+    // fragment cost is not, and Article 7 gives the frame 16 ms.
+    setSampleCount(4);
+#endif
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
     setAutoFillBackground(false);
@@ -860,6 +871,18 @@ void MapCanvas::buildOverlay()
                                  .arg(draw_.culled_count)
                                  .arg(last_frame_us_)
                                  .toStdString()});
+}
+
+QImage MapCanvas::grabCanvas()
+{
+#if PIRICAD_HAVE_RHI
+    // The GPU's own copy. `grabFramebuffer()` renders a frame and reads it back,
+    // so what comes out is what the pipeline drew rather than what the widget
+    // system thinks is there.
+    return grabFramebuffer();
+#else
+    return grab().toImage();
+#endif
 }
 
 std::vector<int> MapCanvas::timeFrames(int rounds)

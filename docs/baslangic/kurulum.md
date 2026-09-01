@@ -158,7 +158,7 @@ kökündeki `CLAUDE.md` Article 8'dedir.
 
 | Eksik | Sonucu | Ne zaman gelecek |
 |---|---|---|
-| GPU canvas (`PIRICAD_WITH_RHI`) | Varsayılan yapıda harita GPU yerine `QPainter` ile çizilir. Seçenek açıldığında QRhi arka ucu dolguları, çizgileri ve ızgara/seçim katmanını GPU'da çizer; **metin ve yayımlanmış raster semboller henüz çizilmez** | Metin katmanı (SDF atlası) Faz 1'de |
+| GPU canvas (`PIRICAD_WITH_RHI`) | Varsayılan yapıda harita GPU yerine `QPainter` ile çizilir. Seçenek açıldığında QRhi arka ucu dolguları, çizgileri, ızgara/seçim katmanını ve (`PIRICAD_WITH_TEXT` ile) metni GPU'da çizer; **desen dolguları ve yayımlanmış raster semboller henüz çizilmez** | Desen ve raster sembol katmanı Faz 1'de |
 | GDAL | DXF ve GeoPackage okunup yazılamaz; `İÇEAKTAR` ve `DIŞAAKTAR` hangi paketin gerektiğini söyleyerek hata döndürür. PiriCAD'in kendi `.pcad` proje dosyası GDAL olmadan da çalışır | Kurulduğunda kendiliğinden açılır |
 | PROJ / GEOS / CGAL | Koordinat dönüşümü ve geometri işlemleri sınırlı | Faz 1–2 |
 | Python (`PIRICAD_WITH_PYTHON`) | Eklenti ve toplu işleme katmanı yok | Faz 2 |
@@ -176,6 +176,7 @@ kapanmaz.
 |---|---|---|
 | `PIRICAD_WITH_LUA` | Gömülü Lua betik motoru | Yok. Lua 5.4 ve sol2 sabitlenmiş commit'lerden indirilir |
 | `PIRICAD_WITH_RHI` | QRhi GPU canvas | Qt 6.7+, Qt Shader Tools (`qsb`) ve Qt Gui'nin **private** başlıkları |
+| `PIRICAD_WITH_TEXT` | GPU tuvalinde metin (SDF atlası) | `libfreetype-dev`, `libharfbuzz-dev`. msdfgen ve stb sabitlenmiş commit'ten iner |
 | `PIRICAD_WITH_GDAL` | DXF / GeoPackage | `libgdal-dev` |
 | `PIRICAD_WITH_PROJ` | Koordinat dönüşümü | `libproj-dev` |
 | `PIRICAD_WITH_POSTGIS` | Canlı PostGIS bağlantısı | `libpq-dev` |
