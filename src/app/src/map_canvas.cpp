@@ -888,12 +888,22 @@ QImage MapCanvas::grabCanvas()
 std::vector<int> MapCanvas::timeFrames(int rounds)
 {
     // Through the real paint path, not a private one: a number measured on a
-    // shortcut is a number about the shortcut. `repaint()` paints synchronously,
-    // so `last_frame_us_` is the round that just finished.
+    // shortcut is a number about the shortcut.
+    //
+    // `grabCanvas()`, NOT `repaint()`. Repainting a widget the window system has
+    // not exposed — which is every headless run, and any run whose screen is
+    // locked — does nothing at all, so the timer measured a paint that had not
+    // happened and the harness reported `0 us`. A backend that draws nothing in
+    // no time reads as infinitely fast, which is the worst possible answer from a
+    // tool whose whole job is to say which backend is quicker.
+    //
+    // The grab forces the frame in both builds and costs a readback, but the
+    // readback lands AFTER `last_draw_us_` is recorded, so the number reported is
+    // still the backend's own share.
     std::vector<int> costs;
     costs.reserve(static_cast<std::size_t>(std::max(0, rounds)));
     for (int i = 0; i < rounds; ++i) {
-        repaint();
+        (void)grabCanvas();
         // The BACKEND's share. Scene rebuild and overlay run in the same paint
         // and, on a sheet of patterned parcels, dwarf it — which is a fact about
         // where the time goes, not about which backend to keep, so the two are

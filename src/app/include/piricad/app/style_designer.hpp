@@ -50,6 +50,7 @@
 /// pulls in the widget classes it stores pointers to makes every translation unit
 /// including it wait for them.
 class QCheckBox;
+class QButtonGroup;
 class QComboBox;
 class QVBoxLayout;
 class QLabel;
@@ -236,6 +237,13 @@ private:
     SectionList* sections_{nullptr};
     QComboBox* renderKind_{nullptr};
     QComboBox* renderValue_{nullptr};
+
+    /// Keeps the three unit buttons to ONE answer.
+    ///
+    /// Without it Qt toggles each on its own: clicking the lit button turns it off
+    /// and the control shows no unit at all, which reads as a broken segment
+    /// rather than as a choice.
+    QButtonGroup* unitGroup_{nullptr};
 
     /// The cell that holds `renderValue_`, so it can be hidden whole.
     ///

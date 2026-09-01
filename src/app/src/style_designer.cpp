@@ -10,6 +10,7 @@
 
 #include <QCheckBox>
 #include <QColorDialog>
+#include <QButtonGroup>
 #include <QComboBox>
 #include <QDate>
 #include <QDialogButtonBox>
@@ -803,6 +804,14 @@ QWidget* StyleDesigner::buildRendererRow()
     unitsLayout->setContentsMargins(0, 0, 0, 0);
     unitsLayout->setSpacing(0);
 
+    // ONE OF THREE, ENFORCED BY QT. The buttons were checkable and ungrouped, so
+    // Qt toggled each on its own: clicking the lit one turned it OFF and left the
+    // control with nothing selected, and two could read as lit until something
+    // else happened to re-sync them. A segmented control that can show no answer
+    // and can show two answers is not a segmented control.
+    unitGroup_ = new QButtonGroup(bar);
+    unitGroup_->setExclusive(true);
+
     static const std::pair<core::Unit, const char*> kUnitButtons[] = {
         {core::Unit::Paper, "Milimetre"},
         {core::Unit::Ground, "Harita birimi"},
@@ -814,11 +823,21 @@ QWidget* StyleDesigner::buildRendererRow()
         button->setCheckable(true);
         button->setProperty("unit", static_cast<int>(unit));
         unitButtons_.push_back(button);
+        unitGroup_->addButton(button, static_cast<int>(unit));
+
         connect(button, &QPushButton::clicked, this, [this, unit] {
+            // EVERY MEASURE ON THE LAYER, not three of the five. `spacing_y` and
+            // `phase` were left behind, so switching a marker line to map units
+            // converted its size, its interval and its offset and left its second
+            // spacing and its phase in paper millimetres — a symbol half in one
+            // unit and half in another, which the mixed check could not even see
+            // because that check reads `size` alone.
             for (core::SymbolLayer& l : symbol_.layers) {
-                l.size.unit     = unit;
-                l.interval.unit = unit;
-                l.offset.unit   = unit;
+                l.size.unit      = unit;
+                l.interval.unit  = unit;
+                l.spacing_y.unit = unit;
+                l.offset.unit    = unit;
+                l.phase.unit     = unit;
             }
             refresh();
             updatePreview();
@@ -1825,8 +1844,15 @@ void StyleDesigner::loadGlobal()
 
     // The renderer row's three buttons say the same thing as the combo below,
     // and they must never disagree: both read the symbol, neither remembers.
+    //
+    // An exclusive group refuses to have nothing checked, and MIXED is exactly the
+    // state that needs it — the layers disagree, so no single button is the
+    // answer. Exclusivity is relaxed for the length of the write and restored
+    // afterwards, which is Qt's own way of clearing a segmented control.
+    unitGroup_->setExclusive(false);
     for (QPushButton* button : unitButtons_)
         button->setChecked(!mixed && button->property("unit").toInt() == static_cast<int>(unit));
+    unitGroup_->setExclusive(true);
 
     QString note;
     switch (unit) {
