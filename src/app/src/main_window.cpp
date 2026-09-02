@@ -16,6 +16,7 @@
 #include "piricad/app/style_designer.hpp"
 #include "piricad/app/title_bar.hpp"
 #include "piricad/app/toolbox.hpp"
+#include "piricad/core/snap.hpp"
 
 #include "piricad/io/vector.hpp"
 #include "piricad/render/backend.hpp"
@@ -40,6 +41,7 @@
 #include <QPalette>
 #include <QPixmap>
 #include <QPlainTextEdit>
+#include <QMenu>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QStackedWidget>
@@ -95,7 +97,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 {
     controller_ = new Controller(this);
 
-    setWindowTitle(tr("PiriCAD — Türkiye Odaklı CBS + CAD"));
+    setWindowTitle(tr("KentOSCad — Türkiye Odaklı CBS + CAD"));
     resize(1560, 1000);
 
     // design.md 7: the frame belongs to the window manager. The shell used to be
@@ -205,7 +207,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(layerPanel_, &LayerPanel::layerSelected, attributePanel_, &AttributePanel::setLayer);
     connect(layerPanel_, &LayerPanel::styleRequested, this, &MainWindow::openStyleDesigner);
 
-    onEcho(tr("PiriCAD %1 — komut merkezli mimari, GPLv3.").arg(QStringLiteral(PIRICAD_VERSION)));
+    onEcho(tr("KentOSCad %1 — komut merkezli mimari, GPLv3.").arg(QStringLiteral(PIRICAD_VERSION)));
     onEcho(tr("Aynı komut arayüzden, komut satırından ve betikten tıpatıp aynı yolu izler."));
     if (const std::string status = render::gpu_backend_status(); !status.empty())
         onEcho(tr("Not: %1").arg(QString::fromStdString(status)));
@@ -347,7 +349,7 @@ void MainWindow::buildActions()
 
     actOpen_ = new QAction(tr("Aç…"), this);
     actOpen_->setShortcut(QKeySequence::Open);
-    actOpen_->setToolTip(tr("AÇ — bir PiriCAD proje dosyası açar"));
+    actOpen_->setToolTip(tr("AÇ — bir KentOSCad proje dosyası açar"));
     actOpen_->setData(static_cast<int>(Glyph::Open));
     connect(actOpen_, &QAction::triggered, this, &MainWindow::openProject);
 
@@ -528,8 +530,7 @@ void MainWindow::buildActions()
     actMeasureArea_ = commandAction(Glyph::MeasureArea, tr("Alan Ölç"),
                                     QStringLiteral("ALANÖLÇ"),
                                     tr("ALANÖLÇ — seçili nesnelerin alanını ve çevresini yazar"));
-    actCoordinate_ = placeholder(Glyph::Coordinate, tr("Koordinat Oku"),
-                                 QStringLiteral("KOORDİNAT"), tr("Faz 2"));
+
     actStyleCopy_ = modifyTool(Glyph::StyleCopy, tr("Stil Kopyala"),
                                QStringLiteral("STİLKOPYALA"),
                                tr("STİLKOPYALA — bir nesnenin stilini seçili nesnelere uygular"));
@@ -654,12 +655,28 @@ void MainWindow::buildActions()
 
     actLayerManager_ = placeholder(Glyph::LayerManager, tr("Katman Yöneticisi"),
                                    QStringLiteral("KATMANYÖNETİCİSİ"), tr("Faz 1"));
+    // A MODAL TOOL like every other two-click tool. It was a plain action, so it
+    // ran but never lit: the user clicked twice on a canvas that gave no sign a
+    // measurement was in progress, and the answer went to a hidden tab.
     actMeasure_ = new QAction(tr("Ölç"), this);
+    actMeasure_->setCheckable(true);
     actMeasure_->setToolTip(tr("ÖLÇ — iki nokta arası mesafe, koordinat farkı ve açı"));
     actMeasure_->setData(static_cast<int>(Glyph::Measure));
+    actMeasure_->setProperty(kToolCommand, QStringLiteral("ÖLÇ"));
     actMeasure_->setObjectName(QStringLiteral("toolAction.ÖLÇ"));
     connect(actMeasure_, &QAction::triggered, this,
             [this] { controller_->runCommand(QStringLiteral("ÖLÇ")); });
+    drawingTools_->addAction(actMeasure_);
+
+    actCoordinate_ = new QAction(tr("Koordinat Oku"), this);
+    actCoordinate_->setCheckable(true);
+    actCoordinate_->setToolTip(tr("KOORDİNAT — tıklanan noktanın sağa/yukarı değerini yazar"));
+    actCoordinate_->setData(static_cast<int>(Glyph::Coordinate));
+    actCoordinate_->setProperty(kToolCommand, QStringLiteral("KOORDİNAT"));
+    actCoordinate_->setObjectName(QStringLiteral("toolAction.KOORDİNAT"));
+    connect(actCoordinate_, &QAction::triggered, this,
+            [this] { controller_->runCommand(QStringLiteral("KOORDİNAT")); });
+    drawingTools_->addAction(actCoordinate_);
     actIdentify_ =
         placeholder(Glyph::Identify, tr("Sorgula"), QStringLiteral("SORGULA"), tr("Faz 2"));
     actTable_ = new QAction(tr("Öznitelik Tablosu"), this);
@@ -795,6 +812,15 @@ void MainWindow::buildMenus()
     view->addAction(actZoomOut_);
     view->addSeparator();
     view->addAction(actSnap_);
+
+    // The keyboard road to the same list the OSNAP chip's right click opens.
+    // ui.md P7: nothing ships reachable only by mouse.
+    auto* snapModes = new QAction(tr("Yakalama Modları…"), this);
+    snapModes->setToolTip(tr("Hangi nesne yakalama modlarının açık olduğunu seçer"));
+    snapModes->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F3));
+    connect(snapModes, &QAction::triggered, this, &MainWindow::openSnapModes);
+    view->addAction(snapModes);
+    addAction(snapModes); // so the shortcut works with focus anywhere in the shell
     view->addAction(actOrtho_);
     view->addAction(actGridSnap_);
     view->addSeparator();
@@ -895,6 +921,9 @@ void MainWindow::buildToolBox()
     toolBox_->addTool(actPolygon_);
     toolBox_->addTool(actRectangle_);
     toolBox_->addTool(actCircle_);
+    // YAY was built as a full draw tool and then left out of the column, so the
+    // one curve this program can draw was reachable only by typing its name.
+    toolBox_->addTool(actArc_);
     toolBox_->addTool(actPoint_);
     toolBox_->addTool(actText_);
     toolBox_->addSeparator();
@@ -1135,6 +1164,16 @@ void MainWindow::buildStatusBar()
     statusStrip_->addToggle(tr("DİNAMİK GİRDİ"), QStringLiteral("core.arayuz.dinamik_girdi"));
     statusStrip_->addToggle(tr("KALINLIK"), QStringLiteral("core.harita.kalinlik"));
 
+    connect(statusStrip_, &StatusStrip::configureRequested, this, [this](const QString& id) {
+        if (id == QStringLiteral("core.yakalama.acik")) {
+            openSnapModes();
+            return;
+        }
+        // Every other chip is a plain on/off, so "configure" means the page of
+        // Ayarlar it lives on rather than a list of its own.
+        openSettings();
+    });
+
     connect(statusStrip_, &StatusStrip::toggled, this, [this](const QString& id) {
         core::Settings& store     = controller_->bus().app_settings();
         const std::uint32_t index = store.catalogue().find(id.toStdString());
@@ -1214,6 +1253,51 @@ void MainWindow::onSettingChanged(const QString& id)
 
     QSignalBlocker block(actTheme_);
     actTheme_->setChecked(theme_ == ThemeMode::Dark);
+}
+
+void MainWindow::openSnapModes()
+{
+    // THE LIST IS THE ENGINE'S, not a table kept here. Every bit of `SnapAllMask`
+    // becomes a row and takes its Turkish label from `core::snap_mode_label`, so a
+    // mode added to the engine appears here without an edit (CLAUDE.md 5.10).
+    QMenu menu(this);
+    menu.setTitle(tr("Nesne yakalama modları"));
+
+    const core::Settings& session = controller_->bus().session_settings();
+    const auto mask = static_cast<std::uint16_t>(session.get("core.yakalama.modlar").as_int());
+
+    // Writes the whole mask through MOD, which is the only road there is: the
+    // command line, a script and this menu all set the same sixteen bits.
+    const auto write = [this](std::uint16_t next) {
+        controller_->runLine(QStringLiteral("MOD ad=yakalama_modları deger=%1").arg(next),
+                             command::Origin::Gui);
+    };
+
+    for (std::uint16_t bit = 1; bit != 0; bit = static_cast<std::uint16_t>(bit << 1)) {
+        if ((core::SnapAllMask & bit) == 0) continue;
+
+        auto* row = menu.addAction(QString::fromUtf8(core::snap_mode_label(bit)));
+        row->setCheckable(true);
+        row->setChecked((mask & bit) != 0);
+
+        // The machine name in the tip, because it is what a script writes and what
+        // the transcript prints.
+        row->setToolTip(QString::fromUtf8(core::snap_mode_id(bit)));
+        connect(row, &QAction::triggered, this, [write, mask, bit](bool on) {
+            write(static_cast<std::uint16_t>(on ? (mask | bit) : (mask & ~bit)));
+        });
+    }
+
+    menu.addSeparator();
+    connect(menu.addAction(tr("Hepsi")), &QAction::triggered, this,
+            [write] { write(static_cast<std::uint16_t>(core::SnapAllMask)); });
+    connect(menu.addAction(tr("Hiçbiri")), &QAction::triggered, this,
+            [write] { write(0); });
+
+    // Under the pointer when it came from the strip, and under the OSNAP chip
+    // when it came from the keyboard — a menu that opens off-screen for a
+    // keyboard user is a feature reachable only by mouse (ui.md P7).
+    menu.exec(QCursor::pos().isNull() ? statusStrip_->mapToGlobal(QPoint(0, 0)) : QCursor::pos());
 }
 
 void MainWindow::refreshAidActions()
@@ -1316,6 +1400,18 @@ void MainWindow::resetLayout()
 void MainWindow::onEcho(const QString& text)
 {
     transcript_->appendPlainText(text);
+
+    // AND WHERE THE USER IS LOOKING. The transcript is the record; the status
+    // line is the answer. A measurement, a coordinate, a count or a refusal that
+    // only reached the record read as a command that did nothing at all — which
+    // is exactly how ÖLÇ and ALANÖLÇ were experienced.
+    //
+    // The last line only: a command that echoes several times is reporting a
+    // list, and the list belongs in the transcript.
+    if (statusStrip_ != nullptr) {
+        const QStringList lines = text.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+        if (!lines.isEmpty()) statusStrip_->setMessage(lines.back().trimmed());
+    }
 }
 
 void MainWindow::onDocumentChanged()
@@ -1564,16 +1660,16 @@ void MainWindow::refreshWindowTitle()
 {
     const QString file = controller_->currentFile();
     const QString name = file.isEmpty() ? tr("adsız") : QFileInfo(file).fileName();
-    setWindowTitle(tr("%1 — PiriCAD").arg(name));
+    setWindowTitle(tr("%1 — KentOSCad").arg(name));
     docTabs_->setDocuments({QFileInfo(name).completeBaseName()}, 0);
-    titleBar_->setDocumentName(tr("%1 — PiriCAD %2").arg(name, QStringLiteral(PIRICAD_VERSION)));
+    titleBar_->setDocumentName(tr("%1 — KentOSCad %2").arg(name, QStringLiteral(PIRICAD_VERSION)));
 }
 
 void MainWindow::openProject()
 {
     const QString path = QFileDialog::getOpenFileName(
         this, tr("Proje aç"), QFileInfo(controller_->currentFile()).absolutePath(),
-        tr("PiriCAD projesi (*.pcad);;Tüm dosyalar (*)"));
+        tr("KentOSCad projesi (*.pcad);;Tüm dosyalar (*)"));
     if (path.isEmpty()) return;
 
     controller_->runLine(QStringLiteral("AÇ \"%1\"").arg(path), command::Origin::Gui);
@@ -1597,7 +1693,7 @@ void MainWindow::saveProject()
 void MainWindow::saveProjectAs()
 {
     QString path = QFileDialog::getSaveFileName(
-        this, tr("Farklı kaydet"), controller_->currentFile(), tr("PiriCAD projesi (*.pcad)"));
+        this, tr("Farklı kaydet"), controller_->currentFile(), tr("KentOSCad projesi (*.pcad)"));
     if (path.isEmpty()) return;
     if (QFileInfo(path).suffix().isEmpty()) path += QStringLiteral(".pcad");
 
@@ -1636,13 +1732,13 @@ void MainWindow::openScript()
 {
     runScriptFile(QFileDialog::getOpenFileName(this, tr("Betik seç"),
                                                QStringLiteral("tests/journal"),
-                                               tr("PiriCAD betiği (*.json);;Tüm dosyalar (*)")));
+                                               tr("KentOSCad betiği (*.json);;Tüm dosyalar (*)")));
 }
 
 void MainWindow::showAbout()
 {
-    QMessageBox::about(this, tr("PiriCAD Hakkında"),
-                       tr("<h3>PiriCAD %1</h3>"
+    QMessageBox::about(this, tr("KentOSCad Hakkında"),
+                       tr("<h3>KentOSCad %1</h3>"
                           "<p>Türkiye odaklı CBS + CAD harita yazılımı.</p>"
                           "<p><b>Mimari:</b> Uygulamanın durumunu değiştiren her şey bir komuttur. "
                           "Arayüz, komut veri yolunun yalnızca bir istemcisidir.</p>"

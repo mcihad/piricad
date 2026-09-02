@@ -381,6 +381,13 @@ void StatusStrip::setCoordinate(const QString& text)
     update();
 }
 
+void StatusStrip::setMessage(const QString& text)
+{
+    if (message_ == text) return;
+    message_ = text;
+    update(); // no relayout: the cell takes the room already between the chips
+}
+
 void StatusStrip::setConnection(const QString& text, bool connected)
 {
     connection_ = text;
@@ -435,7 +442,12 @@ void StatusStrip::leaveEvent(QEvent*)
 
 void StatusStrip::mousePressEvent(QMouseEvent* event)
 {
-    if (event->button() != Qt::LeftButton || hot_ < 0) return;
+    if (hot_ < 0) return;
+    if (event->button() == Qt::RightButton) {
+        emit configureRequested(chips_[hot_].id);
+        return;
+    }
+    if (event->button() != Qt::LeftButton) return;
     emit toggled(chips_[hot_].id);
 }
 
@@ -479,6 +491,24 @@ void StatusStrip::paintEvent(QPaintEvent*)
     const int connWidth = cellWidth(connection_, true);
 
     int x = width() - perfWidth;
+
+    // ---- what the last command said ----
+    //
+    // In the gap the chips leave, elided rather than wrapped: a status line is one
+    // line, and a distance the user cannot finish reading is still the fastest
+    // place to find it. The full text is in `Geçmiş`.
+    if (!message_.isEmpty() && !chips_.isEmpty()) {
+        const int from = chips_.back().left + chips_.back().width + kStatusPadX;
+        const int to   = x - connWidth - kStatusPadX;
+        if (to - from > kStatusPadX * 2) {
+            p.setFont(mono(kStatusPx));
+            p.setPen(t.readout);
+            const QRect box(from, 1, to - from, kStatusHeight - 1);
+            p.drawText(box, Qt::AlignVCenter | Qt::AlignLeft,
+                       QFontMetrics(p.font()).elidedText(message_, Qt::ElideRight, box.width()));
+        }
+    }
+
     p.setFont(mono(kStatusPx));
     p.setPen(t.textDim);
     p.drawText(QRect(x + kStatusPadX, 1, perfWidth, kStatusHeight - 1),

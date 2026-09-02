@@ -1,12 +1,12 @@
 # Koordinat Sistemleri
 
-Türkiye'de ölçüm ve çizim yapan harita mühendisi için; bu sayfayı bitirdiğinizde PiriCAD'in
+Türkiye'de ölçüm ve çizim yapan harita mühendisi için; bu sayfayı bitirdiğinizde KentOSCad'in
 koordinatları nasıl sakladığını, hangi dilimlerle çalıştığını ve bugün neyin yapılıp
 neyin yapılamadığını bileceksiniz.
 
 ## Koordinatlar milimetre olarak saklanır
 
-PiriCAD bütün koordinatları **64 bitlik tam sayı milimetre** olarak saklar. Ondalıklı
+KentOSCad bütün koordinatları **64 bitlik tam sayı milimetre** olarak saklar. Ondalıklı
 sayı kullanmaz.
 
 Kullanıcı olarak bunun size üç sonucu vardır:
@@ -87,7 +87,7 @@ AXIS["northing (X)", ORDER 1]
 AXIS["easting (Y)",  ORDER 2]
 ```
 
-PiriCAD bu konvansiyona uyar: gördüğünüz her etikette Y sağa değeri, X yukarı değeri
+KentOSCad bu konvansiyona uyar: gördüğünüz her etikette Y sağa değeri, X yukarı değeri
 gösterir.
 
 Komut satırına ve betiğe **sağa değer önce** yazılır:
@@ -99,7 +99,7 @@ Komut satırına ve betiğe **sağa değer önce** yazılır:
 ```
 
 Bu sıra yaygın Türk CAD pratiğiyle aynıdır. Dönüşüm yapan kütüphaneler
-(PROJ, EPSG:5254) koordinatı **yukarı değer önce** bekler; PiriCAD bu çevrimi sınırda
+(PROJ, EPSG:5254) koordinatı **yukarı değer önce** bekler; KentOSCad bu çevrimi sınırda
 kendisi yapar, sizin bir şey yapmanız gerekmez.
 
 Yanındaki bölme ölçeği verir: bir ekran pikselinin kaç metreye karşılık geldiği.
@@ -111,13 +111,13 @@ Yanındaki bölme ölçeği verir: bir ekran pikselinin kaç metreye karşılık
 ## Büyük koordinatlar ve ekran titremesi
 
 TUREF/TM3 koordinatları yedi basamaklıdır. Böyle bir sayı doğrudan ekran hassasiyetine
-indirgenirse çizim metrelerce titrer. PiriCAD bunu, koordinatları ekrana göndermeden önce
+indirgenirse çizim metrelerce titrer. KentOSCad bunu, koordinatları ekrana göndermeden önce
 görünüm merkezine göre kaydırarak önler; bu yüzden yakınlaştırdığınızda çizgiler yerinde
 durur.
 
 ## Koordinat dönüşümü
 
-PiriCAD dönüşüm için **PROJ** kullanır — otuz yıldır bu işi yapan, üç platformda da
+KentOSCad dönüşüm için **PROJ** kullanır — otuz yıldır bu işi yapan, üç platformda da
 çalışan standart kütüphane. Yedi TUREF dilimi de tanınır (EPSG:5253–5259) ve
 dilimler arası dönüşüm çalışır.
 
@@ -126,12 +126,12 @@ milimetre olduğu için dönüşüm pratikte kayıpsızdır.
 
 ### İki tuzak, ikisi de kapatıldı
 
-**Eksen sırası.** EPSG:5254 koordinatı *yukarı değer önce* bekler. PiriCAD sağa
+**Eksen sırası.** EPSG:5254 koordinatı *yukarı değer önce* bekler. KentOSCad sağa
 değeri önce saklar. Dönüşüm bu çevrimi sınırda kendisi yapar; siz bir şey yapmazsınız.
 Bu çevrim atlanırsa nokta Kuzey Denizi'ne düşer — testle tutuluyor.
 
 **Derece ve milimetre.** Hedef coğrafi bir sistemse (WGS84 gibi) sonuç derecedir.
-Dereceyi milimetre olarak saklamak noktayı yüz metre kaydırır, o yüzden PiriCAD bu
+Dereceyi milimetre olarak saklamak noktayı yüz metre kaydırır, o yüzden KentOSCad bu
 durumda çizim geometrisini dönüştürmeyi **reddeder** ve açık bir hata verir.
 Coğrafi okuma ekranda ve dışa aktarımda kullanılır, çizimin içinde değil.
 

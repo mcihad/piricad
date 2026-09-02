@@ -9,8 +9,13 @@
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QSettings>
+#include <QStandardPaths>
 #include <QGuiApplication>
 #include <QImage>
+#include <QLineEdit>
 #include <QLocale>
 #include <QMouseEvent>
 #include <QPainter>
@@ -30,6 +35,63 @@ namespace {
 /// of a GPU build therefore comes out with a hole exactly where the drawing is —
 /// which is what made a frame dump report an empty canvas on a canvas that was
 /// drawing correctly. So the canvas is asked for its own frame and composited in.
+/// Moves this user's settings, config and data from the program's former name.
+///
+/// The program was called PiriCAD until Faz 0 and Qt derives every per-user path
+/// from the application and organisation names — the settings file, the config
+/// directory the style designer writes a saved gösterim into, and the data
+/// directory the autosave uses. Renaming without this would not lose the files,
+/// which is worse than losing them: they would sit at the old path and the
+/// program would report an empty style shelf and no preferences, and the user
+/// would have no way to know why.
+///
+/// The old paths are ASKED FOR rather than guessed. Each platform lays these out
+/// differently — `~/.config/<org>` on Linux, `Application Support` on macOS,
+/// `AppData` on Windows — so the names are set to the old ones, Qt is asked, the
+/// names are set to the new ones, and Qt is asked again. Guessing the layout here
+/// would be a third place that has to agree with Qt about it.
+///
+/// Never overwrites: a destination that already exists is a user who has already
+/// run the new build, and the old copy is left where it is rather than merged.
+void migrate_user_data()
+{
+    struct Move
+    {
+        QStandardPaths::StandardLocation where;
+        const char* what;
+    };
+    static const Move kMoves[] = {
+        {QStandardPaths::AppConfigLocation, "ayar"},
+        {QStandardPaths::AppDataLocation, "veri"},
+    };
+
+    const auto paths_under = [](const char* org, const char* app) {
+        QApplication::setOrganizationName(QString::fromLatin1(org));
+        QApplication::setApplicationName(QString::fromLatin1(app));
+
+        QStringList out;
+        for (const Move& m : kMoves)
+            out << QStandardPaths::writableLocation(m.where);
+        out << QSettings().fileName();
+        return out;
+    };
+
+    const QStringList from = paths_under("PiriCAD", "PiriCAD");
+    const QStringList to   = paths_under("KentOSCad", "KentOSCad");
+
+    for (int i = 0; i < from.size() && i < to.size(); ++i) {
+        if (from[i].isEmpty() || to[i].isEmpty() || from[i] == to[i]) continue;
+        if (!QFileInfo::exists(from[i]) || QFileInfo::exists(to[i])) continue;
+
+        // The parent has to exist before a rename into it, and on a fresh machine
+        // it does not: nothing has written a KentOSCad path yet.
+        QDir().mkpath(QFileInfo(to[i]).absolutePath());
+        if (QFile::rename(from[i], to[i]))
+            (void)std::fprintf(stderr, "[kentoscad] taşındı: %s -> %s\n",
+                               from[i].toUtf8().constData(), to[i].toUtf8().constData());
+    }
+}
+
 QImage window_shot(QWidget* subject)
 {
     QImage shot = subject->grab().toImage();
@@ -60,10 +122,17 @@ int main(int argc, char** argv)
     // for the same reason.
     QApplication app(argc, argv);
 
-    QApplication::setApplicationName(QStringLiteral("PiriCAD"));
+    // THE NAME THE USER SEES, and the one Qt derives every per-user path from:
+    // the settings file, the config directory the style library writes into, and
+    // the data directory the autosave uses. Changing it moves all three, so the
+    // rename carries a migration and the migration runs BEFORE anything reads a
+    // path — see `migrate_user_data` above.
+    migrate_user_data();
+
+    QApplication::setApplicationName(QStringLiteral("KentOSCad"));
     QApplication::setApplicationVersion(QStringLiteral(PIRICAD_VERSION));
-    QApplication::setOrganizationName(QStringLiteral("PiriCAD"));
-    QApplication::setOrganizationDomain(QStringLiteral("piricad.org"));
+    QApplication::setOrganizationName(QStringLiteral("KentOSCad"));
+    QApplication::setOrganizationDomain(QStringLiteral("kentoscad.org"));
 
     // FUSION, ON EVERY PLATFORM, BEFORE THE FIRST WIDGET EXISTS.
     //
@@ -84,7 +153,7 @@ int main(int argc, char** argv)
 
     QString fontDir;
     if (!piricad::app::loadShellFonts(&fontDir)) {
-        qWarning("PiriCAD: IBM Plex yüklenemedi (%s). Arayüz bu makinede tasarlandığı gibi "
+        qWarning("KentOSCad: IBM Plex yüklenemedi (%s). Arayüz bu makinede tasarlandığı gibi "
                  "görünmeyecek; PIRICAD_DATA ile veri dizinini gösterin.",
                  fontDir.toUtf8().constData());
     }
@@ -101,7 +170,7 @@ int main(int argc, char** argv)
 
     QCommandLineParser parser;
     parser.setApplicationDescription(
-        QStringLiteral("PiriCAD — Türkiye odaklı CBS + CAD harita yazılımı"));
+        QStringLiteral("KentOSCad — Türkiye odaklı CBS + CAD harita yazılımı"));
     parser.addHelpOption();
     parser.addVersionOption();
 
@@ -449,6 +518,43 @@ int main(int argc, char** argv)
                 QKeyEvent k(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
                 QCoreApplication::sendEvent(canvas, &k);
                 QCoreApplication::processEvents();
+            }
+
+            // 6. METİN WRITES FROM THE CANVAS. The anchor is a click; the string
+            //    is typed into a box that opens where the caption goes. This used
+            //    to hang: the click supplied the anchor, the prompt turned into a
+            //    text prompt, and no client could answer it — focus stayed on the
+            //    canvas while the prompt sat in the command line's placeholder.
+            auto* textTool = window.findChild<QAction*>(QStringLiteral("toolAction.METİN"));
+            check(textTool != nullptr, "METİN aracı bulunamadı");
+            if (textTool != nullptr) {
+                const std::size_t before_text = doc.live_entity_count();
+                textTool->trigger();
+                QCoreApplication::processEvents();
+
+                send(QEvent::MouseButtonPress, QPointF(300, 300), Qt::LeftButton, Qt::LeftButton);
+                send(QEvent::MouseButtonRelease, QPointF(300, 300), Qt::LeftButton, Qt::NoButton);
+
+                // The anchor went in; the box must now be open and focused.
+                auto* box = canvas->findChild<QLineEdit*>(QStringLiteral("canvasTextEditor"));
+                check(box != nullptr && box->isVisible(), "metin kutusu açılmadı");
+
+                if (box != nullptr) {
+                    box->setText(QStringLiteral("ADA 1284"));
+                    QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+                    QCoreApplication::sendEvent(box, &enter);
+                    QCoreApplication::processEvents();
+
+                    check(!box->isVisible(), "metin girildikten sonra kutu kapanmadı");
+                    check(doc.live_entity_count() == before_text + 1, "arayüzden metin yazılamadı");
+                    check(doc.texts().pool_size() > 0, "yazılan metin belgede yok");
+                }
+
+                {
+                    QKeyEvent k(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+                    QCoreApplication::sendEvent(canvas, &k);
+                    QCoreApplication::processEvents();
+                }
             }
 
             if (failures == 0) (void)std::fprintf(stdout, "[piricad] tuval düzenleme: tamam\n");

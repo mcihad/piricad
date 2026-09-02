@@ -38,6 +38,7 @@ namespace piricad::command {
     X(mirror)                                                                                      \
     X(measure)                                                                                     \
     X(measure_area)                                                                                \
+    X(coordinate)                                                                                  \
     X(attribute)                                                                                   \
     X(column)                                                                                      \
     X(erase)                                                                                       \

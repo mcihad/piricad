@@ -21,7 +21,7 @@ kimlikler doğrudan [`SİL`](erase.md) komutuna verilebilir.
 
 ### Pencere ve kesen kutu
 
-CAD dünyasının kırk yıllık ayrımı, PiriCAD'de de aynıdır:
+CAD dünyasının kırk yıllık ayrımı, KentOSCad'de de aynıdır:
 
 | Kutu | Ne alır | Ekranda |
 |---|---|---|

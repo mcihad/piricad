@@ -39,6 +39,8 @@
 #include <memory>
 #include <span>
 
+class QLineEdit;
+
 namespace piricad::app {
 
 /// The one road from a widget to the document; see controller.hpp.
@@ -307,6 +309,21 @@ private:
     render::SceneOptions options_{};
     GridSetup grid_{};
     AidLook look_{};
+
+    /// Opens the in-canvas text box at `where` (widget pixels) for a command that
+    /// is waiting on a string, and hands what the user typed to the controller.
+    ///
+    /// A CAD user types a caption where the caption goes, not into a bar at the
+    /// bottom of the window — and until this existed the prompt reached the
+    /// command line's placeholder while focus stayed here, so METİN took its
+    /// anchor and then hung waiting for a value nothing could send.
+    void openTextEditor(const QPointF& where);
+    void closeTextEditor();
+
+    /// The box itself, created on first use and reused after: a `QLineEdit`
+    /// parented to the canvas, so it dies with the canvas and needs no separate
+    /// lifetime.
+    QLineEdit* text_editor_{nullptr};
 
     bool panning_{false};
     QPointF pan_anchor_{};

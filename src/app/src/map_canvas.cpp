@@ -11,6 +11,8 @@
 #include <QApplication>
 #include <QElapsedTimer>
 #include <QKeyEvent>
+#include <QLineEdit>
+#include <QShortcut>
 #include <QMouseEvent>
 #include <QPaintDevice>
 #include <QScreen>
@@ -648,6 +650,16 @@ void MapCanvas::buildSnapMarker()
         addRun(batch, {{x - h, y}, {x + h, y}}, false);
         addRun(batch, {{x, y - h}, {x, y + h}}, false);
         addRun(batch, {{x - h, y - h}, {x + h, y - h}, {x + h, y + h}, {x - h, y + h}}, true);
+        break;
+    case core::SnapNode: // a filled ring: the surveyed monument itself
+        // DÜĞÜM had no glyph and fell through to `default`, so snapping to a
+        // control point drew nothing at all — the one thing on a cadastral sheet
+        // every boundary is measured from, and the marker said it had not fired.
+        addCircle(batch, x, y, h * 0.55f);
+        addRun(batch, {{x - h, y}, {x - h * 0.55f, y}}, false);
+        addRun(batch, {{x + h * 0.55f, y}, {x + h, y}}, false);
+        addRun(batch, {{x, y - h}, {x, y - h * 0.55f}}, false);
+        addRun(batch, {{x, y + h * 0.55f}, {x, y + h}}, false);
         break;
     case core::SnapPolar:
     case core::SnapOrtho: // diamond: the point is on a locked direction
@@ -1303,6 +1315,16 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
 
     if (event->button() == Qt::LeftButton) {
         if (controller_.awaitingInput()) {
+            // WHAT IS BEING ASKED FOR decides what a click does. A command that
+            // wants a string is not answered by a coordinate, and a click that
+            // sent one anyway is what left METİN waiting forever: the anchor went
+            // in, the prompt turned into "Yazılacak metin", and every further
+            // click supplied another point the command was not asking for.
+            if (controller_.promptKind() == command::ParamKind::Text) {
+                openTextEditor(event->position());
+                return;
+            }
+
             // A click is one input value for the running command, and it is the RAW
             // world point. Snapping is not applied here: it happens once, inside
             // the command layer, on the path every client takes (piricad.md §2.4,
@@ -1310,7 +1332,17 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
             // client with a private route.
             const core::Point2 world =
                 view_.to_world(render::ScreenPoint{event->position().x(), event->position().y()});
+            const QPointF at = event->position();
             controller_.supplyPoint(world);
+
+            // THE BOX OPENS ON THE CLICK THAT EARNED IT. METİN asks for its anchor
+            // first and its string second, so the prompt turns into a text prompt
+            // inside the call above — and waiting for another click would make the
+            // user click twice in the same place with nothing to tell them why.
+            if (controller_.awaitingInput() &&
+                controller_.promptKind() == command::ParamKind::Text)
+                openTextEditor(at);
+
             snap_preview_valid_ = false;
             update();
             return;
@@ -1458,6 +1490,14 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
     }
 
     if (event->key() == Qt::Key_Escape) {
+        // The text box first: it is the innermost thing open, and ESC in it means
+        // "not this caption" rather than "not this command". A second ESC then
+        // cancels METİN, which is the nesting a user expects.
+        if (text_editor_ != nullptr && text_editor_->isVisible()) {
+            closeTextEditor();
+            update();
+            return;
+        }
         if (selecting_) {
             selecting_ = false;
             update();
@@ -1465,6 +1505,7 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
         }
         if (controller_.session()) {
             controller_.cancelInteractive();
+            closeTextEditor();
             snap_preview_valid_ = false;
             update();
             return;
@@ -1481,6 +1522,61 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
         return;
     }
     QWidget::keyPressEvent(event);
+}
+
+// ------------------------------------------------------ the text editor ----
+
+void MapCanvas::openTextEditor(const QPointF& where)
+{
+    if (text_editor_ == nullptr) {
+        text_editor_ = new QLineEdit(this);
+        text_editor_->setObjectName(QStringLiteral("canvasTextEditor"));
+        text_editor_->setAccessibleName(tr("Çizime yazılacak metin"));
+        text_editor_->setMinimumWidth(180);
+
+        // ENTER COMMITS, ESC CANCELS, and both go through the controller rather
+        // than touching the document: this box is a client of the command bus
+        // like every other (CLAUDE.md Article 1.2). `editingFinished` is NOT used
+        // — it also fires on focus loss, which would commit a caption the user was
+        // walking away from.
+        // ESC INSIDE THE BOX. A focused QLineEdit consumes the key, so the
+        // canvas handler never sees it; without this the box could only be
+        // dismissed by typing something and pressing Enter.
+        auto* give_up = new QShortcut(QKeySequence(Qt::Key_Escape), text_editor_);
+        give_up->setContext(Qt::WidgetShortcut);
+        connect(give_up, &QShortcut::activated, this, [this] {
+            closeTextEditor();
+            update();
+        });
+
+        connect(text_editor_, &QLineEdit::returnPressed, this, [this] {
+            const QString typed = text_editor_->text();
+            closeTextEditor();
+            if (!typed.isEmpty()) controller_.supplyText(typed);
+            update();
+        });
+    }
+
+    // Placed where the caption will start, and nudged back inside when the click
+    // was near the right or bottom edge — a box drawn off the canvas is a box the
+    // user cannot type into.
+    const int w = std::max(180, width() / 4);
+    const int h = text_editor_->sizeHint().height();
+    const int x = std::clamp(static_cast<int>(where.x()), 0, std::max(0, width() - w));
+    const int y = std::clamp(static_cast<int>(where.y()) - h / 2, 0, std::max(0, height() - h));
+
+    text_editor_->setGeometry(x, y, w, h);
+    text_editor_->clear();
+    text_editor_->show();
+    text_editor_->setFocus(Qt::OtherFocusReason);
+}
+
+void MapCanvas::closeTextEditor()
+{
+    if (text_editor_ == nullptr) return;
+    text_editor_->hide();
+    text_editor_->clear();
+    setFocus(Qt::OtherFocusReason);
 }
 
 } // namespace piricad::app

@@ -1,7 +1,7 @@
 # AÇ — Proje Dosyası Açma
 
 Kaydedilmiş bir çizime dönmek isteyen kullanıcı için; bu sayfayı bitirdiğinizde
-bir PiriCAD proje dosyasını açabilecek ve açmanın geri alınamayan bir işlem
+bir KentOSCad proje dosyasını açabilecek ve açmanın geri alınamayan bir işlem
 olduğunu bileceksiniz.
 
 ## Ne yapar
@@ -20,7 +20,7 @@ Açma başarılı olduğunda:
 
 Kaydedilmemiş çalışmanız varsa **önce onu kaydedin**. `AÇ` sormaz.
 
-Dosyanın içinde ne olduğu: [PiriCAD proje dosyası](../veri/proje-dosyasi.md).
+Dosyanın içinde ne olduğu: [KentOSCad proje dosyası](../veri/proje-dosyasi.md).
 
 ## Adlar
 
@@ -44,7 +44,7 @@ alınır.
 
 ## Parametreler
 
-Tek parametresi vardır: **`dosya`** — açılacak PiriCAD proje dosyasının yolu.
+Tek parametresi vardır: **`dosya`** — açılacak KentOSCad proje dosyasının yolu.
 Göreli yol programın çalışma dizinine göre çözülür.
 
 Tipi ve adedi için üretilmiş [komut referansına](referans.md) bakın.
@@ -74,7 +74,7 @@ Dosyada bu sürümün tanımadığı veri varsa uyarı da yazılır:
 ```text
 Açıldı: yeni-surumden.pcad  (14 nesne, 5 katman, 63 nokta, biçim 1)
   uyarı: Dosyada bu sürümün tanımadığı 2 veri bloğu var; içerikleri korunmadı.
-         Dosyayı yazan PiriCAD sürümüyle açarsanız tamamını görürsünüz.
+         Dosyayı yazan KentOSCad sürümüyle açarsanız tamamını görürsünüz.
 ```
 
 ### Arayüz
@@ -119,9 +119,9 @@ değiştiren, geri alınamayan bir işlem bir öneriyle tetiklenmemelidir.
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
 | `'...' açılamadı: No such file or directory. Yolu ve okuma iznini denetleyin.` | Dosya yok ya da okunamıyor | Yolu ve izinleri denetleyin |
-| `'...' boş; PiriCAD proje dosyası değil.` | Dosya sıfır bayt | Yedeğinden geri alın |
-| `io.not_a_project: '...' bir PiriCAD proje dosyası değil.` | Başka bir biçim | Dış biçimler için [İÇEAKTAR](import.md) kullanın |
-| `io.format_too_new: '...' en az N. sürüm biçim okuyucusu istiyor` | Dosyayı daha yeni bir PiriCAD yazmış | Mesajdaki sürüme yükseltin |
+| `'...' boş; KentOSCad proje dosyası değil.` | Dosya sıfır bayt | Yedeğinden geri alın |
+| `io.not_a_project: '...' bir KentOSCad proje dosyası değil.` | Başka bir biçim | Dış biçimler için [İÇEAKTAR](import.md) kullanın |
+| `io.format_too_new: '...' en az N. sürüm biçim okuyucusu istiyor` | Dosyayı daha yeni bir KentOSCad yazmış | Mesajdaki sürüme yükseltin |
 | `io.truncated: '...' N bayt olduğunu bildiriyor, ama M bayt.` | Dosya kesilmiş | Yedeğinden geri alın |
 | `io.bad_block: ...` | Dosyanın iç yerleşimi bozuk | Yedeğinden geri alın |
 | `io.inconsistent: ...` | Dosyanın iki yeri birbirini tutmuyor | Yedeğinden geri alın |

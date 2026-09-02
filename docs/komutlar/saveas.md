@@ -6,14 +6,14 @@ dosyaya bağlı olduğunu bileceksiniz.
 
 ## Ne yapar
 
-Çizimi verdiğiniz yola bir PiriCAD proje dosyası (`.pcad`) olarak yazar ve
+Çizimi verdiğiniz yola bir KentOSCad proje dosyası (`.pcad`) olarak yazar ve
 **çizimi o dosyaya bağlar**. Bundan sonra [KAYDET](save.md) oraya yazar.
 
-Hedefte aynı adlı bir dosya varsa üzerine yazılır. PiriCAD önce yanına geçici bir
+Hedefte aynı adlı bir dosya varsa üzerine yazılır. KentOSCad önce yanına geçici bir
 dosya yazıp ancak tamamlandığında yerine koyduğu için, yarıda kesilen bir
 `FARKLIKAYDET` **eski dosyayı bozmaz**.
 
-Dosyanın neyi taşıdığı: [PiriCAD proje dosyası](../veri/proje-dosyasi.md).
+Dosyanın neyi taşıdığı: [KentOSCad proje dosyası](../veri/proje-dosyasi.md).
 
 ## Adlar
 
@@ -33,7 +33,7 @@ FARKLIKAYDET dosya=<dosya-yolu>
 ```
 
 Dosya yolu verilmezse komut yolu sorar. İçinde boşluk olan yol tırnak içine
-alınır. Uzantıyı `.pcad` yazmanız beklenir; PiriCAD uzantı eklemez, çünkü adı
+alınır. Uzantıyı `.pcad` yazmanız beklenir; KentOSCad uzantı eklemez, çünkü adı
 siz koyarsınız.
 
 ## Parametreler

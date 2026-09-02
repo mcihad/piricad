@@ -93,6 +93,12 @@ private:
         QLabel* label{nullptr};
         QWidget* editor{nullptr};
         QWidget* unit{nullptr}; ///< the unit combo beside it, or null
+
+        /// The heading this row sits under (design.md §8: DOLGU, KENAR, GEOMETRİ,
+        /// GÖRÜNÜRLÜK), or null for a row that is always shown. A heading is
+        /// visible exactly when one of its rows is; an empty heading is a
+        /// promise of rows that are not there.
+        QLabel* group{nullptr};
         std::vector<core::SymbolLayerType> types;
     };
 
@@ -112,9 +118,14 @@ private:
     QWidget* buildGlobal();
     QWidget* buildProperties();
 
-    /// Declares one property row and records which layer types show it.
-    void addProperty(QVBoxLayout* form, const QString& label, QWidget* editor, QWidget* unit,
-                     std::vector<core::SymbolLayerType> types);
+    /// Opens one of §8's property groups: a small-caps heading the rows below
+    /// belong to. Returns the heading so the rows can name it.
+    QLabel* addGroup(QVBoxLayout* form, const QString& title);
+
+    /// Declares one property row, under `group`, and records which layer types
+    /// show it.
+    void addProperty(QVBoxLayout* form, QLabel* group, const QString& label, QWidget* editor,
+                     QWidget* unit, std::vector<core::SymbolLayerType> types);
 
     // ---- the shelf on the left ----
     void refreshGalleryTree();

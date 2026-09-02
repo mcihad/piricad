@@ -143,6 +143,28 @@ Task<void> run_measure_area(Context& ctx)
     ctx.record("nesneler", Value::ids(requested));
 }
 
+/// KOORDİNAT — read one point off the drawing.
+///
+/// The reading a surveyor takes before anything else, and the one the tool column
+/// offered as a disabled button for a phase: where IS this. It is `ÖLÇ` with one
+/// point instead of two, and it reports in the document's own CRS rather than in
+/// whatever the view happens to be showing, because the number a user writes down
+/// belongs to the drawing and not to the window.
+Task<void> run_coordinate(Context& ctx)
+{
+    auto at = co_await ctx.point("nokta", "Okunacak nokta");
+    if (!at) co_return; // ESC before anything was read
+
+    const std::string crs = ctx.document().crs().id();
+
+    // SAĞA / YUKARI, which is what a Turkish surveyor calls easting and northing,
+    // and the order a TUCBS record writes them in.
+    ctx.echo("Sağa: " + metres(at->x) + "   Yukarı: " + metres(at->y) +
+             (crs.empty() ? std::string() : "   (" + crs + ")"));
+
+    ctx.record("nokta", Value::point(*at));
+}
+
 } // namespace
 
 PIRICAD_COMMAND(measure)
@@ -175,6 +197,20 @@ PIRICAD_COMMAND(measure_area)
         .flags = Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary  = "Seçilen nesnelerin alanını ve çevresini yazar.",
         .run      = &run_measure_area,
+    };
+}
+
+PIRICAD_COMMAND(coordinate)
+{
+    return CommandSpec{
+        .id       = "core.coordinate",
+        .names    = {"KOORDİNAT", "KOORDINAT", "COORDINATE", "KRD"},
+        .category = Category::Query,
+        .params   = {Param::point("nokta", "Okunacak nokta")},
+        .undo     = UndoPolicy::None,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
+        .summary  = "Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.",
+        .run      = &run_coordinate,
     };
 }
 

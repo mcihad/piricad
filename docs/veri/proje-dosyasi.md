@@ -1,8 +1,8 @@
-# PiriCAD Proje Dosyası (`.pcad`)
+# KentOSCad Proje Dosyası (`.pcad`)
 
 Çizimini kaydeden, arşivleyen ya da başka bir kuruma teslim eden kullanıcı için;
 bu sayfayı bitirdiğinizde `.pcad` dosyasının içinde ne olduğunu, neyin
-korunduğunu, neyin korunmadığını ve bir dosya bozulduğunda PiriCAD'in ne
+korunduğunu, neyin korunmadığını ve bir dosya bozulduğunda KentOSCad'in ne
 söyleyeceğini bileceksiniz.
 
 Kaydetme ve açma komutları için: [AÇ](../komutlar/open.md),
@@ -10,7 +10,7 @@ Kaydetme ve açma komutları için: [AÇ](../komutlar/open.md),
 
 ## Ne işe yarar
 
-`.pcad`, PiriCAD'in kendi proje dosyasıdır. Çizimin tamamını **kayıpsız** taşır:
+`.pcad`, KentOSCad'in kendi proje dosyasıdır. Çizimin tamamını **kayıpsız** taşır:
 geometri, katmanlar, stiller, nesne kimlikleri ve proje ayarları. DXF ya da
 GeoPackage'a dışa aktarmak her zaman bir şeyler kaybeder — proje dosyası
 kaybetmez. Çalışmanızı `.pcad` olarak saklayın, dış biçimleri teslim için
@@ -56,19 +56,19 @@ Ayrıntı: [Koordinat sistemleri](koordinat-sistemleri.md).
 
 ## Sürümler ve uyumluluk
 
-Dosyanın ilk 32 baytı üç şey söyler: bunun bir PiriCAD dosyası olduğu, hangi
+Dosyanın ilk 32 baytı üç şey söyler: bunun bir KentOSCad dosyası olduğu, hangi
 sürümün yazdığı ve **okumak için en az hangi sürümün gerektiği**.
 
-| Durum | PiriCAD ne yapar |
+| Durum | KentOSCad ne yapar |
 |---|---|
 | Dosya bu sürümün yazdığından eski | Açar. Eski dosyalar açılmaya devam eder |
 | Dosyada tanımadığı bir veri bloğu var | Açar, bloğu atlar ve size kaç blok atladığını söyler |
 | Dosya daha yeni bir okuyucu istiyor | **Açmaz.** Gereken sürümü söyler ve yarım yüklemez |
 
 Üçüncü satır önemlidir: yarım açılmış bir proje, açılmamış bir projeden çok daha
-tehlikelidir. PiriCAD ya tamamını okur ya da hiçbirini.
+tehlikelidir. KentOSCad ya tamamını okur ya da hiçbirini.
 
-Yeni bir özellik geldiğinde dosyaya yeni bir blok eklenir; eski PiriCAD o bloğu
+Yeni bir özellik geldiğinde dosyaya yeni bir blok eklenir; eski KentOSCad o bloğu
 atlayarak dosyayı açmaya devam eder. Gereken okuyucu sürümü ancak var olan bir
 bloğun **anlamı** değişirse yükselir, ve bu bugüne kadar olmadı.
 
@@ -81,11 +81,11 @@ bırakılmaz.
 
 ## Dosya bozulursa
 
-PiriCAD dosyadaki hiçbir sayıya güvenmez: her uzunluk, her konum ve her sayaç
+KentOSCad dosyadaki hiçbir sayıya güvenmez: her uzunluk, her konum ve her sayaç
 dosyanın gerçek boyutuna karşı denetlenir. Bozuk bir dosya **çökme değil, hata
 mesajı** üretir, ve mesaj neyin bozuk olduğunu söyler.
 
-PiriCAD bozuk bir dosyayı **kendiliğinden onarmaz**. Onarım ayrı ve açıkça
+KentOSCad bozuk bir dosyayı **kendiliğinden onarmaz**. Onarım ayrı ve açıkça
 istenen bir iştir; sessizce "düzeltilmiş" bir kadastro dosyası, bozuk olduğu
 bilinen bir dosyadan kötüdür.
 
@@ -93,13 +93,13 @@ bilinen bir dosyadan kötüdür.
 
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
-| `io.not_a_project: '...' bir PiriCAD proje dosyası değil.` | Dosya `.pcad` değil ya da başka bir program yazmış | Dış biçimler için [İÇEAKTAR](../komutlar/import.md) kullanın |
-| `io.format_too_new: '...' en az N. sürüm biçim okuyucusu istiyor` | Dosyayı daha yeni bir PiriCAD yazmış | Mesajdaki sürüme yükseltin |
+| `io.not_a_project: '...' bir KentOSCad proje dosyası değil.` | Dosya `.pcad` değil ya da başka bir program yazmış | Dış biçimler için [İÇEAKTAR](../komutlar/import.md) kullanın |
+| `io.format_too_new: '...' en az N. sürüm biçim okuyucusu istiyor` | Dosyayı daha yeni bir KentOSCad yazmış | Mesajdaki sürüme yükseltin |
 | `io.truncated: '...' N bayt olduğunu bildiriyor, ama M bayt.` | Dosya yarım kopyalanmış ya da kesilmiş | Yedeğinden geri alın; kopyalamayı yeniden yapın |
 | `io.bad_block: ... 8 baytlık hizaya oturmuyor. Dosya bozuk.` | Dosyanın iç yerleşimi bozulmuş | Yedeğinden geri alın |
 | `io.inconsistent: ... sütunu N öğe taşıyor, belge kaydı M bildiriyor.` | Dosyanın iki yeri birbirini tutmuyor | Yedeğinden geri alın |
 | `io.key_mismatch: nesne anahtarları artan sırada değil` | Nesne kimlik düzeni bozulmuş | Yedeğinden geri alın; bu dosya güvenilir değil |
-| `io.unknown_kind: ... bu yapı yalnız 0 numaralı türü tanıyor.` | Dosyada bu sürümün tanımadığı bir nesne türü var | Dosyayı yazan PiriCAD sürümüne yükseltin |
+| `io.unknown_kind: ... bu yapı yalnız 0 numaralı türü tanıyor.` | Dosyada bu sürümün tanımadığı bir nesne türü var | Dosyayı yazan KentOSCad sürümüne yükseltin |
 | `Proje dosyası yalnız boş bir belgeye okunabilir.` | Var olan bir çizimin üzerine proje okunmaya çalışıldı | Açmak için `AÇ`, eklemek için `İÇEAKTAR` |
 | `'...' dizini yok. Önce dizini oluşturun ya da başka bir yol seçin.` | Kaydedilecek klasör yok | Klasörü oluşturun |
 | `'...' yazılırken hata oluştu; disk dolu olabilir.` | Disk doldu ya da izin yok | Yer açın; önceki dosyanız değişmedi |

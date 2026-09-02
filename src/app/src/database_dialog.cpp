@@ -186,12 +186,12 @@ QWidget* DatabaseDialog::buildContents()
     leftRows->addWidget(writeLayer_);
 
     // ---- projects ----
-    auto* right     = new QGroupBox(tr("Kayıtlı PiriCAD projeleri"), split);
+    auto* right     = new QGroupBox(tr("Kayıtlı KentOSCad projeleri"), split);
     auto* rightRows = new QVBoxLayout(right);
 
     projects_ = new QListWidget(right);
-    projects_->setToolTip(tr("Bu veritabanına kaydedilmiş PiriCAD projeleri."));
-    projects_->setAccessibleName(tr("Kayıtlı PiriCAD projeleri"));
+    projects_->setToolTip(tr("Bu veritabanına kaydedilmiş KentOSCad projeleri."));
+    projects_->setAccessibleName(tr("Kayıtlı KentOSCad projeleri"));
     projects_->setAlternatingRowColors(true);
     rightRows->addWidget(projects_, 1);
 

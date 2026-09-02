@@ -143,6 +143,16 @@ public:
     void setToggle(const QString& id, bool on);
 
     void setCoordinate(const QString& text);
+
+    /// The last thing a command SAID, printed between the aid chips and the
+    /// right-hand cells.
+    ///
+    /// Every command reports through `ctx.echo`, and until this existed the only
+    /// place that landed was the `Geçmiş` tab of a dock the user has usually
+    /// tabbed away from. So ÖLÇ measured, wrote its distance where nobody was
+    /// looking, and read as a tool that does nothing — the same for ALANÖLÇ,
+    /// KOORDİNAT and every error message a command produces.
+    void setMessage(const QString& text);
     void setConnection(const QString& text, bool connected);
     void setPerformance(const QString& text);
 
@@ -156,6 +166,12 @@ signals:
     /// exactly the same road (Article 1.2).
     void toggled(const QString& id);
 
+    /// A chip was right-clicked: the user wants to CONFIGURE the aid rather than
+    /// switch it. `OSNAP` is on/off as a chip and thirteen separate modes
+    /// underneath, and a strip with thirteen chips on it would be a strip nobody
+    /// can read.
+    void configureRequested(const QString& id);
+
 protected:
     /// Draws the coordinate cell, the chips and the two right-hand cells.
     void paintEvent(QPaintEvent* event) override;
@@ -166,6 +182,8 @@ protected:
     void leaveEvent(QEvent* event) override;
 
 private:
+    QString message_;
+
     struct Chip
     {
         QString label;

@@ -1,6 +1,6 @@
 # Sözlük
 
-Kılavuzda geçen her alan terimini ve PiriCAD terimini arayan herkes için; kılavuzun geri
+Kılavuzda geçen her alan terimini ve KentOSCad terimini arayan herkes için; kılavuzun geri
 kalanı bu sayfadaki tanımları kullanır.
 
 ## Haritacılık ve kadastro terimleri
@@ -112,7 +112,7 @@ yüksekliğinden ortometrik yüksekliğe geçmek için gerekir.
 
 Ayrıntı: [Koordinat sistemleri](veri/koordinat-sistemleri.md).
 
-## PiriCAD terimleri
+## KentOSCad terimleri
 
 **Komut** — Çizimin durumunu değiştiren her işlem. Arayüz düğmesi, komut satırı, betik ve
 AI aynı komutları çağırır. Bkz. [Komut sistemi](komutlar/README.md).
@@ -168,9 +168,9 @@ olmayan ayar: nesne yakalama, dik mod, kutupsal izleme, ızgaraya yakalama.
 **Kapsam** — Çizimdeki görünür nesnelerin tamamını çevreleyen dikdörtgen. `YAKINLAŞ
 KAPSAM` görünümü buna sığdırır.
 
-**Proje dosyası** — PiriCAD'in kendi kayıt biçimi, uzantısı `.pcad`. Çizimi kayıpsız
+**Proje dosyası** — KentOSCad'in kendi kayıt biçimi, uzantısı `.pcad`. Çizimi kayıpsız
 taşır: geometri, katman, stil, nesne anahtarları ve proje ayarları.
-Bkz. [PiriCAD proje dosyası](veri/proje-dosyasi.md).
+Bkz. [KentOSCad proje dosyası](veri/proje-dosyasi.md).
 
 **Nesne anahtarı** — Bir nesnenin kalıcı kimliği. Kaydetmeden, yeniden yüklemeden ve
 sıralamadan etkilenmez, silinse bile başka bir nesneye verilmez. "Bu parsel hangisiydi?"
@@ -183,7 +183,7 @@ ekrandaki çizimin yerine geçmemesidir. Bkz. [Dış veri alma](komutlar/import.
 aktarılmaz. Bkz. [Dış biçime yazma](komutlar/export.md).
 
 **Sürücü** — Bir dış veri biçimini okuyup yazan bileşen; `DXF` ve `GPKG` gibi bir adı
-vardır. PiriCAD yalnızca izin verilen sürücüleri açar.
+vardır. KentOSCad yalnızca izin verilen sürücüleri açar.
 Bkz. [Dış veri biçimleri](veri/dis-formatlar.md).
 
 **`.prj` dosyası** — Bir veri dosyasının koordinat sistemini yanında taşıyan metin

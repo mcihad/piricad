@@ -210,11 +210,27 @@ bool Controller::awaitingInput() const
     return session_ && session_->waiting();
 }
 
+command::ParamKind Controller::promptKind() const
+{
+    if (!session_ || !session_->waiting()) return command::ParamKind::Point;
+    return session_->prompt().kind;
+}
+
 void Controller::supplyPoint(core::Point2 world)
+{
+    supplyValue(command::Value::point(world));
+}
+
+void Controller::supplyText(const QString& text)
+{
+    supplyValue(command::Value::text(text.toStdString()));
+}
+
+void Controller::supplyValue(command::Value value)
 {
     if (!session_ || !session_->waiting()) return;
 
-    auto st = session_->supply(command::Value::point(world));
+    auto st = session_->supply(std::move(value));
     if (!st) {
         emit echoed(tr("Hata: %1").arg(QString::fromStdString(st.error().message)));
     }

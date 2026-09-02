@@ -1,6 +1,6 @@
 # Sorun Giderme
 
-Bir hata mesajıyla karşılaşan herkes için; bu sayfa PiriCAD'in verebileceği mesajları
+Bir hata mesajıyla karşılaşan herkes için; bu sayfa KentOSCad'in verebileceği mesajları
 sebebi ve çözümüyle birlikte listeler.
 
 Mesajlar burada göründüğü gibi yazılır; değişken kısımlar örnek değerlerle gösterilmiştir.
@@ -32,7 +32,7 @@ parametreleri listeler.
 
 ### `'core.layer': bilinmeyen parametre 'renkler'. Tanımlı parametreler: ad, gorunur, kilitli, renk`
 
-**Sebep.** Parametre adı yanlış yazılmış. PiriCAD yazım hatasını sessizce yutmaz.
+**Sebep.** Parametre adı yanlış yazılmış. KentOSCad yazım hatasını sessizce yutmaz.
 
 **Çözüm.** Mesajın sonundaki tanımlı parametrelerden doğru olanı seçin.
 
@@ -248,7 +248,7 @@ panelindeki **Kapsam** grubu `boş çizim` yazar.
 
 **Sebep.** Kum havuzu seviyesi dosya okumaya izin vermiyor.
 
-**Çözüm.** Betiği PiriCAD uygulaması içinden çalıştırın; uygulama `proje` seviyesini
+**Çözüm.** Betiği KentOSCad uygulaması içinden çalıştırın; uygulama `proje` seviyesini
 kullanır.
 
 ### `Betik ya bir komut dizisi ya da "komutlar" alanı olan bir nesne olmalı`
@@ -305,7 +305,7 @@ kullanır.
 
 **Sebep.** Betik motoru olmayan bir ortamda `BETİK` çağrılmış.
 
-**Çözüm.** Betiği PiriCAD uygulaması içinden çalıştırın.
+**Çözüm.** Betiği KentOSCad uygulaması içinden çalıştırın.
 
 ### Betik çalıştı ama çizim görünmüyor
 
@@ -361,9 +361,9 @@ dosya ve satır numarasıyla yazar.
 
 ## Dosya açma ve kaydetme
 
-### `io.not_a_project: '...' bir PiriCAD proje dosyası değil.`
+### `io.not_a_project: '...' bir KentOSCad proje dosyası değil.`
 
-**Sebep.** `AÇ` yalnızca PiriCAD proje dosyalarını (`.pcad`) açar; verdiğiniz dosya
+**Sebep.** `AÇ` yalnızca KentOSCad proje dosyalarını (`.pcad`) açar; verdiğiniz dosya
 başka bir biçim.
 
 **Çözüm.** DXF, GeoPackage gibi dış biçimler için `İÇEAKTAR` kullanın.
@@ -371,16 +371,16 @@ Bkz. [Dış veri alma](komutlar/import.md).
 
 ### `io.format_too_new: '...' en az N. sürüm biçim okuyucusu istiyor`
 
-**Sebep.** Dosyayı, bu yapının okuyamayacağı daha yeni bir PiriCAD yazmış.
+**Sebep.** Dosyayı, bu yapının okuyamayacağı daha yeni bir KentOSCad yazmış.
 
-**Çözüm.** Mesajda adı geçen sürüme yükseltin. PiriCAD dosyayı yarım açmaz; yarım
+**Çözüm.** Mesajda adı geçen sürüme yükseltin. KentOSCad dosyayı yarım açmaz; yarım
 açılmış bir proje, açılmamış bir projeden tehlikelidir.
 
 ### `io.truncated: '...' N bayt olduğunu bildiriyor, ama M bayt.`
 
 **Sebep.** Dosya yarım kopyalanmış, aktarım kesilmiş ya da disk hatası olmuş.
 
-**Çözüm.** Yedeğinizden geri alın ve kopyalamayı yeniden yapın. PiriCAD bozuk bir
+**Çözüm.** Yedeğinizden geri alın ve kopyalamayı yeniden yapın. KentOSCad bozuk bir
 dosyayı kendiliğinden onarmaz; sessizce "düzeltilmiş" bir kadastro dosyası, bozuk
 olduğu bilinen bir dosyadan kötüdür.
 
@@ -390,26 +390,26 @@ olduğu bilinen bir dosyadan kötüdür.
 anahtarlarının sırası tutmuyor.
 
 **Çözüm.** Yedeğinizden geri alın. Bu üç mesajdan biri görünüyorsa dosya güvenilir
-değildir. Bkz. [PiriCAD proje dosyası](veri/proje-dosyasi.md).
+değildir. Bkz. [KentOSCad proje dosyası](veri/proje-dosyasi.md).
 
 ### `io.unknown_kind: ... bu yapı yalnız 0 numaralı türü tanıyor.`
 
 **Sebep.** Dosyada bu sürümün tanımadığı bir nesne türü var.
 
-**Çözüm.** Dosyayı yazan PiriCAD sürümüne yükseltin. Nesneyi düşürerek açmak veri
+**Çözüm.** Dosyayı yazan KentOSCad sürümüne yükseltin. Nesneyi düşürerek açmak veri
 kaybı olurdu, bu yüzden dosya açılmıyor.
 
 ### `Bu çizim henüz bir dosyaya bağlı değil. FARKLIKAYDET ile bir ad verin.`
 
 **Sebep.** `KAYDET` hiç kaydedilmemiş bir çizimde çalıştırıldı.
 
-**Çözüm.** `FARKLIKAYDET` ile bir ad verin. PiriCAD ad uydurmaz.
+**Çözüm.** `FARKLIKAYDET` ile bir ad verin. KentOSCad ad uydurmaz.
 
 ### `'...' yazılırken hata oluştu; disk dolu olabilir. Önceki dosya değiştirilmedi.`
 
 **Sebep.** Kaydetme sırasında disk doldu ya da yazma kesildi.
 
-**Çözüm.** Yer açıp yeniden kaydedin. Son cümle önemlidir: PiriCAD önce yanına
+**Çözüm.** Yer açıp yeniden kaydedin. Son cümle önemlidir: KentOSCad önce yanına
 geçici bir dosya yazıp ancak tamamlandığında yerine koyduğu için **bir önceki
 kaydınız yerinde durur**.
 
@@ -431,7 +431,7 @@ kaydınız yerinde durur**.
 
 ### `io.no_driver: '...' için sürücü bulunamadı.`
 
-**Sebep.** Dosyanın uzantısı izin listesinde değil. PiriCAD, altındaki kütüphanenin
+**Sebep.** Dosyanın uzantısı izin listesinde değil. KentOSCad, altındaki kütüphanenin
 tanıdığı yüzden fazla biçimin yalnızca açıkça izin verilenlerini açar.
 
 **Çözüm.** `bicim` parametresiyle sürücüyü söyleyin ya da dosyayı desteklenen bir
@@ -442,7 +442,7 @@ biçime çevirin. Bkz. [Dış veri biçimleri](veri/dis-formatlar.md).
 **Sebep.** İçe aktarılan veri kümesi koordinat sistemini bildirmiyor. DXF biçiminin
 koordinat sistemi için yeri yoktur.
 
-**Çözüm.** Dosyanın yanına aynı adlı bir `.prj` dosyası koyun. PiriCAD "herhâlde
+**Çözüm.** Dosyanın yanına aynı adlı bir `.prj` dosyası koyun. KentOSCad "herhâlde
 TUREF/TM30'dur" varsayımı yapmaz: TM30 ile TM33 karışması sessizdir ve ancak tapuya
 gittiğinde ortaya çıkar.
 

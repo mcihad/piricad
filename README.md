@@ -1,4 +1,4 @@
-# PiriCAD
+# KentOSCad
 
 **Türkiye odaklı CBS + CAD harita yazılımı.**
 GPLv3 · C++20 · Qt 6 · komut merkezli mimari · BÖHHBÜY / MPYY / TUCBS / TKGM uyumu.
@@ -28,7 +28,7 @@ iddiadır**, niyet beyanı değil: `tests/unit/test_proof.cpp`.
 make doctor        # bu makine neyi derleyebiliyor?
 make build         # her şeyi derle
 make test          # testler + CI kapıları
-make run           # PiriCAD'i başlat
+make run           # KentOSCad'i başlat
 make help          # bütün hedefler
 ```
 

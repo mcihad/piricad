@@ -1,17 +1,17 @@
-# PiriCAD Kullanıcı Kılavuzu
+# KentOSCad Kullanıcı Kılavuzu
 
 Türkiye odaklı CBS + CAD harita yazılımının kullanıcı belgeleri. Harita mühendisi,
 şehir plancısı ve kadastro teknisyeni için yazıldı.
 
 ## Nereden başlamalı
 
-Daha önce PiriCAD kullanmadıysanız sırayla okuyun:
+Daha önce KentOSCad kullanmadıysanız sırayla okuyun:
 
 1. [Kurulum ve derleme](baslangic/kurulum.md) — programı çalışır hâle getirin
 2. [İlk adımlar](baslangic/ilk-adimlar.md) — on dakikada ilk çiziminiz
 3. [Arayüz](baslangic/arayuz.md) — pencerede ne nerede
 4. [Stil tasarımcısı](baslangic/stil-tasarimcisi.md) — bir katmanın nasıl çizileceğini tasarlayın
-4. [Komut sistemi](komutlar/README.md) — PiriCAD'in çalışma mantığı
+4. [Komut sistemi](komutlar/README.md) — KentOSCad'in çalışma mantığı
 
 ## Komutlar
 
@@ -66,6 +66,7 @@ Tek tek komutlar:
 | `ETİKET` | [Özniteliklerden yazı](komutlar/label.md) |
 | `ÖLÇ` | [Mesafe ölçme](komutlar/measure.md) |
 | `ALANÖLÇ` | [Alan ve çevre ölçme](komutlar/measure_area.md) |
+| `KOORDİNAT` | [Nokta koordinatı okuma](komutlar/coordinate.md) |
 | `YAKINLAŞ` | [Görünüm ayarlama](komutlar/zoom.md) |
 | `GERİAL` | [Geri alma](komutlar/undo.md) |
 | `YİNELE` | [Yineleme](komutlar/redo.md) |
@@ -83,7 +84,7 @@ Tek tek komutlar:
 | [Lua betikleri](betik/lua.md) | Döngü, koşul ve hesapla betik yazma; `h` API'si |
 | [Komut günlüğü](mimari/gunluk.md) | Yaptığınız işi geri izleme, makro, oturum kaydı |
 | [Koordinat sistemleri](veri/koordinat-sistemleri.md) | TUREF/TM30, TM 3° dilimleri, milimetre depolama |
-| [PiriCAD proje dosyası](veri/proje-dosyasi.md) | `.pcad` ne taşır, sürüm politikası, bozuk dosya |
+| [KentOSCad proje dosyası](veri/proje-dosyasi.md) | `.pcad` ne taşır, sürüm politikası, bozuk dosya |
 | [Dış veri biçimleri](veri/dis-formatlar.md) | DXF ve GeoPackage, koordinat sistemi, `.prj` dosyası |
 | [Öznitelik tablosu](veri/oznitelik-tablosu.md) | Satırları süzme, düzenleme, alan istatistikleri; süzme ifadesinin dilbilgisi |
 | [MPYY plan gösterimleri](veri/mpyy-gosterimleri.md) | Gösterim veri paketi: hangi RG sürümü, ne çıkarıldı, ne eksik, nasıl yeniden üretilir |
@@ -93,7 +94,7 @@ Tek tek komutlar:
 
 | Sayfa | İçerik |
 |---|---|
-| [Sözlük](sozluk.md) | Haritacılık, imar ve PiriCAD terimleri |
+| [Sözlük](sozluk.md) | Haritacılık, imar ve KentOSCad terimleri |
 | [Sorun giderme](sorun-giderme.md) | Hata mesajları, sebepleri ve çözümleri |
 
 ## Bu kılavuz hakkında

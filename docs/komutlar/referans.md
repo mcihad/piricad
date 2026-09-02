@@ -37,6 +37,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.mirror`](mirror.md) | `AYNALA`, `MIRROR`, `AYN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
 | [`core.measure`](measure.md) | `ÖLÇ`, `OLC`, `MEASURE`, `MS` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar. |
 | [`core.measure_area`](measure_area.md) | `ALANÖLÇ`, `ALANOLC`, `AREAOF`, `AÖ` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Seçilen nesnelerin alanını ve çevresini yazar. |
+| [`core.coordinate`](coordinate.md) | `KOORDİNAT`, `KOORDINAT`, `COORDINATE`, `KRD` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
 | [`core.attribute`](attribute.md) | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
 | [`core.column`](column.md) | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Belgeye öznitelik sütunu tanımlar ve tanımlı sütunları listeler. |
 | [`core.erase`](erase.md) | `SİL`, `SIL`, `ERASE`, `E` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Seçilen nesneleri siler. |
@@ -374,6 +375,16 @@ Seçilen nesnelerin alanını ve çevresini yazar.
 | `nesneler` | selection | en az 0 | Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim |
 
 Ayrıntılı kullanım: [ALANÖLÇ](measure_area.md)
+
+### `core.coordinate` — KOORDİNAT
+
+Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nokta` | point | 1 | Okunacak nokta |
+
+Ayrıntılı kullanım: [KOORDİNAT](coordinate.md)
 
 ### `core.attribute` — ÖZNİTELİK
 
@@ -1686,6 +1697,34 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         }
       ],
       "flags": [
+        "scriptable",
+        "ai_accessible",
+        "read_only"
+      ],
+      "undo": "none"
+    },
+    {
+      "id": "core.coordinate",
+      "names": [
+        "KOORDİNAT",
+        "KOORDINAT",
+        "COORDINATE",
+        "KRD"
+      ],
+      "category": "Sorgu",
+      "summary": "Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.",
+      "params": [
+        {
+          "name": "nokta",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Okunacak nokta"
+        }
+      ],
+      "flags": [
+        "interactive",
         "scriptable",
         "ai_accessible",
         "read_only"

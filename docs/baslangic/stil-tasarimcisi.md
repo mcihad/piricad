@@ -16,22 +16,25 @@ taşıyorsa o, taşımıyorsa katmanın kendi görünümü.
 ## Pencerede ne nerede
 
 ```text
-┌ 🎨 Katman Özellikleri — Kadastro Parselleri ────────── ? ✕ ┐
-│ Bilgi        │ SİMGELEYİCİ  DEĞER        SEMBOL BOYUT BİRİMİ│
-│ Kaynak       │ [Tek Sembol] [—]      [Milimetre|Harita|Piksel]│
-│ ▸Simgeleyici │─────────────────────────────────────────────│
-│ Etiketler    │ [Alan] [Çizgi] [Nokta]                      │
-│ 3B Görünüm   │ ┌ önizleme ─────────────────────────────┐   │
-│ Şeffaflık    │ └───────────────────────────────────────┘   │
-│ Ölçek        │ ┌ hazır gösterimler ┐ ┌ sembol katmanları ┐ │
-│ Öznitelik F. │ │  raf / arama      │ │  ✓ Basit dolgu    │ │
-│ Geçerlilik   │ │                   │ │  ✓ Çizgi dolgu    │ │
-│ Eylemler     │ │                   │ ├───────────────────┤ │
-│ Bağlantılar  │ │                   │ │ katman özellikleri│ │
-│ Sürüm        │ └───────────────────┘ └───────────────────┘ │
-├────────────────────────────────────────────────────────────┤
-│ Stil ▾  Sembolü kütüphaneye kaydet   İptal  Uygula  [Tamam] │
-└────────────────────────────────────────────────────────────┘
+┌ 🎨 Katman Özellikleri — Kadastro Parselleri ─────────────── ? ✕ ┐
+│ Bilgi        │ SİMGELEYİCİ                    SEMBOL BOYUT BİRİMİ│
+│ Kaynak       │ [Tek Sembol]           [Milimetre|Harita|Piksel] │
+│ ▸Simgeleyici │──────────────────────────┬───────────────────────│
+│ Etiketler    │ [Alan] [Çizgi] [Nokta]   │ ┌──────┐ SEMBOL KATMANLARI│
+│ 3B Görünüm   │ ┌ hazır gösterimler ───┐ │ │önizl.│ ▾ Sembol       │
+│ Şeffaflık    │ │ arama                │ │ │      │   ✓ Nokta deseni│
+│ Ölçek        │ │ ▸ EK-1a  ▸ EK-1b     │ │ └──────┘   ✓ Dolgu      │
+│ Öznitelik F. │ │ ┌──┐ ┌──┐ ┌──┐ ┌──┐  │ │  +  ⧉  −         ▲  ▼ │
+│ Geçerlilik   │ │ └──┘ └──┘ └──┘ └──┘  │ │ KATMAN                 │
+│ Eylemler     │ │                      │ │ Katman tipi  [Dolgu   ]│
+│ Bağlantılar  │ │                      │ │ DOLGU                  │
+│ Sürüm        │ │ 335 gösterim         │ │ Dolgu rengi  [#228B22 ]│
+│              │ │ [ Seçileni kullan ]  │ │ KENAR                  │
+│              │ └──────────────────────┘ │ Çizgi rengi  [#000000 ]│
+│              │                          │ Kalınlık     [0 µm    ]│
+├──────────────┴──────────────────────────┴───────────────────────┤
+│ Stil ▾  Sembolü kütüphaneye kaydet   Yardım    İptal Uygula [Tamam]│
+└───────────────────────────────────────────────────────────────────┘
 ```
 
 Soldaki liste on iki bölüm taşır. Bugün **Bilgi** ve **Simgeleyici** doludur;
@@ -70,7 +73,9 @@ birimler kullanıyorsa hiçbiri işaretli görünmez ve alttaki not bunu söyler
 açık olduğunu. `Çizgi` sekmesindeyken raf size alan gösterimi vermez.
 
 Önizleme şekli de bilerek seçilmiştir: alan için dikdörtgen, çizgi için **zikzak**
-(düz çizgi bir desenin köşede ne yaptığını gizler), nokta için tek nokta.
+(düz çizgi bir desenin köşede ne yaptığını gizler), nokta için tek nokta. Kare
+önizlemenin altındaki tek kelime — *kapalı alan*, *kırıklı çizgi*, *tek nokta* —
+resmin hangi geometri üzerinde çizildiğini söyler; sekmeyi değiştirince o da değişir.
 
 ### Hazır gösterimler
 
@@ -92,8 +97,11 @@ kesilmez.
 
 ### Sembol katmanları
 
-Liste **üstten alta** okunur: ilk satır en son çizilen, yani ekranda en üstte
-görünen katmandır. `▲` ve `▼` satırı gördüğünüz yöne taşır.
+Önizlemenin hemen yanındaki **SEMBOL KATMANLARI** listesi. **Üstten alta** okunur:
+ilk satır en son çizilen, yani ekranda en üstte görünen katmandır. `▲` ve `▼`
+satırı gördüğünüz yöne taşır. Listenin en üstündeki **Sembol** satırı bir katman
+değil, sembolün kendisidir: onu seçince bütün katmanlara birden uygulanan
+özellikler (birim, renk, kalınlık, saydamlık) gelir.
 
 Her satırın başındaki kutu o katmanı **kapatır**. Kapalı katman silinmez —
 sembolde durur, dosyaya yazılır, parmak izine girer — sadece çizilmez. Bir
@@ -104,10 +112,23 @@ böyle kurulur.
 
 ### Katman özellikleri
 
-Sağ alt yalnız **seçili tipin okuduğu** alanları gösterir. Bir `dolgu` katmanının
-işaretçi yerleşimi yoktur, o yüzden o satır orada değildir — soluk değil, yok.
-Görmediğiniz bir alan, çizicinin yok sayacağı bir alan değildir.
+Listenin altında, seçili katmanın özellikleri **dört başlık** altında sıralanır;
+her satırda etiket solda, değer sağdadır:
 
+| Başlık | İçinde ne var |
+|---|---|
+| **KATMAN** | Katman tipi; tipe göre yazı, şekil, yerleşim |
+| **DOLGU** | Dolgu rengi |
+| **KENAR** | Çizgi rengi, kalınlık, uç biçimi, birleşim |
+| **GEOMETRİ** | Boyut, aralık, ikinci eksen, kaydırma, açı, faz |
+| **GÖRÜNÜRLÜK** | Saydamlık, renk kilidi |
+
+Yalnız **seçili tipin okuduğu** satırlar gösterilir, ve içinde satırı olmayan bir
+başlık da gösterilmez. Bir `dolgu` katmanının işaretçi yerleşimi yoktur, o yüzden
+o satır orada değildir — soluk değil, yok. Görmediğiniz bir alan, çizicinin yok
+sayacağı bir alan değildir.
+
+Birim, etikette değil değerin yanındadır: kalınlık `µm`, açı `°` sonekiyle yazılır.
 Her ölçünün **kendi birim kutusu** vardır: boyut kâğıtta, aralık zeminde
 olabilir. İkisi aynı sembolde farklı birimlerde durabilir ve bu normaldir.
 
@@ -120,20 +141,20 @@ er geç ayrışırdı.
 Her alan `STİL` komutunun bir parametresidir; hangisi olduğu
 [STİL sayfasında](../komutlar/style.md) tablo hâlinde yazılı.
 
-| Alan | `STİL` parametresi |
+| Başlık · Alan | `STİL` parametresi |
 |---|---|
-| Katman tipi | `tip` |
-| Çizgi rengi | `renk` |
-| Çizgi kalınlığı | `kalinlik` |
-| Dolgu rengi | `dolgu` |
-| Boyut + birim | `boyut`, `birim` |
-| Aralık | `aralik` |
-| İkinci eksen | `aralik_y` |
-| Kaydırma | `kaydirma` |
-| Açı | `aci` |
-| Şekil | `sekil` |
-| Yerleşim | `yerlesim` |
-| Saydamlık | `saydamlik` |
+| KATMAN · Katman tipi | `tip` |
+| KATMAN · Şekil | `sekil` |
+| KATMAN · Yerleşim | `yerlesim` |
+| DOLGU · Dolgu rengi | `dolgu` |
+| KENAR · Çizgi rengi | `renk` |
+| KENAR · Kalınlık | `kalinlik` |
+| GEOMETRİ · Boyut + birim | `boyut`, `birim` |
+| GEOMETRİ · Aralık | `aralik` |
+| GEOMETRİ · İkinci eksen | `aralik_y` |
+| GEOMETRİ · Kaydırma | `kaydirma` |
+| GEOMETRİ · Açı | `aci` |
+| GÖRÜNÜRLÜK · Saydamlık | `saydamlik` |
 
 Tip kutusunda parantez içinde yazan (`gorsel-dolgu` gibi) makine adıdır ve
 komut satırına yazacağınız şeydir.
@@ -153,9 +174,9 @@ paketi** olarak yazar:
 
 | Sistem | Yer |
 |---|---|
-| Linux | `~/.config/PiriCAD/stiller/` |
-| Windows | `%APPDATA%\PiriCAD\stiller\` |
-| macOS | `~/Library/Application Support/PiriCAD/stiller/` |
+| Linux | `~/.config/KentOSCad/stiller/` |
+| Windows | `%APPDATA%\KentOSCad\stiller\` |
+| macOS | `~/Library/Application Support/KentOSCad/stiller/` |
 
 Proje dizinine değil: tasarladığınız sembol size aittir, çizimden çizime sizinle
 gelir ve birinin paftasının yanında takip edilmeyen bir dosya olarak durmamalıdır.
@@ -176,7 +197,7 @@ Lisans engel değil — QGIS GPL-2.0-or-later ve uyumlu. Engeller ölçülebilir
 - `QgsApplication::initQgis()` sağlayıcı kaydını ve SRS veritabanını yüklüyor;
   bu programın soğuk açılış bütçesi **2 saniye**.
 - Gidiş-dönüş tam da bizim bilerek ayrıldığımız yerde kayıplı:
-  `QgsRasterFillSymbolLayer` bir **dosya yolu** tutar, PiriCAD'in görsel dolgusu
+  `QgsRasterFillSymbolLayer` bir **dosya yolu** tutar, KentOSCad'in görsel dolgusu
   ise baytları ve künyesini belgenin içinde taşır — çizim e-postayla gittiğinde
   ayakta kalmasını sağlayan şey bu.
 

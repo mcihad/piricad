@@ -118,6 +118,16 @@ private slots:
     /// from the store and never held separately (CLAUDE.md 5.10).
     void refreshAidActions();
 
+    /// Opens the object-snap mode list: one checkable entry per bit of
+    /// `core.yakalama.modlar`, plus all-and-none.
+    ///
+    /// The engine has offered thirteen modes since it was written and the shell
+    /// showed three switches — F3 for "any of them", F8 for ortho, F9 for grid —
+    /// so KESİŞİM, DİK, YAKIN, DÜĞÜM, UZANTI, PARALEL and UZATILMIŞ KESİŞİM were
+    /// implemented, tested, and unreachable from the program. Every entry writes
+    /// the mask through `MOD`, so the panel is a client of the bus like any other.
+    void openSnapModes();
+
     void showCommandReference();
     void openScript();
     void openDatabase();

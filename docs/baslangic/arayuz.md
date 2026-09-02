@@ -1,6 +1,6 @@
 # Arayüz
 
-PiriCAD penceresini yeni açan kullanıcı için; bu sayfayı bitirdiğinizde her panelin ne
+KentOSCad penceresini yeni açan kullanıcı için; bu sayfayı bitirdiğinizde her panelin ne
 işe yaradığını, nasıl taşınacağını ve fareyle klavyeyle neyin nasıl yapılacağını
 bileceksiniz.
 
@@ -50,10 +50,10 @@ Bu ayrım AutoCAD ve QGIS'in ortak düzenidir.
 ## Pencere çerçevesi ve menü şeridi
 
 Pencerenin çerçevesi, başlık çubuğu ve **kapat / küçült / büyüt** düğmeleri işletim
-sistemine aittir. PiriCAD bunları kendisi çizmez: pencereyi kenarlarından tutup
+sistemine aittir. KentOSCad bunları kendisi çizmez: pencereyi kenarlarından tutup
 boyutlandırmak, ekran kenarına yapıştırmak, sağ tıkla pencere menüsünü açmak ve
 çift tıkla büyütmek masaüstünüzün kendi davranışıdır. Başlık çubuğunda
-`<belge adı> — PiriCAD <sürüm>` yazar.
+`<belge adı> — KentOSCad <sürüm>` yazar.
 
 Onun hemen altındaki 34 px'lik **menü şeridi** uygulamanındır: solda on menü,
 ortada açık belgenin adı ve sürümü, sağda **komut arama** ile kullanıcı baş harfi.
@@ -182,7 +182,7 @@ Nişan imleci `imleç` tercihiyle üç hâlde olabilir — tuvali baştan başa 
 Hiçbir komut çalışmıyorken sol fare tuşu seçim yapar. **Soldan sağa** sürüklerseniz
 kutuya **tamamen giren** nesneler seçilir ve çerçeve düz çizilir; **sağdan sola**
 sürüklerseniz kutuya **değen** her nesne seçilir ve çerçeve kesik çizilir. Bu, CAD
-dünyasının kırk yıllık ayrımıdır ve PiriCAD'de de aynıdır.
+dünyasının kırk yıllık ayrımıdır ve KentOSCad'de de aynıdır.
 
 Seçili nesneler kalın ve renkli çizilir. Seçim çizimin verisi değildir: dosyaya
 yazılmaz, `GERİAL` ile geri alınmaz ve komut günlüğüne belge değişikliği olarak
@@ -204,12 +204,49 @@ düşecektir.
 | Kısayol | Ne yapar |
 |---|---|
 | **F3** | Nesne yakalamayı açar/kapatır |
+| **Shift+F3** | **Yakalama modları listesini açar** — hangi modların açık olduğunu seçersiniz |
 | **F8** | Dik modu açar/kapatır — imleci yatay ve düşey eksene kilitler |
 | **F9** | Izgaraya yakalamayı açar/kapatır |
 
+#### Hangi modlar açık
+
+Durum çubuğundaki **OSNAP** çipine **sağ tıklayın** — ya da **Shift+F3** ile,
+**Görünüm ▸ Yakalama Modları…** ile aynı listeyi açın. Her satır bir moddur ve
+işaretlendiğinde o mod açılır:
+
+| Mod | Neye oturur |
+|---|---|
+| **uç nokta** | Bir halkanın köşesi — parsel köşesi, bina köşesi |
+| **orta nokta** | Bir kenarın tam ortası |
+| **merkez** | Kapalı bir halkanın ağırlık merkezi |
+| **kesişim** | İki kenarın gerçekten kesiştiği yer |
+| **dik ayak** | Önceki noktadan bir kenara indirilen dikin ayağı |
+| **en yakın** | Kenarın imlece en yakın noktası |
+| **düğüm** | Ölçülmüş tek nokta: nirengi, poligon noktası, röper |
+| **ızgara** | En yakın ızgara kesişimi |
+| **kutupsal** | Önceki noktadan çıkan kutupsal ışın |
+| **uzantı** | Bir kenarın kendi ucundan öteye uzanan doğrusu |
+| **paralel** | Önceki noktadan çıkan, bir kenara paralel ışın |
+| **uzatılmış kesişim** | İki kenarın doğrularının kesişeceği yer — ikisi de oraya kadar uzanmasa bile |
+
+Son üçü **kurulmuş** noktalardır: çizimde öyle bir nokta yoktur, geometri onu ima
+eder. Bu yüzden glifleri **açıktır** — içinde boşluk olan bir şekil — ve sıralamada
+her gerçek köşenin **altındadırlar**: kurulmuş bir nokta, var olan bir köşeyi asla
+elinden alamaz.
+
+Aynı açıklıkta birden çok aday varsa sıra şudur: **düğüm → uç → kesişim → orta →
+merkez → …**. Bir kadastro işinde her sınır bir röperden ölçüldüğü için düğüm en
+üsttedir.
+
+Listedeki her değişiklik `MOD yakalama_modları=<maske>` komutunu gönderir; yani
+betikten de aynısını yaparsınız.
+
+#### Hassasiyet
+
 Arama yarıçapı `yakalama_toleransı`, seçme kutusu `seçim_toleransı` tercihidir ve
 ikisi de **ekran pikselidir**: nişan alan göz ekrana bakar, bu yüzden tolerans
-yakınlaştırmayla birlikte değişir.
+yakınlaştırmayla birlikte değişir. İkisini de **Seçenekler ▸ Çizim ve Yakalama**
+sayfasından değiştirirsiniz.
 
 Modların tamamı ve bit maskesi: [Oturum modları](../komutlar/mode.md).
 
@@ -347,7 +384,7 @@ Linux'ta aynı pencere, aynı ölçüler, aynı renkler.
 
 ## Klavyeyle tam kullanım
 
-PiriCAD faresiz tam çalışabilir olacak şekilde tasarlanır. Bugün klavyeyle
+KentOSCad faresiz tam çalışabilir olacak şekilde tasarlanır. Bugün klavyeyle
 yapabilecekleriniz:
 
 | Tuş | İşlev |

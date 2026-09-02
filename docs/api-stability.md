@@ -1,10 +1,10 @@
 # Sürüm ve Uyumluluk Politikası
 
-PiriCAD üzerine iş kuran, eklenti yazan veya çıktı biçimlerine bağımlı sistem geliştiren
+KentOSCad üzerine iş kuran, eklenti yazan veya çıktı biçimlerine bağımlı sistem geliştiren
 herkes için; bu sayfayı bitirdiğinizde neyin sabit kalacağını, neyin ne zaman
 değişebileceğini bileceksiniz.
 
-PiriCAD [Semantik Sürümleme](https://semver.org) kullanır: `BÜYÜK.KÜÇÜK.YAMA`.
+KentOSCad [Semantik Sürümleme](https://semver.org) kullanır: `BÜYÜK.KÜÇÜK.YAMA`.
 
 ## Neyin garantisi var
 

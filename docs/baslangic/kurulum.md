@@ -1,10 +1,10 @@
 # Kurulum ve Derleme
 
-PiriCAD'i kaynaktan derlemek isteyen kullanıcı ve sistem yöneticisi için; bu sayfayı
+KentOSCad'i kaynaktan derlemek isteyen kullanıcı ve sistem yöneticisi için; bu sayfayı
 bitirdiğinizde çalışan bir `piricad` çalıştırılabiliri ve neyin eksik olduğunu söyleyen
 bir teşhis çıktınız olacak.
 
-PiriCAD henüz hazır paket olarak dağıtılmıyor. MSI, DMG, AppImage, `.deb` ve `.rpm`
+KentOSCad henüz hazır paket olarak dağıtılmıyor. MSI, DMG, AppImage, `.deb` ve `.rpm`
 paketleri Faz 1'de gelecek.
 
 ## Gereksinimler
@@ -68,7 +68,7 @@ Bu komut makinede neyin bulunup neyin bulunmadığını, eksik olanın neye mal 
 birlikte listeler. Örnek çıktı:
 
 ```text
-PiriCAD — build environment
+KentOSCad — build environment
 
   CMake                      4.2.3
   Ninja                      1.13.2
@@ -82,7 +82,7 @@ Optional dependencies (all gated OFF by default)
 ```
 
 `MISSING` yazan bir satır derlemeyi engellemez. Bütün dış bağımlılıklar varsayılan
-olarak **kapalıdır**; kapalıyken PiriCAD çalışır, açıkken ve bağımlılık yoksa
+olarak **kapalıdır**; kapalıyken KentOSCad çalışır, açıkken ve bağımlılık yoksa
 yapılandırma ne kurulacağını söyleyerek durur.
 
 ## Derleme profilleri
@@ -124,7 +124,7 @@ make distclean       # bütün derleme ağacını siler
 make bench
 ```
 
-PiriCAD'in karşılamak zorunda olduğu hız hedefleri sabittir ve ölçülür. Örnek çıktı:
+KentOSCad'in karşılamak zorunda olduğu hız hedefleri sabittir ve ölçülür. Örnek çıktı:
 
 ```text
 senaryo                          ölçüm    bütçe      temel  durum
@@ -159,7 +159,7 @@ kökündeki `CLAUDE.md` Article 8'dedir.
 | Eksik | Sonucu | Ne zaman gelecek |
 |---|---|---|
 | GPU canvas (`PIRICAD_WITH_RHI`) | Varsayılan yapıda harita GPU yerine `QPainter` ile çizilir. Seçenek açıldığında QRhi arka ucu MPYY kataloğunun **on bir sembol katmanı türünün hepsini** çizer — dolgu, çizgi, işaretçi, desen, yayımlanmış görsel — ve `PIRICAD_WITH_TEXT` ile metni de. Eksik olan çizim değil ölçüm: kare bütçesi (≤16 ms) henüz koşulmadı | Bütçe ölçülüp karşılandığında varsayılan açık olacak |
-| GDAL | DXF ve GeoPackage okunup yazılamaz; `İÇEAKTAR` ve `DIŞAAKTAR` hangi paketin gerektiğini söyleyerek hata döndürür. PiriCAD'in kendi `.pcad` proje dosyası GDAL olmadan da çalışır | Kurulduğunda kendiliğinden açılır |
+| GDAL | DXF ve GeoPackage okunup yazılamaz; `İÇEAKTAR` ve `DIŞAAKTAR` hangi paketin gerektiğini söyleyerek hata döndürür. KentOSCad'in kendi `.pcad` proje dosyası GDAL olmadan da çalışır | Kurulduğunda kendiliğinden açılır |
 | PROJ / GEOS / CGAL | Koordinat dönüşümü ve geometri işlemleri sınırlı | Faz 1–2 |
 | Python (`PIRICAD_WITH_PYTHON`) | Eklenti ve toplu işleme katmanı yok | Faz 2 |
 

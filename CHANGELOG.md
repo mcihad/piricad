@@ -6,6 +6,84 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — uygulamanın adı KentOSCad oldu (görünen ad)
+
+- Pencere başlığı, hakkında kutusu, dosya süzgeçleri ve 29 belge sayfası yeni adı
+  taşıyor. `QApplication` kimliği `KentOSCad`, alan adı `kentoscad.org`.
+- **Kullanıcı verisi taşınıyor, kaybolmuyor.** Qt her kullanıcı yolunu uygulama
+  adından türetir; ad değişince ayar dosyası, stil kütüphanesinin yazdığı yapılandırma
+  dizini ve otomatik kaydın veri dizini başka yere düşerdi. `migrate_user_data()`
+  eski yolları Qt'ye *sordurup* (tahmin etmeden, üç platformun yerleşimi farklı)
+  yenisine taşıyor; hedef zaten varsa dokunmuyor.
+- İsim uzayı, `#include` yolları, CMake hedefleri ve `PIRICAD_*` makroları bu adımda
+  **değişmedi**; onlar tek mekanik değişiklik olarak ayrı iniyor.
+
+### Eklendi — nesne yakalama modları arayüzden seçilebiliyor
+
+- Yakalama motoru on üç kip taşıyor ve kabuk üçünü gösteriyordu: F3 "herhangi
+  biri", F8 dik mod, F9 ızgara. KESİŞİM, DİK AYAK, EN YAKIN, DÜĞÜM, UZANTI,
+  PARALEL ve UZATILMIŞ KESİŞİM yazılmış, sınanmış ve programdan erişilemez
+  durumdaydı.
+- **OSNAP kip listesi**: durum çubuğundaki OSNAP çipine sağ tık, `Shift+F3`, ya da
+  `Görünüm ▸ Yakalama Modları…`. Her satır `core::snap_mode_label`'dan gelir —
+  motora eklenen bir kip listede kendiliğinden belirir (5.10) — ve her değişiklik
+  `MOD ad=yakalama_modları` komutunu gönderir.
+- **DÜĞÜM'ün glifi eklendi.** Kip `default`'a düşüyor ve hiçbir şey çizmiyordu:
+  bir röpere yakalanıyordunuz, işaretçi tutmadığını söylüyordu. Kadastroda her
+  sınır bir röperden ölçüldüğü için bu kip sıralamada en üsttedir.
+- Belge: [`docs/baslangic/arayuz.md`](docs/baslangic/arayuz.md) — on iki kipin
+  tamamı, öncelik sırası ve hassasiyet ayarı.
+
+### Eklendi — KOORDİNAT komutu
+
+- `KOORDİNAT` / `KOORDINAT` / `COORDINATE` / `KRD`: tıklanan noktanın sağa ve yukarı
+  değerini belgenin koordinat sisteminde yazar. Salt okunur — geri alma yığınına
+  girmez. Araç kutusundaki devre dışı "Koordinat Oku" düğmesinin yerine geçti.
+- Belge: [`docs/komutlar/coordinate.md`](docs/komutlar/coordinate.md).
+
+### Düzeltildi — çalıştığı hâlde kullanıcıya ulaşmayan iki komut
+
+- **METİN artık tuvale yazıyor.** Komut çapayı alıp `ctx.text` ile yazı istiyordu;
+  istem alttaki komut satırının yer tutucusuna düşüyor, odak tuvalde kalıyordu, ve
+  kabuk metin cevabı verecek bir yola sahip değildi — komut süresiz bekliyordu.
+  `Controller::supplyText` eklendi ve tuval, çapa tıklamasının hemen ardından
+  tıklanan yerde bir yazı kutusu açıyor. Enter yazar, Esc vazgeçer.
+- **Komut çıktısı durum çubuğunda.** Her komut `ctx.echo` ile konuşur; bu yalnız
+  kullanıcının çoğu zaman kapalı tuttuğu `Geçmiş` sekmesine düşüyordu. ÖLÇ ölçüyor,
+  sonucu kimsenin bakmadığı yere yazıyordu — "ölçüm araçları çalışmıyor" bu.
+- **ÖLÇ ve KOORDİNAT modal araç oldu**: çalışırken araç kutusunda yanıyorlar.
+- **YAY araç kutusuna eklendi.** Tam bir çizim aracı olarak kurulmuş ama sütuna
+  konmamıştı; programın çizebildiği tek eğri yalnız adı yazılarak ulaşılabiliyordu.
+
+### Değişti — stil tasarımcısı, `design.md` §8'e hizalandı
+
+- **Özellikler dört başlık altında ve sol etiketli**: KATMAN · DOLGU · KENAR ·
+  GEOMETRİ · GÖRÜNÜRLÜK. On dört satırlık düz liste, her satırda etiketi üstte
+  taşıyor ve 756 px'lik pencerede üç satır gösterip gerisini kaydırıyordu.
+  Şimdi etiket 110 px'lik sol sütunda, değer yanında; yaygın tiplerde hiçbir
+  şey kaydırılmıyor. Boş kalan başlık gösterilmiyor.
+- **Ön izleme ile sembol katmanları yan yana**, mockup'ın çizdiği gibi. Üst
+  üste dururken ikisi 372 px alıyordu; şimdi listenin boyu kadar.
+- **Birim alanın içinde**: `Çizgi kalınlığı (µm)` → `Kalınlık` + `µm` soneki,
+  `Açı (°)` → `Açı` + `°`. Etiketler kısaldı, hiçbiri sarmıyor.
+- Üst şeridin başlıkları 16 px'ten §8'in 10.5 px büyük harfine indi; şerit
+  bir sekme değil, iki kontrol gibi okunuyor.
+- Renk alanı en az 200 px boyanmayı bırakıp sütununun genişliğini alıyor;
+  açılır kutular en uzun öğelerine değil sütuna göre daralıyor. İkisi de sağ
+  kenardan taşan satırların sebebiydi.
+- Belge: [`docs/baslangic/stil-tasarimcisi.md`](docs/baslangic/stil-tasarimcisi.md).
+
+### Düzeltildi — macOS'ta `make run` çalışmıyordu
+
+- CMake macOS'ta `.app` paketi üretir ve ikili `bin/piricad.app/Contents/MacOS/`
+  altına iner; Makefile, `/docs` örnekleri ve gate'ler ise `bin/piricad`'ı arar.
+  Derleme artık macOS'ta o yola göreli bir sembolik bağ bırakıyor; üç tüketici
+  de değişmeden çalışıyor.
+- `libpq` Homebrew'da keg-only olduğundan `find_package(PostgreSQL)` onu
+  bulamıyor, PostGIS sessizce kapanıyordu; `brew --prefix libpq` ipucu eklendi.
+- `qgis_backend.cpp` `PIRICAD_WITH_QGIS` kapalıyken de derleniyordu; QGIS
+  başlıkları olmayan her makinede derleme kırılıyordu.
+
 ### Eklendi — gömülü Lua betik motoru (`PIRICAD_WITH_LUA`)
 
 - **`piricad::script::LuaRunner`**, sol2 üzerinden gömülü Lua 5.4. JSON
@@ -724,7 +802,7 @@ yarı budur.
   listedir ve onları gruplayan şey rolleridir. Kodun ilk hâli listeyi "ilk halka
   sınır, gerisi delik" diye okuyordu; **yolla ikiye bölünmüş bir parselin ikinci
   yüzü delik oluyordu**. Sonuç, alanları yanlış olan ve buna rağmen `ST_IsValid`
-  dâhil hiçbir denetimin şikâyet etmediği bir tablo. Böyle bir parsel PiriCAD'e
+  dâhil hiçbir denetimin şikâyet etmediği bir tablo. Böyle bir parsel KentOSCad'e
   `İÇEAKTAR` ile, TKGM'den gelen bir GeoPackage'ın `MULTIPOLYGON` kaydı olarak
   girer; yani hata canlıydı. Açık halkalar için `MULTILINESTRING` de aynı anda
   eklendi.
@@ -780,7 +858,7 @@ yarı budur.
   `Registry`'de kayıtlı, başsız çalışabilen, arayüz-komut satırı-betik eşitliği
   sınanan komutlar. Dosya seçme penceresi yalnız argümanı toplar (Article 1.2).
 - **GDAL/OGR ile DXF ve GeoPackage.** `PIRICAD_WITH_GDAL` arkasında; sürücüler
-  `cmake/PiriCADGdalDrivers.cmake` içindeki açık izin listesinden gelir, tam
+  `cmake/KentOSCadGdalDrivers.cmake` içindeki açık izin listesinden gelir, tam
   sürücü kümesi asla açılmaz (io.md P7). `/vsicurl` gibi sanal dosya sistemi
   yolları reddedilir (P14). Kapalıyken komutlar hangi paketin gerektiğini söyler,
   sessizce başarılı olmaz.

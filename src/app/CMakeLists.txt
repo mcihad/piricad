@@ -82,6 +82,23 @@ set_target_properties(piricad PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
+# ONE PATH TO THE EXECUTABLE ON EVERY PLATFORM. The bundle is right for macOS —
+# the dock name, the icon and the Info.plist live in it — but it puts the binary
+# three directories down, and `bin/piricad` is the path the Makefile's `run`,
+# every `--betik` example in /docs (Article 11.6: an example runs as printed)
+# and the render gates were written against. Rather than teach each of them
+# where macOS keeps it, the build leaves a link where they look. Relative, so
+# the build tree can be moved. Article 10 keeps this out of the Makefile: it is
+# build logic, and this is where build logic lives.
+if(APPLE)
+    add_custom_command(TARGET piricad POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+                "piricad.app/Contents/MacOS/piricad"
+                "${CMAKE_BINARY_DIR}/bin/piricad"
+        COMMENT "bin/piricad -> piricad.app/Contents/MacOS/piricad"
+        VERBATIM)
+endif()
+
 install(TARGETS piricad
     BUNDLE  DESTINATION .
     RUNTIME DESTINATION bin

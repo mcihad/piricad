@@ -6,16 +6,16 @@ dayanıklı olduğunu bileceksiniz.
 
 ## Ne yapar
 
-Çizimi, bağlı olduğu PiriCAD proje dosyasına (`.pcad`) yazar.
+Çizimi, bağlı olduğu KentOSCad proje dosyasına (`.pcad`) yazar.
 
 Çizim henüz bir dosyaya bağlı değilse `KAYDET` **hata verir** ve
 [FARKLIKAYDET](saveas.md) kullanmanızı ister. Sessizce bir ad uydurmaz.
 
-Kaydetme kesintiye dayanıklıdır: PiriCAD önce yanına geçici bir dosya yazar,
+Kaydetme kesintiye dayanıklıdır: KentOSCad önce yanına geçici bir dosya yazar,
 ancak son bayt diske indikten sonra onu yerine koyar. Kaydetme sırasında
 elektrik giderse ya da disk dolarsa **bir önceki kaydınız yerinde durur**.
 
-Dosyanın neyi taşıdığı: [PiriCAD proje dosyası](../veri/proje-dosyasi.md).
+Dosyanın neyi taşıdığı: [KentOSCad proje dosyası](../veri/proje-dosyasi.md).
 
 ## Adlar
 

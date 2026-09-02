@@ -8,7 +8,7 @@ paketinden gösterim uygulamayı ve stili geri almayı bileceksiniz.
 
 Bir katmandaki **canlı nesnelerin her birine bir stil yazar**.
 
-PiriCAD'de görünüm çizim anında hesaplanmaz. `STİL` çalıştığında görünüm bir kez çözülür,
+KentOSCad'de görünüm çizim anında hesaplanmaz. `STİL` çalıştığında görünüm bir kez çözülür,
 çizimin stil tablosuna tek satır olarak yazılır ve her nesne o satırın numarasını taşır.
 Ekran çizerken kural işletmez, öznitelik okumaz, ifade değerlendirmez; tek bir sayı okur.
 Beş milyon parselli bir katmanda kaydırmanın akıcı kalmasının sebebi budur.
@@ -34,7 +34,7 @@ değişikliği veri paketinin güncellenmesidir, programın yeniden derlenmesi d
 
 Mekânsal Planlar Yapım Yönetmeliği'nin (MPYY) gösterim ekleri EK-1a (ortak gösterimler),
 EK-1b (mekânsal strateji planı), EK-1c (çevre düzeni planı), EK-1ç (nazım imar planı),
-EK-1d (uygulama imar planı) ve EK-1e (detay kataloğu) olarak paketlenir. PiriCAD'in bu
+EK-1d (uygulama imar planı) ve EK-1e (detay kataloğu) olarak paketlenir. KentOSCad'in bu
 paketi `data/catalogs/mpyy/plan-gosterim.json` dosyasındadır ve **476 gösterim satırı**
 içerir. Paketin hangi Resmî Gazete sürümüne dayandığı, ne çıkarıldığı ve neyin eksik
 kaldığı [MPYY plan gösterimleri](../veri/mpyy-gosterimleri.md) sayfasında yazılıdır.

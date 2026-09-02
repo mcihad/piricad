@@ -1,6 +1,6 @@
 # İlk Adımlar
 
-PiriCAD'i ilk kez açan kullanıcı için; bu sayfayı bitirdiğinizde çizgi çizmiş, katman
+KentOSCad'i ilk kez açan kullanıcı için; bu sayfayı bitirdiğinizde çizgi çizmiş, katman
 yaratmış, yaptığınızı geri almış ve bir betik çalıştırmış olacaksınız.
 
 Programı henüz derlemediyseniz önce [Kurulum](kurulum.md) sayfasına bakın.
@@ -14,7 +14,7 @@ make run
 Transkript panelinde açılış satırlarını görürsünüz:
 
 ```text
-PiriCAD 0.1.0 — komut merkezli mimari, GPLv3.
+KentOSCad 0.1.0 — komut merkezli mimari, GPLv3.
 Aynı komut arayüzden, komut satırından ve betikten tıpatıp aynı yolu izler.
 Başlamak için: ÇİZGİ  ·  ÇİZGİ 485320,4310220 @50,30 @100<45  ·  YARDIM
 ```
@@ -147,6 +147,6 @@ kaydından üretilir; elle tutulan ikinci bir liste yoktur.
 ## Sırada ne var
 
 - [Arayüz](arayuz.md) — pencerede ne nerede
-- [Komut sistemi](../komutlar/README.md) — PiriCAD'in çalışma mantığı
+- [Komut sistemi](../komutlar/README.md) — KentOSCad'in çalışma mantığı
 - [Komut satırı](../komutlar/komut-satiri.md) — koordinat girişinin tamamı
 - [Sorun giderme](../sorun-giderme.md) — bir şey ters giderse

@@ -58,6 +58,21 @@ public:
     void runInvocation(const command::Invocation& invocation);
     void beginInteractive(const QString& name);
     void supplyPoint(core::Point2 world);
+
+    /// Answers the running command's prompt with a piece of TEXT.
+    ///
+    /// A command asks for what it needs — `ctx.point`, `ctx.number`, `ctx.text` —
+    /// and the client answers in kind. Until this existed the shell could answer
+    /// only points, so METİN took its anchor from the canvas and then waited for
+    /// a string nothing could deliver: the prompt reached the command line's
+    /// placeholder while focus stayed on the canvas, and the command hung.
+    void supplyText(const QString& text);
+
+    /// What the running command is asking for, so a client can offer the right
+    /// editor. `ParamKind::Point` when nothing is running, which is what the
+    /// canvas does by default anyway.
+    command::ParamKind promptKind() const;
+
     void cancelInteractive();
 
     /// The selection, resolved to dense slots for one frame. Recomputed only when
@@ -123,6 +138,12 @@ signals:
     void settingChanged(const QString& id);
 
 private:
+    /// The one body behind `supplyPoint` and `supplyText`: feed the value in, then
+    /// finish the command or re-prompt. One place, because a second answer path
+    /// that forgot to emit `interactiveFinished` would leave the tool column lit
+    /// on a command that had already ended.
+    void supplyValue(command::Value value);
+
     void wireBus();
     void settle();
 

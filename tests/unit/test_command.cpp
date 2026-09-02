@@ -1394,6 +1394,90 @@ TEST_CASE("DAİRE geri alınır")
 // YAY — arcs (core.arc_draw, core.arc)
 // ============================================================================
 
+// -----------------------------------------------------------------------------
+// Object snap modes — the mask every client writes (core.mode)
+// -----------------------------------------------------------------------------
+
+TEST_CASE("MOD yakalama maskesini yazar ve okur")
+{
+    Fixture f;
+
+    // The panel writes the WHOLE mask, so this is exactly what the OSNAP list,
+    // the command line and a script all send.
+    REQUIRE(f.bus.execute_line("MOD ad=yakalama_modları deger=127", Origin::Test).ok());
+    CHECK(f.bus.session_settings().get("core.yakalama.modlar").as_int() == 127);
+
+    REQUIRE(f.bus.execute_line("MOD ad=yakalama_modlari deger=0", Origin::Test).ok());
+    CHECK(f.bus.session_settings().get("core.yakalama.modlar").as_int() == 0);
+}
+
+TEST_CASE("Yakalama maskesi her bir kipi ayrı ayrı taşır")
+{
+    Fixture f;
+
+    // Each declared bit must survive a write and read on its own. A mask that
+    // silently drops a mode is how KESİŞİM could be 'on' and never fire.
+    for (std::uint16_t bit = 1; bit != 0; bit = static_cast<std::uint16_t>(bit << 1)) {
+        if ((core::SnapAllMask & bit) == 0) continue;
+
+        const std::string line = "MOD ad=yakalama_modları deger=" + std::to_string(bit);
+        if (!f.bus.execute_line(line, Origin::Test)) FAIL_WITH("MOD", line);
+        CHECK(f.bus.session_settings().get("core.yakalama.modlar").as_int() == bit);
+    }
+}
+
+TEST_CASE("Her yakalama kipinin Türkçe etiketi ve makine adı vardır")
+{
+    // The OSNAP panel builds its rows from these, so a mode without a name would
+    // appear in the list as "yok" — and a script could not name it either.
+    for (std::uint16_t bit = 1; bit != 0; bit = static_cast<std::uint16_t>(bit << 1)) {
+        if ((core::SnapAllMask & bit) == 0) continue;
+
+        CHECK(std::string(core::snap_mode_id(bit)) != "yok");
+        CHECK(std::string(core::snap_mode_label(bit)) != "yok");
+    }
+}
+
+// -----------------------------------------------------------------------------
+// KOORDİNAT — reading one point (core.coordinate)
+// -----------------------------------------------------------------------------
+
+TEST_CASE("KOORDİNAT tıklanan noktayı belgenin koordinat sisteminde yazar")
+{
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+
+    auto read = f.bus.execute_line("KOORDİNAT nokta=485320.5,4310220.25", Origin::Test);
+    if (!read) FAIL_WITH("KOORDİNAT", read.error().message);
+
+    CHECK(said.find("485320,500") != std::string::npos);
+    CHECK(said.find("4310220,250") != std::string::npos);
+    CHECK(said.find("TUREF/TM30") != std::string::npos);
+}
+
+TEST_CASE("KOORDİNAT çizimi değiştirmez ve geri alma adımı bırakmaz")
+{
+    Fixture f;
+    const std::uint64_t before = f.doc.content_hash();
+
+    REQUIRE(f.bus.execute_line("KOORDİNAT nokta=10,20", Origin::Test).ok());
+
+    CHECK(f.doc.content_hash() == before);
+    CHECK(!f.undo.can_undo()); // a reading is not a change, so there is nothing to undo
+}
+
+TEST_CASE("KOORDİNAT: kısaltmaları ve İngilizce adı aynı komuta çözülür")
+{
+    Fixture f;
+    const CommandSpec* by_tr = f.reg.resolve("KOORDİNAT");
+    REQUIRE(by_tr != nullptr);
+    CHECK(by_tr->id == "core.coordinate");
+    CHECK(f.reg.resolve("KOORDINAT") == by_tr);
+    CHECK(f.reg.resolve("COORDINATE") == by_tr);
+    CHECK(f.reg.resolve("KRD") == by_tr);
+}
+
 TEST_CASE("YAY merkez ve iki uçtan yay çizer, süpürme saat yönünün tersine")
 {
     Fixture f;
@@ -1989,7 +2073,7 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // command that vanished bumps it down by accident, and that is the case worth
     // catching.
     Fixture f;
-    CHECK_EQ(f.reg.size(), std::size_t{49});
+    CHECK_EQ(f.reg.size(), std::size_t{50});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

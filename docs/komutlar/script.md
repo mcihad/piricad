@@ -136,7 +136,7 @@ Betiklerin dosya sistemine erişimi üç seviyeyle sınırlanır:
 | `proje` | Yalnız proje dizini |
 | `tam` | Kullanıcının açık onayı gerekir |
 
-PiriCAD uygulaması betikleri **`proje`** seviyesinde çalıştırır. `güvenli` seviyede bir
+KentOSCad uygulaması betikleri **`proje`** seviyesinde çalıştırır. `güvenli` seviyede bir
 betik dosyası açmaya çalışırsanız reddedilir.
 
 ### Bu sürümdeki betik dili

@@ -9,7 +9,7 @@ betikten çizmeyi bileceksiniz.
 `DAİRE`, bir **merkez** ve **çember üzerinde bir nokta** alır ve daire çizer.
 Yarıçapı iki nokta arasındaki uzaklık belirler.
 
-> **Faz 0 durumu.** Daire, PiriCAD'in ilk **eğri** nesnesidir. Bugün çizilir,
+> **Faz 0 durumu.** Daire, KentOSCad'in ilk **eğri** nesnesidir. Bugün çizilir,
 > seçilir, kaydedilir ve geri alınır. Yakalama henüz dairenin **merkezine ve
 > çemberine ayrıca oturmaz** — genel yakalama kuralları geçerlidir; merkez ve dörtte
 > bir noktaları yakalaması Faz 1'de gelecek. Yay ve daire dilimi de o fazda bu
@@ -17,7 +17,7 @@ Yarıçapı iki nokta arasındaki uzaklık belirler.
 
 ### Daire neden çokgen değil
 
-PiriCAD daireyi **tanımıyla** saklar: merkez ve yarıçap. Ekranda çizilen 128 kenarlı
+KentOSCad daireyi **tanımıyla** saklar: merkez ve yarıçap. Ekranda çizilen 128 kenarlı
 çokgen yalnız **resimdir**; belgede duran sayı değildir.
 
 Bunun sebebi hukukidir. Daire 128 kenarlı bir çokgen olarak saklansaydı çevresi

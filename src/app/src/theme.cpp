@@ -611,11 +611,16 @@ QString themeStyleSheet(ThemeMode mode)
         QLabel#sectionTitle               { color: %(text)s; font-size: 16px; font-weight: 600; }
         QLabel#quiet                      { color: %(textFaint)s; }
 
-        /* design.md 16.1: the field caption sits ABOVE its editor and stays out
-           of the way — a form column is read down the values, not down the
-           labels. */
-        QLabel#formCaption                { background: transparent; color: %(textFaint)s;
-                                            font-size: 11px; font-weight: 500; }
+        /* design.md §8: the symbol editor's caption sits BESIDE its editor in a
+           110 px column, dim rather than faint — it is read, not skimmed. */
+        QLabel#formCaption                { background: transparent; color: %(textDim)s;
+                                            font-size: 12px; }
+
+        /* design.md §16.2: a group heading — small caps, faint, letter-spaced.
+           The same face QGroupBox::title wears, for a group that has no box. */
+        QLabel#groupCaption               { background: transparent; color: %(textFaint)s;
+                                            font-size: 10.5px; font-weight: 600;
+                                            letter-spacing: 0.7px; }
 
         /* A colour is a FIELD of the form, so it is the height of one. Its face
            and its ink are set per value in `show_colour`. */

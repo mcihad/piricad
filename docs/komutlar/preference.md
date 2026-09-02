@@ -1,6 +1,6 @@
 # TERCİH — Uygulama Tercihleri
 
-PiriCAD'i kendi çalışma alışkanlığına göre ayarlayan herkes için; bu sayfayı
+KentOSCad'i kendi çalışma alışkanlığına göre ayarlayan herkes için; bu sayfayı
 bitirdiğinizde tema, dil, otomatik kayıt ve tuval rengi gibi **kullanıcıya ait**
 tercihleri listelemeyi, okumayı ve değiştirmeyi bileceksiniz.
 

@@ -1,7 +1,7 @@
 # STİLAKTAR — Stili QGIS'e Aktarma
 
 Bir katmanın görünümünü QGIS'e taşıyan herkes için; bu sayfayı bitirdiğinizde
-PiriCAD'de kurduğunuz sembolojiyi QML stil dosyası olarak yazmayı bileceksiniz.
+KentOSCad'de kurduğunuz sembolojiyi QML stil dosyası olarak yazmayı bileceksiniz.
 
 > **Faz 0 durumu.** Tek sembollü dışa aktarım çalışıyor: renk, kontur, kalınlık,
 > dolgu ve ölçek penceresi QGIS'e taşınır. **Faz 1'de** gelecekler: kategorize
@@ -21,8 +21,8 @@ yok sayan bir `bicim=QML` demek olurdu.
 **Neden QML elle yazılıyor?** Çünkü yazan bir kitaplık yok: QML QGIS'in kendi
 biçimidir ve tek yazıcısı QGIS'tir. QGIS'i bağlamak lisans yüzünden değil
 (QGIS **GPL-2+**, yani GPLv3 ile uyumlu), mimari yüzünden reddedildi —
-`QgsGeometry` ondalık saklar, PiriCAD `int64` milimetre; QGIS sembolojisi
-`QPainter`'a çizer, PiriCAD GPU'ya gidiyor; `QgsExpression` ikinci bir
+`QgsGeometry` ondalık saklar, KentOSCad `int64` milimetre; QGIS sembolojisi
+`QPainter`'a çizer, KentOSCad GPU'ya gidiyor; `QgsExpression` ikinci bir
 ayrıştırıcıdır ve yasaktır. Kırk satır XML üretmek QGIS'i yeniden yazmak değil,
 onunla konuşmaktır.
 

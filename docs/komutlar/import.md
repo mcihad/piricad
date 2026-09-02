@@ -15,7 +15,7 @@ varsa nesneler ona konur.
 eklenen her şey geri alınır ve çiziminiz içe aktarmadan önceki hâlinde kalır.
 Yarım aktarılmış bir veri kümesi bırakılmaz.
 
-Bir PiriCAD proje dosyası (`.pcad`) içe aktarılmaz, **açılır**:
+Bir KentOSCad proje dosyası (`.pcad`) içe aktarılmaz, **açılır**:
 [AÇ](open.md) kullanın.
 
 Hangi biçimlerin okunduğu ve neyin taşındığı:
@@ -81,7 +81,7 @@ Koordinat sistemi çizimden farklıysa bu da söylenir:
 ```
 
 **DXF için `.prj` dosyasını unutmayın.** DXF biçiminin koordinat sistemi için
-yeri yoktur; PiriCAD aynı adlı `.prj` dosyasını arar ve bulamazsa dosyayı
+yeri yoktur; KentOSCad aynı adlı `.prj` dosyasını arar ve bulamazsa dosyayı
 reddeder. Etiketsiz koordinat kabul edilmez.
 
 ### Arayüz
@@ -143,7 +143,7 @@ satırından, betikten ya da yapay zekâ önerisinden gelmiş olması fark etmez
 | `'...' okunabilir çizgi ya da alan içermiyor` | Desteklenen geometri yok | Nokta ve eğriler bu sürümde okunmuyor |
 | `'...' içindeki N. öğe okunamadı: ...` | Geometri doğrulamayı geçemedi | Mesajın devamı sebebi söyler; kaynak veriyi düzeltin |
 | `'...' sanal dosya sistemi yolu.` | `/vsi...` ile başlayan yol | Dosyayı diske alıp yeniden deneyin |
-| `'...' bir PiriCAD proje dosyası. Proje dosyası açılır, içe aktarılmaz: AÇ komutunu kullanın.` | `.pcad` içe aktarılmaya çalışıldı | [AÇ](open.md) kullanın |
+| `'...' bir KentOSCad proje dosyası. Proje dosyası açılır, içe aktarılmaz: AÇ komutunu kullanın.` | `.pcad` içe aktarılmaya çalışıldı | [AÇ](open.md) kullanın |
 | `'...' katmanı kilitli.` | Hedef katman kilitli | Katmanın kilidini açın |
 | `Dosya motoru bağlı değil; bu ortamda dosya açılıp kaydedilemez.` | Dosya motoru olmayan bir ortam | Uygulama içinden çalıştırın |
 

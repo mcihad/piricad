@@ -18,14 +18,14 @@ Günlük, işletim sisteminin uygulama verisi dizinindeki `oturum.jsonl` dosyas�
 Yolu programın açılışında transkriptte görürsünüz:
 
 ```text
-Komut günlüğü: /home/kullanici/.local/share/PiriCAD/PiriCAD/oturum.jsonl
+Komut günlüğü: /home/kullanici/.local/share/KentOSCad/KentOSCad/oturum.jsonl
 ```
 
 | Sistem | Tipik yol |
 |---|---|
-| Linux | `~/.local/share/PiriCAD/PiriCAD/oturum.jsonl` |
-| Windows | `%LOCALAPPDATA%\PiriCAD\PiriCAD\oturum.jsonl` |
-| macOS | `~/Library/Application Support/PiriCAD/PiriCAD/oturum.jsonl` |
+| Linux | `~/.local/share/KentOSCad/KentOSCad/oturum.jsonl` |
+| Windows | `%LOCALAPPDATA%\KentOSCad\KentOSCad\oturum.jsonl` |
+| macOS | `~/Library/Application Support/KentOSCad/KentOSCad/oturum.jsonl` |
 
 Yazma işlemi ayrı bir iş parçacığında yapılır; disk yavaş olsa bile program beklemez.
 
@@ -108,7 +108,7 @@ Ayrıntı: [Betik yazma](../betik/README.md).
 Linux ve macOS'ta `jq` ile de yapabilirsiniz:
 
 ```bash
-jq -s '[.[] | {cmd, args}]' ~/.local/share/PiriCAD/PiriCAD/oturum.jsonl > yeniden.json
+jq -s '[.[] | {cmd, args}]' ~/.local/share/KentOSCad/KentOSCad/oturum.jsonl > yeniden.json
 ```
 
 ## Destek talebine eklemek

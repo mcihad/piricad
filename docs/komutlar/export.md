@@ -7,7 +7,7 @@ sisteminin nasıl taşındığını ve neyin aktarılmadığını bileceksiniz.
 ## Ne yapar
 
 Çizimdeki **görünür ve silinmemiş** nesneleri, verdiğiniz yola dış bir veri
-biçiminde yazar. Her PiriCAD katmanı hedef dosyada bir katman olur.
+biçiminde yazar. Her KentOSCad katmanı hedef dosyada bir katman olur.
 
 Dışa aktarma **kayıplıdır**. Öznitelikler, nesne başına stil ve kalıcı nesne
 anahtarları aktarılmaz. Çalışma dosyanız her zaman
@@ -70,7 +70,7 @@ Dışa aktarıldı: ada12-teslim.gpkg  (14 öğe, 3 katman, GPKG)
   not: Öznitelik ve stil bilgisi bu sürümde yazılmadı; yalnız geometri ve katman adı aktarıldı.
 ```
 
-DXF'e yazarken PiriCAD yanına bir `.prj` dosyası da koyar ve bunu söyler:
+DXF'e yazarken KentOSCad yanına bir `.prj` dosyası da koyar ve bunu söyler:
 
 ```text
 Dışa aktarıldı: ada12-teslim.dxf  (14 öğe, 3 katman, DXF)
@@ -80,7 +80,7 @@ Dışa aktarıldı: ada12-teslim.dxf  (14 öğe, 3 katman, DXF)
 ```
 
 **İki dosyayı da teslim edin.** `.prj` olmadan DXF'iniz etiketsiz koordinat
-taşır ve PiriCAD dâhil hiçbir program hangi projeksiyonda olduğunu bilemez.
+taşır ve KentOSCad dâhil hiçbir program hangi projeksiyonda olduğunu bilemez.
 
 ### Arayüz
 
@@ -115,7 +115,7 @@ oturumu yeniden oynatmak, o oturumdaki her dışa aktarmayı yeniden yapmamalıd
 
 Toplu teslim üretiminde tipik kullanım, betiğin sonunda tek çağrıdır.
 
-Sanal dosya sistemi yolları (`/vsicurl/`, `/vsis3/`) reddedilir: PiriCAD ağa ya
+Sanal dosya sistemi yolları (`/vsicurl/`, `/vsis3/`) reddedilir: KentOSCad ağa ya
 da arşivin içine yazmaz.
 
 `DIŞAAKTAR` yapay zekâya kapalıdır: bir öneri, kullanıcının diskinde dosya
@@ -134,8 +134,8 @@ oluşturmamalıdır.
 | `'...' oluşturulamadı: ... Dizin izinlerini ve boş alanı denetleyin.` | İzin yok ya da disk dolu | İzinleri ve yeri denetleyin |
 | `'...' katmanı yazılamadı: ...` | Sürücü katmanı kabul etmedi | Katman adında sürücünün kabul etmediği bir karakter olabilir |
 | `Çizimde dışa aktarılacak nesne yok; '...' yazılmadı.` | Çizim boş | Önce çizin |
-| `'...' sanal dosya sistemi yolu. PiriCAD ağa ya da arşivin içine yazmaz.` | `/vsi...` ile başlayan yol | Yerel bir yol verin |
-| `'...' bir PiriCAD proje dosyası uzantısı taşıyor.` | `.pcad` dışa aktarılmaya çalışıldı | [FARKLIKAYDET](saveas.md) kullanın |
+| `'...' sanal dosya sistemi yolu. KentOSCad ağa ya da arşivin içine yazmaz.` | `/vsi...` ile başlayan yol | Yerel bir yol verin |
+| `'...' bir KentOSCad proje dosyası uzantısı taşıyor.` | `.pcad` dışa aktarılmaya çalışıldı | [FARKLIKAYDET](saveas.md) kullanın |
 | `'...' yazılamadı. Koordinat sistemi olmayan bir dışa aktarım eksik veridir` | `.prj` yazılamadı | Dizin izinlerini denetleyin |
 | `Dosya motoru bağlı değil; bu ortamda dosya açılıp kaydedilemez.` | Dosya motoru olmayan bir ortam | Uygulama içinden çalıştırın |
 

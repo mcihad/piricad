@@ -6,7 +6,7 @@ aktarıldığını, neyin aktarılmadığını ve koordinat sisteminin nasıl ta
 bileceksiniz.
 
 Komutlar: [İÇEAKTAR](../komutlar/import.md), [DIŞAAKTAR](../komutlar/export.md).
-Kendi proje dosyanız için: [PiriCAD proje dosyası](proje-dosyasi.md).
+Kendi proje dosyanız için: [KentOSCad proje dosyası](proje-dosyasi.md).
 
 ## Bu sürümde çalışan biçimler
 
@@ -15,8 +15,8 @@ Kendi proje dosyanız için: [PiriCAD proje dosyası](proje-dosyasi.md).
 | AutoCAD DXF | `.dxf` | evet | evet |
 | OGC GeoPackage | `.gpkg` | evet | evet |
 
-Bu liste kasten kısadır. PiriCAD'in altındaki GDAL kütüphanesi yüzden fazla biçim
-tanır; PiriCAD bunların yalnızca **açıkça izin verilenlerini** açar. Bir dosya
+Bu liste kasten kısadır. KentOSCad'in altındaki GDAL kütüphanesi yüzden fazla biçim
+tanır; KentOSCad bunların yalnızca **açıkça izin verilenlerini** açar. Bir dosya
 biçimi, üzerinde sınanmamış bir ayrıştırıcı demektir ve dosya okumak bu ürünün en
 geniş saldırı yüzeyidir.
 
@@ -34,13 +34,13 @@ sayfada bir satırı ile birlikte gelir.
 | Shapefile, GeoJSON | Faz 1 | İzin listesine eklenmeleri için fuzz koşumu ve gidiş-dönüş sınaması gerekiyor |
 | WMS, WMTS, WFS-T, WCS | Faz 2 | Servis istemcileri kendi uygunluk sınamalarıyla gelecek |
 
-PiriCAD **hiçbir zaman** ODA Drawings SDK kullanmayacaktır; kapalı kaynaklıdır ve
+KentOSCad **hiçbir zaman** ODA Drawings SDK kullanmayacaktır; kapalı kaynaklıdır ve
 projenin GPLv3 lisansıyla bağdaşmaz.
 
 ## Koordinat sistemi
 
 **Etiketsiz koordinat kabul edilmez.** İçe aktarılan bir veri kümesi koordinat
-sistemini bildirmiyorsa PiriCAD dosyayı reddeder; "herhâlde TUREF/TM30'dur"
+sistemini bildirmiyorsa KentOSCad dosyayı reddeder; "herhâlde TUREF/TM30'dur"
 varsayımı yapmaz.
 
 Sebebi saha kökenlidir: TM30 ile TM33 karışması sessizdir. Koordinatlar makul
@@ -51,18 +51,18 @@ görünür, çizim makul görünür, ve hata ancak tapuya gittiğinde ortaya ç�
 | GeoPackage | Dosyanın içinde. Ek bir şey gerekmez |
 | DXF | **Taşımaz.** Yanındaki aynı adlı `.prj` dosyasından okunur |
 
-DXF'in koordinat sistemi için yeri yoktur — bu biçimin kendi eksiğidir, PiriCAD'in
+DXF'in koordinat sistemi için yeri yoktur — bu biçimin kendi eksiğidir, KentOSCad'in
 değil. Bu yüzden:
 
-- **Dışa aktarırken** PiriCAD `.dxf` ile birlikte bir `.prj` dosyası yazar ve size
+- **Dışa aktarırken** KentOSCad `.dxf` ile birlikte bir `.prj` dosyası yazar ve size
   söyler. Çizimi taşırken **iki dosyayı da götürün**.
-- **İçe aktarırken** PiriCAD aynı adlı `.prj` dosyasını arar. Yoksa dosyayı
+- **İçe aktarırken** KentOSCad aynı adlı `.prj` dosyasını arar. Yoksa dosyayı
   reddeder ve `.prj` koymanızı ister.
 
 `.prj`, ülkedeki her CBS yazılımının anladığı ESRI biçiminde yazılır.
 
 İçe aktarılan verinin koordinat sistemi çizimin kendi sisteminden farklıysa
-PiriCAD **koordinatları dönüştürmez**; farkı söyler ve kararı size bırakır.
+KentOSCad **koordinatları dönüştürmez**; farkı söyler ve kararı size bırakır.
 Sessiz bir yeniden projeksiyon, yanlış yere oturmuş bir parselin en kolay yoludur.
 
 Çizimin koordinat sistemini `AYAR koordinat_sistemi` ile bildirin:
@@ -97,7 +97,7 @@ etmez. Dosyayı diske indirip öyle açın.
 
 ## Dış biçim desteği kapalıysa
 
-PiriCAD, GDAL kütüphanesi olmadan da derlenebilir. O yapıda `İÇEAKTAR` ve
+KentOSCad, GDAL kütüphanesi olmadan da derlenebilir. O yapıda `İÇEAKTAR` ve
 `DIŞAAKTAR` **hata döndürür** ve hangi paketin kurulması gerektiğini söyler —
 sessizce boş bir katman döndürmez.
 

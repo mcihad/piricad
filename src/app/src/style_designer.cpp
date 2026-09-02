@@ -107,6 +107,11 @@ constexpr std::array<core::LineJoin, 3> kJoins{
 /// a hundred reads as a list of a hundred.
 constexpr int kGalleryCap = 120;
 
+/// The preview swatch's side. 120 is the width at which `symbol_preview` still
+/// draws the zigzag's corner (it straightens the run below that), and it is what
+/// leaves the symbol stack beside it a readable column in a 352 px editor.
+constexpr int kSwatchSide = 120;
+
 /// The stack index a valid row names.
 std::size_t at(int row)
 {
@@ -208,7 +213,13 @@ void show_colour(QToolButton* button, std::uint32_t rgba)
     // The button is stretched by its cell, so its own width is the column's.
     // Before the first layout it has none yet, and the floor keeps the field
     // from starting life as a chip; the next refresh corrects it.
-    const int width = std::max(button->width() - 2, 200);
+    //
+    // The floor was 200 and that was the width of the row's overflow: beside a
+    // 110 px caption a 200 px icon asks for more than the editor column has,
+    // the row grows past the viewport, and every row in the form — they share a
+    // width — is cut at the dialog's edge. 120 is a legible hex and under the
+    // column's narrowest honest width.
+    const int width = std::max(button->width() - 2, 120);
     const qreal dpr = button->devicePixelRatioF();
 
     QPixmap face(QSize(width, kFieldHeight) * dpr);
@@ -244,40 +255,64 @@ void show_colour(QToolButton* button, std::uint32_t rgba)
     button->setIconSize(QSize(width, kFieldHeight));
 }
 
-/// One field of a form: its caption ABOVE its editor, both the full width of the
-/// column (design.md 16.1).
+/// One row of the symbol editor: caption on the LEFT in a fixed column, editor
+/// beside it — design.md §8's `110px | 1fr | 22px` grid.
 ///
-/// The panel used to be a `QFormLayout` with the label in a fixed 86 px left
-/// column, and in a 352 px column that is a quarter of the width spent on the
-/// word "Kaydırma". Longer captions wrapped to two lines and made their row
-/// taller than its neighbours, the editor and its unit combo fought over what
-/// was left, and both ran under the scroll bar. Stacking gives every field the
-/// same rhythm and the whole width to be read in.
+/// §16.1 stacks a caption above its editor, and this panel did that for a
+/// while; but §16.1 is the four-column record form, where a left caption eats
+/// half a 312 px column, and §8 is this window. Here the reference puts the
+/// caption beside the value, and it is right to: a property list is read down
+/// the values and the caption is what tells one from the next. Stacking cost
+/// every row a second line, doubled the column's height and put the last rows
+/// under the bottom of the dialog.
+///
+/// The captions are kept short enough for the column — the unit goes in the
+/// editor's suffix (§15.2), not in the caption — so nothing wraps.
 ///
 /// `caption_out` hands back the label because one row renames itself: the colour
 /// field says "Yazı rengi" on a text marker and "Çizgi rengi" everywhere else.
+/// A combo that takes the width its column gives it rather than the width of
+/// its longest entry. Left to Qt, a combo's minimum is its widest item, and
+/// "Kâğıt — yakınlaştırınca boyu DEĞİŞMEZ" beside a 110 px caption is wider than
+/// the whole editor column — the row ran under the dialog's edge and the value
+/// was cut where the user had to read it. The popup still shows every item in
+/// full; only the closed control shrinks.
+void fit_column(QComboBox* combo)
+{
+    combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    combo->setMinimumContentsLength(6);
+}
+
 QWidget* form_cell(QWidget* parent, const QString& label, QWidget* editor, QWidget* unit,
                    QLabel** caption_out)
 {
-    auto* cell   = new QWidget(parent);
-    auto* column = new QVBoxLayout(cell);
-    column->setContentsMargins(0, 0, 0, 0);
-    column->setSpacing(4);
+    constexpr int kCaptionWidth = 110; // design.md §8
+
+    auto* cell = new QWidget(parent);
+    auto* row  = new QHBoxLayout(cell);
+    row->setContentsMargins(0, 0, 0, 0);
+    row->setSpacing(8);
 
     auto* caption = new QLabel(label, cell);
     caption->setObjectName(QStringLiteral("formCaption"));
-    column->addWidget(caption);
+    caption->setFixedWidth(kCaptionWidth);
+    caption->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    caption->setBuddy(editor);
+    row->addWidget(caption);
 
-    if (unit == nullptr) {
-        column->addWidget(editor);
-    } else {
-        auto* row    = new QWidget(cell);
-        auto* across = new QHBoxLayout(row);
-        across->setContentsMargins(0, 0, 0, 0);
-        across->setSpacing(6);
-        across->addWidget(editor, 5);
-        across->addWidget(unit, 4);
-        column->addWidget(row);
+    // THE ROW NEVER OUTGROWS THE COLUMN. Left to Qt, an editor's minimum is
+    // its widest text — a seven-digit spin box wants 115 px, a unit combo 106 —
+    // and beside a 110 px caption the two together asked for 347 of the 318 the
+    // column has. The scroll area answers that by widening the page past its
+    // viewport, and with no horizontal bar the last 30 px of every row simply
+    // disappear under the dialog's edge. An explicit minimum overrides the
+    // hint, and the stretch factors then share what the column actually has:
+    // about 110 px for a value and 90 for its unit, which is room for both.
+    editor->setMinimumWidth(1);
+    row->addWidget(editor, 5);
+    if (unit != nullptr) {
+        unit->setMinimumWidth(1);
+        row->addWidget(unit, 4);
     }
 
     if (caption_out != nullptr) *caption_out = caption;
@@ -423,45 +458,34 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
         updateHeaderNote();
     });
 
+    // THE SWATCH AND ITS ONE-WORD CAPTION. No title: the dialog's own title bar
+    // already says which layer this is, and a 16 px heading over a 120 px
+    // picture was a third of the space the picture had. The caption under it
+    // still says what geometry the picture is drawn on — a user who does not
+    // connect the tab to the picture reads a zigzag as a claim about their
+    // parcels — but it is a phrase, not a sentence, because the column beside a
+    // swatch is the stack's, not the caption's.
     auto* previewFrame = new QFrame(this);
     previewFrame->setObjectName(QStringLiteral("stylePreview"));
     auto* previewLayout = new QVBoxLayout(previewFrame);
-    previewLayout->setContentsMargins(14, 11, 14, 12);
-    previewLayout->setSpacing(7);
-
-    // The layer's name is NOT repeated here: the dialog's own title bar already
-    // reads "Katman Özellikleri — PARSEL", and spending the width on it twice is
-    // what pushed this header past the edge of a 352 px column.
-    auto* previewTitle = new QLabel(tr("Katman ön izlemesi"), previewFrame);
-    previewTitle->setObjectName(QStringLiteral("sectionTitle"));
-
-    // Said, not left to be inferred: the tab above chose the geometry this
-    // preview is drawn on, and a user who does not connect the two reads the
-    // picture as a claim about their parcels.
-    //
-    // BENEATH the title rather than beside it. A 16 px heading and a sentence of
-    // note do not fit one line in this column, and Qt does not shrink either of
-    // them — it draws both and lets the second run off the edge, which is what
-    // "Kırıklı çizgi üzerinde çiziliyc" was.
-    headerNote_ = new QLabel(previewFrame);
-    headerNote_->setObjectName(QStringLiteral("quiet"));
-    headerNote_->setWordWrap(true);
-
-    auto* titleRow = new QVBoxLayout;
-    titleRow->setContentsMargins(0, 0, 0, 0);
-    titleRow->setSpacing(2);
-    titleRow->addWidget(previewTitle);
-    titleRow->addWidget(headerNote_);
+    previewLayout->setContentsMargins(0, 0, 0, 0);
+    previewLayout->setSpacing(4);
 
     preview_ = new QLabel(previewFrame);
     preview_->setAlignment(Qt::AlignCenter);
-    preview_->setMinimumHeight(96);
+    preview_->setFixedSize(kSwatchSide, kSwatchSide);
     preview_->setObjectName(QStringLiteral("stylePreviewImage"));
     preview_->setAccessibleName(tr("Katman stili ön izlemesi"));
-    preview_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     preview_->installEventFilter(this);
-    previewLayout->addLayout(titleRow);
+
+    headerNote_ = new QLabel(previewFrame);
+    headerNote_->setObjectName(QStringLiteral("quiet"));
+    headerNote_->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
+    headerNote_->setFixedWidth(kSwatchSide);
+
     previewLayout->addWidget(preview_);
+    previewLayout->addWidget(headerNote_);
+    previewLayout->addStretch(1);
 
     // No gap between the bar and the pane: the selected tab has to touch what it
     // opens, or the two are just a row of buttons above a box.
@@ -499,24 +523,28 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     auto* rightLayout = new QVBoxLayout(right);
     rightLayout->setContentsMargins(12, 10, 8, 10);
     rightLayout->setSpacing(10);
-    // FIXED HEIGHTS ON THE TWO SMALL THINGS, and the form takes what is left.
-    //
-    // With stretch factors the preview and the stack grew with the window and the
-    // property form — the thing a user is actually editing — stayed a strip with
-    // one visible row. The reference sizes it the other way: a 92 px preview, a
-    // short layer list, and the properties filling the rest of the column.
-    // Room for the swatch above, plus the title and its note. A frame shorter
-    // than the picture it holds crops the picture, which is how a 168 px preview
-    // came out looking like a 96 px one with its top and bottom shaved off.
-    previewFrame->setFixedHeight(176);
-    QWidget* stack = buildTree();
-    // 150 for the list plus the row of marks under it plus the box's own title.
-    // It was 178 with a tree asking for 190, so the marks had nowhere to go and
-    // drew straight over the last symbol layer.
-    stack->setFixedHeight(186);
 
-    rightLayout->addWidget(previewFrame);
-    rightLayout->addWidget(stack);
+    // SWATCH BESIDE THE STACK, not above it — the way the reference draws them.
+    //
+    // Stacked, the two small things took 372 px of a 756 px window between them
+    // and the property form — the thing a user is actually editing — was left a
+    // strip that showed three rows and scrolled for the rest. Side by side they
+    // take the height of the stack alone, and the form gets what a form needs.
+    //
+    // The row is sized by its content and no more (`Maximum`): the swatch is
+    // fixed, the tree is a fixed number of rows, and everything under this line
+    // belongs to the property form.
+    QWidget* stack = buildTree();
+
+    auto* top    = new QWidget(right);
+    auto* topRow = new QHBoxLayout(top);
+    topRow->setContentsMargins(0, 0, 0, 0);
+    topRow->setSpacing(10);
+    topRow->addWidget(previewFrame);
+    topRow->addWidget(stack, 1);
+    top->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+
+    rightLayout->addWidget(top);
 
     // TWO PAGES, one selection. Selecting the symbol shows what belongs to all of
     // it; selecting a layer shows what belongs to that layer. Showing both at once
@@ -713,16 +741,17 @@ void StyleDesigner::updateHeaderNote()
     QString note;
     switch (shape()) {
     case PreviewShape::Area:
-        note = tr("Kapalı alan üzerinde çiziliyor"); // ui-label
+        note = tr("kapalı alan"); // ui-label
         break;
     case PreviewShape::Line:
-        note = tr("Kırıklı çizgi üzerinde çiziliyor"); // ui-label
+        note = tr("kırıklı çizgi"); // ui-label
         break;
     case PreviewShape::Point:
-        note = tr("Tek nokta üzerinde çiziliyor"); // ui-label
+        note = tr("tek nokta"); // ui-label
         break;
     }
     headerNote_->setText(note);
+    headerNote_->setToolTip(tr("Ön izleme bu geometri üzerinde çiziliyor; üstteki sekme seçer"));
 }
 
 PreviewShape StyleDesigner::shape() const
@@ -742,9 +771,12 @@ QWidget* StyleDesigner::buildRendererRow()
     bar->setObjectName(QStringLiteral("rendererRow"));
 
     auto* row = new QHBoxLayout(bar);
-    row->setContentsMargins(14, 11, 14, 11);
+    row->setContentsMargins(14, 8, 14, 8);
     row->setSpacing(18);
 
+    // Each control under a SMALL-CAPS caption, as §8 draws it. These were 16 px
+    // headings for a while, which made a strip of two controls read as two
+    // sections of the window and cost the strip a third of its height.
     const auto field = [&](const QString& caption, QWidget* editor) {
         auto* cell   = new QWidget(bar);
         auto* column = new QVBoxLayout(cell);
@@ -752,7 +784,7 @@ QWidget* StyleDesigner::buildRendererRow()
         column->setSpacing(4);
 
         auto* label = new QLabel(caption, cell);
-        label->setObjectName(QStringLiteral("sectionTitle"));
+        label->setObjectName(QStringLiteral("groupCaption"));
         column->addWidget(label);
         column->addWidget(editor);
         row->addWidget(cell);
@@ -1195,16 +1227,33 @@ void StyleDesigner::applyGalleryPick()
 
 QWidget* StyleDesigner::buildTree()
 {
-    auto* box    = new QGroupBox(tr("Sembol — üstteki en son çizilir"), this);
+    // A caption over a list, not a boxed group: the box spent 20 px of a 200 px
+    // column on its own border and put its title where the first row should be.
+    auto* box    = new QWidget(this);
     auto* layout = new QVBoxLayout(box);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(4);
+
+    auto* caption = new QLabel(tr("SEMBOL KATMANLARI"), box); // ui-label
+    caption->setObjectName(QStringLiteral("groupCaption"));
+    layout->addWidget(caption);
 
     tree_ = new QTreeWidget(box);
     tree_->setHeaderHidden(true);
     tree_->setIconSize(QSize(44, 26));
     tree_->setRootIsDecorated(true);
-    tree_->setMinimumHeight(150);
     tree_->setAlternatingRowColors(true);
     tree_->setAccessibleName(tr("Sembol katmanları"));
+    // What the order means, where the eye already is. It used to be the box's
+    // title, which is gone; a stack read the wrong way round is the one thing a
+    // newcomer to this window gets wrong.
+    tree_->setToolTip(tr("Üstteki katman en son çizilir — ekranda en üstte görünür"));
+
+    // A WHOLE NUMBER OF ROWS, and a fixed one: the root and four layers, which
+    // is more than a published gösterim carries. Left to grow, the tree took
+    // the column's height and the property form under it took none.
+    const int row_px = tree_->fontMetrics().height() + 12;
+    tree_->setFixedHeight(row_px * 5 + 4);
 
     connect(tree_, &QTreeWidget::currentItemChanged, this,
             [this](QTreeWidgetItem*, QTreeWidgetItem*) { loadSelected(); });
@@ -1275,9 +1324,11 @@ QWidget* StyleDesigner::buildTree()
 
 QWidget* StyleDesigner::buildGlobal()
 {
-    auto* box  = new QGroupBox(tr("SEMBOL ÖZELLİKLERİ"), this); // ui-label
+    auto* box  = new QWidget(this);
     auto* form = new QVBoxLayout(box);
-    form->setSpacing(12);
+    form->setContentsMargins(0, 0, 0, 0);
+    form->setSpacing(6);
+    addGroup(form, tr("SEMBOL")); // ui-label
 
     // ---- THE UNIT, and it is the first row on purpose ----
     //
@@ -1290,6 +1341,7 @@ QWidget* StyleDesigner::buildGlobal()
     // forest hatch belongs to the GROUND: it covers an area, and letting it shrink
     // with the zoom turns a legible texture into a grey wash.
     globalUnit_ = new QComboBox(box);
+    fit_column(globalUnit_);
     globalUnit_->addItem(tr("Kâğıt — yakınlaştırınca boyu DEĞİŞMEZ"), // ui-label
                          static_cast<int>(core::Unit::Paper));
     globalUnit_->addItem(tr("Zemin — çizimle birlikte BÜYÜR ve küçülür"), // ui-label
@@ -1338,8 +1390,8 @@ QWidget* StyleDesigner::buildGlobal()
     form->addWidget(form_cell(box, tr("Ölçü birimi"), globalUnit_, nullptr, nullptr));
     form->addWidget(globalUnitNote_); // the note belongs to the unit above it
     form->addWidget(form_cell(box, tr("Renk"), globalColour_, nullptr, nullptr));
-    form->addWidget(form_cell(box, tr("Çizgi kalınlığı"), globalWidth_, nullptr, nullptr));
-    form->addWidget(form_cell(box, tr("Saydamlık (0-255)"), globalOpacity_, nullptr, nullptr));
+    form->addWidget(form_cell(box, tr("Kalınlık"), globalWidth_, nullptr, nullptr));
+    form->addWidget(form_cell(box, tr("Saydamlık"), globalOpacity_, nullptr, nullptr));
     form->addStretch(1);
 
     return box;
@@ -1347,31 +1399,53 @@ QWidget* StyleDesigner::buildGlobal()
 
 // -------------------------------------------------------- the properties ----
 
-void StyleDesigner::addProperty(QVBoxLayout* form, const QString& label, QWidget* editor,
-                                QWidget* unit, std::vector<SymbolLayerType> types)
+QLabel* StyleDesigner::addGroup(QVBoxLayout* form, const QString& title)
+{
+    auto* heading = new QLabel(title, this);
+    heading->setObjectName(QStringLiteral("groupCaption"));
+    // Air above a heading, none below: the rows under it are its, the rows
+    // above are someone else's.
+    heading->setContentsMargins(0, 8, 0, 0);
+    form->addWidget(heading);
+    return heading;
+}
+
+void StyleDesigner::addProperty(QVBoxLayout* form, QLabel* group, const QString& label,
+                                QWidget* editor, QWidget* unit, std::vector<SymbolLayerType> types)
 {
     QLabel* caption = nullptr;
     QWidget* cell   = form_cell(this, label, editor, unit, &caption);
     form->addWidget(cell);
-    properties_.push_back(Property{caption, cell, unit, std::move(types)});
+    properties_.push_back(Property{caption, cell, unit, group, std::move(types)});
 }
 
 QWidget* StyleDesigner::buildProperties()
 {
-    auto* box  = new QGroupBox(tr("KATMAN ÖZELLİKLERİ"), this); // ui-label
+    // GROUPED, the way §8 groups them — DOLGU, KENAR, GEOMETRİ, GÖRÜNÜRLÜK — and
+    // not one boxed list of fourteen rows. A flat list makes the reader work
+    // out for themselves that "Aralık" and "Faz" are about the same thing and
+    // "Saydamlık" is not; the headings say it. The first group is the layer's
+    // identity and has no heading of its own to hide behind, so it is always
+    // there.
+    auto* box  = new QWidget(this);
     auto* form = new QVBoxLayout(box);
-    form->setSpacing(12);
+    form->setContentsMargins(0, 0, 0, 0);
+    form->setSpacing(6);
 
     type_ = new QComboBox(box);
+    fit_column(type_);
     for (const TypeRow& row : kTypes)
         type_->addItem(
             QStringLiteral("%1  (%2)")
                 .arg(tr(row.label), QString::fromUtf8(core::symbol_layer_type_name(row.type))));
     connect(type_, &QComboBox::currentIndexChanged, this, [this](int) { applyToSelected(); });
+    QLabel* identity = addGroup(form, tr("KATMAN")); // ui-label
+    identity->setContentsMargins(0, 0, 0, 0);        // first heading: nothing above it
     form->addWidget(form_cell(box, tr("Katman tipi"), type_, nullptr, nullptr));
 
     const auto unitCombo = [&] {
         auto* c = new QComboBox(box);
+        fit_column(c);
         for (const core::Unit u : kUnits)
             c->addItem(QString::fromUtf8(core::unit_name(u)));
         connect(c, &QComboBox::currentIndexChanged, this, [this](int) { applyToSelected(); });
@@ -1388,6 +1462,7 @@ QWidget* StyleDesigner::buildProperties()
 
     const auto namedCombo = [&](auto items, auto namer) {
         auto* c = new QComboBox(box);
+        fit_column(c);
         for (const auto value : items)
             c->addItem(QString::fromUtf8(namer(value)));
         connect(c, &QComboBox::currentIndexChanged, this, [this](int) { applyToSelected(); });
@@ -1441,6 +1516,9 @@ QWidget* StyleDesigner::buildProperties()
     // phase, no rotation — so saying "kıl çizgi" in all of them, which the first
     // attempt did, put the word `Kaydırma: 0 — kıl çizgi` on screen.
     width_->setSpecialValueText(tr("0 — kıl çizgi"));
+    // The unit in the field, not in the caption (§15.2): "Kalınlık" fits the
+    // caption column and "Çizgi kalınlığı (µm)" did not.
+    width_->setSuffix(tr(" µm"));
     size_     = spin(1000000, 500);
     interval_ = spin(1000000, 500);
     spacingY_ = spin(1000000, 500);
@@ -1448,6 +1526,7 @@ QWidget* StyleDesigner::buildProperties()
     phase_    = spin(1000000, 100);
     angle_    = spin(359, 5);
     opacity_  = spin(255, 5);
+    angle_->setSuffix(tr("°"));
 
     text_              = new QLineEdit(box);
     const QString hint = tr("Sembolün kendi yazısı, örnek: TAKS"); // ui-label
@@ -1524,7 +1603,7 @@ QWidget* StyleDesigner::buildProperties()
     // The lock, on every layer, because every layer can be the one the regulation
     // fixes. Listed against `everything` below so it never disappears.
     lock_ = new QCheckBox(box);
-    lock_->setText(tr("Sembolün rengi bu katmanı değiştirmesin"));
+    lock_->setText(tr("bu katmanın rengini korur"));
     lock_->setToolTip(tr("MPYY bir lekesinin dolgusunu plancıya bırakır, sınırını ve " // ui-label
                          "glifini siyah basar. Kilitli bir katman, sembolün rengi "
                          "değiştiğinde kendi rengini korur."));
@@ -1538,29 +1617,38 @@ QWidget* StyleDesigner::buildProperties()
         refresh();
     });
 
-    addProperty(form, tr("Yazı"), text_, nullptr, {T::TextMarker});
-    addProperty(form, tr("Çizgi rengi"), stroke_, nullptr, coloured);
+    // What the layer IS — under KATMAN with the type, no heading of their own.
+    addProperty(form, nullptr, tr("Yazı"), text_, nullptr, {T::TextMarker});
+    addProperty(form, nullptr, tr("Şekil"), shape_, nullptr, markers);
+    addProperty(form, nullptr, tr("Yerleşim"), placement_, nullptr, {T::MarkerLine, T::HashLine});
+
+    QLabel* fillGroup = addGroup(form, tr("DOLGU")); // ui-label
+    addProperty(form, fillGroup, tr("Dolgu rengi"), fill_, nullptr, fills);
+
+    QLabel* edgeGroup = addGroup(form, tr("KENAR")); // ui-label
+    addProperty(form, edgeGroup, tr("Çizgi rengi"), stroke_, nullptr, coloured);
     strokeLabel_ = properties_.back().label;
-    addProperty(form, tr("Çizgi kalınlığı (µm)"), width_, nullptr, strokes);
-    addProperty(form, tr("Dolgu rengi"), fill_, nullptr, fills);
-    addProperty(form, tr("Boyut"), size_, sizeUnit_, sized);
-    addProperty(form, tr("Aralık"), interval_, intervalUnit_, spaced);
-    addProperty(form, tr("İkinci eksen"), spacingY_, spacingYUnit_, {T::PointPatternFill});
-    addProperty(form, tr("Kaydırma"), offset_, offsetUnit_,
+    addProperty(form, edgeGroup, tr("Kalınlık"), width_, nullptr, strokes);
+    addProperty(form, edgeGroup, tr("Uç biçimi"), cap_, nullptr, {T::SimpleLine});
+    addProperty(form, edgeGroup, tr("Birleşim"), join_, nullptr, {T::SimpleLine});
+
+    QLabel* geometryGroup = addGroup(form, tr("GEOMETRİ")); // ui-label
+    addProperty(form, geometryGroup, tr("Boyut"), size_, sizeUnit_, sized);
+    addProperty(form, geometryGroup, tr("Aralık"), interval_, intervalUnit_, spaced);
+    addProperty(form, geometryGroup, tr("İkinci eksen"), spacingY_, spacingYUnit_,
+                {T::PointPatternFill});
+    addProperty(form, geometryGroup, tr("Kaydırma"), offset_, offsetUnit_,
                 {T::SimpleLine, T::MarkerLine, T::HashLine, T::RasterLine, T::TextMarker});
-    addProperty(form, tr("Açı (°)"), angle_, nullptr, angled);
-    addProperty(form, tr("Faz"), phase_, phaseUnit_, phased);
-    addProperty(form, tr("Şekil"), shape_, nullptr, markers);
-    addProperty(form, tr("Yerleşim"), placement_, nullptr, {T::MarkerLine, T::HashLine});
-    addProperty(form, tr("Uç biçimi"), cap_, nullptr, {T::SimpleLine});
-    addProperty(form, tr("Birleşim"), join_, nullptr, {T::SimpleLine});
+    addProperty(form, geometryGroup, tr("Açı"), angle_, nullptr, angled);
+    addProperty(form, geometryGroup, tr("Faz"), phase_, phaseUnit_, phased);
 
     // Opacity is read by every type, so it lists them all and is always shown.
     std::vector<T> everything;
     for (const TypeRow& row : kTypes)
         everything.push_back(row.type);
-    addProperty(form, tr("Saydamlık (0-255)"), opacity_, nullptr, everything);
-    addProperty(form, tr("Renk kilidi"), lock_, nullptr, everything);
+    QLabel* visibilityGroup = addGroup(form, tr("GÖRÜNÜRLÜK")); // ui-label
+    addProperty(form, visibilityGroup, tr("Saydamlık"), opacity_, nullptr, everything);
+    addProperty(form, visibilityGroup, tr("Renk kilidi"), lock_, nullptr, everything);
     form->addStretch(1);
 
     return box;
@@ -1709,24 +1797,16 @@ void StyleDesigner::updatePreview()
     // Rendered at the DEVICE ratio and on a checkerboard: a translucent fill over
     // a flat ground is indistinguishable from an opaque paler one, and half of
     // what a designer is judging here is exactly that.
-    // 168, NOT 96, and the number carries two decisions.
-    //
-    // A hairline symbol — a cadastral boundary, which is a width of zero — is one
-    // pixel wide however big the swatch is. On a 96 px checkerboard that one pixel
-    // reads as an empty box, and the one control whose job is to say what the
-    // symbol does said nothing; the pixels were there and nobody could see them.
-    // Room around the line is what makes it legible.
-    //
-    // It is also the threshold `symbol_preview` switches on: below 120 the swatch
-    // straightens the run, so the note beside it — the one that promises a bend —
-    // was describing a corner the preview was not drawing. A caption that
-    // contradicts the picture under it is worse than no caption.
-    constexpr int kSwatchW = 168;
-    constexpr int kSwatchH = 104;
-    previewWidth_          = kSwatchW;
+    // A SQUARE, at the width `symbol_preview` needs to draw a corner. Below 120
+    // the swatch straightens the run, and then the caption under it — the one
+    // that promises a bend — describes a corner the picture is not drawing.
+    // Square rather than the 168×104 band it was: beside the stack the column is
+    // the stack's, and a fill, a hatch and a marker interval are read on a
+    // square anyway.
+    previewWidth_ = kSwatchSide;
 
     const QImage swatch =
-        symbol_preview(symbol_, images, dashes, QSize(kSwatchW, kSwatchH),
+        symbol_preview(symbol_, images, dashes, QSize(kSwatchSide, kSwatchSide),
                        (theme() == ThemeMode::Dark ? darkTokens() : lightTokens()).bgInput.rgba(),
                        shape(), PreviewGround::Checker, devicePixelRatioF());
 
@@ -1818,10 +1898,16 @@ void StyleDesigner::loadSelected()
                                                               : tr("Çizgi rengi"));
 
     type_->setEnabled(have);
+    // A heading is shown when one of its rows is. Two passes: the first clears,
+    // the second lights, because the same heading is named by several rows and
+    // the last row must not switch off what an earlier one switched on.
+    for (const Property& p : properties_)
+        if (p.group != nullptr) p.group->setVisible(false);
     for (const Property& p : properties_) {
         const bool shown = have && std::find(p.types.begin(), p.types.end(), type) != p.types.end();
         p.label->setVisible(shown);
         p.editor->setVisible(shown);
+        if (shown && p.group != nullptr) p.group->setVisible(true);
     }
 }
 
@@ -2143,7 +2229,7 @@ void StyleDesigner::saveToLibrary()
     if (!ok || name.trimmed().isEmpty()) return;
 
     // THE APPLICATION'S OWN SETTINGS DIRECTORY, resolved by Qt per platform:
-    // ~/.config/PiriCAD on Linux, Application Support on macOS, AppData on
+    // ~/.config/KentOSCad on Linux, Application Support on macOS, AppData on
     // Windows. Not the project directory: a symbol a user designs belongs to the
     // user, travels with them between drawings, and must not turn up as an
     // untracked file next to somebody's pafta.

@@ -177,7 +177,7 @@ Betiklerin dosya sistemine ve ağa erişimi üç seviyeyle sınırlanır:
 | Seviye | İzin | Ne zaman |
 |---|---|---|
 | `güvenli` | Dosya sistemi yok, ağ yok | Varsayılan; güvenilmeyen betik |
-| `proje` | Yalnız proje dizini | PiriCAD uygulamasının kullandığı seviye |
+| `proje` | Yalnız proje dizini | KentOSCad uygulamasının kullandığı seviye |
 | `tam` | Sınırsız | Kullanıcının açık onayı gerekir |
 
 `güvenli` seviyede bir dosya açmaya çalışan betik şu yanıtı alır:
