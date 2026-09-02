@@ -1601,6 +1601,70 @@ TEST_CASE("OFSET seçim boşken sebebini söyler")
 }
 
 // -----------------------------------------------------------------------------
+// DİLİM ve HALKA — closed shapes a round curve encloses
+// -----------------------------------------------------------------------------
+
+TEST_CASE("DİLİM merkez ve iki kenardan kapalı bir dilim çizer")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+
+    auto drawn = f.bus.execute_line("DİLİM merkez=0,0 baslangic=10,0 bitis=0,10", Origin::Test);
+    if (!drawn) FAIL_WITH("DİLİM", drawn.error().message);
+
+    REQUIRE(f.doc.live_entity_count() == 1);
+
+    // A quarter of a 10 m circle is about 78,5 m². The exact figure depends on
+    // how many chords the arc is drawn with, so this bounds it rather than
+    // pinning it: a shape that did not close would report zero.
+    const auto slot = f.doc.slot_of(f.doc.entities().key[0]);
+    const core::Mm2 area =
+        f.doc.geometry().area_of(f.doc.entities().slot[slot]);
+    CHECK(area > 70'000'000);
+    CHECK(area < 80'000'000);
+}
+
+TEST_CASE("DİLİM: merkezle çakışan kenar reddedilir")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("DİLİM merkez=0,0 baslangic=0,0 bitis=0,10", Origin::Test).ok());
+    CHECK(f.doc.live_entity_count() == 0);
+}
+
+TEST_CASE("HALKA delikli bir alan çizer ve deliğin alanı sayılmaz")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+
+    auto drawn = f.bus.execute_line("HALKA merkez=0,0 ic=5,0 dis=10,0", Origin::Test);
+    if (!drawn) FAIL_WITH("HALKA", drawn.error().message);
+    REQUIRE(f.doc.live_entity_count() == 1);
+
+    // pi*(10^2 - 5^2) = 235,6 m². If the hole were counted as solid the answer
+    // would be about 314 m², which is the failure this bounds.
+    const auto slot = f.doc.slot_of(f.doc.entities().key[0]);
+    const core::Mm2 area =
+        f.doc.geometry().area_of(f.doc.entities().slot[slot]);
+    CHECK(area > 225'000'000);
+    CHECK(area < 240'000'000);
+}
+
+TEST_CASE("HALKA: iç ve dış ters verilse de çalışır, eşitse reddedilir")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+
+    // Outer clicked first is not a mistake.
+    REQUIRE(f.bus.execute_line("HALKA merkez=0,0 ic=10,0 dis=5,0", Origin::Test).ok());
+    CHECK(f.doc.live_entity_count() == 1);
+
+    // Zero width is not a ring.
+    REQUIRE(f.bus.execute_line("HALKA merkez=0,0 ic=5,0 dis=5,0", Origin::Test).ok());
+    CHECK(f.doc.live_entity_count() == 1);
+}
+
+// -----------------------------------------------------------------------------
 // KAYDIR — panning the view (core.pan)
 // -----------------------------------------------------------------------------
 
@@ -2421,7 +2485,7 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // command that vanished bumps it down by accident, and that is the case worth
     // catching.
     Fixture f;
-    CHECK_EQ(f.reg.size(), std::size_t{52});
+    CHECK_EQ(f.reg.size(), std::size_t{54});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

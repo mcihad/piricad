@@ -40,6 +40,8 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.coordinate`](coordinate.md) | `KOORDİNAT`, `KOORDINAT`, `COORDINATE`, `KRD` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
 | [`core.pan`](pan.md) | `KAYDIR`, `PAN`, `KY` | Görünüm | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır. |
 | [`core.offset`](offset.md) | `OFSET`, `OFFSET`, `OF` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili nesnelerin verilen mesafede paralelini çizer. |
+| [`core.sector`](sector.md) | `DİLİM`, `DILIM`, `SECTOR`, `DL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir. |
+| [`core.annulus`](annulus.md) | `HALKA`, `ANNULUS`, `HLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez, iç ve dış yarıçaptan delikli halka çizer. |
 | [`core.attribute`](attribute.md) | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
 | [`core.column`](column.md) | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Belgeye öznitelik sütunu tanımlar ve tanımlı sütunları listeler. |
 | [`core.erase`](erase.md) | `SİL`, `SIL`, `ERASE`, `E` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Seçilen nesneleri siler. |
@@ -410,6 +412,30 @@ Seçili nesnelerin verilen mesafede paralelini çizer.
 | `kose` | text | isteğe bağlı | KÖŞE | YUVARLAK | PAH — dış köşenin biçimi |
 
 Ayrıntılı kullanım: [OFSET](offset.md)
+
+### `core.sector` — DİLİM
+
+Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `merkez` | point | 1 | Dilimin merkezi |
+| `baslangic` | point | 1 | İlk kenarın ucu; yarıçapı bu belirler |
+| `bitis` | point | 1 | İkinci kenarın yönü; süpürme saat yönünün tersinedir |
+
+Ayrıntılı kullanım: [DİLİM](sector.md)
+
+### `core.annulus` — HALKA
+
+Merkez, iç ve dış yarıçaptan delikli halka çizer.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `merkez` | point | 1 | Halkanın merkezi |
+| `ic` | point | 1 | İç çember üzerinde bir nokta |
+| `dis` | point | 1 | Dış çember üzerinde bir nokta |
+
+Ayrıntılı kullanım: [HALKA](annulus.md)
 
 ### `core.attribute` — ÖZNİTELİK
 
@@ -1825,6 +1851,91 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "max": 1,
           "required": false,
           "help": "KÖŞE | YUVARLAK | PAH — dış köşenin biçimi"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.sector",
+      "names": [
+        "DİLİM",
+        "DILIM",
+        "SECTOR",
+        "DL"
+      ],
+      "category": "Çizim",
+      "summary": "Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir.",
+      "params": [
+        {
+          "name": "merkez",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Dilimin merkezi"
+        },
+        {
+          "name": "baslangic",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "İlk kenarın ucu; yarıçapı bu belirler"
+        },
+        {
+          "name": "bitis",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "İkinci kenarın yönü; süpürme saat yönünün tersinedir"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.annulus",
+      "names": [
+        "HALKA",
+        "ANNULUS",
+        "HLK"
+      ],
+      "category": "Çizim",
+      "summary": "Merkez, iç ve dış yarıçaptan delikli halka çizer.",
+      "params": [
+        {
+          "name": "merkez",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Halkanın merkezi"
+        },
+        {
+          "name": "ic",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "İç çember üzerinde bir nokta"
+        },
+        {
+          "name": "dis",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Dış çember üzerinde bir nokta"
         }
       ],
       "flags": [

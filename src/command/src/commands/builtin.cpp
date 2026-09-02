@@ -41,6 +41,8 @@ namespace piricad::command {
     X(coordinate)                                                                                  \
     X(pan)                                                                                         \
     X(offset)                                                                                      \
+    X(sector)                                                                                      \
+    X(annulus)                                                                                     \
     X(attribute)                                                                                   \
     X(column)                                                                                      \
     X(erase)                                                                                       \

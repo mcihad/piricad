@@ -315,6 +315,8 @@ private:
     QAction* actPolyline_{nullptr};
     QAction* actArc_{nullptr};
     QAction* actCircle_{nullptr};
+    QAction* actSector_{nullptr};
+    QAction* actAnnulus_{nullptr};
     QAction* actRectangle_{nullptr};
     QAction* actScale_{nullptr};
     QAction* actMirror_{nullptr};

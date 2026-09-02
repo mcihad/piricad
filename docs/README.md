@@ -69,6 +69,8 @@ Tek tek komutlar:
 | `KOORDİNAT` | [Nokta koordinatı okuma](komutlar/coordinate.md) |
 | `KAYDIR` | [Görünümü kaydırma](komutlar/pan.md) |
 | `OFSET` | [Paralel çizme](komutlar/offset.md) |
+| `DİLİM` | [Daire dilimi çizme](komutlar/sector.md) |
+| `HALKA` | [Delikli halka çizme](komutlar/annulus.md) |
 | `YAKINLAŞ` | [Görünüm ayarlama](komutlar/zoom.md) |
 | `GERİAL` | [Geri alma](komutlar/undo.md) |
 | `YİNELE` | [Yineleme](komutlar/redo.md) |

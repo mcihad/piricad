@@ -476,6 +476,19 @@ void MainWindow::buildActions()
     // Into the exclusive group like every other modal tool, so exactly one stays
     // lit and `syncToolSelection` can find it by the command it sends.
     drawingTools_->addAction(actCircle_);
+    // IN THE MENU, NOT THE TOOL COLUMN. The column is a curated 46 px strip of the
+    // tools a hand reaches for constantly, and these two are shapes a plan sheet
+    // asks for occasionally — a junction fillet, a protection band around a well.
+    // Giving them a column button each would also mean two more glyphs sharing a
+    // circle, which reads as one control drawn twice.
+    actSector_ = drawTool(Glyph::Arc, tr("Daire Dilimi"), QStringLiteral("DİLİM"),
+                          tr("DİLİM — merkez ve iki kenardan daire dilimi  ·  kısaltma: DL"));
+    drawingTools_->addAction(actSector_);
+    actAnnulus_ = drawTool(Glyph::Circle, tr("Halka"), QStringLiteral("HALKA"),
+                           tr("HALKA — merkez, iç ve dış yarıçaptan delikli halka  ·  "
+                              "kısaltma: HLK"));
+    drawingTools_->addAction(actAnnulus_);
+
     actPoint_ = drawTool(Glyph::Point, tr("Nokta"), QStringLiteral("NOKTA"),
                          tr("NOKTA — ölçülmüş nokta: nirengi, poligon noktası, röper  ·  "
                             "kısaltma: NK"));
@@ -866,6 +879,8 @@ void MainWindow::buildMenus()
     draw->addAction(actPolyline_);
     draw->addAction(actArc_);
     draw->addAction(actCircle_);
+    draw->addAction(actSector_);
+    draw->addAction(actAnnulus_);
     draw->addAction(actRectangle_);
     draw->addAction(actPoint_);
     draw->addAction(actText_);

@@ -18,6 +18,21 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 - İsim uzayı, `#include` yolları, CMake hedefleri ve `PIRICAD_*` makroları bu adımda
   **değişmedi**; onlar tek mekanik değişiklik olarak ayrı iniyor.
 
+### Eklendi — DİLİM ve HALKA
+
+- **`DİLİM`** — merkez ve iki kenardan daire dilimi: kavşak dolgusu, görüş konisi,
+  etki sektörü. Süpürme `YAY`'daki gibi saat yönünün tersine.
+- **`HALKA`** — merkez, iç ve dış yarıçaptan delikli halka: kuyu koruma bandı,
+  sabit genişlikte tampon. Deliği gerçek delik — alan hesabında sayılmıyor. İç ve
+  dış noktanın sırası önemsiz.
+- İkisi de **alan olarak** saklanıyor, tanımıyla değil: `DAİRE` ve `YAY` iki
+  sayıdan çıktığı için tanımıyla saklanır, bir dilimin sınırı ise iki düz yarıçap
+  ve bir eğridir. Model'e bunun için tür eklemek, programın başka hiçbir yerde
+  tanıması gerekmeyen bir şekli tanımak zorunda bırakırdı.
+- Eğrileri `YAY` ve `DAİRE`'nin deterministik bölmesinden geliyor, yani üstüne
+  çizilen bir yay tıpatıp aynı köşelere oturuyor (§7.3).
+- Belgeler: [`sector.md`](docs/komutlar/sector.md), [`annulus.md`](docs/komutlar/annulus.md).
+
 ### Eklendi — OFSET, KAYDIR ve çalışan Alan Seç
 
 - **`OFSET`** — seçili nesnelerin paraleli. Yol şeridi eksenden, çekme mesafesi
