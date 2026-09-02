@@ -194,6 +194,13 @@ private:
     void buildSnapMarker();
     void buildCrosshair();
     void buildRuler();
+
+    /// Draws the drafting guides across the whole canvas, under everything else.
+    ///
+    /// Under, because a guide is furniture: it must never sit on top of the
+    /// drawing it is there to help place. Dashed and in the aid colour, so it
+    /// cannot be mistaken for a line the plot will print.
+    void buildGuides();
     void buildScaleBar();
     void buildNorthArrow();
     void buildZoomStack();
@@ -347,6 +354,14 @@ private:
 
     /// What `buildGuide` last wrote on the rubber band; see `guideLabelForProbe`.
     std::string guide_label_;
+
+    /// The guide being dragged off a ruler, or `GuideAxis` count for none.
+    ///
+    /// Dragging from the ruler is the gesture every drafter knows, and it stays a
+    /// gesture: the drop dispatches `KILAVUZ`, so nothing here writes to the
+    /// document (CLAUDE.md 5.9).
+    int dragging_guide_{-1};      ///< -1 none, 0 horizontal, 1 vertical
+    int dragging_guide_index_{-1}; ///< the existing guide being moved, or -1 for a new one
 
     bool panning_{false};
     QPointF pan_anchor_{};

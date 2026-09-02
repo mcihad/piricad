@@ -228,6 +228,7 @@ işaretlendiğinde o mod açılır:
 | **uzantı** | Bir kenarın kendi ucundan öteye uzanan doğrusu |
 | **paralel** | Önceki noktadan çıkan, bir kenara paralel ışın |
 | **uzatılmış kesişim** | İki kenarın doğrularının kesişeceği yer — ikisi de oraya kadar uzanmasa bile |
+| **kılavuz** | Cetvelden çektiğiniz yapı çizgisi; iki kılavuz kesişiyorsa kesişimi |
 
 Son üçü **kurulmuş** noktalardır: çizimde öyle bir nokta yoktur, geometri onu ima
 eder. Bu yüzden glifleri **açıktır** — içinde boşluk olan bir şekil — ve sıralamada

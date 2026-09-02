@@ -5,6 +5,7 @@
 #include "piricad/app/controller.hpp"
 #include "piricad/core/arc.hpp"
 #include "piricad/core/circle.hpp"
+#include "piricad/core/guide.hpp"
 #include "piricad/core/settings.hpp"
 #include "piricad/render/backend.hpp"
 
@@ -808,6 +809,48 @@ std::string bearing_text(core::Point2 a, core::Point2 b, int unit)
 
 } // namespace
 
+void MapCanvas::buildGuides()
+{
+    const core::GuideStore& guides = controller_.document().guides();
+    if (guides.empty() && dragging_guide_ < 0) return;
+
+    // The aid colour, dashed, one batch for all of them.
+    const std::size_t batch = nextBatch(tokens_->warn.rgba(), 1.0f, true);
+    const auto band         = static_cast<float>(look_.ruler ? look_.ruler_px : 0);
+
+    // THROUGH `render::to_f`, never by casting a coordinate. A TUREF easting is
+    // 4·10^8 millimetres and a float has 24 bits of mantissa, so narrowing an
+    // absolute world value costs metres on screen — the offset is subtracted
+    // first, inside the view, and this uses the one helper that does it
+    // (render.md R2, P1).
+    for (std::size_t i = 0; i < guides.size(); ++i) {
+        if (guides.axis(i) == core::GuideAxis::Horizontal) {
+            const render::ScreenPointF p =
+                render::to_f(view_.to_screen(core::Point2{0, guides.coordinate(i)}));
+            if (p.y < band || p.y > static_cast<float>(height())) continue;
+            addRun(batch, {{band, p.y}, {static_cast<float>(width()), p.y}}, false);
+        } else {
+            const render::ScreenPointF p =
+                render::to_f(view_.to_screen(core::Point2{guides.coordinate(i), 0}));
+            if (p.x < band || p.x > static_cast<float>(width())) continue;
+            addRun(batch, {{p.x, band}, {p.x, static_cast<float>(height())}}, false);
+        }
+    }
+
+    // The one under the cursor while it is being dragged, so the user sees where
+    // it will land before they let go.
+    if (dragging_guide_ >= 0 && cursor_valid_) {
+        // `toScreenF`, not a cast: the cursor is already in widget pixels, and
+        // using the one conversion every other overlay uses keeps this line out of
+        // the narrowing rule's way as well as out of its heuristic's.
+        const render::ScreenPointF at = toScreenF(cursor_);
+        if (dragging_guide_ == 0)
+            addRun(batch, {{band, at.y}, {static_cast<float>(width()), at.y}}, false);
+        else
+            addRun(batch, {{at.x, band}, {at.x, static_cast<float>(height())}}, false);
+    }
+}
+
 void MapCanvas::buildRuler()
 {
     if (!look_.ruler) return;
@@ -1278,6 +1321,7 @@ void MapCanvas::buildOverlay()
     }
 
     buildSelectionBox();
+    buildGuides();
     buildRuler();
     buildScaleBar();
     buildNorthArrow();
@@ -1390,6 +1434,30 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
         return;
     }
 
+    if (event->button() == Qt::LeftButton && look_.ruler) {
+        // A PRESS ON A RULER PULLS A GUIDE OUT, which is the gesture every
+        // drafting program has had since the drawing board: the ruler is where
+        // guides come from. Only when nothing is being asked for — a command
+        // waiting on a point owns every click on this widget.
+        const auto band = static_cast<double>(look_.ruler_px);
+        if (!controller_.awaitingInput()) {
+            if (event->position().y() < band && event->position().x() >= band) {
+                dragging_guide_ = 0; // horizontal: dragged down out of the top ruler
+                cursor_         = event->position();
+                cursor_valid_   = true;
+                update();
+                return;
+            }
+            if (event->position().x() < band && event->position().y() >= band) {
+                dragging_guide_ = 1; // vertical: dragged right out of the left ruler
+                cursor_         = event->position();
+                cursor_valid_   = true;
+                update();
+                return;
+            }
+        }
+    }
+
     if (event->button() == Qt::LeftButton) {
         if (controller_.awaitingInput()) {
             // WHAT IS BEING ASKED FOR decides what a click does. A command that
@@ -1456,6 +1524,13 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
 
 void MapCanvas::mouseMoveEvent(QMouseEvent* event)
 {
+    if (dragging_guide_ >= 0) {
+        cursor_       = event->position();
+        cursor_valid_ = true;
+        update();
+        return;
+    }
+
     cursor_       = event->position();
     cursor_valid_ = true;
 
@@ -1482,6 +1557,39 @@ void MapCanvas::mouseMoveEvent(QMouseEvent* event)
 
 void MapCanvas::mouseReleaseEvent(QMouseEvent* event)
 {
+    if (event->button() == Qt::LeftButton && dragging_guide_ >= 0) {
+        const int axis  = dragging_guide_;
+        dragging_guide_ = -1;
+
+        const auto band = static_cast<double>(look_.ruler ? look_.ruler_px : 0);
+
+        // DROPPED BACK ON THE RULER MEANS "no guide after all", which is how
+        // Inkscape and every other program spells cancel for this gesture. The
+        // press already came off the ruler, so releasing there is a round trip.
+        const bool back_on_ruler =
+            axis == 0 ? event->position().y() < band : event->position().x() < band;
+        if (back_on_ruler) {
+            update();
+            return;
+        }
+
+        const core::Point2 where =
+            view_.to_world(render::ScreenPoint{event->position().x(), event->position().y()});
+        const core::Mm coordinate = axis == 0 ? where.y : where.x;
+
+        // THROUGH THE COMMAND, like every other change this widget makes. The
+        // drag is a gesture; `KILAVUZ` is the feature, and a script places the
+        // same guide with the same line (CLAUDE.md 1.1, 5.9).
+        command::Args args;
+        args.set("yon", command::Value::text(axis == 0 ? "yatay" : "düşey"));
+        args.set("deger", command::Value::integer(coordinate));
+        controller_.runInvocation(
+            command::Invocation{"core.guide", std::move(args), command::Origin::Gui});
+
+        update();
+        return;
+    }
+
     if (event->button() == Qt::MiddleButton) {
         panning_ = false;
         unsetCursor();

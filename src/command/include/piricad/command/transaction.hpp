@@ -110,6 +110,14 @@ public:
     Status set_entity_style(EntityId e, StyleId style);
 
     Status set_entity_hidden(EntityId e, bool hidden);
+
+    /// Adds a drafting guide (`core/guide.hpp`). Furniture rather than geometry,
+    /// but a document change all the same: journalled, undone in one step, and
+    /// saved with the file.
+    Status add_guide(core::GuideAxis axis, core::Mm coordinate);
+
+    /// Removes the guide at `index`.
+    Status remove_guide(std::size_t index);
     /// Sets the document's CRS. The whole record, so undo restores the metadata
     /// the geodesy module resolved along with the id.
     Status set_crs(core::Crs crs);

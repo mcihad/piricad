@@ -96,10 +96,18 @@ enum SnapMode : std::uint16_t {
     SnapParallel  = 1u << 11, ///< PARALEL — a ray from the last point, parallel to an edge
     SnapApparent  = 1u << 12, ///< UZATILMIŞ KESİŞİM — where two edges' lines would cross
 
+    /// KILAVUZ — a drafting guide the user placed (`core/guide.hpp`).
+    ///
+    /// Ranked with the constructed points rather than with the real ones: a guide
+    /// is a line the user drew for themselves and it must never take a measured
+    /// corner away from them. Two guides crossing give an intersection, which is
+    /// what makes the pair usable for setting a point out.
+    SnapGuide = 1u << 14,
+
     /// The modes that need geometry to snap to. Grid and polar need none.
     SnapObjectMask = SnapEndpoint | SnapMidpoint | SnapCenter | SnapIntersection |
                      SnapPerpendicular | SnapNearest | SnapNode | SnapExtension | SnapParallel |
-                     SnapApparent,
+                     SnapApparent | SnapGuide,
 
     /// The modes that look BEYOND the aperture, because the point they build is
     /// not where the geometry that implies it is. They are the only reason

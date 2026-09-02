@@ -35,8 +35,13 @@ constexpr std::size_t kMaxNearSegments = 48;
 /// placement is the rule that keeps them safe: a point this engine invented must
 /// never win against a point the drawing actually contains.
 constexpr std::uint16_t kPriority[] = {
-    SnapNode,    SnapEndpoint, SnapIntersection, SnapMidpoint,  SnapCenter,
-    SnapPerpendicular, SnapNearest,  SnapApparent,     SnapParallel,  SnapExtension,
+    SnapNode,          SnapEndpoint, SnapIntersection, SnapMidpoint, SnapCenter,
+    SnapPerpendicular, SnapNearest,  SnapApparent,     SnapParallel, SnapExtension,
+
+    // A guide is a line the USER drew for themselves, so it sits below every
+    // point the drawing actually contains — the same rule the constructed modes
+    // follow, and for the same reason.
+    SnapGuide,
 };
 
 Mm abs_mm(Mm v) noexcept
@@ -127,6 +132,7 @@ const std::uint16_t* snap_mode_bits()
     static const std::uint16_t bits[] = {
         SnapEndpoint, SnapMidpoint, SnapCenter,    SnapIntersection, SnapPerpendicular, SnapNearest,
         SnapNode,     SnapGrid,     SnapPolar,     SnapExtension,    SnapParallel,      SnapApparent,
+        SnapGuide,
         SnapNone,
     };
     return bits;
@@ -149,6 +155,7 @@ const char* snap_mode_id(std::uint16_t single_bit)
     case SnapApparent: return "uzatilmis_kesisim";
     case SnapOrtho: return "dik_mod";
     case SnapStep: return "adim";
+    case SnapGuide: return "kilavuz";
     default: return "yok";
     }
 }
@@ -170,6 +177,7 @@ const char* snap_mode_label(std::uint16_t single_bit)
     case SnapApparent: return "uzatılmış kesişim";
     case SnapOrtho: return "dik mod";
     case SnapStep: return "adım";
+    case SnapGuide: return "kılavuz";
     default: return "yok";
     }
 }
@@ -525,6 +533,52 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
             result.point  = b.point;
             result.mode   = bit;
             result.entity = b.entity;
+            return result;
+        }
+    }
+
+    // ---- 1b. the drafting guides ----
+    //
+    // AFTER the object block, which returns as soon as it finds anything, so a
+    // parcel corner under the same aperture always wins. A guide is a line the
+    // USER drew for themselves and it must never take a measured point away from
+    // them — the same rule the constructed modes follow.
+    //
+    // Two guides crossing give a POINT, which is what makes a pair of them usable
+    // for setting one out; a single guide gives the foot of the perpendicular
+    // onto it, so the cursor slides along the line.
+    if ((q.modes & SnapGuide) != 0 && q.radius > 0) {
+        const GuideStore& guides = doc.guides();
+
+        Mm best_h = 0, best_v = 0;
+        bool have_h = false, have_v = false;
+        Mm dh = q.radius, dv = q.radius;
+
+        for (std::size_t i = 0; i < guides.size(); ++i) {
+            const Mm c = guides.coordinate(i);
+            if (guides.axis(i) == GuideAxis::Horizontal) {
+                const Mm d = abs_mm(c - q.aim.y);
+                // `<=` so the FIRST guide of two at one coordinate wins and the
+                // answer does not depend on iteration order.
+                if (d < dh || (!have_h && d <= dh)) {
+                    dh     = d;
+                    best_h = c;
+                    have_h = true;
+                }
+            } else {
+                const Mm d = abs_mm(c - q.aim.x);
+                if (d < dv || (!have_v && d <= dv)) {
+                    dv     = d;
+                    best_v = c;
+                    have_v = true;
+                }
+            }
+        }
+
+        if (have_h || have_v) {
+            result.point  = Point2{have_v ? best_v : q.aim.x, have_h ? best_h : q.aim.y};
+            result.mode   = SnapGuide;
+            result.entity = kNoEntity;
             return result;
         }
     }

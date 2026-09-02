@@ -198,6 +198,24 @@ core::Result<core::AttrId> Transaction::declare_attribute(core::AttrSpec spec)
     return doc_.declare_attribute(std::move(spec));
 }
 
+Status Transaction::add_guide(core::GuideAxis axis, core::Mm coordinate)
+{
+    core::Op undo;
+    auto st = doc_.add_guide(axis, coordinate, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
+Status Transaction::remove_guide(std::size_t index)
+{
+    core::Op undo;
+    auto st = doc_.remove_guide(index, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
 Status Transaction::set_entity_hidden(EntityId e, bool hidden)
 {
     core::Op undo;

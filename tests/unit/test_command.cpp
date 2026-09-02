@@ -11,6 +11,7 @@
 #include "piricad/core/arc.hpp"
 #include "piricad/core/circle.hpp"
 #include "piricad/core/entity_kind.hpp"
+#include "piricad/core/guide.hpp"
 #include "piricad/core/offset.hpp"
 #include "piricad/core/snap.hpp"
 #include "piricad/core/text_store.hpp"
@@ -1665,6 +1666,81 @@ TEST_CASE("HALKA: iç ve dış ters verilse de çalışır, eşitse reddedilir")
 }
 
 // -----------------------------------------------------------------------------
+// KILAVUZ — drafting guides (core.guide)
+// -----------------------------------------------------------------------------
+
+TEST_CASE("KILAVUZ yatay ve düşey kılavuz ekler")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KILAVUZ yon=yatay deger=4310220500", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KILAVUZ yon=düşey deger=485320000", Origin::Test).ok());
+
+    REQUIRE(f.doc.guides().size() == 2);
+    CHECK(f.doc.guides().axis(0) == core::GuideAxis::Horizontal);
+    CHECK(f.doc.guides().coordinate(0) == 4310220500);
+    CHECK(f.doc.guides().axis(1) == core::GuideAxis::Vertical);
+    CHECK(f.doc.guides().coordinate(1) == 485320000);
+}
+
+TEST_CASE("KILAVUZ tek geri alma adımıdır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KILAVUZ yon=yatay deger=1000", Origin::Test).ok());
+    REQUIRE(f.doc.guides().size() == 1);
+
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK(f.doc.guides().empty());
+
+    REQUIRE(f.bus.execute_line("YİNELE", Origin::Test).ok());
+    CHECK(f.doc.guides().size() == 1);
+}
+
+TEST_CASE("KILAVUZ sil: yerini söyleyerek silinir, indeksle değil")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KILAVUZ yon=yatay deger=1000", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KILAVUZ yon=yatay deger=2000", Origin::Test).ok());
+
+    // Within half a metre of where it sits, which is as precisely as anyone can
+    // point at a line on a ruler.
+    REQUIRE(f.bus.execute_line("KILAVUZ yon=yatay deger=1200 sil=evet", Origin::Test).ok());
+    REQUIRE(f.doc.guides().size() == 1);
+    CHECK(f.doc.guides().coordinate(0) == 2000);
+}
+
+TEST_CASE("KILAVUZ: olmayan yerde silme isteği sebebini söyler")
+{
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+
+    REQUIRE(f.bus.execute_line("KILAVUZ yon=yatay deger=9999 sil=evet", Origin::Test).ok());
+    CHECK(said.find("kılavuz yok") != std::string::npos);
+}
+
+TEST_CASE("KILAVUZ bir varlık DEĞİLDİR: seçime, sayıma ve kapsama girmez")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+
+    const core::Box2 before = f.doc.extent();
+    const std::size_t count = f.doc.live_entity_count();
+
+    // A guide far outside the drawing must not stretch its extent, and must not
+    // become something SEÇ TÜMÜ can pick — a construction line in a tapu is the
+    // failure this guards.
+    REQUIRE(f.bus.execute_line("KILAVUZ yon=yatay deger=999000000", Origin::Test).ok());
+
+    CHECK(f.doc.live_entity_count() == count);
+    const core::Box2 after = f.doc.extent();
+    CHECK(after.max_y == before.max_y);
+
+    REQUIRE(f.bus.execute_line("SEÇ TÜMÜ", Origin::Test).ok());
+    CHECK(f.bus.selection().size() == count);
+}
+
+// -----------------------------------------------------------------------------
 // KAYDIR — panning the view (core.pan)
 // -----------------------------------------------------------------------------
 
@@ -2485,7 +2561,7 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // command that vanished bumps it down by accident, and that is the case worth
     // catching.
     Fixture f;
-    CHECK_EQ(f.reg.size(), std::size_t{54});
+    CHECK_EQ(f.reg.size(), std::size_t{55});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

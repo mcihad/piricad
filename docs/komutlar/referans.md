@@ -42,6 +42,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.offset`](offset.md) | `OFSET`, `OFFSET`, `OF` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili nesnelerin verilen mesafede paralelini çizer. |
 | [`core.sector`](sector.md) | `DİLİM`, `DILIM`, `SECTOR`, `DL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir. |
 | [`core.annulus`](annulus.md) | `HALKA`, `ANNULUS`, `HLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez, iç ve dış yarıçaptan delikli halka çizer. |
+| [`core.guide`](guide.md) | `KILAVUZ`, `GUIDE`, `KLV` | Çizim | tek işlem | betiklenebilir, AI erişimli | Cetvel kılavuzu ekler, listeler ve siler. |
 | [`core.attribute`](attribute.md) | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
 | [`core.column`](column.md) | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Belgeye öznitelik sütunu tanımlar ve tanımlı sütunları listeler. |
 | [`core.erase`](erase.md) | `SİL`, `SIL`, `ERASE`, `E` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Seçilen nesneleri siler. |
@@ -436,6 +437,18 @@ Merkez, iç ve dış yarıçaptan delikli halka çizer.
 | `dis` | point | 1 | Dış çember üzerinde bir nokta |
 
 Ayrıntılı kullanım: [HALKA](annulus.md)
+
+### `core.guide` — KILAVUZ
+
+Cetvel kılavuzu ekler, listeler ve siler.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `yon` | text | isteğe bağlı | yatay | düşey; yoksa kılavuzlar listelenir |
+| `deger` | integer | isteğe bağlı | Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa |
+| `sil` | bool | isteğe bağlı | Verilen yerdeki kılavuzu siler |
+
+Ayrıntılı kullanım: [KILAVUZ](guide.md)
 
 ### `core.attribute` — ÖZNİTELİK
 
@@ -1940,6 +1953,47 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
       ],
       "flags": [
         "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.guide",
+      "names": [
+        "KILAVUZ",
+        "GUIDE",
+        "KLV"
+      ],
+      "category": "Çizim",
+      "summary": "Cetvel kılavuzu ekler, listeler ve siler.",
+      "params": [
+        {
+          "name": "yon",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "yatay | düşey; yoksa kılavuzlar listelenir"
+        },
+        {
+          "name": "deger",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa"
+        },
+        {
+          "name": "sil",
+          "type": "bool",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Verilen yerdeki kılavuzu siler"
+        }
+      ],
+      "flags": [
         "scriptable",
         "ai_accessible"
       ],

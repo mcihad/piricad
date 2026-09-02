@@ -71,6 +71,7 @@ Tek tek komutlar:
 | `OFSET` | [Paralel çizme](komutlar/offset.md) |
 | `DİLİM` | [Daire dilimi çizme](komutlar/sector.md) |
 | `HALKA` | [Delikli halka çizme](komutlar/annulus.md) |
+| `KILAVUZ` | [Cetvel kılavuzu](komutlar/guide.md) |
 | `YAKINLAŞ` | [Görünüm ayarlama](komutlar/zoom.md) |
 | `GERİAL` | [Geri alma](komutlar/undo.md) |
 | `YİNELE` | [Yineleme](komutlar/redo.md) |

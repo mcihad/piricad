@@ -191,6 +191,20 @@ enum BlockId : std::uint32_t {
     /// (io.md R10, and the reason adding a block is not a version bump).
     kBlkDashes = 0x0037, ///< DashRecord[]
 
+    /// The drafting guides (`core/guide.hpp`), as two parallel columns.
+    ///
+    /// OPTIONAL, like every block added after the format shipped: a file written
+    /// before guides existed has neither and reads back with none, which is what
+    /// that file meant (io.md R10). Two columns rather than a record, because a
+    /// guide is exactly an axis and a coordinate and a struct would waste six
+    /// bytes of padding on every one.
+    ///
+    /// The COUNT comes from the directory, as it does for images: `DocumentRecord`
+    /// has no reserved field left, and `BlockView::column` already refuses a
+    /// length that disagrees with count × stride.
+    kBlkGuideAxis  = 0x0039, ///< u8[],  0 horizontal, 1 vertical
+    kBlkGuideCoord = 0x003A, ///< i64[], Mm — northing for horizontal, easting for vertical
+
     // ---- entity table, one block per column (model.md R6 cull block first) --
     kBlkEntityMinX  = 0x0040, ///< i64[]
     kBlkEntityMinY  = 0x0041, ///< i64[]

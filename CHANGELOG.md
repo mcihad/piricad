@@ -18,6 +18,26 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 - İsim uzayı, `#include` yolları, CMake hedefleri ve `PIRICAD_*` makroları bu adımda
   **değişmedi**; onlar tek mekanik değişiklik olarak ayrı iniyor.
 
+### Eklendi — cetvel kılavuzları (Faz 6)
+
+- **`KILAVUZ`** — yatay ya da düşey sonsuz yapı çizgisi. Üst cetvelden aşağı,
+  sol cetvelden sağa **sürükleyerek** bırakılır; cetvele geri bırakmak vazgeçmektir.
+  Bırakma bir `KILAVUZ` komutu gönderiyor, yani betik de aynısını koyuyor.
+- **Kılavuz bir nesne değil.** Geometrisi, stili, katmanı, özniteliği yok;
+  seçime girmiyor, alan hesabında sayılmıyor, kapsamı büyütmüyor. Belgenin
+  mobilyası: dosyayla gidiyor, dosyayla geliyor. Varlık tablosuna konsaydı bir
+  yapı çizgisinin tapuya karışması kaçınılmaz olurdu.
+- **Yeni yakalama kipi: `kılavuz`.** İki kılavuz kesişiyorsa imleç kesişime
+  oturuyor — bir noktayı aplike etmenin yolu budur — tek kılavuza yakınsa üzerinde
+  kayıyor. Sıralamada gerçek her köşenin **altında**: kullanıcının kendi çizdiği
+  bir çizgi, ölçülmüş bir noktayı elinden alamaz.
+- Dosya biçimine iki **isteğe bağlı** blok eklendi (`0x0039`, `0x003A`).
+  Kılavuzu olmayan bir çizim hiç blok yazmıyor, yani eski dosyalar okunur kalıyor
+  ve golden fixture'lar aynı boyutta (io.md R10).
+- Silme **yerini söyleyerek** yapılıyor, sıra numarasıyla değil: bir kılavuzu
+  silmek sonrakilerin sırasını kaydırır.
+- Belge: [`docs/komutlar/guide.md`](docs/komutlar/guide.md).
+
 ### Eklendi — DİLİM ve HALKA
 
 - **`DİLİM`** — merkez ve iki kenardan daire dilimi: kavşak dolgusu, görüş konisi,

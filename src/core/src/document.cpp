@@ -664,6 +664,41 @@ Status Document::set_attribute(AttrId col, EntityId e, const AttrValue& v, Op& u
     return ok();
 }
 
+Status Document::add_guide(GuideAxis axis, Mm coordinate, Op& undo_out)
+{
+    undo_out              = Op{};
+    undo_out.kind         = Op::Kind::SetGuides;
+    undo_out.guide_axes   = guides_.axes();
+    undo_out.guide_coords = guides_.coordinates();
+
+    guides_.add(axis, coordinate);
+    ++revision_;
+    return ok();
+}
+
+Status Document::remove_guide(std::size_t index, Op& undo_out)
+{
+    if (index >= guides_.size())
+        return err(ErrorCode::NotFound,
+                   "Kılavuz yok: " + std::to_string(index) + ". Çizimde " +
+                       std::to_string(guides_.size()) + " kılavuz var.");
+
+    undo_out              = Op{};
+    undo_out.kind         = Op::Kind::SetGuides;
+    undo_out.guide_axes   = guides_.axes();
+    undo_out.guide_coords = guides_.coordinates();
+
+    guides_.remove(index);
+    ++revision_;
+    return ok();
+}
+
+void Document::set_guides(std::vector<GuideAxis> axes, std::vector<Mm> coords)
+{
+    guides_.load(std::move(axes), std::move(coords));
+    ++revision_;
+}
+
 Result<AttrValue> Document::attribute(AttrId col, EntityId e) const
 {
     if (e >= entities_.size())
@@ -852,6 +887,16 @@ Status Document::apply(const Op& op, Op* undo_out)
     case Op::Kind::SetLayerStyle: return set_layer_style(op.layer, op.style_arg, inverse);
     case Op::Kind::SetLayerGroup: return set_layer_group(op.layer, op.str_arg, inverse);
     case Op::Kind::SetCrs: return set_crs(op.crs_arg, inverse);
+    case Op::Kind::SetGuides: {
+        // The inverse of "restore this list" is "restore the list that is here
+        // now", which is what makes a guide change redoable as well as undoable.
+        inverse              = Op{};
+        inverse.kind         = Op::Kind::SetGuides;
+        inverse.guide_axes   = guides_.axes();
+        inverse.guide_coords = guides_.coordinates();
+        set_guides(op.guide_axes, op.guide_coords);
+        return ok();
+    }
     case Op::Kind::SetGeometry: return restore_geometry(op.entity, op.geometry_slot, inverse);
     case Op::Kind::SetEntityLayer: return set_entity_layer(op.entity, op.layer, inverse);
     }

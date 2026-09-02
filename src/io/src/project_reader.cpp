@@ -624,6 +624,49 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         }
     }
 
+    // ---- the drafting guides ----
+    //
+    // OPTIONAL, and both columns or neither: a file with one of them is corrupt
+    // rather than old, and saying so is better than silently drawing half the
+    // guides at coordinate zero.
+    if (view.has(kBlkGuideAxis) || view.has(kBlkGuideCoord)) {
+        const std::uint64_t n = view.count_of(kBlkGuideAxis);
+        if (n != view.count_of(kBlkGuideCoord))
+            return err(ErrorCode::ParseError,
+                       std::string(kErrConsist) +
+                           ": kılavuz eksen ve koordinat sütunları farklı uzunlukta (" +
+                           std::to_string(n) + " / " + std::to_string(view.count_of(kBlkGuideCoord)) +
+                           ").");
+
+        auto axes = view.column<std::uint8_t>(kBlkGuideAxis, n, "kilavuz ekseni");
+        if (!axes) return axes.error();
+        auto coords = view.column<std::int64_t>(kBlkGuideCoord, n, "kilavuz koordinati");
+        if (!coords) return coords.error();
+
+        std::vector<core::GuideAxis> parsed_axes;
+        std::vector<core::Mm> parsed_coords;
+        parsed_axes.reserve(static_cast<std::size_t>(n));
+        parsed_coords.reserve(static_cast<std::size_t>(n));
+
+        for (std::uint64_t i = 0; i < n; ++i) {
+            const std::uint8_t raw_axis = axes.value()[static_cast<std::size_t>(i)];
+            if (raw_axis > 1)
+                return err(ErrorCode::ParseError,
+                           std::string(kErrConsist) + ": " + std::to_string(i) +
+                               ". kılavuzun ekseni tanınmıyor (" + std::to_string(raw_axis) +
+                               "). Beklenen: 0 yatay, 1 düşey.");
+
+            parsed_axes.push_back(static_cast<core::GuideAxis>(raw_axis));
+            parsed_coords.push_back(
+                static_cast<core::Mm>(coords.value()[static_cast<std::size_t>(i)]));
+        }
+        // Through the transaction, like the dashes above: the reader builds the
+        // document the way every other client does, so a partly-read file rolls
+        // back whole rather than leaving half a guide list behind.
+        for (std::size_t g = 0; g < parsed_axes.size(); ++g)
+            if (auto st = tx.add_guide(parsed_axes[g], parsed_coords[g]); !st) return st.error();
+    }
+
     // ---- entities ----
     std::vector<core::Point2> points;
     std::vector<core::RingGeometry::RingInput> rings;

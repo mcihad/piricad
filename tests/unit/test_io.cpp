@@ -16,6 +16,7 @@
 // on the Bus. Tests are a client of the bus with no privileges (Article 1.2).
 #include "piricad_test.hpp"
 
+#include "piricad/core/guide.hpp"
 #include "piricad/core/arc.hpp"
 #include "piricad/core/circle.hpp"
 
@@ -227,6 +228,57 @@ TEST_CASE("IO: belge -> dosya -> belge, içerik parmak izi birebir aynı")
     // An open is not undoable, and the stack it inherited pointed at a document
     // that no longer exists.
     CHECK_EQ(reloaded.undo.undo_depth(), std::size_t{0});
+}
+
+TEST_CASE("IO: kılavuzlar dosyayla gider ve sırasıyla geri gelir")
+{
+    // K4: guides are saved with the drawing. Their block is OPTIONAL, so this
+    // also pins the other half of that contract — a drawing with no guides must
+    // write no guide block at all, or every golden fixture changes size.
+    TempDir tmp("kilavuz");
+    const std::string path = tmp.file("kilavuzlu.pcad");
+
+    Rig written;
+    REQUIRE(written.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(written.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(written.bus.execute_line("KILAVUZ yon=yatay deger=4310220500", Origin::Test).ok());
+    REQUIRE(written.bus.execute_line("KILAVUZ yon=düşey deger=485320000", Origin::Test).ok());
+
+    auto saved = written.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test);
+    if (!saved) FAIL_WITH("FARKLIKAYDET", saved.error().message);
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+
+    REQUIRE(reloaded.doc.guides().size() == 2);
+    CHECK(reloaded.doc.guides().axis(0) == core::GuideAxis::Horizontal);
+    CHECK(reloaded.doc.guides().coordinate(0) == 4310220500);
+    CHECK(reloaded.doc.guides().axis(1) == core::GuideAxis::Vertical);
+    CHECK(reloaded.doc.guides().coordinate(1) == 485320000);
+}
+
+TEST_CASE("IO: kılavuzu olmayan bir çizim kılavuz bloğu yazmaz")
+{
+    TempDir tmp("kilavuzsuz");
+    const std::string with    = tmp.file("kilavuzlu.pcad");
+    const std::string without = tmp.file("kilavuzsuz.pcad");
+
+    Rig a;
+    REQUIRE(a.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(a.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(a.bus.execute_line("FARKLIKAYDET \"" + without + "\"", Origin::Test).ok());
+
+    Rig b;
+    REQUIRE(b.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("KILAVUZ yon=yatay deger=1000", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("FARKLIKAYDET \"" + with + "\"", Origin::Test).ok());
+
+    // The one with guides is strictly bigger; the one without pays nothing for a
+    // feature it does not use, which is what keeps an old file readable and a
+    // golden fixture stable (io.md R10).
+    CHECK(fs::file_size(with) > fs::file_size(without));
 }
 
 TEST_CASE("IO: boş belge de gidip geliyor")

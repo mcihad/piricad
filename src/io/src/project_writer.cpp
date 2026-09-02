@@ -505,6 +505,20 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     blocks.push_back(column(kBlkImageBytes, image_bytes));
     if (!dashes.empty()) blocks.push_back(column(kBlkDashes, dashes));
 
+    // The guides. Written only when there are some, so a drawing with none costs
+    // no bytes and its file stays byte-identical to one written before guides
+    // existed — which is what keeps the golden fixtures valid.
+    std::vector<std::uint8_t> guide_axes;
+    std::vector<std::int64_t> guide_coords;
+    for (std::size_t i = 0; i < doc.guides().size(); ++i) {
+        guide_axes.push_back(static_cast<std::uint8_t>(doc.guides().axis(i)));
+        guide_coords.push_back(static_cast<std::int64_t>(doc.guides().coordinate(i)));
+    }
+    if (!guide_axes.empty()) {
+        blocks.push_back(column(kBlkGuideAxis, guide_axes));
+        blocks.push_back(column(kBlkGuideCoord, guide_coords));
+    }
+
     blocks.push_back(column(kBlkEntityMinX, ents.min_x));
     blocks.push_back(column(kBlkEntityMinY, ents.min_y));
     blocks.push_back(column(kBlkEntityMaxX, ents.max_x));

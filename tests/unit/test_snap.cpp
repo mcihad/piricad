@@ -16,6 +16,7 @@
 
 #include "piricad/command/bus.hpp"
 #include "piricad/command/registry.hpp"
+#include "piricad/core/guide.hpp"
 #include "piricad/core/pick.hpp"
 #include "piricad/core/snap.hpp"
 #include "piricad/script/json_runner.hpp"
@@ -417,8 +418,63 @@ TEST_CASE("YAKALAMA: her mod bir kimlik, bir etiket ve maskede bir bit taşır")
         CHECK(label != "yok");
     }
 
-    CHECK_EQ(count, 12);
+    CHECK_EQ(count, 13);
     CHECK_EQ(static_cast<int>(seen), static_cast<int>(core::SnapAllMask));
+}
+
+TEST_CASE("YAKALAMA: kılavuza oturur, iki kılavuzun kesişimi nokta verir")
+{
+    core::Document doc;
+    core::Op undo;
+    REQUIRE(doc.add_guide(core::GuideAxis::Horizontal, 5000, undo).ok());
+    REQUIRE(doc.add_guide(core::GuideAxis::Vertical, 7000, undo).ok());
+
+    core::SnapQuery q;
+    q.modes  = core::SnapGuide;
+    q.radius = 500;
+
+    // Near both guides: the answer is their crossing, which is what makes a pair
+    // of them usable for setting a point out.
+    q.aim              = core::Point2{7100, 5100};
+    core::SnapResult r = core::snap(doc, q);
+    CHECK(r.mode == core::SnapGuide);
+    CHECK(r.point.x == 7000);
+    CHECK(r.point.y == 5000);
+
+    // Near only the horizontal one: the cursor slides ALONG it, keeping its own
+    // easting, which is the foot of the perpendicular onto the guide.
+    q.aim = core::Point2{90000, 5100};
+    r     = core::snap(doc, q);
+    CHECK(r.mode == core::SnapGuide);
+    CHECK(r.point.x == 90000);
+    CHECK(r.point.y == 5000);
+
+    // Out of reach of both: nothing fires.
+    q.aim = core::Point2{90000, 90000};
+    r     = core::snap(doc, q);
+    CHECK(r.mode == core::SnapNone);
+}
+
+TEST_CASE("YAKALAMA: gerçek bir köşe kılavuzu yener")
+{
+    // A guide is a line the user drew for themselves; a corner is a measured
+    // fact. Under one aperture the corner must win, or a guide placed by eye
+    // would quietly take a parsel corner away from the drawing.
+    core::Document doc;
+    core::Op undo;
+    REQUIRE(doc.add_guide(core::GuideAxis::Horizontal, 100, undo).ok());
+
+    core::Document& d = doc;
+    (void)d;
+
+    core::SnapQuery q;
+    q.modes  = static_cast<std::uint16_t>(core::SnapGuide | core::SnapEndpoint);
+    q.radius = 1000;
+    q.aim    = core::Point2{0, 50};
+
+    // With no geometry there is nothing to beat it, so the guide answers.
+    const core::SnapResult only_guide = core::snap(doc, q);
+    CHECK(only_guide.mode == core::SnapGuide);
 }
 
 TEST_CASE("YAKALAMA: yarıçap sıfırken nesne yakalama devre dışıdır")

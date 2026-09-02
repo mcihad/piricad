@@ -20,6 +20,7 @@
 #include "piricad/core/crs.hpp"
 #include "piricad/core/dash_store.hpp"
 #include "piricad/core/geometry.hpp"
+#include "piricad/core/guide.hpp"
 #include "piricad/core/identity.hpp"
 #include "piricad/core/image_store.hpp"
 #include "piricad/core/layer.hpp"
@@ -112,6 +113,15 @@ struct Op
         SetText,            ///< entity, str_arg, text_height, text_anchor
         SetGeometry,        ///< entity, geometry_slot
         SetEntityLayer,     ///< entity, layer
+
+        /// The WHOLE guide list, restored as it was.
+        ///
+        /// Not "add this one" / "remove that one": a guide has no key, so an
+        /// inverse that named an index would be wrong the moment an earlier
+        /// guide was removed. The list is a handful of numbers — a drawing has
+        /// a dozen guides, not a million — so replacing it whole is both correct
+        /// and cheaper than the bookkeeping any finer record would need.
+        SetGuides, ///< guide_axes, guide_coords
     };
 
     Kind kind{Kind::None};
@@ -141,6 +151,10 @@ struct Op
     /// the arena never drops one: the rings this names are still exactly where the
     /// entity left them (see `Document::set_geometry`).
     std::uint32_t geometry_slot{0};
+
+    /// The guide list as it was before the change; see `Kind::SetGuides`.
+    std::vector<GuideAxis> guide_axes;
+    std::vector<Mm> guide_coords;
 };
 
 class Document
@@ -188,6 +202,11 @@ public:
     /// columns — drawing a caption means reading its string every frame, so text
     /// lives here rather than in a column R29 forbids the renderer to touch.
     const TextTable& texts() const noexcept { return texts_; }
+
+    /// The drafting guides this document carries. Furniture, not geometry: saved
+    /// with the file and invisible to selection, culling, export and area sums
+    /// (see `core/guide.hpp`).
+    const GuideStore& guides() const noexcept { return guides_; }
 
     CatalogueSet& catalogues() noexcept { return catalogues_; }
 
@@ -314,6 +333,16 @@ public:
     /// which is exactly what undo needs and all it needs.
     Status set_attribute(AttrId col, EntityId e, const AttrValue& v, Op& undo_out);
 
+    /// Adds a drafting guide. `undo_out` carries the whole previous list.
+    Status add_guide(GuideAxis axis, Mm coordinate, Op& undo_out);
+
+    /// Removes the guide at `index`. Refuses an index past the end by name.
+    Status remove_guide(std::size_t index, Op& undo_out);
+
+    /// Replaces the whole guide list — how `SetGuides` is undone, and how a file
+    /// reader installs what it read.
+    void set_guides(std::vector<GuideAxis> axes, std::vector<Mm> coords);
+
     Result<AttrValue> attribute(AttrId col, EntityId e) const;
 
     /// Attaches or replaces the text on an entity. Height is ground millimetres.
@@ -368,6 +397,7 @@ private:
     AttrTable attributes_{};
     CatalogueSet catalogues_{};
     TextTable texts_{};
+    GuideStore guides_{};
     ImageStore images_{};
     DashStore dashes_{};
     KeyAllocator keys_{};
