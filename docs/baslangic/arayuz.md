@@ -360,6 +360,44 @@ aralıklı okunur.
 Katmanlar panelinde bir katman seçtiğinizde bu panel o katmanın özelliklerini
 gösterir: kabuğun **tek** özellik yüzeyi vardır, iki tane değil.
 
+#### Değer düzenleme
+
+Arkasında bir komut olan her satır **buradan düzenlenir**. Düzenlenebilir bir
+değer normal mürekkeple, düzenlenemeyen bir adım soluk yazılır — tıklamadan önce
+hangisinin değişebileceğini görürsünüz.
+
+| Yol | Ne yapar |
+|---|---|
+| Çift tıklama | Satırın düzenleyicisini açar |
+| **↑ ↓** | Satırlar arasında gezer |
+| **Enter** / **F2** | Seçili satırı açar |
+| **Space** | evet/hayır satırını çevirir |
+| **Esc** | Vazgeçer, değeri değiştirmez |
+
+Düzenleyici satırın tipine göre değişir: metin için kutu, evet/hayır için doğrudan
+çevirme, renk için renk seçici, aktif katman gibi kapalı bir küme için liste.
+
+| Satır | Gönderdiği komut |
+|---|---|
+| Öznitelik hücresi | `ÖZNİTELİK ad=<sütun> nesne=<kimlik> deger=<değer>` |
+| `gorunur`, `kilitli` | `KATMAN ad=<katman> gorunur=evet` |
+| `renk` | `KATMAN ad=<katman> renk=0xAARRGGBB` |
+| `kalinlik` | `STİL katman=<katman> kalinlik=<µm>` |
+| `grup` | `KATMAN ad=<katman> grup=<yol>` |
+| `aktif_katman` | `KATMAN ad=<katman>` |
+| `koordinat_sistemi` | `AYAR ad=koordinat_sistemi deger=<sistem>` |
+
+Panelin belgeye giden **özel bir yolu yoktur**: her düzenleme bir komut satırı
+kurar ve veri yoluna verir. Yani hücreden yaptığınız değişiklik komut günlüğünde
+görünür, `GERİAL` ile tek adımda kalkar ve aynısını betikten de yaparsınız.
+
+Nesne **kalıcı kimliğiyle** adlandırılır, bulunduğu sırayla değil: kimlik çizim
+boyunca sabittir, sıra bir depolama ayrıntısıdır ve sonraki bir düzenlemede
+değişebilir.
+
+Değer kabul edilmezse — bir sayı sütununa harf yazmak gibi — komut reddeder,
+hiçbir şey değişmez ve sebebi durum çubuğunda yazar.
+
 ### Geçmiş
 
 Oturumda ne olduğunun metin dökümü. Komut günlüğünün kendisi için

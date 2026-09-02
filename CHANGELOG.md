@@ -18,6 +18,29 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 - İsim uzayı, `#include` yolları, CMake hedefleri ve `PIRICAD_*` makroları bu adımda
   **değişmedi**; onlar tek mekanik değişiklik olarak ayrı iniyor.
 
+### Eklendi — öznitelikler sağ panelden düzenleniyor
+
+- Panel boyanan bir tablo olmaktan çıkıp **düzenleme yüzeyi** oldu: arkasında bir
+  komut olan her satır çift tıklama, `Enter`, `F2` ya da `Space` ile düzenlenir.
+  Metin kutusu, evet/hayır çevirme, renk seçici ve kapalı küme listesi — satırın
+  tipine göre.
+- **Panelin belgeye özel bir yolu yok**: her düzenleme bir komut satırı kurup veri
+  yoluna veriyor (`ÖZNİTELİK`, `KATMAN`, `STİL`, `AYAR`). Günlüğe yazılıyor, tek
+  `GERİAL` ile kalkıyor, betikten aynısı yapılabiliyor (Article 1.1, 5.9).
+- Nesne **kalıcı kimliğiyle** adlandırılıyor, slotuyla değil — bir slot sonraki
+  düzenlemede başka nesneye düşebilir ve günlük tekrarı yanlış parsele yazardı.
+- Panel klavyeyle tam kullanılabilir (ui.md R21); düzenlenebilir değer okuma
+  mürekkebiyle, düzenlenemeyen bir adım soluk yazılıyor.
+
+### Düzeltildi — panel yanlış nesnenin özniteliğini gösteriyordu
+
+- Öznitelik sütunu **geometri slotuna** göre indekslidir (`Document::set_attribute`
+  `entities_.slot[e]` yazar); panel ise sütunu **varlık slotuyla** okuyordu. İkisi
+  yalnız nesneler sırayla oluşturulmuşsa ve hiçbiri düzenlenmemişse aynıdır — yani
+  panel yeni bir çizimde doğru, gerçek bir çizimde başka bir parselin değerini
+  gösteriyordu. Okuma `Document::attribute` üzerinden yapılıyor artık; eşlemeyi
+  bilen tek okuyucu odur.
+
 ### Eklendi — dinamik girdi ve çizim adımı
 
 - **Kılavuz artık ölçüsünü yazıyor**: sürüklenen lastik bandın üzerinde uzunluk ve

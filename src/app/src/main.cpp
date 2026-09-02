@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // PiriCAD — application entry point.
+#include "piricad/app/attribute_panel.hpp"
 #include "piricad/app/main_window.hpp"
 #include "piricad/app/map_canvas.hpp"
 #include "piricad/app/theme.hpp"
@@ -584,6 +585,40 @@ int main(int argc, char** argv)
                     QCoreApplication::processEvents();
                 }
                 window.runScriptLine(QStringLiteral("MOD ad=adım deger=0"));
+            }
+
+            // 8. THE ATTRIBUTE PANEL WRITES THROUGH THE BUS. A column is declared,
+            //    the parsel is selected, and the cell is edited from the panel —
+            //    the value must reach the document, and it must arrive as a
+            //    command so it undoes in one step like any other edit.
+            {
+                window.runScriptLine(QStringLiteral("SÜTUN kimlik=ada_no tur=metin"));
+                window.runScriptLine(QStringLiteral("SEÇ nesneler=1"));
+                QCoreApplication::processEvents();
+
+                auto* panel = window.findChild<piricad::app::AttributePanel*>();
+                check(panel != nullptr, "öznitelik paneli bulunamadı");
+                if (panel != nullptr) {
+                    check(panel->editRowForProbe(QStringLiteral("ada_no"),
+                                                 QStringLiteral("1284")),
+                          "öznitelik satırı düzenlenemedi");
+                    QCoreApplication::processEvents();
+
+                    // READ THE WAY THE DOCUMENT READS. An attribute column is
+                    // indexed by geometry slot, not by entity slot, and only
+                    // `Document::attribute` knows the mapping.
+                    const auto col = doc.attributes().find("ada_no");
+                    check(col != piricad::core::kNoAttr, "ada_no sütunu tanımlanmadı");
+
+                    const auto stored =
+                        doc.attribute(col, doc.slot_of(doc.entities().key[0]));
+                    check(stored.ok() && stored.value().present &&
+                              stored.value().text == "1284",
+                          "panelden yazılan öznitelik belgeye ulaşmadı");
+
+                    window.runScriptLine(QStringLiteral("GERİAL"));
+                    QCoreApplication::processEvents();
+                }
             }
 
             if (failures == 0) (void)std::fprintf(stdout, "[piricad] tuval düzenleme: tamam\n");

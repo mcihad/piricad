@@ -1394,6 +1394,96 @@ TEST_CASE("DAİRE geri alınır")
 // YAY — arcs (core.arc_draw, core.arc)
 // ============================================================================
 
+TEST_CASE("ÖZNİTELİK: varlık slotu ile geometri slotu ayrıştığında da doğru okunur")
+{
+    // THE BUG THIS EXISTS FOR. An attribute column is indexed by GEOMETRY slot —
+    // `Document::set_attribute` writes `entities_.slot[e]` — and a reader that
+    // indexes it with the ENTITY slot agrees only while the two happen to match.
+    // The attribute panel did exactly that, so on a drawing whose entities were
+    // created in mixed kinds it showed a DIFFERENT object's value in the cell.
+    //
+    // `Document::attribute` is the only reader that maps, so this pins the two
+    // together for every live entity rather than for one lucky one.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("METİN noktalar=1,1 yazi=ABC", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("DAİRE merkez=50,50 cevre=60,50", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=0,0 5,5", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SÜTUN kimlik=ada_no tur=metin", Origin::Test).ok());
+
+    const core::AttrId col = f.doc.attributes().find("ada_no");
+    REQUIRE(col != core::kNoAttr);
+
+    // One distinct value per entity, written by KEY the way every client does.
+    for (core::EntityId e = 0; e < f.doc.entities().size(); ++e) {
+        if (!f.doc.alive(e)) continue;
+        const auto key = static_cast<std::uint64_t>(core::raw(f.doc.entities().key[e]));
+        const std::string line =
+            "ÖZNİTELİK ad=ada_no nesne=" + std::to_string(key) + " deger=A" + std::to_string(key);
+        if (!f.bus.execute_line(line, Origin::Test)) FAIL_WITH("ÖZNİTELİK", line);
+    }
+
+    // Each entity reads back ITS OWN value. Before the fix this held only for the
+    // entities whose two slot numbers coincided.
+    for (core::EntityId e = 0; e < f.doc.entities().size(); ++e) {
+        if (!f.doc.alive(e)) continue;
+        const auto key   = static_cast<std::uint64_t>(core::raw(f.doc.entities().key[e]));
+        const auto stored = f.doc.attribute(col, e);
+        if (!stored) FAIL_WITH("öznitelik okunamadı", std::to_string(e));
+        CHECK(stored.value().present);
+        CHECK(stored.value().text == "A" + std::to_string(key));
+    }
+}
+
+TEST_CASE("ÖZNİTELİK: çok nesneli belgede doğru slota yazar")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=20,0 30,0 30,10 20,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("METİN noktalar=1,1 yazi=ABC", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SÜTUN kimlik=ada_no tur=metin", Origin::Test).ok());
+
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK ad=ada_no nesne=1 deger=1284", Origin::Test).ok());
+
+    const core::AttrTable& t    = f.doc.attributes();
+    const core::AttrColumn* col = t.column(t.find("ada_no"));
+    REQUIRE(col != nullptr);
+
+    // The value must sit on the slot that key 1 resolves to RIGHT NOW. If the
+    // two disagree, an attribute written through any client lands on a different
+    // parsel than the one the user picked.
+    const core::EntityId slot = f.doc.slot_of(static_cast<core::EntityKey>(1));
+    REQUIRE(slot != core::kNoEntity);
+    CHECK(col->present(slot));
+    const auto text = col->text(slot);
+    CHECK(std::string(text.data(), text.size()) == "1284");
+}
+
+TEST_CASE("ÖZNİTELİK: panelin kurduğu satır çalışır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SÜTUN kimlik=ada_no tur=metin", Origin::Test).ok());
+
+    // Exactly the line AttributePanel builds, quoting included.
+    auto written =
+        f.bus.execute_line("ÖZNİTELİK ad=\"ada_no\" nesne=1 deger=\"1284\"", Origin::Test);
+    if (!written) FAIL_WITH("ÖZNİTELİK", written.error().message);
+
+    const core::AttrTable& t = f.doc.attributes();
+    const core::AttrColumn* col = t.column(t.find("ada_no"));
+    REQUIRE(col != nullptr);
+
+    const core::EntityId slot = f.doc.slot_of(static_cast<core::EntityKey>(1));
+    REQUIRE(slot != core::kNoEntity);
+    REQUIRE(col->present(slot));
+    const auto text = col->text(slot);
+    CHECK(std::string(text.data(), text.size()) == "1284");
+}
+
 // -----------------------------------------------------------------------------
 // ADIM — the step lock (core.yakalama.adim)
 // -----------------------------------------------------------------------------
