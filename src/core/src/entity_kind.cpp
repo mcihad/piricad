@@ -3,6 +3,7 @@
 
 #include "piricad/core/arc.hpp"
 #include "piricad/core/circle.hpp"
+#include "piricad/core/ellipse.hpp"
 #include "piricad/core/text.hpp"
 
 #include <algorithm>
@@ -645,6 +646,162 @@ PIRICAD_KIND(circle)
     return s;
 }
 
+// ------------------------------------------------------------ core.ellipse ----
+//
+// Three stored vertices: the centre and the two axis ENDPOINTS. The endpoints
+// carry the rotation as vectors, so nothing here reads or writes an angle.
+
+void ellipse_bbox(const RingGeometry& geom, SlotSpan slots, std::span<Box2> out)
+{
+    for (std::size_t i = 0; i < slots.size(); ++i) {
+        // The exact extent of a rotated ellipse is `sqrt(ax² + bx²)` in x and
+        // `sqrt(ay² + by²)` in y — the half-widths of its bounding box. Not the
+        // axis endpoints: for a rotated ellipse those lie INSIDE the box, and a
+        // cull box that small would drop the shape at the edge of the view.
+        const Point2 c = ellipse_centre_of(geom, slots[i]);
+        const Point2 a = ellipse_major_of(geom, slots[i]);
+        const Point2 b = ellipse_minor_of(geom, slots[i]);
+
+        const auto ax = static_cast<double>(a.x - c.x);
+        const auto ay = static_cast<double>(a.y - c.y);
+        const auto bx = static_cast<double>(b.x - c.x);
+        const auto by = static_cast<double>(b.y - c.y);
+
+        const Mm hx = mm_round(std::sqrt(ax * ax + bx * bx));
+        const Mm hy = mm_round(std::sqrt(ay * ay + by * by));
+        out[i]      = Box2{c.x - hx, c.y - hy, c.x + hx, c.y + hy};
+    }
+}
+
+void ellipse_area(const RingGeometry& geom, SlotSpan slots, std::span<Mm2> out)
+{
+    constexpr double kPi = 3.14159265358979323846;
+
+    for (std::size_t i = 0; i < slots.size(); ++i) {
+        const Point2 c = ellipse_centre_of(geom, slots[i]);
+        const Point2 a = ellipse_major_of(geom, slots[i]);
+        const Point2 b = ellipse_minor_of(geom, slots[i]);
+
+        // pi·|a×b|: the cross product of the two axis vectors is the area of the
+        // parallelogram they span, and that is right for a rotated ellipse where
+        // multiplying two axis LENGTHS would only be right for an upright one.
+        const auto ax = static_cast<double>(a.x - c.x);
+        const auto ay = static_cast<double>(a.y - c.y);
+        const auto bx = static_cast<double>(b.x - c.x);
+        const auto by = static_cast<double>(b.y - c.y);
+
+        const double cross = ax * by - ay * bx;
+        const double area  = kPi * (cross < 0.0 ? -cross : cross);
+
+        constexpr double kMax = 9.0e18;
+        out[i] = area >= kMax ? static_cast<Mm2>(kMax) : static_cast<Mm2>(area + 0.5);
+    }
+}
+
+void ellipse_outline_fn(const RingGeometry& geom, SlotSpan slots, EmitBuffer& into)
+{
+    std::vector<Mm> xs;
+    std::vector<Mm> ys;
+
+    for (const std::uint32_t slot : slots) {
+        xs.clear();
+        ys.clear();
+        ellipse_outline(ellipse_centre_of(geom, slot), ellipse_major_of(geom, slot),
+                        ellipse_minor_of(geom, slot), xs, ys);
+
+        into.begin_run(true); // closed
+        for (std::size_t v = 0; v < xs.size(); ++v) into.push_vertex(xs[v], ys[v]);
+    }
+}
+
+void ellipse_hit(const RingGeometry& geom, SlotSpan slots, Point2 probe, Mm tolerance,
+                 std::span<std::uint8_t> out)
+{
+    const double tol   = mm_to_metres(tolerance < 0 ? 0 : tolerance);
+    const double limit = tol * tol;
+
+    std::vector<Mm> xs;
+    std::vector<Mm> ys;
+
+    for (std::size_t i = 0; i < slots.size(); ++i) {
+        // THE RIM, tested against the drawn run and with the same measure the
+        // polyline uses. A closed-form distance to an ellipse has no elementary
+        // solution and every approximation of one is wrong somewhere; the run is
+        // what the user sees and what they aimed at.
+        xs.clear();
+        ys.clear();
+        ellipse_outline(ellipse_centre_of(geom, slots[i]), ellipse_major_of(geom, slots[i]),
+                        ellipse_minor_of(geom, slots[i]), xs, ys);
+
+        out[i] = 0;
+        for (std::size_t v = 0; v < xs.size() && out[i] == 0; ++v) {
+            const Point2 a{xs[v], ys[v]};
+            const Point2 b{xs[(v + 1) % xs.size()], ys[(v + 1) % ys.size()]};
+            if (segment_distance2_m(a, b, probe) <= limit) out[i] = 1;
+        }
+    }
+}
+
+void ellipse_write(const RingGeometry& geom, SlotSpan slots, std::vector<std::uint8_t>& bytes,
+                   std::vector<std::uint32_t>& ends)
+{
+    for (const std::uint32_t slot : slots) {
+        const Point2 c = ellipse_centre_of(geom, slot);
+        const Point2 a = ellipse_major_of(geom, slot);
+        const Point2 b = ellipse_minor_of(geom, slot);
+        put_mm(bytes, c.x);
+        put_mm(bytes, c.y);
+        put_mm(bytes, a.x);
+        put_mm(bytes, a.y);
+        put_mm(bytes, b.x);
+        put_mm(bytes, b.y);
+        ends.push_back(static_cast<std::uint32_t>(bytes.size()));
+    }
+}
+
+Result<std::uint32_t> ellipse_read(RingGeometry& geom, std::span<const std::uint8_t> payload)
+{
+    Reader in(payload);
+    if (!in.remaining(48))
+        return err(ErrorCode::ParseError,
+                   "Elips yükü merkez ve iki eksen ucunu taşıyacak kadar uzun değil.");
+
+    const Mm cx = in.mm();
+    const Mm cy = in.mm();
+    const Mm ax = in.mm();
+    const Mm ay = in.mm();
+    const Mm bx = in.mm();
+    const Mm by = in.mm();
+
+    if (cx == ax && cy == ay)
+        return err(ErrorCode::ParseError, "Elipsin birinci ekseni sıfır uzunlukta.");
+    if (cx == bx && cy == by)
+        return err(ErrorCode::ParseError, "Elipsin ikinci ekseni sıfır uzunlukta.");
+
+    const Point2 pts[3]{Point2{cx, cy}, Point2{ax, ay}, Point2{bx, by}};
+    const RingGeometry::RingInput ring{std::span<const Point2>(pts, 3), RingRole::Open, 0};
+    return geom.append(std::span<const RingGeometry::RingInput>(&ring, 1));
+}
+
+PIRICAD_KIND(ellipse)
+{
+    KindSpec s{};
+    s.id         = kEllipseKind;
+    s.stable_id  = "core.ellipse";
+    s.summary_tr = "Merkez ve iki eksen ucuyla tanımlı elips.";
+    s.names[0]   = "ELİPS";
+    s.names[1]   = "ELIPS";
+    s.names[2]   = "ELLIPSE";
+    s.names[3]   = "EL";
+    s.bbox       = &ellipse_bbox;
+    s.outline    = &ellipse_outline_fn;
+    s.hit        = &ellipse_hit;
+    s.area       = &ellipse_area;
+    s.read       = &ellipse_read;
+    s.write      = &ellipse_write;
+    return s;
+}
+
 PIRICAD_KIND(polyline)
 {
     KindSpec s{};
@@ -742,7 +899,8 @@ const KindSpec* KindTable::find_name(std::string_view name) const
     X(polyline)                                                                                    \
     X(circle)                                                                                      \
     X(arc)                                                                                         \
-    X(point)
+    X(point)                                                                                       \
+    X(ellipse)
 
 bool curve_outline(KindId kind, const RingGeometry& geom, std::uint32_t slot, EmitBuffer& into)
 {

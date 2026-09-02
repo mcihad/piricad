@@ -484,6 +484,10 @@ void MainWindow::buildActions()
     actSector_ = drawTool(Glyph::Arc, tr("Daire Dilimi"), QStringLiteral("DİLİM"),
                           tr("DİLİM — merkez ve iki kenardan daire dilimi  ·  kısaltma: DL"));
     drawingTools_->addAction(actSector_);
+    actEllipse_ = drawTool(Glyph::Circle, tr("Elips"), QStringLiteral("ELİPS"),
+                           tr("ELİPS — merkez ve iki eksenden elips; ikinci eksen birincisine "
+                              "diktir  ·  kısaltma: EL"));
+    drawingTools_->addAction(actEllipse_);
     actAnnulus_ = drawTool(Glyph::Circle, tr("Halka"), QStringLiteral("HALKA"),
                            tr("HALKA — merkez, iç ve dış yarıçaptan delikli halka  ·  "
                               "kısaltma: HLK"));
@@ -887,6 +891,7 @@ void MainWindow::buildMenus()
     draw->addAction(actPolyline_);
     draw->addAction(actArc_);
     draw->addAction(actCircle_);
+    draw->addAction(actEllipse_);
     draw->addAction(actSector_);
     draw->addAction(actAnnulus_);
     draw->addAction(actRectangle_);

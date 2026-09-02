@@ -42,6 +42,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.offset`](offset.md) | `OFSET`, `OFFSET`, `OF` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili nesnelerin verilen mesafede paralelini çizer. |
 | [`core.sector`](sector.md) | `DİLİM`, `DILIM`, `SECTOR`, `DL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir. |
 | [`core.annulus`](annulus.md) | `HALKA`, `ANNULUS`, `HLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez, iç ve dış yarıçaptan delikli halka çizer. |
+| [`core.ellipse_draw`](ellipse_draw.md) | `ELİPS`, `ELIPS`, `ELLIPSE`, `EL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir. |
 | [`core.guide`](guide.md) | `KILAVUZ`, `GUIDE`, `KLV` | Çizim | tek işlem | betiklenebilir, AI erişimli | Cetvel kılavuzu ekler, listeler ve siler. |
 | [`core.attribute`](attribute.md) | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
 | [`core.column`](column.md) | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Belgeye öznitelik sütunu tanımlar ve tanımlı sütunları listeler. |
@@ -437,6 +438,18 @@ Merkez, iç ve dış yarıçaptan delikli halka çizer.
 | `dis` | point | 1 | Dış çember üzerinde bir nokta |
 
 Ayrıntılı kullanım: [HALKA](annulus.md)
+
+### `core.ellipse_draw` — ELİPS
+
+Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `merkez` | point | 1 | Elipsin merkezi |
+| `birinci` | point | 1 | Birinci eksenin ucu |
+| `ikinci` | point | 1 | İkinci eksenin uzaklığı; eksene dik ölçülür |
+
+Ayrıntılı kullanım: [ELİPS](ellipse_draw.md)
 
 ### `core.guide` — KILAVUZ
 
@@ -1949,6 +1962,49 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
           "max": 1,
           "required": true,
           "help": "Dış çember üzerinde bir nokta"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.ellipse_draw",
+      "names": [
+        "ELİPS",
+        "ELIPS",
+        "ELLIPSE",
+        "EL"
+      ],
+      "category": "Çizim",
+      "summary": "Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir.",
+      "params": [
+        {
+          "name": "merkez",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Elipsin merkezi"
+        },
+        {
+          "name": "birinci",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Birinci eksenin ucu"
+        },
+        {
+          "name": "ikinci",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "İkinci eksenin uzaklığı; eksene dik ölçülür"
         }
       ],
       "flags": [

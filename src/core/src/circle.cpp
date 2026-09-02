@@ -5,7 +5,6 @@
 #include <utility>
 
 namespace piricad::core {
-namespace {
 
 /// The unit circle, built by REPEATED EXACT BISECTION.
 ///
@@ -45,8 +44,6 @@ const std::vector<std::pair<double, double>>& unit_circle()
     }();
     return table;
 }
-
-} // namespace
 
 Mm circle_radius_of(const RingGeometry& geom, std::uint32_t slot)
 {

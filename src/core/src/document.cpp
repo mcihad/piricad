@@ -323,6 +323,51 @@ Result<EntityId> Document::add_circle(LayerId lyr, Point2 centre, Mm radius, Op&
     return id;
 }
 
+Result<EntityId> Document::add_ellipse(LayerId lyr, Point2 centre, Point2 major, Point2 minor,
+                                      Op& undo_out)
+{
+    if (lyr >= layers_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen katman kimliği: " + std::to_string(lyr));
+    if (layers_.all()[lyr].locked)
+        return err(ErrorCode::ValidationFailed,
+                   "'" + layers_.all()[lyr].name + "' katmanı kilitli.");
+    if (centre.x == major.x && centre.y == major.y)
+        return err(ErrorCode::InvalidArgument, "Elipsin birinci ekseni sıfır uzunlukta olamaz.");
+    if (centre.x == minor.x && centre.y == minor.y)
+        return err(ErrorCode::InvalidArgument, "Elipsin ikinci ekseni sıfır uzunlukta olamaz.");
+
+    // The three DEFINING vertices: centre and the two axis endpoints. The
+    // endpoints carry the rotation as vectors, so nothing stores an angle.
+    const Point2 pts[3]{centre, major, minor};
+    const RingGeometry::RingInput ring{std::span<const Point2>(pts, 3), RingRole::Open, 0};
+
+    auto slot = geometry_.append(std::span<const RingGeometry::RingInput>(&ring, 1));
+    if (!slot) return slot.error();
+
+    auto id = push_entity(lyr, slot.value(), kEllipseKind);
+    if (!id) return id;
+
+    // As for the circle: the arena bounded the three stored vertices, which for a
+    // rotated ellipse is a triangle strictly inside the shape. Every cull, pick
+    // prefilter and zoom-to-extents reads this box, so it is corrected here.
+    const EntityId e = id.value();
+    Box2 box{};
+    const std::uint32_t one[1]{slot.value()};
+    if (const KindSpec* spec = builtin_kinds().find(kEllipseKind); spec != nullptr)
+        spec->bbox(geometry_, SlotSpan(one, 1), std::span<Box2>(&box, 1));
+
+    entities_.min_x[e] = box.min_x;
+    entities_.min_y[e] = box.min_y;
+    entities_.max_x[e] = box.max_x;
+    entities_.max_y[e] = box.max_y;
+
+    undo_out          = Op{};
+    undo_out.kind     = Op::Kind::SetEntityAlive;
+    undo_out.entity   = e;
+    undo_out.bool_arg = false;
+    return id;
+}
+
 Result<EntityId> Document::add_point(LayerId lyr, Point2 at, Op& undo_out)
 {
     if (lyr >= layers_.size())

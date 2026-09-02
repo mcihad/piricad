@@ -28,6 +28,7 @@
 #include "piricad/core/units.hpp"
 
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 namespace piricad::core {
@@ -50,5 +51,13 @@ inline constexpr std::size_t kCircleSegments = 128;
 /// This is the picture only; the area and the radius come from the definition.
 /// Precomputed LOD replaces the fixed count when `render.md` R4 lands.
 void circle_outline(Point2 centre, Mm radius, std::vector<Mm>& xs, std::vector<Mm>& ys);
+
+/// The `(cos t, sin t)` table `circle_outline` walks: `kCircleSegments` unit
+/// directions, built by repeated EXACT bisection of the four axis directions.
+///
+/// Exposed because the ellipse is the same table scaled along two axis vectors,
+/// and building a second table would be building a second answer — the two
+/// curves would then disagree about where a quadrant is (§7.3).
+const std::vector<std::pair<double, double>>& unit_circle();
 
 } // namespace piricad::core

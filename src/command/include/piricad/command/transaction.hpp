@@ -88,6 +88,9 @@ public:
     /// A circle, from its centre and radius (model.md R22-R26: `core.circle`).
     Result<EntityId> add_circle(LayerId layer, Point2 centre, core::Mm radius);
 
+
+    /// Adds an ellipse from its centre and its two axis endpoints.
+    Result<EntityId> add_ellipse(LayerId layer, Point2 centre, Point2 major, Point2 minor);
     /// An arc: centre, radius and the two ends, swept counter-clockwise.
     Result<EntityId> add_arc(LayerId layer, Point2 centre, core::Mm radius, Point2 start,
                              Point2 end);

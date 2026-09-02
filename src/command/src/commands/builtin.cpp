@@ -43,6 +43,7 @@ namespace piricad::command {
     X(offset)                                                                                      \
     X(sector)                                                                                      \
     X(annulus)                                                                                     \
+    X(ellipse_draw)                                                                                \
     X(guide)                                                                                       \
     X(attribute)                                                                                   \
     X(column)                                                                                      \

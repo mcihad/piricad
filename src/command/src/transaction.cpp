@@ -129,6 +129,15 @@ Result<EntityId> Transaction::add_circle(LayerId layer, Point2 centre, core::Mm 
     return made;
 }
 
+Result<EntityId> Transaction::add_ellipse(LayerId layer, Point2 centre, Point2 major, Point2 minor)
+{
+    core::Op undo;
+    auto made = doc_.add_ellipse(layer, centre, major, minor, undo);
+    if (!made) return made;
+    inverse_.push_back(std::move(undo));
+    return made;
+}
+
 Result<EntityId> Transaction::add_arc(LayerId layer, Point2 centre, core::Mm radius, Point2 start,
                                       Point2 end)
 {

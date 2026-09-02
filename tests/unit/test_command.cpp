@@ -11,6 +11,7 @@
 #include "piricad/core/arc.hpp"
 #include "piricad/core/circle.hpp"
 #include "piricad/core/entity_kind.hpp"
+#include "piricad/core/ellipse.hpp"
 #include "piricad/core/guide.hpp"
 #include "piricad/core/offset.hpp"
 #include "piricad/core/snap.hpp"
@@ -1602,6 +1603,107 @@ TEST_CASE("OFSET seçim boşken sebebini söyler")
 }
 
 // -----------------------------------------------------------------------------
+// ELİPS — stored by its definition (core.ellipse_draw)
+// -----------------------------------------------------------------------------
+
+TEST_CASE("ELİPS merkez ve iki eksenden çizilir, tanımıyla saklanır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=CIZIM", Origin::Test).ok());
+
+    auto drawn =
+        f.bus.execute_line("ELİPS merkez=0,0 birinci=10,0 ikinci=0,5", Origin::Test);
+    if (!drawn) FAIL_WITH("ELİPS", drawn.error().message);
+
+    REQUIRE(f.doc.live_entity_count() == 1);
+    CHECK(f.doc.entities().kind[0] == core::kEllipseKind);
+
+    // THREE stored vertices, not a hundred and twenty-eight: the record is the
+    // definition and the run is only what gets drawn.
+    const auto slot = f.doc.entities().slot[0];
+    const auto span = f.doc.geometry().rings_of(slot);
+    REQUIRE(span.count == 1);
+    CHECK(f.doc.geometry().ring_xs(span.first).size() == 3);
+}
+
+TEST_CASE("ELİPS: alanı pi·a·b, dairenin özel hâli tutarlı")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=CIZIM", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ELİPS merkez=0,0 birinci=10,0 ikinci=0,5", Origin::Test).ok());
+
+    // pi x 10 m x 5 m = 157,08 m².
+    //
+    // THROUGH THE KIND, not through the ring: the stored ring is the three-vertex
+    // definition and encloses nothing. `ALANÖLÇ` asks the same way, which is why
+    // a circle reports pi·r² rather than the area of the polygon it is drawn with.
+    const auto slot = f.doc.entities().slot[0];
+    const core::KindSpec* spec = core::builtin_kinds().find(core::kEllipseKind);
+    REQUIRE(spec != nullptr);
+
+    core::Mm2 area = 0;
+    const std::uint32_t one[1]{slot};
+    spec->area(f.doc.geometry(), core::SlotSpan(one, 1), std::span<core::Mm2>(&area, 1));
+    CHECK(area > 156'000'000);
+    CHECK(area < 158'000'000);
+}
+
+TEST_CASE("ELİPS: ikinci eksen birinciye DİK ölçülür")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=CIZIM", Origin::Test).ok());
+
+    // The third point is 5 m across the axis and 100 m along it. Only the across
+    // component counts, so this must be the same ellipse as `ikinci=0,5`.
+    REQUIRE(f.bus.execute_line("ELİPS merkez=0,0 birinci=10,0 ikinci=100,5", Origin::Test).ok());
+
+    const core::Point2 minor =
+        core::ellipse_minor_of(f.doc.geometry(), f.doc.entities().slot[0]);
+    CHECK(minor.x == 0);
+    CHECK(minor.y == 5000);
+}
+
+TEST_CASE("ELİPS: eksen üzerindeki üçüncü nokta reddedilir")
+{
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+
+    REQUIRE(f.bus.execute_line("KATMAN ad=CIZIM", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ELİPS merkez=0,0 birinci=10,0 ikinci=5,0", Origin::Test).ok());
+
+    // A zero second axis is a line, not an ellipse, and drawing one would put a
+    // record in the file that nothing downstream can draw.
+    CHECK(f.doc.live_entity_count() == 0);
+    CHECK(said.find("İkinci eksen sıfır") != std::string::npos);
+}
+
+TEST_CASE("ELİPS: döndürülmüş elipsin kapsam kutusu şekli içine almalı")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=CIZIM", Origin::Test).ok());
+
+    // A 45-degree ellipse. Its bounding box is NOT the box of its three stored
+    // vertices — that triangle sits strictly inside the shape — and a cull box
+    // that small drops the ellipse at the edge of the view.
+    REQUIRE(f.bus.execute_line("ELİPS merkez=0,0 birinci=10,10 ikinci=-1,1", Origin::Test).ok());
+
+    const core::Box2 box = f.doc.extent();
+    std::vector<core::Mm> xs, ys;
+    core::ellipse_outline(core::ellipse_centre_of(f.doc.geometry(), f.doc.entities().slot[0]),
+                          core::ellipse_major_of(f.doc.geometry(), f.doc.entities().slot[0]),
+                          core::ellipse_minor_of(f.doc.geometry(), f.doc.entities().slot[0]), xs,
+                          ys);
+
+    for (std::size_t i = 0; i < xs.size(); ++i) {
+        CHECK(xs[i] >= box.min_x);
+        CHECK(xs[i] <= box.max_x);
+        CHECK(ys[i] >= box.min_y);
+        CHECK(ys[i] <= box.max_y);
+    }
+}
+
+// -----------------------------------------------------------------------------
 // DİLİM ve HALKA — closed shapes a round curve encloses
 // -----------------------------------------------------------------------------
 
@@ -2640,7 +2742,7 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // command that vanished bumps it down by accident, and that is the case worth
     // catching.
     Fixture f;
-    CHECK_EQ(f.reg.size(), std::size_t{55});
+    CHECK_EQ(f.reg.size(), std::size_t{56});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

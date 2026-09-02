@@ -115,7 +115,7 @@ TEST_CASE("builtin_kinds her çağrıda aynı tabloyu verir")
     // R24 / core.md P8: immutable const state, not a registry. Two references to
     // the same object, so no caller can be handed a table someone else mutated.
     CHECK(&builtin_kinds() == &builtin_kinds());
-    CHECK_EQ(builtin_kinds().size(), std::size_t{4});
+    CHECK_EQ(builtin_kinds().size(), std::size_t{5});
     CHECK_EQ(std::string(builtin_kinds().all()[0].stable_id), std::string("core.polyline"));
     CHECK_EQ(std::string(builtin_kinds().all()[1].stable_id), std::string("core.circle"));
     CHECK_EQ(std::string(builtin_kinds().all()[2].stable_id), std::string("core.arc"));

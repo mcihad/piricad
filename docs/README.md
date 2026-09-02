@@ -71,6 +71,7 @@ Tek tek komutlar:
 | `OFSET` | [Paralel çizme](komutlar/offset.md) |
 | `DİLİM` | [Daire dilimi çizme](komutlar/sector.md) |
 | `HALKA` | [Delikli halka çizme](komutlar/annulus.md) |
+| `ELİPS` | [Elips çizme](komutlar/ellipse_draw.md) |
 | `KILAVUZ` | [Cetvel kılavuzu](komutlar/guide.md) |
 | `OTURT` | [Yerel çizimi haritaya oturtma](komutlar/fit.md) |
 | `TEVHİT` | [Parsel birleştirme](komutlar/merge.md) |

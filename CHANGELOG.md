@@ -18,6 +18,25 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 - İsim uzayı, `#include` yolları, CMake hedefleri ve `PIRICAD_*` makroları bu adımda
   **değişmedi**; onlar tek mekanik değişiklik olarak ayrı iniyor.
 
+### Eklendi — ELİPS
+
+- Merkez ve iki eksenden elips. **Tanımıyla saklanıyor** (`core.ellipse` türü,
+  kimlik 5): merkez ve iki eksen ucu, beş sayı. Çizilen çok kenarlı hat yalnız
+  görüntü — hattı saklayan bir çizim, biri yakınlaştırdığı anda şeklin kimliğini
+  kaybederdi.
+- Eksen uçları **nokta** olarak saklanıyor, uzunluk ve açı olarak değil: iki eksen
+  vektörü dönüklüğü zaten taşıyor, yani hiçbir yerde açı saklanmıyor ve okunmuyor.
+- Çizilen hat `DAİRE`'nin **aynı** birim çember tablosundan geliyor, iki eksen
+  boyunca ölçeklenerek: çarpma ve toplamadan başka işlem yok, üç platformda aynı
+  köşeler (§7.3). İkinci bir tablo kurmak, iki eğrinin çeyreklerin nerede olduğu
+  konusunda ayrışması demekti.
+- **İkinci eksen birinciye dik alınıyor.** Serbest bırakılsaydı kullanıcı elips
+  olmayan kaydırılmış bir şekil çizebilirdi ve kayıtta hiçbir elipsin sahip
+  olmadığı iki eksen dururdu.
+- Döndürülmüş elipsin **kapsam kutusu** üç saklanan köşenin kutusu değil: o üçgen
+  şeklin içinde kalır ve o kadar küçük bir kutu, elipsi görüşün kenarında düşürür.
+- Belge: [`docs/komutlar/ellipse_draw.md`](docs/komutlar/ellipse_draw.md).
+
 ### Eklendi — kadastro: TEVHİT, İFRAZ, TOPOLOJİ (Faz 8)
 
 Yeni modül `/src/domain/cadastre` (Article 3.1 zaten öngörüyordu). Üç komut da

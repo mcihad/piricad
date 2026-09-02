@@ -10,6 +10,7 @@ add_library(piricad_core STATIC
     src/entity_kind.cpp
     src/transform.cpp
     src/geometry.cpp
+    src/ellipse.cpp
     src/guide.cpp
     src/offset.cpp
     src/json.cpp

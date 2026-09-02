@@ -275,6 +275,13 @@ public:
     /// area of whatever polygon happened to be drawn for it.
     Result<EntityId> add_circle(LayerId lyr, Point2 centre, Mm radius, Op& undo_out);
 
+
+    /// Adds an ellipse from its centre and its two axis ENDPOINTS.
+    ///
+    /// Endpoints rather than lengths and an angle: the two vectors carry the
+    /// rotation, so no trigonometry is stored and none is needed to read it back.
+    Result<EntityId> add_ellipse(LayerId lyr, Point2 centre, Point2 major, Point2 minor,
+                                 Op& undo_out);
     /// An arc, from its centre, radius and the two measured ends. The sweep runs
     /// counter-clockwise from `start` to `end` (see `core.arc`).
     Result<EntityId> add_arc(LayerId lyr, Point2 centre, Mm radius, Point2 start, Point2 end,

@@ -42,6 +42,7 @@ inline constexpr KindId kPolylineKind = 1;
 inline constexpr KindId kCircleKind   = 2;
 inline constexpr KindId kArcKind      = 3;
 inline constexpr KindId kPointKind    = 4;
+inline constexpr KindId kEllipseKind  = 5;
 
 
 // ---------------------------------------------------------------- slots -----
