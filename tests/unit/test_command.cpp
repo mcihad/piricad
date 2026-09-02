@@ -1941,7 +1941,7 @@ TEST_CASE("KOORDİNAT tıklanan noktayı belgenin koordinat sisteminde yazar")
 
     CHECK(said.find("485320,500") != std::string::npos);
     CHECK(said.find("4310220,250") != std::string::npos);
-    CHECK(said.find("TUREF/TM30") != std::string::npos);
+    CHECK(said.find("TUREF/TM36") != std::string::npos);
 }
 
 TEST_CASE("KOORDİNAT çizimi değiştirmez ve geri alma adımı bırakmaz")

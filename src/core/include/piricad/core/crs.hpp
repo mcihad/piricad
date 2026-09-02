@@ -105,7 +105,7 @@ public:
     friend bool operator==(const Crs& a, const Crs& b) { return a.id_ == b.id_; }
 
 private:
-    std::string id_{"TUREF/TM30"};
+    std::string id_{"TUREF/TM36"};
     int epsg_{0};
     std::string epoch_;
     int meridian_{0};

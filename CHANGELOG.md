@@ -18,6 +18,41 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 - İsim uzayı, `#include` yolları, CMake hedefleri ve `PIRICAD_*` makroları bu adımda
   **değişmedi**; onlar tek mekanik değişiklik olarak ayrı iniyor.
 
+### Eklendi — yerel koordinat ve OTURT (Faz 7)
+
+- **`OTURT`** — yerel ölçülmüş bir çizimi yayımlanmış kontrol noktalarıyla
+  haritaya taşır. Ekibin istasyonu kurup ona 0,0 dediği iş için: çizimin kendi
+  içinde her mesafesi ve açısı doğrudur, olmadığı tek şey haritanın üzerinde
+  olmaktır.
+- **2B Helmert, afin değil.** Öteler, döndürür, tek ölçekle büyütür; asla
+  kaydırmaz. Bir ölçünün iç geometrisi veridir — kendi çizgileri arasındaki
+  açılar ölçülmüş gerçeklerdir — ve kaydırabilen bir dönüşüm, kontrolü ölçüye
+  değil ölçüyü kontrole uydururdu.
+- **Ölçek kilitlenebilir** (`olcek_kilitli=evet`): kalibre şeritle çalışan bir
+  ekibin mesafeleri yeniden ölçeklenmez, böylece bir kontrol hatası çizimdeki her
+  uzunluğa sessizce dağılmaz. Kilitliyken artıklar büyür — büyümesi gerekir.
+- **Artıklar, RMS ve en büyük artık** raporlanıyor; ölçüm uygulanacak dönüşümle,
+  yuvarlaması dahil yapılıyor, yani rapor çizimin alamayacağı bir uyum vaat
+  etmiyor.
+- **Determinizm**: kapalı biçim en küçük kareler, yalnız +, −, ×, ÷ ve `sqrt`.
+  Dönüklük hiçbir zaman açıya dönüşmüyor — (a, b) çifti olarak kalıyor — ve
+  noktalar tam sayıda kendi ağırlık merkezine indirgeniyor, yani çift duyarlık
+  yalnız küçük farkları görüyor (§7.3).
+- **Tek geri alma adımı**: her köşe taşınır ya da hiçbiri. Yarı taşınmış bir
+  kadastro paftası Article 1.6'nın adını koyduğu hatadır ve burada her yerden
+  kötüdür, çünkü iki yarısı da makul görünür.
+- **`YEREL` sistem**: durum çubuğu ve `KOORDİNAT` "haritaya oturtulmadı" diyor.
+  Bir yerel okuma kendi sahası hakkında doğrudur ve başkasına hiçbir şey ifade
+  etmez; tapuya yazılabilecek bir çift gibi görünmemeli.
+- **Varsayılan dilim TUREF/TM36 oldu** (K1). Golden fixture'lar bilinçli olarak
+  yeniden üretildi; diff yalnız CRS satırını ve ondan türeyen içerik özetini
+  içeriyor, hiçbir geometri değişmedi.
+- Alan komutları ayrı kaydediliyor (`register_geodesy_commands`): `/src/command`
+  bir alan modülüne bağımlı olamaz (Article 3.2), bu yüzden yerleşik liste
+  OTURT'u adlandıramaz.
+- Belge: [`docs/komutlar/fit.md`](docs/komutlar/fit.md). **Golden değerleri
+  jeodezi uzmanı imzası bekliyor** (6.11); aritmetiği ve determinizmi sınanmıştır.
+
 ### Eklendi — cetvel kılavuzları (Faz 6)
 
 - **`KILAVUZ`** — yatay ya da düşey sonsuz yapı çizgisi. Üst cetvelden aşağı,

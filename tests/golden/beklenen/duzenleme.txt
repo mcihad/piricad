@@ -1,4 +1,4 @@
-crs TUREF/TM30
+crs TUREF/TM36
 katman-sayisi 2
 nesne-sayisi 2
 katman 0 gorunur=1 kilitli=0 renk=ff6c7686 kalinlik_um=0 nesne=0
@@ -14,11 +14,11 @@ nesne 2 katman=CIZIM stil=0 halka=1
     30000 0
   alan_mm2 0  cevre_mm 10000
 kapsam 10000 0 30000 0
-icerik-ozeti 2f82821a40d22f62
+icerik-ozeti ca64440c7c652650
 gunluk
-  {"seq":1,"cmd":"core.layer","args":{"ad":"CIZIM"},"origin":"test","crs":"TUREF/TM30","katman":"CIZIM"}
-  {"seq":2,"cmd":"core.line","args":{"noktalar":[[0,0],[10000,0],[20000,0],[30000,0]]},"origin":"test","crs":"TUREF/TM30","katman":"CIZIM"}
-  {"seq":3,"cmd":"core.line","args":{"noktalar":[[0,10000],[10000,10000]]},"origin":"test","crs":"TUREF/TM30","katman":"CIZIM"}
-  {"seq":4,"cmd":"core.erase","args":{"nesneler":[2]},"origin":"test","crs":"TUREF/TM30","katman":"CIZIM"}
-  {"seq":5,"cmd":"core.erase","args":{"nesneler":[1,4]},"origin":"test","crs":"TUREF/TM30","katman":"CIZIM"}
-  {"seq":6,"cmd":"core.layer","args":{"ad":"CIZIM","kilitli":true},"origin":"test","crs":"TUREF/TM30","katman":"CIZIM"}
+  {"seq":1,"cmd":"core.layer","args":{"ad":"CIZIM"},"origin":"test","crs":"TUREF/TM36","katman":"CIZIM"}
+  {"seq":2,"cmd":"core.line","args":{"noktalar":[[0,0],[10000,0],[20000,0],[30000,0]]},"origin":"test","crs":"TUREF/TM36","katman":"CIZIM"}
+  {"seq":3,"cmd":"core.line","args":{"noktalar":[[0,10000],[10000,10000]]},"origin":"test","crs":"TUREF/TM36","katman":"CIZIM"}
+  {"seq":4,"cmd":"core.erase","args":{"nesneler":[2]},"origin":"test","crs":"TUREF/TM36","katman":"CIZIM"}
+  {"seq":5,"cmd":"core.erase","args":{"nesneler":[1,4]},"origin":"test","crs":"TUREF/TM36","katman":"CIZIM"}
+  {"seq":6,"cmd":"core.layer","args":{"ad":"CIZIM","kilitli":true},"origin":"test","crs":"TUREF/TM36","katman":"CIZIM"}

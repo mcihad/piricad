@@ -1652,6 +1652,12 @@ void MainWindow::refreshStatus()
                 tr("EPSG:%1 · %2 / %3")
                     .arg(crs.epsg())
                     .arg(QString::fromStdString(crs.epoch()), QString::fromStdString(crs.id()));
+    } else if (crs.id() == "YEREL" || crs.id() == "LOCAL") {
+        // A LOCAL drawing is not a broken one: the crew called their station 0,0
+        // and every distance in it is right. What it is not, yet, is anywhere on
+        // the map — and the status line has to say that plainly, because a
+        // coordinate read off it means nothing to anyone else until OTURT runs.
+        crsText = tr("YEREL · haritaya oturtulmadı");
     } else {
         crsText = tr("%1 · çözümlenmedi").arg(QString::fromStdString(crs.id()));
     }

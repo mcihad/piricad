@@ -72,6 +72,7 @@ Tek tek komutlar:
 | `DİLİM` | [Daire dilimi çizme](komutlar/sector.md) |
 | `HALKA` | [Delikli halka çizme](komutlar/annulus.md) |
 | `KILAVUZ` | [Cetvel kılavuzu](komutlar/guide.md) |
+| `OTURT` | [Yerel çizimi haritaya oturtma](komutlar/fit.md) |
 | `YAKINLAŞ` | [Görünüm ayarlama](komutlar/zoom.md) |
 | `GERİAL` | [Geri alma](komutlar/undo.md) |
 | `YİNELE` | [Yineleme](komutlar/redo.md) |

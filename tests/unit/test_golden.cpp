@@ -10,6 +10,7 @@
 // vertex moved, not merely that a hash changed.
 #include "piricad_test.hpp"
 
+#include "piricad/domain/geodesy/commands.hpp"
 #include "piricad/command/bus.hpp"
 #include "piricad/command/registry.hpp"
 #include "piricad/script/json_runner.hpp"
@@ -130,6 +131,13 @@ struct Rig
     Rig()
     {
         register_builtin_commands(reg);
+
+        // The manual and the golden scenarios may name ANY command the program
+        // ships, and a domain module owns some of them: `/src/command` may not
+        // depend on `/src/domain`, so its builtin list cannot mention OTURT
+        // (Article 3.2). A harness that registers only the builtins reports a
+        // real command as unknown.
+        domain::geodesy::register_geodesy_commands(reg);
         bus.on_echo = [](std::string_view) {};
     }
 };

@@ -15,6 +15,8 @@
 
 #include "piricad/command/bus.hpp"
 
+#include "piricad/domain/geodesy/commands.hpp"
+#include "piricad/domain/geodesy/helmert.hpp"
 #include "piricad/domain/geodesy/crs_service.hpp"
 
 #include "piricad/domain/geodesy/crs_catalog.hpp"
@@ -268,4 +270,215 @@ TEST_CASE("CRS: kimlik çözülür ve belge tek doğruyu taşır")
     REQUIRE(bus.execute_line("GERİAL", command::Origin::Test).ok());
     CHECK_EQ(doc.crs().id(), std::string("TUREF/TM33"));
     CHECK_EQ(doc.crs().epsg(), 5255); // the resolved metadata came back too
+}
+
+// =============================================================================
+// Helmert 2D — fitting a local survey onto the map (OTURT's arithmetic)
+// =============================================================================
+
+TEST_CASE("HELMERT: iki nokta tam çözüm verir, artık bırakmaz")
+{
+    using namespace piricad::domain::geodesy;
+
+    // A local survey rotated a quarter turn and moved onto TUREF/TM36.
+    std::vector<ControlPoint> control{
+        {{0, 0}, {485300000, 4310200000}},
+        {{10000, 0}, {485300000, 4310210000}},
+    };
+
+    auto fit = fit_helmert(control, false);
+    REQUIRE(fit.ok());
+
+    // Exact through both points: two points and four parameters leave nothing
+    // over, so a residual here would mean the arithmetic is wrong.
+    CHECK(fit.value().rms == 0);
+    CHECK(fit.value().worst == 0);
+
+    // Scale 1 and a quarter turn: the local x axis became the map's north.
+    CHECK(std::abs(fit.value().scale - 1.0) < 1e-9);
+    CHECK(std::abs(fit.value().rotation_grad - 300.0) < 1e-6);
+}
+
+TEST_CASE("HELMERT: ölçeği bulur")
+{
+    using namespace piricad::domain::geodesy;
+
+    // The same shape at twice the size, no rotation.
+    std::vector<ControlPoint> control{
+        {{0, 0}, {0, 0}},
+        {{1000, 0}, {2000, 0}},
+    };
+
+    auto fit = fit_helmert(control, false);
+    REQUIRE(fit.ok());
+    CHECK(std::abs(fit.value().scale - 2.0) < 1e-9);
+
+    // Locked, the same input must NOT rescale — a calibrated tape's distances
+    // are measured data, and absorbing a control error into every length is the
+    // failure this option exists to prevent.
+    auto locked = fit_helmert(control, true);
+    REQUIRE(locked.ok());
+    CHECK(std::abs(locked.value().scale - 1.0) < 1e-12);
+    CHECK(locked.value().rms > 0); // and it says so, in the residuals
+}
+
+TEST_CASE("HELMERT: üç noktada artıkları ve RMS'i raporlar")
+{
+    using namespace piricad::domain::geodesy;
+
+    // Three points that cannot all be satisfied: the third is 20 mm off the line
+    // the first two define. A similarity cannot absorb that, and must not
+    // pretend to.
+    std::vector<ControlPoint> control{
+        {{0, 0}, {0, 0}},
+        {{10000, 0}, {10000, 0}},
+        {{5000, 0}, {5000, 20}},
+    };
+
+    auto fit = fit_helmert(control, false);
+    REQUIRE(fit.ok());
+
+    CHECK(fit.value().residuals.size() == 3);
+    CHECK(fit.value().rms > 0);
+    CHECK(fit.value().worst > 0);
+    CHECK(fit.value().worst <= 20);
+}
+
+TEST_CASE("HELMERT: bir nokta ve çakışık noktalar gerekçesiyle reddedilir")
+{
+    using namespace piricad::domain::geodesy;
+
+    std::vector<ControlPoint> one{{{0, 0}, {100, 100}}};
+    CHECK(!fit_helmert(one, false).ok());
+
+    std::vector<ControlPoint> same{
+        {{5000, 5000}, {0, 0}},
+        {{5000, 5000}, {100, 100}},
+    };
+    CHECK(!fit_helmert(same, false).ok());
+}
+
+TEST_CASE("HELMERT: dönüşüm her noktayı kontrolüne taşır")
+{
+    using namespace piricad::domain::geodesy;
+
+    std::vector<ControlPoint> control{
+        {{0, 0}, {485300000, 4310200000}},
+        {{100000, 0}, {485400000, 4310200000}},
+    };
+
+    auto fit = fit_helmert(control, false);
+    REQUIRE(fit.ok());
+
+    for (const ControlPoint& p : control) {
+        const piricad::core::Point2 landed = fit.value().apply(p.local);
+        CHECK(landed.x == p.map.x);
+        CHECK(landed.y == p.map.y);
+    }
+}
+
+TEST_CASE("OTURT: yerel çizimi kontrol noktalarıyla haritaya taşır")
+{
+    // A survey measured from a station the crew called 0,0. Two published points
+    // put it on TUREF/TM36 — the job this command exists for.
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
+
+    using piricad::command::Origin;
+    REQUIRE(bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+
+    const std::size_t before = doc.live_entity_count();
+
+    // local 0,0 -> map 485300,4310200 and local 10,0 -> map 485310,4310200:
+    // a pure translation, no rotation, no scale.
+    auto fitted = bus.execute_line(
+        "OTURT noktalar=0,0 485300,4310200 10,0 485310,4310200 sistem=TUREF/TM36", Origin::Test);
+    if (!fitted) FAIL_WITH("OTURT", fitted.error().message);
+
+    // Nothing was added or removed — the drawing MOVED.
+    CHECK(doc.live_entity_count() == before);
+
+    const piricad::core::Box2 box = doc.extent();
+    CHECK(box.min_x == 485300000);
+    CHECK(box.min_y == 4310200000);
+    CHECK(doc.crs().id() == "TUREF/TM36");
+}
+
+TEST_CASE("OTURT tek geri alma adımıdır: ya hepsi taşınır ya hiçbiri")
+{
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
+
+    using piricad::command::Origin;
+    REQUIRE(bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(bus.execute_line("ÇİZGİ noktalar=0,0 5,5", Origin::Test).ok());
+
+    const std::uint64_t before = doc.content_hash();
+
+    REQUIRE(bus.execute_line("OTURT noktalar=0,0 100,100 10,0 110,100", Origin::Test).ok());
+    CHECK(doc.content_hash() != before);
+
+    // A half-transformed cadastral sheet is the failure Article 1.6 names, and
+    // both halves would look plausible. One undo must put every vertex back.
+    REQUIRE(bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK(doc.content_hash() == before);
+}
+
+TEST_CASE("OTURT: eksik ya da tek sayıda nokta gerekçesiyle reddedilir")
+{
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
+
+    using piricad::command::Origin;
+    std::string said;
+    bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+
+    REQUIRE(bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+    const std::uint64_t before = doc.content_hash();
+
+    // One pair is a translation with an unknown rotation; the parser's own arity
+    // floor of four points catches it before the body runs.
+    (void)bus.execute_line("OTURT noktalar=0,0 100,100", Origin::Test);
+    CHECK(doc.content_hash() == before);
+}
+
+TEST_CASE("OTURT ölçeği kilitlenebilir: saha ölçüsü yeniden ölçeklenmez")
+{
+    piricad::core::Document doc;
+    piricad::command::Registry reg;
+    piricad::command::Journal journal;
+    piricad::command::UndoStack undo;
+    piricad::command::Bus bus{doc, reg, journal, undo};
+    piricad::command::register_builtin_commands(reg);
+    piricad::domain::geodesy::register_geodesy_commands(reg);
+
+    using piricad::command::Origin;
+    REQUIRE(bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(bus.execute_line("ÇİZGİ noktalar=0,0 100,0", Origin::Test).ok());
+
+    // The control asks for double the size. With the scale locked the line must
+    // keep its measured 100 m length.
+    REQUIRE(bus.execute_line("OTURT noktalar=0,0 0,0 100,0 200,0 olcek_kilitli=evet", Origin::Test)
+                .ok());
+
+    const piricad::core::Box2 box = doc.extent();
+    CHECK(box.max_x - box.min_x == 100000);
 }

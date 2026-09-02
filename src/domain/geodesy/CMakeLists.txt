@@ -7,6 +7,8 @@
 add_library(piricad_domain_geodesy STATIC
     src/crs_catalog.cpp
     src/crs_service.cpp
+    src/helmert.cpp
+    src/fit_command.cpp
     src/transform.cpp
 )
 

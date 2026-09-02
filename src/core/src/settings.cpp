@@ -947,12 +947,15 @@ PIRICAD_SETTING(koordinat_sistemi)
         .names    = {"koordinat_sistemi", "crs", "ks"},
         .type     = SettingType::Text,
         .scope    = SettingScope::Project,
-        .fallback = text_value("TUREF/TM30"),
+        .fallback = text_value("TUREF/TM36"),
         .range    = SettingRange::unbounded(),
         .values   = {},
         .unit     = "",
         .summary  = "Projenin koordinat sistemi. Dışa aktarılan her koordinat bu sisteme "
-                    "göre yazıldığı için proje kapsamındadır.",
+                    "göre yazıldığı için proje kapsamındadır. Varsayılan TUREF/TM36'dır: "
+                    "36 derecelik dilim Ankara'yı ve Orta Anadolu'yu kapsar ve ülkedeki "
+                    "işlerin en büyük kısmı orada yürür. Haritaya henüz oturtulmamış bir "
+                    "iş için YEREL kullanın.",
         .section  = "Koordinat Sistemleri", // ui-label
     };
 }

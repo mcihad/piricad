@@ -157,10 +157,16 @@ Task<void> run_coordinate(Context& ctx)
 
     const std::string crs = ctx.document().crs().id();
 
+    // A LOCAL drawing's numbers are right about the site and mean nothing to
+    // anyone else, so the reading says so rather than printing a bare pair a user
+    // might write into a tapu.
+    const bool local = crs == "YEREL" || crs == "LOCAL";
+    const std::string where =
+        local ? "   (YEREL — haritaya oturtulmadı)" : (crs.empty() ? "" : "   (" + crs + ")");
+
     // SAĞA / YUKARI, which is what a Turkish surveyor calls easting and northing,
     // and the order a TUCBS record writes them in.
-    ctx.echo("Sağa: " + metres(at->x) + "   Yukarı: " + metres(at->y) +
-             (crs.empty() ? std::string() : "   (" + crs + ")"));
+    ctx.echo("Sağa: " + metres(at->x) + "   Yukarı: " + metres(at->y) + where);
 
     ctx.record("nokta", Value::point(*at));
 }
