@@ -6,6 +6,7 @@
 
 namespace kentos::command {
 KENTOS_COMMAND(contour);
+KENTOS_COMMAND(earthwork);
 } // namespace kentos::command
 
 namespace kentos::domain::surface {
@@ -13,6 +14,7 @@ namespace kentos::domain::surface {
 void register_surface_commands(kentos::command::Registry& r)
 {
     (void)r.add(kentos::command::kentos_command_contour());
+    (void)r.add(kentos::command::kentos_command_earthwork());
 }
 
 } // namespace kentos::domain::surface

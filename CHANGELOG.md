@@ -22,6 +22,21 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   okunan bir toolchain iletisi. `scripts/run-iwyu.sh` `xcrun --show-sdk-path`
   ekliyor; Article 10 gereği Makefile'da OS koşulu değil, betikte.
 
+### Eklendi — HACİM: kazı ve dolgu
+
+- Kotlu noktalardan kurulan yüzeyi bir kotla karşılaştırıp kazı ve dolgu
+  hacimlerini veriyor: saha düzenlemesinin, yol platformunun, havuzun keşif
+  hesabı.
+- **Netlenmiyor.** 500 m³ kazı ve 500 m³ dolgusu olan bir saha bir haftalık makine
+  işidir; net hacmi sıfır olduğu için hiçbir şeyin kıpırdamadığı bir saha hiç iş
+  değildir. Makineler ayrı rakamlara göre tutulur. Fark yine yazılıyor — ama en
+  sonda ve adı konarak.
+- Düzlemin **kestiği** üçgen ikiye ayrılıyor: bir üçgeni bütün hâlde tek tarafa
+  saymak, dolguyu kazı sütununa yazmak olurdu.
+- Ara çarpımlar 128 bitte: bir sahanın alanı ile derinliğinin çarpımı int64'ü
+  kolayca aşar.
+- Belge: [`earthwork.md`](docs/komutlar/earthwork.md).
+
 ### Eklendi — EŞYÜKSELTİ ve yüzey modülü
 
 Yeni modül `/src/domain/surface` (Article 3.1 zaten öngörüyordu).

@@ -29,6 +29,13 @@ namespace kentos::core {
 /// Square millimetres. A 100 km x 100 km area is 1e16 mm², well inside int64.
 using Mm2 = std::int64_t;
 
+/// A volume in cubic millimetres.
+///
+/// int64 reaches 9,2·10^18 mm³, which is 9,2 million cubic metres — more than any
+/// earthwork this program will be asked about, and the intermediate products are
+/// carried in 128 bits so the multiply that gets there cannot wrap.
+using Mm3 = std::int64_t;
+
 /// The largest coordinate magnitude `RingGeometry::append` accepts, ±2^61 mm.
 ///
 /// This is an ENFORCED invariant, not a comment: every length and area below is

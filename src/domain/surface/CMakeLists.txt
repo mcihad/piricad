@@ -7,6 +7,7 @@
 add_library(kentos_domain_surface STATIC
     src/contour.cpp
     src/contour_command.cpp
+    src/earthwork_command.cpp
     src/commands.cpp
 )
 

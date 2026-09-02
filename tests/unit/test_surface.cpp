@@ -213,3 +213,111 @@ TEST_CASE("EŞYÜKSELTİ tek geri alma adımıdır")
     REQUIRE(r.bus.execute_line("GERİAL", Origin::Test).ok());
     CHECK(r.doc.live_entity_count() == before);
 }
+
+// =============================================================================
+// HACİM — cut and fill
+// =============================================================================
+
+TEST_CASE("HACİM: düz bir platformun hacmi alan x yükseklik")
+{
+    if (!domain::surface::available()) return;
+
+    // A flat 100 m x 100 m plateau at 110 m, measured against 100 m: exactly
+    // 10 000 m² x 10 m = 100 000 m³ of cut and no fill.
+    std::vector<domain::surface::Level> flat;
+    for (int i = 0; i <= 10; ++i)
+        for (int j = 0; j <= 10; ++j)
+            flat.push_back(domain::surface::Level{core::Point2{i * 10000, j * 10000}, 110000});
+
+    auto work = domain::surface::earthwork(flat, 100000);
+    REQUIRE(work.ok());
+
+    CHECK(work.value().fill == 0);
+    CHECK(work.value().area == 10'000'000'000LL); // 10 000 m² = 1e10 mm²
+
+    // 100 000 m³ = 1e14 mm³, within a thousandth.
+    const core::Mm3 expected = 100'000'000'000'000LL;
+    const core::Mm3 got      = work.value().cut;
+    CHECK(got > expected - expected / 1000);
+    CHECK(got < expected + expected / 1000);
+}
+
+TEST_CASE("HACİM: kazı ve dolgu ayrı raporlanır, birbirini yemez")
+{
+    if (!domain::surface::available()) return;
+
+    // A ramp from 90 m to 110 m across the site, measured against 100 m: half of
+    // it is above and half below, and the two must come back as two numbers.
+    // Netting them would report a balanced site as no work at all — and the
+    // machines are hired against the separate figures.
+    std::vector<domain::surface::Level> ramp;
+    for (int i = 0; i <= 10; ++i)
+        for (int j = 0; j <= 10; ++j)
+            ramp.push_back(
+                domain::surface::Level{core::Point2{i * 10000, j * 10000}, 90000 + i * 2000});
+
+    auto work = domain::surface::earthwork(ramp, 100000);
+    REQUIRE(work.ok());
+
+    CHECK(work.value().cut > 0);
+    CHECK(work.value().fill > 0);
+
+    // Symmetric ramp: the two are equal to within a rounding, and the net is ~0.
+    const core::Mm3 difference = work.value().cut - work.value().fill;
+    const core::Mm3 bound      = work.value().cut / 100;
+    CHECK(difference < bound);
+    CHECK(difference > -bound);
+}
+
+TEST_CASE("HACİM: kotun tam üstündeki yüzey sıfır verir")
+{
+    if (!domain::surface::available()) return;
+
+    std::vector<domain::surface::Level> flat;
+    for (int i = 0; i <= 4; ++i)
+        for (int j = 0; j <= 4; ++j)
+            flat.push_back(domain::surface::Level{core::Point2{i * 10000, j * 10000}, 100000});
+
+    auto work = domain::surface::earthwork(flat, 100000);
+    REQUIRE(work.ok());
+    CHECK(work.value().cut == 0);
+    CHECK(work.value().fill == 0);
+    CHECK(work.value().area > 0); // the area was still measured
+}
+
+TEST_CASE("HACİM komutu kazıyı ve dolguyu ayrı satırlarda yazar")
+{
+    if (!domain::surface::available()) return;
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=N", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("SÜTUN kimlik=kot tur=uzunluk", Origin::Test).ok());
+
+    int key = 0;
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 4; ++j) {
+            REQUIRE(r.bus
+                        .execute_line("NOKTA noktalar=" + std::to_string(i * 10) + "," +
+                                          std::to_string(j * 10),
+                                      Origin::Test)
+                        .ok());
+            ++key;
+            REQUIRE(r.bus
+                        .execute_line("ÖZNİTELİK ad=kot nesne=" + std::to_string(key) +
+                                          " deger=" + std::to_string(100000 + i * 2000),
+                                      Origin::Test)
+                        .ok());
+        }
+
+    r.said.clear();
+    const std::uint64_t before = r.doc.content_hash();
+    auto done                  = r.bus.execute_line("HACİM kot=103000", Origin::Test);
+    if (!done) FAIL_WITH("HACİM", done.error().message);
+
+    CHECK(r.said.find("kazı") != std::string::npos);
+    CHECK(r.said.find("dolgu") != std::string::npos);
+    CHECK(r.said.find("hesap alanı") != std::string::npos);
+
+    // Read-only: a report is not an edit.
+    CHECK(r.doc.content_hash() == before);
+}

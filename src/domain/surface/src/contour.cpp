@@ -31,6 +31,12 @@ core::Result<std::vector<Contour>> trace_contours(const std::vector<Level>&, cor
                      "KENTOS_WITH_CDT=ON ile derleyin.");
 }
 
+core::Result<Earthwork> earthwork(const std::vector<Level>&, core::Mm)
+{
+    return core::err(core::ErrorCode::Unsupported, "Üçgenleme bu yapıda yok; hacim hesaplanamaz. "
+                                                   "KENTOS_WITH_CDT=ON ile derleyin.");
+}
+
 #else
 
 namespace {
@@ -245,6 +251,151 @@ core::Result<std::vector<Contour>> trace_contours(const std::vector<Level>& poin
         }
     }
 
+    return out;
+}
+
+namespace {
+
+/// The plan area of a triangle, in square millimetres, exactly.
+///
+/// The shoelace on 128-bit intermediates: two eastings multiplied are already
+/// 6·10^17 and int64 would wrap on a site of any size (core.md R3).
+core::Mm2 triangle_area(core::Point2 a, core::Point2 b, core::Point2 c)
+{
+    const __int128 twice     = static_cast<__int128>(b.x - a.x) * (c.y - a.y) -
+                               static_cast<__int128>(c.x - a.x) * (b.y - a.y);
+    const __int128 abs_twice = twice < 0 ? -twice : twice;
+    return static_cast<core::Mm2>(abs_twice / 2);
+}
+
+/// The volume of the prism between a triangle and the reference plane.
+///
+/// `area × mean height`, which is exact for a plane over a plane. The three
+/// heights are already relative to the reference level, so the sign of the mean
+/// says which side it is on and the caller does not have to ask twice.
+core::Mm3 prism(core::Mm2 area, core::Mm h1, core::Mm h2, core::Mm h3)
+{
+    const __int128 total = static_cast<__int128>(h1) + h2 + h3;
+    return static_cast<core::Mm3>((static_cast<__int128>(area) * total) / 3);
+}
+
+/// Where the reference plane crosses the edge from `a` to `b`, in plan.
+core::Point2 plane_crossing(core::Point2 a, core::Mm ha, core::Point2 b, core::Mm hb)
+{
+    const core::Mm span = hb - ha;
+    if (span == 0) return a;
+    const double t = static_cast<double>(-ha) / static_cast<double>(span);
+    return core::Point2{a.x + core::mm_round(static_cast<double>(b.x - a.x) * t),
+                        a.y + core::mm_round(static_cast<double>(b.y - a.y) * t)};
+}
+
+/// Adds one triangle's contribution, splitting it where the plane crosses.
+void accumulate(Earthwork& out, core::Point2 pa, core::Mm ha, core::Point2 pb, core::Mm hb,
+                core::Point2 pc, core::Mm hc)
+{
+    const core::Mm2 area = triangle_area(pa, pb, pc);
+    if (area == 0) return;
+    out.area += area;
+
+    const bool a_up = ha > 0, b_up = hb > 0, c_up = hc > 0;
+    const bool a_dn = ha < 0, b_dn = hb < 0, c_dn = hc < 0;
+
+    // WHOLLY ON ONE SIDE, which is the common case: one prism, no splitting.
+    if (!(a_dn || b_dn || c_dn)) {
+        out.cut += prism(area, ha, hb, hc);
+        return;
+    }
+    if (!(a_up || b_up || c_up)) {
+        out.fill += -prism(area, ha, hb, hc);
+        return;
+    }
+
+    // MIXED. Exactly one vertex is alone on its side; find it, cut the two edges
+    // that leave it, and the triangle becomes a small triangle plus a quad. A
+    // triangle counted whole on one side would put fill in the cut column, and
+    // the machines are hired against that column.
+    const core::Point2 p[3]{pa, pb, pc};
+    const core::Mm h[3]{ha, hb, hc};
+
+    int lone = 0;
+    for (int i = 0; i < 3; ++i) {
+        const bool up = h[i] > 0;
+        const bool o1 = h[(i + 1) % 3] > 0;
+        const bool o2 = h[(i + 2) % 3] > 0;
+        if (up != o1 && up != o2) lone = i;
+    }
+
+    const int j = (lone + 1) % 3;
+    const int k = (lone + 2) % 3;
+
+    const core::Point2 m1 = plane_crossing(p[lone], h[lone], p[j], h[j]);
+    const core::Point2 m2 = plane_crossing(p[lone], h[lone], p[k], h[k]);
+
+    // The corner triangle: the lone vertex and the two crossings, which sit AT the
+    // plane and so have height zero.
+    const core::Mm2 corner        = triangle_area(p[lone], m1, m2);
+    const core::Mm3 corner_volume = prism(corner, h[lone], 0, 0);
+
+    // The rest is the quad, split into two triangles. Its volume is what the
+    // whole triangle would have been minus the corner's — computed that way
+    // rather than by re-triangulating, so the two pieces cannot disagree about
+    // the total by a rounding.
+    const core::Mm3 whole = prism(area, h[lone], h[j], h[k]);
+    const core::Mm3 rest  = whole - corner_volume;
+
+    if (h[lone] > 0) {
+        out.cut += corner_volume;
+        out.fill += -rest;
+    } else {
+        out.fill += -corner_volume;
+        out.cut += rest;
+    }
+}
+
+} // namespace
+
+core::Result<Earthwork> earthwork(const std::vector<Level>& points, core::Mm level)
+{
+    if (points.size() < 3)
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "Hacim hesabı en az üç kotlu nokta ister. Verilen: " +
+                             std::to_string(points.size()) + ".");
+
+    std::vector<Level> unique;
+    unique.reserve(points.size());
+    {
+        std::map<Key, std::size_t> seen;
+        for (const Level& p : points)
+            if (seen.emplace(key_of(p.at), unique.size()).second) unique.push_back(p);
+    }
+    if (unique.size() < 3)
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "Hacim hesabı en az üç FARKLI kotlu nokta ister.");
+
+    CDT::Triangulation<double> cdt;
+    std::vector<CDT::V2d<double>> vertices;
+    vertices.reserve(unique.size());
+    for (const Level& p : unique)
+        vertices.push_back(
+            CDT::V2d<double>{static_cast<double>(p.at.x), static_cast<double>(p.at.y)});
+
+    cdt.insertVertices(vertices);
+    cdt.eraseSuperTriangle();
+
+    if (cdt.triangles.empty())
+        return core::err(core::ErrorCode::ValidationFailed,
+                         "Bu noktalardan yüzey kurulamadı: hepsi aynı doğru üzerinde olabilir.");
+
+    Earthwork out;
+    for (const CDT::Triangle& tri : cdt.triangles) {
+        const std::size_t ia = tri.vertices[0];
+        const std::size_t ib = tri.vertices[1];
+        const std::size_t ic = tri.vertices[2];
+        if (ia >= unique.size() || ib >= unique.size() || ic >= unique.size()) continue;
+
+        accumulate(out, unique[ia].at, unique[ia].height - level, unique[ib].at,
+                   unique[ib].height - level, unique[ic].at, unique[ic].height - level);
+    }
     return out;
 }
 

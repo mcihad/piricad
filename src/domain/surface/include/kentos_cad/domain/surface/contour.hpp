@@ -63,4 +63,25 @@ inline constexpr std::size_t kMaxContours = 200000;
 /// True when the triangulator was compiled in.
 bool available() noexcept;
 
+/// Earthwork against a reference level.
+///
+/// The two numbers a site report is built on: how much has to come off and how
+/// much has to go on. They are reported SEPARATELY and never netted into one,
+/// because a site that is 500 m³ cut and 500 m³ fill is a week of work and a
+/// site whose net is zero because nothing moves is none — and the machines are
+/// hired against the first number, not the second.
+struct Earthwork
+{
+    core::Mm3 cut{0};  ///< material above the reference level, to be removed
+    core::Mm3 fill{0}; ///< space below it, to be made up
+    core::Mm2 area{0}; ///< the plan area the figures were computed over
+};
+
+/// Computes cut and fill between the surface through `points` and `level`.
+///
+/// Each triangle is split where the reference plane crosses it, so a triangle
+/// that is partly above and partly below contributes to both figures and neither
+/// is rounded up to swallow the other. Refuses fewer than three points.
+core::Result<Earthwork> earthwork(const std::vector<Level>& points, core::Mm level);
+
 } // namespace kentos::domain::surface
