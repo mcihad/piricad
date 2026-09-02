@@ -174,6 +174,12 @@ KENTOS_COMMAND(fit)
 
 } // namespace kentos::command
 
+namespace kentos::command {
+/// Declared here because its body lives in `stakeout_command.cpp`; the registrar
+/// below is the one place this module's commands are named.
+KENTOS_COMMAND(stakeout);
+} // namespace kentos::command
+
 namespace kentos::domain::geodesy {
 
 void register_geodesy_commands(kentos::command::Registry& r)
@@ -182,6 +188,7 @@ void register_geodesy_commands(kentos::command::Registry& r)
     // because that list lives in `/src/command`, which may not depend on a domain
     // module (CLAUDE.md Article 3.2).
     (void)r.add(kentos::command::kentos_command_fit());
+    (void)r.add(kentos::command::kentos_command_stakeout());
 }
 
 } // namespace kentos::domain::geodesy

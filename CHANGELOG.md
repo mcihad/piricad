@@ -6,6 +6,25 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — Netcad iş akışı: NOKTALAR ve APLİKASYON
+
+Hedef kitle Netcad kullanan harita mühendisleri; bu iki komut onların günlük
+işinin iki ucu.
+
+- **`NOKTALAR`** — ölçü nokta listesi okuma ve yazma. Sahadan dönen numaralı
+  liste çizime nokta olarak giriyor; numara, kot ve kod öznitelik oluyor.
+  **Y sağa, X yukarıdır** (Türkiye'de liste `no, Y, X, Z` yazılır); `eksen=XY`
+  söylenmek zorunda, tahmin edilmiyor. Koordinatlar basamak basamak okunuyor,
+  `strtod` ile değil. Ayraç dosyadan anlaşılıyor, Türkçe ondalık virgülü
+  okunuyor, bozuk satır sessizce atlanmıyor.
+- **`APLİKASYON`** — istasyondan her noktaya mesafe ve açı listesi. `baglama`
+  verilirse açılar ondan ölçülüyor (**semt açısı**), verilmezse kuzeyden
+  (**azimut**) — ve rapor hangisi olduğunu yazıyor. Alet göreli açı okurken
+  azimut vermek, operatörü tripodun başında kafadan çevirmeye zorlardı.
+  Birim `açı_birimi` tercihine uyuyor, varsayılan grad.
+- Belgeler: [`points.md`](docs/komutlar/points.md),
+  [`stakeout.md`](docs/komutlar/stakeout.md).
+
 ### Değişti — tanımlayıcılar da KentOSCad oldu (Faz 0/2)
 
 Görünen ad daha önce değişmişti; bu adım kodun içindeki adları taşıdı. Tamamen

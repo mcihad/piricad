@@ -482,3 +482,111 @@ TEST_CASE("OTURT ölçeği kilitlenebilir: saha ölçüsü yeniden ölçeklenmez
     const kentos::core::Box2 box = doc.extent();
     CHECK(box.max_x - box.min_x == 100000);
 }
+
+// =============================================================================
+// APLİKASYON — the list that takes a design back to the field
+// =============================================================================
+
+TEST_CASE("APLİKASYON: azimut kuzeyden saat yönünde ölçülür")
+{
+    kentos::core::Document doc;
+    kentos::command::Registry reg;
+    kentos::command::Journal journal;
+    kentos::command::UndoStack undo;
+    kentos::command::Bus bus{doc, reg, journal, undo};
+    kentos::command::register_builtin_commands(reg);
+    kentos::domain::geodesy::register_geodesy_commands(reg);
+
+    std::string said;
+    bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+
+    using kentos::command::Origin;
+    REQUIRE(bus.execute_line("KATMAN ad=NIRENGI", Origin::Test).ok());
+    REQUIRE(bus.execute_line("NOKTA noktalar=0,100", Origin::Test).ok());   // due north
+    REQUIRE(bus.execute_line("NOKTA noktalar=100,0", Origin::Test).ok());   // due east
+
+    said.clear();
+    auto listed = bus.execute_line("APLİKASYON istasyon=0,0", Origin::Test);
+    if (!listed) FAIL_WITH("APLİKASYON", listed.error().message);
+
+    // Grad by default: north is 0, east is 100. Reading 100 for north would mean
+    // the bearing was measured the mathematical way and every angle in the sheet
+    // would be wrong by a quadrant.
+    CHECK(said.find("0,0000 grad") != std::string::npos);   // due north
+    CHECK(said.find("100,0000 grad") != std::string::npos); // due east
+    CHECK(said.find("azimut") != std::string::npos);
+
+    // And the distances, which are exact integers.
+    CHECK(said.find("100,000") != std::string::npos);
+}
+
+TEST_CASE("APLİKASYON: bağlama verilince açılar ondan ölçülür")
+{
+    kentos::core::Document doc;
+    kentos::command::Registry reg;
+    kentos::command::Journal journal;
+    kentos::command::UndoStack undo;
+    kentos::command::Bus bus{doc, reg, journal, undo};
+    kentos::command::register_builtin_commands(reg);
+    kentos::domain::geodesy::register_geodesy_commands(reg);
+
+    std::string said;
+    bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+
+    using kentos::command::Origin;
+    REQUIRE(bus.execute_line("KATMAN ad=NIRENGI", Origin::Test).ok());
+    REQUIRE(bus.execute_line("NOKTA noktalar=100,0", Origin::Test).ok()); // due east
+
+    said.clear();
+    // Backsight due north: the instrument is zeroed there, so a point due east
+    // reads 100 grad from it — the number the operator actually turns.
+    REQUIRE(bus.execute_line("APLİKASYON istasyon=0,0 baglama=0,100", Origin::Test).ok());
+
+    CHECK(said.find("semt açısı") != std::string::npos);
+    CHECK(said.find("100,0000 grad") != std::string::npos);
+}
+
+TEST_CASE("APLİKASYON: nokta numarasını listeye yazar")
+{
+    kentos::core::Document doc;
+    kentos::command::Registry reg;
+    kentos::command::Journal journal;
+    kentos::command::UndoStack undo;
+    kentos::command::Bus bus{doc, reg, journal, undo};
+    kentos::command::register_builtin_commands(reg);
+    kentos::domain::geodesy::register_geodesy_commands(reg);
+
+    std::string said;
+    bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+
+    using kentos::command::Origin;
+    REQUIRE(bus.execute_line("KATMAN ad=NIRENGI", Origin::Test).ok());
+    REQUIRE(bus.execute_line("NOKTA noktalar=100,0", Origin::Test).ok());
+    REQUIRE(bus.execute_line("SÜTUN kimlik=nokta_no tur=metin", Origin::Test).ok());
+    REQUIRE(bus.execute_line("ÖZNİTELİK ad=nokta_no nesne=1 deger=NIR-3", Origin::Test).ok());
+
+    said.clear();
+    REQUIRE(bus.execute_line("APLİKASYON istasyon=0,0", Origin::Test).ok());
+
+    // A list whose rows have no name is a list nobody can take back to the field.
+    CHECK(said.find("NIR-3") != std::string::npos);
+}
+
+TEST_CASE("APLİKASYON çizimi değiştirmez")
+{
+    kentos::core::Document doc;
+    kentos::command::Registry reg;
+    kentos::command::Journal journal;
+    kentos::command::UndoStack undo;
+    kentos::command::Bus bus{doc, reg, journal, undo};
+    kentos::command::register_builtin_commands(reg);
+    kentos::domain::geodesy::register_geodesy_commands(reg);
+
+    using kentos::command::Origin;
+    REQUIRE(bus.execute_line("KATMAN ad=NIRENGI", Origin::Test).ok());
+    REQUIRE(bus.execute_line("NOKTA noktalar=100,0", Origin::Test).ok());
+
+    const std::uint64_t before = doc.content_hash();
+    REQUIRE(bus.execute_line("APLİKASYON istasyon=0,0", Origin::Test).ok());
+    CHECK(doc.content_hash() == before);
+}
