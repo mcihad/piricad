@@ -236,6 +236,51 @@ if(KENTOS_WITH_BENCHMARK)
         VERSION 1.8)
 endif()
 
+option(KENTOS_WITH_CDT "Delaunay triangulation for the terrain model" ON)
+
+if(KENTOS_WITH_CDT)
+    # CLAUDE.md 2.7 and 5.16 again: a Delaunay triangulation is a solved problem
+    # with well-known degeneracies — cocircular points, collinear runs, duplicate
+    # coordinates — and the naive implementations get every one of them wrong on
+    # exactly the data a survey produces (a grid of levelling points is cocircular
+    # everywhere).
+    #
+    # CDT rather than CGAL for this: header-only, no dependency tree, and it uses
+    # Shewchuk's robust predicates, which CLAUDE.md 5.4 already requires and
+    # permits. CGAL stays the answer for the straight skeleton (§9.2).
+    #
+    # LICENCE: MPL 2.0 — file-level copyleft, GPLv3-compatible, and recorded in
+    # /NOTICE with this exact pin.
+    # POPULATED, NOT ADDED. CDT is header-only in this configuration, and its own
+    # `CMakeLists.txt` opens with `cmake_minimum_required(VERSION 3.1)` — CMake 4
+    # removed compatibility below 3.5 and refuses to configure it at all. The
+    # library is fine; its build file is from before that change. So the source is
+    # fetched and the include directory is used directly, which is the same shape
+    # this file already uses for Lua, sol2 and the stb header drop.
+    if(NOT KENTOS_FETCH_DEPENDENCIES)
+        message(FATAL_ERROR
+            "KENTOS_WITH_CDT=ON but KENTOS_FETCH_DEPENDENCIES=OFF.\n"
+            "  CDT is fetched from a pinned commit; allow the download,\n"
+            "  or configure with -DKENTOS_WITH_CDT=OFF.")
+    endif()
+
+    message(STATUS "  cdt: sabitlenmiş kaynaktan (${KENTOS_DEP_CDT_SHA})")
+    FetchContent_Declare(cdt
+        GIT_REPOSITORY ${KENTOS_DEP_CDT_REPO}
+        GIT_TAG        ${KENTOS_DEP_CDT_SHA}
+        GIT_SHALLOW    FALSE
+        SOURCE_SUBDIR  cmake-yok        # deliberately absent: populate, do not add
+        SYSTEM
+        EXCLUDE_FROM_ALL)
+    FetchContent_MakeAvailable(cdt)
+
+    # The one target the rest of the build sees. INTERFACE, because there is
+    # nothing to compile: `CDT_USE_AS_COMPILED_LIBRARY` is off and every entry
+    # point is a template in a header.
+    add_library(kentos_cdt INTERFACE)
+    target_include_directories(kentos_cdt SYSTEM INTERFACE "${cdt_SOURCE_DIR}/CDT/include")
+endif()
+
 option(KENTOS_WITH_CLIPPER2 "Polygon offset and boolean through Clipper2" ON)
 
 if(KENTOS_WITH_CLIPPER2)

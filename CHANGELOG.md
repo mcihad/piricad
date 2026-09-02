@@ -6,6 +6,32 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — EŞYÜKSELTİ ve yüzey modülü
+
+Yeni modül `/src/domain/surface` (Article 3.1 zaten öngörüyordu).
+
+- **`EŞYÜKSELTİ`** — kotlu noktalardan eş yükselti eğrileri. Bir ekip nivelman
+  yapıp birkaç yüz nokta getirir; paftaya giren o noktalar değil, tasarımcının
+  araziyi okuduğu bu eğrilerdir. Eğriler kendi katmanına düşüyor ve her biri kendi
+  `kot` özniteliğini taşıyor.
+- **Kotu olmayan nokta kullanılmıyor**, sıfır sayılmıyor: bir yamacın ortasındaki
+  deniz seviyesi noktası etrafındaki bütün eğrileri aşağı çekerdi.
+- **Üçgenleme saklanmıyor.** Ara üründür; saklamak programın tamamına — kırpma,
+  seçme, alan, dışa aktarma — kimsenin çizmediği bir şey için tür öğretmek olurdu.
+- **CDT bağlandı** (MPL 2.0, 21fae3ba'da sabit, `/NOTICE`'ta). Bir nivelman
+  ızgarası **her yerde** eş çemberlidir ve elle yazılmış bir Delaunay'ın çapraz
+  üçgen ürettiği yer tam orasıdır. CDT, 5.4'ün zaten zorunlu kıldığı Shewchuk
+  yüklemleriyle çalışıyor. Kendi CMakeLists'i CMake 4'ün desteklemediği bir
+  minimum bildirdiği için kaynağı alınıp include dizini doğrudan kullanılıyor —
+  deponun Lua/sol2/stb için zaten kullandığı kalıp.
+- **Zincirleme toleranssız**: bir kotun bir kenarı kestiği yer, kenarın iki
+  ucundan sabit sırayla hesaplanıyor, yani kenarı paylaşan iki üçgen aynı
+  milimetreyi buluyor ve parçalar tolerans olmadan birleşiyor. Tolerans gerektiren
+  bir zincirleme, paftanın basacağı kıl payı boşluklar bırakırdı.
+- Kapalı görünen ama **alanı sıfır** olan eğri (bir kot sırası nivelman noktalarına
+  tam denk geldiğinde olur) alan değil çizgi olarak çiziliyor.
+- Belge: [`contour.md`](docs/komutlar/contour.md).
+
 ### Eklendi — DÖNÜŞTÜR: koordinat sistemi dönüşümü
 
 - Çizimin tamamını bir sistemden diğerine taşıyor ve belgenin CRS etiketini de

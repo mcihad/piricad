@@ -39,6 +39,7 @@ add_subdirectory(src/script)
 add_subdirectory(src/render)
 add_subdirectory(src/domain/geodesy)
 add_subdirectory(src/domain/cadastre)
+add_subdirectory(src/domain/surface)
 
 if(KENTOS_BUILD_APP)
     add_subdirectory(src/app)

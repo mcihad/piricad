@@ -24,6 +24,17 @@ Currently linked
                           relinking right is preserved. Qt Charts and
                           Qt DataVisualization are GPLv3-only and are NOT used.
 
+  CDT                     MPL 2.0               1.4.1     21fae3ba
+                          Delaunay triangulation behind
+                          domain/surface/contour.hpp — the terrain model the
+                          EŞYÜKSELTİ command traces contours through. Linked
+                          PRIVATE into kentos_domain_surface; its headers reach
+                          contour.cpp and nothing else. Header-only in this
+                          configuration (CDT_USE_AS_COMPILED_LIBRARY off), so it
+                          is populated and its include directory used directly:
+                          its own CMakeLists declares a minimum below the 3.5
+                          CMake 4 still supports.
+
   Clipper2                BSL-1.0               1.4.0     736ddb0b
                           Polygon offset behind kentos_cad/core/offset.hpp — the
                           OFSET command, and the base ifraz and çekme mesafesi
@@ -243,8 +254,6 @@ recorded as SHAs (CLAUDE.md 5.12).
 
   xxHash                  BSD-2-Clause          v0.8.3    e626a72b
                           Fast hashing.
-  CDT                     MPL 2.0               1.4.1     21fae3ba
-                          Constrained Delaunay for TIN and kırıklık hatları.
 
 Bundled in-tree
 ---------------
@@ -357,7 +366,6 @@ the exact version is pinned in vcpkg.json when the option is first enabled.
   PROJ                    MIT                   coordinate transformation
   GEOS                    LGPL 2.1              overlay operations
   CGAL                    GPLv3+                exact arithmetic, straight skeleton
-  CDT                     MPL 2.0               constrained Delaunay
   Boost (Geometry, PFR)   BSL-1.0               R-tree index
   Eigen                   MPL 2.0               linear algebra, adjustment
   Shewchuk predicates     public domain         robust orientation / incircle

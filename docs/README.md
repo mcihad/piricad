@@ -71,6 +71,7 @@ Tek tek komutlar:
 | `OFSET` | [Paralel çizme](komutlar/offset.md) |
 | `NOKTALAR` | [Ölçü nokta listesi](komutlar/points.md) |
 | `APLİKASYON` | [Aplikasyon listesi](komutlar/stakeout.md) |
+| `EŞYÜKSELTİ` | [Eş yükselti eğrileri](komutlar/contour.md) |
 | `DİLİM` | [Daire dilimi çizme](komutlar/sector.md) |
 | `HALKA` | [Delikli halka çizme](komutlar/annulus.md) |
 | `ELİPS` | [Elips çizme](komutlar/ellipse_draw.md) |

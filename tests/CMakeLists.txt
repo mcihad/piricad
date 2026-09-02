@@ -16,6 +16,7 @@ add_executable(kentos_tests
     unit/test_database.cpp
     unit/test_docs.cpp
     unit/test_cadastre.cpp
+    unit/test_surface.cpp
     unit/test_geodesy.cpp
     unit/test_geometry.cpp
     unit/test_golden.cpp
@@ -49,6 +50,7 @@ target_link_libraries(kentos_tests PRIVATE
     kentos_io
     kentos_domain_geodesy
     kentos_domain_cadastre
+    kentos_domain_surface
     kentos_render
     kentos_script
     kentos_flags

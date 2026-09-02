@@ -68,6 +68,7 @@ target_link_libraries(kentos_cad PRIVATE
     kentos_io
     kentos_domain_geodesy
     kentos_domain_cadastre
+    kentos_domain_surface
     kentos_render
     kentos_script
     kentos_flags
