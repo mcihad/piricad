@@ -28,6 +28,7 @@
 /// Qt widgets this header only holds pointers to. Forward-declared rather than
 /// included so that touching a widget's header does not rebuild everything that
 /// includes the main window.
+class QActionGroup;
 class QComboBox;
 class QStackedWidget;
 class QFrame;
@@ -102,6 +103,10 @@ private slots:
     void onEcho(const QString& text);
     void onDocumentChanged();
     void onPromptChanged(const QString& prompt);
+
+    /// Re-arms a modal draw tool after it has finished a shape, so the next one
+    /// can be drawn without going back to the tool column.
+    void onInteractiveFinished(const QString& id, bool mutated);
     void onUndoStateChanged(bool canUndo, bool canRedo);
     void onCursorMoved(core::Point2 world);
     void onViewRequested(const QString& mode, double factor);
@@ -133,11 +138,42 @@ private:
     void buildActions();
     void buildToolBars();
 
+    /// Lights the tool whose command is actually running, and the select tool when
+    /// none is.
+    ///
+    /// The tool that is lit used to be decided by whether ANY command was waiting
+    /// for input, which lit ÇİZGİ for every one of them — so picking the polygon
+    /// tool and clicking a corner moved the highlight back to the line. Which tool
+    /// is running is a question only the session can answer, and the answer is
+    /// matched through `Registry`: the command each action sends is the one thing
+    /// that identifies it, and there is no second table of tools to keep in step
+    /// (CLAUDE.md 5.10).
+    void syncToolSelection();
+
+    /// Asks before erasing, when `core.duzenleme.silme_onayi` says to. Returns
+    /// whether to go ahead.
+    ///
+    /// The question is the SHELL'S and never the command's. `SİL` has to run in a
+    /// journal replay, in a batch and from a script, and a command body that
+    /// stopped to open a dialog could do none of them — so the interface asks
+    /// first and then sends exactly the command a script would send (Article 1.2).
+    bool confirmErase();
+
     /// Creates a disabled action for a command that does not exist yet. The
     /// tooltip names the phase it arrives in, so the interface never shows a
     /// button that silently does nothing (.claude/ui.md).
     QAction* placeholder(Glyph glyph, const QString& text, const QString& command,
                          const QString& phase);
+
+    /// Creates a button for a command that EDITS THE SELECTION and then finishes.
+    ///
+    /// `runCommand` and not `runLine`: these ask for points, so they begin an
+    /// interactive session the way a typed command does — `runLine` dispatches a
+    /// complete invocation and a transform with no arguments would end before it
+    /// started. They are not modal draw tools and do not join the exclusive group:
+    /// nothing stays armed after one runs.
+    QAction* modifyTool(Glyph glyph, const QString& text, const QString& command,
+                        const QString& tip);
 
     /// Creates an action that dispatches `line` through the bus. The GUI is a
     /// client of the command bus and gets no private path (CLAUDE.md Article 1).
@@ -208,6 +244,12 @@ private:
     QDockWidget* journalDock_{nullptr};
 
     // ---- actions, each of which dispatches one command ----
+
+    /// The modal draw tools, exclusive so exactly one is lit. Held because
+    /// `syncToolSelection` walks it: the group already IS the list of tools, so
+    /// keeping a second one beside it is the duplication CLAUDE.md 5.10 forbids.
+    QActionGroup* drawingTools_{nullptr};
+
     QAction* actSelect_{nullptr};
     QAction* actCut_{nullptr};
     QAction* actCopyClip_{nullptr};
@@ -261,6 +303,14 @@ private:
     QAction* actArc_{nullptr};
     QAction* actCircle_{nullptr};
     QAction* actRectangle_{nullptr};
+    QAction* actScale_{nullptr};
+    QAction* actMirror_{nullptr};
+    QAction* actArray_{nullptr};
+    QAction* actExtend_{nullptr};
+    QAction* actSplit_{nullptr};
+    QAction* actChamfer_{nullptr};
+    QAction* actFillet_{nullptr};
+    QAction* actSetLayer_{nullptr};
     QAction* actPoint_{nullptr};
     QAction* actText_{nullptr};
     QAction* actMove_{nullptr};

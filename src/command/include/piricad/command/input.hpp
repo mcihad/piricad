@@ -43,8 +43,11 @@ const char* origin_name(Origin o);
 /// line says nothing about the shape being drawn, and the user finds out what
 /// they built after they have built it.
 enum class RubberShape : std::uint8_t {
-    Line,     ///< the segment about to be drawn: ÇİZGİ, ALAN
-    Rectangle ///< the face two opposite corners enclose: DİKDÖRTGEN
+    Line,      ///< the segment about to be drawn: ÇİZGİ
+    Rectangle, ///< the face two opposite corners enclose: DİKDÖRTGEN
+    Ring,      ///< the closed face the points so far would enclose: ALAN
+    Circle,    ///< the circle a centre and a rim point make: DAİRE
+    Arc        ///< the arc a centre, a start and the cursor sweep out: YAY
 };
 
 struct Prompt
@@ -55,6 +58,17 @@ struct Prompt
     bool has_rubber_band{false};                 ///< whether a preview should be drawn
     Point2 rubber_origin{};                      ///< where that preview starts
     RubberShape rubber_shape{RubberShape::Line}; ///< what it draws between the two
+
+    /// The points this run has already fixed, oldest first, `rubber_origin` last.
+    ///
+    /// A command that writes its geometry only once it is complete — ALAN cannot
+    /// add a two-vertex face to the document, because no such face is valid — has
+    /// nothing on screen to show the work so far, and `rubber_origin` alone shows
+    /// only the newest segment. Every click then appeared to erase the one before
+    /// it and the shape arrived all at once on completion. A command that commits
+    /// as it goes (ÇİZGİ) leaves this empty: its segments are already in the
+    /// document, and drawing them twice is what a preview must not do.
+    std::vector<Point2> rubber_chain{};
 };
 
 /// Supplies values to a running command. Implementations: queued arguments

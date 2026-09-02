@@ -37,6 +37,7 @@
 
 #include <initializer_list>
 #include <memory>
+#include <span>
 
 namespace piricad::app {
 
@@ -109,6 +110,20 @@ public:
     void resetView();
 
     QString backendName() const;
+
+    /// The document this canvas draws. READ ONLY, like every other reader outside
+    /// a command (Article 5.9): the canvas edits through the bus and so does
+    /// anyone holding this.
+    const core::Document& document() const;
+
+    /// How many vertices the LAST overlay build put in the running command's
+    /// guide. Zero when no guide was drawn.
+    ///
+    /// A guide's correctness is a picture, and a picture is what a headless test
+    /// cannot look at — but "the circle guide is a circle" is answerable as a
+    /// count: a line has two vertices and a circle has many. Developer tooling in
+    /// the same category as `timeFrames`.
+    std::size_t guideVertexCountForProbe() const noexcept { return guide_vertices_; }
 
     /// The canvas frame as an image, whichever surface this build has.
     ///
@@ -198,6 +213,7 @@ private:
                           std::uint32_t fill_rgba = 0);
 
     /// Appends one run of widget-space points.
+    void addRun(std::size_t batch, std::span<const render::ScreenPointF> points, bool closed);
     void addRun(std::size_t batch, std::initializer_list<render::ScreenPointF> points, bool closed);
 
     /// Narrows a widget-space Qt point through the render module's one sanctioned
@@ -300,6 +316,74 @@ private:
     /// Rubber-band selection gesture. Session state, drawn only (model.md R43).
     bool selecting_{false};
     QPointF select_anchor_{};
+
+    /// A corner of a selected object that the pointer can take hold of.
+    ///
+    /// Session state and DRAWN ONLY (model.md R43): a grip is a handle on geometry,
+    /// never geometry itself. Dragging one changes nothing until the mouse is
+    /// released, and what happens then is an ordinary command — `KÖŞETAŞI` or
+    /// `KÖŞEEKLE` — dispatched through the bus with the same arguments a script
+    /// would send. The canvas gets no private road to the document (Article 1.2).
+    struct Grip
+    {
+        core::EntityId entity{core::kNoEntity};
+
+        /// 1-based, counted across the object's rings in R11 order — the exact
+        /// numbering `KÖŞETAŞI` and `KÖŞEEKLE` use, because it IS the argument
+        /// they are about to be given.
+        std::int64_t corner{0};
+
+        /// The press landed on an edge rather than on a corner, so releasing
+        /// creates a corner instead of moving one.
+        bool insert{false};
+
+        core::Point2 at{}; ///< where the grip sits now, in document millimetres
+
+        /// What the command will measure direction aids from — its rubber-band
+        /// origin. For a corner that is the corner itself; for an edge it is the
+        /// corner the edge LEAVES, not the point on the edge that was pressed.
+        /// Kept so the snap marker promises what the command will actually do
+        /// rather than something close to it.
+        core::Point2 base{};
+
+        bool valid() const noexcept { return entity != core::kNoEntity; }
+    };
+
+    /// The grip under the pointer, so it can be lit before it is grabbed.
+    Grip hover_grip_{};
+
+    /// The grip being dragged, and whether a drag is under way at all.
+    Grip drag_grip_{};
+    bool dragging_grip_{false};
+
+    /// Vertices the guide contributed to the last overlay build.
+    std::size_t guide_vertices_{0};
+
+    /// Scratch for a curve guide, kept so the frame path does not allocate.
+    std::vector<core::Mm> curve_scratch_x_;
+    std::vector<core::Mm> curve_scratch_y_;
+
+    /// Where the press landed, so a CLICK on a grip can be told from a DRAG of
+    /// one. Without it, taking hold of a corner and letting go without moving
+    /// wrote a command that moved the corner onto itself: no visible change, and
+    /// an undo step the user has to press Ctrl+Z through to reach the edit they
+    /// actually meant to undo.
+    QPointF drag_anchor_{};
+
+    /// Finds the grip under a widget-space point, corner before edge: a corner and
+    /// the two edges leaving it are all within a few pixels of each other, and a
+    /// user aiming at a corner means the corner.
+    Grip gripAt(const QPointF& where) const;
+
+private:
+
+    /// Draws the corner handles of every selected object, and the shape a drag
+    /// would produce while one is under way.
+    void buildGrips();
+
+    /// Sends the drag as a command. Called on release; a drag that never left the
+    /// grip sends nothing.
+    void commitGripDrag();
 
     /// The aid that would fire if the user clicked now. A preview, never an input:
     /// the value a click supplies is the raw world point, and the aids are applied

@@ -233,7 +233,7 @@ void show_colour(QToolButton* button, std::uint32_t rgba)
         painter.setBrush(colour);
         painter.setPen(QPen(colour.darker(140), 1));
         painter.drawRoundedRect(box, 3, 3);
-        painter.setPen(colour.lightnessF() > 0.55 ? Qt::black : Qt::white);
+        painter.setPen(colour.lightnessF() > 0.55F ? Qt::black : Qt::white);
         painter.drawText(box, Qt::AlignCenter,
                          colour.alpha() == 255 ? colour.name(QColor::HexRgb).toUpper()
                                                : colour.name(QColor::HexArgb).toUpper());

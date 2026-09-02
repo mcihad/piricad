@@ -30,12 +30,8 @@
 
 namespace piricad::core {
 
-/// Dense kind index. Stable forever once assigned: it reaches the file format,
-/// and R26 requires an unknown kind to round-trip byte-identically, which is
-/// only possible if ids are never re-meant.
-using KindId = std::uint16_t;
-
-inline constexpr KindId kNoKind = 0xFFFFu;
+// `KindId`, `kNoKind` and the built-in kind ids live in identity.hpp, so a caller
+// who only asks "is this a circle?" need not include this header.
 
 /// The slots handed to one kind function call. One call per batch (R23).
 using SlotSpan = std::span<const std::uint32_t>;
@@ -95,7 +91,7 @@ struct EmitBuffer
 using BboxFn = void (*)(const RingGeometry& geom, SlotSpan slots, std::span<Box2> out);
 
 /// Drawable geometry for the batch, appended to `into` in slot order.
-using EmitFn = void (*)(const RingGeometry& geom, SlotSpan slots, EmitBuffer& into);
+using OutlineFn = void (*)(const RingGeometry& geom, SlotSpan slots, EmitBuffer& into);
 
 /// 1 for every slot within `tolerance` millimetres of `probe`, 0 otherwise.
 using HitFn = void (*)(const RingGeometry& geom, SlotSpan slots, Point2 probe, Mm tolerance,
@@ -132,8 +128,10 @@ struct KindSpec
     /// older reader can still tell how much of the struct it understands.
     std::uint32_t size{sizeof(KindSpec)};
 
-    /// Dense index, assigned at registration. Not persisted — `stable_id` is what
-    /// reaches the file, because an index is an allocation detail (R22–R26).
+    /// The kind's number, DECLARED by the kind itself rather than handed out in
+    /// registration order — see `kPolylineKind`. It reaches the file: the project
+    /// writer stores this column, so a value once used can never be re-meant
+    /// (R26). `stable_id` is the name a human and a plugin use for the same thing.
     KindId id{kNoKind};
     const char* stable_id{""};  ///< "core.polyline", "cadastre.parsel" — never renamed
     const char* summary_tr{""}; ///< one line, Turkish, shown in help and docs
@@ -143,7 +141,7 @@ struct KindSpec
     const char* names[kMaxNames]{};
 
     BboxFn bbox{nullptr};
-    EmitFn emit{nullptr};
+    OutlineFn outline{nullptr};
     HitFn hit{nullptr};
     AreaFn area{nullptr};
     ReadFn read{nullptr};
@@ -192,8 +190,28 @@ const KindTable& builtin_kinds();
 /// two (R25).
 #define PIRICAD_KIND(sym) ::piricad::core::KindSpec piricad_kind_##sym()
 
-/// The one built-in kind today: an open or closed run of vertices. Arcs, circles,
-/// text and points are Phase 2 and each will add one line here.
+/// The drawable, pickable outline of ONE slot, for a kind whose stored vertices
+/// are not its outline.
+///
+/// Returns false for `core.polyline`, whose rings ARE its outline and are read
+/// straight out of the arena with no copy — that is every entity on the
+/// five-million-parcel sheet the frame budget is written against (§10.1).
+/// Returns true for a curve, having filled `into` with the runs to walk.
+///
+/// THIS IS THE ONE PLACE that answers "what shape is this really". The renderer,
+/// the pick test, the snap engine and the canvas all ask it, so a new curve kind
+/// becomes visible, selectable and snappable by being registered — not by four
+/// separate edits that have to agree.
+bool curve_outline(KindId kind, const RingGeometry& geom, std::uint32_t slot, EmitBuffer& into);
+
+/// The built-in kinds. Arcs, text and points are Phase 2 and each adds one line.
 PIRICAD_KIND(polyline);
+PIRICAD_KIND(circle);
+PIRICAD_KIND(arc);
+PIRICAD_KIND(point);
+
+/// Where a `core.point` slot sits.
+Point2 point_position_of(const RingGeometry& geom, std::uint32_t slot);
+
 
 } // namespace piricad::core

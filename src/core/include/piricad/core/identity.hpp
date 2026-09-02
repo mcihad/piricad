@@ -22,6 +22,28 @@
 
 namespace piricad::core {
 
+/// Which KIND of thing an entity is — `KindSpec::id`, and the reason two entities
+/// holding the same two vertices can be a line and a circle.
+///
+/// The TYPE lives here rather than in `entity_kind.hpp` so that a caller who only
+/// needs to ask "is this a circle?" does not have to include the kind machinery.
+/// That is not tidiness: `KindSpec` has a member called `emit`, `emit` is a Qt
+/// macro, and pulling that struct into a Qt translation unit does not fail with a
+/// message about Qt — it fails with `expected unqualified-id` on a line that
+/// looks perfectly good.
+using KindId = std::uint16_t;
+
+inline constexpr KindId kNoKind = 0xFFFFu;
+
+/// The built-in kind ids, DECLARED by each kind rather than handed out in
+/// registration order. The project writer stores this number, so a value once
+/// used can never be re-meant (model.md R26).
+inline constexpr KindId kPolylineKind = 1;
+inline constexpr KindId kCircleKind   = 2;
+inline constexpr KindId kArcKind      = 3;
+inline constexpr KindId kPointKind    = 4;
+
+
 // ---------------------------------------------------------------- slots -----
 
 using EntityId = std::uint32_t;

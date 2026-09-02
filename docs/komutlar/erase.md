@@ -94,15 +94,38 @@ GERİAL
 
 ### Arayüz
 
-Nesneleri fareyle seçin (tek tık ya da kutu sürükleyin), sonra araç kutusundaki veya
-**Düzen** araç çubuğundaki **Sil** düğmesine basın — ya da **Düzen > Sil** menüsünü
-kullanın. Seçim boşsa transkriptte hatırlatma görürsünüz:
+Nesneleri fareyle seçin (tek tık ya da kutu sürükleyin), sonra **Del** tuşuna basın —
+ya da araç kutusundaki, **Düzen** araç çubuğundaki **Sil** düğmesini, ya da
+**Düzen > Sil** menüsünü kullanın. Dördü de aynı komutu gönderir.
+
+**Del** pencerenin tamamında çalışır: odak tuvalde, katman listesinde ya da öznitelik
+tablosunda olsun fark etmez, silinen hep aynı seçimdir.
+
+Seçim boşsa transkriptte hatırlatma görürsünüz:
 
 ```text
 Silinecek nesne seçili değil. Nesneleri seçin ya da SİL nesneler=1 yazın.
 ```
 
 Seçim yapmayı [`SEÇ`](select.md) sayfası anlatır.
+
+#### Silmeden önce onay isteme
+
+**Ayarlar > Genel** altındaki **silme onayı** (`core.duzenleme.silme_onayi`) açıksa
+arayüz, silmeden önce kaç nesnenin gideceğini yazan bir pencere gösterir. Pencerenin
+öntanımlı düğmesi **Vazgeç**'tir: bu onay, Del'e yanlışlıkla basan kullanıcı için
+vardır, dolayısıyla düşünmeden basılan bir Enter hiçbir şey silmez.
+
+Ayar öntanımlı olarak **kapalıdır** ve yalnız arayüzü ilgilendirir — komut satırı,
+betik ve yapay zekâ hiçbir zaman soru sormaz, çünkü soru soran bir komut ne günlük
+tekrarında ne de toplu işte çalışabilirdi. Onay penceresi bu yüzden komutun değil
+kabuğun işidir.
+
+Ayarı komut satırından da değiştirebilirsiniz:
+
+```text
+TERCİH silme_onayı evet
+```
 
 ### Betik
 

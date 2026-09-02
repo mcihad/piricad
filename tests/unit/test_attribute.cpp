@@ -16,8 +16,8 @@ using namespace piricad::core;
 namespace {
 
 // A 10 m x 10 m square as an exterior ring, and a two-vertex open polyline.
-// Closure is implied, never stored: the kind's emit() flags the run closed and
-// the closing segment is reconstructed from that (see polyline_emit).
+// Closure is implied, never stored: the kind's outline() flags the run closed and
+// the closing segment is reconstructed from that (see polyline_outline).
 constexpr Mm k10m = 10 * kMmPerMetre;
 
 RingGeometry two_slot_geometry(std::uint32_t& parcel_out, std::uint32_t& line_out)
@@ -80,7 +80,7 @@ TEST_CASE("nesne türü kimliğe göre bulunur")
     // R22: six function pointers, all present. A null one is an indirect call
     // through zero in the middle of a frame.
     CHECK(pl->bbox != nullptr);
-    CHECK(pl->emit != nullptr);
+    CHECK(pl->outline != nullptr);
     CHECK(pl->hit != nullptr);
     CHECK(pl->area != nullptr);
     CHECK(pl->read != nullptr);
@@ -115,8 +115,19 @@ TEST_CASE("builtin_kinds her çağrıda aynı tabloyu verir")
     // R24 / core.md P8: immutable const state, not a registry. Two references to
     // the same object, so no caller can be handed a table someone else mutated.
     CHECK(&builtin_kinds() == &builtin_kinds());
-    CHECK_EQ(builtin_kinds().size(), std::size_t{1});
+    CHECK_EQ(builtin_kinds().size(), std::size_t{4});
     CHECK_EQ(std::string(builtin_kinds().all()[0].stable_id), std::string("core.polyline"));
+    CHECK_EQ(std::string(builtin_kinds().all()[1].stable_id), std::string("core.circle"));
+    CHECK_EQ(std::string(builtin_kinds().all()[2].stable_id), std::string("core.arc"));
+    CHECK_EQ(std::string(builtin_kinds().all()[3].stable_id), std::string("core.point"));
+
+    // The ids are DECLARED, not handed out in registration order, because the
+    // project writer stores the number: a kind that changed id between builds
+    // would reinterpret every entity in every saved file.
+    CHECK_EQ(builtin_kinds().find(kPolylineKind)->id, kPolylineKind);
+    CHECK_EQ(builtin_kinds().find(kCircleKind)->id, kCircleKind);
+    CHECK_EQ(builtin_kinds().find(kArcKind)->id, kArcKind);
+    CHECK_EQ(builtin_kinds().find(kPointKind)->id, kPointKind);
 }
 
 TEST_CASE("eksik ya da çakışan tür bildirimi reddedilir")
@@ -235,7 +246,7 @@ TEST_CASE("çokluçizgi türü çizim akışını halka halka üretir")
 
     const std::array<std::uint32_t, 2> slots{parcel, line};
     EmitBuffer buf;
-    pl->emit(g, slots, buf);
+    pl->outline(g, slots, buf);
 
     CHECK_EQ(buf.run_total(), std::size_t{2});
     CHECK_EQ(buf.run_count[0], std::uint32_t{4});

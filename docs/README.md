@@ -32,9 +32,29 @@ Tek tek komutlar:
 | `DIŞAAKTAR` | [Dış biçime yazma](komutlar/export.md) |
 | `VERİTABANI` | [PostGIS ile çalışma](komutlar/database.md) |
 | `ÇİZGİ` | [Çizgi çizme](komutlar/line.md) |
+| `ÇOKLUÇİZGİ` | [Tek nesne olarak çoklu çizgi](komutlar/polyline.md) |
+| `NOKTA` | [Ölçülmüş nokta](komutlar/point_draw.md) |
 | `ALAN` | [Kapalı alan çizme](komutlar/area.md) |
 | `DİKDÖRTGEN` | [İki köşeden dörtgen ve kare çizme](komutlar/rectangle.md) |
+| `DAİRE` | [Daire çizme](komutlar/circle_draw.md) |
+| `YAY` | [Yay çizme](komutlar/arc_draw.md) |
 | `METİN` | [Çizime yazı yazma](komutlar/text.md) |
+| `KÖŞETAŞI` | [Köşe taşıma](komutlar/vertex_move.md) |
+| `KÖŞEEKLE` | [Kenara köşe ekleme](komutlar/vertex_insert.md) |
+| `ALANAÇEVİR` | [Çizgileri kapalı alana çevirme](komutlar/to_area.md) |
+| `TAŞI` | [Nesne taşıma](komutlar/move.md) |
+| `KOPYALA` | [Nesne çoğaltma](komutlar/copy.md) |
+| `DÖNDÜR` | [Nesne döndürme](komutlar/rotate.md) |
+| `ÖLÇEKLE` | [Nesne ölçekleme](komutlar/scale.md) |
+| `AYNALA` | [Nesne aynalama](komutlar/mirror.md) |
+| `DİZİ` | [Nesne çoğaltma dizisi](komutlar/array.md) |
+| `BÖL` | [Çizgiyi ikiye bölme](komutlar/split.md) |
+| `BUDA` | [Çizgiyi sınıra budama](komutlar/trim.md) |
+| `UZAT` | [Çizgiyi sınıra uzatma](komutlar/extend.md) |
+| `PAH` | [Köşe pahı kırma](komutlar/chamfer.md) |
+| `YUVARLA` | [Köşe yuvarlatma](komutlar/fillet.md) |
+| `KATMANAT` | [Nesneyi başka katmana taşıma](komutlar/set_layer.md) |
+| `STİLKOPYALA` | [Stili başka nesneye uygulama](komutlar/match_style.md) |
 | `STİLAKTAR` | [Stili QGIS'e aktarma](komutlar/exportstyle.md) |
 | `ÖZNİTELİK` | [Nesnelerin verisi](komutlar/attribute.md) |
 | `SÜTUN` | [Öznitelik sütunu tanımlama](komutlar/column.md) |
@@ -44,6 +64,8 @@ Tek tek komutlar:
 | `STİL` | [Nesne stili ve gösterim kataloğu](komutlar/style.md) |
 | `SEMBOL` | [Gösterim rafı](komutlar/symbol.md) |
 | `ETİKET` | [Özniteliklerden yazı](komutlar/label.md) |
+| `ÖLÇ` | [Mesafe ölçme](komutlar/measure.md) |
+| `ALANÖLÇ` | [Alan ve çevre ölçme](komutlar/measure_area.md) |
 | `YAKINLAŞ` | [Görünüm ayarlama](komutlar/zoom.md) |
 | `GERİAL` | [Geri alma](komutlar/undo.md) |
 | `YİNELE` | [Yineleme](komutlar/redo.md) |

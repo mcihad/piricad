@@ -229,21 +229,35 @@ TEST_CASE("YAKALAMA: dik ayak önceki noktadan indirilen dikin ayağıdır")
     CHECK(r.point == (Point2{3000, 0}));
 }
 
-TEST_CASE("YAKALAMA: bu belge modeli tek noktalı nesne tutamaz")
+TEST_CASE("YAKALAMA: belge modeli tek noktalı nesne tutar, DÜĞÜM de onu bulur")
 {
-    // Pins the reason DÜĞÜM is not among the modes. A survey monument has nowhere
-    // to live in this document yet: an open ring wants two vertices,
-    // `İÇEAKTAR` says in as many words that it reads lines and areas,
-    // and no command draws a point. When point entities land, this case is the
-    // one that has to change first — and the snap mode follows it, not the other
-    // way round.
+    // This case used to pin the OPPOSITE: that the model could not hold a survey
+    // control point, which is why the DÜĞÜM bit was declared and left unused.
+    // `core.point` holds one now, so the mode is real — and the floor of two
+    // vertices moved to where the kind is known, which is what the second half
+    // checks.
     core::Document doc;
     core::Op op;
-    const std::array<Point2, 1> lone{Point2{5000, 5000}};
+    const core::LayerId layer = doc.ensure_layer("NIRENGI");
 
-    const auto refused = doc.add_polyline(doc.ensure_layer("NIRENGI"), lone, op);
+    const auto made = doc.add_point(layer, Point2{5000, 5000}, op);
+    REQUIRE(made.ok());
+    CHECK(doc.entities().kind[made.value()] == core::kPointKind);
+
+    core::SnapQuery q;
+    q.aim    = Point2{5100, 5000};
+    q.radius = 500;
+    q.modes  = core::SnapNode;
+
+    const core::SnapResult r = core::snap(doc, q);
+    CHECK(r.mode == core::SnapNode);
+    CHECK_EQ(r.point.x, Mm{5000});
+
+    // A LINE still needs two: the floor did not disappear, it moved.
+    const std::array<Point2, 1> lone{Point2{9000, 9000}};
+    const auto refused = doc.add_polyline(layer, lone, op);
     REQUIRE(!refused);
-    CHECK(refused.error().message.find("2 tepe") != std::string::npos);
+    CHECK(refused.error().message.find("iki nokta") != std::string::npos);
 }
 
 TEST_CASE("YAKALAMA: uzantı kenarın kendi doğrultusunu ucundan öteye taşır")
@@ -403,7 +417,7 @@ TEST_CASE("YAKALAMA: her mod bir kimlik, bir etiket ve maskede bir bit taşır")
         CHECK(label != "yok");
     }
 
-    CHECK_EQ(count, 11);
+    CHECK_EQ(count, 12);
     CHECK_EQ(static_cast<int>(seen), static_cast<int>(core::SnapAllMask));
 }
 

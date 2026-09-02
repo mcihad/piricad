@@ -3,6 +3,7 @@
 #include "piricad/app/main_window.hpp"
 #include "piricad/app/map_canvas.hpp"
 #include "piricad/app/theme.hpp"
+#include "piricad/core/circle.hpp"
 #include "piricad/command/log.hpp"
 
 #include <QApplication>
@@ -11,6 +12,7 @@
 #include <QGuiApplication>
 #include <QImage>
 #include <QLocale>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QTimer>
 #include <QTranslator>
@@ -295,6 +297,162 @@ int main(int argc, char** argv)
                                n, costs[costs.size() / 2], costs.front(),
                                scene.empty() ? 0 : scene[scene.size() / 2]);
             QApplication::exit(0);
+        });
+    }
+
+    // Corner editing, driven the way a user drives it: a press, some movement and
+    // a release on the canvas widget.
+    //
+    // Developer tooling and an environment variable rather than a CLI flag, the
+    // same category as PIRICAD_FRAME_DUMP and PIRICAD_SMOKE (CLAUDE.md 5.17 wants
+    // a /docs page for a FEATURE, and this is not one).
+    //
+    // WHY IT EXISTS. The unit suite links no Qt, so it can prove `KÖŞETAŞI` moves
+    // a corner but not that dragging a grip ever reaches `KÖŞETAŞI`. That gap was
+    // not hypothetical: the canvas sent `nesne` as a bare integer where the
+    // declaration says `ParamKind::Selection`, the bus refused the invocation
+    // before the body ran, and the only trace was a line in the transcript. Every
+    // unit test still passed, and grips could be grabbed and dragged with nothing
+    // whatsoever happening on release.
+    if (qEnvironmentVariableIsSet("PIRICAD_EDIT_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            auto* canvas = window.canvas();
+            if (canvas == nullptr) {
+                (void)std::fprintf(stderr, "[piricad] tuval yok\n");
+                QApplication::exit(1);
+                return;
+            }
+
+            window.runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+            window.runScriptLine(QStringLiteral("ALAN 485300,4310200 485360,4310200 "
+                                                "485360,4310245 485300,4310245"));
+            canvas->zoomToExtents();
+            window.runScriptLine(QStringLiteral("SEÇ nesneler=1"));
+            QCoreApplication::processEvents();
+
+            const auto send = [&](QEvent::Type t, const QPointF& at, Qt::MouseButton b,
+                                  Qt::MouseButtons held) {
+                QMouseEvent ev(t, at, canvas->mapToGlobal(at), b, held, Qt::NoModifier);
+                QCoreApplication::sendEvent(canvas, &ev);
+                QCoreApplication::processEvents();
+            };
+
+            /// One press-drag-release on the canvas, in widget coordinates.
+            const auto drag = [&](const QPointF& from, const QPointF& to) {
+                send(QEvent::MouseButtonPress, from, Qt::LeftButton, Qt::LeftButton);
+                send(QEvent::MouseMove, from + (to - from) * 0.5, Qt::NoButton, Qt::LeftButton);
+                send(QEvent::MouseMove, to, Qt::NoButton, Qt::LeftButton);
+                send(QEvent::MouseButtonRelease, to, Qt::LeftButton, Qt::NoButton);
+            };
+
+            const auto at = [&](piricad::core::Point2 world) {
+                const auto p = canvas->view().to_screen(world);
+                return QPointF(p.x, p.y);
+            };
+
+            int failures = 0;
+            const auto check = [&](bool ok, const char* what) {
+                if (!ok) {
+                    ++failures;
+                    (void)std::fprintf(stderr, "[piricad] BAŞARISIZ: %s\n", what);
+                }
+            };
+
+            const auto& doc    = canvas->document();
+            const auto corners = [&] { return doc.geometry().rings_of(doc.entities().slot[0]); };
+            const auto corner  = [&](std::uint32_t i) {
+                return doc.geometry().vertex(corners().first, i);
+            };
+
+            // 1. Drag corner 1. It must MOVE, and the object must stay one object
+            //    with the same key — a corner correction is not a new parsel.
+            const auto key_before  = doc.entities().key[0];
+            const QPointF grabbed  = at(piricad::core::Point2{485300000, 4310200000});
+            drag(grabbed, grabbed + QPointF(60, -40));
+
+            check(doc.geometry().ring_xs(corners().first).size() == 4, "köşe sayısı taşımada değişti");
+            check(corner(0).x != 485300000 || corner(0).y != 4310200000, "köşe taşınmadı");
+            check(doc.entities().key[0] == key_before, "taşıma nesnenin kimliğini değiştirdi");
+            check(doc.live_entity_count() == 1, "taşıma nesne sayısını değiştirdi");
+
+            // 2. Drag the MIDDLE of the edge from corner 2 to corner 3. That is not
+            //    a corner, so it must INSERT one rather than move either end.
+            const QPointF on_edge = at(piricad::core::Point2{485360000, 4310222500});
+            drag(on_edge, on_edge + QPointF(50, 0));
+
+            check(doc.geometry().ring_xs(corners().first).size() == 5, "kenara köşe eklenmedi");
+            check(corner(1).x == 485360000 && corner(1).y == 4310200000,
+                  "ekleme kendinden önceki köşeyi oynattı");
+            check(doc.live_entity_count() == 1, "ekleme nesne sayısını değiştirdi");
+
+            // 3. A press and release with no travel is a CLICK. It must write
+            //    nothing at all, or every grip a user brushes past becomes an undo
+            //    step they have to press Ctrl+Z through.
+            const std::uint64_t before = doc.content_hash();
+            const QPointF still        = at(corner(0));
+            send(QEvent::MouseButtonPress, still, Qt::LeftButton, Qt::LeftButton);
+            send(QEvent::MouseButtonRelease, still, Qt::LeftButton, Qt::NoButton);
+            check(doc.content_hash() == before, "kıpırdamayan tıklama çizimi değiştirdi");
+
+            // 4. A DRAW TOOL STAYS ARMED. Picking ALAN, drawing a parsel and
+            //    finishing it must leave the tool ready for the next parsel; the
+            //    Esc after that — with nothing drawn — must put it away. This is
+            //    the whole modal-tool contract, and it used to fail twice over:
+            //    the tool column lit ÇİZGİ for every command whatever was running,
+            //    and finishing a shape dropped the user back on the select tool.
+            auto* polygon = window.findChild<QAction*>(QStringLiteral("toolAction.ALAN"));
+            check(polygon != nullptr, "ALAN aracı bulunamadı");
+            if (polygon != nullptr) {
+                const auto esc = [&] {
+                    QKeyEvent k(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+                    QCoreApplication::sendEvent(canvas, &k);
+                    QCoreApplication::processEvents();
+                };
+
+                polygon->trigger();
+                QCoreApplication::processEvents();
+                check(polygon->isChecked(), "ALAN seçilince araç yanmıyor");
+
+                const std::size_t drawn_before = doc.live_entity_count();
+                send(QEvent::MouseButtonPress, QPointF(120, 120), Qt::LeftButton, Qt::LeftButton);
+                send(QEvent::MouseButtonRelease, QPointF(120, 120), Qt::LeftButton, Qt::NoButton);
+                send(QEvent::MouseButtonPress, QPointF(220, 120), Qt::LeftButton, Qt::LeftButton);
+                send(QEvent::MouseButtonRelease, QPointF(220, 120), Qt::LeftButton, Qt::NoButton);
+                send(QEvent::MouseButtonPress, QPointF(220, 220), Qt::LeftButton, Qt::LeftButton);
+                send(QEvent::MouseButtonRelease, QPointF(220, 220), Qt::LeftButton, Qt::NoButton);
+
+                esc();
+                check(doc.live_entity_count() == drawn_before + 1, "arayüzden alan çizilemedi");
+                check(polygon->isChecked(), "alan bitince araç sönüyor (yeniden kurulmuyor)");
+
+                esc();
+                check(!polygon->isChecked(), "boş Esc'ten sonra araç hâlâ yanıyor");
+            }
+
+            // 5. THE GUIDE SHOWS THE SHAPE. A circle previewed as a line from the
+            //    centre tells the user nothing about the circle, so the overlay
+            //    must carry a many-vertex run while DAİRE waits for its rim point.
+            //    Counted rather than looked at: the run is the guide.
+            auto* circle = window.findChild<QAction*>(QStringLiteral("toolAction.DAİRE"));
+            check(circle != nullptr, "DAİRE aracı bulunamadı");
+            if (circle != nullptr) circle->trigger();
+            QCoreApplication::processEvents();
+            send(QEvent::MouseButtonPress, QPointF(200, 200), Qt::LeftButton, Qt::LeftButton);
+            send(QEvent::MouseButtonRelease, QPointF(200, 200), Qt::LeftButton, Qt::NoButton);
+            send(QEvent::MouseMove, QPointF(280, 200), Qt::NoButton, Qt::NoButton);
+            (void)canvas->grabCanvas(); // the overlay is built while painting
+
+            check(canvas->guideVertexCountForProbe() >= piricad::core::kCircleSegments,
+                  "daire kılavuzu çember çizmiyor");
+
+            {
+                QKeyEvent k(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+                QCoreApplication::sendEvent(canvas, &k);
+                QCoreApplication::processEvents();
+            }
+
+            if (failures == 0) (void)std::fprintf(stdout, "[piricad] tuval düzenleme: tamam\n");
+            QApplication::exit(failures == 0 ? 0 : 1);
         });
     }
 

@@ -35,6 +35,7 @@
 #include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QPainter>
 #include <QPalette>
 #include <QPixmap>
@@ -48,6 +49,12 @@
 
 namespace piricad::app {
 namespace {
+
+/// Property name under which a tool button carries the command it sends.
+/// `QAction::data()` is taken by the glyph, and a tool that did not say which
+/// command it runs would have to be recognised from a hand-written table — the
+/// second command list CLAUDE.md 5.10 forbids.
+constexpr const char* kToolCommand = "piricad.command";
 
 /// The same swatch the layer panel draws, so the combo and the panel agree.
 /// `1 000 000` — thin-space thousands, the way a Turkish pafta prints a scale.
@@ -183,6 +190,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(controller_, &Controller::echoed, this, &MainWindow::onEcho);
     connect(controller_, &Controller::documentChanged, this, &MainWindow::onDocumentChanged);
     connect(controller_, &Controller::promptChanged, this, &MainWindow::onPromptChanged);
+    connect(controller_, &Controller::interactiveFinished, this,
+            &MainWindow::onInteractiveFinished);
     connect(controller_, &Controller::undoStateChanged, this, &MainWindow::onUndoStateChanged);
     connect(controller_, &Controller::viewRequested, this, &MainWindow::onViewRequested);
     connect(controller_, &Controller::settingChanged, this, &MainWindow::onSettingChanged);
@@ -296,6 +305,27 @@ QAction* MainWindow::commandAction(Glyph glyph, const QString& text, const QStri
     return action;
 }
 
+QAction* MainWindow::modifyTool(Glyph glyph, const QString& text, const QString& command,
+                                const QString& tip)
+{
+    auto* action = new QAction(text, this);
+    action->setToolTip(tip);
+    action->setStatusTip(tip);
+    action->setData(static_cast<int>(glyph));
+    action->setObjectName(QStringLiteral("toolAction.") + command);
+
+    connect(action, &QAction::triggered, this, [this, command] {
+        // Told rather than silently doing nothing: these commands read the
+        // selection, so an empty one is a mistake worth naming.
+        if (controller_->bus().selection().empty()) {
+            onEcho(tr("Önce nesne seçin: %1 seçili nesneler üzerinde çalışır.").arg(command));
+            return;
+        }
+        controller_->runCommand(command);
+    });
+    return action;
+}
+
 QAction* MainWindow::placeholder(Glyph glyph, const QString& text, const QString& command,
                                  const QString& phase)
 {
@@ -381,6 +411,8 @@ void MainWindow::buildActions()
     actLine_->setCheckable(true);
     actLine_->setToolTip(tr("ÇİZGİ — ardışık doğru parçaları çizer  ·  kısaltma: Ç, L"));
     actLine_->setData(static_cast<int>(Glyph::Line));
+    actLine_->setProperty(kToolCommand, QStringLiteral("ÇİZGİ"));
+    actLine_->setObjectName(QStringLiteral("toolAction.ÇİZGİ"));
     connect(actLine_, &QAction::triggered, this,
             [this] { controller_->runCommand(QStringLiteral("ÇİZGİ")); });
 
@@ -394,6 +426,19 @@ void MainWindow::buildActions()
         action->setCheckable(true);
         action->setToolTip(tip);
         action->setData(static_cast<int>(glyph));
+
+        // The command the button sends, kept ON the button. `data()` already
+        // carries the glyph, so this rides as a dynamic property rather than
+        // displacing it. `syncToolSelection` resolves it through `Registry` to
+        // recognise the running command, which is why nothing here needs a second
+        // table mapping tools to commands (CLAUDE.md 5.10).
+        action->setProperty(kToolCommand, command);
+
+        // Named so a test can reach the button a user would press. Nothing in the
+        // shell looks an action up by name; this exists for `PIRICAD_EDIT_PROBE`,
+        // which drives the tool column the way a hand does.
+        action->setObjectName(QStringLiteral("toolAction.") + command);
+
         connect(action, &QAction::triggered, this,
                 [this, command] { controller_->runCommand(command); });
         return action;
@@ -406,29 +451,54 @@ void MainWindow::buildActions()
                  tr("DİKDÖRTGEN — karşılıklı iki köşeden çizer; Ctrl basılıyken kare  ·  "
                     "kısaltma: DKD"));
 
-    auto* drawingTools = new QActionGroup(this);
-    drawingTools->setExclusive(true);
-    drawingTools->addAction(actSelect_);
-    drawingTools->addAction(actLine_);
-    drawingTools->addAction(actPolygon_);
-    drawingTools->addAction(actRectangle_);
+    drawingTools_ = new QActionGroup(this);
+    drawingTools_->setExclusive(true);
+    drawingTools_->addAction(actSelect_);
+    drawingTools_->addAction(actLine_);
+    drawingTools_->addAction(actPolygon_);
+    drawingTools_->addAction(actRectangle_);
 
-    actPolyline_ =
-        placeholder(Glyph::Polyline, tr("Çoklu Çizgi"), QStringLiteral("ÇOKLUÇİZGİ"), tr("Faz 2"));
-    actArc_    = placeholder(Glyph::Arc, tr("Yay"), QStringLiteral("YAY"), tr("Faz 2"));
-    actCircle_ = placeholder(Glyph::Circle, tr("Daire"), QStringLiteral("DAİRE"), tr("Faz 2"));
-    actPoint_  = placeholder(Glyph::Point, tr("Nokta"), QStringLiteral("NOKTA"), tr("Faz 2"));
-    actText_   = placeholder(Glyph::Text, tr("Metin"), QStringLiteral("METİN"), tr("Faz 2"));
+    actPolyline_ = drawTool(Glyph::Polyline, tr("Çoklu Çizgi"), QStringLiteral("ÇOKLUÇİZGİ"),
+                            tr("ÇOKLUÇİZGİ — çok köşeli TEK çizgi nesnesi  ·  kısaltma: ÇÇ"));
+    drawingTools_->addAction(actPolyline_);
+    actArc_ = drawTool(Glyph::Arc, tr("Yay"), QStringLiteral("YAY"),
+                       tr("YAY — merkez ve iki uçtan yay çizer; süpürme saat yönünün "
+                          "tersine  ·  kısaltma: YY"));
+    drawingTools_->addAction(actArc_);
+    actCircle_ = drawTool(Glyph::Circle, tr("Daire"), QStringLiteral("DAİRE"),
+                          tr("DAİRE — merkez ve çember noktasından daire çizer  ·  "
+                             "kısaltma: DR"));
+
+    // Into the exclusive group like every other modal tool, so exactly one stays
+    // lit and `syncToolSelection` can find it by the command it sends.
+    drawingTools_->addAction(actCircle_);
+    actPoint_ = drawTool(Glyph::Point, tr("Nokta"), QStringLiteral("NOKTA"),
+                         tr("NOKTA — ölçülmüş nokta: nirengi, poligon noktası, röper  ·  "
+                            "kısaltma: NK"));
+    drawingTools_->addAction(actPoint_);
+    actText_ = drawTool(Glyph::Text, tr("Metin"), QStringLiteral("METİN"),
+                        tr("METİN — çizime yazı yazar  ·  kısaltma: MT"));
+    drawingTools_->addAction(actText_);
 
     // ---- düzenleme ----
     actErase_ = new QAction(tr("Sil"), this);
-    actErase_->setToolTip(tr("SİL — seçilen nesneleri siler"));
+    actErase_->setToolTip(tr("SİL — seçilen nesneleri siler  ·  Del"));
     actErase_->setData(static_cast<int>(Glyph::Erase));
+
+    // Del, the key every drawing program deletes with. A WINDOW shortcut rather
+    // than one the canvas handles, so it works with the focus in the layer list
+    // or the attribute table too — the selection is the same selection whichever
+    // panel the user is looking at.
+    actErase_->setShortcut(QKeySequence::Delete);
+    actErase_->setShortcutContext(Qt::WindowShortcut);
+    addAction(actErase_);
+
     connect(actErase_, &QAction::triggered, this, [this] {
         // With a selection the button IS the command, exactly as typing `SİL`
         // would be. With nothing selected there is nothing to name, so the button
         // opens the command line rather than doing something silently.
         if (!controller_->bus().selection().empty()) {
+            if (!confirmErase()) return;
             controller_->runCommand(QStringLiteral("SİL"));
             return;
         }
@@ -449,17 +519,20 @@ void MainWindow::buildActions()
 
     actSelectArea_ =
         placeholder(Glyph::SelectArea, tr("Alan Seç"), QStringLiteral("SEÇ pencere="), tr("Faz 2"));
-    actTrim_ = placeholder(Glyph::Trim, tr("Böl / Buda"), QStringLiteral("BUDA"), tr("Faz 2"));
+    actTrim_ = modifyTool(Glyph::Trim, tr("Buda"), QStringLiteral("BUDA"),
+                          tr("BUDA — çizgiyi kestiği sınıra kadar kısaltır  ·  kısaltma: BD"));
     actUnion_ =
         placeholder(Glyph::Union, tr("Birleştir — tevhit"), QStringLiteral("TEVHİT"), tr("Faz 2"));
     actParcelSplit_ = placeholder(Glyph::ParcelSplit, tr("Parsel Böl — ifraz"),
                                   QStringLiteral("İFRAZ"), tr("Faz 2"));
-    actMeasureArea_ =
-        placeholder(Glyph::MeasureArea, tr("Alan Ölç"), QStringLiteral("ALANÖLÇ"), tr("Faz 2"));
+    actMeasureArea_ = commandAction(Glyph::MeasureArea, tr("Alan Ölç"),
+                                    QStringLiteral("ALANÖLÇ"),
+                                    tr("ALANÖLÇ — seçili nesnelerin alanını ve çevresini yazar"));
     actCoordinate_ = placeholder(Glyph::Coordinate, tr("Koordinat Oku"),
                                  QStringLiteral("KOORDİNAT"), tr("Faz 2"));
-    actStyleCopy_ = placeholder(Glyph::StyleCopy, tr("Stil Kopyala"), QStringLiteral("STİLKOPYALA"),
-                                tr("Faz 2"));
+    actStyleCopy_ = modifyTool(Glyph::StyleCopy, tr("Stil Kopyala"),
+                               QStringLiteral("STİLKOPYALA"),
+                               tr("STİLKOPYALA — bir nesnenin stilini seçili nesnelere uygular"));
     actTopology_ = placeholder(Glyph::Topology, tr("Topoloji Denetimi"), QStringLiteral("TOPOLOJİ"),
                                tr("Faz 2"));
 
@@ -468,9 +541,33 @@ void MainWindow::buildActions()
     actStyle_->setToolTip(tr("Katmanın çizim stilini düzenle"));
     connect(actStyle_, &QAction::triggered, this, [this] { openStyleDesigner(QString()); });
 
-    actMove_   = placeholder(Glyph::Move, tr("Taşı"), QStringLiteral("TAŞI"), tr("Faz 2"));
-    actCopy_   = placeholder(Glyph::Copy, tr("Kopyala"), QStringLiteral("KOPYALA"), tr("Faz 2"));
-    actRotate_ = placeholder(Glyph::Rotate, tr("Döndür"), QStringLiteral("DÖNDÜR"), tr("Faz 2"));
+    // The transform tools act on the SELECTION and finish, so they are ordinary
+    // command buttons rather than modal draw tools: nothing stays armed after one
+    // runs, and putting them in the exclusive group would light a tool that is no
+    // longer waiting for anything.
+    actMove_ = modifyTool(Glyph::Move, tr("Taşı"), QStringLiteral("TAŞI"),
+                          tr("TAŞI — seçili nesneleri iki nokta arasındaki kadar taşır"));
+    actCopy_ = modifyTool(Glyph::Copy, tr("Kopyala"), QStringLiteral("KOPYALA"),
+                          tr("KOPYALA — seçili nesnelerin kopyasını koyar"));
+    actRotate_ = modifyTool(Glyph::Rotate, tr("Döndür"), QStringLiteral("DÖNDÜR"),
+                            tr("DÖNDÜR — seçili nesneleri bir merkez etrafında döndürür"));
+    actScale_  = modifyTool(Glyph::Rotate, tr("Ölçekle"), QStringLiteral("ÖLÇEKLE"),
+                            tr("ÖLÇEKLE — seçili nesneleri bir merkeze göre büyütür/küçültür"));
+    actMirror_ = modifyTool(Glyph::Rotate, tr("Aynala"), QStringLiteral("AYNALA"),
+                            tr("AYNALA — seçili nesneleri bir eksende yansıtır"));
+    actArray_  = modifyTool(Glyph::Copy, tr("Dizi"), QStringLiteral("DİZİ"),
+                            tr("DİZİ — seçili nesneleri satır/sütun ya da merkez etrafında çoğaltır"));
+    actExtend_ = modifyTool(Glyph::Trim, tr("Uzat"), QStringLiteral("UZAT"),
+                            tr("UZAT — çizgiyi sınır çizgisine kadar uzatır"));
+    actSplit_  = modifyTool(Glyph::Trim, tr("Böl"), QStringLiteral("BÖL"),
+                            tr("BÖL — çizgiyi verilen noktadan ikiye böler"));
+    actChamfer_ = modifyTool(Glyph::Trim, tr("Pah"), QStringLiteral("PAH"),
+                             tr("PAH — köşeyi düz bir kenarla keser"));
+    actFillet_  = modifyTool(Glyph::Trim, tr("Yuvarla"), QStringLiteral("YUVARLA"),
+                             tr("YUVARLA — köşeyi verilen yarıçapta yayla yuvarlatır"));
+    actSetLayer_ = modifyTool(Glyph::LayerManager, tr("Katmana Taşı"),
+                              QStringLiteral("KATMANAT"),
+                              tr("KATMANAT — seçili nesneleri başka bir katmana taşır"));
     actOffset_ = placeholder(Glyph::Offset, tr("Ofset"), QStringLiteral("OFSET"), tr("Faz 2"));
 
     actUndo_ = new QAction(tr("Geri Al"), this);
@@ -557,7 +654,12 @@ void MainWindow::buildActions()
 
     actLayerManager_ = placeholder(Glyph::LayerManager, tr("Katman Yöneticisi"),
                                    QStringLiteral("KATMANYÖNETİCİSİ"), tr("Faz 1"));
-    actMeasure_      = placeholder(Glyph::Measure, tr("Ölç"), QStringLiteral("ÖLÇ"), tr("Faz 2"));
+    actMeasure_ = new QAction(tr("Ölç"), this);
+    actMeasure_->setToolTip(tr("ÖLÇ — iki nokta arası mesafe, koordinat farkı ve açı"));
+    actMeasure_->setData(static_cast<int>(Glyph::Measure));
+    actMeasure_->setObjectName(QStringLiteral("toolAction.ÖLÇ"));
+    connect(actMeasure_, &QAction::triggered, this,
+            [this] { controller_->runCommand(QStringLiteral("ÖLÇ")); });
     actIdentify_ =
         placeholder(Glyph::Identify, tr("Sorgula"), QStringLiteral("SORGULA"), tr("Faz 2"));
     actTable_ = new QAction(tr("Öznitelik Tablosu"), this);
@@ -721,9 +823,23 @@ void MainWindow::buildMenus()
 
     auto* modify = bar->addMenu(tr("D&eğiştir"));
     modify->addAction(actErase_);
+    modify->addSeparator();
     modify->addAction(actMove_);
     modify->addAction(actCopy_);
     modify->addAction(actRotate_);
+    modify->addAction(actScale_);
+    modify->addAction(actMirror_);
+    modify->addAction(actArray_);
+    modify->addSeparator();
+    modify->addAction(actTrim_);
+    modify->addAction(actExtend_);
+    modify->addAction(actSplit_);
+    modify->addAction(actChamfer_);
+    modify->addAction(actFillet_);
+    modify->addSeparator();
+    modify->addAction(actSetLayer_);
+    modify->addAction(actStyleCopy_);
+    modify->addSeparator();
     modify->addAction(actOffset_);
 
     auto* map = bar->addMenu(tr("&Harita"));
@@ -1217,13 +1333,105 @@ void MainWindow::onDocumentChanged()
     canvas_->update();
 }
 
+bool MainWindow::confirmErase()
+{
+    if (!controller_->bus().app_settings().get("core.duzenleme.silme_onayi").as_bool()) return true;
+
+    const std::size_t count = controller_->bus().selection().size();
+
+    QMessageBox box(this);
+    box.setIcon(QMessageBox::Question);
+    box.setWindowTitle(tr("Silme onayı"));
+    box.setText(tr("%n nesne silinecek.", "", static_cast<int>(count)));
+    box.setInformativeText(tr("Silmek istediğinize emin misiniz? Bu işlem GERİAL ile "
+                              "geri alınabilir."));
+
+    QPushButton* erase  = box.addButton(tr("Sil"), QMessageBox::DestructiveRole);
+    QPushButton* cancel = box.addButton(tr("Vazgeç"), QMessageBox::RejectRole);
+
+    // Cancel is the default, because this dialog exists for the user who did NOT
+    // mean to press Del: a Return landing on "Sil" would delete exactly the work
+    // the confirmation was turned on to protect.
+    box.setDefaultButton(cancel);
+    box.setEscapeButton(static_cast<QAbstractButton*>(cancel));
+    box.exec();
+
+    return box.clickedButton() == static_cast<QAbstractButton*>(erase);
+}
+
+void MainWindow::syncToolSelection()
+{
+    // WHICH command is running, not WHETHER one is. Every draw tool carries the
+    // command it sends; the session knows the command it is running; `Registry`
+    // is what turns the first into the second. A tool whose command is not the
+    // running one is not lit, and that includes ÇİZGİ.
+    const command::Session* session = controller_->session();
+    const command::CommandSpec* running = session ? &session->spec() : nullptr;
+
+    QAction* lit = nullptr;
+    if (running) {
+        for (QAction* action : drawingTools_->actions()) {
+            const QVariant carried = action->property(kToolCommand);
+            if (!carried.isValid()) continue;
+
+            const command::CommandSpec* spec =
+                controller_->registry().resolve(carried.toString().toStdString());
+            if (spec && spec->id == running->id) {
+                lit = action;
+                break;
+            }
+        }
+    }
+
+    // Nothing drawing — or a command no tool button sends, such as one typed at
+    // the command line — leaves the select tool lit, which is what "no modal tool
+    // is armed" looks like.
+    //
+    // No signal guard is needed and none is written: every tool dispatches from
+    // `triggered`, which `setChecked` does not emit, so lighting a button here
+    // cannot re-run the command it stands for. A tool that ever moves to
+    // `toggled` has to revisit this.
+    if (lit)
+        lit->setChecked(true);
+    else
+        actSelect_->setChecked(true);
+}
+
 void MainWindow::onPromptChanged(const QString& prompt)
 {
     commandLine_->setPrompt(prompt);
-    commandLine_->setPrompt(prompt);
-    actSelect_->setChecked(prompt.isEmpty());
-    actLine_->setChecked(!prompt.isEmpty());
+    syncToolSelection();
     canvas_->update();
+}
+
+void MainWindow::onInteractiveFinished(const QString& id, bool mutated)
+{
+    // A DRAW TOOL IS MODAL. Picking `ALAN`, drawing a parsel and being dropped
+    // back on the select tool means reaching for the tool column again before
+    // every single parcel, and a cadastral sheet is hundreds of them.
+    //
+    // Re-arming only after a run that DREW something is what keeps that from
+    // becoming a trap: Esc both finishes an open-ended shape and cancels an empty
+    // one, so the first Esc closes the parsel and re-arms the tool, and the
+    // second — with nothing drawn — puts it away. Two Escs to leave, which is
+    // what a CAD user's hands already expect.
+    if (!mutated) return;
+
+    for (QAction* action : drawingTools_->actions()) {
+        const QVariant carried = action->property(kToolCommand);
+        if (!carried.isValid() || !action->isEnabled()) continue;
+
+        const command::CommandSpec* spec =
+            controller_->registry().resolve(carried.toString().toStdString());
+        if (spec == nullptr || spec->id != id.toStdString()) continue;
+
+        // Queued, not called: this runs inside the finishing command's own signal,
+        // and starting the next session on top of the one being torn down is how a
+        // coroutine gets resumed after its frame is gone.
+        QMetaObject::invokeMethod(
+            this, [this, action] { action->trigger(); }, Qt::QueuedConnection);
+        return;
+    }
 }
 
 void MainWindow::onUndoStateChanged(bool canUndo, bool canRedo)

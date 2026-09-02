@@ -109,6 +109,16 @@ signals:
     void selectionChanged();
     void promptChanged(const QString& prompt);
     void undoStateChanged(bool canUndo, bool canRedo);
+
+    /// An interactive command has ended: `id` is what ran, `mutated` is whether it
+    /// wrote anything to the drawing.
+    ///
+    /// `promptChanged("")` already says a command ended, but not WHICH, and not
+    /// whether it drew. A modal tool needs both: it re-arms itself after a shape
+    /// is finished so the next one can be drawn without going back to the tool
+    /// column, and it must NOT re-arm after a run that drew nothing, or the second
+    /// Esc — the one that means "put this tool away" — would arm it again.
+    void interactiveFinished(const QString& id, bool mutated);
     void viewRequested(const QString& mode, double factor);
     void settingChanged(const QString& id);
 

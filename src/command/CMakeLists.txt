@@ -18,6 +18,7 @@ add_library(piricad_command STATIC
     src/validation.cpp
     src/value.cpp
     src/commands/builtin.cpp
+    src/commands/corner.cpp
     src/commands/database.cpp
     src/commands/edit.cpp
     src/commands/file.cpp
@@ -25,14 +26,24 @@ add_library(piricad_command STATIC
     src/commands/layer.cpp
     src/commands/area.cpp
     src/commands/rectangle.cpp
+    src/commands/arc.cpp
+    src/commands/assign.cpp
     src/commands/attribute.cpp
+    src/commands/circle.cpp
     src/commands/line.cpp
     src/commands/text.cpp
+    src/commands/measure.cpp
     src/commands/pick.cpp
+    src/commands/point.cpp
+    src/commands/polyline.cpp
     src/commands/settings.cpp
     src/commands/style.cpp
     src/commands/symbol.cpp
     src/commands/system.cpp
+    src/commands/to_area.cpp
+    src/commands/transform.cpp
+    src/commands/trim.cpp
+    src/commands/vertex.cpp
     src/commands/view.cpp
 )
 

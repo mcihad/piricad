@@ -16,6 +16,9 @@
 // on the Bus. Tests are a client of the bus with no privileges (Article 1.2).
 #include "piricad_test.hpp"
 
+#include "piricad/core/arc.hpp"
+#include "piricad/core/circle.hpp"
+
 #include <iterator>
 
 #include "piricad/command/bus.hpp"
@@ -1249,4 +1252,83 @@ TEST_CASE("IO: aynı görsel iki kez eklenince tek kopya saklanıyor")
     // The same row again: every picture it names is already there.
     REQUIRE(rig.bus.execute_line(style, Origin::Test).ok());
     CHECK_EQ(rig.doc.images().size(), after_first);
+}
+
+TEST_CASE("IO: daire dosyaya gidip daire olarak geri geliyor")
+{
+    // The kind column is what tells a circle from a two-point line: both are one
+    // Open ring of two vertices, and the geometry alone cannot separate them. A
+    // reader that guessed from the shape would turn every saved circle into a
+    // short line pointing east.
+    TempDir tmp("circle-roundtrip");
+    const std::string path = tmp.file("daire.pcad");
+
+    Rig written;
+    REQUIRE(written.bus.execute_line("KATMAN ad=YAPI", Origin::Test).ok());
+    REQUIRE(written.bus.execute_line("DAİRE merkez=485300,4310200 cevre=485325,4310200",
+                                     Origin::Test)
+                .ok());
+    REQUIRE(written.bus.execute_line("ÇİZGİ 485300,4310200 485325,4310200", Origin::Test).ok());
+
+    const std::uint64_t hash = written.doc.content_hash();
+
+    REQUIRE(written.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    REQUIRE(opened.ok());
+
+    REQUIRE_EQ(reloaded.doc.live_entity_count(), std::size_t{2});
+    CHECK_EQ(reloaded.doc.content_hash(), hash);
+
+    // The circle came back a circle, and the line beside it — the same two
+    // vertices, the same ring — came back a line.
+    CHECK(reloaded.doc.entities().kind[0] == core::kCircleKind);
+    CHECK(reloaded.doc.entities().kind[1] == core::kPolylineKind);
+
+    const std::uint32_t slot = reloaded.doc.entities().slot[0];
+    CHECK_EQ(core::circle_centre_of(reloaded.doc.geometry(), slot).x, core::Mm{485300000});
+    CHECK_EQ(core::circle_radius_of(reloaded.doc.geometry(), slot), core::Mm{25000});
+
+    // And its box is still the circle's, not the box of its two stored vertices.
+    const core::Box2 box = reloaded.doc.entity_extent(0);
+    CHECK_EQ(box.min_y, core::Mm{4310175000});
+    CHECK_EQ(box.max_y, core::Mm{4310225000});
+}
+
+TEST_CASE("IO: yay dosyaya gidip yay olarak geri geliyor")
+{
+    TempDir tmp("arc-roundtrip");
+    const std::string path = tmp.file("yay.pcad");
+
+    Rig written;
+    REQUIRE(written.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(written.bus
+                .execute_line("YAY merkez=485300,4310200 baslangic=485330,4310200 "
+                              "bitis=485300,4310230",
+                              Origin::Test)
+                .ok());
+
+    const std::uint64_t hash = written.doc.content_hash();
+    const core::Box2 box     = written.doc.entity_extent(0);
+
+    REQUIRE(written.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    REQUIRE(opened.ok());
+
+    REQUIRE_EQ(reloaded.doc.live_entity_count(), std::size_t{1});
+    CHECK_EQ(reloaded.doc.content_hash(), hash);
+    CHECK(reloaded.doc.entities().kind[0] == core::kArcKind);
+
+    const std::uint32_t slot = reloaded.doc.entities().slot[0];
+    CHECK_EQ(core::arc_radius_of(reloaded.doc.geometry(), slot), core::Mm{30000});
+    CHECK_EQ(core::arc_start_of(reloaded.doc.geometry(), slot).x, core::Mm{485330000});
+
+    // The arc's own box, rebuilt on load rather than taken from the four stored
+    // vertices — which include the centre and a handle due east.
+    CHECK_EQ(reloaded.doc.entity_extent(0), box);
 }

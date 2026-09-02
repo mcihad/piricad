@@ -220,14 +220,21 @@ void Controller::supplyPoint(core::Point2 world)
     }
 
     if (session_->finished()) {
-        auto done = bus_.finish(*session_);
+        // Read BEFORE `finish`, which is free to reset what the session holds.
+        const QString id = QString::fromStdString(session_->spec().id);
+
+        auto done    = bus_.finish(*session_);
+        bool mutated = false;
         if (!done) {
             emit echoed(tr("Hata: %1").arg(QString::fromStdString(done.error().message)));
-        } else if (!done.value().message.empty()) {
-            emit echoed(QString::fromStdString(done.value().message));
+        } else {
+            mutated = done.value().mutated;
+            if (!done.value().message.empty())
+                emit echoed(QString::fromStdString(done.value().message));
         }
         session_.reset();
         emit promptChanged(QString());
+        emit interactiveFinished(id, mutated);
     } else if (session_->waiting()) {
         emit promptChanged(QString::fromStdString(session_->prompt().message));
     }
@@ -240,13 +247,23 @@ void Controller::cancelInteractive()
 {
     if (!session_) return;
 
+    const QString id = QString::fromStdString(session_->spec().id);
+
     session_->cancel();
     auto done = bus_.finish(*session_);
     if (done && !done.value().message.empty())
         emit echoed(QString::fromStdString(done.value().message));
 
+    // Esc is how a shape with an open number of points is FINISHED, not only how
+    // it is abandoned: `ALAN` and `ÇİZGİ` read corners until the next one does not
+    // come, so the Esc that ends a parsel is the same Esc that cancels an empty
+    // run. `mutated` is what tells the two apart, and it is the whole reason the
+    // tool can re-arm without trapping the user in it.
+    const bool mutated = done && done.value().mutated;
+
     session_.reset();
     emit promptChanged(QString());
+    emit interactiveFinished(id, mutated);
     settle();
     emit documentChanged();
 }

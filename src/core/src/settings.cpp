@@ -392,6 +392,7 @@ PIRICAD_SETTING(harita_imlec_boyu);
 PIRICAD_SETTING(harita_yakinlastirma);
 PIRICAD_SETTING(harita_tekerlek_ters);
 PIRICAD_SETTING(secim_rengi);
+PIRICAD_SETTING(silme_onayi);
 PIRICAD_SETTING(secim_vurgu_rengi);
 PIRICAD_SETTING(plan_olcegi);
 PIRICAD_SETTING(aci_birimi);
@@ -446,6 +447,7 @@ PIRICAD_SETTING(alan_birimi);
     X(harita_yakinlastirma)                                                                        \
     X(harita_tekerlek_ters)                                                                        \
     X(secim_rengi)                                                                                 \
+    X(silme_onayi)                                                                                 \
     X(secim_vurgu_rengi)                                                                           \
     X(plan_olcegi)                                                                                 \
     X(aci_birimi)                                                                                  \
@@ -754,6 +756,30 @@ PIRICAD_SETTING(harita_tekerlek_ters)
         .summary  = "Tekerleği ileri itmek uzaklaştırır. Ekrana ait bir tercih olduğu için "
                     "uygulama kapsamındadır.",
         .section  = "Görünüm ve Tema", // ui-label
+    };
+}
+
+PIRICAD_SETTING(silme_onayi)
+{
+    return SettingSpec{
+        .id       = "core.duzenleme.silme_onayi",
+        .names    = {"silme_onayı", "silme_onayi", "confirmdelete"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::boolean(false),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        // The CONFIRMATION is the interface's, never the command's: `SİL` has to
+        // run in a headless replay and in a batch, and a command that stopped to
+        // ask a question could do neither. So this setting is read by the shell
+        // before it sends the command, which is why it is an application-scope
+        // preference and not project state.
+        .summary  = "Seçili nesneleri silmeden önce onay ister. Çizilen hiçbir baytı "
+                    "değiştirmez — yalnız arayüzün soru sorup sormadığını belirler, "
+                    "betik ve komut satırı hiçbir zaman sormaz — bu yüzden kullanıcının "
+                    "kendi makinesine ait bir uygulama tercihidir.",
+        .section  = "Genel", // ui-label
     };
 }
 

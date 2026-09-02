@@ -17,6 +17,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace piricad::command {
 
@@ -90,6 +91,10 @@ struct PointOptions
     /// What the preview draws. A command that encloses a face with two corners
     /// says so, and the canvas shows the face rather than its diagonal.
     RubberShape rubber_shape{RubberShape::Line};
+
+    /// The points already fixed this run, for a command whose geometry cannot
+    /// reach the document until it is complete. See `Prompt::rubber_chain`.
+    std::vector<Point2> rubber_chain{};
 };
 
 class Context

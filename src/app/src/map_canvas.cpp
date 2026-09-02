@@ -3,9 +3,12 @@
 
 #include "piricad/app/backend_factory.hpp"
 #include "piricad/app/controller.hpp"
+#include "piricad/core/arc.hpp"
+#include "piricad/core/circle.hpp"
 #include "piricad/core/settings.hpp"
 #include "piricad/render/backend.hpp"
 
+#include <QApplication>
 #include <QElapsedTimer>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -69,6 +72,11 @@ void MapCanvas::applyTheme(ThemeMode mode)
 QString MapCanvas::backendName() const
 {
     return QString::fromStdString(backend_->name());
+}
+
+const core::Document& MapCanvas::document() const
+{
+    return controller_.document();
 }
 
 void MapCanvas::zoomToExtents()
@@ -241,19 +249,30 @@ void MapCanvas::updateSnapPreview()
     snap_preview_valid_ = false;
     if (!cursor_valid_) return;
 
-    // The marker is only meaningful while a command is asking for a point: it
-    // promises "click here and this is what you get", and there is nothing to
-    // promise when nothing is being drawn.
+    // The marker promises "let go here and this is what you get", so it is drawn
+    // exactly when something is about to take a point: a command that is asking
+    // for one, or a corner being dragged. Nothing else is a promise the program
+    // can keep.
     command::Session* session = controller_.session();
-    if (!session || !session->waiting()) return;
+    const bool asking         = session && session->waiting();
+    if (!asking && !dragging_grip_) return;
 
     command::Bus& bus                = controller_.bus();
     const command::AidSettings& aids = bus.aid_settings();
     const core::Point2 aim = view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
 
-    const command::Prompt& prompt = session->prompt();
-    const core::SnapResult r      = bus.aids().resolve(controller_.document(), aids, aim,
-                                                       prompt.has_rubber_band, prompt.rubber_origin);
+    // The SAME base the command will use, so the marker and the result cannot
+    // disagree. `KÖŞETAŞI` measures from the corner being moved and `KÖŞEEKLE`
+    // from the corner the edge leaves; a drag that previewed against some other
+    // origin would put dik mod and kutupsal on a different ray than the one the
+    // corner actually lands on.
+    const bool has_base =
+        asking ? session->prompt().has_rubber_band : drag_grip_.valid();
+    const core::Point2 base =
+        asking ? session->prompt().rubber_origin : drag_grip_.base;
+
+    const core::SnapResult r =
+        bus.aids().resolve(controller_.document(), aids, aim, has_base, base);
     if (r.mode == core::SnapNone) return;
 
     snap_preview_       = r;
@@ -308,10 +327,27 @@ void MapCanvas::buildSelection()
     for (core::EntityId e : selected) {
         if (e >= table.size() || !table.visible(e)) continue;
 
+        // THE SHAPE, not the stored vertices. A circle keeps a centre and a radius
+        // handle in its ring; highlighting those draws a line pointing east over a
+        // circle the user can see is selected nowhere.
+        curve_scratch_x_.clear();
+        curve_scratch_y_.clear();
+        const bool curve = table.kind[e] == core::kCircleKind || table.kind[e] == core::kArcKind;
+        if (table.kind[e] == core::kCircleKind)
+            core::circle_outline(core::circle_centre_of(geom, table.slot[e]),
+                                 core::circle_radius_of(geom, table.slot[e]), curve_scratch_x_,
+                                 curve_scratch_y_);
+        else if (table.kind[e] == core::kArcKind)
+            core::arc_outline(core::arc_centre_of(geom, table.slot[e]),
+                              core::arc_radius_of(geom, table.slot[e]),
+                              core::arc_start_of(geom, table.slot[e]),
+                              core::arc_end_of(geom, table.slot[e]), curve_scratch_x_,
+                              curve_scratch_y_);
+
         const core::RingSpan span = geom.rings_of(table.slot[e]);
         for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-            const auto xs = geom.ring_xs(r);
-            const auto ys = geom.ring_ys(r);
+            const auto xs = curve ? std::span<const core::Mm>(curve_scratch_x_) : geom.ring_xs(r);
+            const auto ys = curve ? std::span<const core::Mm>(curve_scratch_y_) : geom.ring_ys(r);
             if (xs.size() < 2) continue;
 
             const auto before = static_cast<std::uint32_t>(batch.xs.size());
@@ -322,9 +358,234 @@ void MapCanvas::buildSelection()
                 batch.ys.push_back(q.y);
             }
             batch.runs.push_back(static_cast<std::uint32_t>(batch.xs.size()) - before);
-            batch.closed.push_back(geom.ring_role[r] != core::RingRole::Open ? 1 : 0);
+            // A circle closes; an arc does not.
+            batch.closed.push_back(
+                (table.kind[e] == core::kCircleKind ||
+                 (!curve && geom.ring_role[r] != core::RingRole::Open))
+                    ? 1
+                    : 0);
         }
     }
+}
+
+MapCanvas::Grip MapCanvas::gripAt(const QPointF& where) const
+{
+    const auto& selected = controller_.selectedSlots();
+    if (selected.empty()) return {};
+
+    const core::Document& doc      = controller_.document();
+    const core::EntityTable& table = doc.entities();
+    const core::RingGeometry& geom = doc.geometry();
+
+    // A screen aperture, not a world one: the user aims at what they can see, so
+    // the same handful of pixels has to work at 1:100 and at 1:100 000. This is
+    // the rule `core/snap.hpp` states for the snap tolerance and the reason it
+    // takes a world radius computed one layer up.
+    constexpr double kCornerPx = 7.0;
+    constexpr double kEdgePx   = 5.0;
+
+    Grip corner_hit;
+    double corner_best = kCornerPx * kCornerPx;
+    Grip edge_hit;
+    double edge_best = kEdgePx * kEdgePx;
+
+    for (core::EntityId e : selected) {
+        if (e >= table.size() || !table.visible(e)) continue;
+
+        // A CURVE HAS NO CORNERS. Its stored vertices are its definition — a
+        // circle's are a centre and a radius handle — and `KÖŞETAŞI` refuses them
+        // for that reason. Offering a handle the command will then refuse is worse
+        // than offering none: it looks broken rather than deliberate.
+        if (table.kind[e] != core::kPolylineKind) continue;
+
+        const core::RingSpan span = geom.rings_of(table.slot[e]);
+
+        // The corner number runs across the object's rings, so it keeps counting
+        // from one ring into the next. `locate()` in commands/vertex.cpp walks the
+        // same order; the two have to agree or a drag edits a different corner
+        // than the one under the pointer.
+        std::int64_t number = 0;
+
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+            const auto xs     = geom.ring_xs(r);
+            const auto ys     = geom.ring_ys(r);
+            const bool closed = geom.ring_role[r] != core::RingRole::Open;
+
+            for (std::size_t v = 0; v < xs.size(); ++v) {
+                ++number;
+                const render::ScreenPoint p = view_.to_screen(core::Point2{xs[v], ys[v]});
+                const double dx             = p.x - where.x();
+                const double dy             = p.y - where.y();
+                const double d2             = dx * dx + dy * dy;
+                if (d2 < corner_best) {
+                    corner_best = d2;
+                    corner_hit  = Grip{e, number, false, core::Point2{xs[v], ys[v]},
+                                       core::Point2{xs[v], ys[v]}};
+                }
+
+                // The edge LEAVING this corner. On an open ring the last vertex has
+                // none — a polyline's ends are not joined (R10) — which is exactly
+                // what `KÖŞEEKLE` refuses, so the canvas never offers it either.
+                const bool last = v + 1 == xs.size();
+                if (last && !closed) continue;
+
+                const std::size_t next      = last ? 0 : v + 1;
+                const render::ScreenPoint q = view_.to_screen(core::Point2{xs[next], ys[next]});
+
+                const double ex = q.x - p.x;
+                const double ey = q.y - p.y;
+                const double len2 = ex * ex + ey * ey;
+                if (len2 <= 0.0) continue;
+
+                double t = ((where.x() - p.x) * ex + (where.y() - p.y) * ey) / len2;
+                t        = std::clamp(t, 0.0, 1.0);
+
+                const double fx = p.x + t * ex - where.x();
+                const double fy = p.y + t * ey - where.y();
+                const double f2 = fx * fx + fy * fy;
+                if (f2 < edge_best) {
+                    edge_best = f2;
+                    // The new corner starts where the pointer pressed, projected
+                    // onto the edge, so it does not jump before the drag begins.
+                    const auto foot = render::ScreenPoint{p.x + t * ex, p.y + t * ey};
+                    edge_hit = Grip{e, number, true, view_.to_world(foot),
+                                    core::Point2{xs[v], ys[v]}};
+                }
+            }
+        }
+    }
+
+    // A corner wins over the edges that meet at it: within a few pixels of a
+    // corner both are hit, and a user aiming there means to move the corner
+    // rather than to grow a new one beside it.
+    if (corner_hit.valid()) return corner_hit;
+    return edge_hit;
+}
+
+void MapCanvas::buildGrips()
+{
+    const auto& selected = controller_.selectedSlots();
+    if (selected.empty()) return;
+
+    const core::Document& doc      = controller_.document();
+    const core::EntityTable& table = doc.entities();
+    const core::RingGeometry& geom = doc.geometry();
+
+    // While a corner is being dragged, the shape it WOULD make is drawn first, so
+    // the user sees the two edges that follow the corner rather than a bare
+    // handle floating away from an unchanged outline.
+    if (dragging_grip_ && drag_grip_.valid() && cursor_valid_) {
+        const core::Point2 to = snap_preview_valid_
+                                    ? snap_preview_.point
+                                    : view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
+
+        const core::EntityId e = drag_grip_.entity;
+        if (e < table.size() && table.visible(e)) {
+            const core::RingSpan span = geom.rings_of(table.slot[e]);
+            const std::size_t batch   = nextBatch(palette_.rubberBand.rgba(), 1.0f, true);
+
+            std::int64_t number = 0;
+            for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+                const auto xs = geom.ring_xs(r);
+                const auto ys = geom.ring_ys(r);
+
+                std::vector<render::ScreenPointF> run;
+                run.reserve(xs.size() + 1);
+                for (std::size_t v = 0; v < xs.size(); ++v) {
+                    ++number;
+                    if (number == drag_grip_.corner && !drag_grip_.insert) {
+                        run.push_back(render::to_f(view_.to_screen(to)));
+                        continue;
+                    }
+                    run.push_back(render::to_f(view_.to_screen(core::Point2{xs[v], ys[v]})));
+                    // An inserted corner goes AFTER the one it was measured from,
+                    // which is the same place `KÖŞEEKLE` will put it.
+                    if (number == drag_grip_.corner && drag_grip_.insert)
+                        run.push_back(render::to_f(view_.to_screen(to)));
+                }
+                addRun(batch, run, geom.ring_role[r] != core::RingRole::Open);
+            }
+        }
+    }
+
+    // The handles themselves, drawn over the outline so a corner is grabbable
+    // wherever two objects meet.
+    const std::size_t plain = nextBatch(palette_.selection.rgba(), 1.0f, false);
+    const std::size_t lit   = nextBatch(tokens_->accent.rgba(), 2.0f, false);
+
+    constexpr float kHalf = 3.0f;
+
+    for (core::EntityId e : selected) {
+        if (e >= table.size() || !table.visible(e)) continue;
+        if (table.kind[e] != core::kPolylineKind) continue; // a curve has no corners
+
+        const core::RingSpan span = geom.rings_of(table.slot[e]);
+        std::int64_t number       = 0;
+
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+            const auto xs = geom.ring_xs(r);
+            const auto ys = geom.ring_ys(r);
+
+            for (std::size_t v = 0; v < xs.size(); ++v) {
+                ++number;
+                const render::ScreenPointF p =
+                    render::to_f(view_.to_screen(core::Point2{xs[v], ys[v]}));
+
+                const bool hot = hover_grip_.valid() && !hover_grip_.insert &&
+                                 hover_grip_.entity == e && hover_grip_.corner == number;
+
+                addRun(hot ? lit : plain,
+                       {{p.x - kHalf, p.y - kHalf},
+                        {p.x + kHalf, p.y - kHalf},
+                        {p.x + kHalf, p.y + kHalf},
+                        {p.x - kHalf, p.y + kHalf}},
+                       true);
+            }
+        }
+    }
+
+    // The edge the pointer is over, marked where the new corner would appear. A
+    // different shape from a corner handle on purpose: it does not move a corner,
+    // it makes one.
+    if (hover_grip_.valid() && hover_grip_.insert && !dragging_grip_) {
+        const render::ScreenPointF p = render::to_f(view_.to_screen(hover_grip_.at));
+        addCircle(lit, p.x, p.y, kHalf);
+    }
+}
+
+void MapCanvas::commitGripDrag()
+{
+    if (!drag_grip_.valid()) return;
+
+    // A press and release without travel is a CLICK, not a drag, and a click on a
+    // corner asks for nothing. Qt's own drag threshold is the right number here:
+    // it is what the platform considers a deliberate movement, and using anything
+    // else makes this widget feel unlike every other one on the machine.
+    const QPointF moved = cursor_ - drag_anchor_;
+    if (moved.manhattanLength() < QApplication::startDragDistance()) return;
+
+    const core::Point2 world =
+        view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
+
+    // The RAW world point, exactly as a click supplies one. Snapping happens once,
+    // inside the command layer, on the road every client takes — the marker the
+    // canvas drew was a preview of that, never a substitute for it.
+    const core::EntityKey key = controller_.document().entities().key[drag_grip_.entity];
+
+    // An ID LIST, because `nesne` is declared `ParamKind::Selection` and the bus
+    // validates the shape before the body runs. A bare integer is refused there —
+    // silently as far as the canvas is concerned, since a rejected dispatch only
+    // writes a line to the transcript, which is exactly how a drag that did
+    // nothing at all looked like a drag that could not start.
+    command::Args args;
+    args.set("nesne",
+             command::Value::ids({static_cast<std::int64_t>(core::raw(key))}));
+    args.set("kose", command::Value::integer(drag_grip_.corner));
+    args.set("nokta", command::Value::point(world));
+
+    controller_.runInvocation(command::Invocation{
+        drag_grip_.insert ? "core.vertex_insert" : "core.vertex_move", std::move(args),
+        command::Origin::Gui});
 }
 
 void MapCanvas::buildSelectionBox()
@@ -779,8 +1040,7 @@ render::ScreenPointF MapCanvas::toScreenF(const QPointF& p)
     return render::to_f(render::ScreenPoint{p.x(), p.y()});
 }
 
-void MapCanvas::addRun(std::size_t index, std::initializer_list<render::ScreenPointF> points,
-                       bool closed)
+void MapCanvas::addRun(std::size_t index, std::span<const render::ScreenPointF> points, bool closed)
 {
     render::OverlayBatch& batch = overlay_.batches[index];
     for (const render::ScreenPointF& p : points) {
@@ -789,6 +1049,12 @@ void MapCanvas::addRun(std::size_t index, std::initializer_list<render::ScreenPo
     }
     batch.runs.push_back(static_cast<std::uint32_t>(points.size()));
     batch.closed.push_back(closed ? 1 : 0);
+}
+
+void MapCanvas::addRun(std::size_t index, std::initializer_list<render::ScreenPointF> points,
+                       bool closed)
+{
+    addRun(index, std::span<const render::ScreenPointF>(points.begin(), points.size()), closed);
 }
 
 void MapCanvas::addCircle(std::size_t index, float cx, float cy, float radius)
@@ -821,6 +1087,9 @@ void MapCanvas::buildOverlay()
     overlay_.beneath = overlay_used_;
 
     buildSelection();
+    buildGrips();
+
+    guide_vertices_ = 0;
 
     // Rubber band for the running interactive command. It runs to the SNAPPED
     // point when an aid has fired, because that is where the segment will land.
@@ -835,7 +1104,62 @@ void MapCanvas::buildOverlay()
         }
 
         const std::size_t batch = nextBatch(palette_.rubberBand.rgba(), 1.0f, true);
-        if (session->prompt().rubber_shape == command::RubberShape::Rectangle) {
+        const command::RubberShape shape = session->prompt().rubber_shape;
+        const std::size_t guide_before   = overlay_.batches[batch].xs.size();
+
+        if (shape == command::RubberShape::Circle || shape == command::RubberShape::Arc) {
+            // THE CURVE ITSELF. Drawn by the same code the document is drawn with
+            // (`core::circle_outline`), so what the guide promises and what the
+            // command produces cannot drift apart — a preview computed a second
+            // way is a preview that is eventually wrong.
+            const core::Point2 centre = session->prompt().rubber_origin;
+            const core::Point2 rim =
+                snap_preview_valid_ ? snap_preview_.point
+                                    : view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
+
+            const double dx       = core::mm_to_metres(rim.x - centre.x);
+            const double dy       = core::mm_to_metres(rim.y - centre.y);
+            const core::Mm radius = core::mm_round(std::sqrt(dx * dx + dy * dy) *
+                                                   static_cast<double>(core::kMmPerMetre));
+
+            // An ARC guide once the first end is fixed: `rubber_chain` carries it,
+            // so the guide sweeps from there to the cursor exactly as the command
+            // will. Before that — and for DAİRE throughout — the guide is the
+            // whole circle, because what is being chosen at that moment IS a
+            // radius, and a radius is a circle.
+            const auto& chain = session->prompt().rubber_chain;
+            const bool arc    = shape == command::RubberShape::Arc && !chain.empty();
+
+            const core::Mm draw_radius =
+                arc ? [&] {
+                    const double ax = core::mm_to_metres(chain.front().x - centre.x);
+                    const double ay = core::mm_to_metres(chain.front().y - centre.y);
+                    return core::mm_round(std::sqrt(ax * ax + ay * ay) *
+                                          static_cast<double>(core::kMmPerMetre));
+                }()
+                    : radius;
+
+            if (draw_radius > 0) {
+                curve_scratch_x_.clear();
+                curve_scratch_y_.clear();
+                if (arc)
+                    core::arc_outline(centre, draw_radius, chain.front(), rim, curve_scratch_x_,
+                                      curve_scratch_y_);
+                else
+                    core::circle_outline(centre, draw_radius, curve_scratch_x_, curve_scratch_y_);
+
+                std::vector<render::ScreenPointF> run;
+                run.reserve(curve_scratch_x_.size());
+                for (std::size_t v = 0; v < curve_scratch_x_.size(); ++v)
+                    run.push_back(render::to_f(view_.to_screen(
+                        core::Point2{curve_scratch_x_[v], curve_scratch_y_[v]})));
+                addRun(batch, run, !arc);
+            }
+
+            // The radius, so the user can read the size they are setting rather
+            // than only see it.
+            addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+        } else if (shape == command::RubberShape::Rectangle) {
             // THE FACE, not its diagonal. A rectangle previewed as one line tells
             // the user nothing about what the next click will make, and with the
             // diagonal lock held it is the difference between seeing a square and
@@ -843,9 +1167,25 @@ void MapCanvas::buildOverlay()
             const render::ScreenPointF a = render::to_f(from);
             const render::ScreenPointF b = toScreenF(to);
             addRun(batch, {{a.x, a.y}, {b.x, a.y}, {b.x, b.y}, {a.x, b.y}}, true);
+        } else if (const auto& chain = session->prompt().rubber_chain; !chain.empty()) {
+            // THE WHOLE SHAPE SO FAR, not only its newest edge. A command whose
+            // geometry cannot reach the document until it is complete (ALAN) has
+            // nothing else on screen, so drawing one segment made every click
+            // look like it had erased the one before it.
+            std::vector<render::ScreenPointF> run;
+            run.reserve(chain.size() + 1);
+            for (const core::Point2& p : chain) run.push_back(render::to_f(view_.to_screen(p)));
+            run.push_back(toScreenF(to));
+
+            // Closed for a ring, because the edge back to the first corner is as
+            // real as the one the cursor is dragging: ALAN never asks the user to
+            // repeat the closing point, so the preview is where they see it.
+            addRun(batch, run, session->prompt().rubber_shape == command::RubberShape::Ring);
         } else {
             addRun(batch, {render::to_f(from), toScreenF(to)}, false);
         }
+
+        guide_vertices_ = overlay_.batches[batch].xs.size() - guide_before;
     }
 
     buildSelectionBox();
@@ -976,6 +1316,20 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
             return;
         }
 
+        // A grip under the pointer takes the press: the user is reaching for a
+        // corner of something already selected, and a selection box started there
+        // would throw that selection away on the way to editing it.
+        if (const Grip grip = gripAt(event->position()); grip.valid()) {
+            drag_grip_     = grip;
+            dragging_grip_ = true;
+            drag_anchor_   = event->position();
+            cursor_        = event->position();
+            cursor_valid_  = true;
+            setCursor(Qt::ClosedHandCursor);
+            update();
+            return;
+        }
+
         // No command is asking for a point, so the drag is a selection.
         selecting_     = true;
         select_anchor_ = event->position();
@@ -1003,6 +1357,14 @@ void MapCanvas::mouseMoveEvent(QMouseEvent* event)
         emit viewChanged();
     }
 
+    // Which corner the pointer could take hold of. Only while nothing is being
+    // dragged and no command is asking for a point: during a drag the answer is
+    // already decided, and during a command the click belongs to the command.
+    if (!dragging_grip_ && !panning_ && !selecting_ && !controller_.awaitingInput())
+        hover_grip_ = gripAt(cursor_);
+    else if (!dragging_grip_)
+        hover_grip_ = Grip{};
+
     updateSnapPreview();
 
     emit cursorMoved(view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()}));
@@ -1014,6 +1376,23 @@ void MapCanvas::mouseReleaseEvent(QMouseEvent* event)
     if (event->button() == Qt::MiddleButton) {
         panning_ = false;
         unsetCursor();
+        return;
+    }
+
+    if (event->button() == Qt::LeftButton && dragging_grip_) {
+        dragging_grip_ = false;
+        cursor_        = event->position();
+        cursor_valid_  = true;
+        unsetCursor();
+
+        commitGripDrag();
+
+        // The corner numbering has changed under an insert, and the geometry under
+        // both, so whatever was remembered about the old shape is stale.
+        drag_grip_          = Grip{};
+        hover_grip_         = Grip{};
+        snap_preview_valid_ = false;
+        update();
         return;
     }
 

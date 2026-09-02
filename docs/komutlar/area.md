@@ -93,9 +93,20 @@ ALAN 485370,4310200 485430,4310200 485430,4310245 485370,4310245 485385,4310212 
 ### Arayüz
 
 Sol paletteki **alan** aracına basın ya da komut satırına `ALAN` yazın; ikisi aynı
-komutu gönderir. Köşeleri sırayla tıklayın, bitirmek için **Enter**, vazgeçmek için
-**Esc**. Yakalama açıkken köşeler mevcut nesnelere oturur — komşu parselin köşesine
-tam oturmak için [`MOD`](mode.md) ile uç nokta yakalamasını açık tutun.
+komutu gönderir. Köşeleri sırayla tıklayın ve **Esc** ile alanı kapatın. Yakalama
+açıkken köşeler mevcut nesnelere oturur — komşu parselin köşesine tam oturmak için
+[`MOD`](mode.md) ile uç nokta yakalamasını açık tutun.
+
+Araç **kalıcıdır**: bir alanı bitirdiğinizde `ALAN` yeniden kurulur ve bir sonrakini
+çizmeye devam edebilirsiniz — her parsel için palete uzanmanız gerekmez. Aracı
+bırakmak için bir kez daha **Esc**'e basın. Yani bir pafta çizerken parmağınız
+Esc'te kalır: bir Esc alanı kapatır, iki Esc aracı bırakır.
+
+İkinci köşeden itibaren, o ana kadar verdiğiniz **bütün köşeler** kesikli bir kılavuzla
+birbirine bağlanır; kılavuz son köşeden imlecinize, imleçten de ilk köşeye döner. Yani
+tıklamayı bitirmeden önce kapanacak alanı bütün olarak görürsünüz. Kılavuz bir ön
+izlemedir: alan belgeye ancak **Enter** ile yazılır, çünkü iki köşeli bir halka alan
+değildir.
 
 Arayüzün ayrıcalığı yoktur: fareyle çizdiğiniz alan ile komut satırına yazdığınız alan
 aynı komuttur ve komut günlüğüne aynı satır olarak düşer.

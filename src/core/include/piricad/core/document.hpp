@@ -62,9 +62,14 @@ public:
     // ---- resolution block: read only for entities the index returned ----
     std::vector<LayerId> layer;
     std::vector<StyleId> style; ///< interned; kByLayerStyle means inherit
-    /// Entity kind index, dense and not persisted — `KindSpec::stable_id` is what
-    /// reaches the file (R22-R26).
-    std::vector<std::uint16_t> kind;
+    /// Which KIND of thing this entity is: `KindSpec::id`, and the reason two
+    /// entities holding the same two vertices can be a line and a circle.
+    ///
+    /// The id is DECLARED by each kind rather than handed out in registration
+    /// order (`core.polyline` is 1, `core.circle` is 2), which is what lets the
+    /// project writer store the number itself and still keep R26's promise that a
+    /// file round-trips byte-identically.
+    std::vector<KindId> kind;
     std::vector<std::uint32_t> slot; ///< row in the per-kind store
 
     // ---- identity: cold. Culling never reads it, and it is 8 bytes (R1) ----
@@ -105,6 +110,8 @@ struct Op
         SetCrs,             ///< crs_arg
         SetAttribute,       ///< attr_col, entity (as the row), attr_arg
         SetText,            ///< entity, str_arg, text_height, text_anchor
+        SetGeometry,        ///< entity, geometry_slot
+        SetEntityLayer,     ///< entity, layer
     };
 
     Kind kind{Kind::None};
@@ -129,6 +136,11 @@ struct Op
 
     Mm text_height{0}; ///< 0 = the slot carries no text
     TextAnchor text_anchor{TextAnchor::BaselineLeft};
+
+    /// The geometry slot to put back. A slot number and not a vertex list, because
+    /// the arena never drops one: the rings this names are still exactly where the
+    /// entity left them (see `Document::set_geometry`).
+    std::uint32_t geometry_slot{0};
 };
 
 class Document
@@ -239,9 +251,46 @@ public:
     Result<EntityId> add_area(LayerId lyr, std::span<const RingGeometry::RingInput> rings,
                               Op& undo_out);
 
+    /// A circle, from its centre and radius. Stored as its DEFINING numbers and
+    /// drawn by the kind (see `core.circle`), so its area is pi*r^2 and not the
+    /// area of whatever polygon happened to be drawn for it.
+    Result<EntityId> add_circle(LayerId lyr, Point2 centre, Mm radius, Op& undo_out);
+
+    /// An arc, from its centre, radius and the two measured ends. The sweep runs
+    /// counter-clockwise from `start` to `end` (see `core.arc`).
+    Result<EntityId> add_arc(LayerId lyr, Point2 centre, Mm radius, Point2 start, Point2 end,
+                             Op& undo_out);
+
+    /// A surveyed point: a control point, a traverse station, a benchmark
+    /// (see `core.point`).
+    Result<EntityId> add_point(LayerId lyr, Point2 at, Op& undo_out);
+
+    /// Moves an entity to another layer, keeping its identity.
+    ///
+    /// The live counters and the mirrored `FlagLayerHidden` bit follow it, because
+    /// the cull test reads that bit and nothing else (R6, R7): an object moved
+    /// onto a hidden layer has to disappear without the frame path asking a
+    /// question.
+    Status set_entity_layer(EntityId e, LayerId layer, Op& undo_out);
+
     Status set_entity_alive(EntityId e, bool alive, Op& undo_out);
     Status set_entity_hidden(EntityId e, bool hidden, Op& undo_out);
     Status set_entity_style(EntityId e, StyleId style, Op& undo_out);
+
+    /// Replaces an entity's geometry, keeping its identity.
+    ///
+    /// The rings are APPENDED to the arena and the entity is repointed at them;
+    /// the slot it used to hold is left where it is. That is what makes this
+    /// undoable in O(1) — the inverse is the old slot number, not a copy of the
+    /// vertices — and it is why the arena is append-only to begin with. The cost
+    /// is a dead slot per edit, which the file writer drops on save.
+    ///
+    /// IDENTITY SURVIVES, and that is the whole reason this exists rather than
+    /// erase-then-add: the key, the layer, the style, the attributes and the text
+    /// all hang off `EntityId`. A parsel whose corner was dragged is the same
+    /// parsel, with the same ada/parsel numbers, and re-adding it would silently
+    /// mint a new key and drop every attribute the surveyor had entered.
+    Status set_geometry(EntityId e, std::span<const RingGeometry::RingInput> rings, Op& undo_out);
 
     Status set_layer_visible(LayerId l, bool visible, Op& undo_out);
     Status set_layer_locked(LayerId l, bool locked, Op& undo_out);
@@ -303,8 +352,13 @@ public:
     Status apply(const Op& op, Op* undo_out = nullptr);
 
 private:
-    Result<EntityId> push_entity(LayerId lyr, std::uint32_t geometry_slot);
+    Result<EntityId> push_entity(LayerId lyr, std::uint32_t geometry_slot, KindId kind);
     void mirror_layer_visibility(LayerId l, bool visible);
+
+    /// Points an entity back at a slot the arena already holds. The undo half of
+    /// `set_geometry`: it appends nothing, because the rings being restored were
+    /// never thrown away.
+    Status restore_geometry(EntityId e, std::uint32_t slot, Op& undo_out);
 
     Crs crs_{};
     EntityTable entities_{};
@@ -339,6 +393,16 @@ private:
     mutable std::unique_ptr<SpatialIndex> index_{};
     mutable std::size_t indexed_live_{0};
     mutable EntityId indexed_upto_{0};
+
+    /// An indexed entity's box has MOVED, so the tree no longer bounds it.
+    ///
+    /// Erasing an entity leaves the tree over-inclusive, which costs a wasted
+    /// candidate and nothing else. Editing geometry is the one mutation that can
+    /// make it UNDER-inclusive: the entity moves out of the box the tree filed it
+    /// under, and a query at its new position stops finding it — which shows up as
+    /// a corner that has visibly moved but will not snap. Nothing else in this
+    /// class needs this, so it is set in exactly one place.
+    mutable bool index_stale_{false};
 };
 
 } // namespace piricad::core

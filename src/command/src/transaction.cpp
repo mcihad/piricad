@@ -39,6 +39,15 @@ Result<EntityId> Transaction::add_area(LayerId layer,
     return id;
 }
 
+Status Transaction::set_entity_layer(EntityId e, LayerId layer)
+{
+    core::Op undo;
+    auto st = doc_.set_entity_layer(e, layer, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
 Status Transaction::erase_entity(EntityId e)
 {
     core::Op undo;
@@ -106,6 +115,43 @@ Status Transaction::set_entity_style(EntityId e, StyleId style)
 {
     core::Op undo;
     auto st = doc_.set_entity_style(e, style, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
+Result<EntityId> Transaction::add_circle(LayerId layer, Point2 centre, core::Mm radius)
+{
+    core::Op undo;
+    auto made = doc_.add_circle(layer, centre, radius, undo);
+    if (!made) return made;
+    inverse_.push_back(std::move(undo));
+    return made;
+}
+
+Result<EntityId> Transaction::add_arc(LayerId layer, Point2 centre, core::Mm radius, Point2 start,
+                                      Point2 end)
+{
+    core::Op undo;
+    auto made = doc_.add_arc(layer, centre, radius, start, end, undo);
+    if (!made) return made;
+    inverse_.push_back(std::move(undo));
+    return made;
+}
+
+Result<EntityId> Transaction::add_point(LayerId layer, Point2 at)
+{
+    core::Op undo;
+    auto made = doc_.add_point(layer, at, undo);
+    if (!made) return made;
+    inverse_.push_back(std::move(undo));
+    return made;
+}
+
+Status Transaction::set_geometry(EntityId e, std::span<const RingGeometry::RingInput> rings)
+{
+    core::Op undo;
+    auto st = doc_.set_geometry(e, rings, undo);
     if (!st) return st;
     inverse_.push_back(std::move(undo));
     return core::ok();

@@ -35,8 +35,8 @@ constexpr std::size_t kMaxNearSegments = 48;
 /// placement is the rule that keeps them safe: a point this engine invented must
 /// never win against a point the drawing actually contains.
 constexpr std::uint16_t kPriority[] = {
-    SnapEndpoint, SnapIntersection, SnapMidpoint, SnapCenter,    SnapPerpendicular,
-    SnapNearest,  SnapApparent,     SnapParallel, SnapExtension,
+    SnapNode,    SnapEndpoint, SnapIntersection, SnapMidpoint,  SnapCenter,
+    SnapPerpendicular, SnapNearest,  SnapApparent,     SnapParallel,  SnapExtension,
 };
 
 Mm abs_mm(Mm v) noexcept
@@ -126,7 +126,8 @@ const std::uint16_t* snap_mode_bits()
 {
     static const std::uint16_t bits[] = {
         SnapEndpoint, SnapMidpoint, SnapCenter,    SnapIntersection, SnapPerpendicular, SnapNearest,
-        SnapGrid,     SnapPolar,    SnapExtension, SnapParallel,     SnapApparent,      SnapNone,
+        SnapNode,     SnapGrid,     SnapPolar,     SnapExtension,    SnapParallel,      SnapApparent,
+        SnapNone,
     };
     return bits;
 }
@@ -140,6 +141,7 @@ const char* snap_mode_id(std::uint16_t single_bit)
     case SnapIntersection: return "kesisim";
     case SnapPerpendicular: return "dik";
     case SnapNearest: return "yakin";
+    case SnapNode: return "dugum";
     case SnapGrid: return "izgara";
     case SnapPolar: return "kutupsal";
     case SnapExtension: return "uzanti";
@@ -159,6 +161,7 @@ const char* snap_mode_label(std::uint16_t single_bit)
     case SnapIntersection: return "kesişim";
     case SnapPerpendicular: return "dik ayak";
     case SnapNearest: return "en yakın";
+    case SnapNode: return "düğüm";
     case SnapGrid: return "ızgara";
     case SnapPolar: return "kutupsal";
     case SnapExtension: return "uzantı";
@@ -315,6 +318,24 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
 
         for (EntityId e : candidates) {
             const RingSpan span = geometry.rings_of(entities.slot[e]);
+
+            // A SURVEYED POINT IS ITS OWN MODE. A monument is what every boundary
+            // on a cadastral sheet was measured from, so it is offered separately
+            // and ranked ABOVE a corner: when a röper and a parcel corner sit a
+            // millimetre apart, the röper is the one that was measured and the
+            // corner is the one that was derived from it.
+            if (entities.kind[e] == kPointKind) {
+                if ((object_modes & SnapNode) != 0 && span.count > 0) {
+                    const auto xs = geometry.ring_xs(span.first);
+                    const auto ys = geometry.ring_ys(span.first);
+                    if (!xs.empty())
+                        offer(best[priority_index(SnapNode)], Point2{xs[0], ys[0]}, e, q.aim,
+                              limit);
+                }
+                // Nothing else applies: a point has no segment to be the middle,
+                // the nearest part or the perpendicular foot of.
+                continue;
+            }
 
             for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
                 const auto xs = geometry.ring_xs(r);

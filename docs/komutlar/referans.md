@@ -11,10 +11,32 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | Komut | Adlar | Kategori | Geri alma | Özellikler | Açıklama |
 |---|---|---|---|---|---|
 | [`core.line`](line.md) | `ÇİZGİ`, `CIZGI`, `LINE`, `Ç`, `L` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki veya daha fazla nokta arasında doğru parçaları çizer. |
+| [`core.polyline`](polyline.md) | `ÇOKLUÇİZGİ`, `COKLUCIZGI`, `POLYLINE`, `ÇÇ`, `PL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Birden çok noktadan TEK bir çizgi nesnesi çizer. |
+| [`core.point_draw`](point_draw.md) | `NOKTA`, `POINT`, `NK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper. |
 | [`core.text`](text.md) | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
 | [`core.exportstyle`](exportstyle.md) | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
 | [`core.area`](area.md) | `ALAN`, `AREA`, `POLİGON`, `POLIGON`, `AL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alan çizer; istenirse içine delik açar. |
 | [`core.rectangle`](rectangle.md) | `DİKDÖRTGEN`, `DIKDORTGEN`, `RECTANGLE`, `DKD`, `REC` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer. |
+| [`core.circle_draw`](circle_draw.md) | `DAİRE`, `DAIRE`, `CIRCLE`, `DR` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve çember üzerindeki bir noktadan daire çizer. |
+| [`core.arc_draw`](arc_draw.md) | `YAY`, `ARC`, `YY` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir. |
+| [`core.vertex_move`](vertex_move.md) | `KÖŞETAŞI`, `KOSETASI`, `MOVEVERTEX`, `KT` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesnenin köşesini yeni bir yere taşır. |
+| [`core.vertex_insert`](vertex_insert.md) | `KÖŞEEKLE`, `KOSEEKLE`, `ADDVERTEX`, `KE` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir kenarın ortasına yeni köşe ekler. |
+| [`core.to_area`](to_area.md) | `ALANAÇEVİR`, `ALANACEVIR`, `TOAREA`, `ALÇ` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Uç uca değen çizgileri tek bir kapalı alana çevirir. |
+| [`core.move`](move.md) | `TAŞI`, `TASI`, `MOVE`, `TŞ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki nokta arasındaki kadar taşır. |
+| [`core.copy`](copy.md) | `KOPYALA`, `COPY`, `KP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerin kopyasını iki nokta arasındaki kadar öteye koyar. |
+| [`core.array`](array.md) | `DİZİ`, `DIZI`, `ARRAY`, `DZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır. |
+| [`core.split`](split.md) | `BÖL`, `BOL`, `SPLIT`, `BL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizgiyi verilen noktadan ikiye böler. |
+| [`core.trim`](trim.md) | `BUDA`, `TRIM`, `BD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizgiyi kestiği sınır çizgisine kadar budar. |
+| [`core.extend`](extend.md) | `UZAT`, `EXTEND`, `UZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizgiyi sınır çizgisine ulaşana kadar uzatır. |
+| [`core.chamfer`](chamfer.md) | `PAH`, `CHAMFER`, `PH` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi düz bir kenarla keser (pah kırar). |
+| [`core.fillet`](fillet.md) | `YUVARLA`, `FILLET`, `YV` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi verilen yarıçapta yay ile yuvarlatır. |
+| [`core.set_layer`](set_layer.md) | `KATMANAT`, `KATMANATA`, `SETLAYER`, `KA` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri başka bir katmana taşır. |
+| [`core.match_style`](match_style.md) | `STİLKOPYALA`, `STILKOPYALA`, `MATCHPROP`, `SK` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Bir nesnenin stilini seçilen nesnelere uygular. |
+| [`core.rotate`](rotate.md) | `DÖNDÜR`, `DONDUR`, `ROTATE`, `DÖN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkez etrafında döndürür. |
+| [`core.scale`](scale.md) | `ÖLÇEKLE`, `OLCEKLE`, `SCALE`, `ÖLÇEK`, `OLCEK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkeze göre büyütür ya da küçültür. |
+| [`core.mirror`](mirror.md) | `AYNALA`, `MIRROR`, `AYN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
+| [`core.measure`](measure.md) | `ÖLÇ`, `OLC`, `MEASURE`, `MS` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar. |
+| [`core.measure_area`](measure_area.md) | `ALANÖLÇ`, `ALANOLC`, `AREAOF`, `AÖ` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Seçilen nesnelerin alanını ve çevresini yazar. |
 | [`core.attribute`](attribute.md) | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
 | [`core.column`](column.md) | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Belgeye öznitelik sütunu tanımlar ve tanımlı sütunları listeler. |
 | [`core.erase`](erase.md) | `SİL`, `SIL`, `ERASE`, `E` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Seçilen nesneleri siler. |
@@ -49,6 +71,26 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | `noktalar` | point_list | en az 2 | Ardışık doğru parçalarının köşe noktaları |
 
 Ayrıntılı kullanım: [ÇİZGİ](line.md)
+
+### `core.polyline` — ÇOKLUÇİZGİ
+
+Birden çok noktadan TEK bir çizgi nesnesi çizer.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `noktalar` | point_list | en az 2 | Çoklu çizginin köşe noktaları; hepsi tek nesne olur |
+
+Ayrıntılı kullanım: [ÇOKLUÇİZGİ](polyline.md)
+
+### `core.point_draw` — NOKTA
+
+Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `noktalar` | point_list | en az 1 | Yerleştirilecek noktalar |
+
+Ayrıntılı kullanım: [NOKTA](point_draw.md)
 
 ### `core.text` — METİN
 
@@ -95,6 +137,243 @@ Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer.
 | `noktalar` | point_list | 2 | Karşılıklı iki köşe; kalan ikisi bunlardan türetilir |
 
 Ayrıntılı kullanım: [DİKDÖRTGEN](rectangle.md)
+
+### `core.circle_draw` — DAİRE
+
+Merkez ve çember üzerindeki bir noktadan daire çizer.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `merkez` | point | 1 | Dairenin merkezi |
+| `cevre` | point | 1 | Çember üzerinde bir nokta; yarıçapı bu belirler |
+
+Ayrıntılı kullanım: [DAİRE](circle_draw.md)
+
+### `core.arc_draw` — YAY
+
+Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `merkez` | point | 1 | Yayın merkezi |
+| `baslangic` | point | 1 | Yayın başlangıç noktası; yarıçapı bu belirler |
+| `bitis` | point | 1 | Yayın bitiş yönü; süpürme saat yönünün tersinedir |
+
+Ayrıntılı kullanım: [YAY](arc_draw.md)
+
+### `core.vertex_move` — KÖŞETAŞI
+
+Bir nesnenin köşesini yeni bir yere taşır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesne` | selection | 1 | Köşesi taşınacak nesnenin kimliği |
+| `kose` | integer | 1 | Taşınacak köşenin sırası; ilk köşe 1'dir |
+| `nokta` | point | 1 | Köşenin yeni yeri |
+
+Ayrıntılı kullanım: [KÖŞETAŞI](vertex_move.md)
+
+### `core.vertex_insert` — KÖŞEEKLE
+
+Bir kenarın ortasına yeni köşe ekler.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesne` | selection | 1 | Köşe eklenecek nesnenin kimliği |
+| `kose` | integer | 1 | Yeni köşenin ardına geleceği köşe; ilk köşe 1'dir |
+| `nokta` | point | 1 | Yeni köşenin yeri |
+
+Ayrıntılı kullanım: [KÖŞEEKLE](vertex_insert.md)
+
+### `core.to_area` — ALANAÇEVİR
+
+Uç uca değen çizgileri tek bir kapalı alana çevirir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim |
+
+Ayrıntılı kullanım: [ALANAÇEVİR](to_area.md)
+
+### `core.move` — TAŞI
+
+Seçilen nesneleri iki nokta arasındaki kadar taşır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Taşınacak nesnelerin kimlikleri; yoksa etkin seçim |
+| `baslangic` | point | 1 | Taşımanın başlangıç noktası |
+| `bitis` | point | 1 | Taşımanın bitiş noktası |
+
+Ayrıntılı kullanım: [TAŞI](move.md)
+
+### `core.copy` — KOPYALA
+
+Seçilen nesnelerin kopyasını iki nokta arasındaki kadar öteye koyar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Kopyalanacak nesnelerin kimlikleri; yoksa etkin seçim |
+| `baslangic` | point | 1 | Kopyalamanın başlangıç noktası |
+| `bitis` | point | 1 | Kopyanın geleceği nokta |
+
+Ayrıntılı kullanım: [KOPYALA](copy.md)
+
+### `core.array` — DİZİ
+
+Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Dizilecek nesnelerin kimlikleri; yoksa etkin seçim |
+| `mod` | text | isteğe bağlı | KUTUPSAL için kutupsal dizi; verilmezse satır/sütun dizisi |
+| `satir` | integer | isteğe bağlı | Satır sayısı (dikdörtgen dizi) |
+| `sutun` | integer | isteğe bağlı | Sütun sayısı (dikdörtgen dizi) |
+| `satir_aralik` | number | isteğe bağlı | Satır aralığı, metre; kuzeye artı |
+| `sutun_aralik` | number | isteğe bağlı | Sütun aralığı, metre; doğuya artı |
+| `merkez` | point | isteğe bağlı | Dizinin merkezi (kutupsal dizi) |
+| `sayi` | integer | isteğe bağlı | Toplam kopya sayısı, özgün dahil (kutupsal dizi) |
+| `aci` | number | isteğe bağlı | Süpürülecek toplam açı, derece; verilmezse tam tur |
+
+Ayrıntılı kullanım: [DİZİ](array.md)
+
+### `core.split` — BÖL
+
+Bir çizgiyi verilen noktadan ikiye böler.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesne` | selection | 1 | Bölünecek çizginin kimliği |
+| `nokta` | point | 1 | Bölme noktası |
+
+Ayrıntılı kullanım: [BÖL](split.md)
+
+### `core.trim` — BUDA
+
+Bir çizgiyi kestiği sınır çizgisine kadar budar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesne` | selection | 1 | Budanacak çizginin kimliği |
+| `sinir` | selection | 1 | Sınır çizgisinin kimliği |
+| `nokta` | point | 1 | Atılacak parçanın üzerindeki bir nokta |
+
+Ayrıntılı kullanım: [BUDA](trim.md)
+
+### `core.extend` — UZAT
+
+Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesne` | selection | 1 | Uzatılacak çizginin kimliği |
+| `sinir` | selection | 1 | Sınır çizgisinin kimliği |
+| `nokta` | point | 1 | Uzatılacak ucun yakınında bir nokta |
+
+Ayrıntılı kullanım: [UZAT](extend.md)
+
+### `core.chamfer` — PAH
+
+Bir köşeyi düz bir kenarla keser (pah kırar).
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesne` | selection | 1 | Köşesi kesilecek nesnenin kimliği |
+| `nokta` | point | 1 | İşlem yapılacak köşe |
+| `mesafe` | number | 1 | Köşeden her iki kenar boyunca kesilecek mesafe, metre |
+
+Ayrıntılı kullanım: [PAH](chamfer.md)
+
+### `core.fillet` — YUVARLA
+
+Bir köşeyi verilen yarıçapta yay ile yuvarlatır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesne` | selection | 1 | Köşesi yuvarlatılacak nesnenin kimliği |
+| `nokta` | point | 1 | İşlem yapılacak köşe |
+| `yaricap` | number | 1 | Yuvarlatma yarıçapı, metre |
+
+Ayrıntılı kullanım: [YUVARLA](fillet.md)
+
+### `core.set_layer` — KATMANAT
+
+Seçilen nesneleri başka bir katmana taşır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Taşınacak nesnelerin kimlikleri; yoksa etkin seçim |
+| `katman` | text | 1 | Hedef katmanın adı; yoksa oluşturulur |
+
+Ayrıntılı kullanım: [KATMANAT](set_layer.md)
+
+### `core.match_style` — STİLKOPYALA
+
+Bir nesnenin stilini seçilen nesnelere uygular.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `kaynak` | selection | 1 | Stili kopyalanacak nesnenin kimliği |
+| `nesneler` | selection | en az 0 | Stili alacak nesnelerin kimlikleri; yoksa etkin seçim |
+
+Ayrıntılı kullanım: [STİLKOPYALA](match_style.md)
+
+### `core.rotate` — DÖNDÜR
+
+Seçilen nesneleri bir merkez etrafında döndürür.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Döndürülecek nesnelerin kimlikleri; yoksa etkin seçim |
+| `merkez` | point | 1 | Döndürme merkezi |
+| `aci` | number | 1 | Dönme açısı, derece; artı yön saat yönünün tersi |
+
+Ayrıntılı kullanım: [DÖNDÜR](rotate.md)
+
+### `core.scale` — ÖLÇEKLE
+
+Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Ölçeklenecek nesnelerin kimlikleri; yoksa etkin seçim |
+| `merkez` | point | 1 | Ölçekleme merkezi; bu nokta yerinde kalır |
+| `carpan` | number | 1 | Ölçek çarpanı; sıfırdan büyük |
+
+Ayrıntılı kullanım: [ÖLÇEKLE](scale.md)
+
+### `core.mirror` — AYNALA
+
+Seçilen nesneleri iki noktadan geçen eksende aynalar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Aynalanacak nesnelerin kimlikleri; yoksa etkin seçim |
+| `baslangic` | point | 1 | Ayna ekseninin ilk noktası |
+| `bitis` | point | 1 | Ayna ekseninin ikinci noktası |
+
+Ayrıntılı kullanım: [AYNALA](mirror.md)
+
+### `core.measure` — ÖLÇ
+
+İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `baslangic` | point | 1 | Ölçümün ilk noktası |
+| `bitis` | point | 1 | Ölçümün ikinci noktası |
+
+Ayrıntılı kullanım: [ÖLÇ](measure.md)
+
+### `core.measure_area` — ALANÖLÇ
+
+Seçilen nesnelerin alanını ve çevresini yazar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim |
+
+Ayrıntılı kullanım: [ALANÖLÇ](measure_area.md)
 
 ### `core.attribute` — ÖZNİTELİK
 
@@ -407,6 +686,60 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
       "undo": "single_transaction"
     },
     {
+      "id": "core.polyline",
+      "names": [
+        "ÇOKLUÇİZGİ",
+        "COKLUCIZGI",
+        "POLYLINE",
+        "ÇÇ",
+        "PL"
+      ],
+      "category": "Çizim",
+      "summary": "Birden çok noktadan TEK bir çizgi nesnesi çizer.",
+      "params": [
+        {
+          "name": "noktalar",
+          "type": "point_list",
+          "min": 2,
+          "max": -1,
+          "required": true,
+          "help": "Çoklu çizginin köşe noktaları; hepsi tek nesne olur"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.point_draw",
+      "names": [
+        "NOKTA",
+        "POINT",
+        "NK"
+      ],
+      "category": "Çizim",
+      "summary": "Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper.",
+      "params": [
+        {
+          "name": "noktalar",
+          "type": "point_list",
+          "min": 1,
+          "max": -1,
+          "required": true,
+          "help": "Yerleştirilecek noktalar"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
       "id": "core.text",
       "names": [
         "METİN",
@@ -529,6 +862,835 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         "ai_accessible"
       ],
       "undo": "single_transaction"
+    },
+    {
+      "id": "core.circle_draw",
+      "names": [
+        "DAİRE",
+        "DAIRE",
+        "CIRCLE",
+        "DR"
+      ],
+      "category": "Çizim",
+      "summary": "Merkez ve çember üzerindeki bir noktadan daire çizer.",
+      "params": [
+        {
+          "name": "merkez",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Dairenin merkezi"
+        },
+        {
+          "name": "cevre",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Çember üzerinde bir nokta; yarıçapı bu belirler"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.arc_draw",
+      "names": [
+        "YAY",
+        "ARC",
+        "YY"
+      ],
+      "category": "Çizim",
+      "summary": "Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir.",
+      "params": [
+        {
+          "name": "merkez",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Yayın merkezi"
+        },
+        {
+          "name": "baslangic",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Yayın başlangıç noktası; yarıçapı bu belirler"
+        },
+        {
+          "name": "bitis",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Yayın bitiş yönü; süpürme saat yönünün tersinedir"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.vertex_move",
+      "names": [
+        "KÖŞETAŞI",
+        "KOSETASI",
+        "MOVEVERTEX",
+        "KT"
+      ],
+      "category": "Düzenleme",
+      "summary": "Bir nesnenin köşesini yeni bir yere taşır.",
+      "params": [
+        {
+          "name": "nesne",
+          "type": "selection",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Köşesi taşınacak nesnenin kimliği"
+        },
+        {
+          "name": "kose",
+          "type": "integer",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Taşınacak köşenin sırası; ilk köşe 1'dir"
+        },
+        {
+          "name": "nokta",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Köşenin yeni yeri"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.vertex_insert",
+      "names": [
+        "KÖŞEEKLE",
+        "KOSEEKLE",
+        "ADDVERTEX",
+        "KE"
+      ],
+      "category": "Düzenleme",
+      "summary": "Bir kenarın ortasına yeni köşe ekler.",
+      "params": [
+        {
+          "name": "nesne",
+          "type": "selection",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Köşe eklenecek nesnenin kimliği"
+        },
+        {
+          "name": "kose",
+          "type": "integer",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Yeni köşenin ardına geleceği köşe; ilk köşe 1'dir"
+        },
+        {
+          "name": "nokta",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Yeni köşenin yeri"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.to_area",
+      "names": [
+        "ALANAÇEVİR",
+        "ALANACEVIR",
+        "TOAREA",
+        "ALÇ"
+      ],
+      "category": "Düzenleme",
+      "summary": "Uç uca değen çizgileri tek bir kapalı alana çevirir.",
+      "params": [
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim"
+        }
+      ],
+      "flags": [
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.move",
+      "names": [
+        "TAŞI",
+        "TASI",
+        "MOVE",
+        "TŞ"
+      ],
+      "category": "Düzenleme",
+      "summary": "Seçilen nesneleri iki nokta arasındaki kadar taşır.",
+      "params": [
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Taşınacak nesnelerin kimlikleri; yoksa etkin seçim"
+        },
+        {
+          "name": "baslangic",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Taşımanın başlangıç noktası"
+        },
+        {
+          "name": "bitis",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Taşımanın bitiş noktası"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.copy",
+      "names": [
+        "KOPYALA",
+        "COPY",
+        "KP"
+      ],
+      "category": "Düzenleme",
+      "summary": "Seçilen nesnelerin kopyasını iki nokta arasındaki kadar öteye koyar.",
+      "params": [
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Kopyalanacak nesnelerin kimlikleri; yoksa etkin seçim"
+        },
+        {
+          "name": "baslangic",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Kopyalamanın başlangıç noktası"
+        },
+        {
+          "name": "bitis",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Kopyanın geleceği nokta"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.array",
+      "names": [
+        "DİZİ",
+        "DIZI",
+        "ARRAY",
+        "DZ"
+      ],
+      "category": "Düzenleme",
+      "summary": "Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır.",
+      "params": [
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Dizilecek nesnelerin kimlikleri; yoksa etkin seçim"
+        },
+        {
+          "name": "mod",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "KUTUPSAL için kutupsal dizi; verilmezse satır/sütun dizisi"
+        },
+        {
+          "name": "satir",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Satır sayısı (dikdörtgen dizi)"
+        },
+        {
+          "name": "sutun",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Sütun sayısı (dikdörtgen dizi)"
+        },
+        {
+          "name": "satir_aralik",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Satır aralığı, metre; kuzeye artı"
+        },
+        {
+          "name": "sutun_aralik",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Sütun aralığı, metre; doğuya artı"
+        },
+        {
+          "name": "merkez",
+          "type": "point",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Dizinin merkezi (kutupsal dizi)"
+        },
+        {
+          "name": "sayi",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Toplam kopya sayısı, özgün dahil (kutupsal dizi)"
+        },
+        {
+          "name": "aci",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Süpürülecek toplam açı, derece; verilmezse tam tur"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.split",
+      "names": [
+        "BÖL",
+        "BOL",
+        "SPLIT",
+        "BL"
+      ],
+      "category": "Düzenleme",
+      "summary": "Bir çizgiyi verilen noktadan ikiye böler.",
+      "params": [
+        {
+          "name": "nesne",
+          "type": "selection",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Bölünecek çizginin kimliği"
+        },
+        {
+          "name": "nokta",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Bölme noktası"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.trim",
+      "names": [
+        "BUDA",
+        "TRIM",
+        "BD"
+      ],
+      "category": "Düzenleme",
+      "summary": "Bir çizgiyi kestiği sınır çizgisine kadar budar.",
+      "params": [
+        {
+          "name": "nesne",
+          "type": "selection",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Budanacak çizginin kimliği"
+        },
+        {
+          "name": "sinir",
+          "type": "selection",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Sınır çizgisinin kimliği"
+        },
+        {
+          "name": "nokta",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Atılacak parçanın üzerindeki bir nokta"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.extend",
+      "names": [
+        "UZAT",
+        "EXTEND",
+        "UZ"
+      ],
+      "category": "Düzenleme",
+      "summary": "Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.",
+      "params": [
+        {
+          "name": "nesne",
+          "type": "selection",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Uzatılacak çizginin kimliği"
+        },
+        {
+          "name": "sinir",
+          "type": "selection",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Sınır çizgisinin kimliği"
+        },
+        {
+          "name": "nokta",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Uzatılacak ucun yakınında bir nokta"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.chamfer",
+      "names": [
+        "PAH",
+        "CHAMFER",
+        "PH"
+      ],
+      "category": "Düzenleme",
+      "summary": "Bir köşeyi düz bir kenarla keser (pah kırar).",
+      "params": [
+        {
+          "name": "nesne",
+          "type": "selection",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Köşesi kesilecek nesnenin kimliği"
+        },
+        {
+          "name": "nokta",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "İşlem yapılacak köşe"
+        },
+        {
+          "name": "mesafe",
+          "type": "number",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Köşeden her iki kenar boyunca kesilecek mesafe, metre"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.fillet",
+      "names": [
+        "YUVARLA",
+        "FILLET",
+        "YV"
+      ],
+      "category": "Düzenleme",
+      "summary": "Bir köşeyi verilen yarıçapta yay ile yuvarlatır.",
+      "params": [
+        {
+          "name": "nesne",
+          "type": "selection",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Köşesi yuvarlatılacak nesnenin kimliği"
+        },
+        {
+          "name": "nokta",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "İşlem yapılacak köşe"
+        },
+        {
+          "name": "yaricap",
+          "type": "number",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Yuvarlatma yarıçapı, metre"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.set_layer",
+      "names": [
+        "KATMANAT",
+        "KATMANATA",
+        "SETLAYER",
+        "KA"
+      ],
+      "category": "Düzenleme",
+      "summary": "Seçilen nesneleri başka bir katmana taşır.",
+      "params": [
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Taşınacak nesnelerin kimlikleri; yoksa etkin seçim"
+        },
+        {
+          "name": "katman",
+          "type": "text",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Hedef katmanın adı; yoksa oluşturulur"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.match_style",
+      "names": [
+        "STİLKOPYALA",
+        "STILKOPYALA",
+        "MATCHPROP",
+        "SK"
+      ],
+      "category": "Düzenleme",
+      "summary": "Bir nesnenin stilini seçilen nesnelere uygular.",
+      "params": [
+        {
+          "name": "kaynak",
+          "type": "selection",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Stili kopyalanacak nesnenin kimliği"
+        },
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Stili alacak nesnelerin kimlikleri; yoksa etkin seçim"
+        }
+      ],
+      "flags": [
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.rotate",
+      "names": [
+        "DÖNDÜR",
+        "DONDUR",
+        "ROTATE",
+        "DÖN"
+      ],
+      "category": "Düzenleme",
+      "summary": "Seçilen nesneleri bir merkez etrafında döndürür.",
+      "params": [
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Döndürülecek nesnelerin kimlikleri; yoksa etkin seçim"
+        },
+        {
+          "name": "merkez",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Döndürme merkezi"
+        },
+        {
+          "name": "aci",
+          "type": "number",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Dönme açısı, derece; artı yön saat yönünün tersi"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.scale",
+      "names": [
+        "ÖLÇEKLE",
+        "OLCEKLE",
+        "SCALE",
+        "ÖLÇEK",
+        "OLCEK"
+      ],
+      "category": "Düzenleme",
+      "summary": "Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.",
+      "params": [
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Ölçeklenecek nesnelerin kimlikleri; yoksa etkin seçim"
+        },
+        {
+          "name": "merkez",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Ölçekleme merkezi; bu nokta yerinde kalır"
+        },
+        {
+          "name": "carpan",
+          "type": "number",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Ölçek çarpanı; sıfırdan büyük"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.mirror",
+      "names": [
+        "AYNALA",
+        "MIRROR",
+        "AYN"
+      ],
+      "category": "Düzenleme",
+      "summary": "Seçilen nesneleri iki noktadan geçen eksende aynalar.",
+      "params": [
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Aynalanacak nesnelerin kimlikleri; yoksa etkin seçim"
+        },
+        {
+          "name": "baslangic",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Ayna ekseninin ilk noktası"
+        },
+        {
+          "name": "bitis",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Ayna ekseninin ikinci noktası"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.measure",
+      "names": [
+        "ÖLÇ",
+        "OLC",
+        "MEASURE",
+        "MS"
+      ],
+      "category": "Sorgu",
+      "summary": "İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar.",
+      "params": [
+        {
+          "name": "baslangic",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Ölçümün ilk noktası"
+        },
+        {
+          "name": "bitis",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Ölçümün ikinci noktası"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible",
+        "read_only"
+      ],
+      "undo": "none"
+    },
+    {
+      "id": "core.measure_area",
+      "names": [
+        "ALANÖLÇ",
+        "ALANOLC",
+        "AREAOF",
+        "AÖ"
+      ],
+      "category": "Sorgu",
+      "summary": "Seçilen nesnelerin alanını ve çevresini yazar.",
+      "params": [
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim"
+        }
+      ],
+      "flags": [
+        "scriptable",
+        "ai_accessible",
+        "read_only"
+      ],
+      "undo": "none"
     },
     {
       "id": "core.attribute",

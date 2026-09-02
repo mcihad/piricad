@@ -5,7 +5,10 @@
 add_library(piricad_core STATIC
     src/attribute.cpp
     src/document.cpp
+    src/arc.cpp
+    src/circle.cpp
     src/entity_kind.cpp
+    src/transform.cpp
     src/geometry.cpp
     src/json.cpp
     src/layer.cpp

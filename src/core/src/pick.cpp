@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/core/pick.hpp"
 
+#include "piricad/core/entity_kind.hpp"
+
 #include "piricad/core/document.hpp"
 #include "piricad/core/spatial_index.hpp"
 
@@ -63,15 +65,58 @@ void for_each_candidate(const Document& doc, const Box2& box, std::vector<Entity
 
 /// Smallest squared distance from `p` to any segment of entity `e`, or a negative
 /// value when the entity carries no segment.
+/// The runs to measure against, whichever kind the entity is.
+///
+/// A curve's stored vertices are its DEFINITION, not its shape: a circle holds a
+/// centre and a radius handle, and measuring to those measures to a line pointing
+/// east. That is exactly what made a circle unpickable anywhere except along its
+/// own radius (core/entity_kind.hpp `curve_outline`).
+struct Runs
+{
+    EmitBuffer curve;
+    bool is_curve{false};
+    std::uint32_t count{0};
+
+    void build(const Document& doc, EntityId e)
+    {
+        const std::uint32_t slot = doc.entities().slot[e];
+        is_curve = curve_outline(doc.entities().kind[e], doc.geometry(), slot, curve);
+        count    = is_curve ? static_cast<std::uint32_t>(curve.run_total())
+                            : doc.geometry().rings_of(slot).count;
+    }
+
+    /// `i` is a run index, 0-based within the entity.
+    std::span<const Mm> xs(const Document& doc, EntityId e, std::uint32_t i) const
+    {
+        if (is_curve)
+            return std::span<const Mm>(curve.xs.data() + curve.run_start[i], curve.run_count[i]);
+        return doc.geometry().ring_xs(doc.geometry().rings_of(doc.entities().slot[e]).first + i);
+    }
+
+    std::span<const Mm> ys(const Document& doc, EntityId e, std::uint32_t i) const
+    {
+        if (is_curve)
+            return std::span<const Mm>(curve.ys.data() + curve.run_start[i], curve.run_count[i]);
+        return doc.geometry().ring_ys(doc.geometry().rings_of(doc.entities().slot[e]).first + i);
+    }
+
+    bool closed(const Document& doc, EntityId e, std::uint32_t i) const
+    {
+        if (is_curve) return curve.run_closed[i] != 0;
+        const RingSpan rs = doc.geometry().rings_of(doc.entities().slot[e]);
+        return doc.geometry().ring_role[rs.first + i] != RingRole::Open;
+    }
+};
+
 double min_distance_squared(const Document& doc, EntityId e, Point2 p)
 {
-    const RingGeometry& geometry = doc.geometry();
-    const RingSpan span          = geometry.rings_of(doc.entities().slot[e]);
+    Runs runs;
+    runs.build(doc, e);
 
     double best = -1.0;
-    for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-        const auto xs = geometry.ring_xs(r);
-        const auto ys = geometry.ring_ys(r);
+    for (std::uint32_t r = 0; r < runs.count; ++r) {
+        const auto xs = runs.xs(doc, e, r);
+        const auto ys = runs.ys(doc, e, r);
         if (xs.empty()) continue;
 
         if (xs.size() == 1) {
@@ -80,7 +125,7 @@ double min_distance_squared(const Document& doc, EntityId e, Point2 p)
             continue;
         }
 
-        const bool closed          = geometry.ring_role[r] != RingRole::Open;
+        const bool closed          = runs.closed(doc, e, r);
         const std::size_t n        = xs.size();
         const std::size_t segments = closed ? n : n - 1;
 
@@ -231,8 +276,7 @@ void pick_in_box(const Document& doc, const Box2& box, PickMode mode, std::vecto
 {
     if (box.empty()) return;
 
-    const EntityTable& entities  = doc.entities();
-    const RingGeometry& geometry = doc.geometry();
+    const EntityTable& entities = doc.entities();
     std::vector<EntityId> scratch;
 
     for_each_candidate(doc, box, scratch, [&](EntityId e) {
@@ -249,11 +293,13 @@ void pick_in_box(const Document& doc, const Box2& box, PickMode mode, std::vecto
         }
 
         // Crossing: the bounding box overlapping is not enough — an L-shaped
-        // parcel's box covers ground the parcel does not.
-        const RingSpan span = geometry.rings_of(entities.slot[e]);
-        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-            const auto xs = geometry.ring_xs(r);
-            const auto ys = geometry.ring_ys(r);
+        // parcel's box covers ground the parcel does not, and a circle's box has
+        // four corners the circle never reaches.
+        Runs runs;
+        runs.build(doc, e);
+        for (std::uint32_t r = 0; r < runs.count; ++r) {
+            const auto xs = runs.xs(doc, e, r);
+            const auto ys = runs.ys(doc, e, r);
             if (xs.empty()) continue;
 
             if (xs.size() == 1) {
@@ -264,7 +310,7 @@ void pick_in_box(const Document& doc, const Box2& box, PickMode mode, std::vecto
                 continue;
             }
 
-            const bool closed          = geometry.ring_role[r] != RingRole::Open;
+            const bool closed          = runs.closed(doc, e, r);
             const std::size_t n        = xs.size();
             const std::size_t segments = closed ? n : n - 1;
 

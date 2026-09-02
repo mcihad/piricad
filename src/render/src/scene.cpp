@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/render/scene.hpp"
 
+#include "piricad/core/entity_kind.hpp"
 #include "piricad/core/spatial_index.hpp"
 
 #include <algorithm>
@@ -240,12 +241,36 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
     // Precomputed LOD tiles replace this per-frame filter in Phase 1 (§10.3).
     const double lod_mm = options.lod ? options.lod_pixels * view.mm_per_pixel() : 0.0;
 
+    // A CIRCLE'S RINGS ARE ITS DEFINITION, NOT ITS PICTURE: two vertices, the
+    // centre and a handle due east (core/circle.hpp). Walked as stored they draw
+    // as a short line pointing east, so the drawn form is built here and the ring
+    // readers below are pointed at it instead.
+    //
+    // Rebuilt per entity into buffers that keep their capacity, because the frame
+    // path does not allocate (§10.4).
+    core::EmitBuffer curve;
+    bool curve_active = false;
+    bool curve_closed = false;
+
+    const auto ring_xs = [&](std::uint32_t ring) {
+        return curve_active ? std::span<const core::Mm>(curve.xs) : geometry.ring_xs(ring);
+    };
+    const auto ring_ys = [&](std::uint32_t ring) {
+        return curve_active ? std::span<const core::Mm>(curve.ys) : geometry.ring_ys(ring);
+    };
+
+    /// Whether this run encloses anything — which decides both the closing
+    /// segment and whether it can be filled. A circle does; an arc does not.
+    const auto ring_closed = [&](std::uint32_t ring) {
+        return curve_active ? curve_closed : geometry.ring_role[ring] != core::RingRole::Open;
+    };
+
     const auto emit_ring = [&](PolylineBatch& batch, std::uint32_t ring) {
-        const auto xs = geometry.ring_xs(ring);
-        const auto ys = geometry.ring_ys(ring);
+        const auto xs = ring_xs(ring);
+        const auto ys = ring_ys(ring);
         if (xs.size() < 2) return;
 
-        const bool closed       = geometry.ring_role[ring] != core::RingRole::Open;
+        const bool closed = ring_closed(ring);
         const std::size_t first = batch.xs.size();
 
         const auto push = [&](std::size_t v) {
@@ -282,8 +307,8 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
     };
 
     const auto emit_fill_ring = [&](PolygonBatch& batch, std::uint32_t ring) {
-        const auto xs = geometry.ring_xs(ring);
-        const auto ys = geometry.ring_ys(ring);
+        const auto xs = ring_xs(ring);
+        const auto ys = ring_ys(ring);
         if (xs.size() < 3) return;
 
         for (std::size_t v = 0; v < xs.size(); ++v) {
@@ -298,7 +323,9 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         // the shape being coloured, and a plan lekesi that leaks over its boundary
         // is a wrong drawing rather than a coarse one.
         batch.runs.push_back(static_cast<std::uint32_t>(xs.size()));
-        batch.is_hole.push_back(geometry.ring_role[ring] == core::RingRole::Interior ? 1u : 0u);
+        // A curve has no holes: its single run is its outline.
+        batch.is_hole.push_back(
+            !curve_active && geometry.ring_role[ring] == core::RingRole::Interior ? 1u : 0u);
         ++out.fill_count;
     };
 
@@ -311,6 +338,13 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
             ++out.culled_count;
             return;
         }
+
+        // What KIND of thing this is decides what its rings mean. Only a curve
+        // needs the substitution, so a polyline — which is every entity on the
+        // five-million-parcel sheet the budget is written against — pays one
+        // comparison and reads its vertices exactly as it always did (§10.1).
+        curve_active = core::curve_outline(entities.kind[e], geometry, entities.slot[e], curve);
+        curve_closed = curve_active && curve.run_total() > 0 && curve.run_closed[0] != 0;
 
         const core::LayerId lid = entities.layer[e];
         if (lid >= layers.size()) return;
@@ -428,8 +462,10 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
                 // The line to walk along and the ring to clip to come from the
                 // same geometry; what differs is which buffer they land in.
                 if (ps.wants_stroke) emit_ring(batch, r);
-                if (fill_wanted && geometry.ring_role[r] != core::RingRole::Open)
-                    emit_fill_ring(fill, r);
+                // A CLOSED CURVE IS A FACE. A circle encloses ground exactly as a
+                // parsel ring does, so it takes the same fill; an arc encloses
+                // nothing and takes none.
+                if (fill_wanted && ring_closed(r)) emit_fill_ring(fill, r);
             }
         }
 

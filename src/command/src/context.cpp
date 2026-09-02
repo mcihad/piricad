@@ -4,6 +4,8 @@
 #include "piricad/command/bus.hpp"
 #include "piricad/command/session.hpp"
 
+#include <utility>
+
 namespace piricad::command {
 namespace {
 
@@ -89,34 +91,35 @@ InputAwaiter<Point2> Context::point(std::string param, std::string message, Poin
     prompt.has_rubber_band = o.rubber_band;
     prompt.rubber_origin   = o.rubber_origin;
     prompt.rubber_shape    = o.rubber_shape;
+    prompt.rubber_chain    = std::move(o.rubber_chain);
     return InputAwaiter<Point2>(session_, std::move(p), std::move(prompt), &to_point);
 }
 
 InputAwaiter<double> Context::number(std::string param, std::string message)
 {
     Param p = Param::number(param, Arity::exactly(1));
-    Prompt prompt{std::move(message), ParamKind::Number, param, false, {}};
+    Prompt prompt{.message = std::move(message), .kind = ParamKind::Number, .param = param};
     return InputAwaiter<double>(session_, std::move(p), std::move(prompt), &to_number);
 }
 
 InputAwaiter<std::int64_t> Context::integer(std::string param, std::string message)
 {
     Param p = Param::integer(param, Arity::exactly(1));
-    Prompt prompt{std::move(message), ParamKind::Integer, param, false, {}};
+    Prompt prompt{.message = std::move(message), .kind = ParamKind::Integer, .param = param};
     return InputAwaiter<std::int64_t>(session_, std::move(p), std::move(prompt), &to_integer);
 }
 
 InputAwaiter<std::string> Context::text(std::string param, std::string message)
 {
     Param p = Param::text(param, Arity::exactly(1));
-    Prompt prompt{std::move(message), ParamKind::Text, param, false, {}};
+    Prompt prompt{.message = std::move(message), .kind = ParamKind::Text, .param = param};
     return InputAwaiter<std::string>(session_, std::move(p), std::move(prompt), &to_text);
 }
 
 InputAwaiter<bool> Context::boolean(std::string param, std::string message)
 {
     Param p = Param::boolean(param, Arity::exactly(1));
-    Prompt prompt{std::move(message), ParamKind::Bool, param, false, {}};
+    Prompt prompt{.message = std::move(message), .kind = ParamKind::Bool, .param = param};
     return InputAwaiter<bool>(session_, std::move(p), std::move(prompt), &to_bool);
 }
 

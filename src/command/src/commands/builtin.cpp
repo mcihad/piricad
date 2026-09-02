@@ -12,10 +12,32 @@ namespace piricad::command {
 
 #define PIRICAD_BUILTIN_COMMANDS(X)                                                                \
     X(line)                                                                                        \
+    X(polyline)                                                                                    \
+    X(point_draw)                                                                                  \
     X(text)                                                                                        \
     X(exportstyle)                                                                                 \
     X(area)                                                                                        \
     X(rectangle)                                                                                   \
+    X(circle_draw)                                                                                 \
+    X(arc_draw)                                                                                    \
+    X(vertex_move)                                                                                 \
+    X(vertex_insert)                                                                               \
+    X(to_area)                                                                                     \
+    X(move)                                                                                        \
+    X(copy_objects)                                                                                \
+    X(array_objects)                                                                               \
+    X(split)                                                                                       \
+    X(trim)                                                                                        \
+    X(extend)                                                                                      \
+    X(chamfer)                                                                                     \
+    X(fillet)                                                                                      \
+    X(set_layer)                                                                                   \
+    X(match_style)                                                                                 \
+    X(rotate)                                                                                      \
+    X(scale)                                                                                       \
+    X(mirror)                                                                                      \
+    X(measure)                                                                                     \
+    X(measure_area)                                                                                \
     X(attribute)                                                                                   \
     X(column)                                                                                      \
     X(erase)                                                                                       \

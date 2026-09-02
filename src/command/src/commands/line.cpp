@@ -21,8 +21,9 @@ Task<void> run(Context& ctx)
     Value::Points drawn{*p1};
     core::Point2 previous = *p1;
 
-    while (auto p2 =
-               co_await ctx.point("noktalar", "Sonraki nokta", PointOptions{true, previous})) {
+    while (auto p2 = co_await ctx.point(
+               "noktalar", "Sonraki nokta",
+               PointOptions{.rubber_band = true, .rubber_origin = previous})) {
         const std::array<core::Point2, 2> segment{previous, *p2};
 
         auto created = ctx.transaction().add_polyline(ctx.active_layer(), segment);

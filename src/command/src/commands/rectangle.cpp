@@ -38,7 +38,9 @@ Task<void> run(Context& ctx)
     // ortho, and polar, and every object snap — measure from it exactly as they
     // do for a line. Nothing here is a private input path (piricad.md §2.4).
     auto second = co_await ctx.point("noktalar", "Karşı köşe",
-                                     PointOptions{true, *first, RubberShape::Rectangle});
+                                     PointOptions{.rubber_band   = true,
+                                                  .rubber_origin = *first,
+                                                  .rubber_shape  = RubberShape::Rectangle});
     if (!second) co_return;
 
     if (first->x == second->x || first->y == second->y) {

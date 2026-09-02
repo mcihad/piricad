@@ -238,15 +238,22 @@ core::Status validate_indices(const DocumentRecord& dr, const Columns& c)
                            std::to_string(dr.style_count) + " stil var. Dosya bozuk.");
 
         // model.md R26 wants an unknown kind preserved and non-editable. This
-        // build has one kind (0) and no payload block to carry another, so a file
-        // that names a second kind is REFUSED rather than opened with its
-        // geometry silently reinterpreted. Refusing loses nothing; opening it
-        // would lose the entity and P11 forbids that.
-        if (c.kind[e] != 0)
+        // build has no payload block to carry one, so a file that names a kind it
+        // does not know is REFUSED rather than opened with its geometry silently
+        // reinterpreted. Refusing loses nothing; opening it would lose the entity
+        // and P11 forbids that.
+        //
+        // 0 is accepted and MEANS `core.polyline`. Every file written before the
+        // kind column carried anything wrote a zero into it — the column existed,
+        // nothing filled it — and those drawings are polylines. Refusing them now
+        // would be refusing every project saved by an earlier build.
+        if (c.kind[e] != 0 && c.kind[e] != core::kPolylineKind &&
+            c.kind[e] != core::kCircleKind && c.kind[e] != core::kArcKind &&
+            c.kind[e] != core::kPointKind)
             return err(ErrorCode::Unsupported,
                        std::string(kErrKind) + ": " + std::to_string(e + 1) + ". nesne " +
                            std::to_string(c.kind[e]) +
-                           " numaralı nesne türünde; bu yapı yalnız 0 numaralı türü tanıyor. "
+                           " numaralı nesne türünde; bu yapı bu türü tanımıyor. "
                            "Dosyayı yazan PiriCAD sürümüne yükseltin.");
 
         // model.md R3: a key above 2^63-1 becomes negative the moment it is
@@ -670,12 +677,45 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
 
         const auto layer_slot = static_cast<core::LayerId>(cols.layer[static_cast<std::size_t>(e)]);
 
-        // A single Open ring is a polyline; anything else is a face. Both land in
-        // Document::add_area, which owns every geometric rule (model.md R9–R12) —
-        // the reader restates none of them.
-        auto added = (total == 1 && rings.front().role == core::RingRole::Open)
-                         ? tx.add_polyline(layer_slot, rings.front().points)
-                         : tx.add_area(layer_slot, rings);
+        // THE KIND COLUMN DECIDES, not the shape of the rings. A circle is stored
+        // as one Open ring of two vertices, which is exactly what a two-point line
+        // looks like; the column is the only thing that tells them apart, and
+        // guessing from the geometry would silently turn every saved circle into a
+        // line pointing east (see `core.circle`).
+        //
+        // A single Open ring is otherwise a polyline and anything else is a face.
+        // Both land in Document::add_area, which owns every geometric rule
+        // (model.md R9–R12) — the reader restates none of them.
+        core::Result<core::EntityId> added = core::err(core::ErrorCode::Internal, "");
+        if (cols.kind[static_cast<std::size_t>(e)] == core::kCircleKind) {
+            const auto pts = rings.front().points;
+            if (total != 1 || pts.size() != 2)
+                return err(ErrorCode::ParseError,
+                           std::string(kErrKind) + ": " + std::to_string(e + 1) +
+                               ". nesne daire olarak işaretli ama merkez ve yarıçapı taşıyan iki "
+                               "tepe noktası yok. Dosya bozuk.");
+            added = tx.add_circle(layer_slot, pts[0], pts[1].x - pts[0].x);
+        } else if (cols.kind[static_cast<std::size_t>(e)] == core::kArcKind) {
+            const auto pts = rings.front().points;
+            if (total != 1 || pts.size() != 4)
+                return err(ErrorCode::ParseError,
+                           std::string(kErrKind) + ": " + std::to_string(e + 1) +
+                               ". nesne yay olarak işaretli ama merkezi, yarıçapı ve iki ucunu "
+                               "taşıyan dört tepe noktası yok. Dosya bozuk.");
+            added = tx.add_arc(layer_slot, pts[0], pts[1].x - pts[0].x, pts[2], pts[3]);
+        } else if (cols.kind[static_cast<std::size_t>(e)] == core::kPointKind) {
+            const auto pts = rings.front().points;
+            if (total != 1 || pts.size() != 1)
+                return err(ErrorCode::ParseError,
+                           std::string(kErrKind) + ": " + std::to_string(e + 1) +
+                               ". nesne nokta olarak işaretli ama tek bir tepe noktası yok. "
+                               "Dosya bozuk.");
+            added = tx.add_point(layer_slot, pts[0]);
+        } else {
+            added = (total == 1 && rings.front().role == core::RingRole::Open)
+                        ? tx.add_polyline(layer_slot, rings.front().points)
+                        : tx.add_area(layer_slot, rings);
+        }
         if (!added)
             return err(added.error().code,
                        std::to_string(e + 1) + ". nesne okunamadı: " + added.error().message);

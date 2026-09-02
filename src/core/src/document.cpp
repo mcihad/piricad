@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "piricad/core/document.hpp"
 
+#include "piricad/core/entity_kind.hpp"
 #include "piricad/core/spatial_index.hpp"
 #include "piricad/core/text.hpp"
 
@@ -177,10 +178,16 @@ const SpatialIndex& Document::spatial_index() const
     const bool shrank              = indexed_live_ > 1024 && live_count_ * 2 < indexed_live_;
     const bool virgin              = index_->empty() && total > 0;
 
-    if (grew || shrank || virgin) {
+    // `index_stale_` is not one of the heuristics above and is not allowed to be:
+    // the others trade a stale tree for a cheaper rebuild, and a tree that is
+    // merely over-inclusive costs a rejected candidate. An edited entity makes it
+    // UNDER-inclusive, and no amount of scanning the tail finds an entity the tree
+    // filed under a box it has left.
+    if (grew || shrank || virgin || index_stale_) {
         index_->build(entities_);
         indexed_upto_ = static_cast<EntityId>(total);
         indexed_live_ = live_count_;
+        index_stale_  = false;
     }
     return *index_;
 }
@@ -205,7 +212,7 @@ LayerId Document::ensure_layer(std::string_view name)
     return added.value();
 }
 
-Result<EntityId> Document::push_entity(LayerId lyr, std::uint32_t geometry_slot)
+Result<EntityId> Document::push_entity(LayerId lyr, std::uint32_t geometry_slot, KindId kind)
 {
     const EntityKey key = keys_.mint_entity();
     if (key == EntityKey::None)
@@ -239,7 +246,7 @@ Result<EntityId> Document::push_entity(LayerId lyr, std::uint32_t geometry_slot)
 
     entities_.layer.push_back(lyr);
     entities_.style.push_back(kByLayerStyle);
-    entities_.kind.push_back(0);
+    entities_.kind.push_back(kind);
     entities_.slot.push_back(geometry_slot);
 
     // The binary search in slot_of() depends on this staying true.
@@ -265,8 +272,123 @@ Result<EntityId> Document::push_entity(LayerId lyr, std::uint32_t geometry_slot)
 
 Result<EntityId> Document::add_polyline(LayerId lyr, std::span<const Point2> pts, Op& undo_out)
 {
+    // THE FLOOR LIVES HERE, where the kind is known. `RingGeometry::append` allows
+    // a one-vertex open ring because a `core.point` is exactly that; a polyline
+    // with one vertex is a line that goes nowhere and is refused.
+    if (pts.size() < 2)
+        return err(ErrorCode::ValidationFailed,
+                   "Bir çizgi en az iki nokta ister, verilen: " + std::to_string(pts.size()) + ".");
+
     const RingGeometry::RingInput ring{pts, RingRole::Open, 0};
     return add_area(lyr, std::span<const RingGeometry::RingInput>(&ring, 1), undo_out);
+}
+
+Result<EntityId> Document::add_circle(LayerId lyr, Point2 centre, Mm radius, Op& undo_out)
+{
+    if (lyr >= layers_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen katman kimliği: " + std::to_string(lyr));
+    if (layers_.all()[lyr].locked)
+        return err(ErrorCode::ValidationFailed,
+                   "'" + layers_.all()[lyr].name + "' katmanı kilitli.");
+    if (radius <= 0)
+        return err(ErrorCode::InvalidArgument,
+                   "Daire yarıçapı sıfırdan büyük olmalı: " + std::to_string(radius));
+
+    // The two DEFINING vertices, not the circle's picture: centre, and a handle
+    // due east of it so the radius reads back as an exact integer subtraction
+    // (see core.circle in entity_kind.cpp). The drawn form is the kind's `emit`.
+    const Point2 pts[2]{centre, Point2{centre.x + radius, centre.y}};
+    const RingGeometry::RingInput ring{std::span<const Point2>(pts, 2), RingRole::Open, 0};
+
+    auto slot = geometry_.append(std::span<const RingGeometry::RingInput>(&ring, 1));
+    if (!slot) return slot.error();
+
+    auto id = push_entity(lyr, slot.value(), kCircleKind);
+    if (!id) return id;
+
+    // The bounding box of a circle is NOT the box of its two stored vertices: the
+    // arena bounded the centre and the handle, which is a flat line to the east.
+    // Every cull, every pick prefilter and every zoom-to-extents reads this, so it
+    // is corrected here rather than left for the kind to answer later.
+    const EntityId e = id.value();
+    entities_.min_x[e] = centre.x - radius;
+    entities_.min_y[e] = centre.y - radius;
+    entities_.max_x[e] = centre.x + radius;
+    entities_.max_y[e] = centre.y + radius;
+
+    undo_out          = Op{};
+    undo_out.kind     = Op::Kind::SetEntityAlive;
+    undo_out.entity   = e;
+    undo_out.bool_arg = false;
+    return id;
+}
+
+Result<EntityId> Document::add_point(LayerId lyr, Point2 at, Op& undo_out)
+{
+    if (lyr >= layers_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen katman kimliği: " + std::to_string(lyr));
+    if (layers_.all()[lyr].locked)
+        return err(ErrorCode::ValidationFailed,
+                   "'" + layers_.all()[lyr].name + "' katmanı kilitli.");
+
+    const Point2 pts[1]{at};
+    const RingGeometry::RingInput ring{std::span<const Point2>(pts, 1), RingRole::Open, 0};
+
+    auto slot = geometry_.append(std::span<const RingGeometry::RingInput>(&ring, 1));
+    if (!slot) return slot.error();
+
+    auto id = push_entity(lyr, slot.value(), kPointKind);
+    if (!id) return id;
+
+    undo_out          = Op{};
+    undo_out.kind     = Op::Kind::SetEntityAlive;
+    undo_out.entity   = id.value();
+    undo_out.bool_arg = false;
+    return id;
+}
+
+Result<EntityId> Document::add_arc(LayerId lyr, Point2 centre, Mm radius, Point2 start, Point2 end,
+                                   Op& undo_out)
+{
+    if (lyr >= layers_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen katman kimliği: " + std::to_string(lyr));
+    if (layers_.all()[lyr].locked)
+        return err(ErrorCode::ValidationFailed,
+                   "'" + layers_.all()[lyr].name + "' katmanı kilitli.");
+    if (radius <= 0)
+        return err(ErrorCode::InvalidArgument,
+                   "Yay yarıçapı sıfırdan büyük olmalı: " + std::to_string(radius));
+
+    const Point2 pts[4]{centre, Point2{centre.x + radius, centre.y}, start, end};
+    const RingGeometry::RingInput ring{std::span<const Point2>(pts, 4), RingRole::Open, 0};
+
+    auto slot = geometry_.append(std::span<const RingGeometry::RingInput>(&ring, 1));
+    if (!slot) return slot.error();
+
+    auto id = push_entity(lyr, slot.value(), kArcKind);
+    if (!id) return id;
+
+    // The box of an ARC, not of its four defining vertices: a sweep crossing due
+    // north reaches higher than either end does, and the arena bounded the centre
+    // and the radius handle along with them. Cull, pick and zoom-to-extents all
+    // read this.
+    const EntityId e     = id.value();
+    const KindSpec* spec = builtin_kinds().find(kArcKind);
+    if (spec != nullptr) {
+        const std::uint32_t one[1]{slot.value()};
+        Box2 box{};
+        spec->bbox(geometry_, SlotSpan(one, 1), std::span<Box2>(&box, 1));
+        entities_.min_x[e] = box.min_x;
+        entities_.min_y[e] = box.min_y;
+        entities_.max_x[e] = box.max_x;
+        entities_.max_y[e] = box.max_y;
+    }
+
+    undo_out          = Op{};
+    undo_out.kind     = Op::Kind::SetEntityAlive;
+    undo_out.entity   = e;
+    undo_out.bool_arg = false;
+    return id;
 }
 
 Result<EntityId> Document::add_area(LayerId lyr, std::span<const RingGeometry::RingInput> rings,
@@ -284,7 +406,7 @@ Result<EntityId> Document::add_area(LayerId lyr, std::span<const RingGeometry::R
     auto slot = geometry_.append(rings);
     if (!slot) return slot.error();
 
-    auto id = push_entity(lyr, slot.value());
+    auto id = push_entity(lyr, slot.value(), kPolylineKind);
     if (!id) return id;
 
     undo_out          = Op{};
@@ -292,6 +414,50 @@ Result<EntityId> Document::add_area(LayerId lyr, std::span<const RingGeometry::R
     undo_out.entity   = id.value();
     undo_out.bool_arg = false;
     return id;
+}
+
+Status Document::set_entity_layer(EntityId e, LayerId layer, Op& undo_out)
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+    if (layer >= layers_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen katman kimliği: " + std::to_string(layer));
+    if (layers_.all()[layer].locked)
+        return err(ErrorCode::ValidationFailed,
+                   "'" + layers_.all()[layer].name + "' katmanı kilitli.");
+
+    const LayerId was = entities_.layer[e];
+    if (was == layer) {
+        undo_out        = Op{};
+        undo_out.kind   = Op::Kind::SetEntityLayer;
+        undo_out.entity = e;
+        undo_out.layer  = was;
+        return ok();
+    }
+
+    // The per-layer live counts follow the object, or the layer panel would go on
+    // reporting it where it no longer is.
+    if (entities_.alive(e)) {
+        --layer_live_[was];
+        ++layer_live_[layer];
+    }
+
+    entities_.layer[e] = layer;
+
+    // The mirrored visibility bit is the cull test's whole input (R7), so it is
+    // re-taken from the NEW layer rather than carried over from the old one.
+    if (const Layer* l = layers_.at(layer); l != nullptr && !l->visible)
+        entities_.flags[e] |= FlagLayerHidden;
+    else
+        entities_.flags[e] &= static_cast<std::uint8_t>(~FlagLayerHidden);
+
+    ++revision_;
+
+    undo_out        = Op{};
+    undo_out.kind   = Op::Kind::SetEntityLayer;
+    undo_out.entity = e;
+    undo_out.layer  = was;
+    return ok();
 }
 
 Status Document::set_entity_alive(EntityId e, bool alive, Op& undo_out)
@@ -352,6 +518,92 @@ Status Document::set_entity_style(EntityId e, StyleId style, Op& undo_out)
     undo_out.kind      = Op::Kind::SetEntityStyle;
     undo_out.entity    = e;
     undo_out.style_arg = was;
+    return ok();
+}
+
+namespace {
+
+/// The bounding box of a slot AS ITS KIND SEES IT.
+///
+/// `RingGeometry::bounds_of` bounds the stored vertices, which for a curve are its
+/// definition and not its shape: a circle's are a centre and a handle due east, so
+/// the arena's answer is a flat line. Every cull, every pick prefilter and every
+/// zoom-to-extents reads this box, so it is asked of the kind.
+Box2 kind_bounds(const RingGeometry& geom, KindId kind, std::uint32_t slot)
+{
+    if (kind != kPolylineKind) {
+        if (const KindSpec* spec = builtin_kinds().find(kind); spec != nullptr) {
+            const std::uint32_t one[1]{slot};
+            Box2 box{};
+            spec->bbox(geom, SlotSpan(one, 1), std::span<Box2>(&box, 1));
+            return box;
+        }
+    }
+    return geom.bounds_of(slot);
+}
+
+} // namespace
+
+Status Document::set_geometry(EntityId e, std::span<const RingGeometry::RingInput> rings,
+                              Op& undo_out)
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+    if (!entities_.alive(e))
+        return err(ErrorCode::InvalidArgument,
+                   "Silinmiş nesnenin geometrisi değiştirilemez: " + std::to_string(e));
+
+    // Validation is the arena's, exactly as it is for a new entity: ring order,
+    // minimum vertex counts and closure are the same rules whether the geometry is
+    // being created or replaced (R11). A refusal here writes nothing, so the
+    // entity keeps the geometry it had.
+    auto slot = geometry_.append(rings);
+    if (!slot) return slot.error();
+
+    const std::uint32_t was = entities_.slot[e];
+    entities_.slot[e]       = slot.value();
+
+    const Box2 box     = kind_bounds(geometry_, entities_.kind[e], slot.value());
+    entities_.min_x[e] = box.min_x;
+    entities_.min_y[e] = box.min_y;
+    entities_.max_x[e] = box.max_x;
+    entities_.max_y[e] = box.max_y;
+
+    // The tree filed this entity under the box it no longer has. See `index_stale_`.
+    index_stale_ = true;
+    ++revision_;
+
+    undo_out               = Op{};
+    undo_out.kind          = Op::Kind::SetGeometry;
+    undo_out.entity        = e;
+    undo_out.geometry_slot = was;
+    return ok();
+}
+
+Status Document::restore_geometry(EntityId e, std::uint32_t slot, Op& undo_out)
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+    if (slot >= geometry_.slot_count())
+        return err(ErrorCode::InvalidArgument,
+                   "Bilinmeyen geometri yuvası: " + std::to_string(slot));
+
+    const std::uint32_t was = entities_.slot[e];
+    entities_.slot[e]       = slot;
+
+    const Box2 box     = kind_bounds(geometry_, entities_.kind[e], slot);
+    entities_.min_x[e] = box.min_x;
+    entities_.min_y[e] = box.min_y;
+    entities_.max_x[e] = box.max_x;
+    entities_.max_y[e] = box.max_y;
+
+    index_stale_ = true;
+    ++revision_;
+
+    undo_out               = Op{};
+    undo_out.kind          = Op::Kind::SetGeometry;
+    undo_out.entity        = e;
+    undo_out.geometry_slot = was;
     return ok();
 }
 
@@ -600,6 +852,8 @@ Status Document::apply(const Op& op, Op* undo_out)
     case Op::Kind::SetLayerStyle: return set_layer_style(op.layer, op.style_arg, inverse);
     case Op::Kind::SetLayerGroup: return set_layer_group(op.layer, op.str_arg, inverse);
     case Op::Kind::SetCrs: return set_crs(op.crs_arg, inverse);
+    case Op::Kind::SetGeometry: return restore_geometry(op.entity, op.geometry_slot, inverse);
+    case Op::Kind::SetEntityLayer: return set_entity_layer(op.entity, op.layer, inverse);
     }
     return err(ErrorCode::Internal, "İşlenmemiş Op::Kind");
 }

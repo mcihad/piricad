@@ -1,4 +1,4 @@
-# Roadmap — where the GPU canvas work stands
+# Roadmap — where PiriCAD stands
 
 > This is a HAND-OFF, not a rulebook. It records what is finished, what is
 > measured, what is written but unproven, and what is left — so the work can be
@@ -7,8 +7,8 @@
 > English, like everything else under `.claude/` (CLAUDE.md 11.9). It is written
 > for whoever continues the work, not for a user of the program.
 >
-> Last updated at commit `98235c4`. When an item here is finished, delete the
-> line — a roadmap nobody prunes stops being read.
+> Last updated after the drawing/editing toolset landed (49 commands). When an
+> item here is finished, delete the line — a roadmap nobody prunes stops being read.
 
 ## Where things stand
 
@@ -62,19 +62,71 @@ cmake --preset dev -DPIRICAD_WITH_RHI=ON -DPIRICAD_WITH_TEXT=ON -DPIRICAD_WITH_L
 cmake --build --preset dev
 ```
 
-## Written but NOT COMPILED
+## The entity model is no longer polyline-only
 
-Committed for the hand-off, unverified. Compile these first.
+`entities.kind` was a column of zeros that nothing read; the kind system was
+declared, unit-tested and wired to nothing. It is live now, and four kinds ship:
 
-- `src/app/src/style_designer.cpp` / `.hpp` — the unit segmented control:
-  a `QButtonGroup` so exactly one unit is lit, the click converting all five of
-  the layer's measures rather than three, and the mixed state shown deliberately.
-- `src/app/src/map_canvas.cpp` — `timeFrames()` renders through `grabCanvas()`
-  instead of `repaint()`. Repainting a widget the window system has not exposed
-  does nothing, so the harness was reporting `0 us` for backends that had not
-  drawn.
+| Kind | id | Stored as |
+|---|---|---|
+| `core.polyline` | 1 | its rings, as before |
+| `core.circle` | 2 | centre + a radius handle due east — the radius is exact |
+| `core.arc` | 3 | centre + radius handle + the two measured ends, swept CCW |
+| `core.point` | 4 | one vertex |
+
+`core::curve_outline` is the ONE place that answers "what shape is this really".
+The renderer, the pick test, the box select and the canvas all ask it, so the next
+curve kind becomes visible, selectable and snappable by being registered. That is
+not a claim — the arc was added after the circle and needed no edit to any of them.
+
+Three things this cost, which are worth not re-deriving:
+
+- **`KindSpec::emit` was named `emit`, which is a Qt macro.** Including
+  `entity_kind.hpp` from a Qt translation unit failed with `expected
+  unqualified-id` on a line that looked perfectly good. The member is `outline`
+  now, and `KindId` lives in `identity.hpp` so a caller who only asks "is this a
+  circle?" needs neither header.
+- **The project reader refused any file whose kind column was not 0.** Filling the
+  column correctly would have made every saved project unloadable. It accepts 0
+  (legacy = polyline) and every declared kind now.
+- **A circle and a two-point line are the same two vertices.** Only the kind column
+  separates them; a reader that guessed from the geometry turned every saved circle
+  into a short line pointing east. There is a round-trip test for exactly that.
+
+Curves never call `std::cos`/`std::sin`: libm is not required to agree between
+platforms and §7.3 promises the drawing does. Tessellation bisects from the four
+exact axis points using only `+`, `*` and `sqrt`, and `core::sin_cos_udeg` reduces
+an integer micro-degree angle by quadrant before a Taylor series — so a right angle
+is exactly a right angle and four 90° rotations return a parcel bit-for-bit.
+
+## What the drawing and editing toolset now covers
+
+Draw: `ÇİZGİ` `ÇOKLUÇİZGİ` `ALAN` `DİKDÖRTGEN` `DAİRE` `YAY` `NOKTA` `METİN`
+Modify: `TAŞI` `KOPYALA` `DÖNDÜR` `ÖLÇEKLE` `AYNALA` `DİZİ` `BÖL` `BUDA` `UZAT`
+`PAH` `YUVARLA` `KÖŞETAŞI` `KÖŞEEKLE` `ALANAÇEVİR` `KATMANAT` `STİLKOPYALA` `SİL`
+Query: `ÖLÇ` `ALANÖLÇ` `SEÇ`
+
+Every one has its Turkish page under `/docs`, a regression test, and works from the
+command line, a script and the GUI alike. `Del` deletes the selection and
+`core.duzenleme.silme_onayi` asks first when it is on.
+
+Two behaviours worth knowing before changing them:
+
+- **A fillet BREAKS the line in two** and puts a `core.arc` between the pieces.
+  Leaving both tangent points in one run draws a chord AND the arc — a lens where a
+  rounded corner should be. For the same reason `YUVARLA` refuses a CLOSED ring:
+  the result is a boundary partly made of a curve, which this ring cannot hold.
+- **A mirror reverses winding**, so ring vertex order is reversed to keep the area
+  positive, and an arc's two ends are swapped to keep the sweep counter-clockwise.
 
 ## Open, in the order they are worth doing
+
+0. **`ÖTELE` (offset) is the one obvious tool still missing**, and it is deliberately
+   not hand-rolled: parallel offsetting with self-intersection cleanup is exactly
+   what Clipper2 does and Article 5.16 says not to reimplement it. Clipper2 is
+   pinned by SHA in `cmake/PiriCADDependencies.cmake` but never fetched, and the
+   house rule below says not to start a `FetchContent` download unasked. Decide
+   that first; the command itself is small once the library is linked.
 
 1. **Default both options ON.** The measurement supports it and Article 8.1's
    removal condition names it. Keep the QPainter backend reachable while the
@@ -84,9 +136,12 @@ Committed for the hand-off, unverified. Compile these first.
    the fix is to stop the page being squashed rather than to add scrolling), and
    a very long published name still elides at the second line — the tooltip
    carries the full name, the cell does not.
-3. **Interactive drawing is unproven.** Every drawing check so far went through
-   a script. Driving a click with XTEST is unreliable while the screen is locked;
-   this needs an unlocked session or a nested compositor.
+3. **Interactive drawing is proven now** — `tests/canvas-edits` (the
+   `PIRICAD_EDIT_PROBE` hook) drives real `QMouseEvent`s into the canvas offscreen
+   and checks the document afterwards. It caught two bugs no unit test could: the
+   canvas sending `nesne` in the wrong `Value` kind so the bus refused the
+   invocation silently, and a draw tool that did not stay armed. Extend it rather
+   than testing the canvas by eye.
 4. **`make check` is red at clang-tidy, and was before this work.** 19 findings
    over the tree; 17 are in files this work never touched — `painter_backend`,
    `database`, `postgis`, `theme`, `project_writer`, `image_store`,

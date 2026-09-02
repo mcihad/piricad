@@ -7,6 +7,8 @@
 // tolerance on a cadastral area, and there is no such thing.
 #include "piricad_test.hpp"
 
+#include "piricad/core/transform.hpp"
+
 #include "piricad/core/geometry.hpp"
 
 #include <cstdint>
@@ -505,12 +507,16 @@ TEST_CASE("halkasız geometri reddedilir")
     reject(g, {}, "en az bir halka");
 }
 
-TEST_CASE("açık halka en az 2, kapalı halka en az 3 tepe noktası ister")
+TEST_CASE("açık halka tek tepe noktasıyla kabul edilir, kapalı halka en az 3 ister")
 {
     RingGeometry g;
 
+    // ONE vertex is a legal open ring, because a `core.point` — a survey control
+    // point, a traverse station, a benchmark — is exactly that and nothing more.
+    // The floor of TWO belongs where the kind is known: `Document::add_polyline`
+    // refuses a line that goes nowhere, and the test below pins that.
     const std::vector<Point2> bir{{0, 0}};
-    reject(g, {ring(bir, RingRole::Open)}, "en az 2 tepe noktası");
+    CHECK(g.append(std::vector<RingGeometry::RingInput>{ring(bir, RingRole::Open)}).ok());
 
     const std::vector<Point2> iki{{0, 0}, {1000, 0}};
     reject(g, {ring(iki, RingRole::Exterior)}, "en az 3 tepe noktası");
@@ -767,4 +773,104 @@ TEST_CASE("clear boşaltır, sonraki append sıfırdan başlar")
     const std::uint32_t slot = must_add(g, {ring(pts, RingRole::Exterior)});
     CHECK_EQ(slot, std::uint32_t{0});
     CHECK_EQ(g.area_of(slot), Mm2{1350000000});
+}
+
+// ============================================================================
+// Transforms — deterministic on every platform (§7.3)
+// ============================================================================
+// (transform.hpp is included at the top of this file)
+
+TEST_CASE("sin_cos_udeg: eksen açıları tam çıkar")
+{
+    using namespace piricad::core;
+
+    // The whole reason the reduction is integer: an axis angle must come out as
+    // exactly 0 and exactly 1, not 6.1e-17 and 0.99999999. A right angle that is
+    // nearly a right angle turns a rectangle into a rhombus one millimetre wide.
+    CHECK_EQ(sin_cos_udeg(0).sin, 0.0);
+    CHECK_EQ(sin_cos_udeg(0).cos, 1.0);
+    CHECK_EQ(sin_cos_udeg(90 * kUDegPerDegree).sin, 1.0);
+    CHECK_EQ(sin_cos_udeg(90 * kUDegPerDegree).cos, 0.0);
+    CHECK_EQ(sin_cos_udeg(180 * kUDegPerDegree).sin, 0.0);
+    CHECK_EQ(sin_cos_udeg(180 * kUDegPerDegree).cos, -1.0);
+    CHECK_EQ(sin_cos_udeg(270 * kUDegPerDegree).sin, -1.0);
+    CHECK_EQ(sin_cos_udeg(270 * kUDegPerDegree).cos, 0.0);
+
+    // Folded, and folded exactly: the same angle however many turns away.
+    CHECK_EQ(sin_cos_udeg(360 * kUDegPerDegree).cos, 1.0);
+    CHECK_EQ(sin_cos_udeg(-90 * kUDegPerDegree).sin, -1.0);
+    CHECK_EQ(sin_cos_udeg(720 * kUDegPerDegree + 90 * kUDegPerDegree).sin, 1.0);
+}
+
+TEST_CASE("sin_cos_udeg: ara açılar doğru")
+{
+    using namespace piricad::core;
+
+    const SinCos t45 = sin_cos_udeg(45 * kUDegPerDegree);
+    CHECK(std::abs(t45.sin - 0.70710678118654752) < 1e-15);
+    CHECK(std::abs(t45.cos - 0.70710678118654752) < 1e-15);
+
+    const SinCos t30 = sin_cos_udeg(30 * kUDegPerDegree);
+    CHECK(std::abs(t30.sin - 0.5) < 1e-15);
+
+    const SinCos t60 = sin_cos_udeg(60 * kUDegPerDegree);
+    CHECK(std::abs(t60.cos - 0.5) < 1e-15);
+
+    // The identity has to hold everywhere, which catches a bad octant swap.
+    for (piricad::core::UDeg a = 0; a < 360 * kUDegPerDegree; a += 7 * kUDegPerDegree) {
+        const SinCos t = sin_cos_udeg(a);
+        CHECK(std::abs(t.sin * t.sin + t.cos * t.cos - 1.0) < 1e-14);
+    }
+}
+
+TEST_CASE("döndürme: dik açı köşeyi tam yerine koyar")
+{
+    using namespace piricad::core;
+
+    const Point2 base{0, 0};
+    const Point2 p{10000, 0};
+
+    const Point2 q = rotated_about(p, base, sin_cos_udeg(90 * kUDegPerDegree));
+    CHECK_EQ(q.x, Mm{0});
+    CHECK_EQ(q.y, Mm{10000});
+
+    const Point2 h = rotated_about(p, base, sin_cos_udeg(180 * kUDegPerDegree));
+    CHECK_EQ(h.x, Mm{-10000});
+    CHECK_EQ(h.y, Mm{0});
+
+    // Four right angles return the point to itself, exactly.
+    Point2 r = p;
+    for (int i = 0; i < 4; ++i) r = rotated_about(r, base, sin_cos_udeg(90 * kUDegPerDegree));
+    CHECK_EQ(r.x, p.x);
+    CHECK_EQ(r.y, p.y);
+}
+
+TEST_CASE("aynalama: yatay ve düşey eksen tam, eğik eksen doğru")
+{
+    using namespace piricad::core;
+
+    // A horizontal axis is an integer negation and must not round.
+    CHECK_EQ(mirrored_in_line(Point2{3000, 5000}, Point2{0, 1000}, Point2{9999, 1000}).y,
+             Mm{-3000});
+    CHECK_EQ(mirrored_in_line(Point2{3000, 5000}, Point2{0, 1000}, Point2{9999, 1000}).x,
+             Mm{3000});
+
+    // And a vertical one.
+    CHECK_EQ(mirrored_in_line(Point2{3000, 5000}, Point2{1000, 0}, Point2{1000, 9999}).x,
+             Mm{-1000});
+
+    // y = x swaps the coordinates.
+    const Point2 d = mirrored_in_line(Point2{7000, 2000}, Point2{0, 0}, Point2{1000, 1000});
+    CHECK_EQ(d.x, Mm{2000});
+    CHECK_EQ(d.y, Mm{7000});
+}
+
+TEST_CASE("ölçekleme: taban noktası yerinde kalır")
+{
+    using namespace piricad::core;
+
+    const Point2 base{5000, 5000};
+    CHECK_EQ(scaled_about(base, base, 3.0).x, base.x);
+    CHECK_EQ(scaled_about(Point2{6000, 5000}, base, 2.0).x, Mm{7000});
+    CHECK_EQ(scaled_about(Point2{6000, 5000}, base, 0.5).x, Mm{5500});
 }

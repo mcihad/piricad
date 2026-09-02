@@ -80,6 +80,24 @@ public:
     /// A face: one exterior ring, optionally with holes, optionally multipart.
     /// This is what a parcel is (model.md R9).
     Result<EntityId> add_area(LayerId layer, std::span<const RingGeometry::RingInput> rings);
+    /// Replaces an entity's geometry, keeping its key, layer, style, attributes
+    /// and text. This is what a corner being dragged is: the same parsel with a
+    /// different boundary, never a new one (see `Document::set_geometry`).
+    Status set_geometry(EntityId e, std::span<const RingGeometry::RingInput> rings);
+
+    /// A circle, from its centre and radius (model.md R22-R26: `core.circle`).
+    Result<EntityId> add_circle(LayerId layer, Point2 centre, core::Mm radius);
+
+    /// An arc: centre, radius and the two ends, swept counter-clockwise.
+    Result<EntityId> add_arc(LayerId layer, Point2 centre, core::Mm radius, Point2 start,
+                             Point2 end);
+
+    /// A surveyed point (model.md R22-R26: `core.point`).
+    Result<EntityId> add_point(LayerId layer, Point2 at);
+
+    /// Moves an entity to another layer, keeping its identity.
+    Status set_entity_layer(EntityId e, LayerId layer);
+
     Status erase_entity(EntityId e);
     Status restore_entity(EntityId e);
     Status set_layer_visible(LayerId l, bool visible);

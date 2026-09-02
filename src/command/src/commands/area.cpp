@@ -47,7 +47,15 @@ Task<void> run(Context& ctx)
     recorded.push_back(*p1);
     core::Point2 previous = *p1;
 
-    while (auto p2 = co_await ctx.point("noktalar", "Sonraki köşe", PointOptions{true, previous})) {
+    // The face reaches the document in one `add_area` at the end, because a ring
+    // of one or two vertices is not a face and the geometry layer is right to
+    // refuse it. So the corners fixed so far are handed to the prompt: they are
+    // the only record of the work in progress that any client can show.
+    while (auto p2 = co_await ctx.point("noktalar", "Sonraki köşe",
+                                        PointOptions{.rubber_band   = true,
+                                                     .rubber_origin = previous,
+                                                     .rubber_shape  = RubberShape::Ring,
+                                                     .rubber_chain  = built.back().points})) {
         built.back().points.push_back(*p2);
         recorded.push_back(*p2);
         previous = *p2;

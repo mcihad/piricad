@@ -76,13 +76,15 @@ enum SnapMode : std::uint16_t {
     // BELOW every real feature, so a constructed point can never take a corner
     // that actually exists away from the user.
 
-    // Bit 9 is deliberately unused. It was written for DÜĞÜM — a lone surveyed
-    // point, the survey monument a cadastral job works from — and taken
-    // out again the same day, because this document model cannot hold one: an
-    // open ring needs two vertices (model.md R9-R12), `İÇEAKTAR` says in as many
-    // words that it reads lines and areas, and no command draws a point. A snap
-    // mode for a thing that cannot exist is a promise the program does not keep.
-    // DÜĞÜM lands with point entities, not before them.
+    /// DÜĞÜM — a lone surveyed point: the control point, traverse station or
+    /// benchmark a cadastral job works from.
+    ///
+    /// This bit was declared and left unused for exactly as long as the document
+    /// could not hold such a thing, because a snap mode for something that cannot
+    /// exist is a promise the program does not keep. `core.point` holds one now,
+    /// and a monument is the single most important thing on a cadastral sheet to
+    /// snap to — every boundary is measured from one.
+    SnapNode = 1u << 9,
 
     SnapExtension = 1u << 10, ///< UZANTI  — the line of a segment, past its own end
     SnapParallel  = 1u << 11, ///< PARALEL — a ray from the last point, parallel to an edge
@@ -90,7 +92,8 @@ enum SnapMode : std::uint16_t {
 
     /// The modes that need geometry to snap to. Grid and polar need none.
     SnapObjectMask = SnapEndpoint | SnapMidpoint | SnapCenter | SnapIntersection |
-                     SnapPerpendicular | SnapNearest | SnapExtension | SnapParallel | SnapApparent,
+                     SnapPerpendicular | SnapNearest | SnapNode | SnapExtension | SnapParallel |
+                     SnapApparent,
 
     /// The modes that look BEYOND the aperture, because the point they build is
     /// not where the geometry that implies it is. They are the only reason

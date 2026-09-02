@@ -338,8 +338,14 @@ Result<std::uint32_t> RingGeometry::append(std::span<const RingInput> rings)
             exterior_seen = false;
         }
 
+        // ONE vertex is enough for an open ring, and that is not a relaxation of
+        // R9-R12: those rules say what a ring IS, and say nothing about a floor.
+        // The floor belongs where the KIND is known — a polyline needs two
+        // vertices and `Document::add_polyline` refuses fewer — because a
+        // `core.point` is a single measured place and there is no second vertex
+        // for it to have. A closed ring still needs three: fewer encloses nothing.
         const std::size_t stored = stored_count(r);
-        const std::size_t needed = (r.role == RingRole::Open) ? 2u : 3u;
+        const std::size_t needed = (r.role == RingRole::Open) ? 1u : 3u;
         if (stored < needed) {
             std::string msg = ordinal(i) + " " + role_name(r.role) + " halka en az " +
                               std::to_string(needed) +

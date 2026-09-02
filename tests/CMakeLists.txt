@@ -97,6 +97,21 @@ if(TARGET piricad)
                 "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
                 $<TARGET_FILE:piricad>)
     set_tests_properties(windows-open PROPERTIES TIMEOUT 120)
+
+    # And the MOUSE, not only the windows. `unit` links no Qt, so it proves that
+    # KÖŞETAŞI moves a corner and nothing at all about whether dragging a grip
+    # ever reaches KÖŞETAŞI. It did not: the canvas sent `nesne` in the wrong
+    # Value kind, the bus refused the invocation before the body ran, and the
+    # whole unit suite stayed green while corners could be grabbed, dragged and
+    # released with no effect whatever. This drives real QMouseEvents into the
+    # canvas and checks the document afterwards.
+    add_test(NAME canvas-edits
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                PIRICAD_EDIT_PROBE=1
+                "PIRICAD_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:piricad>)
+    set_tests_properties(canvas-edits PROPERTIES TIMEOUT 120)
 endif()
 
 # Every gate script runs as a test, so a violation fails `ctest`, not only CI.
