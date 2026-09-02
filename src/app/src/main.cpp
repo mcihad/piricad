@@ -4,22 +4,22 @@
 #include "kentos_cad/app/main_window.hpp"
 #include "kentos_cad/app/map_canvas.hpp"
 #include "kentos_cad/app/theme.hpp"
-#include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/command/log.hpp"
+#include "kentos_cad/core/circle.hpp"
 
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QSettings>
-#include <QStandardPaths>
 #include <QGuiApplication>
 #include <QImage>
 #include <QLineEdit>
 #include <QLocale>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QSettings>
+#include <QStandardPaths>
 #include <QTimer>
 #include <QTranslator>
 
@@ -61,6 +61,7 @@ void migrate_user_data()
         QStandardPaths::StandardLocation where;
         const char* what;
     };
+
     static const Move kMoves[] = {
         {QStandardPaths::AppConfigLocation, "ayar"},
         {QStandardPaths::AppDataLocation, "veri"},
@@ -420,7 +421,7 @@ int main(int argc, char** argv)
                 return QPointF(p.x, p.y);
             };
 
-            int failures = 0;
+            int failures     = 0;
             const auto check = [&](bool ok, const char* what) {
                 if (!ok) {
                     ++failures;
@@ -436,11 +437,12 @@ int main(int argc, char** argv)
 
             // 1. Drag corner 1. It must MOVE, and the object must stay one object
             //    with the same key — a corner correction is not a new parsel.
-            const auto key_before  = doc.entities().key[0];
-            const QPointF grabbed  = at(kentos::core::Point2{485300000, 4310200000});
+            const auto key_before = doc.entities().key[0];
+            const QPointF grabbed = at(kentos::core::Point2{485300000, 4310200000});
             drag(grabbed, grabbed + QPointF(60, -40));
 
-            check(doc.geometry().ring_xs(corners().first).size() == 4, "köşe sayısı taşımada değişti");
+            check(doc.geometry().ring_xs(corners().first).size() == 4,
+                  "köşe sayısı taşımada değişti");
             check(corner(0).x != 485300000 || corner(0).y != 4310200000, "köşe taşınmadı");
             check(doc.entities().key[0] == key_before, "taşıma nesnenin kimliğini değiştirdi");
             check(doc.live_entity_count() == 1, "taşıma nesne sayısını değiştirdi");
@@ -599,8 +601,7 @@ int main(int argc, char** argv)
                 auto* panel = window.findChild<kentos::app::AttributePanel*>();
                 check(panel != nullptr, "öznitelik paneli bulunamadı");
                 if (panel != nullptr) {
-                    check(panel->editRowForProbe(QStringLiteral("ada_no"),
-                                                 QStringLiteral("1284")),
+                    check(panel->editRowForProbe(QStringLiteral("ada_no"), QStringLiteral("1284")),
                           "öznitelik satırı düzenlenemedi");
                     QCoreApplication::processEvents();
 
@@ -610,10 +611,8 @@ int main(int argc, char** argv)
                     const auto col = doc.attributes().find("ada_no");
                     check(col != kentos::core::kNoAttr, "ada_no sütunu tanımlanmadı");
 
-                    const auto stored =
-                        doc.attribute(col, doc.slot_of(doc.entities().key[0]));
-                    check(stored.ok() && stored.value().present &&
-                              stored.value().text == "1284",
+                    const auto stored = doc.attribute(col, doc.slot_of(doc.entities().key[0]));
+                    check(stored.ok() && stored.value().present && stored.value().text == "1284",
                           "panelden yazılan öznitelik belgeye ulaşmadı");
 
                     window.runScriptLine(QStringLiteral("GERİAL"));

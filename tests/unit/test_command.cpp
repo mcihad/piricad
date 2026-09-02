@@ -10,8 +10,8 @@
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/circle.hpp"
-#include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/ellipse.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/guide.hpp"
 #include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/snap.hpp"
@@ -1135,7 +1135,6 @@ TEST_CASE("KÖŞETAŞI: taşınan köşe yeni yerinde yakalanır")
     CHECK_EQ(r.point.x, core::Mm{900000});
 }
 
-
 // ============================================================================
 // ALANAÇEVİR — closing a run of lines into one face (core.to_area)
 // ============================================================================
@@ -1153,8 +1152,8 @@ TEST_CASE("ALANAÇEVİR uç uca değen çizgileri tek alana çevirir ve çizgile
     REQUIRE(f.bus.execute_line("ÇİZGİ 0,45 0,0", Origin::Test).ok());
     REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{4});
 
-    auto turned = f.bus.execute_line("ALANAÇEVİR nesneler=1 nesneler=2 nesneler=3 nesneler=4",
-                                     Origin::Test);
+    auto turned =
+        f.bus.execute_line("ALANAÇEVİR nesneler=1 nesneler=2 nesneler=3 nesneler=4", Origin::Test);
     if (!turned) FAIL_WITH("ALANAÇEVİR", turned.error().message);
     REQUIRE(turned.ok());
 
@@ -1188,9 +1187,9 @@ TEST_CASE("ALANAÇEVİR çizgilerin sırasına ve yönüne bakmaz")
     REQUIRE(f.bus.execute_line("ÇİZGİ 60,45 60,0", Origin::Test).ok()); // reversed
     REQUIRE(f.bus.execute_line("ÇİZGİ 60,45 0,45", Origin::Test).ok());
 
-    REQUIRE(f.bus.execute_line("ALANAÇEVİR nesneler=1 nesneler=2 nesneler=3 nesneler=4",
-                               Origin::Test)
-                .ok());
+    REQUIRE(
+        f.bus.execute_line("ALANAÇEVİR nesneler=1 nesneler=2 nesneler=3 nesneler=4", Origin::Test)
+            .ok());
     REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{1});
 
     core::EntityId face = core::kNoEntity;
@@ -1255,9 +1254,9 @@ TEST_CASE("ALANAÇEVİR geri alınınca çizgiler geri gelir, alan gider")
 
     const std::uint64_t lines = f.doc.content_hash();
 
-    REQUIRE(f.bus.execute_line("ALANAÇEVİR nesneler=1 nesneler=2 nesneler=3 nesneler=4",
-                               Origin::Test)
-                .ok());
+    REQUIRE(
+        f.bus.execute_line("ALANAÇEVİR nesneler=1 nesneler=2 nesneler=3 nesneler=4", Origin::Test)
+            .ok());
     REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{1});
 
     // One command, one undo step — the face and the four erasures together.
@@ -1431,7 +1430,7 @@ TEST_CASE("ÖZNİTELİK: varlık slotu ile geometri slotu ayrıştığında da d
     // entities whose two slot numbers coincided.
     for (core::EntityId e = 0; e < f.doc.entities().size(); ++e) {
         if (!f.doc.alive(e)) continue;
-        const auto key   = static_cast<std::uint64_t>(core::raw(f.doc.entities().key[e]));
+        const auto key    = static_cast<std::uint64_t>(core::raw(f.doc.entities().key[e]));
         const auto stored = f.doc.attribute(col, e);
         if (!stored) FAIL_WITH("öznitelik okunamadı", std::to_string(e));
         CHECK(stored.value().present);
@@ -1476,7 +1475,7 @@ TEST_CASE("ÖZNİTELİK: panelin kurduğu satır çalışır")
         f.bus.execute_line("ÖZNİTELİK ad=\"ada_no\" nesne=1 deger=\"1284\"", Origin::Test);
     if (!written) FAIL_WITH("ÖZNİTELİK", written.error().message);
 
-    const core::AttrTable& t = f.doc.attributes();
+    const core::AttrTable& t    = f.doc.attributes();
     const core::AttrColumn* col = t.column(t.find("ada_no"));
     REQUIRE(col != nullptr);
 
@@ -1507,7 +1506,8 @@ TEST_CASE("Ofset: kapalı bir kare dışarı doğru büyür")
     CHECK(ring.closed);
 
     Box2 box;
-    for (const Point2& p : ring.points) box.extend(p);
+    for (const Point2& p : ring.points)
+        box.extend(p);
     CHECK(box.min_x <= -1000);
     CHECK(box.max_x >= 11000);
 }
@@ -1611,8 +1611,7 @@ TEST_CASE("ELİPS merkez ve iki eksenden çizilir, tanımıyla saklanır")
     Fixture f;
     REQUIRE(f.bus.execute_line("KATMAN ad=CIZIM", Origin::Test).ok());
 
-    auto drawn =
-        f.bus.execute_line("ELİPS merkez=0,0 birinci=10,0 ikinci=0,5", Origin::Test);
+    auto drawn = f.bus.execute_line("ELİPS merkez=0,0 birinci=10,0 ikinci=0,5", Origin::Test);
     if (!drawn) FAIL_WITH("ELİPS", drawn.error().message);
 
     REQUIRE(f.doc.live_entity_count() == 1);
@@ -1637,7 +1636,7 @@ TEST_CASE("ELİPS: alanı pi·a·b, dairenin özel hâli tutarlı")
     // THROUGH THE KIND, not through the ring: the stored ring is the three-vertex
     // definition and encloses nothing. `ALANÖLÇ` asks the same way, which is why
     // a circle reports pi·r² rather than the area of the polygon it is drawn with.
-    const auto slot = f.doc.entities().slot[0];
+    const auto slot            = f.doc.entities().slot[0];
     const core::KindSpec* spec = core::builtin_kinds().find(core::kEllipseKind);
     REQUIRE(spec != nullptr);
 
@@ -1657,8 +1656,7 @@ TEST_CASE("ELİPS: ikinci eksen birinciye DİK ölçülür")
     // component counts, so this must be the same ellipse as `ikinci=0,5`.
     REQUIRE(f.bus.execute_line("ELİPS merkez=0,0 birinci=10,0 ikinci=100,5", Origin::Test).ok());
 
-    const core::Point2 minor =
-        core::ellipse_minor_of(f.doc.geometry(), f.doc.entities().slot[0]);
+    const core::Point2 minor = core::ellipse_minor_of(f.doc.geometry(), f.doc.entities().slot[0]);
     CHECK(minor.x == 0);
     CHECK(minor.y == 5000);
 }
@@ -1720,9 +1718,8 @@ TEST_CASE("DİLİM merkez ve iki kenardan kapalı bir dilim çizer")
     // A quarter of a 10 m circle is about 78,5 m². The exact figure depends on
     // how many chords the arc is drawn with, so this bounds it rather than
     // pinning it: a shape that did not close would report zero.
-    const auto slot = f.doc.slot_of(f.doc.entities().key[0]);
-    const core::Mm2 area =
-        f.doc.geometry().area_of(f.doc.entities().slot[slot]);
+    const auto slot      = f.doc.slot_of(f.doc.entities().key[0]);
+    const core::Mm2 area = f.doc.geometry().area_of(f.doc.entities().slot[slot]);
     CHECK(area > 70'000'000);
     CHECK(area < 80'000'000);
 }
@@ -1746,9 +1743,8 @@ TEST_CASE("HALKA delikli bir alan çizer ve deliğin alanı sayılmaz")
 
     // pi*(10^2 - 5^2) = 235,6 m². If the hole were counted as solid the answer
     // would be about 314 m², which is the failure this bounds.
-    const auto slot = f.doc.slot_of(f.doc.entities().key[0]);
-    const core::Mm2 area =
-        f.doc.geometry().area_of(f.doc.entities().slot[slot]);
+    const auto slot      = f.doc.slot_of(f.doc.entities().key[0]);
+    const core::Mm2 area = f.doc.geometry().area_of(f.doc.entities().slot[slot]);
     CHECK(area > 225'000'000);
     CHECK(area < 240'000'000);
 }
@@ -1929,15 +1925,14 @@ TEST_CASE("KAYDIR iki noktayı görünüm istemcisine iletir")
 {
     Fixture f;
     core::Point2 from{}, to{};
-    int calls = 0;
+    int calls            = 0;
     f.bus.on_pan_request = [&](core::Point2 a, core::Point2 b) {
         from = a;
         to   = b;
         ++calls;
     };
 
-    auto moved =
-        f.bus.execute_line("KAYDIR baslangic=100,200 bitis=150,200", Origin::Test);
+    auto moved = f.bus.execute_line("KAYDIR baslangic=100,200 bitis=150,200", Origin::Test);
     if (!moved) FAIL_WITH("KAYDIR", moved.error().message);
 
     CHECK(calls == 1);
@@ -2153,8 +2148,8 @@ TEST_CASE("YAY merkez ve iki uçtan yay çizer, süpürme saat yönünün tersin
     REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
 
     // East to north: a quarter turn counter-clockwise.
-    auto drawn = f.bus.execute_line("YAY merkez=100,100 baslangic=130,100 bitis=100,130",
-                                    Origin::Test);
+    auto drawn =
+        f.bus.execute_line("YAY merkez=100,100 baslangic=130,100 bitis=100,130", Origin::Test);
     if (!drawn) FAIL_WITH("YAY", drawn.error().message);
     REQUIRE(drawn.ok());
     REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{1});
@@ -2184,8 +2179,8 @@ TEST_CASE("YAY: yarım turdan büyük süpürme kısa yoldan çizilmez")
     REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
 
     // East, counter-clockwise, all the way round to due south: 270 degrees.
-    REQUIRE(f.bus.execute_line("YAY merkez=100,100 baslangic=130,100 bitis=100,70", Origin::Test)
-                .ok());
+    REQUIRE(
+        f.bus.execute_line("YAY merkez=100,100 baslangic=130,100 bitis=100,70", Origin::Test).ok());
 
     // A 270 degree sweep reaches west and north as well as east and south, so its
     // box covers three sides of the full circle.
@@ -2548,8 +2543,7 @@ TEST_CASE("KOPYALA daireyi daire olarak kopyalar ve geri alınır")
     REQUIRE(f.bus.execute_line("KOPYALA nesneler=1 baslangic=0,0 bitis=50,0", Origin::Test).ok());
     REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{2});
     CHECK(f.doc.entities().kind[1] == core::kCircleKind);
-    CHECK_EQ(core::circle_centre_of(f.doc.geometry(), f.doc.entities().slot[1]).x,
-             core::Mm{50000});
+    CHECK_EQ(core::circle_centre_of(f.doc.geometry(), f.doc.entities().slot[1]).x, core::Mm{50000});
     CHECK_EQ(core::circle_radius_of(f.doc.geometry(), f.doc.entities().slot[1]), core::Mm{10000});
 
     REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
@@ -2648,7 +2642,7 @@ TEST_CASE("DÜĞÜM yakalaması röperi bulur ve köşenin önüne geçer")
     q.radius = core::Mm{2000};
 
     // With only the node mode on, the monument is what comes back.
-    q.modes = core::SnapNode;
+    q.modes            = core::SnapNode;
     core::SnapResult r = core::snap(f.doc, q);
     CHECK(r.mode == core::SnapNode);
     CHECK_EQ(r.point.x, core::Mm{60001});
@@ -2750,7 +2744,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
             const CommandSpec* found = f.reg.resolve(name);
             if (found == nullptr) FAIL_WITH("bildirilen ad çözülemiyor", spec.id + " / " + name);
             if (found->id != spec.id)
-                FAIL_WITH("ad başka bir komuta gidiyor", spec.id + " / " + name + " -> " + found->id);
+                FAIL_WITH("ad başka bir komuta gidiyor",
+                          spec.id + " / " + name + " -> " + found->id);
         }
 }
 
@@ -2787,8 +2782,8 @@ TEST_CASE("DİZİ kutupsal dizi üretir ve tam tur eşit böler")
     // A small square 30 m due east of the origin.
     REQUIRE(f.bus.execute_line("ALAN 30,0 32,0 32,2 30,2", Origin::Test).ok());
 
-    REQUIRE(f.bus.execute_line("DİZİ nesneler=1 mod=KUTUPSAL merkez=0,0 sayi=4", Origin::Test)
-                .ok());
+    REQUIRE(
+        f.bus.execute_line("DİZİ nesneler=1 mod=KUTUPSAL merkez=0,0 sayi=4", Origin::Test).ok());
 
     // Four in total: the original plus three quarter-turn copies.
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{4});
@@ -2810,9 +2805,9 @@ TEST_CASE("DİZİ kısmi açıda ilk ve son kopyayı uçlara koyar")
 
     // Three objects across a quarter turn: 0, 45 and 90 degrees — divided by the
     // GAPS, not the count, because both ends keep an object.
-    REQUIRE(f.bus.execute_line("DİZİ nesneler=1 mod=KUTUPSAL merkez=0,0 sayi=3 aci=90",
-                               Origin::Test)
-                .ok());
+    REQUIRE(
+        f.bus.execute_line("DİZİ nesneler=1 mod=KUTUPSAL merkez=0,0 sayi=3 aci=90", Origin::Test)
+            .ok());
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{3});
 
     // The last one is a quarter turn round, so it reaches due north exactly. Its
@@ -2832,18 +2827,20 @@ TEST_CASE("DİZİ geri alınır ve anlamsız girdiyi reddeder")
     const std::uint64_t before = f.doc.content_hash();
 
     // One row and one column is not an array.
-    REQUIRE(f.bus.execute_line("DİZİ nesneler=1 satir=1 sutun=1 satir_aralik=5 sutun_aralik=5",
-                               Origin::Test)
+    REQUIRE(f.bus
+                .execute_line("DİZİ nesneler=1 satir=1 sutun=1 satir_aralik=5 sutun_aralik=5",
+                              Origin::Test)
                 .ok());
     CHECK_EQ(f.doc.content_hash(), before);
 
     // A polar array of one is not an array either.
-    REQUIRE(f.bus.execute_line("DİZİ nesneler=1 mod=KUTUPSAL merkez=0,0 sayi=1", Origin::Test)
-                .ok());
+    REQUIRE(
+        f.bus.execute_line("DİZİ nesneler=1 mod=KUTUPSAL merkez=0,0 sayi=1", Origin::Test).ok());
     CHECK_EQ(f.doc.content_hash(), before);
 
-    REQUIRE(f.bus.execute_line("DİZİ nesneler=1 satir=2 sutun=2 satir_aralik=20 sutun_aralik=20",
-                               Origin::Test)
+    REQUIRE(f.bus
+                .execute_line("DİZİ nesneler=1 satir=2 sutun=2 satir_aralik=20 sutun_aralik=20",
+                              Origin::Test)
                 .ok());
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{4});
 
@@ -3103,8 +3100,8 @@ TEST_CASE("KATMANAT nesneyi başka katmana taşır ve kimliğini korur")
     REQUIRE(f.bus.execute_line("KATMAN ad=TASLAK", Origin::Test).ok());
     REQUIRE(f.bus.execute_line("ALAN 0,0 60,0 60,45 0,45", Origin::Test).ok());
 
-    const core::EntityKey key   = f.doc.entities().key[0];
-    const core::LayerId taslak  = f.doc.entities().layer[0];
+    const core::EntityKey key  = f.doc.entities().key[0];
+    const core::LayerId taslak = f.doc.entities().layer[0];
 
     auto moved = f.bus.execute_line("KATMANAT nesneler=1 katman=PARSEL", Origin::Test);
     if (!moved) FAIL_WITH("KATMANAT", moved.error().message);

@@ -30,11 +30,11 @@ namespace kentos::io {
 /// One surveyed point, as the file names it.
 struct SurveyPoint
 {
-    std::string number;   ///< the point number as written: "P1", "1284", "NIR-3"
-    core::Point2 at{};    ///< easting (Y) and northing (X), in millimetres
-    core::Mm height{0};   ///< the Z the file carried, or 0
+    std::string number;     ///< the point number as written: "P1", "1284", "NIR-3"
+    core::Point2 at{};      ///< easting (Y) and northing (X), in millimetres
+    core::Mm height{0};     ///< the Z the file carried, or 0
     bool has_height{false}; ///< false when the file carried no Z column
-    std::string code;     ///< the surveyor's own code: "AGAC", "BINA", "ROPER"
+    std::string code;       ///< the surveyor's own code: "AGAC", "BINA", "ROPER"
 };
 
 /// Which column holds what.

@@ -36,9 +36,9 @@ struct Level
 /// One contour: a run of vertices, all at the same height.
 struct Contour
 {
-    core::Mm height{0};              ///< the level this line traces
-    std::vector<core::Point2> path;  ///< in order; closed when the ends meet
-    bool closed{false};              ///< the run comes back to where it started
+    core::Mm height{0};             ///< the level this line traces
+    std::vector<core::Point2> path; ///< in order; closed when the ends meet
+    bool closed{false};             ///< the run comes back to where it started
 };
 
 /// Traces contours through `points` at every whole multiple of `interval`.

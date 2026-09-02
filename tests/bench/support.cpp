@@ -332,8 +332,9 @@ int run_all(int argc, char** argv)
 
         Json out;
         out.set("makine", Json::string(here));
-        out.set("aciklama", Json::string("KentOSCad performans temel değerleri. Yalnız aynı makinede "
-                                         "regresyon kapısı olarak kullanılır (kentoscad.md §10.1)."));
+        out.set("aciklama",
+                Json::string("KentOSCad performans temel değerleri. Yalnız aynı makinede "
+                             "regresyon kapısı olarak kullanılır (kentoscad.md §10.1)."));
         out.set("olcumler", std::move(measurements));
 
         std::ofstream file(baseline_path, std::ios::binary);

@@ -8,9 +8,9 @@
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/core/document.hpp"
 
+#include <QButtonGroup>
 #include <QCheckBox>
 #include <QColorDialog>
-#include <QButtonGroup>
 #include <QComboBox>
 #include <QDate>
 #include <QDialogButtonBox>
@@ -416,8 +416,8 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     resize(1280, 756);
 
     const core::LayerId layer = controller_.document().find_layer(layerName_.toStdString());
-    symbol_                   = layer == core::kNoLayer ? core::Symbol::of(core::Appearance{})
-                                                        : symbol_of_layer(controller_.document(), layer);
+    symbol_ = layer == core::kNoLayer ? core::Symbol::of(core::Appearance{})
+                                      : symbol_of_layer(controller_.document(), layer);
     if (symbol_.layers.empty()) symbol_ = core::Symbol::of(core::Appearance{});
     original_ = symbol_;
 

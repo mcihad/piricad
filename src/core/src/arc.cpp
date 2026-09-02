@@ -100,8 +100,8 @@ void arc_outline(Point2 centre, Mm radius, Point2 start, Point2 end, std::vector
 {
     if (radius <= 0) return;
 
-    const Unit from = unit_of(static_cast<double>(start.x - centre.x),
-                              static_cast<double>(start.y - centre.y));
+    const Unit from =
+        unit_of(static_cast<double>(start.x - centre.x), static_cast<double>(start.y - centre.y));
     const Unit to =
         unit_of(static_cast<double>(end.x - centre.x), static_cast<double>(end.y - centre.y));
 
@@ -139,7 +139,8 @@ void arc_outline(Point2 centre, Mm radius, Point2 start, Point2 end, std::vector
             piece = std::move(next);
         }
         // The first point of this piece is the last of the one before it.
-        for (std::size_t i = 1; i < piece.size(); ++i) run.push_back(piece[i]);
+        for (std::size_t i = 1; i < piece.size(); ++i)
+            run.push_back(piece[i]);
     }
 
     const auto r = static_cast<double>(radius);

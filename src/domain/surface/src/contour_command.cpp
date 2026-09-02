@@ -127,7 +127,7 @@ Task<void> run(Context& ctx)
         // it to `add_area` gets it refused, correctly, as a zero-area face; it is
         // a polyline, and drawing it as one is the honest answer.
         const core::Mm2 enclosed = core::ring_area(c.path);
-        const bool is_face = c.closed && (enclosed > 0 || enclosed < 0);
+        const bool is_face       = c.closed && (enclosed > 0 || enclosed < 0);
 
         std::vector<core::RingGeometry::RingInput> rings;
         rings.push_back(core::RingGeometry::RingInput{c.path, core::RingRole::Exterior, 0});

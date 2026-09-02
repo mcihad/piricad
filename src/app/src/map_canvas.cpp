@@ -13,10 +13,10 @@
 #include <QElapsedTimer>
 #include <QKeyEvent>
 #include <QLineEdit>
-#include <QShortcut>
 #include <QMouseEvent>
 #include <QPaintDevice>
 #include <QScreen>
+#include <QShortcut>
 #include <QWheelEvent>
 
 #include <cmath>
@@ -157,21 +157,21 @@ void MapCanvas::reloadGridSettings()
         return static_cast<std::uint32_t>(store.get(id).as_int());
     };
 
-    look_.ruler        = store.get("core.cetvel.gorunur").as_bool();
-    look_.ruler_px     = static_cast<int>(store.get("core.cetvel.kalinlik").as_int());
-    look_.ruler_unit   = static_cast<int>(store.get("core.cetvel.birim").as_enum());
-    look_.scale_bar    = store.get("core.harita.olcek_cubugu").as_bool();
-    look_.north        = store.get("core.harita.kuzey_oku").as_bool();
-    look_.readout      = store.get("core.harita.koordinat_gostergesi").as_bool();
-    look_.cursor       = static_cast<int>(store.get("core.harita.imlec").as_enum());
-    look_.cursor_px    = static_cast<int>(store.get("core.harita.imlec_boyu").as_int());
-    look_.zoom_percent = static_cast<int>(store.get("core.harita.yakinlastirma_adimi").as_int());
-    look_.invert_wheel = store.get("core.harita.tekerlek_ters").as_bool();
-    look_.marker_px    = static_cast<int>(store.get("core.yakalama.isaret_boyu").as_int());
-    look_.snap_tip     = store.get("core.yakalama.ipucu").as_bool();
+    look_.ruler         = store.get("core.cetvel.gorunur").as_bool();
+    look_.ruler_px      = static_cast<int>(store.get("core.cetvel.kalinlik").as_int());
+    look_.ruler_unit    = static_cast<int>(store.get("core.cetvel.birim").as_enum());
+    look_.scale_bar     = store.get("core.harita.olcek_cubugu").as_bool();
+    look_.north         = store.get("core.harita.kuzey_oku").as_bool();
+    look_.readout       = store.get("core.harita.koordinat_gostergesi").as_bool();
+    look_.cursor        = static_cast<int>(store.get("core.harita.imlec").as_enum());
+    look_.cursor_px     = static_cast<int>(store.get("core.harita.imlec_boyu").as_int());
+    look_.zoom_percent  = static_cast<int>(store.get("core.harita.yakinlastirma_adimi").as_int());
+    look_.invert_wheel  = store.get("core.harita.tekerlek_ters").as_bool();
+    look_.marker_px     = static_cast<int>(store.get("core.yakalama.isaret_boyu").as_int());
+    look_.snap_tip      = store.get("core.yakalama.ipucu").as_bool();
     look_.dynamic_input = store.get("core.arayuz.dinamik_girdi").as_bool();
     look_.angle_unit    = static_cast<int>(store.get("core.aci.birim").as_enum());
-    look_.step          = controller_.bus().session_settings().get("core.yakalama.adim").as_length();
+    look_.step = controller_.bus().session_settings().get("core.yakalama.adim").as_length();
 
     look_.marker_rgba     = colour("core.yakalama.isaret_rengi");
     look_.grid_rgba       = colour("core.izgara.renk");
@@ -280,10 +280,8 @@ void MapCanvas::updateSnapPreview()
     // from the corner the edge leaves; a drag that previewed against some other
     // origin would put dik mod and kutupsal on a different ray than the one the
     // corner actually lands on.
-    const bool has_base =
-        asking ? session->prompt().has_rubber_band : drag_grip_.valid();
-    const core::Point2 base =
-        asking ? session->prompt().rubber_origin : drag_grip_.base;
+    const bool has_base     = asking ? session->prompt().has_rubber_band : drag_grip_.valid();
+    const core::Point2 base = asking ? session->prompt().rubber_origin : drag_grip_.base;
 
     const core::SnapResult r =
         bus.aids().resolve(controller_.document(), aids, aim, has_base, base);
@@ -352,11 +350,10 @@ void MapCanvas::buildSelection()
                                  core::circle_radius_of(geom, table.slot[e]), curve_scratch_x_,
                                  curve_scratch_y_);
         else if (table.kind[e] == core::kArcKind)
-            core::arc_outline(core::arc_centre_of(geom, table.slot[e]),
-                              core::arc_radius_of(geom, table.slot[e]),
-                              core::arc_start_of(geom, table.slot[e]),
-                              core::arc_end_of(geom, table.slot[e]), curve_scratch_x_,
-                              curve_scratch_y_);
+            core::arc_outline(
+                core::arc_centre_of(geom, table.slot[e]), core::arc_radius_of(geom, table.slot[e]),
+                core::arc_start_of(geom, table.slot[e]), core::arc_end_of(geom, table.slot[e]),
+                curve_scratch_x_, curve_scratch_y_);
 
         const core::RingSpan span = geom.rings_of(table.slot[e]);
         for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
@@ -373,11 +370,10 @@ void MapCanvas::buildSelection()
             }
             batch.runs.push_back(static_cast<std::uint32_t>(batch.xs.size()) - before);
             // A circle closes; an arc does not.
-            batch.closed.push_back(
-                (table.kind[e] == core::kCircleKind ||
-                 (!curve && geom.ring_role[r] != core::RingRole::Open))
-                    ? 1
-                    : 0);
+            batch.closed.push_back((table.kind[e] == core::kCircleKind ||
+                                    (!curve && geom.ring_role[r] != core::RingRole::Open))
+                                       ? 1
+                                       : 0);
         }
     }
 }
@@ -446,8 +442,8 @@ MapCanvas::Grip MapCanvas::gripAt(const QPointF& where) const
                 const std::size_t next      = last ? 0 : v + 1;
                 const render::ScreenPoint q = view_.to_screen(core::Point2{xs[next], ys[next]});
 
-                const double ex = q.x - p.x;
-                const double ey = q.y - p.y;
+                const double ex   = q.x - p.x;
+                const double ey   = q.y - p.y;
                 const double len2 = ex * ex + ey * ey;
                 if (len2 <= 0.0) continue;
 
@@ -462,8 +458,8 @@ MapCanvas::Grip MapCanvas::gripAt(const QPointF& where) const
                     // The new corner starts where the pointer pressed, projected
                     // onto the edge, so it does not jump before the drag begins.
                     const auto foot = render::ScreenPoint{p.x + t * ex, p.y + t * ey};
-                    edge_hit = Grip{e, number, true, view_.to_world(foot),
-                                    core::Point2{xs[v], ys[v]}};
+                    edge_hit =
+                        Grip{e, number, true, view_.to_world(foot), core::Point2{xs[v], ys[v]}};
                 }
             }
         }
@@ -578,8 +574,7 @@ void MapCanvas::commitGripDrag()
     const QPointF moved = cursor_ - drag_anchor_;
     if (moved.manhattanLength() < QApplication::startDragDistance()) return;
 
-    const core::Point2 world =
-        view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
+    const core::Point2 world = view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
 
     // The RAW world point, exactly as a click supplies one. Snapping happens once,
     // inside the command layer, on the road every client takes — the marker the
@@ -592,14 +587,13 @@ void MapCanvas::commitGripDrag()
     // writes a line to the transcript, which is exactly how a drag that did
     // nothing at all looked like a drag that could not start.
     command::Args args;
-    args.set("nesne",
-             command::Value::ids({static_cast<std::int64_t>(core::raw(key))}));
+    args.set("nesne", command::Value::ids({static_cast<std::int64_t>(core::raw(key))}));
     args.set("kose", command::Value::integer(drag_grip_.corner));
     args.set("nokta", command::Value::point(world));
 
-    controller_.runInvocation(command::Invocation{
-        drag_grip_.insert ? "core.vertex_insert" : "core.vertex_move", std::move(args),
-        command::Origin::Gui});
+    controller_.runInvocation(
+        command::Invocation{drag_grip_.insert ? "core.vertex_insert" : "core.vertex_move",
+                            std::move(args), command::Origin::Gui});
 }
 
 void MapCanvas::buildSelectionBox()
@@ -1206,7 +1200,7 @@ void MapCanvas::buildOverlay()
             to                 = QPointF(snapped.x, snapped.y);
         }
 
-        const std::size_t batch = nextBatch(palette_.rubberBand.rgba(), 1.0f, true);
+        const std::size_t batch          = nextBatch(palette_.rubberBand.rgba(), 1.0f, true);
         const command::RubberShape shape = session->prompt().rubber_shape;
         const std::size_t guide_before   = overlay_.batches[batch].xs.size();
 
@@ -1233,14 +1227,13 @@ void MapCanvas::buildOverlay()
             const auto& chain = session->prompt().rubber_chain;
             const bool arc    = shape == command::RubberShape::Arc && !chain.empty();
 
-            const core::Mm draw_radius =
-                arc ? [&] {
-                    const double ax = core::mm_to_metres(chain.front().x - centre.x);
-                    const double ay = core::mm_to_metres(chain.front().y - centre.y);
-                    return core::mm_round(std::sqrt(ax * ax + ay * ay) *
-                                          static_cast<double>(core::kMmPerMetre));
-                }()
-                    : radius;
+            const core::Mm draw_radius = arc ? [&] {
+                const double ax = core::mm_to_metres(chain.front().x - centre.x);
+                const double ay = core::mm_to_metres(chain.front().y - centre.y);
+                return core::mm_round(std::sqrt(ax * ax + ay * ay) *
+                                      static_cast<double>(core::kMmPerMetre));
+            }()
+                                             : radius;
 
             if (draw_radius > 0) {
                 curve_scratch_x_.clear();
@@ -1254,8 +1247,8 @@ void MapCanvas::buildOverlay()
                 std::vector<render::ScreenPointF> run;
                 run.reserve(curve_scratch_x_.size());
                 for (std::size_t v = 0; v < curve_scratch_x_.size(); ++v)
-                    run.push_back(render::to_f(view_.to_screen(
-                        core::Point2{curve_scratch_x_[v], curve_scratch_y_[v]})));
+                    run.push_back(render::to_f(
+                        view_.to_screen(core::Point2{curve_scratch_x_[v], curve_scratch_y_[v]})));
                 addRun(batch, run, !arc);
             }
 
@@ -1277,7 +1270,8 @@ void MapCanvas::buildOverlay()
             // look like it had erased the one before it.
             std::vector<render::ScreenPointF> run;
             run.reserve(chain.size() + 1);
-            for (const core::Point2& p : chain) run.push_back(render::to_f(view_.to_screen(p)));
+            for (const core::Point2& p : chain)
+                run.push_back(render::to_f(view_.to_screen(p)));
             run.push_back(toScreenF(to));
 
             // Closed for a ring, because the edge back to the first corner is as
@@ -1312,9 +1306,9 @@ void MapCanvas::buildOverlay()
                 // are already there and are about a different thing.
                 const render::ScreenPointF a = render::to_f(from);
                 const render::ScreenPointF b = toScreenF(to);
-                overlay_.labels.push_back(render::OverlayLabel{
-                    tokens_->readout.rgba(), (a.x + b.x) * 0.5f + 8.0f, (a.y + b.y) * 0.5f - 6.0f,
-                    0.0f, false, text});
+                overlay_.labels.push_back(
+                    render::OverlayLabel{tokens_->readout.rgba(), (a.x + b.x) * 0.5f + 8.0f,
+                                         (a.y + b.y) * 0.5f - 6.0f, 0.0f, false, text});
                 guide_label_ = text;
             }
         }
@@ -1484,8 +1478,7 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
             // first and its string second, so the prompt turns into a text prompt
             // inside the call above — and waiting for another click would make the
             // user click twice in the same place with nothing to tell them why.
-            if (controller_.awaitingInput() &&
-                controller_.promptKind() == command::ParamKind::Text)
+            if (controller_.awaitingInput() && controller_.promptKind() == command::ParamKind::Text)
                 openTextEditor(at);
 
             snap_preview_valid_ = false;

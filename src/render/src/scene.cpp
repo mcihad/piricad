@@ -97,7 +97,7 @@ PassStyle pass_of(const core::SymbolLayer& sl, const core::ImageStore& images,
     // its ring reaches the polygon batch even though the layer places a glyph.
     ps.wants_stroke = core::draws_stroke(sl.type) || core::draws_marker(sl.type);
     ps.wants_fill   = core::draws_fill(sl.type) || sl.type == core::SymbolLayerType::CentroidFill ||
-                    sl.type == core::SymbolLayerType::RasterMarker;
+                      sl.type == core::SymbolLayerType::RasterMarker;
 
     // A fixed word needs neither the line nor the ring: it is placed from the
     // entity's own bounding box, which the cull test already has.
@@ -270,7 +270,7 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         const auto ys = ring_ys(ring);
         if (xs.size() < 2) return;
 
-        const bool closed = ring_closed(ring);
+        const bool closed       = ring_closed(ring);
         const std::size_t first = batch.xs.size();
 
         const auto push = [&](std::size_t v) {

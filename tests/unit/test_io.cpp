@@ -16,9 +16,9 @@
 // on the Bus. Tests are a client of the bus with no privileges (Article 1.2).
 #include "kentos_test.hpp"
 
-#include "kentos_cad/core/guide.hpp"
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/guide.hpp"
 
 #include <iterator>
 
@@ -255,7 +255,7 @@ TEST_CASE("NOKTALAR: Y sağa, X yukarı okunur")
 
     REQUIRE(r.doc.live_entity_count() == 1);
     const core::Box2 box = r.doc.extent();
-    CHECK(box.min_x == 485320543); // Y went to the easting
+    CHECK(box.min_x == 485320543);  // Y went to the easting
     CHECK(box.min_y == 4310220250); // X went to the northing
 }
 
@@ -289,7 +289,12 @@ TEST_CASE("NOKTALAR: virgül, noktalı virgül, sekme ve boşluk ayraçları")
 {
     TempDir tmp("nokta-ayrac");
 
-    struct Case { const char* name; const char* line; };
+    struct Case
+    {
+        const char* name;
+        const char* line;
+    };
+
     const Case cases[] = {
         {"virgul.txt", "1,485320.000,4310220.000\n"},
         {"noktali.txt", "1;485320.000;4310220.000\n"},
@@ -358,9 +363,9 @@ TEST_CASE("NOKTALAR: numara, kot ve kod öznitelik olur")
     REQUIRE(r.bus.execute_line("NOKTALAR dosya=\"" + path + "\"", Origin::Test).ok());
 
     const core::AttrTable& t = r.doc.attributes();
-    auto no  = r.doc.attribute(t.find("nokta_no"), 0);
-    auto kot = r.doc.attribute(t.find("kot"), 0);
-    auto kod = r.doc.attribute(t.find("kod"), 0);
+    auto no                  = r.doc.attribute(t.find("nokta_no"), 0);
+    auto kot                 = r.doc.attribute(t.find("kot"), 0);
+    auto kod                 = r.doc.attribute(t.find("kod"), 0);
 
     REQUIRE(no.ok());
     CHECK(no.value().text == "NIR-3");
@@ -384,8 +389,7 @@ TEST_CASE("NOKTALAR: okunan liste yazılıp aynen geri okunur")
     Rig a;
     REQUIRE(a.bus.execute_line("KATMAN ad=N", Origin::Test).ok());
     REQUIRE(a.bus.execute_line("NOKTALAR dosya=\"" + in_path + "\"", Origin::Test).ok());
-    auto written =
-        a.bus.execute_line("NOKTALAR dosya=\"" + out_path + "\" yon=yaz", Origin::Test);
+    auto written = a.bus.execute_line("NOKTALAR dosya=\"" + out_path + "\" yon=yaz", Origin::Test);
     if (!written) FAIL_WITH("NOKTALAR yaz", written.error().message);
 
     Rig b;
@@ -399,7 +403,7 @@ TEST_CASE("NOKTALAR: okunan liste yazılıp aynen geri okunur")
     CHECK(b.doc.extent().max_y == a.doc.extent().max_y);
 
     const core::AttrTable& t = b.doc.attributes();
-    auto no = b.doc.attribute(t.find("nokta_no"), 0);
+    auto no                  = b.doc.attribute(t.find("nokta_no"), 0);
     REQUIRE(no.ok());
     CHECK(no.value().text == "1");
 }
@@ -451,8 +455,7 @@ TEST_CASE("NOKTALAR: bozuk satır sessizce atlanmaz, numarasıyla bildirilir")
     // A point list quietly one row short is a boundary quietly missing a corner.
     auto read = r.bus.execute_line("NOKTALAR dosya=\"" + path + "\"", Origin::Test);
 
-    const std::string reported =
-        read ? r.transcript : r.transcript + read.error().message;
+    const std::string reported = read ? r.transcript : r.transcript + read.error().message;
     CHECK(reported.find("koordinat okunamadı") != std::string::npos);
     CHECK(r.doc.live_entity_count() == 0); // and nothing was half-imported
 }
@@ -1544,9 +1547,9 @@ TEST_CASE("IO: daire dosyaya gidip daire olarak geri geliyor")
 
     Rig written;
     REQUIRE(written.bus.execute_line("KATMAN ad=YAPI", Origin::Test).ok());
-    REQUIRE(written.bus.execute_line("DAİRE merkez=485300,4310200 cevre=485325,4310200",
-                                     Origin::Test)
-                .ok());
+    REQUIRE(
+        written.bus.execute_line("DAİRE merkez=485300,4310200 cevre=485325,4310200", Origin::Test)
+            .ok());
     REQUIRE(written.bus.execute_line("ÇİZGİ 485300,4310200 485325,4310200", Origin::Test).ok());
 
     const std::uint64_t hash = written.doc.content_hash();

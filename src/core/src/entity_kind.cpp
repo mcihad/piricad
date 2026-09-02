@@ -291,13 +291,13 @@ void circle_area(const RingGeometry& geom, SlotSpan slots, std::span<Mm2> out)
     constexpr double kPi = 3.14159265358979323846;
 
     for (std::size_t i = 0; i < slots.size(); ++i) {
-        const auto r = static_cast<double>(circle_radius_of(geom, slots[i]));
+        const auto r   = static_cast<double>(circle_radius_of(geom, slots[i]));
         const double a = kPi * r * r;
 
         // A circle 1000 km across is 3.1e18 mm^2, still inside int64; anything
         // beyond that is not a drawing and is clamped rather than wrapped.
         constexpr double kMax = 9.0e18;
-        out[i] = a >= kMax ? static_cast<Mm2>(kMax) : static_cast<Mm2>(a + 0.5);
+        out[i]                = a >= kMax ? static_cast<Mm2>(kMax) : static_cast<Mm2>(a + 0.5);
     }
 }
 
@@ -312,7 +312,8 @@ void circle_outline_fn(const RingGeometry& geom, SlotSpan slots, EmitBuffer& int
         circle_outline(circle_centre_of(geom, slot), circle_radius_of(geom, slot), xs, ys);
 
         into.begin_run(true); // closed: the segment back to the first point is implied
-        for (std::size_t v = 0; v < xs.size(); ++v) into.push_vertex(xs[v], ys[v]);
+        for (std::size_t v = 0; v < xs.size(); ++v)
+            into.push_vertex(xs[v], ys[v]);
     }
 }
 
@@ -410,7 +411,8 @@ void arc_bbox(const RingGeometry& geom, SlotSpan slots, std::span<Box2> out)
 void arc_area(const RingGeometry&, SlotSpan slots, std::span<Mm2> out)
 {
     // An arc encloses nothing, exactly as an open ring encloses nothing (R10).
-    for (std::size_t i = 0; i < slots.size(); ++i) out[i] = Mm2{0};
+    for (std::size_t i = 0; i < slots.size(); ++i)
+        out[i] = Mm2{0};
 }
 
 void arc_outline_fn(const RingGeometry& geom, SlotSpan slots, EmitBuffer& into)
@@ -425,7 +427,8 @@ void arc_outline_fn(const RingGeometry& geom, SlotSpan slots, EmitBuffer& into)
                     arc_end_of(geom, slot), xs, ys);
 
         into.begin_run(false); // an arc does not close
-        for (std::size_t v = 0; v < xs.size(); ++v) into.push_vertex(xs[v], ys[v]);
+        for (std::size_t v = 0; v < xs.size(); ++v)
+            into.push_vertex(xs[v], ys[v]);
     }
 }
 
@@ -528,7 +531,8 @@ void point_bbox(const RingGeometry& geom, SlotSpan slots, std::span<Box2> out)
 void point_area(const RingGeometry&, SlotSpan slots, std::span<Mm2> out)
 {
     // A point encloses nothing and never will.
-    for (std::size_t i = 0; i < slots.size(); ++i) out[i] = Mm2{0};
+    for (std::size_t i = 0; i < slots.size(); ++i)
+        out[i] = Mm2{0};
 }
 
 void point_outline_fn(const RingGeometry& geom, SlotSpan slots, EmitBuffer& into)
@@ -571,8 +575,7 @@ void point_write(const RingGeometry& geom, SlotSpan slots, std::vector<std::uint
 Result<std::uint32_t> point_read(RingGeometry& geom, std::span<const std::uint8_t> payload)
 {
     Reader in(payload);
-    if (!in.remaining(16))
-        return err(ErrorCode::ParseError, "Nokta yükü bir koordinat taşımıyor.");
+    if (!in.remaining(16)) return err(ErrorCode::ParseError, "Nokta yükü bir koordinat taşımıyor.");
 
     const Mm x = in.mm();
     const Mm y = in.mm();
@@ -710,7 +713,8 @@ void ellipse_outline_fn(const RingGeometry& geom, SlotSpan slots, EmitBuffer& in
                         ellipse_minor_of(geom, slot), xs, ys);
 
         into.begin_run(true); // closed
-        for (std::size_t v = 0; v < xs.size(); ++v) into.push_vertex(xs[v], ys[v]);
+        for (std::size_t v = 0; v < xs.size(); ++v)
+            into.push_vertex(xs[v], ys[v]);
     }
 }
 
@@ -895,7 +899,7 @@ const KindSpec* KindTable::find_name(std::string_view name) const
 // The one and only list of built-in entity kinds (R25). Adding a kind means one
 // factory above and one line here — the same idiom as the command list, and the
 // integer id lives with the factory because it reaches the file format.
-#define KENTOS_BUILTIN_KINDS(X)                                                                   \
+#define KENTOS_BUILTIN_KINDS(X)                                                                    \
     X(polyline)                                                                                    \
     X(circle)                                                                                      \
     X(arc)                                                                                         \

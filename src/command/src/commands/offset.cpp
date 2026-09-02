@@ -17,8 +17,8 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
-#include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/offset.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/units.hpp"
@@ -74,7 +74,8 @@ Task<void> run(Context& ctx)
 
     for (std::int64_t raw : requested) {
         if (raw <= 0) {
-            ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) + ". Kimlikler 1'den başlar.");
+            ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) +
+                     ". Kimlikler 1'den başlar.");
             co_return; // the bus rolls the whole transaction back
         }
 
@@ -147,7 +148,8 @@ KENTOS_COMMAND(offset)
                       "Ofseti alınacak nesneler; yoksa etkin seçim"},
                 Param::integer("mesafe", Arity::optional(),
                                "Ofset mesafesi, milimetre; eksi değer içeri"),
-                Param::text("kose", Arity::optional(), "KÖŞE | YUVARLAK | PAH — dış köşenin biçimi"),
+                Param::text("kose", Arity::optional(),
+                            "KÖŞE | YUVARLAK | PAH — dış köşenin biçimi"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

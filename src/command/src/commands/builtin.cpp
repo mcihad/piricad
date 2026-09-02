@@ -10,7 +10,7 @@
 
 namespace kentos::command {
 
-#define KENTOS_BUILTIN_COMMANDS(X)                                                                \
+#define KENTOS_BUILTIN_COMMANDS(X)                                                                 \
     X(line)                                                                                        \
     X(polyline)                                                                                    \
     X(point_draw)                                                                                  \
@@ -77,8 +77,8 @@ void register_builtin_commands(Registry& r)
 {
     if (r.size() > 0) return; // idempotent
 
-#define KENTOS_REGISTER(sym)                                                                      \
-    if (auto st = r.add(kentos_command_##sym()); !st)                                             \
+#define KENTOS_REGISTER(sym)                                                                       \
+    if (auto st = r.add(kentos_command_##sym()); !st)                                              \
         log_error("command registration failed: " + st.error().message);
     KENTOS_BUILTIN_COMMANDS(KENTOS_REGISTER)
 #undef KENTOS_REGISTER

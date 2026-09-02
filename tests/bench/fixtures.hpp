@@ -16,7 +16,7 @@ namespace bench {
 /// A regular parcel grid in TUREF/TM30, 30th 3-degree zone, near real Turkish
 /// coordinates so the numbers exercise the same magnitudes the product will see.
 inline void build_cadastral_grid(kentos::core::Document& doc, std::size_t parcels,
-                                 std::size_t columns    = 2500,
+                                 std::size_t columns   = 2500,
                                  kentos::core::Mm side = 20000 /* 20 m */)
 {
     using namespace kentos::core;

@@ -51,9 +51,8 @@ Task<void> run(Context& ctx)
     // The source defaults to what the document already says it is, which is the
     // case that needs no thinking; naming it is for a drawing whose label is
     // wrong and the user knows better.
-    const std::string source = ctx.argument("kaynak").empty()
-                                   ? ctx.document().crs().id()
-                                   : ctx.argument("kaynak").as_text();
+    const std::string source = ctx.argument("kaynak").empty() ? ctx.document().crs().id()
+                                                              : ctx.argument("kaynak").as_text();
     const std::string target = target_arg.as_text();
 
     if (source.empty()) {

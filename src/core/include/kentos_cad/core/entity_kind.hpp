@@ -213,5 +213,4 @@ KENTOS_KIND(point);
 /// Where a `core.point` slot sits.
 Point2 point_position_of(const RingGeometry& geom, std::uint32_t slot);
 
-
 } // namespace kentos::core

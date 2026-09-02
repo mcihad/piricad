@@ -32,17 +32,17 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFrame>
+#include <QInputDialog>
 #include <QKeySequence>
 #include <QLabel>
+#include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QPushButton>
 #include <QPainter>
 #include <QPalette>
 #include <QPixmap>
 #include <QPlainTextEdit>
-#include <QInputDialog>
-#include <QMenu>
+#include <QPushButton>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QStackedWidget>
@@ -552,19 +552,17 @@ void MainWindow::buildActions()
         // window and crossing, which is the muscle memory every CAD user has.
         controller_->beginInteractive(QStringLiteral("SEÇ mod=KUTU"));
     });
-    actTrim_ = modifyTool(Glyph::Trim, tr("Buda"), QStringLiteral("BUDA"),
-                          tr("BUDA — çizgiyi kestiği sınıra kadar kısaltır  ·  kısaltma: BD"));
+    actTrim_  = modifyTool(Glyph::Trim, tr("Buda"), QStringLiteral("BUDA"),
+                           tr("BUDA — çizgiyi kestiği sınıra kadar kısaltır  ·  kısaltma: BD"));
     actUnion_ = modifyTool(Glyph::Union, tr("Birleştir — tevhit"), QStringLiteral("TEVHİT"),
                            tr("TEVHİT — komşu parselleri tek parselde birleştirir"));
-    actParcelSplit_ = modifyTool(Glyph::ParcelSplit, tr("Parsel Böl — ifraz"),
-                                 QStringLiteral("İFRAZ"),
-                                 tr("İFRAZ — bir parseli düz bir ayırma çizgisiyle ikiye böler"));
-    actMeasureArea_ = commandAction(Glyph::MeasureArea, tr("Alan Ölç"),
-                                    QStringLiteral("ALANÖLÇ"),
+    actParcelSplit_ =
+        modifyTool(Glyph::ParcelSplit, tr("Parsel Böl — ifraz"), QStringLiteral("İFRAZ"),
+                   tr("İFRAZ — bir parseli düz bir ayırma çizgisiyle ikiye böler"));
+    actMeasureArea_ = commandAction(Glyph::MeasureArea, tr("Alan Ölç"), QStringLiteral("ALANÖLÇ"),
                                     tr("ALANÖLÇ — seçili nesnelerin alanını ve çevresini yazar"));
 
-    actStyleCopy_ = modifyTool(Glyph::StyleCopy, tr("Stil Kopyala"),
-                               QStringLiteral("STİLKOPYALA"),
+    actStyleCopy_ = modifyTool(Glyph::StyleCopy, tr("Stil Kopyala"), QStringLiteral("STİLKOPYALA"),
                                tr("STİLKOPYALA — bir nesnenin stilini seçili nesnelere uygular"));
     // NOT a `modifyTool`: the check runs on the whole drawing when nothing is
     // selected, and refusing an empty selection would refuse its most useful form.
@@ -585,31 +583,31 @@ void MainWindow::buildActions()
     // command buttons rather than modal draw tools: nothing stays armed after one
     // runs, and putting them in the exclusive group would light a tool that is no
     // longer waiting for anything.
-    actMove_ = modifyTool(Glyph::Move, tr("Taşı"), QStringLiteral("TAŞI"),
-                          tr("TAŞI — seçili nesneleri iki nokta arasındaki kadar taşır"));
-    actCopy_ = modifyTool(Glyph::Copy, tr("Kopyala"), QStringLiteral("KOPYALA"),
-                          tr("KOPYALA — seçili nesnelerin kopyasını koyar"));
+    actMove_   = modifyTool(Glyph::Move, tr("Taşı"), QStringLiteral("TAŞI"),
+                            tr("TAŞI — seçili nesneleri iki nokta arasındaki kadar taşır"));
+    actCopy_   = modifyTool(Glyph::Copy, tr("Kopyala"), QStringLiteral("KOPYALA"),
+                            tr("KOPYALA — seçili nesnelerin kopyasını koyar"));
     actRotate_ = modifyTool(Glyph::Rotate, tr("Döndür"), QStringLiteral("DÖNDÜR"),
                             tr("DÖNDÜR — seçili nesneleri bir merkez etrafında döndürür"));
     actScale_  = modifyTool(Glyph::Rotate, tr("Ölçekle"), QStringLiteral("ÖLÇEKLE"),
                             tr("ÖLÇEKLE — seçili nesneleri bir merkeze göre büyütür/küçültür"));
     actMirror_ = modifyTool(Glyph::Rotate, tr("Aynala"), QStringLiteral("AYNALA"),
                             tr("AYNALA — seçili nesneleri bir eksende yansıtır"));
-    actArray_  = modifyTool(Glyph::Copy, tr("Dizi"), QStringLiteral("DİZİ"),
-                            tr("DİZİ — seçili nesneleri satır/sütun ya da merkez etrafında çoğaltır"));
-    actExtend_ = modifyTool(Glyph::Trim, tr("Uzat"), QStringLiteral("UZAT"),
-                            tr("UZAT — çizgiyi sınır çizgisine kadar uzatır"));
-    actSplit_  = modifyTool(Glyph::Trim, tr("Böl"), QStringLiteral("BÖL"),
-                            tr("BÖL — çizgiyi verilen noktadan ikiye böler"));
-    actChamfer_ = modifyTool(Glyph::Trim, tr("Pah"), QStringLiteral("PAH"),
-                             tr("PAH — köşeyi düz bir kenarla keser"));
-    actFillet_  = modifyTool(Glyph::Trim, tr("Yuvarla"), QStringLiteral("YUVARLA"),
-                             tr("YUVARLA — köşeyi verilen yarıçapta yayla yuvarlatır"));
-    actSetLayer_ = modifyTool(Glyph::LayerManager, tr("Katmana Taşı"),
-                              QStringLiteral("KATMANAT"),
+    actArray_ =
+        modifyTool(Glyph::Copy, tr("Dizi"), QStringLiteral("DİZİ"),
+                   tr("DİZİ — seçili nesneleri satır/sütun ya da merkez etrafında çoğaltır"));
+    actExtend_   = modifyTool(Glyph::Trim, tr("Uzat"), QStringLiteral("UZAT"),
+                              tr("UZAT — çizgiyi sınır çizgisine kadar uzatır"));
+    actSplit_    = modifyTool(Glyph::Trim, tr("Böl"), QStringLiteral("BÖL"),
+                              tr("BÖL — çizgiyi verilen noktadan ikiye böler"));
+    actChamfer_  = modifyTool(Glyph::Trim, tr("Pah"), QStringLiteral("PAH"),
+                              tr("PAH — köşeyi düz bir kenarla keser"));
+    actFillet_   = modifyTool(Glyph::Trim, tr("Yuvarla"), QStringLiteral("YUVARLA"),
+                              tr("YUVARLA — köşeyi verilen yarıçapta yayla yuvarlatır"));
+    actSetLayer_ = modifyTool(Glyph::LayerManager, tr("Katmana Taşı"), QStringLiteral("KATMANAT"),
                               tr("KATMANAT — seçili nesneleri başka bir katmana taşır"));
-    actOffset_ = modifyTool(Glyph::Offset, tr("Ofset"), QStringLiteral("OFSET"),
-                            tr("OFSET — seçili nesnelerin paralelini çizer; eksi mesafe içeri"));
+    actOffset_   = modifyTool(Glyph::Offset, tr("Ofset"), QStringLiteral("OFSET"),
+                              tr("OFSET — seçili nesnelerin paralelini çizer; eksi mesafe içeri"));
 
     actUndo_ = new QAction(tr("Geri Al"), this);
     actUndo_->setShortcut(QKeySequence::Undo);
@@ -1342,8 +1340,7 @@ void MainWindow::openSnapModes()
     menu.addSeparator();
     connect(menu.addAction(tr("Hepsi")), &QAction::triggered, this,
             [write] { write(static_cast<std::uint16_t>(core::SnapAllMask)); });
-    connect(menu.addAction(tr("Hiçbiri")), &QAction::triggered, this,
-            [write] { write(0); });
+    connect(menu.addAction(tr("Hiçbiri")), &QAction::triggered, this, [write] { write(0); });
 
     // ---- the STEP, which is not one of the mask's bits ----
     //
@@ -1352,10 +1349,11 @@ void MainWindow::openSnapModes()
     // thinking about how the cursor behaves.
     menu.addSeparator();
     const core::Mm step = session.get("core.yakalama.adim").as_length();
-    auto* stepRow =
-        menu.addAction(step > 0 ? tr("Adım: %1 m…").arg(static_cast<double>(step) / 1000.0, 0, 'f', 3) : tr("Adım: yok…"));
+    auto* stepRow       = menu.addAction(
+        step > 0 ? tr("Adım: %1 m…").arg(static_cast<double>(step) / 1000.0, 0, 'f', 3)
+                 : tr("Adım: yok…"));
     connect(stepRow, &QAction::triggered, this, [this, step] {
-        bool ok = false;
+        bool ok             = false;
         const double metres = QInputDialog::getDouble(
             this, tr("Çizim adımı"),
             tr("İmlecin bir önceki noktaya uzaklığı bu değerin katlarında durur.\n"
@@ -1534,7 +1532,7 @@ void MainWindow::syncToolSelection()
     // command it sends; the session knows the command it is running; `Registry`
     // is what turns the first into the second. A tool whose command is not the
     // running one is not lit, and that includes ÇİZGİ.
-    const command::Session* session = controller_->session();
+    const command::Session* session     = controller_->session();
     const command::CommandSpec* running = session ? &session->spec() : nullptr;
 
     QAction* lit = nullptr;
@@ -1597,8 +1595,7 @@ void MainWindow::onInteractiveFinished(const QString& id, bool mutated)
         // Queued, not called: this runs inside the finishing command's own signal,
         // and starting the next session on top of the one being torn down is how a
         // coroutine gets resumed after its frame is gone.
-        QMetaObject::invokeMethod(
-            this, [action] { action->trigger(); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(this, [action] { action->trigger(); }, Qt::QueuedConnection);
         return;
     }
 }
@@ -1636,8 +1633,8 @@ void MainWindow::onPanRequested(core::Point2 from, core::Point2 to)
     // The centre moves by the OPPOSITE of the grab: dragging a corner to the
     // right walks the view to the left, which is what "holding the paper" means.
     const render::ViewTransform& v = canvas_->view();
-    canvas_->setCentre(core::Point2{v.centre().x - (to.x - from.x),
-                                    v.centre().y - (to.y - from.y)});
+    canvas_->setCentre(
+        core::Point2{v.centre().x - (to.x - from.x), v.centre().y - (to.y - from.y)});
     refreshStatus();
 }
 

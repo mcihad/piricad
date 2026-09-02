@@ -18,10 +18,10 @@ core::Point2 Helmert2D::apply(core::Point2 p) const noexcept
 core::Result<Helmert2D> fit_helmert(const std::vector<ControlPoint>& points, bool lock_scale)
 {
     if (points.size() < 2)
-        return core::err(core::ErrorCode::InvalidArgument,
-                         "Oturtma en az iki kontrol noktası ister. Verilen: " +
-                             std::to_string(points.size()) +
-                             ". Tek nokta yalnız ötelemeyi verir; dönüklük ve ölçek bilinmez.");
+        return core::err(
+            core::ErrorCode::InvalidArgument,
+            "Oturtma en az iki kontrol noktası ister. Verilen: " + std::to_string(points.size()) +
+                ". Tek nokta yalnız ötelemeyi verir; dönüklük ve ölçek bilinmez.");
 
     // ---- reduce to the centroids, in integers ----
     //
@@ -37,7 +37,7 @@ core::Result<Helmert2D> fit_helmert(const std::vector<ControlPoint>& points, boo
         sum_mx += p.map.x;
         sum_my += p.map.y;
     }
-    const auto n     = static_cast<std::int64_t>(points.size());
+    const auto n      = static_cast<std::int64_t>(points.size());
     const core::Mm lx = sum_lx / n;
     const core::Mm ly = sum_ly / n;
     const core::Mm mx = sum_mx / n;

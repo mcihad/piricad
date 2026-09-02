@@ -84,7 +84,7 @@ bool reverses(const Xform& x)
 /// why, so a caller can stop the whole command rather than half-apply it.
 bool transform_one(Context& ctx, core::EntityId slot, const Xform& x)
 {
-    const core::Document& doc = ctx.document();
+    const core::Document& doc   = ctx.document();
     const core::RingGeometry& g = doc.geometry();
     const std::uint32_t gslot   = doc.entities().slot[slot];
     const core::KindId kind     = doc.entities().kind[slot];
@@ -173,7 +173,6 @@ bool transform_one(Context& ctx, core::EntityId slot, const Xform& x)
     return true;
 }
 
-
 /// Makes a NEW entity that is `slot` with `x` applied, and returns its id.
 ///
 /// Everything a user would expect to travel with a copy travels with it: the
@@ -194,7 +193,7 @@ core::Result<core::EntityId> clone_one(Context& ctx, core::EntityId slot, const 
     if (kind == core::kCircleKind) {
         const core::Point2 centre = apply(x, core::circle_centre_of(g, gslot));
         const core::Mm radius     = apply_radius(x, core::circle_radius_of(g, gslot));
-        made = ctx.transaction().add_circle(layer, centre, radius);
+        made                      = ctx.transaction().add_circle(layer, centre, radius);
     } else if (kind == core::kArcKind) {
         const core::Point2 centre = apply(x, core::arc_centre_of(g, gslot));
         const core::Mm radius     = apply_radius(x, core::arc_radius_of(g, gslot));
@@ -221,7 +220,8 @@ core::Result<core::EntityId> clone_one(Context& ctx, core::EntityId slot, const 
             rings.push_back(std::move(pts));
         }
         if (reverses(x))
-            for (auto& pts : rings) std::reverse(pts.begin(), pts.end());
+            for (auto& pts : rings)
+                std::reverse(pts.begin(), pts.end());
 
         for (std::size_t i = 0; i < rings.size(); ++i)
             input.push_back(core::RingGeometry::RingInput{rings[i], g.ring_role[span.first + i],
@@ -255,8 +255,8 @@ core::Result<core::EntityId> clone_one(Context& ctx, core::EntityId slot, const 
         auto value = doc.attribute(static_cast<core::AttrId>(c), slot);
         if (!value) continue;
         if (!value.value().present) continue;
-        auto st = ctx.transaction().set_attribute(static_cast<core::AttrId>(c), fresh,
-                                                  value.value());
+        auto st =
+            ctx.transaction().set_attribute(static_cast<core::AttrId>(c), fresh, value.value());
         if (!st) return st.error();
     }
 
@@ -264,8 +264,8 @@ core::Result<core::EntityId> clone_one(Context& ctx, core::EntityId slot, const 
 }
 
 /// The entities a transform command works on: the named ones, or the selection.
-bool gather(Context& ctx, std::vector<std::int64_t>& requested,
-            std::vector<core::EntityId>& slots, const char* example)
+bool gather(Context& ctx, std::vector<std::int64_t>& requested, std::vector<core::EntityId>& slots,
+            const char* example)
 {
     Bus& bus = ctx.session().bus();
 
@@ -337,7 +337,6 @@ Task<void> run_move(Context& ctx)
     ctx.echo(std::to_string(slots.size()) + " nesne taşındı.");
 }
 
-
 // -------------------------------------------------------------- KOPYALA ----
 
 Task<void> run_copy(Context& ctx)
@@ -372,21 +371,21 @@ Task<void> run_copy(Context& ctx)
     ctx.echo(std::to_string(slots.size()) + " nesne kopyalandı.");
 }
 
-
 // ----------------------------------------------------------------- DİZİ ----
 
 Task<void> run_array(Context& ctx)
 {
     std::vector<std::int64_t> requested;
     std::vector<core::EntityId> slots;
-    if (!gather(ctx, requested, slots, "DİZİ nesneler=1 satir=3 sutun=4 satir_aralik=10 "
-                                       "sutun_aralik=10"))
+    if (!gather(ctx, requested, slots,
+                "DİZİ nesneler=1 satir=3 sutun=4 satir_aralik=10 "
+                "sutun_aralik=10"))
         co_return;
 
     const Value mode_arg = ctx.argument("mod");
-    const bool polar     = !mode_arg.empty() &&
-                       (core::turkish_key_equals(mode_arg.as_text(), "KUTUPSAL") ||
-                        core::turkish_key_equals(mode_arg.as_text(), "POLAR"));
+    const bool polar =
+        !mode_arg.empty() && (core::turkish_key_equals(mode_arg.as_text(), "KUTUPSAL") ||
+                              core::turkish_key_equals(mode_arg.as_text(), "POLAR"));
 
     std::size_t made = 0;
 
@@ -420,9 +419,8 @@ Task<void> run_array(Context& ctx)
             Xform x;
             x.kind = Xform::Kind::Rotate;
             x.base = *centre;
-            x.turn = core::sin_cos_udeg(static_cast<core::UDeg>(
-                std::llround(step * static_cast<double>(i) *
-                             static_cast<double>(core::kUDegPerDegree))));
+            x.turn = core::sin_cos_udeg(static_cast<core::UDeg>(std::llround(
+                step * static_cast<double>(i) * static_cast<double>(core::kUDegPerDegree))));
 
             for (core::EntityId slot : slots) {
                 auto copy = clone_one(ctx, slot, x);
@@ -511,8 +509,8 @@ Task<void> run_rotate(Context& ctx)
     Xform x;
     x.kind = Xform::Kind::Rotate;
     x.base = *centre;
-    x.turn = core::sin_cos_udeg(
-        static_cast<core::UDeg>(std::llround(*degrees * static_cast<double>(core::kUDegPerDegree))));
+    x.turn = core::sin_cos_udeg(static_cast<core::UDeg>(
+        std::llround(*degrees * static_cast<double>(core::kUDegPerDegree))));
 
     if (!apply_all(ctx, slots, x)) co_return;
 

@@ -44,16 +44,16 @@ Task<void> run(Context& ctx)
     if (!reach) co_return;
 
     // The first axis as a vector, and the perpendicular to it.
-    const auto ax = static_cast<double>(major->x - centre->x);
-    const auto ay = static_cast<double>(major->y - centre->y);
+    const auto ax      = static_cast<double>(major->x - centre->x);
+    const auto ay      = static_cast<double>(major->y - centre->y);
     const double a_len = std::sqrt(ax * ax + ay * ay);
 
     // How far the third click reached, measured ACROSS the first axis: the
     // component perpendicular to it. Clicking along the first axis therefore
     // gives a second axis of zero, and the command says so rather than drawing a
     // line and calling it an ellipse.
-    const auto rx = static_cast<double>(reach->x - centre->x);
-    const auto ry = static_cast<double>(reach->y - centre->y);
+    const auto rx       = static_cast<double>(reach->x - centre->x);
+    const auto ry       = static_cast<double>(reach->y - centre->y);
     const double across = (rx * -ay + ry * ax) / a_len;
 
     const double b = across < 0.0 ? -across : across;

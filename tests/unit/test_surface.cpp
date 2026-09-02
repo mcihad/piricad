@@ -43,8 +43,8 @@ std::vector<domain::surface::Level> ramp()
     std::vector<domain::surface::Level> out;
     for (int i = 0; i <= 10; ++i)
         for (int j = 0; j <= 10; ++j)
-            out.push_back(domain::surface::Level{
-                core::Point2{i * 10000, j * 10000}, 100000 + i * 1000});
+            out.push_back(
+                domain::surface::Level{core::Point2{i * 10000, j * 10000}, 100000 + i * 1000});
     return out;
 }
 
@@ -78,7 +78,8 @@ TEST_CASE("EŞYÜKSELTİ: eğriler kendi kotlarında kalır ve zincirlenir")
     for (const domain::surface::Contour& c : traced.value()) {
         REQUIRE(c.path.size() >= 2);
         const core::Mm expected = (c.height - 100000) * 10;
-        for (const core::Point2& p : c.path) CHECK(p.x == expected);
+        for (const core::Point2& p : c.path)
+            CHECK(p.x == expected);
     }
 }
 
@@ -135,8 +136,8 @@ TEST_CASE("EŞYÜKSELTİ komutu kotlu noktalardan eğri çizer")
     int key = 0;
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j) {
-            const std::string line = "NOKTA noktalar=" + std::to_string(i * 10) + "," +
-                                     std::to_string(j * 10);
+            const std::string line =
+                "NOKTA noktalar=" + std::to_string(i * 10) + "," + std::to_string(j * 10);
             REQUIRE(r.bus.execute_line(line, Origin::Test).ok());
             ++key;
             REQUIRE(r.bus

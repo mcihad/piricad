@@ -514,16 +514,16 @@ TEST_CASE("Aynı ad iki ayara verilemez")
 {
     SettingCatalog c = test_catalogue();
     auto clash       = c.add(SettingSpec{
-              .id       = "test.baska.sayi",
-              .names    = {"sayi"}, // already taken by test.proje.sayi
-              .type     = SettingType::Int,
-              .scope    = SettingScope::Project,
-              .fallback = SettingValue::integer(0),
-              .range    = SettingRange::unbounded(),
-              .values   = {},
-              .unit     = "",
-              .summary  = "Çakışan ad.",
-              .section  = "Sınama",
+        .id       = "test.baska.sayi",
+        .names    = {"sayi"}, // already taken by test.proje.sayi
+        .type     = SettingType::Int,
+        .scope    = SettingScope::Project,
+        .fallback = SettingValue::integer(0),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Çakışan ad.",
+        .section  = "Sınama",
     });
     CHECK(!clash.ok());
     CHECK(mentions(clash.error().message, "test.proje.sayi"));

@@ -89,7 +89,7 @@ Task<void> run(Context& ctx)
         // A guide is removed by naming where it is, within half a metre — which is
         // as precise as anyone can point at a line on a ruler.
         constexpr core::Mm kReach = 500;
-        const std::size_t hit = ctx.document().guides().nearest(axis, coordinate, kReach);
+        const std::size_t hit     = ctx.document().guides().nearest(axis, coordinate, kReach);
         if (hit >= ctx.document().guides().size()) {
             ctx.echo("Orada " + axis_name(axis) + " kılavuz yok: " + metres(coordinate));
             co_return;

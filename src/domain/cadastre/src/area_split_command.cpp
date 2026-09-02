@@ -114,7 +114,8 @@ core::Polygon half_plane(core::Point2 origin, double ux, double uy, double offse
 core::Mm2 area_of(const std::vector<core::Polygon>& pieces)
 {
     core::Mm2 total = 0;
-    for (const core::Polygon& p : pieces) total += abs_area(core::ring_area(p.exterior));
+    for (const core::Polygon& p : pieces)
+        total += abs_area(core::ring_area(p.exterior));
     return total;
 }
 
@@ -143,8 +144,8 @@ Task<void> run(Context& ctx)
                                      PointOptions{.rubber_band = true, .rubber_origin = *first});
     if (!second) co_return;
 
-    const auto dx = static_cast<double>(second->x - first->x);
-    const auto dy = static_cast<double>(second->y - first->y);
+    const auto dx       = static_cast<double>(second->x - first->x);
+    const auto dy       = static_cast<double>(second->y - first->y);
     const double length = std::sqrt(dx * dx + dy * dy);
     if (length <= 0.0) {
         ctx.echo("Yön çizgisinin iki ucu aynı yerde; ayırma yönü belirsiz.");
@@ -199,16 +200,16 @@ Task<void> run(Context& ctx)
     bool first_vertex = true;
     double reach      = 0.0;
     for (const core::Point2& p : parcel.exterior) {
-        const double t = (static_cast<double>(p.x - first->x)) * nx +
-                         (static_cast<double>(p.y - first->y)) * ny;
-        const double along = (static_cast<double>(p.x - first->x)) * ux +
-                             (static_cast<double>(p.y - first->y)) * uy;
+        const double t =
+            (static_cast<double>(p.x - first->x)) * nx + (static_cast<double>(p.y - first->y)) * ny;
+        const double along =
+            (static_cast<double>(p.x - first->x)) * ux + (static_cast<double>(p.y - first->y)) * uy;
         if (first_vertex) {
-            low = high = t;
+            low = high   = t;
             first_vertex = false;
         }
-        low  = std::min(low, t);
-        high = std::max(high, t);
+        low   = std::min(low, t);
+        high  = std::max(high, t);
         reach = std::max(reach, std::abs(along) + std::abs(t));
     }
     reach = reach * 2.0 + 1000.0;
@@ -285,8 +286,8 @@ Task<void> run(Context& ctx)
                     !st)
                     return st.error();
             }
-            said += std::string("\n  ") + label + ": " +
-                    square_metres(core::ring_area(piece.exterior));
+            said +=
+                std::string("\n  ") + label + ": " + square_metres(core::ring_area(piece.exterior));
         }
         return core::ok();
     };
@@ -310,8 +311,8 @@ Task<void> run(Context& ctx)
     said += "\n  istenen " + square_metres(target) + ", elde edilen " + square_metres(achieved) +
             "  (fark " + square_metres(achieved - target) + ", tolerans " +
             square_metres(tolerance) + ")";
-    said += "\n  toplam " + square_metres(achieved + area_of(rest.value())) + "  ·  ifrazdan önce " +
-            square_metres(whole);
+    said += "\n  toplam " + square_metres(achieved + area_of(rest.value())) +
+            "  ·  ifrazdan önce " + square_metres(whole);
 
     ctx.record("nesneler", Value::ids(requested));
     ctx.record("yon", Value::points({*first, *second}));
@@ -334,7 +335,8 @@ KENTOS_COMMAND(split_area)
                               "Ayırma çizgisinin YÖNÜ: iki nokta (yol cephesi, mevcut sınır)"),
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                       "Ayrılacak parsel; yoksa etkin seçim"},
-                Param::integer("alan", Arity::optional(), "Ayrılacak alan, mm² (400 m² = 400000000)"),
+                Param::integer("alan", Arity::optional(),
+                               "Ayrılacak alan, mm² (400 m² = 400000000)"),
                 Param::integer("tolerans", Arity::optional(),
                                "Kabul toleransı, mm²; varsayılan 10000 (0,01 m²)"),
             },

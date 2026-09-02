@@ -57,7 +57,7 @@ QString rgba(const QColor& c)
         .arg(c.red())
         .arg(c.green())
         .arg(c.blue())
-        .arg(QString::number(c.alphaF(), 'f', 3));
+        .arg(QString::number(static_cast<double>(c.alphaF()), 'f', 3));
 }
 
 } // namespace

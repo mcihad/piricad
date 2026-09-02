@@ -93,7 +93,7 @@ void report_pending();
 /// answer.
 #define PENDING(why)                                                                               \
     do {                                                                                           \
-        ::kentos_test::mark_pending(why);                                                         \
+        ::kentos_test::mark_pending(why);                                                          \
         return;                                                                                    \
     } while (false)
 

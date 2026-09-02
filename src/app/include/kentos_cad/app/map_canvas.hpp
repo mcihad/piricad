@@ -360,7 +360,7 @@ private:
     /// Dragging from the ruler is the gesture every drafter knows, and it stays a
     /// gesture: the drop dispatches `KILAVUZ`, so nothing here writes to the
     /// document (CLAUDE.md 5.9).
-    int dragging_guide_{-1};      ///< -1 none, 0 horizontal, 1 vertical
+    int dragging_guide_{-1};       ///< -1 none, 0 horizontal, 1 vertical
     int dragging_guide_index_{-1}; ///< the existing guide being moved, or -1 for a new one
 
     bool panning_{false};
@@ -431,7 +431,6 @@ private:
     Grip gripAt(const QPointF& where) const;
 
 private:
-
     /// Draws the corner handles of every selected object, and the shape a drag
     /// would produce while one is under way.
     void buildGrips();

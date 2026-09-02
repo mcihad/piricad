@@ -184,8 +184,8 @@ KENTOS_COMMAND(measure)
                 Param::point("baslangic", "Ölçümün ilk noktası"),
                 Param::point("bitis", "Ölçümün ikinci noktası"),
             },
-        .undo  = UndoPolicy::None,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary = "İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar.",
         .run     = &run_measure,
     };
@@ -198,9 +198,9 @@ KENTOS_COMMAND(measure_area)
         .names    = {"ALANÖLÇ", "ALANOLC", "AREAOF", "AÖ"},
         .category = Category::Query,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim"}},
+                           "Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim"}},
         .undo     = UndoPolicy::None,
-        .flags = Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
+        .flags    = Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary  = "Seçilen nesnelerin alanını ve çevresini yazar.",
         .run      = &run_measure_area,
     };
@@ -214,9 +214,9 @@ KENTOS_COMMAND(coordinate)
         .category = Category::Query,
         .params   = {Param::point("nokta", "Okunacak nokta")},
         .undo     = UndoPolicy::None,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
-        .summary  = "Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.",
-        .run      = &run_coordinate,
+        .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
+        .summary = "Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.",
+        .run     = &run_coordinate,
     };
 }
 

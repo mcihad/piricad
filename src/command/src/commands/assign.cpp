@@ -20,8 +20,8 @@ namespace kentos::command {
 namespace {
 
 /// The entities a command works on: the named ones, or the selection.
-bool gather(Context& ctx, std::vector<std::int64_t>& requested,
-            std::vector<core::EntityId>& slots, const char* example)
+bool gather(Context& ctx, std::vector<std::int64_t>& requested, std::vector<core::EntityId>& slots,
+            const char* example)
 {
     Bus& bus = ctx.session().bus();
 

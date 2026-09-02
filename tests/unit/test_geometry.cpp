@@ -840,7 +840,8 @@ TEST_CASE("döndürme: dik açı köşeyi tam yerine koyar")
 
     // Four right angles return the point to itself, exactly.
     Point2 r = p;
-    for (int i = 0; i < 4; ++i) r = rotated_about(r, base, sin_cos_udeg(90 * kUDegPerDegree));
+    for (int i = 0; i < 4; ++i)
+        r = rotated_about(r, base, sin_cos_udeg(90 * kUDegPerDegree));
     CHECK_EQ(r.x, p.x);
     CHECK_EQ(r.y, p.y);
 }
@@ -852,8 +853,7 @@ TEST_CASE("aynalama: yatay ve düşey eksen tam, eğik eksen doğru")
     // A horizontal axis is an integer negation and must not round.
     CHECK_EQ(mirrored_in_line(Point2{3000, 5000}, Point2{0, 1000}, Point2{9999, 1000}).y,
              Mm{-3000});
-    CHECK_EQ(mirrored_in_line(Point2{3000, 5000}, Point2{0, 1000}, Point2{9999, 1000}).x,
-             Mm{3000});
+    CHECK_EQ(mirrored_in_line(Point2{3000, 5000}, Point2{0, 1000}, Point2{9999, 1000}).x, Mm{3000});
 
     // And a vertical one.
     CHECK_EQ(mirrored_in_line(Point2{3000, 5000}, Point2{1000, 0}, Point2{1000, 9999}).x,

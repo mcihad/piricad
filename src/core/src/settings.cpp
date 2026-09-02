@@ -400,7 +400,7 @@ KENTOS_SETTING(plan_olcegi);
 KENTOS_SETTING(aci_birimi);
 KENTOS_SETTING(alan_birimi);
 
-#define KENTOS_BUILTIN_SETTINGS(X)                                                                \
+#define KENTOS_BUILTIN_SETTINGS(X)                                                                 \
     X(koordinat_sistemi)                                                                           \
     X(koordinat_hassasiyeti)                                                                       \
     X(cizim_birimi)                                                                                \
@@ -815,11 +815,11 @@ KENTOS_SETTING(silme_onayi)
         // ask a question could do neither. So this setting is read by the shell
         // before it sends the command, which is why it is an application-scope
         // preference and not project state.
-        .summary  = "Seçili nesneleri silmeden önce onay ister. Çizilen hiçbir baytı "
-                    "değiştirmez — yalnız arayüzün soru sorup sormadığını belirler, "
-                    "betik ve komut satırı hiçbir zaman sormaz — bu yüzden kullanıcının "
-                    "kendi makinesine ait bir uygulama tercihidir.",
-        .section  = "Genel", // ui-label
+        .summary = "Seçili nesneleri silmeden önce onay ister. Çizilen hiçbir baytı "
+                   "değiştirmez — yalnız arayüzün soru sorup sormadığını belirler, "
+                   "betik ve komut satırı hiçbir zaman sormaz — bu yüzden kullanıcının "
+                   "kendi makinesine ait bir uygulama tercihidir.",
+        .section = "Genel", // ui-label
     };
 }
 
@@ -1543,7 +1543,7 @@ const SettingCatalog& builtin_settings()
     // document, so it is not the mutable registry core.md P8 bans.
     static const SettingCatalog catalogue = [] {
         SettingCatalog c;
-#define KENTOS_REGISTER(sym)                                                                      \
+#define KENTOS_REGISTER(sym)                                                                       \
     if (auto st = c.add(kentos_setting_##sym()); !st) c.record_failure(st.error().message);
         KENTOS_BUILTIN_SETTINGS(KENTOS_REGISTER)
 #undef KENTOS_REGISTER
@@ -1752,8 +1752,8 @@ Status Settings::revert(const SettingChange& change)
     if (index == kNoSetting)
         return err(ErrorCode::NotFound, "Bilinmeyen ayar: " + quote(change.id));
 
-    const auto it      = std::lower_bound(values_.begin(), values_.end(), index,
-                                          [](const auto& e, std::uint32_t k) { return e.first < k; });
+    const auto it = std::lower_bound(values_.begin(), values_.end(), index,
+                                     [](const auto& e, std::uint32_t k) { return e.first < k; });
     const bool present = it != values_.end() && it->first == index;
 
     // The value came from this store, so it is not re-validated: undo restores what

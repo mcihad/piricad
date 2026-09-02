@@ -122,17 +122,19 @@ std::vector<Defect> check_topology(const core::Document& doc,
     // thousands of parcels on it finishing.
     for (std::size_t i = 0; i < polys.size(); ++i) {
         core::Box2 bi;
-        for (const core::Point2& p : polys[i].exterior) bi.extend(p);
+        for (const core::Point2& p : polys[i].exterior)
+            bi.extend(p);
 
         for (std::size_t j = i + 1; j < polys.size(); ++j) {
             core::Box2 bj;
-            for (const core::Point2& p : polys[j].exterior) bj.extend(p);
+            for (const core::Point2& p : polys[j].exterior)
+                bj.extend(p);
 
             if (bi.max_x < bj.min_x || bj.max_x < bi.min_x) continue;
             if (bi.max_y < bj.min_y || bj.max_y < bi.min_y) continue;
 
-            auto shared = core::polygon_boolean({polys[i]}, {polys[j]},
-                                                core::BooleanOp::Intersection);
+            auto shared =
+                core::polygon_boolean({polys[i]}, {polys[j]}, core::BooleanOp::Intersection);
             if (!shared || shared.value().empty()) continue;
 
             core::Mm2 total = 0;
@@ -161,8 +163,7 @@ std::string describe(const core::Document& doc, const Defect& d)
     switch (d.kind) {
     case DefectKind::SelfIntersecting:
         return "Nesne " + std::to_string(first) + ": sınır kendini kesiyor.";
-    case DefectKind::ZeroArea:
-        return "Nesne " + std::to_string(first) + ": alanı sıfır.";
+    case DefectKind::ZeroArea: return "Nesne " + std::to_string(first) + ": alanı sıfır.";
     case DefectKind::Overlap: {
         // Square metres to two decimals, in integers, the way ALANÖLÇ prints one.
         const auto cm2   = static_cast<std::uint64_t>((d.area + 5000) / 10000);
@@ -228,7 +229,7 @@ KENTOS_COMMAND(topology)
         .names    = {"TOPOLOJİ", "TOPOLOJI", "TOPOLOGY", "TPL"},
         .category = Category::Query,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim"}},
+                           "Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim"}},
         .undo     = UndoPolicy::None,
         .flags    = Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary  = "Kendini kesen sınır, sıfır alan ve örtüşen parselleri raporlar.",

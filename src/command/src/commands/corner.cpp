@@ -55,9 +55,8 @@ bool corner_of(Context& ctx, const Value& given, core::EntityId& slot,
 {
     const core::Document& doc = ctx.document();
 
-    id = given.kind() == Value::Kind::IdList
-             ? (given.as_ids().size() == 1 ? given.as_ids()[0] : 0)
-             : given.as_int();
+    id = given.kind() == Value::Kind::IdList ? (given.as_ids().size() == 1 ? given.as_ids()[0] : 0)
+                                             : given.as_int();
 
     if (id <= 0) {
         ctx.echo("Geçersiz nesne kimliği: " + std::to_string(id) + ". Kimlikler 1'den başlar.");
@@ -86,7 +85,8 @@ bool corner_of(Context& ctx, const Value& given, core::EntityId& slot,
     const auto ys = doc.geometry().ring_ys(span.first);
     pts.clear();
     pts.reserve(xs.size());
-    for (std::size_t v = 0; v < xs.size(); ++v) pts.push_back(core::Point2{xs[v], ys[v]});
+    for (std::size_t v = 0; v < xs.size(); ++v)
+        pts.push_back(core::Point2{xs[v], ys[v]});
     return true;
 }
 
@@ -97,7 +97,7 @@ bool pick_corner(const std::vector<core::Point2>& pts, bool closed, core::Point2
 {
     if (pts.size() < 3) return false;
 
-    double best  = -1.0;
+    double best   = -1.0;
     std::size_t k = 0;
     for (std::size_t i = 0; i < pts.size(); ++i) {
         const double d = core::distance_squared(pts[i], probe);
@@ -117,8 +117,8 @@ bool pick_corner(const std::vector<core::Point2>& pts, bool closed, core::Point2
 
 core::RingRole role_of(Context& ctx, core::EntityId slot)
 {
-    const core::RingSpan span = ctx.document().geometry().rings_of(
-        ctx.document().entities().slot[slot]);
+    const core::RingSpan span =
+        ctx.document().geometry().rings_of(ctx.document().entities().slot[slot]);
     return ctx.document().geometry().ring_role[span.first];
 }
 
@@ -231,9 +231,9 @@ Task<void> run_corner(Context& ctx, bool fillet)
         co_return;
     }
     if (tangent >= c.edge1 || tangent >= c.edge2) {
-        ctx.echo("Kesim komşu kenardan uzun: kenarlar " + std::to_string(c.edge1 / 1000) + " m ve " +
-                 std::to_string(c.edge2 / 1000) + " m, gereken " + std::to_string(tangent / 1000) +
-                 " m. Daha küçük bir değer verin.");
+        ctx.echo("Kesim komşu kenardan uzun: kenarlar " + std::to_string(c.edge1 / 1000) +
+                 " m ve " + std::to_string(c.edge2 / 1000) + " m, gereken " +
+                 std::to_string(tangent / 1000) + " m. Daha küçük bir değer verin.");
         co_return;
     }
 
@@ -334,7 +334,7 @@ Task<void> run_corner(Context& ctx, bool fillet)
             return len > 0.0 ? Unit{bx / len, by / len} : Unit{};
         }();
 
-        const core::Mm to_centre = core::mm_round(static_cast<double>(want) / half_sin);
+        const core::Mm to_centre  = core::mm_round(static_cast<double>(want) / half_sin);
         const core::Point2 centre = along(c.v, bis, to_centre);
 
         // THE SWEEP IS COUNTER-CLOCKWISE from the first end to the second

@@ -32,8 +32,7 @@ class Controller;
 /// One value cell can carry a small badge — `HESAP` for a derived number,
 /// `BOŞ` for a cell nobody has filled. §7 names both.
 /// What kind of editor a cell offers when it is opened.
-enum class EditKind : std::uint8_t
-{
+enum class EditKind : std::uint8_t {
     None,   ///< read-only: a derived number, or a fact with no command behind it
     Text,   ///< a line edit — an attribute value, a group path, a width
     Bool,   ///< no editor at all: activating the row flips it
@@ -149,9 +148,9 @@ private:
     int hotRow_      = -1;
 
     /// The line edit, created on first use, parented here.
-    QLineEdit* editor_       = nullptr;
-    int editingGroup_        = -1;
-    int editingRow_          = -1;
+    QLineEdit* editor_ = nullptr;
+    int editingGroup_  = -1;
+    int editingRow_    = -1;
 
     Controller& controller_;
     QVector<AttributeGroup> groups_;

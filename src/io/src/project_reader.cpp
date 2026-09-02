@@ -149,7 +149,7 @@ struct Columns
 
 core::Status load_columns(const BlockView& view, const DocumentRecord& dr, Columns& c)
 {
-#define KENTOS_COLUMN(field, id, type, count, what)                                               \
+#define KENTOS_COLUMN(field, id, type, count, what)                                                \
     do {                                                                                           \
         auto r = view.column<type>(id, count, what);                                               \
         if (!r) return r.error();                                                                  \
@@ -172,9 +172,9 @@ core::Status load_columns(const BlockView& view, const DocumentRecord& dr, Colum
     KENTOS_COLUMN(ring_part, kBlkRingPart, std::uint16_t, dr.ring_count, "halka parçası");
     KENTOS_COLUMN(ring_role, kBlkRingRole, std::uint8_t, dr.ring_count, "halka rolü");
     KENTOS_COLUMN(first_ring, kBlkSlotFirstRing, std::uint32_t, dr.slot_count,
-                   "yuvanın ilk halkası");
+                  "yuvanın ilk halkası");
     KENTOS_COLUMN(ring_total, kBlkSlotRingTotal, std::uint32_t, dr.slot_count,
-                   "yuvanın halka sayısı");
+                  "yuvanın halka sayısı");
     KENTOS_COLUMN(xs, kBlkVertexX, core::Mm, dr.vertex_count, "tepe noktası X");
     KENTOS_COLUMN(ys, kBlkVertexY, core::Mm, dr.vertex_count, "tepe noktası Y");
 
@@ -247,9 +247,8 @@ core::Status validate_indices(const DocumentRecord& dr, const Columns& c)
         // kind column carried anything wrote a zero into it — the column existed,
         // nothing filled it — and those drawings are polylines. Refusing them now
         // would be refusing every project saved by an earlier build.
-        if (c.kind[e] != 0 && c.kind[e] != core::kPolylineKind &&
-            c.kind[e] != core::kCircleKind && c.kind[e] != core::kArcKind &&
-            c.kind[e] != core::kPointKind)
+        if (c.kind[e] != 0 && c.kind[e] != core::kPolylineKind && c.kind[e] != core::kCircleKind &&
+            c.kind[e] != core::kArcKind && c.kind[e] != core::kPointKind)
             return err(ErrorCode::Unsupported,
                        std::string(kErrKind) + ": " + std::to_string(e + 1) + ". nesne " +
                            std::to_string(c.kind[e]) +
@@ -635,8 +634,8 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             return err(ErrorCode::ParseError,
                        std::string(kErrConsist) +
                            ": kılavuz eksen ve koordinat sütunları farklı uzunlukta (" +
-                           std::to_string(n) + " / " + std::to_string(view.count_of(kBlkGuideCoord)) +
-                           ").");
+                           std::to_string(n) + " / " +
+                           std::to_string(view.count_of(kBlkGuideCoord)) + ").");
 
         auto axes = view.column<std::uint8_t>(kBlkGuideAxis, n, "kilavuz ekseni");
         if (!axes) return axes.error();

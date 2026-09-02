@@ -78,8 +78,8 @@ KENTOS_COMMAND(pan)
                 Param::point("bitis", "O noktanın taşınacağı yer"),
             },
         .undo  = UndoPolicy::None,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible |
-                 Flags::Transparent | Flags::ReadOnly,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::Transparent |
+                 Flags::ReadOnly,
         .summary = "Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır.",
         .run     = &run_pan,
     };

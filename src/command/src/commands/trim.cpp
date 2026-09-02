@@ -27,8 +27,7 @@ namespace kentos::command {
 namespace {
 
 /// One entity's single open ring, or false having said why not.
-bool open_run(Context& ctx, std::int64_t id, core::EntityId& slot,
-              std::vector<core::Point2>& pts)
+bool open_run(Context& ctx, std::int64_t id, core::EntityId& slot, std::vector<core::Point2>& pts)
 {
     const core::Document& doc = ctx.document();
 
@@ -59,7 +58,8 @@ bool open_run(Context& ctx, std::int64_t id, core::EntityId& slot,
     const auto ys = doc.geometry().ring_ys(span.first);
     pts.clear();
     pts.reserve(xs.size());
-    for (std::size_t v = 0; v < xs.size(); ++v) pts.push_back(core::Point2{xs[v], ys[v]});
+    for (std::size_t v = 0; v < xs.size(); ++v)
+        pts.push_back(core::Point2{xs[v], ys[v]});
     return true;
 }
 
@@ -91,10 +91,10 @@ bool locate_on(const std::vector<core::Point2>& pts, core::Point2 probe, std::si
             segment = i;
             foot    = f;
 
-            const double ex = core::mm_to_metres(pts[i + 1].x - pts[i].x);
-            const double ey = core::mm_to_metres(pts[i + 1].y - pts[i].y);
-            const double fx = core::mm_to_metres(f.x - pts[i].x);
-            const double fy = core::mm_to_metres(f.y - pts[i].y);
+            const double ex   = core::mm_to_metres(pts[i + 1].x - pts[i].x);
+            const double ey   = core::mm_to_metres(pts[i + 1].y - pts[i].y);
+            const double fx   = core::mm_to_metres(f.x - pts[i].x);
+            const double fy   = core::mm_to_metres(f.y - pts[i].y);
             const double len2 = ex * ex + ey * ey;
             along             = len2 > 0.0 ? (fx * ex + fy * ey) / len2 : 0.0;
         }
@@ -150,7 +150,8 @@ Task<void> run_split(Context& ctx)
     // The FIRST half keeps the object, so its key, layer, style and attributes
     // stay with it (model.md R4, R28). The second half is a new object, exactly
     // as an ifraz produces one parcel that continues and one that is new.
-    std::vector<core::Point2> head(pts.begin(), pts.begin() + static_cast<std::ptrdiff_t>(segment) + 1);
+    std::vector<core::Point2> head(pts.begin(),
+                                   pts.begin() + static_cast<std::ptrdiff_t>(segment) + 1);
     head.push_back(foot);
 
     std::vector<core::Point2> tail;
@@ -219,8 +220,9 @@ Task<void> run_cut(Context& ctx, bool extend)
     const Value target_arg = ctx.argument("nesne");
     const Value edge_arg   = ctx.argument("sinir");
     if (target_arg.empty() || edge_arg.empty()) {
-        ctx.echo(std::string(verb) + " için hem düzenlenecek çizgi hem sınır çizgisi gerekir. "
-                                     "Örnek: " +
+        ctx.echo(std::string(verb) +
+                 " için hem düzenlenecek çizgi hem sınır çizgisi gerekir. "
+                 "Örnek: " +
                  verb + " nesne=1 sinir=2 nokta=5,0");
         co_return;
     }
@@ -252,9 +254,9 @@ Task<void> run_cut(Context& ctx, bool extend)
     const bool at_start   = to_start <= to_end;
 
     // The segment that moves is the one at that end.
-    const std::size_t seg  = at_start ? 0 : pts.size() - 2;
-    const core::Point2 p0  = at_start ? pts[1] : pts[seg];      // the anchored end
-    const core::Point2 p1  = at_start ? pts[0] : pts[seg + 1];  // the end that moves
+    const std::size_t seg = at_start ? 0 : pts.size() - 2;
+    const core::Point2 p0 = at_start ? pts[1] : pts[seg];     // the anchored end
+    const core::Point2 p1 = at_start ? pts[0] : pts[seg + 1]; // the end that moves
 
     // Every edge segment is a candidate; the nearest crossing to the moving end
     // is the one meant, because that is the first boundary the line reaches.
@@ -347,8 +349,7 @@ KENTOS_COMMAND(trim)
             {
                 Param{"nesne", ParamKind::Selection, Arity::exactly(1),
                       "Budanacak çizginin kimliği"},
-                Param{"sinir", ParamKind::Selection, Arity::exactly(1),
-                      "Sınır çizgisinin kimliği"},
+                Param{"sinir", ParamKind::Selection, Arity::exactly(1), "Sınır çizgisinin kimliği"},
                 Param::point("nokta", "Atılacak parçanın üzerindeki bir nokta"),
             },
         .undo    = UndoPolicy::SingleTransaction,
@@ -368,8 +369,7 @@ KENTOS_COMMAND(extend)
             {
                 Param{"nesne", ParamKind::Selection, Arity::exactly(1),
                       "Uzatılacak çizginin kimliği"},
-                Param{"sinir", ParamKind::Selection, Arity::exactly(1),
-                      "Sınır çizgisinin kimliği"},
+                Param{"sinir", ParamKind::Selection, Arity::exactly(1), "Sınır çizgisinin kimliği"},
                 Param::point("nokta", "Uzatılacak ucun yakınında bir nokta"),
             },
         .undo    = UndoPolicy::SingleTransaction,

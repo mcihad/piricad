@@ -71,10 +71,10 @@ core::Result<BlockView> BlockView::parse(std::span<const std::byte> bytes, const
     const std::uint64_t file_size = bytes.size();
 
     if (file_size < sizeof(FileHeader))
-        return err(ErrorCode::ParseError, std::string(kErrTruncated) + ": '" + path + "' " +
-                                              std::to_string(file_size) +
-                                              " bayt; bir KentOSCad proje dosyasının başlığı bile " +
-                                              std::to_string(sizeof(FileHeader)) + " bayttır.");
+        return err(ErrorCode::ParseError,
+                   std::string(kErrTruncated) + ": '" + path + "' " + std::to_string(file_size) +
+                       " bayt; bir KentOSCad proje dosyasının başlığı bile " +
+                       std::to_string(sizeof(FileHeader)) + " bayttır.");
 
     view.header_ = read_record<FileHeader>(bytes, 0);
 

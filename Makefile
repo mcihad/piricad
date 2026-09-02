@@ -94,11 +94,7 @@ tidy-if-present:
 	fi
 
 iwyu-if-present:
-	@if command -v include-what-you-use >/dev/null; then \
-	    iwyu_tool.py -p $(BUILD) src; \
-	else \
-	    echo "check: include-what-you-use not installed — SKIPPED"; \
-	fi
+	@scripts/run-iwyu.sh $(BUILD)
 
 ## --------------------------------------------------------------- tools ----
 

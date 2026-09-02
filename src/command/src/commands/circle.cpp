@@ -43,8 +43,8 @@ Task<void> run(Context& ctx)
     // millimetres leaves the 53-bit mantissa long before it leaves int64, and
     // translating to the centre first is what keeps the operands small
     // (core.md R3). `double` is transient and never stored.
-    const double dx = core::mm_to_metres(rim->x - centre->x);
-    const double dy = core::mm_to_metres(rim->y - centre->y);
+    const double dx       = core::mm_to_metres(rim->x - centre->x);
+    const double dy       = core::mm_to_metres(rim->y - centre->y);
     const core::Mm radius = core::mm_round(std::sqrt(dx * dx + dy * dy) * core::kMmPerMetre);
 
     if (radius <= 0) {

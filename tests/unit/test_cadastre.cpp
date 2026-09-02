@@ -271,8 +271,7 @@ TEST_CASE("ALANİFRAZ: istenen alanı tolerans içinde ayırır")
     const core::Mm2 before = total_area(r.doc);
 
     // Cut parallel to the north-south direction, taking 80 m² off.
-    auto cut = r.bus.execute_line(
-        "ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=80000000", Origin::Test);
+    auto cut = r.bus.execute_line("ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=80000000", Origin::Test);
     if (!cut) FAIL_WITH("ALANİFRAZ", cut.error().message);
 
     REQUIRE(r.doc.live_entity_count() == 2);
@@ -299,8 +298,8 @@ TEST_CASE("ALANİFRAZ: parselden büyük bir alan istemek reddedilir")
     REQUIRE(r.bus.execute_line("ALAN noktalar=0,0 20,0 20,10 0,10", Origin::Test).ok());
 
     r.said.clear();
-    REQUIRE(r.bus.execute_line("ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=500000000", Origin::Test)
-                .ok());
+    REQUIRE(
+        r.bus.execute_line("ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=500000000", Origin::Test).ok());
 
     CHECK(r.doc.live_entity_count() == 1);
     CHECK(r.said.find("küçük olmalı") != std::string::npos);
@@ -313,8 +312,8 @@ TEST_CASE("ALANİFRAZ tek geri alma adımıdır")
     REQUIRE(r.bus.execute_line("ALAN noktalar=0,0 20,0 20,10 0,10", Origin::Test).ok());
 
     const std::uint64_t before = r.doc.content_hash();
-    REQUIRE(r.bus.execute_line("ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=80000000", Origin::Test)
-                .ok());
+    REQUIRE(
+        r.bus.execute_line("ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=80000000", Origin::Test).ok());
     REQUIRE(r.bus.execute_line("GERİAL", Origin::Test).ok());
 
     CHECK(r.doc.content_hash() == before);
@@ -327,8 +326,8 @@ TEST_CASE("ALANİFRAZ: elde edilen alanı raporlar, istenen alanı değil")
     REQUIRE(r.bus.execute_line("ALAN noktalar=0,0 20,0 20,10 0,10", Origin::Test).ok());
 
     r.said.clear();
-    REQUIRE(r.bus.execute_line("ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=80000000", Origin::Test)
-                .ok());
+    REQUIRE(
+        r.bus.execute_line("ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=80000000", Origin::Test).ok());
 
     // A command that printed the target instead of what it achieved would be
     // lying about a number that goes on a tapu.
@@ -345,8 +344,8 @@ TEST_CASE("ALANİFRAZ: öznitelikler iki parçaya da geçer")
     REQUIRE(r.bus.execute_line("SÜTUN kimlik=ada_no tur=metin", Origin::Test).ok());
     REQUIRE(r.bus.execute_line("ÖZNİTELİK ad=ada_no nesne=1 deger=1284", Origin::Test).ok());
 
-    REQUIRE(r.bus.execute_line("ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=80000000", Origin::Test)
-                .ok());
+    REQUIRE(
+        r.bus.execute_line("ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=80000000", Origin::Test).ok());
 
     const core::AttrId ada = r.doc.attributes().find("ada_no");
     std::size_t carried    = 0;

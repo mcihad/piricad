@@ -113,8 +113,7 @@ Task<void> run(Context& ctx)
     // not adjoin is not a tevhit. Saying so is the honest answer; drawing two
     // parcels and calling them one would produce a record TKGM would reject.
     if (merged.value().size() > 1) {
-        ctx.echo("Bu parseller bitişik değil: birleşme " +
-                 std::to_string(merged.value().size()) +
+        ctx.echo("Bu parseller bitişik değil: birleşme " + std::to_string(merged.value().size()) +
                  " ayrı parça veriyor. Tevhit yalnız komşu parseller içindir.");
         co_return;
     }
@@ -138,7 +137,7 @@ Task<void> run(Context& ctx)
     std::vector<std::string> dropped;
 
     for (std::size_t c = 0; c < table.columns(); ++c) {
-        const auto col = static_cast<core::AttrId>(c);
+        const auto col                 = static_cast<core::AttrId>(c);
         const core::AttrColumn* column = table.column(col);
         if (column == nullptr) continue;
 
@@ -199,7 +198,7 @@ KENTOS_COMMAND(merge)
         .names    = {"TEVHİT", "TEVHIT", "MERGE", "TVH"},
         .category = Category::Modify,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Birleştirilecek parseller; yoksa etkin seçim"}},
+                           "Birleştirilecek parseller; yoksa etkin seçim"}},
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Scriptable | Flags::AiAccessible,
         .summary  = "Komşu parselleri tek parselde birleştirir (tevhit).",

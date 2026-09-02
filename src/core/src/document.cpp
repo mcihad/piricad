@@ -310,7 +310,7 @@ Result<EntityId> Document::add_circle(LayerId lyr, Point2 centre, Mm radius, Op&
     // arena bounded the centre and the handle, which is a flat line to the east.
     // Every cull, every pick prefilter and every zoom-to-extents reads this, so it
     // is corrected here rather than left for the kind to answer later.
-    const EntityId e = id.value();
+    const EntityId e   = id.value();
     entities_.min_x[e] = centre.x - radius;
     entities_.min_y[e] = centre.y - radius;
     entities_.max_x[e] = centre.x + radius;
@@ -324,7 +324,7 @@ Result<EntityId> Document::add_circle(LayerId lyr, Point2 centre, Mm radius, Op&
 }
 
 Result<EntityId> Document::add_ellipse(LayerId lyr, Point2 centre, Point2 major, Point2 minor,
-                                      Op& undo_out)
+                                       Op& undo_out)
 {
     if (lyr >= layers_.size())
         return err(ErrorCode::NotFound, "Bilinmeyen katman kimliği: " + std::to_string(lyr));
@@ -724,9 +724,8 @@ Status Document::add_guide(GuideAxis axis, Mm coordinate, Op& undo_out)
 Status Document::remove_guide(std::size_t index, Op& undo_out)
 {
     if (index >= guides_.size())
-        return err(ErrorCode::NotFound,
-                   "Kılavuz yok: " + std::to_string(index) + ". Çizimde " +
-                       std::to_string(guides_.size()) + " kılavuz var.");
+        return err(ErrorCode::NotFound, "Kılavuz yok: " + std::to_string(index) + ". Çizimde " +
+                                            std::to_string(guides_.size()) + " kılavuz var.");
 
     undo_out              = Op{};
     undo_out.kind         = Op::Kind::SetGuides;

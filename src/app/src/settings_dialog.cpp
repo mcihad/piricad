@@ -281,9 +281,9 @@ SettingsDialog::SettingsDialog(Controller& controller, QWidget* parent)
         Section section;
         section.group = declared.title;
         section.title = QString::fromStdString(declared.title);
-        section.page  = declared.phase.empty() ? buildGroup(declared.title, section.title)
-                                               : buildPending(QString::fromStdString(declared.phase),
-                                                              QString::fromStdString(declared.note));
+        section.page = declared.phase.empty() ? buildGroup(declared.title, section.title)
+                                              : buildPending(QString::fromStdString(declared.phase),
+                                                             QString::fromStdString(declared.note));
         pages_->addWidget(section.page);
         sections_->addSection(group_glyph(section_group(declared.title)), section.title);
         order_.push_back(section);
@@ -503,7 +503,7 @@ void SettingsDialog::addRow(QVBoxLayout* into, const SettingSpec& spec)
         if (spec.unit == "0xAARRGGBB") {
             auto* button = new QToolButton(line);
             button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-            connect(button, &QToolButton::clicked, this, [this, &spec, button] {
+            connect(button, &QToolButton::clicked, this, [this, &spec] {
                 const auto current =
                     static_cast<std::uint32_t>(storeOf(spec.scope).get(spec.id).as_int());
 

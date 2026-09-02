@@ -35,10 +35,10 @@ Task<void> run(Context& ctx)
     // The whole run is drawn at the end, so the guide carries every vertex fixed
     // so far — otherwise each click would appear to erase the one before it, the
     // way it did for ALAN before `rubber_chain` existed (input.hpp).
-    while (auto next = co_await ctx.point("noktalar", "Sonraki nokta",
-                                          PointOptions{.rubber_band   = true,
-                                                       .rubber_origin = previous,
-                                                       .rubber_chain  = points})) {
+    while (
+        auto next = co_await ctx.point(
+            "noktalar", "Sonraki nokta",
+            PointOptions{.rubber_band = true, .rubber_origin = previous, .rubber_chain = points})) {
         points.push_back(*next);
         previous = *next;
     }

@@ -79,9 +79,9 @@ core::Result<std::vector<Contour>> trace_contours(const std::vector<Level>& poin
         return core::err(core::ErrorCode::InvalidArgument,
                          "Eş yükselti aralığı sıfırdan büyük olmalı.");
     if (points.size() < 3)
-        return core::err(core::ErrorCode::InvalidArgument,
-                         "Yüzey en az üç kotlu nokta ister. Verilen: " +
-                             std::to_string(points.size()) + ".");
+        return core::err(
+            core::ErrorCode::InvalidArgument,
+            "Yüzey en az üç kotlu nokta ister. Verilen: " + std::to_string(points.size()) + ".");
 
     // ---- duplicates first, and the heights follow them ----
     //
@@ -111,8 +111,8 @@ core::Result<std::vector<Contour>> trace_contours(const std::vector<Level>& poin
     std::vector<CDT::V2d<double>> vertices;
     vertices.reserve(unique.size());
     for (const Level& p : unique)
-        vertices.push_back(CDT::V2d<double>{static_cast<double>(p.at.x),
-                                            static_cast<double>(p.at.y)});
+        vertices.push_back(
+            CDT::V2d<double>{static_cast<double>(p.at.x), static_cast<double>(p.at.y)});
 
     cdt.insertVertices(vertices);
     cdt.eraseSuperTriangle();
@@ -207,7 +207,7 @@ core::Result<std::vector<Contour>> trace_contours(const std::vector<Level>& poin
             for (int direction = 0; direction < 2; ++direction) {
                 bool grew = true;
                 while (grew) {
-                    grew                 = false;
+                    grew                   = false;
                     const core::Point2 tip = direction == 0 ? run.path.back() : run.path.front();
                     const auto range       = ends.equal_range(key_of(tip));
 
@@ -215,9 +215,8 @@ core::Result<std::vector<Contour>> trace_contours(const std::vector<Level>& poin
                         const std::size_t s = it->second;
                         if (used[s]) continue;
 
-                        const Segment& seg = segments[s];
-                        const bool from_tip =
-                            seg.from.x == tip.x && seg.from.y == tip.y;
+                        const Segment& seg      = segments[s];
+                        const bool from_tip     = seg.from.x == tip.x && seg.from.y == tip.y;
                         const core::Point2 next = from_tip ? seg.to : seg.from;
 
                         used[s] = true;

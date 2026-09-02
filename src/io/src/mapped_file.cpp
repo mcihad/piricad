@@ -33,9 +33,9 @@ std::string system_reason()
 #ifdef _WIN32
     const DWORD code = ::GetLastError();
     char* text       = nullptr;
-    const DWORD n   = ::FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-                                           FORMAT_MESSAGE_IGNORE_INSERTS,
-                                       nullptr, code, 0, reinterpret_cast<char*>(&text), 0, nullptr);
+    const DWORD n = ::FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+                                         FORMAT_MESSAGE_IGNORE_INSERTS,
+                                     nullptr, code, 0, reinterpret_cast<char*>(&text), 0, nullptr);
     std::string out = n && text ? std::string(text, n) : ("hata kodu " + std::to_string(code));
     if (text) ::LocalFree(text);
     while (!out.empty() && (out.back() == '\n' || out.back() == '\r'))
@@ -105,7 +105,8 @@ core::Result<MappedFile> MappedFile::open(const std::string& path)
         return core::err(ErrorCode::IoFailure,
                          "'" + path + "' boyutu okunamadı: " + system_reason());
     if (size.QuadPart <= 0)
-        return core::err(ErrorCode::ParseError, "'" + path + "' boş; KentOSCad proje dosyası değil.");
+        return core::err(ErrorCode::ParseError,
+                         "'" + path + "' boş; KentOSCad proje dosyası değil.");
     m.size_ = static_cast<std::size_t>(size.QuadPart);
 
     const HANDLE mapping = ::CreateFileMappingA(file, nullptr, PAGE_READONLY, 0, 0, nullptr);
@@ -143,7 +144,8 @@ core::Result<MappedFile> MappedFile::open(const std::string& path)
         return core::err(ErrorCode::IoFailure,
                          "'" + path + "' sıradan bir dosya değil; proje dosyası bekleniyordu.");
     if (st.st_size <= 0)
-        return core::err(ErrorCode::ParseError, "'" + path + "' boş; KentOSCad proje dosyası değil.");
+        return core::err(ErrorCode::ParseError,
+                         "'" + path + "' boş; KentOSCad proje dosyası değil.");
     m.size_ = static_cast<std::size_t>(st.st_size);
 
     void* view = ::mmap(nullptr, m.size_, PROT_READ, MAP_PRIVATE, fd, 0);

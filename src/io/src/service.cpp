@@ -277,9 +277,8 @@ command::Task<core::Result<std::string>> FileService::export_out(std::string pat
 
 // ------------------------------------------------------------ point lists ----
 
-command::Task<core::Result<std::string>> FileService::import_points(command::Transaction* tx,
-                                                                    std::string path,
-                                                                    bool swapped_axes)
+command::Task<core::Result<std::string>>
+FileService::import_points(command::Transaction* tx, std::string path, bool swapped_axes)
 {
     if (tx == nullptr)
         co_return err(ErrorCode::Internal, "Nokta okuma bir işlem içinde çalışmalı.");
@@ -295,8 +294,8 @@ command::Task<core::Result<std::string>> FileService::import_points(command::Tra
     // is not a drawing edit), so re-importing into the same document adds no
     // second column.
     const core::AttrTable& table = tx->document().attributes();
-    const auto column = [&](const char* id, const char* label, core::AttrType type)
-        -> core::Result<core::AttrId> {
+    const auto column            = [&](const char* id, const char* label,
+                                       core::AttrType type) -> core::Result<core::AttrId> {
         if (const core::AttrId found = table.find(id); found != core::kNoAttr) return found;
 
         core::AttrSpec spec;
@@ -321,8 +320,7 @@ command::Task<core::Result<std::string>> FileService::import_points(command::Tra
         if (!created) co_return created.error();
 
         if (!p.number.empty())
-            if (auto st = tx->set_attribute(no.value(), created.value(),
-                                            core::attr_text(p.number));
+            if (auto st = tx->set_attribute(no.value(), created.value(), core::attr_text(p.number));
                 !st)
                 co_return st.error();
 
@@ -344,11 +342,11 @@ command::Task<core::Result<std::string>> FileService::import_points(command::Tra
 
 core::Result<std::string> FileService::export_points(std::string path, bool swapped_axes)
 {
-    const core::Document& doc = bus_.document();
+    const core::Document& doc    = bus_.document();
     const core::AttrTable& table = doc.attributes();
-    const core::AttrId no   = table.find("nokta_no");
-    const core::AttrId kot  = table.find("kot");
-    const core::AttrId code = table.find("kod");
+    const core::AttrId no        = table.find("nokta_no");
+    const core::AttrId kot       = table.find("kot");
+    const core::AttrId code      = table.find("kod");
 
     std::vector<SurveyPoint> points;
     for (core::EntityId e = 0; e < doc.entities().size(); ++e) {

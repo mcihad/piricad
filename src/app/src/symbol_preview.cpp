@@ -192,8 +192,8 @@ render::DrawList build(const core::Symbol& symbol, const core::ImageStore& image
     // about a corner than nothing at all.
     const bool corner = size.width() >= 120;
 
-    const PreviewScale scale =
-        fit_to_swatch(symbol, images, corner ? shape : PreviewShape::Point, size, w, h);
+    const PreviewScale scale  = fit_to_swatch(symbol, images, corner ? shape : PreviewShape::Point,
+                                              size, static_cast<double>(w), static_cast<double>(h));
     const double mm_per_pixel = scale.mm_per_pixel;
 
     for (std::size_t i = 0; i < count; ++i) {

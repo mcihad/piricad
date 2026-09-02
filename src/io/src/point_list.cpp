@@ -11,7 +11,7 @@
 namespace kentos::io {
 namespace {
 
-constexpr std::size_t kMaxLine   = 4096;   ///< a point line is short; anything longer is not one
+constexpr std::size_t kMaxLine   = 4096;    ///< a point line is short; anything longer is not one
 constexpr std::size_t kMaxPoints = 5000000; ///< bounded so a hostile file cannot exhaust memory
 
 /// Parses a decimal number written in metres into exact millimetres.
@@ -26,7 +26,8 @@ constexpr std::size_t kMaxPoints = 5000000; ///< bounded so a hostile file canno
 /// `485320,543` and refusing it would refuse most real files.
 core::Result<core::Mm> parse_metres(std::string_view text)
 {
-    while (!text.empty() && (text.front() == ' ' || text.front() == '\t')) text.remove_prefix(1);
+    while (!text.empty() && (text.front() == ' ' || text.front() == '\t'))
+        text.remove_prefix(1);
     while (!text.empty() && (text.back() == ' ' || text.back() == '\t' || text.back() == '\r'))
         text.remove_suffix(1);
 
@@ -85,9 +86,11 @@ std::vector<std::string_view> split(std::string_view line, char delimiter)
     if (delimiter == ' ') {
         std::size_t i = 0;
         while (i < line.size()) {
-            while (i < line.size() && (line[i] == ' ' || line[i] == '\t')) ++i;
+            while (i < line.size() && (line[i] == ' ' || line[i] == '\t'))
+                ++i;
             const std::size_t start = i;
-            while (i < line.size() && line[i] != ' ' && line[i] != '\t') ++i;
+            while (i < line.size() && line[i] != ' ' && line[i] != '\t')
+                ++i;
             if (i > start) out.push_back(line.substr(start, i - start));
         }
         return out;
@@ -114,7 +117,8 @@ char delimiter_of(std::string_view line)
 
 std::string trimmed(std::string_view v)
 {
-    while (!v.empty() && (v.front() == ' ' || v.front() == '\t')) v.remove_prefix(1);
+    while (!v.empty() && (v.front() == ' ' || v.front() == '\t'))
+        v.remove_prefix(1);
     while (!v.empty() && (v.back() == ' ' || v.back() == '\t' || v.back() == '\r'))
         v.remove_suffix(1);
     return std::string(v);
@@ -125,8 +129,7 @@ std::string trimmed(std::string_view v)
 core::Result<std::vector<SurveyPoint>> read_point_list(const std::string& path, PointOrder order)
 {
     std::ifstream in(path);
-    if (!in)
-        return core::err(core::ErrorCode::NotFound, "Nokta listesi açılamadı: " + path);
+    if (!in) return core::err(core::ErrorCode::NotFound, "Nokta listesi açılamadı: " + path);
 
     std::vector<SurveyPoint> points;
     std::string line;
@@ -215,8 +218,9 @@ core::Status write_point_list(const std::string& path, const std::vector<SurveyP
 
     // The header names the columns in the order they are written, so the file
     // says what it is without anyone having to know which convention produced it.
-    out << (order == PointOrder::NumberEastingNorthing ? "# nokta_no; Y(saga); X(yukari); Z; kod\n"
-                                                       : "# nokta_no; X(yukari); Y(saga); Z; kod\n");
+    out << (order == PointOrder::NumberEastingNorthing
+                ? "# nokta_no; Y(saga); X(yukari); Z; kod\n"
+                : "# nokta_no; X(yukari); Y(saga); Z; kod\n");
 
     const auto metres = [](core::Mm v) {
         const bool negative = v < 0;
@@ -229,17 +233,16 @@ core::Status write_point_list(const std::string& path, const std::vector<SurveyP
     };
 
     for (const SurveyPoint& p : points) {
-        const std::string a =
-            metres(order == PointOrder::NumberEastingNorthing ? p.at.x : p.at.y);
-        const std::string b =
-            metres(order == PointOrder::NumberEastingNorthing ? p.at.y : p.at.x);
+        const std::string a = metres(order == PointOrder::NumberEastingNorthing ? p.at.x : p.at.y);
+        const std::string b = metres(order == PointOrder::NumberEastingNorthing ? p.at.y : p.at.x);
 
         out << p.number << ';' << a << ';' << b << ';';
         if (p.has_height) out << metres(p.height);
         out << ';' << p.code << '\n';
     }
 
-    if (!out) return core::err(core::ErrorCode::IoFailure, "Nokta listesi yazılırken hata: " + path);
+    if (!out)
+        return core::err(core::ErrorCode::IoFailure, "Nokta listesi yazılırken hata: " + path);
     return core::ok();
 }
 

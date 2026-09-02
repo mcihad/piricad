@@ -137,8 +137,7 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
-    const core::Mm tol =
-        bus.project_settings().get("core.topoloji.dugum_toleransi").as_length();
+    const core::Mm tol = bus.project_settings().get("core.topoloji.dugum_toleransi").as_length();
 
     // Walk the strands end to end, starting from the first. Each step looks for a
     // strand that begins — or, reversed, ends — where the chain currently stops.
@@ -239,7 +238,7 @@ KENTOS_COMMAND(to_area)
         .names    = {"ALANAÇEVİR", "ALANACEVIR", "TOAREA", "ALÇ"},
         .category = Category::Modify,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                         "Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim"}},
+                           "Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim"}},
         .undo     = UndoPolicy::SingleTransaction,
         .flags    = Flags::Scriptable | Flags::AiAccessible,
         .summary  = "Uç uca değen çizgileri tek bir kapalı alana çevirir.",

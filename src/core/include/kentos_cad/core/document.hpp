@@ -275,7 +275,6 @@ public:
     /// area of whatever polygon happened to be drawn for it.
     Result<EntityId> add_circle(LayerId lyr, Point2 centre, Mm radius, Op& undo_out);
 
-
     /// Adds an ellipse from its centre and its two axis ENDPOINTS.
     ///
     /// Endpoints rather than lengths and an angle: the two vectors carry the

@@ -117,8 +117,8 @@ Point2 mirrored_in_line(Point2 p, Point2 a, Point2 b)
     if (ay == 0 && ax != 0) return Point2{p.x, 2 * a.y - p.y};
     if (ax == 0 && ay != 0) return Point2{2 * a.x - p.x, p.y};
 
-    const auto vx = static_cast<double>(ax);
-    const auto vy = static_cast<double>(ay);
+    const auto vx     = static_cast<double>(ax);
+    const auto vy     = static_cast<double>(ay);
     const double len2 = vx * vx + vy * vy;
     if (len2 <= 0.0) return p; // a line through one point reflects nothing
 

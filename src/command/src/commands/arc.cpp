@@ -30,8 +30,7 @@ core::Mm radius_between(core::Point2 centre, core::Point2 p)
     // (core.md R3). `double` is transient and never stored.
     const double dx = core::mm_to_metres(p.x - centre.x);
     const double dy = core::mm_to_metres(p.y - centre.y);
-    return core::mm_round(std::sqrt(dx * dx + dy * dy) *
-                          static_cast<double>(core::kMmPerMetre));
+    return core::mm_round(std::sqrt(dx * dx + dy * dy) * static_cast<double>(core::kMmPerMetre));
 }
 
 Task<void> run(Context& ctx)

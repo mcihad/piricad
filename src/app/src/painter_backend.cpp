@@ -394,7 +394,7 @@ private:
         // under the forest triangles. A pattern layer paints its pattern.
 
         QPen pen(faded(ps.line_rgba, ps.opacity));
-        pen.setWidthF(ps.line_width_px);
+        pen.setWidthF(static_cast<qreal>(ps.line_width_px));
         painter.setPen(pen);
 
         // Rotated about the box centre so the pattern is continuous across the
@@ -439,7 +439,7 @@ private:
         // a `dolgu` layer underneath the pattern, which is what draws the green
         // under the forest triangles. A pattern layer paints its pattern.
 
-        painter.setPen(QPen(faded(ps.line_rgba, ps.opacity), ps.line_width_px));
+        painter.setPen(QPen(faded(ps.line_rgba, ps.opacity), static_cast<qreal>(ps.line_width_px)));
         painter.setBrush(glyph_brush(ps));
 
         // Anchored to the world grid rather than to the bounding box, so the
@@ -468,7 +468,7 @@ private:
         if (batch.runs.empty()) return;
 
         const double size = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 6.0;
-        painter.setPen(QPen(faded(ps.line_rgba, ps.opacity), ps.line_width_px));
+        painter.setPen(QPen(faded(ps.line_rgba, ps.opacity), static_cast<qreal>(ps.line_width_px)));
         painter.setBrush(glyph_brush(ps));
 
         std::size_t offset = 0;
@@ -787,7 +787,7 @@ private:
         if (batch.runs.empty()) return;
 
         QPen pen(faded(batch.rgba, ps.opacity));
-        pen.setWidthF(batch.width_px);
+        pen.setWidthF(static_cast<qreal>(batch.width_px));
         pen.setCapStyle(qt_cap(ps.cap));
         pen.setJoinStyle(qt_join(ps.join));
         apply_dash(pen, ps);
@@ -818,7 +818,7 @@ private:
         const double size = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 5.0;
         const double interval =
             ps.interval_px > 0.5f ? static_cast<double>(ps.interval_px) : size * 3.0;
-        painter.setPen(QPen(faded(ps.line_rgba, ps.opacity), ps.line_width_px));
+        painter.setPen(QPen(faded(ps.line_rgba, ps.opacity), static_cast<qreal>(ps.line_width_px)));
         // A hash tick is a stroke and has no interior to fill.
         painter.setBrush(hash ? QBrush(Qt::NoBrush) : glyph_brush(ps));
 
@@ -1031,7 +1031,7 @@ private:
             if (batch.runs.empty()) continue;
 
             QPen pen(from_rgba(batch.rgba));
-            pen.setWidthF(batch.width_px);
+            pen.setWidthF(static_cast<qreal>(batch.width_px));
             pen.setStyle(batch.dashed ? Qt::DashLine : Qt::SolidLine);
             painter.setPen(pen);
             painter.setBrush(batch.fill_rgba != 0 ? QBrush(from_rgba(batch.fill_rgba))

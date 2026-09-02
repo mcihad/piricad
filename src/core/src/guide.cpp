@@ -22,8 +22,8 @@ bool GuideStore::remove(std::size_t i)
 
 std::size_t GuideStore::nearest(GuideAxis axis, Mm coordinate, Mm tolerance) const noexcept
 {
-    std::size_t best  = coords_.size();
-    Mm best_distance  = tolerance;
+    std::size_t best = coords_.size();
+    Mm best_distance = tolerance;
 
     for (std::size_t i = 0; i < coords_.size(); ++i) {
         if (axes_[i] != axis) continue;

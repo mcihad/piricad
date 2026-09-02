@@ -6,6 +6,22 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — `make check` baştan sona yeşil
+
+- **Sıfır uyarı.** `painter_backend`, `symbol_preview`, `theme` ve
+  `settings_dialog`'daki on `-Wdouble-promotion` / `-Wunused-lambda-capture`
+  uyarısı kapatıldı. Anayasa 6.3 uyarısız bir yapı istiyor; kimsenin okumadığı
+  uyarılarla dolu bir yapı, içindeki gerçek bulguyu da gizler.
+- **Biçim.** Yeniden adlandırma tanımlayıcıları kısalttığı için clang-format'ın
+  sarma noktaları kaydı ve ağaç 519 ihlale çıktı; `make format` ile sıfırlandı.
+  **Not:** clang-format sürümü hiçbir yerde sabitlenmiş değil ve CI'da bir format
+  işi yok — bu ağaç 23.1.0 ile biçimlendirildi. Farklı bir sürümle çalışan bir
+  katkıcı gereksiz churn görür; sürümü sabitlemek ayrı bir iş.
+- **IWYU macOS'ta çalışıyor.** `iwyu_tool.py` SDK yolunu bilmediği için ilk
+  dosyada `'type_traits' file not found` ile düşüyordu — bozuk bir checkout gibi
+  okunan bir toolchain iletisi. `scripts/run-iwyu.sh` `xcrun --show-sdk-path`
+  ekliyor; Article 10 gereği Makefile'da OS koşulu değil, betikte.
+
 ### Eklendi — EŞYÜKSELTİ ve yüzey modülü
 
 Yeni modül `/src/domain/surface` (Article 3.1 zaten öngörüyordu).

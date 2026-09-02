@@ -132,8 +132,8 @@ Task<void> run(Context& ctx)
     const core::AttrTable& table = doc.attributes();
     const core::AttrId no        = table.find("nokta_no");
 
-    std::string report = "Aplikasyon — istasyon " + metres(station->x) + " / " +
-                         metres(station->y) + "\n";
+    std::string report =
+        "Aplikasyon — istasyon " + metres(station->x) + " / " + metres(station->y) + "\n";
     report += relative ? "  açılar bağlama yönünden (semt açısı)\n"
                        : "  açılar kuzeyden saat yönünde (azimut)\n";
     report += "  nokta        mesafe (m)        açı\n";
@@ -164,7 +164,7 @@ Task<void> run(Context& ctx)
 
         name.resize(std::max<std::size_t>(name.size(), 10), ' ');
         std::string length = metres(distance);
-        length             = std::string(16 - std::min<std::size_t>(length.size(), 16), ' ') + length;
+        length = std::string(16 - std::min<std::size_t>(length.size(), 16), ' ') + length;
 
         report += "  " + name + " " + length + "   " + angle_text(turns, unit) + "\n";
         ++counted;
@@ -193,8 +193,8 @@ KENTOS_COMMAND(stakeout)
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                       "Aplike edilecek noktalar; yoksa seçim, o da boşsa çizimdeki bütün noktalar"},
             },
-        .undo  = UndoPolicy::None,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary = "İstasyondan her noktaya mesafe ve açı listesi çıkarır (aplikasyon).",
         .run     = &run,
     };

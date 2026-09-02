@@ -10,11 +10,11 @@
 // vertex moved, not merely that a hash changed.
 #include "kentos_test.hpp"
 
-#include "kentos_cad/domain/cadastre/commands.hpp"
-#include "kentos_cad/domain/surface/commands.hpp"
-#include "kentos_cad/domain/geodesy/commands.hpp"
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/domain/cadastre/commands.hpp"
+#include "kentos_cad/domain/geodesy/commands.hpp"
+#include "kentos_cad/domain/surface/commands.hpp"
 #include "kentos_cad/script/json_runner.hpp"
 
 #include <algorithm>

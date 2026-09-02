@@ -41,7 +41,8 @@ struct Rings
     std::size_t vertex_count() const
     {
         std::size_t n = 0;
-        for (const auto& r : points) n += r.size();
+        for (const auto& r : points)
+            n += r.size();
         return n;
     }
 };
@@ -59,7 +60,8 @@ Rings read_rings(const core::Document& doc, core::EntityId slot)
 
         std::vector<core::Point2> pts;
         pts.reserve(xs.size());
-        for (std::size_t v = 0; v < xs.size(); ++v) pts.push_back(core::Point2{xs[v], ys[v]});
+        for (std::size_t v = 0; v < xs.size(); ++v)
+            pts.push_back(core::Point2{xs[v], ys[v]});
 
         out.points.push_back(std::move(pts));
         out.roles.push_back(doc.geometry().ring_role[ring]);
@@ -140,8 +142,8 @@ bool resolve_entity(Context& ctx, core::EntityId& out)
         return false;
     }
 
-    std::int64_t id    = 0;
-    std::size_t count  = 0;
+    std::int64_t id   = 0;
+    std::size_t count = 0;
     if (!single_id(given, id, count)) {
         ctx.echo("Bir seferde tek nesne düzenlenir; " + std::to_string(count) + " nesne verildi.");
         return false;
@@ -201,8 +203,8 @@ Task<void> run_move(Context& ctx)
     std::int64_t corner = 0;
     if (!resolve_corner(ctx, corner)) co_return;
 
-    Rings rings         = read_rings(ctx.document(), slot);
-    const Where where   = locate(rings, corner);
+    Rings rings       = read_rings(ctx.document(), slot);
+    const Where where = locate(rings, corner);
     if (!where.found) {
         ctx.echo("Bu nesnenin " + std::to_string(corner) + ". köşesi yok; " +
                  std::to_string(rings.vertex_count()) + " köşesi var.");

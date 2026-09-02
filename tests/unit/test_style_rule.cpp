@@ -775,7 +775,7 @@ TEST_CASE("STİL: katalog yolu verilen çağrı da üç istemcide aynı sonucu v
         const std::string text = R"({"ad":"Stil","komutlar":[{"cmd":"core.style","args":{
             "katman":"PARSEL","paket":")" +
                                  package.string() + R"(","olcek":1000}}]})";
-        auto r = runner.run_text(text);
+        auto r                 = runner.run_text(text);
         CHECK(r.ok());
     }
 

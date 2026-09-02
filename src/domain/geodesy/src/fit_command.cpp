@@ -16,8 +16,8 @@
 // scale that was accepted — so the fit is reported in full and the parameters go
 // into the journal with the command.
 #include "kentos_cad/command/context.hpp"
-#include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 #include "kentos_cad/domain/geodesy/commands.hpp"
 
@@ -66,7 +66,7 @@ Task<void> run(Context& ctx)
     for (std::size_t i = 0; i + 1 < given.size(); i += 2)
         control.push_back(ControlPoint{given[i], given[i + 1]});
 
-    const Value lock = ctx.argument("olcek_kilitli");
+    const Value lock  = ctx.argument("olcek_kilitli");
     const bool locked = !lock.empty() && lock.as_bool();
 
     auto fitted = domain::geodesy::fit_helmert(control, locked);
@@ -88,8 +88,8 @@ Task<void> run(Context& ctx)
     report += "\n  karesel ortalama artık (RMS): " + mm_text(fit.rms) + " m";
     report += "\n  en büyük artık: " + mm_text(fit.worst) + " m";
     for (std::size_t i = 0; i < fit.residuals.size(); ++i)
-        report += "\n  " + std::to_string(i + 1) + ". nokta artığı: " + mm_text(fit.residuals[i]) +
-                  " m";
+        report +=
+            "\n  " + std::to_string(i + 1) + ". nokta artığı: " + mm_text(fit.residuals[i]) + " m";
     ctx.echo(report);
 
     // ---- move every vertex ----

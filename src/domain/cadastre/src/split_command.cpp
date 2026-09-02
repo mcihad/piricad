@@ -69,12 +69,12 @@ core::Polygon half_plane(core::Point2 a, core::Point2 b, const core::Box2& box, 
 {
     // Reach: the box's diagonal, doubled. Anything at least that long puts the
     // rectangle's own corners outside the parcel whatever angle the cut is at.
-    const double dx = static_cast<double>(b.x - a.x);
-    const double dy = static_cast<double>(b.y - a.y);
+    const double dx  = static_cast<double>(b.x - a.x);
+    const double dy  = static_cast<double>(b.y - a.y);
     const double len = std::sqrt(dx * dx + dy * dy);
 
-    const double wx = static_cast<double>(box.max_x - box.min_x);
-    const double wy = static_cast<double>(box.max_y - box.min_y);
+    const double wx    = static_cast<double>(box.max_x - box.min_x);
+    const double wy    = static_cast<double>(box.max_y - box.min_y);
     const double reach = 2.0 * (std::sqrt(wx * wx + wy * wy) + 1000.0);
 
     const double ux = dx / len; // along the cut
@@ -116,8 +116,8 @@ Task<void> run(Context& ctx)
             requested.push_back(static_cast<std::int64_t>(core::raw(k)));
 
     if (requested.size() != 1) {
-        ctx.echo("İfraz tek parsel üzerinde çalışır. Seçili: " +
-                 std::to_string(requested.size()) + ".");
+        ctx.echo("İfraz tek parsel üzerinde çalışır. Seçili: " + std::to_string(requested.size()) +
+                 ".");
         co_return;
     }
 
@@ -149,7 +149,8 @@ Task<void> run(Context& ctx)
     }
 
     core::Box2 box;
-    for (const core::Point2& p : parcel.exterior) box.extend(p);
+    for (const core::Point2& p : parcel.exterior)
+        box.extend(p);
 
     const core::Mm2 before = abs_area(core::ring_area(parcel.exterior));
 
@@ -173,7 +174,7 @@ Task<void> run(Context& ctx)
 
     // ---- write the pieces, copy the attributes, remove the original ----
     const core::AttrTable& table = doc.attributes();
-    std::string said = "İfraz: " + std::to_string(pieces.size()) + " parça.";
+    std::string said             = "İfraz: " + std::to_string(pieces.size()) + " parça.";
 
     for (const core::Polygon& piece : pieces) {
         std::vector<core::RingGeometry::RingInput> rings;
@@ -209,7 +210,8 @@ Task<void> run(Context& ctx)
     // loses area has cut something it should not have, and a difference of a few
     // square centimetres is a few square centimetres somebody owns.
     core::Mm2 after = 0;
-    for (const core::Polygon& piece : pieces) after += abs_area(core::ring_area(piece.exterior));
+    for (const core::Polygon& piece : pieces)
+        after += abs_area(core::ring_area(piece.exterior));
     said += "\n  toplam " + square_metres(after) + "  ·  ifrazdan önce " + square_metres(before);
 
     ctx.record("nesneler", Value::ids(requested));

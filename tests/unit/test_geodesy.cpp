@@ -16,8 +16,8 @@
 #include "kentos_cad/command/bus.hpp"
 
 #include "kentos_cad/domain/geodesy/commands.hpp"
-#include "kentos_cad/domain/geodesy/helmert.hpp"
 #include "kentos_cad/domain/geodesy/crs_service.hpp"
+#include "kentos_cad/domain/geodesy/helmert.hpp"
 
 #include "kentos_cad/domain/geodesy/crs_catalog.hpp"
 #include "kentos_cad/domain/geodesy/transform.hpp"
@@ -502,8 +502,8 @@ TEST_CASE("APLİKASYON: azimut kuzeyden saat yönünde ölçülür")
 
     using kentos::command::Origin;
     REQUIRE(bus.execute_line("KATMAN ad=NIRENGI", Origin::Test).ok());
-    REQUIRE(bus.execute_line("NOKTA noktalar=0,100", Origin::Test).ok());   // due north
-    REQUIRE(bus.execute_line("NOKTA noktalar=100,0", Origin::Test).ok());   // due east
+    REQUIRE(bus.execute_line("NOKTA noktalar=0,100", Origin::Test).ok()); // due north
+    REQUIRE(bus.execute_line("NOKTA noktalar=100,0", Origin::Test).ok()); // due east
 
     said.clear();
     auto listed = bus.execute_line("APLİKASYON istasyon=0,0", Origin::Test);
@@ -624,9 +624,10 @@ TEST_CASE("DÖNÜŞTÜR: ED50 dilimi TUREF dilimine taşınır ve etiket onu izl
     using kentos::command::Origin;
     REQUIRE(r.bus.execute_line("AYAR ad=koordinat_sistemi deger=EPSG:5256", Origin::Test).ok());
     REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
-    REQUIRE(r.bus.execute_line("ALAN noktalar=485300,4310200 485360,4310200 485360,4310245 "
-                               "485300,4310245",
-                               Origin::Test)
+    REQUIRE(r.bus
+                .execute_line("ALAN noktalar=485300,4310200 485360,4310200 485360,4310245 "
+                              "485300,4310245",
+                              Origin::Test)
                 .ok());
 
     const kentos::core::Box2 before = r.doc.extent();
@@ -657,9 +658,10 @@ TEST_CASE("DÖNÜŞTÜR tek geri alma adımıdır")
     using kentos::command::Origin;
     REQUIRE(r.bus.execute_line("AYAR ad=koordinat_sistemi deger=EPSG:5256", Origin::Test).ok());
     REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
-    REQUIRE(r.bus.execute_line("ALAN noktalar=485300,4310200 485360,4310200 485360,4310245 "
-                               "485300,4310245",
-                               Origin::Test)
+    REQUIRE(r.bus
+                .execute_line("ALAN noktalar=485300,4310200 485360,4310200 485360,4310245 "
+                              "485300,4310245",
+                              Origin::Test)
                 .ok());
 
     const std::uint64_t before = r.doc.content_hash();
@@ -679,9 +681,10 @@ TEST_CASE("DÖNÜŞTÜR: coğrafi hedef gerekçesiyle reddedilir")
     using kentos::command::Origin;
     REQUIRE(r.bus.execute_line("AYAR ad=koordinat_sistemi deger=EPSG:5256", Origin::Test).ok());
     REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
-    REQUIRE(r.bus.execute_line("ALAN noktalar=485300,4310200 485360,4310200 485360,4310245 "
-                               "485300,4310245",
-                               Origin::Test)
+    REQUIRE(r.bus
+                .execute_line("ALAN noktalar=485300,4310200 485360,4310200 485360,4310245 "
+                              "485300,4310245",
+                              Origin::Test)
                 .ok());
     const std::uint64_t before = r.doc.content_hash();
 
@@ -703,9 +706,10 @@ TEST_CASE("DÖNÜŞTÜR: aynı sistem istenirse hiçbir şey yapmaz")
     using kentos::command::Origin;
     REQUIRE(r.bus.execute_line("AYAR ad=koordinat_sistemi deger=EPSG:5256", Origin::Test).ok());
     REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
-    REQUIRE(r.bus.execute_line("ALAN noktalar=485300,4310200 485360,4310200 485360,4310245 "
-                               "485300,4310245",
-                               Origin::Test)
+    REQUIRE(r.bus
+                .execute_line("ALAN noktalar=485300,4310200 485360,4310200 485360,4310245 "
+                              "485300,4310245",
+                              Origin::Test)
                 .ok());
     const std::uint64_t before = r.doc.content_hash();
 

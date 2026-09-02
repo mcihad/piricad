@@ -6,15 +6,15 @@
 #include "kentos_cad/app/tokens.hpp"
 #include "kentos_cad/core/document.hpp"
 
+#include <QColorDialog>
 #include <QFileInfo>
 #include <QFontMetrics>
-#include <QColorDialog>
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QMouseEvent>
-#include <QShortcut>
 #include <QPainter>
+#include <QShortcut>
 #include <QWheelEvent>
 
 #include <algorithm>
@@ -109,24 +109,43 @@ void AttributePanel::refresh()
             const QString name = QString::fromStdString(l->name);
 
             AttributeGroup group{tr("KATMAN"), {}, true};
-            group.rows.push_back({tr("gorunur"), l->visible ? tr("evet") : tr("hayır"), {}, false,
-                                  tr("KATMAN ad=\"%1\" gorunur=%2").arg(name), EditKind::Bool, {}});
-            group.rows.push_back({tr("kilitli"), l->locked ? tr("evet") : tr("hayır"),
-                                  l->locked ? tr("KİLİT") : QString(), false,
-                                  tr("KATMAN ad=\"%1\" kilitli=%2").arg(name), EditKind::Bool, {}});
+            group.rows.push_back({tr("gorunur"),
+                                  l->visible ? tr("evet") : tr("hayır"),
+                                  {},
+                                  false,
+                                  tr("KATMAN ad=\"%1\" gorunur=%2").arg(name),
+                                  EditKind::Bool,
+                                  {}});
+            group.rows.push_back({tr("kilitli"),
+                                  l->locked ? tr("evet") : tr("hayır"),
+                                  l->locked ? tr("KİLİT") : QString(),
+                                  false,
+                                  tr("KATMAN ad=\"%1\" kilitli=%2").arg(name),
+                                  EditKind::Bool,
+                                  {}});
             group.rows.push_back(
                 {tr("renk"),
                  QStringLiteral("#%1").arg(l->appearance.rgba, 8, 16, QLatin1Char('0')).toUpper(),
-                 {}, false, tr("KATMAN ad=\"%1\" renk=%2").arg(name), EditKind::Colour, {}});
+                 {},
+                 false,
+                 tr("KATMAN ad=\"%1\" renk=%2").arg(name),
+                 EditKind::Colour,
+                 {}});
             group.rows.push_back({tr("kalinlik"),
-                                  tr("%1 mm").arg(l->appearance.width_um / 1000.0, 0, 'f', 2), {},
-                                  false, tr("STİL katman=\"%1\" kalinlik=%2").arg(name),
-                                  EditKind::Text, {}});
+                                  tr("%1 mm").arg(l->appearance.width_um / 1000.0, 0, 'f', 2),
+                                  {},
+                                  false,
+                                  tr("STİL katman=\"%1\" kalinlik=%2").arg(name),
+                                  EditKind::Text,
+                                  {}});
             group.rows.push_back(
                 {tr("grup"),
                  l->group.empty() ? QStringLiteral("—") : QString::fromStdString(l->group),
-                 l->group.empty() ? tr("BOŞ") : QString(), false,
-                 tr("KATMAN ad=\"%1\" grup=\"%2\"").arg(name), EditKind::Text, {}});
+                 l->group.empty() ? tr("BOŞ") : QString(),
+                 false,
+                 tr("KATMAN ad=\"%1\" grup=\"%2\"").arg(name),
+                 EditKind::Text,
+                 {}});
             groups_.push_back(group);
 
             update();
@@ -150,20 +169,34 @@ void AttributePanel::refresh()
             layerNames << QString::fromStdString(l.name);
 
         AttributeGroup identity{tr("BELGE"), {}, true};
-        identity.rows.push_back({tr("koordinat_sistemi"), QString::fromStdString(doc.crs().id()),
-                                 {}, false, tr("AYAR ad=koordinat_sistemi deger=%1"),
-                                 EditKind::Text, {}});
-        identity.rows.push_back({tr("aktif_katman"), controller_.activeLayerName(), {}, false,
-                                 tr("KATMAN ad=\"%1\""), EditKind::Choice, layerNames});
-        identity.rows.push_back({tr("surum"), QString::number(doc.revision()), tr("HESAP"), true,
-                                 {}, EditKind::None, {}});
+        identity.rows.push_back({tr("koordinat_sistemi"),
+                                 QString::fromStdString(doc.crs().id()),
+                                 {},
+                                 false,
+                                 tr("AYAR ad=koordinat_sistemi deger=%1"),
+                                 EditKind::Text,
+                                 {}});
+        identity.rows.push_back({tr("aktif_katman"),
+                                 controller_.activeLayerName(),
+                                 {},
+                                 false,
+                                 tr("KATMAN ad=\"%1\""),
+                                 EditKind::Choice,
+                                 layerNames});
+        identity.rows.push_back({tr("surum"),
+                                 QString::number(doc.revision()),
+                                 tr("HESAP"),
+                                 true,
+                                 {},
+                                 EditKind::None,
+                                 {}});
         groups_.push_back(identity);
 
         AttributeGroup extent{tr("KAPSAM"), {}, true};
         const core::Box2 box = doc.extent();
         if (box.empty()) {
-            extent.rows.push_back({tr("durum"), tr("boş çizim"), tr("BOŞ"), false, {},
-                                   EditKind::None, {}});
+            extent.rows.push_back(
+                {tr("durum"), tr("boş çizim"), tr("BOŞ"), false, {}, EditKind::None, {}});
         } else {
             extent.rows.push_back(
                 {tr("saga_min"), metres(box.min_x), tr("HESAP"), true, {}, EditKind::None, {}});
@@ -226,12 +259,15 @@ void AttributePanel::refresh()
         attrs.rows.push_back(
             {QString::fromStdString(column->spec().name_tr.empty() ? column->spec().id
                                                                    : column->spec().name_tr),
-             shown, present ? QString() : tr("BOŞ"), false,
+             shown,
+             present ? QString() : tr("BOŞ"),
+             false,
              QStringLiteral("ÖZNİTELİK ad=\"%1\" nesne=%2 deger=\"%3\"")
                  .arg(QString::fromStdString(column->spec().id))
                  .arg(static_cast<qulonglong>(key))
                  .arg(QStringLiteral("%1")),
-             EditKind::Text, {}});
+             EditKind::Text,
+             {}});
     }
     if (attrs.rows.isEmpty())
         attrs.rows.push_back(
@@ -304,10 +340,10 @@ void AttributePanel::beginEdit(int group, int index)
     }
 
     if (row.edit == EditKind::Choice) {
-        bool ok             = false;
-        const QString value = QInputDialog::getItem(this, row.key, tr("Yeni değer"), row.choices,
-                                                    static_cast<int>(row.choices.indexOf(row.value)),
-                                                    false, &ok);
+        bool ok = false;
+        const QString value =
+            QInputDialog::getItem(this, row.key, tr("Yeni değer"), row.choices,
+                                  static_cast<int>(row.choices.indexOf(row.value)), false, &ok);
         if (!ok) {
             closeEditor();
             return;
@@ -319,8 +355,7 @@ void AttributePanel::beginEdit(int group, int index)
     if (editor_ == nullptr) {
         editor_ = new QLineEdit(this);
         editor_->setObjectName(QStringLiteral("attributeEditor"));
-        connect(editor_, &QLineEdit::returnPressed, this,
-                [this] { commitEdit(editor_->text()); });
+        connect(editor_, &QLineEdit::returnPressed, this, [this] { commitEdit(editor_->text()); });
 
         auto* giveUp = new QShortcut(QKeySequence(Qt::Key_Escape), editor_);
         giveUp->setContext(Qt::WidgetShortcut);

@@ -44,7 +44,6 @@ inline constexpr KindId kArcKind      = 3;
 inline constexpr KindId kPointKind    = 4;
 inline constexpr KindId kEllipseKind  = 5;
 
-
 // ---------------------------------------------------------------- slots -----
 
 using EntityId = std::uint32_t;

@@ -72,8 +72,8 @@ Result<std::vector<OffsetRing>> offset_ring(const std::vector<Point2>& points, b
 /// without being rewound first.
 struct Polygon
 {
-    std::vector<Point2> exterior;             ///< the outer boundary
-    std::vector<std::vector<Point2>> holes;   ///< the voids inside it, if any
+    std::vector<Point2> exterior;           ///< the outer boundary
+    std::vector<std::vector<Point2>> holes; ///< the voids inside it, if any
 };
 
 /// Which boolean to run.

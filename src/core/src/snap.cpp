@@ -35,8 +35,16 @@ constexpr std::size_t kMaxNearSegments = 48;
 /// placement is the rule that keeps them safe: a point this engine invented must
 /// never win against a point the drawing actually contains.
 constexpr std::uint16_t kPriority[] = {
-    SnapNode,          SnapEndpoint, SnapIntersection, SnapMidpoint, SnapCenter,
-    SnapPerpendicular, SnapNearest,  SnapApparent,     SnapParallel, SnapExtension,
+    SnapNode,
+    SnapEndpoint,
+    SnapIntersection,
+    SnapMidpoint,
+    SnapCenter,
+    SnapPerpendicular,
+    SnapNearest,
+    SnapApparent,
+    SnapParallel,
+    SnapExtension,
 
     // A guide is a line the USER drew for themselves, so it sits below every
     // point the drawing actually contains — the same rule the constructed modes
@@ -130,10 +138,9 @@ std::size_t priority_index(std::uint16_t bit)
 const std::uint16_t* snap_mode_bits()
 {
     static const std::uint16_t bits[] = {
-        SnapEndpoint, SnapMidpoint, SnapCenter,    SnapIntersection, SnapPerpendicular, SnapNearest,
-        SnapNode,     SnapGrid,     SnapPolar,     SnapExtension,    SnapParallel,      SnapApparent,
-        SnapGuide,
-        SnapNone,
+        SnapEndpoint, SnapMidpoint, SnapCenter, SnapIntersection, SnapPerpendicular,
+        SnapNearest,  SnapNode,     SnapGrid,   SnapPolar,        SnapExtension,
+        SnapParallel, SnapApparent, SnapGuide,  SnapNone,
     };
     return bits;
 }
@@ -598,7 +605,7 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
         }
         if ((q.modes & SnapPolar) != 0 && q.polar_step > 0) {
             result.point = apply_step(q.base, apply_polar(q.base, q.aim, q.polar_step), q.step);
-            result.mode        = SnapPolar;
+            result.mode  = SnapPolar;
             result.constrained = true;
             return result;
         }
