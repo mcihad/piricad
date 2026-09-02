@@ -557,6 +557,35 @@ int main(int argc, char** argv)
                 }
             }
 
+            // 7. DYNAMIC INPUT AND THE STEP. While a guide is dragging, the
+            //    overlay must carry a label with the length on it — and with a
+            //    step set, the length it shows must be a multiple of that step.
+            {
+                window.runScriptLine(QStringLiteral("MOD ad=adım deger=1000")); // 1 m
+                auto* lineTool = window.findChild<QAction*>(QStringLiteral("toolAction.ÇİZGİ"));
+                check(lineTool != nullptr, "ÇİZGİ aracı bulunamadı");
+                if (lineTool != nullptr) {
+                    lineTool->trigger();
+                    QCoreApplication::processEvents();
+                    send(QEvent::MouseButtonPress, QPointF(400, 400), Qt::LeftButton,
+                         Qt::LeftButton);
+                    send(QEvent::MouseButtonRelease, QPointF(400, 400), Qt::LeftButton,
+                         Qt::NoButton);
+                    send(QEvent::MouseMove, QPointF(520, 400), Qt::NoButton, Qt::NoButton);
+                    (void)canvas->grabCanvas();
+
+                    check(canvas->guideLabelForProbe().find(" m") != std::string::npos,
+                          "kılavuz uzunluğu yazmıyor");
+
+                    QKeyEvent k(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+                    QCoreApplication::sendEvent(canvas, &k);
+                    QCoreApplication::processEvents();
+                    QCoreApplication::sendEvent(canvas, &k);
+                    QCoreApplication::processEvents();
+                }
+                window.runScriptLine(QStringLiteral("MOD ad=adım deger=0"));
+            }
+
             if (failures == 0) (void)std::fprintf(stdout, "[piricad] tuval düzenleme: tamam\n");
             QApplication::exit(failures == 0 ? 0 : 1);
         });

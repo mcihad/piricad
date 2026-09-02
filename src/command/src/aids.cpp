@@ -54,6 +54,7 @@ const AidSettings& InputAids::settings(const core::Settings& app,
         out.modes                        = static_cast<std::uint16_t>(out.modes | core::SnapPolar);
     }
 
+    out.step        = session.get("core.yakalama.adim").as_length();
     out.snap_radius = radius_from_pixels(app.get("core.yakalama.tolerans").as_int(), mm_per_pixel_);
 
     // A multiple of the aperture, not a fixed distance. The reach then follows the
@@ -92,6 +93,7 @@ core::SnapResult InputAids::resolve(const core::Document& doc, const AidSettings
     q.has_base   = has_base;
     q.base       = base;
     q.reach      = s.reach;
+    q.step       = s.step;
 
     return core::snap(doc, q);
 }

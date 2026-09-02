@@ -18,6 +18,23 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 - İsim uzayı, `#include` yolları, CMake hedefleri ve `PIRICAD_*` makroları bu adımda
   **değişmedi**; onlar tek mekanik değişiklik olarak ayrı iniyor.
 
+### Eklendi — dinamik girdi ve çizim adımı
+
+- **Kılavuz artık ölçüsünü yazıyor**: sürüklenen lastik bandın üzerinde uzunluk ve
+  azimut. Azimut kuzeyden saat yönündedir — aletten okunan değer — ve birimi
+  `açı_birimi` tercihine uyar; varsayılan **grad**, çünkü Türkiye'de nirengi,
+  poligon ve aplikasyon hesapları gradla yürür.
+- **ADIM kilidi** (`core.yakalama.adim`): imlecin bir önceki noktaya olan
+  uzaklığını verilen değerin katına yuvarlar. 12 cm dendiyse çizgi 12, 24, 36 cm'de
+  durur. Yön kilitleriyle birlikte çalışır — dik mod/kutupsal yönü, adım uzunluğu
+  seçer — ve gerçek bir nesne yakalaması her zaman adımın önündedir.
+  `Shift+F3 ▸ Adım…` ya da `MOD ad=adım deger=120`.
+- Adımın aritmetiği tam sayıdır (`segment_length` + tam bölme), yani üç platformda
+  bit-birebir aynıdır (§7.3).
+- **`core.arayuz.dinamik_girdi` ayarı eklendi.** Durum çubuğundaki DİNAMİK GİRDİ
+  çipi bir yıldır var olmayan bir ayara bağlıydı: tıklandığında "bu yardımcı henüz
+  bir ayara bağlı değil" diyordu.
+
 ### Eklendi — nesne yakalama modları arayüzden seçilebiliyor
 
 - Yakalama motoru on üç kip taşıyor ve kabuk üçünü gösteriyordu: F3 "herhangi

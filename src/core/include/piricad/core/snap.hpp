@@ -67,6 +67,12 @@ enum SnapMode : std::uint16_t {
     /// surveyor turns it on and off with F8 twenty times an hour.
     SnapOrtho = 1u << 8,
 
+    /// RESULT ONLY, never requested: the step (`core.yakalama.adim`) rounded the
+    /// distance from the previous point. Like `SnapOrtho` it is a separate
+    /// setting rather than a bit of the mask, because it constrains HOW FAR
+    /// rather than WHERE and composes with every direction lock.
+    SnapStep = 1u << 13,
+
     // ---- constructed points: not on the drawing, but implied by it -----------
     //
     // The three below are what a cadastral or zoning job needs when the thing to
@@ -138,6 +144,11 @@ struct SnapQuery
     /// It also bounds the cost: the search box grows by this much and no more, so
     /// a mode that reads more of the drawing still reads a fixed amount of it.
     Mm reach{0};
+
+    /// Rounds the distance from `base` to a whole multiple of this, in
+    /// millimetres. 0 disables it. Applied after `ortho` and `polar`, so the
+    /// direction lock chooses the ray and this chooses the length along it.
+    Mm step{0};
 };
 
 /// What the engine decided, and why. `mode` is SnapNone when nothing applied and

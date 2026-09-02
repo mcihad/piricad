@@ -148,6 +148,7 @@ const char* snap_mode_id(std::uint16_t single_bit)
     case SnapParallel: return "paralel";
     case SnapApparent: return "uzatilmis_kesisim";
     case SnapOrtho: return "dik_mod";
+    case SnapStep: return "adim";
     default: return "yok";
     }
 }
@@ -168,6 +169,7 @@ const char* snap_mode_label(std::uint16_t single_bit)
     case SnapParallel: return "paralel";
     case SnapApparent: return "uzatılmış kesişim";
     case SnapOrtho: return "dik mod";
+    case SnapStep: return "adım";
     default: return "yok";
     }
 }
@@ -270,6 +272,43 @@ Point2 apply_polar(Point2 base, Point2 p, std::int64_t step_udeg) noexcept
 
     return Point2{base.x + mm_round(distance * best_direction.cos),
                   base.y + mm_round(distance * best_direction.sin)};
+}
+
+/// Rounds the DISTANCE from `base` to `p` to a whole multiple of `step`, keeping
+/// the direction.
+///
+/// What a surveyor means by "12 cm adım": the line stops at 12, 24, 36 cm and
+/// nowhere between. It constrains the LENGTH, not the position — a lattice would
+/// constrain both and is what `apply_grid` is for — so it composes with ortho and
+/// polar rather than fighting them: ortho picks the axis, polar picks the ray,
+/// and this picks how far along it the point sits.
+///
+/// Deterministic, and by the same rule as everything else in this file: the
+/// length comes from `segment_length`, which is exact integer arithmetic, and the
+/// direction is that exact length divided into the integer offsets. No libm.
+Point2 apply_step(Point2 base, Point2 p, Mm step) noexcept
+{
+    if (step <= 0) return p;
+
+    const Mm length = segment_length(base, p);
+    if (length <= 0) return p;
+
+    // Round half away from zero on a positive quantity, in integers: no double
+    // rounding mode can change what this answers.
+    const Mm steps = (length + step / 2) / step;
+    if (steps <= 0) {
+        // Nearer than half a step: the point collapses onto the base, which is
+        // what "the shortest line this step allows is one step" would deny. A zero
+        // length is a line the command refuses anyway, and refusing is honest.
+        return base;
+    }
+
+    const Mm wanted = steps * step;
+    if (wanted == length) return p; // already on a step; no rounding drift
+
+    const double scale = static_cast<double>(wanted) / static_cast<double>(length);
+    return Point2{base.x + mm_round(static_cast<double>(p.x - base.x) * scale),
+                  base.y + mm_round(static_cast<double>(p.y - base.y) * scale)};
 }
 
 // ----------------------------------------------------------------- engine ---
@@ -491,16 +530,27 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
     }
 
     // ---- 2. direction constraint from the previous point ----
+    //
+    // The step is applied AFTER the direction, and to the result of it: ortho
+    // chooses the axis, polar chooses the ray, and the step chooses how far along
+    // it the point lands. It is applied on its own too, so "12 cm adım" works with
+    // no direction lock at all.
     if (q.has_base) {
         if (q.ortho) {
-            result.point       = apply_ortho(q.base, q.aim);
+            result.point       = apply_step(q.base, apply_ortho(q.base, q.aim), q.step);
             result.mode        = SnapOrtho;
             result.constrained = true;
             return result;
         }
         if ((q.modes & SnapPolar) != 0 && q.polar_step > 0) {
-            result.point       = apply_polar(q.base, q.aim, q.polar_step);
+            result.point = apply_step(q.base, apply_polar(q.base, q.aim, q.polar_step), q.step);
             result.mode        = SnapPolar;
+            result.constrained = true;
+            return result;
+        }
+        if (q.step > 0) {
+            result.point       = apply_step(q.base, q.aim, q.step);
+            result.mode        = SnapStep;
             result.constrained = true;
             return result;
         }

@@ -378,6 +378,8 @@ PIRICAD_SETTING(yakalama_uzanti);
 PIRICAD_SETTING(yakalama_isaret_boyu);
 PIRICAD_SETTING(yakalama_isaret_rengi);
 PIRICAD_SETTING(yakalama_ipucu);
+PIRICAD_SETTING(yakalama_adimi);
+PIRICAD_SETTING(dinamik_girdi);
 PIRICAD_SETTING(izgara_rengi);
 PIRICAD_SETTING(izgara_ana_rengi);
 PIRICAD_SETTING(izgara_adimi_y);
@@ -433,6 +435,8 @@ PIRICAD_SETTING(alan_birimi);
     X(yakalama_isaret_boyu)                                                                        \
     X(yakalama_isaret_rengi)                                                                       \
     X(yakalama_ipucu)                                                                              \
+    X(yakalama_adimi)                                                                              \
+    X(dinamik_girdi)                                                                               \
     X(izgara_rengi)                                                                                \
     X(izgara_ana_rengi)                                                                            \
     X(izgara_adimi_y)                                                                              \
@@ -454,6 +458,42 @@ PIRICAD_SETTING(alan_birimi);
     X(alan_birimi)
 
 // ---- SNAP: what the aid layer looks for, and what the canvas draws when it ----
+
+PIRICAD_SETTING(yakalama_adimi)
+{
+    return SettingSpec{
+        .id       = "core.yakalama.adim",
+        .names    = {"adım", "adim", "yakalama_adımı", "yakalama_adimi", "snapstep"},
+        .type     = SettingType::Length,
+        .scope    = SettingScope::Session,
+        .fallback = SettingValue::length(0),
+        .range    = SettingRange::between(0, 1000000000),
+        .values   = {},
+        .unit     = "mm",
+        .summary  = "İmlecin bir önceki noktaya olan UZAKLIĞININ yuvarlanacağı adım. "
+                    "0 kapatır. 120 verilirse çizgi 12 cm, 24 cm, 36 cm... uzunluklarda "
+                    "durur; kutupsal izleme açıkken kutupsal bir ızgara olur. Zemin "
+                    "milimetresidir ve çizme biçimini etkilediği için oturum kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
+    };
+}
+
+PIRICAD_SETTING(dinamik_girdi)
+{
+    return SettingSpec{
+        .id       = "core.arayuz.dinamik_girdi",
+        .names    = {"dinamik_girdi", "dynamicinput", "dyn"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::boolean(true),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Sürüklenen kılavuzun üzerinde uzunluğu ve azimutu yazar. Ele ve "
+                    "ekrana ait bir tercih olduğu için uygulama kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
+    };
+}
 
 PIRICAD_SETTING(yakalama_uzanti)
 {

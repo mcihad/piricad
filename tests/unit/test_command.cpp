@@ -1395,6 +1395,81 @@ TEST_CASE("DAİRE geri alınır")
 // ============================================================================
 
 // -----------------------------------------------------------------------------
+// ADIM — the step lock (core.yakalama.adim)
+// -----------------------------------------------------------------------------
+
+TEST_CASE("ADIM: uzaklık adımın katına yuvarlanır, yön korunur")
+{
+    using namespace piricad::core;
+
+    // 12 cm step, a horizontal aim at 1,00 m: the nearest multiple is 96 cm.
+    SnapQuery q;
+    q.has_base = true;
+    q.base     = Point2{0, 0};
+    q.aim      = Point2{1000, 0}; // 1,00 m in millimetres
+    q.step     = 120;             // 12 cm
+
+    const SnapResult r = snap(Document{}, q);
+    CHECK(r.mode == SnapStep);
+    CHECK(r.point.y == 0);
+    CHECK(r.point.x == 960); // 8 x 120
+}
+
+TEST_CASE("ADIM: adımın üstündeki bir nokta yerinde kalır")
+{
+    using namespace piricad::core;
+
+    SnapQuery q;
+    q.has_base = true;
+    q.base     = Point2{0, 0};
+    q.aim      = Point2{960, 0};
+    q.step     = 120;
+
+    const SnapResult r = snap(Document{}, q);
+    CHECK(r.point.x == 960);
+    CHECK(r.point.y == 0);
+}
+
+TEST_CASE("ADIM dik modla birlikte çalışır: eksen dik moddan, uzunluk adımdan")
+{
+    using namespace piricad::core;
+
+    SnapQuery q;
+    q.has_base = true;
+    q.base     = Point2{0, 0};
+    q.aim      = Point2{1000, 130}; // mostly horizontal, so ortho keeps x
+    q.ortho    = true;
+    q.step     = 120;
+
+    const SnapResult r = snap(Document{}, q);
+    CHECK(r.mode == SnapOrtho); // the direction lock is what fired
+    CHECK(r.point.y == 0);      // ortho flattened it
+    CHECK(r.point.x == 960);    // and the step rounded the length
+}
+
+TEST_CASE("ADIM kapalıyken hiçbir şeye dokunmaz")
+{
+    using namespace piricad::core;
+
+    SnapQuery q;
+    q.has_base = true;
+    q.base     = Point2{0, 0};
+    q.aim      = Point2{1234, 5678};
+    q.step     = 0;
+
+    const SnapResult r = snap(Document{}, q);
+    CHECK(r.point.x == 1234);
+    CHECK(r.point.y == 5678);
+}
+
+TEST_CASE("ADIM ayarı oturum kapsamındadır ve MOD ile yazılır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("MOD ad=adım deger=120", Origin::Test).ok());
+    CHECK(f.bus.session_settings().get("core.yakalama.adim").as_length() == 120);
+}
+
+// -----------------------------------------------------------------------------
 // Object snap modes — the mask every client writes (core.mode)
 // -----------------------------------------------------------------------------
 

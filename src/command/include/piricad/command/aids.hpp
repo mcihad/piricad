@@ -57,6 +57,10 @@ struct AidSettings
     /// How far past the aperture UZANTI, PARALEL and UZATILMIŞ KESİŞİM may look
     /// for the edge they build from; see `core::SnapQuery::reach`.
     core::Mm reach{0};
+
+    /// `core.yakalama.adim`: the multiple the distance from the previous point is
+    /// rounded to, in millimetres. 0 is off.
+    core::Mm step{0};
 };
 
 class InputAids

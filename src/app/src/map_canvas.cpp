@@ -160,6 +160,9 @@ void MapCanvas::reloadGridSettings()
     look_.invert_wheel = store.get("core.harita.tekerlek_ters").as_bool();
     look_.marker_px    = static_cast<int>(store.get("core.yakalama.isaret_boyu").as_int());
     look_.snap_tip     = store.get("core.yakalama.ipucu").as_bool();
+    look_.dynamic_input = store.get("core.arayuz.dinamik_girdi").as_bool();
+    look_.angle_unit    = static_cast<int>(store.get("core.aci.birim").as_enum());
+    look_.step          = controller_.bus().session_settings().get("core.yakalama.adim").as_length();
 
     look_.marker_rgba     = colour("core.yakalama.isaret_rengi");
     look_.grid_rgba       = colour("core.izgara.renk");
@@ -749,6 +752,18 @@ std::string spaced(double value)
     return whole < 0 ? "-" + digits : digits;
 }
 
+/// The bearing from `a` to `b`, written in the project's angle unit.
+///
+/// AZIMUT, which is measured CLOCKWISE FROM NORTH — not the mathematical angle
+/// counter-clockwise from east. That is the number a Turkish surveyor reads off a
+/// total station, writes in a traverse sheet and types into a setting-out list,
+/// and getting it wrong by ninety degrees or by a sign is the kind of mistake
+/// that reaches a parsel corner.
+///
+/// GRAD by default (`core.aci.birim`), because a full circle is 400 grad in
+/// Turkish triangulation, traverse and setting-out arithmetic.
+std::string bearing_text(core::Point2 a, core::Point2 b, int unit);
+
 std::string trimmed(double value, int places)
 {
     std::string out = QString::number(value, 'f', places).toStdString();
@@ -757,6 +772,30 @@ std::string trimmed(double value, int places)
         out.pop_back();
     if (!out.empty() && out.back() == '.') out.pop_back();
     return out;
+}
+
+std::string bearing_text(core::Point2 a, core::Point2 b, int unit)
+{
+    const double dx = static_cast<double>(b.x - a.x);
+    const double dy = static_cast<double>(b.y - a.y);
+    if (dx == 0.0 && dy == 0.0) return {};
+
+    // Clockwise from north: atan2(east, north), not atan2(north, east). A reading
+    // taken the other way round is the mathematical angle, and a surveyor
+    // comparing it against an instrument would find every value mirrored about
+    // the 50-grad line.
+    //
+    // This is a LABEL, not a stored value, so `atan2` is allowed here: nothing in
+    // §7.3's bit-identity requirement passes through it. The engine's own
+    // constraints use `sin_cos_udeg` for exactly that reason.
+    double turns = std::atan2(dx, dy) / (2.0 * 3.14159265358979323846);
+    if (turns < 0.0) turns += 1.0;
+
+    switch (unit) {
+    case 1: return trimmed(turns * 360.0, 3) + "°";
+    case 2: return trimmed(turns * 2.0 * 3.14159265358979323846, 5) + " rad";
+    default: return trimmed(turns * 400.0, 3) + " grad";
+    }
 }
 
 } // namespace
@@ -1102,6 +1141,7 @@ void MapCanvas::buildOverlay()
     buildGrips();
 
     guide_vertices_ = 0;
+    guide_label_.clear();
 
     // Rubber band for the running interactive command. It runs to the SNAPPED
     // point when an aid has fired, because that is where the segment will land.
@@ -1198,6 +1238,35 @@ void MapCanvas::buildOverlay()
         }
 
         guide_vertices_ = overlay_.batches[batch].xs.size() - guide_before;
+
+        // ---- what the guide MEASURES, written on it ----
+        //
+        // A rubber band that shows only a direction makes the user click, read the
+        // result and undo. The length and the bearing belong on the line while it
+        // is being dragged — that is what every CAD calls dynamic input, and what
+        // a surveyor setting out a 12 cm step needs to see the step working.
+        if (look_.dynamic_input) {
+            const core::Point2 from_world = session->prompt().rubber_origin;
+            const core::Point2 to_world =
+                snap_preview_valid_ ? snap_preview_.point
+                                    : view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
+
+            const core::Mm length = core::segment_length(from_world, to_world);
+            if (length > 0) {
+                std::string text = trimmed(static_cast<double>(length) / 1000.0, 3) + " m";
+                text += "  " + bearing_text(from_world, to_world, look_.angle_unit);
+
+                // ON the line, at its middle, lifted clear of it. Beside the
+                // cursor it would fight the snap marker and its mode name, which
+                // are already there and are about a different thing.
+                const render::ScreenPointF a = render::to_f(from);
+                const render::ScreenPointF b = toScreenF(to);
+                overlay_.labels.push_back(render::OverlayLabel{
+                    tokens_->readout.rgba(), (a.x + b.x) * 0.5f + 8.0f, (a.y + b.y) * 0.5f - 6.0f,
+                    0.0f, false, text});
+                guide_label_ = text;
+            }
+        }
     }
 
     buildSelectionBox();

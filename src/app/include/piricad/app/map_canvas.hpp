@@ -38,6 +38,7 @@
 #include <initializer_list>
 #include <memory>
 #include <span>
+#include <string>
 
 class QLineEdit;
 
@@ -126,6 +127,10 @@ public:
     /// count: a line has two vertices and a circle has many. Developer tooling in
     /// the same category as `timeFrames`.
     std::size_t guideVertexCountForProbe() const noexcept { return guide_vertices_; }
+
+    /// The dynamic-input label the guide last carried, for `PIRICAD_EDIT_PROBE`.
+    /// Empty when nothing is being dragged or the reading is switched off.
+    const std::string& guideLabelForProbe() const noexcept { return guide_label_; }
 
     /// The canvas frame as an image, whichever surface this build has.
     ///
@@ -257,6 +262,18 @@ private:
         std::uint32_t grid_rgba{0};       ///< 0 = the theme's
         std::uint32_t grid_major_rgba{0}; ///< 0 = the theme's
         std::uint32_t selection_rgba{0};  ///< 0 = the theme's
+
+        /// Whether the guide carries its own length and bearing while it drags.
+        bool dynamic_input{true};
+
+        /// The angle unit the reading is written in: 0 grad, 1 degree, 2 radian.
+        /// GRAD is the default because Turkish traverse, triangulation and
+        /// setting-out arithmetic is done in grad — a full circle is 400.
+        int angle_unit{0};
+
+        /// The step the cursor's DISTANCE from the previous point is rounded to,
+        /// in millimetres. 0 is off. A user who says "12 cm" gets 12, 24, 36…
+        core::Mm step{0};
     };
 
     /// Grid shape, cached from the preferences so paintEvent does no lookups.
@@ -324,6 +341,9 @@ private:
     /// parented to the canvas, so it dies with the canvas and needs no separate
     /// lifetime.
     QLineEdit* text_editor_{nullptr};
+
+    /// What `buildGuide` last wrote on the rubber band; see `guideLabelForProbe`.
+    std::string guide_label_;
 
     bool panning_{false};
     QPointF pan_anchor_{};

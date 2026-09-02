@@ -41,6 +41,7 @@
 #include <QPalette>
 #include <QPixmap>
 #include <QPlainTextEdit>
+#include <QInputDialog>
 #include <QMenu>
 #include <QSettings>
 #include <QSignalBlocker>
@@ -1293,6 +1294,28 @@ void MainWindow::openSnapModes()
             [write] { write(static_cast<std::uint16_t>(core::SnapAllMask)); });
     connect(menu.addAction(tr("Hiçbiri")), &QAction::triggered, this,
             [write] { write(0); });
+
+    // ---- the STEP, which is not one of the mask's bits ----
+    //
+    // It constrains HOW FAR rather than WHERE, so it is a length rather than a
+    // mode; it lives here because this is the menu a user opens when they are
+    // thinking about how the cursor behaves.
+    menu.addSeparator();
+    const core::Mm step = session.get("core.yakalama.adim").as_length();
+    auto* stepRow =
+        menu.addAction(step > 0 ? tr("Adım: %1 m…").arg(step / 1000.0, 0, 'f', 3) : tr("Adım: yok…"));
+    connect(stepRow, &QAction::triggered, this, [this, step] {
+        bool ok = false;
+        const double metres = QInputDialog::getDouble(
+            this, tr("Çizim adımı"),
+            tr("İmlecin bir önceki noktaya uzaklığı bu değerin katlarında durur.\n"
+               "0 kapatır."),
+            step / 1000.0, 0.0, 1000000.0, 3, &ok);
+        if (!ok) return;
+        controller_->runLine(
+            QStringLiteral("MOD ad=adım deger=%1").arg(static_cast<qlonglong>(metres * 1000.0)),
+            command::Origin::Gui);
+    });
 
     // Under the pointer when it came from the strip, and under the OSNAP chip
     // when it came from the keyboard — a menu that opens off-screen for a

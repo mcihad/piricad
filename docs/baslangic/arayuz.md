@@ -241,6 +241,44 @@ merkez → …**. Bir kadastro işinde her sınır bir röperden ölçüldüğü
 Listedeki her değişiklik `MOD yakalama_modları=<maske>` komutunu gönderir; yani
 betikten de aynısını yaparsınız.
 
+#### Adım — belli uzunluklarda çizmek
+
+Bir çizgiyi 12 cm'nin katlarında bitirmek istiyorsanız **adım** kullanın:
+`Shift+F3` listesinin altındaki **Adım…** satırından değeri girin, ya da
+
+```text
+MOD ad=adım deger=120
+```
+
+Açıkken imlecin bir önceki noktaya olan **uzaklığı** adımın katına yuvarlanır —
+12, 24, 36 cm — ve yön serbest kalır. `0` kapatır.
+
+Yön kilitleriyle **birlikte** çalışır ve sıralama şudur: dik mod ya da kutupsal
+izleme **yönü** seçer, adım o yön üzerindeki **uzunluğu** seçer. Kutupsal ile
+birlikte kullanınca kutupsal bir ızgara elde edersiniz: hem açı hem uzunluk
+adımlı.
+
+Adım, ızgaraya yakalama **değildir**. Izgara noktanın *nerede* olacağını sabitler
+(zemine çakılı bir kafes); adım *ne kadar uzağa* gideceğini sabitler ve
+başlangıcınız neredeyse oradan sayar.
+
+Bir nesne yakalaması tuttuğunda adım devreye girmez: gerçek bir köşe, hesaplanmış
+bir uzunluktan her zaman önceliklidir.
+
+#### Sürüklerken okunan değerler
+
+Kılavuz çizgi sürüklenirken üzerinde **uzunluk** ve **azimut** yazar:
+
+```text
+24,000 m  62,500 grad
+```
+
+Azimut **kuzeyden saat yönünde** ölçülür — aletten okuduğunuz değerdir, matematik
+açısı değil. Birim `açı_birimi` tercihine uyar ve varsayılanı **grad**'dır: tam
+daire 400. `Seçenekler ▸ Genel ▸ Açı birimi` ile derece ya da radyana çevirirsiniz.
+
+Durum çubuğundaki **DİNAMİK GİRDİ** anahtarı bu okumayı kapatır.
+
 #### Hassasiyet
 
 Arama yarıçapı `yakalama_toleransı`, seçme kutusu `seçim_toleransı` tercihidir ve
