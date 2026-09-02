@@ -15,6 +15,7 @@ add_executable(piricad_tests
     unit/test_attribute.cpp
     unit/test_database.cpp
     unit/test_docs.cpp
+    unit/test_cadastre.cpp
     unit/test_geodesy.cpp
     unit/test_geometry.cpp
     unit/test_golden.cpp
@@ -47,6 +48,7 @@ target_link_libraries(piricad_tests PRIVATE
     piricad_command
     piricad_io
     piricad_domain_geodesy
+    piricad_domain_cadastre
     piricad_render
     piricad_script
     piricad_flags

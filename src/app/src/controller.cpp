@@ -2,6 +2,7 @@
 #include "piricad/app/controller.hpp"
 
 #include "piricad/command/log.hpp"
+#include "piricad/domain/cadastre/commands.hpp"
 #include "piricad/domain/geodesy/commands.hpp"
 
 #include "piricad/command/parser.hpp"
@@ -27,6 +28,7 @@ Controller::Controller(QObject* parent)
     // (Article 3.2). `/src/app` depends on everything, so this is the one place
     // both lists can be put on one registry.
     domain::geodesy::register_geodesy_commands(registry_);
+    domain::cadastre::register_cadastre_commands(registry_);
 
     // The CRS resolver, so a drawing knows that TUREF/TM30 is EPSG:5254 without
     // the user restating it. A missing or unreadable /data/crs package leaves the

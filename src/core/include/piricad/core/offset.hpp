@@ -64,4 +64,44 @@ Result<std::vector<OffsetRing>> offset_ring(const std::vector<Point2>& points, b
                                             Mm distance, JoinStyle join = JoinStyle::Miter,
                                             EndStyle end = EndStyle::Butt);
 
+/// One polygon: an exterior ring and the holes inside it.
+///
+/// The shape every boolean below takes and returns. A ring's winding is not the
+/// caller's problem — Clipper2's even-odd rule reads a hole as a hole whichever
+/// way round it was drawn, which is what lets a parcel read from a DXF work
+/// without being rewound first.
+struct Polygon
+{
+    std::vector<Point2> exterior;             ///< the outer boundary
+    std::vector<std::vector<Point2>> holes;   ///< the voids inside it, if any
+};
+
+/// Which boolean to run.
+enum class BooleanOp : std::uint8_t {
+    Union,        ///< everything either side covers — TEVHİT
+    Difference,   ///< what the first covers and the second does not — İFRAZ's remainder
+    Intersection, ///< what both cover — the overlap a topology check looks for
+};
+
+/// Runs `op` over two sets of polygons.
+///
+/// NOT HAND-ROLLED, for the reason `offset_ring` is not: polygon boolean on real
+/// cadastral input — rings that touch at a point, holes that share an edge with
+/// their exterior, coordinates a metre apart over a hundred kilometres — is a
+/// problem with twenty years of corrections in it. `.claude/domain.md` and
+/// CLAUDE.md 5.16 both point at the library rather than at a rewrite.
+///
+/// May return SEVERAL polygons, or NONE. A difference can cut one parcel into
+/// two, and a union of two parcels that do not touch is still two parcels; both
+/// are correct answers a cadastral caller has to handle.
+Result<std::vector<Polygon>> polygon_boolean(const std::vector<Polygon>& subject,
+                                             const std::vector<Polygon>& clip, BooleanOp op);
+
+/// The signed area a ring encloses, in square millimetres.
+///
+/// Positive counter-clockwise. Exposed because a topology check compares areas —
+/// "does the union cover less than the sum" is how an overlap is found — and
+/// doing that through the entity table would mean building an entity first.
+Mm2 ring_area(const std::vector<Point2>& ring) noexcept;
+
 } // namespace piricad::core

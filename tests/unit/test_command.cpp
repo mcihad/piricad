@@ -1741,6 +1741,85 @@ TEST_CASE("KILAVUZ bir varlık DEĞİLDİR: seçime, sayıma ve kapsama girmez")
 }
 
 // -----------------------------------------------------------------------------
+// Polygon boolean — what TEVHİT, İFRAZ and TOPOLOJİ are built on
+// -----------------------------------------------------------------------------
+
+TEST_CASE("BOOLEAN: bitişik iki parsel birleşince tek parsel olur")
+{
+    using namespace piricad::core;
+
+    Polygon left{{{0, 0}, {10000, 0}, {10000, 10000}, {0, 10000}}, {}};
+    Polygon right{{{10000, 0}, {20000, 0}, {20000, 10000}, {10000, 10000}}, {}};
+
+    auto merged = polygon_boolean({left}, {right}, BooleanOp::Union);
+    REQUIRE(merged.ok());
+    REQUIRE(merged.value().size() == 1); // touching along an edge means ONE parcel
+
+    // 10 m x 20 m = 200 m². The seam must be gone, not drawn twice.
+    const Mm2 area = ring_area(merged.value().front().exterior);
+    CHECK((area < 0 ? -area : area) == 200'000'000);
+}
+
+TEST_CASE("BOOLEAN: ayrık iki parsel birleşince iki parsel kalır")
+{
+    using namespace piricad::core;
+
+    Polygon a{{{0, 0}, {10000, 0}, {10000, 10000}, {0, 10000}}, {}};
+    Polygon b{{{50000, 0}, {60000, 0}, {60000, 10000}, {50000, 10000}}, {}};
+
+    auto merged = polygon_boolean({a}, {b}, BooleanOp::Union);
+    REQUIRE(merged.ok());
+    CHECK(merged.value().size() == 2); // and saying "one" would be a lie
+}
+
+TEST_CASE("BOOLEAN: fark bir parseli ikiye bölebilir")
+{
+    using namespace piricad::core;
+
+    // A 30 m parcel with a 10 m band taken out of its middle: two pieces.
+    Polygon parcel{{{0, 0}, {30000, 0}, {30000, 10000}, {0, 10000}}, {}};
+    Polygon band{{{10000, -1000}, {20000, -1000}, {20000, 11000}, {10000, 11000}}, {}};
+
+    auto cut = polygon_boolean({parcel}, {band}, BooleanOp::Difference);
+    REQUIRE(cut.ok());
+    CHECK(cut.value().size() == 2);
+}
+
+TEST_CASE("BOOLEAN: örtüşme kesişimle bulunur, örtüşmeyen ikili boş döner")
+{
+    using namespace piricad::core;
+
+    Polygon a{{{0, 0}, {10000, 0}, {10000, 10000}, {0, 10000}}, {}};
+    Polygon overlapping{{{5000, 5000}, {15000, 5000}, {15000, 15000}, {5000, 15000}}, {}};
+    Polygon apart{{{50000, 0}, {60000, 0}, {60000, 10000}, {50000, 10000}}, {}};
+
+    auto shared = polygon_boolean({a}, {overlapping}, BooleanOp::Intersection);
+    REQUIRE(shared.ok());
+    REQUIRE(shared.value().size() == 1);
+    const Mm2 area = ring_area(shared.value().front().exterior);
+    CHECK((area < 0 ? -area : area) == 25'000'000); // 5 m x 5 m
+
+    auto none = polygon_boolean({a}, {apart}, BooleanOp::Intersection);
+    REQUIRE(none.ok());
+    CHECK(none.value().empty());
+}
+
+TEST_CASE("BOOLEAN: delik, sarım yönü ne olursa olsun delik kalır")
+{
+    using namespace piricad::core;
+
+    // The hole is wound the SAME way as its exterior, which is what a DXF or a
+    // GML may hand over. Even-odd must still read it as a void.
+    Polygon donut{{{0, 0}, {30000, 0}, {30000, 30000}, {0, 30000}},
+                  {{{10000, 10000}, {20000, 10000}, {20000, 20000}, {10000, 20000}}}};
+
+    auto kept = polygon_boolean({donut}, {}, BooleanOp::Union);
+    REQUIRE(kept.ok());
+    REQUIRE(kept.value().size() == 1);
+    CHECK(kept.value().front().holes.size() == 1);
+}
+
+// -----------------------------------------------------------------------------
 // KAYDIR — panning the view (core.pan)
 // -----------------------------------------------------------------------------
 

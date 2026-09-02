@@ -550,10 +550,11 @@ void MainWindow::buildActions()
     });
     actTrim_ = modifyTool(Glyph::Trim, tr("Buda"), QStringLiteral("BUDA"),
                           tr("BUDA — çizgiyi kestiği sınıra kadar kısaltır  ·  kısaltma: BD"));
-    actUnion_ =
-        placeholder(Glyph::Union, tr("Birleştir — tevhit"), QStringLiteral("TEVHİT"), tr("Faz 2"));
-    actParcelSplit_ = placeholder(Glyph::ParcelSplit, tr("Parsel Böl — ifraz"),
-                                  QStringLiteral("İFRAZ"), tr("Faz 2"));
+    actUnion_ = modifyTool(Glyph::Union, tr("Birleştir — tevhit"), QStringLiteral("TEVHİT"),
+                           tr("TEVHİT — komşu parselleri tek parselde birleştirir"));
+    actParcelSplit_ = modifyTool(Glyph::ParcelSplit, tr("Parsel Böl — ifraz"),
+                                 QStringLiteral("İFRAZ"),
+                                 tr("İFRAZ — bir parseli düz bir ayırma çizgisiyle ikiye böler"));
     actMeasureArea_ = commandAction(Glyph::MeasureArea, tr("Alan Ölç"),
                                     QStringLiteral("ALANÖLÇ"),
                                     tr("ALANÖLÇ — seçili nesnelerin alanını ve çevresini yazar"));
@@ -561,8 +562,15 @@ void MainWindow::buildActions()
     actStyleCopy_ = modifyTool(Glyph::StyleCopy, tr("Stil Kopyala"),
                                QStringLiteral("STİLKOPYALA"),
                                tr("STİLKOPYALA — bir nesnenin stilini seçili nesnelere uygular"));
-    actTopology_ = placeholder(Glyph::Topology, tr("Topoloji Denetimi"), QStringLiteral("TOPOLOJİ"),
-                               tr("Faz 2"));
+    // NOT a `modifyTool`: the check runs on the whole drawing when nothing is
+    // selected, and refusing an empty selection would refuse its most useful form.
+    actTopology_ = new QAction(tr("Topoloji Denetimi"), this);
+    actTopology_->setToolTip(tr("TOPOLOJİ — kendini kesen sınır, sıfır alan ve örtüşen "
+                                "parselleri raporlar; hiçbir şeyi düzeltmez"));
+    actTopology_->setData(static_cast<int>(Glyph::Topology));
+    actTopology_->setObjectName(QStringLiteral("toolAction.TOPOLOJİ"));
+    connect(actTopology_, &QAction::triggered, this,
+            [this] { controller_->runCommand(QStringLiteral("TOPOLOJİ")); });
 
     actStyle_ = new QAction(tr("Stil Tasarımcısı"), this);
     actStyle_->setData(static_cast<int>(Glyph::Palette));

@@ -8,6 +8,7 @@
 // examples anywhere — the pages are the source.
 #include "piricad_test.hpp"
 
+#include "piricad/domain/cadastre/commands.hpp"
 #include "piricad/domain/geodesy/commands.hpp"
 #include "piricad/command/bus.hpp"
 #include "piricad/command/registry.hpp"
@@ -45,6 +46,7 @@ struct Rig
         // (Article 3.2). A harness that registers only the builtins reports a
         // real command as unknown.
         domain::geodesy::register_geodesy_commands(reg);
+        domain::cadastre::register_cadastre_commands(reg);
         bus.on_echo = [](std::string_view) {}; // transcript output is not the subject
     }
 };

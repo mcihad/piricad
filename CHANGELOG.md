@@ -18,6 +18,39 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 - İsim uzayı, `#include` yolları, CMake hedefleri ve `PIRICAD_*` makroları bu adımda
   **değişmedi**; onlar tek mekanik değişiklik olarak ayrı iniyor.
 
+### Eklendi — kadastro: TEVHİT, İFRAZ, TOPOLOJİ (Faz 8)
+
+Yeni modül `/src/domain/cadastre` (Article 3.1 zaten öngörüyordu). Üç komut da
+alan modülünden kaydediliyor: `/src/command` bir alan modülüne bağımlı olamaz.
+
+- **`TEVHİT`** — komşu parselleri tek parselde birleştirir; dikiş kalkar, alan
+  korunur. Bitişik olmayan parselleri **reddeder**: iki ayrı parçayı çizip "tek
+  parsel" demek TKGM'nin reddedeceği bir kayıt üretirdi.
+  - **Öznitelikleri uydurmuyor.** Bütün girdilerde aynı olan sütun korunuyor;
+    ayrışan sütun BOŞ geliyor ve komut hangilerini boşalttığını yazıyor. Birinci
+    parselin malikini seçmek bir tapu kaydı uydurmak olurdu. Ayrışanı dolduran
+    kural mevzuata aittir, `/data`'ya ve **uzman imzasına** (6.11) tabidir.
+- **`İFRAZ`** — bir parseli düz ayırma çizgisiyle ikiye böler. Çizgi parselin
+  dışına uzatılıp iki yarı düzlem kesiştiriliyor: **hiçbir alan kaybolmuyor**, bir
+  bant çıkarılmıyor. Her parçanın ve toplamın alanı, ifrazdan önceki alanla
+  birlikte yazılıyor.
+  - Kırıklı çizgiyle ayırma **yaklaşık yapılmıyor**: bir parselden eksilen birkaç
+    santimetrekare, birinin sahip olduğu birkaç santimetrekaredir.
+  - Alana göre ifraz yok: yineleme ve tolerans gerektirir, ikisi de mevzuat
+    kararıdır.
+- **`TOPOLOJİ`** — kendini kesen sınır, sıfır alan ve örtüşen parselleri
+  raporlar. **Hiçbir şeyi düzeltmez**: sınır ölçülmüş veridir, bir kusurun ne
+  anlama geldiğine mühendis karar verir. Ortak sınır örtüşme sayılmıyor (bir
+  santimetrekare pay), yoksa gerçek örtüşmeler okunmayan bir raporun altında
+  kalırdı. Ne kadarının denetlendiğini her zaman yazıyor.
+- **Poligon boolean çekirdeğe eklendi** (`core/offset.hpp`): birleşim, fark,
+  kesişim ve halka alanı, Clipper2 üzerinden. Delikler **çift-tek** kuralıyla
+  okunuyor: bir DXF'ten ya da GML'den gelen delik dışıyla aynı yöne sarılmış
+  olabilir ve biçim aksini vaat etmez.
+- Belgeler: [`merge.md`](docs/komutlar/merge.md),
+  [`split_parcel.md`](docs/komutlar/split_parcel.md),
+  [`topology.md`](docs/komutlar/topology.md).
+
 ### Eklendi — yerel koordinat ve OTURT (Faz 7)
 
 - **`OTURT`** — yerel ölçülmüş bir çizimi yayımlanmış kontrol noktalarıyla

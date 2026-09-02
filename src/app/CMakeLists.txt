@@ -67,6 +67,7 @@ target_link_libraries(piricad PRIVATE
     piricad_command
     piricad_io
     piricad_domain_geodesy
+    piricad_domain_cadastre
     piricad_render
     piricad_script
     piricad_flags
