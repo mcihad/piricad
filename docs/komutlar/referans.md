@@ -38,10 +38,12 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.measure`](measure.md) | `ÖLÇ`, `OLC`, `MEASURE`, `MS` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar. |
 | [`core.measure_area`](measure_area.md) | `ALANÖLÇ`, `ALANOLC`, `AREAOF`, `AÖ` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Seçilen nesnelerin alanını ve çevresini yazar. |
 | [`core.coordinate`](coordinate.md) | `KOORDİNAT`, `KOORDINAT`, `COORDINATE`, `KRD` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
+| [`core.pan`](pan.md) | `KAYDIR`, `PAN`, `KY` | Görünüm | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır. |
+| [`core.offset`](offset.md) | `OFSET`, `OFFSET`, `OF` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili nesnelerin verilen mesafede paralelini çizer. |
 | [`core.attribute`](attribute.md) | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
 | [`core.column`](column.md) | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Belgeye öznitelik sütunu tanımlar ve tanımlı sütunları listeler. |
 | [`core.erase`](erase.md) | `SİL`, `SIL`, `ERASE`, `E` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Seçilen nesneleri siler. |
-| [`core.select`](select.md) | `SEÇ`, `SEC`, `SELECT`, `S` | Düzenleme | geri alınmaz | betiklenebilir, salt okunur | Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta. |
+| [`core.select`](select.md) | `SEÇ`, `SEC`, `SELECT`, `S` | Düzenleme | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta. |
 | [`core.label`](label.md) | `ETİKET`, `ETIKET`, `LABEL`, `ETK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmandaki nesneleri özniteliklerinden okuyarak etiketler. |
 | [`core.layer`](layer.md) | `KATMAN`, `LAYER`, `KAT` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
 | [`core.style`](style.md) | `STİL`, `STIL`, `STYLE`, `ST` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar. |
@@ -385,6 +387,29 @@ Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yaz
 | `nokta` | point | 1 | Okunacak nokta |
 
 Ayrıntılı kullanım: [KOORDİNAT](coordinate.md)
+
+### `core.pan` — KAYDIR
+
+Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `baslangic` | point | 1 | Kaydırmanın tutulacağı nokta |
+| `bitis` | point | 1 | O noktanın taşınacağı yer |
+
+Ayrıntılı kullanım: [KAYDIR](pan.md)
+
+### `core.offset` — OFSET
+
+Seçili nesnelerin verilen mesafede paralelini çizer.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Ofseti alınacak nesneler; yoksa etkin seçim |
+| `mesafe` | integer | isteğe bağlı | Ofset mesafesi, milimetre; eksi değer içeri |
+| `kose` | text | isteğe bağlı | KÖŞE | YUVARLAK | PAH — dış köşenin biçimi |
+
+Ayrıntılı kullanım: [OFSET](offset.md)
 
 ### `core.attribute` — ÖZNİTELİK
 
@@ -1730,6 +1755,84 @@ Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
         "read_only"
       ],
       "undo": "none"
+    },
+    {
+      "id": "core.pan",
+      "names": [
+        "KAYDIR",
+        "PAN",
+        "KY"
+      ],
+      "category": "Görünüm",
+      "summary": "Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır.",
+      "params": [
+        {
+          "name": "baslangic",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Kaydırmanın tutulacağı nokta"
+        },
+        {
+          "name": "bitis",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "O noktanın taşınacağı yer"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible",
+        "transparent",
+        "read_only"
+      ],
+      "undo": "none"
+    },
+    {
+      "id": "core.offset",
+      "names": [
+        "OFSET",
+        "OFFSET",
+        "OF"
+      ],
+      "category": "Düzenleme",
+      "summary": "Seçili nesnelerin verilen mesafede paralelini çizer.",
+      "params": [
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Ofseti alınacak nesneler; yoksa etkin seçim"
+        },
+        {
+          "name": "mesafe",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Ofset mesafesi, milimetre; eksi değer içeri"
+        },
+        {
+          "name": "kose",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "KÖŞE | YUVARLAK | PAH — dış köşenin biçimi"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
     },
     {
       "id": "core.attribute",

@@ -67,6 +67,8 @@ Tek tek komutlar:
 | `ÖLÇ` | [Mesafe ölçme](komutlar/measure.md) |
 | `ALANÖLÇ` | [Alan ve çevre ölçme](komutlar/measure_area.md) |
 | `KOORDİNAT` | [Nokta koordinatı okuma](komutlar/coordinate.md) |
+| `KAYDIR` | [Görünümü kaydırma](komutlar/pan.md) |
+| `OFSET` | [Paralel çizme](komutlar/offset.md) |
 | `YAKINLAŞ` | [Görünüm ayarlama](komutlar/zoom.md) |
 | `GERİAL` | [Geri alma](komutlar/undo.md) |
 | `YİNELE` | [Yineleme](komutlar/redo.md) |

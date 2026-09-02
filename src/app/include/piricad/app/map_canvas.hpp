@@ -110,6 +110,9 @@ public:
 
     void zoomToExtents();
     void zoomBy(double factor);
+
+    /// Moves the view's centre without changing its scale. KAYDIR's landing point.
+    void setCentre(core::Point2 centre);
     void resetView();
 
     QString backendName() const;

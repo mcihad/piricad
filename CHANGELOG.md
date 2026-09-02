@@ -18,6 +18,28 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 - İsim uzayı, `#include` yolları, CMake hedefleri ve `PIRICAD_*` makroları bu adımda
   **değişmedi**; onlar tek mekanik değişiklik olarak ayrı iniyor.
 
+### Eklendi — OFSET, KAYDIR ve çalışan Alan Seç
+
+- **`OFSET`** — seçili nesnelerin paraleli. Yol şeridi eksenden, çekme mesafesi
+  parsel sınırından, koruma bandı dere ekseninden bununla çıkar. Aslını yerinde
+  bırakır: sınır ölçülmüş olandır. Bir `OFSET` kaç paralel üretirse üretsin tek
+  geri alma adımıdır.
+  - **Clipper2 bağlandı** (BSL-1.0, 1.4.0'da sabit) ve `/NOTICE`'ta "bağlı"
+    listesine taşındı. `piricad_core`'a PRIVATE bağlı; başlıkları yalnız
+    `core/offset.cpp`'ye ulaşıyor. Elle yazılmış ofset ters köşede yanlış, içbükey
+    girdide kendini kesen, keskin köşede sınırsız sivrilen sonuç verir (5.16).
+  - Tam sayı girip tam sayı çıkıyor: Clipper2'nin `Path64` yolu int64, `Mm` de
+    int64 — dönüşüm yok, yuvarlama yok, üç platformda aynı cevap.
+  - Kapanan şekli **yok** sayıyor, ters dönmüş halka üretmiyor; bel veren bir
+    şekli ikiye bölebiliyor ve ikisini de çiziyor.
+- **`KAYDIR`** — görünümü iki noktayla öteler, ölçek değişmez. Saydam komut:
+  çizim sürerken araya girip devam edebiliyor. Orta tuşu olmayan aygıtlar için
+  düğme ve komut vardı, komut yoktu.
+- **`SEÇ` etkileşimli oldu**: pencere köşelerini artık kendisi soruyor. Kutuyu
+  argüman olarak alabiliyor ama isteyemiyordu, bu yüzden "Alan Seç" düğmesi
+  gönderecek bir şey bulamayıp devre dışı çıkıyordu.
+- Belgeler: [`offset.md`](docs/komutlar/offset.md), [`pan.md`](docs/komutlar/pan.md).
+
 ### Eklendi — öznitelikler sağ panelden düzenleniyor
 
 - Panel boyanan bir tablo olmaktan çıkıp **düzenleme yüzeyi** oldu: arkasında bir

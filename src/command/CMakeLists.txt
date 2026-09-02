@@ -33,6 +33,7 @@ add_library(piricad_command STATIC
     src/commands/line.cpp
     src/commands/text.cpp
     src/commands/measure.cpp
+    src/commands/offset.cpp
     src/commands/pick.cpp
     src/commands/point.cpp
     src/commands/polyline.cpp

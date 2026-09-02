@@ -330,6 +330,14 @@ public:
     /// a toolbar button reach the viewport by the same route.
     std::function<void(std::string_view mode, double factor)> on_view_request;
 
+    /// KAYDIR asks the view to move so that `from` ends up where `to` is.
+    ///
+    /// A separate hook rather than another `on_view_request` mode, because this
+    /// one carries two document points: pushing them through a string mode and a
+    /// double would be inventing a second, lossy encoding for a coordinate
+    /// (Article 1.4). A headless client leaves it unset and the command says so.
+    std::function<void(core::Point2 from, core::Point2 to)> on_pan_request;
+
     /// Installed by the script layer. Keeps the dependency direction intact:
     /// script depends on command, never the reverse (Constitution Article 3).
     std::function<core::Status(const std::string& path)> on_run_script;

@@ -197,6 +197,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
             &MainWindow::onInteractiveFinished);
     connect(controller_, &Controller::undoStateChanged, this, &MainWindow::onUndoStateChanged);
     connect(controller_, &Controller::viewRequested, this, &MainWindow::onViewRequested);
+    connect(controller_, &Controller::panRequested, this, &MainWindow::onPanRequested);
     connect(controller_, &Controller::settingChanged, this, &MainWindow::onSettingChanged);
     connect(controller_, &Controller::selectionChanged, this,
             [this] { attributePanel_->refresh(); });
@@ -520,8 +521,20 @@ void MainWindow::buildActions()
                                QStringLiteral("PANOKOPYALA"), tr("Faz 2"));
     actPaste_ = placeholder(Glyph::Paste, tr("Yapıştır"), QStringLiteral("YAPIŞTIR"), tr("Faz 2"));
 
-    actSelectArea_ =
-        placeholder(Glyph::SelectArea, tr("Alan Seç"), QStringLiteral("SEÇ pencere="), tr("Faz 2"));
+    // A MODAL TOOL that collects its own two corners. It shipped disabled because
+    // SEÇ could take a box as arguments and could not ask for one.
+    actSelectArea_ = new QAction(tr("Alan Seç"), this);
+    actSelectArea_->setCheckable(true);
+    actSelectArea_->setToolTip(tr("SEÇ PENCERE — iki köşe tıklayın; soldan sağa içinde "
+                                  "kalanları, sağdan sola değdiklerini seçer"));
+    actSelectArea_->setData(static_cast<int>(Glyph::SelectArea));
+    actSelectArea_->setProperty(kToolCommand, QStringLiteral("SEÇ"));
+    actSelectArea_->setObjectName(QStringLiteral("toolAction.SEÇ KUTU"));
+    connect(actSelectArea_, &QAction::triggered, this, [this] {
+        // KUTU rather than PENCERE: the direction of the drag chooses between
+        // window and crossing, which is the muscle memory every CAD user has.
+        controller_->beginInteractive(QStringLiteral("SEÇ mod=KUTU"));
+    });
     actTrim_ = modifyTool(Glyph::Trim, tr("Buda"), QStringLiteral("BUDA"),
                           tr("BUDA — çizgiyi kestiği sınıra kadar kısaltır  ·  kısaltma: BD"));
     actUnion_ =
@@ -570,7 +583,8 @@ void MainWindow::buildActions()
     actSetLayer_ = modifyTool(Glyph::LayerManager, tr("Katmana Taşı"),
                               QStringLiteral("KATMANAT"),
                               tr("KATMANAT — seçili nesneleri başka bir katmana taşır"));
-    actOffset_ = placeholder(Glyph::Offset, tr("Ofset"), QStringLiteral("OFSET"), tr("Faz 2"));
+    actOffset_ = modifyTool(Glyph::Offset, tr("Ofset"), QStringLiteral("OFSET"),
+                            tr("OFSET — seçili nesnelerin paralelini çizer; eksi mesafe içeri"));
 
     actUndo_ = new QAction(tr("Geri Al"), this);
     actUndo_->setShortcut(QKeySequence::Undo);
@@ -597,7 +611,15 @@ void MainWindow::buildActions()
                                 QStringLiteral("YAKINLAŞ ÇARPAN carpan=0.8"),
                                 tr("YAKINLAŞ ÇARPAN carpan=0.8"), QKeySequence::ZoomOut);
 
-    actPan_ = placeholder(Glyph::Pan, tr("Kaydır"), QStringLiteral("KAYDIR"), tr("Faz 2"));
+    actPan_ = new QAction(tr("Kaydır"), this);
+    actPan_->setCheckable(true);
+    actPan_->setToolTip(tr("KAYDIR — bir noktayı tutup başka bir yere taşır; ölçek değişmez"));
+    actPan_->setData(static_cast<int>(Glyph::Pan));
+    actPan_->setProperty(kToolCommand, QStringLiteral("KAYDIR"));
+    actPan_->setObjectName(QStringLiteral("toolAction.KAYDIR"));
+    connect(actPan_, &QAction::triggered, this,
+            [this] { controller_->runCommand(QStringLiteral("KAYDIR")); });
+    drawingTools_->addAction(actPan_);
     actPan_->setToolTip(tr("Kaydır — orta fare tuşu basılı sürükleme her zaman çalışır"));
 
     // ---- input aids ----
@@ -1303,14 +1325,14 @@ void MainWindow::openSnapModes()
     menu.addSeparator();
     const core::Mm step = session.get("core.yakalama.adim").as_length();
     auto* stepRow =
-        menu.addAction(step > 0 ? tr("Adım: %1 m…").arg(step / 1000.0, 0, 'f', 3) : tr("Adım: yok…"));
+        menu.addAction(step > 0 ? tr("Adım: %1 m…").arg(static_cast<double>(step) / 1000.0, 0, 'f', 3) : tr("Adım: yok…"));
     connect(stepRow, &QAction::triggered, this, [this, step] {
         bool ok = false;
         const double metres = QInputDialog::getDouble(
             this, tr("Çizim adımı"),
             tr("İmlecin bir önceki noktaya uzaklığı bu değerin katlarında durur.\n"
                "0 kapatır."),
-            step / 1000.0, 0.0, 1000000.0, 3, &ok);
+            static_cast<double>(step) / 1000.0, 0.0, 1000000.0, 3, &ok);
         if (!ok) return;
         controller_->runLine(
             QStringLiteral("MOD ad=adım deger=%1").arg(static_cast<qlonglong>(metres * 1000.0)),
@@ -1548,7 +1570,7 @@ void MainWindow::onInteractiveFinished(const QString& id, bool mutated)
         // and starting the next session on top of the one being torn down is how a
         // coroutine gets resumed after its frame is gone.
         QMetaObject::invokeMethod(
-            this, [this, action] { action->trigger(); }, Qt::QueuedConnection);
+            this, [action] { action->trigger(); }, Qt::QueuedConnection);
         return;
     }
 }
@@ -1578,6 +1600,16 @@ void MainWindow::onViewRequested(const QString& mode, double factor)
         canvas_->resetView();
     else
         canvas_->zoomBy(factor);
+    refreshStatus();
+}
+
+void MainWindow::onPanRequested(core::Point2 from, core::Point2 to)
+{
+    // The centre moves by the OPPOSITE of the grab: dragging a corner to the
+    // right walks the view to the left, which is what "holding the paper" means.
+    const render::ViewTransform& v = canvas_->view();
+    canvas_->setCentre(core::Point2{v.centre().x - (to.x - from.x),
+                                    v.centre().y - (to.y - from.y)});
     refreshStatus();
 }
 

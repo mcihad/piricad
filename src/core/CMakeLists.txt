@@ -10,6 +10,7 @@ add_library(piricad_core STATIC
     src/entity_kind.cpp
     src/transform.cpp
     src/geometry.cpp
+    src/offset.cpp
     src/json.cpp
     src/layer.cpp
     src/pick.cpp
@@ -34,6 +35,14 @@ target_link_libraries(piricad_core PRIVATE piricad_flags)
 # dependency's headers inside the owning module's .cpp files).
 if(PIRICAD_WITH_JSON)
     target_link_libraries(piricad_core PRIVATE nlohmann_json::nlohmann_json)
+endif()
+
+# PRIVATE for the same reason: Clipper2 lives inside core/offset.cpp and the
+# facade in core/offset.hpp is what the product sees. Nothing outside that one
+# translation unit learns that Clipper2 exists.
+if(PIRICAD_WITH_CLIPPER2)
+    target_link_libraries(piricad_core PRIVATE Clipper2)
+    target_compile_definitions(piricad_core PRIVATE PIRICAD_HAVE_CLIPPER2=1)
 endif()
 
 set_target_properties(piricad_core PROPERTIES

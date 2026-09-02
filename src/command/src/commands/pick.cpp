@@ -186,11 +186,37 @@ Task<void> run_select(Context& ctx)
     std::vector<EntityKey> picked;
     std::vector<core::EntityId> slots;
 
+    // ASKED FOR WHEN THEY ARE NOT GIVEN. `SEÇ PENCERE` could always take two
+    // corners as arguments and could never ask for them, so the tool column's
+    // "Alan Seç" button had nothing to send and shipped disabled. A command that
+    // can be typed with its arguments must also be able to collect them, or the
+    // GUI is a client with less reach than the command line (Article 1.2).
+    std::vector<core::Point2> supplied = ctx.argument("noktalar").as_points();
+
+    if (mode == Mode::Window || mode == Mode::Crossing || mode == Mode::Box) {
+        if (supplied.empty()) {
+            auto first = co_await ctx.point("noktalar", "Seçim kutusunun ilk köşesi");
+            if (!first) co_return; // ESC before anything was picked
+            supplied.push_back(*first);
+        }
+        if (supplied.size() < 2) {
+            auto second = co_await ctx.point("noktalar", "Karşı köşe",
+                                             PointOptions{.rubber_band   = true,
+                                                          .rubber_origin = supplied.front(),
+                                                          .rubber_shape  = RubberShape::Rectangle});
+            if (!second) co_return;
+            supplied.push_back(*second);
+        }
+    } else if (mode == Mode::Point && supplied.empty()) {
+        auto aim = co_await ctx.point("noktalar", "Seçilecek nesnenin üzerinde bir nokta");
+        if (!aim) co_return;
+        supplied.push_back(*aim);
+    }
+
     const auto need_points = [&](std::size_t n) -> bool {
-        const Value v = ctx.argument("noktalar");
-        if (v.as_points().size() >= n) return true;
+        if (supplied.size() >= n) return true;
         ctx.echo(std::string("'") + mode_name(mode) + "' " + std::to_string(n) +
-                 " nokta bekliyor. Girilen: " + std::to_string(v.as_points().size()) + " nokta.");
+                 " nokta bekliyor. Girilen: " + std::to_string(supplied.size()) + " nokta.");
         return false;
     };
 
@@ -230,7 +256,7 @@ Task<void> run_select(Context& ctx)
 
     case Mode::Point: {
         if (!need_points(1)) co_return;
-        const core::Point2 aim = ctx.argument("noktalar").as_points().front();
+        const core::Point2 aim = supplied.front();
 
         // Pixels by default (core.secim.tolerans), metres when a client states
         // one. A script has no screen, so without `tolerans` it picks what lies
@@ -248,9 +274,8 @@ Task<void> run_select(Context& ctx)
     case Mode::Crossing:
     case Mode::Box: {
         if (!need_points(2)) co_return;
-        const Value corners  = ctx.argument("noktalar");
-        const core::Point2 a = corners.as_points()[0];
-        const core::Point2 b = corners.as_points()[1];
+        const core::Point2 a = supplied[0];
+        const core::Point2 b = supplied[1];
 
         core::Box2 box{};
         box.extend(a);
@@ -295,6 +320,10 @@ Task<void> run_select(Context& ctx)
     // The RESOLVED selection is recorded, not the gesture that produced it, so
     // every client's run reads the same however it aimed (piricad.md §2.2).
     ctx.record("mod", Value::text(mode_name(mode)));
+    // The gesture too, so a replay of a WINDOW pick re-runs the same box rather
+    // than only restoring the keys it happened to find. The resolved selection is
+    // recorded below and remains what a client reads back.
+    if (!supplied.empty()) ctx.record("noktalar", Value::points(supplied));
     if (op != Op::Replace) ctx.record("islem", Value::text(op_name(op)));
     if (!selection.empty()) {
         Value::Ints ids;
@@ -343,7 +372,7 @@ PIRICAD_COMMAND(select)
         // journalled as a mutation. ReadOnly is how that is said to the bus — the
         // same flag core.mode, core.preference and core.zoom carry.
         .undo  = UndoPolicy::None,
-        .flags = Flags::Scriptable | Flags::ReadOnly,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
         // Deliberately NOT AiAccessible. A suggestion engine that could change
         // what the engineer has highlighted could change what the next SİL
         // removes without ever emitting SİL itself (.claude/ai.md, §5.1).

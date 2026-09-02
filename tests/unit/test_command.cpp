@@ -11,6 +11,7 @@
 #include "piricad/core/arc.hpp"
 #include "piricad/core/circle.hpp"
 #include "piricad/core/entity_kind.hpp"
+#include "piricad/core/offset.hpp"
 #include "piricad/core/snap.hpp"
 #include "piricad/core/text_store.hpp"
 
@@ -1485,6 +1486,188 @@ TEST_CASE("ÖZNİTELİK: panelin kurduğu satır çalışır")
 }
 
 // -----------------------------------------------------------------------------
+// OFSET — parallel geometry (core/offset.hpp)
+// -----------------------------------------------------------------------------
+
+TEST_CASE("Ofset: kapalı bir kare dışarı doğru büyür")
+{
+    using namespace piricad::core;
+
+    // A 10 m square, offset outward by 1 m. The result must enclose more area
+    // than the input and still be one ring.
+    const std::vector<Point2> square{{0, 0}, {10000, 0}, {10000, 10000}, {0, 10000}};
+
+    auto grown = offset_ring(square, true, 1000);
+    REQUIRE(grown.ok());
+    REQUIRE(grown.value().size() == 1);
+
+    const auto& ring = grown.value().front();
+    CHECK(ring.closed);
+
+    Box2 box;
+    for (const Point2& p : ring.points) box.extend(p);
+    CHECK(box.min_x <= -1000);
+    CHECK(box.max_x >= 11000);
+}
+
+TEST_CASE("Ofset: içeri doğru küçülür, mesafeyi aşınca yok olur")
+{
+    using namespace piricad::core;
+    const std::vector<Point2> square{{0, 0}, {10000, 0}, {10000, 10000}, {0, 10000}};
+
+    auto shrunk = offset_ring(square, true, -1000);
+    REQUIRE(shrunk.ok());
+    REQUIRE(shrunk.value().size() == 1);
+
+    // Half the width inward leaves nothing. A hand-rolled offset returns an
+    // inside-out ring here; this must return none at all.
+    auto gone = offset_ring(square, true, -6000);
+    REQUIRE(gone.ok());
+    CHECK(gone.value().empty());
+}
+
+TEST_CASE("Ofset: açık bir çizginin ofseti kapalı bir bant olur")
+{
+    using namespace piricad::core;
+    const std::vector<Point2> run{{0, 0}, {10000, 0}};
+
+    auto band = offset_ring(run, false, 500);
+    REQUIRE(band.ok());
+    REQUIRE(band.value().size() == 1);
+    CHECK(band.value().front().closed);
+    CHECK(band.value().front().points.size() >= 4);
+}
+
+TEST_CASE("Ofset: sıfır mesafe ve yetersiz nokta gerekçesiyle reddedilir")
+{
+    using namespace piricad::core;
+    const std::vector<Point2> square{{0, 0}, {10000, 0}, {10000, 10000}, {0, 10000}};
+
+    auto zero = offset_ring(square, true, 0);
+    CHECK(!zero.ok());
+
+    const std::vector<Point2> one{{0, 0}};
+    auto tooFew = offset_ring(one, false, 1000);
+    CHECK(!tooFew.ok());
+
+    const std::vector<Point2> two{{0, 0}, {1000, 0}};
+    auto notARing = offset_ring(two, true, 1000);
+    CHECK(!notARing.ok());
+}
+
+TEST_CASE("OFSET seçili parseli paralelleştirir ve aslını yerinde bırakır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+
+    const core::Box2 before = f.doc.extent();
+    const std::size_t count = f.doc.live_entity_count();
+
+    // 1 m outward. mesafe is millimetres in the argument form.
+    auto made = f.bus.execute_line("OFSET nesneler=1 mesafe=1000", Origin::Test);
+    if (!made) FAIL_WITH("OFSET", made.error().message);
+
+    CHECK(f.doc.live_entity_count() == count + 1);
+
+    // The original is untouched — it is the measured thing — and the drawing now
+    // reaches further out than it did.
+    const core::Box2 after = f.doc.extent();
+    CHECK(after.min_x < before.min_x);
+    CHECK(after.max_x > before.max_x);
+}
+
+TEST_CASE("OFSET tek geri alma adımıdır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+
+    const std::uint64_t before = f.doc.content_hash();
+    REQUIRE(f.bus.execute_line("OFSET nesneler=1 mesafe=1000", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+
+    CHECK(f.doc.content_hash() == before);
+}
+
+TEST_CASE("OFSET seçim boşken sebebini söyler")
+{
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+
+    REQUIRE(f.bus.execute_line("OFSET mesafe=1000", Origin::Test).ok());
+    CHECK(said.find("nesne yok") != std::string::npos);
+}
+
+// -----------------------------------------------------------------------------
+// KAYDIR — panning the view (core.pan)
+// -----------------------------------------------------------------------------
+
+TEST_CASE("KAYDIR iki noktayı görünüm istemcisine iletir")
+{
+    Fixture f;
+    core::Point2 from{}, to{};
+    int calls = 0;
+    f.bus.on_pan_request = [&](core::Point2 a, core::Point2 b) {
+        from = a;
+        to   = b;
+        ++calls;
+    };
+
+    auto moved =
+        f.bus.execute_line("KAYDIR baslangic=100,200 bitis=150,200", Origin::Test);
+    if (!moved) FAIL_WITH("KAYDIR", moved.error().message);
+
+    CHECK(calls == 1);
+    CHECK(from.x == 100000);
+    CHECK(to.x == 150000);
+}
+
+TEST_CASE("KAYDIR başsız çalışmada sessizce başarısız olmaz, sebebini yazar")
+{
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+
+    REQUIRE(f.bus.execute_line("KAYDIR baslangic=0,0 bitis=1,1", Origin::Test).ok());
+    CHECK(said.find("istemcisi bağlı değil") != std::string::npos);
+}
+
+TEST_CASE("KAYDIR çizimi değiştirmez")
+{
+    Fixture f;
+    const std::uint64_t before = f.doc.content_hash();
+    REQUIRE(f.bus.execute_line("KAYDIR baslangic=0,0 bitis=10,10", Origin::Test).ok());
+    CHECK(f.doc.content_hash() == before);
+    CHECK(!f.undo.can_undo());
+}
+
+// -----------------------------------------------------------------------------
+// SEÇ — the box it can now ask for
+// -----------------------------------------------------------------------------
+
+TEST_CASE("SEÇ KUTU iki köşe verildiğinde kutunun içindekini seçer")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=100,100 110,100 110,110 100,110", Origin::Test).ok());
+
+    REQUIRE(f.bus.execute_line("SEÇ mod=KUTU noktalar=-5,-5 20,20", Origin::Test).ok());
+    CHECK(f.bus.selection().size() == 1);
+}
+
+TEST_CASE("SEÇ etkileşimlidir: arayüz köşeleri sorabilsin")
+{
+    Fixture f;
+    const CommandSpec* spec = f.reg.resolve("SEÇ");
+    REQUIRE(spec != nullptr);
+    // The tool column's "Alan Seç" button has nothing to send without this.
+    CHECK(has_flag(spec->flags, Flags::Interactive));
+}
+
+// -----------------------------------------------------------------------------
 // ADIM — the step lock (core.yakalama.adim)
 // -----------------------------------------------------------------------------
 
@@ -2238,7 +2421,7 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // command that vanished bumps it down by accident, and that is the case worth
     // catching.
     Fixture f;
-    CHECK_EQ(f.reg.size(), std::size_t{50});
+    CHECK_EQ(f.reg.size(), std::size_t{52});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

@@ -104,7 +104,7 @@ set(PIRICAD_DEP_SPDLOG_SHA     6fa36017cfd5731d617e1a934f0e5ea9c4445b13)  # v1.1
 # packaging PiriCAD gets its own build of the library; a developer on a fresh
 # machine gets a working build with nothing installed.
 function(piricad_dependency name)
-    cmake_parse_arguments(ARG "" "REPO;SHA;PACKAGE;VERSION" "" ${ARGN})
+    cmake_parse_arguments(ARG "" "REPO;SHA;PACKAGE;VERSION;SUBDIR" "" ${ARGN})
 
     if(ARG_PACKAGE)
         find_package(${ARG_PACKAGE} ${ARG_VERSION} QUIET)
@@ -121,13 +121,28 @@ function(piricad_dependency name)
     endif()
 
     message(STATUS "  ${name}: sabitlenmiş kaynaktan (${ARG_SHA})")
-    FetchContent_Declare(${name}
-        GIT_REPOSITORY ${ARG_REPO}
-        GIT_TAG        ${ARG_SHA}
-        GIT_SHALLOW    FALSE
-        SYSTEM                       # third-party warnings are not our warnings
-        EXCLUDE_FROM_ALL
-    )
+    # SUBDIR names where the project's own CMakeLists lives when it is not at the
+    # repository root — Clipper2 keeps its C++ build under `CPP/`, beside the C#
+    # and Delphi ports. Without it FetchContent populates the source, finds no
+    # CMakeLists to add, and the target simply never exists.
+    if(ARG_SUBDIR)
+        FetchContent_Declare(${name}
+            GIT_REPOSITORY ${ARG_REPO}
+            GIT_TAG        ${ARG_SHA}
+            GIT_SHALLOW    FALSE
+            SOURCE_SUBDIR  ${ARG_SUBDIR}
+            SYSTEM                   # third-party warnings are not our warnings
+            EXCLUDE_FROM_ALL
+        )
+    else()
+        FetchContent_Declare(${name}
+            GIT_REPOSITORY ${ARG_REPO}
+            GIT_TAG        ${ARG_SHA}
+            GIT_SHALLOW    FALSE
+            SYSTEM                   # third-party warnings are not our warnings
+            EXCLUDE_FROM_ALL
+        )
+    endif()
     FetchContent_MakeAvailable(${name})
 endfunction()
 
@@ -219,6 +234,37 @@ if(PIRICAD_WITH_BENCHMARK)
         SHA  ${PIRICAD_DEP_BENCHMARK_SHA}
         PACKAGE benchmark
         VERSION 1.8)
+endif()
+
+option(PIRICAD_WITH_CLIPPER2 "Polygon offset and boolean through Clipper2" ON)
+
+if(PIRICAD_WITH_CLIPPER2)
+    # CLAUDE.md 2.7 and 5.16: polygon offsetting is a solved problem with a mature,
+    # excellent, cross-platform answer, and reimplementing it is how a program ends
+    # up with self-intersecting parallels and mitre spikes on reflex corners.
+    #
+    # Clipper2 rather than CGAL for this job: it is header-and-two-sources, has no
+    # dependency tree, and its offsetter takes exactly the join and end types a CAD
+    # user asks for (mitre / round / square). CGAL's straight skeleton stays the
+    # answer for building setbacks, which is a different problem (§9.2).
+    #
+    # LICENCE: Boost Software License 1.0 — GPLv3-compatible, permissive, and
+    # already recorded in /NOTICE with this exact pin.
+    #
+    # INTEGER IN, INTEGER OUT. Clipper2 has an int64 path (`Path64`), which is what
+    # makes it usable here at all: `Mm` is int64 fixed-point millimetres and
+    # Article 2.4 forbids storing a double. The offset distance is an integer
+    # number of millimetres and the vertices come back as int64 — no conversion,
+    # no rounding, and the same answer on every platform (§7.3).
+    set(CLIPPER2_TESTS OFF CACHE INTERNAL "")
+    set(CLIPPER2_EXAMPLES OFF CACHE INTERNAL "")
+    set(CLIPPER2_UTILS OFF CACHE INTERNAL "")
+    piricad_dependency(clipper2
+        REPO   ${PIRICAD_DEP_CLIPPER2_REPO}
+        SHA    ${PIRICAD_DEP_CLIPPER2_SHA}
+        SUBDIR CPP
+        PACKAGE Clipper2
+        VERSION 1.3)
 endif()
 
 option(PIRICAD_WITH_POSTGIS "Read and write layers against a live PostGIS database" ON)

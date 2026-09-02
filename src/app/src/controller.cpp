@@ -92,6 +92,9 @@ void Controller::wireBus()
     bus_.on_view_request = [this](std::string_view mode, double factor) {
         emit viewRequested(QString::fromUtf8(mode.data(), static_cast<int>(mode.size())), factor);
     };
+    bus_.on_pan_request = [this](core::Point2 from, core::Point2 to) {
+        emit panRequested(from, to);
+    };
 }
 
 void Controller::settle()

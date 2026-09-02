@@ -31,7 +31,6 @@ constexpr int kChipGap     = 8;
 constexpr int kTitlePx     = 13;
 constexpr int kSubtitlePx  = 11;
 constexpr int kGroupPadX   = 10;
-constexpr int kGroupPadY   = 6;
 constexpr int kGroupHeight = 26;
 constexpr int kRowHeight   = 26;
 constexpr int kKeyWidth    = 112; ///< the `112px | 1fr` grid §7 fixes
@@ -307,7 +306,8 @@ void AttributePanel::beginEdit(int group, int index)
     if (row.edit == EditKind::Choice) {
         bool ok             = false;
         const QString value = QInputDialog::getItem(this, row.key, tr("Yeni değer"), row.choices,
-                                                    row.choices.indexOf(row.value), false, &ok);
+                                                    static_cast<int>(row.choices.indexOf(row.value)),
+                                                    false, &ok);
         if (!ok) {
             closeEditor();
             return;

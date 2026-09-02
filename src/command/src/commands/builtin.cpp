@@ -39,6 +39,8 @@ namespace piricad::command {
     X(measure)                                                                                     \
     X(measure_area)                                                                                \
     X(coordinate)                                                                                  \
+    X(pan)                                                                                         \
+    X(offset)                                                                                      \
     X(attribute)                                                                                   \
     X(column)                                                                                      \
     X(erase)                                                                                       \

@@ -24,6 +24,14 @@ Currently linked
                           relinking right is preserved. Qt Charts and
                           Qt DataVisualization are GPLv3-only and are NOT used.
 
+  Clipper2                BSL-1.0               1.4.0     736ddb0b
+                          Polygon offset behind piricad/core/offset.hpp — the
+                          OFSET command, and the base ifraz and çekme mesafesi
+                          will be built on (§9.2). Linked PRIVATE into
+                          piricad_core: its headers reach core/offset.cpp and
+                          nothing else. Only the C++ port under CPP/ is used;
+                          the C#, Delphi and DLL trees are not compiled.
+
   nlohmann/json           MIT                   v3.11.3   9cca280a
                           The JSON parser and writer behind piricad/core/json.hpp,
                           used by the journal, the script runner and every /data
@@ -235,9 +243,6 @@ recorded as SHAs (CLAUDE.md 5.12).
 
   xxHash                  BSD-2-Clause          v0.8.3    e626a72b
                           Fast hashing.
-  Clipper2                BSL-1.0               1.4.0     736ddb0b
-                          Polygon boolean and offset — ifraz, tevhit and
-                          çekme mesafesi are built on it (§9.2).
   CDT                     MPL 2.0               1.4.1     21fae3ba
                           Constrained Delaunay for TIN and kırıklık hatları.
 
@@ -352,7 +357,6 @@ the exact version is pinned in vcpkg.json when the option is first enabled.
   PROJ                    MIT                   coordinate transformation
   GEOS                    LGPL 2.1              overlay operations
   CGAL                    GPLv3+                exact arithmetic, straight skeleton
-  Clipper2                BSL-1.0               polygon boolean and offset
   CDT                     MPL 2.0               constrained Delaunay
   Boost (Geometry, PFR)   BSL-1.0               R-tree index
   Eigen                   MPL 2.0               linear algebra, adjustment

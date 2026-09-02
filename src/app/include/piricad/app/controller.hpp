@@ -135,6 +135,9 @@ signals:
     /// Esc — the one that means "put this tool away" — would arm it again.
     void interactiveFinished(const QString& id, bool mutated);
     void viewRequested(const QString& mode, double factor);
+
+    /// KAYDIR asks the canvas to slide so `from` lands on `to`.
+    void panRequested(core::Point2 from, core::Point2 to);
     void settingChanged(const QString& id);
 
 private:

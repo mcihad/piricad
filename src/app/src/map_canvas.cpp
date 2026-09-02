@@ -102,6 +102,14 @@ void MapCanvas::zoomBy(double factor)
     update();
 }
 
+void MapCanvas::setCentre(core::Point2 centre)
+{
+    view_.set_centre(centre, view_.mm_per_pixel());
+    snap_preview_valid_ = false;
+    emit viewChanged();
+    update();
+}
+
 void MapCanvas::resetView()
 {
     view_.set_centre(core::Point2{485350000, 4310235000}, 40.0);

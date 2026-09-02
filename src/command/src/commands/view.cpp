@@ -39,7 +39,51 @@ Task<void> run(Context& ctx)
         ctx.echo("Görünüm istemcisi bağlı değil (başsız çalışma).");
 }
 
+/// KAYDIR — move the view without changing its scale.
+///
+/// Two points: the drawing slides so that the first lands on the second. That is
+/// the gesture every CAD calls pan, and stating it as a pair of DOCUMENT points
+/// rather than a pixel delta is what lets a script, the AI and the mouse all
+/// express the same move (Article 1.2, 1.4).
+Task<void> run_pan(Context& ctx)
+{
+    auto from = co_await ctx.point("baslangic", "Kaydırmanın tutulacağı nokta");
+    if (!from) co_return; // ESC before the view moved
+
+    auto to = co_await ctx.point("bitis", "Bu noktaya taşınacak",
+                                 PointOptions{.rubber_band = true, .rubber_origin = *from});
+    if (!to) co_return;
+
+    Bus& bus = ctx.session().bus();
+    if (bus.on_pan_request)
+        bus.on_pan_request(*from, *to);
+    else
+        ctx.echo("Görünüm istemcisi bağlı değil (başsız çalışma).");
+
+    ctx.record("baslangic", Value::point(*from));
+    ctx.record("bitis", Value::point(*to));
+}
+
 } // namespace
+
+PIRICAD_COMMAND(pan)
+{
+    return CommandSpec{
+        .id       = "core.pan",
+        .names    = {"KAYDIR", "PAN", "KY"},
+        .category = Category::View,
+        .params =
+            {
+                Param::point("baslangic", "Kaydırmanın tutulacağı nokta"),
+                Param::point("bitis", "O noktanın taşınacağı yer"),
+            },
+        .undo  = UndoPolicy::None,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible |
+                 Flags::Transparent | Flags::ReadOnly,
+        .summary = "Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır.",
+        .run     = &run_pan,
+    };
+}
 
 PIRICAD_COMMAND(zoom)
 {
