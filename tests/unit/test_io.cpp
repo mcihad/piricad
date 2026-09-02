@@ -230,6 +230,233 @@ TEST_CASE("IO: belge -> dosya -> belge, içerik parmak izi birebir aynı")
     CHECK_EQ(reloaded.undo.undo_depth(), std::size_t{0});
 }
 
+// =============================================================================
+// Nokta listeleri — the first file a Turkish surveyor opens
+// =============================================================================
+
+TEST_CASE("NOKTALAR: Y sağa, X yukarı okunur")
+{
+    // THE ASSERTION THIS FILE EXISTS FOR. Turkish practice writes `no, Y, X` with
+    // Y across and X up — the opposite of the mathematical convention — and a
+    // reader that took them the other way round would put every point in the
+    // wrong place plausibly enough that nobody would notice.
+    TempDir tmp("noktalar");
+    const std::string path = tmp.file("olcu.txt");
+    {
+        std::ofstream out(path);
+        out << "# Ada 1284 poligon olcusu\n";
+        out << "1;485320.543;4310220.250;845.120;NIRENGI\n";
+    }
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=NIRENGI", Origin::Test).ok());
+    auto read = r.bus.execute_line("NOKTALAR dosya=\"" + path + "\"", Origin::Test);
+    if (!read) FAIL_WITH("NOKTALAR", read.error().message);
+
+    REQUIRE(r.doc.live_entity_count() == 1);
+    const core::Box2 box = r.doc.extent();
+    CHECK(box.min_x == 485320543); // Y went to the easting
+    CHECK(box.min_y == 4310220250); // X went to the northing
+}
+
+TEST_CASE("NOKTALAR: milimetre tam okunur, çift duyarlıktan geçmez")
+{
+    TempDir tmp("nokta-hassas");
+    const std::string path = tmp.file("hassas.txt");
+    {
+        std::ofstream out(path);
+        // A nine-figure easting with three decimals is not exactly representable
+        // as a double; reading it through one loses the last millimetre.
+        out << "1;485320.543;4310220.251\n";
+        out << "2;485320.5435;4310220.2554\n"; // and the fourth digit rounds
+    }
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=N", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("NOKTALAR dosya=\"" + path + "\"", Origin::Test).ok());
+    REQUIRE(r.doc.live_entity_count() == 2);
+
+    const core::RingSpan a = r.doc.geometry().rings_of(r.doc.entities().slot[0]);
+    CHECK(r.doc.geometry().ring_xs(a.first)[0] == 485320543);
+    CHECK(r.doc.geometry().ring_ys(a.first)[0] == 4310220251);
+
+    const core::RingSpan b = r.doc.geometry().rings_of(r.doc.entities().slot[1]);
+    CHECK(r.doc.geometry().ring_xs(b.first)[0] == 485320544); // .5435 -> 544
+    CHECK(r.doc.geometry().ring_ys(b.first)[0] == 4310220255);
+}
+
+TEST_CASE("NOKTALAR: virgül, noktalı virgül, sekme ve boşluk ayraçları")
+{
+    TempDir tmp("nokta-ayrac");
+
+    struct Case { const char* name; const char* line; };
+    const Case cases[] = {
+        {"virgul.txt", "1,485320.000,4310220.000\n"},
+        {"noktali.txt", "1;485320.000;4310220.000\n"},
+        {"sekme.txt", "1\t485320.000\t4310220.000\n"},
+        {"bosluk.txt", "1  485320.000   4310220.000\n"},
+    };
+
+    for (const Case& c : cases) {
+        const std::string path = tmp.file(c.name);
+        {
+            std::ofstream out(path);
+            out << c.line;
+        }
+
+        Rig r;
+        REQUIRE(r.bus.execute_line("KATMAN ad=N", Origin::Test).ok());
+        auto read = r.bus.execute_line("NOKTALAR dosya=\"" + path + "\"", Origin::Test);
+        if (!read) FAIL_WITH(c.name, read.error().message);
+        REQUIRE(r.doc.live_entity_count() == 1);
+        CHECK(r.doc.extent().min_x == 485320000);
+    }
+}
+
+TEST_CASE("NOKTALAR: Türkçe ondalık virgülü noktalı virgüllü dosyada okunur")
+{
+    TempDir tmp("nokta-tr");
+    const std::string path = tmp.file("tr.txt");
+    {
+        std::ofstream out(path);
+        out << "1;485320,543;4310220,250\n"; // a Turkish-locale export
+    }
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=N", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("NOKTALAR dosya=\"" + path + "\"", Origin::Test).ok());
+    CHECK(r.doc.extent().min_x == 485320543);
+}
+
+TEST_CASE("NOKTALAR: eksen=XY sütunları ters okur")
+{
+    TempDir tmp("nokta-xy");
+    const std::string path = tmp.file("xy.txt");
+    {
+        std::ofstream out(path);
+        out << "1;4310220.000;485320.000\n"; // northing first
+    }
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=N", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("NOKTALAR dosya=\"" + path + "\" eksen=XY", Origin::Test).ok());
+    CHECK(r.doc.extent().min_x == 485320000);
+    CHECK(r.doc.extent().min_y == 4310220000);
+}
+
+TEST_CASE("NOKTALAR: numara, kot ve kod öznitelik olur")
+{
+    TempDir tmp("nokta-oznitelik");
+    const std::string path = tmp.file("kodlu.txt");
+    {
+        std::ofstream out(path);
+        out << "NIR-3;485320.000;4310220.000;845.120;ROPER\n";
+    }
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=N", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("NOKTALAR dosya=\"" + path + "\"", Origin::Test).ok());
+
+    const core::AttrTable& t = r.doc.attributes();
+    auto no  = r.doc.attribute(t.find("nokta_no"), 0);
+    auto kot = r.doc.attribute(t.find("kot"), 0);
+    auto kod = r.doc.attribute(t.find("kod"), 0);
+
+    REQUIRE(no.ok());
+    CHECK(no.value().text == "NIR-3");
+    REQUIRE(kot.ok());
+    CHECK(kot.value().number == 845120);
+    REQUIRE(kod.ok());
+    CHECK(kod.value().text == "ROPER");
+}
+
+TEST_CASE("NOKTALAR: okunan liste yazılıp aynen geri okunur")
+{
+    TempDir tmp("nokta-gidis-donus");
+    const std::string in_path  = tmp.file("giris.txt");
+    const std::string out_path = tmp.file("cikis.txt");
+    {
+        std::ofstream out(in_path);
+        out << "1;485320.543;4310220.250;845.120;NIRENGI\n";
+        out << "2;485360.000;4310265.000;845.300;PARSEL\n";
+    }
+
+    Rig a;
+    REQUIRE(a.bus.execute_line("KATMAN ad=N", Origin::Test).ok());
+    REQUIRE(a.bus.execute_line("NOKTALAR dosya=\"" + in_path + "\"", Origin::Test).ok());
+    auto written =
+        a.bus.execute_line("NOKTALAR dosya=\"" + out_path + "\" yon=yaz", Origin::Test);
+    if (!written) FAIL_WITH("NOKTALAR yaz", written.error().message);
+
+    Rig b;
+    REQUIRE(b.bus.execute_line("KATMAN ad=N", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("NOKTALAR dosya=\"" + out_path + "\"", Origin::Test).ok());
+
+    REQUIRE(b.doc.live_entity_count() == 2);
+    CHECK(b.doc.extent().min_x == a.doc.extent().min_x);
+    CHECK(b.doc.extent().min_y == a.doc.extent().min_y);
+    CHECK(b.doc.extent().max_x == a.doc.extent().max_x);
+    CHECK(b.doc.extent().max_y == a.doc.extent().max_y);
+
+    const core::AttrTable& t = b.doc.attributes();
+    auto no = b.doc.attribute(t.find("nokta_no"), 0);
+    REQUIRE(no.ok());
+    CHECK(no.value().text == "1");
+}
+
+TEST_CASE("NOKTALAR tek geri alma adımıdır")
+{
+    TempDir tmp("nokta-geri");
+    const std::string path = tmp.file("cok.txt");
+    {
+        std::ofstream out(path);
+        for (int i = 1; i <= 20; ++i)
+            out << i << ";48532" << i << ".000;4310220.000\n";
+    }
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=N", Origin::Test).ok());
+    const std::size_t before = r.doc.live_entity_count();
+
+    REQUIRE(r.bus.execute_line("NOKTALAR dosya=\"" + path + "\"", Origin::Test).ok());
+    REQUIRE(r.doc.live_entity_count() == before + 20);
+
+    // Twenty points, ONE undo: an import is one step or the user presses Ctrl+Z
+    // twenty times to get back where they were (io.md R17).
+    REQUIRE(r.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK(r.doc.live_entity_count() == before);
+
+    // THE COLUMNS STAY, and that is the design rather than a leak: declaring one
+    // is a SCHEMA change and `SÜTUN` is `UndoPolicy::None` for the same reason a
+    // layer is — rows are addressed against the schema, and undoing a declaration
+    // would invalidate every row written against it. Re-importing therefore adds
+    // no second `nokta_no`.
+    CHECK(r.doc.attributes().find("nokta_no") != core::kNoAttr);
+}
+
+TEST_CASE("NOKTALAR: bozuk satır sessizce atlanmaz, numarasıyla bildirilir")
+{
+    TempDir tmp("nokta-bozuk");
+    const std::string path = tmp.file("bozuk.txt");
+    {
+        std::ofstream out(path);
+        out << "1;485320.000;4310220.000\n";
+        out << "2;485330.000;BURASI-SAYI-DEGIL\n";
+        out << "3;485340.000;4310220.000\n";
+    }
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=N", Origin::Test).ok());
+
+    // A point list quietly one row short is a boundary quietly missing a corner.
+    auto read = r.bus.execute_line("NOKTALAR dosya=\"" + path + "\"", Origin::Test);
+
+    const std::string reported =
+        read ? r.transcript : r.transcript + read.error().message;
+    CHECK(reported.find("koordinat okunamadı") != std::string::npos);
+    CHECK(r.doc.live_entity_count() == 0); // and nothing was half-imported
+}
+
 TEST_CASE("IO: kılavuzlar dosyayla gider ve sırasıyla geri gelir")
 {
     // K4: guides are saved with the drawing. Their block is OPTIONAL, so this

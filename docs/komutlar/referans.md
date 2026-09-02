@@ -43,6 +43,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.sector`](sector.md) | `DİLİM`, `DILIM`, `SECTOR`, `DL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir. |
 | [`core.annulus`](annulus.md) | `HALKA`, `ANNULUS`, `HLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez, iç ve dış yarıçaptan delikli halka çizer. |
 | [`core.ellipse_draw`](ellipse_draw.md) | `ELİPS`, `ELIPS`, `ELLIPSE`, `EL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir. |
+| [`core.points`](points.md) | `NOKTALAR`, `POINTS`, `NKL` | Dosya | tek işlem | betiklenebilir, AI erişimli | Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod). |
 | [`core.guide`](guide.md) | `KILAVUZ`, `GUIDE`, `KLV` | Çizim | tek işlem | betiklenebilir, AI erişimli | Cetvel kılavuzu ekler, listeler ve siler. |
 | [`core.attribute`](attribute.md) | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
 | [`core.column`](column.md) | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Belgeye öznitelik sütunu tanımlar ve tanımlı sütunları listeler. |
@@ -450,6 +451,18 @@ Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir.
 | `ikinci` | point | 1 | İkinci eksenin uzaklığı; eksene dik ölçülür |
 
 Ayrıntılı kullanım: [ELİPS](ellipse_draw.md)
+
+### `core.points` — NOKTALAR
+
+Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod).
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `dosya` | text | 1 | Nokta listesi dosyasının yolu |
+| `yon` | text | isteğe bağlı | oku (varsayılan) | yaz |
+| `eksen` | text | isteğe bağlı | Sütun sırası: YX (varsayılan, Türkiye'de olağan) | XY |
+
+Ayrıntılı kullanım: [NOKTALAR](points.md)
 
 ### `core.guide` — KILAVUZ
 
@@ -2009,6 +2022,47 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       ],
       "flags": [
         "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.points",
+      "names": [
+        "NOKTALAR",
+        "POINTS",
+        "NKL"
+      ],
+      "category": "Dosya",
+      "summary": "Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod).",
+      "params": [
+        {
+          "name": "dosya",
+          "type": "text",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Nokta listesi dosyasının yolu"
+        },
+        {
+          "name": "yon",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "oku (varsayılan) | yaz"
+        },
+        {
+          "name": "eksen",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Sütun sırası: YX (varsayılan, Türkiye'de olağan) | XY"
+        }
+      ],
+      "flags": [
         "scriptable",
         "ai_accessible"
       ],

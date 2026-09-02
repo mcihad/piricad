@@ -44,6 +44,7 @@ namespace kentos::command {
     X(sector)                                                                                      \
     X(annulus)                                                                                     \
     X(ellipse_draw)                                                                                \
+    X(points)                                                                                      \
     X(guide)                                                                                       \
     X(attribute)                                                                                   \
     X(column)                                                                                      \

@@ -20,6 +20,7 @@ add_library(kentos_io STATIC
     src/postgis.cpp
     src/qgis_style.cpp
     src/service.cpp
+    src/point_list.cpp
     src/vector.cpp
 )
 

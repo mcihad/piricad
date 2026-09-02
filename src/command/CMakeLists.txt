@@ -38,6 +38,7 @@ add_library(kentos_command STATIC
     src/commands/offset.cpp
     src/commands/sector.cpp
     src/commands/pick.cpp
+    src/commands/points.cpp
     src/commands/point.cpp
     src/commands/polyline.cpp
     src/commands/settings.cpp

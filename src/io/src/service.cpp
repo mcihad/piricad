@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/io/service.hpp"
 
+#include "kentos_cad/io/point_list.hpp"
+
 #include "adopt.hpp"
 #include "qgis_style.hpp"
 
@@ -118,6 +120,12 @@ command::Task<core::Result<std::string>> FileService::handle(command::FileReques
 
     case command::FileRequest::Verb::ExportStyle:
         co_return export_style(std::move(request.path), std::move(request.layer));
+
+    case command::FileRequest::Verb::ImportPoints:
+        co_return co_await import_points(request.tx, std::move(request.path), request.swapped_axes);
+
+    case command::FileRequest::Verb::ExportPoints:
+        co_return export_points(std::move(request.path), request.swapped_axes);
     }
     co_return err(ErrorCode::Internal, "Bilinmeyen dosya işlemi.");
 }
@@ -265,6 +273,127 @@ command::Task<core::Result<std::string>> FileService::export_out(std::string pat
     const VectorReport& r = report.value();
     co_return "Dışa aktarıldı: " + target + "  (" + std::to_string(r.features) + " öğe, " +
         std::to_string(r.layers) + " katman, " + r.driver + ")" + join_notes(r.notes);
+}
+
+// ------------------------------------------------------------ point lists ----
+
+command::Task<core::Result<std::string>> FileService::import_points(command::Transaction* tx,
+                                                                    std::string path,
+                                                                    bool swapped_axes)
+{
+    if (tx == nullptr)
+        co_return err(ErrorCode::Internal, "Nokta okuma bir işlem içinde çalışmalı.");
+
+    const PointOrder order =
+        swapped_axes ? PointOrder::NumberNorthingEasting : PointOrder::NumberEastingNorthing;
+
+    auto read = read_point_list(path, order);
+    if (!read) co_return read.error();
+
+    // THE THREE COLUMNS A POINT LIST CARRIES, declared once and reused if they
+    // are already there. `declare_attribute` is not undoable by design (a schema
+    // is not a drawing edit), so re-importing into the same document adds no
+    // second column.
+    const core::AttrTable& table = tx->document().attributes();
+    const auto column = [&](const char* id, const char* label, core::AttrType type)
+        -> core::Result<core::AttrId> {
+        if (const core::AttrId found = table.find(id); found != core::kNoAttr) return found;
+
+        core::AttrSpec spec;
+        spec.id      = id;
+        spec.name_tr = label;
+        spec.type    = type;
+        return tx->declare_attribute(std::move(spec));
+    };
+
+    auto no = column("nokta_no", "nokta no", core::AttrType::Text);
+    if (!no) co_return no.error();
+    auto kot = column("kot", "kot", core::AttrType::Length);
+    if (!kot) co_return kot.error();
+    auto code = column("kod", "kod", core::AttrType::Text);
+    if (!code) co_return code.error();
+
+    const command::LayerId layer = bus_.active_layer();
+    std::size_t made             = 0;
+
+    for (const SurveyPoint& p : read.value()) {
+        auto created = tx->add_point(layer, p.at);
+        if (!created) co_return created.error();
+
+        if (!p.number.empty())
+            if (auto st = tx->set_attribute(no.value(), created.value(),
+                                            core::attr_text(p.number));
+                !st)
+                co_return st.error();
+
+        if (p.has_height)
+            if (auto st = tx->set_attribute(kot.value(), created.value(), core::attr_mm(p.height));
+                !st)
+                co_return st.error();
+
+        if (!p.code.empty())
+            if (auto st = tx->set_attribute(code.value(), created.value(), core::attr_text(p.code));
+                !st)
+                co_return st.error();
+        ++made;
+    }
+
+    co_return std::to_string(made) + " nokta okundu: " + path +
+        (swapped_axes ? "  (sütunlar X, Y sırasında)" : "");
+}
+
+core::Result<std::string> FileService::export_points(std::string path, bool swapped_axes)
+{
+    const core::Document& doc = bus_.document();
+    const core::AttrTable& table = doc.attributes();
+    const core::AttrId no   = table.find("nokta_no");
+    const core::AttrId kot  = table.find("kot");
+    const core::AttrId code = table.find("kod");
+
+    std::vector<SurveyPoint> points;
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+        if (!doc.alive(e) || doc.entities().kind[e] != core::kPointKind) continue;
+
+        SurveyPoint p;
+        const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
+        if (span.count == 0) continue;
+        const auto xs = doc.geometry().ring_xs(span.first);
+        const auto ys = doc.geometry().ring_ys(span.first);
+        if (xs.empty()) continue;
+        p.at = core::Point2{xs[0], ys[0]};
+
+        // The point's own number when the drawing carries one, and its permanent
+        // key when it does not — a list whose rows have no name is a list nobody
+        // can take back to the field.
+        if (no != core::kNoAttr) {
+            if (auto had = doc.attribute(no, e); had && had.value().present)
+                p.number = had.value().text;
+        }
+        if (p.number.empty())
+            p.number = std::to_string(static_cast<std::uint64_t>(core::raw(doc.entities().key[e])));
+
+        if (kot != core::kNoAttr) {
+            if (auto had = doc.attribute(kot, e); had && had.value().present) {
+                p.height     = static_cast<core::Mm>(had.value().number);
+                p.has_height = true;
+            }
+        }
+        if (code != core::kNoAttr) {
+            if (auto had = doc.attribute(code, e); had && had.value().present)
+                p.code = had.value().text;
+        }
+        points.push_back(std::move(p));
+    }
+
+    if (points.empty())
+        return err(ErrorCode::NotFound,
+                   "Çizimde nokta yok. NOKTA komutuyla çizin ya da bir liste okuyun.");
+
+    const PointOrder order =
+        swapped_axes ? PointOrder::NumberNorthingEasting : PointOrder::NumberEastingNorthing;
+    if (auto st = write_point_list(path, points, order); !st) return st.error();
+
+    return std::to_string(points.size()) + " nokta yazıldı: " + path;
 }
 
 } // namespace kentos::io

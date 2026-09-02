@@ -82,6 +82,17 @@ private:
                                                          std::string format);
     command::Task<core::Result<std::string>> export_out(std::string path, std::string format);
 
+    /// Reads a surveyed point list and puts one point entity per row in the
+    /// drawing, with `nokta_no`, `kot` and `kod` as attributes.
+    ///
+    /// `swapped_axes` says the file's columns run `no X Y` instead of the Turkish
+    /// `no Y X`; see `io/point_list.hpp` for why that is stated and never guessed.
+    command::Task<core::Result<std::string>> import_points(command::Transaction* tx,
+                                                           std::string path, bool swapped_axes);
+
+    /// Writes every point entity in the drawing back out in the same shape.
+    core::Result<std::string> export_points(std::string path, bool swapped_axes);
+
     command::Bus& bus_;
     std::string current_path_;
     std::stop_source stop_;

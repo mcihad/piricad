@@ -62,12 +62,25 @@ struct FileRequest
         Import,      ///< merge an external dataset into the current document
         Export,      ///< write the current document out in an external format
         ExportStyle, ///< write ONE layer's symbology as a QGIS QML style file
+
+        /// Read a surveyed point list — `nokta no, Y, X, [Z], [kod]` — and put a
+        /// point entity in the drawing for each row. The first file a Turkish
+        /// surveyor opens; see `io/point_list.hpp`.
+        ImportPoints,
+
+        /// Write the drawing's points back out in the same shape.
+        ExportPoints,
     };
 
     Verb verb{Verb::Open}; ///< which operation to carry out
     std::string path;      ///< empty on Save when the document already has a path
     std::string format;    ///< driver id for Import/Export; empty = infer from the path
     std::string layer;     ///< ExportStyle: which layer's symbology to write
+
+    /// ImportPoints / ExportPoints: true when the file's columns run
+    /// `no X Y` instead of the Turkish `no Y X`. Stated by the user, never
+    /// guessed — no heuristic can tell a 485 320 easting from a northing.
+    bool swapped_axes{false};
 
     /// The calling command's own transaction, so an import is ONE undo step and
     /// rolls back whole (io.md R17). Null for the verbs that do not mutate the
