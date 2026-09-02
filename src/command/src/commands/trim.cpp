@@ -10,20 +10,20 @@
 // not this one: it needs the circle-line intersection, and a command that silently
 // treated an arc as its chord would move a road curve by however much the chord
 // misses the arc. That is a wrong drawing, not a coarse one (§12).
-#include "piricad/command/bus.hpp"
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/geometry.hpp"
-#include "piricad/core/pick.hpp"
-#include "piricad/core/units.hpp"
+#include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/units.hpp"
 
 #include <cmath>
 #include <string>
 #include <vector>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 /// One entity's single open ring, or false having said why not.
@@ -318,7 +318,7 @@ Task<void> run_extend(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(split)
+KENTOS_COMMAND(split)
 {
     return CommandSpec{
         .id       = "core.split",
@@ -337,7 +337,7 @@ PIRICAD_COMMAND(split)
     };
 }
 
-PIRICAD_COMMAND(trim)
+KENTOS_COMMAND(trim)
 {
     return CommandSpec{
         .id       = "core.trim",
@@ -358,7 +358,7 @@ PIRICAD_COMMAND(trim)
     };
 }
 
-PIRICAD_COMMAND(extend)
+KENTOS_COMMAND(extend)
 {
     return CommandSpec{
         .id       = "core.extend",
@@ -379,4 +379,4 @@ PIRICAD_COMMAND(extend)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

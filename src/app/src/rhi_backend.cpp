@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PiriCAD — app: the QRhi canvas backend (piricad.md §6.3, CLAUDE.md Article 8.1).
+// KentOSCad — app: the QRhi canvas backend (kentoscad.md §6.3, CLAUDE.md Article 8.1).
 //
 // WHAT THIS IS. The GPU implementation of `render::Backend`. It consumes exactly
 // the same `DrawList` and `Overlay` the QPainter backend consumes, so nothing
@@ -12,7 +12,7 @@
 // types that way (`scripts/ci-gate-backends.sh` exists because of it), so this one
 // lists what it CAN draw and refuses everything else.
 //
-// TEXT IS HERE when `PIRICAD_WITH_TEXT=ON`, through the SDF atlas of render.md R8
+// TEXT IS HERE when `KENTOS_WITH_TEXT=ON`, through the SDF atlas of render.md R8
 // — msdfgen fields over FreeType outlines, shaped with HarfBuzz. Not QPainter:
 // render.md P5 forbids Qt painting inside the QRhi path, and a second text
 // renderer would disagree with the first about where a caption sits.
@@ -23,16 +23,16 @@
 //   * overlay batches are WIDGET PIXELS with y DOWN — what a cursor position and
 //     a viewport already are.
 // Both become widget pixels here, once, on the way into the vertex buffer.
-#include "piricad/app/backend_factory.hpp"
+#include "kentos_cad/app/backend_factory.hpp"
 
-#include "piricad/render/drawlist.hpp"
-#include "piricad/render/symbology.hpp"
+#include "kentos_cad/render/drawlist.hpp"
+#include "kentos_cad/render/symbology.hpp"
 
-#include "piricad/app/symbol_image.hpp"
+#include "kentos_cad/app/symbol_image.hpp"
 
-#if PIRICAD_HAVE_TEXT
-#include "piricad/app/data_root.hpp"
-#include "piricad/render/text_atlas.hpp"
+#if KENTOS_HAVE_TEXT
+#include "kentos_cad/app/data_root.hpp"
+#include "kentos_cad/render/text_atlas.hpp"
 #endif
 
 #include <rhi/qrhi.h>
@@ -59,7 +59,7 @@
 #include <utility>
 #include <vector>
 
-namespace piricad::app {
+namespace kentos::app {
 namespace {
 
 /// The uniform block both pipelines declare, in std140 order.
@@ -287,7 +287,7 @@ private:
     void emit_picture_fill(const render::PolygonBatch& batch, const render::PassStyle& ps,
                            double cx, double cy);
 
-#if PIRICAD_HAVE_TEXT
+#if KENTOS_HAVE_TEXT
     /// The captions in the document and the labels in the overlay, as glyph quads.
     void emit_texts(const render::DrawList& list, double cx, double cy);
     void emit_labels(const render::Overlay& overlay);
@@ -325,7 +325,7 @@ private:
     bool ensure_capacity(QRhi* rhi, QRhiResourceUpdateBatch* rub);
     void release();
 
-#if PIRICAD_HAVE_TEXT
+#if KENTOS_HAVE_TEXT
     /// Opens the atlas once, and keeps the failure so it is not retried per frame.
     void ensure_atlas();
 
@@ -350,7 +350,7 @@ private:
     std::unique_ptr<QRhiGraphicsPipeline> fill_cover_;
     std::unique_ptr<QRhiGraphicsPipeline> mask_clear_;
 
-#if PIRICAD_HAVE_TEXT
+#if KENTOS_HAVE_TEXT
     std::unique_ptr<QRhiBuffer> quad_;   ///< the four static glyph-quad corners
     std::unique_ptr<QRhiBuffer> glyphs_; ///< per-instance glyph rectangles
     std::unique_ptr<QRhiTexture> atlas_texture_;
@@ -370,7 +370,7 @@ private:
     bool picture_quad_uploaded_{false};
     std::vector<float> picture_data_; ///< 13 floats per instance, like the text one
 
-#if PIRICAD_HAVE_TEXT
+#if KENTOS_HAVE_TEXT
 
     std::unique_ptr<render::TextAtlas> atlas_;
     bool atlas_tried_{false};
@@ -1225,7 +1225,7 @@ void RhiBackend::emit_overlay(const render::Overlay& overlay, std::size_t from, 
     }
 }
 
-#if PIRICAD_HAVE_TEXT
+#if KENTOS_HAVE_TEXT
 
 std::uint32_t RhiBackend::emit_line(render::Face face, std::string_view text, float origin_x,
                                     float origin_y, float px, float cos_a, float sin_a,
@@ -1372,7 +1372,7 @@ void RhiBackend::emit_texts(const render::DrawList& list, double cx, double cy)
     }
 }
 
-#endif // PIRICAD_HAVE_TEXT
+#endif // KENTOS_HAVE_TEXT
 
 void RhiBackend::paint_ground(const render::Overlay& overlay)
 {
@@ -1384,7 +1384,7 @@ void RhiBackend::paint_aids(const render::DrawList& list, const render::Overlay&
     // The document's own captions go UNDER the aids and over the passes, which is
     // where the QPainter backend puts them: a parcel number belongs to the drawing,
     // and a snap marker belongs over whatever it is pointing at.
-#if PIRICAD_HAVE_TEXT
+#if KENTOS_HAVE_TEXT
     emit_texts(list, last_cx_, last_cy_);
 #else
     (void)list;
@@ -1392,7 +1392,7 @@ void RhiBackend::paint_aids(const render::DrawList& list, const render::Overlay&
 
     emit_overlay(overlay, overlay.beneath, overlay.batches.size());
 
-#if PIRICAD_HAVE_TEXT
+#if KENTOS_HAVE_TEXT
     emit_labels(overlay);
 #endif
 }
@@ -1403,7 +1403,7 @@ void RhiBackend::paint_aids(const render::DrawList& list, const render::Overlay&
 
 void RhiBackend::release()
 {
-#if PIRICAD_HAVE_TEXT
+#if KENTOS_HAVE_TEXT
     text_.reset();
     srb_text_.reset();
     sampler_.reset();
@@ -1453,10 +1453,10 @@ bool RhiBackend::ensure_resources(QRhi* rhi, QRhiRenderPassDescriptor* rp, int s
     uniform_stride_ = static_cast<quint32>(
         std::max<int>(rhi->ubufAlignment(), static_cast<int>(sizeof(Uniforms))));
 
-    const QShader line_vs = load_shader(":/piricad/shaders/line.vert.qsb");
-    const QShader line_fs = load_shader(":/piricad/shaders/line.frag.qsb");
-    const QShader fill_vs = load_shader(":/piricad/shaders/fill.vert.qsb");
-    const QShader fill_fs = load_shader(":/piricad/shaders/fill.frag.qsb");
+    const QShader line_vs = load_shader(":/kentos_cad/shaders/line.vert.qsb");
+    const QShader line_fs = load_shader(":/kentos_cad/shaders/line.frag.qsb");
+    const QShader fill_vs = load_shader(":/kentos_cad/shaders/fill.vert.qsb");
+    const QShader fill_fs = load_shader(":/kentos_cad/shaders/fill.frag.qsb");
     if (!line_vs.isValid() || !line_fs.isValid() || !fill_vs.isValid() || !fill_fs.isValid())
         return false;
 
@@ -1697,8 +1697,8 @@ bool RhiBackend::ensure_resources(QRhi* rhi, QRhiRenderPassDescriptor* rp, int s
     // The PIPELINES are not built here. Each picture gets its own, beside its own
     // texture and bindings, once it is known — see `Picture`.
     {
-        picture_vs_ = load_shader(":/piricad/shaders/text.vert.qsb");
-        picture_fs_ = load_shader(":/piricad/shaders/image.frag.qsb");
+        picture_vs_ = load_shader(":/kentos_cad/shaders/text.vert.qsb");
+        picture_fs_ = load_shader(":/kentos_cad/shaders/image.frag.qsb");
         if (!picture_vs_.isValid() || !picture_fs_.isValid()) return false;
 
         picture_quad_.reset(
@@ -1732,12 +1732,12 @@ bool RhiBackend::ensure_resources(QRhi* rhi, QRhiRenderPassDescriptor* rp, int s
         pictures_.clear();
     }
 
-#if PIRICAD_HAVE_TEXT
+#if KENTOS_HAVE_TEXT
     // ---- text: one instanced quad per glyph against the SDF atlas (R8) -------
     ensure_atlas();
     if (atlas_) {
-        const QShader text_vs = load_shader(":/piricad/shaders/text.vert.qsb");
-        const QShader text_fs = load_shader(":/piricad/shaders/text.frag.qsb");
+        const QShader text_vs = load_shader(":/kentos_cad/shaders/text.vert.qsb");
+        const QShader text_fs = load_shader(":/kentos_cad/shaders/text.frag.qsb");
         if (!text_vs.isValid() || !text_fs.isValid()) return false;
 
         quad_.reset(
@@ -1806,7 +1806,7 @@ bool RhiBackend::ensure_resources(QRhi* rhi, QRhiRenderPassDescriptor* rp, int s
     return true;
 }
 
-#if PIRICAD_HAVE_TEXT
+#if KENTOS_HAVE_TEXT
 
 void RhiBackend::ensure_atlas()
 {
@@ -1862,7 +1862,7 @@ bool RhiBackend::ensure_atlas_texture(QRhi* rhi, QRhiResourceUpdateBatch* rub)
     return true;
 }
 
-#endif // PIRICAD_HAVE_TEXT
+#endif // KENTOS_HAVE_TEXT
 
 bool RhiBackend::ensure_capacity(QRhi* rhi, QRhiResourceUpdateBatch* rub)
 {
@@ -2000,7 +2000,7 @@ bool RhiBackend::ensure_capacity(QRhi* rhi, QRhiResourceUpdateBatch* rub)
         }
     }
 
-#if PIRICAD_HAVE_TEXT
+#if KENTOS_HAVE_TEXT
     if (atlas_) {
         const quint32 glyph_bytes = static_cast<quint32>(glyph_data_.size() * sizeof(float));
         if (!grow(glyphs_, glyph_capacity_, glyph_bytes)) return false;
@@ -2065,7 +2065,7 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
     cmds_.clear();
     picture_data_.clear();
     picture_keys_.clear();
-#if PIRICAD_HAVE_TEXT
+#if KENTOS_HAVE_TEXT
     glyph_data_.clear();
     px_range_ = atlas_ ? atlas_->px_range() : 0.0f;
 #endif
@@ -2078,23 +2078,23 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
     last_cx_        = cx;
     last_cy_        = cy;
 
-    // PIRICAD_RHI_DEBUG=2 draws the DOCUMENT ALONE, with the overlay left out.
+    // KENTOS_RHI_DEBUG=2 draws the DOCUMENT ALONE, with the overlay left out.
     // Bisecting a frame is the only way to tell "the batch never reached the
     // buffer" from "the batch was drawn and something later covered it", and from
     // a screenshot the two look the same.
-    const QByteArray debug = qgetenv("PIRICAD_RHI_DEBUG");
+    const QByteArray debug = qgetenv("KENTOS_RHI_DEBUG");
 
     if (debug != "2") paint_ground(overlay);
     emit_document(list, cx, cy);
     if (debug != "2" && debug != "3") paint_aids(list, overlay);
 
-    // Developer tooling, the same category as `PIRICAD_FRAME_DUMP`: an environment
+    // Developer tooling, the same category as `KENTOS_FRAME_DUMP`: an environment
     // variable rather than a feature, and there is no user-facing behaviour here
     // to document (CLAUDE.md 5.17). What a GPU frame CONTAINS is otherwise
     // invisible — a batch that never reached the buffer and a batch drawn off
     // screen look identical, and telling them apart by staring at a screenshot is
     // how an afternoon goes.
-    if (!qEnvironmentVariableIsEmpty("PIRICAD_RHI_DEBUG")) {
+    if (!qEnvironmentVariableIsEmpty("KENTOS_RHI_DEBUG")) {
         std::size_t fills = 0;
         std::size_t lines = 0;
         std::size_t texts = 0;
@@ -2154,12 +2154,12 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
     const QRhiCommandBuffer::VertexInput flat_input[1] = {{vertices_.get(), 0}};
 
     // BISECTING A FRAME, which is how all three of this backend's drawing defects
-    // were found. `PIRICAD_RHI_ONLY=resim` draws only the published pictures and
+    // were found. `KENTOS_RHI_ONLY=resim` draws only the published pictures and
     // `=resimsiz` draws everything else — a batch that never reached the buffer
     // and a batch drawn off screen look identical in a screenshot, and so does a
     // pipeline that corrupts the state of the draws after it. Developer tooling,
     // an environment variable rather than a feature (CLAUDE.md 5.17).
-    const QByteArray only = qgetenv("PIRICAD_RHI_ONLY");
+    const QByteArray only = qgetenv("KENTOS_RHI_ONLY");
 
     for (const Cmd& cmd : cmds_) {
         if (only == "resim" && cmd.kind != Cmd::Kind::Image) continue;
@@ -2225,7 +2225,7 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
             continue;
         }
 
-#if PIRICAD_HAVE_TEXT
+#if KENTOS_HAVE_TEXT
         if (cmd.kind == Cmd::Kind::Text) {
             if (!text_ || !glyphs_) continue;
             const QRhiCommandBuffer::VertexInput text_inputs[2] = {{quad_.get(), 0},
@@ -2274,4 +2274,4 @@ std::unique_ptr<render::Backend> make_rhi_backend()
     return std::make_unique<RhiBackend>();
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

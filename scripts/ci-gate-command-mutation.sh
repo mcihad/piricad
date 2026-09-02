@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # GATE: nothing mutates the Document outside a Transaction.
-# piricad.md §8: "/src/domain içinde doğrudan geometri mutasyonu (komut dışı)
+# kentoscad.md §8: "/src/domain içinde doğrudan geometri mutasyonu (komut dışı)
 # görülürse build kırılsın." Constitution Article 1 extends this to every module
 # above /src/command: only Transaction may call a Document mutator.
 set -euo pipefail

@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/domain/cadastre/topology.hpp"
+#include "kentos_cad/domain/cadastre/topology.hpp"
 
-#include "piricad/core/entity_kind.hpp"
-#include "piricad/core/geometry.hpp"
-#include "piricad/core/offset.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/offset.hpp"
 
-#include "piricad/command/bus.hpp"
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
 #include <string>
 
-namespace piricad::domain::cadastre {
+namespace kentos::domain::cadastre {
 namespace {
 
 /// Reads one entity's rings out as a polygon, or returns false when it has none
@@ -175,11 +175,11 @@ std::string describe(const core::Document& doc, const Defect& d)
     return "Bilinmeyen kusur.";
 }
 
-} // namespace piricad::domain::cadastre
+} // namespace kentos::domain::cadastre
 
 // ---------------------------------------------------------------- TOPOLOJİ ---
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 Task<void> run_topology(Context& ctx)
@@ -221,7 +221,7 @@ Task<void> run_topology(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(topology)
+KENTOS_COMMAND(topology)
 {
     return CommandSpec{
         .id       = "core.topology",
@@ -236,4 +236,4 @@ PIRICAD_COMMAND(topology)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

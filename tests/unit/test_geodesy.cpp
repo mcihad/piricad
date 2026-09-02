@@ -1,37 +1,37 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// piricad.md §11, Phase 0 asks for a comparison of PROJ's TUREF accuracy against
+// kentoscad.md §11, Phase 0 asks for a comparison of PROJ's TUREF accuracy against
 // TKGM reference data — comparing PROJ's TUREF accuracy against TKGM
 // reference data — and §12's opening requirement.
 //
 // The thing being tested is not PROJ's mathematics — PROJ is correct and has been
 // for thirty years. What is tested is the wrapper's ONE job: axis order. EPSG:5254
-// declares northing first; PiriCAD stores easting first. A wrapper that gets this
+// declares northing first; KentOSCad stores easting first. A wrapper that gets this
 // wrong returns a coordinate that is plausible and wrong, which is the worst
 // failure this product has (.claude/model.md R37a).
-#include "piricad_test.hpp"
+#include "kentos_test.hpp"
 
-#include "piricad/command/registry.hpp"
+#include "kentos_cad/command/registry.hpp"
 
-#include "piricad/command/bus.hpp"
+#include "kentos_cad/command/bus.hpp"
 
-#include "piricad/domain/geodesy/commands.hpp"
-#include "piricad/domain/geodesy/helmert.hpp"
-#include "piricad/domain/geodesy/crs_service.hpp"
+#include "kentos_cad/domain/geodesy/commands.hpp"
+#include "kentos_cad/domain/geodesy/helmert.hpp"
+#include "kentos_cad/domain/geodesy/crs_service.hpp"
 
-#include "piricad/domain/geodesy/crs_catalog.hpp"
-#include "piricad/domain/geodesy/transform.hpp"
+#include "kentos_cad/domain/geodesy/crs_catalog.hpp"
+#include "kentos_cad/domain/geodesy/transform.hpp"
 
 #include <cmath>
 #include <vector>
 
-using namespace piricad;
-using namespace piricad::domain::geodesy;
-using piricad::core::Point2;
+using namespace kentos;
+using namespace kentos::domain::geodesy;
+using kentos::core::Point2;
 
 namespace {
 
-/// A parcel corner in the 30th zone. Easting first, as PiriCAD stores it.
+/// A parcel corner in the 30th zone. Easting first, as KentOSCad stores it.
 constexpr Point2 kUsak{485320150, 4310220400};
 
 bool near_deg(double a, double b, double tolerance = 1e-6)
@@ -43,7 +43,7 @@ bool near_deg(double a, double b, double tolerance = 1e-6)
 
 TEST_CASE("KATALOG: TM 3 derece dilimleri veriden okunuyor")
 {
-    auto loaded = CrsCatalog::load(PIRICAD_DATA_DIR "/crs");
+    auto loaded = CrsCatalog::load(KENTOS_DATA_DIR "/crs");
     CHECK(loaded.ok());
     if (!loaded.ok()) return;
 
@@ -68,7 +68,7 @@ TEST_CASE("KATALOG: TM 3 derece dilimleri veriden okunuyor")
 
 TEST_CASE("KATALOG: dilim boylamdan, EPSG'den ve addan bulunuyor")
 {
-    auto loaded = CrsCatalog::load(PIRICAD_DATA_DIR "/crs");
+    auto loaded = CrsCatalog::load(KENTOS_DATA_DIR "/crs");
     CHECK(loaded.ok());
     if (!loaded.ok()) return;
     const CrsCatalog& cat = loaded.value();
@@ -212,7 +212,7 @@ TEST_CASE("DÖNÜŞÜM: PROJ yokken sessizce birim dönüşüm yapmıyor")
     if (!Transform::available()) {
         auto any = Transform::between("EPSG:5254", "EPSG:4326");
         CHECK(!any.ok());
-        if (!any.ok()) CHECK(any.error().message.find("PIRICAD_WITH_PROJ") != std::string::npos);
+        if (!any.ok()) CHECK(any.error().message.find("KENTOS_WITH_PROJ") != std::string::npos);
     }
 }
 
@@ -226,7 +226,7 @@ TEST_CASE("CRS: kimlik çözülür ve belge tek doğruyu taşır")
     // constructed default forever. A drawing therefore reported one CRS to the
     // exporter and another to its own file — which is the field blunder model.md
     // R36 is written against.
-    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(PIRICAD_DATA_DIR) + "/crs");
+    auto catalogue = domain::geodesy::CrsCatalog::load(std::string(KENTOS_DATA_DIR) + "/crs");
     REQUIRE(catalogue.ok());
 
     core::Document doc;
@@ -278,7 +278,7 @@ TEST_CASE("CRS: kimlik çözülür ve belge tek doğruyu taşır")
 
 TEST_CASE("HELMERT: iki nokta tam çözüm verir, artık bırakmaz")
 {
-    using namespace piricad::domain::geodesy;
+    using namespace kentos::domain::geodesy;
 
     // A local survey rotated a quarter turn and moved onto TUREF/TM36.
     std::vector<ControlPoint> control{
@@ -301,7 +301,7 @@ TEST_CASE("HELMERT: iki nokta tam çözüm verir, artık bırakmaz")
 
 TEST_CASE("HELMERT: ölçeği bulur")
 {
-    using namespace piricad::domain::geodesy;
+    using namespace kentos::domain::geodesy;
 
     // The same shape at twice the size, no rotation.
     std::vector<ControlPoint> control{
@@ -324,7 +324,7 @@ TEST_CASE("HELMERT: ölçeği bulur")
 
 TEST_CASE("HELMERT: üç noktada artıkları ve RMS'i raporlar")
 {
-    using namespace piricad::domain::geodesy;
+    using namespace kentos::domain::geodesy;
 
     // Three points that cannot all be satisfied: the third is 20 mm off the line
     // the first two define. A similarity cannot absorb that, and must not
@@ -346,7 +346,7 @@ TEST_CASE("HELMERT: üç noktada artıkları ve RMS'i raporlar")
 
 TEST_CASE("HELMERT: bir nokta ve çakışık noktalar gerekçesiyle reddedilir")
 {
-    using namespace piricad::domain::geodesy;
+    using namespace kentos::domain::geodesy;
 
     std::vector<ControlPoint> one{{{0, 0}, {100, 100}}};
     CHECK(!fit_helmert(one, false).ok());
@@ -360,7 +360,7 @@ TEST_CASE("HELMERT: bir nokta ve çakışık noktalar gerekçesiyle reddedilir")
 
 TEST_CASE("HELMERT: dönüşüm her noktayı kontrolüne taşır")
 {
-    using namespace piricad::domain::geodesy;
+    using namespace kentos::domain::geodesy;
 
     std::vector<ControlPoint> control{
         {{0, 0}, {485300000, 4310200000}},
@@ -371,7 +371,7 @@ TEST_CASE("HELMERT: dönüşüm her noktayı kontrolüne taşır")
     REQUIRE(fit.ok());
 
     for (const ControlPoint& p : control) {
-        const piricad::core::Point2 landed = fit.value().apply(p.local);
+        const kentos::core::Point2 landed = fit.value().apply(p.local);
         CHECK(landed.x == p.map.x);
         CHECK(landed.y == p.map.y);
     }
@@ -381,15 +381,15 @@ TEST_CASE("OTURT: yerel çizimi kontrol noktalarıyla haritaya taşır")
 {
     // A survey measured from a station the crew called 0,0. Two published points
     // put it on TUREF/TM36 — the job this command exists for.
-    piricad::core::Document doc;
-    piricad::command::Registry reg;
-    piricad::command::Journal journal;
-    piricad::command::UndoStack undo;
-    piricad::command::Bus bus{doc, reg, journal, undo};
-    piricad::command::register_builtin_commands(reg);
-    piricad::domain::geodesy::register_geodesy_commands(reg);
+    kentos::core::Document doc;
+    kentos::command::Registry reg;
+    kentos::command::Journal journal;
+    kentos::command::UndoStack undo;
+    kentos::command::Bus bus{doc, reg, journal, undo};
+    kentos::command::register_builtin_commands(reg);
+    kentos::domain::geodesy::register_geodesy_commands(reg);
 
-    using piricad::command::Origin;
+    using kentos::command::Origin;
     REQUIRE(bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
     REQUIRE(bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
 
@@ -404,7 +404,7 @@ TEST_CASE("OTURT: yerel çizimi kontrol noktalarıyla haritaya taşır")
     // Nothing was added or removed — the drawing MOVED.
     CHECK(doc.live_entity_count() == before);
 
-    const piricad::core::Box2 box = doc.extent();
+    const kentos::core::Box2 box = doc.extent();
     CHECK(box.min_x == 485300000);
     CHECK(box.min_y == 4310200000);
     CHECK(doc.crs().id() == "TUREF/TM36");
@@ -412,15 +412,15 @@ TEST_CASE("OTURT: yerel çizimi kontrol noktalarıyla haritaya taşır")
 
 TEST_CASE("OTURT tek geri alma adımıdır: ya hepsi taşınır ya hiçbiri")
 {
-    piricad::core::Document doc;
-    piricad::command::Registry reg;
-    piricad::command::Journal journal;
-    piricad::command::UndoStack undo;
-    piricad::command::Bus bus{doc, reg, journal, undo};
-    piricad::command::register_builtin_commands(reg);
-    piricad::domain::geodesy::register_geodesy_commands(reg);
+    kentos::core::Document doc;
+    kentos::command::Registry reg;
+    kentos::command::Journal journal;
+    kentos::command::UndoStack undo;
+    kentos::command::Bus bus{doc, reg, journal, undo};
+    kentos::command::register_builtin_commands(reg);
+    kentos::domain::geodesy::register_geodesy_commands(reg);
 
-    using piricad::command::Origin;
+    using kentos::command::Origin;
     REQUIRE(bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
     REQUIRE(bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
     REQUIRE(bus.execute_line("ÇİZGİ noktalar=0,0 5,5", Origin::Test).ok());
@@ -438,15 +438,15 @@ TEST_CASE("OTURT tek geri alma adımıdır: ya hepsi taşınır ya hiçbiri")
 
 TEST_CASE("OTURT: eksik ya da tek sayıda nokta gerekçesiyle reddedilir")
 {
-    piricad::core::Document doc;
-    piricad::command::Registry reg;
-    piricad::command::Journal journal;
-    piricad::command::UndoStack undo;
-    piricad::command::Bus bus{doc, reg, journal, undo};
-    piricad::command::register_builtin_commands(reg);
-    piricad::domain::geodesy::register_geodesy_commands(reg);
+    kentos::core::Document doc;
+    kentos::command::Registry reg;
+    kentos::command::Journal journal;
+    kentos::command::UndoStack undo;
+    kentos::command::Bus bus{doc, reg, journal, undo};
+    kentos::command::register_builtin_commands(reg);
+    kentos::domain::geodesy::register_geodesy_commands(reg);
 
-    using piricad::command::Origin;
+    using kentos::command::Origin;
     std::string said;
     bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
 
@@ -462,15 +462,15 @@ TEST_CASE("OTURT: eksik ya da tek sayıda nokta gerekçesiyle reddedilir")
 
 TEST_CASE("OTURT ölçeği kilitlenebilir: saha ölçüsü yeniden ölçeklenmez")
 {
-    piricad::core::Document doc;
-    piricad::command::Registry reg;
-    piricad::command::Journal journal;
-    piricad::command::UndoStack undo;
-    piricad::command::Bus bus{doc, reg, journal, undo};
-    piricad::command::register_builtin_commands(reg);
-    piricad::domain::geodesy::register_geodesy_commands(reg);
+    kentos::core::Document doc;
+    kentos::command::Registry reg;
+    kentos::command::Journal journal;
+    kentos::command::UndoStack undo;
+    kentos::command::Bus bus{doc, reg, journal, undo};
+    kentos::command::register_builtin_commands(reg);
+    kentos::domain::geodesy::register_geodesy_commands(reg);
 
-    using piricad::command::Origin;
+    using kentos::command::Origin;
     REQUIRE(bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
     REQUIRE(bus.execute_line("ÇİZGİ noktalar=0,0 100,0", Origin::Test).ok());
 
@@ -479,6 +479,6 @@ TEST_CASE("OTURT ölçeği kilitlenebilir: saha ölçüsü yeniden ölçeklenmez
     REQUIRE(bus.execute_line("OTURT noktalar=0,0 0,0 100,0 200,0 olcek_kilitli=evet", Origin::Test)
                 .ok());
 
-    const piricad::core::Box2 box = doc.extent();
+    const kentos::core::Box2 box = doc.extent();
     CHECK(box.max_x - box.min_x == 100000);
 }

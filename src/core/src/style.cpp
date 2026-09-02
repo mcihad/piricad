@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/style.hpp"
+#include "kentos_cad/core/style.hpp"
 
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/text.hpp"
 
-namespace piricad::core {
+namespace kentos::core {
 namespace {
 
 /// A per-record-type seed, so that folding a style into a document hash cannot
 /// collide with folding a layer or an attribute record that happens to carry the
 /// same integers.
+// THE SEED DOES NOT FOLLOW THE PRODUCT'S NAME, and must not. It is folded into
+// every content hash this program has ever computed — golden fixtures, journal
+// fingerprints, the equality proof — so renaming it would silently change what
+// every stored drawing hashes to. The string is an arbitrary constant that
+// happens to read as the old name; that is all it has ever been.
 constexpr std::uint64_t kAppearanceSeed = fnv1a("piricad.core.appearance");
 constexpr std::uint64_t kSymbolSeed     = fnv1a("piricad.core.symbol");
 
@@ -20,7 +25,7 @@ std::uint64_t fold_appearance(const Appearance& a, std::uint64_t seed)
     // indeterminate and the byte order of a multi-byte member is not, so hashing
     // the raw object would give one answer on x86 and another somewhere else —
     // and a golden fixture that disagrees across platforms is a legal defect
-    // (.claude/core.md R9, piricad.md §7.3).
+    // (.claude/core.md R9, kentoscad.md §7.3).
     std::uint64_t h = seed;
     h               = fnv1a_int(static_cast<std::int64_t>(a.rgba), h);
     h               = fnv1a_int(static_cast<std::int64_t>(a.width_um), h);
@@ -392,4 +397,4 @@ Appearance resolve_appearance(const Appearance& own, const Appearance& layer_def
     return out;
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

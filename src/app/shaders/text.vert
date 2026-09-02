@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PiriCAD — the SDF text pipeline (`.claude/render.md` R8).
+// KentOSCad — the SDF text pipeline (`.claude/render.md` R8).
 //
 // One instance per GLYPH, not per string: every caption on a cadastral sheet
 // comes out of one buffer and one draw call, which is what R7's draw-call budget

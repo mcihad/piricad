@@ -23,7 +23,7 @@ KentOSCad daireyi **tanımıyla** saklar: merkez ve yarıçap. Ekranda çizilen 
 Bunun sebebi hukukidir. Daire 128 kenarlı bir çokgen olarak saklansaydı çevresi
 2·π·r **olmazdı**, alanı π·r² **olmazdı**. 128 kenarlı bir çokgenin alanı gerçek
 daireden binde 0,6 küçüktür; 300 metre yarıçaplı bir koruma alanında bu **170 m²**
-eksik demektir. Tapuya giden sayı budur (`piricad.md` §12).
+eksik demektir. Tapuya giden sayı budur (`kentoscad.md` §12).
 
 Dolayısıyla:
 

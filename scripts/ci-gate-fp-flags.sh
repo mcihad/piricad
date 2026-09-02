@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # GATE: no fast-math anywhere.
-# piricad.md §7.3: -ffast-math / /fp:fast break NaN checks, reorder addition and
+# kentoscad.md §7.3: -ffast-math / /fp:fast break NaN checks, reorder addition and
 # destroy robust predicate correctness. -ffp-contract=off is mandatory because FMA
 # does not round the intermediate result, so x86 and Apple Silicon would disagree.
 # Software producing official survey documents must be bit-identical everywhere.
@@ -28,12 +28,12 @@ done < <(grep -rn --include='CMakeLists.txt' --include='*.cmake' --include='Make
              "$root" --exclude-dir=build --exclude-dir=.git || true)
 
 # The GCC/Clang release flags must actually carry -ffp-contract=off.
-if ! grep -q -- '-ffp-contract=off' "$root/cmake/PiriCADFlags.cmake"; then
-    echo "fp-flags: cmake/PiriCADFlags.cmake no longer sets -ffp-contract=off" >&2
+if ! grep -q -- '-ffp-contract=off' "$root/cmake/KentOSCadFlags.cmake"; then
+    echo "fp-flags: cmake/KentOSCadFlags.cmake no longer sets -ffp-contract=off" >&2
     fail=1
 fi
-if ! grep -q -- '-fno-fast-math' "$root/cmake/PiriCADFlags.cmake"; then
-    echo "fp-flags: cmake/PiriCADFlags.cmake no longer sets -fno-fast-math" >&2
+if ! grep -q -- '-fno-fast-math' "$root/cmake/KentOSCadFlags.cmake"; then
+    echo "fp-flags: cmake/KentOSCadFlags.cmake no longer sets -fno-fast-math" >&2
     fail=1
 fi
 

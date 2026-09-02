@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/domain/geodesy/transform.hpp"
+#include "kentos_cad/domain/geodesy/transform.hpp"
 
-#ifdef PIRICAD_HAVE_PROJ
+#ifdef KENTOS_HAVE_PROJ
 #include <proj.h>
 #endif
 
-namespace piricad::domain::geodesy {
+namespace kentos::domain::geodesy {
 
-#ifdef PIRICAD_HAVE_PROJ
+#ifdef KENTOS_HAVE_PROJ
 
 struct Transform::Impl
 {
@@ -115,7 +115,7 @@ core::Result<Transform> Transform::between(const std::string& source, const std:
     return core::err(core::ErrorCode::Unsupported,
                      "'" + source + "' -> '" + target +
                          "' dönüşümü yapılamıyor: PROJ "
-                         "derlenmemiş. -DPIRICAD_WITH_PROJ=ON ile yapılandırın "
+                         "derlenmemiş. -DKENTOS_WITH_PROJ=ON ile yapılandırın "
                          "(Debian/Ubuntu: libproj-dev).");
 }
 
@@ -188,4 +188,4 @@ core::Status Transform::inverse(std::span<core::Point2> points) const
     return apply(points, [this](double& e, double& n) { return inverse(e, n); }, "geri");
 }
 
-} // namespace piricad::domain::geodesy
+} // namespace kentos::domain::geodesy

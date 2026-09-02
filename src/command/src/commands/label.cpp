@@ -25,23 +25,23 @@
 // THE FORMAT STRING IS A SUBSTITUTION, NOT A LANGUAGE. `{sutun}` is replaced by
 // that column's value and nothing else happens: there is no operator, no nesting,
 // no function, no conditional, no number formatting. CLAUDE.md 5.11 allows this
-// project exactly one grammar, `piricad/command/parser.hpp`, and adding any of
+// project exactly one grammar, `kentos_cad/command/parser.hpp`, and adding any of
 // those things here would be a second one. Extending this is an amendment, not a
-// patch — the same boundary `piricad/core/style_rule.hpp` draws around its closed
+// patch — the same boundary `kentos_cad/core/style_rule.hpp` draws around its closed
 // set of conditions.
-#include "piricad/command/bus.hpp"
-#include "piricad/command/context.hpp"
-#include "piricad/command/registry.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/attribute.hpp"
+#include "kentos_cad/core/attribute.hpp"
 
 #include <array>
 #include <string>
 #include <vector>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 /// The default height of a label, in ground millimetres.
@@ -231,7 +231,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(label)
+KENTOS_COMMAND(label)
 {
     return CommandSpec{
         .id       = "core.label",
@@ -257,4 +257,4 @@ PIRICAD_COMMAND(label)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

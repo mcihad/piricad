@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // core.help — YARDIM, and core.script — BETİK.
-#include "piricad/command/bus.hpp"
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 Task<void> run_help(Context& ctx)
@@ -39,7 +39,7 @@ Task<void> run_help(Context& ctx)
     }
 
     // The listing is generated from the registry — there is no second command list
-    // anywhere in the project (piricad.md §2.3).
+    // anywhere in the project (kentoscad.md §2.3).
     ctx.echo("Komutlar (" + std::to_string(bus.registry().size()) + "):");
     for (const auto& spec : bus.registry().all()) {
         std::string names;
@@ -71,7 +71,7 @@ Task<void> run_script(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(help)
+KENTOS_COMMAND(help)
 {
     return CommandSpec{
         .id       = "core.help",
@@ -85,7 +85,7 @@ PIRICAD_COMMAND(help)
     };
 }
 
-PIRICAD_COMMAND(script)
+KENTOS_COMMAND(script)
 {
     return CommandSpec{
         .id       = "core.script",
@@ -99,4 +99,4 @@ PIRICAD_COMMAND(script)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

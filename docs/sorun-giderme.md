@@ -332,14 +332,14 @@ yazılmaz, panel yine dolar.
 
 ## Kurulum ve derleme
 
-### `PIRICAD_WITH_RHI=ON but qsb was not found.`
+### `KENTOS_WITH_RHI=ON but qsb was not found.`
 
 **Sebep.** GPU çizim arka ucu istenmiş ama gölgelendirici derleyicisi kurulu değil.
 
-**Çözüm.** `qt6-shadertools` paketini kurun veya `-DPIRICAD_WITH_RHI=OFF` ile
+**Çözüm.** `qt6-shadertools` paketini kurun veya `-DKENTOS_WITH_RHI=OFF` ile
 yapılandırın. Bu sürümde GPU arka ucu zaten kapalıdır.
 
-### `PIRICAD_WITH_LUA=ON but the Lua host is a Phase-2 deliverable`
+### `KENTOS_WITH_LUA=ON but the Lua host is a Phase-2 deliverable`
 
 **Sebep.** Henüz gelmemiş bir bileşen açılmaya çalışılmış.
 
@@ -423,10 +423,10 @@ kaydınız yerinde durur**.
 
 ### `io.no_driver: Dış biçim desteği KAPALI.`
 
-**Sebep.** Bu yapı `PIRICAD_WITH_GDAL=OFF` ile derlenmiş.
+**Sebep.** Bu yapı `KENTOS_WITH_GDAL=OFF` ile derlenmiş.
 
 **Çözüm.** Mesaj kurulum komutunu içerir: Debian/Ubuntu'da
-`sudo apt install libgdal-dev`, sonra `-DPIRICAD_WITH_GDAL=ON` ile yapılandırın.
+`sudo apt install libgdal-dev`, sonra `-DKENTOS_WITH_GDAL=ON` ile yapılandırın.
 `make doctor` durumu özetler.
 
 ### `io.no_driver: '...' için sürücü bulunamadı.`

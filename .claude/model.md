@@ -1,6 +1,6 @@
 # Document Model — Rules
 
-> Scope: `piricad/core/{units,document,geometry,identity,style,layer,attribute,entity_kind,settings}.hpp` and every file that persists or renders them  |  Depends on: nothing  |  Source: piricad.md §2.2, §9.3, §10.2, §10.3, §10.5, §12, §13
+> Scope: `kentos_cad/core/{units,document,geometry,identity,style,layer,attribute,entity_kind,settings}.hpp` and every file that persists or renders them  |  Depends on: nothing  |  Source: kentoscad.md §2.2, §9.3, §10.2, §10.3, §10.5, §12, §13
 
 These rules were settled after a six-way study of AutoCAD/ObjectARX, the ODA DWG object model,
 FreeCAD, LibreCAD, QGIS, GDAL/OGR, ArcGIS, FlatGeobuf, GeoPackage and Blender, and an adversarial

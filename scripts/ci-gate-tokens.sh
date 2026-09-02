@@ -51,7 +51,7 @@ if [[ ! -f "$mockup" ]]; then
     exit 0
 fi
 # ---- 2. the initialiser order matches the declaration order --------------------
-header="$root/src/app/include/piricad/app/tokens.hpp"
+header="$root/src/app/include/kentos_cad/app/tokens.hpp"
 if [[ -f "$header" && -f "$tokens" ]]; then
     fields=$(sed -n '/^struct Tokens$/,/^};/p' "$header" |
              sed -n 's/^ *QColor \([A-Za-z_][A-Za-z0-9_]*\);.*/\1/p')

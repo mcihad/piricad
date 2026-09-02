@@ -17,7 +17,7 @@ KentOSCad [Semantik Sürümleme](https://semver.org) kullanır: `BÜYÜK.KÜÇÜ
 | Komut günlüğü biçimi | İleriye uyumlu; bilinmeyen alanlar oynatmada yok sayılır | Yalnız büyük sürümde |
 | Proje dosyası biçimi | Sürümlenir; eski sürüm yeni dosyayı açarken açıklayıcı mesaj verir, çökmez | Yalnız büyük sürümde |
 | Betik API'si | Bir büyük sürüm içinde yalnız ekleme yapılır | Yalnız büyük sürümde |
-| C++ başlıkları (`piricad/`) | İç kullanım. Küçük sürümler arasında garanti yoktur | Her sürümde |
+| C++ başlıkları (`kentos_cad/`) | İç kullanım. Küçük sürümler arasında garanti yoktur | Her sürümde |
 
 ## Komut kimlikleri neden kalıcı
 

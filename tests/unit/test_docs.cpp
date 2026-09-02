@@ -6,14 +6,14 @@
 // the shipped Markdown pages, extracts the fenced blocks, and executes them
 // through the same command bus a user would. There is no second copy of the
 // examples anywhere — the pages are the source.
-#include "piricad_test.hpp"
+#include "kentos_test.hpp"
 
-#include "piricad/domain/cadastre/commands.hpp"
-#include "piricad/domain/geodesy/commands.hpp"
-#include "piricad/command/bus.hpp"
-#include "piricad/command/registry.hpp"
-#include "piricad/core/json.hpp"
-#include "piricad/script/json_runner.hpp"
+#include "kentos_cad/domain/cadastre/commands.hpp"
+#include "kentos_cad/domain/geodesy/commands.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/core/json.hpp"
+#include "kentos_cad/script/json_runner.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -21,8 +21,8 @@
 #include <sstream>
 #include <vector>
 
-using namespace piricad;
-using namespace piricad::command;
+using namespace kentos;
+using namespace kentos::command;
 
 namespace {
 
@@ -54,7 +54,7 @@ struct Rig
 std::vector<fs::path> markdown_pages()
 {
     std::vector<fs::path> pages;
-    const fs::path root{PIRICAD_DOCS_DIR};
+    const fs::path root{KENTOS_DOCS_DIR};
     if (!fs::exists(root)) return pages;
 
     for (const auto& entry : fs::recursive_directory_iterator(root))
@@ -276,7 +276,7 @@ TEST_CASE("DOKÜMAN: örnek betik dosyaları çalışır")
 {
     // Every script the manual points at must run, or the link is a promise the
     // product does not keep.
-    const fs::path journal_dir{PIRICAD_JOURNAL_DIR};
+    const fs::path journal_dir{KENTOS_JOURNAL_DIR};
     if (!fs::exists(journal_dir)) return;
 
     std::size_t ran = 0;

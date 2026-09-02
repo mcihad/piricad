@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/pick.hpp"
+#include "kentos_cad/core/pick.hpp"
 
-#include "piricad/core/entity_kind.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
 
-#include "piricad/core/document.hpp"
-#include "piricad/core/spatial_index.hpp"
+#include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/spatial_index.hpp"
 
 #include <algorithm>
 #include <cstdlib>
 
-namespace piricad::core {
+namespace kentos::core {
 namespace {
 
 bool boxes_overlap(const Box2& a, const Box2& b) noexcept
@@ -356,4 +356,4 @@ EntityId pick_nearest(const Document& doc, Point2 cursor, Mm radius)
     return best;
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

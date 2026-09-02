@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/app/symbol_preview.hpp"
+#include "kentos_cad/app/symbol_preview.hpp"
 
-#include "piricad/app/backend_factory.hpp"
-#include "piricad/render/scene.hpp"
+#include "kentos_cad/app/backend_factory.hpp"
+#include "kentos_cad/render/scene.hpp"
 
 #include <QBuffer>
 #include <QByteArray>
@@ -18,7 +18,7 @@
 #include <memory>
 #include <span>
 
-namespace piricad::app {
+namespace kentos::app {
 namespace {
 
 /// Millimetres per pixel a preview pretends to be looking at the drawing with.
@@ -353,4 +353,4 @@ QIcon symbol_icon(const core::Symbol& symbol, const core::ImageStore& images,
     return QIcon(QPixmap::fromImage(image));
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

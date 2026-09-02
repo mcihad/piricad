@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad_test.hpp"
+#include "kentos_test.hpp"
 
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <map>
 
-#include "piricad/command/bus.hpp"
-#include "piricad/command/parser.hpp"
-#include "piricad/command/registry.hpp"
-#include "piricad/core/arc.hpp"
-#include "piricad/core/circle.hpp"
-#include "piricad/core/entity_kind.hpp"
-#include "piricad/core/ellipse.hpp"
-#include "piricad/core/guide.hpp"
-#include "piricad/core/offset.hpp"
-#include "piricad/core/snap.hpp"
-#include "piricad/core/text_store.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/parser.hpp"
+#include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/ellipse.hpp"
+#include "kentos_cad/core/guide.hpp"
+#include "kentos_cad/core/offset.hpp"
+#include "kentos_cad/core/snap.hpp"
+#include "kentos_cad/core/text_store.hpp"
 
-using namespace piricad;
-using namespace piricad::command;
+using namespace kentos;
+using namespace kentos::command;
 
 namespace {
 
@@ -335,7 +335,7 @@ TEST_CASE("tırnak içindeki değer harfi harfine alınır, ikinci kez ayrışt�
     // string, and every layer name a user chose badly. Quoting means literal.
     Fixture f;
 
-    auto parsed = parse_line("VERİTABANI baglan hedef=\"host=localhost dbname=piricad\"");
+    auto parsed = parse_line("VERİTABANI baglan hedef=\"host=localhost dbname=kentoscad\"");
     REQUIRE(parsed.ok());
     REQUIRE_EQ(parsed.value().tokens.size(), std::size_t{2});
 
@@ -344,7 +344,7 @@ TEST_CASE("tırnak içindeki değer harfi harfine alınır, ikinci kez ayrışt�
     CHECK_EQ(value.word, std::string("hedef"));
     REQUIRE_EQ(value.nested.size(), std::size_t{1});
     CHECK_EQ(value.nested.front().kind, Token::Kind::Text);
-    CHECK_EQ(value.nested.front().text, std::string("host=localhost dbname=piricad"));
+    CHECK_EQ(value.nested.front().text, std::string("host=localhost dbname=kentoscad"));
 
     // A comma inside quotes is a comma, not a coordinate pair.
     auto comma = parse_line("KATMAN ad=\"ADA 12, PARSEL 5\"");
@@ -512,7 +512,7 @@ TEST_CASE("a failing rule rolls the whole transaction back")
     CHECK(!blocked.ok());
     CHECK(blocked.error().message.find("test.refuse") != std::string::npos);
 
-    // No partial application, ever (piricad.md §2.5).
+    // No partial application, ever (kentoscad.md §2.5).
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
     CHECK_EQ(f.undo.undo_depth(), std::size_t{0});
 }
@@ -529,7 +529,7 @@ TEST_CASE("read-only commands never become an undo step")
 
 TEST_CASE("user-facing error messages are Turkish")
 {
-    // piricad.md §3 and §13: the users are Turkish surveying engineers, so an
+    // kentoscad.md §3 and §13: the users are Turkish surveying engineers, so an
     // error they can hit must be Turkish and actionable. A message that leaks an
     // English phrase from the implementation is a defect, and the user manual
     // quotes these strings verbatim (.claude/docs.md R11).
@@ -1493,7 +1493,7 @@ TEST_CASE("ÖZNİTELİK: panelin kurduğu satır çalışır")
 
 TEST_CASE("Ofset: kapalı bir kare dışarı doğru büyür")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
 
     // A 10 m square, offset outward by 1 m. The result must enclose more area
     // than the input and still be one ring.
@@ -1514,7 +1514,7 @@ TEST_CASE("Ofset: kapalı bir kare dışarı doğru büyür")
 
 TEST_CASE("Ofset: içeri doğru küçülür, mesafeyi aşınca yok olur")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
     const std::vector<Point2> square{{0, 0}, {10000, 0}, {10000, 10000}, {0, 10000}};
 
     auto shrunk = offset_ring(square, true, -1000);
@@ -1530,7 +1530,7 @@ TEST_CASE("Ofset: içeri doğru küçülür, mesafeyi aşınca yok olur")
 
 TEST_CASE("Ofset: açık bir çizginin ofseti kapalı bir bant olur")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
     const std::vector<Point2> run{{0, 0}, {10000, 0}};
 
     auto band = offset_ring(run, false, 500);
@@ -1542,7 +1542,7 @@ TEST_CASE("Ofset: açık bir çizginin ofseti kapalı bir bant olur")
 
 TEST_CASE("Ofset: sıfır mesafe ve yetersiz nokta gerekçesiyle reddedilir")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
     const std::vector<Point2> square{{0, 0}, {10000, 0}, {10000, 10000}, {0, 10000}};
 
     auto zero = offset_ring(square, true, 0);
@@ -1848,7 +1848,7 @@ TEST_CASE("KILAVUZ bir varlık DEĞİLDİR: seçime, sayıma ve kapsama girmez")
 
 TEST_CASE("BOOLEAN: bitişik iki parsel birleşince tek parsel olur")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
 
     Polygon left{{{0, 0}, {10000, 0}, {10000, 10000}, {0, 10000}}, {}};
     Polygon right{{{10000, 0}, {20000, 0}, {20000, 10000}, {10000, 10000}}, {}};
@@ -1864,7 +1864,7 @@ TEST_CASE("BOOLEAN: bitişik iki parsel birleşince tek parsel olur")
 
 TEST_CASE("BOOLEAN: ayrık iki parsel birleşince iki parsel kalır")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
 
     Polygon a{{{0, 0}, {10000, 0}, {10000, 10000}, {0, 10000}}, {}};
     Polygon b{{{50000, 0}, {60000, 0}, {60000, 10000}, {50000, 10000}}, {}};
@@ -1876,7 +1876,7 @@ TEST_CASE("BOOLEAN: ayrık iki parsel birleşince iki parsel kalır")
 
 TEST_CASE("BOOLEAN: fark bir parseli ikiye bölebilir")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
 
     // A 30 m parcel with a 10 m band taken out of its middle: two pieces.
     Polygon parcel{{{0, 0}, {30000, 0}, {30000, 10000}, {0, 10000}}, {}};
@@ -1889,7 +1889,7 @@ TEST_CASE("BOOLEAN: fark bir parseli ikiye bölebilir")
 
 TEST_CASE("BOOLEAN: örtüşme kesişimle bulunur, örtüşmeyen ikili boş döner")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
 
     Polygon a{{{0, 0}, {10000, 0}, {10000, 10000}, {0, 10000}}, {}};
     Polygon overlapping{{{5000, 5000}, {15000, 5000}, {15000, 15000}, {5000, 15000}}, {}};
@@ -1908,7 +1908,7 @@ TEST_CASE("BOOLEAN: örtüşme kesişimle bulunur, örtüşmeyen ikili boş dön
 
 TEST_CASE("BOOLEAN: delik, sarım yönü ne olursa olsun delik kalır")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
 
     // The hole is wound the SAME way as its exterior, which is what a DXF or a
     // GML may hand over. Even-odd must still read it as a void.
@@ -1994,7 +1994,7 @@ TEST_CASE("SEÇ etkileşimlidir: arayüz köşeleri sorabilsin")
 
 TEST_CASE("ADIM: uzaklık adımın katına yuvarlanır, yön korunur")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
 
     // 12 cm step, a horizontal aim at 1,00 m: the nearest multiple is 96 cm.
     SnapQuery q;
@@ -2011,7 +2011,7 @@ TEST_CASE("ADIM: uzaklık adımın katına yuvarlanır, yön korunur")
 
 TEST_CASE("ADIM: adımın üstündeki bir nokta yerinde kalır")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
 
     SnapQuery q;
     q.has_base = true;
@@ -2026,7 +2026,7 @@ TEST_CASE("ADIM: adımın üstündeki bir nokta yerinde kalır")
 
 TEST_CASE("ADIM dik modla birlikte çalışır: eksen dik moddan, uzunluk adımdan")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
 
     SnapQuery q;
     q.has_base = true;
@@ -2043,7 +2043,7 @@ TEST_CASE("ADIM dik modla birlikte çalışır: eksen dik moddan, uzunluk adımd
 
 TEST_CASE("ADIM kapalıyken hiçbir şeye dokunmaz")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
 
     SnapQuery q;
     q.has_base = true;

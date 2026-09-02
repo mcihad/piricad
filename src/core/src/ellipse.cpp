@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/ellipse.hpp"
+#include "kentos_cad/core/ellipse.hpp"
 
-#include "piricad/core/circle.hpp"
-#include "piricad/core/units.hpp"
+#include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/units.hpp"
 
-namespace piricad::core {
+namespace kentos::core {
 namespace {
 
 Point2 vertex_at(const RingGeometry& geom, std::uint32_t slot, std::size_t i)
@@ -59,4 +59,4 @@ void ellipse_outline(Point2 centre, Point2 major, Point2 minor, std::vector<Mm>&
     }
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

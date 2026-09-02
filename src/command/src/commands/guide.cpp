@@ -10,17 +10,17 @@
 // ADDRESSED BY COORDINATE, NOT BY INDEX. Removing a guide shifts the ones after
 // it, so an index a user typed a moment ago names a different line by the time
 // they press Enter. The coordinate is what they can see on the ruler.
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/guide.hpp"
-#include "piricad/core/text.hpp"
-#include "piricad/core/units.hpp"
+#include "kentos_cad/core/guide.hpp"
+#include "kentos_cad/core/text.hpp"
+#include "kentos_cad/core/units.hpp"
 
 #include <string>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 std::string axis_name(core::GuideAxis a)
@@ -118,7 +118,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(guide)
+KENTOS_COMMAND(guide)
 {
     return CommandSpec{
         .id       = "core.guide",
@@ -138,4 +138,4 @@ PIRICAD_COMMAND(guide)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/image_store.hpp"
+#include "kentos_cad/core/image_store.hpp"
 
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
 #include <cstring>
 #include <string_view>
 #include <utility>
 
-namespace piricad::core {
+namespace kentos::core {
 namespace {
+// THE SEED DOES NOT FOLLOW THE PRODUCT'S NAME, and must not. It is folded into
+// every content hash this program has ever computed — golden fixtures, journal
+// fingerprints, the equality proof — so renaming it would silently change what
+// every stored drawing hashes to. The string is an arbitrary constant that
+// happens to read as the old name; that is all it has ever been.
 
 constexpr std::uint64_t kImageSeed = fnv1a("piricad.core.image_store");
 
@@ -194,4 +199,4 @@ std::uint64_t ImageStore::fold(std::uint64_t seed) const
     return h;
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

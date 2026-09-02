@@ -11,16 +11,16 @@
 // circle is drawn with a mouse, and because every input aid then applies to it
 // for free: snapping the rim to a parsel corner puts the circle exactly through
 // that corner, which is what a çekme mesafesi or a monument radius needs.
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/units.hpp"
+#include "kentos_cad/core/units.hpp"
 
 #include <cmath>
 #include <string>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 Task<void> run(Context& ctx)
@@ -67,7 +67,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(circle_draw)
+KENTOS_COMMAND(circle_draw)
 {
     return CommandSpec{
         .id       = "core.circle_draw",
@@ -85,4 +85,4 @@ PIRICAD_COMMAND(circle_draw)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

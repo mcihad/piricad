@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/io/service.hpp"
+#include "kentos_cad/io/service.hpp"
 
 #include "adopt.hpp"
 #include "qgis_style.hpp"
 
-#include "piricad/io/project.hpp"
-#include "piricad/io/vector.hpp"
+#include "kentos_cad/io/project.hpp"
+#include "kentos_cad/io/vector.hpp"
 
 #include <fstream>
 #include <string>
 #include <utility>
 
-namespace piricad::io {
+namespace kentos::io {
 namespace {
 
 using core::err;
@@ -233,7 +233,7 @@ FileService::import_into(command::Transaction* tx, std::string path, std::string
     if (is_project_path(path))
         co_return err(ErrorCode::InvalidArgument,
                       "'" + path +
-                          "' bir PiriCAD proje dosyası. Proje dosyası açılır, içe aktarılmaz: "
+                          "' bir KentOSCad proje dosyası. Proje dosyası açılır, içe aktarılmaz: "
                           "AÇ komutunu kullanın.");
 
     auto report = co_await import_vector(*tx, std::move(path), std::move(format),
@@ -254,7 +254,7 @@ command::Task<core::Result<std::string>> FileService::export_out(std::string pat
     if (is_project_path(path))
         co_return err(ErrorCode::InvalidArgument,
                       "'" + path +
-                          "' bir PiriCAD proje dosyası uzantısı taşıyor. Proje kaydetmek için "
+                          "' bir KentOSCad proje dosyası uzantısı taşıyor. Proje kaydetmek için "
                           "FARKLIKAYDET kullanın.");
 
     const std::string target = path;
@@ -267,4 +267,4 @@ command::Task<core::Result<std::string>> FileService::export_out(std::string pat
         std::to_string(r.layers) + " katman, " + r.driver + ")" + join_notes(r.notes);
 }
 
-} // namespace piricad::io
+} // namespace kentos::io

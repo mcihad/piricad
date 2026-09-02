@@ -12,18 +12,18 @@
 // integer segment rather than a stored angle — exact, and identical on every
 // platform because no trigonometry is involved (§7.3). DXF TEXT stores an
 // insertion point and an alignment point for the same reasons.
-#include "piricad/command/bus.hpp"
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/text.hpp"
-#include "piricad/core/text_store.hpp"
+#include "kentos_cad/core/text.hpp"
+#include "kentos_cad/core/text_store.hpp"
 
 #include <array>
 #include <string>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 core::TextAnchor anchor_from(const std::string& word)
@@ -94,7 +94,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(text)
+KENTOS_COMMAND(text)
 {
     return CommandSpec{
         .id       = "core.text",
@@ -119,4 +119,4 @@ PIRICAD_COMMAND(text)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

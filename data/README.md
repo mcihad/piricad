@@ -2,7 +2,7 @@
 
 CLAUDE.md 5.13 and `.claude/data.md`: a regulatory value is never hard-coded in
 C++. Turkish surveying and planning legislation changes often; a change here must
-be a **data release**, not a rebuild (piricad.md §15).
+be a **data release**, not a rebuild (kentoscad.md §15).
 
 | Directory | Contents |
 |---|---|
@@ -22,5 +22,5 @@ the source annexes are present. The user-facing account is
 [`docs/veri/mpyy-gosterimleri.md`](../docs/veri/mpyy-gosterimleri.md).
 
 Redistribution of geographic data is governed by the Coğrafi Veri İzin Belgesi
-process (piricad.md §12). Every dataset's permit status is recorded in
+process (kentoscad.md §12). Every dataset's permit status is recorded in
 `LICENCES.md` and checked by `scripts/ci-gate-data-permits.sh`.

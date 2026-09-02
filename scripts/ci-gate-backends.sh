@@ -9,7 +9,7 @@
 # backend owes the user all of them.
 #
 # WHY THIS IS A GATE AND NOT A UNIT TEST. `/tests` links no Qt, and a backend is
-# Qt by definition (Article 3.4 keeps `piricad_render` Qt-free, so both backends
+# Qt by definition (Article 3.4 keeps `kentos_render` Qt-free, so both backends
 # live in `/src/app`). There is nowhere in the test binary to construct one. What
 # CAN be checked without Qt is that each backend's `render` reaches the one shared
 # function that paints the aids — which is the thing that was missing.

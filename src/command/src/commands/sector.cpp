@@ -15,20 +15,20 @@
 // The curve itself comes from `core::arc_outline` and `core::circle_outline` —
 // the same deterministic bisection the document is drawn with — so a sector's
 // arc and a YAY drawn over it land on exactly the same vertices (§7.3).
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/arc.hpp"
-#include "piricad/core/circle.hpp"
-#include "piricad/core/geometry.hpp"
-#include "piricad/core/units.hpp"
+#include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/units.hpp"
 
 #include <cmath>
 #include <string>
 #include <vector>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 /// The radius `centre`->`p` implies, rounded to the millimetre the record stores.
@@ -168,7 +168,7 @@ Task<void> run_annulus(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(sector)
+KENTOS_COMMAND(sector)
 {
     return CommandSpec{
         .id       = "core.sector",
@@ -187,7 +187,7 @@ PIRICAD_COMMAND(sector)
     };
 }
 
-PIRICAD_COMMAND(annulus)
+KENTOS_COMMAND(annulus)
 {
     return CommandSpec{
         .id       = "core.annulus",
@@ -206,4 +206,4 @@ PIRICAD_COMMAND(annulus)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

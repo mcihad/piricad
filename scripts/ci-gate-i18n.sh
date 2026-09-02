@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # GATE: Turkish-safe casing, and no user-visible string outside tr().
-# piricad.md §13. Constitution 5.6 ("NEVER std::toupper/std::tolower/<cctype>
+# kentoscad.md §13. Constitution 5.6 ("NEVER std::toupper/std::tolower/<cctype>
 # classifiers on Turkish text") and 6.9 ("User-visible strings are tr()-wrapped").
 # .claude/ui.md R24, R25, P4, P8.
 # ASCII classifiers destroy the dotted/dotless i (i->İ, ı->I), so they are banned

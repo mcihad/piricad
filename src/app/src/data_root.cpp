@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/app/data_root.hpp"
+#include "kentos_cad/app/data_root.hpp"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -8,7 +8,7 @@
 
 #include <array>
 
-namespace piricad::app {
+namespace kentos::app {
 namespace {
 
 /// True when `dir` looks like the shipped data tree rather than any directory
@@ -28,10 +28,10 @@ std::string data_root()
         const QString exe = QCoreApplication::applicationDirPath();
 
         const std::array<QString, 4> candidates{
-            qEnvironmentVariable("PIRICAD_DATA"),
-            exe.isEmpty() ? QString() : exe + QStringLiteral("/../share/piricad/data"),
+            qEnvironmentVariable("KENTOS_DATA"),
+            exe.isEmpty() ? QString() : exe + QStringLiteral("/../share/kentos_cad/data"),
             exe.isEmpty() ? QString() : exe + QStringLiteral("/data"),
-            QStringLiteral(PIRICAD_SOURCE_DATA_DIR),
+            QStringLiteral(KENTOS_SOURCE_DATA_DIR),
         };
 
         for (const QString& candidate : candidates) {
@@ -63,4 +63,4 @@ std::string data_path(const std::string& relative)
     return QDir(QString::fromStdString(root)).filePath(tail).toStdString();
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

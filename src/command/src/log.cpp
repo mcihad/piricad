@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/command/log.hpp"
+#include "kentos_cad/command/log.hpp"
 
 #include <mutex>
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 spdlog::level::level_enum to_spdlog(LogLevel level)
@@ -44,7 +44,7 @@ std::shared_ptr<spdlog::logger>& logger()
 {
     static std::shared_ptr<spdlog::logger> log = [] {
         auto made = spdlog::stderr_color_mt("piricad");
-        made->set_pattern("[piricad][%^%l%$] %v");
+        made->set_pattern("[kentos][%^%l%$] %v");
         made->set_level(spdlog::level::info);
         return made;
     }();
@@ -82,4 +82,4 @@ void log_message(LogLevel level, std::string_view message)
     logger()->log(to_spdlog(level), "{}", message);
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

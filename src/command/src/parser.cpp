@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/command/parser.hpp"
+#include "kentos_cad/command/parser.hpp"
 
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <cmath>
 #include <cstdlib>
@@ -9,7 +9,7 @@
 #include <locale>
 #include <sstream>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 /// Appends the character an escape sequence names, and returns how far to advance.
@@ -845,4 +845,4 @@ std::string describe(const Token& t)
     return "?";
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

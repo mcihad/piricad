@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/json.hpp"
+#include "kentos_cad/core/json.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -8,7 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-namespace piricad::core {
+namespace kentos::core {
 namespace {
 
 const std::string& empty_string()
@@ -240,4 +240,4 @@ Result<Json> Json::parse(std::string_view text)
     }
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

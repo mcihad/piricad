@@ -13,7 +13,7 @@ Lua bunun için vardır.
 Lua motoru **seçimlik** derlenir ve varsayılan yapıda **kapalıdır**. Açmak için:
 
 ```bash
-cmake --preset dev -DPIRICAD_WITH_LUA=ON
+cmake --preset dev -DKENTOS_WITH_LUA=ON
 cmake --build --preset dev
 ```
 
@@ -199,7 +199,7 @@ ve **İptal** düğmesini ekleyen çalışma Faz 2'dedir; motor tarafı hazırd�
 |---|---|
 | Komut satırından | `BETİK olcum.lua` |
 | Menüden | **Dosya > Betik Çalıştır…** veya **Ctrl+R** |
-| Açılışta | `piricad --betik olcum.lua` |
+| Açılışta | `kentos_cad --betik olcum.lua` |
 | Make ile | `make run-script SCRIPT=olcum.lua` |
 
 Uzantı hangi motorun çalışacağını belirler: `.json` JSON çalıştırıcısına, `.lua` Lua

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Native project format budgets.
 //
-// piricad.md §10.1 gives no explicit number for `.pcad`, so these are recorded as
+// kentoscad.md §10.1 gives no explicit number for `.pcad`, so these are recorded as
 // informational (`budget = 0`) rather than invented: a gate whose threshold nobody
 // derived is a gate that will be relaxed the first time it fails, and test.md P7
 // forbids relaxing a budget to make a bench pass.
@@ -15,9 +15,9 @@
 // per-entity cost is what matters and it is linear in this format.
 #include "benchmark.hpp"
 
-#include "piricad/command/bus.hpp"
-#include "piricad/command/registry.hpp"
-#include "piricad/io/service.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/io/service.hpp"
 
 #include <filesystem>
 #include <memory>
@@ -26,8 +26,8 @@
 
 namespace {
 
-using namespace piricad;
-using namespace piricad::command;
+using namespace kentos;
+using namespace kentos::command;
 
 namespace fs = std::filesystem;
 
@@ -69,7 +69,7 @@ void fill(Rig& rig, int parcels)
 
 fs::path scratch()
 {
-    return fs::temp_directory_path() / "piricad-bench-io.pcad";
+    return fs::temp_directory_path() / "kentoscad-bench-io.pcad";
 }
 
 /// Writing the native format. One iteration per repetition: the fixture is a
@@ -122,7 +122,7 @@ void open_project(benchmark::State& state)
 
 } // namespace
 
-PIRICAD_BENCH(pcad_save){bench::Case{
+KENTOS_BENCH(pcad_save){bench::Case{
     .id          = "io.pcad_20k_kaydet",
     .title       = "20k parselli projeyi kaydetme",
     .budget      = 0, // informational: §10.1 sets no number for the native format
@@ -132,7 +132,7 @@ PIRICAD_BENCH(pcad_save){bench::Case{
     .body        = &save_project,
 }};
 
-PIRICAD_BENCH(pcad_open){bench::Case{
+KENTOS_BENCH(pcad_open){bench::Case{
     .id          = "io.pcad_20k_ac",
     .title       = "20k parselli projeyi açma",
     .budget      = 0,

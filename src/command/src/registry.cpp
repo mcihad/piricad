@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/command/registry.hpp"
+#include "kentos_cad/command/registry.hpp"
 
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
 
-namespace piricad::command {
+namespace kentos::command {
 
 core::Status Registry::add(CommandSpec spec)
 {
@@ -86,14 +86,14 @@ core::Json Registry::ai_tool_schema() const
 
     core::Json out;
     out.set("version", core::Json::integer(1));
-    out.set("generated_from", core::Json::string("piricad::command::Registry"));
+    out.set("generated_from", core::Json::string("kentos::command::Registry"));
     out.set("tools", std::move(tools));
     return out;
 }
 
 std::string Registry::markdown_reference() const
 {
-    std::string out = "# PiriCAD Command Reference\n\n";
+    std::string out = "# KentOSCad Command Reference\n\n";
     out += "> Generated from the command registry. Do not edit by hand.\n\n";
     out += "| Id | Names | Category | Undo | Flags | Summary |\n";
     out += "|---|---|---|---|---|---|\n";
@@ -127,4 +127,4 @@ Registry& registry()
     return r;
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

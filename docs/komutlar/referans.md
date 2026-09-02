@@ -1,5 +1,5 @@
 <!-- ÜRETİLMİŞ DOSYA — ELLE DÜZENLEMEYİN. -->
-<!-- Kaynak: piricad::command::Registry.  Yeniden üret: make reference -->
+<!-- Kaynak: kentos::command::Registry.  Yeniden üret: make reference -->
 <!-- Bir komutun burada görünmesi için tek yapılması gereken onu kaydetmektir; -->
 <!-- projede elle tutulan ikinci bir komut listesi yoktur (CLAUDE.md 5.10). -->
 
@@ -55,9 +55,9 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.zoom`](zoom.md) | `YAKINLAŞ`, `YAKINLAS`, `ZOOM`, `Z` | Görünüm | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü çizim kapsamına veya verilen çarpana ayarlar. |
 | [`core.undo`](undo.md) | `GERİAL`, `GERIAL`, `UNDO`, `U` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Son işlemi geri alır. |
 | [`core.redo`](redo.md) | `YİNELE`, `YINELE`, `REDO` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Geri alınan işlemi yineler. |
-| [`core.open`](open.md) | `AÇ`, `AC`, `OPEN` | Dosya | geri alınmaz | etkileşimli, betiklenebilir | Bir PiriCAD proje dosyasını açar ve çizimin yerine koyar. |
-| [`core.save`](save.md) | `KAYDET`, `SAVE`, `KYD` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi bağlı olduğu PiriCAD proje dosyasına kaydeder. |
-| [`core.saveas`](saveas.md) | `FARKLIKAYDET`, `SAVEAS`, `FKAYDET` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi yeni bir PiriCAD proje dosyasına kaydeder ve ona bağlar. |
+| [`core.open`](open.md) | `AÇ`, `AC`, `OPEN` | Dosya | geri alınmaz | etkileşimli, betiklenebilir | Bir KentOSCad proje dosyasını açar ve çizimin yerine koyar. |
+| [`core.save`](save.md) | `KAYDET`, `SAVE`, `KYD` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi bağlı olduğu KentOSCad proje dosyasına kaydeder. |
+| [`core.saveas`](saveas.md) | `FARKLIKAYDET`, `SAVEAS`, `FKAYDET` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi yeni bir KentOSCad proje dosyasına kaydeder ve ona bağlar. |
 | [`core.import`](import.md) | `İÇEAKTAR`, `ICEAKTAR`, `IMPORT`, `IAKTAR` | Dosya | tek işlem | etkileşimli, betiklenebilir | Dış bir veri dosyasını çizime ekler. |
 | [`core.export`](export.md) | `DIŞAAKTAR`, `DISAAKTAR`, `EXPORT`, `DAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi dış bir veri biçimine yazar. |
 | [`core.script`](script.md) | `BETİK`, `BETIK`, `SCRIPT` | Betik | komuta özel | etkileşimli, betiklenebilir, salt okunur | Bir betik dosyasını komut veri yolu üzerinden çalıştırır. |
@@ -620,17 +620,17 @@ Ayrıntılı kullanım: [YİNELE](redo.md)
 
 ### `core.open` — AÇ
 
-Bir PiriCAD proje dosyasını açar ve çizimin yerine koyar.
+Bir KentOSCad proje dosyasını açar ve çizimin yerine koyar.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `dosya` | text | 1 | Açılacak PiriCAD proje dosyasının yolu (.pcad) |
+| `dosya` | text | 1 | Açılacak KentOSCad proje dosyasının yolu (.pcad) |
 
 Ayrıntılı kullanım: [AÇ](open.md)
 
 ### `core.save` — KAYDET
 
-Çizimi bağlı olduğu PiriCAD proje dosyasına kaydeder.
+Çizimi bağlı olduğu KentOSCad proje dosyasına kaydeder.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -640,7 +640,7 @@ Ayrıntılı kullanım: [KAYDET](save.md)
 
 ### `core.saveas` — FARKLIKAYDET
 
-Çizimi yeni bir PiriCAD proje dosyasına kaydeder ve ona bağlar.
+Çizimi yeni bir KentOSCad proje dosyasına kaydeder ve ona bağlar.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -738,12 +738,12 @@ Ayrıntılı kullanım: [YARDIM](help.md)
 ## AI araç kataloğu
 
 AI'ın görebildiği komutlar `Flags::AiAccessible` bayrağından üretilir.
-Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).
+Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
 
 ```json
 {
   "version": 1,
-  "generated_from": "piricad::command::Registry",
+  "generated_from": "kentos::command::Registry",
   "tools": [
     {
       "id": "core.line",

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/command/session.hpp"
+#include "kentos_cad/command/session.hpp"
 
-#include "piricad/command/bus.hpp"
+#include "kentos_cad/command/bus.hpp"
 
-namespace piricad::command {
+namespace kentos::command {
 
 const char* session_state_name(SessionState s)
 {
@@ -29,7 +29,7 @@ Session::Session(Bus& bus, const CommandSpec& spec, std::unique_ptr<InputSource>
     // Start from whatever the client supplied up front. A command that answers a
     // prompt overwrites the entry; a command that reads an argument directly
     // leaves it in place. Either way the journal records the effective bundle,
-    // which is what makes a replay reproduce the run (piricad.md §2.2).
+    // which is what makes a replay reproduce the run (kentoscad.md §2.2).
     if (const Args* preset = input_->preset()) resolved_ = *preset;
 }
 
@@ -143,4 +143,4 @@ void Session::fail(core::Error e)
     state_ = SessionState::Failed;
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

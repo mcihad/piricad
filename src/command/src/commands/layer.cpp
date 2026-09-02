@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // core.layer — KATMAN
-#include "piricad/command/bus.hpp"
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 Task<void> run(Context& ctx)
@@ -66,7 +66,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(layer)
+KENTOS_COMMAND(layer)
 {
     return CommandSpec{
         .id       = "core.layer",
@@ -89,4 +89,4 @@ PIRICAD_COMMAND(layer)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

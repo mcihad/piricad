@@ -10,16 +10,16 @@
 // two ends given the other way round are the other arc of the same circle. That
 // is the whole direction control: no flag, no "major arc" option, and no two
 // records that could mean one picture.
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/units.hpp"
+#include "kentos_cad/core/units.hpp"
 
 #include <cmath>
 #include <string>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 /// The radius `centre`->`p` implies, rounded to the millimetre the record stores.
@@ -82,7 +82,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(arc_draw)
+KENTOS_COMMAND(arc_draw)
 {
     return CommandSpec{
         .id       = "core.arc_draw",
@@ -101,4 +101,4 @@ PIRICAD_COMMAND(arc_draw)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/app/attribute_table.hpp"
+#include "kentos_cad/app/attribute_table.hpp"
 
-#include "piricad/app/controller.hpp"
-#include "piricad/app/icons.hpp"
-#include "piricad/app/tokens.hpp"
-#include "piricad/command/parser.hpp"
-#include "piricad/core/document.hpp"
+#include "kentos_cad/app/controller.hpp"
+#include "kentos_cad/app/icons.hpp"
+#include "kentos_cad/app/tokens.hpp"
+#include "kentos_cad/command/parser.hpp"
+#include "kentos_cad/core/document.hpp"
 
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -20,7 +20,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace piricad::app {
+namespace kentos::app {
 namespace {
 
 // `design.md` §9, measured off `öznitelik_tablosu.png`.
@@ -642,4 +642,4 @@ void AttributeTable::applyTheme(ThemeMode mode)
     refreshStatistics();
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

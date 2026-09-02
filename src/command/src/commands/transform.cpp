@@ -16,23 +16,23 @@
 // `Transaction::set_geometry`, so the key, the layer, the style, the attributes
 // and the text stay with the object: a parsel moved onto its correct station is
 // the same parsel, with the same ada/parsel numbers (model.md R4, R28).
-#include "piricad/command/bus.hpp"
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/arc.hpp"
-#include "piricad/core/circle.hpp"
-#include "piricad/core/geometry.hpp"
-#include "piricad/core/text.hpp"
-#include "piricad/core/transform.hpp"
+#include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/text.hpp"
+#include "kentos_cad/core/transform.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 /// What is being done to the coordinates. A description rather than a function,
@@ -592,7 +592,7 @@ Task<void> run_mirror(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(move)
+KENTOS_COMMAND(move)
 {
     return CommandSpec{
         .id       = "core.move",
@@ -612,7 +612,7 @@ PIRICAD_COMMAND(move)
     };
 }
 
-PIRICAD_COMMAND(copy_objects)
+KENTOS_COMMAND(copy_objects)
 {
     return CommandSpec{
         .id       = "core.copy",
@@ -632,7 +632,7 @@ PIRICAD_COMMAND(copy_objects)
     };
 }
 
-PIRICAD_COMMAND(array_objects)
+KENTOS_COMMAND(array_objects)
 {
     return CommandSpec{
         .id       = "core.array",
@@ -664,7 +664,7 @@ PIRICAD_COMMAND(array_objects)
     };
 }
 
-PIRICAD_COMMAND(rotate)
+KENTOS_COMMAND(rotate)
 {
     return CommandSpec{
         .id       = "core.rotate",
@@ -685,7 +685,7 @@ PIRICAD_COMMAND(rotate)
     };
 }
 
-PIRICAD_COMMAND(scale)
+KENTOS_COMMAND(scale)
 {
     return CommandSpec{
         .id       = "core.scale",
@@ -705,7 +705,7 @@ PIRICAD_COMMAND(scale)
     };
 }
 
-PIRICAD_COMMAND(mirror)
+KENTOS_COMMAND(mirror)
 {
     return CommandSpec{
         .id       = "core.mirror",
@@ -725,4 +725,4 @@ PIRICAD_COMMAND(mirror)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

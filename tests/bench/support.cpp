@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "benchmark.hpp"
 
-#include "piricad/core/json.hpp"
+#include "kentos_cad/core/json.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -15,7 +15,7 @@
 namespace bench {
 namespace {
 
-using piricad::core::Json;
+using kentos::core::Json;
 
 std::string read_file(const std::string& path)
 {
@@ -183,10 +183,10 @@ int run_all(int argc, char** argv)
     // The baseline path comes from the environment, not from argv: argv belongs to
     // Google Benchmark now, so `--benchmark_filter=render.*` works while a
     // scenario is being tuned.
-    const char* baseline_env = std::getenv("PIRICAD_BENCH_BASELINE");
+    const char* baseline_env = std::getenv("KENTOS_BENCH_BASELINE");
     const std::string baseline_path =
-        baseline_env ? baseline_env : std::string(PIRICAD_BENCH_DIR) + "/temel-degerler.json";
-    const bool record = std::getenv("PIRICAD_BENCH_RECORD") != nullptr;
+        baseline_env ? baseline_env : std::string(KENTOS_BENCH_DIR) + "/temel-degerler.json";
+    const bool record = std::getenv("KENTOS_BENCH_RECORD") != nullptr;
 
     // ---- load the baseline, if it belongs to this machine ----
     std::string baseline_machine;
@@ -204,7 +204,7 @@ int run_all(int argc, char** argv)
     const std::string here = machine_id();
     const bool same        = !baseline_machine.empty() && baseline_machine == here;
 
-    std::printf("PiriCAD — performans bütçeleri (piricad.md §10.1)\n");
+    std::printf("KentOSCad — performans bütçeleri (kentoscad.md §10.1)\n");
     std::printf("makine: %s\n", here.c_str());
     if (baseline_machine.empty())
         std::printf("temel:  kayıtlı değer yok — regresyon kapısı devre dışı\n");
@@ -332,8 +332,8 @@ int run_all(int argc, char** argv)
 
         Json out;
         out.set("makine", Json::string(here));
-        out.set("aciklama", Json::string("PiriCAD performans temel değerleri. Yalnız aynı makinede "
-                                         "regresyon kapısı olarak kullanılır (piricad.md §10.1)."));
+        out.set("aciklama", Json::string("KentOSCad performans temel değerleri. Yalnız aynı makinede "
+                                         "regresyon kapısı olarak kullanılır (kentoscad.md §10.1)."));
         out.set("olcumler", std::move(measurements));
 
         std::ofstream file(baseline_path, std::ios::binary);

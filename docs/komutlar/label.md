@@ -71,7 +71,7 @@ sarkmaz, ortasında durur. Daireyi ve ortadaki çizgiyi katmanın kendi sembolü
 iç içe yazım yok, fonksiyon yok, koşul yok, sayı biçimlendirme yok.
 
 CLAUDE.md 5.11 bu projeye tam olarak bir dilbilgisi tanıyor
-(`piricad/command/parser.hpp`) ve bunların herhangi biri ikinci bir dilbilgisi
+(`kentos_cad/command/parser.hpp`) ve bunların herhangi biri ikinci bir dilbilgisi
 olurdu. Bunu genişletmek bir yama değil, bir anayasa değişikliğidir.
 
 Tanımlı olmayan bir sütun adı **olduğu gibi kalır**, süslü parantezleriyle

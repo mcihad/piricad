@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://piricad.org/data/catalogs/schema/plan-gosterim.schema.json",
-  "title": "PiriCAD stil (gösterim) kataloğu paketi",
-  "description": "Bir plan gösterim paketinin biçimi. Paket, görünüm satırlarını ve bu satırları nesnelere bağlayan bildirimsel eşleme kurallarını taşır. Kural dili bilerek kapalıdır: eşitlik, küme üyeliği, tam sayı aralığı ve varlık sınaması. İfade, öncelik, olumsuzlama ve aritmetik YOKTUR — projede tek gramer piricad/command/parser.hpp'dir (CLAUDE.md 5.11). Motor karşılığı: src/core/include/piricad/core/style_rule.hpp. Sürüm 2, resmî ek metninden çıkarılan satırların KAYNAK izini taşıyabilmesi için alan ekler (ham sütun metinleri, gömülü sembol görselleri, belirsizlik işareti); sürüm 1'in hiçbir alanının anlamı değişmemiştir (CLAUDE.md 0.2a).",
+  "$id": "https://kentoscad.org/data/catalogs/schema/plan-gosterim.schema.json",
+  "title": "KentOSCad stil (gösterim) kataloğu paketi",
+  "description": "Bir plan gösterim paketinin biçimi. Paket, görünüm satırlarını ve bu satırları nesnelere bağlayan bildirimsel eşleme kurallarını taşır. Kural dili bilerek kapalıdır: eşitlik, küme üyeliği, tam sayı aralığı ve varlık sınaması. İfade, öncelik, olumsuzlama ve aritmetik YOKTUR — projede tek gramer kentos_cad/command/parser.hpp'dir (CLAUDE.md 5.11). Motor karşılığı: src/core/include/kentos_cad/core/style_rule.hpp. Sürüm 2, resmî ek metninden çıkarılan satırların KAYNAK izini taşıyabilmesi için alan ekler (ham sütun metinleri, gömülü sembol görselleri, belirsizlik işareti); sürüm 1'in hiçbir alanının anlamı değişmemiştir (CLAUDE.md 0.2a).",
   "type": "object",
   "required": [
     "schema_version",

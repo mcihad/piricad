@@ -82,7 +82,7 @@ Bunun zaten çözülmüş yolu libpq'nun kendi mekanizmalarıdır:
 
 ```bash
 # Kalıcı çözüm: satır biçimi sunucu:port:veritabanı:kullanıcı:parola
-echo "localhost:5432:piricad:piricad:GİZLİ" >> ~/.pgpass
+echo "localhost:5432:kentoscad:kentoscad:GİZLİ" >> ~/.pgpass
 chmod 600 ~/.pgpass
 ```
 
@@ -91,7 +91,7 @@ Windows'ta aynı dosya `%APPDATA%\postgresql\pgpass.conf` adındadır.
 Tek seferlik bir oturum için ortam değişkeni yeter:
 
 ```bash
-PGPASSWORD=GİZLİ piricad
+PGPASSWORD=GİZLİ kentos_cad
 ```
 
 Komut satırına parola yazarsanız çalışır, ama günlüğe `password=***` olarak
@@ -105,7 +105,7 @@ kasıtlıdır.
 Bağlanın. Parola `~/.pgpass` dosyasından gelir:
 
 ```
-VERİTABANI baglan hedef="host=localhost dbname=piricad user=piricad"
+VERİTABANI baglan hedef="host=localhost dbname=kentoscad user=kentoscad"
 ```
 
 Transkript şunu yazar:
@@ -142,7 +142,7 @@ VERİTABANI katmanyaz katman=PARSEL hedef=ada142_parsel
 Artık QGIS'ten ya da düz SQL'den okunabilir:
 
 ```bash
-psql -d piricad -c "select kimlik, ada_no, ST_Area(geom) from ada142_parsel limit 3"
+psql -d kentoscad -c "select kimlik, ada_no, ST_Area(geom) from ada142_parsel limit 3"
 ```
 
 Bütün projeyi kaydedin:
@@ -158,7 +158,7 @@ Proje veritabanına kaydedildi: 'Ada 142 imar'  (37 nesne, 412 KB).
 Başka bir makinede geri açın:
 
 ```
-VERİTABANI baglan hedef="host=sunucu.belediye.gov.tr dbname=piricad user=harita"
+VERİTABANI baglan hedef="host=sunucu.belediye.gov.tr dbname=kentoscad user=harita"
 VERİTABANI projeac hedef="Ada 142 imar"
 ```
 
@@ -208,7 +208,7 @@ Betikte, her işlem bir satırdır:
 ```json
 [
   { "cmd": "core.database", "args": { "islem": "baglan",
-      "hedef": "host=localhost dbname=piricad user=piricad" } },
+      "hedef": "host=localhost dbname=kentoscad user=kentoscad" } },
   { "cmd": "core.setting",  "args": { "ad": "koordinat_sistemi", "deger": "TUREF/TM30" } },
   { "cmd": "core.database", "args": { "islem": "katmanyaz",
       "katman": "PARSEL", "hedef": "ada142_parsel" } },
@@ -260,7 +260,7 @@ bir katmanda aradaki fark saniyelerle kahve molası arasındaki farktır.
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
 | `Veritabanı motoru bağlı değil. Bu yapı PostgreSQL desteği olmadan derlenmiş olabilir.` | Veritabanı motoru olmayan bir ortam | Uygulama içinden çalıştırın |
-| `Bu KentOSCad yapısı PostgreSQL desteği olmadan derlenmiş.` | `PIRICAD_WITH_POSTGIS=OFF` ile derlenmiş | Kaynaktan `PIRICAD_WITH_POSTGIS=ON` ile yapılandırın |
+| `Bu KentOSCad yapısı PostgreSQL desteği olmadan derlenmiş.` | `KENTOS_WITH_POSTGIS=OFF` ile derlenmiş | Kaynaktan `KENTOS_WITH_POSTGIS=ON` ile yapılandırın |
 | `Bilinmeyen işlem: '...'. Geçerli işlemler: ...` | İşlem adı yanlış yazılmış | Listedeki adlardan birini yazın |
 | `Veritabanı bağlantı dizesi boş. Örnek: host=localhost dbname=postgres user=postgres password=...` | `hedef` boş verilmiş | Bağlantı dizesini yazın |
 | `Veritabanına bağlanılamadı: ...` | Sunucu kapalı, adres yanlış ya da parola geçersiz | Mesajdaki sunucu yanıtını okuyun; `~/.pgpass` dosyasını denetleyin |
@@ -329,20 +329,20 @@ Bir PostGIS sunucusu yoksa Docker ile bir tane açabilirsiniz:
 
 ```bash
 docker run -d --name postgis -p 5432:5432 \
-  -e POSTGRES_PASSWORD=GİZLİ -e POSTGRES_DB=piricad \
+  -e POSTGRES_PASSWORD=GİZLİ -e POSTGRES_DB=kentoscad \
   postgis/postgis:18-3.6
 ```
 
 Sonra eklentiyi bir kez etkinleştirin:
 
 ```bash
-psql -h localhost -U postgres -d piricad -c "CREATE EXTENSION IF NOT EXISTS postgis"
+psql -h localhost -U postgres -d kentoscad -c "CREATE EXTENSION IF NOT EXISTS postgis"
 ```
 
 KentOSCad'i kaynaktan derliyorsanız PostgreSQL desteği bir seçenektir:
 
 ```bash
-cmake --preset dev -DPIRICAD_WITH_POSTGIS=ON
+cmake --preset dev -DKENTOS_WITH_POSTGIS=ON
 ```
 
 Bağımlılık `libpqxx`'tir ve `libpq` geliştirme paketini ister
@@ -363,7 +363,7 @@ connection" cümlesidir. O zamana kadar yol, tabloyu QGIS'ten ya da `ogr2ogr` il
 bir GeoPackage'a yazıp [İÇEAKTAR](import.md) ile almaktır:
 
 ```bash
-ogr2ogr -f GPKG ada142.gpkg PG:"host=localhost dbname=piricad" ada142_parsel
+ogr2ogr -f GPKG ada142.gpkg PG:"host=localhost dbname=kentoscad" ada142_parsel
 ```
 
 ## İlgili sayfalar

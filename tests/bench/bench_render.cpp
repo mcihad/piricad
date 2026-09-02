@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Render budgets from piricad.md §10.1.
+// Render budgets from kentoscad.md §10.1.
 #include "benchmark.hpp"
 #include "fixtures.hpp"
 
-#include "piricad/core/spatial_index.hpp"
-#include "piricad/render/scene.hpp"
+#include "kentos_cad/core/spatial_index.hpp"
+#include "kentos_cad/render/scene.hpp"
 
 #include <array>
 #include <memory>
 
 namespace {
 
-using namespace piricad;
+using namespace kentos;
 
 /// The 5M fixture costs half a second to build, so it is built once and shared by
 /// every render scenario — and, through `bench::cadastral_5m()`, by the snap and
@@ -51,7 +51,7 @@ void pan_zoom_working(benchmark::State& state)
 }
 
 /// Whole layer on screen. Informational: at this zoom precomputed LOD tiles carry
-/// the load, and those are a Phase-1 deliverable (piricad.md §10.3).
+/// the load, and those are a Phase-1 deliverable (kentoscad.md §10.3).
 void pan_zoom_full(benchmark::State& state)
 {
     auto& f = cadastral();
@@ -85,7 +85,7 @@ void bulk_load(benchmark::State& state)
 }
 
 /// Packing the tree is a one-time cost after a bulk load; the native mmap format
-/// will ship it prebuilt (piricad.md §9.3).
+/// will ship it prebuilt (kentoscad.md §9.3).
 void index_build(benchmark::State& state)
 {
     core::Document doc;
@@ -132,7 +132,7 @@ void memory_5m(benchmark::State& state)
 
 } // namespace
 
-PIRICAD_BENCH(render_pan_zoom){bench::Case{
+KENTOS_BENCH(render_pan_zoom){bench::Case{
     .id          = "render.pan_zoom_5m",
     .title       = "5M poligonlu kadastro katmanında pan/zoom",
     .budget      = 16.0,
@@ -141,7 +141,7 @@ PIRICAD_BENCH(render_pan_zoom){bench::Case{
     .body        = &pan_zoom_working,
 }};
 
-PIRICAD_BENCH(render_pan_zoom_full){bench::Case{
+KENTOS_BENCH(render_pan_zoom_full){bench::Case{
     .id          = "render.pan_zoom_5m_tam_kapsam",
     .title       = "5M poligonun tamamı ekranda (LOD gelene kadar bilgilendirme)",
     .budget      = 0.0,
@@ -150,7 +150,7 @@ PIRICAD_BENCH(render_pan_zoom_full){bench::Case{
     .body        = &pan_zoom_full,
 }};
 
-PIRICAD_BENCH(core_bulk_load){bench::Case{
+KENTOS_BENCH(core_bulk_load){bench::Case{
     .id     = "core.toplu_yukleme_1m",
     .title  = "1M parselin belgeye yüklenmesi",
     .budget = 0.0,
@@ -162,7 +162,7 @@ PIRICAD_BENCH(core_bulk_load){bench::Case{
     .body        = &bulk_load,
 }};
 
-PIRICAD_BENCH(index_build_1m){bench::Case{
+KENTOS_BENCH(index_build_1m){bench::Case{
     .id          = "core.indeks_kurulumu_1m",
     .title       = "1M parsel için STR R-tree paketleme",
     .budget      = 0.0,
@@ -172,7 +172,7 @@ PIRICAD_BENCH(index_build_1m){bench::Case{
     .body        = &index_build,
 }};
 
-PIRICAD_BENCH(frame_after_edit_case){bench::Case{
+KENTOS_BENCH(frame_after_edit_case){bench::Case{
     .id          = "render.duzenleme_sonrasi_kare",
     .title       = "5M katmana çizgi eklendikten sonraki kare",
     .budget      = 16.0,
@@ -182,7 +182,7 @@ PIRICAD_BENCH(frame_after_edit_case){bench::Case{
     .body        = &frame_after_edit,
 }};
 
-PIRICAD_BENCH(memory_cadastral){bench::Case{
+KENTOS_BENCH(memory_cadastral){bench::Case{
     .id          = "bellek.5m_parsel",
     .title       = "5M parsel yüklüyken bellek",
     .budget      = 0.0,

@@ -13,7 +13,7 @@ probe() {
     fi
 }
 
-echo "PiriCAD — build environment"
+echo "KentOSCad — build environment"
 echo
 probe "CMake"        "cmake --version | head -1 | cut -d' ' -f3"
 probe "Ninja"        "ninja --version"

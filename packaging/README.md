@@ -1,6 +1,6 @@
 # Packaging
 
-CPack targets, one per platform (piricad.md §8, §14). `make package` builds the
+CPack targets, one per platform (kentoscad.md §8, §14). `make package` builds the
 release preset and runs CPack.
 
 | Platform | Format | Tooling |
@@ -9,7 +9,7 @@ release preset and runs CPack.
 | macOS | DMG | Apple Developer ID + notarization |
 | Linux | AppImage, `.deb`, `.rpm`, Flatpak | CPack + flatpak-builder |
 
-Two release requirements are non-negotiable (piricad.md §13):
+Two release requirements are non-negotiable (kentoscad.md §13):
 
 - **Reproducible builds.** The same source and toolchain produce the same bytes.
 - **A CycloneDX SBOM on every release.** GPL compliance requires knowing exactly

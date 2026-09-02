@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/app/map_canvas.hpp"
+#include "kentos_cad/app/map_canvas.hpp"
 
-#include "piricad/app/backend_factory.hpp"
-#include "piricad/app/controller.hpp"
-#include "piricad/core/arc.hpp"
-#include "piricad/core/circle.hpp"
-#include "piricad/core/guide.hpp"
-#include "piricad/core/settings.hpp"
-#include "piricad/render/backend.hpp"
+#include "kentos_cad/app/backend_factory.hpp"
+#include "kentos_cad/app/controller.hpp"
+#include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/guide.hpp"
+#include "kentos_cad/core/settings.hpp"
+#include "kentos_cad/render/backend.hpp"
 
 #include <QApplication>
 #include <QElapsedTimer>
@@ -22,12 +22,12 @@
 #include <cmath>
 #include <string>
 
-namespace piricad::app {
+namespace kentos::app {
 
 MapCanvas::MapCanvas(Controller& controller, QWidget* parent)
     : CanvasSurface(parent), controller_(controller), backend_(make_canvas_backend())
 {
-#if PIRICAD_HAVE_RHI
+#if KENTOS_HAVE_RHI
     // FOUR SAMPLES. A GPU pipeline rasterises a hard edge, and at a 1.5 px stroke
     // that lands on two pixel columns or three depending on where the line falls
     // — so a hatch whose spacing is uniform comes out with one line in every set
@@ -55,7 +55,7 @@ void MapCanvas::publishViewScale()
 {
     // The only number the aid layer cannot work out for itself. Everything else
     // about snapping — modes, ortho, polar step, grid — lives in the settings and
-    // is readable by every client (piricad/command/aids.hpp).
+    // is readable by every client (kentos_cad/command/aids.hpp).
     controller_.bus().aids().set_view_scale(view_.mm_per_pixel());
 }
 
@@ -1331,7 +1331,7 @@ void MapCanvas::buildOverlay()
     buildSnapMarker();
 
     // Developer HUD. Dear ImGui replaces this once the GPU canvas lands; it is a
-    // debug layer and never a user-facing feature (piricad.md §6.3), so it is off
+    // debug layer and never a user-facing feature (kentoscad.md §6.3), so it is off
     // unless the developer asks for it.
     if (!debug_hud_) return;
 
@@ -1348,7 +1348,7 @@ void MapCanvas::buildOverlay()
 
 QImage MapCanvas::grabCanvas()
 {
-#if PIRICAD_HAVE_RHI
+#if KENTOS_HAVE_RHI
     // The GPU's own copy. `grabFramebuffer()` renders a frame and reads it back,
     // so what comes out is what the pipeline drew rather than what the widget
     // system thinks is there.
@@ -1387,7 +1387,7 @@ std::vector<int> MapCanvas::timeFrames(int rounds)
     return costs;
 }
 
-#if PIRICAD_HAVE_RHI
+#if KENTOS_HAVE_RHI
 void MapCanvas::render(QRhiCommandBuffer* cb)
 #else
 void MapCanvas::paintEvent(QPaintEvent*)
@@ -1408,7 +1408,7 @@ void MapCanvas::paintEvent(QPaintEvent*)
     ctx.width_px           = width();
     ctx.height_px          = height();
     ctx.device_pixel_ratio = static_cast<float>(devicePixelRatioF());
-#if PIRICAD_HAVE_RHI
+#if KENTOS_HAVE_RHI
     // The GPU frame's handles, packed by the factory. Packing them HERE would put
     // backend knowledge in the widget, which render.md R1 keeps out of it.
     ctx.target = rhi_frame_target(rhi(), cb, renderTarget());
@@ -1472,8 +1472,8 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
 
             // A click is one input value for the running command, and it is the RAW
             // world point. Snapping is not applied here: it happens once, inside
-            // the command layer, on the path every client takes (piricad.md §2.4,
-            // piricad/command/aids.hpp). A canvas that snapped first would be a
+            // the command layer, on the path every client takes (kentoscad.md §2.4,
+            // kentos_cad/command/aids.hpp). A canvas that snapped first would be a
             // client with a private route.
             const core::Point2 world =
                 view_.to_world(render::ScreenPoint{event->position().x(), event->position().y()});
@@ -1764,4 +1764,4 @@ void MapCanvas::closeTextEditor()
     setFocus(Qt::OtherFocusReason);
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/arc.hpp"
+#include "kentos_cad/core/arc.hpp"
 
 #include <cmath>
 #include <utility>
 #include <vector>
 
-namespace piricad::core {
+namespace kentos::core {
 namespace {
 
 struct Unit
@@ -151,4 +151,4 @@ void arc_outline(Point2 centre, Mm radius, Point2 start, Point2 end, std::vector
     }
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/app/database_dialog.hpp"
+#include "kentos_cad/app/database_dialog.hpp"
 
-#include "piricad/app/controller.hpp"
+#include "kentos_cad/app/controller.hpp"
 
-#include "piricad/command/bus.hpp"
-#include "piricad/core/document.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/core/document.hpp"
 
 #include <QDialogButtonBox>
 #include <QFormLayout>
@@ -21,7 +21,7 @@
 #include <QStyle>
 #include <QVBoxLayout>
 
-namespace piricad::app {
+namespace kentos::app {
 namespace {
 
 /// A value quoted for the command line.
@@ -408,4 +408,4 @@ void DatabaseDialog::updateEnabled()
     style()->polish(status_);
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

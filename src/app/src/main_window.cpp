@@ -1,28 +1,28 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/app/main_window.hpp"
+#include "kentos_cad/app/main_window.hpp"
 
-#include "piricad/app/attribute_panel.hpp"
-#include "piricad/app/attribute_table.hpp"
-#include "piricad/app/command_line.hpp"
-#include "piricad/app/command_palette.hpp"
-#include "piricad/app/controller.hpp"
-#include "piricad/app/data_root.hpp"
-#include "piricad/app/database_dialog.hpp"
-#include "piricad/app/icons.hpp"
-#include "piricad/app/map_canvas.hpp"
-#include "piricad/app/panels.hpp"
-#include "piricad/app/settings_dialog.hpp"
-#include "piricad/app/shell_chrome.hpp"
-#include "piricad/app/style_designer.hpp"
-#include "piricad/app/title_bar.hpp"
-#include "piricad/app/toolbox.hpp"
-#include "piricad/core/snap.hpp"
+#include "kentos_cad/app/attribute_panel.hpp"
+#include "kentos_cad/app/attribute_table.hpp"
+#include "kentos_cad/app/command_line.hpp"
+#include "kentos_cad/app/command_palette.hpp"
+#include "kentos_cad/app/controller.hpp"
+#include "kentos_cad/app/data_root.hpp"
+#include "kentos_cad/app/database_dialog.hpp"
+#include "kentos_cad/app/icons.hpp"
+#include "kentos_cad/app/map_canvas.hpp"
+#include "kentos_cad/app/panels.hpp"
+#include "kentos_cad/app/settings_dialog.hpp"
+#include "kentos_cad/app/shell_chrome.hpp"
+#include "kentos_cad/app/style_designer.hpp"
+#include "kentos_cad/app/title_bar.hpp"
+#include "kentos_cad/app/toolbox.hpp"
+#include "kentos_cad/core/snap.hpp"
 
-#include "piricad/io/vector.hpp"
-#include "piricad/render/backend.hpp"
+#include "kentos_cad/io/vector.hpp"
+#include "kentos_cad/render/backend.hpp"
 
-#include "piricad/command/bus.hpp"
-#include "piricad/core/settings.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/core/settings.hpp"
 
 #include <QAction>
 #include <QActionGroup>
@@ -50,7 +50,7 @@
 #include <QToolBar>
 #include <QVBoxLayout>
 
-namespace piricad::app {
+namespace kentos::app {
 namespace {
 
 /// Property name under which a tool button carries the command it sends.
@@ -209,7 +209,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(layerPanel_, &LayerPanel::layerSelected, attributePanel_, &AttributePanel::setLayer);
     connect(layerPanel_, &LayerPanel::styleRequested, this, &MainWindow::openStyleDesigner);
 
-    onEcho(tr("KentOSCad %1 — komut merkezli mimari, GPLv3.").arg(QStringLiteral(PIRICAD_VERSION)));
+    onEcho(tr("KentOSCad %1 — komut merkezli mimari, GPLv3.").arg(QStringLiteral(KENTOS_VERSION)));
     onEcho(tr("Aynı komut arayüzden, komut satırından ve betikten tıpatıp aynı yolu izler."));
     if (const std::string status = render::gpu_backend_status(); !status.empty())
         onEcho(tr("Not: %1").arg(QString::fromStdString(status)));
@@ -439,7 +439,7 @@ void MainWindow::buildActions()
         action->setProperty(kToolCommand, command);
 
         // Named so a test can reach the button a user would press. Nothing in the
-        // shell looks an action up by name; this exists for `PIRICAD_EDIT_PROBE`,
+        // shell looks an action up by name; this exists for `KENTOS_EDIT_PROBE`,
         // which drives the tool column the way a hand does.
         action->setObjectName(QStringLiteral("toolAction.") + command);
 
@@ -742,7 +742,7 @@ void MainWindow::buildActions()
     connect(actTheme_, &QAction::toggled, this, &MainWindow::toggleTheme);
 
     // Render statistics are a developer overlay, never a user-facing feature
-    // (piricad.md §6.3, .claude/render.md). Off by default.
+    // (kentoscad.md §6.3, .claude/render.md). Off by default.
     actHud_ = new QAction(tr("Geliştirici Bilgisi"), this);
     actHud_->setCheckable(true);
     actHud_->setShortcut(QKeySequence(Qt::Key_F12));
@@ -1709,7 +1709,7 @@ void MainWindow::refreshStatus()
 
 void MainWindow::showCommandReference()
 {
-    // Generated from the registry, never hand-written (piricad.md §2.3).
+    // Generated from the registry, never hand-written (kentoscad.md §2.3).
     QMessageBox box(this);
     box.setWindowTitle(tr("Komut Listesi"));
     box.setTextFormat(Qt::MarkdownText);
@@ -1751,7 +1751,7 @@ void MainWindow::refreshWindowTitle()
     const QString name = file.isEmpty() ? tr("adsız") : QFileInfo(file).fileName();
     setWindowTitle(tr("%1 — KentOSCad").arg(name));
     docTabs_->setDocuments({QFileInfo(name).completeBaseName()}, 0);
-    titleBar_->setDocumentName(tr("%1 — KentOSCad %2").arg(name, QStringLiteral(PIRICAD_VERSION)));
+    titleBar_->setDocumentName(tr("%1 — KentOSCad %2").arg(name, QStringLiteral(KENTOS_VERSION)));
 }
 
 void MainWindow::openProject()
@@ -1834,8 +1834,8 @@ void MainWindow::showAbout()
                           "<p><b>Lisans:</b> GPLv3 veya sonrası<br>"
                           "<b>Render:</b> %2<br>"
                           "<b>Komut sayısı:</b> %3</p>")
-                           .arg(QStringLiteral(PIRICAD_VERSION), canvas_->backendName())
+                           .arg(QStringLiteral(KENTOS_VERSION), canvas_->backendName())
                            .arg(controller_->registry().size()));
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

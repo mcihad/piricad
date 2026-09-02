@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Style interning and the layer table — .claude/model.md R13–R19, R30–R34.
-#include "piricad_test.hpp"
+#include "kentos_test.hpp"
 
-#include "piricad/core/layer.hpp"
-#include "piricad/core/style.hpp"
-#include "piricad/core/text.hpp"
-#include "piricad/render/drawlist.hpp"
+#include "kentos_cad/core/layer.hpp"
+#include "kentos_cad/core/style.hpp"
+#include "kentos_cad/core/text.hpp"
+#include "kentos_cad/render/drawlist.hpp"
 
 #include <cmath>
 #include <vector>
 
-using namespace piricad::core;
+using namespace kentos::core;
 
 namespace {
 
@@ -876,7 +876,7 @@ TEST_CASE("Symbol: ölçek penceresi kimliğin parçasıdır")
 
 TEST_CASE("Sembol: damgalar kenarı iki uçtan da kapatıyor")
 {
-    using piricad::render::distribute_along;
+    using kentos::render::distribute_along;
 
     // The defect this pins, twice over. A published çizgi tipi is a PICTURE and
     // pictures are wide, so a stamp placed by marching a fixed interval either
@@ -909,7 +909,7 @@ TEST_CASE("Sembol: damgalar kenarı iki uçtan da kapatıyor")
 
 TEST_CASE("Sembol: damga sığmayan kenar hiç damgalanmıyor")
 {
-    using piricad::render::distribute_along;
+    using kentos::render::distribute_along;
 
     // Drawing it anyway is what produced the overshoot: the picture cannot fit
     // and the difference goes outside the geometry.

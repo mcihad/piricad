@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/snap.hpp"
+#include "kentos_cad/core/snap.hpp"
 
-#include "piricad/core/trig.hpp"
+#include "kentos_cad/core/trig.hpp"
 
-#include "piricad/core/document.hpp"
-#include "piricad/core/pick.hpp"
+#include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/pick.hpp"
 
 #include <cmath>
 #include <vector>
 
-namespace piricad::core {
+namespace kentos::core {
 namespace {
 
 /// One segment near the aim, kept with the entity it belongs to so the marker can
@@ -620,4 +620,4 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
     return result;
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

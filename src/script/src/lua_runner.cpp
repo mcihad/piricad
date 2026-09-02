@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/script/lua_runner.hpp"
+#include "kentos_cad/script/lua_runner.hpp"
 
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <sol/sol.hpp>
 
@@ -11,7 +11,7 @@
 #include <stdexcept>
 #include <utility>
 
-namespace piricad::script {
+namespace kentos::script {
 namespace {
 
 using core::ErrorCode;
@@ -385,4 +385,4 @@ void install(command::Bus& bus, JsonRunner& json, LuaRunner& lua)
     };
 }
 
-} // namespace piricad::script
+} // namespace kentos::script

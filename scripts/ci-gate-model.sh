@@ -3,7 +3,7 @@
 #
 # GATE: the document model stays the shape .claude/model.md settled on.
 #
-# piricad.md §10.2 / §10.3 / §12 — every rule below costs something measurable, and
+# kentoscad.md §10.2 / §10.3 / §12 — every rule below costs something measurable, and
 # every one of them is cheaper than the failure it prevents:
 #
 #   R21/P8  No stored field is floating point. A coordinate, a width, an angle or a
@@ -48,7 +48,7 @@ set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fail=0
-core_inc="$root/src/core/include/piricad/core"
+core_inc="$root/src/core/include/kentos_cad/core"
 
 scene_file="$root/src/render/src/scene.cpp"
 

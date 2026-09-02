@@ -139,7 +139,7 @@ Dosya küçük-endian, 8 bayt hizalı ve üç parçadan oluşur:
 [ dizin_konumu     ) blok dizini, blok başına 32 bayt
 ```
 
-Başlık sırayla: 8 baytlık `PIRICAD\x1A` imzası, yazan sürüm, gereken en düşük
+Başlık sırayla: 8 baytlık `PIRICAD\x1A` imzası (ürünün adı değişse de imza değişmez: değişseydi o ana kadar yazılmış her dosya okunamaz olurdu), yazan sürüm, gereken en düşük
 okuyucu sürümü, başlık uzunluğu, blok sayısı, dizin konumu, toplam dosya boyu,
 içerik parmak izi ve proje ayarları parmak izi.
 
@@ -152,5 +152,5 @@ Tanımadığınız bir blok kimliğini uzunluğuna bakarak atlayın; biçim bunu
 kasten böyle tasarlandı.
 
 Blok kimliklerinin tam listesi ve kayıt yerleşimleri
-`src/io/include/piricad/io/format.hpp` dosyasındadır ve bu sayfayla aynı anda
+`src/io/include/kentos_cad/io/format.hpp` dosyasındadır ve bu sayfayla aynı anda
 güncellenir.

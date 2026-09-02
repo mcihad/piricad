@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/app/toolbox.hpp"
+#include "kentos_cad/app/toolbox.hpp"
 
-#include "piricad/app/tokens.hpp"
+#include "kentos_cad/app/tokens.hpp"
 
 #include <QAction>
 #include <QMouseEvent>
@@ -9,7 +9,7 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 
-namespace piricad::app {
+namespace kentos::app {
 namespace {
 
 // Measured off the reference, not guessed: the active tool renders as a 32×32
@@ -160,4 +160,4 @@ void ToolBox::paintEvent(QPaintEvent*)
     p.fillRect(QRect(width() - 1, 0, 1, height()), t.lineHard);
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

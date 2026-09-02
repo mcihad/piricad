@@ -2,16 +2,16 @@
 //
 // The spatial index answers a question the renderer trusts every frame, so it is
 // checked against brute force rather than against itself.
-#include "piricad_test.hpp"
+#include "kentos_test.hpp"
 
-#include "piricad/core/document.hpp"
-#include "piricad/core/spatial_index.hpp"
+#include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/spatial_index.hpp"
 
 #include <algorithm>
 #include <array>
 #include <vector>
 
-using namespace piricad::core;
+using namespace kentos::core;
 
 namespace {
 
@@ -157,7 +157,7 @@ TEST_CASE("empty document produces an empty index")
 TEST_CASE("index packing is deterministic")
 {
     // Two identical documents must produce byte-identical trees, or a golden
-    // comparison across platforms is meaningless (piricad.md §7.3).
+    // comparison across platforms is meaningless (kentoscad.md §7.3).
     const Document a = make_grid(30, 30);
     const Document b = make_grid(30, 30);
 

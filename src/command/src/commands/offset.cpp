@@ -13,20 +13,20 @@
 // The geometry itself is Clipper2's, behind `core/offset.hpp`: CLAUDE.md 5.16
 // forbids hand-rolling a solved problem, and a hand-rolled offset is wrong on
 // exactly the shapes a parcel has (reflex corners, near-doubled-back edges).
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/entity_kind.hpp"
-#include "piricad/command/bus.hpp"
-#include "piricad/core/offset.hpp"
-#include "piricad/core/text.hpp"
-#include "piricad/core/units.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/core/offset.hpp"
+#include "kentos_cad/core/text.hpp"
+#include "kentos_cad/core/units.hpp"
 
 #include <string>
 #include <vector>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 core::JoinStyle join_from(const std::string& word)
@@ -135,7 +135,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(offset)
+KENTOS_COMMAND(offset)
 {
     return CommandSpec{
         .id       = "core.offset",
@@ -156,4 +156,4 @@ PIRICAD_COMMAND(offset)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

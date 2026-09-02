@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/script/sandbox.hpp"
+#include "kentos_cad/script/sandbox.hpp"
 
-#include "piricad/command/bus.hpp"
-#include "piricad/core/json.hpp"
-#include "piricad/core/text.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/core/json.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <array>
 
-namespace piricad::script {
+namespace kentos::script {
 namespace {
 
 /// The identity hash as fixed-width hex.
@@ -83,4 +83,4 @@ void journal_run(command::Bus& bus, std::string_view host, std::string_view labe
     bus.journal().append_meta(record);
 }
 
-} // namespace piricad::script
+} // namespace kentos::script

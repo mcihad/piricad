@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-namespace piricad::command {
+namespace kentos::command {
 
 const char* category_name(Category c)
 {
@@ -122,4 +122,4 @@ core::Json CommandSpec::to_schema() const
     return out;
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

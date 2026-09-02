@@ -226,7 +226,7 @@ hassasiyetini ve birimini kurmak, sonra çizime geçmektir:
 
 `AYAR` **AI erişimine kapalıdır.** Koordinat sistemini değiştirmek çizimdeki bütün
 koordinatları yeniden yorumlamak demektir; bunu yalnızca yetkili bir mühendis yapar
-(`piricad.md` §5.1).
+(`kentoscad.md` §5.1).
 
 Ayrıntı: [Betik yazma](../betik/README.md).
 

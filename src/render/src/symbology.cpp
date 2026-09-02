@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/render/symbology.hpp"
+#include "kentos_cad/render/symbology.hpp"
 
 #include <cmath>
 
-namespace piricad::render {
+namespace kentos::render {
 namespace {
 
 constexpr double kPi = 3.14159265358979323846;
@@ -287,4 +287,4 @@ void pattern_points(float min_x, float min_y, float max_x, float max_y, double s
     }
 }
 
-} // namespace piricad::render
+} // namespace kentos::render

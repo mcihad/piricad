@@ -14,7 +14,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-app="$root/src/app/include/piricad/app"
+app="$root/src/app/include/kentos_cad/app"
 fail=0
 
 if [[ ! -d "$app" ]]; then
@@ -41,7 +41,7 @@ for match in re.finditer(r"^class\s+(\w+)\s*:([^{]*)\{(.*?)^\};", text, re.S | r
     # A class that inherits a Themed base already answers the walk.
     if "DialogFrame" in bases:
         continue
-    if "public Themed" in bases and "Q_INTERFACES(piricad::app::Themed)" in body:
+    if "public Themed" in bases and "Q_INTERFACES(kentos::app::Themed)" in body:
         continue
 
     line = text[: match.start()].count("\n") + 1
@@ -51,7 +51,7 @@ for line, name in bad:
     print(f"themed: {name} paints from tokens but does not declare Themed"
           f" -> {path}:{line}", file=sys.stderr)
     print("themed:   add `, public Themed` to the bases and"
-          " `Q_INTERFACES(piricad::app::Themed)` to the body;", file=sys.stderr)
+          " `Q_INTERFACES(kentos::app::Themed)` to the body;", file=sys.stderr)
     print("themed:   without it `applyThemeToChildren` skips it and the widget"
           " keeps one theme's colours.", file=sys.stderr)
 

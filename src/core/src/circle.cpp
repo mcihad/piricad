@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/circle.hpp"
+#include "kentos_cad/core/circle.hpp"
 
 #include <cmath>
 #include <utility>
 
-namespace piricad::core {
+namespace kentos::core {
 
 /// The unit circle, built by REPEATED EXACT BISECTION.
 ///
@@ -79,4 +79,4 @@ void circle_outline(Point2 centre, Mm radius, std::vector<Mm>& xs, std::vector<M
     }
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

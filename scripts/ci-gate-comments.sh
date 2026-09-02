@@ -246,7 +246,7 @@ for source in sources:
             continue
 
         # A quotation may WRAP, with either mark. A backticked term split across
-        # two lines is one quotation and so is a block quote from piricad.md, and
+        # two lines is one quotation and so is a block quote from kentoscad.md, and
         # demanding that prose never wrap to keep a checker happy would be the
         # checker dictating the writing.
         body = text.lstrip('/* ')

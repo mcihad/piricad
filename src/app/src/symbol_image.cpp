@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/app/symbol_image.hpp"
+#include "kentos_cad/app/symbol_image.hpp"
 
 #include <QByteArray>
 #include <QPainter>
@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace piricad::app {
+namespace kentos::app {
 namespace {
 
 /// True when the bytes open an SVG document; see `core::sniff_image_format`,
@@ -97,4 +97,4 @@ QImage decode_symbol_image(std::span<const std::byte> bytes, int wanted_px)
     return keyed(std::move(image));
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

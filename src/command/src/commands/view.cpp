@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// core.zoom — YAKINLAŞ. A transparent command (piricad.md §3): it may interrupt
+// core.zoom — YAKINLAŞ. A transparent command (kentoscad.md §3): it may interrupt
 // another running command, and it changes view state, never document state.
-#include "piricad/command/bus.hpp"
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/text.hpp"
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 Task<void> run(Context& ctx)
@@ -66,7 +66,7 @@ Task<void> run_pan(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(pan)
+KENTOS_COMMAND(pan)
 {
     return CommandSpec{
         .id       = "core.pan",
@@ -85,7 +85,7 @@ PIRICAD_COMMAND(pan)
     };
 }
 
-PIRICAD_COMMAND(zoom)
+KENTOS_COMMAND(zoom)
 {
     return CommandSpec{
         .id       = "core.zoom",
@@ -103,4 +103,4 @@ PIRICAD_COMMAND(zoom)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

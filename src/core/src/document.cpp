@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/document.hpp"
+#include "kentos_cad/core/document.hpp"
 
-#include "piricad/core/entity_kind.hpp"
-#include "piricad/core/spatial_index.hpp"
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/spatial_index.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
 
-namespace piricad::core {
+namespace kentos::core {
 namespace {
 
 /// Grows geometrically, so appending N entities is O(N) rather than O(N²).
@@ -948,4 +948,4 @@ Status Document::apply(const Op& op, Op* undo_out)
     return err(ErrorCode::Internal, "İşlenmemiş Op::Kind");
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

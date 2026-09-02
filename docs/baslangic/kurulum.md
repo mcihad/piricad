@@ -1,7 +1,7 @@
 # Kurulum ve Derleme
 
 KentOSCad'i kaynaktan derlemek isteyen kullanıcı ve sistem yöneticisi için; bu sayfayı
-bitirdiğinizde çalışan bir `piricad` çalıştırılabiliri ve neyin eksik olduğunu söyleyen
+bitirdiğinizde çalışan bir `kentos_cad` çalıştırılabiliri ve neyin eksik olduğunu söyleyen
 bir teşhis çıktınız olacak.
 
 KentOSCad henüz hazır paket olarak dağıtılmıyor. MSI, DMG, AppImage, `.deb` ve `.rpm`
@@ -30,8 +30,8 @@ sudo apt install build-essential cmake ninja-build qt6-base-dev
 ## Derleme
 
 ```bash
-git clone <depo-adresi> piricad
-cd piricad
+git clone <depo-adresi> kentos_cad
+cd kentos_cad
 make build
 ```
 
@@ -52,7 +52,7 @@ make run-script SCRIPT=tests/journal/ornek-parsel.json
 Aynı işi doğrudan da yapabilirsiniz:
 
 ```bash
-./build/dev/bin/piricad --betik tests/journal/ornek-parsel.json
+./build/dev/bin/kentos_cad --betik tests/journal/ornek-parsel.json
 ```
 
 `--betik` seçeneği verilen JSON betiğini açılışta komut veri yolundan çalıştırır ve
@@ -158,33 +158,33 @@ kökündeki `CLAUDE.md` Article 8'dedir.
 
 | Eksik | Sonucu | Ne zaman gelecek |
 |---|---|---|
-| GPU canvas (`PIRICAD_WITH_RHI`) | Varsayılan yapıda harita GPU yerine `QPainter` ile çizilir. Seçenek açıldığında QRhi arka ucu MPYY kataloğunun **on bir sembol katmanı türünün hepsini** çizer — dolgu, çizgi, işaretçi, desen, yayımlanmış görsel — ve `PIRICAD_WITH_TEXT` ile metni de. Eksik olan çizim değil ölçüm: kare bütçesi (≤16 ms) henüz koşulmadı | Bütçe ölçülüp karşılandığında varsayılan açık olacak |
+| GPU canvas (`KENTOS_WITH_RHI`) | Varsayılan yapıda harita GPU yerine `QPainter` ile çizilir. Seçenek açıldığında QRhi arka ucu MPYY kataloğunun **on bir sembol katmanı türünün hepsini** çizer — dolgu, çizgi, işaretçi, desen, yayımlanmış görsel — ve `KENTOS_WITH_TEXT` ile metni de. Eksik olan çizim değil ölçüm: kare bütçesi (≤16 ms) henüz koşulmadı | Bütçe ölçülüp karşılandığında varsayılan açık olacak |
 | GDAL | DXF ve GeoPackage okunup yazılamaz; `İÇEAKTAR` ve `DIŞAAKTAR` hangi paketin gerektiğini söyleyerek hata döndürür. KentOSCad'in kendi `.pcad` proje dosyası GDAL olmadan da çalışır | Kurulduğunda kendiliğinden açılır |
 | PROJ / GEOS / CGAL | Koordinat dönüşümü ve geometri işlemleri sınırlı | Faz 1–2 |
-| Python (`PIRICAD_WITH_PYTHON`) | Eklenti ve toplu işleme katmanı yok | Faz 2 |
+| Python (`KENTOS_WITH_PYTHON`) | Eklenti ve toplu işleme katmanı yok | Faz 2 |
 
-Lua artık eksik değil: `PIRICAD_WITH_LUA=ON` ile gömülü Lua 5.4 betik motoru derlenir —
+Lua artık eksik değil: `KENTOS_WITH_LUA=ON` ile gömülü Lua 5.4 betik motoru derlenir —
 bkz. [Lua betikleri](../betik/lua.md).
 
 ## Seçimlik yapılandırma seçenekleri
 
-Hepsi `PIRICAD_WITH_<AD>` biçimindedir ve **varsayılan kapalıdır**. Açık ama gereği
+Hepsi `KENTOS_WITH_<AD>` biçimindedir ve **varsayılan kapalıdır**. Açık ama gereği
 kurulu değilse yapılandırma, hangi paketin gerektiğini söyleyerek durur — sessizce
 kapanmaz.
 
 | Seçenek | Ne açar | Makinede gereken |
 |---|---|---|
-| `PIRICAD_WITH_LUA` | Gömülü Lua betik motoru | Yok. Lua 5.4 ve sol2 sabitlenmiş commit'lerden indirilir |
-| `PIRICAD_WITH_RHI` | QRhi GPU canvas | Qt 6.7+, Qt Shader Tools (`qsb`) ve Qt Gui'nin **private** başlıkları |
-| `PIRICAD_WITH_TEXT` | GPU tuvalinde metin (SDF atlası) | `libfreetype-dev`, `libharfbuzz-dev`. msdfgen ve stb sabitlenmiş commit'ten iner |
-| `PIRICAD_WITH_GDAL` | DXF / GeoPackage | `libgdal-dev` |
-| `PIRICAD_WITH_PROJ` | Koordinat dönüşümü | `libproj-dev` |
-| `PIRICAD_WITH_POSTGIS` | Canlı PostGIS bağlantısı | `libpq-dev` |
+| `KENTOS_WITH_LUA` | Gömülü Lua betik motoru | Yok. Lua 5.4 ve sol2 sabitlenmiş commit'lerden indirilir |
+| `KENTOS_WITH_RHI` | QRhi GPU canvas | Qt 6.7+, Qt Shader Tools (`qsb`) ve Qt Gui'nin **private** başlıkları |
+| `KENTOS_WITH_TEXT` | GPU tuvalinde metin (SDF atlası) | `libfreetype-dev`, `libharfbuzz-dev`. msdfgen ve stb sabitlenmiş commit'ten iner |
+| `KENTOS_WITH_GDAL` | DXF / GeoPackage | `libgdal-dev` |
+| `KENTOS_WITH_PROJ` | Koordinat dönüşümü | `libproj-dev` |
+| `KENTOS_WITH_POSTGIS` | Canlı PostGIS bağlantısı | `libpq-dev` |
 
 ### Lua
 
 ```bash
-cmake --preset dev -DPIRICAD_WITH_LUA=ON
+cmake --preset dev -DKENTOS_WITH_LUA=ON
 cmake --build --preset dev
 ```
 
@@ -194,20 +194,20 @@ projeyle birlikte derlenir. İlk yapılandırma bu yüzden ağ ister.
 ### GPU canvas
 
 ```bash
-cmake --preset dev -DPIRICAD_WITH_RHI=ON
+cmake --preset dev -DKENTOS_WITH_RHI=ON
 ```
 
 QRhi, Qt Gui'nin private başlıklarında yaşar ve dağıtımların çoğu bunları ayrı
 paketler. Eksikse yapılandırma şöyle durur:
 
 ```text
-PIRICAD_WITH_RHI=ON but <rhi/qrhi.h> was not found. QRhi lives in Qt Gui's
+KENTOS_WITH_RHI=ON but <rhi/qrhi.h> was not found. QRhi lives in Qt Gui's
 PRIVATE headers, which most distributions package separately from the public ones.
   Debian/Ubuntu: sudo apt install qt6-base-private-dev
   Fedora:        sudo dnf install qt6-qtbase-private-devel
   Arch:          included in qt6-base
   vcpkg:         installed with qtbase
-  Or configure with -DPIRICAD_WITH_RHI=OFF to use the QPainter backend.
+  Or configure with -DKENTOS_WITH_RHI=OFF to use the QPainter backend.
 ```
 
 Shader paketleri derleme sırasında `qsb` ile pişirilir; çalışma anında hiçbir shader

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/spatial_index.hpp"
+#include "kentos_cad/core/spatial_index.hpp"
 
-#include "piricad/core/document.hpp"
+#include "kentos_cad/core/document.hpp"
 
 #include <algorithm>
 #include <cmath>
 
-namespace piricad::core {
+namespace kentos::core {
 namespace {
 
 inline bool overlaps(Mm amin_x, Mm amin_y, Mm amax_x, Mm amax_y, const Box2& b)
@@ -182,4 +182,4 @@ void SpatialIndex::query(const Box2& box, std::vector<EntityId>& out) const
     }
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

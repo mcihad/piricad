@@ -1,11 +1,11 @@
 # Test & Quality Gates — Rules
 
-> Scope: `/tests/{unit,golden,bench,fuzz,journal,ai-eval,support}` + the CI gate scripts in `/scripts` | Depends on: `piricad_core`, `piricad_command`, `piricad_script`, `piricad_render`, target `piricad_tests` | Source: piricad.md §7.3, §9.11, §10.1, §10.5, §11 (Faz 0), §13, §14, §16.5
+> Scope: `/tests/{unit,golden,bench,fuzz,journal,ai-eval,support}` + the CI gate scripts in `/scripts` | Depends on: `kentos_core`, `kentos_command`, `kentos_script`, `kentos_render`, target `kentos_tests` | Source: kentoscad.md §7.3, §9.11, §10.1, §10.5, §11 (Faz 0), §13, §14, §16.5
 
 ## Hard Rules
 
 R1. Six test kinds, one job each: `unit` = logic, `golden` = bit-identical cross-platform reference output, `bench` = §10.1 budgets, `fuzz` = parsers, `journal` = recorded sessions replayed, `ai-eval` = Turkish request → expected command sequence. A test file MUST live in the directory matching its job (§9.11, §14).
-R2. The unit framework is **doctest**, pinned by commit SHA. `/tests/support` holds only what doctest does not do — `PENDING(reason)` for a case an optional dependency makes unrunnable (R8b), and `FAIL_WITH(what, detail)` for a two-part failure message. It MUST stay Qt-free. All tests link into the `piricad_tests` executable.
+R2. The unit framework is **doctest**, pinned by commit SHA. `/tests/support` holds only what doctest does not do — `PENDING(reason)` for a case an optional dependency makes unrunnable (R8b), and `FAIL_WITH(what, detail)` for a two-part failure message. It MUST stay Qt-free. All tests link into the `kentos_tests` executable.
 R3. Every command registered in `Registry` MUST ship a test proving that invoking it from the GUI (`InputSource` mouse), from the command line via `command/parser.hpp`, and from a JSON array via `script/json_runner.hpp` yields (a) an identical `Document` and (b) an identical `Journal` JSONL byte stream. This is the Phase-0 keystone proof (§16.5, §11 Faz 0).
 R4. Document equality MUST be asserted over int64 `Mm` fixed-point coordinates, `EntityId` order and `Layer` state — never over rendered pixels or floating-point coordinates.
 R5. Golden files MUST match bit-for-bit on Linux, Windows and macOS within the same CI run; passing on fewer than three OSes is a failure (§7.3, §10.5).
@@ -59,7 +59,7 @@ P12. NEVER add test-only hooks (`#ifdef TESTING`, friend-for-test, exported inte
 
 ## Enforcement
 
-- `make test` — `piricad_tests` over unit + golden + ai-eval; blocks merge.
+- `make test` — `kentos_tests` over unit + golden + ai-eval; blocks merge.
 - `make bench` — Google Benchmark vs stored baselines; >10% regression = build failure (§10.1).
 - Nightly journal replay job — `/tests/journal` through `Bus`, `Document` + `Journal` diff (§14).
 - Sanitizer matrix — ASan, UBSan, TSan as three separate CI jobs (§9.11).

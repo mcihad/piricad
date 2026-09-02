@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PiriCAD — the line pipeline's fragment stage: colour, and the dash pattern.
+// KentOSCad — the line pipeline's fragment stage: colour, and the dash pattern.
 //
 // THE DASH IS SHADER-SIDE, which `.claude/render.md` R5 asks for by name: width,
 // dash pattern and cap style are instance attributes and uniforms, never

@@ -1,6 +1,6 @@
 # /src/domain/geodesy — jeodezi
 
-`piricad.md` §12 bu modülle açılıyor. Bugün çalışan kısmı: TUREF/TM 3° dilim
+`kentoscad.md` §12 bu modülle açılıyor. Bugün çalışan kısmı: TUREF/TM 3° dilim
 kataloğu ve PROJ tabanlı koordinat dönüşümü.
 
 | Dosya | İş |
@@ -12,7 +12,7 @@ kataloğu ve PROJ tabanlı koordinat dönüşümü.
 
 EPSG:5254 (TUREF/TM30) eksenlerini `AXIS["northing (X)", ORDER 1]`,
 `AXIS["easting (Y)", ORDER 2]` diye bildirir — Türk haritacılık konvansiyonu,
-matematiğin tersi. PiriCAD sağa değeri `Point2::x` içinde saklar. Her dönüşüm bu
+matematiğin tersi. KentOSCad sağa değeri `Point2::x` içinde saklar. Her dönüşüm bu
 yüzden `proj_normalize_for_visualization()` üzerinden kurulur; o çağrı olmadan
 koordinat sessizce takla atar ve makul görünen yanlış bir sonuç çıkar.
 

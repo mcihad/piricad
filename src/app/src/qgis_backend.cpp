@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PiriCAD — app: drawing through the QGIS symbology engine.
+// KentOSCad — app: drawing through the QGIS symbology engine.
 //
 // WHY THIS EXISTS. CLAUDE.md Article 2.7 and 5.16: a mature, excellent,
 // cross-platform library is used and never reimplemented. A symbology engine is
@@ -20,7 +20,7 @@
 // is what the old objection claimed it would break.
 //
 // WHERE THE SEAM IS. `render::Backend`, and nothing else. Article 3.4 keeps
-// `piricad_render` Qt-free and QGIS is Qt, so this file sits beside the QPainter
+// `kentos_render` Qt-free and QGIS is Qt, so this file sits beside the QPainter
 // backend in `/src/app` exactly as Article 8.5 describes. Nothing below `/src/app`
 // learns that QGIS exists, and the canvas cannot tell which backend it holds.
 //
@@ -28,11 +28,11 @@
 // layer that means the same thing; the geometry arrives as the same screen-space
 // batches the QPainter backend receives. So the two backends draw the same
 // document from the same numbers, which is what makes them comparable at all.
-#include "piricad/app/qgis_backend.hpp"
+#include "kentos_cad/app/qgis_backend.hpp"
 
-#include "piricad/app/backend_factory.hpp"
+#include "kentos_cad/app/backend_factory.hpp"
 
-#include "piricad/core/style.hpp"
+#include "kentos_cad/core/style.hpp"
 
 #include <qgsapplication.h>
 #include <qgsfillsymbol.h>
@@ -54,7 +54,7 @@
 #include <cmath>
 #include <memory>
 
-namespace piricad::app {
+namespace kentos::app {
 namespace {
 
 QColor from_rgba(std::uint32_t rgba, std::uint8_t opacity)
@@ -467,4 +467,4 @@ std::unique_ptr<render::Backend> make_qgis_backend()
     return std::make_unique<QgisBackend>();
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

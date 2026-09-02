@@ -4,8 +4,8 @@
 //
 // .claude/io.md R19 and CLAUDE.md 6.7: every parser ships its harness and its
 // seed corpus in the same change as the format. File reading is the largest
-// attack surface this product has (piricad.md §13), and the native reader is the
-// one parser PiriCAD wrote itself — so it is the one nobody else is fuzzing.
+// attack surface this product has (kentoscad.md §13), and the native reader is the
+// one parser KentOSCad wrote itself — so it is the one nobody else is fuzzing.
 //
 // WHAT COUNTS AS A CRASH. Nothing here asserts that a random buffer is a valid
 // project; almost none are. The property under test is narrower and much
@@ -16,11 +16,11 @@
 // P0 (io.md Enforcement).
 //
 // Build:
-//   cmake --preset dev -DPIRICAD_BUILD_FUZZ=ON -DCMAKE_CXX_COMPILER=clang++
-//   ./build/dev/bin/piricad_fuzz_proje tests/fuzz/tohum/proje -max_total_time=300
-#include "piricad/command/bus.hpp"
-#include "piricad/command/registry.hpp"
-#include "piricad/io/service.hpp"
+//   cmake --preset dev -DKENTOS_BUILD_FUZZ=ON -DCMAKE_CXX_COMPILER=clang++
+//   ./build/dev/bin/kentos_fuzz_proje tests/fuzz/tohum/proje -max_total_time=300
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/io/service.hpp"
 
 #ifdef _WIN32
 #include <process.h>
@@ -56,7 +56,7 @@ const std::string& scratch_path()
         const auto pid = ::getpid();
 #endif
         const auto p = std::filesystem::temp_directory_path() /
-                       ("piricad-fuzz-proje-" + std::to_string(pid) + ".pcad");
+                       ("kentoscad-fuzz-proje-" + std::to_string(pid) + ".pcad");
         return p.string();
     }();
     return path;
@@ -80,17 +80,17 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     // the real path a user takes — the AÇ command, on the bus, through the file
     // service — rather than a reader called in isolation. It also proves the
     // document is left clean after a rejected open, on every single input.
-    piricad::core::Document doc;
-    piricad::command::Registry registry;
-    piricad::command::Journal journal;
-    piricad::command::UndoStack undo;
-    piricad::command::Bus bus{doc, registry, journal, undo};
-    piricad::io::FileService files{bus};
+    kentos::core::Document doc;
+    kentos::command::Registry registry;
+    kentos::command::Journal journal;
+    kentos::command::UndoStack undo;
+    kentos::command::Bus bus{doc, registry, journal, undo};
+    kentos::io::FileService files{bus};
 
-    piricad::command::register_builtin_commands(registry);
+    kentos::command::register_builtin_commands(registry);
     bus.on_echo = [](std::string_view) {};
 
-    auto opened = bus.execute_line("AÇ \"" + scratch_path() + "\"", piricad::command::Origin::Test);
+    auto opened = bus.execute_line("AÇ \"" + scratch_path() + "\"", kentos::command::Origin::Test);
     if (!opened) {
         // A rejected file must leave nothing behind (io.md P11). If it ever does,
         // that is the bug, and it is worth aborting the run for.
@@ -103,7 +103,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     // three frames later in the renderer.
     (void)doc.content_hash();
     (void)doc.extent();
-    for (piricad::core::EntityId e = 0; e < doc.entities().size(); ++e) {
+    for (kentos::core::EntityId e = 0; e < doc.entities().size(); ++e) {
         (void)doc.entity_area(e);
         (void)doc.entity_perimeter(e);
         if (doc.entities().layer[e] >= doc.layers().size()) __builtin_trap();

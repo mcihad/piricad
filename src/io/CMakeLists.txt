@@ -1,16 +1,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# piricad_io — format I/O. Depends on core + command + format libraries, nothing else.
+# kentos_io — format I/O. Depends on core + command + format libraries, nothing else.
 #
 # .claude/io.md R3: no Qt anywhere in this module, and the link list is
-# piricad_core, piricad_command and the format libraries. Article 3.2 makes
+# kentos_core, kentos_command and the format libraries. Article 3.2 makes
 # `io -> command` one-way; nothing in /src/command may include a piricad/io header,
 # and scripts/ci-gate-layering.sh fails the build if one does.
 #
 # .claude/io.md R2/P2: gdal*.h, ogr*.h and cpl_*.h appear only in .cpp files here.
 # They are never in the link INTERFACE either — PRIVATE below is what keeps a GDAL
-# header off the include path of everything that links piricad_io.
+# header off the include path of everything that links kentos_io.
 
-add_library(piricad_io STATIC
+add_library(kentos_io STATIC
     src/adopt.cpp
     src/block_view.cpp
     src/database.cpp
@@ -23,36 +23,36 @@ add_library(piricad_io STATIC
     src/vector.cpp
 )
 
-target_include_directories(piricad_io
+target_include_directories(kentos_io
     PUBLIC  include
     PRIVATE src            # block_view.hpp / mapped_file.hpp are NOT public (R1)
 )
 
-target_link_libraries(piricad_io
-    PUBLIC  piricad_core piricad_command
-    PRIVATE piricad_flags
+target_link_libraries(kentos_io
+    PUBLIC  kentos_core kentos_command
+    PRIVATE kentos_flags
 )
 
-set_target_properties(piricad_io PROPERTIES
+set_target_properties(kentos_io PROPERTIES
     EXPORT_NAME io
-    OUTPUT_NAME piricad_io
+    OUTPUT_NAME kentos_io
 )
 
-add_library(PiriCAD::io ALIAS piricad_io)
+add_library(KentOSCad::io ALIAS kentos_io)
 
 # ------------------------------------------------------------------ GDAL ----
-# io.md R22 and CLAUDE.md Article 8.2: behind PIRICAD_WITH_GDAL, hard-failing with
+# io.md R22 and CLAUDE.md Article 8.2: behind KENTOS_WITH_GDAL, hard-failing with
 # an actionable message when ON but missing. When OFF, İÇEAKTAR and DIŞAAKTAR
 # return an Error that names this option and the install command — they never
 # silently succeed and never silently return an empty layer (data.md Enforcement).
 
-include(PiriCADGdalDrivers)
+include(KentOSCadGdalDrivers)
 
-target_compile_definitions(piricad_io PRIVATE
-    PIRICAD_GDAL_DRIVERS="${PIRICAD_GDAL_DRIVERS_STRING}"
+target_compile_definitions(kentos_io PRIVATE
+    KENTOS_GDAL_DRIVERS="${KENTOS_GDAL_DRIVERS_STRING}"
 )
 
-if(PIRICAD_WITH_GDAL)
+if(KENTOS_WITH_GDAL)
     find_package(GDAL 3.8 CONFIG QUIET)
     if(NOT GDAL_FOUND)
         # Deprecated upstream, but still the only route on older distributions.
@@ -61,34 +61,34 @@ if(PIRICAD_WITH_GDAL)
     if(NOT GDAL_FOUND)
         find_package(PkgConfig QUIET)
         if(PkgConfig_FOUND)
-            pkg_check_modules(PIRICAD_GDAL_PC IMPORTED_TARGET gdal>=3.8)
+            pkg_check_modules(KENTOS_GDAL_PC IMPORTED_TARGET gdal>=3.8)
         endif()
     endif()
 
     if(TARGET GDAL::GDAL)
-        target_link_libraries(piricad_io PRIVATE GDAL::GDAL)
-    elseif(TARGET PkgConfig::PIRICAD_GDAL_PC)
-        target_link_libraries(piricad_io PRIVATE PkgConfig::PIRICAD_GDAL_PC)
+        target_link_libraries(kentos_io PRIVATE GDAL::GDAL)
+    elseif(TARGET PkgConfig::KENTOS_GDAL_PC)
+        target_link_libraries(kentos_io PRIVATE PkgConfig::KENTOS_GDAL_PC)
     else()
         message(FATAL_ERROR
-            "PIRICAD_WITH_GDAL=ON but GDAL 3.8+ was not found.\n"
+            "KENTOS_WITH_GDAL=ON but GDAL 3.8+ was not found.\n"
             "  Debian/Ubuntu: sudo apt install libgdal-dev\n"
             "  macOS:         brew install gdal\n"
             "  Windows:       vcpkg install gdal   (the 'gdal' feature in /vcpkg.json)\n"
-            "  Or configure with -DPIRICAD_WITH_GDAL=OFF; İÇEAKTAR and DIŞAAKTAR then\n"
+            "  Or configure with -DKENTOS_WITH_GDAL=OFF; İÇEAKTAR and DIŞAAKTAR then\n"
             "  report that the backend is off instead of silently doing nothing.")
     endif()
 
-    target_compile_definitions(piricad_io PRIVATE PIRICAD_HAVE_GDAL=1)
-    message(STATUS "  GDAL ..... etkin (izinli sürücüler: ${PIRICAD_GDAL_DRIVERS_STRING})")
+    target_compile_definitions(kentos_io PRIVATE KENTOS_HAVE_GDAL=1)
+    message(STATUS "  GDAL ..... etkin (izinli sürücüler: ${KENTOS_GDAL_DRIVERS_STRING})")
 else()
     message(STATUS "  GDAL ..... kapalı (İÇEAKTAR/DIŞAAKTAR hata döndürecek)")
 endif()
 
-if(PIRICAD_WITH_POSTGIS)
+if(KENTOS_WITH_POSTGIS)
     # PRIVATE, like every format library here: a pqxx header must not reach the
-    # include path of everything that links piricad_io (io.md R2/P2). The whole
+    # include path of everything that links kentos_io (io.md R2/P2). The whole
     # dependency lives inside src/postgis.cpp, behind the pimpl in its header.
-    target_link_libraries(piricad_io PRIVATE libpqxx::pqxx)
-    target_compile_definitions(piricad_io PRIVATE PIRICAD_HAVE_POSTGIS=1)
+    target_link_libraries(kentos_io PRIVATE libpqxx::pqxx)
+    target_compile_definitions(kentos_io PRIVATE KENTOS_HAVE_POSTGIS=1)
 endif()

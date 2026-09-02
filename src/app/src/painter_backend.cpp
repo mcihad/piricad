@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PiriCAD — app: the QPainter backend.
+// KentOSCad — app: the QPainter backend.
 //
 // THE PHASE-0 STAND-IN (CLAUDE.md Article 8.1). It draws the same `DrawList` and
 // the same `Overlay` the GPU backend will draw, through the same
@@ -18,14 +18,14 @@
 // use the stencil buffer; text is a system font, where R8 requires an msdfgen SDF
 // atlas shaped with HarfBuzz. Those are the GPU backend's problems, and keeping
 // them out of the interface is what makes them replaceable.
-#include "piricad/app/backend_factory.hpp"
-#include "piricad/app/symbol_image.hpp"
-#if PIRICAD_HAVE_QGIS
-#include "piricad/app/qgis_backend.hpp"
+#include "kentos_cad/app/backend_factory.hpp"
+#include "kentos_cad/app/symbol_image.hpp"
+#if KENTOS_HAVE_QGIS
+#include "kentos_cad/app/qgis_backend.hpp"
 #endif
 
-#include "piricad/core/style.hpp"
-#include "piricad/render/backend.hpp"
+#include "kentos_cad/core/style.hpp"
+#include "kentos_cad/render/backend.hpp"
 
 #include <QBrush>
 #include <QColor>
@@ -49,7 +49,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace piricad::app {
+namespace kentos::app {
 namespace {
 
 QColor from_rgba(std::uint32_t rgba)
@@ -1101,8 +1101,8 @@ std::unique_ptr<render::Backend> make_preview_backend()
 {
     // The QPainter backend, always, because a preview's target is a QImage. See
     // the note on the declaration for why this is not `make_canvas_backend()`.
-#if PIRICAD_HAVE_QGIS
-    if (qgetenv("PIRICAD_BACKEND") != "dahili") return make_qgis_backend();
+#if KENTOS_HAVE_QGIS
+    if (qgetenv("KENTOS_BACKEND") != "dahili") return make_qgis_backend();
 #endif
     return make_builtin_backend();
 }
@@ -1119,17 +1119,17 @@ std::unique_ptr<render::Backend> make_canvas_backend()
     // port finishes, and it names the built-in one rather than hiding it.
     // The GPU backend when this build has one, and then WITHOUT an override. The
     // canvas is a `QRhiWidget` in that build and a QPainter backend has nothing to
-    // paint into there: `PIRICAD_BACKEND=dahili` on a GPU build would hand the
+    // paint into there: `KENTOS_BACKEND=dahili` on a GPU build would hand the
     // painter a null device, which is a blank canvas rather than a comparison.
-    // Comparing the two engines means configuring with -DPIRICAD_WITH_RHI=OFF.
-#if PIRICAD_HAVE_RHI
+    // Comparing the two engines means configuring with -DKENTOS_WITH_RHI=OFF.
+#if KENTOS_HAVE_RHI
     return make_rhi_backend();
 #else
-#if PIRICAD_HAVE_QGIS
-    if (qgetenv("PIRICAD_BACKEND") != "dahili") return make_qgis_backend();
+#if KENTOS_HAVE_QGIS
+    if (qgetenv("KENTOS_BACKEND") != "dahili") return make_qgis_backend();
 #endif
     return make_builtin_backend();
 #endif
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

@@ -12,14 +12,14 @@
 // separate because both intentions are real and neither is a special case of the
 // other — and because changing what `ÇİZGİ` produces would change every drawing
 // already made with it.
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
 #include <string>
 #include <vector>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 Task<void> run(Context& ctx)
@@ -61,7 +61,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(polyline)
+KENTOS_COMMAND(polyline)
 {
     return CommandSpec{
         .id       = "core.polyline",
@@ -76,4 +76,4 @@ PIRICAD_COMMAND(polyline)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

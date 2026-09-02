@@ -1,6 +1,6 @@
 # Render Engine — Rules
 
-> Scope: `/src/render` (target `piricad_render`) and the canvas half of `/src/app` (`MapCanvas` + backend factory) | Depends on: `piricad_core`, Qt 6 Gui/RHI | Source: piricad.md §6.1, §6.3, §9.4, §10.1, §10.3, §10.5
+> Scope: `/src/render` (target `kentos_render`) and the canvas half of `/src/app` (`MapCanvas` + backend factory) | Depends on: `kentos_core`, Qt 6 Gui/RHI | Source: kentoscad.md §6.1, §6.3, §9.4, §10.1, §10.3, §10.5
 
 ## Phase-0 Deviation
 
@@ -24,8 +24,8 @@ R13. Pan/zoom on a 5M-polygon cadastral layer MUST stay **≤ 16 ms/frame** (§1
 R14. Every function in the frame path under `/src/render/src` MUST open a named Tracy zone (`ZoneScopedN`), checked by `scripts/ci-gate-render.sh` (§10.5).
 R15. Render MUST read the `Document` through a read-only snapshot and consume its SoA polyline store directly; state changes only ever come back as commands (`core.zoom` and friends) — see `.claude/command.md`.
 R16. The GPU canvas MUST be a `QRhiWidget` embedded in a Qt Widgets shell (§6.3). QML is allowed only for selected side panels via `QQuickWidget` — see `.claude/ui.md` R3.
-R17. The Dear ImGui overlay MUST be compiled behind `PIRICAD_WITH_IMGUI`, defaulting OFF and hard-forced OFF for `CMAKE_BUILD_TYPE=Release` (§6.1, §9.4).
-R18. `piricad_render` MUST build with `-fno-fast-math -ffp-contract=off`, exactly like the rest of the tree.
+R17. The Dear ImGui overlay MUST be compiled behind `KENTOS_WITH_IMGUI`, defaulting OFF and hard-forced OFF for `CMAKE_BUILD_TYPE=Release` (§6.1, §9.4).
+R18. `kentos_render` MUST build with `-fno-fast-math -ffp-contract=off`, exactly like the rest of the tree.
 R19. Every pixel-space constant (line width, hit radius, label padding, atlas margin) MUST be scaled by `devicePixelRatio`.
 R20. The draw loop MUST be allocation-free: all buffers are sized at resize/tile-load time; transient per-frame data comes from a frame arena that is reset, never grown.
 
@@ -51,7 +51,7 @@ P12. NEVER call `std::toupper`/`std::tolower` on label text (Turkish i/I). Use `
 - [ ] New stage has a Tracy zone and appears in the frame-stats breakdown.
 - [ ] Draw-call count and frame time on the 5M-polygon bench are unchanged or better.
 - [ ] No new allocation in the draw loop (checked under a heap profiler or ASan allocation counter).
-- [ ] Debug-only code is inside `PIRICAD_WITH_IMGUI` or an equivalent OFF-by-default guard.
+- [ ] Debug-only code is inside `KENTOS_WITH_IMGUI` or an equivalent OFF-by-default guard.
 
 ## Enforcement
 
@@ -59,5 +59,5 @@ P12. NEVER call `std::toupper`/`std::tolower` on label text (Turkish i/I). Use `
 - `/tests/unit` jitter regression test: 30th-zone TM3 (`TUREF/TM30`) coordinates, deep zoom, asserts sub-pixel screen error — fails if any world coordinate reaches a `float` unoffset (§11 Phase 0, §10.3).
 - `scripts/ci-gate-layering.sh` — greps `/src/render` for Qt Widgets includes and `/src/app` for backend implementation type names (R1, P9).
 - `scripts/ci-gate-render.sh` — fails on a frame-path file under `/src/render/src` with no `ZoneScoped*` (R14) and on `QPainter` outside the stand-in backend (P3).
-- Release packaging check: `PIRICAD_WITH_IMGUI=OFF` asserted in the packaged build config (P4).
+- Release packaging check: `KENTOS_WITH_IMGUI=OFF` asserted in the packaged build config (P4).
 - clang-tidy + ASan/TSan CI jobs cover P6 and the render-thread rules.

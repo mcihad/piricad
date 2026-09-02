@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/command/aids.hpp"
+#include "kentos_cad/command/aids.hpp"
 
-#include "piricad/core/document.hpp"
+#include "kentos_cad/core/document.hpp"
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 /// Screen pixels to document millimetres. Rounds up to one millimetre when a
@@ -98,4 +98,4 @@ core::SnapResult InputAids::resolve(const core::Document& doc, const AidSettings
     return core::snap(doc, q);
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

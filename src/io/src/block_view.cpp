@@ -3,7 +3,7 @@
 
 #include <algorithm>
 
-namespace piricad::io {
+namespace kentos::io {
 namespace {
 
 using core::err;
@@ -73,7 +73,7 @@ core::Result<BlockView> BlockView::parse(std::span<const std::byte> bytes, const
     if (file_size < sizeof(FileHeader))
         return err(ErrorCode::ParseError, std::string(kErrTruncated) + ": '" + path + "' " +
                                               std::to_string(file_size) +
-                                              " bayt; bir PiriCAD proje dosyasının başlığı bile " +
+                                              " bayt; bir KentOSCad proje dosyasının başlığı bile " +
                                               std::to_string(sizeof(FileHeader)) + " bayttır.");
 
     view.header_ = read_record<FileHeader>(bytes, 0);
@@ -81,7 +81,7 @@ core::Result<BlockView> BlockView::parse(std::span<const std::byte> bytes, const
     if (std::memcmp(view.header_.magic, kMagic, sizeof(kMagic)) != 0)
         return err(ErrorCode::ParseError,
                    std::string(kErrNotPiri) + ": '" + path +
-                       "' bir PiriCAD proje dosyası değil. Dış biçimler için İÇEAKTAR "
+                       "' bir KentOSCad proje dosyası değil. Dış biçimler için İÇEAKTAR "
                        "komutunu kullanın.");
 
     // io.md R9. The file states the lowest reader that can still make sense of
@@ -93,7 +93,7 @@ core::Result<BlockView> BlockView::parse(std::span<const std::byte> bytes, const
                        std::to_string(view.header_.min_reader_version) +
                        ". sürüm biçim okuyucusu istiyor; bu yapı " +
                        std::to_string(kFormatVersion) +
-                       ". sürümü okuyor. Dosyayı yazan PiriCAD sürümüne yükseltin.");
+                       ". sürümü okuyor. Dosyayı yazan KentOSCad sürümüne yükseltin.");
 
     if (view.header_.header_bytes < sizeof(FileHeader) || view.header_.header_bytes > file_size)
         return err(ErrorCode::ParseError,
@@ -198,7 +198,7 @@ core::Result<DocumentRecord> BlockView::document_record() const
     if (!e)
         return err(ErrorCode::ParseError,
                    std::string(kErrConsist) +
-                       ": belge kaydı yok. Her PiriCAD proje dosyası tam bir belge kaydı taşır; "
+                       ": belge kaydı yok. Her KentOSCad proje dosyası tam bir belge kaydı taşır; "
                        "bu dosya bozuk.");
     if (e->elem_bytes != sizeof(DocumentRecord) || e->count != 1)
         return err(ErrorCode::ParseError,
@@ -210,4 +210,4 @@ core::Result<DocumentRecord> BlockView::document_record() const
     return read_record<DocumentRecord>(bytes_, e->offset);
 }
 
-} // namespace piricad::io
+} // namespace kentos::io

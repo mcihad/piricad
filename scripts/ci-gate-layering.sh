@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # GATE: the module dependency graph is one-way.
-# piricad.md §8 / Constitution Article 3.2-3.3: core -> nothing (not even Qt),
+# kentoscad.md §8 / Constitution Article 3.2-3.3: core -> nothing (not even Qt),
 # command -> core, io/domain -> core+command, render -> core+Qt Gui, script/ai ->
 # command, app -> everything; a reverse or lateral dependency is a build failure,
 # and Article 3.4 lists the Qt-free targets. script.md R10/P4/P9 adds: no
@@ -34,7 +34,7 @@ for rule in "${rules[@]}"; do
     # Article 3.4: every module here except render is a Qt-free target.
     if [[ "$mod" != render ]]; then
         while IFS= read -r hit; do
-            echo "layering: Qt inside the Qt-free target piricad_$mod -> $hit" >&2
+            echo "layering: Qt inside the Qt-free target kentos_$mod -> $hit" >&2
             fail=1
         done < <(grep -rn "${sources[@]}" -E \
                      '#[[:space:]]*include[[:space:]]*[<"]Q|\b(QString|QObject|QWidget|QVariant|QByteArray|Q_OBJECT|qDebug)\b' \
@@ -44,7 +44,7 @@ for rule in "${rules[@]}"; do
         echo "layering: reverse or lateral dependency out of /src/$mod -> $hit" >&2
         fail=1
     done < <(grep -rn "${sources[@]}" -E \
-                 "#[[:space:]]*include[[:space:]]*\"piricad/(${rule#*:})/" "$dir" || true)
+                 "#[[:space:]]*include[[:space:]]*\"kentos_cad/(${rule#*:})/" "$dir" || true)
 done
 
 # script.md R10/P4: a script binding never sees a raw Document or Layer handle.

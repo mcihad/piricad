@@ -5,17 +5,17 @@
 // `Alan hesabı` is the legal output of this product (§12), so the numbers below are
 // asserted as exact integers in square millimetres. A tolerance here would be a
 // tolerance on a cadastral area, and there is no such thing.
-#include "piricad_test.hpp"
+#include "kentos_test.hpp"
 
-#include "piricad/core/transform.hpp"
+#include "kentos_cad/core/transform.hpp"
 
-#include "piricad/core/geometry.hpp"
+#include "kentos_cad/core/geometry.hpp"
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-using namespace piricad::core;
+using namespace kentos::core;
 
 namespace {
 
@@ -782,7 +782,7 @@ TEST_CASE("clear boşaltır, sonraki append sıfırdan başlar")
 
 TEST_CASE("sin_cos_udeg: eksen açıları tam çıkar")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
 
     // The whole reason the reduction is integer: an axis angle must come out as
     // exactly 0 and exactly 1, not 6.1e-17 and 0.99999999. A right angle that is
@@ -804,7 +804,7 @@ TEST_CASE("sin_cos_udeg: eksen açıları tam çıkar")
 
 TEST_CASE("sin_cos_udeg: ara açılar doğru")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
 
     const SinCos t45 = sin_cos_udeg(45 * kUDegPerDegree);
     CHECK(std::abs(t45.sin - 0.70710678118654752) < 1e-15);
@@ -817,7 +817,7 @@ TEST_CASE("sin_cos_udeg: ara açılar doğru")
     CHECK(std::abs(t60.cos - 0.5) < 1e-15);
 
     // The identity has to hold everywhere, which catches a bad octant swap.
-    for (piricad::core::UDeg a = 0; a < 360 * kUDegPerDegree; a += 7 * kUDegPerDegree) {
+    for (kentos::core::UDeg a = 0; a < 360 * kUDegPerDegree; a += 7 * kUDegPerDegree) {
         const SinCos t = sin_cos_udeg(a);
         CHECK(std::abs(t.sin * t.sin + t.cos * t.cos - 1.0) < 1e-14);
     }
@@ -825,7 +825,7 @@ TEST_CASE("sin_cos_udeg: ara açılar doğru")
 
 TEST_CASE("döndürme: dik açı köşeyi tam yerine koyar")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
 
     const Point2 base{0, 0};
     const Point2 p{10000, 0};
@@ -847,7 +847,7 @@ TEST_CASE("döndürme: dik açı köşeyi tam yerine koyar")
 
 TEST_CASE("aynalama: yatay ve düşey eksen tam, eğik eksen doğru")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
 
     // A horizontal axis is an integer negation and must not round.
     CHECK_EQ(mirrored_in_line(Point2{3000, 5000}, Point2{0, 1000}, Point2{9999, 1000}).y,
@@ -867,7 +867,7 @@ TEST_CASE("aynalama: yatay ve düşey eksen tam, eğik eksen doğru")
 
 TEST_CASE("ölçekleme: taban noktası yerinde kalır")
 {
-    using namespace piricad::core;
+    using namespace kentos::core;
 
     const Point2 base{5000, 5000};
     CHECK_EQ(scaled_about(base, base, 3.0).x, base.x);

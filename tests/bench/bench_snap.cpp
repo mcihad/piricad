@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Snap and selection budgets.
 //
-// These run on EVERY MOUSE MOVE, next to the frame that piricad.md §10.1 budgets
+// These run on EVERY MOUSE MOVE, next to the frame that kentoscad.md §10.1 budgets
 // at 16 ms over five million parcels. A snap search that took the whole frame
 // budget would halve the frame rate while the user is drawing — which is exactly
 // when the frame rate matters — so each scenario is gated at the frame budget on
@@ -10,15 +10,15 @@
 #include "benchmark.hpp"
 #include "fixtures.hpp"
 
-#include "piricad/core/pick.hpp"
-#include "piricad/core/snap.hpp"
-#include "piricad/render/scene.hpp"
+#include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/snap.hpp"
+#include "kentos_cad/render/scene.hpp"
 
 #include <vector>
 
 namespace {
 
-using namespace piricad;
+using namespace kentos;
 
 /// The working zoom the frame budget is written against: an operator inspecting a
 /// handful of parcels, about 190 m across at 1920x1080.
@@ -125,7 +125,7 @@ void frame_with_snap(benchmark::State& state)
 
 } // namespace
 
-PIRICAD_BENCH(snap_all){bench::Case{
+KENTOS_BENCH(snap_all){bench::Case{
     .id          = "yakalama.imlec_5m",
     .title       = "5M parselde bütün yakalama modlarıyla tek imleç sorgusu",
     .budget      = 16.0,
@@ -134,7 +134,7 @@ PIRICAD_BENCH(snap_all){bench::Case{
     .body        = &snap_all_modes,
 }};
 
-PIRICAD_BENCH(pick_click){bench::Case{
+KENTOS_BENCH(pick_click){bench::Case{
     .id          = "secim.tek_tik_5m",
     .title       = "5M parselde tek tıklamayla seçim",
     .budget      = 16.0,
@@ -143,7 +143,7 @@ PIRICAD_BENCH(pick_click){bench::Case{
     .body        = &pick_single,
 }};
 
-PIRICAD_BENCH(pick_box){bench::Case{
+KENTOS_BENCH(pick_box){bench::Case{
     .id          = "secim.pencere_5m",
     .title       = "5M parselde ekran boyu kesen kutu (bilgilendirme)",
     .budget      = 0.0,
@@ -152,7 +152,7 @@ PIRICAD_BENCH(pick_box){bench::Case{
     .body        = &pick_viewport_box,
 }};
 
-PIRICAD_BENCH(frame_and_snap){bench::Case{
+KENTOS_BENCH(frame_and_snap){bench::Case{
     .id          = "render.kare_ve_yakalama_5m",
     .title       = "Bir fare hareketi: sahne kurulumu + yakalama",
     .budget      = 16.0,

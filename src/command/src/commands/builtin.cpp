@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The one and only list of built-in commands.
 //
-// piricad.md §2.3 — a command is defined once. This list is the registration
+// kentoscad.md §2.3 — a command is defined once. This list is the registration
 // order; every command's definition lives with its implementation. Adding a
 // command means adding one factory and one line here. There is no other list.
-#include "piricad/command/registry.hpp"
+#include "kentos_cad/command/registry.hpp"
 
-#include "piricad/command/log.hpp"
+#include "kentos_cad/command/log.hpp"
 
-namespace piricad::command {
+namespace kentos::command {
 
-#define PIRICAD_BUILTIN_COMMANDS(X)                                                                \
+#define KENTOS_BUILTIN_COMMANDS(X)                                                                \
     X(line)                                                                                        \
     X(polyline)                                                                                    \
     X(point_draw)                                                                                  \
@@ -68,21 +68,21 @@ namespace piricad::command {
     X(mode)                                                                                        \
     X(help)
 
-#define PIRICAD_DECLARE(sym) PIRICAD_COMMAND(sym);
-PIRICAD_BUILTIN_COMMANDS(PIRICAD_DECLARE)
-#undef PIRICAD_DECLARE
+#define KENTOS_DECLARE(sym) KENTOS_COMMAND(sym);
+KENTOS_BUILTIN_COMMANDS(KENTOS_DECLARE)
+#undef KENTOS_DECLARE
 
 void register_builtin_commands(Registry& r)
 {
     if (r.size() > 0) return; // idempotent
 
-#define PIRICAD_REGISTER(sym)                                                                      \
-    if (auto st = r.add(piricad_command_##sym()); !st)                                             \
+#define KENTOS_REGISTER(sym)                                                                      \
+    if (auto st = r.add(kentos_command_##sym()); !st)                                             \
         log_error("command registration failed: " + st.error().message);
-    PIRICAD_BUILTIN_COMMANDS(PIRICAD_REGISTER)
-#undef PIRICAD_REGISTER
+    KENTOS_BUILTIN_COMMANDS(KENTOS_REGISTER)
+#undef KENTOS_REGISTER
 }
 
-#undef PIRICAD_BUILTIN_COMMANDS
+#undef KENTOS_BUILTIN_COMMANDS
 
-} // namespace piricad::command
+} // namespace kentos::command

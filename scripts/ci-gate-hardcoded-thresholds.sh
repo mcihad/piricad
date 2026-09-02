@@ -8,7 +8,7 @@
 #   catalog-key  the line is a lookup key into /data/catalogs, not the value
 #   ui-label     the line NAMES something the user types or reads (a command
 #                alias, a menu string) and carries no regulatory value
-# piricad.md §15: "Mevzuat sık değişiyor -> Veri odaklı katalog mimarisi" — a
+# kentoscad.md §15: "Mevzuat sık değişiyor -> Veri odaklı katalog mimarisi" — a
 # legislation update must be a data package swap, never a rebuild (§12, §8).
 # Constitution 5.13, .claude/domain.md R1/P1, .claude/data.md P1: every TAKS/KAKS
 # row, gösterim, detay kodu, çekme mesafesi, asgari/azami threshold and TUCBS

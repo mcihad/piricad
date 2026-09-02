@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/domain/geodesy/crs_service.hpp"
+#include "kentos_cad/domain/geodesy/crs_service.hpp"
 
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
 #include <string>
 #include <utility>
 
-namespace piricad::domain::geodesy {
+namespace kentos::domain::geodesy {
 namespace {
 
 /// Strips a leading authority prefix and any surrounding whitespace.
@@ -86,4 +86,4 @@ core::Crs CrsService::resolve(std::string_view id) const
     return crs;
 }
 
-} // namespace piricad::domain::geodesy
+} // namespace kentos::domain::geodesy

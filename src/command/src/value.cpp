@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/command/value.hpp"
+#include "kentos_cad/command/value.hpp"
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 const std::string& empty_text()
@@ -283,4 +283,4 @@ core::Result<Args> Args::from_json(const core::Json& j)
     return a;
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

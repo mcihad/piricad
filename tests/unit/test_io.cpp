@@ -14,21 +14,21 @@
 //
 // test.md P9: nothing here mutates a Document except through a command dispatched
 // on the Bus. Tests are a client of the bus with no privileges (Article 1.2).
-#include "piricad_test.hpp"
+#include "kentos_test.hpp"
 
-#include "piricad/core/guide.hpp"
-#include "piricad/core/arc.hpp"
-#include "piricad/core/circle.hpp"
+#include "kentos_cad/core/guide.hpp"
+#include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/circle.hpp"
 
 #include <iterator>
 
-#include "piricad/command/bus.hpp"
-#include "piricad/command/registry.hpp"
-#include "piricad/core/text.hpp"
-#include "piricad/io/format.hpp"
-#include "piricad/io/service.hpp"
-#include "piricad/io/vector.hpp"
-#include "piricad/script/json_runner.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/core/text.hpp"
+#include "kentos_cad/io/format.hpp"
+#include "kentos_cad/io/service.hpp"
+#include "kentos_cad/io/vector.hpp"
+#include "kentos_cad/script/json_runner.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -38,8 +38,8 @@
 #include <string>
 #include <vector>
 
-using namespace piricad;
-using namespace piricad::command;
+using namespace kentos;
+using namespace kentos::command;
 
 namespace {
 
@@ -70,7 +70,7 @@ class TempDir
 public:
     explicit TempDir(const char* tag)
     {
-        path_ = fs::temp_directory_path() / (std::string("piricad-io-") + tag);
+        path_ = fs::temp_directory_path() / (std::string("kentoscad-io-") + tag);
         std::error_code ec;
         fs::remove_all(path_, ec);
         fs::create_directories(path_, ec);
@@ -150,7 +150,7 @@ void write_bytes(const std::string& path, const std::vector<char>& bytes)
 
 /// True when the error message carries the stable token io.md R9 names. The token
 /// is at the front of the message because `core::Error` carries an enum code, not
-/// the string code the rulebook writes — see `piricad/io/format.hpp`.
+/// the string code the rulebook writes — see `kentos_cad/io/format.hpp`.
 bool has_token(const core::Error& e, const char* token)
 {
     return e.message.rfind(token, 0) == 0;
@@ -417,7 +417,7 @@ TEST_CASE("IO: tanınmayan blok atlanır, dosya yine açılır")
     CHECK(reloaded.transcript.find("tanımadığı") != std::string::npos);
 }
 
-TEST_CASE("IO: PiriCAD dosyası olmayan bir dosya adıyla birlikte reddedilir")
+TEST_CASE("IO: KentOSCad dosyası olmayan bir dosya adıyla birlikte reddedilir")
 {
     TempDir tmp("notpiri");
     const std::string path = tmp.file("baska.pcad");
@@ -690,7 +690,7 @@ TEST_CASE("IO: dış biçim arka ucu durumunu her hâlükârda bildirir")
     if (!io::vector_backend_available()) {
         // The status has to name the option, or a user cannot tell an unsupported
         // format from an uninstalled one.
-        CHECK(status.find("PIRICAD_WITH_GDAL") != std::string::npos);
+        CHECK(status.find("KENTOS_WITH_GDAL") != std::string::npos);
     }
 }
 
@@ -701,13 +701,13 @@ TEST_CASE("IO: GDAL kapalıyken İÇEAKTAR sessizce başarılı olmaz")
     Rig rig;
     auto r = rig.bus.execute_line("İÇEAKTAR \"/veri/pafta.dxf\"", Origin::Test);
     REQUIRE(!r.ok());
-    CHECK(r.error().message.find("PIRICAD_WITH_GDAL") != std::string::npos);
+    CHECK(r.error().message.find("KENTOS_WITH_GDAL") != std::string::npos);
 }
 
 TEST_CASE("IO: DXF dışa aktar -> içe aktar gidiş dönüşü")
 {
     if (!io::vector_backend_available())
-        PENDING("PIRICAD_WITH_GDAL=OFF; DXF gidiş-dönüşü sınanamıyor.");
+        PENDING("KENTOS_WITH_GDAL=OFF; DXF gidiş-dönüşü sınanamıyor.");
     TempDir tmp("dxf");
     const std::string path = tmp.file("cizim.dxf");
 
@@ -748,7 +748,7 @@ TEST_CASE("IO: DXF birden çok katmanı taşır — dışa aktarım ilk katmanda
 {
     // The regression this locks. DXF holds exactly ONE OGR layer, named
     // `entities`, and a drawing's layers live there as a `Layer` attribute. The
-    // export asked OGR for a layer per PiriCAD layer, so the second call failed
+    // export asked OGR for a layer per KentOSCad layer, so the second call failed
     // with "Unable to have more than one OGR entities layer in a DXF file": the
     // first layer was written, the command reported the GDAL message, and the file
     // left on disk held a fraction of the drawing.
@@ -756,7 +756,7 @@ TEST_CASE("IO: DXF birden çok katmanı taşır — dışa aktarım ilk katmanda
     // The case above this one draws on a single layer, which is exactly why the
     // bug survived it. A cadastral drawing is never one layer.
     if (!io::vector_backend_available())
-        PENDING("PIRICAD_WITH_GDAL=OFF; çok katmanlı DXF sınanamıyor.");
+        PENDING("KENTOS_WITH_GDAL=OFF; çok katmanlı DXF sınanamıyor.");
     TempDir tmp("dxf-katman");
     const std::string path = tmp.file("cok-katman.dxf");
 
@@ -797,7 +797,7 @@ TEST_CASE("IO: DXF birden çok katmanı taşır — dışa aktarım ilk katmanda
 TEST_CASE("IO: GeoPackage dışa aktar -> içe aktar gidiş dönüşü, koordinat mm cinsinden korunur")
 {
     if (!io::vector_backend_available())
-        PENDING("PIRICAD_WITH_GDAL=OFF; GeoPackage gidiş-dönüşü sınanamıyor.");
+        PENDING("KENTOS_WITH_GDAL=OFF; GeoPackage gidiş-dönüşü sınanamıyor.");
     TempDir tmp("gpkg");
     const std::string path = tmp.file("parseller.gpkg");
 
@@ -832,7 +832,7 @@ TEST_CASE("IO: GeoPackage dışa aktar -> içe aktar gidiş dönüşü, koordina
 
 TEST_CASE("IO: sanal dosya sistemi yolları reddedilir")
 {
-    if (!io::vector_backend_available()) PENDING("PIRICAD_WITH_GDAL=OFF; /vsi reddi sınanamıyor.");
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF; /vsi reddi sınanamıyor.");
     // io.md P14: a dataset path must not become a network fetch or an archive
     // traversal, whoever typed it — a user, a script or the AI.
     Rig rig;
@@ -865,7 +865,7 @@ TEST_CASE("IO: fuzz tohum korpusundaki her dosya çökmeden ele alınır")
     // CLAUDE.md 6.7 ships the harness and the corpus with the format. The libFuzzer
     // target in /tests/fuzz needs Clang; this replays the same seeds through the
     // same reader on every build, so the corpus is never dead weight.
-    const fs::path corpus = fs::path(PIRICAD_FUZZ_DIR) / "tohum" / "proje";
+    const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "proje";
     if (!fs::exists(corpus)) PENDING("Fuzz tohum korpusu bulunamadı: " + corpus.string());
 
     std::vector<fs::path> seeds;
@@ -923,7 +923,7 @@ TEST_CASE("QML: sayılar yerel ayara değil biçime aittir")
     CHECK(body.find("outline_width\" v=\"0.700\"") != std::string::npos);
     CHECK(body.find("0,700") == std::string::npos); // never a comma, on any machine
 
-    // Colours reach QGIS as r,g,b,a decimal — written the PiriCAD way they would
+    // Colours reach QGIS as r,g,b,a decimal — written the KentOSCad way they would
     // load as black and the user would blame the export.
     CHECK(body.find("140,84,26,255") != std::string::npos); // fill  #8C541A
     CHECK(body.find("93,58,18,255") != std::string::npos);  // stroke #5D3A12
@@ -1232,7 +1232,7 @@ TEST_CASE("IO: gömülü görsel dosyayla gidip geliyor")
     // the belediye that has to check it, which is the case this format exists for.
     TempDir tmp("gorsel");
     const std::string path = tmp.file("gorsel.pcad");
-    const std::string pack = std::string(PIRICAD_DATA_DIR) + "/catalogs/mpyy/plan-gosterim.json";
+    const std::string pack = std::string(KENTOS_DATA_DIR) + "/catalogs/mpyy/plan-gosterim.json";
 
     Rig rig;
     REQUIRE(rig.bus.execute_line("KATMAN OSB", Origin::Test).ok());
@@ -1289,7 +1289,7 @@ TEST_CASE("IO: aynı görsel iki kez eklenince tek kopya saklanıyor")
     // deduplication a sheet using twenty gösterim from one annex would carry
     // twenty copies of the same scan.
     Rig rig;
-    const std::string pack = std::string(PIRICAD_DATA_DIR) + "/catalogs/mpyy/plan-gosterim.json";
+    const std::string pack = std::string(KENTOS_DATA_DIR) + "/catalogs/mpyy/plan-gosterim.json";
 
     REQUIRE(rig.bus.execute_line("KATMAN A", Origin::Test).ok());
     REQUIRE(rig.bus.execute_line("KATMAN B", Origin::Test).ok());

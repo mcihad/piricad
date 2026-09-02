@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# piricad_command — the command bus. Depends on core only.
+# kentos_command — the command bus. Depends on core only.
 # Constitution Article 1: every state mutation passes through this library.
 
-add_library(piricad_command STATIC
+add_library(kentos_command STATIC
     src/aids.cpp
     src/bus.cpp
     src/context.cpp
@@ -51,28 +51,28 @@ add_library(piricad_command STATIC
     src/commands/view.cpp
 )
 
-target_include_directories(piricad_command PUBLIC include)
-target_link_libraries(piricad_command
-    PUBLIC  piricad_core
-    PRIVATE piricad_flags
+target_include_directories(kentos_command PUBLIC include)
+target_link_libraries(kentos_command
+    PUBLIC  kentos_core
+    PRIVATE kentos_flags
 )
 find_package(Threads REQUIRED)
-target_link_libraries(piricad_command PUBLIC Threads::Threads)
+target_link_libraries(kentos_command PUBLIC Threads::Threads)
 
 # PRIVATE: spdlog is an implementation detail of command/log.cpp. The facade in
 # command/log.hpp is what the rest of the product sees, so swapping the backend
 # again touches one file (Article 9).
-if(PIRICAD_WITH_SPDLOG)
-    target_link_libraries(piricad_command PRIVATE spdlog::spdlog)
+if(KENTOS_WITH_SPDLOG)
+    target_link_libraries(kentos_command PRIVATE spdlog::spdlog)
 endif()
 
-add_library(PiriCAD::command ALIAS piricad_command)
+add_library(KentOSCad::command ALIAS kentos_command)
 
 # The command reference is generated from the registry, never hand-written
 # (CLAUDE.md 5.10). The generator lives with the module that owns the registry,
 # so no new top-level directory is needed (Article 3.1).
-add_executable(piricad_docgen tools/docgen.cpp)
-target_link_libraries(piricad_docgen PRIVATE piricad_command piricad_flags)
-set_target_properties(piricad_docgen PROPERTIES
+add_executable(kentos_docgen tools/docgen.cpp)
+target_link_libraries(kentos_docgen PRIVATE kentos_command kentos_flags)
+set_target_properties(kentos_docgen PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )

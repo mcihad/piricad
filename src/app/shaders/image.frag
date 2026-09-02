@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PiriCAD — the published-picture pipeline's fragment stage.
+// KentOSCad — the published-picture pipeline's fragment stage.
 //
 // MPYY publishes part of its symbology as PICTURES — a hatch for `orman`, a glyph
 // for `cami`, a line type for `il sınırı`. They arrive as bytes inside the

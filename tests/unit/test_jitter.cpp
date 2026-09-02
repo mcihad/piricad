@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// piricad.md §11 Faz 0: "`double` jitter testi: 30. `dilim` TM3 koordinatlarıyla zoom".
+// kentoscad.md §11 Faz 0: "`double` jitter testi: 30. `dilim` TM3 koordinatlarıyla zoom".
 //
 // §10.3 states the trap: TUREF/TM3 coordinates are seven digits, so writing one
 // straight into a float vertex attribute shimmers by metres. This test proves
 // three things — that the hazard is real, that ViewTransform's origin offset
 // removes it, and that the screen mapping round-trips exactly.
-#include "piricad_test.hpp"
+#include "kentos_test.hpp"
 
-#include "piricad/render/view.hpp"
+#include "kentos_cad/render/view.hpp"
 
 #include <cmath>
 #include <cstddef>
 #include <functional>
 #include <vector>
 
-using namespace piricad;
-using piricad::core::Mm;
-using piricad::core::Point2;
+using namespace kentos;
+using kentos::core::Mm;
+using kentos::core::Point2;
 
 namespace {
 

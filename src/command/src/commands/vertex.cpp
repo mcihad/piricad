@@ -17,17 +17,17 @@
 // off the same drawing the program numbered, and a surveyor counting corners on a
 // parsel starts at one. Ring-and-offset is what this converts to internally, and
 // it never reaches a command line or a journal line.
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/geometry.hpp"
+#include "kentos_cad/core/geometry.hpp"
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 /// One entity's geometry, unpacked into something that can be edited and handed
@@ -290,7 +290,7 @@ Task<void> run_insert(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(vertex_move)
+KENTOS_COMMAND(vertex_move)
 {
     return CommandSpec{
         .id       = "core.vertex_move",
@@ -311,7 +311,7 @@ PIRICAD_COMMAND(vertex_move)
     };
 }
 
-PIRICAD_COMMAND(vertex_insert)
+KENTOS_COMMAND(vertex_insert)
 {
     return CommandSpec{
         .id       = "core.vertex_insert",
@@ -332,4 +332,4 @@ PIRICAD_COMMAND(vertex_insert)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

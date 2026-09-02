@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PiriCAD — io: external vector formats through GDAL/OGR.
+// KentOSCad — io: external vector formats through GDAL/OGR.
 //
 // THE FOUR RULES THAT SHAPE THIS FILE
 //
@@ -12,14 +12,14 @@
 //              the path, so a "dataset" cannot become a network fetch.
 //   io.md R20  A dataset with no CRS is an ERROR. Never a silent TUREF/TM30.
 //
-// WHEN PIRICAD_WITH_GDAL IS OFF everything below still compiles and every entry
+// WHEN KENTOS_WITH_GDAL IS OFF everything below still compiles and every entry
 // point returns an Error naming the option, the package and the install command.
 // data.md Enforcement: a gated capability reports itself, it never quietly
 // succeeds and it never quietly reports nothing.
-#include "piricad/io/vector.hpp"
+#include "kentos_cad/io/vector.hpp"
 
-#include "piricad/core/text.hpp"
-#include "piricad/io/format.hpp"
+#include "kentos_cad/core/text.hpp"
+#include "kentos_cad/io/format.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-#ifdef PIRICAD_HAVE_GDAL
+#ifdef KENTOS_HAVE_GDAL
 #include <cpl_conv.h>
 #include <cpl_error.h>
 #include <gdal_priv.h>
@@ -36,24 +36,24 @@
 #include <ogrsf_frmts.h>
 #endif
 
-namespace piricad::io {
+namespace kentos::io {
 namespace {
 
 using core::err;
 using core::ErrorCode;
 
-/// The allow-list, as /cmake/PiriCADGdalDrivers.cmake declared it. Format:
+/// The allow-list, as /cmake/KentOSCadGdalDrivers.cmake declared it. Format:
 ///   DRIVER:.ext:modes:Türkçe etiket|DRIVER:...
 /// where modes is any of "r", "w", "rw". The separator is a vertical bar because
 /// a semicolon is a CMake list separator and would not survive the definition.
-#ifndef PIRICAD_GDAL_DRIVERS
-#define PIRICAD_GDAL_DRIVERS ""
+#ifndef KENTOS_GDAL_DRIVERS
+#define KENTOS_GDAL_DRIVERS ""
 #endif
 
 std::vector<VectorFormat> parse_allow_list()
 {
     std::vector<VectorFormat> out;
-    const std::string spec = PIRICAD_GDAL_DRIVERS;
+    const std::string spec = KENTOS_GDAL_DRIVERS;
 
     std::size_t begin = 0;
     while (begin < spec.size()) {
@@ -85,7 +85,7 @@ std::vector<VectorFormat> parse_allow_list()
     return out;
 }
 
-#ifdef PIRICAD_HAVE_GDAL
+#ifdef KENTOS_HAVE_GDAL
 
 /// GDAL's virtual filesystem prefixes reach the network, an archive or another
 /// process's memory. io.md P14: a path that arrived in a command argument, a
@@ -222,7 +222,7 @@ void line_to_mm(const OGRLineString* line, std::vector<core::Point2>& out)
 /// GDAL's DXF driver does NOT read a `.prj` — verified against GDAL 3.12, where a
 /// DXF with a correct sidecar still reports `Layer SRS WKT: (unknown)`. DXF has no
 /// slot for a coordinate system at all, so without this every DXF would be an
-/// unlabelled dataset and io.md R20 would make the format unimportable. PiriCAD
+/// unlabelled dataset and io.md R20 would make the format unimportable. KentOSCad
 /// therefore reads the sidecar itself, which is the convention every GIS in the
 /// country already follows, and writes it on export so its own output round-trips.
 core::Result<std::string> sidecar_crs(const std::string& path, OGRSpatialReference& out)
@@ -303,7 +303,7 @@ core::Result<std::string> write_prj_sidecar(const std::string& path, const OGRSp
     return sidecar;
 }
 
-#endif // PIRICAD_HAVE_GDAL
+#endif // KENTOS_HAVE_GDAL
 
 } // namespace
 
@@ -334,7 +334,7 @@ const VectorFormat* vector_format_by_id(const std::string& id)
 
 bool vector_backend_available()
 {
-#ifdef PIRICAD_HAVE_GDAL
+#ifdef KENTOS_HAVE_GDAL
     return true;
 #else
     return false;
@@ -350,13 +350,13 @@ std::string vector_backend_status()
     }
     if (names.empty()) names = "(izin listesi boş)";
 
-#ifdef PIRICAD_HAVE_GDAL
+#ifdef KENTOS_HAVE_GDAL
     return "Dış biçim desteği açık (GDAL). İzin verilen sürücüler: " + names + ".";
 #else
-    return "Dış biçim desteği KAPALI. Bu yapı PIRICAD_WITH_GDAL=OFF ile derlendi, bu yüzden "
+    return "Dış biçim desteği KAPALI. Bu yapı KENTOS_WITH_GDAL=OFF ile derlendi, bu yüzden "
            "İÇEAKTAR ve DIŞAAKTAR hata döndürür. Açmak için GDAL'ı kurun (Debian/Ubuntu: "
            "sudo apt install libgdal-dev, macOS: brew install gdal, vcpkg: 'gdal' özelliği) ve "
-           "-DPIRICAD_WITH_GDAL=ON ile yapılandırın. İzin listesindeki sürücüler: " +
+           "-DKENTOS_WITH_GDAL=ON ile yapılandırın. İzin listesindeki sürücüler: " +
            names + ".";
 #endif
 }
@@ -367,7 +367,7 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                                                         std::string driver, std::string project_crs,
                                                         std::stop_token stop)
 {
-#ifndef PIRICAD_HAVE_GDAL
+#ifndef KENTOS_HAVE_GDAL
     (void)tx;
     (void)path;
     (void)driver;
@@ -381,7 +381,7 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
     if (is_virtual_path(path))
         co_return err(ErrorCode::InvalidArgument,
                       "'" + path +
-                          "' sanal dosya sistemi yolu. PiriCAD bir veri dosyasının ağdan ya da "
+                          "' sanal dosya sistemi yolu. KentOSCad bir veri dosyasının ağdan ya da "
                           "arşivin içinden okunmasına izin vermez; dosyayı diske alıp yeniden "
                           "deneyin.");
 
@@ -596,7 +596,7 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
                                                         std::string driver, std::string crs,
                                                         std::stop_token stop)
 {
-#ifndef PIRICAD_HAVE_GDAL
+#ifndef KENTOS_HAVE_GDAL
     (void)doc;
     (void)path;
     (void)driver;
@@ -610,7 +610,7 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
     if (is_virtual_path(path))
         co_return err(ErrorCode::InvalidArgument,
                       "'" + path +
-                          "' sanal dosya sistemi yolu. PiriCAD ağa ya da arşivin içine yazmaz.");
+                          "' sanal dosya sistemi yolu. KentOSCad ağa ya da arşivin içine yazmaz.");
 
     const VectorFormat* format =
         driver.empty() ? vector_format_for_path(path) : vector_format_by_id(driver);
@@ -665,12 +665,12 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
     // DXF holds exactly ONE OGR layer, named `entities`; a drawing's layers live
     // there as a `Layer` attribute on each feature. Asking OGR for a second layer
     // fails with "Unable to have more than one OGR entities layer in a DXF file",
-    // and before this the export wrote the first PiriCAD layer and then stopped —
+    // and before this the export wrote the first KentOSCad layer and then stopped —
     // a cadastral DXF with one layer in it is not a cadastral DXF.
     //
     // This is a fact about a GDAL driver, not about a regulation, so it lives in
     // /src/io next to the code it governs. If a second single-layer driver is ever
-    // allow-listed, this moves into cmake/PiriCADGdalDrivers.cmake as a field —
+    // allow-listed, this moves into cmake/KentOSCadGdalDrivers.cmake as a field —
     // that file is where per-driver facts belong.
     const bool one_layer_only = format->driver == "DXF";
 
@@ -782,4 +782,4 @@ command::Task<core::Result<VectorReport>> export_vector(const core::Document& do
 #endif
 }
 
-} // namespace piricad::io
+} // namespace kentos::io

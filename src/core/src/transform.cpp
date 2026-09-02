@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/transform.hpp"
+#include "kentos_cad/core/transform.hpp"
 
-namespace piricad::core {
+namespace kentos::core {
 namespace {
 
 /// pi/4 in radians, and the factor that turns a micro-degree into a radian.
@@ -134,4 +134,4 @@ Point2 mirrored_in_line(Point2 p, Point2 a, Point2 b)
     return Point2{a.x + mm_round(rx), a.y + mm_round(ry)};
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

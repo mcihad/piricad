@@ -18,15 +18,15 @@
 // Degenerate input is refused rather than drawn: two corners sharing an x or a y
 // enclose nothing, and the geometry layer would reject the ring anyway — saying
 // so here names the corner the user has to move.
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/geometry.hpp"
+#include "kentos_cad/core/geometry.hpp"
 
 #include <vector>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 Task<void> run(Context& ctx)
@@ -36,7 +36,7 @@ Task<void> run(Context& ctx)
 
     // The rubber band starts at the first corner, so the diagonal lock — and
     // ortho, and polar, and every object snap — measure from it exactly as they
-    // do for a line. Nothing here is a private input path (piricad.md §2.4).
+    // do for a line. Nothing here is a private input path (kentoscad.md §2.4).
     auto second = co_await ctx.point("noktalar", "Karşı köşe",
                                      PointOptions{.rubber_band   = true,
                                                   .rubber_origin = *first,
@@ -77,7 +77,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(rectangle)
+KENTOS_COMMAND(rectangle)
 {
     return CommandSpec{
         .id       = "core.rectangle",
@@ -95,4 +95,4 @@ PIRICAD_COMMAND(rectangle)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

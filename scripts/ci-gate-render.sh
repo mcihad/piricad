@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # GATE: the render path never narrows an absolute world coordinate to float.
-# piricad.md §10.3: TUREF/TM3 eastings are seven digits, so a world coordinate
+# kentoscad.md §10.3: TUREF/TM3 eastings are seven digits, so a world coordinate
 # written straight into a float vertex attribute shimmers by metres on screen.
 # render.md R2/P1 — ViewTransform::offset_x_f / offset_y_f (src/render/src/view.cpp)
 # are the ONLY sanctioned narrowing. Also R20/P6 (no per-frame allocation) and

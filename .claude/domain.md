@@ -1,21 +1,21 @@
 # Domain (Geodesy / Cadastre / Planning / Surface) — Rules
 
-> Scope: `/src/domain/geodesy`, `/src/domain/cadastre`, `/src/domain/planning`, `/src/domain/surface`, plus the data they read in `/data/catalogs` and `/data/crs`  |  Depends on: `piricad_core`, `piricad_command` only  |  Source: piricad.md §2.5, §2.6, §7.3, §8, §9.2, §9.7, §9.9, §10.5, §12, §15
+> Scope: `/src/domain/geodesy`, `/src/domain/cadastre`, `/src/domain/planning`, `/src/domain/surface`, plus the data they read in `/data/catalogs` and `/data/crs`  |  Depends on: `kentos_core`, `kentos_command` only  |  Source: kentoscad.md §2.5, §2.6, §7.3, §8, §9.2, §9.7, §9.9, §10.5, §12, §15
 
 ## Hard Rules
 
 R1. Every regulatory constant, code list, threshold, symbol and annex table MUST live as versioned data under `/data/catalogs` (BÖHHBÜY detail codes and object catalogue, MPYY EK-1a/1b/1c/1ç/1d symbology, EK-1e detail catalogue) or `/data/crs` (geoid grids, transformation parameters). C++ in `/src/domain` only *interprets* them (§8 repo layout, §15 "data-driven catalogue architecture").
 R2. Every catalogue file MUST carry the header block defined in `.claude/data.md` R2 and MUST validate against its schema in `/data/catalogs/schema/`. That rule is the single definition; domain code MUST NOT assume any other field set.
 R3. Every domain catalogue MUST be loadable and replaceable at runtime without recompiling; a legislation update SHALL be a data package swap, not a patch release (§15).
-R4. Every state mutation MUST be a `CommandSpec` registered in `Registry` via `PIRICAD_COMMAND`, dispatched through `Bus`. Domain code receives `Context` and returns `Result<T>`; see `.claude/command.md`.
+R4. Every state mutation MUST be a `CommandSpec` registered in `Registry` via `KENTOS_COMMAND`, dispatched through `Bus`. Domain code receives `Context` and returns `Result<T>`; see `.claude/command.md`.
 R5. Domain command ids MUST use the namespaces `geodesy.`, `cadastre.`, `planning.`, `surface.` and MUST declare, in `.claude/command.md` R7 order, Turkish primary + ASCII-folded Turkish + English + abbreviations — `İFRAZ, IFRAZ, SUBDIVIDE, İFR, IFR` (§5.6).
 R6. Topology checks, geometry validity and regulatory rule evaluation MUST run inside the `Bus` validate stage, so mouse, command line, script and AI clients hit identical checks (§2.6).
 R7. One legal operation MUST be one `Transaction` and one undo step. A validation failure MUST roll back completely; a half-applied ifraz, tevhit or 18. madde parcelation is a build-blocking defect (§2.5).
-R8. All stored coordinates MUST be `Mm` / `Point2` fixed-point int64 from `piricad/core/units.hpp`. Floating point is permitted only inside a computation, never as persisted cadastral geometry.
+R8. All stored coordinates MUST be `Mm` / `Point2` fixed-point int64 from `kentos_cad/core/units.hpp`. Floating point is permitted only inside a computation, never as persisted cadastral geometry.
 R9. Cadastral area computation MUST use exact integer or explicitly ordered accumulation with a documented summation order, and MUST produce bit-identical results on Linux, Windows and macOS (§7.3, §10.5).
 R10. Every domain source file MUST compile under `-fno-fast-math -ffp-contract=off` (`/fp:precise`) and MUST use Shewchuk `predicates.c` for orientation/incircle rather than raw comparisons (§7.3, §9.2).
 R11. `geodesy` MUST implement TUREF/ITRF96 with explicit epoch and velocity field, TM 3° zones 27/30/33/36/39/42/45 at scale factor 1.0, ED50/UTM 6°, and regional ITRF↔ED50 transformation (§12 Jeodezik).
-R12. Every coordinate carried across a transformation MUST name its `Crs` (`piricad/core/crs.hpp`, e.g. `TUREF/TM30`) and its epoch; an unlabelled coordinate MUST be rejected with `Error`.
+R12. Every coordinate carried across a transformation MUST name its `Crs` (`kentos_cad/core/crs.hpp`, e.g. `TUREF/TM30`) and its epoch; an unlabelled coordinate MUST be rejected with `Error`.
 R13. Orthometric heights MUST be derived by Helmert reduction using the currently published Türkiye geoid model grid from `/data/crs`; the grid file name and version MUST appear in the output report.
 R14. `geodesy` MUST support TUSAGA-Aktif / CORS-TR workflows, RINEX ingest and NTRIP streams, and MUST run least-squares network adjustment for polygon, triangulation and GNSS baselines, emitting error ellipses with every adjusted point (§12, §9.7 Eigen/Ceres).
 R15. `geodesy` MUST produce aplikasyon and röper krokisi outputs, the kontrol işleri belge ve çizelgeleri set, and MUST implement pafta subdivision and naming as catalogue-driven rules (§12 Jeodezik).
@@ -27,9 +27,9 @@ R20. `planning` MUST implement 3194 madde 18 parcelation with an explicit düzen
 R21. TAKS/KAKS and çekme mesafesi checks MUST read their limits from the Planlı Alanlar İmar Yönetmeliği catalogue; setback/offset geometry MUST use CGAL straight skeleton or Clipper2 integer offset, never an ad-hoc buffer (§9.2, §12).
 R22. Exported themes MUST map onto the TUCBS 32 themes / 53 sub-themes and MUST ship ISO 19115/19139 metadata; unmapped themes MUST fail export (§12 Veri ve Kurumsal).
 R23. Every regulatory rejection MUST return an `Error` whose message names the legislation article and the catalogue version used, in Turkish.
-R24. Turkish text case conversion MUST use the shared Turkish folding table exposed by `piricad_command` (`.claude/command.md` R7); `std::toupper`/`std::tolower` on Turkish strings is banned (CLAUDE.md 5.6, §13).
+R24. Turkish text case conversion MUST use the shared Turkish folding table exposed by `kentos_command` (`.claude/command.md` R7); `std::toupper`/`std::tolower` on Turkish strings is banned (CLAUDE.md 5.6, §13).
 R25. Every domain rule change MUST land with a `/tests/golden` case whose expected values come from a TKGM/official reference dataset, and MUST be signed off by the surveying-engineer or urban-planner reviewer (§16.7, §16.9).
-R26. Domain sub-modules MUST build as Qt-free static targets `piricad_domain_geodesy`, `piricad_domain_cadastre`, `piricad_domain_planning`, `piricad_domain_surface`, linking only `piricad_core` and `piricad_command`.
+R26. Domain sub-modules MUST build as Qt-free static targets `kentos_domain_geodesy`, `kentos_domain_cadastre`, `kentos_domain_planning`, `kentos_domain_surface`, linking only `kentos_core` and `kentos_command`.
 
 ## Absolute Prohibitions
 

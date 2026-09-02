@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/app/title_bar.hpp"
+#include "kentos_cad/app/title_bar.hpp"
 
-#include "piricad/app/icons.hpp"
-#include "piricad/app/tokens.hpp"
+#include "kentos_cad/app/icons.hpp"
+#include "kentos_cad/app/tokens.hpp"
 
 #include <QFontMetrics>
 #include <QHBoxLayout>
@@ -12,7 +12,7 @@
 #include <QPainter>
 #include <QPainterPath>
 
-namespace piricad::app {
+namespace kentos::app {
 namespace {
 
 // design.md §7 and the reference mockup, in the mockup's own numbers.
@@ -216,4 +216,4 @@ void TitleBar::paintEvent(QPaintEvent*)
     p.drawLine(0, kGradient, width(), kGradient);
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

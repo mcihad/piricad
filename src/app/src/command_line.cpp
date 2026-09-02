@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/app/command_line.hpp"
+#include "kentos_cad/app/command_line.hpp"
 
-#include "piricad/app/controller.hpp"
+#include "kentos_cad/app/controller.hpp"
 
-#include "piricad/app/theme.hpp"
-#include "piricad/app/tokens.hpp"
+#include "kentos_cad/app/theme.hpp"
+#include "kentos_cad/app/tokens.hpp"
 
 #include <QCompleter>
 #include <QKeyEvent>
 #include <QPainter>
 #include <QStringListModel>
 
-namespace piricad::app {
+namespace kentos::app {
 
 CommandLine::CommandLine(Controller& controller, QWidget* parent)
     : QLineEdit(parent), controller_(controller)
@@ -63,7 +63,7 @@ void CommandLine::paintEvent(QPaintEvent* event)
 void CommandLine::refreshCompletions()
 {
     // Completions come from the command registry — the single source of truth.
-    // There is no second command list anywhere (piricad.md §2.3).
+    // There is no second command list anywhere (kentoscad.md §2.3).
     QStringList names;
     for (const auto& spec : controller_.registry().all())
         for (const auto& n : spec.names)
@@ -117,4 +117,4 @@ void CommandLine::keyPressEvent(QKeyEvent* event)
     QLineEdit::keyPressEvent(event);
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

@@ -1,0 +1,177 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// KentOSCad — core: ring geometry.
+//
+// .claude/model.md R9–R12. A cadastral parcel is a ring, may have interior
+// rings, and may be multipart. `(start, count)` — a single open vertex run —
+// cannot express a parcel with a hole, and yola terk and irtifak routinely
+// produce one. `Alan hesabı` over such a parcel is the legal output (§12).
+//
+// Structure-of-arrays throughout, three levels:
+//
+//   entity (slot)  ->  rings  ->  vertices
+//
+// A polyline is one Open ring. A parcel is one Exterior ring. A parcel with an
+// exclusion is Exterior + Interior in the same part. A multipart parcel uses
+// distinct part numbers. Ring order is part ascending, Exterior before its
+// Interior rings (R11) — that ordering is part of the content hash.
+#pragma once
+
+#include "kentos_cad/core/identity.hpp"
+#include "kentos_cad/core/result.hpp"
+#include "kentos_cad/core/units.hpp"
+
+#include <cstdint>
+#include <span>
+#include <vector>
+
+namespace kentos::core {
+
+/// Square millimetres. A 100 km x 100 km area is 1e16 mm², well inside int64.
+using Mm2 = std::int64_t;
+
+/// The largest coordinate magnitude `RingGeometry::append` accepts, ±2^61 mm.
+///
+/// This is an ENFORCED invariant, not a comment: every length and area below is
+/// exact only while it holds. Within it, a segment's dx² + dy² fits in 128 bits
+/// and its square root fits in `Mm`, so no perimeter can overflow and no side can
+/// be silently reported short. It is 2.3e18 mm ≈ 2.3e12 km — eight orders of
+/// magnitude past a `dilim`-prefixed TUREF/TM3 `sağa değer` (3.05e10 mm), so no
+/// legitimate Turkish coordinate is anywhere near it, and a value beyond it is a
+/// corrupt import rather than a place.
+inline constexpr Mm kMmCoordinateLimit = Mm{1} << 61;
+
+enum class RingRole : std::uint8_t {
+    Open     = 0, ///< a polyline: first and last vertex are not joined
+    Exterior = 1, ///< the outer boundary of a face
+    Interior = 2, ///< a hole inside the exterior of the same part
+};
+
+/// Exact distance between two points, in millimetres, rounded to the nearest.
+///
+/// Integer throughout, on 128-bit intermediates. A `std::hypot` of two doubles
+/// would be shorter to write and would not be exact: a `kenar uzunluğu` printed
+/// on a röper krokisi is a reported figure, and one that is systematically a
+/// millimetre short is a wrong figure on a signed document, not a rounding
+/// detail. The 128-bit path also survives a `dilim`-prefixed easting, where the
+/// obvious `dx*dx + dy*dy` in int64 overflows.
+Mm segment_length(Mm ax, Mm ay, Mm bx, Mm by) noexcept;
+
+/// The same, for two points.
+inline Mm segment_length(Point2 a, Point2 b) noexcept
+{
+    return segment_length(a.x, a.y, b.x, b.y);
+}
+
+/// One geometry slot's ring range, as returned by the store.
+struct RingSpan
+{
+    std::uint32_t first{0}; ///< index of the entity's first ring
+    std::uint32_t count{0}; ///< how many rings it has; 0 means no geometry
+};
+
+/// Ring-structured geometry for one entity kind. Indexed by SLOT, never by key.
+class RingGeometry
+{
+public:
+    // ---- vertices: the hot block, never read by attribute code ----
+    std::vector<Mm> xs;
+    std::vector<Mm> ys;
+
+    // ---- rings ----
+    std::vector<std::uint32_t> ring_start; ///< first vertex of the ring
+    std::vector<std::uint32_t> ring_count; ///< vertex count of the ring
+    std::vector<std::uint16_t> ring_part;  ///< multipart grouping
+    /// What each ring is. R11 fixes the ORDER — an exterior is followed by its own
+    /// holes — so a reader never has to work out which hole belongs to which face.
+    std::vector<RingRole> ring_role;
+
+    // ---- slot -> rings ----
+    /// Slot to rings. Indexed by geometry SLOT, which is the same index the
+    /// attribute and text tables use, so all three grow together with the document.
+    std::vector<std::uint32_t> first_ring;
+    std::vector<std::uint32_t> ring_total;
+
+    std::size_t slot_count() const noexcept { return first_ring.size(); }
+
+    std::size_t ring_count_total() const noexcept { return ring_start.size(); }
+
+    std::size_t vertex_count() const noexcept { return xs.size(); }
+
+    RingSpan rings_of(std::uint32_t slot) const noexcept
+    {
+        return RingSpan{first_ring[slot], ring_total[slot]};
+    }
+
+    /// One ring's eastings, as a view into the column. No copy and no bounds
+    /// check on the hot path: the caller got `ring` from `rings_of`, which is the
+    /// only sanctioned way to obtain one.
+    std::span<const Mm> ring_xs(std::uint32_t ring) const
+    {
+        return {xs.data() + ring_start[ring], ring_count[ring]};
+    }
+
+    /// The matching northings.
+    std::span<const Mm> ring_ys(std::uint32_t ring) const
+    {
+        return {ys.data() + ring_start[ring], ring_count[ring]};
+    }
+
+    /// One vertex, for a caller that wants a point rather than two spans.
+    Point2 vertex(std::uint32_t ring, std::uint32_t index) const
+    {
+        const std::uint32_t k = ring_start[ring] + index;
+        return Point2{xs[k], ys[k]};
+    }
+
+    /// One ring of a new slot. Rings MUST be appended in R11 order.
+    struct RingInput
+    {
+        /// The vertices, WITHOUT a repeated closing point: the geometry closes a
+        /// ring itself, so storing the duplicate would count it twice in every
+        /// perimeter and write it twice into every exported file.
+        std::span<const Point2> points;
+
+        RingRole role{RingRole::Open}; ///< open, exterior, or a hole in one
+        std::uint16_t part{0};         ///< which face of a multi-part entity
+    };
+
+    /// Appends a slot built from `rings` and returns its index. Validates R11
+    /// ordering, minimum vertex counts and ring closure.
+    Result<std::uint32_t> append(std::span<const RingInput> rings);
+
+    /// Bounding box over every ring of the slot.
+    Box2 bounds_of(std::uint32_t slot) const;
+
+    /// Signed area of one ring by the shoelace formula, in square millimetres —
+    /// counter-clockwise positive, with the sign of the WINDING, not of the role.
+    /// An Open ring encloses nothing and returns 0, exactly as `area_of` treats
+    /// it: R10 says a polyline's first and last vertex are not joined, so an
+    /// implied-closure area would be a figure for a shape that does not exist.
+    ///
+    /// Coordinates are translated to the ring's first vertex before multiplying:
+    /// a raw shoelace on 1e9-magnitude TM3 coordinates overflows int64, and a
+    /// wrong area is a wrong legal document (§12).
+    Mm2 ring_area(std::uint32_t ring) const;
+
+    /// Net area of a slot: exterior rings positive, interior rings subtracted.
+    /// Open rings contribute nothing. This is `alan hesabı`.
+    Mm2 area_of(std::uint32_t slot) const;
+
+    /// Total length of every ring in the slot, in millimetres. Closed rings
+    /// include the closing segment.
+    Mm perimeter_of(std::uint32_t slot) const;
+
+    void clear();
+
+private:
+    void reserve_vertices(std::size_t extra);
+};
+
+/// Square millimetres to square metres, for display only. Never a stored value.
+constexpr double mm2_to_m2(Mm2 v) noexcept
+{
+    return static_cast<double>(v) /
+           (static_cast<double>(kMmPerMetre) * static_cast<double>(kMmPerMetre));
+}
+
+} // namespace kentos::core

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/render/scene.hpp"
+#include "kentos_cad/render/scene.hpp"
 
-#include "piricad/core/entity_kind.hpp"
-#include "piricad/core/spatial_index.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/spatial_index.hpp"
 
 #include <algorithm>
 #include <cmath>
 
-namespace piricad::render {
+namespace kentos::render {
 namespace {
 
 bool box_contains(const Box2& outer, const Box2& inner)
@@ -506,7 +506,7 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
 
     // The index narrows five million parcels to the handful sharing a leaf with
     // the viewport; entities added since it was last packed are a short tail that
-    // is cheaper to scan than to repack (piricad.md §10.5).
+    // is cheaper to scan than to repack (kentoscad.md §10.5).
     const core::SpatialIndex& index = doc.spatial_index();
 
     // Zoomed far enough out that everything is on screen: the tree can only answer
@@ -533,4 +533,4 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
     finish();
 }
 
-} // namespace piricad::render
+} // namespace kentos::render

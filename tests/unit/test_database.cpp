@@ -22,16 +22,16 @@
 //
 // test.md P9: nothing here mutates a Document except through a command dispatched
 // on the Bus.
-#include "piricad_test.hpp"
+#include "kentos_test.hpp"
 
-#include "piricad/command/bus.hpp"
-#include "piricad/command/registry.hpp"
-#include "piricad/command/transaction.hpp"
-#include "piricad/core/text.hpp"
-#include "piricad/domain/geodesy/crs_service.hpp"
-#include "piricad/io/database.hpp"
-#include "piricad/io/postgis.hpp"
-#include "piricad/io/service.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/command/transaction.hpp"
+#include "kentos_cad/core/text.hpp"
+#include "kentos_cad/domain/geodesy/crs_service.hpp"
+#include "kentos_cad/io/database.hpp"
+#include "kentos_cad/io/postgis.hpp"
+#include "kentos_cad/io/service.hpp"
 
 #include <array>
 #include <cstdlib>
@@ -39,8 +39,8 @@
 #include <string>
 #include <vector>
 
-using namespace piricad;
-using namespace piricad::command;
+using namespace kentos;
+using namespace kentos::command;
 
 namespace {
 
@@ -49,10 +49,10 @@ namespace {
 /// FROM THE ENVIRONMENT AND NOWHERE ELSE. A hard-coded `host=localhost` would
 /// make this suite try to reach whatever happens to listen on port 5432 of the
 /// machine running it, which on a developer's laptop is somebody's real database.
-/// An explicit `PIRICAD_TEST_PGCONN` is consent.
+/// An explicit `KENTOS_TEST_PGCONN` is consent.
 std::string test_conninfo()
 {
-    const char* set = std::getenv("PIRICAD_TEST_PGCONN");
+    const char* set = std::getenv("KENTOS_TEST_PGCONN");
     return set != nullptr ? std::string(set) : std::string();
 }
 
@@ -78,7 +78,7 @@ struct Rig
         register_builtin_commands(reg);
         bus.on_echo = [this](std::string_view s) { transcript.append(s).append("\n"); };
 
-        auto catalogue = domain::geodesy::CrsCatalog::load(std::string(PIRICAD_DATA_DIR) + "/crs");
+        auto catalogue = domain::geodesy::CrsCatalog::load(std::string(KENTOS_DATA_DIR) + "/crs");
         REQUIRE(catalogue.ok());
         crs.emplace(bus, std::move(catalogue.value()));
 
@@ -163,7 +163,7 @@ TEST_CASE("bağlanmadan iş yapılamaz")
 {
     Rig rig;
     if (!io::DatabaseService::available()) {
-        PENDING("bu yapı PIRICAD_WITH_POSTGIS olmadan derlendi");
+        PENDING("bu yapı KENTOS_WITH_POSTGIS olmadan derlendi");
         return;
     }
 
@@ -189,7 +189,7 @@ TEST_CASE("komut argümanları Value olarak gidip geliyor")
     // inside one text value.
     Args conn;
     conn.set("islem", Value::text("baglan"));
-    conn.set("hedef", Value::text("host=localhost port=5432 dbname=piricad user=harita"));
+    conn.set("hedef", Value::text("host=localhost port=5432 dbname=kentoscad user=harita"));
 
     auto conn_back = Args::from_json(conn.to_json());
     REQUIRE(conn_back.ok());
@@ -225,25 +225,25 @@ TEST_CASE("parola libpq'nun HER İKİ bağlantı biçiminden de silinir")
     // The keyword form is the obvious one. The URI form is the one that gets
     // forgotten, and it is the one a user is most likely to paste out of a
     // colleague's message — so it is checked here by name.
-    CHECK_EQ(redact_conninfo("host=localhost dbname=piricad user=harita password=ÇOKGİZLİ"),
-             std::string("host=localhost dbname=piricad user=harita password=***"));
+    CHECK_EQ(redact_conninfo("host=localhost dbname=kentoscad user=harita password=ÇOKGİZLİ"),
+             std::string("host=localhost dbname=kentoscad user=harita password=***"));
 
     // Quoted, because a password with a space in it is still a password.
     CHECK_EQ(redact_conninfo("host=x password='SEC RET' dbname=y"),
              std::string("host=x password=*** dbname=y"));
 
     // The URI form.
-    CHECK_EQ(redact_conninfo("postgresql://harita:ÇOKGİZLİ@sunucu.gov.tr/piricad"),
-             std::string("postgresql://harita:***@sunucu.gov.tr/piricad"));
-    CHECK_EQ(redact_conninfo("postgres://harita:GİZLİ@sunucu:5432/piricad?sslmode=require"),
-             std::string("postgres://harita:***@sunucu:5432/piricad?sslmode=require"));
+    CHECK_EQ(redact_conninfo("postgresql://harita:ÇOKGİZLİ@sunucu.gov.tr/kentoscad"),
+             std::string("postgresql://harita:***@sunucu.gov.tr/kentoscad"));
+    CHECK_EQ(redact_conninfo("postgres://harita:GİZLİ@sunucu:5432/kentoscad?sslmode=require"),
+             std::string("postgres://harita:***@sunucu:5432/kentoscad?sslmode=require"));
 
     // A URI with no password at all is left alone — including the one whose only
     // colon belongs to the PORT, which must not be mistaken for a secret.
-    CHECK_EQ(redact_conninfo("postgresql://harita@sunucu/piricad"),
-             std::string("postgresql://harita@sunucu/piricad"));
-    CHECK_EQ(redact_conninfo("postgresql://sunucu:5432/piricad"),
-             std::string("postgresql://sunucu:5432/piricad"));
+    CHECK_EQ(redact_conninfo("postgresql://harita@sunucu/kentoscad"),
+             std::string("postgresql://harita@sunucu/kentoscad"));
+    CHECK_EQ(redact_conninfo("postgresql://sunucu:5432/kentoscad"),
+             std::string("postgresql://sunucu:5432/kentoscad"));
 
     // The FIELD survives, the secret does not: a replay that silently dropped
     // `password=` would look like a connection that never needed one.
@@ -281,12 +281,12 @@ TEST_CASE("bağlantı dizesindeki parola günlüğe düşmez")
 TEST_CASE("proje veritabanına gidip aynı belge olarak geri gelir")
 {
     if (!io::DatabaseService::available()) {
-        PENDING("bu yapı PIRICAD_WITH_POSTGIS olmadan derlendi");
+        PENDING("bu yapı KENTOS_WITH_POSTGIS olmadan derlendi");
         return;
     }
     const std::string conninfo = test_conninfo();
     if (conninfo.empty()) {
-        PENDING("PIRICAD_TEST_PGCONN ayarlı değil; veritabanı testleri çalışmadı");
+        PENDING("KENTOS_TEST_PGCONN ayarlı değil; veritabanı testleri çalışmadı");
         return;
     }
 
@@ -300,14 +300,14 @@ TEST_CASE("proje veritabanına gidip aynı belge olarak geri gelir")
     const std::uint64_t settings_before = rig.bus.project_settings().fold(core::fnv1a({}));
     const std::size_t entities_before   = live_entities(rig.doc);
 
-    rig.run("VERİTABANI projekaydet hedef=piricad-test-proje");
+    rig.run("VERİTABANI projekaydet hedef=kentoscad-test-proje");
 
     // Draw over it, so "came back the same" cannot be satisfied by doing nothing.
     rig.run("KATMAN ad=SONRADAN");
     rig.run("ÇİZGİ 0.000,0.000 1.000,1.000");
     REQUIRE(rig.doc.content_hash() != before);
 
-    rig.run("VERİTABANI projeac hedef=piricad-test-proje");
+    rig.run("VERİTABANI projeac hedef=kentoscad-test-proje");
 
     CHECK(rig.doc.content_hash() == before);
     CHECK(rig.bus.project_settings().fold(core::fnv1a({})) == settings_before);
@@ -315,28 +315,28 @@ TEST_CASE("proje veritabanına gidip aynı belge olarak geri gelir")
 
     // And it is listed.
     rig.run("VERİTABANI projeler");
-    CHECK(rig.transcript.find("piricad-test-proje") != std::string::npos);
+    CHECK(rig.transcript.find("kentoscad-test-proje") != std::string::npos);
 
     // Tidy up. A test suite pointed at somebody's database leaves it as it found
     // it — and running the delete here is also what proves the verb works.
-    rig.run("VERİTABANI projesil hedef=piricad-test-proje");
+    rig.run("VERİTABANI projesil hedef=kentoscad-test-proje");
     CHECK(rig.transcript.find("silindi") != std::string::npos);
 
     // Deleting what is not there is not an error: a script that tidies before it
     // runs must not abort because the tidying was unnecessary.
-    rig.run("VERİTABANI projesil hedef=piricad-test-proje");
+    rig.run("VERİTABANI projesil hedef=kentoscad-test-proje");
     CHECK(rig.transcript.find("böyle bir proje yoktu") != std::string::npos);
 }
 
 TEST_CASE("katman başka bir programın okuyabileceği tablo olur")
 {
     if (!io::DatabaseService::available()) {
-        PENDING("bu yapı PIRICAD_WITH_POSTGIS olmadan derlendi");
+        PENDING("bu yapı KENTOS_WITH_POSTGIS olmadan derlendi");
         return;
     }
     const std::string conninfo = test_conninfo();
     if (conninfo.empty()) {
-        PENDING("PIRICAD_TEST_PGCONN ayarlı değil; veritabanı testleri çalışmadı");
+        PENDING("KENTOS_TEST_PGCONN ayarlı değil; veritabanı testleri çalışmadı");
         return;
     }
 
@@ -344,18 +344,18 @@ TEST_CASE("katman başka bir programın okuyabileceği tablo olur")
     rig.run("VERİTABANI baglan hedef=\"" + conninfo + "\"");
     draw_fixture(rig);
 
-    rig.run("VERİTABANI katmanyaz katman=PARSEL hedef=piricad_test_parsel");
+    rig.run("VERİTABANI katmanyaz katman=PARSEL hedef=kentos_test_parsel");
     CHECK(rig.transcript.find("1 satır") != std::string::npos);
     CHECK(rig.transcript.find("EPSG:5254") != std::string::npos);
 
     // It shows up as a spatial table, which is what "a GIS layer" means.
     rig.run("VERİTABANI tablolar");
-    CHECK(rig.transcript.find("piricad_test_parsel") != std::string::npos);
+    CHECK(rig.transcript.find("kentos_test_parsel") != std::string::npos);
 
     // The other layer is a different table. TWO rows, not one: `ÇİZGİ` with three
     // points draws two segments and therefore two entities, and the writer emits
     // one row per ENTITY rather than per command.
-    rig.run("VERİTABANI katmanyaz katman=YOL hedef=piricad_test_yol");
+    rig.run("VERİTABANI katmanyaz katman=YOL hedef=kentos_test_yol");
     CHECK(rig.transcript.find("'YOL' katmanı yazıldı: 2 satır") != std::string::npos);
 
     // Writing it AGAIN REPLACES rather than appends — the table is dropped and
@@ -363,19 +363,19 @@ TEST_CASE("katman başka bir programın okuyabileceği tablo olur")
     // every parcel in a municipality's table, and a doubled cadastral table is
     // worse than no table at all.
     const std::string before = rig.transcript;
-    rig.run("VERİTABANI katmanyaz katman=PARSEL hedef=piricad_test_parsel");
+    rig.run("VERİTABANI katmanyaz katman=PARSEL hedef=kentos_test_parsel");
     CHECK(rig.transcript.substr(before.size()).find("1 satır") != std::string::npos);
 }
 
 TEST_CASE("sütun adı çakışması açıkça reddedilir")
 {
     if (!io::DatabaseService::available()) {
-        PENDING("bu yapı PIRICAD_WITH_POSTGIS olmadan derlendi");
+        PENDING("bu yapı KENTOS_WITH_POSTGIS olmadan derlendi");
         return;
     }
     const std::string conninfo = test_conninfo();
     if (conninfo.empty()) {
-        PENDING("PIRICAD_TEST_PGCONN ayarlı değil; veritabanı testleri çalışmadı");
+        PENDING("KENTOS_TEST_PGCONN ayarlı değil; veritabanı testleri çalışmadı");
         return;
     }
 
@@ -391,7 +391,7 @@ TEST_CASE("sütun adı çakışması açıkça reddedilir")
             "485300.000,4310245.000");
 
     const std::string said = rig.expect_fail("VERİTABANI katmanyaz katman=PARSEL "
-                                             "hedef=piricad_test_cakisma");
+                                             "hedef=kentos_test_cakisma");
     CHECK(said.find("kimlik") != std::string::npos);
     CHECK(said.find("yeniden adlandırın") != std::string::npos);
 }
@@ -399,12 +399,12 @@ TEST_CASE("sütun adı çakışması açıkça reddedilir")
 TEST_CASE("çözülmemiş koordinat sistemiyle tablo yazılmaz")
 {
     if (!io::DatabaseService::available()) {
-        PENDING("bu yapı PIRICAD_WITH_POSTGIS olmadan derlendi");
+        PENDING("bu yapı KENTOS_WITH_POSTGIS olmadan derlendi");
         return;
     }
     const std::string conninfo = test_conninfo();
     if (conninfo.empty()) {
-        PENDING("PIRICAD_TEST_PGCONN ayarlı değil; veritabanı testleri çalışmadı");
+        PENDING("KENTOS_TEST_PGCONN ayarlı değil; veritabanı testleri çalışmadı");
         return;
     }
 

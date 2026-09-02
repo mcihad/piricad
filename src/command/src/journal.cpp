@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/command/journal.hpp"
+#include "kentos_cad/command/journal.hpp"
 
-#include "piricad/command/log.hpp"
+#include "kentos_cad/command/log.hpp"
 
 #include <fstream>
 #include <sstream>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 Origin origin_from_name(std::string_view s)
@@ -251,4 +251,4 @@ core::Result<std::vector<JournalEntry>> Journal::read_jsonl(const std::string& p
     return out;
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

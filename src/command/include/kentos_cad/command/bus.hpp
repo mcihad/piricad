@@ -1,0 +1,389 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// KentOSCad — command: THE COMMAND BUS.
+//
+//     GUI button ─┐
+//     Command line ┤
+//     Script ──────┼──►  BUS  ──►  Validation ──►  Transaction ──►  Document
+//     AI ──────────┤                                    │
+//     Batch ───────┘                                    └──►  Journal
+//
+// kentoscad.md §2.1 — "Everything that mutates application state is a command.
+// The user interface is only one client of the command bus."
+// No client on that diagram has a privilege over any other.
+#pragma once
+
+#include "kentos_cad/command/aids.hpp"
+#include "kentos_cad/command/journal.hpp"
+#include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/command/selection.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/transaction.hpp"
+#include "kentos_cad/command/validation.hpp"
+#include "kentos_cad/core/crs.hpp"
+#include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/settings.hpp"
+#include "kentos_cad/core/style_library.hpp"
+
+#include <functional>
+#include <memory>
+#include <string>
+#include <string_view>
+
+namespace kentos::command {
+
+/// One request to run one command: what, with which arguments, from whom.
+///
+/// This IS the serialisable form Article 1.4 requires — a journal line, a script
+/// step and an AI tool call are all this struct — which is why undo, replay,
+/// scripting and audit come out of one mechanism rather than four.
+struct Invocation
+{
+    std::string name;            ///< command id or any declared alias
+    Args args;                   ///< arguments, validated before the body runs
+    Origin origin{Origin::Test}; ///< recorded in the journal, never branched on
+};
+
+/// One file operation, asked for by a file command and carried out by /src/io.
+///
+/// The seam exists for the reason `on_run_script` exists: Article 3.2 lets io
+/// depend on command and never the reverse, but io.md R4 wants every import and
+/// export to be a registered command, and the registry — with the CLI help, the
+/// AI schema and `kentos_docgen` behind it — lives here. So the `CommandSpec`
+/// and the body live in `commands/file.cpp`, and the work arrives through
+/// `Bus::on_file_request`, which `io::FileService` installs. `Category::File` was
+/// reserved in `spec.hpp` from the start for exactly these commands.
+struct FileRequest
+{
+    /// What kind of file operation this is.
+    enum class Verb : std::uint8_t {
+        Open,        ///< replace the document with a native project file
+        Save,        ///< write the native project file the document belongs to
+        SaveAs,      ///< write it somewhere else and belong there from now on
+        Import,      ///< merge an external dataset into the current document
+        Export,      ///< write the current document out in an external format
+        ExportStyle, ///< write ONE layer's symbology as a QGIS QML style file
+    };
+
+    Verb verb{Verb::Open}; ///< which operation to carry out
+    std::string path;      ///< empty on Save when the document already has a path
+    std::string format;    ///< driver id for Import/Export; empty = infer from the path
+    std::string layer;     ///< ExportStyle: which layer's symbology to write
+
+    /// The calling command's own transaction, so an import is ONE undo step and
+    /// rolls back whole (io.md R17). Null for the verbs that do not mutate the
+    /// document through a transaction.
+    Transaction* tx{nullptr};
+};
+
+/// One database operation, asked for by `VERİTABANI` and carried out by /src/io.
+///
+/// A SEPARATE STRUCT FROM `FileRequest`, not extra verbs on it, because the two
+/// address different things and sharing a field would mean naming one `path` and
+/// meaning "table" half the time. A database target is a connection string, a
+/// table, or a stored project's name; a file target is a path. Same seam, same
+/// reason (Article 3.2), different nouns.
+struct DatabaseRequest
+{
+    /// What to do. Deliberately small: this is the command surface a script and
+    /// the AI see, and each verb is one sentence a user would say out loud.
+    enum class Verb : std::uint8_t {
+        Connect,     ///< open a connection and report what the server is
+        Disconnect,  ///< close it
+        Tables,      ///< list the spatial tables the connection can see
+        WriteLayer,  ///< write one layer out as an ordinary spatial table
+        SaveProject, ///< store the whole drawing under a name
+        OpenProject, ///< replace the drawing with a stored one
+        Projects,    ///< list what is stored
+        DropProject, ///< remove one stored project
+    };
+
+    Verb verb{Verb::Connect}; ///< which operation to carry out
+
+    /// Connect: the libpq connection string. WriteLayer: the table to write.
+    /// SaveProject / OpenProject: the name to store under or read back.
+    std::string target;
+
+    /// WriteLayer: which layer. Empty means the active one.
+    std::string layer;
+
+    /// The calling command's transaction, for the verbs that mutate the document.
+    /// Null for everything else, exactly as `FileRequest` uses it.
+    Transaction* tx{nullptr};
+};
+
+/// A PostgreSQL connection string with its password taken out.
+///
+/// ONE implementation, shared by everything that shows or stores a connection
+/// string: `VERİTABANI` before it journals, and the database window before it
+/// displays. A journal is a plain JSONL file that gets attached to bug reports
+/// and committed beside projects, and a screenshot travels further than either.
+///
+/// Handles both forms libpq accepts, because the second one is easy to forget:
+///
+///   `host=x password=SECRET`            -> `password=***`
+///   `host=x password='SEC RET'`         -> `password=***`
+///   `postgresql://user:SECRET@host/db`  -> `postgresql://user:***@host/db`
+///
+/// Replaces the VALUE and keeps the FIELD. A replay that silently dropped the
+/// password would look like a connection that never needed one.
+std::string redact_conninfo(std::string_view conninfo);
+
+/// What happened when a command ran.
+///
+/// Returned to every client identically. `mutated` is what the shell watches to
+/// know whether to repaint, and `ops` is what the undo stack watches to know
+/// whether there is anything to undo.
+struct DispatchResult
+{
+    std::string command_id; ///< canonical id of what ran
+    std::string label;      ///< the label the undo entry will carry
+    std::size_t ops{0};     ///< primitive edits recorded
+    bool mutated{false};    ///< whether the document changed at all
+    std::string message;    ///< user-facing summary, Turkish
+};
+
+class Bus
+{
+public:
+    /// Builds the bus over the four things every command needs. All held by
+    /// reference: the controller owns them and outlives the bus.
+    Bus(core::Document& doc, Registry& reg, Journal& journal, UndoStack& undo);
+
+    // ---- the single entry point for every client ----
+    core::Result<DispatchResult> dispatch(const Invocation& inv);
+
+    /// Parses and dispatches one command line. Used by the CLI widget, by macro
+    /// playback and by the script engine — one grammar, one path (§3).
+    core::Result<DispatchResult> execute_line(std::string_view line, Origin origin);
+
+    /// Starts an interactive command that will ask the user for input.
+    /// Only the GUI uses this, and it buys the GUI no privileges: the session
+    /// runs the same coroutine, validation and transaction as every other client.
+    core::Result<std::unique_ptr<Session>> begin_interactive(std::string_view name);
+
+    /// Called by Session when a command finishes. Validates, commits or rolls
+    /// back, and journals.
+    core::Result<DispatchResult> finish(Session& session);
+
+    // ---- batch mode (§10.4): one validation pass, one undo step ----
+    core::Status begin_batch(std::string label);
+    core::Result<DispatchResult> end_batch();
+    /// Discards every edit made since begin_batch(). Used when a GUI composite
+    /// edit cannot finish, so Apply is all-or-nothing rather than half a symbol.
+    void abort_batch();
+
+    bool in_batch() const noexcept { return batch_ != nullptr; }
+
+    // ---- accessors ----
+    core::Document& document() noexcept { return doc_; }
+
+    const core::Document& document() const noexcept { return doc_; }
+
+    Registry& registry() noexcept { return reg_; }
+
+    Journal& journal() noexcept { return journal_; }
+
+    UndoStack& undo_stack() noexcept { return undo_; }
+
+    Validator& validator() noexcept { return validator_; }
+
+    core::LayerId active_layer() const noexcept { return active_layer_; }
+
+    void set_active_layer(core::LayerId l) { active_layer_ = l; }
+
+    // ---- settings, one store per SCOPE (model.md R39, R41) ----
+    //
+    // PHASE-0 SEAM. R39 puts the PROJECT store inside the document: it travels
+    // with the file, it is undoable, and it is part of content_hash(). That needs
+    // `Document::settings()`, an `Op::SetSetting` variant and
+    // `Transaction::set_setting()`, none of which exist yet — so the store lives
+    // one level out, on the bus that owns exactly one document.
+    //
+    // What it must NOT be is a process-wide static, which is what it was: every
+    // bus in the process shared one store, so the project CRS set in one drawing
+    // leaked into the next File > New, and the AYAR tests were order-coupled
+    // through a hidden global rather than isolated by their fixtures.
+    //
+    // The APP store is per user and machine (R39) and stays here permanently; the
+    // application shell reads and writes it through this accessor so that
+    // `TERCİH tema koyu` and the Görünüm menu are the same write (R38, CLAUDE.md
+    // 5.10 — there is no second settings list).
+    core::Settings& project_settings() noexcept { return project_settings_; }
+
+    const core::Settings& project_settings() const noexcept { return project_settings_; }
+
+    core::Settings& app_settings() noexcept { return app_settings_; }
+
+    const core::Settings& app_settings() const noexcept { return app_settings_; }
+
+    // The SESSION store holds the input aids — snap modes, ortho, polar step,
+    // snap-to-grid. R39 makes them transient: never written to the file, never
+    // written to the preferences file, gone when the process exits. They live on
+    // the bus rather than in the canvas because R43 does not make them private to
+    // the mouse: a script and the AI aim with the same aids the hand does
+    // (CLAUDE.md 1.2). Before this they were declared with nowhere to live, so no
+    // client at all could read or write them.
+    core::Settings& session_settings() noexcept { return session_settings_; }
+
+    // ---- the settings service -------------------------------------------
+    //
+    // ONE road to a setting, whatever its scope. Before this every caller had to
+    // know which of the three stores held the id it wanted, so adding a setting
+    // meant finding every reader and telling it which drawer to open — and a
+    // reader that guessed wrong read a default and reported it as a value.
+    //
+    // The scope is not the caller's business. It is DECLARED on the SettingSpec
+    // (R39-R42) and the declaration is what decides where the value lives, so
+    // this resolves it and the caller states only what it wants.
+
+    /// The store a declared setting lives in, or null when nothing declares `id`.
+    core::Settings* store_for(std::string_view id) noexcept;
+
+    const core::Settings* store_for(std::string_view id) const noexcept;
+
+    /// The value of a declared setting. An undeclared id returns an empty value —
+    /// the same answer `Settings::get` gives, because a typo in an id is a caller
+    /// bug and not a reason to take the program down mid-frame.
+    core::SettingValue setting(std::string_view id) const;
+
+    /// Writes a declared setting into whichever store its scope names.
+    ///
+    /// Calls `on_settings_changed` with that scope afterwards, so whoever owns
+    /// persistence writes it out. Nothing here knows what a preferences file is:
+    /// the APP store is per user and machine and the shell owns the file, exactly
+    /// as `io::FileService` owns the ones under /src/io.
+    /// Returns what actually changed — the canonical id, the value before, the
+    /// value after any R42 clamping, and whether it was clamped. A caller that
+    /// echoed the value it asked for would report a number the store refused.
+    core::Result<core::SettingChange> set_setting(std::string_view id,
+                                                  const core::SettingValue& value);
+
+    /// Fired after a setting changes, with the scope that changed.
+    ///
+    /// The seam that fixes an asymmetry Article 1.2 forbids: preferences used to
+    /// be written only when the main window was destroyed, so `TERCİH` from a
+    /// SCRIPT changed the value for that run and lost it. Every client now
+    /// persists the same way, because none of them does it — the owner does.
+    std::function<void(core::SettingScope)> on_settings_changed;
+
+    const core::Settings& session_settings() const noexcept { return session_settings_; }
+
+    // ---- selection and input aids: session state, never document state ----
+    //
+    // model.md R43 keeps both out of `content_hash()` and out of the journal as
+    // document mutations, and R44 stores the selection as `EntityKey` so it
+    // survives a save, a reorder and a reload. They live on the bus rather than
+    // in the canvas for the same reason the session settings do: a script and the
+    // AI select and aim with the same machinery the hand does (Article 1.2).
+    /// The browsable symbol shelf, for as long as this session lives.
+    ///
+    /// SESSION state, not document state (model.md R43): which symbols a user can
+    /// pick from is a property of what they have installed, not of the drawing.
+    /// A drawing carries the symbols it actually uses, interned in its own style
+    /// table, so it opens the same on a machine with no library at all.
+    core::StyleLibrary& style_library() noexcept { return style_library_; }
+
+    const core::StyleLibrary& style_library() const noexcept { return style_library_; }
+
+    Selection& selection() noexcept { return selection_; }
+
+    const Selection& selection() const noexcept { return selection_; }
+
+    InputAids& aids() noexcept { return aids_; }
+
+    const InputAids& aids() const noexcept { return aids_; }
+
+    /// The aid settings in force, assembled from the app and session stores and
+    /// memoised against their revision counters (see `aids.hpp`). The reference is
+    /// valid until the next settings write or view-scale change.
+    const AidSettings& aid_settings() const
+    {
+        return aids_.settings(app_settings_, session_settings_);
+    }
+
+    // ---- observers. The UI subscribes; it never reaches around the bus. ----
+    std::function<void(std::string_view)> on_echo;
+    std::function<void(const Prompt&)> on_prompt;
+    std::function<void()> on_document_changed;
+    std::function<void(const DispatchResult&)> on_command_finished;
+
+    /// The selection changed. The canvas listens so that selecting from the
+    /// command line, from a script or from a rubber-band drag all light the same
+    /// entities up — the mouse is not a privileged client (Article 1.2).
+    std::function<void()> on_selection_changed;
+
+    /// A setting changed. The shell listens so that writing a preference from the
+    /// command line, from a script or from the AI has the same visible effect as
+    /// using the menu — the menu is not a privileged client (Article 1.2).
+    std::function<void(std::string_view id, core::SettingScope scope)> on_setting_changed;
+
+    /// Resolves a CRS id into a populated `core::Crs`.
+    ///
+    /// Installed by the geodesy module, which owns the zone catalogue; the same
+    /// shape as `on_file_request`, and for the same reason. Without it a CRS keeps
+    /// its id and stays unresolved, which is honest: a build with no geodesy module
+    /// genuinely does not know that TM30 is EPSG:5254.
+    std::function<core::Crs(std::string_view id)> on_crs_resolve;
+
+    /// View state is not document state, so it is not undoable and does not go
+    /// through a transaction. The command still travels the bus, so a script and
+    /// a toolbar button reach the viewport by the same route.
+    std::function<void(std::string_view mode, double factor)> on_view_request;
+
+    /// KAYDIR asks the view to move so that `from` ends up where `to` is.
+    ///
+    /// A separate hook rather than another `on_view_request` mode, because this
+    /// one carries two document points: pushing them through a string mode and a
+    /// double would be inventing a second, lossy encoding for a coordinate
+    /// (Article 1.4). A headless client leaves it unset and the command says so.
+    std::function<void(core::Point2 from, core::Point2 to)> on_pan_request;
+
+    /// Installed by the script layer. Keeps the dependency direction intact:
+    /// script depends on command, never the reverse (Constitution Article 3).
+    std::function<core::Status(const std::string& path)> on_run_script;
+
+    /// Installed by `io::DatabaseService`. Unset means this build has no database
+    /// engine attached — either it was compiled without PostGIS or nothing wired
+    /// the service — and `VERİTABANI` says so rather than pretending it connected.
+    std::function<Task<core::Result<std::string>>(const DatabaseRequest&)> on_database_request;
+
+    /// Installed by `io::FileService`, for the same reason and in the same shape.
+    /// Returns the Turkish line the command echoes, or the error the user sees.
+    /// Unset means no file engine is attached, and the file commands say so
+    /// rather than pretending the save happened.
+    std::function<Task<core::Result<std::string>>(const FileRequest&)> on_file_request;
+
+    /// Asked by `core.saveas` and `core.export` before they build their request:
+    /// the file the document currently belongs to, so the transcript and the GUI
+    /// dialog can start where the user last was. NOT document state (model.md
+    /// R43) — never hashed, never journalled, never undoable.
+    std::function<std::string()> on_current_file;
+
+    void echo(std::string_view message) const;
+
+private:
+    core::Result<DispatchResult> run_to_completion(Session& session);
+    void journal_entry(const Session& session);
+
+    core::Document& doc_;
+    Registry& reg_;
+    Journal& journal_;
+    UndoStack& undo_;
+    Validator validator_;
+    core::LayerId active_layer_{0};
+
+    core::Settings project_settings_{core::builtin_settings(), core::SettingScopeMask::Project};
+    core::Settings app_settings_{core::builtin_settings(), core::SettingScopeMask::App};
+    core::Settings session_settings_{core::builtin_settings(), core::SettingScopeMask::Session};
+
+    Selection selection_{};
+    InputAids aids_{};
+    core::StyleLibrary style_library_{};
+
+    std::unique_ptr<Transaction> batch_;
+    std::string batch_label_;
+    std::size_t batch_commands_{0};
+    std::uint64_t batch_revision_at_start_{0};
+};
+
+} // namespace kentos::command

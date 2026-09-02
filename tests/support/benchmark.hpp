@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PiriCAD — the Article 7 budget harness, on Google Benchmark.
+// KentOSCad — the Article 7 budget harness, on Google Benchmark.
 //
 // TWO JOBS, and keeping them apart is the whole design.
 //
@@ -62,7 +62,7 @@ struct Case
     /// The Article 7 limit in `unit`; 0 means informational — measured, reported
     /// and guarded against regression, but with no absolute number to fail.
     ///
-    /// Zero is used where piricad.md §10.1 states no figure. Inventing one would
+    /// Zero is used where kentoscad.md §10.1 states no figure. Inventing one would
     /// produce a threshold nobody derived, and the first time it failed somebody
     /// would raise it — which test.md P7 forbids outright.
     double budget{0};
@@ -121,4 +121,4 @@ int run_all(int argc, char** argv);
 } // namespace bench
 
 /// Declares one scenario. The symbol only has to be unique within its file.
-#define PIRICAD_BENCH(sym) static const ::bench::Registrar piricad_bench_##sym
+#define KENTOS_BENCH(sym) static const ::bench::Registrar kentos_bench_##sym

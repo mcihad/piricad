@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// libFuzzer harness for the DXF import path (GDAL/OGR + the PiriCAD wrapper).
+// libFuzzer harness for the DXF import path (GDAL/OGR + the KentOSCad wrapper).
 //
 // .claude/io.md R19 names DXF as one of the parsers that must be fuzzed. GDAL's
 // own DXF parser is fuzzed upstream by OSS-Fuzz; what is NOT fuzzed anywhere else
@@ -8,15 +8,15 @@
 // role assignment, the CRS sidecar reader and the transaction rollback. A crash
 // found here is ours until proven otherwise.
 //
-// Built only when PIRICAD_WITH_GDAL is ON; without it the target is not defined,
+// Built only when KENTOS_WITH_GDAL is ON; without it the target is not defined,
 // because a harness that exercises nothing is worse than an absent one.
 //
 // Build:
-//   cmake --preset dev -DPIRICAD_BUILD_FUZZ=ON -DCMAKE_CXX_COMPILER=clang++
-//   ./build/dev/bin/piricad_fuzz_dxf tests/fuzz/tohum/dxf -max_total_time=300
-#include "piricad/command/bus.hpp"
-#include "piricad/command/registry.hpp"
-#include "piricad/io/service.hpp"
+//   cmake --preset dev -DKENTOS_BUILD_FUZZ=ON -DCMAKE_CXX_COMPILER=clang++
+//   ./build/dev/bin/kentos_fuzz_dxf tests/fuzz/tohum/dxf -max_total_time=300
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/io/service.hpp"
 
 #ifdef _WIN32
 #include <process.h>
@@ -44,7 +44,7 @@ const std::string& scratch_path()
         const auto pid = ::getpid();
 #endif
         const auto p = std::filesystem::temp_directory_path() /
-                       ("piricad-fuzz-dxf-" + std::to_string(pid) + ".dxf");
+                       ("kentoscad-fuzz-dxf-" + std::to_string(pid) + ".dxf");
         return p.string();
     }();
     return path;
@@ -61,21 +61,21 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         out.write(reinterpret_cast<const char*>(data), static_cast<std::streamsize>(size));
     }
 
-    piricad::core::Document doc;
-    piricad::command::Registry registry;
-    piricad::command::Journal journal;
-    piricad::command::UndoStack undo;
-    piricad::command::Bus bus{doc, registry, journal, undo};
-    piricad::io::FileService files{bus};
+    kentos::core::Document doc;
+    kentos::command::Registry registry;
+    kentos::command::Journal journal;
+    kentos::command::UndoStack undo;
+    kentos::command::Bus bus{doc, registry, journal, undo};
+    kentos::io::FileService files{bus};
 
-    piricad::command::register_builtin_commands(registry);
+    kentos::command::register_builtin_commands(registry);
     bus.on_echo = [](std::string_view) {};
-    (void)bus.execute_line("AYAR core.crs.id EPSG:5254", piricad::command::Origin::Test);
+    (void)bus.execute_line("AYAR core.crs.id EPSG:5254", kentos::command::Origin::Test);
 
     const std::uint64_t before = doc.content_hash();
 
     auto imported =
-        bus.execute_line("İÇEAKTAR \"" + scratch_path() + "\"", piricad::command::Origin::Test);
+        bus.execute_line("İÇEAKTAR \"" + scratch_path() + "\"", kentos::command::Origin::Test);
     if (!imported) {
         // io.md R17/P11: a failed import rolls back to EXACTLY the pre-import
         // document. Not "close enough" — the same fingerprint.
@@ -84,7 +84,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     }
 
     (void)doc.content_hash();
-    for (piricad::core::EntityId e = 0; e < doc.entities().size(); ++e) {
+    for (kentos::core::EntityId e = 0; e < doc.entities().size(); ++e) {
         (void)doc.entity_area(e);
         if (doc.entities().layer[e] >= doc.layers().size()) __builtin_trap();
     }

@@ -10,16 +10,16 @@
 // The renderer reads a StyleId, resolved at commit time. An attribute is what the
 // parcel IS; the style column is what the parcel LOOKS LIKE, and the second is
 // derived from the first by a rule, never looked up per frame.
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/attribute.hpp"
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/attribute.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <string>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 /// Parses a value against the column's declared type. There is no guessing: the
@@ -160,7 +160,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(attribute)
+KENTOS_COMMAND(attribute)
 {
     return CommandSpec{
         .id       = "core.attribute",
@@ -236,7 +236,7 @@ Task<void> run_column(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(column)
+KENTOS_COMMAND(column)
 {
     return CommandSpec{
         .id       = "core.column",
@@ -258,4 +258,4 @@ PIRICAD_COMMAND(column)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

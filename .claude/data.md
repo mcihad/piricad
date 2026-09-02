@@ -1,6 +1,6 @@
 # Data & Catalogues — Rules
 
-> Scope: `/data/catalogs`, `/data/crs`, `/data/corpus` | Depends on: nothing (pure data; consumed by `/src/domain`, `/src/ai`, `/src/io`) | Source: piricad.md §5.5, §12, §15, §16
+> Scope: `/data/catalogs`, `/data/crs`, `/data/corpus` | Depends on: nothing (pure data; consumed by `/src/domain`, `/src/ai`, `/src/io`) | Source: kentoscad.md §5.5, §12, §15, §16
 
 ## Hard Rules
 
@@ -9,7 +9,7 @@ R2. Every catalogue file MUST carry a header block with `schema_version`, `packa
 R3. Every catalogue MUST have a JSON Schema under `/data/catalogs/schema/` and MUST validate against it in CI.
 R4. Any content change to a catalogue MUST bump `package_version` and add a `CHANGELOG.md` line naming the regulation/genelge that caused it, in the same commit.
 R5. Catalogue entry ids (detay kodu, gösterim kodu) MUST be stable forever; a retired entry MUST be marked `deprecated: true` with `valid_until`, never removed and never reused.
-R6. Catalogue lookups MUST fail loudly: an unknown code returns `Error` via `Result<T>` (`piricad/core/result.hpp`); no compiled-in fallback value. See `.claude/domain.md` for consumption rules.
+R6. Catalogue lookups MUST fail loudly: an unknown code returns `Error` via `Result<T>` (`kentos_cad/core/result.hpp`); no compiled-in fallback value. See `.claude/domain.md` for consumption rules.
 R7. `/data/crs` MUST hold geoid grids and transformation parameters as files, each with a sibling `provenance.json` recording origin institution, acquisition date, licence, and whether redistribution is permitted (§12).
 R8. `/data/crs` MUST cover TUREF/ITRF96 with epoch, TM 3° zones 27/30/33/36/39/42/45 at scale 1.0, ED50/UTM 6°, ITRF↔ED50 regional transformation, and the current Türkiye Jeoit Modeli (§12 Jeodezik).
 R9. Each CRS definition and grid MUST be covered by a reference test that transforms TKGM-supplied reference coordinates through PROJ and asserts agreement within a tolerance stated in the test file (§16.7).
@@ -48,7 +48,7 @@ P10. NEVER let a build target embed a catalogue or grid file into the binary at 
 
 - `scripts/ci-gate-catalogs.sh` — CI job `data-catalogs`: JSON Schema validation, R2 header completeness, rejection of a missing `published` or a past `valid_until`, id stability vs. previous tag, version-bump-on-change. This is the only catalogue validator; `.claude/domain.md` cites the same name.
 - `scripts/ci-gate-corpus.sh` — CI job `data-corpus`: per-chunk `madde`/`published`/`source_ref` completeness, embedding-index manifest freshness against the corpus commit hash.
-- `/tests/unit/crs_reference_test.cpp` in `piricad_tests` — PROJ-vs-TKGM reference coordinates. Gated behind `PIRICAD_WITH_PROJ`; while PROJ is absent (Phase-0 deviation) it MUST report as pending, never as passing.
+- `/tests/unit/crs_reference_test.cpp` in `kentos_tests` — PROJ-vs-TKGM reference coordinates. Gated behind `KENTOS_WITH_PROJ`; while PROJ is absent (Phase-0 deviation) it MUST report as pending, never as passing.
 - `scripts/ci-gate-repo-size.sh` — CI job `repo-size`: fails on any non-LFS blob over 10 MB or on tree size past the cap declared in `/data/MANIFEST.json` (R15).
 - `scripts/ci-gate-data-permits.sh` — CI job `data-permits`: every directory under `/data` reachable by packaging maps to an `/data/LICENCES.md` row with an unexpired permit and a sign-off date.
 - `scripts/ci-gate-layering.sh` — catalogue literals and `#include` of any `/data` path inside `/src/**` break the build (P1, P10).

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PiriCAD — io (internal): a read-only memory mapping of a file.
+// KentOSCad — io (internal): a read-only memory mapping of a file.
 //
 // .claude/io.md R5 requires the native project format to be "usable by mmap with
 // zero parsing of geometry blocks". That is only true if something actually maps
@@ -14,7 +14,7 @@
 // exactly these calls. mio (MIT, header-only, cross-platform) is the right
 // dependency to take, and taking it means the full Article 9 ceremony: read the
 // LICENSE, pin it in /vcpkg.json against the baseline, gate it behind
-// PIRICAD_WITH_MIO, record it in /NOTICE and regenerate the SBOM. That is a
+// KENTOS_WITH_MIO, record it in /NOTICE and regenerate the SBOM. That is a
 // deliberate, reviewable change; it is not something to slip in alongside a file
 // format. Until it happens this stays sixty lines with no allocation, no state
 // and no third-party header, and the swap to mio is a one-file replacement
@@ -24,14 +24,14 @@
 // module boundary (io.md R1, R2).
 #pragma once
 
-#include "piricad/core/result.hpp"
+#include "kentos_cad/core/result.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string>
 
-namespace piricad::io {
+namespace kentos::io {
 
 /// A read-only mapping of a whole file. Move-only; the mapping lives exactly as
 /// long as the object, so a span handed out from `bytes()` is valid for that long
@@ -77,4 +77,4 @@ private:
     std::intptr_t mapping_{-1}; ///< Windows only; unused on POSIX
 };
 
-} // namespace piricad::io
+} // namespace kentos::io

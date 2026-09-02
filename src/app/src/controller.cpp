@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/app/controller.hpp"
+#include "kentos_cad/app/controller.hpp"
 
-#include "piricad/command/log.hpp"
-#include "piricad/domain/cadastre/commands.hpp"
-#include "piricad/domain/geodesy/commands.hpp"
+#include "kentos_cad/command/log.hpp"
+#include "kentos_cad/domain/cadastre/commands.hpp"
+#include "kentos_cad/domain/geodesy/commands.hpp"
 
-#include "piricad/command/parser.hpp"
+#include "kentos_cad/command/parser.hpp"
 
 #include <QDir>
 #include <QStandardPaths>
 
 #include <filesystem>
 
-namespace piricad::app {
+namespace kentos::app {
 
 Controller::Controller(QObject* parent)
     : QObject(parent), bus_(document_, registry_, journal_, undo_), files_(bus_), database_(bus_),
       runner_(bus_, script::Sandbox::Project)
-#if PIRICAD_HAVE_LUA
+#if KENTOS_HAVE_LUA
       ,
       lua_runner_(bus_, script::Sandbox::Project)
 #endif
@@ -46,7 +46,7 @@ Controller::Controller(QObject* parent)
         if (auto st = document_.set_crs(crs_->resolve(document_.crs().id()), discard); !st)
             command::log_warn("başlangıç koordinat sistemi çözülemedi: " + st.error().message);
     }
-#if PIRICAD_HAVE_LUA
+#if KENTOS_HAVE_LUA
     // `proje` for both hosts, and the project directory is the working directory
     // until a document has a path of its own. A jail with no walls denies
     // everything (`.claude/script.md` P8), which is the safe direction to be wrong
@@ -59,7 +59,7 @@ Controller::Controller(QObject* parent)
     wireBus();
 
     // The journal is written asynchronously on its own thread; the UI never waits
-    // on a disk flush (piricad.md §10.4).
+    // on a disk flush (kentoscad.md §10.4).
     const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QDir().mkpath(dir);
     const QString path = dir + "/oturum.jsonl";
@@ -123,7 +123,7 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
         return core::err(core::ErrorCode::InvalidArgument, "Komut satırı boş olamaz.");
 
     // A running interactive command gets the typed value first, unless the typed
-    // text names a transparent command such as ZOOM (piricad.md §3).
+    // text names a transparent command such as ZOOM (kentoscad.md §3).
     if (session_ && session_->waiting()) {
         const command::CommandSpec* spec = registry_.resolve(trimmed.toStdString());
         const bool transparent = spec && has_flag(spec->flags, command::Flags::Transparent);
@@ -307,4 +307,4 @@ QString Controller::activeLayerName() const
     return QStringLiteral("0");
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

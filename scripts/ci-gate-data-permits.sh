@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # GATE: no geographic data without a Coğrafi Veri İzin Belgesi record.
-# piricad.md §12 "Veri ve Kurumsal": "Coğrafi Veri İzin Belgesi süreci".
+# kentoscad.md §12 "Veri ve Kurumsal": "Coğrafi Veri İzin Belgesi süreci".
 # .claude/data.md R16 / P5: a dataset that ships or is redistributed MUST have a
 # permit row (permit id, covered data, scope, expiry, legal sign-off) in
 # /data/LICENCES.md. Exempt: files directly in /data (MANIFEST.json, LICENCES.md)

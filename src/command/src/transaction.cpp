@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/command/transaction.hpp"
+#include "kentos_cad/command/transaction.hpp"
 
 #include <algorithm>
 
-namespace piricad::command {
+namespace kentos::command {
 
 Transaction::Transaction(Document& doc, std::string label) : doc_(doc), label_(std::move(label)) {}
 
@@ -317,4 +317,4 @@ void UndoStack::clear()
     redo_.clear();
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

@@ -15,19 +15,19 @@
 // PENDING SIGN-OFF (CLAUDE.md 6.11): a rule that decides those columns is a
 // regulatory rule, belongs in /data (5.13), and needs a harita mühendisi to
 // approve it. Until then this refuses to guess rather than guessing quietly.
-#include "piricad/command/bus.hpp"
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/entity_kind.hpp"
-#include "piricad/core/geometry.hpp"
-#include "piricad/core/offset.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/offset.hpp"
 
 #include <string>
 #include <vector>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 bool polygon_of(const core::Document& doc, core::EntityId slot, core::Polygon& out)
@@ -192,7 +192,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(merge)
+KENTOS_COMMAND(merge)
 {
     return CommandSpec{
         .id       = "core.merge",
@@ -207,4 +207,4 @@ PIRICAD_COMMAND(merge)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

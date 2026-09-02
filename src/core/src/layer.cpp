@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/layer.hpp"
+#include "kentos_cad/core/layer.hpp"
 
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/text.hpp"
 
-namespace piricad::core {
+namespace kentos::core {
 
 // Defined in style.cpp. The appearance mixing has to exist exactly once: a second
 // copy would drift from the first and silently change every golden fixture that
@@ -18,6 +18,11 @@ namespace {
 /// — and `add()` tells the allocator about it before minting, so the reservation
 /// can never turn into a reused key (R4).
 constexpr std::uint64_t kDefaultLayerKey = 1;
+// THE SEED DOES NOT FOLLOW THE PRODUCT'S NAME, and must not. It is folded into
+// every content hash this program has ever computed — golden fixtures, journal
+// fingerprints, the equality proof — so renaming it would silently change what
+// every stored drawing hashes to. The string is an arbitrary constant that
+// happens to read as the old name; that is all it has ever been.
 
 constexpr std::uint64_t kLayerSeed = fnv1a("piricad.core.layer");
 
@@ -185,4 +190,4 @@ std::uint64_t LayerTable::fold(std::uint64_t seed) const
     return h;
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

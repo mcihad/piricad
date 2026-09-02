@@ -70,7 +70,7 @@ Büyük harf dönüşümü Türkçe kurallarına göre yapılır (`i` → `İ`, 
 
 - **[CLAUDE.md](CLAUDE.md)** — projenin anayasası. Önce bu okunur.
 - **[.claude/](.claude/)** — her motorun kendi kesin kuralları ve kesin yasakları.
-- **[piricad.md](piricad.md)** — teknik referans ve yol haritası (niyetin kaynağı).
+- **[kentoscad.md](kentoscad.md)** — teknik referans ve yol haritası (niyetin kaynağı).
 
 Her kural bir CI kapısına, teste veya benchmark'a bağlıdır. Bağlanamayan kural
 yanlış yazılmıştır.

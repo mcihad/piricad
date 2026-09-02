@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PiriCAD — the flat-colour pipeline: polygon fills and the stencil cover quad.
+// KentOSCad — the flat-colour pipeline: polygon fills and the stencil cover quad.
 //
 // Vertices arrive in WIDGET PIXELS, y down, already origin-offset by the scene
 // builder (render.md R2): a TUREF easting is seven digits and never reaches a

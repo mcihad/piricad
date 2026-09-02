@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PiriCAD — the SDF text pipeline's fragment stage.
+// KentOSCad — the SDF text pipeline's fragment stage.
 //
 // THE MEDIAN IS THE WHOLE TRICK. A single-channel distance field rounds every
 // corner it has, because one distance cannot describe two edges meeting. Three

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PiriCAD — core: settings.
-#include "piricad/core/settings.hpp"
+// KentOSCad — core: settings.
+#include "kentos_cad/core/settings.hpp"
 
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
 #include <cstring>
 
-namespace piricad::core {
+namespace kentos::core {
 namespace {
 
 using std::int64_t;
@@ -326,7 +326,7 @@ constexpr std::int64_t kFullCircle = kUDegFullCircle;
 
 } // namespace
 
-PIRICAD_SETTING(vektor_kutuphanesi)
+KENTOS_SETTING(vektor_kutuphanesi)
 {
     return SettingSpec{
         .id       = "core.stil.vektor",
@@ -353,54 +353,54 @@ PIRICAD_SETTING(vektor_kutuphanesi)
     };
 }
 
-PIRICAD_SETTING(koordinat_sistemi);
-PIRICAD_SETTING(koordinat_hassasiyeti);
-PIRICAD_SETTING(cizim_birimi);
-PIRICAD_SETTING(cizgi_tipi_olcegi);
-PIRICAD_SETTING(metin_yuksekligi);
-PIRICAD_SETTING(veri_paketi_surumu);
-PIRICAD_SETTING(tema);
-PIRICAD_SETTING(dil);
-PIRICAD_SETTING(otomatik_kayit);
-PIRICAD_SETTING(son_dosya_sayisi);
-PIRICAD_SETTING(tuval_arkaplani);
-PIRICAD_SETTING(yakalama_modlari);
-PIRICAD_SETTING(dik_mod);
-PIRICAD_SETTING(kosegen_kilidi);
-PIRICAD_SETTING(kutupsal_aci);
-PIRICAD_SETTING(sembol_kutuphanesi);
-PIRICAD_SETTING(vektor_kutuphanesi);
-PIRICAD_SETTING(veritabani_sunucu);
-PIRICAD_SETTING(veritabani_port);
-PIRICAD_SETTING(veritabani_ad);
-PIRICAD_SETTING(veritabani_kullanici);
-PIRICAD_SETTING(yakalama_uzanti);
-PIRICAD_SETTING(yakalama_isaret_boyu);
-PIRICAD_SETTING(yakalama_isaret_rengi);
-PIRICAD_SETTING(yakalama_ipucu);
-PIRICAD_SETTING(yakalama_adimi);
-PIRICAD_SETTING(dinamik_girdi);
-PIRICAD_SETTING(izgara_rengi);
-PIRICAD_SETTING(izgara_ana_rengi);
-PIRICAD_SETTING(izgara_adimi_y);
-PIRICAD_SETTING(cetvel_gorunur);
-PIRICAD_SETTING(cetvel_kalinligi);
-PIRICAD_SETTING(cetvel_birimi);
-PIRICAD_SETTING(harita_olcek_cubugu);
-PIRICAD_SETTING(harita_kuzey_oku);
-PIRICAD_SETTING(harita_koordinat);
-PIRICAD_SETTING(harita_imlec);
-PIRICAD_SETTING(harita_imlec_boyu);
-PIRICAD_SETTING(harita_yakinlastirma);
-PIRICAD_SETTING(harita_tekerlek_ters);
-PIRICAD_SETTING(secim_rengi);
-PIRICAD_SETTING(silme_onayi);
-PIRICAD_SETTING(secim_vurgu_rengi);
-PIRICAD_SETTING(plan_olcegi);
-PIRICAD_SETTING(aci_birimi);
-PIRICAD_SETTING(alan_birimi);
+KENTOS_SETTING(koordinat_sistemi);
+KENTOS_SETTING(koordinat_hassasiyeti);
+KENTOS_SETTING(cizim_birimi);
+KENTOS_SETTING(cizgi_tipi_olcegi);
+KENTOS_SETTING(metin_yuksekligi);
+KENTOS_SETTING(veri_paketi_surumu);
+KENTOS_SETTING(tema);
+KENTOS_SETTING(dil);
+KENTOS_SETTING(otomatik_kayit);
+KENTOS_SETTING(son_dosya_sayisi);
+KENTOS_SETTING(tuval_arkaplani);
+KENTOS_SETTING(yakalama_modlari);
+KENTOS_SETTING(dik_mod);
+KENTOS_SETTING(kosegen_kilidi);
+KENTOS_SETTING(kutupsal_aci);
+KENTOS_SETTING(sembol_kutuphanesi);
+KENTOS_SETTING(vektor_kutuphanesi);
+KENTOS_SETTING(veritabani_sunucu);
+KENTOS_SETTING(veritabani_port);
+KENTOS_SETTING(veritabani_ad);
+KENTOS_SETTING(veritabani_kullanici);
+KENTOS_SETTING(yakalama_uzanti);
+KENTOS_SETTING(yakalama_isaret_boyu);
+KENTOS_SETTING(yakalama_isaret_rengi);
+KENTOS_SETTING(yakalama_ipucu);
+KENTOS_SETTING(yakalama_adimi);
+KENTOS_SETTING(dinamik_girdi);
+KENTOS_SETTING(izgara_rengi);
+KENTOS_SETTING(izgara_ana_rengi);
+KENTOS_SETTING(izgara_adimi_y);
+KENTOS_SETTING(cetvel_gorunur);
+KENTOS_SETTING(cetvel_kalinligi);
+KENTOS_SETTING(cetvel_birimi);
+KENTOS_SETTING(harita_olcek_cubugu);
+KENTOS_SETTING(harita_kuzey_oku);
+KENTOS_SETTING(harita_koordinat);
+KENTOS_SETTING(harita_imlec);
+KENTOS_SETTING(harita_imlec_boyu);
+KENTOS_SETTING(harita_yakinlastirma);
+KENTOS_SETTING(harita_tekerlek_ters);
+KENTOS_SETTING(secim_rengi);
+KENTOS_SETTING(silme_onayi);
+KENTOS_SETTING(secim_vurgu_rengi);
+KENTOS_SETTING(plan_olcegi);
+KENTOS_SETTING(aci_birimi);
+KENTOS_SETTING(alan_birimi);
 
-#define PIRICAD_BUILTIN_SETTINGS(X)                                                                \
+#define KENTOS_BUILTIN_SETTINGS(X)                                                                \
     X(koordinat_sistemi)                                                                           \
     X(koordinat_hassasiyeti)                                                                       \
     X(cizim_birimi)                                                                                \
@@ -459,7 +459,7 @@ PIRICAD_SETTING(alan_birimi);
 
 // ---- SNAP: what the aid layer looks for, and what the canvas draws when it ----
 
-PIRICAD_SETTING(yakalama_adimi)
+KENTOS_SETTING(yakalama_adimi)
 {
     return SettingSpec{
         .id       = "core.yakalama.adim",
@@ -478,7 +478,7 @@ PIRICAD_SETTING(yakalama_adimi)
     };
 }
 
-PIRICAD_SETTING(dinamik_girdi)
+KENTOS_SETTING(dinamik_girdi)
 {
     return SettingSpec{
         .id       = "core.arayuz.dinamik_girdi",
@@ -495,7 +495,7 @@ PIRICAD_SETTING(dinamik_girdi)
     };
 }
 
-PIRICAD_SETTING(yakalama_uzanti)
+KENTOS_SETTING(yakalama_uzanti)
 {
     return SettingSpec{
         .id       = "core.yakalama.uzanti_carpani",
@@ -516,7 +516,7 @@ PIRICAD_SETTING(yakalama_uzanti)
     };
 }
 
-PIRICAD_SETTING(yakalama_isaret_boyu)
+KENTOS_SETTING(yakalama_isaret_boyu)
 {
     return SettingSpec{
         .id       = "core.yakalama.isaret_boyu",
@@ -533,7 +533,7 @@ PIRICAD_SETTING(yakalama_isaret_boyu)
     };
 }
 
-PIRICAD_SETTING(yakalama_isaret_rengi)
+KENTOS_SETTING(yakalama_isaret_rengi)
 {
     return SettingSpec{
         .id       = "core.yakalama.isaret_rengi",
@@ -550,7 +550,7 @@ PIRICAD_SETTING(yakalama_isaret_rengi)
     };
 }
 
-PIRICAD_SETTING(yakalama_ipucu)
+KENTOS_SETTING(yakalama_ipucu)
 {
     return SettingSpec{
         .id       = "core.yakalama.ipucu",
@@ -570,7 +570,7 @@ PIRICAD_SETTING(yakalama_ipucu)
 
 // ---- GRID: the lattice's own appearance --------------------------------------
 
-PIRICAD_SETTING(izgara_rengi)
+KENTOS_SETTING(izgara_rengi)
 {
     return SettingSpec{
         .id       = "core.izgara.renk",
@@ -587,7 +587,7 @@ PIRICAD_SETTING(izgara_rengi)
     };
 }
 
-PIRICAD_SETTING(izgara_ana_rengi)
+KENTOS_SETTING(izgara_ana_rengi)
 {
     return SettingSpec{
         .id       = "core.izgara.ana_renk",
@@ -604,7 +604,7 @@ PIRICAD_SETTING(izgara_ana_rengi)
     };
 }
 
-PIRICAD_SETTING(izgara_adimi_y)
+KENTOS_SETTING(izgara_adimi_y)
 {
     return SettingSpec{
         .id       = "core.izgara.adim_y",
@@ -625,7 +625,7 @@ PIRICAD_SETTING(izgara_adimi_y)
 
 // ---- RULER ------------------------------------------------------------------
 
-PIRICAD_SETTING(cetvel_gorunur)
+KENTOS_SETTING(cetvel_gorunur)
 {
     return SettingSpec{
         .id       = "core.cetvel.gorunur",
@@ -642,7 +642,7 @@ PIRICAD_SETTING(cetvel_gorunur)
     };
 }
 
-PIRICAD_SETTING(cetvel_kalinligi)
+KENTOS_SETTING(cetvel_kalinligi)
 {
     return SettingSpec{
         .id    = "core.cetvel.kalinlik",
@@ -660,7 +660,7 @@ PIRICAD_SETTING(cetvel_kalinligi)
     };
 }
 
-PIRICAD_SETTING(cetvel_birimi)
+KENTOS_SETTING(cetvel_birimi)
 {
     return SettingSpec{
         .id       = "core.cetvel.birim",
@@ -680,7 +680,7 @@ PIRICAD_SETTING(cetvel_birimi)
 
 // ---- MAP: what sits on top of the drawing ------------------------------------
 
-PIRICAD_SETTING(harita_olcek_cubugu)
+KENTOS_SETTING(harita_olcek_cubugu)
 {
     return SettingSpec{
         .id       = "core.harita.olcek_cubugu",
@@ -697,7 +697,7 @@ PIRICAD_SETTING(harita_olcek_cubugu)
     };
 }
 
-PIRICAD_SETTING(harita_kuzey_oku)
+KENTOS_SETTING(harita_kuzey_oku)
 {
     return SettingSpec{
         .id       = "core.harita.kuzey_oku",
@@ -714,7 +714,7 @@ PIRICAD_SETTING(harita_kuzey_oku)
     };
 }
 
-PIRICAD_SETTING(harita_koordinat)
+KENTOS_SETTING(harita_koordinat)
 {
     return SettingSpec{
         .id       = "core.harita.koordinat_gostergesi",
@@ -731,7 +731,7 @@ PIRICAD_SETTING(harita_koordinat)
     };
 }
 
-PIRICAD_SETTING(harita_imlec)
+KENTOS_SETTING(harita_imlec)
 {
     return SettingSpec{
         .id       = "core.harita.imlec",
@@ -748,7 +748,7 @@ PIRICAD_SETTING(harita_imlec)
     };
 }
 
-PIRICAD_SETTING(harita_imlec_boyu)
+KENTOS_SETTING(harita_imlec_boyu)
 {
     return SettingSpec{
         .id       = "core.harita.imlec_boyu",
@@ -765,7 +765,7 @@ PIRICAD_SETTING(harita_imlec_boyu)
     };
 }
 
-PIRICAD_SETTING(harita_yakinlastirma)
+KENTOS_SETTING(harita_yakinlastirma)
 {
     return SettingSpec{
         .id       = "core.harita.yakinlastirma_adimi",
@@ -782,7 +782,7 @@ PIRICAD_SETTING(harita_yakinlastirma)
     };
 }
 
-PIRICAD_SETTING(harita_tekerlek_ters)
+KENTOS_SETTING(harita_tekerlek_ters)
 {
     return SettingSpec{
         .id       = "core.harita.tekerlek_ters",
@@ -799,7 +799,7 @@ PIRICAD_SETTING(harita_tekerlek_ters)
     };
 }
 
-PIRICAD_SETTING(silme_onayi)
+KENTOS_SETTING(silme_onayi)
 {
     return SettingSpec{
         .id       = "core.duzenleme.silme_onayi",
@@ -823,7 +823,7 @@ PIRICAD_SETTING(silme_onayi)
     };
 }
 
-PIRICAD_SETTING(secim_rengi)
+KENTOS_SETTING(secim_rengi)
 {
     return SettingSpec{
         .id       = "core.secim.renk",
@@ -840,7 +840,7 @@ PIRICAD_SETTING(secim_rengi)
     };
 }
 
-PIRICAD_SETTING(secim_vurgu_rengi)
+KENTOS_SETTING(secim_vurgu_rengi)
 {
     return SettingSpec{
         .id       = "core.secim.vurgu_renk",
@@ -860,7 +860,7 @@ PIRICAD_SETTING(secim_vurgu_rengi)
 
 // ---- PROJECT scope: anything that can change a byte of the exported document --
 
-PIRICAD_SETTING(plan_olcegi)
+KENTOS_SETTING(plan_olcegi)
 {
     return SettingSpec{
         .id       = "core.plan.olcek",
@@ -880,7 +880,7 @@ PIRICAD_SETTING(plan_olcegi)
     };
 }
 
-PIRICAD_SETTING(aci_birimi)
+KENTOS_SETTING(aci_birimi)
 {
     return SettingSpec{
         .id       = "core.aci.birim",
@@ -899,7 +899,7 @@ PIRICAD_SETTING(aci_birimi)
     };
 }
 
-PIRICAD_SETTING(alan_birimi)
+KENTOS_SETTING(alan_birimi)
 {
     return SettingSpec{
         .id       = "core.alan.birim",
@@ -917,7 +917,7 @@ PIRICAD_SETTING(alan_birimi)
     };
 }
 
-PIRICAD_SETTING(sembol_kutuphanesi)
+KENTOS_SETTING(sembol_kutuphanesi)
 {
     return SettingSpec{
         .id       = "core.stil.kutuphane",
@@ -940,7 +940,7 @@ PIRICAD_SETTING(sembol_kutuphanesi)
     };
 }
 
-PIRICAD_SETTING(koordinat_sistemi)
+KENTOS_SETTING(koordinat_sistemi)
 {
     return SettingSpec{
         .id       = "core.crs.id",
@@ -960,7 +960,7 @@ PIRICAD_SETTING(koordinat_sistemi)
     };
 }
 
-PIRICAD_SETTING(koordinat_hassasiyeti)
+KENTOS_SETTING(koordinat_hassasiyeti)
 {
     return SettingSpec{
         .id       = "core.crs.hassasiyet",
@@ -977,7 +977,7 @@ PIRICAD_SETTING(koordinat_hassasiyeti)
     };
 }
 
-PIRICAD_SETTING(cizim_birimi)
+KENTOS_SETTING(cizim_birimi)
 {
     return SettingSpec{
         .id       = "core.cizim.birim",
@@ -994,7 +994,7 @@ PIRICAD_SETTING(cizim_birimi)
     };
 }
 
-PIRICAD_SETTING(cizgi_tipi_olcegi)
+KENTOS_SETTING(cizgi_tipi_olcegi)
 {
     return SettingSpec{
         .id       = "core.cizim.cizgi_tipi_olcegi",
@@ -1011,7 +1011,7 @@ PIRICAD_SETTING(cizgi_tipi_olcegi)
     };
 }
 
-PIRICAD_SETTING(metin_yuksekligi)
+KENTOS_SETTING(metin_yuksekligi)
 {
     return SettingSpec{
         .id       = "core.cizim.metin_yuksekligi",
@@ -1028,7 +1028,7 @@ PIRICAD_SETTING(metin_yuksekligi)
     };
 }
 
-PIRICAD_SETTING(veri_paketi_surumu)
+KENTOS_SETTING(veri_paketi_surumu)
 {
     return SettingSpec{
         .id    = "core.katalog.paket_surumu",
@@ -1062,7 +1062,7 @@ PIRICAD_SETTING(veri_paketi_surumu)
 // tapu document that gets exported. Were it a per-machine preference, the same
 // drawing would report two different parcel areas on two computers.
 
-PIRICAD_SETTING(dugum_toleransi)
+KENTOS_SETTING(dugum_toleransi)
 {
     return SettingSpec{
         .id       = "core.topoloji.dugum_toleransi",
@@ -1081,7 +1081,7 @@ PIRICAD_SETTING(dugum_toleransi)
     };
 }
 
-PIRICAD_SETTING(en_kucuk_alan)
+KENTOS_SETTING(en_kucuk_alan)
 {
     return SettingSpec{
         .id       = "core.topoloji.en_kucuk_alan",
@@ -1101,7 +1101,7 @@ PIRICAD_SETTING(en_kucuk_alan)
 
 // ---- APP scope: per user and machine, and never written into the document ----
 
-PIRICAD_SETTING(tema)
+KENTOS_SETTING(tema)
 {
     return SettingSpec{
         .id       = "core.arayuz.tema",
@@ -1118,7 +1118,7 @@ PIRICAD_SETTING(tema)
     };
 }
 
-PIRICAD_SETTING(dil)
+KENTOS_SETTING(dil)
 {
     return SettingSpec{
         .id       = "core.arayuz.dil",
@@ -1135,7 +1135,7 @@ PIRICAD_SETTING(dil)
     };
 }
 
-PIRICAD_SETTING(otomatik_kayit)
+KENTOS_SETTING(otomatik_kayit)
 {
     return SettingSpec{
         .id       = "core.dosya.otomatik_kayit",
@@ -1152,7 +1152,7 @@ PIRICAD_SETTING(otomatik_kayit)
     };
 }
 
-PIRICAD_SETTING(son_dosya_sayisi)
+KENTOS_SETTING(son_dosya_sayisi)
 {
     return SettingSpec{
         .id       = "core.dosya.son_dosya_sayisi",
@@ -1169,7 +1169,7 @@ PIRICAD_SETTING(son_dosya_sayisi)
     };
 }
 
-PIRICAD_SETTING(tuval_arkaplani)
+KENTOS_SETTING(tuval_arkaplani)
 {
     return SettingSpec{
         .id       = "core.tuval.arkaplan",
@@ -1191,7 +1191,7 @@ PIRICAD_SETTING(tuval_arkaplani)
 // persistent and App scope, like the theme and the canvas colour; something that
 // MOVES the cursor is transient and Session scope.
 
-PIRICAD_SETTING(izgara_gorunur)
+KENTOS_SETTING(izgara_gorunur)
 {
     return SettingSpec{
         .id       = "core.izgara.gorunur",
@@ -1209,7 +1209,7 @@ PIRICAD_SETTING(izgara_gorunur)
     };
 }
 
-PIRICAD_SETTING(izgara_modu)
+KENTOS_SETTING(izgara_modu)
 {
     return SettingSpec{
         .id       = "core.izgara.mod",
@@ -1228,7 +1228,7 @@ PIRICAD_SETTING(izgara_modu)
     };
 }
 
-PIRICAD_SETTING(izgara_adimi)
+KENTOS_SETTING(izgara_adimi)
 {
     return SettingSpec{
         .id       = "core.izgara.adim",
@@ -1247,7 +1247,7 @@ PIRICAD_SETTING(izgara_adimi)
     };
 }
 
-PIRICAD_SETTING(izgara_ana_cizgi)
+KENTOS_SETTING(izgara_ana_cizgi)
 {
     return SettingSpec{
         .id       = "core.izgara.ana_cizgi",
@@ -1265,7 +1265,7 @@ PIRICAD_SETTING(izgara_ana_cizgi)
     };
 }
 
-PIRICAD_SETTING(yakalama_toleransi)
+KENTOS_SETTING(yakalama_toleransi)
 {
     return SettingSpec{
         .id       = "core.yakalama.tolerans",
@@ -1284,7 +1284,7 @@ PIRICAD_SETTING(yakalama_toleransi)
     };
 }
 
-PIRICAD_SETTING(secim_toleransi)
+KENTOS_SETTING(secim_toleransi)
 {
     return SettingSpec{
         .id       = "core.secim.tolerans",
@@ -1305,7 +1305,7 @@ PIRICAD_SETTING(secim_toleransi)
 
 // ---- SESSION scope: transient, never persisted, never hashed ----------------
 
-PIRICAD_SETTING(yakalama_modlari)
+KENTOS_SETTING(yakalama_modlari)
 {
     return SettingSpec{
         .id       = "core.yakalama.modlar",
@@ -1322,7 +1322,7 @@ PIRICAD_SETTING(yakalama_modlari)
     };
 }
 
-PIRICAD_SETTING(dik_mod)
+KENTOS_SETTING(dik_mod)
 {
     return SettingSpec{
         .id       = "core.yakalama.dik_mod",
@@ -1339,7 +1339,7 @@ PIRICAD_SETTING(dik_mod)
     };
 }
 
-PIRICAD_SETTING(kosegen_kilidi)
+KENTOS_SETTING(kosegen_kilidi)
 {
     return SettingSpec{
         .id       = "core.yakalama.kosegen",
@@ -1368,7 +1368,7 @@ PIRICAD_SETTING(kosegen_kilidi)
     };
 }
 
-PIRICAD_SETTING(kutupsal_aci)
+KENTOS_SETTING(kutupsal_aci)
 {
     return SettingSpec{
         .id       = "core.yakalama.kutupsal_aci",
@@ -1385,7 +1385,7 @@ PIRICAD_SETTING(kutupsal_aci)
     };
 }
 
-PIRICAD_SETTING(izgaraya_yakala)
+KENTOS_SETTING(izgaraya_yakala)
 {
     return SettingSpec{
         .id       = "core.yakalama.izgara",
@@ -1429,7 +1429,7 @@ void SettingCatalog::record_failure(std::string message)
 // pointer at a database they cannot reach — and must not carry a pointer at one
 // they CAN.
 
-PIRICAD_SETTING(veritabani_sunucu)
+KENTOS_SETTING(veritabani_sunucu)
 {
     return SettingSpec{
         .id       = "core.veritabani.sunucu",
@@ -1446,7 +1446,7 @@ PIRICAD_SETTING(veritabani_sunucu)
     };
 }
 
-PIRICAD_SETTING(veritabani_port)
+KENTOS_SETTING(veritabani_port)
 {
     return SettingSpec{
         .id       = "core.veritabani.port",
@@ -1464,7 +1464,7 @@ PIRICAD_SETTING(veritabani_port)
     };
 }
 
-PIRICAD_SETTING(veritabani_ad)
+KENTOS_SETTING(veritabani_ad)
 {
     return SettingSpec{
         .id       = "core.veritabani.ad",
@@ -1483,7 +1483,7 @@ PIRICAD_SETTING(veritabani_ad)
     };
 }
 
-PIRICAD_SETTING(veritabani_kullanici)
+KENTOS_SETTING(veritabani_kullanici)
 {
     return SettingSpec{
         .id       = "core.veritabani.kullanici",
@@ -1543,10 +1543,10 @@ const SettingCatalog& builtin_settings()
     // document, so it is not the mutable registry core.md P8 bans.
     static const SettingCatalog catalogue = [] {
         SettingCatalog c;
-#define PIRICAD_REGISTER(sym)                                                                      \
-    if (auto st = c.add(piricad_setting_##sym()); !st) c.record_failure(st.error().message);
-        PIRICAD_BUILTIN_SETTINGS(PIRICAD_REGISTER)
-#undef PIRICAD_REGISTER
+#define KENTOS_REGISTER(sym)                                                                      \
+    if (auto st = c.add(kentos_setting_##sym()); !st) c.record_failure(st.error().message);
+        KENTOS_BUILTIN_SETTINGS(KENTOS_REGISTER)
+#undef KENTOS_REGISTER
         register_sections(c);
         return c;
     }();
@@ -1558,7 +1558,7 @@ std::span<const std::string> builtin_setting_failures()
     return builtin_settings().failures();
 }
 
-#undef PIRICAD_BUILTIN_SETTINGS
+#undef KENTOS_BUILTIN_SETTINGS
 
 // ---------------------------------------------------------- conversion ------
 
@@ -1811,4 +1811,4 @@ std::uint64_t Settings::fold(std::uint64_t seed) const
     return h;
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

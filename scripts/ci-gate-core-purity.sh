@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # GATE: /src/core is Qt-free.
-# piricad.md §8: "CI kapısı: /src/core içinde #include <Q görülürse build kırılsın."
+# kentoscad.md §8: "CI kapısı: /src/core içinde #include <Q görülürse build kırılsın."
 # Constitution Article 3.
 set -euo pipefail
 
@@ -26,7 +26,7 @@ while IFS= read -r hit; do
     echo "core-purity: upward dependency from /src/core -> $hit" >&2
     fail=1
 done < <(grep -rn --include='*.hpp' --include='*.cpp' \
-             -E '#include "piricad/(command|io|render|script|ai|domain|app)/' \
+             -E '#include "kentos_cad/(command|io|render|script|ai|domain|app)/' \
              "$root/src/core" || true)
 
 if [[ $fail -eq 0 ]]; then

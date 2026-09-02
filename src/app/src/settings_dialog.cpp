@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/app/settings_dialog.hpp"
+#include "kentos_cad/app/settings_dialog.hpp"
 
-#include "piricad/app/icons.hpp"
+#include "kentos_cad/app/icons.hpp"
 
-#include "piricad/app/controller.hpp"
+#include "kentos_cad/app/controller.hpp"
 
-#include "piricad/command/bus.hpp"
+#include "kentos_cad/command/bus.hpp"
 
 #include <QColorDialog>
 #include <QComboBox>
@@ -32,7 +32,7 @@
 
 #include <string>
 
-namespace piricad::app {
+namespace kentos::app {
 namespace {
 
 using core::SettingScope;
@@ -715,4 +715,4 @@ void SettingsDialog::applyFilter()
     }
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

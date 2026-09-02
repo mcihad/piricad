@@ -1,5 +1,5 @@
-PiriCAD — Türkiye Odaklı CBS + CAD Harita Yazılımı
-Copyright (C) 2026 PiriCAD contributors
+KentOSCad — Türkiye Odaklı CBS + CAD Harita Yazılımı
+Copyright (C) 2026 KentOSCad contributors
 
 This program is free software: you can redistribute it and/or modify it under the
 terms of the GNU General Public License as published by the Free Software
@@ -13,7 +13,7 @@ THIRD-PARTY COMPONENTS
 CLAUDE.md 5.12 and Article 9 ("To add a dependency") require that a dependency is
 listed here, with its exact pinned version and the licence text that was actually
 read, before it may be linked. The CycloneDX SBOM is regenerated in the same
-change (piricad.md §9.11 — SBOM production is a GPL-compliance obligation, not a
+change (kentoscad.md §9.11 — SBOM production is a GPL-compliance obligation, not a
 nice-to-have).
 
 Currently linked
@@ -25,25 +25,25 @@ Currently linked
                           Qt DataVisualization are GPLv3-only and are NOT used.
 
   Clipper2                BSL-1.0               1.4.0     736ddb0b
-                          Polygon offset behind piricad/core/offset.hpp — the
+                          Polygon offset behind kentos_cad/core/offset.hpp — the
                           OFSET command, and the base ifraz and çekme mesafesi
                           will be built on (§9.2). Linked PRIVATE into
-                          piricad_core: its headers reach core/offset.cpp and
+                          kentos_core: its headers reach core/offset.cpp and
                           nothing else. Only the C++ port under CPP/ is used;
                           the C#, Delphi and DLL trees are not compiled.
 
   nlohmann/json           MIT                   v3.11.3   9cca280a
-                          The JSON parser and writer behind piricad/core/json.hpp,
+                          The JSON parser and writer behind kentos_cad/core/json.hpp,
                           used by the journal, the script runner and every /data
                           catalogue. `ordered_json`, not `json`: the default
                           container sorts object keys and the journal is compared
                           byte for byte across three clients (CLAUDE.md 6.4).
-                          Header-only, linked PRIVATE into piricad_core so the
+                          Header-only, linked PRIVATE into kentos_core so the
                           facade is what the rest of the product sees.
 
   spdlog                  MIT                   v1.15.3   6fa36017
   fmt                     MIT                   11.0.2    0c9fce2f
-                          Logging, behind piricad/command/log.hpp. It lives in
+                          Logging, behind kentos_cad/command/log.hpp. It lives in
                           /src/command and not /src/core because core.md P9 bans
                           a logging sink in core outright; that move is what
                           CLAUDE.md Article 8.4 named as its removal condition,
@@ -51,7 +51,7 @@ Currently linked
                           dependency of spdlog rather than its bundled copy: two
                           copies of fmt in one binary is an ODR violation that
                           surfaces as a crash in a formatting call nobody touched.
-                          Both linked PRIVATE into piricad_command.
+                          Both linked PRIVATE into kentos_command.
 
   FreeType                FTL / GPLv2+          system
                           Glyph OUTLINES for the SDF atlas (render.md R8). Taken
@@ -90,8 +90,8 @@ Currently linked
                           had; upstream's own instruction is to pin a commit.
 
   Lua                     MIT                   5.4.8     6e22fedb
-                          The embedded script language of piricad.md §4.1, behind
-                          PIRICAD_WITH_LUA. Lua and not Python for the hot path:
+                          The embedded script language of kentoscad.md §4.1, behind
+                          KENTOS_WITH_LUA. Lua and not Python for the hot path:
                           an expression that runs per feature runs millions of
                           times on a cadastral sheet, and .claude/script.md R5
                           makes a Python evaluator there a defect.
@@ -99,7 +99,7 @@ Currently linked
                           Built from the OFFICIAL repository, which ships no
                           CMakeLists — upstream distributes a makefile and expects
                           embedders to compile the 32 library sources themselves,
-                          which is what cmake/PiriCADDependencies.cmake does. The
+                          which is what cmake/KentOSCadDependencies.cmake does. The
                           four programs in that tree (lua.c, luac.c, onelua.c,
                           ltests.c) are excluded by name rather than by glob.
 
@@ -109,7 +109,7 @@ Currently linked
 
   sol2                    MIT                   v3.5.0    9190880c
                           The C++ binding layer over Lua, header-only, linked
-                          PRIVATE into piricad_script behind the pimpl in
+                          PRIVATE into kentos_script behind the pimpl in
                           lua_runner.hpp — nothing that includes that header pays
                           for <sol/sol.hpp>.
 
@@ -122,9 +122,9 @@ Currently linked
                           5.14 forbids the -Wno- that would hide it.
 
   doctest                 MIT                   v2.4.12   1da23a3e
-                          The unit-test framework, linked into piricad_tests.
+                          The unit-test framework, linked into kentos_tests.
                           Chosen over Catch2 and GoogleTest for compile time
-                          (piricad.md §9.11): the suite is one binary of ~280
+                          (kentoscad.md §9.11): the suite is one binary of ~280
                           cases that every `make check` rebuilds.
 
                           v2.4.12 rather than the v2.4.11 that had been pinned
@@ -134,15 +134,15 @@ Currently linked
                           cannot report that it does not build.
 
   Google Benchmark        Apache 2.0            v1.9.1    c58e6d07
-                          Times the Article 7 budgets, linked into piricad_bench.
+                          Times the Article 7 budgets, linked into kentos_bench.
                           It MEASURES; it does not gate. The budget table and the
                           per-machine baseline stay in tests/bench/support.cpp,
                           because no library knows that 16 ms is a product
                           requirement rather than a number.
 
-  QGIS (libqgis_core)     GPL-2.0-or-later      4.2.1     system    (PIRICAD_WITH_QGIS)
+  QGIS (libqgis_core)     GPL-2.0-or-later      4.2.1     system    (KENTOS_WITH_QGIS)
                           The symbology engine behind
-                          piricad/app/qgis_backend.cpp. Article 2.7 and 5.16 say
+                          kentos_cad/app/qgis_backend.cpp. Article 2.7 and 5.16 say
                           a mature, excellent, cross-platform library is used and
                           never reimplemented, and a symbology engine is exactly
                           such a thing: marker lines with real placement rules,
@@ -171,9 +171,9 @@ Currently linked
                           /src/app by Article 3.4 — nothing below the shell
                           learns that it exists.
 
-  libpqxx                 BSD-3-Clause          7.9.2     1ca80b0e  (PIRICAD_WITH_POSTGIS)
+  libpqxx                 BSD-3-Clause          7.9.2     1ca80b0e  (KENTOS_WITH_POSTGIS)
                           The PostgreSQL/PostGIS client behind
-                          piricad/io/postgis.hpp. Article 2.9 makes PostGIS a
+                          kentos_cad/io/postgis.hpp. Article 2.9 makes PostGIS a
                           first-class store rather than an export target, and
                           libpqxx is what carries that: a transaction object
                           whose lifetime a command can span, which GDAL's PG
@@ -192,15 +192,15 @@ Currently linked
                           from the system rather than vendored:
                           find_package(PostgreSQL 13) is the floor, because
                           libpqxx 7.9 needs the pipeline API that landed in 14
-                          only for features PiriCAD does not use.
+                          only for features KentOSCad does not use.
 
                           Headers appear ONLY in src/io/src/postgis.cpp, behind
                           the pimpl in its public header (io.md R2/P2).
 
-  GDAL/OGR                MIT (X11) + others    >= 3.8   (PIRICAD_WITH_GDAL)
+  GDAL/OGR                MIT (X11) + others    >= 3.8   (KENTOS_WITH_GDAL)
                           Vector format I/O for /src/io: DXF and GeoPackage
                           today, from the allow-list in
-                          cmake/PiriCADGdalDrivers.cmake.
+                          cmake/KentOSCadGdalDrivers.cmake.
 
                           LICENCE FINDING, from the copyright file of the linked
                           build (GDAL 3.12.2, Debian libgdal-dev): the core is
@@ -225,10 +225,10 @@ Currently linked
 Pinned but NOT YET BUILT OR LINKED
 ----------------------------------
 
-Read this heading literally. cmake/PiriCADDependencies.cmake holds an exact
+Read this heading literally. cmake/KentOSCadDependencies.cmake holds an exact
 commit SHA for each library below, and nothing include()s that file — not the
 root CMakeLists.txt, not a module. No FetchContent runs, no archive is
-downloaded, and not one line of any library below is compiled into any PiriCAD
+downloaded, and not one line of any library below is compiled into any KentOSCad
 binary today.
 
 This section previously said these were "acquired by CMake FetchContent against
@@ -274,19 +274,19 @@ Deliberately hand-written
 Article 2.7 requires a mature cross-platform library wherever one exists. These
 are the recorded exceptions, each with its reason.
 
-  piricad/command/task.hpp
-      The C++20 coroutine Task<T>. piricad.md §7.1 makes writing it the decision:
+  kentos_cad/command/task.hpp
+      The C++20 coroutine Task<T>. kentoscad.md §7.1 makes writing it the decision:
       "cppcoro (MIT, bakımı yavaş) veya kendi minimal Task<T> tipinizi yazın —
       komut altyapısı için 300 satır yeterlidir ve tam kontrol sağlar.
       Öneri: kendiniz yazın."
 
-  piricad/core/text.hpp — turkish_upper
+  kentos_cad/core/text.hpp — turkish_upper
       Seven cased pairs (i/İ, ı/I, ç, ğ, ö, ş, ü) as an exact table. ICU is the
       right answer for collation, normalisation and search, and casing moves onto
       it when those land; pulling in ~30 MB of ICU for seven pairs is not the
       trade today. The table is exact for its domain and is tested.
 
-  piricad/app/flow_layout.hpp — FlowLayout
+  kentos_cad/app/flow_layout.hpp — FlowLayout
       Qt ships no wrapping layout as API. The reflowing layout every Qt
       application needs is published as an example (Qt Widgets "Flow Layout"),
       not as a QFlowLayout class, so there is nothing to link against and no
@@ -294,11 +294,11 @@ are the recorded exceptions, each with its reason.
       itself. ~110 lines implementing QLayout::heightForWidth. Replaced the day
       Qt promotes it to API.
 
-  piricad/core/style_rule.hpp — the style catalogue and rule evaluator
+  kentos_cad/core/style_rule.hpp — the style catalogue and rule evaluator
       Article 2.7 was applied and found no candidate. Every mature symbology
       engine ships as part of a whole renderer, not as a library: Mapnik, QGIS
       and MapLibre all bind their style model to their own geometry store and
-      draw pipeline, and PiriCAD's style column is resolved at COMMIT time into
+      draw pipeline, and KentOSCad's style column is resolved at COMMIT time into
       an interned StyleId rather than evaluated per frame, which is the opposite
       of what those engines are built to do. What is NOT hand-written any more:
       the symbol layer model itself now follows QGIS's — typed layers with
@@ -309,12 +309,12 @@ are the recorded exceptions, each with its reason.
       this file said otherwise and was wrong. The objection is architectural and
       is stated above. OGC SLD/SE 1.1 is a
       wire format, not an engine, and is planned as an import/export boundary
-      behind PIRICAD_WITH_LIBXML2, converted to this table on the way in.
-      What is NOT hand-written: JSON parsing (piricad/core/json.hpp, itself
+      behind KENTOS_WITH_LIBXML2, converted to this table on the way in.
+      What is NOT hand-written: JSON parsing (kentos_cad/core/json.hpp, itself
       slated for replacement by the pinned library), and the hatch clipping the
       renderer will need, which is Clipper2's job when the fill path lands.
 
-  tests/support/piricad_test.hpp — PENDING and FAIL_WITH
+  tests/support/kentos_test.hpp — PENDING and FAIL_WITH
       Two macros on top of doctest, not a framework. PENDING marks a case that
       CANNOT RUN because an optional dependency is off, which .claude/data.md
       requires to report as pending and never as passing; doctest's own skip is
@@ -323,9 +323,9 @@ are the recorded exceptions, each with its reason.
 
       This entry used to name microtest.hpp and core/log.hpp as stand-ins for
       doctest and spdlog. Both stand-ins are gone: logging is spdlog behind
-      piricad/command/log.hpp, and the tests are doctest.
+      kentos_cad/command/log.hpp, and the tests are doctest.
 
-  piricad/core/trig.hpp — sin_cos_udeg
+  kentos_cad/core/trig.hpp — sin_cos_udeg
       Sine and cosine over micro-degrees. Article 2.7 was applied and found no
       candidate: IEEE-754 does not specify the transcendentals, every libm
       implements them differently, and two conforming platforms may disagree by
@@ -350,7 +350,7 @@ are the recorded exceptions, each with its reason.
 Approved but not yet enabled
 ----------------------------
 
-Each of these is gated behind a PIRICAD_WITH_<NAME> CMake option that defaults to
+Each of these is gated behind a KENTOS_WITH_<NAME> CMake option that defaults to
 OFF (CLAUDE.md Article 8.2). The licence column records the compatibility finding;
 the exact version is pinned in vcpkg.json when the option is first enabled.
 
@@ -381,7 +381,7 @@ Refused
   ODA Drawings SDK                   Closed source; GPL-incompatible. DWG support
                                      is bounded by LibreDWG quality, and that is
                                      recorded as the project's largest technical
-                                     risk (piricad.md §9.8, §15).
+                                     risk (kentoscad.md §9.8, §15).
 
   Any GPLv2-only dependency          Incompatible with the Apache-2.0 components
-                                     this project depends on (piricad.md §1).
+                                     this project depends on (kentoscad.md §1).

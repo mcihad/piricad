@@ -1,6 +1,6 @@
 # AI Layer — Rules
 
-> Scope: `/src/ai`, the AI panel in `/src/app`, `/tests/ai-eval`, `/data/corpus`  |  Depends on: `piricad_command` (`Registry`, `Bus`, `Transaction`, `UndoStack`, `Journal`, `Task<T>`, `Value`, `InputSource`), `piricad_core`  |  Source: piricad.md §2.3, §2.5, §2.6, §5.1–§5.6, §10.4, §12
+> Scope: `/src/ai`, the AI panel in `/src/app`, `/tests/ai-eval`, `/data/corpus`  |  Depends on: `kentos_command` (`Registry`, `Bus`, `Transaction`, `UndoStack`, `Journal`, `Task<T>`, `Value`, `InputSource`), `kentos_core`  |  Source: kentoscad.md §2.3, §2.5, §2.6, §5.1–§5.6, §10.4, §12
 
 ## Hard Rules
 
@@ -39,9 +39,9 @@ P6. NEVER let AI skip the validation layer: calling a command's `run()` directly
 P7. NEVER hand-maintain a second tool schema. A checked-in static tool/JSON catalogue duplicating `Registry` is BANNED (§2.3).
 P8. NEVER block the UI on a model response. Synchronous HTTP, blocking waits, or joining a model thread on the UI thread are BANNED (§10.4).
 P9. NEVER dump the drawing into the prompt (§5.3) — no bulk entity, coordinate or attribute serialisation into prompt text.
-P10. NEVER include `<Q...>` in `/src/ai`, and NEVER link `/src/ai` against `piricad_render`, `/src/domain`, `/src/io` or `/src/app`. The panel is the only Qt part and lives in `/src/app`.
+P10. NEVER include `<Q...>` in `/src/ai`, and NEVER link `/src/ai` against `kentos_render`, `/src/domain`, `/src/io` or `/src/app`. The panel is the only Qt part and lives in `/src/app`.
 P11. NEVER write API keys, tokens or endpoint credentials into the audit record, the `Journal`, or the repository.
-P12. NEVER use `std::toupper` / `std::tolower` on Turkish text; `/src/ai` folds through the `piricad_command` table (R23, CLAUDE.md 5.6).
+P12. NEVER use `std::toupper` / `std::tolower` on Turkish text; `/src/ai` folds through the `kentos_command` table (R23, CLAUDE.md 5.6).
 
 ## Definitions of Done
 

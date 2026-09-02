@@ -4,7 +4,7 @@
 # GATE: the MPYY gösterim catalogues are what the official annexes say, and they
 # are REPRODUCIBLE.
 #
-# piricad.md §15 / §12: a legislation change is a data release, not a rebuild —
+# kentoscad.md §15 / §12: a legislation change is a data release, not a rebuild —
 # so the data must be regenerable from the source annex, not hand-typed. A
 # hand-edited catalogue is undetectable in review and unfalsifiable afterwards;
 # a stored digest makes both impossible.
@@ -20,13 +20,13 @@
 #      skipped; a skipped check is reported, never silently passed.
 #
 # The golden summary is data and is reviewed as data. Regenerate it, after reading
-# the diff, with:  PIRICAD_GOLDEN_UPDATE=1 bash scripts/ci-gate-mpyy.sh
+# the diff, with:  KENTOS_GOLDEN_UPDATE=1 bash scripts/ci-gate-mpyy.sh
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 mpyy="$root/data/catalogs/mpyy"
 fixture="$root/tests/golden/mpyy/beklenen.txt"
-kaynak="${PIRICAD_MPYY_KAYNAK:-$root/.mpyy-kaynak}"
+kaynak="${KENTOS_MPYY_KAYNAK:-$root/.mpyy-kaynak}"
 fail=0
 
 if [[ ! -d "$mpyy" ]]; then
@@ -40,7 +40,7 @@ fi
 
 summary="$(python3 "$root/scripts/mpyy-ozet.py" "$mpyy")"
 
-if [[ "${PIRICAD_GOLDEN_UPDATE:-}" == "1" ]]; then
+if [[ "${KENTOS_GOLDEN_UPDATE:-}" == "1" ]]; then
     mkdir -p "$(dirname "$fixture")"
     printf '%s\n' "$summary" >"$fixture"
     echo "mpyy: golden özeti güncellendi -> ${fixture#"$root"/}"
@@ -48,7 +48,7 @@ if [[ "${PIRICAD_GOLDEN_UPDATE:-}" == "1" ]]; then
 fi
 
 if [[ ! -f "$fixture" ]]; then
-    echo "mpyy: golden summary missing -> ${fixture#"$root"/}:1  (run: PIRICAD_GOLDEN_UPDATE=1 bash scripts/ci-gate-mpyy.sh)" >&2
+    echo "mpyy: golden summary missing -> ${fixture#"$root"/}:1  (run: KENTOS_GOLDEN_UPDATE=1 bash scripts/ci-gate-mpyy.sh)" >&2
     exit 1
 fi
 

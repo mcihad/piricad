@@ -96,7 +96,7 @@ Boş hücreleri aramak için `IS NULL` yazın.
 
 Bu ifadeyi okuyan çözümleyici, komut satırındaki `@(100*3),0` ifadesini okuyanla
 **aynıdır**. Projede tam olarak bir dilbilgisi vardır
-(`piricad/command/parser.hpp`, CLAUDE.md 5.11) ve öznitelik süzgeci onun bir
+(`kentos_cad/command/parser.hpp`, CLAUDE.md 5.11) ve öznitelik süzgeci onun bir
 istisnası değildir. Bunun pratik sonucu şudur: burada işe yarayan bir ifade
 betikte de, yapay zekâya verilen bir görevde de aynı anlama gelir.
 

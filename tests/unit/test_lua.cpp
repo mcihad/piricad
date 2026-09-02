@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The Lua host (`.claude/script.md`). Compiled only when `PIRICAD_WITH_LUA=ON`;
+// The Lua host (`.claude/script.md`). Compiled only when `KENTOS_WITH_LUA=ON`;
 // R6 requires the whole suite to build and pass with the option off, so this file
 // must be empty in that build rather than skipped at runtime.
 //
@@ -12,20 +12,20 @@
 //   R14    one script is one undo step, and a failure rolls the whole block back
 //   R9/P4  a read binding returns a value, and there is no write path but h.komut
 //   P8     `güvenli` has no filesystem; `proje` cannot escape the project directory
-#include "piricad_test.hpp"
+#include "kentos_test.hpp"
 
-#if PIRICAD_HAVE_LUA
+#if KENTOS_HAVE_LUA
 
-#include "piricad/command/bus.hpp"
-#include "piricad/command/registry.hpp"
-#include "piricad/script/lua_runner.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/script/lua_runner.hpp"
 
 #include <filesystem>
 #include <fstream>
 #include <thread>
 
-using namespace piricad;
-using namespace piricad::command;
+using namespace kentos;
+using namespace kentos::command;
 
 namespace {
 
@@ -169,7 +169,7 @@ TEST_CASE("LUA: güvenli has no filesystem and proje cannot leave the project")
     // project directory is a path inside it as text and outside it in fact.
     {
         const std::filesystem::path root =
-            std::filesystem::temp_directory_path() / "piricad-lua-test";
+            std::filesystem::temp_directory_path() / "kentoscad-lua-test";
         std::filesystem::create_directories(root);
         {
             std::ofstream(root / "içeride.txt") << "merhaba";
@@ -219,7 +219,7 @@ TEST_CASE("LUA: BETİK picks the host from the file extension")
     script::LuaRunner lua(rig.bus, script::Sandbox::Project);
 
     const std::filesystem::path root =
-        std::filesystem::temp_directory_path() / "piricad-host-dispatch";
+        std::filesystem::temp_directory_path() / "kentoscad-host-dispatch";
     std::filesystem::create_directories(root);
     lua.set_project_root(root.string());
 
@@ -260,4 +260,4 @@ TEST_CASE("LUA: a stop token stops a running chunk")
     CHECK_FALSE(report.ok());
 }
 
-#endif // PIRICAD_HAVE_LUA
+#endif // KENTOS_HAVE_LUA

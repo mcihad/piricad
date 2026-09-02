@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/app/attribute_panel.hpp"
+#include "kentos_cad/app/attribute_panel.hpp"
 
-#include "piricad/app/controller.hpp"
-#include "piricad/app/icons.hpp"
-#include "piricad/app/tokens.hpp"
-#include "piricad/core/document.hpp"
+#include "kentos_cad/app/controller.hpp"
+#include "kentos_cad/app/icons.hpp"
+#include "kentos_cad/app/tokens.hpp"
+#include "kentos_cad/core/document.hpp"
 
 #include <QFileInfo>
 #include <QFontMetrics>
@@ -19,7 +19,7 @@
 
 #include <algorithm>
 
-namespace piricad::app {
+namespace kentos::app {
 namespace {
 
 // `design.md` §7, in the mockup's own numbers.
@@ -608,4 +608,4 @@ void AttributePanel::paintEvent(QPaintEvent*)
     }
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

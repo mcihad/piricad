@@ -1,4 +1,4 @@
-# Roadmap — where PiriCAD stands
+# Roadmap — where KentOSCad stands
 
 > This is a HAND-OFF, not a rulebook. It records what is finished, what is
 > measured, what is written but unproven, and what is left — so the work can be
@@ -20,7 +20,7 @@ halves are still OFF by default.
 | Vector + raster symbology | **All eleven** symbol layer types of `/data/catalogs/mpyy-vektor` draw on the GPU |
 | Text | SDF atlas (msdfgen over FreeType outlines, shaped with HarfBuzz) — rulers, scale bar, north arrow, captions |
 | Frame budget (§10.1) | **Measured, and the GPU wins by 20×** — see below |
-| Defaults | `PIRICAD_WITH_RHI=OFF`, `PIRICAD_WITH_TEXT=OFF` |
+| Defaults | `KENTOS_WITH_RHI=OFF`, `KENTOS_WITH_TEXT=OFF` |
 
 ### The measurement
 
@@ -36,15 +36,15 @@ same machine, median of 20 frames, backend share only:
 The §10.1 budget is 16 ms. Reproduce with:
 
 ```bash
-PIRICAD_FRAME_TIMES=20 QT_QPA_PLATFORM=xcb ./build/dev/bin/piricad --betik <yük.json>
+KENTOS_FRAME_TIMES=20 QT_QPA_PLATFORM=xcb ./build/dev/bin/kentos_cad --betik <yük.json>
 ```
 
-`PIRICAD_BACKEND=dahili` selects the built-in painter on a non-RHI build.
+`KENTOS_BACKEND=dahili` selects the built-in painter on a non-RHI build.
 
 ## What this machine needed
 
 None of these are in the repository; a fresh machine needs them before
-`PIRICAD_WITH_RHI` or `PIRICAD_WITH_TEXT` will configure.
+`KENTOS_WITH_RHI` or `KENTOS_WITH_TEXT` will configure.
 
 ```bash
 sudo apt install qt6-base-private-dev      # <rhi/qrhi.h> — Qt Gui's PRIVATE headers
@@ -53,12 +53,12 @@ sudo apt install libfreetype-dev libharfbuzz-dev
 ```
 
 Lua, sol2, msdfgen and stb_rect_pack are fetched from pinned commits, so the
-first configure with `PIRICAD_WITH_LUA=ON` or `PIRICAD_WITH_TEXT=ON` needs the
+first configure with `KENTOS_WITH_LUA=ON` or `KENTOS_WITH_TEXT=ON` needs the
 network. `qsb` is NOT on `PATH` on any platform — `scripts/doctor.sh` asks Qt
 where its own tools live.
 
 ```bash
-cmake --preset dev -DPIRICAD_WITH_RHI=ON -DPIRICAD_WITH_TEXT=ON -DPIRICAD_WITH_LUA=ON
+cmake --preset dev -DKENTOS_WITH_RHI=ON -DKENTOS_WITH_TEXT=ON -DKENTOS_WITH_LUA=ON
 cmake --build --preset dev
 ```
 
@@ -124,7 +124,7 @@ Two behaviours worth knowing before changing them:
 0. **`ÖTELE` (offset) is the one obvious tool still missing**, and it is deliberately
    not hand-rolled: parallel offsetting with self-intersection cleanup is exactly
    what Clipper2 does and Article 5.16 says not to reimplement it. Clipper2 is
-   pinned by SHA in `cmake/PiriCADDependencies.cmake` but never fetched, and the
+   pinned by SHA in `cmake/KentOSCadDependencies.cmake` but never fetched, and the
    house rule below says not to start a `FetchContent` download unasked. Decide
    that first; the command itself is small once the library is linked.
 
@@ -137,7 +137,7 @@ Two behaviours worth knowing before changing them:
    a very long published name still elides at the second line — the tooltip
    carries the full name, the cell does not.
 3. **Interactive drawing is proven now** — `tests/canvas-edits` (the
-   `PIRICAD_EDIT_PROBE` hook) drives real `QMouseEvent`s into the canvas offscreen
+   `KENTOS_EDIT_PROBE` hook) drives real `QMouseEvent`s into the canvas offscreen
    and checks the document afterwards. It caught two bugs no unit test could: the
    canvas sending `nesne` in the wrong `Value` kind so the bus refused the
    invocation silently, and a draw tool that did not stay armed. Extend it rather
@@ -175,7 +175,7 @@ Two behaviours worth knowing before changing them:
   store and the frame is on the GPU. `MapCanvas::grabCanvas()` exists for this.
 - **A stale `ui/state` in QSettings survives a rebuild and looks exactly like a
   new bug.** `kLayoutVersion` is the way to decline one.
-- **`PIRICAD_RHI_DEBUG` and `PIRICAD_RHI_ONLY`** bisect a frame. A batch that
+- **`KENTOS_RHI_DEBUG` and `KENTOS_RHI_ONLY`** bisect a frame. A batch that
   never reached the buffer, a batch drawn off screen, and a pipeline that
   corrupts the state of the draws after it look identical in a screenshot.
 
@@ -183,5 +183,5 @@ Two behaviours worth knowing before changing them:
 
 - The machine is shared. Ask before building, and never start a full
   `make check` or a `FetchContent` download without being told to.
-- Screenshots come from the real binary: `PIRICAD_FRAME_DUMP=<png>` for one
-  frame, `PIRICAD_SHOT_DIR=<dir>` for every window.
+- Screenshots come from the real binary: `KENTOS_FRAME_DUMP=<png>` for one
+  frame, `KENTOS_SHOT_DIR=<dir>` for every window.

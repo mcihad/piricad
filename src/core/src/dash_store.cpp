@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/dash_store.hpp"
+#include "kentos_cad/core/dash_store.hpp"
 
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <string>
 
-namespace piricad::core {
+namespace kentos::core {
 
 DashStore::DashStore()
 {
@@ -68,4 +68,4 @@ std::uint64_t DashStore::fold(std::uint64_t seed) const
     return h;
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

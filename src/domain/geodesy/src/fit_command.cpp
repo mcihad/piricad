@@ -15,20 +15,20 @@
 // drawing IS — a reviewer has to be able to see the points, the residuals and the
 // scale that was accepted — so the fit is reported in full and the parameters go
 // into the journal with the command.
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/registry.hpp"
-#include "piricad/command/spec.hpp"
-#include "piricad/domain/geodesy/commands.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/command/spec.hpp"
+#include "kentos_cad/domain/geodesy/commands.hpp"
 
-#include "piricad/core/geometry.hpp"
-#include "piricad/core/units.hpp"
-#include "piricad/domain/geodesy/helmert.hpp"
+#include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/units.hpp"
+#include "kentos_cad/domain/geodesy/helmert.hpp"
 
 #include <string>
 #include <vector>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 std::string mm_text(core::Mm v)
@@ -150,7 +150,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(fit)
+KENTOS_COMMAND(fit)
 {
     return CommandSpec{
         .id       = "core.fit",
@@ -172,16 +172,16 @@ PIRICAD_COMMAND(fit)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command
 
-namespace piricad::domain::geodesy {
+namespace kentos::domain::geodesy {
 
-void register_geodesy_commands(piricad::command::Registry& r)
+void register_geodesy_commands(kentos::command::Registry& r)
 {
     // One entry today. It sits here rather than in the builtin X-macro list
     // because that list lives in `/src/command`, which may not depend on a domain
     // module (CLAUDE.md Article 3.2).
-    (void)r.add(piricad::command::piricad_command_fit());
+    (void)r.add(kentos::command::kentos_command_fit());
 }
 
-} // namespace piricad::domain::geodesy
+} // namespace kentos::domain::geodesy

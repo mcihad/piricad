@@ -1,15 +1,15 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
-  "name": "piricad",
+  "name": "kentos-cad",
   "version": "0.1.0",
   "description": "Türkiye odaklı CBS + CAD harita yazılımı",
-  "homepage": "https://github.com/piricad/piricad",
+  "homepage": "https://github.com/mcihad/kentos_cad",
   "license": "GPL-3.0-or-later",
 
   "$comment": [
     "Manifest mode against a real pinned baseline (CLAUDE.md 5.12).",
     "This file covers the libraries with native dependencies. Small pure-C++",
-    "libraries are pinned by commit SHA in cmake/PiriCADDependencies.cmake instead,",
+    "libraries are pinned by commit SHA in cmake/KentOSCadDependencies.cmake instead,",
     "so a fresh checkout builds on all three platforms with nothing installed.",
     "Before enabling any of these: read its LICENSE, confirm GPLv3 compatibility,",
     "record it in NOTICE and regenerate the CycloneDX SBOM in the same PR."
@@ -20,8 +20,8 @@
 
   "features": {
     "gdal": {
-      "$comment": "default-features off on purpose: the network drivers are what io.md P14 refuses, and every driver is parser attack surface /tests/fuzz does not cover. The runtime allow-list is cmake/PiriCADGdalDrivers.cmake.",
-      "description": "Vector format I/O (DXF, GeoPackage) — PIRICAD_WITH_GDAL. Linked; licence recorded in /NOTICE.",
+      "$comment": "default-features off on purpose: the network drivers are what io.md P14 refuses, and every driver is parser attack surface /tests/fuzz does not cover. The runtime allow-list is cmake/KentOSCadGdalDrivers.cmake.",
+      "description": "Vector format I/O (DXF, GeoPackage) — KENTOS_WITH_GDAL. Linked; licence recorded in /NOTICE.",
       "dependencies": [
         {
           "name": "gdal",
@@ -31,19 +31,19 @@
       ]
     },
     "proj": {
-      "description": "Coordinate transformation, TUREF/TM3 and geoid grids — PIRICAD_WITH_PROJ",
+      "description": "Coordinate transformation, TUREF/TM3 and geoid grids — KENTOS_WITH_PROJ",
       "dependencies": [{ "name": "proj", "version>=": "9.4.0" }]
     },
     "geos": {
-      "description": "Overlay, buffer, predicates — PIRICAD_WITH_GEOS",
+      "description": "Overlay, buffer, predicates — KENTOS_WITH_GEOS",
       "dependencies": [{ "name": "geos", "version>=": "3.12.0" }]
     },
     "cgal": {
-      "description": "Exact arithmetic, straight skeleton for setbacks — PIRICAD_WITH_CGAL",
+      "description": "Exact arithmetic, straight skeleton for setbacks — KENTOS_WITH_CGAL",
       "dependencies": [{ "name": "cgal", "version>=": "5.6" }]
     },
     "lua": {
-      "description": "Embedded hot-path script layer — PIRICAD_WITH_LUA",
+      "description": "Embedded hot-path script layer — KENTOS_WITH_LUA",
       "dependencies": [
         { "name": "lua", "version>=": "5.4.6" },
         { "name": "sol2", "version>=": "3.3.0" }

@@ -255,7 +255,7 @@ python3 scripts/mpyy-cikar.py --kaynak /yol/.mpyy-kaynak
    karşılaştırır:
 
 ```bash
-PIRICAD_MPYY_KAYNAK=/yol/.mpyy-kaynak bash scripts/ci-gate-mpyy.sh
+KENTOS_MPYY_KAYNAK=/yol/.mpyy-kaynak bash scripts/ci-gate-mpyy.sh
 ```
 
 Betik yalnız Python 3 standart kütüphanesini kullanır; kurulacak bir şey yoktur.
@@ -265,7 +265,7 @@ Katalog içeriği değiştiyse önce farkı okuyun, sonra golden özetini yenile
 `CHANGELOG.md`'ye değişikliğe sebep olan yönetmelik veya genelgeyi yazın:
 
 ```bash
-PIRICAD_GOLDEN_UPDATE=1 bash scripts/ci-gate-mpyy.sh
+KENTOS_GOLDEN_UPDATE=1 bash scripts/ci-gate-mpyy.sh
 ```
 
 ## Paketi kullanmak

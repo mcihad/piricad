@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <array>
 #include <cstring>
 
-namespace piricad::core {
+namespace kentos::core {
 namespace {
 
 // UTF-8 lower -> upper pairs that ASCII toupper gets wrong in Turkish.
@@ -157,4 +157,4 @@ bool turkish_key_equals(std::string_view a, std::string_view b)
     return turkish_fold_key(a) == turkish_fold_key(b);
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

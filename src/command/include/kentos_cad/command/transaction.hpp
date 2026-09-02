@@ -1,0 +1,208 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// KentOSCad — command: transaction and undo.
+//
+// kentoscad.md §2.5:
+//   * one command  = one undo step (default)
+//   * one script block or one AI suggestion = ONE merged undo step
+//   * a validation failure inside a transaction = full rollback, no partial apply
+//   * a half-applied edit on cadastral or zoning data is never acceptable
+#pragma once
+
+#include "kentos_cad/core/document.hpp"
+
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace kentos::command {
+
+using core::Appearance;
+using core::Document;
+using core::EntityId;
+using core::LayerId;
+using core::Op;
+using core::Point2;
+using core::Result;
+using core::RingGeometry;
+using core::Status;
+using core::StyleId;
+
+/// Collects the inverse of every primitive edit made through it.
+/// The ONLY sanctioned route to Document mutation (Constitution Article 1).
+class Transaction
+{
+public:
+    /// Opens a transaction over a document. `label` is what the undo entry will
+    /// be called — the user reads it in the Düzen menu, so it names the ACTION
+    /// rather than the command id.
+    Transaction(Document& doc, std::string label);
+
+    /// Returns the slot of the layer with this name, creating it if absent.
+    ///
+    /// NOT undoable, and deliberately so — the same decision `Document` records:
+    /// an empty layer is inert, and removing it on undo would invalidate every
+    /// stored slot in `entity.layer`. It lives here anyway because a caller
+    /// outside /src/command must have ONE sanctioned handle for document work
+    /// (Article 5.9) rather than reaching past the transaction for this one call.
+    LayerId ensure_layer(std::string_view name);
+
+    /// Interns an appearance and returns its id, for a command — or a file reader
+    /// — that resolves a style at commit time (model.md R14).
+    ///
+    /// Also not undoable, for two reasons that reinforce each other. The style
+    /// table is a deduplicated pool: adding to it changes nothing that is drawn
+    /// until an entity's style column points at the new entry, and that write IS
+    /// undoable (`set_entity_style`). And the table only ever grows, so an id once
+    /// handed out stays valid for the document's lifetime — rolling an intern back
+    /// would renumber ids that other entities, and the journal's recorded previous
+    /// values, already point at.
+    StyleId intern_style(const Appearance& a);
+
+    /// Interns a full symbol stack. A one-layer stroke stack with no scale window
+    /// returns the same id `intern_style` would, so nothing changes for a drawing
+    /// that uses neither.
+    StyleId intern_symbol(const core::Symbol& sym);
+
+    /// Adds a picture to the drawing. Additive only, like style interning: an id
+    /// handed out stays valid for the document's lifetime, so there is nothing to
+    /// undo and no inverse Op is recorded.
+    core::Result<core::ImageId> intern_image(std::span<const std::byte> bytes,
+                                             std::string_view origin);
+
+    /// Adds a line type to the drawing. Additive for the same reason and with the
+    /// same consequence: no inverse Op, and an id stays valid for the document.
+    core::Result<core::DashId> intern_dash(const core::DashPattern& pattern,
+                                           std::string_view origin);
+
+    Result<EntityId> add_polyline(LayerId layer, std::span<const Point2> pts);
+
+    /// A face: one exterior ring, optionally with holes, optionally multipart.
+    /// This is what a parcel is (model.md R9).
+    Result<EntityId> add_area(LayerId layer, std::span<const RingGeometry::RingInput> rings);
+    /// Replaces an entity's geometry, keeping its key, layer, style, attributes
+    /// and text. This is what a corner being dragged is: the same parsel with a
+    /// different boundary, never a new one (see `Document::set_geometry`).
+    Status set_geometry(EntityId e, std::span<const RingGeometry::RingInput> rings);
+
+    /// A circle, from its centre and radius (model.md R22-R26: `core.circle`).
+    Result<EntityId> add_circle(LayerId layer, Point2 centre, core::Mm radius);
+
+
+    /// Adds an ellipse from its centre and its two axis endpoints.
+    Result<EntityId> add_ellipse(LayerId layer, Point2 centre, Point2 major, Point2 minor);
+    /// An arc: centre, radius and the two ends, swept counter-clockwise.
+    Result<EntityId> add_arc(LayerId layer, Point2 centre, core::Mm radius, Point2 start,
+                             Point2 end);
+
+    /// A surveyed point (model.md R22-R26: `core.point`).
+    Result<EntityId> add_point(LayerId layer, Point2 at);
+
+    /// Moves an entity to another layer, keeping its identity.
+    Status set_entity_layer(EntityId e, LayerId layer);
+
+    Status erase_entity(EntityId e);
+    Status restore_entity(EntityId e);
+    Status set_layer_visible(LayerId l, bool visible);
+    Status set_layer_locked(LayerId l, bool locked);
+    Status set_layer_appearance(LayerId l, const Appearance& a);
+    Status set_layer_style(LayerId l, StyleId style);
+
+    /// Moves a layer in the layer tree. An empty path puts it at the root.
+    Status set_layer_group(LayerId l, std::string group);
+    Status set_entity_style(EntityId e, StyleId style);
+
+    Status set_entity_hidden(EntityId e, bool hidden);
+
+    /// Adds a drafting guide (`core/guide.hpp`). Furniture rather than geometry,
+    /// but a document change all the same: journalled, undone in one step, and
+    /// saved with the file.
+    Status add_guide(core::GuideAxis axis, core::Mm coordinate);
+
+    /// Removes the guide at `index`.
+    Status remove_guide(std::size_t index);
+    /// Sets the document's CRS. The whole record, so undo restores the metadata
+    /// the geodesy module resolved along with the id.
+    Status set_crs(core::Crs crs);
+
+    /// R28's generic attribute write, and the only sanctioned way to reach one.
+    /// Undoable: an ada number typed wrong is exactly the kind of mistake Ctrl+Z
+    /// exists for, and the previous value is what the document hands back.
+    Status set_attribute(core::AttrId col, EntityId e, const core::AttrValue& v);
+
+    /// Declares a column. NOT undoable — see Document::declare_attribute.
+    core::Result<core::AttrId> declare_attribute(core::AttrSpec spec);
+
+    /// Attaches or replaces the text on an entity. Height is ground millimetres;
+    /// an empty `content` detaches it. Undoable like any other edit.
+    Status set_text(EntityId e, std::string content, core::Mm height, core::TextAnchor anchor);
+
+    /// Reverts every edit made through this transaction, newest first.
+    void rollback();
+
+    /// Hands the inverse record over to the undo stack and clears it.
+    std::vector<Op> release();
+
+    bool empty() const noexcept { return inverse_.empty(); }
+
+    std::size_t size() const noexcept { return inverse_.size(); }
+
+    const std::string& label() const noexcept { return label_; }
+
+    void set_label(std::string l) { label_ = std::move(l); }
+
+    Document& document() noexcept { return doc_; }
+
+private:
+    Document& doc_;
+    std::string label_;
+    std::vector<Op> inverse_; ///< newest last
+};
+
+struct UndoEntry
+{
+    std::string label;       ///< what the user reads on the GERİAL menu item
+    std::vector<Op> inverse; ///< the Ops that undo the command, newest last
+};
+
+class UndoStack
+{
+public:
+    /// Puts a completed transaction on the stack and CLEARS the redo side: once
+    /// the user edits after undoing, the branch they undid is gone, which is what
+    /// every editor does and what any other answer would make unpredictable.
+    void push(UndoEntry e);
+
+    /// Whether there is anything to undo or redo, for the menu items.
+    bool can_undo() const noexcept { return !undo_.empty(); }
+
+    bool can_redo() const noexcept { return !redo_.empty(); }
+
+    /// Applies the top inverse record and moves it to the redo stack.
+    Status undo(Document& doc, std::string* label_out = nullptr);
+    Status redo(Document& doc, std::string* label_out = nullptr);
+
+    void clear();
+
+    std::size_t undo_depth() const noexcept { return undo_.size(); }
+
+    std::size_t redo_depth() const noexcept { return redo_.size(); }
+
+    std::string next_undo_label() const
+    {
+        return undo_.empty() ? std::string{} : undo_.back().label;
+    }
+
+    /// The label of what would be redone, or empty. Shown in the menu so the item
+    /// reads "Yinele: Katman ekle" rather than a bare "Yinele".
+    std::string next_redo_label() const
+    {
+        return redo_.empty() ? std::string{} : redo_.back().label;
+    }
+
+private:
+    std::vector<UndoEntry> undo_;
+    std::vector<UndoEntry> redo_;
+};
+
+} // namespace kentos::command

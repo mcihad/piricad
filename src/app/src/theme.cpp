@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/app/theme.hpp"
+#include "kentos_cad/app/theme.hpp"
 
-#include "piricad/app/data_root.hpp"
+#include "kentos_cad/app/data_root.hpp"
 
 #include <QApplication>
 #include <QFontDatabase>
@@ -9,9 +9,9 @@
 #include <QProxyStyle>
 #include <QStyleFactory>
 
-#include "piricad/app/tokens.hpp"
+#include "kentos_cad/app/tokens.hpp"
 
-namespace piricad::app {
+namespace kentos::app {
 namespace {
 
 /// A `Palette` built from a token set.
@@ -679,4 +679,4 @@ QString themeStyleSheet(ThemeMode mode)
         .replace(QStringLiteral("%(scrollHi)s"), t.textFaint.name());
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/guide.hpp"
+#include "kentos_cad/core/guide.hpp"
 
 #include <cstdlib>
 
-namespace piricad::core {
+namespace kentos::core {
 
 std::size_t GuideStore::add(GuideAxis axis, Mm coordinate)
 {
@@ -57,4 +57,4 @@ void GuideStore::load(std::vector<GuideAxis> axes, std::vector<Mm> coords)
     coords_ = std::move(coords);
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

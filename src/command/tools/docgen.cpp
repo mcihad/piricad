@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PiriCAD — generates the command reference from the command registry.
+// KentOSCad — generates the command reference from the command registry.
 //
 // CLAUDE.md 5.10 forbids a second, hand-maintained command list. The user manual
 // still needs a complete reference table, so it is GENERATED from `Registry`
 // here and written into /docs. Editing the output by hand is a defect; the gate
 // scripts/ci-gate-docs.sh regenerates it and fails on any difference.
-#include "piricad/command/registry.hpp"
+#include "kentos_cad/command/registry.hpp"
 
 #include <cstdio>
 #include <fstream>
@@ -13,7 +13,7 @@
 
 namespace {
 
-using namespace piricad::command;
+using namespace kentos::command;
 
 std::string slug(const std::string& id)
 {
@@ -61,7 +61,7 @@ std::string build(const Registry& reg)
     std::string out;
 
     out += "<!-- ÜRETİLMİŞ DOSYA — ELLE DÜZENLEMEYİN. -->\n";
-    out += "<!-- Kaynak: piricad::command::Registry.  Yeniden üret: make reference -->\n";
+    out += "<!-- Kaynak: kentos::command::Registry.  Yeniden üret: make reference -->\n";
     out += "<!-- Bir komutun burada görünmesi için tek yapılması gereken onu kaydetmektir; -->\n";
     out += "<!-- projede elle tutulan ikinci bir komut listesi yoktur (CLAUDE.md 5.10). -->\n\n";
 
@@ -106,7 +106,7 @@ std::string build(const Registry& reg)
 
     out += "## AI araç kataloğu\n\n";
     out += "AI'ın görebildiği komutlar `Flags::AiAccessible` bayrağından üretilir.\n";
-    out += "Elle tutulan ikinci bir araç şeması yoktur (piricad.md §2.3, §5.1).\n\n";
+    out += "Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).\n\n";
     out += "```json\n";
     out += reg.ai_tool_schema().dump_pretty(2);
     out += "\n```\n";
@@ -119,7 +119,7 @@ std::string build(const Registry& reg)
 int main(int argc, char** argv)
 {
     if (argc < 2) {
-        (void)std::fprintf(stderr, "kullanım: piricad_docgen <cikti.md>\n");
+        (void)std::fprintf(stderr, "kullanım: kentos_docgen <cikti.md>\n");
         return 2;
     }
 

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # GATE: the repository stays cloneable.
-# .claude/data.md R15 / P8, piricad.md §12: any file over 10 MB belongs in Git LFS
+# .claude/data.md R15 / P8, kentoscad.md §12: any file over 10 MB belongs in Git LFS
 # or in an external artefact store referenced by URL + SHA-256 from
 # /data/MANIFEST.json; the working-tree cap is one named value in that manifest.
 # Geoid grids, LAZ tiles and corpus PDFs are how a survey repo becomes a 3 GB

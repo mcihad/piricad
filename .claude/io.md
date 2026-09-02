@@ -1,17 +1,17 @@
 # I/O Engine — Rules
 
-> Scope: `/src/io` (GDAL/OGR wrapper, native mmap-able format, DXF/DWG, GML/XML, LAS/LAZ, OGC services), `/tests/fuzz`, `/tests/golden` format cases  |  Depends on: `piricad_core`, `piricad_command` only (canon dependency table)  |  Source: piricad.md §9.2, §9.3, §9.8, §9.9, §9.10, §9.11, §10.1–§10.3, §10.5, §13, §15
+> Scope: `/src/io` (GDAL/OGR wrapper, native mmap-able format, DXF/DWG, GML/XML, LAS/LAZ, OGC services), `/tests/fuzz`, `/tests/golden` format cases  |  Depends on: `kentos_core`, `kentos_command` only (canon dependency table)  |  Source: kentoscad.md §9.2, §9.3, §9.8, §9.9, §9.10, §9.11, §10.1–§10.3, §10.5, §13, §15
 
 ## Hard Rules
 
-R1. Every format access MUST go through a thin wrapper in `/src/io`. Public headers under `piricad/io/` MUST expose only core/command types (`Document`, `Layer`, `EntityId`, `Mm`, `Point2`, `Box2`, `Crs`, `Result<T>`, `Task<T>`) and MUST return `Result<T>` on failure.
+R1. Every format access MUST go through a thin wrapper in `/src/io`. Public headers under `kentos_cad/io/` MUST expose only core/command types (`Document`, `Layer`, `EntityId`, `Mm`, `Point2`, `Box2`, `Crs`, `Result<T>`, `Task<T>`) and MUST return `Result<T>` on failure.
 R2. GDAL/OGR/LibreDWG/libdxfrw/libxml2/PDAL headers MUST appear only in `.cpp` files under `/src/io`. Wrapper classes MUST hide them behind pimpl or forward declarations (§9.2).
-R3. `/src/io` MUST link `piricad_core` + `piricad_command` + format libraries only. No `#include <Q...>` anywhere in `/src/io`.
-R4. Every import and export MUST be a command registered in `Registry` via `PIRICAD_COMMAND`/`CommandSpec`, with Turkish primary + English names; readers MUST NOT mutate `Document` directly (see `.claude/command.md`).
+R3. `/src/io` MUST link `kentos_core` + `kentos_command` + format libraries only. No `#include <Q...>` anywhere in `/src/io`.
+R4. Every import and export MUST be a command registered in `Registry` via `KENTOS_COMMAND`/`CommandSpec`, with Turkish primary + English names; readers MUST NOT mutate `Document` directly (see `.claude/command.md`).
 R5. The native project format MUST be a single file that is columnar (SoA blocks mirroring the `Document` polyline store), 8-byte aligned, offset-addressed with `u64`, and usable by `mmap` with zero parsing of geometry blocks (§9.3, §10.2).
 R6. The native format MUST embed 4–5 precomputed Douglas–Peucker LOD levels written into quadtree tiles (§10.3) and a bulk-loaded STR R-tree (§10.5). Rebuilding either on open is a bug.
 R7. All coordinates in the native format MUST be stored as `Mm` (int64 fixed-point millimetres); the file MUST NOT contain floating-point geometry (canon).
-R8. Every format PiriCAD writes MUST begin with a magic string, a `u32 format_version`, and a `u32 min_reader_version` inside the first 32 bytes (§13).
+R8. Every format KentOSCad writes MUST begin with a magic string, a `u32 format_version`, and a `u32 min_reader_version` inside the first 32 bytes (§13).
 R9. A reader whose version is below `min_reader_version` MUST return `Error{code="io.format_too_new", message=...}` naming the required application version — never crash, never a partial load (§13).
 R10. Unknown chunks MUST be skipped by declared length and MUST NOT be fatal; adding an optional chunk MUST NOT raise `min_reader_version` (forward compatibility, §13).
 R11. PlanGML export MUST be validated in-process against its XSD with libxml2 before any byte is written to the target path; on failure return `Result` errors with line/column. Rejection MUST NOT first be discovered on e-Plan upload (§9.9).
@@ -25,8 +25,8 @@ R18. Header-declared extents, counts, offsets and lengths MUST be treated as unt
 R19. Every parser (dxf, dwg, gml/xml, las/laz, native) MUST have a libFuzzer harness plus seed corpus in `/tests/fuzz`; a new format lands in the same PR as its harness (§9.11, §13).
 R20. Every dataset MUST carry an explicit `Crs`; a missing or unrecognised CRS MUST be an error, never a silent assumption of TUREF/TM30.
 R21. Every `/src/io` dependency MUST be pinned to an exact version in `vcpkg.json` with its LICENSE recorded and MUST appear in the CycloneDX SBOM produced for each release (§9.11).
-R22. All optional format backends MUST sit behind `PIRICAD_WITH_*` CMake options defaulting to OFF that hard-fail with an actionable message when ON but missing (canon Phase-0 deviation 2).
-R23. OGC service clients — WMS, WMTS, WFS-T, WCS, CSW and OGC API Features — MUST be implemented in `/src/io` behind `PIRICAD_WITH_OGC`, MUST expose each service as a registered command (R4), and MUST each carry a conformance-class case in `/tests/golden`; an unconformant response MUST return `Error`, never a partial layer (§12 Veri ve Kurumsal). Export-side theme/metadata obligations stay in `.claude/domain.md` R22.
+R22. All optional format backends MUST sit behind `KENTOS_WITH_*` CMake options defaulting to OFF that hard-fail with an actionable message when ON but missing (canon Phase-0 deviation 2).
+R23. OGC service clients — WMS, WMTS, WFS-T, WCS, CSW and OGC API Features — MUST be implemented in `/src/io` behind `KENTOS_WITH_OGC`, MUST expose each service as a registered command (R4), and MUST each carry a conformance-class case in `/tests/golden`; an unconformant response MUST return `Error`, never a partial layer (§12 Veri ve Kurumsal). Export-side theme/metadata obligations stay in `.claude/domain.md` R22.
 
 ## Absolute Prohibitions
 
@@ -45,7 +45,7 @@ P12. NEVER link LASzip (use laz-perf, §9.10) or Triangle (canon ban list); NEVE
 P13. NEVER silently repair a malformed file — report the defect through `Result`; repair is a separate, explicit, user-invoked command.
 P14. NEVER execute, eval, or resolve anything embedded in an input file (DXF/LISP hooks, XSLT, GML external references, GDAL VSI network paths).
 P15. NEVER add an `/src/io` dependency without an SBOM entry and a GPLv3 compatibility check in the same PR (§9.11).
-P16. NEVER use `std::toupper`/`std::tolower` on Turkish text in layer, pafta, or attribute names — use the shared Turkish folding table exposed by `piricad_command` (`.claude/command.md` R7, CLAUDE.md 5.6).
+P16. NEVER use `std::toupper`/`std::tolower` on Turkish text in layer, pafta, or attribute names — use the shared Turkish folding table exposed by `kentos_command` (`.claude/command.md` R7, CLAUDE.md 5.6).
 
 ## Definitions of Done
 

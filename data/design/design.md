@@ -186,7 +186,7 @@ Dikey sıra: sistem başlık çubuğu → menü şeridi → araç çubuğu → g
 **Pencere çerçevesi.** Çerçeve, başlık çubuğu ve pencere düğmeleri **işletim sisteminindir**.
 Uygulama kendi çerçevesini çizmez: yeniden boyutlandırma kenarları, kenara yapıştırma
 (snap), pencere menüsü ve gölgelendirme pencere yöneticisinin işidir ve çizili bir çerçeve
-bunların hiçbirini veremez. Pencere başlığı `<doküman> — PiriCAD <sürüm>`, diyaloglarda
+bunların hiçbirini veremez. Pencere başlığı `<doküman> — KentOSCad <sürüm>`, diyaloglarda
 `<ad> <nitelik>`; pencere simgesi diyalogun `Glyph`'inden üretilir.
 
 **Menü şeridi (34 px).** Sistem başlık çubuğunun hemen altında, soldan sağa: 10 menü —

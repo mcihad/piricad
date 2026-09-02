@@ -2,14 +2,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # GATE: the plugin boundary is pure C.
-# piricad.md §4.3, §13 — .claude/plugin-api.md R1, R3, P1, P9 and its Enforcement
+# kentoscad.md §4.3, §13 — .claude/plugin-api.md R1, R3, P1, P9 and its Enforcement
 # row "No C++/Qt in header": every header under /src/plugin-api/include is C99 —
 # extern "C", fixed-width integers, opaque handles — and carries the ABI version
 # macro the §13 handshake is built on. A C++ class, template, reference, STL type,
 # exception or <Q...> include on that line breaks the ABI for every compiler that
 # is not the one that built the host.
 # (The abidiff half of the Enforcement table needs a previous release tag and a
-# built piricad_plugin_api; it lands with the first release.)
+# built kentos_plugin_api; it lands with the first release.)
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -26,8 +26,8 @@ if [[ ${#headers[@]} -eq 0 ]]; then
     exit 0
 fi
 
-cpp='\b(class|template|namespace|throw|try|catch|new|delete|typename|virtual)\b|\bstd::|\bpiricad::|\b(Result|Task)[[:space:]]*<|#[[:space:]]*include[[:space:]]*<Q|#[[:space:]]*include[[:space:]]*<(vector|string|memory|map|set|functional|optional|variant|array|utility|algorithm)>'
-cond='#[[:space:]]*(if|ifdef)[[:space:]].*PIRICAD_'
+cpp='\b(class|template|namespace|throw|try|catch|new|delete|typename|virtual)\b|\bstd::|\bkentos::|\b(Result|Task)[[:space:]]*<|#[[:space:]]*include[[:space:]]*<Q|#[[:space:]]*include[[:space:]]*<(vector|string|memory|map|set|functional|optional|variant|array|utility|algorithm)>'
+cond='#[[:space:]]*(if|ifdef)[[:space:]].*KENTOS_'
 ref='[A-Za-z_0-9)][[:space:]]*&[[:space:]]*[A-Za-z_]'
 
 # Comments may name the banned constructs — that is how the ban is documented —
@@ -40,7 +40,7 @@ while IFS= read -r hit; do
     elif grep -qE "$cpp" <<<"$code"; then
         echo "abi: C++ construct on the plugin C ABI -> $hit" >&2; fail=1
     elif grep -qE "$cond" <<<"$code"; then
-        echo "abi: #if/#ifdef on a PIRICAD_ macro (P9) -> $hit" >&2; fail=1
+        echo "abi: #if/#ifdef on a KENTOS_ macro (P9) -> $hit" >&2; fail=1
     elif grep -qE "$ref" <<<"$code" && ! grep -qE '&&|#[[:space:]]*define' <<<"$code"; then
         echo "abi: C++ reference on the plugin C ABI -> $hit" >&2; fail=1
     fi
@@ -53,8 +53,8 @@ for h in "${headers[@]}"; do
     fi
 done
 
-if ! grep -qhE '#[[:space:]]*define[[:space:]]+PIRICAD_[A-Z0-9_]*ABI[A-Z0-9_]*' "${headers[@]}"; then
-    echo "abi: no PIRICAD_*ABI* version macro declared (R3) -> ${headers[0]}:1" >&2
+if ! grep -qhE '#[[:space:]]*define[[:space:]]+KENTOS_[A-Z0-9_]*ABI[A-Z0-9_]*' "${headers[@]}"; then
+    echo "abi: no KENTOS_*ABI* version macro declared (R3) -> ${headers[0]}:1" >&2
     fail=1
 fi
 

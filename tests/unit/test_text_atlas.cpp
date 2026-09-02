@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The SDF glyph atlas (`.claude/render.md` R8). Compiled only when
-// `PIRICAD_WITH_TEXT=ON`.
+// `KENTOS_WITH_TEXT=ON`.
 //
 // THIS IS WHY THE ATLAS IS QT-FREE. A backend cannot be constructed in a suite
 // that links no Qt (CLAUDE.md 3.4), so if the shaping and the field generation
@@ -9,22 +9,22 @@
 // exactly the kind of thing a screenshot does not show: a Turkish letter that
 // quietly became a box, a run whose kerning collapsed, a field with no gradient
 // in it.
-#include "piricad_test.hpp"
+#include "kentos_test.hpp"
 
-#if PIRICAD_HAVE_TEXT
+#if KENTOS_HAVE_TEXT
 
-#include "piricad/render/text_atlas.hpp"
+#include "kentos_cad/render/text_atlas.hpp"
 
 #include <string>
 #include <vector>
 
-using namespace piricad;
+using namespace kentos;
 
 namespace {
 
 std::string fonts()
 {
-    return std::string(PIRICAD_DATA_DIR) + "/fonts";
+    return std::string(KENTOS_DATA_DIR) + "/fonts";
 }
 
 /// The atlas, opened once. Building five faces is the expensive part and every
@@ -177,4 +177,4 @@ TEST_CASE("TEXT: shaping the same word twice reuses the same cells")
         CHECK(first[i].box == again[i].box);
 }
 
-#endif // PIRICAD_HAVE_TEXT
+#endif // KENTOS_HAVE_TEXT

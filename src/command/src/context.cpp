@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/command/context.hpp"
+#include "kentos_cad/command/context.hpp"
 
-#include "piricad/command/bus.hpp"
-#include "piricad/command/session.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/session.hpp"
 
 #include <utility>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 Point2 to_point(const Value& v)
@@ -153,4 +153,4 @@ void Context::record(std::string param, Value v)
     session_.record(std::move(param), std::move(v));
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

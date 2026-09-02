@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/style_rule.hpp"
+#include "kentos_cad/core/style_rule.hpp"
 
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
 #include <limits>
 
-namespace piricad::core {
+namespace kentos::core {
 namespace {
 
 // Every key this file reads is a STRUCTURAL key of the package format, never a
@@ -1134,4 +1134,4 @@ Result<std::uint32_t> parse_rgba(std::string_view text)
     return value;
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

@@ -12,19 +12,19 @@
 // R12), so what the readout says is what an export would say — a measurement
 // taken off pixel positions would disagree with the tapu by whatever the zoom
 // happened to be.
-#include "piricad/command/bus.hpp"
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/entity_kind.hpp"
-#include "piricad/core/units.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/units.hpp"
 
 #include <cmath>
 #include <string>
 #include <vector>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 /// A length in metres, written the way a surveyor reads one off an instrument:
@@ -173,7 +173,7 @@ Task<void> run_coordinate(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(measure)
+KENTOS_COMMAND(measure)
 {
     return CommandSpec{
         .id       = "core.measure",
@@ -191,7 +191,7 @@ PIRICAD_COMMAND(measure)
     };
 }
 
-PIRICAD_COMMAND(measure_area)
+KENTOS_COMMAND(measure_area)
 {
     return CommandSpec{
         .id       = "core.measure_area",
@@ -206,7 +206,7 @@ PIRICAD_COMMAND(measure_area)
     };
 }
 
-PIRICAD_COMMAND(coordinate)
+KENTOS_COMMAND(coordinate)
 {
     return CommandSpec{
         .id       = "core.coordinate",
@@ -220,4 +220,4 @@ PIRICAD_COMMAND(coordinate)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

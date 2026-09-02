@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/offset.hpp"
+#include "kentos_cad/core/offset.hpp"
 
 #include "clipper2/clipper.h"
 
 #include <utility>
 
-namespace piricad::core {
+namespace kentos::core {
 namespace {
 
 Clipper2Lib::JoinType join_of(JoinStyle j)
@@ -181,4 +181,4 @@ Result<std::vector<Polygon>> polygon_boolean(const std::vector<Polygon>& subject
     return out;
 }
 
-} // namespace piricad::core
+} // namespace kentos::core

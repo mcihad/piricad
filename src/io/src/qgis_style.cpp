@@ -10,8 +10,8 @@
 // QGIS's own format and the only writer of it is QGIS, which CLAUDE.md 5.16 would
 // otherwise have us link — and Article 2.7's test refuses that for reasons that
 // have nothing to do with licence (QGIS is GPL-2+, which IS GPLv3-compatible):
-// QgsGeometry is double-based where PiriCAD stores int64 millimetres, QGIS
-// symbology renders into a QPainter where PiriCAD is going to QRhi, and
+// QgsGeometry is double-based where KentOSCad stores int64 millimetres, QGIS
+// symbology renders into a QPainter where KentOSCad is going to QRhi, and
 // QgsExpression is a second parser CLAUDE.md 5.11 forbids. Producing forty lines
 // of XML is not reimplementing QGIS; it is speaking to it.
 //
@@ -20,11 +20,11 @@
 // a wire format with a declarative filter — and not with QML.
 #include "qgis_style.hpp"
 
-#include "piricad/core/style.hpp"
+#include "kentos_cad/core/style.hpp"
 
 #include <string>
 
-namespace piricad::io {
+namespace kentos::io {
 namespace {
 
 /// XML text escaping. Five characters, done once, rather than trusting that a
@@ -47,7 +47,7 @@ std::string escape(std::string_view s)
 }
 
 /// 0xAARRGGBB to the `r,g,b,a` QGIS writes. Alpha last, and decimal, because that
-/// is what QGIS reads — a colour written the way PiriCAD stores it would load as
+/// is what QGIS reads — a colour written the way KentOSCad stores it would load as
 /// black and the user would blame the export.
 std::string colour(std::uint32_t rgba)
 {
@@ -127,7 +127,7 @@ std::string build_qml(const core::Layer& layer, const core::Symbol& symbol, bool
     out += "\"";
 
     // The scale window travels. QGIS spells it minimumScale / maximumScale and
-    // means the same denominators PiriCAD stores, so a leke that hides when you
+    // means the same denominators KentOSCad stores, so a leke that hides when you
     // zoom in keeps hiding when you zoom in over there.
     if (windowed) {
         out += " hasScaleBasedVisibilityFlag=\"1\"";
@@ -137,7 +137,7 @@ std::string build_qml(const core::Layer& layer, const core::Symbol& symbol, bool
     }
     out += ">\n";
 
-    out += "  <!-- PiriCAD tarafından üretildi. Katman: " + escape(layer.name) + " -->\n";
+    out += "  <!-- KentOSCad tarafından üretildi. Katman: " + escape(layer.name) + " -->\n";
     out += "  <renderer-v2 type=\"singleSymbol\" forceraster=\"0\" symbollevels=\"0\">\n";
     out += "    <symbols>\n";
     out += "      <symbol name=\"0\" type=\"";
@@ -158,4 +158,4 @@ std::string build_qml(const core::Layer& layer, const core::Symbol& symbol, bool
     return out;
 }
 
-} // namespace piricad::io
+} // namespace kentos::io

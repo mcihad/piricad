@@ -19,7 +19,7 @@ across platforms and a golden PNG would fail on a font hint; the two ratios
 below move by a fraction of a percent and separate right from wrong by an order
 of magnitude.
 
-THE DEFAULT BACKEND, which is the one a user sees. `PIRICAD_BACKEND=dahili`
+THE DEFAULT BACKEND, which is the one a user sees. `KENTOS_BACKEND=dahili`
 draws the same row very differently today — 89% ink against 5% — because the two
 disagree about how a PAPER measure becomes pixels. That is a real defect and it
 is not this gate's: locking it here would freeze whichever answer happens to be
@@ -42,11 +42,11 @@ ZEMIN    = (0.08, 0.35)   # ground; a fill written to the wrong field is ~0.00
 
 
 def yapi_secenegi(exe, ad):
-    """Reads one PIRICAD_WITH_<AD> out of the CMakeCache that produced `exe`.
+    """Reads one KENTOS_WITH_<AD> out of the CMakeCache that produced `exe`.
 
     Walk up to the build tree rather than counting directories: the executable
-    sits at <build>/bin/piricad on Linux and Windows but three levels deeper
-    inside <build>/bin/piricad.app on macOS.
+    sits at <build>/bin/kentos_cad on Linux and Windows but three levels deeper
+    inside <build>/bin/kentos_cad.app on macOS.
     """
     kok = os.path.dirname(os.path.abspath(exe))
     while True:
@@ -54,7 +54,7 @@ def yapi_secenegi(exe, ad):
         if os.path.isfile(onbellek):
             with open(onbellek, encoding="utf-8") as f:
                 for satir in f:
-                    if satir.startswith(f"PIRICAD_WITH_{ad}:"):
+                    if satir.startswith(f"KENTOS_WITH_{ad}:"):
                         return satir.strip().rsplit("=", 1)[-1] == "ON"
             return None
         ust = os.path.dirname(kok)
@@ -73,15 +73,15 @@ def qgis_motoru_var(exe):
     against it measures the wrong thing and fails an innocent build.
     """
     # Walk up to the build tree rather than counting directories: the executable
-    # sits at <build>/bin/piricad on Linux and Windows but three levels deeper
-    # inside <build>/bin/piricad.app on macOS.
+    # sits at <build>/bin/kentos_cad on Linux and Windows but three levels deeper
+    # inside <build>/bin/kentos_cad.app on macOS.
     kok = os.path.dirname(os.path.abspath(exe))
     while True:
         onbellek = os.path.join(kok, "CMakeCache.txt")
         if os.path.isfile(onbellek):
             with open(onbellek, encoding="utf-8") as f:
                 for satir in f:
-                    if satir.startswith("PIRICAD_WITH_QGIS:"):
+                    if satir.startswith("KENTOS_WITH_QGIS:"):
                         return satir.strip().rsplit("=", 1)[-1] == "ON"
             return None
         ust = os.path.dirname(kok)
@@ -92,13 +92,13 @@ def qgis_motoru_var(exe):
 
 def bul():
     exe = None
-    # macOS builds an application BUNDLE, so the executable is not at bin/piricad
-    # but inside bin/piricad.app. Looking only for the bare name meant this gate
+    # macOS builds an application BUNDLE, so the executable is not at bin/kentos_cad
+    # but inside bin/kentos_cad.app. Looking only for the bare name meant this gate
     # skipped itself on every Mac — a built binary it never found, and a pattern
     # fill nobody was checking.
     for kok_ad in ("build/dev/bin", "build/debug/bin", "build/release/bin"):
-        for aday in (os.path.join(kok_ad, "piricad"),
-                     os.path.join(kok_ad, "piricad.app", "Contents", "MacOS", "piricad")):
+        for aday in (os.path.join(kok_ad, "kentos_cad"),
+                     os.path.join(kok_ad, "KentOSCad.app", "Contents", "MacOS", "KentOSCad")):
             mutlak = os.path.join(KOK, aday)
             if os.path.isfile(mutlak) and os.access(mutlak, os.X_OK):
                 exe = mutlak
@@ -111,8 +111,8 @@ def bul():
 def kare(exe, yol):
     ortam = dict(os.environ)
     ortam.update({"QT_QPA_PLATFORM": "offscreen",
-                  "PIRICAD_DATA": os.path.join(KOK, "data"),
-                  "PIRICAD_FRAME_DUMP": yol})
+                  "KENTOS_DATA": os.path.join(KOK, "data"),
+                  "KENTOS_FRAME_DUMP": yol})
     subprocess.run([exe, "--betik", BETIK], cwd=KOK, env=ortam,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=180)
     return os.path.isfile(yol)
@@ -139,25 +139,25 @@ def olc(yol):
 def main():
     exe = bul()
     if exe is None:
-        print("render-desen: piricad çalıştırılabiliri bulunamadı — ATLANDI "
+        print("render-desen: kentos_cad çalıştırılabiliri bulunamadı — ATLANDI "
               "(uygulama derlenmemiş; `make build` sonrası tekrar çalışır)")
         return 0
 
     # THE GPU BACKEND IS NOT THIS GATE'S SUBJECT, twice over. Its first slice
     # draws geometry and refuses pattern fills outright (`handles()`), so the two
     # ratios below would measure a picture nobody claimed to draw. And
-    # `PIRICAD_FRAME_DUMP` grabs the window with `QWidget::grab`, which returns
+    # `KENTOS_FRAME_DUMP` grabs the window with `QWidget::grab`, which returns
     # nothing for a `QRhiWidget` — the frame lives on the GPU, not in the backing
     # store. Reported as PENDING, never as passing (`data.md` Enforcement).
     if yapi_secenegi(exe, "RHI") is True:
-        print("render-desen: BEKLEMEDE — PIRICAD_WITH_RHI=ON. QRhi arka ucunun ilk "
+        print("render-desen: BEKLEMEDE — KENTOS_WITH_RHI=ON. QRhi arka ucunun ilk "
               "dilimi desen dolgusu çizmiyor (CLAUDE.md 8.1) ve QRhiWidget karesi "
               "QWidget::grab ile alınamıyor. Ölçüm yapılmadı; geçmiş sayılmaz.")
         return 0
 
     motor = qgis_motoru_var(exe)
     if motor is not True:
-        neden = ("PIRICAD_WITH_QGIS=OFF" if motor is False
+        neden = ("KENTOS_WITH_QGIS=OFF" if motor is False
                  else "yapı yapılandırması okunamadı")
         print(f"render-desen: BEKLEMEDE — {neden}. Saklanan oranlar QGIS arka ucuna "
               f"göre ayarlı; QGIS yokken aynı betiği dahili arka uç çiziyor ve onun "

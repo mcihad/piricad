@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# PiriCAD CI. piricad.md §14: 3 OS × (Debug + Release), ASan as a separate job,
+# KentOSCad CI. kentoscad.md §14: 3 OS × (Debug + Release), ASan as a separate job,
 # under 20 minutes per PR. CLAUDE.md 5.14: never merge on a red gate, and
 # continue-on-error on a gate is forbidden.
 name: CI
@@ -77,7 +77,7 @@ jobs:
         if: matrix.config == 'release'
         uses: actions/upload-artifact@v4
         with:
-          name: piricad-${{ matrix.os }}
+          name: kentos_cad-${{ matrix.os }}
           path: build/release/bin/
 
   sanitizers:
@@ -115,7 +115,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Golden fixtures must not have been regenerated during the run
         run: |
-          # piricad.md §7.3: every OS in the `build` matrix replays the same
+          # kentoscad.md §7.3: every OS in the `build` matrix replays the same
           # fixtures in tests/golden/beklenen and fails if its output differs, so
           # the three-way comparison happens there. What is left to check is that
           # nobody quietly regenerated a fixture to make a platform agree.
@@ -137,6 +137,6 @@ jobs:
           version: '6.7.*'
           cache: true
       - run: cmake --preset release
-      - run: cmake --build --preset release --target piricad_bench
-      - name: Budgets are gates, not aspirations (piricad.md §10.1)
-        run: ./build/release/bin/piricad_bench
+      - run: cmake --build --preset release --target kentos_bench
+      - name: Budgets are gates, not aspirations (kentoscad.md §10.1)
+        run: ./build/release/bin/kentos_bench

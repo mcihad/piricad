@@ -5,7 +5,7 @@
 // formality. Constitution Article 1.2 makes the mouse one client among equals: if
 // a rubber-band drag reached the selection directly, a script and the AI would
 // have no way to say "the parcels inside this box", and `secimi_al()` in
-// piricad.md §5.1 would have nothing to read. So the drag builds the same
+// kentoscad.md §5.1 would have nothing to read. So the drag builds the same
 // invocation the command line builds, and both take the bus.
 //
 // It carries `UndoPolicy::None` and `Flags::ReadOnly`, exactly as `core.mode` and
@@ -17,19 +17,19 @@
 // Identity is `EntityKey` throughout (R44). A key survives a save, a reorder and
 // a reload; a dense slot does not, and a selection that silently shifted by one
 // after a compaction would delete the neighbouring parcel.
-#include "piricad/command/bus.hpp"
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/pick.hpp"
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
 #include <string>
 #include <vector>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 using core::EntityKey;
@@ -318,7 +318,7 @@ Task<void> run_select(Context& ctx)
     if (bus.on_selection_changed) bus.on_selection_changed();
 
     // The RESOLVED selection is recorded, not the gesture that produced it, so
-    // every client's run reads the same however it aimed (piricad.md §2.2).
+    // every client's run reads the same however it aimed (kentoscad.md §2.2).
     ctx.record("mod", Value::text(mode_name(mode)));
     // The gesture too, so a replay of a WINDOW pick re-runs the same box rather
     // than only restoring the keys it happened to find. The resolved selection is
@@ -350,7 +350,7 @@ Task<void> run_select(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(select)
+KENTOS_COMMAND(select)
 {
     return CommandSpec{
         .id       = "core.select",
@@ -381,4 +381,4 @@ PIRICAD_COMMAND(select)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

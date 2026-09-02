@@ -4,18 +4,18 @@
 // What these produce is a legal document, so the assertions here are about the
 // two things a surveyor checks first: does the AREA balance, and does the command
 // refuse rather than guess when the answer is not arithmetic.
-#include "piricad_test.hpp"
+#include "kentos_test.hpp"
 
-#include "piricad/command/bus.hpp"
-#include "piricad/command/registry.hpp"
-#include "piricad/core/document.hpp"
-#include "piricad/domain/cadastre/commands.hpp"
-#include "piricad/domain/cadastre/topology.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/core/document.hpp"
+#include "kentos_cad/domain/cadastre/commands.hpp"
+#include "kentos_cad/domain/cadastre/topology.hpp"
 
 #include <string>
 #include <vector>
 
-using namespace piricad;
+using namespace kentos;
 using command::Origin;
 
 namespace {

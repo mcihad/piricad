@@ -1,6 +1,6 @@
 {
   "makine": "13th Gen Intel(R) Core(TM) i5-13500 | gcc 202002 | optimize",
-  "aciklama": "PiriCAD performans temel değerleri. Yalnız aynı makinede regresyon kapısı olarak kullanılır (piricad.md §10.1).",
+  "aciklama": "KentOSCad performans temel değerleri. Yalnız aynı makinede regresyon kapısı olarak kullanılır (kentoscad.md §10.1).",
   "olcumler": {
     "komut.betikten_gonderim": 1.0583759,
     "komut.ayristir_ve_gonder": 2.3498777000000004,

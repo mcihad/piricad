@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# PiriCAD house style. Enforced by `make format-check` and CI.
+# KentOSCad house style. Enforced by `make format-check` and CI.
 ---
 Language: Cpp
 BasedOnStyle: LLVM
@@ -40,11 +40,11 @@ EmptyLineBeforeAccessModifier: Always
 SeparateDefinitionBlocks: Always
 
 # Include order encodes the dependency direction of CLAUDE.md Article 3:
-# own header, then piricad modules, then Qt, then the standard library.
+# own header, then KentOSCad modules, then Qt, then the standard library.
 SortIncludes: CaseSensitive
 IncludeBlocks: Preserve
 IncludeCategories:
-  - Regex: '^"piricad/'
+  - Regex: '^"kentos_cad/'
     Priority: 2
   - Regex: '^<Q'
     Priority: 3

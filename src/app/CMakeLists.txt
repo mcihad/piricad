@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# piricad_app — the Qt Widgets shell.
+# kentos_app — the Qt Widgets shell.
 #
 # Shell: Qt Widgets. Canvas: render::Backend (QRhiWidget target, QPainter in Phase 0).
 # Docking: QDockWidget in Phase 0; Qt Advanced Docking System in Phase 1 (§6.3).
@@ -9,9 +9,9 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Widgets Svg Xml)
 qt_standard_project_setup()
 
 # Q_OBJECT headers must be listed so AUTOMOC processes them: they live under
-# include/piricad/app/ rather than beside their .cpp, which is the layout the rest
+# include/kentos_cad/app/ rather than beside their .cpp, which is the layout the rest
 # of the project uses.
-qt_add_executable(piricad
+qt_add_executable(kentos_cad
     src/attribute_panel.cpp
     src/attribute_table.cpp
     src/command_line.cpp
@@ -37,47 +37,52 @@ qt_add_executable(piricad
     src/tokens.cpp
     src/toolbox.cpp
 
-    include/piricad/app/command_line.hpp
-    include/piricad/app/attribute_panel.hpp
-    include/piricad/app/attribute_table.hpp
-    include/piricad/app/command_palette.hpp
-    include/piricad/app/controller.hpp
-    include/piricad/app/data_root.hpp
-    include/piricad/app/dialog_chrome.hpp
-    include/piricad/app/database_dialog.hpp
-    include/piricad/app/main_window.hpp
-    include/piricad/app/map_canvas.hpp
-    include/piricad/app/panels.hpp
-    include/piricad/app/qgis_backend.hpp
-    include/piricad/app/settings_dialog.hpp
-    include/piricad/app/shell_chrome.hpp
-    include/piricad/app/style_designer.hpp
-    include/piricad/app/flow_layout.hpp
-    include/piricad/app/title_bar.hpp
-    include/piricad/app/toolbox.hpp
+    include/kentos_cad/app/command_line.hpp
+    include/kentos_cad/app/attribute_panel.hpp
+    include/kentos_cad/app/attribute_table.hpp
+    include/kentos_cad/app/command_palette.hpp
+    include/kentos_cad/app/controller.hpp
+    include/kentos_cad/app/data_root.hpp
+    include/kentos_cad/app/dialog_chrome.hpp
+    include/kentos_cad/app/database_dialog.hpp
+    include/kentos_cad/app/main_window.hpp
+    include/kentos_cad/app/map_canvas.hpp
+    include/kentos_cad/app/panels.hpp
+    include/kentos_cad/app/qgis_backend.hpp
+    include/kentos_cad/app/settings_dialog.hpp
+    include/kentos_cad/app/shell_chrome.hpp
+    include/kentos_cad/app/style_designer.hpp
+    include/kentos_cad/app/flow_layout.hpp
+    include/kentos_cad/app/title_bar.hpp
+    include/kentos_cad/app/toolbox.hpp
 )
 
-target_include_directories(piricad PRIVATE include)
-target_compile_definitions(piricad PRIVATE
-    PIRICAD_VERSION="${PROJECT_VERSION}"
-    PIRICAD_SOURCE_DATA_DIR="${CMAKE_SOURCE_DIR}/data")
+target_include_directories(kentos_cad PRIVATE include)
+target_compile_definitions(kentos_cad PRIVATE
+    KENTOS_VERSION="${PROJECT_VERSION}"
+    KENTOS_SOURCE_DATA_DIR="${CMAKE_SOURCE_DIR}/data")
 
-target_link_libraries(piricad PRIVATE
-    piricad_core
-    piricad_command
-    piricad_io
-    piricad_domain_geodesy
-    piricad_domain_cadastre
-    piricad_render
-    piricad_script
-    piricad_flags
+target_link_libraries(kentos_cad PRIVATE
+    kentos_core
+    kentos_command
+    kentos_io
+    kentos_domain_geodesy
+    kentos_domain_cadastre
+    kentos_render
+    kentos_script
+    kentos_flags
     Qt6::Core
     Qt6::Gui
     Qt6::Svg
     Qt6::Widgets
 )
 
-set_target_properties(piricad PROPERTIES
+set_target_properties(kentos_cad PROPERTIES
+    # THE BUNDLE IS NAMED FOR THE PRODUCT, the executable for the file system.
+    # macOS shows the bundle's name in the dock and the menu bar, and "kentos_cad"
+    # there would be the developer's name for the program rather than the user's.
+    OUTPUT_NAME      $<IF:$<BOOL:${APPLE}>,KentOSCad,kentos_cad>
+    MACOSX_BUNDLE_BUNDLE_NAME "KentOSCad"
     WIN32_EXECUTABLE FALSE       # keep the console: the command line is the product
     MACOSX_BUNDLE    TRUE
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
@@ -85,22 +90,22 @@ set_target_properties(piricad PROPERTIES
 
 # ONE PATH TO THE EXECUTABLE ON EVERY PLATFORM. The bundle is right for macOS —
 # the dock name, the icon and the Info.plist live in it — but it puts the binary
-# three directories down, and `bin/piricad` is the path the Makefile's `run`,
+# three directories down, and `bin/kentos_cad` is the path the Makefile's `run`,
 # every `--betik` example in /docs (Article 11.6: an example runs as printed)
 # and the render gates were written against. Rather than teach each of them
 # where macOS keeps it, the build leaves a link where they look. Relative, so
 # the build tree can be moved. Article 10 keeps this out of the Makefile: it is
 # build logic, and this is where build logic lives.
 if(APPLE)
-    add_custom_command(TARGET piricad POST_BUILD
+    add_custom_command(TARGET kentos_cad POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E create_symlink
-                "piricad.app/Contents/MacOS/piricad"
-                "${CMAKE_BINARY_DIR}/bin/piricad"
-        COMMENT "bin/piricad -> piricad.app/Contents/MacOS/piricad"
+                "KentOSCad.app/Contents/MacOS/KentOSCad"
+                "${CMAKE_BINARY_DIR}/bin/kentos_cad"
+        COMMENT "bin/kentos_cad -> KentOSCad.app/Contents/MacOS/kentos_cad"
         VERBATIM)
 endif()
 
-install(TARGETS piricad
+install(TARGETS kentos_cad
     BUNDLE  DESTINATION .
     RUNTIME DESTINATION bin
 )
@@ -113,12 +118,12 @@ install(TARGETS piricad
 #
 # `data_root()` looks here first among the installed layouts; see data_root.hpp.
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/data/"
-    DESTINATION share/piricad/data
+    DESTINATION share/kentos_cad/data
     PATTERN "*.md" EXCLUDE
 )
 
-if(PIRICAD_WITH_RHI)
-    # THE GPU CANVAS (piricad.md §6.3, CLAUDE.md Article 8.1). Three things must
+if(KENTOS_WITH_RHI)
+    # THE GPU CANVAS (kentoscad.md §6.3, CLAUDE.md Article 8.1). Three things must
     # be present and each fails with the package that supplies it, because "QRhi
     # is missing" is not an actionable message on any of the three platforms.
     #
@@ -132,11 +137,11 @@ if(PIRICAD_WITH_RHI)
 
     if(NOT Qt6ShaderTools_FOUND)
         message(FATAL_ERROR
-            "PIRICAD_WITH_RHI=ON but Qt Shader Tools was not found, so the shader "
+            "KENTOS_WITH_RHI=ON but Qt Shader Tools was not found, so the shader "
             "packs cannot be baked.\n"
             "  Debian/Ubuntu: sudo apt install qt6-shadertools-dev\n"
             "  vcpkg:         qtshadertools\n"
-            "  Or configure with -DPIRICAD_WITH_RHI=OFF to use the QPainter backend.")
+            "  Or configure with -DKENTOS_WITH_RHI=OFF to use the QPainter backend.")
     endif()
 
     # THE TARGET IS NOT THE HEADERS. `Qt6::GuiPrivate` comes from qt6-base-dev's
@@ -145,9 +150,9 @@ if(PIRICAD_WITH_RHI)
     # imported target "includes non-existent path .../QtGui/6.10.2", which names
     # neither the option that asked for it nor the package that supplies it. Look
     # for the header itself.
-    set(PIRICAD_QRHI_HEADER_FOUND FALSE)
+    set(KENTOS_QRHI_HEADER_FOUND FALSE)
     if(TARGET Qt6::GuiPrivate)
-        get_target_property(PIRICAD_QT_GUI_PRIVATE_INC Qt6::GuiPrivate
+        get_target_property(KENTOS_QT_GUI_PRIVATE_INC Qt6::GuiPrivate
                             INTERFACE_INCLUDE_DIRECTORIES)
 
         # THE PROPERTY IS GENERATOR EXPRESSIONS, not paths. Qt writes each private
@@ -158,26 +163,26 @@ if(PIRICAD_WITH_RHI)
         # machine that has the headers as readily as on one that does not. Pull the
         # absolute paths back out. Only the value half of the expression contains a
         # slash, so matching them is unambiguous.
-        string(REGEX MATCHALL "/[^;>]+" PIRICAD_QT_GUI_PRIVATE_DIRS
-               "${PIRICAD_QT_GUI_PRIVATE_INC}")
+        string(REGEX MATCHALL "/[^;>]+" KENTOS_QT_GUI_PRIVATE_DIRS
+               "${KENTOS_QT_GUI_PRIVATE_INC}")
 
-        foreach(_dir IN LISTS PIRICAD_QT_GUI_PRIVATE_DIRS)
+        foreach(_dir IN LISTS KENTOS_QT_GUI_PRIVATE_DIRS)
             if(EXISTS "${_dir}/rhi/qrhi.h" OR EXISTS "${_dir}/QtGui/rhi/qrhi.h")
-                set(PIRICAD_QRHI_HEADER_FOUND TRUE)
+                set(KENTOS_QRHI_HEADER_FOUND TRUE)
             endif()
         endforeach()
     endif()
 
-    if(NOT PIRICAD_QRHI_HEADER_FOUND)
+    if(NOT KENTOS_QRHI_HEADER_FOUND)
         message(FATAL_ERROR
-            "PIRICAD_WITH_RHI=ON but <rhi/qrhi.h> was not found. QRhi lives in Qt "
+            "KENTOS_WITH_RHI=ON but <rhi/qrhi.h> was not found. QRhi lives in Qt "
             "Gui's PRIVATE headers, which most distributions package separately "
             "from the public ones.\n"
             "  Debian/Ubuntu: sudo apt install qt6-base-private-dev\n"
             "  Fedora:        sudo dnf install qt6-qtbase-private-devel\n"
             "  Arch:          included in qt6-base\n"
             "  vcpkg:         installed with qtbase\n"
-            "  Or configure with -DPIRICAD_WITH_RHI=OFF to use the QPainter backend.")
+            "  Or configure with -DKENTOS_WITH_RHI=OFF to use the QPainter backend.")
     endif()
 
     # NEVER compiled or patched at runtime (render.md P11): the packs are baked
@@ -187,11 +192,11 @@ if(PIRICAD_WITH_RHI)
     # the SDF text shader cannot be expressed in it at all. GLES 3.0 / GL 3.3 is
     # the floor a GPU-canvas CAD program can ask for, and every desktop and mobile
     # GPU that can run this drawing at 16 ms/frame has had it for a decade.
-    qt_add_shaders(piricad "piricad_shaders"
+    qt_add_shaders(kentos_cad "kentos_shaders"
         GLSL "300es,330"
         HLSL 50
         MSL 12
-        PREFIX "/piricad"
+        PREFIX "/kentos_cad"
         FILES
             shaders/fill.vert
             shaders/fill.frag
@@ -202,11 +207,11 @@ if(PIRICAD_WITH_RHI)
             shaders/image.frag
     )
 
-    target_sources(piricad PRIVATE src/rhi_backend.cpp)
-    target_link_libraries(piricad PRIVATE Qt6::GuiPrivate)
+    target_sources(kentos_cad PRIVATE src/rhi_backend.cpp)
+    target_link_libraries(kentos_cad PRIVATE Qt6::GuiPrivate)
 endif()
 
-if(PIRICAD_WITH_QGIS)
+if(KENTOS_WITH_QGIS)
     # QGIS lives in /src/app alone (Article 3.4, 8.5): nothing below the shell
     # learns that it exists, and the canvas reaches it through render::Backend.
     # SYSTEM, and this is not a suppression. CLAUDE.md 5.14 forbids silencing a
@@ -215,13 +220,13 @@ if(PIRICAD_WITH_QGIS)
     # repository can fix, and a wall of them is how a real finding in our own code
     # gets scrolled past.
     # The backend TU is compiled ONLY here. Its call site in painter_backend.cpp
-    # is already behind `#if PIRICAD_HAVE_QGIS`, so on a machine without the QGIS
+    # is already behind `#if KENTOS_HAVE_QGIS`, so on a machine without the QGIS
     # development files this file has no callers and nothing but unfindable
     # includes — listing it unconditionally broke the build everywhere QGIS is
     # absent, which on macOS is everywhere, since Homebrew ships QGIS as an
     # application cask with no headers.
-    target_sources(piricad PRIVATE src/qgis_backend.cpp)
-    target_include_directories(piricad SYSTEM PRIVATE ${QGIS_INCLUDE_DIR})
-    target_link_libraries(piricad PRIVATE ${QGIS_CORE_LIBRARY} Qt6::Xml)
-    target_compile_definitions(piricad PRIVATE PIRICAD_HAVE_QGIS=1)
+    target_sources(kentos_cad PRIVATE src/qgis_backend.cpp)
+    target_include_directories(kentos_cad SYSTEM PRIVATE ${QGIS_INCLUDE_DIR})
+    target_link_libraries(kentos_cad PRIVATE ${QGIS_CORE_LIBRARY} Qt6::Xml)
+    target_compile_definitions(kentos_cad PRIVATE KENTOS_HAVE_QGIS=1)
 endif()

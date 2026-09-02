@@ -101,7 +101,7 @@ tümüyle uygulanır ya hiç uygulanmaz.
 |---|---|
 | Komut satırından | `BETİK tests/journal/ornek-parsel.json` |
 | Menüden | **Dosya > Betik Çalıştır…** veya **Ctrl+R** |
-| Açılışta | `piricad --betik <dosya>` |
+| Açılışta | `kentos_cad --betik <dosya>` |
 | Make ile | `make run-script SCRIPT=<dosya>` |
 
 Ayrıntı: [BETİK komutu](../komutlar/script.md).
@@ -211,7 +211,7 @@ Bu sayfanın anlattığı JSON biçimi düz bir komut dizisidir: değişken, dö
 fonksiyon yoktur. Beş yerine beş yüz çizgi çizmek gerektiğinde beş yüz satır yazmanız
 gerekir.
 
-Bunun için gömülü **Lua** motoru vardır — `PIRICAD_WITH_LUA=ON` ile derlenir ve
+Bunun için gömülü **Lua** motoru vardır — `KENTOS_WITH_LUA=ON` ile derlenir ve
 varsayılan yapıda kapalıdır:
 
 ```lua

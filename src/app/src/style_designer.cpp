@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/app/style_designer.hpp"
+#include "kentos_cad/app/style_designer.hpp"
 
-#include "piricad/app/tokens.hpp"
+#include "kentos_cad/app/tokens.hpp"
 
-#include "piricad/app/controller.hpp"
+#include "kentos_cad/app/controller.hpp"
 
-#include "piricad/command/bus.hpp"
-#include "piricad/core/document.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/core/document.hpp"
 
 #include <QCheckBox>
 #include <QColorDialog>
@@ -48,7 +48,7 @@
 #include <cstddef>
 #include <string_view>
 
-namespace piricad::app {
+namespace kentos::app {
 namespace {
 
 using core::SymbolLayerType;
@@ -2284,4 +2284,4 @@ void StyleDesigner::saveToLibrary()
                              done.arg(path) + QStringLiteral("\nSEMBOL paket=\"%1\"").arg(path));
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

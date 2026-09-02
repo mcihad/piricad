@@ -2,20 +2,20 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # GATE: symbols are hidden by default; only the plugin ABI has an export surface.
-# piricad.md §7.3 / §4.3 — build.md R9 fixes the GCC/Clang flag string
+# kentoscad.md §7.3 / §4.3 — build.md R9 fixes the GCC/Clang flag string
 # (-O2 -fno-fast-math -ffp-contract=off -flto=thin -fvisibility=hidden); MSVC does
 # not auto-export, and CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS would undo that posture.
-# plugin-api.md R13: piricad_plugin_api exports exactly the symbols listed in
-# piricad_plugin_api.exports — no other module may declare an exported symbol.
+# plugin-api.md R13: kentos_plugin_api exports exactly the symbols listed in
+# kentos_plugin_api.exports — no other module may declare an exported symbol.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fail=0
-flags="$root/cmake/PiriCADFlags.cmake"
+flags="$root/cmake/KentOSCadFlags.cmake"
 
 # 1. The default-hidden flag must stay in the shared flag interface.
 if ! grep -q -- '-fvisibility=hidden' "$flags"; then
-    echo "visibility: cmake/PiriCADFlags.cmake no longer sets -fvisibility=hidden -> $flags:1" >&2
+    echo "visibility: cmake/KentOSCadFlags.cmake no longer sets -fvisibility=hidden -> $flags:1" >&2
     fail=1
 fi
 
@@ -52,6 +52,6 @@ fi
 if [[ $fail -eq 0 ]]; then
     [[ -n "$scanned" && -z "$(find "$root/src/plugin-api" -type f -name '*.h' | head -n 1)" ]] &&
         scanned="$scanned (empty in Phase 0 — no export surface exists yet)"
-    echo "visibility: OK — -fvisibility=hidden set in cmake/PiriCADFlags.cmake, no auto-export$scanned"
+    echo "visibility: OK — -fvisibility=hidden set in cmake/KentOSCadFlags.cmake, no auto-export$scanned"
 fi
 exit $fail

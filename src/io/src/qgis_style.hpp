@@ -2,12 +2,12 @@
 // QGIS QML style export — private to /src/io.
 #pragma once
 
-#include "piricad/core/layer.hpp"
-#include "piricad/core/style.hpp"
+#include "kentos_cad/core/layer.hpp"
+#include "kentos_cad/core/style.hpp"
 
 #include <string>
 
-namespace piricad::io {
+namespace kentos::io {
 
 /// Builds a QGIS 3 QML style document for one layer's symbology.
 ///
@@ -17,4 +17,4 @@ namespace piricad::io {
 /// have to guess.
 std::string build_qml(const core::Layer& layer, const core::Symbol& symbol, bool area);
 
-} // namespace piricad::io
+} // namespace kentos::io

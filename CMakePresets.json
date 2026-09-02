@@ -20,8 +20,8 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "PIRICAD_BUILD_APP": "ON",
-        "PIRICAD_BUILD_TESTS": "ON"
+        "KENTOS_BUILD_APP": "ON",
+        "KENTOS_BUILD_TESTS": "ON"
       }
     },
     {
@@ -36,7 +36,7 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "PIRICAD_BUILD_TESTS": "OFF"
+        "KENTOS_BUILD_TESTS": "OFF"
       }
     },
     {
@@ -55,8 +55,8 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "PIRICAD_BUILD_APP": "OFF",
-        "PIRICAD_BUILD_TESTS": "ON"
+        "KENTOS_BUILD_APP": "OFF",
+        "KENTOS_BUILD_TESTS": "ON"
       }
     }
   ],

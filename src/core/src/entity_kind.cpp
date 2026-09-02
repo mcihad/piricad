@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/core/entity_kind.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
 
-#include "piricad/core/arc.hpp"
-#include "piricad/core/circle.hpp"
-#include "piricad/core/ellipse.hpp"
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/ellipse.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
 #include <cstring>
 
-namespace piricad::core {
+namespace kentos::core {
 namespace {
 
 // ---------------------------------------------------------- core.polyline ----
@@ -589,7 +589,7 @@ Point2 point_position_of(const RingGeometry& geom, std::uint32_t slot)
     return point_position(geom, slot);
 }
 
-PIRICAD_KIND(point)
+KENTOS_KIND(point)
 {
     KindSpec s{};
     s.id         = kPointKind;
@@ -608,7 +608,7 @@ PIRICAD_KIND(point)
     return s;
 }
 
-PIRICAD_KIND(arc)
+KENTOS_KIND(arc)
 {
     KindSpec s{};
     s.id         = kArcKind;
@@ -627,7 +627,7 @@ PIRICAD_KIND(arc)
     return s;
 }
 
-PIRICAD_KIND(circle)
+KENTOS_KIND(circle)
 {
     KindSpec s{};
     s.id         = kCircleKind;
@@ -783,7 +783,7 @@ Result<std::uint32_t> ellipse_read(RingGeometry& geom, std::span<const std::uint
     return geom.append(std::span<const RingGeometry::RingInput>(&ring, 1));
 }
 
-PIRICAD_KIND(ellipse)
+KENTOS_KIND(ellipse)
 {
     KindSpec s{};
     s.id         = kEllipseKind;
@@ -802,7 +802,7 @@ PIRICAD_KIND(ellipse)
     return s;
 }
 
-PIRICAD_KIND(polyline)
+KENTOS_KIND(polyline)
 {
     KindSpec s{};
     s.id         = 1;
@@ -895,7 +895,7 @@ const KindSpec* KindTable::find_name(std::string_view name) const
 // The one and only list of built-in entity kinds (R25). Adding a kind means one
 // factory above and one line here — the same idiom as the command list, and the
 // integer id lives with the factory because it reaches the file format.
-#define PIRICAD_BUILTIN_KINDS(X)                                                                   \
+#define KENTOS_BUILTIN_KINDS(X)                                                                   \
     X(polyline)                                                                                    \
     X(circle)                                                                                      \
     X(arc)                                                                                         \
@@ -922,14 +922,14 @@ const KindTable& builtin_kinds()
     // registry, and nothing can reach in and change what "core.polyline" means.
     static const KindTable table = [] {
         KindTable t;
-#define PIRICAD_REGISTER_KIND(sym) (void)t.add(piricad_kind_##sym());
-        PIRICAD_BUILTIN_KINDS(PIRICAD_REGISTER_KIND)
-#undef PIRICAD_REGISTER_KIND
+#define KENTOS_REGISTER_KIND(sym) (void)t.add(kentos_kind_##sym());
+        KENTOS_BUILTIN_KINDS(KENTOS_REGISTER_KIND)
+#undef KENTOS_REGISTER_KIND
         return t;
     }();
     return table;
 }
 
-#undef PIRICAD_BUILTIN_KINDS
+#undef KENTOS_BUILTIN_KINDS
 
-} // namespace piricad::core
+} // namespace kentos::core

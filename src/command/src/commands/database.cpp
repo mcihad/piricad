@@ -6,7 +6,7 @@
 // their corporate data. A program that can only read a dump cannot sit inside
 // that workflow.
 //
-// TWO THINGS GO IN AND THEY ARE NOT THE SAME THING; `piricad/io/postgis.hpp`
+// TWO THINGS GO IN AND THEY ARE NOT THE SAME THING; `kentos_cad/io/postgis.hpp`
 // states the reasoning in full and it is worth repeating here, because this is the
 // surface a user and the AI both see:
 //
@@ -34,17 +34,17 @@
 // The work itself lives in /src/io behind `Bus::on_database_request`, for the same
 // reason `AÇ` does: Article 3.2 forbids /src/command from including /src/io, while
 // the registry that generates the CLI help, the AI schema and the docs lives here.
-#include "piricad/command/bus.hpp"
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/text.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <array>
 #include <string>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 /// One place where "no database engine" is reported, so a headless test and a
@@ -87,7 +87,7 @@ struct Operation
 
 constexpr std::array<Operation, 8> kOperations{{
     {"baglan", DatabaseRequest::Verb::Connect, true,
-     "Bağlantı dizesi, örnek: host=localhost dbname=piricad user=piricad"}, // ui-label
+     "Bağlantı dizesi, örnek: host=localhost dbname=kentoscad user=kentoscad"}, // ui-label
     {"kes", DatabaseRequest::Verb::Disconnect, false, nullptr},
     {"tablolar", DatabaseRequest::Verb::Tables, false, nullptr},
     {"katmanyaz", DatabaseRequest::Verb::WriteLayer, false, "Yazılacak tablonun adı"},
@@ -185,7 +185,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(database)
+KENTOS_COMMAND(database)
 {
     return CommandSpec{
         .id       = "core.database",
@@ -227,4 +227,4 @@ PIRICAD_COMMAND(database)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

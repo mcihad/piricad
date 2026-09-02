@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/render/drawlist.hpp"
+#include "kentos_cad/render/drawlist.hpp"
 
-namespace piricad::render {
+namespace kentos::render {
 
 EdgeStamps distribute_along(double length, double interval, double margin) noexcept
 {
@@ -65,4 +65,4 @@ void DrawList::clear()
     tail_count    = 0;
 }
 
-} // namespace piricad::render
+} // namespace kentos::render

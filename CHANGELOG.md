@@ -6,6 +6,35 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — tanımlayıcılar da KentOSCad oldu (Faz 0/2)
+
+Görünen ad daha önce değişmişti; bu adım kodun içindeki adları taşıdı. Tamamen
+mekanik, tek commit, açık dal yokken.
+
+| Eski | Yeni |
+|---|---|
+| `namespace piricad` | `namespace kentos` |
+| `#include "piricad/…"` | `#include "kentos_cad/…"` |
+| `piricad_core`, `piricad_app`… | `kentos_core`, `kentos_app`… |
+| `PIRICAD_*` makro ve ortam değişkenleri | `KENTOS_*` |
+| `piricad` çalıştırılabiliri | `kentos_cad` (macOS'ta `KentOSCad.app`) |
+| `piricad.md` | `kentoscad.md` |
+| `cmake/PiriCAD*.cmake` | `cmake/KentOSCad*.cmake` |
+| `piricad_test.hpp`, `piricad_tr.ts` | `kentos_test.hpp`, `kentos_tr.ts` |
+
+**Üç şey bilerek DEĞİŞMEDİ** ve `CLAUDE.md` 0.5a bunu anayasaya yazdı, çünkü
+sonradan gelen biri "işi bitirmek" isteyebilir:
+
+- **Proje dosyasının 8 baytlık imzası `PIRICAD\x1A`.** O ana kadar yazılmış her
+  dosyada duruyor; değiştirmek yeniden adlandırma kılığında bir veri kaybı olurdu.
+  Doğrulandı: yeni yapıyla yazılan bir `.pcad` hâlâ `PIRICAD\x1A` ile başlıyor.
+- **İçerik karması tohumları `fnv1a("piricad.core.*")`.** Her golden fixture'a,
+  her günlük parmak izine ve eşitlik kanıtına katlanmış durumdalar.
+- **`core.*` ayar kimlikleri ve bütün komut kimlikleri.** Kaydedilmiş belgelerin
+  ve günlüğün içindeler; bir tekrar onları adlarıyla çözüyor.
+
+Depo adresi `github.com/mcihad/kentos_cad`, `vcpkg.json` adı `kentos-cad`.
+
 ### Değişti — uygulamanın adı KentOSCad oldu (görünen ad)
 
 - Pencere başlığı, hakkında kutusu, dosya süzgeçleri ve 29 belge sayfası yeni adı
@@ -15,7 +44,7 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   dizini ve otomatik kaydın veri dizini başka yere düşerdi. `migrate_user_data()`
   eski yolları Qt'ye *sordurup* (tahmin etmeden, üç platformun yerleşimi farklı)
   yenisine taşıyor; hedef zaten varsa dokunmuyor.
-- İsim uzayı, `#include` yolları, CMake hedefleri ve `PIRICAD_*` makroları bu adımda
+- İsim uzayı, `#include` yolları, CMake hedefleri ve `KENTOS_*` makroları bu adımda
   **değişmedi**; onlar tek mekanik değişiklik olarak ayrı iniyor.
 
 ### Eklendi — ELİPS
@@ -147,7 +176,7 @@ alan modülünden kaydediliyor: `/src/command` bir alan modülüne bağımlı ol
   bırakır: sınır ölçülmüş olandır. Bir `OFSET` kaç paralel üretirse üretsin tek
   geri alma adımıdır.
   - **Clipper2 bağlandı** (BSL-1.0, 1.4.0'da sabit) ve `/NOTICE`'ta "bağlı"
-    listesine taşındı. `piricad_core`'a PRIVATE bağlı; başlıkları yalnız
+    listesine taşındı. `kentos_core`'a PRIVATE bağlı; başlıkları yalnız
     `core/offset.cpp`'ye ulaşıyor. Elle yazılmış ofset ters köşede yanlış, içbükey
     girdide kendini kesen, keskin köşede sınırsız sivrilen sonuç verir (5.16).
   - Tam sayı girip tam sayı çıkıyor: Clipper2'nin `Path64` yolu int64, `Mm` de
@@ -259,18 +288,18 @@ alan modülünden kaydediliyor: `/src/command` bir alan modülüne bağımlı ol
 
 ### Düzeltildi — macOS'ta `make run` çalışmıyordu
 
-- CMake macOS'ta `.app` paketi üretir ve ikili `bin/piricad.app/Contents/MacOS/`
-  altına iner; Makefile, `/docs` örnekleri ve gate'ler ise `bin/piricad`'ı arar.
+- CMake macOS'ta `.app` paketi üretir ve ikili `bin/kentos_cad.app/Contents/MacOS/`
+  altına iner; Makefile, `/docs` örnekleri ve gate'ler ise `bin/kentos_cad`'ı arar.
   Derleme artık macOS'ta o yola göreli bir sembolik bağ bırakıyor; üç tüketici
   de değişmeden çalışıyor.
 - `libpq` Homebrew'da keg-only olduğundan `find_package(PostgreSQL)` onu
   bulamıyor, PostGIS sessizce kapanıyordu; `brew --prefix libpq` ipucu eklendi.
-- `qgis_backend.cpp` `PIRICAD_WITH_QGIS` kapalıyken de derleniyordu; QGIS
+- `qgis_backend.cpp` `KENTOS_WITH_QGIS` kapalıyken de derleniyordu; QGIS
   başlıkları olmayan her makinede derleme kırılıyordu.
 
-### Eklendi — gömülü Lua betik motoru (`PIRICAD_WITH_LUA`)
+### Eklendi — gömülü Lua betik motoru (`KENTOS_WITH_LUA`)
 
-- **`piricad::script::LuaRunner`**, sol2 üzerinden gömülü Lua 5.4. JSON
+- **`kentos::script::LuaRunner`**, sol2 üzerinden gömülü Lua 5.4. JSON
   çalıştırıcısının yerine geçmez, yanına gelir: `BETİK` hangi motorun çalışacağını
   dosya uzantısından seçer (`.lua` → Lua, gerisi → JSON).
 - **Tek yazma yolu `h.komut(...)`**, `Bus::execute_line` üzerinden — komut
@@ -304,7 +333,7 @@ alan modülünden kaydediliyor: `/src/command` bir alan modülüne bağımlı ol
 ### Düzeltildi — QRhi tuvalinde çizim çıkmıyordu
 
 Üç kusur, üçü de ekran görüntüsünden görünmeyen cinsten; kare ikiye bölünerek
-bulundu (`PIRICAD_RHI_DEBUG`).
+bulundu (`KENTOS_RHI_DEBUG`).
 
 - **`firstInstance` taşınabilir değil.** Örneklenmiş çizimlerde çizgi grupları
   `cb->draw(..., firstInstance)` ile ayrılıyordu; bu `QRhi::BaseInstance`
@@ -324,7 +353,7 @@ bulundu (`PIRICAD_RHI_DEBUG`).
 ### Düzeltildi — kare dökümü GPU tuvalini boş gösteriyordu
 
 `QWidget::grab()` arka tampon üzerinden yürür; `QRhiWidget`'ın karesi orada
-değil, GPU'dadır. `PIRICAD_FRAME_DUMP` ve `PIRICAD_SHOT_DIR` bu yüzden doğru
+değil, GPU'dadır. `KENTOS_FRAME_DUMP` ve `KENTOS_SHOT_DIR` bu yüzden doğru
 çizen bir tuvali boş gösteriyordu. `MapCanvas::grabCanvas()` kareyi kendi
 yüzeyinden alıyor ve pencere görüntüsüne yerleştiriliyor.
 
@@ -337,7 +366,7 @@ sanki bütün kabuk dağılmış gibi görünüyordu. Bayat olan **durumdu**, ç
 değil — bunu ayırt etmek bir öğleden sonra aldı, çünkü kayıtlı yerleşim yeniden
 derlemeden sağ çıkar ve yeni bir hata gibi görünür.
 
-### Eklendi — GPU tuvalinde metin: SDF atlası (`PIRICAD_WITH_TEXT`)
+### Eklendi — GPU tuvalinde metin: SDF atlası (`KENTOS_WITH_TEXT`)
 
 - `render::TextAtlas` — FreeType konturu → msdfgen çok kanallı mesafe alanı →
   stb_rect_pack ile tek dokuya; HarfBuzz `tr` diliyle şekillendirme
@@ -357,7 +386,7 @@ derlemeden sağ çıkar ve yeni bir hata gibi görünür.
 - Shader hedefleri GLES 3.0 / GL 3.3'e çekildi: qsb'nin varsayılanı ESSL 100 ile
   başlar ve orada ne `textureSize` ne türev vardır.
 
-### Eklendi — QRhi GPU canvas'ının ilk dilimi (`PIRICAD_WITH_RHI`)
+### Eklendi — QRhi GPU canvas'ının ilk dilimi (`KENTOS_WITH_RHI`)
 
 - `render::Backend`'in GPU uygulaması: poligon dolguları (stencil ile tek-çift
   kuralı, üçgenleyici bağımlılığı olmadan), shader'da genişletilen çizgiler
@@ -448,8 +477,8 @@ dolgusu seçilemiyordu.
 
 ### Ölçüldü — çizim arka uçları ve desen dolgusunun bedeli
 
-`PIRICAD_FRAME_TIMES=<n>` eklendi: tuvali n kez boyar, kare maliyetlerinin
-ortancasını yazar ve sahne kurulumunu çizimden ayırır. `PIRICAD_FRAME_DUMP` ile
+`KENTOS_FRAME_TIMES=<n>` eklendi: tuvali n kez boyar, kare maliyetlerinin
+ortancasını yazar ve sahne kurulumunu çizimden ayırır. `KENTOS_FRAME_DUMP` ile
 aynı kategoride geliştirici kancasıdır — kullanıcıya bakan bir özellik değildir.
 
 576 parselli bir yaprakta (`tests/bench/sahne/`), aynı yakınlıkta:
@@ -513,7 +542,7 @@ aynı kategoride geliştirici kancasıdır — kullanıcıya bakan bir özellik 
   koordinat sistemi dâhil. Gidiş-dönüş `content_hash()` ile sınanır
   (`tests/unit/test_database.cpp`).
 - **`io::PostgisStore` ve `io::DatabaseService`.** libpqxx 7.9.2 (BSD-3),
-  `PIRICAD_WITH_POSTGIS` arkasında, commit SHA ile sabitlenmiş. libpqxx başlıkları
+  `KENTOS_WITH_POSTGIS` arkasında, commit SHA ile sabitlenmiş. libpqxx başlıkları
   yalnız `src/io/src/postgis.cpp` içinde, açık başlıkta pimpl arkasında (io.md
   R2/P2). Bütün yazma tek işlemde; yarıda kalan bir yazma yoktur (Article 1.6).
 - **Dosya > Veritabanı… penceresi (`Ctrl+Shift+D`).** Modsuz; bağlantı alanları,
@@ -765,7 +794,7 @@ yazarken atladım ve hiçbir şey fark etmedi, çünkü **bindirmenin hiç testi
   geçici olarak silinip doğrulandı.
 
 Testte değil kapıda, çünkü `/tests` Qt bağlamıyor ve bir arka uç tanımı gereği Qt'dir
-(Madde 3.4 `piricad_render`'ı Qt'siz tutuyor, bu yüzden iki motor da `/src/app` içinde).
+(Madde 3.4 `kentos_render`'ı Qt'siz tutuyor, bu yüzden iki motor da `/src/app` içinde).
 
 ### Eklendi — işaretçi çizgide FAZ
 
@@ -820,7 +849,7 @@ programı yapan şeyler — derlendiği makine dışında **hiçbir yerde** yokt
 ve göreli yol çalışma dizinine göre çözülür; yani tam da bulunmayacağı yere.
 
 - `install(DIRECTORY data/ ...)` eklendi; paket `share/piricad/data` altına gidiyor.
-- **`app::data_root()`** sırayla bakıyor: `$PIRICAD_DATA`, `<exe>/../share/piricad/data`,
+- **`app::data_root()`** sırayla bakıyor: `$KENTOS_DATA`, `<exe>/../share/piricad/data`,
   `<exe>/data`, sonra yapılandırıldığı kaynak ağacı. Bir dizin ancak içinde gerçekten
   `catalogs` varsa kabul ediliyor — yarım kurulmuş bir ağacı bulmuş saymak, taze bir
   makinede sessizce boş raf demektir. Derleme zamanında gömülü bir yol değil, çünkü
@@ -843,13 +872,13 @@ sayı buydu. Lisans da engel değil: QGIS **GPL-2.0-or-later**, GPLv3 ile uyumlu
 GPL-2.0-**only** olsaydı Madde 5.5 gereği reddedilirdi).
 
 - **`app::QgisBackend`**, `render::Backend` arayüzünün arkasında. Dikiş orası ve başka
-  yer değil: Madde 3.4 `piricad_render`'ı Qt'siz tutuyor, QGIS ise Qt — bu yüzden dosya
+  yer değil: Madde 3.4 `kentos_render`'ı Qt'siz tutuyor, QGIS ise Qt — bu yüzden dosya
   `QPainter` arka ucunun yanında `/src/app` içinde, tam da Madde 8.5'in tarif ettiği
   gibi. Kabuğun altındaki hiçbir katman QGIS'in var olduğunu öğrenmiyor.
 - **Çizim listesi sözleşme olarak kalıyor.** Her `PassStyle`, aynı anlama gelen QGIS
   sembol katmanına çevriliyor; geometri, `QPainter` arka ucunun aldığı ekran uzayı
   yığınlarının aynısı. İki motor aynı belgeyi aynı sayılardan çiziyor — karşılaştırmayı
-  mümkün kılan şey bu. `PIRICAD_BACKEND=dahili` ile yan yana bakılabiliyor.
+  mümkün kılan şey bu. `KENTOS_BACKEND=dahili` ile yan yana bakılabiliyor.
 - **Sistemden alınıyor, vcpkg'den değil:** QGIS altında GDAL, PROJ, GEOS ve SpatiaLite
   olan bir masaüstü yığını; onu manifestten kurmak QGIS'i kurmak olurdu.
 - **QGIS başlıkları `SYSTEM` olarak dâhil ediliyor.** Bu bir susturma değil (CLAUDE.md
@@ -994,7 +1023,7 @@ yarı budur.
   olduğu için PostGIS kapalı derlenmiş bir yapıda da derleniyor ve sınanıyor —
   doğru olması gereken parça, çalışan bir veritabanı isteyen bir testle
   korunamaz.
-- **`PIRICAD_WITH_POSTGIS=OFF` yapısı derlenmiyordu.** `postgis.cpp` koşulsuz
+- **`KENTOS_WITH_POSTGIS=OFF` yapısı derlenmiyordu.** `postgis.cpp` koşulsuz
   olarak `<pqxx/pqxx>` içeriyordu. Artık `vector.cpp`'nin GDAL için kullandığı
   kalıpta: bağlantı yarısı korumalı, kodlama yarısı her yapıda derleniyor,
   `PostgisStore` her giriş noktasında desteğin kapalı olduğunu söylüyor.
@@ -1015,7 +1044,7 @@ yarı budur.
 
 ### Eklendi — dosya açma ve kaydetme
 
-- **`piricad_io` modülü.** Biçim okuma-yazmanın tamamı `/src/io` altında; Qt yok,
+- **`kentos_io` modülü.** Biçim okuma-yazmanın tamamı `/src/io` altında; Qt yok,
   GDAL başlıkları yalnız `.cpp` dosyalarında, dışa açılan başlıklarda yalnız core
   ve command tipleri (`.claude/io.md` R1–R3, P2).
 - **Yerel proje biçimi `.pcad`.** Sütunlu (SoA), 8 bayt hizalı, `u64` konumla
@@ -1041,7 +1070,7 @@ yarı budur.
 - **Beş dosya komutu.** `AÇ`, `KAYDET`, `FARKLIKAYDET`, `İÇEAKTAR`, `DIŞAAKTAR` —
   `Registry`'de kayıtlı, başsız çalışabilen, arayüz-komut satırı-betik eşitliği
   sınanan komutlar. Dosya seçme penceresi yalnız argümanı toplar (Article 1.2).
-- **GDAL/OGR ile DXF ve GeoPackage.** `PIRICAD_WITH_GDAL` arkasında; sürücüler
+- **GDAL/OGR ile DXF ve GeoPackage.** `KENTOS_WITH_GDAL` arkasında; sürücüler
   `cmake/KentOSCadGdalDrivers.cmake` içindeki açık izin listesinden gelir, tam
   sürücü kümesi asla açılmaz (io.md P7). `/vsicurl` gibi sanal dosya sistemi
   yolları reddedilir (P14). Kapalıyken komutlar hangi paketin gerektiğini söyler,
@@ -1049,9 +1078,9 @@ yarı budur.
 - **Etiketsiz koordinat reddediliyor.** Koordinat sistemi bildirmeyen veri kümesi
   içe aktarılmaz; DXF'in yeri olmadığı için `.prj` yardımcı dosyası yazılır ve
   okunur (io.md R20).
-- **libFuzzer koşumları ve tohum korpusu.** `piricad_fuzz_proje` ve
-  `piricad_fuzz_dxf`, ASan + UBSan altında; tohumlar Clang olmayan yapılarda da
-  `piricad_tests` tarafından aynı okuyucudan geçirilir (io.md R19, CLAUDE.md 6.7).
+- **libFuzzer koşumları ve tohum korpusu.** `kentos_fuzz_proje` ve
+  `kentos_fuzz_dxf`, ASan + UBSan altında; tohumlar Clang olmayan yapılarda da
+  `kentos_tests` tarafından aynı okuyucudan geçirilir (io.md R19, CLAUDE.md 6.7).
 - **Belgeler.** `docs/veri/proje-dosyasi.md`, `docs/veri/dis-formatlar.md` ve beş
   komut sayfası; sözlük ve sorun giderme genişletildi.
 
@@ -1059,11 +1088,11 @@ yarı budur.
 
 - **Nesne yakalama.** Uç nokta, orta nokta, merkez, kesişim, dik ayak, en yakın,
   ızgara ve kutupsal; hepsi `core.yakalama.modlar` bit maskesinden sürülüyor.
-  `piricad/core/snap.hpp` istemciyi bilmez: bir nişan `Point2`, bir tolerans
+  `kentos_cad/core/snap.hpp` istemciyi bilmez: bir nişan `Point2`, bir tolerans
   mesafedir.
 - **Yardımlar tek yolda uygulanıyor.** `co_await ctx.point(...)` ne fareyi ne
   betiği tanır; yakalama, dik mod ve kutupsal izleme `InputAwaiter` içinde,
-  değerin kaynağı sorulmadan çalışır (piricad.md §2.4, `CLAUDE.md` 1.2).
+  değerin kaynağı sorulmadan çalışır (kentoscad.md §2.4, `CLAUDE.md` 1.2).
 - **Seçim.** `EntityKey` kümesi, oturum kapsamında; `content_hash()`'e dokunmaz,
   geri alınmaz, belge değişikliği olarak günlüğe girmez (`model.md` R43, R44).
 - **`SEÇ` komutu.** Tümü, kimlik, pencere, kesen, yön okuyan kutu ve tek nokta;
@@ -1091,10 +1120,10 @@ yarı budur.
 - **Komut veri yolu.** `Bus` → doğrulama → `Transaction` → `Journal`. Arayüz,
   komut satırı, betik, AI ve toplu iş eşit istemciler; hiçbirinin ayrıcalığı yok.
 - **`Task<T>` coroutine tipi.** Etkileşimli komutlar elle yazılmış durum makinesi
-  değil, düz coroutine akışı (piricad.md §2.4).
-- **Tek kaynaklı komut tanımı.** `PIRICAD_COMMAND` makrosu ve `Registry`; komut
+  değil, düz coroutine akışı (kentoscad.md §2.4).
+- **Tek kaynaklı komut tanımı.** `KENTOS_COMMAND` makrosu ve `Registry`; komut
   satırı yardımı, AI araç şeması ve dokümantasyon buradan üretiliyor.
-- **Tek gramer.** `piricad/command/parser.hpp` hem komut satırını hem betiği
+- **Tek gramer.** `kentos_cad/command/parser.hpp` hem komut satırını hem betiği
   ayrıştırır: mutlak, göreli (`@50,30`), kutupsal (`@100<45`) ve satır içi ifade
   (`@(100*3),0`).
 - **Sabit-nokta koordinat.** İç depoda `int64` milimetre; platformlar arası
@@ -1108,7 +1137,7 @@ yarı budur.
   günlüğü paneli, transkript, durum çubuğu.
 - **Faz 0 kanıtı.** Aynı `ÇİZGİ` komutu arayüzden, komut satırından ve JSON
   betiğinden çalıştırıldığında tıpatıp aynı dokümanı ve tıpatıp aynı günlüğü
-  üretiyor (piricad.md §16.5). `tests/unit/test_proof.cpp`.
+  üretiyor (kentoscad.md §16.5). `tests/unit/test_proof.cpp`.
 
 ### Eklendi — stil / gösterim motoru ve MPYY gösterim paketi
 
@@ -1121,7 +1150,7 @@ yarı budur.
   değerlerinden yazar; `sifirla=evet` ile katman varsayılanına döndürür. Arayüz,
   komut satırı ve betikten aynı belgeyi ve aynı günlüğü üretiyor
   (`tests/unit/test_style_rule.cpp`).
-- **Bildirimsel kural değerlendirici** (`piricad/core/style_rule.hpp`). Kural dili
+- **Bildirimsel kural değerlendirici** (`kentos_cad/core/style_rule.hpp`). Kural dili
   bilerek kapalı: eşitlik, küme üyeliği, tam sayı aralığı, varlık. İfade, öncelik,
   olumsuzlama ve aritmetik yok — projede tek gramer `command/parser.hpp`'dir
   (CLAUDE.md 5.11). Kurallar dosya sırasına göre denenir, ilk uyan kazanır; sıra
@@ -1202,7 +1231,7 @@ EK-2 **(Değişik:RG-17/5/2017-30069)** ile değişik hâldedir.
 - **Kılavuz.** Kurulum, ilk adımlar, arayüz turu, komut sistemi, komut satırı,
   sekiz komut sayfası, betik yazma, komut günlüğü, koordinat sistemleri, sözlük ve
   sorun giderme.
-- **Üretilmiş komut referansı.** `piricad_docgen` komut kaydından
+- **Üretilmiş komut referansı.** `kentos_docgen` komut kaydından
   `docs/komutlar/referans.md` üretir; elle düzenlenirse CI kapısı fark eder
   (`make reference`).
 - **`scripts/ci-gate-docs.sh`.** Belgesiz komut, eksik zorunlu bölüm, dizine

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # GATE: every legislation corpus chunk is citable.
-# piricad.md §5.5: "Cevap her zaman kaynak madde referansı ile verilmeli. Madde
+# kentoscad.md §5.5: "Cevap her zaman kaynak madde referansı ile verilmeli. Madde
 # numarası ve yayım tarihi olmadan verilen cevap bu alanda değersizdir, hatta
 # tehlikelidir." data.md R11/P3 and ai.md R15/P5 turn that into metadata: no chunk
 # without `madde` and `published`/`yayim_tarihi`. data.md R15 keeps bulk out of git.

@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// THE PHASE-0 KEYSTONE PROOF (piricad.md §16.5).
+// THE PHASE-0 KEYSTONE PROOF (kentoscad.md §16.5).
 //
-// The Phase-0 proof piricad.md asks for: `ÇİZGİ` must run from the button, from
+// The Phase-0 proof kentoscad.md asks for: `ÇİZGİ` must run from the button, from
 // the command line and from a JSON file, and leave the same document behind.
 //
 // Three clients — a GUI button feeding mouse clicks, a typed command line, and a
 // JSON script — run the same command. This test asserts that all three produce a
 // byte-identical document and a byte-identical journal entry. If that ever stops
 // being true, the architecture has been broken and the build must fail.
-#include "piricad_test.hpp"
+#include "kentos_test.hpp"
 
-#include "piricad/command/bus.hpp"
-#include "piricad/command/registry.hpp"
-#include "piricad/script/json_runner.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/script/json_runner.hpp"
 
 #include <filesystem>
 
-using namespace piricad;
-using namespace piricad::command;
+using namespace kentos;
+using namespace kentos::command;
 
 namespace {
 
@@ -142,7 +142,7 @@ TEST_CASE("PROOF: undo collapses each client's run into exactly one step")
     ])")
               .ok());
 
-    // A whole script block is ONE undo step (piricad.md §2.5).
+    // A whole script block is ONE undo step (kentoscad.md §2.5).
     CHECK_EQ(scr.doc.live_entity_count(), std::size_t{3});
     CHECK_EQ(scr.undo.undo_depth(), std::size_t{1});
 
@@ -172,7 +172,7 @@ TEST_CASE("PROOF: a failing script leaves nothing behind")
 TEST_CASE("PROOF: replaying a journal reproduces the document exactly")
 {
     // This is the foundation of the nightly journal regression pack and of crash
-    // recovery (piricad.md §2.2, §14).
+    // recovery (kentoscad.md §2.2, §14).
     Rig original;
     CHECK(original.bus.execute_line("KATMAN ad=PARSEL", Origin::CommandLine).ok());
     CHECK(original.bus
@@ -180,7 +180,7 @@ TEST_CASE("PROOF: replaying a journal reproduces the document exactly")
               .ok());
     CHECK(original.bus.execute_line("ÇİZGİ @0,0 @25.5,-13.25", Origin::CommandLine).ok());
 
-    const auto path = std::filesystem::temp_directory_path() / "piricad-proof-journal.jsonl";
+    const auto path = std::filesystem::temp_directory_path() / "kentoscad-proof-journal.jsonl";
     std::filesystem::remove(path);
 
     {

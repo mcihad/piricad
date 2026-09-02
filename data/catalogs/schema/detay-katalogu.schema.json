@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://piricad.org/data/catalogs/schema/detay-katalogu.schema.json",
-  "title": "PiriCAD MPYY EK-1e detay kataloğu paketi",
+  "$id": "https://kentoscad.org/data/catalogs/schema/detay-katalogu.schema.json",
+  "title": "KentOSCad MPYY EK-1e detay kataloğu paketi",
   "description": "MPYY EK-1e Mekânsal Planlar Detay Katalogları'nın makine okunur hâli. Bir 'detay', yönetmeliğin kart biçiminde tarif ettiği bir plan öğesidir: detay sınıfı, alt sınıfı, gösterim matrisi ve plan türü (MSP/ÇDP/NİP/UİP) başına geometri tipi, tarama ve sınır açıklaması. Paket BİLEREK ham kalır: kaynağın sütun düzeni ve hücre metinleri olduğu gibi taşınır, çünkü bir gösterim tarifini yoruma çevirmek uzman kararıdır (CLAUDE.md 6.11). Türetilmiş alanlar yalnız tek anlamlı olduklarında yazılır.",
   "type": "object",
   "required": [

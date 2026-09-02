@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PiriCAD — GPU line widening (render.md R5).
+// KentOSCad — GPU line widening (render.md R5).
 //
 // A stroke is NOT sent as CPU-built outline geometry. One instance per segment
 // carries its two endpoints; this shader expands that segment into a screen-space

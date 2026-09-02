@@ -3,7 +3,7 @@
 #
 # GATE: everything a user can do is documented in /docs — the command system included.
 # CLAUDE.md Article 11 and 5.16/5.17, .claude/docs.md R1–R17.
-# piricad.md §13 lists user documentation published from CI as a world-standard
+# kentoscad.md §13 lists user documentation published from CI as a world-standard
 # acceptance criterion; §2.3 forbids a second, hand-maintained command list.
 set -euo pipefail
 
@@ -97,7 +97,7 @@ elif ! head -n1 "$reference" | grep -q 'ÜRETİLMİŞ DOSYA'; then
     fail=1
 else
     docgen=""
-    for candidate in "$root"/build/*/bin/piricad_docgen; do
+    for candidate in "$root"/build/*/bin/kentos_docgen; do
         [[ -x "$candidate" ]] && docgen="$candidate" && break
     done
     if [[ -n "$docgen" ]]; then
@@ -108,7 +108,7 @@ else
             fail=1
         fi
     else
-        echo "docs: note — piricad_docgen is not built, so referans.md freshness was not verified"
+        echo "docs: note — kentos_docgen is not built, so referans.md freshness was not verified"
     fi
     # Every command in the reference must resolve to a page.
     while IFS= read -r slug; do

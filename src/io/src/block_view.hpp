@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// PiriCAD — io (internal): the validated view over a mapped project file.
+// KentOSCad — io (internal): the validated view over a mapped project file.
 //
 // EVERY NUMBER IN A FILE IS HOSTILE. .claude/io.md R18 and P6 say it plainly:
 // header-declared extents, counts, offsets and lengths are untrusted hints and
@@ -12,15 +12,15 @@
 // compatibility story, and it is four lines.
 #pragma once
 
-#include "piricad/core/result.hpp"
-#include "piricad/io/format.hpp"
+#include "kentos_cad/core/result.hpp"
+#include "kentos_cad/io/format.hpp"
 
 #include <cstring>
 #include <span>
 #include <string>
 #include <vector>
 
-namespace piricad::io {
+namespace kentos::io {
 
 /// A parsed, fully validated directory over a mapping. Holds no ownership: the
 /// `MappedFile` that produced the bytes must outlive it.
@@ -39,7 +39,7 @@ public:
     const FileHeader& header() const noexcept { return header_; }
 
     /// Number of directory entries this build did not recognise. Reported to the
-    /// user, never fatal (R10): it is how a file written by a newer PiriCAD says
+    /// user, never fatal (R10): it is how a file written by a newer KentOSCad says
     /// "there is more here than you can see".
     std::size_t unknown_blocks() const noexcept { return unknown_; }
 
@@ -133,4 +133,4 @@ template<class T> T read_record(std::span<const std::byte> bytes, std::uint64_t 
     return out;
 }
 
-} // namespace piricad::io
+} // namespace kentos::io

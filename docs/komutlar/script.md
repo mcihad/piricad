@@ -70,7 +70,7 @@ kendiliğinden görünüme sığdırılır.
 Program açılırken betik çalıştırmak için komut satırı seçeneğini kullanın:
 
 ```bash
-./build/dev/bin/piricad --betik tests/journal/ornek-parsel.json
+./build/dev/bin/kentos_cad --betik tests/journal/ornek-parsel.json
 ```
 
 veya

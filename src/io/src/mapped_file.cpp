@@ -21,7 +21,7 @@
 #include <unistd.h>
 #endif
 
-namespace piricad::io {
+namespace kentos::io {
 namespace {
 
 using core::ErrorCode;
@@ -105,7 +105,7 @@ core::Result<MappedFile> MappedFile::open(const std::string& path)
         return core::err(ErrorCode::IoFailure,
                          "'" + path + "' boyutu okunamadı: " + system_reason());
     if (size.QuadPart <= 0)
-        return core::err(ErrorCode::ParseError, "'" + path + "' boş; PiriCAD proje dosyası değil.");
+        return core::err(ErrorCode::ParseError, "'" + path + "' boş; KentOSCad proje dosyası değil.");
     m.size_ = static_cast<std::size_t>(size.QuadPart);
 
     const HANDLE mapping = ::CreateFileMappingA(file, nullptr, PAGE_READONLY, 0, 0, nullptr);
@@ -143,7 +143,7 @@ core::Result<MappedFile> MappedFile::open(const std::string& path)
         return core::err(ErrorCode::IoFailure,
                          "'" + path + "' sıradan bir dosya değil; proje dosyası bekleniyordu.");
     if (st.st_size <= 0)
-        return core::err(ErrorCode::ParseError, "'" + path + "' boş; PiriCAD proje dosyası değil.");
+        return core::err(ErrorCode::ParseError, "'" + path + "' boş; KentOSCad proje dosyası değil.");
     m.size_ = static_cast<std::size_t>(st.st_size);
 
     void* view = ::mmap(nullptr, m.size_, PROT_READ, MAP_PRIVATE, fd, 0);
@@ -159,4 +159,4 @@ core::Result<MappedFile> MappedFile::open(const std::string& path)
 
 #endif
 
-} // namespace piricad::io
+} // namespace kentos::io

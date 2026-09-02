@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# PiriCAD static analysis. A finding is fixed, never suppressed (CLAUDE.md 5.14).
+# KentOSCad static analysis. A finding is fixed, never suppressed (CLAUDE.md 5.14).
 ---
 Checks: >
   -*,
@@ -42,7 +42,7 @@ Checks: >
 #                                     different advice about the same line is worse
 #                                     than one.
 #   clang-analyzer-optin.core.EnumCastOutOfRange
-#                                     PiriCAD uses `enum class` for two things this
+#                                     KentOSCad uses `enum class` for two things this
 #                                     check reads as a mistake, both of them
 #                                     deliberate and both recorded in
 #                                     `.claude/model.md`. EntityKey and LayerKey are
@@ -56,7 +56,7 @@ Checks: >
 #                                     a checker, which is the trade backwards.
 
 WarningsAsErrors: 'bugprone-*,cert-*,clang-analyzer-*'
-HeaderFilterRegex: '.*/piricad/.*'
+HeaderFilterRegex: '.*/kentos_cad/.*'
 FormatStyle: file
 
 CheckOptions:

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # GATE: every regulatory catalogue is a self-describing, versioned data package.
-# piricad.md §15 "veri odaklı katalog mimarisi", §12: a legislation change is a
+# kentoscad.md §15 "veri odaklı katalog mimarisi", §12: a legislation change is a
 # data release, never a rebuild — so the file itself must say which regulation,
 # annex/madde and publication date it encodes, under which licence.
 # .claude/data.md R2 (header completeness), R3 (schema exists), R5 (ids stable,

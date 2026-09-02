@@ -16,20 +16,20 @@
 // convenient: the arc is a `core.arc` with a real centre and a real radius, so its
 // length and its geometry are exact — a bulge flattened into the polyline would
 // be a curve stored as its own approximation.
-#include "piricad/command/bus.hpp"
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
-#include "piricad/core/geometry.hpp"
-#include "piricad/core/pick.hpp"
-#include "piricad/core/units.hpp"
+#include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/units.hpp"
 
 #include <cmath>
 #include <string>
 #include <vector>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 struct Unit
@@ -369,7 +369,7 @@ Task<void> run_fillet(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(chamfer)
+KENTOS_COMMAND(chamfer)
 {
     return CommandSpec{
         .id       = "core.chamfer",
@@ -390,7 +390,7 @@ PIRICAD_COMMAND(chamfer)
     };
 }
 
-PIRICAD_COMMAND(fillet)
+KENTOS_COMMAND(fillet)
 {
     return CommandSpec{
         .id       = "core.fillet",
@@ -410,4 +410,4 @@ PIRICAD_COMMAND(fillet)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Command-path budgets from piricad.md §10.1 and §10.4.
+// Command-path budgets from kentoscad.md §10.1 and §10.4.
 #include "benchmark.hpp"
 
-#include "piricad/command/bus.hpp"
-#include "piricad/command/parser.hpp"
-#include "piricad/command/registry.hpp"
-#include "piricad/script/json_runner.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/parser.hpp"
+#include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/script/json_runner.hpp"
 
 #include <memory>
 
 namespace {
 
-using namespace piricad;
-using namespace piricad::command;
+using namespace kentos;
+using namespace kentos::command;
 
 struct Rig
 {
@@ -29,7 +29,7 @@ struct Rig
     }
 };
 
-/// piricad.md §10.1: dispatching a command from a script must stay under 10 µs.
+/// kentoscad.md §10.1: dispatching a command from a script must stay under 10 µs.
 ///
 /// The body dispatches ONCE and the harness repeats it, which is the part that
 /// used to be a hand-written `kCalls = 20000` with the per-call cost divided out
@@ -118,7 +118,7 @@ void batch_100k(benchmark::State& state)
 
 } // namespace
 
-PIRICAD_BENCH(script_dispatch){bench::Case{
+KENTOS_BENCH(script_dispatch){bench::Case{
     .id          = "komut.betikten_gonderim",
     .title       = "Betikten komut gönderim maliyeti",
     .budget      = 10.0,
@@ -128,7 +128,7 @@ PIRICAD_BENCH(script_dispatch){bench::Case{
     .body        = &dispatch_from_script,
 }};
 
-PIRICAD_BENCH(cli_parse_dispatch){bench::Case{
+KENTOS_BENCH(cli_parse_dispatch){bench::Case{
     .id          = "komut.ayristir_ve_gonder",
     .title       = "Komut satırı: ayrıştırma + gönderim (30 ms tuş bütçesinin payı)",
     .budget      = 0.0,
@@ -138,7 +138,7 @@ PIRICAD_BENCH(cli_parse_dispatch){bench::Case{
     .body        = &parse_and_dispatch,
 }};
 
-PIRICAD_BENCH(batch_hundred_k){bench::Case{
+KENTOS_BENCH(batch_hundred_k){bench::Case{
     .id          = "komut.toplu_is_100k",
     .title       = "100k nesne yaratan betik — tek doğrulama, tek geri alma kaydı",
     .budget      = 0.0,

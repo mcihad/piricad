@@ -1,6 +1,6 @@
 # Benchmarks
 
-The piricad.md §10.1 budgets, enforced as gates. A benchmark more than **10%
+The kentoscad.md §10.1 budgets, enforced as gates. A benchmark more than **10%
 worse than the stored baseline breaks the build**, and a budget is never relaxed
 to make a benchmark pass (CLAUDE.md Article 7).
 
@@ -18,7 +18,7 @@ Google Benchmark'ın kendi bayrakları da geçerlidir; bir senaryo üzerinde
 çalışırken en çok işe yarayan şudur:
 
 ```bash
-./build/dev/bin/piricad_bench --benchmark_filter='yakalama.*'
+./build/dev/bin/kentos_bench --benchmark_filter='yakalama.*'
 ```
 
 ## Two different checks
@@ -66,10 +66,10 @@ meaningful (§7.3).
 
 | Değişken | Ne yapar |
 |---|---|
-| `PIRICAD_BENCH_RECORD` | Ölçümleri bu makinenin temel değeri olarak kaydeder |
-| `PIRICAD_BENCH_BASELINE` | Temel değer dosyasının yolunu değiştirir |
-| `PIRICAD_FRAME_DUMP` | `piricad` uygulaması bir kare çizip verilen PNG yoluna yazar ve çıkar. `QT_QPA_PLATFORM=offscreen` ile ekransız çalışır; tuvalin doğruluğu bir resim olduğu için bir çizim değişikliğini gözden geçirilebilir kılan şey budur |
-| `PIRICAD_OPEN_DESIGNER` | Verilen katmanda stil tasarımcısını açar; `PIRICAD_FRAME_DUMP` etkin pencereyi çektiği için tasarımcının kendi karesi alınabilir |
+| `KENTOS_BENCH_RECORD` | Ölçümleri bu makinenin temel değeri olarak kaydeder |
+| `KENTOS_BENCH_BASELINE` | Temel değer dosyasının yolunu değiştirir |
+| `KENTOS_FRAME_DUMP` | `kentos_cad` uygulaması bir kare çizip verilen PNG yoluna yazar ve çıkar. `QT_QPA_PLATFORM=offscreen` ile ekransız çalışır; tuvalin doğruluğu bir resim olduğu için bir çizim değişikliğini gözden geçirilebilir kılan şey budur |
+| `KENTOS_OPEN_DESIGNER` | Verilen katmanda stil tasarımcısını açar; `KENTOS_FRAME_DUMP` etkin pencereyi çektiği için tasarımcının kendi karesi alınabilir |
 
 Hiçbiri kullanıcıya dönük değildir; bu yüzden komut satırı seçeneği değil ortam
 değişkenidirler (CLAUDE.md 5.17 bir CLI bayrağı için kendi `/docs` sayfasını

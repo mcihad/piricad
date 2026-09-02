@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad/app/flow_layout.hpp"
+#include "kentos_cad/app/flow_layout.hpp"
 
 #include <QWidget>
 
-namespace piricad::app {
+namespace kentos::app {
 
 FlowLayout::FlowLayout(QWidget* parent, int margin, int hspacing, int vspacing)
     : QLayout(parent), hspace_(hspacing), vspace_(vspacing)
@@ -110,4 +110,4 @@ int FlowLayout::reflow(const QRect& rect, bool test) const
     return y + row_height - rect.y() + m.bottom();
 }
 
-} // namespace piricad::app
+} // namespace kentos::app

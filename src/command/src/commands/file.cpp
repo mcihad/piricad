@@ -12,15 +12,15 @@
 // through `Bus::on_file_request`, which `io::FileService` installs. That is the
 // same seam `BETİK` uses for the script engine, and it exists because Article 3.2
 // forbids /src/command from including /src/io while io.md R4 requires these to be
-// registered commands. See `piricad/io/service.hpp` for the full reasoning.
-#include "piricad/command/bus.hpp"
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
+// registered commands. See `kentos_cad/io/service.hpp` for the full reasoning.
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
 
 #include <string>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 /// One place where "no file engine" is reported, so the message a headless test
@@ -186,7 +186,7 @@ Task<void> run_export_style(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(exportstyle)
+KENTOS_COMMAND(exportstyle)
 {
     return CommandSpec{
         .id       = "core.exportstyle",
@@ -206,14 +206,14 @@ PIRICAD_COMMAND(exportstyle)
     };
 }
 
-PIRICAD_COMMAND(open)
+KENTOS_COMMAND(open)
 {
     return CommandSpec{
         .id       = "core.open",
         .names    = {"AÇ", "AC", "OPEN"},
         .category = Category::File,
         .params   = {Param::text("dosya", Arity::exactly(1),
-                                 "Açılacak PiriCAD proje dosyasının yolu (.pcad)")},
+                                 "Açılacak KentOSCad proje dosyasının yolu (.pcad)")},
         // Opening replaces the document, so there is nothing to undo back INTO —
         // the previous drawing is gone the moment the new one is on screen, which
         // is what every CAD and GIS application this product's users know does.
@@ -224,12 +224,12 @@ PIRICAD_COMMAND(open)
         // Deliberately NOT AiAccessible: replacing the document discards
         // unsaved work, and .claude/ai.md keeps a destructive, non-undoable act
         // out of reach of a suggestion.
-        .summary = "Bir PiriCAD proje dosyasını açar ve çizimin yerine koyar.",
+        .summary = "Bir KentOSCad proje dosyasını açar ve çizimin yerine koyar.",
         .run     = &run_open,
     };
 }
 
-PIRICAD_COMMAND(save)
+KENTOS_COMMAND(save)
 {
     return CommandSpec{
         .id       = "core.save",
@@ -241,12 +241,12 @@ PIRICAD_COMMAND(save)
         // does not go through a transaction. ReadOnly is how the bus is told.
         .undo    = UndoPolicy::None,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
-        .summary = "Çizimi bağlı olduğu PiriCAD proje dosyasına kaydeder.",
+        .summary = "Çizimi bağlı olduğu KentOSCad proje dosyasına kaydeder.",
         .run     = &run_save,
     };
 }
 
-PIRICAD_COMMAND(saveas)
+KENTOS_COMMAND(saveas)
 {
     return CommandSpec{
         .id       = "core.saveas",
@@ -255,12 +255,12 @@ PIRICAD_COMMAND(saveas)
         .params   = {Param::text("dosya", Arity::exactly(1), "Yeni proje dosyasının yolu (.pcad)")},
         .undo     = UndoPolicy::None,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
-        .summary  = "Çizimi yeni bir PiriCAD proje dosyasına kaydeder ve ona bağlar.",
+        .summary  = "Çizimi yeni bir KentOSCad proje dosyasına kaydeder ve ona bağlar.",
         .run      = &run_save_as,
     };
 }
 
-PIRICAD_COMMAND(import)
+KENTOS_COMMAND(import)
 {
     return CommandSpec{
         .id       = "core.import",
@@ -281,7 +281,7 @@ PIRICAD_COMMAND(import)
     };
 }
 
-PIRICAD_COMMAND(exportfile)
+KENTOS_COMMAND(exportfile)
 {
     return CommandSpec{
         .id       = "core.export",
@@ -300,4 +300,4 @@ PIRICAD_COMMAND(exportfile)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

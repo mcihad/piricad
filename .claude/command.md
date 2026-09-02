@@ -1,13 +1,13 @@
 # Command Bus — Rules
 
-> Scope: `/src/command` (CMake target `piricad_command`) — `Bus`, `Registry`, `CommandSpec`/`PIRICAD_COMMAND`, `Value`, `Task<T>`, `Context`, `InputSource`, `Transaction`/`UndoStack`, `Journal`, `Parser`. | Depends on: `piricad_core` only. | Source: piricad.md §2.1–§2.6, §3, §10.4.
+> Scope: `/src/command` (CMake target `kentos_command`) — `Bus`, `Registry`, `CommandSpec`/`KENTOS_COMMAND`, `Value`, `Task<T>`, `Context`, `InputSource`, `Transaction`/`UndoStack`, `Journal`, `Parser`. | Depends on: `kentos_core` only. | Source: kentoscad.md §2.1–§2.6, §3, §10.4.
 
 ## Hard Rules
 
-R1. Every change to `Document` state MUST enter through `Bus::dispatch` (`piricad/command/bus.hpp`) in the fixed order **dispatch → validate → transact → journal**. (§2.1)
-R2. GUI, command line, `piricad_script` JSON runner, AI and batch MUST call the *same* `Bus::dispatch` overload. No client-specific entry point, fast path, or trusted flag. (§2.1)
+R1. Every change to `Document` state MUST enter through `Bus::dispatch` (`kentos_cad/command/bus.hpp`) in the fixed order **dispatch → validate → transact → journal**. (§2.1)
+R2. GUI, command line, `kentos_script` JSON runner, AI and batch MUST call the *same* `Bus::dispatch` overload. No client-specific entry point, fast path, or trusted flag. (§2.1)
 R3. A command invocation MUST be fully expressible as `Value` (`value.hpp`) and MUST round-trip losslessly through the JSONL form `{cmd, args, crs, katman}`; `dispatch(parse(serialize(x)))` MUST produce identical document state as `dispatch(x)`. (§2.2)
-R4. Every command MUST be declared exactly once via `PIRICAD_COMMAND` yielding a `CommandSpec` registered in `Registry` (`spec.hpp`, `registry.hpp`) with `.id`, `.names`, `.category`, `.params`, `.undo`, `.flags`, `.summary` all set. `Registry`-generated help and the AI tool catalogue group by `.category` (§2.3).
+R4. Every command MUST be declared exactly once via `KENTOS_COMMAND` yielding a `CommandSpec` registered in `Registry` (`spec.hpp`, `registry.hpp`) with `.id`, `.names`, `.category`, `.params`, `.undo`, `.flags`, `.summary` all set. `Registry`-generated help and the AI tool catalogue group by `.category` (§2.3).
 R5. CLI help, script bindings, AI tool schema and docs MUST be **generated** by walking `Registry` at build or run time. (§2.3)
 R6. `.id` MUST be stable, lowercase and namespaced (`core.line`, `core.undo`, `core.layer`, `core.zoom`, `core.erase`, `core.script`, `core.help`). Changing an id is a breaking change and MUST ship a journal migration entry.
 R7. `.names` MUST list, in order: Turkish primary, ASCII-folded Turkish variant, English equivalent, abbreviations — e.g. `core.line` = `ÇİZGİ, CIZGI, LINE, Ç, L`. Name matching MUST use the module's explicit Turkish case-folding table (i/I dotted–dotless), never locale-free C functions.
@@ -27,7 +27,7 @@ R20. `Journal` (`journal.hpp`) MUST be append-only JSONL, written after commit, 
 R21. Journal writes MUST be enqueued from the calling thread and performed on a dedicated writer thread. (§10.4)
 R22. The dispatch hot path MUST be allocation-free: arguments live in a POD union or a per-thread arena. Budgets: script dispatch ≤ 10 µs, command-line keystroke → screen ≤ 30 ms. (§10.4, §10.1)
 R23. `TOPLU_BASLA` / `TOPLU_BITIR` MUST collapse N commands into one validation pass and one undo step. (§10.4)
-R24. `piricad_command` MUST compile Qt-free and link only `piricad_core`; see `.claude/core.md` for the core purity rules.
+R24. `kentos_command` MUST compile Qt-free and link only `kentos_core`; see `.claude/core.md` for the core purity rules.
 R25. Commands owned by `/src/domain` (ifraz, tevhit, yola terk, DOP) MUST be registered through the same `Registry` and obey R1–R23; their domain semantics live in `.claude/domain.md`.
 
 ## Absolute Prohibitions
@@ -51,7 +51,7 @@ P16. NEVER let a `Task<T>` command capture a raw pointer or reference to `Docume
 
 ## Definitions of Done
 
-- [ ] New/changed command is declared once with `PIRICAD_COMMAND` and appears in `Registry` with Turkish + English + abbreviations.
+- [ ] New/changed command is declared once with `KENTOS_COMMAND` and appears in `Registry` with Turkish + English + abbreviations.
 - [ ] `Registry`-generated CLI help, script binding and AI schema were regenerated; no file was hand-edited to match.
 - [ ] Interactive path is a `Task<T>` coroutine; cancellation test passes with empty undo stack delta.
 - [ ] Same command driven from GUI, CLI and JSON produces byte-identical `Document` state and identical `Journal` lines.
@@ -62,7 +62,7 @@ P16. NEVER let a `Task<T>` command capture a raw pointer or reference to `Docume
 
 ## Enforcement
 
-- `scripts/ci-gate-core-purity.sh` — fails on `#include <Q...>` or any non-`piricad_core` link in `piricad_command` (R24, P12).
+- `scripts/ci-gate-core-purity.sh` — fails on `#include <Q...>` or any non-`kentos_core` link in `kentos_command` (R24, P12).
 - `scripts/ci-gate-command-mutation.sh` — fails on `Document` mutation outside a `Transaction`, on any second command list not generated from `Registry`, and on `std::function`/`shared_ptr` in dispatch (P2, P3, P9).
 - `/tests/journal` — journal replay regression suite: replay must reproduce golden documents bit-identically (R3, R20).
 - `/tests/unit` — the equality proof test: one command issued from GUI client, CLI string and JSON array must yield identical document state and identical journal lines (R2, R5); plus rollback, cancellation, `TOPLU_BASLA`/`TOPLU_BITIR` merge and error-message-format tests (R10, R13, R19, R23).

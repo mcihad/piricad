@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "piricad_test.hpp"
+#include "kentos_test.hpp"
 
 #include <algorithm>
 
 #include <cmath>
 
-#include "piricad/core/trig.hpp"
+#include "kentos_cad/core/trig.hpp"
 
-#include "piricad/core/document.hpp"
-#include "piricad/core/json.hpp"
-#include "piricad/core/text.hpp"
-#include "piricad/core/units.hpp"
+#include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/json.hpp"
+#include "kentos_cad/core/text.hpp"
+#include "kentos_cad/core/units.hpp"
 
 #include <span>
 
-using namespace piricad::core;
+using namespace kentos::core;
 
 TEST_CASE("mm fixed point is exact and symmetric")
 {
@@ -70,7 +70,7 @@ TEST_CASE("mm rounding never rounds twice")
 TEST_CASE("mm addition is order independent")
 {
     // The reason coordinates are integers: a cadastral area computed in a
-    // different summation order must give the identical result (piricad.md §7.3).
+    // different summation order must give the identical result (kentoscad.md §7.3).
     const Mm a = 485320150, b = -4310220400, c = 7;
     CHECK_EQ(a + b + c, c + b + a);
     CHECK_EQ((a + b) + c, a + (b + c));
@@ -186,8 +186,8 @@ TEST_CASE("json numbers are locale independent and round trip")
 
 namespace {
 
-using piricad::core::RingGeometry;
-using piricad::core::RingRole;
+using kentos::core::RingGeometry;
+using kentos::core::RingRole;
 
 RingGeometry::RingInput ring(std::span<const Point2> pts, RingRole role, std::uint16_t part = 0)
 {
@@ -299,7 +299,7 @@ TEST_CASE("parsel: kalıcı anahtar yuvadan bağımsız ve tekrar edilmiyor")
         CHECK(raw(doc.key_of(c.value())) > raw(kb));
     }
 
-    CHECK_EQ(doc.slot_of(EntityKey{999999}), piricad::core::kNoEntity);
+    CHECK_EQ(doc.slot_of(EntityKey{999999}), kentos::core::kNoEntity);
 }
 
 TEST_CASE("katman görünürlüğü nesne bayrağına yansıyor")

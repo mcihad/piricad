@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://piricad.org/data/catalogs/schema/asgari-standartlar.schema.json",
-  "title": "PiriCAD MPYY EK-2 asgari altyapı standartları paketi",
+  "$id": "https://kentoscad.org/data/catalogs/schema/asgari-standartlar.schema.json",
+  "title": "KentOSCad MPYY EK-2 asgari altyapı standartları paketi",
   "description": "MPYY EK-2: farklı nüfus gruplarında asgari sosyal ve teknik altyapı alanlarına ilişkin standartlar ve asgari alan büyüklükleri tablosu. Bunlar TAKS/KAKS komşusu mevzuat değerleridir; C++ içinde hiçbir satırı bulunamaz (CLAUDE.md 5.13, data.md P1). m²/kişi değerleri BİNDE tam sayı olarak saklanır (0.5 -> 500): projede kayan nokta bir ara değerdir, saklanan biçim değildir (CLAUDE.md 2.4). Çevrilmiş her değerin yanında kaynak metni durur, ki onaylayan plancı çeviriyi denetleyebilsin.",
   "type": "object",
   "required": [

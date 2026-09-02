@@ -12,4 +12,4 @@ Empty in Phase 0. Rules already binding: `.claude/domain.md`.
 Two rules dominate here. Every regulatory constant lives in `/data/catalogs` as
 data, never as code (CLAUDE.md 5.13). Every mutation goes through the command bus
 — direct geometry mutation in this directory breaks the build
-(`scripts/ci-gate-command-mutation.sh`, piricad.md §8).
+(`scripts/ci-gate-command-mutation.sh`, kentoscad.md §8).

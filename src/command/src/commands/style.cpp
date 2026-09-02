@@ -19,13 +19,13 @@
 // The two passes are deliberate. Everything that can fail — reading the package,
 // matching a rule, looking a row up — happens before the first write, so a
 // failure leaves the document untouched instead of half-styled (§2.5, R13).
-#include "piricad/command/bus.hpp"
-#include "piricad/command/context.hpp"
-#include "piricad/command/session.hpp"
-#include "piricad/command/spec.hpp"
-#include "piricad/core/json.hpp"
-#include "piricad/core/style_rule.hpp"
-#include "piricad/core/text.hpp"
+#include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
+#include "kentos_cad/core/json.hpp"
+#include "kentos_cad/core/style_rule.hpp"
+#include "kentos_cad/core/text.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -36,7 +36,7 @@
 #include <string>
 #include <vector>
 
-namespace piricad::command {
+namespace kentos::command {
 namespace {
 
 /// Reads one catalogue package from disk. Core may not do this (core.md P9), so
@@ -151,7 +151,7 @@ bool has_symbol(const core::StyleEntry& row)
 ///
 /// The bytes travel INSIDE the document from here on. A path would break the
 /// moment the drawing is emailed to the belediye that has to check it; see
-/// `piricad/core/image_store.hpp`.
+/// `kentos_cad/core/image_store.hpp`.
 core::Result<core::ImageId> intern_picture(Context& ctx, const std::filesystem::path& dir,
                                            const std::string& file, const std::string& origin)
 {
@@ -763,7 +763,7 @@ Task<void> run(Context& ctx)
 
 } // namespace
 
-PIRICAD_COMMAND(style)
+KENTOS_COMMAND(style)
 {
     return CommandSpec{
         .id       = "core.style",
@@ -848,4 +848,4 @@ PIRICAD_COMMAND(style)
     };
 }
 
-} // namespace piricad::command
+} // namespace kentos::command

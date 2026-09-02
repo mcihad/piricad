@@ -94,7 +94,7 @@ Betikte bir satır olarak:
 Program açılırken bir betikle proje açmak da mümkündür:
 
 ```bash
-./build/dev/bin/piricad --betik acilis.json
+./build/dev/bin/kentos_cad --betik acilis.json
 ```
 
 ## Geri alma
