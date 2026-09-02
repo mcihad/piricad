@@ -256,3 +256,104 @@ TEST_CASE("TOPOLOJİ hiçbir şeyi düzeltmez")
     CHECK(r.doc.content_hash() == before);
     CHECK(r.undo.undo_depth() == depth);
 }
+
+// =============================================================================
+// ALANİFRAZ — cutting to a target area
+// =============================================================================
+
+TEST_CASE("ALANİFRAZ: istenen alanı tolerans içinde ayırır")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    // A 20 m x 10 m parcel: 200 m².
+    REQUIRE(r.bus.execute_line("ALAN noktalar=0,0 20,0 20,10 0,10", Origin::Test).ok());
+
+    const core::Mm2 before = total_area(r.doc);
+
+    // Cut parallel to the north-south direction, taking 80 m² off.
+    auto cut = r.bus.execute_line(
+        "ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=80000000", Origin::Test);
+    if (!cut) FAIL_WITH("ALANİFRAZ", cut.error().message);
+
+    REQUIRE(r.doc.live_entity_count() == 2);
+
+    // The total must be unchanged — an ifraz that loses area has cut something it
+    // should not have.
+    CHECK(total_area(r.doc) == before);
+
+    // And one of the two pieces must be the 80 m² that was asked for, within the
+    // default hundredth of a square metre.
+    bool found = false;
+    for (core::EntityId e = 0; e < r.doc.entities().size(); ++e) {
+        if (!r.doc.alive(e)) continue;
+        const core::Mm2 a = abs_area(area_of(r.doc, e));
+        if (a >= 80000000 - 10000 && a <= 80000000 + 10000) found = true;
+    }
+    CHECK(found);
+}
+
+TEST_CASE("ALANİFRAZ: parselden büyük bir alan istemek reddedilir")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ALAN noktalar=0,0 20,0 20,10 0,10", Origin::Test).ok());
+
+    r.said.clear();
+    REQUIRE(r.bus.execute_line("ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=500000000", Origin::Test)
+                .ok());
+
+    CHECK(r.doc.live_entity_count() == 1);
+    CHECK(r.said.find("küçük olmalı") != std::string::npos);
+}
+
+TEST_CASE("ALANİFRAZ tek geri alma adımıdır")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ALAN noktalar=0,0 20,0 20,10 0,10", Origin::Test).ok());
+
+    const std::uint64_t before = r.doc.content_hash();
+    REQUIRE(r.bus.execute_line("ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=80000000", Origin::Test)
+                .ok());
+    REQUIRE(r.bus.execute_line("GERİAL", Origin::Test).ok());
+
+    CHECK(r.doc.content_hash() == before);
+}
+
+TEST_CASE("ALANİFRAZ: elde edilen alanı raporlar, istenen alanı değil")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ALAN noktalar=0,0 20,0 20,10 0,10", Origin::Test).ok());
+
+    r.said.clear();
+    REQUIRE(r.bus.execute_line("ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=80000000", Origin::Test)
+                .ok());
+
+    // A command that printed the target instead of what it achieved would be
+    // lying about a number that goes on a tapu.
+    CHECK(r.said.find("elde edilen") != std::string::npos);
+    CHECK(r.said.find("fark") != std::string::npos);
+    CHECK(r.said.find("ifrazdan önce") != std::string::npos);
+}
+
+TEST_CASE("ALANİFRAZ: öznitelikler iki parçaya da geçer")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ALAN noktalar=0,0 20,0 20,10 0,10", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("SÜTUN kimlik=ada_no tur=metin", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÖZNİTELİK ad=ada_no nesne=1 deger=1284", Origin::Test).ok());
+
+    REQUIRE(r.bus.execute_line("ALANİFRAZ yon=0,0 0,10 nesneler=1 alan=80000000", Origin::Test)
+                .ok());
+
+    const core::AttrId ada = r.doc.attributes().find("ada_no");
+    std::size_t carried    = 0;
+    for (core::EntityId e = 0; e < r.doc.entities().size(); ++e) {
+        if (!r.doc.alive(e)) continue;
+        auto had = r.doc.attribute(ada, e);
+        if (had && had.value().present && had.value().text == "1284") ++carried;
+    }
+    CHECK(carried == 2);
+}

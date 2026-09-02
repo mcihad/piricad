@@ -6,6 +6,23 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — ALANİFRAZ: alana göre parsel ayırma
+
+- "Bu parselden yola paralel 400 m² ayır" — bir harita mühendisinden gerçekte
+  istenen ifraz. `İFRAZ` söylendiği yerden keser; buna cevap verilir ve kesimi o
+  bulur.
+- **Kesim verilen yöne paralel kayar** ve arama bu yüzden güvenilir: sabit yönlü
+  bir çizgi kaydıkça arkasında kalan alan tek yönlü büyür, dolayısıyla ikiye
+  bölme tek bir cevaba yakınsar. Bir nokta etrafında dönen kesimin böyle bir
+  garantisi yoktur ve bazen başka bir geçerli cevap bulan bir çözücü, üzerine
+  tapu kaydı hesaplanacak bir şey değildir.
+- **Elde edileni raporluyor, isteneni değil.** Sınır milimetre ızgarasına oturur;
+  istenen sayıyı yazan bir komut tapuya gidecek bir sayı hakkında yalan söylerdi.
+  Tolerans (varsayılan 0,01 m²) aşılırsa ifraz **yapılmıyor**.
+- **Mevzuat imzası bekliyor** (6.11): hangi toleransla kabul edileceği ve
+  ada/parsel numarasının hangi parçada kalacağı mevzuata ait sorulardır.
+- Belge: [`split_area.md`](docs/komutlar/split_area.md).
+
 ### Eklendi — Netcad iş akışı: NOKTALAR ve APLİKASYON
 
 Hedef kitle Netcad kullanan harita mühendisleri; bu iki komut onların günlük

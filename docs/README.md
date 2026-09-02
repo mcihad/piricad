@@ -78,6 +78,7 @@ Tek tek komutlar:
 | `OTURT` | [Yerel çizimi haritaya oturtma](komutlar/fit.md) |
 | `TEVHİT` | [Parsel birleştirme](komutlar/merge.md) |
 | `İFRAZ` | [Parsel ayırma](komutlar/split_parcel.md) |
+| `ALANİFRAZ` | [Alana göre parsel ayırma](komutlar/split_area.md) |
 | `TOPOLOJİ` | [Geometri denetimi](komutlar/topology.md) |
 | `YAKINLAŞ` | [Görünüm ayarlama](komutlar/zoom.md) |
 | `GERİAL` | [Geri alma](komutlar/undo.md) |

@@ -7,6 +7,7 @@
 namespace kentos::command {
 KENTOS_COMMAND(merge);
 KENTOS_COMMAND(split_parcel);
+KENTOS_COMMAND(split_area);
 KENTOS_COMMAND(topology);
 } // namespace kentos::command
 
@@ -19,6 +20,7 @@ void register_cadastre_commands(kentos::command::Registry& r)
     // (CLAUDE.md Article 3.2).
     (void)r.add(kentos::command::kentos_command_merge());
     (void)r.add(kentos::command::kentos_command_split_parcel());
+    (void)r.add(kentos::command::kentos_command_split_area());
     (void)r.add(kentos::command::kentos_command_topology());
 }
 
