@@ -6,6 +6,21 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — DÖNÜŞTÜR: koordinat sistemi dönüşümü
+
+- Çizimin tamamını bir sistemden diğerine taşıyor ve belgenin CRS etiketini de
+  yeniliyor. Türkiye'de günlük bir iş: arşiv ED50 dolu, her yeni pafta TUREF, bir
+  belediyenin katmanları yan paftadan farklı dilimde olabiliyor.
+- Dönüşümü **PROJ** yapıyor (§9). Bir datum kaymasını yeniden yazmak, bir sınırın
+  kimse fark etmeden yarım metre kaymasının yoludur.
+- **Coğrafi ucu reddediyor.** Çizim geometrisi tam sayı milimetre; `29,830716°`
+  en yakın "milimetreye" yuvarlandığında nokta yüz metre kayar.
+- **Etiket koordinatları izliyor**: sayıları taşınmış ama CRS'i eski sistemi
+  söyleyen bir çizim, hiç dönüştürülmemiş olandan kötüdür — aşağıdaki her okuyucu
+  etikete güvenir.
+- Tek geri alma adımı: her köşe taşınır ya da hiçbiri.
+- Belge: [`reproject.md`](docs/komutlar/reproject.md).
+
 ### Eklendi — ALANİFRAZ: alana göre parsel ayırma
 
 - "Bu parselden yola paralel 400 m² ayır" — bir harita mühendisinden gerçekte

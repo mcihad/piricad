@@ -590,3 +590,127 @@ TEST_CASE("APLİKASYON çizimi değiştirmez")
     REQUIRE(bus.execute_line("APLİKASYON istasyon=0,0", Origin::Test).ok());
     CHECK(doc.content_hash() == before);
 }
+
+// =============================================================================
+// DÖNÜŞTÜR — moving the drawing between coordinate systems
+// =============================================================================
+
+namespace {
+
+struct GeoRig
+{
+    kentos::core::Document doc;
+    kentos::command::Registry reg;
+    kentos::command::Journal journal;
+    kentos::command::UndoStack undo;
+    kentos::command::Bus bus{doc, reg, journal, undo};
+    std::string said;
+
+    GeoRig()
+    {
+        kentos::command::register_builtin_commands(reg);
+        kentos::domain::geodesy::register_geodesy_commands(reg);
+        bus.on_echo = [this](std::string_view t) { said += std::string(t); };
+    }
+};
+
+} // namespace
+
+TEST_CASE("DÖNÜŞTÜR: ED50 dilimi TUREF dilimine taşınır ve etiket onu izler")
+{
+    if (!kentos::domain::geodesy::Transform::available()) return; // PROJ off in this build
+
+    GeoRig r;
+    using kentos::command::Origin;
+    REQUIRE(r.bus.execute_line("AYAR ad=koordinat_sistemi deger=EPSG:5256", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ALAN noktalar=485300,4310200 485360,4310200 485360,4310245 "
+                               "485300,4310245",
+                               Origin::Test)
+                .ok());
+
+    const kentos::core::Box2 before = r.doc.extent();
+
+    // EPSG:5256 is TUREF / TM36; EPSG:5254 is TUREF / TM33. Same datum, a
+    // different three-degree zone — the everyday case of a municipality whose
+    // sheets straddle a zone boundary.
+    auto moved = r.bus.execute_line("DÖNÜŞTÜR hedef=EPSG:5254", Origin::Test);
+    if (!moved) FAIL_WITH("DÖNÜŞTÜR", moved.error().message);
+
+    const kentos::core::Box2 after = r.doc.extent();
+
+    // The drawing moved — a zone change shifts the easting by hundreds of km —
+    // and nothing was added or lost.
+    CHECK(after.min_x != before.min_x);
+    CHECK(r.doc.live_entity_count() == 1);
+
+    // THE LABEL FOLLOWS THE COORDINATES. A drawing whose numbers moved and whose
+    // CRS still names the old system is worse than one never transformed.
+    CHECK(r.doc.crs().id() == "EPSG:5254");
+}
+
+TEST_CASE("DÖNÜŞTÜR tek geri alma adımıdır")
+{
+    if (!kentos::domain::geodesy::Transform::available()) return;
+
+    GeoRig r;
+    using kentos::command::Origin;
+    REQUIRE(r.bus.execute_line("AYAR ad=koordinat_sistemi deger=EPSG:5256", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ALAN noktalar=485300,4310200 485360,4310200 485360,4310245 "
+                               "485300,4310245",
+                               Origin::Test)
+                .ok());
+
+    const std::uint64_t before = r.doc.content_hash();
+    REQUIRE(r.bus.execute_line("DÖNÜŞTÜR hedef=EPSG:5254", Origin::Test).ok());
+    CHECK(r.doc.content_hash() != before);
+
+    // Every vertex back, in one step.
+    REQUIRE(r.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK(r.doc.content_hash() == before);
+}
+
+TEST_CASE("DÖNÜŞTÜR: coğrafi hedef gerekçesiyle reddedilir")
+{
+    if (!kentos::domain::geodesy::Transform::available()) return;
+
+    GeoRig r;
+    using kentos::command::Origin;
+    REQUIRE(r.bus.execute_line("AYAR ad=koordinat_sistemi deger=EPSG:5256", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ALAN noktalar=485300,4310200 485360,4310200 485360,4310245 "
+                               "485300,4310245",
+                               Origin::Test)
+                .ok());
+    const std::uint64_t before = r.doc.content_hash();
+
+    r.said.clear();
+    // EPSG:4326 is WGS84 in degrees. Rounding 29.83° to the nearest millimetre
+    // moves the point about a hundred metres, so this must refuse rather than
+    // quietly destroy the drawing.
+    REQUIRE(r.bus.execute_line("DÖNÜŞTÜR hedef=EPSG:4326", Origin::Test).ok());
+
+    CHECK(r.said.find("coğrafi") != std::string::npos);
+    CHECK(r.doc.content_hash() == before);
+}
+
+TEST_CASE("DÖNÜŞTÜR: aynı sistem istenirse hiçbir şey yapmaz")
+{
+    if (!kentos::domain::geodesy::Transform::available()) return;
+
+    GeoRig r;
+    using kentos::command::Origin;
+    REQUIRE(r.bus.execute_line("AYAR ad=koordinat_sistemi deger=EPSG:5256", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ALAN noktalar=485300,4310200 485360,4310200 485360,4310245 "
+                               "485300,4310245",
+                               Origin::Test)
+                .ok());
+    const std::uint64_t before = r.doc.content_hash();
+
+    r.said.clear();
+    REQUIRE(r.bus.execute_line("DÖNÜŞTÜR hedef=EPSG:5256", Origin::Test).ok());
+    CHECK(r.said.find("Yapılacak bir şey yok") != std::string::npos);
+    CHECK(r.doc.content_hash() == before);
+}

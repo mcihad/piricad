@@ -178,6 +178,7 @@ namespace kentos::command {
 /// Declared here because its body lives in `stakeout_command.cpp`; the registrar
 /// below is the one place this module's commands are named.
 KENTOS_COMMAND(stakeout);
+KENTOS_COMMAND(reproject);
 } // namespace kentos::command
 
 namespace kentos::domain::geodesy {
@@ -189,6 +190,7 @@ void register_geodesy_commands(kentos::command::Registry& r)
     // module (CLAUDE.md Article 3.2).
     (void)r.add(kentos::command::kentos_command_fit());
     (void)r.add(kentos::command::kentos_command_stakeout());
+    (void)r.add(kentos::command::kentos_command_reproject());
 }
 
 } // namespace kentos::domain::geodesy

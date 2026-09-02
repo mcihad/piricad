@@ -76,6 +76,7 @@ Tek tek komutlar:
 | `ELİPS` | [Elips çizme](komutlar/ellipse_draw.md) |
 | `KILAVUZ` | [Cetvel kılavuzu](komutlar/guide.md) |
 | `OTURT` | [Yerel çizimi haritaya oturtma](komutlar/fit.md) |
+| `DÖNÜŞTÜR` | [Koordinat sistemi dönüşümü](komutlar/reproject.md) |
 | `TEVHİT` | [Parsel birleştirme](komutlar/merge.md) |
 | `İFRAZ` | [Parsel ayırma](komutlar/split_parcel.md) |
 | `ALANİFRAZ` | [Alana göre parsel ayırma](komutlar/split_area.md) |

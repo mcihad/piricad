@@ -10,6 +10,7 @@ add_library(kentos_domain_geodesy STATIC
     src/helmert.cpp
     src/fit_command.cpp
     src/stakeout_command.cpp
+    src/reproject_command.cpp
     src/transform.cpp
 )
 
