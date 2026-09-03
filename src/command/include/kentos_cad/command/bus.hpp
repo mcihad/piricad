@@ -169,10 +169,14 @@ public:
     /// playback and by the script engine — one grammar, one path (§3).
     core::Result<DispatchResult> execute_line(std::string_view line, Origin origin);
 
-    /// Starts an interactive command that will ask the user for input.
+    /// Starts an interactive command that will ask the user for what it still
+    /// needs. Takes a full command LINE, parsed by the one parser, so a button may
+    /// say `SEÇ mod=KUTU` and have the mode answered while the corners are
+    /// clicked; a bare name behaves exactly as before.
+    ///
     /// Only the GUI uses this, and it buys the GUI no privileges: the session
     /// runs the same coroutine, validation and transaction as every other client.
-    core::Result<std::unique_ptr<Session>> begin_interactive(std::string_view name);
+    core::Result<std::unique_ptr<Session>> begin_interactive(std::string_view line);
 
     /// Called by Session when a command finishes. Validates, commits or rolls
     /// back, and journals.

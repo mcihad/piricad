@@ -93,6 +93,7 @@ enum class Glyph {
     Trim,
     Union,
     ParcelSplit,
+    Split,
     MeasureArea,
     Coordinate,
     StyleCopy,

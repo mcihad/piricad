@@ -69,7 +69,7 @@ ALAN noktalar=0,0 20,0 20,10 0,10
 
 ### Arayüz
 
-Parseli seçin, sol araç kutusundaki **Parsel Böl — ifraz** düğmesine basın, sonra
+Parseli seçin, **Kadastro ▸ İfraz** menüsünü tıklayın, sonra
 ayırma çizgisinin iki ucunu tıklayın. Yakalama açıkken uçlar mevcut köşelere
 oturur.
 

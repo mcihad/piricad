@@ -58,8 +58,15 @@ BUDA nesne=1 sinir=2 nokta=485390,4310200
 
 ### Arayüz
 
-`BUDA` yazın, budanacak çizgiyi ve sınırı verin, sonra atmak istediğiniz parçayı
-tıklayın.
+**İki çizgiyi** seçin, sol araç kutusundaki **Buda** düğmesine basın, sonra atmak
+istediğiniz parçayı tıklayın.
+
+Hangisinin budanacağını **tıklama** söyler: tıkladığınız noktaya daha yakın olan
+çizgi budanır, diğeri sınır olur. Seçim sırası kullanılmaz, çünkü seçim listesi
+tıklama sırasını değil nesne kimliğini takip eder — "önce seçtiğim" demek "önce
+çizdiğim" demek olurdu.
+
+Komut satırından `BUDA nesne=1 sinir=2` yazarak ikisini açıkça da verebilirsiniz.
 
 ### Betik
 

@@ -13,6 +13,9 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/pick.hpp"
+
 #include <string>
 #include <vector>
 
@@ -53,6 +56,35 @@ bool gather(Context& ctx, std::vector<std::int64_t>& requested, std::vector<core
         slots.push_back(slot);
     }
     return true;
+}
+
+/// How far `probe` is from the nearest edge of `slot`, in millimetres, or -1 when
+/// the entity has no edge to measure to.
+///
+/// Every ring, open or closed, so an area answers by its boundary and a line by
+/// itself — "the one I clicked on" has to mean the same thing for both.
+double distance_to(const core::Document& doc, core::EntityId slot, core::Point2 probe)
+{
+    const core::RingGeometry& geom = doc.geometry();
+    const core::RingSpan span      = geom.rings_of(doc.entities().slot[slot]);
+
+    double best = -1.0;
+    for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+        const auto xs = geom.ring_xs(r);
+        const auto ys = geom.ring_ys(r);
+        if (xs.size() < 2) continue;
+
+        const bool closed      = geom.ring_role[r] != core::RingRole::Open;
+        const std::size_t last = closed ? xs.size() : xs.size() - 1;
+        for (std::size_t i = 0; i < last; ++i) {
+            const std::size_t j  = (i + 1) % xs.size();
+            const core::Point2 f = core::closest_point_on_segment(
+                core::Point2{xs[i], ys[i]}, core::Point2{xs[j], ys[j]}, probe);
+            const double d = core::distance_squared(f, probe);
+            if (best < 0.0 || d < best) best = d;
+        }
+    }
+    return best;
 }
 
 Task<void> run_set_layer(Context& ctx)
@@ -97,11 +129,50 @@ Task<void> run_match_style(Context& ctx)
     std::vector<core::EntityId> slots;
     if (!gather(ctx, requested, slots, "STİLKOPYALA kaynak=1 nesneler=2 nesneler=3")) co_return;
 
-    const Value source_arg = ctx.argument("kaynak");
+    Value source_arg = ctx.argument("kaynak");
     if (source_arg.empty()) {
-        ctx.echo("Stili kopyalanacak kaynak nesne belirtilmedi. Örnek: "
-                 "STİLKOPYALA kaynak=1 nesneler=2");
-        co_return;
+        // THE CLICK SAYS WHICH ONE IS THE SOURCE.
+        //
+        // Without this the tool column's "Stil Kopyala" button could not work at
+        // all: it sends the bare command, so `kaynak` was always empty and the
+        // only outcome was a refusal — or, before the parameter was made optional,
+        // the raw "zorunlu 'kaynak' parametresi eksik" from post-run validation.
+        //
+        // Taking the first selected object instead would mean "whichever was drawn
+        // first": `Selection::keys()` is sorted by key, not by the order the user
+        // clicked, so it is not something the user said. Clicking the object to
+        // copy FROM is the gesture every drawing program already trains.
+        if (slots.size() < 2) {
+            ctx.echo("Stili kopyalanacak kaynak nesne belirtilmedi. Kaynağı ve hedefleri "
+                     "birlikte seçin ya da STİLKOPYALA kaynak=1 nesneler=2 yazın.");
+            co_return;
+        }
+
+        auto at = co_await ctx.point("nokta", "Stili kopyalanacak KAYNAK nesneye tıklayın");
+        if (!at) co_return;
+
+        std::size_t nearest = 0;
+        double best         = -1.0;
+        for (std::size_t i = 0; i < slots.size(); ++i) {
+            const double d = distance_to(ctx.document(), slots[i], *at);
+            if (d >= 0.0 && (best < 0.0 || d < best)) {
+                best    = d;
+                nearest = i;
+            }
+        }
+        if (best < 0.0) {
+            ctx.echo("Seçili nesnelerin hiçbirinin kenarı yok; kaynak belirlenemedi.");
+            co_return;
+        }
+
+        // RECORDED AS THE ID IT RESOLVED, so a replay copies from the same object
+        // whatever the selection holds then (model.md R43).
+        source_arg = Value::ids({requested[nearest]});
+        ctx.record("nokta", Value::point(*at));
+
+        // The source is not one of its own targets.
+        requested.erase(requested.begin() + static_cast<std::ptrdiff_t>(nearest));
+        slots.erase(slots.begin() + static_cast<std::ptrdiff_t>(nearest));
     }
 
     const std::int64_t source_id =
@@ -186,13 +257,18 @@ KENTOS_COMMAND(match_style)
         .category = Category::Modify,
         .params =
             {
-                Param{"kaynak", ParamKind::Selection, Arity::exactly(1),
-                      "Stili kopyalanacak nesnenin kimliği"},
+                Param{"kaynak", ParamKind::Selection, Arity::optional(),
+                      "Stili kopyalanacak nesnenin kimliği; yoksa tıklanan nesne"},
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                       "Stili alacak nesnelerin kimlikleri; yoksa etkin seçim"},
+                // OPTIONAL: only asked for when `kaynak` was not given, which is
+                // the tool-column road. A script that names its source never sees
+                // this prompt and must not be required to answer it.
+                Param{"nokta", ParamKind::Point, Arity::optional(),
+                      "Kaynak nesnenin üzerinde bir nokta; yalnız kaynak verilmediğinde"},
             },
         .undo    = UndoPolicy::SingleTransaction,
-        .flags   = Flags::Scriptable | Flags::AiAccessible,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Bir nesnenin stilini seçilen nesnelere uygular.",
         .run     = &run_match_style,
     };

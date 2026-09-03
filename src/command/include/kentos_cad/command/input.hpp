@@ -123,24 +123,48 @@ private:
     bool exhausted_{false};
 };
 
-/// Live interaction: every take() returns nullopt, so the command suspends and the
-/// UI resumes it by supplying a value. Used by the GUI client only.
+/// Live interaction: a value the client already knows is handed over, anything
+/// else suspends the command so the UI can supply it. Used by the GUI client only.
+///
+/// THE PRESET IS WHAT MAKES A BUTTON AN EQUAL CLIENT (Article 1.2). A toolbar
+/// button is not always the bare command: "Alan Seç" is `SEÇ mod=KUTU`, and the
+/// mode is known before the user has clicked anything while the two corners are
+/// not. Without this the GUI could start a command OR pass it arguments, never
+/// both, so any tool whose command takes a keyword was reachable only by typing —
+/// which is the mouse-only prohibition of CLAUDE.md 5.15 standing on its head.
+///
+/// The difference from `ArgInputSource` is the whole point: running out of preset
+/// values means ASK THE USER, not stop. A script's queue ending is the end of the
+/// command; a button's preset ending is where the clicking starts.
 class InteractiveInputSource final : public InputSource
 {
 public:
+    /// Nothing answered in advance: every parameter is asked for.
+    InteractiveInputSource() = default;
+
+    /// Starts with `args` already answered; every other parameter is asked for.
+    explicit InteractiveInputSource(Args args) : preset_(std::move(args)) {}
+
     /// A live user at a mouse and keyboard. Recorded in the journal; it buys this
     /// source no privilege (Article 1.2).
     Origin origin() const override { return Origin::Gui; }
 
-    std::optional<Value> take(const Param&) override { return std::nullopt; }
+    std::optional<Value> take(const Param& param) override;
 
     /// An interactive source runs out only when the user cancels — ESC — because
     /// there is always another click available until then.
     bool exhausted() const override { return cancelled_; }
 
+    const Args* preset() const override { return preset_.size() == 0 ? nullptr : &preset_; }
+
     void cancel() { cancelled_ = true; }
 
 private:
+    /// How many values of a given parameter the preset has already handed out;
+    /// the same cursor `ArgInputSource` keeps, for the same reason.
+    std::vector<std::pair<std::string, std::size_t>> cursor_;
+
+    Args preset_;
     bool cancelled_{false};
 };
 

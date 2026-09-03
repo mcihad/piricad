@@ -106,10 +106,26 @@ bool locate_on(const std::vector<core::Point2>& pts, core::Point2 probe, std::si
 
 Task<void> run_split(Context& ctx)
 {
-    const Value given = ctx.argument("nesne");
+    Value given = ctx.argument("nesne");
     if (given.empty()) {
-        ctx.echo("Bölünecek çizgi belirtilmedi. Örnek: BÖL nesne=1 nokta=30,0");
-        co_return;
+        // THE SELECTION IS THE ARGUMENT WHEN NOTHING WAS TYPED. Without this the
+        // tool column's Böl button could never work: it sends the bare command,
+        // so `nesne` was always empty and the button's only possible outcome was
+        // "Bölünecek çizgi belirtilmedi" — with the line selected, on screen, in
+        // front of the user. Every other selection-driven command in the tree
+        // (OFSET, TAŞI, DÖNDÜR, TEVHİT) already reads the selection this way.
+        const std::vector<core::EntityKey>& keys = ctx.session().bus().selection().keys();
+        if (keys.size() != 1) {
+            ctx.echo(keys.empty() ? "Bölünecek çizgi belirtilmedi. Bir çizgi seçin ya da "
+                                    "BÖL nesne=1 nokta=30,0 yazın."
+                                  : "Bir seferde tek çizgi bölünür; " +
+                                        std::to_string(keys.size()) + " nesne seçili.");
+            co_return;
+        }
+        // RECORDED AS THE ID IT RESOLVED TO, not as "whatever was selected": a
+        // journal replay must split the same line however the selection stood at
+        // replay time (model.md R43).
+        given = Value::ids({static_cast<std::int64_t>(core::raw(keys.front()))});
     }
 
     std::int64_t id = 0;
@@ -217,9 +233,37 @@ Task<void> run_cut(Context& ctx, bool extend)
 {
     const char* verb = extend ? "UZAT" : "BUDA";
 
-    const Value target_arg = ctx.argument("nesne");
-    const Value edge_arg   = ctx.argument("sinir");
-    if (target_arg.empty() || edge_arg.empty()) {
+    Value target_arg = ctx.argument("nesne");
+    Value edge_arg   = ctx.argument("sinir");
+
+    // TWO SELECTED OBJECTS ARE THE PAIR, AND THE CLICK SAYS WHICH IS WHICH.
+    //
+    // Without this the tool column's Buda button was dead: it sends the bare
+    // command, so both arguments were always empty and the only outcome was the
+    // "hem düzenlenecek çizgi hem sınır çizgisi gerekir" line, whatever was
+    // selected. Filling them from the selection in order is not an option either —
+    // `Selection::keys()` is sorted by key, not by the order the user clicked, so
+    // "the first one is the target" would mean "whichever was drawn first", which
+    // is not something the user said.
+    //
+    // The point resolves it, and it is the gesture every drawing program already
+    // trains: you click the piece you want GONE. So the click is taken first, and
+    // whichever of the two selected lines it lands nearer is the one being cut.
+    const bool from_selection = target_arg.empty() && edge_arg.empty();
+    std::vector<std::int64_t> pair;
+    if (from_selection) {
+        for (core::EntityKey k : ctx.session().bus().selection().keys())
+            pair.push_back(static_cast<std::int64_t>(core::raw(k)));
+
+        if (pair.size() != 2) {
+            ctx.echo(
+                std::string(verb) + " için hem düzenlenecek çizgi hem sınır çizgisi gerekir. " +
+                (pair.empty() ? std::string("İki çizgi seçin")
+                              : std::to_string(pair.size()) + " nesne seçili; iki tane olmalı") +
+                " ya da " + verb + " nesne=1 sinir=2 nokta=5,0 yazın.");
+            co_return;
+        }
+    } else if (target_arg.empty() || edge_arg.empty()) {
         ctx.echo(std::string(verb) +
                  " için hem düzenlenecek çizgi hem sınır çizgisi gerekir. "
                  "Örnek: " +
@@ -233,8 +277,43 @@ Task<void> run_cut(Context& ctx, bool extend)
                    : v.as_int();
     };
 
-    const std::int64_t target_id = one_id(target_arg);
-    const std::int64_t edge_id   = one_id(edge_arg);
+    // ASKED BEFORE THE PAIR IS SETTLED when it came from the selection, because
+    // the answer is what settles it.
+    auto at = co_await ctx.point("nokta", extend ? "Uzatılacak uç" : "Atılacak parça");
+    if (!at) co_return;
+
+    std::int64_t target_id = 0;
+    std::int64_t edge_id   = 0;
+    if (from_selection) {
+        core::EntityId a = core::kNoEntity;
+        core::EntityId b = core::kNoEntity;
+        std::vector<core::Point2> a_pts;
+        std::vector<core::Point2> b_pts;
+        if (!open_run(ctx, pair[0], a, a_pts)) co_return;
+        if (!open_run(ctx, pair[1], b, b_pts)) co_return;
+
+        const auto nearest = [&](const std::vector<core::Point2>& run) {
+            double best = -1.0;
+            for (std::size_t i = 0; i + 1 < run.size(); ++i) {
+                const core::Point2 f = core::closest_point_on_segment(run[i], run[i + 1], *at);
+                const double d       = core::distance_squared(f, *at);
+                if (best < 0.0 || d < best) best = d;
+            }
+            return best;
+        };
+
+        const bool first_is_target = nearest(a_pts) <= nearest(b_pts);
+        target_id                  = first_is_target ? pair[0] : pair[1];
+        edge_id                    = first_is_target ? pair[1] : pair[0];
+
+        // RECORDED AS THE IDS IT RESOLVED, so a replay cuts the same line with the
+        // same boundary whatever the selection holds then (model.md R43).
+        target_arg = Value::ids({target_id});
+        edge_arg   = Value::ids({edge_id});
+    } else {
+        target_id = one_id(target_arg);
+        edge_id   = one_id(edge_arg);
+    }
 
     core::EntityId target = core::kNoEntity;
     core::EntityId edge   = core::kNoEntity;
@@ -242,12 +321,6 @@ Task<void> run_cut(Context& ctx, bool extend)
     std::vector<core::Point2> edge_pts;
     if (!open_run(ctx, target_id, target, pts)) co_return;
     if (!open_run(ctx, edge_id, edge, edge_pts)) co_return;
-
-    // WHICH END. The point says which end of the line the user is working on,
-    // exactly as it does in every drawing program: click the bit you want gone,
-    // or the end you want pushed out.
-    auto at = co_await ctx.point("nokta", extend ? "Uzatılacak uç" : "Atılacak parça");
-    if (!at) co_return;
 
     const double to_start = core::distance_squared(pts.front(), *at);
     const double to_end   = core::distance_squared(pts.back(), *at);
@@ -328,8 +401,8 @@ KENTOS_COMMAND(split)
         .category = Category::Modify,
         .params =
             {
-                Param{"nesne", ParamKind::Selection, Arity::exactly(1),
-                      "Bölünecek çizginin kimliği"},
+                Param{"nesne", ParamKind::Selection, Arity::optional(),
+                      "Bölünecek çizginin kimliği; yoksa etkin seçim"},
                 Param::point("nokta", "Bölme noktası"),
             },
         .undo    = UndoPolicy::SingleTransaction,
@@ -347,9 +420,10 @@ KENTOS_COMMAND(trim)
         .category = Category::Modify,
         .params =
             {
-                Param{"nesne", ParamKind::Selection, Arity::exactly(1),
-                      "Budanacak çizginin kimliği"},
-                Param{"sinir", ParamKind::Selection, Arity::exactly(1), "Sınır çizgisinin kimliği"},
+                Param{"nesne", ParamKind::Selection, Arity::optional(),
+                      "Budanacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan"},
+                Param{"sinir", ParamKind::Selection, Arity::optional(),
+                      "Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri"},
                 Param::point("nokta", "Atılacak parçanın üzerindeki bir nokta"),
             },
         .undo    = UndoPolicy::SingleTransaction,
@@ -367,9 +441,10 @@ KENTOS_COMMAND(extend)
         .category = Category::Modify,
         .params =
             {
-                Param{"nesne", ParamKind::Selection, Arity::exactly(1),
-                      "Uzatılacak çizginin kimliği"},
-                Param{"sinir", ParamKind::Selection, Arity::exactly(1), "Sınır çizgisinin kimliği"},
+                Param{"nesne", ParamKind::Selection, Arity::optional(),
+                      "Uzatılacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan"},
+                Param{"sinir", ParamKind::Selection, Arity::optional(),
+                      "Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri"},
                 Param::point("nokta", "Uzatılacak ucun yakınında bir nokta"),
             },
         .undo    = UndoPolicy::SingleTransaction,

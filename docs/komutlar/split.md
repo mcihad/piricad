@@ -57,8 +57,12 @@ BÖL nesne=1 nokta=485330,4310200
 
 ### Arayüz
 
-Çizgiyi seçin, `BÖL` yazın, bölme noktasını tıklayın. Yakalama açıkken nokta
-mevcut köşelere ve kesişimlere oturur.
+Çizgiyi seçin, sol araç kutusundaki **Böl** düğmesine basın, bölme noktasını
+tıklayın. Yakalama açıkken nokta mevcut köşelere ve kesişimlere oturur.
+
+Seçili tek bir çizgi varsa `nesne` yazmanıza gerek yoktur: seçim komutun girdisidir.
+Birden çok nesne seçiliyse komut bunu söyler ve hiçbir şey yapmaz — bir seferde tek
+çizgi bölünür.
 
 ### Betik
 

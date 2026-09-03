@@ -49,14 +49,14 @@ public:
     /// must keep its dialog open on failure. Other UI clients use `runLine()`.
     core::Result<command::DispatchResult>
     runLineResult(const QString& line, command::Origin origin = command::Origin::CommandLine);
-    void runCommand(const QString& name); ///< toolbar / menu — same road as a script
+    void runCommand(const QString& line); ///< toolbar / menu — same road as a script
 
     /// Dispatches a fully built invocation. This is `Bus::dispatch`, the same
     /// overload the JSON runner and the AI use (`.claude/command.md` R2): the
     /// canvas needs it because a rubber-band box carries `Point2` values that must
     /// not be round-tripped through formatted text to become a command line.
     void runInvocation(const command::Invocation& invocation);
-    void beginInteractive(const QString& name);
+    void beginInteractive(const QString& line);
     void supplyPoint(core::Point2 world);
 
     /// Answers the running command's prompt with a piece of TEXT.
@@ -67,6 +67,12 @@ public:
     /// a string nothing could deliver: the prompt reached the command line's
     /// placeholder while focus stayed on the canvas, and the command hung.
     void supplyText(const QString& text);
+
+    /// Answers the running command's prompt with a NUMBER — a distance, a scale,
+    /// an angle. The command line reaches for this when `Prompt::kind` says a
+    /// quantity would satisfy the prompt; without it OFSET could be started and
+    /// never finished.
+    void supplyNumber(double value);
 
     /// What the running command is asking for, so a client can offer the right
     /// editor. `ParamKind::Point` when nothing is running, which is what the

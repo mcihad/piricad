@@ -95,6 +95,21 @@ public:
     void openAttributeTable();
     void openCommandSearch();
 
+    /// Presses every button on the tool column in turn and prints what the
+    /// program answered, one line per tool.
+    ///
+    /// THE CHECK NOTHING ELSE MAKES. A tool button is four things that have to
+    /// agree — the action, the command string on it, a command registered under
+    /// exactly that string, and a body that does something useful with an empty
+    /// argument list — and every unit test in the tree exercises the fourth
+    /// through `execute_line`, which is not the road the button takes. That is how
+    /// "Alan Seç" shipped sending `SEÇ mod=KUTU` to a lookup that can only resolve
+    /// a bare name: dead on every click, in every session, with a green suite.
+    ///
+    /// Developer tooling behind `KENTOS_TOOL_PROBE`, the same category as
+    /// `KENTOS_EDIT_PROBE`; nothing user-facing calls it.
+    void probeToolBox();
+
 private slots:
     /// Bus observers. The shell SUBSCRIBES to the command bus and never reaches
     /// around it: a value on screen is there because a command put it there, so
@@ -275,8 +290,10 @@ private:
     QAction* actSelectArea_{nullptr};
     QAction* actPolygon_{nullptr};
     QAction* actTrim_{nullptr};
-    QAction* actUnion_{nullptr};
-    QAction* actParcelSplit_{nullptr};
+    QAction* actCombine_{nullptr};     ///< BİRLEŞTİR — generic; on the tool column
+    QAction* actUnion_{nullptr};       ///< TEVHİT — cadastral; Kadastro menu
+    QAction* actParcelSplit_{nullptr}; ///< İFRAZ — cadastral; Kadastro menu
+    QAction* actAreaSplit_{nullptr};   ///< ALANİFRAZ — cadastral; Kadastro menu
     QAction* actMeasureArea_{nullptr};
     QAction* actCoordinate_{nullptr};
     QAction* actStyleCopy_{nullptr};

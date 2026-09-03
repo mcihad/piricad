@@ -54,8 +54,12 @@ UZAT nesne=1 sinir=2 nokta=485350,4310200
 
 ### Arayüz
 
-`UZAT` yazın, uzatılacak çizgiyi ve sınırı verin, sonra uzatmak istediğiniz uca
-yakın bir yeri tıklayın.
+**İki çizgiyi** seçin, `UZAT` yazın, sonra uzatmak istediğiniz uca yakın bir yeri
+tıklayın.
+
+Hangisinin uzatılacağını **tıklama** söyler: tıkladığınız noktaya daha yakın olan
+çizgi uzatılır, diğeri sınır olur. Komut satırından `UZAT nesne=1 sinir=2` yazarak
+ikisini açıkça da verebilirsiniz.
 
 ### Betik
 

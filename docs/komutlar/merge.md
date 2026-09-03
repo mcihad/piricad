@@ -71,7 +71,11 @@ TEVHİT nesneler=1 2
 
 ### Arayüz
 
-Parselleri seçin, sol araç kutusundaki **Birleştir — tevhit** düğmesine basın.
+Parselleri seçin, **Kadastro ▸ Tevhit** menüsünü tıklayın.
+
+Bu komut sol araç kutusunda değildir: araç kutusundaki **Birleştir**
+([`BİRLEŞTİR`](combine.md)) genel bir geometri işlemidir ve komşuluk aramaz. Tevhit
+mevzuata bağlı bir kadastro işlemidir, bu yüzden kendi menüsündedir.
 
 ### Betik
 

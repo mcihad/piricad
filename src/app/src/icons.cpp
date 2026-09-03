@@ -707,6 +707,20 @@ void draw(QPainter& p, Glyph g, const QColor& c)
         arrowHead(p, QPointF(5.0, 20.4), QPointF(5.0, 16.0), c);
         break;
 
+    case Glyph::Split:
+        // A shape with a cut straight through it: the generic BÖL. Deliberately
+        // NOT `Trim`'s scissors, which BUDA, UZAT, PAH and YUVARLA already share —
+        // on a 46 px column two tools wearing one glyph read as one control drawn
+        // twice, and BÖL sat directly under BUDA.
+        p.setPen(stroke(c, 1.7));
+        p.drawPolyline(QPolygonF({QPointF(4.6, 8.0), QPointF(9.4, 4.4), QPointF(9.4, 19.6),
+                                  QPointF(4.6, 16.0), QPointF(4.6, 8.0)}));
+        p.drawPolyline(QPolygonF({QPointF(19.4, 8.0), QPointF(14.6, 4.4), QPointF(14.6, 19.6),
+                                  QPointF(19.4, 16.0), QPointF(19.4, 8.0)}));
+        p.setPen(QPen(c, 1.4, Qt::DashLine, Qt::FlatCap));
+        p.drawLine(QPointF(12.0, 2.6), QPointF(12.0, 21.4));
+        break;
+
     case Glyph::MeasureArea:
         // A set square over a filled corner: the area measure.
         p.setPen(stroke(c, 1.7));

@@ -1983,6 +1983,140 @@ TEST_CASE("SEÇ etkileşimlidir: arayüz köşeleri sorabilsin")
     CHECK(has_flag(spec->flags, Flags::Interactive));
 }
 
+TEST_CASE("etkileşimli başlatma bir KOMUT SATIRI alır: 'SEÇ mod=KUTU' düğmesi çalışır")
+{
+    // THE REGRESSION. `begin_interactive` resolved the whole string as a command
+    // NAME, and the registry lookup is exact — so the tool column's "Alan Seç"
+    // button, which sends `SEÇ mod=KUTU`, failed on every click with "Bilinmeyen
+    // komut: 'SEÇ mod=KUTU'". The button was 100% dead in every session and no
+    // test touched it: the only coverage went through `execute_line`, which is a
+    // different function.
+    //
+    // The GUI was therefore a strictly weaker client than the command line — it
+    // could start a command or pass it arguments, never both — which Article 1.2
+    // does not permit in either direction.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=100,100 110,100 110,110 100,110", Origin::Test).ok());
+
+    auto started = f.bus.begin_interactive("SEÇ mod=KUTU");
+    REQUIRE(started.ok());
+
+    auto& session = *started.value();
+    // `mod` came from the preset; the two corners are still to be clicked.
+    REQUIRE(session.waiting());
+    REQUIRE(session.supply(Value::point(core::Point2{-5'000, -5'000})).ok());
+    REQUIRE(session.supply(Value::point(core::Point2{20'000, 20'000})).ok());
+
+    REQUIRE(f.bus.finish(session).ok());
+
+    // The SAME answer the typed line gives, which is the whole claim: one parcel
+    // inside the box, the far one left alone.
+    CHECK(f.bus.selection().size() == 1);
+}
+
+// =============================================================================
+// BİRLEŞTİR — the generic merge (core.combine)
+// =============================================================================
+
+TEST_CASE("BİRLEŞTİR: komşu iki alan tek alan olur")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=DENEME", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=10,0 20,0 20,10 10,10", Origin::Test).ok());
+
+    REQUIRE(f.bus.execute_line("BİRLEŞTİR nesneler=1 2", Origin::Test).ok());
+    CHECK(f.doc.live_entity_count() == 1);
+}
+
+TEST_CASE("BİRLEŞTİR: değmeyen alanlar reddedilmez, parça sayısı söylenir")
+{
+    // THE LINE BETWEEN THIS AND TEVHİT. A tevhit of parcels that do not adjoin is
+    // not a tevhit and is refused. Two woodland patches either side of a valley
+    // merging into one layer feature with two parts is an ordinary, correct map
+    // operation — importing the cadastral rule here would forbid it.
+    std::string said;
+    Fixture f;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+
+    REQUIRE(f.bus.execute_line("KATMAN ad=DENEME", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=100,0 110,0 110,10 100,10", Origin::Test).ok());
+
+    REQUIRE(f.bus.execute_line("BİRLEŞTİR nesneler=1 2", Origin::Test).ok());
+
+    CHECK(f.doc.live_entity_count() == 2);
+    CHECK(said.find("değmiyor") != std::string::npos);
+}
+
+TEST_CASE("BİRLEŞTİR: uç uca değen çizgiler tek çizgi olur")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=DENEME", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=0,0 10,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=10,0 10,10", Origin::Test).ok());
+
+    REQUIRE(f.bus.execute_line("BİRLEŞTİR nesneler=1 2", Origin::Test).ok());
+    CHECK(f.doc.live_entity_count() == 1);
+}
+
+TEST_CASE("BİRLEŞTİR: sırası karışık verilen çizgiler de zincirlenir")
+{
+    // The walk grows BOTH ends. Growing only the tail — which is what ALANAÇEVİR
+    // does, correctly, because a ring closes whichever way it is walked — would
+    // refuse this selection for an ordering that is not the user's fault.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=DENEME", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=10,0 20,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=0,0 10,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=20,0 30,0", Origin::Test).ok());
+
+    REQUIRE(f.bus.execute_line("BİRLEŞTİR nesneler=1 2 3", Origin::Test).ok());
+    CHECK(f.doc.live_entity_count() == 1);
+}
+
+TEST_CASE("BİRLEŞTİR: alanla çizgi karışık verilirse adıyla reddeder")
+{
+    std::string said;
+    Fixture f;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+
+    REQUIRE(f.bus.execute_line("KATMAN ad=DENEME", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=20,0 30,0", Origin::Test).ok());
+
+    REQUIRE(f.bus.execute_line("BİRLEŞTİR nesneler=1 2", Origin::Test).ok());
+
+    CHECK(f.doc.live_entity_count() == 2); // nothing happened
+    CHECK(said.find("hem alan hem çizgi") != std::string::npos);
+}
+
+TEST_CASE("BİRLEŞTİR: tek nesneyle çalışmaz")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=DENEME", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+
+    REQUIRE(f.bus.execute_line("BİRLEŞTİR nesneler=1", Origin::Test).ok());
+    CHECK(f.doc.live_entity_count() == 1);
+}
+
+TEST_CASE("etkileşimli başlatma çıplak bir ad ile eskisi gibi davranır")
+{
+    // The compatibility half: every existing caller passes a bare name and must
+    // keep suspending on the first parameter rather than gaining a preset.
+    Fixture f;
+
+    auto started = f.bus.begin_interactive("ÇİZGİ");
+    REQUIRE(started.ok());
+    CHECK(started.value()->waiting());
+    started.value()->cancel();
+    CHECK(f.bus.finish(*started.value()).ok());
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+}
+
 // -----------------------------------------------------------------------------
 // ADIM — the step lock (core.yakalama.adim)
 // -----------------------------------------------------------------------------
@@ -2736,7 +2870,7 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // command that vanished bumps it down by accident, and that is the case worth
     // catching.
     Fixture f;
-    CHECK_EQ(f.reg.size(), std::size_t{57});
+    CHECK_EQ(f.reg.size(), std::size_t{58}); // 57 + BİRLEŞTİR (core.combine)
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

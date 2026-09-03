@@ -381,15 +381,30 @@ core::Result<DispatchResult> Bus::execute_line(std::string_view line, Origin ori
     return dispatch(Invocation{spec->id, std::move(args.value()), origin});
 }
 
-core::Result<std::unique_ptr<Session>> Bus::begin_interactive(std::string_view name)
+core::Result<std::unique_ptr<Session>> Bus::begin_interactive(std::string_view line)
 {
-    const CommandSpec* spec = reg_.resolve(name);
+    // THE SAME PARSER THE TYPED LINE GOES THROUGH (CLAUDE.md 5.11). A bare name
+    // parses to itself with no tokens, so every existing caller is unchanged; a
+    // button that needs to say `SEÇ mod=KUTU` now can, and it means there exactly
+    // what it means typed. Resolving the whole string as a name — which is what
+    // this did — could only ever start a command that took no arguments, so a
+    // GUI button was a strictly weaker client than the command line. Article 1.2
+    // does not allow that ranking to exist in either direction.
+    auto parsed = parse_line(line);
+    if (!parsed) return parsed.error();
+
+    const CommandSpec* spec = reg_.resolve(parsed.value().command);
     if (!spec)
-        return core::err(ErrorCode::NotFound, "Bilinmeyen komut: '" + std::string(name) + "'");
+        return core::err(ErrorCode::NotFound, "Bilinmeyen komut: '" + parsed.value().command +
+                                                  "'. YARDIM yazarak komut listesini görün.");
+
+    auto args = bind_tokens(*spec, parsed.value().tokens);
+    if (!args) return args.error();
 
     auto tx = std::make_unique<Transaction>(doc_, spec->summary.empty() ? spec->id : spec->summary);
     auto session = std::make_unique<Session>(
-        *this, *spec, std::make_unique<InteractiveInputSource>(), std::move(tx));
+        *this, *spec, std::make_unique<InteractiveInputSource>(std::move(args.value())),
+        std::move(tx));
     session->start();
     return session;
 }
@@ -441,10 +456,26 @@ core::Result<DispatchResult> Bus::finish(Session& session)
 
     // Post-run validation over the values the command actually resolved. This is
     // what catches a bad point that the AI or a script produced mid-run (§2.6).
-    ValidationRequest req{spec, session.resolved(), session.input().origin(), doc_};
-    if (auto st = validator_.run(req); !st) {
-        session.transaction().rollback(); // no partial application, ever (§2.5)
-        return st.error();
+    //
+    // A BODY THAT RESOLVED NOTHING AND WROTE NOTHING DECLINED; it did not fail
+    // validation. `BÖL` with two objects selected says "Bir seferde tek çizgi
+    // bölünür" and returns before it ever asks for the split point — and the check
+    // below then reported "zorunlu 'nokta' parametresi eksik" immediately after
+    // the sentence that had just explained the problem in the user's own language.
+    // Two messages for one refusal, the second one addressed to a programmer.
+    //
+    // This is not a loosening: §2.6 says this pass validates THE VALUES THE
+    // COMMAND RESOLVED, and with none resolved there is nothing here to check.
+    // Everything else — the journal entry, the observers, the result — is
+    // unchanged, so a read-only command that reports and resolves nothing still
+    // appears in the record exactly as before.
+    const bool declined = ops == 0 && session.resolved().size() == 0;
+    if (!declined) {
+        ValidationRequest req{spec, session.resolved(), session.input().origin(), doc_};
+        if (auto st = validator_.run(req); !st) {
+            session.transaction().rollback(); // no partial application, ever (§2.5)
+            return st.error();
+        }
     }
 
     result.ops = session.owns_transaction() ? ops : 0;

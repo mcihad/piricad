@@ -126,19 +126,58 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
 
     // A running interactive command gets the typed value first, unless the typed
     // text names a transparent command such as ZOOM (kentoscad.md §3).
+    //
+    // EVERY KIND OF ANSWER, not only a coordinate. This used to intercept a typed
+    // point and nothing else, so a command waiting for a NUMBER could not be
+    // answered at all from the command line: OFSET armed, printed "Ofset mesafesi
+    // (metre)", and a user who typed `5` got "Bilinmeyen komut: '5'" because the
+    // line fell through to `execute_line`. The distance had no other road in —
+    // there is no on-canvas box for a number the way the text command has one —
+    // so the tool could be started and never finished.
+    //
+    // The prompt already says what would satisfy it (`Prompt::kind`), so the
+    // answer is converted to that and handed over. Nothing about which client is
+    // asking enters into it (Article 1.2).
     if (session_ && session_->waiting()) {
         const command::CommandSpec* spec = registry_.resolve(trimmed.toStdString());
         const bool transparent = spec && has_flag(spec->flags, command::Flags::Transparent);
         if (!transparent) {
+            const command::Prompt& asking = session_->prompt();
+
             auto parsed = command::parse_line(trimmed.toStdString());
             if (parsed && !parsed.value().tokens.empty() &&
                 command::is_coordinate(parsed.value().tokens.front())) {
-                auto pt = command::resolve_point(parsed.value().tokens.front(),
-                                                 session_->prompt().rubber_origin);
+                auto pt =
+                    command::resolve_point(parsed.value().tokens.front(), asking.rubber_origin);
                 if (pt) {
                     supplyPoint(pt.value());
                     return command::DispatchResult{};
                 }
+            }
+
+            switch (asking.kind) {
+            case command::ParamKind::Number:
+            case command::ParamKind::Integer: {
+                // The Turkish decimal comma is what a Turkish keyboard produces
+                // and what every other number in this program is written with.
+                bool ok          = false;
+                QString number   = trimmed;
+                const double val = number.replace(QLatin1Char(','), QLatin1Char('.')).toDouble(&ok);
+                if (ok) {
+                    supplyNumber(val);
+                    return command::DispatchResult{};
+                }
+                break;
+            }
+            case command::ParamKind::Text:
+            case command::ParamKind::Bool:
+                // A keyword or a caption. Refused as a command name first — above —
+                // so `ZOOM` still zooms rather than becoming somebody's label.
+                supplyText(trimmed);
+                return command::DispatchResult{};
+            case command::ParamKind::Point:
+            case command::ParamKind::PointList:
+            case command::ParamKind::Selection: break;
             }
         }
     }
@@ -179,27 +218,43 @@ void Controller::refreshSelection()
     selection_revision_ = selection.revision();
 }
 
-void Controller::runCommand(const QString& name)
+void Controller::runCommand(const QString& line)
 {
-    const command::CommandSpec* spec = registry_.resolve(name.toStdString());
+    // A BUTTON MAY CARRY A WHOLE LINE, not just a name — `SEÇ mod=KUTU` is one
+    // tool and `SEÇ` is another. Resolving the whole string as a name, which is
+    // what this did, made any such button a no-op: the registry lookup is exact,
+    // so "SEÇ mod=KUTU" was simply an unknown command. The command word is parsed
+    // out with the one parser (CLAUDE.md 5.11) and the rest travels with it.
+    auto parsed = command::parse_line(line.toStdString());
+    if (!parsed) {
+        emit echoed(tr("Hata: %1").arg(QString::fromStdString(parsed.error().message)));
+        return;
+    }
+
+    const command::CommandSpec* spec = registry_.resolve(parsed.value().command);
     if (!spec) {
-        emit echoed(tr("Bilinmeyen komut: %1").arg(name));
+        emit echoed(tr("Bilinmeyen komut: %1").arg(QString::fromStdString(parsed.value().command)));
         return;
     }
 
     // Interactive commands started from a button behave exactly as if typed.
     if (has_flag(spec->flags, command::Flags::Interactive) && !spec->params.empty()) {
-        beginInteractive(name);
+        beginInteractive(line);
         return;
     }
-    runLine(name, command::Origin::Gui);
+    runLine(line, command::Origin::Gui);
 }
 
-void Controller::beginInteractive(const QString& name)
+void Controller::supplyNumber(double value)
+{
+    supplyValue(command::Value::number(value));
+}
+
+void Controller::beginInteractive(const QString& line)
 {
     cancelInteractive();
 
-    auto started = bus_.begin_interactive(name.toStdString());
+    auto started = bus_.begin_interactive(line.toStdString());
     if (!started) {
         emit echoed(tr("Hata: %1").arg(QString::fromStdString(started.error().message)));
         return;

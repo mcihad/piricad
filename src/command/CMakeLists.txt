@@ -30,6 +30,7 @@ add_library(kentos_command STATIC
     src/commands/assign.cpp
     src/commands/attribute.cpp
     src/commands/circle.cpp
+    src/commands/combine.cpp
     src/commands/line.cpp
     src/commands/text.cpp
     src/commands/measure.cpp

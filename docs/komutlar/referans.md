@@ -25,13 +25,14 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.move`](move.md) | `TAŞI`, `TASI`, `MOVE`, `TŞ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki nokta arasındaki kadar taşır. |
 | [`core.copy`](copy.md) | `KOPYALA`, `COPY`, `KP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerin kopyasını iki nokta arasındaki kadar öteye koyar. |
 | [`core.array`](array.md) | `DİZİ`, `DIZI`, `ARRAY`, `DZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır. |
+| [`core.combine`](combine.md) | `BİRLEŞTİR`, `BIRLESTIR`, `COMBINE`, `BRL` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar. |
 | [`core.split`](split.md) | `BÖL`, `BOL`, `SPLIT`, `BL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizgiyi verilen noktadan ikiye böler. |
 | [`core.trim`](trim.md) | `BUDA`, `TRIM`, `BD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizgiyi kestiği sınır çizgisine kadar budar. |
 | [`core.extend`](extend.md) | `UZAT`, `EXTEND`, `UZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizgiyi sınır çizgisine ulaşana kadar uzatır. |
 | [`core.chamfer`](chamfer.md) | `PAH`, `CHAMFER`, `PH` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi düz bir kenarla keser (pah kırar). |
 | [`core.fillet`](fillet.md) | `YUVARLA`, `FILLET`, `YV` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi verilen yarıçapta yay ile yuvarlatır. |
 | [`core.set_layer`](set_layer.md) | `KATMANAT`, `KATMANATA`, `SETLAYER`, `KA` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri başka bir katmana taşır. |
-| [`core.match_style`](match_style.md) | `STİLKOPYALA`, `STILKOPYALA`, `MATCHPROP`, `SK` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Bir nesnenin stilini seçilen nesnelere uygular. |
+| [`core.match_style`](match_style.md) | `STİLKOPYALA`, `STILKOPYALA`, `MATCHPROP`, `SK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesnenin stilini seçilen nesnelere uygular. |
 | [`core.rotate`](rotate.md) | `DÖNDÜR`, `DONDUR`, `ROTATE`, `DÖN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkez etrafında döndürür. |
 | [`core.scale`](scale.md) | `ÖLÇEKLE`, `OLCEKLE`, `SCALE`, `ÖLÇEK`, `OLCEK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkeze göre büyütür ya da küçültür. |
 | [`core.mirror`](mirror.md) | `AYNALA`, `MIRROR`, `AYN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
@@ -245,13 +246,23 @@ Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır.
 
 Ayrıntılı kullanım: [DİZİ](array.md)
 
+### `core.combine` — BİRLEŞTİR
+
+Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim |
+
+Ayrıntılı kullanım: [BİRLEŞTİR](combine.md)
+
 ### `core.split` — BÖL
 
 Bir çizgiyi verilen noktadan ikiye böler.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `nesne` | selection | 1 | Bölünecek çizginin kimliği |
+| `nesne` | selection | isteğe bağlı | Bölünecek çizginin kimliği; yoksa etkin seçim |
 | `nokta` | point | 1 | Bölme noktası |
 
 Ayrıntılı kullanım: [BÖL](split.md)
@@ -262,8 +273,8 @@ Bir çizgiyi kestiği sınır çizgisine kadar budar.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `nesne` | selection | 1 | Budanacak çizginin kimliği |
-| `sinir` | selection | 1 | Sınır çizgisinin kimliği |
+| `nesne` | selection | isteğe bağlı | Budanacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan |
+| `sinir` | selection | isteğe bağlı | Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri |
 | `nokta` | point | 1 | Atılacak parçanın üzerindeki bir nokta |
 
 Ayrıntılı kullanım: [BUDA](trim.md)
@@ -274,8 +285,8 @@ Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `nesne` | selection | 1 | Uzatılacak çizginin kimliği |
-| `sinir` | selection | 1 | Sınır çizgisinin kimliği |
+| `nesne` | selection | isteğe bağlı | Uzatılacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan |
+| `sinir` | selection | isteğe bağlı | Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri |
 | `nokta` | point | 1 | Uzatılacak ucun yakınında bir nokta |
 
 Ayrıntılı kullanım: [UZAT](extend.md)
@@ -321,8 +332,9 @@ Bir nesnenin stilini seçilen nesnelere uygular.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `kaynak` | selection | 1 | Stili kopyalanacak nesnenin kimliği |
+| `kaynak` | selection | isteğe bağlı | Stili kopyalanacak nesnenin kimliği; yoksa tıklanan nesne |
 | `nesneler` | selection | en az 0 | Stili alacak nesnelerin kimlikleri; yoksa etkin seçim |
+| `nokta` | point | isteğe bağlı | Kaynak nesnenin üzerinde bir nokta; yalnız kaynak verilmediğinde |
 
 Ayrıntılı kullanım: [STİLKOPYALA](match_style.md)
 
@@ -1330,6 +1342,32 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "undo": "single_transaction"
     },
     {
+      "id": "core.combine",
+      "names": [
+        "BİRLEŞTİR",
+        "BIRLESTIR",
+        "COMBINE",
+        "BRL"
+      ],
+      "category": "Düzenleme",
+      "summary": "Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar.",
+      "params": [
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim"
+        }
+      ],
+      "flags": [
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
       "id": "core.split",
       "names": [
         "BÖL",
@@ -1343,10 +1381,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         {
           "name": "nesne",
           "type": "selection",
-          "min": 1,
+          "min": 0,
           "max": 1,
-          "required": true,
-          "help": "Bölünecek çizginin kimliği"
+          "required": false,
+          "help": "Bölünecek çizginin kimliği; yoksa etkin seçim"
         },
         {
           "name": "nokta",
@@ -1377,18 +1415,18 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         {
           "name": "nesne",
           "type": "selection",
-          "min": 1,
+          "min": 0,
           "max": 1,
-          "required": true,
-          "help": "Budanacak çizginin kimliği"
+          "required": false,
+          "help": "Budanacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan"
         },
         {
           "name": "sinir",
           "type": "selection",
-          "min": 1,
+          "min": 0,
           "max": 1,
-          "required": true,
-          "help": "Sınır çizgisinin kimliği"
+          "required": false,
+          "help": "Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri"
         },
         {
           "name": "nokta",
@@ -1419,18 +1457,18 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         {
           "name": "nesne",
           "type": "selection",
-          "min": 1,
+          "min": 0,
           "max": 1,
-          "required": true,
-          "help": "Uzatılacak çizginin kimliği"
+          "required": false,
+          "help": "Uzatılacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan"
         },
         {
           "name": "sinir",
           "type": "selection",
-          "min": 1,
+          "min": 0,
           "max": 1,
-          "required": true,
-          "help": "Sınır çizgisinin kimliği"
+          "required": false,
+          "help": "Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri"
         },
         {
           "name": "nokta",
@@ -1581,10 +1619,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         {
           "name": "kaynak",
           "type": "selection",
-          "min": 1,
+          "min": 0,
           "max": 1,
-          "required": true,
-          "help": "Stili kopyalanacak nesnenin kimliği"
+          "required": false,
+          "help": "Stili kopyalanacak nesnenin kimliği; yoksa tıklanan nesne"
         },
         {
           "name": "nesneler",
@@ -1593,9 +1631,18 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "max": -1,
           "required": false,
           "help": "Stili alacak nesnelerin kimlikleri; yoksa etkin seçim"
+        },
+        {
+          "name": "nokta",
+          "type": "point",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Kaynak nesnenin üzerinde bir nokta; yalnız kaynak verilmediğinde"
         }
       ],
       "flags": [
+        "interactive",
         "scriptable",
         "ai_accessible"
       ],

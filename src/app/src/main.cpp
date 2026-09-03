@@ -385,6 +385,15 @@ int main(int argc, char** argv)
     // before the body ran, and the only trace was a line in the transcript. Every
     // unit test still passed, and grips could be grabbed and dragged with nothing
     // whatsoever happening on release.
+    // Presses every button on the tool column and prints what came back. Same
+    // category as KENTOS_EDIT_PROBE below: developer tooling, not a feature.
+    if (qEnvironmentVariableIsSet("KENTOS_TOOL_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            window.probeToolBox();
+            QApplication::exit(0);
+        });
+    }
+
     if (qEnvironmentVariableIsSet("KENTOS_EDIT_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             auto* canvas = window.canvas();

@@ -49,6 +49,7 @@ Tek tek komutlar:
 | `AYNALA` | [Nesne aynalama](komutlar/mirror.md) |
 | `DİZİ` | [Nesne çoğaltma dizisi](komutlar/array.md) |
 | `BÖL` | [Çizgiyi ikiye bölme](komutlar/split.md) |
+| `BİRLEŞTİR` | [Alan ve çizgi birleştirme](komutlar/combine.md) |
 | `BUDA` | [Çizgiyi sınıra budama](komutlar/trim.md) |
 | `UZAT` | [Çizgiyi sınıra uzatma](komutlar/extend.md) |
 | `PAH` | [Köşe pahı kırma](komutlar/chamfer.md) |

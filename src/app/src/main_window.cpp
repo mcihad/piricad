@@ -25,6 +25,8 @@
 #include "kentos_cad/core/settings.hpp"
 
 #include <QAction>
+#include <QToolButton>
+
 #include <QActionGroup>
 #include <QApplication>
 #include <QComboBox>
@@ -49,6 +51,7 @@
 #include <QStatusBar>
 #include <QToolBar>
 #include <QVBoxLayout>
+#include <cstdio>
 
 namespace kentos::app {
 namespace {
@@ -542,7 +545,7 @@ void MainWindow::buildActions()
     // SEÇ could take a box as arguments and could not ask for one.
     actSelectArea_ = new QAction(tr("Alan Seç"), this);
     actSelectArea_->setCheckable(true);
-    actSelectArea_->setToolTip(tr("SEÇ PENCERE — iki köşe tıklayın; soldan sağa içinde "
+    actSelectArea_->setToolTip(tr("SEÇ KUTU — iki köşe tıklayın; soldan sağa içinde "
                                   "kalanları, sağdan sola değdiklerini seçer"));
     actSelectArea_->setData(static_cast<int>(Glyph::SelectArea));
     actSelectArea_->setProperty(kToolCommand, QStringLiteral("SEÇ"));
@@ -552,13 +555,33 @@ void MainWindow::buildActions()
         // window and crossing, which is the muscle memory every CAD user has.
         controller_->beginInteractive(QStringLiteral("SEÇ mod=KUTU"));
     });
-    actTrim_  = modifyTool(Glyph::Trim, tr("Buda"), QStringLiteral("BUDA"),
-                           tr("BUDA — çizgiyi kestiği sınıra kadar kısaltır  ·  kısaltma: BD"));
-    actUnion_ = modifyTool(Glyph::Union, tr("Birleştir — tevhit"), QStringLiteral("TEVHİT"),
-                           tr("TEVHİT — komşu parselleri tek parselde birleştirir"));
+
+    // IN THE EXCLUSIVE GROUP, like every other modal tool. It is checkable and
+    // nothing ever unchecked it, so the button latched lit for the rest of the
+    // session and two tools showed armed at once. `syncToolSelection` resolves it
+    // through the `kToolCommand` property set above, so the group is all it needed.
+    drawingTools_->addAction(actSelectArea_);
+    actTrim_ = modifyTool(Glyph::Trim, tr("Buda"), QStringLiteral("BUDA"),
+                          tr("BUDA — çizgiyi kestiği sınıra kadar kısaltır  ·  kısaltma: BD"));
+    // THE GENERIC PAIR AND THE CADASTRAL PAIR ARE DIFFERENT TOOLS, and the tool
+    // column carries the generic one. `BİRLEŞTİR`/`BÖL` are geometry: they work on
+    // any area or line and say what came out. `TEVHİT`/`İFRAZ` are cadastral acts
+    // with a regulation behind them — a tevhit is only valid between adjoining
+    // parcels and always yields exactly one — so they live in their own Kadastro
+    // menu rather than sitting on the column looking like the everyday tools.
+    // Merging two woodland patches on opposite sides of a valley is a correct map
+    // operation and a refused tevhit; one button cannot honestly be both.
+    actCombine_ = modifyTool(Glyph::Union, tr("Birleştir"), QStringLiteral("BİRLEŞTİR"),
+                             tr("BİRLEŞTİR — seçili alanları tek alanda birleştirir, uç uca "
+                                "değen çizgileri tek çizgi yapar  ·  kısaltma: BRL"));
+    actUnion_   = modifyTool(Glyph::Union, tr("Tevhit"), QStringLiteral("TEVHİT"),
+                             tr("TEVHİT — komşu parselleri tek parselde birleştirir (kadastro)"));
     actParcelSplit_ =
-        modifyTool(Glyph::ParcelSplit, tr("Parsel Böl — ifraz"), QStringLiteral("İFRAZ"),
-                   tr("İFRAZ — bir parseli düz bir ayırma çizgisiyle ikiye böler"));
+        modifyTool(Glyph::ParcelSplit, tr("İfraz"), QStringLiteral("İFRAZ"),
+                   tr("İFRAZ — bir parseli düz bir ayırma çizgisiyle ikiye böler (kadastro)"));
+    actAreaSplit_ =
+        modifyTool(Glyph::ParcelSplit, tr("Alana Göre İfraz"), QStringLiteral("ALANİFRAZ"),
+                   tr("ALANİFRAZ — parselden istenen yüzölçümünde parça ayırır (kadastro)"));
     actMeasureArea_ = commandAction(Glyph::MeasureArea, tr("Alan Ölç"), QStringLiteral("ALANÖLÇ"),
                                     tr("ALANÖLÇ — seçili nesnelerin alanını ve çevresini yazar"));
 
@@ -598,8 +621,8 @@ void MainWindow::buildActions()
                    tr("DİZİ — seçili nesneleri satır/sütun ya da merkez etrafında çoğaltır"));
     actExtend_   = modifyTool(Glyph::Trim, tr("Uzat"), QStringLiteral("UZAT"),
                               tr("UZAT — çizgiyi sınır çizgisine kadar uzatır"));
-    actSplit_    = modifyTool(Glyph::Trim, tr("Böl"), QStringLiteral("BÖL"),
-                              tr("BÖL — çizgiyi verilen noktadan ikiye böler"));
+    actSplit_    = modifyTool(Glyph::Split, tr("Böl"), QStringLiteral("BÖL"),
+                              tr("BÖL — çizgiyi verilen noktadan ikiye böler  ·  kısaltma: BL"));
     actChamfer_  = modifyTool(Glyph::Trim, tr("Pah"), QStringLiteral("PAH"),
                               tr("PAH — köşeyi düz bir kenarla keser"));
     actFillet_   = modifyTool(Glyph::Trim, tr("Yuvarla"), QStringLiteral("YUVARLA"),
@@ -636,14 +659,14 @@ void MainWindow::buildActions()
 
     actPan_ = new QAction(tr("Kaydır"), this);
     actPan_->setCheckable(true);
-    actPan_->setToolTip(tr("KAYDIR — bir noktayı tutup başka bir yere taşır; ölçek değişmez"));
+    actPan_->setToolTip(tr("KAYDIR — bir noktayı tutup başka bir yere taşır; ölçek değişmez  ·  "
+                           "orta fare tuşu sürükleme her zaman çalışır"));
     actPan_->setData(static_cast<int>(Glyph::Pan));
     actPan_->setProperty(kToolCommand, QStringLiteral("KAYDIR"));
     actPan_->setObjectName(QStringLiteral("toolAction.KAYDIR"));
     connect(actPan_, &QAction::triggered, this,
             [this] { controller_->runCommand(QStringLiteral("KAYDIR")); });
     drawingTools_->addAction(actPan_);
-    actPan_->setToolTip(tr("Kaydır — orta fare tuşu basılı sürükleme her zaman çalışır"));
 
     // ---- input aids ----
     //
@@ -909,6 +932,7 @@ void MainWindow::buildMenus()
     modify->addAction(actTrim_);
     modify->addAction(actExtend_);
     modify->addAction(actSplit_);
+    modify->addAction(actCombine_);
     modify->addAction(actChamfer_);
     modify->addAction(actFillet_);
     modify->addSeparator();
@@ -916,6 +940,16 @@ void MainWindow::buildMenus()
     modify->addAction(actStyleCopy_);
     modify->addSeparator();
     modify->addAction(actOffset_);
+
+    // A MENU OF THEIR OWN, because they are a different kind of thing. Each of
+    // these is an act with a regulation behind it, and grouping them says so; the
+    // everyday geometry that resembles them is one menu to the left.
+    auto* cadastre = bar->addMenu(tr("K&adastro"));
+    cadastre->addAction(actParcelSplit_);
+    cadastre->addAction(actAreaSplit_);
+    cadastre->addAction(actUnion_);
+    cadastre->addSeparator();
+    cadastre->addAction(actTopology_);
 
     auto* map = bar->addMenu(tr("&Harita"));
     map->addAction(actIdentify_);
@@ -978,9 +1012,14 @@ void MainWindow::buildToolBox()
     toolBox_->addSeparator();
 
     // editing
+    //
+    // THE GENERIC PAIR, not the cadastral one. `TEVHİT` and `İFRAZ` used to sit
+    // here, which put two regulated cadastral acts among the everyday edit tools
+    // and left the ordinary "merge these two shapes" with no button at all. They
+    // are in the Kadastro menu now; these two are geometry and work on anything.
     toolBox_->addTool(actTrim_);
-    toolBox_->addTool(actUnion_);
-    toolBox_->addTool(actParcelSplit_);
+    toolBox_->addTool(actCombine_);
+    toolBox_->addTool(actSplit_);
     toolBox_->addTool(actMove_);
     toolBox_->addTool(actOffset_);
     toolBox_->addSeparator();
@@ -1833,6 +1872,137 @@ void MainWindow::showAbout()
                           "<b>Komut sayısı:</b> %3</p>")
                            .arg(QStringLiteral(KENTOS_VERSION), canvas_->backendName())
                            .arg(controller_->registry().size()));
+}
+
+// =============================================================================
+// KENTOS_TOOL_PROBE — the tool column, pressed
+// =============================================================================
+
+void MainWindow::probeToolBox()
+{
+    // A scene with something of every shape the column's tools act on: one face,
+    // two lines that cross, and one that touches neither.
+    runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+    runScriptLine(QStringLiteral("ALAN 0,0 40,0 40,30 0,30"));
+    runScriptLine(QStringLiteral("ÇİZGİ 60,0 60,40"));
+    runScriptLine(QStringLiteral("ÇİZGİ 50,20 80,20"));
+    runScriptLine(QStringLiteral("ÇİZGİ 100,0 120,10"));
+
+    // THE TRANSCRIPT, not the `echoed` signal. Several buttons answer through
+    // `onEcho` directly — "Önce nesne seçin" is a refusal the shell writes, not
+    // one the bus does — and a probe that watched only the bus would call those
+    // buttons silent. Everything a user can read ends up here.
+    QString prompt;
+    bool armed          = false;
+    bool asked          = false;
+    const auto onPrompt = connect(controller_, &Controller::promptChanged, this,
+                                  [&prompt, &armed, &asked](const QString& p) {
+                                      // An EMPTY prompt is the command letting go.
+                                      // Kept, not ignored, so the feed below stops
+                                      // the moment the tool is finished instead of
+                                      // sending its next answer to the bus as a
+                                      // command of its own.
+                                      armed = !p.isEmpty();
+                                      if (armed) {
+                                          prompt = p;
+                                          asked  = true;
+                                      }
+                                  });
+
+    // Every button on the column, found rather than listed: a tool added and
+    // forgotten here would be a tool nobody presses.
+    const QList<QToolButton*> buttons = toolBox_->findChildren<QToolButton*>();
+
+    int ok_ran   = 0;
+    int ok_armed = 0;
+    int dead     = 0;
+
+    for (QToolButton* button : buttons) {
+        QAction* action = button->defaultAction();
+        if (action == nullptr) continue;
+
+        const QString name = action->text();
+        QString cmd        = action->property(kToolCommand).toString();
+        if (cmd.isEmpty()) cmd = action->objectName().section(QLatin1Char('.'), 1);
+
+        // Reset before each, so one tool's leftovers cannot stand in for the
+        // next one's answer.
+        controller_->cancelInteractive();
+        runScriptLine(QStringLiteral("SEÇ mod=NESNE nesneler=2 nesneler=3"));
+        QCoreApplication::processEvents();
+
+        const int held = static_cast<int>(controller_->bus().selection().size());
+
+        const int mark = transcript_->toPlainText().size();
+        prompt.clear();
+        armed = false;
+        asked = false;
+
+        action->trigger();
+        QCoreApplication::processEvents();
+
+        // A modal tool is fed three points, so it either finishes or says what it
+        // still wants: an armed tool that cannot finish is as dead as one that
+        // never started.
+        if (asked) {
+            // A TEXT PROMPT IS ANSWERED WITH TEXT. Feeding a point into `yazi`
+            // is the probe being wrong, not METİN — and the resulting type error
+            // would otherwise be reported as a broken tool.
+            for (int step = 0; step < 3 && armed; ++step) {
+                static const core::Point2 clicks[3] = {
+                    {5'000, 5'000}, {62'000, 20'000}, {75'000, 25'000}};
+                // THROUGH THE ROADS A USER ACTUALLY HAS. A point arrives from the
+                // canvas; a number or a caption is typed into the command line.
+                // Calling `supplyText` directly would prove the session accepts a
+                // value and prove nothing about whether the user can give it one —
+                // which is exactly how OFSET came to have no answerable prompt.
+                if (prompt.contains(QStringLiteral("Yazılacak")))
+                    runScriptLine(QStringLiteral("deneme"));
+                else if (prompt.contains(QStringLiteral("mesafe")))
+                    runScriptLine(QStringLiteral("5"));
+                else
+                    controller_->supplyPoint(clicks[step]);
+                QCoreApplication::processEvents();
+            }
+            controller_->cancelInteractive();
+            QCoreApplication::processEvents();
+        }
+
+        QString said = transcript_->toPlainText().mid(mark).trimmed();
+        said.replace(QLatin1Char('\n'), QLatin1Char(' '));
+
+        QString verdict;
+        const bool refused = said.startsWith(QStringLiteral("Hata:")) ||
+                             said.startsWith(QStringLiteral("Bilinmeyen komut"));
+        if (refused) {
+            ++dead;
+            verdict = QStringLiteral("KIRIK   ") + said;
+        } else if (asked) {
+            ++ok_armed;
+            verdict = QStringLiteral("SORDU   \"") + prompt + QLatin1Char('"');
+            verdict += said.isEmpty() ? QStringLiteral("  ->  tamamlandı, söyleyecek bir şeyi yok")
+                                      : QStringLiteral("  ->  ") + said;
+        } else if (said.isEmpty() && cmd.isEmpty()) {
+            // The idle arrow. It sends no command by design — its job is to
+            // disarm whatever is running — so saying nothing is the right answer.
+            ++ok_ran;
+            verdict = QStringLiteral("BOŞTA   çalışan komutu iptal eder (Esc)");
+        } else if (said.isEmpty()) {
+            ++dead;
+            verdict = QStringLiteral("SESSİZ  düğme ne sordu ne de bir şey söyledi");
+        } else {
+            ++ok_ran;
+            verdict = QStringLiteral("ÇALIŞTI ") + said;
+        }
+
+        (void)std::fprintf(stdout, "[araç] %-18s %-12s seçili=%d  %s\n", qPrintable(name),
+                           qPrintable(cmd), held, qPrintable(verdict.left(140)));
+    }
+
+    disconnect(onPrompt);
+
+    (void)std::fprintf(stdout, "[araç] ---- %d araç: %d çalıştı, %d girdi sordu, %d kırık\n",
+                       static_cast<int>(buttons.size()), ok_ran, ok_armed, dead);
 }
 
 } // namespace kentos::app

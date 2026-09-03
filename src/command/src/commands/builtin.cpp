@@ -26,6 +26,7 @@ namespace kentos::command {
     X(move)                                                                                        \
     X(copy_objects)                                                                                \
     X(array_objects)                                                                               \
+    X(combine)                                                                                     \
     X(split)                                                                                       \
     X(trim)                                                                                        \
     X(extend)                                                                                      \
