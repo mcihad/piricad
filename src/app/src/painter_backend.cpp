@@ -1011,19 +1011,31 @@ public:
     /// the objection CLAUDE.md 5.10 makes about lists.
     static void paint_ground(QPainter& painter, const render::Overlay& overlay)
     {
-        drawOverlay(painter, overlay, 0, overlay.beneath);
+        // BATCHES ONLY. The labels belong to the pass OVER the document, and this
+        // one goes under it — see `drawLabels`.
+        drawBatches(painter, overlay, 0, overlay.beneath);
     }
 
     static void paint_aids(QPainter& painter, const render::DrawList& list,
                            const render::Overlay& overlay, double cx, double cy)
     {
         drawTexts(painter, list, cx, cy);
-        drawOverlay(painter, overlay, overlay.beneath, overlay.batches.size());
+        drawBatches(painter, overlay, overlay.beneath, overlay.batches.size());
+        drawLabels(painter, overlay);
     }
 
 private:
-    /// Draws `[from, to)` of the overlay's batches.
-    static void drawOverlay(QPainter& painter, const render::Overlay& overlay, std::size_t from,
+    /// Draws `[from, to)` of the overlay's batches — and NOT its labels.
+    ///
+    /// The two used to be one function, and the label loop was not ranged: it drew
+    /// every label on every call. The function is called twice per frame, once
+    /// under the document and once over it, so every reading on the canvas was
+    /// painted TWICE — the ruler numbers, the scale bar, the north arrow's `K`,
+    /// the snap tip and the dynamic input's length and bearing. The lower copy
+    /// then had the drawing painted across it, so a measurement on a rubber band
+    /// came out as itself with a half-hidden second copy showing through from
+    /// behind. Reported as "the texts on the line are on top of each other".
+    static void drawBatches(QPainter& painter, const render::Overlay& overlay, std::size_t from,
                             std::size_t to)
     {
         for (std::size_t i = from; i < to && i < overlay.batches.size(); ++i) {
@@ -1058,6 +1070,23 @@ private:
             }
             painter.setBrush(Qt::NoBrush);
         }
+    }
+
+    /// The overlay's readings, ONCE, over the document.
+    static void drawLabels(QPainter& painter, const render::Overlay& overlay)
+    {
+        // SAVED AND RESTORED, so the loop cannot leave the painter carrying a font
+        // nobody after it asked for.
+        //
+        // That leak is what the doubled readings on the canvas actually were. The
+        // face below is read from the painter's CURRENT state, and this function
+        // used to run twice per frame; the second run therefore took whatever font
+        // the last label of the first run had set — mono, 9.5 px — as its "UI
+        // face". Every `px == 0` label was then drawn twice in two different
+        // faces, from the same origin, so the two copies started together and
+        // drifted apart to the right. On a rubber band's length-and-bearing
+        // reading it came out as `33.5521 mm 128.276.976 grad grad`.
+        painter.save();
 
         const QFont uiFace = painter.font();
         for (const auto& label : overlay.labels) {
@@ -1076,6 +1105,8 @@ private:
             painter.drawText(QPointF(static_cast<double>(label.x), static_cast<double>(label.y)),
                              QString::fromStdString(label.text));
         }
+
+        painter.restore();
     }
 };
 

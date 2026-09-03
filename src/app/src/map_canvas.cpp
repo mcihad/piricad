@@ -430,7 +430,7 @@ MapCanvas::Grip MapCanvas::gripAt(const QPointF& where) const
                 if (d2 < corner_best) {
                     corner_best = d2;
                     corner_hit  = Grip{e, number, false, core::Point2{xs[v], ys[v]},
-                                       core::Point2{xs[v], ys[v]}};
+                                      core::Point2{xs[v], ys[v]}};
                 }
 
                 // The edge LEAVING this corner. On an open ring the last vertex has
@@ -1085,8 +1085,28 @@ void MapCanvas::buildReadout()
     const std::string text = "S " + trimmed(static_cast<double>(at.x) / 1000.0, 3) + "   Y " +
                              trimmed(static_cast<double>(at.y) / 1000.0, 3);
 
-    overlay_.labels.push_back(render::OverlayLabel{
-        palette_.gridMajor.rgba(), 12.0f, static_cast<float>(height() - 4), 0.0f, true, text});
+    // ABOVE THE SCALE BAR, and clear of the canvas floor.
+    //
+    // It sat on the baseline `height() - 4`, which put it half outside the canvas
+    // — every descender was cut off — and directly under the scale bar's own three
+    // readings, which are drawn at `height() - 20` in the same corner. Two
+    // unrelated numbers a few pixels apart in one corner read as one garbled
+    // reading, which is what a user sees and reports.
+    //
+    // The bar's geometry is `buildScaleBar`'s and is restated here rather than
+    // shared, because the two are laid out against the same corner and a reader
+    // of either needs to see why the other is where it is. Aligned to the same
+    // left inset as the bar for the same reason.
+    constexpr float kBarTop    = 39.0f; ///< buildScaleBar: kFromFoot + kBarHeight
+    constexpr float kInset     = 16.0f; ///< buildScaleBar: from the canvas's left
+    constexpr float kClearance = 9.0f;  ///< above the bar, or above the floor
+
+    const auto band      = static_cast<float>(look_.ruler ? look_.ruler_px : 0);
+    const float foot     = static_cast<float>(height());
+    const float baseline = look_.scale_bar ? foot - kBarTop - kClearance : foot - kClearance;
+
+    overlay_.labels.push_back(
+        render::OverlayLabel{palette_.gridMajor.rgba(), band + kInset, baseline, 0.0f, true, text});
 }
 
 void MapCanvas::buildCrosshair()
