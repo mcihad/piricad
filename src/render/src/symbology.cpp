@@ -43,7 +43,7 @@ void place_along_run(const float* xs, const float* ys, std::uint32_t count,
                      core::MarkerPlacement placement, double interval, double phase,
                      std::vector<Stamp>& out)
 {
-    if (count < 2 || xs == nullptr || ys == nullptr) return;
+    if (count < 1 || xs == nullptr || ys == nullptr) return;
 
     const auto at = [&](std::uint32_t v) {
         return std::pair<double, double>{static_cast<double>(xs[v]), static_cast<double>(ys[v])};
@@ -63,6 +63,22 @@ void place_along_run(const float* xs, const float* ys, std::uint32_t count,
     };
 
     using core::MarkerPlacement;
+
+    // A LONE VERTEX IS A POINT, and it was getting nothing at all.
+    //
+    // `count < 2` used to leave here empty-handed, which is right for anything
+    // measured ALONG a run — there is no length and no direction to space marks
+    // out over. But a NOKTA outlines to exactly one vertex (`point_outline_fn`),
+    // and a marker on it is not a mark along a line: it IS the object. Refusing
+    // it meant every surveyed point was invisible on the canvas whatever style
+    // it carried.
+    //
+    // Upright, because there is no direction to turn to and inventing one would
+    // rotate every röper by whatever the last segment happened to be.
+    if (count == 1) {
+        stamp(at(0), {1.0, 0.0});
+        return;
+    }
 
     if (placement == MarkerPlacement::Vertex) {
         // Upright at each vertex, not turned to the corner. A vertex marker says

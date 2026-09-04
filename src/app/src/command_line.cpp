@@ -83,7 +83,10 @@ void CommandLine::setPrompt(const QString& prompt)
 void CommandLine::submit()
 {
     const QString line = text().trimmed();
-    if (line.isEmpty()) return;
+    if (line.isEmpty()) {
+        emit accepted();
+        return;
+    }
 
     history_.removeAll(line);
     history_.append(line);

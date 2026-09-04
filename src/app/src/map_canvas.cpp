@@ -1546,7 +1546,12 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
     }
 
     if (event->button() == Qt::RightButton) {
-        controller_.cancelInteractive();
+        // A RIGHT CLICK ENDS THE PICKING, and cancels anything else. That split is
+        // the one every CAD trains: while a command is asking WHICH objects, the
+        // right button means "those ones, go"; at any other moment it means "stop".
+        // It also gives the gesture a home on the canvas, where the hand already
+        // is, instead of only on a key the command line was swallowing.
+        if (!controller_.supplyPickedObjects()) controller_.cancelInteractive();
         update();
     }
 }
@@ -1703,27 +1708,12 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
         return;
     }
 
-    // ENTER FINISHES THE PICKING. A command that asked which objects to act on
-    // has no other way to learn the user is done — clicks keep arriving and any
-    // one of them might be the last — so this is the gesture, and it is the one
-    // every CAD user's hands already make. Nothing else in the program binds
-    // Enter on the canvas, so it costs no existing behaviour.
+    // ENTER FINISHES THE PICKING — when the canvas is the one holding focus. It
+    // usually is not: focus starts on the command line and a tool button is
+    // `NoFocus`, so `CommandLine` sees the key first and `MainWindow` routes it to
+    // the same body. Both roads, one answer.
     if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
-        if (controller_.awaitingInput() &&
-            controller_.promptKind() == command::ParamKind::Selection) {
-            std::vector<std::int64_t> ids;
-            for (core::EntityKey k : controller_.bus().selection().keys())
-                ids.push_back(static_cast<std::int64_t>(core::raw(k)));
-
-            // NOTHING PICKED IS NOT AN ANSWER. Supplying an empty list would end
-            // the command with no objects, which reads as the tool being broken;
-            // saying so and staying armed lets the user carry on pointing.
-            if (ids.empty()) {
-                emit echoRequested(tr("Nesne seçilmedi. Nesneleri tıklayın, sonra Enter'a "
-                                      "basın; vazgeçmek için Esc."));
-                return;
-            }
-            controller_.supplyObjects(ids);
+        if (controller_.supplyPickedObjects()) {
             update();
             return;
         }

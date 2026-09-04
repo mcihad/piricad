@@ -371,7 +371,30 @@ void QgisBackend::drawPass(QgsRenderContext& rc, const render::DrawList& list, s
 
         line->startRender(rc);
         std::size_t offset = 0;
+
+        // A LONE VERTEX IS A POINT, and `renderPolyline` on a one-vertex polyline
+        // draws nothing at all — which is why a placed NOKTA left the canvas empty
+        // while its line neighbours drew. Same disc the built-in backend draws
+        // (`render::kDefaultPointSizeUm`), because a point must not change shape
+        // when the engine changes.
+        const double dot = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 5.0;
+
         for (std::uint32_t run : str.runs) {
+            if (run == 1) {
+                QPainter* p = rc.painter();
+                if (p != nullptr) {
+                    p->save();
+                    p->setRenderHint(QPainter::Antialiasing, true);
+                    p->setPen(Qt::NoPen);
+                    p->setBrush(QColor::fromRgba(str.rgba));
+                    p->drawEllipse(QPointF(cx + static_cast<double>(str.xs[offset]),
+                                           cy - static_cast<double>(str.ys[offset])),
+                                   dot * 0.5, dot * 0.5);
+                    p->restore();
+                }
+                offset += run;
+                continue;
+            }
             line->renderPolyline(run_of(str, offset, run, cx, cy), nullptr, rc);
             offset += run;
         }

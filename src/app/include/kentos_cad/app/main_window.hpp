@@ -110,6 +110,18 @@ public:
     /// `KENTOS_EDIT_PROBE`; nothing user-facing calls it.
     void probeToolBox();
 
+    /// Drives the six modify tools with REAL mouse and key events, the way a hand
+    /// does — `action->trigger()`, then presses on the canvas, then Enter sent to
+    /// whatever actually holds focus.
+    ///
+    /// `probeToolBox` above calls `supplyPoint`/`supplyObjects` directly, which
+    /// proves the session accepts a value and proves NOTHING about whether the
+    /// user can give it one. That gap is exactly where "Alan Seç" hid, and it is
+    /// where the next one will hide too.
+    ///
+    /// Developer tooling behind `KENTOS_HAND_PROBE`.
+    void probeToolsByHand();
+
 private slots:
     /// Bus observers. The shell SUBSCRIBES to the command bus and never reaches
     /// around it: a value on screen is there because a command put it there, so

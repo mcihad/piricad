@@ -37,6 +37,16 @@ public:
     void applyTheme(ThemeMode mode) override;
 
 signals:
+    /// Enter pressed with NOTHING typed.
+    ///
+    /// Every CAD reads that as "done / go ahead", and it is the gesture that ends
+    /// an open-ended step. It matters here because focus lives on this widget
+    /// almost all the time — a tool-column button is `NoFocus` — so a command
+    /// waiting for the user to finish pointing gets its Enter here and nowhere
+    /// else. Swallowing it, which is what `submit()` used to do, left every such
+    /// command armed forever.
+    void accepted();
+
     /// Emitted on Enter, with the raw line. The controller parses it — this
     /// widget never interprets a command, because the parser is shared and there
     /// is exactly one (5.11).

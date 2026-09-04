@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/render/scene.hpp"
+#include "kentos_cad/render/symbology.hpp"
 
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/spatial_index.hpp"
@@ -97,7 +98,7 @@ PassStyle pass_of(const core::SymbolLayer& sl, const core::ImageStore& images,
     // its ring reaches the polygon batch even though the layer places a glyph.
     ps.wants_stroke = core::draws_stroke(sl.type) || core::draws_marker(sl.type);
     ps.wants_fill   = core::draws_fill(sl.type) || sl.type == core::SymbolLayerType::CentroidFill ||
-                      sl.type == core::SymbolLayerType::RasterMarker;
+                    sl.type == core::SymbolLayerType::RasterMarker;
 
     // A fixed word needs neither the line nor the ring: it is placed from the
     // entity's own bounding box, which the cull test already has.
@@ -210,16 +211,23 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         building            = l;
         out.pass_first[key] = static_cast<std::uint32_t>(out.passes.size());
 
-        if (slot >= styles.size()) {
+        // A SIZE ON THE PLAIN PASS, so a lone vertex has something to draw with.
+        // The pass stays a SimpleLine and a polyline is unaffected — a stroke has
+        // no use for `size` — but a point, which outlines to one vertex and would
+        // otherwise draw nothing, gets the default disc (`kDefaultPointSizeUm`).
+        const auto plain = [](core::Appearance look) {
             core::SymbolLayer only;
-            only.look = layers[slot - styles.size()].appearance;
-            add_pass(only);
+            only.look = look;
+            only.size = core::Measure{kDefaultPointSizeUm, core::Unit::Paper};
+            return only;
+        };
+
+        if (slot >= styles.size()) {
+            add_pass(plain(layers[slot - styles.size()].appearance));
         } else {
             const core::Symbol& sym = styles.symbol_at(static_cast<core::StyleId>(slot));
             if (sym.layers.empty()) {
-                core::SymbolLayer only;
-                only.look = styles.entries()[slot];
-                add_pass(only);
+                add_pass(plain(styles.entries()[slot]));
             } else {
                 for (const core::SymbolLayer& sl : sym.layers)
                     add_pass(sl);
@@ -268,7 +276,14 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
     const auto emit_ring = [&](PolylineBatch& batch, std::uint32_t ring) {
         const auto xs = ring_xs(ring);
         const auto ys = ring_ys(ring);
-        if (xs.size() < 2) return;
+
+        // ONE VERTEX IS A POINT AND IT SURVIVES. This used to require two, which
+        // is the right rule for a stroke — a run of one has no segment to draw —
+        // and the wrong rule for the batch: a `NOKTA` outlines to exactly one
+        // vertex (`point_outline_fn`), so every surveyed point was thrown away
+        // here before any backend could decide what a point looks like. Every
+        // surveyed point was invisible on the canvas.
+        if (xs.empty()) return;
 
         const bool closed       = ring_closed(ring);
         const std::size_t first = batch.xs.size();
@@ -296,7 +311,7 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         if (closed && batch.xs.size() - first >= 3) push(0);
 
         const auto emitted = static_cast<std::uint32_t>(batch.xs.size() - first);
-        if (emitted < 2) {
+        if (emitted == 0) {
             batch.xs.resize(first);
             batch.ys.resize(first);
             return;

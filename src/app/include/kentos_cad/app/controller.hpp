@@ -76,6 +76,19 @@ public:
     /// two (Article 1.2).
     void supplyObjects(const std::vector<std::int64_t>& ids);
 
+    /// Hands the running command whatever is picked, if it is asking for objects.
+    ///
+    /// ONE BODY, because "I am done pointing" arrives from three places — Enter on
+    /// the canvas, Enter on the command line, and a right click — and Qt sends a
+    /// key to whatever holds focus, which after startup is the command line. A
+    /// canvas-only Enter therefore committed nothing at all: the tools stayed
+    /// armed forever, every further click just re-selected, and the six of them
+    /// read as dead.
+    ///
+    /// Returns true when the gesture belonged to a running object prompt, so the
+    /// caller knows whether to keep handling the key.
+    bool supplyPickedObjects();
+
     /// Answers the running command's prompt with a NUMBER — a distance, a scale,
     /// an angle. The command line reaches for this when `Prompt::kind` says a
     /// quantity would satisfy the prompt; without it OFSET could be started and

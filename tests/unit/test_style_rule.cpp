@@ -653,6 +653,41 @@ TEST_CASE("STİL: seçilen MPYY sembolü boş katmandan tuvale görselleriyle ul
     CHECK(canvas_has_raster);
 }
 
+TEST_CASE("bir NOKTA sahneye tek köşelik bir çizim olarak ulaşır")
+{
+    // THE REGRESSION. A point outlines to exactly one vertex — `point_outline_fn`
+    // deliberately emits no marker, because what a nirengi looks like is a
+    // regulated gösterim and belongs in /data. The scene builder then threw that
+    // vertex away: `emit_ring` required two, which is the right rule for a stroke
+    // and the wrong one for the batch. Every surveyed point was invisible on the
+    // canvas whatever style it carried, and the user placed one and saw nothing.
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("KATMAN ad=NIRENGI", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("NOKTA noktalar=0,0", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("NOKTA noktalar=10000,0", Origin::Test).ok());
+
+    render::ViewTransform view;
+    view.set_viewport(800, 600);
+    view.fit(rig.doc.extent());
+    render::DrawList draw;
+    render::build_scene(rig.doc, view, {}, draw);
+
+    int lone = 0;
+    for (const render::PolylineBatch& batch : draw.polylines)
+        for (std::uint32_t run : batch.runs)
+            if (run == 1) ++lone;
+
+    CHECK(lone == 2);
+
+    // And the pass carries a size, so a backend has something to draw the default
+    // disc WITH. Without it every point would come out at the fallback pixel size
+    // whatever the sheet resolution.
+    bool sized = false;
+    for (const render::PassStyle& pass : draw.passes)
+        if (pass.type == core::SymbolLayerType::SimpleLine && pass.size_px > 0.5f) sized = true;
+    CHECK(sized);
+}
+
 TEST_CASE("layer order decides what covers what, even when two layers share a style")
 {
     // The defect this pins: passes were keyed by STYLE alone, so two layers
@@ -775,7 +810,7 @@ TEST_CASE("STİL: katalog yolu verilen çağrı da üç istemcide aynı sonucu v
         const std::string text = R"({"ad":"Stil","komutlar":[{"cmd":"core.style","args":{
             "katman":"PARSEL","paket":")" +
                                  package.string() + R"(","olcek":1000}}]})";
-        auto r                 = runner.run_text(text);
+        auto r = runner.run_text(text);
         CHECK(r.ok());
     }
 

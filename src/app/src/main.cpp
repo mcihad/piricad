@@ -395,6 +395,13 @@ int main(int argc, char** argv)
         });
     }
 
+    if (qEnvironmentVariableIsSet("KENTOS_HAND_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            window.probeToolsByHand();
+            QApplication::exit(0);
+        });
+    }
+
     if (qEnvironmentVariableIsSet("KENTOS_EDIT_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             auto* canvas = window.canvas();
@@ -654,8 +661,7 @@ int main(int argc, char** argv)
                     action->trigger();
                     QCoreApplication::processEvents();
                 } else {
-                    (void)std::fprintf(stderr, "[kentos] araç bulunamadı: %s\n",
-                                       qPrintable(name));
+                    (void)std::fprintf(stderr, "[kentos] araç bulunamadı: %s\n", qPrintable(name));
                 }
             }
 

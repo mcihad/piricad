@@ -8,6 +8,8 @@
 
 #include "kentos_cad/command/parser.hpp"
 
+#include "kentos_cad/core/identity.hpp"
+
 #include <QDir>
 #include <QStandardPaths>
 
@@ -248,6 +250,27 @@ void Controller::runCommand(const QString& line)
 void Controller::supplyObjects(const std::vector<std::int64_t>& ids)
 {
     supplyValue(command::Value::ids(ids));
+}
+
+bool Controller::supplyPickedObjects()
+{
+    if (!awaitingInput() || promptKind() != command::ParamKind::Selection) return false;
+
+    std::vector<std::int64_t> ids;
+    for (core::EntityKey k : bus_.selection().keys())
+        ids.push_back(static_cast<std::int64_t>(core::raw(k)));
+
+    // NOTHING PICKED IS NOT AN ANSWER. Supplying an empty list would end the
+    // command with no objects, which reads as the tool being broken; saying so and
+    // staying armed lets the user carry on pointing.
+    if (ids.empty()) {
+        emit echoed(tr("Nesne seçilmedi. Nesneleri tıklayın, sonra Enter'a ya da sağ tuşa "
+                       "basın; vazgeçmek için Esc."));
+        return true;
+    }
+
+    supplyValue(command::Value::ids(ids));
+    return true;
 }
 
 void Controller::supplyNumber(double value)

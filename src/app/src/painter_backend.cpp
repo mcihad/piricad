@@ -793,9 +793,27 @@ private:
         apply_dash(pen, ps);
         painter.setPen(pen);
 
+        // A LONE VERTEX IS A POINT, and a stroke through one vertex draws nothing.
+        // That is why a placed NOKTA left the canvas empty: it outlines to exactly
+        // one vertex and the plain pass is a stroke. Drawn as the default disc
+        // instead — see `render::kDefaultPointSizeUm` for why a disc and not a
+        // gösterim.
+        const double dot = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 5.0;
+
         std::size_t offset = 0;
         QPainterPath path;
         for (std::uint32_t run : batch.runs) {
+            if (run == 1) {
+                painter.save();
+                painter.setPen(Qt::NoPen);
+                painter.setBrush(faded(batch.rgba, ps.opacity));
+                painter.drawEllipse(QPointF(cx + static_cast<double>(batch.xs[offset]),
+                                            cy - static_cast<double>(batch.ys[offset])),
+                                    dot * 0.5, dot * 0.5);
+                painter.restore();
+                offset += run;
+                continue;
+            }
             path.moveTo(cx + static_cast<double>(batch.xs[offset]),
                         cy - static_cast<double>(batch.ys[offset]));
             for (std::uint32_t v = 1; v < run; ++v)

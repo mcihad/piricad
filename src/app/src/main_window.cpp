@@ -209,6 +209,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(canvas_, &MapCanvas::cursorMoved, this, &MainWindow::onCursorMoved);
     connect(canvas_, &MapCanvas::viewChanged, this, &MainWindow::refreshStatus);
     connect(canvas_, &MapCanvas::echoRequested, this, &MainWindow::onEcho);
+
+    // Enter on an empty command line is "done pointing". Focus is here far more
+    // often than on the canvas, so without this the gesture had nowhere to land.
+    connect(commandLine_, &CommandLine::accepted, this,
+            [this] { (void)controller_->supplyPickedObjects(); });
     connect(commandLine_, &CommandLine::submitted, this, &MainWindow::onCommandSubmitted);
     connect(layerPanel_, &LayerPanel::layerSelected, attributePanel_, &AttributePanel::setLayer);
     connect(layerPanel_, &LayerPanel::styleRequested, this, &MainWindow::openStyleDesigner);
@@ -2046,6 +2051,114 @@ void MainWindow::probeToolBox()
     (void)std::fprintf(stdout,
                        "[araç] ---- %d araç x2 geçiş: %d çalıştı, %d girdi sordu, %d kırık\n",
                        static_cast<int>(buttons.size()), ok_ran, ok_armed, dead);
+}
+
+// =============================================================================
+// KENTOS_HAND_PROBE — the six modify tools, driven by a hand
+// =============================================================================
+
+void MainWindow::probeToolsByHand()
+{
+    const auto send = [this](QEvent::Type t, const QPointF& at, Qt::MouseButton b,
+                             Qt::MouseButtons held) {
+        QMouseEvent ev(t, at, canvas_->mapToGlobal(at), b, held, Qt::NoModifier);
+        QCoreApplication::sendEvent(canvas_, &ev);
+        QCoreApplication::processEvents();
+    };
+
+    /// One click on the canvas, in widget coordinates.
+    const auto click = [&](const QPointF& p) {
+        send(QEvent::MouseButtonPress, p, Qt::LeftButton, Qt::LeftButton);
+        send(QEvent::MouseButtonRelease, p, Qt::LeftButton, Qt::NoButton);
+    };
+
+    /// Enter, delivered where Qt would deliver it: to whatever holds focus.
+    const auto enter = [] {
+        QWidget* focused = QApplication::focusWidget();
+        QKeyEvent down(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+        QCoreApplication::sendEvent(focused != nullptr ? focused : QApplication::activeWindow(),
+                                    &down);
+        QCoreApplication::processEvents();
+        return focused;
+    };
+
+    const auto at = [this](core::Point2 world) {
+        const auto p = canvas_->view().to_screen(world);
+        return QPointF(p.x, p.y);
+    };
+
+    struct Step
+    {
+        const char* command;
+        core::Point2 pick;  ///< an object to pick when asked which
+        core::Point2 first; ///< the points it wants afterwards
+        core::Point2 second;
+        const char* typed; ///< a number or string it wants, or nullptr
+    };
+
+    // Two lines that cross at 60,20 and a face away from them.
+    const Step steps[] = {
+        {"BUDA", {60'000, 30'000}, {60'000, 38'000}, {}, nullptr},
+        {"BÖL", {60'000, 30'000}, {60'000, 25'000}, {}, nullptr},
+        {"BİRLEŞTİR", {60'000, 30'000}, {}, {}, nullptr},
+        {"TAŞI", {60'000, 30'000}, {60'000, 30'000}, {70'000, 30'000}, nullptr},
+        {"OFSET", {60'000, 30'000}, {}, {}, "5"},
+        {"STİLKOPYALA", {60'000, 30'000}, {60'000, 30'000}, {}, nullptr},
+    };
+
+    for (const Step& step : steps) {
+        // A fresh drawing, and NOTHING selected: this is the order of work that
+        // was reported broken — reach for the tool first, point at things after.
+        runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
+        runScriptLine(QStringLiteral("SİL"));
+        runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+        runScriptLine(QStringLiteral("ÇİZGİ 60,0 60,40"));
+        runScriptLine(QStringLiteral("ÇİZGİ 50,20 80,20"));
+        canvas_->zoomToExtents();
+        QCoreApplication::processEvents();
+
+        QAction* action =
+            findChild<QAction*>(QStringLiteral("toolAction.") + QString::fromUtf8(step.command));
+        if (action == nullptr) {
+            (void)std::fprintf(stdout, "[el] %-12s DÜĞME YOK\n", step.command);
+            continue;
+        }
+
+        const int mark = transcript_->toPlainText().size();
+        action->trigger();
+        QCoreApplication::processEvents();
+
+        // What it asked for, straight from the session: the command line keeps its
+        // prompt private and this is the thing being measured.
+        const command::Session* live = controller_->session();
+        const QString armed =
+            live != nullptr ? QString::fromStdString(live->prompt().message) : QString();
+
+        // Point at the object it asked about, then say "that is all".
+        click(at(step.pick));
+        QWidget* got_enter = enter();
+
+        // Whatever it wants next.
+        if (step.typed != nullptr) {
+            runScriptLine(QString::fromUtf8(step.typed));
+        } else {
+            if (step.first.x != 0 || step.first.y != 0) click(at(step.first));
+            if (step.second.x != 0 || step.second.y != 0) click(at(step.second));
+        }
+        QCoreApplication::processEvents();
+
+        QString said = transcript_->toPlainText().mid(mark).trimmed();
+        said.replace(QLatin1Char('\n'), QLatin1Char(' '));
+
+        (void)std::fprintf(stdout, "[el] %-12s sordu=\"%s\"  ENTER->%s  ::  %s\n", step.command,
+                           qPrintable(armed.left(38)),
+                           got_enter == nullptr ? "(odak yok)"
+                                                : got_enter->metaObject()->className(),
+                           qPrintable(said.left(120)));
+
+        controller_->cancelInteractive();
+        QCoreApplication::processEvents();
+    }
 }
 
 } // namespace kentos::app

@@ -97,4 +97,18 @@ void hatch_lines(float min_x, float min_y, float max_x, float max_y, double spac
 void pattern_points(float min_x, float min_y, float max_x, float max_y, double step_x,
                     double step_y, std::vector<float>& out);
 
+/// The size a point with NO symbology of its own is drawn at, in PAPER
+/// micrometres — 1,6 mm on the sheet.
+///
+/// A `NOKTA` outlines to a single vertex and nothing else: `point_outline_fn`
+/// deliberately emits no marker, because what a nirengi or a röper LOOKS like is
+/// a regulated gösterim and belongs in `/data`, not in the geometry (model.md
+/// R14, CLAUDE.md 5.13). The consequence was that a point carrying no style drew
+/// nothing at all — the user placed one and the canvas stayed empty.
+///
+/// So this is the placeholder, and it is deliberately NOT any published symbol: a
+/// plain disc, which imitates no gösterim and reads instantly as "unstyled". The
+/// moment a style gives the point a marker layer, that marker is what draws.
+inline constexpr std::int32_t kDefaultPointSizeUm = 1600;
+
 } // namespace kentos::render
