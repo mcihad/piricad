@@ -20,7 +20,7 @@ halves are still OFF by default.
 | Vector + raster symbology | **All eleven** symbol layer types of `/data/catalogs/mpyy-vektor` draw on the GPU |
 | Text | SDF atlas (msdfgen over FreeType outlines, shaped with HarfBuzz) — rulers, scale bar, north arrow, captions |
 | Frame budget (§10.1) | **Measured, and the GPU wins by 20×** — see below |
-| Defaults | `KENTOS_WITH_RHI=OFF`, `KENTOS_WITH_TEXT=OFF` |
+| Defaults | **Both ON wherever the toolchain is found** — probed in `cmake/KentOSCadOptions.cmake` |
 
 ### The measurement
 
@@ -121,26 +121,21 @@ Two behaviours worth knowing before changing them:
 
 ## Open, in the order they are worth doing
 
-> Pruned after the tool-column work. `ÖTELE`/offset is DONE — Clipper2 is linked
-> and `OFSET`, `BİRLEŞTİR` and `BÖL` all run on it (`core::offset_ring`,
-> `core::polygon_boolean`, `core::half_plane`).
+> Pruned as items land. DONE and deleted from this list: `ÖTELE`/offset (Clipper2
+> is linked and `OFSET`, `BİRLEŞTİR` and `BÖL` all run on it), the GPU backend's
+> lone-vertex point marker, and defaulting `KENTOS_WITH_RHI` and
+> `KENTOS_WITH_TEXT` ON.
 
-1. **Default `KENTOS_WITH_RHI` and `KENTOS_WITH_TEXT` ON.** The measurement
-   supports it and Article 8.1's removal condition names it. Keep the QPainter
-   backend reachable while the port settles; deleting it is the end of Phase 1.
-   NOTE: the GPU backend has not been taught the lone-vertex point marker that
-   the QPainter and QGIS backends now draw — do that in the same change, or a
-   NOKTA goes invisible again the moment the option flips on.
-2. **Two published point gösterims still preview blank** ("STRATEJİK …",
+1. **Two published point gösterims still preview blank** ("STRATEJİK …",
    "KIRSAL YERLEŞİK ALAN"). Twenty-six of the twenty-eight draw; these two are
    probably classified `SymbolKind::Point` by `style_library.cpp` while carrying
    only fill layers. Check the classification before the drawing.
-3. **Style designer, two visible faults.** The properties panel ends on a
+2. **Style designer, two visible faults.** The properties panel ends on a
    half-drawn row at the bottom of the window (it is inside a `QScrollArea`, so
    the fix is to stop the page being squashed rather than to add scrolling), and
    a very long published name still elides at the second line — the tooltip
    carries the full name, the cell does not.
-4. **The probes are the only thing that catches interaction defects.** Three now:
+3. **The probes are the only thing that catches interaction defects.** Three now:
    `KENTOS_EDIT_PROBE` (grip dragging), `KENTOS_TOOL_PROBE` (every column button,
    two passes — select-then-press and press-then-select) and `KENTOS_HAND_PROBE`
    (real mouse and key events, which button is lit at each step, and a PNG of
@@ -148,15 +143,15 @@ Two behaviours worth knowing before changing them:
    found by one of them and none was findable by a unit test: the transcript said
    a command ran while the screen showed nothing. Extend them rather than testing
    the canvas by eye.
-5. **`make check` is red at clang-tidy, and was before this work.** 19 findings
+4. **`make check` is red at clang-tidy, and was before this work.** 19 findings
    over the tree; 17 are in files this work never touched. Until they are
    cleared, `make check`'s exit code cannot be trusted as a gate.
    **Read its exit status directly**: piping it through `tail` reports `tail`'s
    status, which is how three green reports were once given for a red run.
-6. **`ci-gate-render-desen.py` reports PENDING on a GPU build.** Its ratios are
+5. **`ci-gate-render-desen.py` reports PENDING on a GPU build.** Its ratios are
    calibrated against the QGIS picture. Now that `MapCanvas::grabCanvas()` can
    read a GPU frame back, the gate can be taught to measure the QRhi path too.
-7. **Renderer work Article 8.1 still owes**: precomputed LOD (`render.md` R4),
+6. **Renderer work Article 8.1 still owes**: precomputed LOD (`render.md` R4),
    a persistent mapped ring buffer with fences (R6), the < 100 draw-call budget
    asserted in `/tests/bench` (R7), label placement on its own thread (R9), the
    render thread (R10). None of these is needed for the picture; all of them are

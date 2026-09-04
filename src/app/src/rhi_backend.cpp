@@ -252,6 +252,15 @@ private:
     void emit_marker_line(const render::PolylineBatch& batch, const render::PassStyle& ps,
                           double cx, double cy, bool hash);
 
+    /// The default disc on every LONE VERTEX in the batch.
+    ///
+    /// A point outlines to one vertex and a stroke through one vertex draws
+    /// nothing, so without this a placed NOKTA is invisible on the GPU exactly as
+    /// it was on the other two backends. Same disc, same size constant, because a
+    /// point must not change shape when the engine changes.
+    void emit_point_dots(const render::PolylineBatch& batch, const render::PassStyle& ps, double cx,
+                         double cy);
+
     /// `cizgi-desen-dolgu`: parallel lines clipped to the face.
     void emit_line_pattern(const render::PolygonBatch& batch, const render::PassStyle& ps,
                            double cx, double cy);
@@ -748,6 +757,42 @@ void RhiBackend::emit_marker_line(const render::PolylineBatch& batch, const rend
                 static_cast<float>(std::sin(radians)), /*clipped=*/false);
 }
 
+void RhiBackend::emit_point_dots(const render::PolylineBatch& batch, const render::PassStyle& ps,
+                                 double cx, double cy)
+{
+    bool any = false;
+    for (const std::uint32_t run : batch.runs)
+        if (run == 1) {
+            any = true;
+            break;
+        }
+    if (!any) return;
+
+    const double size = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 5.0;
+    render::marker_outline(core::MarkerShape::Circle, size, glyph_);
+
+    stamps_.clear();
+    scratch_.clear();
+
+    std::size_t offset = 0;
+    for (const std::uint32_t run : batch.runs) {
+        if (run == 1)
+            stamps_.push_back(render::Stamp{
+                static_cast<float>(cx + static_cast<double>(batch.xs[offset])),
+                static_cast<float>(cy - static_cast<double>(batch.ys[offset])), 1.0f, 0.0f});
+        offset += run;
+    }
+
+    // FILLED WITH THE STROKE COLOUR. A plain pass carries no fill — a stroke has
+    // no interior — but the disc that stands in for an unstyled point is solid,
+    // and it is solid in the STROKE's colour on the other two backends. A copy of
+    // the pass rather than a second `emit_stamps`: the difference is one field.
+    render::PassStyle dot = ps;
+    dot.fill_rgba         = batch.rgba;
+    dot.line_rgba         = batch.rgba;
+    emit_stamps(glyph_, dot, 1.0f, 0.0f, /*clipped=*/false);
+}
+
 void RhiBackend::emit_line_pattern(const render::PolygonBatch& batch, const render::PassStyle& ps,
                                    double cx, double cy)
 {
@@ -1061,6 +1106,9 @@ void RhiBackend::emit_document(const render::DrawList& list, double cx, double c
 
         case SymbolLayerType::SimpleLine: {
             if (line.runs.empty() || line.rgba == 0) break;
+
+            // A lone vertex is a point, and the segment walk below skips it.
+            emit_point_dots(line, ps, cx, cy);
 
             const std::uint32_t first =
                 static_cast<std::uint32_t>(segment_data_.size() * sizeof(float));
