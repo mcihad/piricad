@@ -209,6 +209,8 @@ public:
 
     bool gpu() const override { return true; }
 
+    render::FrameStats stats() const override { return stats_; }
+
     void render(const render::DrawList& list, const render::Overlay& overlay,
                 const render::FrameContext& ctx) override;
 
@@ -409,6 +411,9 @@ private:
     std::vector<float> vertex_data_;  ///< x,y per vertex
     std::vector<char> uniform_data_;  ///< `uniform_stride_` bytes per slot
     std::vector<Cmd> cmds_;
+
+    /// What the last frame cost; answered by `stats()` (render.md R7).
+    render::FrameStats stats_{};
 
     // Symbology scratch. Members and not locals, because the draw loop must not
     // allocate (render.md R20, P6) and a sheet asks for these once per pass.
@@ -2209,6 +2214,12 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
     // an environment variable rather than a feature (CLAUDE.md 5.17).
     const QByteArray only = qgetenv("KENTOS_RHI_ONLY");
 
+    // COUNTED WHERE THEY ARE SUBMITTED, not estimated from the command list: a
+    // stencil fill is two draws and a plain line is one, and R7's budget is
+    // about what the GPU was asked to do rather than about how many commands the
+    // scene builder produced.
+    std::uint32_t draws = 0;
+
     for (const Cmd& cmd : cmds_) {
         if (only == "resim" && cmd.kind != Cmd::Kind::Image) continue;
         if (only == "resimsiz" && cmd.kind == Cmd::Kind::Image) continue;
@@ -2226,6 +2237,7 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
             cb->setVertexInput(0, 2, line_inputs);
             if (cmd.clipped) cb->setStencilRef(0);
             cb->draw(4, cmd.count);
+        ++draws;
             continue;
         }
 
@@ -2235,6 +2247,7 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
             cb->setVertexInput(0, 1, flat_input);
             if (cmd.clipped) cb->setStencilRef(0);
             cb->draw(cmd.count, 1, cmd.first, 0);
+        ++draws;
             continue;
         }
 
@@ -2250,6 +2263,7 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
             cb->setVertexInput(0, 2, inputs);
             if (cmd.clipped) cb->setStencilRef(0);
             cb->draw(4, cmd.count);
+        ++draws;
             continue;
         }
 
@@ -2261,6 +2275,7 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
             cb->setVertexInput(0, 1, flat_input);
             cb->setStencilRef(0);
             cb->draw(cmd.count, 1, cmd.first, 0);
+        ++draws;
             continue;
         }
 
@@ -2270,6 +2285,7 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
             cb->setVertexInput(0, 1, flat_input);
             cb->setStencilRef(0);
             cb->draw(6, 1, cmd.cover, 0);
+        ++draws;
             continue;
         }
 
@@ -2282,6 +2298,7 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
             cb->setShaderResources(srb_text_.get(), 1, &dyn);
             cb->setVertexInput(0, 2, text_inputs);
             cb->draw(4, cmd.count);
+        ++draws;
             continue;
         }
 #endif
@@ -2291,13 +2308,23 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
         cb->setVertexInput(0, 1, flat_input);
         cb->setStencilRef(0);
         cb->draw(cmd.count, 1, cmd.first, 0);
+        ++draws;
 
         cb->setGraphicsPipeline(fill_cover_.get());
         cb->setShaderResources(srb_.get(), 1, &dyn);
         cb->setVertexInput(0, 1, flat_input);
         cb->setStencilRef(0);
         cb->draw(6, 1, cmd.cover, 0);
+        ++draws;
     }
+
+    // Published for R7. The passes and vertices come with it, because a hundred
+    // draw calls over five million polygons is batching working and over five is
+    // not — the count on its own says nothing.
+    stats_.draw_calls = draws;
+    stats_.passes     = static_cast<std::uint32_t>(list.passes.size());
+    stats_.vertices   = static_cast<std::uint32_t>(vertex_data_.size() / 2 +
+                                                 segment_data_.size() / 5);
 
     cb->endPass();
 }

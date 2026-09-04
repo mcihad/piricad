@@ -10,6 +10,8 @@
 
 #include "kentos_cad/render/drawlist.hpp"
 
+#include <cstdint>
+
 #include <string>
 
 namespace kentos::render {
@@ -44,6 +46,33 @@ struct FrameContext
     void* target{nullptr};
 };
 
+/// What one frame COST, read back after `render`.
+///
+/// `render.md` R7 budgets the 5M-polygon cadastral scene at fewer than a hundred
+/// draw calls a frame and requires the count to be LIVE — a batching regression
+/// is invisible in a screenshot and shows up in the frame time long after it is
+/// cheap to find. Every backend answers, so the two can be compared on the same
+/// scene rather than argued about.
+struct FrameStats
+{
+    /// Submissions to the GPU: one per `QRhiCommandBuffer::draw`, counted where
+    /// they are issued rather than estimated from the command list — a stencil
+    /// fill is two draws and a plain line is one.
+    ///
+    /// ZERO ON A NON-GPU BACKEND, and that is not "none": R7's budget is a
+    /// statement about batching on the GPU, and the Phase-0 `QPainter` canvas
+    /// has no comparable unit to report. `Backend::gpu()` says which kind of
+    /// answer this is; a reader that ignores it will compare a real count
+    /// against a backend that never had one.
+    std::uint32_t draw_calls{0};
+
+    /// Passes the draw list carried, and vertices they moved. Context for the
+    /// number above: a hundred draw calls over five million polygons is batching
+    /// working, and over five polygons it is not.
+    std::uint32_t passes{0};
+    std::uint32_t vertices{0};
+};
+
 class Backend
 {
 public:
@@ -66,6 +95,13 @@ public:
     /// move. Keeping them apart is what lets a later backend cache one and not
     /// the other.
     virtual void render(const DrawList& list, const Overlay& overlay, const FrameContext& ctx) = 0;
+
+    /// What the LAST `render` cost. Zero before the first frame.
+    ///
+    /// Not a parameter of `render`: the canvas asks after the frame is on screen,
+    /// and a backend that had to fill a struct handed to it would be reporting
+    /// what it intended rather than what it did.
+    virtual FrameStats stats() const { return {}; }
 };
 
 /// Why the GPU backend is unavailable in this build, or an empty string when it is

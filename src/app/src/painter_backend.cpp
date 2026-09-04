@@ -761,7 +761,7 @@ private:
             total += lengthOf(at(v - 1), at(v));
         if (total <= 0.0) return;
 
-        const auto steps   = static_cast<long long>(total / interval + 0.5);
+        const auto steps   = static_cast<long long>(std::llround(total / interval));
         const double pitch = steps >= 1 ? total / static_cast<double>(steps) : total;
         if (pitch <= 0.0) return;
 

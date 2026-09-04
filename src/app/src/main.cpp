@@ -363,11 +363,19 @@ int main(int argc, char** argv)
             std::sort(scene.begin(), scene.end());
             // The MEDIAN and the best, not the mean: a headless run shares the
             // machine and one descheduled frame drags an average anywhere.
+            // THE DRAW-CALL COUNT COMES WITH THE TIME (render.md R7). A batching
+            // regression does not show up in a screenshot and shows up in the
+            // frame time long after it is cheap to find; printing the two
+            // together is what lets the < 100 budget be measured on the same run
+            // that measures the 16 ms one.
+            const kentos::render::FrameStats fs = canvas->frameStats();
             (void)std::fprintf(stdout,
                                "[kentos] %d kare  cizim ortanca %d us  en iyi %d us"
-                               "  |  sahne ortanca %d us\n",
+                               "  |  sahne ortanca %d us  |  cizim cagrisi %u"
+                               "  gecis %u  kose %u\n",
                                n, costs[costs.size() / 2], costs.front(),
-                               scene.empty() ? 0 : scene[scene.size() / 2]);
+                               scene.empty() ? 0 : scene[scene.size() / 2], fs.draw_calls,
+                               fs.passes, fs.vertices);
             QApplication::exit(0);
         });
     }

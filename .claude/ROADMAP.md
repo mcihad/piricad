@@ -127,7 +127,10 @@ Two behaviours worth knowing before changing them:
 > ON, every published point gösterim previewing (the last one was a WORD, and the
 > preview drew no captions), the style designer's two visible faults, and
 > `ci-gate-render-desen.py`, which now MEASURES the GPU path instead of
-> reporting PENDING against two reasons that had both stopped being true.
+> reporting PENDING against two reasons that had both stopped being true. And
+> `make check` is GREEN: every gate, the format check, and clang-tidy — whose
+> harness was itself a defect (it analysed files the build never compiled, with
+> no flags, and reported the parse failures as findings).
 
 1. **The probes are the only thing that catches interaction defects.** Three now:
    `KENTOS_EDIT_PROBE` (grip dragging), `KENTOS_TOOL_PROBE` (every column button,
@@ -137,16 +140,29 @@ Two behaviours worth knowing before changing them:
    found by one of them and none was findable by a unit test: the transcript said
    a command ran while the screen showed nothing. Extend them rather than testing
    the canvas by eye.
-2. **`make check` is red at clang-tidy, and was before this work.** 19 findings
-   over the tree; 17 are in files this work never touched. Until they are
-   cleared, `make check`'s exit code cannot be trusted as a gate.
-   **Read its exit status directly**: piping it through `tail` reports `tail`'s
-   status, which is how three green reports were once given for a red run.
-3. **Renderer work Article 8.1 still owes**: precomputed LOD (`render.md` R4),
-   a persistent mapped ring buffer with fences (R6), the < 100 draw-call budget
-   asserted in `/tests/bench` (R7), label placement on its own thread (R9), the
-   render thread (R10). None of these is needed for the picture; all of them are
-   needed for the 5M-polygon scene the budget is written against.
+2. **Renderer work Article 8.1 still owes.** R7 is half done: the live
+   draw-call count exists (`render::FrameStats`, counted where the draws are
+   submitted) and `KENTOS_FRAME_TIMES` prints it beside the frame time, so the
+   budget can be MEASURED —
+
+       duz-yuk.json     52 us   31 çizim çağrısı
+       desen-yuku.json 3949 us   82 çizim çağrısı
+
+   — both inside the < 100 budget. What R7 still owes is the ASSERTION in
+   `/tests/bench`, and that is blocked on a real constraint rather than on
+   effort: `/tests` links no Qt (Article 3.4) and every backend is Qt by
+   definition, so the bench binary has nowhere to construct one. Either the bench
+   grows a Qt-linked slice or the assertion moves to a probe under `/src/app`.
+   Decide that before writing it.
+
+   The other four are architecture, not defects, and each is a subsystem:
+   precomputed LOD baked into quadtree tiles at load time (R4), a persistent
+   mapped ring buffer with fences (R6), label placement on its own thread with an
+   atomic pointer swap (R9), and a dedicated render thread owning geometry
+   preparation and submission (R10). None is needed for the picture — the GPU
+   canvas draws everything today and meets both budgets on the scenes above.
+   All are needed before the 5M-polygon sheet the budgets are actually written
+   against.
 
 ## Things that cost an afternoon each — do not re-derive them
 

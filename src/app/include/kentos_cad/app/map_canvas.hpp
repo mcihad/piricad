@@ -145,6 +145,10 @@ public:
     /// GPU path at all.
     QImage grabCanvas();
 
+    /// What the last frame cost the BACKEND (render.md R7). Zero before the
+    /// first paint, and zero for a backend that is not on the GPU.
+    render::FrameStats frameStats() const;
+
 signals:
     /// Emitted as the pointer moves, in DOCUMENT coordinates. The status bar
     /// labels them `sağa değer` (Y) and `yukarı değer` (X), which is the Turkish

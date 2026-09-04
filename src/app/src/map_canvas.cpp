@@ -126,7 +126,7 @@ void MapCanvas::resizeEvent(QResizeEvent* event)
 {
     view_.set_viewport(width(), height());
     publishViewScale();
-    QWidget::resizeEvent(event);
+    CanvasSurface::resizeEvent(event);
     emit viewChanged();
 }
 
@@ -1373,6 +1373,11 @@ QImage MapCanvas::grabCanvas()
 #else
     return grab().toImage();
 #endif
+}
+
+render::FrameStats MapCanvas::frameStats() const
+{
+    return backend_ ? backend_->stats() : render::FrameStats{};
 }
 
 std::vector<int> MapCanvas::timeFrames(int rounds)
