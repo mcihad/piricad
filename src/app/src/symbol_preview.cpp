@@ -220,6 +220,29 @@ render::DrawList build(const core::Symbol& symbol, const core::ImageStore& image
             (void)closed;
         };
 
+        // A PUBLISHED SYMBOL CAN BE A WORD. MPYY prints the letters `KY` for one
+        // of its area classes and the catalogue says so — a single text-marker
+        // layer carrying two characters and nothing else.
+        // It draws from the CAPTION list rather than from a pass (the scene
+        // builder turns it into a `TextItem` for the same reason: a word a later
+        // fill could paint over is a word nobody reads), so a preview that only
+        // filled the geometry buffers left it an empty square in the gallery.
+        if (list.passes[i].type == core::SymbolLayerType::TextMarker) {
+            if (!list.passes[i].text.empty()) {
+                render::TextItem item;
+                item.rgba      = sl.look.rgba;
+                item.x0        = 0.0f;
+                item.y0        = 0.0f;
+                item.x1        = 0.0f;
+                item.y1        = 0.0f;
+                item.height_px = list.passes[i].size_px > 0.5f ? list.passes[i].size_px : 10.0f;
+                item.anchor    = static_cast<std::uint8_t>(core::TextAnchor::MiddleCentre);
+                item.text.assign(list.passes[i].text);
+                list.texts.push_back(std::move(item));
+            }
+            continue;
+        }
+
         if (shape == PreviewShape::Area) {
             // A closed rectangle. The last vertex repeats the first because a draw
             // list holds an already-closed ring, exactly as the scene builder emits

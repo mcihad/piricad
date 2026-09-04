@@ -123,19 +123,11 @@ Two behaviours worth knowing before changing them:
 
 > Pruned as items land. DONE and deleted from this list: `ÖTELE`/offset (Clipper2
 > is linked and `OFSET`, `BİRLEŞTİR` and `BÖL` all run on it), the GPU backend's
-> lone-vertex point marker, and defaulting `KENTOS_WITH_RHI` and
-> `KENTOS_WITH_TEXT` ON.
+> lone-vertex point marker, defaulting `KENTOS_WITH_RHI` and `KENTOS_WITH_TEXT`
+> ON, every published point gösterim previewing (the last one was a WORD, and the
+> preview drew no captions), and the style designer's two visible faults.
 
-1. **Two published point gösterims still preview blank** ("STRATEJİK …",
-   "KIRSAL YERLEŞİK ALAN"). Twenty-six of the twenty-eight draw; these two are
-   probably classified `SymbolKind::Point` by `style_library.cpp` while carrying
-   only fill layers. Check the classification before the drawing.
-2. **Style designer, two visible faults.** The properties panel ends on a
-   half-drawn row at the bottom of the window (it is inside a `QScrollArea`, so
-   the fix is to stop the page being squashed rather than to add scrolling), and
-   a very long published name still elides at the second line — the tooltip
-   carries the full name, the cell does not.
-3. **The probes are the only thing that catches interaction defects.** Three now:
+1. **The probes are the only thing that catches interaction defects.** Three now:
    `KENTOS_EDIT_PROBE` (grip dragging), `KENTOS_TOOL_PROBE` (every column button,
    two passes — select-then-press and press-then-select) and `KENTOS_HAND_PROBE`
    (real mouse and key events, which button is lit at each step, and a PNG of
@@ -143,15 +135,15 @@ Two behaviours worth knowing before changing them:
    found by one of them and none was findable by a unit test: the transcript said
    a command ran while the screen showed nothing. Extend them rather than testing
    the canvas by eye.
-4. **`make check` is red at clang-tidy, and was before this work.** 19 findings
+2. **`make check` is red at clang-tidy, and was before this work.** 19 findings
    over the tree; 17 are in files this work never touched. Until they are
    cleared, `make check`'s exit code cannot be trusted as a gate.
    **Read its exit status directly**: piping it through `tail` reports `tail`'s
    status, which is how three green reports were once given for a red run.
-5. **`ci-gate-render-desen.py` reports PENDING on a GPU build.** Its ratios are
+3. **`ci-gate-render-desen.py` reports PENDING on a GPU build.** Its ratios are
    calibrated against the QGIS picture. Now that `MapCanvas::grabCanvas()` can
    read a GPU frame back, the gate can be taught to measure the QRhi path too.
-6. **Renderer work Article 8.1 still owes**: precomputed LOD (`render.md` R4),
+4. **Renderer work Article 8.1 still owes**: precomputed LOD (`render.md` R4),
    a persistent mapped ring buffer with fences (R6), the < 100 draw-call budget
    asserted in `/tests/bench` (R7), label placement on its own thread (R9), the
    render thread (R10). None of these is needed for the picture; all of them are

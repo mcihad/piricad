@@ -503,8 +503,17 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     setHelpVisible(true);
     setFooterHeight(48);
     setModal(true);
+    // TALL ENOUGH FOR THE LONGEST FORM. 756 px cut the property page in half at
+    // its last row — a marker carries type, shape, fill, stroke, width, size,
+    // unit, angle and opacity, and the viewport ended in the middle of the last
+    // one. A row bisected by an edge reads as a broken dialog, not as a hint that
+    // there is more below, whatever the scrollbar says.
+    //
+    // The scroll area stays: a symbol layer's property list grows with its type
+    // and a small screen is still a small screen. This only stops the ordinary
+    // case from needing it.
     setMinimumSize(1040, 680);
-    resize(1280, 756);
+    resize(1280, 880);
 
     const core::LayerId layer = controller_.document().find_layer(layerName_.toStdString());
     symbol_                   = layer == core::kNoLayer ? core::Symbol::of(core::Appearance{})
@@ -656,7 +665,10 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     // the bottom of the dialog with no way to reach them.
     // Room for the scrollbar, which otherwise sits ON the editors: the widget
     // gets the viewport's width and the bar is drawn over its right edge.
-    pages_->setContentsMargins(0, 0, 14, 0);
+    // AND ROOM UNDER THE LAST ROW. Flush against the viewport's edge, the last
+    // editor is bisected by it the moment the page is one pixel too tall; a
+    // row-height of air means the scroll ends on whitespace instead.
+    pages_->setContentsMargins(0, 0, 14, 16);
 
     auto* scroll = new QScrollArea(this);
     scroll->setWidget(pages_);
@@ -1071,11 +1083,21 @@ QWidget* StyleDesigner::buildGallery()
     gallery_ = new QListWidget(box);
     gallery_->setViewMode(QListView::IconMode);
     gallery_->setIconSize(QSize(56, 40));
-    // WIDE ENOUGH FOR TWO LINES of a published name. At 88 px the grid elided
-    // every label to its first word and a drawer of water gösterims read as five
-    // rows of `İÇME VE …` — five different symbols that the list said were the
-    // same thing.
-    gallery_->setGridSize(QSize(118, 104));
+    // WIDE ENOUGH FOR TWO LINES of a published name, TALL ENOUGH FOR FOUR.
+    //
+    // At 88 px the grid elided every label to its first word and a drawer of
+    // water gösterims read as five rows of `İÇME VE …` — five different symbols
+    // the list said were the same thing. 118 px fixed the width; the height was
+    // still three lines, so the names that actually need the room were the ones
+    // still losing it.
+    //
+    // Four lines is measured, not guessed. Over the 467 published styles the
+    // median name is 20 characters, the 90th percentile 40 and the 95th 48 —
+    // three lines covers 95% and four covers all but a handful, of which the
+    // longest is `KATI ATIK TESİSLERİ ALANI (BOŞALTMA, BERTARAF, İŞLEME,
+    // TRANSFER VE DEPOLAMA)` at 76. Sizing every cell for THAT would waste a
+    // third of the grid on the median row, so the handful keep their tooltip.
+    gallery_->setGridSize(QSize(118, 128));
     gallery_->setResizeMode(QListView::Adjust);
     gallery_->setMovement(QListView::Static);
     gallery_->setWordWrap(true);
