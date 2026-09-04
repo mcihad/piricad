@@ -426,28 +426,36 @@ QWidget* AttributeTable::buildToolRow()
     // rather than doing nothing quietly (§11.8).
     struct Mark
     {
-        Glyph glyph;
+        // Widest first. Declared glyph-tip-line-flag this cost eleven bytes of
+        // padding per entry where three is the best possible.
         const char* tip;
         const char* line;
+        Glyph glyph;
         bool checkable;
     };
 
     static const Mark kMarks[] = {
-        {Glyph::StyleCopy, "Düzenleme kipi", nullptr, true},
-        {Glyph::Save, "Kaydet", "KAYDET", false},
-        {Glyph::Undo, "Geri al", "GERİAL", false},
-        {Glyph::Redo, "Yinele", "YİNELE", false},
-        {Glyph::Plus, "Satır ekle", nullptr, false},
-        {Glyph::Erase, "Satır sil", nullptr, false},
-        {Glyph::Duplicate, "Satırı çoğalt", nullptr, false},
-        {Glyph::SelectArea, "Tümünü seç", "SEÇ tümü=evet", false},
-        {Glyph::Select, "Seçimi tersine çevir", nullptr, false},
-        {Glyph::Filter, "Süz", nullptr, false},
-        {Glyph::Function, "Alan hesapla", nullptr, false},
-        {Glyph::Table, "Alan istatistikleri", nullptr, true},
-        {Glyph::Grid, "Sütunlar", nullptr, false},
-        {Glyph::Export, "Dışa aktar", "DIŞAAKTAR", false},
-        {Glyph::Print, "Yazdır", "YAZDIR", false},
+        {.tip = "Düzenleme kipi", .line = nullptr, .glyph = Glyph::StyleCopy, .checkable = true},
+        {.tip = "Kaydet", .line = "KAYDET", .glyph = Glyph::Save, .checkable = false},
+        {.tip = "Geri al", .line = "GERİAL", .glyph = Glyph::Undo, .checkable = false},
+        {.tip = "Yinele", .line = "YİNELE", .glyph = Glyph::Redo, .checkable = false},
+        {.tip = "Satır ekle", .line = nullptr, .glyph = Glyph::Plus, .checkable = false},
+        {.tip = "Satır sil", .line = nullptr, .glyph = Glyph::Erase, .checkable = false},
+        {.tip = "Satırı çoğalt", .line = nullptr, .glyph = Glyph::Duplicate, .checkable = false},
+        {.tip       = "Tümünü seç",
+         .line      = "SEÇ tümü=evet",
+         .glyph     = Glyph::SelectArea,
+         .checkable = false},
+        {.tip       = "Seçimi tersine çevir",
+         .line      = nullptr,
+         .glyph     = Glyph::Select,
+         .checkable = false},
+        {.tip = "Süz", .line = nullptr, .glyph = Glyph::Filter, .checkable = false},
+        {.tip = "Alan hesapla", .line = nullptr, .glyph = Glyph::Function, .checkable = false},
+        {.tip = "Alan istatistikleri", .line = nullptr, .glyph = Glyph::Table, .checkable = true},
+        {.tip = "Sütunlar", .line = nullptr, .glyph = Glyph::Grid, .checkable = false},
+        {.tip = "Dışa aktar", .line = "DIŞAAKTAR", .glyph = Glyph::Export, .checkable = false},
+        {.tip = "Yazdır", .line = "YAZDIR", .glyph = Glyph::Print, .checkable = false},
     };
 
     for (const Mark& mark : kMarks) {

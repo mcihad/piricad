@@ -8,6 +8,7 @@
 #include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 namespace kentos::core {
@@ -326,7 +327,11 @@ void circle_area(const RingGeometry& geom, SlotSpan slots, std::span<Mm2> out)
         // A circle 1000 km across is 3.1e18 mm^2, still inside int64; anything
         // beyond that is not a drawing and is clamped rather than wrapped.
         constexpr double kMax = 9.0e18;
-        out[i]                = a >= kMax ? static_cast<Mm2>(kMax) : static_cast<Mm2>(a + 0.5);
+        // `llround`, not `+ 0.5` and a cast: the idiom rounds the WRONG WAY for a
+        // negative value and loses the half exactly where the double runs out of
+        // mantissa. This area cannot be negative, so the two agree here today —
+        // which is the reason to write the one that stays right.
+        out[i] = a >= kMax ? static_cast<Mm2>(kMax) : static_cast<Mm2>(std::llround(a));
     }
 }
 
@@ -726,7 +731,7 @@ void ellipse_area(const RingGeometry& geom, SlotSpan slots, std::span<Mm2> out)
         const double area  = kPi * (cross < 0.0 ? -cross : cross);
 
         constexpr double kMax = 9.0e18;
-        out[i] = area >= kMax ? static_cast<Mm2>(kMax) : static_cast<Mm2>(area + 0.5);
+        out[i] = area >= kMax ? static_cast<Mm2>(kMax) : static_cast<Mm2>(std::llround(area));
     }
 }
 

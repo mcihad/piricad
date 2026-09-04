@@ -9,6 +9,8 @@
 #include <QProxyStyle>
 #include <QStyleFactory>
 
+#include <memory>
+
 #include "kentos_cad/app/tokens.hpp"
 
 namespace kentos::app {
@@ -96,10 +98,15 @@ public:
                     const QWidget* widget) const override
     {
         switch (metric) {
+        case PM_DockWidgetSeparatorExtent: return 1;
+
+        // EVERYTHING BELOW IS ZERO, in one branch rather than three identical
+        // ones. The groups are kept apart by their comments because they are
+        // three different reasons; the answer is one answer, and writing it three
+        // times is three chances for one of them to drift.
         case PM_DockWidgetTitleMargin:
         case PM_DockWidgetFrameWidth:
-        case PM_DockWidgetTitleBarButtonMargin: return 0;
-        case PM_DockWidgetSeparatorExtent: return 1;
+        case PM_DockWidgetTitleBarButtonMargin:
 
         // The menu bar's own leading and inter-item spacing, likewise unreachable
         // from a stylesheet. Fusion adds six pixels before the first title and
@@ -109,7 +116,7 @@ public:
         case PM_MenuBarHMargin:
         case PM_MenuBarVMargin:
         case PM_MenuBarPanelWidth:
-        case PM_MenuBarItemSpacing: return 0;
+        case PM_MenuBarItemSpacing:
 
         // The tool bar's own frame and item margin, for the same reason. Fusion
         // insets a widget added to a tool bar by eight pixels, so the ÖLÇEK /
@@ -173,7 +180,12 @@ bool loadShellFonts(QString* whereLooked)
 
 void installShellStyle()
 {
-    QApplication::setStyle(new ShellStyle);
+    // `setStyle` TAKES OWNERSHIP and Qt deletes it at shutdown. A bare `new` in
+    // the argument says nothing about that — it reads as a leak to a reader and
+    // to the analyser both. Releasing a unique_ptr into the sink is the same
+    // instruction with the hand-over written down.
+    auto style = std::make_unique<ShellStyle>();
+    QApplication::setStyle(style.release());
 }
 
 QString themeStyleSheet(ThemeMode mode)

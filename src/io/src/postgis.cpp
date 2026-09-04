@@ -469,7 +469,8 @@ core::Result<std::size_t> PostgisStore::write_layer(const core::Document& doc, c
         std::vector<core::AttrId> sources;
         std::vector<std::string> headings{"kimlik", "geom"};
 
-        for (core::AttrId id = 0; id < attributes.columns(); ++id) {
+        for (std::size_t i = 0; i < attributes.columns(); ++i) {
+            const auto id                  = static_cast<core::AttrId>(i);
             const core::AttrColumn* column = attributes.column(id);
             if (column == nullptr) continue;
 

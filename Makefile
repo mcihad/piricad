@@ -109,7 +109,7 @@ format-check: ## Fail if any source is not formatted
 
 tidy: build ## Run clang-tidy over the compile database
 	@command -v clang-tidy >/dev/null || { echo "clang-tidy not installed"; exit 2; }
-	@find src -name '*.cpp' | xargs clang-tidy -p $(BUILD) --quiet
+	@scripts/tidy.sh $(BUILD)
 
 doctor: ## Report what this machine can and cannot build
 	@scripts/doctor.sh

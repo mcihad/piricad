@@ -56,8 +56,8 @@ std::string angle_text(double turns, int unit)
     const int places    = unit == 2 ? 5 : 4;
 
     const double rounded = scaled * std::pow(10.0, places);
-    const auto whole     = static_cast<std::int64_t>(rounded + 0.5);
-    const auto divisor   = static_cast<std::int64_t>(std::pow(10.0, places) + 0.5);
+    const auto whole     = static_cast<std::int64_t>(std::llround(rounded));
+    const auto divisor   = static_cast<std::int64_t>(std::llround(std::pow(10.0, places)));
 
     std::string frac = std::to_string(whole % divisor);
     frac             = std::string(static_cast<std::size_t>(places) - frac.size(), '0') + frac;

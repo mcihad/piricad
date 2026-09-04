@@ -31,7 +31,7 @@ constexpr unsigned char kJpegSignature[] = {0xFF, 0xD8, 0xFF};
 /// unopenable. The bound exists because these bytes arrive from a file on disk,
 /// which is untrusted input: without it a corrupt header could ask the reader to
 /// allocate whatever a 64-bit length says (io.md R17).
-constexpr std::size_t kMaxImageBytes = 16u * 1024u * 1024u;
+constexpr std::size_t kMaxImageBytes = std::size_t{16} * 1024 * 1024;
 
 bool starts_with(std::span<const std::byte> bytes, const unsigned char* signature,
                  std::size_t length)

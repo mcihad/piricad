@@ -125,9 +125,12 @@ core::Status write_all(const std::string& path, const std::vector<std::byte>& by
 /// A byte count as a person reads it.
 std::string human_bytes(std::int64_t bytes)
 {
-    if (bytes < 1024) return std::to_string(bytes) + " B";
-    if (bytes < 1024 * 1024) return std::to_string(bytes / 1024) + " KB";
-    return std::to_string(bytes / (1024 * 1024)) + " MB";
+    constexpr std::int64_t kKilobyte = 1024;
+    constexpr std::int64_t kMegabyte = kKilobyte * 1024;
+
+    if (bytes < kKilobyte) return std::to_string(bytes) + " B";
+    if (bytes < kMegabyte) return std::to_string(bytes / kKilobyte) + " KB";
+    return std::to_string(bytes / kMegabyte) + " MB";
 }
 
 #endif // KENTOS_HAVE_POSTGIS

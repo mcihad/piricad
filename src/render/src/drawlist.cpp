@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/render/drawlist.hpp"
 
+#include <cmath>
+
 namespace kentos::render {
 
 EdgeStamps distribute_along(double length, double interval, double margin) noexcept
@@ -12,7 +14,7 @@ EdgeStamps distribute_along(double length, double interval, double margin) noexc
 
     // At least one, always: an edge long enough to hold a stamp gets a stamp, and
     // rounding a short-but-adequate edge down to zero would leave a corner bare.
-    const auto count = static_cast<int>(usable / interval + 0.5) + 1;
+    const auto count = static_cast<int>(std::lround(usable / interval)) + 1;
 
     EdgeStamps out;
     out.count = count < 1 ? 1 : count;

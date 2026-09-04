@@ -194,11 +194,14 @@ std::size_t StyleLibrary::add_catalog(const StyleCatalog& catalog, const ImageRe
                                            : SymbolKind::Point;
         else if (!row.image_hatch.empty() || row.appearance.fill_rgba != 0)
             entry.kind = SymbolKind::Area;
-        else if (!row.image_line.empty())
-            entry.kind = SymbolKind::Line;
         else if (!row.image_symbol.empty())
             entry.kind = SymbolKind::Point;
         else
+            // A LINE IMAGE, OR NOTHING AT ALL. The two used to be separate
+            // branches with the same body, which reads as a distinction and is
+            // not one: a row that declares nothing is a line for the same reason
+            // a row with a line picture is — it is the only kind that needs
+            // neither an interior nor a place to stand.
             entry.kind = SymbolKind::Line;
 
         add(std::move(entry));

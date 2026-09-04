@@ -86,7 +86,12 @@ void list_schema(Context& ctx)
     }
     ctx.echo("Öznitelikler (" + std::to_string(table.columns()) + " sütun, " +
              std::to_string(table.rows()) + " satır):");
-    for (core::AttrId c = 0; c < table.columns(); ++c) {
+    // COUNTED IN THE BOUND'S OWN TYPE. `AttrId` is narrower than `columns()`
+    // returns, so a table with more columns than the id can count would wrap and
+    // loop for ever. The id is made where it is used, which is the one place the
+    // narrowing is real.
+    for (std::size_t i = 0; i < table.columns(); ++i) {
+        const auto c               = static_cast<core::AttrId>(i);
         const core::AttrSpec& spec = table.column(c)->spec();
         ctx.echo("    " + spec.id + "  (" + core::attr_type_name(spec.type) + ")" +
                  (spec.required ? "  zorunlu" : "") +

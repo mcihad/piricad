@@ -365,7 +365,8 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
         const core::AttrTable& table = doc.attributes();
         attr_columns.reserve(table.columns());
 
-        for (core::AttrId c = 0; c < table.columns(); ++c) {
+        for (std::size_t i = 0; i < table.columns(); ++i) {
+            const auto c                = static_cast<core::AttrId>(i);
             const core::AttrColumn* col = table.column(c);
             const core::AttrSpec& spec  = col->spec();
 
