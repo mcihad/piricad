@@ -121,38 +121,42 @@ Two behaviours worth knowing before changing them:
 
 ## Open, in the order they are worth doing
 
-0. **`ÖTELE` (offset) is the one obvious tool still missing**, and it is deliberately
-   not hand-rolled: parallel offsetting with self-intersection cleanup is exactly
-   what Clipper2 does and Article 5.16 says not to reimplement it. Clipper2 is
-   pinned by SHA in `cmake/KentOSCadDependencies.cmake` but never fetched, and the
-   house rule below says not to start a `FetchContent` download unasked. Decide
-   that first; the command itself is small once the library is linked.
+> Pruned after the tool-column work. `ÖTELE`/offset is DONE — Clipper2 is linked
+> and `OFSET`, `BİRLEŞTİR` and `BÖL` all run on it (`core::offset_ring`,
+> `core::polygon_boolean`, `core::half_plane`).
 
-1. **Default both options ON.** The measurement supports it and Article 8.1's
-   removal condition names it. Keep the QPainter backend reachable while the
-   port settles; deleting it is the end of Phase 1.
-2. **Style designer, two visible faults.** The properties panel ends on a
+1. **Default `KENTOS_WITH_RHI` and `KENTOS_WITH_TEXT` ON.** The measurement
+   supports it and Article 8.1's removal condition names it. Keep the QPainter
+   backend reachable while the port settles; deleting it is the end of Phase 1.
+   NOTE: the GPU backend has not been taught the lone-vertex point marker that
+   the QPainter and QGIS backends now draw — do that in the same change, or a
+   NOKTA goes invisible again the moment the option flips on.
+2. **Two published point gösterims still preview blank** ("STRATEJİK …",
+   "KIRSAL YERLEŞİK ALAN"). Twenty-six of the twenty-eight draw; these two are
+   probably classified `SymbolKind::Point` by `style_library.cpp` while carrying
+   only fill layers. Check the classification before the drawing.
+3. **Style designer, two visible faults.** The properties panel ends on a
    half-drawn row at the bottom of the window (it is inside a `QScrollArea`, so
    the fix is to stop the page being squashed rather than to add scrolling), and
    a very long published name still elides at the second line — the tooltip
    carries the full name, the cell does not.
-3. **Interactive drawing is proven now** — `tests/canvas-edits` (the
-   `KENTOS_EDIT_PROBE` hook) drives real `QMouseEvent`s into the canvas offscreen
-   and checks the document afterwards. It caught two bugs no unit test could: the
-   canvas sending `nesne` in the wrong `Value` kind so the bus refused the
-   invocation silently, and a draw tool that did not stay armed. Extend it rather
-   than testing the canvas by eye.
-4. **`make check` is red at clang-tidy, and was before this work.** 19 findings
-   over the tree; 17 are in files this work never touched — `painter_backend`,
-   `database`, `postgis`, `theme`, `project_writer`, `image_store`,
-   `style_library`, `drawlist`, `attribute` — plus two third-party headers.
-   Until they are cleared, `make check`'s exit code cannot be trusted as a gate.
+4. **The probes are the only thing that catches interaction defects.** Three now:
+   `KENTOS_EDIT_PROBE` (grip dragging), `KENTOS_TOOL_PROBE` (every column button,
+   two passes — select-then-press and press-then-select) and `KENTOS_HAND_PROBE`
+   (real mouse and key events, which button is lit at each step, and a PNG of
+   every step when given a directory). Every interaction bug in this session was
+   found by one of them and none was findable by a unit test: the transcript said
+   a command ran while the screen showed nothing. Extend them rather than testing
+   the canvas by eye.
+5. **`make check` is red at clang-tidy, and was before this work.** 19 findings
+   over the tree; 17 are in files this work never touched. Until they are
+   cleared, `make check`'s exit code cannot be trusted as a gate.
    **Read its exit status directly**: piping it through `tail` reports `tail`'s
-   status, which is how three green reports were given for a red run.
-5. **`ci-gate-render-desen.py` reports PENDING on a GPU build.** Its ratios are
+   status, which is how three green reports were once given for a red run.
+6. **`ci-gate-render-desen.py` reports PENDING on a GPU build.** Its ratios are
    calibrated against the QGIS picture. Now that `MapCanvas::grabCanvas()` can
    read a GPU frame back, the gate can be taught to measure the QRhi path too.
-6. **Renderer work Article 8.1 still owes**: precomputed LOD (`render.md` R4),
+7. **Renderer work Article 8.1 still owes**: precomputed LOD (`render.md` R4),
    a persistent mapped ring buffer with fences (R6), the < 100 draw-call budget
    asserted in `/tests/bench` (R7), label placement on its own thread (R9), the
    render thread (R10). None of these is needed for the picture; all of them are
