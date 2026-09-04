@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/style_designer.hpp"
 
+#include "kentos_cad/render/symbology.hpp"
+
 #include "kentos_cad/app/tokens.hpp"
 
 #include "kentos_cad/app/controller.hpp"
@@ -78,6 +80,47 @@ constexpr std::array<TypeRow, 12> kTypes{{
     {SymbolLayerType::RasterMarker, "Görsel işaretçi"},
     {SymbolLayerType::TextMarker, "Yazı"},
 }};
+
+/// The layer types that mean anything on one geometry.
+///
+/// A point has no length to stroke and no interior to fill, so offering it
+/// "Çizgi", "Dolgu" and "Tarak çizgi" is offering nine controls that cannot do
+/// anything — and the default symbol of an unstyled layer IS a plain stroke, so
+/// that is exactly what the Nokta tab opened on: layer type "Çizgi", with a
+/// cap and a join to set on a thing that has no ends.
+///
+/// The current layer's own type is always added by the caller, so a symbol that
+/// already carries something unusual can still be read and changed.
+std::vector<SymbolLayerType> types_for(PreviewShape shape)
+{
+    switch (shape) {
+    case PreviewShape::Point:
+        return {SymbolLayerType::SimpleMarker, SymbolLayerType::RasterMarker,
+                SymbolLayerType::TextMarker};
+    case PreviewShape::Line:
+        return {SymbolLayerType::SimpleLine, SymbolLayerType::MarkerLine, SymbolLayerType::HashLine,
+                SymbolLayerType::RasterLine, SymbolLayerType::TextMarker};
+    case PreviewShape::Area: break;
+    }
+    // An area has a boundary as well as an interior, so it keeps the line types.
+    return {SymbolLayerType::SimpleFill,       SymbolLayerType::LinePatternFill,
+            SymbolLayerType::PointPatternFill, SymbolLayerType::RasterFill,
+            SymbolLayerType::CentroidFill,     SymbolLayerType::SimpleLine,
+            SymbolLayerType::MarkerLine,       SymbolLayerType::HashLine,
+            SymbolLayerType::RasterLine,       SymbolLayerType::TextMarker};
+}
+
+/// The type a NEW layer starts as on one geometry. A point starts as a marker,
+/// which is the only thing a point can be.
+SymbolLayerType default_type_for(PreviewShape shape)
+{
+    switch (shape) {
+    case PreviewShape::Point: return SymbolLayerType::SimpleMarker;
+    case PreviewShape::Line: return SymbolLayerType::SimpleLine;
+    case PreviewShape::Area: break;
+    }
+    return SymbolLayerType::SimpleFill;
+}
 
 constexpr std::array<core::MarkerShape, 12> kShapes{
     {core::MarkerShape::Circle, core::MarkerShape::Square, core::MarkerShape::Triangle,
@@ -363,21 +406,40 @@ std::optional<PreviewShape> shape_of_layer(const core::Document& doc, core::Laye
 
     bool any_closed = false;
     bool any_open   = false;
+    bool any_point  = false;
     for (core::EntityId e = 0; e < entities.size(); ++e) {
         if (!entities.alive(e) || entities.layer[e] != layer) continue;
+
+        // A POINT IS NOT A SHORT LINE. Its ring is stored Open — a NOKTA outlines
+        // to a single vertex — so a walk that asked only "open or closed" read a
+        // layer of nirengi as a layer of lines, opened the designer on the Çizgi
+        // tab, offered a gallery of boundary gösterims and put a stroke's cap and
+        // join in the panel. Everything downstream of this answer was then about
+        // the wrong geometry.
+        if (entities.kind[e] == core::kPointKind) {
+            any_point = true;
+            continue;
+        }
+
         const core::RingSpan span = geometry.rings_of(entities.slot[e]);
         for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-            if (geometry.ring_role[r] == core::RingRole::Open)
+            if (geometry.ring_role[r] != core::RingRole::Open)
+                any_closed = true;
+            else if (geometry.ring_xs(r).size() >= 2)
                 any_open = true;
             else
-                any_closed = true;
+                any_point = true; // a lone vertex, whatever kind carried it
         }
         // A closed ring settles it; nothing later can make the layer less of an
         // area layer, so the walk stops rather than touching every parcel.
         if (any_closed) return PreviewShape::Area;
     }
 
+    // Area beats line beats point: a layer that holds any parcel is an area
+    // layer, and the tab has to open on the geometry the user will spend their
+    // time on rather than on whatever happened to be drawn last.
     if (any_open) return PreviewShape::Line;
+    if (any_point) return PreviewShape::Point;
     return std::nullopt;
 }
 
@@ -389,6 +451,35 @@ PreviewShape shape_of(core::SymbolKind kind)
     case core::SymbolKind::Point: return PreviewShape::Point;
     }
     return PreviewShape::Area;
+}
+
+/// Turns the "no symbology yet" symbol into the one that geometry can use.
+///
+/// An unstyled layer's symbol is a single plain stroke — the appearance every CAD
+/// entity has always carried. On a POINT that describes nothing: the panel then
+/// offered a line colour, a cap and a join for a thing with no ends, and the
+/// layer row read "Çizgi" over a dot. Only the untouched default is converted, so
+/// a symbol somebody actually built is never rewritten under them.
+///
+/// Returns true when it changed something.
+bool adopt_geometry_default(core::Symbol& symbol, PreviewShape shape)
+{
+    if (shape != PreviewShape::Point) return false;
+    if (symbol.layers.size() != 1) return false;
+
+    core::SymbolLayer& only = symbol.layers.front();
+    if (only.type != SymbolLayerType::SimpleLine) return false;
+    if (!only.size.empty() || !only.interval.empty()) return false; // somebody set these
+
+    only.type      = SymbolLayerType::SimpleMarker;
+    only.size      = core::Measure{render::kDefaultPointSizeUm, core::Unit::Paper};
+    only.shape     = core::MarkerShape::Circle;
+    only.placement = core::MarkerPlacement::Vertex;
+    // The stroke colour becomes the disc, which is what the canvas already draws
+    // for a point with no symbology at all — so opening the designer does not
+    // change how the drawing looks.
+    if (only.look.fill_rgba == 0) only.look.fill_rgba = only.look.rgba;
+    return true;
 }
 
 core::SymbolKind kind_of(PreviewShape shape)
@@ -416,8 +507,8 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     resize(1280, 756);
 
     const core::LayerId layer = controller_.document().find_layer(layerName_.toStdString());
-    symbol_ = layer == core::kNoLayer ? core::Symbol::of(core::Appearance{})
-                                      : symbol_of_layer(controller_.document(), layer);
+    symbol_                   = layer == core::kNoLayer ? core::Symbol::of(core::Appearance{})
+                                                        : symbol_of_layer(controller_.document(), layer);
     if (symbol_.layers.empty()) symbol_ = core::Symbol::of(core::Appearance{});
     original_ = symbol_;
 
@@ -453,10 +544,15 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
                                         controller_.document().find_layer(layerName_.toStdString()))
                              .value_or(natural_shape(symbol_))));
     connect(geometry_, &QTabBar::currentChanged, this, [this](int) {
+        adopt_geometry_default(symbol_, shape());
         refreshGalleryItems();
         refresh();
         updateHeaderNote();
     });
+
+    // And once for the tab the dialog OPENED on, which is the case a user meets
+    // first: a point layer with no symbology of its own.
+    adopt_geometry_default(symbol_, shape());
 
     // THE SWATCH AND ITS ONE-WORD CAPTION. No title: the dialog's own title bar
     // already says which layer this is, and a 16 px heading over a 120 px
@@ -1058,6 +1154,36 @@ void StyleDesigner::refreshGalleryTree()
     groups_->setCurrentItem(all);
 }
 
+void StyleDesigner::fillTypeChoices(core::SymbolLayerType current)
+{
+    std::vector<SymbolLayerType> allowed = types_for(shape());
+    if (std::find(allowed.begin(), allowed.end(), current) == allowed.end())
+        allowed.insert(allowed.begin(), current);
+
+    // Nothing to do when the box already offers exactly this list: rebuilding it
+    // would fire `currentIndexChanged` and write the symbol back on every refresh.
+    bool same = type_->count() == static_cast<int>(allowed.size());
+    for (int i = 0; same && i < type_->count(); ++i)
+        same = type_->itemData(i).toInt() == static_cast<int>(allowed[static_cast<std::size_t>(i)]);
+
+    if (!same) {
+        const QSignalBlocker quiet(type_);
+        type_->clear();
+        for (const SymbolLayerType t : allowed) {
+            QString label = QString::fromUtf8(core::symbol_layer_type_name(t));
+            for (const TypeRow& row : kTypes)
+                if (row.type == t) label = tr(row.label);
+            type_->addItem(QStringLiteral("%1  (%2)")
+                               .arg(label, QString::fromUtf8(core::symbol_layer_type_name(t))),
+                           static_cast<int>(t));
+        }
+    }
+
+    const QSignalBlocker quiet(type_);
+    for (int i = 0; i < type_->count(); ++i)
+        if (type_->itemData(i).toInt() == static_cast<int>(current)) type_->setCurrentIndex(i);
+}
+
 void StyleDesigner::refreshGalleryItems()
 {
     const core::StyleLibrary& shelf = controller_.bus().style_library();
@@ -1434,10 +1560,9 @@ QWidget* StyleDesigner::buildProperties()
 
     type_ = new QComboBox(box);
     fit_column(type_);
-    for (const TypeRow& row : kTypes)
-        type_->addItem(
-            QStringLiteral("%1  (%2)")
-                .arg(tr(row.label), QString::fromUtf8(core::symbol_layer_type_name(row.type))));
+    // FILLED PER GEOMETRY, in `fillTypeChoices`. The type rides as item DATA
+    // rather than as a position, because a filtered list and a fixed table cannot
+    // both be indexed by the same number.
     connect(type_, &QComboBox::currentIndexChanged, this, [this](int) { applyToSelected(); });
     QLabel* identity = addGroup(form, tr("KATMAN")); // ui-label
     identity->setContentsMargins(0, 0, 0, 0);        // first heading: nothing above it
@@ -1860,8 +1985,7 @@ void StyleDesigner::loadSelected()
                 if (table[at(k)] == value) box->setCurrentIndex(k);
         };
 
-        for (int k = 0; k < static_cast<int>(kTypes.size()); ++k)
-            if (kTypes[at(k)].type == sl.type) type_->setCurrentIndex(k);
+        fillTypeChoices(sl.type);
 
         select(shape_, kShapes, sl.shape);
         select(placement_, kPlacements, sl.placement);
@@ -2015,7 +2139,9 @@ void StyleDesigner::applyToSelected()
     galleryPackage_.clear();
     core::SymbolLayer& sl = symbol_.layers[at(i)];
 
-    sl.type      = pick(kTypes, type_).type;
+    sl.type      = static_cast<SymbolLayerType>(type_->currentData().isValid()
+                                                    ? type_->currentData().toInt()
+                                                    : static_cast<int>(default_type_for(shape())));
     sl.shape     = pick(kShapes, shape_);
     sl.placement = pick(kPlacements, placement_);
     sl.cap       = pick(kCaps, cap_);
@@ -2038,11 +2164,24 @@ void StyleDesigner::applyToSelected()
 
 void StyleDesigner::addLayer()
 {
-    // A plain stroke, which is the layer a CAD entity has always had and the one a
-    // user is least surprised to get.
+    // THE TYPE THE GEOMETRY CAN ACTUALLY USE. A plain stroke is what a CAD entity
+    // has always had and the least surprising default on a line or an area — but
+    // on a POINT it draws nothing at all, so "add a layer" produced a row that
+    // could not be seen and a panel of stroke properties that could not do
+    // anything.
     galleryCode_.clear();
     galleryPackage_.clear();
-    symbol_.layers.push_back(core::SymbolLayer{});
+
+    core::SymbolLayer fresh;
+    fresh.type = default_type_for(shape());
+    if (fresh.type == SymbolLayerType::SimpleMarker) {
+        // A marker with no size is an invisible marker. Same default the canvas
+        // gives an unstyled point, so adding a layer changes how the point is
+        // drawn without changing how big it is.
+        fresh.size           = core::Measure{render::kDefaultPointSizeUm, core::Unit::Paper};
+        fresh.look.fill_rgba = fresh.look.rgba;
+    }
+    symbol_.layers.push_back(fresh);
     refresh();
     selectTopLayer(); // the tree is top first, so the new layer is the first child
 }

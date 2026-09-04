@@ -1268,11 +1268,18 @@ KENTOS_SETTING(izgara_ana_cizgi)
 KENTOS_SETTING(yakalama_toleransi)
 {
     return SettingSpec{
-        .id       = "core.yakalama.tolerans",
-        .names    = {"yakalama_toleransı", "yakalama_toleransi", "aperture"},
-        .type     = SettingType::Int,
-        .scope    = SettingScope::App,
-        .fallback = SettingValue::integer(12),
+        .id    = "core.yakalama.tolerans",
+        .names = {"yakalama_toleransı", "yakalama_toleransi", "aperture"},
+        .type  = SettingType::Int,
+        .scope = SettingScope::App,
+        // SIXTEEN, NOT TWELVE. Twelve logical pixels is the number CAD programs
+        // settled on for a 96-DPI screen and a mouse; on the displays this is
+        // worked on now it is a target the pointer keeps missing, which is what
+        // "snap is weak" means in practice — the engine is right and the aperture
+        // is too small to reach it. Still an aperture and not a magnet: at 16 px
+        // the nearest candidate is unambiguous at every zoom a drawing is worked
+        // at.
+        .fallback = SettingValue::integer(16),
         .range    = SettingRange::between(1, 100),
         .values   = {},
         .unit     = "piksel",
@@ -1308,16 +1315,33 @@ KENTOS_SETTING(secim_toleransi)
 KENTOS_SETTING(yakalama_modlari)
 {
     return SettingSpec{
-        .id       = "core.yakalama.modlar",
-        .names    = {"yakalama_modları", "yakalama_modlari", "yakalama", "osmode"},
-        .type     = SettingType::Int,
-        .scope    = SettingScope::Session,
-        .fallback = SettingValue::integer(0x7),
+        .id    = "core.yakalama.modlar",
+        .names = {"yakalama_modları", "yakalama_modlari", "yakalama", "osmode"},
+        .type  = SettingType::Int,
+        .scope = SettingScope::Session,
+        // UÇ | ORTA | MERKEZ | KESİŞİM | DÜĞÜM.
+        //
+        // KESİŞİM joins the default because where two boundaries cross IS a
+        // cadastral point — a parcel corner that no monument marks is defined by
+        // the two edges that meet there, and a surveyor reaches for it constantly.
+        // YAKIN deliberately stays off: it snaps to ANY point along a segment, so
+        // it always finds something and quietly outranks the corner the user was
+        // actually reaching for.
+        //
+        // `SnapNode` was left out of this default for
+        // as long as the document could not hold a lone point — a snap mode for
+        // something that cannot exist is a promise the program does not keep —
+        // and it stayed out after `core.point` landed, so a placed nirengi or
+        // röper could not be snapped to at all. It is the single most important
+        // thing on a cadastral sheet to snap to: every boundary was measured
+        // from one.
+        .fallback = SettingValue::integer(0x20F),
         .range    = SettingRange::between(0, 0xFFFF),
         .values   = {},
         .unit     = "bit maskesi",
         .summary  = "Etkin nesne yakalama modları, bit maskesi. Yakalama çizimi değil "
-                    "çizme biçimini etkilediği için oturum kapsamındadır.",
+                    "çizme biçimini etkilediği için oturum kapsamındadır. "
+                    "Varsayılan: UÇ | ORTA | MERKEZ | KESİŞİM | DÜĞÜM.",
         .section  = "Çizim ve Yakalama", // ui-label
     };
 }
@@ -1752,8 +1776,8 @@ Status Settings::revert(const SettingChange& change)
     if (index == kNoSetting)
         return err(ErrorCode::NotFound, "Bilinmeyen ayar: " + quote(change.id));
 
-    const auto it = std::lower_bound(values_.begin(), values_.end(), index,
-                                     [](const auto& e, std::uint32_t k) { return e.first < k; });
+    const auto it      = std::lower_bound(values_.begin(), values_.end(), index,
+                                          [](const auto& e, std::uint32_t k) { return e.first < k; });
     const bool present = it != values_.end() && it->first == index;
 
     // The value came from this store, so it is not re-validated: undo restores what

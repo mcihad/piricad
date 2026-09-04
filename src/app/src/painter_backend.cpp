@@ -704,7 +704,7 @@ private:
                               std::size_t offset, std::uint32_t run, const render::PassStyle& ps,
                               double cx, double cy, double interval, const QImage& picture)
     {
-        if (run < 2 || interval <= 0.0) return;
+        if (run < 1 || interval <= 0.0) return;
 
         const auto at = [&](std::uint32_t v) {
             return QPointF(cx + static_cast<double>(batch.xs[offset + v]),
@@ -718,6 +718,14 @@ private:
             painter.drawImage(QPointF(-picture.width() * 0.5, -picture.height() * 0.5), picture);
             painter.restore();
         };
+
+        // A LONE VERTEX IS A POINT: one stamp on it, upright. Everything below
+        // measures length along a run, and a point has none — which is why every
+        // published point sembol came out as an empty square in the gallery.
+        if (run == 1) {
+            stamp(at(0), 0.0);
+            return;
+        }
 
         // A raster marker on an OPEN line sits once, in the middle of the whole run:
         // that is where a plan puts a sembol on a linear feature. On a face it never
@@ -874,7 +882,16 @@ private:
         };
 
         using core::MarkerPlacement;
-        if (run < 2) return;
+        if (run < 1) return;
+
+        // A LONE VERTEX IS A POINT. There is no length to space glyphs along and
+        // no direction to turn them to, so it takes exactly one, upright. Refusing
+        // it left every point gösterim in the style gallery an empty square — the
+        // swatch is drawn on a single vertex, which is what a point is.
+        if (run == 1) {
+            stamp(at(0), 0.0);
+            return;
+        }
 
         if (ps.placement == MarkerPlacement::Vertex) {
             for (std::uint32_t v = 0; v < run; ++v)

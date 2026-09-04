@@ -244,10 +244,16 @@ render::DrawList build(const core::Symbol& symbol, const core::ImageStore& image
                     push(stroke, {{-w, 0.0f}, {w, 0.0f}}, false);
             }
         } else {
-            // A point is a degenerate run of two coincident vertices, which is what
-            // the marker path already walks. A single vertex would be dropped: the
-            // scene builder emits nothing for a run of one.
-            if (list.passes[i].wants_stroke) push(stroke, {{0.0f, 0.0f}, {0.0f, 0.0f}}, false);
+            // ONE VERTEX, which is what a point IS and what the canvas now draws.
+            //
+            // It used to be two coincident vertices, and that was a workaround for
+            // a rule that no longer holds: the scene builder dropped a run of one,
+            // so the preview faked a run of two. The fake had its own cost — a
+            // zero-length run has no direction and no length, so a marker spaced
+            // along it landed nowhere and every point gösterim in the gallery came
+            // out as an empty square. Drawing what the canvas draws is both the
+            // simpler answer and the only one that can be trusted to match it.
+            if (list.passes[i].wants_stroke) push(stroke, {{0.0f, 0.0f}}, false);
         }
     }
     return list;

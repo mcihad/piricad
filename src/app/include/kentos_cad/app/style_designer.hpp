@@ -130,6 +130,10 @@ private:
     // ---- the shelf on the left ----
     void refreshGalleryTree();
     void refreshGalleryItems();
+
+    /// Fills the layer-type box with the types that mean something on the current
+    /// geometry, plus `current` so an existing layer can always be read.
+    void fillTypeChoices(core::SymbolLayerType current);
     void applyGalleryPick();
 
     // ---- the symbol being edited ----

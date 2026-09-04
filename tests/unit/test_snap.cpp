@@ -71,6 +71,31 @@ core::EntityId add_square(core::Document& doc, Mm x, Mm y, Mm side)
 
 // ------------------------------------------------------------- grid rule ----
 
+TEST_CASE("YAKALAMA: DÜĞÜM varsayılan maskede — noktaya yakalanabilir")
+{
+    // THE REGRESSION, and it was invisible from the engine's side: `SnapNode`
+    // works and has its own test, but the default mask was UÇ | ORTA | MERKEZ and
+    // nothing else. So a user who placed a nirengi and reached for it with the
+    // mouse got no snap at all, and every test that asked for the mode by hand
+    // passed while the program did not do it.
+    Rig r;
+    const std::uint16_t modes = r.bus.aid_settings().modes;
+    CHECK((modes & core::SnapNode) != 0);
+
+    // And the three it has always had are still on: this widened the default, it
+    // did not replace it.
+    CHECK((modes & core::SnapEndpoint) != 0);
+    CHECK((modes & core::SnapMidpoint) != 0);
+    CHECK((modes & core::SnapCenter) != 0);
+
+    // KESİŞİM too: where two boundaries cross is a cadastral point.
+    CHECK((modes & core::SnapIntersection) != 0);
+
+    // YAKIN stays OFF on purpose — it always finds something, and a mode that
+    // always finds something outranks the corner the user was reaching for.
+    CHECK((modes & core::SnapNearest) == 0);
+}
+
 TEST_CASE("YAKALAMA: ızgara en yakın kesişime oturur ve ikinci kez oynamaz")
 {
     const Mm step = 1000; // 1 m
