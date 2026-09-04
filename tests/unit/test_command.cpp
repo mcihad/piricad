@@ -2158,8 +2158,8 @@ TEST_CASE("nesneler verilmişse hiç sorulmaz: betik yolu değişmedi")
 
 TEST_CASE("seçim komutun alabileceğinden çoksa reddeder ve ARDINDAN ham hata bırakmaz")
 {
-    // BÖL takes one line. Handed two, it says so — and that used to be followed
-    // by "'core.split': zorunlu 'nokta' parametresi eksik" from post-run
+    // BUDA takes exactly two lines. Handed six, it says so — and that used to be
+    // followed by "'core.trim': zorunlu 'nokta' parametresi eksik" from post-run
     // validation, a second message about a parameter the user was never asked
     // for. `want_objects` clears the parameter it could not accept, and the bus
     // no longer validates a command that resolved nothing.
@@ -2168,26 +2168,81 @@ TEST_CASE("seçim komutun alabileceğinden çoksa reddeder ve ARDINDAN ham hata 
     f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
 
     REQUIRE(f.bus.execute_line("KATMAN ad=DENEME", Origin::Test).ok());
-    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=0,0 10,0", Origin::Test).ok());
-    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=0,5 10,5", Origin::Test).ok());
-    REQUIRE(f.bus.execute_line("SEÇ mod=NESNE nesneler=1 nesneler=2", Origin::Test).ok());
+    for (int i = 0; i < 3; ++i)
+        REQUIRE(
+            f.bus
+                .execute_line("ÇİZGİ noktalar=0," + std::to_string(i) + " 10," + std::to_string(i),
+                              Origin::Test)
+                .ok());
+    REQUIRE(f.bus.execute_line("SEÇ mod=TÜMÜ", Origin::Test).ok());
 
-    // Through the road the BUTTON takes. A script must still name everything it
-    // wants — `BÖL` alone fails validation before the body runs, which is right —
-    // so the case this test is about only exists on the interactive path.
     said.clear();
-    auto started = f.bus.begin_interactive("BÖL");
+    auto started = f.bus.begin_interactive("BUDA");
     REQUIRE(started.ok());
 
     auto& session = *started.value();
-    // It never even asks: two objects are already selected and one is the most it
-    // can take, so it refuses on the selection rather than on a prompt.
+    // It never even asks: three objects are selected and two is the most it can
+    // take, so it refuses on the selection rather than on a prompt.
     CHECK(!session.waiting());
 
     auto done = f.bus.finish(session);
     CHECK(done.ok()); // a refusal, not an error
-    CHECK(said.find("en fazla 1 nesne") != std::string::npos);
+    CHECK(said.find("en fazla 2 nesne") != std::string::npos);
     CHECK(said.find("zorunlu") == std::string::npos);
+}
+
+// =============================================================================
+// BÖL — a cut is a line the user draws
+// =============================================================================
+
+TEST_CASE("BÖL çizilen bir kesme çizgisiyle bir alanı ikiye ayırır")
+{
+    // What the user asked for in so many words: "bölerken çizgi çizerek kesmemiz
+    // gerekiyor". A point along an edge is not how a surveyor states a cut — an
+    // ifraz line is agreed on the ground and DRAWN. This is that cut without the
+    // cadastral half; `İFRAZ` is the same geometry with the regulation on top,
+    // which is why both reach for `core::half_plane`.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=DENEME", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN noktalar=0,0 20,0 20,10 0,10", Origin::Test).ok());
+
+    REQUIRE(f.bus.execute_line("BÖL nesne=1 noktalar=10,-5 noktalar=10,15", Origin::Test).ok());
+
+    // One face in, two out.
+    CHECK(f.doc.live_entity_count() == 2);
+}
+
+TEST_CASE("BÖL kesme çizgisinin kestiği çizgiyi böler, kesmediğine dokunmaz")
+{
+    std::string said;
+    Fixture f;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+
+    REQUIRE(f.bus.execute_line("KATMAN ad=DENEME", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=0,0 20,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=0,50 20,50", Origin::Test).ok());
+
+    said.clear();
+    REQUIRE(
+        f.bus.execute_line("BÖL nesne=1 nesne=2 noktalar=10,-5 noktalar=10,5", Origin::Test).ok());
+
+    // The first line is cut in two; the second is nowhere near the cut and is
+    // reported rather than silently skipped.
+    CHECK(f.doc.live_entity_count() == 3);
+    CHECK(said.find("1 çizgi bölündü") != std::string::npos);
+    CHECK(said.find("kesmiyor") != std::string::npos);
+}
+
+TEST_CASE("BÖL eski nokta biçimi çalışmaya devam eder")
+{
+    // `nokta` is written into journals and into scripts already, so it keeps
+    // working: one open line split at a point on it.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=DENEME", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=0,0 20,0", Origin::Test).ok());
+
+    REQUIRE(f.bus.execute_line("BÖL nesne=1 nokta=10,0", Origin::Test).ok());
+    CHECK(f.doc.live_entity_count() == 2);
 }
 
 TEST_CASE("etkileşimli başlatma çıplak bir ad ile eskisi gibi davranır")

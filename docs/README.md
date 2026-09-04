@@ -48,7 +48,7 @@ Tek tek komutlar:
 | `ÖLÇEKLE` | [Nesne ölçekleme](komutlar/scale.md) |
 | `AYNALA` | [Nesne aynalama](komutlar/mirror.md) |
 | `DİZİ` | [Nesne çoğaltma dizisi](komutlar/array.md) |
-| `BÖL` | [Çizgiyi ikiye bölme](komutlar/split.md) |
+| `BÖL` | [Kesme çizgisiyle bölme](komutlar/split.md) |
 | `BİRLEŞTİR` | [Alan ve çizgi birleştirme](komutlar/combine.md) |
 | `BUDA` | [Çizgiyi sınıra budama](komutlar/trim.md) |
 | `UZAT` | [Çizgiyi sınıra uzatma](komutlar/extend.md) |

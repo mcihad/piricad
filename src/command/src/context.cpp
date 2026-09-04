@@ -159,7 +159,15 @@ Task<bool> want_objects(Context& ctx, std::string param, std::string message,
 
     const auto too_many = [&](std::size_t n) { return most != 0 && n > most; };
 
-    out = ctx.argument(param).as_ids();
+    // BOTH SHAPES AN ID ARRIVES IN. `nesneler=1 2` parses to an IdList, but a lone
+    // `nesne=1` parses to an Int — there is nothing in "1" to say it is a list —
+    // and reading only `as_ids()` therefore saw an empty selection and went on to
+    // ask for one, with the object the script had already named sitting right
+    // there. Every caller that used to unpack this by hand now gets it here.
+    const Value arg = ctx.argument(param);
+    out             = arg.as_ids();
+    if (out.empty() && arg.kind() == Value::Kind::Int) out.push_back(arg.as_int());
+
     if (!out.empty()) {
         if (too_many(out.size()))
             co_return refuse("'" + param + "' en fazla " + std::to_string(most) + " nesne alır; " +

@@ -3,6 +3,7 @@
 
 #include "clipper2/clipper.h"
 
+#include <cmath>
 #include <utility>
 
 namespace kentos::core {
@@ -124,6 +125,35 @@ Mm2 ring_area(const std::vector<Point2>& ring) noexcept
         twice += static_cast<__int128>(a.x) * b.y - static_cast<__int128>(b.x) * a.y;
     }
     return static_cast<Mm2>(twice / 2);
+}
+
+Polygon half_plane(Point2 a, Point2 b, const Box2& box, bool left)
+{
+    // Reach: the box's diagonal, doubled. Anything at least that long puts this
+    // rectangle's own corners outside the face whatever angle the cut is at.
+    const double dx  = static_cast<double>(b.x - a.x);
+    const double dy  = static_cast<double>(b.y - a.y);
+    const double len = std::sqrt(dx * dx + dy * dy);
+    if (len <= 0.0) return {};
+
+    const double wx    = static_cast<double>(box.max_x - box.min_x);
+    const double wy    = static_cast<double>(box.max_y - box.min_y);
+    const double reach = 2.0 * (std::sqrt(wx * wx + wy * wy) + 1000.0);
+
+    const double ux = dx / len; // along the cut
+    const double uy = dy / len;
+    const double nx = left ? -uy : uy; // and away from it, to one side
+    const double ny = left ? ux : -ux;
+
+    const auto at = [&](double along, double across) {
+        return Point2{a.x + mm_round(ux * along + nx * across),
+                      a.y + mm_round(uy * along + ny * across)};
+    };
+
+    Polygon poly;
+    poly.exterior = {at(-reach, 0.0), at(len + reach, 0.0), at(len + reach, reach),
+                     at(-reach, reach)};
+    return poly;
 }
 
 Result<std::vector<Polygon>> polygon_boolean(const std::vector<Polygon>& subject,

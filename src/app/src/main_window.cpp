@@ -2099,7 +2099,7 @@ void MainWindow::probeToolsByHand()
     // Two lines that cross at 60,20 and a face away from them.
     const Step steps[] = {
         {"BUDA", {60'000, 30'000}, {60'000, 38'000}, {}, nullptr},
-        {"BÖL", {60'000, 30'000}, {60'000, 25'000}, {}, nullptr},
+        {"BÖL", {60'000, 30'000}, {55'000, 25'000}, {65'000, 25'000}, nullptr},
         {"BİRLEŞTİR", {60'000, 30'000}, {}, {}, nullptr},
         {"TAŞI", {60'000, 30'000}, {60'000, 30'000}, {70'000, 30'000}, nullptr},
         {"OFSET", {60'000, 30'000}, {}, {}, "5"},

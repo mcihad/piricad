@@ -26,7 +26,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.copy`](copy.md) | `KOPYALA`, `COPY`, `KP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerin kopyasını iki nokta arasındaki kadar öteye koyar. |
 | [`core.array`](array.md) | `DİZİ`, `DIZI`, `ARRAY`, `DZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır. |
 | [`core.combine`](combine.md) | `BİRLEŞTİR`, `BIRLESTIR`, `COMBINE`, `BRL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar. |
-| [`core.split`](split.md) | `BÖL`, `BOL`, `SPLIT`, `BL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizgiyi verilen noktadan ikiye böler. |
+| [`core.split`](split.md) | `BÖL`, `BOL`, `SPLIT`, `BL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Nesneleri çizilen bir kesme çizgisiyle böler. |
 | [`core.trim`](trim.md) | `BUDA`, `TRIM`, `BD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizgiyi kestiği sınır çizgisine kadar budar. |
 | [`core.extend`](extend.md) | `UZAT`, `EXTEND`, `UZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizgiyi sınır çizgisine ulaşana kadar uzatır. |
 | [`core.chamfer`](chamfer.md) | `PAH`, `CHAMFER`, `PH` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi düz bir kenarla keser (pah kırar). |
@@ -258,12 +258,13 @@ Ayrıntılı kullanım: [BİRLEŞTİR](combine.md)
 
 ### `core.split` — BÖL
 
-Bir çizgiyi verilen noktadan ikiye böler.
+Nesneleri çizilen bir kesme çizgisiyle böler.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `nesne` | selection | isteğe bağlı | Bölünecek çizginin kimliği; yoksa etkin seçim |
-| `nokta` | point | 1 | Bölme noktası |
+| `nesne` | selection | en az 0 | Kesilecek nesneler; yoksa etkin seçim |
+| `noktalar` | point_list | 0–2 | Kesme çizgisinin iki noktası; arayüzde çizilir |
+| `nokta` | point | isteğe bağlı | Bölme noktası (tek çizgi; eski biçim) |
 
 Ayrıntılı kullanım: [BÖL](split.md)
 
@@ -1377,23 +1378,31 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "BL"
       ],
       "category": "Düzenleme",
-      "summary": "Bir çizgiyi verilen noktadan ikiye böler.",
+      "summary": "Nesneleri çizilen bir kesme çizgisiyle böler.",
       "params": [
         {
           "name": "nesne",
           "type": "selection",
           "min": 0,
-          "max": 1,
+          "max": -1,
           "required": false,
-          "help": "Bölünecek çizginin kimliği; yoksa etkin seçim"
+          "help": "Kesilecek nesneler; yoksa etkin seçim"
+        },
+        {
+          "name": "noktalar",
+          "type": "point_list",
+          "min": 0,
+          "max": 2,
+          "required": false,
+          "help": "Kesme çizgisinin iki noktası; arayüzde çizilir"
         },
         {
           "name": "nokta",
           "type": "point",
-          "min": 1,
+          "min": 0,
           "max": 1,
-          "required": true,
-          "help": "Bölme noktası"
+          "required": false,
+          "help": "Bölme noktası (tek çizgi; eski biçim)"
         }
       ],
       "flags": [

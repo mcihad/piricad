@@ -60,39 +60,6 @@ bool polygon_of(const core::Document& doc, core::EntityId slot, core::Polygon& o
     return out.exterior.size() >= 3;
 }
 
-/// A rectangle covering one side of the line a->b, big enough to contain `box`.
-///
-/// The line is extended and widened well past the parcel, so the intersection
-/// below is exact: every vertex of the result is either a parcel vertex or a
-/// point on the cut, and none of them came from the rectangle's own corners.
-core::Polygon half_plane(core::Point2 a, core::Point2 b, const core::Box2& box, bool left)
-{
-    // Reach: the box's diagonal, doubled. Anything at least that long puts the
-    // rectangle's own corners outside the parcel whatever angle the cut is at.
-    const double dx  = static_cast<double>(b.x - a.x);
-    const double dy  = static_cast<double>(b.y - a.y);
-    const double len = std::sqrt(dx * dx + dy * dy);
-
-    const double wx    = static_cast<double>(box.max_x - box.min_x);
-    const double wy    = static_cast<double>(box.max_y - box.min_y);
-    const double reach = 2.0 * (std::sqrt(wx * wx + wy * wy) + 1000.0);
-
-    const double ux = dx / len; // along the cut
-    const double uy = dy / len;
-    const double nx = left ? -uy : uy; // and away from it, to one side
-    const double ny = left ? ux : -ux;
-
-    const auto at = [&](double along, double across) {
-        return core::Point2{a.x + core::mm_round(ux * along + nx * across),
-                            a.y + core::mm_round(uy * along + ny * across)};
-    };
-
-    core::Polygon poly;
-    poly.exterior = {at(-reach, 0.0), at(len + reach, 0.0), at(len + reach, reach),
-                     at(-reach, reach)};
-    return poly;
-}
-
 core::Mm2 abs_area(core::Mm2 v)
 {
     return v < 0 ? -v : v;
@@ -156,7 +123,7 @@ Task<void> run(Context& ctx)
 
     std::vector<core::Polygon> pieces;
     for (bool left : {true, false}) {
-        const core::Polygon side = half_plane(*first, *second, box, left);
+        const core::Polygon side = core::half_plane(*first, *second, box, left);
         auto part = core::polygon_boolean({parcel}, {side}, core::BooleanOp::Intersection);
         if (!part) {
             ctx.echo(part.error().message);

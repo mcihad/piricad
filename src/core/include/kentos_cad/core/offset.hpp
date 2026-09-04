@@ -97,6 +97,20 @@ enum class BooleanOp : std::uint8_t {
 Result<std::vector<Polygon>> polygon_boolean(const std::vector<Polygon>& subject,
                                              const std::vector<Polygon>& clip, BooleanOp op);
 
+/// A rectangle covering one side of the line `a`->`b`, big enough to contain
+/// `box` whatever angle the line is at.
+///
+/// The shape a CUT is made with: intersect a face with this and you get the half
+/// on one side of the line. It is extended and widened well past the face on
+/// purpose, so every vertex of the result is either a vertex of the face or a
+/// point ON the cut, and none of them came from this rectangle's own corners —
+/// which is what makes the two halves meet exactly along the line the user drew.
+///
+/// In `core` rather than in either caller because both an ifraz and an ordinary
+/// BÖL are the same cut, and two copies of a geometric trick this particular is
+/// two chances to get it subtly different (CLAUDE.md 5.16).
+Polygon half_plane(Point2 a, Point2 b, const Box2& box, bool left);
+
 /// The signed area a ring encloses, in square millimetres.
 ///
 /// Positive counter-clockwise. Exposed because a topology check compares areas —
