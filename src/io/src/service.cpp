@@ -295,7 +295,7 @@ FileService::import_points(command::Transaction* tx, std::string path, bool swap
     // second column.
     const core::AttrTable& table = tx->document().attributes();
     const auto column            = [&](const char* id, const char* label,
-                                       core::AttrType type) -> core::Result<core::AttrId> {
+                            core::AttrType type) -> core::Result<core::AttrId> {
         if (const core::AttrId found = table.find(id); found != core::kNoAttr) return found;
 
         core::AttrSpec spec;

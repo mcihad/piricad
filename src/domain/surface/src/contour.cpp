@@ -262,8 +262,8 @@ namespace {
 /// 6·10^17 and int64 would wrap on a site of any size (core.md R3).
 core::Mm2 triangle_area(core::Point2 a, core::Point2 b, core::Point2 c)
 {
-    const __int128 twice     = static_cast<__int128>(b.x - a.x) * (c.y - a.y) -
-                               static_cast<__int128>(c.x - a.x) * (b.y - a.y);
+    const __int128 twice = static_cast<__int128>(b.x - a.x) * (c.y - a.y) -
+                           static_cast<__int128>(c.x - a.x) * (b.y - a.y);
     const __int128 abs_twice = twice < 0 ? -twice : twice;
     return static_cast<core::Mm2>(abs_twice / 2);
 }

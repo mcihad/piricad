@@ -106,8 +106,8 @@ enum SnapMode : std::uint16_t {
 
     /// The modes that need geometry to snap to. Grid and polar need none.
     SnapObjectMask = SnapEndpoint | SnapMidpoint | SnapCenter | SnapIntersection |
-        SnapPerpendicular | SnapNearest | SnapNode | SnapExtension | SnapParallel | SnapApparent |
-        SnapGuide,
+                     SnapPerpendicular | SnapNearest | SnapNode | SnapExtension | SnapParallel |
+                     SnapApparent | SnapGuide,
 
     /// The modes that look BEYOND the aperture, because the point they build is
     /// not where the geometry that implies it is. They are the only reason

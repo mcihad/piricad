@@ -229,7 +229,7 @@ KENTOS_COMMAND(topology)
         .names    = {"TOPOLOJİ", "TOPOLOJI", "TOPOLOGY", "TPL"},
         .category = Category::Query,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                           "Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim"}},
+                         "Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim"}},
         .undo     = UndoPolicy::None,
         .flags    = Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary  = "Kendini kesen sınır, sıfır alan ve örtüşen parselleri raporlar.",

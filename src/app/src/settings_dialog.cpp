@@ -281,9 +281,9 @@ SettingsDialog::SettingsDialog(Controller& controller, QWidget* parent)
         Section section;
         section.group = declared.title;
         section.title = QString::fromStdString(declared.title);
-        section.page = declared.phase.empty() ? buildGroup(declared.title, section.title)
-                                              : buildPending(QString::fromStdString(declared.phase),
-                                                             QString::fromStdString(declared.note));
+        section.page  = declared.phase.empty() ? buildGroup(declared.title, section.title)
+                                               : buildPending(QString::fromStdString(declared.phase),
+                                                              QString::fromStdString(declared.note));
         pages_->addWidget(section.page);
         sections_->addSection(group_glyph(section_group(declared.title)), section.title);
         order_.push_back(section);

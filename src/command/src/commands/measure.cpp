@@ -198,7 +198,7 @@ KENTOS_COMMAND(measure_area)
         .names    = {"ALANÖLÇ", "ALANOLC", "AREAOF", "AÖ"},
         .category = Category::Query,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
-                           "Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim"}},
+                         "Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim"}},
         .undo     = UndoPolicy::None,
         .flags    = Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary  = "Seçilen nesnelerin alanını ve çevresini yazar.",

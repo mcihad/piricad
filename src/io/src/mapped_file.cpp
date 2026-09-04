@@ -33,9 +33,9 @@ std::string system_reason()
 #ifdef _WIN32
     const DWORD code = ::GetLastError();
     char* text       = nullptr;
-    const DWORD n = ::FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-                                         FORMAT_MESSAGE_IGNORE_INSERTS,
-                                     nullptr, code, 0, reinterpret_cast<char*>(&text), 0, nullptr);
+    const DWORD n   = ::FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+                                           FORMAT_MESSAGE_IGNORE_INSERTS,
+                                       nullptr, code, 0, reinterpret_cast<char*>(&text), 0, nullptr);
     std::string out = n && text ? std::string(text, n) : ("hata kodu " + std::to_string(code));
     if (text) ::LocalFree(text);
     while (!out.empty() && (out.back() == '\n' || out.back() == '\r'))

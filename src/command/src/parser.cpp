@@ -75,7 +75,7 @@ struct ExprParser
         if (!failed && i != s.size()) {
             failed = true;
             why    = "beklenmeyen '" + std::string(1, s[i]) + "' karakteri (konum " +
-                     std::to_string(i) + ")";
+                  std::to_string(i) + ")";
         }
         return v;
     }
