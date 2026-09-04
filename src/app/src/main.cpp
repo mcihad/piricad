@@ -394,6 +394,59 @@ int main(int argc, char** argv)
     // before the body ran, and the only trace was a line in the transcript. Every
     // unit test still passed, and grips could be grabbed and dragged with nothing
     // whatsoever happening on release.
+    // THE §10.1 AND R7 BUDGETS, ASSERTED. `KENTOS_FRAME_TIMES` measures and
+    // prints; this one measures and FAILS, which is what a gate needs.
+    //
+    // It lives here rather than in `/tests/bench` because of Article 3.4, not
+    // because of taste: `/tests` links no Qt and every backend is Qt by
+    // definition, so the bench binary has nowhere to construct one and could only
+    // ever measure the scene builder. The budgets are about what reaches the
+    // screen. `scripts/ci-gate-butce.sh` drives this.
+    if (const QByteArray rounds = qgetenv("KENTOS_BUDGET_PROBE"); !rounds.isEmpty()) {
+        const int n = std::max(1, rounds.toInt());
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window, n] {
+            kentos::app::MapCanvas* canvas = window.canvas();
+            if (canvas == nullptr) {
+                (void)std::fprintf(stderr, "[butce] tuval yok\n");
+                QApplication::exit(2);
+                return;
+            }
+
+            std::vector<int> costs = canvas->timeFrames(n);
+            std::sort(costs.begin(), costs.end());
+            const int median = costs[costs.size() / 2];
+
+            const kentos::render::FrameStats fs = canvas->frameStats();
+
+            // The two numbers `render.md` names: R13's 16 ms and R7's hundred.
+            // The draw-call budget is asserted only where it MEANS something —
+            // `FrameStats::draw_calls` is zero on a backend that is not on the
+            // GPU, and zero is not "fewer than a hundred", it is "not measured".
+            constexpr int kFrameBudgetUs            = 16000;
+            constexpr std::uint32_t kDrawCallBudget = 100;
+
+            int kusur = 0;
+            if (median > kFrameBudgetUs) {
+                (void)std::fprintf(stderr, "[butce] kare ortancasi %d us — 10.1 butcesi %d us\n",
+                                   median, kFrameBudgetUs);
+                kusur = 1;
+            }
+            const bool gpu = canvas->backendIsGpu();
+            if (gpu && fs.draw_calls >= kDrawCallBudget) {
+                (void)std::fprintf(stderr, "[butce] cizim cagrisi %u — R7 butcesi %u\n",
+                                   fs.draw_calls, kDrawCallBudget);
+                kusur = 1;
+            }
+
+            (void)std::fprintf(stdout,
+                               "[butce] %s — kare ortancasi %d us (butce %d)"
+                               "  ·  cizim cagrisi %u (butce %u%s)\n",
+                               kusur != 0 ? "ASILDI" : "TAMAM", median, kFrameBudgetUs,
+                               fs.draw_calls, kDrawCallBudget, gpu ? "" : ", GPU degil: olculmedi");
+            QApplication::exit(kusur);
+        });
+    }
+
     // Presses every button on the tool column and prints what came back. Same
     // category as KENTOS_EDIT_PROBE below: developer tooling, not a feature.
     if (qEnvironmentVariableIsSet("KENTOS_TOOL_PROBE")) {

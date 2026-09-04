@@ -130,7 +130,8 @@ Two behaviours worth knowing before changing them:
 > reporting PENDING against two reasons that had both stopped being true. And
 > `make check` is GREEN: every gate, the format check, and clang-tidy — whose
 > harness was itself a defect (it analysed files the build never compiled, with
-> no flags, and reported the parse failures as findings).
+> no flags, and reported the parse failures as findings). R7's draw-call budget
+> is asserted too, by `scripts/ci-gate-butce.sh`.
 
 1. **The probes are the only thing that catches interaction defects.** Three now:
    `KENTOS_EDIT_PROBE` (grip dragging), `KENTOS_TOOL_PROBE` (every column button,
@@ -140,29 +141,33 @@ Two behaviours worth knowing before changing them:
    found by one of them and none was findable by a unit test: the transcript said
    a command ran while the screen showed nothing. Extend them rather than testing
    the canvas by eye.
-2. **Renderer work Article 8.1 still owes.** R7 is half done: the live
-   draw-call count exists (`render::FrameStats`, counted where the draws are
-   submitted) and `KENTOS_FRAME_TIMES` prints it beside the frame time, so the
-   budget can be MEASURED —
+2. **Renderer work Article 8.1 still owes — four subsystems, no defects.**
+   R7 is DONE: the live draw-call count exists (`render::FrameStats`, counted
+   where the draws are submitted), `KENTOS_FRAME_TIMES` prints it beside the
+   frame time, and `scripts/ci-gate-butce.sh` ASSERTS both budgets on the
+   heaviest scene in the repository —
 
-       duz-yuk.json     52 us   31 çizim çağrısı
-       desen-yuku.json 3949 us   82 çizim çağrısı
+       [butce] TAMAM — kare ortancasi 4055 us (butce 16000)
+                     · cizim cagrisi 82 (butce 100)
 
-   — both inside the < 100 budget. What R7 still owes is the ASSERTION in
-   `/tests/bench`, and that is blocked on a real constraint rather than on
-   effort: `/tests` links no Qt (Article 3.4) and every backend is Qt by
-   definition, so the bench binary has nowhere to construct one. Either the bench
-   grows a Qt-linked slice or the assertion moves to a probe under `/src/app`.
-   Decide that before writing it.
+   It is a shell gate rather than a bench case because of Article 3.4 and not
+   taste: `/tests` links no Qt and every backend is Qt by definition, so the
+   bench binary can time the SCENE BUILDER and nothing else. A budget about what
+   reaches the screen is measured where the screen is.
 
-   The other four are architecture, not defects, and each is a subsystem:
+   What remains is architecture, and each is a subsystem rather than a fix:
    precomputed LOD baked into quadtree tiles at load time (R4), a persistent
-   mapped ring buffer with fences (R6), label placement on its own thread with an
-   atomic pointer swap (R9), and a dedicated render thread owning geometry
-   preparation and submission (R10). None is needed for the picture — the GPU
-   canvas draws everything today and meets both budgets on the scenes above.
-   All are needed before the 5M-polygon sheet the budgets are actually written
-   against.
+   mapped ring buffer with fences (R6), label placement on its own thread
+   publishing by atomic pointer swap (R9), and a dedicated render thread owning
+   geometry preparation and submission (R10).
+
+   NONE IS NEEDED FOR THE PICTURE and none is a defect a user can hit today: the
+   GPU canvas draws every symbol layer type and meets both budgets on the scenes
+   above. All four are needed before the 5M-polygon sheet the budgets are
+   actually written against, and R10 in particular is not a local change —
+   `QRhiWidget` renders on the GUI thread, so moving submission off it is a
+   question about which surface the canvas is, not about where a loop lives.
+   Take them one at a time, each with its own bench case in the gate above.
 
 ## Things that cost an afternoon each — do not re-derive them
 

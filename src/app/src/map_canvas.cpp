@@ -80,6 +80,11 @@ QString MapCanvas::backendName() const
     return QString::fromStdString(backend_->name());
 }
 
+bool MapCanvas::backendIsGpu() const
+{
+    return backend_ && backend_->gpu();
+}
+
 const core::Document& MapCanvas::document() const
 {
     return controller_.document();

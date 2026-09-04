@@ -2237,7 +2237,7 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
             cb->setVertexInput(0, 2, line_inputs);
             if (cmd.clipped) cb->setStencilRef(0);
             cb->draw(4, cmd.count);
-        ++draws;
+            ++draws;
             continue;
         }
 
@@ -2247,7 +2247,7 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
             cb->setVertexInput(0, 1, flat_input);
             if (cmd.clipped) cb->setStencilRef(0);
             cb->draw(cmd.count, 1, cmd.first, 0);
-        ++draws;
+            ++draws;
             continue;
         }
 
@@ -2263,7 +2263,7 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
             cb->setVertexInput(0, 2, inputs);
             if (cmd.clipped) cb->setStencilRef(0);
             cb->draw(4, cmd.count);
-        ++draws;
+            ++draws;
             continue;
         }
 
@@ -2275,7 +2275,7 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
             cb->setVertexInput(0, 1, flat_input);
             cb->setStencilRef(0);
             cb->draw(cmd.count, 1, cmd.first, 0);
-        ++draws;
+            ++draws;
             continue;
         }
 
@@ -2285,7 +2285,7 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
             cb->setVertexInput(0, 1, flat_input);
             cb->setStencilRef(0);
             cb->draw(6, 1, cmd.cover, 0);
-        ++draws;
+            ++draws;
             continue;
         }
 
@@ -2298,7 +2298,7 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
             cb->setShaderResources(srb_text_.get(), 1, &dyn);
             cb->setVertexInput(0, 2, text_inputs);
             cb->draw(4, cmd.count);
-        ++draws;
+            ++draws;
             continue;
         }
 #endif
@@ -2323,8 +2323,8 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
     // not — the count on its own says nothing.
     stats_.draw_calls = draws;
     stats_.passes     = static_cast<std::uint32_t>(list.passes.size());
-    stats_.vertices   = static_cast<std::uint32_t>(vertex_data_.size() / 2 +
-                                                 segment_data_.size() / 5);
+    stats_.vertices =
+        static_cast<std::uint32_t>(vertex_data_.size() / 2 + segment_data_.size() / 5);
 
     cb->endPass();
 }

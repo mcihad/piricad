@@ -117,6 +117,10 @@ public:
 
     QString backendName() const;
 
+    /// Whether the live backend draws on the GPU. The draw-call budget is only
+    /// meaningful where it does; see `render::FrameStats::draw_calls`.
+    bool backendIsGpu() const;
+
     /// The document this canvas draws. READ ONLY, like every other reader outside
     /// a command (Article 5.9): the canvas edits through the bus and so does
     /// anyone holding this.
