@@ -118,8 +118,14 @@ class Context;
 /// 0 for no limit. Enforced HERE rather than in the caller so that a refusal
 /// leaves the parameter clear; a caller that judged the count itself would be
 /// judging it after the awaiter had already recorded the answer.
+/// `example` is shown only when there is nothing to work on — a script that
+/// forgot its argument needs to see the form, and a user standing at a prompt
+/// does not. Putting it in the PROMPT, which is what the callers used to do, put
+/// "TAŞI nesneler=1 baslangic=0,0 bitis=10,0" on the command line while the user
+/// was being asked to point at something.
 Task<bool> want_objects(Context& ctx, std::string param, std::string message,
-                        std::vector<std::int64_t>& out, std::size_t most = 0);
+                        std::vector<std::int64_t>& out, std::size_t most = 0,
+                        std::string example = {});
 
 class Context
 {

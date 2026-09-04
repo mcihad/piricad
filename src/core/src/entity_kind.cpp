@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/pick.hpp"
 
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/circle.hpp"
@@ -105,6 +106,34 @@ void polyline_hit(const RingGeometry& geom, SlotSpan slots, Point2 probe, Mm tol
                     break;
                 }
             }
+        }
+
+        // A CLICK INSIDE A FACE PICKS THE FACE. Measuring only to the edges is
+        // the CAD answer and the wrong one for a map: a user reaching for a
+        // parcel points AT the parcel, not at the hairline around it, and on a
+        // sheet of adjoining parcels the interior is nearly all of what there is
+        // to point at. Every tool that starts by asking which objects — move,
+        // split, offset — was unusable because of it: the click found nothing and
+        // the command waited for a selection that could not be made.
+        //
+        // AFTER the edge walk and over ALL the rings, because a hole has to be
+        // able to veto the exterior: a click in the court cut out of a building
+        // is a click in the court, and the walk above stops at the first ring
+        // that answers.
+        if (out[i] == 0) {
+            bool in_exterior = false;
+            bool in_hole     = false;
+            for (std::uint32_t r = rs.first; r < rs.first + rs.count; ++r) {
+                if (geom.ring_role[r] == RingRole::Open) continue;
+                const auto xs = geom.ring_xs(r);
+                const auto ys = geom.ring_ys(r);
+                if (!ring_contains(xs, ys, probe)) continue;
+                if (geom.ring_role[r] == RingRole::Exterior)
+                    in_exterior = true;
+                else
+                    in_hole = true;
+            }
+            if (in_exterior && !in_hole) out[i] = 1;
         }
     }
 }

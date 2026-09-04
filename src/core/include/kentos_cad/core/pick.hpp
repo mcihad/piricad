@@ -32,6 +32,7 @@
 #include "kentos_cad/core/units.hpp"
 
 #include <cstdint>
+#include <span>
 #include <vector>
 
 namespace kentos::core {
@@ -66,6 +67,17 @@ Point2 closest_point_on_segment(Point2 a, Point2 b, Point2 p) noexcept;
 /// True when the closed segment [a,b] shares at least one point with `box`.
 /// Exact within `kPickExactLimit`; conservative (true) beyond it.
 bool segment_touches_box(Point2 a, Point2 b, const Box2& box) noexcept;
+
+/// Whether `probe` lies inside the closed ring, by the even-odd rule.
+///
+/// EXACT INTEGER ARITHMETIC, in `__int128` like `ring_area`: whether a click
+/// landed inside a parcel must not depend on the machine, and a crossing test in
+/// `double` disagrees with itself along an edge at TUREF's seven digits.
+///
+/// One implementation for both readers — the pick radius and the kind's own hit
+/// test — because two answers to "is the cursor in this parcel" is two chances
+/// for the selection and the highlight to disagree (CLAUDE.md 5.16).
+bool ring_contains(std::span<const Mm> xs, std::span<const Mm> ys, Point2 probe) noexcept;
 
 /// Intersection of the closed segments [a,b] and [c,d]. False when they are
 /// parallel, collinear or do not meet. Collinear overlap is deliberately NOT an

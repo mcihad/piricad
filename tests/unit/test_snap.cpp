@@ -71,6 +71,43 @@ core::EntityId add_square(core::Document& doc, Mm x, Mm y, Mm side)
 
 // ------------------------------------------------------------- grid rule ----
 
+TEST_CASE("SEÇME: alanın İÇİNE tıklamak alanı seçer, deliğine tıklamak seçmez")
+{
+    // THE DEFECT EVERY TOOL TRIPPED OVER. `pick_nearest` measured to the EDGES
+    // only, so a click one metre inside a parcel was a click on nothing — the
+    // pick radius is a few pixels. Move, split, offset and match-style all start
+    // by asking WHICH objects, so all of them sat waiting for a selection the
+    // user could not make by pointing at the thing they meant.
+    core::Document doc;
+    core::Op op;
+    const core::LayerId layer = doc.ensure_layer("PARSEL");
+
+    // A 40 x 30 m face with a 10 x 10 m court cut out of the middle.
+    const std::array<Point2, 4> outer{Point2{0, 0}, Point2{40'000, 0}, Point2{40'000, 30'000},
+                                      Point2{0, 30'000}};
+    const std::array<Point2, 4> hole{Point2{15'000, 10'000}, Point2{25'000, 10'000},
+                                     Point2{25'000, 20'000}, Point2{15'000, 20'000}};
+    const std::array<core::RingGeometry::RingInput, 2> rings{
+        core::RingGeometry::RingInput{outer, core::RingRole::Exterior, 0},
+        core::RingGeometry::RingInput{hole, core::RingRole::Interior, 0}};
+
+    const auto made = doc.add_area(layer, rings, op);
+    REQUIRE(made.ok());
+
+    // Well inside the face and far from every edge: a few pixels of pick radius
+    // could never reach one.
+    CHECK_EQ(core::pick_nearest(doc, Point2{5'000, 5'000}, 200), made.value());
+
+    // On an edge, as before.
+    CHECK_EQ(core::pick_nearest(doc, Point2{0, 15'000}, 200), made.value());
+
+    // IN THE COURT: a hole is not the thing it was cut out of.
+    CHECK_EQ(core::pick_nearest(doc, Point2{20'000, 15'000}, 200), core::kNoEntity);
+
+    // And outside it entirely.
+    CHECK_EQ(core::pick_nearest(doc, Point2{80'000, 80'000}, 200), core::kNoEntity);
+}
+
 TEST_CASE("YAKALAMA: DÜĞÜM varsayılan maskede — noktaya yakalanabilir")
 {
     // THE REGRESSION, and it was invisible from the engine's side: `SnapNode`

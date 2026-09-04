@@ -142,7 +142,7 @@ InputAwaiter<Value::Ints> Context::objects(std::string param, std::string messag
 }
 
 Task<bool> want_objects(Context& ctx, std::string param, std::string message,
-                        std::vector<std::int64_t>& out, std::size_t most)
+                        std::vector<std::int64_t>& out, std::size_t most, std::string example)
 {
     // A refusal must leave NOTHING behind. The awaiter records whatever it
     // resolved under the parameter it was given, and it does that before the
@@ -193,7 +193,8 @@ Task<bool> want_objects(Context& ctx, std::string param, std::string message,
         // Said for BOTH clients, without asking which one this is (Article 1.2):
         // a user who pressed Esc reads it as confirmation, and a script that
         // forgot its argument reads it as the reason nothing happened.
-        co_return refuse("İşlem yapılacak nesne yok: seçim boş ve '" + param + "' verilmedi.");
+        co_return refuse("İşlem yapılacak nesne yok: seçim boş ve '" + param + "' verilmedi." +
+                         (example.empty() ? std::string{} : "\n  Örnek: " + example));
     }
 
     if (too_many(picked->size()))

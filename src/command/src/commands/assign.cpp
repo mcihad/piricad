@@ -29,10 +29,8 @@ Task<bool> gather(Context& ctx, std::vector<std::int64_t>& requested,
 {
 
     // The argument, the selection, or ASKED FOR — see `want_objects`.
-    if (!co_await want_objects(ctx, "nesneler",
-                               std::string("İşlem yapılacak nesneleri seçin, Enter'a basın  ·  ") +
-                                   example,
-                               requested))
+    if (!co_await want_objects(ctx, "nesneler", "Nesneleri seçin, sonra Enter", requested, 0,
+                               example))
         co_return false;
 
     for (std::int64_t raw : requested) {

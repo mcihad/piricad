@@ -106,6 +106,15 @@ struct Runs
         const RingSpan rs = doc.geometry().rings_of(doc.entities().slot[e]);
         return doc.geometry().ring_role[rs.first + i] != RingRole::Open;
     }
+
+    /// Whether this run is a VOID in the entity rather than its outline. A curve
+    /// has none: a circle's single run is its own boundary.
+    bool hole(const Document& doc, EntityId e, std::uint32_t i) const
+    {
+        if (is_curve) return false;
+        const RingSpan rs = doc.geometry().rings_of(doc.entities().slot[e]);
+        return doc.geometry().ring_role[rs.first + i] == RingRole::Interior;
+    }
 };
 
 double min_distance_squared(const Document& doc, EntityId e, Point2 p)
@@ -137,10 +146,60 @@ double min_distance_squared(const Document& doc, EntityId e, Point2 p)
             if (best < 0.0 || d < best) best = d;
         }
     }
+
+    // A CURSOR INSIDE A FACE IS ON IT, at distance zero.
+    //
+    // Measuring only to the edges is the CAD answer and the wrong one for a map:
+    // a user reaching for a parcel points AT the parcel, not at the hairline
+    // around it, and on a sheet of adjoining parcels the interior is nearly all
+    // there is to point at. Because the pick radius is a few pixels, a click one
+    // metre inside a parcel was simply not a click on anything — which made every
+    // tool that starts by asking WHICH objects unusable: the click found nothing
+    // and the command waited for a selection that could not be made.
+    //
+    // A hole vetoes: the court cut out of a building is not the building.
+    if (best != 0.0) {
+        bool in_exterior = false;
+        bool in_hole     = false;
+        for (std::uint32_t r = 0; r < runs.count; ++r) {
+            if (!runs.closed(doc, e, r)) continue;
+            const auto xs = runs.xs(doc, e, r);
+            const auto ys = runs.ys(doc, e, r);
+            if (!ring_contains(xs, ys, p)) continue;
+            if (runs.hole(doc, e, r))
+                in_hole = true;
+            else
+                in_exterior = true;
+        }
+        if (in_exterior && !in_hole) return 0.0;
+    }
     return best;
 }
 
 } // namespace
+
+bool ring_contains(std::span<const Mm> xs, std::span<const Mm> ys, Point2 probe) noexcept
+{
+    const std::size_t n = xs.size();
+    if (n < 3 || ys.size() != n) return false;
+
+    bool inside = false;
+    for (std::size_t i = 0, j = n - 1; i < n; j = i++) {
+        const bool straddles = (ys[i] > probe.y) != (ys[j] > probe.y);
+        if (!straddles) continue;
+
+        // Where the edge crosses the probe's row, compared against the probe
+        // WITHOUT dividing: (x_j - x_i)(y_p - y_i) against (x_p - x_i)(y_j - y_i),
+        // with the sign of (y_j - y_i) deciding which way the comparison runs.
+        const auto dx = static_cast<__int128>(xs[j]) - xs[i];
+        const auto dy = static_cast<__int128>(ys[j]) - ys[i];
+        const auto px = static_cast<__int128>(probe.x) - xs[i];
+        const auto py = static_cast<__int128>(probe.y) - ys[i];
+
+        if (dy > 0 ? dx * py > px * dy : dx * py < px * dy) inside = !inside;
+    }
+    return inside;
+}
 
 double distance_squared(Point2 a, Point2 b) noexcept
 {

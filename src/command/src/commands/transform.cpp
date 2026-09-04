@@ -273,10 +273,8 @@ Task<bool> gather(Context& ctx, std::vector<std::int64_t>& requested,
     // selection, which is what this did, meant a tool-column button could only
     // work if the user had already highlighted something: press the tool first,
     // as every CAD trains, and nothing happened.
-    if (!co_await want_objects(ctx, "nesneler",
-                               std::string("İşlem yapılacak nesneleri seçin, Enter'a basın  ·  ") +
-                                   example,
-                               requested))
+    if (!co_await want_objects(ctx, "nesneler", "Nesneleri seçin, sonra Enter", requested, 0,
+                               example))
         co_return false;
 
     for (std::int64_t raw : requested) {

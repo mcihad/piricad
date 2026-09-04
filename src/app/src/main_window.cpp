@@ -30,16 +30,19 @@
 #include <QActionGroup>
 #include <QApplication>
 #include <QComboBox>
+#include <QDir>
 #include <QDockWidget>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFrame>
 #include <QInputDialog>
+#include <QKeyEvent>
 #include <QKeySequence>
 #include <QLabel>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPalette>
 #include <QPixmap>
@@ -1972,7 +1975,7 @@ void MainWindow::probeToolBox()
 
             const int held = static_cast<int>(controller_->bus().selection().size());
 
-            const int mark = transcript_->toPlainText().size();
+            const auto mark = static_cast<int>(transcript_->toPlainText().size());
             prompt.clear();
             armed = false;
             asked = false;
@@ -2059,6 +2062,33 @@ void MainWindow::probeToolBox()
 
 void MainWindow::probeToolsByHand()
 {
+    // WHERE THE FRAMES GO. A probe that reads the transcript proves a command
+    // ran; it proves nothing about what the user is looking at while it runs, and
+    // "kesme çalışmıyor, ekrana bakarsan görürsün" is exactly the gap between
+    // those two. Every step is photographed.
+    const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_HAND_PROBE"));
+    const bool shooting = into.size() > 1;
+    if (shooting) QDir().mkpath(into);
+
+    int frame       = 0;
+    const auto shot = [&](const QString& what) {
+        if (!shooting) return;
+        QImage picture = grab().toImage();
+        if (!picture.isNull() && canvas_ != nullptr && canvas_->isVisible()) {
+            const QImage live = canvas_->grabCanvas();
+            if (!live.isNull()) {
+                QPainter painter(&picture);
+                painter.drawImage(QRect(canvas_->mapTo(this, QPoint(0, 0)), canvas_->size()), live);
+            }
+        }
+        const QString path = QStringLiteral("%1/%2-%3.png")
+                                 .arg(into)
+                                 .arg(frame++, 2, 10, QLatin1Char('0'))
+                                 .arg(what);
+        (void)std::fprintf(stdout, "[el] kare %s -> %s\n", qPrintable(what),
+                           picture.save(path) ? "yazıldı" : "YAZILAMADI");
+    };
+
     const auto send = [this](QEvent::Type t, const QPointF& at, Qt::MouseButton b,
                              Qt::MouseButtons held) {
         QMouseEvent ev(t, at, canvas_->mapToGlobal(at), b, held, Qt::NoModifier);
@@ -2066,8 +2096,10 @@ void MainWindow::probeToolsByHand()
         QCoreApplication::processEvents();
     };
 
-    /// One click on the canvas, in widget coordinates.
+    /// One click on the canvas, in widget coordinates. The MOVE first, because
+    /// that is what a hand does and what the rubber band follows.
     const auto click = [&](const QPointF& p) {
+        send(QEvent::MouseMove, p, Qt::NoButton, Qt::NoButton);
         send(QEvent::MouseButtonPress, p, Qt::LeftButton, Qt::LeftButton);
         send(QEvent::MouseButtonRelease, p, Qt::LeftButton, Qt::NoButton);
     };
@@ -2087,77 +2119,89 @@ void MainWindow::probeToolsByHand()
         return QPointF(p.x, p.y);
     };
 
-    struct Step
-    {
-        const char* command;
-        core::Point2 pick;  ///< an object to pick when asked which
-        core::Point2 first; ///< the points it wants afterwards
-        core::Point2 second;
-        const char* typed; ///< a number or string it wants, or nullptr
+    const auto say = [this](const char* tag, int mark) {
+        QString said = transcript_->toPlainText().mid(mark).trimmed();
+        said.replace(QLatin1Char('\n'), QLatin1Char(' '));
+        const command::Session* live = controller_->session();
+        (void)std::fprintf(stdout, "[el] %-12s sorulan=\"%s\"  ::  %s\n", tag,
+                           live != nullptr ? live->prompt().message.c_str() : "(yok)",
+                           qPrintable(said.left(110)));
     };
 
-    // Two lines that cross at 60,20 and a face away from them.
-    const Step steps[] = {
-        {"BUDA", {60'000, 30'000}, {60'000, 38'000}, {}, nullptr},
-        {"BÖL", {60'000, 30'000}, {55'000, 25'000}, {65'000, 25'000}, nullptr},
-        {"BİRLEŞTİR", {60'000, 30'000}, {}, {}, nullptr},
-        {"TAŞI", {60'000, 30'000}, {60'000, 30'000}, {70'000, 30'000}, nullptr},
-        {"OFSET", {60'000, 30'000}, {}, {}, "5"},
-        {"STİLKOPYALA", {60'000, 30'000}, {60'000, 30'000}, {}, nullptr},
-    };
-
-    for (const Step& step : steps) {
-        // A fresh drawing, and NOTHING selected: this is the order of work that
-        // was reported broken — reach for the tool first, point at things after.
+    const auto scene = [this] {
         runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
         runScriptLine(QStringLiteral("SİL"));
         runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+        runScriptLine(QStringLiteral("ALAN 0,0 40,0 40,30 0,30"));
         runScriptLine(QStringLiteral("ÇİZGİ 60,0 60,40"));
-        runScriptLine(QStringLiteral("ÇİZGİ 50,20 80,20"));
         canvas_->zoomToExtents();
         QCoreApplication::processEvents();
+    };
 
-        QAction* action =
-            findChild<QAction*>(QStringLiteral("toolAction.") + QString::fromUtf8(step.command));
-        if (action == nullptr) {
-            (void)std::fprintf(stdout, "[el] %-12s DÜĞME YOK\n", step.command);
-            continue;
+    // ---- TAŞI, step by step, with the screen recorded at each one ------------
+    scene();
+    shot(QStringLiteral("tasi-sahne"));
+    {
+        QAction* action = findChild<QAction*>(QStringLiteral("toolAction.TAŞI"));
+        if (action != nullptr) {
+            const auto mark = static_cast<int>(transcript_->toPlainText().size());
+            action->trigger();
+            QCoreApplication::processEvents();
+            shot(QStringLiteral("tasi-1-basildi"));
+            say("TAŞI/bas", mark);
+
+            click(at(core::Point2{20'000, 15'000})); // inside the face
+            shot(QStringLiteral("tasi-2-secildi"));
+
+            enter();
+            shot(QStringLiteral("tasi-3-enter"));
+            say("TAŞI/enter", mark);
+
+            click(at(core::Point2{0, 0})); // base point
+            shot(QStringLiteral("tasi-4-baslangic"));
+
+            // MOVED WITHOUT PRESSING, which is the frame the user stares at: the
+            // selection should be following the pointer here.
+            send(QEvent::MouseMove, at(core::Point2{25'000, 20'000}), Qt::NoButton, Qt::NoButton);
+            shot(QStringLiteral("tasi-5-suruklerken"));
+
+            click(at(core::Point2{25'000, 20'000})); // destination
+            shot(QStringLiteral("tasi-6-bitti"));
+            say("TAŞI/son", mark);
         }
-
-        const int mark = transcript_->toPlainText().size();
-        action->trigger();
-        QCoreApplication::processEvents();
-
-        // What it asked for, straight from the session: the command line keeps its
-        // prompt private and this is the thing being measured.
-        const command::Session* live = controller_->session();
-        const QString armed =
-            live != nullptr ? QString::fromStdString(live->prompt().message) : QString();
-
-        // Point at the object it asked about, then say "that is all".
-        click(at(step.pick));
-        QWidget* got_enter = enter();
-
-        // Whatever it wants next.
-        if (step.typed != nullptr) {
-            runScriptLine(QString::fromUtf8(step.typed));
-        } else {
-            if (step.first.x != 0 || step.first.y != 0) click(at(step.first));
-            if (step.second.x != 0 || step.second.y != 0) click(at(step.second));
-        }
-        QCoreApplication::processEvents();
-
-        QString said = transcript_->toPlainText().mid(mark).trimmed();
-        said.replace(QLatin1Char('\n'), QLatin1Char(' '));
-
-        (void)std::fprintf(stdout, "[el] %-12s sordu=\"%s\"  ENTER->%s  ::  %s\n", step.command,
-                           qPrintable(armed.left(38)),
-                           got_enter == nullptr ? "(odak yok)"
-                                                : got_enter->metaObject()->className(),
-                           qPrintable(said.left(120)));
-
         controller_->cancelInteractive();
-        QCoreApplication::processEvents();
+    }
+
+    // ---- BÖL, the same way --------------------------------------------------
+    scene();
+    shot(QStringLiteral("bol-sahne"));
+    {
+        QAction* action = findChild<QAction*>(QStringLiteral("toolAction.BÖL"));
+        if (action != nullptr) {
+            const auto mark = static_cast<int>(transcript_->toPlainText().size());
+            action->trigger();
+            QCoreApplication::processEvents();
+            shot(QStringLiteral("bol-1-basildi"));
+            say("BÖL/bas", mark);
+
+            click(at(core::Point2{20'000, 15'000}));
+            shot(QStringLiteral("bol-2-secildi"));
+
+            enter();
+            shot(QStringLiteral("bol-3-enter"));
+            say("BÖL/enter", mark);
+
+            click(at(core::Point2{20'000, -5'000})); // first end of the cut
+            shot(QStringLiteral("bol-4-ilk-uc"));
+
+            send(QEvent::MouseMove, at(core::Point2{20'000, 35'000}), Qt::NoButton, Qt::NoButton);
+            shot(QStringLiteral("bol-5-kilavuz"));
+
+            click(at(core::Point2{20'000, 35'000})); // second end
+            shot(QStringLiteral("bol-6-bitti"));
+            say("BÖL/son", mark);
+        }
+        controller_->cancelInteractive();
     }
 }
 

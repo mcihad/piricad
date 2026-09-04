@@ -396,6 +396,8 @@ int main(int argc, char** argv)
     }
 
     if (qEnvironmentVariableIsSet("KENTOS_HAND_PROBE")) {
+        // The value, when it is a path, is the directory every step is
+        // photographed into. See `MainWindow::probeToolsByHand`.
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             window.probeToolsByHand();
             QApplication::exit(0);
