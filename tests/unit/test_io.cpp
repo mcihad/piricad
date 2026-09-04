@@ -974,6 +974,71 @@ TEST_CASE("IO: DXF dışa aktar -> içe aktar gidiş dönüşü")
     CHECK_EQ(target.doc.live_entity_count(), std::size_t{0});
 }
 
+TEST_CASE("IO: DWG her sürümden okunur ve neyi atladığını söyler")
+{
+#ifndef KENTOS_DWG_SAMPLES
+    PENDING("KENTOS_WITH_DWG=OFF; DWG okuma sınanamıyor.");
+#else
+    // io.md R13 names LibreDWG and R14 wants coverage MEASURED rather than
+    // asserted. LibreDWG ships ten of its own drawings spanning r13 to 2018 —
+    // GPLv3 like the library, so readable here without a licence question — and
+    // this walks all of them.
+    //
+    // They are NOT R14's corpus. R14 asks for fifty licence-cleared real files
+    // held outside the repository and referenced by URL and SHA-256 in
+    // `/data/MANIFEST.json`, and a cadastral drawing from a Turkish office looks
+    // nothing like an AutoCAD sample. This is what makes the reader testable
+    // before that corpus exists, and the coverage numbers it prints are the shape
+    // the real report will take.
+    const fs::path dir = KENTOS_DWG_SAMPLES;
+    if (!fs::exists(dir)) PENDING("LibreDWG örnek dosyaları bulunamadı: " + dir.string());
+
+    std::vector<fs::path> files;
+    for (const auto& entry : fs::directory_iterator(dir))
+        if (entry.is_regular_file() && entry.path().extension() == ".dwg")
+            files.push_back(entry.path());
+    std::sort(files.begin(), files.end()); // test.md R19: sorted iteration
+
+    REQUIRE(files.size() >= 5);
+
+    std::size_t opened = 0;
+    for (const fs::path& file : files) {
+        Rig rig;
+        (void)rig.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test);
+        const std::uint64_t before = rig.doc.content_hash();
+
+        auto imported = rig.bus.execute_line("İÇEAKTAR \"" + file.string() + "\"", Origin::Test);
+
+        if (imported) {
+            ++opened;
+            CHECK(rig.doc.live_entity_count() > 0);
+        } else {
+            // io.md R17: a refusal leaves the document exactly as it was.
+            CHECK_EQ(rig.doc.content_hash(), before);
+        }
+    }
+
+    // EVERY ONE OF THEM, and the number is the point: a drop here is a coverage
+    // regression, which is what R14 asks the build to break on.
+    CHECK_EQ(opened, files.size());
+#endif
+}
+
+TEST_CASE("IO: DWG yazma yok, ve kütüphane düzeyinde yok")
+{
+    // io.md P8 forbids a native DWG writer while R14's coverage report stands,
+    // and the dependency is compiled with `LIBREDWG_DISABLE_WRITE=ON` so the
+    // encoder is not even linked. The command layer says the same thing: a `.dwg`
+    // target is refused by name rather than by a failure halfway through writing.
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok());
+
+    TempDir tmp("dwg-yaz");
+    auto wrote = rig.bus.execute_line("DIŞAAKTAR \"" + tmp.file("cizim.dwg") + "\"", Origin::Test);
+    CHECK(!wrote);
+}
+
 TEST_CASE("IO: Shapefile içe aktarımı — parseller alan olarak gelir")
 {
     if (!io::vector_backend_available())

@@ -13,8 +13,47 @@ Kendi proje dosyanız için: [KentOSCad proje dosyası](proje-dosyasi.md).
 | Biçim | Uzantı | Okuma | Yazma |
 |---|---|---|---|
 | AutoCAD DXF | `.dxf` | evet | evet |
+| AutoCAD DWG | `.dwg` | evet¹ | **hayır** — aşağıya bakın |
 | ESRI Shapefile | `.shp` | evet | **hayır** — aşağıya bakın |
 | OGC GeoPackage | `.gpkg` | evet | evet |
+
+¹ DWG okuma **isteğe bağlı bir yapı seçeneğidir**. Paketlenmiş sürümde açık
+gelir; kendiniz derliyorsanız `-DKENTOS_WITH_DWG=ON` gerekir. Kapalıysa bir
+`.dwg` açmaya çalışmak ne yapmanız gerektiğini yazan bir hata verir.
+
+### DWG okunur, yazılmaz
+
+KentOSCad DWG'yi **LibreDWG** ile okur — var olan tek GPL uyumlu DWG
+uygulamasıdır. r13'ten 2018'e kadar bütün sürümler okunur.
+
+Yazma yok, ve iki ayrı sebeple:
+
+- Yerel bir DWG yazıcısı, hangi varlık türlerinin ne oranda okunduğunu ölçen bir
+  kapsam raporu çıkarılmadan açılmayacak. Yanlış yazılmış bir DWG, teslim
+  edildiği yerde açılmaz.
+- Kütüphane bu yapıda **yazma kodu olmadan** derleniyor
+  (`LIBREDWG_DISABLE_WRITE`), yani bu bir söz değil ikilinin bir özelliği.
+
+DWG çıktısı gerekiyorsa **DXF** olarak dışa aktarın; her CAD programı okur.
+
+KentOSCad **hiçbir zaman** ODA Drawings SDK kullanmayacaktır: kapalı kaynaklıdır
+ve projenin GPLv3 lisansıyla bağdaşmaz.
+
+### DWG'de ne okunur
+
+| Okunan | Okunmayan |
+|---|---|
+| `LINE`, `LWPOLYLINE` (kapalıysa **alan**) | Bloklar (`INSERT`) — parçalanmadan atlanır |
+| `POINT` — nirengi, poligon noktası, röper | Ölçülendirme (`DIMENSION`) |
+| `TEXT` — ada ve parsel numaraları, yüksekliğiyle | Tarama (`HATCH`) |
+| `CIRCLE` ve `ARC` — **gerçek daire ve yay olarak**, çizgiye bölünmeden | Kâğıt alanı (layout) — çizim değildir, alınmaz |
+| Katman adları | Katman rengi ve çizgi tipi |
+
+Okunamayan bir varlık türüyle karşılaşılırsa **adıyla ve sayısıyla** bildirilir.
+Sessizce düşürülmez.
+
+Daire ve yay konusunda DWG, DXF'ten **daha iyidir**: GDAL bir DXF'teki daireyi
+okumadan önce çizgi parçalarına böler, DWG yolunda ise daire daire olarak kalır.
 
 ### Shapefile dört dosyadır
 

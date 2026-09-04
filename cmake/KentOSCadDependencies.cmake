@@ -47,6 +47,9 @@ set(KENTOS_DEP_BENCHMARK_SHA  c58e6d0710581e3a08d65c349664128a8d9a2461)  # v1.9.
 set(KENTOS_DEP_XXHASH_REPO    https://github.com/Cyan4973/xxHash.git)
 set(KENTOS_DEP_XXHASH_SHA     e626a72bc2321cd320e953a0ccf1584cad60f363)  # v0.8.3
 
+set(KENTOS_DEP_LIBREDWG_REPO  https://github.com/LibreDWG/libredwg.git)
+set(KENTOS_DEP_LIBREDWG_SHA   7eb90a9f933623729f82781cb1d68de2e50593f3)  # 0.14.8594
+
 set(KENTOS_DEP_CLIPPER2_REPO  https://github.com/AngusJohnson/Clipper2.git)
 set(KENTOS_DEP_CLIPPER2_SHA   736ddb0b53d97fd5f65dd3d9bbf8a0993eaf387c)  # Clipper2_1.4.0
 
@@ -310,6 +313,35 @@ if(KENTOS_WITH_CLIPPER2)
         SUBDIR CPP
         PACKAGE Clipper2
         VERSION 1.3)
+endif()
+
+if(KENTOS_WITH_DWG)
+    # DWG, READ ONLY, and the read-only part is enforced by the build rather than
+    # by discipline: `LIBREDWG_DISABLE_WRITE=ON` leaves the encoder out of the
+    # library entirely, so io.md P8 — no native DWG writer while the R14 coverage
+    # report stands — is a fact about the binary and not a promise about the code.
+    #
+    # LICENCE: GPL-3.0-or-later, which is the project's own (Article 2.1). It is
+    # also the ONLY GPL-compatible DWG implementation there is: the ODA Drawings
+    # SDK is closed source and banned (P1), and GDAL's CAD driver is libopencad,
+    # a different implementation than R13 names.
+    #
+    # LIBONLY, because the tools are a dozen command-line programs this product
+    # never runs. NO JSON, for the same reason.
+    #
+    # -Werror OFF for this dependency alone. LibreDWG builds its own sources with
+    # it and GCC 15 warns about a _POSIX_C_SOURCE redefinition in its generated
+    # code; that is upstream's warning in upstream's file. CLAUDE.md 5.14 forbids
+    # silencing OUR warnings, and this is neither our warning nor our file.
+    set(LIBREDWG_LIBONLY ON CACHE INTERNAL "")
+    set(LIBREDWG_DISABLE_WRITE ON CACHE INTERNAL "")
+    set(LIBREDWG_DISABLE_JSON ON CACHE INTERNAL "")
+    set(DISABLE_WERROR ON CACHE INTERNAL "")
+    set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
+
+    kentos_dependency(libredwg
+        REPO ${KENTOS_DEP_LIBREDWG_REPO}
+        SHA  ${KENTOS_DEP_LIBREDWG_SHA})
 endif()
 
 option(KENTOS_WITH_POSTGIS "Read and write layers against a live PostGIS database" ON)

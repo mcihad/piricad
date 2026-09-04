@@ -14,6 +14,7 @@ add_library(kentos_io STATIC
     src/adopt.cpp
     src/block_view.cpp
     src/database.cpp
+    src/dwg.cpp
     src/mapped_file.cpp
     src/project_reader.cpp
     src/project_writer.cpp
@@ -84,6 +85,24 @@ if(KENTOS_WITH_GDAL)
     message(STATUS "  GDAL ..... etkin (izinli sürücüler: ${KENTOS_GDAL_DRIVERS_STRING})")
 else()
     message(STATUS "  GDAL ..... kapalı (İÇEAKTAR/DIŞAAKTAR hata döndürecek)")
+endif()
+
+if(KENTOS_WITH_DWG)
+    # PRIVATE, like every format library here: `dwg.h` is a twelve-thousand-line C
+    # header that defines `restrict` and a hundred BITCODE_* macros, and it must
+    # not reach the include path of everything that links kentos_io (io.md R2/P2).
+    # The whole dependency lives inside src/dwg.cpp.
+    target_link_libraries(kentos_io PRIVATE redwg)
+    target_compile_definitions(kentos_io PRIVATE KENTOS_HAVE_DWG=1)
+
+    # LibreDWG generates its own config header into the build tree and keeps the
+    # public ones in `include/`; neither is exported as a target property.
+    target_include_directories(kentos_io PRIVATE
+        "${libredwg_SOURCE_DIR}/include" "${libredwg_BINARY_DIR}")
+
+    message(STATUS "  DWG ...... etkin (LibreDWG, salt okunur)")
+else()
+    message(STATUS "  DWG ...... kapalı (-DKENTOS_WITH_DWG=ON ile açılır)")
 endif()
 
 if(KENTOS_WITH_POSTGIS)

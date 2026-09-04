@@ -42,6 +42,16 @@ target_compile_definitions(kentos_tests PRIVATE
     KENTOS_FUZZ_DIR="${CMAKE_SOURCE_DIR}/tests/fuzz"
 )
 
+if(KENTOS_WITH_DWG)
+    # io.md R14 wants DWG coverage measured against REAL files. LibreDWG ships
+    # ten of its own, spanning r13 to 2018, and they are GPLv3 like the library —
+    # so they can be read here without a licence question. They are not a
+    # substitute for R14's fifty-file corpus of Turkish cadastral drawings; they
+    # are what makes the reader testable before that corpus exists.
+    target_compile_definitions(kentos_tests PRIVATE
+        KENTOS_DWG_SAMPLES="${libredwg_SOURCE_DIR}/test/test-data")
+endif()
+
 target_include_directories(kentos_tests PRIVATE support)
 target_link_libraries(kentos_tests PRIVATE
     doctest::doctest

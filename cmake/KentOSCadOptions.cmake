@@ -101,6 +101,19 @@ elseif(FREETYPE_FOUND AND KENTOS_HB_PROBE_FOUND AND KENTOS_FETCH_DEPENDENCIES)
     set(KENTOS_TEXT_AVAILABLE TRUE)
 endif()
 option(KENTOS_WITH_TEXT "Enable the msdfgen SDF text atlas" ${KENTOS_TEXT_AVAILABLE})
+# DWG, read only, through LibreDWG (`.claude/io.md` R13).
+#
+# OFF by default and deliberately: LibreDWG is not packaged by any distribution
+# this project targets, so turning it on means building a large generated C
+# codebase from a pinned commit — a first configure that starts a long download
+# and a long build is not a default. Turn it on when DWG is wanted:
+#
+#     cmake --preset dev -DKENTOS_WITH_DWG=ON
+#
+# The ODA Drawings SDK is banned outright (io.md P1) and GDAL's own CAD driver is
+# libopencad, a DIFFERENT implementation than the rulebook chose — the allow-list
+# in `KentOSCadGdalDrivers.cmake` says why `.dwg` is not simply added there.
+option(KENTOS_WITH_DWG      "Enable DWG reading through LibreDWG"   OFF)
 option(KENTOS_WITH_TRACY    "Enable Tracy frame profiling"          OFF)
 
 function(kentos_require_dependency option_name package_name hint)

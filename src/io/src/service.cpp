@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/io/service.hpp"
 
+#include "kentos_cad/io/dwg.hpp"
+
+#include "kentos_cad/core/text.hpp"
+
 #include "kentos_cad/io/point_list.hpp"
 
 #include "adopt.hpp"
@@ -230,6 +234,17 @@ core::Result<std::string> FileService::save(const std::string& path, bool save_a
 
 // -------------------------------------------------------------- İÇEAKTAR ----
 
+namespace {
+
+/// Whether the path names a DWG, whatever case it was typed in.
+bool looks_like_dwg(const std::string& path)
+{
+    if (path.size() < 4) return false;
+    return core::turkish_upper(path.substr(path.size() - 4)) == ".DWG";
+}
+
+} // namespace
+
 command::Task<core::Result<std::string>>
 FileService::import_into(command::Transaction* tx, std::string path, std::string format)
 {
@@ -243,6 +258,28 @@ FileService::import_into(command::Transaction* tx, std::string path, std::string
                       "'" + path +
                           "' bir KentOSCad proje dosyası. Proje dosyası açılır, içe aktarılmaz: "
                           "AÇ komutunu kullanın.");
+
+    // DWG GOES TO LIBREDWG, not to GDAL. `.claude/io.md` R13 names the
+    // implementation, and GDAL's own CAD driver is a different one (libopencad);
+    // routing by extension here is what keeps that decision from being made by
+    // whichever driver happens to answer first.
+    if (looks_like_dwg(path)) {
+        auto dwg = co_await import_dwg(*tx, path, effective_crs(bus_), stop_.get_token());
+        if (!dwg) co_return dwg.error();
+
+        const DwgReport& d = dwg.value();
+        std::string said   = "İçe aktarıldı: " + std::to_string(d.entities) + " nesne, " +
+                           std::to_string(d.layers) + " katman (DWG " + d.version + ")";
+
+        // WHAT WAS LEFT BEHIND, BY NAME. An entity type this reader has no
+        // translation for is not a silent loss (io.md P11/P13), and the same list
+        // is what R14's coverage report is built from.
+        std::vector<std::string> notes = d.notes;
+        for (std::size_t i = 0; i < d.skipped.size() && i < 5; ++i)
+            notes.push_back("Okunamayan varlık türü atlandı: " + d.skipped[i].first + " x" +
+                            std::to_string(d.skipped[i].second));
+        co_return said + join_notes(notes);
+    }
 
     auto report = co_await import_vector(*tx, std::move(path), std::move(format),
                                          effective_crs(bus_), stop_.get_token());

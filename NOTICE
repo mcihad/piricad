@@ -43,6 +43,24 @@ Currently linked
                           nothing else. Only the C++ port under CPP/ is used;
                           the C#, Delphi and DLL trees are not compiled.
 
+  LibreDWG                GPL-3.0-or-later      0.14.8594 7eb90a9f
+                          Reads AutoCAD DWG behind kentos_cad/io/dwg.hpp. The
+                          ONLY GPL-compatible DWG implementation there is, which
+                          is why .claude/io.md R13 names it: the ODA Drawings SDK
+                          is closed source and banned outright (P1), and GDAL's
+                          own CAD driver is libopencad, a different
+                          implementation than the rulebook chose. Linked PRIVATE
+                          into kentos_io behind KENTOS_WITH_DWG; dwg.h reaches
+                          io/dwg.cpp and nothing else — it is a twelve-thousand
+                          line C header that defines `restrict`.
+                          Built LIBONLY and with LIBREDWG_DISABLE_WRITE, so the
+                          encoder is not linked at all: io.md P8's "no native DWG
+                          writer" is a property of the binary rather than a
+                          promise about the code. -Werror is off for this
+                          dependency alone — it builds its own sources with it and
+                          GCC 15 warns about a _POSIX_C_SOURCE redefinition in
+                          upstream's generated code.
+
   nlohmann/json           MIT                   v3.11.3   9cca280a
                           The JSON parser and writer behind kentos_cad/core/json.hpp,
                           used by the journal, the script runner and every /data
