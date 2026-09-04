@@ -23,10 +23,35 @@
 #   modlar   r, w, or rw
 #   etiket   the Turkish label a user reads in the dialog
 #
+# EDITING THIS LIST DOES NOT REACH AN EXISTING BUILD TREE. It is a CMake CACHE
+# variable, so `set(... CACHE ...)` leaves an already-configured tree on its old
+# value and the new driver silently does not appear — the import then fails with
+# `io.no_driver` and nothing points at the cache. After editing, run:
+#
+#     cmake -U KENTOS_GDAL_DRIVER_ALLOWLIST -S . -B build/dev
+#
 # ADDING A DRIVER is a reviewed change. Before adding one:
 #   1. it must have a libFuzzer harness and a seed corpus in /tests/fuzz;
 #   2. it must have a round-trip case in /tests/golden;
 #   3. its page under /docs/veri must say what does and does not survive.
+#
+# WHY SHAPEFILE IS HERE. It is what Turkish institutions actually send: TKGM,
+# the belediye and the il müdürlüğü hand over `.shp`, and a program that cannot
+# open one is outside the workflow whatever else it can do. It is also the format
+# with the fewest surprises — a documented, frozen spec with one geometry type
+# per file — which is why it earns its place ahead of anything richer.
+#
+# It is a MULTI-FILE format: `.shp` carries the geometry, `.shx` the index, `.dbf`
+# the attributes and `.prj` the coordinate system. All four travel together, and
+# `/docs/veri/dis-formatlar.md` says which of them KentOSCad requires.
+#
+# READ ONLY, and that is the FORMAT's limit rather than ours. A shapefile holds
+# exactly ONE geometry type: a drawing with parcels, boundaries, monuments and
+# parcel numbers in it cannot be written to one file at all, and GDAL says so by
+# refusing every feature after the first — which is a worse answer than not
+# offering the button. Writing needs a decision about splitting one drawing into
+# several files and naming them, and that decision belongs in a reviewed change
+# of its own. DXF and GPKG both write, and both hold a whole drawing.
 #
 # DELIBERATELY ABSENT, with the reason:
 #
@@ -44,6 +69,7 @@
 #         refused in src/io/src/vector.cpp before GDAL sees the path.
 set(KENTOS_GDAL_DRIVER_ALLOWLIST
     "DXF:.dxf:rw:AutoCAD DXF çizim dosyası"
+    "ESRI Shapefile:.shp:r:ESRI Shapefile"
     "GPKG:.gpkg:rw:OGC GeoPackage veri tabanı"
     CACHE STRING "Allow-listed OGR drivers (io.md P7). Editing this is a reviewed change.")
 

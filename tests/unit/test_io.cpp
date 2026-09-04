@@ -974,6 +974,186 @@ TEST_CASE("IO: DXF dışa aktar -> içe aktar gidiş dönüşü")
     CHECK_EQ(target.doc.live_entity_count(), std::size_t{0});
 }
 
+TEST_CASE("IO: Shapefile içe aktarımı — parseller alan olarak gelir")
+{
+    if (!io::vector_backend_available())
+        PENDING("KENTOS_WITH_GDAL=OFF; Shapefile içe aktarımı sınanamıyor.");
+
+    // WHAT INSTITUTIONS ACTUALLY SEND. The land registry, the municipality and
+    // the provincial directorate all hand over `.shp`; a program that cannot open
+    // one is outside the workflow whatever else it can do.
+    //
+    // Written here with GPKG rather than with a checked-in binary fixture: the
+    // point of the case is the READ path, and a fixture nobody can regenerate is
+    // a fixture nobody can fix. GDAL writes the shapefile set from the same
+    // document the assertions are then made against.
+    TempDir tmp("shp");
+
+    Rig source;
+    REQUIRE(source.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(source.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(source.bus
+                .execute_line("ALAN 485300000,4310200000 485360000,4310200000 "
+                              "485360000,4310245000 485300000,4310245000",
+                              Origin::Test)
+                .ok());
+
+    // Out through GPKG, which holds a face as a face, then across to shapefile
+    // with GDAL's own writer — the file a user receives.
+    const std::string gpkg = tmp.file("kaynak.gpkg");
+    auto exported          = source.bus.execute_line("DIŞAAKTAR \"" + gpkg + "\"", Origin::Test);
+    if (!exported) FAIL_WITH("DIŞAAKTAR", exported.error().message);
+    REQUIRE(fs::exists(gpkg));
+
+    const std::string shp = tmp.file("parsel.shp");
+    const std::string cmd = "ogr2ogr -f \"ESRI Shapefile\" \"" + shp + "\" \"" + gpkg + "\"";
+    if (std::system((cmd + " >/dev/null 2>&1").c_str()) != 0 || !fs::exists(shp))
+        PENDING("ogr2ogr yok; Shapefile örneği üretilemedi.");
+
+    Rig target;
+    REQUIRE(target.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    const std::size_t before = target.undo.undo_depth();
+
+    auto imported = target.bus.execute_line("İÇEAKTAR \"" + shp + "\"", Origin::Test);
+    if (!imported) FAIL_WITH("İÇEAKTAR", imported.error().message);
+
+    CHECK_EQ(target.doc.live_entity_count(), std::size_t{1});
+
+    // A FACE, not a line. The whole reason to read the format.
+    int faces = 0;
+    for (core::EntityId e = 0; e < target.doc.entities().size(); ++e) {
+        if (!target.doc.alive(e)) continue;
+        const core::RingSpan span = target.doc.geometry().rings_of(target.doc.entities().slot[e]);
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r)
+            if (target.doc.geometry().ring_role[r] == core::RingRole::Exterior) ++faces;
+    }
+    CHECK_EQ(faces, 1);
+
+    // io.md R17: one import, one undo step, and undoing it leaves nothing.
+    CHECK_EQ(target.undo.undo_depth() - before, std::size_t{1});
+    REQUIRE(target.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_EQ(target.doc.live_entity_count(), std::size_t{0});
+}
+
+TEST_CASE("IO: eksik .shx Türkçe açıklanır, GDAL'ın config önerisiyle değil")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+
+    // What a user actually meets. Someone e-mails the `.shp` alone, or a zip
+    // loses a member, and GDAL answers
+    //
+    //     Unable to open parsel.shx ... Set SHAPE_RESTORE_SHX config option to YES
+    //
+    // which tells a surveyor to set an environment variable they have never heard
+    // of, in English, about a file they did not know existed. What happened is
+    // that the set arrived incomplete, and that is what the message should say.
+    TempDir tmp("shp-eksik");
+    const std::string path = tmp.file("parsel.shp");
+    {
+        std::ofstream out(path, std::ios::binary);
+        REQUIRE(out.is_open());
+        out << "not a shapefile";
+    }
+
+    Rig rig;
+    auto imported = rig.bus.execute_line("İÇEAKTAR \"" + path + "\"", Origin::Test);
+    REQUIRE(!imported);
+    CHECK(imported.error().message.find(".shx") != std::string::npos);
+    CHECK(imported.error().message.find("TEK dosya değildir") != std::string::npos);
+}
+
+TEST_CASE("IO: Shapefile YAZMA için açık değil, ve sebebini söylüyor")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+
+    // A shapefile holds exactly ONE geometry type. A drawing with parcels,
+    // boundaries, monuments and parcel numbers in it cannot be written to one
+    // file at all — GDAL refuses every feature after the first — so the driver is
+    // read-only until somebody decides how one drawing becomes several files.
+    // Refused by NAME rather than by a GDAL error nobody can act on.
+    const io::VectorFormat* shp = io::vector_format_for_path("/veri/parsel.shp");
+    REQUIRE(shp != nullptr);
+    CHECK(shp->read);
+    CHECK(!shp->write);
+}
+
+TEST_CASE("IO: DXF içe aktarımı noktayı, yazıyı ve KAPALI çizgiyi kaybetmiyor")
+{
+    if (!io::vector_backend_available())
+        PENDING("KENTOS_WITH_GDAL=OFF; DXF içe aktarımı sınanamıyor.");
+
+    // THE THREE THINGS A CADASTRAL DXF IS MADE OF, and all three used to be lost.
+    //
+    //   * DXF has no polygon. A parcel is an LWPOLYLINE with its closed flag set,
+    //     and OGR hands that over as a LINESTRING whose last vertex repeats its
+    //     first. Read as an open run — which is what happened — every parcel in
+    //     the file came in as a LINE: no fill, no area, nothing for İFRAZ or
+    //     TEVHİT to work on.
+    //   * A DXF POINT is a surveyed control point or benchmark. It fell through
+    //     to "unsupported geometry" and was skipped.
+    //   * A DXF TEXT arrives as a POINT carrying its string in a `Text` field —
+    //     every parcel and ada number on the sheet. Also skipped.
+    TempDir tmp("dxf-tam");
+    const std::string path = tmp.file("karisik.dxf");
+
+    {
+        std::ofstream out(path);
+        REQUIRE(out.is_open());
+        out << "0\nSECTION\n2\nENTITIES\n"
+            // a closed square: 50 x 50 m, so 2500 m^2
+            << "0\nLWPOLYLINE\n8\nPARSEL\n90\n4\n70\n1\n"
+            << "10\n0.0\n20\n0.0\n"
+            << "10\n50.0\n20\n0.0\n"
+            << "10\n50.0\n20\n50.0\n"
+            << "10\n0.0\n20\n50.0\n"
+            // a surveyed point
+            << "0\nPOINT\n8\nNIRENGI\n10\n100.0\n20\n200.0\n30\n0.0\n"
+            // and a caption
+            << "0\nTEXT\n8\nNUMARA\n10\n150.0\n20\n250.0\n40\n2.5\n1\nParsel 12\n"
+            << "0\nENDSEC\n0\nEOF\n";
+    }
+    {
+        std::ofstream prj(tmp.file("karisik.prj"));
+        REQUIRE(prj.is_open());
+        prj << "PROJCS[\"TUREF / TM36\",GEOGCS[\"TUREF\",DATUM[\"Turkish_National_Reference_"
+               "Frame\",SPHEROID[\"GRS 1980\",6378137,298.257222101]],PRIMEM[\"Greenwich\",0],"
+               "UNIT[\"degree\",0.0174532925199433]],PROJECTION[\"Transverse_Mercator\"],"
+               "PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",36],"
+               "PARAMETER[\"scale_factor\",1],PARAMETER[\"false_easting\",500000],"
+               "PARAMETER[\"false_northing\",0],UNIT[\"metre\",1]]";
+    }
+
+    Rig rig;
+    auto imported = rig.bus.execute_line("İÇEAKTAR \"" + path + "\"", Origin::Test);
+    if (!imported) FAIL_WITH("İÇEAKTAR", imported.error().message);
+
+    CHECK_EQ(rig.doc.live_entity_count(), std::size_t{3});
+
+    int faces    = 0;
+    int points   = 0;
+    int captions = 0;
+    for (core::EntityId e = 0; e < rig.doc.entities().size(); ++e) {
+        if (!rig.doc.alive(e)) continue;
+
+        if (rig.doc.entities().kind[e] == core::kPointKind) {
+            ++points;
+            continue;
+        }
+        if (rig.doc.texts().has(rig.doc.entities().slot[e])) {
+            ++captions;
+            continue;
+        }
+
+        const core::RingSpan span = rig.doc.geometry().rings_of(rig.doc.entities().slot[e]);
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r)
+            if (rig.doc.geometry().ring_role[r] == core::RingRole::Exterior) ++faces;
+    }
+
+    CHECK_EQ(faces, 1);    // the parcel is a FACE, not a line
+    CHECK_EQ(points, 1);   // the nirengi survived
+    CHECK_EQ(captions, 1); // and so did the number
+}
+
 TEST_CASE("IO: DXF birden çok katmanı taşır — dışa aktarım ilk katmanda durmaz")
 {
     // The regression this locks. DXF holds exactly ONE OGR layer, named
@@ -1113,6 +1293,43 @@ TEST_CASE("IO: fuzz tohum korpusundaki her dosya çökmeden ele alınır")
     }
     CHECK(handled == seeds.size());
     CHECK(handled >= 4);
+}
+
+TEST_CASE("IO: DXF ve Shapefile tohum korpusu da içe aktarımdan geçirilir")
+{
+    // The same claim for the format corpora, and it was not being kept: the
+    // replay above reads `tohum/proje` through `AÇ` and stopped there, so the DXF
+    // seeds — and now the shapefile ones — were only ever exercised by a libFuzzer
+    // build nobody makes on an ordinary machine. `tests/fuzz/CMakeLists.txt` says
+    // the corpora are "NOT dead weight when this is off"; this is what makes that
+    // sentence true.
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+
+    std::size_t handled = 0;
+    for (const char* klasor : {"dxf", "shp"}) {
+        const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / klasor;
+        if (!fs::exists(corpus)) continue;
+
+        std::vector<fs::path> seeds;
+        for (const auto& entry : fs::directory_iterator(corpus))
+            if (entry.is_regular_file()) seeds.push_back(entry.path());
+        std::sort(seeds.begin(), seeds.end()); // test.md R19: sorted iteration
+
+        for (const fs::path& seed : seeds) {
+            Rig rig;
+            (void)rig.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test);
+            const std::uint64_t before = rig.doc.content_hash();
+
+            auto imported =
+                rig.bus.execute_line("İÇEAKTAR \"" + seed.string() + "\"", Origin::Test);
+
+            // Accepted or refused are both fine; what is NOT fine is a refusal
+            // that left something behind (io.md R17).
+            if (!imported) CHECK_EQ(rig.doc.content_hash(), before);
+            ++handled;
+        }
+    }
+    CHECK(handled >= 3);
 }
 
 namespace {

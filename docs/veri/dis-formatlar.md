@@ -13,7 +13,34 @@ Kendi proje dosyanız için: [KentOSCad proje dosyası](proje-dosyasi.md).
 | Biçim | Uzantı | Okuma | Yazma |
 |---|---|---|---|
 | AutoCAD DXF | `.dxf` | evet | evet |
+| ESRI Shapefile | `.shp` | evet | **hayır** — aşağıya bakın |
 | OGC GeoPackage | `.gpkg` | evet | evet |
+
+### Shapefile dört dosyadır
+
+Bir shapefile tek dosya değildir. Dördü birlikte taşınır:
+
+| Dosya | İçindekiler | Gerekli mi |
+|---|---|---|
+| `.shp` | geometri | evet |
+| `.shx` | geometri dizini | **evet** |
+| `.dbf` | öznitelik tablosu | **evet** |
+| `.prj` | koordinat sistemi | yoksa çizimin kendi sistemi varsayılır |
+
+Biri eksikse KentOSCad hangisinin eksik olduğunu ve ne işe yaradığını söyleyip
+durur. Size yalnız `.shp` gönderildiyse dosyayı gönderene **dördünü birden**
+isteyin — eksik bir set açılamaz.
+
+### Neden yazma yok
+
+Bir shapefile dosya başına **tek bir geometri türü** tutar. Parselleri, sınırları,
+nirengileri ve parsel numaralarını birlikte taşıyan bir çizim tek bir `.shp`'ye
+yazılamaz; GDAL ilk öğeden sonrasını reddeder. Bir çizimi birden çok dosyaya nasıl
+böleceğimiz ve onları nasıl adlandıracağımız ayrı bir karar, ve o karar verilene
+kadar çalışmayan bir düğme koymaktansa düğmeyi koymuyoruz.
+
+Teslim için **DXF** ya da **GeoPackage** kullanın; ikisi de çizimin tamamını
+tutar.
 
 Bu liste kasten kısadır. KentOSCad'in altındaki GDAL kütüphanesi yüzden fazla biçim
 tanır; KentOSCad bunların yalnızca **açıkça izin verilenlerini** açar. Bir dosya
@@ -31,7 +58,8 @@ sayfada bir satırı ile birlikte gelir.
 | DWG (yazma) | Planlanmıyor | DWG çıktısı DXF dışa aktarıp dönüştürerek üretilir |
 | PlanGML | Faz 2 | Yazmadan önce XSD ile yerinde doğrulanması gerekiyor; e-Plan yüklemesinde reddedilen bir dosya üretmek kabul edilemez |
 | LAS / LAZ | Faz 2 | Nokta bulutu görüntüleme boru hattıyla birlikte gelecek |
-| Shapefile, GeoJSON | Faz 1 | İzin listesine eklenmeleri için fuzz koşumu ve gidiş-dönüş sınaması gerekiyor |
+| Shapefile (yazma) | Faz 1 | Bir çizimin birden çok dosyaya nasıl bölüneceğine karar verilmesi gerekiyor |
+| GeoJSON | Faz 1 | İzin listesine eklenmesi için fuzz koşumu ve gidiş-dönüş sınaması gerekiyor |
 | WMS, WMTS, WFS-T, WCS | Faz 2 | Servis istemcileri kendi uygunluk sınamalarıyla gelecek |
 
 KentOSCad **hiçbir zaman** ODA Drawings SDK kullanmayacaktır; kapalı kaynaklıdır ve
@@ -76,17 +104,29 @@ AYAR koordinat_sistemi EPSG:5254
 | Aktarılan | Aktarılmayan |
 |---|---|
 | Çizgi ve alan geometrisi, milimetre hassasiyetiyle | Öznitelikler — belge modeli öznitelik sütunlarını Faz 1'de kazanacak |
-| Katman adları | Katman rengi, çizgi tipi, ölçek sınırları |
-| Boşluklu ve çok parçalı alanlar | Nesne başına stil |
-| Koordinat sistemi | Nesne ve katman anahtarları |
+| **Ölçülmüş noktalar** — nirengi, poligon noktası, röper | Katman rengi, çizgi tipi, ölçek sınırları |
+| **Yazılar**, yüksekliğiyle birlikte | Nesne başına stil |
+| Katman adları | Nesne ve katman anahtarları |
+| Boşluklu ve çok parçalı alanlar | Yazı tipi, yazının açısı |
+| Koordinat sistemi | |
 
 Bu yüzden **çalışma dosyanız `.pcad` olmalıdır**. DXF ve GeoPackage teslim
 biçimleridir; bir dışa aktarıp geri alma turu çiziminizi olduğu gibi geri
 getirmez.
 
-Desteklenmeyen bir geometri türüyle karşılaşılırsa (nokta, çoklu nokta, eğri)
-o öğe atlanır ve kaç tanesinin atlandığı transkriptte söylenir. Sessizce
-düşürülmez.
+### DXF'te kapalı çizgi alandır
+
+DXF'in poligonu yoktur: bir parsel, kapalı bayrağı açık bir `LWPOLYLINE`'dır.
+KentOSCad ilk köşesi sonuncusuyla aynı olan bir çizgiyi **alan** olarak okur —
+yoksa dosyadaki her parsel çizgi olarak gelir, dolgusu olmaz, alanı ölçülemez ve
+[`İFRAZ`](../komutlar/split_parcel.md) ile [`TEVHİT`](../komutlar/merge.md)
+üzerinde çalışamaz.
+
+Daire ve yay, GDAL onları çizgi parçalarına böldüğü için **çoklu çizgi** olarak
+gelir. Şekil doğrudur, ama nesne artık daire değildir.
+
+Desteklenmeyen bir geometri türüyle karşılaşılırsa o öğe atlanır ve kaç tanesinin
+atlandığı transkriptte söylenir. Sessizce düşürülmez.
 
 ## Ağdan veri okunmaz
 

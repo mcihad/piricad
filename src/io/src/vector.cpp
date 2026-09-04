@@ -22,10 +22,15 @@
 #include "kentos_cad/io/format.hpp"
 
 #include <algorithm>
+#include <array>
+#include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <set>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 #ifdef KENTOS_HAVE_GDAL
@@ -217,6 +222,50 @@ void line_to_mm(const OGRLineString* line, std::vector<core::Point2>& out)
             core::Point2{core::mm_from_metres(line->getX(i)), core::mm_from_metres(line->getY(i))});
 }
 
+/// The character height an OGR LABEL style declares, in ground millimetres.
+///
+/// GDAL's DXF driver does not expose a text height FIELD — the fields are Layer,
+/// PaperSpace, SubClasses, Linetype, EntityHandle and Text — so the only place
+/// the size survives is the style string:
+///
+///     LABEL(f:"Arial",t:"Parsel 12",p:1,s:2.5g,c:#000000)
+///
+/// `g` is ground units, `p` points, `mm` millimetres on paper. Only ground is
+/// read: a cadastral sheet's parcel numbers are a GROUND height — that is what
+/// makes them grow and shrink with the plot scale the way the regulation expects
+/// — and a paper height imported as a ground one would put a four-metre number
+/// on a parcel. Anything else falls back, and the fallback is stated rather than
+/// guessed at the call site.
+core::Mm label_height_mm(const char* style)
+{
+    if (style == nullptr) return 0;
+
+    const std::string_view text(style);
+    const std::size_t at = text.find("s:");
+    if (at == std::string_view::npos) return 0;
+
+    // Compared against the digit range rather than asked of `<cctype>`: the
+    // classifiers are banned outright in this tree (CLAUDE.md 5.6) because they
+    // are wrong on Turkish text, and a number needs no classifier anyway.
+    std::size_t end = at + 2;
+    while (end < text.size() &&
+           ((text[end] >= '0' && text[end] <= '9') || text[end] == '.' || text[end] == '-'))
+        ++end;
+
+    // GROUND ONLY. `s:2.5g` is 2,5 m of ground; `s:10pt` is ten points on paper
+    // and means nothing to a document that stores ground millimetres.
+    if (end >= text.size() || text[end] != 'g') return 0;
+
+    double value = 0.0;
+    const std::string number(text.substr(at + 2, end - at - 2));
+    try {
+        value = std::stod(number);
+    } catch (...) {
+        return 0;
+    }
+    return value > 0.0 ? core::mm_from_metres(value) : 0;
+}
+
 /// The CRS in the `.prj` companion beside `path`, when there is one.
 ///
 /// GDAL's DXF driver does NOT read a `.prj` — verified against GDAL 3.12, where a
@@ -395,6 +444,33 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
         co_return err(ErrorCode::Unsupported, std::string(kErrNoDriver) + ": " + format->driver +
                                                   " sürücüsü okuma için açık değil.");
 
+    // A SHAPEFILE IS FOUR FILES, and saying so is this program's job rather than
+    // GDAL's. Without the index GDAL refuses with
+    //
+    //     Unable to open parsel.shx ... Set SHAPE_RESTORE_SHX config option to YES
+    //
+    // which tells a surveyor to set an environment variable they have never heard
+    // of, in English, about a file they did not know existed. What actually
+    // happened is that the set arrived incomplete — someone e-mailed the `.shp`
+    // alone, or a zip lost a member — and that is what the message should say.
+    if (format->driver == "ESRI Shapefile") {
+        const std::string base = path.substr(0, path.size() - 4);
+        for (const auto& [suffix, why] :
+             {std::pair<const char*, const char*>{".shx", "geometri dizini"},
+              std::pair<const char*, const char*>{".dbf", "öznitelik tablosu"}}) {
+            std::error_code ec;
+            if (std::filesystem::exists(base + suffix, ec)) continue;
+
+            const std::string upper = base + core::turkish_upper(suffix);
+            if (std::filesystem::exists(upper, ec)) continue;
+
+            co_return err(ErrorCode::IoFailure,
+                          "Shapefile eksik: '" + base + suffix + "' (" + why +
+                              ") yok. Bir shapefile TEK dosya değildir — .shp, .shx, .dbf ve "
+                              ".prj birlikte taşınır. Dosyayı gönderene dördünü de isteyin.");
+        }
+    }
+
     ::CPLErrorReset();
     DatasetHandle data(static_cast<GDALDataset*>(::GDALOpenEx(
         path.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, allowed_driver_argv(), nullptr, nullptr)));
@@ -450,6 +526,13 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
         // `entities` — the export would look fixed and the import would still lose
         // the drawing's structure.
         const int layer_field = layer->GetLayerDefn()->GetFieldIndex("Layer");
+
+        // A DXF TEXT arrives as a POINT carrying its string in this field. Read
+        // once per layer, like the one above: the lookup is a linear scan of the
+        // definition and doing it per feature is the sort of thing that turns a
+        // fast import into a slow one on a sheet with a hundred thousand parcel
+        // numbers on it.
+        const int text_field = layer->GetLayerDefn()->GetFieldIndex("Text");
 
         core::LayerId slot = core::kNoLayer;
         if (layer_field < 0) {
@@ -510,6 +593,65 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                 }
             };
 
+            // A POINT IS A POINT, AND A POINT WITH A STRING IS A CAPTION.
+            //
+            // Both used to fall through to the note below, so a cadastral DXF came
+            // in with its parcels and without its nirengi, its röpers or a single
+            // parsel number — which is most of what makes the sheet readable.
+            if (type == wkbPoint) {
+                const OGRPoint* p = geometry->toPoint();
+                const core::Point2 where{core::mm_from_metres(p->getX()),
+                                         core::mm_from_metres(p->getY())};
+
+                const char* label = text_field >= 0 && feature->IsFieldSetAndNotNull(text_field)
+                                        ? feature->GetFieldAsString(text_field)
+                                        : nullptr;
+
+                if (label != nullptr && *label != 0) {
+                    // TEXT IS A BASELINE PLUS A STRING, exactly as the `METİN`
+                    // command builds one — two real vertices, so the cull, the
+                    // snap and the hit test need to know nothing about text.
+                    core::Mm height = label_height_mm(feature->GetStyleString());
+                    if (height <= 0) {
+                        // The file did not say. A metre is the height a 1/1000
+                        // cadastral sheet prints a parcel number at, and it is
+                        // REPORTED rather than left for the user to discover by
+                        // measuring one.
+                        height = core::mm_from_metres(1.0);
+                        if (report.notes.size() < 8)
+                            report.notes.push_back("Yazı yüksekliği dosyada yok; 1 m varsayıldı.");
+                    }
+
+                    // A rough advance of 0.6 em per character, which decides the
+                    // BOUNDING BOX and not where a glyph lands. Same approximation
+                    // `METİN` makes, and for the same reason.
+                    core::Point2 end = where;
+                    end.x += (height * 6 * static_cast<core::Mm>(std::strlen(label))) / 10;
+
+                    const std::array<core::Point2, 2> baseline{where, end};
+                    auto made = tx.add_polyline(target, baseline);
+                    if (!made)
+                        co_return err(made.error().code,
+                                      "'" + path + "' içindeki " + std::to_string(report.features) +
+                                          ". öğe okunamadı: " + made.error().message);
+
+                    if (auto st = tx.set_text(made.value(), label, height,
+                                              core::TextAnchor::BaselineLeft);
+                        !st)
+                        co_return err(st.error().code,
+                                      "'" + path + "' içindeki " + std::to_string(report.features) +
+                                          ". yazı yazılamadı: " + st.error().message);
+                } else {
+                    auto made = tx.add_point(target, where);
+                    if (!made)
+                        co_return err(made.error().code,
+                                      "'" + path + "' içindeki " + std::to_string(report.features) +
+                                          ". öğe okunamadı: " + made.error().message);
+                }
+                ++report.entities;
+                continue;
+            }
+
             switch (type) {
             case wkbLineString:
                 ring_store.emplace_back();
@@ -552,6 +694,28 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
             // would point at freed memory.
             for (std::size_t r = 0; r < rings.size(); ++r)
                 rings[r].points = ring_store[r];
+
+            // A CLOSED LINESTRING IS A FACE, and this is the single biggest thing
+            // a cadastral DXF loses without it.
+            //
+            // DXF has no polygon: a parcel is an LWPOLYLINE with its closed flag
+            // set, and OGR hands that over as a `LINESTRING` whose last vertex
+            // repeats its first. Read as an open run — which is what happened —
+            // every parcel in the file came in as a LINE: no fill, no area to
+            // measure, nothing for `İFRAZ` or `TEVHİT` to work on, and a topology
+            // check that saw no faces at all.
+            //
+            // The test is the geometry's own: first vertex equal to last, and at
+            // least three distinct corners left after the duplicate is dropped.
+            // Nothing is inferred from the layer's name or the file's extension.
+            if (rings.size() == 1 && rings.front().role == core::RingRole::Open &&
+                ring_store.front().size() >= 4 &&
+                ring_store.front().front() == ring_store.front().back()) {
+                // The closing vertex is IMPLIED, never stored (model.md R10) —
+                // the same rule `ring_to_mm` applies to a polygon's rings.
+                ring_store.front().pop_back();
+                rings.front().role = core::RingRole::Exterior;
+            }
 
             const bool polyline = rings.size() == 1 && rings.front().role == core::RingRole::Open;
             auto added          = polyline ? tx.add_polyline(target, rings.front().points)
