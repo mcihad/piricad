@@ -98,6 +98,10 @@ BİRLEŞTİR nesneler=1 2
 
 Nesneleri seçin, sol araç kutusundaki **Birleştir** düğmesine basın.
 
+Seçim boşken de çalışır: düğmeye basın, komut satırı hangi nesneleri istediğini
+yazar, tuvalden tıklayarak seçin ve **Enter**'a basın. Vazgeçmek için Esc.
+Nesneleri önceden seçtiyseniz sorulmaz.
+
 ### Betik
 
 ```json

@@ -38,17 +38,13 @@ core::JoinStyle join_from(const std::string& word)
 
 Task<void> run(Context& ctx)
 {
-    const Selection& selection = ctx.session().bus().selection();
-
-    Value::Ints requested = ctx.argument("nesneler").as_ids();
-    if (requested.empty()) {
-        for (core::EntityKey k : selection.keys())
-            requested.push_back(static_cast<std::int64_t>(core::raw(k)));
-    }
-    if (requested.empty()) {
-        ctx.echo("Ofseti alınacak nesne yok. Önce seçin, ya da OFSET nesneler=1 yazın.");
+    // The argument, the selection, or ASKED FOR — see `want_objects`. Refusing an
+    // empty selection meant the tool-column button did nothing unless the user had
+    // already highlighted something.
+    Value::Ints requested;
+    if (!co_await want_objects(ctx, "nesneler", "Paraleli çizilecek nesneleri seçin, Enter'a basın",
+                               requested))
         co_return;
-    }
 
     // The distance is a LENGTH the user states, so it is asked for the way a
     // length is asked for and recorded in millimetres like every other measure.

@@ -208,6 +208,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
             QOverload<>::of(&MapCanvas::update));
     connect(canvas_, &MapCanvas::cursorMoved, this, &MainWindow::onCursorMoved);
     connect(canvas_, &MapCanvas::viewChanged, this, &MainWindow::refreshStatus);
+    connect(canvas_, &MapCanvas::echoRequested, this, &MainWindow::onEcho);
     connect(commandLine_, &CommandLine::submitted, this, &MainWindow::onCommandSubmitted);
     connect(layerPanel_, &LayerPanel::layerSelected, attributePanel_, &AttributePanel::setLayer);
     connect(layerPanel_, &LayerPanel::styleRequested, this, &MainWindow::openStyleDesigner);
@@ -319,17 +320,32 @@ QAction* MainWindow::modifyTool(Glyph glyph, const QString& text, const QString&
     action->setToolTip(tip);
     action->setStatusTip(tip);
     action->setData(static_cast<int>(glyph));
+    action->setProperty(kToolCommand, command);
     action->setObjectName(QStringLiteral("toolAction.") + command);
 
-    connect(action, &QAction::triggered, this, [this, command] {
-        // Told rather than silently doing nothing: these commands read the
-        // selection, so an empty one is a mistake worth naming.
-        if (controller_->bus().selection().empty()) {
-            onEcho(tr("Önce nesne seçin: %1 seçili nesneler üzerinde çalışır.").arg(command));
-            return;
-        }
-        controller_->runCommand(command);
-    });
+    // CHECKABLE AND IN THE EXCLUSIVE GROUP, exactly like a draw tool — because it
+    // IS one. These used to be neither, and the consequences compounded:
+    //
+    //   * the button could not show a pressed state at all, so pressing Buda gave
+    //     no answer of any kind;
+    //   * `syncToolSelection` only ever lights an action inside `drawingTools_`,
+    //     so it could never light these;
+    //   * and worse, its fallback lights the SELECT ARROW. So while BUDA was
+    //     genuinely armed and waiting for a click, the tool column positively
+    //     asserted that no tool was running.
+    //
+    // Together that is a tool that "cannot be selected and does not work", which
+    // is exactly how it was reported.
+    action->setCheckable(true);
+    drawingTools_->addAction(action);
+
+    // NO SELECTION GUARD. It used to refuse an empty selection with a sentence in
+    // the status line and never start the command — so the ordinary order of work,
+    // reach for the tool and then point at the thing, did nothing at all. The
+    // commands ask for their objects now (`want_objects`), which is the order
+    // every CAD trains and the one a script never sees.
+    connect(action, &QAction::triggered, this,
+            [this, command] { controller_->runCommand(command); });
     return action;
 }
 
@@ -1881,12 +1897,16 @@ void MainWindow::showAbout()
 void MainWindow::probeToolBox()
 {
     // A scene with something of every shape the column's tools act on: one face,
-    // two lines that cross, and one that touches neither.
-    runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
-    runScriptLine(QStringLiteral("ALAN 0,0 40,0 40,30 0,30"));
-    runScriptLine(QStringLiteral("ÇİZGİ 60,0 60,40"));
-    runScriptLine(QStringLiteral("ÇİZGİ 50,20 80,20"));
-    runScriptLine(QStringLiteral("ÇİZGİ 100,0 120,10"));
+    // two lines that cross inside the box below, and one that touches neither.
+    const auto scene = [this] {
+        runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
+        runScriptLine(QStringLiteral("SİL"));
+        runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+        runScriptLine(QStringLiteral("ALAN 0,0 40,0 40,30 0,30"));
+        runScriptLine(QStringLiteral("ÇİZGİ 60,0 60,40"));
+        runScriptLine(QStringLiteral("ÇİZGİ 50,20 80,20"));
+        runScriptLine(QStringLiteral("ÇİZGİ 100,0 120,10"));
+    };
 
     // THE TRANSCRIPT, not the `echoed` signal. Several buttons answer through
     // `onEcho` directly — "Önce nesne seçin" is a refusal the shell writes, not
@@ -1917,91 +1937,114 @@ void MainWindow::probeToolBox()
     int ok_armed = 0;
     int dead     = 0;
 
-    for (QToolButton* button : buttons) {
-        QAction* action = button->defaultAction();
-        if (action == nullptr) continue;
+    for (int pass = 0; pass < 2; ++pass) {
+        const bool withSelection = pass == 0;
 
-        const QString name = action->text();
-        QString cmd        = action->property(kToolCommand).toString();
-        if (cmd.isEmpty()) cmd = action->objectName().section(QLatin1Char('.'), 1);
+        (void)std::fprintf(stdout, "[araç] ==== %s ====\n",
+                           withSelection ? "önce seç, sonra bas"
+                                         : "önce bas, sonra seç (BOŞ SEÇİM)");
+        for (QToolButton* button : buttons) {
+            QAction* action = button->defaultAction();
+            if (action == nullptr) continue;
 
-        // Reset before each, so one tool's leftovers cannot stand in for the
-        // next one's answer.
-        controller_->cancelInteractive();
-        runScriptLine(QStringLiteral("SEÇ mod=NESNE nesneler=2 nesneler=3"));
-        QCoreApplication::processEvents();
+            const QString name = action->text();
+            QString cmd        = action->property(kToolCommand).toString();
+            if (cmd.isEmpty()) cmd = action->objectName().section(QLatin1Char('.'), 1);
 
-        const int held = static_cast<int>(controller_->bus().selection().size());
+            // Reset before each, so one tool's leftovers cannot stand in for the
+            // next one's answer. `withSelection` is the pass this probe is on: a tool
+            // has to work BOTH ways round — select then press, and press then select —
+            // and it was the second that was broken.
+            controller_->cancelInteractive();
 
-        const int mark = transcript_->toPlainText().size();
-        prompt.clear();
-        armed = false;
-        asked = false;
+            // A FRESH SCENE BEFORE EVERY TOOL. Twenty-one buttons trimming, merging,
+            // offsetting and placing points in the same drawing leaves each one
+            // measuring what the last one did rather than what it does itself.
+            scene();
+            runScriptLine(withSelection ? QStringLiteral("SEÇ mod=KUTU noktalar=45,-5 85,45")
+                                        : QStringLiteral("SEÇ mod=TEMİZLE"));
+            QCoreApplication::processEvents();
 
-        action->trigger();
-        QCoreApplication::processEvents();
+            const int held = static_cast<int>(controller_->bus().selection().size());
 
-        // A modal tool is fed three points, so it either finishes or says what it
-        // still wants: an armed tool that cannot finish is as dead as one that
-        // never started.
-        if (asked) {
-            // A TEXT PROMPT IS ANSWERED WITH TEXT. Feeding a point into `yazi`
-            // is the probe being wrong, not METİN — and the resulting type error
-            // would otherwise be reported as a broken tool.
-            for (int step = 0; step < 3 && armed; ++step) {
-                static const core::Point2 clicks[3] = {
-                    {5'000, 5'000}, {62'000, 20'000}, {75'000, 25'000}};
-                // THROUGH THE ROADS A USER ACTUALLY HAS. A point arrives from the
-                // canvas; a number or a caption is typed into the command line.
-                // Calling `supplyText` directly would prove the session accepts a
-                // value and prove nothing about whether the user can give it one —
-                // which is exactly how OFSET came to have no answerable prompt.
-                if (prompt.contains(QStringLiteral("Yazılacak")))
-                    runScriptLine(QStringLiteral("deneme"));
-                else if (prompt.contains(QStringLiteral("mesafe")))
-                    runScriptLine(QStringLiteral("5"));
-                else
-                    controller_->supplyPoint(clicks[step]);
+            const int mark = transcript_->toPlainText().size();
+            prompt.clear();
+            armed = false;
+            asked = false;
+
+            action->trigger();
+            QCoreApplication::processEvents();
+
+            // A modal tool is fed three points, so it either finishes or says what it
+            // still wants: an armed tool that cannot finish is as dead as one that
+            // never started.
+            if (asked) {
+                // A TEXT PROMPT IS ANSWERED WITH TEXT. Feeding a point into `yazi`
+                // is the probe being wrong, not METİN — and the resulting type error
+                // would otherwise be reported as a broken tool.
+                for (int step = 0; step < 3 && armed; ++step) {
+                    static const core::Point2 clicks[3] = {
+                        {5'000, 5'000}, {62'000, 20'000}, {75'000, 25'000}};
+                    // THROUGH THE ROADS A USER ACTUALLY HAS. A point arrives from the
+                    // canvas; a number or a caption is typed into the command line.
+                    // Calling `supplyText` directly would prove the session accepts a
+                    // value and prove nothing about whether the user can give it one —
+                    // which is exactly how OFSET came to have no answerable prompt.
+                    if (controller_->promptKind() == command::ParamKind::Selection) {
+                        // What the canvas does: pick through `SEÇ`, then Enter.
+                        runScriptLine(QStringLiteral("SEÇ mod=KUTU noktalar=45,-5 85,45"));
+                        std::vector<std::int64_t> ids;
+                        for (core::EntityKey k : controller_->bus().selection().keys())
+                            ids.push_back(static_cast<std::int64_t>(core::raw(k)));
+                        controller_->supplyObjects(ids);
+                    } else if (prompt.contains(QStringLiteral("Yazılacak")))
+                        runScriptLine(QStringLiteral("deneme"));
+                    else if (prompt.contains(QStringLiteral("mesafe")))
+                        runScriptLine(QStringLiteral("5"));
+                    else
+                        controller_->supplyPoint(clicks[step]);
+                    QCoreApplication::processEvents();
+                }
+                controller_->cancelInteractive();
                 QCoreApplication::processEvents();
             }
-            controller_->cancelInteractive();
-            QCoreApplication::processEvents();
+
+            QString said = transcript_->toPlainText().mid(mark).trimmed();
+            said.replace(QLatin1Char('\n'), QLatin1Char(' '));
+
+            QString verdict;
+            const bool refused = said.startsWith(QStringLiteral("Hata:")) ||
+                                 said.startsWith(QStringLiteral("Bilinmeyen komut"));
+            if (refused) {
+                ++dead;
+                verdict = QStringLiteral("KIRIK   ") + said;
+            } else if (asked) {
+                ++ok_armed;
+                verdict = QStringLiteral("SORDU   \"") + prompt + QLatin1Char('"');
+                verdict += said.isEmpty()
+                               ? QStringLiteral("  ->  tamamlandı, söyleyecek bir şeyi yok")
+                               : QStringLiteral("  ->  ") + said;
+            } else if (said.isEmpty() && cmd.isEmpty()) {
+                // The idle arrow. It sends no command by design — its job is to
+                // disarm whatever is running — so saying nothing is the right answer.
+                ++ok_ran;
+                verdict = QStringLiteral("BOŞTA   çalışan komutu iptal eder (Esc)");
+            } else if (said.isEmpty()) {
+                ++dead;
+                verdict = QStringLiteral("SESSİZ  düğme ne sordu ne de bir şey söyledi");
+            } else {
+                ++ok_ran;
+                verdict = QStringLiteral("ÇALIŞTI ") + said;
+            }
+
+            (void)std::fprintf(stdout, "[araç] %-18s %-12s seçili=%d  %s\n", qPrintable(name),
+                               qPrintable(cmd), held, qPrintable(verdict.left(140)));
         }
-
-        QString said = transcript_->toPlainText().mid(mark).trimmed();
-        said.replace(QLatin1Char('\n'), QLatin1Char(' '));
-
-        QString verdict;
-        const bool refused = said.startsWith(QStringLiteral("Hata:")) ||
-                             said.startsWith(QStringLiteral("Bilinmeyen komut"));
-        if (refused) {
-            ++dead;
-            verdict = QStringLiteral("KIRIK   ") + said;
-        } else if (asked) {
-            ++ok_armed;
-            verdict = QStringLiteral("SORDU   \"") + prompt + QLatin1Char('"');
-            verdict += said.isEmpty() ? QStringLiteral("  ->  tamamlandı, söyleyecek bir şeyi yok")
-                                      : QStringLiteral("  ->  ") + said;
-        } else if (said.isEmpty() && cmd.isEmpty()) {
-            // The idle arrow. It sends no command by design — its job is to
-            // disarm whatever is running — so saying nothing is the right answer.
-            ++ok_ran;
-            verdict = QStringLiteral("BOŞTA   çalışan komutu iptal eder (Esc)");
-        } else if (said.isEmpty()) {
-            ++dead;
-            verdict = QStringLiteral("SESSİZ  düğme ne sordu ne de bir şey söyledi");
-        } else {
-            ++ok_ran;
-            verdict = QStringLiteral("ÇALIŞTI ") + said;
-        }
-
-        (void)std::fprintf(stdout, "[araç] %-18s %-12s seçili=%d  %s\n", qPrintable(name),
-                           qPrintable(cmd), held, qPrintable(verdict.left(140)));
     }
-
     disconnect(onPrompt);
 
-    (void)std::fprintf(stdout, "[araç] ---- %d araç: %d çalıştı, %d girdi sordu, %d kırık\n",
+    (void)std::fprintf(stdout,
+                       "[araç] ---- %d araç x2 geçiş: %d çalıştı, %d girdi sordu, %d kırık\n",
                        static_cast<int>(buttons.size()), ok_ran, ok_armed, dead);
 }
 

@@ -6,6 +6,7 @@
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/guide.hpp"
+#include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/settings.hpp"
 #include "kentos_cad/render/backend.hpp"
 
@@ -20,7 +21,9 @@
 #include <QWheelEvent>
 
 #include <cmath>
+#include <cstdint>
 #include <string>
+#include <vector>
 
 namespace kentos::app {
 
@@ -1473,7 +1476,16 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
     }
 
     if (event->button() == Qt::LeftButton) {
-        if (controller_.awaitingInput()) {
+        // A COMMAND ASKING FOR OBJECTS DOES NOT OWN THE CLICK — the selection
+        // does. Picking during a command is the same picking as when none is
+        // running: the press starts a box, the release sends `SEÇ`, the highlight
+        // and the Shift/Ctrl keys behave as they always do. Falling through here
+        // is what makes that true, rather than a second hit-test living in the
+        // canvas (Article 1.2). Enter then hands the result to the command.
+        const bool picking = controller_.awaitingInput() &&
+                             controller_.promptKind() == command::ParamKind::Selection;
+
+        if (controller_.awaitingInput() && !picking) {
             // WHAT IS BEING ASKED FOR decides what a click does. A command that
             // wants a string is not answered by a coordinate, and a click that
             // sent one anyway is what left METİN waiting forever: the anchor went
@@ -1509,7 +1521,11 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
         // A grip under the pointer takes the press: the user is reaching for a
         // corner of something already selected, and a selection box started there
         // would throw that selection away on the way to editing it.
-        if (const Grip grip = gripAt(event->position()); grip.valid()) {
+        //
+        // Not while a command is asking which objects to act on, though: there the
+        // press is always part of the answer, and moving a corner instead would
+        // edit the drawing in the middle of being asked a question.
+        if (const Grip grip = picking ? Grip{} : gripAt(event->position()); grip.valid()) {
             drag_grip_     = grip;
             dragging_grip_ = true;
             drag_anchor_   = event->position();
@@ -1685,6 +1701,32 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
     if (event->key() == Qt::Key_Control) {
         setDiagonalLock(true);
         return;
+    }
+
+    // ENTER FINISHES THE PICKING. A command that asked which objects to act on
+    // has no other way to learn the user is done — clicks keep arriving and any
+    // one of them might be the last — so this is the gesture, and it is the one
+    // every CAD user's hands already make. Nothing else in the program binds
+    // Enter on the canvas, so it costs no existing behaviour.
+    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+        if (controller_.awaitingInput() &&
+            controller_.promptKind() == command::ParamKind::Selection) {
+            std::vector<std::int64_t> ids;
+            for (core::EntityKey k : controller_.bus().selection().keys())
+                ids.push_back(static_cast<std::int64_t>(core::raw(k)));
+
+            // NOTHING PICKED IS NOT AN ANSWER. Supplying an empty list would end
+            // the command with no objects, which reads as the tool being broken;
+            // saying so and staying armed lets the user carry on pointing.
+            if (ids.empty()) {
+                emit echoRequested(tr("Nesne seçilmedi. Nesneleri tıklayın, sonra Enter'a "
+                                      "basın; vazgeçmek için Esc."));
+                return;
+            }
+            controller_.supplyObjects(ids);
+            update();
+            return;
+        }
     }
 
     if (event->key() == Qt::Key_Escape) {

@@ -376,12 +376,11 @@ Task<bool> combine_runs(Context& ctx, std::vector<Piece>& pieces, std::string& s
 
 Task<void> run(Context& ctx)
 {
-    Bus& bus = ctx.session().bus();
-
-    std::vector<std::int64_t> requested = ctx.argument("nesneler").as_ids();
-    if (requested.empty())
-        for (core::EntityKey k : bus.selection().keys())
-            requested.push_back(static_cast<std::int64_t>(core::raw(k)));
+    std::vector<std::int64_t> requested;
+    if (!co_await want_objects(ctx, "nesneler",
+                               "Birleştirilecek alanları ya da çizgileri seçin, Enter'a basın",
+                               requested))
+        co_return;
 
     if (requested.size() < 2) {
         ctx.echo("BİRLEŞTİR en az iki nesne ister. Seçili: " + std::to_string(requested.size()) +
@@ -435,7 +434,7 @@ KENTOS_COMMAND(combine)
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                          "Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim"}},
         .undo     = UndoPolicy::SingleTransaction,
-        .flags    = Flags::Scriptable | Flags::AiAccessible,
+        .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary  = "Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek "
                     "çizgi yapar.",
         .run      = &run,

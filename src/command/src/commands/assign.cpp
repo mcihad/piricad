@@ -22,40 +22,34 @@
 namespace kentos::command {
 namespace {
 
-/// The entities a command works on: the named ones, or the selection.
-bool gather(Context& ctx, std::vector<std::int64_t>& requested, std::vector<core::EntityId>& slots,
-            const char* example)
+/// The entities a command works on: the named ones, the selection, or the ones
+/// the user is asked to point at.
+Task<bool> gather(Context& ctx, std::vector<std::int64_t>& requested,
+                  std::vector<core::EntityId>& slots, const char* example)
 {
-    Bus& bus = ctx.session().bus();
 
-    if (const Value given = ctx.argument("nesneler"); !given.empty()) {
-        requested = given.as_ids();
-    } else {
-        for (core::EntityKey k : bus.selection().keys())
-            requested.push_back(static_cast<std::int64_t>(core::raw(k)));
-
-        if (requested.empty()) {
-            ctx.echo(std::string("İşlem yapılacak nesne belirtilmedi ve seçim boş. Örnek: ") +
-                     example);
-            return false;
-        }
-    }
+    // The argument, the selection, or ASKED FOR — see `want_objects`.
+    if (!co_await want_objects(ctx, "nesneler",
+                               std::string("İşlem yapılacak nesneleri seçin, Enter'a basın  ·  ") +
+                                   example,
+                               requested))
+        co_return false;
 
     for (std::int64_t raw : requested) {
         if (raw <= 0) {
             ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) +
                      ". Kimlikler 1'den başlar.");
-            return false;
+            co_return false;
         }
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
         const core::EntityId slot = ctx.document().slot_of(key);
         if (slot == core::kNoEntity || !ctx.document().alive(slot)) {
             ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
-            return false;
+            co_return false;
         }
         slots.push_back(slot);
     }
-    return true;
+    co_return true;
 }
 
 /// How far `probe` is from the nearest edge of `slot`, in millimetres, or -1 when
@@ -91,7 +85,7 @@ Task<void> run_set_layer(Context& ctx)
 {
     std::vector<std::int64_t> requested;
     std::vector<core::EntityId> slots;
-    if (!gather(ctx, requested, slots, "KATMANAT nesneler=1 katman=PARSEL")) co_return;
+    if (!co_await gather(ctx, requested, slots, "KATMANAT nesneler=1 katman=PARSEL")) co_return;
 
     auto name = co_await ctx.text("katman", "Taşınacak katmanın adı");
     if (!name) co_return;
@@ -127,7 +121,8 @@ Task<void> run_match_style(Context& ctx)
 {
     std::vector<std::int64_t> requested;
     std::vector<core::EntityId> slots;
-    if (!gather(ctx, requested, slots, "STİLKOPYALA kaynak=1 nesneler=2 nesneler=3")) co_return;
+    if (!co_await gather(ctx, requested, slots, "STİLKOPYALA kaynak=1 nesneler=2 nesneler=3"))
+        co_return;
 
     Value source_arg = ctx.argument("kaynak");
     if (source_arg.empty()) {

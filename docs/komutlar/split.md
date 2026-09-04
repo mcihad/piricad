@@ -64,6 +64,10 @@ Seçili tek bir çizgi varsa `nesne` yazmanıza gerek yoktur: seçim komutun gir
 Birden çok nesne seçiliyse komut bunu söyler ve hiçbir şey yapmaz — bir seferde tek
 çizgi bölünür.
 
+Seçim boşken de çalışır: düğmeye basın, komut satırı hangi nesneleri istediğini
+yazar, tuvalden tıklayarak seçin ve **Enter**'a basın. Vazgeçmek için Esc.
+Nesneleri önceden seçtiyseniz sorulmaz.
+
 ### Betik
 
 ```json

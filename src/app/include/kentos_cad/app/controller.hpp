@@ -68,6 +68,14 @@ public:
     /// placeholder while focus stayed on the canvas, and the command hung.
     void supplyText(const QString& text);
 
+    /// Answers the running command's prompt with a set of OBJECTS.
+    ///
+    /// The canvas calls this when the user presses Enter having picked what the
+    /// command asked for; the picking itself went through `SEÇ`, exactly as it
+    /// does when no command is running, so there is one selection road and not
+    /// two (Article 1.2).
+    void supplyObjects(const std::vector<std::int64_t>& ids);
+
     /// Answers the running command's prompt with a NUMBER — a distance, a scale,
     /// an angle. The command line reaches for this when `Prompt::kind` says a
     /// quantity would satisfy the prompt; without it OFSET could be started and

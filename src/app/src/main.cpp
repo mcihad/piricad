@@ -7,6 +7,7 @@
 #include "kentos_cad/command/log.hpp"
 #include "kentos_cad/core/circle.hpp"
 
+#include <QAction>
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QDir>
@@ -642,6 +643,21 @@ int main(int argc, char** argv)
             // so this timer still fires while it is up.
             QWidget* subject = QApplication::activeWindow();
             if (subject == nullptr) subject = &window;
+
+            // KENTOS_ARM presses one tool-column button before the shot, so a
+            // review can see what an ARMED tool looks like. The actions are named
+            // `toolAction.<KOMUT>` for exactly this kind of reach; same category
+            // as the probes above — developer tooling, not a feature.
+            if (const QByteArray arm = qgetenv("KENTOS_ARM"); !arm.isEmpty()) {
+                const QString name = QStringLiteral("toolAction.") + QString::fromUtf8(arm);
+                if (QAction* action = window.findChild<QAction*>(name)) {
+                    action->trigger();
+                    QCoreApplication::processEvents();
+                } else {
+                    (void)std::fprintf(stderr, "[kentos] araç bulunamadı: %s\n",
+                                       qPrintable(name));
+                }
+            }
 
             const bool saved = window_shot(subject).save(path);
             (void)std::fprintf(saved ? stdout : stderr, "[kentos] kare %s: %s\n",

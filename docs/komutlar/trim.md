@@ -68,6 +68,10 @@ tıklama sırasını değil nesne kimliğini takip eder — "önce seçtiğim" d
 
 Komut satırından `BUDA nesne=1 sinir=2` yazarak ikisini açıkça da verebilirsiniz.
 
+Seçim boşken de çalışır: düğmeye basın, komut satırı hangi nesneleri istediğini
+yazar, tuvalden tıklayarak seçin ve **Enter**'a basın. Vazgeçmek için Esc.
+Nesneleri önceden seçtiyseniz sorulmaz.
+
 ### Betik
 
 ```json

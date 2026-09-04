@@ -264,42 +264,36 @@ core::Result<core::EntityId> clone_one(Context& ctx, core::EntityId slot, const 
 }
 
 /// The entities a transform command works on: the named ones, or the selection.
-bool gather(Context& ctx, std::vector<std::int64_t>& requested, std::vector<core::EntityId>& slots,
-            const char* example)
+Task<bool> gather(Context& ctx, std::vector<std::int64_t>& requested,
+                  std::vector<core::EntityId>& slots, const char* example)
 {
-    Bus& bus = ctx.session().bus();
 
-    if (const Value given = ctx.argument("nesneler"); !given.empty()) {
-        requested = given.as_ids();
-    } else {
-        // The active selection, which is the select-then-act order every CAD user
-        // works in. Copied out so the journal records the ids: a replay must not
-        // depend on what happened to be highlighted (model.md R43).
-        for (core::EntityKey k : bus.selection().keys())
-            requested.push_back(static_cast<std::int64_t>(core::raw(k)));
-
-        if (requested.empty()) {
-            ctx.echo(std::string("İşlem yapılacak nesne belirtilmedi ve seçim boş. Örnek: ") +
-                     example);
-            return false;
-        }
-    }
+    // The argument, the selection, or ASKED FOR — `want_objects` in
+    // `command/context.hpp` is the one place that order lives. Refusing an empty
+    // selection, which is what this did, meant a tool-column button could only
+    // work if the user had already highlighted something: press the tool first,
+    // as every CAD trains, and nothing happened.
+    if (!co_await want_objects(ctx, "nesneler",
+                               std::string("İşlem yapılacak nesneleri seçin, Enter'a basın  ·  ") +
+                                   example,
+                               requested))
+        co_return false;
 
     for (std::int64_t raw : requested) {
         if (raw <= 0) {
             ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) +
                      ". Kimlikler 1'den başlar.");
-            return false;
+            co_return false;
         }
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
         const core::EntityId slot = ctx.document().slot_of(key);
         if (slot == core::kNoEntity || !ctx.document().alive(slot)) {
             ctx.echo("Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
-            return false;
+            co_return false;
         }
         slots.push_back(slot);
     }
-    return true;
+    co_return true;
 }
 
 bool apply_all(Context& ctx, const std::vector<core::EntityId>& slots, const Xform& x)
@@ -315,7 +309,8 @@ Task<void> run_move(Context& ctx)
 {
     std::vector<std::int64_t> requested;
     std::vector<core::EntityId> slots;
-    if (!gather(ctx, requested, slots, "TAŞI nesneler=1 baslangic=0,0 bitis=10,0")) co_return;
+    if (!co_await gather(ctx, requested, slots, "TAŞI nesneler=1 baslangic=0,0 bitis=10,0"))
+        co_return;
 
     auto from = co_await ctx.point("baslangic", "Taşımanın başlangıç noktası");
     if (!from) co_return;
@@ -343,7 +338,8 @@ Task<void> run_copy(Context& ctx)
 {
     std::vector<std::int64_t> requested;
     std::vector<core::EntityId> slots;
-    if (!gather(ctx, requested, slots, "KOPYALA nesneler=1 baslangic=0,0 bitis=10,0")) co_return;
+    if (!co_await gather(ctx, requested, slots, "KOPYALA nesneler=1 baslangic=0,0 bitis=10,0"))
+        co_return;
 
     auto from = co_await ctx.point("baslangic", "Kopyalamanın başlangıç noktası");
     if (!from) co_return;
@@ -377,9 +373,9 @@ Task<void> run_array(Context& ctx)
 {
     std::vector<std::int64_t> requested;
     std::vector<core::EntityId> slots;
-    if (!gather(ctx, requested, slots,
-                "DİZİ nesneler=1 satir=3 sutun=4 satir_aralik=10 "
-                "sutun_aralik=10"))
+    if (!co_await gather(ctx, requested, slots,
+                         "DİZİ nesneler=1 satir=3 sutun=4 satir_aralik=10 "
+                         "sutun_aralik=10"))
         co_return;
 
     const Value mode_arg = ctx.argument("mod");
@@ -498,7 +494,7 @@ Task<void> run_rotate(Context& ctx)
 {
     std::vector<std::int64_t> requested;
     std::vector<core::EntityId> slots;
-    if (!gather(ctx, requested, slots, "DÖNDÜR nesneler=1 merkez=0,0 aci=90")) co_return;
+    if (!co_await gather(ctx, requested, slots, "DÖNDÜR nesneler=1 merkez=0,0 aci=90")) co_return;
 
     auto centre = co_await ctx.point("merkez", "Döndürme merkezi");
     if (!centre) co_return;
@@ -526,7 +522,8 @@ Task<void> run_scale(Context& ctx)
 {
     std::vector<std::int64_t> requested;
     std::vector<core::EntityId> slots;
-    if (!gather(ctx, requested, slots, "ÖLÇEKLE nesneler=1 merkez=0,0 carpan=2")) co_return;
+    if (!co_await gather(ctx, requested, slots, "ÖLÇEKLE nesneler=1 merkez=0,0 carpan=2"))
+        co_return;
 
     auto centre = co_await ctx.point("merkez", "Ölçekleme merkezi");
     if (!centre) co_return;
@@ -561,7 +558,8 @@ Task<void> run_mirror(Context& ctx)
 {
     std::vector<std::int64_t> requested;
     std::vector<core::EntityId> slots;
-    if (!gather(ctx, requested, slots, "AYNALA nesneler=1 baslangic=0,0 bitis=0,10")) co_return;
+    if (!co_await gather(ctx, requested, slots, "AYNALA nesneler=1 baslangic=0,0 bitis=0,10"))
+        co_return;
 
     auto a = co_await ctx.point("baslangic", "Ayna ekseninin ilk noktası");
     if (!a) co_return;

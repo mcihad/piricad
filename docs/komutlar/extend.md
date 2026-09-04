@@ -61,6 +61,10 @@ Hangisinin uzatılacağını **tıklama** söyler: tıkladığınız noktaya dah
 çizgi uzatılır, diğeri sınır olur. Komut satırından `UZAT nesne=1 sinir=2` yazarak
 ikisini açıkça da verebilirsiniz.
 
+Seçim boşken de çalışır: düğmeye basın, komut satırı hangi nesneleri istediğini
+yazar, tuvalden tıklayarak seçin ve **Enter**'a basın. Vazgeçmek için Esc.
+Nesneleri önceden seçtiyseniz sorulmaz.
+
 ### Betik
 
 ```json

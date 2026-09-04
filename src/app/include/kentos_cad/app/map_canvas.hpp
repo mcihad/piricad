@@ -154,6 +154,13 @@ signals:
     /// Emitted after a pan or a zoom, so the scale readout can follow.
     void viewChanged();
 
+    /// A line for the transcript and the status strip, from the canvas itself.
+    ///
+    /// Used for the one thing the canvas knows and the bus cannot: that Enter was
+    /// pressed with nothing picked while a command was asking which objects to act
+    /// on. Everything else a user reads comes from a command, and must.
+    void echoRequested(const QString& text);
+
 protected:
     /// Qt event handlers. Every one of them either changes the VIEW — which is
     /// not document state — or feeds a point to the running command through the

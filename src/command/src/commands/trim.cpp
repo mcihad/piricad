@@ -106,40 +106,17 @@ bool locate_on(const std::vector<core::Point2>& pts, core::Point2 probe, std::si
 
 Task<void> run_split(Context& ctx)
 {
-    Value given = ctx.argument("nesne");
-    if (given.empty()) {
-        // THE SELECTION IS THE ARGUMENT WHEN NOTHING WAS TYPED. Without this the
-        // tool column's Böl button could never work: it sends the bare command,
-        // so `nesne` was always empty and the button's only possible outcome was
-        // "Bölünecek çizgi belirtilmedi" — with the line selected, on screen, in
-        // front of the user. Every other selection-driven command in the tree
-        // (OFSET, TAŞI, DÖNDÜR, TEVHİT) already reads the selection this way.
-        const std::vector<core::EntityKey>& keys = ctx.session().bus().selection().keys();
-        if (keys.size() != 1) {
-            ctx.echo(keys.empty() ? "Bölünecek çizgi belirtilmedi. Bir çizgi seçin ya da "
-                                    "BÖL nesne=1 nokta=30,0 yazın."
-                                  : "Bir seferde tek çizgi bölünür; " +
-                                        std::to_string(keys.size()) + " nesne seçili.");
-            co_return;
-        }
-        // RECORDED AS THE ID IT RESOLVED TO, not as "whatever was selected": a
-        // journal replay must split the same line however the selection stood at
-        // replay time (model.md R43).
-        given = Value::ids({static_cast<std::int64_t>(core::raw(keys.front()))});
-    }
+    // THE ARGUMENT, THE SELECTION, OR ASKED FOR — in that order, like every other
+    // modify command. The tool-column button sends the bare command, so `nesne`
+    // arrives empty and the line has to come from somewhere: the highlight when
+    // there is one, and otherwise from pointing at it. Refusing instead is what
+    // made the Böl button look dead.
+    std::vector<std::int64_t> chosen;
+    if (!co_await want_objects(ctx, "nesne", "Bölünecek çizgiyi seçin, Enter'a basın", chosen, 1))
+        co_return;
 
-    std::int64_t id = 0;
-    if (given.kind() == Value::Kind::IdList) {
-        const Value::Ints& ids = given.as_ids();
-        if (ids.size() != 1) {
-            ctx.echo("Bir seferde tek çizgi bölünür; " + std::to_string(ids.size()) +
-                     " nesne verildi.");
-            co_return;
-        }
-        id = ids[0];
-    } else {
-        id = given.as_int();
-    }
+    const Value given     = Value::ids({chosen.front()});
+    const std::int64_t id = chosen.front();
 
     core::EntityId slot = core::kNoEntity;
     std::vector<core::Point2> pts;
@@ -252,15 +229,18 @@ Task<void> run_cut(Context& ctx, bool extend)
     const bool from_selection = target_arg.empty() && edge_arg.empty();
     std::vector<std::int64_t> pair;
     if (from_selection) {
-        for (core::EntityKey k : ctx.session().bus().selection().keys())
-            pair.push_back(static_cast<std::int64_t>(core::raw(k)));
+        if (!co_await want_objects(ctx, "nesne",
+                                   std::string(verb) +
+                                       " için iki çizgi seçin — düzenlenecek ve sınır — "
+                                       "sonra Enter'a basın",
+                                   pair, 2))
+            co_return;
 
         if (pair.size() != 2) {
-            ctx.echo(
-                std::string(verb) + " için hem düzenlenecek çizgi hem sınır çizgisi gerekir. " +
-                (pair.empty() ? std::string("İki çizgi seçin")
-                              : std::to_string(pair.size()) + " nesne seçili; iki tane olmalı") +
-                " ya da " + verb + " nesne=1 sinir=2 nokta=5,0 yazın.");
+            ctx.echo(std::string(verb) +
+                     " tam iki çizgi ister: düzenlenecek olan ve sınır. Seçili: " +
+                     std::to_string(pair.size()) + ". Ya da " + verb +
+                     " nesne=1 sinir=2 nokta=5,0 yazın.");
             co_return;
         }
     } else if (target_arg.empty() || edge_arg.empty()) {

@@ -2103,6 +2103,93 @@ TEST_CASE("BİRLEŞTİR: tek nesneyle çalışmaz")
     CHECK(f.doc.live_entity_count() == 1);
 }
 
+// =============================================================================
+// want_objects — the tool column's "press first, then point"
+// =============================================================================
+
+TEST_CASE("seçim boşken bir düzenleme komutu nesneleri SORAR, reddetmez")
+{
+    // THE REGRESSION. Six buttons on the tool column — trim, split, combine,
+    // move, offset and match-style — refused an empty selection with a line in
+    // the status strip and never started the command — so the ordinary order of work, reach
+    // for the tool and then point at the thing, did nothing at all. They were
+    // reported as "cannot be selected and do not work", and both halves were true.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=DENEME", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=0,0 10,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=0,5 10,5", Origin::Test).ok());
+    REQUIRE(f.bus.selection().empty());
+
+    auto started = f.bus.begin_interactive("TAŞI");
+    REQUIRE(started.ok());
+    auto& session = *started.value();
+
+    // It asks, and it asks for OBJECTS — which is what lets the canvas answer by
+    // picking rather than by sending a coordinate.
+    REQUIRE(session.waiting());
+    CHECK(session.prompt().kind == ParamKind::Selection);
+
+    REQUIRE(session.supply(Value::ids({1, 2})).ok());
+    REQUIRE(session.supply(Value::point(core::Point2{0, 0})).ok());
+    REQUIRE(session.supply(Value::point(core::Point2{20'000, 0})).ok());
+    REQUIRE(f.bus.finish(session).ok());
+
+    // Both lines moved 20 m east.
+    const core::EntityId slot = f.doc.slot_of(static_cast<core::EntityKey>(1));
+    REQUIRE(slot != core::kNoEntity);
+    const core::RingSpan span = f.doc.geometry().rings_of(f.doc.entities().slot[slot]);
+    CHECK(f.doc.geometry().ring_xs(span.first)[0] == 20'000);
+}
+
+TEST_CASE("nesneler verilmişse hiç sorulmaz: betik yolu değişmedi")
+{
+    // The other half of Article 1.2: a client that already said must not be asked.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=DENEME", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=0,0 10,0", Origin::Test).ok());
+
+    REQUIRE(f.bus.execute_line("TAŞI nesneler=1 baslangic=0,0 bitis=20,0", Origin::Test).ok());
+
+    const core::EntityId slot = f.doc.slot_of(static_cast<core::EntityKey>(1));
+    REQUIRE(slot != core::kNoEntity);
+    const core::RingSpan span = f.doc.geometry().rings_of(f.doc.entities().slot[slot]);
+    CHECK(f.doc.geometry().ring_xs(span.first)[0] == 20'000);
+}
+
+TEST_CASE("seçim komutun alabileceğinden çoksa reddeder ve ARDINDAN ham hata bırakmaz")
+{
+    // BÖL takes one line. Handed two, it says so — and that used to be followed
+    // by "'core.split': zorunlu 'nokta' parametresi eksik" from post-run
+    // validation, a second message about a parameter the user was never asked
+    // for. `want_objects` clears the parameter it could not accept, and the bus
+    // no longer validates a command that resolved nothing.
+    std::string said;
+    Fixture f;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+
+    REQUIRE(f.bus.execute_line("KATMAN ad=DENEME", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=0,0 10,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ noktalar=0,5 10,5", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SEÇ mod=NESNE nesneler=1 nesneler=2", Origin::Test).ok());
+
+    // Through the road the BUTTON takes. A script must still name everything it
+    // wants — `BÖL` alone fails validation before the body runs, which is right —
+    // so the case this test is about only exists on the interactive path.
+    said.clear();
+    auto started = f.bus.begin_interactive("BÖL");
+    REQUIRE(started.ok());
+
+    auto& session = *started.value();
+    // It never even asks: two objects are already selected and one is the most it
+    // can take, so it refuses on the selection rather than on a prompt.
+    CHECK(!session.waiting());
+
+    auto done = f.bus.finish(session);
+    CHECK(done.ok()); // a refusal, not an error
+    CHECK(said.find("en fazla 1 nesne") != std::string::npos);
+    CHECK(said.find("zorunlu") == std::string::npos);
+}
+
 TEST_CASE("etkileşimli başlatma çıplak bir ad ile eskisi gibi davranır")
 {
     // The compatibility half: every existing caller passes a bare name and must

@@ -97,6 +97,30 @@ struct PointOptions
     std::vector<Point2> rubber_chain{};
 };
 
+class Context;
+
+/// The objects a modify command is to work on, from whichever source has them.
+///
+/// THE ORDER IS THE POINT, and every modify command needs the same one:
+///   1. the named argument, when a script, the CLI or the AI supplied it;
+///   2. the live selection, when the user highlighted something first;
+///   3. asked for, by pointing at them.
+///
+/// Step 3 is what makes a tool-column button behave like a CAD tool: press it
+/// with nothing selected and it arms and asks, rather than refusing. Before it
+/// existed the buttons answered an empty selection with a sentence in the status
+/// line and did nothing at all, so the ordinary order of work — reach for the
+/// tool, then point at the thing — produced a dead button.
+///
+/// Returns false when the user cancelled; the caller returns without doing
+/// anything, exactly as it would for any other refused prompt.
+/// `most` caps how many objects the caller can accept — 1 for BÖL, 2 for BUDA,
+/// 0 for no limit. Enforced HERE rather than in the caller so that a refusal
+/// leaves the parameter clear; a caller that judged the count itself would be
+/// judging it after the awaiter had already recorded the answer.
+Task<bool> want_objects(Context& ctx, std::string param, std::string message,
+                        std::vector<std::int64_t>& out, std::size_t most = 0);
+
 class Context
 {
 public:
@@ -110,6 +134,14 @@ public:
     InputAwaiter<std::int64_t> integer(std::string param, std::string message);
     InputAwaiter<std::string> text(std::string param, std::string message);
     InputAwaiter<bool> boolean(std::string param, std::string message);
+
+    /// Asks which objects the command is to act on.
+    ///
+    /// Answered without suspending when the client already said — a script's
+    /// `nesneler=1 2`, a CLI line, an AI tool result — and by pointing when it did
+    /// not: the canvas picks into the live selection and Enter hands it over. The
+    /// body cannot tell which happened, which is the whole point (Article 1.2).
+    InputAwaiter<Value::Ints> objects(std::string param, std::string message);
 
     /// Whole-parameter fetch for non-interactive parameters (a script passing a
     /// full point list at once). Returns an empty Value when absent.

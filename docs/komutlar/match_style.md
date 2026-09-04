@@ -73,6 +73,10 @@ kaynaktır; seçimdeki diğerleri onun stilini alır.
 Kaynağı komut satırından da verebilirsiniz: `STİLKOPYALA kaynak=<kimlik>`. O zaman
 tıklama sorulmaz.
 
+Seçim boşken de çalışır: düğmeye basın, komut satırı hangi nesneleri istediğini
+yazar, tuvalden tıklayarak seçin ve **Enter**'a basın. Vazgeçmek için Esc.
+Nesneleri önceden seçtiyseniz sorulmaz.
+
 ### Betik
 
 ```json

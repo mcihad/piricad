@@ -469,7 +469,15 @@ core::Result<DispatchResult> Bus::finish(Session& session)
     // Everything else — the journal entry, the observers, the result — is
     // unchanged, so a read-only command that reports and resolves nothing still
     // appears in the record exactly as before.
-    const bool declined = ops == 0 && session.resolved().size() == 0;
+    // EMPTY VALUES DO NOT COUNT AS RESOLVED. A command that asked for objects,
+    // was handed more than it can take and cleared the parameter again (see
+    // `want_objects`) has a key in `resolved()` holding nothing — it resolved no
+    // value, which is exactly the case this skips.
+    std::size_t settled = 0;
+    for (const auto& [name, value] : session.resolved().items())
+        if (!value.empty()) ++settled;
+
+    const bool declined = ops == 0 && settled == 0;
     if (!declined) {
         ValidationRequest req{spec, session.resolved(), session.input().origin(), doc_};
         if (auto st = validator_.run(req); !st) {

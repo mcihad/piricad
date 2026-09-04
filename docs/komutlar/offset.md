@@ -80,6 +80,10 @@ OFSET nesneler=1 mesafe=-5000
 Nesneleri seçin, sol araç kutusundaki **Ofset** düğmesine basın, mesafeyi metre
 olarak yazın ve Enter'a basın.
 
+Seçim boşken de çalışır: düğmeye basın, komut satırı hangi nesneleri istediğini
+yazar, tuvalden tıklayarak seçin ve **Enter**'a basın. Vazgeçmek için Esc.
+Nesneleri önceden seçtiyseniz sorulmaz.
+
 ### Betik
 
 ```json

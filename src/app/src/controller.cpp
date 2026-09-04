@@ -245,6 +245,11 @@ void Controller::runCommand(const QString& line)
     runLine(line, command::Origin::Gui);
 }
 
+void Controller::supplyObjects(const std::vector<std::int64_t>& ids)
+{
+    supplyValue(command::Value::ids(ids));
+}
+
 void Controller::supplyNumber(double value)
 {
     supplyValue(command::Value::number(value));
