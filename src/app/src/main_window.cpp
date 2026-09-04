@@ -18,6 +18,7 @@
 #include "kentos_cad/app/toolbox.hpp"
 #include "kentos_cad/core/snap.hpp"
 
+#include "kentos_cad/io/dwg.hpp"
 #include "kentos_cad/io/vector.hpp"
 #include "kentos_cad/render/backend.hpp"
 
@@ -1817,6 +1818,14 @@ QString MainWindow::externalFormatFilter(bool for_writing) const
         entries << QStringLiteral("%1 (*%2)")
                        .arg(QString::fromStdString(f.label), QString::fromStdString(f.extension));
     }
+
+    // DWG IS NOT A GDAL DRIVER HERE. It is read by LibreDWG and routed by
+    // extension in `FileService::import_into`, so it is absent from the
+    // allow-list the loop above walks — and a format the file dialog does not
+    // offer is a format the user has no way to know exists. Reading only: io.md
+    // P8 forbids a native DWG writer, so it must never appear in a save dialog.
+    if (!for_writing && io::dwg_backend_available()) entries << tr("AutoCAD DWG (*.dwg)");
+
     entries << tr("Tüm dosyalar (*)");
     return entries.join(QStringLiteral(";;"));
 }

@@ -25,6 +25,7 @@
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/core/text.hpp"
+#include "kentos_cad/io/dwg.hpp"
 #include "kentos_cad/io/format.hpp"
 #include "kentos_cad/io/service.hpp"
 #include "kentos_cad/io/vector.hpp"
@@ -1022,6 +1023,32 @@ TEST_CASE("IO: DWG her sürümden okunur ve neyi atladığını söyler")
     // regression, which is what R14 asks the build to break on.
     CHECK_EQ(opened, files.size());
 #endif
+}
+
+TEST_CASE("IO: okunabilir her biçim dosya diyaloğunda görünür")
+{
+    // A format the file dialog does not offer is a format the user has no way to
+    // know exists. DWG is the one that nearly went out that way: it is read by
+    // LibreDWG and routed by extension, so it is absent from the GDAL allow-list
+    // the dialog filter is built from — the reader worked and the shell's own
+    // import action could not reach it.
+    //
+    // Checked here rather than in the shell because /tests links no Qt: what is
+    // testable is that the two lists agree about what is readable.
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+
+    bool dxf = false;
+    bool shp = false;
+    for (const io::VectorFormat& f : io::vector_formats()) {
+        if (f.extension == ".dxf" && f.read) dxf = true;
+        if (f.extension == ".shp" && f.read) shp = true;
+    }
+    CHECK(dxf);
+    CHECK(shp);
+
+    // And DWG is readable exactly when the build linked LibreDWG — the condition
+    // `MainWindow::externalFormatFilter` asks before adding its entry.
+    CHECK_EQ(io::dwg_backend_available(), io::dwg_backend_status().empty());
 }
 
 TEST_CASE("IO: DWG yazma yok, ve kütüphane düzeyinde yok")
