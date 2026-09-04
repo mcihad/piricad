@@ -493,6 +493,7 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
     std::vector<core::RingGeometry::RingInput> rings;
     std::vector<std::vector<core::Point2>> ring_store;
     std::set<std::string> seen_layers; // so report.layers counts names, not features
+    bool unlabelled = false;           // the "no CRS in the file" note, said once
 
     for (int li = 0; li < data.ptr->GetLayerCount(); ++li) {
         OGRLayer* layer = data.ptr->GetLayer(li);
@@ -503,6 +504,36 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
 
         auto crs = crs_of(layer->GetSpatialRef(), layer_name);
         if (!crs && !sidecar.empty()) crs = sidecar; // the .prj companion, read above
+
+        // A DXF HAS NOWHERE TO PUT A COORDINATE SYSTEM, and no surveying office
+        // ships a `.prj` beside one. Refusing every such file is not R20's rule —
+        // which is that an unlabelled coordinate must never be read SILENTLY —
+        // it is a refusal of the format itself, and it made real cadastral
+        // drawings unopenable.
+        //
+        // So the drawing's own system stands, and it is announced rather than
+        // assumed quietly: the note goes into the report, which the command puts
+        // in front of the user. The danger R20 guards against is a TM30 parcel
+        // plotted as a TM33 one, and that danger is in the SILENCE, not in the
+        // fallback. Nothing is inferred from the coordinates — an easting of
+        // 583 000 fits several Turkish zones and guessing between them is exactly
+        // the blunder the rule exists for.
+        //
+        // To state it explicitly, set the drawing's system before importing:
+        //     AYAR koordinat_sistemi EPSG:5256
+        if (!crs && !project_crs.empty()) {
+            crs = project_crs;
+            if (!unlabelled) {
+                unlabelled = true;
+                report.notes.push_back(
+                    "Dosya koordinat sistemi bildirmiyor (DXF taşıyamaz). Çizimin kendi "
+                    "sistemi varsayıldı: " +
+                    project_crs +
+                    ". Yanlışsa GERİAL ile geri alın, AYAR koordinat_sistemi ile doğrusunu "
+                    "kurun ve yeniden aktarın.");
+            }
+        }
+
         if (!crs)
             co_return err(
                 crs.error().code,

@@ -1039,6 +1039,50 @@ TEST_CASE("IO: DWG yazma yok, ve kütüphane düzeyinde yok")
     CHECK(!wrote);
 }
 
+TEST_CASE("IO: .prj'siz bir DXF reddedilmez — çizimin sistemi varsayılır ve SÖYLENİR")
+{
+    if (!io::vector_backend_available())
+        PENDING("KENTOS_WITH_GDAL=OFF; DXF içe aktarımı sınanamıyor.");
+
+    // WHAT REAL FILES LOOK LIKE. A DXF from a surveying office is one file: no
+    // `.prj` beside it, because DXF has nowhere to put a coordinate system in the
+    // first place. Refusing every such drawing was not io.md R20's rule — which
+    // is that an unlabelled coordinate must never be read SILENTLY — it was a
+    // refusal of the format, and it made real cadastral drawings unopenable.
+    //
+    // The drawing's own system stands and the report SAYS it did. Nothing is
+    // inferred from the numbers: an easting of 583 000 fits several Turkish TM
+    // zones and guessing between them is the blunder R20 exists for.
+    TempDir tmp("dxf-prjsiz");
+    const std::string path = tmp.file("pafta.dxf");
+    {
+        std::ofstream out(path);
+        REQUIRE(out.is_open());
+        out << "0\nSECTION\n2\nENTITIES\n"
+            << "0\nLWPOLYLINE\n8\nPARSEL\n90\n4\n70\n1\n"
+            << "10\n583646.0\n20\n4401083.0\n"
+            << "10\n583696.0\n20\n4401083.0\n"
+            << "10\n583696.0\n20\n4401133.0\n"
+            << "10\n583646.0\n20\n4401133.0\n"
+            << "0\nENDSEC\n0\nEOF\n";
+    }
+    REQUIRE(!fs::exists(tmp.file("pafta.prj")));
+
+    std::string said;
+    Rig rig;
+    rig.bus.on_echo = [&said](std::string_view t) { said += std::string(t); };
+    REQUIRE(rig.bus.execute_line("AYAR core.crs.id EPSG:5256", Origin::Test).ok());
+
+    auto imported = rig.bus.execute_line("İÇEAKTAR \"" + path + "\"", Origin::Test);
+    if (!imported) FAIL_WITH("İÇEAKTAR", imported.error().message);
+
+    CHECK_EQ(rig.doc.live_entity_count(), std::size_t{1});
+
+    // AND IT SAID SO. The danger R20 guards against lives in the silence.
+    CHECK(said.find("koordinat sistemi bildirmiyor") != std::string::npos);
+    CHECK(said.find("EPSG:5256") != std::string::npos);
+}
+
 TEST_CASE("IO: Shapefile içe aktarımı — parseller alan olarak gelir")
 {
     if (!io::vector_backend_available())

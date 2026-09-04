@@ -106,6 +106,27 @@ projenin GPLv3 lisansıyla bağdaşmaz.
 
 ## Koordinat sistemi
 
+### DXF koordinat sistemi taşımaz
+
+Bir DXF'in içinde koordinat sistemi için **yer yoktur**, ve hiçbir harita bürosu
+yanına `.prj` koymaz. Böyle bir dosyayı açtığınızda KentOSCad **çizimin kendi
+sistemini** varsayar ve bunu açıkça söyler:
+
+> Dosya koordinat sistemi bildirmiyor (DXF taşıyamaz). Çizimin kendi sistemi
+> varsayıldı: EPSG:5256.
+
+Doğru sistemi **önceden** kurmak sizin işiniz:
+
+```text
+AYAR koordinat_sistemi EPSG:5256
+İÇEAKTAR "pafta.dxf"
+```
+
+Yanlış sistemle aktardıysanız `GERİAL` ile geri alın, doğrusunu kurun ve yeniden
+aktarın. Koordinatlardan sistem **tahmin edilmez**: 583 000 gibi bir sağa değeri
+Türkiye'de birden çok TM dilimine uyar, ve ikisi arasında tahmin yürütmek bu
+kuralın var olma sebebi olan hatanın ta kendisidir.
+
 **Etiketsiz koordinat kabul edilmez.** İçe aktarılan bir veri kümesi koordinat
 sistemini bildirmiyorsa KentOSCad dosyayı reddeder; "herhâlde TUREF/TM30'dur"
 varsayımı yapmaz.
