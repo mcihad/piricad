@@ -65,6 +65,17 @@ namespace {
 /// second command list CLAUDE.md 5.10 forbids.
 constexpr const char* kToolCommand = "piricad.command";
 
+/// Whether finishing this tool should ARM IT AGAIN.
+///
+/// True of a draw tool and false of a modify tool, and the difference is what
+/// the hand is doing. Drawing is repetitive — a cadastral sheet is hundreds of
+/// parcels and reaching for the tool column before each one is the whole cost —
+/// so ÇİZGİ and ALAN re-arm. Modifying is not: you move a thing once, and a
+/// TAŞI that re-armed asked "Nesneleri seçin" the instant the move landed, ate
+/// the next click as a selection for a command nobody had asked for, and left
+/// its button lit over a canvas the user thought was idle.
+constexpr const char* kToolRepeats = "piricad.repeats";
+
 /// The same swatch the layer panel draws, so the combo and the panel agree.
 /// `1 000 000` — thin-space thousands, the way a Turkish pafta prints a scale.
 /// Not `QLocale::toString`: that puts a full stop in tr_TR, and the reference
@@ -443,6 +454,7 @@ void MainWindow::buildActions()
     actLine_->setToolTip(tr("ÇİZGİ — ardışık doğru parçaları çizer  ·  kısaltma: Ç, L"));
     actLine_->setData(static_cast<int>(Glyph::Line));
     actLine_->setProperty(kToolCommand, QStringLiteral("ÇİZGİ"));
+    actLine_->setProperty(kToolRepeats, true); // the archetypal repeating draw tool
     actLine_->setObjectName(QStringLiteral("toolAction.ÇİZGİ"));
     connect(actLine_, &QAction::triggered, this,
             [this] { controller_->runCommand(QStringLiteral("ÇİZGİ")); });
@@ -464,6 +476,7 @@ void MainWindow::buildActions()
         // recognise the running command, which is why nothing here needs a second
         // table mapping tools to commands (CLAUDE.md 5.10).
         action->setProperty(kToolCommand, command);
+        action->setProperty(kToolRepeats, true);
 
         // Named so a test can reach the button a user would press. Nothing in the
         // shell looks an action up by name; this exists for `KENTOS_EDIT_PROBE`,
@@ -1648,6 +1661,9 @@ void MainWindow::onInteractiveFinished(const QString& id, bool mutated)
     if (!mutated) return;
 
     for (QAction* action : drawingTools_->actions()) {
+        // ONLY A DRAW TOOL REPEATS. See `kToolRepeats`.
+        if (!action->property(kToolRepeats).toBool()) continue;
+
         const QVariant carried = action->property(kToolCommand);
         if (!carried.isValid() || !action->isEnabled()) continue;
 
@@ -2064,8 +2080,7 @@ void MainWindow::probeToolsByHand()
 {
     // WHERE THE FRAMES GO. A probe that reads the transcript proves a command
     // ran; it proves nothing about what the user is looking at while it runs, and
-    // "kesme çalışmıyor, ekrana bakarsan görürsün" is exactly the gap between
-    // those two. Every step is photographed.
+    // "ekrana bakarsan görürsün" is exactly the gap between those two.
     const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_HAND_PROBE"));
     const bool shooting = into.size() > 1;
     if (shooting) QDir().mkpath(into);
@@ -2081,12 +2096,10 @@ void MainWindow::probeToolsByHand()
                 painter.drawImage(QRect(canvas_->mapTo(this, QPoint(0, 0)), canvas_->size()), live);
             }
         }
-        const QString path = QStringLiteral("%1/%2-%3.png")
-                                 .arg(into)
-                                 .arg(frame++, 2, 10, QLatin1Char('0'))
-                                 .arg(what);
-        (void)std::fprintf(stdout, "[el] kare %s -> %s\n", qPrintable(what),
-                           picture.save(path) ? "yazıldı" : "YAZILAMADI");
+        (void)picture.save(QStringLiteral("%1/%2-%3.png")
+                               .arg(into)
+                               .arg(frame++, 2, 10, QLatin1Char('0'))
+                               .arg(what));
     };
 
     const auto send = [this](QEvent::Type t, const QPointF& at, Qt::MouseButton b,
@@ -2096,8 +2109,8 @@ void MainWindow::probeToolsByHand()
         QCoreApplication::processEvents();
     };
 
-    /// One click on the canvas, in widget coordinates. The MOVE first, because
-    /// that is what a hand does and what the rubber band follows.
+    /// One click on the canvas. The MOVE first, because that is what a hand does
+    /// and what the rubber band follows.
     const auto click = [&](const QPointF& p) {
         send(QEvent::MouseMove, p, Qt::NoButton, Qt::NoButton);
         send(QEvent::MouseButtonPress, p, Qt::LeftButton, Qt::LeftButton);
@@ -2111,7 +2124,6 @@ void MainWindow::probeToolsByHand()
         QCoreApplication::sendEvent(focused != nullptr ? focused : QApplication::activeWindow(),
                                     &down);
         QCoreApplication::processEvents();
-        return focused;
     };
 
     const auto at = [this](core::Point2 world) {
@@ -2119,13 +2131,13 @@ void MainWindow::probeToolsByHand()
         return QPointF(p.x, p.y);
     };
 
-    const auto say = [this](const char* tag, int mark) {
-        QString said = transcript_->toPlainText().mid(mark).trimmed();
-        said.replace(QLatin1Char('\n'), QLatin1Char(' '));
-        const command::Session* live = controller_->session();
-        (void)std::fprintf(stdout, "[el] %-12s sorulan=\"%s\"  ::  %s\n", tag,
-                           live != nullptr ? live->prompt().message.c_str() : "(yok)",
-                           qPrintable(said.left(110)));
+    /// WHICH BUTTON IS LIT. The reported defect is that pressing one tool lights
+    /// another, so the answer has to be read off the widgets rather than assumed.
+    const auto lit = [this] {
+        QStringList on;
+        for (QAction* a : drawingTools_->actions())
+            if (a->isChecked()) on << a->text();
+        return on.isEmpty() ? QStringLiteral("(hiçbiri)") : on.join(QStringLiteral("+"));
     };
 
     const auto scene = [this] {
@@ -2134,74 +2146,110 @@ void MainWindow::probeToolsByHand()
         runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
         runScriptLine(QStringLiteral("ALAN 0,0 40,0 40,30 0,30"));
         runScriptLine(QStringLiteral("ÇİZGİ 60,0 60,40"));
+        runScriptLine(QStringLiteral("ÇİZGİ 50,20 80,20"));
         canvas_->zoomToExtents();
         QCoreApplication::processEvents();
     };
 
-    // ---- TAŞI, step by step, with the screen recorded at each one ------------
-    scene();
-    shot(QStringLiteral("tasi-sahne"));
+    struct Step
     {
-        QAction* action = findChild<QAction*>(QStringLiteral("toolAction.TAŞI"));
-        if (action != nullptr) {
-            const auto mark = static_cast<int>(transcript_->toPlainText().size());
-            action->trigger();
-            QCoreApplication::processEvents();
-            shot(QStringLiteral("tasi-1-basildi"));
-            say("TAŞI/bas", mark);
+        const char* tool;    ///< the button pressed
+        core::Point2 pick_a; ///< first object to point at
+        core::Point2 pick_b; ///< a second, when the tool needs two (0,0 = none)
+        core::Point2 p1;     ///< the points it asks for afterwards
+        core::Point2 p2;
+        const char* typed; ///< a number it asks for, or nullptr
+    };
 
-            click(at(core::Point2{20'000, 15'000})); // inside the face
-            shot(QStringLiteral("tasi-2-secildi"));
+    const Step steps[] = {
+        // Inside the face; then two points to move it by.
+        {"TAŞI", {20'000, 15'000}, {}, {5'000, 5'000}, {25'000, 20'000}, nullptr},
+        // Inside the face; then a cut line straight through it.
+        {"BÖL", {20'000, 15'000}, {}, {20'000, -5'000}, {20'000, 35'000}, nullptr},
+        // The two crossing lines; then the piece to discard.
+        {"BUDA", {60'000, 35'000}, {70'000, 20'000}, {60'000, 38'000}, {}, nullptr},
+        // Inside the face; then a distance typed at the command line.
+        {"OFSET", {20'000, 15'000}, {}, {}, {}, "5"},
+    };
 
-            enter();
-            shot(QStringLiteral("tasi-3-enter"));
-            say("TAŞI/enter", mark);
-
-            click(at(core::Point2{0, 0})); // base point
-            shot(QStringLiteral("tasi-4-baslangic"));
-
-            // MOVED WITHOUT PRESSING, which is the frame the user stares at: the
-            // selection should be following the pointer here.
-            send(QEvent::MouseMove, at(core::Point2{25'000, 20'000}), Qt::NoButton, Qt::NoButton);
-            shot(QStringLiteral("tasi-5-suruklerken"));
-
-            click(at(core::Point2{25'000, 20'000})); // destination
-            shot(QStringLiteral("tasi-6-bitti"));
-            say("TAŞI/son", mark);
+    for (const Step& step : steps) {
+        scene();
+        QAction* action =
+            findChild<QAction*>(QStringLiteral("toolAction.") + QString::fromUtf8(step.tool));
+        if (action == nullptr) {
+            (void)std::fprintf(stdout, "[el] %-7s DÜĞME YOK\n", step.tool);
+            continue;
         }
+
+        const auto mark = static_cast<int>(transcript_->toPlainText().size());
+        const auto say  = [&](const char* when) {
+            const command::Session* live = controller_->session();
+            (void)std::fprintf(stdout, "[el] %-7s %-12s yanan=%-22s sorulan=\"%s\"\n", step.tool,
+                                when, qPrintable(lit()),
+                               live != nullptr ? live->prompt().message.c_str() : "(yok)");
+        };
+
+        action->trigger();
+        QCoreApplication::processEvents();
+        shot(QString::fromUtf8(step.tool) + QStringLiteral("-1-basildi"));
+        say("bastıktan");
+
+        click(at(step.pick_a));
+        if (step.pick_b.x != 0 || step.pick_b.y != 0) {
+            // Shift adds, which is how a second object joins a selection.
+            QMouseEvent add(QEvent::MouseButtonPress, at(step.pick_b),
+                            canvas_->mapToGlobal(at(step.pick_b)), Qt::LeftButton, Qt::LeftButton,
+                            Qt::ShiftModifier);
+            QCoreApplication::sendEvent(canvas_, &add);
+            QMouseEvent up(QEvent::MouseButtonRelease, at(step.pick_b),
+                           canvas_->mapToGlobal(at(step.pick_b)), Qt::LeftButton, Qt::NoButton,
+                           Qt::ShiftModifier);
+            QCoreApplication::sendEvent(canvas_, &up);
+            QCoreApplication::processEvents();
+        }
+        shot(QString::fromUtf8(step.tool) + QStringLiteral("-2-secildi"));
+        say("seçtikten");
+
+        enter();
+        shot(QString::fromUtf8(step.tool) + QStringLiteral("-3-enter"));
+        say("enter'dan");
+
+        if (step.typed != nullptr) {
+            runScriptLine(QString::fromUtf8(step.typed));
+        } else {
+            if (step.p1.x != 0 || step.p1.y != 0) click(at(step.p1));
+            if (step.p2.x != 0 || step.p2.y != 0) click(at(step.p2));
+        }
+        QCoreApplication::processEvents();
+        shot(QString::fromUtf8(step.tool) + QStringLiteral("-4-bitti"));
+
+        QString said = transcript_->toPlainText().mid(mark).trimmed();
+        said.replace(QLatin1Char('\n'), QLatin1Char(' '));
+        (void)std::fprintf(stdout, "[el] %-7s SONUÇ  yanan=%-22s :: %s\n", step.tool,
+                           qPrintable(lit()), qPrintable(said.right(110)));
+
         controller_->cancelInteractive();
+        QCoreApplication::processEvents();
     }
 
-    // ---- BÖL, the same way --------------------------------------------------
+    // ---- AND A DRAW TOOL STILL REPEATS -------------------------------------
+    //
+    // The half that must not break. Stopping a modify tool from re-arming is
+    // right; stopping ÇİZGİ from re-arming would mean reaching for the tool
+    // column before every single line on a sheet.
     scene();
-    shot(QStringLiteral("bol-sahne"));
-    {
-        QAction* action = findChild<QAction*>(QStringLiteral("toolAction.BÖL"));
-        if (action != nullptr) {
-            const auto mark = static_cast<int>(transcript_->toPlainText().size());
-            action->trigger();
-            QCoreApplication::processEvents();
-            shot(QStringLiteral("bol-1-basildi"));
-            say("BÖL/bas", mark);
+    if (QAction* line = findChild<QAction*>(QStringLiteral("toolAction.ÇİZGİ"))) {
+        line->trigger();
+        QCoreApplication::processEvents();
+        click(at(core::Point2{5'000, 45'000}));
+        click(at(core::Point2{25'000, 45'000}));
 
-            click(at(core::Point2{20'000, 15'000}));
-            shot(QStringLiteral("bol-2-secildi"));
+        // ESC finishes an open-ended shape; the tool should come back armed.
+        QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+        QCoreApplication::sendEvent(canvas_, &esc);
+        QCoreApplication::processEvents();
 
-            enter();
-            shot(QStringLiteral("bol-3-enter"));
-            say("BÖL/enter", mark);
-
-            click(at(core::Point2{20'000, -5'000})); // first end of the cut
-            shot(QStringLiteral("bol-4-ilk-uc"));
-
-            send(QEvent::MouseMove, at(core::Point2{20'000, 35'000}), Qt::NoButton, Qt::NoButton);
-            shot(QStringLiteral("bol-5-kilavuz"));
-
-            click(at(core::Point2{20'000, 35'000})); // second end
-            shot(QStringLiteral("bol-6-bitti"));
-            say("BÖL/son", mark);
-        }
-        controller_->cancelInteractive();
+        (void)std::fprintf(stdout, "[el] ÇİZGİ  TEKRAR yanan=%s\n", qPrintable(lit()));
     }
 }
 
