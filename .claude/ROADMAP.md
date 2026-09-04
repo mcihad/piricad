@@ -125,7 +125,9 @@ Two behaviours worth knowing before changing them:
 > is linked and `OFSET`, `BİRLEŞTİR` and `BÖL` all run on it), the GPU backend's
 > lone-vertex point marker, defaulting `KENTOS_WITH_RHI` and `KENTOS_WITH_TEXT`
 > ON, every published point gösterim previewing (the last one was a WORD, and the
-> preview drew no captions), and the style designer's two visible faults.
+> preview drew no captions), the style designer's two visible faults, and
+> `ci-gate-render-desen.py`, which now MEASURES the GPU path instead of
+> reporting PENDING against two reasons that had both stopped being true.
 
 1. **The probes are the only thing that catches interaction defects.** Three now:
    `KENTOS_EDIT_PROBE` (grip dragging), `KENTOS_TOOL_PROBE` (every column button,
@@ -140,10 +142,7 @@ Two behaviours worth knowing before changing them:
    cleared, `make check`'s exit code cannot be trusted as a gate.
    **Read its exit status directly**: piping it through `tail` reports `tail`'s
    status, which is how three green reports were once given for a red run.
-3. **`ci-gate-render-desen.py` reports PENDING on a GPU build.** Its ratios are
-   calibrated against the QGIS picture. Now that `MapCanvas::grabCanvas()` can
-   read a GPU frame back, the gate can be taught to measure the QRhi path too.
-4. **Renderer work Article 8.1 still owes**: precomputed LOD (`render.md` R4),
+3. **Renderer work Article 8.1 still owes**: precomputed LOD (`render.md` R4),
    a persistent mapped ring buffer with fences (R6), the < 100 draw-call budget
    asserted in `/tests/bench` (R7), label placement on its own thread (R9), the
    render thread (R10). None of these is needed for the picture; all of them are

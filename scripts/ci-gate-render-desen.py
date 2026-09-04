@@ -40,6 +40,19 @@ BETIK = "tests/golden/cizim/desen-dolgu.json"
 MUREKKEP = (0.02, 0.22)   # trees; a washed face is ~1.00
 ZEMIN    = (0.08, 0.35)   # ground; a fill written to the wrong field is ~0.00
 
+# THE SAME TWO DEFECTS, MEASURED ON THE GPU. Wider, and deliberately so: the
+# bands above are a QGIS-shaped refinement of a much simpler claim, and reusing
+# them on another engine would fail a correct picture for drawing the same
+# gösterim at a slightly different size. What this gate actually asserts is that
+# the pattern did NOT wash its face (ink ~1.00) and that the ground WAS painted
+# (green ~0.00), and both of those stay an order of magnitude away here.
+#
+# Not calibrated to whatever the binary happens to produce — the module docstring
+# warns about exactly that. The bounds are the failure modes, loosened only
+# enough that engine geometry cannot reach them.
+MUREKKEP_RHI = (0.02, 0.45)
+ZEMIN_RHI    = (0.10, 0.70)
+
 
 def yapi_secenegi(exe, ad):
     """Reads one KENTOS_WITH_<AD> out of the CMakeCache that produced `exe`.
@@ -108,11 +121,23 @@ def bul():
     return exe
 
 
-def kare(exe, yol):
+def kare(exe, yol, gpu=False):
+    """Draws the gösterim once and writes the window to `yol`.
+
+    OFFSCREEN IS NOT AN OPTION ON THE GPU PATH. Qt's offscreen platform has no
+    GL context, so a `QRhiWidget` composites as a black rectangle and every ratio
+    below reads zero — which is indistinguishable from "the backend drew nothing"
+    and would fail an innocent build. On the GPU the ambient platform is used
+    when the environment has a display, and the caller reports PENDING when it
+    does not.
+    """
     ortam = dict(os.environ)
-    ortam.update({"QT_QPA_PLATFORM": "offscreen",
-                  "KENTOS_DATA": os.path.join(KOK, "data"),
+    ortam.update({"KENTOS_DATA": os.path.join(KOK, "data"),
                   "KENTOS_FRAME_DUMP": yol})
+    if gpu:
+        ortam.pop("QT_QPA_PLATFORM", None)
+    else:
+        ortam["QT_QPA_PLATFORM"] = "offscreen"
     subprocess.run([exe, "--betik", BETIK], cwd=KOK, env=ortam,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=180)
     return os.path.isfile(yol)
@@ -143,17 +168,52 @@ def main():
               "(uygulama derlenmemiş; `make build` sonrası tekrar çalışır)")
         return 0
 
-    # THE GPU BACKEND IS NOT THIS GATE'S SUBJECT, twice over. Its first slice
-    # draws geometry and refuses pattern fills outright (`handles()`), so the two
-    # ratios below would measure a picture nobody claimed to draw. And
-    # `KENTOS_FRAME_DUMP` grabs the window with `QWidget::grab`, which returns
-    # nothing for a `QRhiWidget` — the frame lives on the GPU, not in the backing
-    # store. Reported as PENDING, never as passing (`data.md` Enforcement).
+    # THE GPU PATH IS MEASURED NOW. Both reasons this used to report PENDING are
+    # gone: the QRhi backend draws all eleven symbol layer types including the
+    # pattern fills, and `MapCanvas::grabCanvas()` reads the frame back off the
+    # GPU so `KENTOS_FRAME_DUMP` composites a real picture. What it still cannot
+    # do is make a GL context out of nothing, so a headless machine is PENDING —
+    # reported as such, never as passing (`data.md` Enforcement).
     if yapi_secenegi(exe, "RHI") is True:
-        print("render-desen: BEKLEMEDE — KENTOS_WITH_RHI=ON. QRhi arka ucunun ilk "
-              "dilimi desen dolgusu çizmiyor (CLAUDE.md 8.1) ve QRhiWidget karesi "
-              "QWidget::grab ile alınamıyor. Ölçüm yapılmadı; geçmiş sayılmaz.")
-        return 0
+        if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
+            print("render-desen: BEKLEMEDE — KENTOS_WITH_RHI=ON ve ortamda ekran yok. "
+                  "QRhiWidget bir GL bağlamı ister; offscreen platformu siyah bir "
+                  "dikdörtgen verir ve o 'çizmedi' ile ayırt edilemez. Ölçüm "
+                  "yapılmadı; geçmiş sayılmaz.")
+            return 0
+
+        with tempfile.TemporaryDirectory() as tmp:
+            yol = os.path.join(tmp, "desen.png")
+            if not kare(exe, yol, gpu=True):
+                print("render-desen: kare üretilemedi (GPU)", file=sys.stderr)
+                return 1
+
+            murekkep, zemin = olc(yol)
+            if murekkep is None:
+                print("render-desen: GPU karesinde ne desen ne zemin var — "
+                      "gösterim çizilmemiş", file=sys.stderr)
+                return 1
+
+            kusur = 0
+            if not MUREKKEP_RHI[0] <= murekkep <= MUREKKEP_RHI[1]:
+                print(f"render-desen: GPU desen mürekkebi %{murekkep*100:.1f} — "
+                      f"beklenen %{MUREKKEP_RHI[0]*100:.0f}..%{MUREKKEP_RHI[1]*100:.0f}. "
+                      f"Yüksekse desen kendi alanını glif rengiyle boyuyor demektir.",
+                      file=sys.stderr)
+                kusur = 1
+            if not ZEMIN_RHI[0] <= zemin <= ZEMIN_RHI[1]:
+                print(f"render-desen: GPU alan zemini %{zemin*100:.1f} — "
+                      f"beklenen %{ZEMIN_RHI[0]*100:.0f}..%{ZEMIN_RHI[1]*100:.0f}. "
+                      f"Düşükse `dolgu` katmanı yüzünü `dolgu_renk` ile boyamıyor "
+                      f"demektir.", file=sys.stderr)
+                kusur = 1
+            if kusur:
+                return 1
+
+            print(f"render-desen: OK (QRhi) — desen %{murekkep*100:.1f}, "
+                  f"zemin %{zemin*100:.1f}; ORMAN ALANI yeşil zemin üstünde üçgen "
+                  f"ağaçlarla çiziliyor")
+            return 0
 
     motor = qgis_motoru_var(exe)
     if motor is not True:
