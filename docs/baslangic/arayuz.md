@@ -361,6 +361,39 @@ aralıklı okunur.
 Katmanlar panelinde bir katman seçtiğinizde bu panel o katmanın özelliklerini
 gösterir: kabuğun **tek** özellik yüzeyi vardır, iki tane değil.
 
+#### Çizimde bir nesne seçtiğinizde
+
+Panel o nesneyle ilgili bildiği her şeyi dört grupta yazar. **NESNE** açık gelir,
+diğerleri kapalı — çünkü ilk sorulan "bu nedir", "kaç metrekare" değildir. Bir
+grubu açtığınızda **açık kalır**: sonraki parseli seçtiğinizde kapanmaz.
+
+| Grup | Ne yazar |
+|---|---|
+| **NESNE** | `kimlik` (kalıcı, değişmez) · `tur` · `katman` · `stil` · `gorunur` |
+| **GEOMETRİ** | `kose` · `halka` · `cevre` ya da `uzunluk` · `alan` |
+| **KAPSAM** | `saga_min/max` · `yukari_min/max` · `genislik` · `yukseklik` |
+| **ÖZNİTELİKLER** | Belgede tanımlı her sütun ve nesnenin o sütundaki değeri |
+
+Nesne yazı taşıyorsa bir de **METİN** grubu gelir: içerik ve yükseklik.
+
+`tur` satırı **ne olduğunu** yazar, nasıl saklandığını değil: kapalı bir halka
+`ALAN`, deliği varsa `ALAN (delikli)`, açık bir halka `ÇOKLUÇİZGİ` olur. İkisi de
+belgede aynı türde durur (`core.polyline`), ama bir parselin karşısında
+"ÇOKLUÇİZGİ" yazması doğru cevap değildir.
+
+`alan` yalnızca kapalı bir şekilde çıkar ve **türün kendi hesabıdır**: bir daire
+πr² bildirir, çizildiği çokgenin alanını değil. Bir yay hiçbir şey çevrelemediği
+için alan yazmaz. [`ALANÖLÇ`](../komutlar/measure_area.md) ile aynı hesap.
+
+`stil` satırı `katmandan` yazıyorsa nesnenin kendi stili yoktur, katmanınkiyle
+çizilir — bu, "stili yok" demekten farklıdır ve nesneye uygulanan bir
+[`STİL`](../komutlar/style.md) komutunun neden bir şey değiştirmediğini açıklar.
+
+**Birden çok nesne seçtiyseniz** panel tek tek satır yazmaz; **SEÇİM** grubunda
+adet, ortak katman (karışıksa `karışık`), toplam uzunluk ve toplam alan verilir.
+Nesne nesne okumak için [öznitelik tablosunu](../veri/oznitelik-tablosu.md)
+(**F6**) kullanın — 312 piksellik bir panel ikinci bir tablo değildir.
+
 #### Değer düzenleme
 
 Arkasında bir komut olan her satır **buradan düzenlenir**. Düzenlenebilir bir

@@ -13,6 +13,7 @@
 #include "kentos_cad/app/theme.hpp"
 #include "kentos_cad/core/layer.hpp"
 
+#include <QHash>
 #include <QRect>
 #include <QString>
 #include <QStringList>
@@ -82,6 +83,12 @@ public:
     /// Re-reads the selection and rebuilds the card and the groups.
     void refresh();
 
+private:
+    /// Builds `groups_` for whatever is selected. Called only by `refresh()`,
+    /// which then restores what the user had opened.
+    void rebuild();
+
+public:
     /// Shows one LAYER's properties instead of the selection's. `kNoLayer`
     /// returns the panel to whatever is selected.
     ///
@@ -154,6 +161,16 @@ private:
 
     Controller& controller_;
     QVector<AttributeGroup> groups_;
+
+    /// Which groups the user has opened or closed, by heading.
+    ///
+    /// `refresh()` rebuilds every group from scratch on each selection change, so
+    /// without this a user who opened GEOMETRİ to read an area would find it shut
+    /// again the moment they picked the next parcel — which is the one moment
+    /// they wanted it open. Keyed by the heading rather than by index because the
+    /// GROUPS THEMSELVES CHANGE: a document, a layer, one object and many objects
+    /// each build a different set.
+    QHash<QString, bool> disclosed_;
     QString title_;    ///< `Parsel 1284 / 21`
     QString subtitle_; ///< `POLYGON · fid 4128 · 4 köşe`
     int glyph_           = 0;

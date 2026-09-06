@@ -5,6 +5,8 @@
 #include "kentos_cad/app/icons.hpp"
 #include "kentos_cad/app/tokens.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/geometry.hpp"
 
 #include <QColorDialog>
 #include <QFileInfo>
@@ -66,6 +68,66 @@ QString metres(core::Mm v)
     return QString::number(static_cast<double>(v) / core::kMmPerMetre, 'f', 3);
 }
 
+/// `1 482,64 m²` — an area in the unit a Turkish surveyor writes it in.
+///
+/// Two decimals and not three: a parcel area on a tapu is stated to the square
+/// centimetre and no further, and printing a digit the document does not carry
+/// invites it to be copied into one that will.
+QString squareMetres(core::Mm2 v)
+{
+    return QString::number(core::mm2_to_m2(v), 'f', 2) + QStringLiteral(" m²");
+}
+
+/// `12,480 m`, with the unit, for a length a user reads rather than edits.
+QString metresWithUnit(core::Mm v)
+{
+    return metres(v) + QStringLiteral(" m");
+}
+
+/// The kind's Turkish name — `ALAN`, `ÇİZGİ`, `DAİRE` — or its number when the
+/// document carries a kind this build does not know.
+///
+/// The NAME and not the id, because the id is a storage detail: `core.polyline`
+/// is 1 because it declared itself 1, and a user reading a property panel is
+/// owed the word, not the number (model.md R22-R26).
+QString kindName(core::KindId kind)
+{
+    if (const core::KindSpec* spec = core::builtin_kinds().find(kind); spec != nullptr) {
+        if (spec->names[0] != nullptr && *spec->names[0] != 0)
+            return QString::fromUtf8(spec->names[0]);
+        return QString::fromUtf8(spec->stable_id);
+    }
+    return AttributePanel::tr("bilinmeyen tür (%1)").arg(kind);
+}
+
+/// What the user means by "türü" — which is not always what the kind is called.
+///
+/// A PARCEL AND A BOUNDARY ARE THE SAME KIND. `core.polyline` stores both: a face
+/// is a slot whose ring is Exterior and a line is one whose ring is Open (model.md
+/// R9, R10). That is the right storage decision and the wrong ANSWER for a
+/// property panel, where "ÇOKLUÇİZGİ" over a 281 m² parcel reads as a defect.
+///
+/// So the kind names the family and the ring's role names the thing: ALAN when
+/// there is a face, ÇOKLUÇİZGİ when there is not. Every other kind — circle, arc,
+/// point — already has one name for one thing and is passed through.
+QString shapeName(const core::Document& doc, core::KindId kind, std::uint32_t gslot)
+{
+    const QString family = kindName(kind);
+    if (kind != core::kPolylineKind) return family;
+
+    const core::RingSpan rings = doc.geometry().rings_of(gslot);
+    bool face                  = false;
+    bool holes                 = false;
+    for (std::uint32_t r = 0; r < rings.count; ++r) {
+        const core::RingRole role = doc.geometry().ring_role[rings.first + r];
+        if (role == core::RingRole::Exterior) face = true;
+        if (role == core::RingRole::Interior) holes = true;
+    }
+
+    if (!face) return family;
+    return holes ? AttributePanel::tr("ALAN (delikli)") : AttributePanel::tr("ALAN");
+}
+
 } // namespace
 
 AttributePanel::AttributePanel(Controller& controller, QWidget* parent)
@@ -92,6 +154,24 @@ void AttributePanel::setLayer(core::LayerId layer)
 }
 
 void AttributePanel::refresh()
+{
+    rebuild();
+
+    // WHAT THE USER OPENED STAYS OPEN. `rebuild()` makes every group afresh, so
+    // without this a surveyor who opened GEOMETRİ to read an area would find it
+    // shut again on the next parcel they clicked — at exactly the moment they
+    // wanted it open. A group nobody has touched keeps the default the builder
+    // chose: NESNE open, the rest closed, so the panel opens on what the object
+    // IS rather than on four screens of numbers.
+    for (AttributeGroup& group : groups_) {
+        const auto remembered = disclosed_.constFind(group.title);
+        if (remembered != disclosed_.constEnd()) group.open = *remembered;
+    }
+
+    update();
+}
+
+void AttributePanel::rebuild()
 {
     groups_.clear();
 
@@ -219,13 +299,288 @@ void AttributePanel::refresh()
     glyph_ = static_cast<int>(Glyph::Polygon);
     title_ = sel.size() == 1 ? tr("Nesne %1").arg(static_cast<qulonglong>(key))
                              : tr("%1 nesne seçili").arg(sel.size());
-    subtitle_ =
-        sel.size() == 1 ? tr("slot %1").arg(static_cast<qulonglong>(slot)) : tr("çoklu seçim");
+
+    if (sel.size() == 1 && slot != core::kNoEntity && doc.alive(slot)) {
+        const core::EntityTable& rows = doc.entities();
+        const std::uint32_t gslot     = rows.slot[slot];
+        const core::KindId kind       = rows.kind[slot];
+        const core::LayerId on        = rows.layer[slot];
+        const core::Layer* layer      = doc.layer(on);
+
+        subtitle_ = tr("%1 · %2").arg(shapeName(doc, kind, gslot),
+                                      layer != nullptr ? QString::fromStdString(layer->name)
+                                                       : tr("katmansız"));
+
+        // ---- what it IS -------------------------------------------------
+        //
+        // Read-only throughout. A panel row becomes editable by carrying the
+        // command that changes it, and there is no command that changes an
+        // object's KIND or its key — those are identity, not properties
+        // (model.md R2). The layer has one and says so.
+        AttributeGroup what{tr("NESNE"), {}, true}; // the one group that opens by default
+        what.rows.push_back({tr("kimlik"),
+                             QString::number(static_cast<qulonglong>(key)),
+                             tr("SABİT"),
+                             true,
+                             {},
+                             EditKind::None,
+                             {}});
+        what.rows.push_back(
+            {tr("tur"), shapeName(doc, kind, gslot), {}, true, {}, EditKind::None, {}});
+
+        QStringList layerNames;
+        for (const core::Layer& l : doc.layers())
+            layerNames << QString::fromStdString(l.name);
+        what.rows.push_back(
+            {tr("katman"),
+             layer != nullptr ? QString::fromStdString(layer->name) : QStringLiteral("—"),
+             {},
+             false,
+             QStringLiteral("KATMANAT nesneler=%1 katman=\"%2\"")
+                 .arg(static_cast<qulonglong>(key))
+                 .arg(QStringLiteral("%1")),
+             EditKind::Choice,
+             layerNames});
+
+        // KATMANDAN means the entity has no style of its own and draws with its
+        // layer's — which is a different statement from "no style at all", and
+        // the one a user needs before they wonder why a STİL on the object did
+        // nothing.
+        const core::StyleId style = rows.style[slot];
+        if (style == core::kByLayerStyle) {
+            what.rows.push_back(
+                {tr("stil"), tr("katmandan"), tr("MİRAS"), true, {}, EditKind::None, {}});
+        } else {
+            const core::Symbol& sym = doc.styles().symbol_at(style);
+            what.rows.push_back({tr("stil"),
+                                 tr("#%1 · %2 katman").arg(style).arg(sym.layers.size()),
+                                 {},
+                                 true,
+                                 {},
+                                 EditKind::None,
+                                 {}});
+            if (sym.max_scale != 0 || sym.min_scale != 0)
+                what.rows.push_back(
+                    {tr("olcek_penceresi"),
+                     tr("1:%1 – 1:%2")
+                         .arg(sym.min_scale == 0 ? tr("∞") : QString::number(sym.min_scale))
+                         .arg(sym.max_scale == 0 ? tr("∞") : QString::number(sym.max_scale)),
+                     {},
+                     true,
+                     {},
+                     EditKind::None,
+                     {}});
+        }
+        what.rows.push_back({tr("gorunur"),
+                             rows.visible(slot) ? tr("evet") : tr("hayır"),
+                             rows.visible(slot) ? QString() : tr("GİZLİ"),
+                             true,
+                             {},
+                             EditKind::None,
+                             {}});
+        groups_.push_back(what);
+
+        // ---- what it MEASURES -------------------------------------------
+        //
+        // THE KIND ANSWERS FOR THE AREA, so a circle reports pi*r² rather than
+        // the area of whatever polygon it happens to be drawn with, and an arc
+        // reports nothing because it encloses nothing. Same call `ALANÖLÇ`
+        // makes — one measurement, one implementation.
+        core::Mm2 area{0};
+        if (const core::KindSpec* spec = core::builtin_kinds().find(kind); spec != nullptr) {
+            const std::uint32_t one[1]{gslot};
+            spec->area(doc.geometry(), core::SlotSpan(one, 1), std::span<core::Mm2>(&area, 1));
+        }
+        const core::Mm length = doc.geometry().perimeter_of(gslot);
+
+        const core::RingSpan rings = doc.geometry().rings_of(gslot);
+        std::size_t vertices       = 0;
+        for (std::uint32_t r = 0; r < rings.count; ++r)
+            vertices += doc.geometry().ring_xs(rings.first + r).size();
+
+        AttributeGroup shape{tr("GEOMETRİ"), {}, false};
+        shape.rows.push_back(
+            {tr("kose"), QString::number(vertices), tr("HESAP"), true, {}, EditKind::None, {}});
+        shape.rows.push_back(
+            {tr("halka"), QString::number(rings.count), tr("HESAP"), true, {}, EditKind::None, {}});
+        // A closed ring's length is its perimeter and an open one's is its
+        // length; naming both `uzunluk` would make a parcel's boundary read as a
+        // distance somebody walked.
+        shape.rows.push_back({area != 0 ? tr("cevre") : tr("uzunluk"),
+                              metresWithUnit(length),
+                              tr("HESAP"),
+                              true,
+                              {},
+                              EditKind::None,
+                              {}});
+        if (area != 0)
+            shape.rows.push_back(
+                {tr("alan"), squareMetres(area), tr("HESAP"), true, {}, EditKind::None, {}});
+        groups_.push_back(shape);
+
+        // ---- where it IS -------------------------------------------------
+        const core::Box2 box = doc.entity_extent(slot);
+        if (!box.empty()) {
+            // ONE ROW PER EDGE, and the range form was tried and abandoned: a TM
+            // easting and a TM northing are ten and eleven digits, and two of them
+            // with a dash between do not fit the 200 px this column has. A value
+            // that is elided is worse than a row that is scrolled to.
+            AttributeGroup where{tr("KAPSAM"), {}, false};
+            where.rows.push_back(
+                {tr("saga_min"), metres(box.min_x), tr("HESAP"), true, {}, EditKind::None, {}});
+            where.rows.push_back(
+                {tr("saga_max"), metres(box.max_x), tr("HESAP"), true, {}, EditKind::None, {}});
+            where.rows.push_back(
+                {tr("yukari_min"), metres(box.min_y), tr("HESAP"), true, {}, EditKind::None, {}});
+            where.rows.push_back(
+                {tr("yukari_max"), metres(box.max_y), tr("HESAP"), true, {}, EditKind::None, {}});
+            where.rows.push_back({tr("genislik"),
+                                  metresWithUnit(box.max_x - box.min_x),
+                                  tr("HESAP"),
+                                  true,
+                                  {},
+                                  EditKind::None,
+                                  {}});
+            where.rows.push_back({tr("yukseklik"),
+                                  metresWithUnit(box.max_y - box.min_y),
+                                  tr("HESAP"),
+                                  true,
+                                  {},
+                                  EditKind::None,
+                                  {}});
+            groups_.push_back(where);
+        }
+
+        // ---- what it SAYS ------------------------------------------------
+        //
+        // Only when there is text. An empty METİN group on every parcel is a
+        // group a user learns to scroll past, and then misses on the label that
+        // does carry one.
+        if (doc.texts().has(gslot)) {
+            AttributeGroup says{tr("METİN"), {}, false};
+            // READ-ONLY, and deliberately. `METİN` DRAWS a caption; it does not
+            // rewrite an existing one, so offering an editor here would quietly
+            // add a second label on top of the first. A row becomes editable when
+            // a command exists that changes it, and this one does not yet.
+            says.rows.push_back({tr("icerik"),
+                                 QString::fromStdString(std::string(doc.texts().text(gslot))),
+                                 {},
+                                 true,
+                                 {},
+                                 EditKind::None,
+                                 {}});
+            says.rows.push_back({tr("yukseklik"),
+                                 metresWithUnit(doc.texts().height(gslot)),
+                                 tr("HESAP"),
+                                 true,
+                                 {},
+                                 EditKind::None,
+                                 {}});
+            groups_.push_back(says);
+        }
+    } else if (sel.size() > 1) {
+        // MANY OBJECTS: the totals, which is what a user selects a block of
+        // parcels to find out. Per-object rows would be a table, and there is one
+        // of those — `ÖZNİTELİK TABLOSU` — rather than a second one in a panel
+        // 312 px wide.
+        core::Mm2 area{0};
+        core::Mm length{0};
+        std::size_t alive = 0;
+        core::Box2 box{};
+        core::LayerId only = core::kNoLayer;
+        bool mixed         = false;
+
+        for (const core::EntityKey k : sel.keys()) {
+            const core::EntityId e = doc.slot_of(k);
+            if (e == core::kNoEntity || !doc.alive(e)) continue;
+            ++alive;
+
+            const std::uint32_t gslot = doc.entities().slot[e];
+            if (const core::KindSpec* spec = core::builtin_kinds().find(doc.entities().kind[e]);
+                spec != nullptr) {
+                core::Mm2 one_area{0};
+                const std::uint32_t one[1]{gslot};
+                spec->area(doc.geometry(), core::SlotSpan(one, 1),
+                           std::span<core::Mm2>(&one_area, 1));
+                area += one_area;
+            }
+            length += doc.geometry().perimeter_of(gslot);
+
+            const core::Box2 each = doc.entity_extent(e);
+            if (!each.empty()) {
+                box.extend(core::Point2{each.min_x, each.min_y});
+                box.extend(core::Point2{each.max_x, each.max_y});
+            }
+
+            const core::LayerId on = doc.entities().layer[e];
+            if (only == core::kNoLayer)
+                only = on;
+            else if (on != only)
+                mixed = true;
+        }
+
+        const core::Layer* layer = mixed ? nullptr : doc.layer(only);
+        subtitle_ =
+            mixed ? tr("karışık katman")
+                  : (layer != nullptr ? QString::fromStdString(layer->name) : tr("çoklu seçim"));
+
+        AttributeGroup sum{tr("SEÇİM"), {}, true}; // the multi-selection headline
+        sum.rows.push_back(
+            {tr("nesne"), QString::number(alive), tr("HESAP"), true, {}, EditKind::None, {}});
+        sum.rows.push_back(
+            {tr("katman"),
+             mixed ? tr("karışık")
+                   : (layer != nullptr ? QString::fromStdString(layer->name) : QStringLiteral("—")),
+             mixed ? tr("KARIŞIK") : QString(),
+             true,
+             {},
+             EditKind::None,
+             {}});
+        sum.rows.push_back({tr("toplam_uzunluk"),
+                            metresWithUnit(length),
+                            tr("HESAP"),
+                            true,
+                            {},
+                            EditKind::None,
+                            {}});
+        sum.rows.push_back(
+            {tr("toplam_alan"), squareMetres(area), tr("HESAP"), true, {}, EditKind::None, {}});
+        groups_.push_back(sum);
+
+        if (!box.empty()) {
+            AttributeGroup where{tr("KAPSAM"), {}, false};
+            where.rows.push_back(
+                {tr("saga_min"), metres(box.min_x), tr("HESAP"), true, {}, EditKind::None, {}});
+            where.rows.push_back(
+                {tr("saga_max"), metres(box.max_x), tr("HESAP"), true, {}, EditKind::None, {}});
+            where.rows.push_back(
+                {tr("yukari_min"), metres(box.min_y), tr("HESAP"), true, {}, EditKind::None, {}});
+            where.rows.push_back(
+                {tr("yukari_max"), metres(box.max_y), tr("HESAP"), true, {}, EditKind::None, {}});
+            where.rows.push_back({tr("genislik"),
+                                  metresWithUnit(box.max_x - box.min_x),
+                                  tr("HESAP"),
+                                  true,
+                                  {},
+                                  EditKind::None,
+                                  {}});
+            where.rows.push_back({tr("yukseklik"),
+                                  metresWithUnit(box.max_y - box.min_y),
+                                  tr("HESAP"),
+                                  true,
+                                  {},
+                                  EditKind::None,
+                                  {}});
+            groups_.push_back(where);
+        }
+    } else {
+        subtitle_ = tr("silinmiş nesne");
+    }
 
     // Every DECLARED column, in declaration order. Nothing here knows what a
     // column means — the panel shows what the catalogue put in the document,
     // which is the only way a legislation update stays a data release (5.13).
-    AttributeGroup attrs{tr("ÖZNİTELİKLER"), {}, true};
+    AttributeGroup attrs{tr("ÖZNİTELİKLER"), {}, false};
     const core::AttrTable& table = doc.attributes();
     for (std::size_t c = 0; c < table.columns(); ++c) {
         const core::AttrColumn* column = table.column(static_cast<core::AttrId>(c));
@@ -431,6 +786,7 @@ void AttributePanel::mousePressEvent(QMouseEvent* event)
     for (int g = 0; g < bands.size() && g < groups_.size(); ++g) {
         if (at < bands[g].first || at >= bands[g].first + bands[g].second) continue;
         groups_[g].open = !groups_[g].open;
+        disclosed_.insert(groups_[g].title, groups_[g].open);
         closeEditor();
         update();
         return;
