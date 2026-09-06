@@ -47,5 +47,20 @@ if [[ ${#dosyalar[@]} -eq 0 ]]; then
     exit 2
 fi
 
-echo "tidy: ${#dosyalar[@]} çeviri birimi (derleme veritabanından)"
-clang-tidy -p "$yapi" --quiet "${dosyalar[@]}"
+# PARALLEL, and not as a nicety. clang-tidy re-parses the whole translation unit
+# for every file it is handed, so 135 of them run for HOURS in one process — on a
+# machine somebody else is also building on, that is the difference between a gate
+# people run and a gate people skip. One job per core minus two, the same
+# reservation the rest of this repository's tooling makes.
+cekirdek=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+is=$(( cekirdek > 3 ? cekirdek - 2 : 1 ))
+
+echo "tidy: ${#dosyalar[@]} çeviri birimi (derleme veritabanından), $is koşut iş"
+
+# xargs answers 123 when any child failed, and a finding IS a failure here, so the
+# status is mapped rather than passed through.
+if printf '%s\0' "${dosyalar[@]}" |
+        xargs -0 -n 1 -P "$is" clang-tidy -p "$yapi" --quiet; then
+    exit 0
+fi
+exit 1

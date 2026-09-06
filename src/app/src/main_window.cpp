@@ -9,6 +9,7 @@
 #include "kentos_cad/app/data_root.hpp"
 #include "kentos_cad/app/database_dialog.hpp"
 #include "kentos_cad/app/icons.hpp"
+#include "kentos_cad/app/import_wizard.hpp"
 #include "kentos_cad/app/map_canvas.hpp"
 #include "kentos_cad/app/panels.hpp"
 #include "kentos_cad/app/settings_dialog.hpp"
@@ -23,6 +24,7 @@
 #include "kentos_cad/render/backend.hpp"
 
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/selection.hpp"
 #include "kentos_cad/core/settings.hpp"
 
 #include <QAction>
@@ -217,8 +219,27 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(controller_, &Controller::viewRequested, this, &MainWindow::onViewRequested);
     connect(controller_, &Controller::panRequested, this, &MainWindow::onPanRequested);
     connect(controller_, &Controller::settingChanged, this, &MainWindow::onSettingChanged);
-    connect(controller_, &Controller::selectionChanged, this,
-            [this] { attributePanel_->refresh(); });
+    connect(controller_, &Controller::selectionChanged, this, [this] {
+        attributePanel_->refresh();
+
+        // Picking a parcel on the map and then hunting for its layer in a list of
+        // forty is work the program can do. Only when the whole selection agrees:
+        // with two layers in it there is no single right answer, and moving the
+        // highlight to whichever came first would be a guess.
+        const command::Selection& picked = controller_->bus().selection();
+        const core::Document& doc        = controller_->document();
+
+        core::LayerId only = core::kNoLayer;
+        for (core::EntityKey k : picked.keys()) {
+            const core::EntityId e = doc.slot_of(k);
+            if (e == core::kNoEntity) continue;
+
+            const core::LayerId on = doc.entities().layer[e];
+            if (only != core::kNoLayer && on != only) return; // mixed — leave it alone
+            only = on;
+        }
+        if (only != core::kNoLayer) layerPanel_->selectLayer(only);
+    });
     connect(controller_, &Controller::selectionChanged, canvas_,
             QOverload<>::of(&MapCanvas::update));
     connect(canvas_, &MapCanvas::cursorMoved, this, &MainWindow::onCursorMoved);
@@ -1549,6 +1570,21 @@ void MainWindow::onEcho(const QString& text)
 {
     transcript_->appendPlainText(text);
 
+    // THE TRANSCRIPT, ON STDOUT, FOR A PROBE RUN. Developer tooling and an
+    // environment variable rather than a CLI flag, for the reason the other
+    // probes give: a flag is user-facing and would need its own /docs page
+    // (CLAUDE.md 5.17). It exists because a script run under `--betik` puts
+    // every answer the program gives into a widget nobody is looking at, so a
+    // refusal — an export with no CRS, a layer name that matched nothing — was
+    // indistinguishable from success from outside the process.
+    static const bool echo_out = qEnvironmentVariableIsSet("KENTOS_ECHO_STDOUT");
+    if (echo_out) {
+        (void)std::fprintf(stdout, "[echo] %s\n", qPrintable(text));
+        // Flushed line by line: a probe run ends by being killed, and a block
+        // buffer that is never flushed loses exactly the answer being probed for.
+        (void)std::fflush(stdout);
+    }
+
     // AND WHERE THE USER IS LOOKING. The transcript is the record; the status
     // line is the answer. A measurement, a coordinate, a count or a refusal that
     // only reached the record read as a command that did nothing at all — which
@@ -1875,17 +1911,46 @@ void MainWindow::saveProjectAs()
     refreshWindowTitle();
 }
 
+ImportWizard* MainWindow::openImportWizard(const QString& path)
+{
+    auto* wizard = new ImportWizard(*controller_, theme_, this);
+    wizard->setAttribute(Qt::WA_DeleteOnClose);
+    wizard->applyTheme(theme_);
+
+    // Non-blocking, so the caller keeps the event loop. The command line the
+    // window builds still runs through the controller — the wizard states the
+    // work and this runs it, exactly as the modal path does.
+    connect(wizard, &QDialog::accepted, this, [this, wizard] {
+        const QString line = wizard->commandLine();
+        if (line.isEmpty()) return;
+        controller_->runLine(line, command::Origin::Gui);
+        controller_->runLine(QStringLiteral("YAKINLAŞ KAPSAM"), command::Origin::Gui);
+    });
+
+    wizard->open();
+    if (!path.isEmpty()) wizard->beginWith(path);
+    return wizard;
+}
+
 void MainWindow::importData()
 {
     if (!io::vector_backend_available()) {
         onEcho(QString::fromStdString(io::vector_backend_status()));
         return;
     }
-    const QString path =
-        QFileDialog::getOpenFileName(this, tr("İçe aktar"), QString(), externalFormatFilter(false));
-    if (path.isEmpty()) return;
 
-    controller_->runLine(QStringLiteral("İÇEAKTAR \"%1\"").arg(path), command::Origin::Gui);
+    // A FILE DIALOG IS NOT ENOUGH FOR A DRAWING. A cadastral DXF holds forty
+    // layers and the user wants six of them; picking the file and then deleting
+    // thirty-four layers is not the same job. The wizard reads the file once,
+    // shows it, and asks — then runs the one command line it built.
+    ImportWizard wizard(*controller_, theme_, this);
+    wizard.applyTheme(theme_);
+    if (wizard.exec() != QDialog::Accepted) return;
+
+    const QString line = wizard.commandLine();
+    if (line.isEmpty()) return;
+
+    controller_->runLine(line, command::Origin::Gui);
     controller_->runLine(QStringLiteral("YAKINLAŞ KAPSAM"), command::Origin::Gui);
 }
 
@@ -2084,6 +2149,11 @@ void MainWindow::probeToolBox()
 // =============================================================================
 // KENTOS_HAND_PROBE — the six modify tools, driven by a hand
 // =============================================================================
+
+void MainWindow::probeLayerPanel()
+{
+    if (layerPanel_ != nullptr) layerPanel_->probeByHand();
+}
 
 void MainWindow::probeToolsByHand()
 {

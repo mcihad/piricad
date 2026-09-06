@@ -10,6 +10,7 @@
 
 #include "kentos_cad/app/theme.hpp"
 
+#include <QEvent>
 #include <QIcon>
 #include <QPoint>
 #include <QStyledItemDelegate>
@@ -48,7 +49,7 @@ public:
     QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
     /// Where `at` falls inside a row of `width`.
-    static Hit hitTest(int x, int width);
+    static Hit hitTest(int x, int width, int depth = 0);
 
     void applyTheme(ThemeMode mode) override { theme_ = mode; }
 
@@ -85,6 +86,25 @@ public:
     /// therefore not document state (model.md R43).
     core::LayerId selectedLayer() const;
 
+    /// Clicks the eye and the lock of the first rows with a REAL mouse event and
+    /// prints what the document did, one line each.
+    ///
+    /// It exists because "katman gizleme gösterme çalışmıyor" was true while every
+    /// unit test passed: the handler read columns the refresh never wrote, and the
+    /// eye was a picture with nothing behind it. A probe that calls `toggleRow`
+    /// directly would have passed too — the defect was in the ROUTE from the
+    /// click to the handler, so the probe has to start at the click.
+    void probeByHand();
+
+    /// Highlights `layer` in the list without sending anything to the bus.
+    ///
+    /// Called when the CANVAS selection changes: picking a parcel on the map and
+    /// then hunting for its layer in a list of forty is work the program can do.
+    /// Selection is not document state (model.md R43), so this moves a highlight
+    /// and nothing else — in particular it does NOT make the layer active, which
+    /// would be an edit nobody asked for.
+    void selectLayer(core::LayerId layer);
+
 signals:
     /// Emitted when the user picks a row, so the property panel can follow.
     void layerSelected(core::LayerId layer);
@@ -94,8 +114,24 @@ signals:
     /// window would be a panel that has to know what is in it.
     void styleRequested(const QString& layerName);
 
+protected:
+    /// Watches the tree's viewport for a click on the eye or the lock.
+    ///
+    /// A DELEGATE CANNOT ANSWER A CLICK. It paints, and `LayerRowDelegate` paints
+    /// the whole row — eye, chip, name, count, lock — into column 0, which is
+    /// exactly why the row has no columns to click. `hitTest` was written for
+    /// this and nothing called it: the eye looked like a control and was a
+    /// picture, and the only handler read column data the refresh never wrote.
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
 private:
     void onItemActivated(QTreeWidgetItem* item, int column);
+
+    /// Sends the KATMAN call that flips one row's eye or lock.
+    void toggleRow(QTreeWidgetItem* item, bool visibility);
+
+    /// Selects every object on `name`, through the bus like everything else.
+    void selectAllOn(const QString& name);
 
     /// The right-click menu. Every entry leaves through the command bus, so a
     /// script can do the same things (Article 1.2).

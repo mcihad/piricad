@@ -531,6 +531,7 @@ Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta.
 | `mod` | text | isteğe bağlı | TÜMÜ | TEMİZLE | NESNE | PENCERE | KESEN | KUTU | NOKTA |
 | `noktalar` | point_list | 0–2 | Kutu köşeleri (iki nokta) veya tek tıklama noktası |
 | `nesneler` | selection | en az 0 | NESNE modunda nesne kimlikleri |
+| `katman` | text | isteğe bağlı | KATMAN modunda katman adı |
 | `islem` | text | isteğe bağlı | DEĞİŞTİR | EKLE | ÇIKAR | TERSİNE |
 | `tolerans` | number | isteğe bağlı | NOKTA modunda arama yarıçapı, metre; yoksa seçim toleransı |
 
@@ -682,6 +683,7 @@ Dış bir veri dosyasını çizime ekler.
 |---|---|---|---|
 | `dosya` | text | 1 | İçe aktarılacak dosyanın yolu |
 | `bicim` | text | isteğe bağlı | Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur |
+| `katmanlar` | text | isteğe bağlı | Yalnızca bu katmanlar okunur, virgülle ayrılır; verilmezse tümü |
 
 Ayrıntılı kullanım: [İÇEAKTAR](import.md)
 

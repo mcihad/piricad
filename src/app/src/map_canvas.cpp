@@ -1374,7 +1374,22 @@ QImage MapCanvas::grabCanvas()
     // The GPU's own copy. `grabFramebuffer()` renders a frame and reads it back,
     // so what comes out is what the pipeline drew rather than what the widget
     // system thinks is there.
-    return grabFramebuffer();
+    const QImage picture = grabFramebuffer();
+    if (!picture.isNull()) return picture;
+
+    // NO GPU HERE, AND THE CALLER STILL ASKED FOR A FRAME. Under `offscreen`
+    // there is no QRhi to grab with — Qt says "Failed to create dedicated QRhi
+    // for grabbing" and hands back a null image — and every probe that reads the
+    // scene AFTER a grab then read a scene that was never built. That is not a
+    // missing picture, it is a false negative: `canvas-edits` reported that the
+    // DAİRE rubber band draws no circle, on a build where it draws one.
+    //
+    // So the scene and the overlay are built anyway. The picture is still null
+    // and the caller still has to cope with that; what it no longer has to cope
+    // with is a canvas whose state depends on whether a GPU was present.
+    rebuildScene();
+    buildOverlay();
+    return picture;
 #else
     return grab().toImage();
 #endif

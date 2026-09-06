@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <stop_token>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace kentos::io {
@@ -60,7 +61,11 @@ std::string vector_backend_status();
 /// What an import or an export actually did, for the transcript line.
 struct VectorReport
 {
-    std::string driver;        ///< the OGR driver that handled it
+    std::string driver; ///< the OGR driver that handled it
+    /// Every layer NAME the file holds, in the order it holds them, with how many
+    /// entities each produced. Filled whether or not `only` filtered anything, so
+    /// one read answers both "what is in here" and "what did I just get".
+    std::vector<std::pair<std::string, std::uint64_t>> layer_names;
     std::uint64_t features{0}; ///< features read or written
     std::uint64_t entities{0}; ///< entities created in the document
     std::uint64_t layers{0};   ///< layers read or written
@@ -86,8 +91,14 @@ struct VectorReport
 ///
 /// `path` and `driver` are taken by value for the coroutine-lifetime reason
 /// spelled out in `project.hpp`.
+/// `only` names the layers to read; an EMPTY list means every layer, which is
+/// what a bare `İÇEAKTAR` asks for. Matching is Turkish-folded, so `İMAR` from a
+/// checklist finds `imar` in the file (CLAUDE.md 5.6). A name in `only` that the
+/// file does not hold is not an error — it is reported as read zero, because the
+/// alternative is a wizard that refuses the whole import over one stale tick.
 command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx, std::string path,
                                                         std::string driver, std::string project_crs,
+                                                        std::vector<std::string> only,
                                                         std::stop_token stop);
 
 /// Writes `doc` to `path` through the named allow-listed driver, or through the

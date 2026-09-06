@@ -23,12 +23,47 @@
 #pragma once
 
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/result.hpp"
 
+#include <cstdint>
 #include <stop_token>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace kentos::io {
+
+/// What one READ-ONLY look at an import file found: which layers it holds, how
+/// many entities each would produce, and what the reader wants to say about it.
+///
+/// It exists for the import wizard, whose second page cannot honestly ask "which
+/// of these layers do you want" until something has actually read the file. The
+/// same numbers are what the wizard prints beside each tick box.
+struct ImportProbe
+{
+    std::string driver;                                        ///< DXF, DWG, GPKG…
+    std::string crs;                                           ///< what the file declared
+    std::uint64_t entities{0};                                 ///< across every layer
+    std::vector<std::pair<std::string, std::uint64_t>> layers; ///< name, entity count
+    std::vector<std::string> notes;                            ///< the reader's own words
+};
+
+/// Reads `path` into `scratch` — a document the caller owns and the user has never
+/// seen — and reports what came out.
+///
+/// THIS IS NOT A SHORTCUT PAST THE COMMAND BUS. Article 5.9 forbids mutating THE
+/// document outside a command; `scratch` is a throwaway the caller allocated for
+/// the purpose, holds no user work, is never journalled and is never rendered as
+/// the drawing. The real import still goes through `İÇEAKTAR` afterwards, with the
+/// layer names the user ticked — which is why the wizard's OK button produces a
+/// journal line identical to the one a script would write.
+///
+/// Synchronous on purpose: the readers it drives suspend only for their own
+/// streaming, never for user input, and a modal wizard has nothing else to do
+/// while it waits.
+core::Result<ImportProbe> probe_import(core::Document& scratch, const std::string& path,
+                                       const std::string& project_crs, std::stop_token stop);
 
 /// Owns the file engine for exactly one `Bus`, and therefore for exactly one
 /// document. Installing the hook in the constructor and clearing it in the
@@ -79,7 +114,8 @@ private:
     // outright, so neither should appear as an identifier at the head of a line
     // where a reader — or a grep — could mistake it for one.
     command::Task<core::Result<std::string>> import_into(command::Transaction* tx, std::string path,
-                                                         std::string format);
+                                                         std::string format,
+                                                         std::vector<std::string> only);
     command::Task<core::Result<std::string>> export_out(std::string path, std::string format);
 
     /// Reads a surveyed point list and puts one point entity per row in the

@@ -82,6 +82,11 @@ struct FileRequest
     /// guessed — no heuristic can tell a 485 320 easting from a northing.
     bool swapped_axes{false};
 
+    /// Import: the layers to read, empty meaning all of them. What the import
+    /// wizard's tick boxes become — and, because it is an ordinary parameter, what
+    /// a script or the command line can state just as well (Article 1.2).
+    std::vector<std::string> layers;
+
     /// The calling command's own transaction, so an import is ONE undo step and
     /// rolls back whole (io.md R17). Null for the verbs that do not mutate the
     /// document through a transaction.

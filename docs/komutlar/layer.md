@@ -139,14 +139,27 @@ başlatır ve katman adını sorar.
 Aynı araç çubuğundaki **aktif katman listesi** doğrudan çalışır: renk kutucuklarıyla
 katmanları gösterir, seçtiğinizde `KATMAN ad="..."` komutunu gönderir.
 
-Sağdaki **Katmanlar** panelinden de yönetilir:
+Sağdaki **Katmanlar** paneli her katmanı tek bir satırda gösterir: solda **göz**,
+yanında renk kutucuğu, katmanın adı, sağda nesne sayısı ve **kilit**.
 
-- Bir satıra çift tıklamak o katmanı **aktif** yapar
-- **Gör.** sütununa çift tıklamak görünürlüğü ters çevirir
-- **Kilit** sütununa çift tıklamak kilidi ters çevirir
+| Nerede | Ne yapar |
+|---|---|
+| **Göz** simgesine tek tık | Görünürlüğü ters çevirir |
+| **Kilit** simgesine tek tık | Kilidi ters çevirir |
+| Satıra çift tık | O katmanı **aktif** yapar |
+| Satıra sağ tık | Katman menüsü: **Tümünü seç**, aktif yap, stili düzenle, gruba taşı… |
 
-Bu üç işlemin her biri arka planda `KATMAN` komutunu gönderir. Yani panelden yaptığınız
-değişiklik de günlüğe yazılır ve **Ctrl+Z** ile geri alınır.
+**Tümünü seç**, o katmandaki bütün nesneleri seçer — çalıştırdığı satır
+[`SEÇ mod=KATMAN katman="..."`](select.md) satırıdır.
+
+Çizimde bir nesne seçtiğinizde **panel o nesnenin katmanını kendiliğinden
+işaretler**, böylece kırk katmanlı bir listede aramak zorunda kalmazsınız.
+Seçimde birden çok katmandan nesne varsa tek doğru cevap olmadığı için işaret
+yerinde bırakılır. Bu işaretleme yalnızca listedeki vurgudur: katmanı **aktif
+yapmaz**, çünkü aktif katmanı değiştirmek kimsenin istemediği bir düzenlemedir.
+
+Panelden yapılan her değişiklik arka planda `KATMAN` komutunu gönderir. Yani
+buradan yaptığınız değişiklik de günlüğe yazılır ve **Ctrl+Z** ile geri alınır.
 
 Aktif katman panelde **kalın** yazılır ve durum çubuğunun **Katman:** bölmesinde görünür.
 

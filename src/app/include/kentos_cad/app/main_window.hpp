@@ -39,6 +39,9 @@ class QToolBar;
 
 namespace kentos::app {
 
+/// The two-page import window this shell opens; see `import_wizard.hpp`.
+class ImportWizard;
+
 /// The PostGIS window, opened from the File menu; see database_dialog.hpp.
 class DatabaseDialog;
 class SettingsDialog;
@@ -94,6 +97,20 @@ public:
     void openSettings();
     void openAttributeTable();
     void openCommandSearch();
+
+    /// Opens the import wizard WITHOUT blocking, on `path` when one is given.
+    ///
+    /// `importData()` runs it modally and then runs the command line it built;
+    /// this one shows it and returns, which is what `KENTOS_SMOKE` and
+    /// `KENTOS_SHOT_DIR` need — a window that never returns cannot be
+    /// photographed or closed by a timer.
+    /// Returns the window it opened, so a probe can photograph the file page and
+    /// only then start the read. A caller with no such need ignores it.
+    ImportWizard* openImportWizard(const QString& path = QString());
+
+    /// Clicks the layer panel's eye and lock with real mouse events and prints
+    /// what the document did. See `LayerPanel::probeByHand`.
+    void probeLayerPanel();
 
     /// Presses every button on the tool column in turn and prints what the
     /// program answered, one line per tool.

@@ -132,6 +132,31 @@ Task<void> run_import(Context& ctx)
         ctx.record("bicim", format);
     }
 
+    // WHICH LAYERS. Empty is every layer, so a bare İÇEAKTAR is unchanged and
+    // this is purely additive. The wizard's checklist sends the same argument the
+    // command line does — there is no private road from the dialog (Article 1.2).
+    if (const Value only = ctx.argument("katmanlar"); !only.empty()) {
+        // ONE text, comma separated — `katmanlar="PARSEL,BİNA"`. A list would be
+        // the tidier shape, but a comma cannot occur in a DXF or DWG layer name
+        // (AutoCAD refuses it), so the separator is unambiguous and the argument
+        // stays one journal token that a human can read and retype.
+        const std::string& raw = only.as_text();
+        std::string one;
+        for (const char c : raw) {
+            if (c == ',') {
+                if (!one.empty()) request.layers.push_back(one);
+                one.clear();
+            } else if (!(one.empty() && (c == ' ' || c == '\t'))) {
+                one.push_back(c);
+            }
+        }
+        while (!one.empty() && (one.back() == ' ' || one.back() == '\t'))
+            one.pop_back();
+        if (!one.empty()) request.layers.push_back(one);
+
+        ctx.record("katmanlar", only);
+    }
+
     // The command's OWN transaction, so the whole import is one undo step and any
     // failure rolls the document back to exactly its pre-import state (io.md R17,
     // P11). This is the only file verb that mutates the document in place.
@@ -271,6 +296,9 @@ KENTOS_COMMAND(import)
                 Param::text("dosya", Arity::exactly(1), "İçe aktarılacak dosyanın yolu"),
                 Param::text("bicim", Arity::optional(),
                             "Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur"),
+                Param::text("katmanlar", Arity::optional(),
+                            "Yalnızca bu katmanlar okunur, virgülle ayrılır; "
+                            "verilmezse tümü"),
             },
         // io.md R17: one transaction, one undo entry, and a failure leaves the
         // document byte for byte as it was.

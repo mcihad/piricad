@@ -26,6 +26,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -414,6 +415,7 @@ std::string vector_backend_status()
 
 command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx, std::string path,
                                                         std::string driver, std::string project_crs,
+                                                        std::vector<std::string> only,
                                                         std::stop_token stop)
 {
 #ifndef KENTOS_HAVE_GDAL
@@ -421,6 +423,7 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
     (void)path;
     (void)driver;
     (void)project_crs;
+    (void)only;
     (void)stop;
     co_return err(ErrorCode::Unsupported,
                   std::string(kErrNoDriver) + ": " + vector_backend_status());
@@ -495,6 +498,31 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
     std::set<std::string> seen_layers; // so report.layers counts names, not features
     bool unlabelled = false;           // the "no CRS in the file" note, said once
 
+    // The wizard's tick boxes, and nothing else in this file knows they exist:
+    // an empty list is "everything", which is what a bare İÇEAKTAR sends. Folded
+    // per comparison rather than pre-folded once because the list is a handful of
+    // names and the comparison happens once per layer, not once per feature —
+    // except on DXF, where the layer is a FIELD, so the per-feature answer is
+    // memoised in `decided` below.
+    const auto wanted = [&only](const std::string& name) {
+        if (only.empty()) return true;
+        for (const std::string& pick : only)
+            if (core::turkish_iequals(pick, name)) return true;
+        return false;
+    };
+    std::map<std::string, bool> decided;
+
+    // Every layer the file holds, whether or not it was read. The wizard's list
+    // is built from exactly this on the probe pass.
+    const auto tally = [&report](const std::string& name, std::uint64_t made) {
+        for (auto& row : report.layer_names)
+            if (row.first == name) {
+                row.second += made;
+                return;
+            }
+        report.layer_names.emplace_back(name, made);
+    };
+
     for (int li = 0; li < data.ptr->GetLayerCount(); ++li) {
         OGRLayer* layer = data.ptr->GetLayer(li);
         if (!layer) continue;
@@ -567,12 +595,24 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
 
         core::LayerId slot = core::kNoLayer;
         if (layer_field < 0) {
+            // Registered before the tick box is consulted: the wizard's list has
+            // to show a layer in order for anyone to be able to tick it.
+            tally(layer_name, 0);
+            if (!wanted(layer_name)) continue;
+
             slot = tx.ensure_layer(layer_name);
             if (slot == core::kNoLayer)
                 co_return err(ErrorCode::ValidationFailed,
                               "'" + layer_name + "' katmanı oluşturulamadı.");
             ++report.layers;
         }
+
+        // Where the per-layer entity counts come from. `report.entities` only
+        // grows, so the run of features belonging to one layer is the delta
+        // between two marks — and a DXF interleaves its layers freely, which is
+        // why this flushes on every change rather than once at the end.
+        std::string open_layer  = layer_field < 0 ? layer_name : std::string();
+        std::uint64_t open_mark = report.entities;
 
         layer->ResetReading();
         while (OGRFeature* raw_feature = layer->GetNextFeature()) {
@@ -595,6 +635,20 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                                         : nullptr;
                 const std::string want =
                     named && *named ? std::string(named) : std::string(layer_name);
+
+                if (want != open_layer) {
+                    if (!open_layer.empty()) tally(open_layer, report.entities - open_mark);
+                    open_layer = want;
+                    open_mark  = report.entities;
+                    tally(want, 0);
+                }
+
+                // Memoised: this runs once per FEATURE, and a sheet has a hundred
+                // thousand of them against a checklist of forty names.
+                auto seen = decided.find(want);
+                if (seen == decided.end()) seen = decided.emplace(want, wanted(want)).first;
+                if (!seen->second) continue;
+
                 target = tx.ensure_layer(want);
                 if (target == core::kNoLayer)
                     co_return err(ErrorCode::ValidationFailed,
@@ -757,6 +811,8 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                                                       ". öğe okunamadı: " + added.error().message);
             ++report.entities;
         }
+
+        if (!open_layer.empty()) tally(open_layer, report.entities - open_mark);
     }
 
     if (report.entities == 0)

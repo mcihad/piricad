@@ -8,8 +8,10 @@
 #include "kentos_cad/render/backend.hpp"
 
 #include <algorithm>
+#include <cstdio>
 #include <vector>
 
+#include <QCoreApplication>
 #include <QHBoxLayout>
 #include <QHash>
 #include <QHeaderView>
@@ -17,9 +19,12 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPixmap>
+#include <QSignalBlocker>
 #include <QTreeWidget>
+#include <QTreeWidgetItemIterator>
 #include <QVBoxLayout>
 
 namespace kentos::app {
@@ -63,10 +68,21 @@ QSize LayerRowDelegate::sizeHint(const QStyleOptionViewItem&, const QModelIndex&
     return QSize(0, kLayerRow);
 }
 
-LayerRowDelegate::Hit LayerRowDelegate::hitTest(int x, int width)
+LayerRowDelegate::Hit LayerRowDelegate::hitTest(int x, int width, int depth)
 {
-    if (x >= kLayerPadX && x < kLayerPadX + kLayerEye) return Hit::Eye;
-    if (x >= width - kLayerPadX - kLayerLock && x < width - kLayerPadX) return Hit::Lock;
+    // `depth` is not decoration: paint() indents the eye by it, so a hit test that
+    // ignores it answers for a nested row's colour chip instead of its eye.
+    // A few px of slack in each direction — a 14 px target is small for a mouse
+    // and tiny for a touchpad, and the slack costs nothing because what is next
+    // to the eye (the chip) and next to the lock (the count) do nothing on click.
+    constexpr int kSlack = 4;
+
+    const int eye = kLayerPadX + depth * 14;
+    if (x >= eye - kSlack && x < eye + kLayerEye + kSlack) return Hit::Eye;
+
+    const int lock = width - kLayerPadX - kLayerLock;
+    if (x >= lock - kSlack && x < lock + kLayerLock + kSlack) return Hit::Lock;
+
     return Hit::Row;
 }
 
@@ -183,6 +199,11 @@ LayerPanel::LayerPanel(Controller& controller, QWidget* parent)
             [this] { emit layerSelected(selectedLayer()); });
     connect(tree_, &QTreeWidget::itemDoubleClicked, this, &LayerPanel::onItemActivated);
 
+    // The eye and the lock are PAINTED by the delegate, and a delegate cannot
+    // answer a click. The viewport can, so the panel watches it and asks the
+    // delegate where the click landed.
+    tree_->viewport()->installEventFilter(this);
+
     tree_->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(tree_, &QTreeWidget::customContextMenuRequested, this, &LayerPanel::showContextMenu);
 }
@@ -199,32 +220,171 @@ core::LayerId LayerPanel::selectedLayer() const
     return static_cast<core::LayerId>(id.toUInt());
 }
 
-void LayerPanel::onItemActivated(QTreeWidgetItem* item, int column)
+void LayerPanel::toggleRow(QTreeWidgetItem* item, bool visibility)
 {
     if (!item) return;
 
+    // The state is read from COLUMN 0 because that is the only column there is:
+    // the tree has `setColumnCount(1)` and the delegate paints eye, chip, name,
+    // count and lock into that one rect. Reading column 1 or 2 — which is what
+    // this did — returns an invalid QVariant, `toBool()` makes it false, and the
+    // command then always says `gorunur=evet`: the eye never turned off.
+    const QVariant id = item->data(0, Qt::UserRole);
+    if (!id.isValid()) return; // a group row has no layer to toggle
+
     const QString name = item->text(0);
+    const bool on      = item->data(0, visibility ? Qt::UserRole + 1 : Qt::UserRole + 2).toBool();
+    const QString off  = on ? QStringLiteral("hayır") : QStringLiteral("evet");
 
-    // Toggling a column is an edit, so it leaves through the command bus like
-    // everything else — never a direct Document write.
-    if (column == 1) {
-        const bool visible = item->data(1, Qt::UserRole).toBool();
+    // Toggling is an edit, so it leaves through the command bus like everything
+    // else — never a direct Document write (CLAUDE.md 5.9).
+    controller_.runLine(
+        QStringLiteral("KATMAN ad=\"%1\" %2=%3")
+            .arg(name, visibility ? QStringLiteral("gorunur") : QStringLiteral("kilitli"), off),
+        command::Origin::Gui);
+}
+
+void LayerPanel::onItemActivated(QTreeWidgetItem* item, int)
+{
+    if (!item) return;
+    if (!item->data(0, Qt::UserRole).isValid()) return;
+
+    controller_.runLine(QStringLiteral("KATMAN ad=\"%1\"").arg(item->text(0)),
+                        command::Origin::Gui);
+}
+
+bool LayerPanel::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched != tree_->viewport() || event->type() != QEvent::MouseButtonRelease)
+        return QWidget::eventFilter(watched, event);
+
+    auto* click = static_cast<QMouseEvent*>(event);
+    if (click->button() != Qt::LeftButton) return false;
+
+    const QPoint at       = click->position().toPoint();
+    QTreeWidgetItem* item = tree_->itemAt(at);
+    if (!item) return false;
+
+    const QRect row = tree_->visualItemRect(item);
+    const int depth = item->data(0, Qt::UserRole + 6).toInt();
+    const auto hit  = LayerRowDelegate::hitTest(at.x() - row.left(), row.width(), depth);
+
+    switch (hit) {
+    case LayerRowDelegate::Hit::Eye: toggleRow(item, true); return true;
+    case LayerRowDelegate::Hit::Lock: toggleRow(item, false); return true;
+    default: return false; // the rest of the row is a normal selection click
+    }
+}
+
+void LayerPanel::probeByHand()
+{
+    const core::Document& doc = controller_.document();
+
+    const auto say = [](const std::string& text) {
+        (void)std::fprintf(stdout, "[katman] %s\n", text.c_str());
+        (void)std::fflush(stdout);
+    };
+
+    const auto hit = [this](QTreeWidgetItem* item, int x) {
+        const QRect row = tree_->visualItemRect(item);
+        const QPointF at(row.left() + x, row.center().y());
+        QMouseEvent press(QEvent::MouseButtonPress, at, tree_->viewport()->mapToGlobal(at),
+                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QMouseEvent release(QEvent::MouseButtonRelease, at, tree_->viewport()->mapToGlobal(at),
+                            Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(tree_->viewport(), &press);
+        QCoreApplication::sendEvent(tree_->viewport(), &release);
+        QCoreApplication::processEvents();
+    };
+
+    for (int i = 0; i < tree_->topLevelItemCount() && i < 3; ++i) {
+        QTreeWidgetItem* item = tree_->topLevelItem(i);
+        const QVariant id     = item->data(0, Qt::UserRole);
+        if (!id.isValid()) continue;
+
+        const std::string name = item->text(0).toStdString();
+        const core::LayerId at = static_cast<core::LayerId>(id.toUInt());
+        const core::Layer* was = doc.layer(at);
+        if (was == nullptr) continue;
+
+        // TWICE. One click proves the route exists; the second proves the handler
+        // reads the CURRENT state rather than a constant — which is the half of
+        // the old defect a single click would not have caught, because a handler
+        // that always sends `gorunur=evet` also "works" the first time.
+        const bool before = was->visible;
+        hit(item, kLayerPadX + kLayerEye / 2);
+        const bool once = doc.layer(at) != nullptr && doc.layer(at)->visible;
+
+        QTreeWidgetItem* back = tree_->topLevelItem(i);
+        if (back != nullptr) hit(back, kLayerPadX + kLayerEye / 2);
+        const bool twice = doc.layer(at) != nullptr && doc.layer(at)->visible;
+
+        const auto word = [](bool on) { return on ? std::string("açık") : std::string("kapalı"); };
+        say("göz  '" + name + "': " + word(before) + " -> " + word(once) + " -> " + word(twice) +
+            (once != before && twice == before ? "  İKİ YÖNDE ÇALIŞIYOR" : "  BOZUK"));
+
+        // The row moved: refresh() rebuilt the tree under the click.
+        QTreeWidgetItem* again = tree_->topLevelItem(i);
+        if (again == nullptr) continue;
+
+        const bool locked_before = doc.layer(at)->locked;
+        hit(again, tree_->viewport()->width() - kLayerPadX - kLayerLock / 2);
+        const core::Layer* after = doc.layer(at);
+        say("kilit '" + name + "': " + (locked_before ? "kilitli" : "açık") + " -> " +
+            (after != nullptr && after->locked ? "kilitli" : "açık") +
+            (after != nullptr && after->locked != locked_before ? "  DEĞİŞTİ" : "  DEĞİŞMEDİ"));
+    }
+
+    // AND THE OTHER DIRECTION: the canvas picks, the panel follows. Driven
+    // through the bus, because that is the road a click on the drawing takes.
+    const core::EntityTable& entities = doc.entities();
+    for (core::EntityId e = 0; e < entities.size(); ++e) {
+        if (!entities.alive(e)) continue;
+
+        const core::LayerId on   = entities.layer[e];
+        const core::Layer* named = doc.layer(on);
+        if (named == nullptr) continue;
+
         controller_.runLine(
-            QStringLiteral("KATMAN ad=\"%1\" gorunur=%2")
-                .arg(name, visible ? QStringLiteral("hayır") : QStringLiteral("evet")),
+            QStringLiteral("SEÇ mod=NESNE nesneler=%1").arg(static_cast<qulonglong>(doc.key_of(e))),
             command::Origin::Gui);
+        QCoreApplication::processEvents();
+
+        const core::LayerId followed = selectedLayer();
+        say("seçim -> panel: nesne katmanı '" + named->name + "', panelde seçili '" +
+            (followed == core::kNoLayer       ? std::string("(yok)")
+             : doc.layer(followed) != nullptr ? doc.layer(followed)->name
+                                              : std::string("?")) +
+            "'" + (followed == on ? "  EŞLEŞTİ" : "  EŞLEŞMEDİ"));
+        break;
+    }
+}
+
+void LayerPanel::selectLayer(core::LayerId layer)
+{
+    if (layer == core::kNoLayer) return;
+    if (selectedLayer() == layer) return; // already there; do not fight the user's scroll
+
+    for (QTreeWidgetItemIterator it(tree_); *it; ++it) {
+        const QVariant id = (*it)->data(0, Qt::UserRole);
+        if (!id.isValid() || static_cast<core::LayerId>(id.toUInt()) != layer) continue;
+
+        // Blocked because this highlight comes FROM the canvas: letting it emit
+        // layerSelected would send the answer back where the question came from.
+        const QSignalBlocker quiet(tree_);
+        tree_->setCurrentItem(*it);
+        tree_->scrollToItem(*it);
         return;
     }
-    if (column == 2) {
-        const bool locked = item->data(2, Qt::UserRole).toBool();
-        controller_.runLine(
-            QStringLiteral("KATMAN ad=\"%1\" kilitli=%2")
-                .arg(name, locked ? QStringLiteral("hayır") : QStringLiteral("evet")),
-            command::Origin::Gui);
-        return;
-    }
+}
 
-    controller_.runLine(QStringLiteral("KATMAN ad=\"%1\"").arg(name), command::Origin::Gui);
+void LayerPanel::selectAllOn(const QString& name)
+{
+    // Through the bus, like every other selection: SEÇ with the layer filter, so
+    // the command line, a script and this menu item all take the same road
+    // (CLAUDE.md 1.2).
+    controller_.runLine(QStringLiteral("SEÇ mod=KATMAN katman=\"%1\"").arg(name),
+                        command::Origin::Gui);
 }
 
 namespace {
@@ -397,6 +557,10 @@ void LayerPanel::showContextMenu(const QPoint& where)
     if (!name.isEmpty()) {
         menu.addSeparator();
 
+        QAction* pick = menu.addAction(tr("Tümünü seç"));
+        pick->setToolTip(tr("Bu katmandaki bütün nesneleri seçer"));
+        connect(pick, &QAction::triggered, this, [this, name] { selectAllOn(name); });
+
         QAction* activate = menu.addAction(tr("Aktif katman yap"));
         connect(activate, &QAction::triggered, this, [this, name] {
             controller_.runLine(QStringLiteral("KATMAN ad=\"%1\"").arg(name), command::Origin::Gui);
@@ -436,7 +600,7 @@ void LayerPanel::showContextMenu(const QPoint& where)
 
         menu.addSeparator();
 
-        const bool visible = item->data(1, Qt::UserRole).toBool();
+        const bool visible = item->data(0, Qt::UserRole + 1).toBool();
         QAction* show      = menu.addAction(visible ? tr("Gizle") : tr("Göster"));
         connect(show, &QAction::triggered, this, [this, name, visible] {
             controller_.runLine(
@@ -445,7 +609,7 @@ void LayerPanel::showContextMenu(const QPoint& where)
                 command::Origin::Gui);
         });
 
-        const bool locked = item->data(2, Qt::UserRole).toBool();
+        const bool locked = item->data(0, Qt::UserRole + 2).toBool();
         QAction* lock     = menu.addAction(locked ? tr("Kilidi aç") : tr("Kilitle"));
         connect(lock, &QAction::triggered, this, [this, name, locked] {
             controller_.runLine(

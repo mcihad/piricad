@@ -75,7 +75,66 @@ std::string effective_crs(const command::Bus& bus)
     return crs.id();
 }
 
+/// Whether the path names a DWG, whatever case it was typed in.
+bool looks_like_dwg(const std::string& path)
+{
+    if (path.size() < 4) return false;
+    return core::turkish_upper(path.substr(path.size() - 4)) == ".DWG";
+}
+
 } // namespace
+
+core::Result<ImportProbe> probe_import(core::Document& scratch, const std::string& path,
+                                       const std::string& project_crs, std::stop_token stop)
+{
+    // The label is never shown: this transaction's inverse Ops are dropped with
+    // the scratch document. It is here because Article 5.9 admits exactly one
+    // route to geometry and a probe does not get a second one.
+    command::Transaction tx(scratch, "İçe aktarma ön okuması");
+
+    ImportProbe out;
+
+    // DRIVEN, NOT AWAITED. `Task<T>` is lazy and the readers below suspend only
+    // on their own streaming — never on user input, which is the one thing that
+    // would need a bus underneath. So resuming until `done()` runs them to
+    // completion, and doing that here keeps coroutine driving inside /src/io
+    // rather than spreading it into the dialog code.
+    const auto drive = [](auto task) {
+        while (!task.done())
+            task.resume();
+        return std::move(task.result());
+    };
+
+    if (looks_like_dwg(path)) {
+        auto read = drive(import_dwg(tx, path, project_crs, {}, std::move(stop)));
+        if (!read) return read.error();
+
+        const DwgReport& d = read.value();
+        out.driver         = "DWG " + d.version;
+        out.crs            = project_crs;
+        out.entities       = d.entities;
+        out.notes          = d.notes;
+        out.layers.reserve(d.layer_names.size());
+        for (const auto& [name, made] : d.layer_names)
+            out.layers.emplace_back(name, static_cast<std::uint64_t>(made));
+
+        for (std::size_t i = 0; i < d.skipped.size() && i < 5; ++i)
+            out.notes.push_back("Okunamayan varlık türü atlandı: " + d.skipped[i].first + " x" +
+                                std::to_string(d.skipped[i].second));
+        return out;
+    }
+
+    auto read = drive(import_vector(tx, path, std::string(), project_crs, {}, std::move(stop)));
+    if (!read) return read.error();
+
+    const VectorReport& r = read.value();
+    out.driver            = r.driver;
+    out.crs               = r.crs;
+    out.entities          = r.entities;
+    out.notes             = r.notes;
+    out.layers            = r.layer_names;
+    return out;
+}
 
 FileService::FileService(command::Bus& bus) : bus_(bus)
 {
@@ -117,7 +176,7 @@ command::Task<core::Result<std::string>> FileService::handle(command::FileReques
 
     case command::FileRequest::Verb::Import:
         co_return co_await import_into(request.tx, std::move(request.path),
-                                       std::move(request.format));
+                                       std::move(request.format), std::move(request.layers));
 
     case command::FileRequest::Verb::Export:
         co_return co_await export_out(std::move(request.path), std::move(request.format));
@@ -234,19 +293,10 @@ core::Result<std::string> FileService::save(const std::string& path, bool save_a
 
 // -------------------------------------------------------------- İÇEAKTAR ----
 
-namespace {
-
-/// Whether the path names a DWG, whatever case it was typed in.
-bool looks_like_dwg(const std::string& path)
-{
-    if (path.size() < 4) return false;
-    return core::turkish_upper(path.substr(path.size() - 4)) == ".DWG";
-}
-
-} // namespace
-
-command::Task<core::Result<std::string>>
-FileService::import_into(command::Transaction* tx, std::string path, std::string format)
+command::Task<core::Result<std::string>> FileService::import_into(command::Transaction* tx,
+                                                                  std::string path,
+                                                                  std::string format,
+                                                                  std::vector<std::string> only)
 {
     if (!tx)
         co_return err(ErrorCode::Internal,
@@ -264,7 +314,7 @@ FileService::import_into(command::Transaction* tx, std::string path, std::string
     // routing by extension here is what keeps that decision from being made by
     // whichever driver happens to answer first.
     if (looks_like_dwg(path)) {
-        auto dwg = co_await import_dwg(*tx, path, effective_crs(bus_), stop_.get_token());
+        auto dwg = co_await import_dwg(*tx, path, effective_crs(bus_), only, stop_.get_token());
         if (!dwg) co_return dwg.error();
 
         const DwgReport& d = dwg.value();
@@ -282,7 +332,7 @@ FileService::import_into(command::Transaction* tx, std::string path, std::string
     }
 
     auto report = co_await import_vector(*tx, std::move(path), std::move(format),
-                                         effective_crs(bus_), stop_.get_token());
+                                         effective_crs(bus_), std::move(only), stop_.get_token());
     if (!report) co_return report.error();
 
     const VectorReport& r = report.value();

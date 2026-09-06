@@ -180,12 +180,19 @@ bool loadShellFonts(QString* whereLooked)
 
 void installShellStyle()
 {
-    // `setStyle` TAKES OWNERSHIP and Qt deletes it at shutdown. A bare `new` in
-    // the argument says nothing about that — it reads as a leak to a reader and
-    // to the analyser both. Releasing a unique_ptr into the sink is the same
-    // instruction with the hand-over written down.
-    auto style = std::make_unique<ShellStyle>();
-    QApplication::setStyle(style.release());
+    // `setStyle` TAKES OWNERSHIP and Qt deletes it at shutdown. Neither a bare
+    // `new` in the argument nor a released `unique_ptr` says that in a way the
+    // static analyser can follow: both read as a pointer that goes out of scope
+    // still owning memory, and `clang-analyzer-cplusplus.NewDeleteLeaks` is a
+    // build-blocking error in this repository (`.clang-tidy` WarningsAsErrors).
+    //
+    // A function-local static holds the pointer for the life of the program,
+    // which is also the truth of the arrangement — Qt drops the style at
+    // shutdown and nothing here ever needs to. So the analyser is satisfied by
+    // the code being accurate rather than by a suppression, and this file keeps
+    // the repository's record of having none (CLAUDE.md 5.14).
+    static ShellStyle* const style = new ShellStyle;
+    QApplication::setStyle(style);
 }
 
 QString themeStyleSheet(ThemeMode mode)
@@ -320,6 +327,23 @@ QString themeStyleSheet(ThemeMode mode)
                                            font-size: 12px; }
         QLabel#rowHelp                   { background: transparent; color: %(textFaint)s;
                                            font-size: 11px; }
+
+        /* ---- import wizard, §16.3's window parts, cut to two pages ---------- */
+        QWidget#wizardStepper            { background: %(raised)s;
+                                           border-bottom: 1px solid %(lineHard)s; }
+        QLabel#wizardStepOn              { background: transparent; color: %(accentHi)s;
+                                           font-size: 10.5px; font-weight: 600;
+                                           letter-spacing: 1px; }
+        QLabel#wizardStepDone            { background: transparent; color: %(textDim)s;
+                                           font-size: 10.5px; letter-spacing: 1px; }
+        QLabel#wizardStepOff             { background: transparent; color: %(textFaint)s;
+                                           font-size: 10.5px; letter-spacing: 1px; }
+        QWidget#wizardStepRule           { background: %(lineSoft)s; }
+        QListWidget#importLayerList      { background: %(window)s; border: 1px solid %(border)s;
+                                           border-radius: 4px; }
+        QWidget#importPreview            { border: 1px solid %(border)s; border-radius: 4px; }
+        QLabel#danger                    { background: transparent; color: %(danger)s;
+                                           font-size: 11.5px; }
 
         /* ---- attribute table, §9 -------------------------------------------- */
         QWidget#rendererRow              { background: %(raised)s;

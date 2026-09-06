@@ -20,6 +20,7 @@
 #include <cstddef>
 #include <stop_token>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace kentos::io {
@@ -34,6 +35,9 @@ struct DwgReport
     /// Anything the reader wants the user to know that is not an error: a file
     /// LibreDWG opened with warnings, an entity type it left behind.
     std::vector<std::string> notes;
+
+    /// Every layer name the file holds, with how many entities each produced.
+    std::vector<std::pair<std::string, std::size_t>> layer_names;
 
     /// Entity type names the reader has no translation for, with how many of each.
     /// R14's coverage report is built from exactly this: what a real file holds
@@ -52,7 +56,11 @@ std::string dwg_backend_status();
 /// io.md R15: streams, checks `stop` at least every 64 K entities, and returns
 /// within 100 ms of a cancellation. R17: everything happens inside the caller's
 /// one transaction, so a failure rolls the document back untouched.
+/// `only` names the layers to read; empty means all of them. See the note on
+/// `import_vector` — the two readers answer the same way on purpose.
 command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std::string path,
-                                                  std::string project_crs, std::stop_token stop);
+                                                  std::string project_crs,
+                                                  std::vector<std::string> only,
+                                                  std::stop_token stop);
 
 } // namespace kentos::io

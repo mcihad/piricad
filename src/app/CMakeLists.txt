@@ -22,6 +22,7 @@ qt_add_executable(kentos_cad
     src/database_dialog.cpp
     src/flow_layout.cpp
     src/icons.cpp
+    src/import_wizard.cpp
     src/main.cpp
     src/main_window.cpp
     src/map_canvas.cpp
@@ -45,6 +46,7 @@ qt_add_executable(kentos_cad
     include/kentos_cad/app/data_root.hpp
     include/kentos_cad/app/dialog_chrome.hpp
     include/kentos_cad/app/database_dialog.hpp
+    include/kentos_cad/app/import_wizard.hpp
     include/kentos_cad/app/main_window.hpp
     include/kentos_cad/app/map_canvas.hpp
     include/kentos_cad/app/panels.hpp

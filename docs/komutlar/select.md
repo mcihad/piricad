@@ -48,6 +48,7 @@ SEÇ
 SEÇ TÜMÜ
 SEÇ TEMİZLE
 SEÇ NESNE nesneler=<kimlik> nesneler=<kimlik> ...
+SEÇ KATMAN katman=<katman-adı>
 SEÇ PENCERE <köşe> <köşe>
 SEÇ KESEN <köşe> <köşe>
 SEÇ KUTU <köşe> <köşe>
@@ -61,9 +62,10 @@ Argümansız çağrı hiçbir şeyi değiştirmez; yalnızca seçimde ne olduğu
 
 | Parametre | Ne yapar |
 |---|---|
-| `mod` | `TÜMÜ`, `TEMİZLE`, `NESNE`, `PENCERE`, `KESEN`, `KUTU` veya `NOKTA`. Verilmezse seçim yalnızca raporlanır |
+| `mod` | `TÜMÜ`, `TEMİZLE`, `NESNE`, `KATMAN`, `PENCERE`, `KESEN`, `KUTU` veya `NOKTA`. Verilmezse seçim yalnızca raporlanır |
 | `noktalar` | Kutu köşeleri (iki nokta) veya `NOKTA` modunda tek tıklama noktası |
 | `nesneler` | `NESNE` modunda nesne kimlikleri. Birden fazla `nesneler=` yazılabilir |
+| `katman` | `KATMAN` modunda katman adı. Türkçe kurallarıyla karşılaştırılır |
 | `islem` | `DEĞİŞTİR` (varsayılan), `EKLE`, `ÇIKAR` veya `TERSİNE` |
 | `tolerans` | `NOKTA` modunda arama yarıçapı, **metre**. Verilmezse `seçim_toleransı` tercihi (ekran pikseli) kullanılır |
 
@@ -100,6 +102,24 @@ Bütün görünür nesneleri seçin:
 ```
 SEÇ TÜMÜ
 ```
+
+### Bir katmandaki her şey
+
+```
+SEÇ KATMAN katman="ADAKENARI"
+```
+
+```text
+126 nesne bulundu (DEĞİŞTİR). Seçimde 126 nesne var: 17, 18, 19, …
+```
+
+Katman panelinde bir katmana **sağ tıklayıp Tümünü seç** dediğinizde çalışan
+satır budur. Katman adı Türkçe kurallarıyla karşılaştırılır: `kaldırım`
+`KALDIRIM` katmanını bulur, `kaldirim` bulmaz.
+
+Gizli katmanlar atlanır — göremediğinizi seçmek istemiş olamazsınız. Gizli bir
+katmanın içeriğini seçmek için önce gözünü açın.
+
 
 Seçimi boşaltın:
 
@@ -231,7 +251,9 @@ Ayrıntı: [Betik yazma](../betik/README.md).
 
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
-| `Beklenen mod: TÜMÜ \| TEMİZLE \| NESNE \| PENCERE \| KESEN \| KUTU \| NOKTA. Girilen: 'OLMAYAN'` | Tanınmayan mod adı | Tablodaki adlardan birini yazın |
+| `Beklenen mod: TÜMÜ \| TEMİZLE \| NESNE \| KATMAN \| PENCERE \| KESEN \| KUTU \| NOKTA. Girilen: 'OLMAYAN'` | Tanınmayan mod adı | Tablodaki adlardan birini yazın |
+| `'KATMAN' bir katman adı bekliyor.` | `mod=KATMAN` verilmiş, `katman=` verilmemiş | Katman adını `katman=` ile yazın |
+| `Katman bulunamadı: <ad>` | Çizimde o adda katman yok | [KATMAN](layer.md) ile adları listeleyin; Türkçe `i`/`ı` ayrımına dikkat edin |
 | `Beklenen işlem: DEĞİŞTİR \| EKLE \| ÇIKAR \| TERSİNE. Girilen: 'BİLİNMEYEN'` | Tanınmayan `islem` değeri | `EKLE`, `ÇIKAR` veya `TERSİNE` yazın |
 | `'PENCERE' 2 nokta bekliyor. Girilen: 1 nokta.` | Kutu için tek köşe verilmiş | İki köşe verin |
 | `'NESNE' en az bir nesne kimliği bekliyor. Örnek: SEÇ NESNE nesneler=1` | `NESNE` modunda kimlik verilmemiş | `nesneler=` ile kimlik verin |

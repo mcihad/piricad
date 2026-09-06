@@ -36,7 +36,7 @@ using core::EntityKey;
 
 /// What the user asked for. Canonical Turkish names; the aliases are folded onto
 /// these once, here, so no other file repeats the list.
-enum class Mode : std::uint8_t { Report, All, Clear, Objects, Window, Crossing, Box, Point };
+enum class Mode : std::uint8_t { Report, All, Clear, Objects, Layer, Window, Crossing, Box, Point };
 
 /// What to do with what was found.
 enum class Op : std::uint8_t { Replace, Add, Remove, Toggle };
@@ -56,6 +56,8 @@ bool parse_mode(const std::string& typed, Mode& out)
         out = Mode::Clear;
     } else if (matches(typed, {"NESNE", "NESNELER", "OBJECT", "LAST"})) {
         out = Mode::Objects;
+    } else if (matches(typed, {"KATMAN", "LAYER", "K"})) {
+        out = Mode::Layer;
     } else if (matches(typed, {"PENCERE", "WINDOW", "W"})) {
         out = Mode::Window;
     } else if (matches(typed, {"KESEN", "CROSSING", "C"})) {
@@ -77,6 +79,7 @@ const char* mode_name(Mode m)
     case Mode::All: return "TÜMÜ";
     case Mode::Clear: return "TEMİZLE";
     case Mode::Objects: return "NESNE";
+    case Mode::Layer: return "KATMAN";
     case Mode::Window: return "PENCERE";
     case Mode::Crossing: return "KESEN";
     case Mode::Box: return "KUTU";
@@ -156,7 +159,8 @@ Task<void> run_select(Context& ctx)
     Mode mode = Mode::Report;
     if (const Value v = ctx.argument("mod"); !v.empty()) {
         if (!parse_mode(v.as_text(), mode)) {
-            ctx.echo("Beklenen mod: TÜMÜ | TEMİZLE | NESNE | PENCERE | KESEN | KUTU | NOKTA. "
+            ctx.echo("Beklenen mod: TÜMÜ | TEMİZLE | NESNE | KATMAN | PENCERE | KESEN | KUTU | "
+                     "NOKTA. "
                      "Girilen: '" +
                      v.as_text() + "'");
             co_return;
@@ -254,6 +258,31 @@ Task<void> run_select(Context& ctx)
         break;
     }
 
+    case Mode::Layer: {
+        const Value v = ctx.argument("katman");
+        if (v.empty()) {
+            ctx.echo("'KATMAN' bir katman adı bekliyor. Örnek: SEÇ mod=KATMAN katman=\"PARSEL\"");
+            co_return;
+        }
+
+        const std::string wanted       = v.as_text();
+        const core::LayerId layer_slot = doc.find_layer(wanted);
+        if (layer_slot == core::kNoLayer) {
+            ctx.echo("Katman bulunamadı: " + wanted);
+            co_return;
+        }
+
+        // Hidden entities are skipped for the same reason TÜMÜ skips them: what
+        // the user cannot see, the user did not mean to select. Selecting a
+        // hidden layer's contents this way is therefore a no-op rather than a
+        // silent grab — turn the eye back on first.
+        const core::EntityTable& entities = doc.entities();
+        for (core::EntityId e = 0; e < entities.size(); ++e)
+            if (entities.visible(e) && entities.layer[e] == layer_slot)
+                picked.push_back(doc.key_of(e));
+        break;
+    }
+
     case Mode::Point: {
         if (!need_points(1)) co_return;
         const core::Point2 aim = supplied.front();
@@ -320,6 +349,10 @@ Task<void> run_select(Context& ctx)
     // The RESOLVED selection is recorded, not the gesture that produced it, so
     // every client's run reads the same however it aimed (kentoscad.md §2.2).
     ctx.record("mod", Value::text(mode_name(mode)));
+    // The layer NAME is recorded, not the slot it resolved to: a slot is an
+    // index into this document's table and means nothing in a replay against
+    // another one (model.md R2, R43).
+    if (mode == Mode::Layer) ctx.record("katman", ctx.argument("katman"));
     // The gesture too, so a replay of a WINDOW pick re-runs the same box rather
     // than only restoring the keys it happened to find. The resolved selection is
     // recorded below and remains what a client reads back.
@@ -364,6 +397,7 @@ KENTOS_COMMAND(select)
                               "Kutu köşeleri (iki nokta) veya tek tıklama noktası"),
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                       "NESNE modunda nesne kimlikleri"},
+                Param::text("katman", Arity::optional(), "KATMAN modunda katman adı"),
                 Param::text("islem", Arity::optional(), "DEĞİŞTİR | EKLE | ÇIKAR | TERSİNE"),
                 Param::number("tolerans", Arity::optional(),
                               "NOKTA modunda arama yarıçapı, metre; yoksa seçim toleransı"),

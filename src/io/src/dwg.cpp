@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/io/dwg.hpp"
 
+#include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #ifdef KENTOS_HAVE_DWG
@@ -56,11 +57,14 @@ std::string dwg_backend_status()
 #ifndef KENTOS_HAVE_DWG
 
 command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std::string path,
-                                                  std::string project_crs, std::stop_token stop)
+                                                  std::string project_crs,
+                                                  std::vector<std::string> only,
+                                                  std::stop_token stop)
 {
     (void)tx;
     (void)path;
     (void)project_crs;
+    (void)only;
     (void)stop;
     co_return err<DwgReport>(ErrorCode::Unsupported,
                              std::string(kErrNoBackend) + ": " + dwg_backend_status());
@@ -103,7 +107,9 @@ std::string version_of(const Dwg_Data& dwg)
 } // namespace
 
 command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std::string path,
-                                                  std::string project_crs, std::stop_token stop)
+                                                  std::string project_crs,
+                                                  std::vector<std::string> only,
+                                                  std::stop_token stop)
 {
     // A DWG carries no coordinate system: like DXF it is a drawing format and
     // not a geodetic one. The caller's project CRS stands, and saying so is the
@@ -118,6 +124,8 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
     // nothing usable came back.
     const int rc = ::dwg_read_file(path.c_str(), &dwg);
     if ((rc & DWG_ERR_CRITICAL) != 0) {
+        report.layer_names.assign(census.begin(), census.end());
+
         ::dwg_free(&dwg);
         co_return err<DwgReport>(ErrorCode::IoFailure,
                                  "'" + path +
@@ -131,8 +139,24 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
     if (rc != 0)
         report.notes.push_back("LibreDWG dosyayı uyarılarla okudu; bazı nesneler eksik olabilir.");
 
+    // The wizard's tick boxes. Empty means every layer, which is what a bare
+    // İÇEAKTAR sends; the match is Turkish-folded (CLAUDE.md 5.6).
+    const auto wanted = [&only](const std::string& name) {
+        if (only.empty()) return true;
+        for (const std::string& pick : only)
+            if (core::turkish_iequals(pick, name)) return true;
+        return false;
+    };
+
+    // Every layer name the file holds and how many entities each produced,
+    // whether or not it was read: the checklist is built from this, so a layer
+    // that is skipped still has to appear in it.
+    std::map<std::string, std::size_t> census;
     std::map<std::string, core::LayerId> layers;
     const auto layer_for = [&](const std::string& name) -> core::LayerId {
+        census.try_emplace(name, 0);
+        if (!wanted(name)) return core::kNoLayer;
+
         const auto found = layers.find(name);
         if (found != layers.end()) return found->second;
 
@@ -164,11 +188,15 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
         // through the middle of the parcels.
         if (obj->tio.entity->entmode == 1) continue;
 
-        const core::LayerId target = layer_for(layer_of(obj));
-        if (target == core::kNoLayer) continue;
+        const std::string on       = layer_of(obj);
+        const core::LayerId target = layer_for(on);
+        if (target == core::kNoLayer) continue; // unticked, or unnameable
 
         const auto keep = [&](core::Result<core::EntityId> made) {
-            if (made) ++report.entities;
+            if (made) {
+                ++report.entities;
+                ++census[on];
+            }
             return made.ok();
         };
 
@@ -257,8 +285,10 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
             const std::array<core::Point2, 2> baseline{at, end};
             auto made = tx.add_polyline(target, baseline);
             if (!made) break;
-            if (tx.set_text(made.value(), e->text_value, height, core::TextAnchor::BaselineLeft))
+            if (tx.set_text(made.value(), e->text_value, height, core::TextAnchor::BaselineLeft)) {
                 ++report.entities;
+                ++census[on];
+            }
             break;
         }
 

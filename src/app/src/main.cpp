@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // KentOSCad — application entry point.
 #include "kentos_cad/app/attribute_panel.hpp"
+#include "kentos_cad/app/import_wizard.hpp"
 #include "kentos_cad/app/main_window.hpp"
 #include "kentos_cad/app/map_canvas.hpp"
 #include "kentos_cad/app/theme.hpp"
@@ -266,6 +267,10 @@ int main(int argc, char** argv)
         later([] {
             if (QWidget* top = QApplication::activePopupWidget()) top->close();
         });
+        later([&window] { window.openImportWizard(); });
+        later([] {
+            if (QWidget* top = QApplication::activeModalWidget()) top->close();
+        });
         later([] {
             if (sheet_refused) {
                 (void)std::fprintf(stderr, "[kentos] duman testi: stil sayfası REDDEDİLDİ\n");
@@ -334,6 +339,33 @@ int main(int argc, char** argv)
         later([shot] { shot(QStringLiteral("5-komut-arama"), QApplication::activePopupWidget()); });
         later([] {
             if (QWidget* top = QApplication::activePopupWidget()) top->close();
+        });
+
+        // The import wizard, both pages. `KENTOS_IMPORT_SAMPLE` names a file to
+        // read; without it only the file page can be photographed, because there
+        // is nothing to list on the second one.
+        static kentos::app::ImportWizard* wizard = nullptr;
+        later([&window] { wizard = window.openImportWizard(); });
+        later([&window] {
+            wizard->setPath(QString::fromLocal8Bit(qgetenv("KENTOS_IMPORT_SAMPLE")));
+        });
+        later([shot] {
+            shot(QStringLiteral("6-ice-aktarma-dosya"), QApplication::activeModalWidget());
+        });
+        // The read only starts HERE, so the page above is photographed before the
+        // wizard leaves it. Two extra beats after: the read runs on its own
+        // thread and the layer page does not exist until it has finished.
+        later([] {
+            if (wizard != nullptr)
+                wizard->beginWith(QString::fromLocal8Bit(qgetenv("KENTOS_IMPORT_SAMPLE")));
+        });
+        later([] {});
+        later([] {});
+        later([shot] {
+            shot(QStringLiteral("7-ice-aktarma-katmanlar"), QApplication::activeModalWidget());
+        });
+        later([] {
+            if (QWidget* top = QApplication::activeModalWidget()) top->close();
         });
 
         later([] { QApplication::exit(0); });
@@ -452,6 +484,15 @@ int main(int argc, char** argv)
     if (qEnvironmentVariableIsSet("KENTOS_TOOL_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             window.probeToolBox();
+            QApplication::exit(0);
+        });
+    }
+
+    // The layer panel, clicked rather than called. Same category as the two
+    // probes around it: developer tooling, an environment variable, no /docs page.
+    if (qEnvironmentVariableIsSet("KENTOS_LAYER_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            window.probeLayerPanel();
             QApplication::exit(0);
         });
     }
