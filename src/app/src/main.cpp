@@ -389,6 +389,19 @@ int main(int argc, char** argv)
                 QApplication::exit(1);
                 return;
             }
+
+            // ZOOM BEFORE TIMING, when asked. `--betik` ends by fitting the
+            // drawing to the canvas, so a zoom inside the script is overwritten
+            // before a single frame is measured — which made four runs at four
+            // magnifications report the same vertex count to the digit. A
+            // symbology cost that depends on magnification cannot be found at one
+            // magnification.
+            if (const QByteArray zoom = qgetenv("KENTOS_ZOOM"); !zoom.isEmpty()) {
+                bool ok            = false;
+                const double times = QString::fromLocal8Bit(zoom).toDouble(&ok);
+                if (ok && times > 0.0) canvas->zoomBy(times);
+            }
+
             std::vector<int> costs = canvas->timeFrames(n);
             std::vector<int> scene = canvas->sceneCosts();
             std::sort(costs.begin(), costs.end());
@@ -401,13 +414,17 @@ int main(int argc, char** argv)
             // together is what lets the < 100 budget be measured on the same run
             // that measures the 16 ms one.
             const kentos::render::FrameStats fs = canvas->frameStats();
+            // THE SCALE COMES WITH THE NUMBERS. A frame cost without the
+            // magnification it was measured at cannot be compared with another
+            // one, and a probe that silently failed to zoom looks exactly like a
+            // cost that does not depend on zoom.
             (void)std::fprintf(stdout,
                                "[kentos] %d kare  cizim ortanca %d us  en iyi %d us"
                                "  |  sahne ortanca %d us  |  cizim cagrisi %u"
-                               "  gecis %u  kose %u\n",
+                               "  gecis %u  kose %u  |  1:%.0f\n",
                                n, costs[costs.size() / 2], costs.front(),
                                scene.empty() ? 0 : scene[scene.size() / 2], fs.draw_calls,
-                               fs.passes, fs.vertices);
+                               fs.passes, fs.vertices, canvas->view().scale_denominator());
             QApplication::exit(0);
         });
     }
@@ -754,6 +771,18 @@ int main(int argc, char** argv)
             // so this timer still fires while it is up.
             QWidget* subject = QApplication::activeWindow();
             if (subject == nullptr) subject = &window;
+
+            // The same magnification hook the timing probe uses. A rendering
+            // change that only shows at 1:1 cannot be reviewed from a picture
+            // taken at the drawing's full extent.
+            if (const QByteArray zoom = qgetenv("KENTOS_ZOOM"); !zoom.isEmpty()) {
+                bool ok            = false;
+                const double times = QString::fromLocal8Bit(zoom).toDouble(&ok);
+                if (ok && times > 0.0 && window.canvas() != nullptr) {
+                    window.canvas()->zoomBy(times);
+                    QCoreApplication::processEvents();
+                }
+            }
 
             // KENTOS_ARM presses one tool-column button before the shot, so a
             // review can see what an ARMED tool looks like. The actions are named

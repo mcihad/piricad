@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/render/symbology.hpp"
 
+#include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace kentos::render {
 namespace {
@@ -41,9 +43,19 @@ void MarkerOutline::clear()
 
 void place_along_run(const float* xs, const float* ys, std::uint32_t count,
                      core::MarkerPlacement placement, double interval, double phase,
-                     std::vector<Stamp>& out)
+                     const PixelBox& clip, std::vector<Stamp>& out)
 {
     if (count < 1 || xs == nullptr || ys == nullptr) return;
+
+    // Outside this, a stamp cannot appear on screen. The caller has already grown
+    // the box by the glyph's own reach, so a mark whose centre is just off the
+    // edge but whose arm crosses it is still kept.
+    const bool bounded = !clip.empty();
+    const auto seen    = [&](double x, double y) {
+        return !bounded ||
+               (x >= static_cast<double>(clip.min_x) && x <= static_cast<double>(clip.max_x) &&
+                y >= static_cast<double>(clip.min_y) && y <= static_cast<double>(clip.max_y));
+    };
 
     const auto at = [&](std::uint32_t v) {
         return std::pair<double, double>{static_cast<double>(xs[v]), static_cast<double>(ys[v])};
@@ -58,6 +70,7 @@ void place_along_run(const float* xs, const float* ys, std::uint32_t count,
     };
 
     const auto stamp = [&](std::pair<double, double> p, std::pair<double, double> d) {
+        if (!seen(p.first, p.second)) return;
         out.push_back(Stamp{static_cast<float>(p.first), static_cast<float>(p.second),
                             static_cast<float>(d.first), static_cast<float>(d.second)});
     };
@@ -115,6 +128,26 @@ void place_along_run(const float* xs, const float* ys, std::uint32_t count,
         const auto b     = at(v);
         const double len = std::hypot(b.first - a.first, b.second - a.second);
         if (len <= 0.0) continue;
+
+        // A SEGMENT WHOLLY OFF SCREEN IS STEPPED OVER, not walked stamp by stamp.
+        // Testing each mark and discarding it is already cheap, but at 1:1 a
+        // parcel edge carries tens of thousands of them and the arithmetic alone
+        // shows up in the frame. Advancing `next` by whole intervals lands on the
+        // same phase the walk would have reached, so nothing shifts.
+        const bool visible_segment =
+            !bounded || (std::max(a.first, b.first) >= static_cast<double>(clip.min_x) &&
+                         std::min(a.first, b.first) <= static_cast<double>(clip.max_x) &&
+                         std::max(a.second, b.second) >= static_cast<double>(clip.min_y) &&
+                         std::min(a.second, b.second) <= static_cast<double>(clip.max_y));
+
+        if (!visible_segment && !centre && interval > 0.0) {
+            if (next <= walked + len) {
+                const double skipped = std::floor((walked + len - next) / interval) + 1.0;
+                next += skipped * interval;
+            }
+            walked += len;
+            continue;
+        }
 
         const auto d = direction(v - 1, v);
         while (next <= walked + len) {
@@ -237,16 +270,20 @@ void marker_outline(core::MarkerShape shape, double size, MarkerOutline& out)
 
 // -----------------------------------------------------------------------------
 
-void hatch_lines(float min_x, float min_y, float max_x, float max_y, double spacing,
-                 double angle_degrees, std::vector<float>& out)
+void hatch_lines(const PixelBox& face, const PixelBox& clip, double spacing, double angle_degrees,
+                 std::vector<float>& out)
 {
-    if (spacing <= 0.0 || max_x <= min_x || max_y <= min_y) return;
+    if (spacing <= 0.0 || face.empty()) return;
 
-    const double cx = (static_cast<double>(min_x) + static_cast<double>(max_x)) * 0.5;
-    const double cy = (static_cast<double>(min_y) + static_cast<double>(max_y)) * 0.5;
+    // THE PHASE ANCHOR IS THE FACE, ALWAYS. Line i sits at `i * spacing` from the
+    // face's own centre, so the pattern belongs to the parcel: pan the view and
+    // it travels with the parcel instead of crawling across it. Everything below
+    // narrows WHICH of those lines are emitted; none of it moves them.
+    const double cx = (static_cast<double>(face.min_x) + static_cast<double>(face.max_x)) * 0.5;
+    const double cy = (static_cast<double>(face.min_y) + static_cast<double>(face.max_y)) * 0.5;
 
-    const double w = static_cast<double>(max_x) - static_cast<double>(min_x);
-    const double h = static_cast<double>(max_y) - static_cast<double>(min_y);
+    const double w = static_cast<double>(face.max_x) - static_cast<double>(face.min_x);
+    const double h = static_cast<double>(face.max_y) - static_cast<double>(face.min_y);
 
     // The half-diagonal, so a set at any angle still reaches every corner, plus
     // one spacing so the outermost line is not cut off by the rotation.
@@ -261,35 +298,103 @@ void hatch_lines(float min_x, float min_y, float max_x, float max_y, double spac
         out.push_back(static_cast<float>(cy + x * sa + y * ca));
     };
 
+    // What actually has to be covered: the part of the face that is on screen.
+    // An empty clip means "no viewport was given", and then the face itself is
+    // the region — which is the old behaviour, kept so a caller that cannot say
+    // where the screen is still gets a correct picture.
+    const bool bounded = !clip.empty();
+    const double rx0 =
+        bounded ? std::max(static_cast<double>(face.min_x), static_cast<double>(clip.min_x))
+                : static_cast<double>(face.min_x);
+    const double ry0 =
+        bounded ? std::max(static_cast<double>(face.min_y), static_cast<double>(clip.min_y))
+                : static_cast<double>(face.min_y);
+    const double rx1 =
+        bounded ? std::min(static_cast<double>(face.max_x), static_cast<double>(clip.max_x))
+                : static_cast<double>(face.max_x);
+    const double ry1 =
+        bounded ? std::min(static_cast<double>(face.max_y), static_cast<double>(clip.max_y))
+                : static_cast<double>(face.max_y);
+    if (rx1 <= rx0 || ry1 <= ry0) return; // the face is off screen entirely
+
+    // That region's four corners, turned into the hatch's own frame. The extent
+    // along the local y axis says WHICH lines can reach it; the extent along the
+    // local x axis says how long each of them has to be.
+    double ly_min = 1e300;
+    double ly_max = -1e300;
+    double lx_min = 1e300;
+    double lx_max = -1e300;
+    for (const auto& [px, py] :
+         {std::pair{rx0, ry0}, std::pair{rx1, ry0}, std::pair{rx1, ry1}, std::pair{rx0, ry1}}) {
+        const double dx = px - cx;
+        const double dy = py - cy;
+        const double lx = dx * ca + dy * sa;
+        const double ly = -dx * sa + dy * ca;
+        lx_min          = std::min(lx_min, lx);
+        lx_max          = std::max(lx_max, lx);
+        ly_min          = std::min(ly_min, ly);
+        ly_max          = std::max(ly_max, ly);
+    }
+
     // A COUNT, not an accumulated position: adding a step a thousand times drifts,
     // and a hatch that drifts is a hatch whose spacing is not the one the annex
-    // published.
+    // published. The count is now taken from the visible band rather than from the
+    // whole face, which is the difference between a few dozen lines and a few
+    // hundred thousand at 1:1.
     const auto steps = static_cast<int>(std::floor(reach / spacing));
-    for (int i = -steps; i <= steps; ++i) {
+    const int first  = std::max(-steps, static_cast<int>(std::floor(ly_min / spacing)) - 1);
+    const int last   = std::min(steps, static_cast<int>(std::ceil(ly_max / spacing)) + 1);
+
+    // One spacing of overshoot at each end so a line's cap and its dash phase do
+    // not stop exactly at the screen edge and shimmer as the view moves.
+    const double x_from = std::max(-reach, lx_min - spacing);
+    const double x_to   = std::min(reach, lx_max + spacing);
+    if (x_to <= x_from) return;
+
+    for (int i = first; i <= last; ++i) {
         const double y = i * spacing;
-        put(-reach, y);
-        put(reach, y);
+        put(x_from, y);
+        put(x_to, y);
     }
 }
 
-void pattern_points(float min_x, float min_y, float max_x, float max_y, double step_x,
-                    double step_y, std::vector<float>& out)
+void pattern_points(const PixelBox& face, const PixelBox& clip, double step_x, double step_y,
+                    std::vector<float>& out)
 {
     if (step_x <= 0.0 || step_y <= 0.0) return;
+    if (face.max_x < face.min_x || face.max_y < face.min_y) return;
+
+    // Bounded to what can be seen BEFORE the grid is counted. `floor(edge / step)`
+    // anchors the grid to the pixel lattice and not to the edge it was given, so
+    // clipping the edge moves no glyph — it only stops the loop from walking
+    // across a parcel that is mostly off screen. A grid is two dimensional, so
+    // this is the difference between a hundred stamps and a hundred thousand.
+    const bool bounded = !clip.empty();
+    const double min_x =
+        bounded ? std::max(static_cast<double>(face.min_x), static_cast<double>(clip.min_x))
+                : static_cast<double>(face.min_x);
+    const double min_y =
+        bounded ? std::max(static_cast<double>(face.min_y), static_cast<double>(clip.min_y))
+                : static_cast<double>(face.min_y);
+    const double max_x =
+        bounded ? std::min(static_cast<double>(face.max_x), static_cast<double>(clip.max_x))
+                : static_cast<double>(face.max_x);
+    const double max_y =
+        bounded ? std::min(static_cast<double>(face.max_y), static_cast<double>(clip.max_y))
+                : static_cast<double>(face.max_y);
     if (max_x < min_x || max_y < min_y) return;
 
-    const double x0 = std::floor(static_cast<double>(min_x) / step_x) * step_x;
-    const double y0 = std::floor(static_cast<double>(min_y) / step_y) * step_y;
+    const double x0 = std::floor(min_x / step_x) * step_x;
+    const double y0 = std::floor(min_y / step_y) * step_y;
 
-    const auto cols =
-        static_cast<int>(std::floor((static_cast<double>(max_x) + step_x - x0) / step_x));
-    const auto rows =
-        static_cast<int>(std::floor((static_cast<double>(max_y) + step_y - y0) / step_y));
+    const auto cols = static_cast<int>(std::floor((max_x + step_x - x0) / step_x));
+    const auto rows = static_cast<int>(std::floor((max_y + step_y - y0) / step_y));
 
-    // A cheap ceiling on how many glyphs one face can ask for. A pattern whose
-    // spacing collapsed under a deep zoom would otherwise ask for millions of
-    // stamps and take the frame with it; a face that needs more than this is one
-    // whose pattern is finer than the screen can show anyway.
+    // A cheap ceiling on how many glyphs one face can ask for. It survives the
+    // clip because a spacing that collapses — a symbol whose interval rounds to a
+    // fraction of a pixel — can still ask for millions of stamps inside a single
+    // screen. What changed is that it is no longer REACHED by a normal deep zoom,
+    // where it used to make the pattern vanish rather than merely be slow.
     constexpr int kMaxStamps = 40000;
     if (cols <= 0 || rows <= 0 || cols > kMaxStamps || rows > kMaxStamps ||
         cols * rows > kMaxStamps)

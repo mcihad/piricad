@@ -26,6 +26,7 @@
 
 #include "kentos_cad/core/style.hpp"
 #include "kentos_cad/render/backend.hpp"
+#include "kentos_cad/render/symbology.hpp"
 
 #include <QBrush>
 #include <QColor>
@@ -397,14 +398,33 @@ private:
         pen.setWidthF(static_cast<qreal>(ps.line_width_px));
         painter.setPen(pen);
 
-        // Rotated about the box centre so the pattern is continuous across the
-        // whole face rather than restarting at each ring.
-        painter.translate(box.center());
-        painter.rotate(-static_cast<double>(ps.angle_udeg) / 1'000'000.0);
+        // THE SAME GENERATOR THE GPU BACKEND USES, and for the same reason the
+        // note on `hatch_lines` gives: the spacing is in pixels while the face is
+        // in world units, so a parcel at 1:1 asked for hundreds of thousands of
+        // lines, every one of them outside the clip this function had already
+        // set. Sharing it also removes the loop that walked a `double` — which is
+        // a defect in its own right (`cert-flp30-c`), because a step added a
+        // hundred thousand times is not the spacing the annex published.
+        const render::PixelBox face{static_cast<float>(box.left()), static_cast<float>(box.top()),
+                                    static_cast<float>(box.right()),
+                                    static_cast<float>(box.bottom())};
+        const QRect view = painter.viewport();
+        const render::PixelBox clip{
+            static_cast<float>(view.left()) - 8.0f, static_cast<float>(view.top()) - 8.0f,
+            static_cast<float>(view.right()) + 8.0f, static_cast<float>(view.bottom()) + 8.0f};
 
-        const double reach = std::hypot(box.width(), box.height()) * 0.5 + spacing;
-        for (double y = -reach; y <= reach; y += spacing)
-            painter.drawLine(QPointF(-reach, y), QPointF(reach, y));
+        // REUSED, not allocated per face. These are static member functions so
+        // there is no object to hang a buffer on, and render.md R20 forbids
+        // allocating inside a paint function — a plan with four thousand hatched
+        // parcels would otherwise make four thousand allocations a frame.
+        static thread_local std::vector<float> lines;
+        lines.clear();
+        render::hatch_lines(face, clip, spacing, static_cast<double>(ps.angle_udeg) / 1'000'000.0,
+                            lines);
+        for (std::size_t i = 0; i + 3 < lines.size(); i += 4)
+            painter.drawLine(
+                QPointF(static_cast<qreal>(lines[i]), static_cast<qreal>(lines[i + 1])),
+                QPointF(static_cast<qreal>(lines[i + 2]), static_cast<qreal>(lines[i + 3])));
 
         painter.restore();
     }
@@ -442,19 +462,30 @@ private:
         painter.setPen(QPen(faded(ps.line_rgba, ps.opacity), static_cast<qreal>(ps.line_width_px)));
         painter.setBrush(glyph_brush(ps));
 
-        // Anchored to the world grid rather than to the bounding box, so the
-        // glyphs do not crawl across the face as the user pans.
-        const double x0      = std::floor(box.left() / step_x) * step_x;
-        const double y0      = std::floor(box.top() / step_y) * step_y;
-        const double degrees = static_cast<double>(ps.angle_udeg) / 1'000'000.0;
-        for (double y = y0; y <= box.bottom() + step_y; y += step_y) {
-            for (double x = x0; x <= box.right() + step_x; x += step_x) {
-                painter.save();
-                painter.translate(x, y);
-                painter.rotate(degrees);
-                painter.drawPath(markerPath(ps.shape, size));
-                painter.restore();
-            }
+        // The shared generator again: world-grid anchored so the glyphs do not
+        // crawl as the user pans, and bounded to the viewport so a face that is
+        // mostly off screen does not ask for a grid nobody can see. A grid is two
+        // dimensional, so at four times the magnification the saving is sixteen.
+        const render::PixelBox face{static_cast<float>(box.left()), static_cast<float>(box.top()),
+                                    static_cast<float>(box.right()),
+                                    static_cast<float>(box.bottom())};
+        const QRect view = painter.viewport();
+        const render::PixelBox clip{
+            static_cast<float>(view.left()) - 8.0f, static_cast<float>(view.top()) - 8.0f,
+            static_cast<float>(view.right()) + 8.0f, static_cast<float>(view.bottom()) + 8.0f};
+
+        static thread_local std::vector<float> spots; // reused; see the note above
+        spots.clear();
+        render::pattern_points(face, clip, step_x, step_y, spots);
+
+        const double degrees     = static_cast<double>(ps.angle_udeg) / 1'000'000.0;
+        const QPainterPath glyph = markerPath(ps.shape, size);
+        for (std::size_t i = 0; i + 1 < spots.size(); i += 2) {
+            painter.save();
+            painter.translate(static_cast<qreal>(spots[i]), static_cast<qreal>(spots[i + 1]));
+            painter.rotate(degrees);
+            painter.drawPath(glyph);
+            painter.restore();
         }
 
         painter.setBrush(Qt::NoBrush);

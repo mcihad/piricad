@@ -51,9 +51,31 @@ struct Stamp
 /// than as one of a series. The phase is what lets two marker lines at one
 /// spacing say different things — MPYY's ETAPLAMA SINIRI alternates a filled
 /// circle with an open one, half a step apart.
+/// A rectangle in SCREEN pixels. Used for a face's bounding box and for the
+/// visible area, which the pattern generators need to tell apart.
+struct PixelBox
+{
+    float min_x{0.0f}; ///< left edge, pixels from the canvas's left
+    float min_y{0.0f}; ///< top edge, pixels from the canvas's top, y down
+    float max_x{0.0f}; ///< right edge
+    float max_y{0.0f}; ///< bottom edge
+
+    /// True when the rectangle encloses nothing. A default-constructed box is
+    /// empty, and the generators read that as "no clip given".
+    bool empty() const noexcept { return max_x <= min_x || max_y <= min_y; }
+};
+
+/// `clip` drops the stamps that cannot be seen, and it is the difference between
+/// a plan that pans and one that does not. The interval is in PIXELS while the
+/// run is a parcel boundary in world units, so at 1:1 one edge is hundreds of
+/// thousands of pixels long and carries tens of thousands of glyphs — each of
+/// them a full marker outline, built and uploaded every frame for a mark nobody
+/// can see. The WALK still crosses the whole run, so the phase is exactly what it
+/// would have been; only the emission stops. An empty clip means "not known" and
+/// stamps everything, which is what this did before.
 void place_along_run(const float* xs, const float* ys, std::uint32_t count,
                      core::MarkerPlacement placement, double interval, double phase,
-                     std::vector<Stamp>& out);
+                     const PixelBox& clip, std::vector<Stamp>& out);
 
 /// A glyph's outline in LOCAL pixels, centred on the origin.
 ///
@@ -81,21 +103,37 @@ struct MarkerOutline
 /// visible from the centre.
 void marker_outline(core::MarkerShape shape, double size, MarkerOutline& out);
 
-/// The parallel lines of a `çizgi-desen-dolgu`, over a box, at an angle.
+/// The parallel lines of a `çizgi-desen-dolgu`, over a face, at an angle.
 ///
-/// Appended as flat segments in SCREEN pixels: x0, y0, x1, y1 per line. The
-/// lines are laid out about the box CENTRE so the pattern is continuous across
-/// the whole face rather than restarting at each ring, and they overshoot the box
-/// by a spacing on every side so a rotated set still covers the corners.
-void hatch_lines(float min_x, float min_y, float max_x, float max_y, double spacing,
-                 double angle_degrees, std::vector<float>& out);
+/// Appended as flat segments in SCREEN pixels: x0, y0, x1, y1 per line. The lines
+/// are laid out about the FACE's centre so the pattern is continuous across the
+/// whole face rather than restarting at each ring, and they overshoot by a spacing
+/// so a rotated set still covers the corners.
+///
+/// `clip` IS WHY THIS FUNCTION IS FAST, and it is not an optimisation that can be
+/// skipped. The spacing is in PIXELS while the face is in world units, so at 1:1
+/// a parcel's bounding box is hundreds of screen widths across and covering it at
+/// six-pixel spacing means hundreds of thousands of segments — every one of them
+/// built, uploaded and then thrown away by the rasteriser. Measured on a styled
+/// imar plan: 3.8 MILLION vertices and 19.8 ms a frame with a handful of parcels
+/// on screen, against a 16 ms budget (§10.1).
+///
+/// The clip narrows the RANGE and never the PHASE: line i still sits at
+/// `i * spacing` from the face's own centre, so panning slides the pattern with
+/// the parcel instead of making it crawl across it.
+void hatch_lines(const PixelBox& face, const PixelBox& clip, double spacing, double angle_degrees,
+                 std::vector<float>& out);
 
-/// The anchor points of a `nokta-desen-dolgu` over a box.
+/// The anchor points of a `nokta-desen-dolgu` over a face.
 ///
 /// Anchored to the pixel grid with `floor(edge / step) * step` rather than to the
-/// box itself, so the glyphs do not crawl across the face as the user pans.
-void pattern_points(float min_x, float min_y, float max_x, float max_y, double step_x,
-                    double step_y, std::vector<float>& out);
+/// face itself, so the glyphs do not crawl across it as the user pans.
+///
+/// `clip` bounds the grid to what can be seen, for the reason `hatch_lines`
+/// gives — and more sharply, because a grid is TWO dimensional: at four times the
+/// magnification a hatch costs four times as much and a glyph grid sixteen.
+void pattern_points(const PixelBox& face, const PixelBox& clip, double step_x, double step_y,
+                    std::vector<float>& out);
 
 /// The size a point with NO symbology of its own is drawn at, in PAPER
 /// micrometres — 1,6 mm on the sheet.

@@ -207,6 +207,28 @@ class RhiBackend final : public render::Backend
 public:
     std::string name() const override { return "QRhi (GPU · geometri)"; }
 
+private:
+    /// The frame's visible rectangle in logical pixels, plus a margin.
+    ///
+    /// Held rather than threaded through every emitter because the pattern
+    /// generators are the only things that need it and they sit five calls deep.
+    /// Set once at the top of `render()`; an empty box means "not known", and the
+    /// generators then cover the whole face as they always did.
+    render::PixelBox visible_{};
+
+    /// `box` grown by `reach` on every side.
+    ///
+    /// A glyph is placed by its CENTRE, so a mark whose centre sits just outside
+    /// the screen can still have half of itself inside it. Growing by the glyph's
+    /// own size is what keeps the edge of the view from eating them.
+    static render::PixelBox grown(const render::PixelBox& box, double reach)
+    {
+        if (box.empty()) return box;
+        const auto r = static_cast<float>(std::max(0.0, reach));
+        return render::PixelBox{box.min_x - r, box.min_y - r, box.max_x + r, box.max_y + r};
+    }
+
+public:
     bool gpu() const override { return true; }
 
     render::FrameStats stats() const override { return stats_; }
@@ -753,7 +775,7 @@ void RhiBackend::emit_marker_line(const render::PolylineBatch& batch, const rend
             run_y_.push_back(static_cast<float>(cy - static_cast<double>(batch.ys[offset + v])));
         }
         render::place_along_run(run_x_.data(), run_y_.data(), run, ps.placement, interval,
-                                static_cast<double>(ps.phase_px), stamps_);
+                                static_cast<double>(ps.phase_px), grown(visible_, size), stamps_);
         offset += run;
     }
 
@@ -812,7 +834,7 @@ void RhiBackend::emit_line_pattern(const render::PolygonBatch& batch, const rend
     const double spacing = ps.interval_px > 0.5f ? static_cast<double>(ps.interval_px) : 6.0;
 
     scratch_.clear();
-    render::hatch_lines(box[0], box[1], box[2], box[3], spacing,
+    render::hatch_lines(render::PixelBox{box[0], box[1], box[2], box[3]}, visible_, spacing,
                         static_cast<double>(ps.angle_udeg) / 1'000'000.0, scratch_);
 
     const std::uint32_t first = static_cast<std::uint32_t>(segment_data_.size() * sizeof(float));
@@ -848,7 +870,8 @@ void RhiBackend::emit_point_pattern(const render::PolygonBatch& batch, const ren
     const double size   = ps.size_px > 0.5f ? static_cast<double>(ps.size_px) : 4.0;
 
     scratch_.clear();
-    render::pattern_points(box[0], box[1], box[2], box[3], step_x, step_y, scratch_);
+    render::pattern_points(render::PixelBox{box[0], box[1], box[2], box[3]}, visible_, step_x,
+                           step_y, scratch_);
 
     stamps_.clear();
     stamps_.reserve(scratch_.size() / 2);
@@ -1004,7 +1027,8 @@ void RhiBackend::emit_picture_along(const render::PolylineBatch& batch, const re
             run_y_.push_back(static_cast<float>(cy - static_cast<double>(batch.ys[offset + v])));
         }
         render::place_along_run(run_x_.data(), run_y_.data(), run, ps.placement, interval,
-                                static_cast<double>(ps.phase_px), stamps_);
+                                static_cast<double>(ps.phase_px),
+                                grown(visible_, std::max(width, height)), stamps_);
         offset += run;
     }
 
@@ -1073,7 +1097,8 @@ void RhiBackend::emit_picture_fill(const render::PolygonBatch& batch, const rend
     if (!emit_face(batch, cx, cy, 0u, /*as_mask=*/true, box)) return;
 
     scratch_.clear();
-    render::pattern_points(box[0], box[1], box[2], box[3], step_x, step_y, scratch_);
+    render::pattern_points(render::PixelBox{box[0], box[1], box[2], box[3]}, visible_, step_x,
+                           step_y, scratch_);
 
     stamps_.clear();
     stamps_.reserve(scratch_.size() / 2);
@@ -2092,6 +2117,18 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
     QRhi* rhi = target->rhi;
     if (!ensure_resources(rhi, target->rt->renderPassDescriptor(), target->rt->sampleCount()))
         return;
+
+    // WHAT CAN BE SEEN, for the pattern generators.
+    //
+    // THE MARGIN IS SMALL ON PURPOSE. A screen's worth on each side makes the
+    // clipped region three times the width and three times the height — nine
+    // times the area, and nine times the pattern — which throws away almost the
+    // whole point of clipping. The generators already overshoot by a spacing of
+    // their own so nothing pops in at the edge, so this only has to absorb
+    // rounding.
+    constexpr float kMargin = 8.0f;
+    visible_ = render::PixelBox{-kMargin, -kMargin, static_cast<float>(ctx.width_px) + kMargin,
+                                static_cast<float>(ctx.height_px) + kMargin};
 
     const QSize pixels = target->rt->pixelSize();
     if (pixels.isEmpty() || ctx.width_px <= 0 || ctx.height_px <= 0) return;
