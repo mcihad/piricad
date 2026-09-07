@@ -129,6 +129,82 @@ constexpr double kNormalCone = 0.36397023426620234;
 /// stores no floating point and a normal has to survive being handed about.
 constexpr double kNormalScale = 1000000.0;
 
+/// Where the ray from `base` through `toward` first meets a drawn edge, looking
+/// only within `window_radius` of `toward`. False when the ray runs into nothing.
+///
+/// WHY THIS EXISTS. A perpendicular is almost never drawn into empty space: it is
+/// drawn from one boundary ACROSS to another, and where it lands is the answer —
+/// a çekme mesafesi ends on the building line, a section runs wall to wall. With
+/// only a direction constraint the run stayed perpendicular but stopped wherever
+/// the pixel fell; with only an object snap it landed on the far edge and stopped
+/// being perpendicular. Neither alone is the measurement.
+///
+/// CURVES ARE NOT WALKED HERE. A circle and an arc store a centre and a handle,
+/// not a chord, so treating their two vertices as an edge would intersect a line
+/// nobody drew.
+bool ray_meets_edge(const Document& doc, Point2 base, Point2 toward, Mm window_radius, Point2& out,
+                    EntityId& hit_entity)
+{
+    if (base == toward) return false;
+
+    const Box2 window{toward.x - window_radius, toward.y - window_radius, toward.x + window_radius,
+                      toward.y + window_radius};
+
+    std::vector<EntityId> candidates;
+    pick_candidates(doc, window, candidates);
+
+    const EntityTable& entities  = doc.entities();
+    const RingGeometry& geometry = doc.geometry();
+
+    const auto limit = static_cast<double>(window_radius) * static_cast<double>(window_radius);
+    double best      = limit;
+    bool found       = false;
+
+    for (const EntityId e : candidates) {
+        if (!doc.alive(e)) continue;
+        if (entities.kind[e] == kCircleKind || entities.kind[e] == kArcKind) continue;
+
+        const RingSpan span = geometry.rings_of(entities.slot[e]);
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+            const auto xs = geometry.ring_xs(r);
+            const auto ys = geometry.ring_ys(r);
+            if (xs.size() < 2) continue;
+
+            const bool closed          = geometry.ring_role[r] != RingRole::Open;
+            const std::size_t n        = xs.size();
+            const std::size_t segments = closed ? n : n - 1;
+
+            for (std::size_t v = 0; v < segments; ++v) {
+                const std::size_t w = (v + 1) % n;
+                const Point2 a{xs[v], ys[v]};
+                const Point2 b{xs[w], ys[w]};
+                if (!segment_touches_box(a, b, window)) continue;
+
+                Point2 crossing{};
+                double t = 0.0;
+                double u = 0.0;
+                if (!line_intersection(base, toward, a, b, crossing, t, u)) continue;
+
+                // ON the drawn edge, and AHEAD of the base. A crossing behind the
+                // run is the boundary it left, not the one it is going to.
+                if (u < 0.0 || u > 1.0 || t <= 0.0) continue;
+
+                const double dx = static_cast<double>(crossing.x - toward.x);
+                const double dy = static_cast<double>(crossing.y - toward.y);
+                const double d2 = (dx * dx) + (dy * dy);
+                if (d2 > best) continue;
+
+                best       = d2;
+                out        = crossing;
+                hit_entity = e;
+                found      = true;
+            }
+        }
+    }
+
+    return found;
+}
+
 /// The unit normal of the edge nearest `at`, scaled by `kNormalScale`.
 ///
 /// SEARCHED THE WAY EVERY OTHER SNAP SEARCHES: the same candidate narrowing, the
@@ -486,6 +562,100 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
     SnapResult result;
     result.point = q.aim;
 
+    // ---- 0. the surface's own perpendicular ----
+    //
+    // Dik mod squares a line to the SHEET. What a survey needs is square to the
+    // THING: a çekme mesafesi runs perpendicular to the boundary it is measured
+    // from, a building line to the road it faces, an offset to the edge it
+    // offsets. On a boundary running at 37 degrees dik mod is exactly the wrong
+    // answer, and there was no right one — the user read the bearing, added
+    // ninety and typed it.
+    //
+    // AHEAD OF THE OBJECT SNAP, and the placement is the rule. Behind it, the
+    // aid held only until the run reached something: the cursor came up to the
+    // boundary across the way, an endpoint or a nearest-point won as it should in
+    // every other case, and the line stopped being square to the surface it left
+    // — in the one gesture whose entire purpose was to stay square. So inside the
+    // cone the perpendicular wins outright, and what it lands ON is the crossing
+    // rather than an arbitrary point of the far edge. Outside the cone it is not
+    // engaged at all and every ordinary snap works exactly as before, which is
+    // what keeps this from being a mode that swallows the drawing.
+    //
+    // The surface is the edge nearest the BASE, because that is the one the run
+    // is leaving; and both directions along the normal are live, so a
+    // perpendicular can be struck inwards or outwards without aiming precisely.
+    // `apply_step` composes with it exactly as it does with the other two: the
+    // normal picks the ray, the step picks how far.
+    if (q.has_base && q.normal_lock && q.normal_reach > 0) {
+        Point2 unit{};
+        if (surface_normal(doc, q.base, q.normal_reach, unit)) {
+            const double nx = static_cast<double>(unit.x) / kNormalScale;
+            const double ny = static_cast<double>(unit.y) / kNormalScale;
+
+            const double dx = static_cast<double>(q.aim.x - q.base.x);
+            const double dy = static_cast<double>(q.aim.y - q.base.y);
+
+            // ALONG the normal, and how far OFF it. Both rays are live, so a
+            // perpendicular can be struck inwards or outwards without aiming
+            // precisely: the sign of `along` chooses the side.
+            const double along = (dx * nx) + (dy * ny);
+            const double off   = (dx * -ny) + (dy * nx);
+            const double reach = std::sqrt((dx * dx) + (dy * dy));
+
+            // A TRACKING AID, NOT A JAIL, and this is the whole difference.
+            //
+            // Held down as an absolute lock it did exactly what it was told
+            // and nothing else was drawable: with the mode on, every line and
+            // every measurement came out perpendicular no matter where the
+            // user aimed, so turning it on meant giving up the drawing. That
+            // is not what a snap is. Every other rule in this engine offers a
+            // point when the aim is NEAR it and stands aside when it is not,
+            // and the normal now does the same — inside the cone it lands
+            // exactly on the perpendicular, outside it the aim is the user's.
+            //
+            // The cone is angular rather than a distance, because the further
+            // along a perpendicular the user pulls, the further sideways the
+            // same intent wanders. `kNormalCone` is its tangent.
+            const bool inside_cone = std::abs(off) <= std::abs(along) * kNormalCone;
+
+            // Right on top of the base there is no direction to be near, so
+            // the aperture stands in for the cone: the first millimetres of a
+            // pull must not be decided by an angle measured on nothing.
+            const bool at_the_base = reach <= static_cast<double>(q.normal_reach);
+
+            if (reach > 0.0 && (inside_cone || at_the_base)) {
+                const Point2 on{q.base.x + mm_round(nx * along), q.base.y + mm_round(ny * along)};
+
+                // AND IT LANDS ON WHAT IT RUNS INTO. A perpendicular is drawn
+                // from one boundary ACROSS to another, and the far boundary is
+                // where the measurement ends. Reaching it used to cost the
+                // perpendicular: the object snap won, the point went onto the
+                // far edge at whatever spot the cursor was nearest, and the
+                // run stopped being square to the surface it left. Both hold
+                // now — the direction is the normal's, the point is the
+                // crossing.
+                //
+                // The step is NOT applied to a crossing. A step rounds how far
+                // along the ray the point sits, and the whole value of landing
+                // on an edge is that it sits exactly there.
+                Point2 crossing{};
+                EntityId crossed = kNoEntity;
+                if (q.radius > 0 && ray_meets_edge(doc, q.base, on, q.radius, crossing, crossed)) {
+                    result.point       = crossing;
+                    result.entity      = crossed;
+                    result.mode        = SnapNormal;
+                    result.constrained = true;
+                    return result;
+                }
+
+                result.point       = apply_step(q.base, on, q.step);
+                result.mode        = SnapNormal;
+                result.constrained = true;
+                return result;
+            }
+        }
+    }
+
     // ---- 1. object snap ----
     std::uint32_t object_modes = q.modes & SnapObjectMask;
 
@@ -812,69 +982,11 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
     // chooses the axis, polar chooses the ray, and the step chooses how far along
     // it the point lands. It is applied on its own too, so "12 cm adım" works with
     // no direction lock at all.
+    //
+    // The surface normal is NOT here. It is stage 0, ahead of the object snap,
+    // because it is the one direction aid whose whole job is to survive reaching
+    // something — see the note there.
     if (q.has_base) {
-        // THE SURFACE'S OWN PERPENDICULAR, and it OUTRANKS dik mod on purpose.
-        //
-        // Dik mod squares a line to the SHEET. What a survey needs is square to
-        // the THING: a çekme mesafesi runs perpendicular to the boundary it is
-        // measured from, a building line to the road it faces, an offset to the
-        // edge it offsets. On a boundary running at 37 degrees dik mod is exactly
-        // the wrong answer, and there was no right one — the user read the
-        // bearing, added ninety and typed it.
-        //
-        // The surface is the edge nearest the BASE, because that is the one the
-        // run is leaving; and both directions along the normal are live, so a
-        // perpendicular can be struck inwards or outwards without aiming
-        // precisely. `apply_step` composes with it exactly as it does with the
-        // other two: the normal picks the ray, the step picks how far.
-        if (q.normal_lock && q.normal_reach > 0) {
-            Point2 unit{};
-            if (surface_normal(doc, q.base, q.normal_reach, unit)) {
-                const double nx = static_cast<double>(unit.x) / kNormalScale;
-                const double ny = static_cast<double>(unit.y) / kNormalScale;
-
-                const double dx = static_cast<double>(q.aim.x - q.base.x);
-                const double dy = static_cast<double>(q.aim.y - q.base.y);
-
-                // ALONG the normal, and how far OFF it. Both rays are live, so a
-                // perpendicular can be struck inwards or outwards without aiming
-                // precisely: the sign of `along` chooses the side.
-                const double along = (dx * nx) + (dy * ny);
-                const double off   = (dx * -ny) + (dy * nx);
-                const double reach = std::sqrt((dx * dx) + (dy * dy));
-
-                // A TRACKING AID, NOT A JAIL, and this is the whole difference.
-                //
-                // Held down as an absolute lock it did exactly what it was told
-                // and nothing else was drawable: with the mode on, every line and
-                // every measurement came out perpendicular no matter where the
-                // user aimed, so turning it on meant giving up the drawing. That
-                // is not what a snap is. Every other rule in this engine offers a
-                // point when the aim is NEAR it and stands aside when it is not,
-                // and the normal now does the same — inside the cone it lands
-                // exactly on the perpendicular, outside it the aim is the user's.
-                //
-                // The cone is angular rather than a distance, because the further
-                // along a perpendicular the user pulls, the further sideways the
-                // same intent wanders. `kNormalCone` is its tangent.
-                const bool inside_cone = std::abs(off) <= std::abs(along) * kNormalCone;
-
-                // Right on top of the base there is no direction to be near, so
-                // the aperture stands in for the cone: the first millimetres of a
-                // pull must not be decided by an angle measured on nothing.
-                const bool at_the_base = reach <= static_cast<double>(q.normal_reach);
-
-                if (reach > 0.0 && (inside_cone || at_the_base)) {
-                    const Point2 on{q.base.x + mm_round(nx * along),
-                                    q.base.y + mm_round(ny * along)};
-                    result.point       = apply_step(q.base, on, q.step);
-                    result.mode        = SnapNormal;
-                    result.constrained = true;
-                    return result;
-                }
-            }
-        }
-
         if (q.ortho) {
             result.point       = apply_step(q.base, apply_ortho(q.base, q.aim), q.step);
             result.mode        = SnapOrtho;

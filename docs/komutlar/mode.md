@@ -101,9 +101,20 @@ sessizce devreye girmez. Aynı anda dik mod da açıksa **yüzey normali kazanı
 Kutupsal açı adımı yüzey normaliyle birlikte çalışır: normal doğrultuyu verir, adım o
 doğrultu üzerinde ilerlemeyi böler.
 
-Nokta yakalaması yüzey normalinin **önündedir**. Bir uç noktaya, bir kesişime ya da bir
-kenarın üstüne oturan tıklama oraya oturur; normal yalnız serbest imleci yönlendirir.
-Bu, bir köşeyi kendi köşesinden çekip almayan tek sıralamadır.
+**Karşı kenara tam dik iner.** Bir dik neredeyse hiç boşluğa çizilmez: bir sınırdan
+**karşıdaki** sınıra gider ve orada biter — yapı yaklaşma mesafesi cephe hattında,
+kesit duvardan duvara. Nişan koninin içindeyken imleç karşı kenara yaklaştığında nokta,
+o kenarın imlece en yakın yerine değil, **normalin kenarı kestiği yere** oturur. Böylece
+hem karşı kenarın üstündesinizdir hem de çizgi ilk yüzeye tam diktir.
+
+Bu yüzden koninin içinde yüzey normali **nesne yakalamasının önündedir**: aksi hâlde
+karşı kenara varıldığı anda uç nokta ya da en yakın kazanır ve çizgi tam da dik kalması
+gereken yerde dikliğini kaybeder. Koninin **dışında** ise yüzey normali hiç devreye
+girmez ve her yakalama her zamanki gibi çalışır — mod, çizimi yutmaz.
+
+Normalin önüne geçtiği yer yalnızca burasıdır. Adım (`core.yakalama.adim`) bir kesişime
+**uygulanmaz**: adım noktanın ışın üzerinde ne kadar ilerlediğini yuvarlar, kenara inen
+bir noktanın bütün değeri ise tam orada durmasıdır.
 
 Açı değerleri **mikro derece** cinsindendir: 45° = `45000000`. Ondalık sayı hiçbir ayarda
 kabul edilmez; bildirilen birim yeterince incedir.

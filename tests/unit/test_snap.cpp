@@ -827,6 +827,56 @@ TEST_CASE("YAKALAMA: yüzey normali bir KİLİT değil, bir YAKALAMADIR")
     CHECK_EQ(back.point, Point2{5000, -3000});
 }
 
+TEST_CASE("YAKALAMA: yüzey normali KARŞI KENARA da dik iner")
+{
+    // WHAT A PERPENDICULAR IS FOR. It is almost never drawn into empty space: it
+    // runs from one boundary ACROSS to another, and where it lands is the answer.
+    // A çekme mesafesi ends on the building line; a section runs wall to wall.
+    //
+    // Reaching the far edge used to COST the perpendicular. The object snap ran
+    // first and won, as it should in every other case: the point went onto the
+    // far edge at whatever spot the cursor was nearest, and the run stopped being
+    // square to the surface it left — in the one gesture whose entire purpose was
+    // to stay square.
+    Rig rig;
+    REQUIRE(rig.line("ÇİZGİ noktalar=0,0 20,0").ok());   // the surface left
+    REQUIRE(rig.line("ÇİZGİ noktalar=0,10 20,10").ok()); // the one across
+
+    core::SnapQuery q;
+    q.has_base     = true;
+    q.base         = Point2{5000, 0};
+    q.normal_lock  = true;
+    q.normal_reach = 500;
+    q.radius       = 500;
+    q.modes        = core::SnapEndpoint | core::SnapMidpoint | core::SnapNearest;
+
+    // 2.3 degrees off the perpendicular and 200 mm short of the far line: inside
+    // the cone, and inside the aperture of the crossing.
+    q.aim                       = Point2{5400, 9800};
+    const core::SnapResult onto = core::snap(rig.doc, q);
+    CHECK_EQ(static_cast<int>(onto.mode), static_cast<int>(core::SnapNormal));
+
+    // ON the far line — y is exactly 10 m — AND still square to the near one:
+    // x has not moved off the base by a millimetre.
+    CHECK_EQ(onto.point, Point2{5000, 10000});
+
+    // WITHOUT THE AID, the same aim is the case the user described: YAKIN takes
+    // it onto the far line at the nearest point, 400 mm along, and the run is no
+    // longer perpendicular to anything.
+    q.normal_lock                = false;
+    const core::SnapResult askew = core::snap(rig.doc, q);
+    CHECK_EQ(askew.point, Point2{5400, 10000});
+
+    // AND IT STILL STOPS AT NOTHING. Aimed into open ground the perpendicular is
+    // a direction and no more: there is no edge to land on, so the point is the
+    // projection of the aim and not some invented crossing.
+    q.normal_lock                      = true;
+    q.aim                              = Point2{5400, 4000};
+    const core::SnapResult open_ground = core::snap(rig.doc, q);
+    CHECK_EQ(static_cast<int>(open_ground.mode), static_cast<int>(core::SnapNormal));
+    CHECK_EQ(open_ground.point, Point2{5000, 4000});
+}
+
 TEST_CASE("YAKALAMA: bir NESNE yakalaması yüzey normalini yener")
 {
     // WHAT THE USER HIT. With the aid on, a cursor brought up to the end of

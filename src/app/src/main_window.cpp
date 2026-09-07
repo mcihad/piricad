@@ -1813,6 +1813,21 @@ void MainWindow::probeSurfaceNormal()
         QCoreApplication::processEvents();
     };
 
+    // Where the last line the document was given ends, in metres, to three
+    // decimals — the figure a perpendicular is drawn to produce.
+    const auto lastEnd = [this]() -> QString {
+        const core::Document& doc  = controller_->document();
+        const auto last            = static_cast<core::EntityId>(doc.entities().size() - 1);
+        const core::RingSpan rings = doc.geometry().rings_of(doc.entities().slot[last]);
+        if (rings.count == 0) return {};
+        const std::span<const core::Mm> xs = doc.geometry().ring_xs(rings.first);
+        const std::span<const core::Mm> ys = doc.geometry().ring_ys(rings.first);
+        if (xs.empty()) return {};
+        return QStringLiteral("%1, %2")
+            .arg(static_cast<double>(xs.back()) / 1000.0, 0, 'f', 3)
+            .arg(static_cast<double>(ys.back()) / 1000.0, 0, 'f', 3);
+    };
+
     // The angle of the last line the document was given, in degrees, measured
     // from its first vertex to its last.
     const auto drawnAngle = [this]() -> double {
@@ -1885,6 +1900,26 @@ void MainWindow::probeSurfaceNormal()
     // there was no other direction left to draw or to measure in. A snap offers a
     // point when the aim is near it and stands aside when it is not.
     say(QStringLiteral("koni dışı: %1°").arg(draw(Qt::Key_Shift, away), 0, 'f', 3));
+
+    // THE FAR EDGE, which is what a perpendicular is actually for: it runs from
+    // one boundary ACROSS to another and ends there. A second line parallel to
+    // the first, so the normal from the midpoint meets it square.
+    //
+    // STRAIGHT TO THE BUS, not through `runScriptLine`. ÇİZGİ repeats, so the
+    // shell re-arms it the moment a run ends, and `Controller::runLine` hands a
+    // typed line to a PARKED command before treating it as a command of its own
+    // — correctly, that is how a coordinate gets typed at a prompt. A scene being
+    // set up is not a user answering a prompt, so it goes in as a dispatch. The
+    // first version of this used `runScriptLine`, the line was swallowed as an
+    // answer, and the check below quietly measured a drawing with nothing across
+    // it and still passed the angle.
+    (void)controller_->bus().execute_line("ÇİZGİ 30,-10 50,10", command::Origin::Gui);
+    canvas_->zoomToExtents();
+    QCoreApplication::processEvents();
+
+    const core::Point2 across{40000, 500};
+    say(QStringLiteral("karşı kenar: %1°").arg(draw(Qt::Key_Shift, across), 0, 'f', 3));
+    say(QStringLiteral("indiği nokta: %1").arg(lastEnd()));
 
     // CTRL, THE OTHER HELD LOCK, and it is here because it was broken in exactly
     // the way the one above was: both sent `MOD` a BOOLEAN for a parameter

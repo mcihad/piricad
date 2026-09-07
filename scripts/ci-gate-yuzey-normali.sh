@@ -77,6 +77,15 @@ bekle "[normal] kilitli: 315.000°"
 # other direction left to draw or to measure in.
 bekle "[normal] koni dışı: 353.660°"
 
+# THE FAR EDGE, and this is what a perpendicular is actually for: it runs from one
+# boundary ACROSS to another and ENDS there. Reaching it used to cost the
+# perpendicular — the object snap won as it does everywhere else, the point went
+# onto the far edge wherever the cursor was nearest, and the run stopped being
+# square to the surface it left. Both hold now: still 315, and landing on the
+# crossing to the millimetre rather than on the projection of a pixel.
+bekle "[normal] karşı kenar: 315.000°"
+bekle "[normal] indiği nokta: 40.000, 0.000"
+
 # THE OTHER HELD LOCK, on the same road and broken the same way: Ctrl sends
 # `MOD köşegen`, which is polar tracking at 45 degrees. A second aim, 33.7
 # degrees off, so 45 is a different answer from both the free bearing and dik
@@ -93,4 +102,5 @@ fi
 
 echo "yuzey-normali: OK — 45°'lik kenara 7° yakın nişan tam 315°'ye oturuyor, 38° uzakta"
 echo "yuzey-normali:   imleç serbest (353.660°), dik modda 0°, Ctrl basılıyken 45°;"
+echo "yuzey-normali:   karşı kenara tam (40.000, 0.000) noktasında iniyor;"
 echo "yuzey-normali:   tuş bırakılınca yardım kapanıyor"
