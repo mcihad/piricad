@@ -58,8 +58,17 @@ bekle() {
 
 bekle "[aile] kart açıldı"
 
-# The whole family, in order, by the command each member sends.
-bekle "[aile] üyeler: ÇİZGİ · ÇOKLUÇİZGİ · DİKDÖRTGEN · ALAN"
+# AND IT SURVIVES THE HAND LETTING GO. The press that opened the card is still
+# down; its release arrives at the card, through the popup grab, with the pointer
+# still on the button and therefore on no row. Closing on it made the card open
+# and vanish in the same motion, so "hold, look, then choose" was impossible.
+bekle "[aile] bırakınca: açık"
+
+# The whole family, in order, by the command each member sends. TWO members, and
+# the two it does NOT have are the check: DİKDÖRTGEN and ÇOKGEN were in here once,
+# grouped as "things drawn with straight edges", and a rectangle is not a kind of
+# line — it is a face, with an area and a fill, and it sits under its own button.
+bekle "[aile] üyeler: ÇİZGİ · ÇOKLUÇİZGİ"
 
 # THE SECOND MEMBER, because taking the first would prove nothing the button did
 # not already do: the face follows the choice...
@@ -72,5 +81,5 @@ if [[ $fail -ne 0 ]]; then
     exit 1
 fi
 
-echo "arac-ailesi: OK — çizgi düğmesi dört üyeli aileyi açıyor, ikinci üye seçilince"
+echo "arac-ailesi: OK — çizgi düğmesi kendi ailesini açıyor, ikinci üye seçilince"
 echo "arac-ailesi:   düğmenin yüzü de çalışan komut da ÇOKLUÇİZGİ oluyor"

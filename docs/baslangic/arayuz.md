@@ -119,7 +119,7 @@ Beş grup. Aktif araç vurgu rengiyle işaretlenir.
 | Grup | Araçlar |
 |---|---|
 | **seçim** | Seç · Alan Seç · Kaydır |
-| **oluşturma** | Çizgi ▸ *(aile)* · Daire ▸ *(aile)* · Nokta · Metin |
+| **oluşturma** | Çizgi ▸ · Dikdörtgen ▸ · Daire ▸ · Yay ▸ *(aileler)* · Nokta · Metin |
 | **düzenleme** | Böl/Buda · Birleştir (tevhit) · Parsel Böl (ifraz) · Taşı · Ofset |
 | **ölçüm** | Uzunluk Ölç ▸ *(aile)* |
 | **yardımcı** | Stil Kopyala · Topoloji Denetimi |
@@ -131,15 +131,27 @@ yapardı. Birbirinin yerine geçen araçlar **tek düğmede** toplanır; düğme
 kullandığınız aracı gösterir, ailenin geri kalanı bir basış ötededir. Böyle bir
 düğmenin sağ alt köşesinde küçük bir **köşe işareti** vardır.
 
-| Düğme | Ailesi |
-|---|---|
-| Çizgi | `ÇİZGİ` · `ÇOKLUÇİZGİ` · `DİKDÖRTGEN` · `ÇOKGEN` |
-| Daire | `DAİRE` · `YAY` · `ELİPS` · `DİLİM` · `HALKA` |
-| Uzunluk Ölç | `ÖLÇ` · `ALANÖLÇ` · `KOORDİNAT` |
+Gruplama **ne çizdiğinize** göredir, kalemin düz gidip gitmediğine göre değil: bir
+dikdörtgen bir çizgi türü değildir — alanı, çevresi ve dolgusu olan bir **yüzdür**, ve
+yeri diğer yüz üreten aracın yanıdır. Aynı biçimde daire kapalıdır ve bir şeyi çevreler,
+yay ise açık bir kenardır ve hiçbir şeyi çevrelemez.
+
+| Düğme | Ailesi | Ortak yanı |
+|---|---|---|
+| Çizgi | `ÇİZGİ` · `ÇOKLUÇİZGİ` | açık kenar dizisi |
+| Dikdörtgen | `DİKDÖRTGEN` · `ÇOKGEN` | kapalı yüz |
+| Daire | `DAİRE` · `ELİPS` · `HALKA` | kapalı eğri |
+| Yay | `YAY` · `DİLİM` | açık eğri ve ondan kesilen dilim |
+| Uzunluk Ölç | `ÖLÇ` · `ALANÖLÇ` · `KOORDİNAT` | ölçme |
 
 Aileyi açmanın üç yolu vardır: düğmeyi **basılı tutmak**, köşe işaretine **tıklamak**
 ya da düğmeye **sağ tıklamak**. Kısa bir tıklama aileyi açmaz, düğmenin yüzündeki
 aracı çalıştırır.
+
+Kart açıldıktan sonra iki türlü seçebilirsiniz: parmağınızı **kaldırmadan** bir satırın
+üstüne kayıp orada bırakmak, ya da **bırakıp** kartı okuduktan sonra tıklamak. Tuşu
+bırakmak kartı kapatmaz — kart ancak bir satır seçilince, **Esc**'e basılınca ya da
+dışına tıklayınca kapanır.
 
 Açılan kart, her aracın adının yanına **komut adını** da yazar. Bu bilerek yapılmıştır:
 düğmeyle bulduğunuz aracı yarın komut satırına yazabilesiniz diye. Kart ok tuşlarıyla
@@ -245,10 +257,11 @@ işaretlendiğinde o mod açılır:
 |---|---|
 | **uç nokta** | Bir halkanın köşesi — parsel köşesi, bina köşesi |
 | **orta nokta** | Bir kenarın tam ortası |
-| **merkez** | Kapalı bir halkanın ağırlık merkezi |
+| **merkez** | Bir **eğrinin** çizildiği merkez: dairenin, yayın |
+| **ağırlık merkezi** | Kapalı bir halkanın alan ağırlık merkezi — parselin ortası |
 | **kesişim** | İki kenarın gerçekten kesiştiği yer |
 | **dik ayak** | Önceki noktadan bir kenara indirilen dikin ayağı |
-| **en yakın** | Kenarın imlece en yakın noktası |
+| **en yakın** | Kenarın imlece en yakın noktası — çizginin **herhangi bir** noktası |
 | **düğüm** | Ölçülmüş tek nokta: nirengi, poligon noktası, röper |
 | **ızgara** | En yakın ızgara kesişimi |
 | **kutupsal** | Önceki noktadan çıkan kutupsal ışın |
@@ -256,6 +269,9 @@ işaretlendiğinde o mod açılır:
 | **paralel** | Önceki noktadan çıkan, bir kenara paralel ışın |
 | **uzatılmış kesişim** | İki kenarın doğrularının kesişeceği yer — ikisi de oraya kadar uzanmasa bile |
 | **kılavuz** | Cetvelden çektiğiniz yapı çizgisi; iki kılavuz kesişiyorsa kesişimi |
+
+Varsayılan olarak açık olanlar: uç nokta, orta nokta, merkez, kesişim, **en yakın**,
+düğüm ve ağırlık merkezi.
 
 Son üçü **kurulmuş** noktalardır: çizimde öyle bir nokta yoktur, geometri onu ima
 eder. Bu yüzden glifleri **açıktır** — içinde boşluk olan bir şekil — ve sıralamada

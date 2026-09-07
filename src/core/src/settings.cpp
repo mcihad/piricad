@@ -1344,13 +1344,22 @@ KENTOS_SETTING(yakalama_modlari)
         // röper could not be snapped to at all. It is the single most important
         // thing on a cadastral sheet to snap to: every boundary was measured
         // from one.
-        .fallback = SettingValue::integer(0x820F),
+        //
+        // YAKIN joins them, and it answers "snap anywhere along that line" — the
+        // question a measurement asks most often. It was off, so a cursor brought
+        // up to the middle of a boundary snapped to nothing and the measurement
+        // came from wherever the pixel happened to land. It cannot take anything
+        // away from anyone: the priority table ranks it below every real feature,
+        // so a corner, a midpoint, a centre and an intersection all still win
+        // over the edge that carries them.
+        .fallback = SettingValue::integer(0x822F),
         .range    = SettingRange::between(0, 0xFFFF),
         .values   = {},
         .unit     = "bit maskesi",
         .summary  = "Etkin nesne yakalama modları, bit maskesi. Yakalama çizimi değil "
                     "çizme biçimini etkilediği için oturum kapsamındadır. "
-                    "Varsayılan: UÇ | ORTA | MERKEZ | KESİŞİM | DÜĞÜM.",
+                    "Varsayılan: UÇ | ORTA | MERKEZ | KESİŞİM | YAKIN | DÜĞÜM | "
+                    "AĞIRLIK MERKEZİ.",
         .section  = "Çizim ve Yakalama", // ui-label
     };
 }
@@ -1384,8 +1393,9 @@ KENTOS_SETTING(yuzey_normali)
         .values   = {},
         .unit     = "",
         .summary  = "Yüzey normali: çizgiyi başladığı yüzeye DİK kilitler — sayfaya "
-                    "değil. Dik moda üstün gelir. Girdi yardımıdır, kaydedilmez; "
-                    "oturum kapsamındadır.",
+                    "değil. Nişan alınan yön normale 20° yaklaşınca oturur, uzaktayken "
+                    "imleç serbesttir. Dik moda üstün gelir. Girdi yardımıdır, "
+                    "kaydedilmez; oturum kapsamındadır.",
         .section  = "Çizim ve Yakalama", // ui-label
     };
 }

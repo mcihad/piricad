@@ -16,6 +16,7 @@
 
 #include <functional>
 
+#include <QRectF>
 #include <QVector>
 #include <QWidget>
 
@@ -107,7 +108,18 @@ protected:
     /// Tracks which row the pointer is over.
     void mouseMoveEvent(QMouseEvent* event) override;
 
-    /// Settles on the row under the pointer; a release off the rows just closes.
+    /// Dismisses the card when the press lands outside it. A `Qt::Popup` grabs
+    /// the pointer but does not close itself, so this is what "click away"
+    /// means here.
+    void mousePressEvent(QMouseEvent* event) override;
+
+    /// Settles on the row under the pointer.
+    ///
+    /// A release OFF the rows does nothing, and that is the whole fix: the press
+    /// that opened this card is still down, and its release arrives here through
+    /// the popup grab with the pointer still over the BUTTON. Closing on it made
+    /// the card vanish the instant the user let go — so holding could never be
+    /// followed by looking.
     void mouseReleaseEvent(QMouseEvent* event) override;
 
     /// Arrow keys move, Enter settles, Esc closes — the card is answerable
@@ -115,6 +127,9 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
 
 private:
+    /// The card itself, inside the translucent margin the shadow is drawn in.
+    QRectF cardRect() const;
+
     /// The row under `where`, or -1 when the point is off the rows.
     int rowAt(const QPoint& where) const;
 

@@ -80,24 +80,30 @@ Bugün oturum kapsamında altı mod vardır:
 ### Yüzey normali
 
 `dik_mod` imleci **sayfanın** eksenlerine kilitler: yatay ya da düşey. `yüzey_normali`
-imleci **nesnenin** eksenine kilitler: ilk noktanın oturduğu kenara tam dik olan
+imleci **nesnenin** eksenine yakalar: ilk noktanın oturduğu kenara tam dik olan
 doğrultuya.
 
 37°'lik bir parsel sınırından çekilen bir yapı yaklaşma mesafesi 127°'dir. Dik mod bunu
 söyleyemez; gözle çizilen bir dik ise ölçüsü tapuya giden bir belgeye onda birlik hata
 olarak yazılır. Yüzey normali bunu tam çizer.
 
-Kilit, **ilk noktanın yakınındaki en yakın kenardan** okunur. Yakınlık ölçüsü yakalama
-toleransıdır (`core.yakalama.tolerans`): erim içinde bir kenar yoksa mod sessizce
-devreye girmez ve doğrultu serbest kalır. Aynı anda dik mod da açıksa **yüzey normali
-kazanır** — daha özel olan kilit, daha genel olanı ezer.
+**Bu bir kilit değil, bir yakalamadır.** Nişan aldığınız yön normale **20°'den fazla
+uzaksa** yardım devreye girmez ve imleç sizindir; 20°'nin içindeyse nokta tam dik
+doğrultuya oturur. Yani mod açıkken de her yöne çizebilir, her yöne ölçebilirsiniz —
+dikey çekmek istediğinizde kabaca o yöne nişan almanız yeter, gerisini program tam
+yapar.
 
-Kutupsal açı adımı yüzey normaliyle birlikte çalışır: kilit doğrultuyu verir, adım o
+Doğrultu, **ilk noktanın yakınındaki en yakın kenardan** okunur. Yakınlık ölçüsü
+yakalama toleransıdır (`core.yakalama.tolerans`): erim içinde bir kenar yoksa yardım
+sessizce devreye girmez. Aynı anda dik mod da açıksa **yüzey normali kazanır** — daha
+özel olan, daha genel olanı ezer.
+
+Kutupsal açı adımı yüzey normaliyle birlikte çalışır: normal doğrultuyu verir, adım o
 doğrultu üzerinde ilerlemeyi böler.
 
-Nokta yakalaması yüzey normalinin **önündedir**. Bir uç noktaya ya da bir kesişime
-oturan tıklama oraya oturur; kilit yalnız serbest imleci yönlendirir. Bu, bir köşeyi
-kendi köşesinden çekip almayan tek sıralamadır.
+Nokta yakalaması yüzey normalinin **önündedir**. Bir uç noktaya, bir kesişime ya da bir
+kenarın üstüne oturan tıklama oraya oturur; normal yalnız serbest imleci yönlendirir.
+Bu, bir köşeyi kendi köşesinden çekip almayan tek sıralamadır.
 
 Açı değerleri **mikro derece** cinsindendir: 45° = `45000000`. Ondalık sayı hiçbir ayarda
 kabul edilmez; bildirilen birim yeterince incedir.
@@ -122,8 +128,15 @@ kabul edilmez; bildirilen birim yeterince incedir.
 | 14 | `16384` | Kılavuz | Kendi koyduğunuz çizim kılavuzuna |
 | 15 | `32768` | Ağırlık merkezi | Kapalı bir halkanın **alan** ağırlık merkezine |
 
-Varsayılan `0x820F` = uç nokta + orta nokta + merkez + kesişim + düğüm +
-ağırlık merkezi.
+Varsayılan `0x822F` = uç nokta + orta nokta + merkez + kesişim + **en yakın** +
+düğüm + ağırlık merkezi.
+
+**En yakın** varsayılana sonradan katıldı. Kapalı olması "her zaman bir şey bulur,
+aradığınız köşeyi gölgeler" gerekçesineydi; oysa bunu maske değil **öncelik tablosu**
+çözüyor — en yakın, gerçek olan her şeyin altındadır, yani bir köşe, bir orta nokta, bir
+merkez ve bir kesişim onu her zaman yener. Kapalı olmasının bedeli ise gerçekti: bir
+sınırın **ortasına** getirilen imleç hiçbir şeye oturmuyor, ölçü pikselin düştüğü yerden
+alınıyordu. "Şu çizgiye kaç metre" bir ölçümün en sık sorduğu sorudur.
 
 **Merkez ile ağırlık merkezi ayrı iki şeydir**, ve CAD bunları hep ayrı tutmuştur.
 `Merkez`, bir **eğrinin** çizildiği noktadır — dairenin ya da yayın merkezi; bir

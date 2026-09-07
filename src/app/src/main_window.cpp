@@ -1122,18 +1122,31 @@ void MainWindow::buildToolBox()
     // not and left out the one that does, which is the opposite of useful.
     //
     // FAMILIES, not one button each. Eleven creation tools down a 46 px column is
-    // a list nobody reads; they are four ways of laying straight edges, five ways
-    // of laying curves, and two that are neither. The button shows whichever
-    // member was used last and holds the rest one press away, which is how every
-    // CAD tool palette has answered this since the first one.
+    // a list nobody reads. The button shows whichever member was used last and
+    // holds the rest one press away, which is how every CAD tool palette has
+    // answered this since the first one.
+    //
+    // GROUPED BY WHAT COMES OUT, not by whether the pen moves in a straight line.
+    // "Straight edges" put DİKDÖRTGEN and ÇOKGEN under the line button, and a
+    // rectangle is not a kind of line — it is a FACE, with an area, a perimeter
+    // and a fill, and it belongs beside the other tool that makes one. The same
+    // mistake put YAY under DAİRE: a circle is closed and encloses something, an
+    // arc is an open run of edge and encloses nothing.
+    //
+    //   line   — an open run of edges
+    //   face   — a closed face
+    //   circle — a closed curve
+    //   arc    — an open curve, and the sector cut from one
     //
     // The flyout also PRINTS THE COMMAND WORD beside each name, so the mouse
     // teaches the keyboard: a user who found ÇOKLUÇİZGİ under the line button
     // has just been told what to type tomorrow (CLAUDE.md 5.15).
-    toolBox_->addFamily({actLine_, actPolyline_, actRectangle_, actPolygon_});
+    toolBox_->addFamily({actLine_, actPolyline_});
+    toolBox_->addFamily({actRectangle_, actPolygon_});
+    toolBox_->addFamily({actCircle_, actEllipse_, actAnnulus_});
     // YAY was built as a full draw tool and then left out of the column, so the
     // one curve this program can draw was reachable only by typing its name.
-    toolBox_->addFamily({actCircle_, actArc_, actEllipse_, actSector_, actAnnulus_});
+    toolBox_->addFamily({actArc_, actSector_});
     toolBox_->addTool(actPoint_);
     toolBox_->addTool(actText_);
     toolBox_->addSeparator();
@@ -1481,16 +1494,21 @@ void MainWindow::openSnapModes()
     menu.setTitle(tr("Nesne yakalama modları"));
 
     const core::Settings& session = controller_->bus().session_settings();
-    const auto mask = static_cast<std::uint16_t>(session.get("core.yakalama.modlar").as_int());
+    const auto mask = static_cast<std::uint32_t>(session.get("core.yakalama.modlar").as_int());
 
     // Writes the whole mask through MOD, which is the only road there is: the
-    // command line, a script and this menu all set the same sixteen bits.
-    const auto write = [this](std::uint16_t next) {
+    // command line, a script and this menu all set the same bits.
+    //
+    // THIRTY-TWO OF THEM, as the engine has. Sixteen was the width before
+    // `SnapCentroid` filled the last one, and "Hepsi" truncating a mask it had
+    // just been handed is the kind of defect that only shows up on the day a
+    // seventeenth mode lands.
+    const auto write = [this](std::uint32_t next) {
         controller_->runLine(QStringLiteral("MOD ad=yakalama_modları deger=%1").arg(next),
                              command::Origin::Gui);
     };
 
-    for (std::uint16_t bit = 1; bit != 0; bit = static_cast<std::uint16_t>(bit << 1)) {
+    for (std::uint32_t bit = 1; bit != 0; bit = static_cast<std::uint32_t>(bit << 1)) {
         if ((core::SnapAllMask & bit) == 0) continue;
 
         auto* row = menu.addAction(QString::fromUtf8(core::snap_mode_label(bit)));
@@ -1501,13 +1519,13 @@ void MainWindow::openSnapModes()
         // the transcript prints.
         row->setToolTip(QString::fromUtf8(core::snap_mode_id(bit)));
         connect(row, &QAction::triggered, this, [write, mask, bit](bool on) {
-            write(static_cast<std::uint16_t>(on ? (mask | bit) : (mask & ~bit)));
+            write(static_cast<std::uint32_t>(on ? (mask | bit) : (mask & ~bit)));
         });
     }
 
     menu.addSeparator();
     connect(menu.addAction(tr("Hepsi")), &QAction::triggered, this,
-            [write] { write(static_cast<std::uint16_t>(core::SnapAllMask)); });
+            [write] { write(static_cast<std::uint32_t>(core::SnapAllMask)); });
     connect(menu.addAction(tr("Hiçbiri")), &QAction::triggered, this, [write] { write(0); });
 
     // ---- the STEP, which is not one of the mask's bits ----
@@ -1812,13 +1830,14 @@ void MainWindow::probeSurfaceNormal()
         return turn;
     };
 
-    // The anchor is the MIDPOINT of that edge and the cursor goes east of it, 14 m
-    // clear of the edge so no object snap can claim the click: 353.7 degrees
-    // free, 315 under the lock. A run that printed the same figure twice would
-    // mean the key changed nothing. Millimetres here, because that is what the
-    // document stores; the line above is a command line and speaks metres.
+    // The anchor is the MIDPOINT of that edge. Two cursor positions, both well
+    // clear of the edge so no object snap can claim the click, and the pair is
+    // the whole test: one aimed roughly along the perpendicular and one nowhere
+    // near it. Millimetres here, because that is what the document stores; the
+    // line above is a command line and speaks metres.
     const core::Point2 anchor{20000, 20000};
-    const core::Point2 away{38000, 18000};
+    const core::Point2 away{38000, 18000};  ///< 353.7°, 38° off the normal
+    const core::Point2 toward{38000, 6000}; ///< 322.1°, 7° off it
 
     // UNDONE AFTER EACH RUN, and it is not tidiness. The first line drawn leaves
     // an ENDPOINT at the cursor position, and the next run's click snaps to it —
@@ -1846,18 +1865,26 @@ void MainWindow::probeSurfaceNormal()
         return turn;
     };
 
-    const double freeTurn = draw(0, away);
+    const double freeTurn = draw(0, toward);
     say(QStringLiteral("serbest: %1°").arg(freeTurn, 0, 'f', 3));
 
     // The control: dik mod on the same click squares the line to the SHEET, which
     // on this edge is exactly the wrong answer. Printing both is what makes the
     // third figure mean something.
     (void)controller_->bus().execute_line("MOD dik_mod evet", command::Origin::Gui);
-    say(QStringLiteral("dik mod: %1°").arg(draw(0, away), 0, 'f', 3));
+    say(QStringLiteral("dik mod: %1°").arg(draw(0, toward), 0, 'f', 3));
     (void)controller_->bus().execute_line("MOD dik_mod hayır", command::Origin::Gui);
 
-    const double lockedTurn = draw(Qt::Key_Shift, away);
+    // INSIDE THE CONE: the aim is 7 degrees off the perpendicular and lands
+    // exactly on it.
+    const double lockedTurn = draw(Qt::Key_Shift, toward);
     say(QStringLiteral("kilitli: %1°").arg(lockedTurn, 0, 'f', 3));
+
+    // OUTSIDE IT, and this is the line the user complained about. Held as an
+    // absolute lock the aid answered 315 here too, which meant that with it on
+    // there was no other direction left to draw or to measure in. A snap offers a
+    // point when the aim is near it and stands aside when it is not.
+    say(QStringLiteral("koni dışı: %1°").arg(draw(Qt::Key_Shift, away), 0, 'f', 3));
 
     // CTRL, THE OTHER HELD LOCK, and it is here because it was broken in exactly
     // the way the one above was: both sent `MOD` a BOOLEAN for a parameter
@@ -1927,6 +1954,20 @@ void MainWindow::probeToolFamily()
         return;
     }
     say(QStringLiteral("kart açıldı"));
+
+    // THE RELEASE THAT ENDS THE HOLD, and it arrives HERE rather than at the
+    // button: a `Qt::Popup` grabs the pointer the moment it opens. The pointer is
+    // still over the button, so in the card's own coordinates it is off every row
+    // — and closing on that made the card vanish in the same motion that opened
+    // it. Nobody could hold, look, and then choose.
+    const QPointF outside(-20, 10);
+    QMouseEvent letGo(QEvent::MouseButtonRelease, outside,
+                      QPointF(card->mapToGlobal(QPoint(-20, 10))), Qt::LeftButton, Qt::NoButton,
+                      Qt::NoModifier);
+    QCoreApplication::sendEvent(card, &letGo);
+    say(QStringLiteral("bırakınca: %1")
+            .arg(card->isVisible() ? QStringLiteral("açık") : QStringLiteral("kapandı")));
+    if (!card->isVisible()) return;
 
     // WHAT IT LISTS, in order. The card is the only place a user is told that the
     // button they pressed sends `ÇİZGİ` and that `ÇOKLUÇİZGİ` is beside it.

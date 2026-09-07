@@ -267,6 +267,11 @@ void ToolFlyout::reveal(const QVector<QAction*>& family, QAction* current, const
     setFocus(Qt::PopupFocusReason);
 }
 
+QRectF ToolFlyout::cardRect() const
+{
+    return {kFlyShadow, kFlyShadow, width() - (kFlyShadow * 2.0), height() - (kFlyShadow * 2.0)};
+}
+
 int ToolFlyout::rowAt(const QPoint& where) const
 {
     const int row = (where.y() - kFlyShadow - kFlyPadV) / kFlyRow;
@@ -291,14 +296,27 @@ void ToolFlyout::mouseMoveEvent(QMouseEvent* event)
     update();
 }
 
+void ToolFlyout::mousePressEvent(QMouseEvent* event)
+{
+    // Outside the card means "not this after all". Inside it, the press does
+    // nothing: the choice is made on the release, over the row it lands on.
+    if (rowAt(event->position().toPoint()) < 0 && !cardRect().contains(event->position())) close();
+}
+
 void ToolFlyout::mouseReleaseEvent(QMouseEvent* event)
 {
+    // TWO GESTURES, ONE CARD, and the second one is why a release off the rows
+    // may not close anything.
+    //
+    //   HOLD AND DRAG — press the button, hold, slide onto a row, let go there.
+    //   HOLD AND LOOK — press the button, hold, let go, read the card, click.
+    //
+    // The release that ends the hold arrives HERE, through the popup grab, with
+    // the pointer still sitting on the button and therefore on no row at all.
+    // Closing on it made the second gesture impossible: the card opened and
+    // vanished in the same motion.
     const int row = rowAt(event->position().toPoint());
-    if (row < 0) {
-        close();
-        return;
-    }
-    settle(row);
+    if (row >= 0) settle(row);
 }
 
 void ToolFlyout::keyPressEvent(QKeyEvent* event)
@@ -345,8 +363,7 @@ void ToolFlyout::paintEvent(QPaintEvent*)
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing, true);
 
-    const QRectF card(kFlyShadow, kFlyShadow, width() - (kFlyShadow * 2.0),
-                      height() - (kFlyShadow * 2.0));
+    const QRectF card = cardRect();
 
     // The shadow is drawn as a short stack of rounded rects fading outwards. A
     // blur would cost a full-card raster on every open; this reads the same at

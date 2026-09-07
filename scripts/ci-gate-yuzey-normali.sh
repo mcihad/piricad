@@ -59,16 +59,23 @@ bekle() {
     fi
 }
 
-# THE FREE RUN FIRST, because it is what makes the other two mean something: the
-# same two clicks with no lock give the raw bearing of the cursor.
-bekle "[normal] serbest: 353.660°"
+# THE FREE RUN FIRST, because it is what makes the rest mean something: the same
+# two clicks with no aid give the raw bearing of the cursor.
+bekle "[normal] serbest: 322.125°"
 
 # THE CONTROL. Dik mod on the same click squares the line to the sheet — 0
 # degrees — which on a 45 degree boundary is exactly the wrong answer.
 bekle "[normal] dik mod: 0.000°"
 
-# THE ANSWER. Perpendicular to the EDGE, and the edge runs at 45.
+# THE ANSWER. Perpendicular to the EDGE, and the edge runs at 45. The aim was 7
+# degrees off it, which is how a hand aims.
 bekle "[normal] kilitli: 315.000°"
+
+# AND IT IS A SNAP, NOT A JAIL — the line this gate exists for. Aimed 38 degrees
+# off the perpendicular the aid stands aside and the bearing is the user's own.
+# Held as an absolute lock it answered 315 here too, and with it on there was no
+# other direction left to draw or to measure in.
+bekle "[normal] koni dışı: 353.660°"
 
 # THE OTHER HELD LOCK, on the same road and broken the same way: Ctrl sends
 # `MOD köşegen`, which is polar tracking at 45 degrees. A second aim, 33.7
@@ -84,5 +91,6 @@ if [[ $fail -ne 0 ]]; then
     exit 1
 fi
 
-echo "yuzey-normali: OK — 45°'lik kenardan çekilen çizgi kilitliyken tam 315°, dik modda"
-echo "yuzey-normali:   0°, serbestken 353.660°, Ctrl basılıyken 45°; tuş bırakılınca kilit kapanıyor"
+echo "yuzey-normali: OK — 45°'lik kenara 7° yakın nişan tam 315°'ye oturuyor, 38° uzakta"
+echo "yuzey-normali:   imleç serbest (353.660°), dik modda 0°, Ctrl basılıyken 45°;"
+echo "yuzey-normali:   tuş bırakılınca yardım kapanıyor"

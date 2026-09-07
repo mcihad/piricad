@@ -117,6 +117,14 @@ Point2 arc_midpoint(Point2 centre, Mm radius, Point2 from, Point2 to)
                   centre.y + mm_round(static_cast<double>(radius) * std::sin(half))};
 }
 
+/// How wide the surface-normal aid catches, as the TANGENT of its half-angle.
+///
+/// tan(20°). Twenty degrees either side of the perpendicular is wide enough that
+/// a deliberate pull lands in it without aiming, and narrow enough that four
+/// fifths of every direction stays the user's own — which is the bargain a snap
+/// makes and a lock does not.
+constexpr double kNormalCone = 0.36397023426620234;
+
 /// The unit normal is carried as an integer pair scaled by this, because core
 /// stores no floating point and a normal has to survive being handed about.
 constexpr double kNormalScale = 1000000.0;
@@ -822,16 +830,48 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
         if (q.normal_lock && q.normal_reach > 0) {
             Point2 unit{};
             if (surface_normal(doc, q.base, q.normal_reach, unit)) {
-                const double nx    = static_cast<double>(unit.x) / kNormalScale;
-                const double ny    = static_cast<double>(unit.y) / kNormalScale;
-                const double along = static_cast<double>(q.aim.x - q.base.x) * nx +
-                                     static_cast<double>(q.aim.y - q.base.y) * ny;
+                const double nx = static_cast<double>(unit.x) / kNormalScale;
+                const double ny = static_cast<double>(unit.y) / kNormalScale;
 
-                const Point2 on{q.base.x + mm_round(nx * along), q.base.y + mm_round(ny * along)};
-                result.point       = apply_step(q.base, on, q.step);
-                result.mode        = SnapNormal;
-                result.constrained = true;
-                return result;
+                const double dx = static_cast<double>(q.aim.x - q.base.x);
+                const double dy = static_cast<double>(q.aim.y - q.base.y);
+
+                // ALONG the normal, and how far OFF it. Both rays are live, so a
+                // perpendicular can be struck inwards or outwards without aiming
+                // precisely: the sign of `along` chooses the side.
+                const double along = (dx * nx) + (dy * ny);
+                const double off   = (dx * -ny) + (dy * nx);
+                const double reach = std::sqrt((dx * dx) + (dy * dy));
+
+                // A TRACKING AID, NOT A JAIL, and this is the whole difference.
+                //
+                // Held down as an absolute lock it did exactly what it was told
+                // and nothing else was drawable: with the mode on, every line and
+                // every measurement came out perpendicular no matter where the
+                // user aimed, so turning it on meant giving up the drawing. That
+                // is not what a snap is. Every other rule in this engine offers a
+                // point when the aim is NEAR it and stands aside when it is not,
+                // and the normal now does the same — inside the cone it lands
+                // exactly on the perpendicular, outside it the aim is the user's.
+                //
+                // The cone is angular rather than a distance, because the further
+                // along a perpendicular the user pulls, the further sideways the
+                // same intent wanders. `kNormalCone` is its tangent.
+                const bool inside_cone = std::abs(off) <= std::abs(along) * kNormalCone;
+
+                // Right on top of the base there is no direction to be near, so
+                // the aperture stands in for the cone: the first millimetres of a
+                // pull must not be decided by an angle measured on nothing.
+                const bool at_the_base = reach <= static_cast<double>(q.normal_reach);
+
+                if (reach > 0.0 && (inside_cone || at_the_base)) {
+                    const Point2 on{q.base.x + mm_round(nx * along),
+                                    q.base.y + mm_round(ny * along)};
+                    result.point       = apply_step(q.base, on, q.step);
+                    result.mode        = SnapNormal;
+                    result.constrained = true;
+                    return result;
+                }
             }
         }
 

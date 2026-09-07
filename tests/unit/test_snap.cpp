@@ -135,9 +135,14 @@ TEST_CASE("YAKALAMA: DÜĞÜM varsayılan maskede — noktaya yakalanabilir")
     // KESİŞİM too: where two boundaries cross is a cadastral point.
     CHECK((modes & core::SnapIntersection) != 0);
 
-    // YAKIN stays OFF on purpose — it always finds something, and a mode that
-    // always finds something outranks the corner the user was reaching for.
-    CHECK((modes & core::SnapNearest) == 0);
+    // AND YAKIN, which was off for exactly one reason: it always finds
+    // something. That reason turned out to be answered by the priority table
+    // rather than by the mask — YAKIN ranks below every real feature, so it can
+    // never outrank the corner the user was reaching for — while the cost of
+    // leaving it off was real: a cursor brought up to the MIDDLE of a boundary
+    // snapped to nothing, and "how far is it to that line" is the question a
+    // measurement asks most often.
+    CHECK((modes & core::SnapNearest) != 0);
 }
 
 TEST_CASE("YAKALAMA: ızgara en yakın kesişime oturur ve ikinci kez oynamaz")
@@ -777,6 +782,107 @@ TEST_CASE("YAKALAMA: yayın uçları, ortası ve kendisi yakalanır")
     CHECK_EQ(static_cast<int>(core::snap(rig.doc, q).mode), static_cast<int>(core::SnapNone));
 }
 
+TEST_CASE("YAKALAMA: yüzey normali bir KİLİT değil, bir YAKALAMADIR")
+{
+    // WHAT WAS WRONG WITH IT. Held down as an absolute lock it did what it was
+    // told and nothing else was drawable: with the mode on, every line and every
+    // measurement came out perpendicular no matter where the user aimed. Turning
+    // the aid on meant giving up the drawing.
+    //
+    // That is not what a snap is. Every other rule in this engine offers a point
+    // when the aim is NEAR it and stands aside when it is not.
+    core::Document doc;
+    core::Op undo;
+    const core::LayerId layer = doc.ensure_layer("SINIR");
+
+    const std::array<Point2, 2> edge{Point2{0, 0}, Point2{20000, 0}};
+    REQUIRE(doc.add_polyline(layer, edge, undo).ok());
+
+    core::SnapQuery q;
+    q.has_base     = true;
+    q.base         = Point2{5000, 0}; // on the edge
+    q.normal_lock  = true;
+    q.normal_reach = 500;
+
+    // INSIDE THE CONE — 9.5 degrees off a vertical normal. It lands exactly on
+    // the perpendicular, which is the whole point of asking for one.
+    q.aim                     = Point2{5500, 3000};
+    const core::SnapResult on = core::snap(doc, q);
+    CHECK_EQ(static_cast<int>(on.mode), static_cast<int>(core::SnapNormal));
+    CHECK_EQ(on.point, Point2{5000, 3000});
+
+    // OUTSIDE IT — 45 degrees off. The aim is the user's own and nothing touches
+    // it. This is the assertion the old absolute lock could never make.
+    q.aim                       = Point2{8000, 3000};
+    const core::SnapResult free = core::snap(doc, q);
+    CHECK(free.mode != core::SnapNormal);
+    CHECK_EQ(free.point, Point2{8000, 3000});
+
+    // AND BOTH SIDES ARE LIVE. A perpendicular may be struck into the parcel or
+    // out of it, and which one is decided by where the user aimed, not by a sign
+    // chosen here.
+    q.aim                       = Point2{5500, -3000};
+    const core::SnapResult back = core::snap(doc, q);
+    CHECK_EQ(static_cast<int>(back.mode), static_cast<int>(core::SnapNormal));
+    CHECK_EQ(back.point, Point2{5000, -3000});
+}
+
+TEST_CASE("YAKALAMA: bir NESNE yakalaması yüzey normalini yener")
+{
+    // WHAT THE USER HIT. With the aid on, a cursor brought up to the end of
+    // another line did not take it: they could measure to the perpendicular and
+    // to nothing else. The order in `snap()` already says an object snap returns
+    // before any direction constraint is reached — this is the case that proves
+    // the aid did not quietly become an exception to it.
+    Rig rig;
+    REQUIRE(rig.line("ÇİZGİ noktalar=0,0 20,0").ok());  // the surface
+    REQUIRE(rig.line("ÇİZGİ noktalar=15,3 18,9").ok()); // and a corner to reach for
+
+    // A REAL APERTURE. The declared tolerance is in screen pixels, so it is the
+    // view scale that turns it into millimetres; at 16 mm per pixel the default
+    // aperture is wide enough to reach a corner 224 mm away.
+    rig.bus.aids().set_view_scale(16.0);
+    REQUIRE(rig.line("MOD yüzey_normali evet").ok());
+
+    rig.echoed.clear();
+    REQUIRE(rig.line("ÖLÇ baslangic=5,0 bitis=15.2,3.1").ok());
+
+    // The corner at (15, 3), not the foot of a perpendicular at (5, 3.1):
+    // hypot(10, 3) = 10.440 m, and the locked answer would have been 3.100.
+    CHECK(rig.echoed.find("10,440") != std::string::npos);
+}
+
+TEST_CASE("YAKALAMA: YAKIN varsayılan olarak açık — çizginin herhangi bir noktası")
+{
+    // WHAT WAS MISSING. A measurement asks "how far is it from here to that
+    // boundary" far more often than it asks about a corner, and YAKIN is the mode
+    // that answers it. It was off by default, so a cursor brought up to the middle
+    // of a boundary snapped to nothing and the measurement came from wherever the
+    // pixel happened to land — silently, and wrong by a pixel's worth of ground.
+    Rig rig;
+    CHECK((rig.bus.aid_settings().modes & core::SnapNearest) != 0);
+
+    REQUIRE(rig.line("ÇİZGİ noktalar=0,0 20,0").ok());
+    rig.bus.aids().set_view_scale(16.0);
+
+    // Both aims are 200 mm off the line and nowhere near either end, so only
+    // YAKIN can answer them. Snapped, the measured run is exactly 10 m; unsnapped
+    // it is 10 m as well — which is why the ANGLE is checked too: off the line the
+    // run would still be east-west, but it would not START on the boundary.
+    rig.echoed.clear();
+    REQUIRE(rig.line("ÖLÇ baslangic=5,0.2 bitis=15,-0.2").ok());
+    CHECK(rig.echoed.find("10,000") != std::string::npos);
+    CHECK(rig.echoed.find("90.000°") != std::string::npos);
+
+    // And it never takes a corner away: the priority table ranks it below every
+    // real feature, so an aim near the end lands ON the end.
+    core::SnapQuery q;
+    q.aim    = Point2{19800, 200};
+    q.radius = 400;
+    q.modes  = core::SnapEndpoint | core::SnapNearest;
+    CHECK_EQ(static_cast<int>(core::snap(rig.doc, q).mode), static_cast<int>(core::SnapEndpoint));
+}
+
 TEST_CASE("YAKALAMA: ÖLÇ'ün ikinci noktası da yakalanıyor")
 {
     // WHAT WAS ASKED. Snapping runs inside the command layer, on the path every
@@ -869,11 +975,12 @@ TEST_CASE("YAKALAMA: MOD yüzey_normali yazmak GERÇEKTEN kilitliyor")
     REQUIRE(rig.line("KATMAN ad=SINIR").ok());
     REQUIRE(rig.line("ÇİZGİ 0,0 10,10").ok()); // an edge at 45 degrees, in metres
 
-    // Two points, both typed: the aim is a loose wave away from the edge and the
-    // base sits on it. Source-blindness is the point — a typed run and a drawn
-    // run take the same road through `apply_input_aids`.
+    // Two points, both typed: the base sits on the edge and the aim is a loose
+    // wave INSIDE the aid's cone — a couple of degrees off the perpendicular,
+    // which is how a hand aims. Source-blindness is the point: a typed run and a
+    // drawn run take the same road through `apply_input_aids`.
     REQUIRE(rig.line("MOD yüzey_normali evet").ok());
-    REQUIRE(rig.line("ÇİZGİ 5,5 9,4.5").ok());
+    REQUIRE(rig.line("ÇİZGİ 5,5 9,1.2").ok());
 
     const auto drawn = static_cast<core::EntityId>(doc_of(rig).entities().size() - 1);
     const core::RingSpan rings =
@@ -894,7 +1001,7 @@ TEST_CASE("YAKALAMA: MOD yüzey_normali yazmak GERÇEKTEN kilitliyor")
     // was aimed — a check that would pass by accident if the engine were simply
     // ignoring the aim.
     REQUIRE(rig.line("MOD yüzey_normali hayır").ok());
-    REQUIRE(rig.line("ÇİZGİ 5,5 9,4.5").ok());
+    REQUIRE(rig.line("ÇİZGİ 5,5 9,1.2").ok());
 
     const auto free_drawn = static_cast<core::EntityId>(doc_of(rig).entities().size() - 1);
     const core::RingSpan free_rings =
@@ -902,7 +1009,7 @@ TEST_CASE("YAKALAMA: MOD yüzey_normali yazmak GERÇEKTEN kilitliyor")
     const auto fxs = doc_of(rig).geometry().ring_xs(free_rings.first);
     const auto fys = doc_of(rig).geometry().ring_ys(free_rings.first);
     CHECK_EQ(static_cast<long long>(fxs[1]), 9000LL);
-    CHECK_EQ(static_cast<long long>(fys[1]), 4500LL);
+    CHECK_EQ(static_cast<long long>(fys[1]), 1200LL);
 }
 
 TEST_CASE("SEÇİM: pick_all imlecin altındaki her şeyi, en yakın önce verir")
