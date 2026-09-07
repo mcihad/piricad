@@ -194,6 +194,26 @@ satırından, betikten ya da yapay zekâ önerisinden gelmiş olması fark etmez
 | `io.no_driver: Dış biçim desteği KAPALI.` | GDAL olmadan derlenmiş yapı | Mesajdaki kurulum komutunu izleyin |
 | `'...' açılamadı: ...` | Dosya yok, okunamıyor ya da bozuk | Yolu ve izinleri denetleyin |
 | `İçe aktarma iptal edildi; çizim değişmedi.` | Sihirbazda **Okumayı durdur**'a basıldı | Yeniden **İleri**'ye basın |
+
+## Bozuk öğeler atlanır, sayılır ve söylenir
+
+Gerçek bir çizim bozuk öğe taşır. Bir CAD programının bıraktığı, elli beş
+noktasının hepsi aynı yerde olan bir çokgen; sıfır uzunlukta bir çizgi; üç
+köşesi olmayan bir alan. Bunlar **atlanır**, çizimin geri kalanı okunur ve
+transkript kaç tanesinin neden atlandığını yazar:
+
+```text
+İçe aktarıldı: 71 820 nesne, 112 katman (DXF, EPSG:5256)
+  not: 3 öğe geometrisi kullanılamadığı için atlandı. İlki: 1. halka dış halka
+       en az 3 tepe noktası ister, verilen: 1
+```
+
+Bir öğe yüzünden bütün dosyayı reddetmek doğru değildir: 48 MB'lık bir kadastro
+çiziminde tek bozuk çokgen, 18 497 sağlam nesnenin de çöpe gitmesi demekti.
+Kayıp **sessiz de değildir** — atlanan her şey sayılır ve sebebi yazılır.
+
+Dosyanın tamamı okunamıyorsa (bozuk başlık, tanınmayan biçim) durum farklıdır:
+o zaman içe aktarma **tamamen** başarısız olur ve çizim değişmez.
 | `'...' katmanı hiçbir koordinat sistemi bildirmiyor.` | Veri kümesi etiketsiz | Yanına aynı adlı bir `.prj` dosyası koyun |
 | `'...' içindeki katmanlar farklı koordinat sistemleri bildiriyor` | Karışık veri kümesi | Tek bir sisteme dönüştürüp yeniden deneyin |
 | `'...' okunabilir çizgi ya da alan içermiyor` | Desteklenen geometri yok | Nokta ve eğriler bu sürümde okunmuyor |

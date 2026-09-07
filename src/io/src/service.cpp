@@ -336,9 +336,18 @@ command::Task<core::Result<std::string>> FileService::import_into(command::Trans
     if (!report) co_return report.error();
 
     const VectorReport& r = report.value();
+
+    // WHAT WAS LEFT BEHIND, IN FRONT OF THE USER. A skipped feature that only
+    // reached a counter is a silent loss, which io.md P11 forbids; the first
+    // reason comes with the count so the user can tell "one broken polyline" from
+    // "this reader cannot handle this file".
+    std::vector<std::string> notes = r.notes;
+    if (r.skipped != 0)
+        notes.push_back(std::to_string(r.skipped) +
+                        " öğe geometrisi kullanılamadığı için atlandı. İlki: " + r.skipped_reason);
+
     co_return "İçe aktarıldı: " + std::to_string(r.entities) + " nesne, " +
-        std::to_string(r.layers) + " katman (" + r.driver + ", " + r.crs + ")" +
-        join_notes(r.notes);
+        std::to_string(r.layers) + " katman (" + r.driver + ", " + r.crs + ")" + join_notes(notes);
 }
 
 // ------------------------------------------------------------- DIŞAAKTAR ----

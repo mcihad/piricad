@@ -8,6 +8,21 @@
 #include "kentos_cad/command/log.hpp"
 #include "kentos_cad/core/circle.hpp"
 
+#include <csignal>
+
+// glibc and the BSDs carry `<execinfo.h>`; MSVC does not, and there the handler
+// still catches the signal and still dies correctly, just without the trace.
+#if defined(__has_include)
+#if __has_include(<execinfo.h>)
+#include <execinfo.h>
+#include <unistd.h>
+#define KENTOS_HAVE_BACKTRACE 1
+#endif
+#endif
+#ifndef KENTOS_HAVE_BACKTRACE
+#define KENTOS_HAVE_BACKTRACE 0
+#endif
+
 #include <QAction>
 #include <QApplication>
 #include <QCommandLineParser>
@@ -112,10 +127,62 @@ QImage window_shot(QWidget* subject)
     return shot;
 }
 
+/// Writes a stack trace and dies, so the NEXT crash is a report rather than a
+/// shrug.
+///
+/// WHY THIS EXISTS. A user reported the program "falling into a segfault at a
+/// meaningless point". Two teardown defects were found with the sanitizers and
+/// fixed, but neither could be provoked from the probes — and a crash that cannot
+/// be reproduced cannot be fixed from a description of where the mouse was. A
+/// stack trace turns the next one into a bug report.
+///
+/// ASYNC-SIGNAL-SAFE, which rules out almost everything: no `printf`, no
+/// allocation, no Qt. `backtrace_symbols_fd` is the one member of the pair that
+/// writes without allocating, which is why the trace goes to a descriptor rather
+/// than into a string. The default handler is restored and the signal re-raised,
+/// so the process still dies the way the system expects and a core file is still
+/// written.
+extern "C" void kentos_crash_handler(int signal_number)
+{
+#if KENTOS_HAVE_BACKTRACE
+    static const char banner[] =
+        "\n[kentos] ÇÖKME. Aşağıdaki yığın izini hata bildirimine ekleyin.\n";
+    // The result is discarded on purpose and the cast is not enough for GCC: a
+    // handler that branched on a failed write would be a handler doing more work
+    // inside a signal, which is the one thing it must not do.
+    if (::write(STDERR_FILENO, banner, sizeof(banner) - 1) < 0) { /* nothing to do */
+    }
+
+    void* frames[64];
+    const int depth = ::backtrace(frames, 64);
+    ::backtrace_symbols_fd(frames, depth, STDERR_FILENO);
+#endif
+
+    // Back to the system's own handler, then let the signal through: a process
+    // that swallowed its own SIGSEGV would leave no core file and no exit status
+    // anybody could act on.
+    // Neither result is actionable INSIDE A SIGNAL HANDLER, which is the whole
+    // reason they are discarded: if restoring the default handler failed there is
+    // no second mechanism to try, and reporting it would mean doing more work in
+    // the one place that must do as little as possible.
+    (void)std::signal(signal_number, SIG_DFL);
+    (void)std::raise(signal_number);
+}
+
+/// Installs the handler for the signals a defect in this program can raise.
+void install_crash_handler()
+{
+    for (const int sig : {SIGSEGV, SIGABRT, SIGBUS, SIGFPE, SIGILL})
+        (void)std::signal(sig, &kentos_crash_handler);
+}
+
 } // namespace
 
 int main(int argc, char** argv)
 {
+    // FIRST, before Qt and before anything that can fault.
+    install_crash_handler();
+
     // Before QApplication, which is the only place Qt reads it.
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
         Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);

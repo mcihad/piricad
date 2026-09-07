@@ -467,6 +467,32 @@ olması fark etmez.
 **Çözüm.** Bu sürüm çizgi ve alan okur; nokta, çoklu nokta ve eğriler okunmaz.
 Atlanan öğe sayısı transkriptte söylenir.
 
+### `N öğe geometrisi kullanılamadığı için atlandı`
+
+**Sebep.** Dosya, geometrisi kullanılamayan öğeler taşıyor — bütün noktaları aynı
+yerde olan bir çokgen, sıfır uzunlukta bir çizgi gibi. Çizim programlarının
+bıraktığı artıklardır.
+
+**Çözüm.** Genelde bir şey yapmanız gerekmez: geri kalan her şey okunmuştur ve
+not, kaç öğenin neden atlandığını söyler. Atlanan sayı beklediğinizden çoksa
+dosyayı üreten programda bir temizleme (`PURGE`, `OVERKILL`) çalıştırıp yeniden
+aktarın.
+
+## Program çöktüğünde
+
+Program bir çökme anında **yığın izini** standart hata akışına yazar:
+
+```text
+[kentos] ÇÖKME. Aşağıdaki yığın izini hata bildirimine ekleyin.
+/.../kentos_cad(+0x103373) [0x5d75ec5c2373]
+...
+```
+
+Bu izi ve o ana kadarki [komut günlüğünüzü](mimari/gunluk.md) birlikte gönderin:
+ikisi bir arada, çökmenin nerede olduğunu ve oraya nasıl gelindiğini söyler.
+Programı bir uçbirimden başlattıysanız iz doğrudan uçbirime düşer; kısayoldan
+başlattıysanız sistem günlüğüne yazılır (Linux'ta `journalctl --user -b`).
+
 ## Yardım alamadığınızda
 
 Sorununuzu tarif etmek yerine oturum günlüğünüzü paylaşın: dosya, sorunun ortaya çıktığı

@@ -279,6 +279,28 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 
 MainWindow::~MainWindow()
 {
+    // EVERY CONNECTION INTO THIS WINDOW IS CUT FIRST, and this is not tidiness.
+    //
+    // A shell owns its docks, its canvas and its panels as CHILDREN, so Qt
+    // deletes them from `~QObject` — which runs after this body and after every
+    // member of MainWindow has been destroyed. A child that emits on the way out
+    // (a dock hiding emits `visibilityChanged`) then reaches a slot on a
+    // MainWindow whose lifetime has ended: UBSan calls it a member call on an
+    // address that is not a MainWindow, and what it is in practice is a write or
+    // a call into memory that now belongs to something else. That is the shape of
+    // a crash "at a meaningless point" — the damage is done at shutdown and lands
+    // wherever the stack happens to be reused.
+    //
+    // Qt severs these in `~QObject`, which is too late by exactly the window this
+    // destructor opens. Doing it here closes that window.
+    //
+    // BY SENDER, one at a time. `QObject::disconnect(nullptr, …)` looks like it
+    // would say "from anyone", and it does nothing at all: Qt documents the
+    // sender as the one argument that may not be a wildcard. The docks are the
+    // senders that emit on the way out, and they are named here for that reason.
+    for (QDockWidget* dock : {propertyDock_, layerDock_, journalDock_})
+        if (dock != nullptr) dock->disconnect(this);
+
     savePreferences();
 
     // Window geometry and dock layout are not declared settings and deliberately
@@ -1180,6 +1202,8 @@ void MainWindow::buildPanels()
     resizeDocks({propertyDock_, layerDock_}, {312, 312}, Qt::Horizontal);
     resizeDocks({propertyDock_, layerDock_}, {600, 268}, Qt::Vertical);
 
+    // These fire during TEARDOWN as well as during use — see the note in
+    // `~MainWindow`, which is where the connection is severed.
     for (QDockWidget* dock : {propertyDock_, layerDock_, journalDock_}) {
         connect(dock, &QDockWidget::topLevelChanged, this, [this] { syncDockTitles(); });
         connect(dock, &QDockWidget::visibilityChanged, this, [this] { syncDockTitles(); });
@@ -1215,7 +1239,9 @@ void MainWindow::openSettings()
     if (settings_ == nullptr) {
         settings_ = new SettingsDialog(*controller_, this);
         settings_->setAttribute(Qt::WA_DeleteOnClose);
-        connect(settings_, &QObject::destroyed, this, [this] { settings_ = nullptr; });
+        // No `destroyed` lambda: `settings_` is a QPointer and nulls itself. See
+        // the note on the member for why the lambda was a write after this
+        // window's own lifetime had ended.
     }
     settings_->applyTheme(theme_);
     settings_->show();
@@ -1232,7 +1258,7 @@ void MainWindow::openDatabase()
     if (database_ == nullptr) {
         database_ = new DatabaseDialog(*controller_, this);
         database_->setAttribute(Qt::WA_DeleteOnClose);
-        connect(database_, &QObject::destroyed, this, [this] { database_ = nullptr; });
+        // No `destroyed` lambda; see the note on the member.
     }
     database_->show();
     database_->raise();

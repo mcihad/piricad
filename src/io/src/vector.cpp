@@ -796,19 +796,41 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
             if (rings.size() == 1 && rings.front().role == core::RingRole::Open &&
                 ring_store.front().size() >= 4 &&
                 ring_store.front().front() == ring_store.front().back()) {
-                // The closing vertex is IMPLIED, never stored (model.md R10) —
-                // the same rule `ring_to_mm` applies to a polygon's rings.
-                ring_store.front().pop_back();
-                rings.front().role = core::RingRole::Exterior;
+                // AND AT LEAST THREE DISTINCT CORNERS. The vertex COUNT is not the
+                // test: a real drawing carries runs of repeated points — one file
+                // holds a fifty-five vertex LINESTRING whose vertices are all the
+                // same coordinate — and such a run passes "first equals last"
+                // trivially. Calling it a face hands `add_area` a ring that
+                // collapses to a single vertex, which it rightly refuses.
+                std::size_t corners = 0;
+                for (std::size_t v = 0; v + 1 < ring_store.front().size(); ++v)
+                    if (ring_store.front()[v] != ring_store.front()[v + 1]) ++corners;
+
+                if (corners >= 3) {
+                    // The closing vertex is IMPLIED, never stored (model.md R10) —
+                    // the same rule `ring_to_mm` applies to a polygon's rings.
+                    ring_store.front().pop_back();
+                    rings.front().role = core::RingRole::Exterior;
+                }
             }
 
             const bool polyline = rings.size() == 1 && rings.front().role == core::RingRole::Open;
             auto added          = polyline ? tx.add_polyline(target, rings.front().points)
                                            : tx.add_area(target, rings);
-            if (!added)
-                co_return err(added.error().code, "'" + path + "' içindeki " +
-                                                      std::to_string(report.features) +
-                                                      ". öğe okunamadı: " + added.error().message);
+            if (!added) {
+                // SKIPPED, COUNTED AND NAMED — not thrown, and this is the whole
+                // difference between a reader and a validator. One unusable
+                // feature in a 48 MB drawing used to abort the import and roll
+                // back 18 497 sound entities; the user was told the file could not
+                // be read, which was true of one line of it.
+                //
+                // The DWG reader already answers this way for an entity type it
+                // has no translation for, and io.md P11/P13 asks for exactly this:
+                // a loss is reported, never silent.
+                ++report.skipped;
+                if (report.skipped_reason.empty()) report.skipped_reason = added.error().message;
+                continue;
+            }
             ++report.entities;
         }
 

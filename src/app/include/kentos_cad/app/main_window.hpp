@@ -24,6 +24,7 @@
 #include "kentos_cad/core/units.hpp"
 
 #include <QMainWindow>
+#include <QPointer>
 
 /// Qt widgets this header only holds pointers to. Forward-declared rather than
 /// included so that touching a widget's header does not rebuild everything that
@@ -341,8 +342,20 @@ private:
 
     /// The PostGIS window, kept because it is modeless: a user connects once and
     /// goes on drawing. Null when it has never been opened or has been closed.
-    DatabaseDialog* database_{nullptr};
-    SettingsDialog* settings_{nullptr};
+    /// The two modeless windows, held as GUARDED pointers.
+    ///
+    /// A RAW POINTER PLUS A `destroyed` LAMBDA IS A WRITE AFTER DESTRUCTION, and
+    /// UBSan says so: both windows are CHILDREN of this one and carry
+    /// `WA_DeleteOnClose`, so on shutdown Qt deletes them from `~QObject` — which
+    /// runs AFTER `~MainWindow`'s body. The lambda then wrote `nullptr` into a
+    /// MainWindow whose lifetime had ended, over whatever the stack had put
+    /// there. That is exactly the shape of a crash "at a meaningless point": the
+    /// damage is done at teardown and lands somewhere else entirely.
+    ///
+    /// `QPointer` nulls itself when the object goes, needs no connection at all,
+    /// and cannot outlive anything.
+    QPointer<DatabaseDialog> database_;
+    QPointer<SettingsDialog> settings_;
     QAction* actSelectAll_{nullptr};
     QAction* actSelectNone_{nullptr};
     QAction* actOrtho_{nullptr};

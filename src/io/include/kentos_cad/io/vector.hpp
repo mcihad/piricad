@@ -69,7 +69,18 @@ struct VectorReport
     std::uint64_t features{0}; ///< features read or written
     std::uint64_t entities{0}; ///< entities created in the document
     std::uint64_t layers{0};   ///< layers read or written
-    std::string crs;           ///< the CRS the dataset declared (io.md R20)
+
+    /// Features the reader could not turn into geometry, and the first reason.
+    ///
+    /// A REAL FILE CARRIES RUBBISH. `deneme_suşehri.dxf` is 48 MB of a real
+    /// cadastral drawing and holds a LINESTRING whose fifty-five vertices are all
+    /// the same point — something a CAD program left behind. Refusing the whole
+    /// file over it threw away 18 497 sound entities, which is the same mistake
+    /// the missing-`.prj` refusal made: correct by the letter, useless in the
+    /// office. The feature is dropped, counted and NAMED (io.md P11, P13).
+    std::uint64_t skipped{0};
+    std::string skipped_reason;
+    std::string crs; ///< the CRS the dataset declared (io.md R20)
     /// Anything the user should know that is not a failure — a dropped field, a
     /// sidecar written, a driver limitation worked around. Reported, never
     /// swallowed: a silent lossy export is how a wrong pafta gets delivered.
