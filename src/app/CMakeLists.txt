@@ -207,6 +207,8 @@ if(KENTOS_WITH_RHI)
             shaders/line.frag
             shaders/text.vert
             shaders/text.frag
+            shaders/marker.vert
+            shaders/marker.frag
             shaders/image.frag
     )
 

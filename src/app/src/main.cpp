@@ -474,6 +474,22 @@ int main(int argc, char** argv)
             constexpr int kFrameBudgetUs            = 16000;
             constexpr std::uint32_t kDrawCallBudget = 100;
 
+            // A THIRD BUDGET, and it exists because the other two did not catch
+            // the defect they were standing next to. This scene styles seven
+            // layers with pattern fills and drew 188 144 vertices a frame for a
+            // picture that needs 8 432: every glyph of every stamp was expanded
+            // on the CPU and re-uploaded, every frame. It stayed inside 16 ms on
+            // a fast machine and inside a hundred draw calls, so both gates were
+            // green while zooming a styled plan had become unusable.
+            //
+            // Vertices are the honest unit for that failure: it is work that
+            // scales with the number of stamps, and a machine slower than this
+            // one is where it stops fitting in 16 ms. Twenty-five thousand is
+            // three times what this scene needs and a twentieth of what it used
+            // to ask for — loose enough not to fire on a legitimate change,
+            // tight enough that per-stamp expansion cannot come back.
+            constexpr std::uint32_t kVertexBudget = 25000;
+
             int kusur = 0;
             if (median > kFrameBudgetUs) {
                 (void)std::fprintf(stderr, "[butce] kare ortancasi %d us — 10.1 butcesi %d us\n",
@@ -486,12 +502,21 @@ int main(int argc, char** argv)
                                    fs.draw_calls, kDrawCallBudget);
                 kusur = 1;
             }
+            if (gpu && fs.vertices >= kVertexBudget) {
+                (void)std::fprintf(stderr,
+                                   "[butce] kose %u — butce %u. Bir sembol katmani damga basina "
+                                   "geometri uretiyor olabilir; KENTOS_FRAME_PARTS=1 hangisi "
+                                   "oldugunu soyler.\n",
+                                   fs.vertices, kVertexBudget);
+                kusur = 1;
+            }
 
             (void)std::fprintf(stdout,
                                "[butce] %s — kare ortancasi %d us (butce %d)"
-                               "  ·  cizim cagrisi %u (butce %u%s)\n",
+                               "  ·  cizim cagrisi %u (butce %u%s)  ·  kose %u (butce %u)\n",
                                kusur != 0 ? "ASILDI" : "TAMAM", median, kFrameBudgetUs,
-                               fs.draw_calls, kDrawCallBudget, gpu ? "" : ", GPU degil: olculmedi");
+                               fs.draw_calls, kDrawCallBudget, gpu ? "" : ", GPU degil: olculmedi",
+                               fs.vertices, kVertexBudget);
             QApplication::exit(kusur);
         });
     }

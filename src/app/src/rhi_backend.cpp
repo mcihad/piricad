@@ -167,6 +167,7 @@ struct Cmd
         Unmask, ///< clear the mask with the cover quad, writing no colour
         Line,   ///< instanced segment quads
         Tri,    ///< a triangle list: marker interiors
+        Marker, ///< ONE glyph, drawn once per stamp — see `marker.vert`
         Text,   ///< instanced glyph quads against the SDF atlas
         Image,  ///< instanced textured quads: a published picture
     };
@@ -200,6 +201,11 @@ struct Cmd
     /// Image only: which picture, as an index into this frame's texture list plus
     /// one. Zero means "no picture", which is every other kind.
     std::uint32_t image{0};
+
+    /// Marker only: the glyph's own geometry, uploaded once for the whole pass.
+    /// `first` and `count` carry the INSTANCES, as they do for Line and Text.
+    std::uint32_t glyph_first{0}; ///< first vertex in the marker vertex buffer
+    std::uint32_t glyph_count{0}; ///< how many vertices that glyph has
 };
 
 class RhiBackend final : public render::Backend
@@ -382,6 +388,21 @@ private:
     std::unique_ptr<QRhiGraphicsPipeline> fill_stencil_;
     std::unique_ptr<QRhiGraphicsPipeline> fill_cover_;
     std::unique_ptr<QRhiGraphicsPipeline> mask_clear_;
+
+    /// The instanced marker pipeline and its two buffers.
+    ///
+    /// `marker_verts_` holds each pass's glyph in GLYPH-LOCAL pixels — a few
+    /// dozen vertices — and `marker_instances_` holds sixteen bytes per stamp.
+    /// The clipped variant draws only inside the stencil, which is how a pattern
+    /// stays inside its parcel.
+    std::unique_ptr<QRhiBuffer> marker_verts_;
+    std::unique_ptr<QRhiBuffer> marker_instances_;
+    std::unique_ptr<QRhiGraphicsPipeline> marker_;
+    std::unique_ptr<QRhiGraphicsPipeline> marker_clip_;
+    quint32 marker_vertex_capacity_{0};
+    quint32 marker_instance_capacity_{0};
+    std::vector<float> marker_vertex_data_;   ///< glyph-local xy pairs
+    std::vector<float> marker_instance_data_; ///< x, y, cos, sin per stamp
 
 #if KENTOS_HAVE_TEXT
     std::unique_ptr<QRhiBuffer> quad_;   ///< the four static glyph-quad corners
@@ -660,22 +681,92 @@ void RhiBackend::emit_stamps(const render::MarkerOutline& glyph, const render::P
 
     const std::uint32_t fill_rgba = faded(ps.fill_rgba, ps.opacity);
     const std::uint32_t line_rgba = faded(ps.line_rgba, ps.opacity);
+    const bool stroked            = line_rgba != 0 && ps.line_width_px > 0.0f;
 
-    const std::uint32_t tri_first = static_cast<std::uint32_t>(vertex_data_.size() / 2);
-    const std::uint32_t seg_first =
-        static_cast<std::uint32_t>(segment_data_.size() * sizeof(float));
-    std::uint32_t tri_count = 0;
+    // THE GLYPH ONCE, THE STAMPS MANY TIMES.
+    //
+    // This used to expand the glyph's own geometry — a fan of triangles and a
+    // ring of segments — once per stamp. A mosque parcel's dot pattern at the
+    // drawing's full extent is nineteen hundred stamps, so three parcels rebuilt
+    // and re-uploaded 134 784 triangle vertices and 44 895 segment records EVERY
+    // FRAME, to draw two-pixel dots. That is the whole of the answer to "why does
+    // zooming get slow when I style a layer", and it is why QGIS — which caches a
+    // symbol and stamps the cache — does not have it.
+    //
+    // The glyph now goes into `marker_verts_` in its own local pixels and each
+    // stamp becomes sixteen bytes in `marker_instances_`. Same shape the text
+    // pipeline has had from the beginning: one instance per glyph, not one buffer
+    // per string.
+    const auto push_local = [this](float x, float y) {
+        marker_vertex_data_.push_back(x);
+        marker_vertex_data_.push_back(y);
+    };
 
-    for (const render::Stamp& stamp : stamps_) {
-        // The stamp's direction composed with the pass's own angle. Two rotations
-        // and not one: the stamp carries where the LINE points, the pass carries
-        // how the GLYPH is turned on it.
-        const float ca = stamp.cos_a * extra_cos - stamp.sin_a * extra_sin;
-        const float sa = stamp.cos_a * extra_sin + stamp.sin_a * extra_cos;
+    const std::uint32_t fill_first = static_cast<std::uint32_t>(marker_vertex_data_.size() / 2);
+    std::uint32_t fill_count       = 0;
 
-        const auto place = [&](float lx, float ly) {
-            return std::pair<float, float>{stamp.x + lx * ca - ly * sa,
-                                           stamp.y + lx * sa + ly * ca};
+    if (fill_rgba != 0) {
+        std::size_t offset = 0;
+        for (std::size_t r = 0; r < glyph.runs.size(); ++r) {
+            const std::uint32_t run = glyph.runs[r];
+            const bool shut         = r < glyph.closed.size() && glyph.closed[r] != 0;
+
+            // Fanned from the glyph's own ORIGIN rather than from a vertex. Every
+            // shape in `symbology.hpp` is star-shaped about the centre — that is
+            // what "a marker centred on its point" means — so the fan is a correct
+            // triangulation of the star's notches and the arrow's tail without a
+            // triangulator.
+            if (shut && run >= 3) {
+                for (std::uint32_t v = 0; v < run; ++v) {
+                    const std::uint32_t next = (v + 1) % run;
+                    push_local(0.0f, 0.0f);
+                    push_local(glyph.xs[offset + v], glyph.ys[offset + v]);
+                    push_local(glyph.xs[offset + next], glyph.ys[offset + next]);
+                }
+                fill_count += run * 3;
+            }
+            offset += run;
+        }
+    }
+
+    // THE STROKE, AS LOCAL TRIANGLES, and this is not an approximation of what the
+    // line pipeline draws — it is the same quad. `line.vert` widens a segment to
+    // `half_width` about its own centre and extends it by `half_width` at each
+    // end, and `line.frag` writes a flat colour with no antialiasing, so the two
+    // paths rasterise identically. Building it here means a stroked glyph is
+    // instanced like a filled one instead of costing one segment record per edge
+    // per stamp.
+    const std::uint32_t stroke_first = static_cast<std::uint32_t>(marker_vertex_data_.size() / 2);
+    std::uint32_t stroke_count       = 0;
+
+    if (stroked) {
+        const float half = std::max(0.5f, ps.line_width_px * 0.5f);
+
+        const auto quad = [&](float x0, float y0, float x1, float y1) {
+            const float dx  = x1 - x0;
+            const float dy  = y1 - y0;
+            const float len = std::hypot(dx, dy);
+            const float tx  = len > 0.0f ? dx / len : 1.0f;
+            const float ty  = len > 0.0f ? dy / len : 0.0f;
+            const float nx  = -ty;
+            const float ny  = tx;
+
+            // The segment extended by a half width at each end, exactly as the
+            // `corner.x * 2 - 1` term in `line.vert` does.
+            const float ax = x0 - tx * half;
+            const float ay = y0 - ty * half;
+            const float bx = x1 + tx * half;
+            const float by = y1 + ty * half;
+
+            push_local(ax - nx * half, ay - ny * half);
+            push_local(ax + nx * half, ay + ny * half);
+            push_local(bx - nx * half, by - ny * half);
+
+            push_local(bx - nx * half, by - ny * half);
+            push_local(ax + nx * half, ay + ny * half);
+            push_local(bx + nx * half, by + ny * half);
+
+            stroke_count += 6;
         };
 
         std::size_t offset = 0;
@@ -683,66 +774,50 @@ void RhiBackend::emit_stamps(const render::MarkerOutline& glyph, const render::P
             const std::uint32_t run = glyph.runs[r];
             const bool shut         = r < glyph.closed.size() && glyph.closed[r] != 0;
 
-            // The interior, fanned from the glyph's own ORIGIN rather than from a
-            // vertex. Every shape in `symbology.hpp` is star-shaped about the
-            // centre — that is what "a marker centred on its point" means — so
-            // the fan is a correct triangulation of the star's notches and the
-            // arrow's tail without a triangulator.
-            if (shut && fill_rgba != 0 && run >= 3) {
-                const auto centre = place(0.0f, 0.0f);
-                for (std::uint32_t v = 0; v < run; ++v) {
-                    const auto a             = place(glyph.xs[offset + v], glyph.ys[offset + v]);
-                    const std::uint32_t next = (v + 1) % run;
-                    const auto b = place(glyph.xs[offset + next], glyph.ys[offset + next]);
-
-                    vertex_data_.push_back(centre.first);
-                    vertex_data_.push_back(centre.second);
-                    vertex_data_.push_back(a.first);
-                    vertex_data_.push_back(a.second);
-                    vertex_data_.push_back(b.first);
-                    vertex_data_.push_back(b.second);
-                }
-                tri_count += run * 3;
-            }
-
-            if (line_rgba != 0 && ps.line_width_px > 0.0f) {
-                for (std::uint32_t v = 0; v + 1 < run; ++v) {
-                    const auto a = place(glyph.xs[offset + v], glyph.ys[offset + v]);
-                    const auto b = place(glyph.xs[offset + v + 1], glyph.ys[offset + v + 1]);
-                    emit_segment(a.first, a.second, b.first, b.second);
-                }
-                if (shut && run >= 3) {
-                    const auto a = place(glyph.xs[offset + run - 1], glyph.ys[offset + run - 1]);
-                    const auto b = place(glyph.xs[offset], glyph.ys[offset]);
-                    emit_segment(a.first, a.second, b.first, b.second);
-                }
-            }
+            for (std::uint32_t v = 0; v + 1 < run; ++v)
+                quad(glyph.xs[offset + v], glyph.ys[offset + v], glyph.xs[offset + v + 1],
+                     glyph.ys[offset + v + 1]);
+            if (shut && run >= 3)
+                quad(glyph.xs[offset + run - 1], glyph.ys[offset + run - 1], glyph.xs[offset],
+                     glyph.ys[offset]);
 
             offset += run;
         }
     }
 
-    if (tri_count > 0) {
-        Cmd cmd;
-        cmd.kind    = Cmd::Kind::Tri;
-        cmd.clipped = clipped;
-        cmd.uniform = push_uniform(fill_rgba, 0.0f);
-        cmd.first   = tri_first;
-        cmd.count   = tri_count;
-        cmds_.push_back(cmd);
+    if (fill_count == 0 && stroke_count == 0) return;
+
+    // ONE INSTANCE BLOCK FOR BOTH DRAWS. The fill and the stroke sit at the same
+    // places and face the same way; only the colour differs, and that is a
+    // uniform.
+    const std::uint32_t instance_first =
+        static_cast<std::uint32_t>(marker_instance_data_.size() * sizeof(float));
+
+    for (const render::Stamp& stamp : stamps_) {
+        // The stamp's direction composed with the pass's own angle. Two rotations
+        // and not one: the stamp carries where the LINE points, the pass carries
+        // how the GLYPH is turned on it.
+        marker_instance_data_.push_back(stamp.x);
+        marker_instance_data_.push_back(stamp.y);
+        marker_instance_data_.push_back(stamp.cos_a * extra_cos - stamp.sin_a * extra_sin);
+        marker_instance_data_.push_back(stamp.cos_a * extra_sin + stamp.sin_a * extra_cos);
     }
 
-    const std::uint32_t seg_count =
-        static_cast<std::uint32_t>(segment_data_.size() / 5 - seg_first / (5 * sizeof(float)));
-    if (seg_count > 0) {
+    const auto submit = [&](std::uint32_t first, std::uint32_t count, std::uint32_t rgba) {
+        if (count == 0) return;
         Cmd cmd;
-        cmd.kind    = Cmd::Kind::Line;
-        cmd.clipped = clipped;
-        cmd.uniform = push_uniform(line_rgba, std::max(0.5f, ps.line_width_px * 0.5f));
-        cmd.first   = seg_first;
-        cmd.count   = seg_count;
+        cmd.kind        = Cmd::Kind::Marker;
+        cmd.clipped     = clipped;
+        cmd.uniform     = push_uniform(rgba, 0.0f);
+        cmd.first       = instance_first;
+        cmd.count       = static_cast<std::uint32_t>(stamps_.size());
+        cmd.glyph_first = first;
+        cmd.glyph_count = count;
         cmds_.push_back(cmd);
-    }
+    };
+
+    submit(fill_first, fill_count, fill_rgba);
+    submit(stroke_first, stroke_count, line_rgba);
 }
 
 void RhiBackend::emit_marker_line(const render::PolylineBatch& batch, const render::PassStyle& ps,
@@ -1732,6 +1807,51 @@ bool RhiBackend::ensure_resources(QRhi* rhi, QRhiRenderPassDescriptor* rp, int s
         tri_->setTargetBlends({blend});
         if (!tri_->create()) return false;
 
+        // The instanced marker pipeline. Two bindings, exactly as the text one
+        // has: the glyph's own geometry per vertex, the stamp per instance. The
+        // clipped variant reads the same stencil a pattern fill sets, which is
+        // how a dot grid stays inside its parcel.
+        const QShader marker_vs = load_shader(":/kentos_cad/shaders/marker.vert.qsb");
+        const QShader marker_fs = load_shader(":/kentos_cad/shaders/marker.frag.qsb");
+        if (!marker_vs.isValid() || !marker_fs.isValid()) return false;
+
+        marker_verts_.reset(rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::VertexBuffer, 4096));
+        if (!marker_verts_->create()) return false;
+        marker_vertex_capacity_ = 4096;
+
+        marker_instances_.reset(
+            rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::VertexBuffer, 65536));
+        if (!marker_instances_->create()) return false;
+        marker_instance_capacity_ = 65536;
+
+        QRhiVertexInputLayout marker_layout;
+        marker_layout.setBindings({
+            {2 * sizeof(float)},                                      // glyph-local xy
+            {4 * sizeof(float), QRhiVertexInputBinding::PerInstance}, // stamps
+        });
+        marker_layout.setAttributes({
+            {0, 0, QRhiVertexInputAttribute::Float2, 0},
+            {1, 1, QRhiVertexInputAttribute::Float4, 0},
+        });
+
+        if (!clipped(marker_clip_, marker_layout, marker_vs, marker_fs,
+                     QRhiGraphicsPipeline::Triangles))
+            return false;
+
+        marker_.reset(rhi->newGraphicsPipeline());
+        marker_->setShaderStages(
+            {{QRhiShaderStage::Vertex, marker_vs}, {QRhiShaderStage::Fragment, marker_fs}});
+        marker_->setVertexInputLayout(marker_layout);
+        marker_->setShaderResourceBindings(srb_.get());
+        marker_->setRenderPassDescriptor(rp);
+        marker_->setTopology(QRhiGraphicsPipeline::Triangles);
+        marker_->setCullMode(QRhiGraphicsPipeline::None);
+        marker_->setDepthTest(false);
+        marker_->setDepthWrite(false);
+        marker_->setSampleCount(sample_count);
+        marker_->setTargetBlends({blend});
+        if (!marker_->create()) return false;
+
         // Clearing the mask afterwards. The same cover quad as a solid fill, with
         // the colour writes off: a mask left standing would clip the next face's
         // pattern to the previous face's shape.
@@ -2093,6 +2213,24 @@ bool RhiBackend::ensure_capacity(QRhi* rhi, QRhiResourceUpdateBatch* rub)
         if (!ensure_atlas_texture(rhi, rub)) return false;
     }
 #endif
+    // The marker buffers. A few dozen bytes of glyph and sixteen bytes a stamp,
+    // where the flat path uploaded the glyph's whole geometry once per stamp.
+    {
+        const quint32 marker_vertex_bytes =
+            static_cast<quint32>(marker_vertex_data_.size() * sizeof(float));
+        const quint32 marker_instance_bytes =
+            static_cast<quint32>(marker_instance_data_.size() * sizeof(float));
+        if (!grow(marker_verts_, marker_vertex_capacity_, marker_vertex_bytes)) return false;
+        if (!grow(marker_instances_, marker_instance_capacity_, marker_instance_bytes))
+            return false;
+        if (marker_vertex_bytes > 0)
+            rub->updateDynamicBuffer(marker_verts_.get(), 0, marker_vertex_bytes,
+                                     marker_vertex_data_.data());
+        if (marker_instance_bytes > 0)
+            rub->updateDynamicBuffer(marker_instances_.get(), 0, marker_instance_bytes,
+                                     marker_instance_data_.data());
+    }
+
     if (seg_bytes > 0)
         rub->updateDynamicBuffer(segments_.get(), 0, seg_bytes, segment_data_.data());
     if (vtx_bytes > 0) rub->updateDynamicBuffer(vertices_.get(), 0, vtx_bytes, vertex_data_.data());
@@ -2151,6 +2289,8 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
     // is what makes the second frame allocation-free (render.md R20, P6).
     segment_data_.clear();
     vertex_data_.clear();
+    marker_vertex_data_.clear();
+    marker_instance_data_.clear();
     uniform_data_.clear();
     cmds_.clear();
     picture_data_.clear();
@@ -2288,6 +2428,24 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
             continue;
         }
 
+        if (cmd.kind == Cmd::Kind::Marker) {
+            if (!marker_verts_ || !marker_instances_) continue;
+            const QRhiCommandBuffer::VertexInput inputs[2] = {
+                // The BYTE offset of the glyph's first vertex. Widened before the
+                // multiply, not after: a glyph list is small today and the product
+                // of two 32-bit values is a 32-bit value, which is a silent wrap
+                // waiting for the day it is not.
+                {marker_verts_.get(), static_cast<quint64>(cmd.glyph_first) * 2u * sizeof(float)},
+                {marker_instances_.get(), cmd.first}};
+            cb->setGraphicsPipeline(cmd.clipped ? marker_clip_.get() : marker_.get());
+            cb->setShaderResources(srb_.get(), 1, &dyn);
+            cb->setVertexInput(0, 2, inputs);
+            if (cmd.clipped) cb->setStencilRef(0);
+            cb->draw(cmd.glyph_count, cmd.count);
+            ++draws;
+            continue;
+        }
+
         if (cmd.kind == Cmd::Kind::Image) {
             if (cmd.image == 0 || cmd.image > picture_keys_.size()) continue;
             const Picture& entry = pictures_.at(picture_keys_[cmd.image - 1]);
@@ -2353,6 +2511,35 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
         cb->setStencilRef(0);
         cb->draw(6, 1, cmd.cover, 0);
         ++draws;
+    }
+
+    // WHAT THE FRAME IS MADE OF, when a probe asks. `draw_calls` and `vertices`
+    // say a frame is expensive; they do not say WHICH symbol layer made it
+    // expensive, and the answer has twice been guessed at from a catalogue entry
+    // and twice been wrong. Developer tooling behind an environment variable,
+    // same category as KENTOS_FRAME_TIMES — no /docs page, no user-facing flag.
+    static const bool breakdown = qEnvironmentVariableIsSet("KENTOS_FRAME_PARTS");
+    if (breakdown) {
+        struct Part
+        {
+            const char* name;
+            std::uint32_t count;
+            std::uint32_t verts;
+        };
+
+        Part parts[8]{{"Fill", 0, 0}, {"Mask", 0, 0},   {"Unmask", 0, 0}, {"Line", 0, 0},
+                      {"Tri", 0, 0},  {"Marker", 0, 0}, {"Text", 0, 0},   {"Image", 0, 0}};
+        for (const Cmd& c : cmds_) {
+            Part& part = parts[static_cast<std::size_t>(c.kind)];
+            ++part.count;
+            part.verts += c.count;
+        }
+        (void)std::fprintf(stdout, "[parca]");
+        for (const Part& part : parts)
+            if (part.count != 0)
+                (void)std::fprintf(stdout, "  %s %u/%u", part.name, part.count, part.verts);
+        (void)std::fprintf(stdout, "\n");
+        (void)std::fflush(stdout);
     }
 
     // Published for R7. The passes and vertices come with it, because a hundred
