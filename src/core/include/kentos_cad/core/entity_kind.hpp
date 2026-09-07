@@ -100,6 +100,21 @@ using HitFn = void (*)(const RingGeometry& geom, SlotSpan slots, Point2 probe, M
 /// Net area per slot in square millimetres — `alan hesabı`, the legal output (R12).
 using AreaFn = void (*)(const RingGeometry& geom, SlotSpan slots, std::span<Mm2> out);
 
+/// The length around one entity, in millimetres — a closed shape's perimeter and
+/// an open one's length.
+///
+/// THE KIND HAS TO ANSWER THIS, for the same reason it answers for the area. A
+/// circle stores its centre and its radius, so summing the segments of its stored
+/// run gives the RADIUS, and that is what `ÖLÇ` reported as an eight-metre
+/// circle's circumference. What a shape measures is the shape's own business
+/// (model.md R22-R26).
+///
+/// May be null: `KindSpec` grows by appending and a kind registered against an
+/// older layout has no such member, so a caller falls back to
+/// `RingGeometry::perimeter_of` — which is exactly right for a polyline and wrong
+/// only for the curves that now declare one.
+using PerimeterFn = void (*)(const RingGeometry& geom, SlotSpan slots, std::span<Mm> out);
+
 /// Appends one slot decoded from `payload` and returns its index. Payloads come
 /// off disk and are untrusted: every length in them is checked against the
 /// bytes actually present (io.md).
@@ -146,6 +161,11 @@ struct KindSpec
     AreaFn area{nullptr};
     ReadFn read{nullptr};
     WriteFn write{nullptr};
+
+    /// APPENDED, and that is the point of `size` being first: a kind compiled
+    /// against the older layout has no such member, and a reader that checks
+    /// `size` can tell. Optional for the same reason — see `PerimeterFn`.
+    PerimeterFn perimeter{nullptr};
 };
 
 /// The kinds one Document understands. Owned by the Document, passed by

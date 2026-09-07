@@ -125,11 +125,19 @@ Task<void> run_measure_area(Context& ctx)
         core::Mm2 area{0};
         core::Mm perimeter{0};
 
+        // THE KIND ANSWERS FOR BOTH. Summing the stored run gives a CIRCLE's
+        // radius, not its circumference — an eight-metre circle reported "çevre:
+        // 8,000 m" — because a circle stores its centre and one point at radius
+        // distance. A kind registered before `perimeter` existed has none, and
+        // then the run's own length is the right answer anyway.
+        perimeter = doc.geometry().perimeter_of(gslot);
         if (const core::KindSpec* spec = core::builtin_kinds().find(kind); spec != nullptr) {
             const std::uint32_t one[1]{gslot};
             spec->area(doc.geometry(), core::SlotSpan(one, 1), std::span<core::Mm2>(&area, 1));
+            if (spec->perimeter != nullptr)
+                spec->perimeter(doc.geometry(), core::SlotSpan(one, 1),
+                                std::span<core::Mm>(&perimeter, 1));
         }
-        perimeter = doc.geometry().perimeter_of(gslot);
 
         ctx.echo("Nesne " + std::to_string(raw) + " — alan: " + square_metres(area) +
                  "   çevre: " + metres(perimeter));

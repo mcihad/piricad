@@ -387,11 +387,15 @@ void AttributePanel::rebuild()
         // reports nothing because it encloses nothing. Same call `ALANÖLÇ`
         // makes — one measurement, one implementation.
         core::Mm2 area{0};
+        core::Mm length = doc.geometry().perimeter_of(gslot);
         if (const core::KindSpec* spec = core::builtin_kinds().find(kind); spec != nullptr) {
             const std::uint32_t one[1]{gslot};
             spec->area(doc.geometry(), core::SlotSpan(one, 1), std::span<core::Mm2>(&area, 1));
+            // And for the length too: the stored run of a circle is its radius.
+            if (spec->perimeter != nullptr)
+                spec->perimeter(doc.geometry(), core::SlotSpan(one, 1),
+                                std::span<core::Mm>(&length, 1));
         }
-        const core::Mm length = doc.geometry().perimeter_of(gslot);
 
         const core::RingSpan rings = doc.geometry().rings_of(gslot);
         std::size_t vertices       = 0;

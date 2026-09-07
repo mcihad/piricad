@@ -18,6 +18,7 @@
 
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/guide.hpp"
 
 #include <iterator>
@@ -1466,6 +1467,92 @@ TEST_CASE("IO: DXF ve Shapefile tohum korpusu da içe aktarımdan geçirilir")
         }
     }
     CHECK(handled >= 3);
+}
+
+TEST_CASE("DXF: daire daire, yay yay olarak okunur — çokgen olarak değil")
+{
+    // WHAT THIS LOCKS. OGR's DXF driver tessellates a CIRCLE and an ARC into a
+    // LINESTRING before this module sees them, so a reader that trusted the
+    // geometry alone stored a real cadastral file's 3 874 circles and 3 523 arcs
+    // as many-cornered polygons: no centre, no radius, an area that was the
+    // polygon's rather than pi r squared, and nothing for a centre snap to find.
+    // AutoCAD and FreeCAD keep them as curves.
+    //
+    // Three things have to hold at once, and each of them was wrong at some point
+    // while this was written:
+    //
+    //   * the CLASS is read from the file (`SubClasses`), never guessed from the
+    //     shape — a surveyor's hand-drawn 64-gon must stay a polygon;
+    //   * the centre is fitted in a frame TRANSLATED to the first vertex, because
+    //     a TUREF northing squared is 2e19 and a double stops counting by ones at
+    //     9e15 — untranslated, two identical circles in one file came out one as a
+    //     circle and one as a polygon;
+    //   * the sweep direction is read from the tessellation, because OGR hands
+    //     these arcs over CLOCKWISE and taking the ends in arrival order stored
+    //     the COMPLEMENT — a 120 degree arc became the 240 degree one.
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+
+    const fs::path seed = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "dxf" / "05-daire-yay-cizgi.dxf";
+    if (!fs::exists(seed)) PENDING("Fikstür bulunamadı: " + seed.string());
+
+    Rig rig;
+    (void)rig.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test);
+    auto imported = rig.bus.execute_line("İÇEAKTAR \"" + seed.string() + "\"", Origin::Test);
+    REQUIRE(imported.ok());
+    REQUIRE_EQ(rig.doc.live_entity_count(), 3u);
+
+    // The measures, in millimetres, from the kind rather than from the stored run.
+    const auto measure = [&rig](core::EntityId e, core::Mm2& area, core::Mm& length) {
+        const std::uint32_t slot[1]{rig.doc.entities().slot[e]};
+        const core::KindSpec* spec = core::builtin_kinds().find(rig.doc.entities().kind[e]);
+        REQUIRE(spec != nullptr);
+        spec->area(rig.doc.geometry(), core::SlotSpan(slot, 1), std::span<core::Mm2>(&area, 1));
+        REQUIRE(spec->perimeter != nullptr);
+        spec->perimeter(rig.doc.geometry(), core::SlotSpan(slot, 1),
+                        std::span<core::Mm>(&length, 1));
+    };
+
+    bool saw_circle = false;
+    bool saw_arc    = false;
+    bool saw_line   = false;
+
+    for (core::EntityId e = 0; e < rig.doc.entities().size(); ++e) {
+        if (!rig.doc.alive(e)) continue;
+
+        core::Mm2 area{0};
+        core::Mm length{0};
+        measure(e, area, length);
+
+        switch (rig.doc.entities().kind[e]) {
+        case core::kCircleKind: {
+            saw_circle = true;
+            // r = 8 m. pi r^2 = 201 061 930 mm^2, 2 pi r = 50 265 mm. Within a
+            // millimetre of the exact figure, which is the storage unit.
+            CHECK(std::abs(area - core::Mm2{201'061'930}) <= 2000);
+            CHECK(std::abs(length - core::Mm{50'265}) <= 1);
+            break;
+        }
+        case core::kArcKind: {
+            saw_arc = true;
+            // An arc encloses nothing (R10), and r = 12,5 m over 120 degrees is
+            // 26 180 mm — NOT the 52 360 the reversed ends produced.
+            CHECK_EQ(area, core::Mm2{0});
+            CHECK(std::abs(length - core::Mm{26'180}) <= 2);
+            break;
+        }
+        case core::kPolylineKind: {
+            saw_line = true;
+            CHECK_EQ(area, core::Mm2{0});
+            CHECK_EQ(length, core::Mm{30'000});
+            break;
+        }
+        default: break;
+        }
+    }
+
+    CHECK(saw_circle);
+    CHECK(saw_arc);
+    CHECK(saw_line);
 }
 
 namespace {

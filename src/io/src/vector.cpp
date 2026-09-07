@@ -28,6 +28,7 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -413,6 +414,88 @@ std::string vector_backend_status()
 
 // ---------------------------------------------------------------- import ----
 
+namespace {
+
+/// The circle a run of points lies on, or nothing.
+///
+/// OGR hands a DXF CIRCLE and ARC over already tessellated, so the centre and the
+/// radius have to be recovered from points that sit ON the curve. Three of them
+/// determine it exactly — the circumcentre of the triangle they form — and the
+/// three are taken a third of the way apart so a nearly straight arc does not
+/// produce a nearly degenerate triangle.
+///
+/// AND THEN IT IS CHECKED. Every vertex is measured against the fitted circle and
+/// the fit is refused if any of them is off by more than a millimetre, which is
+/// the storage unit: a drawing's numbers are not the place for a shape that
+/// almost fits. A refused fit falls back to the polyline the tessellation already
+/// is — worse fidelity, never a wrong figure.
+/// pi as a literal, for the reason `core/entity_kind.cpp` gives: no libm call, so
+/// every platform multiplies the same doubles in the same order (Article 2.5).
+constexpr double kPi = 3.14159265358979323846;
+
+struct FittedCircle
+{
+    core::Point2 centre{};
+    core::Mm radius{0};
+};
+
+std::optional<FittedCircle> fit_circle(const std::vector<core::Point2>& pts)
+{
+    if (pts.size() < 5) return std::nullopt;
+
+    // TRANSLATED TO THE FIRST VERTEX BEFORE ANY MULTIPLY, and this is the whole
+    // difference between a circle and a sixty-four-sided polygon. A TUREF
+    // northing is 4 448 000 000 millimetres; the circumcentre determinant squares
+    // it, which lands at 2e19 — past the 9e15 where a double still counts by ones.
+    // The cancellation that follows is total, and the residual check then refused
+    // perfectly good circles while letting others through by luck: two adjacent
+    // eight-metre circles in the same file came out one as a circle and one as a
+    // polygon. `ring_area` translates for exactly this reason.
+    const core::Point2 origin = pts.front();
+    const auto at             = [&](std::size_t i) {
+        return std::pair<double, double>{static_cast<double>(pts[i].x - origin.x),
+                                         static_cast<double>(pts[i].y - origin.y)};
+    };
+
+    const auto [ax, ay] = at(0);
+    const auto [bx, by] = at(pts.size() / 3);
+    const auto [cx, cy] = at((2 * pts.size()) / 3);
+
+    // The circumcentre, by the standard determinant. `d` is twice the signed area
+    // of the triangle: it vanishes exactly when the three are collinear, which is
+    // the one case this cannot answer.
+    const double d = 2.0 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by));
+    if (std::abs(d) < 1e-9) return std::nullopt;
+
+    const double a2 = ax * ax + ay * ay;
+    const double b2 = bx * bx + by * by;
+    const double c2 = cx * cx + cy * cy;
+
+    const double ux = (a2 * (by - cy) + b2 * (cy - ay) + c2 * (ay - by)) / d;
+    const double uy = (a2 * (cx - bx) + b2 * (ax - cx) + c2 * (bx - ax)) / d;
+    const double r  = std::hypot(ax - ux, ay - uy);
+
+    if (!std::isfinite(ux) || !std::isfinite(uy) || !std::isfinite(r) || r <= 0.0)
+        return std::nullopt;
+
+    // The check, in the same translated frame. One millimetre is the storage
+    // unit, so a vertex further out than that would not round to the fitted
+    // circle anyway.
+    for (std::size_t i = 0; i < pts.size(); ++i) {
+        const auto [px, py] = at(i);
+        const double off    = std::abs(std::hypot(px - ux, py - uy) - r);
+        if (off > 1.0) return std::nullopt;
+    }
+
+    FittedCircle out;
+    out.centre = core::Point2{origin.x + static_cast<core::Mm>(std::llround(ux)),
+                              origin.y + static_cast<core::Mm>(std::llround(uy))};
+    out.radius = static_cast<core::Mm>(std::llround(r));
+    return out.radius > 0 ? std::optional<FittedCircle>{out} : std::nullopt;
+}
+
+} // namespace
+
 command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx, std::string path,
                                                         std::string driver, std::string project_crs,
                                                         std::vector<std::string> only,
@@ -592,6 +675,18 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
         // fast import into a slow one on a sheet with a hundred thousand parcel
         // numbers on it.
         const int text_field = layer->GetLayerDefn()->GetFieldIndex("Text");
+
+        // WHAT THE FILE SAYS THE ENTITY IS. OGR's DXF driver tessellates a CIRCLE
+        // and an ARC into a LINESTRING before this module ever sees them, so a
+        // reader that trusted the geometry alone would store 3 874 circles and
+        // 3 523 arcs as many-cornered polygons — no centre, no radius, an area
+        // that is the polygon's rather than pi r squared, and no snap to a centre
+        // or a quadrant. AutoCAD and FreeCAD keep them as curves and so must we.
+        //
+        // The class is READ, not guessed: `SubClasses` is the entity's own DXF
+        // class chain. What is recovered from the tessellation is only the
+        // NUMBERS, and only when they check out — see `fit_circle`.
+        const int class_field = layer->GetLayerDefn()->GetFieldIndex("SubClasses");
 
         core::LayerId slot = core::kNoLayer;
         if (layer_field < 0) {
@@ -793,6 +888,71 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
             // The test is the geometry's own: first vertex equal to last, and at
             // least three distinct corners left after the duplicate is dropped.
             // Nothing is inferred from the layer's name or the file's extension.
+            // A CIRCLE OR AN ARC, WHEN THE FILE SAYS SO. Checked before the
+            // closed-polygon heuristic, because a tessellated circle IS a closed
+            // ring and would otherwise be stored as a face — with the polygon's
+            // area instead of pi r squared, and nothing to snap a centre to.
+            if (class_field >= 0 && rings.size() == 1 && !ring_store.empty()) {
+                const char* declared         = feature->IsFieldSetAndNotNull(class_field)
+                                                   ? feature->GetFieldAsString(class_field)
+                                                   : nullptr;
+                const std::string_view chain = declared != nullptr ? declared : "";
+
+                // `AcDbEntity:AcDbCircle:AcDbArc` for an arc, and the same chain
+                // without the tail for a circle — an arc IS a circle in DXF's own
+                // class hierarchy, so the more specific name is tested first.
+                const bool is_arc = chain.find("AcDbArc") != std::string_view::npos;
+                const bool is_circle =
+                    !is_arc && chain.find("AcDbCircle") != std::string_view::npos;
+
+                if ((is_arc || is_circle) && !ring_store.front().empty()) {
+                    if (const auto fit = fit_circle(ring_store.front()); fit) {
+                        // WHICH WAY ROUND, read from the tessellation rather than
+                        // assumed. `add_arc` sweeps counter-clockwise from start to
+                        // end, and OGR hands this file's arcs over CLOCKWISE — 150°
+                        // to 30° for an arc DXF declares as 30° to 150°. Taking the
+                        // ends in the order they arrive therefore stored the
+                        // COMPLEMENT: a 120° arc came out as the 240° one on the
+                        // other side of the circle, which draws and measures wrong.
+                        //
+                        // The signed turning of the run says it without a
+                        // convention: each step's angle change is wrapped into
+                        // (-pi, pi] and summed, so the total is the sweep with its
+                        // sign, whatever order the points came in.
+                        const std::vector<core::Point2>& run = ring_store.front();
+                        double turning                       = 0.0;
+                        for (std::size_t v = 0; v + 1 < run.size(); ++v) {
+                            const double a0 =
+                                std::atan2(static_cast<double>(run[v].y - fit->centre.y),
+                                           static_cast<double>(run[v].x - fit->centre.x));
+                            const double a1 =
+                                std::atan2(static_cast<double>(run[v + 1].y - fit->centre.y),
+                                           static_cast<double>(run[v + 1].x - fit->centre.x));
+                            double step = a1 - a0;
+                            while (step > kPi)
+                                step -= 2.0 * kPi;
+                            while (step <= -kPi)
+                                step += 2.0 * kPi;
+                            turning += step;
+                        }
+
+                        const core::Point2 from = turning >= 0.0 ? run.front() : run.back();
+                        const core::Point2 to   = turning >= 0.0 ? run.back() : run.front();
+
+                        auto made = is_circle
+                                        ? tx.add_circle(target, fit->centre, fit->radius)
+                                        : tx.add_arc(target, fit->centre, fit->radius, from, to);
+                        if (made) {
+                            ++report.entities;
+                            continue;
+                        }
+                        // A refused add falls through to the polyline below: the
+                        // tessellation is still a true picture of the curve, and
+                        // a drawn approximation beats a dropped entity.
+                    }
+                }
+            }
+
             if (rings.size() == 1 && rings.front().role == core::RingRole::Open &&
                 ring_store.front().size() >= 4 &&
                 ring_store.front().front() == ring_store.front().back()) {

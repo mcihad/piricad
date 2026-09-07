@@ -442,6 +442,59 @@ void arc_bbox(const RingGeometry& geom, SlotSpan slots, std::span<Box2> out)
     }
 }
 
+void circle_perimeter(const RingGeometry& geom, SlotSpan slots, std::span<Mm> out)
+{
+    // The same literal pi `circle_area` uses, and for the same reason: no libm
+    // call, so every platform multiplies the same doubles in the same order
+    // (§7.3, Article 2.5).
+    constexpr double kPi = 3.14159265358979323846;
+
+    for (std::size_t i = 0; i < slots.size(); ++i) {
+        const auto r = static_cast<double>(circle_radius_of(geom, slots[i]));
+        out[i]       = static_cast<Mm>(std::llround(2.0 * kPi * r));
+    }
+}
+
+void arc_perimeter(const RingGeometry& geom, SlotSpan slots, std::span<Mm> out)
+{
+    constexpr double kPi = 3.14159265358979323846;
+
+    for (std::size_t i = 0; i < slots.size(); ++i) {
+        const Point2 centre = arc_centre_of(geom, slots[i]);
+        const auto r        = static_cast<double>(arc_radius_of(geom, slots[i]));
+        const Point2 start  = arc_start_of(geom, slots[i]);
+        const Point2 end    = arc_end_of(geom, slots[i]);
+
+        // The sweep from the two ends, counter-clockwise, which is the direction
+        // `add_arc` documents. A sweep that comes out at or below zero has wrapped
+        // the whole way round: an arc whose ends coincide is a full turn, not a
+        // zero-length one.
+        double a0    = std::atan2(static_cast<double>(start.y - centre.y),
+                                  static_cast<double>(start.x - centre.x));
+        double a1    = std::atan2(static_cast<double>(end.y - centre.y),
+                                  static_cast<double>(end.x - centre.x));
+        double sweep = a1 - a0;
+        while (sweep <= 0.0)
+            sweep += 2.0 * kPi;
+
+        out[i] = static_cast<Mm>(std::llround(r * sweep));
+    }
+}
+
+void polyline_perimeter(const RingGeometry& geom, SlotSpan slots, std::span<Mm> out)
+{
+    // What the stored run measures IS what a polyline measures, so this is the
+    // one kind for which the geometry's own answer was already right.
+    for (std::size_t i = 0; i < slots.size(); ++i)
+        out[i] = geom.perimeter_of(slots[i]);
+}
+
+void point_perimeter(const RingGeometry&, SlotSpan slots, std::span<Mm> out)
+{
+    for (std::size_t i = 0; i < slots.size(); ++i)
+        out[i] = Mm{0};
+}
+
 void arc_area(const RingGeometry&, SlotSpan slots, std::span<Mm2> out)
 {
     // An arc encloses nothing, exactly as an open ring encloses nothing (R10).
@@ -640,6 +693,7 @@ KENTOS_KIND(point)
     s.outline    = &point_outline_fn;
     s.hit        = &point_hit;
     s.area       = &point_area;
+    s.perimeter  = &point_perimeter;
     s.read       = &point_read;
     s.write      = &point_write;
     return s;
@@ -659,6 +713,7 @@ KENTOS_KIND(arc)
     s.outline    = &arc_outline_fn;
     s.hit        = &arc_hit;
     s.area       = &arc_area;
+    s.perimeter  = &arc_perimeter;
     s.read       = &arc_read;
     s.write      = &arc_write;
     return s;
@@ -678,6 +733,7 @@ KENTOS_KIND(circle)
     s.outline    = &circle_outline_fn;
     s.hit        = &circle_hit;
     s.area       = &circle_area;
+    s.perimeter  = &circle_perimeter;
     s.read       = &circle_read;
     s.write      = &circle_write;
     return s;
@@ -707,6 +763,33 @@ void ellipse_bbox(const RingGeometry& geom, SlotSpan slots, std::span<Box2> out)
         const Mm hx = mm_round(std::sqrt(ax * ax + bx * bx));
         const Mm hy = mm_round(std::sqrt(ay * ay + by * by));
         out[i]      = Box2{c.x - hx, c.y - hy, c.x + hx, c.y + hy};
+    }
+}
+
+void ellipse_perimeter(const RingGeometry& geom, SlotSpan slots, std::span<Mm> out)
+{
+    constexpr double kPi = 3.14159265358979323846;
+
+    for (std::size_t i = 0; i < slots.size(); ++i) {
+        const Point2 c = ellipse_centre_of(geom, slots[i]);
+        const Point2 a = ellipse_major_of(geom, slots[i]);
+        const Point2 b = ellipse_minor_of(geom, slots[i]);
+
+        const double ra =
+            std::hypot(static_cast<double>(a.x - c.x), static_cast<double>(a.y - c.y));
+        const double rb =
+            std::hypot(static_cast<double>(b.x - c.x), static_cast<double>(b.y - c.y));
+
+        // RAMANUJAN'S SECOND APPROXIMATION. An ellipse's circumference has no
+        // closed form — it is an elliptic integral — and this one is within a few
+        // parts per billion for every eccentricity a drawing produces, which is
+        // far below the millimetre this is rounded to. Stated rather than hidden:
+        // the number is an approximation, and it is a better one than the
+        // tessellation it replaces.
+        const double h = (ra - rb) * (ra - rb) / ((ra + rb) * (ra + rb));
+        const double p = kPi * (ra + rb) * (1.0 + (3.0 * h) / (10.0 + std::sqrt(4.0 - 3.0 * h)));
+
+        out[i] = std::isfinite(p) ? static_cast<Mm>(std::llround(p)) : Mm{0};
     }
 }
 
@@ -835,6 +918,7 @@ KENTOS_KIND(ellipse)
     s.outline    = &ellipse_outline_fn;
     s.hit        = &ellipse_hit;
     s.area       = &ellipse_area;
+    s.perimeter  = &ellipse_perimeter;
     s.read       = &ellipse_read;
     s.write      = &ellipse_write;
     return s;
@@ -854,6 +938,7 @@ KENTOS_KIND(polyline)
     s.outline    = &polyline_outline;
     s.hit        = &polyline_hit;
     s.area       = &polyline_area;
+    s.perimeter  = &polyline_perimeter;
     s.read       = &polyline_read;
     s.write      = &polyline_write;
     return s;

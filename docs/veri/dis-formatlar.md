@@ -52,8 +52,9 @@ ve projenin GPLv3 lisansıyla bağdaşmaz.
 Okunamayan bir varlık türüyle karşılaşılırsa **adıyla ve sayısıyla** bildirilir.
 Sessizce düşürülmez.
 
-Daire ve yay konusunda DWG, DXF'ten **daha iyidir**: GDAL bir DXF'teki daireyi
-okumadan önce çizgi parçalarına böler, DWG yolunda ise daire daire olarak kalır.
+Daire ve yay her iki yolda da **gerçek daire ve yay** olarak gelir. DWG yolunda
+LibreDWG onları zaten öyle verir; DXF yolunda GDAL çizgi parçalarına böler ve
+KentOSCad merkezle yarıçapı geri kurar — nasıl olduğu aşağıda.
 
 ### Shapefile dört dosyadır
 
@@ -182,8 +183,22 @@ yoksa dosyadaki her parsel çizgi olarak gelir, dolgusu olmaz, alanı ölçülem
 [`İFRAZ`](../komutlar/split_parcel.md) ile [`TEVHİT`](../komutlar/merge.md)
 üzerinde çalışamaz.
 
-Daire ve yay, GDAL onları çizgi parçalarına böldüğü için **çoklu çizgi** olarak
-gelir. Şekil doğrudur, ama nesne artık daire değildir.
+### Daire daire, yay yay olarak gelir
+
+GDAL bir DXF'teki `CIRCLE` ve `ARC` varlığını KentOSCad'e ulaşmadan önce çizgi
+parçalarına böler. Böyle bırakılsa nesne artık daire olmazdı: merkezi, yarıçapı,
+πr² alanı ve merkeze yakalama olmazdı — 48 MB'lık bir kadastro dosyasında 3 874
+daire ve 3 523 yay çokgene dönerdi. AutoCAD ve FreeCAD onları eğri olarak tutar,
+KentOSCad de tutar.
+
+Nesnenin **ne olduğu dosyadan okunur**, şekle bakılarak tahmin edilmez: DXF her
+varlığın kendi sınıf zincirini yazar (`AcDbEntity:AcDbCircle`). Yalnızca
+**sayılar** — merkez ve yarıçap — parçalanmış noktalardan geri kurulur, ve
+kurulan çember dosyadaki her noktaya milimetre içinde uymuyorsa kabul edilmez;
+o zaman çoklu çizgi olarak kalır. Yani bir haritacının elle çizdiği 64 kenarlı
+çokgen çokgen kalır, daireye dönüşmez.
+
+Yayın hangi yöne süpürdüğü de dosyadan değil, parçalanmanın kendisinden okunur.
 
 Desteklenmeyen bir geometri türüyle karşılaşılırsa o öğe atlanır ve kaç tanesinin
 atlandığı transkriptte söylenir. Sessizce düşürülmez.
