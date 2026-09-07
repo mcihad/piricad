@@ -652,6 +652,123 @@ TEST_CASE("SEÇİM: tek nokta en yakın nesneyi bulur, eşitlikte küçük slotu
 
 // ---------------------------------------------------------- the selection ---
 
+TEST_CASE("SEÇİM: KATMAN modu yalnız o katmanı alır, gizli olanı almaz")
+{
+    // WHAT THE LAYER PANEL'S "Tümünü seç" RUNS. The menu entry sends this exact
+    // line and nothing else (Article 1.2: the menu is a client, not a shortcut),
+    // so the behaviour the user sees is the behaviour checked here.
+    Rig rig;
+    if (!rig.line("KATMAN ad=PARSEL")) FAIL("KATMAN PARSEL");
+    if (!rig.line("ALAN noktalar=0,0 10,0 10,10 0,10")) FAIL("ALAN 1");
+    if (!rig.line("ALAN noktalar=20,0 30,0 30,10 20,10")) FAIL("ALAN 2");
+    if (!rig.line("KATMAN ad=YOL")) FAIL("KATMAN YOL");
+    if (!rig.line("ÇİZGİ noktalar=0,20 30,20")) FAIL("ÇİZGİ");
+
+    REQUIRE_EQ(rig.doc.live_entity_count(), std::size_t{3});
+
+    if (!rig.line("SEÇ mod=KATMAN katman=PARSEL")) FAIL("SEÇ PARSEL");
+    CHECK_EQ(rig.bus.selection().size(), std::size_t{2});
+
+    if (!rig.line("SEÇ mod=KATMAN katman=YOL")) FAIL("SEÇ YOL");
+    CHECK_EQ(rig.bus.selection().size(), std::size_t{1});
+
+    // HIDDEN IS NOT SELECTED, the same rule TÜMÜ follows: what the user cannot
+    // see, the user did not mean to grab. A layer whose eye is shut therefore
+    // selects nothing rather than quietly filling the selection with objects
+    // that are not on the screen.
+    if (!rig.line("KATMAN ad=PARSEL gorunur=hayır")) FAIL("KATMAN gizle");
+    if (!rig.line("SEÇ mod=KATMAN katman=PARSEL")) FAIL("SEÇ gizli");
+    CHECK_EQ(rig.bus.selection().size(), std::size_t{0});
+
+    // A name nobody declared is refused rather than silently emptying the
+    // selection, because "no such layer" and "that layer is empty" are different
+    // answers to the user.
+    rig.echoed.clear();
+    (void)rig.line("SEÇ mod=KATMAN katman=YOKBÖYLE");
+    CHECK(rig.echoed.find("Katman bulunamadı") != std::string::npos);
+}
+
+TEST_CASE("SEÇİM: pick_all imlecin altındaki her şeyi, en yakın önce verir")
+{
+    // WHAT THE CHOOSER READS. A click on a plan sheet lands on a parcel, on the
+    // ada boundary over it and on the road line through it; the list is what lets
+    // a user say which of the three they meant.
+    core::Document doc;
+    const core::EntityId inner = add_square(doc, 0, 0, 10000);
+    const core::EntityId outer = add_square(doc, -5000, -5000, 20000);
+
+    std::vector<core::EntityId> under;
+
+    // A generous radius takes both; the point is inside each of them.
+    core::pick_all(doc, Point2{5000, 5000}, 20000, under);
+    CHECK_EQ(under.size(), std::size_t{2});
+
+    // THE SAME ANSWER AS `pick_nearest`, AT THE FRONT. The chooser's first row is
+    // what a plain click has always selected, so pressing Enter on it changes
+    // nothing — and the two must not be free to disagree about which is on top.
+    CHECK_EQ(under.front(), core::pick_nearest(doc, Point2{5000, 5000}, 20000));
+
+    // Far from both, and a radius that reaches neither.
+    core::pick_all(doc, Point2{500000, 500000}, 1000, under);
+    CHECK(under.empty());
+
+    // A THIRD SQUARE, NOWHERE NEAR THE OTHER TWO. Distance to a face the point is
+    // INSIDE is zero, so two nested squares are always both at zero and never
+    // separate — which is exactly why the chooser exists. Separation is tested
+    // where it can be: a point close to one shape and far from the rest.
+    const core::EntityId away = add_square(doc, 100000, 100000, 10000);
+    core::pick_all(doc, Point2{99500, 105000}, 1000, under);
+    REQUIRE_EQ(under.size(), std::size_t{1});
+    CHECK_EQ(under.front(), away);
+    CHECK(inner != away);
+
+    // `out` is CLEARED, not appended to: the previous query's answer must not
+    // survive into this one.
+    core::pick_all(doc, Point2{-5000, -5000}, 1000, under);
+    REQUIRE_EQ(under.size(), std::size_t{1});
+    CHECK_EQ(under.front(), outer);
+}
+
+TEST_CASE("SEÇİM: SEÇ NOKTA sira= üstteki nesnenin altına iner")
+{
+    // WITHOUT THIS THE CHOOSER WOULD BE A GESTURE. The shell's window picks a row
+    // and sends `SEÇ NESNE`, but the CAPABILITY — reach past the top object under
+    // a point — has to exist for a script and for the command line too, or it is
+    // a feature only a mouse has (CLAUDE.md 5.15).
+    Rig rig;
+    rig.with_view();
+    if (!rig.line("KATMAN ad=PARSEL")) FAIL("KATMAN PARSEL");
+    if (!rig.line("ALAN noktalar=0,0 10,0 10,10 0,10")) FAIL("ALAN 1");
+    if (!rig.line("KATMAN ad=ADA")) FAIL("KATMAN ADA");
+    if (!rig.line("ALAN noktalar=-5,-5 15,-5 15,15 -5,15")) FAIL("ALAN 2");
+
+    // Inside both. `tolerans` is in metres and given here so the test does not
+    // depend on a screen scale.
+    if (!rig.line("SEÇ mod=NOKTA noktalar=5,5 tolerans=20")) FAIL("SEÇ 1");
+    REQUIRE_EQ(rig.bus.selection().size(), std::size_t{1});
+    const core::EntityKey first = rig.bus.selection().keys().front();
+
+    if (!rig.line("SEÇ mod=NOKTA noktalar=5,5 tolerans=20 sira=2")) FAIL("SEÇ 2");
+    REQUIRE_EQ(rig.bus.selection().size(), std::size_t{1});
+    CHECK(rig.bus.selection().keys().front() != first);
+
+    // `sira=1` is what a bare NOKTA has always meant, and it must stay that.
+    if (!rig.line("SEÇ mod=NOKTA noktalar=5,5 tolerans=20 sira=1")) FAIL("SEÇ 3");
+    REQUIRE_EQ(rig.bus.selection().size(), std::size_t{1});
+    CHECK_EQ(rig.bus.selection().keys().front(), first);
+
+    // Past the end is REFUSED and says how many there were, rather than quietly
+    // selecting nothing — "there is no third one" and "the third one is empty"
+    // are different answers.
+    rig.echoed.clear();
+    (void)rig.line("SEÇ mod=NOKTA noktalar=5,5 tolerans=20 sira=9");
+    CHECK(rig.echoed.find("9. istendi") != std::string::npos);
+
+    rig.echoed.clear();
+    (void)rig.line("SEÇ mod=NOKTA noktalar=5,5 tolerans=20 sira=0");
+    CHECK(rig.echoed.find("1'den küçük olamaz") != std::string::npos);
+}
+
 TEST_CASE("SEÇİM: küme anahtar sıralı, tekil ve sürüm sayar")
 {
     Selection s;

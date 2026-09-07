@@ -12,6 +12,7 @@
 #include "kentos_cad/app/import_wizard.hpp"
 #include "kentos_cad/app/map_canvas.hpp"
 #include "kentos_cad/app/panels.hpp"
+#include "kentos_cad/app/pick_list.hpp"
 #include "kentos_cad/app/settings_dialog.hpp"
 #include "kentos_cad/app/shell_chrome.hpp"
 #include "kentos_cad/app/style_designer.hpp"
@@ -55,6 +56,9 @@
 #include <QSignalBlocker>
 #include <QStackedWidget>
 #include <QStatusBar>
+#include <QTableView>
+#include <QTableWidget>
+#include <QTimer>
 #include <QToolBar>
 #include <QVBoxLayout>
 #include <cstdio>
@@ -245,6 +249,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(canvas_, &MapCanvas::cursorMoved, this, &MainWindow::onCursorMoved);
     connect(canvas_, &MapCanvas::viewChanged, this, &MainWindow::refreshStatus);
     connect(canvas_, &MapCanvas::echoRequested, this, &MainWindow::onEcho);
+    connect(canvas_, &MapCanvas::pickAmbiguous, this, &MainWindow::choosePick);
 
     // Enter on an empty command line is "done pointing". Focus is here far more
     // often than on the canvas, so without this the gesture had nowhere to land.
@@ -253,6 +258,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(commandLine_, &CommandLine::submitted, this, &MainWindow::onCommandSubmitted);
     connect(layerPanel_, &LayerPanel::layerSelected, attributePanel_, &AttributePanel::setLayer);
     connect(layerPanel_, &LayerPanel::styleRequested, this, &MainWindow::openStyleDesigner);
+    connect(layerPanel_, &LayerPanel::attributeTableRequested, this,
+            [this](const QString& layer) { openAttributeTable(layer); });
 
     onEcho(tr("KentOSCad %1 — komut merkezli mimari, GPLv3.").arg(QStringLiteral(KENTOS_VERSION)));
     onEcho(tr("Aynı komut arayüzden, komut satırından ve betikten tıpatıp aynı yolu izler."));
@@ -833,7 +840,11 @@ void MainWindow::buildActions()
     actTable_->setData(static_cast<int>(Glyph::Table));
     actTable_->setToolTip(tr("Katmanın satırlarını ve sütunlarını aç"));
     actTable_->setShortcut(QKeySequence(Qt::Key_F6));
-    connect(actTable_, &QAction::triggered, this, &MainWindow::openAttributeTable);
+    // A lambda and not the member: `QAction::triggered` carries a `bool` and the
+    // slot now takes a layer name, so a direct connect would hand the checked
+    // state in as a layer. The menu means "the layer I am drawing on", which is
+    // what the empty name asks for.
+    connect(actTable_, &QAction::triggered, this, [this] { openAttributeTable(); });
 
     actAi_ = placeholder(Glyph::Ai, tr("AI Asistan"), QString(), tr("Faz 3"));
     actAi_->setToolTip(tr("AI komut önerisi — önizleme ve onay ile (Faz 3)"));
@@ -1555,15 +1566,156 @@ void MainWindow::refreshLayerCombo()
     if (layerPanel_) layerPanel_->refresh();
 }
 
-void MainWindow::openAttributeTable()
+void MainWindow::openAttributeTable(const QString& layerName)
 {
     // Rebuilt each time rather than kept: the window reads the document through
     // the controller and holds no copy, so there is nothing to keep alive, and a
     // stale one is one more thing that can disagree with the drawing.
-    auto* table = new AttributeTable(*controller_, controller_->activeLayerName(), this);
+    //
+    // NAMED WHEN THE CALLER NAMES ONE. The Katman menu has no layer in mind and
+    // means "the one I am drawing on"; the layer panel's context menu has one
+    // under the pointer and means that one. Falling back to the active layer for
+    // both would make the panel's entry lie about which layer it opened.
+    const QString on = layerName.isEmpty() ? controller_->activeLayerName() : layerName;
+    auto* table      = new AttributeTable(*controller_, on, this);
     table->setAttribute(Qt::WA_DeleteOnClose, true);
     table->applyTheme(theme_);
     table->show();
+}
+
+void MainWindow::choosePick(const std::vector<core::EntityId>& candidates,
+                            Qt::KeyboardModifiers modifiers)
+{
+    if (candidates.empty()) return;
+
+    // WHAT WAS SELECTED BEFORE, so Esc means what Esc means. The window changes
+    // the selection while the user walks the rows — that is how they see which
+    // row is which — and a cancel that left the last row highlighted would have
+    // silently made the choice it was cancelling.
+    const std::vector<core::EntityKey> before = controller_->bus().selection().keys();
+
+    // ONE LINE, ALWAYS THE SAME LINE. Browsing, choosing and cancelling all leave
+    // through `core.select`, so the transcript of a click in this window reads
+    // exactly like the command a script would have sent (Article 1.2).
+    const auto send = [this](const std::vector<core::EntityKey>& keys, const char* how) {
+        command::Args args;
+        if (keys.empty()) {
+            args.set("mod", command::Value::text("TEMİZLE"));
+        } else {
+            std::vector<std::int64_t> ids;
+            ids.reserve(keys.size());
+            for (const core::EntityKey key : keys)
+                ids.push_back(static_cast<std::int64_t>(static_cast<std::uint64_t>(key)));
+            args.set("mod", command::Value::text("NESNE"));
+            args.set("nesneler", command::Value::ids(std::move(ids)));
+            if (how != nullptr) args.set("islem", command::Value::text(how));
+        }
+        controller_->runInvocation(
+            command::Invocation{"core.select", std::move(args), command::Origin::Gui});
+    };
+
+    PickList chooser(*controller_, candidates, this);
+    chooser.applyTheme(theme_);
+
+    // Replace while browsing whatever the modifiers say, because the question the
+    // preview answers is "which one is this row", and a Shift-add preview would
+    // answer a different one.
+    connect(&chooser, &PickList::highlighted, this,
+            [&send](core::EntityKey key) { send({key}, nullptr); });
+
+    if (chooser.exec() != QDialog::Accepted) {
+        send(before, nullptr);
+        return;
+    }
+
+    // AND NOW THE MODIFIERS, against the selection as it was before the window
+    // opened rather than against the preview it left behind. QGIS keys, the same
+    // three `dispatchSelection` sends: Shift adds, Ctrl removes, a plain click
+    // replaces.
+    send(before, nullptr);
+    const core::EntityKey key = chooser.picked();
+    if (key == core::EntityKey::None) return;
+
+    if (modifiers.testFlag(Qt::ShiftModifier))
+        send({key}, "EKLE");
+    else if (modifiers.testFlag(Qt::ControlModifier))
+        send({key}, "ÇIKAR");
+    else
+        send({key}, nullptr);
+}
+
+void MainWindow::probePickList()
+{
+    const auto say = [](const QString& text) {
+        (void)std::fprintf(stdout, "[secim] %s\n", text.toUtf8().constData());
+        (void)std::fflush(stdout);
+    };
+
+    if (canvas_ == nullptr) {
+        say(QStringLiteral("tuval yok"));
+        return;
+    }
+
+    // ARMED BEFORE THE CLICK, because the click opens a MODAL window and does not
+    // return until it closes. The timer fires inside that nested event loop,
+    // which is the only place the chooser can be answered from.
+    QTimer::singleShot(200, this, [this, say] {
+        auto* chooser = qobject_cast<PickList*>(QApplication::activeModalWidget());
+        if (chooser == nullptr) {
+            say(QStringLiteral("liste açılmadı"));
+            return;
+        }
+
+        auto* grid = chooser->findChild<QTableWidget*>();
+        if (grid == nullptr || grid->rowCount() < 2) {
+            say(QStringLiteral("listede iki satır yok"));
+            chooser->reject();
+            return;
+        }
+
+        say(QStringLiteral("liste: %1 satır").arg(grid->rowCount()));
+        for (int row = 0; row < grid->rowCount(); ++row)
+            say(QStringLiteral("satır %1: %2 · %3 · %4 · %5")
+                    .arg(row + 1)
+                    .arg(grid->item(row, 0) != nullptr ? grid->item(row, 0)->text() : QString())
+                    .arg(grid->item(row, 1) != nullptr ? grid->item(row, 1)->text() : QString())
+                    .arg(grid->item(row, 2) != nullptr ? grid->item(row, 2)->text() : QString())
+                    .arg(grid->item(row, 3) != nullptr ? grid->item(row, 3)->text() : QString()));
+
+        // THE SECOND ROW, which is the whole point: the first is what
+        // `pick_nearest` was already choosing, and reaching past it is the
+        // capability that did not exist.
+        grid->setCurrentCell(1, 0);
+
+        // Photographed when the variable carries a path, the same bargain
+        // `KENTOS_HAND_PROBE` makes: a transcript proves the rows are right and
+        // says nothing about whether a person can read them.
+        if (const QByteArray into = qgetenv("KENTOS_PICK_PROBE"); !into.isEmpty() && into != "1") {
+            const QString file = QString::fromLocal8Bit(into);
+            if (chooser->grab().save(file))
+                say(QStringLiteral("kare yazıldı: %1").arg(file));
+            else
+                say(QStringLiteral("kare yazılamadı: %1").arg(file));
+        }
+
+        chooser->accept();
+    });
+
+    const QPoint at(canvas_->width() / 2, canvas_->height() / 2);
+    QMouseEvent press(QEvent::MouseButtonPress, at, canvas_->mapToGlobal(at), Qt::LeftButton,
+                      Qt::LeftButton, Qt::NoModifier);
+    QMouseEvent release(QEvent::MouseButtonRelease, at, canvas_->mapToGlobal(at), Qt::LeftButton,
+                        Qt::NoButton, Qt::NoModifier);
+    QCoreApplication::sendEvent(canvas_, &press);
+    QCoreApplication::sendEvent(canvas_, &release);
+
+    const command::Selection& picked = controller_->bus().selection();
+    say(QStringLiteral("seçim: %1 nesne%2")
+            .arg(picked.size())
+            .arg(picked.size() == 1 ? QStringLiteral(", kimlik %1")
+                                          .arg(static_cast<qulonglong>(
+                                              static_cast<std::uint64_t>(picked.keys().front())))
+                                    : QString()));
 }
 
 void MainWindow::openCommandSearch()
@@ -2178,7 +2330,59 @@ void MainWindow::probeToolBox()
 
 void MainWindow::probeLayerPanel()
 {
-    if (layerPanel_ != nullptr) layerPanel_->probeByHand();
+    if (layerPanel_ == nullptr) return;
+    layerPanel_->probeByHand();
+
+    const auto say = [](const QString& text) {
+        (void)std::fprintf(stdout, "[katman] %s\n", text.toUtf8().constData());
+        (void)std::fflush(stdout);
+    };
+
+    // THE TWO CONTEXT-MENU ENTRIES, OPENED AS A USER OPENS THEM. The menu is
+    // built by the same function the right-click builds it with, and the entry is
+    // found by the text on it — so a renamed entry, a menu that stops being built
+    // for a layer row, or a signal that goes nowhere all show up here. Calling
+    // `selectAllOn` directly would prove none of that, which is the lesson
+    // `probeByHand` above was written for.
+    const core::Document& doc = controller_->document();
+
+    QString on;
+    for (core::EntityId e = 0; e < doc.entities().size() && on.isEmpty(); ++e) {
+        if (!doc.alive(e)) continue;
+        const core::LayerId slot = doc.entities().layer[e];
+        if (slot < doc.layers().size()) on = QString::fromStdString(doc.layers()[slot].name);
+    }
+    if (on.isEmpty()) {
+        say(QStringLiteral("çizimde nesne yok; menü denenmedi"));
+        return;
+    }
+
+    if (!layerPanel_->triggerContextEntry(on, tr("Tümünü seç")))
+        say(QStringLiteral("'%1' satırında 'Tümünü seç' yok").arg(on));
+    else
+        say(QStringLiteral("Tümünü seç · %1 → %2 nesne seçili")
+                .arg(on)
+                .arg(controller_->bus().selection().size()));
+
+    if (!layerPanel_->triggerContextEntry(on, tr("Öznitelik tablosu"))) {
+        say(QStringLiteral("'%1' satırında 'Öznitelik tablosu' yok").arg(on));
+        return;
+    }
+
+    // The window the signal opened, and how many rows it decided to show. The
+    // table is scoped to the layer the menu was opened on, so this number is the
+    // whole point of the entry: the drawing's total would mean the scope was lost.
+    auto* table = findChild<AttributeTable*>();
+    if (table == nullptr) {
+        say(QStringLiteral("Öznitelik tablosu · %1 → pencere açılmadı").arg(on));
+        return;
+    }
+
+    auto* grid = table->findChild<QTableView*>();
+    say(QStringLiteral("Öznitelik tablosu · %1 → %2 satır")
+            .arg(on)
+            .arg(grid != nullptr && grid->model() != nullptr ? grid->model()->rowCount() : -1));
+    table->close();
 }
 
 void MainWindow::probeToolsByHand()

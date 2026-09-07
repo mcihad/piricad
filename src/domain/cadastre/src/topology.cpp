@@ -188,7 +188,12 @@ Task<void> run_topology(Context& ctx)
     const Selection& selection = ctx.session().bus().selection();
 
     std::vector<core::EntityKey> keys;
-    for (std::int64_t raw : ctx.argument("nesneler").as_ids())
+
+    // Named for the reason `stakeout_command.cpp` gives: `argument` returns by
+    // value and `as_ids` refers into it, so the two written together leave the
+    // loop reading a destroyed vector.
+    const Value picked = ctx.argument("nesneler");
+    for (std::int64_t raw : picked.as_ids())
         keys.push_back(static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw)));
     if (keys.empty())
         for (core::EntityKey k : selection.keys())

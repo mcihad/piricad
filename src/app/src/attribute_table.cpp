@@ -3,6 +3,7 @@
 
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/icons.hpp"
+#include "kentos_cad/app/measure_text.hpp"
 #include "kentos_cad/app/tokens.hpp"
 #include "kentos_cad/command/parser.hpp"
 #include "kentos_cad/core/document.hpp"
@@ -48,29 +49,9 @@ QString grouped(double value, int places = 2)
     return text;
 }
 
-/// `18904.36` -> `18 904.36`. Only a MEASURE is grouped.
-///
-/// A number with a fractional part is a measurement and a reader wants its
-/// magnitude at a glance; a whole number in an attribute table is almost always
-/// an identifier — an ada, a parsel, a UAVT code — and grouping one turns `1284`
-/// into `1 284`, which is not how anybody writes an ada number. The decimal
-/// point is what tells the two apart, and it is the same rule the reference's
-/// own columns follow.
-QString spacedThousands(const QString& text)
-{
-    bool numeric = false;
-    (void)text.toDouble(&numeric);
-    if (!numeric) return text;
-
-    const qsizetype dot = text.indexOf(QLatin1Char('.'));
-    if (dot < 0) return text;
-    QString out          = text;
-    qsizetype at         = dot < 0 ? out.size() : dot;
-    const qsizetype stop = out.startsWith(QLatin1Char('-')) ? 1 : 0;
-    for (at -= 3; at > stop; at -= 3)
-        out.insert(at, QLatin1Char(' '));
-    return out;
-}
+// Grouping lives in `measure_text.hpp` now: the pick chooser prints figures into
+// the same kind of column and two rules for one column is one too many.
+using measure::spacedThousands;
 
 } // namespace
 
@@ -78,8 +59,8 @@ QString spacedThousands(const QString& text)
 // AttributeModel
 // =============================================================================
 
-AttributeModel::AttributeModel(Controller& controller, QObject* parent)
-    : QAbstractTableModel(parent), controller_(controller)
+AttributeModel::AttributeModel(Controller& controller, QString layerName, QObject* parent)
+    : QAbstractTableModel(parent), controller_(controller), layer_(std::move(layerName))
 {
     refresh();
 }
@@ -98,12 +79,29 @@ void AttributeModel::refresh()
     rows_.clear();
     error_.clear();
 
+    // THE LAYER SCOPE, resolved here and not cached. The window's title already
+    // said which layer it was opened on; every row in the drawing was in it
+    // anyway, so the title was the only thing that knew. A layer's attribute
+    // table has to be that layer's rows.
+    //
+    // A name that no longer resolves shows nothing rather than everything: the
+    // layer was renamed or deleted under the open window, and the honest answer
+    // to "the rows of a layer that is not there" is none of them.
+    const bool scoped        = !layer_.isEmpty();
+    const core::LayerId only = scoped ? doc.find_layer(layer_.toStdString()) : core::kNoLayer;
+    if (scoped && only == core::kNoLayer) {
+        endResetModel();
+        emit filtered(0, 0);
+        return;
+    }
+
     // The predicate reads THIS row's cells. Nothing about the grammar knows what
     // an attribute is, which is what lets the same expression filter a PostGIS
     // result set the day that lands.
     std::size_t total = 0;
     for (core::EntityId slot = 0; slot < doc.entities().size(); ++slot) {
         if (!doc.alive(slot)) continue;
+        if (scoped && doc.entities().layer[slot] != only) continue;
         ++total;
 
         const command::FieldReader field =
@@ -128,8 +126,11 @@ void AttributeModel::refresh()
             // mistake and repeating it a thousand times helps nobody.
             error_ = QString::fromStdString(matched.error().message);
             rows_.clear();
-            for (core::EntityId all = 0; all < doc.entities().size(); ++all)
-                if (doc.alive(all)) rows_.push_back(doc.entities().key[all]);
+            for (core::EntityId all = 0; all < doc.entities().size(); ++all) {
+                if (!doc.alive(all)) continue;
+                if (scoped && doc.entities().layer[all] != only) continue;
+                rows_.push_back(doc.entities().key[all]);
+            }
             break;
         }
         if (matched.value()) rows_.push_back(doc.entities().key[slot]);
@@ -333,7 +334,7 @@ AttributeTable::AttributeTable(Controller& controller, QString layerName, QWidge
     setFooterHeight(kFooterRow);
     resize(1900, 1030);
 
-    model_ = new AttributeModel(controller_, this);
+    model_ = new AttributeModel(controller_, layerName_, this);
 
     view_ = new QTableView(this);
     view_->setObjectName(QStringLiteral("attributeGrid"));

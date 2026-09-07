@@ -262,9 +262,9 @@ namespace {
 /// 6·10^17 and int64 would wrap on a site of any size (core.md R3).
 core::Mm2 triangle_area(core::Point2 a, core::Point2 b, core::Point2 c)
 {
-    const __int128 twice = static_cast<__int128>(b.x - a.x) * (c.y - a.y) -
-                           static_cast<__int128>(c.x - a.x) * (b.y - a.y);
-    const __int128 abs_twice = twice < 0 ? -twice : twice;
+    const core::Int128 twice = static_cast<core::Int128>(b.x - a.x) * (c.y - a.y) -
+                               static_cast<core::Int128>(c.x - a.x) * (b.y - a.y);
+    const core::Int128 abs_twice = twice < 0 ? -twice : twice;
     return static_cast<core::Mm2>(abs_twice / 2);
 }
 
@@ -275,8 +275,8 @@ core::Mm2 triangle_area(core::Point2 a, core::Point2 b, core::Point2 c)
 /// says which side it is on and the caller does not have to ask twice.
 core::Mm3 prism(core::Mm2 area, core::Mm h1, core::Mm h2, core::Mm h3)
 {
-    const __int128 total = static_cast<__int128>(h1) + h2 + h3;
-    return static_cast<core::Mm3>((static_cast<__int128>(area) * total) / 3);
+    const core::Int128 total = static_cast<core::Int128>(h1) + h2 + h3;
+    return static_cast<core::Mm3>((static_cast<core::Int128>(area) * total) / 3);
 }
 
 /// Where the reference plane crosses the edge from `a` to `b`, in plan.

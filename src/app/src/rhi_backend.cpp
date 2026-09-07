@@ -362,6 +362,14 @@ private:
 
     bool ensure_resources(QRhi* rhi, QRhiRenderPassDescriptor* rp, int sample_count);
     bool ensure_capacity(QRhi* rhi, QRhiResourceUpdateBatch* rub);
+
+    /// Re-points every set of bindings at the current `uniforms_`.
+    ///
+    /// Called when the uniform buffer is replaced. Three sets name that buffer BY
+    /// ADDRESS — `srb_`, `srb_text_` and one per cached picture — and a set left
+    /// naming the old one is a read of freed memory inside the driver.
+    bool rebind_uniforms();
+
     void release();
 
 #if KENTOS_HAVE_TEXT
@@ -1472,6 +1480,16 @@ void RhiBackend::emit_texts(const render::DrawList& list, double cx, double cy)
         // QPainter backend draws the same line here.
         if (item.text.empty() || item.height_px < 3.0f) continue;
 
+        // CAP HEIGHT IN, EM SIZE OUT. `height_px` is the height of a CAPITAL
+        // LETTER — that is what a DXF's group code 40 means, what the METIN
+        // command promises, and what a lettering height is on a plotted sheet.
+        // Everything below scales EM units, and the two differ by about a third:
+        // fed straight in, an imported 3 m caption drew 2.1 m tall and a third
+        // too narrow, which is how a TAKS over KAKS label stopped sitting
+        // centred in its own circle.
+        const float cap = atlas_->cap_height(render::Face::Sans);
+        const float em  = cap > 0.0f ? item.height_px / cap : item.height_px;
+
         const double sx = cx + static_cast<double>(item.x0);
         const double sy = cy - static_cast<double>(item.y0);
         const double ex = cx + static_cast<double>(item.x1);
@@ -1499,7 +1517,7 @@ void RhiBackend::emit_texts(const render::DrawList& list, double cx, double cy)
         }
         if (lines_.empty()) continue;
 
-        const float step = item.height_px * 1.25f;
+        const float step = em * 1.25f;
 
         for (std::size_t line = 0; line < lines_.size(); ++line) {
             const float offset =
@@ -1510,8 +1528,8 @@ void RhiBackend::emit_texts(const render::DrawList& list, double cx, double cy)
             const float ox = static_cast<float>(sx) - sin_a * offset;
             const float oy = static_cast<float>(sy) + cos_a * offset;
 
-            count += emit_line(render::Face::Sans, lines_[line], ox, oy, item.height_px, cos_a,
-                               sin_a, item.rgba, item.anchor);
+            count += emit_line(render::Face::Sans, lines_[line], ox, oy, em, cos_a, sin_a,
+                               item.rgba, item.anchor);
         }
     }
 
@@ -2062,18 +2080,88 @@ bool RhiBackend::ensure_atlas_texture(QRhi* rhi, QRhiResourceUpdateBatch* rub)
 
 #endif // KENTOS_HAVE_TEXT
 
+bool RhiBackend::rebind_uniforms()
+{
+    // IN PLACE, on the objects that already exist — `setBindings` then `create()`
+    // again, the way `ensure_atlas_texture` re-points the text bindings when the
+    // atlas widens. The layout is unchanged, so every pipeline built against
+    // these bindings stays valid. Handing out NEW bindings objects instead would
+    // trade one dangling pointer for another: `line_`, `tri_`, `fill_cover_` and
+    // the rest were all created against these very ones.
+    const auto uniform_binding = [this] {
+        return QRhiShaderResourceBinding::uniformBufferWithDynamicOffset(
+            0, QRhiShaderResourceBinding::VertexStage | QRhiShaderResourceBinding::FragmentStage,
+            uniforms_.get(), sizeof(Uniforms));
+    };
+
+    int bound = 0;
+
+    if (srb_) {
+        srb_->setBindings({uniform_binding()});
+        if (!srb_->create()) return false;
+        ++bound;
+    }
+
+#if KENTOS_HAVE_TEXT
+    if (srb_text_ && atlas_texture_ && sampler_) {
+        srb_text_->setBindings({
+            uniform_binding(),
+            QRhiShaderResourceBinding::sampledTexture(1, QRhiShaderResourceBinding::FragmentStage,
+                                                      atlas_texture_.get(), sampler_.get()),
+        });
+        if (!srb_text_->create()) return false;
+        ++bound;
+    }
+#endif
+
+    // The cached pictures, which is the half that was missed: a picture's
+    // bindings are built once, when its texture is uploaded, and then live as
+    // long as the picture is in the cache — across every later growth of the
+    // uniform buffer.
+    for (auto& item : pictures_) {
+        Picture& entry = item.second;
+        if (!entry.srb || !entry.texture || !picture_sampler_) continue;
+        entry.srb->setBindings({
+            uniform_binding(),
+            QRhiShaderResourceBinding::sampledTexture(1, QRhiShaderResourceBinding::FragmentStage,
+                                                      entry.texture.get(), picture_sampler_.get()),
+        });
+        if (!entry.srb->create()) return false;
+        ++bound;
+    }
+
+    // Developer tooling, an environment variable and not a feature (CLAUDE.md
+    // 5.17). `scripts/ci-gate-rhi-omur.sh` needs to know this branch was actually
+    // taken: a lifetime test run on a scene that never outgrows its uniform
+    // buffer proves nothing, and would go on proving nothing quietly.
+    if (qEnvironmentVariableIsSet("KENTOS_RHI_OMUR"))
+        qInfo("[omur] tekduzen tampon %u bayta buyudu, %d baglama yeniden yonlendirildi",
+              uniform_capacity_, bound);
+
+    return true;
+}
+
 bool RhiBackend::ensure_capacity(QRhi* rhi, QRhiResourceUpdateBatch* rub)
 {
     // Grown to a HIGH-WATER MARK, never per frame. render.md R6 asks for a
     // persistent mapped ring buffer with fences; this is the honest first step
     // toward it — a buffer that is recreated only when a frame needs more than
     // every frame before it did, which on a pan is never.
+    //
+    // DROPPING THE OLD BUFFER OBJECT IS SAFE BY ITSELF, and it is worth writing
+    // down why, because the obvious worry is wrong: `~QRhiBuffer` runs
+    // `destroy()`, and QRhi does not hand the native allocation back to the
+    // driver there — it queues it until the frames that could still be reading it
+    // have gone through. What is NOT safe is leaving something else pointing at
+    // the buffer that just went away, which is exactly what the uniform buffer
+    // below does to three sets of bindings.
     const auto grow = [&](std::unique_ptr<QRhiBuffer>& buf, quint32& capacity, quint32 needed) {
         if (needed == 0) return true;
         if (buf && capacity >= needed) return true;
         quint32 size = capacity ? capacity : 64u * 1024u;
         while (size < needed)
             size *= 2;
+
         buf.reset(rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::VertexBuffer, size));
         if (!buf->create()) return false;
         capacity = size;
@@ -2095,11 +2183,19 @@ bool RhiBackend::ensure_capacity(QRhi* rhi, QRhiResourceUpdateBatch* rub)
         if (!uniforms_->create()) return false;
         uniform_capacity_ = size;
 
-        srb_.reset(rhi->newShaderResourceBindings());
-        srb_->setBindings({QRhiShaderResourceBinding::uniformBufferWithDynamicOffset(
-            0, QRhiShaderResourceBinding::VertexStage | QRhiShaderResourceBinding::FragmentStage,
-            uniforms_.get(), sizeof(Uniforms))});
-        if (!srb_->create()) return false;
+        // AND EVERY SET OF BINDINGS FOLLOWS IT. This is the crash, not a tidy-up:
+        // the uniform buffer was replaced under bindings that still named the old
+        // one, and the driver read an allocation that no longer existed —
+        //
+        //     QRhiWidget::paintEvent -> QRhi::endOffscreenFrame -> libgallium -> SIGSEGV
+        //
+        // It felt random because this branch is reached only when a scene wants
+        // more uniform slots than every scene before it did: importing a 48 MB
+        // cadastral DXF is the reliable way there, and a small drawing never gets
+        // near it. `srb_` was rebuilt here already; the text bindings and the
+        // per-picture bindings were not, and the per-picture ones are built once
+        // and then cached for the life of the picture.
+        if (!rebind_uniforms()) return false;
     }
 
     if (!corners_uploaded_) {
@@ -2387,8 +2483,12 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
     // were found. `KENTOS_RHI_ONLY=resim` draws only the published pictures and
     // `=resimsiz` draws everything else — a batch that never reached the buffer
     // and a batch drawn off screen look identical in a screenshot, and so does a
-    // pipeline that corrupts the state of the draws after it. Developer tooling,
-    // an environment variable rather than a feature (CLAUDE.md 5.17).
+    // pipeline that corrupts the state of the draws after it. Any single kind
+    // works too, by the Turkish name `kind_name` gives it: `=cizgi` keeps only
+    // the lines, `=-cizgi` keeps everything BUT the lines. Both directions are
+    // needed — one says the kind draws, the other says the kind is what breaks
+    // the draws after it. Developer tooling, an environment variable rather than
+    // a feature (CLAUDE.md 5.17).
     const QByteArray only = qgetenv("KENTOS_RHI_ONLY");
 
     // COUNTED WHERE THEY ARE SUBMITTED, not estimated from the command list: a
@@ -2397,9 +2497,34 @@ void RhiBackend::render(const render::DrawList& list, const render::Overlay& ove
     // scene builder produced.
     std::uint32_t draws = 0;
 
+    // One name per kind, so a frame can be cut down to a single pipeline. A crash
+    // inside the GPU driver names no draw call of ours; halving the frame does.
+    const auto kind_name = [](Cmd::Kind k) {
+        switch (k) {
+        case Cmd::Kind::Fill: return "dolgu";
+        case Cmd::Kind::Mask: return "maske";
+        case Cmd::Kind::Unmask: return "maskesiz";
+        case Cmd::Kind::Line: return "cizgi";
+        case Cmd::Kind::Tri: return "ucgen";
+        case Cmd::Kind::Marker: return "isaretci";
+        case Cmd::Kind::Text: return "yazi";
+        case Cmd::Kind::Image: return "resim";
+        }
+        return "?";
+    };
+
     for (const Cmd& cmd : cmds_) {
         if (only == "resim" && cmd.kind != Cmd::Kind::Image) continue;
         if (only == "resimsiz" && cmd.kind == Cmd::Kind::Image) continue;
+        if (!only.isEmpty() && only != "resim" && only != "resimsiz") {
+            // `=cizgi` keeps only that kind; `=-cizgi` drops it and keeps the rest.
+            const QByteArray name = kind_name(cmd.kind);
+            if (only.startsWith('-')) {
+                if (only.mid(1) == name) continue;
+            } else if (only != name) {
+                continue;
+            }
+        }
 
         const quint32 offset = cmd.uniform * uniform_stride_;
         const QRhiCommandBuffer::DynamicOffset dyn(0, offset);

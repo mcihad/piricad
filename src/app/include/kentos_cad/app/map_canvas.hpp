@@ -42,10 +42,31 @@
 
 class QLineEdit;
 
+namespace kentos::core {
+/// The setting store; declared here so the wheel helper below can name it without
+/// pulling `core/settings.hpp` into every translation unit that draws a canvas.
+class Settings;
+} // namespace kentos::core
+
 namespace kentos::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
+
+/// What one wheel turn does to the scale, read from the two map settings.
+///
+/// ONE FUNCTION BECAUSE THERE ARE TWO MAP VIEWS. The canvas is not the only
+/// widget with a wheel: the import wizard's preview has one too, and it used to
+/// carry its own hard-coded 20 % — IN THE OPPOSITE DIRECTION. Pushing the wheel
+/// away zoomed in on the drawing and out on the preview of the very file about to
+/// become that drawing, and neither honoured `core.harita.tekerlek_ters`, so a
+/// user who inverted the wheel got one view inverted and the other not.
+///
+/// `notches` is `angleDelta().y() / 120.0` — fractional on a trackpad, which is
+/// why it is a double and why the step is raised to it rather than multiplied by
+/// it. The result goes straight to `ViewTransform::zoom_at`, where above one
+/// means closer.
+double wheel_zoom_factor(const core::Settings& store, double notches);
 
 /// The widget the canvas IS. See the header note: one build option, two surfaces,
 /// one set of event handlers above them.
@@ -162,6 +183,16 @@ signals:
     /// Emitted after a pan or a zoom, so the scale readout can follow.
     void viewChanged();
 
+    /// A click that hit more than one object, with the candidates nearest first
+    /// and the modifiers that were down.
+    ///
+    /// THE CANVAS DOES NOT OPEN THE WINDOW, for the reason `LayerPanel` does not
+    /// open the style designer: a widget that opened a dialog would be a widget
+    /// that has to know what is in it. This says what happened; the shell decides
+    /// what to show, and whatever it shows sends `SEÇ` like every other client.
+    void pickAmbiguous(const std::vector<core::EntityId>& candidates,
+                       Qt::KeyboardModifiers modifiers);
+
     /// A line for the transcript and the status strip, from the canvas itself.
     ///
     /// Used for the one thing the canvas knows and the bus cannot: that Enter was
@@ -271,16 +302,14 @@ private:
     /// bus reports that a store moved.
     struct AidLook
     {
-        bool ruler{true};     ///< the two scales along the top and the left
-        int ruler_px{22};     ///< their thickness
-        int ruler_unit{0};    ///< 0 metre, 1 santimetre, 2 kilometre
-        bool scale_bar{true}; ///< the bar that says what the zoom means
-        bool north{true};     ///< the north arrow
-        bool readout{true};   ///< the cursor's own easting and northing
-        int cursor{0};        ///< 0 full screen, 1 short, 2 none
-        int cursor_px{30};    ///< arm length of the short cursor
-        int zoom_percent{20}; ///< how much one wheel notch changes the scale
-        bool invert_wheel{false};
+        bool ruler{true};                 ///< the two scales along the top and the left
+        int ruler_px{22};                 ///< their thickness
+        int ruler_unit{0};                ///< 0 metre, 1 santimetre, 2 kilometre
+        bool scale_bar{true};             ///< the bar that says what the zoom means
+        bool north{true};                 ///< the north arrow
+        bool readout{true};               ///< the cursor's own easting and northing
+        int cursor{0};                    ///< 0 full screen, 1 short, 2 none
+        int cursor_px{30};                ///< arm length of the short cursor
         int marker_px{12};                ///< half size of the snap marker
         bool snap_tip{true};              ///< name the mode beside the marker
         std::uint32_t marker_rgba{0};     ///< 0 = take the theme's own colour

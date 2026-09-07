@@ -315,6 +315,40 @@ QString themeStyleSheet(ThemeMode mode)
                                            border-right: 1px solid %(lineHard)s; }
         QWidget#symbolColumn             { background: %(panel)s;
                                            border-left: 1px solid %(lineHard)s; }
+
+        /* ---- style designer, §8 -------------------------------------------- */
+        /*
+         * THE SAME LANGUAGE THE TABLES SPEAK. The lists in this window were
+         * default Qt views inside a `QGroupBox`, beside inputs that did follow
+         * §15 — so the window read as two programs. These give the symbol stack
+         * and the published-symbol tree the attribute grid's own manners: a 4 px
+         * frame rather than a box, 26 px rows, the wash on the selected one with
+         * the accent edge that says which it is.
+         */
+        QTreeWidget#designerList,
+        QListWidget#designerGallery      { background: %(window)s; border: 1px solid %(border)s;
+                                           border-radius: 4px; outline: none; }
+        QTreeWidget#designerList::item   { min-height: 24px; padding: 2px 6px; }
+        QListWidget#designerGallery::item { border-radius: 4px; }
+
+        /* The caption above them, and the label beside a field: both are the
+         * QUIET half of the pair. A caption drawn in the same ink as its value
+         * makes the reader find the value themselves. */
+        QLabel#formCaption               { background: transparent; color: %(textDim)s;
+                                           font-size: 11.5px; }
+        QLineEdit#designerSearch         { background: %(input)s; border: 1px solid %(border)s;
+                                           border-radius: 4px; padding: 4px 9px;
+                                           min-height: 22px; max-height: 22px;
+                                           font-size: 11.5px; }
+
+        /* §15.1's icon button: no ground until it is pointed at. */
+        QToolButton#rowTool              { background: transparent; color: %(textDim)s;
+                                           border: 1px solid transparent; border-radius: 4px;
+                                           padding: 0px; font-size: 13px; }
+        QToolButton#rowTool:hover        { background: %(hoverIcon)s; color: %(onHover)s; }
+        QToolButton#rowTool:pressed      { background: %(wash)s; color: %(accentHi)s;
+                                           border: 1px solid %(accentEdge)s; }
+        QToolButton#rowTool:disabled     { color: %(textFaint)s; }
         QLineEdit#settingsSearch         { background: %(input)s; border: 1px solid %(border)s;
                                            border-radius: 4px; padding: 4px 8px;
                                            min-height: 20px; font-size: 11.5px; }
@@ -374,6 +408,23 @@ QString themeStyleSheet(ThemeMode mode)
                                            selection-background-color: %(wash)s;
                                            selection-color: %(text)s; }
         QTableView#attributeGrid::item   { padding: 0px 8px; }
+
+        /* ---- pick chooser, §9's table at dialog size ----------------------- */
+        /*
+         * THE SAME TABLE, SMALLER. It answers one question about four or five
+         * rows, so it drops the attribute grid's monospace body — a layer name
+         * is a word — and keeps everything else: the header band, the soft rule
+         * between rows, the wash on the selected one. A chooser styled its own
+         * way would be a second answer to "what does a table look like here".
+         */
+        QTableView#pickList              { background: %(window)s; border: none;
+                                           gridline-color: %(lineSoft)s;
+                                           font-size: 12.5px;
+                                           selection-background-color: %(wash)s;
+                                           selection-color: %(text)s; }
+        QTableView#pickList::item        { padding: 0px 12px; border: none; }
+        QTableView#pickList::item:selected { background: %(wash)s; color: %(text)s;
+                                           border-left: 2px solid %(accent)s; }
         QPushButton#segment              { background: %(input)s; color: %(textDim)s;
                                            border: 1px solid %(border)s; border-radius: 4px;
                                            padding: 4px 14px; min-height: 22px;

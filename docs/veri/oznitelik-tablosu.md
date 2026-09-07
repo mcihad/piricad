@@ -4,7 +4,17 @@ Bir katmanın satırlarını ve sütunlarını bir tabloda açar; süzer, sıral
 ve seçili sütunun sayısal özetini çıkarır.
 
 **F6** ile ya da **Analiz ▸ Öznitelik Tablosu** ile açılır. Araç çubuğundaki
-*pencereler* grubunda da bir düğmesi vardır.
+*pencereler* grubunda da bir düğmesi vardır. Bu üç yol tabloyu **aktif katmanda**
+açar.
+
+Başka bir katmanın tablosunu açmak için katman panelinde o satıra **sağ tıklayıp
+Öznitelik tablosu** deyin — katmanı aktif yapmanız gerekmez
+([KATMAN](../komutlar/layer.md)).
+
+**Tablo tek bir katmanın satırlarını gösterir**, çizimin tamamını değil: başlıkta
+yazan katman, alttaki sayıda sayılan katman ve süzgecin üzerinde çalıştığı katman
+aynı katmandır. Silinmiş ya da adı değişmiş bir katmanın tablosu açık kalırsa
+tablo boşalır — orada olmayan bir katmanın satırları yoktur.
 
 ## Pencerede ne var
 

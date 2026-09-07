@@ -22,6 +22,29 @@ using Mm = std::int64_t;
 inline constexpr Mm kMmPerMetre = 1000;
 inline constexpr Mm kMmInvalid  = std::numeric_limits<Mm>::min();
 
+/// The width every exact product of two `Mm` needs, and the ONE place this
+/// project names a compiler extension.
+///
+/// WHY 128 BITS ARE NOT OPTIONAL. A shoelace term, a cross product and a
+/// point-in-ring test all multiply two coordinate DIFFERENCES, and a difference
+/// is an `Mm` — 64 bits. Their product is 128. Doing it in `double` would be the
+/// `-ffast-math` mistake in another costume: a parcel's area is a legal figure
+/// (§12) and Article 2.5 pins the arithmetic precisely so two machines agree
+/// bit for bit.
+///
+/// WHY IT IS SPELLED ONCE. `__int128` is not ISO C++, so `-Wpedantic` reports
+/// every declaration that spells it — twelve of them across four files — and
+/// CLAUDE.md 5.14 forbids answering that with `-Wno-*`. Naming the extension in
+/// one declaration, with `__extension__` where the compiler expects to be told
+/// "yes, deliberately", leaves every call site written in ordinary C++ and the
+/// warning class fully armed everywhere else.
+///
+#ifdef __SIZEOF_INT128__
+__extension__ using Int128 = __int128; ///< exact 128-bit integer; see the note above
+#else
+#error "Exact geometry needs a 128-bit integer; this compiler has none (core.md R3)."
+#endif
+
 /// THE rounding helper (core.md R20). Deterministic round-half-away-from-zero,
 /// identical on every platform: std::llround is not constexpr and std::round's
 /// mode is not pinned. Every transient `double` that becomes an `Mm` goes through

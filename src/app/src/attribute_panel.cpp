@@ -3,6 +3,7 @@
 
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/icons.hpp"
+#include "kentos_cad/app/measure_text.hpp"
 #include "kentos_cad/app/tokens.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
@@ -63,72 +64,16 @@ QFont mono(int px)
     return f;
 }
 
-QString metres(core::Mm v)
-{
-    return QString::number(static_cast<double>(v) / core::kMmPerMetre, 'f', 3);
-}
-
-/// `1 482,64 m²` — an area in the unit a Turkish surveyor writes it in.
-///
-/// Two decimals and not three: a parcel area on a tapu is stated to the square
-/// centimetre and no further, and printing a digit the document does not carry
-/// invites it to be copied into one that will.
-QString squareMetres(core::Mm2 v)
-{
-    return QString::number(core::mm2_to_m2(v), 'f', 2) + QStringLiteral(" m²");
-}
-
-/// `12,480 m`, with the unit, for a length a user reads rather than edits.
-QString metresWithUnit(core::Mm v)
-{
-    return metres(v) + QStringLiteral(" m");
-}
-
-/// The kind's Turkish name — `ALAN`, `ÇİZGİ`, `DAİRE` — or its number when the
-/// document carries a kind this build does not know.
-///
-/// The NAME and not the id, because the id is a storage detail: `core.polyline`
-/// is 1 because it declared itself 1, and a user reading a property panel is
-/// owed the word, not the number (model.md R22-R26).
-QString kindName(core::KindId kind)
-{
-    if (const core::KindSpec* spec = core::builtin_kinds().find(kind); spec != nullptr) {
-        if (spec->names[0] != nullptr && *spec->names[0] != 0)
-            return QString::fromUtf8(spec->names[0]);
-        return QString::fromUtf8(spec->stable_id);
-    }
-    return AttributePanel::tr("bilinmeyen tür (%1)").arg(kind);
-}
-
-/// What the user means by "türü" — which is not always what the kind is called.
-///
-/// A PARCEL AND A BOUNDARY ARE THE SAME KIND. `core.polyline` stores both: a face
-/// is a slot whose ring is Exterior and a line is one whose ring is Open (model.md
-/// R9, R10). That is the right storage decision and the wrong ANSWER for a
-/// property panel, where "ÇOKLUÇİZGİ" over a 281 m² parcel reads as a defect.
-///
-/// So the kind names the family and the ring's role names the thing: ALAN when
-/// there is a face, ÇOKLUÇİZGİ when there is not. Every other kind — circle, arc,
-/// point — already has one name for one thing and is passed through.
-QString shapeName(const core::Document& doc, core::KindId kind, std::uint32_t gslot)
-{
-    const QString family = kindName(kind);
-    if (kind != core::kPolylineKind) return family;
-
-    const core::RingSpan rings = doc.geometry().rings_of(gslot);
-    bool face                  = false;
-    bool holes                 = false;
-    for (std::uint32_t r = 0; r < rings.count; ++r) {
-        const core::RingRole role = doc.geometry().ring_role[rings.first + r];
-        if (role == core::RingRole::Exterior) face = true;
-        if (role == core::RingRole::Interior) holes = true;
-    }
-
-    if (!face) return family;
-    return holes ? AttributePanel::tr("ALAN (delikli)") : AttributePanel::tr("ALAN");
-}
-
 } // namespace
+
+// The five of them now live in `measure_text.hpp`, because the pick chooser says
+// the same things about the same entities and two answers to "how big is it" is
+// one answer too many.
+using measure::kindName;
+using measure::metres;
+using measure::metresWithUnit;
+using measure::shapeName;
+using measure::squareMetres;
 
 AttributePanel::AttributePanel(Controller& controller, QWidget* parent)
     : QWidget(parent), controller_(controller)

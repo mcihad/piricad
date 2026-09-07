@@ -53,6 +53,10 @@
 namespace kentos::app {
 namespace {
 
+/// How tall the symbol layer stack is allowed to be, in rows.
+constexpr int kStackRowsMin = 3;
+constexpr int kStackRowsMax = 6;
+
 using core::SymbolLayerType;
 
 /// The symbol layer types offered, grouped by what they draw.
@@ -1058,10 +1062,22 @@ QWidget* StyleDesigner::buildPendingPage(const QString& phase, const QString& no
 
 QWidget* StyleDesigner::buildGallery()
 {
-    auto* box    = new QGroupBox(tr("Hazır gösterimler"), this); // ui-label
+    // A CAPTION OVER A LIST, NOT A BOXED GROUP — the same lesson the symbol
+    // layer stack learned below, and the last box in this window to learn it. A
+    // `QGroupBox` spends a 1 px border and 20 px of padding on saying where its
+    // contents begin, and puts its title where the first row should be; the
+    // caption says the same thing in ten pixels and leaves the rest to the list.
+    auto* box    = new QWidget(this);
     auto* layout = new QVBoxLayout(box);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(6);
+
+    auto* galleryCaption = new QLabel(tr("HAZIR GÖSTERİMLER"), box); // ui-label
+    galleryCaption->setObjectName(QStringLiteral("groupCaption"));
+    layout->addWidget(galleryCaption);
 
     groups_ = new QTreeWidget(box);
+    groups_->setObjectName(QStringLiteral("designerList"));
     groups_->setHeaderHidden(true);
     groups_->setUniformRowHeights(true);
 
@@ -1075,12 +1091,14 @@ QWidget* StyleDesigner::buildGallery()
             [this](QTreeWidgetItem*, QTreeWidgetItem*) { refreshGalleryItems(); });
 
     search_ = new QLineEdit(box);
+    search_->setObjectName(QStringLiteral("designerSearch"));
     search_->setPlaceholderText(tr("Ara — etiket, kimlik ve grup yolu"));
     search_->setClearButtonEnabled(true);
     connect(search_, &QLineEdit::textChanged, this,
             [this](const QString&) { refreshGalleryItems(); });
 
     gallery_ = new QListWidget(box);
+    gallery_->setObjectName(QStringLiteral("designerGallery"));
     gallery_->setViewMode(QListView::IconMode);
     gallery_->setIconSize(QSize(56, 40));
     // WIDE ENOUGH FOR TWO LINES of a published name, TALL ENOUGH FOR FOUR.
@@ -1130,6 +1148,7 @@ QWidget* StyleDesigner::buildGallery()
             [this](QListWidgetItem*, QListWidgetItem*) { showProvenance(); });
 
     use_ = new QPushButton(tr("Seçileni kullan"), box);
+    use_->setObjectName(QStringLiteral("primary"));
     use_->setToolTip(tr("Seçili gösterimi düzenlenebilir sembol yığını olarak alır")); // ui-label
     connect(use_, &QPushButton::clicked, this, &StyleDesigner::applyGalleryPick);
 
@@ -1141,7 +1160,15 @@ QWidget* StyleDesigner::buildGallery()
     layout->addWidget(gallery_, 3);
     layout->addWidget(galleryNote_);
     layout->addWidget(provenance_);
-    layout->addWidget(use_);
+
+    // RIGHT, AND ITS OWN WIDTH. A button stretched across seven hundred pixels
+    // reads as a banner rather than as something to press, and it is the one
+    // action in this half of the window — §15.1's single primary.
+    auto* useRow = new QHBoxLayout;
+    useRow->setContentsMargins(0, 0, 0, 0);
+    useRow->addStretch(1);
+    useRow->addWidget(use_);
+    layout->addLayout(useRow);
     return box;
 }
 
@@ -1387,6 +1414,7 @@ QWidget* StyleDesigner::buildTree()
     layout->addWidget(caption);
 
     tree_ = new QTreeWidget(box);
+    tree_->setObjectName(QStringLiteral("designerList"));
     tree_->setHeaderHidden(true);
     tree_->setIconSize(QSize(44, 26));
     tree_->setRootIsDecorated(true);
@@ -1397,11 +1425,13 @@ QWidget* StyleDesigner::buildTree()
     // newcomer to this window gets wrong.
     tree_->setToolTip(tr("Üstteki katman en son çizilir — ekranda en üstte görünür"));
 
-    // A WHOLE NUMBER OF ROWS, and a fixed one: the root and four layers, which
-    // is more than a published gösterim carries. Left to grow, the tree took
-    // the column's height and the property form under it took none.
-    const int row_px = tree_->fontMetrics().height() + 12;
-    tree_->setFixedHeight(row_px * 5 + 4);
+    // A WHOLE NUMBER OF ROWS, AND ONLY THE ROWS IT HAS. Left to grow, the tree
+    // took the column's height and the property form under it took none — so it
+    // was pinned at five, which is more than a published gösterim carries and
+    // left a third of the box as empty ground under a two-layer symbol. It now
+    // fits what is in it, floored at three so a one-layer symbol is not a slot
+    // and capped at six so a deep stack scrolls rather than starving the form.
+    fitStackHeight();
 
     connect(tree_, &QTreeWidget::currentItemChanged, this,
             [this](QTreeWidgetItem*, QTreeWidgetItem*) { loadSelected(); });
@@ -1435,15 +1465,23 @@ QWidget* StyleDesigner::buildTree()
         QMetaObject::invokeMethod(this, &StyleDesigner::refresh, Qt::QueuedConnection);
     });
 
+    // §15.1's icon button: 24 px, ghost, a tooltip and no label. They were bare
+    // `QToolButton`s carrying a glyph as their text, so they drew at whatever
+    // width the glyph happened to be — five different sizes in one row.
     const auto button = [&](const QString& text, const QString& tip, auto slot) {
         auto* b = new QToolButton(box);
+        b->setObjectName(QStringLiteral("rowTool"));
         b->setText(text);
         b->setToolTip(tip);
+        b->setAccessibleName(tip);
+        b->setFixedSize(24, 24);
         connect(b, &QToolButton::clicked, this, slot);
         return b;
     };
 
     auto* bar = new QHBoxLayout;
+    bar->setContentsMargins(0, 0, 0, 0);
+    bar->setSpacing(2);
     bar->addWidget(button(QStringLiteral("+"), tr("Katman ekle"), &StyleDesigner::addLayer));
     bar->addWidget(
         button(QStringLiteral("⧉"), tr("Katmanı kopyala"), &StyleDesigner::duplicateLayer));
@@ -1921,8 +1959,24 @@ void StyleDesigner::refresh()
         tree_->setCurrentItem(chosen != nullptr ? chosen : root);
     }
 
+    fitStackHeight();
+
     updatePreview();
     loadSelected();
+}
+
+void StyleDesigner::fitStackHeight()
+{
+    if (tree_ == nullptr) return;
+
+    // The root plus one row per symbol layer, because the root is always shown
+    // expanded. Measured from the font rather than from a constant: the row
+    // height follows the application font, and a hard-coded one clips at any
+    // other size.
+    const int rows =
+        std::clamp(static_cast<int>(symbol_.layers.size()) + 1, kStackRowsMin, kStackRowsMax);
+    const int row_px = tree_->fontMetrics().height() + 12;
+    tree_->setFixedHeight(row_px * rows + 4);
 }
 
 void StyleDesigner::updatePreview()

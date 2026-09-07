@@ -85,7 +85,7 @@ verilir.
 | `olcek_min` | Bu ölçek paydasından daha yakında çizilmez (1:N'deki N) |
 | `olcek_max` | Bu ölçek paydasından daha uzakta çizilmez |
 | `olcek` | Ölçek paydası (1:N). Ölçeğe bağlı satır ve kuralların hangisinin geçerli olduğunu belirler. `0` = ölçekten bağımsız |
-| `renk` | Çizgi rengi, `0xAARRGGBB` düzeninde tam sayı |
+| `renk` | Çizgi rengi, `0xAARRGGBB` düzeninde tam sayı. Verilmezse **siyah** |
 | `kalinlik` | Çizgi kalınlığı, **kâğıt mikrometresi**. `1000` = paftada 1 mm |
 | `dolgu` | Dolgu rengi, `0xAARRGGBB`. `0` = dolgusuz |
 | `sira` | Çizim sırası. Büyük olan üste gelir |
@@ -114,6 +114,12 @@ Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
 `renk` ve `dolgu` değerleri `KATMAN` komutundakiyle aynı düzendedir; hazır değerler için
 [Katman yönetimi](layer.md) sayfasındaki renk tablosuna bakın.
+
+**Rengini söylemeyen bir çizgi siyahtır.** Yeni bir katman, yeni bir sembol katmanı ve
+rengi verilmemiş bir `STİL` hep siyahla başlar — pafta siyah mürekkeple basılır, rengini
+söylemeyen bir gösterim onunla çizilir ve bir harita mühendisi bir çizgi çizip rengini
+söylemediğinde siyah kasteder. Bu bir varsayılandır, bir kilit değil: `renk` verildiği
+anda o geçerlidir.
 
 ### Sembol katmanları — bir gösterim tek çizgi değildir
 

@@ -1000,6 +1000,9 @@ private:
     /// slash in it.
     static void drawTexts(QPainter& painter, const render::DrawList& list, double cx, double cy)
     {
+        /// Big enough that the face's cap ratio comes back with three digits.
+        constexpr int kCapProbePx = 256;
+
         for (const auto& item : list.texts) {
             if (item.text.empty() || item.height_px < 3.0f) continue; // unreadable, so not drawn
 
@@ -1014,8 +1017,17 @@ private:
             const double degrees =
                 (dx == 0.0 && dy == 0.0) ? 0.0 : std::atan2(dy, dx) * 180.0 / M_PI;
 
+            // CAP HEIGHT IN, EM SIZE OUT — see the note in the QRhi backend.
+            // `height_px` is the height of a CAPITAL LETTER, `setPixelSize` wants
+            // the EM, and the two differ by about a third. Measured from the face
+            // rather than assumed, at a probe size big enough that the integer
+            // `capHeight()` is not the dominant error.
             QFont font = painter.font();
-            font.setPixelSize(std::max(3, static_cast<int>(item.height_px)));
+            font.setPixelSize(kCapProbePx);
+            const double cap  = QFontMetricsF(font).capHeight();
+            const double tall = static_cast<double>(item.height_px);
+            const double em   = cap > 0.0 ? tall * kCapProbePx / cap : tall;
+            font.setPixelSize(std::max(3, static_cast<int>(em)));
             painter.setFont(font);
             painter.setPen(from_rgba(item.rgba));
 

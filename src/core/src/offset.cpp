@@ -118,11 +118,11 @@ Mm2 ring_area(const std::vector<Point2>& ring) noexcept
     // The shoelace sum, in 128-bit intermediates so a TUREF-scale ring cannot
     // overflow: two eastings multiplied are already 6·10^17 and a hundred of them
     // would leave int64 (core.md R3).
-    __int128 twice = 0;
+    Int128 twice = 0;
     for (std::size_t i = 0; i < ring.size(); ++i) {
         const Point2& a = ring[i];
         const Point2& b = ring[(i + 1) % ring.size()];
-        twice += static_cast<__int128>(a.x) * b.y - static_cast<__int128>(b.x) * a.y;
+        twice += static_cast<Int128>(a.x) * b.y - static_cast<Int128>(b.x) * a.y;
     }
     return static_cast<Mm2>(twice / 2);
 }

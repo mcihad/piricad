@@ -19,6 +19,7 @@
 #include "kentos_cad/app/dialog_chrome.hpp"
 #include "kentos_cad/app/theme.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/settings.hpp"
 #include "kentos_cad/io/service.hpp"
 #include "kentos_cad/render/drawlist.hpp"
 #include "kentos_cad/render/scene.hpp"
@@ -107,6 +108,14 @@ public:
     /// Refits after the tick boxes changed which layers are visible.
     void refit();
 
+    /// Where the wheel reads its direction and its step from.
+    ///
+    /// The SAME store the canvas reads, so `core.harita.tekerlek_ters` and
+    /// `core.harita.yakinlastirma_adimi` mean one thing in the program rather
+    /// than one thing per widget. Without it this preview carried its own
+    /// hard-coded step, pointing the other way.
+    void useSettings(const core::Settings* store) { settings_ = store; }
+
     void applyTheme(ThemeMode mode) override;
 
 protected:
@@ -124,7 +133,8 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
 
 private:
-    const core::Document* doc_ = nullptr;
+    const core::Document* doc_      = nullptr;
+    const core::Settings* settings_ = nullptr;
     std::unique_ptr<render::Backend> backend_;
     render::ViewTransform view_;
     render::SceneOptions options_;

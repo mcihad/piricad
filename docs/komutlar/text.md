@@ -28,6 +28,11 @@ yüksekliğindedir; 1/1000 ölçekli bir paftada bu kâğıtta 2,5 mm eder. Öl�
 değiştiğinde yazının paftadaki boyu da değişir — MPYY'nin öngördüğü budur ve
 çizimin söylediği şeyin bir parçasıdır.
 
+Ölçülen yükseklik **büyük harfin boyudur**, yazı tipinin em boyu değil: `2500`
+dediğinizde `A` harfi zeminde tam 2,5 m olur. CAD'in her yerinde anlam budur —
+DXF'in 40 grup kodu da, bir paftadaki yazı yüksekliği de aynı şeyi söyler — ve
+içe aktarılan bir yazı bu yüzden dosyadaki boyuyla çizilir.
+
 ## Adlar
 
 | Ad | Tür |

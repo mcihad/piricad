@@ -102,7 +102,15 @@ Task<void> run(Context& ctx)
     // What to set out: the selection when there is one, otherwise every point in
     // the drawing. A surveyor asking for an aplikasyon of nothing means all of it.
     std::vector<core::EntityId> targets;
-    for (std::int64_t raw : ctx.argument("nesneler").as_ids()) {
+
+    // NAMED, and not for tidiness. `Context::argument` returns a `Value` BY
+    // VALUE and `as_ids()` hands back a reference into it, so writing the two
+    // together binds the loop to a container inside a temporary that dies at the
+    // end of the initialiser — the loop then walked freed memory. C++23 extends a
+    // range-for's temporaries to cover exactly this; this project is C++20
+    // (Article 2.2), where it is undefined behaviour and GCC says so.
+    const Value picked = ctx.argument("nesneler");
+    for (std::int64_t raw : picked.as_ids()) {
         const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw));
         const core::EntityId slot = doc.slot_of(key);
         if (slot == core::kNoEntity || !doc.alive(slot)) {

@@ -4,12 +4,15 @@
 #include "kentos_cad/app/backend_factory.hpp"
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/icons.hpp"
+#include "kentos_cad/app/map_canvas.hpp"
 #include "kentos_cad/app/tokens.hpp"
 #include "kentos_cad/command/transaction.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/io/dwg.hpp"
 #include "kentos_cad/io/vector.hpp"
 #include "kentos_cad/render/backend.hpp"
+
+#include <cmath>
 
 #include <QDateTime>
 #include <QFileDialog>
@@ -226,17 +229,34 @@ void ImportPreview::paintEvent(QPaintEvent*)
     // and QPaintDevice both, so the two pointers are different addresses.
     ctx.target = static_cast<QPaintDevice*>(this);
 
-    const render::Overlay empty;
+    // TRANSPARENT, and this is what made the preview black in the light theme.
+    // `Overlay::background_rgba` defaults to OPAQUE BLACK, so handing a default
+    // overlay to the backend clears the whole widget before a single entity is
+    // drawn — over the themed ground filled three lines above. In the dark theme
+    // the canvas token is nearly black anyway and nobody could see it happening.
+    //
+    // Zero alpha means "leave what is already there", the same contract the
+    // symbol shelf uses to keep its checkerboard, and here the ground is already
+    // painted.
+    render::Overlay empty;
+    empty.background_rgba = 0;
     backend_->render(draw_, empty, ctx);
 }
 
 void ImportPreview::wheelEvent(QWheelEvent* event)
 {
-    const double steps = event->angleDelta().y() / 120.0;
-    if (steps == 0.0) return;
+    const double notches = event->angleDelta().y() / 120.0;
+    if (notches == 0.0) return;
+
+    // THE CANVAS'S OWN FUNCTION, not a copy of it. This used to zoom the other
+    // way from the main view and ignore the wheel settings besides, so pushing the
+    // wheel away pulled back from a drawing that was about to be imported and
+    // pushed into it once it was.
+    const double factor =
+        settings_ != nullptr ? wheel_zoom_factor(*settings_, notches) : std::pow(1.2, notches);
 
     const QPointF at = event->position();
-    view_.zoom_at(render::ScreenPoint{at.x(), at.y()}, steps > 0 ? 1.0 / 1.2 : 1.2);
+    view_.zoom_at(render::ScreenPoint{at.x(), at.y()}, factor);
     update();
     event->accept();
 }
@@ -252,7 +272,12 @@ void ImportPreview::mouseMoveEvent(QMouseEvent* event)
 {
     if (!dragging_) return;
     const QPoint now = event->position().toPoint();
-    view_.pan_pixels(dragFrom_.x() - now.x(), dragFrom_.y() - now.y());
+
+    // THE SAME SIGN THE CANVAS USES, and it was the other one here. The canvas
+    // pans by `position - anchor`, which is the grab-and-drag every map has: the
+    // drawing follows the hand. This subtracted the other way round, so the same
+    // drag moved the preview one way and the imported drawing the other.
+    view_.pan_pixels(now.x() - dragFrom_.x(), now.y() - dragFrom_.y());
     dragFrom_ = now;
     update();
 }
@@ -527,6 +552,7 @@ QWidget* ImportWizard::buildLayerPage()
     left->addWidget(drawnHeading);
 
     preview_ = new ImportPreview(page);
+    preview_->useSettings(&controller_.bus().app_settings());
     left->addWidget(preview_, 1);
 
     summary_ = new QLabel(page);

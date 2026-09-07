@@ -110,6 +110,18 @@ public:
     /// (`render.md` R20).
     RunMetrics shape(Face face, std::string_view utf8, std::vector<PlacedGlyph>& out);
 
+    /// The face's cap height, in EM.
+    ///
+    /// NEEDED BEFORE ANYTHING IS SHAPED, which is why it is here and not only in
+    /// `RunMetrics`. A CAD text height is the height of a CAPITAL LETTER: that is
+    /// what AutoCAD's group code 40 means, what the METIN command's own page
+    /// promises a user (2500 draws letters 2,5 m tall on the ground), and what the
+    /// regulation's lettering height is on a sheet. An em size is a different
+    /// number — about a third larger — so a backend that feeds a cap height to a
+    /// font as its em size draws every caption a third too small. It has to divide
+    /// by this first.
+    float cap_height(Face face) const noexcept;
+
     /// The box for a `PlacedGlyph::box`. Never out of range: indices come from
     /// `shape()` and the table only grows.
     const GlyphBox& box(std::uint32_t index) const;

@@ -52,6 +52,36 @@ TEST_CASE("TEXT: the five bundled faces open")
     CHECK_FALSE(missing.ok());
 }
 
+TEST_CASE("TEXT: the cap height is available before anything is shaped")
+{
+    // THE REGRESSION. A CAD text height is the height of a CAPITAL LETTER — a
+    // DXF's group code 40, the METIN command's own promise, the lettering height
+    // a regulation names. A font's em size is a different and larger number, so a
+    // backend that hands a cap height to a face as its em size draws every
+    // caption about a third too small and a third too narrow. That is what an
+    // imported TAKS-over-KAKS label looked like: the fraction no longer filled
+    // the circle drawn around it.
+    //
+    // Both backends now divide the height by this ratio before they scale
+    // anything, and they need it BEFORE they shape a run — hence the accessor.
+    for (const render::Face face :
+         {render::Face::Sans, render::Face::SansMedium, render::Face::SansSemiBold,
+          render::Face::Mono, render::Face::MonoMedium}) {
+        const float cap = shared().cap_height(face);
+
+        // A real cap height, not a placeholder: a capital letter is most of the
+        // em and never all of it. A 1.0 here would mean the conversion had
+        // quietly become a no-op and the defect had come back.
+        CHECK(cap > 0.5f);
+        CHECK(cap < 0.85f);
+
+        // The same number a shaped run reports, because the backends read it from
+        // one place and the anchor maths reads it from the other.
+        std::vector<render::PlacedGlyph> glyphs;
+        CHECK(shared().shape(face, "0", glyphs).cap == cap);
+    }
+}
+
 TEST_CASE("TEXT: a Turkish word shapes into one glyph per letter")
 {
     std::vector<render::PlacedGlyph> glyphs;
@@ -129,24 +159,31 @@ TEST_CASE("TEXT: a glyph's field carries a gradient")
     CHECK(box.top > box.bottom);
     CHECK(box.left < 0.0f);
 
+    // The width in both the units this test needs it in, converted ONCE. Mixing
+    // `int` and `std::size_t` in the arithmetic below is what the sign-conversion
+    // warnings were about, and an atlas index computed half-signed is a real way
+    // to read the wrong pixel.
     const int side                          = shared().width();
+    const auto wide                         = static_cast<std::size_t>(side);
+    const auto across                       = static_cast<float>(side);
     const std::vector<std::uint8_t>& pixels = shared().pixels();
-    REQUIRE(pixels.size() == static_cast<std::size_t>(side) * side * 4u);
+    REQUIRE(pixels.size() == wide * wide * 4u);
 
     // A FIELD, not a mask. Inside the letter the distance is high, outside it is
     // low, and the two must actually differ — a generator that failed silently
     // writes one constant everywhere and the glyph comes out as a filled block or
     // as nothing at all.
-    const int x0 = static_cast<int>(box.u0 * side);
-    const int x1 = static_cast<int>(box.u1 * side);
-    const int y0 = static_cast<int>(box.v0 * side);
-    const int y1 = static_cast<int>(box.v1 * side);
+    const int x0 = static_cast<int>(box.u0 * across);
+    const int x1 = static_cast<int>(box.u1 * across);
+    const int y0 = static_cast<int>(box.v0 * across);
+    const int y1 = static_cast<int>(box.v1 * across);
 
     int lowest  = 255;
     int highest = 0;
     for (int y = y0; y < y1; ++y) {
         for (int x = x0; x < x1; ++x) {
-            const std::size_t at = (static_cast<std::size_t>(y) * side + x) * 4u;
+            const std::size_t at =
+                (static_cast<std::size_t>(y) * wide + static_cast<std::size_t>(x)) * 4u;
             const int median =
                 std::max(std::min(pixels[at], pixels[at + 1]),
                          std::min(std::max(pixels[at], pixels[at + 1]), pixels[at + 2]));

@@ -42,8 +42,10 @@ class AttributeModel : public QAbstractTableModel
     Q_OBJECT
 
 public:
-    /// Builds the model over a controller, which outlives it.
-    explicit AttributeModel(Controller& controller, QObject* parent = nullptr);
+    /// Builds the model over a controller, which outlives it, showing `layerName`
+    /// alone or the whole drawing when it is empty.
+    explicit AttributeModel(Controller& controller, QString layerName = QString(),
+                            QObject* parent = nullptr);
 
     /// Re-reads the document and re-applies the filter.
     void refresh();
@@ -79,6 +81,14 @@ private:
     QVector<core::AttrId> columns_; ///< every declared column, in declaration order
     QString filter_;
     QString error_;
+
+    /// The layer the table is scoped to, or empty for the whole drawing.
+    ///
+    /// HELD BY NAME AND RESOLVED ON EVERY REFRESH, not resolved once into a
+    /// `LayerId`: a layer id is a SLOT and slots move when layers are added or
+    /// removed (model.md R1/R5), so a cached one would quietly start showing a
+    /// different layer's rows.
+    QString layer_;
 };
 
 /// The window `design.md` §9 draws around that model.

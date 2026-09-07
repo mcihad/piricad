@@ -23,6 +23,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -224,13 +225,96 @@ void line_to_mm(const OGRLineString* line, std::vector<core::Point2>& out)
             core::Point2{core::mm_from_metres(line->getX(i)), core::mm_from_metres(line->getY(i))});
 }
 
+/// One parameter's value out of an OGR style string, or empty when it is absent.
+///
+/// GDAL hands a DXF's text over as a style string and nowhere else:
+///
+///     LABEL(f:"Arial",t:"Yol boyu",p:1,a:37.5,s:2.5g,c:#000000)
+///
+/// SCANNED RATHER THAN SEARCHED FOR, and the difference is a real defect and not
+/// a nicety: the caption's own text is one of the parameters, so a plain
+/// `find("a:")` matches inside `t:"Ada: 12"` and reads the parcel's own label as
+/// an angle. The scan walks parameter by parameter from the opening bracket and
+/// steps over a quoted value whole, so the only `a:` it can see is a parameter
+/// name.
+std::string_view style_value(const char* style, std::string_view key)
+{
+    if (style == nullptr) return {};
+
+    const std::string_view text(style);
+    std::size_t at = text.find('(');
+    if (at == std::string_view::npos) return {};
+    ++at;
+
+    while (at < text.size() && text[at] != ')') {
+        const std::size_t colon = text.find(':', at);
+        if (colon == std::string_view::npos) return {};
+
+        const std::string_view name = text.substr(at, colon - at);
+
+        // The value, to the next top-level comma. A quoted one is stepped over
+        // whole, backslash escapes included, so a comma or a bracket inside a
+        // caption ends nothing.
+        std::size_t end = colon + 1;
+        if (end < text.size() && text[end] == '"') {
+            ++end;
+            while (end < text.size() && text[end] != '"') {
+                if (text[end] == '\\' && end + 1 < text.size()) ++end;
+                ++end;
+            }
+            if (end < text.size()) ++end; // the closing quote
+        } else {
+            while (end < text.size() && text[end] != ',' && text[end] != ')')
+                ++end;
+        }
+
+        if (name == key) {
+            std::string_view value = text.substr(colon + 1, end - colon - 1);
+            if (value.size() >= 2 && value.front() == '"' && value.back() == '"')
+                value = value.substr(1, value.size() - 2);
+            return value;
+        }
+
+        at = end;
+        while (at < text.size() && (text[at] == ',' || text[at] == ' '))
+            ++at;
+    }
+
+    return {};
+}
+
+/// A leading decimal number, or nothing. `std::stod` on a scanned parameter.
+///
+/// Compared against the digit range rather than asked of `<cctype>`: the
+/// classifiers are banned outright in this tree (CLAUDE.md 5.6) because they are
+/// wrong on Turkish text, and a number needs no classifier anyway.
+std::optional<double> leading_number(std::string_view value, std::string_view unit)
+{
+    std::size_t end = 0;
+    if (end < value.size() && (value[end] == '-' || value[end] == '+')) ++end;
+    while (end < value.size() && ((value[end] >= '0' && value[end] <= '9') || value[end] == '.' ||
+                                  value[end] == 'e' || value[end] == 'E' ||
+                                  ((value[end] == '-' || value[end] == '+') && end > 0 &&
+                                   (value[end - 1] == 'e' || value[end - 1] == 'E'))))
+        ++end;
+    if (end == 0) return std::nullopt;
+
+    // The unit the caller insists on, exactly: `s:2.5g` is ground, `s:10pt` is
+    // paper, and the two are not interchangeable.
+    if (value.substr(end) != unit) return std::nullopt;
+
+    try {
+        return std::stod(std::string(value.substr(0, end)));
+    } catch (...) {
+        return std::nullopt;
+    }
+}
+
 /// The character height an OGR LABEL style declares, in ground millimetres.
 ///
 /// GDAL's DXF driver does not expose a text height FIELD — the fields are Layer,
 /// PaperSpace, SubClasses, Linetype, EntityHandle and Text — so the only place
-/// the size survives is the style string:
-///
-///     LABEL(f:"Arial",t:"Parsel 12",p:1,s:2.5g,c:#000000)
+/// the size survives is the style string.
 ///
 /// `g` is ground units, `p` points, `mm` millimetres on paper. Only ground is
 /// read: a cadastral sheet's parcel numbers are a GROUND height — that is what
@@ -240,32 +324,22 @@ void line_to_mm(const OGRLineString* line, std::vector<core::Point2>& out)
 /// guessed at the call site.
 core::Mm label_height_mm(const char* style)
 {
-    if (style == nullptr) return 0;
+    const std::optional<double> value = leading_number(style_value(style, "s"), "g");
+    return value && *value > 0.0 ? core::mm_from_metres(*value) : 0;
+}
 
-    const std::string_view text(style);
-    const std::size_t at = text.find("s:");
-    if (at == std::string_view::npos) return 0;
-
-    // Compared against the digit range rather than asked of `<cctype>`: the
-    // classifiers are banned outright in this tree (CLAUDE.md 5.6) because they
-    // are wrong on Turkish text, and a number needs no classifier anyway.
-    std::size_t end = at + 2;
-    while (end < text.size() &&
-           ((text[end] >= '0' && text[end] <= '9') || text[end] == '.' || text[end] == '-'))
-        ++end;
-
-    // GROUND ONLY. `s:2.5g` is 2,5 m of ground; `s:10pt` is ten points on paper
-    // and means nothing to a document that stores ground millimetres.
-    if (end >= text.size() || text[end] != 'g') return 0;
-
-    double value = 0.0;
-    const std::string number(text.substr(at + 2, end - at - 2));
-    try {
-        value = std::stod(number);
-    } catch (...) {
-        return 0;
-    }
-    return value > 0.0 ? core::mm_from_metres(value) : 0;
+/// The rotation an OGR LABEL style declares, in degrees counter-clockwise.
+///
+/// WHY IT MATTERS ON A PLAN. A DXF caption carries an angle (group code 50) and a
+/// planner uses it: street names run along the street, parcel numbers along the
+/// parcel, ada numbers along the block. Dropped, every one of those comes in
+/// horizontal — 1 412 of the 13 112 captions in a 48 MB zoning DXF — and a label
+/// that was laid along a road crosses it instead. Nothing else in the file says
+/// which way a caption faces.
+double label_angle_deg(const char* style)
+{
+    const std::optional<double> value = leading_number(style_value(style, "a"), "");
+    return value ? *value : 0.0;
 }
 
 /// The CRS in the `.prj` companion beside `path`, when there is one.
@@ -791,7 +865,8 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                     // TEXT IS A BASELINE PLUS A STRING, exactly as the `METİN`
                     // command builds one — two real vertices, so the cull, the
                     // snap and the hit test need to know nothing about text.
-                    core::Mm height = label_height_mm(feature->GetStyleString());
+                    const char* style = feature->GetStyleString();
+                    core::Mm height   = label_height_mm(style);
                     if (height <= 0) {
                         // The file did not say. A metre is the height a 1/1000
                         // cadastral sheet prints a parcel number at, and it is
@@ -804,9 +879,21 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
 
                     // A rough advance of 0.6 em per character, which decides the
                     // BOUNDING BOX and not where a glyph lands. Same approximation
-                    // `METİN` makes, and for the same reason.
-                    core::Point2 end = where;
-                    end.x += (height * 6 * static_cast<core::Mm>(std::strlen(label))) / 10;
+                    // `METİN` makes, and for the same reason. At least one
+                    // millimetre of it, because the baseline is also the
+                    // DIRECTION and a zero-length one has none.
+                    const core::Mm advance = std::max<core::Mm>(
+                        1, (height * 6 * static_cast<core::Mm>(std::strlen(label))) / 10);
+
+                    // THE BASELINE IS THE ROTATION. `render/src/scene.cpp` reads a
+                    // caption's facing from its first vertex to its last and
+                    // nothing else, so the angle DXF stores is carried by turning
+                    // the run rather than by a field: no new column, and every
+                    // client that already draws a caption draws a turned one.
+                    const double turn = label_angle_deg(style) * kPi / 180.0;
+                    const core::Point2 end{
+                        where.x + core::mm_round(static_cast<double>(advance) * std::cos(turn)),
+                        where.y + core::mm_round(static_cast<double>(advance) * std::sin(turn))};
 
                     const std::array<core::Point2, 2> baseline{where, end};
                     auto made = tx.add_polyline(target, baseline);

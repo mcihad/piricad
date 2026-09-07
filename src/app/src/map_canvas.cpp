@@ -7,6 +7,7 @@
 #include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/guide.hpp"
 #include "kentos_cad/core/identity.hpp"
+#include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/settings.hpp"
 #include "kentos_cad/render/backend.hpp"
 
@@ -173,8 +174,6 @@ void MapCanvas::reloadGridSettings()
     look_.readout       = store.get("core.harita.koordinat_gostergesi").as_bool();
     look_.cursor        = static_cast<int>(store.get("core.harita.imlec").as_enum());
     look_.cursor_px     = static_cast<int>(store.get("core.harita.imlec_boyu").as_int());
-    look_.zoom_percent  = static_cast<int>(store.get("core.harita.yakinlastirma_adimi").as_int());
-    look_.invert_wheel  = store.get("core.harita.tekerlek_ters").as_bool();
     look_.marker_px     = static_cast<int>(store.get("core.yakalama.isaret_boyu").as_int());
     look_.snap_tip      = store.get("core.yakalama.ipucu").as_bool();
     look_.dynamic_input = store.get("core.arayuz.dinamik_girdi").as_bool();
@@ -311,6 +310,25 @@ void MapCanvas::dispatchSelection(const QPointF& from, const QPointF& to,
     const double slack =
         static_cast<double>(controller_.bus().app_settings().get("core.secim.tolerans").as_int());
     const bool is_box = std::abs(to.x() - from.x()) > slack || std::abs(to.y() - from.y()) > slack;
+
+    // MORE THAN ONE THING UNDER THE CURSOR IS A QUESTION, not a tie to break
+    // silently. On a plan sheet a click lands on a parcel, on the boundary that
+    // closes it and on the ada boundary over that; `pick_nearest` answers with
+    // one of them, correctly and unhelpfully. The shell asks.
+    //
+    // The candidates are READ here and chosen elsewhere: this emits, the window
+    // that opens sends `SEÇ`, and the document is never touched from a widget
+    // (Article 5.9). The radius is the command's own `pick_radius`, so the list
+    // holds exactly what `SEÇ mod=NOKTA` would have been choosing between.
+    if (!is_box) {
+        std::vector<core::EntityId> under;
+        core::pick_all(controller_.document(), a, controller_.bus().aid_settings().pick_radius,
+                       under);
+        if (under.size() > 1) {
+            emit pickAmbiguous(under, mods);
+            return;
+        }
+    }
 
     command::Args args;
     args.set("mod", command::Value::text(is_box ? "KUTU" : "NOKTA"));
@@ -1679,19 +1697,30 @@ void MapCanvas::mouseReleaseEvent(QMouseEvent* event)
     }
 }
 
-void MapCanvas::wheelEvent(QWheelEvent* event)
+double wheel_zoom_factor(const core::Settings& store, double notches)
 {
-    double steps = event->angleDelta().y() / 120.0;
-    if (steps == 0.0) return;
-    if (look_.invert_wheel) steps = -steps;
+    if (notches == 0.0) return 1.0;
+    if (store.get("core.harita.tekerlek_ters").as_bool()) notches = -notches;
 
     // The step is a PERCENTAGE of the current scale, so every notch feels the same
     // at every zoom. 20 % is the default and the range is wide on purpose: the
     // people who want three notches per decade and the people who want thirty are
     // both right about their own hands.
-    const double factor = 1.0 + static_cast<double>(look_.zoom_percent) / 100.0;
+    const auto percent = static_cast<double>(store.get("core.harita.yakinlastirma_adimi").as_int());
+    return std::pow(1.0 + percent / 100.0, notches);
+}
+
+void MapCanvas::wheelEvent(QWheelEvent* event)
+{
+    const double notches = event->angleDelta().y() / 120.0;
+    if (notches == 0.0) return;
+
+    // Through the shared helper rather than through `look_`, so the preview in the
+    // import wizard cannot drift from this: one reading of the settings, one
+    // direction. The lookup is two folded string compares and this runs on a
+    // wheel event, not inside the frame budget.
     view_.zoom_at(render::ScreenPoint{event->position().x(), event->position().y()},
-                  std::pow(factor, steps));
+                  wheel_zoom_factor(controller_.bus().app_settings(), notches));
     publishViewScale();
     updateSnapPreview();
     emit viewChanged();

@@ -56,6 +56,7 @@ message(STATUS "  compiler ......... ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPIL
 message(STATUS "  application ...... ${KENTOS_BUILD_APP}")
 message(STATUS "  tests ............ ${KENTOS_BUILD_TESTS}")
 message(STATUS "  GDAL / PROJ ...... ${KENTOS_WITH_GDAL} / ${KENTOS_WITH_PROJ}")
+message(STATUS "  DWG (LibreDWG) ... ${KENTOS_WITH_DWG}")
 message(STATUS "  Lua / Python ..... ${KENTOS_WITH_LUA} / ${KENTOS_WITH_PYTHON}")
 message(STATUS "  QRhi canvas ...... ${KENTOS_WITH_RHI}")
 message(STATUS "")

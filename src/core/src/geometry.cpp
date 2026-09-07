@@ -60,7 +60,7 @@ const char* role_name(RingRole r) noexcept
 
 // ---------------------------------------------------------- exact 128-bit ----
 //
-// Every quantity below is exact for any coordinate append() accepts. __int128 is
+// Every quantity below is exact for any coordinate append() accepts. `Int128` is
 // not used: MSVC does not have it and CLAUDE.md 6.1 requires the same numbers on
 // all three platforms, so the two limbs are carried by hand.
 

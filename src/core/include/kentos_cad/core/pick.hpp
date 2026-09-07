@@ -70,7 +70,7 @@ bool segment_touches_box(Point2 a, Point2 b, const Box2& box) noexcept;
 
 /// Whether `probe` lies inside the closed ring, by the even-odd rule.
 ///
-/// EXACT INTEGER ARITHMETIC, in `__int128` like `ring_area`: whether a click
+/// EXACT INTEGER ARITHMETIC, in `core::Int128` like `ring_area`: whether a click
 /// landed inside a parcel must not depend on the machine, and a crossing test in
 /// `double` disagrees with itself along an edge at TUREF's seven digits.
 ///
@@ -118,5 +118,21 @@ void pick_in_box(const Document& doc, const Box2& box, PickMode mode, std::vecto
 /// The visible entity nearest `cursor` whose geometry comes within `radius`, or
 /// `kNoEntity`. Ties break on the lower slot, which makes the answer stable.
 EntityId pick_nearest(const Document& doc, Point2 cursor, Mm radius);
+
+/// EVERY visible entity whose geometry comes within `radius` of `cursor`, nearest
+/// first. `out` is cleared first.
+///
+/// WHY THE WHOLE LIST AND NOT JUST THE WINNER. On a cadastral sheet a click lands
+/// on a parcel, its boundary and the ada boundary over it at once, and
+/// `pick_nearest` answers with one of the three and no way to say which one was
+/// meant. The shell offers the list; `SEÇ mod=NOKTA sira=` names a row of it from
+/// the command line and from a script, so choosing the second thing under the
+/// cursor is not a mouse-only capability (CLAUDE.md 5.15).
+///
+/// THE ORDER IS `pick_nearest`'S OWN: sorted by distance, ties on the lower slot,
+/// so `out.front()` is exactly what `pick_nearest` would have returned. The two
+/// must not be able to disagree about which entity is on top — a test holds them
+/// to it.
+void pick_all(const Document& doc, Point2 cursor, Mm radius, std::vector<EntityId>& out);
 
 } // namespace kentos::core

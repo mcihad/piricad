@@ -18,6 +18,7 @@
 
 /// Qt widgets this header only holds pointers to.
 class QLabel;
+class QMenu;
 class QTreeWidget;
 class QTreeWidgetItem;
 
@@ -96,6 +97,16 @@ public:
     /// click to the handler, so the probe has to start at the click.
     void probeByHand();
 
+    /// Opens the REAL context menu of the row named `layerName` and fires the
+    /// entry whose text is `entry`. Returns false when either is not there.
+    ///
+    /// It exists for `KENTOS_LAYER_PROBE`, and for the reason `probeByHand`
+    /// gives: calling a handler proves the handler works and says nothing about
+    /// whether the menu a user opens can reach it. The menu it opens is built by
+    /// the same function the right-click builds it with — there is no second
+    /// menu for the probe to be right about.
+    bool triggerContextEntry(const QString& layerName, const QString& entry);
+
     /// Highlights `layer` in the list without sending anything to the bus.
     ///
     /// Called when the CANVAS selection changes: picking a parcel on the map and
@@ -113,6 +124,17 @@ signals:
     /// the designer. The panel does not own the dialog: a panel that opened a
     /// window would be a panel that has to know what is in it.
     void styleRequested(const QString& layerName);
+
+    /// Emitted when the user asks for a layer's attribute table, for the same
+    /// reason and by the same route as `styleRequested`.
+    ///
+    /// ON THE LAYER THE MENU WAS OPENED ON, not on the active one. The table
+    /// already knew how to open on a named layer; the only way to reach it was
+    /// the Katman menu, which passes whichever layer happens to be ACTIVE — so
+    /// looking at the attributes of a layer meant making it active first, which
+    /// is an edit nobody asked for (`selectLayer` refuses to do it for the same
+    /// reason).
+    void attributeTableRequested(const QString& layerName);
 
 protected:
     /// Watches the tree's viewport for a click on the eye or the lock.
@@ -136,6 +158,10 @@ private:
     /// The right-click menu. Every entry leaves through the command bus, so a
     /// script can do the same things (Article 1.2).
     void showContextMenu(const QPoint& where);
+
+    /// Builds that menu for one row, owned by the caller. Separate from
+    /// `showContextMenu` only so `triggerContextEntry` can open the same one.
+    QMenu* buildContextMenu(QTreeWidgetItem* item);
 
     /// A small preview of what this layer draws, rendered by the CANVAS backend
     /// so the swatch and the map cannot disagree.

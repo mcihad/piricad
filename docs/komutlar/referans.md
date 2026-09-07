@@ -534,6 +534,7 @@ Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta.
 | `katman` | text | isteğe bağlı | KATMAN modunda katman adı |
 | `islem` | text | isteğe bağlı | DEĞİŞTİR | EKLE | ÇIKAR | TERSİNE |
 | `tolerans` | number | isteğe bağlı | NOKTA modunda arama yarıçapı, metre; yoksa seçim toleransı |
+| `sira` | number | isteğe bağlı | NOKTA modunda kaçıncı nesne: 1 en yakını, 2 altındaki |
 
 Ayrıntılı kullanım: [SEÇ](select.md)
 

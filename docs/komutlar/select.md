@@ -68,11 +68,42 @@ Argümansız çağrı hiçbir şeyi değiştirmez; yalnızca seçimde ne olduğu
 | `katman` | `KATMAN` modunda katman adı. Türkçe kurallarıyla karşılaştırılır |
 | `islem` | `DEĞİŞTİR` (varsayılan), `EKLE`, `ÇIKAR` veya `TERSİNE` |
 | `tolerans` | `NOKTA` modunda arama yarıçapı, **metre**. Verilmezse `seçim_toleransı` tercihi (ekran pikseli) kullanılır |
+| `sira` | `NOKTA` modunda kaçıncı nesne: `1` en yakını (varsayılan), `2` onun altındaki |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
 Her modun İngilizce ve karaktersiz karşılıkları da kabul edilir: `TUMU`/`ALL`,
 `TEMIZLE`/`CLEAR`, `WINDOW`, `CROSSING`, `BOX`, `POINT`, `ADD`, `REMOVE`, `TOGGLE`.
+
+### Aynı noktada birden çok nesne varsa
+
+Bir imar paftasında tek bir tıklama **aynı anda** parsele, onu kapatan sınıra ve
+üstündeki ada sınırına düşer. Üçü de imlecin altındadır ve üçünün de uzaklığı
+sıfırdır; "en yakın" sorusunun tek bir doğru cevabı yoktur.
+
+**Arayüzde** böyle bir tıklama bir liste açar. Listede her aday bir satırdır ve
+satır dört şey yazar: **tür**, **katman**, **ölçü** (alan, uzunluk ya da yarıçap
+— nesnenin ne olduğuna göre) ve **kimlik**. Satırlar arasında gezindikçe seçim
+çizimde canlı olarak değişir, böylece hangi satırın hangi nesne olduğunu
+görürsünüz. **Enter** ya da çift tık seçer, **Esc** vazgeçer ve seçimi liste
+açılmadan önceki hâline geri alır.
+
+İlk satır her zaman komutun kendi başına seçeceği nesnedir — yani listeyi görmezden
+gelip Enter'a basmak eski davranışın tıpatıp aynısıdır.
+
+**Komut satırında ve betikte** aynı şeyi `sira` yapar:
+
+```text
+Komut: SEÇ mod=NOKTA noktalar=485320,4310220 tolerans=2
+1 nesne seçildi.
+
+Komut: SEÇ mod=NOKTA noktalar=485320,4310220 tolerans=2 sira=2
+1 nesne seçildi.
+```
+
+O noktada olmayan bir sıra istenirse komut kaç nesne olduğunu söyler ve seçimi
+değiştirmez. Bu, listenin fareye özel bir yetenek olmamasının sebebidir: aynı
+seçimi bir betik de, bir yapay zekâ önerisi de yazabilir.
 
 ### Tolerans neden pikseldir
 

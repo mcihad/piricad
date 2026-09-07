@@ -26,7 +26,9 @@ qt_add_executable(kentos_cad
     src/main.cpp
     src/main_window.cpp
     src/map_canvas.cpp
+    src/measure_text.cpp
     src/painter_backend.cpp
+    src/pick_list.cpp
     src/style_designer.cpp
     src/symbol_image.cpp
     src/symbol_preview.cpp
@@ -50,6 +52,7 @@ qt_add_executable(kentos_cad
     include/kentos_cad/app/main_window.hpp
     include/kentos_cad/app/map_canvas.hpp
     include/kentos_cad/app/panels.hpp
+    include/kentos_cad/app/pick_list.hpp
     include/kentos_cad/app/qgis_backend.hpp
     include/kentos_cad/app/settings_dialog.hpp
     include/kentos_cad/app/shell_chrome.hpp

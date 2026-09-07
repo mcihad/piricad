@@ -17,9 +17,11 @@ Kendi proje dosyanız için: [KentOSCad proje dosyası](proje-dosyasi.md).
 | ESRI Shapefile | `.shp` | evet | **hayır** — aşağıya bakın |
 | OGC GeoPackage | `.gpkg` | evet | evet |
 
-¹ DWG okuma **isteğe bağlı bir yapı seçeneğidir**. Paketlenmiş sürümde açık
-gelir; kendiniz derliyorsanız `-DKENTOS_WITH_DWG=ON` gerekir. Kapalıysa bir
-`.dwg` açmaya çalışmak ne yapmanız gerektiğini yazan bir hata verir.
+¹ DWG okuma bir yapı seçeneğidir ama **açık gelir** — hem paketlenmiş sürümde hem
+kendiniz derlerken. Kapatmak isterseniz `-DKENTOS_WITH_DWG=OFF`; ağa çıkamayan
+bir yapıda (`KENTOS_FETCH_DEPENDENCIES=OFF`) kendiliğinden kapalıdır, çünkü
+LibreDWG kaynağı o yapıda indirilemez. Kapalıyken bir `.dwg` açmaya çalışmak ne
+yapmanız gerektiğini yazan bir hata verir.
 
 ### DWG okunur, yazılmaz
 
@@ -44,13 +46,21 @@ ve projenin GPLv3 lisansıyla bağdaşmaz.
 | Okunan | Okunmayan |
 |---|---|
 | `LINE`, `LWPOLYLINE` (kapalıysa **alan**) | Bloklar (`INSERT`) — parçalanmadan atlanır |
-| `POINT` — nirengi, poligon noktası, röper | Ölçülendirme (`DIMENSION`) |
-| `TEXT` — ada ve parsel numaraları, yüksekliğiyle | Tarama (`HATCH`) |
-| `CIRCLE` ve `ARC` — **gerçek daire ve yay olarak**, çizgiye bölünmeden | Kâğıt alanı (layout) — çizim değildir, alınmaz |
-| Katman adları | Katman rengi ve çizgi tipi |
+| `POLYLINE` — eski usul çoklu çizgi, kapalıysa **alan** | Ölçülendirme (`DIMENSION`) |
+| `POINT` — nirengi, poligon noktası, röper | Tarama (`HATCH`) |
+| `TEXT` — ada ve parsel numaraları, yüksekliğiyle | Kâğıt alanı (layout) — çizim değildir, alınmaz |
+| `CIRCLE` ve `ARC` — **gerçek daire ve yay olarak**, çizgiye bölünmeden | Katman rengi ve çizgi tipi |
+| Katman adları ve her katmandaki nesne sayısı | |
 
 Okunamayan bir varlık türüyle karşılaşılırsa **adıyla ve sayısıyla** bildirilir.
 Sessizce düşürülmez.
+
+**Eski usul `POLYLINE` de okunur**, ve bu ayrı bir satırı hak ediyor: AutoCAD
+`LWPOLYLINE` ortaya çıkmadan önce on yıl boyunca `POLYLINE` yazdı ve o dönemden
+gelen her dosya hâlâ onu taşır. Köşeleri nesnenin içinde değil, ayrı `VERTEX`
+nesneleri olarak durur ve zinciri bir `SEQEND` kapatır. Bir kadastro çiziminde
+parsel sınırlarının tamamı bu türde olabilir — 48 MB'lık örnek çizimde 12 013
+`POLYLINE`'a karşılık tek bir `LWPOLYLINE` bile yok.
 
 Daire ve yay her iki yolda da **gerçek daire ve yay** olarak gelir. DWG yolunda
 LibreDWG onları zaten öyle verir; DXF yolunda GDAL çizgi parçalarına böler ve
@@ -166,9 +176,9 @@ AYAR koordinat_sistemi EPSG:5254
 |---|---|
 | Çizgi ve alan geometrisi, milimetre hassasiyetiyle | Öznitelikler — belge modeli öznitelik sütunlarını Faz 1'de kazanacak |
 | **Ölçülmüş noktalar** — nirengi, poligon noktası, röper | Katman rengi, çizgi tipi, ölçek sınırları |
-| **Yazılar**, yüksekliğiyle birlikte | Nesne başına stil |
+| **Yazılar**, yüksekliği ve **açısıyla** birlikte | Nesne başına stil |
 | Katman adları | Nesne ve katman anahtarları |
-| Boşluklu ve çok parçalı alanlar | Yazı tipi, yazının açısı |
+| Boşluklu ve çok parçalı alanlar | Yazı tipi |
 | Koordinat sistemi | |
 
 Bu yüzden **çalışma dosyanız `.pcad` olmalıdır**. DXF ve GeoPackage teslim
@@ -182,6 +192,18 @@ KentOSCad ilk köşesi sonuncusuyla aynı olan bir çizgiyi **alan** olarak okur
 yoksa dosyadaki her parsel çizgi olarak gelir, dolgusu olmaz, alanı ölçülemez ve
 [`İFRAZ`](../komutlar/split_parcel.md) ile [`TEVHİT`](../komutlar/merge.md)
 üzerinde çalışamaz.
+
+### Yazı dosyadaki açıyla gelir
+
+Bir DXF yazısı kendi açısını taşır ve plancı bunu kullanır: yol adı yol boyunca,
+parsel ve ada numarası parsel boyunca yazılır. Açı okunmazsa hepsi yatay gelir ve
+yola göre yazılmış bir etiket yolu keser — Suşehri imar planındaki 13 112 yazının
+1 412'si dönüktür.
+
+KentOSCad bir yazıyı **taban çizgisi artı bir metin** olarak tutar, ve yazının
+yönü o taban çizgisinin yönüdür. Dosyadaki açı bu yüzden ayrı bir alana değil,
+taban çizgisinin kendisine yazılır: yeni bir sütun gerekmez ve yazıyı çizen her
+istemci dönük olanı da çizer.
 
 ### Daire daire, yay yay olarak gelir
 

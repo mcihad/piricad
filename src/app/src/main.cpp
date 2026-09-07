@@ -606,6 +606,16 @@ int main(int argc, char** argv)
         });
     }
 
+    // The pick chooser, opened by a real click rather than by a call. Same
+    // category as the probes around it: developer tooling, an environment
+    // variable, no /docs page.
+    if (qEnvironmentVariableIsSet("KENTOS_PICK_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            window.probePickList();
+            QApplication::exit(0);
+        });
+    }
+
     if (qEnvironmentVariableIsSet("KENTOS_HAND_PROBE")) {
         // The value, when it is a path, is the directory every step is
         // photographed into. See `MainWindow::probeToolsByHand`.

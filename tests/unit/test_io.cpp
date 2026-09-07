@@ -21,6 +21,7 @@
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/guide.hpp"
 
+#include <cmath>
 #include <iterator>
 
 #include "kentos_cad/command/bus.hpp"
@@ -1026,6 +1027,58 @@ TEST_CASE("IO: DWG her sürümden okunur ve neyi atladığını söyler")
 #endif
 }
 
+TEST_CASE("IO: DWG eski usul POLYLINE'i ve katman listesini getiriyor")
+{
+#ifndef KENTOS_DWG_SAMPLES
+    PENDING("KENTOS_WITH_DWG=OFF; DWG POLYLINE okuma sınanamıyor.");
+#else
+    // TWO REGRESSIONS, both of which a real cadastral DWG walks straight into.
+    //
+    //   * THE OLD-STYLE POLYLINE. AutoCAD wrote `POLYLINE` for a decade before
+    //     `LWPOLYLINE` existed, and its vertices are separate objects chained by
+    //     handle and closed by a `SEQEND`. The reader knew only `LWPOLYLINE`, so
+    //     every one of them fell through to "unsupported type" — a drawing came
+    //     in without its parcel boundaries and the report blamed the file.
+    //   * THE LAYER CHECKLIST. The reader counted entities per layer into a
+    //     census and then never put it in the report, so the wizard's second page
+    //     offered a DWG no layers to tick.
+    //
+    // Neither needs a fixture of our own: LibreDWG ships its own drawings, GPLv3
+    // like the library, and `KENTOS_DWG_SAMPLES` points at them.
+    const fs::path dir = KENTOS_DWG_SAMPLES;
+    if (!fs::exists(dir)) PENDING("LibreDWG örnek dosyaları bulunamadı: " + dir.string());
+
+    std::vector<fs::path> files;
+    for (const auto& entry : fs::directory_iterator(dir))
+        if (entry.is_regular_file() && entry.path().extension() == ".dwg")
+            files.push_back(entry.path());
+    std::sort(files.begin(), files.end()); // test.md R19: sorted iteration
+    REQUIRE(files.size() >= 5);
+
+    std::size_t with_layers = 0;
+    for (const fs::path& file : files) {
+        core::Document scratch;
+        auto probe = io::probe_import(scratch, file.string(), "EPSG:5254", std::stop_token{});
+        if (!probe) continue;
+
+        if (!probe.value().layers.empty()) ++with_layers;
+
+        // A POLYLINE, ITS VERTICES AND ITS SEQEND ARE NOT LOSSES. The report
+        // names every type it could not read; none of these three may be in it.
+        for (const std::string& note : probe.value().notes) {
+            INFO(file.filename().string() << ": " << note);
+            CHECK(note.find("POLYLINE") == std::string::npos);
+            CHECK(note.find("VERTEX") == std::string::npos);
+            CHECK(note.find("SEQEND") == std::string::npos);
+        }
+    }
+
+    // A drawing that read has layers, because everything in a DWG sits on one —
+    // `0` at the very least. An empty list is the defect, not a quiet file.
+    CHECK_EQ(with_layers, files.size());
+#endif
+}
+
 TEST_CASE("IO: okunabilir her biçim dosya diyaloğunda görünür")
 {
     // A format the file dialog does not offer is a format the user has no way to
@@ -1289,6 +1342,71 @@ TEST_CASE("IO: DXF içe aktarımı noktayı, yazıyı ve KAPALI çizgiyi kaybetm
     CHECK_EQ(faces, 1);    // the parcel is a FACE, not a line
     CHECK_EQ(points, 1);   // the nirengi survived
     CHECK_EQ(captions, 1); // and so did the number
+}
+
+TEST_CASE("IO: DXF yazısı dosyadaki açıyla geliyor")
+{
+    // THE REGRESSION. A DXF caption carries a rotation (group code 50) and a
+    // planner uses it: street names run along the street, parcel and ada numbers
+    // along the parcel. GDAL puts it in the feature's STYLE STRING and nowhere
+    // else — `LABEL(f:"Arial",t:"Yol",p:1,a:30,s:2g,c:#000000)` — and the reader
+    // read only the size out of that string. Every caption in an imported plan
+    // therefore came in horizontal, and a label laid along a road crossed it.
+    //
+    // A caption is a baseline plus a string, and `render/src/scene.cpp` reads its
+    // facing from the first vertex to the last. So the angle is checked where it
+    // actually lives: the direction of the two vertices the import produced.
+    if (!io::vector_backend_available())
+        PENDING("KENTOS_WITH_GDAL=OFF; DXF yazı açısı sınanamıyor.");
+
+    TempDir tmp("dxf-yazi-aci");
+    const std::string path = tmp.file("yazili.dxf");
+
+    {
+        std::ofstream out(path);
+        REQUIRE(out.is_open());
+        out << "0\nSECTION\n2\nENTITIES\n"
+            // Rotated 30 degrees counter-clockwise.
+            << "0\nTEXT\n8\nYOL\n10\n0.0\n20\n0.0\n40\n2.0\n50\n30.0\n1\nYol\n"
+            // NOT rotated, and its own text contains `a:`. The angle used to be
+            // looked for with a plain search, which finds that one and reads a
+            // parcel's own label as its rotation.
+            << "0\nTEXT\n8\nADA\n10\n100.0\n20\n100.0\n40\n2.0\n1\nAda: 12\n"
+            << "0\nENDSEC\n0\nEOF\n";
+    }
+
+    Rig rig;
+    auto imported = rig.bus.execute_line("İÇEAKTAR \"" + path + "\"", Origin::Test);
+    if (!imported) FAIL_WITH("İÇEAKTAR", imported.error().message);
+
+    // Both captions, by the string they carry.
+    double turned = 1e9;
+    double flat   = 1e9;
+    for (core::EntityId e = 0; e < rig.doc.entities().size(); ++e) {
+        if (!rig.doc.alive(e)) continue;
+        const auto slot = rig.doc.entities().slot[e];
+        if (!rig.doc.texts().has(slot)) continue;
+
+        const core::RingSpan span = rig.doc.geometry().rings_of(slot);
+        REQUIRE(span.count >= 1);
+        const auto xs = rig.doc.geometry().ring_xs(span.first);
+        const auto ys = rig.doc.geometry().ring_ys(span.first);
+        REQUIRE(xs.size() >= 2);
+
+        const double degrees = std::atan2(static_cast<double>(ys.back() - ys.front()),
+                                          static_cast<double>(xs.back() - xs.front())) *
+                               180.0 / 3.14159265358979323846;
+
+        if (rig.doc.texts().text(slot) == "Yol")
+            turned = degrees;
+        else if (rig.doc.texts().text(slot) == "Ada: 12")
+            flat = degrees;
+    }
+
+    // A degree of slack: the baseline's ends are ground MILLIMETRES, so the
+    // direction is quantised by the rounding and not exact.
+    CHECK(std::abs(turned - 30.0) < 1.0);
+    CHECK(std::abs(flat) < 1.0);
 }
 
 TEST_CASE("IO: DXF birden çok katmanı taşır — dışa aktarım ilk katmanda durmaz")

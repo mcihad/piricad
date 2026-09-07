@@ -1,7 +1,7 @@
 crs TUREF/TM36
 katman-sayisi 3
 nesne-sayisi 3
-katman 0 gorunur=1 kilitli=0 renk=ff6c7686 kalinlik_um=0 nesne=0
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=0
 katman PARSEL gorunur=1 kilitli=0 renk=ff2e7d32 kalinlik_um=350 nesne=2
 katman YOL gorunur=1 kilitli=0 renk=ffe06c00 kalinlik_um=500 nesne=1
 nesne 0 katman=PARSEL stil=1 halka=1
@@ -20,7 +20,7 @@ nesne 2 katman=YOL stil=0 halka=1
     485360000 4310260000
   alan_mm2 0  cevre_mm 60000
 kapsam 485300000 4310200000 485360000 4310260000
-icerik-ozeti 94d4205f498b88e5
+icerik-ozeti 3be7685694d689e5
 gunluk
   {"seq":1,"cmd":"core.layer","args":{"ad":"PARSEL"},"origin":"test","crs":"TUREF/TM36","katman":"PARSEL"}
   {"seq":2,"cmd":"core.layer","args":{"ad":"YOL","renk":4284310640},"origin":"test","crs":"TUREF/TM36","katman":"YOL"}

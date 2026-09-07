@@ -43,13 +43,18 @@ enum class Source : std::uint8_t {
 /// area symbology, and a line-only record cannot represent an `imar planı` (R18).
 struct Appearance
 {
-    std::uint32_t rgba{0xFF6C7686u}; ///< 0xAARRGGBB, stroke colour
-    std::int32_t width_um{0};        ///< PAPER micrometres, 1 µm = 1/1000 mm (R20)
-    std::uint16_t dash{0};           ///< index into the dash table, from /data
-    std::uint16_t symbol{0};         ///< index into the MPYY/BÖHHBÜY symbol atlas
-    std::uint32_t fill_rgba{0};      ///< 0 = no fill
-    std::uint16_t hatch{0};          ///< index into the hatch table, from /data
-    std::int16_t z_order{0};         ///< MPYY prescribes a draw order
+    /// 0xAARRGGBB, stroke colour. BLACK, and it is the default for the reason
+    /// every CAD program's is: a plan is printed in black ink, a gösterim that
+    /// names no colour is drawn in it, and a surveyor who draws a line and does
+    /// not say what colour it is means black. The grey that stood here read as a
+    /// deliberate choice on a sheet where nothing had chosen anything.
+    std::uint32_t rgba{0xFF000000u};
+    std::int32_t width_um{0};   ///< PAPER micrometres, 1 µm = 1/1000 mm (R20)
+    std::uint16_t dash{0};      ///< index into the dash table, from /data
+    std::uint16_t symbol{0};    ///< index into the MPYY/BÖHHBÜY symbol atlas
+    std::uint32_t fill_rgba{0}; ///< 0 = no fill
+    std::uint16_t hatch{0};     ///< index into the hatch table, from /data
+    std::int16_t z_order{0};    ///< MPYY prescribes a draw order
 
     /// Where each property gets its value. `ByLayer` by default, which is what an
     /// ordinary cadastral entity carries and what makes the default Appearance

@@ -56,6 +56,13 @@ scene_file="$root/src/render/src/scene.cpp"
 # Strips a // tail; a line that is nothing but comment comes back empty.
 strip() { local s="${1%%//*}"; printf '%s' "$s"; }
 
+# `__extension__` prefixes a declaration; it says "yes, a compiler extension, on
+# purpose" and nothing about what follows. Dropping it lets the tests below read
+# the declaration itself — without it, units.hpp's `__extension__ using Int128 =
+# __int128;` reads as a namespace-scope variable to R24. clang-format keeps the
+# prefix and the declaration on one line, so this is where they meet.
+unprefix() { local s="$1"; printf '%s' "${s#__extension__ }"; }
+
 # ------------------------------------------------------- R21 / P8: no floats ---
 #
 # Scope is the records model.md settles: identity, geometry, style, layer,
@@ -175,7 +182,7 @@ ns_keyword='^[[:space:]]*(using|namespace|struct|class|enum|template|typedef|fri
 while IFS= read -r f; do
     while IFS= read -r hit; do
         ln="${hit%%:*}"
-        code="$(strip "${hit#*:}")"
+        code="$(unprefix "$(strip "${hit#*:}")")"
         [[ -z "$code" ]] && continue
         grep -qE '\b(const|constexpr)\b' <<<"$code" && continue
         grep -qE "$ns_keyword" <<<"$code" && continue

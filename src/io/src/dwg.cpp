@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <map>
 #include <string>
@@ -119,13 +120,18 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
     Dwg_Data dwg;
     std::memset(&dwg, 0, sizeof(dwg));
 
+    DwgReport report;
+
+    // Every layer name the file holds and how many entities each produced,
+    // whether or not it was read: the checklist is built from this, so a layer
+    // that is skipped still has to appear in it.
+    std::map<std::string, std::size_t> census;
+
     // LibreDWG reports its own diagnosis through the return code's bits: the
     // low ones are severity and anything at or above `DWG_ERR_CRITICAL` means
     // nothing usable came back.
     const int rc = ::dwg_read_file(path.c_str(), &dwg);
     if ((rc & DWG_ERR_CRITICAL) != 0) {
-        report.layer_names.assign(census.begin(), census.end());
-
         ::dwg_free(&dwg);
         co_return err<DwgReport>(ErrorCode::IoFailure,
                                  "'" + path +
@@ -133,7 +139,6 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
                                      "bu sürümün desteklemediği bir DWG sürümü olabilir.");
     }
 
-    DwgReport report;
     report.version = version_of(dwg);
     report.objects = static_cast<std::size_t>(dwg.num_objects);
     if (rc != 0)
@@ -148,10 +153,6 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
         return false;
     };
 
-    // Every layer name the file holds and how many entities each produced,
-    // whether or not it was read: the checklist is built from this, so a layer
-    // that is skipped still has to appear in it.
-    std::map<std::string, std::size_t> census;
     std::map<std::string, core::LayerId> layers;
     const auto layer_for = [&](const std::string& name) -> core::LayerId {
         census.try_emplace(name, 0);
@@ -200,6 +201,22 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
             return made.ok();
         };
 
+        // One run of vertices into the drawing: a FACE when the file says the run
+        // is closed, a polyline otherwise. Shared, because "closed means a parcel"
+        // is a property of the run and not of the entity type that carried it —
+        // LWPOLYLINE and the old-style POLYLINE both arrive here.
+        const auto add_run = [&](bool closed) {
+            while (closed && points.size() >= 2 && points.back() == points.front())
+                points.pop_back(); // the closing vertex is implied (model.md R10)
+
+            if (closed && points.size() >= 3) {
+                const core::RingGeometry::RingInput ring{points, core::RingRole::Exterior, 0};
+                return keep(tx.add_area(target, {&ring, 1}));
+            }
+            if (points.size() >= 2) return keep(tx.add_polyline(target, points));
+            return false;
+        };
+
         switch (obj->fixedtype) {
         case DWG_TYPE_LINE: {
             const Dwg_Entity_LINE* e = obj->tio.entity->tio.LINE;
@@ -223,18 +240,68 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
             // parcel. Read as an open run it would come in as a line: no fill,
             // no area, nothing for İFRAZ or TEVHİT to work on — the same defect
             // the DXF path had, arriving by a different road.
-            const bool closed = (e->flag & 512) != 0;
-            while (closed && points.size() >= 2 && points.back() == points.front())
-                points.pop_back(); // the closing vertex is implied (model.md R10)
-
-            if (closed && points.size() >= 3) {
-                const core::RingGeometry::RingInput ring{points, core::RingRole::Exterior, 0};
-                (void)keep(tx.add_area(target, {&ring, 1}));
-            } else if (points.size() >= 2) {
-                (void)keep(tx.add_polyline(target, points));
-            }
+            (void)add_run((e->flag & 512) != 0);
             break;
         }
+
+        // THE OLD-STYLE POLYLINE, and a real cadastral drawing is full of it.
+        // AutoCAD wrote `POLYLINE` for a decade before `LWPOLYLINE` existed and
+        // every file exported from that era still carries it — a 48 MB zoning
+        // drawing measured here holds 12 013 of them against no LWPOLYLINE at
+        // all, which is every parcel boundary in it. Unhandled, they fell to the
+        // `default:` below and were reported as an unsupported type: the drawing
+        // came in without its parcels.
+        //
+        // Its vertices are SEPARATE OBJECTS in the file, chained to the polyline
+        // by handle and closed off by a `SEQEND`. LibreDWG walks that chain and
+        // hands back a flat array, which it calloc'd — hence the `free`.
+        case DWG_TYPE_POLYLINE_2D:
+        case DWG_TYPE_POLYLINE_3D: {
+            const bool flat = obj->fixedtype == DWG_TYPE_POLYLINE_2D;
+
+            int error          = 0;
+            const BITCODE_BL n = flat ? ::dwg_object_polyline_2d_get_numpoints(obj, &error)
+                                      : ::dwg_object_polyline_3d_get_numpoints(obj, &error);
+            if (error != 0 || n < 2) break;
+
+            points.clear();
+            points.reserve(n);
+
+            if (flat) {
+                dwg_point_2d* run = ::dwg_object_polyline_2d_get_points(obj, &error);
+                if (error != 0 || run == nullptr) break;
+                for (BITCODE_BL v = 0; v < n; ++v)
+                    points.push_back(to_mm(run[v].x, run[v].y));
+                ::free(run);
+            } else {
+                // Z IS DROPPED, deliberately. This is a plan reader: the document
+                // is two-dimensional and a height belongs in a surface, not in a
+                // parcel boundary (model.md R9).
+                dwg_point_3d* run = ::dwg_object_polyline_3d_get_points(obj, &error);
+                if (error != 0 || run == nullptr) break;
+                for (BITCODE_BL v = 0; v < n; ++v)
+                    points.push_back(to_mm(run[v].x, run[v].y));
+                ::free(run);
+            }
+
+            // BIT 1 THIS TIME, not 512: the old polyline's flag word is its own,
+            // and its closed bit is the low one.
+            const bool closed = flat ? (obj->tio.entity->tio.POLYLINE_2D->flag & 1) != 0
+                                     : (obj->tio.entity->tio.POLYLINE_3D->flag & 1) != 0;
+            (void)add_run(closed);
+            break;
+        }
+
+        // NOT LOSSES. A `VERTEX` belongs to the `POLYLINE` that owns it and a
+        // `SEQEND` only marks where the run stops; both were already read, above,
+        // as part of their polyline. Counting them as unsupported would have the
+        // report announce 162 067 dropped objects for a file that dropped none.
+        case DWG_TYPE_VERTEX_2D:
+        case DWG_TYPE_VERTEX_3D:
+        case DWG_TYPE_VERTEX_MESH:
+        case DWG_TYPE_VERTEX_PFACE:
+        case DWG_TYPE_VERTEX_PFACE_FACE:
+        case DWG_TYPE_SEQEND: break;
 
         case DWG_TYPE_POINT: {
             const Dwg_Entity_POINT* e = obj->tio.entity->tio.POINT;
@@ -260,12 +327,12 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
             // which is what the DXF path cannot avoid — GDAL breaks both into
             // line segments before this program ever sees them.
             const core::Point2 centre = to_mm(e->center.x, e->center.y);
-            const auto on             = [&](double angle) {
+            const auto around         = [&](double angle) {
                 return core::Point2{centre.x + core::mm_from_metres(e->radius * std::cos(angle)),
                                     centre.y + core::mm_from_metres(e->radius * std::sin(angle))};
             };
             (void)keep(tx.add_arc(target, centre, core::mm_from_metres(e->radius),
-                                  on(e->start_angle), on(e->end_angle)));
+                                  around(e->start_angle), around(e->end_angle)));
             break;
         }
 
@@ -302,6 +369,11 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
     }
 
     ::dwg_free(&dwg);
+
+    // THE WIZARD'S CHECKLIST, which was never filled: `service.cpp` builds the
+    // layer tick boxes out of this list, so an empty one meant a DWG offered the
+    // user no layers to choose between.
+    report.layer_names.assign(census.begin(), census.end());
 
     report.skipped.assign(skipped.begin(), skipped.end());
     std::sort(report.skipped.begin(), report.skipped.end(),

@@ -191,10 +191,10 @@ bool ring_contains(std::span<const Mm> xs, std::span<const Mm> ys, Point2 probe)
         // Where the edge crosses the probe's row, compared against the probe
         // WITHOUT dividing: (x_j - x_i)(y_p - y_i) against (x_p - x_i)(y_j - y_i),
         // with the sign of (y_j - y_i) deciding which way the comparison runs.
-        const auto dx = static_cast<__int128>(xs[j]) - xs[i];
-        const auto dy = static_cast<__int128>(ys[j]) - ys[i];
-        const auto px = static_cast<__int128>(probe.x) - xs[i];
-        const auto py = static_cast<__int128>(probe.y) - ys[i];
+        const auto dx = static_cast<Int128>(xs[j]) - xs[i];
+        const auto dy = static_cast<Int128>(ys[j]) - ys[i];
+        const auto px = static_cast<Int128>(probe.x) - xs[i];
+        const auto py = static_cast<Int128>(probe.y) - ys[i];
 
         if (dy > 0 ? dx * py > px * dy : dx * py < px * dy) inside = !inside;
     }
@@ -413,6 +413,44 @@ EntityId pick_nearest(const Document& doc, Point2 cursor, Mm radius)
     });
 
     return best;
+}
+
+void pick_all(const Document& doc, Point2 cursor, Mm radius, std::vector<EntityId>& out)
+{
+    out.clear();
+    if (radius < 0) return;
+
+    const Box2 box{cursor.x - radius, cursor.y - radius, cursor.x + radius, cursor.y + radius};
+    const double limit = static_cast<double>(radius) * static_cast<double>(radius);
+
+    const EntityTable& entities = doc.entities();
+    std::vector<EntityId> scratch;
+
+    // The distance rides ALONGSIDE the id rather than being recomputed in the
+    // comparator: `min_distance_squared` walks the entity's rings, and a sort
+    // that called it would walk them O(n log n) times for a list a user is about
+    // to read four rows of.
+    std::vector<std::pair<double, EntityId>> found;
+
+    for_each_candidate(doc, box, scratch, [&](EntityId e) {
+        if (!entities.visible(e)) return;
+        if (!boxes_overlap(entities.box_of(e), box)) return;
+
+        const double d = min_distance_squared(doc, e, cursor);
+        if (d < 0.0 || d > limit) return;
+        found.emplace_back(d, e);
+    });
+
+    // STABLE, and on the distance alone. Candidates arrive in ascending slot
+    // order, so a stable sort leaves two equally close entities in slot order —
+    // which is the tie `pick_nearest` breaks the same way, and is what lets
+    // `out.front()` be its answer.
+    std::stable_sort(found.begin(), found.end(),
+                     [](const auto& a, const auto& b) { return a.first < b.first; });
+
+    out.reserve(found.size());
+    for (const auto& [distance, entity] : found)
+        out.push_back(entity);
 }
 
 } // namespace kentos::core

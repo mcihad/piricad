@@ -535,14 +535,43 @@ QIcon LayerPanel::layerIcon(const core::Layer& layer, core::StyleId used) const
 
 void LayerPanel::showContextMenu(const QPoint& where)
 {
-    QTreeWidgetItem* item = tree_->itemAt(where);
+    QMenu* menu = buildContextMenu(tree_->itemAt(where));
 
+    // Every entry leaves through the command bus. A context menu is a client like
+    // any other and gets no private road to the document (Article 1.2, 5.9) —
+    // which is also what lets a script do the same things.
+    menu->exec(tree_->viewport()->mapToGlobal(where));
+    delete menu;
+}
+
+bool LayerPanel::triggerContextEntry(const QString& layerName, const QString& entry)
+{
+    for (QTreeWidgetItemIterator it(tree_); *it; ++it) {
+        if (!(*it)->data(0, Qt::UserRole).isValid()) continue;
+        if ((*it)->text(0) != layerName) continue;
+
+        QMenu* menu = buildContextMenu(*it);
+        for (QAction* action : menu->actions()) {
+            if (action->text() != entry) continue;
+            action->trigger();
+            delete menu;
+            return true;
+        }
+        delete menu;
+        return false;
+    }
+    return false;
+}
+
+QMenu* LayerPanel::buildContextMenu(QTreeWidgetItem* item)
+{
     // A group row carries no layer id, so the menu it gets is the one that does
     // not need one.
     const QVariant id  = item ? item->data(0, Qt::UserRole) : QVariant();
     const QString name = (item && id.isValid()) ? item->text(0) : QString();
 
-    QMenu menu(this);
+    auto* owned = new QMenu(this);
+    QMenu& menu = *owned;
 
     QAction* add = menu.addAction(tr("Yeni katman…"));
     connect(add, &QAction::triggered, this, [this] {
@@ -560,6 +589,11 @@ void LayerPanel::showContextMenu(const QPoint& where)
         QAction* pick = menu.addAction(tr("Tümünü seç"));
         pick->setToolTip(tr("Bu katmandaki bütün nesneleri seçer"));
         connect(pick, &QAction::triggered, this, [this, name] { selectAllOn(name); });
+
+        QAction* table = menu.addAction(tr("Öznitelik tablosu"));
+        table->setToolTip(tr("Bu katmanın öznitelik tablosunu açar"));
+        connect(table, &QAction::triggered, this,
+                [this, name] { emit attributeTableRequested(name); });
 
         QAction* activate = menu.addAction(tr("Aktif katman yap"));
         connect(activate, &QAction::triggered, this, [this, name] {
@@ -633,10 +667,7 @@ void LayerPanel::showContextMenu(const QPoint& where)
         });
     }
 
-    // Every entry above leaves through the command bus. A context menu is a
-    // client like any other and gets no private road to the document (Article
-    // 1.2, 5.9) — which is also what lets a script do the same things.
-    menu.exec(tree_->viewport()->mapToGlobal(where));
+    return owned;
 }
 
 } // namespace kentos::app

@@ -21,7 +21,10 @@
 
 #include "kentos_cad/app/icons.hpp"
 #include "kentos_cad/app/theme.hpp"
+#include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/units.hpp"
+
+#include <vector>
 
 #include <QMainWindow>
 #include <QPointer>
@@ -96,8 +99,28 @@ public:
     /// on construction fails a test rather than a user. A window nothing
     /// constructs is a window nothing is checking.
     void openSettings();
-    void openAttributeTable();
+
+    /// Opens the attribute table on `layerName`, or on the ACTIVE layer when it is
+    /// empty — which is what the Katman menu and `KENTOS_SMOKE` ask for.
+    void openAttributeTable(const QString& layerName = QString());
+
     void openCommandSearch();
+
+    /// Asks which of `candidates` the click meant, and sends the answer to the
+    /// bus with `modifiers` applied.
+    ///
+    /// Public for the same reason the three windows above are: `KENTOS_PICK_PROBE`
+    /// drives it, and a chooser nothing constructs is a chooser nothing checks.
+    void choosePick(const std::vector<core::EntityId>& candidates, Qt::KeyboardModifiers modifiers);
+
+    /// Clicks the middle of the canvas with a REAL mouse event, answers the
+    /// chooser that opens by taking its SECOND row, and prints what the document
+    /// ended up with.
+    ///
+    /// It starts at the click for the reason `LayerPanel::probeByHand` does:
+    /// calling `choosePick` would prove `choosePick` works and say nothing about
+    /// whether a click can reach it. `scripts/ci-gate-secim-listesi.sh` drives it.
+    void probePickList();
 
     /// Opens the import wizard WITHOUT blocking, on `path` when one is given.
     ///

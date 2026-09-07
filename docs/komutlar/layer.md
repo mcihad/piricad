@@ -39,7 +39,7 @@ Argümansız çağırırsanız komut katman adını sorar.
 | `ad` | Katman adı. Zorunlu. Yoksa katman yaratılır, her hâlükârda aktif olur |
 | `gorunur` | Katmanın görünürlüğü. `evet` / `hayır` |
 | `kilitli` | Katman kilidi. Kilitli katmana çizilemez |
-| `renk` | Çizim rengi, `0xAARRGGBB` biçiminde tam sayı |
+| `renk` | Çizim rengi, `0xAARRGGBB` biçiminde tam sayı. Yeni katman **siyah** başlar |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -147,10 +147,17 @@ yanında renk kutucuğu, katmanın adı, sağda nesne sayısı ve **kilit**.
 | **Göz** simgesine tek tık | Görünürlüğü ters çevirir |
 | **Kilit** simgesine tek tık | Kilidi ters çevirir |
 | Satıra çift tık | O katmanı **aktif** yapar |
-| Satıra sağ tık | Katman menüsü: **Tümünü seç**, aktif yap, stili düzenle, gruba taşı… |
+| Satıra sağ tık | Katman menüsü: **Tümünü seç**, **Öznitelik tablosu**, aktif yap, stili düzenle, gruba taşı… |
 
 **Tümünü seç**, o katmandaki bütün nesneleri seçer — çalıştırdığı satır
 [`SEÇ mod=KATMAN katman="..."`](select.md) satırıdır.
+
+**Öznitelik tablosu**, [o katmanın öznitelik tablosunu](../veri/oznitelik-tablosu.md)
+açar. **Sağ tıkladığınız katmanın**, aktif katmanın değil: bir katmanın
+özniteliklerine bakmak için önce onu aktif yapmanız gerekmez. Pencere başlığı
+hangi katmanda olduğunuzu yazar ve alt satır kaç nesne gösterdiğini söyler —
+`Katman` menüsündeki aynı adlı öğe ise aktif katmanı açar, çünkü orada işaret
+edilmiş bir katman yoktur.
 
 Çizimde bir nesne seçtiğinizde **panel o nesnenin katmanını kendiliğinden
 işaretler**, böylece kırk katmanlı bir listede aramak zorunda kalmazsınız.

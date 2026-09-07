@@ -294,8 +294,36 @@ Task<void> run_select(Context& ctx)
         if (const Value t = ctx.argument("tolerans"); !t.empty())
             radius = core::mm_from_metres(t.as_number());
 
-        const core::EntityId hit = core::pick_nearest(doc, aim, radius);
-        if (hit != core::kNoEntity) picked.push_back(doc.key_of(hit));
+        // WHICH ONE OF THEM, and this is what makes the shell's chooser a command
+        // rather than a gesture. A click on a cadastral sheet lands on a parcel,
+        // its boundary and the ada boundary at once; `sira=1` is the nearest and
+        // is what a bare NOKTA has always meant, `sira=2` is the next one down.
+        // Without it, reaching past the top object would be a thing only a mouse
+        // could do (CLAUDE.md 5.15) and a script could never repeat.
+        std::size_t want = 1;
+        if (const Value n = ctx.argument("sira"); !n.empty()) {
+            const double asked = n.as_number();
+            if (asked < 1.0) {
+                ctx.echo("'sira' 1'den küçük olamaz; 1 en yakın nesnedir.");
+                co_return;
+            }
+            want = static_cast<std::size_t>(asked);
+        }
+
+        if (want == 1) {
+            const core::EntityId hit = core::pick_nearest(doc, aim, radius);
+            if (hit != core::kNoEntity) picked.push_back(doc.key_of(hit));
+            break;
+        }
+
+        std::vector<core::EntityId> under;
+        core::pick_all(doc, aim, radius, under);
+        if (want > under.size()) {
+            ctx.echo("O noktada " + std::to_string(under.size()) + " nesne var; " +
+                     std::to_string(want) + ". istendi.");
+            co_return;
+        }
+        picked.push_back(doc.key_of(under[want - 1]));
         break;
     }
 
@@ -353,6 +381,8 @@ Task<void> run_select(Context& ctx)
     // index into this document's table and means nothing in a replay against
     // another one (model.md R2, R43).
     if (mode == Mode::Layer) ctx.record("katman", ctx.argument("katman"));
+    if (mode == Mode::Point)
+        if (const Value n = ctx.argument("sira"); !n.empty()) ctx.record("sira", n);
     // The gesture too, so a replay of a WINDOW pick re-runs the same box rather
     // than only restoring the keys it happened to find. The resolved selection is
     // recorded below and remains what a client reads back.
@@ -401,6 +431,8 @@ KENTOS_COMMAND(select)
                 Param::text("islem", Arity::optional(), "DEĞİŞTİR | EKLE | ÇIKAR | TERSİNE"),
                 Param::number("tolerans", Arity::optional(),
                               "NOKTA modunda arama yarıçapı, metre; yoksa seçim toleransı"),
+                Param::number("sira", Arity::optional(),
+                              "NOKTA modunda kaçıncı nesne: 1 en yakını, 2 altındaki"),
             },
         // R43: a selection is not document state, so it is not undoable and not
         // journalled as a mutation. ReadOnly is how that is said to the bus — the

@@ -380,6 +380,11 @@ core::Result<std::unique_ptr<TextAtlas>> TextAtlas::open(const std::string& font
     return atlas;
 }
 
+float TextAtlas::cap_height(Face face) const noexcept
+{
+    return impl_->faces[static_cast<std::uint8_t>(face)].cap;
+}
+
 RunMetrics TextAtlas::shape(Face face, std::string_view utf8, std::vector<PlacedGlyph>& out)
 {
     Impl& impl                 = *impl_;

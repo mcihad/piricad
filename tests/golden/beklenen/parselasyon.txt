@@ -1,7 +1,7 @@
 crs TUREF/TM36
 katman-sayisi 4
 nesne-sayisi 18
-katman 0 gorunur=1 kilitli=0 renk=ff6c7686 kalinlik_um=0 nesne=0
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=0
 katman PARSEL gorunur=1 kilitli=0 renk=ff2e7d32 kalinlik_um=0 nesne=16
 katman YOL gorunur=1 kilitli=0 renk=ff5d6470 kalinlik_um=0 nesne=1
 katman KAPALI gorunur=0 kilitli=0 renk=ffa0a0a0 kalinlik_um=0 nesne=1
@@ -96,7 +96,7 @@ nesne 17 katman=KAPALI stil=0 halka=1
     485380000 4310190000
   alan_mm2 0  cevre_mm 90000
 kapsam 485290000 4310200000 485380000 4310270000
-icerik-ozeti cc54c663b008684b
+icerik-ozeti 48cc17e21418cf0b
 gunluk
   {"seq":1,"cmd":"core.layer","args":{"ad":"PARSEL","renk":4281236786},"origin":"script","crs":"TUREF/TM36","katman":"PARSEL"}
   {"seq":2,"cmd":"core.line","args":{"noktalar":[[485300000,4310200000],[485330000,4310200000],[485330000,4310230000],[485300000,4310230000],[485300000,4310200000]]},"origin":"script","crs":"TUREF/TM36","katman":"PARSEL"}

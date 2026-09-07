@@ -1,8 +1,8 @@
 crs TUREF/TM36
 katman-sayisi 2
 nesne-sayisi 2
-katman 0 gorunur=1 kilitli=0 renk=ff6c7686 kalinlik_um=0 nesne=0
-katman CIZIM gorunur=1 kilitli=1 renk=ff6c7686 kalinlik_um=0 nesne=2
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=0
+katman CIZIM gorunur=1 kilitli=1 renk=ff000000 kalinlik_um=0 nesne=2
 nesne 1 katman=CIZIM stil=0 halka=1
   halka rol=0 parca=0 tepe=2
     10000 0
@@ -14,7 +14,7 @@ nesne 2 katman=CIZIM stil=0 halka=1
     30000 0
   alan_mm2 0  cevre_mm 10000
 kapsam 10000 0 30000 0
-icerik-ozeti ca64440c7c652650
+icerik-ozeti f1ae11997eef32b8
 gunluk
   {"seq":1,"cmd":"core.layer","args":{"ad":"CIZIM"},"origin":"test","crs":"TUREF/TM36","katman":"CIZIM"}
   {"seq":2,"cmd":"core.line","args":{"noktalar":[[0,0],[10000,0],[20000,0],[30000,0]]},"origin":"test","crs":"TUREF/TM36","katman":"CIZIM"}

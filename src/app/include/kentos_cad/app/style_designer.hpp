@@ -182,6 +182,14 @@ private:
     void updateHeaderNote();
 
     /// Redraws the big preview at the width the label currently has.
+    /// Sizes the symbol layer stack to the rows it actually holds.
+    ///
+    /// Bounded on purpose: unbounded, the stack takes the column's height and the
+    /// property form under it takes none — which is what the fixed height it
+    /// replaces was guarding against, at the cost of an empty box under every
+    /// two-layer symbol.
+    void fitStackHeight();
+
     void updatePreview();
 
     /// Re-renders the preview when its label is resized; see `updatePreview()`.
