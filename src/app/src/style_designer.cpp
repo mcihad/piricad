@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/style_designer.hpp"
 
+#include "kentos_cad/core/attribute.hpp"
+
 #include "kentos_cad/render/symbology.hpp"
 
 #include "kentos_cad/app/tokens.hpp"
@@ -52,6 +54,19 @@
 
 namespace kentos::app {
 namespace {
+
+/// The column types a symbol parameter can ask for, in the order the combo shows
+/// them. The same closed set `SÜTUN` declares — there is no second type system.
+constexpr std::array<core::AttrType, 5> kFieldTypes{core::AttrType::Text, core::AttrType::Int64,
+                                                    core::AttrType::Length, core::AttrType::Bool,
+                                                    core::AttrType::CodeRef};
+
+int index_of_field_type(core::AttrType t)
+{
+    for (std::size_t i = 0; i < kFieldTypes.size(); ++i)
+        if (kFieldTypes[i] == t) return static_cast<int>(i);
+    return 0;
+}
 
 /// How tall the symbol layer stack is allowed to be, in rows.
 constexpr int kStackRowsMin = 3;
@@ -1718,6 +1733,22 @@ QWidget* StyleDesigner::buildProperties()
     text_->setPlaceholderText(hint);
     connect(text_, &QLineEdit::textEdited, this, [this](const QString&) { applyToSelected(); });
 
+    // THE SLOT. A text layer either carries a word or names a column; setting one
+    // clears the other, here as in `STİL`, because a layer that held both would
+    // have to decide at draw time which it meant.
+    field_ = new QLineEdit(box);
+    field_->setPlaceholderText(tr("Öznitelik sütunu, örnek: taks")); // ui-label
+    connect(field_, &QLineEdit::textEdited, this, [this](const QString& typed) {
+        if (!typed.isEmpty() && !text_->text().isEmpty()) text_->clear();
+        applyToSelected();
+    });
+
+    fieldType_ = new QComboBox(box);
+    fit_column(fieldType_);
+    for (const core::AttrType t : kFieldTypes)
+        fieldType_->addItem(QString::fromUtf8(core::attr_type_name(t)));
+    connect(fieldType_, &QComboBox::currentIndexChanged, this, [this](int) { applyToSelected(); });
+
     sizeUnit_     = unitCombo();
     intervalUnit_ = unitCombo();
     spacingYUnit_ = unitCombo();
@@ -1804,6 +1835,7 @@ QWidget* StyleDesigner::buildProperties()
 
     // What the layer IS — under KATMAN with the type, no heading of their own.
     addProperty(form, nullptr, tr("Yazı"), text_, nullptr, {T::TextMarker});
+    addProperty(form, nullptr, tr("Alan"), field_, fieldType_, {T::TextMarker});
     addProperty(form, nullptr, tr("Şekil"), shape_, nullptr, markers);
     addProperty(form, nullptr, tr("Yerleşim"), placement_, nullptr, {T::MarkerLine, T::HashLine});
 
@@ -2078,6 +2110,8 @@ void StyleDesigner::loadSelected()
 
         lock_->setChecked(sl.colour_locked);
         text_->setText(QString::fromStdString(sl.text));
+        field_->setText(QString::fromStdString(sl.field));
+        fieldType_->setCurrentIndex(index_of_field_type(sl.field_type));
         width_->setValue(sl.look.width_um);
         size_->setValue(sl.size.value);
         interval_->setValue(sl.interval.value);
@@ -2229,7 +2263,11 @@ void StyleDesigner::applyToSelected()
     sl.offset    = core::Measure{offset_->value(), pick(kUnits, offsetUnit_)};
     sl.phase     = core::Measure{phase_->value(), pick(kUnits, phaseUnit_)};
 
-    sl.text           = text_->text().toStdString();
+    sl.text       = text_->text().toStdString();
+    sl.field      = field_->text().trimmed().toStdString();
+    sl.field_type = kFieldTypes[static_cast<std::size_t>(
+        std::clamp(fieldType_->currentIndex(), 0, static_cast<int>(kFieldTypes.size()) - 1))];
+    if (!sl.field.empty()) sl.text.clear();
     sl.look.width_um  = width_->value();
     sl.look.src_width = core::Source::Explicit;
     sl.angle_udeg     = angle_->value() * 1000000;

@@ -388,6 +388,16 @@ public:
 
 private:
     Result<EntityId> push_entity(LayerId lyr, std::uint32_t geometry_slot, KindId kind);
+    /// Recomputes `e`'s bounding box from its geometry, and then grows it over
+    /// the letters when it carries text.
+    ///
+    /// THE BOX IS WHAT THE CULL AND THE PICK PREFILTER READ (R6), and a caption's
+    /// geometry is the hairline under its letters — so without this an imported
+    /// ada number reported a bounding box zero millimetres tall, fell out of
+    /// every query whose box did not cross that one line, and could not be
+    /// clicked on. `pick.hpp::text_quad` owns the shape; this stores its extent.
+    void refresh_box(EntityId e);
+
     void mirror_layer_visibility(LayerId l, bool visible);
 
     /// Points an entity back at a slot the arena already holds. The undo half of

@@ -593,6 +593,51 @@ Task<void> run(Context& ctx)
         described.text = v.as_text();
         has_layer      = true;
     }
+
+    // THE SLOT, and the column it needs, declared together.
+    //
+    // A caption and a slot are the two things a `yazi-isaretci` can be and it is
+    // never both: `yazi` writes a word, `alan` writes whatever the parcel says.
+    // Given both, the slot wins and the word is dropped — silently keeping a
+    // fixed caption on a layer the user just parameterised would draw the wrong
+    // thing on every object.
+    //
+    // The column is DECLARED HERE, in the same transaction. It is the connective
+    // tissue the whole feature turns on: a symbol that asks for `taks` and a
+    // drawing with no `taks` column is a symbol whose parameter can never be
+    // filled in, and making the user notice that themselves — by drawing the
+    // object, opening the panel and finding nothing — is how a feature reads as
+    // broken. One command, one transaction, one undo step (Article 1.6).
+    if (const Value v = ctx.argument("alan"); !v.empty()) {
+        const std::string column = v.as_text();
+
+        core::AttrType type = core::AttrType::Text;
+        if (const Value t = ctx.argument("alan_tipi"); !t.empty()) {
+            const auto parsed = core::attr_type_from_name(t.as_text());
+            if (!parsed) {
+                ctx.echo("Bilinmeyen alan türü: '" + t.as_text() +
+                         "'. Beklenen: tam_sayi, uzunluk, evet_hayir, metin, kod.");
+                co_return;
+            }
+            type = *parsed;
+        }
+
+        if (ctx.document().attributes().find(column) == core::kNoAttr) {
+            core::AttrSpec spec;
+            spec.id      = column;
+            spec.name_tr = column;
+            spec.type    = type;
+            if (auto made = ctx.transaction().declare_attribute(std::move(spec)); !made) {
+                ctx.echo(made.error().message);
+                co_return;
+            }
+        }
+
+        described.field      = column;
+        described.field_type = type;
+        described.text.clear();
+        has_layer = true;
+    }
     if (const Value v = ctx.argument("saydamlik"); !v.empty()) {
         described.opacity = static_cast<std::uint8_t>(std::clamp<std::int64_t>(v.as_int(), 0, 255));
         has_layer         = true;
@@ -735,8 +780,9 @@ Task<void> run(Context& ctx)
     }
 
     // Recorded so a replay resolves the same rows whichever client typed them.
-    for (const char* name : {"paket", "kod", "sinifla", "olcek", "olcek_min", "olcek_max", "renk",
-                             "kalinlik", "dolgu", "sira", "sifirla", "desen", "faz"}) {
+    for (const char* name :
+         {"paket", "kod", "sinifla", "olcek", "olcek_min", "olcek_max", "renk", "kalinlik", "dolgu",
+          "sira", "sifirla", "desen", "faz", "yazi", "alan", "alan_tipi"}) {
         if (const Value v = ctx.argument(name); !v.empty()) ctx.record(name, v);
     }
 
@@ -839,6 +885,12 @@ KENTOS_COMMAND(style)
                             "çizgi/boşluk uzunlukları — '8 1 1 1' gibi (kesik-nokta)"),
                 Param::text("yazi", Arity::optional(),
                             "yazi-isaretci katmanının yazdığı sabit metin"),
+                Param::text("alan", Arity::optional(),
+                            "yazi-isaretci katmanının okuyacağı öznitelik sütunu; "
+                            "yoksa tanımlanır"),
+                Param::text("alan_tipi", Arity::optional(),
+                            "alan= sütununun türü: tam_sayi, uzunluk, evet_hayir, "
+                            "metin, kod"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

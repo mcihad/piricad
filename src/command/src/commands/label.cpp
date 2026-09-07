@@ -97,6 +97,18 @@ core::Result<std::string> render(const core::Document& doc, const std::string& f
     return out;
 }
 
+/// One text slot a symbol declares: which column it reads, where it sits
+/// relative to the object's centre, and how tall it is written.
+///
+/// Ground millimetres throughout, because that is what a text ENTITY is measured
+/// in and the caller has already refused anything else.
+struct Slot
+{
+    std::string field;
+    core::Mm offset{0};
+    core::Mm height{0}; ///< 0 = take the command's own height
+};
+
 Task<void> run(Context& ctx)
 {
     auto source_name = co_await ctx.text("katman", "Etiketlenecek katman");
@@ -111,12 +123,57 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
+    // THE SYMBOL'S OWN SLOTS, when it has any and no format was typed.
+    //
+    // This is the whole point of a parameterised gösterim: the symbol already
+    // knows WHERE each figure goes — a `yapılaşma koşulu` circle carries one slot
+    // above its rule and one below, at the offsets the published symbol draws its
+    // fixed words at — and until now the user had to say it again, one `ETİKET`
+    // per figure with a hand-measured `kaydirma`. The symbol says it once.
+    //
+    // Collected BEFORE the format is asked for, because having slots is what
+    // makes the question unnecessary. Typing `bicim` anyway overrides them, which
+    // is how a one-off label on a parameterised layer stays possible.
+    std::vector<Slot> slots;
+    if (ctx.argument("bicim").empty()) {
+        const core::Layer* record = bus.document().layer(source);
+        if (record != nullptr && bus.document().styles().contains(record->style)) {
+            const core::Symbol& symbol = bus.document().styles().symbol_at(record->style);
+            for (const core::SymbolLayer& sl : symbol.layers) {
+                if (sl.type != core::SymbolLayerType::TextMarker || sl.field.empty()) continue;
+                if (!sl.enabled) continue;
+
+                // GROUND, and refused rather than guessed. A slot's offset and
+                // size are what place a real text ENTITY on the drawing, and a
+                // paper micrometre becomes a ground millimetre only through a
+                // plot scale this command does not have. Guessing one would put
+                // the figure in the wrong place at every scale but one.
+                if (sl.offset.unit != core::Unit::Ground ||
+                    (!sl.size.empty() && sl.size.unit != core::Unit::Ground)) {
+                    ctx.session().fail(
+                        core::err(core::ErrorCode::ValidationFailed,
+                                  "'" + sl.field +
+                                      "' alanının kaydırması ve boyutu zemin biriminde olmalı: "
+                                      "STİL ... birim=zemin ile verin."));
+                    co_return;
+                }
+                slots.push_back(Slot{sl.field, static_cast<core::Mm>(sl.offset.value),
+                                     static_cast<core::Mm>(sl.size.value)});
+            }
+        }
+    }
+
     // The prompt NAMES what the user is being asked for, and its example uses the
     // column names a plan sheet actually has. It carries no regulatory value: the
     // TAKS and KAKS figures themselves live in /data and in the drawing.
     const char* kFormatPrompt = "Etiket biçimi, örnek: TAKS {taks} / KAKS {kaks}"; // ui-label
-    auto format               = co_await ctx.text("bicim", kFormatPrompt);
-    if (!format || format->empty()) co_return;
+
+    std::string format_text;
+    if (slots.empty()) {
+        auto format = co_await ctx.text("bicim", kFormatPrompt);
+        if (!format || format->empty()) co_return;
+        format_text = *format;
+    }
 
     // Labels go on their OWN layer by default, so a sheet can be plotted with and
     // without them and so restyling them does not touch the parcels. The name is
@@ -151,7 +208,7 @@ Task<void> run(Context& ctx)
     // Line breaks arrive already decoded: the command-line lexer turns `\n` into
     // a newline and a JSON script writes one directly. Nothing to do here, which
     // is the point — there is one lexer in this program (CLAUDE.md 5.11).
-    const std::string& lines = *format;
+    const std::string& lines = format_text;
 
     // ---- pass 1: decide. Nothing below this point may fail. ----
     //
@@ -160,8 +217,51 @@ Task<void> run(Context& ctx)
     // the drawing untouched instead of half-labelled (Article 1.6).
     std::vector<core::Point2> where;
     std::vector<std::string> texts;
+    std::vector<core::Mm> heights;
 
-    {
+    if (!slots.empty()) {
+        // COLUMNS RESOLVED ONCE, not per entity. `AttrTable::find` folds a Turkish
+        // string and walks a map; doing it inside the entity loop would pay for it
+        // 71 820 times on the sheet this feature was written for, for an answer
+        // that cannot change while the loop runs.
+        std::vector<core::AttrId> columns;
+        columns.reserve(slots.size());
+        for (const Slot& slot : slots) {
+            const core::AttrId col = bus.document().attributes().find(slot.field);
+            if (col == core::kNoAttr) {
+                ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                             "Sembolün istediği sütun çizimde yok: '" + slot.field +
+                                                 "'. SÜTUN ile tanımlayın."));
+                co_return;
+            }
+            columns.push_back(col);
+        }
+
+        const auto& entities = bus.document().entities();
+        for (core::EntityId e = 0; e < entities.size(); ++e) {
+            if (!entities.alive(e) || entities.layer[e] != source) continue;
+
+            const core::Point2 centre = entities.box_of(e).centre();
+            for (std::size_t s = 0; s < slots.size(); ++s) {
+                auto value = bus.document().attribute(columns[s], e);
+                if (!value) {
+                    ctx.session().fail(value.error());
+                    co_return;
+                }
+                // AN EMPTY CELL WRITES NOTHING. A parcel whose TAKS has not been
+                // entered yet gets no figure rather than a `yok` printed inside
+                // its circle.
+                if (!value.value().present) continue;
+
+                std::string words = as_text(value.value());
+                if (words.empty()) continue;
+
+                where.push_back(core::Point2{centre.x, centre.y + slots[s].offset});
+                texts.push_back(std::move(words));
+                heights.push_back(slots[s].height > 0 ? slots[s].height : height);
+            }
+        }
+    } else {
         const auto& entities = bus.document().entities();
         for (core::EntityId e = 0; e < entities.size(); ++e) {
             if (!entities.alive(e) || entities.layer[e] != source) continue;
@@ -180,6 +280,7 @@ Task<void> run(Context& ctx)
             at.y += offset;
             where.push_back(at);
             texts.push_back(std::move(text.value()));
+            heights.push_back(height);
         }
     }
 
@@ -198,9 +299,10 @@ Task<void> run(Context& ctx)
         // and hit-tested by the same code every other entity uses. Its advance is
         // approximate on purpose: it sets the cull box, and the backend measures
         // the real font when it draws.
+        const core::Mm tall      = heights[i];
         const auto chars         = static_cast<core::Mm>(texts[i].size());
         const core::Point2 start = where[i];
-        const core::Point2 end{start.x + (height * 6 * chars) / 10, start.y};
+        const core::Point2 end{start.x + (tall * 6 * chars) / 10, start.y};
 
         const std::array<core::Point2, 2> baseline{start, end};
         auto created = ctx.transaction().add_polyline(target, baseline);
@@ -212,7 +314,7 @@ Task<void> run(Context& ctx)
         // Centred on the point both ways, because a label that names a face sits in
         // the middle of it — which is also what puts it inside a `merkez-isaretci`
         // circle drawn by the face's own symbol.
-        if (auto st = ctx.transaction().set_text(created.value(), texts[i], height,
+        if (auto st = ctx.transaction().set_text(created.value(), texts[i], tall,
                                                  core::TextAnchor::MiddleCentre);
             !st) {
             ctx.session().fail(st.error());
@@ -221,7 +323,7 @@ Task<void> run(Context& ctx)
     }
 
     ctx.record("katman", Value::text(*source_name));
-    ctx.record("bicim", Value::text(*format));
+    if (!format_text.empty()) ctx.record("bicim", Value::text(format_text));
     ctx.record("hedef", Value::text(target_name));
     ctx.record("yukseklik", Value::integer(height));
     ctx.record("kaydirma", Value::integer(offset));
@@ -240,8 +342,15 @@ KENTOS_COMMAND(label)
         .params =
             {
                 Param::text("katman", Arity::exactly(1), "Etiketlenecek katmanın adı"),
-                Param::text("bicim", Arity::exactly(1),
-                            "Etiket biçimi; {sutun} o sütunun değeriyle değişir, \\n satır kırar"),
+                // OPTIONAL NOW, because a parameterised symbol already says what
+                // to write and where. Left required, the bus refused the command
+                // before its body could look at the layer's slots (Article 1.3:
+                // validate, then run). The body still asks for it interactively
+                // when the symbol declares none, so a bare ETİKET on an ordinary
+                // layer prompts exactly as it did.
+                Param::text("bicim", Arity::optional(),
+                            "Etiket biçimi; {sutun} o sütunun değeriyle değişir, \\n satır kırar. "
+                            "Sembol alan bildiriyorsa gerekmez"),
                 Param::text("hedef", Arity::optional(),
                             "Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET'"),
                 Param::integer("yukseklik", Arity::optional(),

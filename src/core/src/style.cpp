@@ -262,6 +262,12 @@ std::uint64_t fold_symbol(const Symbol& sym, std::uint64_t seed)
         h = fnv1a_int(l.colour_locked ? 1 : 0, h);
         h = fold_measure(l.phase, h);
         h = fnv1a(l.text, h);
+
+        // The slot folds too, and it has to: a symbol that prints `taks` and one
+        // that prints `kaks` from the same circle are two symbols, and interning
+        // them together would make one parcel's figure appear on another's.
+        h = fnv1a(l.field, h);
+        h = fnv1a_int(static_cast<std::int64_t>(l.field_type), h);
         h = fold_appearance(l.look, h);
     }
     h = fnv1a_int(static_cast<std::int64_t>(sym.min_scale), h);

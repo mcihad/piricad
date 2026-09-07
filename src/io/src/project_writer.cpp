@@ -290,6 +290,9 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     std::vector<std::uint8_t> symbol_layer_flags;
     std::vector<std::uint32_t> symbol_layer_text;
     std::vector<std::int32_t> symbol_layer_phase;
+    std::vector<std::uint32_t> symbol_layer_field;
+    std::vector<std::uint8_t> symbol_layer_field_type;
+    bool any_field = false;
     symbols.reserve(doc.styles().size());
 
     for (std::size_t i = 0; i < doc.styles().size(); ++i) {
@@ -328,6 +331,9 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
             symbol_layer_flags.push_back(
                 static_cast<std::uint8_t>((l.enabled ? 1u : 0u) | (l.colour_locked ? 2u : 0u)));
             symbol_layer_text.push_back(pool.intern(l.text));
+            symbol_layer_field.push_back(pool.intern(l.field));
+            symbol_layer_field_type.push_back(static_cast<std::uint8_t>(l.field_type));
+            any_field = any_field || !l.field.empty();
         }
     }
 
@@ -502,6 +508,18 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     if (std::any_of(symbol_layer_phase.begin(), symbol_layer_phase.end(),
                     [](std::int32_t v) { return v != 0; }))
         blocks.push_back(column(kBlkSymbolLayerPhase, symbol_layer_phase));
+
+    // AND THE SAME BARGAIN FOR THE SLOTS. A drawing whose symbols carry no
+    // parameter writes neither block, so its file is byte for byte the one it was
+    // before parameters existed — which is what keeps `tests/golden` honest about
+    // what a change actually changed.
+    //
+    // The EMPTY string interns to a real index rather than to nothing, so the
+    // test is the field's own emptiness and not the index's value.
+    if (any_field) {
+        blocks.push_back(column(kBlkSymbolLayerField, symbol_layer_field));
+        blocks.push_back(column(kBlkSymbolLayerFieldType, symbol_layer_field_type));
+    }
     blocks.push_back(column(kBlkImages, images));
     blocks.push_back(column(kBlkImageBytes, image_bytes));
     if (!dashes.empty()) blocks.push_back(column(kBlkDashes, dashes));

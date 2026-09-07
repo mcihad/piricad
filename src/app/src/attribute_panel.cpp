@@ -407,23 +407,32 @@ void AttributePanel::rebuild()
         // does carry one.
         if (doc.texts().has(gslot)) {
             AttributeGroup says{tr("METİN"), {}, false};
-            // READ-ONLY, and deliberately. `METİN` DRAWS a caption; it does not
-            // rewrite an existing one, so offering an editor here would quietly
-            // add a second label on top of the first. A row becomes editable when
-            // a command exists that changes it, and this one does not yet.
+
+            // EDITABLE NOW, and the note that stood here said exactly why it was
+            // not: "a row becomes editable when a command exists that changes it,
+            // and this one does not yet". `YAZIDÜZENLE` is that command. `METİN`
+            // still only DRAWS — offering it here would have put a second label
+            // on top of the first.
+            const auto id = QString::number(
+                static_cast<qulonglong>(static_cast<std::uint64_t>(doc.key_of(slot))));
+
             says.rows.push_back({tr("icerik"),
                                  QString::fromStdString(std::string(doc.texts().text(gslot))),
                                  {},
-                                 true,
-                                 {},
-                                 EditKind::None,
+                                 false,
+                                 tr("YAZIDÜZENLE nesneler=%1 yazi=\"%2\"").arg(id),
+                                 EditKind::Text,
                                  {}});
+
+            // MILLIMETRES IN THE EDITOR, metres in the reading: the command takes
+            // ground millimetres and a user editing this row is answering the
+            // command, not the label.
             says.rows.push_back({tr("yukseklik"),
                                  metresWithUnit(doc.texts().height(gslot)),
-                                 tr("HESAP"),
-                                 true,
                                  {},
-                                 EditKind::None,
+                                 false,
+                                 tr("YAZIDÜZENLE nesneler=%1 yukseklik=%2").arg(id),
+                                 EditKind::Text,
                                  {}});
             groups_.push_back(says);
         }

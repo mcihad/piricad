@@ -22,6 +22,7 @@
 #include "kentos_cad/core/units.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -49,6 +50,16 @@ enum class AttrType : std::uint8_t {
 
 /// Stable machine name for schemas, files and messages.
 const char* attr_type_name(AttrType t) noexcept;
+
+/// The type a user's word names, or nothing when it names none.
+///
+/// THE INVERSE OF `attr_type_name`, AND THE ONLY ONE. `SÜTUN` parsed these words
+/// inline; the moment a second command had to read the same word — a symbol
+/// declaring the column it needs — the choice was to copy the chain or to share
+/// it, and a copy is how `metin` comes to mean one thing in one command and
+/// another somewhere else. Turkish-folded, so `TAM_SAYI` and `tam_sayı` are the
+/// same word (CLAUDE.md 5.6).
+std::optional<AttrType> attr_type_from_name(std::string_view word);
 
 /// One column's declaration, as read from /data. All-runtime by construction:
 /// there is no constexpr table of specs anywhere, because that table would be

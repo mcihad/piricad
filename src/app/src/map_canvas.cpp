@@ -365,6 +365,23 @@ void MapCanvas::buildSelection()
     for (core::EntityId e : selected) {
         if (e >= table.size() || !table.visible(e)) continue;
 
+        // A CAPTION IS OUTLINED AROUND ITS LETTERS. Its ring is the hairline under
+        // them, so highlighting the ring drew a rule beneath a word and left the
+        // word looking untouched — the same complaint as the circle below, in a
+        // different disguise. `core::text_quad` owns that shape; the pick test
+        // and this outline have to agree about where the caption is.
+        if (std::array<core::Point2, 4> quad; core::text_quad(doc, e, quad)) {
+            const auto before = static_cast<std::uint32_t>(batch.xs.size());
+            for (const core::Point2 corner : quad) {
+                const render::ScreenPointF q = render::to_f(view_.to_screen(corner));
+                batch.xs.push_back(q.x);
+                batch.ys.push_back(q.y);
+            }
+            batch.runs.push_back(static_cast<std::uint32_t>(batch.xs.size()) - before);
+            batch.closed.push_back(1);
+            continue;
+        }
+
         // THE SHAPE, not the stored vertices. A circle keeps a centre and a radius
         // handle in its ring; highlighting those draws a line pointing east over a
         // circle the user can see is selected nowhere.

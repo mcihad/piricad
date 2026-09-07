@@ -463,12 +463,27 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         symbol_layer_phase = rows.value();
     }
 
+    std::span<const std::uint32_t> symbol_layer_field;
+    std::span<const std::uint8_t> symbol_layer_field_type;
     std::span<const std::uint32_t> symbol_layer_text;
     if (view.has(kBlkSymbolLayerText) && dr.symbol_layer_count > 0) {
         auto rows = view.column<std::uint32_t>(kBlkSymbolLayerText, dr.symbol_layer_count,
                                                "sembol katmani yazilari");
         if (!rows) return rows.error();
         symbol_layer_text = rows.value();
+    }
+
+    if (view.has(kBlkSymbolLayerField) && dr.symbol_layer_count > 0) {
+        auto rows = view.column<std::uint32_t>(kBlkSymbolLayerField, dr.symbol_layer_count,
+                                               "sembol katmani alanlari");
+        if (!rows) return rows.error();
+        symbol_layer_field = rows.value();
+    }
+    if (view.has(kBlkSymbolLayerFieldType) && dr.symbol_layer_count > 0) {
+        auto rows = view.column<std::uint8_t>(kBlkSymbolLayerFieldType, dr.symbol_layer_count,
+                                              "sembol katmani alan turleri");
+        if (!rows) return rows.error();
+        symbol_layer_field_type = rows.value();
     }
 
     for (std::uint64_t i = 0; i < dr.style_count; ++i) {
@@ -507,6 +522,23 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                         strings.at(symbol_layer_text[r.first_layer + k], "sembol katmani yazisi");
                     if (!text) return text.error();
                     layer.text = std::move(text.value());
+                }
+
+                // The slot, read the same way and just as optionally: a file
+                // written before symbol parameters existed has neither block and
+                // every layer comes back a plain caption.
+                if (r.first_layer + k < symbol_layer_field.size()) {
+                    auto field =
+                        strings.at(symbol_layer_field[r.first_layer + k], "sembol katmani alani");
+                    if (!field) return field.error();
+                    layer.field = std::move(field.value());
+                }
+                if (r.first_layer + k < symbol_layer_field_type.size()) {
+                    const std::uint8_t raw = symbol_layer_field_type[r.first_layer + k];
+                    if (raw > static_cast<std::uint8_t>(core::AttrType::CodeRef))
+                        return err(ErrorCode::ParseError,
+                                   "Bilinmeyen sembol katmanı alan türü: " + std::to_string(raw));
+                    layer.field_type = static_cast<core::AttrType>(raw);
                 }
                 sym.layers.push_back(layer);
             }

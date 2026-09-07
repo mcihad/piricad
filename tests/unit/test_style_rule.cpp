@@ -230,6 +230,156 @@ TEST_CASE("STİL: renk metni '#AARRGGBB' ve '#RRGGBB' biçimlerini çözer")
 
 // ------------------------------------------------------------ package load ----
 
+// ------------------------------------------------------- symbol parameters ----
+
+TEST_CASE("SEMBOL PARAMETRESİ: alan bildiren yazı katmanı sütunu da tanımlar")
+{
+    // WHAT THIS FEATURE IS. The regulation's building-condition symbol is a
+    // circle, a rule and two ratios — and the ratios belong to the PARCEL, not to
+    // the symbol. So a
+    // text layer either carries a word (a caption) or names a column (a slot), and
+    // the value lives where every other per-object value lives: an attribute
+    // column (model.md R27). A symbol that stored the figures itself would be a
+    // per-entity property bag under another name (P12).
+    Rig rig;
+    CHECK(rig.bus.execute_line("KATMAN ad=YAPI", Origin::Test).ok());
+
+    // THE COLUMN IS DECLARED BY THE SAME COMMAND, in the same transaction. A
+    // symbol that asks for `taks` in a drawing with no `taks` column is a
+    // parameter that can never be filled in, and making the user discover that by
+    // drawing the object and finding an empty panel is how a feature reads as
+    // broken.
+    CHECK_EQ(rig.doc.attributes().find("taks"), core::kNoAttr);
+    CHECK(rig.bus
+              .execute_line("STİL katman=YAPI tip=yazi-isaretci alan=taks alan_tipi=metin "
+                            "birim=zemin kaydirma=2500 boyut=3000",
+                            Origin::Test)
+              .ok());
+    REQUIRE(rig.doc.attributes().find("taks") != core::kNoAttr);
+
+    const core::Layer* layer = rig.doc.layer(rig.doc.find_layer("YAPI"));
+    REQUIRE(layer != nullptr);
+    REQUIRE(rig.doc.styles().contains(layer->style));
+
+    const core::Symbol& symbol = rig.doc.styles().symbol_at(layer->style);
+    REQUIRE_EQ(symbol.layers.size(), std::size_t{1});
+    CHECK_EQ(symbol.layers.front().field, std::string("taks"));
+    CHECK(symbol.layers.front().field_type == core::AttrType::Text);
+
+    // A SLOT DRAWS NOTHING, and that is the whole of its frame-path cost. R29
+    // forbids reading an attribute column at frame time and P7 forbids evaluating
+    // anything there; a slot obeys both by leaving `text` empty, which the draw
+    // loop already skips. There is no new branch on the 16 ms path.
+    CHECK(symbol.layers.front().text.empty());
+
+    // A word and a column are the two things it can be and never both: naming a
+    // column drops the word, because a fixed caption left on a layer the user just
+    // parameterised would draw the same thing on every object.
+    CHECK(rig.bus
+              .execute_line("STİL katman=YAPI tip=yazi-isaretci yazi=TAKS alan=kaks "
+                            "alan_tipi=metin birim=zemin",
+                            Origin::Test)
+              .ok());
+    const core::Layer* after = rig.doc.layer(rig.doc.find_layer("YAPI"));
+    REQUIRE(after != nullptr);
+    const core::Symbol& second = rig.doc.styles().symbol_at(after->style);
+    REQUIRE_EQ(second.layers.size(), std::size_t{1});
+    CHECK_EQ(second.layers.front().field, std::string("kaks"));
+    CHECK(second.layers.front().text.empty());
+
+    // An unknown type is refused by name rather than silently taken as text.
+    std::string said;
+    rig.bus.on_echo = [&said](std::string_view s) { said.append(s); };
+    (void)rig.bus.execute_line("STİL katman=YAPI tip=yazi-isaretci alan=x alan_tipi=zart",
+                               Origin::Test);
+    CHECK(said.find("Bilinmeyen alan türü") != std::string::npos);
+}
+
+TEST_CASE("SEMBOL PARAMETRESİ: ETİKET sembolün slotlarını doldurur")
+{
+    // ONE CALL, TWO FIGURES, EACH AT ITS OWN OFFSET. Before this the user wrote
+    // one ETİKET per figure with a hand-measured `kaydirma`; the symbol already
+    // knew both offsets, because they are the same numbers its fixed words are
+    // drawn at.
+    Rig rig;
+    CHECK(rig.bus.execute_line("KATMAN ad=YAPI", Origin::Test).ok());
+    CHECK(rig.bus
+              .execute_line("STİL katman=YAPI tip=yazi-isaretci alan=taks alan_tipi=metin "
+                            "birim=zemin kaydirma=2500 boyut=3000",
+                            Origin::Test)
+              .ok());
+    CHECK(rig.bus
+              .execute_line("STİL katman=YAPI tip=yazi-isaretci ekle=evet alan=kaks "
+                            "alan_tipi=metin birim=zemin kaydirma=-2500 boyut=3000",
+                            Origin::Test)
+              .ok());
+    CHECK(rig.bus.execute_line("ALAN noktalar=0,0 20,0 20,20 0,20", Origin::Test).ok());
+    // QUOTED, because a TAKS is a ratio written to two places and an unquoted
+    // `0.40` is a NUMBER token — which comes back out of the cell as `0.4`. The
+    // document stores no floating point (model.md R21), so a ratio is text and
+    // the trailing zero is part of what it says.
+    CHECK(rig.bus.execute_line("ÖZNİTELİK ad=taks nesne=1 deger=\"0.40\"", Origin::Test).ok());
+    CHECK(rig.bus.execute_line("ÖZNİTELİK ad=kaks nesne=1 deger=\"1.20\"", Origin::Test).ok());
+
+    // NO `bicim`. The symbol says what to write and where, so the command does
+    // not ask — and `bicim` had to become optional for the bus to let the body
+    // reach the layer at all (Article 1.3: validate, then run).
+    CHECK(rig.bus.execute_line("ETİKET katman=YAPI", Origin::Test).ok());
+
+    const core::LayerId labels = rig.doc.find_layer("YAPI ETİKET");
+    REQUIRE(labels != core::kNoLayer);
+
+    std::vector<std::pair<std::string, core::Mm>> written;
+    for (core::EntityId e = 0; e < rig.doc.entities().size(); ++e) {
+        if (!rig.doc.alive(e) || rig.doc.entities().layer[e] != labels) continue;
+        const std::uint32_t slot = rig.doc.entities().slot[e];
+        REQUIRE(rig.doc.texts().has(slot));
+        written.emplace_back(std::string(rig.doc.texts().text(slot)),
+                             rig.doc.entities().box_of(e).centre().y);
+    }
+    std::sort(written.begin(), written.end(),
+              [](const auto& a, const auto& b) { return a.second > b.second; });
+
+    REQUIRE_EQ(written.size(), std::size_t{2});
+
+    // TAKS above the rule, KAKS below — the offsets the symbol declared, and the
+    // reason the two figures do not land on top of each other.
+    CHECK_EQ(written[0].first, std::string("0.40"));
+    CHECK_EQ(written[1].first, std::string("1.20"));
+    CHECK(written[0].second > written[1].second);
+
+    // AN EMPTY CELL WRITES NOTHING. A parcel whose TAKS has not been entered yet
+    // gets no figure rather than a `yok` printed inside its circle.
+    CHECK(rig.bus.execute_line("ALAN noktalar=40,0 60,0 60,20 40,20", Origin::Test).ok());
+    CHECK(rig.bus.execute_line("ETİKET katman=YAPI hedef=BOŞ", Origin::Test).ok());
+
+    std::size_t second_round         = 0;
+    const core::LayerId empty_target = rig.doc.find_layer("BOŞ");
+    for (core::EntityId e = 0; e < rig.doc.entities().size(); ++e)
+        if (rig.doc.alive(e) && rig.doc.entities().layer[e] == empty_target) ++second_round;
+    CHECK_EQ(second_round, std::size_t{2}); // the first parcel's two, and nothing for the new one
+}
+
+TEST_CASE("SEMBOL PARAMETRESİ: zemin olmayan ölçü reddedilir, tahmin edilmez")
+{
+    // A slot's offset and size place a real text ENTITY, and a paper micrometre
+    // becomes a ground millimetre only through a plot scale this command does not
+    // have. Guessing one would put the figure in the right place at exactly one
+    // scale and the wrong place at every other.
+    Rig rig;
+    CHECK(rig.bus.execute_line("KATMAN ad=YAPI", Origin::Test).ok());
+    CHECK(rig.bus
+              .execute_line("STİL katman=YAPI tip=yazi-isaretci alan=taks alan_tipi=metin "
+                            "birim=kagit kaydirma=2500",
+                            Origin::Test)
+              .ok());
+    CHECK(rig.bus.execute_line("ALAN noktalar=0,0 20,0 20,20 0,20", Origin::Test).ok());
+
+    auto refused = rig.bus.execute_line("ETİKET katman=YAPI", Origin::Test);
+    REQUIRE(!refused.ok());
+    CHECK(refused.error().message.find("zemin biriminde") != std::string::npos);
+}
+
 TEST_CASE("STİL: paket künyesi eksiksiz olmadan yüklenmez")
 {
     auto complete = parse_catalog(kFixture);

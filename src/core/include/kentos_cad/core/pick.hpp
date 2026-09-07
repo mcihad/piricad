@@ -31,6 +31,7 @@
 #include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/units.hpp"
 
+#include <array>
 #include <cstdint>
 #include <span>
 #include <vector>
@@ -103,6 +104,23 @@ bool closest_point_on_line(Point2 a, Point2 b, Point2 p, Point2& out, double& t)
 /// which is the point an ifraz needs when the corner monument is gone.
 bool line_intersection(Point2 a, Point2 b, Point2 c, Point2 d, Point2& out, double& t,
                        double& u) noexcept;
+
+/// The four corners of the band a caption occupies, or false when `e` carries no
+/// text. Corners run baseline-start, baseline-end, then back along the top.
+///
+/// A CAPTION IS NOT ITS BASELINE. Text is stored as a two-vertex baseline plus a
+/// string (model.md R9), which is what lets the cull, the snap and the hit test
+/// treat it like every other entity — but the baseline is a hairline UNDER the
+/// letters and nothing is drawn on it. Picked and bounded by that line alone, an
+/// imported ada number was a caption you could see, could not click, and whose
+/// extent the document reported as zero tall.
+///
+/// The band runs from half a text height BELOW the baseline to a full height
+/// above it: above covers the capitals, below covers the descenders and the
+/// `MiddleCentre` anchor, and doing it along the baseline's own normal means a
+/// caption laid along a road is bounded along the road rather than by the
+/// upright box around it.
+bool text_quad(const Document& doc, EntityId e, std::array<Point2, 4>& out);
 
 /// Appends every visible entity whose bounding box overlaps `box`, in ascending
 /// slot order. This is the shared narrowing step: the index for what it has

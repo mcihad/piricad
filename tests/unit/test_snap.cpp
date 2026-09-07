@@ -769,6 +769,92 @@ TEST_CASE("SEÇİM: SEÇ NOKTA sira= üstteki nesnenin altına iner")
     CHECK(rig.echoed.find("1'den küçük olamaz") != std::string::npos);
 }
 
+TEST_CASE("SEÇİM: yazı harflerinden tutulur, taban çizgisinden değil")
+{
+    // THE REGRESSION, and it made every imported caption unclickable. A text
+    // entity's geometry is the BASELINE — a hairline under the letters — so the
+    // stored bounding box was zero millimetres tall and the distance test measured
+    // to a line nothing is drawn on. A click in the middle of `PARSEL 12` was a
+    // click a whole text height away from anything the document thought was there,
+    // and a zoning plan's 13 112 captions could be seen and not selected.
+    Rig rig;
+    rig.with_view();
+    if (!rig.line("METİN noktalar=0,0 yazi=\"PARSEL 12\" yukseklik=3000")) FAIL("METİN");
+
+    core::EntityId text = core::kNoEntity;
+    for (core::EntityId e = 0; e < rig.doc.entities().size(); ++e)
+        if (rig.doc.alive(e) && rig.doc.texts().has(rig.doc.entities().slot[e])) text = e;
+    REQUIRE(text != core::kNoEntity);
+
+    // THE BOX COVERS THE LETTERS. Zero tall is the defect in one number: no query
+    // whose own box misses that single line can ever reach the entity, however
+    // exact the distance test after it is.
+    const core::Box2 box = rig.doc.entities().box_of(text);
+    CHECK(box.max_y - box.min_y >= 3000);
+
+    // Half the cap height above the baseline is the middle of the letters, and it
+    // is where a person aims. The tolerance is tight on purpose: a generous one
+    // would pass by reaching the baseline rather than the glyphs.
+    if (!rig.line("SEÇ mod=NOKTA noktalar=8,1.5 tolerans=0.2")) FAIL("SEÇ harf");
+    CHECK_EQ(rig.bus.selection().size(), std::size_t{1});
+
+    // And still on the baseline itself, which is where it always worked.
+    if (!rig.line("SEÇ mod=NOKTA noktalar=8,0 tolerans=0.2")) FAIL("SEÇ taban");
+    CHECK_EQ(rig.bus.selection().size(), std::size_t{1});
+
+    // Well clear of the band is still a miss: the caption grew to its letters, not
+    // to the whole neighbourhood.
+    if (!rig.line("SEÇ mod=NOKTA noktalar=8,12 tolerans=0.2")) FAIL("SEÇ uzak");
+    CHECK_EQ(rig.bus.selection().size(), std::size_t{0});
+}
+
+TEST_CASE("YAZIDÜZENLE: var olan bir yazıyı yerinde değiştirir")
+{
+    // A CAPTION THAT COULD BE READ AND NOT WRITTEN. `METİN` draws one; nothing
+    // rewrote one, which is why the property panel showed its text read-only with
+    // the note that a row becomes editable when a command exists for it.
+    Rig rig;
+    rig.with_view();
+    if (!rig.line("METİN noktalar=0,0 yazi=\"PARSEL 12\" yukseklik=3000")) FAIL("METİN");
+
+    core::EntityId text = core::kNoEntity;
+    for (core::EntityId e = 0; e < rig.doc.entities().size(); ++e)
+        if (rig.doc.alive(e) && rig.doc.texts().has(rig.doc.entities().slot[e])) text = e;
+    REQUIRE(text != core::kNoEntity);
+    const std::uint32_t slot = rig.doc.entities().slot[text];
+
+    if (!rig.line("SEÇ mod=NOKTA noktalar=8,1.5 tolerans=0.2")) FAIL("SEÇ");
+    if (!rig.line("YAZIDÜZENLE yazi=\"ADA 128\"")) FAIL("YAZIDÜZENLE");
+
+    CHECK_EQ(std::string(rig.doc.texts().text(slot)), std::string("ADA 128"));
+
+    // WHAT WAS NOT ASKED FOR DOES NOT MOVE. Rewriting the words must not reset a
+    // height somebody chose.
+    CHECK_EQ(rig.doc.texts().height(slot), core::Mm{3000});
+
+    if (!rig.line("YAZIDÜZENLE yukseklik=4000")) FAIL("YAZIDÜZENLE yukseklik");
+    CHECK_EQ(rig.doc.texts().height(slot), core::Mm{4000});
+    CHECK_EQ(std::string(rig.doc.texts().text(slot)), std::string("ADA 128"));
+
+    // AND THE BOX FOLLOWED IT, which is what keeps the caption clickable after it
+    // grows.
+    CHECK(rig.doc.entities().box_of(text).max_y - rig.doc.entities().box_of(text).min_y >= 4000);
+
+    // ONE UNDO STEP, and it puts back both the words and the height.
+    if (!rig.line("GERİAL")) FAIL("GERİAL");
+    CHECK_EQ(rig.doc.texts().height(slot), core::Mm{3000});
+
+    // A selection with no caption in it is told so rather than silently doing
+    // nothing that looks like success.
+    Rig bare;
+    bare.with_view();
+    if (!bare.line("ÇİZGİ noktalar=0,0 10,0")) FAIL("ÇİZGİ");
+    if (!bare.line("SEÇ mod=TÜMÜ")) FAIL("SEÇ TÜMÜ");
+    bare.echoed.clear();
+    (void)bare.line("YAZIDÜZENLE yazi=\"olmaz\"");
+    CHECK(bare.echoed.find("yazı taşıyan nesne yok") != std::string::npos);
+}
+
 TEST_CASE("SEÇİM: küme anahtar sıralı, tekil ve sürüm sayar")
 {
     Selection s;

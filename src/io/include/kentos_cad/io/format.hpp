@@ -186,6 +186,17 @@ enum BlockId : std::uint32_t {
     /// file meant (io.md R10).
     kBlkSymbolLayerPhase = 0x0038, ///< i32[], one per symbol layer
 
+    /// The attribute column each `TextMarker` symbol layer reads instead of a
+    /// fixed word, and what that column should hold.
+    ///
+    /// TWO OPTIONAL BLOCKS, written only when some layer declares one — the same
+    /// bargain as the phase above it (io.md R10, and the reason adding a block is
+    /// not a version bump). A file written before symbol parameters existed has
+    /// neither, and every layer reads back as a plain caption, which is what that
+    /// file meant.
+    kBlkSymbolLayerField     = 0x003B, ///< u32[], index into kBlkStringSpans
+    kBlkSymbolLayerFieldType = 0x003C, ///< u8[], core::AttrType
+
     kBlkImages     = 0x0033, ///< ImageRecord[]
     kBlkImageBytes = 0x0034, ///< u8[], the payloads back to back
 

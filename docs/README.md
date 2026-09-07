@@ -39,6 +39,7 @@ Tek tek komutlar:
 | `DAİRE` | [Daire çizme](komutlar/circle_draw.md) |
 | `YAY` | [Yay çizme](komutlar/arc_draw.md) |
 | `METİN` | [Çizime yazı yazma](komutlar/text.md) |
+| `YAZIDÜZENLE` | [Var olan yazıyı değiştirme](komutlar/edittext.md) |
 | `KÖŞETAŞI` | [Köşe taşıma](komutlar/vertex_move.md) |
 | `KÖŞEEKLE` | [Kenara köşe ekleme](komutlar/vertex_insert.md) |
 | `ALANAÇEVİR` | [Çizgileri kapalı alana çevirme](komutlar/to_area.md) |

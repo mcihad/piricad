@@ -25,6 +25,35 @@ yazan bir komut" olmasının da sebebi. Etiketleyici de aynı biçimdedir:
 
 > **Etiketleyici, yazı nesnesi yazan bir komuttur.**
 
+### Sembol alan bildiriyorsa biçim vermeyin
+
+Katmanın sembolündeki bir `yazi-isaretci` katmanı sabit bir kelime yerine bir
+**öznitelik sütunu** adlandırmışsa ([`STİL alan=`](style.md)), `ETİKET` biçimi
+sormaz: sembol neyin, nereye ve hangi boyda yazılacağını zaten söylüyordur.
+
+```
+KATMAN ad=YAPI
+STİL katman=YAPI tip=yazi-isaretci alan=taks alan_tipi=metin birim=zemin kaydirma=2500 boyut=3000
+STİL katman=YAPI ekle=evet tip=yazi-isaretci alan=kaks alan_tipi=metin birim=zemin kaydirma=-2500 boyut=3000
+ALAN noktalar=485300,4310200 485320,4310200 485320,4310220 485300,4310220
+ÖZNİTELİK ad=taks nesne=1 deger="0.40"
+ÖZNİTELİK ad=kaks nesne=1 deger="1.20"
+ETİKET katman=YAPI
+```
+
+Kurulum bir kez yapılır; sonrasında etiketlemenin tamamı son satırdır.
+
+Bu, MPYY'nin yapılaşma koşulu dairesini tek çağrıda doldurur: TAKS çizginin
+üstüne, KAKS altına, sembolün bildirdiği kaydırmalarla. Önceden bunun için figür
+başına bir `ETİKET` ve elle ölçülmüş bir `kaydirma` gerekiyordu — oysa o iki sayı
+zaten sembolün kendi sabit yazılarını çizdiği yerlerdi.
+
+**Boş hücre hiçbir şey yazmaz.** TAKS'ı henüz girilmemiş bir parsel dairesinin
+içinde `yok` görmez, boş kalır.
+
+`bicim` yazarsanız sembolün slotları yok sayılır — parametreli bir katmana tek
+seferlik başka bir etiket atmak böyle mümkün kalır.
+
 ## Adlar
 
 `ETİKET` · `ETIKET` · `LABEL` · `ETK`
@@ -40,7 +69,7 @@ ETİKET katman=<ad> bicim=<biçim> [hedef=<ad>] [yukseklik=<tam sayı>]
 | Parametre | Ne yapar |
 |---|---|
 | `katman` | Etiketlenecek katmanın adı. Zorunlu |
-| `bicim` | Etiket biçimi. `{sutun}` o sütunun değeriyle değişir. Zorunlu |
+| `bicim` | Etiket biçimi. `{sutun}` o sütunun değeriyle değişir. Sembol **alan** bildiriyorsa gerekmez |
 | `hedef` | Etiketlerin yazılacağı katman. Verilmezse `<katman> ETİKET` |
 | `yukseklik` | Yazı yüksekliği, **zemin milimetresi**. Verilmezse 2000 (2 m) |
 | `kaydirma` | Nesnenin ortasından dikey kaydırma, **zemin milimetresi**. Artı yukarı |

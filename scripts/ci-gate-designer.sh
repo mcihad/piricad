@@ -36,6 +36,22 @@ checks=(
     "size_px|sized|MarkerLine HashLine PointPatternFill CentroidFill SimpleMarker RasterFill RasterMarker RasterLine TextMarker"
 )
 
+# AND ONE PROPERTY NO RENDERER READS, on purpose.
+#
+# A `yazi-isaretci` layer's `field` names the attribute column the layer stands
+# for. The DRAW PATH never reads it — model.md R29 forbids reading an attribute
+# column at frame time, and a slot obeys by drawing nothing — but `ETİKET` reads
+# it to decide what to write and where. So the drift this guards is the same one
+# in a different reader: a designer that stops offering the row leaves a property
+# the command reads unreachable from the dialog, which is a symbol parameter that
+# can only be declared by typing.
+if ! grep -q 'addProperty(form, nullptr, tr("Alan"), field_, fieldType_, {T::TextMarker})' \
+        "$designer"; then
+    echo "designer: TextMarker's 'field' is read by ETİKET but the dialog offers no row" >&2
+    echo "designer:   for it -> ${designer#$root/}:1" >&2
+    fail=1
+fi
+
 for row in "${checks[@]}"; do
     IFS='|' read -r field list types <<<"$row"
 

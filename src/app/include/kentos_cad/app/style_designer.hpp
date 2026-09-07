@@ -309,6 +309,11 @@ private:
     QSpinBox* angle_{nullptr};
     QSpinBox* opacity_{nullptr};
     QLineEdit* text_{nullptr};
+
+    /// The attribute column a text layer reads instead of carrying a word, and
+    /// what that column holds. A layer is a caption OR a slot, never both.
+    QLineEdit* field_{nullptr};
+    QComboBox* fieldType_{nullptr};
     QComboBox* sizeUnit_{nullptr};
     QComboBox* intervalUnit_{nullptr};
     QComboBox* spacingYUnit_{nullptr};

@@ -16,6 +16,7 @@
 // This is Esri's RuleID column, and Esri ships it at cadastral scale.
 #pragma once
 
+#include "kentos_cad/core/attribute.hpp"
 #include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/image_store.hpp"
 
@@ -322,6 +323,36 @@ struct SymbolLayer
     /// a handle into a side table would make two symbols equal that draw different
     /// words whenever the table was rebuilt in another order.
     std::string text;
+
+    /// The attribute column a `TextMarker` reads instead of carrying a word.
+    ///
+    /// THIS IS THE SYMBOL'S PARAMETER, and naming it as an ATTRIBUTE rather than
+    /// as a thing of its own is the whole design. The regulation's building-
+    /// condition symbol is a circle, a rule, and two ratios that belong to the
+    /// PARCEL. The circle and the rule are the symbol's; the ratios are the
+    /// parcel's. A symbol that stored the figures itself would be a per-entity
+    /// property bag under another name (model.md P12), and it would have to grow
+    /// its own table, its own editor, its own export and its own filter. Held as
+    /// a column (R27), every one of those already exists.
+    ///
+    /// So a text layer is one of two things and never both: a CAPTION, which
+    /// carries `text` and draws it, or a SLOT, which carries `field` and draws
+    /// NOTHING. The frame path needs no rule for the second case — a slot leaves
+    /// `text` empty and the draw loop's existing `text.empty()` skip is the whole
+    /// implementation. R29 forbids reading an attribute column at frame time, and
+    /// this is how the slot obeys it at zero cost: `ETİKET` fills the slot by
+    /// writing a text ENTITY at the slot's own position, which is what
+    /// `.claude/model.md` R14 means by "a renderer is a command".
+    std::string field;
+
+    /// What that column should hold. Read when the field is declared, ignored
+    /// when it is empty.
+    ///
+    /// The symbol carries the type because the symbol is what knows: a gösterim
+    /// that prints a ratio wants a number, one that prints an ada wants an
+    /// integer, and the drawing that uses it should not have to guess. It is the
+    /// same closed set `SÜTUN` declares — there is no second type system.
+    AttrType field_type{AttrType::Text};
 
     /// The picture a raster type draws, as an index into the document's
     /// `ImageStore`. `kNoImage` for every other type.

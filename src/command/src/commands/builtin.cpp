@@ -15,6 +15,7 @@ namespace kentos::command {
     X(polyline)                                                                                    \
     X(point_draw)                                                                                  \
     X(text)                                                                                        \
+    X(edittext)                                                                                    \
     X(exportstyle)                                                                                 \
     X(area)                                                                                        \
     X(rectangle)                                                                                   \

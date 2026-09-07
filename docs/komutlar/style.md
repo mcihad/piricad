@@ -109,6 +109,8 @@ verilir.
 | `saydamlik` | Katman saydamlığı `0`–`255`. `255` tam opak |
 | `desen` | Çizgi tipi: `sürekli`, ya da çizgi/boşluk uzunlukları — `"8 1 1 1"` |
 | `yazi` | `yazi-isaretci` katmanının yazdığı sabit metin |
+| `alan` | `yazi-isaretci` katmanının okuyacağı **öznitelik sütunu**. Sütun yoksa aynı işlemde tanımlanır |
+| `alan_tipi` | `alan` sütununun türü: `tam_sayi`, `uzunluk`, `evet_hayir`, `metin`, `kod` |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -120,6 +122,49 @@ rengi verilmemiş bir `STİL` hep siyahla başlar — pafta siyah mürekkeple ba
 söylemeyen bir gösterim onunla çizilir ve bir harita mühendisi bir çizgi çizip rengini
 söylemediğinde siyah kasteder. Bu bir varsayılandır, bir kilit değil: `renk` verildiği
 anda o geçerlidir.
+
+### Sembol parametresi — dairenin içindeki sayı parselin, sembolün değil
+
+MPYY'nin **yapılaşma koşulu** gösterimi bir daire, ortasında bir çizgi, çizginin
+üstünde TAKS ve altında KAKS'tır. Daire ve çizgi **sembolün** malıdır; iki sayı
+**parselin**. Bu yüzden bir `yazi-isaretci` katmanı iki şeyden biridir ve asla
+ikisi birden değildir:
+
+| | |
+|---|---|
+| **Yazı** (`yazi=`) | Sabit bir kelime yazar — `TGB`, `OSB`, `A1` |
+| **Alan** (`alan=`) | Bir **öznitelik sütununu** adlandırır ve kendisi hiçbir şey çizmez |
+
+`alan=` verdiğinizde iki şey birden olur: sembol katmanı o sütunu ister, ve sütun
+çizimde yoksa **aynı işlemde tanımlanır**. Tek komut, tek geri alma adımı — çünkü
+istediği sütunu olmayan bir sembol, hiçbir zaman doldurulamayacak bir parametredir.
+
+```
+KATMAN ad=YAPI
+STİL katman=YAPI tip=isaretci sekil=daire birim=zemin boyut=12000
+STİL katman=YAPI ekle=evet tip=yazi-isaretci alan=taks alan_tipi=metin birim=zemin kaydirma=2500 boyut=3000
+STİL katman=YAPI ekle=evet tip=yazi-isaretci alan=kaks alan_tipi=metin birim=zemin kaydirma=-2500 boyut=3000
+```
+
+Bundan sonra bu katmana çizdiğiniz her nesnenin **Öznitelikler** panelinde `taks`
+ve `kaks` satırları, tipine göre düzenlenebilir olarak çıkar — çünkü bunlar
+sıradan öznitelik sütunlarıdır. Değerleri girdikten sonra
+[`ETİKET katman=YAPI`](label.md) sembolün bildirdiği yerlere yazar.
+
+**Değer neden sütunda durur?** Çünkü orada durduğu anda öznitelik tablosu, süzgeç,
+`.pcad`, GPKG, PostGIS ve DXF **bedavaya** çalışır. Sembolün kendi içinde saklansa
+her birini yeniden yazmak gerekirdi — ve bu, belge modelinin nesne başına
+"özellik torbası" yasağının (`model.md` P12) tam olarak engellediği şeydir.
+
+**Alan bildiren katman ekranda hiçbir şey çizmez.** Kare yolu öznitelik sütunu
+okuyamaz (`model.md` R29); slot bu kurala sıfır maliyetle uyar, çünkü yazısı boş
+kalır ve çizim döngüsü boş yazıyı zaten atlar. Sayıyı kâğıda koyan şey `ETİKET`in
+yazdığı gerçek metin nesnesidir.
+
+**Kaydırma ve boyut zemin biriminde olmalıdır** (`birim=zemin`). Kâğıt mikrometresi
+zemin milimetresine ancak bir pafta ölçeğiyle çevrilir; `ETİKET`in elinde öyle bir
+ölçek yoktur ve tahmin etseydi sayıyı tek bir ölçekte doğru, diğer hepsinde yanlış
+yere koyardı. Bu yüzden reddeder, uydurmaz.
 
 ### Sembol katmanları — bir gösterim tek çizgi değildir
 

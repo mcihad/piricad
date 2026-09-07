@@ -3012,7 +3012,7 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // command that vanished bumps it down by accident, and that is the case worth
     // catching.
     Fixture f;
-    CHECK_EQ(f.reg.size(), std::size_t{58}); // 57 + BİRLEŞTİR (core.combine)
+    CHECK_EQ(f.reg.size(), std::size_t{59}); // 58 + YAZIDÜZENLE (core.edittext)
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

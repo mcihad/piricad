@@ -202,6 +202,22 @@ while IFS= read -r f; do
     done < <(grep -nE '\bstatic\b|^[A-Za-z_]' "$f" || true)
 done < <(find "$root/src/core" -name '*.hpp' -o -name '*.cpp' | sort)
 
+# ------------------------------------- the file's block ids are unique ---
+#
+# `format.hpp` numbers every block in the native file. A REUSED number is not a
+# compile error and not a link error: the writer emits both blocks, the reader
+# asks for one and gets whichever came first, and the failure surfaces as
+# "kilavuz ekseni sutununun oge boyu 4, beklenen 1" — a corrupt-file message
+# about a file that is fine. It cost exactly that once; the numbers are listed in
+# one header, so checking them is one line.
+dosya="$root/src/io/include/kentos_cad/io/format.hpp"
+if [[ -f "$dosya" ]]; then
+    while IFS= read -r yinelenen; do
+        echo "model: file block id used twice (io/format.hpp) -> $yinelenen" >&2
+        fail=1
+    done < <(grep -oE '= 0x[0-9A-Fa-f]{4},' "$dosya" | sort | uniq -d || true)
+fi
+
 # ---------------------------------------------------- R6 / P3: the cull block ---
 #
 # HEURISTIC, and deliberately so. The cull region is taken to be the enclosing

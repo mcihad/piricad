@@ -14,6 +14,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.polyline`](polyline.md) | `ÇOKLUÇİZGİ`, `COKLUCIZGI`, `POLYLINE`, `ÇÇ`, `PL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Birden çok noktadan TEK bir çizgi nesnesi çizer. |
 | [`core.point_draw`](point_draw.md) | `NOKTA`, `POINT`, `NK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper. |
 | [`core.text`](text.md) | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
+| [`core.edittext`](edittext.md) | `YAZIDÜZENLE`, `YAZIDUZENLE`, `EDITTEXT`, `YZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir. |
 | [`core.exportstyle`](exportstyle.md) | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
 | [`core.area`](area.md) | `ALAN`, `AREA`, `POLİGON`, `POLIGON`, `AL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alan çizer; istenirse içine delik açar. |
 | [`core.rectangle`](rectangle.md) | `DİKDÖRTGEN`, `DIKDORTGEN`, `RECTANGLE`, `DKD`, `REC` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer. |
@@ -114,6 +115,19 @@ Ayrıntılı kullanım: [NOKTA](point_draw.md)
 | `hizalama` | text | isteğe bağlı | sol, orta, sag veya merkez |
 
 Ayrıntılı kullanım: [METİN](text.md)
+
+### `core.edittext` — YAZIDÜZENLE
+
+Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Düzenlenecek yazılar; verilmezse seçim |
+| `yazi` | text | isteğe bağlı | Yeni metin; verilmezse değişmez |
+| `yukseklik` | integer | isteğe bağlı | Yeni yükseklik, zeminde milimetre; verilmezse değişmez |
+| `hizalama` | text | isteğe bağlı | sol, orta, sag veya merkez; verilmezse değişmez |
+
+Ayrıntılı kullanım: [YAZIDÜZENLE](edittext.md)
 
 ### `core.exportstyle` — STİLAKTAR
 
@@ -545,7 +559,7 @@ Katmandaki nesneleri özniteliklerinden okuyarak etiketler.
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `katman` | text | 1 | Etiketlenecek katmanın adı |
-| `bicim` | text | 1 | Etiket biçimi; {sutun} o sütunun değeriyle değişir, \n satır kırar |
+| `bicim` | text | isteğe bağlı | Etiket biçimi; {sutun} o sütunun değeriyle değişir, \n satır kırar. Sembol alan bildiriyorsa gerekmez |
 | `hedef` | text | isteğe bağlı | Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET' |
 | `yukseklik` | integer | isteğe bağlı | Yazı yüksekliği, zemin milimetresi |
 | `kaydirma` | integer | isteğe bağlı | Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı |
@@ -603,6 +617,8 @@ Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden
 | `saydamlik` | integer | isteğe bağlı | Katman saydamlığı 0-255; 255 tam opak |
 | `desen` | text | isteğe bağlı | Çizgi tipi: sürekli, ya da çizgi kalınlığının katı olarak çizgi/boşluk uzunlukları — '8 1 1 1' gibi (kesik-nokta) |
 | `yazi` | text | isteğe bağlı | yazi-isaretci katmanının yazdığı sabit metin |
+| `alan` | text | isteğe bağlı | yazi-isaretci katmanının okuyacağı öznitelik sütunu; yoksa tanımlanır |
+| `alan_tipi` | text | isteğe bağlı | alan= sütununun türü: tam_sayi, uzunluk, evet_hayir, metin, kod |
 
 Ayrıntılı kullanım: [STİL](style.md)
 
@@ -907,6 +923,57 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "max": 1,
           "required": false,
           "help": "sol, orta, sag veya merkez"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.edittext",
+      "names": [
+        "YAZIDÜZENLE",
+        "YAZIDUZENLE",
+        "EDITTEXT",
+        "YZD"
+      ],
+      "category": "Düzenleme",
+      "summary": "Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir.",
+      "params": [
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Düzenlenecek yazılar; verilmezse seçim"
+        },
+        {
+          "name": "yazi",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Yeni metin; verilmezse değişmez"
+        },
+        {
+          "name": "yukseklik",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Yeni yükseklik, zeminde milimetre; verilmezse değişmez"
+        },
+        {
+          "name": "hizalama",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "sol, orta, sag veya merkez; verilmezse değişmez"
         }
       ],
       "flags": [
@@ -2260,10 +2327,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         {
           "name": "bicim",
           "type": "text",
-          "min": 1,
+          "min": 0,
           "max": 1,
-          "required": true,
-          "help": "Etiket biçimi; {sutun} o sütunun değeriyle değişir, \\n satır kırar"
+          "required": false,
+          "help": "Etiket biçimi; {sutun} o sütunun değeriyle değişir, \\n satır kırar. Sembol alan bildiriyorsa gerekmez"
         },
         {
           "name": "hedef",
@@ -2613,6 +2680,22 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "max": 1,
           "required": false,
           "help": "yazi-isaretci katmanının yazdığı sabit metin"
+        },
+        {
+          "name": "alan",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "yazi-isaretci katmanının okuyacağı öznitelik sütunu; yoksa tanımlanır"
+        },
+        {
+          "name": "alan_tipi",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "alan= sütununun türü: tam_sayi, uzunluk, evet_hayir, metin, kod"
         }
       ],
       "flags": [

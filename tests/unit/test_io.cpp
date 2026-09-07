@@ -1888,6 +1888,52 @@ TEST_CASE("IO: yığılmış sembol dosyayla gidip geliyor")
     CHECK(after == before);
 }
 
+TEST_CASE("IO: sembolün alan slotu dosyayla gidip geliyor")
+{
+    // A SLOT IS PART OF THE SYMBOL, so it has to survive the file. Two OPTIONAL
+    // blocks carry it, written only when some layer declares one — so a drawing
+    // with none is byte for byte the file it was before parameters existed, and a
+    // file written before them reads back as plain captions (io.md R10).
+    TempDir tmp("sembol-alani");
+    const std::string path = tmp.file("sembol-alani.pcad");
+
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("KATMAN YAPI", Origin::Test).ok());
+    REQUIRE(rig.bus
+                .execute_line("STİL katman=YAPI tip=yazi-isaretci alan=taks alan_tipi=metin "
+                              "birim=zemin kaydirma=2500 boyut=3000",
+                              Origin::Test)
+                .ok());
+
+    const core::LayerId on = rig.doc.find_layer("YAPI");
+    REQUIRE(on != core::kNoLayer);
+    const core::Layer* record = rig.doc.layer(on);
+    REQUIRE(record != nullptr);
+    const core::Symbol before = rig.doc.styles().symbol_at(record->style);
+    REQUIRE_EQ(before.layers.size(), std::size_t{1});
+    CHECK_EQ(before.layers.front().field, std::string("taks"));
+
+    const std::uint64_t hash = rig.doc.content_hash();
+    REQUIRE(rig.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+
+    // The fingerprint folds the slot and its type, so a document that hashes the
+    // same cannot have lost either.
+    CHECK_EQ(reloaded.doc.content_hash(), hash);
+
+    const core::LayerId back = reloaded.doc.find_layer("YAPI");
+    REQUIRE(back != core::kNoLayer);
+    const core::Layer* after_record = reloaded.doc.layer(back);
+    REQUIRE(after_record != nullptr);
+    const core::Symbol after = reloaded.doc.styles().symbol_at(after_record->style);
+    CHECK(after == before);
+    CHECK_EQ(after.layers.front().field, std::string("taks"));
+    CHECK(after.layers.front().field_type == core::AttrType::Text);
+}
+
 TEST_CASE("IO: boş katmanın varsayılan sembolü dosyayla gidip geliyor")
 {
     TempDir tmp("katman-sembolu");

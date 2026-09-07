@@ -34,6 +34,21 @@ const char* attr_type_name(AttrType t) noexcept
     return "?";
 }
 
+std::optional<AttrType> attr_type_from_name(std::string_view word)
+{
+    // The words a user types, not the machine names `attr_type_name` prints: a
+    // schema file says `Int64` and a person says `tam_sayi`, and this side of the
+    // pair is the person's.
+    if (turkish_iequals(word, "tam_sayi") || turkish_iequals(word, "tam_sayı"))
+        return AttrType::Int64;
+    if (turkish_iequals(word, "uzunluk")) return AttrType::Length;
+    if (turkish_iequals(word, "evet_hayir") || turkish_iequals(word, "evet_hayır"))
+        return AttrType::Bool;
+    if (turkish_iequals(word, "metin")) return AttrType::Text;
+    if (turkish_iequals(word, "kod")) return AttrType::CodeRef;
+    return std::nullopt;
+}
+
 AttrValue attr_absent(AttrType t)
 {
     AttrValue v;

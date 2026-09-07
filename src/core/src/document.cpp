@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/document.hpp"
 
+#include "kentos_cad/core/pick.hpp"
+
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/spatial_index.hpp"
 #include "kentos_cad/core/text.hpp"
@@ -608,14 +610,7 @@ Status Document::set_geometry(EntityId e, std::span<const RingGeometry::RingInpu
     const std::uint32_t was = entities_.slot[e];
     entities_.slot[e]       = slot.value();
 
-    const Box2 box     = kind_bounds(geometry_, entities_.kind[e], slot.value());
-    entities_.min_x[e] = box.min_x;
-    entities_.min_y[e] = box.min_y;
-    entities_.max_x[e] = box.max_x;
-    entities_.max_y[e] = box.max_y;
-
-    // The tree filed this entity under the box it no longer has. See `index_stale_`.
-    index_stale_ = true;
+    refresh_box(e);
     ++revision_;
 
     undo_out               = Op{};
@@ -636,13 +631,7 @@ Status Document::restore_geometry(EntityId e, std::uint32_t slot, Op& undo_out)
     const std::uint32_t was = entities_.slot[e];
     entities_.slot[e]       = slot;
 
-    const Box2 box     = kind_bounds(geometry_, entities_.kind[e], slot);
-    entities_.min_x[e] = box.min_x;
-    entities_.min_y[e] = box.min_y;
-    entities_.max_x[e] = box.max_x;
-    entities_.max_y[e] = box.max_y;
-
-    index_stale_ = true;
+    refresh_box(e);
     ++revision_;
 
     undo_out               = Op{};
@@ -771,13 +760,39 @@ Status Document::set_text(EntityId e, std::string content, Mm height, TextAnchor
 
     if (content.empty() || height <= 0) {
         texts_.clear(slot);
+        refresh_box(e);
         ++revision_;
         return ok();
     }
 
     if (auto st = texts_.set(slot, content, height, anchor); !st) return st;
+
+    // THE BOX FOLLOWS THE TEXT, in both directions. Attaching a caption grows the
+    // entity over its letters; detaching one shrinks it back to the line. A box
+    // left behind either way is an entity the cull and the pick disagree with the
+    // drawing about.
+    refresh_box(e);
     ++revision_;
     return ok();
+}
+
+void Document::refresh_box(EntityId e)
+{
+    if (e >= entities_.size()) return;
+
+    Box2 box = kind_bounds(geometry_, entities_.kind[e], entities_.slot[e]);
+
+    if (std::array<Point2, 4> quad; text_quad(*this, e, quad))
+        for (const Point2 corner : quad)
+            box.extend(corner);
+
+    entities_.min_x[e] = box.min_x;
+    entities_.min_y[e] = box.min_y;
+    entities_.max_x[e] = box.max_x;
+    entities_.max_y[e] = box.max_y;
+
+    // The tree filed this entity under the box it no longer has.
+    index_stale_ = true;
 }
 
 void Document::mirror_layer_visibility(LayerId l, bool visible)

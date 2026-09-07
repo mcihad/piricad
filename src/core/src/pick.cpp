@@ -7,6 +7,7 @@
 #include "kentos_cad/core/spatial_index.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 
 namespace kentos::core {
@@ -119,6 +120,27 @@ struct Runs
 
 double min_distance_squared(const Document& doc, EntityId e, Point2 p)
 {
+    // A CAPTION IS MEASURED TO ITS LETTERS. Everything below walks the entity's
+    // rings, and a text entity's ring is the hairline UNDER the letters — so a
+    // click in the middle of `ADA 128` was a click a whole text height away from
+    // anything the document thought was there. It is the same rule the face test
+    // at the bottom of this function states for a parcel: a user reaching for a
+    // thing points AT the thing, not at the invisible line beneath it.
+    if (std::array<Point2, 4> quad; text_quad(doc, e, quad)) {
+        const Mm qx[4]{quad[0].x, quad[1].x, quad[2].x, quad[3].x};
+        const Mm qy[4]{quad[0].y, quad[1].y, quad[2].y, quad[3].y};
+        if (ring_contains(std::span<const Mm>(qx, 4), std::span<const Mm>(qy, 4), p)) return 0.0;
+
+        double best = -1.0;
+        for (std::size_t v = 0; v < 4; ++v) {
+            const Point2 a = quad[v];
+            const Point2 b = quad[(v + 1) % 4];
+            const double d = distance_squared(closest_point_on_segment(a, b, p), p);
+            if (best < 0.0 || d < best) best = d;
+        }
+        return best;
+    }
+
     Runs runs;
     runs.build(doc, e);
 
@@ -451,6 +473,48 @@ void pick_all(const Document& doc, Point2 cursor, Mm radius, std::vector<EntityI
     out.reserve(found.size());
     for (const auto& [distance, entity] : found)
         out.push_back(entity);
+}
+
+bool text_quad(const Document& doc, EntityId e, std::array<Point2, 4>& out)
+{
+    if (e >= doc.entities().size() || !doc.alive(e)) return false;
+
+    const std::uint32_t slot = doc.entities().slot[e];
+    if (!doc.texts().has(slot)) return false;
+
+    const RingSpan span = doc.geometry().rings_of(slot);
+    if (span.count == 0) return false;
+
+    const auto xs = doc.geometry().ring_xs(span.first);
+    const auto ys = doc.geometry().ring_ys(span.first);
+    if (xs.size() < 2) return false;
+
+    const Point2 a{xs.front(), ys.front()};
+    const Point2 b{xs.back(), ys.back()};
+
+    const Mm height = doc.texts().height(slot);
+    if (height <= 0) return false;
+
+    // THE BASELINE'S OWN NORMAL, so a caption laid along a road is bounded along
+    // the road. The run's direction is the rotation — the document stores no
+    // angle (model.md R9) — and a zero-length baseline has no direction, so it
+    // falls back to the page's up, which is what such a caption is drawn along.
+    const double dx  = static_cast<double>(b.x - a.x);
+    const double dy  = static_cast<double>(b.y - a.y);
+    const double len = std::sqrt(dx * dx + dy * dy);
+
+    const double nx = len > 0.0 ? -dy / len : 0.0;
+    const double ny = len > 0.0 ? dx / len : 1.0;
+
+    const double tall = static_cast<double>(height);
+    const Point2 up{mm_round(nx * tall), mm_round(ny * tall)};
+    const Point2 down{mm_round(nx * -tall * 0.5), mm_round(ny * -tall * 0.5)};
+
+    out[0] = Point2{a.x + down.x, a.y + down.y};
+    out[1] = Point2{b.x + down.x, b.y + down.y};
+    out[2] = Point2{b.x + up.x, b.y + up.y};
+    out[3] = Point2{a.x + up.x, a.y + up.y};
+    return true;
 }
 
 } // namespace kentos::core
