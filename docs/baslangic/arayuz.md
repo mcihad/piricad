@@ -81,7 +81,7 @@ açar; altçizgi, ekranı boş yere doldurmasın diye gizlidir.
 |---|---|
 | **Dosya** | Yeni, Aç (**Ctrl+O**), Kaydet (**Ctrl+S**), Farklı Kaydet… (**Ctrl+Shift+S**), İçe/Dışa Aktar…, Yazdır, Veritabanı… (**Ctrl+Shift+D**), Betik Çalıştır… (**Ctrl+R**), Çıkış |
 | **Düzen** | Geri Al (**Ctrl+Z**), Yinele (**Ctrl+Shift+Z**), Tümünü Seç (**Ctrl+A**), Seçimi Temizle (**Ctrl+Shift+A**), Ayarlar… |
-| **Görünüm** | Kapsama Yakınlaş (**Ctrl+0**), Yakınlaştır, Uzaklaştır, Nesne Yakalama (**F3**), Dik Mod (**F8**), Izgaraya Yakala (**F9**), Araç Çubuğu, Paneller, Koyu Tema, Geliştirici Bilgisi (**F12**) |
+| **Görünüm** | Kapsama Yakınlaş (**Ctrl+0**), Yakınlaştır, Uzaklaştır, Nesne Yakalama (**F3**), Dik Mod (**F8**), Yüzey Normali (**F10**), Izgaraya Yakala (**F9**), Araç Çubuğu, Paneller, Koyu Tema, Geliştirici Bilgisi (**F12**) |
 | **Çizim** | Çizgi, Çoklu Çizgi, Yay, Daire, Dikdörtgen, Nokta, Metin |
 | **Değiştir** | Sil, Taşı, Kopyala, Döndür, Ofset |
 | **Harita** | Sorgula, Ölç, Veritabanı… |
@@ -114,15 +114,39 @@ Sağ uçtaki iki okuma değiştirilemez, yalnızca okunur:
 
 ## Araç kutusu
 
-Beş grup, toplam 19 araç. Aktif araç vurgu rengiyle işaretlenir.
+Beş grup. Aktif araç vurgu rengiyle işaretlenir.
 
 | Grup | Araçlar |
 |---|---|
 | **seçim** | Seç · Alan Seç · Kaydır |
-| **oluşturma** | Çoklu Çizgi · Poligon · Dikdörtgen · Daire · Nokta · Metin |
+| **oluşturma** | Çizgi ▸ *(aile)* · Daire ▸ *(aile)* · Nokta · Metin |
 | **düzenleme** | Böl/Buda · Birleştir (tevhit) · Parsel Böl (ifraz) · Taşı · Ofset |
-| **ölçüm** | Uzunluk Ölç · Alan Ölç · Koordinat Oku |
+| **ölçüm** | Uzunluk Ölç ▸ *(aile)* |
 | **yardımcı** | Stil Kopyala · Topoloji Denetimi |
+
+### Araç aileleri
+
+Sütun 46 piksel geniştir; on bir çizim aracını alt alta dizmek okunmayan bir liste
+yapardı. Birbirinin yerine geçen araçlar **tek düğmede** toplanır; düğme en son
+kullandığınız aracı gösterir, ailenin geri kalanı bir basış ötededir. Böyle bir
+düğmenin sağ alt köşesinde küçük bir **köşe işareti** vardır.
+
+| Düğme | Ailesi |
+|---|---|
+| Çizgi | `ÇİZGİ` · `ÇOKLUÇİZGİ` · `DİKDÖRTGEN` · `ÇOKGEN` |
+| Daire | `DAİRE` · `YAY` · `ELİPS` · `DİLİM` · `HALKA` |
+| Uzunluk Ölç | `ÖLÇ` · `ALANÖLÇ` · `KOORDİNAT` |
+
+Aileyi açmanın üç yolu vardır: düğmeyi **basılı tutmak**, köşe işaretine **tıklamak**
+ya da düğmeye **sağ tıklamak**. Kısa bir tıklama aileyi açmaz, düğmenin yüzündeki
+aracı çalıştırır.
+
+Açılan kart, her aracın adının yanına **komut adını** da yazar. Bu bilerek yapılmıştır:
+düğmeyle bulduğunuz aracı yarın komut satırına yazabilesiniz diye. Kart ok tuşlarıyla
+gezilir, **Enter** ile seçilir, **Esc** ile kapanır.
+
+Ailedeki her araç ayrıca **Çiz** menüsünde kendi kalemiyle durur ve kendi adıyla
+komut satırından çağrılabilir; aile düğmesi bir kısayoldur, tek yol değildir.
 
 Faz 2'de gelecek araçlar pasiftir ve hangi fazda geleceklerini ipucunda yazarlar —
 görünmez olmaları, yokmuş gibi davranmaktan daha kötü olurdu.
@@ -206,6 +230,9 @@ düşecektir.
 | **F3** | Nesne yakalamayı açar/kapatır |
 | **Shift+F3** | **Yakalama modları listesini açar** — hangi modların açık olduğunu seçersiniz |
 | **F8** | Dik modu açar/kapatır — imleci yatay ve düşey eksene kilitler |
+| **F10** | Yüzey normalini açar/kapatır — imleci başlanan **kenara** dik kilitler |
+| **Shift** (basılı) | Bir komut nokta beklerken yüzey normalini **tuttuğunuz sürece** açar |
+| **Ctrl** (basılı) | Köşegen kilidi: imleci öncekinden 45°'nin katlarına kilitler |
 | **F9** | Izgaraya yakalamayı açar/kapatır |
 
 #### Hangi modlar açık
@@ -506,7 +533,7 @@ yapabilecekleriniz:
 | **Esc** | Satırı temizler; satır boşsa komutu iptal eder |
 | **Ctrl+Z** / **Ctrl+Shift+Z** | Geri al / yinele |
 | **Ctrl+A** / **Ctrl+Shift+A** | Tümünü seç / seçimi temizle |
-| **F3** / **F8** / **F9** | Nesne yakalama / dik mod / ızgaraya yakalama |
+| **F3** / **F8** / **F10** / **F9** | Nesne yakalama / dik mod / yüzey normali / ızgaraya yakalama |
 | **Ctrl+0** | Kapsama yakınlaş |
 | **Ctrl++** / **Ctrl+-** | Yakınlaştır / uzaklaştır |
 | **Ctrl+R** | Betik çalıştır |

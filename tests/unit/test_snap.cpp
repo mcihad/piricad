@@ -56,6 +56,13 @@ struct Rig
     }
 };
 
+/// The document a rig is dispatching into. Named because the tests below read it
+/// often enough that `rig.doc` spelled out four times a line reads worse.
+const core::Document& doc_of(const Rig& rig)
+{
+    return rig.doc;
+}
+
 /// A closed square, 10 m on a side, as one Exterior ring.
 core::EntityId add_square(core::Document& doc, Mm x, Mm y, Mm side)
 {
@@ -116,7 +123,7 @@ TEST_CASE("YAKALAMA: DÜĞÜM varsayılan maskede — noktaya yakalanabilir")
     // mouse got no snap at all, and every test that asked for the mode by hand
     // passed while the program did not do it.
     Rig r;
-    const std::uint16_t modes = r.bus.aid_settings().modes;
+    const std::uint32_t modes = r.bus.aid_settings().modes;
     CHECK((modes & core::SnapNode) != 0);
 
     // And the three it has always had are still on: this widened the default, it
@@ -242,14 +249,22 @@ TEST_CASE("YAKALAMA: orta nokta, en yakın ve merkez modları")
     CHECK_EQ(static_cast<int>(n.mode), static_cast<int>(core::SnapNearest));
     CHECK(n.point == (Point2{7000, 0}));
 
-    // Centre of a closed square is its middle.
+    // A CLOSED SQUARE'S MIDDLE IS ITS CENTROID, and that is now its own mode.
+    // `MERKEZ` is the centre a CURVE is drawn about — a circle's, an arc's — and
+    // for as long as one bit meant both, the centre a röper is set out from could
+    // not be snapped to at all.
     core::SnapQuery centre;
     centre.aim               = Point2{5200, 4900};
     centre.radius            = 1000;
-    centre.modes             = core::SnapCenter;
+    centre.modes             = core::SnapCentroid;
     const core::SnapResult c = core::snap(doc, centre);
-    CHECK_EQ(static_cast<int>(c.mode), static_cast<int>(core::SnapCenter));
+    CHECK_EQ(static_cast<int>(c.mode), static_cast<int>(core::SnapCentroid));
     CHECK(c.point == (Point2{5000, 5000}));
+
+    // And the old name no longer answers for it: a face has no curve to be the
+    // centre of.
+    centre.modes = core::SnapCenter;
+    CHECK_EQ(static_cast<int>(core::snap(doc, centre).mode), static_cast<int>(core::SnapNone));
 }
 
 TEST_CASE("YAKALAMA: kesişim iki ayrı çizginin gerçek kesişme noktasını verir")
@@ -464,12 +479,12 @@ TEST_CASE("YAKALAMA: her mod bir kimlik, bir etiket ve maskede bir bit taşır")
     // CLAUDE.md 5.10: the bit list IS the mode list. A mode added to the enum and
     // forgotten in `snap_mode_bits()` would be unreachable from MOD, from the
     // generated reference and from the canvas marker table at once.
-    std::uint16_t seen = 0;
+    std::uint32_t seen = 0;
     int count          = 0;
 
-    for (const std::uint16_t* bit = core::snap_mode_bits(); *bit != core::SnapNone; ++bit) {
+    for (const std::uint32_t* bit = core::snap_mode_bits(); *bit != core::SnapNone; ++bit) {
         CHECK((seen & *bit) == 0); // declared once
-        seen = static_cast<std::uint16_t>(seen | *bit);
+        seen = static_cast<std::uint32_t>(seen | *bit);
         ++count;
 
         const std::string id    = core::snap_mode_id(*bit);
@@ -480,7 +495,7 @@ TEST_CASE("YAKALAMA: her mod bir kimlik, bir etiket ve maskede bir bit taşır")
         CHECK(label != "yok");
     }
 
-    CHECK_EQ(count, 13);
+    CHECK_EQ(count, 14); // 13 + AĞIRLIK MERKEZİ
     CHECK_EQ(static_cast<int>(seen), static_cast<int>(core::SnapAllMask));
 }
 
@@ -686,6 +701,208 @@ TEST_CASE("SEÇİM: KATMAN modu yalnız o katmanı alır, gizli olanı almaz")
     rig.echoed.clear();
     (void)rig.line("SEÇ mod=KATMAN katman=YOKBÖYLE");
     CHECK(rig.echoed.find("Katman bulunamadı") != std::string::npos);
+}
+
+TEST_CASE("YAKALAMA: daire merkezine ve çemberine yakalanır, hayalet çizgisine değil")
+{
+    // WHAT A CIRCLE IS IN STORE, and why snapping got it wrong. A circle keeps two
+    // vertices — its centre and a handle due east at the radius — and the whole of
+    // `snap()` walked that pair as if it were a drawn SEGMENT. So a click near the
+    // circle offered the middle of a line nobody drew, the nearest point of a line
+    // nobody drew, and the east handle as if it were a corner; the one thing it
+    // could not offer was the CENTRE, because `ring_centroid` wants a closed ring
+    // of three vertices and a circle's is neither.
+    Rig rig;
+    rig.with_view();
+    if (!rig.line("DAİRE merkez=10,10 cevre=15,10")) FAIL("DAİRE");
+
+    core::SnapQuery q;
+    q.radius = 800; // 0.8 m aperture
+    q.modes  = core::SnapCenter | core::SnapNearest | core::SnapEndpoint | core::SnapMidpoint;
+
+    // THE CENTRE. This is what `MERKEZ` means on a circle in every CAD program
+    // there is, and it is what a surveyor reaches for to set a röper out.
+    q.aim                         = Point2{10200, 10200};
+    const core::SnapResult centre = core::snap(rig.doc, q);
+    CHECK(centre.mode == core::SnapCenter);
+    CHECK_EQ(centre.point, Point2{10000, 10000});
+
+    // THE CURVE ITSELF, exactly — centre plus radius along the aim's own
+    // direction, not a tessellated approximation of it.
+    q.aim                      = Point2{15500, 10000};
+    const core::SnapResult rim = core::snap(rig.doc, q);
+    CHECK(rim.mode == core::SnapNearest);
+    CHECK_EQ(rim.point, Point2{15000, 10000});
+
+    // AND NOTHING IN BETWEEN. The stored handle sits due east at the radius and
+    // the midpoint of the phantom segment sits halfway to it; both used to be
+    // offered, and both are places the drawing has nothing at all.
+    q.aim                        = Point2{12500, 10000}; // the phantom midpoint
+    q.modes                      = core::SnapEndpoint | core::SnapMidpoint;
+    const core::SnapResult ghost = core::snap(rig.doc, q);
+    CHECK(ghost.mode == core::SnapNone);
+}
+
+TEST_CASE("YAKALAMA: yayın uçları, ortası ve kendisi yakalanır")
+{
+    Rig rig;
+    rig.with_view();
+    // A quarter arc about the origin, radius 10 m, sweeping from due east to due
+    // north — `add_arc` runs counter-clockwise from start to end.
+    if (!rig.line("YAY merkez=0,0 baslangic=10,0 bitis=0,10")) FAIL("YAY");
+
+    core::SnapQuery q;
+    q.radius = 700;
+    q.modes  = core::SnapCenter | core::SnapEndpoint | core::SnapMidpoint | core::SnapNearest;
+
+    q.aim = Point2{300, 300};
+    CHECK_EQ(static_cast<int>(core::snap(rig.doc, q).mode), static_cast<int>(core::SnapCenter));
+
+    q.aim                       = Point2{10300, 200};
+    const core::SnapResult ends = core::snap(rig.doc, q);
+    CHECK_EQ(static_cast<int>(ends.mode), static_cast<int>(core::SnapEndpoint));
+    CHECK_EQ(ends.point, Point2{10000, 0});
+
+    // HALFWAY ALONG THE CURVE, not the middle of the chord between its ends —
+    // which is inside the arc and on nothing that is drawn. At 45 degrees on a
+    // 10 m radius that is (7071, 7071).
+    q.aim                      = Point2{7100, 7100};
+    const core::SnapResult mid = core::snap(rig.doc, q);
+    CHECK_EQ(static_cast<int>(mid.mode), static_cast<int>(core::SnapMidpoint));
+    CHECK_EQ(mid.point, Point2{7071, 7071});
+
+    // AND ONLY THE PART THAT IS DRAWN. A quarter arc is a quarter: the other
+    // three sit on the circle it was cut from and on nothing the drawing has.
+    q.aim = Point2{-10300, 0};
+    CHECK_EQ(static_cast<int>(core::snap(rig.doc, q).mode), static_cast<int>(core::SnapNone));
+}
+
+TEST_CASE("YAKALAMA: ÖLÇ'ün ikinci noktası da yakalanıyor")
+{
+    // WHAT WAS ASKED. Snapping runs inside the command layer, on the path every
+    // client takes, so a second point is resolved exactly like a first — and a
+    // rubber band does not weaken it: an object snap RETURNS before the direction
+    // locks are reached, so dik mod cannot pull a corner off its corner.
+    Rig rig;
+    rig.with_view();
+    if (!rig.line("ÇİZGİ noktalar=0,0 20,0")) FAIL("ÇİZGİ");
+    if (!rig.line("ÇİZGİ noktalar=0,10 20,10")) FAIL("ÇİZGİ 2");
+
+    // Both aims are 20 cm off a real corner. `with_view()` puts the aperture at
+    // the declared tolerance in millimetres, which the fixture sets wide enough.
+    if (!rig.line("AYAR core.yakalama.tolerans 400")) FAIL("AYAR tolerans");
+    rig.bus.aids().set_view_scale(1.0);
+
+    auto measured = rig.line("ÖLÇ baslangic=0.2,0.2 bitis=20.2,10.2");
+    if (!measured) FAIL_WITH("ÖLÇ", measured.error().message);
+
+    // The transcript reports the distance between the points the command actually
+    // took, so exactly 20 m by 10 m is the assertion that both ends snapped.
+    CHECK(rig.echoed.find("22,361") != std::string::npos);
+}
+
+TEST_CASE("YAKALAMA: yüzey normali kilidi sayfaya değil, YÜZEYE dik çizer")
+{
+    // WHAT DİK MOD CANNOT DO. Dik mod squares a line to the SHEET. A çekme
+    // mesafesi runs perpendicular to the BOUNDARY it is measured from, a building
+    // line to the road it faces — and on a boundary running at an angle, dik mod
+    // is exactly the wrong answer. There was no right one: the surveyor read the
+    // bearing, added ninety and typed it.
+    core::Document doc;
+    core::Op undo;
+    const core::LayerId layer = doc.ensure_layer("SINIR");
+
+    // An edge at 45 degrees, so the surface normal and both page axes disagree.
+    const std::array<Point2, 2> edge{Point2{0, 0}, Point2{10000, 10000}};
+    REQUIRE(doc.add_polyline(layer, edge, undo).ok());
+
+    core::SnapQuery q;
+    q.has_base     = true;
+    q.base         = Point2{5000, 5000}; // on the edge
+    q.normal_lock  = true;
+    q.normal_reach = 2000;
+
+    // The aim is a loose wave in the general direction of the normal; the lock
+    // puts it exactly on it. The normal of a 45-degree edge is 135 degrees, so a
+    // point 1000 out lands at (-707, +707) from the base.
+    q.aim                    = Point2{4000, 6500};
+    const core::SnapResult n = core::snap(doc, q);
+    CHECK_EQ(static_cast<int>(n.mode), static_cast<int>(core::SnapNormal));
+    CHECK(n.constrained);
+
+    // ON the normal: the vector from base to point is perpendicular to the edge,
+    // which is the whole assertion. Exactly, in integers.
+    const double along = static_cast<double>(n.point.x - q.base.x) * 10000.0 +
+                         static_cast<double>(n.point.y - q.base.y) * 10000.0;
+    CHECK(std::abs(along) < 1.0e7); // the dot product with the edge is zero to rounding
+
+    // IT OUTRANKS DİK MOD, because it is a deliberate constraint against a named
+    // edge and dik mod is a default about the page.
+    q.ortho                     = true;
+    const core::SnapResult over = core::snap(doc, q);
+    CHECK_EQ(static_cast<int>(over.mode), static_cast<int>(core::SnapNormal));
+
+    // NO SURFACE, NO LOCK. A perpendicular to nothing is not a constraint, it is
+    // an invention — so out of reach it falls through to whatever else is on.
+    q.ortho                     = false;
+    q.base                      = Point2{900000, 900000};
+    q.aim                       = Point2{901000, 901500};
+    const core::SnapResult none = core::snap(doc, q);
+    CHECK(none.mode != core::SnapNormal);
+}
+
+TEST_CASE("YAKALAMA: MOD yüzey_normali yazmak GERÇEKTEN kilitliyor")
+{
+    // THE REGRESSION, and the case above could not see it. `core::snap` honoured
+    // the lock from the first day; what did not happen was CARRYING it there.
+    // `InputAids::resolve` built the `SnapQuery` field by field and simply left
+    // `normal_lock` and `normal_reach` out, so the setting was read, cached in
+    // `AidSettings`, echoed back by `MOD` as set, ticked in the menu — and every
+    // line came out exactly where it would have without it.
+    //
+    // So this test refuses to touch `SnapQuery`. It goes in through the command a
+    // user types and comes out at the document, which is the only path that
+    // proves the wiring rather than the arithmetic.
+    Rig rig;
+    rig.with_view();
+
+    REQUIRE(rig.line("KATMAN ad=SINIR").ok());
+    REQUIRE(rig.line("ÇİZGİ 0,0 10,10").ok()); // an edge at 45 degrees, in metres
+
+    // Two points, both typed: the aim is a loose wave away from the edge and the
+    // base sits on it. Source-blindness is the point — a typed run and a drawn
+    // run take the same road through `apply_input_aids`.
+    REQUIRE(rig.line("MOD yüzey_normali evet").ok());
+    REQUIRE(rig.line("ÇİZGİ 5,5 9,4.5").ok());
+
+    const auto drawn = static_cast<core::EntityId>(doc_of(rig).entities().size() - 1);
+    const core::RingSpan rings =
+        doc_of(rig).geometry().rings_of(doc_of(rig).entities().slot[drawn]);
+    REQUIRE(rings.count == 1);
+    const auto xs = doc_of(rig).geometry().ring_xs(rings.first);
+    const auto ys = doc_of(rig).geometry().ring_ys(rings.first);
+    REQUIRE(xs.size() == 2);
+
+    // PERPENDICULAR TO THE EDGE, exactly. The edge runs at 45, so the drawn
+    // segment must run at 315: dx positive, dy its exact negative.
+    const Mm dx = xs[1] - xs[0];
+    const Mm dy = ys[1] - ys[0];
+    CHECK(dx > 0);
+    CHECK_EQ(static_cast<long long>(dx), static_cast<long long>(-dy));
+
+    // AND THE SETTING IS WHAT DID IT. Turned off, the same line lands where it
+    // was aimed — a check that would pass by accident if the engine were simply
+    // ignoring the aim.
+    REQUIRE(rig.line("MOD yüzey_normali hayır").ok());
+    REQUIRE(rig.line("ÇİZGİ 5,5 9,4.5").ok());
+
+    const auto free_drawn = static_cast<core::EntityId>(doc_of(rig).entities().size() - 1);
+    const core::RingSpan free_rings =
+        doc_of(rig).geometry().rings_of(doc_of(rig).entities().slot[free_drawn]);
+    const auto fxs = doc_of(rig).geometry().ring_xs(free_rings.first);
+    const auto fys = doc_of(rig).geometry().ring_ys(free_rings.first);
+    CHECK_EQ(static_cast<long long>(fxs[1]), 9000LL);
+    CHECK_EQ(static_cast<long long>(fys[1]), 4500LL);
 }
 
 TEST_CASE("SEÇİM: pick_all imlecin altındaki her şeyi, en yakın önce verir")

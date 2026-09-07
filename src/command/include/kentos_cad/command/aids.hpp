@@ -47,12 +47,19 @@ namespace kentos::command {
 /// that own them. Assembled in one place so no caller reads a setting id twice.
 struct AidSettings
 {
-    std::uint16_t modes{core::SnapNone}; ///< which object snaps are enabled
+    std::uint32_t modes{core::SnapNone}; ///< which object snaps are enabled
     core::Mm snap_radius{0};             ///< object-snap aperture in document millimetres
     core::Mm pick_radius{0};             ///< single-click pick box in document millimetres
     core::Mm grid_step{0};               ///< lattice spacing in document millimetres
     bool ortho{false};                   ///< `dik mod`: lock the cursor to the two axes
-    std::int64_t polar_step{0};          ///< micro-degrees
+
+    /// `yüzey normali`: lock the run to the perpendicular of the surface it
+    /// starts from, rather than to the page's axes. See `core::SnapQuery`.
+    bool normal_lock{false};
+
+    /// How far to look for that surface, in document millimetres.
+    core::Mm normal_reach{0};
+    std::int64_t polar_step{0}; ///< micro-degrees
 
     /// How far past the aperture UZANTI, PARALEL and UZATILMIŞ KESİŞİM may look
     /// for the edge they build from; see `core::SnapQuery::reach`.

@@ -366,6 +366,7 @@ KENTOS_SETTING(son_dosya_sayisi);
 KENTOS_SETTING(tuval_arkaplani);
 KENTOS_SETTING(yakalama_modlari);
 KENTOS_SETTING(dik_mod);
+KENTOS_SETTING(yuzey_normali);
 KENTOS_SETTING(kosegen_kilidi);
 KENTOS_SETTING(kutupsal_aci);
 KENTOS_SETTING(sembol_kutuphanesi);
@@ -422,6 +423,7 @@ KENTOS_SETTING(alan_birimi);
     X(secim_toleransi)                                                                             \
     X(yakalama_modlari)                                                                            \
     X(dik_mod)                                                                                     \
+    X(yuzey_normali)                                                                               \
     X(kosegen_kilidi)                                                                              \
     X(sembol_kutuphanesi)                                                                          \
     X(vektor_kutuphanesi)                                                                          \
@@ -1328,6 +1330,13 @@ KENTOS_SETTING(yakalama_modlari)
         // it always finds something and quietly outranks the corner the user was
         // actually reaching for.
         //
+        // AĞIRLIK MERKEZİ joins it too, and MERKEZ changes meaning under it: a
+        // circle's centre and a face's centre of area are two different points
+        // answering two different questions, and CAD has always kept them apart.
+        // For as long as there was one bit it meant the centroid, so the centre a
+        // röper is set out from could not be snapped to at all. Both are on, so a
+        // drawing that snapped to a parcel's centroid before still does.
+        //
         // `SnapNode` was left out of this default for
         // as long as the document could not hold a lone point — a snap mode for
         // something that cannot exist is a promise the program does not keep —
@@ -1335,7 +1344,7 @@ KENTOS_SETTING(yakalama_modlari)
         // röper could not be snapped to at all. It is the single most important
         // thing on a cadastral sheet to snap to: every boundary was measured
         // from one.
-        .fallback = SettingValue::integer(0x20F),
+        .fallback = SettingValue::integer(0x820F),
         .range    = SettingRange::between(0, 0xFFFF),
         .values   = {},
         .unit     = "bit maskesi",
@@ -1359,6 +1368,24 @@ KENTOS_SETTING(dik_mod)
         .unit     = "",
         .summary  = "Dik mod: imleci yatay ve düşey eksene kilitler. Girdi yardımıdır, "
                     "kaydedilmez; oturum kapsamındadır.",
+        .section  = "Çizim ve Yakalama", // ui-label
+    };
+}
+
+KENTOS_SETTING(yuzey_normali)
+{
+    return SettingSpec{
+        .id       = "core.yakalama.yuzey_normali",
+        .names    = {"yüzey_normali", "yuzey_normali", "normal", "yuzeye_dik"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::Session,
+        .fallback = SettingValue::boolean(false),
+        .range    = SettingRange::between(0, 1),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Yüzey normali: çizgiyi başladığı yüzeye DİK kilitler — sayfaya "
+                    "değil. Dik moda üstün gelir. Girdi yardımıdır, kaydedilmez; "
+                    "oturum kapsamındadır.",
         .section  = "Çizim ve Yakalama", // ui-label
     };
 }

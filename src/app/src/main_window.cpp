@@ -31,6 +31,10 @@
 #include <QAction>
 #include <QToolButton>
 
+#include <cmath>
+#include <limits>
+#include <span>
+
 #include <QActionGroup>
 #include <QApplication>
 #include <QComboBox>
@@ -70,7 +74,7 @@ namespace {
 /// `QAction::data()` is taken by the glyph, and a tool that did not say which
 /// command it runs would have to be recognised from a hand-written table — the
 /// second command list CLAUDE.md 5.10 forbids.
-constexpr const char* kToolCommand = "piricad.command";
+constexpr const char* kToolCommand = kToolCommandProperty;
 
 /// Whether finishing this tool should ARM IT AGAIN.
 ///
@@ -379,6 +383,11 @@ QAction* MainWindow::commandAction(Glyph glyph, const QString& text, const QStri
     action->setStatusTip(tip);
     action->setData(static_cast<int>(glyph));
     if (!shortcut.isEmpty()) action->setShortcut(shortcut);
+
+    // The first word of the line is the command a user would type, and the tool
+    // flyout prints it beside the name. Without it a family row would name a tool
+    // and then leave the column that teaches its name blank.
+    action->setProperty(kToolCommand, line.section(QLatin1Char(' '), 0, 0));
 
     connect(action, &QAction::triggered, this,
             [this, line] { controller_->runLine(line, command::Origin::Gui); });
@@ -785,6 +794,23 @@ void MainWindow::buildActions()
                              command::Origin::Gui);
     });
 
+    // PERPENDICULAR TO THE SURFACE, not to the page. Ortho locks to the world
+    // axes; this one locks to the normal of whatever edge the line started on, so
+    // a setback off a 37 degree parcel boundary is drawn at exactly 127 rather
+    // than eyeballed. Shift held on the canvas engages it for as long as it is
+    // held; F10 and `MOD yüzey_normali evet` latch it (Article 1.2).
+    actNormal_ = new QAction(tr("Yüzey Normali"), this);
+    actNormal_->setCheckable(true);
+    actNormal_->setShortcut(QKeySequence(Qt::Key_F10));
+    actNormal_->setToolTip(
+        tr("MOD yüzey_normali — çizgiyi başladığı yüzeye dik kilitler (F10, tuval üzerinde "
+           "Shift basılı)"));
+    connect(actNormal_, &QAction::toggled, this, [this](bool on) {
+        controller_->runLine(QStringLiteral("MOD yüzey_normali %1")
+                                 .arg(on ? QStringLiteral("evet") : QStringLiteral("hayır")),
+                             command::Origin::Gui);
+    });
+
     actGridSnap_ = new QAction(tr("Izgaraya Yakala"), this);
     actGridSnap_->setData(static_cast<int>(Glyph::Grid));
     actGridSnap_->setCheckable(true);
@@ -985,6 +1011,7 @@ void MainWindow::buildMenus()
     view->addAction(snapModes);
     addAction(snapModes); // so the shortcut works with focus anywhere in the shell
     view->addAction(actOrtho_);
+    view->addAction(actNormal_);
     view->addAction(actGridSnap_);
     view->addSeparator();
 
@@ -1093,14 +1120,20 @@ void MainWindow::buildToolBox()
     // ÇİZGİ FIRST, and it was missing entirely. It is the one command in this
     // program that works today end to end — the tool box listed the five that do
     // not and left out the one that does, which is the opposite of useful.
-    toolBox_->addTool(actLine_);
-    toolBox_->addTool(actPolyline_);
-    toolBox_->addTool(actPolygon_);
-    toolBox_->addTool(actRectangle_);
-    toolBox_->addTool(actCircle_);
+    //
+    // FAMILIES, not one button each. Eleven creation tools down a 46 px column is
+    // a list nobody reads; they are four ways of laying straight edges, five ways
+    // of laying curves, and two that are neither. The button shows whichever
+    // member was used last and holds the rest one press away, which is how every
+    // CAD tool palette has answered this since the first one.
+    //
+    // The flyout also PRINTS THE COMMAND WORD beside each name, so the mouse
+    // teaches the keyboard: a user who found ÇOKLUÇİZGİ under the line button
+    // has just been told what to type tomorrow (CLAUDE.md 5.15).
+    toolBox_->addFamily({actLine_, actPolyline_, actRectangle_, actPolygon_});
     // YAY was built as a full draw tool and then left out of the column, so the
     // one curve this program can draw was reachable only by typing its name.
-    toolBox_->addTool(actArc_);
+    toolBox_->addFamily({actCircle_, actArc_, actEllipse_, actSector_, actAnnulus_});
     toolBox_->addTool(actPoint_);
     toolBox_->addTool(actText_);
     toolBox_->addSeparator();
@@ -1119,9 +1152,7 @@ void MainWindow::buildToolBox()
     toolBox_->addSeparator();
 
     // measurement
-    toolBox_->addTool(actMeasure_);
-    toolBox_->addTool(actMeasureArea_);
-    toolBox_->addTool(actCoordinate_);
+    toolBox_->addFamily({actMeasure_, actMeasureArea_, actCoordinate_});
     toolBox_->addSeparator();
 
     // helpers
@@ -1527,6 +1558,10 @@ void MainWindow::refreshAidActions()
         actOrtho_->setChecked(session.get("core.yakalama.dik_mod").as_bool());
     }
     {
+        QSignalBlocker block(actNormal_);
+        actNormal_->setChecked(session.get("core.yakalama.yuzey_normali").as_bool());
+    }
+    {
         QSignalBlocker block(actGridSnap_);
         actGridSnap_->setChecked(session.get("core.yakalama.izgara").as_bool());
     }
@@ -1718,6 +1753,206 @@ void MainWindow::probePickList()
                                           .arg(static_cast<qulonglong>(
                                               static_cast<std::uint64_t>(picked.keys().front())))
                                     : QString()));
+}
+
+void MainWindow::probeSurfaceNormal()
+{
+    const auto say = [](const QString& text) {
+        (void)std::fprintf(stdout, "[normal] %s\n", text.toUtf8().constData());
+        (void)std::fflush(stdout);
+    };
+
+    if (canvas_ == nullptr) {
+        say(QStringLiteral("tuval yok"));
+        return;
+    }
+
+    // A 45 degree edge, so the answer is a round number and a wrong answer is
+    // obvious: its normal is 135 or 315, and nothing else is within 40 degrees.
+    runScriptLine(QStringLiteral("KATMAN ad=SINIR"));
+    runScriptLine(QStringLiteral("ÇİZGİ 0,0 40,40"));
+    canvas_->zoomToExtents();
+    QCoreApplication::processEvents();
+
+    const auto at = [this](core::Point2 world) {
+        const auto p = canvas_->view().to_screen(world);
+        return QPointF(p.x, p.y);
+    };
+
+    const auto click = [this](const QPointF& where) {
+        QMouseEvent press(QEvent::MouseButtonPress, where, canvas_->mapToGlobal(where),
+                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QMouseEvent release(QEvent::MouseButtonRelease, where, canvas_->mapToGlobal(where),
+                            Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(canvas_, &press);
+        QCoreApplication::sendEvent(canvas_, &release);
+        QCoreApplication::processEvents();
+    };
+
+    const auto key = [this](QEvent::Type type, int which) {
+        QKeyEvent event(type, which, Qt::NoModifier);
+        QCoreApplication::sendEvent(canvas_, &event);
+        QCoreApplication::processEvents();
+    };
+
+    // The angle of the last line the document was given, in degrees, measured
+    // from its first vertex to its last.
+    const auto drawnAngle = [this]() -> double {
+        const core::Document& doc  = controller_->document();
+        const auto last            = static_cast<core::EntityId>(doc.entities().size() - 1);
+        const core::RingSpan rings = doc.geometry().rings_of(doc.entities().slot[last]);
+        if (rings.count == 0) return std::numeric_limits<double>::quiet_NaN();
+        const std::span<const core::Mm> xs = doc.geometry().ring_xs(rings.first);
+        const std::span<const core::Mm> ys = doc.geometry().ring_ys(rings.first);
+        if (xs.size() < 2) return std::numeric_limits<double>::quiet_NaN();
+        const double dx = static_cast<double>(xs.back() - xs.front());
+        const double dy = static_cast<double>(ys.back() - ys.front());
+        double turn     = std::atan2(dy, dx) * 180.0 / 3.14159265358979323846;
+        if (turn < 0.0) turn += 360.0;
+        return turn;
+    };
+
+    // The anchor is the MIDPOINT of that edge and the cursor goes east of it, 14 m
+    // clear of the edge so no object snap can claim the click: 353.7 degrees
+    // free, 315 under the lock. A run that printed the same figure twice would
+    // mean the key changed nothing. Millimetres here, because that is what the
+    // document stores; the line above is a command line and speaks metres.
+    const core::Point2 anchor{20000, 20000};
+    const core::Point2 away{38000, 18000};
+
+    // UNDONE AFTER EACH RUN, and it is not tidiness. The first line drawn leaves
+    // an ENDPOINT at the cursor position, and the next run's click snaps to it —
+    // object snap outranks every direction lock, so run two and run three both
+    // came back with the aim untouched and the lock looked broken when it was
+    // the scaffolding that was.
+    const auto draw = [&](int hold, core::Point2 target) {
+        controller_->runCommand(QStringLiteral("ÇİZGİ"));
+        QCoreApplication::processEvents();
+        click(at(anchor));
+        if (hold != 0) key(QEvent::KeyPress, hold);
+        click(at(target));
+        if (hold != 0) key(QEvent::KeyRelease, hold);
+        // ESC, not Enter. The line command's loop ends when its point awaiter is
+        // cancelled, and what it has already drawn is committed — the same
+        // "finish the polyline" that ESC has meant in every CAD program. Enter
+        // left the command parked, and everything after it measured a line that
+        // had not landed yet.
+        key(QEvent::KeyPress, Qt::Key_Escape);
+        QCoreApplication::processEvents();
+
+        const double turn = drawnAngle();
+        (void)controller_->bus().execute_line("GERİAL", command::Origin::Gui);
+        QCoreApplication::processEvents();
+        return turn;
+    };
+
+    const double freeTurn = draw(0, away);
+    say(QStringLiteral("serbest: %1°").arg(freeTurn, 0, 'f', 3));
+
+    // The control: dik mod on the same click squares the line to the SHEET, which
+    // on this edge is exactly the wrong answer. Printing both is what makes the
+    // third figure mean something.
+    (void)controller_->bus().execute_line("MOD dik_mod evet", command::Origin::Gui);
+    say(QStringLiteral("dik mod: %1°").arg(draw(0, away), 0, 'f', 3));
+    (void)controller_->bus().execute_line("MOD dik_mod hayır", command::Origin::Gui);
+
+    const double lockedTurn = draw(Qt::Key_Shift, away);
+    say(QStringLiteral("kilitli: %1°").arg(lockedTurn, 0, 'f', 3));
+
+    // CTRL, THE OTHER HELD LOCK, and it is here because it was broken in exactly
+    // the way the one above was: both sent `MOD` a BOOLEAN for a parameter
+    // declared as text, so the bus refused the call, the echo carried the refusal
+    // where nobody was looking, and holding Ctrl locked nothing at all. A second
+    // aim, 33.7 degrees off, so the 45 degree ray is a different answer from both
+    // the free bearing and dik mod's.
+    const core::Point2 aslant{38000, 32000};
+    say(QStringLiteral("köşegen: %1°").arg(draw(Qt::Key_Control, aslant), 0, 'f', 3));
+
+    // AND THE KEY LET GO OF IT. A lock that stayed on after the key came up would
+    // steer every line drawn afterwards, which is the failure a held modifier
+    // makes and a latched one cannot.
+    say(QStringLiteral("bırakınca: %1")
+            .arg(controller_->bus().session_settings().get("core.yakalama.yuzey_normali").as_bool()
+                     ? QStringLiteral("açık")
+                     : QStringLiteral("kapalı")));
+}
+
+void MainWindow::probeToolFamily()
+{
+    const auto say = [](const QString& text) {
+        (void)std::fprintf(stdout, "[aile] %s\n", text.toUtf8().constData());
+        (void)std::fflush(stdout);
+    };
+
+    if (toolBox_ == nullptr) {
+        say(QStringLiteral("araç kutusu yok"));
+        return;
+    }
+
+    // The button whose face is ÇİZGİ — found by what it carries rather than by
+    // its position in the column, so re-ordering the palette cannot make this
+    // probe silently check a different button.
+    QToolButton* line = nullptr;
+    for (QToolButton* button : toolBox_->findChildren<QToolButton*>()) {
+        const QAction* face = button->defaultAction();
+        if (face != nullptr && face->property(kToolCommand).toString() == QStringLiteral("ÇİZGİ"))
+            line = button;
+    }
+    if (line == nullptr) {
+        say(QStringLiteral("ÇİZGİ düğmesi yok"));
+        return;
+    }
+
+    // A RIGHT CLICK, which opens the family at once — the held press takes 280 ms
+    // of real time and a probe that slept for it would be a probe that sometimes
+    // did not.
+    const QPointF centre(line->width() / 2.0, line->height() / 2.0);
+    QMouseEvent press(QEvent::MouseButtonPress, centre,
+                      QPointF(line->mapToGlobal(centre.toPoint())), Qt::RightButton,
+                      Qt::RightButton, Qt::NoModifier);
+    QCoreApplication::sendEvent(line, &press);
+
+    // NO `processEvents` between the press and the check. A `Qt::Popup` grabs the
+    // pointer, and the real pointer is not where this synthetic press said it
+    // was — so the first turn of the loop delivers a click outside the card and
+    // Qt closes it. `sendEvent` is synchronous; by the time it returns the card
+    // is up, and everything below drives it directly.
+    auto* card = toolBox_->findChild<ToolFlyout*>();
+    if (card == nullptr) {
+        say(QStringLiteral("kart yok"));
+        return;
+    }
+    if (!card->isVisible()) {
+        say(QStringLiteral("kart görünmez"));
+        return;
+    }
+    say(QStringLiteral("kart açıldı"));
+
+    // WHAT IT LISTS, in order. The card is the only place a user is told that the
+    // button they pressed sends `ÇİZGİ` and that `ÇOKLUÇİZGİ` is beside it.
+    QStringList members;
+    for (const QAction* member : card->members())
+        members << member->property(kToolCommand).toString();
+
+    // The second member, because taking the first would prove nothing the button
+    // did not already do.
+    say(QStringLiteral("üyeler: %1").arg(members.join(QStringLiteral(" · "))));
+
+    QKeyEvent down(QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier);
+    QKeyEvent again(QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier);
+    QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+    QCoreApplication::sendEvent(card, &down);
+    QCoreApplication::sendEvent(card, &again);
+    QCoreApplication::sendEvent(card, &enter);
+
+    const QAction* face = line->defaultAction();
+    say(QStringLiteral("düğmenin yüzü: %1")
+            .arg(face != nullptr ? face->property(kToolCommand).toString() : QString()));
+
+    const command::Session* running = controller_->session();
+    say(QStringLiteral("çalışan komut: %1")
+            .arg(running != nullptr ? QString::fromStdString(running->spec().id)
+                                    : QStringLiteral("yok")));
 }
 
 void MainWindow::openCommandSearch()

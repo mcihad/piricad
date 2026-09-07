@@ -50,12 +50,27 @@ class Document;
 /// Bits of `core.yakalama.modlar`. The mask IS the engine's input, so the MOD
 /// command, the F-key toggles and a script all write the same sixteen bits and
 /// there is no second list of snap modes anywhere (CLAUDE.md 5.10).
-enum SnapMode : std::uint16_t {
+/// THIRTY-TWO BITS, and the sixteen it grew from were full.
+///
+/// Every bit below is spoken for, so the surface-normal lock had nowhere to be
+/// reported from. The mask is a SESSION setting and a query field — never a
+/// stored document value (model.md R43) — so widening it costs a wider integer in
+/// two structs and nothing on disk.
+enum SnapMode : std::uint32_t {
     SnapNone = 0,
 
-    SnapEndpoint      = 1u << 0, ///< UÇ      — a ring vertex
-    SnapMidpoint      = 1u << 1, ///< ORTA    — the middle of a segment
-    SnapCenter        = 1u << 2, ///< MERKEZ  — the centroid of a closed ring
+    SnapEndpoint = 1u << 0, ///< UÇ   — a ring vertex, or an arc's own end
+    SnapMidpoint = 1u << 1, ///< ORTA — the middle of a segment, or along an arc
+
+    /// MERKEZ — the centre a CURVE is drawn about: a circle's, an arc's.
+    ///
+    /// NOT the centroid of a face, which is a different point answering a
+    /// different question, and CAD has always kept the two apart: this is
+    /// AutoCAD's `CEN`, and `SnapCentroid` below is its `GCE`. For as long as
+    /// there was one bit it meant the centroid, so a circle's centre — the point
+    /// every röper on a cadastral sheet is set out from — could not be snapped to
+    /// at all.
+    SnapCenter        = 1u << 2,
     SnapIntersection  = 1u << 3, ///< KESİŞİM — where two segments cross
     SnapPerpendicular = 1u << 4, ///< DİK     — the foot of a perpendicular from the last point
     SnapNearest       = 1u << 5, ///< YAKIN   — the closest point of a segment
@@ -104,8 +119,21 @@ enum SnapMode : std::uint16_t {
     /// what makes the pair usable for setting a point out.
     SnapGuide = 1u << 14,
 
+    /// AĞIRLIK MERKEZİ — the area centroid of a closed ring.
+    ///
+    /// What `SnapCenter` used to mean, moved to its own bit so that a circle's
+    /// centre could have the name it has in every other CAD program. Both are in
+    /// the default set, so a drawing that snapped to a parcel's centroid before
+    /// still does.
+    SnapCentroid = 1u << 15,
+
+    /// RESULT ONLY, never requested: the point was locked to the NORMAL of the
+    /// surface the run starts from. Reported so the marker and the transcript can
+    /// name what moved it, exactly as `SnapOrtho` is.
+    SnapNormal = 1u << 16,
+
     /// The modes that need geometry to snap to. Grid and polar need none.
-    SnapObjectMask = SnapEndpoint | SnapMidpoint | SnapCenter | SnapIntersection |
+    SnapObjectMask = SnapEndpoint | SnapMidpoint | SnapCenter | SnapCentroid | SnapIntersection |
                      SnapPerpendicular | SnapNearest | SnapNode | SnapExtension | SnapParallel |
                      SnapApparent | SnapGuide,
 
@@ -120,26 +148,51 @@ enum SnapMode : std::uint16_t {
 
 /// Stable machine name of ONE mode bit — "uc", "orta", "izgara". Used by the MOD
 /// transcript, the generated documentation and the canvas marker table.
-const char* snap_mode_id(std::uint16_t single_bit);
+const char* snap_mode_id(std::uint32_t single_bit);
 
 /// Turkish label of ONE mode bit — "uç nokta", "orta nokta" (kentoscad.md §13).
-const char* snap_mode_label(std::uint16_t single_bit);
+const char* snap_mode_label(std::uint32_t single_bit);
 
 /// Every declared bit, low to high, terminated by SnapNone. Iterating this is how
 /// callers render a mask without writing the list a second time.
-const std::uint16_t* snap_mode_bits();
+const std::uint32_t* snap_mode_bits();
 
 /// One aim, and everything the engine may use to resolve it.
 struct SnapQuery
 {
     Point2 aim{};                  ///< where the client pointed, in document millimetres
     Mm radius{0};                  ///< object-snap search radius; 0 disables object snap
-    std::uint16_t modes{SnapNone}; ///< bit mask of the enabled object snaps
+    std::uint32_t modes{SnapNone}; ///< bit mask of the enabled object snaps
     Mm grid_step{0};               ///< lattice spacing; 0 disables the grid even if the bit is set
     bool ortho{false};             ///< dik mod
     std::int64_t polar_step{0};    ///< micro-degrees; 0 disables polar even if the bit is set
-    bool has_base{false};          ///< a previous point exists (rubber-band origin)
-    Point2 base{};                 ///< that previous point — ortho, polar and DİK measure from it
+
+    /// YÜZEY NORMALİ — lock the point to the perpendicular of the surface the run
+    /// STARTS from, rather than to the page's own axes.
+    ///
+    /// WHY IT IS NOT `ortho`. Dik mod squares a line to the SHEET: north-south,
+    /// east-west, whatever the drawing under it is doing. What a survey actually
+    /// needs is square to the THING — a çekme mesafesi runs perpendicular to the
+    /// parcel boundary it is measured from, a building line to the road it faces,
+    /// an offset to the edge it offsets. On a boundary that runs at 37 degrees,
+    /// dik mod is exactly the wrong answer and there was no right one: the user
+    /// had to read the bearing, add ninety and type it.
+    ///
+    /// The surface is the edge nearest `base`, because that is the one the run is
+    /// leaving. Both directions along the normal are offered, so a perpendicular
+    /// can be struck inwards or outwards without the user aiming precisely.
+    ///
+    /// It OUTRANKS ortho and polar: it is a deliberate constraint against a named
+    /// edge, and the two of them are defaults about the page.
+    bool normal_lock{false};
+
+    /// How far to look for that surface, in millimetres. Zero switches the lock
+    /// off however `normal_lock` is set — the same contract `grid_step` and
+    /// `polar_step` keep, so a client that cannot see the drawing cannot ask for
+    /// a perpendicular to it.
+    Mm normal_reach{0};
+    bool has_base{false}; ///< a previous point exists (rubber-band origin)
+    Point2 base{};        ///< that previous point — ortho, polar and DİK measure from it
 
     /// How far past the aperture the constructed modes may look, in millimetres.
     ///
@@ -164,7 +217,7 @@ struct SnapQuery
 struct SnapResult
 {
     Point2 point{};               ///< where the point ended up
-    std::uint16_t mode{SnapNone}; ///< the single bit that produced the point
+    std::uint32_t mode{SnapNone}; ///< the single bit that produced the point
     EntityId entity{kNoEntity};   ///< the entity snapped to, for the canvas marker
     bool constrained{false};      ///< ortho or polar moved the point along a direction
 };

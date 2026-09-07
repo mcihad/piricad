@@ -33,16 +33,17 @@ const AidSettings& InputAids::settings(const core::Settings& app,
     AidSettings out;
 
     const auto declared = static_cast<std::uint16_t>(session.get("core.yakalama.modlar").as_int());
-    out.modes           = static_cast<std::uint16_t>(declared & core::SnapAllMask);
+    out.modes           = static_cast<std::uint32_t>(declared & core::SnapAllMask);
 
     // One engine input, two doors: F9 / `MOD ızgaraya_yakala` and the mask bit are
     // the same switch, so the canvas and the engine cannot disagree about whether
     // the grid is live.
     if (session.get("core.yakalama.izgara").as_bool())
-        out.modes = static_cast<std::uint16_t>(out.modes | core::SnapGrid);
+        out.modes = static_cast<std::uint32_t>(out.modes | core::SnapGrid);
 
-    out.ortho      = session.get("core.yakalama.dik_mod").as_bool();
-    out.polar_step = session.get("core.yakalama.kutupsal_aci").as_int();
+    out.ortho       = session.get("core.yakalama.dik_mod").as_bool();
+    out.normal_lock = session.get("core.yakalama.yuzey_normali").as_bool();
+    out.polar_step  = session.get("core.yakalama.kutupsal_aci").as_int();
 
     // The diagonal lock is polar tracking at 45°, and it OVERRIDES the configured
     // step while it is held. A second corner locked to a 45° diagonal from the
@@ -51,11 +52,18 @@ const AidSettings& InputAids::settings(const core::Settings& app,
     if (session.get("core.yakalama.kosegen").as_bool()) {
         constexpr std::int64_t kDiagonal = 45'000'000; // micro-degrees
         out.polar_step                   = kDiagonal;
-        out.modes                        = static_cast<std::uint16_t>(out.modes | core::SnapPolar);
+        out.modes                        = static_cast<std::uint32_t>(out.modes | core::SnapPolar);
     }
 
     out.step        = session.get("core.yakalama.adim").as_length();
     out.snap_radius = radius_from_pixels(app.get("core.yakalama.tolerans").as_int(), mm_per_pixel_);
+
+    // THE SAME DISTANCE THE OBJECT SNAP USES, and set AFTER it for that reason.
+    // The surface a perpendicular is struck from is the one under the point the
+    // run leaves, so the lock looks exactly as far as a snap would — and no
+    // further, because a perpendicular to an edge the user cannot see is a
+    // direction they did not choose.
+    out.normal_reach = out.snap_radius;
 
     // A multiple of the aperture, not a fixed distance. The reach then follows the
     // zoom the way a user expects: an extension worth offering at 1:1000 covers
@@ -92,8 +100,16 @@ core::SnapResult InputAids::resolve(const core::Document& doc, const AidSettings
     q.polar_step = s.polar_step;
     q.has_base   = has_base;
     q.base       = base;
-    q.reach      = s.reach;
-    q.step       = s.step;
+
+    // CARRIED, and it was not. The lock was read from the settings, cached in
+    // `AidSettings` and then dropped on the floor here — so `MOD yüzey_normali
+    // evet` reported success, the menu tick came on, and every line came out
+    // exactly where it would have without it. A query field that is never
+    // written is a feature that is never wired.
+    q.normal_lock  = s.normal_lock;
+    q.normal_reach = s.normal_reach;
+    q.reach        = s.reach;
+    q.step         = s.step;
 
     return core::snap(doc, q);
 }

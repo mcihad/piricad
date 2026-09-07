@@ -56,8 +56,8 @@ Value apply_input_aids(Session& session, const Prompt& prompt, Value v)
     const bool object_snap = set.snap_radius > 0 && (set.modes & core::SnapObjectMask) != 0;
     const bool grid        = set.grid_step > 0 && (set.modes & core::SnapGrid) != 0;
     const bool direction =
-        prompt.has_rubber_band &&
-        (set.ortho || (set.polar_step > 0 && (set.modes & core::SnapPolar) != 0));
+        prompt.has_rubber_band && (set.ortho || set.normal_lock ||
+                                   (set.polar_step > 0 && (set.modes & core::SnapPolar) != 0));
     if (!object_snap && !grid && !direction) return v;
 
     const core::Document& doc = bus.document();

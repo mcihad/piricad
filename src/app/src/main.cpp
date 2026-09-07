@@ -616,6 +616,23 @@ int main(int argc, char** argv)
         });
     }
 
+    // The surface-normal lock, engaged by HOLDING A KEY on a real canvas. The
+    // engine half has a unit test; this is the half only a screen can answer.
+    if (qEnvironmentVariableIsSet("KENTOS_NORMAL_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            window.probeSurfaceNormal();
+            QApplication::exit(0);
+        });
+    }
+
+    // The tool family flyout, opened from the button rather than by a call.
+    if (qEnvironmentVariableIsSet("KENTOS_FAMILY_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            window.probeToolFamily();
+            QApplication::exit(0);
+        });
+    }
+
     if (qEnvironmentVariableIsSet("KENTOS_HAND_PROBE")) {
         // The value, when it is a path, is the directory every step is
         // photographed into. See `MainWindow::probeToolsByHand`.

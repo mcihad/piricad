@@ -116,6 +116,15 @@ public:
     /// Turns the 45 degree lock on or off through the bus.
     void setDiagonalLock(bool on);
 
+    /// Turns the surface-normal lock on or off through the bus.
+    ///
+    /// The lock draws PERPENDICULAR TO THE SURFACE the line started on, not
+    /// perpendicular to the page: on a parcel edge running at 37 degrees it gives
+    /// 127, which is what a setback line, a frontage line and a section line all
+    /// are. Ortho cannot express that, and measuring one by eye is how a 0.4 m
+    /// error gets into a legal document.
+    void setSurfaceNormalLock(bool on);
+
     /// Repaints `rounds` times and returns the frame costs, in microseconds.
     ///
     /// Developer tooling, the same category as `KENTOS_FRAME_DUMP`: there is no
@@ -222,6 +231,7 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
 
 private:
     void rebuildScene();
@@ -490,6 +500,7 @@ private:
     bool snap_preview_valid_{false};
     /// Ctrl held: the 45 degree lock is on for as long as it is.
     bool diagonal_lock_{false};
+    bool normal_lock_{false};
 
     int last_frame_us_{0};
     int last_scene_us_{0};

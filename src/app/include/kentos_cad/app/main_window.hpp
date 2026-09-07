@@ -122,6 +122,23 @@ public:
     /// whether a click can reach it. `scripts/ci-gate-secim-listesi.sh` drives it.
     void probePickList();
 
+    /// Draws a slanted edge, starts ÇİZGİ on it, holds SHIFT on the canvas and
+    /// prints the angle the rubber band actually settled on.
+    ///
+    /// It starts at the key event and the mouse move for the reason
+    /// `probePickList` starts at the click: the engine half of the surface-normal
+    /// lock has its own unit test in `/tests/unit/test_snap.cpp`, and what no
+    /// Qt-free test can reach is whether HOLDING A KEY on a real canvas engages
+    /// it. `scripts/ci-gate-yuzey-normali.sh` drives it.
+    void probeSurfaceNormal();
+
+    /// Presses and holds the line tool button, prints the family card that opens
+    /// and takes a row other than the first.
+    ///
+    /// Same bargain as the probes around it: a flyout nothing opens is a flyout
+    /// nothing checks. `scripts/ci-gate-arac-ailesi.sh` drives it.
+    void probeToolFamily();
+
     /// Opens the import wizard WITHOUT blocking, on `path` when one is given.
     ///
     /// `importData()` runs it modally and then runs the command line it built;
@@ -382,6 +399,7 @@ private:
     QAction* actSelectAll_{nullptr};
     QAction* actSelectNone_{nullptr};
     QAction* actOrtho_{nullptr};
+    QAction* actNormal_{nullptr};
     QAction* actGridSnap_{nullptr};
 
     // ---- dosya ----

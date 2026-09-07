@@ -13,6 +13,7 @@
 
 #include <QApplication>
 #include <QElapsedTimer>
+#include <QFocusEvent>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QMouseEvent>
@@ -1753,9 +1754,13 @@ void MapCanvas::setDiagonalLock(bool on)
     // reachable by typing `MOD köşegen=evet` and by a script (Article 1.2,
     // 5.15). Ctrl is a way of holding a mode down, not a capability of its own —
     // otherwise "draw me a square" would be a thing only a mouse could ask for.
+    // TEXT, because `MOD` declares `deger` as text (`Param::text`). A boolean
+    // here failed validation before the body ever ran: the bus answered "Hata",
+    // the echo carried it where nobody was looking, and Ctrl locked nothing at
+    // all for as long as this had been written that way.
     command::Args args;
     args.set("ad", command::Value::text("köşegen"));
-    args.set("deger", command::Value::boolean(on));
+    args.set("deger", command::Value::text(on ? "evet" : "hayır"));
     controller_.runInvocation(
         command::Invocation{"core.mode", std::move(args), command::Origin::Gui});
 
@@ -1765,9 +1770,43 @@ void MapCanvas::setDiagonalLock(bool on)
     update();
 }
 
+void MapCanvas::focusOutEvent(QFocusEvent* event)
+{
+    // A key release is delivered to whoever has focus, so a held key that leaves
+    // the canvas — Alt+Tab, a click in the command line — never comes back up
+    // here. Both held locks are dropped rather than left standing.
+    setDiagonalLock(false);
+    setSurfaceNormalLock(false);
+    QWidget::focusOutEvent(event);
+}
+
+void MapCanvas::setSurfaceNormalLock(bool on)
+{
+    if (normal_lock_ == on) return;
+    normal_lock_ = on;
+
+    // Same road as the diagonal lock, and for the same reason: the key is a way of
+    // holding a mode down, not a capability of its own. `MOD yüzey_normali evet`
+    // from the command line, from a script or from the AI does exactly this write
+    // (Article 1.2, 5.15).
+    command::Args args;
+    args.set("ad", command::Value::text("yüzey_normali"));
+    args.set("deger", command::Value::text(on ? "evet" : "hayır"));
+    controller_.runInvocation(
+        command::Invocation{"core.mode", std::move(args), command::Origin::Gui});
+
+    updateSnapPreview();
+    update();
+}
+
 void MapCanvas::keyReleaseEvent(QKeyEvent* event)
 {
     if (event->key() == Qt::Key_Control) setDiagonalLock(false);
+
+    // RELEASED UNCONDITIONALLY, unlike the press. The press only engages while a
+    // command is picking, but the command can END while the key is still down —
+    // and a lock nobody turned off would then quietly steer the NEXT line.
+    if (event->key() == Qt::Key_Shift) setSurfaceNormalLock(false);
     QWidget::keyReleaseEvent(event);
 }
 
@@ -1776,6 +1815,16 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
     // Held, not toggled: the lock lasts exactly as long as the key does.
     if (event->key() == Qt::Key_Control) {
         setDiagonalLock(true);
+        return;
+    }
+
+    // ONLY WHILE A COMMAND IS PICKING. Shift also means "add to the selection"
+    // (`dispatchSelection`), and the two never overlap: a box selection is drawn
+    // when no command is waiting for a point, and there is no surface to stand
+    // normal to before the first point is placed. Guarding on the session is what
+    // keeps one key honest in both jobs.
+    if (event->key() == Qt::Key_Shift && controller_.session()) {
+        setSurfaceNormalLock(true);
         return;
     }
 

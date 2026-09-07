@@ -3,6 +3,8 @@
 
 #include "kentos_cad/core/trig.hpp"
 
+#include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/pick.hpp"
 
@@ -34,12 +36,18 @@ constexpr std::size_t kMaxNearSegments = 48;
 /// The three CONSTRUCTED modes sit at the bottom, below even YAKIN, and that
 /// placement is the rule that keeps them safe: a point this engine invented must
 /// never win against a point the drawing actually contains.
-constexpr std::uint16_t kPriority[] = {
+constexpr std::uint32_t kPriority[] = {
     SnapNode,
     SnapEndpoint,
     SnapIntersection,
     SnapMidpoint,
     SnapCenter,
+
+    // A CENTROID IS DERIVED, so it ranks under every point the drawing states
+    // outright. A parcel's centre of area is a number this engine computed; its
+    // corner is a number a surveyor measured, and the two must never compete on
+    // equal terms.
+    SnapCentroid,
     SnapPerpendicular,
     SnapNearest,
     SnapApparent,
@@ -69,6 +77,139 @@ Mm snap_axis(Mm v, Mm step) noexcept
 /// Accumulated in `double` rather than int64: the cross products of a hundred
 /// vertices of a 20 m parcel fit, but a 5 km ring in TM3 does not, and an
 /// overflowing centroid would put the snap marker in another province. The
+/// The angle of `p` about `centre`, in radians, wrapped into [0, 2pi).
+double bearing_of(Point2 centre, Point2 p)
+{
+    double a = std::atan2(static_cast<double>(p.y - centre.y), static_cast<double>(p.x - centre.x));
+    if (a < 0.0) a += 2.0 * 3.14159265358979323846;
+    return a;
+}
+
+/// Whether `p` lies on the sweep an arc actually draws.
+///
+/// `add_arc` sweeps COUNTER-CLOCKWISE from start to end (`io/vector.cpp` says so
+/// where it reconstructs one from a DXF), so the test is whether `p`'s bearing
+/// falls in the counter-clockwise run between the two — and not merely on the
+/// circle the arc was cut from. Without it, a point on the missing three quarters
+/// of a quarter-arc snaps to something that is not drawn.
+bool on_arc(Point2 centre, Point2 from, Point2 to, Point2 p)
+{
+    const double a = bearing_of(centre, from);
+    const double b = bearing_of(centre, to);
+    const double c = bearing_of(centre, p);
+
+    const double sweep = b >= a ? b - a : b - a + 2.0 * 3.14159265358979323846;
+    const double along = c >= a ? c - a : c - a + 2.0 * 3.14159265358979323846;
+    return along <= sweep;
+}
+
+/// The point halfway ALONG an arc — not the midpoint of the chord between its
+/// ends, which is inside the curve and on nothing.
+Point2 arc_midpoint(Point2 centre, Mm radius, Point2 from, Point2 to)
+{
+    const double a = bearing_of(centre, from);
+    const double b = bearing_of(centre, to);
+
+    const double sweep = b >= a ? b - a : b - a + 2.0 * 3.14159265358979323846;
+    const double half  = a + sweep * 0.5;
+
+    return Point2{centre.x + mm_round(static_cast<double>(radius) * std::cos(half)),
+                  centre.y + mm_round(static_cast<double>(radius) * std::sin(half))};
+}
+
+/// The unit normal is carried as an integer pair scaled by this, because core
+/// stores no floating point and a normal has to survive being handed about.
+constexpr double kNormalScale = 1000000.0;
+
+/// The unit normal of the edge nearest `at`, scaled by `kNormalScale`.
+///
+/// SEARCHED THE WAY EVERY OTHER SNAP SEARCHES: the same candidate narrowing, the
+/// same aperture discipline. False when nothing is within reach, which is what
+/// switches the lock off rather than guessing a direction — a perpendicular to no
+/// surface is not a constraint, it is an invention.
+///
+/// A CURVE'S NORMAL IS ITS RADIUS. On a circle or an arc the perpendicular to the
+/// surface runs through the centre, and computing it from the two stored vertices
+/// would give the normal of a line nobody drew.
+bool surface_normal(const Document& doc, Point2 at, Mm reach, Point2& out)
+{
+    const Box2 box{at.x - reach, at.y - reach, at.x + reach, at.y + reach};
+
+    std::vector<EntityId> candidates;
+    pick_candidates(doc, box, candidates);
+
+    const EntityTable& entities  = doc.entities();
+    const RingGeometry& geometry = doc.geometry();
+
+    double best = -1.0;
+    double bx = 0.0, by = 0.0;
+
+    const auto consider = [&](double dx, double dy, double distance) {
+        const double len = std::sqrt(dx * dx + dy * dy);
+        if (len <= 0.0) return;
+        if (best >= 0.0 && distance >= best) return;
+        best = distance;
+        bx   = dx / len;
+        by   = dy / len;
+    };
+
+    for (EntityId e : candidates) {
+        if (!entities.visible(e)) continue;
+
+        if (entities.kind[e] == kCircleKind || entities.kind[e] == kArcKind) {
+            const std::uint32_t slot = entities.slot[e];
+            const Point2 centre = entities.kind[e] == kCircleKind ? circle_centre_of(geometry, slot)
+                                                                  : arc_centre_of(geometry, slot);
+            const double dx     = static_cast<double>(at.x - centre.x);
+            const double dy     = static_cast<double>(at.y - centre.y);
+            const double radius = static_cast<double>(entities.kind[e] == kCircleKind
+                                                          ? circle_radius_of(geometry, slot)
+                                                          : arc_radius_of(geometry, slot));
+            const double len    = std::sqrt(dx * dx + dy * dy);
+            if (len > 0.0) consider(dx, dy, std::abs(len - radius));
+            continue;
+        }
+
+        const RingSpan span = geometry.rings_of(entities.slot[e]);
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+            const auto xs = geometry.ring_xs(r);
+            const auto ys = geometry.ring_ys(r);
+            if (xs.size() < 2) continue;
+
+            const bool closed          = geometry.ring_role[r] != RingRole::Open;
+            const std::size_t n        = xs.size();
+            const std::size_t segments = closed ? n : n - 1;
+
+            for (std::size_t v = 0; v < segments; ++v) {
+                const std::size_t w = (v + 1) % n;
+                const Point2 a{xs[v], ys[v]};
+                const Point2 b{xs[w], ys[w]};
+
+                const Point2 foot = closest_point_on_segment(a, b, at);
+                const double d    = std::sqrt(distance_squared(foot, at));
+                if (d > static_cast<double>(reach)) continue;
+
+                // The normal is the edge turned a quarter turn; the SIGN is taken
+                // from which side `at` is on, so the ray leaves the surface the
+                // way the user is standing.
+                double nx = -static_cast<double>(b.y - a.y);
+                double ny = static_cast<double>(b.x - a.x);
+                if (static_cast<double>(at.x - foot.x) * nx +
+                        static_cast<double>(at.y - foot.y) * ny <
+                    0.0) {
+                    nx = -nx;
+                    ny = -ny;
+                }
+                consider(nx, ny, d);
+            }
+        }
+    }
+
+    if (best < 0.0) return false;
+    out = Point2{mm_round(bx * kNormalScale), mm_round(by * kNormalScale)};
+    return true;
+}
+
 /// summation order is the ring's own vertex order, which is fixed by model.md
 /// R11, so the result is the same on every platform (`-ffp-contract=off`).
 bool ring_centroid(const RingGeometry& geometry, std::uint32_t ring, Point2& out)
@@ -124,7 +265,7 @@ void offer(Best& best, Point2 candidate, EntityId owner, Point2 aim, double limi
     best.distance = d;
 }
 
-std::size_t priority_index(std::uint16_t bit)
+std::size_t priority_index(std::uint32_t bit)
 {
     for (std::size_t i = 0; i < sizeof(kPriority) / sizeof(kPriority[0]); ++i)
         if (kPriority[i] == bit) return i;
@@ -135,22 +276,23 @@ std::size_t priority_index(std::uint16_t bit)
 
 // ------------------------------------------------------------------ names ---
 
-const std::uint16_t* snap_mode_bits()
+const std::uint32_t* snap_mode_bits()
 {
-    static const std::uint16_t bits[] = {
-        SnapEndpoint, SnapMidpoint, SnapCenter, SnapIntersection, SnapPerpendicular,
-        SnapNearest,  SnapNode,     SnapGrid,   SnapPolar,        SnapExtension,
-        SnapParallel, SnapApparent, SnapGuide,  SnapNone,
+    static const std::uint32_t bits[] = {
+        SnapEndpoint,      SnapMidpoint, SnapCenter,   SnapCentroid, SnapIntersection,
+        SnapPerpendicular, SnapNearest,  SnapNode,     SnapGrid,     SnapPolar,
+        SnapExtension,     SnapParallel, SnapApparent, SnapGuide,    SnapNone,
     };
     return bits;
 }
 
-const char* snap_mode_id(std::uint16_t single_bit)
+const char* snap_mode_id(std::uint32_t single_bit)
 {
     switch (single_bit) {
     case SnapEndpoint: return "uc";
     case SnapMidpoint: return "orta";
     case SnapCenter: return "merkez";
+    case SnapCentroid: return "agirlik_merkezi";
     case SnapIntersection: return "kesisim";
     case SnapPerpendicular: return "dik";
     case SnapNearest: return "yakin";
@@ -161,18 +303,20 @@ const char* snap_mode_id(std::uint16_t single_bit)
     case SnapParallel: return "paralel";
     case SnapApparent: return "uzatilmis_kesisim";
     case SnapOrtho: return "dik_mod";
+    case SnapNormal: return "yuzey_normali";
     case SnapStep: return "adim";
     case SnapGuide: return "kilavuz";
     default: return "yok";
     }
 }
 
-const char* snap_mode_label(std::uint16_t single_bit)
+const char* snap_mode_label(std::uint32_t single_bit)
 {
     switch (single_bit) {
     case SnapEndpoint: return "uç nokta";
     case SnapMidpoint: return "orta nokta";
     case SnapCenter: return "merkez";
+    case SnapCentroid: return "ağırlık merkezi";
     case SnapIntersection: return "kesişim";
     case SnapPerpendicular: return "dik ayak";
     case SnapNearest: return "en yakın";
@@ -183,6 +327,7 @@ const char* snap_mode_label(std::uint16_t single_bit)
     case SnapParallel: return "paralel";
     case SnapApparent: return "uzatılmış kesişim";
     case SnapOrtho: return "dik mod";
+    case SnapNormal: return "yüzey normali";
     case SnapStep: return "adım";
     case SnapGuide: return "kılavuz";
     default: return "yok";
@@ -334,13 +479,13 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
     result.point = q.aim;
 
     // ---- 1. object snap ----
-    std::uint16_t object_modes = q.modes & SnapObjectMask;
+    std::uint32_t object_modes = q.modes & SnapObjectMask;
 
     // A constructed mode with no reach is a mode that cannot see the edge it
     // would build from, so it is switched off here rather than searching for
     // nothing — the same contract `grid_step` and `polar_step` already keep.
     if (q.reach <= 0)
-        object_modes = static_cast<std::uint16_t>(object_modes & ~SnapConstructedMask);
+        object_modes = static_cast<std::uint32_t>(object_modes & ~SnapConstructedMask);
 
     if (q.radius > 0 && object_modes != 0) {
         // The APERTURE is what a snap must land inside; the SEARCH BOX is how far
@@ -391,15 +536,78 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
                 continue;
             }
 
+            // A CURVE IS NOT ITS STORED VERTICES, and treating it as if it were
+            // was the whole of this bug. A circle keeps its centre and a handle
+            // due east at the radius; an arc keeps its centre and its two ends.
+            // The loop below walks a ring as a chain of SEGMENTS, so on a circle
+            // it offered the middle of a line nobody drew, the nearest point of a
+            // line nobody drew, and the east handle as though it were a corner —
+            // while the one point a surveyor actually reaches for, the CENTRE,
+            // was unreachable, because `ring_centroid` wants three vertices and a
+            // closed ring and a circle's is neither.
+            //
+            // `pick.cpp` and the selection outline already know this and rebuild
+            // the shape from centre and radius; snapping now reads the same way.
+            if (entities.kind[e] == kCircleKind || entities.kind[e] == kArcKind) {
+                const bool full          = entities.kind[e] == kCircleKind;
+                const std::uint32_t slot = entities.slot[e];
+                const Point2 centre =
+                    full ? circle_centre_of(geometry, slot) : arc_centre_of(geometry, slot);
+                const Mm radius =
+                    full ? circle_radius_of(geometry, slot) : arc_radius_of(geometry, slot);
+
+                if ((object_modes & SnapCenter) != 0)
+                    offer(best[priority_index(SnapCenter)], centre, e, q.aim, limit);
+
+                if (!full) {
+                    // An ARC has two real ends and a real middle; a full circle
+                    // has neither, and offering one would be inventing a corner.
+                    const Point2 from = arc_start_of(geometry, slot);
+                    const Point2 to   = arc_end_of(geometry, slot);
+                    if ((object_modes & SnapEndpoint) != 0) {
+                        offer(best[priority_index(SnapEndpoint)], from, e, q.aim, limit);
+                        offer(best[priority_index(SnapEndpoint)], to, e, q.aim, limit);
+                    }
+                    if ((object_modes & SnapMidpoint) != 0) {
+                        const Point2 mid = arc_midpoint(centre, radius, from, to);
+                        offer(best[priority_index(SnapMidpoint)], mid, e, q.aim, limit);
+                    }
+                }
+
+                // THE CURVE ITSELF, computed rather than tessellated: centre plus
+                // the radius along the aim's own direction is EXACT, and it costs
+                // one square root where walking 64 chords would cost 64 segments
+                // and still land beside the curve.
+                if ((object_modes & SnapNearest) != 0 && radius > 0) {
+                    const double dx  = static_cast<double>(q.aim.x - centre.x);
+                    const double dy  = static_cast<double>(q.aim.y - centre.y);
+                    const double len = std::sqrt(dx * dx + dy * dy);
+                    if (len > 0.0) {
+                        const double scale = static_cast<double>(radius) / len;
+                        Point2 on{centre.x + mm_round(dx * scale), centre.y + mm_round(dy * scale)};
+                        // An arc is only the part of the circle it sweeps; a point
+                        // beyond its ends belongs to the circle it was cut from
+                        // and not to the thing that is drawn.
+                        if (full || on_arc(centre, arc_start_of(geometry, slot),
+                                           arc_end_of(geometry, slot), on))
+                            offer(best[priority_index(SnapNearest)], on, e, q.aim, limit);
+                    }
+                }
+
+                // NOT the segment walk below: there is no segment. Every mode a
+                // curve can answer has been answered.
+                continue;
+            }
+
             for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
                 const auto xs = geometry.ring_xs(r);
                 const auto ys = geometry.ring_ys(r);
                 if (xs.empty()) continue;
 
-                if ((object_modes & SnapCenter) != 0) {
+                if ((object_modes & SnapCentroid) != 0) {
                     Point2 centre{};
                     if (ring_centroid(geometry, r, centre))
-                        offer(best[priority_index(SnapCenter)], centre, e, q.aim, limit);
+                        offer(best[priority_index(SnapCentroid)], centre, e, q.aim, limit);
                 }
 
                 if ((object_modes & SnapEndpoint) != 0)
@@ -534,7 +742,7 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
             }
         }
 
-        for (std::uint16_t bit : kPriority) {
+        for (std::uint32_t bit : kPriority) {
             const Best& b = best[priority_index(bit)];
             if (b.distance < 0.0) continue;
             result.point  = b.point;
@@ -597,6 +805,36 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
     // it the point lands. It is applied on its own too, so "12 cm adım" works with
     // no direction lock at all.
     if (q.has_base) {
+        // THE SURFACE'S OWN PERPENDICULAR, and it OUTRANKS dik mod on purpose.
+        //
+        // Dik mod squares a line to the SHEET. What a survey needs is square to
+        // the THING: a çekme mesafesi runs perpendicular to the boundary it is
+        // measured from, a building line to the road it faces, an offset to the
+        // edge it offsets. On a boundary running at 37 degrees dik mod is exactly
+        // the wrong answer, and there was no right one — the user read the
+        // bearing, added ninety and typed it.
+        //
+        // The surface is the edge nearest the BASE, because that is the one the
+        // run is leaving; and both directions along the normal are live, so a
+        // perpendicular can be struck inwards or outwards without aiming
+        // precisely. `apply_step` composes with it exactly as it does with the
+        // other two: the normal picks the ray, the step picks how far.
+        if (q.normal_lock && q.normal_reach > 0) {
+            Point2 unit{};
+            if (surface_normal(doc, q.base, q.normal_reach, unit)) {
+                const double nx    = static_cast<double>(unit.x) / kNormalScale;
+                const double ny    = static_cast<double>(unit.y) / kNormalScale;
+                const double along = static_cast<double>(q.aim.x - q.base.x) * nx +
+                                     static_cast<double>(q.aim.y - q.base.y) * ny;
+
+                const Point2 on{q.base.x + mm_round(nx * along), q.base.y + mm_round(ny * along)};
+                result.point       = apply_step(q.base, on, q.step);
+                result.mode        = SnapNormal;
+                result.constrained = true;
+                return result;
+            }
+        }
+
         if (q.ortho) {
             result.point       = apply_step(q.base, apply_ortho(q.base, q.aim), q.step);
             result.mode        = SnapOrtho;

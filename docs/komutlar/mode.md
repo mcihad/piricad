@@ -63,14 +63,41 @@ Mod adı yerine kimliği de yazılabilir: `MOD core.yakalama.dik_mod evet`.
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
-Bugün oturum kapsamında dört mod vardır:
+Bugün oturum kapsamında altı mod vardır:
 
 | Mod | Tür | Varsayılan | Ne yapar |
 |---|---|---|---|
 | `yakalama_modları` | Bit maskesi | `7` | Etkin nesne yakalama modları |
 | `dik_mod` | Evet/hayır | `hayır` | İmleci yatay ve düşey eksene kilitler |
+| `yüzey_normali` | Evet/hayır | `hayır` | Çizgiyi başladığı **yüzeye** dik kilitler |
+| `köşegen` | Evet/hayır | `hayır` | İmleci öncekinden 45°'nin katlarına kilitler |
 | `kutupsal_açı` | µderece | `45000000` (45°) | Kutupsal izleme açı adımı |
 | `ızgaraya_yakala` | Evet/hayır | `hayır` | Girilen noktayı en yakın ızgara kesişimine oturtur |
+
+`köşegen`, tuval üzerinde **Ctrl** basılı tutularak da açılır; bıraktığınızda kapanır.
+`DİKDÖRTGEN`'in ikinci köşesi böyle kilitlenince kare çıkar.
+
+### Yüzey normali
+
+`dik_mod` imleci **sayfanın** eksenlerine kilitler: yatay ya da düşey. `yüzey_normali`
+imleci **nesnenin** eksenine kilitler: ilk noktanın oturduğu kenara tam dik olan
+doğrultuya.
+
+37°'lik bir parsel sınırından çekilen bir yapı yaklaşma mesafesi 127°'dir. Dik mod bunu
+söyleyemez; gözle çizilen bir dik ise ölçüsü tapuya giden bir belgeye onda birlik hata
+olarak yazılır. Yüzey normali bunu tam çizer.
+
+Kilit, **ilk noktanın yakınındaki en yakın kenardan** okunur. Yakınlık ölçüsü yakalama
+toleransıdır (`core.yakalama.tolerans`): erim içinde bir kenar yoksa mod sessizce
+devreye girmez ve doğrultu serbest kalır. Aynı anda dik mod da açıksa **yüzey normali
+kazanır** — daha özel olan kilit, daha genel olanı ezer.
+
+Kutupsal açı adımı yüzey normaliyle birlikte çalışır: kilit doğrultuyu verir, adım o
+doğrultu üzerinde ilerlemeyi böler.
+
+Nokta yakalaması yüzey normalinin **önündedir**. Bir uç noktaya ya da bir kesişime
+oturan tıklama oraya oturur; kilit yalnız serbest imleci yönlendirir. Bu, bir köşeyi
+kendi köşesinden çekip almayan tek sıralamadır.
 
 Açı değerleri **mikro derece** cinsindendir: 45° = `45000000`. Ondalık sayı hiçbir ayarda
 kabul edilmez; bildirilen birim yeterince incedir.
@@ -83,7 +110,7 @@ kabul edilmez; bildirilen birim yeterince incedir.
 |---|---|---|---|
 | 0 | `1` | Uç nokta | Bir halkanın köşesine |
 | 1 | `2` | Orta nokta | Bir kenarın ortasına |
-| 2 | `4` | Merkez | Kapalı bir halkanın ağırlık merkezine |
+| 2 | `4` | Merkez | Bir **eğrinin** çizildiği merkeze: dairenin, yayın |
 | 3 | `8` | Kesişim | İki kenarın gerçekten kesiştiği noktaya |
 | 4 | `16` | Dik ayak | Önceki noktadan bir kenara indirilen dikin ayağına |
 | 5 | `32` | En yakın | Bir kenarın imlece en yakın noktasına |
@@ -92,9 +119,27 @@ kabul edilmez; bildirilen birim yeterince incedir.
 | 10 | `1024` | Uzantı | Bir kenarın kendi doğrultusuna, kenarın **ötesinde** |
 | 11 | `2048` | Paralel | Önceki noktadan çıkan, bir kenara **paralel** ışına |
 | 12 | `4096` | Uzatılmış kesişim | İki kenarın uzatılsalar **buluşacakları** köşeye |
+| 14 | `16384` | Kılavuz | Kendi koyduğunuz çizim kılavuzuna |
+| 15 | `32768` | Ağırlık merkezi | Kapalı bir halkanın **alan** ağırlık merkezine |
 
-Varsayılan `7` = uç nokta + orta nokta + merkez. Onaltılık de yazabilirsiniz:
-`MOD yakalama_modları 0x2F`.
+Varsayılan `0x820F` = uç nokta + orta nokta + merkez + kesişim + düğüm +
+ağırlık merkezi.
+
+**Merkez ile ağırlık merkezi ayrı iki şeydir**, ve CAD bunları hep ayrı tutmuştur.
+`Merkez`, bir **eğrinin** çizildiği noktadır — dairenin ya da yayın merkezi; bir
+röperin aplike edildiği nokta odur. `Ağırlık merkezi`, kapalı bir şeklin **alan**
+ağırlık merkezidir — parselin ortası. Tek bir bit ikisini birden karşıladığı sürece
+ikincisi çalışıyor, birincisi hiç çalışmıyordu.
+
+**Bir eğri, sakladığı köşelerden ibaret değildir.** Bir daire merkezini ve
+yarıçapı veren doğu yönünde bir tutamağı saklar; yakalama bu ikiliyi çizilmiş bir
+**kenar** gibi yürüyordu, yani kimsenin çizmediği bir doğrunun ortasını, en yakın
+noktasını ve tutamağını köşe diye öneriyordu. Artık daire ve yay kendi
+geometrileriyle okunuyor: merkez merkez, yayın uçları uç, yayın ortası **yay
+boyunca** yarıda, ve `En yakın` çemberin kendisi — kirişin değil, ve yayın
+süpürmediği yere oturmadan.
+
+Onaltılık de yazabilirsiniz: `MOD yakalama_modları 0x2F`.
 
 `0` bütün nesne yakalamayı kapatır. Kısayolu **F3**'tür.
 
@@ -239,7 +284,13 @@ listesi yoktur:
 |---|---|---|
 | Nesne Yakalama | **F3** | `MOD yakalama_modları <maske>` |
 | Dik Mod | **F8** | `MOD dik_mod evet` / `hayır` |
+| Yüzey Normali | **F10** | `MOD yüzey_normali evet` / `hayır` |
 | Izgaraya Yakala | **F9** | `MOD ızgaraya_yakala evet` / `hayır` |
+
+Yüzey normalinin bir de **basılı tutma** yolu vardır: bir komut nokta beklerken tuval
+üzerinde **Shift**'i basılı tutun, kilit tuttuğunuz sürece açık kalır, bıraktığınızda
+kapanır. **F10** ise kilidi mandallar. İkisi de aynı ayarı yazar; hangisini
+kullandığınızın komutun gördüğü değere etkisi yoktur.
 
 Menü kalemlerinin işareti değerin kendisinden okunur: komut satırına
 `MOD dik_mod evet` yazdığınızda **F8**'e basmışsınız gibi işaret gelir.
