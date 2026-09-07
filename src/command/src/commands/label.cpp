@@ -140,8 +140,17 @@ Task<void> run(Context& ctx)
         if (record != nullptr && bus.document().styles().contains(record->style)) {
             const core::Symbol& symbol = bus.document().styles().symbol_at(record->style);
             for (const core::SymbolLayer& sl : symbol.layers) {
-                if (sl.type != core::SymbolLayerType::TextMarker || sl.field.empty()) continue;
-                if (!sl.enabled) continue;
+                if (sl.type != core::SymbolLayerType::TextMarker || !sl.enabled) continue;
+
+                // EVERY TEXT BINDING ON THE LAYER, because a symbol carries as
+                // many parameters as its author wanted. The other kinds are
+                // `STİL`'s to resolve: they land in the appearance rather than on
+                // paper as an entity of their own.
+                std::vector<const core::SymbolBinding*> writes;
+                for (const core::SymbolBinding& b : sl.bindings)
+                    if (b.what == core::SymbolProperty::Text && !b.field.empty())
+                        writes.push_back(&b);
+                if (writes.empty()) continue;
 
                 // GROUND, and refused rather than guessed. A slot's offset and
                 // size are what place a real text ENTITY on the drawing, and a
@@ -152,13 +161,14 @@ Task<void> run(Context& ctx)
                     (!sl.size.empty() && sl.size.unit != core::Unit::Ground)) {
                     ctx.session().fail(
                         core::err(core::ErrorCode::ValidationFailed,
-                                  "'" + sl.field +
+                                  "'" + writes.front()->field +
                                       "' alanının kaydırması ve boyutu zemin biriminde olmalı: "
                                       "STİL ... birim=zemin ile verin."));
                     co_return;
                 }
-                slots.push_back(Slot{sl.field, static_cast<core::Mm>(sl.offset.value),
-                                     static_cast<core::Mm>(sl.size.value)});
+                for (const core::SymbolBinding* b : writes)
+                    slots.push_back(Slot{b->field, static_cast<core::Mm>(sl.offset.value),
+                                         static_cast<core::Mm>(sl.size.value)});
             }
         }
     }

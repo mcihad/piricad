@@ -55,17 +55,49 @@
 namespace kentos::app {
 namespace {
 
-/// The column types a symbol parameter can ask for, in the order the combo shows
-/// them. The same closed set `SÜTUN` declares — there is no second type system.
-constexpr std::array<core::AttrType, 5> kFieldTypes{core::AttrType::Text, core::AttrType::Int64,
-                                                    core::AttrType::Length, core::AttrType::Bool,
-                                                    core::AttrType::CodeRef};
-
-int index_of_field_type(core::AttrType t)
+/// A layer's parameters as the one line the dialog edits — and as `STİL alan=`
+/// reads it. Written out in full, type included, so a round trip through the
+/// field cannot quietly change a column's declared type.
+QString bindings_to_text(const std::vector<core::SymbolBinding>& bindings)
 {
-    for (std::size_t i = 0; i < kFieldTypes.size(); ++i)
-        if (kFieldTypes[i] == t) return static_cast<int>(i);
-    return 0;
+    QStringList parts;
+    parts.reserve(static_cast<qsizetype>(bindings.size()));
+    for (const core::SymbolBinding& b : bindings)
+        parts << QStringLiteral("%1:%2:%3")
+                     .arg(QString::fromStdString(b.field),
+                          QString::fromUtf8(core::symbol_property_name(b.what)),
+                          QString::fromUtf8(core::attr_type_name(b.type)));
+    return parts.join(QStringLiteral(", "));
+}
+
+/// The inverse. A token whose words do not resolve is DROPPED rather than
+/// guessed: the dialog re-reads what it wrote on the next refresh, so a
+/// half-typed parameter simply has no effect until it is finished.
+std::vector<core::SymbolBinding> bindings_from_text(const QString& line)
+{
+    std::vector<core::SymbolBinding> out;
+    for (const QString& token : line.split(QLatin1Char(','), Qt::SkipEmptyParts)) {
+        const QStringList parts = token.trimmed().split(QLatin1Char(':'));
+        if (parts.isEmpty() || parts.front().trimmed().isEmpty()) continue;
+
+        core::SymbolBinding b;
+        b.field = parts.front().trimmed().toStdString();
+
+        if (parts.size() >= 2) {
+            const auto what = core::symbol_property_from_name(parts[1].trimmed().toStdString());
+            if (!what) continue;
+            b.what = *what;
+        }
+        if (parts.size() >= 3) {
+            const auto type = core::attr_type_from_name(parts[2].trimmed().toStdString());
+            if (!type) continue;
+            b.type = *type;
+        } else if (b.what != core::SymbolProperty::Text) {
+            b.type = core::AttrType::Int64;
+        }
+        out.push_back(std::move(b));
+    }
+    return out;
 }
 
 /// How tall the symbol layer stack is allowed to be, in rows.
@@ -1733,21 +1765,19 @@ QWidget* StyleDesigner::buildProperties()
     text_->setPlaceholderText(hint);
     connect(text_, &QLineEdit::textEdited, this, [this](const QString&) { applyToSelected(); });
 
-    // THE SLOT. A text layer either carries a word or names a column; setting one
-    // clears the other, here as in `STİL`, because a layer that held both would
-    // have to decide at draw time which it meant.
+    // THE PARAMETER LIST, IN ONE LINE, and in the SAME syntax `STİL alan=` takes:
+    // `sütun[:özellik[:tür]]`, comma separated. A table editor here would be a
+    // second spelling of the same thing, and a user who learned one would have to
+    // learn the other; a script and this field now say a parameter the same way.
     field_ = new QLineEdit(box);
-    field_->setPlaceholderText(tr("Öznitelik sütunu, örnek: taks")); // ui-label
+    field_->setPlaceholderText(tr("kod:yazi:metin, kat:kalinlik")); // ui-label
+    field_->setToolTip(tr("Nesneden alınacak parametreler, virgülle ayrılır: "
+                          "sütun:özellik:tür. Özellik yazi, renk, dolgu, kalinlik, "
+                          "boyut, aci ya da saydamlik olabilir."));
     connect(field_, &QLineEdit::textEdited, this, [this](const QString& typed) {
         if (!typed.isEmpty() && !text_->text().isEmpty()) text_->clear();
         applyToSelected();
     });
-
-    fieldType_ = new QComboBox(box);
-    fit_column(fieldType_);
-    for (const core::AttrType t : kFieldTypes)
-        fieldType_->addItem(QString::fromUtf8(core::attr_type_name(t)));
-    connect(fieldType_, &QComboBox::currentIndexChanged, this, [this](int) { applyToSelected(); });
 
     sizeUnit_     = unitCombo();
     intervalUnit_ = unitCombo();
@@ -1833,9 +1863,19 @@ QWidget* StyleDesigner::buildProperties()
         refresh();
     });
 
+    // Every declared type, for the rows that are not about one of them. Built
+    // once, here, because two of them want it and a second loop would be a second
+    // answer to "which types are there".
+    std::vector<T> everything;
+    for (const TypeRow& row : kTypes)
+        everything.push_back(row.type);
+
     // What the layer IS — under KATMAN with the type, no heading of their own.
     addProperty(form, nullptr, tr("Yazı"), text_, nullptr, {T::TextMarker});
-    addProperty(form, nullptr, tr("Alan"), field_, fieldType_, {T::TextMarker});
+
+    // EVERY TYPE, not just the text one: a marker takes its colour from a column
+    // as readily as a caption takes its words.
+    addProperty(form, nullptr, tr("Parametreler"), field_, nullptr, everything);
     addProperty(form, nullptr, tr("Şekil"), shape_, nullptr, markers);
     addProperty(form, nullptr, tr("Yerleşim"), placement_, nullptr, {T::MarkerLine, T::HashLine});
 
@@ -1860,9 +1900,6 @@ QWidget* StyleDesigner::buildProperties()
     addProperty(form, geometryGroup, tr("Faz"), phase_, phaseUnit_, phased);
 
     // Opacity is read by every type, so it lists them all and is always shown.
-    std::vector<T> everything;
-    for (const TypeRow& row : kTypes)
-        everything.push_back(row.type);
     QLabel* visibilityGroup = addGroup(form, tr("GÖRÜNÜRLÜK")); // ui-label
     addProperty(form, visibilityGroup, tr("Saydamlık"), opacity_, nullptr, everything);
     addProperty(form, visibilityGroup, tr("Renk kilidi"), lock_, nullptr, everything);
@@ -2110,8 +2147,7 @@ void StyleDesigner::loadSelected()
 
         lock_->setChecked(sl.colour_locked);
         text_->setText(QString::fromStdString(sl.text));
-        field_->setText(QString::fromStdString(sl.field));
-        fieldType_->setCurrentIndex(index_of_field_type(sl.field_type));
+        field_->setText(bindings_to_text(sl.bindings));
         width_->setValue(sl.look.width_um);
         size_->setValue(sl.size.value);
         interval_->setValue(sl.interval.value);
@@ -2263,11 +2299,10 @@ void StyleDesigner::applyToSelected()
     sl.offset    = core::Measure{offset_->value(), pick(kUnits, offsetUnit_)};
     sl.phase     = core::Measure{phase_->value(), pick(kUnits, phaseUnit_)};
 
-    sl.text       = text_->text().toStdString();
-    sl.field      = field_->text().trimmed().toStdString();
-    sl.field_type = kFieldTypes[static_cast<std::size_t>(
-        std::clamp(fieldType_->currentIndex(), 0, static_cast<int>(kFieldTypes.size()) - 1))];
-    if (!sl.field.empty()) sl.text.clear();
+    sl.text     = text_->text().toStdString();
+    sl.bindings = bindings_from_text(field_->text());
+    for (const core::SymbolBinding& b : sl.bindings)
+        if (b.what == core::SymbolProperty::Text) sl.text.clear();
     sl.look.width_um  = width_->value();
     sl.look.src_width = core::Source::Explicit;
     sl.angle_udeg     = angle_->value() * 1000000;

@@ -109,8 +109,7 @@ verilir.
 | `saydamlik` | Katman saydamlığı `0`–`255`. `255` tam opak |
 | `desen` | Çizgi tipi: `sürekli`, ya da çizgi/boşluk uzunlukları — `"8 1 1 1"` |
 | `yazi` | `yazi-isaretci` katmanının yazdığı sabit metin |
-| `alan` | `yazi-isaretci` katmanının okuyacağı **öznitelik sütunu**. Sütun yoksa aynı işlemde tanımlanır |
-| `alan_tipi` | `alan` sütununun türü: `tam_sayi`, `uzunluk`, `evet_hayir`, `metin`, `kod` |
+| `alan` | Nesneden alınacak **parametreler**, virgülle: `sütun[:özellik[:tür]]` |
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -139,11 +138,30 @@ ikisi birden değildir:
 çizimde yoksa **aynı işlemde tanımlanır**. Tek komut, tek geri alma adımı — çünkü
 istediği sütunu olmayan bir sembol, hiçbir zaman doldurulamayacak bir parametredir.
 
+**İstediğiniz kadar parametre, istediğiniz tipte.** `alan=` virgülle ayrılmış bir
+listedir ve her öğe `sütun[:özellik[:tür]]` yazılır:
+
+| Yazılış | Anlamı |
+|---|---|
+| `alan=taks` | `taks` sütunu, **yazı** olarak, `metin` tipinde |
+| `alan=taks:yazi:metin` | Aynısı, üç parçası da açık yazılmış |
+| `alan=kat:kalinlik` | `kat` sütunu **çizgi kalınlığını** sürer, `tam_sayi` |
+| `alan=fonksiyon:renk:metin, kat:kalinlik, yon:aci` | Bir katmanda **üç** parametre |
+
+Özellik `yazi`, `renk`, `dolgu`, `kalinlik`, `boyut`, `aci` ya da `saydamlik`
+olabilir. Tür `SÜTUN` komutunun türleridir: `tam_sayi`, `uzunluk`, `evet_hayir`,
+`metin`, `kod` — ikinci bir tip sistemi yoktur. Verilmezse `yazi` için `metin`,
+diğerleri için `tam_sayi` varsayılır.
+
+Virgül ayracı `İÇEAKTAR katmanlar=` ile aynı pazarlıktır: bir sütun kimliği virgül
+taşımaz, o yüzden ayraç kesindir ve parametre listesi **tek bir günlük belirteci**
+olarak kalır — bir insanın okuyup yeniden yazabileceği bir şey.
+
 ```
 KATMAN ad=YAPI
 STİL katman=YAPI tip=isaretci sekil=daire birim=zemin boyut=12000
-STİL katman=YAPI ekle=evet tip=yazi-isaretci alan=taks alan_tipi=metin birim=zemin kaydirma=2500 boyut=3000
-STİL katman=YAPI ekle=evet tip=yazi-isaretci alan=kaks alan_tipi=metin birim=zemin kaydirma=-2500 boyut=3000
+STİL katman=YAPI ekle=evet tip=yazi-isaretci alan=taks:yazi:metin birim=zemin kaydirma=2500 boyut=3000
+STİL katman=YAPI ekle=evet tip=yazi-isaretci alan=kaks:yazi:metin birim=zemin kaydirma=-2500 boyut=3000
 ```
 
 Bundan sonra bu katmana çizdiğiniz her nesnenin **Öznitelikler** panelinde `taks`
@@ -165,6 +183,49 @@ yazdığı gerçek metin nesnesidir.
 zemin milimetresine ancak bir pafta ölçeğiyle çevrilir; `ETİKET`in elinde öyle bir
 ölçek yoktur ve tahmin etseydi sayıyı tek bir ölçekte doğru, diğer hepsinde yanlış
 yere koyardı. Bu yüzden reddeder, uydurmaz.
+
+### Nesnenin sütunu bir özelliği sürebilir
+
+Özellik `yazi` değilse, sütun artık paftaya yazı yazmaz — **o özelliği sürer**.
+Her nesne kendi değerini getirir:
+
+```
+SÜTUN kat tam_sayi
+KATMAN ad=BINA
+ALAN noktalar=485300,4310200 485312,4310200 485312,4310212 485300,4310212
+ÖZNİTELİK ad=kat nesne=1 deger=900
+STİL katman=BINA tip=cizgi alan=kat:kalinlik
+```
+
+QGIS bunu *data-defined override* diye adlandırır ve **her karede** hesaplar.
+Burada hesaplanmaz: kare yolu öznitelik sütunu okuyamaz (`model.md` R29) ve orada
+hiçbir şey değerlendirilemez (P7). Bunun yerine R14'ün söylediği yapılır —
+**işleyici bir komuttur** — ve `STİL` her nesnenin değerini okuyup ona uyan stili
+`style[e]` sütununa yazar. Çizim yolu yine tek bir `u32` okur ve sütundan haberi
+olmaz.
+
+**Aynı değer aynı stildir.** Stil tablosu tekilleştirilmiştir; beş milyon parsel
+bir avuç görünüme çöker (R13). `kat=900` olan iki bina aynı `StyleId`'yi paylaşır,
+tabloda sınıf başına bir giriş olur — nesne başına değil.
+
+**Sınıflar bileşimdir.** İki parametrenin her biri yirmi ayrı değer taşıyorsa
+tabloya giren şey dört yüz **bileşimdir**; komut bileşimi sayar, tek tek
+parametreyi değil.
+
+**En çok 256 sınıf** (R17). Parsel numarası gibi her nesnede farklı olan bir sütun
+tabloyu nesne sayısı kadar büyütürdü; komut bunu sayıp reddeder ve kaç ayrı değer
+gördüğünü söyler. Sürekli bir büyüklüğü sürmek isterseniz değerleri gruplayın ya
+da katalogla sınıflandırın (`sinifla=`).
+
+**Boş hücre katmanın kendi değerini korur.** Kat adedi girilmemiş bir parsel, sıfır
+katlı bir parsel değildir; öyle boyamak çizimin olmayan bir olguyu uydurması olur.
+
+**Önce karar, sonra yazma.** Bütün hücreler ilk stil tekilleştirilmeden önce
+okunur: sayının olması gereken yerde kelime bulunursa çizim yarı boyanmış değil,
+hiç dokunulmamış kalır (Article 1.6).
+
+**Tazeleme.** Öznitelik değiştikten sonra komutu yeniden çalıştırın; bu, `model.md`
+R15'in saydığı dört tetikleyiciden biridir ve etiketlerdekiyle aynı pazarlıktır.
 
 ### Sembol katmanları — bir gösterim tek çizgi değildir
 

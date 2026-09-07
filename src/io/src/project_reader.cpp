@@ -463,8 +463,10 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         symbol_layer_phase = rows.value();
     }
 
-    std::span<const std::uint32_t> symbol_layer_field;
-    std::span<const std::uint8_t> symbol_layer_field_type;
+    std::span<const std::uint16_t> bind_count;
+    std::span<const std::uint32_t> bind_field;
+    std::span<const std::uint8_t> bind_what;
+    std::span<const std::uint8_t> bind_type;
     std::span<const std::uint32_t> symbol_layer_text;
     if (view.has(kBlkSymbolLayerText) && dr.symbol_layer_count > 0) {
         auto rows = view.column<std::uint32_t>(kBlkSymbolLayerText, dr.symbol_layer_count,
@@ -473,17 +475,35 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         symbol_layer_text = rows.value();
     }
 
-    if (view.has(kBlkSymbolLayerField) && dr.symbol_layer_count > 0) {
-        auto rows = view.column<std::uint32_t>(kBlkSymbolLayerField, dr.symbol_layer_count,
-                                               "sembol katmani alanlari");
+    // THE PARAMETER LISTS. `Count` is one per layer; the other three run back to
+    // back across every layer in order, so their length is the SUM of the counts
+    // and is read from the block itself rather than assumed.
+    if (view.has(kBlkSymbolLayerBindCount) && dr.symbol_layer_count > 0) {
+        auto rows = view.column<std::uint16_t>(kBlkSymbolLayerBindCount, dr.symbol_layer_count,
+                                               "sembol katmani parametre sayilari");
         if (!rows) return rows.error();
-        symbol_layer_field = rows.value();
-    }
-    if (view.has(kBlkSymbolLayerFieldType) && dr.symbol_layer_count > 0) {
-        auto rows = view.column<std::uint8_t>(kBlkSymbolLayerFieldType, dr.symbol_layer_count,
-                                              "sembol katmani alan turleri");
-        if (!rows) return rows.error();
-        symbol_layer_field_type = rows.value();
+        bind_count = rows.value();
+
+        std::uint64_t total = 0;
+        for (const std::uint16_t n : bind_count)
+            total += n;
+
+        if (total > 0) {
+            auto fields = view.column<std::uint32_t>(kBlkSymbolLayerBindField, total,
+                                                     "sembol katmani parametre alanlari");
+            if (!fields) return fields.error();
+            bind_field = fields.value();
+
+            auto whats = view.column<std::uint8_t>(kBlkSymbolLayerBindWhat, total,
+                                                   "sembol katmani parametre ozellikleri");
+            if (!whats) return whats.error();
+            bind_what = whats.value();
+
+            auto types = view.column<std::uint8_t>(kBlkSymbolLayerBindType, total,
+                                                   "sembol katmani parametre turleri");
+            if (!types) return types.error();
+            bind_type = types.value();
+        }
     }
 
     for (std::uint64_t i = 0; i < dr.style_count; ++i) {
@@ -524,22 +544,38 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                     layer.text = std::move(text.value());
                 }
 
-                // The slot, read the same way and just as optionally: a file
-                // written before symbol parameters existed has neither block and
-                // every layer comes back a plain caption.
-                if (r.first_layer + k < symbol_layer_field.size()) {
-                    auto field =
-                        strings.at(symbol_layer_field[r.first_layer + k], "sembol katmani alani");
-                    if (!field) return field.error();
-                    layer.field = std::move(field.value());
+                // The parameter list, read the same way and just as optionally: a
+                // file written before symbol parameters existed has no such block
+                // and every layer comes back a plain caption.
+                if (r.first_layer + k < bind_count.size()) {
+                    std::uint64_t first = 0;
+                    for (std::size_t j = 0; j < r.first_layer + k; ++j)
+                        first += bind_count[j];
+
+                    for (std::uint16_t b = 0; b < bind_count[r.first_layer + k]; ++b) {
+                        const std::uint64_t at = first + b;
+                        if (at >= bind_field.size()) break;
+
+                        auto field = strings.at(bind_field[at], "sembol katmani parametre alani");
+                        if (!field) return field.error();
+
+                        if (bind_what[at] >
+                            static_cast<std::uint8_t>(core::SymbolProperty::Opacity))
+                            return err(ErrorCode::ParseError,
+                                       "Bilinmeyen sembol parametresi ozelligi: " +
+                                           std::to_string(bind_what[at]));
+                        if (bind_type[at] > static_cast<std::uint8_t>(core::AttrType::CodeRef))
+                            return err(ErrorCode::ParseError,
+                                       "Bilinmeyen sembol parametresi turu: " +
+                                           std::to_string(bind_type[at]));
+
+                        layer.bindings.push_back(
+                            core::SymbolBinding{std::move(field.value()),
+                                                static_cast<core::SymbolProperty>(bind_what[at]),
+                                                static_cast<core::AttrType>(bind_type[at])});
+                    }
                 }
-                if (r.first_layer + k < symbol_layer_field_type.size()) {
-                    const std::uint8_t raw = symbol_layer_field_type[r.first_layer + k];
-                    if (raw > static_cast<std::uint8_t>(core::AttrType::CodeRef))
-                        return err(ErrorCode::ParseError,
-                                   "Bilinmeyen sembol katmanı alan türü: " + std::to_string(raw));
-                    layer.field_type = static_cast<core::AttrType>(raw);
-                }
+
                 sym.layers.push_back(layer);
             }
         }

@@ -186,16 +186,23 @@ enum BlockId : std::uint32_t {
     /// file meant (io.md R10).
     kBlkSymbolLayerPhase = 0x0038, ///< i32[], one per symbol layer
 
-    /// The attribute column each `TextMarker` symbol layer reads instead of a
-    /// fixed word, and what that column should hold.
+    /// The parameters each symbol layer takes from the OBJECT: which column, which
+    /// property, and what the column holds.
     ///
-    /// TWO OPTIONAL BLOCKS, written only when some layer declares one — the same
-    /// bargain as the phase above it (io.md R10, and the reason adding a block is
-    /// not a version bump). A file written before symbol parameters existed has
-    /// neither, and every layer reads back as a plain caption, which is what that
-    /// file meant.
-    kBlkSymbolLayerField     = 0x003B, ///< u32[], index into kBlkStringSpans
-    kBlkSymbolLayerFieldType = 0x003C, ///< u8[], core::AttrType
+    /// FOUR OPTIONAL BLOCKS, written only when some layer declares a parameter —
+    /// the same bargain as the phase above them (io.md R10, and the reason adding
+    /// a block is not a version bump). A file written before symbol parameters
+    /// existed has none of them, and every layer reads back as a plain caption,
+    /// which is what that file meant.
+    ///
+    /// A LIST PER LAYER, so `Count` says how many each one has and the other three
+    /// run back to back across every layer in order — the same (first, count)
+    /// shape the ring geometry uses, with the first derived by running total
+    /// rather than stored, because a parameter list is read whole or not at all.
+    kBlkSymbolLayerBindCount = 0x003B, ///< u16[], one per symbol layer
+    kBlkSymbolLayerBindField = 0x003C, ///< u32[], index into kBlkStringSpans
+    kBlkSymbolLayerBindWhat  = 0x003D, ///< u8[],  core::SymbolProperty
+    kBlkSymbolLayerBindType  = 0x003E, ///< u8[],  core::AttrType
 
     kBlkImages     = 0x0033, ///< ImageRecord[]
     kBlkImageBytes = 0x0034, ///< u8[], the payloads back to back

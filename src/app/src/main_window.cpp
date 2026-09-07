@@ -263,6 +263,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 
     onEcho(tr("KentOSCad %1 — komut merkezli mimari, GPLv3.").arg(QStringLiteral(KENTOS_VERSION)));
     onEcho(tr("Aynı komut arayüzden, komut satırından ve betikten tıpatıp aynı yolu izler."));
+    if (const std::string status = render::text_backend_status(); !status.empty())
+        onEcho(tr("Not: %1").arg(QString::fromStdString(status)));
     if (const std::string status = render::gpu_backend_status(); !status.empty())
         onEcho(tr("Not: %1").arg(QString::fromStdString(status)));
     onEcho(tr("Başlamak için: ÇİZGİ  ·  ÇİZGİ 485320,4310220 @50,30 @100<45  ·  YARDIM"));

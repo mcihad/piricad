@@ -31,6 +31,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -60,6 +61,54 @@ core::Result<core::StyleCatalog> load_catalog(const std::string& path)
 
     return core::StyleCatalog::from_json(parsed.value());
 }
+
+/// One cell as the number a driven property needs.
+///
+/// A COLOUR IS THE ONE THAT IS NOT ALWAYS A NUMBER. A colour column is either an
+/// integer already in `0xAARRGGBB` — which is what `KATMAN renk=` writes and what
+/// an import produces — or the text a person types, `#RRGGBB`. Both are accepted
+/// through the SAME parser the rest of this file uses; a second colour reader is
+/// how `#80FFFFFF` comes to mean two things.
+core::Result<std::int64_t> driven_value(const core::AttrValue& cell, core::SymbolProperty what)
+{
+    if (!cell.present) return core::err(core::ErrorCode::NotFound, "hücre boş");
+
+    if ((what == core::SymbolProperty::Colour || what == core::SymbolProperty::Fill) &&
+        (cell.type == core::AttrType::Text || cell.type == core::AttrType::CodeRef)) {
+        auto rgba = core::parse_rgba(cell.text);
+        if (!rgba) return rgba.error();
+        return static_cast<std::int64_t>(rgba.value());
+    }
+
+    if (cell.type == core::AttrType::Text || cell.type == core::AttrType::CodeRef)
+        return core::err(core::ErrorCode::InvalidArgument, "'" + cell.text + "' bir sayı değil");
+
+    return cell.number;
+}
+
+/// Writes that number into the layer, in the property's own unit.
+void apply_driven(core::SymbolLayer& layer, core::SymbolProperty what, std::int64_t value)
+{
+    switch (what) {
+    case core::SymbolProperty::Colour: layer.look.rgba = static_cast<std::uint32_t>(value); break;
+    case core::SymbolProperty::Fill:
+        layer.look.fill_rgba = static_cast<std::uint32_t>(value);
+        break;
+    case core::SymbolProperty::Width: layer.look.width_um = static_cast<std::int32_t>(value); break;
+    case core::SymbolProperty::Size: layer.size.value = static_cast<std::int32_t>(value); break;
+    case core::SymbolProperty::Angle: layer.angle_udeg = static_cast<std::int32_t>(value); break;
+    case core::SymbolProperty::Opacity:
+        layer.opacity = static_cast<std::uint8_t>(std::clamp<std::int64_t>(value, 0, 255));
+        break;
+    case core::SymbolProperty::Text: break; // written by ETİKET, never by a style
+    }
+}
+
+/// R17's ceiling, and the reason it is a ceiling rather than a warning: the style
+/// table is INTERNED so that five million parcels collapse onto a handful of
+/// appearances. A property driven by parsel number would put one entry in it per
+/// parcel and undo that in a single command.
+constexpr std::size_t kDrivenClassLimit = 256;
 
 /// The classifying values one entity offers a rule today.
 ///
@@ -608,36 +657,124 @@ Task<void> run(Context& ctx)
     // filled in, and making the user notice that themselves — by drawing the
     // object, opening the panel and finding nothing — is how a feature reads as
     // broken. One command, one transaction, one undo step (Article 1.6).
-    if (const Value v = ctx.argument("alan"); !v.empty()) {
-        const std::string column = v.as_text();
+    // ---- the parameters this layer takes from the object ----
+    //
+    // ONE TOKEN PER PARAMETER, REPEATABLE, so a symbol has as many as its author
+    // wants: `alan=taks:yazi:metin alan=kat:kalinlik:tam_sayi`. Three segments,
+    // split on `:` with no nesting and no escaping — a column id is lowercase and
+    // carries no colon, which is what makes the separator unambiguous. The same
+    // shape as `desen="8 1 1 1"` and a layer's `A > B` group path: a value
+    // format, not a second grammar (CLAUDE.md 5.11).
+    //
+    // Defaults do the common case in one word: `alan=taks` on a text layer is
+    // `alan=taks:yazi:metin`.
+    // COMMA SEPARATED, ONE ARGUMENT — the same bargain `İÇEAKTAR katmanlar=`
+    // makes and for the same reason: a column id carries no comma, so the
+    // separator is unambiguous, and the parameter list stays ONE journal token a
+    // person can read and retype.
+    //
+    // NAMED, AND NOT FOR TIDINESS. `Context::argument` returns a `Value` BY VALUE
+    // and `as_text()` hands back a reference INTO it, so a range-for written over
+    // the two together walks a string inside a temporary that died at the end of
+    // the initialiser. C++23 extends a range-for's temporaries to cover exactly
+    // this; this project is C++20 (Article 2.2), where it is undefined behaviour —
+    // and it read as a parameter list that parsed into garbage, which the command
+    // then reported as a malformed token and returned from without complaint.
+    const Value asked_for = ctx.argument("alan");
 
-        core::AttrType type = core::AttrType::Text;
-        if (const Value t = ctx.argument("alan_tipi"); !t.empty()) {
-            const auto parsed = core::attr_type_from_name(t.as_text());
-            if (!parsed) {
-                ctx.echo("Bilinmeyen alan türü: '" + t.as_text() +
+    std::vector<std::string> tokens;
+    {
+        std::string one;
+        for (const char c : asked_for.as_text()) {
+            if (c == ',') {
+                if (!one.empty()) tokens.push_back(one);
+                one.clear();
+            } else if (!(one.empty() && (c == ' ' || c == '\t'))) {
+                one.push_back(c);
+            }
+        }
+        while (!one.empty() && (one.back() == ' ' || one.back() == '\t'))
+            one.pop_back();
+        if (!one.empty()) tokens.push_back(one);
+    }
+    std::vector<core::SymbolBinding> asked;
+    for (const std::string& token : tokens) {
+        std::vector<std::string> parts;
+        std::string one;
+        for (const char c : token) {
+            if (c == ':') {
+                parts.push_back(one);
+                one.clear();
+            } else {
+                one.push_back(c);
+            }
+        }
+        parts.push_back(one);
+
+        if (parts.size() > 3 || parts.front().empty()) {
+            ctx.echo("'alan' biçimi: sütun[:özellik[:tür]] — örnek alan=kod:yazi:metin. "
+                     "Gelen: '" +
+                     token + "'");
+            co_return;
+        }
+
+        core::SymbolBinding binding;
+        binding.field = parts.front();
+
+        if (parts.size() >= 2 && !parts[1].empty()) {
+            const auto what = core::symbol_property_from_name(parts[1]);
+            if (!what) {
+                ctx.echo("Bilinmeyen özellik: '" + parts[1] +
+                         "'. Beklenen: yazi, renk, dolgu, kalinlik, boyut, aci, saydamlik.");
+                co_return;
+            }
+            binding.what = *what;
+        }
+
+        if (parts.size() >= 3 && !parts[2].empty()) {
+            const auto type = core::attr_type_from_name(parts[2]);
+            if (!type) {
+                ctx.echo("Bilinmeyen alan türü: '" + parts[2] +
                          "'. Beklenen: tam_sayi, uzunluk, evet_hayir, metin, kod.");
                 co_return;
             }
-            type = *parsed;
+            binding.type = *type;
+        } else if (binding.what != core::SymbolProperty::Text) {
+            // A property that lands in a number wants a number, and saying so is
+            // better than declaring a text column somebody then cannot drive.
+            binding.type = core::AttrType::Int64;
         }
 
-        if (ctx.document().attributes().find(column) == core::kNoAttr) {
+        // THE COLUMN IS DECLARED HERE, in the same transaction. A symbol that asks
+        // for `taks` in a drawing with no `taks` column is a parameter that can
+        // never be filled in, and making the user discover that by drawing the
+        // object and finding an empty panel is how a feature reads as broken.
+        if (ctx.document().attributes().find(binding.field) == core::kNoAttr) {
             core::AttrSpec spec;
-            spec.id      = column;
-            spec.name_tr = column;
-            spec.type    = type;
+            spec.id      = binding.field;
+            spec.name_tr = binding.field;
+            spec.type    = binding.type;
             if (auto made = ctx.transaction().declare_attribute(std::move(spec)); !made) {
                 ctx.echo(made.error().message);
                 co_return;
             }
         }
 
-        described.field      = column;
-        described.field_type = type;
-        described.text.clear();
-        has_layer = true;
+        asked.push_back(std::move(binding));
     }
+
+    if (!asked.empty()) {
+        described.bindings = asked;
+        has_layer          = true;
+
+        // A word and a column are the two things a text layer can say and never
+        // both: naming a column drops the word, because a fixed caption left on a
+        // layer the user just parameterised would draw the same thing on every
+        // object.
+        for (const core::SymbolBinding& b : asked)
+            if (b.what == core::SymbolProperty::Text) described.text.clear();
+    }
+
     if (const Value v = ctx.argument("saydamlik"); !v.empty()) {
         described.opacity = static_cast<std::uint8_t>(std::clamp<std::int64_t>(v.as_int(), 0, 255));
         has_layer         = true;
@@ -699,8 +836,97 @@ Task<void> run(Context& ctx)
     // A described symbol is the layer's default renderer. Appending starts from
     // the layer default, not from an arbitrary first entity, so it works on an
     // empty layer and stays stable when entities have individual overrides.
+    // ---- pass 1: DECIDE. Nothing past this may fail on a value. ----
+    //
+    // Every driven cell of every parameter is read and every class counted BEFORE
+    // the first intern, so a column that turns out to hold a word where a number
+    // belongs leaves the drawing untouched instead of half-restyled (Article 1.6).
+    // It is also where R17's ceiling is enforced: past it the style table would
+    // stop being the handful of entries five million parcels collapse onto.
+    //
+    // A TEXT parameter is not here. It lands on paper as its own entity, written
+    // by `ETİKET`, and never touches the appearance.
+    struct DrivenColumn
+    {
+        core::AttrId column{core::kNoAttr};
+        core::SymbolProperty what{core::SymbolProperty::Colour};
+        std::string field;
+    };
+
+    std::vector<DrivenColumn> driven;
+    for (const core::SymbolBinding& b : described.bindings) {
+        if (b.what == core::SymbolProperty::Text) continue;
+
+        const core::AttrId col = bus.document().attributes().find(b.field);
+        if (col == core::kNoAttr) {
+            ctx.session().fail(
+                core::err(core::ErrorCode::NotFound,
+                          "Bilinmeyen öznitelik: '" + b.field + "'. SÜTUN ile tanımlayın."));
+            co_return;
+        }
+        driven.push_back(DrivenColumn{col, b.what, b.field});
+    }
+
+    // One row per target, one column per driven parameter. `kKeepLayerValue` marks
+    // an empty cell: a parcel whose storey count has not been entered is not a
+    // parcel with zero storeys, and painting it as one would be the drawing
+    // inventing a fact.
+    constexpr std::int64_t kKeepLayerValue = std::numeric_limits<std::int64_t>::min();
+    std::vector<std::int64_t> driven_values;
+    if (!driven.empty()) {
+        driven_values.assign(targets.size() * driven.size(), kKeepLayerValue);
+
+        std::vector<std::vector<std::int64_t>> classes(driven.size());
+        for (std::size_t i = 0; i < targets.size(); ++i) {
+            for (std::size_t d = 0; d < driven.size(); ++d) {
+                auto cell = bus.document().attribute(driven[d].column, targets[i]);
+                if (!cell) {
+                    ctx.session().fail(cell.error());
+                    co_return;
+                }
+                if (!cell.value().present) continue;
+
+                auto number = driven_value(cell.value(), driven[d].what);
+                if (!number) {
+                    ctx.session().fail(core::err(
+                        number.error().code,
+                        "'" + driven[d].field +
+                            "' sütunu bu özelliği süremiyor: " + number.error().message + "."));
+                    co_return;
+                }
+                driven_values[i * driven.size() + d] = number.value();
+
+                auto& seen = classes[d];
+                if (std::find(seen.begin(), seen.end(), number.value()) == seen.end())
+                    seen.push_back(number.value());
+            }
+        }
+
+        // COUNTED PER PARAMETER AND THEN MULTIPLIED, because that is what the
+        // style table actually holds: two parameters of twenty values each make
+        // four hundred combinations, and it is the COMBINATIONS that become
+        // entries.
+        std::size_t combinations = 1;
+        for (const auto& seen : classes) {
+            combinations *= std::max<std::size_t>(seen.size(), 1);
+            if (combinations > kDrivenClassLimit) break;
+        }
+        if (combinations > kDrivenClassLimit) {
+            ctx.session().fail(core::err(
+                core::ErrorCode::ValidationFailed,
+                "Sürülen parametreler " + std::to_string(combinations) +
+                    " ayrı bileşim üretiyor; en çok " + std::to_string(kDrivenClassLimit) +
+                    " sınıf sürülebilir. Değerleri gruplayın ya da katalogla sınıflandırın "
+                    "(sinifla=)."));
+            co_return;
+        }
+    }
+
+    // A DRIVEN PROPERTY HAS NO LAYER DEFAULT. Every object carries its own value,
+    // so there is no single symbol to write onto the layer — the same reason
+    // `sinifla` is excluded here.
     const bool changes_layer_symbol =
-        !clear && classify_by.empty() &&
+        !clear && classify_by.empty() && driven.empty() &&
         (has_layer || direct_layer_style || direct_symbol.has_value());
     if (clear || changes_layer_symbol) {
         core::StyleId layer_style = core::kByLayerStyle;
@@ -752,6 +978,15 @@ Task<void> run(Context& ctx)
             if (has_layer) {
                 core::SymbolLayer added = described;
                 added.look              = resolved[i];
+
+                // THE OBJECT'S OWN VALUES, substituted here and interned below.
+                // Two parcels with the same values land on the same `StyleId`, so
+                // the table holds one entry per CLASS and not one per parcel.
+                for (std::size_t d = 0; d < driven.size(); ++d) {
+                    const std::int64_t v = driven_values[i * driven.size() + d];
+                    if (v != kKeepLayerValue) apply_driven(added, driven[d].what, v);
+                }
+
                 sym.layers.push_back(added);
             } else if (row_symbol) {
                 // The row was published WITH PICTURES, so the symbol is what the
@@ -782,7 +1017,7 @@ Task<void> run(Context& ctx)
     // Recorded so a replay resolves the same rows whichever client typed them.
     for (const char* name :
          {"paket", "kod", "sinifla", "olcek", "olcek_min", "olcek_max", "renk", "kalinlik", "dolgu",
-          "sira", "sifirla", "desen", "faz", "yazi", "alan", "alan_tipi"}) {
+          "sira", "sifirla", "desen", "faz", "yazi", "alan"}) {
         if (const Value v = ctx.argument(name); !v.empty()) ctx.record(name, v);
     }
 
@@ -886,11 +1121,10 @@ KENTOS_COMMAND(style)
                 Param::text("yazi", Arity::optional(),
                             "yazi-isaretci katmanının yazdığı sabit metin"),
                 Param::text("alan", Arity::optional(),
-                            "yazi-isaretci katmanının okuyacağı öznitelik sütunu; "
-                            "yoksa tanımlanır"),
-                Param::text("alan_tipi", Arity::optional(),
-                            "alan= sütununun türü: tam_sayi, uzunluk, evet_hayir, "
-                            "metin, kod"),
+                            "Nesneden alınacak parametreler, virgülle: "
+                            "sütun[:özellik[:tür]] — 'kod:yazi:metin, kat:kalinlik'. "
+                            "Sütun yoksa tanımlanır"),
+
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

@@ -211,7 +211,23 @@ struct Cmd
 class RhiBackend final : public render::Backend
 {
 public:
-    std::string name() const override { return "QRhi (GPU · geometri)"; }
+    /// What the status strip says this canvas is — and, when it matters, what it
+    /// is NOT.
+    ///
+    /// THE TEXT ATLAS IS OPTIONAL AND ITS ABSENCE IS INVISIBLE. Every caption in
+    /// this file is drawn behind `KENTOS_HAVE_TEXT`, so a build without it opens
+    /// a plan sheet correctly, at full speed, and silently without the 13 112 ada
+    /// and parsel numbers on it. That is the worst shape a missing option can
+    /// take: nothing is broken, nothing is slow, and what the surveyor came for is
+    /// simply not there. The strip they are already looking at says so.
+    std::string name() const override
+    {
+#if KENTOS_HAVE_TEXT
+        return "QRhi (GPU · geometri · yazı)";
+#else
+        return "QRhi (GPU · geometri · YAZISIZ)";
+#endif
+    }
 
 private:
     /// The frame's visible rectangle in logical pixels, plus a margin.

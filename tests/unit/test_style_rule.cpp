@@ -251,7 +251,7 @@ TEST_CASE("SEMBOL PARAMETRESİ: alan bildiren yazı katmanı sütunu da tanımla
     // broken.
     CHECK_EQ(rig.doc.attributes().find("taks"), core::kNoAttr);
     CHECK(rig.bus
-              .execute_line("STİL katman=YAPI tip=yazi-isaretci alan=taks alan_tipi=metin "
+              .execute_line("STİL katman=YAPI tip=yazi-isaretci alan=taks:yazi:metin "
                             "birim=zemin kaydirma=2500 boyut=3000",
                             Origin::Test)
               .ok());
@@ -263,8 +263,8 @@ TEST_CASE("SEMBOL PARAMETRESİ: alan bildiren yazı katmanı sütunu da tanımla
 
     const core::Symbol& symbol = rig.doc.styles().symbol_at(layer->style);
     REQUIRE_EQ(symbol.layers.size(), std::size_t{1});
-    CHECK_EQ(symbol.layers.front().field, std::string("taks"));
-    CHECK(symbol.layers.front().field_type == core::AttrType::Text);
+    CHECK_EQ(symbol.layers.front().bindings.front().field, std::string("taks"));
+    CHECK(symbol.layers.front().bindings.front().type == core::AttrType::Text);
 
     // A SLOT DRAWS NOTHING, and that is the whole of its frame-path cost. R29
     // forbids reading an attribute column at frame time and P7 forbids evaluating
@@ -276,23 +276,223 @@ TEST_CASE("SEMBOL PARAMETRESİ: alan bildiren yazı katmanı sütunu da tanımla
     // column drops the word, because a fixed caption left on a layer the user just
     // parameterised would draw the same thing on every object.
     CHECK(rig.bus
-              .execute_line("STİL katman=YAPI tip=yazi-isaretci yazi=TAKS alan=kaks "
-                            "alan_tipi=metin birim=zemin",
+              .execute_line("STİL katman=YAPI tip=yazi-isaretci yazi=TAKS alan=kaks:yazi:metin "
+                            "birim=zemin",
                             Origin::Test)
               .ok());
     const core::Layer* after = rig.doc.layer(rig.doc.find_layer("YAPI"));
     REQUIRE(after != nullptr);
     const core::Symbol& second = rig.doc.styles().symbol_at(after->style);
     REQUIRE_EQ(second.layers.size(), std::size_t{1});
-    CHECK_EQ(second.layers.front().field, std::string("kaks"));
+    CHECK_EQ(second.layers.front().bindings.front().field, std::string("kaks"));
     CHECK(second.layers.front().text.empty());
 
     // An unknown type is refused by name rather than silently taken as text.
     std::string said;
     rig.bus.on_echo = [&said](std::string_view s) { said.append(s); };
-    (void)rig.bus.execute_line("STİL katman=YAPI tip=yazi-isaretci alan=x alan_tipi=zart",
-                               Origin::Test);
+    (void)rig.bus.execute_line("STİL katman=YAPI tip=yazi-isaretci alan=x:yazi:zart", Origin::Test);
     CHECK(said.find("Bilinmeyen alan türü") != std::string::npos);
+}
+
+TEST_CASE("SEMBOL PARAMETRESİ: nesnenin sütunu bir özelliği sürüyor")
+{
+    // QGIS calls this a data-defined override and evaluates it at RENDER time.
+    // This product cannot (R29, P7), and R14 says what to do instead: a renderer
+    // is a COMMAND that writes the style column. The frame path still reads one
+    // u32 and knows nothing about the column.
+    Rig rig;
+    CHECK(rig.bus.execute_line("SÜTUN kat tam_sayi", Origin::Test).ok());
+    CHECK(rig.bus.execute_line("KATMAN ad=BINA", Origin::Test).ok());
+    CHECK(rig.bus.execute_line("ALAN noktalar=0,0 12,0 12,12 0,12", Origin::Test).ok());
+    CHECK(rig.bus.execute_line("ALAN noktalar=16,0 28,0 28,12 16,12", Origin::Test).ok());
+    CHECK(rig.bus.execute_line("ALAN noktalar=32,0 44,0 44,12 32,12", Origin::Test).ok());
+
+    // Two objects share a value, the third differs: that is what the interning
+    // claim is about.
+    CHECK(rig.bus.execute_line("ÖZNİTELİK ad=kat nesne=1 deger=200", Origin::Test).ok());
+    CHECK(rig.bus.execute_line("ÖZNİTELİK ad=kat nesne=2 deger=900", Origin::Test).ok());
+    CHECK(rig.bus.execute_line("ÖZNİTELİK ad=kat nesne=3 deger=200", Origin::Test).ok());
+
+    CHECK(rig.bus.execute_line("STİL katman=BINA tip=cizgi alan=kat:kalinlik", Origin::Test).ok());
+
+    const core::StyleId a = rig.doc.entities().style[0];
+    const core::StyleId b = rig.doc.entities().style[1];
+    const core::StyleId c = rig.doc.entities().style[2];
+
+    // ONE ENTRY PER CLASS, NOT PER OBJECT. The style table is interned so that
+    // five million parcels collapse onto a handful of appearances (R13); a driven
+    // property that produced one entry per object would undo that in one command.
+    CHECK_EQ(a, c);
+    CHECK(a != b);
+
+    REQUIRE(rig.doc.styles().contains(a));
+    REQUIRE(rig.doc.styles().contains(b));
+    CHECK_EQ(rig.doc.styles().symbol_at(a).layers.front().look.width_um, 200);
+    CHECK_EQ(rig.doc.styles().symbol_at(b).layers.front().look.width_um, 900);
+
+    // AN EMPTY CELL KEEPS THE LAYER'S OWN VALUE. A parcel whose storey count has
+    // not been entered is not a parcel with zero storeys, and painting it as one
+    // would be the drawing inventing a fact.
+    CHECK(rig.bus.execute_line("ALAN noktalar=48,0 60,0 60,12 48,12", Origin::Test).ok());
+    CHECK(
+        rig.bus
+            .execute_line("STİL katman=BINA tip=cizgi kalinlik=700 alan=kat:kalinlik", Origin::Test)
+            .ok());
+    const core::StyleId blank = rig.doc.entities().style[3];
+    REQUIRE(rig.doc.styles().contains(blank));
+    CHECK_EQ(rig.doc.styles().symbol_at(blank).layers.front().look.width_um, 700);
+}
+
+TEST_CASE("SEMBOL PARAMETRESİ: sürülen özellik önce karar verir, sonra yazar")
+{
+    Rig rig;
+    std::string said;
+    rig.bus.on_echo = [&said](std::string_view t) { said.append(t).append("\n"); };
+
+    CHECK(rig.bus.execute_line("SÜTUN nitelik metin", Origin::Test).ok());
+    CHECK(rig.bus.execute_line("KATMAN ad=BINA", Origin::Test).ok());
+    CHECK(rig.bus.execute_line("ALAN noktalar=0,0 12,0 12,12 0,12", Origin::Test).ok());
+    CHECK(rig.bus.execute_line("ÖZNİTELİK ad=nitelik nesne=1 deger=Tarla", Origin::Test).ok());
+
+    const std::uint64_t before = rig.doc.content_hash();
+
+    // A WORD WHERE A NUMBER BELONGS leaves the drawing untouched rather than half
+    // restyled: every cell is read before the first intern (Article 1.6).
+    auto refused = rig.bus.execute_line("STİL katman=BINA tip=cizgi alan=nitelik:kalinlik:metin",
+                                        Origin::Test);
+    REQUIRE(!refused.ok());
+    CHECK(refused.error().message.find("süremiyor") != std::string::npos);
+    CHECK_EQ(rig.doc.content_hash(), before);
+
+    // A COLOUR IS THE ONE THAT IS NOT ALWAYS A NUMBER: `#RRGGBB` is what a person
+    // types, and it goes through the same parser the rest of the command uses.
+    CHECK(
+        rig.bus.execute_line("ÖZNİTELİK ad=nitelik nesne=1 deger=\"#112233\"", Origin::Test).ok());
+    CHECK(rig.bus.execute_line("STİL katman=BINA tip=cizgi alan=nitelik:renk:metin", Origin::Test)
+              .ok());
+    const core::StyleId painted = rig.doc.entities().style[0];
+    REQUIRE(rig.doc.styles().contains(painted));
+    CHECK_EQ(rig.doc.styles().symbol_at(painted).layers.front().look.rgba, 0xFF112233u);
+
+    // Both halves of the pair are required, and an unknown property is named
+    // rather than quietly ignored.
+    // A malformed token is named rather than quietly ignored, and so is a word
+    // that resolves to no property.
+    said.clear();
+    (void)rig.bus.execute_line("STİL katman=BINA tip=cizgi alan=nitelik:zart", Origin::Test);
+    CHECK(said.find("Bilinmeyen özellik") != std::string::npos);
+
+    said.clear();
+    (void)rig.bus.execute_line("STİL katman=BINA tip=cizgi alan=a:b:c:d", Origin::Test);
+    CHECK(said.find("'alan' biçimi") != std::string::npos);
+}
+
+TEST_CASE("SEMBOL PARAMETRESİ: bir katmanda istenildiği kadar, istenilen tipte")
+{
+    // THE POINT OF THE LIST. A symbol has as many parameters as its author wants,
+    // of whatever types the drawing declares — not one, and not only text. Here
+    // one line layer takes its colour from a text column, its width from an
+    // integer one and its angle from a third, all at once.
+    Rig rig;
+    CHECK(rig.bus.execute_line("KATMAN ad=BINA", Origin::Test).ok());
+    CHECK(rig.bus.execute_line("ALAN noktalar=0,0 12,0 12,12 0,12", Origin::Test).ok());
+    CHECK(rig.bus.execute_line("ALAN noktalar=16,0 28,0 28,12 16,12", Origin::Test).ok());
+
+    // EVERY COLUMN DECLARED BY THE SAME COMMAND, each with the type its token
+    // asked for. None of them existed a line ago.
+    CHECK(rig.bus
+              .execute_line("STİL katman=BINA tip=cizgi "
+                            "alan=\"fonksiyon:renk:metin, kat:kalinlik:tam_sayi, yon:aci\"",
+                            Origin::Test)
+              .ok());
+
+    REQUIRE(rig.doc.attributes().find("fonksiyon") != core::kNoAttr);
+    REQUIRE(rig.doc.attributes().find("kat") != core::kNoAttr);
+    REQUIRE(rig.doc.attributes().find("yon") != core::kNoAttr);
+
+    // The type rode in the token: a colour column is text, the other two are
+    // integers because a property that lands in a number wants one.
+    CHECK(rig.doc.attributes().column(rig.doc.attributes().find("fonksiyon"))->spec().type ==
+          core::AttrType::Text);
+    CHECK(rig.doc.attributes().column(rig.doc.attributes().find("kat"))->spec().type ==
+          core::AttrType::Int64);
+    CHECK(rig.doc.attributes().column(rig.doc.attributes().find("yon"))->spec().type ==
+          core::AttrType::Int64);
+
+    const core::Layer* record = rig.doc.layer(rig.doc.find_layer("BINA"));
+    REQUIRE(record != nullptr);
+
+    // Three parameters on ONE layer, in the order they were written.
+    for (core::EntityId e = 0; e < rig.doc.entities().size(); ++e) {
+        if (!rig.doc.alive(e)) continue;
+        const core::StyleId id = rig.doc.entities().style[e];
+        if (!rig.doc.styles().contains(id)) continue;
+        const core::Symbol& sym = rig.doc.styles().symbol_at(id);
+        REQUIRE_EQ(sym.layers.size(), std::size_t{1});
+        REQUIRE_EQ(sym.layers.front().bindings.size(), std::size_t{3});
+        CHECK(sym.layers.front().bindings[0].what == core::SymbolProperty::Colour);
+        CHECK(sym.layers.front().bindings[1].what == core::SymbolProperty::Width);
+        CHECK(sym.layers.front().bindings[2].what == core::SymbolProperty::Angle);
+        break;
+    }
+
+    // AND ALL THREE DRIVE AT ONCE. One object carries values for every parameter;
+    // the other carries none, so it keeps the layer's own look and the two do not
+    // share a style.
+    CHECK(rig.bus.execute_line("ÖZNİTELİK ad=fonksiyon nesne=1 deger=\"#112233\"", Origin::Test)
+              .ok());
+    CHECK(rig.bus.execute_line("ÖZNİTELİK ad=kat nesne=1 deger=900", Origin::Test).ok());
+    CHECK(rig.bus.execute_line("ÖZNİTELİK ad=yon nesne=1 deger=45000000", Origin::Test).ok());
+    CHECK(rig.bus
+              .execute_line("STİL katman=BINA tip=cizgi "
+                            "alan=\"fonksiyon:renk:metin, kat:kalinlik:tam_sayi, yon:aci\"",
+                            Origin::Test)
+              .ok());
+
+    const core::StyleId filled = rig.doc.entities().style[0];
+    const core::StyleId bare   = rig.doc.entities().style[1];
+    CHECK(filled != bare);
+
+    REQUIRE(rig.doc.styles().contains(filled));
+    const core::SymbolLayer& drawn = rig.doc.styles().symbol_at(filled).layers.front();
+    CHECK_EQ(drawn.look.rgba, 0xFF112233u);
+    CHECK_EQ(drawn.look.width_um, 900);
+    CHECK_EQ(drawn.angle_udeg, 45000000);
+}
+
+TEST_CASE("SEMBOL PARAMETRESİ: 256 sınıfın üstü reddediliyor")
+{
+    // R17's ceiling, and it is a ceiling rather than a warning: a property driven
+    // by parcel number would put one style-table entry per parcel and undo the
+    // interning the whole model rests on.
+    Rig rig;
+    CHECK(rig.bus.execute_line("SÜTUN kat tam_sayi", Origin::Test).ok());
+    CHECK(rig.bus.execute_line("KATMAN ad=BINA", Origin::Test).ok());
+
+    for (int i = 0; i < 300; ++i) {
+        const int x = i * 20;
+        CHECK(rig.bus
+                  .execute_line("ALAN noktalar=" + std::to_string(x) + ",0 " +
+                                    std::to_string(x + 10) + ",0 " + std::to_string(x + 10) +
+                                    ",10 " + std::to_string(x) + ",10",
+                                Origin::Test)
+                  .ok());
+        CHECK(rig.bus
+                  .execute_line("ÖZNİTELİK ad=kat nesne=" + std::to_string(i + 1) +
+                                    " deger=" + std::to_string(100 + i),
+                                Origin::Test)
+                  .ok());
+    }
+
+    const std::uint64_t before = rig.doc.content_hash();
+    auto refused =
+        rig.bus.execute_line("STİL katman=BINA tip=cizgi alan=kat:kalinlik", Origin::Test);
+    REQUIRE(!refused.ok());
+    CHECK(refused.error().message.find("300 ayrı bileşim") != std::string::npos);
+    CHECK(refused.error().message.find("256") != std::string::npos);
+
+    // Refused means NOTHING was written, not "written and then complained about".
+    CHECK_EQ(rig.doc.content_hash(), before);
 }
 
 TEST_CASE("SEMBOL PARAMETRESİ: ETİKET sembolün slotlarını doldurur")
@@ -304,13 +504,13 @@ TEST_CASE("SEMBOL PARAMETRESİ: ETİKET sembolün slotlarını doldurur")
     Rig rig;
     CHECK(rig.bus.execute_line("KATMAN ad=YAPI", Origin::Test).ok());
     CHECK(rig.bus
-              .execute_line("STİL katman=YAPI tip=yazi-isaretci alan=taks alan_tipi=metin "
+              .execute_line("STİL katman=YAPI tip=yazi-isaretci alan=taks:yazi:metin "
                             "birim=zemin kaydirma=2500 boyut=3000",
                             Origin::Test)
               .ok());
     CHECK(rig.bus
               .execute_line("STİL katman=YAPI tip=yazi-isaretci ekle=evet alan=kaks "
-                            "alan_tipi=metin birim=zemin kaydirma=-2500 boyut=3000",
+                            "birim=zemin kaydirma=-2500 boyut=3000",
                             Origin::Test)
               .ok());
     CHECK(rig.bus.execute_line("ALAN noktalar=0,0 20,0 20,20 0,20", Origin::Test).ok());
@@ -369,7 +569,7 @@ TEST_CASE("SEMBOL PARAMETRESİ: zemin olmayan ölçü reddedilir, tahmin edilmez
     Rig rig;
     CHECK(rig.bus.execute_line("KATMAN ad=YAPI", Origin::Test).ok());
     CHECK(rig.bus
-              .execute_line("STİL katman=YAPI tip=yazi-isaretci alan=taks alan_tipi=metin "
+              .execute_line("STİL katman=YAPI tip=yazi-isaretci alan=taks:yazi:metin "
                             "birim=kagit kaydirma=2500",
                             Origin::Test)
               .ok());

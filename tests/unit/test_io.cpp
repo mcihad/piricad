@@ -1900,7 +1900,7 @@ TEST_CASE("IO: sembolün alan slotu dosyayla gidip geliyor")
     Rig rig;
     REQUIRE(rig.bus.execute_line("KATMAN YAPI", Origin::Test).ok());
     REQUIRE(rig.bus
-                .execute_line("STİL katman=YAPI tip=yazi-isaretci alan=taks alan_tipi=metin "
+                .execute_line("STİL katman=YAPI tip=yazi-isaretci alan=taks:yazi:metin "
                               "birim=zemin kaydirma=2500 boyut=3000",
                               Origin::Test)
                 .ok());
@@ -1911,7 +1911,7 @@ TEST_CASE("IO: sembolün alan slotu dosyayla gidip geliyor")
     REQUIRE(record != nullptr);
     const core::Symbol before = rig.doc.styles().symbol_at(record->style);
     REQUIRE_EQ(before.layers.size(), std::size_t{1});
-    CHECK_EQ(before.layers.front().field, std::string("taks"));
+    CHECK_EQ(before.layers.front().bindings.front().field, std::string("taks"));
 
     const std::uint64_t hash = rig.doc.content_hash();
     REQUIRE(rig.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
@@ -1930,8 +1930,8 @@ TEST_CASE("IO: sembolün alan slotu dosyayla gidip geliyor")
     REQUIRE(after_record != nullptr);
     const core::Symbol after = reloaded.doc.styles().symbol_at(after_record->style);
     CHECK(after == before);
-    CHECK_EQ(after.layers.front().field, std::string("taks"));
-    CHECK(after.layers.front().field_type == core::AttrType::Text);
+    CHECK_EQ(after.layers.front().bindings.front().field, std::string("taks"));
+    CHECK(after.layers.front().bindings.front().type == core::AttrType::Text);
 }
 
 TEST_CASE("IO: boş katmanın varsayılan sembolü dosyayla gidip geliyor")

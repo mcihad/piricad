@@ -35,6 +35,11 @@ probe "qsb (GPU canvas)" \
        done
        command -v qsb || command -v qsb6" \
       "QRhi backend unavailable; QPainter is used"
+# The two halves the text atlas needs. Named separately because either one alone
+# turns the option OFF, and a report that said only "text: MISSING" would leave
+# the reader guessing which package to install.
+probe "FreeType (yazı)"  "pkg-config --modversion freetype2"   "NO CAPTIONS ARE DRAWN on the GPU canvas"
+probe "HarfBuzz (yazı)"  "pkg-config --modversion harfbuzz"    "NO CAPTIONS ARE DRAWN on the GPU canvas"
 probe "GDAL"             "gdal-config --version"               "no format I/O"
 probe "PROJ"             "pkg-config --modversion proj"        "no coordinate transformation"
 probe "GEOS"             "geos-config --version"               "no overlay operations"

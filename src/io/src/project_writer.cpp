@@ -290,8 +290,10 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     std::vector<std::uint8_t> symbol_layer_flags;
     std::vector<std::uint32_t> symbol_layer_text;
     std::vector<std::int32_t> symbol_layer_phase;
-    std::vector<std::uint32_t> symbol_layer_field;
-    std::vector<std::uint8_t> symbol_layer_field_type;
+    std::vector<std::uint16_t> bind_count;
+    std::vector<std::uint32_t> bind_field;
+    std::vector<std::uint8_t> bind_what;
+    std::vector<std::uint8_t> bind_type;
     bool any_field = false;
     symbols.reserve(doc.styles().size());
 
@@ -331,9 +333,13 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
             symbol_layer_flags.push_back(
                 static_cast<std::uint8_t>((l.enabled ? 1u : 0u) | (l.colour_locked ? 2u : 0u)));
             symbol_layer_text.push_back(pool.intern(l.text));
-            symbol_layer_field.push_back(pool.intern(l.field));
-            symbol_layer_field_type.push_back(static_cast<std::uint8_t>(l.field_type));
-            any_field = any_field || !l.field.empty();
+            bind_count.push_back(static_cast<std::uint16_t>(l.bindings.size()));
+            for (const core::SymbolBinding& b : l.bindings) {
+                bind_field.push_back(pool.intern(b.field));
+                bind_what.push_back(static_cast<std::uint8_t>(b.what));
+                bind_type.push_back(static_cast<std::uint8_t>(b.type));
+            }
+            any_field = any_field || !l.bindings.empty();
         }
     }
 
@@ -509,16 +515,15 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
                     [](std::int32_t v) { return v != 0; }))
         blocks.push_back(column(kBlkSymbolLayerPhase, symbol_layer_phase));
 
-    // AND THE SAME BARGAIN FOR THE SLOTS. A drawing whose symbols carry no
-    // parameter writes neither block, so its file is byte for byte the one it was
+    // AND THE SAME BARGAIN FOR THE PARAMETERS. A drawing whose symbols declare
+    // none writes no block at all, so its file is byte for byte the one it was
     // before parameters existed — which is what keeps `tests/golden` honest about
     // what a change actually changed.
-    //
-    // The EMPTY string interns to a real index rather than to nothing, so the
-    // test is the field's own emptiness and not the index's value.
     if (any_field) {
-        blocks.push_back(column(kBlkSymbolLayerField, symbol_layer_field));
-        blocks.push_back(column(kBlkSymbolLayerFieldType, symbol_layer_field_type));
+        blocks.push_back(column(kBlkSymbolLayerBindCount, bind_count));
+        blocks.push_back(column(kBlkSymbolLayerBindField, bind_field));
+        blocks.push_back(column(kBlkSymbolLayerBindWhat, bind_what));
+        blocks.push_back(column(kBlkSymbolLayerBindType, bind_type));
     }
     blocks.push_back(column(kBlkImages, images));
     blocks.push_back(column(kBlkImageBytes, image_bytes));

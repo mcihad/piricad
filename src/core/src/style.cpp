@@ -263,16 +263,52 @@ std::uint64_t fold_symbol(const Symbol& sym, std::uint64_t seed)
         h = fold_measure(l.phase, h);
         h = fnv1a(l.text, h);
 
-        // The slot folds too, and it has to: a symbol that prints `taks` and one
-        // that prints `kaks` from the same circle are two symbols, and interning
-        // them together would make one parcel's figure appear on another's.
-        h = fnv1a(l.field, h);
-        h = fnv1a_int(static_cast<std::int64_t>(l.field_type), h);
+        // The parameters fold too, in order, and they have to: a symbol that takes
+        // its figure from `taks` and one that takes it from `kaks` are two
+        // symbols, and interning them together would make one parcel's number
+        // appear on another's.
+        h = fnv1a_int(static_cast<std::int64_t>(l.bindings.size()), h);
+        for (const SymbolBinding& b : l.bindings) {
+            h = fnv1a(b.field, h);
+            h = fnv1a_int(static_cast<std::int64_t>(b.what), h);
+            h = fnv1a_int(static_cast<std::int64_t>(b.type), h);
+        }
         h = fold_appearance(l.look, h);
     }
     h = fnv1a_int(static_cast<std::int64_t>(sym.min_scale), h);
     h = fnv1a_int(static_cast<std::int64_t>(sym.max_scale), h);
     return h;
+}
+
+const char* symbol_property_name(SymbolProperty p) noexcept
+{
+    switch (p) {
+    case SymbolProperty::Text: return "yazi";
+    case SymbolProperty::Colour: return "renk";
+    case SymbolProperty::Fill: return "dolgu";
+    case SymbolProperty::Width: return "kalinlik";
+    case SymbolProperty::Size: return "boyut";
+    case SymbolProperty::Angle: return "aci";
+    case SymbolProperty::Opacity: return "saydamlik";
+    }
+    return "?";
+}
+
+std::optional<SymbolProperty> symbol_property_from_name(std::string_view word)
+{
+    // Folded, so `KALINLIK` and `kalınlık` are the same word (CLAUDE.md 5.6). The
+    // dotted and dotless spellings both appear because a user types one and a
+    // script writes the other.
+    if (turkish_iequals(word, "yazi") || turkish_iequals(word, "yazı")) return SymbolProperty::Text;
+    if (turkish_iequals(word, "renk")) return SymbolProperty::Colour;
+    if (turkish_iequals(word, "dolgu")) return SymbolProperty::Fill;
+    if (turkish_iequals(word, "kalinlik") || turkish_iequals(word, "kalınlık"))
+        return SymbolProperty::Width;
+    if (turkish_iequals(word, "boyut")) return SymbolProperty::Size;
+    if (turkish_iequals(word, "aci") || turkish_iequals(word, "açı")) return SymbolProperty::Angle;
+    if (turkish_iequals(word, "saydamlik") || turkish_iequals(word, "saydamlık"))
+        return SymbolProperty::Opacity;
+    return std::nullopt;
 }
 
 std::size_t StyleTable::SymbolHash::operator()(const Symbol& s) const noexcept

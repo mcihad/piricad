@@ -33,8 +33,8 @@ sormaz: sembol neyin, nereye ve hangi boyda yazılacağını zaten söylüyordur
 
 ```
 KATMAN ad=YAPI
-STİL katman=YAPI tip=yazi-isaretci alan=taks alan_tipi=metin birim=zemin kaydirma=2500 boyut=3000
-STİL katman=YAPI ekle=evet tip=yazi-isaretci alan=kaks alan_tipi=metin birim=zemin kaydirma=-2500 boyut=3000
+STİL katman=YAPI tip=yazi-isaretci alan=taks:yazi:metin birim=zemin kaydirma=2500 boyut=3000
+STİL katman=YAPI ekle=evet tip=yazi-isaretci alan=kaks:yazi:metin birim=zemin kaydirma=-2500 boyut=3000
 ALAN noktalar=485300,4310200 485320,4310200 485320,4310220 485300,4310220
 ÖZNİTELİK ad=taks nesne=1 deger="0.40"
 ÖZNİTELİK ad=kaks nesne=1 deger="1.20"

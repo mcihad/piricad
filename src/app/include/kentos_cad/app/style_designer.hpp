@@ -310,10 +310,9 @@ private:
     QSpinBox* opacity_{nullptr};
     QLineEdit* text_{nullptr};
 
-    /// The attribute column a text layer reads instead of carrying a word, and
-    /// what that column holds. A layer is a caption OR a slot, never both.
+    /// The parameters this layer takes from the object, as one line in the same
+    /// syntax `STİL alan=` reads: `sütun[:özellik[:tür]]`, comma separated.
     QLineEdit* field_{nullptr};
-    QComboBox* fieldType_{nullptr};
     QComboBox* sizeUnit_{nullptr};
     QComboBox* intervalUnit_{nullptr};
     QComboBox* spacingYUnit_{nullptr};

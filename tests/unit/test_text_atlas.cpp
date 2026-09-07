@@ -11,6 +11,37 @@
 // in it.
 #include "kentos_test.hpp"
 
+#include "kentos_cad/render/backend.hpp"
+
+#include <string>
+
+using namespace kentos;
+
+TEST_CASE("TEXT: yazısız bir yapı bunu söylüyor")
+{
+    // THE DEFECT THIS LOCKS. The SDF atlas is optional and the QRhi canvas's whole
+    // text path is compiled out with it, so a build without it opens a plan sheet
+    // correctly, at full speed, and silently without the 13 112 captions on it.
+    // Nothing is broken, nothing is slow, and what the user came for is not there
+    // — which is exactly the shape that gets reported as "the import lost my
+    // labels" rather than as a missing package.
+    //
+    // Written to hold in BOTH configurations, because the one that matters is the
+    // one this suite is usually not built in.
+#if KENTOS_HAVE_TEXT
+    CHECK(render::text_backend_status().empty());
+#else
+    const std::string said = render::text_backend_status();
+    CHECK_FALSE(said.empty());
+
+    // It names the switch and both packages, because "text is missing" without
+    // them is a fact the reader can do nothing with.
+    CHECK(said.find("KENTOS_WITH_TEXT") != std::string::npos);
+    CHECK(said.find("FreeType") != std::string::npos);
+    CHECK(said.find("HarfBuzz") != std::string::npos);
+#endif
+}
+
 #if KENTOS_HAVE_TEXT
 
 #include "kentos_cad/render/text_atlas.hpp"

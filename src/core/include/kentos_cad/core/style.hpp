@@ -120,6 +120,46 @@ struct Measure
     friend bool operator==(const Measure&, const Measure&) = default;
 };
 
+/// Which property of a symbol layer an object's own column supplies.
+///
+/// QGIS calls this a data-defined override. The list is deliberately the set of
+/// properties a value can be written into WITHOUT inventing a mapping: a number
+/// is a width, an angle, a size or an opacity, and a colour is a colour. What is
+/// NOT here is anything that would need a lookup table to turn a value into an
+/// appearance — that is a classification, it belongs to a catalogue, and the
+/// style command's classifying argument already does it.
+enum class SymbolProperty : std::uint8_t {
+    Text = 0, ///< what a TextMarker writes; filled by `ETİKET`, drawn by nobody
+    Colour,   ///< look.rgba
+    Fill,     ///< look.fill_rgba
+    Width,    ///< look.width_um
+    Size,     ///< size.value, in the layer's own unit
+    Angle,    ///< angle_udeg
+    Opacity,  ///< opacity, 0-255
+};
+
+/// Stable machine name, for a file, a message or a test.
+const char* symbol_property_name(SymbolProperty p) noexcept;
+
+/// The word a user writes for one, or nothing when the word names none.
+std::optional<SymbolProperty> symbol_property_from_name(std::string_view word);
+
+/// One parameter: which column supplies it, which property it lands in, and what
+/// the column should hold.
+///
+/// The TYPE rides along because the SYMBOL is what knows: a gösterim that prints
+/// a ratio wants text, one that drives a width wants an integer, and the drawing
+/// that uses it should not have to guess. It is the same closed set `SÜTUN`
+/// declares — there is no second type system.
+struct SymbolBinding
+{
+    std::string field;                         ///< the attribute column
+    SymbolProperty what{SymbolProperty::Text}; ///< where its value lands
+    AttrType type{AttrType::Text};             ///< what the column should hold
+
+    friend bool operator==(const SymbolBinding&, const SymbolBinding&) = default;
+};
+
 /// What a symbol layer draws — QGIS calls this the symbol layer type.
 ///
 /// The list is the subset of QGIS's that MPYY EK-1 actually needs, and each entry
@@ -324,35 +364,35 @@ struct SymbolLayer
     /// words whenever the table was rebuilt in another order.
     std::string text;
 
-    /// The attribute column a `TextMarker` reads instead of carrying a word.
+    /// What this layer takes from the OBJECT rather than from the symbol.
     ///
-    /// THIS IS THE SYMBOL'S PARAMETER, and naming it as an ATTRIBUTE rather than
-    /// as a thing of its own is the whole design. The regulation's building-
-    /// condition symbol is a circle, a rule, and two ratios that belong to the
-    /// PARCEL. The circle and the rule are the symbol's; the ratios are the
-    /// parcel's. A symbol that stored the figures itself would be a per-entity
-    /// property bag under another name (model.md P12), and it would have to grow
-    /// its own table, its own editor, its own export and its own filter. Held as
-    /// a column (R27), every one of those already exists.
+    /// THE PARAMETER LIST, and it is a list because a symbol has as many
+    /// parameters as its author wants. One marker can take its colour from a
+    /// function code, its size from a floor area and its angle from a bearing;
+    /// one text layer takes its words from a column. Held as one binding each,
+    /// with no ceiling but the drawing's own sense.
     ///
-    /// So a text layer is one of two things and never both: a CAPTION, which
-    /// carries `text` and draws it, or a SLOT, which carries `field` and draws
-    /// NOTHING. The frame path needs no rule for the second case — a slot leaves
-    /// `text` empty and the draw loop's existing `text.empty()` skip is the whole
-    /// implementation. R29 forbids reading an attribute column at frame time, and
-    /// this is how the slot obeys it at zero cost: `ETİKET` fills the slot by
-    /// writing a text ENTITY at the slot's own position, which is what
-    /// `.claude/model.md` R14 means by "a renderer is a command".
-    std::string field;
-
-    /// What that column should hold. Read when the field is declared, ignored
-    /// when it is empty.
+    /// WHY THE VALUE IS AN ATTRIBUTE AND NOT A THING OF ITS OWN. The regulation's
+    /// building-condition symbol is a circle, a rule, and two ratios that belong
+    /// to the PARCEL. A symbol that stored those ratios itself would be a
+    /// per-entity property bag under another name (model.md P12), and it would
+    /// need its own table, editor, export and filter. Held as a column (R27),
+    /// every one of those already exists.
     ///
-    /// The symbol carries the type because the symbol is what knows: a gösterim
-    /// that prints a ratio wants a number, one that prints an ada wants an
-    /// integer, and the drawing that uses it should not have to guess. It is the
-    /// same closed set `SÜTUN` declares — there is no second type system.
-    AttrType field_type{AttrType::Text};
+    /// WHERE EACH KIND IS RESOLVED, and neither is on the frame path (R29, P7):
+    ///
+    ///   * `Text` — by `ETİKET`, which writes a text ENTITY at the layer's own
+    ///     offset. The layer itself draws NOTHING: it leaves `text` empty and the
+    ///     draw loop's existing skip is the whole implementation, so a text
+    ///     binding costs the 16 ms budget nothing at all.
+    ///   * everything else — by `STİL`, which reads the column, substitutes the
+    ///     value and INTERNS the result. Two objects with the same value share one
+    ///     `StyleId`, so the table holds one entry per class and not one per
+    ///     object (R13), and R17 caps the classes.
+    ///
+    /// Both are `model.md` R14's rule in the same words: a renderer is a command
+    /// that writes the style column, never a frame-time evaluation.
+    std::vector<SymbolBinding> bindings;
 
     /// The picture a raster type draws, as an index into the document's
     /// `ImageStore`. `kNoImage` for every other type.

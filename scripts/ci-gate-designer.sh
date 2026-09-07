@@ -36,19 +36,23 @@ checks=(
     "size_px|sized|MarkerLine HashLine PointPatternFill CentroidFill SimpleMarker RasterFill RasterMarker RasterLine TextMarker"
 )
 
-# AND ONE PROPERTY NO RENDERER READS, on purpose.
+# AND ONE LIST NO RENDERER READS, on purpose.
 #
-# A `yazi-isaretci` layer's `field` names the attribute column the layer stands
-# for. The DRAW PATH never reads it — model.md R29 forbids reading an attribute
-# column at frame time, and a slot obeys by drawing nothing — but `ETİKET` reads
-# it to decide what to write and where. So the drift this guards is the same one
-# in a different reader: a designer that stops offering the row leaves a property
-# the command reads unreachable from the dialog, which is a symbol parameter that
-# can only be declared by typing.
-if ! grep -q 'addProperty(form, nullptr, tr("Alan"), field_, fieldType_, {T::TextMarker})' \
+# A symbol layer's `bindings` name the attribute columns the layer takes from the
+# object. The DRAW PATH never reads them — model.md R29 forbids reading an
+# attribute column at frame time, and a text binding obeys by drawing nothing —
+# but `ETİKET` reads the text ones and the style command reads the rest. So the
+# drift this guards is the same one in a different reader: a designer that stops
+# offering the row leaves a property those commands read unreachable from the
+# dialog, which is a symbol parameter that can only be declared by typing.
+#
+# EVERY TYPE, not just the text one: a marker takes its colour from a column as
+# readily as a caption takes its words, so the row is offered wherever a symbol
+# layer can be drawn at all.
+if ! grep -q 'addProperty(form, nullptr, tr("Parametreler"), field_, nullptr, everything)' \
         "$designer"; then
-    echo "designer: TextMarker's 'field' is read by ETİKET but the dialog offers no row" >&2
-    echo "designer:   for it -> ${designer#$root/}:1" >&2
+    echo "designer: symbol parameters are read by ETİKET and STİL but the dialog offers" >&2
+    echo "designer:   no row for them -> ${designer#$root/}:1" >&2
     fail=1
 fi
 

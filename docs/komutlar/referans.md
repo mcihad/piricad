@@ -617,8 +617,7 @@ Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden
 | `saydamlik` | integer | isteğe bağlı | Katman saydamlığı 0-255; 255 tam opak |
 | `desen` | text | isteğe bağlı | Çizgi tipi: sürekli, ya da çizgi kalınlığının katı olarak çizgi/boşluk uzunlukları — '8 1 1 1' gibi (kesik-nokta) |
 | `yazi` | text | isteğe bağlı | yazi-isaretci katmanının yazdığı sabit metin |
-| `alan` | text | isteğe bağlı | yazi-isaretci katmanının okuyacağı öznitelik sütunu; yoksa tanımlanır |
-| `alan_tipi` | text | isteğe bağlı | alan= sütununun türü: tam_sayi, uzunluk, evet_hayir, metin, kod |
+| `alan` | text | isteğe bağlı | Nesneden alınacak parametreler, virgülle: sütun[:özellik[:tür]] — 'kod:yazi:metin, kat:kalinlik'. Sütun yoksa tanımlanır |
 
 Ayrıntılı kullanım: [STİL](style.md)
 
@@ -2687,15 +2686,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "min": 0,
           "max": 1,
           "required": false,
-          "help": "yazi-isaretci katmanının okuyacağı öznitelik sütunu; yoksa tanımlanır"
-        },
-        {
-          "name": "alan_tipi",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "alan= sütununun türü: tam_sayi, uzunluk, evet_hayir, metin, kod"
+          "help": "Nesneden alınacak parametreler, virgülle: sütun[:özellik[:tür]] — 'kod:yazi:metin, kat:kalinlik'. Sütun yoksa tanımlanır"
         }
       ],
       "flags": [

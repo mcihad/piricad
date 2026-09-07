@@ -109,4 +109,15 @@ public:
 /// Phase-0 deviation is visible rather than silent.
 std::string gpu_backend_status();
 
+/// Empty when the SDF text atlas is compiled in, and an actionable line when it
+/// is not.
+///
+/// WHY IT IS ITS OWN LINE. `KENTOS_WITH_TEXT` is optional and the QRhi canvas's
+/// entire text path lives behind it, so a build without it draws a plan sheet
+/// correctly and at full speed while silently omitting every caption on it. That
+/// is the worst shape a missing option can take: nothing is wrong, nothing is
+/// slow, and the numbers a surveyor came for are simply not there. The shell
+/// prints this at start-up beside the canvas backend's own status.
+std::string text_backend_status();
+
 } // namespace kentos::render
