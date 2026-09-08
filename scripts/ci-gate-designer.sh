@@ -36,23 +36,32 @@ checks=(
     "size_px|sized|MarkerLine HashLine PointPatternFill CentroidFill SimpleMarker RasterFill RasterMarker RasterLine TextMarker"
 )
 
-# AND ONE LIST NO RENDERER READS, on purpose.
+# THE SYMBOL PARAMETERS, AND WHAT IS BEING GUARDED NOW.
 #
 # A symbol layer's `bindings` name the attribute columns the layer takes from the
-# object. The DRAW PATH never reads them — model.md R29 forbids reading an
-# attribute column at frame time, and a text binding obeys by drawing nothing —
-# but `ETİKET` reads the text ones and the style command reads the rest. So the
-# drift this guards is the same one in a different reader: a designer that stops
-# offering the row leaves a property those commands read unreachable from the
-# dialog, which is a symbol parameter that can only be declared by typing.
+# object. This gate used to require a ROW for them in the dialog. That row has
+# been removed on purpose: it wrote the bindings into the in-memory symbol and
+# the preview redrew, but `applyToDocument` emits one `STİL` per symbol layer and
+# never emitted `alan=` — so the parameters reached the preview and never reached
+# the document. A control that reports success and changes nothing is worse than
+# no control, and a colon-separated line was a programmer's answer to a
+# plan-maker's question besides. The replacement is being designed.
 #
-# EVERY TYPE, not just the text one: a marker takes its colour from a column as
-# readily as a caption takes its words, so the row is offered wherever a symbol
-# layer can be drawn at all.
-if ! grep -q 'addProperty(form, nullptr, tr("Parametreler"), field_, nullptr, everything)' \
-        "$designer"; then
-    echo "designer: symbol parameters are read by ETİKET and STİL but the dialog offers" >&2
-    echo "designer:   no row for them -> ${designer#$root/}:1" >&2
+# So what is guarded is the other half, and it is the half that matters: the
+# CAPABILITY must still exist while the dialog has no row for it. `STİL` declares
+# `alan`, `ETİKET` reads the text bindings, and the document model carries them.
+# If any of those goes, the feature has been deleted rather than postponed — and
+# a postponed row with no command behind it is just a deletion nobody announced.
+declares_alan="$root/src/command/src/commands/style.cpp"
+if ! grep -q '"alan"' "$declares_alan"; then
+    echo "designer: the parameter row was removed from the dialog on the promise that" >&2
+    echo "designer:   STİL alan= still declares symbol parameters, and it no longer does" >&2
+    echo "designer:   -> ${declares_alan#$root/}:1" >&2
+    fail=1
+fi
+
+if ! grep -q 'bindings' "$root/src/core/include/kentos_cad/core/style.hpp"; then
+    echo "designer: SymbolLayer no longer carries bindings -> src/core/include/kentos_cad/core/style.hpp:1" >&2
     fail=1
 fi
 

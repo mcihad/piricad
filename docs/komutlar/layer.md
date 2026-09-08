@@ -147,7 +147,7 @@ yanında renk kutucuğu, katmanın adı, sağda nesne sayısı ve **kilit**.
 | **Göz** simgesine tek tık | Görünürlüğü ters çevirir |
 | **Kilit** simgesine tek tık | Kilidi ters çevirir |
 | Satıra çift tık | O katmanı **aktif** yapar |
-| Satıra sağ tık | Katman menüsü: **Tümünü seç**, **Öznitelik tablosu**, aktif yap, stili düzenle, gruba taşı… |
+| Satıra sağ tık | Katman menüsü: **Tümünü seç**, **Öznitelik tablosu**, aktif yap, gruba taşı… ve en altta **Katman Özellikleri…** |
 
 **Tümünü seç**, o katmandaki bütün nesneleri seçer — çalıştırdığı satır
 [`SEÇ mod=KATMAN katman="..."`](select.md) satırıdır.

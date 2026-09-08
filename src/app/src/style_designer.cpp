@@ -27,6 +27,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QMenu>
 #include <QMessageBox>
 #include <QPainter>
 #include <QPixmap>
@@ -54,51 +55,6 @@
 
 namespace kentos::app {
 namespace {
-
-/// A layer's parameters as the one line the dialog edits — and as `STİL alan=`
-/// reads it. Written out in full, type included, so a round trip through the
-/// field cannot quietly change a column's declared type.
-QString bindings_to_text(const std::vector<core::SymbolBinding>& bindings)
-{
-    QStringList parts;
-    parts.reserve(static_cast<qsizetype>(bindings.size()));
-    for (const core::SymbolBinding& b : bindings)
-        parts << QStringLiteral("%1:%2:%3")
-                     .arg(QString::fromStdString(b.field),
-                          QString::fromUtf8(core::symbol_property_name(b.what)),
-                          QString::fromUtf8(core::attr_type_name(b.type)));
-    return parts.join(QStringLiteral(", "));
-}
-
-/// The inverse. A token whose words do not resolve is DROPPED rather than
-/// guessed: the dialog re-reads what it wrote on the next refresh, so a
-/// half-typed parameter simply has no effect until it is finished.
-std::vector<core::SymbolBinding> bindings_from_text(const QString& line)
-{
-    std::vector<core::SymbolBinding> out;
-    for (const QString& token : line.split(QLatin1Char(','), Qt::SkipEmptyParts)) {
-        const QStringList parts = token.trimmed().split(QLatin1Char(':'));
-        if (parts.isEmpty() || parts.front().trimmed().isEmpty()) continue;
-
-        core::SymbolBinding b;
-        b.field = parts.front().trimmed().toStdString();
-
-        if (parts.size() >= 2) {
-            const auto what = core::symbol_property_from_name(parts[1].trimmed().toStdString());
-            if (!what) continue;
-            b.what = *what;
-        }
-        if (parts.size() >= 3) {
-            const auto type = core::attr_type_from_name(parts[2].trimmed().toStdString());
-            if (!type) continue;
-            b.type = *type;
-        } else if (b.what != core::SymbolProperty::Text) {
-            b.type = core::AttrType::Int64;
-        }
-        out.push_back(std::move(b));
-    }
-    return out;
-}
 
 /// How tall the symbol layer stack is allowed to be, in rows.
 constexpr int kStackRowsMin = 3;
@@ -836,13 +792,34 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
         return button;
     };
 
+    // A REAL MENU, and it earned its arrow. `Stil ▾` was a plain button that did
+    // one thing — revert the window — while wearing the mark of a button that
+    // opens a list; and beside it sat a second full-width button for saving to
+    // the library, which is the rarest action in the window taking the most room
+    // in the footer.
+    //
+    // `Stili temizle` moved in here from the layer's context menu, where it was
+    // one of two style entries scattered among `Gizle` and `Gruba taşı…`. It is
+    // the one style action that is not "edit the symbol", so it belongs with the
+    // other things done TO a style rather than in it.
     auto* styleMenu = footerButton(tr("Stil ▾"), false);
-    styleMenu->setToolTip(tr("Katmanın şu an çizdiğine geri döner"));
-    connect(styleMenu, &QPushButton::clicked, this, &StyleDesigner::resetToLayer);
+    auto* actions   = new QMenu(styleMenu);
 
-    auto* save = footerButton(tr("Sembolü kütüphaneye kaydet"), false);
+    QAction* revert = actions->addAction(tr("Katmanın çizdiğine dön"));
+    revert->setToolTip(tr("Bu penceredeki değişiklikleri atar; katmana dokunmaz"));
+    connect(revert, &QAction::triggered, this, &StyleDesigner::resetToLayer);
+
+    QAction* clear = actions->addAction(tr("Stili temizle"));
+    clear->setToolTip(tr("Katmanın stilini siler; nesneler katman görünümüne döner"));
+    connect(clear, &QAction::triggered, this, &StyleDesigner::clearStyle);
+
+    actions->addSeparator();
+
+    QAction* save = actions->addAction(tr("Sembolü kütüphaneye kaydet…"));
     save->setToolTip(tr("Sembolü kendi gösterim paketiniz olarak diske yazar")); // ui-label
-    connect(save, &QPushButton::clicked, this, &StyleDesigner::saveToLibrary);
+    connect(save, &QAction::triggered, this, &StyleDesigner::saveToLibrary);
+
+    styleMenu->setMenu(actions);
 
     auto* cancel = footerButton(tr("İptal"), false);
     connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
@@ -858,7 +835,6 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
 
     QHBoxLayout* bar = footer();
     bar->insertWidget(0, styleMenu);
-    bar->insertWidget(1, save);
     bar->addWidget(cancel);
     bar->addWidget(apply);
     bar->addWidget(ok);
@@ -1765,20 +1741,6 @@ QWidget* StyleDesigner::buildProperties()
     text_->setPlaceholderText(hint);
     connect(text_, &QLineEdit::textEdited, this, [this](const QString&) { applyToSelected(); });
 
-    // THE PARAMETER LIST, IN ONE LINE, and in the SAME syntax `STİL alan=` takes:
-    // `sütun[:özellik[:tür]]`, comma separated. A table editor here would be a
-    // second spelling of the same thing, and a user who learned one would have to
-    // learn the other; a script and this field now say a parameter the same way.
-    field_ = new QLineEdit(box);
-    field_->setPlaceholderText(tr("kod:yazi:metin, kat:kalinlik")); // ui-label
-    field_->setToolTip(tr("Nesneden alınacak parametreler, virgülle ayrılır: "
-                          "sütun:özellik:tür. Özellik yazi, renk, dolgu, kalinlik, "
-                          "boyut, aci ya da saydamlik olabilir."));
-    connect(field_, &QLineEdit::textEdited, this, [this](const QString& typed) {
-        if (!typed.isEmpty() && !text_->text().isEmpty()) text_->clear();
-        applyToSelected();
-    });
-
     sizeUnit_     = unitCombo();
     intervalUnit_ = unitCombo();
     spacingYUnit_ = unitCombo();
@@ -1873,9 +1835,28 @@ QWidget* StyleDesigner::buildProperties()
     // What the layer IS — under KATMAN with the type, no heading of their own.
     addProperty(form, nullptr, tr("Yazı"), text_, nullptr, {T::TextMarker});
 
-    // EVERY TYPE, not just the text one: a marker takes its colour from a column
-    // as readily as a caption takes its words.
-    addProperty(form, nullptr, tr("Parametreler"), field_, nullptr, everything);
+    // NO PARAMETER ROW HERE, and its absence is deliberate. There was one: a
+    // single line in `STİL alan=`'s own syntax, `sütun[:özellik[:tür]]`, comma
+    // separated. Two things were wrong with it.
+    //
+    // It did not work. The row wrote `bindings` into the in-memory symbol and the
+    // preview redrew, but `applyToDocument` emits one `STİL` per symbol layer and
+    // never emitted `alan=` — so the parameters reached the preview and never
+    // reached the document. A control that reports success and changes nothing is
+    // worse than no control.
+    //
+    // And a colon-separated line is a programmer's answer to a plan-maker's
+    // question. Which column, which property it drives, what type it is — that is
+    // a small table with three choosers per row, and it belongs in this window
+    // beside the layer's own attribute schema rather than as a text field the
+    // user has to know a grammar for.
+    //
+    // The capability is untouched: `STİL katman=… alan="kod:yazi:metin"` still
+    // declares them, `ETİKET` still reads the text ones, and a symbol that
+    // carries bindings keeps them through this dialog. Only the row is gone,
+    // pending the design that replaces it. `scripts/ci-gate-designer.sh` holds
+    // the command side to that promise.
+
     addProperty(form, nullptr, tr("Şekil"), shape_, nullptr, markers);
     addProperty(form, nullptr, tr("Yerleşim"), placement_, nullptr, {T::MarkerLine, T::HashLine});
 
@@ -2147,7 +2128,6 @@ void StyleDesigner::loadSelected()
 
         lock_->setChecked(sl.colour_locked);
         text_->setText(QString::fromStdString(sl.text));
-        field_->setText(bindings_to_text(sl.bindings));
         width_->setValue(sl.look.width_um);
         size_->setValue(sl.size.value);
         interval_->setValue(sl.interval.value);
@@ -2299,8 +2279,11 @@ void StyleDesigner::applyToSelected()
     sl.offset    = core::Measure{offset_->value(), pick(kUnits, offsetUnit_)};
     sl.phase     = core::Measure{phase_->value(), pick(kUnits, phaseUnit_)};
 
-    sl.text     = text_->text().toStdString();
-    sl.bindings = bindings_from_text(field_->text());
+    // `sl.bindings` IS DELIBERATELY NOT WRITTEN HERE. The row that edited it is
+    // gone from this dialog (see the note in `buildProperties`), so what the
+    // layer already carries survives a round trip through the window instead of
+    // being cleared by a control that is no longer on screen.
+    sl.text = text_->text().toStdString();
     for (const core::SymbolBinding& b : sl.bindings)
         if (b.what == core::SymbolProperty::Text) sl.text.clear();
     sl.look.width_um  = width_->value();
@@ -2502,6 +2485,31 @@ bool StyleDesigner::applyToDocument()
         return false;
     }
     return true;
+}
+
+void StyleDesigner::clearStyle()
+{
+    if (layerName_.isEmpty()) return;
+
+    QString quoted = layerName_;
+    quoted.replace('\\', QStringLiteral("\\\\"));
+    quoted.replace('"', QStringLiteral("\\\""));
+
+    // THE COMMAND, not a reach into the style column. This window has no private
+    // road to the document and this entry is no exception (Article 1.1, 5.9) —
+    // it sends exactly the line the context menu used to send.
+    auto cleared = controller_.runLineResult(
+        QStringLiteral("STİL katman=\"%1\" sifirla=evet").arg(quoted), command::Origin::Gui);
+    if (!cleared) {
+        QMessageBox::warning(this, tr("Stil temizlenemedi"),
+                             QString::fromStdString(cleared.error().message));
+        return;
+    }
+
+    // And the window follows the document rather than keeping the symbol it was
+    // showing: a dialog that still displays a style the layer no longer has is a
+    // dialog that will write it back on the next Apply.
+    resetToLayer();
 }
 
 void StyleDesigner::saveToLibrary()

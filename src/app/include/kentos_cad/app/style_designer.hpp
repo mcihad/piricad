@@ -172,6 +172,13 @@ private:
     /// Puts the symbol back to what the layer draws right now.
     void resetToLayer();
 
+    /// Clears the layer's style through `STİL sifirla`, then re-reads the layer.
+    ///
+    /// Moved here from the layer's context menu, where it sat beside `Stili
+    /// düzenle…` as the second of two style entries among a list of things that
+    /// are not styles.
+    void clearStyle();
+
     /// Shows where the highlighted gallery entry was published.
     void showProvenance();
 
@@ -310,9 +317,6 @@ private:
     QSpinBox* opacity_{nullptr};
     QLineEdit* text_{nullptr};
 
-    /// The parameters this layer takes from the object, as one line in the same
-    /// syntax `STİL alan=` reads: `sütun[:özellik[:tür]]`, comma separated.
-    QLineEdit* field_{nullptr};
     QComboBox* sizeUnit_{nullptr};
     QComboBox* intervalUnit_{nullptr};
     QComboBox* spacingYUnit_{nullptr};

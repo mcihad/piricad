@@ -80,9 +80,21 @@ bekle() {
 bekle "[katman] Tümünü seç · PARSEL → 2 nesne seçili"
 bekle "[katman] Öznitelik tablosu · PARSEL → 2 satır"
 
+# THE SHAPE OF THE MENU, in order, separators included. Two entries were taken
+# out of it — `Stili düzenle…` and `Stili temizle`, both pieces of the Katman
+# Özellikleri window shown as items in a list beside `Gizle` and `Gruba taşı…` —
+# and one was put in: `Katman Özellikleri…`, last, after a rule, where every
+# desktop program puts the entry that OPENS something rather than doing it.
+#
+# Checked as a whole line rather than entry by entry, because the order is part
+# of the claim: a properties entry in the middle of the list is the thing this
+# replaced.
+bekle "[katman] menü · PARSEL: Yeni katman… | — | Tümünü seç | Öznitelik tablosu | Aktif katman yap | Özniteliklerden etiketle… | — | Gizle | Kilidi aç | — | Gruba taşı… | — | Katman Özellikleri…"
+
 if [[ $fail -ne 0 ]]; then
     exit 1
 fi
 
 echo "katman-menu: OK — sağ tuş menüsü 'Tümünü seç' ve 'Öznitelik tablosu' girişlerini"
-echo "katman-menu:   açtığı katmana bağlıyor: beşin ikisi, her ikisinde de"
+echo "katman-menu:   açtığı katmana bağlıyor: beşin ikisi, her ikisinde de;"
+echo "katman-menu:   stil kalemleri çıktı, en altta 'Katman Özellikleri…' duruyor"

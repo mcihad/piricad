@@ -13,6 +13,7 @@
 #include <QEvent>
 #include <QIcon>
 #include <QPoint>
+#include <QStringList>
 #include <QStyledItemDelegate>
 #include <QWidget>
 
@@ -107,6 +108,14 @@ public:
     /// menu for the probe to be right about.
     bool triggerContextEntry(const QString& layerName, const QString& entry);
 
+    /// The texts of the row's context menu, in order, separators as `—`.
+    ///
+    /// The SHAPE of the menu, not just whether one entry works. It is here
+    /// because two entries were taken out of it — `Stili düzenle…` and `Stili
+    /// temizle`, both pieces of the Katman Özellikleri window shown as menu items
+    /// — and a removal nothing checks is a removal that comes back.
+    QStringList contextEntries(const QString& layerName);
+
     /// Highlights `layer` in the list without sending anything to the bus.
     ///
     /// Called when the CANVAS selection changes: picking a parcel on the map and
@@ -120,13 +129,20 @@ signals:
     /// Emitted when the user picks a row, so the property panel can follow.
     void layerSelected(core::LayerId layer);
 
-    /// Emitted when the user asks to edit a layer's style, so the shell can open
-    /// the designer. The panel does not own the dialog: a panel that opened a
+    /// Emitted when the user asks for a layer's PROPERTIES, so the shell can open
+    /// that window. The panel does not own the dialog: a panel that opened a
     /// window would be a panel that has to know what is in it.
-    void styleRequested(const QString& layerName);
+    ///
+    /// It used to be `styleRequested`, from a `Stili düzenle…` entry, and the
+    /// name was the smaller half of the truth: the window it opens has always
+    /// been titled `Katman Özellikleri` and has a dozen pages of which the
+    /// symbology is one. A context menu that offered the style — and, beside it,
+    /// a second entry that cleared the style — was scattering one window's
+    /// contents across a menu.
+    void propertiesRequested(const QString& layerName);
 
     /// Emitted when the user asks for a layer's attribute table, for the same
-    /// reason and by the same route as `styleRequested`.
+    /// reason and by the same route as `propertiesRequested`.
     ///
     /// ON THE LAYER THE MENU WAS OPENED ON, not on the active one. The table
     /// already knew how to open on a named layer; the only way to reach it was

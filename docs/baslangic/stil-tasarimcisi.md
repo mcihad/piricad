@@ -6,7 +6,7 @@ kurduğunuz her sembolü bir betik de yazabilir.
 
 ## Nasıl açılır
 
-- Katmanlar panelinde katmana **sağ tıklayın → Stili düzenle…**
+- Katmanlar panelinde katmana **sağ tıklayın → Katman Özellikleri…**
 - Araç çubuğunda *pencereler* grubundaki **palet** düğmesi
 - **Katman ▸ Stil Tasarımcısı**
 
@@ -33,7 +33,7 @@ taşıyorsa o, taşımıyorsa katmanın kendi görünümü.
 │              │ └──────────────────────┘ │ Çizgi rengi  [#000000 ]│
 │              │                          │ Kalınlık     [0 µm    ]│
 ├──────────────┴──────────────────────────┴───────────────────────┤
-│ Stil ▾  Sembolü kütüphaneye kaydet   Yardım    İptal Uygula [Tamam]│
+│ Stil ▾                              Yardım    İptal Uygula [Tamam]│
 └───────────────────────────────────────────────────────────────────┘
 ```
 
@@ -158,6 +158,34 @@ Her alan `STİL` komutunun bir parametresidir; hangisi olduğu
 
 Tip kutusunda parantez içinde yazan (`gorsel-dolgu` gibi) makine adıdır ve
 komut satırına yazacağınız şeydir.
+
+### Sembol parametreleri
+
+Bir sembol katmanı, çizeceği değeri nesnenin **öznitelik sütunundan** alabilir:
+dairenin içine `taks` sütununu yazdırmak, çizgi kalınlığını `kat` sütununa
+sürmek gibi. Bunu bugün [`STİL alan=`](../komutlar/style.md) ile yazarsınız.
+
+Bu pencerede **henüz bir satırı yoktur**. Bir süre vardı ve çalışmıyordu: girilen
+parametre önizlemeye yansıyor, **Uygula** ise onu belgeye hiç göndermiyordu. Bunun
+yerine sütun · özellik · tür üçlüsünü seçtiren gerçek bir tablo tasarlanacak ve
+buraya, katmanın öznitelik şemasının yanına gelecek. Tarihi **Faz 2**.
+
+Sembolünde parametre olan bir katmanı bu pencerede açıp **Uygula** demek
+parametreleri **silmez**; pencere kendisinde satırı olmayan bir şeye dokunmaz.
+
+## Stil ▾ menüsü
+
+Alt çubuğun solundaki **Stil ▾** düğmesi üç işi taşır:
+
+| Kalem | Ne yapar |
+|---|---|
+| **Katmanın çizdiğine dön** | Bu penceredeki değişiklikleri atar; katmana dokunmaz |
+| **Stili temizle** | `STİL katman=… sifirla=evet` gönderir: katmanın stili silinir, nesneler katman görünümüne döner |
+| **Sembolü kütüphaneye kaydet…** | Sembolü kendi gösterim paketiniz olarak diske yazar |
+
+**Stili temizle** eskiden katmanın sağ tık menüsündeydi. Bir stili silmek, bir stili
+kurmakla aynı pencerede durur; katmanın menüsü ise katmanın kendisiyle ilgili
+kalemlere ayrıldı.
 
 ## Uygula
 

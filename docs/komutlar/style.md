@@ -157,6 +157,11 @@ Virgül ayracı `İÇEAKTAR katmanlar=` ile aynı pazarlıktır: bir sütun kiml
 taşımaz, o yüzden ayraç kesindir ve parametre listesi **tek bir günlük belirteci**
 olarak kalır — bir insanın okuyup yeniden yazabileceği bir şey.
 
+**Bugün yalnız komutla yazılır.** Katman Özellikleri penceresinde parametrelerin
+bir satırı yoktur; sütun · özellik · tür üçlüsünü seçtiren tablo **Faz 2**'de
+gelecek. Parametreli bir sembolü o pencerede açıp **Uygula** demek parametreleri
+silmez.
+
 ```
 KATMAN ad=YAPI
 STİL katman=YAPI tip=isaretci sekil=daire birim=zemin boyut=12000
@@ -520,7 +525,7 @@ da aynı komuttur, aynı doğrulamadan geçer ve aynı günlüğe yazılır.
 Komut satırına `STİL` yazıp **Enter**'a basarsanız katman adı sorulur; adı yazıp yeniden
 **Enter**'a basmak yeter. **Esc** komutu iptal eder ve çizimde hiçbir iz bırakmaz.
 
-**Katmanlar** panelinde bir katmana sağ tıklayarak açılan **Stil** iletişim kutusu ve
+**Katmanlar** panelinde bir katmana sağ tıklayıp **Katman Özellikleri…** dediğinizde açılan pencere ve
 gösterim kataloğu seçici **Faz 1'de** gelecek; ikisi de bu komutu gönderecek, ikinci bir
 stil listesi olmayacak.
 

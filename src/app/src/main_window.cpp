@@ -261,7 +261,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
             [this] { (void)controller_->supplyPickedObjects(); });
     connect(commandLine_, &CommandLine::submitted, this, &MainWindow::onCommandSubmitted);
     connect(layerPanel_, &LayerPanel::layerSelected, attributePanel_, &AttributePanel::setLayer);
-    connect(layerPanel_, &LayerPanel::styleRequested, this, &MainWindow::openStyleDesigner);
+    connect(layerPanel_, &LayerPanel::propertiesRequested, this, &MainWindow::openStyleDesigner);
     connect(layerPanel_, &LayerPanel::attributeTableRequested, this,
             [this](const QString& layer) { openAttributeTable(layer); });
 
@@ -2669,6 +2669,11 @@ void MainWindow::probeLayerPanel()
         say(QStringLiteral("çizimde nesne yok; menü denenmedi"));
         return;
     }
+
+    // THE WHOLE MENU, in order. One entry firing says nothing about the two that
+    // were taken out of it.
+    say(QStringLiteral("menü · %1: %2")
+            .arg(on, layerPanel_->contextEntries(on).join(QStringLiteral(" | "))));
 
     if (!layerPanel_->triggerContextEntry(on, tr("Tümünü seç")))
         say(QStringLiteral("'%1' satırında 'Tümünü seç' yok").arg(on));

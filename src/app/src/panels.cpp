@@ -563,6 +563,22 @@ bool LayerPanel::triggerContextEntry(const QString& layerName, const QString& en
     return false;
 }
 
+QStringList LayerPanel::contextEntries(const QString& layerName)
+{
+    for (QTreeWidgetItemIterator it(tree_); *it; ++it) {
+        if (!(*it)->data(0, Qt::UserRole).isValid()) continue;
+        if ((*it)->text(0) != layerName) continue;
+
+        QMenu* menu = buildContextMenu(*it);
+        QStringList texts;
+        for (const QAction* action : menu->actions())
+            texts << (action->isSeparator() ? QStringLiteral("—") : action->text());
+        delete menu;
+        return texts;
+    }
+    return {};
+}
+
 QMenu* LayerPanel::buildContextMenu(QTreeWidgetItem* item)
 {
     // A group row carries no layer id, so the menu it gets is the one that does
@@ -598,16 +614,6 @@ QMenu* LayerPanel::buildContextMenu(QTreeWidgetItem* item)
         QAction* activate = menu.addAction(tr("Aktif katman yap"));
         connect(activate, &QAction::triggered, this, [this, name] {
             controller_.runLine(QStringLiteral("KATMAN ad=\"%1\"").arg(name), command::Origin::Gui);
-        });
-
-        QAction* style = menu.addAction(tr("Stili düzenle…"));
-        connect(style, &QAction::triggered, this, [this, name] { emit styleRequested(name); });
-
-        QAction* clear = menu.addAction(tr("Stili temizle"));
-        clear->setToolTip(tr("Nesneler katman görünümüne döner"));
-        connect(clear, &QAction::triggered, this, [this, name] {
-            controller_.runLine(QStringLiteral("STİL katman=\"%1\" sifirla=evet").arg(name),
-                                command::Origin::Gui);
         });
 
         QAction* label = menu.addAction(tr("Özniteliklerden etiketle…"));
@@ -665,6 +671,23 @@ QMenu* LayerPanel::buildContextMenu(QTreeWidgetItem* item)
                     QStringLiteral("KATMAN ad=\"%1\" grup=\"%2\"").arg(name, path.trimmed()),
                     command::Origin::Gui);
         });
+
+        // LAST, AND ON ITS OWN. Two entries used to sit in the middle of this
+        // menu — `Stili düzenle…` and `Stili temizle` — and both were pieces of
+        // one window shown in a list beside `Gizle` and `Gruba taşı…`. The window
+        // they belong to has been called `Katman Özellikleri` all along and holds
+        // a dozen pages; the symbology is one of them, and clearing the style is
+        // a button on it.
+        //
+        // The place every desktop program puts `Properties`: the bottom of the
+        // menu, after a rule, because it is the entry that opens something rather
+        // than doing something.
+        menu.addSeparator();
+
+        QAction* properties = menu.addAction(tr("Katman Özellikleri…"));
+        properties->setToolTip(tr("Bilgi, simgeleyici, etiketler — katmanın bütün ayarları"));
+        connect(properties, &QAction::triggered, this,
+                [this, name] { emit propertiesRequested(name); });
     }
 
     return owned;
