@@ -330,6 +330,13 @@ private:
         /// Whether the guide carries its own length and bearing while it drags.
         bool dynamic_input{true};
 
+        /// How big the figures beside the cursor are drawn, in pixels.
+        ///
+        /// Its own setting rather than the interface font, because these are read
+        /// WHILE THE HAND IS MOVING, over a drawing, often at arm's length — and
+        /// the interface font is sized for text read still and close.
+        int hint_px{14};
+
         /// The angle unit the reading is written in: 0 grad, 1 degree, 2 radian.
         /// GRAD is the default because Turkish traverse, triangulation and
         /// setting-out arithmetic is done in grad — a full circle is 400.

@@ -173,6 +173,7 @@ void MapCanvas::reloadGridSettings()
     look_.scale_bar     = store.get("core.harita.olcek_cubugu").as_bool();
     look_.north         = store.get("core.harita.kuzey_oku").as_bool();
     look_.readout       = store.get("core.harita.koordinat_gostergesi").as_bool();
+    look_.hint_px       = static_cast<int>(store.get("core.harita.ipucu_boyu").as_int());
     look_.cursor        = static_cast<int>(store.get("core.harita.imlec").as_enum());
     look_.cursor_px     = static_cast<int>(store.get("core.harita.imlec_boyu").as_int());
     look_.marker_px     = static_cast<int>(store.get("core.yakalama.isaret_boyu").as_int());
@@ -740,8 +741,8 @@ void MapCanvas::buildSnapMarker()
     // constructed modes on there is more to tell apart, not less.
     if (look_.snap_tip)
         overlay_.labels.push_back(
-            render::OverlayLabel{ink, x + h + 4.0f, y - h - 2.0f, 0.0f, false,
-                                 std::string(core::snap_mode_label(snap_preview_.mode))});
+            render::OverlayLabel{ink, x + h + 4.0f, y - h - 2.0f, static_cast<float>(look_.hint_px),
+                                 false, std::string(core::snap_mode_label(snap_preview_.mode))});
 }
 
 /// The ruler's numbers, in the unit the preference names.
@@ -1149,8 +1150,9 @@ void MapCanvas::buildReadout()
     const float foot     = static_cast<float>(height());
     const float baseline = look_.scale_bar ? foot - kBarTop - kClearance : foot - kClearance;
 
-    overlay_.labels.push_back(
-        render::OverlayLabel{palette_.gridMajor.rgba(), band + kInset, baseline, 0.0f, true, text});
+    overlay_.labels.push_back(render::OverlayLabel{palette_.gridMajor.rgba(), band + kInset,
+                                                   baseline, static_cast<float>(look_.hint_px),
+                                                   true, text});
 }
 
 void MapCanvas::buildCrosshair()
@@ -1370,9 +1372,9 @@ void MapCanvas::buildOverlay()
                 // are already there and are about a different thing.
                 const render::ScreenPointF a = render::to_f(from);
                 const render::ScreenPointF b = toScreenF(to);
-                overlay_.labels.push_back(
-                    render::OverlayLabel{tokens_->readout.rgba(), (a.x + b.x) * 0.5f + 8.0f,
-                                         (a.y + b.y) * 0.5f - 6.0f, 0.0f, false, text});
+                overlay_.labels.push_back(render::OverlayLabel{
+                    tokens_->readout.rgba(), (a.x + b.x) * 0.5f + 8.0f, (a.y + b.y) * 0.5f - 6.0f,
+                    static_cast<float>(look_.hint_px), false, text});
                 guide_label_ = text;
             }
         }

@@ -104,6 +104,19 @@ public:
     /// is a panel whose editing path breaks silently.
     bool editRowForProbe(const QString& key, const QString& value);
 
+    /// Opens the editor on the row named `key` and LEAVES it open, so a probe can
+    /// photograph what a user is looking at while they type.
+    ///
+    /// `editRowForProbe` above commits without ever building the editor, which is
+    /// the right shape for checking that the command goes out and the wrong one
+    /// for checking that the cell is readable while it is open — the row's stored
+    /// value used to be painted underneath the box, and no transcript could have
+    /// shown that.
+    bool openRowForProbe(const QString& key);
+
+    /// Every row key the panel is currently showing, for the same probe.
+    QStringList probeRowKeys() const;
+
 protected:
     /// Painted rather than laid out, for the reason the file header gives: the
     /// `112px | 1fr` grid and the 26 px row are exact numbers, and a layout of

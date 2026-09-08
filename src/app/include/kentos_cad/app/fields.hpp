@@ -64,6 +64,24 @@ enum class FieldKind : std::uint8_t {
     Colour,      ///< `0xAARRGGBB`, with the platform picker
 };
 
+/// How an editor is framed, which is a question about WHERE it is, not what it
+/// edits.
+///
+/// The same `Field` serves two places and they want opposite things. In a FORM —
+/// the column dialog, a settings row — it is one control among several and has
+/// to look like the shell's other inputs: a ground, a border, a radius, the
+/// accent on focus. In a CELL it is replacing a value that was already painted
+/// there, and a box drawn around it would be a widget appearing on top of the
+/// panel rather than the row becoming editable.
+///
+/// Getting this wrong is visible either way round: a form of borderless fields
+/// reads as text floating on a dialog, and a bordered box in a table row reads
+/// as something bolted on.
+enum class FieldFrame : std::uint8_t {
+    Box,  ///< a form control: ground, border, radius, accent on focus
+    Cell, ///< fills the cell it replaces; an accent ring says it is open
+};
+
 /// How one editor is configured. Everything is optional and the defaults are the
 /// unconstrained case, so a plain text cell needs `{}`.
 struct FieldSpec
@@ -89,7 +107,18 @@ struct FieldSpec
 
     /// A unit printed inside the box, after the value: `m`, `m²`, `°`.
     QString suffix;
+
+    /// Whether this editor is a form control or a cell. Defaults to the form,
+    /// because that is the one that looks wrong when it is silently omitted.
+    FieldFrame frame{FieldFrame::Box};
 };
+
+/// The same spec, framed as a table cell rather than as a form control.
+inline FieldSpec as_cell(FieldSpec spec)
+{
+    spec.frame = FieldFrame::Cell;
+    return spec;
+}
 
 /// A spec that only names its kind — the common case, and the one the compiler
 /// otherwise makes noisy: an aggregate written `{FieldKind::Bool}` leaves four

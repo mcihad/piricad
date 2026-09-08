@@ -2078,6 +2078,53 @@ void MainWindow::probeSchemaPage()
     // AND A DROP, which is the one edit that loses data.
     page->probeAction(QStringLiteral("sil"), 4, QString());
     say(QStringLiteral("silindikten sonra: %1 sütun").arg(page->probeRows().size()));
+
+    // PHOTOGRAPHED WHEN ASKED, the same bargain `KENTOS_PICK_PROBE` makes: a
+    // transcript proves the rows are right and says nothing about whether a
+    // person can read them. The frame around an input is exactly the kind of
+    // thing only a picture answers.
+    const QByteArray into = qgetenv("KENTOS_SCHEMA_PROBE");
+    if (into.isEmpty() || into == "1") return;
+
+    const QString dir = QString::fromLocal8Bit(into);
+    QDir().mkpath(dir);
+
+    properties.resize(1280, 880);
+    properties.show();
+    QCoreApplication::processEvents();
+    if (properties.grab().save(dir + QStringLiteral("/katman-ozellikleri.png")))
+        say(QStringLiteral("kare: katman-ozellikleri.png"));
+
+    // THE INSPECTOR WITH A CELL OPEN, which is the picture the transcript cannot
+    // take: the row's stored value used to be painted under the editor, so the
+    // old text and the typed one sat on top of each other.
+    runScriptLine(QStringLiteral("ÇİZGİ 0,0 10,10"));
+    runScriptLine(QStringLiteral("SEÇ nesneler=1"));
+    QCoreApplication::processEvents();
+    // SIZED BEFORE IT IS ASKED. The panel lives in a dock that may be collapsed
+    // while a probe runs, and `beginEdit` refuses a row whose rectangle has no
+    // width — correctly, since there is nowhere to put the editor.
+    if (attributePanel_ != nullptr) attributePanel_->resize(340, 620);
+    if (attributePanel_ != nullptr) attributePanel_->refresh();
+    QCoreApplication::processEvents();
+    if (attributePanel_ != nullptr && attributePanel_->openRowForProbe(QStringLiteral("Ada No"))) {
+        QCoreApplication::processEvents();
+        if (attributePanel_->grab().save(dir + QStringLiteral("/denetci-duzenleme.png")))
+            say(QStringLiteral("kare: denetci-duzenleme.png"));
+    } else {
+        say(QStringLiteral("denetçi satırı açılmadı; seçim %1 nesne, satırlar: %2")
+                .arg(controller_->bus().selection().size())
+                .arg(attributePanel_ != nullptr
+                         ? attributePanel_->probeRowKeys().join(QStringLiteral(" | "))
+                         : QString()));
+    }
+
+    ColumnDialog form(*controller_, QString(), &properties);
+    form.applyTheme(theme_);
+    form.show();
+    QCoreApplication::processEvents();
+    if (form.grab().save(dir + QStringLiteral("/sutun-formu.png")))
+        say(QStringLiteral("kare: sutun-formu.png"));
 }
 
 void MainWindow::openCommandSearch()

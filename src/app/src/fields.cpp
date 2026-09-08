@@ -21,6 +21,7 @@
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
 #include <QSlider>
+#include <QStyle>
 #include <QToolButton>
 #include <QWidgetAction>
 
@@ -57,6 +58,19 @@ Field::Field(const FieldSpec& spec, QWidget* parent) : QWidget(parent), spec_(sp
 {
     setObjectName(QStringLiteral("field"));
 
+    // WITHOUT THIS THE STYLESHEET PAINTS NOTHING. A plain `QWidget` subclass
+    // ignores `background` and `border` from a sheet unless it is told to draw
+    // its own styled background — which is why the first cut of this file looked
+    // like it had no rule at all rather than like it had the wrong one.
+    setAttribute(Qt::WA_StyledBackground, true);
+
+    // THE FRAME RIDES AS A PROPERTY, so one rule set in `theme.cpp` can answer
+    // both shapes with an attribute selector instead of two object names that
+    // would have to be kept in step. Set before anything is built, because a
+    // property read by the stylesheet has to be there when the child is polished.
+    setProperty("frame",
+                spec_.frame == FieldFrame::Cell ? QStringLiteral("cell") : QStringLiteral("box"));
+
     // NO MARGIN AND NO SPACING. The field IS the cell: its owner hands it the
     // rectangle the value was painted in, and anything this layout added would
     // show up as the box being a size the row is not.
@@ -64,9 +78,15 @@ Field::Field(const FieldSpec& spec, QWidget* parent) : QWidget(parent), spec_(sp
     row->setContentsMargins(0, 0, 0, 0);
     row->setSpacing(0);
 
-    const auto plainLine = [this, row] {
+    const auto frameOf = [this](QWidget* child) {
+        child->setProperty("frame", property("frame"));
+        return child;
+    };
+
+    const auto plainLine = [this, row, frameOf] {
         line_ = new QLineEdit(this);
         line_->setObjectName(QStringLiteral("fieldLine"));
+        frameOf(line_);
         line_->setFrame(false);
         line_->setPlaceholderText(spec_.placeholder);
         line_->installEventFilter(this);
@@ -74,9 +94,10 @@ Field::Field(const FieldSpec& spec, QWidget* parent) : QWidget(parent), spec_(sp
         return line_;
     };
 
-    const auto squareButton = [this, row](const QString& glyph) {
+    const auto squareButton = [this, row, frameOf](const QString& glyph) {
         auto* button = new QToolButton(this);
         button->setObjectName(QStringLiteral("fieldPicker"));
+        frameOf(button);
         button->setText(glyph);
         button->setFixedWidth(kPickerWidth);
         button->setFocusPolicy(Qt::NoFocus);
@@ -129,9 +150,10 @@ Field::Field(const FieldSpec& spec, QWidget* parent) : QWidget(parent), spec_(sp
         // A SEGMENT, NOT A TICK. A check box in a cell is a 13 px target with a
         // label somewhere else; two words that light up say what they mean at
         // row height and read the same as the value the cell was painting.
-        const auto segment = [this, row](const QString& text) {
+        const auto segment = [this, row, frameOf](const QString& text) {
             auto* button = new QPushButton(text, this);
             button->setObjectName(QStringLiteral("fieldSegment"));
+            frameOf(button);
             button->setCheckable(true);
             button->setFocusPolicy(Qt::StrongFocus);
             button->installEventFilter(this);
@@ -156,6 +178,7 @@ Field::Field(const FieldSpec& spec, QWidget* parent) : QWidget(parent), spec_(sp
     case FieldKind::Combo:
         combo_ = new QComboBox(this);
         combo_->setObjectName(QStringLiteral("fieldCombo"));
+        frameOf(combo_);
         combo_->addItems(spec_.choices);
         combo_->installEventFilter(this);
         row->addWidget(combo_, 1);
@@ -169,6 +192,7 @@ Field::Field(const FieldSpec& spec, QWidget* parent) : QWidget(parent), spec_(sp
     case FieldKind::MultiSelect:
         picker_ = new QToolButton(this);
         picker_->setObjectName(QStringLiteral("fieldMulti"));
+        frameOf(picker_);
         picker_->setToolButtonStyle(Qt::ToolButtonTextOnly);
         picker_->setPopupMode(QToolButton::InstantPopup);
         picker_->installEventFilter(this);
@@ -203,6 +227,7 @@ Field::Field(const FieldSpec& spec, QWidget* parent) : QWidget(parent), spec_(sp
         // a slider alone is a control for a preference, not for a figure.
         line_ = new QLineEdit(this);
         line_->setObjectName(QStringLiteral("fieldLine"));
+        frameOf(line_);
         line_->setFrame(false);
         line_->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
         line_->setFixedWidth(kReadoutWidth);
@@ -397,6 +422,15 @@ bool Field::eventFilter(QObject* watched, QEvent* event)
     // dialog all take the focus off the editor while the edit is still going on,
     // and committing there would close the editor under the very list the user
     // just opened.
+    // The focus ring on a FORM field lives on the container, because the border
+    // does: Qt's stylesheets have no `:focus-within`, so the state is carried as
+    // a property and repolished by hand.
+    if (event->type() == QEvent::FocusIn && spec_.frame == FieldFrame::Box) {
+        setProperty("state", QStringLiteral("focus"));
+        style()->unpolish(this);
+        style()->polish(this);
+    }
+
     if (event->type() == QEvent::FocusOut) {
         auto* focus = static_cast<QFocusEvent*>(event);
         if (focus->reason() == Qt::PopupFocusReason ||
@@ -409,6 +443,11 @@ bool Field::eventFilter(QObject* watched, QEvent* event)
         if (next != nullptr && (next == this || isAncestorOf(next)))
             return QWidget::eventFilter(watched, event);
 
+        if (spec_.frame == FieldFrame::Box) {
+            setProperty("state", QVariant());
+            style()->unpolish(this);
+            style()->polish(this);
+        }
         commit();
     }
     return QWidget::eventFilter(watched, event);

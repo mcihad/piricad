@@ -390,6 +390,7 @@ KENTOS_SETTING(cetvel_birimi);
 KENTOS_SETTING(harita_olcek_cubugu);
 KENTOS_SETTING(harita_kuzey_oku);
 KENTOS_SETTING(harita_koordinat);
+KENTOS_SETTING(harita_ipucu_boyu);
 KENTOS_SETTING(harita_imlec);
 KENTOS_SETTING(harita_imlec_boyu);
 KENTOS_SETTING(harita_yakinlastirma);
@@ -448,6 +449,7 @@ KENTOS_SETTING(alan_birimi);
     X(harita_olcek_cubugu)                                                                         \
     X(harita_kuzey_oku)                                                                            \
     X(harita_koordinat)                                                                            \
+    X(harita_ipucu_boyu)                                                                           \
     X(harita_imlec)                                                                                \
     X(harita_imlec_boyu)                                                                           \
     X(harita_yakinlastirma)                                                                        \
@@ -730,6 +732,30 @@ KENTOS_SETTING(harita_koordinat)
         .summary  = "İmlecin bulunduğu noktanın sağa/yukarı değeri tuvalde gösterilir. "
                     "Çizime girmediği için uygulama kapsamındadır.",
         .section  = "Görünüm ve Tema", // ui-label
+    };
+}
+
+KENTOS_SETTING(harita_ipucu_boyu)
+{
+    return SettingSpec{
+        .id       = "core.harita.ipucu_boyu",
+        .names    = {"ipucu_boyu", "ipucu", "hintsize"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(14),
+        .range    = SettingRange::between(9, 28),
+        .values   = {},
+        .unit     = "piksel",
+        // A SETTING AND NOT A CONSTANT, because the right size is not a fact
+        // about the program. These figures are read WHILE THE HAND IS MOVING,
+        // over a drawing, often at arm's length from a large screen — and the
+        // interface font, which is what they used to inherit, is sized for text
+        // being read still and close. Whose eyes and whose screen decide.
+        .summary = "Tuvalde imlecin yanında çıkan sayıların boyu: uzunluk, açı, koordinat "
+                   "ve yakalama adı. Arayüz yazısından ayrıdır, çünkü bunlar el hareket "
+                   "ederken okunur. Çizimin baytına girmez, gözünüze ve ekranınıza aittir; "
+                   "bu yüzden uygulama kapsamındadır.",
+        .section = "Görünüm ve Tema", // ui-label
     };
 }
 

@@ -432,25 +432,38 @@ QString themeStyleSheet(ThemeMode mode)
         QPushButton#segment:checked      { background: %(wash)s; color: %(accentHi)s;
                                            border: 1px solid %(accentEdge)s; }
 
-        /* ---- inline editors, `fields.hpp` ----------------------------------- */
+        /* ---- editors, `fields.hpp` ------------------------------------------ */
         /*
-         * THE FIELD IS THE CELL. Everything here is about the box NOT looking
-         * like a box: no frame of its own, no rounded corner, no padding the row
-         * did not have, and the same ground the row is selected with. What the
-         * user should see when a cell is opened is that the value became
-         * selectable — not that a widget appeared on top of the panel.
+         * ONE COMPONENT, TWO FRAMES, and they want opposite things.
          *
-         * `max-height` is unset on purpose. The generic input rule above pins
-         * every line edit at 22 px, which is right in a dialog form and wrong
-         * here: this one is exactly as tall as the row its owner hands it.
+         * `frame="box"` is a FORM control — the column dialog, a settings row. It
+         * is one control among several and must look like every other input in
+         * this shell: a ground, a 1 px border, a 4 px radius, the accent when it
+         * has the focus. A form of borderless fields reads as text floating on a
+         * dialog, which is exactly what the first cut of this file shipped.
+         *
+         * `frame="cell"` is replacing a value already painted in a table row.
+         * There the box is what must NOT be seen: no ground of its own beyond the
+         * selection wash, no radius, no padding the row did not have. The one
+         * mark it carries is a 1 px accent ring, because "this cell is open" has
+         * to be visible even when the box is invisible.
+         *
+         * `max-height` is unset for the cell. The generic input rule above pins
+         * every line edit at 22 px, which is right in a dialog and wrong in a
+         * row whose height its owner decides.
          */
-        QWidget#field                    { background: %(wash)s; }
+        QWidget#field[frame="box"]       { background: %(input)s;
+                                           border: 1px solid %(border)s; border-radius: 4px; }
+        QWidget#field[frame="box"][state="focus"] { border: 1px solid %(accent)s; }
+        QWidget#field[frame="cell"]      { background: %(wash)s;
+                                           border: 1px solid %(accent)s; border-radius: 0px; }
+
         QLineEdit#fieldLine              { background: transparent; color: %(text)s;
                                            border: none; border-radius: 0px;
                                            padding: 0px 8px;
-                                           min-height: 0px; max-height: 16777215px;
                                            selection-background-color: %(accent)s;
                                            selection-color: %(onAccent)s; }
+        QLineEdit#fieldLine[frame="cell"] { min-height: 0px; max-height: 16777215px; }
         QLineEdit#fieldLine[state="invalid"] { color: %(danger)s; }
 
         QToolButton#fieldPicker          { background: transparent; color: %(textDim)s;
@@ -470,12 +483,14 @@ QString themeStyleSheet(ThemeMode mode)
                                            font-size: 11.5px; }
         QPushButton#fieldSegment:hover   { background: %(hoverIcon)s; color: %(onHover)s; }
         QPushButton#fieldSegment:checked { background: %(accent)s; color: %(onAccent)s; }
+        /* In a form the two halves need a rule between them, or they read as one
+         * wide button with half of it lit. */
+        QPushButton#fieldSegment[frame="box"] { border-right: 1px solid %(border)s; }
 
         QComboBox#fieldCombo             { background: transparent; color: %(text)s;
                                            border: none; border-radius: 0px;
-                                           padding: 0px 8px;
-                                           min-height: 0px; max-height: 16777215px; }
-        QComboBox#fieldCombo::drop-down  { border: none; width: 16px; }
+                                           padding: 0px 8px; }
+        QComboBox#fieldCombo[frame="cell"] { min-height: 0px; max-height: 16777215px; }
 
         QSlider#fieldSlider::groove:horizontal { background: %(border)s; height: 3px;
                                            border-radius: 1px; }
@@ -614,7 +629,17 @@ QString themeStyleSheet(ThemeMode mode)
         QComboBox:disabled                { color: %(textFaint)s; background: transparent;
                                             border: 1px solid transparent; }
 
-        QComboBox::drop-down              { border: none; width: 22px; }
+        /* THE DROP-DOWN IS LEFT ALONE, and that is the fix. Styling `::drop-down`
+         * at all makes Qt stop drawing the base style's arrow, and nothing here
+         * replaced it — so every combo in the program, in the settings window and
+         * in the column form alike, looked exactly like a text box. A control
+         * that does not say it opens a list is a list nobody opens.
+         *
+         * The border-triangle trick that would replace it does not render as a
+         * triangle in Qt's stylesheet engine (it comes out a square), and an
+         * image would need a resource file this project deliberately does not
+         * have — it draws its icons in code. So the honest answer is to let
+         * Fusion draw the one subcontrol it draws well. */
         QComboBox QAbstractItemView       { background: %(panel)s; color: %(text)s;
                                             border: 1px solid %(border)s;
                                             selection-background-color: %(wash)s; }

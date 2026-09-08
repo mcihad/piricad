@@ -610,7 +610,10 @@ void AttributePanel::beginEdit(int group, int index)
         editor_ = nullptr;
     }
     if (editor_ == nullptr) {
-        editor_ = new Field(row.field, this);
+        // AS A CELL, not as a form control. The editor is replacing a value that
+        // was already painted in this row, so what it must not do is look like a
+        // box that appeared on top of the panel — see `FieldFrame`.
+        editor_ = new Field(as_cell(row.field), this);
         editor_->applyTheme(theme_);
         connect(editor_, &Field::committed, this, &AttributePanel::commitEdit);
         connect(editor_, &Field::cancelled, this, [this] { closeEditor(); });
@@ -644,6 +647,31 @@ void AttributePanel::commitEdit(const QString& value)
     // same journal and undo in one step (CLAUDE.md 1.1, 5.9).
     controller_.runLine(command.arg(value), command::Origin::Gui);
     refresh();
+}
+
+QStringList AttributePanel::probeRowKeys() const
+{
+    QStringList out;
+    for (const AttributeGroup& group : groups_)
+        for (const AttributeRow& row : group.rows)
+            out << row.key;
+    return out;
+}
+
+bool AttributePanel::openRowForProbe(const QString& key)
+{
+    for (int g = 0; g < groups_.size(); ++g)
+        for (int r = 0; r < groups_[g].rows.size(); ++r) {
+            if (groups_[g].rows[r].key != key || groups_[g].rows[r].command.isEmpty()) continue;
+
+            // A COLLAPSED GROUP HAS NO ROW RECTANGLE, and `beginEdit` refuses a
+            // row it cannot place. Opening the group is what a user does before
+            // clicking the row, so the probe does it too.
+            groups_[g].open = true;
+            beginEdit(g, r);
+            return editingGroup_ == g && editingRow_ == r;
+        }
+    return false;
 }
 
 bool AttributePanel::editRowForProbe(const QString& key, const QString& value)
@@ -842,6 +870,13 @@ void AttributePanel::paintEvent(QPaintEvent*)
         for (int r = 0; r < group.rows.size(); ++r) {
             const AttributeRow& row = group.rows[r];
 
+            // THE ROW BEING EDITED PAINTS NO VALUE. The editor sits exactly on
+            // the value rectangle, and painting the stored text under it left the
+            // old value and the typed one on top of each other — legibly enough
+            // to read both and not enough to read either. The key and the rules
+            // still paint: what the editor replaces is the value, not the row.
+            const bool open = g == editingGroup_ && r == editingRow_;
+
             // design.md §2's one selected-row pattern, used by every list in the
             // program: an accent wash plus a 2 px inset edge. Stated with a shape
             // as well as a colour, per §13.
@@ -858,7 +893,7 @@ void AttributePanel::paintEvent(QPaintEvent*)
                        Qt::AlignVCenter | Qt::AlignLeft, row.key);
 
             int right = width() - kValuePadX;
-            if (!row.badge.isEmpty()) {
+            if (!row.badge.isEmpty() && !open) {
                 p.setFont(sans(9, QFont::DemiBold, 0.5));
                 const QFontMetrics badge(p.font());
                 const int w = static_cast<int>(badge.horizontalAdvance(row.badge)) + kBadgePadX * 2;
@@ -884,8 +919,10 @@ void AttributePanel::paintEvent(QPaintEvent*)
             // them change without clicking anything to find out.
             const bool editable = !row.command.isEmpty();
             p.setPen(editable ? t.text : t.textDim);
-            p.drawText(QRect(kKeyWidth + kValuePadX, y, right - kKeyWidth - kValuePadX, kRowHeight),
-                       Qt::AlignVCenter | Qt::AlignLeft, row.value);
+            if (!open)
+                p.drawText(
+                    QRect(kKeyWidth + kValuePadX, y, right - kKeyWidth - kValuePadX, kRowHeight),
+                    Qt::AlignVCenter | Qt::AlignLeft, row.value);
 
             p.fillRect(QRect(0, y + kRowHeight - 1, width(), 1), t.lineSoft);
             y += kRowHeight;

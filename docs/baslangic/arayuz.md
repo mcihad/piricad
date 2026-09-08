@@ -323,6 +323,18 @@ daire 400. `Seçenekler ▸ Genel ▸ Açı birimi` ile derece ya da radyana çe
 
 Durum çubuğundaki **DİNAMİK GİRDİ** anahtarı bu okumayı kapatır.
 
+Tuvalde imlecin yanında çıkan bütün sayıların **boyu ayarlanabilir**: uzunluk, azimut,
+koordinat göstergesi ve yakalama modunun adı. `Seçenekler ▸ Görünüm ve Tema ▸ İpucu
+boyu` ya da:
+
+```
+TERCİH ipucu_boyu 18
+```
+
+Varsayılan **14 piksel**, aralık 9–28. Arayüz yazısından ayrı tutulur, çünkü bunlar
+**el hareket ederken**, bir çizimin üstünde, çoğu zaman büyük bir ekrana uzaktan
+bakılarak okunur; arayüz yazısı ise durup yakından okunmak için ölçülüdür.
+
 #### Hassasiyet
 
 Arama yarıçapı `yakalama_toleransı`, seçme kutusu `seçim_toleransı` tercihidir ve
