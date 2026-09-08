@@ -81,6 +81,22 @@ public:
     void refresh();
 
 private:
+    /// Commits the value and opens the NEXT editable row.
+    ///
+    /// WHY ENTER MOVES ON. A panel of attributes is filled the way a ledger is:
+    /// type, Enter, type, Enter. Stopping after each value makes the user reach
+    /// for the mouse between every two fields, which on a parcel with six
+    /// attributes is five reaches nobody asked for.
+    ///
+    /// Separate from `commitEdit` because that one is also what a Bool toggle and
+    /// the probe call, and neither of those is a person working down a list.
+    void commitAndAdvance(const QString& value);
+
+    /// The row after (`group`, `index`) that can be edited, or false when the
+    /// list ends. Collapsed groups are OPENED on the way past, because a row the
+    /// user cannot see is not a row they were about to fill in.
+    bool nextEditable(int group, int index, int& outGroup, int& outIndex);
+
     /// Builds `groups_` for whatever is selected. Called only by `refresh()`,
     /// which then restores what the user had opened.
     void rebuild();

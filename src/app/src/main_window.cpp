@@ -2127,6 +2127,67 @@ void MainWindow::probeSchemaPage()
         say(QStringLiteral("kare: sutun-formu.png"));
 }
 
+void MainWindow::probeAttributeGrid()
+{
+    const auto say = [](const QString& text) {
+        (void)std::fprintf(stdout, "[tablo] %s\n", text.toUtf8().constData());
+        (void)std::fflush(stdout);
+    };
+
+    // A drawing with two objects and three columns, so the wrap at the end of a
+    // row has somewhere to wrap TO.
+    command::Bus& bus = controller_->bus();
+    for (const char* line : {"KATMAN ad=PARSEL", "ÇİZGİ 0,0 10,0", "ÇİZGİ 0,5 10,5",
+                             "SÜTUN kimlik=\"ada\" tur=tam_sayi ad=\"Ada\" zorunlu=evet",
+                             "SÜTUN kimlik=\"oran\" tur=ondalik basamak=2 ad=\"Oran\"",
+                             "SÜTUN kimlik=\"onay\" tur=tarih ad=\"Onay\""})
+        (void)bus.execute_line(line, command::Origin::Gui);
+    QCoreApplication::processEvents();
+
+    AttributeTable table(*controller_, QString(), this);
+    table.applyTheme(theme_);
+    table.resize(1100, 640);
+    table.show();
+    QCoreApplication::processEvents();
+
+    const auto drive = [&table](const char* action, const QString& value = QString()) {
+        return table.probeGrid(QString::fromUtf8(action), value);
+    };
+
+    // ---- 1. the mode is off, so nothing opens ----
+    drive("git", QStringLiteral("0,1"));
+    say(QStringLiteral("kip kapalıyken: %1").arg(drive("ac")));
+
+    // ---- 2. on, and the cursor is typed across ----
+    say(QStringLiteral("kip: %1").arg(drive("kip", QStringLiteral("evet"))));
+    drive("git", QStringLiteral("0,1"));
+    drive("ac");
+    say(QStringLiteral("kip açıkken: %1").arg(table.probeGrid(QStringLiteral("ac"), QString())));
+
+    say(QStringLiteral("enter 1 -> %1").arg(drive("yaz", QStringLiteral("128"))));
+    drive("ac");
+    say(QStringLiteral("enter 2 -> %1").arg(drive("yaz", QStringLiteral("0,40"))));
+    drive("ac");
+
+    // ---- 3. the last column wraps to the next row's first ----
+    say(QStringLiteral("enter 3 -> %1").arg(drive("yaz", QStringLiteral("2026-09-08"))));
+
+    // ---- 4. and a bad value is refused before it is sent ----
+    drive("git", QStringLiteral("1,1"));
+    drive("ac");
+    drive("yaz", QStringLiteral("abc"));
+    say(QStringLiteral("reddedilen: %1").arg(drive("sikayet").left(60)));
+
+    // READ FROM THE MODEL, not from wherever the cursor ended up: an open editor
+    // moves the focus around and `currentIndex` is about the view, while what is
+    // being checked here is what the DOCUMENT ended up holding.
+    say(QStringLiteral("tam sayı: %1").arg(drive("hucre", QStringLiteral("0,1"))));
+    say(QStringLiteral("ondalık: %1").arg(drive("hucre", QStringLiteral("0,2"))));
+    say(QStringLiteral("tarih: %1").arg(drive("hucre", QStringLiteral("0,3"))));
+
+    table.close();
+}
+
 void MainWindow::openCommandSearch()
 {
     if (!palette_) {

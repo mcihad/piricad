@@ -149,6 +149,12 @@ public:
     /// `scripts/ci-gate-oznitelik-semasi.sh` drives it.
     void probeSchemaPage();
 
+    /// Drives the attribute grid: refuses to open a cell with the edit mode off,
+    /// then turns it on, types across a row, and reports where Enter landed —
+    /// including the wrap from the last column to the next row's first.
+    /// `scripts/ci-gate-tablo-giris.sh` drives it.
+    void probeAttributeGrid();
+
     /// Opens the import wizard WITHOUT blocking, on `path` when one is given.
     ///
     /// `importData()` runs it modally and then runs the command line it built;

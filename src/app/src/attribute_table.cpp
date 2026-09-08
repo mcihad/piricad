@@ -10,8 +10,10 @@
 
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPainter>
 #include <QPushButton>
 #include <QTableView>
@@ -220,35 +222,111 @@ QVariant AttributeModel::data(const QModelIndex& index, int role) const
     return {};
 }
 
+void AttributeModel::setEditing(bool on)
+{
+    if (editing_ == on) return;
+    editing_ = on;
+
+    // The whole grid's flags changed, and Qt has no narrower way to say so.
+    beginResetModel();
+    endResetModel();
+}
+
+FieldSpec AttributeModel::fieldFor(int column) const
+{
+    if (column <= 0 || column > columns_.size()) return {};
+    const core::AttrColumn* held = controller_.document().attributes().column(columns_[column - 1]);
+    return held != nullptr ? field_for(held->spec()) : FieldSpec{};
+}
+
+QString AttributeModel::validateRow(int row) const
+{
+    if (row < 0 || row >= rows_.size()) return {};
+
+    const core::Document& doc = controller_.document();
+    const core::EntityId slot = doc.slot_of(rows_[row]);
+    if (slot == core::kNoEntity || !doc.alive(slot)) return {};
+
+    // THE DOCUMENT'S OWN CHECK, not a second one written here. `validate_row`
+    // is what a command runs before it commits, and a table that judged by a
+    // different rule would call a row good that the next save refuses.
+    const auto checked = doc.attributes().validate_row(doc.entities().slot[slot], doc.catalogues());
+    return checked.ok() ? QString() : QString::fromStdString(checked.error().message);
+}
+
+QStringList AttributeModel::validateAll() const
+{
+    QStringList out;
+    for (int row = 0; row < rows_.size(); ++row) {
+        const QString complaint = validateRow(row);
+        if (!complaint.isEmpty()) out << tr("%1. satır: %2").arg(row + 1).arg(complaint);
+    }
+    return out;
+}
+
 Qt::ItemFlags AttributeModel::flags(const QModelIndex& index) const
 {
     if (!index.isValid()) return Qt::NoItemFlags;
 
     // `fid` is identity and never editable; everything else goes out as a
-    // command when it changes.
+    // command when it changes — but ONLY while the edit mode is on.
+    //
+    // THE REFUSAL IS HERE AND NOT IN THE VIEW'S TRIGGERS, because a trigger only
+    // covers the ways it was told about: a double click, a key press, `edit()`
+    // called from code, a paste. A cell that is not marked editable cannot be
+    // opened by any of them.
     const Qt::ItemFlags base = Qt::ItemIsSelectable | Qt::ItemIsEnabled;
-    return index.column() == 0 ? base : base | Qt::ItemIsEditable;
+    if (!editing_ || index.column() == 0) return base;
+    return base | Qt::ItemIsEditable;
 }
 
 bool AttributeModel::setData(const QModelIndex& index, const QVariant& value, int role)
 {
     if (role != Qt::EditRole || !index.isValid() || index.column() == 0) return false;
+    if (!editing_) return false;
 
     const core::AttrColumn* column =
         controller_.document().attributes().column(columns_[index.column() - 1]);
     if (!column) return false;
 
+    const QString text    = value.toString();
+    const QString asTyped = text.isEmpty() ? QStringLiteral("yok") : text;
+
+    // CHECKED BEFORE IT IS SENT, against the column's own declaration and with
+    // the parser the command itself uses (`core::attr_parse`). The command would
+    // refuse it anyway — but a refusal that arrives after the dispatch is a
+    // failed line in the transcript and a cell the user has already left. This
+    // one keeps the value where they can still see and fix it.
+    const auto parsed = core::attr_parse(column->spec(), asTyped.toStdString());
+    if (!parsed) {
+        emit rejected(QString::fromStdString(parsed.error().message));
+        return false;
+    }
+
     // THROUGH THE BUS, like every other client. The table has no path into the
     // entity store and must not: a value edited here and the same value typed at
     // the prompt have to produce the same journal line (Article 1.2, 5.9).
-    const QString text = value.toString();
-    controller_.runLine(QStringLiteral("ÖZNİTELİK ad=%1 nesne=%2 deger=\"%3\"")
-                            .arg(QString::fromStdString(column->spec().id))
-                            .arg(static_cast<qulonglong>(keyAt(index.row())))
-                            .arg(text.isEmpty() ? QStringLiteral("yok") : text),
-                        command::Origin::Gui);
+    // AND THE ANSWER IS READ. `runLine` discards the result, so a command that
+    // refused — a locked layer, an object the key no longer names — left the cell
+    // showing the old value with nothing said about why. A write nobody checks is
+    // a write that sometimes does not happen.
+    auto written = controller_.runLineResult(QStringLiteral("ÖZNİTELİK ad=%1 nesne=%2 deger=\"%3\"")
+                                                 .arg(QString::fromStdString(column->spec().id))
+                                                 .arg(static_cast<qulonglong>(keyAt(index.row())))
+                                                 .arg(asTyped),
+                                             command::Origin::Gui);
+    if (!written) {
+        emit rejected(QString::fromStdString(written.error().message));
+        return false;
+    }
 
     emit dataChanged(index, index);
+
+    // AND THE ROW IS CHECKED AFTER EVERY ENTRY, not only when the mode closes. A
+    // required cell left empty three hundred rows ago is a complaint nobody will
+    // connect to what they were doing; the same complaint at the moment it
+    // happens is one keystroke from being fixed.
+    emit rowChecked(index.row(), validateRow(index.row()));
     return true;
 }
 
@@ -403,14 +481,164 @@ AttributeTable::AttributeTable(Controller& controller, QString layerName, QWidge
     summary_ = new QLabel(this);
     summary_->setObjectName(QStringLiteral("mono"));
 
+    // What the last entry was refused for, or what the row it landed in is still
+    // missing. In the warn colour, because it is about something the user just
+    // did rather than about something that is broken.
+    complaint_ = new QLabel(this);
+    complaint_->setObjectName(QStringLiteral("warning"));
+    complaint_->setVisible(false);
+
     footer()->insertWidget(0, pager_);
+    footer()->insertWidget(1, complaint_);
     footer()->addWidget(summary_);
 
     connect(model_, &AttributeModel::filtered, this, [this](int, int) { refreshCounts(); });
     connect(&controller_, &Controller::documentChanged, this, [this] { model_->refresh(); });
 
+    // ---- what the grid says back ----
+    connect(model_, &AttributeModel::rejected, this, &AttributeTable::complain);
+    connect(model_, &AttributeModel::rowChecked, this, [this](int at, const QString& complaint) {
+        if (complaint.isEmpty())
+            complain(QString());
+        else
+            complain(tr("%1. satır: %2").arg(at + 1).arg(complaint));
+    });
+
+    // ---- our editors, and Enter walking the grid ----
+    delegate_ = new FieldDelegate([this](int column) { return model_->fieldFor(column); }, this);
+    delegate_->setTheme(theme_);
+    view_->setItemDelegate(delegate_);
+    connect(delegate_, &FieldDelegate::advanced, this, &AttributeTable::advanceFrom);
+
+    // READ-ONLY UNTIL ASKED. The model refuses to mark a cell editable while the
+    // mode is off; this stops the view from even trying, so a double click on a
+    // value somebody meant to read does nothing at all.
+    view_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
     refreshCounts();
     refreshStatistics();
+}
+
+void AttributeTable::setEditing(bool on)
+{
+    if (!on && model_->editing()) {
+        // BEFORE THE MODE CLOSES, because this is the last moment the person who
+        // typed the values is still the person looking at them.
+        const QStringList complaints = model_->validateAll();
+        if (!complaints.isEmpty()) {
+            const QString head = complaints.mid(0, 8).join(QStringLiteral("\n"));
+            const QString more = complaints.size() > 8
+                                     ? tr("\n\n…ve %1 satır daha.").arg(complaints.size() - 8)
+                                     : QString();
+            const auto answer  = QMessageBox::warning(
+                this, tr("Doğrulanmayan satırlar"),
+                tr("Tablo şemaya uymuyor:\n\n%1%2\n\nYine de düzenleme kipinden çıkılsın mı?")
+                    .arg(head, more),
+                QMessageBox::Cancel | QMessageBox::Yes, QMessageBox::Cancel);
+            if (answer != QMessageBox::Yes) {
+                QSignalBlocker block(editToggle_);
+                editToggle_->setChecked(true);
+                return;
+            }
+        }
+    }
+
+    model_->setEditing(on);
+    view_->setEditTriggers(on ? (QAbstractItemView::DoubleClicked |
+                                 QAbstractItemView::EditKeyPressed |
+                                 QAbstractItemView::AnyKeyPressed)
+                              : QAbstractItemView::NoEditTriggers);
+    complain(QString());
+
+    if (on && view_->currentIndex().isValid() && view_->currentIndex().column() == 0)
+        view_->setCurrentIndex(model_->index(view_->currentIndex().row(), 1));
+}
+
+void AttributeTable::advanceFrom(const QModelIndex& from)
+{
+    if (!from.isValid() || !model_->editing()) return;
+
+    // ACROSS, THEN DOWN, THEN STOP. Column 0 is `fid` and never opens, so a wrap
+    // lands on column 1 — the first cell of the next row that a person can type
+    // into. The last cell of the last row stays put rather than wrapping to the
+    // top, because "I have reached the end" is information and a silent jump to
+    // row one is a value entered in the wrong place.
+    int at     = from.row();
+    int column = from.column() + 1;
+    if (column >= model_->columnCount()) {
+        column = 1;
+        ++at;
+    }
+    if (at >= model_->rowCount() || column >= model_->columnCount()) return;
+
+    const QModelIndex next = model_->index(at, column);
+    view_->setCurrentIndex(next);
+    view_->scrollTo(next);
+    view_->edit(next);
+}
+
+QString AttributeTable::probeGrid(const QString& action, const QString& value)
+{
+    const auto where = [this] {
+        const QModelIndex at = view_->currentIndex();
+        return at.isValid() ? QStringLiteral("%1,%2").arg(at.row()).arg(at.column())
+                            : QStringLiteral("yok");
+    };
+
+    if (action == QStringLiteral("kip")) {
+        editToggle_->setChecked(value == QStringLiteral("evet"));
+        return model_->editing() ? QStringLiteral("açık") : QStringLiteral("kapalı");
+    }
+
+    if (action == QStringLiteral("git")) {
+        const QStringList parts = value.split(QLatin1Char(','));
+        if (parts.size() == 2)
+            view_->setCurrentIndex(model_->index(parts[0].toInt(), parts[1].toInt()));
+        return where();
+    }
+
+    if (action == QStringLiteral("ac")) {
+        // Through `edit()`, which is what a double click and the F2 key both
+        // reach — so a mode that refuses here refuses them too.
+        view_->edit(view_->currentIndex());
+        return view_->findChild<Field*>() != nullptr ? QStringLiteral("açıldı")
+                                                     : QStringLiteral("açılmadı");
+    }
+
+    if (action == QStringLiteral("yaz")) {
+        auto* editor = view_->findChild<Field*>();
+        if (editor == nullptr) return QStringLiteral("düzenleyici yok");
+        editor->setValue(value);
+
+        // The Enter a person presses, not a call to `commitData`: the whole point
+        // is that the key travels from the editor to the delegate to this window.
+        QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+        QCoreApplication::sendEvent(editor, &enter);
+        QCoreApplication::processEvents();
+        return where();
+    }
+
+    if (action == QStringLiteral("hucre")) {
+        const QStringList parts = value.split(QLatin1Char(','));
+        if (parts.size() != 2) return QStringLiteral("?");
+        return model_->index(parts[0].toInt(), parts[1].toInt()).data(Qt::EditRole).toString();
+    }
+
+    if (action == QStringLiteral("oku")) {
+        const QModelIndex at = view_->currentIndex();
+        return at.isValid() ? at.data(Qt::EditRole).toString() : QString();
+    }
+
+    if (action == QStringLiteral("sikayet")) return complaint_->text();
+
+    return QStringLiteral("bilinmeyen eylem");
+}
+
+void AttributeTable::complain(const QString& text)
+{
+    if (complaint_ == nullptr) return;
+    complaint_->setText(text);
+    complaint_->setVisible(!text.isEmpty());
 }
 
 QWidget* AttributeTable::buildToolRow()
@@ -470,6 +698,15 @@ QWidget* AttributeTable::buildToolRow()
             const QString line = QString::fromUtf8(mark.line);
             connect(button, &QToolButton::clicked, this,
                     [this, line] { controller_.runLine(line, command::Origin::Gui); });
+        } else if (std::strcmp(mark.tip, "Düzenleme kipi") == 0) {
+            // THE ONE MARK THAT WAS CHECKABLE AND DID NOTHING. It has been in
+            // this row since the window was drawn, ticking and untying itself
+            // while every cell stayed editable underneath it — which is worse
+            // than not having it, because it said a thing about the table that
+            // was not true.
+            editToggle_ = button;
+            button->setToolTip(tr("Düzenleme kipi — kapalıyken hiçbir hücre açılmaz"));
+            connect(button, &QToolButton::toggled, this, &AttributeTable::setEditing);
         } else {
             button->setEnabled(mark.checkable);
         }
@@ -637,6 +874,7 @@ void AttributeTable::refreshStatistics()
 
 void AttributeTable::applyTheme(ThemeMode mode)
 {
+    if (delegate_ != nullptr) delegate_->setTheme(mode);
     theme_ = mode;
     DialogFrame::applyTheme(mode);
 

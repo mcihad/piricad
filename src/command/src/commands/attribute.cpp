@@ -22,67 +22,12 @@
 namespace kentos::command {
 namespace {
 
-/// Parses a value against the column's declared type. There is no guessing: the
-/// schema said what this column holds, and a value that is not that is refused
-/// with the type named, not silently coerced.
+/// The one parser, in core, so the prompt and the attribute grid cannot disagree
+/// about what `evet` or `0,40` means. It used to live here as a local function;
+/// see `core::attr_parse` for why it moved.
 core::Result<core::AttrValue> parse_for(const core::AttrSpec& spec, const std::string& text)
 {
-    if (core::turkish_iequals(text, "yok") || core::turkish_iequals(text, "bos") ||
-        core::turkish_iequals(text, "boş"))
-        return core::AttrValue{spec.type, false, 0, {}};
-
-    switch (spec.type) {
-    case core::AttrType::Text: return core::attr_text(text);
-    case core::AttrType::CodeRef: return core::attr_code(text);
-    case core::AttrType::Bool: {
-        if (core::turkish_iequals(text, "evet") || text == "1") return core::attr_bool(true);
-        if (core::turkish_iequals(text, "hayır") || core::turkish_iequals(text, "hayir") ||
-            text == "0")
-            return core::attr_bool(false);
-        return core::err(core::ErrorCode::InvalidArgument,
-                         "'" + spec.id + "' özniteliği evet/hayır bekliyor. Girilen: '" + text +
-                             "'");
-    }
-    case core::AttrType::Int64:
-    case core::AttrType::Length: {
-        try {
-            std::size_t used  = 0;
-            const long long v = std::stoll(text, &used);
-            if (used != text.size()) throw std::invalid_argument("kuyruk");
-            return spec.type == core::AttrType::Length
-                       ? core::attr_mm(static_cast<core::Mm>(v))
-                       : core::attr_int64(static_cast<std::int64_t>(v));
-        } catch (const std::exception&) {
-            return core::err(core::ErrorCode::InvalidArgument,
-                             "'" + spec.id + "' özniteliği tam sayı bekliyor" +
-                                 (spec.type == core::AttrType::Length ? " (milimetre)" : "") +
-                                 ". Girilen: '" + text + "'");
-        }
-    }
-    case core::AttrType::Decimal: {
-        // The column's own precision, not the one the typing happened to use. A
-        // value with more digits than the column declares is REFUSED rather than
-        // rounded: a document that quietly turned 0.405 into 0.40 would be saying
-        // something the user did not.
-        const auto scaled = core::decimal_from_text(text, spec.scale);
-        if (!scaled)
-            return core::err(core::ErrorCode::InvalidArgument,
-                             "'" + spec.id + "' özniteliği " + std::to_string(spec.scale) +
-                                 " basamaklı ondalık sayı bekliyor. Girilen: '" + text + "'");
-        return core::attr_decimal(*scaled, spec.scale);
-    }
-    case core::AttrType::Date: {
-        const auto days = core::date_from_text(text);
-        if (!days)
-            return core::err(core::ErrorCode::InvalidArgument,
-                             "'" + spec.id +
-                                 "' özniteliği YYYY-AA-GG biçiminde tarih bekliyor. "
-                                 "Girilen: '" +
-                                 text + "'");
-        return core::attr_date(*days);
-    }
-    }
-    return core::err(core::ErrorCode::Internal, "Bilinmeyen öznitelik türü.");
+    return core::attr_parse(spec, text);
 }
 
 std::string show(const core::AttrValue& v)

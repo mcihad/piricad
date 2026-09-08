@@ -31,12 +31,15 @@
 #pragma once
 
 #include "kentos_cad/app/theme.hpp"
+#include "kentos_cad/core/attribute.hpp"
 
 #include <cstdint>
+#include <functional>
 #include <utility>
 
 #include <QString>
 #include <QStringList>
+#include <QStyledItemDelegate>
 #include <QWidget>
 
 class QAbstractButton;
@@ -159,6 +162,58 @@ inline FieldSpec decimal_of(int decimals)
     spec.decimals = decimals;
     return spec;
 }
+
+/// The editor a declared attribute column asks for.
+///
+/// ONE MAPPING, not one per panel. The object inspector and the attribute table
+/// both open editors over the same columns, and two copies of "a `tarih` gets a
+/// calendar" is how one of them ends up offering a line edit for a date long
+/// after the other stopped.
+FieldSpec field_for(const core::AttrSpec& column);
+
+/// The Qt item delegate that puts a `Field` in a table cell.
+///
+/// WHY THE TABLE NEEDS ONE. `QStyledItemDelegate` opens Qt's own editors — a
+/// `QLineEdit` for everything, a `QSpinBox` with arrows nobody can hit at row
+/// height — which is the same "bolted-on widget" the inspector had before
+/// `Field` existed, and the same wrong editor for a date or a yes/no.
+///
+/// ENTER MOVES ON, which is the other half. A table of attributes is filled in
+/// the way a ledger is filled in: type, Enter, type, Enter. The delegate reports
+/// each finished cell through `advanced` and the window decides where the next
+/// one is — the delegate knows about editors, not about the shape of the grid.
+class FieldDelegate : public QStyledItemDelegate
+{
+    Q_OBJECT
+
+public:
+    /// `specs` answers "what does column N hold"; the delegate calls it per cell
+    /// rather than caching, because a column can be declared while the table is
+    /// open.
+    using SpecFor = std::function<FieldSpec(int column)>;
+
+    FieldDelegate(SpecFor specs, QObject* parent = nullptr);
+
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option,
+                          const QModelIndex& index) const override;
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override;
+    void setModelData(QWidget* editor, QAbstractItemModel* model,
+                      const QModelIndex& index) const override;
+    void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option,
+                              const QModelIndex& index) const override;
+
+    /// The palette the editors are themed with. Set by the window that owns the
+    /// table, and remembered so editors built later match.
+    void setTheme(ThemeMode mode) { theme_ = mode; }
+
+signals:
+    /// One cell was finished with Enter. The window moves to the next one.
+    void advanced(const QModelIndex& from);
+
+private:
+    SpecFor specs_;
+    ThemeMode theme_{ThemeMode::Dark};
+};
 
 /// One inline editor. Built for a cell, sized by the cell, gone when it commits.
 class Field : public QWidget, public Themed

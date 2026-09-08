@@ -461,13 +461,18 @@ hangisinin değişebileceğini görürsünüz.
 | **↑ ↓** | Satırlar arasında gezer |
 | **Enter** / **F2** | Seçili satırı açar |
 | **Space** | evet/hayır satırını çevirir |
-| **Enter** (düzenlerken) | Değeri alır ve düzenlemeden çıkar |
+| **Enter** (düzenlerken) | Değeri alır ve **sonraki satırı** düzenlemeye açar |
 | **Esc** (düzenlerken) | Vazgeçer, değeri değiştirmez |
 | Başka bir yere tıklamak | **Enter ile aynı**: değer alınır |
 
 Son satır bilerek öyledir. Bir değeri yazıp sonraki satıra tıklayan kişi işini
 bitirmiştir; **Enter**'a basmadı diye yazdığını atmak, gözüyle gördüğü emeği çöpe
 atmaktır.
+
+**Enter sonraki satıra geçer** ve onu da açar. Öznitelik paneli bir defter gibi
+doldurulur: yaz, Enter, yaz, Enter. Her değerden sonra durmak, altı öznitelikli bir
+parselde kimsenin istemediği beş fare hareketi demektir. Düzenlenemeyen satırlar
+atlanır; kapalı bir grup, içine girilirken açılır.
 
 #### Düzenleyici, satırın kendisidir
 

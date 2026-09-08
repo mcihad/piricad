@@ -642,6 +642,15 @@ int main(int argc, char** argv)
         });
     }
 
+    // The attribute grid: the edit-mode gate, our editors, and Enter walking the
+    // row the way a ledger is filled in.
+    if (qEnvironmentVariableIsSet("KENTOS_TABLE_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            window.probeAttributeGrid();
+            QApplication::exit(0);
+        });
+    }
+
     if (qEnvironmentVariableIsSet("KENTOS_HAND_PROBE")) {
         // The value, when it is a path, is the directory every step is
         // photographed into. See `MainWindow::probeToolsByHand`.

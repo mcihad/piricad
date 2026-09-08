@@ -115,9 +115,65 @@ nedeni yazar.
 
 ## Düzenleme
 
-Bir hücreye çift tıklayın, yeni değeri yazın, **Enter**.
+### Önce düzenleme kipi
 
-Bu bir `ÖZNİTELİK` komutu gönderir. Yani:
+Tablo **varsayılan olarak salt okunurdur**. Araç satırındaki **Düzenleme kipi**
+düğmesine basmadan hiçbir hücre açılmaz: ne çift tıklamayla, ne **F2** ile, ne
+yapıştırmayla.
+
+Bu bilerek böyledir. Bin parsellik bir tablo, yazıldığından çok daha sık **okunur**;
+sadece bakmak için açılan bir kadastro değerinin üstüne düşen bir çift tıklama,
+kimsenin istemediği ve kimsenin fark etmediği bir değişikliktir.
+
+Reddetme, görünümün "düzenleme tetikleyicileri" ayarında değil, **modelin
+kendisindedir** — yani hücreye hangi yoldan gidilirse gidilsin geçerlidir.
+
+### Yazmak
+
+Kip açıkken bir hücreye çift tıklayın ya da **F2**'ye basın, değeri yazın, **Enter**.
+
+Açılan düzenleyici sütunun **türüne göre** değişir — arayüzün geri kalanıyla aynı
+bileşenlerdir: tarih için takvim, evet/hayır için iki kelimelik segment, ondalık için
+bildirilen basamağı kabul eden kutu. Qt'nin kendi düzenleyicileri değildir; hücrenin
+tam üstüne, hücrenin kendisi gibi oturur.
+
+### Enter kolonları geçer
+
+Eski muhasebe programlarındaki gibi: **Enter** değeri alır ve **sağdaki kolona**
+geçer, orayı da düzenlemeye açar. Satırın son kolonundaysanız **alt satırın ilk
+kolonuna** sarar.
+
+Son satırın son hücresinde durur, başa dönmez: "sona geldim" bir bilgidir, sessizce
+birinci satıra atlamak ise yanlış yere girilmiş bir değerdir.
+
+| Tuş | Ne yapar |
+|---|---|
+| **Enter** | Değeri alır, sonraki kolona geçer ve açar |
+| **Esc** | Vazgeçer, hücreyi değiştirmez |
+| Başka yere tıklamak | **Enter ile aynı**: değer alınır |
+
+### Doğrulama
+
+Yazdığınız değer **gönderilmeden önce** sütunun bildirimine göre denetlenir; komutun
+kendi kullandığı çözümleyiciyle, yani ikinci bir kural yoktur. Kabul edilmezse hiçbir
+şey gönderilmez ve alt çubukta sebebi yazar:
+
+```text
+'ada' özniteliği tam sayı bekliyor. Girilen: 'abc'
+```
+
+**Her girişten sonra** o satırın tamamı da denetlenir — zorunlu sütunlar dolu mu,
+katalog kodları tanınıyor mu. Üç yüz satır önce boş bırakılmış zorunlu bir hücre,
+kimsenin yaptığı işle bağdaştıramayacağı bir şikâyettir; aynı şikâyet olduğu anda tek
+tuş uzaktadır.
+
+**Düzenleme kipinden çıkarken** tablonun tamamı denetlenir. Uymayan satır varsa
+liste hâlinde gösterilir ve çıkmak isteyip istemediğiniz sorulur — değerleri yazan
+kişinin hâlâ onlara bakıyor olduğu son andır.
+
+### Yazılan şey bir komuttur
+
+Her düzenleme bir `ÖZNİTELİK` komutu gönderir. Yani:
 
 - **Geri alınabilir** — **Ctrl+Z** hücreyi eski değerine döndürür.
 - **Günlüğe yazılır** — komut günlüğünde, komut satırından yazılmış hâliyle

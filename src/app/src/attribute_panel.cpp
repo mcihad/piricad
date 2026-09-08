@@ -512,26 +512,11 @@ void AttributePanel::rebuild()
                                       : QStringLiteral("—");
 
         // WHAT THE COLUMN IS DECIDES WHAT OPENS. A `tarih` column gets a calendar,
-        // an `evet_hayir` gets the two-word segment, a `kod` gets the catalogue's
-        // own list. Before this every column got a line edit and found out it was
-        // the wrong one when the command refused what was typed.
-        const core::AttrSpec& declared = column->spec();
-        FieldSpec editor;
-        switch (declared.type) {
-        case core::AttrType::Bool: editor = field_of(FieldKind::Bool); break;
-        case core::AttrType::Date:
-            editor             = field_of(FieldKind::Date);
-            editor.placeholder = tr("YYYY-AA-GG");
-            break;
-        case core::AttrType::Decimal: editor = decimal_of(declared.scale); break;
-        case core::AttrType::Int64: editor = field_of(FieldKind::Number); break;
-        case core::AttrType::Length:
-            editor        = field_of(FieldKind::Number);
-            editor.suffix = tr("mm");
-            break;
-        case core::AttrType::CodeRef:
-        case core::AttrType::Text: editor = field_of(FieldKind::Text); break;
-        }
+        // an `evet_hayir` gets the two-word segment. Read from the ONE mapping in
+        // `fields.hpp`, which the attribute table reads too: two copies of it is
+        // how one of them keeps offering a line edit for a date long after the
+        // other stopped.
+        const FieldSpec editor = field_for(column->spec());
 
         // ONE COMMAND PER OBJECT, and the object is named by its PERMANENT key
         // rather than by the slot it happens to occupy: a slot is a storage
@@ -615,7 +600,7 @@ void AttributePanel::beginEdit(int group, int index)
         // box that appeared on top of the panel — see `FieldFrame`.
         editor_ = new Field(as_cell(row.field), this);
         editor_->applyTheme(theme_);
-        connect(editor_, &Field::committed, this, &AttributePanel::commitEdit);
+        connect(editor_, &Field::committed, this, &AttributePanel::commitAndAdvance);
         connect(editor_, &Field::cancelled, this, [this] { closeEditor(); });
     }
 
@@ -630,6 +615,47 @@ void AttributePanel::beginEdit(int group, int index)
     editor_->show();
     editor_->beginEditing();
     update();
+}
+
+bool AttributePanel::nextEditable(int group, int index, int& outGroup, int& outIndex)
+{
+    int g = group;
+    int r = index + 1;
+    for (; g < groups_.size(); ++g, r = 0)
+        for (; r < groups_[g].rows.size(); ++r) {
+            if (groups_[g].rows[r].command.isEmpty()) continue;
+
+            // OPENED ON THE WAY PAST. A collapsed group has no row rectangle and
+            // `beginEdit` would refuse it — and a row the user cannot see is not
+            // a row they were about to fill in.
+            groups_[g].open = true;
+            outGroup        = g;
+            outIndex        = r;
+            return true;
+        }
+    return false;
+}
+
+void AttributePanel::commitAndAdvance(const QString& value)
+{
+    // WHERE WE WERE, taken before the commit: `commitEdit` refreshes, which
+    // rebuilds `groups_` and clears the editing position.
+    const int wasGroup = editingGroup_;
+    const int wasRow   = editingRow_;
+
+    commitEdit(value);
+
+    if (wasGroup < 0) return;
+
+    int nextGroup = -1;
+    int nextRow   = -1;
+    if (!nextEditable(wasGroup, wasRow, nextGroup, nextRow)) return;
+
+    // AFTER THE LAYOUT HAS CAUGHT UP. The group above may have just been opened,
+    // and `beginEdit` asks for a rectangle that only exists once the panel has
+    // laid itself out again.
+    update();
+    beginEdit(nextGroup, nextRow);
 }
 
 void AttributePanel::commitEdit(const QString& value)

@@ -16,6 +16,7 @@
 #include "kentos_cad/app/theme.hpp"
 
 #include "kentos_cad/app/dialog_chrome.hpp"
+#include "kentos_cad/app/fields.hpp"
 #include "kentos_cad/core/attribute.hpp"
 #include "kentos_cad/core/identity.hpp"
 
@@ -26,6 +27,7 @@
 class QLabel;
 class QLineEdit;
 class QTableView;
+class QToolButton;
 
 namespace kentos::app {
 
@@ -63,6 +65,30 @@ public:
     /// Every value of one column, as text, for the statistics panel.
     QVector<QString> columnValues(int column) const;
 
+    /// Whether cells may be opened at all.
+    ///
+    /// OFF UNTIL SOMEBODY ASKS. A grid of a thousand parcels is read far more
+    /// often than it is written, and a double click that starts editing a
+    /// cadastral value the reader only meant to look at is a change nobody
+    /// intended and nobody notices. The mode is a deliberate act, and while it is
+    /// off `flags()` does not mark a single cell editable — the refusal is in the
+    /// model, not in the view's triggers, so it holds however the cell is reached.
+    void setEditing(bool on);
+
+    bool editing() const noexcept { return editing_; }
+
+    /// What the column at `column` holds, for the delegate that opens its editor.
+    /// Column 0 is `fid` and has no editor.
+    FieldSpec fieldFor(int column) const;
+
+    /// Checks one row against the schema: required cells present, codes known.
+    /// Empty when it is sound, otherwise what is wrong with it, in Turkish.
+    QString validateRow(int row) const;
+
+    /// The same over every row the filter kept. Empty when the whole table is
+    /// sound.
+    QStringList validateAll() const;
+
     int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     int columnCount(const QModelIndex& parent = QModelIndex()) const override;
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
@@ -75,12 +101,21 @@ signals:
     /// The filter was re-applied: how many rows survived, out of how many.
     void filtered(int shown, int total);
 
+    /// A cell was refused before it was ever sent, with the reason. The window
+    /// shows it; the document was not touched.
+    void rejected(const QString& reason);
+
+    /// A cell was written and the row it belongs to was checked afterwards.
+    /// `complaint` is empty when the row is sound.
+    void rowChecked(int row, const QString& complaint);
+
 private:
     Controller& controller_;
     QVector<core::EntityKey> rows_; ///< the rows the filter kept, in slot order
     QVector<core::AttrId> columns_; ///< every declared column, in declaration order
     QString filter_;
     QString error_;
+    bool editing_{false};
 
     /// The layer the table is scoped to, or empty for the whole drawing.
     ///
@@ -102,6 +137,15 @@ public:
 
     void applyTheme(ThemeMode mode) override;
 
+    /// Drives the grid the way a hand does, for `KENTOS_TABLE_PROBE`: turn the
+    /// mode on or off, type into the current cell, and read back where the
+    /// cursor ended up.
+    ///
+    /// It exists because none of what was just built can be checked from a
+    /// transcript: "a cell does not open while the mode is off" and "Enter lands
+    /// on the next column" are both statements about a grid under a hand.
+    QString probeGrid(const QString& action, const QString& value);
+
 private:
     /// Builds the 44 px tool row above the filter bar.
     QWidget* buildToolRow();
@@ -118,6 +162,24 @@ private:
     /// Re-reads the counts in the title bar and the footer.
     void refreshCounts();
 
+    /// Turns the edit mode on or off.
+    ///
+    /// TURNING IT OFF VALIDATES FIRST. Leaving the mode is the moment the user
+    /// says "I am done with this table", and it is the last one at which a
+    /// missing required value is still theirs to fix rather than a surprise in
+    /// somebody else's save.
+    void setEditing(bool on);
+
+    /// Moves to the cell after `from` and opens it.
+    ///
+    /// ACROSS, THEN DOWN, THEN STOP — the way a ledger is filled in. The last
+    /// column wraps to the next row's first editable column, which is column 1:
+    /// `fid` is identity and never opens.
+    void advanceFrom(const QModelIndex& from);
+
+    /// Says something in the footer, in the warn colour, until the next entry.
+    void complain(const QString& text);
+
     Controller& controller_;
     QString layerName_;
 
@@ -127,6 +189,9 @@ private:
     QLineEdit* search_{nullptr};
     QLabel* pager_{nullptr};
     QLabel* summary_{nullptr};
+    QLabel* complaint_{nullptr};
+    QToolButton* editToggle_{nullptr};
+    FieldDelegate* delegate_{nullptr};
     QWidget* statistics_{nullptr};
     QLabel* statsField_{nullptr};
     QLabel* statsBody_{nullptr};

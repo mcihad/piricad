@@ -775,6 +775,10 @@ QString themeStyleSheet(ThemeMode mode)
         QLabel#sectionTitle               { color: %(text)s; font-size: 16px; font-weight: 600; }
         QLabel#quiet                      { color: %(textFaint)s; }
 
+        /* Something the user just did, not something that is broken: warn, which
+         * §1.2 reserves for "be careful", rather than danger's "this is wrong". */
+        QLabel#warning                    { color: %(warn)s; }
+
         /* design.md §8: the symbol editor's caption sits BESIDE its editor in a
            110 px column, dim rather than faint — it is read, not skimmed. */
         QLabel#formCaption                { background: transparent; color: %(textDim)s;

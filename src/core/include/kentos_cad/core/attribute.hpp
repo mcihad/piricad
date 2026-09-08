@@ -188,6 +188,20 @@ std::optional<std::int64_t> date_from_text(std::string_view text);
 std::string decimal_to_text(std::int64_t scaled, std::uint8_t scale, DecimalMark mark);
 std::optional<std::int64_t> decimal_from_text(std::string_view text, std::uint8_t scale);
 
+/// One cell FROM text, checked against what the column declared.
+///
+/// THE INVERSE OF `attr_display`, AND THE ONLY ONE. It lived inside the
+/// `ÖZNİTELİK` command, which was fine while the command was the only writer;
+/// the moment a second one appeared — an attribute table that wants to refuse a
+/// bad cell before it sends anything — the choice was to copy the parser or to
+/// share it, and a copy is how `evet` comes to mean one thing at the prompt and
+/// something else in a grid.
+///
+/// There is no guessing: the schema said what this column holds, and a value
+/// that is not that is refused with the type named rather than coerced. `yok`,
+/// `bos` and `boş` clear the cell, which is a different fact from zero.
+Result<AttrValue> attr_parse(const AttrSpec& spec, std::string_view text);
+
 /// One cell as text.
 ///
 /// A `Length` is stored in millimetres and printed in metres, because that is

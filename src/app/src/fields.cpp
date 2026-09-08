@@ -468,4 +468,98 @@ void Field::applyTheme(ThemeMode mode)
     update();
 }
 
+// =============================================================================
+// field_for
+// =============================================================================
+
+FieldSpec field_for(const core::AttrSpec& column)
+{
+    switch (column.type) {
+    case core::AttrType::Bool: return field_of(FieldKind::Bool);
+
+    case core::AttrType::Date: {
+        FieldSpec spec   = field_of(FieldKind::Date);
+        spec.placeholder = QStringLiteral("YYYY-AA-GG");
+        return spec;
+    }
+
+    case core::AttrType::Decimal: return decimal_of(column.scale);
+
+    case core::AttrType::Int64: return field_of(FieldKind::Number);
+
+    case core::AttrType::Length: {
+        FieldSpec spec = field_of(FieldKind::Number);
+        spec.suffix    = QStringLiteral("mm");
+        return spec;
+    }
+
+    case core::AttrType::CodeRef:
+    case core::AttrType::Text: break;
+    }
+    return field_of(FieldKind::Text);
+}
+
+// =============================================================================
+// FieldDelegate
+// =============================================================================
+
+FieldDelegate::FieldDelegate(SpecFor specs, QObject* parent)
+    : QStyledItemDelegate(parent), specs_(std::move(specs))
+{}
+
+QWidget* FieldDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem&,
+                                     const QModelIndex& index) const
+{
+    FieldSpec spec = specs_ ? specs_(index.column()) : FieldSpec{};
+    spec.frame     = FieldFrame::Cell;
+
+    auto* editor = new Field(spec, parent);
+    editor->applyTheme(theme_);
+
+    // COMMIT, CLOSE, THEN MOVE, in that order and through Qt's own signals. A
+    // delegate that wrote the model itself would bypass `setModelData`, which is
+    // the one place the value becomes a command.
+    connect(editor, &Field::committed, this, [this, editor, index](const QString&) {
+        auto* self = const_cast<FieldDelegate*>(this);
+        emit self->commitData(editor);
+        emit self->closeEditor(editor, QAbstractItemDelegate::NoHint);
+        emit self->advanced(index);
+    });
+    connect(editor, &Field::cancelled, this, [this, editor] {
+        auto* self = const_cast<FieldDelegate*>(this);
+        emit self->closeEditor(editor, QAbstractItemDelegate::RevertModelCache);
+    });
+    return editor;
+}
+
+void FieldDelegate::setEditorData(QWidget* editor, const QModelIndex& index) const
+{
+    auto* field = qobject_cast<Field*>(editor);
+    if (field == nullptr) return;
+
+    // THE EDIT ROLE, not the display one. A table prints `2 940.12` with a
+    // grouping space and a `—` for an empty cell; neither is a value a command
+    // would take, and putting one in the box makes the user delete characters
+    // that were never there.
+    const QString stored = index.data(Qt::EditRole).toString();
+    field->setValue(stored == QStringLiteral("—") ? QString() : stored);
+    field->beginEditing();
+}
+
+void FieldDelegate::setModelData(QWidget* editor, QAbstractItemModel* model,
+                                 const QModelIndex& index) const
+{
+    auto* field = qobject_cast<Field*>(editor);
+    if (field == nullptr) return;
+    model->setData(index, field->value(), Qt::EditRole);
+}
+
+void FieldDelegate::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option,
+                                         const QModelIndex&) const
+{
+    // EXACTLY THE CELL, for the reason the inspector's editor is: the only thing
+    // that should change on screen is that the value became selectable.
+    editor->setGeometry(option.rect);
+}
+
 } // namespace kentos::app

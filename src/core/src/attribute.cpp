@@ -383,6 +383,78 @@ Result<AttrValue> AttrColumn::get(std::size_t row) const
     return v;
 }
 
+Result<AttrValue> attr_parse(const AttrSpec& spec, std::string_view text)
+{
+    const std::string word(text);
+
+    if (turkish_iequals(word, "yok") || turkish_iequals(word, "bos") ||
+        turkish_iequals(word, "boş"))
+        return AttrValue{spec.type, false, 0, {}, spec.scale};
+
+    switch (spec.type) {
+    case AttrType::Text: return attr_text(word);
+    case AttrType::CodeRef: return attr_code(word);
+
+    case AttrType::Bool: {
+        if (turkish_iequals(word, "evet") || word == "1") return attr_bool(true);
+        if (turkish_iequals(word, "hayır") || turkish_iequals(word, "hayir") || word == "0")
+            return attr_bool(false);
+        return err(ErrorCode::InvalidArgument,
+                   "'" + spec.id + "' özniteliği evet/hayır bekliyor. Girilen: '" + word + "'");
+    }
+
+    case AttrType::Decimal: {
+        // The column's own precision, not the one the typing happened to use. A
+        // value with more digits than the column declares is REFUSED rather than
+        // rounded: a document that quietly turned 0.405 into 0.40 would be saying
+        // something the user did not.
+        const auto scaled = decimal_from_text(word, spec.scale);
+        if (!scaled)
+            return err(ErrorCode::InvalidArgument,
+                       "'" + spec.id + "' özniteliği " + std::to_string(spec.scale) +
+                           " basamaklı ondalık sayı bekliyor. Girilen: '" + word + "'");
+        return attr_decimal(*scaled, spec.scale);
+    }
+
+    case AttrType::Date: {
+        const auto days = date_from_text(word);
+        if (!days)
+            return err(ErrorCode::InvalidArgument,
+                       "'" + spec.id +
+                           "' özniteliği YYYY-AA-GG biçiminde tarih bekliyor. Girilen: '" + word +
+                           "'");
+        return attr_date(*days);
+    }
+
+    case AttrType::Int64:
+    case AttrType::Length: {
+        // Hand-walked rather than `std::stoll`, because that one throws on a bad
+        // value and accepts a trailing tail on a good one — two behaviours this
+        // has to correct at every call site anyway.
+        std::size_t at = 0;
+        bool negative  = false;
+        if (at < word.size() && (word[at] == '+' || word[at] == '-')) {
+            negative = word[at] == '-';
+            ++at;
+        }
+        std::int64_t magnitude = 0;
+        std::size_t digits     = 0;
+        for (; at < word.size() && word[at] >= '0' && word[at] <= '9'; ++at, ++digits)
+            magnitude = magnitude * 10 + (word[at] - '0');
+
+        if (digits == 0 || at != word.size())
+            return err(ErrorCode::InvalidArgument,
+                       "'" + spec.id + "' özniteliği tam sayı bekliyor" +
+                           (spec.type == AttrType::Length ? " (milimetre)" : "") + ". Girilen: '" +
+                           word + "'");
+
+        const std::int64_t value = negative ? -magnitude : magnitude;
+        return spec.type == AttrType::Length ? attr_mm(static_cast<Mm>(value)) : attr_int64(value);
+    }
+    }
+    return err(ErrorCode::Internal, "Bilinmeyen öznitelik türü.");
+}
+
 std::string attr_display(const AttrValue& value, DecimalMark mark)
 {
     if (!value.present) return {};
