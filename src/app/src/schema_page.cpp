@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/schema_page.hpp"
+#include "kentos_cad/app/widgets.hpp"
 
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/fields.hpp"
@@ -8,7 +9,6 @@
 
 #include <algorithm>
 
-#include <QFormLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
@@ -89,23 +89,27 @@ ColumnDialog::ColumnDialog(Controller& controller, QString existing, QString lay
     setFooterHeight(52);
     setModal(true);
 
-    auto* body = new QWidget(this);
-    auto* form = new QFormLayout(body);
-    form->setContentsMargins(18, 16, 18, 16);
-    form->setSpacing(10);
-    form->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    // THE FORM GRAMMAR of `form_örnek.png`: a label above its control, a
+    // required mark on the label, and the control at the standard's regular
+    // height. Every row here is a `FormRow`, so the dialog cannot invent a
+    // fourth way of putting a name beside an input.
+    auto* body   = new QWidget(this);
+    auto* column = new QVBoxLayout(body);
+    column->setContentsMargins(18, 16, 18, 16);
+    column->setSpacing(12);
 
-    const auto add = [this, form](const QString& label, Field* editor) {
-        auto* text = new QLabel(label, this);
-        editor->setFixedHeight(26);
-        form->addRow(text, editor);
-        return text;
+    const auto add = [this, column](const QString& label, Field* editor, bool required = false) {
+        editor->setFixedHeight(static_cast<int>(ControlSize::Regular));
+        auto* row = new FormRow(label, editor, this);
+        row->setRequired(required);
+        column->addWidget(row);
+        return row;
     };
 
     FieldSpec idSpec;
     idSpec.placeholder = tr("ada_no");
     id_                = new Field(idSpec, this);
-    add(tr("Kimlik"), id_);
+    add(tr("Kimlik"), id_, true);
 
     FieldSpec labelSpec;
     labelSpec.placeholder = tr("Panelde görünecek ad");
@@ -113,15 +117,15 @@ ColumnDialog::ColumnDialog(Controller& controller, QString existing, QString lay
     add(tr("Ad"), label_);
 
     type_ = new Field(combo_of(typeWords()), this);
-    add(tr("Tür"), type_);
+    add(tr("Tür"), type_, true);
 
-    digits_      = new Field(number_of(0, core::kMaxScale), this);
-    digitsLabel_ = add(tr("Basamak"), digits_);
+    digits_    = new Field(number_of(0, core::kMaxScale), this);
+    digitsRow_ = add(tr("Basamak"), digits_);
 
     FieldSpec catalogSpec;
     catalogSpec.placeholder = tr("Katalog kimliği");
     catalog_                = new Field(catalogSpec, this);
-    catalogLabel_           = add(tr("Katalog"), catalog_);
+    catalogRow_             = add(tr("Katalog"), catalog_);
 
     required_ = new Field(field_of(FieldKind::Bool), this);
     add(tr("Zorunlu"), required_);
@@ -130,6 +134,7 @@ ColumnDialog::ColumnDialog(Controller& controller, QString existing, QString lay
     aboutSpec.placeholder = tr("Tek satırlık açıklama");
     about_                = new Field(aboutSpec, this);
     add(tr("Açıklama"), about_);
+    column->addStretch(1);
 
     setBody(body);
 
@@ -164,12 +169,12 @@ ColumnDialog::ColumnDialog(Controller& controller, QString existing, QString lay
     connect(type_, &Field::committed, this, [this](const QString&) { syncTypeRows(); });
     syncTypeRows();
 
-    auto* cancel = new QPushButton(tr("Vazgeç"), this);
+    auto* cancel = new Button(ButtonRole::Secondary, tr("Vazgeç"), std::nullopt, this);
     connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
     footer()->addWidget(cancel);
 
-    auto* ok = new QPushButton(editing ? tr("Kaydet") : tr("Tanımla"), this);
-    ok->setObjectName(QStringLiteral("primary"));
+    auto* ok = new Button(ButtonRole::Primary, editing ? tr("Kaydet") : tr("Tanımla"),
+                          editing ? Glyph::Save : Glyph::Plus, this);
     ok->setDefault(true);
     connect(ok, &QPushButton::clicked, this, &QDialog::accept);
     footer()->addWidget(ok);
@@ -187,10 +192,8 @@ void ColumnDialog::syncTypeRows()
     // A ROW THAT DOES NOTHING IS NOT SHOWN. `basamak` on a text column and
     // `katalog` on an integer are boxes whose value is discarded, and a form full
     // of those teaches the user that the form does not mean what it says.
-    digitsLabel_->setVisible(isDecimal);
-    digits_->setVisible(isDecimal);
-    catalogLabel_->setVisible(isCode);
-    catalog_->setVisible(isCode);
+    digitsRow_->setVisible(isDecimal);
+    catalogRow_->setVisible(isCode);
 }
 
 QString ColumnDialog::line() const
@@ -275,17 +278,19 @@ SchemaPage::SchemaPage(Controller& controller, QString layerName, QWidget* paren
     auto* buttons = new QHBoxLayout;
     buttons->setSpacing(8);
 
-    add_ = new QPushButton(tr("Ekle…"), this);
-    add_->setObjectName(QStringLiteral("primary"));
+    // SECONDARY, not primary, though it is the page's main action: this page
+    // sits inside the settings window and inside the layer properties window,
+    // and each of those already has its one primary — `Tamam` — in the footer.
+    // The standard allows a screen exactly one.
+    add_ = new Button(ButtonRole::Secondary, tr("Ekle…"), Glyph::Plus, this);
     connect(add_, &QPushButton::clicked, this, [this] { declareOrEdit(QString()); });
     buttons->addWidget(add_);
 
-    edit_ = new QPushButton(tr("Düzenle…"), this);
+    edit_ = new Button(ButtonRole::Secondary, tr("Düzenle…"), Glyph::Pencil, this);
     connect(edit_, &QPushButton::clicked, this, [this] { declareOrEdit(currentId()); });
     buttons->addWidget(edit_);
 
-    drop_ = new QPushButton(tr("Sil"), this);
-    drop_->setObjectName(QStringLiteral("danger"));
+    drop_ = new Button(ButtonRole::Danger, tr("Sil"), Glyph::Trash, this);
     connect(drop_, &QPushButton::clicked, this, &SchemaPage::dropSelected);
     buttons->addWidget(drop_);
 

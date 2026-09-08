@@ -19,6 +19,7 @@
 #include "kentos_cad/app/style_designer.hpp"
 #include "kentos_cad/app/title_bar.hpp"
 #include "kentos_cad/app/toolbox.hpp"
+#include "kentos_cad/app/widgets.hpp"
 #include "kentos_cad/core/snap.hpp"
 
 #include "kentos_cad/io/dwg.hpp"
@@ -2329,6 +2330,39 @@ void MainWindow::closeEvent(QCloseEvent* event)
     }
 
     QMainWindow::closeEvent(event);
+}
+
+void MainWindow::probeWidgets()
+{
+    const auto say = [](const QString& text) {
+        (void)std::fprintf(stdout, "[bilesen] %s\n", text.toUtf8().constData());
+        (void)std::fflush(stdout);
+    };
+
+    // A top-level window of its own, so the sheet is measured at the sizes the
+    // components take when nothing around them constrains them.
+    QWidget* sheet = buildComponentSheet(theme_);
+    sheet->setWindowTitle(tr("Bileşen Standardı"));
+    sheet->resize(1240, 860);
+    sheet->show();
+    QCoreApplication::processEvents();
+
+    for (const QString& line : componentSheetInventory(sheet))
+        say(line);
+
+    // Photographed when the variable carries a path, the same bargain every probe
+    // here makes: an inventory proves the components exist at their heights, and
+    // says nothing about whether a person would call them one set.
+    const QByteArray into = qgetenv("KENTOS_WIDGETS_PROBE");
+    if (!into.isEmpty() && into != "1") {
+        const QString dir = QString::fromLocal8Bit(into);
+        QDir().mkpath(dir);
+        if (sheet->grab().save(dir + QStringLiteral("/bilesenler.png")))
+            say(QStringLiteral("kare: bilesenler.png"));
+    }
+
+    sheet->close();
+    delete sheet;
 }
 
 void MainWindow::openCommandSearch()

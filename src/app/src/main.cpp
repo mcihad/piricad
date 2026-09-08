@@ -651,6 +651,15 @@ int main(int argc, char** argv)
         });
     }
 
+    // The living component standard: every control in every state, its
+    // inventory printed for the gate and its picture saved for the manual.
+    if (qEnvironmentVariableIsSet("KENTOS_WIDGETS_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            window.probeWidgets();
+            QApplication::exit(0);
+        });
+    }
+
     if (qEnvironmentVariableIsSet("KENTOS_HAND_PROBE")) {
         // The value, when it is a path, is the directory every step is
         // photographed into. See `MainWindow::probeToolsByHand`.

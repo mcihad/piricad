@@ -23,7 +23,6 @@
 #include <QListWidget>
 #include <QMouseEvent>
 #include <QPainter>
-#include <QProgressBar>
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QStyle>
@@ -312,19 +311,15 @@ ImportWizard::ImportWizard(Controller& controller, ThemeMode theme, QWidget* par
     setBody(body);
     setFooterHeight(52);
 
-    back_ = new QPushButton(tr("Geri"), this);
-    back_->setFixedHeight(32);
+    back_ = new Button(ButtonRole::Secondary, tr("Geri"), std::nullopt, this);
     back_->setEnabled(false);
     connect(back_, &QPushButton::clicked, this, [this] { showPage(0); });
 
-    cancel_ = new QPushButton(tr("İptal"), this);
-    cancel_->setFixedHeight(32);
+    cancel_ = new Button(ButtonRole::Secondary, tr("İptal"), std::nullopt, this);
     connect(cancel_, &QPushButton::clicked, this, &ImportWizard::reject);
 
-    next_ = new QPushButton(tr("İleri"), this);
-    next_->setObjectName(QStringLiteral("primary"));
+    next_ = new Button(ButtonRole::Primary, tr("İleri"), std::nullopt, this);
     next_->setDefault(true);
-    next_->setFixedHeight(32);
     next_->setEnabled(false);
     connect(next_, &QPushButton::clicked, this, [this] {
         if (pages_->currentIndex() == 0) {
@@ -444,8 +439,7 @@ QWidget* ImportWizard::buildFilePage()
                   : QString());
     });
 
-    auto* browse = new QPushButton(tr("Gözat…"), page);
-    browse->setFixedHeight(30);
+    auto* browse = new Button(ButtonRole::Secondary, tr("Gözat…"), Glyph::Open, page);
     connect(browse, &QPushButton::clicked, this, &ImportWizard::browse);
 
     pick->addWidget(pathField_, 1);
@@ -474,14 +468,13 @@ QWidget* ImportWizard::buildFilePage()
     pcol->setContentsMargins(0, 0, 0, 0);
     pcol->setSpacing(8);
 
-    progress_ = new QProgressBar(progressBox_);
-    progress_->setTextVisible(false);
-    progress_->setFixedHeight(6);
-    // INDETERMINATE ON PURPOSE. The readers stream and do not report a fraction,
-    // and a bar that filled itself on a timer would be a lie told at the exact
-    // moment the user is deciding whether to wait. What IS honest — the elapsed
-    // seconds and a stop that works — is under it.
-    progress_->setRange(0, 0);
+    // The 2 px accent strip of design.md §11, indeterminate on purpose: the
+    // readers stream and report no fraction, and a bar that filled itself on a
+    // timer would be a lie told at the exact moment the user is deciding
+    // whether to wait. It runs while `progressBox_` is shown and stops when it
+    // is hidden; the honest figures — elapsed seconds, a stop that works — are
+    // under it.
+    progress_ = new ProgressStrip(progressBox_);
     pcol->addWidget(progress_);
 
     progressText_ = new QLabel(progressBox_);
@@ -573,14 +566,12 @@ QWidget* ImportWizard::buildLayerPage()
     auto* listHeading = new QLabel(tr("KATMANLAR"), page);
     listHeading->setObjectName(QStringLiteral("groupCaption"));
 
-    auto* all = new QPushButton(tr("Tümü"), page);
-    all->setObjectName(QStringLiteral("ghost"));
-    all->setFlat(true);
+    auto* all = new Button(ButtonRole::Ghost, tr("Tümü"), std::nullopt, page);
+    all->setControlSize(ControlSize::Compact);
     connect(all, &QPushButton::clicked, this, [this] { setAllChecked(true); });
 
-    auto* none = new QPushButton(tr("Hiçbiri"), page);
-    none->setObjectName(QStringLiteral("ghost"));
-    none->setFlat(true);
+    auto* none = new Button(ButtonRole::Ghost, tr("Hiçbiri"), std::nullopt, page);
+    none->setControlSize(ControlSize::Compact);
     connect(none, &QPushButton::clicked, this, [this] { setAllChecked(false); });
 
     head->addWidget(listHeading);

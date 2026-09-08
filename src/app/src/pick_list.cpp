@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/pick_list.hpp"
+#include "kentos_cad/app/widgets.hpp"
 
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/measure_text.hpp"
@@ -63,12 +64,12 @@ PickList::PickList(Controller& controller, const std::vector<core::EntityId>& ca
 
     build(candidates);
 
-    auto* pick = new QPushButton(tr("Seç"), this);
+    auto* pick = new Button(ButtonRole::Primary, tr("Seç"), Glyph::Check, this);
     pick->setDefault(true);
     footer()->addWidget(pick);
     connect(pick, &QPushButton::clicked, this, &QDialog::accept);
 
-    auto* cancel = new QPushButton(tr("Vazgeç"), this);
+    auto* cancel = new Button(ButtonRole::Secondary, tr("Vazgeç"), std::nullopt, this);
     footer()->addWidget(cancel);
     connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
 

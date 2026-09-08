@@ -98,6 +98,17 @@ enum class Glyph {
     Coordinate,
     StyleCopy,
     Topology,
+
+    // ---- the component standard, `bileşen_standardı.png` ----------------------
+    Trash,    ///< a bin: the destructive button's mark, not the eraser tool's
+    Pencil,   ///< editing, as a state: the mode toggle and the edit-mode tool
+    Tune,     ///< three sliders: the icon-only button's example
+    Check,    ///< a tick: the checked box, a validation rule that holds
+    Calendar, ///< a date field's picker
+    Warning,  ///< a triangle with a bar: a banner that asks for care
+    Info,     ///< a ring with a dot: a banner that only informs
+    Ruler,    ///< a length input's leading mark
+    Refresh,  ///< two arcs chasing each other: read it again from the server
 };
 
 /// Renders `glyph` at `size` logical pixels in `colour`, with a checked variant

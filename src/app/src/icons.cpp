@@ -628,6 +628,85 @@ void draw(QPainter& p, Glyph g, const QColor& c)
         p.drawEllipse(QPointF(7.0, 14.2), 1.5, 1.5);
         break;
 
+    // ---- the component standard, `bileşen_standardı.png` ----------------------
+    case Glyph::Trash:
+        p.setPen(stroke(c, 1.7));
+        p.drawLine(QPointF(4.6, 7.0), QPointF(19.4, 7.0));
+        p.drawLine(QPointF(9.4, 7.0), QPointF(9.4, 4.6));
+        p.drawLine(QPointF(9.4, 4.6), QPointF(14.6, 4.6));
+        p.drawLine(QPointF(14.6, 4.6), QPointF(14.6, 7.0));
+        p.drawPolyline(QPolygonF(
+            {QPointF(6.2, 7.0), QPointF(7.2, 20.0), QPointF(16.8, 20.0), QPointF(17.8, 7.0)}));
+        p.drawLine(QPointF(10.2, 10.4), QPointF(10.5, 16.8));
+        p.drawLine(QPointF(13.8, 10.4), QPointF(13.5, 16.8));
+        break;
+
+    case Glyph::Pencil:
+        p.setPen(stroke(c, 1.7));
+        p.drawPolygon(QPolygonF({QPointF(4.4, 19.6), QPointF(5.4, 15.2), QPointF(15.8, 4.8),
+                                 QPointF(19.2, 8.2), QPointF(8.8, 18.6)}));
+        p.drawLine(QPointF(13.6, 7.0), QPointF(17.0, 10.4));
+        break;
+
+    case Glyph::Tune:
+        p.setPen(stroke(c, 1.7));
+        for (const qreal y : {6.6, 12.0, 17.4})
+            p.drawLine(QPointF(4.4, y), QPointF(19.6, y));
+        p.setBrush(c);
+        p.drawEllipse(QPointF(14.6, 6.6), 2.0, 2.0);
+        p.drawEllipse(QPointF(9.0, 12.0), 2.0, 2.0);
+        p.drawEllipse(QPointF(15.8, 17.4), 2.0, 2.0);
+        break;
+
+    case Glyph::Check:
+        p.setPen(stroke(c, 2.1));
+        p.drawPolyline(QPolygonF({QPointF(5.2, 12.4), QPointF(10.0, 17.2), QPointF(19.0, 7.4)}));
+        break;
+
+    case Glyph::Calendar:
+        p.setPen(stroke(c, 1.7));
+        p.drawRoundedRect(QRectF(4.0, 5.6, 16.0, 14.4), 1.8, 1.8);
+        p.drawLine(QPointF(4.0, 10.0), QPointF(20.0, 10.0));
+        p.drawLine(QPointF(8.4, 3.6), QPointF(8.4, 7.4));
+        p.drawLine(QPointF(15.6, 3.6), QPointF(15.6, 7.4));
+        break;
+
+    case Glyph::Warning:
+        p.setPen(stroke(c, 1.7));
+        p.drawPolygon(QPolygonF({QPointF(12.0, 4.4), QPointF(20.4, 19.2), QPointF(3.6, 19.2)}));
+        p.setPen(stroke(c, 1.9));
+        p.drawLine(QPointF(12.0, 9.6), QPointF(12.0, 13.8));
+        p.setBrush(c);
+        p.drawEllipse(QPointF(12.0, 16.4), 1.1, 1.1);
+        break;
+
+    case Glyph::Info:
+        p.setPen(stroke(c, 1.7));
+        p.drawEllipse(QPointF(12.0, 12.0), 8.6, 8.6);
+        p.setPen(stroke(c, 1.9));
+        p.drawLine(QPointF(12.0, 11.0), QPointF(12.0, 16.4));
+        p.setBrush(c);
+        p.drawEllipse(QPointF(12.0, 7.8), 1.1, 1.1);
+        break;
+
+    case Glyph::Ruler:
+        p.setPen(stroke(c, 1.7));
+        p.drawRoundedRect(QRectF(3.6, 8.4, 16.8, 7.2), 1.2, 1.2);
+        for (const qreal x : {7.6, 10.6, 13.6, 16.6})
+            p.drawLine(QPointF(x, 8.4), QPointF(x, x == 10.6 || x == 16.6 ? 12.6 : 11.2));
+        break;
+
+    case Glyph::Refresh:
+        // Two arcs, each ending in a right-angled head — the loop of "again",
+        // drawn so it re-tints with the theme where the platform's reload icon
+        // arrived in whatever colour the platform had.
+        p.setPen(stroke(c, 1.7));
+        p.drawArc(QRectF(4.5, 4.5, 15.0, 15.0), 20 * 16, 160 * 16);
+        p.drawArc(QRectF(4.5, 4.5, 15.0, 15.0), 200 * 16, 160 * 16);
+        p.drawPolyline(QPolygonF({QPointF(19.0, 4.6), QPointF(19.0, 9.4), QPointF(14.2, 9.4)}));
+        p.drawPolyline(QPolygonF({QPointF(5.0, 19.4), QPointF(5.0, 14.6), QPointF(9.8, 14.6)}));
+        break;
+
     case Glyph::Help:
         p.setPen(stroke(c, 1.7));
         p.drawEllipse(QPointF(12.0, 12.0), 8.6, 8.6);

@@ -30,11 +30,13 @@
 // the panel that owns it turns that into a command (CLAUDE.md 1.1, 5.9).
 #pragma once
 
+#include "kentos_cad/app/icons.hpp"
 #include "kentos_cad/app/theme.hpp"
 #include "kentos_cad/core/attribute.hpp"
 
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <utility>
 
 #include <QDate>
@@ -46,6 +48,7 @@
 
 class QAbstractButton;
 class QComboBox;
+class QLabel;
 class QLineEdit;
 class QSlider;
 class QToolButton;
@@ -67,6 +70,21 @@ enum class FieldKind : std::uint8_t {
     Date,        ///< a calendar day, `YYYY-AA-GG`, with a picker
     Range,       ///< a bounded number, dragged rather than typed
     Colour,      ///< `0xAARRGGBB`, with the platform picker
+};
+
+/// What a value IS RIGHT NOW, from `bileşen_standardı.png`'s seven states —
+/// minus focus and disabled, which the widget system already carries.
+///
+/// Each says a DIFFERENT thing, and the two easiest to confuse are the ones
+/// worth stating: `Changed` (warn) means "you edited this and it is not saved",
+/// `Invalid` (danger) means "this value is not acceptable". A field that used one
+/// colour for both would tell a user their own edit was wrong.
+enum class FieldState : std::uint8_t {
+    Normal,   ///< the value is what it was
+    Changed,  ///< edited and not yet written — warn
+    Invalid,  ///< not acceptable — danger
+    Derived,  ///< computed by the program; editing it is meaningless — accent, `fx`
+    ReadOnly, ///< can be read and not written — dim, no ground
 };
 
 /// How an editor is framed, which is a question about WHERE it is, not what it
@@ -110,8 +128,14 @@ struct FieldSpec
     /// decimal's clothing, which is why `SÜTUN` defaults it to two.
     int decimals{0};
 
-    /// A unit printed inside the box, after the value: `m`, `m²`, `°`.
+    /// A unit printed inside the box, after the value, dim and in mono: `m`,
+    /// `m²`, `°`. The standard draws it at the right edge, and a length with
+    /// its unit beside it is a length nobody has to guess the unit of.
     QString suffix;
+
+    /// A mark at the left edge, before the value: a ruler on a length, a lock
+    /// on a read-only code. `Derived` supplies its own `fx` when this is empty.
+    std::optional<Glyph> glyph;
 
     /// Whether this editor is a form control or a cell. Defaults to the form,
     /// because that is the one that looks wrong when it is silently omitted.
@@ -334,6 +358,15 @@ public:
     /// Focuses the editor and selects what is in it, so typing replaces.
     void beginEditing();
 
+    /// Puts the field in one of the standard's states; see `FieldState`. The
+    /// stylesheet reads it as the `state` property on the frame and the line.
+    void setState(FieldState state);
+
+    FieldState state() const noexcept { return state_; }
+
+    /// The unit at the right edge, or empty for none.
+    void setUnit(const QString& unit);
+
     /// The kind this field was built for, so an owner can decide whether the
     /// editor it has is the editor it now needs.
     FieldKind kind() const noexcept { return spec_.kind; }
@@ -365,6 +398,9 @@ private:
     /// Rewrites the button face of a `MultiSelect` from the ticked entries.
     void refreshMultiFace();
 
+    /// Repaints the leading mark in the ink the state calls for.
+    void refreshLead();
+
     FieldSpec spec_;
     bool done_{false}; ///< one edit ends once, whichever way it ends
 
@@ -374,9 +410,12 @@ private:
     QAbstractButton* no_{nullptr};  ///< Bool
     QToolButton* picker_{nullptr};  ///< Date, Colour, MultiSelect
     DatePopup* calendar_{nullptr};  ///< Date, built on the first press
-    QSlider* slider_{nullptr};      ///< Range
-    QStringList ticked_;            ///< MultiSelect
-    QString colour_;                ///< Colour, as `0xAARRGGBB`
+    QLabel* lead_{nullptr};         ///< the mark at the left edge, when there is one
+    QLabel* unit_{nullptr};         ///< the unit at the right edge, when there is one
+    FieldState state_{FieldState::Normal};
+    QSlider* slider_{nullptr}; ///< Range
+    QStringList ticked_;       ///< MultiSelect
+    QString colour_;           ///< Colour, as `0xAARRGGBB`
     ThemeMode theme_{ThemeMode::Dark};
 };
 

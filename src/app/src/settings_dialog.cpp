@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/settings_dialog.hpp"
 
+#include "kentos_cad/app/fields.hpp"
 #include "kentos_cad/app/icons.hpp"
+#include "kentos_cad/app/widgets.hpp"
 
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/schema_page.hpp"
@@ -10,11 +12,8 @@
 
 #include <QColorDialog>
 #include <QComboBox>
-#include <QDialogButtonBox>
-#include <QDoubleSpinBox>
 #include <QFont>
 #include <QFormLayout>
-#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -25,7 +24,6 @@
 #include <QPixmap>
 #include <QPushButton>
 #include <QScrollArea>
-#include <QSpinBox>
 #include <QStackedWidget>
 #include <QTabWidget>
 #include <QToolButton>
@@ -359,20 +357,17 @@ SettingsDialog::SettingsDialog(Controller& controller, Mode mode, QWidget* paren
     });
 
     // ---- the footer ----
-    const auto footerButton = [this](const QString& text, bool primary) {
-        auto* button = new QPushButton(text, this);
-        button->setObjectName(primary ? QStringLiteral("primary") : QString());
-        button->setDefault(primary);
-        return button;
-    };
-
-    auto* defaults = footerButton(tr("Varsayılanlara dön"), false);
+    // Roles from the standard, and ONE primary. `Tamam` is the answer; `İptal`
+    // and `Uygula` stand beside it as secondaries; the two housekeeping actions
+    // at the far left are ghosts — present, low, never competing with the answer.
+    auto* defaults = new Button(ButtonRole::Ghost, tr("Varsayılanlara dön"), std::nullopt, this);
     connect(defaults, &QPushButton::clicked, this, [this] {
         for (const Row& r : rows_)
             write(*r.spec, QStringLiteral("varsayılan"));
     });
 
-    auto* exportProfile = footerButton(tr("Profili dışa aktar"), false);
+    auto* exportProfile =
+        new Button(ButtonRole::Ghost, tr("Profili dışa aktar"), std::nullopt, this);
     connect(exportProfile, &QPushButton::clicked, this, [this] {
         // Phase 2. Said in the window rather than in a tooltip, because a button
         // that does nothing silently is worse than one that says why.
@@ -382,7 +377,7 @@ SettingsDialog::SettingsDialog(Controller& controller, Mode mode, QWidget* paren
                                     "günlüğü zaten taşınabilir bir kayıttır."));
     });
 
-    auto* cancel = footerButton(tr("İptal"), false);
+    auto* cancel = new Button(ButtonRole::Secondary, tr("İptal"), std::nullopt, this);
     connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
 
     // EVERY EDIT IS ALREADY WRITTEN. A setting changes the moment its control
@@ -390,7 +385,7 @@ SettingsDialog::SettingsDialog(Controller& controller, Mode mode, QWidget* paren
     // only closes. Both are here because §10 draws them and because a user who
     // does not see them wonders whether anything was saved; neither pretends to
     // do work it does not do, and the tooltip says so.
-    auto* apply = footerButton(tr("Uygula"), false);
+    auto* apply = new Button(ButtonRole::Secondary, tr("Uygula"), std::nullopt, this);
     apply->setToolTip(tr("Her değişiklik yazıldığı anda uygulanır; bu düğme pencereyi açık "
                          "bırakır."));
     connect(apply, &QPushButton::clicked, this, [this] {
@@ -399,7 +394,8 @@ SettingsDialog::SettingsDialog(Controller& controller, Mode mode, QWidget* paren
         refresh();
     });
 
-    auto* ok = footerButton(tr("Tamam"), true);
+    auto* ok = new Button(ButtonRole::Primary, tr("Tamam"), std::nullopt, this);
+    ok->setDefault(true);
     connect(ok, &QPushButton::clicked, this, &QDialog::accept);
 
     QHBoxLayout* bar = footer();
@@ -627,21 +623,22 @@ void SettingsDialog::addRow(QVBoxLayout* into, const SettingSpec& spec)
             break;
         }
 
-        auto* box = new QDoubleSpinBox(line);
-        box->setDecimals(0);
-        box->setGroupSeparatorShown(true);
-        box->setMinimum(spec.range.bounded() ? static_cast<double>(spec.range.min)
-                                             : -kLengthCeiling);
-        box->setMaximum(spec.range.bounded() ? static_cast<double>(spec.range.max)
-                                             : kLengthCeiling);
-        box->setSuffix(spec.unit.empty()
-                           ? QString()
-                           : QStringLiteral(" %1").arg(QString::fromStdString(spec.unit)));
-        // On editingFinished, not on every keystroke: a spin box counting up from
-        // 0 to 10000 would otherwise dispatch ten thousand commands and fill the
-        // journal with every number on the way.
-        connect(box, &QDoubleSpinBox::editingFinished, this, [this, &spec, box] {
-            if (!loading_) write(spec, QString::number(box->value(), 'f', 0));
+        // The standard's number input — mono digits, the unit dim at the right
+        // edge — with the setting's declared bounds as its validator. The spin
+        // box it replaces had arrows nobody could hit at row height and a suffix
+        // glued to the number.
+        const long long low  = spec.range.bounded() ? static_cast<long long>(spec.range.min)
+                                                    : -static_cast<long long>(kLengthCeiling);
+        const long long high = spec.range.bounded() ? static_cast<long long>(spec.range.max)
+                                                    : static_cast<long long>(kLengthCeiling);
+        auto* box = new Field(number_of(low, high, QString::fromStdString(spec.unit)), line);
+        box->setFixedHeight(static_cast<int>(ControlSize::Regular));
+        box->setAccessibleName(row_label(spec));
+        // On commit — Enter, or focus leaving — not on every keystroke: a control
+        // that reported each digit would dispatch a command per keystroke and
+        // fill the journal with every number on the way to the one meant.
+        connect(box, &Field::committed, this, [this, &spec](const QString& text) {
+            if (!loading_ && !text.isEmpty()) write(spec, text);
         });
         editor = box;
         break;
@@ -781,8 +778,8 @@ void SettingsDialog::refresh()
                                     : QStringLiteral("#%1").arg(rgba, 8, 16, QLatin1Char('0')));
                 break;
             }
-            qobject_cast<QDoubleSpinBox*>(row.editor)
-                ->setValue(static_cast<double>(value.as_int()));
+            if (auto* field = qobject_cast<Field*>(row.editor))
+                field->setValue(QString::number(value.as_int()));
             break;
         case SettingType::Text:
             qobject_cast<QLineEdit*>(row.editor)

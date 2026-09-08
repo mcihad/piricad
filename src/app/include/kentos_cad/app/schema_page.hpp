@@ -31,7 +31,6 @@
 #include <QWidget>
 
 class QLabel;
-class QPushButton;
 class QTableWidget;
 
 namespace kentos::app {
@@ -41,6 +40,10 @@ class Controller;
 
 /// One inline editor; see fields.hpp.
 class Field;
+
+/// The component set; see widgets.hpp.
+class Button;
+class FormRow;
 
 /// Declares or edits one column. Modal, and it writes nothing itself: the caller
 /// reads `line()` and sends it.
@@ -81,8 +84,8 @@ private:
     Field* required_{nullptr};
     Field* about_{nullptr};
 
-    QLabel* digitsLabel_{nullptr};
-    QLabel* catalogLabel_{nullptr};
+    FormRow* digitsRow_{nullptr};
+    FormRow* catalogRow_{nullptr};
     ThemeMode theme_{ThemeMode::Dark};
 };
 
@@ -132,9 +135,9 @@ private:
     QString layer_;
 
     QTableWidget* table_{nullptr};
-    QPushButton* add_{nullptr};
-    QPushButton* edit_{nullptr};
-    QPushButton* drop_{nullptr};
+    Button* add_{nullptr};
+    Button* edit_{nullptr};
+    Button* drop_{nullptr};
     QLabel* note_{nullptr};
     ThemeMode theme_{ThemeMode::Dark};
 };

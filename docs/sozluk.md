@@ -220,3 +220,32 @@ uzak bir görünümdür. Ölçeğe bağlı gösterimler bu sayıya göre seçili
 
 **Kâğıt mikrometresi** — Çizgi kalınlığının saklandığı birim; 1000 mikrometre paftada
 1 mm eder. Piksel değildir, çünkü piksel karşılığı ölçek ve ekran çözünürlüğüyle değişir.
+
+**Bileşen seti** — KentOSCad pencerelerinin kurulduğu ortak düğme, girdi ve seçim
+denetimleri ailesi. Her denetim 24, 30 ya da 36 piksel boyundadır ve aynı köşe, kenar ve
+renk kurallarıyla çizilir. Bkz. [Bileşenler](baslangic/bilesenler.md).
+
+**Birincil düğme** — Bir pencerenin asıl onayı olan mavi dolgulu düğme: `Tamam`,
+`Bağlan`, `Filtrele`. Bir ekranda yalnız bir tane bulunur.
+
+**Hayalet düğme** — Zemini ve kenarı olmayan, yalnız yazıdan ibaret düşük öncelikli
+düğme: `Yardım`, `Tümü`, `Yenile`.
+
+**Yıkıcı düğme** — Geri alınamayan bir eylemi başlatan kırmızı kenarlı düğme: `Sil`,
+`Projeyi Sil`. Her zaman onay ister.
+
+**Kip anahtarı** — Basılı durarak bir kipi açık tutan düğme; `Düzenleme` gibi. Basılıyken
+mavi kenar ve dolgu alır.
+
+**Segment** — Yan yana duran, yalnız biri seçili olabilen iki–dört seçenek: `Tablo | Form`,
+`Milimetre | Harita birimi | Piksel`. Hiçbirinin seçili olmaması, seçeneğin anlattığı
+şeylerin aynı fikirde olmadığı anlamına gelir.
+
+**Çip** — Tam yuvarlak küçük etiket; seçilebilir olabilir. Sığmayan çipler `+2` gibi bir
+sayı çipiyle toplanır.
+
+**Rozet** — Bir değerin ya da etiketin yanına düşen 14 piksellik küçük etiket: `HESAP`,
+`BOŞ`, `ZORUNLU`, `SABİT`. Rengi ne dediğini söyler, yazısı her zaman rengin yanındadır.
+
+**Türetilmiş değer** — Programın başka değerlerden hesapladığı, elle girilmeyen değer.
+Girdi kutusunda `fx` işareti, etiketinde `HESAP` rozeti taşır.

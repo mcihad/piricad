@@ -14,6 +14,7 @@ qt_standard_project_setup()
 qt_add_executable(kentos_cad
     src/attribute_panel.cpp
     src/fields.cpp
+    src/widgets.cpp
     src/schema_page.cpp
     src/attribute_table.cpp
     src/command_line.cpp
@@ -45,6 +46,7 @@ qt_add_executable(kentos_cad
     include/kentos_cad/app/command_line.hpp
     include/kentos_cad/app/attribute_panel.hpp
     include/kentos_cad/app/fields.hpp
+    include/kentos_cad/app/widgets.hpp
     include/kentos_cad/app/schema_page.hpp
     include/kentos_cad/app/attribute_table.hpp
     include/kentos_cad/app/command_palette.hpp

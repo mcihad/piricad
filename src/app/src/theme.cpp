@@ -306,10 +306,6 @@ QString themeStyleSheet(ThemeMode mode)
         QDialog#dialogFrame              { background: %(window)s; }
         QWidget#dialogFooter             { background: %(raised)s;
                                            border-top: 1px solid %(lineHard)s; }
-        QPushButton#dialogHelp          { background: transparent; color: %(textDim)s;
-                                           border: 1px solid %(border)s; border-radius: 4px;
-                                           padding: 4px 12px; font-size: 12px; }
-        QPushButton#dialogHelp:hover    { color: %(text)s; border-color: %(accent)s; }
         QWidget#settingsSidebar,
         QWidget#designerSidebar          { background: %(strip)s;
                                            border-right: 1px solid %(lineHard)s; }
@@ -508,6 +504,49 @@ QString themeStyleSheet(ThemeMode mode)
         QSlider#fieldSlider::handle:horizontal { background: %(accent)s; width: 9px;
                                            margin: -4px 0px; border-radius: 4px; }
 
+        /* The field's own marks: the unit at the right edge, the glyph at the
+         * left. Both are labels inside the frame, so they inherit its ground
+         * and add nothing of their own. */
+        QLabel#fieldUnit                  { color: %(textDim)s; background: transparent;
+                                            font-family: "IBM Plex Mono", monospace;
+                                            font-size: 11px; padding: 0px 8px 0px 0px; }
+        QLabel#fieldLead                  { background: transparent; }
+        QWidget#field[frame="box"][state="changed"]  { border: 1px solid %(warn)s;
+                                            background: %(warnWash)s; }
+        QWidget#field[frame="box"][state="invalid"]  { border: 1px solid %(dangerEdge)s;
+                                            background: %(dangerWash)s; }
+        QWidget#field[frame="box"][state="derived"]  { border: 1px solid %(accentEdge)s; }
+        /* Read-only and disabled KEEP THEIR BOX. The standard draws both as a
+         * box — read-only on a sunken ground with a lock, disabled outlined with
+         * faint text — because a value with no frame reads as a caption, and the
+         * reader then cannot tell a field they may not edit from a label. */
+        QWidget#field[frame="box"][state="readonly"] { border: 1px solid %(lineSoft)s;
+                                            background: %(sunken)s; }
+        QWidget#field[frame="box"]:disabled { border: 1px solid %(lineSoft)s;
+                                            background: transparent; }
+        QLineEdit#fieldLine[state="changed"]  { color: %(warn)s; }
+        QLineEdit#fieldLine[state="derived"]  { color: %(accentHi)s; }
+        QLineEdit#fieldLine[state="readonly"] { color: %(textDim)s; }
+
+        /* ---- the form grammar, `form_örnek.png` ----------------------------- */
+        /*
+         * A label ABOVE its control, 11 px and dim; a caption badge at the right
+         * end of the label row; one line under the control that helps (faint) or
+         * complains (danger) — never both, because a field is not both fine and
+         * wrong. `FormRow` writes these names; `FormSection` paints itself.
+         */
+        QLabel#formRowLabel               { color: %(textDim)s; font-size: 11px; }
+        QLabel#formHelp                   { color: %(textFaint)s; font-size: 10.5px; }
+        QLabel#formHelp[tone="danger"]    { color: %(danger)s; }
+        QLabel#sliderReadout              { color: %(readoutDim)s;
+                                            font-family: "IBM Plex Mono", monospace;
+                                            font-size: 11px; }
+        QLabel#bannerTitle                { color: %(text)s; font-weight: 600; font-size: 12px;
+                                            background: transparent; }
+        QLabel#bannerText                 { color: %(textDim)s; font-size: 11.5px;
+                                            background: transparent; }
+        QWidget#componentSheet            { background: %(window)s; }
+
         /* ---- layers panel, §7 ---------------------------------------------- */
         /* The row is painted by LayerRowDelegate; the view must add nothing. */
         QTreeWidget#layerTree            { background: %(panel)s; border: none;
@@ -669,10 +708,19 @@ QString themeStyleSheet(ThemeMode mode)
          *   mode         carries an on/off state — reads as pressed
          *   icon         32x32, 16 px glyph, tooltip only
          */
-        QPushButton                       { background: transparent; color: %(textDim)s;
+        QPushButton, QPushButton#secondary { background: transparent; color: %(textDim)s;
                                             border: 1px solid %(border)s; border-radius: 4px;
-                                            padding: 0px 16px; min-height: 30px; max-height: 30px;
-                                            font-size: 12px; }
+                                            padding: 0px 16px; font-size: 12px; }
+
+        /* NO HEIGHT HERE, on purpose. The three heights the standard allows —
+         * 24 / 30 / 36 — are `ControlSize`, and `Button::setControlSize` fixes
+         * the widget to one of them. A `min-height` in this sheet is not a second
+         * copy of that number: Qt's `polish()` turns it into the widget's minimum
+         * size WITH the border added, so a rule saying 30 made a button of 32 and
+         * overrode the code's 30. One source for a height, and it is the code. The
+         * `size` property still selects the padding and the type. */
+        QPushButton[size="compact"]       { padding: 0px 12px; font-size: 11.5px; }
+        QPushButton[size="large"]         { padding: 0px 20px; font-size: 12.5px; }
         QPushButton:hover                 { background: %(hoverIcon)s; color: %(text)s; }
         QPushButton:pressed               { background: %(header)s; }
         QPushButton:disabled              { color: %(textFaint)s; border-color: %(lineSoft)s; }
@@ -699,9 +747,9 @@ QString themeStyleSheet(ThemeMode mode)
         QPushButton#mode:checked          { background: %(wash)s; color: %(accentHi)s;
                                             border: 1px solid %(accentEdge)s; }
 
-        QPushButton#iconButton            { min-width: 32px; max-width: 32px;
-                                            min-height: 32px; max-height: 32px;
-                                            padding: 0px; }
+        QPushButton#iconButton            { padding: 0px; } /* 32×32 fixed by `Button` */
+        QPushButton#iconButton:hover      { background: %(hoverIcon)s; color: %(onHover)s; }
+        QPushButton#iconButton:checked    { background: %(wash)s; border-color: %(accentEdge)s; }
 
         /* ---- selection controls -------------------------------------------- */
         /*
@@ -732,10 +780,19 @@ QString themeStyleSheet(ThemeMode mode)
         /* ---- segment, slider ------------------------------------------------ */
         QPushButton#segment               { background: transparent; color: %(textDim)s;
                                             border: 1px solid %(border)s; border-radius: 0px;
-                                            padding: 0px 14px; min-height: 24px;
-                                            max-height: 24px; font-size: 11.5px; }
+                                            padding: 0px 14px; font-size: 11.5px; }
         QPushButton#segment:checked       { background: %(wash)s; color: %(accentHi)s;
                                             border: 1px solid %(accentEdge)s; }
+        /* `Segment` writes `edge`: the two ends carry the outer radii and every
+         * option after the first drops its left border, so two neighbours share
+         * one line instead of drawing two side by side. */
+        QPushButton#segment[edge="first"] { border-top-left-radius: 4px;
+                                            border-bottom-left-radius: 4px; }
+        QPushButton#segment[edge="last"]  { border-top-right-radius: 4px;
+                                            border-bottom-right-radius: 4px; border-left: none; }
+        QPushButton#segment[edge="mid"]   { border-left: none; }
+        QPushButton#segment[edge="only"]  { border-radius: 4px; }
+        QPushButton#segment[size="regular"] { padding: 0px 16px; font-size: 12px; }
         QPushButton#segment:hover         { background: %(hoverIcon)s; }
 
         QSlider::groove:horizontal        { height: 4px; background: %(lineSoft)s;
@@ -841,6 +898,7 @@ QString themeStyleSheet(ThemeMode mode)
         .replace(QStringLiteral("%(strip)s"), t.bgStrip.name())
         .replace(QStringLiteral("%(separator)s"), t.separator.name())
         .replace(QStringLiteral("%(readout)s"), t.readout.name())
+        .replace(QStringLiteral("%(readoutDim)s"), t.readoutDim.name())
         .replace(QStringLiteral("%(hint)s"), t.hint.name())
         .replace(QStringLiteral("%(warnWash)s"), rgba(t.warnWash))
         .replace(QStringLiteral("%(warn)s"), t.warn.name())

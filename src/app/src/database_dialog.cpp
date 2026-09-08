@@ -2,21 +2,19 @@
 #include "kentos_cad/app/database_dialog.hpp"
 
 #include "kentos_cad/app/controller.hpp"
+#include "kentos_cad/app/fields.hpp"
+#include "kentos_cad/app/widgets.hpp"
 
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/core/document.hpp"
 
-#include <QDialogButtonBox>
-#include <QFormLayout>
-#include <QGroupBox>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QInputDialog>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
-#include <QPushButton>
-#include <QSpinBox>
 #include <QSplitter>
 #include <QStyle>
 #include <QVBoxLayout>
@@ -53,92 +51,118 @@ QString project_of(const QString& row)
 } // namespace
 
 DatabaseDialog::DatabaseDialog(Controller& controller, QWidget* parent)
-    : QDialog(parent), controller_(controller)
+    : DialogFrame(parent), controller_(controller)
 {
-    setWindowTitle(tr("Veritabanı — PostGIS"));
+    setHeading(Glyph::Cloud, tr("Veritabanı"), tr("— PostGIS"));
     setModal(false);
     setMinimumSize(820, 580);
     resize(900, 660);
 
-    auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(14, 14, 14, 12);
-    layout->setSpacing(10);
+    auto* body   = new QWidget(this);
+    auto* layout = new QVBoxLayout(body);
+    layout->setContentsMargins(18, 14, 18, 12);
+    layout->setSpacing(14);
     layout->addWidget(buildConnection());
     layout->addWidget(buildContents(), 1);
+    setBody(body);
 
-    // The text is set explicitly rather than left to QDialogButtonBox's standard
-    // label: Qt's own translations are not loaded here, and a Turkish window with
-    // an English "Close" on it is the kind of seam a user notices immediately.
-    auto* buttons = new QDialogButtonBox(this);
-    buttons->addButton(tr("Kapat"), QDialogButtonBox::RejectRole);
-    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-    layout->addWidget(buttons);
+    // The frame's footer, not a `QDialogButtonBox`. That box arrived wearing
+    // Qt's English "Close" until the label was forced, and the platform's idea
+    // of a button rather than the standard's; a `Button` of the secondary role
+    // is what a close action at the end of a footer is.
+    auto* close = new Button(ButtonRole::Secondary, tr("Kapat"), std::nullopt, this);
+    connect(close, &QPushButton::clicked, this, &QDialog::reject);
+    footer()->addWidget(close);
 
     updateEnabled();
 }
 
 QWidget* DatabaseDialog::buildConnection()
 {
-    auto* box  = new QGroupBox(tr("PostGIS bağlantısı"), this);
+    auto* box  = new QWidget(this);
     auto* rows = new QVBoxLayout(box);
-    rows->setSpacing(8);
+    rows->setContentsMargins(0, 0, 0, 0);
+    rows->setSpacing(10);
 
-    auto* form = new QFormLayout;
-    form->setLabelAlignment(Qt::AlignRight);
-    form->setHorizontalSpacing(12);
-    form->setVerticalSpacing(7);
+    // A section heading from the set where a `QGroupBox` used to draw a frame of
+    // its own around the fields. The form grammar of `form_örnek.png` is a
+    // heading with a rule, then labelled rows — label above control.
+    rows->addWidget(
+        new FormSection(tr("PostGIS bağlantısı"), tr("parola hiçbir yere kaydedilmez"), box));
 
     // Filled from the APPLICATION settings, which is where the last connection
     // was remembered. Not from the project: a drawing mailed to a colleague must
     // not carry a pointer at a database.
     command::Bus& bus = controller_.bus();
 
-    host_ = new QLineEdit(
-        QString::fromUtf8(bus.setting("core.veritabani.sunucu").as_text().data(),
-                          static_cast<int>(bus.setting("core.veritabani.sunucu").as_text().size())),
-        box);
-    host_->setPlaceholderText(tr("localhost — ya da tam bir bağlantı dizesi"));
-    host_->setAccessibleName(tr("PostGIS sunucu adresi"));
-    host_->setToolTip(tr("Sunucu adresi. İçinde '=' geçen tam bir libpq bağlantı dizesi "
-                         "yazarsanız diğer alanlar yok sayılır."));
-
-    port_ = new QSpinBox(box);
-    port_->setRange(1, 65535);
-    port_->setValue(static_cast<int>(bus.setting("core.veritabani.port").as_int()));
-    port_->setAccessibleName(tr("PostGIS bağlantı noktası"));
-
     const auto text_of = [&bus](const char* id) {
         const std::string_view v = bus.setting(id).as_text();
         return QString::fromUtf8(v.data(), static_cast<int>(v.size()));
     };
 
-    database_ = new QLineEdit(text_of("core.veritabani.ad"), box);
+    // The four text boxes are the shell's own `QLineEdit`, styled by the one
+    // sheet at the standard's regular height; `Field` is for values with a kind,
+    // and a host name has none. The port has one — a bounded whole number — and
+    // gets the set's number input, its bounds as its validator.
+    const auto textBox = [box](const QString& text) {
+        auto* edit = new QLineEdit(text, box);
+        edit->setFixedHeight(static_cast<int>(ControlSize::Regular));
+        return edit;
+    };
+
+    host_ = textBox(text_of("core.veritabani.sunucu"));
+    host_->setPlaceholderText(tr("localhost — ya da tam bir bağlantı dizesi"));
+    host_->setAccessibleName(tr("PostGIS sunucu adresi"));
+    host_->setToolTip(tr("Sunucu adresi. İçinde '=' geçen tam bir libpq bağlantı dizesi "
+                         "yazarsanız diğer alanlar yok sayılır."));
+
+    FieldSpec portSpec   = number_of(1, 65535);
+    portSpec.placeholder = QStringLiteral("5432");
+    port_                = new Field(portSpec, box);
+    port_->setFixedHeight(static_cast<int>(ControlSize::Regular));
+    port_->setValue(QString::number(bus.setting("core.veritabani.port").as_int()));
+    port_->setAccessibleName(tr("PostGIS bağlantı noktası"));
+
+    database_ = textBox(text_of("core.veritabani.ad"));
     database_->setPlaceholderText(tr("veritabanı adı"));
     database_->setAccessibleName(tr("PostGIS veritabanı adı"));
 
-    user_ = new QLineEdit(text_of("core.veritabani.kullanici"), box);
+    user_ = textBox(text_of("core.veritabani.kullanici"));
     user_->setPlaceholderText(tr("kullanıcı adı"));
     user_->setAccessibleName(tr("PostGIS kullanıcı adı"));
 
-    password_ = new QLineEdit(box);
+    password_ = textBox(QString());
     password_->setEchoMode(QLineEdit::Password);
     password_->setPlaceholderText(tr("boş bırakın — ~/.pgpass ya da PGPASSWORD"));
     password_->setAccessibleName(tr("PostGIS parolası"));
     password_->setToolTip(tr("Parola HİÇBİR YERE kaydedilmez. Her açılışta boş başlar. "
                              "Kalıcı olması için ~/.pgpass dosyasını kullanın."));
 
-    form->addRow(tr("Adres:"), host_);
-    form->addRow(tr("Port:"), port_);
-    form->addRow(tr("Veritabanı:"), database_);
-    form->addRow(tr("Kullanıcı:"), user_);
-    form->addRow(tr("Parola:"), password_);
-    rows->addLayout(form);
+    // The address wide with the port narrow beside it, then the three names in
+    // one row: two lines instead of five, and every label above its own box.
+    auto* grid = new QGridLayout;
+    grid->setContentsMargins(0, 0, 0, 0);
+    grid->setHorizontalSpacing(12);
+    grid->setVerticalSpacing(8);
+    grid->addWidget(new FormRow(tr("Adres"), host_, box), 0, 0, 1, 2);
+    grid->addWidget(new FormRow(tr("Port"), port_, box), 0, 2);
+    grid->addWidget(new FormRow(tr("Veritabanı"), database_, box), 1, 0);
+    grid->addWidget(new FormRow(tr("Kullanıcı"), user_, box), 1, 1);
+    grid->addWidget(new FormRow(tr("Parola"), password_, box), 1, 2);
+    grid->setColumnStretch(0, 2);
+    grid->setColumnStretch(1, 2);
+    grid->setColumnStretch(2, 1);
+    rows->addLayout(grid);
 
+    // ONE PRIMARY on this screen, and it is `Bağlan`: nothing else here matters
+    // until it has been pressed. Disconnecting is a secondary; re-reading the
+    // lists is a ghost with the set's own arrows, where the platform's reload
+    // icon used to arrive in whatever colour the platform had.
     auto* actions = new QHBoxLayout;
-    connect_      = new QPushButton(tr("Bağlan"), box);
-    disconnect_   = new QPushButton(tr("Bağlantıyı Kes"), box);
-    refresh_      = new QPushButton(tr("Yenile"), box);
-    refresh_->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+    actions->setSpacing(8);
+    connect_    = new Button(ButtonRole::Primary, tr("Bağlan"), std::nullopt, box);
+    disconnect_ = new Button(ButtonRole::Secondary, tr("Bağlantıyı Kes"), std::nullopt, box);
+    refresh_    = new Button(ButtonRole::Ghost, tr("Yenile"), Glyph::Refresh, box);
     refresh_->setToolTip(tr("Sunucudaki tabloları ve kayıtlı projeleri yeniden okur"));
     connect_->setDefault(true);
     connect_->setAccessibleName(tr("PostGIS sunucusuna bağlan"));
@@ -171,8 +195,11 @@ QWidget* DatabaseDialog::buildContents()
     split->setChildrenCollapsible(false);
 
     // ---- tables ----
-    auto* left     = new QGroupBox(tr("Mekansal tablolar"), split);
+    auto* left     = new QWidget(split);
     auto* leftRows = new QVBoxLayout(left);
+    leftRows->setContentsMargins(0, 0, 8, 0);
+    leftRows->setSpacing(8);
+    leftRows->addWidget(new FormSection(tr("Mekansal tablolar"), QString(), left));
 
     tables_ = new QListWidget(left);
     tables_->setToolTip(tr("Sunucudaki geometri sütunu olan tablolar."));
@@ -180,14 +207,20 @@ QWidget* DatabaseDialog::buildContents()
     tables_->setAlternatingRowColors(true);
     leftRows->addWidget(tables_, 1);
 
-    writeLayer_ = new QPushButton(tr("Etkin Katmanı Yaz…"), left);
+    writeLayer_ = new Button(ButtonRole::Secondary, tr("Etkin Katmanı Yaz…"), Glyph::Export, left);
     writeLayer_->setToolTip(tr("VERİTABANI katmanyaz — katmanı bir mekansal tablo olarak yazar. "
                                "Aynı adlı tablo varsa YERİNE yazılır."));
-    leftRows->addWidget(writeLayer_);
+    auto* leftButtons = new QHBoxLayout;
+    leftButtons->addWidget(writeLayer_);
+    leftButtons->addStretch(1);
+    leftRows->addLayout(leftButtons);
 
     // ---- projects ----
-    auto* right     = new QGroupBox(tr("Kayıtlı KentOSCad projeleri"), split);
+    auto* right     = new QWidget(split);
     auto* rightRows = new QVBoxLayout(right);
+    rightRows->setContentsMargins(8, 0, 0, 0);
+    rightRows->setSpacing(8);
+    rightRows->addWidget(new FormSection(tr("Kayıtlı KentOSCad projeleri"), QString(), right));
 
     projects_ = new QListWidget(right);
     projects_->setToolTip(tr("Bu veritabanına kaydedilmiş KentOSCad projeleri."));
@@ -195,13 +228,17 @@ QWidget* DatabaseDialog::buildContents()
     projects_->setAlternatingRowColors(true);
     rightRows->addWidget(projects_, 1);
 
+    // The destructive one wears the destructive role and stands apart from the
+    // two it could be mistaken for. Deleting a project has no undo (the command
+    // says so, and asks); a button that looked like `Projeyi Aç` would not.
     auto* buttons = new QHBoxLayout;
-    saveProject_  = new QPushButton(tr("Projeyi Kaydet…"), right);
-    openProject_  = new QPushButton(tr("Projeyi Aç"), right);
-    dropProject_  = new QPushButton(tr("Projeyi Sil"), right);
-    dropProject_->setIcon(style()->standardIcon(QStyle::SP_TrashIcon));
+    buttons->setSpacing(8);
+    saveProject_ = new Button(ButtonRole::Secondary, tr("Projeyi Kaydet…"), Glyph::Save, right);
+    openProject_ = new Button(ButtonRole::Secondary, tr("Projeyi Aç"), Glyph::Open, right);
+    dropProject_ = new Button(ButtonRole::Danger, tr("Projeyi Sil"), Glyph::Trash, right);
     buttons->addWidget(saveProject_);
     buttons->addWidget(openProject_);
+    buttons->addStretch(1);
     buttons->addWidget(dropProject_);
     rightRows->addLayout(buttons);
 
@@ -221,6 +258,12 @@ QWidget* DatabaseDialog::buildContents()
     return split;
 }
 
+QString DatabaseDialog::port() const
+{
+    const QString typed = port_->value().trimmed();
+    return typed.isEmpty() ? QStringLiteral("5432") : typed;
+}
+
 QString DatabaseDialog::conninfo() const
 {
     // A host box holding an `=` is a whole connection string the user pasted, and
@@ -231,7 +274,7 @@ QString DatabaseDialog::conninfo() const
 
     QString out = QStringLiteral("host=%1 port=%2")
                       .arg(host.isEmpty() ? QStringLiteral("localhost") : host)
-                      .arg(port_->value());
+                      .arg(port());
     if (!database_->text().trimmed().isEmpty())
         out += QStringLiteral(" dbname=") + database_->text().trimmed();
     if (!user_->text().trimmed().isEmpty())
@@ -288,7 +331,7 @@ void DatabaseDialog::rememberConnection()
     if (!host_->text().contains('=')) {
         controller_.runLine(QStringLiteral("TERCİH veritabani_sunucu ") + quoted(host_->text()),
                             command::Origin::Gui);
-        controller_.runLine(QStringLiteral("TERCİH veritabani_port %1").arg(port_->value()),
+        controller_.runLine(QStringLiteral("TERCİH veritabani_port %1").arg(port()),
                             command::Origin::Gui);
         controller_.runLine(QStringLiteral("TERCİH veritabani_adi ") + quoted(database_->text()),
                             command::Origin::Gui);

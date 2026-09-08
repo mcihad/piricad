@@ -23,7 +23,7 @@ if [[ ! -d "$tracked" ]]; then
     exit 0
 fi
 
-for want in design.md terracad-mockup.html ana_ekran.png stil.png; do
+for want in design.md terracad-mockup.html ana_ekran.png stil.png bileşen_standardı.png; do
     if [[ ! -f "$tracked/$want" ]]; then
         echo "design: missing -> data/design/$want" >&2
         echo "design:   the gates and the shell read the reference from here." >&2

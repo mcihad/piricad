@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/dialog_chrome.hpp"
+#include "kentos_cad/app/widgets.hpp"
 
 #include "kentos_cad/app/tokens.hpp"
 #include "kentos_cad/core/text.hpp"
@@ -75,9 +76,11 @@ DialogFrame::DialogFrame(QWidget* parent) : QDialog(parent)
     // label to whatever it decides its content rect is — which produced a footer
     // reading `Y...m`, a button whose name had been cut in half. Nothing here
     // needed a tool button: it has no icon, no menu and no auto-raise.
-    auto* help = new QPushButton(tr("Yardım"), footerBar_);
-    help->setObjectName(QStringLiteral("dialogHelp"));
-    help->setCursor(Qt::PointingHandCursor);
+    //
+    // And now a `Button` of the Ghost role: low priority, no chrome of its own,
+    // which is what a help button at the far end of a footer is. Its private
+    // stylesheet rule went with the change — one hierarchy, six roles, no seventh.
+    auto* help = new Button(ButtonRole::Ghost, tr("Yardım"), Glyph::Help, footerBar_);
     help->setVisible(false);
     connect(help, &QPushButton::clicked, this, &DialogFrame::helpRequested);
     help_ = help;

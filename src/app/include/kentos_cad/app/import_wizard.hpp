@@ -18,6 +18,7 @@
 
 #include "kentos_cad/app/dialog_chrome.hpp"
 #include "kentos_cad/app/theme.hpp"
+#include "kentos_cad/app/widgets.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/settings.hpp"
 #include "kentos_cad/io/service.hpp"
@@ -37,7 +38,6 @@
 class QLabel;
 class QLineEdit;
 class QListWidget;
-class QProgressBar;
 class QPushButton;
 class QStackedWidget;
 class QTimer;
@@ -192,15 +192,15 @@ private:
 
     Controller& controller_;
 
-    QStackedWidget* pages_  = nullptr;
-    QLineEdit* pathField_   = nullptr;
-    QLabel* fileFacts_      = nullptr;
-    QProgressBar* progress_ = nullptr;
-    QLabel* progressText_   = nullptr;
-    QWidget* progressBox_   = nullptr;
-    QLabel* stepOne_        = nullptr;
-    QLabel* stepTwo_        = nullptr;
-    QWidget* stepRule_      = nullptr;
+    QStackedWidget* pages_   = nullptr;
+    QLineEdit* pathField_    = nullptr;
+    QLabel* fileFacts_       = nullptr;
+    ProgressStrip* progress_ = nullptr;
+    QLabel* progressText_    = nullptr;
+    QWidget* progressBox_    = nullptr;
+    QLabel* stepOne_         = nullptr;
+    QLabel* stepTwo_         = nullptr;
+    QWidget* stepRule_       = nullptr;
 
     ImportPreview* preview_ = nullptr;
     QListWidget* layers_    = nullptr;
@@ -208,9 +208,9 @@ private:
     QLabel* summary_        = nullptr;
     QLabel* tally_          = nullptr;
 
-    QPushButton* back_   = nullptr;
-    QPushButton* next_   = nullptr;
-    QPushButton* cancel_ = nullptr;
+    Button* back_   = nullptr;
+    Button* next_   = nullptr;
+    Button* cancel_ = nullptr;
 
     std::unique_ptr<core::Document> scratch_;
     ImportProbeThread* probe_ = nullptr;

@@ -40,6 +40,12 @@
 - **R27** Cold start SHALL be ≤ 2 s and RAM on an empty project ≤ 300 MB (§10.1); both are bench-gated.
 - **R28** All I/O, geometry and parsing work SHALL run off the UI thread and return via `Task<T>` / queued connection.
 
+**Component set (`data/design/bileşen_standardı.png`, `design.md` §11–§13)**
+- **R29** Every control in the shell SHALL be an instance of the component set in `widgets.hpp` and `fields.hpp` — `Button` (roles Primary, Secondary, Ghost, Danger, Mode, Icon), `CheckBox`, `RadioButton`, `ToggleSwitch`, `Segment`, `Slider`, `Chip`, `Badge`, `Banner`, `ProgressStrip`, `FormRow`, `FormSection`, `Field` — sized by `ControlSize` (24 / 30 / 36 px), radius 4, coloured by the one stylesheet from `tokens.hpp`. A role is a constructor argument, never an object name a caller remembers to set.
+- **R30** One primary button per screen. A page hosted inside a framed dialog (the settings window, the layer properties window) uses secondaries for its own actions; the frame's footer holds the primary.
+- **R31** No state SHALL be told by colour alone: every state carries a shape too — a glyph, a badge's text, a ring, the knob's side — and the keyboard focus ring appears only for keyboard focus (§13).
+- **R32** A component added to the set SHALL appear in the living standard (`buildComponentSheet`, opened by `KENTOS_WIDGETS_PROBE`), in `scripts/ci-gate-bilesenler.sh`'s expected inventory and in `docs/baslangic/bilesenler.md`, in the same change.
+
 ## Absolute Prohibitions
 
 - **P1** NEVER mutate `Document`, `Layer` or entity data from a widget, slot or event handler. Only a command inside a `Transaction` may.
@@ -54,6 +60,7 @@
 - **P10** NEVER read or write the `Journal`, `UndoStack` or on-disk project format directly from `/src/app`; go through the command/io APIs (`.claude/command.md`, `.claude/io.md`).
 - **P11** NEVER `#include` a `/src/domain` internal header in the UI; the UI knows command ids and `Value`, nothing more.
 - **P12** NEVER let AI output act on the UI without preview + explicit user approval; see `.claude/ai.md`.
+- **P13** NEVER construct a raw `QPushButton`, `QCheckBox`, `QRadioButton`, `QSlider`, `QSpinBox`, `QDoubleSpinBox`, `QProgressBar`, `QGroupBox` or `QDialogButtonBox` outside `widgets.cpp` and `fields.cpp`, and never give a widget a private stylesheet (CLAUDE.md 5.19). The single allowance — the style designer's three numeric property editors — is named in `scripts/ci-gate-bilesenler.sh` with its removal condition and a ceiling that may only fall.
 
 ## Definitions of Done
 
@@ -64,11 +71,13 @@
 - [ ] Command line: abbreviation, autocomplete, history, transcript entry and error text checked for the new command.
 - [ ] No `Document` mutation outside a command; no new work on the UI thread.
 - [ ] Latency / cold-start / RAM benches still within §10.1 budgets.
+- [ ] Every control is from the component set and the screen has one primary (R29, R30); a new component is on the living standard, in the gate's inventory and in the manual (R32).
 
 ## Enforcement
 
 - `/tests/unit` — UI-free command tests via `Bus`; a command that only works from `/src/app` fails review.
 - `/tests/bench` — keystroke→screen ≤ 30 ms, cold start ≤ 2 s, empty-project RAM ≤ 300 MB; >10% regression breaks the build.
+- `scripts/ci-gate-bilesenler.sh` — no raw control outside the set (P13, with its one shrinking allowance), every role and every size styled in the one sheet, and the living standard opened by `KENTOS_WIDGETS_PROBE` reporting the standard's own heights and states (R29, R32).
 - `scripts/ci-gate-i18n.sh` — translation completeness (`lupdate` + missing-string scan), literal-string scan for un-`tr()`'d user text, pixel-literal scan in layout code (R23), and a `std::toupper|std::tolower` grep over `/src/app`.
 - Manual release-test checklist (not a gate): keyboard-only path, screen-reader announcement, dark theme, high DPI (R22, R23).
 - `/tests/journal` — autosave/crash-recovery replay of the command journal reproduces the document byte-identically.

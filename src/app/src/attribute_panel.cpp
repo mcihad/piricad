@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/attribute_panel.hpp"
+#include "kentos_cad/app/widgets.hpp"
 
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/icons.hpp"
@@ -39,7 +40,6 @@ constexpr int kRowHeight   = 26;
 constexpr int kKeyWidth    = 112; ///< the `112px | 1fr` grid §7 fixes
 constexpr int kRowPadX     = 10;
 constexpr int kValuePadX   = 8;
-constexpr int kBadgePadX   = 5;
 constexpr int kBadgeHeight = 14;
 
 const Tokens& tokensOf(ThemeMode mode)
@@ -941,21 +941,19 @@ void AttributePanel::paintEvent(QPaintEvent*)
 
             int right = width() - kValuePadX;
             if (!row.badge.isEmpty() && !open) {
-                p.setFont(sans(9, QFont::DemiBold, 0.5));
-                const QFontMetrics badge(p.font());
-                const int w = static_cast<int>(badge.horizontalAdvance(row.badge)) + kBadgePadX * 2;
-                const QRectF box(right - w, y + (kRowHeight - kBadgeHeight) / 2.0, w, kBadgeHeight);
+                const int w = Badge::widthFor(row.badge);
+                const QRect box(right - w, y + (kRowHeight - kBadgeHeight) / 2, w, kBadgeHeight);
 
-                // The badge says WHY the cell reads as it does: a derived number
-                // is `HESAP` in the warn colour because editing it is meaningless,
-                // an unfilled one is `BOŞ` in the faint one because it is simply
-                // not known yet. Two different facts, never the same mark.
-                p.setPen(Qt::NoPen);
-                p.setBrush(row.derived ? QColor(t.warn.red(), t.warn.green(), t.warn.blue(), 38)
-                                       : t.hoverIcon);
-                p.drawRoundedRect(box, 2.5, 2.5);
-                p.setPen(row.derived ? t.warn : t.textFaint);
-                p.drawText(box, Qt::AlignCenter, row.badge);
+                // THE SAME BADGE THE REST OF THE PROGRAM DRAWS, in the tones
+                // design.md §7 gives them: `HESAP` is the program's own derivation
+                // (accent), `BOŞ` is a required value nobody has entered (warn), a
+                // fact with no urgency — `SABİT`, `MİRAS` — is neutral. This panel
+                // used to paint derived values in the warn colour, which said "you
+                // changed this" about a number the user never touched.
+                Tone tone = Tone::Neutral;
+                if (row.derived) tone = Tone::Accent;
+                if (row.badge == tr("BOŞ")) tone = Tone::Warn;
+                Badge::paint(p, box, row.badge, tone, theme_);
                 right -= w + 6;
             }
 

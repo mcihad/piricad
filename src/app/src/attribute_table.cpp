@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/attribute_table.hpp"
+#include "kentos_cad/app/widgets.hpp"
 
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/icons.hpp"
@@ -13,6 +14,7 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMenu>
 #include <QMessageBox>
 #include <QPainter>
 #include <QPushButton>
@@ -758,14 +760,14 @@ QWidget* AttributeTable::buildToolRow()
 
     row->addStretch(1);
 
-    // The `Tablo | Form` pair: the same rows, one at a time or all at once.
-    for (const char* name : {"Tablo", "Form"}) {
-        auto* button = new QPushButton(tr(name), bar);
-        button->setObjectName(QStringLiteral("segment"));
-        button->setCheckable(true);
-        button->setChecked(std::strcmp(name, "Tablo") == 0);
-        row->addWidget(button);
-    }
+    // The `Tablo | Form` pair: the same rows, all at once or one at a time. ONE
+    // control, because it is one choice — two loose buttons that happened to
+    // touch rounded a corner each and read as two things.
+    auto* view = new Segment(bar);
+    view->addOption(tr("Tablo"), tr("Satırlar bir ızgarada"));
+    view->addOption(tr("Form"), tr("Bir kayıt, alan alan — Faz 2'de gelecek"));
+    view->setControlSize(ControlSize::Regular);
+    row->addWidget(view);
 
     return bar;
 }
@@ -791,8 +793,7 @@ QWidget* AttributeTable::buildFilterBar()
         tr("Süzme ifadesi — \"alan_m2\" > 2000 AND \"plan_fonksiyon\" = 'Konut'"));
     row->addWidget(filter_, 1);
 
-    auto* apply = new QPushButton(tr("Filtrele"), bar);
-    apply->setObjectName(QStringLiteral("primary"));
+    auto* apply = new Button(ButtonRole::Primary, tr("Filtrele"), Glyph::Filter, bar);
     connect(apply, &QPushButton::clicked, this, [this] {
         model_->setFilter(filter_->text());
         if (!model_->filterError().isEmpty())
@@ -805,7 +806,13 @@ QWidget* AttributeTable::buildFilterBar()
     connect(filter_, &QLineEdit::returnPressed, apply, &QPushButton::click);
     row->addWidget(apply);
 
-    auto* save = new QPushButton(tr("Kaydet ▾"), bar);
+    // A REAL MENU ARROW, drawn by the style, instead of a `▾` typed into the
+    // label: the glyph in the text was a picture of a menu on a button that had
+    // none. It still opens nothing — the saved filters are Phase 2 — and says so.
+    auto* save  = new Button(ButtonRole::Secondary, tr("Kaydet"), Glyph::Save, bar);
+    auto* saved = new QMenu(save);
+    saved->addAction(tr("Kayıtlı süzgeçler — Faz 2'de gelecek"))->setEnabled(false);
+    save->setMenuArrow(saved);
     save->setToolTip(tr("Kayıtlı süzgeçler Faz 2'de gelecek."));
     save->setEnabled(false);
     row->addWidget(save);

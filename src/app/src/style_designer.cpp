@@ -9,16 +9,14 @@
 
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/schema_page.hpp"
+#include "kentos_cad/app/widgets.hpp"
 
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/core/document.hpp"
 
-#include <QButtonGroup>
-#include <QCheckBox>
 #include <QColorDialog>
 #include <QComboBox>
 #include <QDate>
-#include <QDialogButtonBox>
 #include <QDir>
 #include <QEvent>
 #include <QFormLayout>
@@ -46,8 +44,11 @@
 #include <QTabBar>
 #include <QToolButton>
 #include <QTreeWidget>
+
 #include <QVBoxLayout>
+#include <array>
 #include <cstring>
+#include <utility>
 
 #include <algorithm>
 #include <array>
@@ -56,6 +57,15 @@
 
 namespace kentos::app {
 namespace {
+
+/// The three units a symbol's measures can be in, in the order the renderer
+/// row's segment shows them — and the order `refresh()` reads back, so the two
+/// can never disagree about which option is which.
+constexpr std::array<std::pair<core::Unit, const char*>, 3> kUnitOptions{{
+    {core::Unit::Paper, "Milimetre"},
+    {core::Unit::Ground, "Harita birimi"},
+    {core::Unit::Pixel, "Piksel"},
+}};
 
 /// How tall the symbol layer stack is allowed to be, in rows.
 constexpr int kStackRowsMin = 3;
@@ -791,26 +801,20 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     pageStack_->setCurrentIndex(2);
 
     // ---- the footer, §8 ----
-    const auto footerButton = [this](const QString& text, bool primary) {
-        auto* button = new QPushButton(text, this);
-        if (primary) {
-            button->setObjectName(QStringLiteral("primary"));
-            button->setDefault(true);
-        }
-        return button;
-    };
+    // Roles from the standard, and ONE primary: `Tamam`.
 
-    // A REAL MENU, and it earned its arrow. `Stil ▾` was a plain button that did
-    // one thing — revert the window — while wearing the mark of a button that
-    // opens a list; and beside it sat a second full-width button for saving to
-    // the library, which is the rarest action in the window taking the most room
-    // in the footer.
+    // A REAL MENU, and it earned its arrow — which the style now draws
+    // (`Button::setMenuArrow`) instead of a `▾` typed into the label. `Stil ▾`
+    // was a plain button that did one thing — revert the window — while wearing
+    // the mark of a button that opens a list; and beside it sat a second
+    // full-width button for saving to the library, which is the rarest action in
+    // the window taking the most room in the footer.
     //
     // `Stili temizle` moved in here from the layer's context menu, where it was
     // one of two style entries scattered among `Gizle` and `Gruba taşı…`. It is
     // the one style action that is not "edit the symbol", so it belongs with the
     // other things done TO a style rather than in it.
-    auto* styleMenu = footerButton(tr("Stil ▾"), false);
+    auto* styleMenu = new Button(ButtonRole::Secondary, tr("Stil"), std::nullopt, this);
     auto* actions   = new QMenu(styleMenu);
 
     QAction* revert = actions->addAction(tr("Katmanın çizdiğine dön"));
@@ -827,16 +831,17 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     save->setToolTip(tr("Sembolü kendi gösterim paketiniz olarak diske yazar")); // ui-label
     connect(save, &QAction::triggered, this, &StyleDesigner::saveToLibrary);
 
-    styleMenu->setMenu(actions);
+    styleMenu->setMenuArrow(actions);
 
-    auto* cancel = footerButton(tr("İptal"), false);
+    auto* cancel = new Button(ButtonRole::Secondary, tr("İptal"), std::nullopt, this);
     connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
 
-    auto* apply = footerButton(tr("Uygula"), false);
+    auto* apply = new Button(ButtonRole::Secondary, tr("Uygula"), std::nullopt, this);
     apply->setToolTip(tr("Sembolü STİL komutlarına çevirip katmana yazar; pencere açık kalır"));
     connect(apply, &QPushButton::clicked, this, [this] { (void)applyToDocument(); });
 
-    auto* ok = footerButton(tr("Tamam"), true);
+    auto* ok = new Button(ButtonRole::Primary, tr("Tamam"), std::nullopt, this);
+    ok->setDefault(true);
     connect(ok, &QPushButton::clicked, this, [this] {
         if (applyToDocument()) accept();
     });
@@ -972,55 +977,39 @@ QWidget* StyleDesigner::buildRendererRow()
 
     row->addStretch(1);
 
-    // The unit, as three buttons rather than a combo: three choices that a user
-    // switches between constantly read faster side by side than in a list, and
-    // the reference draws them that way.
-    auto* units       = new QWidget(bar);
-    auto* unitsLayout = new QHBoxLayout(units);
-    unitsLayout->setContentsMargins(0, 0, 0, 0);
-    unitsLayout->setSpacing(0);
-
-    // ONE OF THREE, ENFORCED BY QT. The buttons were checkable and ungrouped, so
-    // Qt toggled each on its own: clicking the lit one turned it OFF and left the
-    // control with nothing selected, and two could read as lit until something
-    // else happened to re-sync them. A segmented control that can show no answer
-    // and can show two answers is not a segmented control.
-    unitGroup_ = new QButtonGroup(bar);
-    unitGroup_->setExclusive(true);
-
-    static const std::pair<core::Unit, const char*> kUnitButtons[] = {
-        {core::Unit::Paper, "Milimetre"},
-        {core::Unit::Ground, "Harita birimi"},
-        {core::Unit::Pixel, "Piksel"},
-    };
-    for (const auto& [unit, label] : kUnitButtons) {
-        auto* button = new QPushButton(tr(label), units);
-        button->setObjectName(QStringLiteral("segment"));
-        button->setCheckable(true);
-        button->setProperty("unit", static_cast<int>(unit));
-        unitButtons_.push_back(button);
-        unitGroup_->addButton(button, static_cast<int>(unit));
-
-        connect(button, &QPushButton::clicked, this, [this, unit] {
-            // EVERY MEASURE ON THE LAYER, not three of the five. `spacing_y` and
-            // `phase` were left behind, so switching a marker line to map units
-            // converted its size, its interval and its offset and left its second
-            // spacing and its phase in paper millimetres — a symbol half in one
-            // unit and half in another, which the mixed check could not even see
-            // because that check reads `size` alone.
-            for (core::SymbolLayer& l : symbol_.layers) {
-                l.size.unit      = unit;
-                l.interval.unit  = unit;
-                l.spacing_y.unit = unit;
-                l.offset.unit    = unit;
-                l.phase.unit     = unit;
-            }
-            refresh();
-            updatePreview();
-        });
-        unitsLayout->addWidget(button);
+    // The unit as ONE segmented control rather than a combo: three choices a
+    // user switches between constantly read faster side by side than in a list,
+    // and the reference draws them that way. One control, not three checkable
+    // buttons — the component keeps them to one lit option, clears them all when
+    // the layers disagree, and rounds only its outer corners.
+    units_ = new Segment(bar);
+    for (const auto& [unit, label] : kUnitOptions) {
+        (void)unit;
+        units_->addOption(tr(label));
     }
-    field(tr("SEMBOL BOYUT BİRİMİ"), units);
+    connect(units_, &Segment::currentChanged, this, [this](int index) {
+        // `refresh()` writes the segment from the symbol under `loading_`; only
+        // the user's own click may write the symbol from the segment.
+        if (loading_ || index < 0) return;
+        const core::Unit unit = kUnitOptions[static_cast<std::size_t>(index)].first;
+
+        // EVERY MEASURE ON THE LAYER, not three of the five. `spacing_y` and
+        // `phase` were left behind, so switching a marker line to map units
+        // converted its size, its interval and its offset and left its second
+        // spacing and its phase in paper millimetres — a symbol half in one
+        // unit and half in another, which the mixed check could not even see
+        // because that check reads `size` alone.
+        for (core::SymbolLayer& l : symbol_.layers) {
+            l.size.unit      = unit;
+            l.interval.unit  = unit;
+            l.spacing_y.unit = unit;
+            l.offset.unit    = unit;
+            l.phase.unit     = unit;
+        }
+        refresh();
+        updatePreview();
+    });
+    field(tr("SEMBOL BOYUT BİRİMİ"), units_);
 
     return bar;
 }
@@ -1179,8 +1168,9 @@ QWidget* StyleDesigner::buildGallery()
     connect(gallery_, &QListWidget::currentItemChanged, this,
             [this](QListWidgetItem*, QListWidgetItem*) { showProvenance(); });
 
-    use_ = new QPushButton(tr("Seçileni kullan"), box);
-    use_->setObjectName(QStringLiteral("primary"));
+    // Secondary, though it is the page's main action: the window's one primary
+    // is `Tamam` in the footer, and the standard allows a screen exactly one.
+    use_ = new Button(ButtonRole::Secondary, tr("Seçileni kullan"), Glyph::Check, box);
     use_->setToolTip(tr("Seçili gösterimi düzenlenebilir sembol yığını olarak alır")); // ui-label
     connect(use_, &QPushButton::clicked, this, &StyleDesigner::applyGalleryPick);
 
@@ -1819,12 +1809,11 @@ QWidget* StyleDesigner::buildProperties()
 
     // The lock, on every layer, because every layer can be the one the regulation
     // fixes. Listed against `everything` below so it never disappears.
-    lock_ = new QCheckBox(box);
-    lock_->setText(tr("bu katmanın rengini korur"));
+    lock_ = new CheckBox(tr("bu katmanın rengini korur"), box);
     lock_->setToolTip(tr("MPYY bir lekesinin dolgusunu plancıya bırakır, sınırını ve " // ui-label
                          "glifini siyah basar. Kilitli bir katman, sembolün rengi "
                          "değiştiğinde kendi rengini korur."));
-    connect(lock_, &QCheckBox::toggled, this, [this](bool on) {
+    connect(lock_, &CheckBox::toggled, this, [this](bool on) {
         if (loading_) return;
         const int i = currentLayer();
         if (i < 0) return;
@@ -2187,17 +2176,14 @@ void StyleDesigner::loadGlobal()
         if (globalUnit_->itemData(i).toInt() == static_cast<int>(unit))
             globalUnit_->setCurrentIndex(i);
 
-    // The renderer row's three buttons say the same thing as the combo below,
-    // and they must never disagree: both read the symbol, neither remembers.
-    //
-    // An exclusive group refuses to have nothing checked, and MIXED is exactly the
-    // state that needs it — the layers disagree, so no single button is the
-    // answer. Exclusivity is relaxed for the length of the write and restored
-    // afterwards, which is Qt's own way of clearing a segmented control.
-    unitGroup_->setExclusive(false);
-    for (QPushButton* button : unitButtons_)
-        button->setChecked(!mixed && button->property("unit").toInt() == static_cast<int>(unit));
-    unitGroup_->setExclusive(true);
+    // The renderer row's segment says the same thing as the combo below, and
+    // they must never disagree: both read the symbol, neither remembers. MIXED —
+    // the layers disagree, so no single option is the answer — lights nothing,
+    // which is what `Segment::setCurrent(-1)` exists for.
+    int lit = -1;
+    for (std::size_t k = 0; k < kUnitOptions.size(); ++k)
+        if (kUnitOptions[k].first == unit) lit = static_cast<int>(k);
+    units_->setCurrent(mixed ? -1 : lit);
 
     QString note;
     switch (unit) {

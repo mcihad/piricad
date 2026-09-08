@@ -49,8 +49,6 @@
 /// The Qt widgets this dialog holds, declared rather than included: a header that
 /// pulls in the widget classes it stores pointers to makes every translation unit
 /// including it wait for them.
-class QCheckBox;
-class QButtonGroup;
 class QComboBox;
 class QVBoxLayout;
 class QLabel;
@@ -60,13 +58,17 @@ class QStackedWidget;
 class QSpinBox;
 class QTabBar;
 class QToolButton;
-class QPushButton;
 class QTreeWidget;
 
 namespace kentos::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
+
+/// The component set; see widgets.hpp.
+class Button;
+class CheckBox;
+class Segment;
 
 /// The attribute schema, as one page of this window; see schema_page.hpp.
 class SchemaPage;
@@ -250,7 +252,7 @@ private:
 
     /// Takes the highlighted gösterim into the stack. Disabled while the shelf
     /// has nothing on it to take.
-    QPushButton* use_{nullptr};
+    Button* use_{nullptr};
 
     /// Where the highlighted gösterim was published. A plan sheet is a legal
     /// document and its symbology has a citation (CLAUDE.md 11.7); showing it
@@ -274,12 +276,10 @@ private:
     QComboBox* renderKind_{nullptr};
     QComboBox* renderValue_{nullptr};
 
-    /// Keeps the three unit buttons to ONE answer.
-    ///
-    /// Without it Qt toggles each on its own: clicking the lit button turns it off
-    /// and the control shows no unit at all, which reads as a broken segment
-    /// rather than as a choice.
-    QButtonGroup* unitGroup_{nullptr};
+    /// The symbol's unit as ONE segmented control — millimetre, map unit, pixel
+    /// — where three loose buttons used to stand. The component keeps them to one
+    /// answer, and to none when the layers disagree (`Segment::setCurrent(-1)`).
+    Segment* units_{nullptr};
 
     /// The cell that holds `renderValue_`, so it can be hidden whole.
     ///
@@ -287,7 +287,6 @@ private:
     /// phase ships. A disabled combo with an em dash in it is a control the reader
     /// has to work out, and the answer is already written beside it.
     QWidget* valueCell_{nullptr};
-    QVector<QPushButton*> unitButtons_;
     QStackedWidget* pageStack_{nullptr};
     QComboBox* globalUnit_{nullptr};
     QToolButton* globalColour_{nullptr};
@@ -310,7 +309,7 @@ private:
     QToolButton* fill_{nullptr};
 
     /// Keeps this layer's colour when the whole symbol's colour is set.
-    QCheckBox* lock_{nullptr};
+    CheckBox* lock_{nullptr};
     QSpinBox* width_{nullptr};
     QSpinBox* size_{nullptr};
     QSpinBox* interval_{nullptr};

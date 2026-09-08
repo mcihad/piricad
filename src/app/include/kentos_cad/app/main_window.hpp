@@ -158,6 +158,15 @@ public:
     /// `scripts/ci-gate-tablo-giris.sh` drives it.
     void probeAttributeGrid();
 
+    /// Opens the living component standard — every component in every state,
+    /// laid out as `bileşen_standardı.png` is — prints its inventory, and
+    /// photographs it when `KENTOS_WIDGETS_PROBE` carries a directory.
+    ///
+    /// It is how a change to a component is SEEN before it ships, and how the
+    /// picture in `docs/baslangic/bilesenler.md` is regenerated (docs.md R15).
+    /// `scripts/ci-gate-bilesenler.sh` drives it.
+    void probeWidgets();
+
     /// Opens the import wizard WITHOUT blocking, on `path` when one is given.
     ///
     /// `importData()` runs it modally and then runs the command line it built;

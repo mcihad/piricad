@@ -9,7 +9,7 @@
 // bus would skip the journal with it.
 //
 // So this file holds no SQL, no connection and no libpqxx header. It holds four
-// line edits, two lists and the sentences the store sent back.
+// line edits, a port field, two lists and the sentences the store sent back.
 //
 // THE PASSWORD IS NOT REMEMBERED. Host, port, database and user are application
 // settings and come back next time; the password field starts empty every time
@@ -18,7 +18,8 @@
 // file permissions — see `docs/komutlar/veritabani.md`.
 #pragma once
 
-#include <QDialog>
+#include "kentos_cad/app/dialog_chrome.hpp"
+
 #include <QString>
 
 /// The Qt widgets this dialog holds, declared rather than included: a header that
@@ -27,16 +28,18 @@
 class QLabel;
 class QLineEdit;
 class QListWidget;
-class QPushButton;
-class QSpinBox;
 
 namespace kentos::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
 
+/// The component set; see widgets.hpp and fields.hpp.
+class Button;
+class Field;
+
 /// Connects to a PostGIS database and moves layers and projects in and out.
-class DatabaseDialog : public QDialog
+class DatabaseDialog : public DialogFrame
 {
     Q_OBJECT
 
@@ -80,25 +83,29 @@ private:
     /// would reach it.
     void rememberConnection();
 
+    /// The port as typed, or libpq's own default when the box is empty — which
+    /// is what the box's placeholder promises.
+    QString port() const;
+
     Controller& controller_;
 
     QLineEdit* host_{nullptr};
-    QSpinBox* port_{nullptr};
+    Field* port_{nullptr};
     QLineEdit* database_{nullptr};
     QLineEdit* user_{nullptr};
     QLineEdit* password_{nullptr};
-    QPushButton* connect_{nullptr};
-    QPushButton* disconnect_{nullptr};
-    QPushButton* refresh_{nullptr};
+    Button* connect_{nullptr};
+    Button* disconnect_{nullptr};
+    Button* refresh_{nullptr};
     QLabel* status_{nullptr};
 
     QListWidget* tables_{nullptr};
     QListWidget* projects_{nullptr};
 
-    QPushButton* writeLayer_{nullptr};
-    QPushButton* saveProject_{nullptr};
-    QPushButton* openProject_{nullptr};
-    QPushButton* dropProject_{nullptr};
+    Button* writeLayer_{nullptr};
+    Button* saveProject_{nullptr};
+    Button* openProject_{nullptr};
+    Button* dropProject_{nullptr};
 
     bool connected_{false};
 };

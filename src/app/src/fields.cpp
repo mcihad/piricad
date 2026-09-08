@@ -13,6 +13,7 @@
 #include <QIcon>
 #include <QIntValidator>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
 #include <QPainter>
@@ -33,6 +34,10 @@ constexpr int kPickerWidth = 22;
 
 /// How much of a `Range` row the readout takes, leaving the rest to the slider.
 constexpr int kReadoutWidth = 54;
+
+/// The leading mark: a 14 px glyph in a 24 px cell, the standard's own metric.
+constexpr int kLeadWidth = 24;
+constexpr int kLeadGlyph = 14;
 
 const Tokens& tokensOf(ThemeMode mode)
 {
@@ -389,6 +394,16 @@ Field::Field(const FieldSpec& spec, QWidget* parent) : QWidget(parent), spec_(sp
         return child;
     };
 
+    // THE MARK AT THE LEFT EDGE, before whatever the kind puts in the row: a
+    // ruler before a length, a lock before a read-only code. Built for every
+    // kind that has a line, hidden until a glyph or a derived state asks for it.
+    lead_ = new QLabel(this);
+    lead_->setObjectName(QStringLiteral("fieldLead"));
+    lead_->setFixedWidth(kLeadWidth);
+    lead_->setAlignment(Qt::AlignCenter);
+    lead_->setVisible(spec_.glyph.has_value());
+    row->addWidget(lead_, 0);
+
     const auto plainLine = [this, row, frameOf] {
         line_ = new QLineEdit(this);
         line_->setObjectName(QStringLiteral("fieldLine"));
@@ -564,7 +579,78 @@ Field::Field(const FieldSpec& spec, QWidget* parent) : QWidget(parent), spec_(sp
         break;
     }
 
+    // THE UNIT AT THE RIGHT EDGE — `m`, `m²`, `°` — dim and in mono, because it
+    // is read with the figure and not instead of it. `spec.suffix` was carried
+    // by every length field and drawn by none until this label existed.
+    unit_ = new QLabel(spec_.suffix, this);
+    unit_->setObjectName(QStringLiteral("fieldUnit"));
+    unit_->setVisible(!spec_.suffix.isEmpty());
+    if (picker_ != nullptr)
+        row->insertWidget(row->indexOf(picker_), unit_, 0);
+    else
+        row->addWidget(unit_, 0);
+
+    refreshLead();
     installEventFilter(this);
+}
+
+void Field::setState(FieldState state)
+{
+    state_ = state;
+
+    // One word the stylesheet reads, on the frame AND on the line: the frame
+    // owns the border, the line owns the ink, and the two rules live under the
+    // same name so they cannot say different things.
+    const char* word = nullptr;
+    switch (state_) {
+    case FieldState::Changed: word = "changed"; break;
+    case FieldState::Invalid: word = "invalid"; break;
+    case FieldState::Derived: word = "derived"; break;
+    case FieldState::ReadOnly: word = "readonly"; break;
+    case FieldState::Normal: break;
+    }
+    const QVariant value = word != nullptr ? QVariant(QLatin1String(word)) : QVariant();
+
+    const auto restyle = [](QWidget* w, const QVariant& v) {
+        w->setProperty("state", v);
+        w->style()->unpolish(w);
+        w->style()->polish(w);
+    };
+    restyle(this, value);
+    if (line_ != nullptr) {
+        restyle(line_, value);
+        line_->setReadOnly(state_ == FieldState::ReadOnly || spec_.kind == FieldKind::Colour);
+    }
+    if (combo_ != nullptr) restyle(combo_, value);
+    refreshLead();
+}
+
+void Field::setUnit(const QString& unit)
+{
+    spec_.suffix = unit;
+    if (unit_ == nullptr) return;
+    unit_->setText(unit);
+    unit_->setVisible(!unit.isEmpty());
+}
+
+void Field::refreshLead()
+{
+    if (lead_ == nullptr) return;
+    const Tokens& t = tokensOf(theme_);
+
+    // A derived value wears the `fx` of a formula in the accent, whatever mark
+    // the spec asked for: that it is COMPUTED is the more important thing to say.
+    std::optional<Glyph> mark = spec_.glyph;
+    QColor ink                = t.textDim;
+    if (state_ == FieldState::Derived) {
+        mark = Glyph::Function;
+        ink  = t.accentHi;
+    }
+    if (state_ == FieldState::Invalid) ink = t.danger;
+    if (state_ == FieldState::Changed) ink = t.warn;
+
+    lead_->setVisible(mark.has_value());
+    if (mark) lead_->setPixmap(glyph_pixmap(*mark, ink, kLeadGlyph, devicePixelRatioF()));
 }
 
 void Field::applyValidator()
@@ -769,6 +855,7 @@ bool Field::eventFilter(QObject* watched, QEvent* event)
 void Field::applyTheme(ThemeMode mode)
 {
     theme_ = mode;
+    refreshLead();
 
     // The colour picker paints the value it holds, so it has to be repainted
     // when the tokens change — its border comes from them.

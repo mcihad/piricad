@@ -117,6 +117,7 @@ Project-wide. A violation is a build failure or a merge block, never a discussio
 5.16 NEVER hand-roll what a mature, cross-platform library already does well — JSON, testing, benchmarking, spatial indexing, Unicode casing, logging, formatting, hashing, compression, geometry predicates, polygon boolean, triangulation, coordinate transformation, format I/O, linear algebra. Reach for `/vcpkg.json` or a pinned `FetchContent` entry first, and justify in the PR why a hand-rolled version is the exception (Article 2.7, §9).
 5.17 NEVER ship a user-facing feature — command, script API, sandbox level, file format, CLI flag, panel or dialog — without its Turkish Markdown page under `/docs`, linked from `docs/README.md`. Undocumented is unshipped (Article 11).
 5.18 NEVER hand-edit `docs/komutlar/referans.md`, and never hand-write a second command or parameter table anywhere in `/docs` — it is generated from `Registry` by `kentos_docgen` (§2.3).
+5.19 NEVER construct a raw Qt control in `/src/app` — `QPushButton`, `QCheckBox`, `QRadioButton`, `QSlider`, `QSpinBox`, `QDoubleSpinBox`, `QProgressBar`, `QGroupBox`, `QDialogButtonBox` — outside `widgets.cpp` and `fields.cpp`, and never give a control a private stylesheet or an object name that stands in for a role. Every control is an instance of the component set (`widgets.hpp`, `fields.hpp`) drawn from `data/design/bileşen_standardı.png`: six button roles in one hierarchy, one primary per screen, an input with seven states, heights 24/30/36. `scripts/ci-gate-bilesenler.sh` enforces it; the one shrinking allowance is named there with its removal condition (`ui.md` R29–R32, P13). This amendment supersedes nothing: it makes explicit what `ui.md` R1 and `design.md` §12 already meant by "one stylesheet" (§6.3, §13).
 
 ## Article 6 — Definition of Done
 
@@ -134,6 +135,7 @@ A change is finished only when every clause holds.
 6.10 Docs updated: `/docs/api-stability.md` on any `/src/plugin-api` change; `/NOTICE` and the CycloneDX SBOM regenerated on any dependency change (§13, §9.11).
 6.11 Regulatory change carries a domain-expert (harita mühendisi / şehir plancısı) sign-off on the PR (§16.9).
 6.12 The `/docs` page for every touched user-facing behaviour is written or updated in the same change, `make reference` has been run, and `scripts/ci-gate-docs.sh` is green. A feature without its page is not finished (Article 11).
+6.13 A new or changed dialog, panel or form uses only the component set (Article 5.19), and a component added to the set appears in the living standard (`KENTOS_WIDGETS_PROBE`), in the gate's inventory and in `docs/baslangic/bilesenler.md` in the same change.
 
 ## Article 7 — Performance Budgets (§10.1)
 
