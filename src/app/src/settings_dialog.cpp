@@ -203,12 +203,16 @@ QString scope_summary(bool project, bool app, bool session)
 
 } // namespace
 
-SettingsDialog::SettingsDialog(Controller& controller, QWidget* parent)
-    : DialogFrame(parent), controller_(controller)
+SettingsDialog::SettingsDialog(Controller& controller, Mode mode, QWidget* parent)
+    : DialogFrame(parent), controller_(controller), mode_(mode)
 {
+    const bool project = mode_ == Mode::Project;
+
     // design.md §10 measures this window at 1180 × 740, with a 232 px left
     // column and a 52 px footer. Every one of those numbers is the reference's.
-    setHeading(Glyph::Settings, tr("Seçenekler"));
+    setHeading(project ? Glyph::Document : Glyph::Settings,
+               project ? tr("Proje Ayarları") : tr("Seçenekler"),
+               project ? tr("— dosyayla birlikte giden her şey") : QString());
     setFooterHeight(52);
     setModal(true);
     resize(1180, 740);
@@ -279,6 +283,7 @@ SettingsDialog::SettingsDialog(Controller& controller, QWidget* parent)
     // page arrives with no edit to this file (CLAUDE.md 5.10, the same rule the
     // command list lives under).
     for (const core::SettingSection& declared : core::builtin_settings().sections()) {
+        if (project) break; // the project window has its own two pages, below
         Section section;
         section.group = declared.title;
         section.title = QString::fromStdString(declared.title);
@@ -290,33 +295,31 @@ SettingsDialog::SettingsDialog(Controller& controller, QWidget* parent)
         order_.push_back(section);
     }
 
-    // AND ONE PAGE THAT IS NOT A SETTINGS SECTION. Project attribute columns are
-    // not settings — they are the document's schema, they live in the file and
-    // they are declared by a command — but this is where a person looks for
-    // "things that belong to the whole project", and a schema page reachable only
-    // from a layer's properties would be the wrong shelf for the project's own
-    // columns.
+    // THE PROJECT WINDOW'S OWN TWO PAGES, and neither is a declared section.
     //
-    // Appended after the declared sections rather than folded into them, because
-    // the loop above is deliberately driven by the catalogue and must stay that
-    // way (CLAUDE.md 5.10).
-    {
-        Section section;
-        section.group = "Proje Ayarları";
-        section.title = tr("Proje Ayarları");
-        section.page  = buildProjectPage();
-        pages_->addWidget(section.page);
-        sections_->addSection(Glyph::Document, section.title);
-        order_.push_back(section);
-    }
-    {
-        Section section;
-        section.group = "Proje Öznitelikleri";
-        section.title = tr("Proje Öznitelikleri");
-        section.page  = new SchemaPage(controller_, QString(), this);
-        pages_->addWidget(section.page);
-        sections_->addSection(Glyph::Table, section.title);
-        order_.push_back(section);
+    // The settings half gathers every project-scoped setting whatever topic it
+    // was declared under: `Seçenekler` cuts by topic, which is how a person looks
+    // for ONE setting, and that scatters "what travels with this file" across
+    // five pages. The schema half is not settings at all — it is the document's
+    // own columns — but it is the other half of the same question, and a page
+    // reachable only from a layer's properties would be the wrong shelf for the
+    // columns every object carries.
+    if (project) {
+        Section settings;
+        settings.group = "Proje Ayarları";
+        settings.title = tr("Ayarlar");
+        settings.page  = buildProjectPage();
+        pages_->addWidget(settings.page);
+        sections_->addSection(Glyph::Settings, settings.title);
+        order_.push_back(settings);
+
+        Section schema;
+        schema.group = "Proje Öznitelikleri";
+        schema.title = tr("Öznitelikler");
+        schema.page  = new SchemaPage(controller_, QString(), this);
+        pages_->addWidget(schema.page);
+        sections_->addSection(Glyph::Table, schema.title);
+        order_.push_back(schema);
     }
 
     connect(sections_, &SectionList::currentChanged, this, [this](int index) {
@@ -340,14 +343,14 @@ SettingsDialog::SettingsDialog(Controller& controller, QWidget* parent)
             return;
         }
 
-        bool project = false, app = false, session = false;
+        bool inProject = false, app = false, session = false;
         for (const SettingSpec& spec : core::builtin_settings().all()) {
             if (spec.section != order_[at].group) continue;
-            project |= spec.scope == SettingScope::Project;
+            inProject |= spec.scope == SettingScope::Project;
             app |= spec.scope == SettingScope::App;
             session |= spec.scope == SettingScope::Session;
         }
-        summary_->setText(scope_summary(project, app, session));
+        summary_->setText(scope_summary(inProject, app, session));
     });
 
     connect(search_, &QLineEdit::textChanged, this, [this](const QString& text) {

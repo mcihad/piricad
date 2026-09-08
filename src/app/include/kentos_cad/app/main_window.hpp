@@ -100,6 +100,9 @@ public:
     /// constructs is a window nothing is checking.
     void openSettings();
 
+    /// Opens `Proje Ayarları`: what the .pcad file carries, and its schema.
+    void openProjectSettings();
+
     /// Opens the attribute table on `layerName`, or on the ACTIVE layer when it is
     /// empty — which is what the Katman menu and `KENTOS_SMOKE` ask for.
     void openAttributeTable(const QString& layerName = QString());
@@ -404,6 +407,7 @@ private:
     QAction* actRedo_{nullptr};
     QAction* actScript_{nullptr};
     QAction* actDatabase_{nullptr};
+    QAction* actProjectSettings_{nullptr};
     QAction* actSettings_{nullptr};
 
     /// The PostGIS window, kept because it is modeless: a user connects once and
@@ -422,6 +426,11 @@ private:
     /// and cannot outlive anything.
     QPointer<DatabaseDialog> database_;
     QPointer<SettingsDialog> settings_;
+
+    /// `Proje Ayarları`, its own window and its own instance: the two answer
+    /// different questions and a person often has both open, one to change a
+    /// preference and one to check what the file carries.
+    QPointer<SettingsDialog> projectSettings_;
     QAction* actSelectAll_{nullptr};
     QAction* actSelectNone_{nullptr};
     QAction* actOrtho_{nullptr};

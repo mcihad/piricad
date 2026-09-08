@@ -84,7 +84,7 @@ Arayüzde ikisinin iki ayrı yeri vardır:
 
 | Sütun | Nereden tanımlanır |
 |---|---|
-| Proje sütunu | **Seçenekler ▸ Proje Öznitelikleri** |
+| Proje sütunu | **Dosya ▸ Proje Ayarları… ▸ Öznitelikler** |
 | Katman sütunu | Katmana **sağ tık → Katman Özellikleri… → Öznitelikler** |
 
 Katmanın sayfası proje sütunlarını da listeler — `proje sütunu` diye işaretli ve
@@ -169,8 +169,8 @@ Düzenlemede **Kimlik** ve **Tür** kutuları kapalıdır — komut da onları r
 bir formun reddedilecek bir şeyi yazdırması yanıltıcı olurdu.
 
 Bu sayfadan tanımlanan sütun **yalnız o katmana** aittir. Çizimin tamamına ait bir
-alan için **Seçenekler ▸ Proje Öznitelikleri** sayfasını kullanın; sayfanın üstündeki
-not hangisinde olduğunuzu yazar.
+alan için **Dosya ▸ Proje Ayarları… ▸ Öznitelikler** sayfasını kullanın; sayfanın
+üstündeki not hangisinde olduğunuzu yazar.
 
 ## Örnekler
 

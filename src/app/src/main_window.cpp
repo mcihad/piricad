@@ -494,6 +494,15 @@ void MainWindow::buildActions()
     actDatabase_->setData(static_cast<int>(Glyph::Open));
     connect(actDatabase_, &QAction::triggered, this, &MainWindow::openDatabase);
 
+    // THE PROJECT'S OWN WINDOW, in the Dosya menu because the project IS the
+    // file: what it holds travels with the file and nothing on that window is
+    // about this computer.
+    actProjectSettings_ = new QAction(tr("Proje Ayarları…"), this);
+    actProjectSettings_->setData(static_cast<int>(Glyph::Document));
+    actProjectSettings_->setToolTip(
+        tr("Çizimle birlikte giden ayarlar ve projenin öznitelik sütunları"));
+    connect(actProjectSettings_, &QAction::triggered, this, &MainWindow::openProjectSettings);
+
     actSettings_ = new QAction(tr("Ayarlar…"), this);
     actSettings_->setData(static_cast<int>(Glyph::Settings));
     actSettings_->setShortcut(QKeySequence::Preferences);
@@ -983,6 +992,8 @@ void MainWindow::buildMenus()
     file->addAction(actExport_);
     file->addAction(actPrint_);
     file->addSeparator();
+    file->addAction(actProjectSettings_);
+    file->addSeparator();
     file->addAction(actDatabase_);
     file->addAction(actScript_);
     file->addSeparator();
@@ -1296,7 +1307,7 @@ void MainWindow::openSettings()
     // changed it standing in front of the drawing. `settingChanged` keeps it in
     // step, so a value typed at the command line while it is open shows through.
     if (settings_ == nullptr) {
-        settings_ = new SettingsDialog(*controller_, this);
+        settings_ = new SettingsDialog(*controller_, SettingsDialog::Mode::All, this);
         settings_->setAttribute(Qt::WA_DeleteOnClose);
         // No `destroyed` lambda: `settings_` is a QPointer and nulls itself. See
         // the note on the member for why the lambda was a write after this
@@ -1306,6 +1317,22 @@ void MainWindow::openSettings()
     settings_->show();
     settings_->raise();
     settings_->activateWindow();
+}
+
+void MainWindow::openProjectSettings()
+{
+    // ITS OWN WINDOW AND ITS OWN INSTANCE. `Seçenekler` answers "how do I want
+    // this program to behave" and this one answers "what is inside this file";
+    // a person often has both open, and sharing one window would make checking
+    // the second close the first.
+    if (projectSettings_ == nullptr) {
+        projectSettings_ = new SettingsDialog(*controller_, SettingsDialog::Mode::Project, this);
+        projectSettings_->setAttribute(Qt::WA_DeleteOnClose);
+    }
+    projectSettings_->applyTheme(theme_);
+    projectSettings_->show();
+    projectSettings_->raise();
+    projectSettings_->activateWindow();
 }
 
 void MainWindow::openDatabase()
@@ -2085,19 +2112,23 @@ void MainWindow::probeSchemaPage()
     page->probeAction(QStringLiteral("sil"), 4, QString());
     say(QStringLiteral("silindikten sonra: %1 sütun").arg(page->probeRows().size()));
 
-    // THE SETTINGS WINDOW'S OWN PAGES, because the project half of the schema
-    // story lives there: `Proje Ayarları` gathers everything that travels with
-    // the file, `Proje Öznitelikleri` declares the columns every object carries.
+    // THE PROJECT'S OWN WINDOW, which is the other half of the story: this page
+    // declares a LAYER's columns, and the project's live there — beside the
+    // settings that travel in the same file.
     {
-        SettingsDialog options(*controller_, this);
-        options.applyTheme(theme_);
-        say(QStringLiteral("bölümler: %1")
-                .arg(options.probeSections()
-                         .mid(options.probeSections().size() - 2)
-                         .join(QStringLiteral(" | "))));
-        say(QStringLiteral("proje ayarı: %1").arg(options.probeProjectSettings().size()));
+        SettingsDialog project(*controller_, SettingsDialog::Mode::Project, this);
+        project.applyTheme(theme_);
+        say(QStringLiteral("proje penceresi: %1")
+                .arg(project.probeSections().join(QStringLiteral(" | "))));
+        say(QStringLiteral("proje ayarı: %1").arg(project.probeProjectSettings().size()));
         say(QStringLiteral("proje ayarları: %1")
-                .arg(options.probeProjectSettings().join(QStringLiteral(", "))));
+                .arg(project.probeProjectSettings().join(QStringLiteral(", "))));
+
+        // AND `Seçenekler` NO LONGER CARRIES THEM. Two windows both holding the
+        // project's pages would be two places to look and one of them wrong.
+        SettingsDialog options(*controller_, SettingsDialog::Mode::All, this);
+        options.applyTheme(theme_);
+        say(QStringLiteral("seçenekler son bölüm: %1").arg(options.probeSections().back()));
     }
 
     // PHOTOGRAPHED WHEN ASKED, the same bargain `KENTOS_PICK_PROBE` makes: a

@@ -187,7 +187,8 @@ satırıyla çıkar ve türüne uygun düzenleyiciyle açılır — tarihe takvi
 kelimelik segment.
 
 **Buradan tanımlanan sütun yalnız bu katmana aittir.** Çizimin tamamına ait bir alan
-— `ada`, `parsel` gibi — **Seçenekler ▸ Proje Öznitelikleri** sayfasında tanımlanır.
+— `ada`, `parsel` gibi — **Dosya ▸ Proje Ayarları… ▸ Öznitelikler** sayfasında
+tanımlanır.
 
 Sayfa proje sütunlarını da listeler, `proje sütunu` diye işaretli ve düzenlenemez
 hâlde: bu katmandaki bir nesnenin taşıyacağı alanların tamamı odur.

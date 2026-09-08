@@ -169,15 +169,22 @@ Koordinat Sistemleri… — çünkü bir ayar konusuyla aranır: `çizim birimi`
 şeylerin yanındadır. Sayfanın başlığının altındaki tek satır o sayfadaki ayarların
 hangi kapsamda olduğunu söyler; karışıksa onu da söyler.
 
-Listenin sonunda **iki sayfa** daha vardır:
+## Proje Ayarları penceresi
+
+`Seçenekler` "bu program nasıl davransın" sorusunu cevaplar. **`Dosya ▸ Proje
+Ayarları…`** ise başka bir soruyu: **"bu dosyanın içinde ne var"**. Ayrı bir
+penceredir, çünkü ikinci soruyu soran biri genellikle dosyayı birine vermek
+üzeredir — ve ikisi çoğu zaman aynı anda açık durur.
+
+İki sayfası vardır:
 
 | Sayfa | Ne var |
 |---|---|
-| **Proje Ayarları** | Çizimle birlikte giden ayarların **tamamı**, bir arada. Her biri konusuna göre kendi sayfasında da durur; buradaki, `.pcad` dosyasını bir meslektaşınıza vermeden önce "bununla ne gidiyor" sorusunun cevabıdır |
-| **Proje Öznitelikleri** | Çizimdeki her nesnenin taşıdığı sütunlar. Bunlar ayar değil, belgenin şemasıdır — bkz. [`SÜTUN`](column.md) |
+| **Ayarlar** | Çizimle birlikte giden ayarların **tamamı**, konularına göre gruplanmış. Her biri `Seçenekler`'de kendi konu sayfasında da durur |
+| **Öznitelikler** | Çizimdeki **her** nesnenin taşıdığı sütunlar. Bunlar ayar değil, belgenin şemasıdır — bkz. [`SÜTUN`](column.md). Yalnız bir katmana ait sütunlar o katmanın özelliklerinden tanımlanır |
 
-İki görünüm de **tek katalogdan üretilir**: bir ayarı konusundan da, Proje Ayarları
-sayfasından da değiştirseniz aynı komut çalışır. İkinci bir liste yoktur.
+İki pencere de **tek katalogdan üretilir**: bir ayarı konusundan da, Proje
+Ayarları'ndan da değiştirseniz aynı komut çalışır. İkinci bir liste yoktur.
 
 Her satırın sağında değerin sizin mi yoksa programın mı olduğu (`ayarlanmış` /
 `varsayılan`) ve varsayılana döndüren bir düğme vardır. Üstteki arama kutusu ad,

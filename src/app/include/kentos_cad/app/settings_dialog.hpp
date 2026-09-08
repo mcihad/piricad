@@ -25,6 +25,7 @@
 #include <QDialog>
 #include <QString>
 
+#include <cstdint>
 #include <vector>
 
 class QLabel;
@@ -38,15 +39,32 @@ namespace kentos::app {
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
 
-/// Shows every declared setting, grouped by who owns it, and writes changes
-/// through the command bus.
+/// Shows declared settings, grouped by topic, and writes changes through the
+/// command bus.
+///
+/// TWO WINDOWS, ONE CLASS, and that is deliberate. `Seçenekler` and `Proje
+/// Ayarları` answer different questions — "how do I want this program to behave"
+/// and "what travels inside this file" — and they are separate windows because a
+/// person asking the second one is usually about to hand the file to somebody.
+/// But every row in both is the same row: built from the same catalogue, written
+/// through the same command, marked and reset the same way. Two classes would be
+/// two copies of that (CLAUDE.md 5.10), and the second copy is the one that
+/// stops offering a setting the first one gained.
 class SettingsDialog : public DialogFrame
 {
     Q_OBJECT
 
 public:
-    /// Opens on the first section, with every declared setting already listed.
-    explicit SettingsDialog(Controller& controller, QWidget* parent = nullptr);
+    /// Which of the two windows this instance is.
+    enum class Mode : std::uint8_t {
+        All,     ///< `Seçenekler`: every declared setting, by topic
+        Project, ///< `Proje Ayarları`: what the .pcad file carries, and its schema
+    };
+
+    /// Opens on the first section, with the settings `mode` selects already
+    /// listed.
+    explicit SettingsDialog(Controller& controller, Mode mode = Mode::All,
+                            QWidget* parent = nullptr);
 
     /// The sidebar's section titles, in order, for `KENTOS_SETTINGS_PROBE`.
     QStringList probeSections() const;
@@ -127,6 +145,9 @@ private:
     void applyFilter();
 
     Controller& controller_;
+
+    /// Which window this is; see `Mode`.
+    Mode mode_{Mode::All};
     /// §10's left column: a search field over a list of sections, with the
     /// pages themselves in a stack the list switches.
     SectionList* sections_{nullptr};

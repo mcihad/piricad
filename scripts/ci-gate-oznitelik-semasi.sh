@@ -92,8 +92,15 @@ bekle "[sema] silindikten sonra: 4 sütun"
 
 # THE PROJECT HALF OF THE STORY, and both halves have to exist for either to make
 # sense: a layer page that declares layer columns is only honest if there is
-# somewhere else to declare the project's.
-bekle "[sema] bölümler: Proje Ayarları | Proje Öznitelikleri"
+# somewhere else to declare the project's. It is its OWN WINDOW — `Dosya ▸ Proje
+# Ayarları…` — with the settings that travel in the file beside the schema that
+# does.
+bekle "[sema] proje penceresi: Ayarlar | Öznitelikler"
+
+# AND `Seçenekler` DOES NOT ALSO CARRY THEM. Two windows both holding the
+# project's pages would be two places to look and one of them wrong; the options
+# window ends on its last declared topic section and nothing after it.
+bekle "[sema] seçenekler son bölüm: Ağ ve Kimlik"
 
 # EVERY PROJECT-SCOPED SETTING, and the page is generated from the catalogue —
 # so this count moves when a setting is declared, never because somebody
