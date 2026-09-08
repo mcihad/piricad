@@ -480,10 +480,24 @@ void AttributePanel::rebuild()
     // column means — the panel shows what the catalogue put in the document,
     // which is the only way a legislation update stays a data release (5.13).
     AttributeGroup attrs{tr("ÖZNİTELİKLER"), {}, false};
+
+    // The layer this object sits on, by name: a layer column is scoped by name
+    // for the reason `AttrSpec::layer` gives — a `LayerId` is a slot and slots
+    // move (model.md R1/R5).
+    QString on_layer;
+    if (const core::LayerId on = doc.entities().layer[slot]; on < doc.layers().size())
+        on_layer = QString::fromStdString(doc.layers()[on].name);
+
     const core::AttrTable& table = doc.attributes();
     for (std::size_t c = 0; c < table.columns(); ++c) {
         const core::AttrColumn* column = table.column(static_cast<core::AttrId>(c));
         if (!column) continue;
+
+        // ONLY WHAT THIS OBJECT'S LAYER CARRIES. A project column is on every
+        // object; a layer column belongs to its own layer alone, and showing it
+        // elsewhere puts a row nobody can ever fill in on every parcel, every
+        // road and every tree in the drawing.
+        if (!core::attr_applies_to(column->spec(), on_layer.toStdString())) continue;
 
         // THROUGH THE DOCUMENT, NOT INTO THE COLUMN. An attribute column is
         // indexed by GEOMETRY slot (`Document::set_attribute` writes

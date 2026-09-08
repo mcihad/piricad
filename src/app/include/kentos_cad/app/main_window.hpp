@@ -248,6 +248,16 @@ private slots:
     void showCommandLine(bool visible);
     void resetLayout();
 
+protected:
+    /// Asks before losing work, and lets the user say no.
+    ///
+    /// THE ONE PLACE A CLOSE CAN BE REFUSED. Every road out of the application —
+    /// the window's own close box, the File menu's quit item, Alt+F4, the desktop
+    /// asking politely — arrives here, because all of them end in
+    /// `QWidget::close()`. Hooking the menu item instead would have covered
+    /// exactly one of them.
+    void closeEvent(QCloseEvent* event) override;
+
 private:
     void buildActions();
     void buildToolBars();

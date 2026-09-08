@@ -53,6 +53,7 @@ SÜTUN kimlik=<kimlik> sil=evet
 | `zorunlu` | Her satır bir değer taşımalı mı |
 | `basamak` | Yalnız `ondalik` için: noktadan sonra kaç basamak. Varsayılan `2` |
 | `katalog` | Yalnız `kod` için: kodların çekildiği katalog kimliği |
+| `katman` | Sütunu **yalnız o katmana** tanımlar. Verilmezse **proje geneli** |
 | `sil` | `evet` verilirse sütunu ve içindeki bütün değerleri siler |
 
 Türler:
@@ -66,6 +67,37 @@ Türler:
 | `metin` | Serbest metin | `TOPLU KONUT ALANI` |
 | `tarih` | Takvim günü, `YYYY-AA-GG` | `2026-09-08` |
 | `kod` | Bir `/data` kataloğundan çekilen kod | `A-1` |
+
+### İki tür sütun: projenin ve katmanın
+
+`ada` ve `parsel` çizimdeki **her** parselin bilgisidir; `direk_yuksekligi` ise yalnız
+`ENERJİ` katmanındaki nesnelerin. İkincisini proje geneline tanımlamak, çizimdeki her
+yolun, her ağacın ve her parselin öznitelik panelinde asla doldurulamayacak boş bir
+satır demektir.
+
+| Yazılış | Kim taşır |
+|---|---|
+| `SÜTUN kimlik=ada tur=tam_sayi` | **Her** nesne |
+| `SÜTUN kimlik=direk tur=uzunluk katman=ENERJİ` | Yalnız `ENERJİ` katmanındaki nesneler |
+
+Arayüzde ikisinin iki ayrı yeri vardır:
+
+| Sütun | Nereden tanımlanır |
+|---|---|
+| Proje sütunu | **Seçenekler ▸ Proje Öznitelikleri** |
+| Katman sütunu | Katmana **sağ tık → Katman Özellikleri… → Öznitelikler** |
+
+Katmanın sayfası proje sütunlarını da listeler — `proje sütunu` diye işaretli ve
+düzenlenemez — çünkü o katmandaki bir nesnenin **taşıyacağı** alanların tamamı budur.
+
+Katman adı **Türkçe katlanarak** karşılaştırılır: `Enerji` ile `ENERJİ` aynı katmandır.
+
+Bir sütunun kapsamı sonradan da değiştirilebilir; yanlışlıkla proje geneline
+tanımlanmış bir alan tek komutla yerine oturur:
+
+```
+SÜTUN kimlik=direk katman=ENERJİ
+```
 
 ### Ondalık neden "float" değil
 
@@ -103,7 +135,7 @@ düzenler**:
 SÜTUN kimlik=oran ad="Ölçülen Oran" aciklama="Arazide ölçülen oran" zorunlu=evet
 ```
 
-Değiştirilebilenler: `ad`, `aciklama`, `zorunlu`, `katalog` ve `basamak`.
+Değiştirilebilenler: `ad`, `aciklama`, `zorunlu`, `katalog`, `basamak` ve `katman`.
 
 **Kimlik ve tür değiştirilemez.** Kimlik, sütuna atıfta bulunan her sembolün, her
 kuralın ve her günlük satırının adlandırdığı şeydir; tür ise saklanan sayıların
@@ -136,9 +168,9 @@ kullanılmayacak bir kutu formun söylediğine güveni azaltır.
 Düzenlemede **Kimlik** ve **Tür** kutuları kapalıdır — komut da onları reddeder ve
 bir formun reddedilecek bir şeyi yazdırması yanıltıcı olurdu.
 
-Sayfa pencerenin adında **katman** geçse de sütunlar **çizimin tamamına** tanımlanır.
-Şema koleksiyona aittir; bu belgede bir koleksiyon vardır. Burada tanımladığınız bir
-sütun her katmandaki nesnede görünür; sayfanın üstündeki not bunu yazar.
+Bu sayfadan tanımlanan sütun **yalnız o katmana** aittir. Çizimin tamamına ait bir
+alan için **Seçenekler ▸ Proje Öznitelikleri** sayfasını kullanın; sayfanın üstündeki
+not hangisinde olduğunuzu yazar.
 
 ## Örnekler
 

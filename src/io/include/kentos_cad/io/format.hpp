@@ -265,6 +265,18 @@ enum BlockId : std::uint32_t {
     /// be the largest block in the file for no information.
     kBlkAttrCells = 0x0073, ///< AttrCellRecord[]
 
+    /// The layer each column is scoped to, one string index per column, in the
+    /// same order as `kBlkAttrSchema`. Index 0 — the empty string — means the
+    /// column belongs to the whole project.
+    ///
+    /// ITS OWN BLOCK RATHER THAN A FIELD, and this is what the optional-block
+    /// mechanism is for (io.md R10). `AttrColumnRecord` has five reserved bytes
+    /// left, which is one short of a properly aligned `u32`, and reordering the
+    /// record would repoint every schema row in every file already written. A
+    /// file with no such block reads as every column being the project's —
+    /// exactly what those files meant, because that was the only kind there was.
+    kBlkAttrColumnLayer = 0x0075, ///< u32[], index into kBlkStringSpans
+
     // ---- text (a caption is geometry-adjacent, not an attribute) ------------
     /// One record per slot that carries text. Same reasoning as the cells above.
     kBlkTexts = 0x0074, ///< TextRecord[]

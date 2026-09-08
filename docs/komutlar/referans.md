@@ -528,6 +528,7 @@ Ayrıntılı kullanım: [ÖZNİTELİK](attribute.md)
 | `zorunlu` | bool | isteğe bağlı | Her satır bir değer taşımalı mı |
 | `katalog` | text | isteğe bağlı | Yalnız 'kod' türü için: katalog kimliği |
 | `basamak` | integer | isteğe bağlı | Yalnız 'ondalik' için: noktadan sonraki basamak sayısı |
+| `katman` | text | isteğe bağlı | Sütunu yalnız bu katmana tanımlar; yoksa proje geneli |
 | `sil` | bool | isteğe bağlı | Sütunu ve içindeki bütün değerleri siler |
 
 Ayrıntılı kullanım: [SÜTUN](column.md)

@@ -74,9 +74,18 @@ void AttributeModel::refresh()
     const core::Document& doc    = controller_.document();
     const core::AttrTable& table = doc.attributes();
 
+    // ONLY THE COLUMNS THIS TABLE'S SCOPE CARRIES. A table opened on a layer
+    // shows the project's columns and that layer's own; the whole-drawing table
+    // shows every one, because there is no single layer it could filter by and a
+    // column hidden there would be a column with no table at all.
     columns_.clear();
-    for (std::size_t c = 0; c < table.columns(); ++c)
+    for (std::size_t c = 0; c < table.columns(); ++c) {
+        const core::AttrColumn* held = table.column(static_cast<core::AttrId>(c));
+        if (held == nullptr) continue;
+        if (!layer_.isEmpty() && !core::attr_applies_to(held->spec(), layer_.toStdString()))
+            continue;
         columns_.push_back(static_cast<core::AttrId>(c));
+    }
 
     rows_.clear();
     error_.clear();

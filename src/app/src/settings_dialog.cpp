@@ -4,6 +4,7 @@
 #include "kentos_cad/app/icons.hpp"
 
 #include "kentos_cad/app/controller.hpp"
+#include "kentos_cad/app/schema_page.hpp"
 
 #include "kentos_cad/command/bus.hpp"
 
@@ -286,6 +287,26 @@ SettingsDialog::SettingsDialog(Controller& controller, QWidget* parent)
                                                               QString::fromStdString(declared.note));
         pages_->addWidget(section.page);
         sections_->addSection(group_glyph(section_group(declared.title)), section.title);
+        order_.push_back(section);
+    }
+
+    // AND ONE PAGE THAT IS NOT A SETTINGS SECTION. Project attribute columns are
+    // not settings — they are the document's schema, they live in the file and
+    // they are declared by a command — but this is where a person looks for
+    // "things that belong to the whole project", and a schema page reachable only
+    // from a layer's properties would be the wrong shelf for the project's own
+    // columns.
+    //
+    // Appended after the declared sections rather than folded into them, because
+    // the loop above is deliberately driven by the catalogue and must stay that
+    // way (CLAUDE.md 5.10).
+    {
+        Section section;
+        section.group = "Proje Öznitelikleri";
+        section.title = tr("Proje Öznitelikleri");
+        section.page  = new SchemaPage(controller_, QString(), this);
+        pages_->addWidget(section.page);
+        sections_->addSection(Glyph::Table, section.title);
         order_.push_back(section);
     }
 

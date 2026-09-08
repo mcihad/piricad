@@ -139,6 +139,15 @@ public:
     /// (.claude/model.md R43).
     QString currentFile() const;
 
+    /// Whether the drawing has changed since it was last written to disk.
+    ///
+    /// The document's own revision counter against the one the file was written
+    /// from. It counts EVERY mutation, undo included — so a change made and then
+    /// undone still reads as dirty, which is the honest answer: the two documents
+    /// are equal but nothing has proved that, and asking one extra question is
+    /// cheaper than losing somebody's afternoon.
+    bool isDirty() const;
+
     QString activeLayerName() const;
 
 signals:

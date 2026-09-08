@@ -385,6 +385,11 @@ QString Controller::currentFile() const
     return QString::fromStdString(files_.current_path());
 }
 
+bool Controller::isDirty() const
+{
+    return document_.revision() != files_.saved_revision();
+}
+
 QString Controller::activeLayerName() const
 {
     if (const core::Layer* l = document_.layer(bus_.active_layer()))

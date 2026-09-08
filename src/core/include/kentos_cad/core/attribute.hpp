@@ -116,6 +116,25 @@ struct AttrSpec
     /// (R34: three cardinalities, one authority).
     std::string catalog;
 
+    /// The layer this column belongs to, or empty for a column the whole project
+    /// carries.
+    ///
+    /// TWO KINDS OF ATTRIBUTE, and a drawing needs both. `ada` and `parsel` are
+    /// facts about every parcel in the project and are declared once, in the
+    /// project's settings. `direk_yuksekligi` is a fact about the objects on the
+    /// ENERJİ layer and means nothing on a road centreline; declaring it project-
+    /// wide puts an empty row in the inspector of every object in the drawing.
+    ///
+    /// R27 IS NOT BENT BY THIS, it is read properly. The rule puts the schema on
+    /// the COLLECTION rather than on the object, and cites OGRFeatureDefn — which
+    /// belongs to an OGR *layer*. A layer-scoped column is that reading; a
+    /// project-scoped one is the collection being the whole drawing.
+    ///
+    /// HELD BY NAME, like `Layer::group` and like every layer reference in a
+    /// command. A `LayerId` is a SLOT and slots move (R1/R5), so a stored id
+    /// would quietly re-point at a different layer the first time one is removed.
+    std::string layer;
+
     /// Digits after the point, for `Decimal`. Meaningless for every other type.
     ///
     /// It is part of the SCHEMA rather than of the cell because it is a statement
@@ -187,6 +206,17 @@ std::optional<std::int64_t> date_from_text(std::string_view text);
 /// prefers.
 std::string decimal_to_text(std::int64_t scaled, std::uint8_t scale, DecimalMark mark);
 std::optional<std::int64_t> decimal_from_text(std::string_view text, std::uint8_t scale);
+
+/// Whether a column is offered on `layer_name`.
+///
+/// A project column is offered everywhere; a layer column only on its own layer.
+/// Compared with the Turkish fold, because a layer named `Yapı` and one named
+/// `YAPI` are the same layer to every other part of this program (CLAUDE.md 5.6).
+///
+/// A FREE FUNCTION, not a method: the panel, the table, the schema page and the
+/// commands all ask this question, and none of them holds an `AttrTable` when
+/// they do — they hold a spec and a layer name.
+bool attr_applies_to(const AttrSpec& spec, std::string_view layer_name);
 
 /// One cell FROM text, checked against what the column declared.
 ///

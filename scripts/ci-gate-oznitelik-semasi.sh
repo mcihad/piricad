@@ -62,18 +62,31 @@ bekle() {
     fi
 }
 
+# SIX COLUMNS WERE DECLARED AND FIVE ARE LISTED, which is the whole of the
+# layer/project split. The sixth was declared with `katman=ENERJİ` and this page
+# belongs to another layer — so it is not here, and before the split it would
+# have been, along with an empty row on every object in the drawing.
 bekle "[sema] sütun sayısı: 5"
 
-# Five types, five rows, and the columns that only some of them carry.
-bekle "[sema] satır: ada · Ada No · tam_sayi ·  · evet · "
-bekle "[sema] satır: oran · Oran · ondalik · 2 basamak ·  · "
-bekle "[sema] satır: onay · Onay Tarihi · tarih ·  ·  · "
-bekle "[sema] satır: tescilli · Tescilli · evet_hayir ·  ·  · "
-bekle "[sema] satır: cephe · Cephe · uzunluk ·  ·  · "
+# Five types, five rows, and the columns that only some of them carry. Each is
+# marked `proje sütunu` because the page is a LAYER's and these belong to the
+# project: listed as context, not editable from here.
+bekle "[sema] satır: ada · Ada No · tam_sayi ·  · evet · proje sütunu"
+bekle "[sema] satır: oran · Oran · ondalik · 2 basamak ·  · proje sütunu"
+bekle "[sema] satır: onay · Onay Tarihi · tarih ·  ·  · proje sütunu"
+bekle "[sema] satır: tescilli · Tescilli · evet_hayir ·  ·  · proje sütunu"
+bekle "[sema] satır: cephe · Cephe · uzunluk ·  ·  · proje sütunu"
+
+# And the layer column is nowhere on this page.
+if grep -qF "direk" <<<"$cikti"; then
+    echo "oznitelik-semasi: 'ENERJİ' katmanına tanımlanan sütun başka bir katmanın" >&2
+    echo "oznitelik-semasi:   sayfasında görünüyor -> src/app/src/schema_page.cpp:1" >&2
+    fail=1
+fi
 
 # THE EDIT CHANGED WHAT IT SAYS. Name, digits and requiredness moved; the id and
 # the type did not, and `AttrColumn::amend` is what refuses those.
-bekle "[sema] düzenlendi: oran · Ölçülen Oran · ondalik · 3 basamak · evet · "
+bekle "[sema] düzenlendi: oran · Ölçülen Oran · ondalik · 3 basamak · evet · proje sütunu"
 
 bekle "[sema] silindikten sonra: 4 sütun"
 
@@ -82,4 +95,5 @@ if [[ $fail -ne 0 ]]; then
 fi
 
 echo "oznitelik-semasi: OK — beş türde sütun pencereden tanımlanıyor, ondalık basamağı ve"
-echo "oznitelik-semasi:   zorunluluk komut satırına geçiyor, düzenleme ve silme çalışıyor"
+echo "oznitelik-semasi:   zorunluluk komut satırına geçiyor, düzenleme ve silme çalışıyor;"
+echo "oznitelik-semasi:   başka bir katmana tanımlanan sütun bu sayfada görünmüyor"

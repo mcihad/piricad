@@ -943,11 +943,20 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                                                     "öznitelik şeması");
         if (!schema) return schema.error();
 
+        // The scope block, when the file has one. Written since layer-scoped
+        // columns existed; a file without it holds only project columns, which is
+        // what those files meant (io.md R10).
+        auto scopes = view.column<std::uint32_t>(
+            kBlkAttrColumnLayer, view.count_of(kBlkAttrColumnLayer), "öznitelik sütun kapsamı");
+        if (!scopes) return scopes.error();
+
         std::vector<core::AttrId> columns;
         columns.reserve(schema.value().size());
 
+        std::size_t at_column = 0;
         for (const AttrColumnRecord& r : schema.value()) {
-            auto id = strings.at(r.id_string, "öznitelik kimliği");
+            const std::size_t scope_at = at_column++;
+            auto id                    = strings.at(r.id_string, "öznitelik kimliği");
             if (!id) return id.error();
             auto name = strings.at(r.name_string, "öznitelik adı");
             if (!name) return name.error();
@@ -973,6 +982,12 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             spec.type       = static_cast<core::AttrType>(r.type);
             spec.required   = r.required != 0;
             spec.scale      = r.scale > core::kMaxScale ? core::kMaxScale : r.scale;
+
+            if (scope_at < scopes.value().size()) {
+                auto scope = strings.at(scopes.value()[scope_at], "öznitelik sütun kapsamı");
+                if (!scope) return scope.error();
+                spec.layer = scope.value();
+            }
 
             auto made = tx.declare_attribute(std::move(spec));
             if (!made) {

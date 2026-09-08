@@ -888,3 +888,43 @@ TEST_CASE("ŞEMA: sütun düzenlenir ve silinir; kimliği ve türü değişmez")
     CHECK_EQ(doc.attributes().find("oran"), kNoAttr);
     CHECK_FALSE(doc.drop_attribute("oran").ok());
 }
+
+TEST_CASE("ŞEMA: sütun ya PROJENİN ya da bir KATMANIN")
+{
+    // WHAT THE USER HIT. They added TAKS and KAKS to one layer and found them on
+    // every object in the drawing — because the schema was the document's and had
+    // no other shape. `ada` and `parsel` genuinely are facts about every parcel;
+    // `direk_yuksekligi` is a fact about the ENERJİ layer and means nothing on a
+    // road centreline, and declaring it project-wide puts an empty row in the
+    // inspector of every object there is.
+    AttrSpec project;
+    project.id   = "ada";
+    project.type = AttrType::Int64;
+
+    AttrSpec scoped;
+    scoped.id    = "direk";
+    scoped.type  = AttrType::Length;
+    scoped.layer = "ENERJİ";
+
+    // A project column is offered everywhere.
+    CHECK(attr_applies_to(project, "ENERJİ"));
+    CHECK(attr_applies_to(project, "PARSEL"));
+    CHECK(attr_applies_to(project, ""));
+
+    // A layer column, only on its own layer.
+    CHECK(attr_applies_to(scoped, "ENERJİ"));
+    CHECK_FALSE(attr_applies_to(scoped, "PARSEL"));
+
+    // FOLDED THE TURKISH WAY, because `Enerji` and `ENERJİ` are the same layer to
+    // every other part of this program — and the dotted/dotless i is exactly
+    // where an ASCII fold would get it wrong (CLAUDE.md 5.6).
+    CHECK(attr_applies_to(scoped, "enerji"));
+
+    // AND AN UNSCOPED COLUMN IS THE PROJECT'S, which is what a document written
+    // before this existed reads back as: every column it holds was offered
+    // everywhere, and that is what those files meant.
+    AttrSpec legacy;
+    legacy.id = "eski";
+    CHECK(legacy.layer.empty());
+    CHECK(attr_applies_to(legacy, "HERHANGİ"));
+}

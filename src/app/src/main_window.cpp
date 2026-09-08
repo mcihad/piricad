@@ -38,6 +38,7 @@
 
 #include <QActionGroup>
 #include <QApplication>
+#include <QCloseEvent>
 #include <QComboBox>
 #include <QDir>
 #include <QDockWidget>
@@ -2056,6 +2057,7 @@ void MainWindow::probeSchemaPage()
     // gets two words.
     const QStringList declarations{
         QStringLiteral("SÜTUN kimlik=\"ada\" tur=tam_sayi ad=\"Ada No\" zorunlu=evet"),
+        QStringLiteral("SÜTUN kimlik=\"direk\" tur=uzunluk ad=\"Direk\" katman=\"ENERJİ\""),
         QStringLiteral("SÜTUN kimlik=\"oran\" tur=ondalik ad=\"Oran\" basamak=2 zorunlu=hayır"),
         QStringLiteral("SÜTUN kimlik=\"onay\" tur=tarih ad=\"Onay Tarihi\" zorunlu=hayır"),
         QStringLiteral("SÜTUN kimlik=\"tescilli\" tur=evet_hayir ad=\"Tescilli\" zorunlu=hayır"),
@@ -2065,6 +2067,10 @@ void MainWindow::probeSchemaPage()
         if (!page->probeAction(QStringLiteral("satir"), -1, line))
             say(QStringLiteral("gönderilemedi: %1").arg(line));
 
+    // WHOSE PAGE THIS IS. The window was opened on a layer, so its page lists that
+    // layer's columns and the project's; the `ENERJİ` column above belongs to
+    // neither and must not appear.
+    say(QStringLiteral("kapsam: %1").arg(controller_->activeLayerName()));
     say(QStringLiteral("sütun sayısı: %1").arg(page->probeRows().size()));
     for (const QString& row : page->probeRows())
         say(QStringLiteral("satır: %1").arg(row));
@@ -2119,7 +2125,7 @@ void MainWindow::probeSchemaPage()
                          : QString()));
     }
 
-    ColumnDialog form(*controller_, QString(), &properties);
+    ColumnDialog form(*controller_, QString(), controller_->activeLayerName(), &properties);
     form.applyTheme(theme_);
     form.show();
     QCoreApplication::processEvents();
@@ -2236,6 +2242,47 @@ void MainWindow::probeAttributeGrid()
     }
 
     table.close();
+}
+
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+    if (!controller_->isDirty()) {
+        QMainWindow::closeEvent(event);
+        return;
+    }
+
+    // THREE ANSWERS, and the third one is the point: a person who reaches for the
+    // X by accident must be able to say "no, I did not mean that". A two-button
+    // dialog with Save and Discard makes the accident unrecoverable.
+    const QString name = controller_->currentFile().isEmpty()
+                             ? tr("Adsız çizim")
+                             : QFileInfo(controller_->currentFile()).fileName();
+
+    const auto answer = QMessageBox::question(
+        this, tr("Kaydedilsin mi?"),
+        tr("%1 üzerinde kaydedilmemiş değişiklikler var.\n\n"
+           "Kapatmadan önce kaydedilsin mi?")
+            .arg(name),
+        QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+
+    if (answer == QMessageBox::Cancel) {
+        event->ignore();
+        return;
+    }
+
+    if (answer == QMessageBox::Save) {
+        // `saveProject` already turns "no file yet" into the Save As dialog, and
+        // that dialog can itself be cancelled — a cancelled save must not become
+        // a silent discard, which is what the check below is for.
+        saveProject();
+
+        if (controller_->isDirty()) {
+            event->ignore();
+            return;
+        }
+    }
+
+    QMainWindow::closeEvent(event);
 }
 
 void MainWindow::openCommandSearch()

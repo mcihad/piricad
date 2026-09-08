@@ -74,12 +74,18 @@ QString quoted(const QString& raw)
 // ColumnDialog
 // =============================================================================
 
-ColumnDialog::ColumnDialog(Controller& controller, QString existing, QWidget* parent)
-    : DialogFrame(parent), controller_(controller), existing_(std::move(existing))
+ColumnDialog::ColumnDialog(Controller& controller, QString existing, QString layerName,
+                           QWidget* parent)
+    : DialogFrame(parent), controller_(controller), existing_(std::move(existing)),
+      layer_(std::move(layerName))
 {
     const bool editing = !existing_.isEmpty();
+    // THE SCOPE IS IN THE TITLE, because it is the one thing about a new column
+    // that the form does not ask and cannot be changed later.
+    const QString scope =
+        layer_.isEmpty() ? tr("— proje geneli") : tr("— yalnız '%1' katmanı").arg(layer_);
     setHeading(Glyph::Table, editing ? tr("Sütunu Düzenle") : tr("Yeni Sütun"),
-               editing ? QStringLiteral("— %1").arg(existing_) : QString());
+               editing ? QStringLiteral("— %1").arg(existing_) : scope);
     setFooterHeight(52);
     setModal(true);
 
@@ -193,7 +199,10 @@ QString ColumnDialog::line() const
     if (id.isEmpty()) return {};
 
     QString out = QStringLiteral("SÜTUN kimlik=%1").arg(quoted(id));
-    if (existing_.isEmpty()) out += QStringLiteral(" tur=%1").arg(type_->value());
+    if (existing_.isEmpty()) {
+        out += QStringLiteral(" tur=%1").arg(type_->value());
+        if (!layer_.isEmpty()) out += QStringLiteral(" katman=%1").arg(quoted(layer_));
+    }
 
     if (!label_->value().trimmed().isEmpty())
         out += QStringLiteral(" ad=%1").arg(quoted(label_->value().trimmed()));
@@ -222,8 +231,8 @@ void ColumnDialog::applyTheme(ThemeMode mode)
 // SchemaPage
 // =============================================================================
 
-SchemaPage::SchemaPage(Controller& controller, QWidget* parent)
-    : QWidget(parent), controller_(controller)
+SchemaPage::SchemaPage(Controller& controller, QString layerName, QWidget* parent)
+    : QWidget(parent), controller_(controller), layer_(std::move(layerName))
 {
     auto* column = new QVBoxLayout(this);
     column->setContentsMargins(16, 14, 16, 14);
@@ -233,12 +242,15 @@ SchemaPage::SchemaPage(Controller& controller, QWidget* parent)
     note_->setObjectName(QStringLiteral("quiet"));
     note_->setWordWrap(true);
 
-    // SAID PLAINLY, because the window it sits in is a LAYER's. The schema
-    // belongs to the document (model.md R27) and a user who declared `taks` here
-    // will find it offered on a road object too; better to read that than to
-    // discover it.
-    note_->setText(tr("Sütunlar çizimin tamamına tanımlanır: burada tanımladığınız bir sütun "
-                      "her katmandaki nesnede görünür. Değerler nesne nesne girilir."));
+    // SAID PLAINLY, because which page you are on decides what a new column
+    // becomes and nothing else on screen says it.
+    note_->setText(layer_.isEmpty()
+                       ? tr("Proje sütunları: çizimdeki HER nesne bunları taşır. Yalnız bir "
+                            "katmana ait bir alan için o katmanın özelliklerini açın.")
+                       : tr("'%1' katmanının sütunları: yalnız bu katmandaki nesneler taşır. "
+                            "Aşağıda proje sütunları da listelenir — onlar her nesnededir ve "
+                            "buradan düzenlenmez.")
+                             .arg(layer_));
     column->addWidget(note_);
 
     table_ = new QTableWidget(this);
@@ -290,10 +302,26 @@ void SchemaPage::refresh()
 {
     const core::AttrTable& schema = controller_.document().attributes();
 
-    table_->setRowCount(static_cast<int>(schema.columns()));
+    // THIS PAGE'S OWN COLUMNS FIRST, then the project's as context when the page
+    // belongs to a layer: an object on this layer carries both, and a list that
+    // showed only half of it would answer "what will I be asked for" wrongly.
+    std::vector<core::AttrId> shownColumns;
     for (std::size_t i = 0; i < schema.columns(); ++i) {
         const core::AttrSpec& spec = schema.column(static_cast<core::AttrId>(i))->spec();
+        const bool mine =
+            layer_.isEmpty() ? spec.layer.empty() : QString::fromStdString(spec.layer) == layer_;
+        if (mine) shownColumns.push_back(static_cast<core::AttrId>(i));
+    }
+    if (!layer_.isEmpty())
+        for (std::size_t i = 0; i < schema.columns(); ++i)
+            if (schema.column(static_cast<core::AttrId>(i))->spec().layer.empty())
+                shownColumns.push_back(static_cast<core::AttrId>(i));
+
+    table_->setRowCount(static_cast<int>(shownColumns.size()));
+    for (std::size_t i = 0; i < shownColumns.size(); ++i) {
+        const core::AttrSpec& spec = schema.column(shownColumns[i])->spec();
         const auto row             = static_cast<int>(i);
+        const bool borrowed        = !layer_.isEmpty() && spec.layer.empty();
 
         // What only some types carry, in one column rather than three mostly
         // empty ones: the digits of a decimal, the catalogue of a code.
@@ -303,9 +331,13 @@ void SchemaPage::refresh()
         else if (spec.type == core::AttrType::CodeRef)
             detail = QString::fromStdString(spec.catalog);
 
-        const auto cell = [this, row](int at, const QString& text, bool numeric) {
+        const auto cell = [this, row, borrowed](int at, const QString& text, bool numeric) {
             auto* item = new QTableWidgetItem(text);
-            item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+            // A project column shown on a layer page is CONTEXT: it is listed so
+            // the reader knows what the objects here carry, and it is not
+            // selectable because editing it belongs on the project's own page.
+            item->setFlags(borrowed ? Qt::ItemIsEnabled
+                                    : (Qt::ItemIsEnabled | Qt::ItemIsSelectable));
             item->setTextAlignment(numeric ? (Qt::AlignRight | Qt::AlignVCenter)
                                            : (Qt::AlignLeft | Qt::AlignVCenter));
             if (numeric) {
@@ -322,7 +354,11 @@ void SchemaPage::refresh()
         cell(Column::Type, wordFor(spec.type), false);
         cell(Column::Detail, detail, false);
         cell(Column::Required, spec.required ? tr("evet") : QString(), false);
-        cell(Column::About, QString::fromStdString(spec.summary_tr), false);
+        const QString about = QString::fromStdString(spec.summary_tr);
+        cell(Column::About,
+             borrowed ? (about.isEmpty() ? tr("proje sütunu") : tr("proje sütunu · %1").arg(about))
+                      : about,
+             false);
     }
 
     table_->resizeColumnsToContents();
@@ -350,7 +386,7 @@ QString SchemaPage::currentId() const
 
 void SchemaPage::declareOrEdit(const QString& existing)
 {
-    ColumnDialog dialog(controller_, existing, this);
+    ColumnDialog dialog(controller_, existing, layer_, this);
     dialog.applyTheme(theme_);
     if (dialog.exec() != QDialog::Accepted) return;
 

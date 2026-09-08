@@ -383,6 +383,15 @@ Result<AttrValue> AttrColumn::get(std::size_t row) const
     return v;
 }
 
+bool attr_applies_to(const AttrSpec& spec, std::string_view layer_name)
+{
+    // AN UNSCOPED COLUMN IS THE PROJECT'S, and that is the default a document
+    // read from an older file gets: no scope recorded, so every column it holds
+    // is offered everywhere — which is exactly what those files meant.
+    if (spec.layer.empty()) return true;
+    return turkish_iequals(spec.layer, layer_name);
+}
+
 Result<AttrValue> attr_parse(const AttrSpec& spec, std::string_view text)
 {
     const std::string word(text);

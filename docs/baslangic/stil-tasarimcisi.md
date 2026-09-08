@@ -186,10 +186,11 @@ Tanımladığınız sütun, o nesne seçildiğinde sağdaki **Öznitelikler** pa
 satırıyla çıkar ve türüne uygun düzenleyiciyle açılır — tarihe takvim, evet/hayıra iki
 kelimelik segment.
 
-**Sütunlar çizimin tamamına tanımlanır**, tek bir katmana değil. Şema koleksiyona
-aittir ve bu belgede bir koleksiyon vardır; sayfanın üstündeki not da bunu söyler.
-Pencere bir katmanın penceresi olduğu için burada durur, katmanın malı olduğu için
-değil.
+**Buradan tanımlanan sütun yalnız bu katmana aittir.** Çizimin tamamına ait bir alan
+— `ada`, `parsel` gibi — **Seçenekler ▸ Proje Öznitelikleri** sayfasında tanımlanır.
+
+Sayfa proje sütunlarını da listeler, `proje sütunu` diye işaretli ve düzenlenemez
+hâlde: bu katmandaki bir nesnenin taşıyacağı alanların tamamı odur.
 
 ## Stil ▾ menüsü
 

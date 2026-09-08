@@ -267,6 +267,10 @@ command::Task<core::Result<std::string>> FileService::open(std::string path)
 
     current_path_ = std::move(path);
 
+    // WHAT IS ON DISK, AS OF NOW. A drawing just read from a file is not dirty,
+    // however many revisions the read itself took to build it.
+    saved_revision_ = bus_.document().revision();
+
     const ProjectReport& r = report.value();
     co_return "Açıldı: " + current_path_ + "  (" + std::to_string(r.entities) + " nesne, " +
         std::to_string(r.layers) + " katman, " + std::to_string(r.vertices) + " nokta, biçim " +
@@ -284,7 +288,8 @@ core::Result<std::string> FileService::save(const std::string& path, bool save_a
     auto report = save_project(bus_.document(), bus_.project_settings(), path);
     if (!report) return report.error();
 
-    current_path_ = path;
+    current_path_   = path;
+    saved_revision_ = bus_.document().revision();
 
     const ProjectReport& r = report.value();
     return std::string(save_as ? "Farklı kaydedildi: " : "Kaydedildi: ") + path + "  (" +

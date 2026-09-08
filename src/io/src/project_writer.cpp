@@ -372,10 +372,12 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     // would reopen as a DIFFERENT document — and the reader's own fingerprint
     // check would say so on every load. It did, which is how this gap was found.
     std::vector<AttrColumnRecord> attr_columns;
+    std::vector<std::uint32_t> attr_column_layer;
     std::vector<AttrCellRecord> attr_cells;
     {
         const core::AttrTable& table = doc.attributes();
         attr_columns.reserve(table.columns());
+        attr_column_layer.reserve(table.columns());
 
         for (std::size_t i = 0; i < table.columns(); ++i) {
             const auto c                = static_cast<core::AttrId>(i);
@@ -391,6 +393,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
             r.required       = spec.required ? 1u : 0u;
             r.scale          = spec.scale;
             attr_columns.push_back(r);
+            attr_column_layer.push_back(pool.intern(spec.layer));
 
             // Only cells that carry a value. A cadastral layer is mostly empty
             // columns; a record per empty cell would be the biggest block in the
@@ -566,6 +569,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
 
     blocks.push_back(column(kBlkSettings, setting_rows));
     blocks.push_back(column(kBlkAttrSchema, attr_columns));
+    blocks.push_back(column(kBlkAttrColumnLayer, attr_column_layer));
     blocks.push_back(column(kBlkAttrCells, attr_cells));
     blocks.push_back(column(kBlkTexts, text_rows));
 

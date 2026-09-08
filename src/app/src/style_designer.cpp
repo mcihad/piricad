@@ -752,7 +752,7 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
             if (std::strcmp(page.title, "Simgeleyici") == 0)
                 pageStack_->addWidget(renderer);
             else if (std::strcmp(page.title, "Öznitelikler") == 0) {
-                schema_ = new SchemaPage(controller_, this);
+                schema_ = new SchemaPage(controller_, layerName_, this);
                 pageStack_->addWidget(schema_);
             } else
                 pageStack_->addWidget(buildInfoPage());

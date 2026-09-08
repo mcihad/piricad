@@ -1555,3 +1555,31 @@ TEST_CASE("the drawn grid and the snapped grid are the same lattice")
     CHECK_EQ(core::apply_grid(on, step).x, on.x);
     CHECK_EQ(core::apply_grid(on, step).y, on.y);
 }
+
+TEST_CASE("SÜTUN: katman= verilen sütun yalnız o katmana tanımlanır")
+{
+    // THROUGH THE COMMAND, because that is where the user's report started: a
+    // column declared from one layer's properties turned up on every object.
+    Rig rig;
+    REQUIRE(rig.line("SÜTUN kimlik=ada tur=tam_sayi").ok());
+    REQUIRE(rig.line("SÜTUN kimlik=direk tur=uzunluk katman=ENERJİ").ok());
+
+    const core::AttrTable& schema = rig.doc.attributes();
+
+    const core::AttrId project = schema.find("ada");
+    REQUIRE(project != core::kNoAttr);
+    CHECK(schema.column(project)->spec().layer.empty());
+
+    const core::AttrId scoped = schema.find("direk");
+    REQUIRE(scoped != core::kNoAttr);
+    CHECK_EQ(schema.column(scoped)->spec().layer, "ENERJİ");
+
+    CHECK(core::attr_applies_to(schema.column(project)->spec(), "PARSEL"));
+    CHECK_FALSE(core::attr_applies_to(schema.column(scoped)->spec(), "PARSEL"));
+
+    // AND AN EDIT CAN MOVE IT. A column declared project-wide by mistake — which
+    // is how this was reported — is one command away from belonging to the layer
+    // it was meant for.
+    REQUIRE(rig.line("SÜTUN kimlik=ada katman=PARSEL").ok());
+    CHECK_EQ(schema.column(schema.find("ada"))->spec().layer, "PARSEL");
+}

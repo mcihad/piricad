@@ -90,6 +90,15 @@ public:
     /// journalled and not undoable.
     const std::string& current_path() const noexcept { return current_path_; }
 
+    /// The document revision the file on disk was written from.
+    ///
+    /// WHY HERE AND NOT IN THE DOCUMENT. "Has this been saved" is a fact about
+    /// the FILE, not about the drawing: two documents open in one process are
+    /// saved separately, and `Document::revision()` is a content counter that
+    /// knows nothing about disks (model.md R43). Zero means "never written", and
+    /// an empty drawing at revision zero is correctly not dirty.
+    std::uint64_t saved_revision() const noexcept { return saved_revision_; }
+
     /// Asks every running read to stop. io.md R15: a cancelled read returns
     /// within 100 ms.
     void request_stop();
@@ -131,6 +140,7 @@ private:
 
     command::Bus& bus_;
     std::string current_path_;
+    std::uint64_t saved_revision_{0};
     std::stop_source stop_;
 };
 

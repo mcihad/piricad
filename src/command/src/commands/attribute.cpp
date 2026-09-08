@@ -64,6 +64,7 @@ void list_schema(Context& ctx)
         const auto c               = static_cast<core::AttrId>(i);
         const core::AttrSpec& spec = table.column(c)->spec();
         ctx.echo("    " + spec.id + "  (" + core::attr_type_name(spec.type) + ")" +
+                 (spec.layer.empty() ? "  proje" : "  katman: " + spec.layer) +
                  (spec.required ? "  zorunlu" : "") +
                  (spec.catalog.empty() ? "" : "  katalog: " + spec.catalog) + "  — " +
                  spec.name_tr);
@@ -204,6 +205,7 @@ Task<void> run_column(Context& ctx)
     const Value must    = ctx.argument("zorunlu");
     const Value catalog = ctx.argument("katalog");
     const Value digits  = ctx.argument("basamak");
+    const Value scoped  = ctx.argument("katman");
 
     const core::AttrTable& table = ctx.document().attributes();
     const core::AttrId found     = table.find(column);
@@ -221,6 +223,7 @@ Task<void> run_column(Context& ctx)
         if (!must.empty()) next.required = must.as_bool();
         if (!catalog.empty()) next.catalog = catalog.as_text();
         if (!digits.empty()) next.scale = static_cast<std::uint8_t>(digits.as_int());
+        if (!scoped.empty()) next.layer = scoped.as_text();
 
         if (!type.empty()) {
             const auto wanted = core::attr_type_from_name(type.as_text());
@@ -244,6 +247,7 @@ Task<void> run_column(Context& ctx)
         if (!must.empty()) ctx.record("zorunlu", must);
         if (!catalog.empty()) ctx.record("katalog", catalog);
         if (!digits.empty()) ctx.record("basamak", digits);
+        if (!scoped.empty()) ctx.record("katman", scoped);
         ctx.echo("Sütun güncellendi: " + column);
         co_return;
     }
@@ -269,6 +273,13 @@ Task<void> run_column(Context& ctx)
     if (!must.empty()) spec.required = must.as_bool();
     if (!catalog.empty()) spec.catalog = catalog.as_text();
 
+    // TWO KINDS OF COLUMN. Without `katman` this is the PROJECT's: `ada` and
+    // `parsel` are facts about every parcel in the drawing. With it, the column
+    // belongs to that layer alone — `direk_yuksekligi` means nothing on a road
+    // centreline, and declaring it project-wide puts an empty row in the
+    // inspector of every object there is.
+    if (!scoped.empty()) spec.layer = scoped.as_text();
+
     // TWO DIGITS BY DEFAULT, because that is what a TAKS, a KAKS and a rate all
     // carry, and a decimal column declared with none would be an integer with a
     // point in its name.
@@ -288,9 +299,11 @@ Task<void> run_column(Context& ctx)
     if (!about.empty()) ctx.record("aciklama", about);
     if (!must.empty()) ctx.record("zorunlu", must);
     if (!catalog.empty()) ctx.record("katalog", catalog);
+    if (!scoped.empty()) ctx.record("katman", scoped);
     if (spec.type == core::AttrType::Decimal) ctx.record("basamak", Value::integer(spec.scale));
 
-    ctx.echo("Sütun tanımlandı: " + column + " (" + core::attr_type_name(spec.type) + ")");
+    ctx.echo("Sütun tanımlandı: " + column + " (" + core::attr_type_name(spec.type) + ")" +
+             (spec.layer.empty() ? ", proje geneli" : ", yalnız '" + spec.layer + "' katmanında"));
 }
 
 } // namespace
@@ -314,6 +327,8 @@ KENTOS_COMMAND(column)
                             "Yalnız 'kod' türü için: katalog kimliği"),
                 Param::integer("basamak", Arity::optional(),
                                "Yalnız 'ondalik' için: noktadan sonraki basamak sayısı"),
+                Param::text("katman", Arity::optional(),
+                            "Sütunu yalnız bu katmana tanımlar; yoksa proje geneli"),
                 Param::boolean("sil", Arity::optional(),
                                "Sütunu ve içindeki bütün değerleri siler"),
             },
