@@ -335,6 +335,17 @@ public:
     /// A schema comes from /data, and reloading a package is its own command.
     Result<AttrId> declare_attribute(AttrSpec spec);
 
+    /// Drops a column and every cell in it. NOT undoable, for the same reason.
+    ///
+    /// The caller above this is expected to have asked the user first: this is
+    /// the one edit in the program that destroys entered data with no record of
+    /// it anywhere.
+    Status drop_attribute(std::string_view id);
+
+    /// Changes what a column says about itself; see `AttrColumn::amend`. NOT
+    /// undoable, and it cannot change the id or the type.
+    Status amend_attribute(std::string_view id, const AttrSpec& next);
+
     /// R28's one generic write: column, row, value in; the previous value out,
     /// which is exactly what undo needs and all it needs.
     Status set_attribute(AttrId col, EntityId e, const AttrValue& v, Op& undo_out);

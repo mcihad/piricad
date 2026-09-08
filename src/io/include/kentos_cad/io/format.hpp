@@ -455,7 +455,15 @@ struct AttrColumnRecord
     std::uint32_t catalog_string; ///< catalogue id, or 0
     std::uint8_t type;            ///< core::AttrType
     std::uint8_t required;        ///< 1 when every row must carry a value
-    std::uint8_t reserved[6];     ///< alignment, zero-filled
+
+    /// Digits after the point, for a `Decimal` column; zero for every other type.
+    ///
+    /// TAKEN FROM THE RESERVED BYTES, which is what they were left for: the
+    /// record keeps its size, its offsets and its block id, and a file written
+    /// before this field existed reads back as scale 0 — which is exactly right,
+    /// because every type that file could hold has no fraction (io.md R10).
+    std::uint8_t scale;
+    std::uint8_t reserved[5]; ///< alignment, zero-filled
 };
 
 static_assert(sizeof(AttrColumnRecord) == 24, "wire record");

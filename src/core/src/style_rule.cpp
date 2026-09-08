@@ -235,14 +235,21 @@ std::string comparable_text(const AttrValue& v)
     case AttrType::CodeRef: return v.text;
     case AttrType::Int64:
     case AttrType::Length:
+    case AttrType::Date:
     case AttrType::Bool: return std::to_string(v.number);
+
+    // A DECIMAL COMPARES AS ITS TEXT, not as its scaled integer. A rule written
+    // against `taks >= 0.4` is comparing against the number a plan note carries;
+    // `40` is an implementation detail of how this document stores it.
+    case AttrType::Decimal: return decimal_to_text(v.number, v.scale, DecimalMark::Point);
     }
     return {};
 }
 
 bool numeric(const AttrValue& v) noexcept
 {
-    return v.type == AttrType::Int64 || v.type == AttrType::Length || v.type == AttrType::Bool;
+    return v.type == AttrType::Int64 || v.type == AttrType::Length || v.type == AttrType::Bool ||
+           v.type == AttrType::Decimal || v.type == AttrType::Date;
 }
 
 } // namespace

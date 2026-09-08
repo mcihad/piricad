@@ -389,6 +389,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
             r.catalog_string = pool.intern(spec.catalog);
             r.type           = static_cast<std::uint8_t>(spec.type);
             r.required       = spec.required ? 1u : 0u;
+            r.scale          = spec.scale;
             attr_columns.push_back(r);
 
             // Only cells that carry a value. A cadastral layer is mostly empty

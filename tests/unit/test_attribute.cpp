@@ -3,6 +3,7 @@
 #include "kentos_test.hpp"
 
 #include "kentos_cad/core/attribute.hpp"
+#include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
 
@@ -761,4 +762,129 @@ TEST_CASE("öznitelik tablosu satır sayısını sütunlara yayar")
     const auto bad_column = t.set(9, 0, attr_int64(1));
     CHECK(!bad_column.ok());
     CHECK_EQ(static_cast<int>(bad_column.error().code), static_cast<int>(ErrorCode::NotFound));
+}
+
+TEST_CASE("ÖZNİTELİK: ondalık sütun tam sayı saklar, noktayı şema koyar")
+{
+    // WHY FIXED POINT AND NOT A FLOAT. `0.4` is not representable in binary
+    // floating point, so a TAKS typed as 0.40, written to disk, read back and
+    // compared would sometimes differ in the last bit — and this document's
+    // fixtures are compared byte for byte across three operating systems (R21,
+    // P8). The cell holds an integer and the column says where the point goes.
+    AttrSpec spec;
+    spec.id      = "oran";
+    spec.name_tr = "Oran";
+    spec.type    = AttrType::Decimal;
+    spec.scale   = 2;
+
+    AttrColumn column(spec);
+    column.resize(2);
+
+    const auto scaled = decimal_from_text("0,40", 2);
+    REQUIRE(scaled.has_value());
+    CHECK_EQ(*scaled, 40);
+
+    // BOTH SEPARATORS MEAN THE SAME NUMBER. A user typing into a Turkish panel
+    // writes a comma; a script writes a point. Neither should have to know which
+    // one this build prefers on output.
+    CHECK_EQ(decimal_from_text("0.40", 2).value_or(-1), 40);
+
+    // AND PAST THE DECLARED PRECISION IS REFUSED, not rounded: a column that
+    // quietly turned 0.405 into 0.40 would be a document saying something the
+    // user did not.
+    CHECK_FALSE(decimal_from_text("0.405", 2).has_value());
+
+    REQUIRE(column.set(0, attr_decimal(*scaled, 2)).ok());
+    const auto back = column.get(0);
+    REQUIRE(back.ok());
+    CHECK_EQ(back.value().number, 40);
+
+    // EVERY DECLARED DIGIT, trailing zeros included: `0,40` and `0,4` are the
+    // same number and only one of them is what a plan note says.
+    CHECK_EQ(attr_display(back.value(), DecimalMark::Comma), "0,40");
+    CHECK_EQ(attr_display(back.value(), DecimalMark::Point), "0.40");
+}
+
+TEST_CASE("ÖZNİTELİK: tarih gün sayar, ISO okur ve ISO yazar")
+{
+    // A DAY AND NOT AN INSTANT. A plan is approved on a date, not at a
+    // timestamp, and storing a time of day would invite a time zone into a
+    // document that has no business carrying one.
+    const auto epoch = date_from_text("1970-01-01");
+    REQUIRE(epoch.has_value());
+    CHECK_EQ(*epoch, 0);
+
+    const auto day = date_from_text("2026-09-08");
+    REQUIRE(day.has_value());
+    CHECK_EQ(date_to_text(*day), "2026-09-08");
+
+    // THE SHAPE EXACTLY. A parser that also took `12/03/2026` would have to
+    // decide whether that is March or December, and the answer differs by
+    // country — which is the ambiguity ISO 8601 exists to end.
+    CHECK_FALSE(date_from_text("08/09/2026").has_value());
+    CHECK_FALSE(date_from_text("2026-02-30").has_value()); // no such day
+    CHECK_FALSE(date_from_text("2026-9-8x").has_value());
+
+    AttrSpec spec;
+    spec.id   = "onay";
+    spec.type = AttrType::Date;
+    AttrColumn column(spec);
+    column.resize(1);
+    REQUIRE(column.set(0, attr_date(*day)).ok());
+    CHECK_EQ(attr_display(column.get(0).value()), "2026-09-08");
+}
+
+TEST_CASE("ŞEMA: sütun düzenlenir ve silinir; kimliği ve türü değişmez")
+{
+    Document doc;
+
+    AttrSpec spec;
+    spec.id      = "oran";
+    spec.name_tr = "Oran";
+    spec.type    = AttrType::Decimal;
+    spec.scale   = 2;
+    REQUIRE(doc.declare_attribute(spec).ok());
+
+    const AttrId at = doc.attributes().find("oran");
+    REQUIRE(at != kNoAttr);
+
+    // A value entered at two digits, so the rescale below has something to move.
+    Op undo;
+    const EntityId e =
+        doc.add_point(doc.ensure_layer("PARSEL"), Point2{0, 0}, undo).value_or(kNoEntity);
+    REQUIRE(e != kNoEntity);
+    REQUIRE(doc.set_attribute(at, e, attr_decimal(40, 2), undo).ok());
+
+    // WHAT AN EDIT MAY CHANGE: the name, the description, requiredness, and the
+    // digits. GAINING digits is exact — 0.40 at two is 40 and at three is 400 —
+    // so the cells are rescaled and nothing the user typed moves.
+    AttrSpec next = spec;
+    next.name_tr  = "Ölçülen Oran";
+    next.required = true;
+    next.scale    = 3;
+    REQUIRE(doc.amend_attribute("oran", next).ok());
+    CHECK_EQ(doc.attributes().column(at)->spec().name_tr, "Ölçülen Oran");
+    CHECK_EQ(doc.attribute(at, doc.entities().slot[e]).value().number, 400);
+    CHECK_EQ(attr_display(doc.attribute(at, doc.entities().slot[e]).value(), DecimalMark::Point),
+             "0.400");
+
+    // AND WHAT IT MAY NOT. The id is what every symbol binding and every rule
+    // names; the type is what the stored integers MEAN; and losing a digit would
+    // throw away something somebody entered on purpose.
+    AttrSpec renamed = next;
+    renamed.id       = "baska";
+    CHECK_FALSE(doc.amend_attribute("oran", renamed).ok());
+
+    AttrSpec retyped = next;
+    retyped.type     = AttrType::Text;
+    CHECK_FALSE(doc.amend_attribute("oran", retyped).ok());
+
+    AttrSpec shorter = next;
+    shorter.scale    = 1;
+    CHECK_FALSE(doc.amend_attribute("oran", shorter).ok());
+
+    // DROPPING IS IRREVERSIBLE AND COMPLETE.
+    REQUIRE(doc.drop_attribute("oran").ok());
+    CHECK_EQ(doc.attributes().find("oran"), kNoAttr);
+    CHECK_FALSE(doc.drop_attribute("oran").ok());
 }

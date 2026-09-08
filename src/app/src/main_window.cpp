@@ -13,6 +13,7 @@
 #include "kentos_cad/app/map_canvas.hpp"
 #include "kentos_cad/app/panels.hpp"
 #include "kentos_cad/app/pick_list.hpp"
+#include "kentos_cad/app/schema_page.hpp"
 #include "kentos_cad/app/settings_dialog.hpp"
 #include "kentos_cad/app/shell_chrome.hpp"
 #include "kentos_cad/app/style_designer.hpp"
@@ -2029,6 +2030,54 @@ void MainWindow::probeToolFamily()
     say(QStringLiteral("çalışan komut: %1")
             .arg(running != nullptr ? QString::fromStdString(running->spec().id)
                                     : QStringLiteral("yok")));
+}
+
+void MainWindow::probeSchemaPage()
+{
+    const auto say = [](const QString& text) {
+        (void)std::fprintf(stdout, "[sema] %s\n", text.toUtf8().constData());
+        (void)std::fflush(stdout);
+    };
+
+    // The window a user opens from the layer's context menu, on the page they
+    // would click. Built here rather than shown modally, because a modal `exec`
+    // never returns to a probe.
+    StyleDesigner properties(*controller_, controller_->activeLayerName(), this);
+    properties.applyTheme(theme_);
+
+    auto* page = properties.findChild<SchemaPage*>();
+    if (page == nullptr) {
+        say(QStringLiteral("Öznitelikler sayfası yok"));
+        return;
+    }
+
+    // EVERY TYPE, because the point of the page is that a column is not always a
+    // line of text: a date gets a calendar, a decimal gets its digits, a yes/no
+    // gets two words.
+    const QStringList declarations{
+        QStringLiteral("SÜTUN kimlik=\"ada\" tur=tam_sayi ad=\"Ada No\" zorunlu=evet"),
+        QStringLiteral("SÜTUN kimlik=\"oran\" tur=ondalik ad=\"Oran\" basamak=2 zorunlu=hayır"),
+        QStringLiteral("SÜTUN kimlik=\"onay\" tur=tarih ad=\"Onay Tarihi\" zorunlu=hayır"),
+        QStringLiteral("SÜTUN kimlik=\"tescilli\" tur=evet_hayir ad=\"Tescilli\" zorunlu=hayır"),
+        QStringLiteral("SÜTUN kimlik=\"cephe\" tur=uzunluk ad=\"Cephe\" zorunlu=hayır"),
+    };
+    for (const QString& line : declarations)
+        if (!page->probeAction(QStringLiteral("satir"), -1, line))
+            say(QStringLiteral("gönderilemedi: %1").arg(line));
+
+    say(QStringLiteral("sütun sayısı: %1").arg(page->probeRows().size()));
+    for (const QString& row : page->probeRows())
+        say(QStringLiteral("satır: %1").arg(row));
+
+    // AN EDIT, which may change what a column SAYS and not what it is.
+    page->probeAction(QStringLiteral("satir"), -1,
+                      QStringLiteral("SÜTUN kimlik=\"oran\" ad=\"Ölçülen Oran\" "
+                                     "basamak=3 zorunlu=evet"));
+    say(QStringLiteral("düzenlendi: %1").arg(page->probeRows().value(1)));
+
+    // AND A DROP, which is the one edit that loses data.
+    page->probeAction(QStringLiteral("sil"), 4, QString());
+    say(QStringLiteral("silindikten sonra: %1 sütun").arg(page->probeRows().size()));
 }
 
 void MainWindow::openCommandSearch()

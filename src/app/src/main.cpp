@@ -633,6 +633,15 @@ int main(int argc, char** argv)
         });
     }
 
+    // The attribute schema page of Katman Özellikleri, driven through its own
+    // dialog lines.
+    if (qEnvironmentVariableIsSet("KENTOS_SCHEMA_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            window.probeSchemaPage();
+            QApplication::exit(0);
+        });
+    }
+
     if (qEnvironmentVariableIsSet("KENTOS_HAND_PROBE")) {
         // The value, when it is a path, is the directory every step is
         // photographed into. See `MainWindow::probeToolsByHand`.

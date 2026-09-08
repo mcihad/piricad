@@ -46,6 +46,29 @@ enum class AttrType : std::uint8_t {
     Bool,
     Text,    ///< free text, dictionary-encoded
     CodeRef, ///< a code drawn from a named /data catalogue
+
+    /// A number with a fraction — TAKS 0.40, a slope, a rate.
+    ///
+    /// FIXED POINT, NOT FLOATING. Every other program calls this a `float` and
+    /// stores an IEEE double; this one cannot (R21, P8) and would not want to.
+    /// `0.4` is not representable in binary floating point, so a TAKS typed as
+    /// 0.40, written to disk, read back and compared would sometimes differ in
+    /// the last bit — and this document is a legal one whose fixtures are
+    /// compared byte for byte across three operating systems.
+    ///
+    /// So the cell holds an INTEGER and `AttrSpec::scale` says where the point
+    /// goes: scale 2 stores 0.40 as 40. The arithmetic is exact, the ordering is
+    /// the integers' own, and the text form round-trips exactly.
+    Decimal,
+
+    /// A calendar day: an approval date, the start of a display period, a
+    /// registration day.
+    ///
+    /// Days since 1970-01-01, as an integer, proleptic Gregorian — what
+    /// `std::chrono::sys_days` counts. A DAY AND NOT AN INSTANT: a plan is
+    /// approved on a date, not at a timestamp, and storing a time of day would
+    /// invite a time zone into a document that has no business carrying one.
+    Date,
 };
 
 /// Stable machine name for schemas, files and messages.
@@ -60,6 +83,18 @@ const char* attr_type_name(AttrType t) noexcept;
 /// another somewhere else. Turkish-folded, so `TAM_SAYI` and `tam_sayı` are the
 /// same word (CLAUDE.md 5.6).
 std::optional<AttrType> attr_type_from_name(std::string_view word);
+
+/// Which mark separates the whole part of a number from its fraction.
+///
+/// TWO CONVENTIONS, ONE FORMATTER. A plan sheet prints `1,5` because that is
+/// what Turkish typography does; an attribute table prints `1.5` because the
+/// filter grammar, the sort and every export read a point. They are the same
+/// number and the same millimetre-to-metre arithmetic, so they are one function
+/// with a parameter rather than two functions that will drift.
+enum class DecimalMark : std::uint8_t {
+    Comma, ///< paper: `1,5`
+    Point, ///< data: `1.5`
+};
 
 /// One column's declaration, as read from /data. All-runtime by construction:
 /// there is no constexpr table of specs anywhere, because that table would be
@@ -81,6 +116,15 @@ struct AttrSpec
     /// (R34: three cardinalities, one authority).
     std::string catalog;
 
+    /// Digits after the point, for `Decimal`. Meaningless for every other type.
+    ///
+    /// It is part of the SCHEMA rather than of the cell because it is a statement
+    /// about the column: a TAKS column carries two digits for every parcel in the
+    /// drawing, and a column whose rows disagreed about where the point sits
+    /// would not be a column. Capped at `kMaxScale` so the scaled integer cannot
+    /// overflow what an `int64` can hold for any value a plan carries.
+    std::uint8_t scale{0};
+
     friend bool operator==(const AttrSpec&, const AttrSpec&) = default;
 };
 
@@ -91,8 +135,16 @@ struct AttrValue
 {
     AttrType type{AttrType::Int64}; ///< must match the column's declared type
     bool present{false};            ///< false = the cell is empty, OGR's IsFieldSet
-    std::int64_t number{0};         ///< Int64, Length, Bool
+    std::int64_t number{0};         ///< Int64, Length, Bool, Decimal, Date
     std::string text;               ///< Text, CodeRef
+
+    /// Where the point goes, copied from the column's spec when the cell is read.
+    ///
+    /// It rides on the value because `attr_display` is handed a value and not a
+    /// column: a formatter that had to be given the schema separately would be a
+    /// formatter every caller could get wrong in a way that shows up as a number
+    /// off by a factor of a hundred.
+    std::uint8_t scale{0};
 
     /// Exact equality, `present` included: an empty cell and a cell holding zero
     /// are different facts about a parcel, and an undo record has to tell them
@@ -109,17 +161,32 @@ AttrValue attr_mm(Mm v);
 AttrValue attr_bool(bool v);
 AttrValue attr_text(std::string v);
 
-/// Which mark separates the whole part of a number from its fraction.
+/// A fixed-point number: `scaled` is the value times ten to the `scale`.
+AttrValue attr_decimal(std::int64_t scaled, std::uint8_t scale);
+
+/// A calendar day, as days since 1970-01-01.
+AttrValue attr_date(std::int64_t days);
+
+/// The most digits after the point a `Decimal` column may declare.
 ///
-/// TWO CONVENTIONS, ONE FORMATTER. A plan sheet prints `1,5` because that is
-/// what Turkish typography does; an attribute table prints `1.5` because the
-/// filter grammar, the sort and every export read a point. They are the same
-/// number and the same millimetre-to-metre arithmetic, so they are one function
-/// with a parameter rather than two functions that will drift.
-enum class DecimalMark : std::uint8_t {
-    Comma, ///< paper: `1,5`
-    Point, ///< data: `1.5`
-};
+/// Six is past what any plan carries — TAKS and KAKS take two, a slope three —
+/// and it leaves an int64 room for values in the billions.
+inline constexpr std::uint8_t kMaxScale = 6;
+
+/// A calendar day as `YYYY-AA-GG`, and back. The text form is ISO 8601 because
+/// that is what sorts as text, what every export writes and what no locale
+/// reinterprets; the panel is free to show it in another order.
+std::string date_to_text(std::int64_t days);
+std::optional<std::int64_t> date_from_text(std::string_view text);
+
+/// A fixed-point number as text, and back, both in exact integer arithmetic.
+///
+/// `mark` chooses the separator for the text form; the parser accepts BOTH,
+/// because a user typing `0,40` into a Turkish panel and a script writing `0.40`
+/// mean the same number and neither should have to know which one this build
+/// prefers.
+std::string decimal_to_text(std::int64_t scaled, std::uint8_t scale, DecimalMark mark);
+std::optional<std::int64_t> decimal_from_text(std::string_view text, std::uint8_t scale);
 
 /// One cell as text.
 ///
@@ -244,6 +311,21 @@ public:
     /// different facts about a parcel.
     std::uint64_t fold(std::uint64_t seed) const;
 
+    /// Changes what the column SAYS about itself without touching what it holds:
+    /// display name, description, whether it is required, its catalogue, and —
+    /// for a `Decimal` — how many digits it carries.
+    ///
+    /// THE ID AND THE TYPE ARE FIXED. The id is the column's identity, named by
+    /// every symbol binding, style rule and journal line that ever mentioned it;
+    /// the type is what the stored integers MEAN. Changing either is not an edit
+    /// of a column, it is a different column, and the honest way to get one is to
+    /// delete this and declare that.
+    ///
+    /// A CHANGED SCALE RESCALES THE CELLS. Two digits becoming three turns 40
+    /// into 400, because both are 0.40 and the number the user typed must not
+    /// change under them. Losing digits is refused rather than rounded.
+    Status amend(const AttrSpec& next);
+
 private:
     Result<std::uint32_t> intern(const std::string& s);
 
@@ -265,6 +347,22 @@ public:
     Result<AttrId> add(AttrSpec spec);
 
     AttrId find(std::string_view id) const;
+
+    /// Drops a column and everything in it. False when `col` names none.
+    ///
+    /// IRREVERSIBLE, like every other schema change (R27): the declaration is
+    /// what rows are addressed against, and there is no undo record that could
+    /// put a column back with its cells. Every caller above this is expected to
+    /// ask first.
+    ///
+    /// `AttrId` is a DENSE INDEX, so ids after the dropped one shift down by one.
+    /// Nothing persists an `AttrId` — the stable identity of a column is its `id`
+    /// string — but anything holding one across this call is holding the wrong
+    /// column afterwards.
+    bool remove(AttrId col);
+
+    /// `AttrColumn::amend`, addressed by id. False when `col` names no column.
+    Status amend(AttrId col, const AttrSpec& next);
 
     const AttrColumn* column(AttrId col) const;
     AttrColumn* column(AttrId col);

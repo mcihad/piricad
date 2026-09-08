@@ -139,29 +139,23 @@ void AttributePanel::rebuild()
                                   {},
                                   false,
                                   tr("KATMAN ad=\"%1\" gorunur=%2").arg(name),
-                                  EditKind::Bool,
-                                  {}});
-            group.rows.push_back({tr("kilitli"),
-                                  l->locked ? tr("evet") : tr("hayır"),
-                                  l->locked ? tr("KİLİT") : QString(),
-                                  false,
+                                  field_of(FieldKind::Bool)});
+            group.rows.push_back({tr("kilitli"), l->locked ? tr("evet") : tr("hayır"),
+                                  l->locked ? tr("KİLİT") : QString(), false,
                                   tr("KATMAN ad=\"%1\" kilitli=%2").arg(name),
-                                  EditKind::Bool,
-                                  {}});
+                                  field_of(FieldKind::Bool)});
             group.rows.push_back(
                 {tr("renk"),
                  QStringLiteral("#%1").arg(l->appearance.rgba, 8, 16, QLatin1Char('0')).toUpper(),
                  {},
                  false,
                  tr("KATMAN ad=\"%1\" renk=%2").arg(name),
-                 EditKind::Colour,
-                 {}});
+                 field_of(FieldKind::Colour)});
             group.rows.push_back({tr("kalinlik"),
                                   tr("%1 mm").arg(l->appearance.width_um / 1000.0, 0, 'f', 2),
                                   {},
                                   false,
                                   tr("STİL katman=\"%1\" kalinlik=%2").arg(name),
-                                  EditKind::Text,
                                   {}});
             group.rows.push_back(
                 {tr("grup"),
@@ -169,7 +163,6 @@ void AttributePanel::rebuild()
                  l->group.empty() ? tr("BOŞ") : QString(),
                  false,
                  tr("KATMAN ad=\"%1\" grup=\"%2\"").arg(name),
-                 EditKind::Text,
                  {}});
             groups_.push_back(group);
 
@@ -199,38 +192,26 @@ void AttributePanel::rebuild()
                                  {},
                                  false,
                                  tr("AYAR ad=koordinat_sistemi deger=%1"),
-                                 EditKind::Text,
                                  {}});
         identity.rows.push_back({tr("aktif_katman"),
                                  controller_.activeLayerName(),
                                  {},
                                  false,
                                  tr("KATMAN ad=\"%1\""),
-                                 EditKind::Choice,
-                                 layerNames});
-        identity.rows.push_back({tr("surum"),
-                                 QString::number(doc.revision()),
-                                 tr("HESAP"),
-                                 true,
-                                 {},
-                                 EditKind::None,
-                                 {}});
+                                 combo_of(layerNames)});
+        identity.rows.push_back(
+            {tr("surum"), QString::number(doc.revision()), tr("HESAP"), true, {}, {}});
         groups_.push_back(identity);
 
         AttributeGroup extent{tr("KAPSAM"), {}, true};
         const core::Box2 box = doc.extent();
         if (box.empty()) {
-            extent.rows.push_back(
-                {tr("durum"), tr("boş çizim"), tr("BOŞ"), false, {}, EditKind::None, {}});
+            extent.rows.push_back({tr("durum"), tr("boş çizim"), tr("BOŞ"), false, {}, {}});
         } else {
-            extent.rows.push_back(
-                {tr("saga_min"), metres(box.min_x), tr("HESAP"), true, {}, EditKind::None, {}});
-            extent.rows.push_back(
-                {tr("saga_max"), metres(box.max_x), tr("HESAP"), true, {}, EditKind::None, {}});
-            extent.rows.push_back(
-                {tr("yukari_min"), metres(box.min_y), tr("HESAP"), true, {}, EditKind::None, {}});
-            extent.rows.push_back(
-                {tr("yukari_max"), metres(box.max_y), tr("HESAP"), true, {}, EditKind::None, {}});
+            extent.rows.push_back({tr("saga_min"), metres(box.min_x), tr("HESAP"), true, {}, {}});
+            extent.rows.push_back({tr("saga_max"), metres(box.max_x), tr("HESAP"), true, {}, {}});
+            extent.rows.push_back({tr("yukari_min"), metres(box.min_y), tr("HESAP"), true, {}, {}});
+            extent.rows.push_back({tr("yukari_max"), metres(box.max_y), tr("HESAP"), true, {}, {}});
         }
         groups_.push_back(extent);
 
@@ -268,10 +249,8 @@ void AttributePanel::rebuild()
                              tr("SABİT"),
                              true,
                              {},
-                             EditKind::None,
                              {}});
-        what.rows.push_back(
-            {tr("tur"), shapeName(doc, kind, gslot), {}, true, {}, EditKind::None, {}});
+        what.rows.push_back({tr("tur"), shapeName(doc, kind, gslot), {}, true, {}, {}});
 
         QStringList layerNames;
         for (const core::Layer& l : doc.layers())
@@ -284,8 +263,7 @@ void AttributePanel::rebuild()
              QStringLiteral("KATMANAT nesneler=%1 katman=\"%2\"")
                  .arg(static_cast<qulonglong>(key))
                  .arg(QStringLiteral("%1")),
-             EditKind::Choice,
-             layerNames});
+             combo_of(layerNames)});
 
         // KATMANDAN means the entity has no style of its own and draws with its
         // layer's — which is a different statement from "no style at all", and
@@ -293,8 +271,7 @@ void AttributePanel::rebuild()
         // nothing.
         const core::StyleId style = rows.style[slot];
         if (style == core::kByLayerStyle) {
-            what.rows.push_back(
-                {tr("stil"), tr("katmandan"), tr("MİRAS"), true, {}, EditKind::None, {}});
+            what.rows.push_back({tr("stil"), tr("katmandan"), tr("MİRAS"), true, {}, {}});
         } else {
             const core::Symbol& sym = doc.styles().symbol_at(style);
             what.rows.push_back({tr("stil"),
@@ -302,7 +279,6 @@ void AttributePanel::rebuild()
                                  {},
                                  true,
                                  {},
-                                 EditKind::None,
                                  {}});
             if (sym.max_scale != 0 || sym.min_scale != 0)
                 what.rows.push_back(
@@ -313,7 +289,6 @@ void AttributePanel::rebuild()
                      {},
                      true,
                      {},
-                     EditKind::None,
                      {}});
         }
         what.rows.push_back({tr("gorunur"),
@@ -321,7 +296,6 @@ void AttributePanel::rebuild()
                              rows.visible(slot) ? QString() : tr("GİZLİ"),
                              true,
                              {},
-                             EditKind::None,
                              {}});
         groups_.push_back(what);
 
@@ -348,10 +322,9 @@ void AttributePanel::rebuild()
             vertices += doc.geometry().ring_xs(rings.first + r).size();
 
         AttributeGroup shape{tr("GEOMETRİ"), {}, false};
+        shape.rows.push_back({tr("kose"), QString::number(vertices), tr("HESAP"), true, {}, {}});
         shape.rows.push_back(
-            {tr("kose"), QString::number(vertices), tr("HESAP"), true, {}, EditKind::None, {}});
-        shape.rows.push_back(
-            {tr("halka"), QString::number(rings.count), tr("HESAP"), true, {}, EditKind::None, {}});
+            {tr("halka"), QString::number(rings.count), tr("HESAP"), true, {}, {}});
         // A closed ring's length is its perimeter and an open one's is its
         // length; naming both `uzunluk` would make a parcel's boundary read as a
         // distance somebody walked.
@@ -360,11 +333,9 @@ void AttributePanel::rebuild()
                               tr("HESAP"),
                               true,
                               {},
-                              EditKind::None,
                               {}});
         if (area != 0)
-            shape.rows.push_back(
-                {tr("alan"), squareMetres(area), tr("HESAP"), true, {}, EditKind::None, {}});
+            shape.rows.push_back({tr("alan"), squareMetres(area), tr("HESAP"), true, {}, {}});
         groups_.push_back(shape);
 
         // ---- where it IS -------------------------------------------------
@@ -375,27 +346,17 @@ void AttributePanel::rebuild()
             // with a dash between do not fit the 200 px this column has. A value
             // that is elided is worse than a row that is scrolled to.
             AttributeGroup where{tr("KAPSAM"), {}, false};
+            where.rows.push_back({tr("saga_min"), metres(box.min_x), tr("HESAP"), true, {}, {}});
+            where.rows.push_back({tr("saga_max"), metres(box.max_x), tr("HESAP"), true, {}, {}});
+            where.rows.push_back({tr("yukari_min"), metres(box.min_y), tr("HESAP"), true, {}, {}});
+            where.rows.push_back({tr("yukari_max"), metres(box.max_y), tr("HESAP"), true, {}, {}});
             where.rows.push_back(
-                {tr("saga_min"), metres(box.min_x), tr("HESAP"), true, {}, EditKind::None, {}});
-            where.rows.push_back(
-                {tr("saga_max"), metres(box.max_x), tr("HESAP"), true, {}, EditKind::None, {}});
-            where.rows.push_back(
-                {tr("yukari_min"), metres(box.min_y), tr("HESAP"), true, {}, EditKind::None, {}});
-            where.rows.push_back(
-                {tr("yukari_max"), metres(box.max_y), tr("HESAP"), true, {}, EditKind::None, {}});
-            where.rows.push_back({tr("genislik"),
-                                  metresWithUnit(box.max_x - box.min_x),
-                                  tr("HESAP"),
-                                  true,
-                                  {},
-                                  EditKind::None,
-                                  {}});
+                {tr("genislik"), metresWithUnit(box.max_x - box.min_x), tr("HESAP"), true, {}, {}});
             where.rows.push_back({tr("yukseklik"),
                                   metresWithUnit(box.max_y - box.min_y),
                                   tr("HESAP"),
                                   true,
                                   {},
-                                  EditKind::None,
                                   {}});
             groups_.push_back(where);
         }
@@ -421,7 +382,6 @@ void AttributePanel::rebuild()
                                  {},
                                  false,
                                  tr("YAZIDÜZENLE nesneler=%1 yazi=\"%2\"").arg(id),
-                                 EditKind::Text,
                                  {}});
 
             // MILLIMETRES IN THE EDITOR, metres in the reading: the command takes
@@ -432,7 +392,6 @@ void AttributePanel::rebuild()
                                  {},
                                  false,
                                  tr("YAZIDÜZENLE nesneler=%1 yukseklik=%2").arg(id),
-                                 EditKind::Text,
                                  {}});
             groups_.push_back(says);
         }
@@ -483,8 +442,7 @@ void AttributePanel::rebuild()
                   : (layer != nullptr ? QString::fromStdString(layer->name) : tr("çoklu seçim"));
 
         AttributeGroup sum{tr("SEÇİM"), {}, true}; // the multi-selection headline
-        sum.rows.push_back(
-            {tr("nesne"), QString::number(alive), tr("HESAP"), true, {}, EditKind::None, {}});
+        sum.rows.push_back({tr("nesne"), QString::number(alive), tr("HESAP"), true, {}, {}});
         sum.rows.push_back(
             {tr("katman"),
              mixed ? tr("karışık")
@@ -492,42 +450,25 @@ void AttributePanel::rebuild()
              mixed ? tr("KARIŞIK") : QString(),
              true,
              {},
-             EditKind::None,
              {}});
-        sum.rows.push_back({tr("toplam_uzunluk"),
-                            metresWithUnit(length),
-                            tr("HESAP"),
-                            true,
-                            {},
-                            EditKind::None,
-                            {}});
         sum.rows.push_back(
-            {tr("toplam_alan"), squareMetres(area), tr("HESAP"), true, {}, EditKind::None, {}});
+            {tr("toplam_uzunluk"), metresWithUnit(length), tr("HESAP"), true, {}, {}});
+        sum.rows.push_back({tr("toplam_alan"), squareMetres(area), tr("HESAP"), true, {}, {}});
         groups_.push_back(sum);
 
         if (!box.empty()) {
             AttributeGroup where{tr("KAPSAM"), {}, false};
+            where.rows.push_back({tr("saga_min"), metres(box.min_x), tr("HESAP"), true, {}, {}});
+            where.rows.push_back({tr("saga_max"), metres(box.max_x), tr("HESAP"), true, {}, {}});
+            where.rows.push_back({tr("yukari_min"), metres(box.min_y), tr("HESAP"), true, {}, {}});
+            where.rows.push_back({tr("yukari_max"), metres(box.max_y), tr("HESAP"), true, {}, {}});
             where.rows.push_back(
-                {tr("saga_min"), metres(box.min_x), tr("HESAP"), true, {}, EditKind::None, {}});
-            where.rows.push_back(
-                {tr("saga_max"), metres(box.max_x), tr("HESAP"), true, {}, EditKind::None, {}});
-            where.rows.push_back(
-                {tr("yukari_min"), metres(box.min_y), tr("HESAP"), true, {}, EditKind::None, {}});
-            where.rows.push_back(
-                {tr("yukari_max"), metres(box.max_y), tr("HESAP"), true, {}, EditKind::None, {}});
-            where.rows.push_back({tr("genislik"),
-                                  metresWithUnit(box.max_x - box.min_x),
-                                  tr("HESAP"),
-                                  true,
-                                  {},
-                                  EditKind::None,
-                                  {}});
+                {tr("genislik"), metresWithUnit(box.max_x - box.min_x), tr("HESAP"), true, {}, {}});
             where.rows.push_back({tr("yukseklik"),
                                   metresWithUnit(box.max_y - box.min_y),
                                   tr("HESAP"),
                                   true,
                                   {},
-                                  EditKind::None,
                                   {}});
             groups_.push_back(where);
         }
@@ -555,12 +496,42 @@ void AttributePanel::rebuild()
         // can be right by construction.
         const auto stored  = doc.attribute(static_cast<core::AttrId>(c), slot);
         const bool present = stored.ok() && stored.value().present;
-        const QString shown =
-            present ? (stored.value().type == core::AttrType::Text ||
-                               stored.value().type == core::AttrType::CodeRef
-                           ? QString::fromStdString(stored.value().text)
-                           : QString::number(static_cast<qlonglong>(stored.value().number)))
-                    : QStringLiteral("—");
+
+        // THROUGH THE ONE FORMATTER, and it was not. This panel printed the raw
+        // stored integer, which is right for a count and wrong for everything
+        // else: a length came out in millimetres where the whole document says
+        // metres, and a fixed-point rate came out as `40` where the plan note
+        // says `0,40`. `core::attr_display` is the function that knows, and it is
+        // the same one the attribute table and every export use.
+        //
+        // The POINT, not the comma. What is shown here is what the editor opens
+        // with and what the command receives back, so it has to be the form the
+        // command parses — the paper form belongs on paper.
+        const QString shown = present ? QString::fromStdString(core::attr_display(
+                                            stored.value(), core::DecimalMark::Point))
+                                      : QStringLiteral("—");
+
+        // WHAT THE COLUMN IS DECIDES WHAT OPENS. A `tarih` column gets a calendar,
+        // an `evet_hayir` gets the two-word segment, a `kod` gets the catalogue's
+        // own list. Before this every column got a line edit and found out it was
+        // the wrong one when the command refused what was typed.
+        const core::AttrSpec& declared = column->spec();
+        FieldSpec editor;
+        switch (declared.type) {
+        case core::AttrType::Bool: editor = field_of(FieldKind::Bool); break;
+        case core::AttrType::Date:
+            editor             = field_of(FieldKind::Date);
+            editor.placeholder = tr("YYYY-AA-GG");
+            break;
+        case core::AttrType::Decimal: editor = decimal_of(declared.scale); break;
+        case core::AttrType::Int64: editor = field_of(FieldKind::Number); break;
+        case core::AttrType::Length:
+            editor        = field_of(FieldKind::Number);
+            editor.suffix = tr("mm");
+            break;
+        case core::AttrType::CodeRef:
+        case core::AttrType::Text: editor = field_of(FieldKind::Text); break;
+        }
 
         // ONE COMMAND PER OBJECT, and the object is named by its PERMANENT key
         // rather than by the slot it happens to occupy: a slot is a storage
@@ -572,19 +543,15 @@ void AttributePanel::rebuild()
         attrs.rows.push_back(
             {QString::fromStdString(column->spec().name_tr.empty() ? column->spec().id
                                                                    : column->spec().name_tr),
-             shown,
-             present ? QString() : tr("BOŞ"),
-             false,
+             shown, present ? QString() : tr("BOŞ"), false,
              QStringLiteral("ÖZNİTELİK ad=\"%1\" nesne=%2 deger=\"%3\"")
                  .arg(QString::fromStdString(column->spec().id))
                  .arg(static_cast<qulonglong>(key))
                  .arg(QStringLiteral("%1")),
-             EditKind::Text,
-             {}});
+             editor});
     }
     if (attrs.rows.isEmpty())
-        attrs.rows.push_back(
-            {tr("sütun"), tr("tanımlı değil"), tr("BOŞ"), false, {}, EditKind::None, {}});
+        attrs.rows.push_back({tr("sütun"), tr("tanımlı değil"), tr("BOŞ"), false, {}, {}});
     groups_.push_back(attrs);
 
     update();
@@ -626,67 +593,39 @@ void AttributePanel::beginEdit(int group, int index)
     if (index < 0 || index >= groups_[group].rows.size()) return;
 
     const AttributeRow& row = groups_[group].rows[index];
-    if (row.command.isEmpty() || row.edit == EditKind::None) return;
+    if (row.command.isEmpty()) return;
+
+    const QRect box = rowRect(group, index);
+    if (box.isEmpty()) return;
 
     editingGroup_ = group;
     editingRow_   = index;
 
-    // A BOOLEAN HAS NO EDITOR. Opening a text box to type "evet" would be a worse
-    // control than the one word already on the row: activating it flips it.
-    if (row.edit == EditKind::Bool) {
-        const bool now = row.value == tr("evet");
-        commitEdit(now ? tr("hayır") : tr("evet"));
-        return;
+    // ONE EDITOR PER KIND, and it is rebuilt when the kind changes rather than
+    // kept and reconfigured: a date field and a number field differ in what they
+    // hold as much as in how they look, and a widget carrying the leftovers of
+    // the last row is how a calendar ends up over a floor count.
+    if (editor_ != nullptr && editor_->kind() != row.field.kind) {
+        editor_->deleteLater();
+        editor_ = nullptr;
     }
-
-    if (row.edit == EditKind::Colour) {
-        const QColor before = QColor::fromRgba(row.value.mid(1).toUInt(nullptr, 16));
-        const QColor picked = QColorDialog::getColor(before, this, tr("Katman rengi"),
-                                                     QColorDialog::ShowAlphaChannel);
-        if (!picked.isValid()) {
-            closeEditor();
-            return;
-        }
-        // 0xAARRGGBB, which is what KATMAN renk= reads.
-        commitEdit(QStringLiteral("0x%1").arg(picked.rgba(), 8, 16, QLatin1Char('0')).toUpper());
-        return;
-    }
-
-    if (row.edit == EditKind::Choice) {
-        bool ok = false;
-        const QString value =
-            QInputDialog::getItem(this, row.key, tr("Yeni değer"), row.choices,
-                                  static_cast<int>(row.choices.indexOf(row.value)), false, &ok);
-        if (!ok) {
-            closeEditor();
-            return;
-        }
-        commitEdit(value);
-        return;
-    }
-
     if (editor_ == nullptr) {
-        editor_ = new QLineEdit(this);
-        editor_->setObjectName(QStringLiteral("attributeEditor"));
-        connect(editor_, &QLineEdit::returnPressed, this, [this] { commitEdit(editor_->text()); });
-
-        auto* giveUp = new QShortcut(QKeySequence(Qt::Key_Escape), editor_);
-        giveUp->setContext(Qt::WidgetShortcut);
-        connect(giveUp, &QShortcut::activated, this, [this] { closeEditor(); });
+        editor_ = new Field(row.field, this);
+        editor_->applyTheme(theme_);
+        connect(editor_, &Field::committed, this, &AttributePanel::commitEdit);
+        connect(editor_, &Field::cancelled, this, [this] { closeEditor(); });
     }
 
-    const QRect box = rowRect(group, index);
-    if (box.isEmpty()) {
-        closeEditor();
-        return;
-    }
-    editor_->setGeometry(box.adjusted(2, 2, -2, -2));
+    // EXACTLY THE CELL. Not inset by two pixels, not a widget floating over the
+    // row: the value rectangle the row was painted with, so the only thing that
+    // changes on screen is that the value became selectable.
+    editor_->setGeometry(box);
+
     // An empty cell reads as `—`; putting that in the box would make the user
     // delete a character that was never a value.
-    editor_->setText(row.value == QStringLiteral("—") ? QString() : row.value);
-    editor_->selectAll();
+    editor_->setValue(row.value == QStringLiteral("—") ? QString() : row.value);
     editor_->show();
-    editor_->setFocus(Qt::OtherFocusReason);
+    editor_->beginEditing();
     update();
 }
 
@@ -712,7 +651,7 @@ bool AttributePanel::editRowForProbe(const QString& key, const QString& value)
     for (int g = 0; g < groups_.size(); ++g)
         for (int r = 0; r < groups_[g].rows.size(); ++r) {
             const AttributeRow& row = groups_[g].rows[r];
-            if (row.key != key || row.command.isEmpty() || row.edit == EditKind::None) continue;
+            if (row.key != key || row.command.isEmpty()) continue;
 
             editingGroup_ = g;
             editingRow_   = r;
@@ -726,10 +665,7 @@ void AttributePanel::closeEditor()
 {
     editingGroup_ = -1;
     editingRow_   = -1;
-    if (editor_ != nullptr) {
-        editor_->hide();
-        editor_->clear();
-    }
+    if (editor_ != nullptr) editor_->hide();
     setFocus(Qt::OtherFocusReason);
     update();
 }
@@ -813,7 +749,7 @@ void AttributePanel::keyPressEvent(QKeyEvent* event)
         if (current >= 0) beginEdit(hotRowGroup_, hotRow_);
         return;
     case Qt::Key_Space:
-        if (current >= 0 && groups_[hotRowGroup_].rows[hotRow_].edit == EditKind::Bool)
+        if (current >= 0 && groups_[hotRowGroup_].rows[hotRow_].field.kind == FieldKind::Bool)
             beginEdit(hotRowGroup_, hotRow_);
         return;
     default: break;
@@ -946,7 +882,7 @@ void AttributePanel::paintEvent(QPaintEvent*)
             // An editable value is written in the READING ink; one that cannot be
             // edited is a step back. The reader can tell what this panel will let
             // them change without clicking anything to find out.
-            const bool editable = !row.command.isEmpty() && row.edit != EditKind::None;
+            const bool editable = !row.command.isEmpty();
             p.setPen(editable ? t.text : t.textDim);
             p.drawText(QRect(kKeyWidth + kValuePadX, y, right - kKeyWidth - kValuePadX, kRowHeight),
                        Qt::AlignVCenter | Qt::AlignLeft, row.value);

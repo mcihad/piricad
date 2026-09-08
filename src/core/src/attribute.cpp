@@ -4,6 +4,7 @@
 #include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
+#include <chrono>
 
 namespace kentos::core {
 namespace {
@@ -30,6 +31,8 @@ const char* attr_type_name(AttrType t) noexcept
     case AttrType::Bool: return "Bool";
     case AttrType::Text: return "Text";
     case AttrType::CodeRef: return "CodeRef";
+    case AttrType::Decimal: return "Ondalik";
+    case AttrType::Date: return "Tarih";
     }
     return "?";
 }
@@ -46,6 +49,9 @@ std::optional<AttrType> attr_type_from_name(std::string_view word)
         return AttrType::Bool;
     if (turkish_iequals(word, "metin")) return AttrType::Text;
     if (turkish_iequals(word, "kod")) return AttrType::CodeRef;
+    if (turkish_iequals(word, "ondalik") || turkish_iequals(word, "ondalık"))
+        return AttrType::Decimal;
+    if (turkish_iequals(word, "tarih")) return AttrType::Date;
     return std::nullopt;
 }
 
@@ -82,6 +88,144 @@ AttrValue attr_bool(bool b)
     v.present = true;
     v.number  = b ? 1 : 0;
     return v;
+}
+
+AttrValue attr_decimal(std::int64_t scaled, std::uint8_t scale)
+{
+    AttrValue v;
+    v.type    = AttrType::Decimal;
+    v.present = true;
+    v.number  = scaled;
+    v.scale   = scale > kMaxScale ? kMaxScale : scale;
+    return v;
+}
+
+AttrValue attr_date(std::int64_t days)
+{
+    AttrValue v;
+    v.type    = AttrType::Date;
+    v.present = true;
+    v.number  = days;
+    return v;
+}
+
+std::string date_to_text(std::int64_t days)
+{
+    // `std::chrono`, not a hand-rolled civil calendar. The conversion is famously
+    // easy to get wrong at the March boundary and in the years before 1970, the
+    // standard library has carried a correct, constexpr, allocation-free version
+    // since C++20, and Article 2.7 says to use it (CLAUDE.md 5.16).
+    const std::chrono::year_month_day date{
+        std::chrono::sys_days{std::chrono::days{static_cast<int>(days)}}};
+    if (!date.ok()) return {};
+
+    // Built digit by digit rather than with a formatter, because `std::format`
+    // and the streams both consult a locale and this string is compared byte for
+    // byte in golden fixtures (R9).
+    const auto pad = [](int value, std::size_t width) {
+        std::string out = std::to_string(value);
+        if (out.size() < width) out.insert(0, width - out.size(), '0');
+        return out;
+    };
+    return pad(static_cast<int>(date.year()), 4) + "-" +
+           pad(static_cast<int>(static_cast<unsigned>(date.month())), 2) + "-" +
+           pad(static_cast<int>(static_cast<unsigned>(date.day())), 2);
+}
+
+std::optional<std::int64_t> date_from_text(std::string_view text)
+{
+    // `YYYY-AA-GG`, and that shape exactly. A parser that also took `12/03/2026`
+    // would have to decide whether that is March or December, and the answer
+    // differs by country — which is precisely the ambiguity ISO 8601 exists to
+    // end. The panel may SHOW a date any way it likes; this is what it stores.
+    int part[3]{};
+    std::size_t at    = 0;
+    std::size_t field = 0;
+    for (; field < 3; ++field) {
+        const std::size_t start = at;
+        while (at < text.size() && text[at] >= '0' && text[at] <= '9') {
+            part[field] = part[field] * 10 + (text[at] - '0');
+            ++at;
+        }
+        if (at == start) return std::nullopt;
+        if (field < 2) {
+            if (at >= text.size() || (text[at] != '-' && text[at] != '.')) return std::nullopt;
+            ++at;
+        }
+    }
+    if (at != text.size()) return std::nullopt;
+
+    const std::chrono::year_month_day date{std::chrono::year{part[0]},
+                                           std::chrono::month{static_cast<unsigned>(part[1])},
+                                           std::chrono::day{static_cast<unsigned>(part[2])}};
+    if (!date.ok()) return std::nullopt;
+    return std::chrono::sys_days{date}.time_since_epoch().count();
+}
+
+std::string decimal_to_text(std::int64_t scaled, std::uint8_t scale, DecimalMark mark)
+{
+    const bool negative          = scaled < 0;
+    const std::int64_t magnitude = negative ? -scaled : scaled;
+
+    std::int64_t divisor = 1;
+    for (std::uint8_t i = 0; i < scale; ++i)
+        divisor *= 10;
+
+    std::string out = std::to_string(magnitude / divisor);
+    if (scale > 0) {
+        // EVERY DECLARED DIGIT, trailing zeros included. A `Length` trims them
+        // because a metre reading is a measurement; a TAKS does not, because
+        // `0.40` and `0.4` are the same number and only one of them is what the
+        // plan note says.
+        std::string digits = std::to_string(magnitude % divisor);
+        digits.insert(0, static_cast<std::size_t>(scale) - digits.size(), '0');
+        out += (mark == DecimalMark::Comma ? "," : ".") + digits;
+    }
+    return negative ? "-" + out : out;
+}
+
+std::optional<std::int64_t> decimal_from_text(std::string_view text, std::uint8_t scale)
+{
+    // BOTH MARKS ACCEPTED. A user typing `0,40` into a Turkish panel and a script
+    // writing `0.40` mean the same number, and which one this build prefers on
+    // output is not something either of them should have to know.
+    std::size_t at = 0;
+    bool negative  = false;
+    if (at < text.size() && (text[at] == '+' || text[at] == '-')) {
+        negative = text[at] == '-';
+        ++at;
+    }
+
+    std::int64_t whole = 0;
+    std::size_t digits = 0;
+    for (; at < text.size() && text[at] >= '0' && text[at] <= '9'; ++at, ++digits)
+        whole = whole * 10 + (text[at] - '0');
+
+    std::int64_t fraction = 0;
+    std::size_t taken     = 0;
+    if (at < text.size() && (text[at] == ',' || text[at] == '.')) {
+        ++at;
+        for (; at < text.size() && text[at] >= '0' && text[at] <= '9'; ++at) {
+            // PAST THE DECLARED PRECISION IS AN ERROR, not a rounding. A column
+            // declared with two digits that quietly turned `0.405` into `0.40`
+            // would be a document saying something the user did not.
+            if (taken == scale) return std::nullopt;
+            fraction = fraction * 10 + (text[at] - '0');
+            ++taken;
+        }
+    }
+    if (digits == 0 && taken == 0) return std::nullopt;
+    if (at != text.size()) return std::nullopt;
+
+    for (std::size_t i = taken; i < scale; ++i)
+        fraction *= 10;
+
+    std::int64_t divisor = 1;
+    for (std::uint8_t i = 0; i < scale; ++i)
+        divisor *= 10;
+
+    const std::int64_t scaled = (whole * divisor) + fraction;
+    return negative ? -scaled : scaled;
 }
 
 AttrValue attr_text(std::string s)
@@ -228,6 +372,7 @@ Result<AttrValue> AttrColumn::get(std::size_t row) const
 
     AttrValue v;
     v.type    = spec_.type;
+    v.scale   = spec_.scale;
     v.present = present(row);
     if (!v.present) return v;
 
@@ -264,6 +409,8 @@ std::string attr_display(const AttrValue& value, DecimalMark mark)
         return negative ? "-" + out : out;
     }
     case AttrType::Int64: return std::to_string(value.number);
+    case AttrType::Decimal: return decimal_to_text(value.number, value.scale, mark);
+    case AttrType::Date: return date_to_text(value.number);
     }
     return {};
 }
@@ -320,6 +467,65 @@ Result<AttrId> AttrTable::add(AttrSpec spec)
     columns_.emplace_back(std::move(spec));
     columns_.back().resize(rows_);
     return id;
+}
+
+Status AttrColumn::amend(const AttrSpec& next)
+{
+    if (next.id != spec_.id)
+        return err(ErrorCode::InvalidArgument,
+                   "Bir sütunun kimliği değiştirilemez: '" + spec_.id + "' -> '" + next.id +
+                       "'. Kimlik, sütuna atıfta bulunan her sembolün ve her kuralın "
+                       "adlandırdığı şeydir.");
+    if (next.type != spec_.type)
+        return err(ErrorCode::InvalidArgument,
+                   "'" + spec_.id + "' sütununun türü değiştirilemez (" +
+                       attr_type_name(spec_.type) + " -> " + attr_type_name(next.type) +
+                       "). Saklanan sayıların ANLAMI odur; başka bir tür istiyorsanız sütunu "
+                       "silip yeniden tanımlayın.");
+    if (next.type == AttrType::CodeRef && next.catalog.empty())
+        return err(ErrorCode::InvalidArgument,
+                   "'" + spec_.id +
+                       "' bir katalog kodu sütunu ama hangi kataloğu kullandığı yazılmamış.");
+
+    if (next.type == AttrType::Decimal && next.scale != spec_.scale) {
+        if (next.scale > kMaxScale)
+            return err(ErrorCode::InvalidArgument,
+                       "En çok " + std::to_string(kMaxScale) + " ondalık basamak olabilir.");
+
+        // GAINING DIGITS IS EXACT, LOSING THEM IS REFUSED. 0.40 at two digits is
+        // 40 and at three is 400 — the same number, so the cells are rescaled and
+        // nothing the user typed changes under them. Going the other way would
+        // throw away a digit somebody entered on purpose, and a schema edit is
+        // not the place to discover that a value has quietly moved.
+        if (next.scale < spec_.scale)
+            return err(ErrorCode::InvalidArgument,
+                       "'" + spec_.id + "' sütununun basamak sayısı azaltılamaz (" +
+                           std::to_string(spec_.scale) + " -> " + std::to_string(next.scale) +
+                           "): girilmiş değerlerin son basamağı atılırdı.");
+
+        std::int64_t factor = 1;
+        for (std::uint8_t i = spec_.scale; i < next.scale; ++i)
+            factor *= 10;
+        for (std::size_t row = 0; row < rows_; ++row)
+            if (present(row)) numbers_[row] *= factor;
+    }
+
+    spec_ = next;
+    return ok();
+}
+
+bool AttrTable::remove(AttrId col)
+{
+    if (col >= columns_.size()) return false;
+    columns_.erase(columns_.begin() + static_cast<std::ptrdiff_t>(col));
+    return true;
+}
+
+Status AttrTable::amend(AttrId col, const AttrSpec& next)
+{
+    if (col >= columns_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen öznitelik sütunu: " + std::to_string(col));
+    return columns_[col].amend(next);
 }
 
 AttrId AttrTable::find(std::string_view id) const

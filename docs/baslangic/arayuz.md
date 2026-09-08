@@ -449,10 +449,38 @@ hangisinin değişebileceğini görürsünüz.
 | **↑ ↓** | Satırlar arasında gezer |
 | **Enter** / **F2** | Seçili satırı açar |
 | **Space** | evet/hayır satırını çevirir |
-| **Esc** | Vazgeçer, değeri değiştirmez |
+| **Enter** (düzenlerken) | Değeri alır ve düzenlemeden çıkar |
+| **Esc** (düzenlerken) | Vazgeçer, değeri değiştirmez |
+| Başka bir yere tıklamak | **Enter ile aynı**: değer alınır |
 
-Düzenleyici satırın tipine göre değişir: metin için kutu, evet/hayır için doğrudan
-çevirme, renk için renk seçici, aktif katman gibi kapalı bir küme için liste.
+Son satır bilerek öyledir. Bir değeri yazıp sonraki satıra tıklayan kişi işini
+bitirmiştir; **Enter**'a basmadı diye yazdığını atmak, gözüyle gördüğü emeği çöpe
+atmaktır.
+
+#### Düzenleyici, satırın kendisidir
+
+Düzenleyici, değerin çizildiği **dikdörtgenin tamamını** kaplar: kendi çerçevesi,
+kendi kenar boşluğu, kendi köşe yuvarlaması yoktur. Ekranda değişen tek şey değerin
+artık seçilebilir olmasıdır — panelin üstüne bir bileşen konmuş hissi vermez.
+
+Ve **ne düzenlediğini bilir**. Sütunun bildirilmiş türü hangi düzenleyicinin
+açılacağını belirler:
+
+| Sütun türü | Açılan |
+|---|---|
+| `metin`, `kod` | Metin kutusu |
+| `tam_sayi` | Yalnız rakam alan kutu |
+| `uzunluk` | Aynısı, sonunda `mm` birimi |
+| `ondalik` | Bildirilen basamak kadar ondalık alan kutu; hem `,` hem `.` kabul eder |
+| `evet_hayir` | İki kelimelik segment: **evet** / **hayır** |
+| `tarih` | `YYYY-AA-GG` kutusu ve yanında takvim |
+
+Bunlar tek bir bileşen setidir ve program boyunca aynıdır: metin, sayı, ondalık,
+evet/hayır, liste, çoklu seçim, tarih, aralık ve renk. Katman Özellikleri'ndeki
+**Öznitelikler** sayfasının formu da aynı bileşenleri kullanır.
+
+Önceden her satır aynı metin kutusunu açıyordu: bir tarih de, bir evet/hayır da
+serbest metin olarak yazılıyor ve yanlış olduğu ancak komut reddettiğinde anlaşılıyordu.
 
 | Satır | Gönderdiği komut |
 |---|---|

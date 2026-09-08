@@ -277,6 +277,13 @@ const char* sql_type(core::AttrType type)
     case core::AttrType::Bool: return "boolean";
     case core::AttrType::Text:
     case core::AttrType::CodeRef: return "text";
+
+    // `numeric`, not `double precision`. The column is fixed point on this side
+    // and `numeric` is fixed point on that side; mapping it to a float would put
+    // a TAKS of 0.40 into a type that cannot hold it exactly, which is the whole
+    // reason it is not a float here either.
+    case core::AttrType::Decimal: return "numeric";
+    case core::AttrType::Date: return "date";
     }
     return "text";
 }
@@ -547,6 +554,13 @@ core::Result<std::size_t> PostgisStore::write_layer(const core::Document& doc, c
                         break;
                     case core::AttrType::Text:
                     case core::AttrType::CodeRef: cell = value.value().text; break;
+                    case core::AttrType::Decimal:
+                        cell = core::decimal_to_text(value.value().number, value.value().scale,
+                                                     core::DecimalMark::Point);
+                        break;
+                    case core::AttrType::Date:
+                        cell = core::date_to_text(value.value().number);
+                        break;
                     }
                 }
 

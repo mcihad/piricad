@@ -132,6 +132,14 @@ public:
     /// Declares a column. NOT undoable — see Document::declare_attribute.
     core::Result<core::AttrId> declare_attribute(core::AttrSpec spec);
 
+    /// Drops a column and everything in it. NOT undoable — see
+    /// `Document::drop_attribute`, and ask the user before calling it.
+    core::Status drop_attribute(std::string_view id);
+
+    /// Changes a column's name, description, requiredness, catalogue or scale.
+    /// NOT undoable; cannot change the id or the type.
+    core::Status amend_attribute(std::string_view id, const core::AttrSpec& next);
+
     /// Attaches or replaces the text on an entity. Height is ground millimetres;
     /// an empty `content` detaches it. Undoable like any other edit.
     Status set_text(EntityId e, std::string content, core::Mm height, core::TextAnchor anchor);

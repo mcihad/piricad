@@ -96,9 +96,17 @@ elif ! head -n1 "$reference" | grep -q 'ÜRETİLMİŞ DOSYA'; then
     echo "docs: generated reference lost its do-not-edit header -> docs/komutlar/referans.md:1" >&2
     fail=1
 else
+    # IN PRESET ORDER, not in glob order. `build/*` sorts `asan` before `dev`,
+    # so a sanitiser tree left over from an earlier session was answering this
+    # check with a registry from before the change being tested — the gate then
+    # reported the freshly generated reference as stale, for ever, and the only
+    # way out was to notice which binary it had picked.
     docgen=""
-    for candidate in "$root"/build/*/bin/kentos_docgen; do
-        [[ -x "$candidate" ]] && docgen="$candidate" && break
+    for candidate in dev release debug asan headless; do
+        if [[ -x "$root/build/$candidate/bin/kentos_docgen" ]]; then
+            docgen="$root/build/$candidate/bin/kentos_docgen"
+            break
+        fi
     done
     if [[ -n "$docgen" ]]; then
         tmp="$(mktemp)"

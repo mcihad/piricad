@@ -59,6 +59,28 @@ core::Result<core::AttrValue> parse_for(const core::AttrSpec& spec, const std::s
                                  ". Girilen: '" + text + "'");
         }
     }
+    case core::AttrType::Decimal: {
+        // The column's own precision, not the one the typing happened to use. A
+        // value with more digits than the column declares is REFUSED rather than
+        // rounded: a document that quietly turned 0.405 into 0.40 would be saying
+        // something the user did not.
+        const auto scaled = core::decimal_from_text(text, spec.scale);
+        if (!scaled)
+            return core::err(core::ErrorCode::InvalidArgument,
+                             "'" + spec.id + "' özniteliği " + std::to_string(spec.scale) +
+                                 " basamaklı ondalık sayı bekliyor. Girilen: '" + text + "'");
+        return core::attr_decimal(*scaled, spec.scale);
+    }
+    case core::AttrType::Date: {
+        const auto days = core::date_from_text(text);
+        if (!days)
+            return core::err(core::ErrorCode::InvalidArgument,
+                             "'" + spec.id +
+                                 "' özniteliği YYYY-AA-GG biçiminde tarih bekliyor. "
+                                 "Girilen: '" +
+                                 text + "'");
+        return core::attr_date(*days);
+    }
     }
     return core::err(core::ErrorCode::Internal, "Bilinmeyen öznitelik türü.");
 }
@@ -72,6 +94,9 @@ std::string show(const core::AttrValue& v)
     case core::AttrType::Bool: return v.number != 0 ? "evet" : "hayır";
     case core::AttrType::Length: return std::to_string(v.number) + " mm";
     case core::AttrType::Int64: return std::to_string(v.number);
+    case core::AttrType::Decimal:
+        return core::decimal_to_text(v.number, v.scale, core::DecimalMark::Point);
+    case core::AttrType::Date: return core::date_to_text(v.number);
     }
     return "?";
 }
@@ -195,40 +220,118 @@ namespace {
 /// number, so one command cannot bind both to the same positional slot. Splitting
 /// them also matches what they are — one changes the SCHEMA, the other changes a
 /// VALUE, and only the second is undoable.
+/// Every type word `SÜTUN` accepts, for the message a wrong one gets.
+///
+/// Built from the ONE list in core rather than repeated here: this command used
+/// to carry its own if-chain, which is exactly how `metin` comes to mean one
+/// thing in one command and something else in another (see the note above
+/// `core::attr_type_from_name`).
+const char* kTypeWords = "tam_sayi, ondalik, uzunluk, evet_hayir, metin, tarih, kod";
+
 Task<void> run_column(Context& ctx)
 {
-    const Value id   = ctx.argument("kimlik");
-    const Value type = ctx.argument("tur");
-
+    // NAMED, AND NOT FOR TIDINESS. `Context::argument` returns a `Value` BY
+    // VALUE and `as_text()` hands back a reference into it, so reading one
+    // straight out of the call dangles the moment the temporary dies.
+    const Value id = ctx.argument("kimlik");
     if (id.empty()) {
         list_schema(ctx);
         co_return;
     }
+    const std::string column = id.as_text();
+
+    // ---- drop ----
+    if (ctx.argument("sil").as_bool()) {
+        auto dropped = ctx.transaction().drop_attribute(column);
+        if (!dropped) {
+            ctx.echo(dropped.error().message);
+            co_return;
+        }
+        ctx.record("kimlik", id);
+        ctx.record("sil", Value::boolean(true));
+        ctx.echo("Sütun silindi: " + column);
+        co_return;
+    }
+
+    const Value type    = ctx.argument("tur");
+    const Value label   = ctx.argument("ad");
+    const Value about   = ctx.argument("aciklama");
+    const Value must    = ctx.argument("zorunlu");
+    const Value catalog = ctx.argument("katalog");
+    const Value digits  = ctx.argument("basamak");
+
+    const core::AttrTable& table = ctx.document().attributes();
+    const core::AttrId found     = table.find(column);
+
+    // ---- amend: what an existing column says about itself ----
+    //
+    // A second call naming a column that already exists is an EDIT, not a
+    // duplicate declaration. What it may change is what the column says about
+    // itself; the id and the type are the column's identity and the meaning of
+    // its stored integers, and `AttrColumn::amend` refuses both.
+    if (found != core::kNoAttr) {
+        core::AttrSpec next = table.column(found)->spec();
+        if (!label.empty()) next.name_tr = label.as_text();
+        if (!about.empty()) next.summary_tr = about.as_text();
+        if (!must.empty()) next.required = must.as_bool();
+        if (!catalog.empty()) next.catalog = catalog.as_text();
+        if (!digits.empty()) next.scale = static_cast<std::uint8_t>(digits.as_int());
+
+        if (!type.empty()) {
+            const auto wanted = core::attr_type_from_name(type.as_text());
+            if (!wanted) {
+                ctx.echo("Bilinmeyen öznitelik türü: '" + type.as_text() +
+                         "'. Beklenen: " + kTypeWords + ".");
+                co_return;
+            }
+            next.type = *wanted;
+        }
+
+        auto amended = ctx.transaction().amend_attribute(column, next);
+        if (!amended) {
+            ctx.echo(amended.error().message);
+            co_return;
+        }
+
+        ctx.record("kimlik", id);
+        if (!label.empty()) ctx.record("ad", label);
+        if (!about.empty()) ctx.record("aciklama", about);
+        if (!must.empty()) ctx.record("zorunlu", must);
+        if (!catalog.empty()) ctx.record("katalog", catalog);
+        if (!digits.empty()) ctx.record("basamak", digits);
+        ctx.echo("Sütun güncellendi: " + column);
+        co_return;
+    }
+
+    // ---- declare ----
     if (type.empty()) {
-        ctx.echo("Kullanım: SÜTUN <kimlik> <tur>. Türler: tam_sayi, uzunluk, evet_hayir, metin.");
+        ctx.echo(std::string("Kullanım: SÜTUN <kimlik> <tur>. Türler: ") + kTypeWords + ".");
+        co_return;
+    }
+
+    const std::string word = type.as_text();
+    const auto wanted      = core::attr_type_from_name(word);
+    if (!wanted) {
+        ctx.echo("Bilinmeyen öznitelik türü: '" + word + "'. Beklenen: " + kTypeWords + ".");
         co_return;
     }
 
     core::AttrSpec spec;
-    spec.id             = id.as_text();
-    spec.name_tr        = id.as_text();
-    const std::string t = type.as_text();
+    spec.id      = column;
+    spec.name_tr = label.empty() ? column : label.as_text();
+    spec.type    = *wanted;
+    if (!about.empty()) spec.summary_tr = about.as_text();
+    if (!must.empty()) spec.required = must.as_bool();
+    if (!catalog.empty()) spec.catalog = catalog.as_text();
 
-    if (core::turkish_iequals(t, "tam_sayi") || core::turkish_iequals(t, "tam_sayı"))
-        spec.type = core::AttrType::Int64;
-    else if (core::turkish_iequals(t, "uzunluk"))
-        spec.type = core::AttrType::Length;
-    else if (core::turkish_iequals(t, "evet_hayir") || core::turkish_iequals(t, "evet_hayır"))
-        spec.type = core::AttrType::Bool;
-    else if (core::turkish_iequals(t, "metin"))
-        spec.type = core::AttrType::Text;
-    else {
-        ctx.echo("Bilinmeyen öznitelik türü: '" + t +
-                 "'. Beklenen: tam_sayi, uzunluk, evet_hayir, metin.");
-        co_return;
-    }
+    // TWO DIGITS BY DEFAULT, because that is what a TAKS, a KAKS and a rate all
+    // carry, and a decimal column declared with none would be an integer with a
+    // point in its name.
+    if (spec.type == core::AttrType::Decimal)
+        spec.scale = digits.empty() ? 2 : static_cast<std::uint8_t>(digits.as_int());
+    if (spec.scale > core::kMaxScale) spec.scale = core::kMaxScale;
 
-    auto made = ctx.transaction().declare_attribute(std::move(spec));
+    auto made = ctx.transaction().declare_attribute(spec);
     if (!made) {
         ctx.echo(made.error().message);
         co_return;
@@ -236,7 +339,13 @@ Task<void> run_column(Context& ctx)
 
     ctx.record("kimlik", id);
     ctx.record("tur", type);
-    ctx.echo("Sütun tanımlandı: " + id.as_text() + " (" + t + ")");
+    if (!label.empty()) ctx.record("ad", label);
+    if (!about.empty()) ctx.record("aciklama", about);
+    if (!must.empty()) ctx.record("zorunlu", must);
+    if (!catalog.empty()) ctx.record("katalog", catalog);
+    if (spec.type == core::AttrType::Decimal) ctx.record("basamak", Value::integer(spec.scale));
+
+    ctx.echo("Sütun tanımlandı: " + column + " (" + core::attr_type_name(spec.type) + ")");
 }
 
 } // namespace
@@ -251,14 +360,24 @@ KENTOS_COMMAND(column)
             {
                 Param::text("kimlik", Arity::optional(),
                             "Sütun kimliği; yoksa tanımlı sütunlar listelenir"),
-                Param::text("tur", Arity::optional(), "tam_sayi, uzunluk, evet_hayir veya metin"),
+                Param::text("tur", Arity::optional(),
+                            "tam_sayi, ondalik, uzunluk, evet_hayir, metin, tarih, kod"),
+                Param::text("ad", Arity::optional(), "Panelde görünen Türkçe ad"),
+                Param::text("aciklama", Arity::optional(), "Tek satırlık açıklama"),
+                Param::boolean("zorunlu", Arity::optional(), "Her satır bir değer taşımalı mı"),
+                Param::text("katalog", Arity::optional(),
+                            "Yalnız 'kod' türü için: katalog kimliği"),
+                Param::integer("basamak", Arity::optional(),
+                               "Yalnız 'ondalik' için: noktadan sonraki basamak sayısı"),
+                Param::boolean("sil", Arity::optional(),
+                               "Sütunu ve içindeki bütün değerleri siler"),
             },
         // NOT undoable, and for the same reason a layer is not: the schema is what
         // rows are addressed against, and undoing a declaration would invalidate
         // every row index the journal already holds.
         .undo    = UndoPolicy::None,
         .flags   = Flags::Scriptable,
-        .summary = "Belgeye öznitelik sütunu tanımlar ve tanımlı sütunları listeler.",
+        .summary = "Öznitelik sütunu tanımlar, düzenler, siler; argümansız çağrılınca listeler.",
         .run     = &run_column,
     };
 }

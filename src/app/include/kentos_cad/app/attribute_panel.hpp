@@ -10,6 +10,7 @@
 // owns no path of its own into the entity store.
 #pragma once
 
+#include "kentos_cad/app/fields.hpp"
 #include "kentos_cad/app/theme.hpp"
 #include "kentos_cad/core/layer.hpp"
 
@@ -23,8 +24,6 @@
 #include <array>
 #include <cstdint>
 
-class QLineEdit;
-
 namespace kentos::app {
 
 /// The one road from a widget to the document; see controller.hpp.
@@ -32,15 +31,6 @@ class Controller;
 
 /// One value cell can carry a small badge — `HESAP` for a derived number,
 /// `BOŞ` for a cell nobody has filled. §7 names both.
-/// What kind of editor a cell offers when it is opened.
-enum class EditKind : std::uint8_t {
-    None,   ///< read-only: a derived number, or a fact with no command behind it
-    Text,   ///< a line edit — an attribute value, a group path, a width
-    Bool,   ///< no editor at all: activating the row flips it
-    Colour, ///< the platform colour picker
-    Choice, ///< one of `AttributeRow::choices`
-};
-
 struct AttributeRow
 {
     QString key;          ///< the column's Turkish name, or its id when it has none
@@ -58,10 +48,17 @@ struct AttributeRow
     /// Empty means the row cannot be edited.
     QString command;
 
-    EditKind edit = EditKind::None;
-
-    /// The values a `Choice` row may take, in the order they are offered.
-    QStringList choices;
+    /// The editor this cell opens, from `fields.hpp`.
+    ///
+    /// IT REPLACED AN `EditKind` ENUM, and the enum was the smaller half of the
+    /// question: it said a cell was "text" or "a choice" and had nowhere to put
+    /// the bounds of a number, the digits of a decimal or the day format of a
+    /// date. A column declared as `tarih` was typed as free text and found out
+    /// it was wrong only when the command refused it.
+    ///
+    /// Read-only is still the empty `command`, not a kind: a row with nothing to
+    /// send has nothing to edit, and saying so twice invites the two to disagree.
+    FieldSpec field;
 };
 
 struct AttributeGroup
@@ -155,9 +152,9 @@ private:
     int hotRow_      = -1;
 
     /// The line edit, created on first use, parented here.
-    QLineEdit* editor_ = nullptr;
-    int editingGroup_  = -1;
-    int editingRow_    = -1;
+    Field* editor_    = nullptr;
+    int editingGroup_ = -1;
+    int editingRow_   = -1;
 
     Controller& controller_;
     QVector<AttributeGroup> groups_;

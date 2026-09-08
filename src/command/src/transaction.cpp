@@ -207,6 +207,16 @@ core::Result<core::AttrId> Transaction::declare_attribute(core::AttrSpec spec)
     return doc_.declare_attribute(std::move(spec));
 }
 
+core::Status Transaction::drop_attribute(std::string_view id)
+{
+    return doc_.drop_attribute(id);
+}
+
+core::Status Transaction::amend_attribute(std::string_view id, const core::AttrSpec& next)
+{
+    return doc_.amend_attribute(id, next);
+}
+
 Status Transaction::add_guide(core::GuideAxis axis, core::Mm coordinate)
 {
     core::Op undo;

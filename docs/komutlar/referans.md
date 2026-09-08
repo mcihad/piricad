@@ -48,7 +48,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.points`](points.md) | `NOKTALAR`, `POINTS`, `NKL` | Dosya | tek işlem | betiklenebilir, AI erişimli | Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod). |
 | [`core.guide`](guide.md) | `KILAVUZ`, `GUIDE`, `KLV` | Çizim | tek işlem | betiklenebilir, AI erişimli | Cetvel kılavuzu ekler, listeler ve siler. |
 | [`core.attribute`](attribute.md) | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
-| [`core.column`](column.md) | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Belgeye öznitelik sütunu tanımlar ve tanımlı sütunları listeler. |
+| [`core.column`](column.md) | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Öznitelik sütunu tanımlar, düzenler, siler; argümansız çağrılınca listeler. |
 | [`core.erase`](erase.md) | `SİL`, `SIL`, `ERASE`, `E` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Seçilen nesneleri siler. |
 | [`core.select`](select.md) | `SEÇ`, `SEC`, `SELECT`, `S` | Düzenleme | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta. |
 | [`core.label`](label.md) | `ETİKET`, `ETIKET`, `LABEL`, `ETK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmandaki nesneleri özniteliklerinden okuyarak etiketler. |
@@ -517,12 +517,18 @@ Ayrıntılı kullanım: [ÖZNİTELİK](attribute.md)
 
 ### `core.column` — SÜTUN
 
-Belgeye öznitelik sütunu tanımlar ve tanımlı sütunları listeler.
+Öznitelik sütunu tanımlar, düzenler, siler; argümansız çağrılınca listeler.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `kimlik` | text | isteğe bağlı | Sütun kimliği; yoksa tanımlı sütunlar listelenir |
-| `tur` | text | isteğe bağlı | tam_sayi, uzunluk, evet_hayir veya metin |
+| `tur` | text | isteğe bağlı | tam_sayi, ondalik, uzunluk, evet_hayir, metin, tarih, kod |
+| `ad` | text | isteğe bağlı | Panelde görünen Türkçe ad |
+| `aciklama` | text | isteğe bağlı | Tek satırlık açıklama |
+| `zorunlu` | bool | isteğe bağlı | Her satır bir değer taşımalı mı |
+| `katalog` | text | isteğe bağlı | Yalnız 'kod' türü için: katalog kimliği |
+| `basamak` | integer | isteğe bağlı | Yalnız 'ondalik' için: noktadan sonraki basamak sayısı |
+| `sil` | bool | isteğe bağlı | Sütunu ve içindeki bütün değerleri siler |
 
 Ayrıntılı kullanım: [SÜTUN](column.md)
 

@@ -564,7 +564,7 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                             return err(ErrorCode::ParseError,
                                        "Bilinmeyen sembol parametresi ozelligi: " +
                                            std::to_string(bind_what[at]));
-                        if (bind_type[at] > static_cast<std::uint8_t>(core::AttrType::CodeRef))
+                        if (bind_type[at] > static_cast<std::uint8_t>(core::AttrType::Date))
                             return err(ErrorCode::ParseError,
                                        "Bilinmeyen sembol parametresi turu: " +
                                            std::to_string(bind_type[at]));
@@ -956,7 +956,7 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             auto catalog = strings.at(r.catalog_string, "öznitelik kataloğu");
             if (!catalog) return catalog.error();
 
-            if (r.type > static_cast<std::uint8_t>(core::AttrType::CodeRef)) {
+            if (r.type > static_cast<std::uint8_t>(core::AttrType::Date)) {
                 report.warnings.push_back(
                     Warning{"io.attr_type", "'" + id.value() +
                                                 "' özniteliğinin türü bu sürümde tanınmıyor; "
@@ -972,6 +972,7 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             spec.catalog    = catalog.value();
             spec.type       = static_cast<core::AttrType>(r.type);
             spec.required   = r.required != 0;
+            spec.scale      = r.scale > core::kMaxScale ? core::kMaxScale : r.scale;
 
             auto made = tx.declare_attribute(std::move(spec));
             if (!made) {

@@ -37,8 +37,8 @@ taşıyorsa o, taşımıyorsa katmanın kendi görünümü.
 └───────────────────────────────────────────────────────────────────┘
 ```
 
-Soldaki liste on iki bölüm taşır. Bugün **Bilgi** ve **Simgeleyici** doludur;
-kalan onu hangi fazda geleceğini kendi sayfasında yazar. Gizlenmiş bir bölüm,
+Soldaki liste on üç bölüm taşır. Bugün **Bilgi**, **Simgeleyici** ve
+**Öznitelikler** doludur; kalan onu hangi fazda geleceğini kendi sayfasında yazar. Gizlenmiş bir bölüm,
 kullanıcının varlığından haberdar olamayacağı bir yetenektir; adı yazılmış bir
 bölüm ise tarihi belli bir sözdür.
 
@@ -172,6 +172,24 @@ buraya, katmanın öznitelik şemasının yanına gelecek. Tarihi **Faz 2**.
 
 Sembolünde parametre olan bir katmanı bu pencerede açıp **Uygula** demek
 parametreleri **silmez**; pencere kendisinde satırı olmayan bir şeye dokunmaz.
+
+## Öznitelikler sayfası
+
+Çizimdeki nesnelerin taşıyabileceği **sütunlar** burada tanımlanır: `ada`, `parsel`,
+`onay_tarihi`, `oran`. Tablo tanımlı bütün sütunları gösterir; altındaki **Ekle…**,
+**Düzenle…** ve **Sil** düğmeleri [`SÜTUN`](../komutlar/column.md) komutunu gönderir.
+
+Sütun türleri ve her birinin ne tuttuğu o sayfada yazılıdır. Kısaca: `metin`,
+`tam_sayi`, `ondalik`, `uzunluk`, `evet_hayir`, `tarih`, `kod`.
+
+Tanımladığınız sütun, o nesne seçildiğinde sağdaki **Öznitelikler** panelinde kendi
+satırıyla çıkar ve türüne uygun düzenleyiciyle açılır — tarihe takvim, evet/hayıra iki
+kelimelik segment.
+
+**Sütunlar çizimin tamamına tanımlanır**, tek bir katmana değil. Şema koleksiyona
+aittir ve bu belgede bir koleksiyon vardır; sayfanın üstündeki not da bunu söyler.
+Pencere bir katmanın penceresi olduğu için burada durur, katmanın malı olduğu için
+değil.
 
 ## Stil ▾ menüsü
 

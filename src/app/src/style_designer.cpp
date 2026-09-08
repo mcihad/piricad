@@ -8,6 +8,7 @@
 #include "kentos_cad/app/tokens.hpp"
 
 #include "kentos_cad/app/controller.hpp"
+#include "kentos_cad/app/schema_page.hpp"
 
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/core/document.hpp"
@@ -722,6 +723,7 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
          "Katmanın verisinin nereden geldiği — dosya yolu, PostGIS bağlantısı, "
          "koordinat sistemi ve kodlama — buraya gelecek."},
         {Glyph::Palette, "Simgeleyici", "", ""},
+        {Glyph::Table, "Öznitelikler", "", ""},
         {Glyph::Text, "Etiketler", "Faz 2",
          "Etiket yerleşimi, çakışma çözümü ve ölçek aralıkları buraya gelecek. "
          "Bugün etiketler ETİKET komutuyla yazılır; bkz. docs/komutlar/label.md."},
@@ -730,7 +732,8 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
         {Glyph::Measure, "Ölçek", "Faz 2",
          "Katmanın hangi ölçek aralığında çizileceği buraya gelecek."},
         {Glyph::Table, "Öznitelik Formu", "Faz 2",
-         "Tek kaydın form görünümü ve alan denetimleri buraya gelecek."},
+         "Tek kaydın form görünümü ve alan denetimleri buraya gelecek. "
+         "Sütunların kendisi Öznitelikler sayfasında tanımlanır."},
         {Glyph::Topology, "Geçerlilik", "Faz 2",
          "Geometri ve öznitelik geçerlilik kuralları buraya gelecek."},
         {Glyph::Script, "Eylemler", "Faz 3",
@@ -746,8 +749,13 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
         sections_->addSection(page.glyph, title);
 
         if (std::strlen(page.phase) == 0) {
-            pageStack_->addWidget(std::strcmp(page.title, "Simgeleyici") == 0 ? renderer
-                                                                              : buildInfoPage());
+            if (std::strcmp(page.title, "Simgeleyici") == 0)
+                pageStack_->addWidget(renderer);
+            else if (std::strcmp(page.title, "Öznitelikler") == 0) {
+                schema_ = new SchemaPage(controller_, this);
+                pageStack_->addWidget(schema_);
+            } else
+                pageStack_->addWidget(buildInfoPage());
             continue;
         }
         pageStack_->addWidget(buildPendingPage(tr(page.phase), tr(page.note)));
@@ -862,6 +870,7 @@ void StyleDesigner::applyTheme(ThemeMode mode)
 {
     DialogFrame::applyTheme(mode);
     if (sections_) sections_->applyTheme(mode);
+    if (schema_) schema_->applyTheme(mode);
 
     // The swatch's checkerboard is drawn from the tokens, so it has to be drawn
     // again when they change — a dark lattice under a light dialog is exactly the

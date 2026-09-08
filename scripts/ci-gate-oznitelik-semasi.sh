@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# GATE: the attribute schema can be built, edited and pruned from the window.
+#
+# WHAT IT GUARDS. Before this page, a column could only be declared by typing
+# `SÜTUN` at the prompt — so the schema, which is the thing every attribute value
+# in the drawing is addressed against, was reachable only by someone who already
+# knew the command. That is the mouse-only rule (CLAUDE.md 5.15) standing on its
+# head: a capability that exists only for the keyboard is just as much a hole in
+# the equality of clients, because the panel that shows the values could not
+# declare the column they go in.
+#
+# WHAT IS CHECKED, and each line is a different failure:
+#
+#   * EVERY TYPE lands. A page that offered a type word the command does not know
+#     would give the user a form they can fill in and not send.
+#   * The QUALIFIERS survive. A decimal's digits and a column's requiredness are
+#     the two fields that are easy to build a form for and forget to put on the
+#     command line.
+#   * An EDIT changes what a column says and not what it is.
+#   * A DROP removes exactly one column.
+set -euo pipefail
+
+kok="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+exe=""
+for aday in build/dev/bin/kentos_cad build/release/bin/kentos_cad build/debug/bin/kentos_cad; do
+    if [[ -x "$kok/$aday" ]]; then exe="$kok/$aday"; break; fi
+done
+
+if [[ -z "$exe" ]]; then
+    echo "oznitelik-semasi: kentos_cad bulunamadı — ATLANDI (uygulama derlenmemiş)"
+    exit 0
+fi
+
+if [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
+    echo "oznitelik-semasi: BEKLEMEDE — ortamda ekran yok. Açılmayan bir pencere hiçbir"
+    echo "oznitelik-semasi:   şeyi kanıtlamaz."
+    exit 0
+fi
+
+cd "$kok"
+
+set +e
+cikti="$(KENTOS_DATA="$kok/data" KENTOS_SCHEMA_PROBE=1 "$exe" 2>/dev/null)"
+rc=$?
+set -e
+
+fail=0
+
+if [[ $rc -ge 128 ]]; then
+    echo "oznitelik-semasi: uygulama sinyal $((rc - 128)) ile öldü" >&2
+    fail=1
+fi
+
+bekle() {
+    if ! grep -qF "$1" <<<"$cikti"; then
+        echo "oznitelik-semasi: beklenen satır yok -> $1" >&2
+        grep '^\[sema\]' <<<"$cikti" >&2 || true
+        fail=1
+    fi
+}
+
+bekle "[sema] sütun sayısı: 5"
+
+# Five types, five rows, and the columns that only some of them carry.
+bekle "[sema] satır: ada · Ada No · tam_sayi ·  · evet · "
+bekle "[sema] satır: oran · Oran · ondalik · 2 basamak ·  · "
+bekle "[sema] satır: onay · Onay Tarihi · tarih ·  ·  · "
+bekle "[sema] satır: tescilli · Tescilli · evet_hayir ·  ·  · "
+bekle "[sema] satır: cephe · Cephe · uzunluk ·  ·  · "
+
+# THE EDIT CHANGED WHAT IT SAYS. Name, digits and requiredness moved; the id and
+# the type did not, and `AttrColumn::amend` is what refuses those.
+bekle "[sema] düzenlendi: oran · Ölçülen Oran · ondalik · 3 basamak · evet · "
+
+bekle "[sema] silindikten sonra: 4 sütun"
+
+if [[ $fail -ne 0 ]]; then
+    exit 1
+fi
+
+echo "oznitelik-semasi: OK — beş türde sütun pencereden tanımlanıyor, ondalık basamağı ve"
+echo "oznitelik-semasi:   zorunluluk komut satırına geçiyor, düzenleme ve silme çalışıyor"

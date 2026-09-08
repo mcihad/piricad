@@ -432,6 +432,58 @@ QString themeStyleSheet(ThemeMode mode)
         QPushButton#segment:checked      { background: %(wash)s; color: %(accentHi)s;
                                            border: 1px solid %(accentEdge)s; }
 
+        /* ---- inline editors, `fields.hpp` ----------------------------------- */
+        /*
+         * THE FIELD IS THE CELL. Everything here is about the box NOT looking
+         * like a box: no frame of its own, no rounded corner, no padding the row
+         * did not have, and the same ground the row is selected with. What the
+         * user should see when a cell is opened is that the value became
+         * selectable — not that a widget appeared on top of the panel.
+         *
+         * `max-height` is unset on purpose. The generic input rule above pins
+         * every line edit at 22 px, which is right in a dialog form and wrong
+         * here: this one is exactly as tall as the row its owner hands it.
+         */
+        QWidget#field                    { background: %(wash)s; }
+        QLineEdit#fieldLine              { background: transparent; color: %(text)s;
+                                           border: none; border-radius: 0px;
+                                           padding: 0px 8px;
+                                           min-height: 0px; max-height: 16777215px;
+                                           selection-background-color: %(accent)s;
+                                           selection-color: %(onAccent)s; }
+        QLineEdit#fieldLine[state="invalid"] { color: %(danger)s; }
+
+        QToolButton#fieldPicker          { background: transparent; color: %(textDim)s;
+                                           border: none; border-left: 1px solid %(border)s; }
+        QToolButton#fieldPicker:hover    { background: %(hoverIcon)s; color: %(onHover)s; }
+
+        QToolButton#fieldMulti           { background: transparent; color: %(text)s;
+                                           border: none; padding: 0px 8px;
+                                           text-align: left; }
+        QToolButton#fieldMulti:hover     { background: %(hoverIcon)s; }
+        QToolButton#fieldMulti::menu-indicator { image: none; width: 0px; }
+
+        /* Two words that light up, not a 13 px tick with its label elsewhere. */
+        QPushButton#fieldSegment         { background: transparent; color: %(textDim)s;
+                                           border: none; border-radius: 0px;
+                                           padding: 0px; min-height: 0px;
+                                           font-size: 11.5px; }
+        QPushButton#fieldSegment:hover   { background: %(hoverIcon)s; color: %(onHover)s; }
+        QPushButton#fieldSegment:checked { background: %(accent)s; color: %(onAccent)s; }
+
+        QComboBox#fieldCombo             { background: transparent; color: %(text)s;
+                                           border: none; border-radius: 0px;
+                                           padding: 0px 8px;
+                                           min-height: 0px; max-height: 16777215px; }
+        QComboBox#fieldCombo::drop-down  { border: none; width: 16px; }
+
+        QSlider#fieldSlider::groove:horizontal { background: %(border)s; height: 3px;
+                                           border-radius: 1px; }
+        QSlider#fieldSlider::sub-page:horizontal { background: %(accent)s; height: 3px;
+                                           border-radius: 1px; }
+        QSlider#fieldSlider::handle:horizontal { background: %(accent)s; width: 9px;
+                                           margin: -4px 0px; border-radius: 4px; }
+
         /* ---- layers panel, §7 ---------------------------------------------- */
         /* The row is painted by LayerRowDelegate; the view must add nothing. */
         QTreeWidget#layerTree            { background: %(panel)s; border: none;

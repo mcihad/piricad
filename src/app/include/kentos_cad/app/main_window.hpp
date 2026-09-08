@@ -139,6 +139,16 @@ public:
     /// nothing checks. `scripts/ci-gate-arac-ailesi.sh` drives it.
     void probeToolFamily();
 
+    /// Opens Katman Özellikleri on its Öznitelikler page, declares one column of
+    /// every type through the page's own dialog line, edits one, drops one, and
+    /// prints the table after each step.
+    ///
+    /// It goes through the page rather than through `SÜTUN` directly for the
+    /// reason every probe here does: the command has its own tests, and what
+    /// those cannot reach is whether the window a user opens can send it.
+    /// `scripts/ci-gate-oznitelik-semasi.sh` drives it.
+    void probeSchemaPage();
+
     /// Opens the import wizard WITHOUT blocking, on `path` when one is given.
     ///
     /// `importData()` runs it modally and then runs the command line it built;

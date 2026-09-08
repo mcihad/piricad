@@ -68,6 +68,9 @@ namespace kentos::app {
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
 
+/// The attribute schema, as one page of this window; see schema_page.hpp.
+class SchemaPage;
+
 /// Designs one symbol and applies it to a layer through the command bus.
 class StyleDesigner : public DialogFrame
 {
@@ -201,6 +204,9 @@ private:
 
     /// Re-renders the preview when its label is resized; see `updatePreview()`.
     bool eventFilter(QObject* watched, QEvent* event) override;
+
+    /// The attribute schema page, so the theme and the probe can reach it.
+    SchemaPage* schema_{nullptr};
 
     Controller& controller_;
     QString layerName_;

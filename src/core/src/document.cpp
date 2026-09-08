@@ -663,6 +663,37 @@ Result<AttrId> Document::declare_attribute(AttrSpec spec)
     return col;
 }
 
+Status Document::drop_attribute(std::string_view id)
+{
+    const AttrId col = attributes_.find(id);
+    if (col == kNoAttr)
+        return err(ErrorCode::NotFound, "Bilinmeyen öznitelik: '" + std::string(id) + "'");
+
+    if (!attributes_.remove(col))
+        return err(ErrorCode::Internal, "Öznitelik silinemedi: '" + std::string(id) + "'");
+    ++revision_;
+    return ok();
+}
+
+Status Document::amend_attribute(std::string_view id, const AttrSpec& next)
+{
+    const AttrId col = attributes_.find(id);
+    if (col == kNoAttr)
+        return err(ErrorCode::NotFound, "Bilinmeyen öznitelik: '" + std::string(id) + "'");
+
+    // Same rule as a declaration: a CodeRef column must name a catalogue this
+    // document actually holds (R34).
+    if (next.type == AttrType::CodeRef && catalogues_.find(next.catalog) == nullptr)
+        return err(ErrorCode::InvalidArgument,
+                   "'" + next.id + "' özniteliği '" + next.catalog +
+                       "' kataloğuna dayanıyor ama belge o kataloğu taşımıyor.");
+
+    auto amended = attributes_.amend(col, next);
+    if (!amended) return amended;
+    ++revision_;
+    return ok();
+}
+
 Status Document::set_attribute(AttrId col, EntityId e, const AttrValue& v, Op& undo_out)
 {
     if (e >= entities_.size())
