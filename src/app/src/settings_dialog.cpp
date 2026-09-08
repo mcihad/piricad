@@ -302,6 +302,15 @@ SettingsDialog::SettingsDialog(Controller& controller, QWidget* parent)
     // way (CLAUDE.md 5.10).
     {
         Section section;
+        section.group = "Proje Ayarları";
+        section.title = tr("Proje Ayarları");
+        section.page  = buildProjectPage();
+        pages_->addWidget(section.page);
+        sections_->addSection(Glyph::Document, section.title);
+        order_.push_back(section);
+    }
+    {
+        Section section;
         section.group = "Proje Öznitelikleri";
         section.title = tr("Proje Öznitelikleri");
         section.page  = new SchemaPage(controller_, QString(), this);
@@ -315,6 +324,21 @@ SettingsDialog::SettingsDialog(Controller& controller, QWidget* parent)
         const auto at = static_cast<std::size_t>(index);
         pages_->setCurrentIndex(index);
         heading_->setText(order_[at].title);
+
+        // THE TWO PAGES THAT ARE NOT A DECLARED SECTION say what they are
+        // themselves; the loop below would find no setting under their name and
+        // fall through to the "this page is mixed" sentence, which is exactly
+        // wrong for a page whose entire point is that it is not.
+        if (order_[at].group == "Proje Ayarları") {
+            summary_->setText(scope_summary(true, false, false));
+            return;
+        }
+        if (order_[at].group == "Proje Öznitelikleri") {
+            summary_->setText(tr("Çizimdeki her nesnenin taşıdığı sütunlar. Bunlar ayar değil, "
+                                 "belgenin şemasıdır: dosyanın içinde saklanır ve dosyayla "
+                                 "birlikte gider."));
+            return;
+        }
 
         bool project = false, app = false, session = false;
         for (const SettingSpec& spec : core::builtin_settings().all()) {
@@ -447,6 +471,64 @@ QWidget* SettingsDialog::buildGroup(const std::string& section, const QString& t
             caption->setContentsMargins(0, open_group.empty() ? 0 : 18, 0, 6);
             layout->addWidget(caption);
             open_group = group;
+        }
+        addRow(layout, spec);
+    }
+
+    layout->addStretch(1);
+
+    auto* scroll = new QScrollArea(this);
+    scroll->setWidget(page);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    return scroll;
+}
+
+QStringList SettingsDialog::probeSections() const
+{
+    QStringList out;
+    for (const Section& section : order_)
+        out << section.title;
+    return out;
+}
+
+QStringList SettingsDialog::probeProjectSettings() const
+{
+    QStringList out;
+    for (const SettingSpec& spec : core::builtin_settings().all())
+        if (spec.scope == SettingScope::Project) out << QString::fromStdString(spec.id);
+    return out;
+}
+
+QWidget* SettingsDialog::buildProjectPage()
+{
+    auto* page   = new QWidget(this);
+    auto* layout = new QVBoxLayout(page);
+    layout->setContentsMargins(0, 0, 12, 12);
+    layout->setSpacing(0);
+
+    auto* note =
+        new QLabel(tr("Bu ayarlar çizimin kendisine aittir: .pcad dosyasının içinde saklanır, "
+                      "dosyayla birlikte gider ve başka bir bilgisayarda açıldığında aynı kalır. "
+                      "Her biri konusuna göre kendi sayfasında da durur; burada bir arada."),
+                   page);
+    note->setObjectName(QStringLiteral("quiet"));
+    note->setWordWrap(true);
+    note->setContentsMargins(0, 0, 0, 14);
+    layout->addWidget(note);
+
+    // GROUPED BY THE TOPIC THEY WERE DECLARED UNDER, so a reader who knows a
+    // setting from its own page finds it in the same company here.
+    std::string open_section;
+    for (const SettingSpec& spec : core::builtin_settings().all()) {
+        if (spec.scope != SettingScope::Project) continue;
+
+        if (spec.section != open_section) {
+            auto* caption = new QLabel(QString::fromStdString(spec.section).toUpper(), page);
+            caption->setObjectName(QStringLiteral("sectionTitle"));
+            caption->setContentsMargins(0, open_section.empty() ? 0 : 18, 0, 6);
+            layout->addWidget(caption);
+            open_section = spec.section;
         }
         addRow(layout, spec);
     }

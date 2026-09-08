@@ -549,8 +549,15 @@ void AttributePanel::rebuild()
                  .arg(QStringLiteral("%1")),
              editor});
     }
-    if (attrs.rows.isEmpty())
-        attrs.rows.push_back({tr("sütun"), tr("tanımlı değil"), tr("BOŞ"), false, {}, {}});
+    // AN EMPTY STATE, AND IT MUST NOT LOOK LIKE A ROW. This used to be
+    // `sütun / tanımlı değil / BOŞ` — a key, a value and the badge that means
+    // "this cell has not been filled in" — sitting in a group where every other
+    // row IS a column. It was read exactly as it looked: an attribute called
+    // `sütun` that the program had made up by itself, and it was reported as one.
+    //
+    // No key, no badge, and the derived ink: a sentence about the group rather
+    // than a member of it.
+    if (attrs.rows.isEmpty()) attrs.rows.push_back({{}, tr("tanımlı sütun yok"), {}, true, {}, {}});
     groups_.push_back(attrs);
 
     update();

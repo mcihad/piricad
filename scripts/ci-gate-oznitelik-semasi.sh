@@ -90,6 +90,24 @@ bekle "[sema] düzenlendi: oran · Ölçülen Oran · ondalik · 3 basamak · ev
 
 bekle "[sema] silindikten sonra: 4 sütun"
 
+# THE PROJECT HALF OF THE STORY, and both halves have to exist for either to make
+# sense: a layer page that declares layer columns is only honest if there is
+# somewhere else to declare the project's.
+bekle "[sema] bölümler: Proje Ayarları | Proje Öznitelikleri"
+
+# EVERY PROJECT-SCOPED SETTING, and the page is generated from the catalogue —
+# so this count moves when a setting is declared, never because somebody
+# remembered to add a row (CLAUDE.md 5.10).
+bekle "[sema] proje ayarı: 11"
+
+# The two nobody would think to look for outside their own topic page, which is
+# the reason the gathered page exists at all.
+if ! grep -q "core.crs.id" <<<"$cikti" || ! grep -q "core.plan.olcek" <<<"$cikti"; then
+    echo "oznitelik-semasi: 'Proje Ayarları' sayfası proje kapsamlı ayarları toplamıyor" >&2
+    echo "oznitelik-semasi:   -> src/app/src/settings_dialog.cpp:1" >&2
+    fail=1
+fi
+
 if [[ $fail -ne 0 ]]; then
     exit 1
 fi

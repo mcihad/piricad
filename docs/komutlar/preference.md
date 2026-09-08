@@ -187,8 +187,21 @@ kendi birincil adı, alanı bildirilen tipinden, sınırları bildirilen aralı�
 üzerine gelince çıkan açıklaması bildirilen özetinden gelir. Kataloğa eklenen bir ayar
 bu pencereye kendiliğinden düşer.
 
-Üç sekme, üç kapsam: **Proje** çizimle birlikte giden ayarlar, **Uygulama** bu
-bilgisayardaki tercihleriniz, **Oturum** yalnız bu açık pencere için geçerli olanlar.
+Sol sütun **konuya** göre bölünmüştür — Genel, Görünüm ve Tema, Çizim ve Yakalama,
+Koordinat Sistemleri… — çünkü bir ayar konusuyla aranır: `çizim birimi`, öteki genel
+şeylerin yanındadır. Sayfanın başlığının altındaki tek satır o sayfadaki ayarların
+hangi kapsamda olduğunu söyler; karışıksa onu da söyler.
+
+Listenin sonunda **iki sayfa** daha vardır:
+
+| Sayfa | Ne var |
+|---|---|
+| **Proje Ayarları** | Çizimle birlikte giden ayarların **tamamı**, bir arada. Her biri konusuna göre kendi sayfasında da durur; buradaki, `.pcad` dosyasını bir meslektaşınıza vermeden önce "bununla ne gidiyor" sorusunun cevabıdır |
+| **Proje Öznitelikleri** | Çizimdeki her nesnenin taşıdığı sütunlar. Bunlar ayar değil, belgenin şemasıdır — bkz. [`SÜTUN`](column.md) |
+
+İki görünüm de **tek katalogdan üretilir**: bir ayarı konusundan da, Proje Ayarları
+sayfasından da değiştirseniz aynı komut çalışır. İkinci bir liste yoktur.
+
 Her satırın sağında değerin sizin mi yoksa programın mı olduğu (`ayarlanmış` /
 `varsayılan`) ve varsayılana döndüren bir düğme vardır. Üstteki arama kutusu ad,
 kimlik ve açıklama üzerinde birden arar.

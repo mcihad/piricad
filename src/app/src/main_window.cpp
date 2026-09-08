@@ -2085,6 +2085,21 @@ void MainWindow::probeSchemaPage()
     page->probeAction(QStringLiteral("sil"), 4, QString());
     say(QStringLiteral("silindikten sonra: %1 sütun").arg(page->probeRows().size()));
 
+    // THE SETTINGS WINDOW'S OWN PAGES, because the project half of the schema
+    // story lives there: `Proje Ayarları` gathers everything that travels with
+    // the file, `Proje Öznitelikleri` declares the columns every object carries.
+    {
+        SettingsDialog options(*controller_, this);
+        options.applyTheme(theme_);
+        say(QStringLiteral("bölümler: %1")
+                .arg(options.probeSections()
+                         .mid(options.probeSections().size() - 2)
+                         .join(QStringLiteral(" | "))));
+        say(QStringLiteral("proje ayarı: %1").arg(options.probeProjectSettings().size()));
+        say(QStringLiteral("proje ayarları: %1")
+                .arg(options.probeProjectSettings().join(QStringLiteral(", "))));
+    }
+
     // PHOTOGRAPHED WHEN ASKED, the same bargain `KENTOS_PICK_PROBE` makes: a
     // transcript proves the rows are right and says nothing about whether a
     // person can read them. The frame around an input is exactly the kind of

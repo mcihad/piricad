@@ -48,6 +48,17 @@ public:
     /// Opens on the first section, with every declared setting already listed.
     explicit SettingsDialog(Controller& controller, QWidget* parent = nullptr);
 
+    /// The sidebar's section titles, in order, for `KENTOS_SETTINGS_PROBE`.
+    QStringList probeSections() const;
+
+    /// The ids of the settings the `Proje Ayarları` page carries, in order.
+    ///
+    /// Read from the catalogue the page is built from rather than from the
+    /// widgets, because what is being checked is the RULE — every project-scoped
+    /// setting, and nothing else — and a page that built itself from a hand-kept
+    /// list would pass a widget count while breaking exactly that.
+    QStringList probeProjectSettings() const;
+
 private:
     /// One editable setting: the widgets that show it and the spec behind them.
     struct Row
@@ -70,6 +81,22 @@ private:
     /// Builds the page for one group and returns it. Never null: a group only
     /// exists because a setting declared it.
     QWidget* buildGroup(const std::string& section, const QString& title);
+
+    /// The page that gathers every PROJECT-scoped setting, whatever topic it was
+    /// declared under.
+    ///
+    /// WHY A SECOND VIEW OF THE SAME SETTINGS. The pages above are cut by topic,
+    /// which is how a person looks for one setting: `çizim birimi` is found under
+    /// `Genel`, beside the other general things. But "what travels with this
+    /// file" is a different question and a real one — it is the answer somebody
+    /// needs before handing a `.pcad` to a colleague, and topic pages scatter it
+    /// across five of them.
+    ///
+    /// It is NOT a second list (CLAUDE.md 5.10): both views are generated from
+    /// the one settings catalogue, and a row here writes the same setting through
+    /// the same command as the row on its topic page. Adding a setting adds it to
+    /// both with no edit here.
+    QWidget* buildProjectPage();
 
     /// Builds the page of a section that has no settings yet: the phase it
     /// arrives in and one line saying what will be on it.
