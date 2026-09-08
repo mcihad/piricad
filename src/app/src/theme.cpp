@@ -455,7 +455,16 @@ QString themeStyleSheet(ThemeMode mode)
         QWidget#field[frame="box"]       { background: %(input)s;
                                            border: 1px solid %(border)s; border-radius: 4px; }
         QWidget#field[frame="box"][state="focus"] { border: 1px solid %(accent)s; }
-        QWidget#field[frame="cell"]      { background: %(wash)s;
+        /* OPAQUE, and this is the whole of it. The ground was `wash`, which is the
+         * selection accent at twelve per cent — and a translucent editor lets the
+         * cell UNDERNEATH show through, so the stored value and the one being
+         * typed were both legible at once, at different alignments, in the same
+         * box. An editor is not a highlight: it covers what it replaces.
+         *
+         * `input` rather than a blend of the row's own ground, because a cell that
+         * is open IS an input, and the shell already has one ground for those.
+         * The accent border is what says "open"; the ground only has to be solid. */
+        QWidget#field[frame="cell"]      { background: %(input)s;
                                            border: 1px solid %(accent)s; border-radius: 0px; }
 
         QLineEdit#fieldLine              { background: transparent; color: %(text)s;

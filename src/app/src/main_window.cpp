@@ -2154,6 +2154,13 @@ void MainWindow::probeAttributeGrid()
         return table.probeGrid(QString::fromUtf8(action), value);
     };
 
+    /// Puts a value in the open editor WITHOUT committing it, so the picture
+    /// below shows a cell mid-edit rather than a cell that has been left.
+    const auto drive2 = [](AttributeTable& t) {
+        t.probeGrid(QStringLiteral("koy"), QStringLiteral("3325"));
+        QCoreApplication::processEvents();
+    };
+
     // ---- 1. the mode is off, so nothing opens ----
     drive("git", QStringLiteral("0,1"));
     say(QStringLiteral("kip kapalıyken: %1").arg(drive("ac")));
@@ -2163,6 +2170,21 @@ void MainWindow::probeAttributeGrid()
     drive("git", QStringLiteral("0,1"));
     drive("ac");
     say(QStringLiteral("kip açıkken: %1").arg(table.probeGrid(QStringLiteral("ac"), QString())));
+
+    // PHOTOGRAPHED WITH A CELL OPEN. Whether an editor covers what it replaces is
+    // a question only a picture answers: the ground used to be the selection
+    // accent at twelve per cent, so the stored value and the typed one were both
+    // legible at once, at different alignments, in the same box.
+    const QByteArray into = qgetenv("KENTOS_TABLE_PROBE");
+    if (!into.isEmpty() && into != "1") {
+        const QString dir = QString::fromLocal8Bit(into);
+        QDir().mkpath(dir);
+        drive("git", QStringLiteral("0,1"));
+        drive("ac");
+        drive2(table);
+        if (table.grab().save(dir + QStringLiteral("/tablo-duzenleme.png")))
+            say(QStringLiteral("kare: tablo-duzenleme.png"));
+    }
 
     say(QStringLiteral("enter 1 -> %1").arg(drive("yaz", QStringLiteral("128"))));
     drive("ac");

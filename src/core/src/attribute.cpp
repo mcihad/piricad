@@ -650,9 +650,15 @@ Status AttrTable::validate_required(std::size_t row) const
 
     for (const auto& c : columns_) {
         if (!c.spec().required || c.present(row)) continue;
-        return err(ErrorCode::ValidationFailed, "'" + c.spec().name_tr +
-                                                    "' özniteliği zorunlu ama " +
-                                                    std::to_string(row) + ". satırda boş.");
+
+        // THE COLUMN, NOT THE ROW. `row` here is a geometry SLOT — a storage
+        // index that means nothing to anybody looking at a drawing — and every
+        // caller already knows which row it asked about in the numbering its own
+        // reader understands. Naming it here put two different numbers for the
+        // same thing in one sentence — the table's visible row and this storage
+        // slot, neither of which is the other.
+        return err(ErrorCode::ValidationFailed,
+                   "'" + c.spec().name_tr + "' özniteliği zorunlu ama boş.");
     }
     return ok();
 }

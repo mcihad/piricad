@@ -618,6 +618,13 @@ QString AttributeTable::probeGrid(const QString& action, const QString& value)
         return where();
     }
 
+    if (action == QStringLiteral("koy")) {
+        auto* editor = view_->findChild<Field*>();
+        if (editor == nullptr) return QStringLiteral("düzenleyici yok");
+        editor->setValue(value);
+        return QStringLiteral("kondu");
+    }
+
     if (action == QStringLiteral("hucre")) {
         const QStringList parts = value.split(QLatin1Char(','));
         if (parts.size() != 2) return QStringLiteral("?");

@@ -88,6 +88,17 @@ bekle "[tablo] tam sayı: 128"
 bekle "[tablo] ondalık: 0.40"
 bekle "[tablo] tarih: 2026-09-08"
 
+# AND THE OPEN CELL COVERS WHAT IT REPLACES. The ground of a cell-framed editor
+# was `wash`, the selection accent at twelve per cent — translucent, so the
+# stored value showed through and the user saw their own typing beside the old
+# number, at two different alignments, in one box. An editor is not a highlight.
+if ! grep -A 2 'QWidget#field\[frame="cell"\]' "$kok/src/app/src/theme.cpp" |
+        grep -q 'background: %(input)s'; then
+    echo "oznitelik-tablosu: hücre düzenleyicisinin zemini saydam olmamalı" >&2
+    echo "tablo-giris:   -> src/app/src/theme.cpp:1  (altındaki hücre metni içinden geçer)" >&2
+    fail=1
+fi
+
 if [[ $fail -ne 0 ]]; then
     exit 1
 fi
