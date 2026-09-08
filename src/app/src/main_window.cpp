@@ -2171,21 +2171,6 @@ void MainWindow::probeAttributeGrid()
     drive("ac");
     say(QStringLiteral("kip açıkken: %1").arg(table.probeGrid(QStringLiteral("ac"), QString())));
 
-    // PHOTOGRAPHED WITH A CELL OPEN. Whether an editor covers what it replaces is
-    // a question only a picture answers: the ground used to be the selection
-    // accent at twelve per cent, so the stored value and the typed one were both
-    // legible at once, at different alignments, in the same box.
-    const QByteArray into = qgetenv("KENTOS_TABLE_PROBE");
-    if (!into.isEmpty() && into != "1") {
-        const QString dir = QString::fromLocal8Bit(into);
-        QDir().mkpath(dir);
-        drive("git", QStringLiteral("0,1"));
-        drive("ac");
-        drive2(table);
-        if (table.grab().save(dir + QStringLiteral("/tablo-duzenleme.png")))
-            say(QStringLiteral("kare: tablo-duzenleme.png"));
-    }
-
     say(QStringLiteral("enter 1 -> %1").arg(drive("yaz", QStringLiteral("128"))));
     drive("ac");
     say(QStringLiteral("enter 2 -> %1").arg(drive("yaz", QStringLiteral("0,40"))));
@@ -2206,6 +2191,49 @@ void MainWindow::probeAttributeGrid()
     say(QStringLiteral("tam sayı: %1").arg(drive("hucre", QStringLiteral("0,1"))));
     say(QStringLiteral("ondalık: %1").arg(drive("hucre", QStringLiteral("0,2"))));
     say(QStringLiteral("tarih: %1").arg(drive("hucre", QStringLiteral("0,3"))));
+
+    // PHOTOGRAPHED WITH A CELL OPEN. Whether an editor covers what it replaces is
+    // a question only a picture answers: the ground used to be the selection
+    // accent at twelve per cent, so the stored value and the typed one were both
+    // legible at once, at different alignments, in the same box.
+    const QByteArray into = qgetenv("KENTOS_TABLE_PROBE");
+    if (!into.isEmpty() && into != "1") {
+        const QString dir = QString::fromLocal8Bit(into);
+        QDir().mkpath(dir);
+
+        // A FRESH WINDOW FOR THE PICTURES. The run above deliberately leaves
+        // editors half-open — a refused value, a cell typed into and left — and
+        // photographing that state would photograph the probe rather than the
+        // program. A second table starts where a user would.
+        AttributeTable shot(*controller_, QString(), this);
+        shot.applyTheme(theme_);
+        shot.resize(1100, 640);
+        shot.show();
+        QCoreApplication::processEvents();
+
+        const auto pose = [&shot](const char* action, const QString& value = QString()) {
+            return shot.probeGrid(QString::fromUtf8(action), value);
+        };
+        pose("kip", QStringLiteral("evet"));
+
+        // THE CALENDAR FIRST, and on a cell that already HOLDS a date — the
+        // question is not only whether it looks right but whether it opens on
+        // the day the cell carries.
+        pose("git", QStringLiteral("0,3"));
+        pose("ac");
+        say(QStringLiteral("takvim: %1").arg(pose("takvim")));
+        say(QStringLiteral("takvim günü: %1").arg(pose("takvimgun")));
+        if (auto* card = shot.findChild<DatePopup*>(); card != nullptr)
+            if (card->grab().save(dir + QStringLiteral("/takvim.png")))
+                say(QStringLiteral("kare: takvim.png"));
+
+        pose("git", QStringLiteral("0,1"));
+        pose("ac");
+        drive2(shot);
+        if (shot.grab().save(dir + QStringLiteral("/tablo-duzenleme.png")))
+            say(QStringLiteral("kare: tablo-duzenleme.png"));
+        shot.close();
+    }
 
     table.close();
 }

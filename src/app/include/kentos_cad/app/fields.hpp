@@ -37,6 +37,8 @@
 #include <functional>
 #include <utility>
 
+#include <QDate>
+#include <QRect>
 #include <QString>
 #include <QStringList>
 #include <QStyledItemDelegate>
@@ -163,6 +165,85 @@ inline FieldSpec decimal_of(int decimals)
     return spec;
 }
 
+/// The calendar a `Date` field opens.
+///
+/// DRAWN, NOT ASSEMBLED. `QCalendarWidget` is a `QTableView` with a navigation
+/// bar of tool buttons and spin boxes bolted to the top of it, and it arrives
+/// wearing whatever the platform style gives it: month and year in two little
+/// combos, arrows sized for a desktop from 2005, a grid with its own header and
+/// its own selection colours. Styling it means reaching into four private
+/// subwidgets and losing to at least one of them; the result is the "extra
+/// component dropped on the window" look this program spent a whole component
+/// set getting rid of.
+///
+/// It is thirty lines of painting to do it properly, and then the card matches
+/// the tool flyout because it is the same card: rounded, shadowed, the shell's
+/// own tokens, its own type.
+///
+/// TURKISH FROM `QLocale`, never from a table here and never from `<cctype>`:
+/// month and day names come from `QLocale(QLocale::Turkish)`, which is the rule
+/// for every piece of Turkish text this program shows (CLAUDE.md 5.6).
+class DatePopup : public QWidget, public Themed
+{
+    Q_OBJECT
+    Q_INTERFACES(kentos::app::Themed)
+
+public:
+    /// Builds the card. Sized once, from the metrics in `fields.cpp`: six week
+    /// rows always, so the card never changes height as the months go by.
+    explicit DatePopup(QWidget* parent = nullptr);
+
+    /// Opens the card under `anchor`, showing the month `on` falls in.
+    void reveal(const QDate& on, const QPoint& anchor);
+
+    void applyTheme(ThemeMode mode) override;
+
+signals:
+    /// A day was chosen. The card has already closed.
+    void picked(const QDate& day);
+
+    /// The user asked for the cell to be emptied.
+    void cleared();
+
+protected:
+    /// Draws the shadow, the card, the month row, the weekday row, the grid and
+    /// the two footer buttons.
+    void paintEvent(QPaintEvent* event) override;
+
+    /// Tracks the day under the pointer.
+    void mouseMoveEvent(QMouseEvent* event) override;
+
+    /// Steps a month or a year, picks a day, or dismisses the card.
+    void mousePressEvent(QMouseEvent* event) override;
+
+    /// Arrows walk by day, PgUp/PgDn by month, Home is today, Enter picks,
+    /// Delete empties the cell, Esc closes. A calendar is a grid and somebody
+    /// entering a hundred approval dates should never reach for the mouse to
+    /// move one day.
+    void keyPressEvent(QKeyEvent* event) override;
+
+private:
+    /// The day under `where`, or an invalid date when the point is off the grid.
+    QDate dayAt(const QPoint& where) const;
+
+    /// The rectangle of the header button `which`: 0 and 1 step the month back
+    /// and on, 2 and 3 the year.
+    QRect arrowRect(int which) const;
+
+    /// The two footer buttons: 0 is `Bugün`, 1 is `Temizle`.
+    QRect footRect(int which) const;
+
+    /// The first cell of the grid: the Monday on or before the first of `shown_`.
+    QDate gridStart() const;
+
+    QDate shown_;     ///< any day in the month being displayed
+    QDate chosen_;    ///< what the field held when the card opened
+    QDate cursor_;    ///< where the keyboard is
+    int hover_{-1};   ///< the cell under the pointer, or -1
+    int pressed_{-1}; ///< the header or footer button under the pointer, or -1
+    ThemeMode theme_{ThemeMode::Dark};
+};
+
 /// The editor a declared attribute column asks for.
 ///
 /// ONE MAPPING, not one per panel. The object inspector and the attribute table
@@ -201,6 +282,23 @@ public:
                       const QModelIndex& index) const override;
     void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option,
                               const QModelIndex& index) const override;
+
+    /// Does nothing, ON PURPOSE, and this is load-bearing.
+    ///
+    /// Qt installs the delegate as an event filter on every editor it creates,
+    /// and `QAbstractItemDelegate::eventFilter` then handles Enter, Esc and focus
+    /// leaving itself — commit, close, move. A `Field` handles all three too, and
+    /// it must: it is a COMPOSITE, so the key press lands on its inner line edit
+    /// where Qt's filter, installed on the outer widget, never sees it.
+    ///
+    /// Two committers is not twice as good. Qt closed the editor on focus-out
+    /// while the field was still emitting for the same edit, so `commitData` and
+    /// `closeEditor` arrived for an editor the view had already released —
+    /// "editor that does not belong to this view", and then a crash, because the
+    /// object was destroyed with its own event handler still on the stack.
+    ///
+    /// So the default handling is switched off and the field's is the only one.
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
     /// The palette the editors are themed with. Set by the window that owns the
     /// table, and remembered so editors built later match.
@@ -275,6 +373,7 @@ private:
     QAbstractButton* yes_{nullptr}; ///< Bool
     QAbstractButton* no_{nullptr};  ///< Bool
     QToolButton* picker_{nullptr};  ///< Date, Colour, MultiSelect
+    DatePopup* calendar_{nullptr};  ///< Date, built on the first press
     QSlider* slider_{nullptr};      ///< Range
     QStringList ticked_;            ///< MultiSelect
     QString colour_;                ///< Colour, as `0xAARRGGBB`

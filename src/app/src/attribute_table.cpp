@@ -579,6 +579,17 @@ void AttributeTable::advanceFrom(const QModelIndex& from)
 
 QString AttributeTable::probeGrid(const QString& action, const QString& value)
 {
+    // THE EDITOR THAT IS OPEN, not the first one Qt still owns. A closed editor
+    // is destroyed with `deleteLater`, so for one turn of the loop the view has
+    // two `Field` children and `findChild` hands back the dead one — which is how
+    // a probe ends up typing into the cell it just left.
+    const auto openEditor = [this]() -> Field* {
+        const QList<Field*> all = view_->findChildren<Field*>();
+        for (auto it = all.crbegin(); it != all.crend(); ++it)
+            if ((*it)->isVisible()) return *it;
+        return nullptr;
+    };
+
     const auto where = [this] {
         const QModelIndex at = view_->currentIndex();
         return at.isValid() ? QStringLiteral("%1,%2").arg(at.row()).arg(at.column())
@@ -601,12 +612,11 @@ QString AttributeTable::probeGrid(const QString& action, const QString& value)
         // Through `edit()`, which is what a double click and the F2 key both
         // reach — so a mode that refuses here refuses them too.
         view_->edit(view_->currentIndex());
-        return view_->findChild<Field*>() != nullptr ? QStringLiteral("açıldı")
-                                                     : QStringLiteral("açılmadı");
+        return openEditor() != nullptr ? QStringLiteral("açıldı") : QStringLiteral("açılmadı");
     }
 
     if (action == QStringLiteral("yaz")) {
-        auto* editor = view_->findChild<Field*>();
+        auto* editor = openEditor();
         if (editor == nullptr) return QStringLiteral("düzenleyici yok");
         editor->setValue(value);
 
@@ -618,8 +628,25 @@ QString AttributeTable::probeGrid(const QString& action, const QString& value)
         return where();
     }
 
+    if (action == QStringLiteral("takvim")) {
+        auto* editor = openEditor();
+        if (editor == nullptr) return QStringLiteral("düzenleyici yok");
+        auto* button = editor->findChild<QToolButton*>();
+        if (button == nullptr) return QStringLiteral("düğme yok");
+        button->click();
+        QCoreApplication::processEvents();
+        auto* card = editor->findChild<DatePopup*>();
+        return (card != nullptr && card->isVisible()) ? QStringLiteral("açıldı")
+                                                      : QStringLiteral("açılmadı");
+    }
+
+    if (action == QStringLiteral("takvimgun")) {
+        auto* editor = openEditor();
+        return editor != nullptr ? editor->value() : QStringLiteral("düzenleyici yok");
+    }
+
     if (action == QStringLiteral("koy")) {
-        auto* editor = view_->findChild<Field*>();
+        auto* editor = openEditor();
         if (editor == nullptr) return QStringLiteral("düzenleyici yok");
         editor->setValue(value);
         return QStringLiteral("kondu");

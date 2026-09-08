@@ -4,9 +4,9 @@
 #include "kentos_cad/app/tokens.hpp"
 
 #include <QApplication>
-#include <QCalendarWidget>
 #include <QColorDialog>
 #include <QComboBox>
+#include <QCursor>
 #include <QDate>
 #include <QEvent>
 #include <QHBoxLayout>
@@ -23,7 +23,6 @@
 #include <QSlider>
 #include <QStyle>
 #include <QToolButton>
-#include <QWidgetAction>
 
 namespace kentos::app {
 namespace {
@@ -52,7 +51,314 @@ QString decimalPattern(int decimals)
     return QStringLiteral("^[+-]?\\d*(?:[.,]\\d{0,%1})?$").arg(decimals);
 }
 
+/// The calendar card, `design.md`'s own geometry at day scale.
+constexpr int kDayW      = 32;
+constexpr int kDayH      = 26;
+constexpr int kCalPad    = 10; ///< inside the card, around the grid
+constexpr int kCalHead   = 34; ///< the month row
+constexpr int kCalWeek   = 22; ///< the weekday row
+constexpr int kCalFoot   = 32; ///< `Bugün` / `Temizle`
+constexpr int kCalRows   = 6;  ///< always six, so the card never changes height
+constexpr int kCalCols   = 7;
+constexpr int kCalShadow = 12;
+constexpr int kCalRadius = 8;
+constexpr int kArrowW    = 26;
+
+/// The one locale every piece of Turkish text in this program is formed with.
+/// Month and day names are NOT a table here, and never `<cctype>` (CLAUDE.md 5.6).
+const QLocale& turkish()
+{
+    static const QLocale one(QLocale::Turkish, QLocale::Turkey);
+    return one;
+}
+
 } // namespace
+
+// =============================================================================
+// DatePopup
+// =============================================================================
+
+DatePopup::DatePopup(QWidget* parent) : QWidget(parent)
+{
+    setObjectName(QStringLiteral("datePopup"));
+    setWindowFlags(Qt::Popup | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint);
+    setAttribute(Qt::WA_TranslucentBackground, true);
+    setMouseTracking(true);
+    setFocusPolicy(Qt::StrongFocus);
+
+    const int card = kCalPad * 2 + kDayW * kCalCols;
+    const int tall = kCalHead + kCalWeek + kDayH * kCalRows + kCalFoot + kCalPad;
+    resize(card + kCalShadow * 2, tall + kCalShadow * 2);
+}
+
+void DatePopup::reveal(const QDate& on, const QPoint& anchor)
+{
+    chosen_  = on;
+    cursor_  = on.isValid() ? on : QDate::currentDate();
+    shown_   = cursor_;
+    hover_   = -1;
+    pressed_ = -1;
+
+    QPoint at = anchor;
+    if (const QScreen* screen = QApplication::screenAt(anchor); screen != nullptr) {
+        const QRect room = screen->availableGeometry();
+        at.setX(std::clamp(at.x(), room.left(), room.right() - width()));
+        // ABOVE the anchor when there is no room below, which on a cell near the
+        // bottom of a table is most of the time.
+        if (at.y() + height() > room.bottom()) at.setY(anchor.y() - height() + kCalShadow * 2);
+    }
+    move(at);
+    show();
+    setFocus(Qt::PopupFocusReason);
+}
+
+QDate DatePopup::gridStart() const
+{
+    // MONDAY FIRST, because that is the week a Turkish calendar prints and the
+    // one `QLocale(Turkish)` reports.
+    const QDate first(shown_.year(), shown_.month(), 1);
+    return first.addDays(-(first.dayOfWeek() - 1));
+}
+
+QRect DatePopup::arrowRect(int which) const
+{
+    const int top  = kCalShadow;
+    const int left = kCalShadow;
+    const int card = width() - kCalShadow * 2;
+    switch (which) {
+    case 0: return {left + kCalPad, top + 4, kArrowW, kCalHead - 8};                      // ‹ month
+    case 1: return {left + kCalPad + kArrowW, top + 4, kArrowW, kCalHead - 8};            // › month
+    case 2: return {left + card - kCalPad - kArrowW * 2, top + 4, kArrowW, kCalHead - 8}; // ‹ year
+    case 3: return {left + card - kCalPad - kArrowW, top + 4, kArrowW, kCalHead - 8};     // › year
+    default: return {};
+    }
+}
+
+QRect DatePopup::footRect(int which) const
+{
+    const int card = width() - kCalShadow * 2;
+    const int top  = height() - kCalShadow - kCalFoot;
+    const int half = (card - kCalPad * 2) / 2;
+    return {kCalShadow + kCalPad + which * half, top, half, kCalFoot - 6};
+}
+
+QDate DatePopup::dayAt(const QPoint& where) const
+{
+    const int left = kCalShadow + kCalPad;
+    const int top  = kCalShadow + kCalHead + kCalWeek;
+
+    const int column = (where.x() - left) / kDayW;
+    const int row    = (where.y() - top) / kDayH;
+    if (where.x() < left || where.y() < top) return {};
+    if (column < 0 || column >= kCalCols || row < 0 || row >= kCalRows) return {};
+    return gridStart().addDays(row * kCalCols + column);
+}
+
+void DatePopup::mouseMoveEvent(QMouseEvent* event)
+{
+    const QDate under = dayAt(event->position().toPoint());
+    const int cell    = under.isValid() ? static_cast<int>(gridStart().daysTo(under)) : -1;
+    if (cell == hover_) return;
+    hover_ = cell;
+    update();
+}
+
+void DatePopup::mousePressEvent(QMouseEvent* event)
+{
+    const QPoint at = event->position().toPoint();
+
+    for (int which = 0; which < 4; ++which)
+        if (arrowRect(which).contains(at)) {
+            shown_ = shown_.addMonths(which == 0   ? -1
+                                      : which == 1 ? 1
+                                                   : 0)
+                         .addYears(which == 2   ? -1
+                                   : which == 3 ? 1
+                                                : 0);
+            update();
+            return;
+        }
+
+    if (footRect(0).contains(at)) {
+        const QDate today = QDate::currentDate();
+        close();
+        emit picked(today);
+        return;
+    }
+    if (footRect(1).contains(at)) {
+        close();
+        emit cleared();
+        return;
+    }
+
+    if (const QDate day = dayAt(at); day.isValid()) {
+        close();
+        emit picked(day);
+        return;
+    }
+
+    // Outside the card dismisses it; a `Qt::Popup` grabs the pointer but does
+    // not close itself.
+    if (!QRect(kCalShadow, kCalShadow, width() - kCalShadow * 2, height() - kCalShadow * 2)
+             .contains(at))
+        close();
+}
+
+void DatePopup::keyPressEvent(QKeyEvent* event)
+{
+    // A CALENDAR IS A GRID AND ARROWS WALK IT. Somebody entering a hundred
+    // approval dates should never have to reach for the mouse to move one day.
+    switch (event->key()) {
+    case Qt::Key_Left: cursor_ = cursor_.addDays(-1); break;
+    case Qt::Key_Right: cursor_ = cursor_.addDays(1); break;
+    case Qt::Key_Up: cursor_ = cursor_.addDays(-7); break;
+    case Qt::Key_Down: cursor_ = cursor_.addDays(7); break;
+    case Qt::Key_PageUp: cursor_ = cursor_.addMonths(-1); break;
+    case Qt::Key_PageDown: cursor_ = cursor_.addMonths(1); break;
+    case Qt::Key_Home: cursor_ = QDate::currentDate(); break;
+    case Qt::Key_Return:
+    case Qt::Key_Enter: {
+        const QDate day = cursor_;
+        close();
+        emit picked(day);
+        return;
+    }
+    case Qt::Key_Delete:
+    case Qt::Key_Backspace:
+        close();
+        emit cleared();
+        return;
+    case Qt::Key_Escape: close(); return;
+    default: QWidget::keyPressEvent(event); return;
+    }
+
+    shown_ = cursor_;
+    update();
+}
+
+void DatePopup::applyTheme(ThemeMode mode)
+{
+    theme_ = mode;
+    update();
+}
+
+void DatePopup::paintEvent(QPaintEvent*)
+{
+    const Tokens& t = tokensOf(theme_);
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing, true);
+
+    const QRectF card(kCalShadow, kCalShadow, width() - kCalShadow * 2.0,
+                      height() - kCalShadow * 2.0);
+
+    // The same shadow the tool flyout wears, for the same reason: a popup that
+    // sits flat on the window behind it reads as part of that window.
+    p.setPen(Qt::NoPen);
+    for (int ring = kCalShadow; ring > 0; ring -= 3) {
+        QColor ink(0, 0, 0);
+        ink.setAlphaF(0.030f * static_cast<float>(kCalShadow - ring + 3) / 3.0f);
+        p.setBrush(ink);
+        p.drawRoundedRect(card.adjusted(-ring, -ring + 2, ring, ring + 2), kCalRadius + ring,
+                          kCalRadius + ring);
+    }
+
+    p.setBrush(t.bgRaised);
+    p.setPen(QPen(t.border, 1.0));
+    p.drawRoundedRect(card, kCalRadius, kCalRadius);
+
+    QFont face = font();
+
+    // ---- the month row ----
+    face.setPixelSize(12);
+    face.setWeight(QFont::DemiBold);
+    p.setFont(face);
+    p.setPen(t.text);
+    p.drawText(QRectF(card.left(), card.top(), card.width(), kCalHead), Qt::AlignCenter,
+               turkish().toString(shown_, QStringLiteral("MMMM yyyy")));
+
+    face.setWeight(QFont::Normal);
+    face.setPixelSize(13);
+    p.setFont(face);
+    static const char* kArrows[] = {"‹", "›", "«", "»"};
+    for (int which = 0; which < 4; ++which) {
+        const QRect box = arrowRect(which);
+        if (box.contains(mapFromGlobal(QCursor::pos()))) {
+            p.setPen(Qt::NoPen);
+            p.setBrush(t.hoverIcon);
+            p.drawRoundedRect(box, 4, 4);
+        }
+        p.setPen(t.textDim);
+        p.drawText(box, Qt::AlignCenter, QString::fromUtf8(kArrows[which]));
+    }
+
+    // ---- the weekday row ----
+    face.setPixelSize(10);
+    p.setFont(face);
+    p.setPen(t.textFaint);
+    for (int column = 0; column < kCalCols; ++column) {
+        const QRect box(kCalShadow + kCalPad + column * kDayW, kCalShadow + kCalHead, kDayW,
+                        kCalWeek);
+        p.drawText(box, Qt::AlignCenter, turkish().dayName(column + 1, QLocale::ShortFormat));
+    }
+
+    // ---- the days ----
+    face.setPixelSize(12);
+    p.setFont(face);
+
+    const QDate start = gridStart();
+    const QDate today = QDate::currentDate();
+    for (int cell = 0; cell < kCalRows * kCalCols; ++cell) {
+        const QDate day = start.addDays(cell);
+        const QRect box(kCalShadow + kCalPad + (cell % kCalCols) * kDayW,
+                        kCalShadow + kCalHead + kCalWeek + (cell / kCalCols) * kDayH, kDayW, kDayH);
+
+        const bool inMonth  = day.month() == shown_.month();
+        const bool isChosen = day == chosen_;
+        const bool isCursor = day == cursor_;
+
+        if (isChosen) {
+            p.setPen(Qt::NoPen);
+            p.setBrush(t.accent);
+            p.drawRoundedRect(box.adjusted(2, 1, -2, -1), 4, 4);
+        } else if (cell == hover_) {
+            p.setPen(Qt::NoPen);
+            p.setBrush(t.hoverRow);
+            p.drawRoundedRect(box.adjusted(2, 1, -2, -1), 4, 4);
+        }
+        if (isCursor && !isChosen) {
+            p.setPen(QPen(t.accentEdge, 1.0));
+            p.setBrush(Qt::NoBrush);
+            p.drawRoundedRect(box.adjusted(2, 1, -2, -1), 4, 4);
+        }
+
+        // TODAY IS A MARK, not a fill: a fill would compete with the selection,
+        // and on the day somebody happens to be entering they would be the same
+        // colour and mean two different things.
+        if (day == today && !isChosen) {
+            p.setPen(Qt::NoPen);
+            p.setBrush(t.warn);
+            p.drawEllipse(QPointF(box.center().x() + 0.5, box.bottom() - 3.0), 1.6, 1.6);
+        }
+
+        p.setPen(isChosen ? t.onAccent : (inMonth ? t.text : t.textFaint));
+        p.drawText(box, Qt::AlignCenter, QString::number(day.day()));
+    }
+
+    // ---- the foot ----
+    face.setPixelSize(11);
+    p.setFont(face);
+    static const char* kFeet[] = {"Bugün", "Temizle"};
+    for (int which = 0; which < 2; ++which) {
+        const QRect box = footRect(which);
+        if (box.contains(mapFromGlobal(QCursor::pos()))) {
+            p.setPen(Qt::NoPen);
+            p.setBrush(t.hoverRow);
+            p.drawRoundedRect(box, 4, 4);
+        }
+        p.setPen(which == 0 ? t.accent : t.textDim);
+        p.drawText(box, Qt::AlignCenter, tr(kFeet[which]));
+    }
+}
 
 Field::Field(const FieldSpec& spec, QWidget* parent) : QWidget(parent), spec_(spec)
 {
@@ -124,25 +430,20 @@ Field::Field(const FieldSpec& spec, QWidget* parent) : QWidget(parent), spec_(sp
         // people who would rather look at a month is the pair that works.
         picker_ = squareButton(QStringLiteral("▾"));
         connect(picker_, &QToolButton::clicked, this, [this] {
-            auto* menu     = new QMenu(this);
-            auto* calendar = new QCalendarWidget(menu);
-            calendar->setGridVisible(false);
-            calendar->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
-
-            const QDate current = QDate::fromString(line_->text(), Qt::ISODate);
-            calendar->setSelectedDate(current.isValid() ? current : QDate::currentDate());
-
-            auto* holder = new QWidgetAction(menu);
-            holder->setDefaultWidget(calendar);
-            menu->addAction(holder);
-
-            connect(calendar, &QCalendarWidget::clicked, this, [this, menu](const QDate& picked) {
-                line_->setText(picked.toString(Qt::ISODate));
-                menu->close();
-                commit();
-            });
-            menu->exec(mapToGlobal(QPoint(0, height())));
-            menu->deleteLater();
+            if (calendar_ == nullptr) {
+                calendar_ = new DatePopup(this);
+                connect(calendar_, &DatePopup::picked, this, [this](const QDate& day) {
+                    line_->setText(day.toString(Qt::ISODate));
+                    commit();
+                });
+                connect(calendar_, &DatePopup::cleared, this, [this] {
+                    line_->clear();
+                    commit();
+                });
+            }
+            calendar_->applyTheme(theme_);
+            calendar_->reveal(QDate::fromString(line_->text(), Qt::ISODate),
+                              mapToGlobal(QPoint(0, height())));
         });
         break;
 
@@ -390,14 +691,26 @@ void Field::commit()
 {
     if (done_) return;
     done_ = true;
-    emit committed(value());
+
+    // QUEUED, AND THIS IS A CRASH FIX rather than a nicety. Both ways an edit
+    // ends — Enter and focus leaving — are handled inside this widget's own event
+    // filter. Whoever hears `committed` closes the editor, and in a table view
+    // that means Qt DELETES it: the object whose event handler is still on the
+    // stack. Deferring the emit to the next turn of the loop lets the handler
+    // return first, and the editor is destroyed with nothing of its own running.
+    //
+    // The context object is `this`, so an editor destroyed before the loop gets
+    // there simply never emits — which is the right answer and not a leak.
+    const QString settled = value();
+    QMetaObject::invokeMethod(
+        this, [this, settled] { emit committed(settled); }, Qt::QueuedConnection);
 }
 
 void Field::cancel()
 {
     if (done_) return;
     done_ = true;
-    emit cancelled();
+    QMetaObject::invokeMethod(this, [this] { emit cancelled(); }, Qt::QueuedConnection);
 }
 
 bool Field::eventFilter(QObject* watched, QEvent* event)
@@ -530,6 +843,12 @@ QWidget* FieldDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem
         emit self->closeEditor(editor, QAbstractItemDelegate::RevertModelCache);
     });
     return editor;
+}
+
+bool FieldDelegate::eventFilter(QObject* watched, QEvent* event)
+{
+    // Deliberately not `QStyledItemDelegate::eventFilter`. See the header.
+    return QObject::eventFilter(watched, event);
 }
 
 void FieldDelegate::setEditorData(QWidget* editor, const QModelIndex& index) const

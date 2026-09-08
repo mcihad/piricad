@@ -48,8 +48,14 @@ fi
 
 cd "$kok"
 
+# The probe photographs its own work when the variable carries a path — the
+# calendar and an open cell are two things no transcript can describe. The frames
+# are thrown away here; what the gate reads is the lines that come with them.
+gecici="$(mktemp -d)"
+trap 'rm -rf "$gecici"' EXIT
+
 set +e
-cikti="$(KENTOS_DATA="$kok/data" KENTOS_TABLE_PROBE=1 "$exe" 2>/dev/null)"
+cikti="$(KENTOS_DATA="$kok/data" KENTOS_TABLE_PROBE="$gecici" "$exe" 2>/dev/null)"
 rc=$?
 set -e
 
@@ -87,6 +93,11 @@ bekle "[tablo] reddedilen: 'ada' özniteliği tam sayı bekliyor. Girilen: 'abc'
 bekle "[tablo] tam sayı: 128"
 bekle "[tablo] ondalık: 0.40"
 bekle "[tablo] tarih: 2026-09-08"
+
+# THE CALENDAR OPENS ON THE DAY THE CELL ALREADY HOLDS. A picker that always
+# starts on today makes correcting an approval date a hunt through the months.
+bekle "[tablo] takvim: açıldı"
+bekle "[tablo] takvim günü: 2026-09-08"
 
 # AND THE OPEN CELL COVERS WHAT IT REPLACES. The ground of a cell-framed editor
 # was `wash`, the selection accent at twelve per cent — translucent, so the

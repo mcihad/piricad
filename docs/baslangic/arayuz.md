@@ -492,6 +492,14 @@ açılacağını belirler:
 | `evet_hayir` | İki kelimelik segment: **evet** / **hayır** |
 | `tarih` | `YYYY-AA-GG` kutusu ve yanında takvim |
 
+Takvim, kutunun **hâlihazırda taşıdığı güne** açılır — her seferinde bugüne değil.
+Ay okları `‹ ›`, yıl okları `«  »`; ok tuşlarıyla gün gün, **PgUp/PgDn** ile ay ay
+gezilir, **Enter** seçer, **Delete** hücreyi boşaltır, **Esc** kapatır. Altta
+**Bugün** ve **Temizle**.
+
+Gün adları ve ay adları `QLocale(Türkçe)`'den gelir; programda hiçbir yerde Türkçe
+metin bir tablodan ya da `<cctype>`'tan üretilmez.
+
 Bunlar tek bir bileşen setidir ve program boyunca aynıdır: metin, sayı, ondalık,
 evet/hayır, liste, çoklu seçim, tarih, aralık ve renk. Katman Özellikleri'ndeki
 **Öznitelikler** sayfasının formu da aynı bileşenleri kullanır.
