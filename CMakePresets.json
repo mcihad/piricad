@@ -1,6 +1,10 @@
 {
   "version": 6,
-  "cmakeMinimumRequired": { "major": 3, "minor": 28, "patch": 0 },
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
   "configurePresets": [
     {
       "name": "base",
@@ -15,9 +19,20 @@
       }
     },
     {
+      "name": "canvas",
+      "hidden": true,
+      "cacheVariables": {
+        "KENTOS_WITH_RHI": "ON",
+        "KENTOS_WITH_TEXT": "ON"
+      }
+    },
+    {
       "name": "dev",
       "displayName": "Development (RelWithDebInfo, tests on)",
-      "inherits": "base",
+      "inherits": [
+        "canvas",
+        "base"
+      ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "KENTOS_BUILD_APP": "ON",
@@ -27,13 +42,21 @@
     {
       "name": "debug",
       "displayName": "Debug",
-      "inherits": "base",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+      "inherits": [
+        "canvas",
+        "base"
+      ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
     },
     {
       "name": "release",
       "displayName": "Release",
-      "inherits": "base",
+      "inherits": [
+        "canvas",
+        "base"
+      ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "KENTOS_BUILD_TESTS": "OFF"
@@ -42,7 +65,10 @@
     {
       "name": "asan",
       "displayName": "AddressSanitizer + UndefinedBehaviorSanitizer",
-      "inherits": "base",
+      "inherits": [
+        "canvas",
+        "base"
+      ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer",
@@ -56,33 +82,58 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "KENTOS_BUILD_APP": "OFF",
-        "KENTOS_BUILD_TESTS": "ON"
+        "KENTOS_BUILD_TESTS": "ON",
+        "KENTOS_WITH_RHI": "OFF",
+        "KENTOS_WITH_TEXT": "OFF"
       }
     }
   ],
   "buildPresets": [
-    { "name": "dev",      "configurePreset": "dev" },
-    { "name": "debug",    "configurePreset": "debug" },
-    { "name": "release",  "configurePreset": "release" },
-    { "name": "asan",     "configurePreset": "asan" },
-    { "name": "headless", "configurePreset": "headless" }
+    {
+      "name": "dev",
+      "configurePreset": "dev"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan"
+    },
+    {
+      "name": "headless",
+      "configurePreset": "headless"
+    }
   ],
   "testPresets": [
     {
       "name": "dev",
       "configurePreset": "dev",
-      "output": { "outputOnFailure": true },
-      "execution": { "stopOnFailure": false }
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "stopOnFailure": false
+      }
     },
     {
       "name": "asan",
       "configurePreset": "asan",
-      "output": { "outputOnFailure": true }
+      "output": {
+        "outputOnFailure": true
+      }
     },
     {
       "name": "headless",
       "configurePreset": "headless",
-      "output": { "outputOnFailure": true }
+      "output": {
+        "outputOnFailure": true
+      }
     }
   ]
 }

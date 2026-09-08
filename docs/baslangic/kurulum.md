@@ -24,7 +24,37 @@ C++20 zorunludur; komutların etkileşim modeli coroutine üzerine kuruludur.
 Ubuntu/Debian'da:
 
 ```bash
-sudo apt install build-essential cmake ninja-build qt6-base-dev
+sudo apt install build-essential cmake ninja-build qt6-base-dev \
+                 qt6-shadertools-dev libfreetype-dev libharfbuzz-dev
+```
+
+Fedora'da:
+
+```bash
+sudo dnf install gcc-c++ cmake ninja-build qt6-qtbase-devel \
+                 qt6-qtshadertools-devel freetype-devel harfbuzz-devel
+```
+
+macOS'ta:
+
+```bash
+brew install cmake ninja qt freetype harfbuzz
+```
+
+Son üç paket **isteğe bağlı değildir**: GPU tuvali ve tuvaldeki yazılar onlarla
+gelir, ve `dev`, `debug`, `release`, `asan` ön ayarları bunları **açıkça talep
+eder**. Kurulu değillerse yapılandırma, hangi paketin eksik olduğunu söyleyerek
+**durur** — sessizce kapanmaz.
+
+Bu bilerek böyledir. Sonda başarısız olduğunda sessizdir: eskiden eksik paketle
+yapılandırma sorunsuz geçiyor, program açılıyor ve çizimde **hiçbir yazı
+görünmüyordu**. Derleyen kişiye bu hiç söylenmiyordu; parselleri numarasız görünce
+anlıyordu.
+
+Yazısız bir yapıyı bilerek istiyorsanız yolu açıktır:
+
+```bash
+cmake --preset dev -DKENTOS_WITH_RHI=OFF -DKENTOS_WITH_TEXT=OFF
 ```
 
 ## Derleme
@@ -168,15 +198,24 @@ bkz. [Lua betikleri](../betik/lua.md).
 
 ## Seçimlik yapılandırma seçenekleri
 
-Hepsi `KENTOS_WITH_<AD>` biçimindedir ve **varsayılan kapalıdır**. Açık ama gereği
-kurulu değilse yapılandırma, hangi paketin gerektiğini söyleyerek durur — sessizce
-kapanmaz.
+Hepsi `KENTOS_WITH_<AD>` biçimindedir. Açık ama gereği kurulu değilse yapılandırma,
+hangi paketin gerektiğini söyleyerek durur — sessizce kapanmaz.
+
+Varsayılanları üç türlüdür:
+
+* **Bulununca açık.** `GDAL`, `PROJ`, `RHI`, `TEXT`: makinede varsa açık gelir.
+  Makinesinde GDAL olan biri, DXF açamayan bir KentOSCad derlememelidir.
+* **Ön ayarın talep ettiği.** `RHI` ve `TEXT` ayrıca `dev`, `debug`, `release` ve
+  `asan` ön ayarlarında **açıkça ON** yazılıdır, yani bulunamazsa yapılandırma
+  durur. `headless` bunu istemez: uygulama derlemez, Qt'siz hedeflerin kendi
+  başına ayakta durduğunu kanıtlamak için vardır.
+* **Kapalı.** Kalanlar.
 
 | Seçenek | Ne açar | Makinede gereken |
 |---|---|---|
 | `KENTOS_WITH_LUA` | Gömülü Lua betik motoru | Yok. Lua 5.4 ve sol2 sabitlenmiş commit'lerden indirilir |
-| `KENTOS_WITH_RHI` | QRhi GPU canvas | Qt 6.7+, Qt Shader Tools (`qsb`) ve Qt Gui'nin **private** başlıkları |
-| `KENTOS_WITH_TEXT` | GPU tuvalinde metin (SDF atlası) | `libfreetype-dev`, `libharfbuzz-dev`. msdfgen ve stb sabitlenmiş commit'ten iner |
+| `KENTOS_WITH_RHI` | QRhi GPU canvas | Qt 6.7+, Qt Shader Tools (`qsb`) ve Qt Gui'nin **private** başlıkları. Ön ayarlar talep eder |
+| `KENTOS_WITH_TEXT` | GPU tuvalinde metin (SDF atlası) | `libfreetype-dev`, `libharfbuzz-dev`. msdfgen ve stb sabitlenmiş commit'ten iner. Ön ayarlar talep eder |
 | `KENTOS_WITH_GDAL` | DXF / GeoPackage | `libgdal-dev` |
 | `KENTOS_WITH_PROJ` | Koordinat dönüşümü | `libproj-dev` |
 | `KENTOS_WITH_POSTGIS` | Canlı PostGIS bağlantısı | `libpq-dev` |
