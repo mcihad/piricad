@@ -1,18 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/widgets.hpp"
 
+#include "kentos_cad/app/datagrid.hpp"
 #include "kentos_cad/app/dialog_chrome.hpp"
+#include "kentos_cad/app/expression_edit.hpp"
 #include "kentos_cad/app/fields.hpp"
 #include "kentos_cad/app/tokens.hpp"
 
 #include <algorithm>
 
+#include <QAbstractTableModel>
 #include <QButtonGroup>
 #include <QFocusEvent>
 #include <QFontMetrics>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QHideEvent>
+#include <QListView>
 #include <QMenu>
 #include <QPainter>
 #include <QPainterPath>
@@ -506,6 +510,158 @@ void Segment::applyTheme(ThemeMode mode)
 }
 
 // =============================================================================
+// ComboBox
+// =============================================================================
+
+namespace {
+constexpr int kComboPadX   = 10; ///< text inset
+constexpr int kComboArrow  = 14; ///< the chevron
+constexpr int kComboArrowW = 26; ///< the room the chevron takes at the right
+} // namespace
+
+ComboBox::ComboBox(QWidget* parent) : QComboBox(parent)
+{
+    // The sheet is told to draw NOTHING for this box — see `theme.cpp` — so the
+    // ground, the border and the chevron below are the only ones there are.
+    setObjectName(QStringLiteral("comboBox"));
+    setFocusPolicy(Qt::StrongFocus);
+    setCursor(Qt::PointingHandCursor);
+    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    setControlSize(ControlSize::Regular);
+
+    // THE POPUP IS THE SHELL'S LIST. Qt's default view is a `QListView` drawn by
+    // the platform style; naming it lets the one sheet give it the panel ground,
+    // the 26 px rows and the hover wash every other list in the program has.
+    auto* list = new QListView(this);
+    list->setObjectName(QStringLiteral("comboPopup"));
+    list->setUniformItemSizes(true);
+    setView(list);
+}
+
+void ComboBox::setControlSize(ControlSize size)
+{
+    size_ = size;
+    setFixedHeight(static_cast<int>(size_));
+    restyle(this, "size", QLatin1String(sizeName(size_)));
+}
+
+void ComboBox::applyTheme(ThemeMode mode)
+{
+    theme_ = mode;
+    update();
+}
+
+QSize ComboBox::sizeHint() const
+{
+    const QFontMetrics fm(font());
+    int widest = 0;
+    for (int i = 0; i < count(); ++i)
+        widest = std::max(widest, fm.horizontalAdvance(itemText(i)));
+    return {widest + 2 * kComboPadX + kComboArrowW + (iconSize().width() > 0 ? 22 : 0),
+            static_cast<int>(size_)};
+}
+
+void ComboBox::focusInEvent(QFocusEvent* event)
+{
+    QComboBox::focusInEvent(event);
+    update();
+}
+
+void ComboBox::focusOutEvent(QFocusEvent* event)
+{
+    QComboBox::focusOutEvent(event);
+    update();
+}
+
+void ComboBox::paintEvent(QPaintEvent*)
+{
+    const Tokens& t = tokensOf(theme_);
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing, true);
+
+    // A combo INSIDE A FIELD wears no box: the field paints the frame, or the
+    // table row is the frame (fields.hpp). Everywhere else it is the standard's
+    // input, box and all.
+    const bool bare     = bare_;
+    const QString state = property("state").toString();
+    const bool on       = isEnabled();
+
+    QColor ground = t.bgInput;
+    QColor edge   = underMouse() && on ? t.separator : t.border;
+    if (state == QLatin1String("changed")) {
+        edge   = t.warn;
+        ground = t.warnWash;
+    } else if (state == QLatin1String("invalid")) {
+        edge   = t.dangerEdge;
+        ground = t.dangerWash;
+    } else if (state == QLatin1String("derived")) {
+        edge = t.accentEdge;
+    } else if (state == QLatin1String("readonly")) {
+        edge   = t.lineSoft;
+        ground = t.bgSunken;
+    }
+    if (!on) {
+        edge   = t.lineSoft;
+        ground = Qt::transparent;
+    }
+    if (hasFocus() && on) edge = t.accent;
+
+    if (!bare) {
+        p.setPen(QPen(edge, 1.0));
+        p.setBrush(ground);
+        p.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), 4.0, 4.0);
+    }
+
+    // The value, with the item's icon before it when it has one.
+    int x            = kComboPadX;
+    const QIcon mark = currentIndex() >= 0 ? itemIcon(currentIndex()) : QIcon();
+    if (!mark.isNull()) {
+        const QSize sz =
+            iconSize().isValid() && iconSize().width() > 0 ? iconSize() : QSize(16, 16);
+        mark.paint(&p, QRect(x, (height() - sz.height()) / 2, sz.width(), sz.height()));
+        x += sz.width() + 6;
+    }
+    QFont face(QStringLiteral("IBM Plex Sans"));
+    face.setPixelSize(size_ == ControlSize::Compact ? 11 : 12);
+    p.setFont(face);
+    QColor ink = on ? t.text : t.textFaint;
+    if (state == QLatin1String("changed")) ink = t.warn;
+    if (state == QLatin1String("invalid")) ink = t.danger;
+    if (state == QLatin1String("derived")) ink = t.accentHi;
+    if (state == QLatin1String("readonly")) ink = t.textDim;
+    p.setPen(ink);
+    const QRect box(x, 0, width() - x - kComboArrowW, height());
+    const QString shown = currentIndex() >= 0 ? currentText() : placeholderText();
+    if (currentIndex() < 0) p.setPen(t.hint);
+    p.drawText(box, Qt::AlignLeft | Qt::AlignVCenter,
+               p.fontMetrics().elidedText(shown, Qt::ElideRight, box.width()));
+
+    // The chevron, drawn: the mark that says "this opens", re-tinted with the
+    // theme, the same 14 px on every list in the program.
+    p.drawPixmap(QRect(width() - kComboArrowW + (kComboArrowW - kComboArrow) / 2,
+                       (height() - kComboArrow) / 2, kComboArrow, kComboArrow),
+                 glyph_pixmap(Glyph::ChevronDown, on ? t.textDim : t.textFaint, kComboArrow,
+                              devicePixelRatioF()));
+
+    if (hasFocus() && on && !bare) paintFocusRing(p, QRectF(rect()), 4.0, t);
+}
+
+void ComboBox::setBare(bool on)
+{
+    bare_ = on;
+    // The owner's height is the height: a field is 30 px, a table cell is
+    // whatever the row is, and a fixed 30 inside a 26 px cell overflowed it.
+    if (on) {
+        setMinimumHeight(0);
+        setMaximumHeight(QWIDGETSIZE_MAX);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    } else {
+        setControlSize(size_);
+    }
+    update();
+}
+
+// =============================================================================
 // Slider
 // =============================================================================
 
@@ -820,10 +976,16 @@ void ProgressStrip::setActive(bool on)
 {
     if (active_ == on) return;
     active_ = on;
-    if (on)
+    if (on) {
+        // The first frame already shows a segment, a third of the way along,
+        // rather than the sliver of one entering from the left: a strip that is
+        // photographed the instant it starts — the living standard does exactly
+        // that — has to look like what it is.
+        phase_ = width() * (kStripSegmentP + 30) / 100;
         clock_->start();
-    else
+    } else {
         clock_->stop();
+    }
     update();
 }
 
@@ -1019,6 +1181,49 @@ void FormSection::paintEvent(QPaintEvent*)
 
 namespace {
 
+/// Three parcels for the sheet's table: what §9's grid looks like with a figure
+/// column, a word column, a NULL and an edited cell — no document behind it.
+class SheetRows : public QAbstractTableModel
+{
+public:
+    explicit SheetRows(QObject* parent) : QAbstractTableModel(parent) {}
+
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override
+    {
+        return parent.isValid() ? 0 : 3;
+    }
+
+    int columnCount(const QModelIndex& parent = QModelIndex()) const override
+    {
+        return parent.isValid() ? 0 : 4;
+    }
+
+    QVariant headerData(int section, Qt::Orientation orientation, int role) const override
+    {
+        if (orientation != Qt::Horizontal) return {};
+        static const char* const kNames[] = {"fid", "ada_no", "alan_m2", "nitelik"};
+        if (role == Qt::DisplayRole) return QString::fromUtf8(kNames[section]);
+        if (role == Qt::TextAlignmentRole)
+            return QVariant(static_cast<int>((section < 3 ? Qt::AlignRight : Qt::AlignLeft) |
+                                             Qt::AlignVCenter));
+        return {};
+    }
+
+    QVariant data(const QModelIndex& index, int role) const override
+    {
+        static const char* const kCells[3][4] = {{"4126", "1284", "2 940.12", "Arsa"},
+                                                 {"4127", "1284", "3 105.80", "Arsa"},
+                                                 {"4128", "1285", "3 482.64", ""}};
+        if (role == Qt::DisplayRole) return QString::fromUtf8(kCells[index.row()][index.column()]);
+        if (role == Qt::TextAlignmentRole)
+            return QVariant(static_cast<int>((index.column() < 3 ? Qt::AlignRight : Qt::AlignLeft) |
+                                             Qt::AlignVCenter));
+        if (role == GridRole::Null) return index.row() == 2 && index.column() == 3;
+        if (role == GridRole::Edited) return index.row() == 1 && index.column() == 2;
+        return {};
+    }
+};
+
 /// Tags one sheet item so `componentSheetInventory` can read it back.
 template<class W> W* shown(W* w, const char* kind, const char* state)
 {
@@ -1054,21 +1259,23 @@ QWidget* buildComponentSheet(ThemeMode mode, QWidget* parent)
         grid->setHorizontalSpacing(16);
         grid->setVerticalSpacing(8);
 
+        // Pointers first, then the two enums: the analyser counts the padding a
+        // byte-sized enum between two pointers costs, and it is right to.
         struct Row
         {
-            ButtonRole role;
             const char* caption;
             const char* text;
-            Glyph glyph;
             const char* kind;
+            Glyph glyph;
+            ButtonRole role;
         };
 
         const Row rows[] = {
-            {ButtonRole::Primary, "Birincil", "Kaydet", Glyph::Save, "primary"},
-            {ButtonRole::Secondary, "İkincil", "Uygula", Glyph::Check, "secondary"},
-            {ButtonRole::Ghost, "Hayalet", "Sıfırla", Glyph::Undo, "ghost"},
-            {ButtonRole::Danger, "Yıkıcı", "Kaydı sil", Glyph::Trash, "danger"},
-            {ButtonRole::Mode, "Kip anahtarı", "Düzenleme", Glyph::Pencil, "mode"},
+            {"Birincil", "Kaydet", "primary", Glyph::Save, ButtonRole::Primary},
+            {"İkincil", "Uygula", "secondary", Glyph::Check, ButtonRole::Secondary},
+            {"Hayalet", "Sıfırla", "ghost", Glyph::Undo, ButtonRole::Ghost},
+            {"Yıkıcı", "Kaydı sil", "danger", Glyph::Trash, ButtonRole::Danger},
+            {"Kip anahtarı", "Düzenleme", "mode", Glyph::Pencil, ButtonRole::Mode},
         };
         int column = 0;
         for (const Row& row : rows) {
@@ -1196,8 +1403,16 @@ QWidget* buildComponentSheet(ThemeMode mode, QWidget* parent)
         grid->addWidget(readOnly, 1, 0);
         grid->addWidget(disabled, 1, 1);
         grid->addWidget(derived, 1, 2);
+        // The list on its own, outside a field: the component every drop-down in
+        // the program is an instance of.
+        auto* list = shown(new ComboBox(sheet), "açılır liste", "3 seçenek");
+        list->addItems({QStringLiteral("Ayrık nizam"), QStringLiteral("Blok nizam"),
+                        QStringLiteral("İkiz nizam")});
+        auto* listRow = new FormRow(QStringLiteral("Açılır liste (bileşen)"), list, sheet);
+
         grid->addWidget(combo, 2, 0);
         grid->addWidget(date, 2, 1);
+        grid->addWidget(listRow, 2, 2);
         page->addLayout(grid);
     }
 
@@ -1324,6 +1539,26 @@ QWidget* buildComponentSheet(ThemeMode mode, QWidget* parent)
         auto* strip = shown(new ProgressStrip(sheet), "yükleniyor", "etkin");
         strip->setActive(true);
         page->addWidget(strip);
+    }
+
+    // ---- TABLO · İFADE ÇUBUĞU, design.md §9 ------------------------------------
+    {
+        page->addWidget(new FormSection(
+            QStringLiteral("TABLO · İFADE ÇUBUĞU"),
+            QStringLiteral("zebra, seçili satır, boş hücre, düzenlenmiş hücre"), sheet));
+        auto* expression = shown(new ExpressionEdit(sheet), "ifade", "renkli");
+        expression->setExpression(
+            QStringLiteral("\"alan_m2\" > 2000 AND \"plan_fonksiyon\" = 'Konut'"));
+        page->addWidget(expression);
+        auto* grid = shown(new DataGrid(sheet), "tablo", "3 satır");
+        grid->setModel(new SheetRows(grid));
+        grid->setFixedHeight(30 + 3 * 26 + 2);
+        grid->setColumnWidth(0, 72);
+        grid->setColumnWidth(1, 100);
+        grid->setColumnWidth(2, 120);
+        grid->setColumnWidth(3, 160);
+        grid->selectRow(1);
+        page->addWidget(grid);
     }
 
     page->addStretch(1);

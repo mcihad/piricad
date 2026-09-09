@@ -63,6 +63,25 @@ Task<void> run(Context& ctx)
         }
     }
 
+    // WHOSE CORNERS. Given only with `yon=yaz`: a read has nothing to select.
+    // The ids are copied into the request AND recorded, so the journal line
+    // replays the same file whatever happens to be highlighted that day.
+    std::vector<std::int64_t> owners;
+    if (const Value given = ctx.argument("nesneler"); !given.empty()) {
+        if (!writing) {
+            ctx.echo("nesneler yalnız yon=yaz ile verilir: köşeleri yazılacak nesneler.");
+            co_return;
+        }
+        owners = given.as_ids();
+        for (std::int64_t raw : owners) {
+            if (raw <= 0) {
+                ctx.echo("Geçersiz nesne kimliği: " + std::to_string(raw) +
+                         ". Kimlikler 1'den başlar.");
+                co_return;
+            }
+        }
+    }
+
     Bus& bus = ctx.session().bus();
     if (!bus.on_file_request) {
         ctx.echo("Dosya motoru bağlı değil; bu ortamda nokta listesi okunup yazılamaz.");
@@ -74,6 +93,8 @@ Task<void> run(Context& ctx)
     request.path = path.as_text();
     request.swapped_axes = swapped;
     request.tx           = writing ? nullptr : &ctx.transaction();
+    for (std::int64_t raw : owners)
+        request.entities.push_back(static_cast<std::uint64_t>(raw));
 
     auto done = co_await bus.on_file_request(std::move(request));
     if (!done) {
@@ -84,6 +105,7 @@ Task<void> run(Context& ctx)
     ctx.record("dosya", path);
     if (writing) ctx.record("yon", Value::text("yaz"));
     if (swapped) ctx.record("eksen", Value::text("XY"));
+    if (!owners.empty()) ctx.record("nesneler", Value::ids(owners));
 }
 
 } // namespace
@@ -98,6 +120,8 @@ KENTOS_COMMAND(points)
             {
                 Param::text("dosya", Arity::exactly(1), "Nokta listesi dosyasının yolu"),
                 Param::text("yon", Arity::optional(), "oku (varsayılan) | yaz"),
+                Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
+                      "yon=yaz ile: köşeleri yazılacak nesneler; verilmezse çizimdeki noktalar"},
                 Param::text("eksen", Arity::optional(),
                             "Sütun sırası: YX (varsayılan, Türkiye'de olağan) | XY"),
             },

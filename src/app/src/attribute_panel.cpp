@@ -10,12 +10,16 @@
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
 
+#include <QClipboard>
 #include <QColorDialog>
+#include <QContextMenuEvent>
 #include <QFileInfo>
 #include <QFontMetrics>
+#include <QGuiApplication>
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QLineEdit>
+#include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QShortcut>
@@ -233,9 +237,19 @@ void AttributePanel::rebuild()
         const core::LayerId on        = rows.layer[slot];
         const core::Layer* layer      = doc.layer(on);
 
-        subtitle_ = tr("%1 · %2").arg(shapeName(doc, kind, gslot),
-                                      layer != nullptr ? QString::fromStdString(layer->name)
-                                                       : tr("katmansız"));
+        // HOW MANY CORNERS, which is the first thing a surveyor asks of a parcel
+        // and the card says before the groups open: `ALAN · fid 4128 · 4 köşe`.
+        const core::RingSpan span = doc.geometry().rings_of(gslot);
+        std::size_t corners       = 0;
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r)
+            corners += doc.geometry().ring_count[r];
+
+        subtitle_ =
+            tr("%1 · fid %2 · %3 köşe · %4")
+                .arg(shapeName(doc, kind, gslot))
+                .arg(static_cast<qulonglong>(key))
+                .arg(corners)
+                .arg(layer != nullptr ? QString::fromStdString(layer->name) : tr("katmansız"));
 
         // ---- what it IS -------------------------------------------------
         //
@@ -251,6 +265,11 @@ void AttributePanel::rebuild()
                              {},
                              {}});
         what.rows.push_back({tr("tur"), shapeName(doc, kind, gslot), {}, true, {}, {}});
+        what.rows.push_back(
+            {tr("kose_sayisi"), QString::number(corners), tr("HESAP"), true, {}, {}});
+        if (span.count > 1)
+            what.rows.push_back(
+                {tr("halka_sayisi"), QString::number(span.count), tr("HESAP"), true, {}, {}});
 
         QStringList layerNames;
         for (const core::Layer& l : doc.layers())
@@ -770,6 +789,61 @@ void AttributePanel::mousePressEvent(QMouseEvent* event)
         setFocus(Qt::MouseFocusReason);
         update();
         return;
+    }
+}
+
+void AttributePanel::contextMenuEvent(QContextMenuEvent* event)
+{
+    const core::Document& doc     = controller_.document();
+    const command::Selection& sel = controller_.bus().selection();
+    if (layer_ != core::kNoLayer || sel.size() != 1) {
+        QWidget::contextMenuEvent(event);
+        return;
+    }
+    const core::EntityKey key = sel.keys().front();
+    const core::EntityId slot = doc.slot_of(key);
+    if (slot == core::kNoEntity || !doc.alive(slot)) return;
+
+    const core::Layer* layer = doc.layer(doc.entities().layer[slot]);
+    const QString layerName  = layer != nullptr ? QString::fromStdString(layer->name) : QString();
+
+    // FOUR THINGS ONE DOES WITH AN OBJECT one is looking at. Each is a road to
+    // something that already exists — the export window, the clipboard, two
+    // windows — so the menu adds no capability of its own (CLAUDE.md 5.15).
+    QMenu menu(this);
+    QAction* exportCorners = menu.addAction(tr("Koordinatları dışa aktar…"));
+    QAction* copyCorners   = menu.addAction(tr("Koordinatları kopyala"));
+    menu.addSeparator();
+    QAction* table      = menu.addAction(tr("Öznitelik tablosunu aç"));
+    QAction* properties = menu.addAction(tr("Katman özellikleri…"));
+    table->setEnabled(!layerName.isEmpty());
+    properties->setEnabled(!layerName.isEmpty());
+
+    QAction* picked = menu.exec(event->globalPos());
+    if (picked == nullptr) return;
+
+    if (picked == exportCorners) {
+        emit exportCoordinatesRequested();
+    } else if (picked == copyCorners) {
+        // The same rows the file would carry — `nesne.köşe;Y;X;katman` — so what
+        // is pasted into a spreadsheet reads like what NOKTALAR writes.
+        QStringList lines;
+        const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[slot]);
+        std::size_t n             = 0;
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+            const auto xs = doc.geometry().ring_xs(r);
+            const auto ys = doc.geometry().ring_ys(r);
+            for (std::size_t i = 0; i < xs.size(); ++i)
+                lines << QStringLiteral("%1.%2;%3;%4;%5")
+                             .arg(static_cast<qulonglong>(key))
+                             .arg(++n)
+                             .arg(measure::metres(xs[i]), measure::metres(ys[i]), layerName);
+        }
+        QGuiApplication::clipboard()->setText(lines.join(QLatin1Char('\n')));
+    } else if (picked == table) {
+        emit tableRequested(layerName);
+    } else if (picked == properties) {
+        emit propertiesRequested(layerName);
     }
 }
 

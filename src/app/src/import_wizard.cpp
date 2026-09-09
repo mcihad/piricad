@@ -7,14 +7,18 @@
 #include "kentos_cad/app/map_canvas.hpp"
 #include "kentos_cad/app/tokens.hpp"
 #include "kentos_cad/command/transaction.hpp"
+#include "kentos_cad/core/attribute.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/io/dwg.hpp"
 #include "kentos_cad/io/vector.hpp"
 #include "kentos_cad/render/backend.hpp"
 
+#include <algorithm>
 #include <cmath>
 
+#include <QCoreApplication>
 #include <QDateTime>
+#include <QElapsedTimer>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QHBoxLayout>
@@ -66,6 +70,22 @@ const Tokens& tk(ThemeMode mode)
     return mode == ThemeMode::Dark ? darkTokens() : lightTokens();
 }
 
+/// The attribute type as the user reads it. `attr_type_name` is the token a
+/// script writes (`SÜTUN tur=`); this is the word beside a field on a page.
+QString type_label(core::AttrType type)
+{
+    switch (type) {
+    case core::AttrType::Int64: return QCoreApplication::translate("ImportWizard", "Tam sayı");
+    case core::AttrType::Length: return QCoreApplication::translate("ImportWizard", "Uzunluk");
+    case core::AttrType::Bool: return QCoreApplication::translate("ImportWizard", "Evet / hayır");
+    case core::AttrType::Text: return QCoreApplication::translate("ImportWizard", "Metin");
+    case core::AttrType::CodeRef: return QCoreApplication::translate("ImportWizard", "Kod");
+    case core::AttrType::Decimal: return QCoreApplication::translate("ImportWizard", "Ondalık");
+    case core::AttrType::Date: return QCoreApplication::translate("ImportWizard", "Tarih");
+    }
+    return QString::fromUtf8(core::attr_type_name(type));
+}
+
 /// One layer row: tick box, name, entity count. design.md §15.3 — the state is
 /// said with a SHAPE (a tick) and not with colour alone (§13).
 class LayerCheckDelegate : public QStyledItemDelegate
@@ -74,6 +94,10 @@ public:
     using QStyledItemDelegate::QStyledItemDelegate;
 
     void setTheme(ThemeMode mode) { theme_ = mode; }
+
+    /// How wide the right-hand column is. The layer page prints a count in it
+    /// (62 px); the field page prints a type and a sample value, which need more.
+    void setDetailWidth(int px) { detail_ = px; }
 
     /// Where the row's tick box is, so a click can be routed to it. The whole row
     /// toggles, so this is used for painting and for nothing else — but stating
@@ -121,7 +145,7 @@ public:
         }
 
         const int x     = tick.right() + kGap;
-        const int right = box.right() - kPadX - kCntW;
+        const int right = box.right() - kPadX - detail_;
 
         QFont face(QStringLiteral("IBM Plex Sans"));
         face.setPixelSize(12);
@@ -135,14 +159,16 @@ public:
         digits.setPixelSize(11);
         p->setFont(digits);
         p->setPen(t.textFaint);
-        p->drawText(QRect(right, box.top(), kCntW, kRow), Qt::AlignVCenter | Qt::AlignRight,
-                    index.data(Qt::UserRole + 1).toString());
+        p->drawText(QRect(right, box.top(), detail_, kRow), Qt::AlignVCenter | Qt::AlignRight,
+                    p->fontMetrics().elidedText(index.data(Qt::UserRole + 1).toString(),
+                                                Qt::ElideRight, detail_));
 
         p->restore();
     }
 
 private:
     ThemeMode theme_ = ThemeMode::Dark;
+    int detail_      = kCntW;
 };
 
 } // namespace
@@ -306,6 +332,7 @@ ImportWizard::ImportWizard(Controller& controller, ThemeMode theme, QWidget* par
     pages_ = new QStackedWidget(body);
     pages_->addWidget(buildFilePage());
     pages_->addWidget(buildLayerPage());
+    pages_->addWidget(buildFieldPage());
     column->addWidget(pages_, 1);
 
     setBody(body);
@@ -313,7 +340,8 @@ ImportWizard::ImportWizard(Controller& controller, ThemeMode theme, QWidget* par
 
     back_ = new Button(ButtonRole::Secondary, tr("Geri"), std::nullopt, this);
     back_->setEnabled(false);
-    connect(back_, &QPushButton::clicked, this, [this] { showPage(0); });
+    connect(back_, &QPushButton::clicked, this,
+            [this] { showPage(std::max(0, pages_->currentIndex() - 1)); });
 
     cancel_ = new Button(ButtonRole::Secondary, tr("İptal"), std::nullopt, this);
     connect(cancel_, &QPushButton::clicked, this, &ImportWizard::reject);
@@ -326,19 +354,34 @@ ImportWizard::ImportWizard(Controller& controller, ThemeMode theme, QWidget* par
             startProbe();
             return;
         }
+        if (pages_->currentIndex() == 1) {
+            showPage(2);
+            return;
+        }
 
-        // THE WHOLE POINT OF THE WINDOW, in one line: the ticks become an
-        // argument, and the argument goes on the same command line a script
+        // THE WHOLE POINT OF THE WINDOW, in one line: the ticks become two
+        // arguments, and the arguments go on the same command line a script
         // would write (Article 1.2).
         const QStringList picked = chosen();
         line_ = QStringLiteral("İÇEAKTAR dosya=\"%1\"").arg(pathField_->text().trimmed());
         if (picked.size() != static_cast<int>(found_.layers.size()))
             line_ += QStringLiteral(" katmanlar=\"%1\"").arg(picked.join(QLatin1Char(',')));
+
+        // The fields, by the names the file gives them: every one ticked is
+        // `*`, none ticked is nothing said — the import then reads geometry
+        // alone, as every drawing before this page did.
+        const QStringList wanted = chosenFields();
+        if (fields_->count() > 0 && wanted.size() == fields_->count())
+            line_ += QStringLiteral(" alanlar=*");
+        else if (!wanted.isEmpty())
+            line_ += QStringLiteral(" alanlar=\"%1\"").arg(wanted.join(QLatin1Char(',')));
         accept();
     });
 
+    // ALL THREE AT THE RIGHT, after the stretch the frame already holds. `Geri`
+    // used to be added before a second stretch and sat in the middle of the
+    // footer, belonging to neither end.
     footer()->addWidget(back_);
-    footer()->addStretch(1);
     footer()->addWidget(cancel_);
     footer()->addWidget(next_);
 
@@ -377,6 +420,8 @@ void ImportWizard::applyTheme(ThemeMode mode)
     // is the only thing that ever sets it.
     if (layers_ != nullptr)
         static_cast<LayerCheckDelegate*>(layers_->itemDelegate())->setTheme(mode);
+    if (fields_ != nullptr)
+        static_cast<LayerCheckDelegate*>(fields_->itemDelegate())->setTheme(mode);
     if (preview_ != nullptr) preview_->applyTheme(mode);
     update();
 }
@@ -404,10 +449,69 @@ QWidget* ImportWizard::buildStepper()
     stepTwo_ = new QLabel(tr("2 · KATMANLAR"), bar);
     stepTwo_->setObjectName(QStringLiteral("wizardStepOff"));
 
+    stepRuleTwo_ = new QWidget(bar);
+    stepRuleTwo_->setObjectName(QStringLiteral("wizardStepRule"));
+    stepRuleTwo_->setFixedHeight(1);
+
+    stepThree_ = new QLabel(tr("3 · ALANLAR"), bar);
+    stepThree_->setObjectName(QStringLiteral("wizardStepOff"));
+
     row->addWidget(stepOne_);
     row->addWidget(stepRule_, 1);
     row->addWidget(stepTwo_);
+    row->addWidget(stepRuleTwo_, 1);
+    row->addWidget(stepThree_);
     return bar;
+}
+
+QWidget* ImportWizard::buildFieldPage()
+{
+    // THE TABLE BESIDE THE GEOMETRY. A Shapefile or a GeoPackage carries fields
+    // — ada, parsel, nitelik — and a parcel imported without them is half a
+    // parcel. Each row: which layer, which field, what it becomes, and a first
+    // value so `ada_no` and `parsel_no` can be told apart before anything is
+    // written. The ticked rows become `alanlar=` on the command line.
+    auto* page   = new QWidget(this);
+    auto* column = new QVBoxLayout(page);
+    column->setContentsMargins(20, 18, 20, 18);
+    column->setSpacing(10);
+
+    auto* head = new QHBoxLayout;
+    head->setSpacing(8);
+    auto* heading = new QLabel(tr("ALANLAR"), page);
+    heading->setObjectName(QStringLiteral("groupCaption"));
+    auto* all = new Button(ButtonRole::Ghost, tr("Tümü"), std::nullopt, page);
+    all->setControlSize(ControlSize::Compact);
+    connect(all, &QPushButton::clicked, this, [this] { setAllFieldsChecked(true); });
+    auto* none = new Button(ButtonRole::Ghost, tr("Hiçbiri"), std::nullopt, page);
+    none->setControlSize(ControlSize::Compact);
+    connect(none, &QPushButton::clicked, this, [this] { setAllFieldsChecked(false); });
+    head->addWidget(heading);
+    head->addStretch(1);
+    head->addWidget(all);
+    head->addWidget(none);
+    column->addLayout(head);
+
+    fields_ = new QListWidget(page);
+    fields_->setObjectName(QStringLiteral("importLayerList"));
+    fields_->setFrameShape(QFrame::NoFrame);
+    fields_->setMouseTracking(true);
+    fields_->setUniformItemSizes(true);
+    fields_->setSelectionMode(QAbstractItemView::NoSelection);
+    auto* delegate = new LayerCheckDelegate(fields_);
+    delegate->setDetailWidth(260);
+    fields_->setItemDelegate(delegate);
+    connect(fields_, &QListWidget::itemClicked, this, [this](QListWidgetItem* item) {
+        item->setCheckState(item->checkState() == Qt::Checked ? Qt::Unchecked : Qt::Checked);
+        refreshFieldTally();
+    });
+    column->addWidget(fields_, 1);
+
+    fieldTally_ = new QLabel(page);
+    fieldTally_->setObjectName(QStringLiteral("quiet"));
+    fieldTally_->setWordWrap(true);
+    column->addWidget(fieldTally_);
+    return page;
 }
 
 QWidget* ImportWizard::buildFilePage()
@@ -427,7 +531,9 @@ QWidget* ImportWizard::buildFilePage()
 
     pathField_ = new QLineEdit(page);
     pathField_->setFixedHeight(30);
-    pathField_->setPlaceholderText(tr("DXF, DWG, Shapefile veya GeoPackage yolu"));
+    pathField_->setPlaceholderText(io::dwg_backend_available()
+                                       ? tr("DXF, DWG, Shapefile veya GeoPackage yolu")
+                                       : tr("DXF, Shapefile veya GeoPackage yolu"));
     connect(pathField_, &QLineEdit::textChanged, this, [this](const QString& text) {
         const QFileInfo about(text.trimmed());
         const bool ready = about.isFile();
@@ -516,10 +622,14 @@ QWidget* ImportWizard::buildFilePage()
         grid->addWidget(row);
     }
 
+    // The io layer's status names a CMake flag, which is for the person who
+    // builds the program; the person who uses it is told what to do instead.
     auto* dwgRow = new QLabel(io::dwg_backend_available()
                                   ? tr(".DWG  ·  AutoCAD çizimi  ·  %1").arg(tr("yalnızca okunur"))
-                                  : QString::fromStdString(io::dwg_backend_status()),
+                                  : tr(".DWG  ·  bu sürümde okunmaz; çizimi DXF olarak kaydedip "
+                                       "içe aktarın"),
                               page);
+    dwgRow->setToolTip(QString::fromStdString(io::dwg_backend_status()));
     dwgRow->setObjectName(QStringLiteral("quiet"));
     dwgRow->setWordWrap(true);
     grid->addWidget(dwgRow);
@@ -632,6 +742,21 @@ void ImportWizard::beginWith(const QString& path)
     if (next_->isEnabled()) startProbe();
 }
 
+bool ImportWizard::probeSettle(int page, int msecs)
+{
+    // Until the layer page is up, not merely until the thread stops: the
+    // thread's `finished` is delivered as an event, and a check made between the
+    // two saw a finished read and a wizard still on its first page.
+    QElapsedTimer clock;
+    clock.start();
+    while (pages_->currentIndex() == 0 && clock.elapsed() < msecs)
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+    if (!scratch_ || pages_->currentIndex() == 0) return false;
+    showPage(page);
+    QCoreApplication::processEvents();
+    return true;
+}
+
 void ImportWizard::browse()
 {
     QStringList filters;
@@ -731,28 +856,87 @@ void ImportWizard::probeFinished()
                 .arg(QString::fromStdString(found_.driver), grouped(found_.entities),
                      grouped(static_cast<std::uint64_t>(found_.layers.size())));
     if (!found_.crs.empty()) said << QString::fromStdString(found_.crs);
-    for (const std::string& note : found_.notes)
+    for (const std::string& note : found_.notes) {
+        // The reader's hint about `alanlar=` is for the command line; here the
+        // third page IS that choice, so the hint would send the user elsewhere.
+        if (note.find("alanlar=") != std::string::npos) continue;
         said << QString::fromStdString(note);
+    }
     summary_->setText(said.join(QStringLiteral("\n")));
 
     preview_->setDocument(scratch_.get());
+
+    // The third page's rows: every field the reader saw, ticked to begin with
+    // for the same reason the layers are.
+    fields_->clear();
+    for (const io::VectorField& f : found_.fields) {
+        const QString type = type_label(f.type);
+        auto* row =
+            new QListWidgetItem(QStringLiteral("%1 · %2").arg(QString::fromStdString(f.layer),
+                                                              QString::fromStdString(f.name)),
+                                fields_);
+        row->setData(Qt::UserRole, QString::fromStdString(f.name));
+        row->setData(Qt::UserRole + 1,
+                     f.sample.empty()
+                         ? type
+                         : QStringLiteral("%1 · %2").arg(type, QString::fromStdString(f.sample)));
+        row->setToolTip(tr("Sütun kimliği: %1").arg(QString::fromStdString(f.id)));
+        row->setCheckState(Qt::Checked);
+    }
     refreshTally();
+    refreshFieldTally();
     showPage(1);
+}
+
+void ImportWizard::refreshFieldTally()
+{
+    if (fields_->count() == 0) {
+        fieldTally_->setText(tr("Bu dosyada öznitelik alanı yok; yalnız geometri okunur."));
+        return;
+    }
+    const int ticked = static_cast<int>(chosenFields().size());
+    fieldTally_->setText(
+        tr("%1 / %2 alan katmanın sütunu olur. Sütun kimliği alan adının küçük harfe "
+           "indirilmiş biçimidir; aynı ad iki katmanda geçerse tek sütun olur.")
+            .arg(ticked)
+            .arg(fields_->count()));
+}
+
+void ImportWizard::setAllFieldsChecked(bool on)
+{
+    for (int i = 0; i < fields_->count(); ++i)
+        fields_->item(i)->setCheckState(on ? Qt::Checked : Qt::Unchecked);
+    refreshFieldTally();
+}
+
+QStringList ImportWizard::chosenFields() const
+{
+    QStringList picked;
+    for (int i = 0; i < fields_->count(); ++i) {
+        const QListWidgetItem* row = fields_->item(i);
+        if (row->checkState() != Qt::Checked) continue;
+        const QString name = row->data(Qt::UserRole).toString();
+        if (!picked.contains(name)) picked << name;
+    }
+    return picked;
 }
 
 void ImportWizard::showPage(int page)
 {
     pages_->setCurrentIndex(page);
-    back_->setEnabled(page == 1);
-    next_->setText(page == 1 ? tr("İçe Aktar") : tr("İleri"));
+    back_->setEnabled(page > 0);
+    next_->setText(page == 2 ? tr("İçe Aktar") : tr("İleri"));
 
     stepOne_->setObjectName(page == 0 ? QStringLiteral("wizardStepOn")
                                       : QStringLiteral("wizardStepDone"));
-    stepTwo_->setObjectName(page == 1 ? QStringLiteral("wizardStepOn")
-                                      : QStringLiteral("wizardStepOff"));
+    stepTwo_->setObjectName(page == 1  ? QStringLiteral("wizardStepOn")
+                            : page > 1 ? QStringLiteral("wizardStepDone")
+                                       : QStringLiteral("wizardStepOff"));
+    stepThree_->setObjectName(page == 2 ? QStringLiteral("wizardStepOn")
+                                        : QStringLiteral("wizardStepOff"));
     // A stylesheet is matched at set time, so a changed object name needs the
     // widget re-polished or the rule that now applies never runs.
-    for (QLabel* step : {stepOne_, stepTwo_}) {
+    for (QLabel* step : {stepOne_, stepTwo_, stepThree_}) {
         step->style()->unpolish(step);
         step->style()->polish(step);
     }

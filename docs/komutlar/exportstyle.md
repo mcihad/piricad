@@ -97,8 +97,11 @@ STİLAKTAR CDP_LEKE cdp.qml
 
 ### Arayüz
 
-**Dosya > Stili Dışa Aktar…** seçili katmanın stilini yazar. Menüden yapılan da
-komut satırından yazılan da aynı komuttur.
+Katmanın **Katman Özellikleri** penceresinde (katmana sağ tıklayın → **Katman
+Özellikleri…**) alt banttaki **Stil** menüsünden **QGIS stiline aktar…** deyin.
+[Dışa Aktar](../baslangic/disa-aktarma.md) penceresi katman adını doldurur, dosyayı
+sorar ve çalıştıracağı `STİLAKTAR` satırını gösterir. Menüden yapılan da komut
+satırından yazılan da aynı komuttur.
 
 ### Betik
 

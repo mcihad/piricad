@@ -23,7 +23,8 @@
       "hidden": true,
       "cacheVariables": {
         "KENTOS_WITH_RHI": "ON",
-        "KENTOS_WITH_TEXT": "ON"
+        "KENTOS_WITH_TEXT": "ON",
+        "KENTOS_WITH_DWG": "OFF"
       }
     },
     {

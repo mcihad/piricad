@@ -17,11 +17,12 @@ Kendi proje dosyanız için: [KentOSCad proje dosyası](proje-dosyasi.md).
 | ESRI Shapefile | `.shp` | evet | **hayır** — aşağıya bakın |
 | OGC GeoPackage | `.gpkg` | evet | evet |
 
-¹ DWG okuma bir yapı seçeneğidir ama **açık gelir** — hem paketlenmiş sürümde hem
-kendiniz derlerken. Kapatmak isterseniz `-DKENTOS_WITH_DWG=OFF`; ağa çıkamayan
-bir yapıda (`KENTOS_FETCH_DEPENDENCIES=OFF`) kendiliğinden kapalıdır, çünkü
-LibreDWG kaynağı o yapıda indirilemez. Kapalıyken bir `.dwg` açmaya çalışmak ne
-yapmanız gerektiğini yazan bir hata verir.
+¹ DWG okuma bir yapı seçeneğidir ve **kapalı gelir**: LibreDWG'nin okuyucusu bu
+sürümde altı nesne türünü tanır ve derlemesi kendi uyarılarını taşır. Açmak için
+`-DKENTOS_WITH_DWG=ON` ile yeniden yapılandırın; ağa çıkamayan bir yapıda
+(`KENTOS_FETCH_DEPENDENCIES=OFF`) kaynak indirilemediği için açılamaz. Kapalıyken
+bir `.dwg` açmaya çalışmak ne yapmanız gerektiğini yazan bir hata verir; içe
+aktarma penceresi de DWG yerine DXF kaydedip getirmenizi söyler.
 
 ### DWG okunur, yazılmaz
 

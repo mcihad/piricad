@@ -105,6 +105,7 @@ Tek tek komutlar:
 | [Koordinat sistemleri](veri/koordinat-sistemleri.md) | TUREF/TM30, TM 3° dilimleri, milimetre depolama |
 | [KentOSCad proje dosyası](veri/proje-dosyasi.md) | `.pcad` ne taşır, sürüm politikası, bozuk dosya |
 | [Dış veri biçimleri](veri/dis-formatlar.md) | DXF ve GeoPackage, koordinat sistemi, `.prj` dosyası |
+| [Dışa Aktar penceresi](baslangic/disa-aktarma.md) | Çizimi, bir nesnenin köşelerini ya da bir stili tek pencereden yazma |
 | [Öznitelik tablosu](veri/oznitelik-tablosu.md) | Satırları süzme, düzenleme, alan istatistikleri; süzme ifadesinin dilbilgisi |
 | [MPYY plan gösterimleri](veri/mpyy-gosterimleri.md) | Gösterim veri paketi: hangi RG sürümü, ne çıkarıldı, ne eksik, nasıl yeniden üretilir |
 | [Sürüm ve uyumluluk politikası](api-stability.md) | Neyin sabit kaldığı, neyin değişebileceği |

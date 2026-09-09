@@ -21,8 +21,11 @@ qt_add_executable(kentos_cad
     src/command_palette.cpp
     src/controller.cpp
     src/data_root.cpp
+    src/datagrid.cpp
     src/dialog_chrome.cpp
     src/database_dialog.cpp
+    src/expression_edit.cpp
+    src/export_dialog.cpp
     src/flow_layout.cpp
     src/icons.cpp
     src/import_wizard.cpp
@@ -45,6 +48,9 @@ qt_add_executable(kentos_cad
 
     include/kentos_cad/app/command_line.hpp
     include/kentos_cad/app/attribute_panel.hpp
+    include/kentos_cad/app/datagrid.hpp
+    include/kentos_cad/app/expression_edit.hpp
+    include/kentos_cad/app/export_dialog.hpp
     include/kentos_cad/app/fields.hpp
     include/kentos_cad/app/widgets.hpp
     include/kentos_cad/app/schema_page.hpp

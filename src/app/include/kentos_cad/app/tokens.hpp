@@ -125,6 +125,16 @@ struct Tokens
     QColor hud;
     QColor selectWindow; ///< PENCERE box: wholly inside
     QColor selectCross;  ///< KESEN box: whatever it touches
+
+    // ---- the expression bar, §9 ----
+    //
+    // A filter is read as much as it is typed, and §9 gives its four parts of
+    // speech four inks so `"alan_m2" > 2000 AND "plan_fonksiyon" = 'Konut'` can
+    // be parsed by eye: field, operator, text constant, logical word.
+    QColor syntaxField;    ///< a quoted column name
+    QColor syntaxOperator; ///< `=`, `>`, `<>` and the arithmetic
+    QColor syntaxString;   ///< a single-quoted constant
+    QColor syntaxLogical;  ///< AND, OR, NOT and their Turkish names
 };
 
 /// The dark tokens — `design.md` §2, verbatim.

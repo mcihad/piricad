@@ -262,6 +262,82 @@ TEST_CASE("NOKTALAR: Y sağa, X yukarı okunur")
     CHECK(box.min_y == 4310220250); // X went to the northing
 }
 
+TEST_CASE("İÇEAKTAR: alanlar=* bir Shapefile'ın alanlarını sütun yapar")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF; Shapefile okunamıyor.");
+
+    // `parsel.shp` carries two text fields, `ada` and `parsel`. Without `alanlar`
+    // they stay in the file and the report says so; with `*` they become two
+    // layer-scoped columns and every parcel carries its values.
+    const std::string fixture =
+        (fs::path(KENTOS_FUZZ_DIR) / "tohum" / "shp" / "parsel.shp").string();
+
+    Rig quiet;
+    REQUIRE(quiet.bus.execute_line("AYAR koordinat_sistemi EPSG:5254", Origin::Test).ok());
+    auto plain = quiet.bus.execute_line("İÇEAKTAR dosya=\"" + fixture + "\"", Origin::Test);
+    if (!plain) FAIL_WITH("İÇEAKTAR", plain.error().message);
+    CHECK(quiet.doc.attributes().find("ada") == core::kNoAttr);
+    CHECK(quiet.transcript.find("öznitelik alanı var") != std::string::npos);
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("AYAR koordinat_sistemi EPSG:5254", Origin::Test).ok());
+    auto read = r.bus.execute_line("İÇEAKTAR dosya=\"" + fixture + "\" alanlar=*", Origin::Test);
+    if (!read) FAIL_WITH("İÇEAKTAR alanlar", read.error().message);
+
+    const core::AttrId ada    = r.doc.attributes().find("ada");
+    const core::AttrId parsel = r.doc.attributes().find("parsel");
+    INFO("transcript: ", r.transcript);
+    REQUIRE(ada != core::kNoAttr);
+    REQUIRE(parsel != core::kNoAttr);
+    CHECK(r.doc.attributes().column(ada)->spec().type == core::AttrType::Text);
+    CHECK(!r.doc.attributes().column(ada)->spec().layer.empty());
+
+    std::size_t carried = 0;
+    for (core::EntityId e = 0; e < r.doc.entities().size(); ++e) {
+        if (!r.doc.alive(e)) continue;
+        if (auto v = r.doc.attribute(ada, e); v && v.value().present) ++carried;
+    }
+    CHECK(carried == 2);
+    CHECK(r.transcript.find("2 alan sütun olarak okundu") != std::string::npos);
+}
+
+TEST_CASE("NOKTALAR: yon=yaz nesneler= ile bir nesnenin köşeleri yazılır")
+{
+    // A parcel's corners as a stake-out list: one row per vertex, numbered
+    // `nesne.köşe`, coded with the layer's name — the same writer the point
+    // entities use, so the two files read alike.
+    Rig r;
+    TempDir dir("koseler");
+    REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ALAN 0,0 100,0 100,80 0,80", Origin::Test).ok());
+
+    const std::string path = dir.file("koseler.txt");
+    auto wrote =
+        r.bus.execute_line("NOKTALAR dosya=\"" + path + "\" yon=yaz nesneler=1", Origin::Test);
+    if (!wrote) FAIL_WITH("NOKTALAR yaz nesneler", wrote.error().message);
+
+    std::ifstream in(path);
+    std::vector<std::string> rows;
+    for (std::string line; std::getline(in, line);)
+        if (!line.empty() && line[0] != '#') rows.push_back(line);
+
+    REQUIRE(rows.size() >= 4);
+    CHECK(rows.front().rfind("1.1;", 0) == 0);
+    CHECK(rows.back().rfind("1." + std::to_string(rows.size()) + ";", 0) == 0);
+    CHECK(rows.front().find("PARSEL") != std::string::npos);
+
+    // Without `yon=yaz` the argument is refused before anything is written.
+    auto misuse = r.bus.execute_line("NOKTALAR dosya=\"" + path + "\" nesneler=1", Origin::Test);
+    CHECK(r.transcript.find("yalnız yon=yaz") != std::string::npos);
+    (void)misuse;
+
+    // A key that names nothing is a refusal, not an empty file.
+    auto missing = r.bus.execute_line(
+        "NOKTALAR dosya=\"" + dir.file("yok.txt") + "\" yon=yaz nesneler=99", Origin::Test);
+    CHECK(r.transcript.find("Nesne bulunamadı") != std::string::npos);
+    (void)missing;
+}
+
 TEST_CASE("NOKTALAR: milimetre tam okunur, çift duyarlıktan geçmez")
 {
     TempDir tmp("nokta-hassas");

@@ -167,6 +167,25 @@ public:
     /// `scripts/ci-gate-bilesenler.sh` drives it.
     void probeWidgets();
 
+    /// Photographs every window of the program — the main window with an object
+    /// selected, both settings windows, the layer properties, the attribute
+    /// table, the PostGIS window, the import wizard, the column dialog — into
+    /// the directory `KENTOS_DIALOG_PROBE` names, in the theme the mockups are
+    /// drawn in unless `KENTOS_PROBE_THEME=acik`.
+    ///
+    /// It exists because a window is judged by looking at it, and a reviewer who
+    /// has to build a drawing by hand before every look does not look.
+    void probeDialogs();
+
+    /// Builds the drawing every window probe photographs: a named layer, three
+    /// objects, five typed columns and values on the first parcel.
+    void seedProbeDrawing();
+
+    /// Opens the layer properties window on the probe drawing, classifies its
+    /// layer by a text column, applies, and prints what the document ended up
+    /// with — `KENTOS_DESIGNER_PROBE`, photographed when given a directory.
+    void probeDesigner();
+
     /// Opens the import wizard WITHOUT blocking, on `path` when one is given.
     ///
     /// `importData()` runs it modally and then runs the command line it built;

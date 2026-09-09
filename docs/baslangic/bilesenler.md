@@ -65,13 +65,21 @@ işarette ve varsa etiketinin yanındaki rozette okunur:
 | **Devre dışı** | soluk | — | bu bağlamda anlamı yok |
 | **Türetilmiş** | mavi, hafif mavi zemin | `fx`, `HESAP` rozeti | programın hesapladığı değer; elle girilmez |
 
-Sayılar tek aralıklı yazı tipiyle yazılır ve binlikler boşlukla ayrılır: `3 482.64`.
-Uzunluk ve alan kutularının sağ kenarında birim soluk yazıyla durur: `m`, `m²`, `°`.
-Kutuya birim yazmazsınız; yalnız sayıyı yazarsınız.
+Sayılar tek aralıklı yazı tipiyle yazılır. Kutuya sayıyı boşluksuz yazarsınız
+(`3480.00`); tablo ve nesne denetçisi gösterirken binlikleri boşlukla ayırır
+(`3 480.00`). Uzunluk ve alan kutularının sağ kenarında birim soluk yazıyla durur:
+`m`, `m²`, `°`. Kutuya birim yazmazsınız; yalnız sayıyı yazarsınız.
 
 Sayı kutusu yalnız o alanın izin verdiği karakterleri kabul eder: tam sayı alanına
 virgül yazılamaz, ondalık alan tanımlanan basamak kadar ondalık alır, tarih alanı
-`GG.AA.YYYY` biçiminde okur.
+`YYYY-AA-GG` biçiminde okur ve gösterir: `2019-03-14`.
+
+**Açılır liste** aynı kutunun içinde bir değer ve sağda aşağı bakan bir ok taşır;
+ok "bu açılır" demektir. Liste açılınca seçenekler 26 piksellik satırlarda, panel
+zemininde sıralanır; üzerine gelinen satır hafif boyanır. Kutunun kenarı metin
+kutusuyla aynı durumları söyler: odaklanınca mavi, değiştirilince turuncu, devre
+dışıysa soluk. Program boyunca — Seçenekler, stil tasarımcısı, sütun formu — aynı
+liste kullanılır; başka görünüşte bir açılır liste görürseniz bu bir hatadır.
 
 **Değiştirilmiş ile Hatalı farklı şeyler söyler.** Turuncu "bunu siz değiştirdiniz ve
 kaydedilmedi", kırmızı "bu değer kabul edilmez" demektir. Turuncu bir kutuyu
@@ -86,9 +94,9 @@ kaydetmek yeter; kırmızı bir kutu düzeltilmeden pencere kapanmaz.
 - **Tab** onaylayıp sonraki denetime gider.
 - Açılır listede **Alt+↓** ya da **Space** listeyi açar; bir harf yazmak o harfle
   başlayan seçeneğe gider.
-- Tarih alanında **Space** ya da **Alt+↓** takvimi açar. Takvimde ok tuşları gün gün,
-  **PgUp / PgDn** ay ay yürür; **Home** bugüne gider, **Enter** seçer, **Delete**
-  alanı boşaltır, **Esc** kapatır.
+- Tarih alanında **Alt+↓** ya da **F4** takvimi açar; çok seçimli alanda aynı tuşlar
+  listeyi açar. Takvimde ok tuşları gün gün, **PgUp / PgDn** ay ay yürür; **Home**
+  bugüne gider, **Enter** seçer, **Delete** alanı boşaltır, **Esc** kapatır.
 
 Girdilerin öznitelik tablosunda nasıl davrandığı — düzenleme kipi, satır satır
 doğrulama — [Öznitelik tablosu](../veri/oznitelik-tablosu.md) sayfasında anlatılır.
@@ -126,6 +134,28 @@ Program bir şeyin ne kadar süreceğini bilmediğinde — dosya okunurken, sunu
 bağlanırken — yüzde uydurmaz, bu çizgiyi akıtır. Altında geçen saniye ve çalışan bir
 `İptal` düğmesi bulunur.
 
+## Tablo
+
+Programdaki her tablo aynı tablodur: öznitelik tablosu, stil tasarımcısındaki sınıf
+tablosu, nesne seçme penceresi. Kuralları:
+
+- **Başlık bandı** 30 piksel; sütun adları tek aralıklı yazıyla, sıralanan sütun mavi ve
+  yanında ok. Başlığa tıklamak o sütuna göre sıralar; ikinci tık tersine çevirir.
+- **Satır numarası** solda 46 piksellik sütunda, soluk.
+- **Zebra**: satırlar iki ton arasında gider; imlecin üstündeki satır bir ton açılır.
+- **Seçili satır** mavi yıkamayla ve sol kenarında 2 piksellik mavi çubukla gösterilir.
+- **Sayılar** tek aralıklı ve sağa dayalı, **sözcükler** sola dayalı; **boş hücre** soluk
+  bir `—`; bu oturumda **değiştirdiğiniz hücre** turuncu yazı ve ince turuncu çerçeve
+  taşır, çizim kaydedilince kalkar.
+- Düzenleme kipi açıkken hücreye çift tık ya da **F2** girdi kutusunu açar; **Enter**
+  onaylayıp sonraki hücreye geçer, **Esc** vazgeçer.
+
+**İfade çubuğu** tablonun üstündeki tek satırlık süzgeçtir. Yazdığınız ifade
+okunurken renklenir: sütun adları mavi, işleçler turuncu, metin sabitleri yeşil,
+`AND` / `OR` / `NOT` mor. Renk yalnız okumayı kolaylaştırır; ifadeyi komut satırının
+dilbilgisi çözer ve kabul etmediği bir sözcüğü çubuğun altında söyler. **Enter**
+süzgeci uygular.
+
 ## Form düzeni
 
 Bir formda her alanın **etiketi üstünde** durur; zorunlu alanın etiketi kırmızı bir
@@ -139,8 +169,8 @@ bir not — `TAKBİS'ten çekildi · 14.03.2019` — vardır.
 | Pencere | Kullandığı bileşenler |
 |---|---|
 | **Ayarlar** ve **Proje Ayarları** | anahtar, açılır liste, sayı girdisi, renk kutusu; alt bantta hayalet `Varsayılanlara dön`, ikincil `İptal` / `Uygula`, birincil `Tamam` |
-| **Katman Özellikleri** | `Milimetre \| Harita birimi \| Piksel` segmenti, renk kilidi onay kutusu, menülü `Stil` düğmesi |
-| **Öznitelik Tablosu** | `Tablo \| Form` segmenti, birincil `Filtrele`, hücre içi girdiler |
+| **Katman Özellikleri** | `Milimetre \| Harita birimi \| Piksel` segmenti, sınıf tablosu, `{ }` veriye bağlama düğmeleri, renk kilidi onay kutusu, menülü `Stil` düğmesi |
+| **Öznitelik Tablosu** | tablo, ifade çubuğu, `Tablo \| Form` segmenti, birincil `Filtrele`, hücre içi girdiler |
 | **Yeni Sütun** | üstte etiketli form satırları, zorunlu işaretleri, birincil `Tanımla` |
 | **İçe Aktar** | ikincil `Gözat…`, yükleme çizgisi, birincil `İleri` |
 | **Veritabanı** | bölüm başlıkları, etiketi üstte alanlar, birincil `Bağlan`, hayalet `Yenile`, yıkıcı `Projeyi Sil` |
@@ -164,7 +194,8 @@ Bu sayfadaki resim o dosyanın kopyasıdır; bileşenler değişince aynı komut
 | Tuş | Ne yapar |
 |---|---|
 | **Tab / Shift+Tab** | sonraki / önceki denetime gider |
-| **Space** | düğmeye basar, kutuyu işaretler, anahtarı çevirir, listeyi ya da takvimi açar |
+| **Space** | düğmeye basar, kutuyu işaretler, anahtarı çevirir, açılır listeyi açar |
+| **Alt+↓ / F4** | tarih alanında takvimi, çok seçimli alanda listeyi açar |
 | **Enter** | girişi onaylar; pencerede varsayılan düğmeyi çalıştırır |
 | **Esc** | girişi iptal eder; pencereyi kapatır |
 | **↑ ↓ ← →** | radyo seçeneği, kaydırıcı değeri, takvimde gün |

@@ -44,11 +44,81 @@ bölüm ise tarihi belli bir sözdür.
 
 ### Simgeleyici satırı
 
-| Alan | Ne yapar |
+Üst şeritteki **SİMGELEYİCİ** açılır listesi katmandaki nesnelerin sembollerini neyin
+belirlediğini seçer. QGIS'in simgeleyici listesinin bu programın kurallarına çevrilmiş
+hâlidir; her biri bir katalog paketi ve tek bir `STİL` satırına iner, o yüzden
+tasarımcıda kurduğunuz her şey komut satırından da yazılabilir.
+
+| Simgeleyici | Ne yapar |
 |---|---|
-| **SİMGELEYİCİ** | Katmanın nasıl çizileceği. Bugün **Tek Sembol**; kategorize ve aralıklı Faz 2 |
-| **DEĞER** | Kategorize simgeleyicinin hangi sütuna bakacağı — Faz 2'de etkinleşir |
-| **SEMBOL BOYUT BİRİMİ** | Sembolün ölçülerinin birimi: **Milimetre** · **Harita birimi** · **Piksel** |
+| **Tek Sembol** | Katmandaki her nesne aynı sembolü çizer. Orta bölmede hazır gösterimler rafı durur. |
+| **Kategorize Edilmiş** | Bir sütunun her **değeri** kendi sembolünü alır: `plan_fonksiyon = Konut` bir renk, `Ticaret` başka bir renk. |
+| **Derecelendirilmiş** | Sayısal bir sütun **aralıklara** bölünür; her aralık bir sınıftır: alanı 0–500 m² olanlar bir sembol, 500–2 000 başka bir sembol. |
+| **Kural Tabanlı** | Faz 2'de gelecek. Bir kural tek bir alan üzerinde tek sınamadır — eşitlik, liste, aralık, var — ve serbest ifade dili bu programda yoktur. |
+
+Tek Sembol dışında bir simgeleyici seçince şeride iki denetim daha gelir: **DEĞER**
+(sınıflandırılacak sütun; derecelendirmede yalnız sayısal sütunlar listelenir) ve
+**RENK SKALASI** (sınıflara verilecek renkler: *Ayrık renkler* renk çemberinde eşit
+aralıklı tonlar, *Tek renk açılımı* sembolün kendi rengini koyudan açığa, *Gri tonlar*).
+
+### Sınıf tablosu
+
+Kategorize ya da derecelendirilmiş simgeleyicide orta bölme rafın yerine sınıf
+tablosunu gösterir:
+
+```text
+┌──┬────────┬──────────────┬──────────────────────┬────────┐
+│✓ │ sembol │ değer        │ gösterim adı         │  nesne │
+├──┼────────┼──────────────┼──────────────────────┼────────┤
+│✓ │ ▬▬▬    │ Konut        │ Konut Alanı          │    612 │
+│✓ │ ▬▬▬    │ Ticaret      │ Ticaret + Hizmet     │    138 │
+│✓ │ ▬▬▬    │ ‹diğer›      │ diğer değerler       │     32 │
+└──┴────────┴──────────────┴──────────────────────┴────────┘
+ [Sınıflandır] [Ekle] [Sil] [Tümünü sil]           [Gelişmiş ▾]
+```
+
+- **Sınıflandır** sütundaki her değer için bir satır kurar (derecelendirmede **SINIF**
+  sayısı ve **YÖNTEM** — *Eşit aralık* ya da *Eşit sayı* — ile aralıkları böler),
+  renkleri skaladan verir ve nesne sayılarını yazar.
+- **‹diğer›** satırı her zaman vardır ve silinemez: hiçbir sınıfa girmeyen ya da değeri
+  boş olan nesneler onun sembolünü alır. Bir sınıfın işaretini kaldırırsanız nesneleri
+  ‹diğer›'e düşer.
+- Bir satıra tıklayınca sağdaki sembol düzenleyici **o sınıfın** sembolünü açar;
+  başlığında `SEÇİLİ SEMBOL — Konut` yazar. Katman ekleyip renk değiştirirseniz
+  tablodaki örnek anında yenilenir.
+- **Gösterim adı** hücresine çift tıklayıp lejantta okunacak adı yazabilirsiniz;
+  **değer** hücresi de elle düzenlenebilir (`Ekle` ile eklenen sınıflar için).
+
+**Uygula** ya da **Tamam** dediğinizde tasarımcı sınıfları bir gösterim paketi olarak
+yazar — uygulama ayar dizininde `stiller/siniflar/` altına, katman adıyla — ve tek satır
+çalıştırır:
+
+```text
+STİL katman="Kadastro Parselleri" paket="…/stiller/siniflar/kadastro-parselleri-….json"
+```
+
+Paket, her sınıf için bir stil satırı ve bir kural taşır: `kosullar` içinde `esittir`
+(kategorize) ya da `aralik` (derecelendirilmiş), en sonda koşulsuz ‹diğer› kuralı.
+Komut her nesnenin sütununu kurallara göre okur ve stil sütununu yazar; aynı paketi
+bir betikten vermek aynı sonucu verir. Pencereyi bir sonraki açışınızda sınıflar
+paketten geri okunur; semboller ise belgeden alınır, çünkü Uygula'dan sonra doğru olan
+belgedir.
+
+Sınıflandırma **katmanın kendi sütunlarını** kullanır; sütun yoksa önce Öznitelikler
+sayfasında tanımlayın.
+
+### Veriye bağlı özellikler — `{ }`
+
+Sağdaki özellik satırlarının sonunda `{ }` işareti olanlar bir **sütundan** alınabilir:
+çizgi rengi, dolgu rengi, kalınlık, boyut, açı, saydamlık ve yazı. İşarete tıklayın,
+listeden sütunu seçin; işaret maviye döner, kutu kilitlenir ve değer artık her nesnenin
+kendi sütunundan gelir — kat adedine göre kalınlık, fonksiyon koduna göre yazı gibi.
+**Bağı kaldır** eski duruma döndürür. QGIS bu düğmeye *veriye bağlı geçersiz kılma* der;
+burada karşılığı `STİL … alan="sütun:özellik:tür"` argümanıdır ve Uygula onu yazar.
+
+Renk için tam sayı ya da `#RRGGBB` metin sütunu, ölçüler için sayısal sütun, yazı için
+her sütun seçilebilir.
+
 
 ### Sembol boyut birimi — en çok kullanacağınız denetim
 
@@ -69,8 +139,13 @@ birimler kullanıyorsa hiçbiri işaretli görünmez ve alttaki not bunu söyler
 ### Geometri sekmeleri
 
 İlk karar bu: sembol hangi geometri için. Sekme iki şeyi birden belirler —
-önizlemenin hangi şekil üzerinde çizileceğini ve soldaki rafın hangi çekmecesinin
-açık olduğunu. `Çizgi` sekmesindeyken raf size alan gösterimi vermez.
+önizlemenin hangi şekil üzerinde çizileceğini ve rafın hangi çekmecesinin açık
+olduğunu. `Çizgi` sekmesindeyken raf size alan gösterimi vermez.
+
+Sekmeler yalnız **katman kendisi söylemiyorsa** görünür: boş bir katmanda ya da
+hem çizgi hem alan taşıyan bir katmanda. Parsel katmanı alandır, yol ekseni
+katmanı çizgidir; çizim bunu zaten söylüyorsa sekme satırı gösterilmez ve sembol
+o geometri için kurulur.
 
 Önizleme şekli de bilerek seçilmiştir: alan için dikdörtgen, çizgi için **zikzak**
 (düz çizgi bir desenin köşede ne yaptığını gizler), nokta için tek nokta. Kare
@@ -79,18 +154,19 @@ resmin hangi geometri üzerinde çizildiğini söyler; sekmeyi değiştirince o 
 
 ### Hazır gösterimler
 
-Soldaki raf, mevzuatın yayımladığı gösterim setidir ve ağacı da mevzuatın
-kendisinindir: EK-1a ortak, EK-1b MSP, EK-1c ÇDP, EK-1ç NİP, EK-1d UİP, her ekin
-altında kendi bölüm yolu.
+Orta sütundaki raf, mevzuatın yayımladığı gösterim setidir; grupları da
+mevzuatın kendisinindir: EK-1a ortak, EK-1b MSP, EK-1c ÇDP, EK-1ç NİP, EK-1d
+UİP, her ekin altında kendi bölümleri. Raf bir **liste**dir: her satırda
+gösterimin gerçek görseli ve tam adı, üzerine gelince kimliği ve dayanağı.
 
-- Ağaçtan bir bölüm seçin, ya da
-- Arama kutusuna yazın — arama **ağacı dinlemez**, bir kelimeyi nerede olursa
+- Arama kutusunun yanındaki açılır listeden bir ek ya da bölüm seçin, ya da
+- Arama kutusuna yazın — arama **grubu dinlemez**, bir kelimeyi nerede olursa
   bulur.
 
-Küçük resimler taramanın, çizgi tipinin ve simgenin **gerçek görselleridir**;
-renk değil. `Seçileni al` ya da çift tıklama, o gösterimi yığına **koyar** —
-üstüne eklemez, çünkü yayımlanmış bir gösterimi seçmek "bu böyle görünmeli"
-demektir.
+Satırdaki görseller taramanın, çizgi tipinin ve simgenin **gerçek
+görselleridir**; renk değil. `Seçileni kullan` ya da çift tıklama, o gösterimi
+yığına **koyar** — üstüne eklemez, çünkü yayımlanmış bir gösterimi seçmek "bu
+böyle görünmeli" demektir.
 
 Raf çok kalabalıksa altındaki not kaç tanesinin gösterildiğini yazar. Sessizce
 kesilmez.
@@ -99,13 +175,15 @@ kesilmez.
 
 Önizlemenin hemen yanındaki **SEMBOL KATMANLARI** listesi. **Üstten alta** okunur:
 ilk satır en son çizilen, yani ekranda en üstte görünen katmandır. `▲` ve `▼`
-satırı gördüğünüz yöne taşır. Listenin en üstündeki **Sembol** satırı bir katman
-değil, sembolün kendisidir: onu seçince bütün katmanlara birden uygulanan
-özellikler (birim, renk, kalınlık, saydamlık) gelir.
+satırı gördüğünüz yöne taşır. Listede yalnız katmanlar vardır; sembolün
+**kendisine** ait özellikler (birim, renk, kalınlık, saydamlık) için önizleme
+resmine tıklayın — o zaman sağdaki form bütün katmanlara birden uygulanan
+ayarları gösterir.
 
-Her satırın başındaki kutu o katmanı **kapatır**. Kapalı katman silinmez —
-sembolde durur, dosyaya yazılır, parmak izine girer — sadece çizilmez. Bir
-katmanın ne kattığını görmek için kapatıp açmak en hızlı yoldur.
+Her satırın sağındaki **göz** o katmanı **kapatır**; kapalı katmanın gözü çizili,
+adı soluk görünür. Kapalı katman silinmez — sembolde durur, dosyaya yazılır,
+parmak izine girer — sadece çizilmez. Bir katmanın ne kattığını görmek için
+kapatıp açmak en hızlı yoldur.
 
 `⧉` seçili katmanı kopyalar; iki farklı kalınlıkta aynı çizgi (yol kaplaması)
 böyle kurulur.

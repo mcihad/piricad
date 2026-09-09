@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -573,6 +574,7 @@ std::optional<FittedCircle> fit_circle(const std::vector<core::Point2>& pts)
 command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx, std::string path,
                                                         std::string driver, std::string project_crs,
                                                         std::vector<std::string> only,
+                                                        std::vector<std::string> fields,
                                                         std::stop_token stop)
 {
 #ifndef KENTOS_HAVE_GDAL
@@ -581,6 +583,7 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
     (void)driver;
     (void)project_crs;
     (void)only;
+    (void)fields;
     (void)stop;
     co_return err(ErrorCode::Unsupported,
                   std::string(kErrNoDriver) + ": " + vector_backend_status());
@@ -780,6 +783,96 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
         // grows, so the run of features belonging to one layer is the delta
         // between two marks — and a DXF interleaves its layers freely, which is
         // why this flushes on every change rather than once at the end.
+        // THE FIELD PLAN, once per OGR layer: every attribute field the layer
+        // carries, the column it would become, and whether this run writes it.
+        // A DXF's fields are OGR's own bookkeeping — Layer, SubClasses, Linetype,
+        // EntityHandle — and are never offered; a Shapefile's or a GeoPackage's
+        // are the parcel's ada and parsel numbers, which is the whole point.
+        struct FieldPlan
+        {
+            int index{0};
+            std::string name;
+            std::string id;
+            core::AttrType type{core::AttrType::Text};
+            std::uint8_t scale{0};
+            core::AttrId column{core::kNoAttr};
+            std::string sample;
+        };
+
+        std::vector<FieldPlan> plan;
+        if (layer_field < 0) {
+            const bool everything = fields.size() == 1 && fields.front() == "*";
+            const auto asked      = [&](const std::string& name) {
+                if (everything) return true;
+                for (const std::string& f : fields)
+                    if (core::turkish_iequals(f, name)) return true;
+                return false;
+            };
+            OGRFeatureDefn* defn = layer->GetLayerDefn();
+            for (int i = 0; i < defn->GetFieldCount(); ++i) {
+                const OGRFieldDefn* f = defn->GetFieldDefn(i);
+                FieldPlan entry;
+                entry.index = i;
+                entry.name  = f->GetNameRef();
+                switch (f->GetType()) {
+                case OFTInteger:
+                case OFTInteger64: entry.type = core::AttrType::Int64; break;
+                case OFTReal:
+                    entry.type  = core::AttrType::Decimal;
+                    entry.scale = static_cast<std::uint8_t>(
+                        f->GetPrecision() > 0 && f->GetPrecision() <= 6 ? f->GetPrecision() : 2);
+                    break;
+                case OFTDate:
+                case OFTDateTime: entry.type = core::AttrType::Date; break;
+                default: entry.type = core::AttrType::Text; break;
+                }
+                // The column id: the field's name folded to what `SÜTUN kimlik=`
+                // takes, so `ADA_NO` and `ada_no` in two files land in one column.
+                // `turkish_fold_key` folds case AND alphabet — to ASCII capitals —
+                // and a column id is lower case, so the capitals come down here.
+                // ASCII only by then, which is why no locale is involved.
+                std::string id = core::turkish_fold_key(entry.name);
+                for (char& ch : id) {
+                    if (ch >= 'A' && ch <= 'Z')
+                        ch = static_cast<char>(ch - 'A' + 'a');
+                    else if (!((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_'))
+                        ch = '_';
+                }
+                if (id.empty()) id = "alan_" + std::to_string(i);
+                entry.id = id;
+
+                if (asked(entry.name)) {
+                    // Declared once and reused when it is already there: a
+                    // declaration is not undoable (a schema is not a drawing
+                    // edit), so a second import of the same file adds no second
+                    // column. A column of another type under the same id is a
+                    // conflict the report states rather than resolves.
+                    const core::AttrTable& table = tx.document().attributes();
+                    if (const core::AttrId found = table.find(entry.id); found != core::kNoAttr) {
+                        const core::AttrColumn* held = table.column(found);
+                        if (held != nullptr && held->spec().type == entry.type)
+                            entry.column = found;
+                        else if (report.notes.size() < 8)
+                            report.notes.push_back("'" + entry.id +
+                                                   "' sütunu belgede başka türde tanımlı; alan "
+                                                   "okunmadı.");
+                    } else {
+                        core::AttrSpec spec;
+                        spec.id       = entry.id;
+                        spec.name_tr  = entry.name;
+                        spec.type     = entry.type;
+                        spec.scale    = entry.scale;
+                        spec.layer    = layer_name;
+                        auto declared = tx.declare_attribute(std::move(spec));
+                        if (!declared) co_return declared.error();
+                        entry.column = declared.value();
+                    }
+                }
+                plan.push_back(std::move(entry));
+            }
+        }
+        bool sampled = false;
+
         std::string open_layer  = layer_field < 0 ? layer_name : std::string();
         std::uint64_t open_mark = report.entities;
 
@@ -793,6 +886,61 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
             if ((report.features % 4096) == 0 && stop.stop_requested())
                 co_return err(ErrorCode::Cancelled, "İçe aktarma iptal edildi; çizim değişmedi.");
             ++report.features;
+
+            // The first feature lends every field its sample, imported or not.
+            if (!sampled) {
+                sampled = true;
+                for (FieldPlan& entry : plan)
+                    if (feature->IsFieldSetAndNotNull(entry.index))
+                        entry.sample =
+                            std::string(feature->GetFieldAsString(entry.index)).substr(0, 40);
+            }
+
+            // Writes the requested fields of THIS feature onto the entity it became.
+            const auto stamp = [&](command::EntityId made) -> core::Status {
+                for (const FieldPlan& entry : plan) {
+                    if (entry.column == core::kNoAttr) continue;
+                    if (!feature->IsFieldSetAndNotNull(entry.index)) continue;
+                    core::AttrValue value;
+                    switch (entry.type) {
+                    case core::AttrType::Int64:
+                        value.type    = core::AttrType::Int64;
+                        value.present = true;
+                        value.number  = feature->GetFieldAsInteger64(entry.index);
+                        break;
+                    case core::AttrType::Decimal: {
+                        double scaled = feature->GetFieldAsDouble(entry.index);
+                        for (std::uint8_t d = 0; d < entry.scale; ++d)
+                            scaled *= 10.0;
+                        value = core::attr_decimal(static_cast<std::int64_t>(std::llround(scaled)),
+                                                   entry.scale);
+                        break;
+                    }
+                    case core::AttrType::Date: {
+                        int y = 0, mo = 0, d = 0, h = 0, mi = 0, tz = 0;
+                        float sec = 0.0F;
+                        if (!feature->GetFieldAsDateTime(entry.index, &y, &mo, &d, &h, &mi, &sec,
+                                                         &tz))
+                            continue;
+                        // Written through the one date parser rather than computed
+                        // here, so a 30 February in a file is refused the way a
+                        // typed one is. A year outside four digits does not fit
+                        // the buffer and is skipped like any other unreadable value.
+                        char iso[16];
+                        const int wrote =
+                            std::snprintf(iso, sizeof iso, "%04d-%02d-%02d", y, mo, d);
+                        if (wrote <= 0 || wrote >= static_cast<int>(sizeof iso)) continue;
+                        const auto days = core::date_from_text(iso);
+                        if (!days) continue;
+                        value = core::attr_date(*days);
+                        break;
+                    }
+                    default: value = core::attr_text(feature->GetFieldAsString(entry.index)); break;
+                    }
+                    if (auto st = tx.set_attribute(entry.column, made, value); !st) return st;
+                }
+                return core::ok();
+            };
 
             const OGRGeometry* geometry = feature->GetGeometryRef();
             if (!geometry) continue;
@@ -908,12 +1056,14 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                         co_return err(st.error().code,
                                       "'" + path + "' içindeki " + std::to_string(report.features) +
                                           ". yazı yazılamadı: " + st.error().message);
+                    if (auto st = stamp(made.value()); !st) co_return st.error();
                 } else {
                     auto made = tx.add_point(target, where);
                     if (!made)
                         co_return err(made.error().code,
                                       "'" + path + "' içindeki " + std::to_string(report.features) +
                                           ". öğe okunamadı: " + made.error().message);
+                    if (auto st = stamp(made.value()); !st) co_return st.error();
                 }
                 ++report.entities;
                 continue;
@@ -1030,6 +1180,7 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                                         ? tx.add_circle(target, fit->centre, fit->radius)
                                         : tx.add_arc(target, fit->centre, fit->radius, from, to);
                         if (made) {
+                            if (auto st = stamp(made.value()); !st) co_return st.error();
                             ++report.entities;
                             continue;
                         }
@@ -1078,10 +1229,23 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                 if (report.skipped_reason.empty()) report.skipped_reason = added.error().message;
                 continue;
             }
+            if (auto st = stamp(added.value()); !st) co_return st.error();
             ++report.entities;
         }
 
         if (!open_layer.empty()) tally(open_layer, report.entities - open_mark);
+
+        for (const FieldPlan& entry : plan) {
+            VectorField seen;
+            seen.layer    = layer_name;
+            seen.name     = entry.name;
+            seen.id       = entry.id;
+            seen.type     = entry.type;
+            seen.scale    = entry.scale;
+            seen.sample   = entry.sample;
+            seen.imported = entry.column != core::kNoAttr;
+            report.fields.push_back(std::move(seen));
+        }
     }
 
     if (report.entities == 0)
@@ -1100,11 +1264,23 @@ command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx
                                ". Koordinatlar dönüştürülmedi; AYAR koordinat_sistemi ile "
                                "denetleyin.");
 
-    // model.md R27/R28: attributes belong in typed columns declared from /data,
-    // and the Document has no attribute store yet. Saying so is the honest
-    // answer; dropping them without a word would not be.
-    report.notes.push_back("Öznitelikler bu sürümde okunmadı; belge modeli öznitelik "
-                           "sütunlarını Faz 1'de kazanacak.");
+    // WHAT HAPPENED TO THE TABLE. Fields the file had and this run did not read
+    // are said, by count, with the argument that reads them; fields it did read
+    // are counted too. Dropping a parcel's ada number without a word is the one
+    // thing an import must never do (io.md P11).
+    {
+        std::size_t offered = 0, taken = 0;
+        for (const VectorField& f : report.fields) {
+            ++offered;
+            if (f.imported) ++taken;
+        }
+        if (offered > 0 && taken == 0)
+            report.notes.push_back("Dosyada " + std::to_string(offered) +
+                                   " öznitelik alanı var; sütun olarak okumak için "
+                                   "alanlar=* ya da alanlar=\"ad,ad\" verin.");
+        else if (taken > 0)
+            report.notes.push_back(std::to_string(taken) + " alan sütun olarak okundu.");
+    }
 
     co_return report;
 #endif

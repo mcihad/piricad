@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/panels.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/icons.hpp"
@@ -185,6 +186,18 @@ LayerPanel::LayerPanel(Controller& controller, QWidget* parent)
 
     rows_ = new LayerRowDelegate(this);
     tree_->setItemDelegate(rows_);
+
+    // The filter box, hidden until the header's mark asks for it: forty layers
+    // are found by typing, and a box that was always there took a row from the
+    // list on the days nobody typed.
+    filter_ = new QLineEdit(this);
+    filter_->setObjectName(QStringLiteral("layerFilter"));
+    filter_->setPlaceholderText(tr("Katmanlarda ara…")); // ui-label
+    filter_->setClearButtonEnabled(true);
+    filter_->setAccessibleName(tr("Katman süzgeci"));
+    filter_->setVisible(false);
+    connect(filter_, &QLineEdit::textChanged, this, [this](const QString&) { applyFilter(); });
+    layout->addWidget(filter_);
     layout->addWidget(tree_, 1);
 
     // §7's footer: how many layers there are and how many of them can be edited.
@@ -206,6 +219,41 @@ LayerPanel::LayerPanel(Controller& controller, QWidget* parent)
 
     tree_->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(tree_, &QTreeWidget::customContextMenuRequested, this, &LayerPanel::showContextMenu);
+}
+
+void LayerPanel::addLayerInteractively()
+{
+    bool ok             = false;
+    const QString fresh = QInputDialog::getText(this, tr("Yeni katman"), tr("Katman adı:"),
+                                                QLineEdit::Normal, QString(), &ok);
+    if (ok && !fresh.trimmed().isEmpty())
+        controller_.runLine(QStringLiteral("KATMAN ad=\"%1\"").arg(fresh.trimmed()),
+                            command::Origin::Gui);
+}
+
+void LayerPanel::toggleFilter()
+{
+    const bool show = !filter_->isVisible();
+    filter_->setVisible(show);
+    if (show)
+        filter_->setFocus(Qt::OtherFocusReason);
+    else
+        filter_->clear();
+    applyFilter();
+}
+
+void LayerPanel::applyFilter()
+{
+    const std::string needle = core::turkish_fold_key(
+        filter_->isVisible() ? filter_->text().toStdString() : std::string());
+    for (QTreeWidgetItemIterator it(tree_); *it; ++it) {
+        QTreeWidgetItem* item = *it;
+        if (!item->data(0, Qt::UserRole).isValid()) continue; // a group row follows its children
+        const bool shown =
+            needle.empty() ||
+            core::turkish_fold_key(item->text(0).toStdString()).find(needle) != std::string::npos;
+        item->setHidden(!shown);
+    }
 }
 
 core::LayerId LayerPanel::selectedLayer() const
@@ -504,6 +552,7 @@ void LayerPanel::refresh()
 
     tree_->expandAll();
     tree_->blockSignals(false);
+    if (filter_ != nullptr && filter_->isVisible()) applyFilter();
 
     std::size_t editable = 0;
     for (const auto& l : doc.layers())
@@ -590,14 +639,7 @@ QMenu* LayerPanel::buildContextMenu(QTreeWidgetItem* item)
     QMenu& menu = *owned;
 
     QAction* add = menu.addAction(tr("Yeni katman…"));
-    connect(add, &QAction::triggered, this, [this] {
-        bool ok             = false;
-        const QString fresh = QInputDialog::getText(this, tr("Yeni katman"), tr("Katman adı:"),
-                                                    QLineEdit::Normal, QString(), &ok);
-        if (ok && !fresh.trimmed().isEmpty())
-            controller_.runLine(QStringLiteral("KATMAN ad=\"%1\"").arg(fresh.trimmed()),
-                                command::Origin::Gui);
-    });
+    connect(add, &QAction::triggered, this, &LayerPanel::addLayerInteractively);
 
     if (!name.isEmpty()) {
         menu.addSeparator();

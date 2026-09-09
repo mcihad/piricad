@@ -8,17 +8,25 @@
 #include "kentos_cad/app/tokens.hpp"
 
 #include "kentos_cad/app/controller.hpp"
+#include "kentos_cad/app/datagrid.hpp"
+#include "kentos_cad/app/export_dialog.hpp"
+#include "kentos_cad/app/fields.hpp"
 #include "kentos_cad/app/schema_page.hpp"
 #include "kentos_cad/app/widgets.hpp"
 
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/json.hpp"
+#include "kentos_cad/core/style_library.hpp"
+#include "kentos_cad/core/style_rule.hpp"
 
+#include <QAbstractTableModel>
 #include <QColorDialog>
 #include <QComboBox>
 #include <QDate>
 #include <QDir>
 #include <QEvent>
+#include <QFile>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -26,6 +34,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QLocale>
 #include <QMenu>
 #include <QMessageBox>
 #include <QPainter>
@@ -39,6 +48,7 @@
 #include <QSpinBox>
 #include <QSplitter>
 
+#include <QHeaderView>
 #include <QStackedWidget>
 #include <QStandardPaths>
 #include <QTabBar>
@@ -47,11 +57,13 @@
 
 #include <QVBoxLayout>
 #include <array>
+#include <cmath>
 #include <cstring>
+#include <functional>
+#include <set>
 #include <utility>
 
 #include <algorithm>
-#include <array>
 #include <cstddef>
 #include <string_view>
 
@@ -512,6 +524,133 @@ core::SymbolKind kind_of(PreviewShape shape)
 
 } // namespace
 
+/// The category table's model, `design.md` §8: tick · swatch · value · legend
+/// name · count. It owns nothing — the rows are the designer's — and paints
+/// nothing: the grid does, from the roles this answers.
+class CategoryModel : public QAbstractTableModel
+{
+public:
+    using IconFor = std::function<QIcon(const StyleCategory&)>;
+
+    CategoryModel(QVector<StyleCategory>& rows, IconFor icons, QObject* parent)
+        : QAbstractTableModel(parent), rows_(rows), icons_(std::move(icons))
+    {}
+
+    /// The rows were rebuilt wholesale.
+    void reload()
+    {
+        beginResetModel();
+        endResetModel();
+    }
+
+    /// One row's symbol or count changed — the two columns the designer writes.
+    /// Only those two, on purpose: the tick and the value are the USER's columns,
+    /// and the designer recounts when they change; a notice covering them here
+    /// would make that recount notify itself without end.
+    void rowChanged(int row)
+    {
+        if (row < 0 || row >= rows_.size()) return;
+        emit dataChanged(index(row, 1), index(row, 1));
+        emit dataChanged(index(row, 4), index(row, 4));
+    }
+
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override
+    {
+        return parent.isValid() ? 0 : static_cast<int>(rows_.size());
+    }
+
+    int columnCount(const QModelIndex& parent = QModelIndex()) const override
+    {
+        return parent.isValid() ? 0 : 5;
+    }
+
+    QVariant headerData(int section, Qt::Orientation orientation, int role) const override
+    {
+        if (orientation != Qt::Horizontal) return {};
+        if (role == Qt::TextAlignmentRole)
+            return QVariant(static_cast<int>((section == 4 ? Qt::AlignRight : Qt::AlignLeft) |
+                                             Qt::AlignVCenter));
+        if (role != Qt::DisplayRole) return {};
+        switch (section) {
+        case 1: return tr("SEMBOL");
+        case 2: return tr("DEĞER");
+        case 3: return tr("GÖSTERİM ADI"); // ui-label
+        case 4: return tr("NESNE");
+        default: return QString();
+        }
+    }
+
+    QVariant data(const QModelIndex& index, int role) const override
+    {
+        if (!index.isValid() || index.row() >= rows_.size()) return {};
+        const StyleCategory& row = rows_[index.row()];
+        switch (index.column()) {
+        case 0:
+            if (role == Qt::CheckStateRole)
+                return row.other || row.enabled ? Qt::Checked : Qt::Unchecked;
+            return {};
+        case 1:
+            if (role == Qt::DecorationRole && icons_) return icons_(row);
+            return {};
+        case 2:
+            if (role == Qt::DisplayRole || role == Qt::EditRole) return row.value;
+            if (role == Qt::TextAlignmentRole)
+                return QVariant(
+                    static_cast<int>((row.numeric && !row.other ? Qt::AlignRight : Qt::AlignLeft) |
+                                     Qt::AlignVCenter));
+            return {};
+        case 3:
+            if (role == Qt::DisplayRole || role == Qt::EditRole) return row.label;
+            return {};
+        case 4:
+            if (role == Qt::DisplayRole) return QString::number(row.count);
+            if (role == Qt::TextAlignmentRole)
+                return QVariant(static_cast<int>(Qt::AlignRight | Qt::AlignVCenter));
+            return {};
+        default: return {};
+        }
+    }
+
+    Qt::ItemFlags flags(const QModelIndex& index) const override
+    {
+        if (!index.isValid()) return Qt::NoItemFlags;
+        Qt::ItemFlags base = Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+        const bool other   = rows_[index.row()].other;
+        if (index.column() == 0 && !other) base |= Qt::ItemIsUserCheckable;
+        if (index.column() == 3 || (index.column() == 2 && !other)) base |= Qt::ItemIsEditable;
+        return base;
+    }
+
+    bool setData(const QModelIndex& index, const QVariant& value, int role) override
+    {
+        if (!index.isValid() || index.row() >= rows_.size()) return false;
+        StyleCategory& row = rows_[index.row()];
+        if (index.column() == 0 && role == Qt::CheckStateRole && !row.other) {
+            row.enabled = static_cast<Qt::CheckState>(value.toInt()) == Qt::Checked;
+            emit dataChanged(index, index);
+            return true;
+        }
+        if (role != Qt::EditRole) return false;
+        const QString text = value.toString().trimmed();
+        if (text.isEmpty()) return false;
+        if (index.column() == 2 && !row.other) {
+            row.value = text;
+            emit dataChanged(index, index);
+            return true;
+        }
+        if (index.column() == 3) {
+            row.label = text;
+            emit dataChanged(index, index);
+            return true;
+        }
+        return false;
+    }
+
+private:
+    QVector<StyleCategory>& rows_;
+    IconFor icons_;
+};
+
 StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget* parent)
     : DialogFrame(parent), controller_(controller), layerName_(std::move(layerName))
 {
@@ -566,10 +705,14 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     geometry_->setTabToolTip(1, tr("Sınır, yol ekseni, kanal — çizgiler"));
     geometry_->setTabToolTip(2, tr("Nirengi, poligon, ağaç — noktalar"));
     geometry_->setAccessibleName(tr("Sembolün çizileceği geometri"));
-    geometry_->setCurrentIndex(
-        static_cast<int>(shape_of_layer(controller_.document(),
-                                        controller_.document().find_layer(layerName_.toStdString()))
-                             .value_or(natural_shape(symbol_))));
+    const std::optional<PreviewShape> known = shape_of_layer(
+        controller_.document(), controller_.document().find_layer(layerName_.toStdString()));
+    geometry_->setCurrentIndex(static_cast<int>(known.value_or(natural_shape(symbol_))));
+    // SHOWN ONLY WHEN THE LAYER DOES NOT SAY. A parcel layer is areas and a road
+    // axis layer is lines; asking which of the three to draw is a question the
+    // drawing has answered, and the reference has no such row. An empty layer,
+    // or one holding lines and areas both, still gets asked.
+    geometry_->setVisible(!known.has_value());
     connect(geometry_, &QTabBar::currentChanged, this, [this](int) {
         adopt_geometry_default(symbol_, shape());
         refreshGalleryItems();
@@ -599,6 +742,8 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     preview_->setFixedSize(kSwatchSide, kSwatchSide);
     preview_->setObjectName(QStringLiteral("stylePreviewImage"));
     preview_->setAccessibleName(tr("Katman stili ön izlemesi"));
+    preview_->setToolTip(tr("Bütün sembolün özellikleri — birim, renk, saydamlık — için tıklayın"));
+    preview_->setCursor(Qt::PointingHandCursor);
     preview_->installEventFilter(this);
 
     headerNote_ = new QLabel(previewFrame);
@@ -638,7 +783,15 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     leftColumn->setContentsMargins(0, 0, 0, 0);
     leftColumn->setSpacing(0);
     leftColumn->addLayout(tabRow);
-    leftColumn->addWidget(buildGallery(), 1);
+
+    // THE SHELF OR THE TABLE. A single symbol is chosen FROM the shelf of
+    // published gösterim; a categorized or graduated one is a table of classes,
+    // each with its own symbol edited in the column at the right (design.md §8
+    // draws the categorized state). One pane, two pages, the renderer decides.
+    middle_ = new QStackedWidget(left);
+    middle_->addWidget(buildGallery());
+    middle_->addWidget(buildCategoryPage());
+    leftColumn->addWidget(middle_, 1);
 
     auto* right = new QWidget(this);
     right->setObjectName(QStringLiteral("symbolColumn"));
@@ -667,6 +820,12 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     topRow->addWidget(stack, 1);
     top->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
 
+    // WHOSE SYMBOL THIS IS. `SEÇİLİ SEMBOL — Konut` in the reference: with a
+    // categorized renderer the column edits one class at a time, and a column
+    // that did not say which would be edited blind.
+    symbolCaption_ = new QLabel(right);
+    symbolCaption_->setObjectName(QStringLiteral("groupCaption"));
+    rightLayout->addWidget(symbolCaption_);
     rightLayout->addWidget(top);
 
     // TWO PAGES, one selection. Selecting the symbol shows what belongs to all of
@@ -827,6 +986,17 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
 
     actions->addSeparator();
 
+    // The road to STİLAKTAR. The manual named a `Dosya` menu entry that never
+    // existed; the layer's own properties window is where its style lives, so
+    // this is where it leaves from.
+    QAction* toQgis = actions->addAction(tr("QGIS stiline aktar…"));
+    toQgis->setToolTip(tr("Katmanın sembolojisini QGIS'in okuduğu .qml dosyası olarak yazar"));
+    connect(toQgis, &QAction::triggered, this, [this] {
+        ExportDialog window(controller_, ExportSubject::Style, layerName_, this);
+        window.applyTheme(theme());
+        window.exec();
+    });
+
     QAction* save = actions->addAction(tr("Sembolü kütüphaneye kaydet…"));
     save->setToolTip(tr("Sembolü kendi gösterim paketiniz olarak diske yazar")); // ui-label
     connect(save, &QAction::triggered, this, &StyleDesigner::saveToLibrary);
@@ -869,6 +1039,966 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     refresh();
     selectTopLayer();
     updateHeaderNote();
+    updateSymbolCaption();
+
+    // A layer classified in an earlier session comes back as its classes, not as
+    // one symbol: the package the designer wrote is re-read and the symbols are
+    // taken from the document, which is the truth after an Apply.
+    restoreClassification();
+}
+
+// ------------------------------------------------------------- the renderer ----
+
+namespace {
+
+/// The package's colour notation, `#AARRGGBB`.
+QString hexColour(std::uint32_t rgba)
+{
+    return QStringLiteral("#%1").arg(rgba, 8, 16, QLatin1Char('0'));
+}
+
+/// A string as JSON writes it.
+QString jsonText(const QString& text)
+{
+    QString out = text;
+    out.replace(QLatin1Char('\\'), QStringLiteral("\\\\"));
+    out.replace(QLatin1Char('"'), QStringLiteral("\\\""));
+    out.replace(QLatin1Char('\n'), QLatin1Char(' '));
+    return QLatin1Char('"') + out + QLatin1Char('"');
+}
+
+/// A value quoted for the command line; the parser reads a quoted value whole.
+QString quotedArg(const QString& value)
+{
+    QString out = value;
+    out.replace(QLatin1Char('\\'), QStringLiteral("\\\\"));
+    out.replace(QLatin1Char('"'), QStringLiteral("\\\""));
+    return QLatin1Char('"') + out + QLatin1Char('"');
+}
+
+/// Whether a column holds figures a range can compare.
+bool numericType(core::AttrType type)
+{
+    return type == core::AttrType::Int64 || type == core::AttrType::Length ||
+           type == core::AttrType::Decimal;
+}
+
+/// A class colour from the ramp. Derived from the symbol's own colour, not read
+/// from a table of literals: hues spaced around the wheel, one hue from dark to
+/// light, or greys — `Sınıflandır` hands the classes something to tell apart by
+/// and the designer takes it from there.
+QColor rampColour(int ramp, int i, int n, const QColor& base)
+{
+    // `float` throughout: that is what `QColor::fromHsvF` takes in Qt 6, and a
+    // double here would be converted at the call with a warning on every line.
+    const float t   = n <= 1 ? 0.0F : static_cast<float>(i) / static_cast<float>(n - 1);
+    const float hue = base.hsvHueF() < 0.0F ? 0.58F : base.hsvHueF();
+    switch (ramp) {
+    case 1: return QColor::fromHsvF(hue, 0.55F, 0.35F + 0.6F * t);
+    case 2: return QColor::fromHsvF(0.0F, 0.0F, 0.35F + 0.55F * t);
+    default:
+        return QColor::fromHsvF(
+            std::fmod(hue + static_cast<float>(i) / static_cast<float>(std::max(1, n)), 1.0F), 0.5F,
+            0.82F);
+    }
+}
+
+/// Paints every unlocked layer of `symbol` in `colour`: fills in it, strokes and
+/// glyphs a step darker so the boundary still reads against the fill.
+void recolour(core::Symbol& symbol, const QColor& colour)
+{
+    for (core::SymbolLayer& l : symbol.layers) {
+        if (l.colour_locked) continue;
+        if (core::draws_fill(l.type)) {
+            QColor fill = colour;
+            fill.setAlpha(l.look.fill_rgba != 0 ? qAlpha(l.look.fill_rgba) : 255);
+            l.look.fill_rgba = fill.rgba();
+            l.look.src_fill  = core::Source::Explicit;
+        }
+        if (core::draws_stroke(l.type) || core::draws_marker(l.type)) {
+            QColor ink = colour.darker(135);
+            ink.setAlpha(qAlpha(l.look.rgba) != 0 ? qAlpha(l.look.rgba) : 255);
+            l.look.rgba       = ink.rgba();
+            l.look.src_colour = core::Source::Explicit;
+        }
+    }
+}
+
+/// A raw attribute number as the column prints it — `3 480.00` for a decimal
+/// with two places, `1284` for a whole number.
+QString displayNumber(std::int64_t raw, const core::AttrSpec& spec)
+{
+    core::AttrValue v;
+    v.type    = spec.type;
+    v.present = true;
+    v.number  = raw;
+    v.scale   = spec.scale;
+    return QString::fromStdString(core::attr_display(v, core::DecimalMark::Point));
+}
+
+/// Whether one object's value falls in a class.
+bool classMatches(const StyleCategory& c, const core::AttrValue& v)
+{
+    if (c.other || !v.present) return false;
+    if (c.numeric) {
+        if (!numericType(v.type) && v.type != core::AttrType::Bool &&
+            v.type != core::AttrType::Date)
+            return false;
+        if (c.has_low && v.number < c.low) return false;
+        if (c.has_high && v.number > c.high) return false;
+        return true;
+    }
+    return QString::fromStdString(core::attr_display(v, core::DecimalMark::Point)) == c.value;
+}
+
+} // namespace
+
+QWidget* StyleDesigner::buildCategoryPage()
+{
+    auto* page   = new QWidget(this);
+    auto* column = new QVBoxLayout(page);
+    column->setContentsMargins(0, 8, 0, 0);
+    column->setSpacing(8);
+
+    // THE ONE TABLE, at §8's widths: tick · swatch · value · legend name · count.
+    categoryModel_ = new CategoryModel(
+        categories_,
+        [this](const StyleCategory& c) {
+            return symbol_icon(c.symbol, controller_.document().images(),
+                               controller_.document().dashes(), QSize(58, 17),
+                               palette().color(QPalette::Base).rgba(), shape());
+        },
+        this);
+    categoryGrid_ = new DataGrid(page);
+    categoryGrid_->setModel(categoryModel_);
+    categoryGrid_->setRowNumbers(false);
+    categoryGrid_->setSelectionMode(QAbstractItemView::SingleSelection);
+    categoryGrid_->setEditors([](int) { return as_cell(field_of(FieldKind::Text)); });
+    categoryGrid_->setEditTriggers(QAbstractItemView::DoubleClicked |
+                                   QAbstractItemView::EditKeyPressed);
+    categoryGrid_->setColumnWidth(0, 34);
+    categoryGrid_->setColumnWidth(1, 74);
+    categoryGrid_->setColumnWidth(2, 200);
+    categoryGrid_->setColumnWidth(4, 86);
+    categoryGrid_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
+    categoryGrid_->setAccessibleName(tr("Sınıf tablosu"));
+    connect(categoryGrid_->selectionModel(), &QItemSelectionModel::currentRowChanged, this,
+            [this](const QModelIndex& now, const QModelIndex&) {
+                if (now.isValid()) selectCategory(now.row());
+            });
+    connect(categoryModel_, &QAbstractItemModel::dataChanged, this,
+            [this](const QModelIndex& from, const QModelIndex&, const QList<int>&) {
+                // A class switched off or renamed by hand changes who gets what.
+                if (from.column() == 0 || from.column() == 2) refreshCategoryCounts();
+                if (from.column() == 3 && from.row() == editingCategory_) updateSymbolCaption();
+            });
+    column->addWidget(categoryGrid_, 1);
+
+    // ---- the row under the table, §8: classify · add · remove · remove all ·
+    //      the class count and method for a graduated renderer · advanced ----
+    auto* foot = new QHBoxLayout;
+    foot->setContentsMargins(12, 0, 12, 8);
+    foot->setSpacing(8);
+
+    // Secondaries all: the window's one primary is `Tamam` in the footer.
+    auto* classify = new Button(ButtonRole::Secondary, tr("Sınıflandır"), std::nullopt, page);
+    classify->setToolTip(tr("Sütundaki her değer için bir sınıf kurar; renkleri skaladan verir"));
+    connect(classify, &QPushButton::clicked, this, &StyleDesigner::classify);
+    foot->addWidget(classify);
+
+    auto* add = new Button(ButtonRole::Secondary, tr("Ekle"), std::nullopt, page);
+    add->setToolTip(tr("Elle bir sınıf ekler; değerini tabloda yazın"));
+    connect(add, &QPushButton::clicked, this, &StyleDesigner::addCategory);
+    foot->addWidget(add);
+
+    removeCategory_ = new Button(ButtonRole::Secondary, tr("Sil"), std::nullopt, page);
+    connect(removeCategory_, &QPushButton::clicked, this, &StyleDesigner::removeCategory);
+    foot->addWidget(removeCategory_);
+
+    auto* clearAll = new Button(ButtonRole::Secondary, tr("Tümünü sil"), std::nullopt, page);
+    connect(clearAll, &QPushButton::clicked, this, &StyleDesigner::clearCategories);
+    foot->addWidget(clearAll);
+    foot->addStretch(1);
+
+    graduatedCell_ = new QWidget(page);
+    auto* grad     = new QHBoxLayout(graduatedCell_);
+    grad->setContentsMargins(0, 0, 0, 0);
+    grad->setSpacing(8);
+    auto* countCaption = new QLabel(tr("SINIF"), graduatedCell_);
+    countCaption->setObjectName(QStringLiteral("groupCaption"));
+    grad->addWidget(countCaption);
+    classCount_ = new Field(number_of(2, 20), graduatedCell_);
+    classCount_->setFixedHeight(static_cast<int>(ControlSize::Regular));
+    classCount_->setFixedWidth(64);
+    classCount_->setValue(QStringLiteral("5"));
+    classCount_->setAccessibleName(tr("Sınıf sayısı"));
+    grad->addWidget(classCount_);
+    auto* modeCaption = new QLabel(tr("YÖNTEM"), graduatedCell_);
+    modeCaption->setObjectName(QStringLiteral("groupCaption"));
+    grad->addWidget(modeCaption);
+    classMode_ = new Segment(graduatedCell_);
+    classMode_->addOption(tr("Eşit aralık"), tr("Değer aralığı eşit parçalara bölünür"));
+    classMode_->addOption(tr("Eşit sayı"), tr("Her sınıfa eşit sayıda nesne düşer"));
+    classMode_->setControlSize(ControlSize::Regular);
+    grad->addWidget(classMode_);
+    graduatedCell_->setVisible(false);
+    foot->addWidget(graduatedCell_);
+
+    // Said, not silently absent (§11.8). The `‹diğer›` row already takes every
+    // unclassified object, so nothing is lost while merging waits.
+    auto* merge = new CheckBox(tr("Diğer değerleri birleştir"), page);
+    merge->setEnabled(false);
+    merge->setToolTip(tr("Sınıfları birleştirme Faz 2'de gelecek; ‹diğer› satırı sınıfsız kalan "
+                         "her nesneyi zaten alır"));
+    foot->addWidget(merge);
+
+    auto* advanced = new Button(ButtonRole::Secondary, tr("Gelişmiş"), std::nullopt, page);
+    auto* more     = new QMenu(advanced);
+    more->addAction(tr("Sembol seviyeleri… — Faz 2'de gelecek"))->setEnabled(false);
+    more->addAction(tr("Kayıtlı sembollerle eşleştir — Faz 2'de gelecek"))->setEnabled(false);
+    advanced->setMenuArrow(more);
+    foot->addWidget(advanced);
+
+    column->addLayout(foot);
+    return page;
+}
+
+void StyleDesigner::fillValueColumns()
+{
+    if (renderValue_ == nullptr) return;
+    const QString keep = renderValue_->currentText();
+    const Held quiet(loading_);
+    renderValue_->clear();
+    const core::AttrTable& table = controller_.document().attributes();
+    for (std::size_t c = 0; c < table.columns(); ++c) {
+        const core::AttrColumn* column = table.column(static_cast<core::AttrId>(c));
+        if (column == nullptr) continue;
+        // A graduated renderer classes FIGURES; offering it a text column would
+        // offer a range over words.
+        if (renderer_ == Renderer::Graduated && !numericType(column->spec().type)) continue;
+        // Only the columns this layer carries: a project column or its own.
+        if (!core::attr_applies_to(column->spec(), layerName_.toStdString())) continue;
+        renderValue_->addItem(QString::fromStdString(column->spec().id));
+    }
+    const int back = renderValue_->findText(keep);
+    if (back >= 0) renderValue_->setCurrentIndex(back);
+}
+
+QString StyleDesigner::rendererValueColumn() const
+{
+    return renderValue_ != nullptr ? renderValue_->currentText() : QString();
+}
+
+void StyleDesigner::setRenderer(Renderer kind)
+{
+    // Leaving the single symbol keeps it aside; coming back restores it. A class
+    // being edited is stored first so nothing typed into it is lost.
+    if (renderer_ == Renderer::Single && kind != Renderer::Single) single_ = symbol_;
+    storeEditedCategory();
+
+    const Renderer before = renderer_;
+    renderer_             = kind;
+    editingCategory_      = -1;
+    if (kind == Renderer::Single || before != kind) {
+        categories_.clear();
+        if (!single_.layers.empty()) symbol_ = single_;
+    }
+    {
+        const Held quiet(loading_);
+        renderKind_->setCurrentIndex(static_cast<int>(kind));
+    }
+    fillValueColumns();
+    valueCell_->setVisible(kind != Renderer::Single);
+    rampCell_->setVisible(kind != Renderer::Single);
+    graduatedCell_->setVisible(kind == Renderer::Graduated);
+    middle_->setCurrentIndex(kind == Renderer::Single ? 0 : 1);
+    refreshCategoryGrid();
+    refresh();
+    selectTopLayer();
+    updateSymbolCaption();
+}
+
+void StyleDesigner::classify()
+{
+    const QString column = rendererValueColumn();
+    if (column.isEmpty()) {
+        QMessageBox::information(
+            this, tr("Sınıflandır"),
+            tr("Önce DEĞER için bir sütun seçin. Katmanın sütunu yoksa Öznitelikler "
+               "sayfasında tanımlayın."));
+        return;
+    }
+    const core::Document& doc  = controller_.document();
+    const core::AttrId col     = doc.attributes().find(column.toStdString());
+    const core::LayerId layer  = doc.find_layer(layerName_.toStdString());
+    const core::AttrColumn* at = col == core::kNoAttr ? nullptr : doc.attributes().column(col);
+    if (at == nullptr || layer == core::kNoLayer) return;
+    const core::AttrSpec& spec = at->spec();
+
+    storeEditedCategory();
+    editingCategory_ = -1;
+    if (single_.layers.empty()) single_ = symbol_;
+    const core::Symbol base = single_;
+    galleryCode_.clear();
+    galleryPackage_.clear();
+
+    QVector<StyleCategory> fresh;
+    int leftover = 0;
+
+    if (renderer_ == Renderer::Categorized) {
+        // Distinct values in first-seen order, which is the order of the drawing
+        // and therefore the order the user already knows.
+        for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+            if (!doc.alive(e) || doc.entities().layer[e] != layer) continue;
+            const auto cell = doc.attribute(col, e);
+            if (!cell || !cell.value().present) {
+                ++leftover;
+                continue;
+            }
+            const QString text =
+                QString::fromStdString(core::attr_display(cell.value(), core::DecimalMark::Point));
+            bool seen = false;
+            for (StyleCategory& c : fresh)
+                if (c.value == text) {
+                    ++c.count;
+                    seen = true;
+                    break;
+                }
+            if (seen) continue;
+            StyleCategory c;
+            c.value   = text;
+            c.label   = text;
+            c.count   = 1;
+            c.numeric = numericType(spec.type) || spec.type == core::AttrType::Bool ||
+                        spec.type == core::AttrType::Date;
+            c.low = c.high = cell.value().number;
+            c.has_low = c.has_high = c.numeric;
+            fresh.push_back(c);
+        }
+    } else {
+        // Classes over the figures: equal width, or equal count.
+        std::vector<std::int64_t> numbers;
+        for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+            if (!doc.alive(e) || doc.entities().layer[e] != layer) continue;
+            const auto cell = doc.attribute(col, e);
+            if (!cell || !cell.value().present) {
+                ++leftover;
+                continue;
+            }
+            numbers.push_back(cell.value().number);
+        }
+        if (numbers.size() < 2) {
+            QMessageBox::information(this, tr("Sınıflandır"),
+                                     tr("Derecelendirmek için sütunda en az iki değer olmalı."));
+            return;
+        }
+        std::sort(numbers.begin(), numbers.end());
+        const int wanted      = std::clamp(classCount_->value().toInt(), 2, 20);
+        const bool equalCount = classMode_->current() == 1;
+        const std::int64_t lo = numbers.front();
+        const std::int64_t hi = numbers.back();
+        std::int64_t from     = lo;
+        for (int k = 0; k < wanted && from <= hi; ++k) {
+            std::int64_t to;
+            if (k == wanted - 1) {
+                to = hi;
+            } else if (equalCount) {
+                const std::size_t cut = std::min(
+                    numbers.size() - 1, (numbers.size() * static_cast<std::size_t>(k + 1)) /
+                                            static_cast<std::size_t>(wanted));
+                to = std::max(from, numbers[cut] - 1);
+            } else {
+                to = std::max(from, lo + ((hi - lo) * (k + 1)) / wanted - (k + 1 < wanted ? 1 : 0));
+            }
+            if (to < from) to = from;
+            StyleCategory c;
+            c.numeric  = true;
+            c.has_low  = true;
+            c.has_high = true;
+            c.low      = from;
+            c.high     = to;
+            c.value =
+                QStringLiteral("%1 – %2").arg(displayNumber(from, spec), displayNumber(to, spec));
+            c.label = c.value;
+            for (const std::int64_t n : numbers)
+                if (n >= from && n <= to) ++c.count;
+            fresh.push_back(c);
+            from = to + 1;
+        }
+    }
+
+    // Colours from the ramp, then the row that takes whatever is left.
+    const QColor baseColour =
+        from_rgba(base.primary().fill_rgba != 0 ? base.primary().fill_rgba : base.primary().rgba);
+    for (int i = 0; i < fresh.size(); ++i) {
+        fresh[i].symbol = base;
+        recolour(fresh[i].symbol,
+                 rampColour(ramp_->currentIndex(), i, static_cast<int>(fresh.size()), baseColour));
+    }
+    StyleCategory other;
+    other.other  = true;
+    other.value  = tr("‹diğer›");
+    other.label  = tr("diğer değerler");
+    other.count  = leftover;
+    other.symbol = base;
+    fresh.push_back(other);
+
+    categories_ = std::move(fresh);
+    refreshCategoryGrid();
+    if (!categories_.isEmpty()) {
+        categoryGrid_->setCurrentIndex(categoryModel_->index(0, 2));
+        selectCategory(0);
+    }
+}
+
+void StyleDesigner::addCategory()
+{
+    if (renderer_ == Renderer::Single) return;
+    storeEditedCategory();
+    if (single_.layers.empty()) single_ = symbol_;
+
+    StyleCategory c;
+    c.value  = tr("değer");
+    c.label  = tr("yeni sınıf");
+    c.symbol = single_;
+    if (categories_.isEmpty()) {
+        StyleCategory other;
+        other.other  = true;
+        other.value  = tr("‹diğer›");
+        other.label  = tr("diğer değerler");
+        other.symbol = single_;
+        categories_.push_back(other);
+    }
+    // Before `‹diğer›`, which stays last: it is the rule with no condition and a
+    // rule after it would never be reached.
+    const int at = std::max(0, static_cast<int>(categories_.size()) - 1);
+    categories_.insert(at, c);
+    if (editingCategory_ >= at) ++editingCategory_;
+    refreshCategoryGrid();
+    categoryGrid_->setCurrentIndex(categoryModel_->index(at, 2));
+    selectCategory(at);
+    categoryGrid_->edit(categoryModel_->index(at, 2));
+}
+
+void StyleDesigner::removeCategory()
+{
+    const QModelIndex current = categoryGrid_->currentIndex();
+    if (!current.isValid() || current.row() >= categories_.size()) return;
+    if (categories_[current.row()].other) {
+        QMessageBox::information(
+            this, tr("Sil"), tr("‹diğer› satırı silinemez: sınıfsız kalan her nesneyi o alır."));
+        return;
+    }
+    if (editingCategory_ == current.row()) editingCategory_ = -1;
+    if (editingCategory_ > current.row()) --editingCategory_;
+    categories_.remove(current.row());
+    refreshCategoryGrid();
+    const int next = std::min(current.row(), static_cast<int>(categories_.size()) - 1);
+    if (next >= 0) {
+        categoryGrid_->setCurrentIndex(categoryModel_->index(next, 2));
+        selectCategory(next);
+    }
+}
+
+void StyleDesigner::clearCategories()
+{
+    categories_.clear();
+    editingCategory_ = -1;
+    if (!single_.layers.empty()) symbol_ = single_;
+    refreshCategoryGrid();
+    refresh();
+    selectTopLayer();
+    updateSymbolCaption();
+}
+
+void StyleDesigner::selectCategory(int row)
+{
+    if (row < 0 || row >= categories_.size() || row == editingCategory_) return;
+    storeEditedCategory();
+    editingCategory_ = row;
+    symbol_          = categories_[row].symbol;
+    galleryCode_.clear();
+    galleryPackage_.clear();
+    refresh();
+    selectTopLayer();
+    updateSymbolCaption();
+    if (removeCategory_ != nullptr) removeCategory_->setEnabled(!categories_[row].other);
+}
+
+void StyleDesigner::storeEditedCategory()
+{
+    if (editingCategory_ < 0 || editingCategory_ >= categories_.size()) return;
+    if (categories_[editingCategory_].symbol == symbol_) return;
+    categories_[editingCategory_].symbol = symbol_;
+    if (categoryModel_ != nullptr) categoryModel_->rowChanged(editingCategory_);
+}
+
+void StyleDesigner::refreshCategoryGrid()
+{
+    if (categoryModel_ == nullptr) return;
+    refreshCategoryCounts();
+    categoryModel_->reload();
+    if (removeCategory_ != nullptr) removeCategory_->setEnabled(false);
+}
+
+void StyleDesigner::refreshCategoryCounts()
+{
+    if (categories_.isEmpty() || recounting_) return;
+    const Held once(recounting_);
+    const core::Document& doc = controller_.document();
+    const core::AttrId col    = doc.attributes().find(rendererValueColumn().toStdString());
+    const core::LayerId layer = doc.find_layer(layerName_.toStdString());
+    for (StyleCategory& c : categories_)
+        c.count = 0;
+    if (col == core::kNoAttr || layer == core::kNoLayer) return;
+
+    // Who gets what, in rule order: the first enabled class that matches, else
+    // `‹diğer›` — exactly how `StyleCatalog::classify` will read the package.
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+        if (!doc.alive(e) || doc.entities().layer[e] != layer) continue;
+        const auto cell      = doc.attribute(col, e);
+        StyleCategory* taker = nullptr;
+        if (cell) {
+            for (StyleCategory& c : categories_) {
+                if (c.other || !c.enabled) continue;
+                if (classMatches(c, cell.value())) {
+                    taker = &c;
+                    break;
+                }
+            }
+        }
+        if (taker == nullptr)
+            for (StyleCategory& c : categories_)
+                if (c.other) taker = &c;
+        if (taker != nullptr) ++taker->count;
+    }
+    if (categoryModel_ != nullptr)
+        for (int r = 0; r < categories_.size(); ++r)
+            categoryModel_->rowChanged(r);
+}
+
+void StyleDesigner::updateSymbolCaption()
+{
+    if (symbolCaption_ == nullptr) return;
+    QString whose = layerName_;
+    if (renderer_ != Renderer::Single)
+        whose = editingCategory_ >= 0 && editingCategory_ < categories_.size()
+                    ? categories_[editingCategory_].label
+                    : tr("sınıf seçilmedi");
+    symbolCaption_->setText(tr("SEÇİLİ SEMBOL — %1").arg(whose)); // ui-label
+}
+
+QString StyleDesigner::classificationPackagePath() const
+{
+    // The application's own settings directory, beside the user's saved symbols
+    // (`saveToLibrary`): a classification belongs to the person who made it and
+    // travels with them. Named by the layer, so re-opening the window finds it.
+    const QString root = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    if (root.isEmpty()) return {};
+    QString slug = QLocale(QLocale::Turkish).toLower(layerName_);
+    slug.replace(QRegularExpression(QStringLiteral("[^a-z0-9]+")), QStringLiteral("-"));
+    return QDir(root).filePath(
+        QStringLiteral("stiller/siniflar/%1-%2.json").arg(slug).arg(qHash(layerName_), 0, 16));
+}
+
+QString StyleDesigner::categoryPackageJson() const
+{
+    const core::Document& doc = controller_.document();
+    const QString column      = rendererValueColumn();
+
+    // One symbol layer as the package vocabulary states it (style_rule.cpp's
+    // `kKeyLayer*`). A picture layer is skipped: the bytes live in the document
+    // and a user package carries no images (CLAUDE.md 3.5 keeps them data).
+    const auto layerJson = [&doc](const core::SymbolLayer& sl) -> QString {
+        if (sl.image != core::kNoImage) return {};
+        QStringList parts;
+        parts << QStringLiteral("\"tip\": %1")
+                     .arg(jsonText(QString::fromUtf8(core::symbol_layer_type_name(sl.type))));
+        parts << QStringLiteral("\"renk\": %1").arg(jsonText(hexColour(sl.look.rgba)));
+        parts << QStringLiteral("\"kalinlik\": %1").arg(sl.look.width_um);
+        if (sl.look.fill_rgba != 0)
+            parts
+                << QStringLiteral("\"dolgu_renk\": %1").arg(jsonText(hexColour(sl.look.fill_rgba)));
+        parts << QStringLiteral("\"sekil\": %1")
+                     .arg(jsonText(QString::fromUtf8(core::marker_shape_name(sl.shape))));
+        parts << QStringLiteral("\"yerlesim\": %1")
+                     .arg(jsonText(QString::fromUtf8(core::marker_placement_name(sl.placement))));
+        parts << QStringLiteral("\"birim\": %1")
+                     .arg(jsonText(QString::fromUtf8(core::unit_name(sl.size.unit))));
+        parts << QStringLiteral("\"boyut\": %1").arg(sl.size.value);
+        parts << QStringLiteral("\"aralik\": %1").arg(sl.interval.value);
+        parts << QStringLiteral("\"aralik_y\": %1").arg(sl.spacing_y.value);
+        parts << QStringLiteral("\"kaydirma\": %1").arg(sl.offset.value);
+        parts << QStringLiteral("\"faz\": %1").arg(sl.phase.value);
+        parts << QStringLiteral("\"aci\": %1").arg(sl.angle_udeg);
+        parts << QStringLiteral("\"renk_kilidi\": %1")
+                     .arg(sl.colour_locked ? QStringLiteral("true") : QStringLiteral("false"));
+        if (!sl.text.empty())
+            parts << QStringLiteral("\"yazi\": %1").arg(jsonText(QString::fromStdString(sl.text)));
+        if (sl.look.dash != 0 && doc.dashes().contains(sl.look.dash)) {
+            const core::DashPattern& pattern = doc.dashes().at(sl.look.dash);
+            QStringList lengths;
+            for (std::uint8_t k = 0; k < pattern.count; ++k)
+                lengths << QString::number(pattern.lengths[k] / 100.0, 'f', 2);
+            if (!lengths.isEmpty())
+                parts << QStringLiteral("\"desen\": [%1]").arg(lengths.join(QStringLiteral(", ")));
+        }
+        return QStringLiteral("        { %1 }").arg(parts.join(QStringLiteral(", ")));
+    };
+
+    QStringList styles;
+    QStringList rules;
+    int otherIndex = -1;
+    for (int i = 0; i < categories_.size(); ++i) {
+        const StyleCategory& c = categories_[i];
+        QStringList layers;
+        for (const core::SymbolLayer& sl : c.symbol.layers) {
+            if (!sl.enabled) continue;
+            const QString one = layerJson(sl);
+            if (!one.isEmpty()) layers << one;
+        }
+        styles << QStringLiteral("    {\n      \"id\": \"s%1\",\n      \"ad\": %2,\n"
+                                 "      \"bolum\": [\"KULLANICI\", \"SINIFLAR\"],\n"
+                                 "      \"kaynak\": \"Stil tasarımcısı\",\n"
+                                 "      \"katmanlar\": [\n%3\n      ]\n    }")
+                      .arg(i)
+                      .arg(jsonText(c.label), layers.join(QStringLiteral(",\n")));
+        if (c.other) {
+            otherIndex = i;
+            continue;
+        }
+        if (!c.enabled) continue;
+        QString condition;
+        if (c.numeric)
+            condition =
+                QStringLiteral("{ \"alan\": %1, \"aralik\": { \"en_az\": %2, \"en_cok\": %3 } }")
+                    .arg(jsonText(column))
+                    .arg(c.low)
+                    .arg(c.high);
+        else
+            condition = QStringLiteral("{ \"alan\": %1, \"esittir\": %2 }")
+                            .arg(jsonText(column), jsonText(c.value));
+        rules << QStringLiteral("    { \"id\": \"k%1\", \"stil\": \"s%1\", \"kosullar\": [ %2 ] }")
+                     .arg(i)
+                     .arg(condition);
+    }
+    // THE RULE WITH NO CONDITION, LAST: everything the classes did not take. The
+    // command refuses an unclassified object rather than drawing it grey, and
+    // this row is what keeps that refusal from ever being reached.
+    if (otherIndex >= 0)
+        rules << QStringLiteral("    { \"id\": \"k-diger\", \"stil\": \"s%1\", \"kosullar\": [] }")
+                     .arg(otherIndex);
+
+    return QStringLiteral("{\n"
+                          "  \"id\": \"sinif-%1\",\n"
+                          "  \"package_version\": \"1.0.0\",\n"
+                          "  \"source\": %2,\n"
+                          "  \"published\": \"%3\",\n"
+                          "  \"licence\": \"kullanıcı\",\n"
+                          "  \"aciklama\": %4,\n"
+                          "  \"stiller\": [\n%5\n  ],\n"
+                          "  \"kurallar\": [\n%6\n  ]\n"
+                          "}\n")
+        .arg(QString::number(qHash(layerName_), 16),
+             jsonText(tr("Kullanıcı tanımlı sınıflandırma — %1 · %2").arg(layerName_, column)),
+             QDate::currentDate().toString(Qt::ISODate),
+             jsonText(QStringLiteral("simgeleyici=%1;sutun=%2")
+                          .arg(renderer_ == Renderer::Graduated ? QStringLiteral("derece")
+                                                                : QStringLiteral("kategori"),
+                               column)),
+             styles.join(QStringLiteral(",\n")), rules.join(QStringLiteral(",\n")));
+}
+
+bool StyleDesigner::writeClassificationPackage(QString* error) const
+{
+    const QString path = classificationPackagePath();
+    if (path.isEmpty()) {
+        if (error) *error = tr("Uygulama ayar dizini bulunamadı.");
+        return false;
+    }
+    if (!QDir().mkpath(QFileInfo(path).absolutePath())) {
+        if (error) *error = tr("Dizin oluşturulamadı: %1").arg(QFileInfo(path).absolutePath());
+        return false;
+    }
+    const QByteArray bytes = categoryPackageJson().toUtf8();
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size() || !file.commit()) {
+        if (error) *error = tr("Paket yazılamadı: %1").arg(path);
+        return false;
+    }
+    return true;
+}
+
+bool StyleDesigner::applyClassification()
+{
+    storeEditedCategory();
+    if (categories_.isEmpty()) {
+        QMessageBox::information(this, tr("Simgeleyici"),
+                                 tr("Önce Sınıflandır ile sınıfları kurun ya da Ekle ile bir sınıf "
+                                    "yazın; uygulanacak sınıf yok."));
+        return false;
+    }
+    QString error;
+    if (!writeClassificationPackage(&error)) {
+        QMessageBox::warning(this, tr("Stil uygulanamadı"), error);
+        return false;
+    }
+
+    // ONE LINE. The package carries every class and its rule; the command reads
+    // each object's columns against those rules and writes the style column —
+    // exactly what a script that named the same package would get (Article 1.2,
+    // model.md R14).
+    const auto applied = controller_.runLineResult(
+        QStringLiteral("STİL katman=%1 paket=%2")
+            .arg(quotedArg(layerName_), quotedArg(classificationPackagePath())),
+        command::Origin::Gui);
+    if (!applied) {
+        QMessageBox::warning(this, tr("Stil uygulanamadı"),
+                             QString::fromStdString(applied.error().message));
+        return false;
+    }
+    refreshCategoryCounts();
+    return true;
+}
+
+bool StyleDesigner::restoreClassification()
+{
+    const QString path = classificationPackagePath();
+    if (path.isEmpty() || !QFile::exists(path)) return false;
+
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) return false;
+    const QByteArray bytes = file.readAll();
+    const auto parsed      = core::Json::parse(
+        std::string_view(bytes.constData(), static_cast<std::size_t>(bytes.size())));
+    if (!parsed) return false;
+    auto catalog = core::StyleCatalog::from_json(parsed.value());
+    if (!catalog) return false;
+
+    // What the package says about itself: which renderer, which column.
+    QString column;
+    Renderer kind = Renderer::Categorized;
+    if (const core::Json* about = parsed.value().find("aciklama"); about != nullptr) {
+        const QString text = QString::fromStdString(about->as_string());
+        for (const QString& part : text.split(QLatin1Char(';'))) {
+            if (part.startsWith(QLatin1String("sutun="))) column = part.mid(6);
+            if (part == QLatin1String("simgeleyici=derece")) kind = Renderer::Graduated;
+        }
+    }
+    const core::Document& doc  = controller_.document();
+    const core::AttrId col     = doc.attributes().find(column.toStdString());
+    const core::LayerId layer  = doc.find_layer(layerName_.toStdString());
+    const core::AttrColumn* at = col == core::kNoAttr ? nullptr : doc.attributes().column(col);
+    if (at == nullptr || layer == core::kNoLayer) return false;
+
+    // The symbols come from the DOCUMENT where an object carries them — that is
+    // the truth after an Apply — and from the package row only for a class no
+    // object matches today.
+    const auto fromDocument = [&](const StyleCategory& c) -> std::optional<core::Symbol> {
+        for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+            if (!doc.alive(e) || doc.entities().layer[e] != layer) continue;
+            const auto cell = doc.attribute(col, e);
+            if (!cell || !classMatches(c, cell.value())) continue;
+            const core::StyleId style = doc.entities().style[e];
+            if (style == core::kByLayerStyle) continue;
+            return doc.styles().symbol_at(style);
+        }
+        return std::nullopt;
+    };
+
+    QVector<StyleCategory> restored;
+    for (const core::StyleRule& rule : catalog.value().rules()) {
+        const auto entry = catalog.value().entry(rule.entry);
+        if (!entry) continue;
+        StyleCategory c;
+        c.label = QString::fromStdString(entry.value()->label);
+        if (rule.conditions.empty()) {
+            c.other = true;
+            c.value = tr("‹diğer›");
+        } else {
+            const core::StyleCondition& cond = rule.conditions.front();
+            if (cond.test == core::StyleCondition::Test::Range) {
+                c.numeric  = true;
+                c.has_low  = cond.has_low;
+                c.has_high = cond.has_high;
+                c.low      = cond.low;
+                c.high     = cond.high;
+                c.value    = c.low == c.high
+                                 ? displayNumber(c.low, at->spec())
+                                 : QStringLiteral("%1 – %2").arg(displayNumber(c.low, at->spec()),
+                                                                 displayNumber(c.high, at->spec()));
+            } else if (!cond.values.empty()) {
+                c.value = QString::fromStdString(cond.values.front());
+            }
+        }
+        if (auto carried = fromDocument(c); carried.has_value())
+            c.symbol = std::move(carried.value());
+        else
+            c.symbol = core::symbol_of_entry(*entry.value(),
+                                             [](const std::string&) { return core::kNoImage; });
+        restored.push_back(std::move(c));
+    }
+    if (restored.isEmpty()) return false;
+
+    single_          = original_;
+    renderer_        = kind;
+    editingCategory_ = -1;
+    categories_      = std::move(restored);
+    {
+        const Held quiet(loading_);
+        renderKind_->setCurrentIndex(static_cast<int>(kind));
+    }
+    fillValueColumns();
+    {
+        const Held quiet(loading_);
+        renderValue_->setCurrentText(column);
+    }
+    valueCell_->setVisible(true);
+    rampCell_->setVisible(true);
+    graduatedCell_->setVisible(kind == Renderer::Graduated);
+    middle_->setCurrentIndex(1);
+    refreshCategoryGrid();
+    categoryGrid_->setCurrentIndex(categoryModel_->index(0, 2));
+    selectCategory(0);
+    return true;
+}
+
+// ---------------------------------------------- data-defined properties ----
+
+void StyleDesigner::bindProperty(core::SymbolProperty what, QToolButton* button)
+{
+    const int i = currentLayer();
+    if (i < 0) return;
+    core::SymbolLayer& sl = symbol_.layers[at(i)];
+
+    QString bound;
+    for (const core::SymbolBinding& b : sl.bindings)
+        if (b.what == what) bound = QString::fromStdString(b.field);
+
+    // Which columns can drive this property: a colour takes a number or a text
+    // (`#RRGGBB`), a measure takes a figure, a text takes anything.
+    const auto suits = [what](core::AttrType type) {
+        switch (what) {
+        case core::SymbolProperty::Text: return true;
+        case core::SymbolProperty::Colour:
+        case core::SymbolProperty::Fill:
+            return type == core::AttrType::Int64 || type == core::AttrType::Text ||
+                   type == core::AttrType::CodeRef;
+        default: return numericType(type);
+        }
+    };
+
+    QMenu menu(this);
+    QAction* head = menu.addAction(tr("Sütundan al"));
+    head->setEnabled(false);
+    const core::AttrTable& table = controller_.document().attributes();
+    QVector<QAction*> choices;
+    for (std::size_t c = 0; c < table.columns(); ++c) {
+        const core::AttrColumn* column = table.column(static_cast<core::AttrId>(c));
+        if (column == nullptr || !suits(column->spec().type)) continue;
+        if (!core::attr_applies_to(column->spec(), layerName_.toStdString())) continue;
+        const QString id = QString::fromStdString(column->spec().id);
+        QAction* choice  = menu.addAction(id);
+        choice->setCheckable(true);
+        choice->setChecked(id == bound);
+        choice->setData(static_cast<int>(c));
+        choices.push_back(choice);
+    }
+    if (choices.isEmpty()) {
+        QAction* none = menu.addAction(tr("Uygun sütun yok — Öznitelikler sayfasında tanımlayın"));
+        none->setEnabled(false);
+    }
+    menu.addSeparator();
+    QAction* clear = menu.addAction(tr("Bağı kaldır"));
+    clear->setEnabled(!bound.isEmpty());
+
+    QAction* picked = menu.exec(button->mapToGlobal(QPoint(0, button->height())));
+    if (picked == nullptr || picked == head) return;
+
+    galleryCode_.clear();
+    galleryPackage_.clear();
+    std::erase_if(sl.bindings, [what](const core::SymbolBinding& b) { return b.what == what; });
+    if (picked != clear) {
+        const core::AttrColumn* column =
+            table.column(static_cast<core::AttrId>(picked->data().toInt()));
+        if (column != nullptr) {
+            core::SymbolBinding b;
+            b.field = column->spec().id;
+            b.what  = what;
+            b.type  = column->spec().type;
+            sl.bindings.push_back(std::move(b));
+            // A text taken from a column is not also a fixed word.
+            if (what == core::SymbolProperty::Text) sl.text.clear();
+        }
+    }
+    refresh();
+}
+
+void StyleDesigner::refreshBindingMarks()
+{
+    if (bindingMarks_.empty()) return;
+    const int i     = currentLayer();
+    const Tokens& t = theme() == ThemeMode::Dark ? darkTokens() : lightTokens();
+
+    const auto editorOf = [this](core::SymbolProperty what) -> QWidget* {
+        switch (what) {
+        case core::SymbolProperty::Colour: return stroke_;
+        case core::SymbolProperty::Fill: return fill_;
+        case core::SymbolProperty::Width: return width_;
+        case core::SymbolProperty::Size: return size_;
+        case core::SymbolProperty::Angle: return angle_;
+        case core::SymbolProperty::Opacity: return opacity_;
+        case core::SymbolProperty::Text: return text_;
+        }
+        return nullptr;
+    };
+
+    for (auto& [what, mark] : bindingMarks_) {
+        QString field;
+        if (i >= 0)
+            for (const core::SymbolBinding& b : symbol_.layers[at(i)].bindings)
+                if (b.what == what) field = QString::fromStdString(b.field);
+        const bool bound = !field.isEmpty();
+        mark->setProperty("bound", bound);
+        mark->style()->unpolish(mark);
+        mark->style()->polish(mark);
+        mark->setIcon(icon(Glyph::DataObject, bound ? t.accentHi : t.textFaint, t.accent, 16));
+        mark->setToolTip(
+            bound
+                ? tr("Sütundan alınıyor: %1 — değiştirmek ya da kaldırmak için tıklayın").arg(field)
+                : tr("Bu özelliği bir sütundan al"));
+        // A driven property is not typed: the column decides, and a box that
+        // still accepted a value would accept a value nothing reads.
+        if (QWidget* editor = editorOf(what); editor != nullptr) editor->setEnabled(!bound);
+    }
+}
+
+QStringList StyleDesigner::probeRenderer(const QString& column)
+{
+    QStringList out;
+    setRenderer(Renderer::Categorized);
+    {
+        const Held quiet(loading_);
+        renderValue_->setCurrentText(column);
+    }
+    classify();
+    for (const StyleCategory& c : categories_)
+        out << QStringLiteral("%1 · %2 nesne%3")
+                   .arg(c.label)
+                   .arg(c.count)
+                   .arg(c.other ? QStringLiteral(" · diğer") : QString());
+    out << QStringLiteral("paket: %1").arg(classificationPackagePath());
+    out << QStringLiteral("uygula: %1")
+               .arg(applyToDocument() ? QStringLiteral("tamam") : QStringLiteral("olmadı"));
+
+    std::set<core::StyleId> styles;
+    const core::Document& doc = controller_.document();
+    const core::LayerId layer = doc.find_layer(layerName_.toStdString());
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+        if (doc.alive(e) && doc.entities().layer[e] == layer)
+            styles.insert(doc.entities().style[e]);
+    out << QStringLiteral("katmanda %1 farklı stil").arg(styles.size());
+    return out;
 }
 
 void StyleDesigner::applyTheme(ThemeMode mode)
@@ -881,6 +2011,17 @@ void StyleDesigner::applyTheme(ThemeMode mode)
     // again when they change — a dark lattice under a light dialog is exactly the
     // kind of leftover a theme switch is meant not to produce.
     if (preview_) updatePreview();
+
+    // Every drawn mark re-tints with the theme; each carries its glyph in a
+    // property, which keeps this from being a second list of buttons.
+    const Tokens& t = mode == ThemeMode::Dark ? darkTokens() : lightTokens();
+    for (QToolButton* b : findChildren<QToolButton*>()) {
+        const QVariant glyph = b->property("glyph");
+        if (glyph.isValid())
+            b->setIcon(icon(static_cast<Glyph>(glyph.toInt()), t.textDim, t.accent, 16));
+    }
+    if (categoryGrid_ != nullptr) categoryGrid_->applyTheme(mode);
+    refreshBindingMarks();
 }
 
 void StyleDesigner::updateHeaderNote()
@@ -940,33 +2081,43 @@ QWidget* StyleDesigner::buildRendererRow()
         return cell;
     };
 
-    renderKind_ = new QComboBox(bar);
+    // QGIS's renderer list, cut to what the model can state (style_rule.hpp:
+    // Equals, OneOf, Range, Present — and no fifth). Each is a catalogue package
+    // of rules and ONE `STİL katman= paket=` line; the rule-based renderer with
+    // free expressions is the evaluator CLAUDE.md 5.11 forbids, and says so.
+    renderKind_ = new ComboBox(bar);
     renderKind_->addItem(tr("Tek Sembol"));
     renderKind_->addItem(tr("Kategorize Edilmiş"));
-    renderKind_->addItem(tr("Aralıklı"));
+    renderKind_->addItem(tr("Derecelendirilmiş"));
+    renderKind_->addItem(tr("Kural Tabanlı"));
     renderKind_->setMinimumWidth(190);
+    renderKind_->setAccessibleName(tr("Simgeleyici"));
     connect(renderKind_, &QComboBox::currentIndexChanged, this, [this](int index) {
-        if (index == 0) return;
-        // §11.8: say which phase, do not pretend. A categorised renderer needs a
-        // per-value symbol column in the document, which is a model change and
-        // not a widget.
-        QMessageBox::information(
-            this, tr("Simgeleyici"),
-            tr("Kategorize ve aralıklı simgeleyiciler Faz 2'de gelecek: her değere kendi "
-               "sembolünü veren bir sütun, belgede tanımlanmayı bekliyor. Bugün bir katman "
-               "tek sembol çizer; değere göre ayırmak için katmanı bölün ya da ETİKET ile "
-               "yazın."));
-        renderKind_->setCurrentIndex(0);
+        if (loading_) return;
+        if (index == 3) {
+            QMessageBox::information(
+                this, tr("Simgeleyici"),
+                tr("Kural tabanlı simgeleyici Faz 2'de gelecek. Bir kural tek bir alan "
+                   "üzerinde tek sınamadır — eşitlik, liste, aralık, var — ve serbest bir "
+                   "ifade dili bu programda yoktur. Bugün değere göre Kategorize Edilmiş, "
+                   "sayıya göre Derecelendirilmiş simgeleyiciler var."));
+            const Held quiet(loading_);
+            renderKind_->setCurrentIndex(static_cast<int>(renderer_));
+            return;
+        }
+        setRenderer(static_cast<Renderer>(index));
     });
     field(tr("SİMGELEYİCİ"), renderKind_);
 
-    renderValue_ = new QComboBox(bar);
+    renderValue_ = new ComboBox(bar);
     renderValue_->setMinimumWidth(190);
-    for (std::size_t c = 0; c < controller_.document().attributes().columns(); ++c) {
-        const core::AttrColumn* column =
-            controller_.document().attributes().column(static_cast<core::AttrId>(c));
-        if (column) renderValue_->addItem(QString::fromStdString(column->spec().id));
-    }
+    renderValue_->setAccessibleName(tr("Sınıflandırma sütunu"));
+    fillValueColumns();
+    connect(renderValue_, &QComboBox::currentIndexChanged, this, [this](int) {
+        if (loading_ || renderer_ == Renderer::Single) return;
+        // A new column means new classes; the old ones described another column.
+        if (!categories_.isEmpty()) clearCategories();
+    });
 
     // HIDDEN, not shown disabled with an em dash in it. A control that is present
     // but does nothing is worse than one that is absent: the reader spends the
@@ -974,6 +2125,30 @@ QWidget* StyleDesigner::buildRendererRow()
     // no value column" — is already said by the renderer beside it.
     valueCell_ = field(tr("DEĞER"), renderValue_);
     valueCell_->setVisible(false);
+
+    // The colours `Sınıflandır` hands the classes, derived from the symbol's own
+    // colour rather than from a table of literals: distinct hues around the
+    // wheel, one hue from dark to light, or greys.
+    ramp_ = new ComboBox(bar);
+    ramp_->addItem(tr("Ayrık renkler"));
+    ramp_->addItem(tr("Tek renk açılımı"));
+    ramp_->addItem(tr("Gri tonlar"));
+    // A ramp is a picture before it is a name: eight steps of each, drawn into
+    // the item, so the list is read the way the reference draws it.
+    ramp_->setIconSize(QSize(56, 12));
+    for (int k = 0; k < ramp_->count(); ++k) {
+        QPixmap strip(56, 12);
+        strip.fill(Qt::transparent);
+        QPainter sp(&strip);
+        for (int i = 0; i < 8; ++i)
+            sp.fillRect(i * 7, 0, 7, 12, rampColour(k, i, 8, palette().color(QPalette::Highlight)));
+        sp.end();
+        ramp_->setItemIcon(k, QIcon(strip));
+    }
+    ramp_->setMinimumWidth(160);
+    ramp_->setAccessibleName(tr("Renk skalası"));
+    rampCell_ = field(tr("RENK SKALASI"), ramp_);
+    rampCell_->setVisible(false);
 
     row->addStretch(1);
 
@@ -1097,19 +2272,16 @@ QWidget* StyleDesigner::buildGallery()
     galleryCaption->setObjectName(QStringLiteral("groupCaption"));
     layout->addWidget(galleryCaption);
 
-    groups_ = new QTreeWidget(box);
-    groups_->setObjectName(QStringLiteral("designerList"));
-    groups_->setHeaderHidden(true);
-    groups_->setUniformRowHeights(true);
-
-    // A WHOLE NUMBER OF ROWS. The box was 132 px against a row of about 36, so it
-    // ended on a half-drawn annex name — which reads as a rendering fault rather
-    // than as a list that scrolls.
-    const int row_px = groups_->fontMetrics().height() + 14;
-    groups_->setMinimumHeight(row_px * 4 + 4);
-    groups_->setMaximumHeight(row_px * 6 + 4);
-    connect(groups_, &QTreeWidget::currentItemChanged, this,
-            [this](QTreeWidgetItem*, QTreeWidgetItem*) { refreshGalleryItems(); });
+    // THE DRAWER IS A LIST BESIDE THE SEARCH, not a tree band above a grid of
+    // tiles. The tree took a third of the column to show five annex names, and
+    // the tiles under it wrapped every published name into three or four lines
+    // of capitals — a wall nobody could scan. The same shelf as rows: one
+    // gösterim per 30 px line, its real swatch at the left and its whole name
+    // beside it, in the table language every other window here speaks (§9).
+    groups_ = new ComboBox(box);
+    groups_->setAccessibleName(tr("Gösterim grubu")); // ui-label
+    groups_->setFixedWidth(280);
+    connect(groups_, &QComboBox::currentIndexChanged, this, [this](int) { refreshGalleryItems(); });
 
     search_ = new QLineEdit(box);
     search_->setObjectName(QStringLiteral("designerSearch"));
@@ -1120,28 +2292,14 @@ QWidget* StyleDesigner::buildGallery()
 
     gallery_ = new QListWidget(box);
     gallery_->setObjectName(QStringLiteral("designerGallery"));
-    gallery_->setViewMode(QListView::IconMode);
-    gallery_->setIconSize(QSize(56, 40));
-    // WIDE ENOUGH FOR TWO LINES of a published name, TALL ENOUGH FOR FOUR.
-    //
-    // At 88 px the grid elided every label to its first word and a drawer of
-    // water gösterims read as five rows of `İÇME VE …` — five different symbols
-    // the list said were the same thing. 118 px fixed the width; the height was
-    // still three lines, so the names that actually need the room were the ones
-    // still losing it.
-    //
-    // Four lines is measured, not guessed. Over the 467 published styles the
-    // median name is 20 characters, the 90th percentile 40 and the 95th 48 —
-    // three lines covers 95% and four covers all but a handful, of which the
-    // longest is `KATI ATIK TESİSLERİ ALANI (BOŞALTMA, BERTARAF, İŞLEME,
-    // TRANSFER VE DEPOLAMA)` at 76. Sizing every cell for THAT would waste a
-    // third of the grid on the median row, so the handful keep their tooltip.
-    gallery_->setGridSize(QSize(118, 128));
-    gallery_->setResizeMode(QListView::Adjust);
-    gallery_->setMovement(QListView::Static);
-    gallery_->setWordWrap(true);
-    gallery_->setSpacing(4);
-    gallery_->setAccessibleName(tr("Hazır gösterim galerisi")); // ui-label
+    gallery_->setViewMode(QListView::ListMode);
+    gallery_->setIconSize(QSize(44, 26));
+    gallery_->setUniformItemSizes(true);
+    gallery_->setAlternatingRowColors(true);
+    gallery_->setWordWrap(false);
+    gallery_->setSpacing(0);
+    gallery_->setMouseTracking(true);
+    gallery_->setAccessibleName(tr("Hazır gösterim listesi")); // ui-label
     connect(gallery_, &QListWidget::itemDoubleClicked, this,
             [this](QListWidgetItem*) { applyGalleryPick(); });
 
@@ -1177,9 +2335,13 @@ QWidget* StyleDesigner::buildGallery()
     // The search goes ABOVE the tree it filters. Between the tree and the
     // thumbnails it read as belonging to neither, and when the box was starved
     // for height it was the row that overlapped its neighbours.
-    layout->addWidget(search_);
-    layout->addWidget(groups_, 1);
-    layout->addWidget(gallery_, 3);
+    auto* filterRow = new QHBoxLayout;
+    filterRow->setContentsMargins(0, 0, 0, 0);
+    filterRow->setSpacing(8);
+    filterRow->addWidget(groups_);
+    filterRow->addWidget(search_, 1);
+    layout->addLayout(filterRow);
+    layout->addWidget(gallery_, 1);
     layout->addWidget(galleryNote_);
     layout->addWidget(provenance_);
 
@@ -1198,31 +2360,24 @@ void StyleDesigner::refreshGalleryTree()
 {
     const core::StyleLibrary& shelf = controller_.bus().style_library();
 
+    const QSignalBlocker quiet(groups_);
     groups_->clear();
+    groups_->addItem(tr("Tümü"), QStringList{});
 
-    auto* all = new QTreeWidgetItem(groups_);
-    all->setText(0, tr("Tümü"));
-    all->setData(0, Qt::UserRole, QStringList{});
-
-    // The regulation's own tree, two levels deep. Four hundred rows over five
-    // annexes is not a package big enough to need lazy expansion, and a tree that
-    // is all there is a tree you can search by eye.
+    // The regulation's own tree, two levels deep, flattened into the list with
+    // the sections indented under their annex. Four hundred rows over five
+    // annexes is not a package big enough to need more than that.
     const std::vector<std::string> root;
     for (const std::string& annex : shelf.children(root)) {
-        auto* node = new QTreeWidgetItem(groups_);
-        node->setText(0, QString::fromStdString(annex));
-        node->setData(0, Qt::UserRole, QStringList{QString::fromStdString(annex)});
+        groups_->addItem(QString::fromStdString(annex), QStringList{QString::fromStdString(annex)});
 
         const std::vector<std::string> level{annex};
-        for (const std::string& section : shelf.children(level)) {
-            auto* leaf = new QTreeWidgetItem(node);
-            leaf->setText(0, QString::fromStdString(section));
-            leaf->setData(
-                0, Qt::UserRole,
+        for (const std::string& section : shelf.children(level))
+            groups_->addItem(
+                QStringLiteral("    %1").arg(QString::fromStdString(section)),
                 QStringList{QString::fromStdString(annex), QString::fromStdString(section)});
-        }
     }
-    groups_->setCurrentItem(all);
+    groups_->setCurrentIndex(0);
 }
 
 void StyleDesigner::fillTypeChoices(core::SymbolLayerType current)
@@ -1297,8 +2452,8 @@ void StyleDesigner::refreshGalleryItems()
 
     if (!needle.isEmpty()) {
         rows = shelf.search(needle.toStdString());
-    } else if (QTreeWidgetItem* item = groups_->currentItem()) {
-        const QStringList path = item->data(0, Qt::UserRole).toStringList();
+    } else {
+        const QStringList path = groups_->currentData().toStringList();
         if (path.isEmpty()) {
             rows = shelf.of_kind(kind);
         } else {
@@ -1332,12 +2487,11 @@ void StyleDesigner::refreshGalleryItems()
 
         auto* item = new QListWidgetItem(gallery_);
         item->setText(QString::fromStdString(e->label.empty() ? e->id : e->label));
-        item->setIcon(symbol_icon(e->symbol, images, shelf.dashes(), QSize(56, 40), paper,
+        item->setIcon(symbol_icon(e->symbol, images, shelf.dashes(), QSize(44, 26), paper,
                                   shape_of(e->kind)));
         item->setData(Qt::UserRole, QString::fromStdString(e->id));
-        // The FULL name first. The cell shows two lines and a published gösterim
-        // name is often longer than that, so the tooltip has to carry the name and
-        // not only its provenance.
+        // The name again, with the id and the citation: a row elides a very long
+        // published name, and the id is what a script writes.
         item->setToolTip(QString::fromStdString((e->label.empty() ? e->id : e->label) + "\n" +
                                                 e->id + "\n" + e->source_ref));
     }
@@ -1393,8 +2547,14 @@ void StyleDesigner::showProvenance()
 void StyleDesigner::resetToLayer()
 {
     symbol_ = original_;
+    single_ = original_;
     galleryCode_.clear();
     galleryPackage_.clear();
+    if (renderer_ != Renderer::Single) {
+        categories_.clear();
+        editingCategory_ = -1;
+        setRenderer(Renderer::Single);
+    }
     geometry_->setCurrentIndex(static_cast<int>(natural_shape(symbol_)));
     refresh();
     selectTopLayer();
@@ -1435,11 +2595,22 @@ QWidget* StyleDesigner::buildTree()
     caption->setObjectName(QStringLiteral("groupCaption"));
     layout->addWidget(caption);
 
+    // FLAT, as the reference draws it: one row per symbol layer, the top row
+    // drawn last, an eye at the right to switch the layer off. There used to be a
+    // `Sembol` root above the rows carrying the symbol-wide settings; the
+    // reference has no such row, and the whole-symbol page is reached by clicking
+    // the preview instead (see `eventFilter`).
     tree_ = new QTreeWidget(box);
     tree_->setObjectName(QStringLiteral("designerList"));
     tree_->setHeaderHidden(true);
+    tree_->setColumnCount(2);
+    tree_->header()->setStretchLastSection(false);
+    tree_->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+    tree_->header()->setSectionResizeMode(1, QHeaderView::Fixed);
+    tree_->setColumnWidth(1, 30);
     tree_->setIconSize(QSize(44, 26));
-    tree_->setRootIsDecorated(true);
+    tree_->setRootIsDecorated(false);
+    tree_->setIndentation(0);
     tree_->setAlternatingRowColors(true);
     tree_->setAccessibleName(tr("Sembol katmanları"));
     // What the order means, where the eye already is. It used to be the box's
@@ -1458,13 +2629,13 @@ QWidget* StyleDesigner::buildTree()
     connect(tree_, &QTreeWidget::currentItemChanged, this,
             [this](QTreeWidgetItem*, QTreeWidgetItem*) { loadSelected(); });
 
-    connect(tree_, &QTreeWidget::itemChanged, this, [this](QTreeWidgetItem* item, int) {
-        if (loading_ || item == nullptr) return;
+    // THE EYE. A click on the second column switches the layer off or on; a
+    // click anywhere else selects the row. The old check box did the same job
+    // through `itemChanged`, which also fired while the rows were being built.
+    connect(tree_, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem* item, int column) {
+        if (loading_ || item == nullptr || column != 1) return;
 
-        // The stack index the row CARRIES, not the row it sits on. A row whose
-        // index has not been written yet is a row this dialog is still building,
-        // and answering it as a user edit is what used to switch symbol layer 0
-        // off behind the user's back.
+        // The stack index the row CARRIES, not the row it sits on.
         const QVariant carried = item->data(0, Qt::UserRole);
         if (!carried.isValid()) return;
 
@@ -1473,14 +2644,12 @@ QWidget* StyleDesigner::buildTree()
 
         galleryCode_.clear();
         galleryPackage_.clear();
-        symbol_.layers[at(index)].enabled = item->checkState(0) == Qt::Checked;
+        symbol_.layers[at(index)].enabled = !symbol_.layers[at(index)].enabled;
 
         // QUEUED, and this is a correctness fix rather than a nicety. Qt is still
-        // inside `QTreeWidgetItem::setCheckState` when this runs; `refresh()`
-        // clears the tree, which deletes that very item, and the call Qt is in
-        // the middle of then returns into freed memory. The list version of this
-        // dialog survived it by luck and the tree does not — it segfaults on the
-        // first click of a check box.
+        // inside the click delivery when this runs; `refresh()` clears the tree,
+        // which deletes that very item, and the call Qt is in the middle of then
+        // returns into freed memory.
         //
         // A slot that rebuilds the model it was notified about has to do it after
         // the notification has unwound. That is what a queued call is for.
@@ -1490,10 +2659,17 @@ QWidget* StyleDesigner::buildTree()
     // §15.1's icon button: 24 px, ghost, a tooltip and no label. They were bare
     // `QToolButton`s carrying a glyph as their text, so they drew at whatever
     // width the glyph happened to be — five different sizes in one row.
-    const auto button = [&](const QString& text, const QString& tip, auto slot) {
+    // Drawn marks, not `+` and `⧉` typed as text: a glyph typed into a button
+    // sits at whatever width and baseline the font gives it, and five of them in
+    // a row sat at five. The glyph rides in a property so the theme re-tints it.
+    const auto button = [&](Glyph glyph, const QString& tip, auto slot) {
         auto* b = new QToolButton(box);
         b->setObjectName(QStringLiteral("rowTool"));
-        b->setText(text);
+        b->setProperty("glyphed", true);
+        b->setProperty("glyph", static_cast<int>(glyph));
+        b->setIconSize(QSize(16, 16));
+        b->setIcon(icon(glyph, palette().color(QPalette::WindowText),
+                        palette().color(QPalette::Highlight), 16));
         b->setToolTip(tip);
         b->setAccessibleName(tip);
         b->setFixedSize(24, 24);
@@ -1504,13 +2680,12 @@ QWidget* StyleDesigner::buildTree()
     auto* bar = new QHBoxLayout;
     bar->setContentsMargins(0, 0, 0, 0);
     bar->setSpacing(2);
-    bar->addWidget(button(QStringLiteral("+"), tr("Katman ekle"), &StyleDesigner::addLayer));
-    bar->addWidget(
-        button(QStringLiteral("⧉"), tr("Katmanı kopyala"), &StyleDesigner::duplicateLayer));
-    bar->addWidget(button(QStringLiteral("−"), tr("Katmanı sil"), &StyleDesigner::removeLayer));
+    bar->addWidget(button(Glyph::Plus, tr("Katman ekle"), &StyleDesigner::addLayer));
+    bar->addWidget(button(Glyph::Duplicate, tr("Katmanı kopyala"), &StyleDesigner::duplicateLayer));
+    bar->addWidget(button(Glyph::Minus, tr("Katmanı sil"), &StyleDesigner::removeLayer));
     bar->addStretch(1);
-    bar->addWidget(button(QStringLiteral("▲"), tr("Yukarı"), [this] { moveLayer(+1); }));
-    bar->addWidget(button(QStringLiteral("▼"), tr("Aşağı"), [this] { moveLayer(-1); }));
+    bar->addWidget(button(Glyph::ChevronUp, tr("Yukarı"), [this] { moveLayer(+1); }));
+    bar->addWidget(button(Glyph::ChevronDown, tr("Aşağı"), [this] { moveLayer(-1); }));
 
     // The two things a stack is used for most, on the keys a user already presses
     // for them elsewhere. Scoped to the TREE so they do not fire while a spin box
@@ -1548,7 +2723,7 @@ QWidget* StyleDesigner::buildGlobal()
     // 0,5 mm at 1/1000 and at 1/5000 — so it must not move when the view does. A
     // forest hatch belongs to the GROUND: it covers an area, and letting it shrink
     // with the zoom turns a legible texture into a grey wash.
-    globalUnit_ = new QComboBox(box);
+    globalUnit_ = new ComboBox(box);
     fit_column(globalUnit_);
     globalUnit_->addItem(tr("Kâğıt — yakınlaştırınca boyu DEĞİŞMEZ"), // ui-label
                          static_cast<int>(core::Unit::Paper));
@@ -1640,7 +2815,7 @@ QWidget* StyleDesigner::buildProperties()
     form->setContentsMargins(0, 0, 0, 0);
     form->setSpacing(6);
 
-    type_ = new QComboBox(box);
+    type_ = new ComboBox(box);
     fit_column(type_);
     // FILLED PER GEOMETRY, in `fillTypeChoices`. The type rides as item DATA
     // rather than as a position, because a filtered list and a fixed table cannot
@@ -1651,7 +2826,7 @@ QWidget* StyleDesigner::buildProperties()
     form->addWidget(form_cell(box, tr("Katman tipi"), type_, nullptr, nullptr));
 
     const auto unitCombo = [&] {
-        auto* c = new QComboBox(box);
+        auto* c = new ComboBox(box);
         fit_column(c);
         for (const core::Unit u : kUnits)
             c->addItem(QString::fromUtf8(core::unit_name(u)));
@@ -1668,7 +2843,7 @@ QWidget* StyleDesigner::buildProperties()
     };
 
     const auto namedCombo = [&](auto items, auto namer) {
-        auto* c = new QComboBox(box);
+        auto* c = new ComboBox(box);
         fit_column(c);
         for (const auto value : items)
             c->addItem(QString::fromUtf8(namer(value)));
@@ -1882,6 +3057,40 @@ QWidget* StyleDesigner::buildProperties()
     QLabel* visibilityGroup = addGroup(form, tr("GÖRÜNÜRLÜK")); // ui-label
     addProperty(form, visibilityGroup, tr("Saydamlık"), opacity_, nullptr, everything);
     addProperty(form, visibilityGroup, tr("Renk kilidi"), lock_, nullptr, everything);
+
+    // THE THIRD COLUMN of §8's `110px | 1fr | 22px` row: a `{ }` at the end of
+    // every property a column can drive. QGIS calls it the data-defined override;
+    // the model calls it a binding (`SymbolLayer::bindings`) and `STİL alan=`
+    // writes it. This is the row that used to be a colon-separated text field
+    // and was removed for it; it is back as what it always was — a chooser.
+    const auto attach = [this](QWidget* editor, core::SymbolProperty what) {
+        for (const Property& p : properties_) {
+            auto* row = qobject_cast<QHBoxLayout*>(p.editor->layout());
+            if (row == nullptr || row->indexOf(editor) < 0) continue;
+            auto* mark = new QToolButton(p.editor);
+            mark->setObjectName(QStringLiteral("bindMark"));
+            mark->setIconSize(QSize(16, 16));
+            mark->setFixedSize(22, 22);
+            mark->setCursor(Qt::PointingHandCursor);
+            mark->setToolTip(tr("Bu özelliği bir sütundan al"));
+            mark->setAccessibleName(tr("%1 — sütundan al").arg(p.label->text()));
+            mark->setProperty("bound", false);
+            connect(mark, &QToolButton::clicked, this,
+                    [this, what, mark] { bindProperty(what, mark); });
+            row->addWidget(mark);
+            bindingMarks_.emplace_back(what, mark);
+            return;
+        }
+    };
+    attach(stroke_, core::SymbolProperty::Colour);
+    attach(fill_, core::SymbolProperty::Fill);
+    attach(width_, core::SymbolProperty::Width);
+    attach(size_, core::SymbolProperty::Size);
+    attach(angle_, core::SymbolProperty::Angle);
+    attach(opacity_, core::SymbolProperty::Opacity);
+    attach(text_, core::SymbolProperty::Text);
+    refreshBindingMarks();
+
     form->addStretch(1);
 
     return box;
@@ -1906,11 +3115,10 @@ int StyleDesigner::currentLayer() const
 
 void StyleDesigner::selectTopLayer()
 {
-    // The row a new or duplicated layer lands on. The tree is drawn top first, so
-    // the layer drawn LAST is the first child of the root.
+    // The row a new or duplicated layer lands on. The list is drawn top first, so
+    // the layer drawn LAST is the first row.
     if (tree_->topLevelItemCount() == 0) return;
-    QTreeWidgetItem* root = tree_->topLevelItem(0);
-    tree_->setCurrentItem(root->childCount() > 0 ? root->child(0) : root);
+    tree_->setCurrentItem(tree_->topLevelItem(0));
 }
 
 bool StyleDesigner::rootSelected() const
@@ -1924,6 +3132,10 @@ bool StyleDesigner::rootSelected() const
 
 void StyleDesigner::refresh()
 {
+    // The class being edited is `symbol_` itself; its row in the table follows
+    // every change so the swatch there is never a stroke behind the editor.
+    if (renderer_ != Renderer::Single) storeEditedCategory();
+
     // Never from inside itself. Every editor in this dialog answers a change by
     // rebuilding the whole right-hand side, so one that is rewritten BY the
     // rebuild would otherwise ask for another one.
@@ -1963,17 +3175,11 @@ void StyleDesigner::refresh()
 
         tree_->clear();
 
-        // THE ROOT IS THE SYMBOL. It carries no stack index, which is how every
-        // reader here tells it from a layer, and its picture is the whole symbol
-        // rather than any one part of it.
-        auto* root = new QTreeWidgetItem;
-        root->setText(0, tr("Sembol"));
-        root->setToolTip(0, tr("Bütün sembole ait özellikler: birim, renk, "
-                               "kalınlık, saydamlık"));
-        root->setIcon(0, symbol_icon(symbol_, images, dashes, QSize(44, 26), paper, shape()));
-        tree_->addTopLevelItem(root);
-
-        QTreeWidgetItem* chosen = keep_root ? root : nullptr;
+        // NO ROOT ROW. The whole symbol is what the preview shows, and clicking
+        // the preview selects it; every row here is one layer and carries its
+        // stack index, which is how the readers tell "a layer" from "nothing".
+        QTreeWidgetItem* chosen = nullptr;
+        const QColor eyeInk     = palette().color(QPalette::WindowText);
 
         for (std::size_t i = symbol_.layers.size(); i-- > 0;) {
             const core::SymbolLayer& sl = symbol_.layers[i];
@@ -1996,15 +3202,20 @@ void StyleDesigner::refresh()
                        .arg(label, QString::fromUtf8(core::symbol_layer_type_name(sl.type))));
             item->setIcon(0, symbol_icon(one, images, dashes, QSize(44, 26), paper, shape()));
             item->setData(0, Qt::UserRole, static_cast<int>(i));
-            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-            item->setCheckState(0, sl.enabled ? Qt::Checked : Qt::Unchecked);
-            root->addChild(item);
+            // The eye says the state with a SHAPE (open or struck), not with a
+            // colour alone (design.md §13); a switched-off row is also dimmed.
+            item->setIcon(1, QIcon(glyph_pixmap(sl.enabled ? Glyph::Eye : Glyph::EyeOff,
+                                                sl.enabled ? eyeInk : eyeInk.lighter(160), 16,
+                                                devicePixelRatioF())));
+            item->setToolTip(1, sl.enabled ? tr("Katmanı gizle") : tr("Katmanı göster"));
+            if (!sl.enabled) item->setForeground(0, eyeInk.lighter(160));
+            tree_->addTopLevelItem(item);
 
             if (!keep_root && static_cast<int>(i) == keep) chosen = item;
         }
 
-        root->setExpanded(true);
-        tree_->setCurrentItem(chosen != nullptr ? chosen : root);
+        // Nothing selected IS the whole symbol (`rootSelected`).
+        tree_->setCurrentItem(chosen);
     }
 
     fitStackHeight();
@@ -2017,12 +3228,11 @@ void StyleDesigner::fitStackHeight()
 {
     if (tree_ == nullptr) return;
 
-    // The root plus one row per symbol layer, because the root is always shown
-    // expanded. Measured from the font rather than from a constant: the row
-    // height follows the application font, and a hard-coded one clips at any
-    // other size.
+    // One row per symbol layer. Measured from the font rather than from a
+    // constant: the row height follows the application font, and a hard-coded
+    // one clips at any other size.
     const int rows =
-        std::clamp(static_cast<int>(symbol_.layers.size()) + 1, kStackRowsMin, kStackRowsMax);
+        std::clamp(static_cast<int>(symbol_.layers.size()), kStackRowsMin, kStackRowsMax);
     const int row_px = tree_->fontMetrics().height() + 12;
     tree_->setFixedHeight(row_px * rows + 4);
 }
@@ -2077,6 +3287,16 @@ bool StyleDesigner::eventFilter(QObject* watched, QEvent* event)
     // that width is not known until the layout has handed it out. Repainted on
     // resize, and only on resize, so the first layout does not leave a 200 px
     // chip in a 312 px field.
+    // THE PREVIEW IS THE WHOLE SYMBOL'S ROW. The layer list has no root row any
+    // more (the reference has none), so the page with the symbol-wide settings
+    // is reached by clicking the picture of the whole symbol; no row selected is
+    // that page (`rootSelected`).
+    if (watched == preview_ && event->type() == QEvent::MouseButtonRelease) {
+        tree_->setCurrentItem(nullptr);
+        loadSelected();
+        return true;
+    }
+
     if (event->type() == QEvent::Resize) {
         const int i = currentLayer();
         if (watched == globalColour_) show_colour(globalColour_, symbol_.primary().rgba);
@@ -2135,6 +3355,7 @@ void StyleDesigner::loadSelected()
         angle_->setValue(sl.angle_udeg / 1000000);
         opacity_->setValue(sl.opacity);
     }
+    refreshBindingMarks();
 
     // Only the rows this type reads. A property nobody reads is a promise the
     // renderer does not keep.
@@ -2353,19 +3574,18 @@ void StyleDesigner::moveLayer(int delta)
     // now occupies is counted from the other end.
     // Follow the LAYER, not the row: `refresh()` already put the selection back
     // on the stack index it had, and the move changed which index that is.
-    if (tree_->topLevelItemCount() > 0) {
-        QTreeWidgetItem* root = tree_->topLevelItem(0);
-        for (int c = 0; c < root->childCount(); ++c)
-            if (root->child(c)->data(0, Qt::UserRole).toInt() == to)
-                tree_->setCurrentItem(root->child(c));
-    }
+    for (int c = 0; c < tree_->topLevelItemCount(); ++c)
+        if (tree_->topLevelItem(c)->data(0, Qt::UserRole).toInt() == to)
+            tree_->setCurrentItem(tree_->topLevelItem(c));
 }
 
 // ------------------------------------------------------------- the exits ----
 
 bool StyleDesigner::applyToDocument()
 {
-    if (layerName_.isEmpty() || symbol_.layers.empty()) return false;
+    if (layerName_.isEmpty()) return false;
+    if (renderer_ != Renderer::Single) return applyClassification();
+    if (symbol_.layers.empty()) return false;
 
     command::Bus& bus = controller_.bus();
     if (auto st = bus.begin_batch(tr("Katman stilini uygula").toStdString()); !st) {
@@ -2448,6 +3668,19 @@ bool StyleDesigner::applyToDocument()
             text.replace('\\', QStringLiteral("\\\\"));
             text.replace('"', QStringLiteral("\\\""));
             line += QStringLiteral(" yazi=\"%1\"").arg(text);
+        }
+
+        // THE BINDINGS, at last. `alan=` is how a symbol layer says which column
+        // drives which property; this dialog used to write them into the preview
+        // and never into the line, so they never reached the document.
+        if (!sl.bindings.empty()) {
+            QStringList parts;
+            for (const core::SymbolBinding& b : sl.bindings)
+                parts << QStringLiteral("%1:%2:%3")
+                             .arg(QString::fromStdString(b.field),
+                                  QString::fromUtf8(core::symbol_property_name(b.what)),
+                                  QString::fromUtf8(core::attr_type_name(b.type)));
+            line += QStringLiteral(" alan=\"%1\"").arg(parts.join(QStringLiteral(", ")));
         }
 
         auto applied = controller_.runLineResult(line, command::Origin::Gui);

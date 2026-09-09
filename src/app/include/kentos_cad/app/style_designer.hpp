@@ -67,11 +67,33 @@ class Controller;
 
 /// The component set; see widgets.hpp.
 class Button;
+class ComboBox;
 class CheckBox;
 class Segment;
 
 /// The attribute schema, as one page of this window; see schema_page.hpp.
 class SchemaPage;
+class DataGrid;
+class CategoryModel;
+class Field;
+
+/// One class of a categorized or graduated renderer: what an object must say to
+/// get this symbol, and the symbol. A value for a category, a raw integer range
+/// for a class, or neither for the `‹diğer›` row that takes whatever is left.
+struct StyleCategory
+{
+    QString value;         ///< the attribute's text, as `attr_display` prints it
+    QString label;         ///< what the legend reads; editable
+    std::int64_t low{0};   ///< inclusive raw lower bound, read when `has_low`
+    std::int64_t high{0};  ///< inclusive raw upper bound, read when `has_high`
+    bool has_low{false};   ///< whether `low` bounds the class
+    bool has_high{false};  ///< whether `high` bounds the class
+    bool numeric{false};   ///< matched as a number (range), not as text
+    bool other{false};     ///< the rule with no condition: everything left over
+    bool enabled{true};    ///< off: no rule is written and its objects fall to `‹diğer›`
+    int count{0};          ///< how many of the layer's objects match today
+    core::Symbol symbol{}; ///< what those objects are drawn with
+};
 
 /// Designs one symbol and applies it to a layer through the command bus.
 class StyleDesigner : public DialogFrame
@@ -86,6 +108,13 @@ public:
 
     /// The symbol as the user left it.
     const core::Symbol& symbol() const noexcept { return symbol_; }
+
+    /// Drives the renderer the way a hand would, for `KENTOS_DESIGNER_PROBE`:
+    /// switches to the categorized renderer, classifies by `column`, applies, and
+    /// reports every class with its count and how many styles the layer ended
+    /// up with. It exists because a categorized style is a package file plus a
+    /// command, and whether the two agree is not something a transcript shows.
+    QStringList probeRenderer(const QString& column);
 
 private:
     /// One editable property: its widgets and the layer types that read it.
@@ -193,6 +222,36 @@ private:
     /// Says, beside the preview, what the chosen geometry tab is drawing on.
     void updateHeaderNote();
 
+    // ---- the renderer: which symbol each object gets (design.md §8) ----
+
+    /// What decides an object's symbol on this layer. QGIS's renderer list, cut
+    /// to what the model can state: one symbol, one per value, one per range.
+    /// Every one of them is a catalogue package and one `STİL` line.
+    enum class Renderer : std::uint8_t { Single, Categorized, Graduated };
+
+    QWidget* buildCategoryPage();
+    void setRenderer(Renderer kind);
+    void fillValueColumns();
+    QString rendererValueColumn() const;
+    void classify();
+    void addCategory();
+    void removeCategory();
+    void clearCategories();
+    void selectCategory(int row);
+    void storeEditedCategory();
+    void refreshCategoryGrid();
+    void refreshCategoryCounts();
+    void updateSymbolCaption();
+    QString classificationPackagePath() const;
+    QString categoryPackageJson() const;
+    bool writeClassificationPackage(QString* error) const;
+    bool restoreClassification();
+    bool applyClassification();
+
+    // ---- data-defined properties: a column drives a property ----
+    void bindProperty(core::SymbolProperty what, QToolButton* button);
+    void refreshBindingMarks();
+
     /// Redraws the big preview at the width the label currently has.
     /// Sizes the symbol layer stack to the rows it actually holds.
     ///
@@ -245,7 +304,7 @@ private:
     /// What the header says about the geometry the tabs have chosen.
     QLabel* headerNote_{nullptr};
 
-    QTreeWidget* groups_{nullptr};
+    ComboBox* groups_{nullptr};
     QLineEdit* search_{nullptr};
     QListWidget* gallery_{nullptr};
     QLabel* galleryNote_{nullptr};
@@ -329,6 +388,26 @@ private:
     QComboBox* phaseUnit_{nullptr};
 
     std::vector<Property> properties_;
+
+    // ---- the renderer ----
+    Renderer renderer_{Renderer::Single};
+    core::Symbol single_{};             ///< the layer's own symbol while a class is edited
+    QVector<StyleCategory> categories_; ///< in rule order; `‹diğer›` last
+    int editingCategory_{-1};           ///< which class `symbol_` currently is
+    bool recounting_{false};            ///< `refreshCategoryCounts` is running
+    QStackedWidget* middle_{nullptr};   ///< the shelf, or the category table
+    DataGrid* categoryGrid_{nullptr};
+    CategoryModel* categoryModel_{nullptr};
+    QComboBox* ramp_{nullptr};
+    QWidget* rampCell_{nullptr};
+    QWidget* graduatedCell_{nullptr};
+    Field* classCount_{nullptr};
+    Segment* classMode_{nullptr};
+    QLabel* symbolCaption_{nullptr};
+    Button* removeCategory_{nullptr};
+
+    /// The `{ }` at the end of a bindable property row, by the property it binds.
+    std::vector<std::pair<core::SymbolProperty, QToolButton*>> bindingMarks_;
 };
 
 } // namespace kentos::app

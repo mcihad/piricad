@@ -325,7 +325,10 @@ QString themeStyleSheet(ThemeMode mode)
         QListWidget#designerGallery      { background: %(window)s; border: 1px solid %(border)s;
                                            border-radius: 4px; outline: none; }
         QTreeWidget#designerList::item   { min-height: 24px; padding: 2px 6px; }
-        QListWidget#designerGallery::item { border-radius: 4px; }
+        QListWidget#designerGallery::item { min-height: 30px; padding: 0px 8px;
+                                            border: none; }
+        QListWidget#designerGallery::item:hover { background: %(hoverRow)s; }
+        QListWidget#designerGallery::item:selected { background: %(wash)s; color: %(text)s; }
 
         /* The caption above them, and the label beside a field: both are the
          * QUIET half of the pair. A caption drawn in the same ink as its value
@@ -398,12 +401,93 @@ QString themeStyleSheet(ThemeMode mode)
                                            font-size: 11.5px; min-height: 22px; }
         QWidget#statsPanel               { background: %(panel)s;
                                            border-left: 1px solid %(lineHard)s; }
-        QTableView#attributeGrid         { background: %(window)s; border: none;
-                                           gridline-color: %(lineSoft)s;
-                                           font-family: "IBM Plex Mono"; font-size: 11.5px;
-                                           selection-background-color: %(wash)s;
+        /* ---- the one table, `datagrid.hpp` -------------------------------- */
+        /*
+         * The grid paints its own cells and its own header sections, so the
+         * sheet only has to keep Qt from painting anything under them: no
+         * frame, no highlight, no focus rectangle, and the header band's own
+         * ground where the sections stop.
+         */
+        QTableView#dataGrid              { background: %(window)s; border: none; outline: none;
+                                           selection-background-color: transparent;
                                            selection-color: %(text)s; }
-        QTableView#attributeGrid::item   { padding: 0px 8px; }
+        QTableView#dataGrid::item        { padding: 0px; border: none; }
+        QTableView#dataGrid::item:selected { background: transparent; border: none; }
+        QHeaderView#gridHeader           { background: %(header)s; border: none; }
+        QHeaderView#gridHeader::section  { background: transparent; border: none; padding: 0px; }
+        QTableCornerButton::section      { background: %(header)s; border: none;
+                                           border-bottom: 1px solid %(lineHard)s; }
+
+        /* The expression bar: the same box as every input, mono, one line. */
+        QPlainTextEdit#expressionEdit    { background: %(input)s; color: %(text)s;
+                                           border: 1px solid %(border)s; border-radius: 4px;
+                                           padding: 4px 8px 0px 8px;
+                                           min-height: 24px; max-height: 24px; }
+        QPlainTextEdit#expressionEdit:focus { border: 1px solid %(accent)s; }
+
+        /* The statistics panel's head and the two footer switches' words. */
+        QLabel#statsTitle                { background: transparent; color: %(text)s;
+                                           font-size: 13px; font-weight: 600; }
+        QLabel#statsField                { background: transparent; color: %(accentHi)s;
+                                           font-family: "IBM Plex Mono", monospace;
+                                           font-size: 11.5px; }
+        QLabel#statsKey                  { background: transparent; color: %(textDim)s;
+                                           font-size: 11.5px; }
+        QLabel#statsValue                { background: transparent; color: %(readout)s;
+                                           font-family: "IBM Plex Mono", monospace;
+                                           font-size: 11.5px; }
+        QFrame#toolRule                  { background: %(separator)s; border: none; }
+
+        /* THE DROP-DOWN LIST IS A COMPONENT (`ComboBox`, widgets.hpp). It paints
+         * its own box and chevron, so the sheet draws nothing for it — no
+         * geometry either, or `polish()` would size it past its own height. The
+         * popup is the shell's list: the panel ground, 26 px rows, the hover wash. */
+        QComboBox#comboBox               { background: transparent; border: none; padding: 0px;
+                                           min-height: 0px; max-height: 16777215px;
+                                           color: %(text)s; }
+        QComboBox#comboBox::drop-down    { width: 0px; border: none; }
+        QComboBox#comboBox QAbstractItemView#comboPopup {
+                                           background: %(panel)s; color: %(text)s;
+                                           border: 1px solid %(border)s; padding: 4px;
+                                           outline: none; selection-background-color: transparent; }
+        QComboBox#comboBox QAbstractItemView#comboPopup::item {
+                                           min-height: 26px; padding: 0px 10px; border: none;
+                                           border-radius: 3px; }
+        QComboBox#comboBox QAbstractItemView#comboPopup::item:hover,
+        QComboBox#comboBox QAbstractItemView#comboPopup::item:selected {
+                                           background: %(hoverRow)s; color: %(text)s; }
+
+        /* The data-defined mark of the style designer, §8: a `{ }` at the end of a
+         * property row, lit in the accent when a column drives the property. */
+        QToolButton#bindMark             { background: transparent; border: 1px solid transparent;
+                                           border-radius: 4px; padding: 0px;
+                                           min-width: 22px; max-width: 22px;
+                                           min-height: 22px; max-height: 22px; }
+        QToolButton#bindMark:hover       { background: %(hoverIcon)s; }
+        QToolButton#bindMark[bound="true"] { background: %(wash)s;
+                                           border: 1px solid %(accentEdge)s; }
+        QToolButton#rowTool[glyphed="true"] { background: transparent; border: none;
+                                           border-radius: 4px; padding: 0px; }
+        QToolButton#rowTool[glyphed="true"]:hover { background: %(hoverIcon)s; }
+
+        /* The settings window's rows, §10: a soft rule under each. */
+        QWidget#settingRow               { background: transparent;
+                                           border-bottom: 1px solid %(lineSoft)s; }
+
+        /* The export window's command line: the one sentence it promises. */
+        QLabel#commandPreview            { background: %(input)s; color: %(accentHi)s;
+                                           border: 1px solid %(border)s; border-radius: 4px;
+                                           padding: 8px 10px;
+                                           font-family: "IBM Plex Mono", monospace;
+                                           font-size: 12px; }
+        QLabel#commandPreview[empty="true"] { color: %(textFaint)s;
+                                           font-family: "IBM Plex Sans", sans-serif; }
+        QToolButton#pagerMark            { background: transparent; border: none;
+                                           border-radius: 4px; padding: 0px;
+                                           min-width: 22px; max-width: 22px;
+                                           min-height: 22px; max-height: 22px; }
+        QToolButton#pagerMark:hover      { background: %(hoverIcon)s; }
+        QToolButton#pagerMark:disabled   { background: transparent; }
 
         /* ---- pick chooser, §9's table at dialog size ----------------------- */
         /*
@@ -492,10 +576,11 @@ QString themeStyleSheet(ThemeMode mode)
          * wide button with half of it lit. */
         QPushButton#fieldSegment[frame="box"] { border-right: 1px solid %(border)s; }
 
-        QComboBox#fieldCombo             { background: transparent; color: %(text)s;
-                                           border: none; border-radius: 0px;
-                                           padding: 0px 8px; }
-        QComboBox#fieldCombo[frame="cell"] { min-height: 0px; max-height: 16777215px; }
+        /* A field's combo is the component drawn BARE: the field paints the box
+         * (or the cell is the box), so the sheet gives it no ground and no edge. */
+        QComboBox#fieldCombo             { background: transparent; border: none;
+                                           padding: 0px; min-height: 0px;
+                                           max-height: 16777215px; }
 
         QSlider#fieldSlider::groove:horizontal { background: %(border)s; height: 3px;
                                            border-radius: 1px; }
@@ -640,7 +725,7 @@ QString themeStyleSheet(ThemeMode mode)
          * "you changed this", danger means "this is wrong". A dialog that used
          * one colour for both would tell a user their own edit was invalid.
          */
-        QLineEdit, QPlainTextEdit, QTextEdit, QSpinBox, QDoubleSpinBox, QComboBox {
+        QLineEdit, QPlainTextEdit, QTextEdit, QSpinBox, QDoubleSpinBox {
             background: %(input)s; color: %(text)s;
             border: 1px solid %(border)s; border-radius: 4px;
             padding: 4px 9px; min-height: 22px; max-height: 22px;
@@ -649,19 +734,19 @@ QString themeStyleSheet(ThemeMode mode)
         QPlainTextEdit, QTextEdit         { max-height: 16777215px; }
 
         QLineEdit:hover, QSpinBox:hover,
-        QDoubleSpinBox:hover, QComboBox:hover { border: 1px solid %(separator)s; }
+        QDoubleSpinBox:hover                { border: 1px solid %(separator)s; }
 
         QLineEdit:focus, QPlainTextEdit:focus, QSpinBox:focus,
-        QDoubleSpinBox:focus, QComboBox:focus,
+        QDoubleSpinBox:focus,
         QLineEdit[state="focus"]          { border: 1px solid %(accent)s;
                                             background: %(input)s; }
 
-        QLineEdit[state="changed"], QComboBox[state="changed"],
+        QLineEdit[state="changed"],
         QSpinBox[state="changed"], QDoubleSpinBox[state="changed"] {
                                             border: 1px solid %(warn)s; color: %(warn)s;
                                             background: %(warnWash)s; }
 
-        QLineEdit[state="invalid"], QComboBox[state="invalid"],
+        QLineEdit[state="invalid"],
         QSpinBox[state="invalid"], QDoubleSpinBox[state="invalid"] {
                                             border: 1px solid %(dangerEdge)s; color: %(danger)s;
                                             background: %(dangerWash)s; }
@@ -673,24 +758,16 @@ QString themeStyleSheet(ThemeMode mode)
         QLineEdit[readOnly="true"]        { background: transparent; color: %(textDim)s;
                                             border: 1px solid transparent; }
 
-        QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled,
-        QComboBox:disabled                { color: %(textFaint)s; background: transparent;
+        QLineEdit:disabled, QSpinBox:disabled,
+        QDoubleSpinBox:disabled           { color: %(textFaint)s; background: transparent;
                                             border: 1px solid transparent; }
 
-        /* THE DROP-DOWN IS LEFT ALONE, and that is the fix. Styling `::drop-down`
-         * at all makes Qt stop drawing the base style's arrow, and nothing here
-         * replaced it — so every combo in the program, in the settings window and
-         * in the column form alike, looked exactly like a text box. A control
-         * that does not say it opens a list is a list nobody opens.
-         *
-         * The border-triangle trick that would replace it does not render as a
-         * triangle in Qt's stylesheet engine (it comes out a square), and an
-         * image would need a resource file this project deliberately does not
-         * have — it draws its icons in code. So the honest answer is to let
-         * Fusion draw the one subcontrol it draws well. */
-        QComboBox QAbstractItemView       { background: %(panel)s; color: %(text)s;
-                                            border: 1px solid %(border)s;
-                                            selection-background-color: %(wash)s; }
+        /* NO RULE FOR `QComboBox` HERE, on purpose. Every drop-down list in the
+         * program is the `ComboBox` component (widgets.hpp), which paints its
+         * own box, value and chevron; its rules sit with the other components
+         * above. A Fusion combo under a stylesheet kept the arrow and lost the
+         * box, or the other way round, and no rule set here ever made the two
+         * agree — so the component draws, and the sheet stays out of its way. */
         QSpinBox::up-button, QSpinBox::down-button,
         QDoubleSpinBox::up-button, QDoubleSpinBox::down-button { width: 15px; border: none;
                                             background: transparent; }

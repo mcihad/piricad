@@ -70,6 +70,11 @@ const Tokens kDark{
     /* hud          */ QColor(0x8B, 0x94, 0x9E),
     /* selectWindow */ QColor(0x4C, 0xAF, 0x7D),
     /* selectCross  */ QColor(0x4C, 0xAF, 0x7D),
+
+    /* syntaxField    */ QColor(0x8E, 0xCD, 0xF2),
+    /* syntaxOperator */ QColor(0xE0, 0xA5, 0x5E),
+    /* syntaxString   */ QColor(0x9D, 0xC7, 0x8A),
+    /* syntaxLogical  */ QColor(0xA4, 0x8F, 0xD0),
 };
 
 /// The light theme, produced from the same structure by a second mapping
@@ -144,6 +149,11 @@ const Tokens kLight{
     /* hud          */ QColor(0x5A, 0x64, 0x6E),
     /* selectWindow */ QColor(0x2E, 0x7D, 0x54),
     /* selectCross  */ QColor(0x2E, 0x7D, 0x54),
+
+    /* syntaxField    */ QColor(0x1F, 0x6E, 0x9C),
+    /* syntaxOperator */ QColor(0x9A, 0x5B, 0x14),
+    /* syntaxString   */ QColor(0x3E, 0x7A, 0x2E),
+    /* syntaxLogical  */ QColor(0x5E, 0x48, 0xA0),
 };
 
 } // namespace

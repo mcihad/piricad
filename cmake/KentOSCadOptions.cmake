@@ -103,31 +103,20 @@ endif()
 option(KENTOS_WITH_TEXT "Enable the msdfgen SDF text atlas" ${KENTOS_TEXT_AVAILABLE})
 # DWG, read only, through LibreDWG (`.claude/io.md` R13).
 #
-# ON BY DEFAULT, AND THIS SUPERSEDES THE OFF THAT STOOD HERE. That default was
-# written against a guess — "a large generated C codebase" whose build was assumed
-# to be too long to impose on a first configure — and the guess has now been
-# MEASURED on the reference machine: 41 s wall, 147 s CPU, once, plus a 262 MB
-# clone. That is a fraction of what Qt, GDAL and PROJ already cost a fresh
-# checkout, and the price of the old default was that a program which advertises
-# DWG import could not read a DWG unless the person building it knew to ask.
-# Article 8.2 asks for exactly this: behind `KENTOS_WITH_<NAME>`, hard-failing
-# with an actionable message when ON but unavailable, defaulting ON once found.
-#
-# An offline or packaged build still gets the old behaviour, because there the
-# source cannot be fetched at all and a failed configure would be worse than a
-# missing format:
-#
-#     cmake --preset dev -DKENTOS_WITH_DWG=OFF
+# OFF BY DEFAULT. The cost of building it was measured on the reference machine —
+# 41 s wall, 147 s CPU, once, plus a 262 MB clone — and that is not the reason.
+# The reason is that LibreDWG compiles with a page of its own warnings on every
+# configuration this project builds, and a build that is clean by rule (CLAUDE.md
+# 5.14) cannot carry a dependency that is not; and the DWG reader is not part of
+# the working set today (six entity types, `io.md` R14's coverage corpus not yet
+# assembled). `-DKENTOS_WITH_DWG=ON` turns it on for the machine that wants it,
+# and asking for ON without the source (an offline build,
+# `KENTOS_FETCH_DEPENDENCIES=OFF`) is a hard error naming the fix, per Article 8.2.
 #
 # The ODA Drawings SDK is banned outright (io.md P1) and GDAL's own CAD driver is
 # libopencad, a DIFFERENT implementation than the rulebook chose — the allow-list
 # in `KentOSCadGdalDrivers.cmake` says why `.dwg` is not simply added there.
-if(DEFINED KENTOS_FETCH_DEPENDENCIES AND NOT KENTOS_FETCH_DEPENDENCIES)
-    set(KENTOS_DWG_AVAILABLE OFF)
-else()
-    set(KENTOS_DWG_AVAILABLE ON)
-endif()
-option(KENTOS_WITH_DWG      "Enable DWG reading through LibreDWG"   ${KENTOS_DWG_AVAILABLE})
+option(KENTOS_WITH_DWG      "Enable DWG reading through LibreDWG"   OFF)
 option(KENTOS_WITH_TRACY    "Enable Tracy frame profiling"          OFF)
 
 function(kentos_require_dependency option_name package_name hint)

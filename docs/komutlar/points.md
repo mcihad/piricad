@@ -53,7 +53,7 @@ milimetresi bir parsel köşesinde önemlidir.
 ## Sözdizimi
 
 ```text
-NOKTALAR dosya=<yol> [yon=oku|yaz] [eksen=YX|XY]
+NOKTALAR dosya=<yol> [yon=oku|yaz] [eksen=YX|XY] [nesneler=<kimlikler>]
 ```
 
 ## Parametreler
@@ -63,6 +63,7 @@ NOKTALAR dosya=<yol> [yon=oku|yaz] [eksen=YX|XY]
 | `dosya` | Nokta listesinin yolu |
 | `yon` | `oku` (varsayılan) ya da `yaz` |
 | `eksen` | Sütun sırası: `YX` (varsayılan) ya da `XY` |
+| `nesneler` | Yalnız `yon=yaz` ile: köşeleri yazılacak nesnelerin kimlikleri, virgülle. Verilmezse çizimdeki nokta nesneleri yazılır |
 
 ## Örnekler
 
@@ -92,10 +93,37 @@ Yazılan dosya noktalı virgülle ayrılır ve ondalık olarak `.` kullanır: T�
 yerel ayarlı bir hesap tablosu `485320.543`'ü ikiye bölmeden açar ve dosyayı
 sonradan kim okursa okusun belirsizlik kalmaz.
 
+### Bir nesnenin köşelerini yazmak
+
+Aplikasyona çıkacak ekip parselin köşelerini ister, noktalarını değil. `nesneler`
+verildiğinde her köşe bir satır olur; satır numarası `nesne.köşe` biçimindedir ve
+kod sütununa katmanın adı yazılır:
+
+```text
+NOKTALAR dosya="koseler.txt" yon=yaz nesneler=4128
+```
+
+```text
+4128.1;485300.000;4310200.000;Kadastro Parselleri
+4128.2;485360.000;4310200.000;Kadastro Parselleri
+4128.3;485360.000;4310245.000;Kadastro Parselleri
+4128.4;485300.000;4310245.000;Kadastro Parselleri
+```
+
+Birden çok nesne virgülle verilir: `nesneler=4128,4129`. Delikli bir parselin iç
+halkası dış halkanın ardından, numara sırasıyla devam eder.
+
 ### Arayüz
 
-`NOKTALAR dosya="..."` komut satırından. Okunan noktalar aktif katmana düşer,
-yani önce `KATMAN` ile hedefi seçin.
+Okumak için `NOKTALAR dosya="..."` komut satırından. Okunan noktalar aktif katmana
+düşer, yani önce `KATMAN` ile hedefi seçin.
+
+Bir nesnenin köşelerini yazmak için sağdaki **Öznitelikler** panelinde nesne
+seçiliyken panele **sağ tıklayın** (ya da klavyede **Menü** tuşuna / **Shift+F10**'a
+basın) ve **Koordinatları dışa aktar…** deyin. [Dışa Aktar](../baslangic/disa-aktarma.md)
+penceresi açılır; dosyayı seçtiğinizde pencere kuracağı `NOKTALAR … yon=yaz nesneler=…`
+satırını altta gösterir ve **Dışa aktar** ile çalıştırır. Aynı menüdeki
+**Koordinatları kopyala**, aynı satırları panoya koyar.
 
 ### Betik
 
@@ -145,6 +173,20 @@ Sınır, hasımca bir dosyanın belleği tüketmesini engeller.
 > `Çizimde nokta yok. NOKTA komutuyla çizin ya da bir liste okuyun.`
 
 `yon=yaz` verildi ama çizimde yazılacak nokta yok.
+
+> `nesneler yalnız yon=yaz ile verilir: köşeleri yazılacak nesneler.`
+
+`nesneler` bir okuma çağrısında verildi. Okunan bir listenin seçilecek nesnesi yoktur;
+`yon=yaz` ekleyin.
+
+> `Nesne bulunamadı veya silinmiş: 99`
+
+`nesneler` içindeki bir kimlik çizimde yok. Kimliği panelden ya da öznitelik
+tablosunun `fid` sütunundan okuyun.
+
+> `Verilen nesnelerin yazılacak köşesi yok.`
+
+Verilen nesnelerin hiçbirinin geometrisi köşe taşımıyor.
 
 ## İlgili
 

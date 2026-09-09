@@ -92,6 +92,7 @@ QString group_title(const std::string& group)
         {"cetvel", "Cetvel"},
         {"harita", "Harita"},
         {"veritabani", "Veritabanı"},
+        {"duzenleme", "Düzenleme"},
     };
 
     for (const auto& [id, title] : kTitles)
@@ -465,9 +466,13 @@ QWidget* SettingsDialog::buildGroup(const std::string& section, const QString& t
 
         const std::string group = group_of(spec.id);
         if (group != open_group) {
-            auto* caption = new QLabel(group_title(group).toUpper(), page);
-            caption->setObjectName(QStringLiteral("sectionTitle"));
-            caption->setContentsMargins(0, open_group.empty() ? 0 : 18, 0, 6);
+            // THE STANDARD'S SECTION HEADING — small caps, a rule to the right
+            // edge — and the TURKISH upper case: `toUpper()` without a locale
+            // wrote `DUZENLEME` and `ACI` over `DÜZENLEME` and `AÇI` (CLAUDE.md
+            // 5.6, ui.md P4).
+            auto* caption = new FormSection(QLocale(QLocale::Turkish).toUpper(group_title(group)),
+                                            QString(), page);
+            caption->setContentsMargins(0, open_group.empty() ? 0 : 14, 0, 2);
             layout->addWidget(caption);
             open_group = group;
         }
@@ -506,16 +511,6 @@ QWidget* SettingsDialog::buildProjectPage()
     layout->setContentsMargins(0, 0, 12, 12);
     layout->setSpacing(0);
 
-    auto* note =
-        new QLabel(tr("Bu ayarlar çizimin kendisine aittir: .pcad dosyasının içinde saklanır, "
-                      "dosyayla birlikte gider ve başka bir bilgisayarda açıldığında aynı kalır. "
-                      "Her biri konusuna göre kendi sayfasında da durur; burada bir arada."),
-                   page);
-    note->setObjectName(QStringLiteral("quiet"));
-    note->setWordWrap(true);
-    note->setContentsMargins(0, 0, 0, 14);
-    layout->addWidget(note);
-
     // GROUPED BY THE TOPIC THEY WERE DECLARED UNDER, so a reader who knows a
     // setting from its own page finds it in the same company here.
     std::string open_section;
@@ -523,9 +518,10 @@ QWidget* SettingsDialog::buildProjectPage()
         if (spec.scope != SettingScope::Project) continue;
 
         if (spec.section != open_section) {
-            auto* caption = new QLabel(QString::fromStdString(spec.section).toUpper(), page);
-            caption->setObjectName(QStringLiteral("sectionTitle"));
-            caption->setContentsMargins(0, open_section.empty() ? 0 : 18, 0, 6);
+            auto* caption = new FormSection(
+                QLocale(QLocale::Turkish).toUpper(QString::fromStdString(spec.section)), QString(),
+                page);
+            caption->setContentsMargins(0, open_section.empty() ? 0 : 14, 0, 2);
             layout->addWidget(caption);
             open_section = spec.section;
         }
@@ -547,9 +543,13 @@ void SettingsDialog::addRow(QVBoxLayout* into, const SettingSpec& spec)
     // right-aligned, and the reset mark after it. The help is the SETTING'S OWN
     // summary — the sentence the catalogue already carries — so a row explains
     // itself without this file knowing what any of them mean.
-    auto* line   = new QWidget(into->parentWidget());
+    auto* line = new QWidget(into->parentWidget());
+    // §10's row: a 1 px rule under each, drawn by the sheet.
+    line->setObjectName(QStringLiteral("settingRow"));
+    line->setAttribute(Qt::WA_StyledBackground, true);
+
     auto* layout = new QHBoxLayout(line);
-    layout->setContentsMargins(0, 7, 0, 7);
+    layout->setContentsMargins(0, 9, 0, 9);
     layout->setSpacing(8);
 
     auto* words = new QVBoxLayout;
@@ -588,7 +588,7 @@ void SettingsDialog::addRow(QVBoxLayout* into, const SettingSpec& spec)
         break;
     }
     case SettingType::Enum: {
-        auto* box = new QComboBox(line);
+        auto* box = new ComboBox(line);
         for (const std::string& value : spec.values)
             box->addItem(QString::fromStdString(value));
         connect(box, &QComboBox::currentTextChanged, this, [this, &spec](const QString& text) {
@@ -792,6 +792,24 @@ void SettingsDialog::refresh()
         // question a settings window exists to answer.
         row.state->setText(store.is_explicit(row.spec->id) ? tr("ayarlanmış")   // ui-label
                                                            : tr("varsayılan")); // ui-label
+    }
+
+    // §10's orange dot beside a category that departs from its defaults, so the
+    // list says where the changes are before a page is opened.
+    if (sections_ != nullptr) {
+        for (int i = 0; i < static_cast<int>(order_.size()); ++i) {
+            bool departed = false;
+            for (const Row& row : rows_) {
+                if (QString::fromStdString(row.spec->section) !=
+                    order_[static_cast<std::size_t>(i)].title)
+                    continue;
+                if (storeOf(row.spec->scope).is_explicit(row.spec->id)) {
+                    departed = true;
+                    break;
+                }
+            }
+            sections_->setMarked(i, departed);
+        }
     }
 
     loading_ = false;

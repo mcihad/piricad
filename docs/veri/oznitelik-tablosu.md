@@ -182,10 +182,35 @@ Her düzenleme bir `ÖZNİTELİK` komutu gönderir. Yani:
 
 Boş bırakılan bir hücre `yok` değerini alır, yani gerçekten boşalır — sıfır olmaz.
 
+## Araç satırı ve alt bant
+
+Üstteki araç satırı beş grup taşır, gruplar ince çizgilerle ayrılır: düzenleme kipi ·
+kaydet · geri/yinele │ satır ekle · seçili satırları sil (`SİL nesneler=…`) · çoğalt │
+tümünü seç · seçimi kaldır · seçimi tersine çevir · seçiliye yakınlaş │ süz (ifade çubuğuna
+gider) · alan hesaplayıcı · alan istatistikleri paneli · sütunlar (göster/gizle menüsü) │
+dışa aktar ([Dışa Aktar](../baslangic/disa-aktarma.md) penceresi) · yazdır. Henüz
+gelmemiş olanlar soluk durur ve ipucunda hangi fazda geleceğini söyler; sağ uçta
+`Tablo | Form` segmenti (form görünümü Faz 2'de).
+
+İfade çubuğunun sağındaki **Tabloda ara…** kutusu hızlı süzgeçtir: yazdığınız metni
+herhangi bir hücresinde geçiren satırlar kalır, Türkçe büyük-küçük harf gözetilmez.
+
+Bir sütun başlığına tıklamak o sütuna göre sıralar (ikinci tık tersine çevirir); sayılar
+sayı olarak, sözcükler Türkçe alfabetik sıralanır, boş hücreler her iki yönde en sonda.
+Bu oturumda yazdığınız hücreler turuncu yazı ve ince turuncu çerçeveyle işaretlidir;
+pencere başlığı da `1 düzenlendi` diye sayar.
+
+Alt bantta soldan sağa: sayfalayıcı (`1 – 18 / 1 482` — görünen satır aralığı; ok
+düğmeleri sayfa sayfa kaydırır, uçtakiler başa ve sona gider), **Yalnızca seçiliyi
+göster** ve **Haritayla eşitle** anahtarları, en sağda seçili sütunun toplamı ve
+ortalaması.
+
 ## Seçim haritayla ortaktır
 
 Tabloda bir satır seçmek çizimde o nesneyi seçer; ikisi aynı nesnenin iki
-görünümüdür. Seçim `SEÇ` komutuyla gider, tıpkı tuvalde seçmek gibi.
+görünümüdür. Seçim `SEÇ` komutuyla gider, tıpkı tuvalde seçmek gibi. Ters yön de
+çalışır: **Haritayla eşitle** açıkken tuvalde seçilen nesnenin satırı tabloda seçilir;
+**Yalnızca seçiliyi göster** ise tabloyu tuvaldeki seçime indirger.
 
 ## Alan istatistikleri
 

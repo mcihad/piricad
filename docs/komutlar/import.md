@@ -38,7 +38,8 @@ Hangi biçimlerin okunduğu ve neyin taşındığı:
 İÇEAKTAR <dosya-yolu>
 İÇEAKTAR <dosya-yolu> <bicim>
 İÇEAKTAR dosya=<dosya-yolu> bicim=<sürücü-adı>
-İÇEAKTAR dosya=<dosya-yolu> katmanlar="<ad>,<ad>,<ad>"
+İÇEAKTAR dosya=<dosya-yolu> katmanlar="<ad>,<ad>,<ad>" alanlar="<alan>,<alan>"
+İÇEAKTAR dosya=<dosya-yolu> alanlar=*
 ```
 
 Biçim verilmezse uzantıdan bulunur. İçinde boşluk olan yol tırnak içine alınır.
@@ -50,6 +51,7 @@ Biçim verilmezse uzantıdan bulunur. İçinde boşluk olan yol tırnak içine a
 | `dosya` | İçe aktarılacak dosyanın yolu. Zorunlu |
 | `bicim` | Sürücü adı: `DXF` ya da `GPKG`. Verilmezse uzantıdan bulunur |
 | `katmanlar` | Yalnızca bu katmanlar okunur, virgülle ayrılır. Verilmezse dosyadaki bütün katmanlar okunur |
+| `alanlar` | Sütun olarak okunacak öznitelik alanları, virgülle; `*` hepsini okur. Verilmezse hiçbir alan okunmaz, yalnız geometri gelir |
 
 Tipi ve adedi için üretilmiş [komut referansına](referans.md) bakın.
 
@@ -116,6 +118,28 @@ bölge tahmin edilmez: 583 000 doğu değeri birden çok Türkiye diliminde
 geçerlidir ve aralarında tahmin yürütmek tam olarak bu kuralın önlediği
 hatadır.
 
+### Öznitelik alanları
+
+Bir Shapefile ya da GeoPackage geometrinin yanında bir tablo taşır: `ada`, `parsel`,
+`nitelik`, `alan_m2`. `alanlar` bu alanların hangilerinin çizimde **sütun** olacağını
+söyler; her alan katmanına özel bir sütun olarak tanımlanır ve her nesne kendi
+değerini alır:
+
+```text
+İÇEAKTAR dosya="kadastro.gpkg" alanlar="ada,parsel"
+İÇEAKTAR dosya="kadastro.gpkg" alanlar=*
+```
+
+Alan türleri sütun türüne şöyle çevrilir: tam sayı → `tam_sayi`, ondalık → `ondalik`
+(dosyanın bildirdiği basamak sayısıyla, bildirmezse iki), tarih → `tarih`, geri kalanı
+`metin`. Sütun kimliği alan adının küçük harfe indirilmiş biçimidir: `ADA_NO` → `ada_no`.
+Belgede aynı kimlikte ve aynı türde bir sütun varsa yeniden kullanılır; türü farklıysa
+alan okunmaz ve rapor bunu söyler. Bir DXF'in alanları (katman adı, çizgi tipi, tutamak)
+OGR'ın kendi defter kayıtlarıdır ve hiçbir zaman sunulmaz.
+
+`alanlar` verilmezse dosyanın kaç alanı olduğu raporda yazılır, böylece bir şeyin
+okunmadığı sessizce geçmez.
+
 ### Arayüz
 
 **Dosya > İçe Aktar…** menüsü veya **Dosya** araç çubuğundaki **İçe Aktar**
@@ -134,7 +158,12 @@ görürsünüz. **Tümü** ve **Hiçbiri** bağlantıları görünen satırlara 
 arama kutusuna bir şey yazdıysanız yalnızca süzgeçten geçen katmanları
 etkilerler. Çizim tekerlekle yakınlaşır, sürüklemeyle kayar.
 
-**İçe Aktar**, işaretlediğiniz katmanlarla tek bir `İÇEAKTAR` satırı kurar ve
+Üçüncü sayfa **ALANLAR**: dosyanın öznitelik alanları katman adı, alan adı, olacağı
+sütun türü ve ilk değeriyle listelenir; işaretlediğiniz alanlar sütun olarak okunur
+(`Tümü` / `Hiçbiri` düğmeleri listenin üstündedir). Alanı olmayan bir dosyada sayfa
+bunu söyler ve boş kalır.
+
+**İçe Aktar**, işaretlediğiniz katmanlar ve alanlarla tek bir `İÇEAKTAR` satırı kurar ve
 onu çalıştırır. Pencere yalnızca argüman toplar: kurduğu satır, aynı işi bir
 betikte yazacağınız satırın tıpatıp aynısıdır.
 

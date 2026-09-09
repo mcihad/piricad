@@ -219,7 +219,16 @@ class PanelHeader : public QWidget, public Themed
 public:
     /// `buttons` names which of the four §6 marks this header carries, in the
     /// order the reference draws them: grip, collapse, float, close.
-    enum Button { Grip = 1 << 0, Collapse = 1 << 1, Float = 1 << 2, Close = 1 << 3 };
+    enum Button {
+        Grip     = 1 << 0,
+        Collapse = 1 << 1,
+        Float    = 1 << 2,
+        Close    = 1 << 3,
+        /// The two the layers panel adds before the dock marks (design.md §7):
+        /// a new layer, and the filter box.
+        Add    = 1 << 4,
+        Filter = 1 << 5,
+    };
 
     explicit PanelHeader(QWidget* parent = nullptr);
 

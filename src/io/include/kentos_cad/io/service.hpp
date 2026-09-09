@@ -25,6 +25,7 @@
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/result.hpp"
+#include "kentos_cad/io/vector.hpp"
 
 #include <cstdint>
 #include <stop_token>
@@ -47,6 +48,7 @@ struct ImportProbe
     std::uint64_t entities{0};                                 ///< across every layer
     std::vector<std::pair<std::string, std::uint64_t>> layers; ///< name, entity count
     std::vector<std::string> notes;                            ///< the reader's own words
+    std::vector<VectorField> fields;                           ///< every attribute field, per layer
 };
 
 /// Reads `path` into `scratch` — a document the caller owns and the user has never
@@ -124,7 +126,8 @@ private:
     // where a reader — or a grep — could mistake it for one.
     command::Task<core::Result<std::string>> import_into(command::Transaction* tx, std::string path,
                                                          std::string format,
-                                                         std::vector<std::string> only);
+                                                         std::vector<std::string> only,
+                                                         std::vector<std::string> fields);
     command::Task<core::Result<std::string>> export_out(std::string path, std::string format);
 
     /// Reads a surveyed point list and puts one point entity per row in the
@@ -136,7 +139,8 @@ private:
                                                            std::string path, bool swapped_axes);
 
     /// Writes every point entity in the drawing back out in the same shape.
-    core::Result<std::string> export_points(std::string path, bool swapped_axes);
+    core::Result<std::string> export_points(std::string path, bool swapped_axes,
+                                            std::vector<std::uint64_t> entities);
 
     command::Bus& bus_;
     std::string current_path_;

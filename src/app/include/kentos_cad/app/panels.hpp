@@ -19,6 +19,7 @@
 
 /// Qt widgets this header only holds pointers to.
 class QLabel;
+class QLineEdit;
 class QMenu;
 class QTreeWidget;
 class QTreeWidgetItem;
@@ -125,6 +126,14 @@ public:
     /// would be an edit nobody asked for.
     void selectLayer(core::LayerId layer);
 
+    /// Asks for a name and runs `KATMAN ad=…` — the header's `+` and the context
+    /// menu's `Yeni katman…` are the same road.
+    void addLayerInteractively();
+
+    /// Shows the filter box above the list and puts the cursor in it, or hides
+    /// it and shows every row again. The header's filter mark.
+    void toggleFilter();
+
 signals:
     /// Emitted when the user picks a row, so the property panel can follow.
     void layerSelected(core::LayerId layer);
@@ -165,6 +174,10 @@ protected:
 private:
     void onItemActivated(QTreeWidgetItem* item, int column);
 
+    /// Hides every row whose name does not contain the filter box's text,
+    /// Turkish-folded; an empty box shows them all.
+    void applyFilter();
+
     /// Sends the KATMAN call that flips one row's eye or lock.
     void toggleRow(QTreeWidgetItem* item, bool visibility);
 
@@ -188,6 +201,7 @@ private:
 
     Controller& controller_;
     QTreeWidget* tree_{nullptr};
+    QLineEdit* filter_{nullptr};
     LayerRowDelegate* rows_{nullptr};
     QLabel* footer_{nullptr};
 };

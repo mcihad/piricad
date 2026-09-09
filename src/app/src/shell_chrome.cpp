@@ -600,7 +600,8 @@ void PanelHeader::relayout()
 QVector<int> PanelHeader::buttonList() const
 {
     QVector<int> out;
-    for (int bit : {Grip, Collapse, Float, Close})
+    // The panel's own marks first, the dock's after: `+ ⧩ ⋮` reads left to right.
+    for (int bit : {Add, Filter, Grip, Collapse, Float, Close})
         if (buttons_ & bit) out.push_back(bit);
     return out;
 }
@@ -683,11 +684,20 @@ void PanelHeader::paintEvent(QPaintEvent*)
                    Qt::AlignVCenter | Qt::AlignLeft, tab.label);
     }
 
-    static const Glyph kMarks[] = {Glyph::Grip, Glyph::Collapse, Glyph::Float, Glyph::Close};
-    const QVector<int> marks    = buttonList();
+    const auto glyphOf = [](int bit) {
+        switch (bit) {
+        case Grip: return Glyph::Grip;
+        case Collapse: return Glyph::Collapse;
+        case Float: return Glyph::Float;
+        case Close: return Glyph::Close;
+        case Add: return Glyph::Plus;
+        case Filter: return Glyph::Filter;
+        default: return Glyph::Grip;
+        }
+    };
+    const QVector<int> marks = buttonList();
     int bx = width() - kHeaderRight - static_cast<int>(marks.size()) * (kHeaderBtn + kHeaderBtnGap);
     for (int bit : marks) {
-        const int which = bit == Grip ? 0 : bit == Collapse ? 1 : bit == Float ? 2 : 3;
         const QRect box(bx, (kHeaderHeight - kHeaderBtn) / 2, kHeaderBtn, kHeaderBtn);
         if (hotButton_ == bit) {
             p.setPen(Qt::NoPen);
@@ -695,7 +705,7 @@ void PanelHeader::paintEvent(QPaintEvent*)
             p.drawRoundedRect(box, 3, 3);
         }
         p.drawPixmap(QRect(box.left() + 3, box.top() + 3, kHeaderIcon, kHeaderIcon),
-                     glyph_pixmap(kMarks[which], hotButton_ == bit ? t.text : t.textFaint,
+                     glyph_pixmap(glyphOf(bit), hotButton_ == bit ? t.text : t.textFaint,
                                   kHeaderIcon, devicePixelRatioF()));
         bx += kHeaderBtn + kHeaderBtnGap;
     }

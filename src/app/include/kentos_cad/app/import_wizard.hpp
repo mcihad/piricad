@@ -164,6 +164,11 @@ public:
     /// again is a page the user has no work to do on.
     void beginWith(const QString& path);
 
+    /// For the screenshot probe: waits for a read started by `beginWith` to
+    /// finish, at most `msecs`, then shows `page`. False when the read did not
+    /// finish in time — the probe then photographs nothing rather than a spinner.
+    bool probeSettle(int page, int msecs = 15000);
+
     /// The `İÇEAKTAR` line the user approved, or empty when they cancelled. The
     /// caller runs it: the wizard states the work, the controller does it.
     QString commandLine() const { return line_; }
@@ -176,6 +181,7 @@ private:
     // ---- pages ----
     QWidget* buildFilePage();
     QWidget* buildLayerPage();
+    QWidget* buildFieldPage();
     QWidget* buildStepper();
 
     // ---- acting ----
@@ -190,6 +196,13 @@ private:
     /// Every ticked layer name, in the order the file holds them.
     QStringList chosen() const;
 
+    // ---- the field page ----
+    void setAllFieldsChecked(bool on);
+    void refreshFieldTally();
+
+    /// Every ticked field name, once each, in the order the file holds them.
+    QStringList chosenFields() const;
+
     Controller& controller_;
 
     QStackedWidget* pages_   = nullptr;
@@ -200,7 +213,11 @@ private:
     QWidget* progressBox_    = nullptr;
     QLabel* stepOne_         = nullptr;
     QLabel* stepTwo_         = nullptr;
+    QLabel* stepThree_       = nullptr;
     QWidget* stepRule_       = nullptr;
+    QWidget* stepRuleTwo_    = nullptr;
+    QListWidget* fields_     = nullptr;
+    QLabel* fieldTally_      = nullptr;
 
     ImportPreview* preview_ = nullptr;
     QListWidget* layers_    = nullptr;

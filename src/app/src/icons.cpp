@@ -550,6 +550,49 @@ void draw(QPainter& p, Glyph g, const QColor& c)
         p.drawPolyline(QPolygonF({QPointF(9.6, 6.6), QPointF(15.0, 12.0), QPointF(9.6, 17.4)}));
         break;
 
+    case Glyph::ChevronUp:
+        p.setPen(stroke(c, 1.9));
+        p.drawPolyline(QPolygonF({QPointF(6.6, 14.4), QPointF(12.0, 9.0), QPointF(17.4, 14.4)}));
+        break;
+
+    case Glyph::DataObject: {
+        // Two braces, drawn rather than typed, so they re-tint and sit on the
+        // 24 px grid like every other mark.
+        p.setPen(stroke(c, 1.6));
+        QPainterPath left;
+        left.moveTo(9.8, 4.4);
+        left.cubicTo(6.6, 4.4, 7.4, 7.6, 7.4, 9.4);
+        left.cubicTo(7.4, 11.2, 5.6, 12.0, 4.6, 12.0);
+        left.cubicTo(5.6, 12.0, 7.4, 12.8, 7.4, 14.6);
+        left.cubicTo(7.4, 16.4, 6.6, 19.6, 9.8, 19.6);
+        p.drawPath(left);
+        QPainterPath right;
+        right.moveTo(14.2, 4.4);
+        right.cubicTo(17.4, 4.4, 16.6, 7.6, 16.6, 9.4);
+        right.cubicTo(16.6, 11.2, 18.4, 12.0, 19.4, 12.0);
+        right.cubicTo(18.4, 12.0, 16.6, 12.8, 16.6, 14.6);
+        right.cubicTo(16.6, 16.4, 17.4, 19.6, 14.2, 19.6);
+        p.drawPath(right);
+        break;
+    }
+
+    case Glyph::ChevronLeft:
+        p.setPen(stroke(c, 1.9));
+        p.drawPolyline(QPolygonF({QPointF(14.4, 6.6), QPointF(9.0, 12.0), QPointF(14.4, 17.4)}));
+        break;
+
+    case Glyph::PageFirst:
+        p.setPen(stroke(c, 1.9));
+        p.drawPolyline(QPolygonF({QPointF(15.4, 6.6), QPointF(10.0, 12.0), QPointF(15.4, 17.4)}));
+        p.drawLine(QPointF(7.0, 6.6), QPointF(7.0, 17.4));
+        break;
+
+    case Glyph::PageLast:
+        p.setPen(stroke(c, 1.9));
+        p.drawPolyline(QPolygonF({QPointF(8.6, 6.6), QPointF(14.0, 12.0), QPointF(8.6, 17.4)}));
+        p.drawLine(QPointF(17.0, 6.6), QPointF(17.0, 17.4));
+        break;
+
     case Glyph::Cloud:
         p.setPen(stroke(c, 1.7));
         {
@@ -694,6 +737,19 @@ void draw(QPainter& p, Glyph g, const QColor& c)
         p.drawRoundedRect(QRectF(3.6, 8.4, 16.8, 7.2), 1.2, 1.2);
         for (const qreal x : {7.6, 10.6, 13.6, 16.6})
             p.drawLine(QPointF(x, 8.4), QPointF(x, x == 10.6 || x == 16.6 ? 12.6 : 11.2));
+        break;
+
+    case Glyph::Sigma:
+        p.setPen(stroke(c, 1.8));
+        p.drawPolyline(QPolygonF({QPointF(17.6, 5.0), QPointF(6.4, 5.0), QPointF(12.6, 12.0),
+                                  QPointF(6.4, 19.0), QPointF(17.6, 19.0)}));
+        break;
+
+    case Glyph::Invert:
+        p.setPen(stroke(c, 1.7));
+        p.drawRect(QRectF(4.0, 4.0, 11.0, 11.0));
+        p.setBrush(c);
+        p.drawRect(QRectF(9.0, 9.0, 11.0, 11.0));
         break;
 
     case Glyph::Refresh:

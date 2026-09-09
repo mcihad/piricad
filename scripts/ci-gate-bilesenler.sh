@@ -17,7 +17,7 @@
 #
 #   1. NO RAW CONTROL OUTSIDE THE SET. A `QPushButton`, `QCheckBox`,
 #      `QRadioButton`, `QSlider`, `QSpinBox`, `QDoubleSpinBox`, `QProgressBar`,
-#      `QGroupBox` or `QDialogButtonBox` constructed anywhere in /src/app other
+#      `QGroupBox`, `QDialogButtonBox` or `QComboBox` constructed anywhere in /src/app other
 #      than `widgets.cpp` and `fields.cpp` is a control that can drift. The one
 #      allowance is named below with its removal condition, Article 8 style.
 #
@@ -34,7 +34,7 @@ kok="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fail=0
 
 # ---- 1. no raw control outside the set ---------------------------------------
-raw='new (QPushButton|QCheckBox|QRadioButton|QSlider|QSpinBox|QDoubleSpinBox|QProgressBar|QGroupBox|QDialogButtonBox)\b'
+raw='new (QPushButton|QCheckBox|QRadioButton|QSlider|QSpinBox|QDoubleSpinBox|QProgressBar|QGroupBox|QDialogButtonBox|QComboBox)\b'
 
 # THE ONE ALLOWANCE. The style designer's per-layer property form drives its
 # numeric editors — width, size, interval, spacing, phase, opacity — through the
@@ -157,6 +157,9 @@ else
     bekle "[bilesen] rozet · accent · 14 px"
     bekle "[bilesen] uyarı şeridi · warn"
     bekle "[bilesen] yükleniyor · etkin · 2 px"
+    bekle "[bilesen] açılır liste · 3 seçenek · 30 px"
+    bekle "[bilesen] ifade · renkli · 30 px"
+    bekle "[bilesen] tablo · 3 satır"
 fi
 
 if [[ $fail -ne 0 ]]; then

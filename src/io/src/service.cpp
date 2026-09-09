@@ -124,12 +124,13 @@ core::Result<ImportProbe> probe_import(core::Document& scratch, const std::strin
         return out;
     }
 
-    auto read = drive(import_vector(tx, path, std::string(), project_crs, {}, std::move(stop)));
+    auto read = drive(import_vector(tx, path, std::string(), project_crs, {}, {}, std::move(stop)));
     if (!read) return read.error();
 
     const VectorReport& r = read.value();
     out.driver            = r.driver;
     out.crs               = r.crs;
+    out.fields            = r.fields;
     out.entities          = r.entities;
     out.notes             = r.notes;
     out.layers            = r.layer_names;
@@ -176,7 +177,8 @@ command::Task<core::Result<std::string>> FileService::handle(command::FileReques
 
     case command::FileRequest::Verb::Import:
         co_return co_await import_into(request.tx, std::move(request.path),
-                                       std::move(request.format), std::move(request.layers));
+                                       std::move(request.format), std::move(request.layers),
+                                       std::move(request.fields));
 
     case command::FileRequest::Verb::Export:
         co_return co_await export_out(std::move(request.path), std::move(request.format));
@@ -188,7 +190,8 @@ command::Task<core::Result<std::string>> FileService::handle(command::FileReques
         co_return co_await import_points(request.tx, std::move(request.path), request.swapped_axes);
 
     case command::FileRequest::Verb::ExportPoints:
-        co_return export_points(std::move(request.path), request.swapped_axes);
+        co_return export_points(std::move(request.path), request.swapped_axes,
+                                std::move(request.entities));
     }
     co_return err(ErrorCode::Internal, "Bilinmeyen dosya işlemi.");
 }
@@ -298,10 +301,9 @@ core::Result<std::string> FileService::save(const std::string& path, bool save_a
 
 // -------------------------------------------------------------- İÇEAKTAR ----
 
-command::Task<core::Result<std::string>> FileService::import_into(command::Transaction* tx,
-                                                                  std::string path,
-                                                                  std::string format,
-                                                                  std::vector<std::string> only)
+command::Task<core::Result<std::string>>
+FileService::import_into(command::Transaction* tx, std::string path, std::string format,
+                         std::vector<std::string> only, std::vector<std::string> fields)
 {
     if (!tx)
         co_return err(ErrorCode::Internal,
@@ -336,8 +338,9 @@ command::Task<core::Result<std::string>> FileService::import_into(command::Trans
         co_return said + join_notes(notes);
     }
 
-    auto report = co_await import_vector(*tx, std::move(path), std::move(format),
-                                         effective_crs(bus_), std::move(only), stop_.get_token());
+    auto report =
+        co_await import_vector(*tx, std::move(path), std::move(format), effective_crs(bus_),
+                               std::move(only), std::move(fields), stop_.get_token());
     if (!report) co_return report.error();
 
     const VectorReport& r = report.value();
@@ -441,7 +444,8 @@ FileService::import_points(command::Transaction* tx, std::string path, bool swap
         (swapped_axes ? "  (sütunlar X, Y sırasında)" : "");
 }
 
-core::Result<std::string> FileService::export_points(std::string path, bool swapped_axes)
+core::Result<std::string> FileService::export_points(std::string path, bool swapped_axes,
+                                                     std::vector<std::uint64_t> entities)
 {
     const core::Document& doc    = bus_.document();
     const core::AttrTable& table = doc.attributes();
@@ -450,6 +454,42 @@ core::Result<std::string> FileService::export_points(std::string path, bool swap
     const core::AttrId code      = table.find("kod");
 
     std::vector<SurveyPoint> points;
+
+    // THE CORNERS OF NAMED OBJECTS: one row per vertex of every ring, numbered
+    // `key.n` so a row can be traced back to its parcel, coded with the layer's
+    // name so a list of forty parcels still reads. What a stake-out list is.
+    if (!entities.empty()) {
+        for (const std::uint64_t raw : entities) {
+            const auto key            = static_cast<core::EntityKey>(raw);
+            const core::EntityId slot = doc.slot_of(key);
+            if (slot == core::kNoEntity || !doc.alive(slot))
+                return err(ErrorCode::NotFound,
+                           "Nesne bulunamadı veya silinmiş: " + std::to_string(raw));
+
+            const core::Layer* layer  = doc.layer(doc.entities().layer[slot]);
+            const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[slot]);
+            std::size_t n             = 0;
+            for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+                const auto xs = doc.geometry().ring_xs(r);
+                const auto ys = doc.geometry().ring_ys(r);
+                for (std::size_t i = 0; i < xs.size(); ++i) {
+                    SurveyPoint p;
+                    p.number = std::to_string(raw) + "." + std::to_string(++n);
+                    p.at     = core::Point2{xs[i], ys[i]};
+                    if (layer != nullptr) p.code = layer->name;
+                    points.push_back(std::move(p));
+                }
+            }
+        }
+        if (points.empty())
+            return err(ErrorCode::NotFound, "Verilen nesnelerin yazılacak köşesi yok.");
+
+        const PointOrder order =
+            swapped_axes ? PointOrder::NumberNorthingEasting : PointOrder::NumberEastingNorthing;
+        if (auto st = write_point_list(path, points, order); !st) return st.error();
+        return std::to_string(points.size()) + " köşe yazıldı: " + path;
+    }
+
     for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
         if (!doc.alive(e) || doc.entities().kind[e] != core::kPointKind) continue;
 

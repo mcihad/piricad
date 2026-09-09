@@ -47,13 +47,15 @@
 #include <QWidget>
 
 class QAbstractButton;
-class QComboBox;
 class QLabel;
 class QLineEdit;
 class QSlider;
 class QToolButton;
 
 namespace kentos::app {
+
+/// The component set; see widgets.hpp.
+class ComboBox;
 
 /// What a cell offers when it is opened.
 ///
@@ -404,14 +406,16 @@ private:
     FieldSpec spec_;
     bool done_{false}; ///< one edit ends once, whichever way it ends
 
-    QLineEdit* line_{nullptr};      ///< Text, Number, Decimal, Date
-    QComboBox* combo_{nullptr};     ///< Combo
-    QAbstractButton* yes_{nullptr}; ///< Bool
-    QAbstractButton* no_{nullptr};  ///< Bool
-    QToolButton* picker_{nullptr};  ///< Date, Colour, MultiSelect
-    DatePopup* calendar_{nullptr};  ///< Date, built on the first press
-    QLabel* lead_{nullptr};         ///< the mark at the left edge, when there is one
-    QLabel* unit_{nullptr};         ///< the unit at the right edge, when there is one
+    QLineEdit* line_{nullptr};         ///< Text, Number, Decimal, Date
+    ComboBox* combo_{nullptr};         ///< Combo
+    QAbstractButton* yes_{nullptr};    ///< Bool, in a cell: the `evet` half
+    QAbstractButton* toggle_{nullptr}; ///< Bool, in a form: the switch
+    QLabel* toggleWord_{nullptr};      ///< the word beside the switch
+    QAbstractButton* no_{nullptr};     ///< Bool
+    QToolButton* picker_{nullptr};     ///< Date, Colour, MultiSelect
+    DatePopup* calendar_{nullptr};     ///< Date, built on the first press
+    QLabel* lead_{nullptr};            ///< the mark at the left edge, when there is one
+    QLabel* unit_{nullptr};            ///< the unit at the right edge, when there is one
     FieldState state_{FieldState::Normal};
     QSlider* slider_{nullptr}; ///< Range
     QStringList ticked_;       ///< MultiSelect

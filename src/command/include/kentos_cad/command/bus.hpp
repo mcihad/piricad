@@ -82,10 +82,23 @@ struct FileRequest
     /// guessed — no heuristic can tell a 485 320 easting from a northing.
     bool swapped_axes{false};
 
+    /// ExportPoints: the entities whose CORNERS are written, one row per vertex,
+    /// numbered `key.n`. Empty means the drawing's point entities, which is what
+    /// a surveyor taking a list back to the field wants; a parcel's corners are
+    /// what the same surveyor wants for a stake-out, and both are the same file.
+    std::vector<std::uint64_t> entities;
+
     /// Import: the layers to read, empty meaning all of them. What the import
     /// wizard's tick boxes become — and, because it is an ordinary parameter, what
     /// a script or the command line can state just as well (Article 1.2).
     std::vector<std::string> layers;
+
+    /// Import: the attribute FIELDS to read as columns, by the names the file
+    /// gives them; a single `*` means every field, and empty means none — the
+    /// behaviour every drawing imported so far was written with. A Shapefile or a
+    /// GeoPackage carries a table beside its geometry, and a parcel that arrives
+    /// without its ada and parsel numbers is half a parcel.
+    std::vector<std::string> fields;
 
     /// The calling command's own transaction, so an import is ONE undo step and
     /// rolls back whole (io.md R17). Null for the verbs that do not mutate the

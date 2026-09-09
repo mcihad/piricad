@@ -157,6 +157,27 @@ Task<void> run_import(Context& ctx)
         ctx.record("katmanlar", only);
     }
 
+    // WHICH FIELDS BECOME COLUMNS. Same shape as `katmanlar`: one text, comma
+    // separated, `*` for all. Absent means none, so a drawing imported before
+    // this parameter existed imports exactly as it did.
+    if (const Value wanted = ctx.argument("alanlar"); !wanted.empty()) {
+        const std::string text = wanted.as_text();
+        std::string one;
+        for (const char ch : text) {
+            if (ch == ',') {
+                if (!one.empty()) request.fields.push_back(one);
+                one.clear();
+                continue;
+            }
+            if (ch == ' ' && one.empty()) continue;
+            one.push_back(ch);
+        }
+        while (!one.empty() && one.back() == ' ')
+            one.pop_back();
+        if (!one.empty()) request.fields.push_back(one);
+        ctx.record("alanlar", wanted);
+    }
+
     // The command's OWN transaction, so the whole import is one undo step and any
     // failure rolls the document back to exactly its pre-import state (io.md R17,
     // P11). This is the only file verb that mutates the document in place.
@@ -299,6 +320,9 @@ KENTOS_COMMAND(import)
                 Param::text("katmanlar", Arity::optional(),
                             "Yalnızca bu katmanlar okunur, virgülle ayrılır; "
                             "verilmezse tümü"),
+                Param::text("alanlar", Arity::optional(),
+                            "Sütun olarak okunacak öznitelik alanları, virgülle; "
+                            "* hepsi; verilmezse alan okunmaz"),
             },
         // io.md R17: one transaction, one undo entry, and a failure leaves the
         // document byte for byte as it was.

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/fields.hpp"
 
+#include "kentos_cad/app/dialog_chrome.hpp"
 #include "kentos_cad/app/tokens.hpp"
+#include "kentos_cad/app/widgets.hpp"
 
 #include <QApplication>
 #include <QColorDialog>
@@ -463,6 +465,30 @@ Field::Field(const FieldSpec& spec, QWidget* parent) : QWidget(parent), spec_(sp
         break;
 
     case FieldKind::Bool: {
+        // IN A FORM, A SWITCH: `bileşen_standardı.png` gives an on/off setting the
+        // pill, and a `Zorunlu` row that stretched two words across the whole
+        // column read as a segmented control about something else. The word
+        // beside the pill says the state in text as well (design.md §13).
+        if (spec_.frame == FieldFrame::Box) {
+            // No box around a pill: the switch is its own shape, and a bordered
+            // input ground behind it read as a text field holding a toggle.
+            setProperty("frame", QStringLiteral("bare"));
+            auto* pill = new ToggleSwitch(this);
+            pill->installEventFilter(this);
+            toggle_     = pill;
+            toggleWord_ = new QLabel(tr("hayır"), this);
+            toggleWord_->setObjectName(QStringLiteral("fieldUnit"));
+            connect(pill, &QAbstractButton::toggled, this, [this](bool on) {
+                toggleWord_->setText(on ? tr("evet") : tr("hayır"));
+                commit();
+            });
+            row->addSpacing(6);
+            row->addWidget(pill);
+            row->addWidget(toggleWord_);
+            row->addStretch(1);
+            break;
+        }
+
         // A SEGMENT, NOT A TICK. A check box in a cell is a 13 px target with a
         // label somewhere else; two words that light up say what they mean at
         // row height and read the same as the value the cell was painting.
@@ -492,8 +518,9 @@ Field::Field(const FieldSpec& spec, QWidget* parent) : QWidget(parent), spec_(sp
     }
 
     case FieldKind::Combo:
-        combo_ = new QComboBox(this);
+        combo_ = new ComboBox(this);
         combo_->setObjectName(QStringLiteral("fieldCombo"));
+        combo_->setBare(true); // the field is the box
         frameOf(combo_);
         combo_->addItems(spec_.choices);
         combo_->installEventFilter(this);
@@ -692,7 +719,9 @@ void Field::refreshMultiFace()
 QString Field::value() const
 {
     switch (spec_.kind) {
-    case FieldKind::Bool: return (yes_ != nullptr && yes_->isChecked()) ? tr("evet") : tr("hayır");
+    case FieldKind::Bool:
+        if (toggle_ != nullptr) return toggle_->isChecked() ? tr("evet") : tr("hayır");
+        return (yes_ != nullptr && yes_->isChecked()) ? tr("evet") : tr("hayır");
     case FieldKind::Combo: return combo_ != nullptr ? combo_->currentText() : QString();
     case FieldKind::MultiSelect: return ticked_.join(QStringLiteral(", "));
     case FieldKind::Colour: return colour_;
@@ -704,14 +733,20 @@ QString Field::value() const
 void Field::setValue(const QString& text)
 {
     switch (spec_.kind) {
-    case FieldKind::Bool:
+    case FieldKind::Bool: {
+        const bool on =
+            text.compare(tr("evet"), Qt::CaseInsensitive) == 0 || text == QLatin1String("1");
+        if (toggle_ != nullptr) {
+            QSignalBlocker quiet(toggle_);
+            toggle_->setChecked(on);
+            if (toggleWord_ != nullptr) toggleWord_->setText(on ? tr("evet") : tr("hayır"));
+        }
         if (yes_ != nullptr && no_ != nullptr) {
-            const bool on =
-                text.compare(tr("evet"), Qt::CaseInsensitive) == 0 || text == QLatin1String("1");
             yes_->setChecked(on);
             no_->setChecked(!on);
         }
         return;
+    }
 
     case FieldKind::Combo:
         if (combo_ != nullptr) {
@@ -809,6 +844,22 @@ bool Field::eventFilter(QObject* watched, QEvent* event)
         }
         if (key->key() == Qt::Key_Escape) {
             cancel();
+            return true;
+        }
+
+        // THE PICKER OPENS FROM THE KEYBOARD — Alt+Down or F4, the keys a combo
+        // box answers to — because the button beside the line takes no focus
+        // (it must not: Tab has to leave the field in one step) and a calendar
+        // only a mouse could open would be a capability the keyboard lacks
+        // (CLAUDE.md 5.15, ui.md R21).
+        const bool opensPicker =
+            key->key() == Qt::Key_F4 ||
+            (key->key() == Qt::Key_Down && key->modifiers().testFlag(Qt::AltModifier));
+        if (opensPicker && picker_ != nullptr) {
+            if (picker_->menu() != nullptr)
+                picker_->showMenu();
+            else
+                picker_->click();
             return true;
         }
     }
@@ -932,10 +983,14 @@ QWidget* FieldDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem
     return editor;
 }
 
-bool FieldDelegate::eventFilter(QObject* watched, QEvent* event)
+bool FieldDelegate::eventFilter(QObject*, QEvent*)
 {
-    // Deliberately not `QStyledItemDelegate::eventFilter`. See the header.
-    return QObject::eventFilter(watched, event);
+    // Deliberately NOT `QStyledItemDelegate::eventFilter` — see the header. And
+    // not `QObject::eventFilter` either: that would be the same decision spelt as
+    // a call past the parent, which the analyser rightly reads as a mistake. The
+    // base implementation is `return false`, so this says so itself: the field
+    // handles its own keys, and this filter handles nothing.
+    return false;
 }
 
 void FieldDelegate::setEditorData(QWidget* editor, const QModelIndex& index) const

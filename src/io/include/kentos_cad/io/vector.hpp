@@ -18,6 +18,7 @@
 
 #include "kentos_cad/command/task.hpp"
 #include "kentos_cad/command/transaction.hpp"
+#include "kentos_cad/core/attribute.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/result.hpp"
 
@@ -59,6 +60,23 @@ bool vector_backend_available();
 std::string vector_backend_status();
 
 /// What an import or an export actually did, for the transcript line.
+/// One attribute field the file carries, as the reader saw it.
+///
+/// Reported for EVERY field whether or not it was imported, because the import
+/// wizard's third page is this list: what the file has, what type it would
+/// become, and a first value so the user can tell `ada_no` from `parsel_no`
+/// without opening the file elsewhere.
+struct VectorField
+{
+    std::string layer;                         ///< the OGR layer it belongs to
+    std::string name;                          ///< the field's own name, as in the file
+    std::string id;                            ///< the column id it becomes: folded, `[a-z0-9_]`
+    core::AttrType type{core::AttrType::Text}; ///< the declared type it maps to
+    std::uint8_t scale{0};                     ///< decimals kept for a Decimal
+    std::string sample;                        ///< the first non-empty value, for recognition
+    bool imported{false};                      ///< whether this run wrote it as a column
+};
+
 struct VectorReport
 {
     std::string driver; ///< the OGR driver that handled it
@@ -85,6 +103,7 @@ struct VectorReport
     /// sidecar written, a driver limitation worked around. Reported, never
     /// swallowed: a silent lossy export is how a wrong pafta gets delivered.
     std::vector<std::string> notes;
+    std::vector<VectorField> fields; ///< every attribute field the file carries
 };
 
 /// Reads `path` into `tx.document()`, merging into whatever is already there.
@@ -110,6 +129,7 @@ struct VectorReport
 command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx, std::string path,
                                                         std::string driver, std::string project_crs,
                                                         std::vector<std::string> only,
+                                                        std::vector<std::string> fields,
                                                         std::stop_token stop);
 
 /// Writes `doc` to `path` through the named allow-listed driver, or through the

@@ -38,6 +38,7 @@
 
 #include <QAbstractButton>
 #include <QColor>
+#include <QComboBox>
 #include <QLabel>
 #include <QPushButton>
 #include <QString>
@@ -278,6 +279,53 @@ private:
     int current_{-1};
     ControlSize size_{ControlSize::Compact};
     ThemeMode theme_{ThemeMode::Dark};
+};
+
+/// The one drop-down list — `bileşen_standardı.png`'s `Açılır liste`.
+///
+/// A `QComboBox` under Fusion draws its own box and its own arrow, and under a
+/// stylesheet either keeps the arrow and loses the box or the other way round;
+/// every combo in the program looked like a different program's. This one paints
+/// itself: the standard's input ground and border, the value in sans, a drawn
+/// chevron that re-tints with the theme, the accent border on focus, and the
+/// `state` the field standard names (changed, invalid, derived, read-only). Its
+/// popup is the shell's own list, 26 px rows on the panel ground.
+///
+/// It IS a `QComboBox`, so `addItem`, `currentText`, `currentData` and every
+/// signal are Qt's — a caller replaces the type name and nothing else.
+class ComboBox : public QComboBox, public Themed
+{
+    Q_OBJECT
+    Q_INTERFACES(kentos::app::Themed)
+
+public:
+    /// Builds an empty list at the standard's regular height.
+    explicit ComboBox(QWidget* parent = nullptr);
+
+    /// One of the standard's three heights.
+    void setControlSize(ControlSize size);
+
+    /// Drawn without its box — the value and the chevron only — when a `Field`
+    /// or a table cell owns it and paints the frame itself. Releases the fixed
+    /// height too: the owner's height is then the height.
+    void setBare(bool on);
+
+    void applyTheme(ThemeMode mode) override;
+
+    /// The text's width plus the chevron; the caller widens it as it likes.
+    QSize sizeHint() const override;
+
+protected:
+    /// Draws the box, the value (with its icon, when the item has one) and the
+    /// chevron; the focus ring for keyboard focus only.
+    void paintEvent(QPaintEvent* event) override;
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
+
+private:
+    ControlSize size_{ControlSize::Regular};
+    ThemeMode theme_{ThemeMode::Dark};
+    bool bare_{false};
 };
 
 /// A slider with its value printed beside it, in mono, because a slider alone

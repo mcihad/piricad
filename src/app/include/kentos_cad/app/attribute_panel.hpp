@@ -133,6 +133,17 @@ public:
     /// Every row key the panel is currently showing, for the same probe.
     QStringList probeRowKeys() const;
 
+signals:
+    /// The user asked for the shown object's corners as a file. The shell opens
+    /// the export window; the panel does not own it.
+    void exportCoordinatesRequested();
+
+    /// The user asked for the attribute table of `layer`.
+    void tableRequested(const QString& layer);
+
+    /// The user asked for the layer properties window of `layer`.
+    void propertiesRequested(const QString& layer);
+
 protected:
     /// Painted rather than laid out, for the reason the file header gives: the
     /// `112px | 1fr` grid and the 26 px row are exact numbers, and a layout of
@@ -143,6 +154,12 @@ protected:
     /// selects it, and a double click opens its editor.
     void mousePressEvent(QMouseEvent* event) override;
     void mouseDoubleClickEvent(QMouseEvent* event) override;
+
+    /// The object's menu: export its corners, copy them, open its layer's table
+    /// or properties. Offered while ONE object is shown, wherever on the panel
+    /// the click lands — and from the keyboard through the Menu key, which Qt
+    /// routes here too (ui.md R21).
+    void contextMenuEvent(QContextMenuEvent* event) override;
 
     /// Up and down walk the rows, Enter and F2 open the editor, Space flips a
     /// boolean. ui.md R21: every operation is reachable from the keyboard.

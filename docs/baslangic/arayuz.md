@@ -401,8 +401,10 @@ ve **yüzdür**.
 
 ### Öznitelikler
 
-Üstte **seçili nesne kartı**: tip ikonu, adı ve bir satır tanım. Hiçbir şey seçili
-değilse belgenin kendi bilgileri yazılır — boşalan bir panel bozulmuş görünür.
+Üstte **seçili nesne kartı**: tip ikonu, adı ve bir satır tanım — türü, kalıcı
+kimliği, köşe sayısı ve katmanı: `ALAN · fid 4128 · 4 köşe · Kadastro Parselleri`.
+Hiçbir şey seçili değilse belgenin kendi bilgileri yazılır — boşalan bir panel bozulmuş
+görünür.
 
 Altında katlanabilir gruplar ve `112 px | 1fr` ızgarasında satırlar: solda alan adı,
 sağda değer. Değer tek aralıklı yazıyla yazılır, çünkü değer veridir ve veri tek
@@ -424,12 +426,18 @@ grubu açtığınızda **açık kalır**: sonraki parseli seçtiğinizde kapanma
 
 | Grup | Ne yazar |
 |---|---|
-| **NESNE** | `kimlik` (kalıcı, değişmez) · `tur` · `katman` · `stil` · `gorunur` |
+| **NESNE** | `kimlik` (kalıcı, değişmez) · `tur` · `kose_sayisi` (hesap) · `halka_sayisi` (delikli ya da çok parçalı nesnede) · `katman` · `stil` · `gorunur` |
 | **GEOMETRİ** | `kose` · `halka` · `cevre` ya da `uzunluk` · `alan` |
 | **KAPSAM** | `saga_min/max` · `yukari_min/max` · `genislik` · `yukseklik` |
 | **ÖZNİTELİKLER** | Belgede tanımlı her sütun ve nesnenin o sütundaki değeri |
 
 Nesne yazı taşıyorsa bir de **METİN** grubu gelir: içerik ve yükseklik.
+
+Tek nesne seçiliyken panele **sağ tıklayın** — klavyede **Menü** tuşu ya da
+**Shift+F10** — nesnenin menüsü açılır: **Koordinatları dışa aktar…**
+([Dışa Aktar](disa-aktarma.md) penceresi, `NOKTALAR … yon=yaz nesneler=…`),
+**Koordinatları kopyala** (aynı satırlar panoya: `nesne.köşe;Y;X;katman`),
+**Öznitelik tablosunu aç** ve **Katman özellikleri…**.
 
 `tur` satırı **ne olduğunu** yazar, nasıl saklandığını değil: kapalı bir halka
 `ALAN`, deliği varsa `ALAN (delikli)`, açık bir halka `ÇOKLUÇİZGİ` olur. İkisi de
@@ -535,8 +543,13 @@ Oturumda ne olduğunun metin dökümü. Komut günlüğünün kendisi için
 
 ## Katmanlar paneli
 
-Sağ panelin altında, kendi 29 piksellik başlığıyla. Her satır tek bir satırdır ve
-sütun başlığı yoktur:
+Sağ panelin altında, kendi 29 piksellik başlığıyla. Başlığın sağ ucunda panelin iki
+işareti vardır: **＋** yeni katman adı sorar ve `KATMAN ad=…` çalıştırır; **süzgeç**
+listenin üstünde bir arama kutusu açar — yazdıkça adı uymayan katmanlar gizlenir, Türkçe
+büyük-küçük harf gözetilmez; aynı işaret kutuyu kapatır ve hepsini geri getirir. Onların
+yanında dock işaretleri (taşıma, katlama, ayırma) durur.
+
+Her satır tek bir satırdır ve sütun başlığı yoktur:
 
 | Kısım | Ne yapar |
 |---|---|

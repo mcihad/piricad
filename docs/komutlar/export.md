@@ -84,9 +84,11 @@ taşır ve KentOSCad dâhil hiçbir program hangi projeksiyonda olduğunu bileme
 
 ### Arayüz
 
-**Dosya > Dışa Aktar…** menüsü veya **Dosya** araç çubuğundaki **Dışa Aktar**
-düğmesi, izin verilen biçimlerle süzülmüş bir dosya adı penceresi açar. Pencere
-yalnızca argümanı toplar.
+**Dosya > Dışa Aktar…** menüsü, **Dosya** araç çubuğundaki **Dışa Aktar** düğmesi
+ve öznitelik tablosunun araç satırındaki **Dışa aktar** işareti aynı
+[Dışa Aktar](../baslangic/disa-aktarma.md) penceresini açar: solda yazılabilen
+biçimler, sağda dosya, altta pencerenin çalıştıracağı `DIŞAAKTAR` satırı. Pencere
+yalnızca argümanları toplar; dosyayı komut yazar.
 
 ### Betik
 

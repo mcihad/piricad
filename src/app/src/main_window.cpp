@@ -8,6 +8,7 @@
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/data_root.hpp"
 #include "kentos_cad/app/database_dialog.hpp"
+#include "kentos_cad/app/export_dialog.hpp"
 #include "kentos_cad/app/icons.hpp"
 #include "kentos_cad/app/import_wizard.hpp"
 #include "kentos_cad/app/map_canvas.hpp"
@@ -1217,6 +1218,18 @@ void MainWindow::buildPanels()
     // ---- the attributes / history panel ----
     attributePanel_ = new AttributePanel(*controller_, this);
 
+    // The object's menu asks; the shell answers, because the shell is what owns
+    // windows. The panel never learns what is in any of them.
+    connect(attributePanel_, &AttributePanel::exportCoordinatesRequested, this, [this] {
+        ExportDialog window(*controller_, ExportSubject::Coordinates, QString(), this);
+        window.applyTheme(theme_);
+        window.exec();
+    });
+    connect(attributePanel_, &AttributePanel::tableRequested, this,
+            [this](const QString& layer) { openAttributeTable(layer); });
+    connect(attributePanel_, &AttributePanel::propertiesRequested, this,
+            [this](const QString& layer) { openStyleDesigner(layer); });
+
     transcript_ = new QPlainTextEdit(this);
     transcript_->setReadOnly(true);
     transcript_->setMaximumBlockCount(2000);
@@ -1248,7 +1261,14 @@ void MainWindow::buildPanels()
 
     layerHeader_ = new PanelHeader(this);
     layerHeader_->addTab(tr("Katmanlar"), static_cast<int>(Glyph::Layer));
-    layerHeader_->setButtons(PanelHeader::Grip | PanelHeader::Collapse | PanelHeader::Float);
+    layerHeader_->setButtons(PanelHeader::Add | PanelHeader::Filter | PanelHeader::Grip |
+                             PanelHeader::Collapse | PanelHeader::Float);
+    connect(layerHeader_, &PanelHeader::buttonPressed, this, [this](int button) {
+        // The panel's own two marks; the dock marks are answered where every
+        // header's are.
+        if (button == PanelHeader::Add) layerPanel_->addLayerInteractively();
+        if (button == PanelHeader::Filter) layerPanel_->toggleFilter();
+    });
 
     layerDock_ = makeDock(QStringLiteral("layerDock"), layerHeader_, layerPanel_);
     layerDock_->toggleViewAction()->setText(tr("Katmanlar"));
@@ -2365,6 +2385,186 @@ void MainWindow::probeWidgets()
     delete sheet;
 }
 
+void MainWindow::seedProbeDrawing()
+{
+    // A drawing with enough in it for every window to show something: a named
+    // layer, three objects, five typed columns and values on the parcels.
+    command::Bus& bus = controller_->bus();
+    for (const char* line :
+         {"KATMAN ad=\"Kadastro Parselleri\"", "ALAN 0,0 100,0 100,80 0,80",
+          "ALAN 120,0 220,0 220,80 120,80", "ÇİZGİ 0,100 220,100",
+          "SÜTUN kimlik=\"ada_no\" tur=tam_sayi ad=\"Ada No\" zorunlu=evet",
+          "SÜTUN kimlik=\"parsel_no\" tur=tam_sayi ad=\"Parsel No\" zorunlu=evet",
+          "SÜTUN kimlik=\"alan_m2\" tur=ondalik basamak=2 ad=\"Alan\"",
+          "SÜTUN kimlik=\"nitelik\" tur=metin ad=\"Nitelik\"",
+          "SÜTUN kimlik=\"tapu_tarih\" tur=tarih ad=\"Tapu Tarihi\"",
+          "ÖZNİTELİK ad=ada_no nesne=1 deger=1284", "ÖZNİTELİK ad=parsel_no nesne=1 deger=21",
+          "ÖZNİTELİK ad=nitelik nesne=1 deger=Arsa",
+          "ÖZNİTELİK ad=tapu_tarih nesne=1 deger=2019-03-14",
+          "ÖZNİTELİK ad=ada_no nesne=2 deger=1284", "ÖZNİTELİK ad=parsel_no nesne=2 deger=22",
+          "ÖZNİTELİK ad=nitelik nesne=2 deger=Tarla"})
+        (void)bus.execute_line(line, command::Origin::Gui);
+    QCoreApplication::processEvents();
+}
+
+void MainWindow::probeDesigner()
+{
+    const auto say = [](const QString& text) {
+        (void)std::fprintf(stdout, "[tasarimci] %s\n", text.toUtf8().constData());
+        (void)std::fflush(stdout);
+    };
+    theme_ = ThemeMode::Dark;
+    applyTheme();
+    seedProbeDrawing();
+
+    StyleDesigner designer(*controller_, QStringLiteral("Kadastro Parselleri"), this);
+    designer.applyTheme(theme_);
+    designer.resize(1280, 756);
+    designer.show();
+    QCoreApplication::processEvents();
+
+    for (const QString& line : designer.probeRenderer(QStringLiteral("nitelik")))
+        say(line);
+
+    const QByteArray into = qgetenv("KENTOS_DESIGNER_PROBE");
+    if (!into.isEmpty() && into != "1") {
+        const QString dir = QString::fromLocal8Bit(into);
+        QDir().mkpath(dir);
+        QCoreApplication::processEvents();
+        if (designer.grab().save(dir + QStringLiteral("/tasarimci-kategori.png")))
+            say(QStringLiteral("kare: tasarimci-kategori.png"));
+    }
+
+    // And a second window on the same layer finds the classes again.
+    StyleDesigner again(*controller_, QStringLiteral("Kadastro Parselleri"), this);
+    again.applyTheme(theme_);
+    say(QStringLiteral("yeniden açılış: %1")
+            .arg(again.symbol().layers.empty() ? QStringLiteral("boş")
+                                               : QStringLiteral("sembol var")));
+    designer.close();
+}
+
+void MainWindow::probeDialogs()
+{
+    const auto say = [](const QString& text) {
+        (void)std::fprintf(stdout, "[pencere] %s\n", text.toUtf8().constData());
+        (void)std::fflush(stdout);
+    };
+
+    const QString dir = QString::fromLocal8Bit(qgetenv("KENTOS_DIALOG_PROBE"));
+    if (dir.isEmpty() || dir == QLatin1String("1")) {
+        say(QStringLiteral("KENTOS_DIALOG_PROBE bir dizin olmalı"));
+        return;
+    }
+    QDir().mkpath(dir);
+
+    // THE THEME THE MOCKUPS ARE DRAWN IN, unless asked otherwise. The window's own
+    // state for the length of the probe; the preference file is not written.
+    theme_ = qgetenv("KENTOS_PROBE_THEME") == "acik" ? ThemeMode::Light : ThemeMode::Dark;
+    applyTheme();
+
+    seedProbeDrawing();
+    command::Bus& bus = controller_->bus();
+    (void)bus.execute_line("SEÇ TÜMÜ", command::Origin::Gui);
+    QCoreApplication::processEvents();
+
+    // One object selected, through the same line the pick list sends.
+    const std::vector<core::EntityKey> all = bus.selection().keys();
+    if (!all.empty()) {
+        command::Args args;
+        args.set("mod", command::Value::text("NESNE"));
+        args.set("nesneler", command::Value::ids({static_cast<std::int64_t>(
+                                 static_cast<std::uint64_t>(all.front()))}));
+        controller_->runInvocation(
+            command::Invocation{"core.select", std::move(args), command::Origin::Gui});
+    }
+    QCoreApplication::processEvents();
+    say(QStringLiteral("nesne: %1, seçili: %2").arg(all.size()).arg(bus.selection().size()));
+
+    const auto shoot = [&dir, &say](QWidget* w, const char* name) {
+        w->show();
+        QCoreApplication::processEvents();
+        QCoreApplication::processEvents();
+        const QString file = dir + QLatin1Char('/') + QLatin1String(name) + QStringLiteral(".png");
+        say(w->grab().save(file) ? QStringLiteral("kare: %1.png").arg(QLatin1String(name))
+                                 : QStringLiteral("yazılamadı: %1").arg(file));
+    };
+
+    shoot(this, "ana");
+    if (attributePanel_ != nullptr) shoot(attributePanel_, "nesne-paneli");
+    if (layerPanel_ != nullptr) shoot(layerPanel_, "katman-paneli");
+
+    {
+        SettingsDialog d(*controller_, SettingsDialog::Mode::All, this);
+        d.applyTheme(theme_);
+        d.resize(1180, 740);
+        shoot(&d, "secenekler");
+    }
+    {
+        SettingsDialog d(*controller_, SettingsDialog::Mode::Project, this);
+        d.applyTheme(theme_);
+        d.resize(1180, 740);
+        shoot(&d, "proje-ayarlari");
+    }
+    {
+        StyleDesigner d(*controller_, controller_->activeLayerName(), this);
+        d.applyTheme(theme_);
+        d.resize(1280, 756);
+        shoot(&d, "katman-ozellikleri");
+    }
+    {
+        // The plain state as well — a layer no classification touched — because
+        // that is the page most layers open on.
+        QString plain;
+        const core::Document& doc = controller_->document();
+        for (std::size_t slot = 0; slot < doc.layers().size() && plain.isEmpty(); ++slot) {
+            const QString name = QString::fromStdString(doc.layers()[slot].name);
+            if (name != controller_->activeLayerName()) plain = name;
+        }
+        if (!plain.isEmpty()) {
+            StyleDesigner d(*controller_, plain, this);
+            d.applyTheme(theme_);
+            d.resize(1280, 756);
+            shoot(&d, "katman-ozellikleri-tek");
+        }
+    }
+    {
+        AttributeTable d(*controller_, QString(), this);
+        d.applyTheme(theme_);
+        d.resize(1400, 800);
+        shoot(&d, "oznitelik-tablosu");
+    }
+    {
+        DatabaseDialog d(*controller_, this);
+        d.applyTheme(theme_);
+        shoot(&d, "veritabani");
+    }
+    {
+        ImportWizard d(*controller_, theme_, this);
+        shoot(&d, "ice-aktar");
+
+        // With a file named in `KENTOS_PROBE_IMPORT`, the two pages a read fills
+        // as well: the layers and the fields. A wizard photographed only on its
+        // first page is a wizard nobody checked.
+        const QString sample = QString::fromLocal8Bit(qgetenv("KENTOS_PROBE_IMPORT"));
+        if (!sample.isEmpty()) {
+            d.beginWith(sample);
+            if (d.probeSettle(1)) shoot(&d, "ice-aktar-katmanlar");
+            if (d.probeSettle(2)) shoot(&d, "ice-aktar-alanlar");
+        }
+    }
+    {
+        ColumnDialog d(*controller_, QString(), controller_->activeLayerName(), this);
+        d.applyTheme(theme_);
+        shoot(&d, "yeni-sutun");
+    }
+    {
+        ExportDialog d(*controller_, ExportSubject::Coordinates, QString(), this);
+        d.applyTheme(theme_);
+        shoot(&d, "disa-aktar");
+    }
+}
+
 void MainWindow::openCommandSearch()
 {
     if (!palette_) {
@@ -2785,11 +2985,12 @@ void MainWindow::exportData()
         onEcho(QString::fromStdString(io::vector_backend_status()));
         return;
     }
-    const QString path =
-        QFileDialog::getSaveFileName(this, tr("Dışa aktar"), QString(), externalFormatFilter(true));
-    if (path.isEmpty()) return;
-
-    controller_->runLine(QStringLiteral("DIŞAAKTAR \"%1\"").arg(path), command::Origin::Gui);
+    // ONE EXPORT WINDOW for everything that leaves the program: the format list
+    // is the io layer's, the line it runs is shown, and a user who reads it has
+    // learnt the command (export_dialog.hpp).
+    ExportDialog window(*controller_, ExportSubject::Drawing, QString(), this);
+    window.applyTheme(theme_);
+    window.exec();
 }
 
 void MainWindow::openScript()

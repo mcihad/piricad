@@ -487,6 +487,7 @@ Ayrıntılı kullanım: [ELİPS](ellipse_draw.md)
 |---|---|---|---|
 | `dosya` | text | 1 | Nokta listesi dosyasının yolu |
 | `yon` | text | isteğe bağlı | oku (varsayılan) | yaz |
+| `nesneler` | selection | en az 0 | yon=yaz ile: köşeleri yazılacak nesneler; verilmezse çizimdeki noktalar |
 | `eksen` | text | isteğe bağlı | Sütun sırası: YX (varsayılan, Türkiye'de olağan) | XY |
 
 Ayrıntılı kullanım: [NOKTALAR](points.md)
@@ -707,6 +708,7 @@ Dış bir veri dosyasını çizime ekler.
 | `dosya` | text | 1 | İçe aktarılacak dosyanın yolu |
 | `bicim` | text | isteğe bağlı | Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur |
 | `katmanlar` | text | isteğe bağlı | Yalnızca bu katmanlar okunur, virgülle ayrılır; verilmezse tümü |
+| `alanlar` | text | isteğe bağlı | Sütun olarak okunacak öznitelik alanları, virgülle; * hepsi; verilmezse alan okunmaz |
 
 Ayrıntılı kullanım: [İÇEAKTAR](import.md)
 
@@ -2185,6 +2187,14 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "max": 1,
           "required": false,
           "help": "oku (varsayılan) | yaz"
+        },
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "yon=yaz ile: köşeleri yazılacak nesneler; verilmezse çizimdeki noktalar"
         },
         {
           "name": "eksen",

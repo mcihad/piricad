@@ -660,6 +660,22 @@ int main(int argc, char** argv)
         });
     }
 
+    // Every window, photographed into a directory, for looking at.
+    if (qEnvironmentVariableIsSet("KENTOS_DIALOG_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            window.probeDialogs();
+            QApplication::exit(0);
+        });
+    }
+
+    // The layer properties window: classify a layer by a column and apply it.
+    if (qEnvironmentVariableIsSet("KENTOS_DESIGNER_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            window.probeDesigner();
+            QApplication::exit(0);
+        });
+    }
+
     if (qEnvironmentVariableIsSet("KENTOS_HAND_PROBE")) {
         // The value, when it is a path, is the directory every step is
         // photographed into. See `MainWindow::probeToolsByHand`.
