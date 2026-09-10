@@ -4,11 +4,17 @@
 #include "kentos_cad/app/backend_factory.hpp"
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/dimension.hpp"
+#include "kentos_cad/core/ellipse.hpp"
+#include "kentos_cad/core/grips.hpp"
 #include "kentos_cad/core/guide.hpp"
 #include "kentos_cad/core/identity.hpp"
+#include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/settings.hpp"
+#include "kentos_cad/core/spline.hpp"
 #include "kentos_cad/render/backend.hpp"
 
 #include <QApplication>
@@ -22,6 +28,7 @@
 #include <QShortcut>
 #include <QWheelEvent>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <string>
@@ -167,20 +174,23 @@ void MapCanvas::reloadGridSettings()
         return static_cast<std::uint32_t>(store.get(id).as_int());
     };
 
-    look_.ruler         = store.get("core.cetvel.gorunur").as_bool();
-    look_.ruler_px      = static_cast<int>(store.get("core.cetvel.kalinlik").as_int());
-    look_.ruler_unit    = static_cast<int>(store.get("core.cetvel.birim").as_enum());
-    look_.scale_bar     = store.get("core.harita.olcek_cubugu").as_bool();
-    look_.north         = store.get("core.harita.kuzey_oku").as_bool();
-    look_.readout       = store.get("core.harita.koordinat_gostergesi").as_bool();
-    look_.hint_px       = static_cast<int>(store.get("core.harita.ipucu_boyu").as_int());
-    look_.cursor        = static_cast<int>(store.get("core.harita.imlec").as_enum());
-    look_.cursor_px     = static_cast<int>(store.get("core.harita.imlec_boyu").as_int());
-    look_.marker_px     = static_cast<int>(store.get("core.yakalama.isaret_boyu").as_int());
-    look_.snap_tip      = store.get("core.yakalama.ipucu").as_bool();
-    look_.dynamic_input = store.get("core.arayuz.dinamik_girdi").as_bool();
-    look_.angle_unit    = static_cast<int>(store.get("core.aci.birim").as_enum());
-    look_.step = controller_.bus().session_settings().get("core.yakalama.adim").as_length();
+    look_.ruler           = store.get("core.cetvel.gorunur").as_bool();
+    look_.ruler_px        = static_cast<int>(store.get("core.cetvel.kalinlik").as_int());
+    look_.ruler_unit      = static_cast<int>(store.get("core.cetvel.birim").as_enum());
+    look_.scale_bar       = store.get("core.harita.olcek_cubugu").as_bool();
+    look_.north           = store.get("core.harita.kuzey_oku").as_bool();
+    look_.readout         = store.get("core.harita.koordinat_gostergesi").as_bool();
+    look_.hint_px         = static_cast<int>(store.get("core.harita.ipucu_boyu").as_int());
+    look_.cursor          = static_cast<int>(store.get("core.harita.imlec").as_enum());
+    look_.cursor_px       = static_cast<int>(store.get("core.harita.imlec_boyu").as_int());
+    look_.marker_px       = static_cast<int>(store.get("core.yakalama.isaret_boyu").as_int());
+    look_.snap_tip        = store.get("core.yakalama.ipucu").as_bool();
+    look_.dynamic_input   = store.get("core.arayuz.dinamik_girdi").as_bool();
+    look_.pick_px         = static_cast<double>(store.get("core.secim.tolerans").as_int());
+    options_.line_weights = store.get("core.harita.kalinlik").as_bool();
+    if (underMouse()) applyPointer();
+    look_.angle_unit = static_cast<int>(store.get("core.aci.birim").as_enum());
+    look_.step       = controller_.bus().session_settings().get("core.yakalama.adim").as_length();
 
     look_.marker_rgba     = colour("core.yakalama.isaret_rengi");
     look_.grid_rgba       = colour("core.izgara.renk");
@@ -338,7 +348,14 @@ void MapCanvas::dispatchSelection(const QPointF& from, const QPointF& to,
 
     // QGIS keys, because that is where the CBS half of this product's users come
     // from: Shift adds, Ctrl removes, a plain click replaces.
-    if (mods.testFlag(Qt::ShiftModifier))
+    //
+    // WHILE A COMMAND IS ASKING WHICH OBJECTS, a plain click ADDS. The question
+    // is "which ones", plural, and a click that replaced the answer so far made
+    // BİRLEŞTİR — which needs two — impossible to answer by pointing: the second
+    // object threw the first away. Ctrl still removes; Shift adds as it did.
+    const bool picking =
+        controller_.awaitingInput() && controller_.promptKind() == command::ParamKind::Selection;
+    if (mods.testFlag(Qt::ShiftModifier) || (picking && !mods.testFlag(Qt::ControlModifier)))
         args.set("islem", command::Value::text("EKLE"));
     else if (mods.testFlag(Qt::ControlModifier))
         args.set("islem", command::Value::text("ÇIKAR"));
@@ -386,10 +403,16 @@ void MapCanvas::buildSelection()
 
         // THE SHAPE, not the stored vertices. A circle keeps a centre and a radius
         // handle in its ring; highlighting those draws a line pointing east over a
-        // circle the user can see is selected nowhere.
+        // circle the user can see is selected nowhere. An ellipse keeps a centre
+        // and two axis ends, and highlighting those drew a triangle inside it.
+        // Every kind that is not its vertices goes through the one tessellator
+        // the picture uses (`core::curve_outline`), so the outline and the
+        // drawing agree.
         curve_scratch_x_.clear();
         curve_scratch_y_.clear();
-        const bool curve = table.kind[e] == core::kCircleKind || table.kind[e] == core::kArcKind;
+        const bool curve =
+            table.kind[e] != core::kPolylineKind && table.kind[e] != core::kPointKind;
+        bool curve_closed = table.kind[e] != core::kArcKind;
         if (table.kind[e] == core::kCircleKind)
             core::circle_outline(core::circle_centre_of(geom, table.slot[e]),
                                  core::circle_radius_of(geom, table.slot[e]), curve_scratch_x_,
@@ -399,6 +422,17 @@ void MapCanvas::buildSelection()
                 core::arc_centre_of(geom, table.slot[e]), core::arc_radius_of(geom, table.slot[e]),
                 core::arc_start_of(geom, table.slot[e]), core::arc_end_of(geom, table.slot[e]),
                 curve_scratch_x_, curve_scratch_y_);
+        else if (curve) {
+            core::EmitBuffer outline;
+            if (core::entity_outline(doc, e, outline) && outline.run_total() > 0) {
+                // The first run is the shape; a selection outline is one stroke.
+                curve_scratch_x_.assign(outline.xs.begin(),
+                                        outline.xs.begin() + outline.run_count[0]);
+                curve_scratch_y_.assign(outline.ys.begin(),
+                                        outline.ys.begin() + outline.run_count[0]);
+                curve_closed = outline.run_closed[0] != 0;
+            }
+        }
 
         const core::RingSpan span = geom.rings_of(table.slot[e]);
         for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
@@ -414,11 +448,9 @@ void MapCanvas::buildSelection()
                 batch.ys.push_back(q.y);
             }
             batch.runs.push_back(static_cast<std::uint32_t>(batch.xs.size()) - before);
-            // A circle closes; an arc does not.
-            batch.closed.push_back((table.kind[e] == core::kCircleKind ||
-                                    (!curve && geom.ring_role[r] != core::RingRole::Open))
-                                       ? 1
-                                       : 0);
+            // A circle and an ellipse close; an arc does not.
+            batch.closed.push_back(
+                (curve ? curve_closed : geom.ring_role[r] != core::RingRole::Open) ? 1 : 0);
         }
     }
 }
@@ -447,11 +479,26 @@ MapCanvas::Grip MapCanvas::gripAt(const QPointF& where) const
     for (core::EntityId e : selected) {
         if (e >= table.size() || !table.visible(e)) continue;
 
-        // A CURVE HAS NO CORNERS. Its stored vertices are its definition — a
-        // circle's are a centre and a radius handle — and `KÖŞETAŞI` refuses them
-        // for that reason. Offering a handle the command will then refuse is worse
-        // than offering none: it looks broken rather than deliberate.
-        if (table.kind[e] != core::kPolylineKind) continue;
+        // EVERY OTHER KIND OFFERS ITS GRIPS — a circle's centre and quadrants, an
+        // arc's ends, an ellipse's axis ends, a dimension's definition points —
+        // from the one table `KÖŞETAŞI` edits by (core/grips.hpp). Only a
+        // polyline has EDGES a new corner can go into, so only it is searched
+        // for an edge hit below.
+        if (table.kind[e] != core::kPolylineKind) {
+            const auto grips = core::entity_grips(doc, e);
+            for (std::size_t i = 0; i < grips.size(); ++i) {
+                const render::ScreenPoint p = view_.to_screen(grips[i].at);
+                const double dx             = p.x - where.x();
+                const double dy             = p.y - where.y();
+                const double d2             = dx * dx + dy * dy;
+                if (d2 < corner_best) {
+                    corner_best = d2;
+                    corner_hit =
+                        Grip{e, static_cast<std::int64_t>(i + 1), false, grips[i].at, grips[i].at};
+                }
+            }
+            continue;
+        }
 
         const core::RingSpan span = geom.rings_of(table.slot[e]);
 
@@ -535,7 +582,17 @@ void MapCanvas::buildGrips()
                                     : view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
 
         const core::EntityId e = drag_grip_.entity;
-        if (e < table.size() && table.visible(e)) {
+        if (e < table.size() && table.visible(e) && table.kind[e] != core::kPolylineKind) {
+            // The shape the grip table says this drag makes, drawn by the kind's
+            // own outline (`core::grip_preview`): a circle stays a circle while
+            // its quadrant is pulled.
+            const std::size_t batch = nextBatch(palette_.rubberBand.rgba(), 1.0f, true);
+            core::EmitBuffer buf;
+            if (drag_grip_.corner >= 1 &&
+                core::grip_preview(doc, e, static_cast<std::size_t>(drag_grip_.corner - 1), to,
+                                   buf))
+                addEmitRuns(batch, buf, 0, 0);
+        } else if (e < table.size() && table.visible(e)) {
             const core::RingSpan span = geom.rings_of(table.slot[e]);
             const std::size_t batch   = nextBatch(palette_.rubberBand.rgba(), 1.0f, true);
 
@@ -572,7 +629,29 @@ void MapCanvas::buildGrips()
 
     for (core::EntityId e : selected) {
         if (e >= table.size() || !table.visible(e)) continue;
-        if (table.kind[e] != core::kPolylineKind) continue; // a curve has no corners
+        if (table.kind[e] != core::kPolylineKind) {
+            // The kind's grips: a square where a point is a point, a circle where
+            // a handle sets a size (radius, arc bend, caption).
+            const auto grips = core::entity_grips(doc, e);
+            for (std::size_t i = 0; i < grips.size(); ++i) {
+                const render::ScreenPointF p = render::to_f(view_.to_screen(grips[i].at));
+                const bool hot               = hover_grip_.valid() && !hover_grip_.insert &&
+                                 hover_grip_.entity == e &&
+                                 hover_grip_.corner == static_cast<std::int64_t>(i + 1);
+                const core::GripRole role = grips[i].role;
+                if (role == core::GripRole::Radius || role == core::GripRole::ArcMid ||
+                    role == core::GripRole::Caption)
+                    addCircle(hot ? lit : plain, p.x, p.y, kHalf);
+                else
+                    addRun(hot ? lit : plain,
+                           {{p.x - kHalf, p.y - kHalf},
+                            {p.x + kHalf, p.y - kHalf},
+                            {p.x + kHalf, p.y + kHalf},
+                            {p.x - kHalf, p.y + kHalf}},
+                           true);
+            }
+            continue;
+        }
 
         const core::RingSpan span = geom.rings_of(table.slot[e]);
         std::int64_t number       = 0;
@@ -711,6 +790,11 @@ void MapCanvas::buildSnapMarker()
         addRun(batch, {{x + h * 0.55f, y}, {x + h, y}}, false);
         addRun(batch, {{x, y - h}, {x, y - h * 0.55f}}, false);
         addRun(batch, {{x, y + h * 0.55f}, {x, y + h}}, false);
+        break;
+    case core::SnapInsertion: // a square with its centre marked: where a thing was PUT
+        addRun(batch, {{x - h, y - h}, {x + h, y - h}, {x + h, y + h}, {x - h, y + h}}, true);
+        addRun(batch, {{x - h * 0.4f, y}, {x + h * 0.4f, y}}, false);
+        addRun(batch, {{x, y - h * 0.4f}, {x, y + h * 0.4f}}, false);
         break;
     case core::SnapPolar:
     case core::SnapOrtho: // diamond: the point is on a locked direction
@@ -1155,26 +1239,102 @@ void MapCanvas::buildReadout()
                                                    true, text});
 }
 
+core::Point2 MapCanvas::cursorWorld() const
+{
+    return snap_preview_valid_ ? snap_preview_.point
+                               : view_.to_world(render::ScreenPoint{cursor_.x(), cursor_.y()});
+}
+
+void MapCanvas::addWorldRun(std::size_t batch, std::span<const core::Mm> xs,
+                            std::span<const core::Mm> ys, bool closed, core::Mm dx, core::Mm dy)
+{
+    if (xs.size() < 2) return;
+    std::vector<render::ScreenPointF> run;
+    run.reserve(xs.size());
+    for (std::size_t v = 0; v < xs.size(); ++v)
+        run.push_back(render::to_f(view_.to_screen(core::Point2{xs[v] + dx, ys[v] + dy})));
+    addRun(batch, run, closed);
+}
+
+void MapCanvas::addEmitRuns(std::size_t batch, const core::EmitBuffer& buf, core::Mm dx,
+                            core::Mm dy)
+{
+    for (std::size_t r = 0; r < buf.run_total(); ++r)
+        addWorldRun(batch, buf.run_xs(r), buf.run_ys(r), buf.run_closed[r] != 0, dx, dy);
+}
+
+void MapCanvas::addGhost(std::size_t batch, core::Mm dx, core::Mm dy)
+{
+    const core::Document& doc      = controller_.document();
+    const core::EntityTable& table = doc.entities();
+    const core::RingGeometry& geom = doc.geometry();
+    core::EmitBuffer buf;
+    for (core::EntityId e : controller_.selectedSlots()) {
+        if (e >= table.size() || !table.visible(e)) continue;
+        // A caption travels as the box around its letters (`text_quad`), a curve
+        // as its drawn form, a polyline as its rings.
+        if (std::array<core::Point2, 4> quad; core::text_quad(doc, e, quad)) {
+            std::vector<render::ScreenPointF> run;
+            for (const core::Point2 corner : quad)
+                run.push_back(
+                    render::to_f(view_.to_screen(core::Point2{corner.x + dx, corner.y + dy})));
+            addRun(batch, run, true);
+            if (table.kind[e] == core::kPolylineKind) continue;
+        }
+        buf.clear();
+        if (core::entity_outline(doc, e, buf)) {
+            addEmitRuns(batch, buf, dx, dy);
+            continue;
+        }
+        const core::RingSpan span = geom.rings_of(table.slot[e]);
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r)
+            addWorldRun(batch, geom.ring_xs(r), geom.ring_ys(r),
+                        geom.ring_role[r] != core::RingRole::Open, dx, dy);
+    }
+}
+
 void MapCanvas::buildCrosshair()
 {
-    if (!cursor_valid_ || look_.cursor == 2) return;
+    if (!cursor_valid_ || look_.cursor == 2 || panning_) return;
 
     const std::size_t batch      = nextBatch(palette_.crosshair.rgba(), 1.0f, false);
     const render::ScreenPointF c = toScreenF(cursor_);
     const float x = c.x, y = c.y;
 
+    // THE CAD CROSSHAIR: two lines that stop short of the centre, and in the gap
+    // the PICK BOX — the square that says what a click will take hold of. The
+    // box is the selection tolerance the preference declares, so what it shows
+    // is exactly what `SEÇ mod=NOKTA` reaches. It is drawn when a click would
+    // SELECT: with no command running, or while one asks which objects. A
+    // command asking for a POINT gets the bare cross, because a click then
+    // lands a coordinate and nothing is taken hold of.
+    const bool asks_point =
+        controller_.awaitingInput() && controller_.promptKind() != command::ParamKind::Selection;
+    const auto half = static_cast<float>(std::max(2.0, look_.pick_px));
+    const float gap = asks_point ? 3.0f : half + 2.0f;
+
     // Full screen or a short cross, which is the choice every CAD offers and the
     // one people hold opinions about: the long lines line a point up against
     // something far away, the short one keeps the drawing legible.
-    if (look_.cursor == 0) {
-        addRun(batch, {{x, 0.0f}, {x, static_cast<float>(height())}}, false);
-        addRun(batch, {{0.0f, y}, {static_cast<float>(width()), y}}, false);
-        return;
-    }
+    const bool full   = look_.cursor == 0;
+    const auto arm    = static_cast<float>(look_.cursor_px);
+    const float left  = full ? 0.0f : x - arm;
+    const float right = full ? static_cast<float>(width()) : x + arm;
+    const float top   = full ? 0.0f : y - arm;
+    const float down  = full ? static_cast<float>(height()) : y + arm;
 
-    const auto arm = static_cast<float>(look_.cursor_px);
-    addRun(batch, {{x - arm, y}, {x + arm, y}}, false);
-    addRun(batch, {{x, y - arm}, {x, y + arm}}, false);
+    addRun(batch, {{left, y}, {x - gap, y}}, false);
+    addRun(batch, {{x + gap, y}, {right, y}}, false);
+    addRun(batch, {{x, top}, {x, y - gap}}, false);
+    addRun(batch, {{x, y + gap}, {x, down}}, false);
+
+    if (!asks_point)
+        addRun(batch,
+               {{x - half, y - half},
+                {x + half, y - half},
+                {x + half, y + half},
+                {x - half, y + half}},
+               true);
 }
 
 std::size_t MapCanvas::nextBatch(std::uint32_t rgba, float width_px, bool dashed,
@@ -1329,6 +1489,97 @@ void MapCanvas::buildOverlay()
             const render::ScreenPointF a = render::to_f(from);
             const render::ScreenPointF b = toScreenF(to);
             addRun(batch, {{a.x, a.y}, {b.x, a.y}, {b.x, b.y}, {a.x, b.y}}, true);
+        } else if (shape == command::RubberShape::Ellipse &&
+                   !session->prompt().rubber_chain.empty()) {
+            // THE ELLIPSE the third click will make: the first axis is fixed (the
+            // chain), the cursor's reach ACROSS it is the second — the same
+            // arithmetic ELİPS does with the click (commands/ellipse.cpp).
+            const core::Point2 centre = session->prompt().rubber_origin;
+            const core::Point2 major  = session->prompt().rubber_chain.front();
+            const core::Point2 reach  = cursorWorld();
+            const auto ax             = static_cast<double>(major.x - centre.x);
+            const auto ay             = static_cast<double>(major.y - centre.y);
+            const double a_len        = std::sqrt(ax * ax + ay * ay);
+            const auto rx             = static_cast<double>(reach.x - centre.x);
+            const auto ry             = static_cast<double>(reach.y - centre.y);
+            const double across       = a_len > 0.0 ? std::abs((rx * -ay + ry * ax) / a_len) : 0.0;
+            if (across >= 1.0) {
+                const core::Point2 minor{centre.x + core::mm_round(-ay / a_len * across),
+                                         centre.y + core::mm_round(ax / a_len * across)};
+                curve_scratch_x_.clear();
+                curve_scratch_y_.clear();
+                core::ellipse_outline(centre, major, minor, curve_scratch_x_, curve_scratch_y_);
+                addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, true, 0, 0);
+            }
+            addRun(batch,
+                   {render::to_f(view_.to_screen(centre)), render::to_f(view_.to_screen(major))},
+                   false);
+            addRun(batch, {render::to_f(from), toScreenF(to)}, false);
+        } else if (shape == command::RubberShape::Curve) {
+            // THE CURVE through the control points so far and the cursor, drawn
+            // by the kind's own evaluator over the degree SPLINE will use.
+            std::vector<core::Point2> controls = session->prompt().rubber_chain;
+            controls.push_back(cursorWorld());
+            core::SplineDef def;
+            if (auto decoded = core::decode_spline(session->prompt().rubber_payload))
+                def = decoded.value();
+            def.degree     = static_cast<std::uint8_t>(std::clamp<std::size_t>(
+                def.degree, 1, std::max<std::size_t>(1, controls.size() - 1)));
+            def.knots_nano = core::uniform_clamped_knots(controls.size(), def.degree);
+            curve_scratch_x_.clear();
+            curve_scratch_y_.clear();
+            if (controls.size() >= 2)
+                core::spline_points(controls, def, 16, curve_scratch_x_, curve_scratch_y_);
+            if (curve_scratch_x_.size() >= 2)
+                addWorldRun(batch, curve_scratch_x_, curve_scratch_y_, def.closed, 0, 0);
+            // The control polygon, faint, so the hand sees what it is steering.
+            std::vector<render::ScreenPointF> polygon;
+            for (const core::Point2& p : controls)
+                polygon.push_back(render::to_f(view_.to_screen(p)));
+            addRun(batch, polygon, false);
+        } else if (shape == command::RubberShape::Dimension &&
+                   session->prompt().rubber_chain.size() >= 2) {
+            // THE DIMENSION laid out at the cursor — extension lines, dimension
+            // line, arrowheads — by the layout ÖLÇÜ will use on the click, drawn
+            // by the kind's own outline over a scratch record.
+            if (auto decoded = core::decode_dimension(session->prompt().rubber_payload)) {
+                core::DimensionDef def = decoded.value();
+                core::DimensionLayout layout;
+                if (core::dimension_layout(def, session->prompt().rubber_chain, cursorWorld(), 0,
+                                           layout)) {
+                    const auto base = core::dimension_baseline(
+                        layout.text_centre, layout.text_dir_x, layout.text_dir_y, 1, "0");
+                    const std::vector<core::Point2> baseline{base[0], base[1]};
+                    const core::RingGeometry::RingInput rings[2]{
+                        {baseline, core::RingRole::Open, 0},
+                        {layout.defs, core::RingRole::Open, 0}};
+                    core::RingGeometry scratch;
+                    const std::vector<std::uint8_t> payload = core::encode_dimension(def);
+                    if (auto slot = scratch.append(rings, payload)) {
+                        core::EmitBuffer buf;
+                        core::dimension_outline(scratch, slot.value(), buf);
+                        addEmitRuns(batch, buf, 0, 0);
+                    }
+                }
+            }
+        } else if (shape == command::RubberShape::Block) {
+            // THE BLOCK under the cursor, expanded by the code that will draw the
+            // reference once it is placed, with the scale, turn and grid the
+            // command was given.
+            if (auto decoded = core::decode_block_reference(session->prompt().rubber_payload)) {
+                core::EmitBuffer buf;
+                if (core::expand_block_definition(controller_.document(), cursorWorld(),
+                                                  decoded.value(), buf))
+                    addEmitRuns(batch, buf, 0, 0);
+            }
+        } else if (shape == command::RubberShape::Ghost) {
+            // THE OBJECTS THEMSELVES, carried by the cursor's offset from the base
+            // point: where TAŞI will put them and where KOPYALA's next copy lands.
+            const core::Point2 at = cursorWorld();
+            const core::Mm dx     = at.x - session->prompt().rubber_origin.x;
+            const core::Mm dy     = at.y - session->prompt().rubber_origin.y;
+            addGhost(batch, dx, dy);
+            addRun(batch, {render::to_f(from), toScreenF(to)}, false);
         } else if (const auto& chain = session->prompt().rubber_chain; !chain.empty()) {
             // THE WHOLE SHAPE SO FAR, not only its newest edge. A command whose
             // geometry cannot reach the document until it is complete (ALAN) has
@@ -1609,14 +1860,48 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
     }
 
     if (event->button() == Qt::RightButton) {
-        // A RIGHT CLICK ENDS THE PICKING, and cancels anything else. That split is
-        // the one every CAD trains: while a command is asking WHICH objects, the
-        // right button means "those ones, go"; at any other moment it means "stop".
-        // It also gives the gesture a home on the canvas, where the hand already
-        // is, instead of only on a key the command line was swallowing.
-        if (!controller_.supplyPickedObjects()) controller_.cancelInteractive();
+        // THE RIGHT BUTTON FINISHES. While a command is asking WHICH objects it
+        // means "those ones, go"; while it is asking for points it means "that is
+        // the shape, done" — the run closes on what it has and the tool stays in
+        // the hand for the next one. Only Esc puts a tool away
+        // (`Controller::finishInteractive` versus `cancelInteractive`). With no
+        // command running the button does nothing yet.
+        if (!controller_.supplyPickedObjects() && controller_.session())
+            controller_.finishInteractive();
+        snap_preview_valid_ = false;
         update();
     }
+}
+
+void MapCanvas::enterEvent(QEnterEvent* event)
+{
+    // THE DRAWN CROSSHAIR IS THE POINTER. The platform arrow on top of it was two
+    // pointers for one hand, and neither of them was the one a CAD user aims
+    // with: the arrow's tip is off the crosshair's centre by its own shape.
+    applyPointer();
+    QWidget::enterEvent(event);
+}
+
+void MapCanvas::leaveEvent(QEvent* event)
+{
+    cursor_valid_       = false;
+    snap_preview_valid_ = false;
+    unsetCursor();
+    update();
+    QWidget::leaveEvent(event);
+}
+
+void MapCanvas::applyPointer()
+{
+    if (panning_ || dragging_grip_) {
+        setCursor(Qt::ClosedHandCursor);
+        return;
+    }
+    if (look_.cursor == 2 || (text_editor_ != nullptr && text_editor_->isVisible())) {
+        unsetCursor();
+        return;
+    }
+    setCursor(Qt::BlankCursor);
 }
 
 void MapCanvas::mouseMoveEvent(QMouseEvent* event)
@@ -1689,7 +1974,7 @@ void MapCanvas::mouseReleaseEvent(QMouseEvent* event)
 
     if (event->button() == Qt::MiddleButton) {
         panning_ = false;
-        unsetCursor();
+        applyPointer();
         return;
     }
 
@@ -1697,7 +1982,7 @@ void MapCanvas::mouseReleaseEvent(QMouseEvent* event)
         dragging_grip_ = false;
         cursor_        = event->position();
         cursor_valid_  = true;
-        unsetCursor();
+        applyPointer();
 
         commitGripDrag();
 

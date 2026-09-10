@@ -126,6 +126,12 @@ AYAR koordinat_hassasiyeti 4
 AYAR cizim_birimi metre
 ```
 
+`cizim_birimi` iki yerde okunur: [`İÇEAKTAR`](import.md) bir DXF'i ya da DWG'yi
+**her zaman** bu birimde okur — dosyanın `$INSUNITS` başlığı ayarla karşılaştırılır,
+farklıysa uyarı yazılır, ama başlık ayarın yerine geçmez; [`DIŞAAKTAR`](export.md)
+bir DXF'i bu birimde yazar ve `$INSUNITS` başlığa işler.
+Belgedeki koordinatlar her zaman milimetredir; ayar yalnız dosya sınırında iş görür.
+
 Çizgi tipi ölçeğini yarıya indirin — binde cinsinden, yani `500`:
 
 ```

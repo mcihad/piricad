@@ -125,9 +125,9 @@ kabul edilmez; bildirilen birim yeterince incedir.
 
 | Bit | Değer | Mod | Neye oturur |
 |---|---|---|---|
-| 0 | `1` | Uç nokta | Bir halkanın köşesine |
+| 0 | `1` | Uç nokta | Bir halkanın köşesine; yayın iki ucuna; elipsin dört eksen ucuna |
 | 1 | `2` | Orta nokta | Bir kenarın ortasına |
-| 2 | `4` | Merkez | Bir **eğrinin** çizildiği merkeze: dairenin, yayın |
+| 2 | `4` | Merkez | Bir **eğrinin** çizildiği merkeze: dairenin, yayın, elipsin |
 | 3 | `8` | Kesişim | İki kenarın gerçekten kesiştiği noktaya |
 | 4 | `16` | Dik ayak | Önceki noktadan bir kenara indirilen dikin ayağına |
 | 5 | `32` | En yakın | Bir kenarın imlece en yakın noktasına |
@@ -138,9 +138,19 @@ kabul edilmez; bildirilen birim yeterince incedir.
 | 12 | `4096` | Uzatılmış kesişim | İki kenarın uzatılsalar **buluşacakları** köşeye |
 | 14 | `16384` | Kılavuz | Kendi koyduğunuz çizim kılavuzuna |
 | 15 | `32768` | Ağırlık merkezi | Kapalı bir halkanın **alan** ağırlık merkezine |
+| 17 | `131072` | Ekleme noktası | Bir nesnenin **yerleştirildiği** noktaya: blok referansının ekleme noktasına |
 
 Varsayılan `0x822F` = uç nokta + orta nokta + merkez + kesişim + **en yakın** +
 düğüm + ağırlık merkezi.
+
+**Eğriler çizildikleri gibi yakalanır, saklandıkları gibi değil.** Daire merkez
+ve yarıçapla, yay merkez ve iki uçla, elips merkez ve iki eksen ucuyla saklanır;
+yakalama bu tanım noktalarını değil ekrandaki eğriyi okur. Dairede ve yayda
+`En yakın` ve `Dik ayak` tam hesaplanır. Elipste `Merkez` merkezi, `Uç nokta`
+dört eksen ucunu verir; `En yakın`, `Dik ayak` ve `Kesişim` çizilen 128 kenarlı
+yaklaşığın üzerine oturur (bir iki milimetre içinde). `Orta nokta`, `Uzantı` ve
+`Paralel` elipste verilmez: bir yaklaşığın kirişinin ortası eğrinin geçmediği bir
+yerdir, kirişin uzantısı kimsenin çizmediği bir doğrudur.
 
 **En yakın** varsayılana sonradan katıldı. Kapalı olması "her zaman bir şey bulur,
 aradığınız köşeyi gölgeler" gerekçesineydi; oysa bunu maske değil **öncelik tablosu**

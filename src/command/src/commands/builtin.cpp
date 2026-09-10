@@ -46,6 +46,12 @@ namespace kentos::command {
     X(sector)                                                                                      \
     X(annulus)                                                                                     \
     X(ellipse_draw)                                                                                \
+    X(spline)                                                                                      \
+    X(hatch)                                                                                       \
+    X(block)                                                                                       \
+    X(insert)                                                                                      \
+    X(dimension)                                                                                   \
+    X(leader)                                                                                      \
     X(points)                                                                                      \
     X(guide)                                                                                       \
     X(attribute)                                                                                   \

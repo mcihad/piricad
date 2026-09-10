@@ -50,6 +50,12 @@ set(KENTOS_DEP_XXHASH_SHA     e626a72bc2321cd320e953a0ccf1584cad60f363)  # v0.8.
 set(KENTOS_DEP_LIBREDWG_REPO  https://github.com/LibreDWG/libredwg.git)
 set(KENTOS_DEP_LIBREDWG_SHA   7eb90a9f933623729f82781cb1d68de2e50593f3)  # 0.14.8594
 
+# libdxfrw: LibreCAD's DXF reader/writer, GPL-2.0-or-later (compatible with this
+# project's GPLv3 — the "or later" is the whole of the finding, and it is in every
+# source header). master of 2025-09-25; there is no tagged release after 1.0.1.
+set(KENTOS_DEP_LIBDXFRW_REPO  https://github.com/LibreCAD/libdxfrw.git)
+set(KENTOS_DEP_LIBDXFRW_SHA   92d7466ed9146badcd4fb44c82d1dd8302b3c7db)  # 1.0.1+ (2025-09-25)
+
 set(KENTOS_DEP_CLIPPER2_REPO  https://github.com/AngusJohnson/Clipper2.git)
 set(KENTOS_DEP_CLIPPER2_SHA   736ddb0b53d97fd5f65dd3d9bbf8a0993eaf387c)  # Clipper2_1.4.0
 
@@ -342,6 +348,67 @@ if(KENTOS_WITH_DWG)
     kentos_dependency(libredwg
         REPO ${KENTOS_DEP_LIBREDWG_REPO}
         SHA  ${KENTOS_DEP_LIBREDWG_SHA})
+endif()
+
+if(KENTOS_WITH_DXFRW)
+    # DXF, READ AND WRITE, through the library io.md R13 names. Pure C++11, no
+    # dependency of its own, one static library.
+    #
+    # BUILT FROM ITS SOURCES BY THIS FILE, not through its own CMakeLists — for
+    # the reason CDT is: upstream declares `cmake_minimum_required(VERSION 3.0)`,
+    # below the 3.5 that CMake 4 still accepts, so `add_subdirectory` refuses it
+    # outright. Its build file is also unconditional `-Werror` at directory scope
+    # with no option to turn it off, which would let a newer compiler's warning in
+    # THEIR source break OUR build (CLAUDE.md 5.14 is about our warnings, and this
+    # is neither our warning nor our file). Listing the twenty-one sources here
+    # costs a line per file and buys the Article 2.5 floating-point flags on
+    # every one of them, the dwg2dxf tool and the doxygen run left out, and a
+    # target that is exactly what kentos_io links. The list is upstream's own
+    # `libdxfrw_srcs`; a bump of the SHA re-reads it.
+    set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
+    kentos_dependency(libdxfrw
+        REPO   ${KENTOS_DEP_LIBDXFRW_REPO}
+        SHA    ${KENTOS_DEP_LIBDXFRW_SHA}
+        SUBDIR kentos-no-cmake)   # a subdir with no CMakeLists: populate, do not add
+    # `kentos_dependency` is a function, so the populated source directory has to
+    # be asked for again in this scope.
+    FetchContent_GetProperties(libdxfrw)
+
+    set(KENTOS_DXFRW_SOURCES
+        src/intern/drw_dbg.cpp
+        src/intern/drw_textcodec.cpp
+        src/intern/dwgbuffer.cpp
+        src/intern/dwgreader.cpp
+        src/intern/dwgreader15.cpp
+        src/intern/dwgreader18.cpp
+        src/intern/dwgreader21.cpp
+        src/intern/dwgreader24.cpp
+        src/intern/dwgreader27.cpp
+        src/intern/dwgutil.cpp
+        src/intern/dxfreader.cpp
+        src/intern/dxfwriter.cpp
+        src/intern/rscodec.cpp
+        src/drw_base.cpp
+        src/drw_classes.cpp
+        src/drw_entities.cpp
+        src/drw_header.cpp
+        src/drw_objects.cpp
+        src/libdwgr.cpp
+        src/libdxfrw.cpp)
+    list(TRANSFORM KENTOS_DXFRW_SOURCES PREPEND "${libdxfrw_SOURCE_DIR}/")
+
+    add_library(dxfrw STATIC ${KENTOS_DXFRW_SOURCES})
+    target_include_directories(dxfrw SYSTEM PUBLIC "${libdxfrw_SOURCE_DIR}/src")
+    target_compile_features(dxfrw PUBLIC cxx_std_14)
+    set_target_properties(dxfrw PROPERTIES CXX_CLANG_TIDY "" EXPORT_NAME libdxfrw)
+    # Article 2.5 binds every TU in every config, third-party included: a fused
+    # multiply-add inside the reader's OCS arithmetic would round differently on
+    # Apple Silicon than on x86.
+    if(MSVC)
+        target_compile_options(dxfrw PRIVATE /fp:precise /W3)
+    else()
+        target_compile_options(dxfrw PRIVATE -fno-fast-math -ffp-contract=off -w)
+    endif()
 endif()
 
 option(KENTOS_WITH_POSTGIS "Read and write layers against a live PostGIS database" ON)

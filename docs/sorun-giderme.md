@@ -392,12 +392,15 @@ anahtarlarının sırası tutmuyor.
 **Çözüm.** Yedeğinizden geri alın. Bu üç mesajdan biri görünüyorsa dosya güvenilir
 değildir. Bkz. [KentOSCad proje dosyası](veri/proje-dosyasi.md).
 
-### `io.unknown_kind: ... bu yapı yalnız 0 numaralı türü tanıyor.`
+### `io.unknown_kind: ... 65535 numaralı türde; bu değer 'tür yok' anlamına ayrılmıştır`
 
-**Sebep.** Dosyada bu sürümün tanımadığı bir nesne türü var.
+**Sebep.** Dosyanın tür sütununa ayrılmış değer yazılmış; hiçbir KentOSCad sürümü bunu
+yazmaz. Bu sürümün tanımadığı gerçek bir tür bu hatayı **vermez**: nesne görünür ve
+korunur, yalnız düzenlenemez ("Bu yapının tanımadığı türdeki nesne düzenlenemez;
+olduğu gibi korunur.").
 
-**Çözüm.** Dosyayı yazan KentOSCad sürümüne yükseltin. Nesneyi düşürerek açmak veri
-kaybı olurdu, bu yüzden dosya açılmıyor.
+**Çözüm.** Yedeğinizden geri alın. Düzenlenemeyen bir nesneyle karşılaşıyorsanız
+dosyayı yazan KentOSCad sürümüne yükseltin; nesne o sürümde tam anlamıyla açılır.
 
 ### `Bu çizim henüz bir dosyaya bağlı değil. FARKLIKAYDET ile bir ad verin.`
 

@@ -175,9 +175,9 @@ private:
 
 // ------------------------------------------------------- ImportProbeThread --
 
-ImportProbeThread::ImportProbeThread(core::Document& into, QString path, QString projectCrs,
+ImportProbeThread::ImportProbeThread(core::Document& into, QString path, io::ImportOptions options,
                                      QObject* parent)
-    : QThread(parent), into_(into), path_(std::move(path)), crs_(std::move(projectCrs)),
+    : QThread(parent), into_(into), path_(std::move(path)), options_(std::move(options)),
       outcome_(core::Error{core::ErrorCode::Internal, "Okuma başlamadı."})
 {}
 
@@ -188,7 +188,7 @@ void ImportProbeThread::cancel()
 
 void ImportProbeThread::run()
 {
-    outcome_ = io::probe_import(into_, path_.toStdString(), crs_.toStdString(), stop_.get_token());
+    outcome_ = io::probe_import(into_, path_.toStdString(), options_, stop_.get_token());
 }
 
 // ----------------------------------------------------------- ImportPreview --
@@ -344,7 +344,17 @@ ImportWizard::ImportWizard(Controller& controller, ThemeMode theme, QWidget* par
             [this] { showPage(std::max(0, pages_->currentIndex() - 1)); });
 
     cancel_ = new Button(ButtonRole::Secondary, tr("İptal"), std::nullopt, this);
-    connect(cancel_, &QPushButton::clicked, this, &ImportWizard::reject);
+    // WHILE THE PROBE RUNS THIS BUTTON IS THE STOP BUTTON, and it has to mean it:
+    // pressing it used to close the whole window under a thread that was still
+    // reading. The read is stopped; the window stays, and the button turns back
+    // into the cancel button when the thread returns (`probeFinished`).
+    connect(cancel_, &QPushButton::clicked, this, [this] {
+        if (probe_ != nullptr && probe_->isRunning()) {
+            probe_->cancel();
+            return;
+        }
+        reject();
+    });
 
     next_ = new Button(ButtonRole::Primary, tr("İleri"), std::nullopt, this);
     next_->setDefault(true);
@@ -798,13 +808,18 @@ void ImportWizard::startProbe()
     // to stop being read more than they want the window gone.
     cancel_->setText(tr("Okumayı durdur"));
 
-    // The drawing's own system, resolved the way `io/service.cpp` resolves it:
-    // the probe compares what it is given and never guesses (io.md R20).
+    // The drawing's own system and its unit, resolved the way `io/service.cpp`
+    // resolves them for the command: the probe compares what it is given and
+    // never guesses (io.md R20), and a DXF that names no unit is read in the
+    // project's unit here exactly as İÇEAKTAR will read it.
+    io::ImportOptions options;
     const core::Crs& mine = controller_.document().crs();
-    const QString crs     = mine.resolved() ? QStringLiteral("EPSG:%1").arg(mine.epsg())
-                                            : QString::fromStdString(mine.id());
+    options.project_crs   = mine.resolved() ? "EPSG:" + std::to_string(mine.epsg()) : mine.id();
+    options.drawing_unit =
+        core::drawing_unit_from_setting(controller_.bus().setting("core.cizim.birim").as_enum());
 
-    probe_ = new ImportProbeThread(*scratch_, pathField_->text().trimmed(), crs, this);
+    probe_ =
+        new ImportProbeThread(*scratch_, pathField_->text().trimmed(), std::move(options), this);
     connect(probe_, &QThread::finished, this, &ImportWizard::probeFinished);
     probe_->start();
 }
@@ -856,11 +871,17 @@ void ImportWizard::probeFinished()
                 .arg(QString::fromStdString(found_.driver), grouped(found_.entities),
                      grouped(static_cast<std::uint64_t>(found_.layers.size())));
     if (!found_.crs.empty()) said << QString::fromStdString(found_.crs);
-    for (const std::string& note : found_.notes) {
+    // Most serious first, each with its level in front, so a warning about an
+    // assumed unit is not the eighth line under seven counts.
+    for (const io::Diagnostic& line : found_.diagnostics.ordered()) {
         // The reader's hint about `alanlar=` is for the command line; here the
         // third page IS that choice, so the hint would send the user elsewhere.
-        if (note.find("alanlar=") != std::string::npos) continue;
-        said << QString::fromStdString(note);
+        if (line.text.find("alanlar=") != std::string::npos) continue;
+        if (line.level == io::Severity::Info)
+            said << QString::fromStdString(line.text);
+        else
+            said << QStringLiteral("%1: %2").arg(QString::fromUtf8(io::severity_prefix(line.level)),
+                                                 QString::fromStdString(line.text));
     }
     summary_->setText(said.join(QStringLiteral("\n")));
 

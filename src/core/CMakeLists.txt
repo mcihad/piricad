@@ -6,8 +6,17 @@ add_library(kentos_core STATIC
     src/attribute.cpp
     src/document.cpp
     src/arc.cpp
+    src/arc_polyline.cpp
     src/circle.cpp
+    src/block.cpp
+    src/block_reference.cpp
+    src/dimension.cpp
+    src/grips.cpp
+    src/hatch.cpp
+    src/spline.cpp
     src/entity_kind.cpp
+    src/foreign_table.cpp
+    src/outline.cpp
     src/transform.cpp
     src/geometry.cpp
     src/ellipse.cpp

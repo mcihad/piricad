@@ -21,14 +21,22 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/command/drawing_catalogs.hpp"
+
 #include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/arc_polyline.hpp"
+#include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/transform.hpp"
+#include "kentos_cad/core/trig.hpp"
 
 #include <algorithm>
 #include <cmath>
+#include <numeric>
 #include <string>
 #include <vector>
 
@@ -78,6 +86,210 @@ core::Mm apply_radius(const Xform& x, core::Mm r)
 bool reverses(const Xform& x)
 {
     return x.kind == Xform::Kind::Mirror;
+}
+
+/// How a stored ANGLE changes: a turn adds itself, a mirror about an axis at θ
+/// takes an angle α to 2θ − α, the rest leave it. In whole micro-degrees from
+/// `atan2_udeg`, never libm (§7.3).
+std::int64_t apply_angle(const Xform& x, std::int64_t udeg)
+{
+    std::int64_t out = udeg;
+    switch (x.kind) {
+    case Xform::Kind::Rotate:
+        out += core::atan2_udeg(static_cast<std::int64_t>(std::llround(x.turn.sin * 1e9)),
+                                static_cast<std::int64_t>(std::llround(x.turn.cos * 1e9)));
+        break;
+    case Xform::Kind::Mirror:
+        out = 2 * core::atan2_udeg(x.axis_b.y - x.base.y, x.axis_b.x - x.base.x) - udeg;
+        break;
+    default: break;
+    }
+    out %= core::kUDegFullCircle;
+    if (out < 0) out += core::kUDegFullCircle;
+    return out;
+}
+
+/// A length under the transform: only a scale changes it.
+core::Mm apply_length(const Xform& x, core::Mm v)
+{
+    return apply_radius(x, v);
+}
+
+/// A rational scale under the transform: multiplied by the factor, to six
+/// decimals, reduced.
+core::Ratio apply_ratio(const Xform& x, core::Ratio r)
+{
+    if (x.kind != Xform::Kind::Scale) return r;
+    const double v       = static_cast<double>(r.num) / static_cast<double>(r.den) * x.factor;
+    const auto num       = static_cast<std::int64_t>(std::llround(v * 1000000.0));
+    std::int64_t den     = 1000000;
+    const std::int64_t g = std::gcd(num < 0 ? -num : num, den);
+    return g > 1 ? core::Ratio{num / g, den / g} : core::Ratio{num, den};
+}
+
+/// The entity's rings, transformed: every stored vertex moves. A closed ring is
+/// reversed under a reflection so its winding, and the sign of its area, stay
+/// what R11 requires; an open one keeps its order, because a spline's control
+/// polygon, a dimension's definition points and a text baseline all MEAN their
+/// order.
+void transformed_rings(const core::RingGeometry& g, std::uint32_t gslot, const Xform& x,
+                       std::vector<std::vector<core::Point2>>& rings,
+                       std::vector<core::RingGeometry::RingInput>& input)
+{
+    const core::RingSpan span = g.rings_of(gslot);
+    rings.clear();
+    input.clear();
+    rings.reserve(span.count);
+    input.reserve(span.count);
+    for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+        const auto xs = g.ring_xs(r);
+        const auto ys = g.ring_ys(r);
+        std::vector<core::Point2> pts;
+        pts.reserve(xs.size());
+        for (std::size_t v = 0; v < xs.size(); ++v)
+            pts.push_back(apply(x, core::Point2{xs[v], ys[v]}));
+        if (reverses(x) && g.ring_role[r] != core::RingRole::Open)
+            std::reverse(pts.begin(), pts.end());
+        rings.push_back(std::move(pts));
+    }
+    for (std::size_t i = 0; i < rings.size(); ++i)
+        input.push_back(core::RingGeometry::RingInput{rings[i], g.ring_role[span.first + i],
+                                                      g.ring_part[span.first + i]});
+}
+
+/// Applies `x` to a kind whose payload holds coordinates or angles, so rings
+/// and payload change together (`Transaction::set_kind_geometry`).
+bool transform_payload_kind(Context& ctx, core::EntityId slot, const Xform& x)
+{
+    const core::Document& doc   = ctx.document();
+    const core::RingGeometry& g = doc.geometry();
+    const std::uint32_t gslot   = doc.entities().slot[slot];
+    const core::KindId kind     = doc.entities().kind[slot];
+    std::vector<std::vector<core::Point2>> rings;
+    std::vector<core::RingGeometry::RingInput> input;
+    transformed_rings(g, gslot, x, rings, input);
+    std::vector<std::uint8_t> payload;
+
+    if (kind == core::kArcPolylineKind) {
+        auto def = core::arc_polyline_of(g, gslot);
+        if (!def) {
+            ctx.echo(def.error().message);
+            return false;
+        }
+        core::ArcPolyline ap      = def.value();
+        ap.constant_width         = apply_length(x, ap.constant_width);
+        const core::RingSpan span = g.rings_of(gslot);
+        const bool closed   = span.count > 0 && g.ring_role[span.first] != core::RingRole::Open;
+        const std::size_t n = rings.empty() ? 0 : rings[0].size();
+        for (core::ArcPolyline::Arc& a : ap.arcs) {
+            a.centre = apply(x, a.centre);
+            a.radius = apply_radius(x, a.radius);
+            if (a.radius <= 0) {
+                ctx.echo("Ölçekleme bir yay kenarı sıfır yarıçapa indiriyor.");
+                return false;
+            }
+            if (reverses(x)) {
+                // Mirrored: the sweep flips. On a closed ring the vertices were
+                // reversed too, which flips it back and renumbers the edges.
+                if (closed && n > 0)
+                    a.segment = a.segment + 1 >= n ? static_cast<std::uint32_t>(n - 1)
+                                                   : static_cast<std::uint32_t>(n - 2 - a.segment);
+                else
+                    a.ccw = !a.ccw;
+            }
+        }
+        std::sort(ap.arcs.begin(), ap.arcs.end(),
+                  [](const core::ArcPolyline::Arc& a, const core::ArcPolyline::Arc& b) {
+                      return a.segment < b.segment;
+                  });
+        payload = core::encode_arc_polyline(ap);
+    } else if (kind == core::kHatchKind) {
+        auto def = core::hatch_of(g, gslot);
+        if (!def) {
+            ctx.echo(def.error().message);
+            return false;
+        }
+        core::HatchDef h = def.value();
+        h.angle_udeg     = apply_angle(x, h.angle_udeg);
+        h.scale          = apply_ratio(x, h.scale);
+        h.origin         = apply(x, h.origin);
+        payload          = core::encode_hatch(h);
+        // The pattern is drawn by the style (model.md R14), so the style follows.
+        const core::StyleId st = doc.entities().style[slot];
+        std::uint32_t ink      = 0xFF000000u;
+        if (st != core::kByLayerStyle && st < doc.styles().size())
+            ink = doc.styles().symbol_at(st).primary().rgba;
+        if (auto s = ctx.transaction().set_entity_style(
+                slot, ctx.transaction().intern_symbol(hatch_symbol(h, ink)));
+            !s) {
+            ctx.echo(s.error().message);
+            return false;
+        }
+    } else if (kind == core::kBlockReferenceKind) {
+        auto def = core::block_reference_of(g, gslot);
+        if (!def) {
+            ctx.echo(def.error().message);
+            return false;
+        }
+        core::BlockReference ref = def.value();
+        ref.rotation_udeg        = apply_angle(x, ref.rotation_udeg);
+        ref.sx                   = apply_ratio(x, ref.sx);
+        ref.sy                   = apply_ratio(x, ref.sy);
+        ref.column_spacing       = apply_length(x, ref.column_spacing);
+        ref.row_spacing          = apply_length(x, ref.row_spacing);
+        // A reflection of R(ρ)·S is R(2θ−ρ)·S with the y scale negated.
+        if (reverses(x)) ref.sy.num = -ref.sy.num;
+        const core::Point2 at = rings.empty() || rings[0].empty() ? core::Point2{} : rings[0][0];
+        ref.bounds            = core::block_reference_bounds(doc, at, ref);
+        payload               = core::encode_block_reference(ref);
+    } else if (kind == core::kDimensionKind) {
+        auto def = core::dimension_of(g, gslot);
+        if (!def) {
+            ctx.echo(def.error().message);
+            return false;
+        }
+        core::DimensionDef d = def.value();
+        if (d.type == core::DimensionType::Linear)
+            d.rotation_udeg = apply_angle(x, d.rotation_udeg);
+        const bool angle =
+            d.type == core::DimensionType::Angular || d.type == core::DimensionType::Angular3P;
+        if (!angle) d.measurement = apply_length(x, d.measurement);
+        d.arrow_size       = apply_length(x, d.arrow_size);
+        d.extension_beyond = apply_length(x, d.extension_beyond);
+        d.extension_offset = apply_length(x, d.extension_offset);
+        d.text_gap         = apply_length(x, d.text_gap);
+        payload            = core::encode_dimension(d);
+        if (x.kind == Xform::Kind::Scale && doc.texts().has(gslot)) {
+            // The measured text changes with the length; the caption follows.
+            const core::DrawingUnit unit = core::drawing_unit_from_setting(
+                ctx.session().bus().project_settings().get("core.cizim.birim").as_enum());
+            if (auto s = ctx.transaction().set_text(slot, core::dimension_text(d, unit),
+                                                    doc.texts().height(gslot),
+                                                    doc.texts().anchor(gslot));
+                !s) {
+                ctx.echo(s.error().message);
+                return false;
+            }
+        }
+    } else if (kind == core::kLeaderKind) {
+        auto def = core::leader_of(g, gslot);
+        if (!def) {
+            ctx.echo(def.error().message);
+            return false;
+        }
+        core::LeaderDef l = def.value();
+        l.arrow_size      = apply_length(x, l.arrow_size);
+        payload           = core::encode_leader(l);
+    } else {
+        return false;
+    }
+
+    auto st = ctx.transaction().set_kind_geometry(slot, input, payload);
+    if (!st) {
+        ctx.echo(st.error().message);
+        return false;
+    }
+    return true;
 }
 
 /// Applies `x` to one entity, whatever kind it is. Returns false having echoed
@@ -135,35 +347,26 @@ bool transform_one(Context& ctx, core::EntityId slot, const Xform& x)
         return true;
     }
 
-    // A polyline or a face: every stored vertex is a real corner, so every one
-    // moves. The ring structure — roles, parts, hole order — is untouched.
-    const core::RingSpan span = g.rings_of(gslot);
+    // A kind whose payload holds coordinates or angles changes both at once.
+    if (kind == core::kArcPolylineKind || kind == core::kHatchKind ||
+        kind == core::kBlockReferenceKind || kind == core::kDimensionKind ||
+        kind == core::kLeaderKind)
+        return transform_payload_kind(ctx, slot, x);
+
+    // A polyline, a face, a spline, an ellipse: every stored vertex is a real
+    // corner or a definition point, so every one moves. The ring structure —
+    // roles, parts, hole order — is untouched, and so is a payload that holds
+    // no coordinate (a spline's knots, an ellipse's sweep), which the geometry
+    // carries over.
+    //
+    // A REFLECTION REVERSES WINDING, so a ring walked counter-clockwise now runs
+    // clockwise. A closed ring's vertex order is reversed to put it back, because
+    // the sign of a ring's area is the sign of its winding and a face whose
+    // exterior wound the wrong way would compute a negative alan (geometry.hpp
+    // `ring_area`). An open ring keeps its order (`transformed_rings`).
     std::vector<std::vector<core::Point2>> rings;
     std::vector<core::RingGeometry::RingInput> input;
-    rings.reserve(span.count);
-    input.reserve(span.count);
-
-    for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-        const auto xs = g.ring_xs(r);
-        const auto ys = g.ring_ys(r);
-        std::vector<core::Point2> pts;
-        pts.reserve(xs.size());
-        for (std::size_t v = 0; v < xs.size(); ++v)
-            pts.push_back(apply(x, core::Point2{xs[v], ys[v]}));
-        rings.push_back(std::move(pts));
-    }
-
-    // A REFLECTION REVERSES WINDING, so a ring walked counter-clockwise now runs
-    // clockwise. The vertex order is reversed to put it back, because the sign of
-    // a ring's area is the sign of its winding and a face whose exterior wound the
-    // wrong way would compute a negative alan (geometry.hpp `ring_area`).
-    if (reverses(x))
-        for (auto& pts : rings)
-            std::reverse(pts.begin(), pts.end());
-
-    for (std::size_t i = 0; i < rings.size(); ++i)
-        input.push_back(core::RingGeometry::RingInput{rings[i], g.ring_role[span.first + i],
-                                                      g.ring_part[span.first + i]});
+    transformed_rings(g, gslot, x, rings, input);
 
     auto st = ctx.transaction().set_geometry(slot, input);
     if (!st) {
@@ -313,8 +516,13 @@ Task<void> run_move(Context& ctx)
     auto from = co_await ctx.point("baslangic", "Taşımanın başlangıç noktası");
     if (!from) co_return;
 
+    // The objects themselves ride under the cursor, offset from the base point
+    // — the ghost every CAD shows — so where they will land is seen, not
+    // inferred from a line.
     auto to = co_await ctx.point("bitis", "Taşımanın bitiş noktası",
-                                 PointOptions{.rubber_band = true, .rubber_origin = *from});
+                                 PointOptions{.rubber_band   = true,
+                                              .rubber_origin = *from,
+                                              .rubber_shape  = RubberShape::Ghost});
     if (!to) co_return;
 
     Xform x;
@@ -342,27 +550,37 @@ Task<void> run_copy(Context& ctx)
     auto from = co_await ctx.point("baslangic", "Kopyalamanın başlangıç noktası");
     if (!from) co_return;
 
-    auto to = co_await ctx.point("bitis", "Kopyanın geleceği nokta",
-                                 PointOptions{.rubber_band = true, .rubber_origin = *from});
-    if (!to) co_return;
+    // ONE COPY PER POINT, until the right button or Esc ends the run: a row of
+    // identical poles or manholes is placed in one command rather than one
+    // command per pole. A script gives the same list as `bitis=`; a single
+    // point is the one copy it always made.
+    std::vector<core::Point2> placed;
+    while (auto to = co_await ctx.point(
+               "bitis", placed.empty() ? "Kopyanın geleceği nokta" : "Sonraki kopyanın yeri",
+               PointOptions{.rubber_band   = true,
+                            .rubber_origin = *from,
+                            .rubber_shape  = RubberShape::Ghost})) {
+        Xform x;
+        x.kind = Xform::Kind::Translate;
+        x.dx   = to->x - from->x;
+        x.dy   = to->y - from->y;
 
-    Xform x;
-    x.kind = Xform::Kind::Translate;
-    x.dx   = to->x - from->x;
-    x.dy   = to->y - from->y;
-
-    for (core::EntityId slot : slots) {
-        auto made = clone_one(ctx, slot, x);
-        if (!made) {
-            ctx.echo(made.error().message);
-            co_return; // the bus rolls the whole transaction back
+        for (core::EntityId slot : slots) {
+            auto made = clone_one(ctx, slot, x);
+            if (!made) {
+                ctx.echo(made.error().message);
+                co_return; // the bus rolls the whole transaction back
+            }
         }
+        placed.push_back(*to);
     }
+    if (placed.empty()) co_return; // ESC before a copy was placed: nothing to record
 
     ctx.record("nesneler", Value::ids(requested));
     ctx.record("baslangic", Value::point(*from));
-    ctx.record("bitis", Value::point(*to));
-    ctx.echo(std::to_string(slots.size()) + " nesne kopyalandı.");
+    ctx.record("bitis", Value::points(placed));
+    ctx.echo(std::to_string(slots.size() * placed.size()) + " nesne kopyalandı" +
+             (placed.size() > 1 ? " (" + std::to_string(placed.size()) + " yere)." : "."));
 }
 
 // ----------------------------------------------------------------- DİZİ ----
@@ -617,11 +835,13 @@ KENTOS_COMMAND(copy_objects)
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                       "Kopyalanacak nesnelerin kimlikleri; yoksa etkin seçim"},
                 Param::point("baslangic", "Kopyalamanın başlangıç noktası"),
-                Param::point("bitis", "Kopyanın geleceği nokta"),
+                Param::points("bitis", Arity::at_least(1),
+                              "Kopyaların geleceği noktalar; her nokta bir kopya"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Seçilen nesnelerin kopyasını iki nokta arasındaki kadar öteye koyar.",
+        .summary = "Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya "
+                   "kadar öteleyerek koyar.",
         .run     = &run_copy,
     };
 }

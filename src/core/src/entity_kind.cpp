@@ -6,12 +6,151 @@
 #include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/text.hpp"
+#include "kentos_cad/core/trig.hpp"
+#include "kentos_cad/core/wire.hpp"
+
+#include "kind_common.hpp"
 
 #include <algorithm>
 #include <cmath>
-#include <cstring>
 
 namespace kentos::core {
+
+// ---------------------------------------------------------- shared helpers ---
+//
+// The pieces every kind file uses (kind_common.hpp). Defined here rather than in
+// a file of their own so the polyline — the kind the frame budget is written
+// against — keeps its helpers in the translation unit that calls them.
+namespace kind {
+
+double segment_distance2_m(Point2 a, Point2 b, Point2 p)
+{
+    const double vx = mm_to_metres(b.x - a.x);
+    const double vy = mm_to_metres(b.y - a.y);
+    const double wx = mm_to_metres(p.x - a.x);
+    const double wy = mm_to_metres(p.y - a.y);
+
+    const double vv = vx * vx + vy * vy;
+    double t        = 0.0;
+    if (vv > 0.0) {
+        t = (wx * vx + wy * vy) / vv;
+        if (t < 0.0) t = 0.0;
+        if (t > 1.0) t = 1.0;
+    }
+
+    const double dx = wx - t * vx;
+    const double dy = wy - t * vy;
+    return dx * dx + dy * dy;
+}
+
+Status refuse_payload(const char* what, std::span<const std::uint8_t> payload)
+{
+    if (payload.empty()) return ok();
+    return err(ErrorCode::ValidationFailed, std::string(what) + " tür yükü taşımaz; verilen " +
+                                                std::to_string(payload.size()) + " bayt.");
+}
+
+Status one_open_ring(const char* what, std::span<const RingGeometry::RingInput> rings,
+                     std::size_t vertices)
+{
+    if (rings.size() != 1 || rings[0].role != RingRole::Open || rings[0].points.size() != vertices)
+        return err(ErrorCode::ValidationFailed,
+                   std::string(what) + " tek bir açık halkada tam " + std::to_string(vertices) +
+                       " tepe noktası ister; verilen " + std::to_string(rings.size()) + " halka" +
+                       (rings.empty() ? std::string()
+                                      : ", ilkinde " + std::to_string(rings[0].points.size()) +
+                                            " tepe noktası") +
+                       ".");
+    return ok();
+}
+
+Box2 box_of_points(std::span<const Mm> xs, std::span<const Mm> ys)
+{
+    Box2 b{};
+    for (std::size_t v = 0; v < xs.size(); ++v)
+        b.extend(Point2{xs[v], ys[v]});
+    return b;
+}
+
+Box2 box_of_runs(const EmitBuffer& runs)
+{
+    return box_of_points(runs.xs, runs.ys);
+}
+
+bool runs_hit(const EmitBuffer& runs, Point2 probe, Mm tolerance, bool inside_counts)
+{
+    const double tol   = mm_to_metres(tolerance < 0 ? 0 : tolerance);
+    const double limit = tol * tol;
+    for (std::size_t r = 0; r < runs.run_total(); ++r) {
+        const auto xs = runs.run_xs(r);
+        const auto ys = runs.run_ys(r);
+        if (xs.empty()) continue;
+        if (xs.size() == 1) {
+            const Point2 v{xs[0], ys[0]};
+            if (segment_distance2_m(v, v, probe) <= limit) return true;
+            continue;
+        }
+        const bool closed      = runs.run_closed[r] != 0;
+        const std::size_t last = xs.size() - 1;
+        const std::size_t segs = closed ? xs.size() : last;
+        for (std::size_t sgm = 0; sgm < segs; ++sgm) {
+            const std::size_t j = (sgm == last) ? 0 : sgm + 1;
+            if (segment_distance2_m(Point2{xs[sgm], ys[sgm]}, Point2{xs[j], ys[j]}, probe) <= limit)
+                return true;
+        }
+    }
+    if (!inside_counts) return false;
+    // A click inside the shape picks the shape, and a hole vetoes it — the
+    // polyline rule, over the drawn runs.
+    bool in_shape = false;
+    bool in_hole  = false;
+    for (std::size_t r = 0; r < runs.run_total(); ++r) {
+        if (runs.run_closed[r] == 0) continue;
+        if (!ring_contains(runs.run_xs(r), runs.run_ys(r), probe)) continue;
+        if (runs.run_hole[r] != 0)
+            in_hole = true;
+        else
+            in_shape = true;
+    }
+    return in_shape && !in_hole;
+}
+
+Mm run_length(std::span<const Mm> xs, std::span<const Mm> ys, bool closed)
+{
+    if (xs.size() < 2) return 0;
+    double total           = 0.0;
+    const std::size_t segs = closed ? xs.size() : xs.size() - 1;
+    for (std::size_t i = 0; i < segs; ++i) {
+        const std::size_t j = (i + 1) % xs.size();
+        const auto dx       = static_cast<double>(xs[j] - xs[i]);
+        const auto dy       = static_cast<double>(ys[j] - ys[i]);
+        total += std::sqrt(dx * dx + dy * dy);
+    }
+    return static_cast<Mm>(std::llround(total));
+}
+
+double run_area2(std::span<const Mm> xs, std::span<const Mm> ys)
+{
+    if (xs.size() < 3) return 0.0;
+    double a2 = 0.0;
+    for (std::size_t i = 0; i < xs.size(); ++i) {
+        const std::size_t j = (i + 1) % xs.size();
+        a2 += static_cast<double>(xs[i] - xs[0]) * static_cast<double>(ys[j] - ys[0]) -
+              static_cast<double>(xs[j] - xs[0]) * static_cast<double>(ys[i] - ys[0]);
+    }
+    return a2;
+}
+
+} // namespace kind
+
+using kind::kKeyCenter;
+using kind::kKeyEndpoint;
+using kind::kKeyMidpoint;
+using kind::offer;
+using kind::one_open_ring;
+using kind::refuse_payload;
+using kind::segment_distance2_m;
+
 namespace {
 
 // ---------------------------------------------------------- core.polyline ----
@@ -43,33 +182,6 @@ void polyline_outline(const RingGeometry& geom, SlotSpan slots, EmitBuffer& into
                 into.push_vertex(xs[v], ys[v]);
         }
     }
-}
-
-/// Squared distance from `p` to segment `a`-`b`, in square metres.
-///
-/// Metres rather than millimetres because the square of a TM3 coordinate
-/// difference in mm overflows the 53-bit mantissa long before it overflows
-/// int64, and the whole point of translating to the probe first is to keep the
-/// operands small. `double` is transient here and never reaches a member
-/// (core.md R3).
-double segment_distance2_m(Point2 a, Point2 b, Point2 p)
-{
-    const double vx = mm_to_metres(b.x - a.x);
-    const double vy = mm_to_metres(b.y - a.y);
-    const double wx = mm_to_metres(p.x - a.x);
-    const double wy = mm_to_metres(p.y - a.y);
-
-    const double vv = vx * vx + vy * vy;
-    double t        = 0.0;
-    if (vv > 0.0) {
-        t = (wx * vx + wy * vy) / vv;
-        if (t < 0.0) t = 0.0;
-        if (t > 1.0) t = 1.0;
-    }
-
-    const double dx = wx - t * vx;
-    const double dy = wy - t * vy;
-    return dx * dx + dy * dy;
 }
 
 void polyline_hit(const RingGeometry& geom, SlotSpan slots, Point2 probe, Mm tolerance,
@@ -141,84 +253,10 @@ void polyline_hit(const RingGeometry& geom, SlotSpan slots, Point2 probe, Mm tol
 
 // -------------------------------------------------------------- payload ------
 //
-// Little-endian everywhere, assembled byte by byte: a file written on x86 is
-// read on Apple Silicon and R26 promises the payload comes back byte-identical.
-// memcpy rather than a cast for the signed/unsigned hop, so no coordinate ever
-// meets static_cast<Mm> outside the units.hpp rounding helper (core.md R20).
-
-void put_u32(std::vector<std::uint8_t>& out, std::uint32_t v)
-{
-    for (int i = 0; i < 4; ++i)
-        out.push_back(static_cast<std::uint8_t>((v >> (i * 8)) & 0xFFu));
-}
-
-void put_u16(std::vector<std::uint8_t>& out, std::uint16_t v)
-{
-    for (int i = 0; i < 2; ++i)
-        out.push_back(
-            static_cast<std::uint8_t>((static_cast<std::uint32_t>(v) >> (i * 8)) & 0xFFu));
-}
-
-void put_mm(std::vector<std::uint8_t>& out, Mm v)
-{
-    std::uint64_t u = 0;
-    std::memcpy(&u, &v, sizeof(u));
-    for (int i = 0; i < 8; ++i)
-        out.push_back(static_cast<std::uint8_t>((u >> (i * 8)) & 0xFFu));
-}
-
-class Reader
-{
-public:
-    explicit Reader(std::span<const std::uint8_t> bytes) : bytes_(bytes) {}
-
-    std::size_t left() const noexcept { return bytes_.size() - at_; }
-
-    bool remaining(std::size_t n) const noexcept { return left() >= n; }
-
-    /// `count` records of `stride` bytes each, without ever computing the
-    /// product: a hostile file declares four billion rings, and on a 32-bit
-    /// build `count * stride` wraps to a number the payload happily satisfies.
-    bool remaining_records(std::uint32_t count, std::size_t stride) const noexcept
-    {
-        return count <= left() / stride;
-    }
-
-    std::uint32_t u32()
-    {
-        std::uint32_t v = 0;
-        for (int i = 0; i < 4; ++i)
-            v |= static_cast<std::uint32_t>(bytes_[at_ + static_cast<std::size_t>(i)]) << (i * 8);
-        at_ += 4;
-        return v;
-    }
-
-    std::uint16_t u16()
-    {
-        std::uint32_t v = 0;
-        for (int i = 0; i < 2; ++i)
-            v |= static_cast<std::uint32_t>(bytes_[at_ + static_cast<std::size_t>(i)]) << (i * 8);
-        at_ += 2;
-        return static_cast<std::uint16_t>(v);
-    }
-
-    std::uint8_t u8() { return bytes_[at_++]; }
-
-    Mm mm()
-    {
-        std::uint64_t u = 0;
-        for (int i = 0; i < 8; ++i)
-            u |= static_cast<std::uint64_t>(bytes_[at_ + static_cast<std::size_t>(i)]) << (i * 8);
-        at_ += 8;
-        Mm v = 0;
-        std::memcpy(&v, &u, sizeof(v));
-        return v;
-    }
-
-private:
-    std::span<const std::uint8_t> bytes_;
-    std::size_t at_{0};
-};
+// The byte order lives in core/wire.hpp, shared with every kind a later phase
+// adds and with the document's payload columns; this file only names the
+// reader the way its read functions always have.
+using Reader = WireReader;
 
 void polyline_write(const RingGeometry& geom, SlotSpan slots, std::vector<std::uint8_t>& bytes,
                     std::vector<std::uint32_t>& ends)
@@ -318,8 +356,6 @@ void circle_area(const RingGeometry& geom, SlotSpan slots, std::span<Mm2> out)
 {
     // pi as a literal: no libm call, so every platform multiplies the same three
     // doubles in the same order and rounds the same way (§7.3, Article 2.5).
-    constexpr double kPi = 3.14159265358979323846;
-
     for (std::size_t i = 0; i < slots.size(); ++i) {
         const auto r   = static_cast<double>(circle_radius_of(geom, slots[i]));
         const double a = kPi * r * r;
@@ -447,8 +483,6 @@ void circle_perimeter(const RingGeometry& geom, SlotSpan slots, std::span<Mm> ou
     // The same literal pi `circle_area` uses, and for the same reason: no libm
     // call, so every platform multiplies the same doubles in the same order
     // (§7.3, Article 2.5).
-    constexpr double kPi = 3.14159265358979323846;
-
     for (std::size_t i = 0; i < slots.size(); ++i) {
         const auto r = static_cast<double>(circle_radius_of(geom, slots[i]));
         out[i]       = static_cast<Mm>(std::llround(2.0 * kPi * r));
@@ -457,8 +491,6 @@ void circle_perimeter(const RingGeometry& geom, SlotSpan slots, std::span<Mm> ou
 
 void arc_perimeter(const RingGeometry& geom, SlotSpan slots, std::span<Mm> out)
 {
-    constexpr double kPi = 3.14159265358979323846;
-
     for (std::size_t i = 0; i < slots.size(); ++i) {
         const Point2 centre = arc_centre_of(geom, slots[i]);
         const auto r        = static_cast<double>(arc_radius_of(geom, slots[i]));
@@ -466,18 +498,16 @@ void arc_perimeter(const RingGeometry& geom, SlotSpan slots, std::span<Mm> out)
         const Point2 end    = arc_end_of(geom, slots[i]);
 
         // The sweep from the two ends, counter-clockwise, which is the direction
-        // `add_arc` documents. A sweep that comes out at or below zero has wrapped
-        // the whole way round: an arc whose ends coincide is a full turn, not a
-        // zero-length one.
-        double a0    = std::atan2(static_cast<double>(start.y - centre.y),
-                                  static_cast<double>(start.x - centre.x));
-        double a1    = std::atan2(static_cast<double>(end.y - centre.y),
-                                  static_cast<double>(end.x - centre.x));
-        double sweep = a1 - a0;
-        while (sweep <= 0.0)
-            sweep += 2.0 * kPi;
+        // `add_arc` documents — in whole micro-degrees from `atan2_udeg`, never
+        // from `std::atan2`, so the same arc measures the same on every platform
+        // (§7.3). Ends that coincide are a full turn, not a zero-length arc.
+        const std::int64_t a0 = atan2_udeg(start.y - centre.y, start.x - centre.x);
+        const std::int64_t a1 = atan2_udeg(end.y - centre.y, end.x - centre.x);
+        std::int64_t sweep    = a1 - a0;
+        if (sweep <= 0) sweep += kUDegFullCircle;
 
-        out[i] = static_cast<Mm>(std::llround(r * sweep));
+        const double radians = static_cast<double>(sweep) * (kPi / (180.0 * 1000000.0));
+        out[i]               = static_cast<Mm>(std::llround(r * radians));
     }
 }
 
@@ -679,6 +709,125 @@ Point2 point_position_of(const RingGeometry& geom, std::uint32_t slot)
     return point_position(geom, slot);
 }
 
+// ------------------------------------------------------------- validate ------
+//
+// Each kind's own floor, asked before a single byte is appended (model.md R9a).
+// The five built-in kinds carry no payload, so each refuses one: bytes a build
+// cannot interpret are bytes a later build would trust.
+
+Status polyline_validate(std::span<const RingGeometry::RingInput> rings,
+                         std::span<const std::uint8_t> payload)
+{
+    if (auto st = refuse_payload("Çoklu çizgi", payload); !st) return st;
+    // THE FLOOR LIVES HERE, where the kind is known. `RingGeometry::append`
+    // allows a one-vertex open ring because a `core.point` is exactly that; a
+    // polyline with one vertex is a line that goes nowhere and is refused. Faces
+    // are checked by the arena itself (three vertices, R11 order).
+    if (rings.size() == 1 && rings[0].role == RingRole::Open && rings[0].points.size() < 2)
+        return err(ErrorCode::ValidationFailed, "Bir çizgi en az iki nokta ister, verilen: " +
+                                                    std::to_string(rings[0].points.size()) + ".");
+    return ok();
+}
+
+Status circle_validate(std::span<const RingGeometry::RingInput> rings,
+                       std::span<const std::uint8_t> payload)
+{
+    if (auto st = refuse_payload("Daire", payload); !st) return st;
+    if (auto st = one_open_ring("Daire", rings, 2); !st) return st;
+    const Point2 c = rings[0].points[0];
+    const Point2 h = rings[0].points[1];
+    if (h.y != c.y || h.x <= c.x)
+        return err(ErrorCode::ValidationFailed,
+                   "Dairenin yarıçap tutamağı merkezin tam doğusunda ve merkezden uzakta olmalı; "
+                   "yarıçap sıfırdan büyük olmalı.");
+    return ok();
+}
+
+Status arc_validate(std::span<const RingGeometry::RingInput> rings,
+                    std::span<const std::uint8_t> payload)
+{
+    if (auto st = refuse_payload("Yay", payload); !st) return st;
+    if (auto st = one_open_ring("Yay", rings, 4); !st) return st;
+    const Point2 c = rings[0].points[0];
+    const Point2 h = rings[0].points[1];
+    if (h.y != c.y || h.x <= c.x)
+        return err(ErrorCode::ValidationFailed,
+                   "Yayın yarıçap tutamağı merkezin tam doğusunda olmalı; yarıçap sıfırdan büyük "
+                   "olmalı.");
+    return ok();
+}
+
+Status point_validate(std::span<const RingGeometry::RingInput> rings,
+                      std::span<const std::uint8_t> payload)
+{
+    if (auto st = refuse_payload("Nokta", payload); !st) return st;
+    return one_open_ring("Nokta", rings, 1);
+}
+
+Status ellipse_validate(std::span<const RingGeometry::RingInput> rings,
+                        std::span<const std::uint8_t> payload)
+{
+    // A payload is the sweep of a PARTIAL ellipse (core/ellipse.hpp); none is a
+    // whole one. Anything else is bytes this kind cannot read.
+    if (!payload.empty())
+        if (auto arc = decode_ellipse_arc(payload); !arc) return arc.error();
+    if (auto st = one_open_ring("Elips", rings, 3); !st) return st;
+    const Point2 c = rings[0].points[0];
+    if (rings[0].points[1] == c)
+        return err(ErrorCode::InvalidArgument, "Elipsin birinci ekseni sıfır uzunlukta olamaz.");
+    if (rings[0].points[2] == c)
+        return err(ErrorCode::InvalidArgument, "Elipsin ikinci ekseni sıfır uzunlukta olamaz.");
+    return ok();
+}
+
+// ----------------------------------------------------------- key points ------
+//
+// What a snap reaches for on a curve beyond its outline. The mode bits are the
+// values `core/snap.hpp` declares; they are written as numbers here because this
+// header sits below the snap engine, and a kind must not depend on it.
+
+void circle_key_points(const RingGeometry& geom, std::uint32_t slot, KeyPointSink& into)
+{
+    offer(into, circle_centre_of(geom, slot), kKeyCenter);
+}
+
+void arc_key_points(const RingGeometry& geom, std::uint32_t slot, KeyPointSink& into)
+{
+    const Point2 centre = arc_centre_of(geom, slot);
+    const Point2 from   = arc_start_of(geom, slot);
+    const Point2 to     = arc_end_of(geom, slot);
+    offer(into, centre, kKeyCenter);
+    offer(into, from, kKeyEndpoint);
+    offer(into, to, kKeyEndpoint);
+    offer(into, arc_midpoint(centre, arc_radius_of(geom, slot), from, to), kKeyMidpoint);
+}
+
+void ellipse_key_points(const RingGeometry& geom, std::uint32_t slot, KeyPointSink& into)
+{
+    // The centre, and the four axis ends: the two the command was given and
+    // their mirrors. They are what ELİPS was drawn from and what a surveyor
+    // measures it by; an ellipse has no corner and no end of its own. A partial
+    // ellipse has two ends instead of four axis ends.
+    const Point2 c     = ellipse_centre_of(geom, slot);
+    const Point2 major = ellipse_major_of(geom, slot);
+    const Point2 minor = ellipse_minor_of(geom, slot);
+    offer(into, c, kKeyCenter);
+    if (const auto arc = ellipse_arc_of(geom, slot); arc.has_value()) {
+        std::vector<Mm> xs;
+        std::vector<Mm> ys;
+        ellipse_arc_outline(c, major, minor, arc->start_udeg, arc->end_udeg, xs, ys);
+        if (!xs.empty()) {
+            offer(into, Point2{xs.front(), ys.front()}, kKeyEndpoint);
+            offer(into, Point2{xs.back(), ys.back()}, kKeyEndpoint);
+        }
+        return;
+    }
+    offer(into, major, kKeyEndpoint);
+    offer(into, minor, kKeyEndpoint);
+    offer(into, Point2{2 * c.x - major.x, 2 * c.y - major.y}, kKeyEndpoint);
+    offer(into, Point2{2 * c.x - minor.x, 2 * c.y - minor.y}, kKeyEndpoint);
+}
+
 KENTOS_KIND(point)
 {
     KindSpec s{};
@@ -696,6 +845,7 @@ KENTOS_KIND(point)
     s.perimeter  = &point_perimeter;
     s.read       = &point_read;
     s.write      = &point_write;
+    s.validate   = &point_validate;
     return s;
 }
 
@@ -716,6 +866,8 @@ KENTOS_KIND(arc)
     s.perimeter  = &arc_perimeter;
     s.read       = &arc_read;
     s.write      = &arc_write;
+    s.validate   = &arc_validate;
+    s.key_points = &arc_key_points;
     return s;
 }
 
@@ -736,6 +888,8 @@ KENTOS_KIND(circle)
     s.perimeter  = &circle_perimeter;
     s.read       = &circle_read;
     s.write      = &circle_write;
+    s.validate   = &circle_validate;
+    s.key_points = &circle_key_points;
     return s;
 }
 
@@ -744,9 +898,35 @@ KENTOS_KIND(circle)
 // Three stored vertices: the centre and the two axis ENDPOINTS. The endpoints
 // carry the rotation as vectors, so nothing here reads or writes an angle.
 
+/// The drawn form of one ellipse slot: the whole curve, closed, or the partial
+/// one's open sweep. Returns whether the run closes.
+bool ellipse_run(const RingGeometry& geom, std::uint32_t slot, std::vector<Mm>& xs,
+                 std::vector<Mm>& ys)
+{
+    xs.clear();
+    ys.clear();
+    const Point2 c     = ellipse_centre_of(geom, slot);
+    const Point2 major = ellipse_major_of(geom, slot);
+    const Point2 minor = ellipse_minor_of(geom, slot);
+    if (const auto arc = ellipse_arc_of(geom, slot); arc.has_value()) {
+        ellipse_arc_outline(c, major, minor, arc->start_udeg, arc->end_udeg, xs, ys);
+        return false;
+    }
+    ellipse_outline(c, major, minor, xs, ys);
+    return true;
+}
+
 void ellipse_bbox(const RingGeometry& geom, SlotSpan slots, std::span<Box2> out)
 {
+    std::vector<Mm> xs;
+    std::vector<Mm> ys;
     for (std::size_t i = 0; i < slots.size(); ++i) {
+        if (ellipse_arc_of(geom, slots[i]).has_value()) {
+            // A partial ellipse's box is its drawn sweep's, like an arc's.
+            ellipse_run(geom, slots[i], xs, ys);
+            out[i] = kind::box_of_points(xs, ys);
+            continue;
+        }
         // The exact extent of a rotated ellipse is `sqrt(ax² + bx²)` in x and
         // `sqrt(ay² + by²)` in y — the half-widths of its bounding box. Not the
         // axis endpoints: for a rotated ellipse those lie INSIDE the box, and a
@@ -768,9 +948,16 @@ void ellipse_bbox(const RingGeometry& geom, SlotSpan slots, std::span<Box2> out)
 
 void ellipse_perimeter(const RingGeometry& geom, SlotSpan slots, std::span<Mm> out)
 {
-    constexpr double kPi = 3.14159265358979323846;
-
+    std::vector<Mm> xs;
+    std::vector<Mm> ys;
     for (std::size_t i = 0; i < slots.size(); ++i) {
+        if (ellipse_arc_of(geom, slots[i]).has_value()) {
+            // A partial ellipse's length has no closed form either; the drawn
+            // sweep's is what is reported, and the page says so.
+            ellipse_run(geom, slots[i], xs, ys);
+            out[i] = kind::run_length(xs, ys, false);
+            continue;
+        }
         const Point2 c = ellipse_centre_of(geom, slots[i]);
         const Point2 a = ellipse_major_of(geom, slots[i]);
         const Point2 b = ellipse_minor_of(geom, slots[i]);
@@ -795,9 +982,12 @@ void ellipse_perimeter(const RingGeometry& geom, SlotSpan slots, std::span<Mm> o
 
 void ellipse_area(const RingGeometry& geom, SlotSpan slots, std::span<Mm2> out)
 {
-    constexpr double kPi = 3.14159265358979323846;
-
     for (std::size_t i = 0; i < slots.size(); ++i) {
+        if (ellipse_arc_of(geom, slots[i]).has_value()) {
+            // An open sweep encloses nothing, exactly as an arc does not.
+            out[i] = Mm2{0};
+            continue;
+        }
         const Point2 c = ellipse_centre_of(geom, slots[i]);
         const Point2 a = ellipse_major_of(geom, slots[i]);
         const Point2 b = ellipse_minor_of(geom, slots[i]);
@@ -824,12 +1014,8 @@ void ellipse_outline_fn(const RingGeometry& geom, SlotSpan slots, EmitBuffer& in
     std::vector<Mm> ys;
 
     for (const std::uint32_t slot : slots) {
-        xs.clear();
-        ys.clear();
-        ellipse_outline(ellipse_centre_of(geom, slot), ellipse_major_of(geom, slot),
-                        ellipse_minor_of(geom, slot), xs, ys);
-
-        into.begin_run(true); // closed
+        const bool closed = ellipse_run(geom, slot, xs, ys);
+        into.begin_run(closed);
         for (std::size_t v = 0; v < xs.size(); ++v)
             into.push_vertex(xs[v], ys[v]);
     }
@@ -849,13 +1035,11 @@ void ellipse_hit(const RingGeometry& geom, SlotSpan slots, Point2 probe, Mm tole
         // polyline uses. A closed-form distance to an ellipse has no elementary
         // solution and every approximation of one is wrong somewhere; the run is
         // what the user sees and what they aimed at.
-        xs.clear();
-        ys.clear();
-        ellipse_outline(ellipse_centre_of(geom, slots[i]), ellipse_major_of(geom, slots[i]),
-                        ellipse_minor_of(geom, slots[i]), xs, ys);
+        const bool closed = ellipse_run(geom, slots[i], xs, ys);
 
-        out[i] = 0;
-        for (std::size_t v = 0; v < xs.size() && out[i] == 0; ++v) {
+        out[i]                 = 0;
+        const std::size_t segs = xs.size() < 2 ? 0 : (closed ? xs.size() : xs.size() - 1);
+        for (std::size_t v = 0; v < segs && out[i] == 0; ++v) {
             const Point2 a{xs[v], ys[v]};
             const Point2 b{xs[(v + 1) % xs.size()], ys[(v + 1) % ys.size()]};
             if (segment_distance2_m(a, b, probe) <= limit) out[i] = 1;
@@ -921,6 +1105,8 @@ KENTOS_KIND(ellipse)
     s.perimeter  = &ellipse_perimeter;
     s.read       = &ellipse_read;
     s.write      = &ellipse_write;
+    s.validate   = &ellipse_validate;
+    s.key_points = &ellipse_key_points;
     return s;
 }
 
@@ -941,6 +1127,7 @@ KENTOS_KIND(polyline)
     s.perimeter  = &polyline_perimeter;
     s.read       = &polyline_read;
     s.write      = &polyline_write;
+    s.validate   = &polyline_validate;
     return s;
 }
 
@@ -1023,7 +1210,13 @@ const KindSpec* KindTable::find_name(std::string_view name) const
     X(circle)                                                                                      \
     X(arc)                                                                                         \
     X(point)                                                                                       \
-    X(ellipse)
+    X(ellipse)                                                                                     \
+    X(arc_polyline)                                                                                \
+    X(spline)                                                                                      \
+    X(hatch)                                                                                       \
+    X(block_reference)                                                                             \
+    X(dimension)                                                                                   \
+    X(leader)
 
 bool curve_outline(KindId kind, const RingGeometry& geom, std::uint32_t slot, EmitBuffer& into)
 {

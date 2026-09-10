@@ -6,6 +6,125 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değiştirildi — Araç modeli, nişan ve tutamaklar
+
+- **Araç elde kalır.** Her modal araç (çizim, düzenleme, ölçme) bitince yeniden
+  hazırlanır: **sol tuş başlatır, sağ tuş bitirir, araç seçili kalır**; Esc ya da Seç oku
+  bırakır. Nesne isteyen bir araç yeniden hazırlanırken seçimi temizler. `ALANÖLÇ` artık
+  nesnesi yoksa sorar (`Interactive`).
+- **Sağ tık bitirir**, iptal etmez. Komut nesne beklerken bir tık seçime **ekler**
+  (`BİRLEŞTİR` iki nesneyi tıkla alabilir); Ctrl çıkarır.
+- **CAD nişanı**: ortası boş artı ve ortasında seçim toleransı boyunda **seçim kutusu**;
+  nokta beklenirken yalın artı. İşletim sistemi imleci tuvalde gizli.
+- **Hayaletler**: `ELİPS`, `SPLINE`, `TARAMA`, `ÖLÇÜ` (uzatma çizgileri ve oklarıyla),
+  `BLOKEKLE` (bloğun kendisi), `TAŞI` ve `KOPYALA` (nesnelerin kendileri) imlecin altında
+  yapılacak şekli çizer; hepsi türün kendi çizim koduyla.
+- **`KOPYALA` her `bitis` noktasına bir kopya** koyar (`bitis` artık nokta listesi).
+- **Tutamaklar her türde**: `core/grips.hpp` daire (merkez + dört çeyrek), yay (merkez,
+  uçlar, orta), elips (merkez, eksen uçları ve aynaları), yaylı çizgi (köşeler + yay
+  ortaları; şişkinlik korunur), spline/tarama/lider köşeleri, ölçü (tanım noktaları +
+  yazı; çizgi ve rakam yeniden kurulur), blok referansı (ekleme noktası). `KÖŞETAŞI` bunları
+  taşır, tuval tutamaklarını çizer ve sürüklerken türün kendi önizlemesini gösterir.
+  `KÖŞEEKLE` eğrileri reddetmeye devam eder.
+- **NORMAL** çipi durum çubuğunda (`core.yakalama.yuzey_normali`).
+- **Düzeltildi:** geometrisi değiştirilen nesnenin yazısı yeni yuvaya taşınır. `KÖŞETAŞI`
+  yazılı bir nesnenin (METİN, ölçü) köşesini taşıyınca yazı eski yuvada kalıp kayboluyordu.
+- **Düzeltildi:** bir komut nokta beklerken yazılan başka bir komut önce bekleyeni bitirir;
+  önceden bekleyenin açık işlemi içinde çalışıyor ve hiçbir şey çizmiyordu.
+- `core::dimension_layout` / `dimension_picks` / `dimension_baseline`: ölçünün yerleşimi
+  komut, tutamak ve önizleme için tek yerde.
+
+### Düzeltildi — DXF birimi ve daire/yay okuma
+
+- **Birimde otorite `AYAR çizim_birimi`.** Dosyanın `$INSUNITS` başlığı artık yalnız
+  karşılaştırılıp söylenir; farklıysa `uyarı:` satırı düzeltme komutunu verir. Türk
+  kadastro DXF'leri sayılar metre iken başlıkta milimetre der; başlığa inanmak koca bir
+  ilçeyi sekiz metreye sığdırıp her daireyi lekeye çeviriyordu.
+- **Daire ve yay uydurma** üç noktalı çevrel merkezden tüm köşelerin en küçük kareler
+  uydurmasına geçti; kısa kaldırım yayları artık yay olarak gelir.
+- **Elips yakalama** çizilen eğriye oturur (MERKEZ, dört eksen ucu UÇ; YAKIN/DİK/KESİŞİM);
+  tanım çizgilerine oturmaz. Seçim vurgusu da elipsi elips olarak çizer.
+- Kayıp sayaçları yalnız içe alınan katmanları sayar.
+
+### Eklendi — Yeni nesne türleri (Sprint 5, C1–C5)
+
+- **Altı yeni tür**, her biri kendi `KindSpec`'i, yükü ve `docs/nesneler` sayfasıyla:
+  yaylı çoklu çizgi (`core.arc_polyline`, 6), spline (`core.spline`, 7), tarama
+  (`core.hatch`, 8), blok referansı (`core.block_reference`, 9), ölçü (`core.dimension`,
+  10), lider (`core.leader`, 11); elips (5) kısmi elips için 24 baytlık yük taşır. Her yük
+  8 baytlık düzen başlığıyla başlar (model.md R9a).
+- **Komutlar**: `SPLINE`, `TARAMA`, `BLOK`, `BLOKEKLE`, `ÖLÇÜ`, `LİDER`; `ELİPS
+  baslangic= bitis=`. `TAŞI`/`DÖNDÜR`/`ÖLÇEKLE`/`AYNALA` yükü de dönüştürür (yay
+  merkezleri, tarama açısı, blok dönüşümü, ölçü değeri).
+- **Kataloglar** `data/catalogs/dxf/`: `tarama-desenleri.json` (SOLID, ANSI31–37, LINE,
+  NET, DOTS, EARTH, GRASS), `olcu-stili.json` (ISO-25, STANDARD, MIMARI); yolları
+  `TERCİH desen_kataloğu` ve `ölçü_stilleri`.
+- **Çizim**: `EmitBuffer` koşuları stil, katman ve yazı taşır; blok referansı üyelerini her
+  karede tam sayı aritmetiğiyle yerleştirir (ByBlock ve `0` katmanı referansa uyar);
+  yazılı bir tür (ölçü) hem yazısını hem çizgilerini çizer.
+- **DXF**: şişkinlik → yaylı çoklu çizgi, `SPLINE` → spline, `HATCH` → tarama (aileler
+  katalogdan), `BLOCK`/`INSERT` → blok tanımı ve referansı (açılmaz), `DIMENSION` →
+  ölçü (DIMSTYLE ölçüleriyle), `LEADER` → lider, kısmi `ELLIPSE` → kısmi elips; yazıcı
+  her birini kendi varlığıyla geri yazar (`BLOCK`, `DIMSTYLE` tablosu dahil).
+  `blok_adi`/`tarama_deseni` köprü sütunları kalktı.
+- Altın senaryo `nesne-turleri.txt`; fixture `22-lider.dxf`.
+- DXF renk 7 ("beyaz/siyah") siyah okunur ve siyah 7 olarak yazılır: katman tablosu olmayan
+  bir dosyanın çizgileri beyaz zeminde görünmez geliyordu.
+- **Araç kutusu ve Çizim menüsü**: SPLINE çizgi ailesine, TARAMA yüz ailesine girdi; iki
+  yeni aile: Blok Ekle (`BLOKEKLE` · `BLOK`) ve Ölçü (`ÖLÇÜ` · `LİDER`).
+- **Durum çubuğu anahtarları çalışıyor**: YAKALAMA, DİK, POLAR ve OSNAP var olmayan ayar
+  kimliklerine bağlıydı ve tıklandığında yalnız "bir ayara bağlı değil" diyordu; şimdi her
+  biri kapsamının komutunu gönderir (`MOD`/`TERCİH`), OSNAP ve POLAR yakalama maskesini
+  okur ve yazar. **KALINLIK** yeni `çizgi_kalınlığı` tercihidir: kapalıyken çizgiler kıl
+  çizgi olur, kalınlık nesnede kalır.
+
+### Eklendi — DXF libdxfrw ile (Sprint 4)
+
+- **libdxfrw** (GPL-2.0-or-later, LibreCAD, `92d7466e`) `KENTOS_WITH_DXFRW` arkasında,
+  kaynak indirilebilen her yapıda açık; kendi CMake'i CMake 4'te derlenmediği için
+  kaynaklarından bizim hedefimiz olarak kurulur (Article 2.5 kayan nokta bayraklarıyla).
+- **Okuyucu** (`import_dxf`): daire, yay, elips gerçek eğri; LWPOLYLINE/POLYLINE
+  (şişkinlik düşürülerek), SPLINE (de Boor, düşürülerek), INSERT açılımı (ölçek, dönme,
+  ayna, dizi, iç içe 16 kat, ByBlock renk, `blok_adi`), HATCH (dolu → dolgu; desen →
+  `tarama_deseni`), SOLID/TRACE/3DFACE alan, TEXT/MTEXT (kod süzgeci, hiza), katman
+  rengi/kalınlığı/durumu, nesne stili, `$INSUNITS` karşılaştırma, kod sayfası uyarısı,
+  Z → `kot`, tutamak → `kaynak_kimlik`, XDATA → yabancı veri, 44 satırlık tanı sözlüğü.
+- **Yazıcı** (`export_dxf`): her tür kendi varlığı; katmanlar renk/kalınlık/görünürlük/kilit;
+  öznitelikler `KENTOSCAD` XDATA'sı olarak (`ad#tür=değer`) ve geri okunur; yabancı XDATA
+  geldiği gibi; `.prj` yan dosyası; `DIŞAAKTAR surum=2000…2018`.
+- GDAL'ın DXF sürücüsü yalnız libdxfrw kapalı derlenmiş yapılarda kullanılır.
+- Fixture'lar 18–21 (şişkinlik, XDATA, blok dönüşümü, aynalı OCS) ve tam gidiş-dönüş testi.
+
+### Değişti — İçe aktarma arayüzü dondurmuyor (Sprint 3)
+
+- **İki fazlı içe aktarma.** Okuma bir `Job` olarak ayrı iş parçacığında bir karalama
+  belgeye yapılır (`read_into_scratch`), sonra `Transaction::adopt_from` ile komutun tek
+  işlemi içinde gerçek belgeye kopyalanır (io.md P3, R17). Arayüz = komut satırı = betik:
+  üçü aynı belgeyi ve günlüğü üretir; kanıt testi eklendi.
+- Durum çubuğunda iş etiketi, kayan şerit ve **Durdur** çipi; Esc de durdurur. Sihirbazın
+  `Okumayı durdur` düğmesi artık pencereyi kapatmıyor, okumayı durduruyor.
+- Komut satırına yazılan etkileşimli komutlar düğme gibi başlar (`begin_interactive`),
+  günlükte kaynağı `CommandLine` olarak kalır.
+- `Transaction::adopt_from` genel: her tür (bilinmeyen dahil), yük, katman görünümü,
+  stil, yazı, öznitelik, yabancı veri ve blok tanımları kopyalanır.
+
+### Eklendi — CAD çekirdeği C0 (Sprint 2)
+
+- **Tür yükü** (model.md R9a): `RingGeometry` yuva başına bayt dizisi taşır; dosyada
+  0x0080–0x0083 blokları; `Document::add_kind` / `set_kind_payload`; `KindSpec::validate`
+  ve `key_points`; içerik özeti türü ve yükü katlar.
+- **Tanınmayan tür korunur** (R26): okuyucu her türü kabul eder, elips dosyaya gidip
+  geri gelir, bilinmeyen tür görünür ve düzenlenemez, yeniden kaydedilince bayt bayt aynı.
+- **Yabancı veri** (`ForeignTable`, R26a) ve **blok tablosu** iskeleti (R45,
+  `FlagInBlock`); dosya blokları 0x0084–0x0088; panelde `ek_veri` sayısı.
+- **`entity_outline`** ve çok koşulu `EmitBuffer` (delik bayrağı): sahne, seçim, yakalama
+  ve kanvas tek yoldan geçer.
+- **Belirlenimcilik araçları**: `atan2_udeg`, `rotate_udeg`, `mul_div_round`,
+  `circular_segment_area`; yayın uzunluğu artık `std::atan2` kullanmaz; `transform.cpp`'deki
+  ikinci trigonometri silindi.
+- Yakalama modu **EKLEME** (bit 17); maske 16 bite kırpılmıyor.
+- `docs/nesneler/` sayfaları ve üretilmiş `docs/nesneler/referans.md`.
+
 ### Düzeltildi — `make check` baştan sona yeşil
 
 - **Sıfır uyarı.** `painter_backend`, `symbol_preview`, `theme` ve

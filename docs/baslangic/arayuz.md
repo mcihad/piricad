@@ -116,10 +116,18 @@ Sağ uçtaki iki okuma değiştirilemez, yalnızca okunur:
 
 Beş grup. Aktif araç vurgu rengiyle işaretlenir.
 
+**Bir araç elinizde kalır.** Çizgi'ye bastıysanız çizgi çizersiniz; bir çizgiyi **sağ
+tıkla** bitirdiğinizde araç bırakılmaz, sıradaki çizgi için hazır bekler. Aynısı
+Taşı, Alan Ölç, Ölçü ve diğer her araç için geçerlidir: **sol tuş başlatır, sağ tuş
+bitirir, araç seçili kalır**. Aracı bırakmanın iki yolu vardır: **Esc** ya da
+**Seç** okuna (veya başka bir araca) basmak. Nesne isteyen bir araç yeniden
+hazırlanırken seçimi temizler ve sorusunu baştan sorar; bir önceki taşımanın
+nesneleri elinizde kalmaz.
+
 | Grup | Araçlar |
 |---|---|
 | **seçim** | Seç · Alan Seç · Kaydır |
-| **oluşturma** | Çizgi ▸ · Dikdörtgen ▸ · Daire ▸ · Yay ▸ *(aileler)* · Nokta · Metin |
+| **oluşturma** | Çizgi ▸ · Dikdörtgen ▸ · Daire ▸ · Yay ▸ · Nokta · Metin · Blok Ekle ▸ · Ölçü ▸ *(▸ aileler)* |
 | **düzenleme** | Böl/Buda · Birleştir (tevhit) · Parsel Böl (ifraz) · Taşı · Ofset |
 | **ölçüm** | Uzunluk Ölç ▸ *(aile)* |
 | **yardımcı** | Stil Kopyala · Topoloji Denetimi |
@@ -138,10 +146,12 @@ yay ise açık bir kenardır ve hiçbir şeyi çevrelemez.
 
 | Düğme | Ailesi | Ortak yanı |
 |---|---|---|
-| Çizgi | `ÇİZGİ` · `ÇOKLUÇİZGİ` | açık kenar dizisi |
-| Dikdörtgen | `DİKDÖRTGEN` · `ÇOKGEN` | kapalı yüz |
+| Çizgi | `ÇİZGİ` · `ÇOKLUÇİZGİ` · `SPLINE` | açık kenar dizisi: düz, kırık, pürüzsüz |
+| Dikdörtgen | `DİKDÖRTGEN` · `ÇOKGEN` · `TARAMA` | kapalı yüz; tarama desenli yüzdür |
 | Daire | `DAİRE` · `ELİPS` · `HALKA` | kapalı eğri |
 | Yay | `YAY` · `DİLİM` | açık eğri ve ondan kesilen dilim |
+| Blok Ekle | `BLOKEKLE` · `BLOK` | blok yerleştirmek ve tanımlamak |
+| Ölçü | `ÖLÇÜ` · `LİDER` | açıklama: ölçü ve not oku |
 | Uzunluk Ölç | `ÖLÇ` · `ALANÖLÇ` · `KOORDİNAT` | ölçme |
 
 Aileyi açmanın üç yolu vardır: düğmeyi **basılı tutmak**, köşe işaretine **tıklamak**
@@ -179,18 +189,38 @@ Birden çok çizimi aynı anda açmak Faz 2'de gelecek; bugün tek sekme görün
 
 | Etkileşim | Sonuç |
 |---|---|
-| Sol tık, komut çalışırken | Çalışan komuta bir nokta verir |
+| Sol tık, komut nokta beklerken | Çalışan komuta bir nokta verir |
+| Sol tık, komut nesne beklerken | Nesneyi seçime **ekler**; **Ctrl** ile çıkarır |
 | Sol tık, komut yokken | İmlecin yakınındaki nesneyi seçer |
 | Sol tuş basılı sürükle, komut yokken | Seçim kutusu çizer |
 | **Shift** + tık/sürükle | Seçime ekler |
 | **Ctrl** + tık/sürükle | Seçimden çıkarır |
-| Sağ tık | Çalışan komutu iptal eder |
+| Sağ tık, komut nesne beklerken | Seçilenleri komuta verir (Enter ile aynı) |
+| Sağ tık, komut nokta beklerken | Şekli olduğu yerde **bitirir**; araç elde kalır |
 | Orta tuş basılı sürükle | Görünümü kaydırır |
 | Fare tekerleği | İmlecin bulunduğu noktaya yakınlaştırır/uzaklaştırır |
-| **Esc** | Çalışan komutu iptal eder; komut yoksa seçimi temizler |
+| **Esc** | Çalışan komutu iptal eder ve aracı bırakır; komut yoksa seçimi temizler |
 
-İmleç konumu artı işaretiyle gösterilir ve koordinatı durum çubuğunda yazar. Bir komut
-nokta beklerken son noktadan imlece kesikli bir kılavuz çizgi uzanır.
+İmleç bir **CAD nişanıdır**: ortası boş bırakılmış yatay ve dikey iki çizgi, ortasında
+da **seçim kutusu** — bir tıklamanın neyi tutacağını gösteren kare. Karenin kenarı
+`Ayarlar > Uygulama > Seçim` altındaki toleransın iki katıdır; ne gösteriyorsa `SEÇ`
+onu tutar. Komut bir **nokta** beklerken kare kaybolur ve nişan yalın artıya döner,
+çünkü o anda tıklama bir koordinat bırakır, bir şey tutmaz. İşletim sisteminin ok
+imleci tuvalin üstünde gizlidir; nişanın kendisi imleçtir. Koordinat durum çubuğunda
+yazar.
+
+Bir komut nokta beklerken imlecin altında **yapılacak şeklin hayaleti** durur, yalnız
+bir kılavuz çizgi değil: `ÇİZGİ`'de sıradaki kenar, `ALAN` ve `TARAMA`'da o âna kadarki
+halka, `DİKDÖRTGEN`'de yüz, `DAİRE`/`YAY`/`DİLİM`'de eğri, `ELİPS`'te üçüncü tıkla
+oluşacak elips, `SPLINE`'da kontrol noktalarından geçen eğri, `ÖLÇÜ`'de uzatma çizgileri
+ve oklarıyla ölçü, `BLOKEKLE`'de bloğun kendisi, `TAŞI` ve `KOPYALA`'da taşınan
+nesnelerin kendileri. Hayalet, tıklamanın üreteceği geometriyi çizen aynı kodla
+çizilir; ne görüyorsanız onu alırsınız.
+
+Bir komut uzun bir işi ayrı iş parçacığına verdiğinde (bugün: [`İÇEAKTAR`](../komutlar/import.md)
+dosyayı okurken) durum çubuğunun mesaj hücresi işin adını, altında kayan bir şeridi ve
+yanında **Durdur** çipini gösterir. Pencere donmaz; **Durdur** ya da **Esc** işi keser ve
+çizim değişmeden kalır.
 
 ### Harita üzerindeki yardımcılar
 
@@ -212,6 +242,8 @@ aralıkları 137 metre olan bir cetvelden kimse mesafe okuyamaz.
 
 Nişan imleci `imleç` tercihiyle üç hâlde olabilir — tuvali baştan başa geçen çizgiler
 (`tam_ekran`), kısa bir artı (`kısa`, uzunluğu `imleç_boyu` ile) ya da hiç (`yok`).
+`yok` seçilirse işletim sisteminin ok imleci geri gelir. Seçim kutusu her iki nişanda
+da ortada durur; boyu `Seçim > tolerans` tercihinden gelir.
 
 ### Seçim
 
@@ -390,6 +422,11 @@ Her zaman açıktır — bir CAD kullanıcısının eli oraya kendiliğinden gid
 - **Yukarı / Aşağı** — geçmiş
 - **Tab** — tamamlama; adlar `Registry`'den gelir
 - **Esc** — çalışan **komutu** iptal eder, yazıyı silmez
+
+Bir komut nokta, sayı ya da yazı beklerken yazdığınız satır **o komutun cevabıdır**:
+`10,20`, `@5<45`, `12,5` ya da bir yazı. İlk sözcük bir komut adıysa satır cevap
+değil komuttur: `YAKINLAŞ KAPSAM` gibi saydam bir komut bekleyenin yanında çalışır,
+diğer her komut bekleyeni önce sağ tık gibi bitirir ve sonra kendisi başlar.
 
 Ayrıntı için bkz. [Komut satırı](../komutlar/komut-satiri.md).
 
@@ -580,10 +617,23 @@ geçer.
 | ortada | Yardımcı anahtarları: **IZGARA · YAKALAMA · DİK · POLAR · OSNAP · DİNAMİK GİRDİ · KALINLIK** |
 | sağda | Veritabanı durumu ve çizim motoru |
 
-Anahtarlara tıklamak o ayarı yazar — ve bir **komut** gönderir. Yani F7 ile tıklamak
-aynı şeydir ve ikisi de günlüğe aynı satırı yazar. Açık bir anahtar iki şeyle
-işaretlenir: zemini açılır **ve** yazısı vurgu rengine döner; renk körü bir
+Anahtarlara tıklamak o ayarı yazar — ve bir **komut** gönderir. Yani F8 ile DİK'e
+tıklamak aynı şeydir ve ikisi de günlüğe aynı satırı yazar. Açık bir anahtar iki
+şeyle işaretlenir: zemini açılır **ve** yazısı vurgu rengine döner; renk körü bir
 kullanıcı için tek başına renk yeterli değildir.
+
+| Anahtar | Gönderdiği komut | Ne yapar |
+|---|---|---|
+| **IZGARA** | `TERCİH core.izgara.gorunur` | Kılavuz ızgarayı çizer/gizler |
+| **YAKALAMA** | `MOD ızgaraya_yakala` | Noktayı en yakın ızgara kesişimine oturtur (F9) |
+| **DİK** | `MOD dik_mod` | İmleci yatay ve düşey eksene kilitler (F8) |
+| **POLAR** | `MOD yakalama_modları` (kutupsal biti) | Önceki noktadan çıkan kutupsal ışınlara yakalar |
+| **OSNAP** | `MOD yakalama_modları` | Nesne yakalamayı açar/kapatır; kapatınca maske hatırlanır, açınca geri gelir (F3). Sağ tık mod listesini açar |
+| **DİNAMİK GİRDİ** | `TERCİH core.arayuz.dinamik_girdi` | İmlecin yanındaki koordinat ve uzunluk okumasını açar/kapatır |
+| **KALINLIK** | `TERCİH çizgi_kalınlığı` | Çizgi kalınlıklarını paftadaki ölçüsüyle çizer; kapalıyken her çizgi tek piksel kıl çizgidir. Kalınlık nesnede ve çıktıda durur, yalnız ekran değişir |
+
+Sağ tıklamak anahtarın ayarını açar: OSNAP ve POLAR'da yakalama modları listesi,
+ötekilerde Ayarlar penceresinin ilgili sayfası.
 
 ## Tema
 

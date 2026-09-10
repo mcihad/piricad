@@ -874,3 +874,55 @@ TEST_CASE("ölçekleme: taban noktası yerinde kalır")
     CHECK_EQ(scaled_about(Point2{6000, 5000}, base, 2.0).x, Mm{7000});
     CHECK_EQ(scaled_about(Point2{6000, 5000}, base, 0.5).x, Mm{5500});
 }
+
+TEST_CASE("YÜK: tür yükü yuvayla birlikte saklanır, bayt bayt geri okunur")
+{
+    // model.md R9a. A kind's bytes ride beside its rings, opaque to the arena;
+    // a slot without any reads back empty, and a document without any keeps the
+    // per-slot column unallocated.
+    RingGeometry g;
+    const auto plain = rect(0, 0, 1000, 1000);
+    const std::uint8_t bytes[5]{0xDE, 0xAD, 0x00, 0xFF, 0x7F};
+
+    const auto first =
+        g.append(std::vector<RingGeometry::RingInput>{ring(plain, RingRole::Exterior)});
+    REQUIRE(first.ok());
+    CHECK_FALSE(g.has_payload());
+    CHECK(g.payload_ref.empty());
+    CHECK(g.payload_of(first.value()).empty());
+
+    const auto loaded = g.append(std::vector<RingGeometry::RingInput>{ring(plain, RingRole::Open)},
+                                 std::span<const std::uint8_t>(bytes, 5));
+    REQUIRE(loaded.ok());
+    CHECK(g.has_payload());
+    // The column now follows the slots one for one, the earlier slot marked empty.
+    REQUIRE_EQ(g.payload_ref.size(), 2u);
+    CHECK_EQ(g.payload_ref[0], kNoPayload);
+    const auto back = g.payload_of(loaded.value());
+    REQUIRE_EQ(back.size(), 5u);
+    for (std::size_t i = 0; i < 5; ++i)
+        CHECK_EQ(back[i], bytes[i]);
+
+    // A later slot without a payload keeps the column aligned.
+    const auto third = g.append(std::vector<RingGeometry::RingInput>{ring(plain, RingRole::Open)});
+    REQUIRE(third.ok());
+    REQUIRE_EQ(g.payload_ref.size(), 3u);
+    CHECK_EQ(g.payload_ref[2], kNoPayload);
+    CHECK(g.payload_of(third.value()).empty());
+
+    // A refused append leaves the pool exactly as it was: the payload column is
+    // part of the "nothing was touched" promise a rolled-back transaction rests on.
+    const std::vector<Point2> two{{0, 0}, {1, 1}};
+    const auto refused =
+        g.append(std::vector<RingGeometry::RingInput>{ring(two, RingRole::Exterior)},
+                 std::span<const std::uint8_t>(bytes, 5));
+    CHECK_FALSE(refused.ok());
+    CHECK_EQ(g.payload.size(), 5u);
+    CHECK_EQ(g.payload_start.size(), 1u);
+    CHECK_EQ(g.payload_ref.size(), 3u);
+
+    g.clear();
+    CHECK(g.payload.empty());
+    CHECK(g.payload_ref.empty());
+    CHECK_FALSE(g.has_payload());
+}

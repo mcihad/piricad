@@ -280,7 +280,8 @@ Mm segment_length(Mm ax, Mm ay, Mm bx, Mm by) noexcept
     return static_cast<Mm>(round_sqrt_u128(sum));
 }
 
-Result<std::uint32_t> RingGeometry::append(std::span<const RingInput> rings)
+Result<std::uint32_t> RingGeometry::append(std::span<const RingInput> rings,
+                                           std::span<const std::uint8_t> bytes)
 {
     const auto ordinal = [](std::size_t i) { return std::to_string(i + 1) + ". halka"; };
 
@@ -419,6 +420,12 @@ Result<std::uint32_t> RingGeometry::append(std::span<const RingInput> rings)
     if (ring_start.size() + rings.size() > kIndexLimit)
         return err(ErrorCode::ValidationFailed,
                    "Geometri deposu 4294967295 halka sınırını aşıyor; belgeyi bölün.");
+    if (bytes.size() > kIndexLimit)
+        return err(ErrorCode::ValidationFailed,
+                   "Tür yükü 4294967295 bayt sınırını aşıyor; nesneyi bölün.");
+    if (!bytes.empty() && payload_start.size() >= kIndexLimit)
+        return err(ErrorCode::ValidationFailed,
+                   "Tür yükü deposu 4294967295 kayıt sınırını aşıyor; belgeyi bölün.");
 
     reserve_vertices(new_vertices);
     reserve_for(ring_start, rings.size());
@@ -447,6 +454,19 @@ Result<std::uint32_t> RingGeometry::append(std::span<const RingInput> rings)
     const auto slot = static_cast<std::uint32_t>(first_ring.size());
     first_ring.push_back(first);
     ring_total.push_back(static_cast<std::uint32_t>(rings.size()));
+
+    // The payload column exists only once something has a payload, and from then
+    // on it follows the slots one for one — the same lazy shape TextTable keeps,
+    // so a drawing of nothing but parcels never allocates it.
+    if (!bytes.empty()) {
+        if (payload_ref.size() < slot) payload_ref.resize(slot, kNoPayload);
+        payload_ref.push_back(static_cast<std::uint32_t>(payload_start.size()));
+        payload_start.push_back(static_cast<std::uint64_t>(payload.size()));
+        payload_bytes.push_back(static_cast<std::uint32_t>(bytes.size()));
+        payload.insert(payload.end(), bytes.begin(), bytes.end());
+    } else if (!payload_ref.empty()) {
+        payload_ref.push_back(kNoPayload);
+    }
     return slot;
 }
 
@@ -544,6 +564,10 @@ void RingGeometry::clear()
     ring_role.clear();
     first_ring.clear();
     ring_total.clear();
+    payload_ref.clear();
+    payload_start.clear();
+    payload_bytes.clear();
+    payload.clear();
 }
 
 void RingGeometry::reserve_vertices(std::size_t extra)

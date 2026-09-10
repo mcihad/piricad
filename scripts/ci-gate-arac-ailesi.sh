@@ -64,11 +64,12 @@ bekle "[aile] kart açıldı"
 # and vanish in the same motion, so "hold, look, then choose" was impossible.
 bekle "[aile] bırakınca: açık"
 
-# The whole family, in order, by the command each member sends. TWO members, and
-# the two it does NOT have are the check: DİKDÖRTGEN and ÇOKGEN were in here once,
-# grouped as "things drawn with straight edges", and a rectangle is not a kind of
-# line — it is a face, with an area and a fill, and it sits under its own button.
-bekle "[aile] üyeler: ÇİZGİ · ÇOKLUÇİZGİ"
+# The whole family, in order, by the command each member sends. THREE members —
+# the open runs of edges: straight, straight-jointed, smooth — and the two it does
+# NOT have are the check: DİKDÖRTGEN and ÇOKGEN were in here once, grouped as
+# "things drawn with straight edges", and a rectangle is not a kind of line — it
+# is a face, with an area and a fill, and it sits under its own button.
+bekle "[aile] üyeler: ÇİZGİ · ÇOKLUÇİZGİ · SPLINE"
 
 # THE SECOND MEMBER, because taking the first would prove nothing the button did
 # not already do: the face follows the choice...

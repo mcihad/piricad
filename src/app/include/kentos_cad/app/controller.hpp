@@ -30,6 +30,8 @@
 #include <optional>
 #include <vector>
 
+class QThread;
+
 namespace kentos::app {
 
 class Controller : public QObject
@@ -56,7 +58,10 @@ public:
     /// canvas needs it because a rubber-band box carries `Point2` values that must
     /// not be round-tripped through formatted text to become a command line.
     void runInvocation(const command::Invocation& invocation);
-    void beginInteractive(const QString& line);
+    /// Starts a command the way a button does: the arguments the line carries are
+    /// answered, everything else is asked for. `origin` is what the journal
+    /// records — a typed line that then prompts is `CommandLine`.
+    void beginInteractive(const QString& line, command::Origin origin = command::Origin::Gui);
     void supplyPoint(core::Point2 world);
 
     /// Answers the running command's prompt with a piece of TEXT.
@@ -101,6 +106,13 @@ public:
     command::ParamKind promptKind() const;
 
     void cancelInteractive();
+
+    /// FINISHES the running command the way the right mouse button means it: the
+    /// open-ended shape closes on what it has, and the tool that started it stays
+    /// armed for the next one. The same unwinding as `cancelInteractive` — the
+    /// command takes its ESC path — with `dismissed` false on the way out, which
+    /// is what tells the shell to arm the tool again rather than put it away.
+    void finishInteractive();
 
     /// The selection, resolved to dense slots for one frame. Recomputed only when
     /// the selection or the document changes, never per frame: model.md R2 keeps
@@ -162,14 +174,21 @@ signals:
     void undoStateChanged(bool canUndo, bool canRedo);
 
     /// An interactive command has ended: `id` is what ran, `mutated` is whether it
-    /// wrote anything to the drawing.
+    /// wrote anything to the drawing, `dismissed` whether the USER put it away.
     ///
     /// `promptChanged("")` already says a command ended, but not WHICH, and not
-    /// whether it drew. A modal tool needs both: it re-arms itself after a shape
-    /// is finished so the next one can be drawn without going back to the tool
-    /// column, and it must NOT re-arm after a run that drew nothing, or the second
-    /// Esc — the one that means "put this tool away" — would arm it again.
-    void interactiveFinished(const QString& id, bool mutated);
+    /// how. A modal tool needs both: it stays armed — re-arms itself — after a
+    /// run that finished on its own or that the right button closed, so the next
+    /// shape needs no trip to the tool column; and it goes away only when the
+    /// user says so: Esc, the select arrow, or another tool. `dismissed` is also
+    /// true for a run that never asked for anything, so a tool that runs through
+    /// without a prompt cannot re-arm itself into a loop.
+    void interactiveFinished(const QString& id, bool mutated, bool dismissed);
+
+    /// A command handed work to a thread (job.hpp): the status strip shows
+    /// `label` and a Durdur, and stays live while the read runs.
+    void jobStarted(const QString& label);
+    void jobFinished();
     void viewRequested(const QString& mode, double factor);
 
     /// KAYDIR asks the canvas to slide so `from` lands on `to`.
@@ -182,6 +201,19 @@ private:
     /// that forgot to emit `interactiveFinished` would leave the tool column lit
     /// on a command that had already ended.
     void supplyValue(command::Value value);
+
+    /// After a value was supplied or a job returned: finishes the command,
+    /// re-prompts, or leaves it parked on the next job. The one place that decides,
+    /// so the tool column and the prompt cannot disagree with the session.
+    void settleSession();
+
+    bool finishing_{false}; ///< inside `finishInteractive`: the end is a finish, not a dismissal
+    bool asked_{false};     ///< the running session has prompted for at least one value
+
+    /// `Bus::on_job_host`: runs the session's job on a worker thread and resumes
+    /// the session on this thread when it returns (io.md P3).
+    void hostJob(command::Session& session);
+    void onJobFinished();
 
     void wireBus();
     void settle();
@@ -217,6 +249,10 @@ private:
 #endif
 
     std::unique_ptr<command::Session> session_;
+
+    /// The worker running `session_`'s job, or null. Owned through Qt parenting;
+    /// waited on before the session goes.
+    QThread* jobThread_{nullptr};
 
     std::vector<core::EntityId> selected_slots_;
     std::uint64_t selection_revision_{0};

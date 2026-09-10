@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/pick.hpp"
 
+#include "kentos_cad/core/outline.hpp"
+
 #include "kentos_cad/core/entity_kind.hpp"
 
 #include "kentos_cad/core/document.hpp"
@@ -46,9 +48,11 @@ void for_each_candidate(const Document& doc, const Box2& box, std::vector<Entity
     const EntityTable& entities = doc.entities();
     const SpatialIndex& index   = doc.spatial_index();
 
+    // A block definition's members are never candidates on their own (R45): the
+    // index leaves them out, and the two scans below leave them out the same way.
     if (index.empty() || box_contains_box(box, index.bounds())) {
         for (EntityId e = 0; e < entities.size(); ++e)
-            visit(e);
+            if (entities.standalone(e)) visit(e);
         return;
     }
 
@@ -61,7 +65,7 @@ void for_each_candidate(const Document& doc, const Box2& box, std::vector<Entity
         visit(e);
 
     for (EntityId e = doc.indexed_upto(); e < entities.size(); ++e)
-        visit(e);
+        if (entities.standalone(e)) visit(e);
 }
 
 /// Smallest squared distance from `p` to any segment of entity `e`, or a negative
@@ -81,9 +85,9 @@ struct Runs
     void build(const Document& doc, EntityId e)
     {
         const std::uint32_t slot = doc.entities().slot[e];
-        is_curve = curve_outline(doc.entities().kind[e], doc.geometry(), slot, curve);
-        count    = is_curve ? static_cast<std::uint32_t>(curve.run_total())
-                            : doc.geometry().rings_of(slot).count;
+        is_curve                 = entity_outline(doc, e, curve);
+        count                    = is_curve ? static_cast<std::uint32_t>(curve.run_total())
+                                            : doc.geometry().rings_of(slot).count;
     }
 
     /// `i` is a run index, 0-based within the entity.
@@ -108,11 +112,11 @@ struct Runs
         return doc.geometry().ring_role[rs.first + i] != RingRole::Open;
     }
 
-    /// Whether this run is a VOID in the entity rather than its outline. A curve
-    /// has none: a circle's single run is its own boundary.
+    /// Whether this run is a VOID in the entity rather than its outline: a
+    /// face's interior ring, or a run the kind marked as one (a hatch island).
     bool hole(const Document& doc, EntityId e, std::uint32_t i) const
     {
-        if (is_curve) return false;
+        if (is_curve) return curve.run_hole[i] != 0;
         const RingSpan rs = doc.geometry().rings_of(doc.entities().slot[e]);
         return doc.geometry().ring_role[rs.first + i] == RingRole::Interior;
     }

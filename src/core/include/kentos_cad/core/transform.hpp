@@ -15,6 +15,7 @@
 // of which IEEE-754 pins exactly.
 #pragma once
 
+#include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #include <cstdint>
@@ -26,18 +27,11 @@ namespace kentos::core {
 /// angle: 90° is 90 000 000, not a float that is nearly it.
 using UDeg = std::int64_t;
 
-/// Sine and cosine of an angle, identical on every platform.
-///
-/// See the header note: never libm. Angles outside one turn are folded first, so
-/// -90°, 270° and 630° give the same answer to the last bit.
-struct SinCos
-{
-    double sin{0.0}; ///< sine of the angle
-    double cos{1.0}; ///< cosine of the angle
-};
-
-/// Sine and cosine of `angle`, computed identically on every platform.
-SinCos sin_cos_udeg(UDeg angle);
+// `SinCos` and `sin_cos_udeg` live in core/trig.hpp: ONE trigonometry, shared
+// with the snap engine, the arc's perimeter and every kind that turns a point.
+// This header once carried a second copy with a different series, and two
+// deterministic functions that disagree in the last bit are one bug more than
+// none.
 
 /// `p` moved by `dx`, `dy`. Exact: integers added to integers.
 constexpr Point2 translated(Point2 p, Mm dx, Mm dy) noexcept

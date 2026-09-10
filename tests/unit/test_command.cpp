@@ -1,19 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_test.hpp"
 
+#include "kentos_cad/core/dimension.hpp"
+#include "kentos_cad/core/grips.hpp"
 #include "kentos_cad/core/text.hpp"
 
 #include <map>
 
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/job.hpp"
 #include "kentos_cad/command/parser.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/guide.hpp"
+#include "kentos_cad/core/hatch.hpp"
 #include "kentos_cad/core/offset.hpp"
+#include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/snap.hpp"
 #include "kentos_cad/core/text_store.hpp"
 
@@ -1032,6 +1038,29 @@ TEST_CASE("KÖŞETAŞI köşeyi taşır ve nesnenin kimliğini korur")
     CHECK(f.doc.geometry().area_of(f.doc.entities().slot[0]) > before);
 }
 
+TEST_CASE("KÖŞETAŞI yazılı nesnenin yazısını taşır: yeni yuva yazıyı devralır")
+{
+    // A caption lives on the geometry SLOT, and every geometry edit appends a new
+    // slot. The label used to stay on the old one, so moving a corner of a
+    // captioned parsel — or a dimension's point — silently erased the label.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YAZI", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("METİN 10,10 \"1234/7\" 2000", Origin::Test).ok());
+    const core::EntityId e = f.doc.slot_of(static_cast<core::EntityKey>(std::uint64_t{1}));
+    REQUIRE(e != core::kNoEntity);
+    REQUIRE_EQ(std::string(f.doc.texts().text(f.doc.entities().slot[e])), std::string("1234/7"));
+
+    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=1 nokta=12,10", Origin::Test).ok());
+    CHECK_EQ(std::string(f.doc.texts().text(f.doc.entities().slot[e])), std::string("1234/7"));
+    CHECK_EQ(f.doc.texts().height(f.doc.entities().slot[e]), core::Mm{2000});
+
+    // Undo and redo both keep it.
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_EQ(std::string(f.doc.texts().text(f.doc.entities().slot[e])), std::string("1234/7"));
+    REQUIRE(f.bus.execute_line("YİNELE", Origin::Test).ok());
+    CHECK_EQ(std::string(f.doc.texts().text(f.doc.entities().slot[e])), std::string("1234/7"));
+}
+
 TEST_CASE("KÖŞETAŞI geri alınınca köşe eski yerine döner")
 {
     Fixture f;
@@ -1357,25 +1386,175 @@ TEST_CASE("DAİRE: aynı yere iki nokta reddedilir")
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
 }
 
-TEST_CASE("KÖŞETAŞI ve ALANAÇEVİR daireyi reddeder")
+TEST_CASE("KÖŞETAŞI dairenin merkezini taşır ve çeyrek tutamağıyla yarıçapını kurar; KÖŞEEKLE ve "
+          "ALANAÇEVİR daireyi reddeder")
 {
-    // A circle's two vertices are a centre and a radius handle, not corners.
-    // Treating them as corners would move the centre or resize the circle without
-    // saying so, and inserting a third would leave a record that is not a circle.
+    // A circle's grips are its centre and four quadrant handles (core/grips.hpp):
+    // the centre translates it, a quadrant sets the radius. It stays a circle
+    // throughout — no corner can be ADDED to it, and it cannot become a face.
     Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
     REQUIRE(f.bus.execute_line("KATMAN ad=YAPI", Origin::Test).ok());
     REQUIRE(f.bus.execute_line("DAİRE merkez=100,100 cevre=110,100", Origin::Test).ok());
+    const core::EntityId e = f.doc.slot_of(static_cast<core::EntityKey>(std::uint64_t{1}));
+    REQUIRE(e != core::kNoEntity);
+    const auto centre = [&] {
+        return core::circle_centre_of(f.doc.geometry(), f.doc.entities().slot[e]);
+    };
+    const auto radius = [&] {
+        return core::circle_radius_of(f.doc.geometry(), f.doc.entities().slot[e]);
+    };
 
-    const std::uint64_t before = f.doc.content_hash();
+    const auto grips = core::entity_grips(f.doc, e);
+    REQUIRE_EQ(grips.size(), 5u);
+    CHECK_EQ(grips[0].role, core::GripRole::Centre);
+    CHECK_EQ(grips[2].at, (core::Point2{100000, 110000}));
 
     REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=1 nokta=200,200", Origin::Test).ok());
+    CHECK_EQ(centre(), (core::Point2{200000, 200000}));
+    CHECK_EQ(radius(), core::Mm{10000});
+
+    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=2 nokta=215,200", Origin::Test).ok());
+    CHECK_EQ(centre(), (core::Point2{200000, 200000}));
+    CHECK_EQ(radius(), core::Mm{15000});
+    CHECK_EQ(f.doc.entities().kind[e], core::kCircleKind);
+
+    // Undone one grip at a time, back to the drawn circle.
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_EQ(radius(), core::Mm{10000});
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_EQ(centre(), (core::Point2{100000, 100000}));
+
+    const std::uint64_t before = f.doc.content_hash();
+    said.clear();
+    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=6 nokta=200,200", Origin::Test).ok());
     CHECK_EQ(f.doc.content_hash(), before);
+    CHECK(said.find("6. tutamağı yok; 5 tutamağı var") != std::string::npos);
+
+    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=2 nokta=100,100", Origin::Test).ok());
+    CHECK_EQ(f.doc.content_hash(), before); // a radius of zero is refused
 
     REQUIRE(f.bus.execute_line("KÖŞEEKLE nesne=1 kose=1 nokta=200,200", Origin::Test).ok());
     CHECK_EQ(f.doc.content_hash(), before);
 
     REQUIRE(f.bus.execute_line("ALANAÇEVİR nesneler=1", Origin::Test).ok());
     CHECK_EQ(f.doc.content_hash(), before);
+}
+
+TEST_CASE("KÖŞETAŞI elipsin eksenini çevirir; ikinci eksen dik kalır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=YAPI", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ELİPS merkez=0,0 birinci=10,0 ikinci=0,5", Origin::Test).ok());
+    const core::EntityId e = f.doc.slot_of(static_cast<core::EntityKey>(std::uint64_t{1}));
+    REQUIRE(e != core::kNoEntity);
+    const auto major = [&] {
+        return core::ellipse_major_of(f.doc.geometry(), f.doc.entities().slot[e]);
+    };
+    const auto minor = [&] {
+        return core::ellipse_minor_of(f.doc.geometry(), f.doc.entities().slot[e]);
+    };
+
+    // Five grips: centre, two axis ends, their mirror images.
+    const auto grips = core::entity_grips(f.doc, e);
+    REQUIRE_EQ(grips.size(), 5u);
+    CHECK_EQ(grips[3].at, (core::Point2{-10000, 0}));
+    CHECK_EQ(grips[4].at, (core::Point2{0, -5000}));
+
+    // The first axis turns north; the second keeps its 5 m and its side.
+    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=2 nokta=0,20", Origin::Test).ok());
+    CHECK_EQ(major(), (core::Point2{0, 20000}));
+    CHECK_EQ(minor(), (core::Point2{-5000, 0}));
+
+    // The second axis is measured ACROSS the first, as ELİPS measures it.
+    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=3 nokta=3,7", Origin::Test).ok());
+    CHECK_EQ(major(), (core::Point2{0, 20000}));
+    CHECK_EQ(minor(), (core::Point2{3000, 0}));
+
+    // On the first axis there is no second: refused, nothing moves.
+    const std::uint64_t before = f.doc.content_hash();
+    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=3 nokta=0,9", Origin::Test).ok());
+    CHECK_EQ(f.doc.content_hash(), before);
+    CHECK_EQ(f.doc.entities().kind[e], core::kEllipseKind);
+}
+
+TEST_CASE("KÖŞETAŞI ölçünün tanım noktasını taşır: çizgi yeniden kurulur, yazı yeniden ölçülür")
+{
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+    REQUIRE(f.bus.execute_line("KATMAN ad=CIZIM", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÖLÇÜ birinci=0,0 ikinci=12.5,0 konum=0,3", Origin::Test).ok());
+    const core::EntityId e = f.doc.slot_of(static_cast<core::EntityKey>(std::uint64_t{1}));
+    REQUIRE(e != core::kNoEntity);
+    REQUIRE_EQ(f.doc.entities().kind[e], core::kDimensionKind);
+    CHECK_EQ(std::string(f.doc.texts().text(f.doc.entities().slot[e])), std::string("12,50"));
+
+    // Three definition points and the caption: four grips.
+    const auto grips = core::entity_grips(f.doc, e);
+    REQUIRE_EQ(grips.size(), 4u);
+    CHECK_EQ(grips[1].at, (core::Point2{12500, 0}));
+    CHECK_EQ(grips[3].role, core::GripRole::Caption);
+
+    // The second point moves out to 20 m: the figure follows, the line stays
+    // where it was placed.
+    said.clear();
+    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=2 nokta=20,0", Origin::Test).ok());
+    INFO(said);
+    const auto def = core::dimension_of(f.doc.geometry(), f.doc.entities().slot[e]);
+    REQUIRE(def.ok());
+    CHECK_EQ(def.value().measurement, std::int64_t{20000});
+    CHECK_EQ(std::string(f.doc.texts().text(f.doc.entities().slot[e])), std::string("20,00"));
+    const auto after = core::entity_grips(f.doc, e);
+    REQUIRE_EQ(after.size(), 4u);
+    CHECK_EQ(after[1].at, (core::Point2{20000, 0}));
+    CHECK_EQ(after[2].at, (core::Point2{0, 3000}));
+    // The caption re-centred over the new line: between the points, above it.
+    CHECK_EQ(after[3].at.x, core::Mm{10000});
+    CHECK(after[3].at.y > 3000);
+
+    // The caption grip slides the text alone.
+    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=4 nokta=5,9", Origin::Test).ok());
+    const auto slid = core::entity_grips(f.doc, e);
+    CHECK_EQ(slid[3].at, (core::Point2{5000, 9000}));
+    CHECK_EQ(slid[1].at, (core::Point2{20000, 0}));
+    CHECK_EQ(std::string(f.doc.texts().text(f.doc.entities().slot[e])), std::string("20,00"));
+
+    // Undo restores the 12,50 caption with the geometry.
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_EQ(std::string(f.doc.texts().text(f.doc.entities().slot[e])), std::string("12,50"));
+}
+
+TEST_CASE("KÖŞETAŞI blok referansının ekleme noktasını taşır ve kutusunu yeniler")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=CIZIM", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("BLOK ad=OK taban=0,0 nesneler=1", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("BLOKEKLE ad=OK nokta=100,100", Origin::Test).ok());
+
+    core::EntityId ref = core::kNoEntity;
+    for (core::EntityId e = 0; e < f.doc.entities().size(); ++e)
+        if (f.doc.alive(e) && f.doc.entities().kind[e] == core::kBlockReferenceKind &&
+            core::block_reference_insertion(f.doc.geometry(), f.doc.entities().slot[e]) ==
+                core::Point2{100000, 100000})
+            ref = e;
+    REQUIRE(ref != core::kNoEntity);
+    const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[ref]));
+
+    const auto grips = core::entity_grips(f.doc, ref);
+    REQUIRE_EQ(grips.size(), 1u);
+    CHECK_EQ(grips[0].role, core::GripRole::Insertion);
+
+    REQUIRE(f.bus
+                .execute_line("KÖŞETAŞI nesne=" + std::to_string(key) + " kose=1 nokta=200,200",
+                              Origin::Test)
+                .ok());
+    CHECK_EQ(core::block_reference_insertion(f.doc.geometry(), f.doc.entities().slot[ref]),
+             (core::Point2{200000, 200000}));
+    CHECK_EQ(f.doc.entities().box_of(ref), (core::Box2{200000, 200000, 210000, 200000}));
 }
 
 TEST_CASE("DAİRE geri alınır")
@@ -2520,15 +2699,36 @@ TEST_CASE("YAY: merkezle çakışan uç reddedilir")
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
 }
 
-TEST_CASE("KÖŞETAŞI ve ALANAÇEVİR yayı da reddeder")
+TEST_CASE("KÖŞETAŞI yayın ucunu taşır ve yarıçapı yeniden kurar; ALANAÇEVİR yayı reddeder")
 {
     Fixture f;
     REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
     REQUIRE(f.bus.execute_line("YAY merkez=100,100 baslangic=130,100 bitis=100,130", Origin::Test)
                 .ok());
+    const core::EntityId e = f.doc.slot_of(static_cast<core::EntityKey>(std::uint64_t{1}));
+    REQUIRE(e != core::kNoEntity);
+    const auto slot = [&] { return f.doc.entities().slot[e]; };
+
+    // Centre, start, end, midpoint.
+    const auto grips = core::entity_grips(f.doc, e);
+    REQUIRE_EQ(grips.size(), 4u);
+    CHECK_EQ(grips[1].at, (core::Point2{130000, 100000}));
+    CHECK_EQ(grips[3].role, core::GripRole::Radius);
+
+    // The start goes to 40 m out; the radius follows it, the end keeps its direction.
+    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=2 nokta=140,100", Origin::Test).ok());
+    CHECK_EQ(core::arc_start_of(f.doc.geometry(), slot()), (core::Point2{140000, 100000}));
+    CHECK_EQ(core::arc_radius_of(f.doc.geometry(), slot()), core::Mm{40000});
+    CHECK_EQ(core::arc_end_of(f.doc.geometry(), slot()), (core::Point2{100000, 130000}));
+
+    // The centre carries the whole arc.
+    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=1 nokta=0,0", Origin::Test).ok());
+    CHECK_EQ(core::arc_centre_of(f.doc.geometry(), slot()), (core::Point2{0, 0}));
+    CHECK_EQ(core::arc_start_of(f.doc.geometry(), slot()), (core::Point2{40000, 0}));
+    CHECK_EQ(core::arc_radius_of(f.doc.geometry(), slot()), core::Mm{40000});
+    CHECK_EQ(f.doc.entities().kind[e], core::kArcKind);
 
     const std::uint64_t before = f.doc.content_hash();
-    REQUIRE(f.bus.execute_line("KÖŞETAŞI nesne=1 kose=1 nokta=200,200", Origin::Test).ok());
     REQUIRE(f.bus.execute_line("ALANAÇEVİR nesneler=1", Origin::Test).ok());
     CHECK_EQ(f.doc.content_hash(), before);
 }
@@ -2765,6 +2965,34 @@ TEST_CASE("KOPYALA nesneyi çoğaltır; kopya yeni bir kimlik alır")
              f.doc.geometry().area_of(f.doc.entities().slot[0]));
 }
 
+TEST_CASE("KOPYALA her bitiş noktasına bir kopya koyar ve hepsi tek geri alma adımıdır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=DIREK", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN 0,0 1,0 1,1 0,1", Origin::Test).ok());
+
+    // Three poles in a row from one command: one per point. A named list
+    // accumulates by repeating its name, as `nesneler=` does.
+    auto copied = f.bus.execute_line(
+        "KOPYALA nesneler=1 baslangic=0,0 bitis=10,0 bitis=20,0 bitis=30,0", Origin::Test);
+    if (!copied) FAIL_WITH("KOPYALA", copied.error().message);
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{4});
+
+    // The last copy sits where the last point said.
+    bool at_thirty = false;
+    for (core::EntityId e = 0; e < f.doc.entities().size(); ++e)
+        if (f.doc.alive(e) && f.doc.entities().box_of(e) == core::Box2{30000, 0, 31000, 1000})
+            at_thirty = true;
+    CHECK(at_thirty);
+
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
+
+    // The one-point form is the copy it always was.
+    REQUIRE(f.bus.execute_line("KOPYALA nesneler=1 baslangic=0,0 bitis=5,0", Origin::Test).ok());
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{2});
+}
+
 TEST_CASE("KOPYALA yazıyı ve öznitelikleri de taşır")
 {
     // A copied parsel that lost its ada number would be a worse copy than one
@@ -2989,11 +3217,16 @@ TEST_CASE("ALANÖLÇ dairenin alanını pi*r^2 olarak bildirir")
 TEST_CASE("ALANÖLÇ seçimi kullanır ve boş seçimi açıklar")
 {
     Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
     REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
     REQUIRE(f.bus.execute_line("ALAN 0,0 60,0 60,45 0,45", Origin::Test).ok());
 
-    // Nothing selected and no ids: explained rather than silently doing nothing.
+    // Nothing selected and no ids: the tool would ASK on the canvas; here, with
+    // nobody to answer, it says so the way every modify tool does.
     REQUIRE(f.bus.execute_line("ALANÖLÇ", Origin::Test).ok());
+    CHECK(said.find("İşlem yapılacak nesne yok") != std::string::npos);
+    CHECK(said.find("ALANÖLÇ nesneler=1") != std::string::npos);
 
     REQUIRE(f.bus.execute_line("SEÇ nesneler=1", Origin::Test).ok());
     REQUIRE(f.bus.execute_line("ALANÖLÇ", Origin::Test).ok());
@@ -3012,7 +3245,7 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // command that vanished bumps it down by accident, and that is the case worth
     // catching.
     Fixture f;
-    CHECK_EQ(f.reg.size(), std::size_t{59}); // 58 + YAZIDÜZENLE (core.edittext)
+    CHECK_EQ(f.reg.size(), std::size_t{65}); // 59 + SPLINE, TARAMA, BLOK, BLOKEKLE, ÖLÇÜ, LİDER
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())
@@ -3452,4 +3685,198 @@ TEST_CASE("STİLKOPYALA kaynağın etkin stilini hedeflere uygular")
     CHECK_EQ(f.doc.styles().at(f.doc.entities().style[1]).rgba,
              f.doc.layer_table().at(a)->appearance.rgba);
     CHECK_EQ(f.doc.styles().at(f.doc.entities().style[1]).rgba, 0xFFCC0000u);
+}
+
+namespace {
+
+/// A command that hands one unit of work to a job and reports where it ran.
+Task<void> run_job_probe(Context& ctx)
+{
+    bool ran = false;
+    Job job;
+    job.label = "sınama işi";
+    job.work  = [&ran](const JobControl&) { ran = true; };
+    co_await run_job(ctx.session(), job);
+    ctx.echo(ran ? "iş koştu" : "iş koşmadı");
+}
+
+CommandSpec job_probe_spec()
+{
+    CommandSpec spec;
+    spec.id      = "test.is";
+    spec.names   = {"İŞSINAMA", "ISSINAMA"};
+    spec.summary = "sınama";
+    spec.flags   = Flags::Interactive | Flags::Scriptable;
+    spec.run     = &run_job_probe;
+    return spec;
+}
+
+} // namespace
+
+TEST_CASE("İŞ: ev sahibi yoksa iş yerinde koşar, varsa oturum parkeder ve sürdürülür")
+{
+    // Without a host every road runs the job in place — a script, a test, a
+    // one-shot line — and the body never notices.
+    Fixture plain;
+    REQUIRE(plain.reg.add(job_probe_spec()).ok());
+    std::string said;
+    plain.bus.on_echo = [&said](std::string_view s) { said.append(s); };
+    REQUIRE(plain.bus.execute_line("İŞSINAMA", Origin::Test).ok());
+    CHECK(said == "iş koştu");
+
+    // With a host, a session the client keeps parks on the job: Working, not
+    // finished, and the host is handed the session without the job having run.
+    Fixture hosted;
+    REQUIRE(hosted.reg.add(job_probe_spec()).ok());
+    said.clear();
+    hosted.bus.on_echo     = [&said](std::string_view s) { said.append(s); };
+    Session* parked        = nullptr;
+    hosted.bus.on_job_host = [&parked](Session& s) { parked = &s; };
+
+    auto started = hosted.bus.begin_interactive("İŞSINAMA");
+    REQUIRE(started.ok());
+    Session& session = *started.value();
+    CHECK(session.working());
+    CHECK_EQ(std::string(session_state_name(session.state())), "working");
+    REQUIRE(parked == &session);
+    REQUIRE(session.job() != nullptr);
+    CHECK(session.job()->label == "sınama işi");
+    CHECK(said.empty());
+
+    // The host runs the job and resumes; the command finishes where it left off.
+    session.job()->work(JobControl{session.job()->stop.get_token()});
+    session.resume_job();
+    CHECK(session.finished());
+    CHECK(said == "iş koştu");
+    CHECK(hosted.bus.finish(session).ok());
+
+    // The one-shot road ignores the host even when one is installed.
+    said.clear();
+    parked = nullptr;
+    REQUIRE(hosted.bus.execute_line("İŞSINAMA", Origin::Test).ok());
+    CHECK(parked == nullptr);
+    CHECK(said == "iş koştu");
+}
+
+// ------------------------------------------------------ Phase 2 kind commands --
+
+TEST_CASE("Yeni türler: SPLINE, TARAMA, BLOK, BLOKEKLE, ÖLÇÜ ve LİDER kendi türünü çizer, GERİAL "
+          "kaldırır")
+{
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+    REQUIRE(f.bus.execute_line("KATMAN ad=CIZIM", Origin::Test).ok());
+    const auto run = [&](const char* line) {
+        auto r = f.bus.execute_line(line, Origin::Test);
+        if (!r) FAIL_WITH(line, r.error().message);
+    };
+    const auto kind_count = [&](core::KindId kind) {
+        std::size_t n = 0;
+        for (core::EntityId e = 0; e < f.doc.entities().size(); ++e)
+            if (f.doc.alive(e) && f.doc.entities().kind[e] == kind) ++n;
+        return n;
+    };
+
+    run("SPLINE noktalar=0,0 10,20 20,20 30,0 derece=3");
+    CHECK_EQ(kind_count(core::kSplineKind), 1u);
+    run("TARAMA noktalar=0,100 20,100 20,120 0,120 desen=ANSI37 olcek=1000");
+    CHECK_EQ(kind_count(core::kHatchKind), 1u);
+    // The hatch draws through a symbol with one fill layer per family, two for ANSI37.
+    {
+        const auto h              = static_cast<core::EntityId>(f.doc.entities().size() - 1);
+        const core::StyleId style = f.doc.entities().style[h];
+        REQUIRE(style != core::kByLayerStyle);
+        std::size_t fills = 0;
+        for (const core::SymbolLayer& l : f.doc.styles().symbol_at(style).layers)
+            if (l.type == core::SymbolLayerType::LinePatternFill) ++fills;
+        CHECK_EQ(fills, 2u);
+    }
+    // An unknown pattern is refused with the catalogue's names.
+    (void)f.bus.execute_line("TARAMA noktalar=0,0 1,0 1,1 desen=YOK", Origin::Test);
+    CHECK(said.find("Tanınmayan tarama deseni") != std::string::npos);
+
+    run("KATMAN ad=SEMBOL");
+    run("DAİRE merkez=200,300 cevre=201,300");
+    run("ÇİZGİ 200,300 202,300");
+    run("SEÇ KATMAN katman=SEMBOL");
+    const std::size_t before_block = f.doc.live_entity_count();
+    run("BLOK ad=KAPAK taban=200,300");
+    // Two members went into the definition, one reference stands where they were.
+    REQUIRE_EQ(f.doc.blocks().size(), 1u);
+    CHECK_EQ(f.doc.blocks().at(0).members.size(), 2u);
+    CHECK_EQ(kind_count(core::kBlockReferenceKind), 1u);
+    CHECK_EQ(f.doc.live_entity_count(), before_block + 1); // +2 members +1 ref −2 originals
+    (void)f.bus.execute_line("BLOK ad=KAPAK taban=0,0 nesneler=1", Origin::Test);
+    CHECK(said.find("zaten var") != std::string::npos);
+
+    run("BLOKEKLE ad=KAPAK nokta=220,300 olcek=2 aci=90");
+    run("BLOKEKLE ad=KAPAK nokta=240,300 sutun=3 satir=2 sutun_aralik=5000 satir_aralik=4000");
+    CHECK_EQ(kind_count(core::kBlockReferenceKind), 3u);
+    (void)f.bus.execute_line("BLOKEKLE ad=YOK nokta=0,0", Origin::Test);
+    CHECK(said.find("adında blok yok") != std::string::npos);
+
+    run("ÖLÇÜ birinci=0,400 ikinci=12.5,400 konum=0,403");
+    CHECK_EQ(kind_count(core::kDimensionKind), 1u);
+    CHECK(said.find("Ölçü çizildi: 12,50 (ISO-25)") != std::string::npos);
+    run("ÖLÇÜ birinci=100,400 ikinci=100,410 konum=105.4,401.9 tur=acisal tepe=110,400");
+    CHECK(said.find("45,00°") != std::string::npos); // the arms at 180° and 135° from the vertex
+    run("LİDER noktalar=0,500 3,503 6,503 metin=Rögar");
+    CHECK_EQ(kind_count(core::kLeaderKind), 1u);
+
+    // Every one is a single undo step.
+    const std::size_t all = f.doc.live_entity_count();
+    run("GERİAL");
+    CHECK_EQ(f.doc.live_entity_count(), all - 2); // the leader and its caption
+    run("GERİAL");
+    CHECK_EQ(kind_count(core::kDimensionKind), 1u);
+    run("GERİAL");
+    CHECK_EQ(kind_count(core::kDimensionKind), 0u);
+}
+
+TEST_CASE("Yeni türler: TAŞI, DÖNDÜR, ÖLÇEKLE ve AYNALA yükü de dönüştürür")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=SEMBOL", Origin::Test).ok());
+    const auto run = [&](const char* line) {
+        auto r = f.bus.execute_line(line, Origin::Test);
+        if (!r) FAIL_WITH(line, r.error().message);
+    };
+    run("ÇİZGİ 0,0 2,0");
+    run("SEÇ KATMAN katman=SEMBOL");
+    run("BLOK ad=OK taban=0,0");
+    const auto ref = static_cast<core::EntityId>(f.doc.entities().size() - 1);
+    REQUIRE_EQ(f.doc.entities().kind[ref], core::kBlockReferenceKind);
+    const std::string id = std::to_string(core::raw(f.doc.entities().key[ref]));
+
+    // Turned a quarter about its insertion: the line points north.
+    run(("DÖNDÜR nesneler=" + id + " merkez=0,0 aci=90").c_str());
+    core::EmitBuffer runs;
+    REQUIRE(core::entity_outline(f.doc, ref, runs));
+    CHECK_EQ(runs.run_xs(0)[1], 0);
+    CHECK_EQ(runs.run_ys(0)[1], 2000);
+    auto turned = core::block_reference_of(f.doc.geometry(), f.doc.entities().slot[ref]);
+    REQUIRE(turned.ok());
+    CHECK_EQ(turned.value().rotation_udeg, 90'000'000);
+
+    // Scaled ×2 about the origin: the line is 4 m, the scale rational doubles.
+    run(("ÖLÇEKLE nesneler=" + id + " merkez=0,0 carpan=2").c_str());
+    runs.clear();
+    REQUIRE(core::entity_outline(f.doc, ref, runs));
+    CHECK_EQ(runs.run_ys(0)[1], 4000);
+
+    // Mirrored in the x axis: north becomes south.
+    run(("AYNALA nesneler=" + id + " baslangic=0,0 bitis=10,0").c_str());
+    runs.clear();
+    REQUIRE(core::entity_outline(f.doc, ref, runs));
+    CHECK_EQ(runs.run_ys(0)[1], -4000);
+
+    // A hatch keeps its pattern angle turning with it.
+    run("TARAMA noktalar=100,100 120,100 120,120 100,120 desen=ANSI31 olcek=1000");
+    const auto hatch      = static_cast<core::EntityId>(f.doc.entities().size() - 1);
+    const std::string hid = std::to_string(core::raw(f.doc.entities().key[hatch]));
+    run(("DÖNDÜR nesneler=" + hid + " merkez=110,110 aci=15").c_str());
+    auto hdef = core::hatch_of(f.doc.geometry(), f.doc.entities().slot[hatch]);
+    REQUIRE(hdef.ok());
+    CHECK_EQ(hdef.value().angle_udeg, 15'000'000);
 }

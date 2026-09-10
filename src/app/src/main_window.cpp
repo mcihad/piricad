@@ -72,6 +72,16 @@
 #include <cstdio>
 
 namespace kentos::app {
+
+namespace {
+
+/// The two status chips that are a face on the snap MASK rather than a setting of
+/// their own: object snap as a whole, and the kutupsal (polar) bit.
+constexpr const char* kChipOsnap = "chip.osnap";
+constexpr const char* kChipPolar = "chip.polar";
+
+} // namespace
+
 namespace {
 
 /// Property name under which a tool button carries the command it sends.
@@ -82,13 +92,13 @@ constexpr const char* kToolCommand = kToolCommandProperty;
 
 /// Whether finishing this tool should ARM IT AGAIN.
 ///
-/// True of a draw tool and false of a modify tool, and the difference is what
-/// the hand is doing. Drawing is repetitive — a cadastral sheet is hundreds of
-/// parcels and reaching for the tool column before each one is the whole cost —
-/// so ÇİZGİ and ALAN re-arm. Modifying is not: you move a thing once, and a
-/// TAŞI that re-armed asked "Nesneleri seçin" the instant the move landed, ate
-/// the next click as a selection for a command nobody had asked for, and left
-/// its button lit over a canvas the user thought was idle.
+/// True of every modal tool now — draw, modify, measure. A tool stays in the
+/// hand until the hand puts it down: the right button closes the shape and the
+/// tool waits for the next one, Esc or the select arrow puts it away. A TAŞI
+/// that re-armed used to eat the next click as a selection for a command nobody
+/// had asked for; the cure is not to stop re-arming but to CLEAR the selection
+/// first, so the re-armed tool asks its question again from nothing
+/// (`onInteractiveFinished`).
 constexpr const char* kToolRepeats = "piricad.repeats";
 
 /// The same swatch the layer panel draws, so the combo and the panel agree.
@@ -227,6 +237,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(controller_, &Controller::promptChanged, this, &MainWindow::onPromptChanged);
     connect(controller_, &Controller::interactiveFinished, this,
             &MainWindow::onInteractiveFinished);
+
     connect(controller_, &Controller::undoStateChanged, this, &MainWindow::onUndoStateChanged);
     connect(controller_, &Controller::viewRequested, this, &MainWindow::onViewRequested);
     connect(controller_, &Controller::panRequested, this, &MainWindow::onPanRequested);
@@ -422,6 +433,7 @@ QAction* MainWindow::modifyTool(Glyph glyph, const QString& text, const QString&
     // Together that is a tool that "cannot be selected and does not work", which
     // is exactly how it was reported.
     action->setCheckable(true);
+    action->setProperty(kToolRepeats, true);
     drawingTools_->addAction(action);
 
     // NO SELECTION GUARD. It used to refuse an empty selection with a sentence in
@@ -520,7 +532,8 @@ void MainWindow::buildActions()
     actSelect_ = new QAction(tr("Seç"), this);
     actSelect_->setCheckable(true);
     actSelect_->setChecked(true);
-    actSelect_->setToolTip(tr("Seçim aracı — çalışan komutu iptal eder (Esc)"));
+    actSelect_->setToolTip(
+        tr("Seçim aracı — eldeki aracı bırakır, çalışan komutu iptal eder (Esc)"));
     actSelect_->setData(static_cast<int>(Glyph::Select));
     connect(actSelect_, &QAction::triggered, this, [this] { controller_->cancelInteractive(); });
 
@@ -616,6 +629,31 @@ void MainWindow::buildActions()
                         tr("METİN — çizime yazı yazar  ·  kısaltma: MT"));
     drawingTools_->addAction(actText_);
 
+    // ---- Faz 2 türleri: spline, tarama, blok, ölçü, lider ----
+    actSpline_ = drawTool(Glyph::Function, tr("Spline"), QStringLiteral("SPLINE"),
+                          tr("SPLINE — kontrol noktalarından pürüzsüz eğri  ·  kısaltma: SPL"));
+    drawingTools_->addAction(actSpline_);
+    // TARAMA and BLOK work on objects, so they go the way BUDA does: the command
+    // asks for its objects when nothing is selected (`want_objects`).
+    actHatch_  = modifyTool(Glyph::Grid, tr("Tarama"), QStringLiteral("TARAMA"),
+                            tr("TARAMA — kapalı nesnelerin içini katalogdaki bir desenle tarar  ·  "
+                                "kısaltma: TRM"));
+    actBlock_  = modifyTool(Glyph::Duplicate, tr("Blok"), QStringLiteral("BLOK"),
+                            tr("BLOK — seçilen nesnelerden adlı blok tanımlar ve yerine bir "
+                                "referans koyar  ·  kısaltma: BLK"));
+    actInsert_ = drawTool(Glyph::Copy, tr("Blok Ekle"), QStringLiteral("BLOKEKLE"),
+                          tr("BLOKEKLE — tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle "
+                             "yerleştirir  ·  kısaltma: BE"));
+    drawingTools_->addAction(actInsert_);
+    actDimension_ = drawTool(Glyph::Ruler, tr("Ölçü"), QStringLiteral("ÖLÇÜ"),
+                             tr("ÖLÇÜ — iki nokta arasını, yarıçapı, çapı ya da açıyı ölçüp yazısı "
+                                "ve oklarıyla çizer  ·  kısaltma: ÖÇ"));
+    drawingTools_->addAction(actDimension_);
+    actLeader_ = drawTool(Glyph::Locate, tr("Lider"), QStringLiteral("LİDER"),
+                          tr("LİDER — bir noktayı gösteren oklu çizgi, istenirse yanına yazı  ·  "
+                             "kısaltma: LD"));
+    drawingTools_->addAction(actLeader_);
+
     // ---- düzenleme ----
     actErase_ = new QAction(tr("Sil"), this);
     actErase_->setToolTip(tr("SİL — seçilen nesneleri siler  ·  Del"));
@@ -694,8 +732,8 @@ void MainWindow::buildActions()
     actAreaSplit_ =
         modifyTool(Glyph::ParcelSplit, tr("Alana Göre İfraz"), QStringLiteral("ALANİFRAZ"),
                    tr("ALANİFRAZ — parselden istenen yüzölçümünde parça ayırır (kadastro)"));
-    actMeasureArea_ = commandAction(Glyph::MeasureArea, tr("Alan Ölç"), QStringLiteral("ALANÖLÇ"),
-                                    tr("ALANÖLÇ — seçili nesnelerin alanını ve çevresini yazar"));
+    actMeasureArea_ = modifyTool(Glyph::MeasureArea, tr("Alan Ölç"), QStringLiteral("ALANÖLÇ"),
+                                 tr("ALANÖLÇ — seçili nesnelerin alanını ve çevresini yazar"));
 
     actStyleCopy_ = modifyTool(Glyph::StyleCopy, tr("Stil Kopyala"), QStringLiteral("STİLKOPYALA"),
                                tr("STİLKOPYALA — bir nesnenin stilini seçili nesnelere uygular"));
@@ -861,6 +899,7 @@ void MainWindow::buildActions()
     actMeasure_->setToolTip(tr("ÖLÇ — iki nokta arası mesafe, koordinat farkı ve açı"));
     actMeasure_->setData(static_cast<int>(Glyph::Measure));
     actMeasure_->setProperty(kToolCommand, QStringLiteral("ÖLÇ"));
+    actMeasure_->setProperty(kToolRepeats, true);
     actMeasure_->setObjectName(QStringLiteral("toolAction.ÖLÇ"));
     connect(actMeasure_, &QAction::triggered, this,
             [this] { controller_->runCommand(QStringLiteral("ÖLÇ")); });
@@ -871,6 +910,7 @@ void MainWindow::buildActions()
     actCoordinate_->setToolTip(tr("KOORDİNAT — tıklanan noktanın sağa/yukarı değerini yazar"));
     actCoordinate_->setData(static_cast<int>(Glyph::Coordinate));
     actCoordinate_->setProperty(kToolCommand, QStringLiteral("KOORDİNAT"));
+    actCoordinate_->setProperty(kToolRepeats, true);
     actCoordinate_->setObjectName(QStringLiteral("toolAction.KOORDİNAT"));
     connect(actCoordinate_, &QAction::triggered, this,
             [this] { controller_->runCommand(QStringLiteral("KOORDİNAT")); });
@@ -1054,6 +1094,13 @@ void MainWindow::buildMenus()
     draw->addAction(actRectangle_);
     draw->addAction(actPoint_);
     draw->addAction(actText_);
+    draw->addSeparator();
+    draw->addAction(actSpline_);
+    draw->addAction(actHatch_);
+    draw->addAction(actBlock_);
+    draw->addAction(actInsert_);
+    draw->addAction(actDimension_);
+    draw->addAction(actLeader_);
 
     auto* modify = bar->addMenu(tr("D&eğiştir"));
     modify->addAction(actErase_);
@@ -1156,14 +1203,20 @@ void MainWindow::buildToolBox()
     // The flyout also PRINTS THE COMMAND WORD beside each name, so the mouse
     // teaches the keyboard: a user who found ÇOKLUÇİZGİ under the line button
     // has just been told what to type tomorrow (CLAUDE.md 5.15).
-    toolBox_->addFamily({actLine_, actPolyline_});
-    toolBox_->addFamily({actRectangle_, actPolygon_});
+    //   spline — an open run of edges too, drawn smooth; it joins the line family
+    //   hatch  — a closed face with a pattern; it joins the face family
+    //   block  — placing and defining: the placement first, it is the daily one
+    //   note   — a dimension and a leader both annotate: one family
+    toolBox_->addFamily({actLine_, actPolyline_, actSpline_});
+    toolBox_->addFamily({actRectangle_, actPolygon_, actHatch_});
     toolBox_->addFamily({actCircle_, actEllipse_, actAnnulus_});
     // YAY was built as a full draw tool and then left out of the column, so the
     // one curve this program can draw was reachable only by typing its name.
     toolBox_->addFamily({actArc_, actSector_});
     toolBox_->addTool(actPoint_);
     toolBox_->addTool(actText_);
+    toolBox_->addFamily({actInsert_, actBlock_});
+    toolBox_->addFamily({actDimension_, actLeader_});
     toolBox_->addSeparator();
 
     // editing
@@ -1433,19 +1486,33 @@ void MainWindow::buildStatusBar()
     // brings its own margin and the style its own frame — so the strip draws
     // itself and the numbers in `shell_chrome.cpp` ARE the specification.
     statusStrip_ = new StatusStrip(this);
+    // A job in flight (an import reading on a thread) shows on the strip with a
+    // Durdur; the chip asks the controller to stop it, the same road Esc takes.
+    connect(controller_, &Controller::jobStarted, this,
+            [this](const QString& label) { statusStrip_->setBusy(label, true); });
+    connect(controller_, &Controller::jobFinished, this,
+            [this] { statusStrip_->setBusy(QString(), false); });
+    connect(statusStrip_, &StatusStrip::stopRequested, this,
+            [this] { controller_->cancelInteractive(); });
 
     // Each chip is the command it names. The mouse gets no private road: clicking
-    // IZGARA runs `IZGARA`, exactly as typing it would (Article 1.2).
+    // DİK runs `MOD dik_mod`, exactly as F8 and typing it do (Article 1.2). The
+    // id on a chip is the SETTING it reads its state from; four of the seven are
+    // session modes (model.md R43) and go through `MOD`, two are application
+    // preferences and go through `TERCİH`. Two chips are not a setting of their
+    // own but a face on the snap mask: OSNAP is "any object mode on", POLAR is
+    // the kutupsal bit — both written as the mask, the way the F3 action writes it.
     statusStrip_->addToggle(tr("IZGARA"), QStringLiteral("core.izgara.gorunur"));
-    statusStrip_->addToggle(tr("YAKALAMA"), QStringLiteral("core.izgara.yakalama"));
-    statusStrip_->addToggle(tr("DİK"), QStringLiteral("core.yakalama.dik"));
-    statusStrip_->addToggle(tr("POLAR"), QStringLiteral("core.yakalama.polar"));
-    statusStrip_->addToggle(tr("OSNAP"), QStringLiteral("core.yakalama.acik"));
+    statusStrip_->addToggle(tr("YAKALAMA"), QStringLiteral("core.yakalama.izgara"));
+    statusStrip_->addToggle(tr("DİK"), QStringLiteral("core.yakalama.dik_mod"));
+    statusStrip_->addToggle(tr("POLAR"), QString::fromLatin1(kChipPolar));
+    statusStrip_->addToggle(tr("NORMAL"), QStringLiteral("core.yakalama.yuzey_normali"));
+    statusStrip_->addToggle(tr("OSNAP"), QString::fromLatin1(kChipOsnap));
     statusStrip_->addToggle(tr("DİNAMİK GİRDİ"), QStringLiteral("core.arayuz.dinamik_girdi"));
     statusStrip_->addToggle(tr("KALINLIK"), QStringLiteral("core.harita.kalinlik"));
 
     connect(statusStrip_, &StatusStrip::configureRequested, this, [this](const QString& id) {
-        if (id == QStringLiteral("core.yakalama.acik")) {
+        if (id == QString::fromLatin1(kChipOsnap) || id == QString::fromLatin1(kChipPolar)) {
             openSnapModes();
             return;
         }
@@ -1455,16 +1522,43 @@ void MainWindow::buildStatusBar()
     });
 
     connect(statusStrip_, &StatusStrip::toggled, this, [this](const QString& id) {
-        core::Settings& store     = controller_->bus().app_settings();
-        const std::uint32_t index = store.catalogue().find(id.toStdString());
+        const core::Settings& session = controller_->bus().session_settings();
+        const int mask = static_cast<int>(session.get("core.yakalama.modlar").as_int());
+        if (id == QString::fromLatin1(kChipOsnap)) {
+            // The same words the F3 action sends: the mask remembered while
+            // object snap was on, or nothing.
+            const bool on = (mask & static_cast<int>(core::SnapObjectMask)) != 0;
+            controller_->runLine(
+                QStringLiteral("MOD yakalama_modları %1").arg(on ? 0 : snapMaskMemory_),
+                command::Origin::Gui);
+            return;
+        }
+        if (id == QString::fromLatin1(kChipPolar)) {
+            controller_->runLine(QStringLiteral("MOD yakalama_modları %1")
+                                     .arg(mask ^ static_cast<int>(core::SnapPolar)),
+                                 command::Origin::Gui);
+            return;
+        }
+        const std::uint32_t index = core::builtin_settings().find(id.toStdString());
         if (index == core::kNoSetting) {
             onEcho(tr("Bu yardımcı henüz bir ayara bağlı değil: %1").arg(id));
             return;
         }
-        const bool now = store.get(id.toStdString()).as_bool();
-        controller_->runLine(QStringLiteral("AYAR ad=%1 deger=%2")
-                                 .arg(id, now ? QStringLiteral("hayır") : QStringLiteral("evet")),
-                             command::Origin::Gui);
+        const core::SettingSpec& spec = core::builtin_settings().at(index);
+        // The store the SCOPE names, and the command that scope owns (R41): a
+        // session mode is `MOD`, a preference is `TERCİH`, a project setting `AYAR`.
+        const core::Settings& store =
+            spec.scope == core::SettingScope::Session ? controller_->bus().session_settings()
+            : spec.scope == core::SettingScope::App   ? controller_->bus().app_settings()
+                                                      : controller_->bus().project_settings();
+        const bool now     = store.get(id.toStdString()).as_bool();
+        const QString verb = spec.scope == core::SettingScope::Session ? QStringLiteral("MOD")
+                             : spec.scope == core::SettingScope::App   ? QStringLiteral("TERCİH")
+                                                                       : QStringLiteral("AYAR");
+        controller_->runLine(
+            QStringLiteral("%1 %2 %3")
+                .arg(verb, id, now ? QStringLiteral("hayır") : QStringLiteral("evet")),
+            command::Origin::Gui);
     });
 }
 
@@ -1511,6 +1605,7 @@ void MainWindow::onSettingChanged(const QString& id)
         canvas_->reloadGridSettings();
         canvas_->reloadSnapSettings();
         refreshAidActions();
+        refreshStatus();
         canvas_->update();
         return;
     }
@@ -1519,6 +1614,19 @@ void MainWindow::onSettingChanged(const QString& id)
         id.startsWith(QLatin1String("core.secim."))) {
         canvas_->reloadSnapSettings();
         refreshAidActions();
+        refreshStatus();
+        canvas_->update();
+        return;
+    }
+
+    // The canvas's own look: the coordinate readout by the cursor, the line
+    // weights, the scale bar and the north arrow. Re-read into the canvas, and the
+    // strip's chips follow; the scene is rebuilt on the next paint.
+    if (id == QLatin1String("core.arayuz.dinamik_girdi") ||
+        id.startsWith(QLatin1String("core.harita.")) ||
+        id.startsWith(QLatin1String("core.cetvel."))) {
+        canvas_->reloadGridSettings();
+        refreshStatus();
         canvas_->update();
         return;
     }
@@ -2709,21 +2817,23 @@ void MainWindow::onPromptChanged(const QString& prompt)
     canvas_->update();
 }
 
-void MainWindow::onInteractiveFinished(const QString& id, bool mutated)
+void MainWindow::onInteractiveFinished(const QString& id, bool mutated, bool dismissed)
 {
-    // A DRAW TOOL IS MODAL. Picking `ALAN`, drawing a parsel and being dropped
-    // back on the select tool means reaching for the tool column again before
-    // every single parcel, and a cadastral sheet is hundreds of them.
+    // A TOOL IS MODAL. Picking `ALAN`, drawing a parsel and being dropped back on
+    // the select tool means reaching for the tool column again before every
+    // single parcel, and a cadastral sheet is hundreds of them. So a tool stays
+    // armed until the user puts it down: a run that finished on its own or that
+    // the right button closed arms the tool again; Esc, the select arrow and
+    // picking another tool dismiss it (`Controller::interactiveFinished`).
     //
-    // Re-arming only after a run that DREW something is what keeps that from
-    // becoming a trap: Esc both finishes an open-ended shape and cancels an empty
-    // one, so the first Esc closes the parsel and re-arms the tool, and the
-    // second — with nothing drawn — puts it away. Two Escs to leave, which is
-    // what a CAD user's hands already expect.
-    if (!mutated) return;
+    // The wizard asked for a zoom once its import lands (see openImportWizard).
+    if (zoomAfterImport_ && id == QLatin1String("core.import")) {
+        zoomAfterImport_ = false;
+        if (mutated) controller_->runLine(QStringLiteral("YAKINLAŞ KAPSAM"), command::Origin::Gui);
+    }
+    if (dismissed) return;
 
     for (QAction* action : drawingTools_->actions()) {
-        // ONLY A DRAW TOOL REPEATS. See `kToolRepeats`.
         if (!action->property(kToolRepeats).toBool()) continue;
 
         const QVariant carried = action->property(kToolCommand);
@@ -2732,6 +2842,15 @@ void MainWindow::onInteractiveFinished(const QString& id, bool mutated)
         const command::CommandSpec* spec =
             controller_->registry().resolve(carried.toString().toStdString());
         if (spec == nullptr || spec->id != id.toStdString()) continue;
+
+        // A TOOL THAT STARTS BY ASKING WHICH OBJECTS asks again from nothing: with
+        // the selection left standing, a re-armed TAŞI would take the same
+        // objects and ask for a base point the instant the move landed, and a
+        // re-armed ALANÖLÇ would measure the same parcel for ever.
+        const bool wants_objects =
+            !spec->params.empty() && spec->params.front().kind == command::ParamKind::Selection;
+        if (wants_objects && !controller_->bus().selection().empty())
+            controller_->runLine(QStringLiteral("SEÇ TEMİZLE"), command::Origin::Gui);
 
         // Queued, not called: this runs inside the finishing command's own signal,
         // and starting the next session on top of the one being torn down is how a
@@ -2814,16 +2933,23 @@ void MainWindow::refreshStatus()
     }
     readout_->setCrs(crsText);
 
-    // Every chip re-reads its own setting, so the strip agrees with the store
-    // whoever wrote it — the F-keys, the command line, a script or the AI.
-    const core::Settings& store = controller_->bus().app_settings();
-    for (const QString& id :
-         {QStringLiteral("core.izgara.gorunur"), QStringLiteral("core.izgara.yakalama"),
-          QStringLiteral("core.yakalama.dik"), QStringLiteral("core.yakalama.polar"),
-          QStringLiteral("core.yakalama.acik"), QStringLiteral("core.arayuz.dinamik_girdi"),
-          QStringLiteral("core.harita.kalinlik")}) {
-        if (store.catalogue().find(id.toStdString()) == core::kNoSetting) continue;
-        statusStrip_->setToggle(id, store.get(id.toStdString()).as_bool());
+    // Every chip re-reads its own setting from the store its scope lives in, so
+    // the strip agrees with the store whoever wrote it — the F-keys, the command
+    // line, a script or the AI. The two mask chips read the snap mask.
+    {
+        const core::Settings& app     = controller_->bus().app_settings();
+        const core::Settings& session = controller_->bus().session_settings();
+        for (const char* id :
+             {"core.izgara.gorunur", "core.arayuz.dinamik_girdi", "core.harita.kalinlik"})
+            statusStrip_->setToggle(QString::fromLatin1(id), app.get(id).as_bool());
+        for (const char* id :
+             {"core.yakalama.izgara", "core.yakalama.dik_mod", "core.yakalama.yuzey_normali"})
+            statusStrip_->setToggle(QString::fromLatin1(id), session.get(id).as_bool());
+        const int mask = static_cast<int>(session.get("core.yakalama.modlar").as_int());
+        statusStrip_->setToggle(QString::fromLatin1(kChipOsnap),
+                                (mask & static_cast<int>(core::SnapObjectMask)) != 0);
+        statusStrip_->setToggle(QString::fromLatin1(kChipPolar),
+                                (mask & static_cast<int>(core::SnapPolar)) != 0);
     }
 
     const io::DatabaseService& db = controller_->database();
@@ -2948,8 +3074,11 @@ ImportWizard* MainWindow::openImportWizard(const QString& path)
     connect(wizard, &QDialog::accepted, this, [this, wizard] {
         const QString line = wizard->commandLine();
         if (line.isEmpty()) return;
+        // The import reads on a worker thread and finishes later, so the zoom
+        // to what arrived waits for `interactiveFinished` (below) rather than
+        // running now against a drawing the data has not reached yet.
+        zoomAfterImport_ = true;
         controller_->runLine(line, command::Origin::Gui);
-        controller_->runLine(QStringLiteral("YAKINLAŞ KAPSAM"), command::Origin::Gui);
     });
 
     wizard->open();
@@ -3380,10 +3509,16 @@ void MainWindow::probeToolsByHand()
             runScriptLine(QString::fromUtf8(step.typed));
         } else {
             if (step.p1.x != 0 || step.p1.y != 0) click(at(step.p1));
-            if (step.p2.x != 0 || step.p2.y != 0) click(at(step.p2));
+            if (step.p2.x != 0 || step.p2.y != 0) {
+                // The hand hovers before it clicks: the frame here is the GHOST
+                // — the objects carried under the cursor — that TAŞI shows.
+                send(QEvent::MouseMove, at(step.p2), Qt::NoButton, Qt::NoButton);
+                shot(QString::fromUtf8(step.tool) + QStringLiteral("-4-hayalet"));
+                click(at(step.p2));
+            }
         }
         QCoreApplication::processEvents();
-        shot(QString::fromUtf8(step.tool) + QStringLiteral("-4-bitti"));
+        shot(QString::fromUtf8(step.tool) + QStringLiteral("-5-bitti"));
 
         QString said = transcript_->toPlainText().mid(mark).trimmed();
         said.replace(QLatin1Char('\n'), QLatin1Char(' '));
@@ -3394,11 +3529,59 @@ void MainWindow::probeToolsByHand()
         QCoreApplication::processEvents();
     }
 
-    // ---- AND A DRAW TOOL STILL REPEATS -------------------------------------
+    // ---- THE GHOSTS ----------------------------------------------------------
     //
-    // The half that must not break. Stopping a modify tool from re-arming is
-    // right; stopping ÇİZGİ from re-arming would mean reaching for the tool
-    // column before every single line on a sheet.
+    // Every preview the canvas draws under the cursor, photographed mid-gesture:
+    // the frame is what the user sees BEFORE the click that commits. A preview
+    // that draws nothing here is a preview that draws nothing for them.
+    struct Ghost
+    {
+        const char* name;                 ///< the frame's name
+        const char* line;                 ///< what starts the tool (a command line)
+        std::vector<core::Point2> clicks; ///< points given before the hover
+        core::Point2 hover;               ///< where the pointer rests for the frame
+        bool preselect;                   ///< the face is selected first (TAŞI, KOPYALA)
+    };
+
+    const Ghost ghosts[] = {
+        {"elips", "ELİPS", {{10'000, 40'000}, {30'000, 40'000}}, {20'000, 47'000}, false},
+        {"spline",
+         "SPLINE",
+         {{0, 35'000}, {10'000, 48'000}, {20'000, 35'000}},
+         {30'000, 48'000},
+         false},
+        {"olcu", "ÖLÇÜ", {{0, 33'000}, {25'000, 33'000}}, {12'000, 42'000}, false},
+        {"tarama", "TARAMA noktalar=50,35", {{70'000, 35'000}}, {60'000, 48'000}, false},
+        {"kopyala", "KOPYALA", {{20'000, 15'000}}, {60'000, 20'000}, true},
+        {"blok", "BLOKEKLE ad=OK", {}, {30'000, 45'000}, false},
+    };
+    scene();
+    // Keys run on across scenes, so the member is found by WHERE it is.
+    runScriptLine(QStringLiteral("ÇİZGİ 100,100 110,105"));
+    runScriptLine(QStringLiteral("SEÇ mod=KUTU noktalar=99,99 111,106"));
+    runScriptLine(QStringLiteral("BLOK ad=OK taban=100,100"));
+    for (const Ghost& g : ghosts) {
+        runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+        if (g.preselect) runScriptLine(QStringLiteral("SEÇ mod=KUTU noktalar=-1,-1 41,31"));
+        controller_->runCommand(QString::fromUtf8(g.line));
+        QCoreApplication::processEvents();
+        for (const core::Point2& p : g.clicks)
+            click(at(p));
+        send(QEvent::MouseMove, at(g.hover), Qt::NoButton, Qt::NoButton);
+        shot(QStringLiteral("hayalet-") + QString::fromUtf8(g.name));
+        const command::Session* live = controller_->session();
+        (void)std::fprintf(stdout, "[el] hayalet %-8s sorulan=\"%s\" kılavuz=%zu köşe\n", g.name,
+                           live != nullptr ? live->prompt().message.c_str() : "(yok)",
+                           canvas_->guideVertexCountForProbe());
+        controller_->cancelInteractive();
+        QCoreApplication::processEvents();
+    }
+
+    // ---- AND A TOOL STAYS IN THE HAND ---------------------------------------
+    //
+    // The right button FINISHES the open-ended line and the tool comes back
+    // armed; Esc puts it away. Both halves are printed, because the first
+    // without the second is a tool that cannot be left.
     scene();
     if (QAction* line = findChild<QAction*>(QStringLiteral("toolAction.ÇİZGİ"))) {
         line->trigger();
@@ -3406,12 +3589,16 @@ void MainWindow::probeToolsByHand()
         click(at(core::Point2{5'000, 45'000}));
         click(at(core::Point2{25'000, 45'000}));
 
-        // ESC finishes an open-ended shape; the tool should come back armed.
+        const QPointF here = at(core::Point2{25'000, 45'000});
+        send(QEvent::MouseButtonPress, here, Qt::RightButton, Qt::RightButton);
+        send(QEvent::MouseButtonRelease, here, Qt::RightButton, Qt::NoButton);
+        QCoreApplication::processEvents();
+        (void)std::fprintf(stdout, "[el] ÇİZGİ  SAĞ TIK yanan=%s\n", qPrintable(lit()));
+
         QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
         QCoreApplication::sendEvent(canvas_, &esc);
         QCoreApplication::processEvents();
-
-        (void)std::fprintf(stdout, "[el] ÇİZGİ  TEKRAR yanan=%s\n", qPrintable(lit()));
+        (void)std::fprintf(stdout, "[el] ÇİZGİ  ESC    yanan=%s\n", qPrintable(lit()));
     }
 }
 

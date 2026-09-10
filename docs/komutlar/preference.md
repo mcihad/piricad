@@ -97,6 +97,27 @@ Vektör paketini kapatıp yalnız ekin resimlerini görmek için boş bırakın:
 TERCİH vektör_paketi ""
 ```
 
+### Çizim katalogları: tarama desenleri ve ölçü stilleri
+
+İki komut ölçülerini koddan değil `/data/catalogs/dxf` altındaki bir dosyadan okur, ve
+dosyanın yolu bu makinenin tercihidir:
+
+| Ayar | Ne yükler |
+|---|---|
+| `desen_kataloğu` | [`TARAMA`](hatch.md) desenleri ve DXF `HATCH` okuyucusunun adla bulduğu çizgi aileleri: `tarama-desenleri.json` |
+| `ölçü_stilleri` | [`ÖLÇÜ`](dimension.md) ve [`LİDER`](leader.md) stilleri — ok boyu, uzatma çizgileri, yazı yüksekliği, ondalık: `olcu-stili.json` |
+
+Kendi deseninizi ya da stilinizi eklemek için dosyayı kopyalayın, satır ekleyin ve
+yolunu verin:
+
+```
+TERCİH desen_kataloğu
+TERCİH ölçü_stilleri
+```
+
+Yol çizime yazılmaz: desen ve stil, nesne oluşturulurken nesnenin **kendi yüküne**
+kopyalanır, katalog sonradan değişse çizim değişmez.
+
 ## Örnekler
 
 ### Komut satırı

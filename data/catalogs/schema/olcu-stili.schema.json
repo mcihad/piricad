@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kentoscad.org/data/catalogs/schema/olcu-stili.schema.json",
+  "title": "KentOSCad ölçü stili kataloğu",
+  "description": "ÖLÇÜ ve LİDER komutlarının ok, uzatma ve yazı ölçüleri, kâğıt mikrometresi (model.md R20). Komut AYAR plan_ölçeği ile zemine indirir.",
+  "type": "object",
+  "required": ["schema_version", "package_version", "id", "source", "published", "licence", "stiller"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "package_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "id": { "type": "string" },
+    "source": { "type": "string" },
+    "published": { "type": "string", "format": "date" },
+    "licence": { "type": "string" },
+    "aciklama": { "type": "string" },
+    "stiller": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "ok", "ok_boyu_um", "uzatma_fazlasi_um", "uzatma_boslugu_um", "yazi_boslugu_um", "yazi_yuksekligi_um", "ondalik", "ondalik_ayraci"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "maxLength": 255 },
+          "aciklama": { "type": "string" },
+          "ok": { "description": "Ok biçimi: kapali (dolu üçgen), acik (iki çizgi), centik (45° çizgi).", "type": "string", "enum": ["kapali", "acik", "centik"] },
+          "ok_boyu_um": { "type": "integer", "minimum": 0 },
+          "uzatma_fazlasi_um": { "type": "integer", "minimum": 0 },
+          "uzatma_boslugu_um": { "type": "integer", "minimum": 0 },
+          "yazi_boslugu_um": { "type": "integer", "minimum": 0 },
+          "yazi_yuksekligi_um": { "type": "integer", "minimum": 1 },
+          "ondalik": { "type": "integer", "minimum": 0, "maximum": 8 },
+          "ondalik_ayraci": { "type": "string", "enum": [",", "."] }
+        }
+      }
+    }
+  }
+}

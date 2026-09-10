@@ -22,7 +22,7 @@ R5. Every id that reaches a user, a file, a journal line or an AI tool call is a
 ### The cull block is closed
 
 R6. The per-frame cull test reads exactly two things: the four bbox arrays (`min_x, min_y, max_x, max_y`) and one `flags` byte. Nothing else. `layer`, `kind`, `style`, `slot`, `order` and `key` are read **only for entities the index returned**.
-R7. `flags` carries `alive`, `hidden` (per entity) and `layer_hidden` (mirrored from the layer, refreshed by the command that changes layer visibility). Mirroring costs one O(n) pass per visibility toggle and saves an indirect load per entity per frame; that trade is deliberate.
+R7. `flags` carries `alive`, `hidden` (per entity), `layer_hidden` (mirrored from the layer, refreshed by the command that changes layer visibility) and `in_block` (the entity belongs to a block definition and is drawn only through a reference, R45). Four bits, one byte; R6 and R8 are unchanged. Mirroring costs one O(n) pass per visibility toggle and saves an indirect load per entity per frame; that trade is deliberate.
 R8. Adding a column to the cull block requires amending this rule. The measured cost of the full-extent path is recorded in `tests/bench/temel-degerler.json`; a new cull column is a memory-traffic regression on the frame path that is already the slowest measured scenario.
 
 ### Geometry
@@ -31,6 +31,7 @@ R9. Geometry is stored as **entity → rings → vertices**, not as a single ver
 R10. Each ring carries `start`, `count`, `part` and `role`. `role` is `Open`, `Exterior` or `Interior`. A polyline is one `Open` ring; a parcel is one `Exterior` ring; a parcel with an exclusion is `Exterior` + `Interior` in the same part; a multipart parcel uses distinct `part` values.
 R11. Ring order within an entity is `part` ascending, then `Exterior` before its `Interior` rings. This ordering is part of the content hash and therefore of every golden fixture.
 R12. Area is computed over rings with sign by role, never over a raw vertex run. Alan hesabı is the legal output (§12).
+R9a. A kind may store BESIDE its rings a **payload**: fixed-width little-endian integer fields laid down with `core/wire.hpp`, interpreted only by the kind's own `KindSpec`, never by the arena, the renderer or a command. It is slot-indexed in `RingGeometry` (`payload_ref` per slot, records, one pool) and in file blocks `0x0080–0x0083`, written only when a payload exists; it is folded byte for byte into `content_hash()`; an unknown kind's payload is kept unchanged (R26). Changing a payload appends a new slot and repoints the entity (`set_kind_payload`), so the inverse is `Op::SetGeometry` and no Op variant exists for it. A polyline has none and pays nothing.
 
 ### Style and the cascade
 
@@ -53,11 +54,12 @@ R21. No stored field is floating point. Coordinates are `Mm`, widths are µm, an
 
 ### Kinds and extension
 
-R22. An entity kind is declared once as a `KindSpec` carrying free function pointers over spans — `bbox`, `emit`, `hit`, `area`, `read`, `write`. No `this`, no capture, no `std::function`, no virtual.
+R22. An entity kind is declared once as a `KindSpec` carrying free function pointers over spans — `bbox`, `emit`, `hit`, `area`, `read`, `write`, and the appended optional `perimeter`, `validate` (the kind's own floor, asked before a byte is appended) and `key_points` (what a snap offers beyond the outline, each under its own mode). No `this`, no capture, no `std::function`, no virtual. `core::entity_outline` (outline.hpp) is the ONE document-aware entry the renderer, the pick test, the snap engine and the canvas call for a kind's drawn shape; its `EmitBuffer` runs carry `closed`, `hole`, and — for a run that is not the entity's own, a block member's — `style`, `layer` and `text` (the inherit sentinels mean the entity's). Every payload-carrying kind starts its payload with the 8-byte header `u16 layout_version, u16 flags, u32 reserved` (`kind_common.hpp`), so a later layout is refused by version, never misread.
 R23. Kind function pointers are dispatched **once per (kind, layer, style) batch**, never per entity. The batch count is bounded by kinds × layers × styles, never by entity count.
 R24. The kind table is **owned by the `Document`** and passed by reference, exactly like every other piece of core state. There is no process-wide mutable registry in core (`core.md` P8). `/src/command` owns the registration list and the docgen/AI projection.
 R25. Registration mirrors `commands/builtin.cpp` exactly: one factory per kind, one X-macro list, integer ids, generated docs. One idiom in the codebase, not two.
-R26. An entity of an unknown kind loads as **visible, preserved and non-editable**, and its payload round-trips byte-identically. Dropping it is data destruction with legal consequences (`domain.md` P9).
+R26. An entity of an unknown kind loads as **visible, preserved and non-editable**, and its payload round-trips byte-identically. Dropping it is data destruction with legal consequences (`domain.md` P9). `Document::editable` is the one test every in-place edit asks; it refuses an unknown kind and a block member (R45).
+R26a. **Foreign data** — bytes another program attached to an entity (DXF XDATA) — lives in `core::ForeignTable`: per slot, per tag, schemaless. It is never queried by name, never shown beyond its count, edited by no command, never read by the frame path, folded into `content_hash()`, written to file blocks `0x0084/0x0085` and returned to the source format as it came. This is not a property bag (P12): nothing is typed, looked up or edited. P8 binds model fields; an IEEE value inside a foreign byte string is the FILE's number, not the document's.
 
 ### Attributes
 
@@ -98,6 +100,10 @@ R40. **Anything that can change a byte of an exported legal document is `Scope::
 R41. One command per scope, never one command per setting: `AYAR` writes project settings through a transaction, `TERCİH` writes application settings.
 R42. A value out of range in a file written by another version is clamped to the declared range with a recorded warning, never silently accepted and never a hard failure that makes the file unopenable.
 
+### Blocks
+
+R45. Block definitions live in `core::BlockTable`, **append-only**, names unique under Turkish folding, ids reaching the file (blocks `0x0086–0x0088`) and every reference's payload. A member is fixed at its creation (`add_kind(..., in_block)`), flagged `in_block` (R7), kept out of the index, the pick and the cull, and refused by every in-place edit; `BLOKDÜZENLE` (Phase 2) is what changes a definition. A definition that would contain itself, directly or through the blocks its members reference (`uses`), is refused — `Document::add_kind` records the `uses` edge when the member is a `core.block_reference`. A reference (`core.block_reference`, `block_reference.hpp`) is drawn by expanding the definition through `entity_outline`: members placed by `mul_div_round` and `rotate_udeg`, each run carrying the member's style, layer and caption, a member on layer `0` or with a ByBlock source inheriting the reference's; its stored `bounds` is the drawn form's box and is recomputed by every command that moves it.
+
 ### Not document state
 
 R43. Selection, snap state, view state, active layer and the command line's history are **not** document state. They MUST NOT touch `content_hash()` or `revision()`, and they are not journalled as document mutations.
@@ -125,7 +131,7 @@ P16. NEVER write a file format version until the entity and layer records below 
 ## Definitions of Done
 
 - [ ] New stored field: fixed width, no floating point, documented unit, added to `content_hash()` deliberately, golden fixtures regenerated in their own reviewed commit.
-- [ ] New entity kind: one `KindSpec` factory, one line in the X-macro list, a `/docs/nesneler/<slug>.md` page, a golden fixture, and no change to the renderer, the index or the undo stack.
+- [ ] New entity kind: one `KindSpec` factory (with `validate`), one line in the X-macro list, a `/docs/nesneler/<slug>.md` page with the fixed skeleton and a row in the generated `docs/nesneler/referans.md` (`make reference`), a golden fixture, and no change to the renderer, the index or the undo stack — the renderer sees a new kind only as `entity_outline` runs.
 - [ ] New attribute: declared in `/data`, zero new `Op` variants, not read by the frame path.
 - [ ] New setting: one `SettingSpec`, correct scope by the R40 test, generated documentation, and a migration entry if it replaces an older id.
 - [ ] Anything touching the cull block: `make bench` run, `render.pan_zoom_5m` still inside 16 ms, baseline re-recorded in the same commit.

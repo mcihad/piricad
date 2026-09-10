@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kentoscad.org/data/catalogs/schema/tarama-desenleri.schema.json",
+  "title": "KentOSCad tarama deseni kataloğu",
+  "description": "TARAMA komutunun ve DXF HATCH okuyucusunun adla bulduğu çizgi desenleri. Bir desen çizgi ailelerinden oluşur: açı (mikroderece), taban noktası, bir çizgiden ötekine kayma ve kesik dizisi; uzunluklar desen mikrometresidir ve taramanın ölçeğiyle çarpılır (core/hatch.hpp HatchDef::Family). Yönetmelik değeri taşımaz.",
+  "type": "object",
+  "required": ["schema_version", "package_version", "id", "source", "published", "licence", "desenler"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "package_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "id": { "type": "string" },
+    "source": { "type": "string" },
+    "published": { "type": "string", "format": "date" },
+    "licence": { "type": "string" },
+    "aciklama": { "type": "string" },
+    "desenler": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "aileler"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "description": "Desenin adı, DXF'in 2 grubuyla aynı; büyük harf.", "type": "string", "maxLength": 255 },
+          "aciklama": { "type": "string" },
+          "aileler": {
+            "type": "array",
+            "maxItems": 64,
+            "items": {
+              "type": "object",
+              "required": ["aci_uderece", "taban_um", "kayma_um", "kesik_um"],
+              "additionalProperties": false,
+              "properties": {
+                "aci_uderece": { "description": "Çizgilerin yönü, mikroderece.", "type": "integer" },
+                "taban_um": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 },
+                "kayma_um": { "description": "Bir çizgiden ötekine kayma: ailenin çerçevesinde x çizgi boyunca, y çizgiye dik.", "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 },
+                "kesik_um": { "description": "Çizgi boyunca kesik dizisi: pozitif mürekkep, negatif boşluk, sıfır nokta.", "type": "array", "items": { "type": "integer" }, "maxItems": 32 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

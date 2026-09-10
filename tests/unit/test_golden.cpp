@@ -83,7 +83,20 @@ std::string dump(const core::Document& doc, const Journal& journal)
         const core::RingSpan span = geometry.rings_of(entities.slot[e]);
         out += "nesne " + std::to_string(e) + " katman=" + doc.layers()[entities.layer[e]].name +
                " stil=" + std::to_string(entities.style[e]) +
-               " halka=" + std::to_string(span.count) + "\n";
+               " halka=" + std::to_string(span.count);
+        // The kind and the payload are content (model.md R9a): written only when
+        // they say something, so a polyline's line reads as it always did.
+        if (entities.kind[e] != core::kPolylineKind)
+            out += " tur=" + std::to_string(entities.kind[e]);
+        if (const auto bytes = geometry.payload_of(entities.slot[e]); !bytes.empty()) {
+            out += " yuk=";
+            for (const std::uint8_t b : bytes) {
+                constexpr char kHex[] = "0123456789abcdef";
+                out += kHex[b >> 4];
+                out += kHex[b & 0x0F];
+            }
+        }
+        out += "\n";
 
         // Ring role, part and vertex run are all part of the identity of the
         // geometry: a parcel and the same outline digitised as a polyline are

@@ -110,10 +110,29 @@ else
     done
     if [[ -n "$docgen" ]]; then
         tmp="$(mktemp)"
-        trap 'rm -f "$tmp"' EXIT
-        if "$docgen" "$tmp" >/dev/null 2>&1 && ! diff -q "$reference" "$tmp" >/dev/null; then
-            echo "docs: docs/komutlar/referans.md is stale or hand-edited -> docs/komutlar/referans.md:1  (run: make reference)" >&2
-            fail=1
+        tmp_kinds="$(mktemp)"
+        trap 'rm -f "$tmp" "$tmp_kinds"' EXIT
+        if "$docgen" "$tmp" "$tmp_kinds" >/dev/null 2>&1; then
+            if ! diff -q "$reference" "$tmp" >/dev/null; then
+                echo "docs: docs/komutlar/referans.md is stale or hand-edited -> docs/komutlar/referans.md:1  (run: make reference)" >&2
+                fail=1
+            fi
+            # The kinds table, generated the same way from builtin_kinds() (model.md R25).
+            kinds_reference="$docs/nesneler/referans.md"
+            if [[ ! -f "$kinds_reference" ]]; then
+                echo "docs: generated kinds reference missing -> docs/nesneler/referans.md:1  (run: make reference)" >&2
+                fail=1
+            elif ! diff -q "$kinds_reference" "$tmp_kinds" >/dev/null; then
+                echo "docs: docs/nesneler/referans.md is stale or hand-edited -> docs/nesneler/referans.md:1  (run: make reference)" >&2
+                fail=1
+            fi
+            # Every kind in the table must have its page (model.md DoD).
+            while IFS= read -r slug; do
+                [[ -f "$docs/nesneler/$slug.md" ]] || {
+                    echo "docs: kinds reference links a page that does not exist -> docs/nesneler/$slug.md:1" >&2
+                    fail=1
+                }
+            done < <(grep -oE '\]\([a-z0-9_-]+\.md\)' "$tmp_kinds" | sed -E 's/^\]\((.*)\.md\)$/\1/')
         fi
     else
         echo "docs: note — kentos_docgen is not built, so referans.md freshness was not verified"

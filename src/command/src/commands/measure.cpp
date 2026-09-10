@@ -85,20 +85,13 @@ Task<void> run_measure(Context& ctx)
 
 Task<void> run_measure_area(Context& ctx)
 {
-    Bus& bus = ctx.session().bus();
-
+    // The argument, the selection, or ASKED FOR — the order every modify tool
+    // uses (`want_objects`), so the tool-column button arms and asks instead of
+    // refusing when nothing is highlighted.
     std::vector<std::int64_t> requested;
-    if (const Value given = ctx.argument("nesneler"); !given.empty()) {
-        requested = given.as_ids();
-    } else {
-        for (core::EntityKey k : bus.selection().keys())
-            requested.push_back(static_cast<std::int64_t>(core::raw(k)));
-
-        if (requested.empty()) {
-            ctx.echo("Ölçülecek nesne belirtilmedi ve seçim boş. Örnek: ALANÖLÇ nesneler=1");
-            co_return;
-        }
-    }
+    if (!co_await want_objects(ctx, "nesneler", "Ölçülecek nesneleri seçin, sonra Enter", requested,
+                               0, "ALANÖLÇ nesneler=1"))
+        co_return;
 
     const core::Document& doc = ctx.document();
     core::Mm2 total{0};
@@ -208,7 +201,7 @@ KENTOS_COMMAND(measure_area)
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                          "Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim"}},
         .undo     = UndoPolicy::None,
-        .flags    = Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
+        .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary  = "Seçilen nesnelerin alanını ve çevresini yazar.",
         .run      = &run_measure_area,
     };

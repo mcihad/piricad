@@ -114,9 +114,9 @@ tidy: build ## Run clang-tidy over the compile database
 doctor: ## Report what this machine can and cannot build
 	@scripts/doctor.sh
 
-reference: $(BUILD)/CMakeCache.txt ## Regenerate docs/komutlar/referans.md from the registry
+reference: $(BUILD)/CMakeCache.txt ## Regenerate docs/komutlar/referans.md and docs/nesneler/referans.md
 	@$(CMAKE) --build $(BUILD) --target kentos_docgen --parallel $(JOBS) >/dev/null
-	@$(BIN)/kentos_docgen docs/komutlar/referans.md
+	@$(BIN)/kentos_docgen docs/komutlar/referans.md docs/nesneler/referans.md
 
 docs: reference ## Regenerate generated docs and check the manual
 	@scripts/ci-gate-docs.sh

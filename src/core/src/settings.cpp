@@ -326,6 +326,49 @@ constexpr std::int64_t kFullCircle = kUDegFullCircle;
 
 } // namespace
 
+KENTOS_SETTING(tarama_desen_katalogu)
+{
+    return SettingSpec{
+        .id    = "core.tarama.desen_katalogu",
+        .names = {"desen_kataloğu", "desen_katalogu", "hatch_patterns", "desenler"},
+        .type  = SettingType::Text,
+        .scope = SettingScope::App,
+        .fallback =
+            text_value("data/catalogs/dxf/tarama-desenleri.json"), // catalog-key: a path into
+                                                                   // /data/catalogs, not a value
+        .range   = SettingRange::unbounded(),
+        .values  = {},
+        .unit    = "",
+        .summary = "TARAMA komutunun ve DXF okuyucusunun adla bulduğu tarama deseni " // ui-label
+                   "kataloğu (ANSI31, NET, …). Bir desenin açısı ve aralığı bu dosyadan "
+                   "okunur; kendi deseninizi eklemek için dosyayı kopyalayıp yolunu verin. "
+                   "Bu makinedeki bir dosya yolu olduğu için uygulama ayarıdır; desenin "
+                   "kendisi çizimle birlikte nesnede saklanır.",
+        .section = "Veri Kaynakları", // ui-label
+    };
+}
+
+KENTOS_SETTING(olcu_stil_katalogu)
+{
+    return SettingSpec{
+        .id       = "core.olcu.stil_katalogu",
+        .names    = {"ölçü_stilleri", "olcu_stilleri", "dimension_styles", "ölçüstil"},
+        .type     = SettingType::Text,
+        .scope    = SettingScope::App,
+        .fallback = text_value("data/catalogs/dxf/olcu-stili.json"), // catalog-key: a path into
+                                                                     // /data/catalogs, not a value
+        .range   = SettingRange::unbounded(),
+        .values  = {},
+        .unit    = "",
+        .summary = "ÖLÇÜ ve LİDER komutlarının ok boyunu, uzatma çizgilerini ve yazı " // ui-label
+                   "yüksekliğini aldığı ölçü stili kataloğu (ISO-25, STANDARD, MIMARI). "
+                   "Değerler kâğıt mikrometresidir ve plan ölçeğiyle zemine iner. Bu "
+                   "makinedeki bir dosya yolu olduğu için uygulama ayarıdır; ölçünün "
+                   "kendi sayıları çizimle birlikte nesnede saklanır.",
+        .section = "Veri Kaynakları", // ui-label
+    };
+}
+
 KENTOS_SETTING(vektor_kutuphanesi)
 {
     return SettingSpec{
@@ -371,6 +414,8 @@ KENTOS_SETTING(kosegen_kilidi);
 KENTOS_SETTING(kutupsal_aci);
 KENTOS_SETTING(sembol_kutuphanesi);
 KENTOS_SETTING(vektor_kutuphanesi);
+KENTOS_SETTING(tarama_desen_katalogu);
+KENTOS_SETTING(olcu_stil_katalogu);
 KENTOS_SETTING(veritabani_sunucu);
 KENTOS_SETTING(veritabani_port);
 KENTOS_SETTING(veritabani_ad);
@@ -388,6 +433,7 @@ KENTOS_SETTING(cetvel_gorunur);
 KENTOS_SETTING(cetvel_kalinligi);
 KENTOS_SETTING(cetvel_birimi);
 KENTOS_SETTING(harita_olcek_cubugu);
+KENTOS_SETTING(harita_kalinlik);
 KENTOS_SETTING(harita_kuzey_oku);
 KENTOS_SETTING(harita_koordinat);
 KENTOS_SETTING(harita_ipucu_boyu);
@@ -447,6 +493,9 @@ KENTOS_SETTING(alan_birimi);
     X(cetvel_kalinligi)                                                                            \
     X(cetvel_birimi)                                                                               \
     X(harita_olcek_cubugu)                                                                         \
+    X(harita_kalinlik)                                                                             \
+    X(tarama_desen_katalogu)                                                                       \
+    X(olcu_stil_katalogu)                                                                          \
     X(harita_kuzey_oku)                                                                            \
     X(harita_koordinat)                                                                            \
     X(harita_ipucu_boyu)                                                                           \
@@ -697,6 +746,25 @@ KENTOS_SETTING(harita_olcek_cubugu)
         .unit     = "",
         .summary  = "Tuvalin köşesinde, o anki yakınlaştırmaya göre bir ölçek çubuğu "
                     "çizilir. Çizime girmediği için uygulama kapsamındadır.",
+        .section  = "Görünüm ve Tema", // ui-label
+    };
+}
+
+KENTOS_SETTING(harita_kalinlik)
+{
+    return SettingSpec{
+        .id       = "core.harita.kalinlik",
+        .names    = {"çizgi_kalınlığı", "cizgi_kalinligi", "lineweight", "kalınlık"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::boolean(true),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Çizgi kalınlıkları ekranda paftadaki ölçüsüyle çizilir; kapalıyken her "
+                    "çizgi tek piksel (kıl çizgi) olur, kalınlık nesnede ve çıktıda durur. "
+                    "Yalnız ekranı etkilediği için uygulama kapsamındadır (durum çubuğu "
+                    "KALINLIK).",
         .section  = "Görünüm ve Tema", // ui-label
     };
 }
@@ -1379,7 +1447,7 @@ KENTOS_SETTING(yakalama_modlari)
         // so a corner, a midpoint, a centre and an intersection all still win
         // over the edge that carries them.
         .fallback = SettingValue::integer(0x822F),
-        .range    = SettingRange::between(0, 0xFFFF),
+        .range    = SettingRange::between(0, 0x3FFFF),
         .values   = {},
         .unit     = "bit maskesi",
         .summary  = "Etkin nesne yakalama modları, bit maskesi. Yakalama çizimi değil "

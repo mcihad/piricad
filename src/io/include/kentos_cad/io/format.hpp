@@ -281,11 +281,32 @@ enum BlockId : std::uint32_t {
     /// One record per slot that carries text. Same reasoning as the cells above.
     kBlkTexts = 0x0074, ///< TextRecord[]
 
+    // ---- kind payload (model.md R9a). All four or none: a payload-free ------
+    // ---- document writes no payload column, so its file is byte for byte ---
+    // ---- what it was before payloads existed. ------------------------------
+    /// The pool: every slot's payload back to back, in slot order.
+    kBlkKindPayload = 0x0080, ///< u8[]
+    /// Per SLOT (`slot_count` rows): the record index, or `core::kNoPayload`.
+    kBlkSlotPayloadRef = 0x0081, ///< u32[]
+    /// Per record: where the payload starts in kBlkKindPayload.
+    kBlkPayloadStart = 0x0082, ///< u64[]
+    /// Per record: how many bytes it holds. `start + bytes <= pool` is checked on
+    /// load (io.md R18); an unknown kind's bytes are kept exactly as they came
+    /// (model.md R26).
+    kBlkPayloadBytes = 0x0083, ///< u32[]
+
+    // ---- foreign data (model.md R26a). Both or neither. ----------------------
+    /// Bytes another program attached to entities, back to back.
+    kBlkForeignBytes = 0x0084, ///< u8[]
+    /// One row per attachment: which slot, which tag, where in the pool.
+    kBlkForeignRecords = 0x0085, ///< ForeignRecord[]
+
+    // ---- block definitions (model.md R45). All three or none. ---------------
+    kBlkBlocks       = 0x0086, ///< BlockRecord[]
+    kBlkBlockMembers = 0x0087, ///< u64[] member entity keys, per block a contiguous run
+    kBlkBlockUses    = 0x0088, ///< u32[] block ids a block's members reference, per block a run
+
     // ---- reserved. Declared here so the ids can never be re-meant. ----------
-    /// Payload of an entity kind this build does not understand, kept so that
-    /// model.md R26 ("preserved, non-editable, byte-identical round trip") can be
-    /// honoured without a format change. Phase 1.
-    kBlkKindPayload = 0x0080,
     /// Precomputed Douglas–Peucker LOD levels in quadtree tiles (io.md R6).
     /// Phase 1: no simplifier exists yet. See CLAUDE.md Article 8.
     kBlkLodTiles = 0x0090,
@@ -506,6 +527,37 @@ struct TextRecord
 };
 
 static_assert(sizeof(TextRecord) == 24, "wire record");
+
+/// One foreign attachment (model.md R26a): bytes another program owns, kept as
+/// they came. `tag_string` names the source vocabulary (`dxf.xdata`).
+struct ForeignRecord
+{
+    std::uint32_t slot;       ///< entity slot
+    std::uint32_t tag_string; ///< into the string pool
+    std::uint64_t offset;     ///< into kBlkForeignBytes
+    std::uint32_t bytes;      ///< length
+    std::uint32_t reserved;   ///< zero
+};
+
+static_assert(sizeof(ForeignRecord) == 24, "wire record");
+
+/// One block definition (model.md R45). Members and uses are runs into their
+/// own columns, so a block with neither costs a record and nothing else.
+struct BlockRecord
+{
+    std::uint32_t name_string;  ///< into the string pool
+    std::uint32_t desc_string;  ///< into the string pool; 0 = empty
+    std::int64_t base_x;        ///< Mm
+    std::int64_t base_y;        ///< Mm
+    std::uint32_t first_member; ///< into kBlkBlockMembers
+    std::uint32_t member_count; ///< how many member keys follow `first_member`
+    std::uint32_t first_use;    ///< into kBlkBlockUses
+    std::uint32_t use_count;    ///< how many block ids follow `first_use`
+    std::uint8_t flags;         ///< reserved, zero
+    std::uint8_t reserved[7];   ///< alignment, zero-filled
+};
+
+static_assert(sizeof(BlockRecord) == 48, "wire record");
 
 /// The one document-level record. Counts here are cross-checked against the
 /// directory: a column whose length disagrees with this record is a corrupt file,

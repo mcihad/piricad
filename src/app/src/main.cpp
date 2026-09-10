@@ -281,6 +281,17 @@ int main(int argc, char** argv)
         QTimer::singleShot(0, &window, [&window, path] { window.runScriptFile(path); });
     }
 
+    // ONE TYPED LINE AT START-UP, for the frame proof below. A script runs through
+    // the script runner, which drives every command to completion in one call;
+    // this runs through the command line's own road, so a hosted job — an import
+    // reading on a worker thread — can be photographed with its Durdur on the
+    // status strip. Developer tooling, an environment variable for the reason
+    // KENTOS_FRAME_DUMP is one.
+    if (const QByteArray typed = qgetenv("KENTOS_PROBE_LINE"); !typed.isEmpty()) {
+        const QString line = QString::fromUtf8(typed);
+        QTimer::singleShot(0, &window, [&window, line] { window.runScriptLine(line); });
+    }
+
     // Long enough for the start-up script to finish and the canvas to paint once.
     // A fixed delay rather than a signal, because "the drawing has settled" is not
     // a thing the application knows: a script can open a file, and a coroutine

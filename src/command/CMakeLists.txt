@@ -7,6 +7,7 @@ add_library(kentos_command STATIC
     src/bus.cpp
     src/context.cpp
     src/input.cpp
+    src/job.cpp
     src/journal.cpp
     src/log.cpp
     src/parser.cpp
@@ -17,6 +18,11 @@ add_library(kentos_command STATIC
     src/transaction.cpp
     src/validation.cpp
     src/value.cpp
+    src/drawing_catalogs.cpp
+    src/commands/block.cpp
+    src/commands/dimension.cpp
+    src/commands/hatch.cpp
+    src/commands/spline.cpp
     src/commands/builtin.cpp
     src/commands/corner.cpp
     src/commands/database.cpp
@@ -78,3 +84,7 @@ target_link_libraries(kentos_docgen PRIVATE kentos_command kentos_flags)
 set_target_properties(kentos_docgen PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
+
+# The source tree's data, so a developer build finds the drawing catalogues with
+# no environment set (command/drawing_catalogs.hpp `resolve_catalog_path`).
+target_compile_definitions(kentos_command PRIVATE KENTOS_SOURCE_DATA_DIR="${CMAKE_SOURCE_DIR}/data")

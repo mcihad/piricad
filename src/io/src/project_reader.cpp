@@ -145,6 +145,14 @@ struct Columns
     std::span<const std::uint8_t> ring_role;
     std::span<const std::uint32_t> first_ring, ring_total;
     std::span<const core::Mm> xs, ys;
+
+    /// The kind payload (model.md R9a). Absent from a payload-free file, in which
+    /// case `has_payload` is false and the spans are empty.
+    bool has_payload{false};
+    std::span<const std::uint32_t> payload_ref;
+    std::span<const std::uint64_t> payload_start;
+    std::span<const std::uint32_t> payload_bytes;
+    std::span<const std::uint8_t> payload;
 };
 
 core::Status load_columns(const BlockView& view, const DocumentRecord& dr, Columns& c)
@@ -178,6 +186,36 @@ core::Status load_columns(const BlockView& view, const DocumentRecord& dr, Colum
     KENTOS_COLUMN(xs, kBlkVertexX, core::Mm, dr.vertex_count, "tepe noktası X");
     KENTOS_COLUMN(ys, kBlkVertexY, core::Mm, dr.vertex_count, "tepe noktası Y");
 
+    // OPTIONAL, and all four or none: a payload-free file writes none of them
+    // (model.md R9a), and a file with some but not all is corrupt rather than
+    // old. The pool's length is its own; the record columns must agree with
+    // each other, and the reference column covers every slot.
+    const bool any_payload = view.has(kBlkKindPayload) || view.has(kBlkSlotPayloadRef) ||
+                             view.has(kBlkPayloadStart) || view.has(kBlkPayloadBytes);
+    if (any_payload) {
+        if (!(view.has(kBlkKindPayload) && view.has(kBlkSlotPayloadRef) &&
+              view.has(kBlkPayloadStart) && view.has(kBlkPayloadBytes)))
+            return err(ErrorCode::ParseError,
+                       std::string(kErrConsist) +
+                           ": tür yükü sütunlarının bir kısmı eksik; havuz, yuva başvurusu, "
+                           "kayıt başlangıcı ve kayıt uzunluğu birlikte bulunur. Dosya bozuk.");
+        const std::uint64_t records = view.count_of(kBlkPayloadStart);
+        if (records != view.count_of(kBlkPayloadBytes))
+            return err(ErrorCode::ParseError,
+                       std::string(kErrConsist) + ": tür yükü kayıt sütunları farklı uzunlukta (" +
+                           std::to_string(records) + " / " +
+                           std::to_string(view.count_of(kBlkPayloadBytes)) + "). Dosya bozuk.");
+        KENTOS_COLUMN(payload_ref, kBlkSlotPayloadRef, std::uint32_t, dr.slot_count,
+                      "yuvanın tür yükü başvurusu");
+        KENTOS_COLUMN(payload_start, kBlkPayloadStart, std::uint64_t, records,
+                      "tür yükü kaydının başlangıcı");
+        KENTOS_COLUMN(payload_bytes, kBlkPayloadBytes, std::uint32_t, records,
+                      "tür yükü kaydının uzunluğu");
+        KENTOS_COLUMN(payload, kBlkKindPayload, std::uint8_t, view.count_of(kBlkKindPayload),
+                      "tür yükü havuzu");
+        c.has_payload = true;
+    }
+
 #undef KENTOS_COLUMN
     return core::ok();
 }
@@ -188,6 +226,27 @@ core::Status load_columns(const BlockView& view, const DocumentRecord& dr, Colum
 /// rejected file or a segfault.
 core::Status validate_indices(const DocumentRecord& dr, const Columns& c)
 {
+    // Every payload record must lie inside the pool, and every slot reference
+    // must name a record (io.md R18) — a payload is bytes off disk, and a length
+    // that is not checked here is a read past the end of the mapping later.
+    if (c.has_payload) {
+        const std::uint64_t pool = c.payload.size();
+        for (std::size_t r = 0; r < c.payload_start.size(); ++r)
+            if (c.payload_start[r] > pool || c.payload_bytes[r] > pool - c.payload_start[r])
+                return err(ErrorCode::ParseError,
+                           std::string(kErrConsist) + ": " + std::to_string(r + 1) +
+                               ". tür yükü kaydı [" + std::to_string(c.payload_start[r]) + ", +" +
+                               std::to_string(c.payload_bytes[r]) + ") havuzun dışına taşıyor (" +
+                               std::to_string(pool) + " bayt). Dosya bozuk.");
+        for (std::size_t s = 0; s < c.payload_ref.size(); ++s)
+            if (c.payload_ref[s] != core::kNoPayload && c.payload_ref[s] >= c.payload_start.size())
+                return err(ErrorCode::ParseError,
+                           std::string(kErrConsist) + ": " + std::to_string(s + 1) + ". yuva " +
+                               std::to_string(c.payload_ref[s]) +
+                               ". tür yükü kaydına bakıyor, dosyada " +
+                               std::to_string(c.payload_start.size()) + " kayıt var. Dosya bozuk.");
+    }
+
     for (std::uint64_t r = 0; r < dr.ring_count; ++r) {
         const std::uint64_t start = c.ring_start[r];
         const std::uint64_t count = c.ring_count[r];
@@ -237,23 +296,20 @@ core::Status validate_indices(const DocumentRecord& dr, const Columns& c)
                            std::to_string(c.style[e]) + "'e bakıyor, dosyada " +
                            std::to_string(dr.style_count) + " stil var. Dosya bozuk.");
 
-        // model.md R26 wants an unknown kind preserved and non-editable. This
-        // build has no payload block to carry one, so a file that names a kind it
-        // does not know is REFUSED rather than opened with its geometry silently
-        // reinterpreted. Refusing loses nothing; opening it would lose the entity
-        // and P11 forbids that.
+        // model.md R26: a kind this build does not know is PRESERVED — loaded
+        // through `add_kind` with its rings and payload exactly as written,
+        // visible, and refused by every edit. The one value refused here is the
+        // sentinel that means "no kind at all", which no writer ever stores.
         //
         // 0 is accepted and MEANS `core.polyline`. Every file written before the
         // kind column carried anything wrote a zero into it — the column existed,
         // nothing filled it — and those drawings are polylines. Refusing them now
         // would be refusing every project saved by an earlier build.
-        if (c.kind[e] != 0 && c.kind[e] != core::kPolylineKind && c.kind[e] != core::kCircleKind &&
-            c.kind[e] != core::kArcKind && c.kind[e] != core::kPointKind)
-            return err(ErrorCode::Unsupported,
-                       std::string(kErrKind) + ": " + std::to_string(e + 1) + ". nesne " +
-                           std::to_string(c.kind[e]) +
-                           " numaralı nesne türünde; bu yapı bu türü tanımıyor. "
-                           "Dosyayı yazan KentOSCad sürümüne yükseltin.");
+        if (c.kind[e] == core::kNoKind)
+            return err(ErrorCode::ParseError,
+                       std::string(kErrKind) + ": " + std::to_string(e + 1) +
+                           ". nesne 65535 numaralı türde; bu değer 'tür yok' anlamına ayrılmıştır "
+                           "ve hiçbir yazıcı onu yazmaz. Dosya bozuk.");
 
         // model.md R3: a key above 2^63-1 becomes negative the moment it is
         // journalled, so it can never be allowed in from a file.
@@ -734,6 +790,83 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             if (auto st = tx.add_guide(parsed_axes[g], parsed_coords[g]); !st) return st.error();
     }
 
+    // ---- block definitions (model.md R45), before the entities they own ----
+    //
+    // A member is created INSIDE its block (`add_kind`'s `in_block`), so the
+    // membership is read first and looked up per entity by key. The member and
+    // use columns are empty — and therefore absent, as every empty column is —
+    // for a file whose blocks have none; only the records column says whether
+    // blocks exist at all.
+    std::vector<std::pair<std::uint64_t, core::BlockId>> block_of_key; // sorted by key
+    if (view.has(kBlkBlocks)) {
+        auto records = view.column<BlockRecord>(kBlkBlocks, view.count_of(kBlkBlocks), "bloklar");
+        if (!records) return records.error();
+        auto members = view.column<std::uint64_t>(kBlkBlockMembers, view.count_of(kBlkBlockMembers),
+                                                  "blok üyeleri");
+        if (!members) return members.error();
+        auto uses = view.column<std::uint32_t>(kBlkBlockUses, view.count_of(kBlkBlockUses),
+                                               "blok kullanımları");
+        if (!uses) return uses.error();
+
+        const std::uint64_t member_total = members.value().size();
+        const std::uint64_t use_total    = uses.value().size();
+        for (std::size_t b = 0; b < records.value().size(); ++b) {
+            const BlockRecord& r = records.value()[b];
+            if (r.first_member > member_total || r.member_count > member_total - r.first_member ||
+                r.first_use > use_total || r.use_count > use_total - r.first_use)
+                return err(ErrorCode::ParseError,
+                           std::string(kErrConsist) + ": " + std::to_string(b + 1) +
+                               ". blok üye ya da kullanım aralığı sütunun dışına taşıyor. "
+                               "Dosya bozuk.");
+            auto name = strings.at(r.name_string, "blok adı");
+            if (!name) return name.error();
+            std::string description;
+            if (r.desc_string != 0) {
+                auto d = strings.at(r.desc_string, "blok açıklaması");
+                if (!d) return d.error();
+                description = d.value();
+            }
+            auto id = tx.add_block(name.value(), description, core::Point2{r.base_x, r.base_y});
+            if (!id)
+                return err(id.error().code,
+                           std::to_string(b + 1) + ". blok okunamadı: " + id.error().message);
+            if (id.value() != static_cast<core::BlockId>(b))
+                return err(ErrorCode::ParseError,
+                           std::string(kErrConsist) + ": " + std::to_string(b + 1) + ". blok " +
+                               std::to_string(id.value()) + ". kimliğe düştü. Dosya bozuk.");
+            for (std::uint32_t m = 0; m < r.member_count; ++m)
+                block_of_key.emplace_back(members.value()[r.first_member + m], id.value());
+        }
+        std::sort(block_of_key.begin(), block_of_key.end());
+        for (std::size_t i = 1; i < block_of_key.size(); ++i)
+            if (block_of_key[i].first == block_of_key[i - 1].first)
+                return err(ErrorCode::ParseError,
+                           std::string(kErrConsist) + ": " + std::to_string(block_of_key[i].first) +
+                               " anahtarlı nesne iki bloğun üyesi görünüyor. Dosya bozuk.");
+        // Uses are restored after the entities, once every block exists.
+        for (std::size_t b = 0; b < records.value().size(); ++b) {
+            const BlockRecord& r = records.value()[b];
+            for (std::uint32_t u = 0; u < r.use_count; ++u) {
+                const std::uint32_t used = uses.value()[r.first_use + u];
+                if (used >= records.value().size())
+                    return err(ErrorCode::ParseError,
+                               std::string(kErrConsist) + ": " + std::to_string(b + 1) + ". blok " +
+                                   std::to_string(used) +
+                                   ". bloğu kullanıyor, dosyada o kadar blok yok. Dosya bozuk.");
+                if (auto st = tx.add_block_use(static_cast<core::BlockId>(b), used); !st)
+                    return err(st.error().code,
+                               std::to_string(b + 1) + ". blok okunamadı: " + st.error().message);
+            }
+        }
+    }
+    const auto block_of = [&block_of_key](std::uint64_t key) {
+        const auto at = std::lower_bound(block_of_key.begin(), block_of_key.end(), key,
+                                         [](const std::pair<std::uint64_t, core::BlockId>& p,
+                                            std::uint64_t k) { return p.first < k; });
+        return at != block_of_key.end() && at->first == key ? at->second : core::kNoBlock;
+    };
+    std::size_t members_seen = 0;
+
     // ---- entities ----
     std::vector<core::Point2> points;
     std::vector<core::RingGeometry::RingInput> rings;
@@ -793,39 +926,24 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         // guessing from the geometry would silently turn every saved circle into a
         // line pointing east (see `core.circle`).
         //
-        // A single Open ring is otherwise a polyline and anything else is a face.
-        // Both land in Document::add_area, which owns every geometric rule
-        // (model.md R9–R12) — the reader restates none of them.
-        core::Result<core::EntityId> added = core::err(core::ErrorCode::Internal, "");
-        if (cols.kind[static_cast<std::size_t>(e)] == core::kCircleKind) {
-            const auto pts = rings.front().points;
-            if (total != 1 || pts.size() != 2)
-                return err(ErrorCode::ParseError,
-                           std::string(kErrKind) + ": " + std::to_string(e + 1) +
-                               ". nesne daire olarak işaretli ama merkez ve yarıçapı taşıyan iki "
-                               "tepe noktası yok. Dosya bozuk.");
-            added = tx.add_circle(layer_slot, pts[0], pts[1].x - pts[0].x);
-        } else if (cols.kind[static_cast<std::size_t>(e)] == core::kArcKind) {
-            const auto pts = rings.front().points;
-            if (total != 1 || pts.size() != 4)
-                return err(ErrorCode::ParseError,
-                           std::string(kErrKind) + ": " + std::to_string(e + 1) +
-                               ". nesne yay olarak işaretli ama merkezi, yarıçapı ve iki ucunu "
-                               "taşıyan dört tepe noktası yok. Dosya bozuk.");
-            added = tx.add_arc(layer_slot, pts[0], pts[1].x - pts[0].x, pts[2], pts[3]);
-        } else if (cols.kind[static_cast<std::size_t>(e)] == core::kPointKind) {
-            const auto pts = rings.front().points;
-            if (total != 1 || pts.size() != 1)
-                return err(ErrorCode::ParseError,
-                           std::string(kErrKind) + ": " + std::to_string(e + 1) +
-                               ". nesne nokta olarak işaretli ama tek bir tepe noktası yok. "
-                               "Dosya bozuk.");
-            added = tx.add_point(layer_slot, pts[0]);
-        } else {
-            added = (total == 1 && rings.front().role == core::RingRole::Open)
-                        ? tx.add_polyline(layer_slot, rings.front().points)
-                        : tx.add_area(layer_slot, rings);
+        // ONE road for every kind: `add_kind` runs the kind's own `validate` (a
+        // circle wants its centre and a handle due east, an ellipse two axes…),
+        // so the reader restates none of those rules — and a kind this build does
+        // not know goes through the same door, rings and payload as written
+        // (model.md R26). Zero means `core.polyline` for the reason given above.
+        const auto declared = cols.kind[static_cast<std::size_t>(e)];
+        const core::KindId kind =
+            declared == 0 ? core::kPolylineKind : static_cast<core::KindId>(declared);
+        std::span<const std::uint8_t> payload;
+        if (cols.has_payload && cols.payload_ref[slot] != core::kNoPayload) {
+            const std::uint32_t ref = cols.payload_ref[slot];
+            payload = std::span<const std::uint8_t>(cols.payload.data() + cols.payload_start[ref],
+                                                    cols.payload_bytes[ref]);
         }
+        const core::BlockId in_block = block_of(cols.key[static_cast<std::size_t>(e)]);
+        if (in_block != core::kNoBlock) ++members_seen;
+        core::Result<core::EntityId> added =
+            tx.add_kind(layer_slot, kind, rings, payload, in_block);
         if (!added)
             return err(added.error().code,
                        std::to_string(e + 1) + ". nesne okunamadı: " + added.error().message);
@@ -853,6 +971,57 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             if (auto st = tx.set_entity_hidden(id, true); !st) return st.error();
         if ((flags & core::FlagAlive) == 0)
             if (auto st = tx.erase_entity(id); !st) return st.error();
+    }
+
+    if (members_seen != block_of_key.size())
+        return err(ErrorCode::ParseError,
+                   std::string(kErrConsist) + ": blok üye listeleri " +
+                       std::to_string(block_of_key.size()) + " anahtar sayıyor, nesnelerde " +
+                       std::to_string(members_seen) + " bulundu. Dosya bozuk.");
+
+    // ---- foreign data (model.md R26a): both columns or neither ----
+    if (view.has(kBlkForeignBytes) || view.has(kBlkForeignRecords)) {
+        if (!(view.has(kBlkForeignBytes) && view.has(kBlkForeignRecords)))
+            return err(ErrorCode::ParseError,
+                       std::string(kErrConsist) +
+                           ": yabancı veri sütunlarının biri eksik; havuz ve kayıtlar birlikte "
+                           "bulunur. Dosya bozuk.");
+        auto pool_bytes = view.column<std::uint8_t>(
+            kBlkForeignBytes, view.count_of(kBlkForeignBytes), "yabancı veri havuzu");
+        if (!pool_bytes) return pool_bytes.error();
+        auto rows = view.column<ForeignRecord>(
+            kBlkForeignRecords, view.count_of(kBlkForeignRecords), "yabancı veri kayıtları");
+        if (!rows) return rows.error();
+
+        // Slot -> entity, for a file whose slots and entities agree (they do
+        // after the loop above, which checked every id).
+        std::vector<core::EntityId> entity_of_slot(static_cast<std::size_t>(dr.slot_count),
+                                                   core::kNoEntity);
+        for (std::uint64_t e = 0; e < dr.entity_count; ++e)
+            entity_of_slot[cols.slot[static_cast<std::size_t>(e)]] = static_cast<core::EntityId>(e);
+
+        const std::uint64_t pool_size = pool_bytes.value().size();
+        for (std::size_t i = 0; i < rows.value().size(); ++i) {
+            const ForeignRecord& r = rows.value()[i];
+            if (r.slot >= dr.slot_count || entity_of_slot[r.slot] == core::kNoEntity)
+                return err(ErrorCode::ParseError,
+                           std::string(kErrConsist) + ": " + std::to_string(i + 1) +
+                               ". yabancı veri kaydı hiçbir nesnenin olmayan " +
+                               std::to_string(r.slot) + ". yuvaya bakıyor. Dosya bozuk.");
+            if (r.offset > pool_size || r.bytes > pool_size - r.offset)
+                return err(ErrorCode::ParseError,
+                           std::string(kErrConsist) + ": " + std::to_string(i + 1) +
+                               ". yabancı veri kaydı havuzun dışına taşıyor. Dosya bozuk.");
+            auto tag = strings.at(r.tag_string, "yabancı veri etiketi");
+            if (!tag) return tag.error();
+            if (auto st = tx.attach_foreign(
+                    entity_of_slot[r.slot], tag.value(),
+                    std::span<const std::uint8_t>(pool_bytes.value().data() + r.offset, r.bytes));
+                !st)
+                return err(st.error().code,
+                           std::to_string(i + 1) +
+                               ". yabancı veri kaydı okunamadı: " + st.error().message);
+        }
     }
 
     // ---- deferred layer locks ----

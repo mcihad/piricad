@@ -12,7 +12,7 @@ Kendi proje dosyanız için: [KentOSCad proje dosyası](proje-dosyasi.md).
 
 | Biçim | Uzantı | Okuma | Yazma |
 |---|---|---|---|
-| AutoCAD DXF | `.dxf` | evet | evet |
+| AutoCAD DXF | `.dxf` | evet² | evet² |
 | AutoCAD DWG | `.dwg` | evet¹ | **hayır** — aşağıya bakın |
 | ESRI Shapefile | `.shp` | evet | **hayır** — aşağıya bakın |
 | OGC GeoPackage | `.gpkg` | evet | evet |
@@ -23,6 +23,13 @@ sürümde altı nesne türünü tanır ve derlemesi kendi uyarılarını taşır
 (`KENTOS_FETCH_DEPENDENCIES=OFF`) kaynak indirilemediği için açılamaz. Kapalıyken
 bir `.dwg` açmaya çalışmak ne yapmanız gerektiğini yazan bir hata verir; içe
 aktarma penceresi de DWG yerine DXF kaydedip getirmenizi söyler.
+
+² DXF **libdxfrw** ile okunur ve yazılır (`KENTOS_WITH_DXFRW`, kaynak indirilebilen
+her yapıda açık gelir). libdxfrw dosyayı grup kodu düzeyinde okur: daire daire, yay yay,
+elips elips, blok referansı açılmış üyeleriyle, XDATA baytıyla gelir; yazarken de her
+tür kendi DXF varlığı olarak gider. Kütüphane kapalıysa (`-DKENTOS_WITH_DXFRW=OFF`)
+DXF GDAL'ın sürücüsüyle okunur ve yazılır; o yol eğrileri parçalar, blokları ve
+XDATA'yı düşürür ve bunu transkriptte söyler.
 
 ### DWG okunur, yazılmaz
 
@@ -64,8 +71,9 @@ parsel sınırlarının tamamı bu türde olabilir — 48 MB'lık örnek çizimd
 `POLYLINE`'a karşılık tek bir `LWPOLYLINE` bile yok.
 
 Daire ve yay her iki yolda da **gerçek daire ve yay** olarak gelir. DWG yolunda
-LibreDWG onları zaten öyle verir; DXF yolunda GDAL çizgi parçalarına böler ve
-KentOSCad merkezle yarıçapı geri kurar — nasıl olduğu aşağıda.
+LibreDWG onları öyle verir; DXF yolunda libdxfrw da öyle verir. Yalnız libdxfrw
+kapalı derlenmiş bir yapıda GDAL çizgi parçalarına böler ve KentOSCad merkezle
+yarıçapı geri kurar — nasıl olduğu aşağıda.
 
 ### Shapefile dört dosyadır
 
@@ -105,6 +113,7 @@ sayfada bir satırı ile birlikte gelir.
 
 | Biçim | Ne zaman | Neden şimdi değil |
 |---|---|---|
+| DXF çizgi tipleri (LTYPE), tarama ailelerinin kesik dizisi, yaylı ve spline kenarlı tarama sınırı | Faz 2 | Çizgi tipi ve kesikler düz çizilir ve söylenir; eğri sınırlar çizgi parçalarına bölünür |
 | DWG (okuma) | Faz 2 | Önce 50+ gerçek dosyalık bir kapsam raporu çıkarılacak; hangi varlık türlerinin ne oranda okunduğu ölçülmeden açılmayacak |
 | DWG (yazma) | Planlanmıyor | DWG çıktısı DXF dışa aktarıp dönüştürerek üretilir |
 | PlanGML | Faz 2 | Yazmadan önce XSD ile yerinde doğrulanması gerekiyor; e-Plan yüklemesinde reddedilen bir dosya üretmek kabul edilemez |
@@ -156,8 +165,9 @@ değil. Bu yüzden:
 
 - **Dışa aktarırken** KentOSCad `.dxf` ile birlikte bir `.prj` dosyası yazar ve size
   söyler. Çizimi taşırken **iki dosyayı da götürün**.
-- **İçe aktarırken** KentOSCad aynı adlı `.prj` dosyasını arar. Yoksa dosyayı
-  reddeder ve `.prj` koymanızı ister.
+- **İçe aktarırken** KentOSCad aynı adlı `.prj` dosyasını arar. Yoksa çizimin
+  kendi sistemini varsayar ve bunu transkriptte açıkça söyler; koordinatlardan
+  bölge tahmin etmez.
 
 `.prj`, ülkedeki her CBS yazılımının anladığı ESRI biçiminde yazılır.
 
@@ -173,14 +183,24 @@ AYAR koordinat_sistemi EPSG:5254
 
 ## Ne aktarılır, ne aktarılmaz
 
-| Aktarılan | Aktarılmayan |
+| Aktarılan | Eksik alınan ya da alınmayan (her biri transkriptte söylenir) |
 |---|---|
-| Çizgi ve alan geometrisi, milimetre hassasiyetiyle | Öznitelikler — belge modeli öznitelik sütunlarını Faz 1'de kazanacak |
-| **Ölçülmüş noktalar** — nirengi, poligon noktası, röper | Katman rengi, çizgi tipi, ölçek sınırları |
-| **Yazılar**, yüksekliği ve **açısıyla** birlikte | Nesne başına stil |
-| Katman adları | Nesne ve katman anahtarları |
-| Boşluklu ve çok parçalı alanlar | Yazı tipi |
-| Koordinat sistemi | |
+| Çizgi ve alan geometrisi, milimetre hassasiyetiyle | Çizgi tipi (LTYPE): bu sürümde uygulanmaz, çizgiler düz; söylenir |
+| **Ölçülmüş noktalar** — nirengi, poligon noktası, röper | Yazı tipi; yazının üst/orta hizaları en yakın desteklenen hizaya çevrilir |
+| **Yazılar**, yüksekliği, **açısı** ve hizasıyla birlikte; MTEXT biçim kodları soyulur | Yalnız uydurma noktası taşıyan spline: uydurma noktaları kontrol noktası sayılır, `düşürme:` ile söylenir |
+| **Daire, yay, elips ve kısmi elips** — gerçek eğri olarak; GeoPackage'a çokgen olarak gider, geri okunuşta eğri olur | Katalogda olmayan tarama deseni: sınır, ad, açı korunur, desen çizilmez, söylenir |
+| **Yaylı çoklu çizgi** (şişkinlik): her yay merkezi ve yarıçapıyla; **spline**: derece, düğüm, ağırlık | Kenar boyunca değişen çoklu çizgi kalınlığı |
+| **Blok tanımları ve referansları** (`BLOCK`/`INSERT`): yapısıyla, ölçek, açı, ayna, dizi; iç içe | Anonim bloklar (`*D1`…): ölçünün kendi çizgileri, ölçü nesnesi zaten okunduğu için |
+| **Tarama** (`HATCH`): sınır döngüleri, desen adı, açı, ölçek; aileler desen kataloğundan | Tarama sınırındaki yay ve spline kenarlar çizgi parçalarına bölünür |
+| **Ölçü** (`DIMENSION`: hizalı, doğrusal, yarıçap, çap, açısal, ordinat) ve **lider** (`LEADER`) | Ölçü stilinin dosyada olmaması: ISO-25 ölçüleri kullanılır, söylenir |
+| **Katman adı, rengi, kalınlığı**, dondurulmuş/kapalı (görünmez) ve kilitli durumu | |
+| **Nesnenin kendi rengi ve kalınlığı** (ACI ve gerçek renk); blok üyesinde ByBlock. ACI 7 ("beyaz/siyah", zemine uyan renk) siyah okunur, siyah ACI 7 yazılır | |
+| Boşluklu ve çok parçalı alanlar | |
+| Koordinat sistemi (`.prj` yan dosyasından) | Kâğıt alanı (layout), sonsuz doğru, bakış penceresi, raster resim, ağ: okunmaz, sayılır |
+| **Yükseklik (Z)**: sabitse `kot` sütununa; köşeden köşeye değişiyorsa atılır ve söylenir | |
+| **Kaynak tutamağı** (`kaynak_kimlik` sütunu) ve **XDATA** (bayt bayt, `ek_veri`) | |
+| **Öznitelikler** — GeoPackage ve Shapefile'dan (`alanlar=`), GeoPackage'a; DXF'e `KENTOSCAD` XDATA olarak gider ve oradan geri gelir | |
+| Nesne türü ve kalıcı anahtar — GeoPackage'a `tur` ve `anahtar` alanı olarak | |
 
 Bu yüzden **çalışma dosyanız `.pcad` olmalıdır**. DXF ve GeoPackage teslim
 biçimleridir; bir dışa aktarıp geri alma turu çiziminizi olduğu gibi geri
@@ -188,11 +208,59 @@ getirmez.
 
 ### DXF'te kapalı çizgi alandır
 
-DXF'in poligonu yoktur: bir parsel, kapalı bayrağı açık bir `LWPOLYLINE`'dır.
-KentOSCad ilk köşesi sonuncusuyla aynı olan bir çizgiyi **alan** olarak okur —
-yoksa dosyadaki her parsel çizgi olarak gelir, dolgusu olmaz, alanı ölçülemez ve
-[`İFRAZ`](../komutlar/split_parcel.md) ile [`TEVHİT`](../komutlar/merge.md)
-üzerinde çalışamaz.
+DXF'in poligonu yoktur: bir parsel, **kapalı bayrağı** açık bir `LWPOLYLINE` ya da
+`POLYLINE`'dır. KentOSCad kapalılığı dosyanın bayrağından okur (bayrak yoksa, ilk
+köşesi sonuncusuyla aynı olan çizgiyi de kapalı sayar) ve böyle bir çizgiyi
+**alan** olarak alır — yoksa dosyadaki her parsel çizgi olarak gelir, dolgusu
+olmaz, alanı ölçülemez ve [`İFRAZ`](../komutlar/split_parcel.md) ile
+[`TEVHİT`](../komutlar/merge.md) üzerinde çalışamaz. `SOLID`, `TRACE` ve `3DFACE`
+de alan olur.
+
+### DXF nasıl okunur
+
+KentOSCad bir DXF'i **libdxfrw** ile grup kodu düzeyinde okur. Her varlık kendi
+türüyle gelir: `CIRCLE` daire, `ARC` yay (saat yönünün tersine süpürme, dosyadaki
+yön korunarak), `ELLIPSE` elips ya da kısmi elips, `POINT` nokta, `TEXT` ve `MTEXT`
+yazı, `LWPOLYLINE` ve eski usul `POLYLINE` çoklu çizgi, alan ya da — şişkinliği varsa
+— [yaylı çoklu çizgi](../nesneler/yaylicizgi.md), `SPLINE`
+[spline](../nesneler/spline.md), `HATCH` [tarama](../nesneler/tarama.md), `DIMENSION`
+[ölçü](../nesneler/olcu.md), `LEADER` [lider](../nesneler/lider.md). Katmanlar
+rengiyle, kalınlığıyla, dondurulmuş/kapalı ve kilitli durumuyla kurulur; nesnenin
+kendi rengi ve kalınlığı varsa stil olur.
+
+`BLOCKS` bölümündeki her adlı **blok tanımı** çizimin blok tablosuna girer ve üyeleri
+tanımın içinde, kendi koordinatlarıyla okunur; her `INSERT` bir
+[blok referansı](../nesneler/blokreferansi.md) olur: taban noktası, ölçek (eksenlerde
+ayrı ayrı, eksi ölçek ayna), dönme ve dizi (satır/sütun) referansın yükünde durur, iç
+içe bloklar korunur. `0` katmanındaki üye referansın katmanında, rengi **ByBlock** olan
+üye referansın renginde çizilir. Anonim bloklar (`*Model_Space`, `*D1`) okunmaz.
+
+Bir nesnenin **düzlemi** (OCS, `210` grubu) dikkate alınır: kütüphane her noktayı
+çizim düzlemine taşır, aynalı bir düzlemdeki (normal −Z) yayın yönü çevrilir. Eğik
+bir düzlem düzleştirilir ve sayılır.
+
+Her nesnenin dosyadaki **tutamağı** `kaynak_kimlik` sütununa, başka bir programın
+bağladığı **XDATA** bayt bayt yanına yazılır; ikisi de dışa aktarımda geri gider.
+Dosya `$DWGCODEPAGE` bildirmiyorsa uyarı verilir: 2007 öncesi bir dosyada Türkçe
+harfler yanlış çıkabilir. Okuma ayrı iş parçacığında sürer ve **Durdur** ile kesilir.
+
+### DXF birimi (`$INSUNITS`)
+
+Bir DXF ve bir DWG **her zaman** [`AYAR çizim_birimi`](../komutlar/setting.md)
+ayarındaki birimde okunur (milimetre, santimetre ya da metre; varsayılan metre) ve
+koordinatlar milimetreye ölçeklenir. Dosyanın `$INSUNITS` başlığı bu ayarla
+karşılaştırılır: başlık yoksa ya da 0 ise hangi birimin kullanıldığı **not**
+olarak yazılır, başlık ayardan farklı bir şey diyorsa bu bir **uyarı** olur ve
+dosyayı öteki birimde okuyan komut satırı uyarının içindedir. Başlık ayarın yerine
+**geçmez**: başlığı dosyayı son kaydeden program yazar ve Türkiye'deki kadastro ve
+imar DXF'lerinin çoğu sayıları metre iken "milimetre" der. Dışa aktarırken DXF
+aynı ayarın biriminde yazılır ve `$INSUNITS` başlığa işlenir. GeoPackage ve
+Shapefile'ın birimi koordinat sisteminin metresidir.
+
+### Kâğıt alanı okunmaz
+
+DXF ve DWG'nin layout'larındaki antet, pafta çerçevesi ve bakış pencereleri çizim
+değildir; model alanına alınmaz. Kaç öğe atlandığı transkriptte yazılır.
 
 ### Yazı dosyadaki açıyla gelir
 
@@ -208,20 +276,18 @@ istemci dönük olanı da çizer.
 
 ### Daire daire, yay yay olarak gelir
 
-GDAL bir DXF'teki `CIRCLE` ve `ARC` varlığını KentOSCad'e ulaşmadan önce çizgi
-parçalarına böler. Böyle bırakılsa nesne artık daire olmazdı: merkezi, yarıçapı,
-πr² alanı ve merkeze yakalama olmazdı — 48 MB'lık bir kadastro dosyasında 3 874
-daire ve 3 523 yay çokgene dönerdi. AutoCAD ve FreeCAD onları eğri olarak tutar,
-KentOSCad de tutar.
+libdxfrw yolunda `CIRCLE` merkez ve yarıçap, `ARC` merkez, yarıçap ve iki uç olarak
+okunur; parçalama yoktur. 48 MB'lık Suşehri kadastro dosyasındaki 3 874 daire ve
+3 523 yay bu yüzden daire ve yaydır: merkezleri, yarıçapları, πr² alanları ve
+merkeze yakalamaları vardır.
 
-Nesnenin **ne olduğu dosyadan okunur**, şekle bakılarak tahmin edilmez: DXF her
-varlığın kendi sınıf zincirini yazar (`AcDbEntity:AcDbCircle`). Yalnızca
-**sayılar** — merkez ve yarıçap — parçalanmış noktalardan geri kurulur, ve
-kurulan çember dosyadaki her noktaya milimetre içinde uymuyorsa kabul edilmez;
-o zaman çoklu çizgi olarak kalır. Yani bir haritacının elle çizdiği 64 kenarlı
-çokgen çokgen kalır, daireye dönüşmez.
-
-Yayın hangi yöne süpürdüğü de dosyadan değil, parçalanmanın kendisinden okunur.
+libdxfrw kapalı derlenmiş bir yapıda GDAL yolu devreye girer ve GDAL eğriyi çizgi
+parçalarına böler. O yolda nesnenin **ne olduğu dosyadan okunur**, şekle bakılarak
+tahmin edilmez (`AcDbEntity:AcDbCircle` sınıf zinciri); yalnızca **sayılar** —
+merkez ve yarıçap — parçalanmış noktalardan bütün köşelerin en küçük kareler
+uydurmasıyla geri kurulur ve kurulan çember dosyadaki her noktaya 1,5 mm içinde
+uymuyorsa kabul edilmez, nesne çoklu çizgi kalır. Bir haritacının elle çizdiği 64
+kenarlı çokgen çokgen kalır, daireye dönüşmez.
 
 Desteklenmeyen bir geometri türüyle karşılaşılırsa o öğe atlanır ve kaç tanesinin
 atlandığı transkriptte söylenir. Sessizce düşürülmez.

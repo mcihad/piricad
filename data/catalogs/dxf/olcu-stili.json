@@ -1,0 +1,20 @@
+{
+ "schema_version": 1,
+ "package_version": "1.0.0",
+ "id": "olcu-stili",
+ "source": "ISO 129-1 teknik çizim ölçülendirme kuralları ve AutoCAD ISO-25 / STANDARD varsayılanları; yönetmelik değeri değildir",
+ "published": "2026-09-09",
+ "licence": "GPL-3.0-or-later",
+ "aciklama": "ÖLÇÜ ve LİDER komutlarının ok, uzatma çizgisi ve yazı ölçüleri, KÂĞIT mikrometresi (model.md R20). Komut bunları AYAR plan_ölçeği ile zemine indirir: 2500 µm ok 1/1000 paftada 2,5 m'dir.",
+ "stiller": [
+  { "id": "ISO-25", "aciklama": "ISO metrik varsayılan: kapalı ok 2,5 mm, uzatma fazlası 1,25 mm, iki ondalık, virgül",
+    "ok": "kapali", "ok_boyu_um": 2500, "uzatma_fazlasi_um": 1250, "uzatma_boslugu_um": 625,
+    "yazi_boslugu_um": 625, "yazi_yuksekligi_um": 2500, "ondalik": 2, "ondalik_ayraci": "," },
+  { "id": "STANDARD", "aciklama": "AutoCAD STANDARD: kapalı ok 1,8 mm, dört ondalık, nokta",
+    "ok": "kapali", "ok_boyu_um": 1800, "uzatma_fazlasi_um": 1800, "uzatma_boslugu_um": 625,
+    "yazi_boslugu_um": 900, "yazi_yuksekligi_um": 1800, "ondalik": 4, "ondalik_ayraci": "." },
+  { "id": "MIMARI", "aciklama": "Mimari çizgi ucu: 45° çentik, iki ondalık, virgül",
+    "ok": "centik", "ok_boyu_um": 2000, "uzatma_fazlasi_um": 1500, "uzatma_boslugu_um": 1000,
+    "yazi_boslugu_um": 800, "yazi_yuksekligi_um": 2500, "ondalik": 2, "ondalik_ayraci": "," }
+ ]
+}

@@ -381,7 +381,7 @@ core::Result<DispatchResult> Bus::execute_line(std::string_view line, Origin ori
     return dispatch(Invocation{spec->id, std::move(args.value()), origin});
 }
 
-core::Result<std::unique_ptr<Session>> Bus::begin_interactive(std::string_view line)
+core::Result<std::unique_ptr<Session>> Bus::begin_interactive(std::string_view line, Origin origin)
 {
     // THE SAME PARSER THE TYPED LINE GOES THROUGH (CLAUDE.md 5.11). A bare name
     // parses to itself with no tokens, so every existing caller is unchanged; a
@@ -403,8 +403,11 @@ core::Result<std::unique_ptr<Session>> Bus::begin_interactive(std::string_view l
 
     auto tx = std::make_unique<Transaction>(doc_, spec->summary.empty() ? spec->id : spec->summary);
     auto session = std::make_unique<Session>(
-        *this, *spec, std::make_unique<InteractiveInputSource>(std::move(args.value())),
+        *this, *spec, std::make_unique<InteractiveInputSource>(std::move(args.value()), origin),
         std::move(tx));
+    // The caller keeps this session and resumes it later, so a job it awaits may
+    // be hosted (job.hpp). `dispatch` never sets this: it finishes in one call.
+    session->set_client_driven(true);
     session->start();
     return session;
 }
@@ -424,6 +427,15 @@ core::Result<DispatchResult> Bus::run_to_completion(Session& session)
 core::Result<DispatchResult> Bus::finish(Session& session)
 {
     const CommandSpec& spec = session.spec();
+
+    // A worker still owns part of this command. Finishing now would commit a
+    // transaction the read has not yet filled; the host finishes it when the
+    // job returns.
+    if (session.state() == SessionState::Working)
+        return core::err(ErrorCode::InvalidArgument,
+                         "'" + spec.id +
+                             "' komutu hâlâ çalışıyor; bitmesini bekleyin ya da "
+                             "durdurun.");
 
     if (session.state() == SessionState::Failed) {
         session.transaction().rollback();

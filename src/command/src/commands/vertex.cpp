@@ -17,11 +17,16 @@
 // off the same drawing the program numbered, and a surveyor counting corners on a
 // parsel starts at one. Ring-and-offset is what this converts to internally, and
 // it never reaches a command line or a journal line.
+#include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/dimension.hpp"
 #include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/grips.hpp"
+#include "kentos_cad/core/identity.hpp"
+#include "kentos_cad/core/units.hpp"
 
 #include <cstdint>
 #include <string>
@@ -134,7 +139,11 @@ bool single_id(const Value& v, std::int64_t& out, std::size_t& count)
 /// meaningful only inside one in-memory document and a journalled slot replays
 /// onto whatever entity holds that index next — in a cadastral drawing, the
 /// neighbouring parsel (model.md R5, P4).
-bool resolve_entity(Context& ctx, core::EntityId& out)
+///
+/// `corners_only` is what KÖŞEEKLE asks: a new corner can only go into a
+/// polyline, because every other kind's vertices are a DEFINITION and one more
+/// of them would leave a record that is no longer that kind.
+bool resolve_entity(Context& ctx, core::EntityId& out, bool corners_only)
 {
     const Value given = ctx.argument("nesne");
     if (given.empty()) {
@@ -160,20 +169,87 @@ bool resolve_entity(Context& ctx, core::EntityId& out)
         return false;
     }
 
-    // A CURVE HAS NO CORNERS. Its stored vertices are its definition — a circle's
-    // are a centre and a radius handle, an arc's add the two ends — not a
-    // boundary. Dragging one as if it were a corner would silently move the
-    // centre or resize the curve, and inserting another would leave a record that
-    // is no longer a curve at all (core/circle.hpp, core/arc.hpp).
-    if (ctx.document().entities().kind[slot] != core::kPolylineKind) {
+    if (auto st = ctx.document().editable(slot); !st) {
+        ctx.echo(st.error().message);
+        return false;
+    }
+
+    // A CURVE HAS NO CORNERS TO ADD. Its stored vertices are its definition — a
+    // circle's are a centre and a radius handle, an arc's add the two ends — and
+    // one more would leave a record that is no longer a curve at all. Moving one
+    // is another matter: every kind names its grips (core/grips.hpp).
+    if (corners_only && ctx.document().entities().kind[slot] != core::kPolylineKind) {
         ctx.echo("Nesne " + std::to_string(id) +
-                 " bir eğri; eğrinin köşesi yoktur. Ölçüsünü değiştirmek için silip "
-                 "yeniden çizin.");
+                 " bir eğri; eğrinin arasına köşe eklenemez. Tutamaklarını KÖŞETAŞI ile "
+                 "taşıyabilirsiniz.");
         return false;
     }
 
     out = slot;
     return true;
+}
+
+core::DrawingUnit drawing_unit(Context& ctx)
+{
+    return core::drawing_unit_from_setting(
+        ctx.session().bus().project_settings().get("core.cizim.birim").as_enum());
+}
+
+/// KÖŞETAŞI for every kind but the polyline: the grip table says what moving
+/// grip `corner` means, and a dimension's caption is re-said afterwards.
+Task<void> move_grip_of(Context& ctx, core::EntityId slot, std::int64_t corner)
+{
+    const auto grips = core::entity_grips(ctx.document(), slot);
+    if (corner < 1 || static_cast<std::size_t>(corner) > grips.size()) {
+        ctx.echo("Bu nesnenin " + std::to_string(corner) + ". tutamağı yok; " +
+                 std::to_string(grips.size()) + " tutamağı var.");
+        co_return;
+    }
+    const auto index        = static_cast<std::size_t>(corner - 1);
+    const core::Point2 from = grips[index].at;
+
+    auto to = co_await ctx.point("nokta", "Tutamağın yeni yeri",
+                                 PointOptions{.rubber_band = true, .rubber_origin = from});
+    if (!to) co_return;
+
+    auto edit = core::move_grip(ctx.document(), slot, index, *to);
+    if (!edit) {
+        ctx.echo(edit.error().message);
+        co_return;
+    }
+    core::GripEdit& g = edit.value();
+
+    // A dimension says a number; a moved definition point changes it, and the
+    // caption is re-laid for the new text in the drawing's unit.
+    std::string text;
+    core::Mm height = 0;
+    if (ctx.document().entities().kind[slot] == core::kDimensionKind && g.caption_centre) {
+        if (auto def = core::decode_dimension(g.payload)) {
+            height          = ctx.document().texts().height(ctx.document().entities().slot[slot]);
+            text            = core::dimension_text(def.value(), drawing_unit(ctx));
+            const auto base = core::dimension_baseline(*g.caption_centre, g.caption_dir_x,
+                                                       g.caption_dir_y, height, text);
+            g.points[0]     = {base[0], base[1]};
+        }
+    }
+
+    const auto inputs = g.inputs();
+    if (auto st = ctx.transaction().set_kind_geometry(slot, inputs, g.payload); !st) {
+        ctx.echo(st.error().message);
+        co_return;
+    }
+    if (!text.empty()) {
+        if (auto st =
+                ctx.transaction().set_text(slot, text, height, core::TextAnchor::MiddleCentre);
+            !st) {
+            ctx.echo(st.error().message);
+            co_return;
+        }
+    }
+
+    ctx.record("nesne", ctx.argument("nesne"));
+    ctx.record("kose", Value::integer(corner));
+    ctx.record("nokta", Value::point(*to));
 }
 
 /// The `kose` argument, or a message naming what was wrong with it. ASCII in the
@@ -198,10 +274,15 @@ bool resolve_corner(Context& ctx, std::int64_t& out)
 Task<void> run_move(Context& ctx)
 {
     core::EntityId slot = core::kNoEntity;
-    if (!resolve_entity(ctx, slot)) co_return;
+    if (!resolve_entity(ctx, slot, false)) co_return;
 
     std::int64_t corner = 0;
     if (!resolve_corner(ctx, corner)) co_return;
+
+    if (ctx.document().entities().kind[slot] != core::kPolylineKind) {
+        co_await move_grip_of(ctx, slot, corner);
+        co_return;
+    }
 
     Rings rings       = read_rings(ctx.document(), slot);
     const Where where = locate(rings, corner);
@@ -240,7 +321,7 @@ Task<void> run_move(Context& ctx)
 Task<void> run_insert(Context& ctx)
 {
     core::EntityId slot = core::kNoEntity;
-    if (!resolve_entity(ctx, slot)) co_return;
+    if (!resolve_entity(ctx, slot, true)) co_return;
 
     std::int64_t corner = 0;
     if (!resolve_corner(ctx, corner)) co_return;
@@ -308,7 +389,7 @@ KENTOS_COMMAND(vertex_move)
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Bir nesnenin köşesini yeni bir yere taşır.",
+        .summary = "Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.",
         .run     = &run_move,
     };
 }

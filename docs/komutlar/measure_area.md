@@ -36,13 +36,13 @@ ALANÖLÇ
 ALANÖLÇ nesneler=<k1> nesneler=<k2> …
 ```
 
-Kimlik verilmezse **etkin seçim** ölçülür.
+Kimlik verilmezse **etkin seçim** ölçülür; o da boşsa arayüz nesneleri sorar.
 
 ## Parametreler
 
 | Parametre | Ne yapar |
 |---|---|
-| `nesneler` | Ölçülecek nesnelerin kimlikleri. Verilmezse etkin seçim |
+| `nesneler` | Ölçülecek nesnelerin kimlikleri. Verilmezse etkin seçim; o da boşsa tuvalden seçtirir |
 
 ## Örnekler
 
@@ -65,7 +65,11 @@ ALANÖLÇ nesneler=1 nesneler=2 nesneler=3
 
 ### Arayüz
 
-Nesneleri seçin ve komut satırına `ALANÖLÇ` yazın. Sonuç transkripte düşer.
+Araç kutusunda **Uzunluk Ölç** ailesinden **Alan Ölç**'e basın. Seçili nesne varsa
+hemen ölçülür; yoksa komut "Ölçülecek nesneleri seçin" der, tuvalden tıkladığınız
+her nesne seçime eklenir ve **sağ tık** (ya da Enter) ölçtürür. Sonuç transkripte
+düşer ve araç elinizde kalır: seçim temizlenir, sıradaki parsel için yeniden sorar.
+Bırakmak için Esc.
 
 ### Betik
 
@@ -90,7 +94,7 @@ diye bir şey olmayabilir.
 
 | Mesaj | Sebebi | Çözümü |
 |---|---|---|
-| `Ölçülecek nesne belirtilmedi ve seçim boş. Örnek: ALANÖLÇ nesneler=1` | Ne kimlik verildi ne seçim var | Nesneleri seçin ya da kimliklerini yazın |
+| `İşlem yapılacak nesne yok: seçim boş ve 'nesneler' verilmedi.` | Ne kimlik verildi ne seçim var, tuvalde de seçilmedi | Nesneleri seçin ya da kimliklerini yazın; örnek satır mesajın altındadır |
 | `Geçersiz nesne kimliği: N. Kimlikler 1'den başlar.` | Sıfır ya da negatif kimlik | Kimlikler 1'den başlar |
 | `Nesne bulunamadı veya silinmiş: N` | Kimlik yok ya da nesne silinmiş | [`SEÇ`](select.md) ile doğru kimliği bulun |
 

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/controller.hpp"
 
+#include "kentos_cad/command/job.hpp"
+
 #include "kentos_cad/command/log.hpp"
 #include "kentos_cad/domain/cadastre/commands.hpp"
 #include "kentos_cad/domain/geodesy/commands.hpp"
@@ -15,7 +17,32 @@
 
 #include <filesystem>
 
+#include <QThread>
+
 namespace kentos::app {
+namespace {
+
+/// The thread a hosted job runs on. It reads the job through the session and
+/// touches nothing else of it; the session is resumed on the GUI thread when
+/// `finished` arrives there (a queued connection, because the signal is emitted
+/// from this thread).
+class JobRunner final : public QThread
+{
+public:
+    JobRunner(command::Session& session, QObject* parent) : QThread(parent), session_(session) {}
+
+protected:
+    void run() override
+    {
+        if (command::Job* job = session_.job(); job != nullptr)
+            job->work(command::JobControl{job->stop.get_token()});
+    }
+
+private:
+    command::Session& session_;
+};
+
+} // namespace
 
 Controller::Controller(QObject* parent)
     : QObject(parent), bus_(document_, registry_, journal_, undo_), files_(bus_), database_(bus_),
@@ -76,6 +103,13 @@ Controller::Controller(QObject* parent)
 
 Controller::~Controller()
 {
+    // A worker still reading would write into a frame the session is about to
+    // free: stop it and wait, then let the session go.
+    if (jobThread_ != nullptr) {
+        if (session_) session_->cancel();
+        jobThread_->wait();
+        jobThread_ = nullptr;
+    }
     session_.reset();
     journal_.close_sink();
 }
@@ -91,7 +125,8 @@ void Controller::wireBus()
         refreshSelection();
         emit documentChanged();
     };
-    bus_.on_prompt = [this](const command::Prompt& p) {
+    bus_.on_job_host = [this](command::Session& session) { hostJob(session); };
+    bus_.on_prompt   = [this](const command::Prompt& p) {
         emit promptChanged(QString::fromStdString(p.message));
     };
     bus_.on_selection_changed = [this] {
@@ -141,16 +176,33 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
     // answer is converted to that and handed over. Nothing about which client is
     // asking enters into it (Article 1.2).
     if (session_ && session_->waiting()) {
-        const command::CommandSpec* spec = registry_.resolve(trimmed.toStdString());
+        // THE FIRST WORD DECIDES. A word the registry knows is a COMMAND: a
+        // transparent one (`YAKINLAŞ KAPSAM`) runs beside the waiting command; any
+        // other finishes the waiting one first — the way Enter finishes it — and
+        // then starts on a clean bus. Running the typed command THROUGH the parked
+        // one is what this used to do: `ÇİZGİ 60,0 60,40` typed while ALAN waited
+        // for a corner handed `60,0` to ALAN as its next corner and drew nothing.
+        // A word the registry does not know is an ANSWER: the whole line is the
+        // value the prompt asked for — a coordinate, a number, a caption.
+        auto parsed = command::parse_line(trimmed.toStdString());
+        const command::CommandSpec* spec =
+            parsed ? registry_.resolve(parsed.value().command) : nullptr;
         const bool transparent = spec && has_flag(spec->flags, command::Flags::Transparent);
-        if (!transparent) {
+        if (spec != nullptr && !transparent) {
+            // Picking objects for the waiting command IS its answer, so a
+            // selection command runs beside it (`dispatchSelection`).
+            if (spec->id != "core.select") cancelInteractive();
+        } else if (spec == nullptr) {
             const command::Prompt& asking = session_->prompt();
 
-            auto parsed = command::parse_line(trimmed.toStdString());
-            if (parsed && !parsed.value().tokens.empty() &&
-                command::is_coordinate(parsed.value().tokens.front())) {
+            // The line tokenised as VALUES: the parser takes the first word as a
+            // command, so a stand-in word goes in front and every token that
+            // follows is the answer.
+            auto answer = command::parse_line("YANIT " + trimmed.toStdString());
+            if (answer && !answer.value().tokens.empty() &&
+                command::is_coordinate(answer.value().tokens.front())) {
                 auto pt =
-                    command::resolve_point(parsed.value().tokens.front(), asking.rubber_origin);
+                    command::resolve_point(answer.value().tokens.front(), asking.rubber_origin);
                 if (pt) {
                     supplyPoint(pt.value());
                     return command::DispatchResult{};
@@ -180,6 +232,50 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
             case command::ParamKind::Point:
             case command::ParamKind::PointList:
             case command::ParamKind::Selection: break;
+            }
+        }
+    }
+
+    // A TYPED INTERACTIVE COMMAND STARTS THE WAY A BUTTON STARTS IT. `execute_line`
+    // drives a command to completion in one call, which is right for a script and
+    // a test and wrong for a live user: `İÇEAKTAR` typed with a 48 MB DXF froze
+    // the window for the read, and `ÇİZGİ` typed alone could not prompt for its
+    // points. Through `begin_interactive` the same body prompts, hands its read to
+    // a worker thread, and is recorded with the origin it came from — nothing
+    // else about it changes (Article 1.2). A batch keeps the one-shot road, because
+    // a batch is a script.
+    //
+    // A LINE THAT RUNS STRAIGHT THROUGH STILL ANSWERS SYNCHRONOUSLY: when the
+    // session finishes inside `begin_interactive` — every argument was on the
+    // line and nothing was handed to a worker — it is finished here and its result
+    // returned, exactly as `execute_line` returned it. Only a session that parks,
+    // on a prompt or on a job, is kept.
+    if (!bus_.in_batch() && !session_) {
+        if (auto parsed = command::parse_line(trimmed.toStdString()); parsed) {
+            const command::CommandSpec* spec = registry_.resolve(parsed.value().command);
+            if (spec != nullptr && has_flag(spec->flags, command::Flags::Interactive) &&
+                !spec->params.empty()) {
+                auto started = bus_.begin_interactive(trimmed.toStdString(), origin);
+                if (!started) {
+                    emit echoed(
+                        tr("Hata: %1").arg(QString::fromStdString(started.error().message)));
+                    settle();
+                    return started.error();
+                }
+                session_ = std::move(started.value());
+                if (!session_->finished()) {
+                    settleSession();
+                    return command::DispatchResult{};
+                }
+                auto done = bus_.finish(*session_);
+                session_.reset();
+                if (!done) {
+                    emit echoed(tr("Hata: %1").arg(QString::fromStdString(done.error().message)));
+                } else if (!done.value().message.empty()) {
+                    emit echoed(QString::fromStdString(done.value().message));
+                }
+                settle();
+                return done;
             }
         }
     }
@@ -278,27 +374,90 @@ void Controller::supplyNumber(double value)
     supplyValue(command::Value::number(value));
 }
 
-void Controller::beginInteractive(const QString& line)
+void Controller::beginInteractive(const QString& line, command::Origin origin)
 {
+    // A command whose job is still running cannot be replaced: its worker owns
+    // the read. The user stops it first (Durdur), or waits.
+    if (session_ && session_->working()) {
+        emit echoed(tr("Bir komut hâlâ çalışıyor: %1. Bitmesini bekleyin ya da Durdur.")
+                        .arg(QString::fromStdString(session_->spec().id)));
+        return;
+    }
     cancelInteractive();
 
-    auto started = bus_.begin_interactive(line.toStdString());
+    auto started = bus_.begin_interactive(line.toStdString(), origin);
     if (!started) {
         emit echoed(tr("Hata: %1").arg(QString::fromStdString(started.error().message)));
         return;
     }
 
     session_ = std::move(started.value());
-    if (session_->waiting()) {
-        emit promptChanged(QString::fromStdString(session_->prompt().message));
-    } else {
-        auto done = bus_.finish(*session_);
-        if (!done) emit echoed(tr("Hata: %1").arg(QString::fromStdString(done.error().message)));
+    settleSession();
+}
+
+void Controller::settleSession()
+{
+    if (!session_) return;
+
+    // Parked on a job: the host resumes it, and `onJobFinished` comes back here.
+    if (session_->working()) {
+        emit promptChanged(QString());
+        settle();
+        return;
+    }
+
+    if (session_->finished()) {
+        // Read BEFORE `finish`, which is free to reset what the session holds.
+        const QString id = QString::fromStdString(session_->spec().id);
+
+        auto done    = bus_.finish(*session_);
+        bool mutated = false;
+        if (!done) {
+            emit echoed(tr("Hata: %1").arg(QString::fromStdString(done.error().message)));
+        } else {
+            mutated = done.value().mutated;
+            if (!done.value().message.empty())
+                emit echoed(QString::fromStdString(done.value().message));
+        }
+        const bool asked = asked_;
+        asked_           = false;
         session_.reset();
         emit promptChanged(QString());
+        emit interactiveFinished(id, mutated, !asked);
+    } else if (session_->waiting()) {
+        asked_ = true;
+        emit promptChanged(QString::fromStdString(session_->prompt().message));
     }
+
     settle();
     emit documentChanged();
+}
+
+void Controller::hostJob(command::Session& session)
+{
+    // Started from inside `Session::park_job`, before the coroutine has actually
+    // suspended, so nothing here may resume the session: the worker only READS
+    // the job, and `finished` reaches `onJobFinished` through the event loop.
+    auto* runner = new JobRunner(session, this);
+    jobThread_   = runner;
+    connect(runner, &QThread::finished, this, &Controller::onJobFinished);
+    const command::Job* job = session.job();
+    emit jobStarted(job != nullptr ? QString::fromStdString(job->label) : QString());
+    runner->start();
+}
+
+void Controller::onJobFinished()
+{
+    if (jobThread_ != nullptr) {
+        jobThread_->wait();
+        jobThread_->deleteLater();
+        jobThread_ = nullptr;
+    }
+    emit jobFinished();
+
+    if (!session_ || !session_->working()) return;
+    session_->resume_job();
+    settleSession();
 }
 
 bool Controller::awaitingInput() const
@@ -331,33 +490,21 @@ void Controller::supplyValue(command::Value value)
         emit echoed(tr("Hata: %1").arg(QString::fromStdString(st.error().message)));
     }
 
-    if (session_->finished()) {
-        // Read BEFORE `finish`, which is free to reset what the session holds.
-        const QString id = QString::fromStdString(session_->spec().id);
-
-        auto done    = bus_.finish(*session_);
-        bool mutated = false;
-        if (!done) {
-            emit echoed(tr("Hata: %1").arg(QString::fromStdString(done.error().message)));
-        } else {
-            mutated = done.value().mutated;
-            if (!done.value().message.empty())
-                emit echoed(QString::fromStdString(done.value().message));
-        }
-        session_.reset();
-        emit promptChanged(QString());
-        emit interactiveFinished(id, mutated);
-    } else if (session_->waiting()) {
-        emit promptChanged(QString::fromStdString(session_->prompt().message));
-    }
-
-    settle();
-    emit documentChanged();
+    settleSession();
 }
 
 void Controller::cancelInteractive()
 {
     if (!session_) return;
+
+    // DURDUR. The worker owns the read; the stop is requested and the command
+    // finishes — as cancelled, with the document untouched — when the worker
+    // returns and `onJobFinished` resumes it. Nothing is finished here.
+    if (session_->working()) {
+        session_->cancel();
+        emit echoed(tr("Durduruluyor…"));
+        return;
+    }
 
     const QString id = QString::fromStdString(session_->spec().id);
 
@@ -373,11 +520,22 @@ void Controller::cancelInteractive()
     // tool can re-arm without trapping the user in it.
     const bool mutated = done && done.value().mutated;
 
+    // Esc, the select arrow and a new tool DISMISS; the right button FINISHES.
+    // A run that never asked for anything is dismissed too, whatever ended it.
+    const bool dismissed = !finishing_ || !asked_;
+    asked_               = false;
     session_.reset();
     emit promptChanged(QString());
-    emit interactiveFinished(id, mutated);
+    emit interactiveFinished(id, mutated, dismissed);
     settle();
     emit documentChanged();
+}
+
+void Controller::finishInteractive()
+{
+    finishing_ = true;
+    cancelInteractive();
+    finishing_ = false;
 }
 
 QString Controller::currentFile() const

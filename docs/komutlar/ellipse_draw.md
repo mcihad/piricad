@@ -34,7 +34,7 @@ köşeler çıkar (§7.3).
 ## Sözdizimi
 
 ```text
-ELİPS merkez=<sağa>,<yukarı> birinci=<sağa>,<yukarı> ikinci=<sağa>,<yukarı>
+ELİPS merkez=<sağa>,<yukarı> birinci=<sağa>,<yukarı> ikinci=<sağa>,<yukarı> [baslangic=<derece> bitis=<derece>]
 ```
 
 ## Parametreler
@@ -44,6 +44,7 @@ ELİPS merkez=<sağa>,<yukarı> birinci=<sağa>,<yukarı> ikinci=<sağa>,<yukar�
 | `merkez` | Elipsin merkezi |
 | `birinci` | Birinci eksenin ucu |
 | `ikinci` | İkinci eksenin uzaklığı; **birinci eksene dik** ölçülür |
+| `baslangic`, `bitis` | Birlikte verilirse **kısmi elips**: yayın başlangıç ve bitiş açısı, derece, birinci eksenden saat yönünün tersine, elipsin kendi parametresinde |
 
 ## Örnekler
 
@@ -61,6 +62,15 @@ Döndürülmüş:
 ```text
 ELİPS merkez=0,0 birinci=10,10 ikinci=-1,1
 ```
+
+Kısmi — birinci eksenden ikinci eksene çeyrek yay:
+
+```text
+ELİPS merkez=30,0 birinci=40,0 ikinci=30,5 baslangic=0 bitis=90
+```
+
+Açı elipsin **parametresidir**, geometrik açı değil: 90° her zaman ikinci eksenin
+ucudur, elips ne kadar basık olsa da. DXF ve DWG de böyle sayar.
 
 ### Arayüz
 
@@ -98,6 +108,14 @@ bu çalıştırmanın yuvarladığı bir sayıya güvenmez.
 > `İkinci eksen sıfır: üçüncü nokta birinci eksenin üzerinde. Eksene dik bir yer seçin.`
 
 Üçüncü nokta birinci eksenin doğrusu üzerinde; dik bileşeni sıfır.
+
+> `Kısmi elips için baslangic= ve bitis= birlikte verilir (derece).`
+
+Yalnız biri verildi.
+
+> `Başlangıç ve bitiş açısı aynı; tam elips için ikisini de vermeyin.`
+
+Sıfır uzunlukta yay istendi.
 
 ## İlgili
 

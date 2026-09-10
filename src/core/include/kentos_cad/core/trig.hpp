@@ -136,4 +136,131 @@ constexpr SinCos sin_cos_udeg(std::int64_t udeg) noexcept
     }
 }
 
+namespace detail {
+
+/// atan(t) on [0, tan(π/8)] by its Taylor series, twelve terms in fixed Horner
+/// order. At the fold point the next term is below 1e-16, a few ulps.
+constexpr double atan_poly(double t) noexcept
+{
+    const double z = t * t;
+    return t *
+           (1.0 +
+            z * (-3.3333333333333333e-01 +
+                 z * (2.0000000000000000e-01 +
+                      z * (-1.4285714285714285e-01 +
+                           z * (1.1111111111111111e-01 +
+                                z * (-9.0909090909090912e-02 +
+                                     z * (7.6923076923076927e-02 +
+                                          z * (-6.6666666666666666e-02 +
+                                               z * (5.8823529411764705e-02 +
+                                                    z * (-5.2631578947368418e-02 +
+                                                         z * (4.7619047619047616e-02 +
+                                                              z * -4.3478260869565216e-02)))))))))));
+}
+
+/// tan(π/8) = √2 − 1, the fold point of `atan_unit`.
+inline constexpr double kTanEighth = 0.41421356237309503;
+
+/// atan(t) on [0, 1], in radians. Arguments past tan(π/8) are folded through
+/// atan(t) = π/8 + atan((t − c)/(1 + t·c)) with c = tan(π/8), so the series only
+/// ever sees [0, tan(π/16)] where twelve terms carry it to the last bit.
+constexpr double atan_unit(double t) noexcept
+{
+    if (t <= kTanEighth) return atan_poly(t);
+    return kPi / 8.0 + atan_poly((t - kTanEighth) / (1.0 + t * kTanEighth));
+}
+
+} // namespace detail
+
+/// The direction of the vector (dx, dy) in MICRO-DEGREES, counter-clockwise from
+/// due east, in [0, 360°). The zero vector answers 0.
+///
+/// Deterministic on every platform where `std::atan2` is not: the octant is
+/// found by INTEGER comparisons, so the four axes and the four diagonals come
+/// out exact — 90 000 000, never 89 999 999 — and only the residue inside one
+/// octant reaches a polynomial, in one fixed evaluation order. The rounding to a
+/// whole micro-degree happens once, in the first octant, before the exact
+/// integer reflections place the result. Half a micro-degree at ten kilometres
+/// is a tenth of a millimetre, under the storage unit.
+constexpr std::int64_t atan2_udeg(std::int64_t dy, std::int64_t dx) noexcept
+{
+    if (dx == 0 && dy == 0) return 0;
+
+    // Magnitudes as unsigned so INT64_MIN cannot overflow the negation.
+    const std::uint64_t ax =
+        dx < 0 ? 0u - static_cast<std::uint64_t>(dx) : static_cast<std::uint64_t>(dx);
+    const std::uint64_t ay =
+        dy < 0 ? 0u - static_cast<std::uint64_t>(dy) : static_cast<std::uint64_t>(dy);
+
+    // Into the first octant: the smaller over the larger is at most one.
+    const bool steep = ay > ax;
+    const double t   = steep ? static_cast<double>(ax) / static_cast<double>(ay)
+                             : static_cast<double>(ay) / static_cast<double>(ax);
+    const double rad = detail::atan_unit(t);
+
+    // Round ONCE, here, where the angle is at most 45° and never negative. Spelled
+    // out rather than `std::llround`, which is not constexpr.
+    const double udeg_d  = rad * (180.0 * 1000000.0 / kPi);
+    const auto truncated = static_cast<std::int64_t>(udeg_d);
+    const std::int64_t whole =
+        (udeg_d - static_cast<double>(truncated)) >= 0.5 ? truncated + 1 : truncated;
+    const std::int64_t quarter = kUDegFullCircle / 4;
+
+    // Exact reflections back into place.
+    std::int64_t a = steep ? quarter - whole : whole;
+    if (dx < 0) a = 2 * quarter - a;
+    if (dy < 0) a = kUDegFullCircle - a;
+    if (a >= kUDegFullCircle) a -= kUDegFullCircle;
+    return a;
+}
+
+/// `p` turned about `base` by `udeg` counter-clockwise.
+///
+/// A multiple of a quarter turn is an integer swap and negation — exact, so a
+/// block inserted at 90° lands on the millimetre it was drawn on. Anything else
+/// goes through `sin_cos_udeg` and one `mm_round` per coordinate.
+constexpr Point2 rotate_udeg(Point2 p, Point2 base, std::int64_t udeg) noexcept
+{
+    std::int64_t a = udeg % kUDegFullCircle;
+    if (a < 0) a += kUDegFullCircle;
+    const std::int64_t quarter = kUDegFullCircle / 4;
+    const Mm dx                = p.x - base.x;
+    const Mm dy                = p.y - base.y;
+    if (a % quarter == 0) {
+        switch (a / quarter) {
+        case 0: return p;
+        case 1: return Point2{base.x - dy, base.y + dx};
+        case 2: return Point2{base.x - dx, base.y - dy};
+        default: return Point2{base.x + dy, base.y - dx};
+        }
+    }
+    const SinCos t = sin_cos_udeg(a);
+    const auto fx  = static_cast<double>(dx);
+    const auto fy  = static_cast<double>(dy);
+    return Point2{base.x + mm_round(fx * t.cos - fy * t.sin),
+                  base.y + mm_round(fx * t.sin + fy * t.cos)};
+}
+
+/// Square millimetres, spelled here as geometry.hpp spells it, so this header
+/// stays below the geometry it serves.
+using Mm2 = std::int64_t;
+
+/// The area of the circular segment cut from a circle of radius `radius` by a
+/// chord subtending `sweep_udeg` (0 < sweep < 360°), in square millimetres:
+/// r²(θ − sin θ)/2. What an arc-polyline's bulged edge adds to, or takes from,
+/// the polygon of its vertices (`alan hesabı`, model.md R12).
+constexpr Mm2 circular_segment_area(Mm radius, std::int64_t sweep_udeg) noexcept
+{
+    const double r     = static_cast<double>(radius);
+    const double theta = static_cast<double>(sweep_udeg) * (kPi / (180.0 * 1000000.0));
+    const double s     = sin_cos_udeg(sweep_udeg).sin;
+    const double area  = r * r * (theta - s) / 2.0;
+    // Half away from zero, spelled out: `std::llround` is not constexpr.
+    const auto truncated = static_cast<Mm2>(area);
+    const double frac    = area - static_cast<double>(truncated);
+    if (frac >= 0.5) return truncated + 1;
+    if (frac <= -0.5) return truncated - 1;
+    return truncated;
+}
+
 } // namespace kentos::core

@@ -79,6 +79,12 @@ Tek tek komutlar:
 | `DİLİM` | [Daire dilimi çizme](komutlar/sector.md) |
 | `HALKA` | [Delikli halka çizme](komutlar/annulus.md) |
 | `ELİPS` | [Elips çizme](komutlar/ellipse_draw.md) |
+| `SPLINE` | [Spline çizme](komutlar/spline.md) |
+| `TARAMA` | [Tarama çizme](komutlar/hatch.md) |
+| `BLOK` | [Blok tanımlama](komutlar/block.md) |
+| `BLOKEKLE` | [Blok yerleştirme](komutlar/insert.md) |
+| `ÖLÇÜ` | [Ölçülendirme](komutlar/dimension.md) |
+| `LİDER` | [Lider çizme](komutlar/leader.md) |
 | `KILAVUZ` | [Cetvel kılavuzu](komutlar/guide.md) |
 | `OTURT` | [Yerel çizimi haritaya oturtma](komutlar/fit.md) |
 | `DÖNÜŞTÜR` | [Koordinat sistemi dönüşümü](komutlar/reproject.md) |
@@ -94,6 +100,28 @@ Tek tek komutlar:
 | `TERCİH` | [Uygulama tercihleri](komutlar/preference.md) |
 | `MOD` | [Oturum modları](komutlar/mode.md) |
 | `YARDIM` | [Yardım](komutlar/help.md) |
+
+## Nesne türleri
+
+Çizimdeki her şey bir **nesne türüdür**: saklanan sayıları, çizilen biçimi, yakalama
+noktaları ve ölçüleri türün kendisi söyler. Türlerin tablosu çekirdeğin kaydından
+üretilir; her türün kendi sayfası vardır.
+
+| Sayfa | İçerik |
+|---|---|
+| [Nesne türleri](nesneler/README.md) | Tür nedir, sayılar nasıl saklanır, tanınmayan tür ne olur |
+| [Türler referansı](nesneler/referans.md) | Bütün türlerin üretilmiş tablosu |
+| [Çoklu çizgi ve alan](nesneler/coklucizgi.md) | Halkalar, parsel, delik, çok parça; alan ve çevre |
+| [Daire](nesneler/daire.md) | Merkez ve yarıçap; 128-gen çizim; tam alan |
+| [Yay](nesneler/yay.md) | Merkez, yarıçap, iki uç; saat yönünün tersine |
+| [Nokta](nesneler/nokta.md) | Ölçülmüş tek nokta; düğüm yakalama |
+| [Elips](nesneler/elips.md) | Merkez ve iki eksen ucu; eksen uçlarına yakalama; kısmi elips |
+| [Yaylı çoklu çizgi](nesneler/yaylicizgi.md) | Kenarları yay olabilen çizgi ve alan; DXF şişkinliği; alan tam |
+| [Spline](nesneler/spline.md) | Kontrol noktaları, derece, düğümler; de Boor ile çizim |
+| [Tarama](nesneler/tarama.md) | Sınır halkaları ve desen; desen kataloğu |
+| [Blok referansı](nesneler/blokreferansi.md) | Blok tanımını yerleştiren nesne; ölçek, açı, dizi |
+| [Ölçü](nesneler/olcu.md) | Uzunluk, yarıçap, çap, açı; stil kataloğu; yazı tam sayıdan |
+| [Lider](nesneler/lider.md) | Oklu not çizgisi |
 
 ## İleri konular
 

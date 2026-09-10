@@ -10,6 +10,7 @@
 #include "kentos_cad/command/spec.hpp"
 #include "kentos_cad/command/value.hpp"
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <utility>
@@ -47,7 +48,13 @@ enum class RubberShape : std::uint8_t {
     Rectangle, ///< the face two opposite corners enclose: DİKDÖRTGEN
     Ring,      ///< the closed face the points so far would enclose: ALAN
     Circle,    ///< the circle a centre and a rim point make: DAİRE
-    Arc        ///< the arc a centre, a start and the cursor sweep out: YAY
+    Arc,       ///< the arc a centre, a start and the cursor sweep out: YAY
+    Ellipse,   ///< the ellipse a centre, a first-axis end (the chain) and the cursor's reach make:
+               ///< ELİPS
+    Curve,     ///< the smooth curve through the chain and the cursor: SPLINE
+    Dimension, ///< the dimension the chain's picks and the cursor's line location make: ÖLÇÜ
+    Block,     ///< the block definition `rubber_payload` names, placed at the cursor: BLOKEKLE
+    Ghost ///< the selected objects carried by the cursor's offset from the origin: TAŞI, KOPYALA
 };
 
 struct Prompt
@@ -69,6 +76,14 @@ struct Prompt
     /// as it goes (ÇİZGİ) leaves this empty: its segments are already in the
     /// document, and drawing them twice is what a preview must not do.
     std::vector<Point2> rubber_chain{};
+
+    /// The kind payload of the thing about to be made, for a preview that needs
+    /// more than points: the block reference BLOKEKLE will place (its block,
+    /// scale and turn), the dimension ÖLÇÜ will lay out (its type and figures),
+    /// the spline's degree. Decoded by the canvas with the kind's own decoder
+    /// and drawn by the kind's own outline, so the preview is the future
+    /// drawing. Empty for every other shape.
+    std::vector<std::uint8_t> rubber_payload{};
 };
 
 /// Supplies values to a running command. Implementations: queued arguments
@@ -143,11 +158,15 @@ public:
     InteractiveInputSource() = default;
 
     /// Starts with `args` already answered; every other parameter is asked for.
-    explicit InteractiveInputSource(Args args) : preset_(std::move(args)) {}
+    /// `origin` is what the journal records: a button is `Gui`, a typed line that
+    /// then prompts is `CommandLine`. Neither buys the source any privilege
+    /// (Article 1.2).
+    explicit InteractiveInputSource(Args args, Origin origin = Origin::Gui)
+        : preset_(std::move(args)), origin_(origin)
+    {}
 
-    /// A live user at a mouse and keyboard. Recorded in the journal; it buys this
-    /// source no privilege (Article 1.2).
-    Origin origin() const override { return Origin::Gui; }
+    /// Where the run came from, as recorded in the journal.
+    Origin origin() const override { return origin_; }
 
     std::optional<Value> take(const Param& param) override;
 
@@ -166,6 +185,7 @@ private:
 
     Args preset_;
     bool cancelled_{false};
+    Origin origin_{Origin::Gui};
 };
 
 } // namespace kentos::command

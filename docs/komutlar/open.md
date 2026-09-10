@@ -126,7 +126,7 @@ değiştiren, geri alınamayan bir işlem bir öneriyle tetiklenmemelidir.
 | `io.bad_block: ...` | Dosyanın iç yerleşimi bozuk | Yedeğinden geri alın |
 | `io.inconsistent: ...` | Dosyanın iki yeri birbirini tutmuyor | Yedeğinden geri alın |
 | `io.key_mismatch: ...` | Nesne kimlik düzeni bozulmuş | Yedeğinden geri alın; bu dosya güvenilir değil |
-| `io.unknown_kind: ...` | Tanınmayan nesne türü | Dosyayı yazan sürüme yükseltin |
+| `io.unknown_kind: ... 65535 numaralı türde` | Tür sütununa ayrılmış değer yazılmış (bozuk dosya) | Yedeğinden geri alın; tanınmayan bir tür hata değildir, korunarak açılır |
 | `Dosya motoru bağlı değil; bu ortamda dosya açılıp kaydedilemez.` | Dosya motoru olmayan bir ortamda çalışılıyor | Uygulama içinden çalıştırın |
 | `Proje dosyası yalnız boş bir belgeye okunabilir.` | İç hata; bu mesajı görürseniz bildirin | — |
 

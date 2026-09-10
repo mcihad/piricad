@@ -22,6 +22,7 @@
 #include "kentos_cad/script/json_runner.hpp"
 
 #include <array>
+#include <cstdlib>
 
 using namespace kentos;
 using namespace kentos::command;
@@ -500,7 +501,7 @@ TEST_CASE("YAKALAMA: her mod bir kimlik, bir etiket ve maskede bir bit taşır")
         CHECK(label != "yok");
     }
 
-    CHECK_EQ(count, 14); // 13 + AĞIRLIK MERKEZİ
+    CHECK_EQ(count, 15); // 13 + AĞIRLIK MERKEZİ + EKLEME
     CHECK_EQ(static_cast<int>(seen), static_cast<int>(core::SnapAllMask));
 }
 
@@ -744,6 +745,61 @@ TEST_CASE("YAKALAMA: daire merkezine ve çemberine yakalanır, hayalet çizgisin
     // offered, and both are places the drawing has nothing at all.
     q.aim                        = Point2{12500, 10000}; // the phantom midpoint
     q.modes                      = core::SnapEndpoint | core::SnapMidpoint;
+    const core::SnapResult ghost = core::snap(rig.doc, q);
+    CHECK(ghost.mode == core::SnapNone);
+}
+
+TEST_CASE("YAKALAMA: elipsin merkezi, eksen uçları ve kendisi yakalanır, tanım çizgileri değil")
+{
+    // WHAT AN ELLIPSE IS IN STORE. Three vertices — the centre and the ends of
+    // its two axes — in one open ring, and `snap()` walked them as if they were a
+    // drawn polyline: it offered the centre and the axis ends as corners, the
+    // middles of the two definition lines, and the nearest point ON those lines.
+    // The user drawing next to an ellipse landed on its axes, which nobody drew,
+    // and never on its edge, which everybody sees. Snapping now reads the same
+    // 128-gon the picture and the pick test are built from.
+    Rig rig;
+    rig.with_view();
+    if (!rig.line("ELİPS merkez=10,10 birinci=16,10 ikinci=10,13")) FAIL("ELİPS");
+
+    core::SnapQuery q;
+    q.radius = 800; // 0.8 m aperture
+    q.modes  = core::SnapCenter | core::SnapNearest | core::SnapEndpoint | core::SnapMidpoint;
+
+    // THE CENTRE, as on a circle.
+    q.aim                         = Point2{10200, 10200};
+    const core::SnapResult centre = core::snap(rig.doc, q);
+    CHECK(centre.mode == core::SnapCenter);
+    CHECK_EQ(centre.point, Point2{10000, 10000});
+
+    // THE FOUR AXIS ENDS are UÇ: the two the command was given and their mirrors.
+    q.aim                       = Point2{16100, 10100};
+    const core::SnapResult east = core::snap(rig.doc, q);
+    CHECK(east.mode == core::SnapEndpoint);
+    CHECK_EQ(east.point, Point2{16000, 10000});
+    q.aim                       = Point2{3900, 9900};
+    const core::SnapResult west = core::snap(rig.doc, q);
+    CHECK(west.mode == core::SnapEndpoint);
+    CHECK_EQ(west.point, Point2{4000, 10000});
+    q.aim                        = Point2{10100, 6900};
+    const core::SnapResult south = core::snap(rig.doc, q);
+    CHECK(south.mode == core::SnapEndpoint);
+    CHECK_EQ(south.point, Point2{10000, 7000});
+
+    // THE CURVE ITSELF. At x = 13 m the ellipse passes y = 10 + 3·√(1 − 0.25) =
+    // 12.598 m; the 128-gon's chord sits within a couple of millimetres of it.
+    q.aim                      = Point2{13000, 12700};
+    q.modes                    = core::SnapNearest;
+    const core::SnapResult rim = core::snap(rig.doc, q);
+    CHECK(rim.mode == core::SnapNearest);
+    CHECK(std::abs(rim.point.x - 13000) <= 30);
+    CHECK(std::abs(rim.point.y - 12598) <= 30);
+
+    // AND NOTHING ON THE AXES. Halfway from the centre to the east end is the
+    // midpoint of a definition line and the nearest point of it; the curve is
+    // 2.6 m away from there, the axis end 3 m. Nothing is within the aperture.
+    q.aim                        = Point2{13000, 10000};
+    q.modes                      = core::SnapEndpoint | core::SnapMidpoint | core::SnapNearest;
     const core::SnapResult ghost = core::snap(rig.doc, q);
     CHECK(ghost.mode == core::SnapNone);
 }

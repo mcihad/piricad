@@ -14,11 +14,16 @@ add_library(kentos_io STATIC
     src/adopt.cpp
     src/block_view.cpp
     src/database.cpp
+    src/diagnostics.cpp
     src/dwg.cpp
+    src/dxf_common.cpp
+    src/dxf_reader.cpp
+    src/dxf_writer.cpp
     src/mapped_file.cpp
     src/project_reader.cpp
     src/project_writer.cpp
     src/postgis.cpp
+    src/prj_sidecar.cpp
     src/qgis_style.cpp
     src/service.cpp
     src/point_list.cpp
@@ -103,6 +108,19 @@ if(KENTOS_WITH_DWG)
     message(STATUS "  DWG ...... etkin (LibreDWG, salt okunur)")
 else()
     message(STATUS "  DWG ...... kapalı (-DKENTOS_WITH_DWG=ON ile açılır)")
+endif()
+
+if(KENTOS_WITH_DXFRW)
+    # PRIVATE, like every format library here (io.md R2/P2): the DRW_* headers
+    # reach dxf_reader.cpp, dxf_writer.cpp and dxf_common.cpp, and nothing else.
+    # libdxfrw's target exports no build-tree include directory (only the install
+    # interface), so its source directory is named here.
+    target_link_libraries(kentos_io PRIVATE dxfrw)
+    target_compile_definitions(kentos_io PRIVATE KENTOS_HAVE_DXFRW=1)
+    target_include_directories(kentos_io SYSTEM PRIVATE "${libdxfrw_SOURCE_DIR}/src")
+    message(STATUS "  DXF ...... etkin (libdxfrw, okuma ve yazma)")
+else()
+    message(STATUS "  DXF ...... libdxfrw kapalı; DXF GDAL sürücüsüyle okunur/yazılır")
 endif()
 
 if(KENTOS_WITH_POSTGIS)

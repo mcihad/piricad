@@ -30,6 +30,7 @@ enum class SessionState : std::uint8_t {
     Ready, ///< created, not started
     Running,
     Waiting, ///< suspended on a Prompt, needs supply()
+    Working, ///< suspended on a Job a host is running, needs resume_job()
     Completed,
     Cancelled,
     Failed,
@@ -41,6 +42,9 @@ const char* session_state_name(SessionState s);
 /// The command bus; see bus.hpp. Declared rather than included because the bus
 /// includes this header.
 class Bus;
+
+/// Work handed to a host thread; see job.hpp.
+struct Job;
 
 class Session
 {
@@ -69,7 +73,27 @@ public:
 
     bool waiting() const noexcept { return state_ == SessionState::Waiting; }
 
+    /// Suspended on a job a host is running (job.hpp).
+    bool working() const noexcept { return state_ == SessionState::Working; }
+
     bool finished() const noexcept;
+
+    /// Whether this session's client can resume it LATER — after a prompt is
+    /// answered, after a job finishes. `Bus::begin_interactive` sets it; a session
+    /// driven to completion in one call (`dispatch`, a script) cannot be, and a
+    /// job it awaits therefore runs in place. This is the one fact `JobAwaiter`
+    /// decides on, and it is about the session's lifetime, never about which kind
+    /// of client started it (Article 1.2).
+    void set_client_driven(bool on) noexcept { client_driven_ = on; }
+
+    bool client_driven() const noexcept { return client_driven_; }
+
+    /// The job this session is parked on, or null.
+    Job* job() const noexcept { return job_; }
+
+    /// Whether `cancel()` was asked while a job was running: the job's stop was
+    /// requested and the command is unwinding on its result.
+    bool cancel_requested() const noexcept { return cancel_requested_; }
 
     const Prompt& prompt() const noexcept { return prompt_; }
 
@@ -107,6 +131,18 @@ public:
     bool park(std::coroutine_handle<> h, Prompt p);
     Value take_supplied();
 
+    // ---- used by JobAwaiter and the job host ----
+    /// Parks the command on `job` and hands the session to `Bus::on_job_host`.
+    /// False — and nothing done — when there is no host or the session cannot be
+    /// resumed later; the awaiter then runs the job in place. The host MUST NOT
+    /// resume the session from inside this call: the coroutine is not suspended
+    /// until the awaiter returns.
+    bool park_job(std::coroutine_handle<> h, Job& job);
+
+    /// The host says the job is done: resumes the command where it left off. The
+    /// command reads the job's outcome and continues, prompts, or finishes.
+    void resume_job();
+
 private:
     void resume_once();
 
@@ -125,6 +161,10 @@ private:
     Args resolved_{};
     core::Error error_{};
     std::uint64_t document_revision_at_start_{0};
+
+    bool client_driven_{false};
+    Job* job_{nullptr};
+    bool cancel_requested_{false};
 };
 
 // ---- InputAwaiter, defined here because it needs the full Session ----

@@ -14,6 +14,7 @@
 #include "kentos_cad/command/value.hpp"
 
 #include <coroutine>
+#include <cstdint>
 #include <functional>
 #include <optional>
 #include <string>
@@ -95,6 +96,9 @@ struct PointOptions
     /// The points already fixed this run, for a command whose geometry cannot
     /// reach the document until it is complete. See `Prompt::rubber_chain`.
     std::vector<Point2> rubber_chain{};
+
+    /// The kind payload the preview draws with. See `Prompt::rubber_payload`.
+    std::vector<std::uint8_t> rubber_payload{};
 };
 
 class Context;

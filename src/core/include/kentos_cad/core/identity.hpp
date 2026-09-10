@@ -44,6 +44,14 @@ inline constexpr KindId kArcKind      = 3;
 inline constexpr KindId kPointKind    = 4;
 inline constexpr KindId kEllipseKind  = 5;
 
+/// Phase 2 kinds. Each carries a payload (model.md R9a) beside its rings.
+inline constexpr KindId kArcPolylineKind    = 6;  ///< a polyline whose edges may be arcs
+inline constexpr KindId kSplineKind         = 7;  ///< a NURBS curve
+inline constexpr KindId kHatchKind          = 8;  ///< a pattern-filled face
+inline constexpr KindId kBlockReferenceKind = 9;  ///< a placed block definition
+inline constexpr KindId kDimensionKind      = 10; ///< a measured length or angle, drawn
+inline constexpr KindId kLeaderKind         = 11; ///< an arrowed line pointing at something
+
 // ---------------------------------------------------------------- slots -----
 
 using EntityId = std::uint32_t;

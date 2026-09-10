@@ -37,7 +37,8 @@ listesi ile seçenekler değişir:
 
 - **BİÇİM** — konunun izin verdiği biçimler. Çizim için liste, programın okuyup
   yazabildiği dış biçimlerdir; her biçimin altında bir satır not vardır
-  (GeoPackage öznitelikleri de taşır, DXF katmanları ve çizgi tiplerini korur).
+  (GeoPackage öznitelikleri, nesne türünü ve yazıları alan olarak da taşır; DXF
+  katman adlarını korur, eğrileri kapalı çokgen olarak yazar).
 - **HEDEF** — yazılacak dosya. **Gözat…** sistemin dosya penceresini seçili biçime
   süzülmüş açar; uzantı yazmazsanız biçimin uzantısı eklenir.
 - **SEÇENEKLER** — konuya göre: köşe listesinde sütun sırası (`Y X` Türkiye'de

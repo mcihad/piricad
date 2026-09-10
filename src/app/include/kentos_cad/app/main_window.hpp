@@ -238,7 +238,7 @@ private slots:
 
     /// Re-arms a modal draw tool after it has finished a shape, so the next one
     /// can be drawn without going back to the tool column.
-    void onInteractiveFinished(const QString& id, bool mutated);
+    void onInteractiveFinished(const QString& id, bool mutated, bool dismissed);
     void onUndoStateChanged(bool canUndo, bool canRedo);
     void onCursorMoved(core::Point2 world);
     void onViewRequested(const QString& mode, double factor);
@@ -405,6 +405,10 @@ private:
     /// keeping a second one beside it is the duplication CLAUDE.md 5.10 forbids.
     QActionGroup* drawingTools_{nullptr};
 
+    /// The import wizard asked for a zoom to what its import brings, once the
+    /// hosted read lands (`onInteractiveFinished`).
+    bool zoomAfterImport_{false};
+
     QAction* actSelect_{nullptr};
     QAction* actCut_{nullptr};
     QAction* actCopyClip_{nullptr};
@@ -482,6 +486,12 @@ private:
     QAction* actSector_{nullptr};
     QAction* actAnnulus_{nullptr};
     QAction* actRectangle_{nullptr};
+    QAction* actSpline_{nullptr};
+    QAction* actHatch_{nullptr};
+    QAction* actBlock_{nullptr};
+    QAction* actInsert_{nullptr};
+    QAction* actDimension_{nullptr};
+    QAction* actLeader_{nullptr};
     QAction* actScale_{nullptr};
     QAction* actMirror_{nullptr};
     QAction* actArray_{nullptr};

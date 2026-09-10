@@ -432,6 +432,42 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
         }
     }
 
+    // ---- foreign data (model.md R26a) ----
+    std::vector<ForeignRecord> foreign_rows;
+    {
+        const core::ForeignTable& foreign = doc.foreign();
+        for (const core::ForeignTable::Record& rec : foreign.records()) {
+            ForeignRecord r{};
+            r.slot       = rec.slot;
+            r.tag_string = pool.intern(foreign.tags()[rec.tag]);
+            r.offset     = rec.start;
+            r.bytes      = rec.bytes;
+            foreign_rows.push_back(r);
+        }
+    }
+
+    // ---- block definitions (model.md R45) ----
+    std::vector<BlockRecord> block_rows;
+    std::vector<std::uint64_t> block_members;
+    std::vector<std::uint32_t> block_uses;
+    for (const core::BlockDef& def : doc.blocks().all()) {
+        BlockRecord r{};
+        r.name_string  = pool.intern(def.name);
+        r.desc_string  = def.description.empty() ? 0u : pool.intern(def.description);
+        r.base_x       = def.base.x;
+        r.base_y       = def.base.y;
+        r.first_member = static_cast<std::uint32_t>(block_members.size());
+        r.member_count = static_cast<std::uint32_t>(def.members.size());
+        for (const core::EntityKey k : def.members)
+            block_members.push_back(core::raw(k));
+        r.first_use = static_cast<std::uint32_t>(block_uses.size());
+        r.use_count = static_cast<std::uint32_t>(def.uses.size());
+        for (const core::BlockId u : def.uses)
+            block_uses.push_back(u);
+        r.flags = def.flags;
+        block_rows.push_back(r);
+    }
+
     // ---- the document record ----
     DocumentRecord dr{};
     dr.crs_string      = crs_id;
@@ -567,11 +603,35 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     blocks.push_back(column(kBlkVertexX, geo.xs));
     blocks.push_back(column(kBlkVertexY, geo.ys));
 
+    // The kind payload, only when a slot carries one (model.md R9a): a drawing of
+    // parcels, circles and captions writes none of these, so its file is byte
+    // for byte the one it was before payloads existed — which keeps the golden
+    // fixtures honest about what a change actually changed. Once one slot has a
+    // payload the reference column covers every slot (RingGeometry::append).
+    if (geo.has_payload()) {
+        blocks.push_back(column(kBlkKindPayload, geo.payload));
+        blocks.push_back(column(kBlkSlotPayloadRef, geo.payload_ref));
+        blocks.push_back(column(kBlkPayloadStart, geo.payload_start));
+        blocks.push_back(column(kBlkPayloadBytes, geo.payload_bytes));
+    }
+
     blocks.push_back(column(kBlkSettings, setting_rows));
     blocks.push_back(column(kBlkAttrSchema, attr_columns));
     blocks.push_back(column(kBlkAttrColumnLayer, attr_column_layer));
     blocks.push_back(column(kBlkAttrCells, attr_cells));
     blocks.push_back(column(kBlkTexts, text_rows));
+
+    // Foreign data and block definitions: both absent from a drawing that has
+    // none, so its file is byte for byte what it was before they existed.
+    if (!foreign_rows.empty()) {
+        blocks.push_back(column(kBlkForeignBytes, doc.foreign().pool()));
+        blocks.push_back(column(kBlkForeignRecords, foreign_rows));
+    }
+    if (!block_rows.empty()) {
+        blocks.push_back(column(kBlkBlocks, block_rows));
+        blocks.push_back(column(kBlkBlockMembers, block_members));
+        blocks.push_back(column(kBlkBlockUses, block_uses));
+    }
 
     // An empty column carries no information a reader needs and its absence is
     // the encoding of "zero of these" (BlockView::column accepts that), so an

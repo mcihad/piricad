@@ -14,9 +14,13 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/ellipse.hpp"
+#include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #include <cmath>
+#include <span>
+#include <vector>
 
 namespace kentos::command {
 namespace {
@@ -40,7 +44,8 @@ Task<void> run(Context& ctx)
     auto reach = co_await ctx.point("ikinci", "İkinci eksenin uzaklığı",
                                     PointOptions{.rubber_band   = true,
                                                  .rubber_origin = *centre,
-                                                 .rubber_shape  = RubberShape::Line});
+                                                 .rubber_shape  = RubberShape::Ellipse,
+                                                 .rubber_chain  = {*major}});
     if (!reach) co_return;
 
     // The first axis as a vector, and the perpendicular to it.
@@ -67,10 +72,44 @@ Task<void> run(Context& ctx)
     const core::Point2 minor{centre->x + core::mm_round(-ay / a_len * b),
                              centre->y + core::mm_round(ax / a_len * b)};
 
-    auto created = ctx.transaction().add_ellipse(ctx.active_layer(), *centre, *major, minor);
+    // A PARTIAL ellipse when both angles are given: the sweep, counter-clockwise
+    // from the first axis in the ellipse's own parameter (core/ellipse.hpp), is
+    // the kind's payload; a whole one carries none.
+    const Value from = ctx.argument("baslangic");
+    const Value to   = ctx.argument("bitis");
+    if (from.empty() != to.empty()) {
+        ctx.echo("Kısmi elips için baslangic= ve bitis= birlikte verilir (derece).");
+        co_return;
+    }
+    std::vector<std::uint8_t> payload;
+    if (!from.empty()) {
+        const auto norm = [](double deg) {
+            auto udeg =
+                static_cast<std::int64_t>(std::llround(deg * 1000000.0)) % core::kUDegFullCircle;
+            if (udeg < 0) udeg += core::kUDegFullCircle;
+            return udeg;
+        };
+        const core::EllipseArc arc{norm(from.as_number()), norm(to.as_number())};
+        if (arc.start_udeg == arc.end_udeg) {
+            ctx.echo("Başlangıç ve bitiş açısı aynı; tam elips için ikisini de vermeyin.");
+            co_return;
+        }
+        payload = core::encode_ellipse_arc(arc);
+    }
+
+    const core::Point2 def[3]{*centre, *major, minor};
+    const core::RingGeometry::RingInput ring{std::span<const core::Point2>(def, 3),
+                                             core::RingRole::Open, 0};
+    auto created = ctx.transaction().add_kind(
+        ctx.active_layer(), core::kEllipseKind,
+        std::span<const core::RingGeometry::RingInput>(&ring, 1), payload);
     if (!created) {
         ctx.echo(created.error().message);
         co_return; // the bus rolls the transaction back
+    }
+    if (!from.empty()) {
+        ctx.record("baslangic", from);
+        ctx.record("bitis", to);
     }
 
     // RECORDED AS IT WAS ASKED, like YAY: the three points the user gave, not the
@@ -94,6 +133,11 @@ KENTOS_COMMAND(ellipse_draw)
                 Param::point("merkez", "Elipsin merkezi"),
                 Param::point("birinci", "Birinci eksenin ucu"),
                 Param::point("ikinci", "İkinci eksenin uzaklığı; eksene dik ölçülür"),
+                Param::number("baslangic", Arity::optional(),
+                              "Kısmi elips: başlangıç açısı, derece, birinci eksenden saat "
+                              "yönünün tersine"),
+                Param::number("bitis", Arity::optional(),
+                              "Kısmi elips: bitiş açısı, derece; baslangic ile birlikte"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,

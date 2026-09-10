@@ -7,6 +7,9 @@
 #include <QFontMetrics>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QTimer>
+
+#include <algorithm>
 
 namespace kentos::app {
 namespace {
@@ -402,6 +405,32 @@ void StatusStrip::setPerformance(const QString& text)
     update();
 }
 
+void StatusStrip::setBusy(const QString& label, bool on)
+{
+    busy_      = on;
+    busyLabel_ = label;
+    if (on) {
+        if (pulse_ == nullptr) {
+            pulse_ = new QTimer(this);
+            pulse_->setInterval(40);
+            connect(pulse_, &QTimer::timeout, this, &StatusStrip::pulse);
+        }
+        phase_ = 0;
+        pulse_->start();
+    } else {
+        if (pulse_ != nullptr) pulse_->stop();
+        stopRect_ = QRect();
+        stopHot_  = false;
+    }
+    update();
+}
+
+void StatusStrip::pulse()
+{
+    phase_ = (phase_ + 3) % 200;
+    update();
+}
+
 void StatusStrip::relayout()
 {
     // The coordinate cell is as wide as its own text, so the chips start where
@@ -431,7 +460,9 @@ void StatusStrip::mouseMoveEvent(QMouseEvent* event)
     hot_          = -1;
     for (int i = 0; i < chips_.size(); ++i)
         if (at >= chips_[i].left && at < chips_[i].left + chips_[i].width) hot_ = i;
-    if (hot_ != was) update();
+    const bool stopWas = stopHot_;
+    stopHot_ = busy_ && !stopRect_.isEmpty() && stopRect_.contains(event->position().toPoint());
+    if (hot_ != was || stopHot_ != stopWas) update();
 }
 
 void StatusStrip::leaveEvent(QEvent*)
@@ -442,6 +473,11 @@ void StatusStrip::leaveEvent(QEvent*)
 
 void StatusStrip::mousePressEvent(QMouseEvent* event)
 {
+    // DURDUR, while a job runs: the one control on the strip that is not an aid.
+    if (busy_ && !stopRect_.isEmpty() && stopRect_.contains(event->position().toPoint())) {
+        if (event->button() == Qt::LeftButton) emit stopRequested();
+        return;
+    }
     if (hot_ < 0) return;
     if (event->button() == Qt::RightButton) {
         emit configureRequested(chips_[hot_].id);
@@ -492,12 +528,50 @@ void StatusStrip::paintEvent(QPaintEvent*)
 
     int x = width() - perfWidth;
 
+    // ---- a job in flight: its label, a live segment, and Durdur ----
+    //
+    // Takes the message gap while it runs. The moving segment is what says the
+    // program is alive when a 48 MB DXF is being read on another thread, and the
+    // chip is the only way to stop that read short of closing the window.
+    if (busy_ && !chips_.isEmpty()) {
+        const int from = chips_.back().left + chips_.back().width + kStatusPadX;
+        const int to   = x - connWidth - kStatusPadX;
+        const QFontMetrics chipMetrics(sans(kStatusPx, QFont::DemiBold, 0.4));
+        const int stopWidth = kStatusPadX +
+                              static_cast<int>(chipMetrics.horizontalAdvance(tr("Durdur"))) +
+                              kStatusPadX;
+        if (to - from > stopWidth + kStatusPadX * 4) {
+            stopRect_ = QRect(to - stopWidth, 1, stopWidth, kStatusHeight - 1);
+            const QRect label(from, 1, stopRect_.left() - kStatusPadX - from, kStatusHeight - 1);
+
+            p.setFont(mono(kStatusPx));
+            p.setPen(t.readout);
+            p.drawText(
+                label, Qt::AlignVCenter | Qt::AlignLeft,
+                QFontMetrics(p.font()).elidedText(busyLabel_, Qt::ElideMiddle, label.width()));
+
+            // The segment: a fifth of the label's width, sweeping left to right.
+            const int span = std::max(20, label.width() / 5);
+            const int lane = label.width() - span;
+            const int sx   = label.left() + (lane > 0 ? (phase_ * lane) / 200 : 0);
+            p.fillRect(QRect(label.left(), kStatusHeight - 3, label.width(), 2), t.lineSoft);
+            p.fillRect(QRect(sx, kStatusHeight - 3, span, 2), t.accent);
+
+            p.fillRect(stopRect_, stopHot_ ? t.hoverRow : t.bgHeader);
+            p.setFont(sans(kStatusPx, QFont::DemiBold, 0.4));
+            p.setPen(t.accent);
+            p.drawText(stopRect_, Qt::AlignCenter, tr("Durdur"));
+        } else {
+            stopRect_ = QRect();
+        }
+    }
+
     // ---- what the last command said ----
     //
     // In the gap the chips leave, elided rather than wrapped: a status line is one
     // line, and a distance the user cannot finish reading is still the fastest
     // place to find it. The full text is in `Geçmiş`.
-    if (!message_.isEmpty() && !chips_.isEmpty()) {
+    if (!busy_ && !message_.isEmpty() && !chips_.isEmpty()) {
         const int from = chips_.back().left + chips_.back().width + kStatusPadX;
         const int to   = x - connWidth - kStatusPadX;
         if (to - from > kStatusPadX * 2) {

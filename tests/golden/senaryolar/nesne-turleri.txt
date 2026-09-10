@@ -1,0 +1,27 @@
+# Faz 2 nesne türleri (C1–C5): spline, tarama, kısmi elips, blok tanımı ve
+# referansı, ölçü, lider. Bu senaryo her türün yükünü (yuk=) ve türden gelen
+# alan/çevre ölçüsünü bayt bayt kilitler: de Boor örneklemesi, yay alanı,
+# blok yerleşimi ve ölçü yazısı üç platformda aynı sayıyı vermek zorundadır (§7.3).
+#
+# Tarama ve ölçü kataloglarını derlenmiş kaynak ağacından bulur (TERCİH
+# desen_kataloğu / ölçü_stilleri varsayılanları), çalışma dizininden bağımsızdır.
+KATMAN ad=EGRILER
+SPLINE noktalar=485300,4310200 485310,4310220 485320,4310220 485330,4310200 derece=3
+SPLINE noktalar=485340,4310200 485350,4310210 485360,4310200 485350,4310190 derece=2 kapali=evet
+ELİPS merkez=485400,4310200 birinci=485410,4310200 ikinci=485400,4310205 baslangic=0 bitis=90
+KATMAN ad=TARAMALAR
+TARAMA noktalar=485300,4310300 485320,4310300 485320,4310320 485300,4310320 desen=ANSI31 aci=0 olcek=1000
+TARAMA noktalar=485330,4310300 485350,4310300 485350,4310320 485330,4310320 desen=SOLID
+KATMAN ad=SEMBOL
+DAİRE merkez=485500,4310300 cevre=485501,4310300
+ÇİZGİ 485500,4310300 485502,4310300
+SEÇ KATMAN katman=SEMBOL
+BLOK ad=KAPAK taban=485500,4310300
+BLOKEKLE ad=KAPAK nokta=485520,4310300 olcek=2 aci=90
+BLOKEKLE ad=KAPAK nokta=485540,4310300 olcek=-1
+BLOKEKLE ad=KAPAK nokta=485560,4310300 sutun=3 satir=2 sutun_aralik=5000 satir_aralik=4000
+KATMAN ad=OLCULER
+ÖLÇÜ birinci=485600,4310200 ikinci=485612.5,4310200 konum=485600,4310203
+ÖLÇÜ birinci=485600,4310220 ikinci=485603,4310227 konum=485610,4310223 tur=dogrusal
+ÖLÇÜ birinci=485700,4310200 ikinci=485700,4310210 konum=485705,4310205 tur=acisal tepe=485710,4310200
+LİDER noktalar=485800,4310200 485803,4310203 485806,4310203 metin=Rögar

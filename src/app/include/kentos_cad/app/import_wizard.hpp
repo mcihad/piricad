@@ -65,7 +65,9 @@ class ImportProbeThread : public QThread
 
 public:
     /// Reads `path` into `into` when started. Nothing happens until `start()`.
-    ImportProbeThread(core::Document& into, QString path, QString projectCrs,
+    /// `options` carries the drawing's CRS and the unit to assume for a file
+    /// that names none — the same two facts the command hands the reader.
+    ImportProbeThread(core::Document& into, QString path, io::ImportOptions options,
                       QObject* parent = nullptr);
 
     /// Asks the read to stop. The thread returns within 100 ms.
@@ -81,7 +83,7 @@ protected:
 private:
     core::Document& into_;
     QString path_;
-    QString crs_;
+    io::ImportOptions options_;
     std::stop_source stop_;
     core::Result<io::ImportProbe> outcome_;
 };

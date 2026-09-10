@@ -124,8 +124,9 @@ Task<void> run_import(Context& ctx)
     if (engine_missing(ctx, bus)) co_return;
 
     FileRequest request;
-    request.verb = FileRequest::Verb::Import;
-    request.path = *path;
+    request.verb    = FileRequest::Verb::Import;
+    request.path    = *path;
+    request.session = &ctx.session();
 
     if (const Value format = ctx.argument("bicim"); !format.empty()) {
         request.format = format.as_text();
@@ -202,6 +203,12 @@ Task<void> run_export(Context& ctx)
     if (const Value format = ctx.argument("bicim"); !format.empty()) {
         request.format = format.as_text();
         ctx.record("bicim", format);
+    }
+    // WHICH DXF RELEASE. Recorded as the year the user typed, so a replay writes
+    // the same file; the file service refuses it for any other format.
+    if (const Value version = ctx.argument("surum"); !version.empty()) {
+        request.version = static_cast<int>(version.as_int());
+        ctx.record("surum", version);
     }
     co_await submit(ctx, bus, request);
 }
@@ -344,6 +351,8 @@ KENTOS_COMMAND(exportfile)
                 Param::text("dosya", Arity::exactly(1), "Yazılacak dosyanın yolu"),
                 Param::text("bicim", Arity::optional(),
                             "Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur"),
+                Param::integer("surum", Arity::optional(),
+                               "DXF sürümü: 2000, 2004, 2007 (varsayılan), 2010, 2013, 2018"),
             },
         .undo    = UndoPolicy::None,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,

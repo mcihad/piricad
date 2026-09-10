@@ -20,11 +20,11 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.rectangle`](rectangle.md) | `DİKDÖRTGEN`, `DIKDORTGEN`, `RECTANGLE`, `DKD`, `REC` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer. |
 | [`core.circle_draw`](circle_draw.md) | `DAİRE`, `DAIRE`, `CIRCLE`, `DR` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve çember üzerindeki bir noktadan daire çizer. |
 | [`core.arc_draw`](arc_draw.md) | `YAY`, `ARC`, `YY` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir. |
-| [`core.vertex_move`](vertex_move.md) | `KÖŞETAŞI`, `KOSETASI`, `MOVEVERTEX`, `KT` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesnenin köşesini yeni bir yere taşır. |
+| [`core.vertex_move`](vertex_move.md) | `KÖŞETAŞI`, `KOSETASI`, `MOVEVERTEX`, `KT` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır. |
 | [`core.vertex_insert`](vertex_insert.md) | `KÖŞEEKLE`, `KOSEEKLE`, `ADDVERTEX`, `KE` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir kenarın ortasına yeni köşe ekler. |
 | [`core.to_area`](to_area.md) | `ALANAÇEVİR`, `ALANACEVIR`, `TOAREA`, `ALÇ` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Uç uca değen çizgileri tek bir kapalı alana çevirir. |
 | [`core.move`](move.md) | `TAŞI`, `TASI`, `MOVE`, `TŞ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki nokta arasındaki kadar taşır. |
-| [`core.copy`](copy.md) | `KOPYALA`, `COPY`, `KP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerin kopyasını iki nokta arasındaki kadar öteye koyar. |
+| [`core.copy`](copy.md) | `KOPYALA`, `COPY`, `KP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
 | [`core.array`](array.md) | `DİZİ`, `DIZI`, `ARRAY`, `DZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır. |
 | [`core.combine`](combine.md) | `BİRLEŞTİR`, `BIRLESTIR`, `COMBINE`, `BRL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar. |
 | [`core.split`](split.md) | `BÖL`, `BOL`, `SPLIT`, `BL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Nesneleri çizilen bir kesme çizgisiyle böler. |
@@ -38,13 +38,19 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.scale`](scale.md) | `ÖLÇEKLE`, `OLCEKLE`, `SCALE`, `ÖLÇEK`, `OLCEK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkeze göre büyütür ya da küçültür. |
 | [`core.mirror`](mirror.md) | `AYNALA`, `MIRROR`, `AYN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
 | [`core.measure`](measure.md) | `ÖLÇ`, `OLC`, `MEASURE`, `MS` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar. |
-| [`core.measure_area`](measure_area.md) | `ALANÖLÇ`, `ALANOLC`, `AREAOF`, `AÖ` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Seçilen nesnelerin alanını ve çevresini yazar. |
+| [`core.measure_area`](measure_area.md) | `ALANÖLÇ`, `ALANOLC`, `AREAOF`, `AÖ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Seçilen nesnelerin alanını ve çevresini yazar. |
 | [`core.coordinate`](coordinate.md) | `KOORDİNAT`, `KOORDINAT`, `COORDINATE`, `KRD` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
 | [`core.pan`](pan.md) | `KAYDIR`, `PAN`, `KY` | Görünüm | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır. |
 | [`core.offset`](offset.md) | `OFSET`, `OFFSET`, `OF` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili nesnelerin verilen mesafede paralelini çizer. |
 | [`core.sector`](sector.md) | `DİLİM`, `DILIM`, `SECTOR`, `DL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir. |
 | [`core.annulus`](annulus.md) | `HALKA`, `ANNULUS`, `HLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez, iç ve dış yarıçaptan delikli halka çizer. |
 | [`core.ellipse_draw`](ellipse_draw.md) | `ELİPS`, `ELIPS`, `ELLIPSE`, `EL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir. |
+| [`core.spline`](spline.md) | `SPLINE`, `SPLINE`, `SPLINE`, `SPL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kontrol noktalarından NURBS eğrisi (spline) çizer. |
+| [`core.hatch`](hatch.md) | `TARAMA`, `TARAMA`, `HATCH`, `TRM` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar. |
+| [`core.block`](block.md) | `BLOK`, `BLOK`, `BLOCK`, `BLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar. |
+| [`core.insert`](insert.md) | `BLOKEKLE`, `BLOKEKLE`, `INSERT`, `BE` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir. |
+| [`core.dimension`](dimension.md) | `ÖLÇÜ`, `OLCU`, `DIMENSION`, `ÖÇ` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
+| [`core.leader`](leader.md) | `LİDER`, `LIDER`, `LEADER`, `LD` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar. |
 | [`core.points`](points.md) | `NOKTALAR`, `POINTS`, `NKL` | Dosya | tek işlem | betiklenebilir, AI erişimli | Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod). |
 | [`core.guide`](guide.md) | `KILAVUZ`, `GUIDE`, `KLV` | Çizim | tek işlem | betiklenebilir, AI erişimli | Cetvel kılavuzu ekler, listeler ve siler. |
 | [`core.attribute`](attribute.md) | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
@@ -186,7 +192,7 @@ Ayrıntılı kullanım: [YAY](arc_draw.md)
 
 ### `core.vertex_move` — KÖŞETAŞI
 
-Bir nesnenin köşesini yeni bir yere taşır.
+Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -232,13 +238,13 @@ Ayrıntılı kullanım: [TAŞI](move.md)
 
 ### `core.copy` — KOPYALA
 
-Seçilen nesnelerin kopyasını iki nokta arasındaki kadar öteye koyar.
+Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesneler` | selection | en az 0 | Kopyalanacak nesnelerin kimlikleri; yoksa etkin seçim |
 | `baslangic` | point | 1 | Kopyalamanın başlangıç noktası |
-| `bitis` | point | 1 | Kopyanın geleceği nokta |
+| `bitis` | point_list | en az 1 | Kopyaların geleceği noktalar; her nokta bir kopya |
 
 Ayrıntılı kullanım: [KOPYALA](copy.md)
 
@@ -476,8 +482,98 @@ Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir.
 | `merkez` | point | 1 | Elipsin merkezi |
 | `birinci` | point | 1 | Birinci eksenin ucu |
 | `ikinci` | point | 1 | İkinci eksenin uzaklığı; eksene dik ölçülür |
+| `baslangic` | number | isteğe bağlı | Kısmi elips: başlangıç açısı, derece, birinci eksenden saat yönünün tersine |
+| `bitis` | number | isteğe bağlı | Kısmi elips: bitiş açısı, derece; baslangic ile birlikte |
 
 Ayrıntılı kullanım: [ELİPS](ellipse_draw.md)
+
+### `core.spline` — SPLINE
+
+Kontrol noktalarından NURBS eğrisi (spline) çizer.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `noktalar` | point_list | en az 2 | Kontrol noktaları |
+| `derece` | integer | isteğe bağlı | Eğrinin derecesi, 1–15; varsayılan 3 |
+| `kapali` | bool | isteğe bağlı | Son noktadan ilkine kapansın mı; varsayılan hayır |
+
+Ayrıntılı kullanım: [SPLINE](spline.md)
+
+### `core.hatch` — TARAMA
+
+Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `noktalar` | point_list | en az 0 | Sınır köşeleri, nesne seçmek yerine; en az üç nokta |
+| `nesneler` | selection | en az 0 | Sınırı verecek kapalı nesneler; yoksa etkin seçim ya da noktalar= |
+| `desen` | text | isteğe bağlı | Katalogdaki desen adı: SOLID, ANSI31, NET…; varsayılan SOLID |
+| `aci` | number | isteğe bağlı | Desenin dönme açısı, derece; varsayılan 0 |
+| `olcek` | number | isteğe bağlı | Desen ölçeği; varsayılan pafta ölçeğinin paydası (AYAR plan_ölçeği) |
+| `katalog` | text | isteğe bağlı | Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu |
+
+Ayrıntılı kullanım: [TARAMA](hatch.md)
+
+### `core.block` — BLOK
+
+Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `ad` | text | 1 | Bloğun adı; Türkçe katlanmış hâliyle benzersiz |
+| `taban` | point | 1 | Taban noktası: referansların yerleştirildiği nokta |
+| `nesneler` | selection | en az 0 | Bloğa girecek nesneler; yoksa etkin seçim |
+| `aciklama` | text | isteğe bağlı | Serbest açıklama |
+
+Ayrıntılı kullanım: [BLOK](block.md)
+
+### `core.insert` — BLOKEKLE
+
+Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `ad` | text | 1 | Yerleştirilecek bloğun adı |
+| `nokta` | point | 1 | Ekleme noktası |
+| `olcek` | number | isteğe bağlı | Ölçek; eksi değer x'te aynalar; varsayılan 1 |
+| `olcek_y` | number | isteğe bağlı | Y ölçeği, farklıysa; varsayılan olcek |
+| `aci` | number | isteğe bağlı | Dönme açısı, derece; varsayılan 0 |
+| `sutun` | integer | isteğe bağlı | Dizi sütun sayısı; varsayılan 1 |
+| `satir` | integer | isteğe bağlı | Dizi satır sayısı; varsayılan 1 |
+| `sutun_aralik` | integer | isteğe bağlı | Sütunlar arası, milimetre, döndürülmüş eksende |
+| `satir_aralik` | integer | isteğe bağlı | Satırlar arası, milimetre, döndürülmüş eksende |
+
+Ayrıntılı kullanım: [BLOKEKLE](insert.md)
+
+### `core.dimension` — ÖLÇÜ
+
+İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `birinci` | point | 1 | Birinci nokta; açısal ölçüde birinci kolun ucu |
+| `ikinci` | point | 1 | İkinci nokta; açısal ölçüde ikinci kolun ucu |
+| `konum` | point | 1 | Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta |
+| `tur` | text | isteğe bağlı | hizali (varsayılan), dogrusal, yaricap, cap, acisal |
+| `tepe` | point_list | isteğe bağlı | Açısal ölçünün tepe noktası |
+| `stil` | text | isteğe bağlı | Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI |
+| `metin` | text | isteğe bağlı | Ölçülen değer yerine yazılacak metin |
+| `katalog` | text | isteğe bağlı | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
+
+Ayrıntılı kullanım: [ÖLÇÜ](dimension.md)
+
+### `core.leader` — LİDER
+
+Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `noktalar` | point_list | en az 2 | Okun ucundan yazının yanına köşeler |
+| `metin` | text | isteğe bağlı | Son köşenin yanına yazılacak metin |
+| `stil` | text | isteğe bağlı | Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25 |
+| `katalog` | text | isteğe bağlı | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
+
+Ayrıntılı kullanım: [LİDER](leader.md)
 
 ### `core.points` — NOKTALAR
 
@@ -720,6 +816,7 @@ Ayrıntılı kullanım: [İÇEAKTAR](import.md)
 |---|---|---|---|
 | `dosya` | text | 1 | Yazılacak dosyanın yolu |
 | `bicim` | text | isteğe bağlı | Sürücü adı (DXF, GPKG); verilmezse uzantıdan bulunur |
+| `surum` | integer | isteğe bağlı | DXF sürümü: 2000, 2004, 2007 (varsayılan), 2010, 2013, 2018 |
 
 Ayrıntılı kullanım: [DIŞAAKTAR](export.md)
 
@@ -1141,7 +1238,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "KT"
       ],
       "category": "Düzenleme",
-      "summary": "Bir nesnenin köşesini yeni bir yere taşır.",
+      "summary": "Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.",
       "params": [
         {
           "name": "nesne",
@@ -1295,7 +1392,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "KP"
       ],
       "category": "Düzenleme",
-      "summary": "Seçilen nesnelerin kopyasını iki nokta arasındaki kadar öteye koyar.",
+      "summary": "Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.",
       "params": [
         {
           "name": "nesneler",
@@ -1315,11 +1412,11 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         {
           "name": "bitis",
-          "type": "point",
+          "type": "point_list",
           "min": 1,
-          "max": 1,
+          "max": -1,
           "required": true,
-          "help": "Kopyanın geleceği nokta"
+          "help": "Kopyaların geleceği noktalar; her nokta bir kopya"
         }
       ],
       "flags": [
@@ -1922,6 +2019,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         }
       ],
       "flags": [
+        "interactive",
         "scriptable",
         "ai_accessible",
         "read_only"
@@ -2153,6 +2251,408 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "max": 1,
           "required": true,
           "help": "İkinci eksenin uzaklığı; eksene dik ölçülür"
+        },
+        {
+          "name": "baslangic",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Kısmi elips: başlangıç açısı, derece, birinci eksenden saat yönünün tersine"
+        },
+        {
+          "name": "bitis",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Kısmi elips: bitiş açısı, derece; baslangic ile birlikte"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.spline",
+      "names": [
+        "SPLINE",
+        "SPLINE",
+        "SPLINE",
+        "SPL"
+      ],
+      "category": "Çizim",
+      "summary": "Kontrol noktalarından NURBS eğrisi (spline) çizer.",
+      "params": [
+        {
+          "name": "noktalar",
+          "type": "point_list",
+          "min": 2,
+          "max": -1,
+          "required": true,
+          "help": "Kontrol noktaları"
+        },
+        {
+          "name": "derece",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Eğrinin derecesi, 1–15; varsayılan 3"
+        },
+        {
+          "name": "kapali",
+          "type": "bool",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Son noktadan ilkine kapansın mı; varsayılan hayır"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.hatch",
+      "names": [
+        "TARAMA",
+        "TARAMA",
+        "HATCH",
+        "TRM"
+      ],
+      "category": "Çizim",
+      "summary": "Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar.",
+      "params": [
+        {
+          "name": "noktalar",
+          "type": "point_list",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Sınır köşeleri, nesne seçmek yerine; en az üç nokta"
+        },
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Sınırı verecek kapalı nesneler; yoksa etkin seçim ya da noktalar="
+        },
+        {
+          "name": "desen",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Katalogdaki desen adı: SOLID, ANSI31, NET…; varsayılan SOLID"
+        },
+        {
+          "name": "aci",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Desenin dönme açısı, derece; varsayılan 0"
+        },
+        {
+          "name": "olcek",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Desen ölçeği; varsayılan pafta ölçeğinin paydası (AYAR plan_ölçeği)"
+        },
+        {
+          "name": "katalog",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.block",
+      "names": [
+        "BLOK",
+        "BLOK",
+        "BLOCK",
+        "BLK"
+      ],
+      "category": "Çizim",
+      "summary": "Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar.",
+      "params": [
+        {
+          "name": "ad",
+          "type": "text",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Bloğun adı; Türkçe katlanmış hâliyle benzersiz"
+        },
+        {
+          "name": "taban",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Taban noktası: referansların yerleştirildiği nokta"
+        },
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Bloğa girecek nesneler; yoksa etkin seçim"
+        },
+        {
+          "name": "aciklama",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Serbest açıklama"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.insert",
+      "names": [
+        "BLOKEKLE",
+        "BLOKEKLE",
+        "INSERT",
+        "BE"
+      ],
+      "category": "Çizim",
+      "summary": "Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.",
+      "params": [
+        {
+          "name": "ad",
+          "type": "text",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Yerleştirilecek bloğun adı"
+        },
+        {
+          "name": "nokta",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Ekleme noktası"
+        },
+        {
+          "name": "olcek",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Ölçek; eksi değer x'te aynalar; varsayılan 1"
+        },
+        {
+          "name": "olcek_y",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Y ölçeği, farklıysa; varsayılan olcek"
+        },
+        {
+          "name": "aci",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Dönme açısı, derece; varsayılan 0"
+        },
+        {
+          "name": "sutun",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Dizi sütun sayısı; varsayılan 1"
+        },
+        {
+          "name": "satir",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Dizi satır sayısı; varsayılan 1"
+        },
+        {
+          "name": "sutun_aralik",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Sütunlar arası, milimetre, döndürülmüş eksende"
+        },
+        {
+          "name": "satir_aralik",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Satırlar arası, milimetre, döndürülmüş eksende"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.dimension",
+      "names": [
+        "ÖLÇÜ",
+        "OLCU",
+        "DIMENSION",
+        "ÖÇ"
+      ],
+      "category": "Çizim",
+      "summary": "İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer.",
+      "params": [
+        {
+          "name": "birinci",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Birinci nokta; açısal ölçüde birinci kolun ucu"
+        },
+        {
+          "name": "ikinci",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "İkinci nokta; açısal ölçüde ikinci kolun ucu"
+        },
+        {
+          "name": "konum",
+          "type": "point",
+          "min": 1,
+          "max": 1,
+          "required": true,
+          "help": "Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta"
+        },
+        {
+          "name": "tur",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "hizali (varsayılan), dogrusal, yaricap, cap, acisal"
+        },
+        {
+          "name": "tepe",
+          "type": "point_list",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Açısal ölçünün tepe noktası"
+        },
+        {
+          "name": "stil",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI"
+        },
+        {
+          "name": "metin",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Ölçülen değer yerine yazılacak metin"
+        },
+        {
+          "name": "katalog",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "core.leader",
+      "names": [
+        "LİDER",
+        "LIDER",
+        "LEADER",
+        "LD"
+      ],
+      "category": "Çizim",
+      "summary": "Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.",
+      "params": [
+        {
+          "name": "noktalar",
+          "type": "point_list",
+          "min": 2,
+          "max": -1,
+          "required": true,
+          "help": "Okun ucundan yazının yanına köşeler"
+        },
+        {
+          "name": "metin",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Son köşenin yanına yazılacak metin"
+        },
+        {
+          "name": "stil",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25"
+        },
+        {
+          "name": "katalog",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri"
         }
       ],
       "flags": [

@@ -11,10 +11,13 @@
 
 #include "kentos_cad/app/theme.hpp"
 
+#include <QRect>
 #include <QStatusBar>
 #include <QString>
 #include <QVector>
 #include <QWidget>
+
+class QTimer;
 
 namespace kentos::app {
 
@@ -153,6 +156,12 @@ public:
     /// looking, and read as a tool that does nothing — the same for ALANÖLÇ,
     /// KOORDİNAT and every error message a command produces.
     void setMessage(const QString& text);
+
+    /// A command's work is running on a thread: `label` takes the message cell,
+    /// a moving segment under it says the program is alive, and a `Durdur` chip
+    /// beside it requests the stop (`stopRequested`). Off, the cell reads as
+    /// before.
+    void setBusy(const QString& label, bool on);
     void setConnection(const QString& text, bool connected);
     void setPerformance(const QString& text);
 
@@ -165,6 +174,9 @@ signals:
     /// this into an `AYAR` call, so the mouse and the keyboard reach the store by
     /// exactly the same road (Article 1.2).
     void toggled(const QString& id);
+
+    /// The `Durdur` chip was clicked while busy.
+    void stopRequested();
 
     /// A chip was right-clicked: the user wants to CONFIGURE the aid rather than
     /// switch it. `OSNAP` is on/off as a chip and thirteen separate modes
@@ -196,6 +208,9 @@ private:
     void relayout();
     int cellWidth(const QString& text, bool withIcon) const;
 
+    /// Advances the busy segment; connected to `pulse_` while busy.
+    void pulse();
+
     QVector<Chip> chips_;
     QString coordinate_;
     QString connection_;
@@ -204,6 +219,13 @@ private:
     int hot_         = -1;
     int coordWidth_  = 0;
     ThemeMode theme_ = ThemeMode::Dark;
+
+    bool busy_ = false;
+    QString busyLabel_;
+    QRect stopRect_; ///< where the Durdur chip was last painted; empty when not busy
+    bool stopHot_  = false;
+    int phase_     = 0; ///< the busy segment's position, in pixels
+    QTimer* pulse_ = nullptr;
 };
 
 /// The 29 px header every dock panel wears (`design.md` §6).

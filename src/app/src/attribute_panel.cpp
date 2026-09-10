@@ -265,6 +265,17 @@ void AttributePanel::rebuild()
                              {},
                              {}});
         what.rows.push_back({tr("tur"), shapeName(doc, kind, gslot), {}, true, {}, {}});
+        // FOREIGN DATA IS COUNTED, NEVER SHOWN (model.md R26a): bytes another
+        // program owns, kept for the round trip, in a vocabulary this program
+        // does not read. The count tells the user they are there.
+        if (const std::size_t foreign = doc.foreign().count_for(gslot); foreign != 0)
+            what.rows.push_back({tr("ek_veri"),
+                                 tr("%n kayıt (başka programın verisi, korunur)", nullptr,
+                                    static_cast<int>(foreign)),
+                                 tr("SABİT"),
+                                 true,
+                                 {},
+                                 {}});
         what.rows.push_back(
             {tr("kose_sayisi"), QString::number(corners), tr("HESAP"), true, {}, {}});
         if (span.count > 1)

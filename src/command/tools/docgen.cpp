@@ -6,6 +6,8 @@
 // here and written into /docs. Editing the output by hand is a defect; the gate
 // scripts/ci-gate-docs.sh regenerates it and fails on any difference.
 #include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include <cstdio>
 #include <fstream>
@@ -116,10 +118,55 @@ std::string build(const Registry& reg)
 
 } // namespace
 
+/// The page slug of a kind: its Turkish name, folded to ASCII and lowered.
+/// `ÇOKLUÇİZGİ` becomes `coklucizgi`, which is the file under docs/nesneler/.
+std::string kind_slug(const kentos::core::KindSpec& spec)
+{
+    std::string folded = kentos::core::turkish_fold_key(spec.names[0]);
+    for (char& c : folded)
+        if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+    return folded;
+}
+
+/// The kinds table (model.md R25): generated from `builtin_kinds()` the way the
+/// command table is generated from the registry, so there is no hand-kept list
+/// of entity kinds anywhere in /docs.
+std::string build_kinds()
+{
+    std::string out;
+    out += "<!-- ÜRETİLMİŞ DOSYA — ELLE DÜZENLEMEYİN. -->\n";
+    out += "<!-- Kaynak: kentos::core::builtin_kinds().  Yeniden üret: make reference -->\n";
+    out += "<!-- Bir nesne türünün burada görünmesi için tek yapılması gereken onu kaydetmektir; "
+           "-->\n";
+    out += "<!-- projede elle tutulan ikinci bir tür listesi yoktur (model.md R25). -->\n\n";
+
+    out += "# Nesne Türleri Referansı\n\n";
+    out += "Bu tablo çekirdeğin tür kaydından üretilir. Her türün ayrıntılı sayfası\n";
+    out += "`docs/nesneler/` altındadır ve tablodan bağlanır. Kimlik dosyaya yazılan sayıdır ve\n";
+    out += "bir kez verildikten sonra asla başka anlama gelmez (model.md R26).\n\n";
+
+    out += "| Tür | Kimlik | Adlar | Açıklama |\n";
+    out += "|---|---|---|---|\n";
+    for (const kentos::core::KindSpec& spec : kentos::core::builtin_kinds().all()) {
+        out += "| [`" + std::string(spec.stable_id) + "`](" + kind_slug(spec) + ".md) | " +
+               std::to_string(spec.id) + " | ";
+        bool first = true;
+        for (const char* n : spec.names) {
+            if (n == nullptr || *n == '\0') continue;
+            if (!first) out += ", ";
+            first = false;
+            out += "`" + std::string(n) + "`";
+        }
+        out += " | " + std::string(spec.summary_tr) + " |\n";
+    }
+    return out;
+}
+
 int main(int argc, char** argv)
 {
     if (argc < 2) {
-        (void)std::fprintf(stderr, "kullanım: kentos_docgen <cikti.md>\n");
+        (void)std::fprintf(stderr,
+                           "kullanım: kentos_docgen <komut-referans.md> [<nesne-referans.md>]\n");
         return 2;
     }
 
@@ -134,5 +181,16 @@ int main(int argc, char** argv)
 
     out << build(reg);
     (void)std::fprintf(stdout, "docgen: %zu komut -> %s\n", reg.size(), argv[1]);
+
+    if (argc >= 3) {
+        std::ofstream kinds(argv[2], std::ios::out | std::ios::binary);
+        if (!kinds) {
+            (void)std::fprintf(stderr, "docgen: '%s' yazılamadı\n", argv[2]);
+            return 1;
+        }
+        kinds << build_kinds();
+        (void)std::fprintf(stdout, "docgen: %zu nesne türü -> %s\n",
+                           kentos::core::builtin_kinds().size(), argv[2]);
+    }
     return 0;
 }

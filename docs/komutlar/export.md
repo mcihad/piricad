@@ -9,8 +9,18 @@ sisteminin nasıl taşındığını ve neyin aktarılmadığını bileceksiniz.
 Çizimdeki **görünür ve silinmemiş** nesneleri, verdiğiniz yola dış bir veri
 biçiminde yazar. Her KentOSCad katmanı hedef dosyada bir katman olur.
 
-Dışa aktarma **kayıplıdır**. Öznitelikler, nesne başına stil ve kalıcı nesne
-anahtarları aktarılmaz. Çalışma dosyanız her zaman
+Dışa aktarma **biçime göre kayıplıdır**. GeoPackage'a öznitelik sütunları alan
+olarak, her nesnenin türü ve kalıcı anahtarı, yazının metni, yüksekliği, açısı ve
+hizası da yazılır; daire, yay ve elips ekranda göründükleri çokgen olarak gider.
+DXF'e (libdxfrw ile) her tür kendi varlığı olarak gider: daire `CIRCLE`, yay `ARC`,
+elips ve kısmi elips `ELLIPSE`, nokta `POINT`, yazı `TEXT`, çizgi ve alan
+`LWPOLYLINE`, yaylı çoklu çizgi şişkinlikli `LWPOLYLINE`, spline `SPLINE`, tarama
+`HATCH`, blok tanımları `BLOCK` ve referansları `INSERT`, ölçü `DIMENSION` (stili
+`DIMSTYLE` tablosuna), lider `LEADER`; katmanlar rengi, kalınlığı, görünürlüğü ve
+kilidiyle; nesnenin kendi rengi ve kalınlığı; öznitelikler `KENTOSCAD` uygulama
+verisi (XDATA) olarak — KentOSCad geri okurken sütunlarına döner; başka programın
+XDATA'sı geldiği gibi. Çizgi tipleri bu sürümde yazılmaz ve söylenir. Çalışma
+dosyanız her zaman
 [`.pcad`](../veri/proje-dosyasi.md) olmalıdır; dış biçimler teslim içindir.
 
 Hangi biçimlerin yazıldığı ve neyin taşındığı:
@@ -67,20 +77,53 @@ Transkript şunu yazar:
 
 ```text
 Dışa aktarıldı: ada12-teslim.gpkg  (14 öğe, 3 katman, GPKG)
-  not: Öznitelik ve stil bilgisi bu sürümde yazılmadı; yalnız geometri ve katman adı aktarıldı.
+  not: 2 öznitelik sütunu alan olarak yazıldı; stil bilgisi yazılmadı.
 ```
 
 DXF'e yazarken KentOSCad yanına bir `.prj` dosyası da koyar ve bunu söyler:
 
 ```text
-Dışa aktarıldı: ada12-teslim.dxf  (14 öğe, 3 katman, DXF)
-  not: DXF biçimi koordinat sistemi taşımaz; sistem 'ada12-teslim.prj' dosyasına
-       yazıldı. Çizimi taşırken bu dosyayı da götürün, yoksa koordinatlar etiketsiz kalır.
-  not: Öznitelik ve stil bilgisi bu sürümde yazılmadı; yalnız geometri ve katman adı aktarıldı.
+Dışa aktarıldı: ada12-teslim.dxf  (14 nesne, 3 katman, DXF AC1021, EPSG:5256)
+  not: Çizgi tipleri bu sürümde DXF'e yazılmadı; her katman CONTINUOUS.
+```
+
+DXF sürümü `surum=` ile seçilir: `2000`, `2004`, `2007` (varsayılan), `2010`, `2013`,
+`2018`. 2007 ve sonrası UTF-8'dir; daha eski bir sürüm istenirse dosyaya
+`$DWGCODEPAGE ANSI_1254` yazılır ki Türkçe harfler AutoCAD'de doğru çıksın.
+
+```
+DIŞAAKTAR dosya="ada12-teslim.dxf" surum=2000
 ```
 
 **İki dosyayı da teslim edin.** `.prj` olmadan DXF'iniz etiketsiz koordinat
 taşır ve KentOSCad dâhil hiçbir program hangi projeksiyonda olduğunu bilemez.
+
+### Daire, yay, elips, nokta ve yazı nasıl yazılır
+
+Dış biçimlerin dairesi, yayı ya da yazısı yoktur; KentOSCad bunları **nesnenin
+türüne göre** yazar. GeoPackage'da her katmanın tablosu şu alanları taşır:
+
+| Alan | İçeriği |
+|---|---|
+| `tur` | `core.polyline`, `core.circle`, `core.arc`, `core.ellipse`, `core.point`, `core.text` |
+| `anahtar` | nesnenin kalıcı anahtarı |
+| `yazi`, `yukseklik_mm`, `aci`, `hizalama` | yazının metni, zemin milimetresi yüksekliği, saat yönünün tersine açısı, hizası |
+| çizimdeki her öznitelik sütunu | kendi adıyla, şemadaki türüyle (tam sayı, ondalık, tarih…) |
+
+Daire ve elips çokgen, yay çizgi olarak gider; yazı taban çizgisinin başındaki
+nokta olarak. Bu dosyayı KentOSCad geri okurken `tur` alanını tanır: daire daire,
+yay yay, yazı yazı olarak geri gelir (elips bugün alan olarak gelir ve bunu söyler).
+
+DXF'te alan yoktur: yazı `TEXT` olarak yüksekliği, açısı ve hizasıyla, parsel kapalı
+`LWPOLYLINE` olarak (boşluğu kendi kapalı `LWPOLYLINE`'ı), daire `CIRCLE`, yay `ARC`,
+elips `ELLIPSE`, nokta `POINT`, yaylı çoklu çizgi şişkinlikli `LWPOLYLINE`, spline
+`SPLINE`, tarama sınır döngüleri ve desen adıyla `HATCH` (desen tanım çizgileri
+yazılmaz; AutoCAD deseni adıyla bulur), blok tanımı üyeleriyle `BLOCK`, referansı
+`INSERT`, ölçü türüyle `DIMENSION`, lider `LEADER` olarak yazılır. Koordinatlar
+[`AYAR çizim_birimi`](setting.md) ayarındaki birimde yazılır ve `$INSUNITS` başlığa
+işlenir. Öznitelikler her nesnenin `KENTOSCAD` uygulama verisine `ada#0=12` biçiminde
+(ad, sütun türü, değer) yazılır; KentOSCad bu dosyayı geri okurken sütunu yoksa
+kurar ve değeri yerine koyar.
 
 ### Arayüz
 

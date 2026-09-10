@@ -17,9 +17,16 @@
 #include "kentos_test.hpp"
 
 #include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/arc_polyline.hpp"
+#include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/circle.hpp"
+#include "kentos_cad/core/dimension.hpp"
+#include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/guide.hpp"
+#include "kentos_cad/core/hatch.hpp"
+#include "kentos_cad/core/outline.hpp"
+#include "kentos_cad/core/spline.hpp"
 
 #include <cmath>
 #include <iterator>
@@ -28,6 +35,7 @@
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/io/dwg.hpp"
+#include "kentos_cad/io/dxf.hpp"
 #include "kentos_cad/io/format.hpp"
 #include "kentos_cad/io/service.hpp"
 #include "kentos_cad/io/vector.hpp"
@@ -143,6 +151,20 @@ std::vector<char> read_bytes(const std::string& path)
     std::ifstream in(path, std::ios::binary);
     return std::vector<char>((std::istreambuf_iterator<char>(in)),
                              std::istreambuf_iterator<char>());
+}
+
+/// The comparable part of a journal: what was commanded, with what arguments —
+/// never `origin` or `ts`, the two fields that may legitimately differ.
+std::string what_happened(const Journal& j)
+{
+    std::string out;
+    for (const auto& e : j.entries()) {
+        out += e.command_id;
+        out += ' ';
+        out += e.args.to_json().dump();
+        out += '\n';
+    }
+    return out;
 }
 
 void write_bytes(const std::string& path, const std::vector<char>& bytes)
@@ -1134,18 +1156,22 @@ TEST_CASE("IO: DWG eski usul POLYLINE'i ve katman listesini getiriyor")
     std::size_t with_layers = 0;
     for (const fs::path& file : files) {
         core::Document scratch;
-        auto probe = io::probe_import(scratch, file.string(), "EPSG:5254", std::stop_token{});
+        io::ImportOptions options;
+        options.project_crs = "EPSG:5254";
+        auto probe          = io::probe_import(scratch, file.string(), options, std::stop_token{});
         if (!probe) continue;
 
         if (!probe.value().layers.empty()) ++with_layers;
 
-        // A POLYLINE, ITS VERTICES AND ITS SEQEND ARE NOT LOSSES. The report
-        // names every type it could not read; none of these three may be in it.
-        for (const std::string& note : probe.value().notes) {
-            INFO(file.filename().string() << ": " << note);
-            CHECK(note.find("POLYLINE") == std::string::npos);
-            CHECK(note.find("VERTEX") == std::string::npos);
-            CHECK(note.find("SEQEND") == std::string::npos);
+        // A POLYLINE, ITS VERTICES AND ITS SEQEND ARE NOT LOSSES. The census
+        // names every type it could not read; none of these three may be among
+        // the skipped ones.
+        for (const io::TypeTally& row : probe.value().diagnostics.types) {
+            INFO(file.filename().string() << ": " << row.type << " x" << row.skipped);
+            if (row.skipped == 0) continue;
+            CHECK(row.type.find("POLYLINE") == std::string::npos);
+            CHECK(row.type.find("VERTEX") == std::string::npos);
+            CHECK(row.type.find("SEQEND") == std::string::npos);
         }
     }
 
@@ -2293,4 +2319,1159 @@ TEST_CASE("IO: yay dosyaya gidip yay olarak geri geliyor")
     // The arc's own box, rebuilt on load rather than taken from the four stored
     // vertices — which include the centre and a handle due east.
     CHECK_EQ(reloaded.doc.entity_extent(0), box);
+}
+
+// ------------------------------------------------------- the DXF corpus ----
+//
+// One case per seed in tests/fuzz/tohum/dxf. Each locks two things: what the
+// GDAL path makes of the file today, and what the transcript SAYS about what it
+// could not keep (io.md P11/P13). The libdxfrw reader that follows tightens the
+// geometry assertions; the sentences stay.
+
+namespace {
+
+/// Imports one seed of the DXF corpus into `rig` with the project CRS set, and
+/// returns the transcript the command printed.
+std::string import_seed(Rig& rig, const char* name)
+{
+    const fs::path seed = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "dxf" / name;
+    REQUIRE(fs::exists(seed));
+    REQUIRE(rig.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    auto imported = rig.bus.execute_line("İÇEAKTAR \"" + seed.string() + "\"", Origin::Test);
+    if (!imported) FAIL_WITH("İÇEAKTAR", imported.error().message);
+    return rig.transcript;
+}
+
+/// The vertices of an entity's first ring.
+std::vector<core::Point2> first_ring(const core::Document& doc, core::EntityId e)
+{
+    const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[e]);
+    std::vector<core::Point2> out;
+    if (span.count == 0) return out;
+    const auto xs = doc.geometry().ring_xs(span.first);
+    const auto ys = doc.geometry().ring_ys(span.first);
+    for (std::size_t v = 0; v < xs.size(); ++v)
+        out.push_back(core::Point2{xs[v], ys[v]});
+    return out;
+}
+
+/// The first alive entity of a kind, or -1.
+/// The first DRAWING entity of `kind`: a block definition's member is alive but
+/// not on the drawing, and is not what a reader of the drawing means.
+int first_of_kind(const core::Document& doc, core::KindId kind)
+{
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e)
+        if (doc.alive(e) && doc.entities().kind[e] == kind &&
+            (doc.entities().flags[e] & core::FlagInBlock) == 0)
+            return static_cast<int>(e);
+    return -1;
+}
+
+} // namespace
+
+TEST_CASE("DXF: $INSUNITS başlığı ayarın yerine geçmez, yalnız karşılaştırılır")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+
+    // 10 says `$INSUNITS 4` (millimetres) and its numbers really are millimetres.
+    // With the default setting (metres) it is read as METRES all the same — the
+    // setting is the user's, the header is whoever last saved the file — and the
+    // disagreement is the one WARNING, naming the command that reads it right.
+    Rig metres;
+    const std::string said = import_seed(metres, "10-birim-mm.dxf");
+    REQUIRE_EQ(metres.doc.live_entity_count(), 1u);
+    const auto as_metres = first_ring(metres.doc, 0);
+    REQUIRE_EQ(as_metres.size(), 2u);
+    CHECK_EQ(as_metres[0], (core::Point2{422575250000, 4448078450000}));
+    CHECK(said.find("uyarı: Çizim metre olarak okundu (AYAR çizim_birimi); dosya başlığı "
+                    "milimetre diyor.") != std::string::npos);
+    CHECK(said.find("AYAR çizim_birimi milimetre deyin") != std::string::npos);
+
+    // Told the drawing is in millimetres, the numbers land unscaled and the
+    // header's agreement is a note, not a warning.
+    Rig millimetres;
+    REQUIRE(millimetres.bus.execute_line("AYAR cizim_birimi milimetre", Origin::Test).ok());
+    const std::string agreed = import_seed(millimetres, "10-birim-mm.dxf");
+    const auto as_mm         = first_ring(millimetres.doc, 0);
+    REQUIRE_EQ(as_mm.size(), 2u);
+    CHECK_EQ(as_mm[0], (core::Point2{422575250, 4448078450}));
+    CHECK_EQ(as_mm[1], (core::Point2{422605250, 4448078450}));
+    CHECK(agreed.find("not: Çizim milimetre olarak okundu (AYAR çizim_birimi); dosya başlığı "
+                      "da öyle diyor.") != std::string::npos);
+    CHECK(agreed.find("uyarı: Çizim") == std::string::npos);
+}
+
+TEST_CASE("DXF: başlığı milimetre diyen metre dosyası daire ve yayını metre boyunda getirir")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+
+    // THE SUSEHRI FILE. A real cadastral DXF said `$INSUNITS 4` over coordinates
+    // that were plainly metres; obeying the header divided the whole town by a
+    // thousand and rounded every 3.5 m circle to a 4 mm blob of a few vertices.
+    // Fixture 17 is that file in miniature: the circle must come back as a
+    // circle of 3 500 mm, the arc as an arc of 5 000 mm, and the header's claim
+    // must be a warning the user can act on.
+    Rig rig;
+    const std::string said = import_seed(rig, "17-yanlis-insunits.dxf");
+
+    const int circle = first_of_kind(rig.doc, core::kCircleKind);
+    const int arc    = first_of_kind(rig.doc, core::kArcKind);
+    REQUIRE(circle >= 0);
+    REQUIRE(arc >= 0);
+    const auto& geom = rig.doc.geometry();
+    const auto& ents = rig.doc.entities();
+    const core::Mm r_circle =
+        core::circle_radius_of(geom, ents.slot[static_cast<std::size_t>(circle)]);
+    const core::Mm r_arc = core::arc_radius_of(geom, ents.slot[static_cast<std::size_t>(arc)]);
+    const core::Point2 centre =
+        core::circle_centre_of(geom, ents.slot[static_cast<std::size_t>(circle)]);
+    INFO("circle r=" << r_circle << " arc r=" << r_arc);
+    CHECK(std::abs(r_circle - 3500) <= 1);
+    CHECK(std::abs(r_arc - 5000) <= 1);
+    CHECK(std::abs(centre.x - 422575250) <= 1);
+    CHECK(std::abs(centre.y - 4448118450) <= 1);
+    CHECK(said.find("uyarı: Çizim metre olarak okundu (AYAR çizim_birimi); dosya başlığı "
+                    "milimetre diyor.") != std::string::npos);
+    CHECK(said.find("Okunan türler: ARC 1, CIRCLE 1") != std::string::npos);
+}
+
+TEST_CASE("DXF: birimsiz dosya proje ayarının birimiyle okunur ve bunu söyler")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+
+    // 05 has no HEADER at all. In metres (the default) the circle sits at
+    // 422 575.25 m; told the drawing is in centimetres, the same numbers are a
+    // hundredth of that — and the transcript says which unit was used and why.
+    Rig metres;
+    (void)import_seed(metres, "05-daire-yay-cizgi.dxf");
+    Rig centimetres;
+    REQUIRE(centimetres.bus.execute_line("AYAR cizim_birimi santimetre", Origin::Test).ok());
+    const std::string said = import_seed(centimetres, "05-daire-yay-cizgi.dxf");
+
+    const int circle_m  = first_of_kind(metres.doc, core::kCircleKind);
+    const int circle_cm = first_of_kind(centimetres.doc, core::kCircleKind);
+    REQUIRE(circle_m >= 0);
+    REQUIRE(circle_cm >= 0);
+    const auto centre_m  = first_ring(metres.doc, static_cast<core::EntityId>(circle_m));
+    const auto centre_cm = first_ring(centimetres.doc, static_cast<core::EntityId>(circle_cm));
+    CHECK_EQ(centre_m[0], (core::Point2{422575250, 4448118450}));
+    // 422 575.25 cm is 4 225 752.5 mm; the centre is FITTED from the stroked
+    // vertices OGR hands over, so it lands within the millimetre of that.
+    INFO("cm centre: " << centre_cm[0].x << ", " << centre_cm[0].y);
+    CHECK(std::abs(centre_cm[0].x - 4225752) <= 1);
+    CHECK(std::abs(centre_cm[0].y - 44481184) <= 1);
+    CHECK(said.find("not: Dosya birim bildirmiyor; çizim santimetre olarak okundu (AYAR "
+                    "çizim_birimi)") != std::string::npos);
+
+    // A file that names no unit is told so in EVERY unit, metres included: the
+    // setting was used, and the note says which one, so a wrong one is one
+    // command away from right.
+    CHECK(metres.transcript.find("not: Dosya birim bildirmiyor; çizim metre olarak okundu (AYAR "
+                                 "çizim_birimi)") != std::string::npos);
+    CHECK(metres.transcript.find("uyarı: Dosya birim") == std::string::npos);
+}
+
+TEST_CASE("DXF: kâğıt alanındaki nesne okunmaz ve sayılır")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    Rig rig;
+    const std::string said = import_seed(rig, "11-kagit-alani.dxf");
+
+    // The title-block line lives on a layout (group 67 = 1). Read into the
+    // model it would sit at the origin, 4 448 km from the parcel, and
+    // `YAKINLAŞ KAPSAM` would show both as two dots.
+    CHECK_EQ(rig.doc.live_entity_count(), 1u);
+    CHECK(said.find("atlandı: 1 öğe kâğıt alanında") != std::string::npos);
+}
+
+TEST_CASE("DXF: elips elips olarak gelir, spline düzleştirilir ve söylenir")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF: GDAL yolu elipsi parçalar.");
+
+    // libdxfrw hands the ELLIPSE over as centre and axes, so it is an ellipse in
+    // the drawing — the GDAL path could only make a face of its stroked outline.
+    Rig ellipse;
+    const std::string said_e = import_seed(ellipse, "06-elips.dxf");
+    REQUIRE_EQ(ellipse.doc.live_entity_count(), 1u);
+    CHECK_EQ(ellipse.doc.entities().kind[0], core::kEllipseKind);
+    CHECK(said_e.find("ELLIPSE 1") != std::string::npos); // the census names the type
+
+    // A SPLINE is a spline (core/spline.hpp): its four control points, its
+    // degree and its eight knots come as the file states them, and the drawn
+    // curve starts on the first control point and ends on the last.
+    Rig spline;
+    const std::string said_s = import_seed(spline, "08-spline.dxf");
+    REQUIRE_EQ(spline.doc.live_entity_count(), 1u);
+    CHECK_EQ(spline.doc.entities().kind[0], core::kSplineKind);
+    CHECK_EQ(first_ring(spline.doc, 0).size(), 4u);
+    const std::uint32_t sslot = spline.doc.entities().slot[0];
+    auto def                  = core::spline_of(spline.doc.geometry(), sslot);
+    REQUIRE(def.ok());
+    CHECK_EQ(def.value().degree, 3);
+    CHECK_EQ(def.value().knots_nano.size(), 8u);
+    std::vector<core::Mm> xs, ys;
+    CHECK_FALSE(core::spline_outline(spline.doc.geometry(), sslot, xs, ys));
+    REQUIRE(xs.size() >= 17u);
+    CHECK_EQ(xs.front(), 422600000);
+    CHECK_EQ(xs.back(), 422630000);
+    CHECK(said_s.find("SPLINE 1") != std::string::npos);
+    CHECK(said_s.find("düşürme") == std::string::npos);
+}
+
+TEST_CASE("DXF: tarama tarama olarak gelir, dolu ise dolgu katmanıyla çizilir")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    Rig rig;
+    const std::string said = import_seed(rig, "07-tarama.dxf");
+
+    REQUIRE_EQ(rig.doc.live_entity_count(), 1u);
+    // A 10 m square: the boundary is kept exactly and the face measures as one.
+    CHECK_EQ(rig.doc.entity_area(0), core::Mm2{100'000'000});
+    CHECK(said.find("HATCH 1") != std::string::npos);
+    if (io::dxf_backend_available()) {
+        // A HATCH is a `core.hatch` (core/hatch.hpp): SOLID, drawn through a
+        // symbol whose fill layer carries the ink (model.md R14).
+        CHECK_EQ(rig.doc.entities().kind[0], core::kHatchKind);
+        auto def = core::hatch_of(rig.doc.geometry(), rig.doc.entities().slot[0]);
+        REQUIRE(def.ok());
+        CHECK(def.value().solid);
+        CHECK_EQ(def.value().name, "SOLID");
+        const core::StyleId style = rig.doc.entities().style[0];
+        REQUIRE(style != core::kByLayerStyle);
+        bool filled = false;
+        for (const core::SymbolLayer& l : rig.doc.styles().symbol_at(style).layers)
+            if (l.type == core::SymbolLayerType::SimpleFill && l.look.fill_rgba != 0) filled = true;
+        CHECK(filled);
+    } else {
+        CHECK(said.find("not: 1 tarama (HATCH) sınırı alan olarak okundu") != std::string::npos);
+    }
+}
+
+TEST_CASE("DXF: ölçü ölçü olarak gelir: tanım noktaları, ölçülen değer, yazılan metin")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    Rig rig;
+    const std::string said = import_seed(rig, "09-olculendirme.dxf");
+    CHECK(rig.doc.live_entity_count() >= 1u);
+    CHECK(said.find("DIMENSION") != std::string::npos);
+    if (!io::dxf_backend_available()) return;
+
+    // The aligned DIMENSION is a `core.dimension` (core/dimension.hpp): its two
+    // points 12,5 m apart measure 12500 mm, the text the file typed stands, and
+    // the drawn form has extension lines, a line and two arrowheads.
+    const int dim = first_of_kind(rig.doc, core::kDimensionKind);
+    REQUIRE(dim >= 0);
+    const auto e             = static_cast<core::EntityId>(dim);
+    const std::uint32_t slot = rig.doc.entities().slot[e];
+    auto def                 = core::dimension_of(rig.doc.geometry(), slot);
+    REQUIRE(def.ok());
+    CHECK_EQ(def.value().type, core::DimensionType::Aligned);
+    CHECK_EQ(def.value().measurement, 12500);
+    CHECK_EQ(def.value().override_text, "12.50");
+    REQUIRE(rig.doc.texts().has(slot));
+    CHECK_EQ(std::string(rig.doc.texts().text(slot)), "12.50");
+    core::EmitBuffer runs;
+    REQUIRE(core::entity_outline(rig.doc, e, runs));
+    CHECK_EQ(runs.run_total(), 5u);
+    CHECK(said.find("stili dosyada tanımlı değildi") != std::string::npos);
+}
+
+TEST_CASE("DXF: lider lider olarak gelir, oku ilk köşede")
+{
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    Rig rig;
+    const std::string said = import_seed(rig, "22-lider.dxf");
+    REQUIRE_EQ(rig.doc.live_entity_count(), 1u);
+    CHECK_EQ(rig.doc.entities().kind[0], core::kLeaderKind);
+    CHECK_EQ(first_ring(rig.doc, 0).size(), 3u);
+    auto def = core::leader_of(rig.doc.geometry(), rig.doc.entities().slot[0]);
+    REQUIRE(def.ok());
+    CHECK(def.value().arrow);
+    core::EmitBuffer runs;
+    REQUIRE(core::entity_outline(rig.doc, 0, runs));
+    REQUIRE_EQ(runs.run_total(), 2u);
+    CHECK_EQ(runs.run_xs(1)[0], 422600000); // the arrowhead's tip is the first vertex
+    CHECK(said.find("LEADER 1") != std::string::npos);
+}
+
+TEST_CASE("DXF: yükseklik (Z) atıldığında söylenir")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    Rig rig;
+    const std::string said = import_seed(rig, "14-yukseklik-z.dxf");
+    CHECK_EQ(rig.doc.live_entity_count(), 1u);
+    if (io::dxf_backend_available()) {
+        // A constant Z is a KOT: written to the `kot` column (Length, millimetres)
+        // rather than thrown away, and the transcript says so. The fixture's line
+        // sits at 12.5 m.
+        CHECK(said.find("`kot` sütununa yazıldı") != std::string::npos);
+        const core::AttrId kot = rig.doc.attributes().find("kot");
+        REQUIRE(kot != core::kNoAttr);
+        auto cell = rig.doc.attributes().get(kot, rig.doc.entities().slot[0]);
+        REQUIRE(cell.ok());
+        CHECK(cell.value().present);
+        CHECK_EQ(cell.value().number, 12500);
+    } else {
+        CHECK(said.find("uyarı: 1 öğede yükseklik (Z) vardı") != std::string::npos);
+    }
+}
+
+TEST_CASE("DXF: nesnenin kendi rengi ve çizgi tipi okunmadığında söylenir")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    Rig rig;
+    const std::string said = import_seed(rig, "15-renk-cizgitipi.dxf");
+    CHECK_EQ(rig.doc.live_entity_count(), 2u);
+    // One of the two lines carries colour 1 (red) and DASHED; the other inherits.
+    if (io::dxf_backend_available()) {
+        // The colour IS read now — ACI 1 is red — and the line type, which is
+        // not, is said as a degradation.
+        const core::StyleId own = rig.doc.entities().style[0];
+        REQUIRE(own != core::kByLayerStyle);
+        CHECK_EQ(rig.doc.styles().at(own).rgba, 0xFFFF0000u);
+        CHECK_EQ(rig.doc.entities().style[1], core::kByLayerStyle);
+        CHECK(said.find("düşürme: 1 öğenin çizgi tipi okunmadı") != std::string::npos);
+    } else {
+        CHECK(said.find("not: 1 öğenin kendi rengi ya da çizgi tipi bu sürümde okunmadı") !=
+              std::string::npos);
+    }
+}
+
+TEST_CASE("DXF: iç içe blok referansı yapısıyla gelir ve üyeleri yerinde çizilir")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    Rig rig;
+    const std::string said = import_seed(rig, "13-ic-ice-blok.dxf");
+
+    if (!io::dxf_backend_available()) {
+        // GDAL explodes both inserts; what arrives is the one line, translated twice.
+        REQUIRE_EQ(rig.doc.live_entity_count(), 1u);
+        const auto pts = first_ring(rig.doc, 0);
+        REQUIRE_EQ(pts.size(), 2u);
+        CHECK(std::abs(pts[0].x - 422575250) <= 1);
+        return;
+    }
+    // B inserts A at (0, 5); the drawing inserts B at the parcel. Two block
+    // DEFINITIONS with their members, one reference on the drawing (R45): the
+    // line is a member of A, the nested INSERT a member of B, and only the
+    // reference is a drawing entity.
+    REQUIRE_EQ(rig.doc.blocks().size(), 2u);
+    CHECK(rig.doc.blocks().find("A") != core::kNoBlock);
+    CHECK(rig.doc.blocks().find("B") != core::kNoBlock);
+    CHECK(said.find("2 blok tanımı ve 1 blok referansı") != std::string::npos);
+    std::size_t drawn  = 0;
+    core::EntityId ref = core::kNoEntity;
+    for (core::EntityId e = 0; e < rig.doc.entities().size(); ++e) {
+        if (!rig.doc.alive(e)) continue;
+        if ((rig.doc.entities().flags[e] & core::FlagInBlock) != 0) continue;
+        ++drawn;
+        ref = e;
+    }
+    REQUIRE_EQ(drawn, 1u);
+    CHECK_EQ(rig.doc.entities().kind[ref], core::kBlockReferenceKind);
+
+    // Drawn through the reference, the line lands where the two placements put
+    // it — the same millimetres the exploding reader used to produce.
+    core::EmitBuffer runs;
+    REQUIRE(core::entity_outline(rig.doc, ref, runs));
+    REQUIRE_EQ(runs.run_total(), 1u);
+    const auto xs = runs.run_xs(0);
+    const auto ys = runs.run_ys(0);
+    REQUIRE_EQ(xs.size(), 2u);
+    CHECK(std::abs(xs[0] - 422575250) <= 1);
+    CHECK(std::abs(ys[0] - 4448083450) <= 1);
+    CHECK(std::abs(xs[1] - 422585250) <= 1);
+    CHECK(std::abs(ys[1] - 4448083450) <= 1);
+    // The reference's box is the drawn form's, so it culls and zooms right.
+    const core::Box2 box = rig.doc.entities().box_of(ref);
+    CHECK(std::abs(box.min_x - 422575250) <= 1);
+    CHECK(std::abs(box.max_x - 422585250) <= 1);
+}
+
+TEST_CASE("DXF: Türkçe kod sayfalı yazı UTF-8 olarak gelir")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    Rig rig;
+    (void)import_seed(rig, "12-turkce-yazi.dxf");
+
+    // A 2000-era DXF stores "ŞİŞLİ" as five CP1254 bytes and names the code
+    // page in $DWGCODEPAGE. What reaches the document is UTF-8.
+    REQUIRE_EQ(rig.doc.live_entity_count(), 1u);
+    const std::uint32_t slot = rig.doc.entities().slot[0];
+    REQUIRE(rig.doc.texts().has(slot));
+    CHECK_EQ(std::string(rig.doc.texts().text(slot)), "ŞİŞLİ");
+    CHECK_EQ(rig.doc.texts().height(slot), core::Mm{2500});
+
+    // The rotation rides on the baseline: 30 degrees, within a hundredth.
+    const auto pts = first_ring(rig.doc, 0);
+    REQUIRE_EQ(pts.size(), 2u);
+    const double turned = std::atan2(static_cast<double>(pts[1].y - pts[0].y),
+                                     static_cast<double>(pts[1].x - pts[0].x)) *
+                          180.0 / 3.14159265358979323846;
+    CHECK(std::abs(turned - 30.0) < 0.01);
+}
+
+TEST_CASE("DXF: nokta ve yazı kendi türleriyle gelir")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    Rig rig;
+    (void)import_seed(rig, "16-nokta-ve-yazi.dxf");
+
+    REQUIRE_EQ(rig.doc.live_entity_count(), 2u);
+    const int point = first_of_kind(rig.doc, core::kPointKind);
+    REQUIRE(point >= 0);
+    CHECK_EQ(first_ring(rig.doc, static_cast<core::EntityId>(point))[0],
+             (core::Point2{422600000, 4448100000}));
+
+    bool caption = false;
+    for (core::EntityId e = 0; e < rig.doc.entities().size(); ++e) {
+        const std::uint32_t slot = rig.doc.entities().slot[e];
+        if (rig.doc.alive(e) && rig.doc.texts().has(slot)) {
+            caption = true;
+            CHECK_EQ(std::string(rig.doc.texts().text(slot)), "Ada 12");
+        }
+    }
+    CHECK(caption);
+}
+
+TEST_CASE("DXF: transkript okunan türlerin sayımıyla biter")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    Rig rig;
+    const std::string said = import_seed(rig, "05-daire-yay-cizgi.dxf");
+    CHECK(said.find("Okunan türler:") != std::string::npos);
+    CHECK(said.find("ARC 1") != std::string::npos);
+    CHECK(said.find("CIRCLE 1") != std::string::npos);
+    CHECK(said.find("LINE 1") != std::string::npos);
+}
+
+// --------------------------------------------- export knows what a thing is ----
+
+TEST_CASE("IO: GPKG dışa aktarım daire, yay, elips, nokta ve yazıyı türüyle yazar ve geri okur")
+{
+    // THE EXPORT USED TO READ RINGS ALONE. A circle is stored as its centre and a
+    // radius handle, so it left the program as a two-point line pointing east;
+    // a caption left as its bare baseline with the words dropped. Now the kind
+    // decides what is written, the caption's four facts ride as fields, and the
+    // attribute table travels with the geometry — so a GeoPackage written here
+    // comes back as the drawing it was.
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+
+    TempDir dir("gpkg-turler");
+    const std::string path = dir.file("turler.gpkg");
+
+    Rig a;
+    const auto run = [&](const std::string& line) {
+        auto r = a.bus.execute_line(line, Origin::Test);
+        if (!r) FAIL_WITH(line.c_str(), r.error().message);
+    };
+    run("AYAR core.crs.id EPSG:5254");
+    run("KATMAN ad=PARSEL");
+    run("DAİRE 485320.150,4310220.400 485328.150,4310220.400");
+    run("YAY merkez=485400.000,4310220.400 baslangic=485412.500,4310220.400 "
+        "bitis=485387.500,4310220.400");
+    run("ELİPS merkez=485500.000,4310220.400 birinci=485520.000,4310220.400 "
+        "ikinci=485500.000,4310230.400");
+    run("NOKTA 485600.000,4310220.400");
+    run("METİN 485700.000,4310220.400 \"Ada 12\" 2500");
+    run("SÜTUN kimlik=ada tur=tam_sayi");
+    run("ÖZNİTELİK ada 1 12");
+    REQUIRE_EQ(a.doc.live_entity_count(), 5u);
+    run("DIŞAAKTAR dosya=\"" + path + "\" bicim=GPKG");
+    CHECK(a.transcript.find("1 öznitelik sütunu alan olarak yazıldı") != std::string::npos);
+
+    Rig b;
+    REQUIRE(b.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    auto back = b.bus.execute_line("İÇEAKTAR dosya=\"" + path + "\" alanlar=*", Origin::Test);
+    if (!back) FAIL_WITH("İÇEAKTAR", back.error().message);
+    REQUIRE_EQ(b.doc.live_entity_count(), 5u);
+
+    // The circle: fitted back from the 128-gon within the millimetre.
+    const int circle = first_of_kind(b.doc, core::kCircleKind);
+    REQUIRE(circle >= 0);
+    {
+        const auto v = first_ring(b.doc, static_cast<core::EntityId>(circle));
+        REQUIRE_EQ(v.size(), 2u);
+        CHECK(std::abs(v[0].x - 485320150) <= 1);
+        CHECK(std::abs(v[0].y - 4310220400) <= 1);
+        CHECK(std::abs((v[1].x - v[0].x) - 8000) <= 1);
+    }
+
+    // The arc: centre, radius and both ends.
+    const int arc = first_of_kind(b.doc, core::kArcKind);
+    REQUIRE(arc >= 0);
+    {
+        const auto v = first_ring(b.doc, static_cast<core::EntityId>(arc));
+        REQUIRE_EQ(v.size(), 4u);
+        CHECK(std::abs(v[0].x - 485400000) <= 1);
+        CHECK(std::abs((v[1].x - v[0].x) - 12500) <= 1);
+        CHECK(std::abs(v[2].x - 485412500) <= 1);
+        CHECK(std::abs(v[3].x - 485387500) <= 1);
+    }
+
+    // The ellipse comes back as a face today, and the transcript says so.
+    CHECK(b.transcript.find("elips") != std::string::npos);
+
+    // The point and the caption, exactly.
+    const int point = first_of_kind(b.doc, core::kPointKind);
+    REQUIRE(point >= 0);
+    CHECK_EQ(first_ring(b.doc, static_cast<core::EntityId>(point))[0],
+             (core::Point2{485600000, 4310220400}));
+
+    bool caption = false;
+    for (core::EntityId e = 0; e < b.doc.entities().size(); ++e) {
+        const std::uint32_t slot = b.doc.entities().slot[e];
+        if (!b.doc.alive(e) || !b.doc.texts().has(slot)) continue;
+        caption = true;
+        CHECK_EQ(std::string(b.doc.texts().text(slot)), "Ada 12");
+        CHECK_EQ(b.doc.texts().height(slot), core::Mm{2500});
+        CHECK_EQ(first_ring(b.doc, e)[0], (core::Point2{485700000, 4310220400}));
+    }
+    CHECK(caption);
+
+    // The attribute came back on the circle, as a number.
+    const core::AttrId ada = b.doc.attributes().find("ada");
+    REQUIRE(ada != core::kNoAttr);
+    auto cell = b.doc.attribute(ada, static_cast<core::EntityId>(circle));
+    REQUIRE(cell.ok());
+    CHECK(cell.value().present);
+    CHECK_EQ(cell.value().number, 12);
+}
+
+TEST_CASE("IO: DXF dışa aktarım parseli kapalı LWPOLYLINE, yazıyı yazı olarak yazar")
+{
+    // GDAL's DXF writer turns a polygon into a solid HATCH unless told otherwise,
+    // and a parcel delivered as a hatch is a filled picture to every CAD program
+    // that opens it. And a caption used to leave as a bare baseline.
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+
+    TempDir dir("dxf-parsel");
+    const std::string path = dir.file("parsel.dxf");
+
+    Rig a;
+    const auto run = [&](const std::string& line) {
+        auto r = a.bus.execute_line(line, Origin::Test);
+        if (!r) FAIL_WITH(line.c_str(), r.error().message);
+    };
+    run("AYAR core.crs.id EPSG:5254");
+    run("KATMAN ad=PARSEL");
+    run("ALAN 485300.000,4310200.000 485360.000,4310200.000 485360.000,4310245.000 "
+        "485300.000,4310245.000");
+    run("METİN 485310.000,4310210.000 \"Ada 12\" 2500");
+    run("DAİRE 485320.150,4310220.400 485328.150,4310220.400");
+    run("DIŞAAKTAR dosya=\"" + path + "\" bicim=DXF");
+
+    std::ifstream in(path, std::ios::binary);
+    const std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    CHECK(bytes.find("LWPOLYLINE") != std::string::npos);
+    // libdxfrw writes the caption as TEXT and the circle as a CIRCLE; the GDAL
+    // writer wrote MTEXT and stroked the circle.
+    CHECK(
+        (bytes.find("\nTEXT\n") != std::string::npos || bytes.find("MTEXT") != std::string::npos));
+    if (io::dxf_backend_available()) CHECK(bytes.find("\nCIRCLE\n") != std::string::npos);
+    CHECK(bytes.find("\nHATCH\n") == std::string::npos);
+    CHECK(bytes.find("Ada") != std::string::npos);
+
+    Rig b;
+    REQUIRE(b.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    auto back = b.bus.execute_line("İÇEAKTAR dosya=\"" + path + "\"", Origin::Test);
+    if (!back) FAIL_WITH("İÇEAKTAR", back.error().message);
+    REQUIRE_EQ(b.doc.live_entity_count(), 3u);
+
+    std::size_t faces = 0, captions = 0;
+    for (core::EntityId e = 0; e < b.doc.entities().size(); ++e) {
+        if (!b.doc.alive(e)) continue;
+        const std::uint32_t slot  = b.doc.entities().slot[e];
+        const core::RingSpan span = b.doc.geometry().rings_of(slot);
+        if (b.doc.geometry().ring_role[span.first] == core::RingRole::Exterior) ++faces;
+        if (b.doc.texts().has(slot)) {
+            ++captions;
+            CHECK_EQ(std::string(b.doc.texts().text(slot)), "Ada 12");
+            CHECK_EQ(b.doc.texts().height(slot), core::Mm{2500});
+        }
+    }
+    // Through libdxfrw the circle is a CIRCLE both ways and comes back as one;
+    // only the parcel is a face. The GDAL writer stroked it into a second face.
+    std::size_t circles = 0;
+    for (core::EntityId e = 0; e < b.doc.entities().size(); ++e)
+        if (b.doc.alive(e) && b.doc.entities().kind[e] == core::kCircleKind) ++circles;
+    if (io::dxf_backend_available()) {
+        CHECK_EQ(faces, 1u);
+        CHECK_EQ(circles, 1u);
+    } else {
+        CHECK_EQ(faces, 2u);
+    }
+    CHECK_EQ(captions, 1u);
+}
+
+TEST_CASE("IO: elips dosyaya gidip elips olarak geri gelir")
+{
+    // The reader used to refuse a file naming the ellipse kind — the one kind the
+    // writer could store and the reader could not open. Every kind now goes
+    // through `add_kind`, so an ellipse is an ellipse on the way back and the
+    // fingerprint, which folds the kind, agrees.
+    TempDir dir("elips-gidis-donus");
+    const std::string path = (dir.path() / "elips.pcad").string();
+
+    Rig written;
+    REQUIRE(written.bus.execute_line("ELİPS merkez=10,10 birinci=16,10 ikinci=10,13", Origin::Test)
+                .ok());
+    REQUIRE_EQ(written.doc.live_entity_count(), 1u);
+    CHECK_EQ(written.doc.entities().kind[0], core::kEllipseKind);
+    const std::uint64_t hash = written.doc.content_hash();
+    REQUIRE(written.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    REQUIRE_EQ(reloaded.doc.live_entity_count(), 1u);
+    CHECK_EQ(reloaded.doc.entities().kind[0], core::kEllipseKind);
+    CHECK_EQ(reloaded.doc.content_hash(), hash);
+    CHECK_EQ(reloaded.doc.entities().box_of(0), written.doc.entities().box_of(0));
+    CHECK(std::abs(reloaded.doc.entity_area(0) - written.doc.entity_area(0)) == 0);
+}
+
+TEST_CASE("IO: bilinmeyen tür korunur, çizilir, yeniden kaydedilince bayt bayt aynı")
+{
+    // model.md R26. A kind from a later build arrives with rings and a payload
+    // this build cannot interpret. The file carries both exactly; the reader
+    // hands them to `add_kind` as they came; a re-save writes the same bytes.
+    TempDir dir("bilinmeyen-tur");
+    const std::string first  = (dir.path() / "ilk.pcad").string();
+    const std::string second = (dir.path() / "ikinci.pcad").string();
+
+    Rig written;
+    {
+        // Built below the bus on purpose: no command of this build can make a
+        // kind this build does not know, and that is the situation under test.
+        core::Op undo;
+        const core::LayerId lyr = written.doc.ensure_layer("GELECEK");
+        const std::vector<core::Point2> pts{{0, 0}, {8000, 0}, {8000, 6000}};
+        const std::uint8_t bytes[6]{0xCA, 0xFE, 0x00, 0x01, 0x02, 0x03};
+        const core::RingGeometry::RingInput ring{pts, core::RingRole::Open, 0};
+        REQUIRE(written.doc
+                    .add_kind(lyr, static_cast<core::KindId>(4242),
+                              std::span<const core::RingGeometry::RingInput>(&ring, 1),
+                              std::span<const std::uint8_t>(bytes, 6), undo)
+                    .ok());
+    }
+    const std::uint64_t hash = written.doc.content_hash();
+    REQUIRE(written.bus.execute_line("FARKLIKAYDET \"" + first + "\"", Origin::Test).ok());
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + first + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    REQUIRE_EQ(reloaded.doc.live_entity_count(), 1u);
+    CHECK_EQ(reloaded.doc.entities().kind[0], 4242);
+    CHECK_FALSE(reloaded.doc.kind_known(0));
+    CHECK(reloaded.doc.entities().visible(0));
+    CHECK_EQ(reloaded.doc.entities().box_of(0), (core::Box2{0, 0, 8000, 6000}));
+    const auto back = reloaded.doc.geometry().payload_of(reloaded.doc.entities().slot[0]);
+    REQUIRE_EQ(back.size(), 6u);
+    CHECK_EQ(back[0], 0xCA);
+    CHECK_EQ(back[1], 0xFE);
+    CHECK_EQ(back[5], 0x03);
+    CHECK_EQ(reloaded.doc.content_hash(), hash);
+    // The header's fingerprint was recomputed from the same content, so no
+    // warning about it.
+    CHECK(reloaded.transcript.find("parmak izi") == std::string::npos);
+
+    REQUIRE(reloaded.bus.execute_line("FARKLIKAYDET \"" + second + "\"", Origin::Test).ok());
+    const std::vector<char> a = read_bytes(first);
+    REQUIRE_FALSE(a.empty());
+    CHECK(a == read_bytes(second));
+}
+
+TEST_CASE("IO: yabancı veri ve blok tanımı dosyaya gider, geri gelir, yeniden kaydedilince bayt "
+          "bayt aynı")
+{
+    // model.md R26a and R45. Both tables are absent from a drawing that has
+    // none; when present they come back exactly, the member keeps its flag, and
+    // a re-save is the same bytes.
+    TempDir dir("yabanci-blok");
+    const std::string first  = (dir.path() / "ilk.pcad").string();
+    const std::string second = (dir.path() / "ikinci.pcad").string();
+
+    Rig written;
+    {
+        core::Op undo;
+        const core::LayerId lyr = written.doc.ensure_layer("SEMBOL");
+        const auto kapak = written.doc.add_block("Kapak", "rögar kapağı", core::Point2{10, 20});
+        REQUIRE(kapak.ok());
+        const std::vector<core::Point2> pts{{0, 0}, {600, 0}};
+        const core::RingGeometry::RingInput ring{pts, core::RingRole::Open, 0};
+        const auto member = written.doc.add_kind(
+            lyr, core::kPolylineKind, std::span<const core::RingGeometry::RingInput>(&ring, 1), {},
+            undo, kapak.value());
+        REQUIRE(member.ok());
+
+        const std::vector<core::Point2> line{{0, 0}, {5000, 0}};
+        const auto plain = written.doc.add_polyline(lyr, line, undo);
+        REQUIRE(plain.ok());
+        const std::uint8_t bytes[4]{0xAA, 0xBB, 0xCC, 0xDD};
+        REQUIRE(written.doc
+                    .attach_foreign(plain.value(), core::kForeignDxfXdata,
+                                    std::span<const std::uint8_t>(bytes, 4), undo)
+                    .ok());
+    }
+    const std::uint64_t hash = written.doc.content_hash();
+    REQUIRE(written.bus.execute_line("FARKLIKAYDET \"" + first + "\"", Origin::Test).ok());
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + first + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    const core::Document& doc = reloaded.doc;
+    REQUIRE_EQ(doc.blocks().size(), 1u);
+    CHECK_EQ(doc.blocks().at(0).name, "Kapak");
+    CHECK_EQ(doc.blocks().at(0).description, "rögar kapağı");
+    CHECK_EQ(doc.blocks().at(0).base, (core::Point2{10, 20}));
+    REQUIRE_EQ(doc.blocks().at(0).members.size(), 1u);
+    CHECK_EQ(doc.blocks().at(0).members[0], doc.key_of(0));
+    CHECK((doc.entities().flags[0] & core::FlagInBlock) != 0);
+    CHECK_FALSE(doc.entities().visible(0));
+    CHECK(doc.entities().visible(1));
+
+    const auto back = doc.foreign().bytes(doc.entities().slot[1], core::kForeignDxfXdata);
+    REQUIRE_EQ(back.size(), 4u);
+    CHECK_EQ(back[0], 0xAA);
+    CHECK_EQ(back[3], 0xDD);
+    CHECK_EQ(doc.content_hash(), hash);
+    CHECK(reloaded.transcript.find("parmak izi") == std::string::npos);
+
+    REQUIRE(reloaded.bus.execute_line("FARKLIKAYDET \"" + second + "\"", Origin::Test).ok());
+    const std::vector<char> a = read_bytes(first);
+    REQUIRE_FALSE(a.empty());
+    CHECK(a == read_bytes(second));
+}
+
+TEST_CASE("İÇEAKTAR: arayüz (iş sahibi), komut satırı ve betik aynı belgeyi ve günlüğü üretir")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    const std::string path = std::string(KENTOS_FUZZ_DIR) + "/tohum/dxf/05-daire-yay-cizgi.dxf";
+
+    // ---- client 1: the GUI. A host takes the read off the bus thread; here it
+    //      is a test double that records the session, runs the job when told and
+    //      resumes the command — the order the real host follows. ----
+    Rig gui;
+    command::Session* parked = nullptr;
+    gui.bus.on_job_host      = [&parked](command::Session& s) { parked = &s; };
+    {
+        auto started = gui.bus.begin_interactive("İÇEAKTAR dosya=\"" + path + "\"");
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        REQUIRE(session.working());
+        REQUIRE(parked == &session);
+        REQUIRE(session.job() != nullptr);
+        CHECK(session.job()->label.find("05-daire-yay-cizgi.dxf") != std::string::npos);
+        // Nothing has reached the drawing while the worker reads.
+        CHECK_EQ(gui.doc.live_entity_count(), 0u);
+
+        session.job()->work(command::JobControl{session.job()->stop.get_token()});
+        session.resume_job();
+        REQUIRE(session.finished());
+        auto done = gui.bus.finish(session);
+        if (!done) FAIL_WITH("finish", done.error().message);
+        CHECK(done.value().mutated);
+    }
+
+    // ---- client 2: the command line, driven to completion in one call ----
+    Rig cli;
+    REQUIRE(cli.bus.execute_line("İÇEAKTAR dosya=\"" + path + "\"", Origin::CommandLine).ok());
+
+    // ---- client 3: a JSON script ----
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({"ad": "İçe aktarma kanıtı", "komutlar": [
+            {"cmd": "core.import", "args": {"dosya": ")" +
+                                 path + R"("}}]})");
+        if (!r) FAIL_WITH("betik", r.error().message);
+    }
+
+    // ---- the proof ----
+    CHECK(gui.doc.live_entity_count() > 0);
+    CHECK_EQ(gui.doc.live_entity_count(), cli.doc.live_entity_count());
+    CHECK_EQ(cli.doc.live_entity_count(), scr.doc.live_entity_count());
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    // One undo step each (io.md R17).
+    CHECK_EQ(gui.undo.undo_depth(), 1u);
+    CHECK_EQ(cli.undo.undo_depth(), 1u);
+}
+
+TEST_CASE("İÇEAKTAR: Durdur okumayı keser ve çizim değişmez")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    const std::string path = std::string(KENTOS_FUZZ_DIR) + "/tohum/dxf/05-daire-yay-cizgi.dxf";
+
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("ÇİZGİ 10,10 20,20", Origin::Test).ok());
+    const std::uint64_t before = rig.doc.content_hash();
+    const std::size_t depth    = rig.undo.undo_depth();
+
+    command::Session* parked = nullptr;
+    rig.bus.on_job_host      = [&parked](command::Session& s) { parked = &s; };
+    auto started             = rig.bus.begin_interactive("İÇEAKTAR dosya=\"" + path + "\"");
+    REQUIRE(started.ok());
+    auto& session = *started.value();
+    REQUIRE(session.working());
+
+    // Durdur before the worker gets going: the stop is requested, the read
+    // returns cancelled, and the command unwinds without a byte in the drawing.
+    session.cancel();
+    CHECK(session.cancel_requested());
+    CHECK(session.job()->stop.stop_requested());
+    // Finishing a working session is refused: the worker still owns the read.
+    CHECK_FALSE(rig.bus.finish(session).ok());
+
+    session.job()->work(command::JobControl{session.job()->stop.get_token()});
+    session.resume_job();
+    REQUIRE(session.finished());
+    auto done = rig.bus.finish(session);
+    CHECK_FALSE(done.ok());
+    if (!done) CHECK(done.error().message.find("durduruldu") != std::string::npos);
+
+    CHECK_EQ(rig.doc.content_hash(), before);
+    CHECK_EQ(rig.undo.undo_depth(), depth);
+    CHECK_EQ(rig.doc.live_entity_count(), 1u);
+}
+
+TEST_CASE("İÇEAKTAR: iş sahibi kurulu olsa da tek çağrılık yol yerinde koşar")
+{
+    if (!io::vector_backend_available()) PENDING("KENTOS_WITH_GDAL=OFF.");
+    const std::string path = std::string(KENTOS_FUZZ_DIR) + "/tohum/dxf/05-daire-yay-cizgi.dxf";
+
+    // A host is installed, but `execute_line` finishes in one call and its session
+    // is not client-driven: the job runs in place and the host is never asked.
+    Rig rig;
+    bool asked          = false;
+    rig.bus.on_job_host = [&asked](command::Session&) { asked = true; };
+    REQUIRE(rig.bus.execute_line("İÇEAKTAR dosya=\"" + path + "\"", Origin::CommandLine).ok());
+    CHECK_FALSE(asked);
+    CHECK(rig.doc.live_entity_count() > 0);
+}
+
+TEST_CASE("DXF: şişkinlikli çoklu çizgi yaylı çoklu çizgi olur; alanı tam, yayı tanımıyla")
+{
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    Rig rig;
+    const std::string said = import_seed(rig, "18-siskinlik.dxf");
+    REQUIRE_EQ(rig.doc.live_entity_count(), 1u);
+    // A 10 m square whose east edge bulges into a half circle of radius 5 m
+    // (core/arc_polyline.hpp): 100 + π·25/2 m², EXACT to the square millimetre
+    // because the arc is kept as centre and radius, not stroked.
+    CHECK_EQ(rig.doc.entities().kind[0], core::kArcPolylineKind);
+    CHECK(std::abs(rig.doc.entity_area(0) - core::Mm2{139'269'908}) <= 2);
+    const std::uint32_t slot = rig.doc.entities().slot[0];
+    auto def                 = core::arc_polyline_of(rig.doc.geometry(), slot);
+    REQUIRE(def.ok());
+    REQUIRE_EQ(def.value().arcs.size(), 1u);
+    CHECK_EQ(def.value().arcs[0].radius, 5000);
+    CHECK(def.value().arcs[0].ccw);
+    // The constant width the file declared rides along for the round trip.
+    CHECK(def.value().constant_width > 0);
+    // The perimeter: three straight edges and a half circle, 30 + 5π m.
+    CHECK(std::abs(rig.doc.entity_perimeter(0) - core::Mm{45708}) <= 1);
+    CHECK(said.find("düşürme") == std::string::npos);
+    CHECK(said.find("LWPOLYLINE 1") != std::string::npos);
+}
+
+TEST_CASE("DXF: XDATA bayt bayt korunur, tutamak kaynak_kimlik olur, dışa aktarımla geri döner")
+{
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    TempDir dir("dxf-xdata");
+    Rig rig;
+    const std::string said = import_seed(rig, "19-xdata.dxf");
+    REQUIRE_EQ(rig.doc.live_entity_count(), 1u);
+    const std::uint32_t slot = rig.doc.entities().slot[0];
+    const auto bytes         = rig.doc.foreign().bytes(slot, core::kForeignDxfXdata);
+    REQUIRE_FALSE(bytes.empty());
+    CHECK(said.find("ek verisi (XDATA) bayt bayt korundu") != std::string::npos);
+
+    const core::AttrId handle = rig.doc.attributes().find("kaynak_kimlik");
+    REQUIRE(handle != core::kNoAttr);
+    auto cell = rig.doc.attributes().get(handle, slot);
+    REQUIRE(cell.ok());
+    CHECK_EQ(cell.value().text, "2A");
+
+    // Out and back: the foreign bytes are the same bytes.
+    const std::string path = dir.file("xdata-geri.dxf");
+    REQUIRE(rig.bus.execute_line("DIŞAAKTAR dosya=\"" + path + "\"", Origin::Test).ok());
+    Rig back;
+    REQUIRE(back.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    auto in = back.bus.execute_line("İÇEAKTAR dosya=\"" + path + "\"", Origin::Test);
+    if (!in) FAIL_WITH("İÇEAKTAR", in.error().message);
+    REQUIRE_EQ(back.doc.live_entity_count(), 1u);
+    const auto again =
+        back.doc.foreign().bytes(back.doc.entities().slot[0], core::kForeignDxfXdata);
+    REQUIRE_EQ(again.size(), bytes.size());
+    CHECK(std::equal(again.begin(), again.end(), bytes.begin()));
+}
+
+TEST_CASE(
+    "DXF: blok referansı ölçek, dönme ve aynayla yerleşir; ByBlock üye referansın rengini alır")
+{
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    Rig rig;
+    const std::string said = import_seed(rig, "20-blok-donusum.dxf");
+    // One definition (a circle and a line), two references on the drawing.
+    REQUIRE_EQ(rig.doc.blocks().size(), 1u);
+    const core::BlockId kapak = rig.doc.blocks().find("KAPAK");
+    REQUIRE(kapak != core::kNoBlock);
+    CHECK_EQ(rig.doc.blocks().at(kapak).members.size(), 2u);
+    CHECK(said.find("1 blok tanımı ve 2 blok referansı") != std::string::npos);
+
+    int refs = 0;
+    for (core::EntityId e = 0; e < rig.doc.entities().size(); ++e) {
+        if (!rig.doc.alive(e) || (rig.doc.entities().flags[e] & core::FlagInBlock) != 0) continue;
+        REQUIRE_EQ(rig.doc.entities().kind[e], core::kBlockReferenceKind);
+        ++refs;
+        const std::uint32_t slot = rig.doc.entities().slot[e];
+        auto ref                 = core::block_reference_of(rig.doc.geometry(), slot);
+        REQUIRE(ref.ok());
+        const core::Point2 at = core::block_reference_insertion(rig.doc.geometry(), slot);
+
+        core::EmitBuffer runs;
+        REQUIRE(core::entity_outline(rig.doc, e, runs));
+        REQUIRE_EQ(runs.run_total(), 2u); // the circle's rim and the line
+        if (at.x == 100000) {
+            // Scaled ×2 and turned 90°: the transform is stored as it was given.
+            CHECK_EQ(ref.value().sx, (core::Ratio{2, 1}));
+            CHECK_EQ(ref.value().rotation_udeg, 90'000'000);
+            // The line (0,0)-(2,0) scaled ×2 then turned 90° points north.
+            const auto xs = runs.run_xs(1);
+            const auto ys = runs.run_ys(1);
+            REQUIRE_EQ(xs.size(), 2u);
+            CHECK_EQ(xs[0], 100000);
+            CHECK_EQ(ys[0], 200000);
+            CHECK_EQ(xs[1], 100000);
+            CHECK_EQ(ys[1], 204000);
+            // The circle's rim, radius doubled: its box is 4 m across.
+            core::Box2 rim{};
+            for (std::size_t v = 0; v < runs.run_xs(0).size(); ++v)
+                rim.extend(core::Point2{runs.run_xs(0)[v], runs.run_ys(0)[v]});
+            CHECK_EQ(rim.max_x - rim.min_x, 4000);
+            // ByBlock inside the block: the run inherits the reference's style,
+            // and the reference is red (colour 1 on the INSERT).
+            CHECK_EQ(runs.run_style[0], core::kInheritRunStyle);
+            const core::StyleId style = rig.doc.entities().style[e];
+            REQUIRE(style != core::kByLayerStyle);
+            CHECK_EQ(rig.doc.styles().at(style).rgba, 0xFFFF0000u);
+        } else {
+            // Mirrored in x: the line points west.
+            CHECK_EQ(at, (core::Point2{300000, 200000}));
+            CHECK_EQ(ref.value().sx, (core::Ratio{-1, 1}));
+            const auto xs = runs.run_xs(1);
+            const auto ys = runs.run_ys(1);
+            REQUIRE_EQ(xs.size(), 2u);
+            CHECK_EQ(xs[0], 300000);
+            CHECK_EQ(ys[0], 200000);
+            CHECK_EQ(xs[1], 298000);
+            CHECK_EQ(ys[1], 200000);
+        }
+    }
+    CHECK_EQ(refs, 2);
+}
+
+TEST_CASE("DXF: aynalı OCS (normal −Z) daireyi ve yayı çizim düzlemine doğru taşır")
+{
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    Rig rig;
+    (void)import_seed(rig, "21-aynali-ocs.dxf");
+    REQUIRE_EQ(rig.doc.live_entity_count(), 2u);
+    const int circle = first_of_kind(rig.doc, core::kCircleKind);
+    const int arc    = first_of_kind(rig.doc, core::kArcKind);
+    REQUIRE(circle >= 0);
+    REQUIRE(arc >= 0);
+    const auto& geo = rig.doc.geometry();
+    // A normal of (0,0,−1) mirrors X: the centre at OCS (10,20) is WCS (−10,20).
+    CHECK_EQ(core::circle_centre_of(geo, rig.doc.entities().slot[static_cast<std::size_t>(circle)]),
+             (core::Point2{-10000, 20000}));
+    // The arc 0°→90° in the mirrored system runs from OCS (15,20) to (10,25); in
+    // WCS that is (−15,20) to (−10,25), swept the other way round — so the stored
+    // counter-clockwise arc starts at (−10,25) and ends at (−15,20).
+    const std::uint32_t aslot = rig.doc.entities().slot[static_cast<std::size_t>(arc)];
+    const core::Point2 start  = core::arc_start_of(geo, aslot);
+    const core::Point2 end    = core::arc_end_of(geo, aslot);
+    CHECK(std::abs(start.x + 10000) <= 1);
+    CHECK(std::abs(start.y - 25000) <= 1);
+    CHECK(std::abs(end.x + 15000) <= 1);
+    CHECK(std::abs(end.y - 20000) <= 1);
+}
+
+TEST_CASE("DXF gidiş-dönüş: her tür, yazı ve öznitelik geri gelir; surum=2000 kod sayfasını yazar")
+{
+    if (!io::dxf_backend_available()) PENDING("KENTOS_WITH_DXFRW=OFF.");
+    TempDir dir("dxf-gidis-donus");
+    const std::string path = dir.file("tumu.dxf");
+
+    Rig a;
+    const auto run = [&](const std::string& line) {
+        auto r = a.bus.execute_line(line, Origin::Test);
+        if (!r) FAIL_WITH(line.c_str(), r.error().message);
+    };
+    run("AYAR core.crs.id EPSG:5254");
+    run("KATMAN ad=PARSEL");
+    run("SÜTUN kimlik=ada tur=tam_sayi");
+    run("ALAN 485300,4310200 485360,4310200 485360,4310245 485300,4310245");
+    run("ÖZNİTELİK ada 1 12");
+    run("DAİRE merkez=485320,4310220 cevre=485328,4310220");
+    run("YAY merkez=485400,4310200 baslangic=485412.5,4310200 bitis=485400,4310212.5");
+    run("ELİPS merkez=485500,4310300 birinci=485560,4310300 ikinci=485500,4310330");
+    run("NOKTA 485600,4310200");
+    run("METİN 485310,4310210 \"Şişli 12\" 2500");
+    // The Phase 2 kinds, each through its own command.
+    run("SPLINE noktalar=485700,4310200 485710,4310220 485720,4310220 485730,4310200 derece=3");
+    run("TARAMA noktalar=485700,4310300 485720,4310300 485720,4310320 485700,4310320 desen=ANSI31 "
+        "aci=30 olcek=1000");
+    run("ELİPS merkez=485800,4310300 birinci=485810,4310300 ikinci=485800,4310305 baslangic=0 "
+        "bitis=90");
+    run("KATMAN ad=SEMBOL");
+    run("DAİRE merkez=485900,4310300 cevre=485901,4310300");
+    run("SEÇ KATMAN katman=SEMBOL");
+    run("BLOK ad=KAPAK taban=485900,4310300");
+    run("BLOKEKLE ad=KAPAK nokta=485920,4310300 olcek=2 aci=90");
+    run("ÖLÇÜ birinci=485600,4310400 ikinci=485612.5,4310400 konum=485600,4310403");
+    run("LİDER noktalar=485700,4310400 485703,4310403 485706,4310403 metin=Bak");
+    run("DIŞAAKTAR dosya=\"" + path + "\" surum=2000");
+    CHECK(a.transcript.find("DXF AC1015") != std::string::npos);
+
+    std::ifstream in(path, std::ios::binary);
+    const std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    CHECK(bytes.find("$DWGCODEPAGE") != std::string::npos);
+    CHECK(bytes.find("ANSI_1254") != std::string::npos);
+    CHECK(bytes.find("\nCIRCLE\n") != std::string::npos);
+    CHECK(bytes.find("\nARC\n") != std::string::npos);
+    CHECK(bytes.find("\nELLIPSE\n") != std::string::npos);
+    CHECK(bytes.find("\nPOINT\n") != std::string::npos);
+    CHECK(bytes.find("\nSPLINE\n") != std::string::npos);
+    CHECK(bytes.find("\nHATCH\n") != std::string::npos);
+    CHECK(bytes.find("\nBLOCK\n") != std::string::npos);
+    CHECK(bytes.find("\nKAPAK\n") != std::string::npos);
+    CHECK(bytes.find("\nINSERT\n") != std::string::npos);
+    CHECK(bytes.find("\nDIMENSION\n") != std::string::npos);
+    CHECK(bytes.find("\nLEADER\n") != std::string::npos);
+    CHECK(bytes.find("KENTOSCAD") != std::string::npos); // the ada number travels as XDATA
+    CHECK(fs::exists(dir.file("tumu.prj")));
+
+    Rig b;
+    REQUIRE(b.bus.execute_line("AYAR core.crs.id EPSG:5254", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("SÜTUN kimlik=ada tur=tam_sayi", Origin::Test).ok());
+    auto back = b.bus.execute_line("İÇEAKTAR dosya=\"" + path + "\"", Origin::Test);
+    if (!back) FAIL_WITH("İÇEAKTAR", back.error().message);
+
+    // The Phase 2 kinds come back as what they are.
+    {
+        const auto& g = b.doc.geometry();
+        const int sp  = first_of_kind(b.doc, core::kSplineKind);
+        REQUIRE(sp >= 0);
+        auto sdef = core::spline_of(g, b.doc.entities().slot[static_cast<std::size_t>(sp)]);
+        REQUIRE(sdef.ok());
+        CHECK_EQ(sdef.value().degree, 3);
+        CHECK_EQ(first_ring(b.doc, static_cast<core::EntityId>(sp)).size(), 4u);
+
+        const int ht = first_of_kind(b.doc, core::kHatchKind);
+        REQUIRE(ht >= 0);
+        auto hdef = core::hatch_of(g, b.doc.entities().slot[static_cast<std::size_t>(ht)]);
+        REQUIRE(hdef.ok());
+        CHECK_EQ(hdef.value().name, "ANSI31");
+        CHECK_EQ(hdef.value().angle_udeg, 30'000'000);
+        CHECK_EQ(hdef.value().scale, (core::Ratio{1000, 1}));
+        CHECK_EQ(hdef.value().families.size(), 1u);
+        CHECK_EQ(b.doc.entity_area(static_cast<core::EntityId>(ht)), core::Mm2{400'000'000});
+
+        REQUIRE_EQ(b.doc.blocks().size(), 1u);
+        const core::BlockId kapak = b.doc.blocks().find("KAPAK");
+        REQUIRE(kapak != core::kNoBlock);
+        CHECK_EQ(b.doc.blocks().at(kapak).members.size(), 1u);
+        int refs = 0;
+        for (core::EntityId e = 0; e < b.doc.entities().size(); ++e) {
+            if (!b.doc.alive(e) || b.doc.entities().kind[e] != core::kBlockReferenceKind) continue;
+            ++refs;
+            auto ref = core::block_reference_of(g, b.doc.entities().slot[e]);
+            REQUIRE(ref.ok());
+            if (ref.value().rotation_udeg != 0) {
+                CHECK_EQ(ref.value().rotation_udeg, 90'000'000);
+                CHECK_EQ(ref.value().sx, (core::Ratio{2, 1}));
+            }
+        }
+        CHECK_EQ(refs, 2);
+
+        const int dm = first_of_kind(b.doc, core::kDimensionKind);
+        REQUIRE(dm >= 0);
+        const std::uint32_t dslot = b.doc.entities().slot[static_cast<std::size_t>(dm)];
+        auto ddef                 = core::dimension_of(g, dslot);
+        REQUIRE(ddef.ok());
+        CHECK_EQ(ddef.value().type, core::DimensionType::Aligned);
+        CHECK_EQ(ddef.value().measurement, 12500);
+        CHECK_EQ(ddef.value().style, "ISO-25");
+        REQUIRE(b.doc.texts().has(dslot));
+        CHECK_EQ(std::string(b.doc.texts().text(dslot)), "12,50");
+
+        const int ld = first_of_kind(b.doc, core::kLeaderKind);
+        REQUIRE(ld >= 0);
+        CHECK_EQ(first_ring(b.doc, static_cast<core::EntityId>(ld)).size(), 3u);
+
+        int partial = 0;
+        for (core::EntityId e = 0; e < b.doc.entities().size(); ++e)
+            if (b.doc.alive(e) && b.doc.entities().kind[e] == core::kEllipseKind)
+                if (const auto arc = core::ellipse_arc_of(g, b.doc.entities().slot[e]); arc) {
+                    ++partial;
+                    CHECK_EQ(arc->start_udeg, 0);
+                    CHECK_EQ(arc->end_udeg, 90'000'000);
+                }
+        CHECK_EQ(partial, 1);
+    }
+
+    const int circle = first_of_kind(b.doc, core::kCircleKind);
+    const int arc    = first_of_kind(b.doc, core::kArcKind);
+    const int elli   = first_of_kind(b.doc, core::kEllipseKind);
+    const int point  = first_of_kind(b.doc, core::kPointKind);
+    REQUIRE(circle >= 0);
+    REQUIRE(arc >= 0);
+    REQUIRE(elli >= 0);
+    REQUIRE(point >= 0);
+    const auto& geo = b.doc.geometry();
+    CHECK_EQ(core::circle_radius_of(geo, b.doc.entities().slot[static_cast<std::size_t>(circle)]),
+             8000);
+    const std::uint32_t aslot = b.doc.entities().slot[static_cast<std::size_t>(arc)];
+    CHECK(std::abs(core::arc_radius_of(geo, aslot) - 12500) <= 1);
+    CHECK(std::abs(core::arc_start_of(geo, aslot).x - 485412500) <= 1);
+    CHECK(std::abs(core::arc_end_of(geo, aslot).y - 4310212500) <= 1);
+    const std::uint32_t eslot = b.doc.entities().slot[static_cast<std::size_t>(elli)];
+    CHECK(std::abs(core::ellipse_major_of(geo, eslot).x - 485560000) <= 1);
+    CHECK(std::abs(core::ellipse_minor_of(geo, eslot).y - 4310330000) <= 1);
+
+    const core::AttrId ada = b.doc.attributes().find("ada");
+    REQUIRE(ada != core::kNoAttr);
+    std::size_t faces = 0, captions = 0, sisli = 0;
+    for (core::EntityId e = 0; e < b.doc.entities().size(); ++e) {
+        if (!b.doc.alive(e)) continue;
+        const std::uint32_t slot = b.doc.entities().slot[e];
+        // The captions that are TEXT entities: METİN's and the leader's. A
+        // dimension's caption is part of the DIMENSION and is checked above.
+        if (b.doc.texts().has(slot) && b.doc.entities().kind[e] == core::kPolylineKind) {
+            ++captions;
+            if (std::string(b.doc.texts().text(slot)) == "Şişli 12") {
+                ++sisli;
+                CHECK_EQ(b.doc.texts().height(slot), core::Mm{2500});
+            } else {
+                CHECK_EQ(std::string(b.doc.texts().text(slot)), "Bak");
+            }
+        }
+        if (b.doc.entities().kind[e] == core::kPolylineKind &&
+            geo.ring_role[geo.rings_of(slot).first] == core::RingRole::Exterior) {
+            ++faces;
+            auto cell = b.doc.attributes().get(ada, slot);
+            REQUIRE(cell.ok());
+            CHECK(cell.value().present);
+            CHECK_EQ(cell.value().number, 12);
+        }
+    }
+    CHECK_EQ(faces, 1u);
+    CHECK_EQ(captions, 2u); // the METİN and the leader's own caption
+    CHECK_EQ(sisli, 1u);
 }

@@ -27,6 +27,9 @@ kullanın.
 | **Nesne ve katman anahtarları** | "Bu parsel hangisiydi?" hukuki bir sorudur; anahtar kalıcıdır ve asla yeniden kullanılmaz |
 | Silinmiş nesnelerin satırları | Silinen bir nesnenin anahtarı boşta kalır; boşluk korunmazsa o anahtar başka bir parsele verilir |
 | Halka geometrisi: tepe noktaları, halka rolleri, parça numaraları | Boşluklu ve çok parçalı parsel — yola terk ve irtifak bunu rutin olarak üretir |
+| **Blok tanımları**: ad, açıklama, taban noktası, üye nesnelerin anahtarları | Bir kez çizilip çok kez yerleştirilen sembol (rögar kapağı, kuzey oku, antet). Tanımın nesneleri aynı nesne tablosunda "blok içinde" bayrağıyla durur; kendi başlarına çizilmez, seçilmez, düzenlenmez — yerleştiren blok referansı (Faz 2) çizer |
+| **Yabancı veri**: başka bir programın nesneye bağladığı baytlar (DXF XDATA) | Bu program okuyamaz ama kaybedemez: dosya geldiği baytlarla geri gider. Öznitelik paneli yalnız sayısını gösterir ("ek_veri: 2 kayıt") |
+| **Tür yükü**: bir nesne türünün halkalarının söyleyemediğini taşıyan baytlar | Yaylı çoklu çizginin yayları, spline'ın düğümleri, taramanın deseni, blok referansının dönüşümü, ölçünün sayıları buradadır; yükü olmayan bir çizim bu sütunları hiç yazmaz. Bu sürümün **tanımadığı bir tür** de bu yolla korunur: nesne görünür, halkaları ve yükü bayt bayt aynı kalır, düzenlenmeye kalkışılırsa "Bu yapının tanımadığı türdeki nesne düzenlenemez; olduğu gibi korunur." denir |
 | **Proje kapsamlı ayarlar** | Dışa aktarılan belgenin baytını değiştirebilen her ayar |
 
 Taşınmayan, kasten:
@@ -99,7 +102,7 @@ bilinen bir dosyadan kötüdür.
 | `io.bad_block: ... 8 baytlık hizaya oturmuyor. Dosya bozuk.` | Dosyanın iç yerleşimi bozulmuş | Yedeğinden geri alın |
 | `io.inconsistent: ... sütunu N öğe taşıyor, belge kaydı M bildiriyor.` | Dosyanın iki yeri birbirini tutmuyor | Yedeğinden geri alın |
 | `io.key_mismatch: nesne anahtarları artan sırada değil` | Nesne kimlik düzeni bozulmuş | Yedeğinden geri alın; bu dosya güvenilir değil |
-| `io.unknown_kind: ... bu yapı yalnız 0 numaralı türü tanıyor.` | Dosyada bu sürümün tanımadığı bir nesne türü var | Dosyayı yazan KentOSCad sürümüne yükseltin |
+| `io.unknown_kind: ... 65535 numaralı türde; bu değer 'tür yok' anlamına ayrılmıştır` | Tür sütununa ayrılmış değer yazılmış | Yedeğinden geri alın; tanınmayan bir tür bu hatayı vermez, korunarak açılır |
 | `Proje dosyası yalnız boş bir belgeye okunabilir.` | Var olan bir çizimin üzerine proje okunmaya çalışıldı | Açmak için `AÇ`, eklemek için `İÇEAKTAR` |
 | `'...' dizini yok. Önce dizini oluşturun ya da başka bir yol seçin.` | Kaydedilecek klasör yok | Klasörü oluşturun |
 | `'...' yazılırken hata oluştu; disk dolu olabilir.` | Disk doldu ya da izin yok | Yer açın; önceki dosyanız değişmedi |
@@ -116,9 +119,6 @@ Aşağıdakiler dosya biçiminde **yer ayrılmış** ama Faz 1'de doldurulacak:
   kademe taşıyacak ve uzaklaşmış görünüm bunları okuyacak.
 - **Önceden kurulmuş alansal dizin (R-ağacı).** Bugün dizin belge açılırken
   bellekte kurulur. Faz 1'de dosyadan okunacak.
-- **Tanınmayan nesne türlerinin taşınması.** Bugün böyle bir dosya açılmaz ve
-  sebebi söylenir; Faz 1'de nesne görünür, korunur ve düzenlenemez hâlde
-  yüklenecek.
 - **Katman açıklaması, çizdirilebilirlik, ölçek sınırları, saydamlık ve katalog
   künyesi.** Dosya bunları yazar ve okur; bu sürümde bu alanları değiştirebilen
   bir komut yok, dolayısıyla varsayılan dışında bir değer taşıyan bir dosya

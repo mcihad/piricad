@@ -50,4 +50,37 @@ Point2 arc_end_of(const RingGeometry& geom, std::uint32_t slot);
 void arc_outline(Point2 centre, Mm radius, Point2 start, Point2 end, std::vector<Mm>& xs,
                  std::vector<Mm>& ys);
 
+/// The point halfway ALONG the arc — not the midpoint of the chord between its
+/// ends, which is inside the curve and on nothing. Ends that coincide are a full
+/// turn (as `arc_perimeter` reads them), whose midpoint is the far side.
+///
+/// Deterministic for the same reason `arc_outline` is: the direction is the
+/// normalised sum of the two end directions (or its negation past a half turn),
+/// so nothing but +, *, / and `sqrt` touches it — never `std::cos`/`std::sin`.
+Point2 arc_midpoint(Point2 centre, Mm radius, Point2 start, Point2 end);
+
+/// Whether `p`'s direction from `centre` falls within the counter-clockwise
+/// sweep from `start` to `end` — on the arc that is DRAWN, not merely on the
+/// circle it was cut from. Decided from cross and dot products, never from an
+/// angle.
+bool on_arc(Point2 centre, Point2 start, Point2 end, Point2 p);
+
+/// The counter-clockwise sweep from `from` to `to` about `centre`, in whole
+/// micro-degrees, from `atan2_udeg` — never `std::atan2` (§7.3). Coincident
+/// ends are a full turn, as `arc_perimeter` reads them.
+std::int64_t arc_sweep_udeg(Point2 centre, Point2 from, Point2 to) noexcept;
+
+/// The arc a DXF BULGE describes between `a` and `b`. A bulge is tan(sweep/4),
+/// positive for a counter-clockwise sweep from a to b; 1 is a half circle. Only
+/// +, *, / and one square root touch it, so the centre and radius round the same
+/// on every platform. False when the bulge bends nothing a millimetre can show,
+/// or the two ends coincide.
+bool arc_from_bulge(Point2 a, Point2 b, double bulge, Point2& centre, Mm& radius,
+                    bool& ccw) noexcept;
+
+/// The bulge of the arc from `a` to `b` about `centre` with `radius`, sweeping
+/// counter-clockwise when `ccw`: what a DXF writer puts on the vertex. The
+/// inverse of `arc_from_bulge` to within the rounding of the stored centre.
+double bulge_from_arc(Point2 a, Point2 b, Point2 centre, Mm radius, bool ccw) noexcept;
+
 } // namespace kentos::core

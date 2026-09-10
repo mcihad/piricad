@@ -3,6 +3,7 @@
 #include "kentos_cad/render/symbology.hpp"
 
 #include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/spatial_index.hpp"
 
 #include <algorithm>
@@ -186,10 +187,11 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         fill.ys.clear();
         fill.runs.clear();
         fill.is_hole.clear();
-        stroke.rgba     = sl.look.rgba;
-        stroke.width_px = stroke_width_px(sl, options.pixels_per_paper_mm);
-        fill.rgba       = sl.look.fill_rgba;
-        fill.hatch      = sl.look.hatch;
+        stroke.rgba = sl.look.rgba;
+        stroke.width_px =
+            options.line_weights ? stroke_width_px(sl, options.pixels_per_paper_mm) : 1.0f;
+        fill.rgba  = sl.look.fill_rgba;
+        fill.hatch = sl.look.hatch;
 
         out.z_keys.push_back(
             DrawList::ZKey{building, sl.look.z_order, static_cast<std::uint32_t>(at)});
@@ -256,21 +258,30 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
     //
     // Rebuilt per entity into buffers that keep their capacity, because the frame
     // path does not allocate (§10.4).
+    // While `curve_active`, a "ring" index below is a RUN index into `curve`: the
+    // outline of a kind may hold several runs (a hatch's boundary and its
+    // islands), and each is walked exactly as a stored ring would be.
     core::EmitBuffer curve;
     bool curve_active = false;
-    bool curve_closed = false;
 
     const auto ring_xs = [&](std::uint32_t ring) {
-        return curve_active ? std::span<const core::Mm>(curve.xs) : geometry.ring_xs(ring);
+        return curve_active ? curve.run_xs(ring) : geometry.ring_xs(ring);
     };
     const auto ring_ys = [&](std::uint32_t ring) {
-        return curve_active ? std::span<const core::Mm>(curve.ys) : geometry.ring_ys(ring);
+        return curve_active ? curve.run_ys(ring) : geometry.ring_ys(ring);
     };
 
     /// Whether this run encloses anything — which decides both the closing
     /// segment and whether it can be filled. A circle does; an arc does not.
     const auto ring_closed = [&](std::uint32_t ring) {
-        return curve_active ? curve_closed : geometry.ring_role[ring] != core::RingRole::Open;
+        return curve_active ? curve.run_closed[ring] != 0
+                            : geometry.ring_role[ring] != core::RingRole::Open;
+    };
+
+    /// Whether this run is a void in its entity — a hole to leave unpainted.
+    const auto ring_hole = [&](std::uint32_t ring) {
+        return curve_active ? curve.run_hole[ring] != 0
+                            : geometry.ring_role[ring] == core::RingRole::Interior;
     };
 
     const auto emit_ring = [&](PolylineBatch& batch, std::uint32_t ring) {
@@ -338,9 +349,7 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         // the shape being coloured, and a plan lekesi that leaks over its boundary
         // is a wrong drawing rather than a coarse one.
         batch.runs.push_back(static_cast<std::uint32_t>(xs.size()));
-        // A curve has no holes: its single run is its outline.
-        batch.is_hole.push_back(
-            !curve_active && geometry.ring_role[ring] == core::RingRole::Interior ? 1u : 0u);
+        batch.is_hole.push_back(ring_hole(ring) ? 1u : 0u);
         ++out.fill_count;
     };
 
@@ -358,8 +367,7 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         // needs the substitution, so a polyline — which is every entity on the
         // five-million-parcel sheet the budget is written against — pays one
         // comparison and reads its vertices exactly as it always did (§10.1).
-        curve_active = core::curve_outline(entities.kind[e], geometry, entities.slot[e], curve);
-        curve_closed = curve_active && curve.run_total() > 0 && curve.run_closed[0] != 0;
+        curve_active = core::entity_outline(doc, e, curve);
 
         const core::LayerId lid = entities.layer[e];
         if (lid >= layers.size()) return;
@@ -403,77 +411,88 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
 
         const core::RingSpan span = geometry.rings_of(entities.slot[e]);
 
+        /// One caption: the baseline from `x0,y0` to `x1,y1` in document
+        /// millimetres, the text-table entry at `tslot`, in `rgba`.
+        const auto emit_caption = [&](std::uint32_t tslot, core::Mm x0, core::Mm y0, core::Mm x1,
+                                      core::Mm y1, std::uint32_t rgba) {
+            TextItem item;
+            item.rgba = rgba;
+            item.x0   = view.offset_x_f(x0);
+            item.y0   = view.offset_y_f(y0);
+            item.x1   = view.offset_x_f(x1);
+            item.y1   = view.offset_y_f(y1);
+
+            // Ground millimetres to pixels, like every other length on screen.
+            // A height in paper units would change what the drawing SAYS when
+            // the plot scale changes, and on a pafta the height of a parcel
+            // number is part of the drawing (R20).
+            item.height_px =
+                static_cast<float>(static_cast<double>(texts.height(tslot)) / view.mm_per_pixel());
+            item.anchor = static_cast<std::uint8_t>(texts.anchor(tslot));
+            item.text.assign(texts.text(tslot));
+
+            out.texts.push_back(std::move(item));
+            ++out.text_count;
+        };
+
         // A text entity is its baseline plus a string. The baseline is an ordinary
         // open ring, so it is culled, snapped and hit-tested by the same code every
-        // other entity uses; only the drawing differs.
+        // other entity uses; only the drawing differs. A DIMENSION carries its
+        // caption the same way and draws its lines as well: only a polyline's
+        // baseline is construction and nothing else.
         if (texts.has(entities.slot[e]) && span.count > 0) {
             const auto xs = geometry.ring_xs(span.first);
             const auto ys = geometry.ring_ys(span.first);
             if (xs.size() >= 2) {
-                TextItem item;
-                item.rgba = out.polylines[first].rgba;
-                item.x0   = view.offset_x_f(xs.front());
-                item.y0   = view.offset_y_f(ys.front());
-                item.x1   = view.offset_x_f(xs.back());
-                item.y1   = view.offset_y_f(ys.back());
-
-                // Ground millimetres to pixels, like every other length on screen.
-                // A height in paper units would change what the drawing SAYS when
-                // the plot scale changes, and on a pafta the height of a parcel
-                // number is part of the drawing (R20).
-                item.height_px = static_cast<float>(
-                    static_cast<double>(texts.height(entities.slot[e])) / view.mm_per_pixel());
-                item.anchor = static_cast<std::uint8_t>(texts.anchor(entities.slot[e]));
-                item.text.assign(texts.text(entities.slot[e]));
-
-                out.texts.push_back(std::move(item));
-                ++out.text_count;
+                emit_caption(entities.slot[e], xs.front(), ys.front(), xs.back(), ys.back(),
+                             out.polylines[first].rgba);
                 ++out.entity_count;
-                return; // the baseline itself is construction, not ink
+                if (entities.kind[e] == core::kPolylineKind || !curve_active) return;
             }
         }
 
-        // The same geometry into EVERY pass of this style. A gösterim that is a
-        // fill, a boundary and a glyph draws the parcel three times, once per
-        // layer, which is what a stack means.
-        for (std::uint32_t p = first; p < first + count; ++p) {
-            const PassStyle& ps  = out.passes[p];
-            PolylineBatch& batch = out.polylines[p];
-            PolygonBatch& fill   = out.polygons[p];
+        /// Walks run `r` (a ring index, or a run index while `curve_active`)
+        /// into every pass from `p_first` for `p_count`.
+        const auto emit_run_into = [&](std::uint32_t p_first, std::uint32_t p_count,
+                                       std::uint32_t r) {
+            for (std::uint32_t p = p_first; p < p_first + p_count; ++p) {
+                const PassStyle& ps  = out.passes[p];
+                PolylineBatch& batch = out.polylines[p];
+                PolygonBatch& fill   = out.polygons[p];
 
-            // A fixed word is placed from the entity's own bounding box, not from
-            // its rings: the box is what the cull test already read, and the
-            // centre of it is where a plan puts a gösterim's own lettering.
-            if (ps.type == core::SymbolLayerType::TextMarker) {
-                if (ps.text.empty()) continue;
+                // A fixed word is placed from the entity's own bounding box, not
+                // from its rings: the box is what the cull test already read, and
+                // the centre of it is where a plan puts a gösterim's own lettering.
+                if (ps.type == core::SymbolLayerType::TextMarker) {
+                    if (ps.text.empty()) continue;
 
-                const core::Box2 box      = entities.box_of(e);
-                const core::Point2 centre = box.centre();
+                    const core::Box2 box      = entities.box_of(e);
+                    const core::Point2 centre = box.centre();
 
-                TextItem item;
-                item.rgba      = ps.line_rgba;
-                item.x0        = view.offset_x_f(centre.x);
-                item.y0        = view.offset_y_f(centre.y) + ps.offset_px;
-                item.x1        = item.x0 + 1.0f; // horizontal; the baseline IS the rotation
-                item.y1        = item.y0;
-                item.height_px = ps.size_px > 0.5f ? ps.size_px : 10.0f;
+                    TextItem item;
+                    item.rgba      = ps.line_rgba;
+                    item.x0        = view.offset_x_f(centre.x);
+                    item.y0        = view.offset_y_f(centre.y) + ps.offset_px;
+                    item.x1        = item.x0 + 1.0f; // horizontal; the baseline IS the rotation
+                    item.y1        = item.y0;
+                    item.height_px = ps.size_px > 0.5f ? ps.size_px : 10.0f;
 
-                // Centred both ways, because a word inside a circle sits in the
-                // middle of it and the offset is what moves it off centre.
-                item.anchor = static_cast<std::uint8_t>(core::TextAnchor::MiddleCentre);
-                item.text.assign(ps.text);
+                    // Centred both ways, because a word inside a circle sits in the
+                    // middle of it and the offset is what moves it off centre.
+                    item.anchor = static_cast<std::uint8_t>(core::TextAnchor::MiddleCentre);
+                    item.text.assign(ps.text);
 
-                out.texts.push_back(std::move(item));
-                ++out.text_count;
-                continue;
-            }
+                    out.texts.push_back(std::move(item));
+                    ++out.text_count;
+                    continue;
+                }
 
-            // A plain fill with no colour paints nothing, so its rings are not
-            // worth collecting; a pattern fill paints whatever its own ink is.
-            const bool fill_wanted =
-                ps.wants_fill && (fill.rgba != 0 || ps.type != core::SymbolLayerType::SimpleFill);
+                // A plain fill with no colour paints nothing, so its rings are not
+                // worth collecting; a pattern fill paints whatever its own ink is.
+                const bool fill_wanted =
+                    ps.wants_fill &&
+                    (fill.rgba != 0 || ps.type != core::SymbolLayerType::SimpleFill);
 
-            for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
                 // The line to walk along and the ring to clip to come from the
                 // same geometry; what differs is which buffer they land in.
                 if (ps.wants_stroke) emit_ring(batch, r);
@@ -482,6 +501,62 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
                 // nothing and takes none.
                 if (fill_wanted && ring_closed(r)) emit_fill_ring(fill, r);
             }
+        };
+
+        // A stored entity walks its rings; an outlined kind walks its runs. The
+        // same geometry goes into EVERY pass of the style: a gösterim that is a
+        // fill, a boundary and a glyph draws the parcel three times, once per
+        // layer, which is what a stack means.
+        const std::uint32_t first_run = curve_active ? 0u : span.first;
+        const std::uint32_t run_count =
+            curve_active ? static_cast<std::uint32_t>(curve.run_total()) : span.count;
+        for (std::uint32_t r = first_run; r < first_run + run_count; ++r) {
+            if (!curve_active) {
+                emit_run_into(first, count, r);
+                continue;
+            }
+
+            // A RUN MAY BRING ITS OWN STYLE, LAYER AND CAPTION — a block
+            // reference's members keep theirs (model.md R45, render.md R15).
+            // The inherit sentinels mean the entity's, which is the common case
+            // and costs three comparisons.
+            const std::uint32_t rs = curve.run_style[r];
+            const std::uint32_t rl = curve.run_layer[r];
+            const std::uint32_t rt = curve.run_text[r];
+            if (rs == core::kInheritRunStyle && rl == core::kInheritRunLayer &&
+                rt == core::kNoRunText) {
+                emit_run_into(first, count, r);
+                continue;
+            }
+
+            const core::LayerId run_layer = rl == core::kInheritRunLayer ? lid : rl;
+            if (run_layer >= layers.size()) continue;
+            std::size_t run_slot = slot;
+            if (rs != core::kInheritRunStyle) {
+                if (rs < styles.size()) run_slot = rs;
+            } else if (rl != core::kInheritRunLayer) {
+                // The member's own layer decides, exactly as it would for an
+                // entity drawn on that layer with the ByLayer sentinel.
+                const core::StyleId ls = layers[run_layer].style;
+                run_slot =
+                    (ls != core::kByLayerStyle && ls < styles.size()) ? ls : layer_slot(run_layer);
+            }
+            const std::size_t run_key   = passes_for(run_layer, run_slot);
+            const std::uint32_t r_first = out.pass_first[run_key];
+            const std::uint32_t r_count = out.pass_count[run_key];
+            if (r_count == 0) continue;
+
+            if (rt != core::kNoRunText && texts.has(rt)) {
+                // The run is a member caption's baseline: drawn as text, in the
+                // pass's colour, and the baseline itself is construction.
+                const auto xs = curve.run_xs(r);
+                const auto ys = curve.run_ys(r);
+                if (xs.size() >= 2)
+                    emit_caption(rt, xs.front(), ys.front(), xs.back(), ys.back(),
+                                 out.polylines[r_first].rgba);
+                continue;
+            }
+            emit_run_into(r_first, r_count, r);
         }
 
         ++out.entity_count;

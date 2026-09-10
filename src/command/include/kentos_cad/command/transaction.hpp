@@ -97,6 +97,58 @@ public:
     /// A surveyed point (model.md R22-R26: `core.point`).
     Result<EntityId> add_point(LayerId layer, Point2 at);
 
+    /// An entity of any kind from its rings and kind payload — the general form
+    /// every `add_*` above spells for one kind (`Document::add_kind`). This is
+    /// how a file reader and an import hand over what the source held, unknown
+    /// kinds included (model.md R26).
+    Result<EntityId> add_kind(LayerId layer, core::KindId kind,
+                              std::span<const RingGeometry::RingInput> rings,
+                              std::span<const std::uint8_t> payload,
+                              core::BlockId in_block = core::kNoBlock);
+
+    /// Attaches bytes another program owns to `e` (`Document::attach_foreign`).
+    Status attach_foreign(EntityId e, std::string_view tag, std::span<const std::uint8_t> bytes);
+
+    /// Adds a block definition (`Document::add_block`). Append-only, no inverse.
+    core::Result<core::BlockId> add_block(std::string_view name, std::string_view description,
+                                          Point2 base);
+
+    /// Records that `block` references `uses` (`Document::add_block_use`).
+    Status add_block_use(core::BlockId block, core::BlockId uses);
+
+    /// Replaces an entity's kind payload, keeping its rings and its identity
+    /// (`Document::set_kind_payload`).
+    Status set_kind_payload(EntityId e, std::span<const std::uint8_t> payload);
+
+    /// Replaces rings and payload together (`Document::set_kind_geometry`).
+    Status set_kind_geometry(EntityId e, std::span<const RingGeometry::RingInput> rings,
+                             std::span<const std::uint8_t> payload);
+
+    /// What `adopt_from` brought over.
+    struct AdoptSummary
+    {
+        std::uint64_t entities{0};      ///< live entities copied
+        std::uint64_t layers{0};        ///< layers this document did not have before
+        std::uint64_t columns{0};       ///< attribute columns declared here for the first time
+        std::vector<std::string> notes; ///< what could not be carried, in Turkish, at most a few
+    };
+
+    /// Copies EVERYTHING a scratch document holds into this transaction's
+    /// document: layers (by name, with appearance, style, visibility, lock and
+    /// group), the styles, dash patterns and pictures those need, block
+    /// definitions, every live entity of every kind — known or not, with its
+    /// payload — its hidden bit, own style, caption, attribute cells and foreign
+    /// data. Layers are matched by name and columns by id, so a re-import lands
+    /// on the same layers and columns rather than making new ones.
+    ///
+    /// GENERAL, NOT A SWITCH PER KIND: an entity goes through `add_kind` with its
+    /// rings and payload as stored, so a kind added next month is adopted by the
+    /// code written this month. This is the second half of a two-phase import —
+    /// a reader fills a scratch document on a worker thread, this copies it into
+    /// the real one on the bus thread, inside the command's one transaction
+    /// (io.md P3, R17). Any failure is returned; the transaction rolls back whole.
+    core::Result<AdoptSummary> adopt_from(const core::Document& scratch);
+
     /// Moves an entity to another layer, keeping its identity.
     Status set_entity_layer(EntityId e, LayerId layer);
 

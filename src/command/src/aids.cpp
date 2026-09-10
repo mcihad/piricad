@@ -32,8 +32,11 @@ const AidSettings& InputAids::settings(const core::Settings& app,
 
     AidSettings out;
 
-    const auto declared = static_cast<std::uint16_t>(session.get("core.yakalama.modlar").as_int());
-    out.modes           = static_cast<std::uint32_t>(declared & core::SnapAllMask);
+    // THE WHOLE MASK. It was narrowed to sixteen bits here, which silently
+    // dropped every mode above bit 15 — the surface normal's result bit and, now,
+    // EKLEME — however the setting was written.
+    const auto declared = static_cast<std::uint32_t>(session.get("core.yakalama.modlar").as_int());
+    out.modes           = declared & core::SnapAllMask;
 
     // One engine input, two doors: F9 / `MOD ızgaraya_yakala` and the mask bit are
     // the same switch, so the canvas and the engine cannot disagree about whether

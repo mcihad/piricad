@@ -132,10 +132,17 @@ enum SnapMode : std::uint32_t {
     /// name what moved it, exactly as `SnapOrtho` is.
     SnapNormal = 1u << 16,
 
+    /// EKLEME — the point a kind was PLACED by: a block reference's insertion
+    /// point, a caption's anchor. Offered by the kind itself through
+    /// `KindSpec::key_points`; no built-in kind offers one yet, and the block
+    /// reference will be the first. Ranked with UÇ, because it is a point the
+    /// drawing states outright.
+    SnapInsertion = 1u << 17,
+
     /// The modes that need geometry to snap to. Grid and polar need none.
     SnapObjectMask = SnapEndpoint | SnapMidpoint | SnapCenter | SnapCentroid | SnapIntersection |
                      SnapPerpendicular | SnapNearest | SnapNode | SnapExtension | SnapParallel |
-                     SnapApparent | SnapGuide,
+                     SnapApparent | SnapGuide | SnapInsertion,
 
     /// The modes that look BEYOND the aperture, because the point they build is
     /// not where the geometry that implies it is. They are the only reason

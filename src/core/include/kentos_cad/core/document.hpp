@@ -17,8 +17,10 @@
 #pragma once
 
 #include "kentos_cad/core/attribute.hpp"
+#include "kentos_cad/core/block.hpp"
 #include "kentos_cad/core/crs.hpp"
 #include "kentos_cad/core/dash_store.hpp"
+#include "kentos_cad/core/foreign_table.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/guide.hpp"
 #include "kentos_cad/core/identity.hpp"
@@ -47,6 +49,10 @@ enum EntityFlag : std::uint8_t {
     FlagAlive       = 1u << 0,
     FlagHidden      = 1u << 1, ///< hidden on its own
     FlagLayerHidden = 1u << 2, ///< mirrored from the layer, refreshed on toggle
+    /// Part of a block DEFINITION (model.md R45): drawn only through a reference,
+    /// never on its own, so the cull test, the index and the pick skip it — one
+    /// more bit in the byte R6 already reads, and no new column.
+    FlagInBlock = 1u << 3,
 };
 
 /// Tier 1. One row per entity: POD, mmap-able, no pointers, no kind-specific data.
@@ -84,7 +90,14 @@ public:
     /// one test — that is the whole point of mirroring the layer bit.
     bool visible(EntityId e) const noexcept
     {
-        return (flags[e] & (FlagAlive | FlagHidden | FlagLayerHidden)) == FlagAlive;
+        return (flags[e] & (FlagAlive | FlagHidden | FlagLayerHidden | FlagInBlock)) == FlagAlive;
+    }
+
+    /// Alive and not inside a block definition: what the spatial index packs and
+    /// what a pick or a snap may reach directly.
+    bool standalone(EntityId e) const noexcept
+    {
+        return (flags[e] & (FlagAlive | FlagInBlock)) == FlagAlive;
     }
 
     /// The cached bounding box. Assembled from the four columns rather than
@@ -113,6 +126,8 @@ struct Op
         SetText,            ///< entity, str_arg, text_height, text_anchor
         SetGeometry,        ///< entity, geometry_slot
         SetEntityLayer,     ///< entity, layer
+        AttachForeign,      ///< entity, str_arg (the tag), bytes_arg
+        DetachForeign,      ///< entity, str_arg (the tag)
 
         /// The WHOLE guide list, restored as it was.
         ///
@@ -155,6 +170,9 @@ struct Op
     /// The guide list as it was before the change; see `Kind::SetGuides`.
     std::vector<GuideAxis> guide_axes;
     std::vector<Mm> guide_coords;
+
+    /// The foreign bytes to put back; see `Kind::AttachForeign`.
+    std::vector<std::uint8_t> bytes_arg;
 };
 
 class Document
@@ -202,6 +220,13 @@ public:
     /// columns — drawing a caption means reading its string every frame, so text
     /// lives here rather than in a column R29 forbids the renderer to touch.
     const TextTable& texts() const noexcept { return texts_; }
+
+    /// Bytes another program attached to entities (model.md R26a). Opaque: no
+    /// command reads them, no panel shows more than their count.
+    const ForeignTable& foreign() const noexcept { return foreign_; }
+
+    /// The block definitions this document holds (model.md R45).
+    const BlockTable& blocks() const noexcept { return blocks_; }
 
     /// The drafting guides this document carries. Furniture, not geometry: saved
     /// with the file and invisible to selection, culling, export and area sums
@@ -289,6 +314,68 @@ public:
     /// A surveyed point: a control point, a traverse station, a benchmark
     /// (see `core.point`).
     Result<EntityId> add_point(LayerId lyr, Point2 at, Op& undo_out);
+
+    /// THE GENERAL MUTATOR every `add_*` above is a spelling of: an entity of
+    /// `kind` from its stored rings and its kind payload (model.md R9a).
+    ///
+    /// The kind's own `validate` runs first, so a circle handed three vertices or
+    /// an arc-polyline handed too few bulges is refused before a byte is
+    /// appended; the bounding box is the KIND's (`bbox`), never the arena's box
+    /// of the definition vertices. A kind this build does not know is accepted
+    /// exactly as given — visible through its rings, preserved byte for byte,
+    /// and refused by every edit (R26) — which is what lets a file reader and an
+    /// import hand over whatever the source held without a switch per kind.
+    ///
+    /// `in_block` names the block definition the entity belongs to, or kNoBlock
+    /// for an ordinary entity. A member is flagged `FlagInBlock` and recorded in
+    /// the block's member list; it is drawn only through a reference.
+    Result<EntityId> add_kind(LayerId lyr, KindId kind,
+                              std::span<const RingGeometry::RingInput> rings,
+                              std::span<const std::uint8_t> payload, Op& undo_out,
+                              BlockId in_block = kNoBlock);
+
+    /// Attaches bytes another program owns to `e` under `tag` (model.md R26a).
+    /// The inverse detaches them. Refused for a (entity, tag) already attached.
+    Status attach_foreign(EntityId e, std::string_view tag, std::span<const std::uint8_t> bytes,
+                          Op& undo_out);
+
+    /// Removes the bytes under (e, tag); the inverse re-attaches them.
+    Status detach_foreign(EntityId e, std::string_view tag, Op& undo_out);
+
+    /// Adds a block definition (model.md R45). Append-only and not undoable, for
+    /// the reason `ensure_layer` is not: an empty definition is inert, and an id
+    /// once handed out reaches the file and every reference's payload.
+    Result<BlockId> add_block(std::string_view name, std::string_view description, Point2 base);
+
+    /// Records that `block`'s members reference `uses`, refusing a cycle. What a
+    /// block reference created inside a definition calls, and what the file
+    /// reader restores.
+    Status add_block_use(BlockId block, BlockId uses);
+
+    /// Whether `e` may be edited in place: alive, of a kind this build knows
+    /// (model.md R26), and not inside a block definition (R45). The message is
+    /// what the refusing command says.
+    Status editable(EntityId e) const;
+
+    /// Replaces an entity's kind payload, keeping its rings and its identity.
+    ///
+    /// A new slot is appended with the same rings and the new bytes, and the
+    /// entity is repointed at it, exactly as `set_geometry` does for the rings —
+    /// so the inverse is the old slot number (`Op::Kind::SetGeometry`) and no new
+    /// Op variant exists. The kind validates the pair before anything is written.
+    Status set_kind_payload(EntityId e, std::span<const std::uint8_t> payload, Op& undo_out);
+
+    /// Replaces an entity's rings AND its kind payload together, keeping its
+    /// identity — what a transform of a kind whose payload holds coordinates
+    /// needs (an arc polyline's centres, a block reference's turn), since the
+    /// rings alone or the payload alone would fail the kind's validate against
+    /// the half not yet changed. One new slot; the inverse is `Op::SetGeometry`.
+    Status set_kind_geometry(EntityId e, std::span<const RingGeometry::RingInput> rings,
+                             std::span<const std::uint8_t> payload, Op& undo_out);
+
+    /// Whether `e` is of a kind this build understands. An entity of an unknown
+    /// kind is preserved and drawn, and refused by every edit (model.md R26).
+    bool kind_known(EntityId e) const noexcept;
 
     /// Moves an entity to another layer, keeping its identity.
     ///
@@ -409,6 +496,14 @@ private:
     /// clicked on. `pick.hpp::text_quad` owns the shape; this stores its extent.
     void refresh_box(EntityId e);
 
+    /// Copies the caption of geometry slot `from` onto slot `to`, when there is
+    /// one. A caption lives on the SLOT (`TextTable`), and every edit that
+    /// replaces an entity's geometry appends a new slot — so without this a
+    /// corner moved on a labelled parsel, or a definition point moved on a
+    /// dimension, silently dropped the label. Undo repoints to the old slot,
+    /// which keeps its own caption, so nothing is written back on the way out.
+    void carry_text(std::uint32_t from, std::uint32_t to);
+
     void mirror_layer_visibility(LayerId l, bool visible);
 
     /// Points an entity back at a slot the arena already holds. The undo half of
@@ -424,6 +519,8 @@ private:
     AttrTable attributes_{};
     CatalogueSet catalogues_{};
     TextTable texts_{};
+    ForeignTable foreign_{};
+    BlockTable blocks_{};
     GuideStore guides_{};
     ImageStore images_{};
     DashStore dashes_{};

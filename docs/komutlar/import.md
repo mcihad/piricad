@@ -73,15 +73,17 @@ Transkript şunu yazar:
 
 ```text
 İçe aktarıldı: 128 nesne, 3 katman (GPKG, EPSG:5254)
-  not: Öznitelikler bu sürümde okunmadı; belge modeli öznitelik sütunlarını Faz 1'de kazanacak.
+  not: Dosyada 4 öznitelik alanı var; sütun olarak okumak için alanlar=* ya da alanlar="ad,ad" verin.
+  not: Okunan türler: Polygon 96, Line String 32
 ```
 
-Koordinat sistemi çizimden farklıysa bu da söylenir:
+Koordinat sistemi çizimden farklıysa bu bir **uyarı** olarak söylenir:
 
 ```text
 İçe aktarıldı: 128 nesne, 3 katman (GPKG, EPSG:5255)
-  not: Dosyanın koordinat sistemi EPSG:5255, çizimin ki EPSG:5254. Koordinatlar
-       dönüştürülmedi; AYAR koordinat_sistemi ile denetleyin.
+  uyarı: Dosyanın koordinat sistemi EPSG:5255, çizimin ki EPSG:5254. Koordinatlar
+         dönüştürülmedi; AYAR koordinat_sistemi ile denetleyin.
+  not: Okunan türler: Polygon 96, Line String 32
 ```
 
 ### Yalnızca istediğiniz katmanlar
@@ -94,6 +96,9 @@ Kırk katmanlı bir imar DXF'inden yalnızca ada kenarı ile kaldırımı almak 
 
 ```text
 İçe aktarıldı: 174 nesne, 2 katman (DXF, EPSG:5256)
+  not: Dosya birim bildirmiyor; çizim metre olarak okundu (AYAR çizim_birimi). Yanlışsa
+       GERİAL ile geri alın, AYAR çizim_birimi ile doğrusunu kurun ve yeniden İÇEAKTAR.
+  not: Okunan türler: LWPOLYLINE 121, LINE 53
 ```
 
 Katman adları **Türkçe kurallarıyla** karşılaştırılır: `kaldırım` `KALDIRIM`
@@ -117,6 +122,71 @@ Tehlike sessizlikte olduğu için varsayım her seferinde yazılır. Koordinatla
 bölge tahmin edilmez: 583 000 doğu değeri birden çok Türkiye diliminde
 geçerlidir ve aralarında tahmin yürütmek tam olarak bu kuralın önlediği
 hatadır.
+
+### Transkriptin söylediği
+
+Komut, okuduğu dosyada **neyi olduğu gibi aldığını, neyi eksik aldığını ve neyi
+almadığını** transkriptin sonunda satır satır söyler. Her satırın başında
+seviyesi vardır:
+
+| Ön ek | Anlamı |
+|---|---|
+| `not:` | bilmeniz iyi olur; bir kayıp değil |
+| `uyarı:` | okuyucu bir şey varsaydı; çizim yanlış yerde ya da yanlış boyda olabilir |
+| `düşürme:` | dosyadaki bir şey, taşıdığından daha az bilgiyle okundu |
+| `atlandı:` | dosyadaki bir şey hiç okunmadı |
+| `hata:` | okuyucunun bir şeyi dışarıda bırakarak atlattığı bir arıza |
+
+Serbest notlar sekizde durur; kalanı `… ve N not daha.` diye sayılır. Şu bilgiler
+ise not değil **sayım**dır ve her zaman yazılır: varsayılan birim, kâğıt alanı
+sayısı, atlanan öğe sayısı ve ilk sebebi, okunan türlerin sayımı (`Okunan
+türler: LWPOLYLINE 4021, LINE 1200; parçalanan: ELLIPSE 3; atlanan: DIMENSION 27`).
+
+**DXF birimi.** Bir DXF **her zaman** [`AYAR çizim_birimi`](setting.md)
+ayarındaki birimde okunur; varsayılan metredir. Dosyanın `$INSUNITS` başlığı bu
+ayarla karşılaştırılır ve **söylenir, ama asla ayarın yerine geçmez**. Başlığı
+dosyayı son kaydeden program yazar ve Türkiye'deki kadastro ve imar DXF'lerinin
+çoğu, sayıları metre iken başlıkta "milimetre" (kod 4) der; başlığa inanmak koca
+bir ilçeyi sekiz metreye sığdırır ve her daireyi birer milimetreye yuvarlar. Üç
+durum, üç satır:
+
+```text
+  not: Dosya birim bildirmiyor; çizim metre olarak okundu (AYAR çizim_birimi). Yanlışsa
+       GERİAL ile geri alın, AYAR çizim_birimi ile doğrusunu kurun ve yeniden İÇEAKTAR.
+  uyarı: Çizim metre olarak okundu (AYAR çizim_birimi); dosya başlığı milimetre diyor.
+         Sayılar gerçekten milimetre ise GERİAL ile geri alın, AYAR çizim_birimi milimetre
+         deyin ve yeniden İÇEAKTAR.
+  not: Çizim santimetre olarak okundu (AYAR çizim_birimi); dosya başlığı da öyle diyor.
+       Koordinatlar milimetreye ölçeklendi.
+```
+
+Başlık ile ayar metrede anlaşıyorsa hiçbir satır yazılmaz. Başlık ayarın
+sunmadığı bir birim (inç, fit, kilometre…) diyorsa uyarı bunu da söyler; böyle bir
+dosya kaynağında metreye çevrilip aktarılır. GeoPackage ve Shapefile'ın birimi
+koordinat sisteminin metresidir; onlarda birim sorusu yoktur.
+
+**Kâğıt alanı.** Bir DXF'in layout'larındaki antet, pafta çerçevesi ve bakış
+pencereleri çizim değildir; okunmaz ve sayılır (`atlandı: 3 öğe kâğıt alanında
+(layout) olduğu için atlandı`).
+
+**DXF notları.** DXF libdxfrw ile okunur ([nasıl okunduğu](../veri/dis-formatlar.md)):
+daire, yay, elips ve kısmi elips gerçek eğri; şişkinlikli çizgi yaylı çoklu çizgi;
+spline, tarama, ölçü ve lider kendi türleri; blok tanımları ve referansları yapısıyla;
+katman rengi, kalınlığı ve durumu; nesnenin kendi rengi ve kalınlığı; sabit yükseklik
+`kot` sütununa; tutamak `kaynak_kimlik` sütununa; XDATA bayt bayt.
+**Düşürülerek alınanlar**, her biri `düşürme:` ile sayılır: yalnız uydurma noktalı
+spline'ın uydurma noktaları kontrol noktası sayılır; katalogda olmayan tarama deseni
+çizilmez; çizgi tipi ve değişen çoklu çizgi kalınlığı okunmaz; üst/orta yazı hizaları
+en yakın hizaya çevrilir. **Alınmayanlar**, `atlandı:` ile sayılır: sonsuz doğru, bakış
+penceresi, raster resim, ağ, anonim bloklar. Bir örnek:
+
+```text
+İçe aktarıldı: 28098 nesne, 3 katman (DXF AC1015, EPSG:5256)
+  düşürme: 1410 öğede köşeler farklı yüksekliklerdeydi; çizim iki boyutludur, kot yazılmadı.
+  not: 33 öğenin yüksekliği (Z) `kot` sütununa yazıldı.
+  atlandı: 79 öğe geometrisi kullanılamadığı için atlandı. İlki: LINE: sıfır uzunlukta çizgi
+  not: Okunan türler: LINE 22444, ARC 3423, CIRCLE 2223, POINT 5, TEXT 3; atlanan: LINE 56, ARC 7
+```
 
 ### Öznitelik alanları
 
@@ -166,6 +236,15 @@ bunu söyler ve boş kalır.
 **İçe Aktar**, işaretlediğiniz katmanlar ve alanlarla tek bir `İÇEAKTAR` satırı kurar ve
 onu çalıştırır. Pencere yalnızca argüman toplar: kurduğu satır, aynı işi bir
 betikte yazacağınız satırın tıpatıp aynısıdır.
+
+**Okuma pencereyi dondurmaz.** Dosya ayrı bir iş parçacığında okunur; bu sürede
+durum çubuğunda `İçe aktarılıyor: <dosya>` yazısı, altında kayan bir şerit ve
+yanında **Durdur** çipi görünür. **Durdur** (ya da **Esc**) okumayı keser: çizime
+hiçbir şey eklenmez ve transkript `Hata: İçe aktarma durduruldu; çizim değişmedi.`
+der. Okuma bitince nesneler çizime tek seferde, tek geri alma adımı olarak girer.
+Komut satırından yazılan `İÇEAKTAR` da aynı yolu izler; bir betiğin içindeki
+`core.import` ise betiğin kendi sırasında, bekleyerek okur — iki yol da aynı çizimi
+ve aynı günlük satırını üretir.
 
 ### Betik
 
@@ -233,8 +312,8 @@ transkript kaç tanesinin neden atlandığını yazar:
 
 ```text
 İçe aktarıldı: 71 820 nesne, 112 katman (DXF, EPSG:5256)
-  not: 3 öğe geometrisi kullanılamadığı için atlandı. İlki: 1. halka dış halka
-       en az 3 tepe noktası ister, verilen: 1
+  atlandı: 3 öğe geometrisi kullanılamadığı için atlandı. İlki: 1. halka dış halka
+           en az 3 tepe noktası ister, verilen: 1
 ```
 
 Bir öğe yüzünden bütün dosyayı reddetmek doğru değildir: 48 MB'lık bir kadastro
@@ -245,7 +324,7 @@ Dosyanın tamamı okunamıyorsa (bozuk başlık, tanınmayan biçim) durum farkl
 o zaman içe aktarma **tamamen** başarısız olur ve çizim değişmez.
 | `'...' katmanı hiçbir koordinat sistemi bildirmiyor.` | Veri kümesi etiketsiz | Yanına aynı adlı bir `.prj` dosyası koyun |
 | `'...' içindeki katmanlar farklı koordinat sistemleri bildiriyor` | Karışık veri kümesi | Tek bir sisteme dönüştürüp yeniden deneyin |
-| `'...' okunabilir çizgi ya da alan içermiyor` | Desteklenen geometri yok | Nokta ve eğriler bu sürümde okunmuyor |
+| `'...' okunabilir çizgi ya da alan içermiyor` | Dosyada çizgi, alan, nokta ya da yazı yok; ya da hepsi kâğıt alanında | Dosyayı bir CAD programında açıp model alanında ne olduğuna bakın |
 | `'...' içindeki N. öğe okunamadı: ...` | Geometri doğrulamayı geçemedi | Mesajın devamı sebebi söyler; kaynak veriyi düzeltin |
 | `'...' sanal dosya sistemi yolu.` | `/vsi...` ile başlayan yol | Dosyayı diske alıp yeniden deneyin |
 | `'...' bir KentOSCad proje dosyası. Proje dosyası açılır, içe aktarılmaz: AÇ komutunu kullanın.` | `.pcad` içe aktarılmaya çalışıldı | [AÇ](open.md) kullanın |

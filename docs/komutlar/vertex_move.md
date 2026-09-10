@@ -23,6 +23,27 @@ Köşeler **1'den başlayarak** numaralanır ve numaralar nesnenin halkaları bo
 sırayla ilerler: önce dış sınır, sonra varsa delikler. Dört köşeli bir parselin
 köşeleri 1, 2, 3 ve 4'tür.
 
+### Eğrilerin tutamakları
+
+Köşesi olmayan nesnelerin de **tutamakları** vardır ve `KÖŞETAŞI` onları da taşır;
+`kose` o zaman tutamağın sırasıdır. Bir tutamağı taşımak nesnenin türünü değiştirmez:
+daire daire kalır, yalnız yarıçapı ya da yeri değişir.
+
+| Nesne | Tutamaklar (sırayla) | Taşıyınca ne olur |
+|---|---|---|
+| Daire | 1 merkez · 2–5 doğu/kuzey/batı/güney çeyrek | merkez daireyi taşır; çeyrek yarıçapı kurar |
+| Yay | 1 merkez · 2 başlangıç · 3 bitiş · 4 orta nokta | merkez yayı taşır; uç kendi yerine gider ve yarıçap onu izler; orta nokta yalnız yarıçapı kurar |
+| Elips | 1 merkez · 2 birinci eksen ucu · 3 ikinci eksen ucu · 4–5 aynaları | eksen ucu ekseni çevirir ve uzatır; öteki eksen boyunu koruyarak dik kalır |
+| Yaylı çoklu çizgi | köşeler · sonra her yayın orta noktası | köşe taşınınca ona değen yaylar şişkinliğini korur; yayın ortası yayı üç noktadan yeniden kurar, kirişin üstüne gelirse kenar düzleşir |
+| Spline | kontrol noktaları · sonra varsa uydurma noktaları | nokta yerine gider, eğri yeniden hesaplanır |
+| Tarama, lider | halka köşeleri | köşe yerine gider |
+| Ölçü | tanım noktaları · son olarak yazı | tanım noktası taşınınca ölçü çizgisi, uzatma çizgileri ve yazı yeniden kurulur, rakam yeniden ölçülür; yazı tutamağı yalnız yazıyı kaydırır |
+| Blok referansı | 1 ekleme noktası | referans taşınır |
+| Nokta | 1 nokta | nokta taşınır |
+
+Bir eğrinin **arasına** köşe eklenemez: [`KÖŞEEKLE`](vertex_insert.md) yalnız çoklu
+çizgi ve alan için çalışır.
+
 ## Adlar
 
 | Ad | Tür |
@@ -79,9 +100,12 @@ KÖŞETAŞI nesne=1 kose=2
 
 ### Arayüz
 
-Nesneyi seçin; köşeleri küçük kare tutamaklarla işaretlenir. İmleç bir tutamağın
-üzerine gelince tutamak vurgulanır. Basıp sürükleyin ve bırakın; sürüklerken
-nesnenin alacağı yeni biçim kesikli çizgiyle gösterilir.
+Nesneyi seçin; köşeleri küçük kare tutamaklarla işaretlenir. Bir dairede merkez ve
+dört çeyrek, bir yayda uçlar ve orta nokta, bir ölçüde tanım noktaları ve yazı
+görünür; boyut kuran tutamaklar (yarıçap, yay ortası, yazı) kare değil **yuvarlak**
+çizilir. İmleç bir tutamağın üzerine gelince tutamak vurgulanır. Basıp sürükleyin ve
+bırakın; sürüklerken nesnenin alacağı yeni biçim kesikli çizgiyle gösterilir — daire
+sürüklenirken daire kalır, çünkü önizleme türün kendi çizimidir.
 
 Sürüklerken yakalama açıksa köşe komşu nesnelerin köşelerine oturur ve yakalama
 işareti nerede duracağını önceden gösterir — komşu parselin köşesine tam oturmak
@@ -137,6 +161,11 @@ geri alma adımıdır. Hepsini tek adımda toplamak isterseniz betiği tek blok 
 | `Köşe numarası belirtilmedi. İlk köşe 1'dir.` | `kose` verilmedi | Taşınacak köşenin sırasını yazın |
 | `Tek bir köşe numarası beklenir; N değer verildi.` | `kose` birden çok değer aldı | Tek bir köşe numarası yazın |
 | `Bu nesnenin N. köşesi yok; M köşesi var.` | Nesnede o sırada köşe yok | 1 ile M arasında bir numara verin |
+| `Bu nesnenin N. tutamağı yok; M tutamağı var.` | Eğride o sırada tutamak yok | Yukarıdaki tabloya göre 1 ile M arasında bir numara verin |
+| `Yarıçap sıfır: tutamak merkezin üstünde. …` | Çeyrek ya da uç tutamağı merkeze bırakıldı | Merkezden uzak bir nokta verin |
+| `Birinci eksen sıfır: …` / `İkinci eksen sıfır: …` | Elipsin ekseni sıfıra indi | Merkezden ya da birinci eksenden uzak bir nokta verin |
+| `Ölçü bu noktayla kurulamıyor: …` | İki nokta çakıştı ya da açının tepesi kolun ucuna geldi | Noktayı başka yere bırakın |
+| `Blok tanımındaki nesne doğrudan düzenlenemez …` | Nesne bir blok tanımının üyesi | Referansın ekleme noktasını taşıyın |
 
 Köşenin yeni yeri halkayı kendi üzerine katlarsa ya da bir deliği dış sınırın
 dışına çıkarırsa geometri katmanı taşımayı reddeder ve sebebini yazar; bu durumda

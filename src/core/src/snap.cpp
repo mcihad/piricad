@@ -6,6 +6,8 @@
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/pick.hpp"
 
 #include <cmath>
@@ -38,6 +40,7 @@ constexpr std::size_t kMaxNearSegments = 48;
 /// never win against a point the drawing actually contains.
 constexpr std::uint32_t kPriority[] = {
     SnapNode,
+    SnapInsertion,
     SnapEndpoint,
     SnapIntersection,
     SnapMidpoint,
@@ -77,46 +80,6 @@ Mm snap_axis(Mm v, Mm step) noexcept
 /// Accumulated in `double` rather than int64: the cross products of a hundred
 /// vertices of a 20 m parcel fit, but a 5 km ring in TM3 does not, and an
 /// overflowing centroid would put the snap marker in another province. The
-/// The angle of `p` about `centre`, in radians, wrapped into [0, 2pi).
-double bearing_of(Point2 centre, Point2 p)
-{
-    double a = std::atan2(static_cast<double>(p.y - centre.y), static_cast<double>(p.x - centre.x));
-    if (a < 0.0) a += 2.0 * 3.14159265358979323846;
-    return a;
-}
-
-/// Whether `p` lies on the sweep an arc actually draws.
-///
-/// `add_arc` sweeps COUNTER-CLOCKWISE from start to end (`io/vector.cpp` says so
-/// where it reconstructs one from a DXF), so the test is whether `p`'s bearing
-/// falls in the counter-clockwise run between the two — and not merely on the
-/// circle the arc was cut from. Without it, a point on the missing three quarters
-/// of a quarter-arc snaps to something that is not drawn.
-bool on_arc(Point2 centre, Point2 from, Point2 to, Point2 p)
-{
-    const double a = bearing_of(centre, from);
-    const double b = bearing_of(centre, to);
-    const double c = bearing_of(centre, p);
-
-    const double sweep = b >= a ? b - a : b - a + 2.0 * 3.14159265358979323846;
-    const double along = c >= a ? c - a : c - a + 2.0 * 3.14159265358979323846;
-    return along <= sweep;
-}
-
-/// The point halfway ALONG an arc — not the midpoint of the chord between its
-/// ends, which is inside the curve and on nothing.
-Point2 arc_midpoint(Point2 centre, Mm radius, Point2 from, Point2 to)
-{
-    const double a = bearing_of(centre, from);
-    const double b = bearing_of(centre, to);
-
-    const double sweep = b >= a ? b - a : b - a + 2.0 * 3.14159265358979323846;
-    const double half  = a + sweep * 0.5;
-
-    return Point2{centre.x + mm_round(static_cast<double>(radius) * std::cos(half)),
-                  centre.y + mm_round(static_cast<double>(radius) * std::sin(half))};
-}
-
 /// How wide the surface-normal aid catches, as the TANGENT of its half-angle.
 ///
 /// tan(20°). Twenty degrees either side of the perpendicular is wide enough that
@@ -129,6 +92,56 @@ constexpr double kNormalCone = 0.36397023426620234;
 /// stores no floating point and a normal has to survive being handed about.
 constexpr double kNormalScale = 1000000.0;
 
+/// Whether `kind` is drawn from a TESSELLATED outline rather than from its own
+/// vertices or an exact centre-and-radius rule. Today that is the ellipse, whose
+/// ring holds a centre and two axis ends — a definition, not a shape — and it is
+/// every kind a later phase adds (spline, hatch, dimension). A polyline and a
+/// point ARE their vertices; a circle and an arc are answered exactly, from
+/// centre and radius, wherever they occur below.
+bool outline_kind(KindId kind) noexcept
+{
+    return kind != kPolylineKind && kind != kPointKind && kind != kCircleKind && kind != kArcKind;
+}
+
+/// One drawn chain of an entity: a polyline's ring, or one run of a tessellated
+/// outline. `closed` says the segment back to the first vertex is implied.
+struct Chain
+{
+    std::span<const Mm> xs;
+    std::span<const Mm> ys;
+    bool closed;
+};
+
+/// Calls `fn(const Chain&)` for every drawn chain of `e`. A polyline yields its
+/// rings; a kind drawn from an outline yields the runs `curve_outline` builds
+/// into `scratch` — the SAME tessellation the picture and the pick test use, so
+/// what a snap lands on is what the user sees. Snapping to an ellipse used to
+/// walk its three stored vertices as if they were edges, and landed on the axes
+/// of a shape whose axes are not drawn.
+template<class Fn>
+void for_each_chain(const Document& doc, EntityId e, EmitBuffer& scratch, Fn&& fn)
+{
+    const EntityTable& entities  = doc.entities();
+    const RingGeometry& geometry = doc.geometry();
+    const std::uint32_t slot     = entities.slot[e];
+
+    if (outline_kind(entities.kind[e])) {
+        scratch.clear();
+        if (entity_outline(doc, e, scratch)) {
+            for (std::size_t r = 0; r < scratch.run_total(); ++r)
+                fn(Chain{scratch.run_xs(r), scratch.run_ys(r), scratch.run_closed[r] != 0});
+            return;
+        }
+        // A kind this build does not know has no outline of its own and is
+        // walked as its stored rings — which is how it is drawn (model.md R26).
+    }
+
+    const RingSpan span = geometry.rings_of(slot);
+    for (std::uint32_t r = span.first; r < span.first + span.count; ++r)
+        fn(Chain{geometry.ring_xs(r), geometry.ring_ys(r),
+                 geometry.ring_role[r] != RingRole::Open});
+}
+
 /// Where the ray from `base` through `toward` first meets a drawn edge, looking
 /// only within `window_radius` of `toward`. False when the ray runs into nothing.
 ///
@@ -139,9 +152,9 @@ constexpr double kNormalScale = 1000000.0;
 /// the pixel fell; with only an object snap it landed on the far edge and stopped
 /// being perpendicular. Neither alone is the measurement.
 ///
-/// CURVES ARE NOT WALKED HERE. A circle and an arc store a centre and a handle,
-/// not a chord, so treating their two vertices as an edge would intersect a line
-/// nobody drew.
+/// CIRCLES AND ARCS ARE NOT WALKED HERE. They store a centre and a handle, not
+/// a chord, so treating their two vertices as an edge would intersect a line
+/// nobody drew. An ellipse is walked as the outline it is drawn with.
 bool ray_meets_edge(const Document& doc, Point2 base, Point2 toward, Mm window_radius, Point2& out,
                     EntityId& hit_entity)
 {
@@ -153,31 +166,26 @@ bool ray_meets_edge(const Document& doc, Point2 base, Point2 toward, Mm window_r
     std::vector<EntityId> candidates;
     pick_candidates(doc, window, candidates);
 
-    const EntityTable& entities  = doc.entities();
-    const RingGeometry& geometry = doc.geometry();
+    const EntityTable& entities = doc.entities();
 
     const auto limit = static_cast<double>(window_radius) * static_cast<double>(window_radius);
     double best      = limit;
     bool found       = false;
+    EmitBuffer outline;
 
     for (const EntityId e : candidates) {
         if (!doc.alive(e)) continue;
         if (entities.kind[e] == kCircleKind || entities.kind[e] == kArcKind) continue;
 
-        const RingSpan span = geometry.rings_of(entities.slot[e]);
-        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-            const auto xs = geometry.ring_xs(r);
-            const auto ys = geometry.ring_ys(r);
-            if (xs.size() < 2) continue;
-
-            const bool closed          = geometry.ring_role[r] != RingRole::Open;
-            const std::size_t n        = xs.size();
-            const std::size_t segments = closed ? n : n - 1;
+        for_each_chain(doc, e, outline, [&](const Chain& chain) {
+            const std::size_t n = chain.xs.size();
+            if (n < 2) return;
+            const std::size_t segments = chain.closed ? n : n - 1;
 
             for (std::size_t v = 0; v < segments; ++v) {
                 const std::size_t w = (v + 1) % n;
-                const Point2 a{xs[v], ys[v]};
-                const Point2 b{xs[w], ys[w]};
+                const Point2 a{chain.xs[v], chain.ys[v]};
+                const Point2 b{chain.xs[w], chain.ys[w]};
                 if (!segment_touches_box(a, b, window)) continue;
 
                 Point2 crossing{};
@@ -199,7 +207,7 @@ bool ray_meets_edge(const Document& doc, Point2 base, Point2 toward, Mm window_r
                 hit_entity = e;
                 found      = true;
             }
-        }
+        });
     }
 
     return found;
@@ -227,6 +235,7 @@ bool surface_normal(const Document& doc, Point2 at, Mm reach, Point2& out)
 
     double best = -1.0;
     double bx = 0.0, by = 0.0;
+    EmitBuffer outline;
 
     const auto consider = [&](double dx, double dy, double distance) {
         const double len = std::sqrt(dx * dx + dy * dy);
@@ -254,20 +263,18 @@ bool surface_normal(const Document& doc, Point2 at, Mm reach, Point2& out)
             continue;
         }
 
-        const RingSpan span = geometry.rings_of(entities.slot[e]);
-        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
-            const auto xs = geometry.ring_xs(r);
-            const auto ys = geometry.ring_ys(r);
-            if (xs.size() < 2) continue;
-
-            const bool closed          = geometry.ring_role[r] != RingRole::Open;
-            const std::size_t n        = xs.size();
-            const std::size_t segments = closed ? n : n - 1;
+        // A polyline's own edges, or the drawn outline of a kind that is not its
+        // vertices (an ellipse): the normal of a chord of the picture, never of a
+        // definition line.
+        for_each_chain(doc, e, outline, [&](const Chain& chain) {
+            const std::size_t n = chain.xs.size();
+            if (n < 2) return;
+            const std::size_t segments = chain.closed ? n : n - 1;
 
             for (std::size_t v = 0; v < segments; ++v) {
                 const std::size_t w = (v + 1) % n;
-                const Point2 a{xs[v], ys[v]};
-                const Point2 b{xs[w], ys[w]};
+                const Point2 a{chain.xs[v], chain.ys[v]};
+                const Point2 b{chain.xs[w], chain.ys[w]};
 
                 const Point2 foot = closest_point_on_segment(a, b, at);
                 const double d    = std::sqrt(distance_squared(foot, at));
@@ -286,7 +293,7 @@ bool surface_normal(const Document& doc, Point2 at, Mm reach, Point2& out)
                 }
                 consider(nx, ny, d);
             }
-        }
+        });
     }
 
     if (best < 0.0) return false;
@@ -363,9 +370,10 @@ std::size_t priority_index(std::uint32_t bit)
 const std::uint32_t* snap_mode_bits()
 {
     static const std::uint32_t bits[] = {
-        SnapEndpoint,      SnapMidpoint, SnapCenter,   SnapCentroid, SnapIntersection,
-        SnapPerpendicular, SnapNearest,  SnapNode,     SnapGrid,     SnapPolar,
-        SnapExtension,     SnapParallel, SnapApparent, SnapGuide,    SnapNone,
+        SnapEndpoint,     SnapMidpoint,      SnapCenter,    SnapCentroid,
+        SnapIntersection, SnapPerpendicular, SnapNearest,   SnapNode,
+        SnapGrid,         SnapPolar,         SnapExtension, SnapParallel,
+        SnapApparent,     SnapGuide,         SnapInsertion, SnapNone,
     };
     return bits;
 }
@@ -390,6 +398,7 @@ const char* snap_mode_id(std::uint32_t single_bit)
     case SnapNormal: return "yuzey_normali";
     case SnapStep: return "adim";
     case SnapGuide: return "kilavuz";
+    case SnapInsertion: return "ekleme";
     default: return "yok";
     }
 }
@@ -414,6 +423,7 @@ const char* snap_mode_label(std::uint32_t single_bit)
     case SnapNormal: return "yüzey normali";
     case SnapStep: return "adım";
     case SnapGuide: return "kılavuz";
+    case SnapInsertion: return "ekleme noktası";
     default: return "yok";
     }
 }
@@ -690,6 +700,14 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
         std::vector<NearSegment> reachable;
         if ((object_modes & SnapConstructedMask) != 0) reachable.reserve(kMaxNearSegments);
 
+        // The drawn outline of a kind that is not its vertices, rebuilt per
+        // candidate. One buffer for the whole query: an ellipse is 128 vertices
+        // and a query sees a handful of candidates. The key-point buffers are
+        // reused the same way.
+        EmitBuffer outline;
+        std::vector<Point2> key_points;
+        std::vector<std::uint32_t> key_modes;
+
         const EntityTable& entities  = doc.entities();
         const RingGeometry& geometry = doc.geometry();
 
@@ -774,6 +792,59 @@ SnapResult snap(const Document& doc, const SnapQuery& q)
 
                 // NOT the segment walk below: there is no segment. Every mode a
                 // curve can answer has been answered.
+                continue;
+            }
+
+            // A KIND DRAWN FROM AN OUTLINE — the ellipse today — answers from the
+            // outline the picture is drawn with, never from its stored definition
+            // points. Its centre is MERKEZ; its four axis ends are offered as UÇ,
+            // because they are the points ELİPS was drawn from and the points a
+            // surveyor measures it by. The chords carry YAKIN, DİK and KESİŞİM.
+            // ORTA, UZANTI and PARALEL are NOT offered on a chord of an
+            // approximation: the middle of a chord is a place the curve does not
+            // pass, and the extension of one is a line nobody drew.
+            if (outline_kind(entities.kind[e])) {
+                // The kind names its own key points and the mode each is offered
+                // under (`KindSpec::key_points`): an ellipse's centre as MERKEZ
+                // and its four axis ends as UÇ, a block reference's insertion
+                // point as EKLEME. Offered only under a mode that is on, at that
+                // mode's own priority.
+                if (const KindSpec* spec = builtin_kinds().find(entities.kind[e]);
+                    spec != nullptr && spec->key_points != nullptr) {
+                    key_points.clear();
+                    key_modes.clear();
+                    KeyPointSink sink{key_points, key_modes};
+                    spec->key_points(geometry, entities.slot[e], sink);
+                    for (std::size_t k = 0; k < key_points.size(); ++k)
+                        if ((object_modes & key_modes[k]) != 0)
+                            offer(best[priority_index(key_modes[k])], key_points[k], e, q.aim,
+                                  limit);
+                }
+
+                for_each_chain(doc, e, outline, [&](const Chain& chain) {
+                    const std::size_t n = chain.xs.size();
+                    if (n < 2) return;
+                    const std::size_t segments = chain.closed ? n : n - 1;
+
+                    for (std::size_t v = 0; v < segments; ++v) {
+                        const std::size_t w = (v + 1) % n;
+                        const Point2 a{chain.xs[v], chain.ys[v]};
+                        const Point2 b{chain.xs[w], chain.ys[w]};
+                        if (!segment_touches_box(a, b, aperture)) continue;
+
+                        if ((object_modes & SnapNearest) != 0)
+                            offer(best[priority_index(SnapNearest)],
+                                  closest_point_on_segment(a, b, q.aim), e, q.aim, limit);
+
+                        if ((object_modes & SnapPerpendicular) != 0 && q.has_base)
+                            offer(best[priority_index(SnapPerpendicular)],
+                                  closest_point_on_segment(a, b, q.base), e, q.aim, limit);
+
+                        if ((object_modes & SnapIntersection) != 0 &&
+                            near.size() < kMaxNearSegments)
+                            near.push_back(NearSegment{a, b, e});
+                    }
+                });
                 continue;
             }
 

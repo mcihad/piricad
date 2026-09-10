@@ -24,8 +24,6 @@
 #include "kentos_cad/render/scene.hpp"
 #include "kentos_cad/render/view.hpp"
 
-#include <vector>
-
 #include <QImage>
 #include <QRectF>
 
@@ -39,6 +37,7 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <vector>
 
 class QLineEdit;
 
@@ -46,6 +45,13 @@ namespace kentos::core {
 /// The setting store; declared here so the wheel helper below can name it without
 /// pulling `core/settings.hpp` into every translation unit that draws a canvas.
 class Settings;
+} // namespace kentos::core
+
+namespace kentos::core {
+/// Forward-declared on purpose: `entity_kind.hpp` names a member `emit`, which
+/// Qt's keyword macro would erase in any translation unit that includes Qt
+/// first. Only the .cpp includes the full definition.
+struct EmitBuffer;
 } // namespace kentos::core
 
 namespace kentos::app {
@@ -227,6 +233,8 @@ protected:
     void resizeEvent(QResizeEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
+    void enterEvent(QEnterEvent* event) override;
+    void leaveEvent(QEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
@@ -250,6 +258,26 @@ private:
     void buildSnapMarker();
     void buildCrosshair();
     void buildRuler();
+
+    /// Sets the platform pointer for the moment: blank over the canvas, because
+    /// the drawn crosshair is the pointer; a closed hand while panning or
+    /// dragging a corner; the arrow only when the crosshair is turned off.
+    void applyPointer();
+
+    /// The cursor in document millimetres: the snapped point when an aid has
+    /// fired, else the raw position — where a click would land.
+    core::Point2 cursorWorld() const;
+
+    /// Appends one run of document points, shifted by `(dx, dy)`, to an overlay batch.
+    void addWorldRun(std::size_t batch, std::span<const core::Mm> xs, std::span<const core::Mm> ys,
+                     bool closed, core::Mm dx, core::Mm dy);
+
+    /// Appends every run of an outline buffer, shifted, to an overlay batch.
+    void addEmitRuns(std::size_t batch, const core::EmitBuffer& buf, core::Mm dx, core::Mm dy);
+
+    /// The selected objects' outlines shifted by `(dx, dy)`: the ghost TAŞI and
+    /// KOPYALA carry under the cursor.
+    void addGhost(std::size_t batch, core::Mm dx, core::Mm dy);
 
     /// Draws the drafting guides across the whole canvas, under everything else.
     ///
@@ -320,6 +348,7 @@ private:
         bool readout{true};               ///< the cursor's own easting and northing
         int cursor{0};                    ///< 0 full screen, 1 short, 2 none
         int cursor_px{30};                ///< arm length of the short cursor
+        double pick_px{6.0};              ///< half side of the pick box: the selection tolerance
         int marker_px{12};                ///< half size of the snap marker
         bool snap_tip{true};              ///< name the mode beside the marker
         std::uint32_t marker_rgba{0};     ///< 0 = take the theme's own colour

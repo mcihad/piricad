@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/document.hpp"
 
+#include "kentos_cad/core/block_reference.hpp"
+
 #include "kentos_cad/core/pick.hpp"
 
 #include "kentos_cad/core/entity_kind.hpp"
@@ -74,13 +76,44 @@ Box2 Document::extent() const
 Mm2 Document::entity_area(EntityId e) const
 {
     if (e >= entities_.size() || !entities_.alive(e)) return 0;
+
+    // THE KIND ANSWERS, for the reason `AreaFn` gives: a circle's rings are a
+    // centre and a handle, and the shoelace over those is zero. The polyline
+    // reads straight from the arena, which is the same answer without the
+    // table lookup, and it is every entity on the five-million-parcel sheet.
+    const KindId kind = entities_.kind[e];
+    if (kind != kPolylineKind) {
+        if (const KindSpec* spec = builtin_kinds().find(kind); spec != nullptr) {
+            const std::uint32_t one[1]{entities_.slot[e]};
+            Mm2 out = 0;
+            spec->area(geometry_, SlotSpan(one, 1), std::span<Mm2>(&out, 1));
+            return out;
+        }
+    }
     return geometry_.area_of(entities_.slot[e]);
 }
 
 Mm Document::entity_perimeter(EntityId e) const
 {
     if (e >= entities_.size() || !entities_.alive(e)) return 0;
+    const KindId kind = entities_.kind[e];
+    if (kind != kPolylineKind) {
+        if (const KindSpec* spec = builtin_kinds().find(kind);
+            spec != nullptr && spec->perimeter != nullptr) {
+            const std::uint32_t one[1]{entities_.slot[e]};
+            Mm out = 0;
+            spec->perimeter(geometry_, SlotSpan(one, 1), std::span<Mm>(&out, 1));
+            return out;
+        }
+    }
     return geometry_.perimeter_of(entities_.slot[e]);
+}
+
+bool Document::kind_known(EntityId e) const noexcept
+{
+    if (e >= entities_.size()) return false;
+    const KindId kind = entities_.kind[e];
+    return kind == kPolylineKind || builtin_kinds().find(kind) != nullptr;
 }
 
 std::uint64_t Document::content_hash() const
@@ -100,13 +133,27 @@ std::uint64_t Document::content_hash() const
     h = texts_.fold(h);
     h = images_.fold(h);
     h = dashes_.fold(h);
+    h = foreign_.fold(h);
+    h = blocks_.fold(h);
 
     for (EntityId e = 0; e < entities_.size(); ++e) {
         if (!entities_.alive(e)) continue;
 
         h = fnv1a(layers_.all()[entities_.layer[e]].folded, h);
         h = fnv1a_int(static_cast<std::int64_t>(entities_.style[e]), h);
-        h = fnv1a_int(entities_.flags[e] & (FlagAlive | FlagHidden), h);
+        h = fnv1a_int(entities_.flags[e] & (FlagAlive | FlagHidden | FlagInBlock), h);
+
+        // THE KIND IS CONTENT: a circle and a two-vertex line hold the same two
+        // vertices and are not the same drawing. Folded only for a kind other
+        // than the polyline, so every file written before kinds were hashed —
+        // all of them parcels and lines — keeps the fingerprint in its header.
+        // The payload is folded byte for byte, for the same reason and with the
+        // same bargain: a slot without one adds nothing (model.md R9a).
+        if (entities_.kind[e] != kPolylineKind)
+            h = fnv1a_int(static_cast<std::int64_t>(entities_.kind[e]), h);
+        if (const auto bytes = geometry_.payload_of(entities_.slot[e]); !bytes.empty())
+            h = fnv1a(std::string_view(reinterpret_cast<const char*>(bytes.data()), bytes.size()),
+                      h);
 
         const RingSpan span = geometry_.rings_of(entities_.slot[e]);
         for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
@@ -270,6 +317,254 @@ Result<EntityId> Document::push_entity(LayerId lyr, std::uint32_t geometry_slot,
     ++layer_live_[lyr];
     ++revision_;
     return id;
+}
+
+namespace {
+
+/// The bounding box of a slot AS ITS KIND SEES IT.
+///
+/// `RingGeometry::bounds_of` bounds the stored vertices, which for a curve are its
+/// definition and not its shape: a circle's are a centre and a handle due east, so
+/// the arena's answer is a flat line. Every cull, every pick prefilter and every
+/// zoom-to-extents reads this box, so it is asked of the kind.
+Box2 kind_bounds(const RingGeometry& geom, KindId kind, std::uint32_t slot)
+{
+    if (kind != kPolylineKind) {
+        if (const KindSpec* spec = builtin_kinds().find(kind); spec != nullptr) {
+            const std::uint32_t one[1]{slot};
+            Box2 box{};
+            spec->bbox(geom, SlotSpan(one, 1), std::span<Box2>(&box, 1));
+            return box;
+        }
+    }
+    return geom.bounds_of(slot);
+}
+
+} // namespace
+
+Result<EntityId> Document::add_kind(LayerId lyr, KindId kind,
+                                    std::span<const RingGeometry::RingInput> rings,
+                                    std::span<const std::uint8_t> payload, Op& undo_out,
+                                    BlockId in_block)
+{
+    if (lyr >= layers_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen katman kimliği: " + std::to_string(lyr));
+    if (layers_.all()[lyr].locked)
+        return err(ErrorCode::ValidationFailed,
+                   "'" + layers_.all()[lyr].name + "' katmanı kilitli.");
+    if (kind == kNoKind) return err(ErrorCode::InvalidArgument, "Nesne türü atanmamış (kNoKind).");
+    if (in_block != kNoBlock && in_block >= blocks_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen blok kimliği: " + std::to_string(in_block));
+
+    // The kind's own floor, before a byte is appended. An unknown kind has no
+    // floor here and is taken as given: the arena still enforces R9–R12 on its
+    // rings, and its payload is opaque by definition (R26).
+    if (const KindSpec* spec = builtin_kinds().find(kind);
+        spec != nullptr && spec->validate != nullptr)
+        if (auto st = spec->validate(rings, payload); !st) return st.error();
+
+    // A block reference names a definition, and the document is the one who
+    // knows whether it exists and whether placing it inside `in_block` would
+    // let a definition contain itself (R45).
+    BlockId uses = kNoBlock;
+    if (kind == kBlockReferenceKind) {
+        auto ref = decode_block_reference(payload);
+        if (!ref) return ref.error();
+        uses = ref.value().block;
+        if (uses >= blocks_.size())
+            return err(ErrorCode::NotFound,
+                       "Blok referansı tanımsız bir bloğu gösteriyor: " + std::to_string(uses));
+        if (in_block != kNoBlock && blocks_.would_cycle(in_block, uses))
+            return err(ErrorCode::ValidationFailed,
+                       "'" + blocks_.at(in_block).name +
+                           "' bloğu kendini içerecekti; bir blok tanımı kendine referans veremez.");
+    }
+
+    auto slot = geometry_.append(rings, payload);
+    if (!slot) return slot.error();
+
+    auto id = push_entity(lyr, slot.value(), kind);
+    if (!id) return id;
+
+    // The box of the SHAPE, not of the definition vertices: a circle's are a
+    // centre and a handle due east, an ellipse's a triangle strictly inside it.
+    // Every cull, pick prefilter and zoom-to-extents reads this box.
+    const EntityId e   = id.value();
+    const Box2 box     = kind_bounds(geometry_, kind, slot.value());
+    entities_.min_x[e] = box.min_x;
+    entities_.min_y[e] = box.min_y;
+    entities_.max_x[e] = box.max_x;
+    entities_.max_y[e] = box.max_y;
+
+    // A definition member is never drawn on its own: the flag keeps it out of
+    // the cull, the index and the pick, and the block remembers it by key.
+    if (in_block != kNoBlock) {
+        entities_.flags[e] |= FlagInBlock;
+        if (auto st = blocks_.add_member(in_block, entities_.key[e], uses); !st) return st.error();
+    }
+
+    undo_out          = Op{};
+    undo_out.kind     = Op::Kind::SetEntityAlive;
+    undo_out.entity   = e;
+    undo_out.bool_arg = false;
+    return id;
+}
+
+Status Document::editable(EntityId e) const
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+    if (!entities_.alive(e))
+        return err(ErrorCode::InvalidArgument, "Silinmiş nesne düzenlenemez: " + std::to_string(e));
+    if (!kind_known(e))
+        return err(ErrorCode::Unsupported,
+                   "Bu yapının tanımadığı türdeki nesne düzenlenemez; olduğu gibi korunur.");
+    if ((entities_.flags[e] & FlagInBlock) != 0)
+        return err(ErrorCode::ValidationFailed,
+                   "Blok tanımındaki nesne doğrudan düzenlenemez; BLOKDÜZENLE (Faz 2).");
+    return ok();
+}
+
+Status Document::attach_foreign(EntityId e, std::string_view tag,
+                                std::span<const std::uint8_t> bytes, Op& undo_out)
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+    if (auto st = foreign_.attach(entities_.slot[e], tag, bytes); !st) return st;
+    ++revision_;
+
+    undo_out         = Op{};
+    undo_out.kind    = Op::Kind::DetachForeign;
+    undo_out.entity  = e;
+    undo_out.str_arg = std::string(tag);
+    return ok();
+}
+
+Status Document::detach_foreign(EntityId e, std::string_view tag, Op& undo_out)
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+    const auto was = foreign_.bytes(entities_.slot[e], tag);
+    if (was.empty())
+        return err(ErrorCode::NotFound, std::to_string(e) + ". nesnede '" + std::string(tag) +
+                                            "' etiketli yabancı veri yok.");
+
+    // The inverse is built BEFORE the write: it needs the bytes being removed.
+    undo_out         = Op{};
+    undo_out.kind    = Op::Kind::AttachForeign;
+    undo_out.entity  = e;
+    undo_out.str_arg = std::string(tag);
+    undo_out.bytes_arg.assign(was.begin(), was.end());
+
+    (void)foreign_.detach(entities_.slot[e], tag);
+    ++revision_;
+    return ok();
+}
+
+Result<BlockId> Document::add_block(std::string_view name, std::string_view description,
+                                    Point2 base)
+{
+    auto id = blocks_.add(name, description, base);
+    if (id) ++revision_;
+    return id;
+}
+
+Status Document::add_block_use(BlockId block, BlockId uses)
+{
+    if (block >= blocks_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen blok kimliği: " + std::to_string(block));
+    if (uses >= blocks_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen blok kimliği: " + std::to_string(uses));
+    if (blocks_.would_cycle(block, uses))
+        return err(ErrorCode::ValidationFailed,
+                   "'" + blocks_.at(block).name + "' bloğu '" + blocks_.at(uses).name +
+                       "' bloğunu içeremez: kendini içeren bir tanım sonsuza dek açılır.");
+    // Recorded through the member path with no member: only the edge is new.
+    BlockDef& def = const_cast<BlockDef&>(blocks_.at(block));
+    if (std::find(def.uses.begin(), def.uses.end(), uses) == def.uses.end())
+        def.uses.push_back(uses);
+    ++revision_;
+    return ok();
+}
+
+Status Document::set_kind_geometry(EntityId e, std::span<const RingGeometry::RingInput> rings,
+                                   std::span<const std::uint8_t> payload, Op& undo_out)
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+    if (!entities_.alive(e))
+        return err(ErrorCode::InvalidArgument,
+                   "Silinmiş nesnenin geometrisi değiştirilemez: " + std::to_string(e));
+    if (auto st = editable(e); !st) return st;
+
+    if (const KindSpec* spec = builtin_kinds().find(entities_.kind[e]);
+        spec != nullptr && spec->validate != nullptr)
+        if (auto st = spec->validate(rings, payload); !st) return st;
+
+    auto slot = geometry_.append(rings, payload);
+    if (!slot) return slot.error();
+
+    const std::uint32_t was = entities_.slot[e];
+    entities_.slot[e]       = slot.value();
+    carry_text(was, slot.value());
+    refresh_box(e);
+    ++revision_;
+
+    undo_out               = Op{};
+    undo_out.kind          = Op::Kind::SetGeometry;
+    undo_out.entity        = e;
+    undo_out.geometry_slot = was;
+    return ok();
+}
+
+Status Document::set_kind_payload(EntityId e, std::span<const std::uint8_t> payload, Op& undo_out)
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+    if (auto st = editable(e); !st) return st;
+
+    // The same rings, re-described for `append`: the arena stores eastings and
+    // northings apart, and a RingInput wants points, so they meet in one buffer
+    // for the length of this call.
+    const std::uint32_t was = entities_.slot[e];
+    const RingSpan span     = geometry_.rings_of(was);
+    std::vector<Point2> points;
+    std::vector<RingGeometry::RingInput> rings;
+    std::size_t total = 0;
+    for (std::uint32_t r = span.first; r < span.first + span.count; ++r)
+        total += geometry_.ring_count[r];
+    points.reserve(total);
+    for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+        const auto xs = geometry_.ring_xs(r);
+        const auto ys = geometry_.ring_ys(r);
+        for (std::size_t i = 0; i < xs.size(); ++i)
+            points.push_back(Point2{xs[i], ys[i]});
+    }
+    std::size_t cursor = 0;
+    for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+        rings.push_back(RingGeometry::RingInput{
+            std::span<const Point2>(points.data() + cursor, geometry_.ring_count[r]),
+            geometry_.ring_role[r], geometry_.ring_part[r]});
+        cursor += geometry_.ring_count[r];
+    }
+
+    if (const KindSpec* spec = builtin_kinds().find(entities_.kind[e]);
+        spec != nullptr && spec->validate != nullptr)
+        if (auto st = spec->validate(rings, payload); !st) return st;
+
+    auto slot = geometry_.append(rings, payload);
+    if (!slot) return slot.error();
+
+    entities_.slot[e] = slot.value();
+    carry_text(was, slot.value());
+    refresh_box(e);
+    ++revision_;
+
+    undo_out               = Op{};
+    undo_out.kind          = Op::Kind::SetGeometry;
+    undo_out.entity        = e;
+    undo_out.geometry_slot = was;
+    return ok();
 }
 
 Result<EntityId> Document::add_polyline(LayerId lyr, std::span<const Point2> pts, Op& undo_out)
@@ -568,29 +863,6 @@ Status Document::set_entity_style(EntityId e, StyleId style, Op& undo_out)
     return ok();
 }
 
-namespace {
-
-/// The bounding box of a slot AS ITS KIND SEES IT.
-///
-/// `RingGeometry::bounds_of` bounds the stored vertices, which for a curve are its
-/// definition and not its shape: a circle's are a centre and a handle due east, so
-/// the arena's answer is a flat line. Every cull, every pick prefilter and every
-/// zoom-to-extents reads this box, so it is asked of the kind.
-Box2 kind_bounds(const RingGeometry& geom, KindId kind, std::uint32_t slot)
-{
-    if (kind != kPolylineKind) {
-        if (const KindSpec* spec = builtin_kinds().find(kind); spec != nullptr) {
-            const std::uint32_t one[1]{slot};
-            Box2 box{};
-            spec->bbox(geom, SlotSpan(one, 1), std::span<Box2>(&box, 1));
-            return box;
-        }
-    }
-    return geom.bounds_of(slot);
-}
-
-} // namespace
-
 Status Document::set_geometry(EntityId e, std::span<const RingGeometry::RingInput> rings,
                               Op& undo_out)
 {
@@ -599,16 +871,24 @@ Status Document::set_geometry(EntityId e, std::span<const RingGeometry::RingInpu
     if (!entities_.alive(e))
         return err(ErrorCode::InvalidArgument,
                    "Silinmiş nesnenin geometrisi değiştirilemez: " + std::to_string(e));
+    if (auto st = editable(e); !st) return st;
 
     // Validation is the arena's, exactly as it is for a new entity: ring order,
     // minimum vertex counts and closure are the same rules whether the geometry is
-    // being created or replaced (R11). A refusal here writes nothing, so the
-    // entity keeps the geometry it had.
-    auto slot = geometry_.append(rings);
+    // being created or replaced (R11) — and the kind's own, over the rings and
+    // the payload it keeps (R9a): moving an arc polyline's vertices without its
+    // arcs is refused where the arcs no longer fit. A refusal here writes
+    // nothing, so the entity keeps the geometry it had.
+    const std::span<const std::uint8_t> payload = geometry_.payload_of(entities_.slot[e]);
+    if (const KindSpec* spec = builtin_kinds().find(entities_.kind[e]);
+        spec != nullptr && spec->validate != nullptr)
+        if (auto st = spec->validate(rings, payload); !st) return st;
+    auto slot = geometry_.append(rings, payload);
     if (!slot) return slot.error();
 
     const std::uint32_t was = entities_.slot[e];
     entities_.slot[e]       = slot.value();
+    carry_text(was, slot.value());
 
     refresh_box(e);
     ++revision_;
@@ -618,6 +898,13 @@ Status Document::set_geometry(EntityId e, std::span<const RingGeometry::RingInpu
     undo_out.entity        = e;
     undo_out.geometry_slot = was;
     return ok();
+}
+
+void Document::carry_text(std::uint32_t from, std::uint32_t to)
+{
+    if (!texts_.has(from)) return;
+    texts_.resize(geometry_.slot_count());
+    (void)texts_.set(to, texts_.text(from), texts_.height(from), texts_.anchor(from));
 }
 
 Status Document::restore_geometry(EntityId e, std::uint32_t slot, Op& undo_out)
@@ -989,6 +1276,9 @@ Status Document::apply(const Op& op, Op* undo_out)
     }
     case Op::Kind::SetGeometry: return restore_geometry(op.entity, op.geometry_slot, inverse);
     case Op::Kind::SetEntityLayer: return set_entity_layer(op.entity, op.layer, inverse);
+    case Op::Kind::AttachForeign:
+        return attach_foreign(op.entity, op.str_arg, op.bytes_arg, inverse);
+    case Op::Kind::DetachForeign: return detach_foreign(op.entity, op.str_arg, inverse);
     }
     return err(ErrorCode::Internal, "İşlenmemiş Op::Kind");
 }

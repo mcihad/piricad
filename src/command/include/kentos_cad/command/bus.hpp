@@ -104,6 +104,13 @@ struct FileRequest
     /// rolls back whole (io.md R17). Null for the verbs that do not mutate the
     /// document through a transaction.
     Transaction* tx{nullptr};
+
+    /// The calling command's session, so the file work can be handed to a job
+    /// host (job.hpp) when there is one. Null runs the read in place.
+    Session* session{nullptr};
+
+    /// Export: the DXF release year to write (`surum=2013`); 0 means the default.
+    int version{0};
 };
 
 /// One database operation, asked for by `VERİTABANI` and carried out by /src/io.
@@ -194,7 +201,11 @@ public:
     ///
     /// Only the GUI uses this, and it buys the GUI no privileges: the session
     /// runs the same coroutine, validation and transaction as every other client.
-    core::Result<std::unique_ptr<Session>> begin_interactive(std::string_view line);
+    ///
+    /// `origin` is what the journal records for the run: a button is `Gui`, a
+    /// typed line `CommandLine`. It buys the session nothing else.
+    core::Result<std::unique_ptr<Session>> begin_interactive(std::string_view line,
+                                                             Origin origin = Origin::Gui);
 
     /// Called by Session when a command finishes. Validates, commits or rolls
     /// back, and journals.
@@ -339,6 +350,13 @@ public:
     // ---- observers. The UI subscribes; it never reaches around the bus. ----
     std::function<void(std::string_view)> on_echo;
     std::function<void(const Prompt&)> on_prompt;
+
+    /// Runs the job a session is parked on, OFF this thread, and calls
+    /// `Session::resume_job` on this thread when it is done (job.hpp). The GUI
+    /// installs it; a bus without one runs every job in place, which is what a
+    /// script, the command line and a test get — the same command body, the
+    /// same result (Article 1.2). Never resume the session from inside the hook.
+    std::function<void(Session&)> on_job_host;
     std::function<void()> on_document_changed;
     std::function<void(const DispatchResult&)> on_command_finished;
 

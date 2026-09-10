@@ -4,6 +4,8 @@
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/units.hpp"
 
+#include "dxf_units.hpp"
+
 #ifdef KENTOS_HAVE_DWG
 // io.md R2: the format library's headers never leave this translation unit.
 // LibreDWG is C, and `dwg.h` is a 12 000-line header that defines `restrict`
@@ -58,14 +60,11 @@ std::string dwg_backend_status()
 #ifndef KENTOS_HAVE_DWG
 
 command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std::string path,
-                                                  std::string project_crs,
-                                                  std::vector<std::string> only,
-                                                  std::stop_token stop)
+                                                  ImportOptions options, std::stop_token stop)
 {
     (void)tx;
     (void)path;
-    (void)project_crs;
-    (void)only;
+    (void)options;
     (void)stop;
     co_return err<DwgReport>(ErrorCode::Unsupported,
                              std::string(kErrNoBackend) + ": " + dwg_backend_status());
@@ -75,9 +74,15 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
 
 namespace {
 
-core::Point2 to_mm(double x, double y)
+/// How many characters a UTF-8 string holds — code points, not bytes. A Turkish
+/// caption is two bytes per `Ş`, `ğ` or `İ`, and a byte count made every one of
+/// them a letter and a half wide when the baseline's advance was estimated.
+std::size_t code_points(const char* text)
 {
-    return core::Point2{core::mm_from_metres(x), core::mm_from_metres(y)};
+    std::size_t n = 0;
+    for (const unsigned char* p = reinterpret_cast<const unsigned char*>(text); *p != 0; ++p)
+        if ((*p & 0xC0u) != 0x80u) ++n;
+    return n;
 }
 
 /// The layer an entity sits on, defaulting to `0` exactly as DWG does.
@@ -108,14 +113,12 @@ std::string version_of(const Dwg_Data& dwg)
 } // namespace
 
 command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std::string path,
-                                                  std::string project_crs,
-                                                  std::vector<std::string> only,
-                                                  std::stop_token stop)
+                                                  ImportOptions options, std::stop_token stop)
 {
     // A DWG carries no coordinate system: like DXF it is a drawing format and
     // not a geodetic one. The caller's project CRS stands, and saying so is the
     // command's job rather than this reader's.
-    (void)project_crs;
+    const std::vector<std::string>& only = options.only;
 
     Dwg_Data dwg;
     std::memset(&dwg, 0, sizeof(dwg));
@@ -139,10 +142,32 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
                                      "bu sürümün desteklemediği bir DWG sürümü olabilir.");
     }
 
-    report.version = version_of(dwg);
-    report.objects = static_cast<std::size_t>(dwg.num_objects);
+    report.version          = version_of(dwg);
+    report.objects          = static_cast<std::size_t>(dwg.num_objects);
+    ImportDiagnostics& diag = report.diagnostics;
     if (rc != 0)
-        report.notes.push_back("LibreDWG dosyayı uyarılarla okudu; bazı nesneler eksik olabilir.");
+        diag.note(Severity::Warning,
+                  "LibreDWG dosyayı uyarılarla okudu; bazı nesneler eksik olabilir.");
+
+    // THE UNIT THE NUMBERS ARE IN: the project's, exactly as the DXF path. The
+    // header's INSUNITS is compared to it and reported, never obeyed (see
+    // vector.cpp for the town that shrank to eight metres when it was).
+    const core::DrawingUnit unit = options.drawing_unit;
+    {
+        diag.unit        = unit;
+        diag.unit_source = UnitSource::Setting;
+        const int code   = static_cast<int>(dwg.header_vars.INSUNITS);
+        if (const auto known = drawing_unit_from_insunits(code); known.has_value())
+            diag.declared_unit = known;
+        else if (code != 0)
+            diag.note(Severity::Warning,
+                      "INSUNITS=" + std::to_string(code) + " bu sürümde çevrilmiyor; çizim " +
+                          core::drawing_unit_name(unit) + " olarak okundu (AYAR çizim_birimi).");
+    }
+    const auto mm = [unit](double x, double y) {
+        return core::Point2{core::mm_from_drawing_units(x, unit),
+                            core::mm_from_drawing_units(y, unit)};
+    };
 
     // The wizard's tick boxes. Empty means every layer, which is what a bare
     // İÇEAKTAR sends; the match is Turkish-folded (CLAUDE.md 5.6).
@@ -186,8 +211,12 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
 
         // PAPER SPACE IS NOT THE DRAWING. A DWG's layouts hold the sheet frame,
         // the title block and the viewports; importing them puts a paper border
-        // through the middle of the parcels.
-        if (obj->tio.entity->entmode == 1) continue;
+        // through the middle of the parcels. Counted, so the report can say how
+        // much of the file was a sheet rather than a drawing.
+        if (obj->tio.entity->entmode == 1) {
+            ++diag.paper_space_skipped;
+            continue;
+        }
 
         const std::string on       = layer_of(obj);
         const core::LayerId target = layer_for(on);
@@ -197,6 +226,7 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
             if (made) {
                 ++report.entities;
                 ++census[on];
+                diag.tally(obj->name != nullptr ? obj->name : "?", 1, 0, 0);
             }
             return made.ok();
         };
@@ -221,8 +251,8 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
         case DWG_TYPE_LINE: {
             const Dwg_Entity_LINE* e = obj->tio.entity->tio.LINE;
             if (e == nullptr) break;
-            const std::array<core::Point2, 2> run{to_mm(e->start.x, e->start.y),
-                                                  to_mm(e->end.x, e->end.y)};
+            const std::array<core::Point2, 2> run{mm(e->start.x, e->start.y),
+                                                  mm(e->end.x, e->end.y)};
             (void)keep(tx.add_polyline(target, run));
             break;
         }
@@ -234,7 +264,7 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
             points.clear();
             points.reserve(e->num_points);
             for (BITCODE_BL v = 0; v < e->num_points; ++v)
-                points.push_back(to_mm(e->points[v].x, e->points[v].y));
+                points.push_back(mm(e->points[v].x, e->points[v].y));
 
             // BIT 512 IS `CLOSED`, and it is the whole reason a DWG parcel is a
             // parcel. Read as an open run it would come in as a line: no fill,
@@ -271,7 +301,7 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
                 dwg_point_2d* run = ::dwg_object_polyline_2d_get_points(obj, &error);
                 if (error != 0 || run == nullptr) break;
                 for (BITCODE_BL v = 0; v < n; ++v)
-                    points.push_back(to_mm(run[v].x, run[v].y));
+                    points.push_back(mm(run[v].x, run[v].y));
                 ::free(run);
             } else {
                 // Z IS DROPPED, deliberately. This is a plan reader: the document
@@ -280,7 +310,7 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
                 dwg_point_3d* run = ::dwg_object_polyline_3d_get_points(obj, &error);
                 if (error != 0 || run == nullptr) break;
                 for (BITCODE_BL v = 0; v < n; ++v)
-                    points.push_back(to_mm(run[v].x, run[v].y));
+                    points.push_back(mm(run[v].x, run[v].y));
                 ::free(run);
             }
 
@@ -306,14 +336,14 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
         case DWG_TYPE_POINT: {
             const Dwg_Entity_POINT* e = obj->tio.entity->tio.POINT;
             if (e == nullptr) break;
-            (void)keep(tx.add_point(target, to_mm(e->x, e->y)));
+            (void)keep(tx.add_point(target, mm(e->x, e->y)));
             break;
         }
 
         case DWG_TYPE_CIRCLE: {
             const Dwg_Entity_CIRCLE* e = obj->tio.entity->tio.CIRCLE;
             if (e == nullptr || e->radius <= 0.0) break;
-            (void)keep(tx.add_circle(target, to_mm(e->center.x, e->center.y),
+            (void)keep(tx.add_circle(target, mm(e->center.x, e->center.y),
                                      core::mm_from_metres(e->radius)));
             break;
         }
@@ -326,7 +356,7 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
             // circle and an ARC is an arc: neither is tessellated on the way in,
             // which is what the DXF path cannot avoid — GDAL breaks both into
             // line segments before this program ever sees them.
-            const core::Point2 centre = to_mm(e->center.x, e->center.y);
+            const core::Point2 centre = mm(e->center.x, e->center.y);
             const auto around         = [&](double angle) {
                 return core::Point2{centre.x + core::mm_from_metres(e->radius * std::cos(angle)),
                                     centre.y + core::mm_from_metres(e->radius * std::sin(angle))};
@@ -340,14 +370,14 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
             const Dwg_Entity_TEXT* e = obj->tio.entity->tio.TEXT;
             if (e == nullptr || e->text_value == nullptr || *e->text_value == 0) break;
 
-            const core::Mm height =
-                e->height > 0.0 ? core::mm_from_metres(e->height) : core::mm_from_metres(1.0);
-            const core::Point2 at = to_mm(e->ins_pt.x, e->ins_pt.y);
+            const core::Mm height = e->height > 0.0 ? core::mm_from_drawing_units(e->height, unit)
+                                                    : core::mm_from_metres(1.0);
+            const core::Point2 at = mm(e->ins_pt.x, e->ins_pt.y);
 
             // The same 0.6 em advance the METİN command uses: it decides the
             // BOUNDING BOX and not where a glyph lands.
             core::Point2 end = at;
-            end.x += (height * 6 * static_cast<core::Mm>(std::strlen(e->text_value))) / 10;
+            end.x += (height * 6 * static_cast<core::Mm>(code_points(e->text_value))) / 10;
 
             const std::array<core::Point2, 2> baseline{at, end};
             auto made = tx.add_polyline(target, baseline);
@@ -355,6 +385,7 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
             if (tx.set_text(made.value(), e->text_value, height, core::TextAnchor::BaselineLeft)) {
                 ++report.entities;
                 ++census[on];
+                diag.tally("TEXT", 1, 0, 0);
             }
             break;
         }
@@ -375,9 +406,10 @@ command::Task<core::Result<DwgReport>> import_dwg(command::Transaction& tx, std:
     // user no layers to choose between.
     report.layer_names.assign(census.begin(), census.end());
 
-    report.skipped.assign(skipped.begin(), skipped.end());
-    std::sort(report.skipped.begin(), report.skipped.end(),
-              [](const auto& a, const auto& b) { return a.second > b.second; });
+    // What was left behind, by type and count: the census R14's coverage report
+    // is built from, and the `atlanan:` half of the transcript's last line.
+    for (const auto& [name, n] : skipped)
+        diag.tally(name, 0, n, 0);
 
     if (report.entities == 0)
         co_return err<DwgReport>(ErrorCode::ValidationFailed,

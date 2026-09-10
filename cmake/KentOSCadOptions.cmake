@@ -117,6 +117,21 @@ option(KENTOS_WITH_TEXT "Enable the msdfgen SDF text atlas" ${KENTOS_TEXT_AVAILA
 # libopencad, a DIFFERENT implementation than the rulebook chose — the allow-list
 # in `KentOSCadGdalDrivers.cmake` says why `.dwg` is not simply added there.
 option(KENTOS_WITH_DWG      "Enable DWG reading through LibreDWG"   OFF)
+
+# DXF through libdxfrw (io.md R13: DXF is first-class, read AND write). ON wherever
+# the pinned source can be obtained: it is pure C++11 with no dependency of its
+# own, so the only thing that can stop it is an offline build with
+# KENTOS_FETCH_DEPENDENCIES=OFF — and asking for ON there is a hard error naming
+# the fix, per Article 8.2, not a build that quietly reads DXF with the older
+# GDAL path. GDAL's DXF driver flattens every curve before this program sees it;
+# libdxfrw hands the CIRCLE, the ARC, the ELLIPSE, the SPLINE, the INSERT and
+# the XDATA over as what they are, which is what "first-class" means.
+if(NOT DEFINED KENTOS_FETCH_DEPENDENCIES OR KENTOS_FETCH_DEPENDENCIES)
+    set(KENTOS_DXFRW_AVAILABLE ON)
+else()
+    set(KENTOS_DXFRW_AVAILABLE OFF)
+endif()
+option(KENTOS_WITH_DXFRW    "Read and write DXF through libdxfrw"   ${KENTOS_DXFRW_AVAILABLE})
 option(KENTOS_WITH_TRACY    "Enable Tracy frame profiling"          OFF)
 
 function(kentos_require_dependency option_name package_name hint)

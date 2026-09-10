@@ -36,6 +36,13 @@ namespace kentos::core {
 /// The slots handed to one kind function call. One call per batch (R23).
 using SlotSpan = std::span<const std::uint32_t>;
 
+/// A run that takes its style from the entity it belongs to (`EmitBuffer::run_style`).
+inline constexpr std::uint32_t kInheritRunStyle = 0xFFFFFFFFu;
+/// A run drawn on the entity's own layer (`EmitBuffer::run_layer`).
+inline constexpr std::uint32_t kInheritRunLayer = 0xFFFFFFFFu;
+/// A run that carries no caption (`EmitBuffer::run_text`).
+inline constexpr std::uint32_t kNoRunText = 0xFFFFFFFFu;
+
 /// Where a kind writes the geometry it wants drawn: flat coordinate arrays plus
 /// a run table, which is what a DrawList wants and what a GPU buffer upload
 /// wants. Deliberately not an interface with a virtual push_vertex(): the whole
@@ -51,17 +58,51 @@ struct EmitBuffer
     std::vector<std::uint32_t> run_start; ///< first vertex of the run
     std::vector<std::uint32_t> run_count; ///< how many vertices the run holds
     std::vector<std::uint8_t> run_closed; ///< 1 = the closing segment is implied
+    /// 1 = the run is a VOID in its entity rather than an outline — a hatch's
+    /// island, a face's interior ring. The fill pass reads it the way it reads
+    /// `RingRole::Interior` on a stored ring; a stroke pass ignores it.
+    std::vector<std::uint8_t> run_hole;
+
+    /// THE STYLE, LAYER AND CAPTION OF A RUN, when they are not the entity's own.
+    /// A block reference draws its definition's members, and a member keeps its
+    /// own colour, its own layer and its own text; the scene builder reads these
+    /// three columns and batches the run where THEY say. `kInheritRunStyle`,
+    /// `kInheritRunLayer` and `kNoRunText` — what every other kind writes — mean
+    /// "the entity's", which is what the columns meant before they existed.
+    std::vector<std::uint32_t> run_style; ///< a StyleId, or kInheritRunStyle
+    std::vector<std::uint32_t> run_layer; ///< a LayerId, or kInheritRunLayer
+    std::vector<std::uint32_t>
+        run_text; ///< a text-table slot whose caption this run is the baseline of, or kNoRunText
 
     /// How many runs have been emitted.
     std::size_t run_total() const noexcept { return run_start.size(); }
 
     /// Starts a run. `closed` says the segment back to the first vertex is
-    /// implied rather than stored — the ring convention the geometry uses.
-    void begin_run(bool closed)
+    /// implied rather than stored — the ring convention the geometry uses;
+    /// `hole` says the run bounds a void rather than the shape (see `run_hole`);
+    /// `style`, `layer` and `text` are the run's own or the inherit sentinels.
+    void begin_run(bool closed, bool hole = false, std::uint32_t style = kInheritRunStyle,
+                   std::uint32_t layer = kInheritRunLayer, std::uint32_t text = kNoRunText)
     {
         run_start.push_back(static_cast<std::uint32_t>(xs.size()));
         run_count.push_back(0);
         run_closed.push_back(closed ? std::uint8_t{1} : std::uint8_t{0});
+        run_hole.push_back(hole ? std::uint8_t{1} : std::uint8_t{0});
+        run_style.push_back(style);
+        run_layer.push_back(layer);
+        run_text.push_back(text);
+    }
+
+    /// The eastings of run `i`.
+    std::span<const Mm> run_xs(std::size_t i) const noexcept
+    {
+        return {xs.data() + run_start[i], run_count[i]};
+    }
+
+    /// The northings of run `i`.
+    std::span<const Mm> run_ys(std::size_t i) const noexcept
+    {
+        return {ys.data() + run_start[i], run_count[i]};
     }
 
     /// Appends one vertex to the run in progress. Undefined before `begin_run`,
@@ -82,6 +123,10 @@ struct EmitBuffer
         run_start.clear();
         run_count.clear();
         run_closed.clear();
+        run_hole.clear();
+        run_style.clear();
+        run_layer.clear();
+        run_text.clear();
     }
 };
 
@@ -127,6 +172,32 @@ using ReadFn = Result<std::uint32_t> (*)(RingGeometry& geom, std::span<const std
 using WriteFn = void (*)(const RingGeometry& geom, SlotSpan slots, std::vector<std::uint8_t>& bytes,
                          std::vector<std::uint32_t>& ends);
 
+/// Whether `rings` and `payload` describe a well-formed entity of the kind,
+/// asked BEFORE anything is appended so a refusal leaves no trace. This is where
+/// a kind's own floor lives — a circle wants exactly a centre and a handle due
+/// east, an ellipse two axes of non-zero length, an arc-polyline as many bulges
+/// as it has segments — and where a payload's lengths are checked against the
+/// bytes present, because a payload comes off disk (io.md). The message is what
+/// the user reads when a command or a file is refused. May be null: a kind with
+/// nothing to check beyond what `RingGeometry::append` already enforces.
+using ValidateFn = Status (*)(std::span<const RingGeometry::RingInput> rings,
+                              std::span<const std::uint8_t> payload);
+
+/// Where a kind's key points are collected. `modes` holds one snap-mode bit per
+/// point (`core/snap.hpp`: `SnapCenter`, `SnapEndpoint`, `SnapInsertion`…), so
+/// the snap engine offers each under the mode a user expects rather than one
+/// mode for everything.
+struct KeyPointSink
+{
+    std::vector<Point2>& points;       ///< the points, in document millimetres
+    std::vector<std::uint32_t>& modes; ///< one snap-mode bit per point
+};
+
+/// The points a snap offers on one slot BEYOND its outline: an ellipse's centre
+/// and axis ends, a block reference's insertion point, a dimension's definition
+/// points. May be null for a kind whose outline is all there is to reach for.
+using KeyPointsFn = void (*)(const RingGeometry& geom, std::uint32_t slot, KeyPointSink& into);
+
 /// One entity kind, declared once (R22).
 ///
 /// `size` leads the struct so a later ABI boundary can grow it by appending
@@ -166,6 +237,10 @@ struct KindSpec
     /// against the older layout has no such member, and a reader that checks
     /// `size` can tell. Optional for the same reason — see `PerimeterFn`.
     PerimeterFn perimeter{nullptr};
+
+    /// Appended later still, both optional (see their typedefs).
+    ValidateFn validate{nullptr};
+    KeyPointsFn key_points{nullptr};
 };
 
 /// The kinds one Document understands. Owned by the Document, passed by
@@ -224,11 +299,19 @@ const KindTable& builtin_kinds();
 /// separate edits that have to agree.
 bool curve_outline(KindId kind, const RingGeometry& geom, std::uint32_t slot, EmitBuffer& into);
 
-/// The built-in kinds. Arcs, text and points are Phase 2 and each adds one line.
+/// The built-in kinds, one factory each (R25). The first five live in
+/// entity_kind.cpp; every Phase 2 kind has its own file beside its geometry.
 KENTOS_KIND(polyline);
 KENTOS_KIND(circle);
 KENTOS_KIND(arc);
 KENTOS_KIND(point);
+KENTOS_KIND(ellipse);
+KENTOS_KIND(arc_polyline);
+KENTOS_KIND(spline);
+KENTOS_KIND(hatch);
+KENTOS_KIND(block_reference);
+KENTOS_KIND(dimension);
+KENTOS_KIND(leader);
 
 /// Where a `core.point` slot sits.
 Point2 point_position_of(const RingGeometry& geom, std::uint32_t slot);

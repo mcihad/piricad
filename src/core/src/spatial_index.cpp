@@ -35,8 +35,10 @@ void SpatialIndex::build(const EntityTable& store)
     clear();
 
     order_.reserve(store.size());
+    // Alive and not inside a block definition (model.md R45): a member is
+    // reached through its reference, never on its own.
     for (EntityId e = 0; e < store.size(); ++e)
-        if (store.alive(e)) order_.push_back(e);
+        if (store.standalone(e)) order_.push_back(e);
 
     if (order_.empty()) return;
 

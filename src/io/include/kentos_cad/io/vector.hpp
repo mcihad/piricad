@@ -21,6 +21,8 @@
 #include "kentos_cad/core/attribute.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/result.hpp"
+#include "kentos_cad/io/diagnostics.hpp"
+#include "kentos_cad/io/options.hpp"
 
 #include <cstdint>
 #include <stop_token>
@@ -87,8 +89,13 @@ struct VectorReport
     std::uint64_t features{0}; ///< features read or written
     std::uint64_t entities{0}; ///< entities created in the document
     std::uint64_t layers{0};   ///< layers read or written
+    std::uint64_t texts{0};    ///< captions written as point features (export)
+    std::uint64_t columns{0};  ///< attribute columns written as fields (export)
+    std::string crs;           ///< the CRS the dataset declared (io.md R20)
 
-    /// Features the reader could not turn into geometry, and the first reason.
+    /// What an IMPORT wants the user to know: the unit it scaled by, the
+    /// features it could not turn into geometry, the types it read or left
+    /// behind, and every note a reader emitted.
     ///
     /// A REAL FILE CARRIES RUBBISH. `deneme_suşehri.dxf` is 48 MB of a real
     /// cadastral drawing and holds a LINESTRING whose fifty-five vertices are all
@@ -96,12 +103,11 @@ struct VectorReport
     /// file over it threw away 18 497 sound entities, which is the same mistake
     /// the missing-`.prj` refusal made: correct by the letter, useless in the
     /// office. The feature is dropped, counted and NAMED (io.md P11, P13).
-    std::uint64_t skipped{0};
-    std::string skipped_reason;
-    std::string crs; ///< the CRS the dataset declared (io.md R20)
-    /// Anything the user should know that is not a failure — a dropped field, a
-    /// sidecar written, a driver limitation worked around. Reported, never
-    /// swallowed: a silent lossy export is how a wrong pafta gets delivered.
+    ImportDiagnostics diagnostics;
+
+    /// What an EXPORT wants the user to know that is not a failure — a sidecar
+    /// written, a driver limitation worked around. Reported, never swallowed: a
+    /// silent lossy export is how a wrong pafta gets delivered.
     std::vector<std::string> notes;
     std::vector<VectorField> fields; ///< every attribute field the file carries
 };
@@ -119,27 +125,27 @@ struct VectorReport
 /// `service.cpp`. Taking it as an argument keeps this module out of that
 /// argument: it compares what it is given and never guesses.
 ///
-/// `path` and `driver` are taken by value for the coroutine-lifetime reason
+/// `path` and `options` are taken by value for the coroutine-lifetime reason
 /// spelled out in `project.hpp`.
-/// `only` names the layers to read; an EMPTY list means every layer, which is
-/// what a bare `İÇEAKTAR` asks for. Matching is Turkish-folded, so `İMAR` from a
-/// checklist finds `imar` in the file (CLAUDE.md 5.6). A name in `only` that the
-/// file does not hold is not an error — it is reported as read zero, because the
-/// alternative is a wizard that refuses the whole import over one stale tick.
+/// `options.only` names the layers to read; an EMPTY list means every layer,
+/// which is what a bare `İÇEAKTAR` asks for. Matching is Turkish-folded, so `İMAR`
+/// from a checklist finds `imar` in the file (CLAUDE.md 5.6). A name in `only`
+/// that the file does not hold is not an error — it is reported as read zero,
+/// because the alternative is a wizard that refuses the whole import over one
+/// stale tick. `options.drawing_unit` is the unit a DXF is read in (the setting).
 command::Task<core::Result<VectorReport>> import_vector(command::Transaction& tx, std::string path,
-                                                        std::string driver, std::string project_crs,
-                                                        std::vector<std::string> only,
-                                                        std::vector<std::string> fields,
+                                                        ImportOptions options,
                                                         std::stop_token stop);
 
 /// Writes `doc` to `path` through the named allow-listed driver, or through the
-/// driver that matches the extension when `driver` is empty.
-/// `crs` is the coordinate system to stamp on the output, and it must be one OGR
-/// can resolve (an EPSG code, a PROJ string, a WKT). An export with no usable CRS
-/// produces a file whose coordinates mean nothing to whoever receives it, so it
-/// is refused rather than written (io.md R20).
+/// driver that matches the extension when `options.driver` is empty.
+/// `options.crs` is the coordinate system to stamp on the output, and it must be
+/// one OGR can resolve (an EPSG code, a PROJ string, a WKT). An export with no
+/// usable CRS produces a file whose coordinates mean nothing to whoever receives
+/// it, so it is refused rather than written (io.md R20). `options.unit` is the
+/// unit a DXF's coordinates are written in; a geodetic format writes metres.
 command::Task<core::Result<VectorReport>> export_vector(const core::Document& doc, std::string path,
-                                                        std::string driver, std::string crs,
+                                                        ExportOptions options,
                                                         std::stop_token stop);
 
 } // namespace kentos::io

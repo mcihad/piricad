@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/command/session.hpp"
 
+#include "kentos_cad/command/job.hpp"
+
 #include "kentos_cad/command/bus.hpp"
 
 namespace kentos::command {
@@ -11,6 +13,7 @@ const char* session_state_name(SessionState s)
     case SessionState::Ready: return "ready";
     case SessionState::Running: return "running";
     case SessionState::Waiting: return "waiting";
+    case SessionState::Working: return "working";
     case SessionState::Completed: return "completed";
     case SessionState::Cancelled: return "cancelled";
     case SessionState::Failed: return "failed";
@@ -113,9 +116,52 @@ core::Status Session::supply(Value v)
     return core::ok();
 }
 
+bool Session::park_job(std::coroutine_handle<> h, Job& job)
+{
+    if (!client_driven_ || !bus_.on_job_host) return false;
+    parked_ = h;
+    job_    = &job;
+    state_  = SessionState::Working;
+    bus_.on_job_host(*this);
+    return true;
+}
+
+void Session::resume_job()
+{
+    if (state_ != SessionState::Working) return;
+    job_   = nullptr;
+    state_ = SessionState::Running;
+
+    auto h  = parked_;
+    parked_ = {};
+    if (!h) return;
+    try {
+        h.resume();
+    } catch (const std::exception& e) {
+        fail(core::err(core::ErrorCode::Internal,
+                       std::string("'") + spec_->id + "' komutu istisna fırlattı: " + e.what()));
+        return;
+    } catch (...) {
+        fail(core::err(core::ErrorCode::Internal,
+                       std::string("'") + spec_->id + "' komutu bilinmeyen bir istisna fırlattı."));
+        return;
+    }
+    if (task_.done() && state_ == SessionState::Running) state_ = SessionState::Completed;
+}
+
 void Session::cancel()
 {
     if (finished()) return;
+
+    // A WORKER OWNS THE JOB. The coroutine cannot be resumed from here while the
+    // worker is inside `work`; the stop is requested, the host resumes the
+    // command when the worker returns, and the command unwinds on the cancelled
+    // outcome it finds — the same ESC path, one job later.
+    if (state_ == SessionState::Working) {
+        if (job_ != nullptr) job_->stop.request_stop();
+        cancel_requested_ = true;
+        return;
+    }
 
     if (auto* live = dynamic_cast<InteractiveInputSource*>(input_.get())) live->cancel();
 

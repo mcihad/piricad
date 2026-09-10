@@ -43,6 +43,23 @@ Currently linked
                           nothing else. Only the C++ port under CPP/ is used;
                           the C#, Delphi and DLL trees are not compiled.
 
+  libdxfrw                GPL-2.0-or-later      1.0.1+    92d7466e
+                          Reads and writes AutoCAD DXF behind kentos_cad/io/dxf.hpp
+                          — the library .claude/io.md R13 names for "DXF is
+                          first-class". LICENCE FINDING: every source header says
+                          "version 2 of the License, or (at your option) any later
+                          version", which is what makes a GPLv2 library usable in
+                          a GPLv3 program (kentoscad.md §1); a GPLv2-ONLY library
+                          would be refused. Linked PRIVATE into kentos_io behind
+                          KENTOS_WITH_DXFRW (ON wherever the pinned source can be
+                          fetched); DRW_* headers reach io/dxf_reader.cpp,
+                          io/dxf_writer.cpp and io/dxf_common.cpp and nothing
+                          else. Built without dwg2dxf and without its doxygen run.
+                          Its own -Werror is reset at directory scope (no option
+                          exists upstream); the Article 2.5 floating-point flags
+                          are applied to its target. Text code pages including
+                          ANSI_1254 (Turkish) are converted by the library.
+
   LibreDWG                GPL-3.0-or-later      0.14.8594 7eb90a9f
                           Reads AutoCAD DWG behind kentos_cad/io/dwg.hpp. The
                           ONLY GPL-compatible DWG implementation there is, which
@@ -391,7 +408,6 @@ the exact version is pinned in vcpkg.json when the option is first enabled.
   llama.cpp               MIT                   local LLM inference
   ONNX Runtime            MIT                   embedding models
   sqlite-vec              Apache 2.0            vector search for the mevzuat RAG
-  libdxfrw                GPLv2+                DXF
   LibreDWG                GPLv3+                DWG read
   Qt Advanced Docking     LGPLv2.1              CAD-grade docking
   Tracy                   BSD-3                 frame profiling

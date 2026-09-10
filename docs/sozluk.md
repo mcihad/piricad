@@ -249,3 +249,37 @@ sayı çipiyle toplanır.
 
 **Türetilmiş değer** — Programın başka değerlerden hesapladığı, elle girilmeyen değer.
 Girdi kutusunda `fx` işareti, etiketinde `HESAP` rozeti taşır.
+
+**Nesne türü** — Bir nesnenin dosyaya hangi sayılarla yazıldığını ve ekranda hangi biçimin
+çizildiğini birlikte söyleyen sınıfı: çoklu çizgi, daire, yay, nokta, elips. Bkz.
+[Nesne türleri](nesneler/README.md).
+
+**Tür yükü** — Bir nesne türünün halkalarının söyleyemediğini taşıyan, yalnız o türün
+okuduğu bayt dizisi. Kısmi elips, yaylı çoklu çizgi, spline, tarama, blok referansı,
+ölçü ve lider taşır; çoklu çizgi, daire, yay, nokta ve tam elips taşımaz.
+
+**Yabancı veri** — Başka bir programın nesneye bağladığı, KentOSCad'in okumadığı ama
+kaybetmediği baytlar; DXF'te XDATA. Panelde yalnız sayısı görünür.
+
+**Blok** — Bir kez çizilip çok kez yerleştirilen sembolün tanımı: rögar kapağı, kuzey oku,
+antet. Tanımın nesneleri kendi başına çizilmez ve düzenlenmez.
+
+**Blok referansı** — Bir bloğu belli bir noktaya, ölçekle ve açıyla yerleştiren nesne
+(`BLOKEKLE`); DXF `INSERT`.
+
+**Ekleme noktası** — Bir blok referansının yerleştirildiği nokta; yakalama modu
+`EKLEME`.
+
+**Şişkinlik** — DXF'te bir çoklu çizgi kenarının yay olduğunu söyleyen sayı (bulge):
+kirişin yarısına oranla yayın yüksekliği. Okunurken yayın merkezine ve yarıçapına
+çevrilir ve yaylı çoklu çizgi türünde saklanır.
+
+**Spline** — Kontrol noktaları, derece ve düğümlerle tanımlı pürüzsüz eğri (NURBS);
+`SPLINE` komutu ve DXF `SPLINE`.
+
+**Tarama** — Kapalı bir sınırı dolu ya da çizgi deseniyle dolduran nesne (DXF `HATCH`);
+desenler katalogdan adla gelir.
+
+**Ölçü ve lider** — Uzunluğu ya da açıyı yazısı ve oklarıyla gösteren nesne (`ÖLÇÜ`,
+DXF `DIMENSION`) ile bir noktayı gösteren oklu çizgi (`LİDER`, DXF `LEADER`).
+

@@ -2,6 +2,7 @@
 #include "kentos_cad/io/service.hpp"
 
 #include "kentos_cad/io/dwg.hpp"
+#include "kentos_cad/io/dxf.hpp"
 
 #include "kentos_cad/core/text.hpp"
 
@@ -13,6 +14,7 @@
 #include "kentos_cad/io/project.hpp"
 #include "kentos_cad/io/vector.hpp"
 
+#include <filesystem>
 #include <fstream>
 #include <string>
 #include <utility>
@@ -41,6 +43,15 @@ std::string join_notes(const std::vector<std::string>& notes)
         out += n;
     }
     return out;
+}
+
+/// The unit a drawing-format file is read in when it names none, and written in
+/// always: the project setting `core.cizim.birim`, which had no consumer before
+/// this. Project scope is right (model.md R40): the unit changes every byte of an
+/// exported DXF.
+core::DrawingUnit effective_unit(const command::Bus& bus)
+{
+    return core::drawing_unit_from_setting(bus.setting("core.cizim.birim").as_enum());
 }
 
 /// The coordinate system a user can actually set.
@@ -76,6 +87,14 @@ std::string effective_crs(const command::Bus& bus)
 }
 
 /// Whether the path names a DWG, whatever case it was typed in.
+/// `.dxf` by extension, case-folded. The libdxfrw road when the build has it.
+bool looks_like_dxf(const std::string& path)
+{
+    if (path.size() < 4) return false;
+    const std::string tail = core::turkish_upper(path.substr(path.size() - 4));
+    return tail == ".DXF";
+}
+
 bool looks_like_dwg(const std::string& path)
 {
     if (path.size() < 4) return false;
@@ -85,7 +104,7 @@ bool looks_like_dwg(const std::string& path)
 } // namespace
 
 core::Result<ImportProbe> probe_import(core::Document& scratch, const std::string& path,
-                                       const std::string& project_crs, std::stop_token stop)
+                                       const ImportOptions& options, std::stop_token stop)
 {
     // The label is never shown: this transaction's inverse Ops are dropped with
     // the scratch document. It is here because Article 5.9 admits exactly one
@@ -105,26 +124,44 @@ core::Result<ImportProbe> probe_import(core::Document& scratch, const std::strin
         return std::move(task.result());
     };
 
+    // A probe reads EVERY layer and NO attribute column: the wizard's pages are
+    // built from what the file has, and the user has not chosen yet.
+    ImportOptions everything = options;
+    everything.only.clear();
+    everything.fields.clear();
+
+    if (dxf_backend_available() &&
+        (looks_like_dxf(path) || core::turkish_iequals(options.driver, "DXF"))) {
+        auto read = drive(import_dxf(tx, path, everything, std::move(stop)));
+        if (!read) return read.error();
+
+        const DxfReport& d = read.value();
+        out.driver         = "DXF " + d.version;
+        out.crs            = d.crs;
+        out.entities       = d.entities;
+        out.diagnostics    = d.diagnostics;
+        out.layers.reserve(d.layer_names.size());
+        for (const auto& [name, made] : d.layer_names)
+            out.layers.emplace_back(name, static_cast<std::uint64_t>(made));
+        return out;
+    }
+
     if (looks_like_dwg(path)) {
-        auto read = drive(import_dwg(tx, path, project_crs, {}, std::move(stop)));
+        auto read = drive(import_dwg(tx, path, everything, std::move(stop)));
         if (!read) return read.error();
 
         const DwgReport& d = read.value();
         out.driver         = "DWG " + d.version;
-        out.crs            = project_crs;
+        out.crs            = options.project_crs;
         out.entities       = d.entities;
-        out.notes          = d.notes;
+        out.diagnostics    = d.diagnostics;
         out.layers.reserve(d.layer_names.size());
         for (const auto& [name, made] : d.layer_names)
             out.layers.emplace_back(name, static_cast<std::uint64_t>(made));
-
-        for (std::size_t i = 0; i < d.skipped.size() && i < 5; ++i)
-            out.notes.push_back("Okunamayan varlık türü atlandı: " + d.skipped[i].first + " x" +
-                                std::to_string(d.skipped[i].second));
         return out;
     }
 
-    auto read = drive(import_vector(tx, path, std::string(), project_crs, {}, {}, std::move(stop)));
+    auto read = drive(import_vector(tx, path, everything, std::move(stop)));
     if (!read) return read.error();
 
     const VectorReport& r = read.value();
@@ -132,7 +169,7 @@ core::Result<ImportProbe> probe_import(core::Document& scratch, const std::strin
     out.crs               = r.crs;
     out.fields            = r.fields;
     out.entities          = r.entities;
-    out.notes             = r.notes;
+    out.diagnostics       = r.diagnostics;
     out.layers            = r.layer_names;
     return out;
 }
@@ -161,7 +198,60 @@ FileService::~FileService()
 void FileService::request_stop()
 {
     stop_.request_stop();
+    if (current_job_ != nullptr) current_job_->stop.request_stop();
     stop_ = std::stop_source{}; // ready for the next operation
+}
+
+core::Result<ImportOutcome> read_into_scratch(command::Transaction& tx, const std::string& path,
+                                              const ImportOptions& options, std::stop_token stop)
+{
+    // DRIVEN, NOT AWAITED — see `probe_import` for why that is safe here.
+    const auto drive = [](auto task) {
+        while (!task.done())
+            task.resume();
+        return std::move(task.result());
+    };
+
+    ImportOutcome out;
+    // DXF GOES TO LIBDXFRW when the build has it (io.md R13): the GDAL driver
+    // flattens every curve and drops the blocks and the XDATA before this program
+    // sees them. `bicim=DXF` on a file with another extension takes the same road.
+    if (dxf_backend_available() &&
+        (looks_like_dxf(path) || core::turkish_iequals(options.driver, "DXF"))) {
+        auto read = drive(import_dxf(tx, path, options, std::move(stop)));
+        if (!read) return read.error();
+        const DxfReport& d = read.value();
+        out.driver         = "DXF " + d.version;
+        out.crs            = d.crs;
+        out.entities       = d.entities;
+        out.layers         = d.layers;
+        out.layer_names    = d.layer_names;
+        out.diagnostics    = d.diagnostics;
+        return out;
+    }
+    if (looks_like_dwg(path)) {
+        auto read = drive(import_dwg(tx, path, options, std::move(stop)));
+        if (!read) return read.error();
+        const DwgReport& d = read.value();
+        out.driver         = "DWG " + d.version;
+        out.crs            = options.project_crs;
+        out.entities       = d.entities;
+        out.layers         = d.layers;
+        out.layer_names    = d.layer_names;
+        out.diagnostics    = d.diagnostics;
+        return out;
+    }
+
+    auto read = drive(import_vector(tx, path, options, std::move(stop)));
+    if (!read) return read.error();
+    const VectorReport& r = read.value();
+    out.driver            = r.driver;
+    out.crs               = r.crs;
+    out.entities          = r.entities;
+    out.layers            = r.layers;
+    out.layer_names       = r.layer_names;
+    out.diagnostics       = r.diagnostics;
+    return out;
 }
 
 command::Task<core::Result<std::string>> FileService::handle(command::FileRequest request)
@@ -176,12 +266,13 @@ command::Task<core::Result<std::string>> FileService::handle(command::FileReques
     }
 
     case command::FileRequest::Verb::Import:
-        co_return co_await import_into(request.tx, std::move(request.path),
+        co_return co_await import_into(request.tx, request.session, std::move(request.path),
                                        std::move(request.format), std::move(request.layers),
                                        std::move(request.fields));
 
     case command::FileRequest::Verb::Export:
-        co_return co_await export_out(std::move(request.path), std::move(request.format));
+        co_return co_await export_out(std::move(request.path), std::move(request.format),
+                                      request.version);
 
     case command::FileRequest::Verb::ExportStyle:
         co_return export_style(std::move(request.path), std::move(request.layer));
@@ -302,8 +393,9 @@ core::Result<std::string> FileService::save(const std::string& path, bool save_a
 // -------------------------------------------------------------- İÇEAKTAR ----
 
 command::Task<core::Result<std::string>>
-FileService::import_into(command::Transaction* tx, std::string path, std::string format,
-                         std::vector<std::string> only, std::vector<std::string> fields)
+FileService::import_into(command::Transaction* tx, command::Session* session, std::string path,
+                         std::string format, std::vector<std::string> only,
+                         std::vector<std::string> fields)
 {
     if (!tx)
         co_return err(ErrorCode::Internal,
@@ -316,52 +408,65 @@ FileService::import_into(command::Transaction* tx, std::string path, std::string
                           "' bir KentOSCad proje dosyası. Proje dosyası açılır, içe aktarılmaz: "
                           "AÇ komutunu kullanın.");
 
-    // DWG GOES TO LIBREDWG, not to GDAL. `.claude/io.md` R13 names the
-    // implementation, and GDAL's own CAD driver is a different one (libopencad);
-    // routing by extension here is what keeps that decision from being made by
-    // whichever driver happens to answer first.
-    if (looks_like_dwg(path)) {
-        auto dwg = co_await import_dwg(*tx, path, effective_crs(bus_), only, stop_.get_token());
-        if (!dwg) co_return dwg.error();
+    ImportOptions options;
+    options.driver       = std::move(format);
+    options.project_crs  = effective_crs(bus_);
+    options.only         = std::move(only);
+    options.fields       = std::move(fields);
+    options.drawing_unit = effective_unit(bus_);
 
-        const DwgReport& d = dwg.value();
-        std::string said   = "İçe aktarıldı: " + std::to_string(d.entities) + " nesne, " +
-                           std::to_string(d.layers) + " katman (DWG " + d.version + ")";
+    // PHASE ONE: the read, into a document of its own. Everything below `job.work`
+    // may run on a host thread while this frame sits suspended; the scratch
+    // document, the outcome and the job live in the frame, which is heap memory
+    // that outlives the suspension. The scratch document is touched by exactly
+    // one thread at a time — the worker while it runs, this one afterwards.
+    auto scratch                        = std::make_unique<core::Document>();
+    core::Result<ImportOutcome> outcome = err(ErrorCode::Internal, "Okuma başlamadı.");
+    command::Job job;
+    job.label = "İçe aktarılıyor: " + std::filesystem::path(path).filename().string();
+    job.work  = [&scratch, &outcome, &path, &options](const command::JobControl& control) {
+        command::Transaction reading(*scratch, "İçe aktarma okuması");
+        outcome = read_into_scratch(reading, path, options, control.stop);
+        // The inverse Ops are dropped with the scratch document; nothing here is
+        // journalled or undoable (Article 5.9 admits one route to geometry and a
+        // read does not get a second one).
+        if (!outcome) reading.rollback();
+    };
+    current_job_ = &job;
+    if (session != nullptr)
+        co_await command::run_job(*session, job);
+    else
+        job.work(command::JobControl{job.stop.get_token()});
+    current_job_ = nullptr;
 
-        // WHAT WAS LEFT BEHIND, BY NAME. An entity type this reader has no
-        // translation for is not a silent loss (io.md P11/P13), and the same list
-        // is what R14's coverage report is built from.
-        std::vector<std::string> notes = d.notes;
-        for (std::size_t i = 0; i < d.skipped.size() && i < 5; ++i)
-            notes.push_back("Okunamayan varlık türü atlandı: " + d.skipped[i].first + " x" +
-                            std::to_string(d.skipped[i].second));
-        co_return said + join_notes(notes);
+    if (!outcome) {
+        if (job.stop.stop_requested())
+            co_return err(ErrorCode::Cancelled, "İçe aktarma durduruldu; çizim değişmedi.");
+        co_return outcome.error();
     }
 
-    auto report =
-        co_await import_vector(*tx, std::move(path), std::move(format), effective_crs(bus_),
-                               std::move(only), std::move(fields), stop_.get_token());
-    if (!report) co_return report.error();
-
-    const VectorReport& r = report.value();
+    // PHASE TWO: into the real document, on this thread, inside the command's one
+    // transaction (io.md R17). A failure here rolls the whole import back.
+    auto adopted = tx->adopt_from(*scratch);
+    if (!adopted) co_return adopted.error();
 
     // WHAT WAS LEFT BEHIND, IN FRONT OF THE USER. A skipped feature that only
-    // reached a counter is a silent loss, which io.md P11 forbids; the first
-    // reason comes with the count so the user can tell "one broken polyline" from
-    // "this reader cannot handle this file".
-    std::vector<std::string> notes = r.notes;
-    if (r.skipped != 0)
-        notes.push_back(std::to_string(r.skipped) +
-                        " öğe geometrisi kullanılamadığı için atlandı. İlki: " + r.skipped_reason);
-
-    co_return "İçe aktarıldı: " + std::to_string(r.entities) + " nesne, " +
-        std::to_string(r.layers) + " katman (" + r.driver + ", " + r.crs + ")" + join_notes(notes);
+    // reached a counter is a silent loss, which io.md P11 forbids; the transcript
+    // carries the count with the first reason, the unit that was used and every
+    // type that was read, degraded or left out.
+    const ImportOutcome& r = outcome.value();
+    std::string said       = "İçe aktarıldı: " + std::to_string(r.entities) + " nesne, " +
+                       std::to_string(r.layers) + " katman (" + r.driver + ", " + r.crs + ")" +
+                       r.diagnostics.transcript();
+    for (const std::string& n : adopted.value().notes)
+        said += "\n  not: " + n;
+    co_return said;
 }
 
 // ------------------------------------------------------------- DIŞAAKTAR ----
 
 command::Task<core::Result<std::string>> FileService::export_out(std::string path,
-                                                                 std::string format)
+                                                                 std::string format, int version)
 {
     if (is_project_path(path))
         co_return err(ErrorCode::InvalidArgument,
@@ -370,8 +475,37 @@ command::Task<core::Result<std::string>> FileService::export_out(std::string pat
                           "FARKLIKAYDET kullanın.");
 
     const std::string target = path;
-    auto report = co_await export_vector(bus_.document(), std::move(path), std::move(format),
-                                         effective_crs(bus_), stop_.get_token());
+    ExportOptions options;
+    options.driver = std::move(format);
+    options.crs    = effective_crs(bus_);
+    options.unit   = effective_unit(bus_);
+
+    // DXF GOES TO LIBDXFRW when the build has it: a circle is written as a
+    // CIRCLE, not as the polygon the GDAL driver would make of it (io.md R13).
+    if (dxf_backend_available() &&
+        (looks_like_dxf(target) || core::turkish_iequals(options.driver, "DXF"))) {
+        const auto ver = dxf_version_from_year(version == 0 ? 2007 : version);
+        if (!ver)
+            co_return err(ErrorCode::InvalidArgument,
+                          "'" + std::to_string(version) +
+                              "' bir DXF sürümü değil. Seçenekler: 2000, 2004, 2007, 2010, 2013, "
+                              "2018.");
+        auto written = co_await export_dxf(bus_.document(), target, std::move(options), *ver,
+                                           stop_.get_token());
+        if (!written) co_return written.error();
+        const DxfReport& d = written.value();
+        co_return "Dışa aktarıldı: " + target + "  (" + std::to_string(d.entities) + " nesne, " +
+            std::to_string(d.layers) + " katman, DXF " + d.version + ", " + d.crs + ")" +
+            d.diagnostics.transcript();
+    }
+    if (version != 0)
+        co_return err(
+            ErrorCode::InvalidArgument,
+            "surum= yalnız DXF için anlamlıdır" +
+                std::string(dxf_backend_available() ? "." : " ve bu yapıda libdxfrw kapalı."));
+
+    auto report = co_await export_vector(bus_.document(), std::move(path), std::move(options),
+                                         stop_.get_token());
     if (!report) co_return report.error();
 
     const VectorReport& r = report.value();

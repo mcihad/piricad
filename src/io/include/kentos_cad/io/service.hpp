@@ -23,6 +23,7 @@
 #pragma once
 
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/job.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/result.hpp"
 #include "kentos_cad/io/vector.hpp"
@@ -47,7 +48,7 @@ struct ImportProbe
     std::string crs;                                           ///< what the file declared
     std::uint64_t entities{0};                                 ///< across every layer
     std::vector<std::pair<std::string, std::uint64_t>> layers; ///< name, entity count
-    std::vector<std::string> notes;                            ///< the reader's own words
+    ImportDiagnostics diagnostics;                             ///< the reader's own words, levelled
     std::vector<VectorField> fields;                           ///< every attribute field, per layer
 };
 
@@ -64,8 +65,28 @@ struct ImportProbe
 /// Synchronous on purpose: the readers it drives suspend only for their own
 /// streaming, never for user input, and a modal wizard has nothing else to do
 /// while it waits.
+/// What one read of an external dataset produced, before it is adopted.
+struct ImportOutcome
+{
+    std::string driver;        ///< `DXF`, `GPKG`, `DWG R2018`…
+    std::string crs;           ///< the system the data was read in
+    std::uint64_t entities{0}; ///< entities the reader created
+    std::uint64_t layers{0};   ///< layers the reader touched
+    std::vector<std::pair<std::string, std::size_t>>
+        layer_names;               ///< (name, entity count), in file order
+    ImportDiagnostics diagnostics; ///< what the reader wants said
+};
+
+/// Reads `path` into `tx`'s document — a SCRATCH document on a worker thread in
+/// the application, the real one in a headless client — choosing the reader by
+/// the file (DWG to LibreDWG, everything else to the vector reader) and driving
+/// it to completion. This is phase one of an import; `Transaction::adopt_from`
+/// is phase two. Honours `stop` (io.md R15).
+core::Result<ImportOutcome> read_into_scratch(command::Transaction& tx, const std::string& path,
+                                              const ImportOptions& options, std::stop_token stop);
+
 core::Result<ImportProbe> probe_import(core::Document& scratch, const std::string& path,
-                                       const std::string& project_crs, std::stop_token stop);
+                                       const ImportOptions& options, std::stop_token stop);
 
 /// Owns the file engine for exactly one `Bus`, and therefore for exactly one
 /// document. Installing the hook in the constructor and clearing it in the
@@ -101,8 +122,8 @@ public:
     /// an empty drawing at revision zero is correctly not dirty.
     std::uint64_t saved_revision() const noexcept { return saved_revision_; }
 
-    /// Asks every running read to stop. io.md R15: a cancelled read returns
-    /// within 100 ms.
+    /// Asks every running read to stop — the one in place and the one a host is
+    /// running. io.md R15: a cancelled read returns within 100 ms.
     void request_stop();
 
 private:
@@ -124,11 +145,18 @@ private:
     // two words are module directives in C++20 and CLAUDE.md 5.2 bans modules
     // outright, so neither should appear as an identifier at the head of a line
     // where a reader — or a grep — could mistake it for one.
-    command::Task<core::Result<std::string>> import_into(command::Transaction* tx, std::string path,
-                                                         std::string format,
-                                                         std::vector<std::string> only,
-                                                         std::vector<std::string> fields);
-    command::Task<core::Result<std::string>> export_out(std::string path, std::string format);
+    /// TWO PHASES (io.md P3). The read fills a scratch document as a `Job`, which
+    /// the session's host runs off the bus thread when there is one and this
+    /// coroutine runs in place when there is not; the copy into the real document
+    /// happens here, afterwards, inside `tx`. The document and the journal come
+    /// out the same either way (Article 1.2).
+    command::Task<core::Result<std::string>>
+    import_into(command::Transaction* tx, command::Session* session, std::string path,
+                std::string format, std::vector<std::string> only, std::vector<std::string> fields);
+    /// `version` is the DXF year (`surum=2013`), 0 for the default; refused for
+    /// any other format.
+    command::Task<core::Result<std::string>> export_out(std::string path, std::string format,
+                                                        int version);
 
     /// Reads a surveyed point list and puts one point entity per row in the
     /// drawing, with `nokta_no`, `kot` and `kod` as attributes.
@@ -145,6 +173,8 @@ private:
     command::Bus& bus_;
     std::string current_path_;
     std::uint64_t saved_revision_{0};
+    /// The job an import is parked on, so `request_stop` reaches it too.
+    command::Job* current_job_{nullptr};
     std::stop_source stop_;
 };
 

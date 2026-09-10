@@ -42,6 +42,10 @@ struct SceneOptions
 
     bool cull{true}; ///< frustum cull against the visible box (§10.3)
     bool lod{true};  ///< drop vertices below one pixel of separation (§10.3)
+    /// Draw strokes at their paper width. Off, every stroke is a one-pixel
+    /// hairline — the KALINLIK chip — while the width stays on the entity and
+    /// on paper: a display choice, never a change to the drawing (R20).
+    bool line_weights{true};
     /// A vertex closer than this to its predecessor cannot be told apart on
     /// screen and is dropped. Strokes only — a face keeps every vertex, because
     /// dropping one changes the shape being coloured.

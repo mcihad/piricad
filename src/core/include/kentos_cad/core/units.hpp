@@ -213,4 +213,128 @@ struct Box2
     friend constexpr bool operator==(const Box2&, const Box2&) = default;
 };
 
+// ------------------------------------------------------- drawing units ----
+
+/// The unit a drawing FILE writes its numbers in.
+///
+/// NOT A STORAGE UNIT. The document stores millimetres and nothing else (R2); a
+/// `DrawingUnit` exists only at the file boundary, where a DXF's `$INSUNITS` or
+/// the project setting `core.cizim.birim` says what the numbers in the file mean.
+/// A millimetre-authored DXF read as metres arrives a thousand times too large,
+/// which is exactly the silent failure this type is here to name.
+///
+/// The first three values ARE the indices of the `core.cizim.birim` enum list —
+/// `milimetre, santimetre, metre` (settings.cpp) — and MUST NOT be reordered: a
+/// saved setting is an index.
+enum class DrawingUnit : std::uint8_t {
+    Millimetre = 0,
+    Centimetre = 1,
+    Metre      = 2,
+    Inch       = 3,
+    Foot       = 4,
+    Kilometre  = 5,
+    Micron     = 6,
+    Decimetre  = 7,
+    Decametre  = 8,
+    Hectometre = 9,
+};
+
+/// Millimetres per drawing unit as an exact rational, so a unit that is not a
+/// whole number of millimetres (an inch is 25.4) is still stated exactly.
+struct UnitRatio
+{
+    std::int64_t num{1}; ///< millimetres …
+    std::int64_t den{1}; ///< … per `den` units
+};
+
+/// The exact ratio of one drawing unit to a millimetre.
+constexpr UnitRatio drawing_unit_ratio(DrawingUnit unit) noexcept
+{
+    switch (unit) {
+    case DrawingUnit::Millimetre: return {1, 1};
+    case DrawingUnit::Centimetre: return {10, 1};
+    case DrawingUnit::Metre: return {1000, 1};
+    case DrawingUnit::Inch: return {254, 10};
+    case DrawingUnit::Foot: return {3048, 10};
+    case DrawingUnit::Kilometre: return {1000000, 1};
+    case DrawingUnit::Micron: return {1, 1000};
+    case DrawingUnit::Decimetre: return {100, 1};
+    case DrawingUnit::Decametre: return {10000, 1};
+    case DrawingUnit::Hectometre: return {100000, 1};
+    }
+    return {1000, 1};
+}
+
+/// A file value in `unit` to millimetres: one multiply, one division and the ONE
+/// rounding helper (R20). For metres this is `value * 1000.0 / 1.0`, which is
+/// bit-identical to `mm_from_metres`, so a geodetic format read through this
+/// function rounds exactly as it always did.
+constexpr Mm mm_from_drawing_units(double value, DrawingUnit unit) noexcept
+{
+    const UnitRatio r = drawing_unit_ratio(unit);
+    return mm_round(value * static_cast<double>(r.num) / static_cast<double>(r.den));
+}
+
+/// Millimetres to a file value in `unit`. A transient `double` for a writer;
+/// never stored (R3).
+constexpr double drawing_units_from_mm(Mm mm, DrawingUnit unit) noexcept
+{
+    const UnitRatio r = drawing_unit_ratio(unit);
+    return static_cast<double>(mm) * static_cast<double>(r.den) / static_cast<double>(r.num);
+}
+
+/// The unit a `core.cizim.birim` setting index names. Anything outside the three
+/// the setting declares is read as metres, which is the setting's own default.
+constexpr DrawingUnit drawing_unit_from_setting(std::uint16_t index) noexcept
+{
+    return index <= 2 ? static_cast<DrawingUnit>(index) : DrawingUnit::Metre;
+}
+
+/// The Turkish name of a unit, for a note: `milimetre`, `santimetre`, `metre`, …
+constexpr const char* drawing_unit_name(DrawingUnit unit) noexcept
+{
+    switch (unit) {
+    case DrawingUnit::Millimetre: return "milimetre";
+    case DrawingUnit::Centimetre: return "santimetre";
+    case DrawingUnit::Metre: return "metre";
+    case DrawingUnit::Inch: return "inç";
+    case DrawingUnit::Foot: return "fit";
+    case DrawingUnit::Kilometre: return "kilometre";
+    case DrawingUnit::Micron: return "mikrometre";
+    case DrawingUnit::Decimetre: return "desimetre";
+    case DrawingUnit::Decametre: return "dekametre";
+    case DrawingUnit::Hectometre: return "hektometre";
+    }
+    return "metre";
+}
+
+/// A rational scale — a block reference's `sx`, a hatch pattern's scale, a paper
+/// scale — stored as two integers because no stored field is floating point
+/// (model.md R21). `den` is never zero.
+struct Ratio
+{
+    std::int64_t num{1}; ///< numerator
+    std::int64_t den{1}; ///< denominator, positive
+
+    /// Equal when both terms are equal; 1/2 and 2/4 are two ratios.
+    friend constexpr bool operator==(const Ratio&, const Ratio&) noexcept = default;
+};
+
+/// `v * num / den`, rounded half away from zero, with the product carried in 128
+/// bits so a TUREF coordinate times a scale cannot wrap (§7.3). `den` must be
+/// positive; the sign lives in `num` and `v`. This is the one multiply a stored
+/// coordinate goes through when it is scaled, and it is exact where a `double`
+/// product of two large integers is not.
+constexpr std::int64_t mul_div_round(std::int64_t v, std::int64_t num, std::int64_t den) noexcept
+{
+    const Int128 product = static_cast<Int128>(v) * static_cast<Int128>(num);
+    const Int128 d       = static_cast<Int128>(den);
+    // Truncating division, then the half step towards the sign of the product.
+    const Int128 q   = product / d;
+    const Int128 r   = product - q * d;
+    const Int128 two = 2;
+    if (r >= 0) return static_cast<std::int64_t>(two * r >= d ? q + 1 : q);
+    return static_cast<std::int64_t>(two * (-r) >= d ? q - 1 : q);
+}
+
 } // namespace kentos::core

@@ -33,7 +33,11 @@ program hangi numaranın doğru olduğunu bilemez.
 KOPYALA
 KOPYALA nesneler=<k1> nesneler=<k2> …
 KOPYALA nesneler=<k> baslangic=<n> bitis=<n>
+KOPYALA nesneler=<k> baslangic=<n> bitis=<n1> bitis=<n2> bitis=<n3>
 ```
+
+`bitis`e verilen **her nokta bir kopyadır**: aynı direği üç yere koymak tek komuttur.
+Komut satırında liste, `nesneler` gibi, adı yinelenerek uzar; betikte tek dizidir.
 
 ## Parametreler
 
@@ -41,7 +45,7 @@ KOPYALA nesneler=<k> baslangic=<n> bitis=<n>
 |---|---|
 | `nesneler` | Kopyalanacak nesnelerin kimlikleri. Verilmezse etkin seçim |
 | `baslangic` | Kopyalamanın başlangıç noktası |
-| `bitis` | Kopyanın geleceği nokta |
+| `bitis` | Kopyaların geleceği noktalar; her nokta için bir kopya. Arayüzde sağ tık ya da Esc listeyi bitirir |
 
 ## Örnekler
 
@@ -58,10 +62,20 @@ Göreli koordinatla, tam 25 metre doğuya:
 KOPYALA nesneler=1 baslangic=0,0 bitis=@25,0
 ```
 
+Üç kopya, on metre arayla:
+
+```text
+KOPYALA nesneler=1 baslangic=0,0 bitis=10,0 bitis=20,0 bitis=30,0
+```
+
 ### Arayüz
 
-Nesneleri seçin, `KOPYALA` yazın, iki noktayı tıklayın. Yakalama kopyanın
-nereye oturacağını belirler.
+Araç kutusunda **Taşı** ailesinden Kopyala'yı seçin ya da komut satırına `KOPYALA`
+yazın. Nesneler seçili değilse komut sorar: tuvalden tıklayın (her tık seçime
+**ekler**) ve sağ tıklayın. Sonra başlangıç noktasını verin; imlecin altında
+kopyalanacak nesnelerin **hayaleti** taşınır. Her sol tık bir kopya bırakır; **sağ
+tık** bitirir ve araç elinizde kalır. Vazgeçmek için Esc: bırakılmış kopyalar kalır,
+bırakılmamış olan çizilmez.
 
 ### Betik
 

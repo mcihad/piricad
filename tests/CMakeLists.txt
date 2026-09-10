@@ -14,6 +14,8 @@ add_executable(kentos_tests
     unit/test_command.cpp
     unit/test_attribute.cpp
     unit/test_database.cpp
+    unit/test_diagnostics.cpp
+    unit/test_kinds.cpp
     unit/test_docs.cpp
     unit/test_cadastre.cpp
     unit/test_surface.cpp

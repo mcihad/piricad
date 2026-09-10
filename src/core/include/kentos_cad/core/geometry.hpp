@@ -76,6 +76,9 @@ struct RingSpan
     std::uint32_t count{0}; ///< how many rings it has; 0 means no geometry
 };
 
+/// The `payload_ref` value of a slot that carries no kind payload.
+inline constexpr std::uint32_t kNoPayload = 0xFFFFFFFFu;
+
 /// Ring-structured geometry for one entity kind. Indexed by SLOT, never by key.
 class RingGeometry
 {
@@ -98,7 +101,34 @@ public:
     std::vector<std::uint32_t> first_ring;
     std::vector<std::uint32_t> ring_total;
 
+    // ---- slot -> kind payload (model.md R9a) ----
+    /// Bytes a kind stores BESIDE its rings — an arc-polyline's bulges, a
+    /// spline's knots, a block reference's transform — opaque to this class and
+    /// to everything but the kind's own `KindSpec` (core/wire.hpp lays them
+    /// down). Most slots carry none, so the per-slot column is one `u32` into a
+    /// record table that only slots WITH a payload occupy, and a document with
+    /// no payload at all keeps `payload_ref` empty: the five-million-parcel
+    /// sheet pays nothing (§10.1). The file writes these columns only when a
+    /// payload exists, so a payload-free file is byte for byte what it was.
+    std::vector<std::uint32_t>
+        payload_ref; ///< per slot: record index or kNoPayload; empty until the first payload
+    std::vector<std::uint64_t> payload_start; ///< per record: offset into `payload`
+    std::vector<std::uint32_t> payload_bytes; ///< per record: length in bytes
+    std::vector<std::uint8_t> payload;        ///< the pool, append-only like the vertices
+
     std::size_t slot_count() const noexcept { return first_ring.size(); }
+
+    /// The payload of `slot`, or an empty span when it carries none.
+    std::span<const std::uint8_t> payload_of(std::uint32_t slot) const noexcept
+    {
+        if (slot >= payload_ref.size() || payload_ref[slot] == kNoPayload) return {};
+        const std::uint32_t r = payload_ref[slot];
+        return {payload.data() + payload_start[r], payload_bytes[r]};
+    }
+
+    /// Whether any slot carries a payload — what decides whether the payload
+    /// columns are written at all.
+    bool has_payload() const noexcept { return !payload_start.empty(); }
 
     std::size_t ring_count_total() const noexcept { return ring_start.size(); }
 
@@ -143,8 +173,11 @@ public:
     };
 
     /// Appends a slot built from `rings` and returns its index. Validates R11
-    /// ordering, minimum vertex counts and ring closure.
-    Result<std::uint32_t> append(std::span<const RingInput> rings);
+    /// ordering, minimum vertex counts and ring closure. `bytes` is the kind's
+    /// payload, copied as given; the arena does not read it. A refused append
+    /// leaves every column, the payload pool included, exactly as it was.
+    Result<std::uint32_t> append(std::span<const RingInput> rings,
+                                 std::span<const std::uint8_t> bytes = {});
 
     /// Bounding box over every ring of the slot.
     Box2 bounds_of(std::uint32_t slot) const;
