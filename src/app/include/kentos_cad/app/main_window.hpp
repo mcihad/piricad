@@ -63,6 +63,7 @@ class StatusStrip;
 class ReadoutStrip;
 class TitleBar;
 class ToolBox;
+class ToolsPanel;
 
 class MainWindow : public QMainWindow
 {
@@ -378,6 +379,9 @@ private:
     LayerPanel* layerPanel_{nullptr};
     AttributePanel* attributePanel_{nullptr};
     QStackedWidget* propertyStack_{nullptr};
+    ToolsPanel* toolsPanel_{nullptr};
+    QTimer* jobPulse_{nullptr}; ///< reads the running job's progress figure for the status strip
+    QString jobLabel_;          ///< the running job's label, so the figure can be appended to it
     PanelHeader* propertyHeader_{nullptr};
     PanelHeader* layerHeader_{nullptr};
     PanelHeader* journalHeader_{nullptr};

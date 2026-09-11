@@ -75,6 +75,9 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.preference`](preference.md) | `TERCİH`, `TERCIH`, `PREFERENCE`, `PREF` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Uygulama tercihlerini listeler, okur ve değiştirir. |
 | [`core.mode`](mode.md) | `MOD`, `MODE`, `MD` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Oturum modlarını (yakalama, dik mod, kutupsal izleme) listeler, okur ve değiştirir. |
 | [`core.help`](help.md) | `YARDIM`, `HELP`, `?` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Komut listesini veya tek bir komutun ayrıntısını gösterir. |
+| [`islem.alan_duzenle`](alan_duzenle.md) | `ALANDÜZENLE`, `ALANDUZENLE`, `ADJUSTAREA`, `ADZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp genişleterek, bir kenarı kaydırarak ya da bir köşeyi çekerek; şekil bozulmaz. |
+| [`islem.uzunluk_yaz`](uzunluk_yaz.md) | `UZUNLUKYAZ`, `UZUNLUKYAZ`, `LABELLENGTH`, `UZY` | İşlem | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar. |
+| [`islem.kose_numarala`](kose_numarala.md) | `KÖŞENUMARALA`, `KOSENUMARALA`, `NUMBERVERTICES`, `KNM` | İşlem | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar. |
 
 ## Parametreler
 
@@ -884,6 +887,67 @@ Komut listesini veya tek bir komutun ayrıntısını gösterir.
 | `komut` | text | isteğe bağlı | Ayrıntısı istenen komut adı |
 
 Ayrıntılı kullanım: [YARDIM](help.md)
+
+### `islem.alan_duzenle` — ALANDÜZENLE
+
+Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp genişleterek, bir kenarı kaydırarak ya da bir köşeyi çekerek; şekil bozulmaz.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz |
+| `kapsam` | text | isteğe bağlı | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır |
+| `pencere` | point_list | 0–2 | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir |
+| `katman` | text | isteğe bağlı | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
+| `alan` | number | isteğe bağlı | Hedef alan, metrekare |
+| `mod` | text | isteğe bağlı | Nasıl getirileceği (hepsi / kenar / kose); varsayılan hepsi |
+| `kenar` | integer | isteğe bağlı | Kaydırılacak kenar (ilk köşeden çıkan kenar 1); mod=kenar |
+| `kose` | integer | isteğe bağlı | Çekilecek köşe; mod=kose |
+| `nokta` | point | isteğe bağlı | Kenarın ya da köşenin gideceği yer; verilmezse arayüz sürükletir, komut satırı hedefe tam oturtur |
+
+Ayrıntılı kullanım: [ALANDÜZENLE](alan_duzenle.md)
+
+### `islem.uzunluk_yaz` — UZUNLUKYAZ
+
+Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz |
+| `kapsam` | text | isteğe bağlı | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır |
+| `pencere` | point_list | 0–2 | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir |
+| `katman` | text | isteğe bağlı | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
+| `birim` | text | isteğe bağlı | Uzunluğun yazılacağı birim (metre / santimetre / milimetre / kilometre); varsayılan metre |
+| `ondalik` | integer | isteğe bağlı | Virgülden sonraki basamak sayısı; varsayılan 2 |
+| `bicim` | text | isteğe bağlı | Yazının kalıbı; {} sayının yerini tutar (örnek: "{} m", "L={}") |
+| `ayrac` | text | isteğe bağlı | Ondalık ayracı (virgul / nokta); varsayılan virgul |
+| `taraf` | text | isteğe bağlı | Yazının kenarın hangi yanına düşeceği (otomatik / sol / sag / dis / ic); varsayılan otomatik |
+| `yukseklik` | integer | isteğe bağlı | Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 |
+| `bosluk` | integer | isteğe bağlı | Kenar ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 |
+| `enaz` | integer | isteğe bağlı | Bundan kısa kenarlara yazı yazılmaz, milimetre; varsayılan 0 |
+
+Ayrıntılı kullanım: [UZUNLUKYAZ](uzunluk_yaz.md)
+
+### `islem.kose_numarala` — KÖŞENUMARALA
+
+Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz |
+| `kapsam` | text | isteğe bağlı | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır |
+| `pencere` | point_list | 0–2 | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir |
+| `katman` | text | isteğe bağlı | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
+| `baslangic` | point | isteğe bağlı | Sayımın başlayacağı köşeye en yakın nokta; verilmezse ilk köşe |
+| `yon` | text | isteğe bağlı | Sayım yönü (ters / saat); varsayılan ters |
+| `onek` | text | isteğe bağlı | Numaranın önüne gelen yazı (örnek: A, K-) |
+| `basamak` | integer | isteğe bağlı | Numaranın en az basamak sayısı; eksikler dolgu ile tamamlanır; varsayılan 0 |
+| `dolgu` | text | isteğe bağlı | Basamak dolgusu; varsayılan 0 |
+| `ilk` | integer | isteğe bağlı | İlk köşenin numarası; varsayılan 1 |
+| `sonek` | text | isteğe bağlı | Numaranın arkasına gelen yazı |
+| `yukseklik` | integer | isteğe bağlı | Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 |
+| `bosluk` | integer | isteğe bağlı | Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 |
+
+Ayrıntılı kullanım: [KÖŞENUMARALA](kose_numarala.md)
 
 ## AI araç kataloğu
 
@@ -3298,6 +3362,335 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "read_only"
       ],
       "undo": "none"
+    },
+    {
+      "id": "islem.alan_duzenle",
+      "names": [
+        "ALANDÜZENLE",
+        "ALANDUZENLE",
+        "ADJUSTAREA",
+        "ADZ"
+      ],
+      "category": "Düzenleme",
+      "summary": "Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp genişleterek, bir kenarı kaydırarak ya da bir köşeyi çekerek; şekil bozulmaz.",
+      "params": [
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz"
+        },
+        {
+          "name": "kapsam",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "secili (varsayılan), gorunum ya da proje: nesneler nereden alınır"
+        },
+        {
+          "name": "pencere",
+          "type": "point_list",
+          "min": 0,
+          "max": 2,
+          "required": false,
+          "help": "gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir"
+        },
+        {
+          "name": "katman",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman"
+        },
+        {
+          "name": "alan",
+          "type": "number",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Hedef alan, metrekare"
+        },
+        {
+          "name": "mod",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Nasıl getirileceği (hepsi / kenar / kose); varsayılan hepsi"
+        },
+        {
+          "name": "kenar",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Kaydırılacak kenar (ilk köşeden çıkan kenar 1); mod=kenar"
+        },
+        {
+          "name": "kose",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Çekilecek köşe; mod=kose"
+        },
+        {
+          "name": "nokta",
+          "type": "point",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Kenarın ya da köşenin gideceği yer; verilmezse arayüz sürükletir, komut satırı hedefe tam oturtur"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "islem.uzunluk_yaz",
+      "names": [
+        "UZUNLUKYAZ",
+        "UZUNLUKYAZ",
+        "LABELLENGTH",
+        "UZY"
+      ],
+      "category": "İşlem",
+      "summary": "Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar.",
+      "params": [
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz"
+        },
+        {
+          "name": "kapsam",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "secili (varsayılan), gorunum ya da proje: nesneler nereden alınır"
+        },
+        {
+          "name": "pencere",
+          "type": "point_list",
+          "min": 0,
+          "max": 2,
+          "required": false,
+          "help": "gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir"
+        },
+        {
+          "name": "katman",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman"
+        },
+        {
+          "name": "birim",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Uzunluğun yazılacağı birim (metre / santimetre / milimetre / kilometre); varsayılan metre"
+        },
+        {
+          "name": "ondalik",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Virgülden sonraki basamak sayısı; varsayılan 2"
+        },
+        {
+          "name": "bicim",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Yazının kalıbı; {} sayının yerini tutar (örnek: \"{} m\", \"L={}\")"
+        },
+        {
+          "name": "ayrac",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Ondalık ayracı (virgul / nokta); varsayılan virgul"
+        },
+        {
+          "name": "taraf",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Yazının kenarın hangi yanına düşeceği (otomatik / sol / sag / dis / ic); varsayılan otomatik"
+        },
+        {
+          "name": "yukseklik",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0"
+        },
+        {
+          "name": "bosluk",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Kenar ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0"
+        },
+        {
+          "name": "enaz",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Bundan kısa kenarlara yazı yazılmaz, milimetre; varsayılan 0"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
+    },
+    {
+      "id": "islem.kose_numarala",
+      "names": [
+        "KÖŞENUMARALA",
+        "KOSENUMARALA",
+        "NUMBERVERTICES",
+        "KNM"
+      ],
+      "category": "İşlem",
+      "summary": "Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar.",
+      "params": [
+        {
+          "name": "nesneler",
+          "type": "selection",
+          "min": 0,
+          "max": -1,
+          "required": false,
+          "help": "Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz"
+        },
+        {
+          "name": "kapsam",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "secili (varsayılan), gorunum ya da proje: nesneler nereden alınır"
+        },
+        {
+          "name": "pencere",
+          "type": "point_list",
+          "min": 0,
+          "max": 2,
+          "required": false,
+          "help": "gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir"
+        },
+        {
+          "name": "katman",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman"
+        },
+        {
+          "name": "baslangic",
+          "type": "point",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Sayımın başlayacağı köşeye en yakın nokta; verilmezse ilk köşe"
+        },
+        {
+          "name": "yon",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Sayım yönü (ters / saat); varsayılan ters"
+        },
+        {
+          "name": "onek",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Numaranın önüne gelen yazı (örnek: A, K-)"
+        },
+        {
+          "name": "basamak",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Numaranın en az basamak sayısı; eksikler dolgu ile tamamlanır; varsayılan 0"
+        },
+        {
+          "name": "dolgu",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Basamak dolgusu; varsayılan 0"
+        },
+        {
+          "name": "ilk",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "İlk köşenin numarası; varsayılan 1"
+        },
+        {
+          "name": "sonek",
+          "type": "text",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Numaranın arkasına gelen yazı"
+        },
+        {
+          "name": "yukseklik",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0"
+        },
+        {
+          "name": "bosluk",
+          "type": "integer",
+          "min": 0,
+          "max": 1,
+          "required": false,
+          "help": "Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0"
+        }
+      ],
+      "flags": [
+        "interactive",
+        "scriptable",
+        "ai_accessible"
+      ],
+      "undo": "single_transaction"
     }
   ]
 }

@@ -105,7 +105,7 @@ bekle "[sema] seçenekler son bölüm: Ağ ve Kimlik"
 # EVERY PROJECT-SCOPED SETTING, and the page is generated from the catalogue —
 # so this count moves when a setting is declared, never because somebody
 # remembered to add a row (CLAUDE.md 5.10).
-bekle "[sema] proje ayarı: 11"
+bekle "[sema] proje ayarı: 12"
 
 # The two nobody would think to look for outside their own topic page, which is
 # the reason the gathered page exists at all.

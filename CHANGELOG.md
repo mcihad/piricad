@@ -6,6 +6,36 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — İşlem araçları (Processing)
+
+- **`kentos_processing`** modülü ve `ProcessingTool` arayüzü (`.claude/processing.md`):
+  bir araç adını, açıklamasını, uygulandığı geometri türlerini, parametrelerini ve çıktı
+  biçimini bildirir; her araç kayıttan **üretilen bir komuttur** (`İşlem` kategorisi).
+  Dört ortak parametre: `nesneler`, `kapsam` (secili/gorunum/proje), `pencere`, `katman`.
+- **Asenkron çalışma**: iş kopya üzerinde ayrı iş parçacığında koşar (`Job`), durum çubuğu
+  yüzde gösterir (`Job::permille`), **Durdur** hiçbir şey yazılmadan keser; sonuç tek
+  işlemde, tek geri alma adımında, istenen katmana yazılır. Günlüğe uygulanan nesnelerin
+  kimlikleri ve bütün parametreler yazılır; yeniden oynatma aynı sonucu verir.
+- **Araçlar paneli**: sağ panelde Öznitelikler ve Geçmiş'in yanında üçüncü sekme; ağaç,
+  süzgeç, kart (türler, kapsam, parametre alanları, çıktı katmanı, gönderilecek komut
+  satırı, Çalıştır). **Analiz ▸ İşlem Araçları** menüsü aynı kayıttan üretilir.
+- İlk iki araç: **`UZUNLUKYAZ`** (kenar uzunluklarını kenara paralel, istenen birim ve
+  biçimde yazar) ve **`KÖŞENUMARALA`** (köşeleri seçilen köşeden başlayarak, istenen yönde
+  ve biçimde — `A00001` — numaralar, dışa yazar).
+- **`ALANDÜZENLE`**: kapalı bir alanı istenen alana getirir — her yandan eşit
+  daraltıp genişleterek (`mod=hepsi`, komut satırı ve toplu iş), bir kenarı kaydırarak
+  (`kenar`) ya da bir köşeyi çekerek (`kose`). Arayüzde kenar/köşe tıklanır, hayalet
+  fareyi izler ve hedefe yaklaşınca oturur, **Enter** hedefi kabul eder; özgün sınır o
+  ana kadar durur. Aritmetik `core/area_edit.hpp`'de, milimetrede ve belirlenimci.
+  İşlem araçları artık bir **etkileşimli faz** (`ProcessingTool::interact`) ve
+  **yerinde değiştirme** çıktısı (`OutputShape::InPlace`) bildirebilir.
+- Araçlar panelinde bir araca ikinci kez tıklamak da kartı (ya da pencereyi) açar; kart
+  aracın bu çizimdeki son değerleriyle açılır (`AYAR son_değerler`, `core.islem.hatirla`);
+  seçili tek alanın alanı kartta yazar; açık temada açılır listenin seçili satırı okunur.
+- Araçlar ağacında her araç ve grup ikonlu; `TERCİH araç_penceresi` (`core.islem.pencere`)
+  açıkken bir araca tıklamak kartı kendi penceresinde açar. Kart panelin zeminine oturur,
+  alanlar bileşen standardının kutularıyla belirgindir.
+
 ### Değiştirildi — Araç modeli, nişan ve tutamaklar
 
 - **Araç elde kalır.** Her modal araç (çizim, düzenleme, ölçme) bitince yeniden

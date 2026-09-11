@@ -123,6 +123,10 @@ public:
 
     command::Session* session() const noexcept { return session_.get(); }
 
+    /// How far the running job has come, 0..1000, or -1 when no job is running
+    /// or the job does not count (`Job::permille`).
+    int jobPermille() const noexcept;
+
     bool awaitingInput() const;
 
     core::Document& document() noexcept { return document_; }

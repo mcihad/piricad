@@ -33,6 +33,7 @@ add_executable(kentos_tests
     unit/test_symbology.cpp
     unit/test_text_atlas.cpp
     unit/test_proof.cpp
+    unit/test_processing.cpp
 )
 
 # The manual's examples are executed straight out of the Markdown, so there is no
@@ -61,6 +62,7 @@ target_link_libraries(kentos_tests PRIVATE
     kentos_core
     kentos_command
     kentos_io
+    kentos_processing
     kentos_domain_geodesy
     kentos_domain_cadastre
     kentos_domain_surface

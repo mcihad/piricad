@@ -16,6 +16,7 @@ checked=""; skipped=""
 # module : modules it may NOT include — upward or lateral in the Article 3.2 graph.
 rules=("command:io|render|script|ai|domain|app|plugin-api"
        "io:render|script|ai|domain|app"
+       "processing:render|script|ai|domain|app|plugin-api"
        "domain:io|render|script|ai|app"
        "render:command|io|script|ai|domain|app"
        "script:io|render|ai|domain|app"

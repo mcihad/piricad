@@ -426,6 +426,8 @@ KENTOS_SETTING(yakalama_isaret_rengi);
 KENTOS_SETTING(yakalama_ipucu);
 KENTOS_SETTING(yakalama_adimi);
 KENTOS_SETTING(dinamik_girdi);
+KENTOS_SETTING(islem_pencere);
+KENTOS_SETTING(islem_hatirla);
 KENTOS_SETTING(izgara_rengi);
 KENTOS_SETTING(izgara_ana_rengi);
 KENTOS_SETTING(izgara_adimi_y);
@@ -486,6 +488,8 @@ KENTOS_SETTING(alan_birimi);
     X(yakalama_ipucu)                                                                              \
     X(yakalama_adimi)                                                                              \
     X(dinamik_girdi)                                                                               \
+    X(islem_pencere)                                                                               \
+    X(islem_hatirla)                                                                               \
     X(izgara_rengi)                                                                                \
     X(izgara_ana_rengi)                                                                            \
     X(izgara_adimi_y)                                                                              \
@@ -545,6 +549,42 @@ KENTOS_SETTING(dinamik_girdi)
         .summary  = "Sürüklenen kılavuzun üzerinde uzunluğu ve azimutu yazar. Ele ve "
                     "ekrana ait bir tercih olduğu için uygulama kapsamındadır.",
         .section  = "Çizim ve Yakalama", // ui-label
+    };
+}
+
+KENTOS_SETTING(islem_pencere)
+{
+    return SettingSpec{
+        .id       = "core.islem.pencere",
+        .names    = {"araç_penceresi", "arac_penceresi", "toolwindow", "araçpenceresi"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::boolean(false),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Araçlar panelinde bir işlem aracına tıklanınca aracın kartı kendi "
+                    "penceresinde açılır; kapalıyken kart panelin içinde, ağacın altında "
+                    "açılır. Ele ait bir tercih olduğu için uygulama kapsamındadır.",
+        .section  = "Görünüm ve Tema", // ui-label
+    };
+}
+
+KENTOS_SETTING(islem_hatirla)
+{
+    return SettingSpec{
+        .id       = "core.islem.hatirla",
+        .names    = {"son_değerler", "son_degerler", "remembertools", "hatırla"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::Project,
+        .fallback = SettingValue::boolean(true),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Araçlar panelinde bir aracın kartı, o araç bu çizimde en son hangi "
+                    "değerlerle çalıştıysa onlarla açılır (komut günlüğünden okunur). Çizime "
+                    "ait bir tercih olduğu için proje kapsamındadır.",
+        .section  = "Genel", // ui-label
     };
 }
 

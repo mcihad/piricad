@@ -335,9 +335,22 @@ QString themeStyleSheet(ThemeMode mode)
          * makes the reader find the value themselves. */
         QLabel#formCaption               { background: transparent; color: %(textDim)s;
                                            font-size: 11.5px; }
-        QLineEdit#designerSearch         { background: %(input)s; border: 1px solid %(border)s;
+        QLineEdit#designerSearch,
+        QLineEdit#toolSearch             { background: %(input)s; border: 1px solid %(border)s;
                                            border-radius: 4px; padding: 4px 9px;
                                            min-height: 22px; max-height: 22px;
+                                           font-size: 11.5px; }
+
+        /* The Araçlar tree: the designer list's manners, with the group rows
+         * read as headings — no wash, the quiet ink — and the tool rows lit
+         * the way every selected row in the shell is. */
+        QTreeWidget#toolTree             { background: %(window)s; border: 1px solid %(border)s;
+                                           border-radius: 4px; outline: none; }
+        QTreeWidget#toolTree::item       { min-height: 24px; padding: 2px 6px; }
+        QTreeWidget#toolTree::item:hover { background: %(hoverRow)s; }
+        QTreeWidget#toolTree::item:selected { background: %(wash)s; color: %(text)s; }
+        QLabel#toolPreview               { background: %(input)s; border: 1px solid %(border)s;
+                                           border-radius: 4px; padding: 6px 8px;
                                            font-size: 11.5px; }
 
         /* §15.1's icon button: no ground until it is pointed at. */
@@ -446,15 +459,20 @@ QString themeStyleSheet(ThemeMode mode)
                                            min-height: 0px; max-height: 16777215px;
                                            color: %(text)s; }
         QComboBox#comboBox::drop-down    { width: 0px; border: none; }
-        QComboBox#comboBox QAbstractItemView#comboPopup {
+        QComboBox#comboBox QAbstractItemView#comboPopup,
+        QComboBox#fieldCombo QAbstractItemView#comboPopup {
                                            background: %(panel)s; color: %(text)s;
                                            border: 1px solid %(border)s; padding: 4px;
-                                           outline: none; selection-background-color: transparent; }
-        QComboBox#comboBox QAbstractItemView#comboPopup::item {
+                                           outline: none; selection-background-color: transparent;
+                                           selection-color: %(text)s; }
+        QComboBox#comboBox QAbstractItemView#comboPopup::item,
+        QComboBox#fieldCombo QAbstractItemView#comboPopup::item {
                                            min-height: 26px; padding: 0px 10px; border: none;
-                                           border-radius: 3px; }
+                                           border-radius: 3px; color: %(text)s; }
         QComboBox#comboBox QAbstractItemView#comboPopup::item:hover,
-        QComboBox#comboBox QAbstractItemView#comboPopup::item:selected {
+        QComboBox#comboBox QAbstractItemView#comboPopup::item:selected,
+        QComboBox#fieldCombo QAbstractItemView#comboPopup::item:hover,
+        QComboBox#fieldCombo QAbstractItemView#comboPopup::item:selected {
                                            background: %(hoverRow)s; color: %(text)s; }
 
         /* The data-defined mark of the style designer, §8: a `{ }` at the end of a

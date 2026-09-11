@@ -80,7 +80,10 @@ add_library(KentOSCad::command ALIAS kentos_command)
 # (CLAUDE.md 5.10). The generator lives with the module that owns the registry,
 # so no new top-level directory is needed (Article 3.1).
 add_executable(kentos_docgen tools/docgen.cpp)
-target_link_libraries(kentos_docgen PRIVATE kentos_command kentos_flags)
+# The generator lists every command the program ships, and the processing
+# tools are commands: the module sits above command, so the executable links it
+# rather than the library reaching up (Article 3.2).
+target_link_libraries(kentos_docgen PRIVATE kentos_command kentos_processing kentos_flags)
 set_target_properties(kentos_docgen PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )

@@ -54,7 +54,8 @@ enum class RubberShape : std::uint8_t {
     Curve,     ///< the smooth curve through the chain and the cursor: SPLINE
     Dimension, ///< the dimension the chain's picks and the cursor's line location make: ÖLÇÜ
     Block,     ///< the block definition `rubber_payload` names, placed at the cursor: BLOKEKLE
-    Ghost ///< the selected objects carried by the cursor's offset from the origin: TAŞI, KOPYALA
+    Ghost,   ///< the selected objects carried by the cursor's offset from the origin: TAŞI, KOPYALA
+    AreaEdit ///< a face with one edge or corner following the cursor to a wanted area: ALANDÜZENLE
 };
 
 struct Prompt

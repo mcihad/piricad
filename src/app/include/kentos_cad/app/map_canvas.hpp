@@ -48,6 +48,7 @@ class Settings;
 } // namespace kentos::core
 
 namespace kentos::core {
+struct AreaGhost; ///< core/area_edit.hpp; the .cpp includes the definition
 /// Forward-declared on purpose: `entity_kind.hpp` names a member `emit`, which
 /// Qt's keyword macro would erase in any translation unit that includes Qt
 /// first. Only the .cpp includes the full definition.
@@ -171,6 +172,11 @@ public:
     /// the same category as `timeFrames`.
     std::size_t guideVertexCountForProbe() const noexcept { return guide_vertices_; }
 
+    /// Enter while a face is being pulled to a wanted area: sends the point that
+    /// lands the figure exactly. True when it did; false when nothing of the
+    /// kind is being asked, so the caller can go on to what Enter means next.
+    bool acceptGuide();
+
     /// The dynamic-input label the guide last carried, for `KENTOS_EDIT_PROBE`.
     /// Empty when nothing is being dragged or the reading is switched off.
     const std::string& guideLabelForProbe() const noexcept { return guide_label_; }
@@ -267,6 +273,10 @@ private:
     /// The cursor in document millimetres: the snapped point when an aid has
     /// fired, else the raw position — where a click would land.
     core::Point2 cursorWorld() const;
+
+    /// The face-at-wanted-area ghost for the running ALANDÜZENLE prompt, or an
+    /// empty one when no such prompt is up (core/area_edit.hpp).
+    core::AreaGhost areaGhost() const;
 
     /// Appends one run of document points, shifted by `(dx, dy)`, to an overlay batch.
     void addWorldRun(std::size_t batch, std::span<const core::Mm> xs, std::span<const core::Mm> ys,

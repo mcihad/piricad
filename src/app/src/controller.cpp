@@ -7,6 +7,7 @@
 #include "kentos_cad/domain/cadastre/commands.hpp"
 #include "kentos_cad/domain/geodesy/commands.hpp"
 #include "kentos_cad/domain/surface/commands.hpp"
+#include "kentos_cad/processing/registry.hpp"
 
 #include "kentos_cad/command/parser.hpp"
 
@@ -59,6 +60,7 @@ Controller::Controller(QObject* parent)
     // both lists can be put on one registry.
     domain::geodesy::register_geodesy_commands(registry_);
     domain::cadastre::register_cadastre_commands(registry_);
+    processing::register_processing_commands(registry_);
     domain::surface::register_surface_commands(registry_);
 
     // The CRS resolver, so a drawing knows that TUREF/TM30 is EPSG:5254 without
@@ -529,6 +531,15 @@ void Controller::cancelInteractive()
     emit interactiveFinished(id, mutated, dismissed);
     settle();
     emit documentChanged();
+}
+
+int Controller::jobPermille() const noexcept
+{
+    if (!session_ || !session_->working()) return -1;
+    const command::Job* job = session_->job();
+    if (job == nullptr) return -1;
+    const std::uint32_t p = job->permille.load();
+    return p == 0 ? -1 : static_cast<int>(p);
 }
 
 void Controller::finishInteractive()

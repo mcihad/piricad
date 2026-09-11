@@ -14,7 +14,7 @@ fail=0
 # src/command/src/transaction.cpp (the sanctioned wrapper) may name them.
 mutators='add_polyline|set_entity_alive|set_layer_visible|set_layer_locked|set_layer_style|set_crs'
 
-for dir in src/domain src/io src/render src/script src/ai src/app; do
+for dir in src/domain src/io src/processing src/render src/script src/ai src/app; do
     [[ -d "$root/$dir" ]] || continue
     while IFS= read -r hit; do
         # A call through a Transaction object is exactly what is required.

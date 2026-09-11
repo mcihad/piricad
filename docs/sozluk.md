@@ -283,3 +283,8 @@ desenler katalogdan adla gelir.
 **Ölçü ve lider** — Uzunluğu ya da açıyı yazısı ve oklarıyla gösteren nesne (`ÖLÇÜ`,
 DXF `DIMENSION`) ile bir noktayı gösteren oklu çizgi (`LİDER`, DXF `LEADER`).
 
+**İşlem aracı** — Kapsamındaki (seçim, görünüm ya da proje) bütün nesnelere aynı işi tek
+seferde uygulayan komut; QGIS'in Processing araçlarının karşılığı. Hangi geometri
+türlerine uygulandığını bildirir, ayrı iş parçacığında koşar, durdurulabilir ve sonucunu
+seçilen katmana yazar (`UZUNLUKYAZ`, `KÖŞENUMARALA`). Bkz. [İşlem araçları](islem/README.md).
+

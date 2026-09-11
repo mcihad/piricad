@@ -4,6 +4,7 @@
 #include "kentos_cad/app/backend_factory.hpp"
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/core/arc.hpp"
+#include "kentos_cad/core/area_edit.hpp"
 #include "kentos_cad/core/block_reference.hpp"
 #include "kentos_cad/core/circle.hpp"
 #include "kentos_cad/core/dimension.hpp"
@@ -1239,6 +1240,46 @@ void MapCanvas::buildReadout()
                                                    true, text});
 }
 
+bool MapCanvas::acceptGuide()
+{
+    // ENTER ACCEPTS THE FIGURE: while a face is being pulled to a wanted area,
+    // Enter sends the point that lands it exactly on the figure, wherever the
+    // hand happens to be. Reached from the canvas and from the command line,
+    // because focus is on the line far more often than on the drawing.
+    const auto* session = controller_.session();
+    if (session == nullptr || !session->waiting() ||
+        session->prompt().rubber_shape != command::RubberShape::AreaEdit)
+        return false;
+    const core::AreaGhost ghost = areaGhost();
+    if (ghost.points.empty()) return false;
+    controller_.supplyPoint(ghost.commit);
+    return true;
+}
+
+core::AreaGhost MapCanvas::areaGhost() const
+{
+    core::AreaGhost none;
+    const auto* session = controller_.session();
+    if (session == nullptr || !session->waiting()) return none;
+    const auto request = core::decode_area_edit(session->prompt().rubber_payload);
+    if (!request) return none;
+    const core::Document& doc = controller_.document();
+    const core::EntityId e =
+        doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(request->key)));
+    if (e == core::kNoEntity || !doc.alive(e)) return none;
+    const core::RingSpan rs = doc.geometry().rings_of(doc.entities().slot[e]);
+    if (rs.count == 0) return none;
+    const auto xs = doc.geometry().ring_xs(rs.first);
+    const auto ys = doc.geometry().ring_ys(rs.first);
+    std::vector<core::Point2> ring;
+    ring.reserve(xs.size());
+    for (std::size_t v = 0; v < xs.size(); ++v)
+        ring.push_back(core::Point2{xs[v], ys[v]});
+    // The snap reach is a few PIXELS, whatever the zoom, like every other snap.
+    const core::Mm snap = core::mm_round(8.0 * view_.mm_per_pixel());
+    return core::area_edit_ghost(ring, *request, cursorWorld(), std::max<core::Mm>(snap, 1));
+}
+
 core::Point2 MapCanvas::cursorWorld() const
 {
     return snap_preview_valid_ ? snap_preview_.point
@@ -1572,6 +1613,35 @@ void MapCanvas::buildOverlay()
                                                   decoded.value(), buf))
                     addEmitRuns(batch, buf, 0, 0);
             }
+        } else if (shape == command::RubberShape::AreaEdit) {
+            // THE FACE AT THE WANTED AREA. The edge or the corner in hand follows
+            // the cursor; within a few pixels of the figure it SNAPS onto it, and
+            // the figure's own point is what Enter sends (keyPressEvent). The
+            // original stays drawn underneath: nothing changes until the command
+            // commits.
+            const core::AreaGhost ghost = areaGhost();
+            if (!ghost.points.empty()) {
+                const std::size_t lit =
+                    ghost.snapped ? nextBatch(tokens_->accent.rgba(), 1.5f, false) : batch;
+                std::vector<core::Mm> xs;
+                std::vector<core::Mm> ys;
+                xs.reserve(ghost.points.size());
+                ys.reserve(ghost.points.size());
+                for (const core::Point2& p : ghost.points) {
+                    xs.push_back(p.x);
+                    ys.push_back(p.y);
+                }
+                addWorldRun(lit, xs, ys, true, 0, 0);
+                if (look_.dynamic_input) {
+                    const render::ScreenPointF at = toScreenF(to);
+                    std::string text              = core::format_square_metres(ghost.area);
+                    if (ghost.snapped) text += "  ✓ hedef";
+                    overlay_.labels.push_back(
+                        render::OverlayLabel{tokens_->readout.rgba(), at.x + 12.0f, at.y - 10.0f,
+                                             static_cast<float>(look_.hint_px), false, text});
+                    guide_label_ = text;
+                }
+            }
         } else if (shape == command::RubberShape::Ghost) {
             // THE OBJECTS THEMSELVES, carried by the cursor's offset from the base
             // point: where TAŞI will put them and where KOPYALA's next copy lands.
@@ -1603,11 +1673,13 @@ void MapCanvas::buildOverlay()
 
         // ---- what the guide MEASURES, written on it ----
         //
+        // Not for the area ghost: its figure is the area, written above.
+        //
         // A rubber band that shows only a direction makes the user click, read the
         // result and undo. The length and the bearing belong on the line while it
         // is being dragged — that is what every CAD calls dynamic input, and what
         // a surveyor setting out a 12 cm step needs to see the step working.
-        if (look_.dynamic_input) {
+        if (look_.dynamic_input && shape != command::RubberShape::AreaEdit) {
             const core::Point2 from_world = session->prompt().rubber_origin;
             const core::Point2 to_world =
                 snap_preview_valid_ ? snap_preview_.point
@@ -2121,6 +2193,10 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
     // the same body. Both roads, one answer.
     if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
         if (controller_.supplyPickedObjects()) {
+            update();
+            return;
+        }
+        if (acceptGuide()) {
             update();
             return;
         }

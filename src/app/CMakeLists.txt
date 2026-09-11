@@ -13,6 +13,7 @@ qt_standard_project_setup()
 # of the project uses.
 qt_add_executable(kentos_cad
     src/attribute_panel.cpp
+    src/tools_panel.cpp
     src/fields.cpp
     src/widgets.cpp
     src/schema_page.cpp
@@ -64,6 +65,7 @@ qt_add_executable(kentos_cad
     include/kentos_cad/app/main_window.hpp
     include/kentos_cad/app/map_canvas.hpp
     include/kentos_cad/app/panels.hpp
+    include/kentos_cad/app/tools_panel.hpp
     include/kentos_cad/app/pick_list.hpp
     include/kentos_cad/app/qgis_backend.hpp
     include/kentos_cad/app/settings_dialog.hpp
@@ -83,6 +85,7 @@ target_link_libraries(kentos_cad PRIVATE
     kentos_core
     kentos_command
     kentos_io
+    kentos_processing
     kentos_domain_geodesy
     kentos_domain_cadastre
     kentos_domain_surface

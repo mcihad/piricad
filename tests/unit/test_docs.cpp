@@ -14,6 +14,7 @@
 #include "kentos_cad/domain/cadastre/commands.hpp"
 #include "kentos_cad/domain/geodesy/commands.hpp"
 #include "kentos_cad/domain/surface/commands.hpp"
+#include "kentos_cad/processing/registry.hpp"
 #include "kentos_cad/script/json_runner.hpp"
 
 #include <algorithm>
@@ -49,6 +50,7 @@ struct Rig
         domain::geodesy::register_geodesy_commands(reg);
         domain::cadastre::register_cadastre_commands(reg);
         domain::surface::register_surface_commands(reg);
+        processing::register_processing_commands(reg);
         bus.on_echo = [](std::string_view) {}; // transcript output is not the subject
     }
 };

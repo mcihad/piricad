@@ -8,6 +8,7 @@
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/text.hpp"
+#include "kentos_cad/processing/registry.hpp"
 
 #include <cstdio>
 #include <fstream>
@@ -172,6 +173,7 @@ int main(int argc, char** argv)
 
     Registry reg;
     register_builtin_commands(reg);
+    kentos::processing::register_processing_commands(reg);
 
     std::ofstream out(argv[1], std::ios::out | std::ios::binary);
     if (!out) {

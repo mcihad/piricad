@@ -24,14 +24,15 @@ class Context;
 /// toolbars and `docs/komutlar/referans.md` are all generated from the registry,
 /// and a hand-maintained second list of commands is forbidden (CLAUDE.md 5.10).
 enum class Category : std::uint8_t {
-    Draw,   ///< Çizim
-    Modify, ///< Düzenleme
-    View,   ///< Görünüm
-    Layer,  ///< Katman
-    File,   ///< Dosya
-    Query,  ///< Sorgu
-    Script, ///< Betik
-    System, ///< Sistem
+    Draw,       ///< Çizim
+    Modify,     ///< Düzenleme
+    View,       ///< Görünüm
+    Layer,      ///< Katman
+    File,       ///< Dosya
+    Query,      ///< Sorgu
+    Script,     ///< Betik
+    System,     ///< Sistem
+    Processing, ///< İşlem: an analysis tool applied to many objects at once (processing.md)
 };
 
 /// Turkish label for a category, for a menu title and the reference table.

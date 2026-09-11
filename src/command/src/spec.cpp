@@ -14,6 +14,7 @@ const char* category_name(Category c)
     case Category::Query: return "Sorgu";
     case Category::Script: return "Betik";
     case Category::System: return "Sistem";
+    case Category::Processing: return "İşlem";
     }
     return "?";
 }

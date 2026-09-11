@@ -53,7 +53,7 @@ NOT move, and a future reader must not "finish the job" by moving them:
 
 ```
 /cmake  /scripts  /packaging  /docs
-/src   core  command  io  render  script  ai  domain{geodesy,cadastre,planning,surface}  app  plugin-api
+/src   core  command  io  processing  render  script  ai  domain{geodesy,cadastre,planning,surface}  app  plugin-api
 /data  catalogs (BÖHHBÜY codes, MPYY symbology — DATA, never code)  crs (geoid grids, transform params)  corpus (legislation + index)
 /tests unit  golden  bench  fuzz  journal  ai-eval  support
 ```
@@ -64,6 +64,7 @@ NOT move, and a future reader must not "finish the job" by moving them:
 core       -> nothing (not even Qt)
 command    -> core
 io         -> core, command
+processing -> core, command, io
 domain     -> core, command
 render     -> core  (+ Qt Gui when the QRhi backend lands, Article 8.1)
 script     -> command
@@ -73,7 +74,7 @@ plugin-api -> stable C ABI only (core types by value, bus via handle)
 ```
 
 3.3 **A reverse or lateral dependency is a build failure, not a review comment.** `#include <Q...>` under `/src/core`, `/src/command`, `/src/script`, `/src/io`, `/src/domain` or `/src/ai` breaks the build; so does direct geometry mutation outside a command under `/src/domain` (§8 CI gates).
-3.4 Qt-free targets: `kentos_core`, `kentos_command`, `kentos_io`, `kentos_script`, `kentos_ai`, the four `kentos_domain_*`, `kentos_plugin_api`, and `kentos_render` for as long as Article 8.1 holds. Qt-linked: `kentos_app` (Widgets), and `kentos_render` once the QRhi backend lands.
+3.4 Qt-free targets: `kentos_core`, `kentos_command`, `kentos_io`, `kentos_processing`, `kentos_script`, `kentos_ai`, the four `kentos_domain_*`, `kentos_plugin_api`, and `kentos_render` for as long as Article 8.1 holds. Qt-linked: `kentos_app` (Widgets), and `kentos_render` once the QRhi backend lands.
 3.5 `/data` holds data, schemas and manifests only — no C++, shell, Python or Lua, and no compile-time embedding of a catalogue or grid.
 
 ## Article 4 — Rulebooks
@@ -87,6 +88,7 @@ plugin-api -> stable C ABI only (core types by value, bus via handle)
 | `.claude/script.md` | `/src/script` | JSON runner today, Lua/Python later, sandbox levels, read-only bindings, batch merge, 10 µs dispatch |
 | `.claude/ai.md` | `/src/ai`, AI panel, `/tests/ai-eval`, `/data/corpus` | Suggestion pipeline, approval, audit records, coordinate-hallucination defence, local models, mevzuat RAG citations |
 | `.claude/domain.md` | `/src/domain/*` | Geodesy, cadastre, planning, surface semantics; catalogue-driven regulation; TUREF/TM3; ifraz/tevhit/DOP/PlanGML |
+| `.claude/processing.md` | `/src/processing`, the Araçlar panel of `/src/app`, `/docs/islem` | `ProcessingTool`: one generated command per tool, geometry classes, scope (selection/viewport/project), snapshot in, output out, worker thread with progress and stop, output layer, the Araçlar panel as a client |
 | `.claude/data.md` | `/data/*` | Catalogue versioning and schemas, CRS provenance, corpus chunk metadata, data permits, LFS/size policy |
 | `.claude/ui.md` | `/src/app` | Widgets shell, command line widget, `Registry`-driven actions, i18n, accessibility, latency and cold-start budgets |
 | `.claude/plugin-api.md` | `/src/plugin-api` | C99 ABI, version handshake, additive-only evolution, capability sandbox, signing, crash isolation, GPLv3-compatible licences |
@@ -175,6 +177,12 @@ Three deviations from this constitution exist today. Three more were removed whe
 3. Declare argument arity, type and range as `Param` so `Bus` validates before the body runs.
 4. Regenerate CLI help, script bindings, AI schema and docs from `Registry` — never hand-edit a file to match.
 5. Land the equality proof (Article 6.4), a cancellation test with an empty undo delta, and a `Value` round-trip test.
+
+**To add a processing tool** — read `.claude/processing.md`.
+1. Derive `processing::ProcessingTool`, declare it with `KENTOS_PROCESSING_TOOL`, list it once in `src/processing/src/registry.cpp`; the command, the Araçlar tree, the Analiz menu and the reference are generated from that list (5.10).
+2. Fill `ToolSpec`: `islem.` id, names in R7 order, title, summary, group, the `Applies` classes, parameters via `ToolParam`, the output shape. The four shared parameters (`nesneler`, `kapsam`, `pencere`, `katman`) are the runner's; never redeclare them.
+3. Write `run` over the snapshot only: no document, no bus, no echo; check `Progress::cancelled()` per object, report `Progress::at()`, return `processing::cancelled()` when stopped. A tool that needs the hand overrides `interact` and writes what it asked into `input.args` (processing.md R4a). The runner hosts the worker, validates, writes the output in one transaction and journals the resolved keys and every parameter.
+4. Land the page (docs.md R7), the `docs/islem/README.md` row, the changelog line, `make reference`, and the tests in `tests/unit/test_processing.cpp` (spec, result per class, scope, stop, undo, command-line = script).
 
 **Before writing any non-trivial algorithm** — ask whether a mature library already does it.
 1. Check §9 of `kentoscad.md`: it already names the chosen library for most problems this product has.

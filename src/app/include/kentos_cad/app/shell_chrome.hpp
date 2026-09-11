@@ -162,6 +162,10 @@ public:
     /// beside it requests the stop (`stopRequested`). Off, the cell reads as
     /// before.
     void setBusy(const QString& label, bool on);
+
+    /// Replaces the busy label without restarting the live segment: what a job
+    /// that counts calls as its figure moves (`Controller::jobPermille`).
+    void setBusyLabel(const QString& label);
     void setConnection(const QString& text, bool connected);
     void setPerformance(const QString& text);
 

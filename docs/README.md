@@ -43,6 +43,9 @@ Tek tek komutlar:
 | `YAZIDÜZENLE` | [Var olan yazıyı değiştirme](komutlar/edittext.md) |
 | `KÖŞETAŞI` | [Köşe taşıma](komutlar/vertex_move.md) |
 | `KÖŞEEKLE` | [Kenara köşe ekleme](komutlar/vertex_insert.md) |
+| `UZUNLUKYAZ` | [Kenar uzunluklarını yazma](komutlar/uzunluk_yaz.md) |
+| `KÖŞENUMARALA` | [Köşe numaralama](komutlar/kose_numarala.md) |
+| `ALANDÜZENLE` | [Alanı istenen değere getirme](komutlar/alan_duzenle.md) |
 | `ALANAÇEVİR` | [Çizgileri kapalı alana çevirme](komutlar/to_area.md) |
 | `TAŞI` | [Nesne taşıma](komutlar/move.md) |
 | `KOPYALA` | [Nesne çoğaltma](komutlar/copy.md) |
@@ -127,6 +130,7 @@ noktaları ve ölçüleri türün kendisi söyler. Türlerin tablosu çekirdeği
 
 | Sayfa | İçerik |
 |---|---|
+| [İşlem araçları](islem/README.md) | Araçlar paneli; kapsam, asenkron çalışma ve Durdur, çıktı katmanı; araç listesi |
 | [Betik yazma](betik/README.md) | JSON betik biçimi, toplu işlem, kum havuzu |
 | [Lua betikleri](betik/lua.md) | Döngü, koşul ve hesapla betik yazma; `h` API'si |
 | [Komut günlüğü](mimari/gunluk.md) | Yaptığınız işi geri izleme, makro, oturum kaydı |

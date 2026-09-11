@@ -20,8 +20,10 @@
 #include "kentos_cad/app/style_designer.hpp"
 #include "kentos_cad/app/title_bar.hpp"
 #include "kentos_cad/app/toolbox.hpp"
+#include "kentos_cad/app/tools_panel.hpp"
 #include "kentos_cad/app/widgets.hpp"
 #include "kentos_cad/core/snap.hpp"
+#include "kentos_cad/processing/registry.hpp"
 
 #include "kentos_cad/io/dwg.hpp"
 #include "kentos_cad/io/vector.hpp"
@@ -244,6 +246,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(controller_, &Controller::settingChanged, this, &MainWindow::onSettingChanged);
     connect(controller_, &Controller::selectionChanged, this, [this] {
         attributePanel_->refresh();
+        if (toolsPanel_ != nullptr) toolsPanel_->refresh();
 
         // Picking a parcel on the map and then hunting for its layer in a list of
         // forty is work the program can do. Only when the whole selection agrees:
@@ -272,8 +275,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 
     // Enter on an empty command line is "done pointing". Focus is here far more
     // often than on the canvas, so without this the gesture had nowhere to land.
-    connect(commandLine_, &CommandLine::accepted, this,
-            [this] { (void)controller_->supplyPickedObjects(); });
+    connect(commandLine_, &CommandLine::accepted, this, [this] {
+        if (!controller_->supplyPickedObjects()) (void)canvas_->acceptGuide();
+    });
     connect(commandLine_, &CommandLine::submitted, this, &MainWindow::onCommandSubmitted);
     connect(layerPanel_, &LayerPanel::layerSelected, attributePanel_, &AttributePanel::setLayer);
     connect(layerPanel_, &LayerPanel::propertiesRequested, this, &MainWindow::openStyleDesigner);
@@ -1143,6 +1147,25 @@ void MainWindow::buildMenus()
     auto* analyse = bar->addMenu(tr("&Analiz"));
     analyse->addAction(actTable_);
     analyse->addSeparator();
+
+    // THE PROCESSING TOOLS, from the registry: one entry per tool, and the panel
+    // that shows them as a tree. Nothing here is a second list (CLAUDE.md 5.10).
+    auto* tools = analyse->addMenu(tr("İşlem Araçları"));
+    for (const processing::ProcessingTool* tool : processing::processing_tools()) {
+        const auto& spec = tool->spec();
+        tools->addAction(commandAction(Glyph::Function, QString::fromStdString(spec.title),
+                                       QString::fromStdString(spec.names.front()),
+                                       QString::fromStdString(spec.summary)));
+    }
+    tools->addSeparator();
+    auto* showTools = tools->addAction(tr("Araçlar Paneli"));
+    showTools->setStatusTip(tr("Sağ paneldeki Araçlar sekmesini açar"));
+    connect(showTools, &QAction::triggered, this, [this] {
+        propertyDock_->show();
+        propertyHeader_->setCurrent(2);
+        propertyStack_->setCurrentIndex(2);
+    });
+    analyse->addSeparator();
     analyse->addAction(actAi_);
 
     auto* layer = bar->addMenu(tr("&Katman"));
@@ -1296,13 +1319,21 @@ void MainWindow::buildPanels()
         tr("Her komut buraya JSON olarak yazılır. Bu günlük geri almanın, makro "
            "kaydının, regresyon testinin ve çökme kurtarmanın ortak kaynağıdır."));
 
+    // ---- the tools panel: the processing registry as a tree and a form ----
+    toolsPanel_ = new ToolsPanel(*controller_, this);
+    toolsPanel_->setViewportProvider([this] { return canvas_->view().visible_box(); });
+    connect(toolsPanel_, &ToolsPanel::runRequested, this,
+            [this](const QString& line) { controller_->runLine(line, command::Origin::Gui); });
+
     propertyStack_ = new QStackedWidget(this);
     propertyStack_->addWidget(attributePanel_);
     propertyStack_->addWidget(transcript_);
+    propertyStack_->addWidget(toolsPanel_);
 
     propertyHeader_ = new PanelHeader(this);
     propertyHeader_->addTab(tr("Öznitelikler"), static_cast<int>(Glyph::Table));
     propertyHeader_->addTab(tr("Geçmiş"), static_cast<int>(Glyph::History));
+    propertyHeader_->addTab(tr("Araçlar"), static_cast<int>(Glyph::Function));
     connect(propertyHeader_, &PanelHeader::tabChanged, propertyStack_,
             &QStackedWidget::setCurrentIndex);
 
@@ -1488,10 +1519,26 @@ void MainWindow::buildStatusBar()
     statusStrip_ = new StatusStrip(this);
     // A job in flight (an import reading on a thread) shows on the strip with a
     // Durdur; the chip asks the controller to stop it, the same road Esc takes.
-    connect(controller_, &Controller::jobStarted, this,
-            [this](const QString& label) { statusStrip_->setBusy(label, true); });
-    connect(controller_, &Controller::jobFinished, this,
-            [this] { statusStrip_->setBusy(QString(), false); });
+    // A job that COUNTS shows its figure beside its label: "<label> · %42". One
+    // that streams (a file read) leaves the figure at zero and
+    // the strip stays as it was. Polled, because the figure is written by the
+    // worker thread and read here; a signal per object would be the wrong tool.
+    jobPulse_ = new QTimer(this);
+    jobPulse_->setInterval(150);
+    connect(jobPulse_, &QTimer::timeout, this, [this] {
+        const int permille = controller_->jobPermille();
+        if (permille < 0) return;
+        statusStrip_->setBusyLabel(tr("%1 · %%2").arg(jobLabel_).arg(permille / 10));
+    });
+    connect(controller_, &Controller::jobStarted, this, [this](const QString& label) {
+        jobLabel_ = label;
+        statusStrip_->setBusy(label, true);
+        jobPulse_->start();
+    });
+    connect(controller_, &Controller::jobFinished, this, [this] {
+        jobPulse_->stop();
+        statusStrip_->setBusy(QString(), false);
+    });
     connect(statusStrip_, &StatusStrip::stopRequested, this,
             [this] { controller_->cancelInteractive(); });
 
@@ -1601,6 +1648,8 @@ void MainWindow::onSettingChanged(const QString& id)
     // A preference written from the command line, a script or the AI must land on
     // screen exactly as the menu item does. Reading the value back from the store
     // rather than trusting the caller keeps one source of truth.
+    if (id.startsWith(QLatin1String("core.islem.")) && toolsPanel_ != nullptr)
+        toolsPanel_->refresh();
     if (id.startsWith(QLatin1String("core.izgara."))) {
         canvas_->reloadGridSettings();
         canvas_->reloadSnapSettings();
@@ -3575,6 +3624,67 @@ void MainWindow::probeToolsByHand()
                            canvas_->guideVertexCountForProbe());
         controller_->cancelInteractive();
         QCoreApplication::processEvents();
+    }
+
+    // ---- THE ARAÇLAR PANEL --------------------------------------------------
+    //
+    // The panel composes a command line from its fields and sends it: the line
+    // is printed so a reader can type it, and the frame shows the card.
+    scene();
+    if (toolsPanel_ != nullptr && propertyHeader_ != nullptr) {
+        propertyHeader_->setCurrent(2);
+        propertyStack_->setCurrentIndex(2);
+        QCoreApplication::processEvents();
+        for (const char* id : {"islem.uzunluk_yaz", "islem.kose_numarala", "islem.alan_duzenle"}) {
+            if (!toolsPanel_->selectTool(QString::fromUtf8(id))) continue;
+            QCoreApplication::processEvents();
+            // With `TERCİH araç_penceresi evet` the card opened in its own window,
+            // which the main window's frame cannot show: it is photographed itself.
+            if (auto* dialog = findChild<ToolDialog*>();
+                dialog != nullptr && dialog->isVisible() && shooting) {
+                (void)dialog->grab().save(
+                    QStringLiteral("%1/%2-pencere-%3.png")
+                        .arg(into)
+                        .arg(frame++, 2, 10, QLatin1Char('0'))
+                        .arg(QString::fromUtf8(id).section(QLatin1Char('.'), 1)));
+            }
+            const auto before = static_cast<int>(transcript_->toPlainText().size());
+            runScriptLine(QStringLiteral("SEÇ mod=KUTU noktalar=-1,-1 41,31"));
+            QString line = toolsPanel_->commandLine();
+            if (QString::fromUtf8(id) == QLatin1String("islem.alan_duzenle"))
+                line += QStringLiteral(" alan=1500 mod=kenar");
+            controller_->runLine(line, command::Origin::Gui);
+            if (QString::fromUtf8(id) == QLatin1String("islem.alan_duzenle")) {
+                // The tool asks which edge, then where: the top edge, pulled up,
+                // photographed with the ghost following the hand, then Enter.
+                click(at(core::Point2{20'000, 30'000}));
+                send(QEvent::MouseMove, at(core::Point2{20'000, 36'000}), Qt::NoButton,
+                     Qt::NoButton);
+                shot(QStringLiteral("alan-hayalet"));
+                (void)std::fprintf(stdout, "[el] alan hayalet kılavuz=%zu köşe etiket=\"%s\"\n",
+                                   canvas_->guideVertexCountForProbe(),
+                                   canvas_->guideLabelForProbe().c_str());
+                // Enter ON THE CANVAS, where the hand is: focus is in the tree
+                // here, and Enter there would run the tool afresh.
+                QKeyEvent accept(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+                QCoreApplication::sendEvent(canvas_, &accept);
+                QCoreApplication::processEvents();
+            }
+            // The work is on a worker thread; the result lands when it is done.
+            QElapsedTimer waited;
+            waited.start();
+            while (controller_->session() != nullptr && controller_->session()->working() &&
+                   waited.elapsed() < 5000)
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+            QCoreApplication::processEvents();
+            QString said = transcript_->toPlainText().mid(before).trimmed();
+            said.replace(QLatin1Char('\n'), QLatin1Char(' '));
+            (void)std::fprintf(stdout, "[el] araç %-20s satır=\"%s\" :: %s\n", id,
+                               qPrintable(toolsPanel_->commandLine()), qPrintable(said.right(120)));
+            shot(QStringLiteral("araclar-") + QString::fromUtf8(id).section(QLatin1Char('.'), 1));
+        }
+        propertyHeader_->setCurrent(0);
+        propertyStack_->setCurrentIndex(0);
     }
 
     // ---- AND A TOOL STAYS IN THE HAND ---------------------------------------

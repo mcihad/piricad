@@ -17,7 +17,9 @@
 // tests check.
 #pragma once
 
+#include <atomic>
 #include <coroutine>
+#include <cstdint>
 #include <functional>
 #include <stop_token>
 #include <string>
@@ -41,6 +43,12 @@ struct Job
     std::string label;                           ///< what the status strip says while it runs
     std::function<void(const JobControl&)> work; ///< the work itself; must not touch the document
     std::stop_source stop;                       ///< the worker's stop, requested by cancel()
+
+    /// How far the work has come, 0..1000, written by the worker and read by
+    /// the status strip. A job that cannot count leaves it at zero and the
+    /// strip stays indeterminate, which is the honest picture for a streamed
+    /// read; a processing tool that walks a known number of objects counts.
+    std::atomic<std::uint32_t> permille{0};
 };
 
 /// `co_await run_job(session, job)`: runs the job and continues when it is done.

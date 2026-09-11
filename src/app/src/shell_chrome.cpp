@@ -405,6 +405,13 @@ void StatusStrip::setPerformance(const QString& text)
     update();
 }
 
+void StatusStrip::setBusyLabel(const QString& label)
+{
+    if (!busy_ || busyLabel_ == label) return;
+    busyLabel_ = label;
+    update();
+}
+
 void StatusStrip::setBusy(const QString& label, bool on)
 {
     busy_      = on;

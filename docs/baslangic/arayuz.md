@@ -436,6 +436,17 @@ Ayrıntı için bkz. [Komut satırı](../komutlar/komut-satiri.md).
 başlıkta sekmelerle birlikte üç işaret bulunur: **tutamak** (sürükle), **daralt**
 ve **yüzdür**.
 
+### Araçlar
+
+Üçüncü sekme: [işlem araçları](../islem/README.md), gruplar hâlinde bir ağaçta. Üstteki
+kutu ada göre süzer. Bir satır seçilince altında aracın kartı açılır: açıklaması,
+uygulandığı türler (çip olarak), **Kapsam** (Seçili · Görünüm · Proje), parametre
+alanları, çıktı katmanı, gönderilecek **komut satırı** ve **Çalıştır**. Görünüm kapsamı
+seçilince görünümün iki köşesi satıra `pencere=` olarak yazılır; kartta okuduğunuz
+satırı komut satırına yazmak aynı işi yapar. Aynı araçlar **Analiz ▸ İşlem Araçları**
+menüsünde de durur. `TERCİH araç_penceresi evet` ile kart panelin içinde değil kendi
+penceresinde açılır.
+
 ### Öznitelikler
 
 Üstte **seçili nesne kartı**: tip ikonu, adı ve bir satır tanım — türü, kalıcı
