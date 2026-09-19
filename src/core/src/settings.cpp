@@ -407,6 +407,9 @@ KENTOS_SETTING(mcp_belirtec_zorunlu);
 KENTOS_SETTING(mcp_otomatik);
 KENTOS_SETTING(ai_hassas);
 KENTOS_SETTING(ai_dusunme_goster);
+KENTOS_SETTING(ai_onay_politikasi);
+KENTOS_SETTING(ai_soru_politikasi);
+KENTOS_SETTING(ai_uzerine_yazma);
 KENTOS_SETTING(tema);
 KENTOS_SETTING(dil);
 KENTOS_SETTING(otomatik_kayit);
@@ -467,6 +470,9 @@ KENTOS_SETTING(alan_birimi);
     X(mcp_otomatik)                                                                                \
     X(ai_hassas)                                                                                   \
     X(ai_dusunme_goster)                                                                           \
+    X(ai_onay_politikasi)                                                                          \
+    X(ai_soru_politikasi)                                                                          \
+    X(ai_uzerine_yazma)                                                                            \
     X(dugum_toleransi)                                                                             \
     X(en_kucuk_alan)                                                                               \
     X(tema)                                                                                        \
@@ -1809,6 +1815,84 @@ KENTOS_SETTING(ai_dusunme_goster)
     };
 }
 
+KENTOS_SETTING(ai_onay_politikasi)
+{
+    return SettingSpec{
+        .id    = "core.ai.onay_politikasi",
+        .names = {"onay_politikası", "onay_politikasi", "approval_policy"},
+        .type  = SettingType::Enum,
+        // APP SCOPE, DELIBERATELY. A project file must not be able to raise the
+        // trust a machine extends to an agent: opening a drawing somebody sent
+        // you would then be enough to widen what a client may do on your
+        // workstation (TODOS S-02).
+        .scope = SettingScope::App,
+        // THE STRICTEST ONE IS THE DEFAULT that an existing installation keeps.
+        // A new installation is moved to `riskli_islemlerde` by the first-run
+        // path, not by this fallback: an upgrade must not silently loosen what
+        // was already in force (TODOS S-06).
+        .fallback = SettingValue::enumerated(0),
+        .range    = SettingRange::between(0, 2),
+        .values   = {"her_degisiklikte", "riskli_islemlerde", "otomatik"},
+        .unit     = "",
+        .summary  = "Bir ajanın önerdiği işin ne sıklıkta onay bekleyeceği. "
+                    "her_degisiklikte: her plan için bir onay. riskli_islemlerde: yalnız "
+                    "üzerine yazma ve bu makinenin dışına çıkan işler. otomatik: yetki "
+                    "kapsamı içindeki ve girdileri tam olan iş onay beklemeden yürür. "
+                    "Okuma ve görünüm her üç modda da doğrudan çalışır. Bu bir güven "
+                    "kararıdır ve bu makineye aittir, çizime değil: uygulama kapsamındadır, "
+                    "yani açtığınız bir proje dosyası onu yükseltemez.",
+        .section  = "Çalışma Davranışı", // ui-label
+    };
+}
+
+KENTOS_SETTING(ai_soru_politikasi)
+{
+    return SettingSpec{
+        .id    = "core.ai.soru_politikasi",
+        .names = {"soru_politikası", "soru_politikasi", "question_policy"},
+        .type  = SettingType::Enum,
+        // SEPARATE FROM APPROVAL ON PURPOSE. "Do not ask me what paper size" and
+        // "ask me before you overwrite" are two different wishes; one control for
+        // both is how a user ends up unable to have either (TODOS §7.1).
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::enumerated(1),
+        .range    = SettingRange::between(0, 2),
+        .values   = {"etkili_belirsizlikte_sor", "yalniz_zorunlu", "varsayimla_ilerle"},
+        .unit     = "",
+        .summary  = "Bir ajanın açıklama sorusunu ne zaman soracağı. "
+                    "etkili_belirsizlikte_sor: sonucu anlamlı değiştirecek belirsizlikleri "
+                    "tek kartta toplar. yalniz_zorunlu: önce araçlarla bilgi toplar, gerçekten "
+                    "eksik zorunlu bilgi için bir soru sorar. varsayimla_ilerle: geri "
+                    "alınabilir ve makul varsayımları kaydeder ve uygular. Hiçbir modda "
+                    "koordinat, parola ya da hangi dosyanın silineceği uydurulmaz. "
+                    "Kullanıcının çalışma alışkanlığı olduğu için uygulama kapsamındadır.",
+        .section  = "Çalışma Davranışı", // ui-label
+    };
+}
+
+KENTOS_SETTING(ai_uzerine_yazma)
+{
+    return SettingSpec{
+        .id       = "core.ai.uzerine_yazma",
+        .names    = {"üzerine_yazma", "uzerine_yazma", "overwrite_policy"},
+        .type     = SettingType::Enum,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::enumerated(1),
+        .range    = SettingRange::between(0, 2),
+        .values   = {"sor", "yeni_ad_uret", "izin_ver"},
+        .unit     = "",
+        // THE `otomatik` APPROVAL MODE DOES NOT OVERRIDE THIS. Somebody who chose
+        // `sor` chose it on purpose, and sacrificing the narrower setting to the
+        // wider mode would make the narrower setting a lie.
+        .summary = "Bir ajanın yazacağı dosya zaten varsa ne olacağı. sor: onay ister. "
+                   "yeni_ad_uret: çakışmayan bir ad üretir ve var olan dosyaya dokunmaz. "
+                   "izin_ver: üstüne yazar. Onay politikası otomatik olsa bile 'sor' "
+                   "seçiliyken sorulur. Bu makinedeki dosyalarla ilgili bir karar olduğu "
+                   "için uygulama kapsamındadır.",
+        .section = "Çalışma Davranışı", // ui-label
+    };
+}
+
 KENTOS_SETTING(ai_sorumlu)
 {
     return SettingSpec{
@@ -1851,6 +1935,10 @@ void register_sections(SettingCatalog& into)
     into.add_section({"Veri Kaynakları", "", ""});
     into.add_section({"Plot ve Çıktı", "", ""});
     into.add_section({"Yapay Zeka Modelleri", "", ""});
+    into.add_section({"Çalışma Davranışı", "",
+                      "Bir ajanın ne sıklıkta onay isteyeceği, ne zaman soru soracağı "
+                      "ve var olan bir dosyayla karşılaşınca ne yapacağı. Üçü ayrı "
+                      "tercihtir: biri diğerinin yerine geçmez."});
     into.add_section({"MCP Sunucusu", "", ""});
     into.add_section({"Etiketleme", "Faz 2",
                       "Etiket yerleşimi, çakışma çözümü ve ölçek aralıkları buraya gelecek. "

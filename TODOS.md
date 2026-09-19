@@ -418,12 +418,39 @@ ve hiç seçim yoksa önce bağlam çözülür; çözülemiyorsa yalnız nesne s
 
 ### 7.2. Politikanın uygulanması ve eski kurallardan geçiş
 
-- [ ] **S-01 / P0 — Ortak policy engine.** Modelden bağımsız bir karar motoru;
-  etki, hedef, kullanıcı tercihi, istemci kapsamı ve iş kimliğinden `allow`,
-  `approval_required`, `input_required`, `deny` üretsin. Gate bu kararı uygulasın;
-  hem otomatik hem elle onaylanan plan aynı Bus doğrulamasından geçsin. **Kabul:**
-  sohbet, MCP ve tekrar bağlanma aynı girdilerde aynı kararı verir.
-- [ ] **S-02 / P0 — Settings UI, kapsam ve saklama.** Uygulama/kullanıcı düzeyinde
+- [~] **S-01 / P0 — Ortak policy engine.** *(karar motoru 19 Eylül 2026)*
+  **Yapıldı:** `ai/policy.hpp` — saf bir işlev. `decide(effect, prefs, scope, missing,
+  overwrites)` dört kararı üretiyor: `izin`, `onay_gerekli`, `girdi_gerekli`,
+  `yetki_yok`. Model yok, Qt yok, saat yok, G/Ç yok — aynı girdiler sohbette,
+  soket üzerinde ve testte aynı cevabı veriyor. Her karar bir **gerekçe** taşıyor
+  (kimsenin açıklayamadığı bir karar kimsenin itiraz edemeyeceği bir karardır) ve
+  hangi etki bitlerinin onu sürüklediğini söylüyor.
+  Kurulan ayrımlar: **kapsam bir tercih değildir** — `yetki_yok`, `onay_gerekli`
+  değil, çünkü "bir insana sor" denen istemci, hiçbir insanın o karttan veremeyeceği
+  bir şeyi sonsuza dek sorar. **Okuma her modda doğrudan.** **Riskli, "değişen her
+  şey" değil**: bir çizim düzenlemesi tek Ctrl+Z uzakta, riskli olan geri almanın
+  ulaşamadığı şey — üstüne yazılan dosya ve bu makinenin dışı. **`otomatik` onay
+  modu `uzerine_yazma=sor`'u ezmez.**
+  Sekiz test, her biri §7.1 tablosunun bir satırı.
+  **Kalan — ve bu bilerek bırakıldı:** `Gate` bu kararı henüz UYGULAMIYOR.
+  `Gate::apply` hâlâ yalnız bir insanın üretebileceği `Approval` istiyor, çünkü
+  bunu değiştirmek **CLAUDE.md 5.7'yi tadil etmek**tir (S-05). O tadil kullanıcının
+  kararıdır; motor onsuz da doğru ve sınanabilir.
+- [~] **S-02 / P0 — Settings UI, kapsam ve saklama.** *(saklama 19 Eylül 2026)*
+  **Yapıldı:** `core.ai.onay_politikasi`, `core.ai.soru_politikasi` ve
+  `core.ai.uzerine_yazma` üç `Enum` ayar olarak, hepsi **App kapsamında** — bir
+  proje dosyasının açılması bir makinenin bir ajana verdiği güveni yükseltemez.
+  Varsayılanlar en dar olanlar (`her_degisiklikte`); yeni kurulumun
+  `riskli_islemlerde`'ye taşınması ilk açılış yolunun işi, bu geri düşüşün değil —
+  bir yükseltme yürürlükteki davranışı sessizce gevşetemez (S-06).
+  Yeni "Çalışma Davranışı" ayar bölümü açıldı.
+  **`core.ai.cikti_dizini` EKLENEMEDİ:** bir `SettingSpec` metni 48 bayt taşıyor
+  (`kSettingTextCapacity`) ve bir dosya yolu sığmaz. "Klasörler ve Şablonlar"
+  bölümü hâlâ Faz 2 yer tutucusu; çıktı dizini o klasör mekanizmasıyla gelmeli.
+  **Kalan:** ayar sayfasının arayüzü, etkin profilin sohbet başlığında/MCP
+  keşfinde görünmesi, bekleyen planların tercih değişince yeniden değerlendirilmesi.
+  Eski madde metni:
+  Uygulama/kullanıcı düzeyinde
   sakla; sıradan proje dosyası açılması güveni yükseltmesin. Etkin profil ve kaynağı
   sohbet başlığında/MCP keşfinde görülsün. Kullanıcı değişikliği yeni adımlara hemen
   uygulansın; bekleyen planlar tekrar değerlendirilsin. **Kabul:** uygulama yeniden
