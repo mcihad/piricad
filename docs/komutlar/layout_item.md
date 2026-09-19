@@ -75,6 +75,8 @@ tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıd�
 | `kilit` | Öğeyi taşımaya kapatır |
 | `cerceve` | Öğenin çevresine çerçeve çizer |
 | `sira` | Çizim sırası; büyük olan üstte |
+| `harita` | Bu öğenin bağlı olduğu harita çerçevesinin adı; `ilk` bağı kaldırır |
+| `sayfa` | Öğenin duracağı sayfa (1'den başlar); `tasi` ile verilir |
 
 ### Tablo öğesi
 
@@ -92,6 +94,25 @@ saklanmaz — ölçek değiştiğinde yeniden bastığınız yerleşim yeni öl�
 `<yerlesim>` · `<proje>` · `<olcek>` · `<tarih>` · `<crs>` · `<kagit>`
 
 Eski `<pafta>` yer tutucusu da çözülmeye devam eder: bir çizimin antedine yazılmış yazı, programın bir sözcük hakkında fikir değiştirmesiyle bozulmaz.
+
+### Hangi haritaya bağlı
+
+Bir ölçek çubuğu bir haritanın ölçeğini, bir kuzey oku onun dönüşünü, bir lejant
+onun çizdiği sembolleri ve bir `<olcek>` yer tutucusu onun paydasını söyler. Tek
+haritalı bir sayfada soru yok. **İki harita çerçeveli bir sayfada vardır**, ve
+program bunu "ilk bulduğunu al" diye cevaplayamaz: 1:1000 ve 1:5000 iki çerçeve
+varken bir haritanın sayısını öbürünün altına basmak olurdu.
+
+```
+ÇIKTIÖĞE islem=ayarla ad=olcek harita=harita2
+```
+
+Bağ verilmezse **ilk harita** geçerlidir — tek haritalı sayfanın doğru cevabı ve
+bu alandan önce yazılmış her yerleşimin söylediği şey. `harita=ilk` bağı kaldırır.
+
+**Bağlı olduğu harita silinirse öğe sessizce ilk haritaya dönmez.** Çizilmez ve
+bildirilir: imzalanan bir belgede başka bir haritanın ölçeğini sessizce yazan bir
+ölçek çubuğu, yanlış bir sayıdır.
 
 ### Ölçek mi pencere mi
 
@@ -199,6 +220,9 @@ Bir yerleşimi baştan sona kuran betik:
 | `'X' kilitli; önce kilidi açın: ÇIKTIÖĞE islem=ayarla ad=X kilit=hayır` | Kilitli öğe taşınmak istendi | Kilidi açın |
 | `pencere iki köşe ister: pencere=x1,y1 x2,y2` | Anahtar bir kez yazıldı | `pencere=` anahtarını **iki kez** yazın |
 | `'X' bir harita çerçevesi değil; pencere yalnız haritaya verilir.` | `pencere=` harita olmayan bir öğeye verildi | Harita öğesinin adını verin |
+| `'X' yerleşiminde 'Y' adlı bir harita çerçevesi yok.` | `harita=` olmayan bir öğeyi gösteriyor | `islem=listele` ile harita adlarını görün |
+| `Bir harita çerçevesi başka bir haritaya bağlanmaz.` | `harita=` bir harita öğesine verildi | Ölçek, kuzey, lejant ya da metne verin |
+| `'X' yerleşiminde N sayfa var; M. sayfa yok.` | `sayfa=` aralık dışında | Sayfa sayısını görün |
 | `Izgara: yok / arti / cizgi / centik` | Tanınmayan ızgara biçimi | Listedeki sözcüklerden birini yazın |
 | `'X' ve 'Y' aynı parametrenin iki adı; ikisi birden verilmez. Yeni adı 'Z'.` | Bir parametrenin eski ve yeni adı birlikte verildi | Yalnız yeni adı bırakın |
 

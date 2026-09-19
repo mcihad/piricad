@@ -197,6 +197,21 @@ struct LayoutItem
     /// Table: the attribute columns to print, in order. Empty means every column.
     std::vector<std::string> columns;
 
+    /// WHICH MAP FRAME THIS ITEM BELONGS TO, by that item's own id.
+    ///
+    /// A scale bar states a map's scale, a north arrow its rotation, a legend the
+    /// symbols it draws and a `<olcek>` placeholder its denominator — and on a
+    /// sheet with two map frames at two scales, "the map" is not a question the
+    /// program may answer by taking the first one it finds. Empty means the
+    /// first map, which is right for the one-map sheet and is what every layout
+    /// written before this field says.
+    ///
+    /// A name that no longer resolves is NOT quietly turned back into the first
+    /// map: an item whose link was deleted is reported, because a scale bar
+    /// silently restating a different map's scale is a wrong number on a legal
+    /// document (`layout_trouble`).
+    std::string linked_map;
+
     /// Map: the ground window this frame shows, in `Mm`. Empty means "not aimed
     /// yet": the designer then shows the drawing's extent and says so.
     Box2 extent{};
@@ -308,6 +323,14 @@ struct Layout
     /// The FIRST map item, which is the one a print frame aims and the one the
     /// scale bar and the north arrow follow. Null when the layout has none.
     const LayoutItem* first_map() const;
+
+    /// The map frame `item` belongs to: the one it names, or the first one when
+    /// it names none. Null when it names one that is not there — which is a
+    /// defect to report, never a reason to fall back.
+    const LayoutItem* map_for(const LayoutItem& item) const;
+
+    /// Whether `item` names a map frame that is not on this layout.
+    bool link_is_broken(const LayoutItem& item) const;
 
     /// Which page `items[i]` is on, 0 when the column is short (an older file).
     std::int32_t page_of(std::size_t i) const noexcept

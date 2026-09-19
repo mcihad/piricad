@@ -305,6 +305,7 @@ std::string layout_to_json(const Layout& layout, std::string_view name)
         one.set("genislik", int_json(item.frame.w));
         one.set("yukseklik", int_json(item.frame.h));
         one.set("sira", int_json(item.z));
+        if (!item.linked_map.empty()) one.set("harita", Json::string(item.linked_map));
         if (item.locked) one.set("kilit", Json::boolean(true));
         if (item.rotation_udeg != 0) one.set("donme", int_json(item.rotation_udeg));
         if (item.frame_visible) one.set("cerceve", Json::boolean(true));
@@ -412,6 +413,7 @@ Result<Layout> layout_from_json(std::string_view text, std::string name)
                           static_cast<Um>(int_of(one, "genislik")),
                           static_cast<Um>(int_of(one, "yukseklik"))};
             item.z             = static_cast<std::int32_t>(int_of(one, "sira"));
+            item.linked_map    = text_of(one, "harita");
             item.locked        = bool_of(one, "kilit");
             item.rotation_udeg = static_cast<std::int32_t>(int_of(one, "donme"));
             item.frame_visible = bool_of(one, "cerceve");
@@ -542,6 +544,21 @@ LayoutItem default_item(LayoutItemKind kind)
     case LayoutItemKind::Shape: break;
     }
     return out;
+}
+
+const LayoutItem* Layout::map_for(const LayoutItem& item) const
+{
+    if (item.linked_map.empty()) return first_map();
+    const LayoutItem* named = find(item.linked_map);
+    // NAMED BUT NOT THERE IS NOT "the first one". A scale bar quietly restating
+    // a different map's scale is a wrong number on a document somebody signs.
+    if (named == nullptr || named->kind != LayoutItemKind::Map) return nullptr;
+    return named;
+}
+
+bool Layout::link_is_broken(const LayoutItem& item) const
+{
+    return !item.linked_map.empty() && map_for(item) == nullptr;
 }
 
 Layout default_layout(std::string name, Um width, Um height, Um margin)

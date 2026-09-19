@@ -4207,3 +4207,91 @@ TEST_CASE("Çıktı yerleşimi: bir öğe sayfalar arasında taşınır")
     for (std::size_t i = 0; i < read->items.size(); ++i)
         if (read->items[i].id == "baslik") CHECK_EQ(read->page_of(i), 1);
 }
+
+TEST_CASE("Çıktı yerleşimi: ölçek çubuğu kendi haritasına bağlanır")
+{
+    // TODOS L-05: on a sheet with two map frames at two scales, "the map" is not
+    // a question the program may answer by taking the first one it finds.
+    Rig r;
+    REQUIRE(r.bus.execute_line("ALAN noktalar=0,0 100,0 100,80 0,80", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=İki kagit=A3 yon=yatay", Origin::Test)
+                .ok());
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIÖĞE islem=ekle yerlesim=İki tur=harita ad=harita2", Origin::Test)
+            .ok());
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIÖĞE islem=ayarla yerlesim=İki ad=harita olcek=1000 "
+                              "pencere=0,0 pencere=100,80",
+                              Origin::Test)
+                .ok());
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIÖĞE islem=ayarla yerlesim=İki ad=harita2 olcek=5000 "
+                              "pencere=0,0 pencere=100,80",
+                              Origin::Test)
+                .ok());
+
+    const auto sheet            = [&] { return r.doc.layouts().find("İki"); };
+    const core::LayoutItem* bar = sheet()->find("olcek");
+    REQUIRE(bar != nullptr);
+
+    // UNLINKED MEANS THE FIRST MAP, which is right for a one-map sheet and is
+    // what every layout written before this field says.
+    REQUIRE(sheet()->map_for(*bar) != nullptr);
+    CHECK_EQ(sheet()->map_for(*bar)->id, "harita");
+    CHECK_FALSE(sheet()->link_is_broken(*bar));
+
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIÖĞE islem=ayarla yerlesim=İki ad=olcek harita=harita2",
+                              Origin::Test)
+                .ok());
+    CHECK_EQ(sheet()->map_for(*sheet()->find("olcek"))->id, "harita2");
+    CHECK_EQ(core::map_scale(*sheet()->map_for(*sheet()->find("olcek"))), 5000);
+
+    // A LINK THAT NO LONGER RESOLVES IS NOT QUIETLY THE FIRST MAP. A scale bar
+    // silently restating a different map's scale is a wrong number on a document
+    // somebody signs.
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=sil yerlesim=İki ad=harita2", Origin::Test).ok());
+    const core::LayoutItem* orphan = sheet()->find("olcek");
+    REQUIRE(orphan != nullptr);
+    CHECK(sheet()->link_is_broken(*orphan));
+    CHECK(sheet()->map_for(*orphan) == nullptr);
+
+    // A map that is not there is refused, and a map frame cannot follow a map.
+    CHECK_FALSE(
+        r.bus.execute_line("ÇIKTIÖĞE islem=ayarla yerlesim=İki ad=olcek harita=yok", Origin::Test)
+            .ok());
+    CHECK_FALSE(r.bus
+                    .execute_line("ÇIKTIÖĞE islem=ayarla yerlesim=İki ad=harita harita=harita",
+                                  Origin::Test)
+                    .ok());
+
+    // `ilk` gives the link back.
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIÖĞE islem=ayarla yerlesim=İki ad=olcek harita=ilk", Origin::Test)
+            .ok());
+    CHECK_FALSE(sheet()->link_is_broken(*sheet()->find("olcek")));
+
+    // AND IT SURVIVES THE FILE. The four bytes come out of the record's reserved
+    // run, so the record is still 160 bytes and a file written before this field
+    // reads back with every item following the first map.
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIÖĞE islem=ekle yerlesim=İki tur=harita ad=harita3", Origin::Test)
+            .ok());
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIÖĞE islem=ayarla yerlesim=İki ad=olcek harita=harita3",
+                              Origin::Test)
+                .ok());
+    TempDir tmp("harita-bagi");
+    const std::string path = tmp.file("bagli.pcad");
+    REQUIRE(r.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig back;
+    REQUIRE(back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
+    const core::Layout* read = back.doc.layouts().find("İki");
+    REQUIRE(read != nullptr);
+    const core::LayoutItem* kept = read->find("olcek");
+    REQUIRE(kept != nullptr);
+    CHECK_EQ(kept->linked_map, "harita3");
+    REQUIRE(read->map_for(*kept) != nullptr);
+    CHECK_EQ(read->map_for(*kept)->id, "harita3");
+}

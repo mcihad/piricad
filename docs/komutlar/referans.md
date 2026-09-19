@@ -766,6 +766,7 @@ Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, b
 | `kilit` | bool | isteğe bağlı | Öğeyi taşımaya kapatır |
 | `cerceve` | bool | isteğe bağlı | Öğenin çevresine çerçeve çizer |
 | `sayfa` | integer | isteğe bağlı | Öğenin duracağı sayfa (1'den başlar); tasi ile verilir |
+| `harita` | text | isteğe bağlı | Bu öğenin bağlı olduğu harita çerçevesinin adı. Verilmezse ilk harita. 'ilk' bağı kaldırır |
 | `sira` | integer | isteğe bağlı | Çizim sırası; büyük olan üstte |
 
 Ayrıntılı kullanım: [ÇIKTIÖĞE](layout_item.md)

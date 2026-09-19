@@ -536,7 +536,7 @@ QString resolve_placeholders(const QString& text, const core::Layout& layout,
 
 void paint_layout_page(QPainter& painter, const QRectF& target, const core::Document& document,
                        const core::Layout& layout, int page, double dpi, const LayoutFacts& facts,
-                       bool margin_guide)
+                       bool margin_guide, std::vector<std::string>* trouble)
 {
     if (layout.pages.empty() || target.width() < 1.0 || target.height() < 1.0) return;
     const std::size_t index = static_cast<std::size_t>(
@@ -558,12 +558,23 @@ void paint_layout_page(QPainter& painter, const QRectF& target, const core::Docu
         return layout.items[a].z < layout.items[b].z;
     });
 
-    const core::LayoutItem* first_map = layout.first_map();
-
     for (const std::size_t at : ordered) {
         const core::LayoutItem* item = &layout.items[at];
         const QRectF box             = frame_in(target, sheet, item->frame);
         if (box.width() < 0.5 || box.height() < 0.5) continue;
+
+        // THE MAP THIS ITEM BELONGS TO, not the first one on the sheet. A scale
+        // bar states a map's scale and a `<olcek>` placeholder its denominator;
+        // on a page with a 1:1000 and a 1:5000 frame, taking whichever comes
+        // first prints one map's number under the other map.
+        //
+        // A NAME THAT NO LONGER RESOLVES DRAWS NOTHING AND IS REPORTED. Falling
+        // back to the first map would put a wrong number on a document somebody
+        // signs, and it would do it silently.
+        const core::LayoutItem* owner = layout.map_for(*item);
+        if (trouble != nullptr && layout.link_is_broken(*item))
+            trouble->push_back("'" + item->id + "' öğesi '" + item->linked_map +
+                               "' adlı haritaya bağlı ve o harita yok.");
 
         painter.save();
         if (item->rotation_udeg != 0) {
@@ -583,13 +594,12 @@ void paint_layout_page(QPainter& painter, const QRectF& target, const core::Docu
             painter.setFont(font_at(item->text_height, px_per_paper_mm));
             painter.drawText(
                 box, static_cast<int>(alignment_of(*item) | Qt::TextWordWrap),
-                resolve_placeholders(QString::fromStdString(item->text), layout, first_map, facts));
+                resolve_placeholders(QString::fromStdString(item->text), layout, owner, facts));
             break;
         }
 
         case core::LayoutItemKind::ScaleBar:
-            paint_scale_bar(painter, box, *item,
-                            first_map != nullptr ? core::map_scale(*first_map) : 0,
+            paint_scale_bar(painter, box, *item, owner != nullptr ? core::map_scale(*owner) : 0,
                             px_per_paper_mm);
             break;
 

@@ -6,6 +6,25 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — öğeler kendi haritasına bağlanıyor (TODOS L-05)
+
+- Bir ölçek çubuğu bir haritanın ölçeğini, bir `<olcek>` yer tutucusu onun
+  paydasını söyler. Tek haritalı sayfada soru yok; **iki harita çerçeveli sayfada
+  vardır**, ve program bunu "ilk bulduğunu al" diye cevaplıyordu: 1:1000 ve 1:5000
+  iki çerçeve varken bir haritanın sayısı öbürünün altına basılıyordu.
+- `core::LayoutItem::linked_map` ve `ÇIKTIÖĞE islem=ayarla harita=<ad>`.
+  Verilmezse ilk harita — tek haritalı sayfanın doğru cevabı ve bu alandan önce
+  yazılmış her yerleşimin söylediği şey. `harita=ilk` bağı kaldırır.
+- **Kopuk bağ sessizce ilk haritaya dönmüyor.** `Layout::map_for` null veriyor,
+  `link_is_broken` doğru diyor ve `paint_layout_page` bunu `trouble` listesine
+  yazıyor — imzalanan bir belgede başka bir haritanın ölçeğini sessizce yazan bir
+  ölçek çubuğu yanlış bir sayıdır. Bu liste preflight raporunun tohumu (L-15).
+- Dosya biçimi: dört bayt kaydın **`reserved` dizisinden** alındı, yani
+  `LayoutItemRecord` hâlâ 160 bayt ve bu alandan önce yazılmış bir dosya sıfırlarla
+  okunup her öğeyi ilk haritaya bağlıyor — yazıldığında ne demek istediyse o
+  (io.md R10). Sürüm artışı yok.
+
+
 ### Düzeltildi — harita çerçevesinin katman listesi render'a hiç ulaşmıyordu
 
 - `core::LayoutItem::layers` modelde baştan beri duruyordu ve `paint_map` onu

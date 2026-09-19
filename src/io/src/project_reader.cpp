@@ -864,6 +864,12 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                 auto text = strings.at(ir.text, "yerleşim öğesi metni");
                 if (!text) return text.error();
                 item.text = std::move(text.value());
+                // 0 IS THE POOL'S EMPTY STRING, and an empty link means "follow
+                // the first map" — which is what a file written before this
+                // field carried in its reserved bytes.
+                auto linked = strings.at(ir.linked_map, "yerleşim öğesi harita bağı");
+                if (!linked) return linked.error();
+                item.linked_map = std::move(linked.value());
 
                 // AN UNKNOWN KIND IS A REFUSAL, not a silent Label: a file from a
                 // later build carrying an item this one cannot draw would be

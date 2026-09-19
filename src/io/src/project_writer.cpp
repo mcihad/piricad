@@ -611,6 +611,9 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
                 out.grid                = static_cast<std::uint8_t>(item.grid);
                 out.grid_labels         = static_cast<std::uint8_t>(item.grid_labels);
                 out.shape               = static_cast<std::uint8_t>(item.shape);
+                // 0 MEANS "follow the first map", which is what an empty name means
+                // and what a file written before this field says.
+                out.linked_map = pool.intern(item.linked_map);
 
                 out.first_layer = static_cast<std::uint32_t>(name_rows.size());
                 out.layer_count = static_cast<std::uint32_t>(item.layers.size());

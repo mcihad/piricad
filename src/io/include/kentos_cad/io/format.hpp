@@ -657,7 +657,15 @@ struct LayoutItemRecord
     std::uint8_t grid;                ///< 146  core::GridStyle
     std::uint8_t grid_labels;         ///< 147  core::GridLabels
     std::uint8_t shape;               ///< 148  core::LayoutShape
-    std::uint8_t reserved[11];        ///< 149  zero-filled
+    std::uint8_t reserved[3];         ///< 149  zero-filled
+    /// 152  into the string pool; 0 = this item follows the first map frame.
+    ///
+    /// TAKEN OUT OF THE RESERVED RUN, which is what a reserved run is for: the
+    /// record stays 160 bytes, so a file written before this field reads back
+    /// with zeros here and every item follows the first map — exactly what it
+    /// meant when it was written (io.md R10).
+    std::uint32_t linked_map;
+    std::uint8_t reserved2[4]; ///< 156  zero-filled
 };
 
 static_assert(sizeof(LayoutItemRecord) == 160, "wire record");

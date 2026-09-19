@@ -658,6 +658,36 @@ Task<void> run_item(Context& ctx)
                 ctx.record("olcek", v);
             }
 
+            // WHICH MAP THIS ITEM BELONGS TO. A scale bar states a map's scale
+            // and a `<olcek>` placeholder its denominator; on a sheet with two
+            // map frames at two scales, "the map" is not a question the program
+            // may answer by taking the first one it finds.
+            //
+            // `ilk` clears the link rather than naming an item called that:
+            // without a word for it there would be no way back once set.
+            if (const Value v = ctx.argument("harita"); !v.empty()) {
+                const std::string wanted = v.as_text();
+                if (core::turkish_key_equals(wanted, "ilk")) {
+                    item->linked_map.clear();
+                } else {
+                    const LayoutItem* named = target->find(wanted);
+                    if (named == nullptr || named->kind != LayoutItemKind::Map) {
+                        ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                                     "'" + sheet + "' yerleşiminde '" + wanted +
+                                                         "' adlı bir harita çerçevesi yok."));
+                        co_return;
+                    }
+                    if (item->kind == LayoutItemKind::Map) {
+                        ctx.session().fail(
+                            core::err(core::ErrorCode::InvalidArgument,
+                                      "Bir harita çerçevesi başka bir haritaya bağlanmaz."));
+                        co_return;
+                    }
+                    item->linked_map = wanted;
+                }
+                ctx.record("harita", v);
+            }
+
             // WHERE THE MAP FRAME LOOKS. Two ground corners, the same shape
             // `YAZDIR pencere=` takes — which is what lets the canvas's print
             // frame aim a layout: the user drags a rectangle and the window types
@@ -962,6 +992,9 @@ KENTOS_COMMAND(layout_item)
                 Param::boolean("cerceve", Arity::optional(), "Öğenin çevresine çerçeve çizer"),
                 Param::integer_range("sayfa", Arity::optional(), 1, 10000,
                                      "Öğenin duracağı sayfa (1'den başlar); tasi ile verilir"),
+                Param::text("harita", Arity::optional(),
+                            "Bu öğenin bağlı olduğu harita çerçevesinin adı. Verilmezse ilk "
+                            "harita. 'ilk' bağı kaldırır"),
                 Param::integer_range("sira", Arity::optional(), -1000, 1000,
                                      "Çizim sırası; büyük olan üstte"),
             },

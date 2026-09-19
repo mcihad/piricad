@@ -18,6 +18,9 @@
 
 #include <QString>
 
+#include <string>
+#include <vector>
+
 class QPainter;
 class QRectF;
 
@@ -48,9 +51,14 @@ struct LayoutFacts
 ///
 /// The page's white ground is painted first. `margin_guide` draws the hairline
 /// the designer shows and the printer does not.
+///
+/// `trouble` collects what the page could not honour — today, an item linked to a
+/// map frame that is not there. It is an OUT-PARAMETER rather than a refusal
+/// because a sheet with one broken link still has to print the rest of itself;
+/// this is the seed of the preflight report (TODOS L-15).
 void paint_layout_page(QPainter& painter, const QRectF& target, const core::Document& document,
                        const core::Layout& layout, int page, double dpi, const LayoutFacts& facts,
-                       bool margin_guide = false);
+                       bool margin_guide = false, std::vector<std::string>* trouble = nullptr);
 
 /// The text a label prints, with its placeholders resolved.
 QString resolve_placeholders(const QString& text, const core::Layout& layout,

@@ -260,7 +260,21 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   olsun. `paint_map` gerçek katman filtresini kullansın. **Kabul:** aynı sayfadaki
   1:1000 ve 1:5000 haritalar farklı katmanlarla çizilir; ana tuval görünürlüğündeki
   değişiklik kilitlenmiş çerçeveyi etkilemez. CRS dönüşüm desteği eksikse hata açık olur.
-- [ ] **L-05 / P0 — Haritaya bağlı kartografik öğeler.** `linked_map_id` ile ölçek
+- [~] **L-05 / P0 — Haritaya bağlı kartografik öğeler.** *(bağ 19 Eylül 2026)*
+  **Yapıldı:** `core::LayoutItem::linked_map` ve `ÇIKTIÖĞE islem=ayarla harita=<ad>`.
+  Ölçek çubuğu ve `<olcek>` yer tutucusu artık **kendi haritasının** ölçeğini
+  söylüyor; `first_map()` yalnız bağ verilmemişken geçerli. `harita=ilk` bağı
+  kaldırıyor. Bir harita çerçevesi başka bir haritaya bağlanamıyor.
+  **Kopuk bağ sessizce ilk haritaya DÖNMÜYOR**: `Layout::map_for` null veriyor,
+  `link_is_broken` doğru diyor ve `paint_layout_page` bunu `trouble` listesine
+  yazıyor — preflight raporunun tohumu (L-15).
+  Dosya biçimi dört baytı kaydın `reserved` dizisinden aldı: `LayoutItemRecord`
+  hâlâ 160 bayt, eski dosya sıfırlarla okunup her öğeyi ilk haritaya bağlıyor
+  (io.md R10). Testi dosya gidiş-dönüşünü de kapsıyor.
+  **Kalan:** lejant ve kuzey oku henüz bağı kullanmıyor (ikisi de bugün haritadan
+  bir şey okumuyor); harita içerik dönüşü ile öğe kutusu dönüşünün ayrılması;
+  ızgaranın CRS'i, çizgi/çentik seçimi ve sayı biçimi.
+  Eski madde metni: `linked_map_id` ile ölçek
   çubuğu, kuzey oku, lejant, overview ve dinamik metni ilişkilendir. Harita içerik
   dönüşü ile öğe kutusu dönüşünü ayır. Grid'in CRS'i, aralıkları, çizgi/çentik,
   kenar etiketleri ve sayı formatı düzenlenebilsin. **Kabul:** ikinci haritanın ölçeği
