@@ -36,9 +36,11 @@ kaydına geçer. Tutamak, alındığı çizim sürümüne bağlıdır: çizim de
 kabul edilmez.
 
 **2. Yazan bir araç çağrıldığında uygulanmaz.** Çizimi ya da diski değiştiren bir araç
-çağrısı bir **öneri** açar, uygulanacak komut satırlarını geri döndürür ve bilgisayar
-başındaki mühendis uygulayana kadar hiçbir şey değişmez. Onaylanan bir öneri tek bir
-işlemdir ve tek `Ctrl+Z` ile geri alınır.
+çağrısı bir **öneri** açar ve uygulanacak komut satırlarını geri döndürür. Öneriyi
+uygulayan **istemci değildir**: ya bilgisayar başındaki mühendis kartta uygular, ya da
+o mühendisin **önceden kendisi için kurduğu onay politikası**. Uygulanan bir öneri tek
+bir işlemdir ve tek `Ctrl+Z` ile geri alınır. Hangi yoldan geçtiği denetim kaydına
+yazılır ([Onay ve denetim](onay.md)).
 
 **3. Birim tam sayı milimetredir.** Bütün koordinatlar `int64` sabit noktalı milimetre;
 ondalık yoktur. 485320,15 metre `485320150` demektir, alan milimetrekaredir. Eksen

@@ -134,6 +134,15 @@ private:
     /// Runs an approved plan: one batch, one undo entry, all or nothing.
     core::Status applyPlan(const ai::Plan& plan);
 
+    /// Offers the plan to the user's standing approval policy, and says whether
+    /// it was applied.
+    ///
+    /// `false` IS THE ORDINARY ANSWER and not a failure: under the default
+    /// `her_degisiklikte` every plan waits for a person, so a user who never
+    /// touched the setting sees exactly the behaviour they always saw. See
+    /// `ai::decide_by_policy` for why the second road is safe (CLAUDE.md 5.23).
+    core::Result<bool> applyByPolicy(const ai::Plan& plan);
+
     /// Mints handles from a read command's structured report, so the client can
     /// point at what it just learned (dispatcher.hpp explains why this is the
     /// dispatcher's job and not the command's). They land in `requester`'s own

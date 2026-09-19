@@ -1891,26 +1891,22 @@ KENTOS_SETTING(ai_onay_politikasi)
         .range    = SettingRange::between(0, 2),
         .values   = {"her_degisiklikte", "riskli_islemlerde", "otomatik"},
         .unit     = "",
-        // THE SUMMARY SAYS WHAT HAPPENS, NOT WHAT THE ENGINE CAN DO.
-        //
-        // It used to promise that `otomatik` runs work "onay beklemeden" — and
-        // that is FALSE in this build: CLAUDE.md 5.7 forbids applying AI output
-        // without a preview and an explicit approval, and `ai::Gate` enforces it
-        // by requiring an `ai::Approval` that only the suggestion card can mint.
-        // A person who picked `otomatik` was still asked every single time, by a
-        // control that had told them otherwise.
-        //
-        // The policy engine keeps the mode — it is written and tested for the day
-        // the rule changes (TODOS S-03..S-06) — but the SETTING must not describe
-        // a behaviour the program does not have (CLAUDE.md 11.8: no aspirational
-        // present tense in what a user reads).
+        // THE SUMMARY SAYS WHAT HAPPENS. It once promised that `otomatik` runs
+        // work "onay beklemeden" while the program asked anyway, and then said
+        // plainly that the mode was not in force. Since §5.2.1 was amended
+        // (20 September 2026) the mode IS in force, so the text says that — and
+        // names what still cannot happen, because that is the part a person
+        // choosing this setting most needs to know.
         .summary = "Bir ajanın önerdiği işin ne sıklıkta onay bekleyeceği. "
-                   "her_degisiklikte: her plan için bir onay. riskli_islemlerde: yalnız "
-                   "üzerine yazma ve bu makinenin dışına çıkan işler onay ister; geri "
-                   "alınabilir düzenleme istemez. otomatik: HENÜZ YÜRÜRLÜKTE DEĞİL — bu "
-                   "sürümde çizimi değiştiren her iş, hangi mod seçili olursa olsun, "
-                   "öneri kartında bir insanın onayını bekler; seçtiğinizde program yine "
-                   "sorar. Okuma ve görünüm her üç modda da doğrudan çalışır. Bu bir güven "
+                   "her_degisiklikte: her plan için bir onay — öntanımlı budur ve "
+                   "yükseltmede değişmez. riskli_islemlerde: yalnız üzerine yazma ve bu "
+                   "makinenin dışına çıkan işler onay ister; geri alınabilir düzenleme "
+                   "istemez. otomatik: yetki kapsamı içindeki ve girdileri tam olan iş "
+                   "onay beklemeden yürür — ama kapsam dışındaki iş hiçbir modda yürümez, "
+                   "her karar denetim kaydına hangi politikanın verdiğiyle yazılır, ve "
+                   "onay kartta okunan adımlara bağlıdır. Okuma ve görünüm her üç modda da "
+                   "doğrudan çalışır. Bu ayarı yalnız siz değiştirebilirsiniz: bir ajan, "
+                   "bir betik ya da bir model kendi iznini genişletemez. Bu bir güven "
                    "kararıdır ve bu makineye aittir, çizime değil: uygulama kapsamındadır, "
                    "yani açtığınız bir proje dosyası onu yükseltemez.",
         .section = "Çalışma Davranışı", // ui-label

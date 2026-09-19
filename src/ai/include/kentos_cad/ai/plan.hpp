@@ -8,12 +8,13 @@
 // applies it (`ai::Gate`), and a plan that is rejected or withdrawn leaves the
 // document bit-identical (ai.md R20).
 //
-// THIS IS NOT A POLICY THIS FILE CHOSE. CLAUDE.md 5.7 and ai.md R3/P1 forbid
-// applying AI output without a preview and an explicit human approval, with no
-// trust mode, no setting and no flag — because a cadastral or zoning output is a
-// legal document and only a licensed engineer may stand behind it (ai.md R8).
-// The maintainer was asked and confirmed it: an external agent composes, a person
-// applies.
+// THIS IS NOT A POLICY THIS FILE CHOSE. CLAUDE.md 5.7 and ai.md R3/P1 allow AI
+// output to reach the document by exactly two roads — a preview a person
+// approves, or an approval policy that person set beforehand for themselves —
+// and forbid every other. Which road it took is recorded, because a cadastral or
+// zoning output is a legal document and only a licensed engineer may stand
+// behind it (§5.2.4, ai.md R8). An external agent composes; it never applies,
+// and it cannot widen the policy that decides (CLAUDE.md 5.23).
 //
 // ONE PLAN IS ONE UNDO STEP (ai.md R4). Applying runs every step inside one
 // batch, so eleven commands collapse into one `UndoStack` entry and one Ctrl+Z

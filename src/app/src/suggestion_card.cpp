@@ -179,10 +179,11 @@ core::Status SuggestionCard::decide(bool apply)
     if (!pending_)
         return core::err(core::ErrorCode::InvalidArgument, "Bu öneri zaten karara bağlandı.");
 
-    // ==== THE ONE CALL TO `ai::Gate::approve` IN THE PROGRAM =================
+    // ==== ONE OF THE TWO CALLS TO `ai::Gate::approve` IN THE PROGRAM =========
     // Everything above this line is words on a screen; this is the line that
-    // turns a person's click into a value nothing else can make. `ci-gate-ai.sh`
-    // checks that this file is its only caller (ai.md P15).
+    // turns a person's CLICK into a value nothing else can make. The other call
+    // is the policy path, which acts on permission the same person gave
+    // beforehand; `ci-gate-ai.sh` fails the build on a third (ai.md P15).
     //
     // THE POLICY IN FORCE AT THE MOMENT OF THE CLICK travels with the approval,
     // rather than being looked up when the record is written: the setting can

@@ -994,8 +994,23 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
     text += "\nUygulanacak komut satırları:";
     for (const std::string& line : lines)
         text += "\n  " + line;
-    text += "\nÇizim değişmedi. Bu satırları bilgisayar başındaki harita mühendisi uygulayana "
-            "kadar hiçbir şey uygulanmaz; uygulanırsa tamamı tek bir işlem ve tek `Ctrl+Z` olur.";
+    // WHAT ACTUALLY HAPPENED, not what usually happens. Since §5.2.1 was amended
+    // a plan may already have been applied by the user's standing policy before
+    // this answer is built — and telling that client "çizim değişmedi" would be a
+    // flat lie about the drawing it is working on. The state decides the
+    // sentence; the client never applies either way (ai.md R24).
+    const PlanState said_state = state ? state.value().state : PlanState::Pending;
+    if (said_state == PlanState::Applied)
+        text += "\nBU SATIRLAR UYGULANDI: kullanıcının önceden kurduğu onay politikası "
+                "izin verdi (denetim kaydına hangi politikanın verdiği yazıldı). Tamamı "
+                "tek bir işlemdir ve tek `Ctrl+Z` ile geri alınır. Uygulayan sen değilsin.";
+    else if (said_state == PlanState::Running)
+        text += "\nBu satırlar ŞU AN uygulanıyor; henüz bitmedi. Sonucu `ÖNERİ islem=durum` "
+                "ile sorun.";
+    else
+        text += "\nÇizim değişmedi. Bu satırlar, bilgisayar başındaki harita mühendisi "
+                "kartta uygulayana ya da onun önceden kurduğu onay politikası izin verene "
+                "kadar uygulanmaz; uygulanırsa tamamı tek bir işlem ve tek `Ctrl+Z` olur.";
 
     Json structured = state ? state.value().to_json() : Json::object({});
     if (!state) {

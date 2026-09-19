@@ -291,18 +291,26 @@ ayarla üretilemez: yapıcısı özeldir, tek bir üretici işlevi vardır ve o 
 ## Onay politikası ayarı ve `otomatik`
 
 `Seçenekler ▸ Çalışma Davranışı` sayfasında bir **onay politikası** vardır ve üç değeri
-olur: `her_degisiklikte`, `riskli_islemlerde`, `otomatik`.
+olur:
 
-> **`otomatik` bu sürümde yürürlükte değildir.** Hangi mod seçili olursa olsun, çizimi
-> değiştiren her iş öneri kartında bir insanın onayını bekler. Seçerseniz program yine
-> sorar.
+| Değer | Ne zaman onay sorulur |
+|---|---|
+| `her_degisiklikte` | Her plan için. **Öntanımlı budur ve yükseltmede değişmez.** |
+| `riskli_islemlerde` | Yalnız üzerine yazma ve bu makinenin dışına çıkan işler; geri alınabilir düzenleme sorulmaz |
+| `otomatik` | Yetki kapsamı içindeki ve girdileri tam olan iş onay beklemeden yürür |
 
-Bunu açıkça yazıyoruz çünkü bir kontrolün yaptığını söylediği şeyi yapmaması, o kontrolün
-hiç olmamasından kötüdür. Ayarın özeti de bunu söyler.
+**Hiçbir modda olmayan şeyler** — ve bunlar modun seçimiyle değişmez:
 
-Değer yine de duruyor: politika motoru yazıldı ve sınandı, ve kuralın değiştiği gün
-kullanılacak. Değişmediği sürece ajanlara verilen yönerge de aynı şeyi söylemeye devam
-eder: "Bunu atlayan bir yol, bir başlık ya da bir ayar yoktur."
+- **Kapsam dışındaki iş hiçbir modda yürümez.** Kapsam dışı olmak onayla açılabilecek bir
+  şey değildir; `otomatik` bile onu açmaz.
+- **Girdisi eksik bir plan yürümez**; ortada onaylanacak bir şey yoktur.
+- **Her karar denetim kaydına yazılır**, hangi politikanın verdiğiyle birlikte. Otomatik
+  bir işlem, insan tıklaması gibi kaydedilmez.
+- **Onay, kartta okunan adımlara bağlıdır.** Kart çizildikten sonra eklenen bir adım
+  uygulanmaz.
+- **Ayarı yalnız siz değiştirebilirsiniz.** Bir ajan kendi politikasını genişletemez.
+
+Okuma ve görünüm her üç modda da doğrudan çalışır — onlar zaten hiçbir şeyi değiştirmez.
 
 ## Bir istemci kendi iznini genişletemez
 

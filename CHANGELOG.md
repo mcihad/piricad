@@ -6,6 +6,37 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — onay modeli: tek yol yerine iki yol (TODOS S-05, S-04; §5.2.1 tadili)
+
+**Bu bir kural değişikliğidir ve kullanıcının kararıyla yapıldı.** Zincir, hiyerarşinin
+gerektirdiği sırayla ve tek değişiklikte taşındı; aradan biri atlansaydı anayasa ya
+niyetin kaynağıyla ya da kendi rulebook'uyla çelişirdi (CLAUDE.md Article 0.2/0.4).
+
+- **`kentoscad.md` §5.2.1**: "Otomatik uygulama yok" → **"Onaysız uygulama yok"**. AI'nın
+  ürettiği bir dizi çizime iki yoldan ulaşır: önizleme + onay, ya da kullanıcının
+  **önceden, kendisi için, bilerek** kurduğu onay politikası. **§5.2.4 değişmedi:** AI
+  imza atamaz — politika, kullanıcının imzasının kapsamını önceden tarif etmesidir,
+  imzasının yerine geçmesi değil.
+- **`CLAUDE.md` 5.7** yeniden yazıldı ve neyi geçersiz kıldığını adıyla yazıyor
+  (Article 0.5). Yeni **5.23**: hiçbir çağıran kendi yetkisini genişletemez.
+- **`.claude/ai.md`** R3, P1, P15, R24.
+- **`ci-gate-ai.sh`**: onay fabrikası **iki kapalı çağırana** açıldı — kart ve politika
+  yolu — ve **üçüncüsünde hâlâ kırıyor**.
+- **Kod**: `ai::decide_by_policy` ve `AiService::applyByPolicy`.
+
+**Öntanımlı davranış değişmedi.** `her_degisiklikte` hâlâ fallback, yükseltmede de öyle
+kalıyor: ayarı hiç ellememiş bir kullanıcı için her şey aynı.
+
+**Ve değişmeyenler asıl mesele:** kapsam dışı iş hiçbir modda yürümüyor (`Deny` onayla
+açılmıyor); girdisi eksik plan yürümüyor; onay kartta okunan adımlara bağlı; her karar
+denetim kaydına hangi politikanın verdiğiyle yazılıyor; ve politikayı **yalnız
+kullanıcı** değiştirebiliyor. İkinci yolu bir "güven kipi" değil bir **izin** yapan şey
+bu sonuncusu.
+
+**Yol üstünde bulunan kusur:** MCP cevabı her hâlde "Çizim değişmedi" diyordu. Politika
+uygulamışsa bu, istemciye üzerinde çalıştığı çizim hakkında düpedüz yalandır. Cevap artık
+duruma göre konuşuyor ve her hâlde ekliyor: **uygulayan sen değilsin.**
+
 ### Güvenlik — onay, kartta okunan satırlara bağlandı (TODOS S-04)
 
 - Onay yalnız önerinin **kimliğine** bağlıydı. Kart çizildikten sonra öneriyi açan

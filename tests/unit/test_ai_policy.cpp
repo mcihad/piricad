@@ -294,3 +294,60 @@ TEST_CASE("S-04: yeni bir yetki ayarı işaretsiz eklenemez")
         CHECK_MESSAGE(both == false, "hem yetki hem tercih olamaz -> " << spec.id);
     }
 }
+
+TEST_CASE("S-05: yetkisiz uygulama yakalanır, yetkili uygulama reddedilmez")
+{
+    // S-05's acceptance: CI must still catch an unauthorised application, and
+    // must no longer refuse an authorised automatic one as a forbidden approval
+    // caller. The amendment of §5.2.1 (20 September 2026) opened a SECOND road to
+    // a decision; it did not open the door.
+    //
+    // WHAT CHANGED AND WHAT DID NOT. Before, `decide` could answer `Allow` and
+    // nothing could act on it: `Gate::approve` had one caller. Now the policy
+    // path may act — and only within the scope the person set, which no caller
+    // can widen (`escalates`, CLAUDE.md 5.23).
+    using kentos::ai::escalates;
+    using kentos::command::Args;
+    using kentos::command::CommandSpec;
+    using kentos::command::Value;
+
+    // ---- YETKİLİ: the user chose `otomatik` for themselves ------------------
+    ClientScope mine;
+    mine.client = "Ajan A";
+    const kentos::ai::PolicyDecision allowed =
+        decide(Effect::DocumentEdit, with(ApprovalPolicy::Automatic), mine);
+    CHECK_EQ(allowed.verdict, Verdict::Allow);
+    CHECK_FALSE(allowed.reason.empty());
+
+    // ---- YETKİSİZ: out of scope stays out, whatever the policy says ---------
+    //
+    // `Deny` is not `ApprovalRequired`: a client cannot widen its own scope by
+    // any answer, so no preference turns this into an application.
+    ClientScope narrow;
+    narrow.client            = "Ajan B";
+    narrow.may_edit_document = false;
+    const kentos::ai::PolicyDecision denied =
+        decide(Effect::DocumentEdit, with(ApprovalPolicy::Automatic), narrow);
+    CHECK_EQ(denied.verdict, Verdict::Deny);
+
+    // ---- AND THE POLICY ITSELF IS STILL OUT OF REACH -----------------------
+    //
+    // This is the clause that makes the second road safe rather than a trust
+    // mode: a model that met a refusal and turned the policy to `otomatik` would
+    // be granting itself the permission it was denied. The amendment did not
+    // touch this.
+    CommandSpec pref;
+    pref.id = "core.preference";
+    Args widen;
+    widen.set("ad", Value::text("onay_politikası"));
+    widen.set("deger", Value::text("otomatik"));
+    CHECK(escalates(pref, widen));
+
+    // ---- THE DEFAULT IS UNCHANGED for a user who never touched the setting --
+    //
+    // An upgrade must not loosen what was already in force: `her_degisiklikte`
+    // is still the fallback and still sends every edit to a person.
+    const kentos::ai::PolicyDecision fallback =
+        decide(Effect::DocumentEdit, with(ApprovalPolicy::EveryChange), mine);
+    CHECK_EQ(fallback.verdict, Verdict::ApprovalRequired);
+}

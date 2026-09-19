@@ -3,6 +3,9 @@
 
 #include "kentos_cad/ai/commands.hpp"
 #include "kentos_cad/ai/policy.hpp"
+#include "kentos_cad/ai/policy_path.hpp"
+
+#include "kentos_cad/command/log.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/command/session.hpp"
 
@@ -153,6 +156,47 @@ core::Status AiService::settle(const ai::Approval& approval)
     const core::Status settled = gate_->decide(approval);
     emit suggestionSettled(QString::fromStdString(approval.plan_id()));
     return settled;
+}
+
+/// Who the audit record names when a policy decided. The same name the card
+/// uses: the responsible engineer, or the operating system's user marked as such.
+/// A policy decision is still made ON somebody's authority (ai.md R8).
+static std::string policy_operator(const core::Settings& settings)
+{
+    const std::string named{settings.get("core.ai.sorumlu").as_text()};
+    if (!named.empty()) return named;
+    const QString user = qEnvironmentVariable("USER", qEnvironmentVariable("USERNAME"));
+    return user.isEmpty() ? std::string("(adsız kullanıcı)")
+                          : user.toStdString() + " (işletim sistemi kullanıcısı)";
+}
+
+core::Result<bool> AiService::applyByPolicy(const ai::Plan& plan)
+{
+    // WHAT THIS PLAN WOULD LEAVE CHANGED, from its own steps — never guessed
+    // from a command's name (`command::effect_of`, C-02).
+    auto effect = command::Effect::None;
+    for (const ai::PlanStep& step : plan.steps) {
+        const command::CommandSpec* spec = bus_.registry().by_id(step.command_id);
+        if (spec == nullptr) return false; // unknown step: a person decides
+        effect = effect | command::effect_of(*spec, step.args);
+    }
+
+    ai::PolicyPreferences prefs;
+    prefs.approval =
+        ai::approval_policy_from(appSettings().get("core.ai.onay_politikasi").as_text());
+    prefs.questions =
+        ai::question_policy_from(appSettings().get("core.ai.soru_politikasi").as_text());
+    prefs.overwrite =
+        ai::overwrite_policy_from(appSettings().get("core.ai.uzerine_yazma").as_text());
+
+    // THE REQUESTER'S SCOPE. A client reaches only what a client may reach; the
+    // person at the keyboard is unscoped and their own clicks do not come
+    // through here at all.
+    ai::ClientScope scope;
+    scope.client = plan.requester;
+
+    return ai::decide_by_policy(*gate_, plan, prefs, scope, effect, policy_operator(appSettings()),
+                                QDateTime::currentDateTimeUtc().toMSecsSinceEpoch());
 }
 
 core::Status AiService::applyPlan(const ai::Plan& plan)
@@ -371,6 +415,23 @@ core::Result<std::string> AiService::propose(ai::Plan plan)
 
     const std::string filed = plans_.add(std::move(plan));
     emit suggestionFiled(QString::fromStdString(filed));
+
+    // ---- THE SECOND SANCTIONED ROAD (§5.2.1, CLAUDE.md 5.7) ----------------
+    //
+    // The card is one way a decision is made; a policy the user set beforehand
+    // is the other. `decide_by_policy` answers `false` for anything that needs a
+    // person — which is every plan under the default `her_degisiklikte` — so the
+    // card path is unchanged for a user who never touched the setting.
+    //
+    // AND THE POLICY IS THEIRS ALONE: every authority setting is refused to an
+    // agent one layer below (`ai::escalates`, CLAUDE.md 5.23), which is what
+    // makes this road safe rather than a trust mode.
+    if (const ai::Plan* held = plans_.find(filed); held != nullptr) {
+        if (auto applied = applyByPolicy(*held); !applied)
+            command::log_error(applied.error().message);
+        else if (applied.value())
+            emit suggestionSettled(QString::fromStdString(filed));
+    }
 
     // SAID ON THE TRANSCRIPT TOO, because a suggestion that arrived while the
     // user was looking at the drawing must not be a silent modal surprise: the

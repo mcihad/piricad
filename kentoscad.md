@@ -230,7 +230,7 @@ Kullanıcı: "Yola cepheli parsellerde 5 metre çekme mesafesi oluştur"
 
 ### 5.2 Kesinlikle Uyulacak Kurallar
 
-1. **Otomatik uygulama yok.** AI'nın ürettiği her komut dizisi önizlenir ve kullanıcı onaylar. Kadastro ve imar çıktısı hukuki belgedir.
+1. **Onaysız uygulama yok.** AI'nın ürettiği her komut dizisi ya önizlenip kullanıcı tarafından onaylanır, ya da kullanıcının **önceden, kendisi için, bilerek** kurduğu bir onay politikasına göre yürür. Politikayı yalnız bilgisayar başındaki kişi kurabilir; bir istemci, bir başlık, bir prompt ya da bir model kendi iznini genişletemez. Hangi yoldan geçtiği denetim kaydına yazılır. Kadastro ve imar çıktısı hukuki belgedir ve 4. madde değişmez: **AI imza atamaz** — politika, kullanıcının imzasının kapsamını önceden tarif etmesidir, imzanın yerine geçmesi değil. *(20 Eylül 2026'da tadil edildi; önceki hâli "Otomatik uygulama yok. AI'nın ürettiği her komut dizisi önizlenir ve kullanıcı onaylar." idi ve her otomatik yolu tümden yasaklıyordu.)*
 2. **Tek undo adımı.** Onaylanan AI önerisinin tamamı tek `Ctrl+Z` ile geri alınabilmeli.
 3. **Denetim kaydı zorunlu.** Prompt, model kimliği ve sürümü, üretilen komutlar, kullanıcı kararı, zaman damgası. "Bu çizgi neden burada?" sorusuna cevap verebilmelisiniz.
 4. **Sorumluluk sınırı net.** BÖHHBÜY'e göre üretim kontrolü harita/geomatik mühendisinin sorumluluğundadır. AI imza atamaz. Arayüz bunu belirsiz bırakmamalı — AI çıktısı "öneri" olarak etiketlenmeli.

@@ -158,9 +158,14 @@ uygulanacak **komut satırlarının tamamı**. Cevap bunu Türkçe olarak da sö
 Öneri kaydı açıldı: p0f3a1c7b9e4d2856 (durum: beklemede).
 Uygulanacak komut satırları:
   KATMAN ad="YOL KENARI"
-Çizim değişmedi. Bu satırları bilgisayar başındaki harita mühendisi uygulayana kadar
-hiçbir şey uygulanmaz; uygulanırsa tamamı tek bir işlem ve tek `Ctrl+Z` olur.
+Çizim değişmedi. Bu satırlar, bilgisayar başındaki harita mühendisi kartta uygulayana
+ya da onun önceden kurduğu onay politikası izin verene kadar uygulanmaz; uygulanırsa
+tamamı tek bir işlem ve tek `Ctrl+Z` olur.
 ```
+
+Önerinin durumu `uygulandi` ise cevap bunu açıkça söyler — kullanıcının önceden kurduğu
+onay politikası izin vermiştir — ve yine ekler: **uygulayan sen değilsin.** İstemci
+hiçbir hâlde uygulamaz ([Onay ve denetim](onay.md)).
 
 Akışı dinleyen bir istemci, cevaptan önce bir bildirim de alır:
 

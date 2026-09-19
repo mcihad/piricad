@@ -10,10 +10,17 @@
 #      exist — the SPDX line in each file, and the list in /NOTICE that tells a
 #      distributor which files those are — and two lists drift. This compares them.
 #
-#   2. NOBODY CAN FORGE AN APPROVAL. `.claude/ai.md` P1 forbids any trust mode,
-#      and P15 makes that structural: `ai::Gate::approve` is the only factory for
-#      an `Approval` and it is called from the suggestion card and nowhere else.
-#      A second caller anywhere is the trust mode arriving by the back door.
+#   2. NOBODY CAN FORGE AN APPROVAL. `.claude/ai.md` P1 forbids any claim standing
+#      in for a decision, and P15 makes that structural: `ai::Gate::approve` is the
+#      only factory for an `Approval` and it is called from exactly TWO places —
+#      the suggestion card, where a person clicked, and the policy path, which
+#      acts on permission that person gave beforehand. A THIRD caller anywhere is
+#      the trust mode arriving by the back door.
+#
+#      THE COUNT WENT FROM ONE TO TWO ON 20 SEPTEMBER 2026, with §5.2.1 and
+#      CLAUDE.md 5.7. It did NOT become "anyone may ask": the list below is
+#      closed, and the policy path is on it because the policy is the user's and
+#      nothing else can reach it (CLAUDE.md 5.23, `ai::escalates`).
 #
 #   3. THE CATALOGUE IS GENERATED. ai.md P7 bans a checked-in tool schema, and
 #      CLAUDE.md 5.20 bans hand-editing the two generated documents. The deleted
@@ -81,17 +88,22 @@ else
     }
 fi
 
-# ---- 2. one caller for the approval factory ---------------------------------
+# ---- 2. two callers for the approval factory, and no third ------------------
 if [[ -f "$root/src/ai/src/gate.cpp" ]]; then
     # `Gate::approve` is the definition; a CALL is `.approve(` or `->approve(`
-    # on a gate. The suggestion card is the sanctioned caller.
+    # on a gate. Two callers are sanctioned and the list is CLOSED:
+    #   · the suggestion card — a person clicked;
+    #   · the policy path — the person gave permission beforehand, and only they
+    #     could have (CLAUDE.md 5.23).
     mapfile -t callers < <(grep -rlnE '(\.|->)approve\(' "$root/src" "$root/tests" 2>/dev/null \
                                | sed "s|^$root/||" | sort -u)
     for caller in "${callers[@]}"; do
         case "$caller" in
-            src/app/src/suggestion_card.cpp | tests/unit/test_ai_*.cpp | src/ai/src/gate.cpp) ;;
+            src/app/src/suggestion_card.cpp | src/ai/src/policy_path.cpp \
+                | tests/unit/test_ai_*.cpp | src/ai/src/gate.cpp) ;;
             *)
-                echo "ai: only the suggestion card may ask for an approval (ai.md P15) -> $caller:1" >&2
+                echo "ai: only the suggestion card and the policy path may ask for an" >&2
+                echo "ai:   approval (ai.md P15) -> $caller:1" >&2
                 fail=1
                 ;;
         esac
@@ -156,6 +168,6 @@ done < <(grep -rnE '"[^"]*(onaylandı|kontrol edildi|uygundur|mevzuata uygundur|
 
 if [[ $fail -ne 0 ]]; then exit 1; fi
 
-echo "ai: OK — licence split matches /NOTICE, one approval factory with one caller,"
+echo "ai: OK — licence split matches /NOTICE, one approval factory with two closed callers,"
 echo "ai:   catalogue generated (no checked-in schema, no revived projection),"
 echo "ai:   /src/ai does no I/O, and no P4 blocklist word reaches an AI surface"

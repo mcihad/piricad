@@ -19,6 +19,7 @@ include(sources_chat.cmake)
 add_library(kentos_ai STATIC
     src/catalog.cpp
     src/policy.cpp
+    src/policy_path.cpp
     src/llmstxt.cpp
     src/handles.cpp
     src/job_templates.cpp

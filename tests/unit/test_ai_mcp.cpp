@@ -855,7 +855,11 @@ TEST_CASE("Yazma aracı ÇALIŞMAZ: öneri kimliği ve komut satırları döner"
     CHECK(text.find(plan_id) != std::string::npos);
     // The exact command line a person reads and could type themselves.
     CHECK(text.find("ÇİZGİ 0,0 10000,10000") != std::string::npos);
-    CHECK(text.find("uygulayana kadar") != std::string::npos);
+    // THE ANSWER SAYS WHICH STATE IT IS IN. A pending plan says the drawing is
+    // unchanged and names BOTH roads it could take — the card, or the policy the
+    // user set beforehand (§5.2.1). It must never claim the client applied it.
+    CHECK(text.find("Çizim değişmedi") != std::string::npos);
+    CHECK(text.find("onay politikası") != std::string::npos);
 
     const Json* structured = result.find("structuredContent");
     REQUIRE(structured != nullptr);

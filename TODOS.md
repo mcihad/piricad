@@ -21,11 +21,11 @@ işi bitirmeli, her adımda kullanıcıya geri dönmemeli.
 | `- [x]` | Bitti. |
 | `- [!]` | **Karar bekliyor.** Mühendislik tarafında yapılacak iş kalmadı; madde, bakımcının vermesi gereken bir karara bağlı ve o karar maddenin altında okunmaya hazır yazılı. |
 
-`[!]` 20 Eylül 2026'da eklendi ve tek bir madde taşıyor (S-05). Sebebi şu: bir iş
-planının "henüz yapılmadı" ile "bakımcının kararını bekliyor" durumlarını
-ayırt edememesi, ikincisini birincisi gibi göstermektir — ve o iki durumun
-gerektirdiği hamle aynı değildir. `[!]` bir madde **bitmiş sayılmaz**; ne
-yapıldığı ve neyin beklendiği maddenin kendisinde yazılıdır.
+`[!]` 20 Eylül 2026'da eklendi, tek bir madde taşıdı (S-05) ve aynı gün boşaldı:
+kullanıcı kararı verdi, zincir uygulandı. İşaret duruyor çünkü sebebi duruyor —
+bir iş planının "henüz yapılmadı" ile "bakımcının kararını bekliyor" durumlarını
+ayırt edememesi, ikincisini birincisi gibi göstermektir, ve o iki durumun
+gerektirdiği hamle aynı değildir. `[!]` bir maddeyi **bitmiş saymaz**.
 
 ## 1. İncelenen dallar ve mevcut çalışmalar
 
@@ -900,7 +900,7 @@ ve hiç seçim yoksa önce bağlam çözülür; çözülemiyorsa yalnız nesne s
   policy'den üretilsin. Yalnız prompt'a “sorma” yazmak yeterli sayılmasın.
   **Kabul:** otomatik modda “mühendis uygulayana kadar bekler” gibi çelişkili
   metin yok; modeller araç başarısını bekleyip iş akışına devam eder.
-- [~] **S-04 / P0 — İzinleri yeniden sorma ve yetki yükseltme kontrolü.** Bir
+- [x] **S-04 / P0 — İzinleri yeniden sorma ve yetki yükseltme kontrolü.** Bir
   onay planın içeriği/revizyonu/etki kapsamına bağlansın; aynı iş için onay
   tekrarlanmasın. Model genel ayarları yönetebilsin; kendi onay politikasını veya
   erişim kapsamını genişletme işlemi ayrı, açık kullanıcı talebine dayanmalı.
@@ -922,112 +922,46 @@ ve hiç seçim yoksa önce bağlam çözülür; çözülemiyorsa yalnız nesne s
   ve `Approval::content` bunu bağlıyor; farklı bir öneri **reddediliyor**,
   kırpılmıyor — dürüst cevap önerinin şu anki hâlini gösteren yeni bir karttır.
   Revizyon kontrolü zaten vardı (`applyPlan`, C-04).
-  **Kalan — ve bu bir KULLANICI KARARI:** "aynı iş için onay tekrarlanmasın" ve
-  "kullanıcının önceden verdiği otomatik yetki" cümleleri, önceden verilmiş bir
-  iznin sonraki adımları da kapsamasını istiyor. Bu, `kentoscad.md` §5.2.1'in
-  ("Otomatik uygulama yok … Kadastro ve imar çıktısı hukuki belgedir") ve ardından
-  CLAUDE.md 5.7'nin tadili demektir — bu sırayla, çünkü Article 0.4 çatışmayı
-  yukarı çözüyor. Tadilat metni **S-05'in altında yazılı ve okunmaya hazır**;
-  karar bakımcının.
-- [!] **S-05 / P0 — Kural, test ve doküman migration'ı.** *(tadilat metni hazır — KARAR BEKLİYOR)*
-  Mevcut `CLAUDE.md` 2.8/2.10/5.7, `.claude/ai.md` R2/R3 ve P1/P15, `plan.hpp`,
-  `gate.hpp`, `dispatcher.hpp` yorumları ve `scripts/ci-gate-ai.sh` zorunlu insan
-  onayı/tek fabrika çağırıcısı varsayımlarını taşıyor. Bu kullanıcı talebi yeni
-  ürün yönünü belirliyor: uygulama sırasında bu metinler ve testler policy tabanlı
-  modele birlikte geçirilmeli; kuraldan habersiz bir bypass eklenmemeli.
-  `docs/yapay-zeka/onay.md`, MCP/sohbet kılavuzları ve üretilen `docs/llms*.txt`
-  aynı değişimde güncellensin.
-  **Kabul:** CI hâlâ yetkisiz uygulamayı yakalar; yetkili otomatik uygulamayı
-  “yasak onay çağırıcısı” diye reddetmez. Üretilen dosyalar elle değiştirilmez.
+  *(20 Eylül 2026 — son yarı da kapandı.)* Kullanıcının **önceden verdiği**
+  yetki artık gerçekten iş görüyor: tadilat onaylandı (S-05) ve
+  `ai::decide_by_policy` politikanın izin verdiği planı uyguluyor. "Aynı iş için
+  onay tekrarlanmasın" böylece sağlandı — izin bir kez, önceden, kullanıcının
+  kendisi tarafından veriliyor. Kapsam dışı iş hiçbir modda yürümüyor ve model
+  kendi politikasını genişletemiyor, yani izin **yetki yükseltmesine**
+  dönüşmüyor.
+- [x] **S-05 / P0 — Kural, test ve doküman migration'ı.** *(20 Eylül 2026)*
+  Kullanıcı 20 Eylül'de tadilatı onayladı ve zincirin tamamı **tek değişiklikte**
+  taşındı — sıra bağlayıcıydı ve ona uyuldu:
+  1. **`kentoscad.md` §5.2.1** (niyetin kaynağı, Article 0.3/0.4 gereği önce):
+     "Otomatik uygulama yok" → "Onaysız uygulama yok", iki yol (önizleme+onay, ya
+     da kullanıcının **önceden kendisi için** kurduğu politika). **§5.2.4
+     değişmedi:** AI imza atamaz.
+  2. **`CLAUDE.md` 5.7** yeniden yazıldı, neyi geçersiz kıldığını adıyla yazıyor
+     (Article 0.5); yeni **5.23** yetki genişletme yasağını anayasaya taşıdı.
+  3. **`.claude/ai.md`** R3, P1, P15 ve R24.
+  4. **`scripts/ci-gate-ai.sh`**: onay fabrikası **iki kapalı çağırana** açıldı
+     (kart + politika yolu), **üçüncüsü hâlâ kırıyor**. Kabul cümlesinin ikinci
+     yarısı buydu.
+  5. **Kod:** `ai::decide_by_policy` (`policy_path.cpp`) ve
+     `AiService::applyByPolicy`. Politika `Allow` demezse hiçbir şey olmuyor, yani
+     öntanımlı `her_degisiklikte` altında davranış **birebir eskisi**.
+  6. **Yorumlar:** `gate.hpp`, `plan.hpp`, `suggestion_card.cpp`.
+  7. **Belgeler:** `onay.md` ("Onay zorlanamaz" iki yolu anlatıyor, politika
+     tablosu ve "hiçbir modda olmayan şeyler"), `README.md`, `mcp-sunucusu.md`,
+     ayar özeti; `make reference` ile `llms*.txt` yeniden üretildi (elle değil).
+  8. **Testler:** `no_autoapply` yerine S-05'in kabul vakası — yetkisiz uygulama
+     yakalanıyor (`Deny` onayla açılmıyor), yetkili uygulama reddedilmiyor; S-03
+     vakası tersine çevrildi (özet artık programın YAPTIĞINI anlatıyor).
+  **Yol üstünde bulunan kusur:** MCP cevabı her hâlde "Çizim değişmedi" diyordu.
+  Politika uygulamışsa bu, istemciye üzerinde çalıştığı çizim hakkında düpedüz
+  yalandır. Cevap artık duruma göre konuşuyor ve her hâlde ekliyor: **uygulayan
+  sen değilsin.**
+  **Değişmeyenler — ve asıl mesele bunlar:** kapsam dışı iş hiçbir modda yürümez;
+  girdisi eksik plan yürümez; onay kartta okunan adımlara bağlı; her karar hangi
+  politikanın verdiğiyle kayda geçiyor; ve politikayı **yalnız kullanıcı**
+  değiştirebiliyor (`ai::escalates`, CLAUDE.md 5.23) — ikinci yolu bir "güven
+  kipi" değil bir **izin** yapan şey budur.
 
-  ---
-
-  #### Neden bu madde bir ajan tarafından kapatılamaz
-
-  İlk yazdığımda bunu "CLAUDE.md 5.7'nin tadili" sandım. **Yanlıştı, ve yanlış
-  olduğu önemli:** 5.7 kendi başına duran bir tercih değil, `kentoscad.md`
-  §5.2.1'in anayasaya geçirilmiş hâli. Kaynak metin şöyle diyor:
-
-  > **5.2 Kesinlikle Uyulacak Kurallar**
-  > 1. **Otomatik uygulama yok.** AI'nın ürettiği her komut dizisi önizlenir ve
-  >    kullanıcı onaylar. Kadastro ve imar çıktısı hukuki belgedir.
-  > 4. …BÖHHBÜY'e göre üretim kontrolü harita/geomatik mühendisinin
-  >    sorumluluğundadır. **AI imza atamaz.**
-
-  CLAUDE.md Article 0.3 `kentoscad.md`'yi **niyetin kaynağı** ilan ediyor ve 0.4
-  çatışmanın **yukarı** çözüldüğünü söylüyor: rulebook → anayasa → `kentoscad.md`,
-  ve *"A real contradiction is a defect — fix the document, never route around it
-  in code."*
-
-  Dolayısıyla yalnız 5.7'yi tadil etmek, anayasayı niyetin kaynağıyla **çelişkiye
-  düşürürdü** — 0.4'ün adıyla yasakladığı şey. Bu maddeyi kapatmanın tek doğru
-  yolu **`kentoscad.md` §5.2.1'den başlamaktır**, ve o belge bakımcının ürün
-  niyetini yazdığı belgedir.
-
-  Bu TODOS dosyası da hiyerarşide **altta**: Article 0.1 *"Where any document …
-  conflicts with it, this file wins"* diyor ve TODOS bir dosyadır. Yani S-05'in
-  "bu kullanıcı talebi yeni ürün yönünü belirliyor" cümlesi §5.2.1'i kendiliğinden
-  geçersiz kılmıyor — **§5.2.1'in değiştirilmesini talep ediyor**. Talebi kaydeden
-  bir satır, ruhsatlı mühendisin imza sorumluluğunu değiştiren bilgilendirilmiş bir
-  karar değildir.
-
-  Bu maddenin §5.2.1'e bağlı OLMAYAN her parçası yapıldı ve ayrı ayrı işaretlendi:
-  S-03'ün çelişen metni, S-04'ün yetki yükseltme yarısı ve onayın içeriğe
-  bağlanması, S-06'nın karar kaynağı alanları.
-
-  #### Önerilen tadilat (bakımcının onayına)
-
-  **0. ÖNCE `kentoscad.md` §5.2.1.** Bu olmadan aşağıdakilerin hiçbiri yapılamaz;
-  yapılırsa anayasa niyetin kaynağıyla çelişir (Article 0.4). Önerilen yeni metin:
-
-  > 1. **Onaysız uygulama yok.** AI'nın ürettiği her komut dizisi ya önizlenip
-  >    kullanıcı tarafından onaylanır, ya da kullanıcının **önceden, kendisi için,
-  >    bilerek** kurduğu bir onay politikasına göre yürür. Politikayı yalnız
-  >    bilgisayar başındaki kişi kurabilir; bir istemci, bir başlık, bir prompt ya
-  >    da bir model kendi iznini genişletemez. Hangi yoldan geçtiği denetim
-  >    kaydına yazılır. Kadastro ve imar çıktısı hukuki belgedir ve §5.2.4
-  >    değişmez: **AI imza atamaz** — politika, kullanıcının imzasının kapsamını
-  >    önceden tarif etmesidir, imzanın yerine geçmesi değil.
-
-  **1. CLAUDE.md 5.7 yerine:**
-
-  > 5.7 NEVER apply AI output outside the sanctioned decision path. A change to
-  > the document reaches it either through a preview and an explicit human
-  > approval, or through an approval policy the user set BEFOREHAND, deliberately
-  > and for themselves — never through a claim made by a client, a header, a
-  > prompt or a model. Whichever path it took is recorded in the audit record
-  > (`karar_veren`) and the policy in force is recorded with it. **This
-  > supersedes the former 5.7**, which forbade every automatic path outright; the
-  > reason it did — that a cadastral output is a legal document only a licensed
-  > engineer may sign (2.8) — is preserved by the fact that only the person at the
-  > workstation can set the policy (`ai::escalates`, S-04) and by the record
-  > naming what decided (S-06).
-
-  **2. `.claude/ai.md`:** R3/P1 aynı cümleyle yeniden yazılır; P15'in "tek fabrika
-  çağırıcısı" kuralı "onay nesnesini yalnız kart ya da politika motoru üretir,
-  ikisi de kullanıcının önceden verdiği izne dayanır" olur.
-
-  **3. `scripts/ci-gate-ai.sh`:** tek çağıran denetimi **iki** meşru çağırana
-  açılır (`suggestion_card.cpp` ve politika motoru) ve üçüncüsünü kırmaya devam
-  eder. Kabul cümlesinin ikinci yarısı budur.
-
-  **4. Kod yorumları:** `plan.hpp`, `gate.hpp`, `dispatcher.hpp` ve
-  `policy.hpp`'deki "yalnız bir insan" cümleleri aynı değişiklikte güncellenir.
-
-  **5. Belgeler:** `docs/yapay-zeka/onay.md`'nin "Onay zorlanamaz" ve "`otomatik`
-  yürürlükte değil" bölümleri; `mcp-sunucusu.md` ve `sohbet.md`; ve `make
-  reference` ile üretilen `docs/llms*.txt` (elle değil).
-
-  **6. Testler:** `test_ai_policy.cpp`'deki S-03 vakası (özet artık katılımsız
-  yürütmeyi vaat EDEBİLİR) ve `no_autoapply_test`'in yerine "yetkisiz uygulama
-  yakalanır, yetkili uygulama reddedilmez" vakası.
-
-  Tadilat kabul edilirse S-03'ün ve S-04'ün kalan yarıları da aynı değişiklikte
-  kapanır; reddedilirse bu madde kapanır ve `otomatik` değeri ayardan kaldırılır.
-
-  **Sıra bağlayıcıdır:** §5.2.1 → CLAUDE.md 5.7 → ai.md → kapı → yorumlar →
-  belgeler → testler. Aradan biri atlanırsa ortaya çıkan şey, kuralın kendisinin
-  yasakladığı "kuraldan habersiz bypass"tır (bu maddenin kendi cümlesi).
 - [~] **S-06 / P1 — Audit ve ayar migration'ı.** *(karar kaynağı ve policy 19 Eylül 2026)*
   **Yapıldı:** Denetim kaydı iki alan kazandı — `karar_veren` ve
   `onay_politikasi`. İlki bugün her satırda `insan` yazıyor ve **yazılması

@@ -1027,7 +1027,7 @@ TEST_CASE("TERCİH betikten de kalıcıdır — kapsam bildirimi her istemciye g
     CHECK_EQ(app_writes, 2);
 }
 
-TEST_CASE("S-03: bir ayarın özeti programın yapmadığı şeyi vaat edemez")
+TEST_CASE("S-03: bir ayarın özeti programın YAPTIĞI şeyi anlatır")
 {
     // THE TWO TEXTS CONTRADICTED EACH OTHER, and one of them was wrong.
     //
@@ -1049,17 +1049,22 @@ TEST_CASE("S-03: bir ayarın özeti programın yapmadığı şeyi vaat edemez")
     REQUIRE(at != kNoSetting);
     const SettingSpec& spec = cat.all()[at];
 
-    CHECK(spec.summary.find("onay beklemeden") == std::string::npos);
-
-    // AND IT SAYS SO OUT LOUD. A value a person can pick that quietly does
-    // nothing is the aspirational present tense CLAUDE.md 11.8 forbids, in the
-    // one place a user actually reads.
-    bool warned = spec.summary.find("YÜRÜRLÜKTE DEĞİL") != std::string::npos ||
-                  spec.summary.find("yürürlükte değil") != std::string::npos;
-    CHECK(warned);
-
-    // The value itself is still offered, because the policy engine is written
-    // and tested for the day the rule changes; what is refused is describing it
-    // as something the program does today.
+    // SINCE §5.2.1 WAS AMENDED the mode is in force, so the summary describes it
+    // rather than warning that it does nothing. The rule the case enforces is
+    // unchanged and still the point: the text and the behaviour must agree.
+    CHECK(spec.summary.find("yürürlükte değil") == std::string::npos);
+    CHECK(spec.summary.find("YÜRÜRLÜKTE DEĞİL") == std::string::npos);
     CHECK(std::find(spec.values.begin(), spec.values.end(), "otomatik") != spec.values.end());
+
+    // AND IT NAMES WHAT STILL CANNOT HAPPEN, which is what a person choosing
+    // this setting most needs to know: work outside the scope runs in no mode,
+    // and the setting is theirs alone — no agent can widen it (CLAUDE.md 5.23).
+    CHECK(spec.summary.find("kapsam dışındaki iş") != std::string::npos);
+    CHECK(spec.summary.find("genişletemez") != std::string::npos);
+
+    // THE DEFAULT IS UNCHANGED BY THE AMENDMENT. An upgrade must not loosen what
+    // was already in force, so `her_degisiklikte` is still the fallback and the
+    // summary still says so.
+    CHECK_EQ(spec.fallback.as_enum(), 0u);
+    CHECK(spec.summary.find("öntanımlı budur") != std::string::npos);
 }
