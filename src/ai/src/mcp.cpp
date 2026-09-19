@@ -780,11 +780,20 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
                                 "Bilinmeyen araç: '" + tool_name + "'. Geçerli adlardan birkaçı: " +
                                     sample_names(catalog, 4) + ". Tam liste: `tools/list`."));
 
-    const command::CommandSpec* spec = registry_.by_id(tool->command_id);
+    // THE COMMAND ID IS COPIED, not read back later through `tool`.
+    //
+    // `tool` points into the dispatcher's CATALOGUE, which the application
+    // rebuilds lazily when the registry's fingerprint moves — and between here
+    // and the `_meta` block far below this function runs a whole plan through
+    // `propose`. Nothing registers a command mid-plan today, so the pointer
+    // survives; "survives today" is exactly what `LayoutDesigner::aimAt` relied
+    // on before it crashed the program on freed memory. A copy costs nothing.
+    const std::string command_id     = tool->command_id;
+    const command::CommandSpec* spec = registry_.by_id(command_id);
     if (spec == nullptr)
         return with_audit(fault(rpc.id, kInternalError,
                                 "Araç '" + tool_name + "' kayıtlı olmayan bir komuta bakıyor: '" +
-                                    tool->command_id + "'."));
+                                    command_id + "'."));
 
     Compiled compiled = compile(*spec, arguments, out.audit.requester);
 
@@ -826,7 +835,7 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
     // ---------------------------------------------------------------- reading --
     if (!tool->mutates) {
         core::Result<ToolOutcome> ran =
-            dispatcher_.run_read_only(tool->command_id, compiled.args, out.audit.requester);
+            dispatcher_.run_read_only(command_id, compiled.args, out.audit.requester);
         if (!ran) {
             // A DOMAIN ERROR: an unknown layer, an empty selection, a refusal by
             // validation. A result with `isError`, never a JSON-RPC error, so a
@@ -875,7 +884,7 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
 
         Json meta;
         meta.set("cad.kentos/commandId",
-                 Json::string(outcome.command_id.empty() ? tool->command_id : outcome.command_id));
+                 Json::string(outcome.command_id.empty() ? command_id : outcome.command_id));
         out.payload = rpc_result(rpc.id, call_result(std::move(text),
                                                      have_structured ? structured : Json::null(),
                                                      false, std::move(meta)));
@@ -888,7 +897,7 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
     // that person. The client is answered immediately with the plan's id, its
     // state and the exact command lines it holds.
     PlanStep step;
-    step.command_id = tool->command_id;
+    step.command_id = command_id;
     step.args       = compiled.args;
     step.line       = render_line(*spec, compiled.args);
     step.handles    = compiled.handles;
@@ -1001,7 +1010,7 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
     }
 
     Json meta;
-    meta.set("cad.kentos/commandId", Json::string(tool->command_id));
+    meta.set("cad.kentos/commandId", Json::string(command_id));
     meta.set(kPlanMetaKey, Json::string(plan_id));
     meta.set("cad.kentos/approval", Json::string("user-required"));
 

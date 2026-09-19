@@ -432,13 +432,20 @@ void LayerPanel::probeByHand()
         const core::Layer* named = doc.layer(on);
         if (named == nullptr) continue;
 
+        // THE NAME IS TAKEN BEFORE THE BUS RUNS. `SEÇ` does not rewrite the
+        // layer table today, so this pointer happens to survive — but "happens
+        // to" is what `LayoutDesigner::aimAt` relied on, and that one crashed
+        // the program in `strlen` on freed memory. A copy costs nothing and
+        // removes the question.
+        const std::string on_layer = named->name;
+
         controller_.runLine(
             QStringLiteral("SEÇ mod=NESNE nesneler=%1").arg(static_cast<qulonglong>(doc.key_of(e))),
             command::Origin::Gui);
         QCoreApplication::processEvents();
 
         const core::LayerId followed = selectedLayer();
-        say("seçim -> panel: nesne katmanı '" + named->name + "', panelde seçili '" +
+        say("seçim -> panel: nesne katmanı '" + on_layer + "', panelde seçili '" +
             (followed == core::kNoLayer       ? std::string("(yok)")
              : doc.layer(followed) != nullptr ? doc.layer(followed)->name
                                               : std::string("?")) +

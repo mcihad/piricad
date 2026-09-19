@@ -6,6 +6,15 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Sağlamlaştırıldı — aynı desen için ağaç tarandı
+
+- `aimAt`'ı çökerten desen — belgeye işaret eden bir imleci veri yolu çağrısının
+  üstünden taşımak — bütün `/src/app`, `/src/command`, `/src/ai` ve
+  `/src/processing` için tarandı. İki yer daha bulundu ve ikisi de **bugün
+  zararsızdı**: `panels.cpp`'de `SEÇ` katman tablosunu yeniden yazmıyor,
+  `mcp.cpp`'de bir plan kaydı komut kütüğünü değiştirmiyor. İkisi de kopyaya
+  çevrildi, çünkü "bugün zararsız" tam olarak `aimAt`'ın dayandığı şeydi.
+
 ### Düzeltildi — çıktı tasarımcısında serbest bırakılmış belleğe erişim (çökme)
 
 - `LayoutDesigner::aimAt` belgeye **işaret eden** bir `const LayoutItem*` tutuyor,
