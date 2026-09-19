@@ -1910,3 +1910,44 @@ TEST_CASE("SEMBOL: yönetmeliğin öteki adı da aynı gösterime çıkıyor")
         }
     CHECK(aliases >= std::size_t{13});
 }
+
+TEST_CASE("Çıktı yerleşimi: harita çerçevesi yalnız kendi katmanlarını çizer")
+{
+    // TODOS 2.1 named this: the model carried `layers` and `paint_map` never
+    // passed it to the renderer, so "this map draws these layers" was a field a
+    // user could set and a sheet would ignore. The claim is about the RENDERER,
+    // so it is made against `build_scene` rather than against a picture.
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("KATMAN ad=parsel", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("ÇİZGİ 0,0 10,10", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("KATMAN ad=bina", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("ÇİZGİ 20,0 30,10", Origin::Test).ok());
+    REQUIRE_EQ(rig.doc.live_entity_count(), std::size_t{2});
+
+    render::ViewTransform view;
+    view.set_viewport(800, 600);
+    view.fit(rig.doc.extent());
+
+    const auto drawn = [&](const std::vector<std::uint8_t>& mask) {
+        render::SceneOptions options;
+        options.cull          = false;
+        options.layer_allowed = mask;
+        render::DrawList list;
+        render::build_scene(rig.doc, view, options, list);
+        return list.entity_count;
+    };
+
+    // EMPTY MEANS EVERY VISIBLE LAYER, which is the canvas's answer.
+    const std::size_t all = drawn({});
+    CHECK(all >= 2);
+
+    // And a mask that names one layer draws less than all of them.
+    std::vector<std::uint8_t> only_first(rig.doc.layers().size(), 0);
+    REQUIRE(!only_first.empty());
+    only_first[0] = 1;
+    CHECK(drawn(only_first) < all);
+
+    // A mask that names nothing draws nothing: it narrows, it does not widen.
+    const std::vector<std::uint8_t> none(rig.doc.layers().size(), 0);
+    CHECK_EQ(drawn(none), std::size_t{0});
+}

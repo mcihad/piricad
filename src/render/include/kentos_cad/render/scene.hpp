@@ -6,6 +6,9 @@
 #include "kentos_cad/render/drawlist.hpp"
 #include "kentos_cad/render/view.hpp"
 
+#include <cstdint>
+#include <span>
+
 namespace kentos::render {
 
 /// Turns one symbol layer into a pass, converting every measure to pixels.
@@ -50,6 +53,20 @@ struct SceneOptions
     /// screen and is dropped. Strokes only — a face keeps every vertex, because
     /// dropping one changes the shape being coloured.
     double lod_pixels{0.75};
+
+    /// WHICH LAYERS THIS SCENE MAY DRAW, indexed by `LayerId`. Empty means every
+    /// visible layer, which is the canvas's answer and the answer a first map
+    /// frame wants.
+    ///
+    /// A SPAN OF BYTES, not a list of names. This is read once per entity on the
+    /// five-million-parcel path, so it has to be an array index — comparing layer
+    /// names there would put a string compare inside the frame budget (§10.1).
+    /// The caller builds it from whatever it has; `layout_render.cpp` builds it
+    /// from a map item's `layers`.
+    ///
+    /// It NARROWS, never widens: a layer the document hides stays hidden whatever
+    /// this says, because `EntityTable::visible` has already spoken (model.md R7).
+    std::span<const std::uint8_t> layer_allowed;
 };
 
 /// Rebuilds `out` for the current view. Allocation is reused between frames:

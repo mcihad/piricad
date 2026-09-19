@@ -127,6 +127,22 @@ void paint_map(QPainter& painter, const QRectF& box, const core::Document& docum
         options.lod                 = true;
         options.line_weights        = true;
 
+        // THE FRAME'S OWN LAYERS, which the model has carried all along and the
+        // renderer was never told about: `item.layers` reached no scene option,
+        // so "this map draws these layers" was a field a user could set and a
+        // sheet would ignore. Empty still means every visible layer.
+        //
+        // Built as a byte per layer, because the scene reads it once per entity
+        // and a name compare there would sit inside the frame budget (§10.1).
+        std::vector<std::uint8_t> allowed;
+        if (!item.layers.empty()) {
+            allowed.assign(document.layers().size(), 0);
+            for (const std::string& wanted : item.layers)
+                for (std::size_t i = 0; i < document.layers().size(); ++i)
+                    if (core::turkish_key_equals(document.layers()[i].name, wanted)) allowed[i] = 1;
+            options.layer_allowed = allowed;
+        }
+
         render::DrawList list;
         render::build_scene(document, view, options, list);
 

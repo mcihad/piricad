@@ -372,6 +372,14 @@ void build_scene(const core::Document& doc, const ViewTransform& view, const Sce
         const core::LayerId lid = entities.layer[e];
         if (lid >= layers.size()) return;
 
+        // THE CALLER'S LAYER FILTER, one array index. A layout's map frame names
+        // the layers it draws so that two frames on one sheet can show different
+        // themes of the same ground; the canvas passes nothing and every visible
+        // layer is drawn.
+        if (!options.layer_allowed.empty() &&
+            (lid >= options.layer_allowed.size() || options.layer_allowed[lid] == 0))
+            return;
+
         // The style column decides, and falls back to the layer only when it
         // carries the ByLayer sentinel. This is the one lookup the frame path
         // does, and it is an array index — never a rule, an expression or a

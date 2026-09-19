@@ -6,6 +6,20 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — harita çerçevesinin katman listesi render'a hiç ulaşmıyordu
+
+- `core::LayoutItem::layers` modelde baştan beri duruyordu ve `paint_map` onu
+  hiçbir render seçeneğine aktarmıyordu: "bu harita şu katmanları çizer",
+  kullanıcının ayarlayabildiği ve sayfanın yok saydığı bir alandı.
+- `render::SceneOptions::layer_allowed` eklendi — **katman başına bir bayt**,
+  ad listesi değil: sahne bunu nesne başına bir kez okuyor ve orada bir ad
+  karşılaştırması kare bütçesinin içine girerdi (§10.1).
+- Maske **daraltıyor, genişletmiyor**: belgenin gizlediği bir katman ne olursa
+  olsun gizli kalıyor, çünkü `EntityTable::visible` zaten konuşmuştur (model.md R7).
+  Boş olması "görünür bütün katmanlar" demek — tuvalin cevabı ve ilk harita
+  çerçevesinin istediği.
+
+
 ### Eklendi — çok sayfalı çıktı yerleşimi (TODOS L-02)
 
 - **Tasarımcıda bir SAYFA bölümü**: hangi sayfada olunduğunu söyleyen bir alan,
