@@ -31,6 +31,7 @@
 #include "kentos_cad/ai/provider.hpp"
 
 #include <QString>
+#include <QStringList>
 #include <QWidget>
 
 #include <functional>
@@ -168,6 +169,23 @@ private:
     /// happen (TODOS A-04). Nothing is applied here: the person already
     /// decided, and what continues is the conversation.
     void resumeAfterDecision(const QString& planId, bool applied);
+
+    /// The suggestions THIS conversation has filed, in the order it filed them.
+    ///
+    /// Kept so a cancellation cannot claim that nothing happened. The cancel
+    /// message used to say the drawing was untouched, which is false the moment
+    /// a card in this conversation has been applied — and pressing Stop right
+    /// after applying one is the likeliest moment of all (TODOS A-06). Only the
+    /// ids are kept; what became of each is asked of the plan store, which is
+    /// the only thing that knows.
+    QStringList filed_;
+
+    /// Which of `filed_` are applied right now, as a readable list. Empty when
+    /// this conversation has changed nothing.
+    QString appliedSoFar() const;
+
+    /// How many read rounds this question may take, from `core.ai.tur_siniri`.
+    int maxRounds() const;
 
     /// The profile the chooser is on, or nothing when none is configured.
     const ai::ProviderProfile* chosen() const;

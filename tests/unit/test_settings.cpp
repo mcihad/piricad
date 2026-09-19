@@ -105,7 +105,7 @@ TEST_CASE("SettingSpec: her bildirim eksiksiz ve kataloğa kabul edilmiş")
 {
     const SettingCatalog& cat = builtin_settings();
     CHECK(cat.size() ==
-          70); // her X-makro satırı kabul edildi (62 + MCP, yapay zeka ve çalışma davranışı)
+          71); // her X-makro satırı kabul edildi (62 + MCP, yapay zeka ve çalışma davranışı)
 
     for (const auto& spec : cat.all()) {
         CHECK(!spec.id.empty());

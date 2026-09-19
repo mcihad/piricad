@@ -407,6 +407,7 @@ KENTOS_SETTING(mcp_belirtec_zorunlu);
 KENTOS_SETTING(mcp_otomatik);
 KENTOS_SETTING(ai_hassas);
 KENTOS_SETTING(ai_dusunme_goster);
+KENTOS_SETTING(ai_tur_siniri);
 KENTOS_SETTING(ai_onay_politikasi);
 KENTOS_SETTING(ai_soru_politikasi);
 KENTOS_SETTING(ai_uzerine_yazma);
@@ -470,6 +471,7 @@ KENTOS_SETTING(alan_birimi);
     X(mcp_otomatik)                                                                                \
     X(ai_hassas)                                                                                   \
     X(ai_dusunme_goster)                                                                           \
+    X(ai_tur_siniri)                                                                               \
     X(ai_onay_politikasi)                                                                          \
     X(ai_soru_politikasi)                                                                          \
     X(ai_uzerine_yazma)                                                                            \
@@ -1813,6 +1815,35 @@ KENTOS_SETTING(ai_hassas)
         // could change this would be widening its own permissions, so
         // `ai::escalates` refuses the call whatever flags the command carries.
         // The person at the keyboard edits it here like any other setting.
+        .authority = true,
+    };
+}
+
+KENTOS_SETTING(ai_tur_siniri)
+{
+    return SettingSpec{
+        .id    = "core.ai.tur_siniri",
+        .names = {"tur_sınırı", "tur_siniri", "round_limit", "tur"},
+        .type  = SettingType::Int,
+        // APP SCOPE: it is how patient the person at THIS workstation is with a
+        // model that keeps reading, not a property of the drawing. A project
+        // carried to another office meets that office's patience (model.md R40).
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(8),
+        .range    = SettingRange::between(1, 50),
+        .values   = {},
+        .unit     = "tur",
+        .summary  = "Bir soru için modelin en çok kaç tur okuma aracı çalıştırabileceği. "
+                    "Sınıra gelince panel durur ve durduğunu söyler — yapılmış işler "
+                    "kaybolmaz. Bu makinedeki kişinin sabrını tarif ettiği için uygulama "
+                    "kapsamındadır.",
+        .section  = "Yapay Zeka Modelleri", // ui-label
+        // AUTHORITY, NOT PREFERENCE, and the guard test forced the question the
+        // day this setting was written (settings.hpp `authority`, TODOS S-04).
+        // A round limit bounds how much a model may DO before it has to stop and
+        // ask; a model that hit the limit and raised it would be granting itself
+        // the turns it was refused. That it is a small number does not make it a
+        // preference — the approval policy is a small word.
         .authority = true,
     };
 }

@@ -6,6 +6,24 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — "iptal edildi" mesajı uygulanmış işleri gizliyordu (TODOS A-06, kısmi)
+
+- **Dur**, "İptal edildi. Çizimde hiçbir şey değişmedi." diyordu. Bu, o konuşmada
+  bir öneriyi uygulamış biri için **yanlıştı** — ve bir öneriyi uyguladıktan hemen
+  sonra Dur'a basmak en olası andır. İptal edilen TUR hiçbir şey değiştirmez;
+  **iş** epey şey değiştirmiş olabilir, ve uygulanmış işi gizleyen bir mesaj hiç
+  mesaj olmamasından kötüdür.
+- Mesaj artık bu konuşmada uygulanmış önerileri adıyla sayıyor ve Ctrl+Z'yi
+  gösteriyor. Hangisinin uygulandığı **öneri defterinden** okunuyor, bir bayraktan
+  değil: kişi bir kartı uygulayıp geri almış, sonra başkasını uygulamış olabilir.
+- **Tur sınırı artık bir ayar** (`core.ai.tur_siniri`, 1–50, öntanımlı 8): bir
+  modelin okumakta ne kadar ısrar edebileceği, bu makinedeki kişinin kararıdır,
+  bir C++ sabitinin değil. **Yetki ayarı** olarak işaretlendi — sınıra çarpıp onu
+  yükselten bir model, reddedildiği turları kendine vermiş olurdu (S-04).
+- Bu kararı **testin kendisi zorladı**: `core.ai.` altına eklenen sekizinci ayar,
+  yetki mi tercih mi olduğu söylenene kadar yapıyı kırdı. Kapı yazıldığı gün işe
+  yaradı.
+
 ### Sağlamlaştırıldı — aynı desen için ağaç tarandı
 
 - `aimAt`'ı çökerten desen — belgeye işaret eden bir imleci veri yolu çağrısının

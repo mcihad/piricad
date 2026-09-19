@@ -668,7 +668,24 @@ motor kabiliyeti eklenir; GUI, AI ve MCP aynı sürümde bu kabiliyeti kullanır
   modele görsel girdi sun. Çok modlu olmayan model yapısal raporla çalışabilsin.
   **Kabul:** “lejant haritanın üstüne binmiş” talebinde çakışma saptanır, düzeltilir
   ve yeni önizlemeyle doğrulanır; yalnız metinle “düzelttim” denmez.
-- [ ] **A-06 / P1 — İş sürekliliği ve anlaşılır UI.** İş/adım durumu, varsayımlar,
+- [~] **A-06 / P1 — İş sürekliliği ve anlaşılır UI.** *(dürüst iptal ve tur sınırı 19 Eylül 2026)*
+  **Yapıldı — ve bu maddenin "iptal edildi mesajı gerçekten uygulanmış işleri
+  gizlemez" cümlesi bir kusuru tarif ediyordu:** Dur, "Çizimde hiçbir şey
+  değişmedi" diyordu, ki bir öneriyi uygulamış biri için yanlıştı. Mesaj artık bu
+  konuşmada uygulanmış önerileri adıyla sayıyor ve Ctrl+Z'yi gösteriyor;
+  hangisinin uygulandığı öneri defterinden okunuyor, bir bayraktan değil.
+  **Tur sınırı ayar oldu** (`core.ai.tur_siniri`, 1–50, öntanımlı 8) ve **yetki**
+  olarak işaretlendi: sınıra çarpıp onu yükselten bir model, reddedildiği turları
+  kendine verirdi. Sınıra gelince panel duruyor ve **söylüyor** — sonuç
+  kaybolmuyor.
+  **"Sağlayıcı hatasında tamamlanmış adımlar yeniden uygulanmaz"** zaten
+  sağlanıyordu: uygulanmış bir plan `Applied` ve `settle` ikinci kararı
+  reddediyor.
+  **Kalan:** iş/adım durumunun ve varsayımların panelde görünmesi; çıktı
+  bağlantıları; devam/geri al düğmeleri; tek toplu soru kartı; oturum geçmişinin
+  ve çalışma özetinin **kalıcı** olması; süre ve maliyet sınırları. Hepsi A-04'ün
+  iş yürütücüsüne bağlı — bugün iş durumu diye bir nesne yok, tur sayacı var.
+  **Eski metin:** İş/adım durumu, varsayımlar,
   uygulanan değişiklikler, çıktı bağlantıları, durdur/devam/geri al ve gerektiğinde
   tek toplu soru kartı göster. Oturum geçmişi ve çalışma özeti kalıcı olsun. İş/tur/
   süre/maliyet sınırları Settings'te olsun; sınıra gelince sonuç kaybolmasın.

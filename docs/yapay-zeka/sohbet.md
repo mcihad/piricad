@@ -124,6 +124,30 @@ vermek, kararla tartışmaktır.
 Tur sınırı bir onayla sıfırlanmaz: turunu tüketmiş bir iş orada durur ve durduğunu
 söyler.
 
+### Tur sınırı
+
+Bir soru için modelin en çok kaç tur okuma aracı çalıştırabileceğini
+`Seçenekler ▸ Yapay Zeka Modelleri` sayfasındaki **tur sınırı** belirler (1–50,
+öntanımlı 8). Sınıra gelince panel durur ve durduğunu **söyler**; yapılmış işler
+kaybolmaz.
+
+Bu bir **yetki** ayarıdır: modelin kendisi değiştiremez. Sınıra çarpıp onu yükselten
+bir model, reddedildiği turları kendine vermiş olurdu ([Onay ve denetim](onay.md)).
+
+### Durdurunca
+
+**Dur**, o anda uçan turu iptal eder. İptal edilen tur çizimde hiçbir şey değiştirmez —
+ama **bu konuşmada daha önce uyguladığınız öneriler çizimde durur**, ve mesaj bunu adıyla
+söyler:
+
+```text
+İptal edildi. Bu turda hiçbir şey uygulanmadı — ama bu konuşmada daha önce
+uyguladığınız öneriler çizimde duruyor: p0f3a1c7b9e4d2856. Geri almak için Ctrl+Z.
+```
+
+Eskiden yalnız "çizimde hiçbir şey değişmedi" yazıyordu; bir öneriyi uyguladıktan hemen
+sonra Dur'a basmak en olası andır ve o cümle orada **yanlıştı**.
+
 ## Bir mesaj neyden oluşur
 
 Sohbetteki her mesaj **parçalardan** oluşur, düz bir metinden değil:

@@ -27,8 +27,14 @@
 namespace kentos::app {
 namespace {
 
-/// How many read-tool rounds one question may take before the panel stops.
-constexpr int kMaxRounds = 8;
+/// How many read-tool rounds one question may take before the panel stops, when
+/// nothing says otherwise.
+///
+/// THE LIVE NUMBER IS A SETTING (`core.ai.tur_siniri`), because how patient to be
+/// with a model that keeps reading is a judgement the person at the workstation
+/// makes, not one this file can make for them (TODOS A-06). This is only the
+/// fallback for a build with no settings behind it.
+constexpr int kDefaultMaxRounds = 8;
 
 /// The biggest file the panel will attach, and it says the number when it
 /// refuses. A provider's own limit is smaller than this for images and larger
@@ -481,6 +487,12 @@ int ChatPanel::runReadTools(const std::vector<ai::Block>& calls)
     return ran;
 }
 
+int ChatPanel::maxRounds() const
+{
+    const std::int64_t asked = controller_.bus().app_settings().get("core.ai.tur_siniri").as_int();
+    return static_cast<int>(asked > 0 ? asked : kDefaultMaxRounds);
+}
+
 std::string ChatPanel::requesterLabel() const
 {
     const ai::ProviderProfile* profile = chosen();
@@ -535,6 +547,10 @@ QString ChatPanel::fileWrites(const std::vector<ai::Block>& calls)
     }
 
     const QString id = QString::fromStdString(filed.value());
+    // REMEMBERED SO A CANCELLATION CANNOT CLAIM NOTHING HAPPENED (A-06). The id
+    // only; what became of it is asked of the store, which is the only thing
+    // that knows.
+    if (!filed_.contains(id)) filed_.push_back(id);
     for (const ai::Block& call : calls) {
         const ai::ToolDef* tool = service_.catalog().find(call.tool_name);
         // READS AND UNKNOWN NAMES BELONG TO `runReadTools`, and the two sets
@@ -613,14 +629,14 @@ void ChatPanel::finishTurn(int status, const QString& trouble)
 
         const int reads = runReadTools(calls);
         if (reads > 0 && filed.isEmpty()) {
-            if (++round_ < kMaxRounds) {
+            if (++round_ < maxRounds()) {
                 sendRound();
                 return;
             }
             auto* stopped = new MessageBubble(Speaker::Notice, this);
             stopped->setNote(tr("Model %1 turdur okumaya devam ediyor; durduruldu. "
                                 "Sorunuzu daha somut yazmayı deneyin.")
-                                 .arg(kMaxRounds),
+                                 .arg(maxRounds()),
                              Tone::Warn);
             transcript_->append(stopped);
             stopped->applyTheme(theme_);
@@ -703,11 +719,11 @@ void ChatPanel::resumeAfterDecision(const QString& planId, bool applied)
     // THE ROUND COUNTER IS NOT RESET. A person's decision is not a licence to
     // start the turn budget again: a job that has already spent its rounds
     // stops here and says so, rather than looping on somebody's approval.
-    if (++round_ >= kMaxRounds) {
+    if (++round_ >= maxRounds()) {
         auto* stopped = new MessageBubble(Speaker::Notice, this);
         stopped->setNote(tr("Bu iş için tur sınırına (%1) ulaşıldı; model devam ettirilmedi. "
                             "Kaldığı yerden sürdürmek için ne istediğinizi yazın.")
-                             .arg(kMaxRounds),
+                             .arg(maxRounds()),
                          Tone::Warn);
         transcript_->append(stopped);
         stopped->applyTheme(theme_);
@@ -715,6 +731,20 @@ void ChatPanel::resumeAfterDecision(const QString& planId, bool applied)
         return;
     }
     sendRound();
+}
+
+QString ChatPanel::appliedSoFar() const
+{
+    // WHAT THIS CONVERSATION HAS ALREADY CHANGED, read back from the plan store
+    // rather than remembered as a flag: the person may have applied a card, then
+    // undone it, then applied another, and only the store knows where that left
+    // the drawing.
+    QStringList done;
+    for (const QString& id : filed_) {
+        const core::Result<ai::Plan> state = service_.plan_state(id.toStdString(), std::string());
+        if (state && state.value().state == ai::PlanState::Applied) done << id;
+    }
+    return done.join(QStringLiteral(", "));
 }
 
 void ChatPanel::stop()
@@ -725,7 +755,20 @@ void ChatPanel::stop()
     tick_->stop();
     if (open_ != nullptr) {
         open_->setWaiting(false);
-        open_->setNote(tr("İptal edildi. Çizimde hiçbir şey değişmedi."), Tone::Warn);
+
+        // "İPTAL EDİLDİ. ÇİZİMDE HİÇBİR ŞEY DEĞİŞMEDİ" WAS A LIE whenever the
+        // person had already applied a card in this conversation — and pressing
+        // Dur right after applying one is the most likely moment of all. The
+        // cancelled TURN changed nothing; the job may have changed plenty, and a
+        // message that hides applied work is worse than no message (TODOS A-06).
+        const QString already = appliedSoFar();
+        open_->setNote(already.isEmpty()
+                           ? tr("İptal edildi. Çizimde hiçbir şey değişmedi.")
+                           : tr("İptal edildi. Bu turda hiçbir şey uygulanmadı — ama bu "
+                                "konuşmada daha önce uyguladığınız öneriler çizimde duruyor: "
+                                "%1. Geri almak için Ctrl+Z.")
+                                 .arg(already),
+                       Tone::Warn);
         open_ = nullptr;
     }
     // THE HALF-BUILT TURN IS DROPPED, which is the whole reason it lives outside
@@ -746,6 +789,11 @@ void ChatPanel::newChat()
         if (auto* chip = qobject_cast<AttachmentChip*>(child)) chip->deleteLater();
     attachRow_->setVisible(false);
     trouble_->setVisible(false);
+    // A NEW CONVERSATION HAS APPLIED NOTHING. The plans it filed are still in
+    // the store and still on the undo stack — what is dropped is this panel's
+    // claim to them, which is the honest thing: they belong to a conversation
+    // that is over.
+    filed_.clear();
     round_ = 0;
     refreshMeter();
     refreshControls();
