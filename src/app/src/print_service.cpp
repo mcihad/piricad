@@ -15,6 +15,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QImage>
 #include <QMarginsF>
 #include <QPageLayout>
 #include <QPageSize>
@@ -23,10 +24,12 @@
 #include <QPrinter>
 #include <QPrinterInfo>
 #include <QStandardPaths>
+#include <QSvgGenerator>
 
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <system_error>
 #include <utility>
@@ -319,6 +322,208 @@ command::Task<core::Result<std::string>> PrintService::handle(command::PrintRequ
     co_return core::err(core::ErrorCode::Internal, "İşlenmemiş yazdırma isteği.");
 }
 
+/// WHICH FILE A NAME ASKS FOR.
+///
+/// The extension is the request, and a format this build cannot write is refused
+/// rather than quietly answered with a PDF (TODOS L-13).
+enum class SheetFormat : std::uint8_t {
+    Pdf,        ///< the default, and the only vector page format today
+    Png,        ///< raster, with a world file beside it
+    Tiff,       ///< raster, with a world file beside it
+    Svg,        ///< vector, one file per page
+    Unsupported ///< named, and named in the refusal
+};
+
+SheetFormat format_of(const QString& path)
+{
+    const QString ext = QFileInfo(path).suffix().toLower();
+    if (ext == QLatin1String("pdf")) return SheetFormat::Pdf;
+    if (ext == QLatin1String("png")) return SheetFormat::Png;
+    if (ext == QLatin1String("tif") || ext == QLatin1String("tiff")) return SheetFormat::Tiff;
+    if (ext == QLatin1String("svg")) return SheetFormat::Svg;
+    return SheetFormat::Unsupported;
+}
+
+/// WHAT THIS BUILD CAN WRITE, said out loud when it is asked for something else.
+///
+/// A capability report rather than a bare refusal: a person who asked for a
+/// GeoPDF needs to know that the answer is "not in this build" and what to ask
+/// for instead — not that something went wrong.
+std::string unsupported_message(const QString& path)
+{
+    const std::string ext = QFileInfo(path).suffix().toLower().toStdString();
+    std::string said      = ext.empty() ? std::string("Dosya adında uzantı yok: '")
+                                        : std::string("Bu biçim yazılamıyor: '." + ext + "' — '");
+    said += path.toStdString() + "'.";
+    said += " Bu yapı şunları yazar: .pdf (vektör sayfa), .svg (vektör, sayfa başına bir "
+            "dosya), .png ve .tif (raster, yanına world file). ";
+    said += "GeoPDF ve katmanlı PDF bu yapıda YOK (TODOS L-13); istenirse düz PDF'e "
+            "indirgenmez, bu satırla reddedilir — çünkü doğru adla yazılmış yanlış bir "
+            "dosya, hiç yazılmamış bir dosyadan kötüdür.";
+    return said;
+}
+
+/// The world file's six lines for a raster page, or empty when the sheet has no
+/// aimed map frame.
+///
+/// WHY A SIDECAR AND NOT A TAG IN THE FILE. A world file is six numbers in a text
+/// file that every GIS reads, needs no library, and cannot be silently dropped by
+/// an image encoder. The numbers are the affine from PIXEL CENTRES to ground, in
+/// the drawing's own units (millimetres), which is what `Mm` storage makes exact.
+///
+/// IT DESCRIBES THE MAP FRAME, NOT THE PAGE. A sheet is mostly paper: a title, a
+/// legend and a scale bar are not on the ground anywhere. So the world file is
+/// written only when there is exactly one aimed map frame, and it maps the pixels
+/// of that frame. A file claiming the whole page is ground would georeference the
+/// legend.
+std::string world_file_for(const core::Layout& sheet, const core::LayoutItem& map,
+                           const core::LayoutPage& page, double px_per_paper_mm)
+{
+    (void)sheet;
+    (void)page;
+    const core::Box2 window = core::map_window(map);
+    if (window.empty() || map.frame.w <= 0 || map.frame.h <= 0) return {};
+
+    // THE FRAME IN OUTPUT PIXELS, which is what `paint_map` hands the view.
+    const double frame_w_px = static_cast<double>(map.frame.w) / 1000.0 * px_per_paper_mm;
+    const double frame_h_px = static_cast<double>(map.frame.h) / 1000.0 * px_per_paper_mm;
+    if (frame_w_px < 1.0 || frame_h_px < 1.0) return {};
+
+    // ONE SCALE IN BOTH DIRECTIONS, because `ViewTransform::fit` takes the LARGER
+    // of the two ratios and centres the window in the frame. A world file with
+    // two different scales would describe a picture the renderer never draws —
+    // which is what the first version of this wrote, by assuming the aimed
+    // extent lands exactly on the frame instead of being letterboxed into it.
+    const double sx = static_cast<double>(window.width()) / frame_w_px;
+    const double sy = static_cast<double>(window.height()) / frame_h_px;
+    const double s  = std::max(sx, sy);
+    if (s <= 0.0) return {};
+
+    // The ground point under the frame's top-left CORNER, from the centred view.
+    const core::Point2 centre = window.centre();
+    const double left         = static_cast<double>(centre.x) - frame_w_px / 2.0 * s;
+    const double top          = static_cast<double>(centre.y) + frame_h_px / 2.0 * s;
+
+    // WHERE THE FRAME SITS ON THE PAGE, in the same pixels. A world file
+    // describes the WHOLE raster, and the raster is a sheet of paper with a map
+    // on part of it; leaving this out would georeference the page's corner as if
+    // it were the map's.
+    const double fx = static_cast<double>(map.frame.x) / 1000.0 * px_per_paper_mm;
+    const double fy = static_cast<double>(map.frame.y) / 1000.0 * px_per_paper_mm;
+
+    // A world file names the CENTRE of the top-left pixel, not its corner.
+    const double c = left + (0.5 - fx) * s;
+    const double f = top - (0.5 - fy) * s;
+
+    const auto num = [](double v) { return QString::number(v, 'f', 10).toStdString(); };
+    return num(s) + "\n0.0000000000\n0.0000000000\n" + num(-s) + "\n" + num(c) + "\n" + num(f) +
+           "\n";
+}
+
+/// The world file's name for a raster: `.png` -> `.pgw`, `.tif` -> `.tfw`.
+QString world_file_path(const QString& path, SheetFormat format)
+{
+    const QFileInfo at(path);
+    const QString stem = at.absolutePath() + QLatin1Char('/') + at.completeBaseName();
+    return stem + (format == SheetFormat::Png ? QStringLiteral(".pgw") : QStringLiteral(".tfw"));
+}
+
+/// Writes a layout as raster or SVG pages, and the world file beside a raster.
+///
+/// ONE FILE PER PAGE when there is more than one, named `<ad>-1`, `<ad>-2`: a
+/// raster holds one image and an SVG one drawing, so a multi-page sheet cannot
+/// be one file. The names are said in the answer rather than left to be
+/// discovered.
+core::Result<std::string>
+write_sheet_image(const QString& path, const core::Layout& sheet, SheetFormat format, int dpi,
+                  const std::function<void(QPaintDevice&, int)>& draw,
+                  const std::function<void(QPainter&, int, double)>& page_draw)
+{
+    (void)draw;
+    const QFileInfo target(path);
+    if (!target.absoluteDir().exists())
+        return core::err(core::ErrorCode::IoFailure,
+                         "Yazılamadı: dizin yok — " + target.absolutePath().toStdString());
+
+    const int resolution    = dpi > 0 ? dpi : 300;
+    const double px_per_mm  = static_cast<double>(resolution) / kMmPerInch;
+    const std::size_t pages = sheet.pages.size();
+    std::vector<std::string> written;
+
+    for (std::size_t i = 0; i < pages; ++i) {
+        const core::LayoutPage& one = sheet.pages[i];
+        const int w_px = std::max(1, static_cast<int>(std::lround(one.w / 1000.0 * px_per_mm)));
+        const int h_px = std::max(1, static_cast<int>(std::lround(one.h / 1000.0 * px_per_mm)));
+
+        QString out = path;
+        if (pages > 1)
+            out = target.absolutePath() + QLatin1Char('/') + target.completeBaseName() +
+                  QStringLiteral("-%1.").arg(i + 1) + target.suffix();
+
+        const QString temp = beside(out);
+        QFile::remove(temp);
+
+        if (format == SheetFormat::Svg) {
+            QSvgGenerator svg;
+            svg.setFileName(temp);
+            svg.setSize(QSize(w_px, h_px));
+            svg.setViewBox(QRect(0, 0, w_px, h_px));
+            svg.setResolution(resolution);
+            svg.setTitle(QString::fromStdString(sheet.name));
+            QPainter painter(&svg);
+            page_draw(painter, static_cast<int>(i), static_cast<double>(resolution));
+        } else {
+            QImage canvas(w_px, h_px, QImage::Format_ARGB32_Premultiplied);
+            // WHITE, NOT TRANSPARENT. A sheet is paper; a transparent PNG opened
+            // over a dark background shows black text on black.
+            canvas.fill(Qt::white);
+            canvas.setDotsPerMeterX(
+                static_cast<int>(std::lround(resolution / kMmPerInch * 1000.0)));
+            canvas.setDotsPerMeterY(
+                static_cast<int>(std::lround(resolution / kMmPerInch * 1000.0)));
+            {
+                QPainter painter(&canvas);
+                page_draw(painter, static_cast<int>(i), static_cast<double>(resolution));
+            }
+            if (!canvas.save(temp, format == SheetFormat::Png ? "PNG" : "TIFF"))
+                return core::err(core::ErrorCode::IoFailure,
+                                 "Görüntü yazılamadı: " + out.toStdString());
+        }
+
+        if (auto st = publish(temp, out); !st) return st.error();
+        written.push_back(out.toStdString());
+
+        // ---- AND THE WORLD FILE, for a raster with an aimed map frame -------
+        if (format == SheetFormat::Png || format == SheetFormat::Tiff) {
+            const core::LayoutItem* map = sheet.first_map();
+            if (map != nullptr) {
+                const std::string six = world_file_for(sheet, *map, one, px_per_mm);
+                if (!six.empty()) {
+                    const QString wf = world_file_path(out, format);
+                    QFile file(wf);
+                    if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+                        file.write(six.c_str(), static_cast<qint64>(six.size()));
+                        file.close();
+                        written.push_back(wf.toStdString());
+                    }
+                }
+            }
+        }
+    }
+
+    std::string said = "Çıktı yerleşimi yazıldı: " + sheet.name + ", " + std::to_string(pages) +
+                       " sayfa, " + std::to_string(resolution) + " dpi";
+    for (const std::string& one : written)
+        said += "\n  " + one;
+    if (format == SheetFormat::Png || format == SheetFormat::Tiff) {
+        const core::LayoutItem* map = sheet.first_map();
+        if (map == nullptr || map->extent.empty())
+            said += "\n  (world file YAZILMADI: sayfada hedeflenmiş harita çerçevesi yok, "
+                    "yani görüntünün zeminde bir yeri yok)";
+    }
+    return said;
+}
+
 core::Result<std::string> PrintService::printLayout(const command::PrintRequest& request)
 {
     const core::Layout* sheet = document_.layouts().find(request.layout);
@@ -437,6 +642,33 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
         const QString path = utf8(request.path);
         if (path.isEmpty())
             return core::err(core::ErrorCode::InvalidArgument, "PDF dosyasının yolu boş.");
+
+        // ---- WHAT THE NAME ASKS FOR (TODOS L-13) ----------------------------
+        //
+        // `YAZDIR yerlesim=X dosya=cikti.png` used to write a PDF, call it
+        // `cikti.png`, and report success. Everything downstream — a browser, a
+        // report, a mail attachment — then failed to open a file the program had
+        // said was fine, and nothing anywhere explained why.
+        //
+        // The extension is the request. A format this build can write is
+        // written; one it cannot is REFUSED BY NAME. "Desteklenmeyen özellik
+        // sessiz düz PDF'ye indirgenmez" is L-13's own sentence, and silently
+        // renaming a PDF is the worst form of that degradation because the file
+        // looks like it worked.
+        const SheetFormat want = format_of(path);
+        if (want == SheetFormat::Unsupported)
+            return core::err(core::ErrorCode::Unsupported, unsupported_message(path));
+        if (want != SheetFormat::Pdf) {
+            const auto one_page = [&](QPainter& painter, int index, double resolution) {
+                const core::LayoutPage& page_at = sheet->pages[static_cast<std::size_t>(index)];
+                const double w_px               = page_at.w / 1000.0 / kMmPerInch * resolution;
+                const double h_px               = page_at.h / 1000.0 / kMmPerInch * resolution;
+                paint_layout_page(painter, QRectF(0, 0, w_px, h_px), document_, *sheet, index,
+                                  resolution, facts, /*margin_guide=*/false, &trouble);
+            };
+            return write_sheet_image(path, *sheet, want, sheet->dpi, {}, one_page);
+        }
+
         const QFileInfo target(path);
         if (!target.absoluteDir().exists())
             return core::err(core::ErrorCode::IoFailure,

@@ -504,7 +504,22 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   veya kontur çıkarma ve sayfa aralığı seçenekleri tanımlansın. **Kabul:** 1:1000'de
   100 m çizgi kâğıtta 100 mm'dir; raster-only veri dışında harita PDF'de tek görüntü
   değildir. Önerilen test toleransı 0,1 mm; fiziksel baskıda “sayfaya sığdır” kapatılır.
-- [ ] **L-13 / P2 — Coğrafi referans ve üretim çıktısı.** Referans harita üzerinden
+- [~] **L-13 / P2 — Coğrafi referans ve üretim çıktısı.** *(biçimler ve world file 19 Eylül 2026)*
+  **Yapıldı — ve asıl kusur şuydu:** `dosya=cikti.png` bir **PDF yazıp adını
+  `cikti.png` koyuyor** ve "tamam" diyordu. Artık uzantı isteğin kendisi:
+  `.pdf` (vektör sayfa), `.svg` (vektör, sayfa başına bir dosya), `.png`/`.tif`
+  (raster + world file). Yazılamayan biçim **adıyla reddediliyor** ve ne
+  yazılabildiği sayılıyor — GeoPDF dahil; sessiz indirgeme yok.
+  **World file** raster çıktının yanına, sayfada hedeflenmiş harita çerçevesi
+  varsa. Sayfanın tamamını tanımlıyor ama çerçevenin sayfadaki yerini hesaba
+  katıyor, ve ölçek iki yönde aynı (çerçeve pencereyi germiyor, sığdırıyor).
+  Hedef yoksa yazılmıyor ve sebebi söyleniyor.
+  `KENTOS_PRINT_PROBE` dördünü de gerçek dosyada sınıyor.
+  **Kalan:** katmanlı/coğrafi referanslı PDF (GeoPDF) — bu bir bağımlılık ve
+  lisans kararıdır ve maddenin kendisi "ayrı teknik inceleme" diyor; grup/sıra/ad/
+  görünürlük eşlemesi; renk profili seçenekleri; ve `dpi` ile renk profilinin
+  komut parametresi olması (bugün dpi yerleşimin kendi ayarından geliyor).
+  **Eski metin:** Referans harita üzerinden
   world file/coğrafi referanslı PDF; katmanlı GeoPDF, grup/sıra/ad/görünürlük eşlemesi;
   SVG ve PNG/TIFF çıktı, DPI ve renk profili seçenekleri ekle. Backend desteğini
   capability olarak bildir. **Kabul:** koordinat eşlemesi bağımsız okuyucuda doğrulanır;

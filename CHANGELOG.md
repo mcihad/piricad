@@ -6,6 +6,39 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — `dosya=cikti.png` bir PDF yazıp adını `cikti.png` koyuyordu (TODOS L-13)
+
+- Ve **"tamam" diyordu**. Sonra o dosyayı açmaya çalışan her şey — tarayıcı, rapor,
+  e-posta eki — başarısız oluyordu ve hiçbir yerde sebebi yazmıyordu. Doğru adla
+  yazılmış yanlış bir dosya, hiç yazılmamış bir dosyadan kötüdür.
+- **Uzantı isteğin kendisidir.** Yazılabilen biçim yazılıyor, yazılamayan **adıyla
+  reddediliyor** ve ne yazılabildiği sayılıyor. "Desteklenmeyen özellik sessiz düz
+  PDF'e indirgenmez" L-13'ün kendi cümlesi, ve sessizce yeniden adlandırmak bu
+  indirgemenin en kötü biçimi: dosya işe yaramış gibi görünüyor.
+
+### Eklendi — raster, SVG ve world file (TODOS L-13, kısmi)
+
+- **`.png` / `.tif`**: sayfa istenen dpi'de raster olarak yazılıyor, beyaz zeminle
+  (saydam bir PNG koyu arka planda siyah üstüne siyah yazı olur) ve doğru fiziksel
+  çözünürlük etiketiyle.
+- **`.svg`**: vektör, **sayfa başına bir dosya** — bir SVG bir çizim tutar, çok
+  sayfalı bir yerleşim tek dosya olamaz. Adlar sonuçta yazılı, keşfedilmeye
+  bırakılmıyor.
+- **World file** (`.pgw` / `.tfw`) raster çıktının yanına, sayfada hedeflenmiş bir
+  harita çerçevesi varsa. Altı satır, her CBS okur, kütüphane gerektirmez ve bir
+  görüntü kodlayıcısı tarafından sessizce düşürülemez.
+- World file **sayfanın tamamını** tanımlıyor ama çerçevenin sayfadaki yerini hesaba
+  katıyor: katmasaydı lejantı koordinatlandırmış olurdu. Ölçek **iki yönde de aynı**,
+  çünkü çerçeve pencereyi germiyor sığdırıyor — ilk yazdığım hâli iki ayrı ölçek
+  üretiyordu, yani hiç çizilmeyen bir resmi tarif ediyordu.
+- Hedeflenmiş çerçeve yoksa world file **yazılmıyor** ve sonuç bunu söylüyor:
+  görüntünün zeminde bir yeri yok.
+- `KENTOS_PRINT_PROBE` dördünü de gerçek dosyada sınıyor: PNG gerçekten PNG mi,
+  world file'ın afini çerçevenin ortasını hedeflenen pencerenin ortasına düşürüyor
+  mu, desteklenmeyen biçim gerçekten **hiç dosya bırakmıyor** mu, SVG gerçekten SVG
+  mi. Afin sınaması ilk seferde kırıldı ve **hatalı olan sınamaydı**: bir world
+  file 0 numaralı pikselin MERKEZİNİ adlandırır, köşesini değil.
+
 ### Düzeltildi — atlas nişanı belge özetine girmiyordu (içerik karması)
 
 - `Document::content_hash` yerleşimin **atlas bloğunu** katlamıyordu. Atlas kaç

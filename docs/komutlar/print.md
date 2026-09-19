@@ -48,7 +48,7 @@ YAZDIR
 YAZDIR merkez=<nokta> olcek=<N> dosya=<yol>
 YAZDIR pencere=<x1,y1> pencere=<x2,y2> yazici=<ad>
 YAZDIR merkez=<nokta> profil=<ad> dosya=<yol> sifre=<şifre> kopyalanabilir=hayır
-YAZDIR yerlesim=<ad> dosya=<yol>
+YAZDIR yerlesim=<ad> dosya=<yol>            (.pdf / .svg / .png / .tif)
 ```
 
 ## Parametreler
@@ -144,6 +144,42 @@ açar, **Profilleri Yönet…** `Seçenekler ▸ Plot ve Çıktı`'yı açar.
   ]
 }
 ```
+
+### Hangi biçim: uzantı isteğin kendisidir
+
+`dosya=` uzantısı **ne istendiğini söyler** ve program onu yazar:
+
+| Uzantı | Ne çıkar |
+|---|---|
+| `.pdf` | Vektör sayfa. Çok sayfalı yerleşim tek dosyadır |
+| `.svg` | Vektör, **sayfa başına bir dosya** (`ad-1.svg`, `ad-2.svg`) |
+| `.png` | Raster, yanına **world file** (`.pgw`) |
+| `.tif` | Raster, yanına **world file** (`.tfw`) |
+
+> **Yazılamayan bir biçim reddedilir, sessizce PDF'e indirgenmez.** `dosya=cikti.png`
+> eskiden bir **PDF yazıp adını `cikti.png` koyuyor** ve "tamam" diyordu; sonra o dosyayı
+> açmaya çalışan her şey başarısız oluyordu ve sebebini kimse söylemiyordu. Doğru adla
+> yazılmış yanlış bir dosya, hiç yazılmamış bir dosyadan kötüdür.
+>
+> **GeoPDF ve katmanlı PDF bu yapıda yoktur.** İstendiğinde ret cevabı bunu adıyla söyler
+> ve ne yazılabildiğini sayar.
+
+#### World file
+
+Raster çıktının yanına, sayfada **hedeflenmiş bir harita çerçevesi varsa**, altı satırlık
+bir world file yazılır. Her CBS okur, kütüphane gerektirmez ve bir görüntü kodlayıcısı
+tarafından sessizce düşürülemez.
+
+World file **sayfanın tamamını** tanımlar ama anlamı harita çerçevesindedir: bir sayfa
+çoğunlukla kâğıttır — başlık, lejant ve ölçek çubuğu zeminde hiçbir yerde değildir.
+Bu yüzden çerçevenin sayfadaki yeri hesaba katılır; katılmasaydı dosya, lejantı
+koordinatlandırmış olurdu.
+
+Ölçek **iki yönde de aynıdır**, çünkü harita çerçevesi hedeflenen pencereyi kutuya
+**sığdırır** (germez): kısa kenarda pencere çerçevenin en-boy oranına genişletilir.
+
+Sayfada hedeflenmiş harita çerçevesi yoksa world file **yazılmaz** ve sonuç bunu söyler:
+görüntünün zeminde bir yeri yoktur.
 
 ## Geri alma
 

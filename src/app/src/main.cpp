@@ -1464,6 +1464,104 @@ int main(int argc, char** argv)
                       "yuvarlamadan sonra satır hem pencere hem ölçek taşıyor");
             }
 
+            // ---- WHAT THE FILE NAME ASKED FOR (TODOS L-13) ------------------
+            //
+            // `dosya=cikti.png` used to write a PDF, call it `cikti.png` and
+            // report success. Everything downstream then failed to open a file
+            // the program had said was fine. This is the half a real file can
+            // refute, so a real file is what is read.
+            {
+                window.runScriptLine(QStringLiteral("KATMAN ad=RASTER"));
+                window.runScriptLine(QStringLiteral("ALAN 0,0 40,0 40,30 0,30"));
+                window.runScriptLine(
+                    QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=Raster kagit=A4"));
+                window.runScriptLine(QStringLiteral(
+                    "ÇIKTIÖĞE islem=ayarla yerlesim=Raster ad=harita pencere=0,0 pencere=60,45"));
+
+                kentos::app::Controller* controller = window.controller();
+
+                const QString png = dir + QStringLiteral("/sayfa.png");
+                QFile::remove(png);
+                window.runScriptLine(
+                    QStringLiteral("YAZDIR yerlesim=Raster dosya=\"%1\"").arg(png));
+
+                const QByteArray head = [&png] {
+                    QFile f(png);
+                    return f.open(QIODevice::ReadOnly) ? f.read(8) : QByteArray();
+                }();
+                check(head.startsWith("\x89PNG"), "PNG istendi, PNG yazılmadı");
+
+                // AND THE WORLD FILE BESIDE IT, with the affine the renderer
+                // actually uses. The first version wrote two different scales,
+                // which describes a picture the renderer never draws: the view
+                // LETTERBOXES the aimed window into the frame and uses one
+                // scale for both directions.
+                const QString pgw = dir + QStringLiteral("/sayfa.pgw");
+                check(QFileInfo::exists(pgw), "world file yazılmadı");
+                QFile wf(pgw);
+                if (wf.open(QIODevice::ReadOnly)) {
+                    const QList<QByteArray> lines = wf.readAll().split('\n');
+                    if (lines.size() >= 6) {
+                        const double a_px = lines[0].toDouble();
+                        const double d_px = lines[3].toDouble();
+                        const double c_x  = lines[4].toDouble();
+                        const double f_y  = lines[5].toDouble();
+                        check(std::abs(a_px + d_px) < 1e-6, "world file iki ayrı ölçek taşıyor");
+                        check(a_px > 0.0, "world file ölçeği pozitif değil");
+
+                        // THE MAP FRAME'S CENTRE MUST LAND ON THE AIMED WINDOW'S
+                        // CENTRE. Exact, and independent of the letterboxing:
+                        // whatever the frame's aspect, the fitted view is centred.
+                        const kentos::core::Layout* raster =
+                            controller->document().layouts().find("Raster");
+                        const kentos::core::LayoutItem* frame =
+                            raster != nullptr ? raster->first_map() : nullptr;
+                        if (frame != nullptr) {
+                            const double dpi    = raster->dpi > 0 ? raster->dpi : 300;
+                            const double per_mm = dpi / 25.4;
+                            const double cx_px =
+                                (frame->frame.x + frame->frame.w / 2.0) / 1000.0 * per_mm;
+                            const double cy_px =
+                                (frame->frame.y + frame->frame.h / 2.0) / 1000.0 * per_mm;
+                            // A WORLD FILE NAMES THE CENTRE OF PIXEL INDEX 0,
+                            // so ground at pixel index p is C + A*p — and a
+                            // continuous page coordinate u sits at index
+                            // u - 0.5. Getting that half pixel wrong is what
+                            // made this check fail the first time, and the
+                            // world file was right all along.
+                            const double gx = c_x + a_px * (cx_px - 0.5);
+                            const double gy = f_y + d_px * (cy_px - 0.5);
+                            // The sheet is aimed at 0,0 .. 60,45 m, so the centre
+                            // is 30 m, 22.5 m — in millimetres.
+                            check(std::abs(gx - 30000.0) < 2.0 && std::abs(gy - 22500.0) < 2.0,
+                                  "WORLD FILE YANLIŞ: çerçevenin ortası hedeflenen pencerenin "
+                                  "ortasına düşmüyor");
+                        }
+                    }
+                }
+
+                // AND A FORMAT THIS BUILD CANNOT WRITE IS REFUSED BY NAME rather
+                // than answered with a PDF under a false extension.
+                const QString bogus = dir + QStringLiteral("/sayfa.geopdf");
+                QFile::remove(bogus);
+                window.runScriptLine(
+                    QStringLiteral("YAZDIR yerlesim=Raster dosya=\"%1\"").arg(bogus));
+                check(!QFileInfo::exists(bogus),
+                      "DESTEKLENMEYEN BİÇİM SESSİZCE YAZILDI — reddedilmeliydi");
+
+                // SVG is vector and one file per page.
+                const QString svg = dir + QStringLiteral("/sayfa.svg");
+                QFile::remove(svg);
+                window.runScriptLine(
+                    QStringLiteral("YAZDIR yerlesim=Raster dosya=\"%1\"").arg(svg));
+                const QByteArray svg_head = [&svg] {
+                    QFile f(svg);
+                    return f.open(QIODevice::ReadOnly) ? f.read(256) : QByteArray();
+                }();
+                check(svg_head.contains("<svg") || svg_head.contains("<?xml"),
+                      "SVG istendi, SVG yazılmadı");
+            }
+
             (void)std::fprintf(stdout, "[yazdir] %s — sayfa %.0f×%.0f pt, sifreli %s\n",
                                failures == 0 ? "TAMAM" : "BASARISIZ", box.width(), box.height(),
                                sealed_bytes.contains("/Encrypt") ? "evet" : "hayir");

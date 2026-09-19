@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="209.973mm" height="297.011mm"
+ viewBox="0 0 2480 3508"
+ xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.2" baseProfile="tiny">
+<title>Raster</title>
+<desc>Generated with Qt</desc>
+<defs>
+</defs>
+<g fill="none" stroke="black" stroke-width="1" fill-rule="evenodd" stroke-linecap="square" stroke-linejoin="bevel" >
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="#ffffff" fill-opacity="1" stroke="none" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+<rect x="0" y="0" width="2480.31" height="3507.87"/>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="#ffffff" fill-opacity="1" stroke="none" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+<rect x="118.11" y="282.366" width="2244.09" height="2980.72"/>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,118.11,282.366)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" transform="matrix(1,0,0,1,118.11,282.366)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+<path vector-effect="none" fill-rule="evenodd" d="M0,2332 L1496,2332 L1496,1210 L0,1210 L0,2332 Z "/>
+<path vector-effect="none" fill-rule="evenodd" d="M0,2332 L1496,2332 L1496,1210 L0,1210 L0,2332 Z "/>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" transform="matrix(1,0,0,1,118.11,282.366)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,118.11,282.366)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1.1811" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+<polyline fill="none" vector-effect="none" points="95.6693,2614.28 140.551,2614.28 " />
+<polyline fill="none" vector-effect="none" points="118.11,2591.84 118.11,2636.72 " />
+<polyline fill="none" vector-effect="none" points="95.6693,2240.25 140.551,2240.25 " />
+<polyline fill="none" vector-effect="none" points="118.11,2217.81 118.11,2262.7 " />
+<polyline fill="none" vector-effect="none" points="95.6693,1866.23 140.551,1866.23 " />
+<polyline fill="none" vector-effect="none" points="118.11,1843.79 118.11,1888.67 " />
+<polyline fill="none" vector-effect="none" points="95.6693,1492.21 140.551,1492.21 " />
+<polyline fill="none" vector-effect="none" points="118.11,1469.77 118.11,1514.65 " />
+<polyline fill="none" vector-effect="none" points="95.6693,1118.19 140.551,1118.19 " />
+<polyline fill="none" vector-effect="none" points="118.11,1095.75 118.11,1140.63 " />
+<polyline fill="none" vector-effect="none" points="95.6693,744.17 140.551,744.17 " />
+<polyline fill="none" vector-effect="none" points="118.11,721.729 118.11,766.611 " />
+<polyline fill="none" vector-effect="none" points="95.6693,370.149 140.551,370.149 " />
+<polyline fill="none" vector-effect="none" points="118.11,347.708 118.11,392.59 " />
+<polyline fill="none" vector-effect="none" points="469.685,2614.28 514.567,2614.28 " />
+<polyline fill="none" vector-effect="none" points="492.126,2591.84 492.126,2636.72 " />
+<polyline fill="none" vector-effect="none" points="469.685,2240.25 514.567,2240.25 " />
+<polyline fill="none" vector-effect="none" points="492.126,2217.81 492.126,2262.7 " />
+<polyline fill="none" vector-effect="none" points="469.685,1866.23 514.567,1866.23 " />
+<polyline fill="none" vector-effect="none" points="492.126,1843.79 492.126,1888.67 " />
+<polyline fill="none" vector-effect="none" points="469.685,1492.21 514.567,1492.21 " />
+<polyline fill="none" vector-effect="none" points="492.126,1469.77 492.126,1514.65 " />
+<polyline fill="none" vector-effect="none" points="469.685,1118.19 514.567,1118.19 " />
+<polyline fill="none" vector-effect="none" points="492.126,1095.75 492.126,1140.63 " />
+<polyline fill="none" vector-effect="none" points="469.685,744.17 514.567,744.17 " />
+<polyline fill="none" vector-effect="none" points="492.126,721.729 492.126,766.611 " />
+<polyline fill="none" vector-effect="none" points="469.685,370.149 514.567,370.149 " />
+<polyline fill="none" vector-effect="none" points="492.126,347.708 492.126,392.59 " />
+<polyline fill="none" vector-effect="none" points="843.701,2614.28 888.583,2614.28 " />
+<polyline fill="none" vector-effect="none" points="866.142,2591.84 866.142,2636.72 " />
+<polyline fill="none" vector-effect="none" points="843.701,2240.25 888.583,2240.25 " />
+<polyline fill="none" vector-effect="none" points="866.142,2217.81 866.142,2262.7 " />
+<polyline fill="none" vector-effect="none" points="843.701,1866.23 888.583,1866.23 " />
+<polyline fill="none" vector-effect="none" points="866.142,1843.79 866.142,1888.67 " />
+<polyline fill="none" vector-effect="none" points="843.701,1492.21 888.583,1492.21 " />
+<polyline fill="none" vector-effect="none" points="866.142,1469.77 866.142,1514.65 " />
+<polyline fill="none" vector-effect="none" points="843.701,1118.19 888.583,1118.19 " />
+<polyline fill="none" vector-effect="none" points="866.142,1095.75 866.142,1140.63 " />
+<polyline fill="none" vector-effect="none" points="843.701,744.17 888.583,744.17 " />
+<polyline fill="none" vector-effect="none" points="866.142,721.729 866.142,766.611 " />
+<polyline fill="none" vector-effect="none" points="843.701,370.149 888.583,370.149 " />
+<polyline fill="none" vector-effect="none" points="866.142,347.708 866.142,392.59 " />
+<polyline fill="none" vector-effect="none" points="1217.72,2614.28 1262.6,2614.28 " />
+<polyline fill="none" vector-effect="none" points="1240.16,2591.84 1240.16,2636.72 " />
+<polyline fill="none" vector-effect="none" points="1217.72,2240.25 1262.6,2240.25 " />
+<polyline fill="none" vector-effect="none" points="1240.16,2217.81 1240.16,2262.7 " />
+<polyline fill="none" vector-effect="none" points="1217.72,1866.23 1262.6,1866.23 " />
+<polyline fill="none" vector-effect="none" points="1240.16,1843.79 1240.16,1888.67 " />
+<polyline fill="none" vector-effect="none" points="1217.72,1492.21 1262.6,1492.21 " />
+<polyline fill="none" vector-effect="none" points="1240.16,1469.77 1240.16,1514.65 " />
+<polyline fill="none" vector-effect="none" points="1217.72,1118.19 1262.6,1118.19 " />
+<polyline fill="none" vector-effect="none" points="1240.16,1095.75 1240.16,1140.63 " />
+<polyline fill="none" vector-effect="none" points="1217.72,744.17 1262.6,744.17 " />
+<polyline fill="none" vector-effect="none" points="1240.16,721.729 1240.16,766.611 " />
+<polyline fill="none" vector-effect="none" points="1217.72,370.149 1262.6,370.149 " />
+<polyline fill="none" vector-effect="none" points="1240.16,347.708 1240.16,392.59 " />
+<polyline fill="none" vector-effect="none" points="1591.73,2614.28 1636.61,2614.28 " />
+<polyline fill="none" vector-effect="none" points="1614.17,2591.84 1614.17,2636.72 " />
+<polyline fill="none" vector-effect="none" points="1591.73,2240.25 1636.61,2240.25 " />
+<polyline fill="none" vector-effect="none" points="1614.17,2217.81 1614.17,2262.7 " />
+<polyline fill="none" vector-effect="none" points="1591.73,1866.23 1636.61,1866.23 " />
+<polyline fill="none" vector-effect="none" points="1614.17,1843.79 1614.17,1888.67 " />
+<polyline fill="none" vector-effect="none" points="1591.73,1492.21 1636.61,1492.21 " />
+<polyline fill="none" vector-effect="none" points="1614.17,1469.77 1614.17,1514.65 " />
+<polyline fill="none" vector-effect="none" points="1591.73,1118.19 1636.61,1118.19 " />
+<polyline fill="none" vector-effect="none" points="1614.17,1095.75 1614.17,1140.63 " />
+<polyline fill="none" vector-effect="none" points="1591.73,744.17 1636.61,744.17 " />
+<polyline fill="none" vector-effect="none" points="1614.17,721.729 1614.17,766.611 " />
+<polyline fill="none" vector-effect="none" points="1591.73,370.149 1636.61,370.149 " />
+<polyline fill="none" vector-effect="none" points="1614.17,347.708 1614.17,392.59 " />
+<polyline fill="none" vector-effect="none" points="1965.75,2614.28 2010.63,2614.28 " />
+<polyline fill="none" vector-effect="none" points="1988.19,2591.84 1988.19,2636.72 " />
+<polyline fill="none" vector-effect="none" points="1965.75,2240.25 2010.63,2240.25 " />
+<polyline fill="none" vector-effect="none" points="1988.19,2217.81 1988.19,2262.7 " />
+<polyline fill="none" vector-effect="none" points="1965.75,1866.23 2010.63,1866.23 " />
+<polyline fill="none" vector-effect="none" points="1988.19,1843.79 1988.19,1888.67 " />
+<polyline fill="none" vector-effect="none" points="1965.75,1492.21 2010.63,1492.21 " />
+<polyline fill="none" vector-effect="none" points="1988.19,1469.77 1988.19,1514.65 " />
+<polyline fill="none" vector-effect="none" points="1965.75,1118.19 2010.63,1118.19 " />
+<polyline fill="none" vector-effect="none" points="1988.19,1095.75 1988.19,1140.63 " />
+<polyline fill="none" vector-effect="none" points="1965.75,744.17 2010.63,744.17 " />
+<polyline fill="none" vector-effect="none" points="1988.19,721.729 1988.19,766.611 " />
+<polyline fill="none" vector-effect="none" points="1965.75,370.149 2010.63,370.149 " />
+<polyline fill="none" vector-effect="none" points="1988.19,347.708 1988.19,392.59 " />
+<polyline fill="none" vector-effect="none" points="2339.76,2614.28 2384.65,2614.28 " />
+<polyline fill="none" vector-effect="none" points="2362.2,2591.84 2362.2,2636.72 " />
+<polyline fill="none" vector-effect="none" points="2339.76,2240.25 2384.65,2240.25 " />
+<polyline fill="none" vector-effect="none" points="2362.2,2217.81 2362.2,2262.7 " />
+<polyline fill="none" vector-effect="none" points="2339.76,1866.23 2384.65,1866.23 " />
+<polyline fill="none" vector-effect="none" points="2362.2,1843.79 2362.2,1888.67 " />
+<polyline fill="none" vector-effect="none" points="2339.76,1492.21 2384.65,1492.21 " />
+<polyline fill="none" vector-effect="none" points="2362.2,1469.77 2362.2,1514.65 " />
+<polyline fill="none" vector-effect="none" points="2339.76,1118.19 2384.65,1118.19 " />
+<polyline fill="none" vector-effect="none" points="2362.2,1095.75 2362.2,1140.63 " />
+<polyline fill="none" vector-effect="none" points="2339.76,744.17 2384.65,744.17 " />
+<polyline fill="none" vector-effect="none" points="2362.2,721.729 2362.2,766.611 " />
+<polyline fill="none" vector-effect="none" points="2339.76,370.149 2384.65,370.149 " />
+<polyline fill="none" vector-effect="none" points="2362.2,347.708 2362.2,392.59 " />
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1.1811" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="24" font-weight="400" font-style="normal" 
+>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="110.906" y="274.772" font-family="IBM Plex Sans" font-size="24" font-weight="400" font-style="normal" 
+ >0</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="477.734" y="274.772" font-family="IBM Plex Sans" font-size="24" font-weight="400" font-style="normal" 
+ >10</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="851.75" y="274.772" font-family="IBM Plex Sans" font-size="24" font-weight="400" font-style="normal" 
+ >20</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="1225.77" y="274.772" font-family="IBM Plex Sans" font-size="24" font-weight="400" font-style="normal" 
+ >30</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="1599.78" y="274.772" font-family="IBM Plex Sans" font-size="24" font-weight="400" font-style="normal" 
+ >40</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="1973.8" y="274.772" font-family="IBM Plex Sans" font-size="24" font-weight="400" font-style="normal" 
+ >50</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="2347.81" y="274.772" font-family="IBM Plex Sans" font-size="24" font-weight="400" font-style="normal" 
+ >60</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="101.719" y="2626.57" font-family="IBM Plex Sans" font-size="24" font-weight="400" font-style="normal" 
+ >0</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="87.3281" y="2252.55" font-family="IBM Plex Sans" font-size="24" font-weight="400" font-style="normal" 
+ >10</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="87.3281" y="1878.53" font-family="IBM Plex Sans" font-size="24" font-weight="400" font-style="normal" 
+ >20</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="87.3281" y="1504.51" font-family="IBM Plex Sans" font-size="24" font-weight="400" font-style="normal" 
+ >30</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="87.3281" y="1130.49" font-family="IBM Plex Sans" font-size="24" font-weight="400" font-style="normal" 
+ >40</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="87.3281" y="756.467" font-family="IBM Plex Sans" font-size="24" font-weight="400" font-style="normal" 
+ >50</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="87.3281" y="382.446" font-family="IBM Plex Sans" font-size="24" font-weight="400" font-style="normal" 
+ >60</text>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1.1811" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="2.3622" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+<rect x="118.11" y="282.366" width="2244.09" height="2980.72"/>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="63" font-weight="400" font-style="normal" 
+>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="1148.59" y="204.375" font-family="IBM Plex Sans" font-size="63" font-weight="400" font-style="normal" 
+ >Raster</text>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1.77165" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+<rect x="118.11" y="3323.99" width="373.767" height="39.4636"/>
+</g>
+
+<g fill="#ffffff" fill-opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1.77165" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+<rect x="491.877" y="3323.99" width="373.767" height="39.4636"/>
+</g>
+
+<g fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1.77165" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+<rect x="865.643" y="3323.99" width="373.767" height="39.4636"/>
+</g>
+
+<g fill="#ffffff" fill-opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="1.77165" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+<rect x="1239.41" y="3323.99" width="373.767" height="39.4636"/>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1.77165" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="29" font-weight="400" font-style="normal" 
+>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="109.406" y="3394.17" font-family="IBM Plex Sans" font-size="29" font-weight="400" font-style="normal" 
+ >0</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="474.484" y="3394.17" font-family="IBM Plex Sans" font-size="29" font-weight="400" font-style="normal" 
+ >10</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="848.25" y="3394.17" font-family="IBM Plex Sans" font-size="29" font-weight="400" font-style="normal" 
+ >20</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="1222.02" y="3394.17" font-family="IBM Plex Sans" font-size="29" font-weight="400" font-style="normal" 
+ >30</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="1595.78" y="3394.17" font-family="IBM Plex Sans" font-size="29" font-weight="400" font-style="normal" 
+ >40</text>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="1637.41" y="3394.17" font-family="IBM Plex Sans" font-size="29" font-weight="400" font-style="normal" 
+ > m   1:316</text>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="#000000" fill-opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2.3622" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+<path vector-effect="none" fill-rule="evenodd" d="M2303.15,3154.43 L2280.83,3241.24 L2303.15,3216.44 L2303.15,3154.43 Z "/>
+</g>
+
+<g fill="#ffffff" fill-opacity="1" stroke="#000000" stroke-opacity="1" stroke-width="2.3622" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+<path vector-effect="none" fill-rule="evenodd" d="M2303.15,3154.43 L2325.47,3241.24 L2303.15,3216.44 L2303.15,3154.43 Z "/>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="2.3622" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="35" font-weight="400" font-style="normal" 
+>
+<text fill="#000000" fill-opacity="1" stroke="none" xml:space="preserve" x="2292.05" y="3152.43" font-family="IBM Plex Sans" font-size="35" font-weight="400" font-style="normal" 
+ >K</text>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+
+<g fill="none" stroke="#000000" stroke-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="bevel" transform="matrix(1,0,0,1,0,0)"
+font-family="IBM Plex Sans" font-size="12" font-weight="400" font-style="normal" 
+>
+</g>
+</g>
+</svg>
