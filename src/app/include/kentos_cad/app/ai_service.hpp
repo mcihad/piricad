@@ -112,6 +112,7 @@ public:
                                                 const command::Args& args,
                                                 const std::string& requester) override;
     core::Result<std::string> propose(ai::Plan plan) override;
+    std::string existing_plan(const std::string& key, const std::string& requester) const override;
     core::Result<ai::Plan> plan_state(const std::string& id,
                                       const std::string& requester) const override;
     void withdraw(const std::string& id, const std::string& requester) override;

@@ -76,8 +76,21 @@ AiService::AiService(command::Bus& bus, QObject* parent) : QObject(parent), bus_
             if (plan == nullptr)
                 co_return core::err(core::ErrorCode::NotFound,
                                     "Böyle bir öneri yok: '" + request.plan + "'.");
-            co_return "Öneri " + plan->id + ": " + ai::plan_state_name(plan->state) + ", " +
-                std::to_string(plan->steps.size()) + " adım.";
+            std::string said = "Öneri " + plan->id + ": " + ai::plan_state_name(plan->state) +
+                               ", " + std::to_string(plan->steps.size()) + " adım.";
+            // HOW FAR IT HAS GOT, while it is running — the same two counts the
+            // client's structured answer carries, so the command line and the
+            // protocol say one thing (M-06).
+            if (plan->state == ai::PlanState::Running)
+                said += " " + std::to_string(plan->done_steps) +
+                        " adım bitti; henüz "
+                        "tamamlanmadı.";
+            if (!plan->outputs.empty()) {
+                said += " Yazılan dosyalar:";
+                for (const std::string& one : plan->outputs)
+                    said += "\n    " + one;
+            }
+            co_return said;
         }
 
         // THE TWO DECIDING VERBS CARRY OUT A DECISION THAT HAS ALREADY BEEN
@@ -291,6 +304,22 @@ core::Result<std::string> AiService::propose(ai::Plan plan)
             return core::err(core::ErrorCode::Unsupported, why);
     }
 
+    // ---- HAVE I ALREADY BEEN ASKED THIS? (TODOS M-06) ----------------------
+    //
+    // An agent that loses its connection mid-call cannot tell whether the call
+    // arrived, and retrying is the only thing it can do. Without a key the retry
+    // files a SECOND suggestion, so the person at the workstation gets two
+    // identical cards for one piece of work and has to work out which to apply.
+    // With one, the retry is handed the id of the card already on the screen.
+    //
+    // SCOPED TO THE REQUESTER (`PlanStore::find_by_key`): two clients may use
+    // the same word for two different jobs, and one must not reach another's
+    // plan by guessing a key (M-07).
+    if (!plan.idempotency_key.empty())
+        if (const ai::Plan* already = plans_.find_by_key(plan.idempotency_key, plan.requester);
+            already != nullptr)
+            return already->id;
+
     // ---- APPENDING TO A SUGGESTION THAT IS ALREADY ON SOMEBODY'S SCREEN ------
     //
     // A non-empty `Plan::id` names a plan to EXTEND rather than a second one to
@@ -332,6 +361,12 @@ core::Result<std::string> AiService::propose(ai::Plan plan)
         bus_.echo(said);
     }
     return filed;
+}
+
+std::string AiService::existing_plan(const std::string& key, const std::string& requester) const
+{
+    const ai::Plan* held = plans_.find_by_key(key, requester);
+    return held != nullptr ? held->id : std::string();
 }
 
 core::Result<ai::Plan> AiService::plan_state(const std::string& id,

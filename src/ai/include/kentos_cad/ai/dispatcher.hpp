@@ -104,6 +104,16 @@ public:
     /// second parameter would be a second place for one fact.
     virtual core::Result<std::string> propose(Plan plan) = 0;
 
+    /// The plan `requester` has already filed under `key`, or an empty string.
+    ///
+    /// ASKED BEFORE `propose`, because afterwards the two cases cannot be told
+    /// apart: proposing with a key that is already held answers with the SAME
+    /// id, which is what makes a retry safe and what makes it invisible. A
+    /// client that retried after a dropped connection should be told its retry
+    /// was recognised rather than that a second suggestion was opened (M-06).
+    virtual std::string existing_plan(const std::string& key,
+                                      const std::string& requester) const = 0;
+
     /// A plan's state, for a client that is waiting on a decision. Refuses a
     /// plan `requester` does not own.
     virtual core::Result<Plan> plan_state(const std::string& id,

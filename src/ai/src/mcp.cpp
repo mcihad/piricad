@@ -902,6 +902,17 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
         if (const Json* asked = rpc.meta.find(kPlanMetaKey); asked != nullptr && asked->is_string())
             target = asked->as_string();
 
+    // AND IT MAY NAME ITS OWN REQUEST, so that a retry after a dropped
+    // connection is answered with the plan already on the person's screen rather
+    // than filing a second one (`kIdempotencyMetaKey`, TODOS M-06).
+    std::string once;
+    if (const Json* asked = rpc.meta.find("idempotency"); asked != nullptr && asked->is_string())
+        once = asked->as_string();
+    if (once.empty())
+        if (const Json* asked = rpc.meta.find(kIdempotencyMetaKey);
+            asked != nullptr && asked->is_string())
+            once = asked->as_string();
+
     Plan plan;
     // THE CONTRACT THIS RELIES ON, stated where it is used: `Dispatcher::propose`
     // with a non-empty `Plan::id` naming a PENDING plan APPENDS the steps to that
@@ -909,8 +920,9 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
     // `PlanStore::append` is the operation behind it. The returned id is checked
     // against the requested one below, so an implementation that ignored the
     // field produces a visible refusal rather than a silent second suggestion.
-    plan.id        = target;
-    plan.requester = out.audit.requester;
+    plan.id              = target;
+    plan.requester       = out.audit.requester;
+    plan.idempotency_key = once;
     // The client's own words for what it asked, which is the tool call itself:
     // there is no prompt in an MCP exchange. Small by construction — it is the
     // arguments, never the drawing (ai.md P9).
@@ -920,6 +932,12 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
     // is driving it, and a guess written into a legal record is a false fact.
     plan.revision = dispatcher_.revision();
     plan.steps.push_back(std::move(step));
+
+    // ASKED BEFORE FILING, because after it the two cases are indistinguishable:
+    // `propose` answers with an id either way, which is exactly what makes a
+    // retry safe and exactly what makes it invisible.
+    const std::string already =
+        once.empty() ? std::string() : dispatcher_.existing_plan(once, out.audit.requester);
 
     core::Result<std::string> filed = dispatcher_.propose(std::move(plan));
     if (!filed) {
@@ -953,10 +971,17 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
         lines.push_back(render_line(*spec, compiled.args));
     }
 
-    std::string text =
-        std::string("Öneri ") + (target.empty() ? "kaydı açıldı" : "genişletildi") + ": " +
-        plan_id + " (durum: " + plan_state_name(state ? state.value().state : PlanState::Pending) +
-        ").";
+    // THE SAME REQUEST ASKED TWICE IS THE SAME SUGGESTION, and the client is told
+    // which of the three things happened — otherwise a retry reads as "opened"
+    // and the agent believes it has asked for two pieces of work (M-06).
+    const char* what = "kaydı açıldı";
+    if (!target.empty())
+        what = "genişletildi";
+    else if (!already.empty())
+        what = "zaten açıktı — aynı istek";
+
+    std::string text = std::string("Öneri ") + what + ": " + plan_id + " (durum: " +
+                       plan_state_name(state ? state.value().state : PlanState::Pending) + ").";
     text += "\nUygulanacak komut satırları:";
     for (const std::string& line : lines)
         text += "\n  " + line;

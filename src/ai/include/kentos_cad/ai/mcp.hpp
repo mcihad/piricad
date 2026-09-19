@@ -116,6 +116,20 @@ inline constexpr const char* kPlanMetaKey = "cad.kentos/plan";
 /// The `_meta` key a client may name itself in, for the audit record.
 inline constexpr const char* kClientMetaKey = "cad.kentos/client";
 
+/// The `_meta` key a client names ITS OWN REQUEST in, so a retry is not a second
+/// suggestion.
+///
+/// WHAT IT IS FOR. A client whose connection drops mid-call cannot tell whether
+/// the call arrived; retrying is the only thing it can do. Without a key the
+/// retry files a second plan, and the person at the workstation gets two
+/// identical cards for one piece of work. With one, the retry is answered with
+/// the id of the plan already on their screen (TODOS M-06).
+///
+/// TWO SPELLINGS, like the plan key: the prefixed form the specification asks
+/// for on any `_meta` key it did not define, and the short `idempotency` the
+/// manual prints.
+inline constexpr const char* kIdempotencyMetaKey = "cad.kentos/idempotency";
+
 /// The protocol engine: one function from an HTTP request to an HTTP answer.
 class McpServer
 {

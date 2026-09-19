@@ -6,6 +6,34 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — uzun işler: nerede kaldı, ve aynı isteği iki kez sormak (TODOS M-06)
+
+- **`PlanState::Running` (`uygulaniyor`)**: bir karar değil, kararla sonuç
+  arasındaki süre. Dört yüz parsellik bir atlas dakikalar sürer ve o sırada
+  durumu soran istemciye `beklemede` demek yanlıştı — "hâlâ bir insanı bekliyor"
+  demek olur ve ajanı kullanıcıya "neden hâlâ tıklamadınız" diye sormaya
+  gönderir. Cevap artık **biten adım** ve **toplam adım** sayılarını taşıyor;
+  yüzde değil, çünkü adım kişinin onayladığı ve istemcinin adlandırabildiği birim.
+- **Yarım bir çıktı bitmiş görünmüyor.** Yazılan dosyalar, yeni sürüm ve uyarılar
+  ancak toplu iş kapandıktan sonra yazılıyor; `uygulaniyor` hâlindeki cevap
+  bunları hiç taşımıyor ve "henüz bitmedi" diye **sözle** söylüyor. İlerleme her
+  adım **bittiğinde** sayılıyor, başladığında değil.
+- **Idempotency anahtarı** (`_meta.idempotency` / `cad.kentos/idempotency`):
+  bağlantısı kopan bir istemci çağrının ulaşıp ulaşmadığını bilemez ve yeniden
+  denemekten başka bir şey yapamaz. Anahtarsız bir deneme ikinci bir öneri
+  açıyordu — bilgisayar başındaki kişinin ekranında tek iş için iki aynı kart.
+  Artık ekrandaki önerinin kimliği dönüyor ve cevap "zaten açıktı — aynı istek"
+  diyor, ki istemci bunu "açıldı" diye okumasın.
+- Anahtar **istemciye özel** (`PlanStore::find_by_key`): iki ajan aynı sözcüğü iki
+  ayrı iş için kullanabilir ve hiçbiri anahtar tahmin ederek bir başkasının
+  önerisine ulaşamaz (M-07).
+- `PlanStore::begin_apply` ve `settle` ayrı: biri kararın **yürütüldüğünü**, diğeri
+  kararın kendisini kaydediyor. Çalışan bir planın ikinci kez uygulanması
+  reddediliyor; `Running`'den karara geçmek serbest, çünkü `Running` bir karar
+  değil.
+- `ÖNERİ islem=durum` aynı iki sayıyı ve biten iş için yazılan dosyaları söylüyor:
+  komut satırı ile protokol tek bir şey anlatıyor (Article 1.2).
+
 ### Güvenlik — bir istemci kendi iznini genişletemez (TODOS S-04, kısmi)
 
 - **`SettingSpec::authority`**: bir ayarın tercih mi yetki mi olduğu, ayarın

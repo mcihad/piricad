@@ -97,6 +97,14 @@ struct FakeDispatcher final : ai::Dispatcher
         // a new plan. See the note in `mcp.cpp`; the engine checks the returned
         // id against the requested one, so an implementation that ignored the
         // field would produce a visible refusal rather than a second suggestion.
+        // THE SAME REQUEST ASKED TWICE IS THE SAME SUGGESTION (M-06). Mirrors
+        // `AiService::propose`: a retry after a dropped connection must not put
+        // a second identical card on somebody's screen.
+        if (!plan.idempotency_key.empty())
+            if (const ai::Plan* already = plans.find_by_key(plan.idempotency_key, plan.requester);
+                already != nullptr)
+                return already->id;
+
         if (!plan.id.empty()) {
             const std::string target = plan.id;
             for (const ai::PlanStep& step : plan.steps) {
@@ -109,6 +117,12 @@ struct FakeDispatcher final : ai::Dispatcher
             return target;
         }
         return plans.add(std::move(plan));
+    }
+
+    std::string existing_plan(const std::string& key, const std::string& requester) const override
+    {
+        const ai::Plan* held = plans.find_by_key(key, requester);
+        return held != nullptr ? held->id : std::string();
     }
 
     core::Result<ai::Plan> plan_state(const std::string& id,
@@ -1699,4 +1713,113 @@ TEST_CASE("M-08: defter sınırlıdır ama yetkisizliği unutmaz")
 
     CHECK(ledger.size() <= ai::ClientLedger::kMaxClients);
     CHECK(ledger.revoked("yasakli"));
+}
+
+TEST_CASE("M-06: aynı istek iki kez gelirse ikinci bir öneri açılmaz")
+{
+    Rig f;
+    ai::McpServer server = f.server();
+
+    const auto draw = [&](const char* key) {
+        Json arguments;
+        arguments.set("noktalar", Json::string(f.points_handle()));
+        Json meta;
+        meta.set("idempotency", Json::string(key));
+        return server.handle(tool_call("core_line", std::move(arguments), std::move(meta)).view());
+    };
+
+    // A CLIENT WHOSE CONNECTION DROPS MID-CALL cannot tell whether the call
+    // arrived; retrying is the only thing it can do. Without a key the retry
+    // files a SECOND suggestion and the person at the workstation gets two
+    // identical cards for one piece of work (TODOS M-06).
+    const ai::HttpOutcome first = draw("is-1");
+    REQUIRE_EQ(first.status, 200);
+    REQUIRE_FALSE(is_error(result_of(first)));
+    const std::string plan_id = first.audit.plan_id;
+    REQUIRE_FALSE(plan_id.empty());
+    CHECK_EQ(f.disp.plans.pending().size(), 1u);
+
+    const ai::HttpOutcome retry = draw("is-1");
+    REQUIRE_EQ(retry.status, 200);
+    CHECK_FALSE(is_error(result_of(retry)));
+    CHECK_EQ(retry.audit.plan_id, plan_id);
+    CHECK_EQ(f.disp.plans.pending().size(), 1u);
+    CHECK_EQ(f.disp.plans.find(plan_id)->steps.size(), 1u);
+
+    // AND THE CLIENT IS TOLD which of the three things happened: a retry that
+    // read "kaydı açıldı" would leave the agent believing it had asked for two
+    // pieces of work.
+    CHECK(text_of(result_of(retry)).find("aynı istek") != std::string::npos);
+    CHECK(text_of(result_of(first)).find("aynı istek") == std::string::npos);
+
+    // A DIFFERENT KEY IS A DIFFERENT JOB. The guard must not collapse two real
+    // requests into one.
+    const ai::HttpOutcome other = draw("is-2");
+    REQUIRE_EQ(other.status, 200);
+    CHECK_NE(other.audit.plan_id, plan_id);
+    CHECK_EQ(f.disp.plans.pending().size(), 2u);
+
+    // AND THE KEY IS SCOPED TO THE CLIENT. Two agents may use the same word for
+    // two different jobs, and one must not be handed another's plan by guessing
+    // a key (M-07).
+    Json arguments;
+    arguments.set("noktalar", Json::string(f.points_handle("Ajan B")));
+    Json meta;
+    meta.set("idempotency", Json::string("is-1"));
+    meta.set(ai::kClientMetaKey, Json::string("Ajan B"));
+    const ai::HttpOutcome stranger =
+        server.handle(tool_call("core_line", std::move(arguments), std::move(meta)).view());
+    REQUIRE_EQ(stranger.status, 200);
+    CHECK_NE(stranger.audit.plan_id, plan_id);
+}
+
+TEST_CASE("M-06: uygulanmakta olan bir öneri bitmiş görünmez")
+{
+    ai::PlanStore plans;
+
+    ai::Plan one;
+    one.requester = "Ajan A";
+    for (int i = 0; i < 3; ++i) {
+        ai::PlanStep step;
+        step.command_id = "core.layer";
+        step.line       = "KATMAN ad=k" + std::to_string(i);
+        one.steps.push_back(step);
+    }
+    const std::string id = plans.add(std::move(one));
+
+    // BEFORE: waiting for a person, and the answer says exactly that.
+    CHECK_EQ(plans.find(id)->state, ai::PlanState::Pending);
+    CHECK(plans.find(id)->to_json().find("aciklama")->as_string().find("uygulanmadı") !=
+          std::string::npos);
+
+    // DURING: a client polling mid-application was told `beklemede` — "still
+    // waiting for a person" — which is false the moment the person has clicked,
+    // and sends the agent to ask the user why they have not decided yet.
+    REQUIRE(plans.begin_apply(id));
+    CHECK_EQ(plans.find(id)->state, ai::PlanState::Running);
+    CHECK_FALSE(plans.pending().size() == 1u); // no longer on anybody's screen
+
+    plans.report_progress(id, 2);
+    const core::Json running = plans.find(id)->to_json();
+    CHECK_EQ(running.find("durum")->as_string(), std::string("uygulaniyor"));
+    CHECK_EQ(running.find("biten_adim")->as_int(), 2);
+    CHECK_EQ(running.find("toplam_adim")->as_int(), 3);
+    // SAID IN WORDS, because a half-finished result read as a finished one is
+    // the failure M-06 names: the file list is only complete at `uygulandi`.
+    CHECK(running.find("aciklama")->as_string().find("henüz bitmedi") != std::string::npos);
+    CHECK(running.find("yazilan_dosyalar") == nullptr);
+
+    // A SECOND APPLY IS REFUSED while one is running: the person said yes once.
+    CHECK_FALSE(plans.begin_apply(id));
+
+    // AFTER: `Running` is not a decision, so settling from it is allowed — but
+    // only once.
+    REQUIRE(plans.settle(id, ai::PlanState::Applied));
+    CHECK_EQ(plans.find(id)->state, ai::PlanState::Applied);
+    CHECK_FALSE(plans.settle(id, ai::PlanState::Rejected));
+
+    // And progress stops being written once it is over: a count on a settled
+    // plan would read as work still going.
+    plans.report_progress(id, 99);
+    CHECK_EQ(plans.find(id)->done_steps, 2u);
 }

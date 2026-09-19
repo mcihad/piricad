@@ -41,10 +41,20 @@ Uygulanan bir öneri **tek bir işlemdir**: adımların tamamı tek bir toplu i�
 | Durum | Anlamı |
 |---|---|
 | `beklemede` | Karar verilmedi; çizim değişmedi |
+| `uygulaniyor` | Kart onayladı, adımlar **şu an** çalışıyor; henüz bitmedi |
 | `uygulandi` | Kart onayladı, adımlar tek işlem olarak uygulandı |
 | `reddedildi` | Kart reddetti; çizim değişmedi |
 | `geri_cekildi` | İsteyen istemci bağlantıyı kapattı ya da defter doldu |
 | `basarisiz` | Kart onayladı, program uygulayamadı; toplu iş geri sarıldı |
+
+`uygulaniyor` bir **karar değildir**: kararla sonuç arasındaki süredir. Dört yüz parsellik
+bir atlas dakikalar sürer, ve o sırada durumu soran bir istemciye `beklemede` demek
+yanlıştır — "hâlâ bir insanı bekliyor" demek olur ve ajanı kullanıcıya "neden hâlâ
+tıklamadınız" diye sormaya gönderir. Bu durumda cevap **biten adım** ve **toplam adım**
+sayılarını da taşır.
+
+**Yarım bir çıktı bitmiş sayılmaz.** Yazılan dosyalar, yeni sürüm ve uyarılar ancak durum
+`uygulandi` olduğunda tamamdır; `uygulaniyor` hâlindeki cevap bunları hiç taşımaz.
 
 Bir önerinin kararı **bir kere** verilir. Verilmiş bir karar değiştirilemez; gerekiyorsa
 istemci yeni bir öneri açar.
@@ -119,6 +129,19 @@ Bir önerinin durumunu sormak:
 
 ```text
 Öneri p0f3a1c7b9e4d2856: beklemede, 2 adım.
+```
+
+Uygulanırken sorarsanız nerede olduğunu da söyler:
+
+```text
+Öneri p0f3a1c7b9e4d2856: uygulaniyor, 9 adım. 4 adım bitti; henüz tamamlanmadı.
+```
+
+Bittiğinde yazdığı dosyaları sayar:
+
+```text
+Öneri p0f3a1c7b9e4d2856: uygulandi, 9 adım. Yazılan dosyalar:
+    /Users/ali/isler/ada1284-atlas.pdf
 ```
 
 Komut satırından uygulamayı denemek — komut kararı vermez ve nereye bakmanız

@@ -27,6 +27,7 @@
 #include "kentos_cad/core/json.hpp"
 #include "kentos_cad/core/result.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -40,6 +41,17 @@ enum class PlanState : std::uint8_t {
     Rejected,  ///< the person said no
     Withdrawn, ///< the client went away (it closed the stream) before a decision
     Failed,    ///< applying it was refused by validation; nothing was applied
+
+    /// A person said yes and the steps are running NOW.
+    ///
+    /// NOT A DECISION — the decision was `Applied`'s to make and this is the
+    /// stretch of time before it. It exists because an atlas over four hundred
+    /// parcels is minutes of work, and a client polling in the middle of it was
+    /// told `beklemede`: "still waiting for a person", which is false and sends
+    /// the agent to ask the user why they have not clicked yet (TODOS M-06).
+    ///
+    /// ADDED AT THE END, like every enum whose values reach a client.
+    Running,
 };
 
 /// The state's Turkish word, for a client's answer and for the card.
@@ -98,6 +110,30 @@ struct Plan
     /// the audit record names them instead (S-06).
     std::string decided_by;
 
+    // ---- how far it has got, and why asking twice is safe (TODOS M-06) ------
+
+    /// How many steps have finished, while the state is `Running`.
+    ///
+    /// A COUNT RATHER THAN A PERCENTAGE. The steps are the unit a person
+    /// approved and the unit a client can name; a percentage would be this
+    /// number divided by `steps.size()` and rounded, which is the same fact
+    /// with the interesting half thrown away.
+    std::size_t done_steps{0};
+
+    /// The client's own name for the request this plan came from.
+    ///
+    /// WHY IT EXISTS. An agent that loses its connection mid-call cannot tell
+    /// whether the call arrived. Retrying is the only thing it can do, and
+    /// without this the retry files a SECOND suggestion — so the person at the
+    /// workstation gets two identical cards for one piece of work and has to
+    /// work out which one to apply. With it, the retry gets the id of the plan
+    /// that is already on the screen.
+    ///
+    /// SCOPED TO THE REQUESTER, always. Two clients may use the same word for
+    /// two different jobs, and one client must not be handed another's plan by
+    /// guessing a key (M-07).
+    std::string idempotency_key;
+
     /// What the client is told: id, state, the lines, and the rule that a person
     /// must apply it. Never the raw arguments — the lines are the readable form.
     core::Json to_json() const;
@@ -153,8 +189,23 @@ public:
     core::Status append_for(std::string_view id, std::string_view requester, PlanStep step);
 
     /// Marks the outcome. The only writer is `Gate`, and only after a person has
-    /// decided; nothing else may move a plan out of `Pending`.
+    /// decided; nothing else may move a plan out of `Pending` or `Running`.
     core::Status settle(std::string_view id, PlanState state, std::string refusal = {});
+
+    /// Moves a plan from `Pending` to `Running` and reports its progress there.
+    ///
+    /// SEPARATE FROM `settle` BECAUSE IT IS NOT A DECISION. `settle` records
+    /// what a person decided and refuses a second answer; this records that the
+    /// decision is being carried out. Calling it on a plan that is not pending
+    /// is refused for the same reason a second decision is.
+    core::Status begin_apply(std::string_view id);
+
+    /// Records that `done` steps of a running plan have finished.
+    void report_progress(std::string_view id, std::size_t done);
+
+    /// The plan `requester` filed under `key`, or null. See
+    /// `Plan::idempotency_key` for why this is scoped and what it prevents.
+    const Plan* find_by_key(std::string_view key, std::string_view requester) const;
 
     /// Every plan still waiting, oldest first — what the suggestion panel lists.
     std::vector<const Plan*> pending() const;

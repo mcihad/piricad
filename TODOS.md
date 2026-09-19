@@ -884,11 +884,27 @@ uygulanan ve müzakere edilen yetenekler ilan edilmelidir.
   `kentoscad://layouts/{id}/preview`, `kentoscad://jobs/{id}/result`. Bunlar yeni
   uygulama tasarımıdır, mevcut endpoint iddiası değildir. **Kabul:** ajan layout'u
   yalnız oluşturmaz; son durumunu ve ürettiği dosyanın doğrulama raporunu okuyabilir.
-- [ ] **M-06 / P1 — Uzun işler ve olaylar.** Atlas, import ve processing işlerini
-  `job_id`, ilerleme, iptal, hata ve sonuçla izle. Desteklenen Tasks uzantısı ayrıca
-  uygulanıp müzakere edilirse kullan; diğer istemciler için uygulama araçlarıyla
-  durum sorgulama fallback'i sun. **Kabul:** reconnect sonrasında durum bulunur,
-  aynı istek tekrarı yeni iş açmaz; kısmi çıktı tamamlanmış görünmez.
+- [x] **M-06 / P1 — Uzun işler ve olaylar.** *(19 Eylül 2026)*
+  **İş kimliği zaten öneri kimliğidir** ve ayrı bir `job_id` açmak ikinci bir
+  kimlik olurdu: bir ajanın açtırabildiği uzun iş, uyguladığı bir öneridir
+  (okuma araçları kısadır, yazan hiçbir şey ajan tarafında çalışmaz).
+  **Reconnect sonrasında durum bulunur:** protokol durumsuz, defter uygulamada;
+  `ÖNERİ islem=durum` ve `tools/call` cevabındaki `oneri` alanı her yeni
+  bağlantıda aynı kimliği çözüyor.
+  **Aynı istek tekrarı yeni iş açmaz:** `_meta.idempotency` anahtarı, istemciye
+  kapsamlı. Bağlantısı kopan istemci çağrının ulaşıp ulaşmadığını bilemez;
+  anahtarsız deneme ekranda tek iş için iki kart bırakıyordu.
+  **Kısmi çıktı tamamlanmış görünmez:** yeni `uygulaniyor` durumu, biten/toplam
+  adım sayıları, ve dosya listesinin ancak toplu iş kapandıktan sonra yazılması.
+  Dosyanın kendisi zaten atomik yayımlanıyor (C-05).
+  **Tasks uzantısı ilan edilmiyor**, çünkü müzakere edilmiş bir uygulaması yok;
+  M-09'daki `prompts` kararıyla aynı gerekçe. Durum sorgulama fallback'i
+  uygulama araçlarıyla, yani `ÖNERİ` ile veriliyor.
+  **Kalan:** adım İÇİ ilerleme. Bugün sayılan birim adımdır; dört yüz sayfalık bir
+  atlas tek bir adımdır ve o adımın içindeki sayfa sayacı `command::Job`'ın
+  `permille` alanında duruyor ama öneriye bağlı değil. Bağlamak, uygulamanın
+  toplu işi bir iş parçasına taşımasını gerektiriyor (aynı iş parçası kuralı:
+  belge kilitsiz).
 - [x] **M-07 / P1 — İstemci kapsamı ve veri izolasyonu.** *(19 Eylül 2026)*
   `ai::Dispatcher`'ın dört kapısı artık **kimin sorduğunu** alıyor: `run_read_only`,
   `plan_state`, `withdraw`, `handles`. İstemciyi ayıran ad, `_meta` içindeki

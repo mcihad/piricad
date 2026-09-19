@@ -183,6 +183,28 @@ Bir istemci birkaç adımı **tek bir öneride** toplayabilir: ikinci ve sonraki
 eklenir ve hepsi tek onayla, tek işlem olarak uygulanır. `_meta` anahtarının iki yazımı
 da okunur: kısa `plan` ve protokolün istediği ön ekli biçim `cad.kentos/plan`.
 
+### Aynı isteği iki kez göndermek
+
+Bağlantısı kopan bir istemci, çağrının ulaşıp ulaşmadığını **bilemez**. Yapabileceği tek
+şey yeniden denemektir — ve anahtarsız bir yeniden deneme **ikinci bir öneri** açar:
+bilgisayar başındaki kişinin ekranında tek bir iş için iki aynı kart belirir ve hangisini
+uygulayacağını çözmek zorunda kalır.
+
+Bunun için istemci `_meta` içinde kendi isteğine bir ad verir:
+
+```json
+{ "_meta": { "idempotency": "atlas-ada-1284" } }
+```
+
+(`params` içindeki `_meta` nesnesine bir alan olarak yazılır.)
+
+Aynı ad ikinci kez gelirse **yeni öneri açılmaz**: ekrandaki önerinin kimliği döner ve
+cevap "zaten açıktı — aynı istek" der. Kısa `idempotency` ve ön ekli
+`cad.kentos/idempotency` yazımlarının ikisi de okunur.
+
+Anahtar **istemciye özeldir**: iki ajan aynı sözcüğü iki ayrı iş için kullanabilir, ve
+hiçbiri bir anahtarı tahmin ederek bir başkasının önerisine ulaşamaz.
+
 ### İstemci giderse
 
 Bu protokol sürümünde **iptal, akışı kapatmaktır**. Bir istemci öneri taşıyan akışını

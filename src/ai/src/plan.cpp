@@ -25,6 +25,7 @@ const char* plan_state_name(PlanState state)
     case PlanState::Rejected: return "reddedildi";
     case PlanState::Withdrawn: return "geri_cekildi";
     case PlanState::Failed: return "basarisiz";
+    case PlanState::Running: return "uygulaniyor";
     }
     return "bilinmiyor";
 }
@@ -45,6 +46,14 @@ core::Json Plan::to_json() const
     out.set("adimlar", std::move(lines));
 
     if (!refusal.empty()) out.set("gerekce", core::Json::string(refusal));
+
+    // HOW FAR IT HAS GOT, while it is running. Said as two counts rather than as
+    // a percentage: the step is the unit a person approved and the unit a client
+    // can name (M-06).
+    if (state == PlanState::Running) {
+        out.set("biten_adim", core::Json::integer(static_cast<std::int64_t>(done_steps)));
+        out.set("toplam_adim", core::Json::integer(static_cast<std::int64_t>(steps.size())));
+    }
 
     // WHAT APPLYING IT LEFT BEHIND, said rather than inferred. A client that has
     // to read "uygulandı" and then guess whether a file appeared is a client that
@@ -70,13 +79,20 @@ core::Json Plan::to_json() const
     // write is waiting for a person reads the empty result as a failure and
     // tries again — which is how a careful protocol turns into eleven duplicate
     // suggestions on somebody's screen.
-    out.set("aciklama",
-            core::Json::string(state == PlanState::Pending
-                                   ? "Bu öneri uygulanmadı. Çizimi değiştirmek için bilgisayar "
-                                     "başındaki mühendisin onaylaması gerekir; onaylanırsa "
-                                     "tamamı tek bir işlem ve tek Ctrl+Z olur."
-                                   : "Bu önerinin durumu yukarıda; uygulama kararı kullanıcıya "
-                                     "aittir."));
+    // AND A RUNNING PLAN SAYS SO IN WORDS. A client reading a list of files
+    // while the work is still going would read a partial result as a finished
+    // one — which is exactly what M-06 forbids, and the reason `yazilan_dosyalar`
+    // is only ever filled once the batch has closed.
+    const char* note = "Bu önerinin durumu yukarıda; uygulama kararı kullanıcıya aittir.";
+    if (state == PlanState::Pending)
+        note = "Bu öneri uygulanmadı. Çizimi değiştirmek için bilgisayar başındaki "
+               "mühendisin onaylaması gerekir; onaylanırsa tamamı tek bir işlem ve tek "
+               "Ctrl+Z olur.";
+    else if (state == PlanState::Running)
+        note = "Bu öneri ŞU AN uygulanıyor; henüz bitmedi. Sonuç — yazılan dosyalar, yeni "
+               "sürüm, uyarılar — ancak durum 'uygulandi' olduğunda tamamdır. Yarım bir "
+               "çıktı bitmiş sayılmaz.";
+    out.set("aciklama", core::Json::string(note));
     return out;
 }
 
@@ -154,6 +170,38 @@ const Plan* PlanStore::find(std::string_view id) const
     return nullptr;
 }
 
+core::Status PlanStore::begin_apply(std::string_view id)
+{
+    Plan* plan = find(id);
+    if (plan == nullptr)
+        return core::err(core::ErrorCode::NotFound,
+                         "Böyle bir öneri yok: '" + std::string(id) + "'.");
+    if (plan->state != PlanState::Pending)
+        return core::err(core::ErrorCode::ValidationFailed,
+                         "Öneri '" + std::string(id) + "' zaten " + plan_state_name(plan->state) +
+                             "; yeniden uygulanamaz.");
+    plan->state      = PlanState::Running;
+    plan->done_steps = 0;
+    return core::ok();
+}
+
+void PlanStore::report_progress(std::string_view id, std::size_t done)
+{
+    // ONLY A RUNNING PLAN HAS PROGRESS. Writing a count onto a settled plan
+    // would be describing work that is over, and a client polling afterwards
+    // would read it as work still going.
+    if (Plan* plan = find(id); plan != nullptr && plan->state == PlanState::Running)
+        plan->done_steps = done;
+}
+
+const Plan* PlanStore::find_by_key(std::string_view key, std::string_view requester) const
+{
+    if (key.empty()) return nullptr;
+    for (const Plan& plan : plans_)
+        if (plan.idempotency_key == key && plan.requester == requester) return &plan;
+    return nullptr;
+}
+
 core::Status PlanStore::settle(std::string_view id, PlanState state, std::string refusal)
 {
     Plan* plan = find(id);
@@ -165,7 +213,10 @@ core::Status PlanStore::settle(std::string_view id, PlanState state, std::string
     // twice or recording two different answers for one question, and the audit
     // record is supposed to answer "what did the engineer decide" without
     // ambiguity (ai.md R6).
-    if (plan->state != PlanState::Pending)
+    //
+    // `Running` PASSES, because it is not a decision: it is the stretch between
+    // the decision and its outcome, and the outcome is what lands here (M-06).
+    if (plan->state != PlanState::Pending && plan->state != PlanState::Running)
         return core::err(core::ErrorCode::ValidationFailed,
                          "Öneri '" + std::string(id) + "' zaten " + plan_state_name(plan->state) +
                              "; kararı değiştirilemez.");
