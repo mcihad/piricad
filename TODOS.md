@@ -787,7 +787,22 @@ uygulanan ve müzakere edilen yetenekler ilan edilmelidir.
   durum gerçek `applied/running/completed` sonucu olsun; hep `pending` dönmesin.
   **Kabul:** dış ajan insanın sohbet mesajı göndermesini beklemeden işini takip eder;
   onay gereken modda tek plan kararıyla devam eder, başka istemcinin planına ekleyemez.
-- [ ] **M-05 / P1 — İş ve çıktı kaynakları.** Belge özeti, layer schema, layout
+- [~] **M-05 / P1 — İş ve çıktı kaynakları.** *(iki canlı kaynak 19 Eylül 2026)*
+  **Eklendi:** `kentoscad://belge/ozet` (belge özeti, katmanlar, çıktı
+  yerleşimleri ve hedefli olup olmadıkları, seçim, görünüm) ve
+  `kentoscad://yerlesim/denetim` (her yerleşimin preflight raporu).
+  **İkisi de kendi veri yolunu kurmuyor**: `Dispatcher::run_read_only` üzerinden
+  `BAĞLAM` ve `ÇIKTIYERLEŞİMİ islem=denetle` komutlarını çalıştırıyorlar. Kendi
+  belge özetini hesaplayan bir kaynak, tek bir soruya ikinci bir cevap olurdu ve
+  ikisi zamanla ayrışırdı (CLAUDE.md 5.10). Yerleşim adları da sunucunun tuttuğu
+  bir listeden değil, `BAĞLAM`'ın cevabından geliyor — sunucunun kendi belgesi yok
+  ve olmamalı.
+  `application/json` dönüyorlar, düz metin değil: bir ajan katman sayısını
+  öğrenmek için Türkçe bir cümle ayrıştırmak zorunda kalmamalı.
+  Bilinmeyen bir URI, sunulanların **hepsini adıyla** söyleyen bir `400` + `-32602`
+  alıyor.
+  **Kalan:** `kentoscad://jobs/{id}/result` ve artefaktlar (A-04'ün iş yürütücüsüne
+  bağlı); layout önizlemesi (görüntü kaynağı); seçili öğeler ayrı kaynak olarak. Belge özeti, layer schema, layout
   ağacı, seçili öğeler, önizleme, preflight, iş sonucu ve artefaktları kaynak
   olarak sun. Örnek uygulama URI'ları: `kentoscad://documents/{id}/summary`,
   `kentoscad://layouts/{id}/preview`, `kentoscad://jobs/{id}/result`. Bunlar yeni

@@ -971,6 +971,14 @@ McpServer::Answer McpServer::resources_list(const JsonRpcRequest& rpc) const
     resources.push(resource_entry(kLlmsFullUri, "llms-full.txt", "Kullanım kılavuzu (tam)",
                                   "Aynı özet, ardından her aracın adı, açıklaması ve "
                                   "parametre tablosu. Komut kataloğundan üretilir."));
+    resources.push(resource_entry(kContextUri, "belge-ozeti", "Üzerinde çalışılan belge",
+                                  "Belge sürümü, koordinat sistemi, kapsam, katmanlar, çıktı "
+                                  "yerleşimleri ve hedefli olup olmadıkları, seçili nesneler ve "
+                                  "görünüm. `BAĞLAM` komutundan üretilir."));
+    resources.push(resource_entry(kPreflightUri, "yerlesim-denetimi", "Çıktı yerleşimi denetimi",
+                                  "Basmayı engellemeyen ama sessizce yanlış olan durumlar: "
+                                  "hedeflenmemiş harita, sayfadan taşan kutu, kopuk harita bağı. "
+                                  "`ÇIKTIYERLEŞİMİ islem=denetle` komutundan üretilir."));
 
     Json result;
     result.set("resources", std::move(resources));
@@ -990,18 +998,70 @@ McpServer::Answer McpServer::resources_read(const JsonRpcRequest& rpc) const
 
     const std::string uri = asked->as_string();
     std::string text;
-    if (uri == kLlmsUri)
+    std::string media = "text/markdown";
+
+    // THE TWO LIVE ONES RUN THE COMMAND THAT ALREADY ANSWERS THEM.
+    //
+    // Not a second data path: a resource that computed a document summary of its
+    // own would be a second answer to one question, and the two would drift
+    // (CLAUDE.md 5.10). They are read-only commands, so they run under every
+    // policy including the strictest.
+    const auto from_command = [&](const char* command_id, command::Args args) {
+        core::Result<ToolOutcome> ran = dispatcher_.run_read_only(command_id, std::move(args));
+        if (!ran) return std::string{};
+        media = "application/json";
+        return ran.value().report.is_null() ? std::string("{}") : ran.value().report.dump_pretty(2);
+    };
+
+    if (uri == kLlmsUri) {
         text = llms_txt(registry_);
-    else if (uri == kLlmsFullUri)
+    } else if (uri == kLlmsFullUri) {
         text = llms_full_txt(registry_);
-    else
+    } else if (uri == kContextUri) {
+        text = from_command("core.context", command::Args{});
+    } else if (uri == kPreflightUri) {
+        // EVERY SHEET, one report. The command answers one layout at a time, so
+        // this walks them — and a drawing with no layouts answers with an empty
+        // list rather than an error, because "none" is an answer.
+        // THE NAMES COME FROM THE CONTEXT COMMAND, not from a list this object
+        // keeps: the server has no document of its own and should not grow one.
+        media       = "application/json";
+        Json sheets = Json::array({});
+        if (auto named = dispatcher_.run_read_only("core.context", command::Args{}); named) {
+            const Json* listed = named.value().report.find("cikti_yerlesimleri");
+            if (listed != nullptr && listed->is_array())
+                for (const Json& one : listed->as_array()) {
+                    const Json* name = one.find("ad");
+                    if (name == nullptr || !name->is_string()) continue;
+
+                    command::Args ask;
+                    ask.set("islem", command::Value::text("denetle"));
+                    ask.set("ad", command::Value::text(name->as_string()));
+                    auto ran = dispatcher_.run_read_only("core.layout", std::move(ask));
+
+                    Json sheet;
+                    sheet.set("yerlesim", Json::string(name->as_string()));
+                    Json notes = Json::array({});
+                    if (ran)
+                        for (const std::string& line : ran.value().lines)
+                            notes.push(Json::string(line));
+                    sheet.set("satirlar", std::move(notes));
+                    sheets.push(std::move(sheet));
+                }
+        }
+        Json report;
+        report.set("yerlesimler", std::move(sheets));
+        text = report.dump_pretty(2);
+    } else {
         return fault(rpc.id, kInvalidParams,
-                     "Bilinmeyen kaynak: '" + uri + "'. Bu sunucu iki kaynak sunar: `" +
-                         std::string(kLlmsUri) + "` ve `" + kLlmsFullUri + "`.");
+                     "Bilinmeyen kaynak: '" + uri + "'. Bu sunucu şunları sunar: `" +
+                         std::string(kLlmsUri) + "`, `" + kLlmsFullUri + "`, `" + kContextUri +
+                         "`, `" + kPreflightUri + "`.");
+    }
 
     Json entry;
     entry.set("uri", Json::string(uri));
-    entry.set("mimeType", Json::string("text/markdown"));
+    entry.set("mimeType", Json::string(media));
     entry.set("text", Json::string(std::move(text)));
 
     Json contents = Json::array({});

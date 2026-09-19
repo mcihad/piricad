@@ -90,6 +90,20 @@ inline constexpr const char* kLlmsUri = "kentoscad://llms.txt";
 /// The long form: `ai::llms_full_txt`, also generated on every read.
 inline constexpr const char* kLlmsFullUri = "kentoscad://llms-full.txt";
 
+/// WHAT THE CLIENT IS WORKING ON, as a resource rather than a call.
+///
+/// The same answer `core.context` gives — served through the same command, not
+/// through a second path that could come to disagree with it (CLAUDE.md 5.10).
+/// A resource because a client attaches it once and re-reads it; a tool because
+/// an agent asks it mid-turn. The two are different gestures over one answer.
+inline constexpr const char* kContextUri = "kentoscad://belge/ozet";
+
+/// What the drawing's sheets cannot honour, from `ÇIKTIYERLEŞİMİ islem=denetle`.
+///
+/// Read before an export rather than after it: none of what it reports fails, so
+/// the file appears and looks finished (TODOS L-15, M-05).
+inline constexpr const char* kPreflightUri = "kentoscad://yerlesim/denetim";
+
 /// The `_meta` key a client appends to an existing pending suggestion with.
 ///
 /// TWO SPELLINGS ARE ACCEPTED — this one and the bare `plan` — because MCP asks

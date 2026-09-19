@@ -1033,7 +1033,7 @@ TEST_CASE("Eski bir tutamak reddedilir: çizim o zamandan beri değişti")
     CHECK(f.disp.plans.pending().empty());
 }
 
-TEST_CASE("İki kaynak da okunur ve üretilmiş metni döner")
+TEST_CASE("Her kaynak okunur ve üretilmiş metni döner")
 {
     Rig f;
     ai::McpServer server = f.server();
@@ -1045,7 +1045,9 @@ TEST_CASE("İki kaynak da okunur ve üretilmiş metni döner")
     const Json list       = result_of(server.handle(listed.view()));
     const Json* resources = list.find("resources");
     REQUIRE(resources != nullptr);
-    REQUIRE_EQ(resources->as_array().size(), 2u);
+    // FOUR NOW: the two generated documents, and the two live ones that TODOS
+    // M-05 asks for — the document summary and the layout preflight.
+    REQUIRE_EQ(resources->as_array().size(), 4u);
 
     const auto read = [&](const char* uri) {
         Json params;
@@ -1304,4 +1306,55 @@ TEST_CASE("MCP: taşınmayan bir bildirim kabiliyeti ilan edilmiyor")
 
     // And no subscriptions capability at all, for the same reason.
     CHECK(caps->find("subscriptions") == nullptr);
+}
+
+TEST_CASE("MCP: canlı kaynaklar aynı komutlardan besleniyor")
+{
+    // TODOS M-05. A resource that computed a document summary of its own would be
+    // a second answer to one question, and the two would drift (CLAUDE.md 5.10).
+    // These run the very commands that already answer them, through the same
+    // read-only door every other caller uses.
+    Rig f;
+    ai::McpServer server = f.server();
+
+    const auto read = [&](const char* uri) {
+        Json params;
+        params.set("uri", Json::string(uri));
+        Req req;
+        req.mcp_method = "resources/read";
+        req.mcp_name   = uri;
+        req.body       = rpc_body("resources/read", std::move(params));
+        return server.handle(req.view());
+    };
+
+    for (const char* uri : {ai::kContextUri, ai::kPreflightUri}) {
+        const ai::HttpOutcome out = read(uri);
+        REQUIRE_EQ(out.status, 200);
+        const Json result    = result_of(out);
+        const Json* contents = result.find("contents");
+        REQUIRE(contents != nullptr);
+        REQUIRE_EQ(contents->as_array().size(), 1u);
+        const Json& entry = contents->as_array()[0];
+        CHECK_EQ(entry.find("uri")->as_string(), uri);
+        // JSON, NOT PROSE. An agent should not have to parse a Turkish sentence
+        // to learn a layer count.
+        CHECK_EQ(entry.find("mimeType")->as_string(), "application/json");
+        CHECK(!entry.find("text")->as_string().empty());
+    }
+
+    // AND A URI NOBODY SERVES IS NAMED, WITH WHAT IS SERVED. A client that asked
+    // for the wrong thing should not have to guess what the right thing is.
+    Json params;
+    params.set("uri", Json::string("kentoscad://yok"));
+    Req bad;
+    bad.mcp_method                = "resources/read";
+    bad.mcp_name                  = "kentoscad://yok";
+    bad.body                      = rpc_body("resources/read", std::move(params));
+    const ai::HttpOutcome refused = server.handle(bad.view());
+    // `400` WITH `-32602`, which is what this revision says an invalid parameter
+    // is — and the message names every URI that IS served, so a client that asked
+    // for the wrong thing does not have to guess the right one.
+    CHECK_EQ(refused.status, 400);
+    CHECK(refused.body.find("kentoscad://belge/ozet") != std::string::npos);
+    CHECK(refused.body.find("kentoscad://yerlesim/denetim") != std::string::npos);
 }
