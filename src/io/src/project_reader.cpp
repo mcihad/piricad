@@ -790,6 +790,153 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             if (auto st = tx.add_guide(parsed_axes[g], parsed_coords[g]); !st) return st.error();
     }
 
+    // ---- the sheet layouts (core/layout.hpp) ----
+    //
+    // OPTIONAL, like the guides above, and read through the transaction for the
+    // same reason: a partly-read file rolls back whole. The pages block is
+    // required beside the layouts block — a layout with no page is refused by
+    // the store — while the item and name blocks are absent when nothing needs
+    // them, exactly as every empty column is.
+    if (view.has(kBlkLayouts)) {
+        const std::uint64_t layout_n = view.count_of(kBlkLayouts);
+        auto layout_rows             = view.column<LayoutRecord>(kBlkLayouts, layout_n, "pafta");
+        if (!layout_rows) return layout_rows.error();
+
+        const std::uint64_t page_n = view.count_of(kBlkLayoutPages);
+        auto page_rows = view.column<LayoutPageRecord>(kBlkLayoutPages, page_n, "pafta sayfasi");
+        if (!page_rows) return page_rows.error();
+
+        const std::uint64_t item_n = view.count_of(kBlkLayoutItems);
+        auto item_rows = view.column<LayoutItemRecord>(kBlkLayoutItems, item_n, "pafta ogesi");
+        if (!item_rows) return item_rows.error();
+
+        const std::uint64_t name_n = view.count_of(kBlkLayoutNames);
+        auto name_rows = view.column<std::uint32_t>(kBlkLayoutNames, name_n, "pafta ad listesi");
+        if (!name_rows) return name_rows.error();
+
+        /// A run inside one of the side blocks, checked before it is walked: a
+        /// first/count pair that reaches past the end is a corrupt file, and
+        /// reading it would be reading somebody else's rows (io.md R18).
+        const auto run_fits = [](std::uint64_t run_first, std::uint64_t run_count,
+                                 std::uint64_t rows) {
+            return run_first <= rows && run_count <= rows - run_first;
+        };
+
+        std::vector<core::Layout> sheets;
+        sheets.reserve(static_cast<std::size_t>(layout_n));
+
+        for (std::uint64_t li = 0; li < layout_n; ++li) {
+            const LayoutRecord& r = layout_rows.value()[static_cast<std::size_t>(li)];
+            core::Layout out;
+
+            auto name = strings.at(r.name, "pafta adı");
+            if (!name) return name.error();
+            out.name   = std::move(name.value());
+            auto paper = strings.at(r.paper, "pafta kâğıdı");
+            if (!paper) return paper.error();
+            out.paper     = std::move(paper.value());
+            out.dpi       = r.dpi;
+            out.margin    = r.margin_um;
+            out.landscape = r.landscape != 0;
+
+            if (!run_fits(r.first_page, r.page_count, page_n))
+                return err(ErrorCode::ParseError,
+                           std::string(kErrConsist) + ": '" + out.name +
+                               "' paftasının sayfa aralığı dosyanın dışına taşıyor.");
+            out.pages.clear();
+            for (std::uint32_t p = 0; p < r.page_count; ++p) {
+                const LayoutPageRecord& pr = page_rows.value()[r.first_page + p];
+                out.pages.push_back(core::LayoutPage{pr.w, pr.h});
+            }
+
+            if (!run_fits(r.first_item, r.item_count, item_n))
+                return err(ErrorCode::ParseError,
+                           std::string(kErrConsist) + ": '" + out.name +
+                               "' paftasının öğe aralığı dosyanın dışına taşıyor.");
+
+            for (std::uint32_t ii = 0; ii < r.item_count; ++ii) {
+                const LayoutItemRecord& ir = item_rows.value()[r.first_item + ii];
+                core::LayoutItem item;
+
+                auto id = strings.at(ir.id, "pafta öğesi adı");
+                if (!id) return id.error();
+                item.id   = std::move(id.value());
+                auto text = strings.at(ir.text, "pafta öğesi metni");
+                if (!text) return text.error();
+                item.text = std::move(text.value());
+
+                // AN UNKNOWN KIND IS A REFUSAL, not a silent Label: a file from a
+                // later build carrying an item this one cannot draw would be
+                // saved back with that item turned into something else, which is
+                // data loss wearing a default value (model.md R26's reasoning).
+                const std::optional<core::LayoutItemKind> kind =
+                    ir.kind <= static_cast<std::uint8_t>(core::LayoutItemKind::Table)
+                        ? std::optional<core::LayoutItemKind>(
+                              static_cast<core::LayoutItemKind>(ir.kind))
+                        : std::nullopt;
+                if (!kind)
+                    return err(ErrorCode::ParseError, std::string(kErrConsist) + ": '" + out.name +
+                                                          "' paftasındaki '" + item.id +
+                                                          "' öğesinin türü bu sürümde yok (" +
+                                                          std::to_string(ir.kind) + ").");
+                item.kind = *kind;
+
+                item.frame             = core::PaperRect{ir.x_um, ir.y_um, ir.w_um, ir.h_um};
+                item.z                 = ir.z;
+                item.rotation_udeg     = ir.rotation_udeg;
+                item.locked            = ir.locked != 0;
+                item.frame_visible     = ir.frame_visible != 0;
+                item.frame_width       = ir.frame_width_um;
+                item.frame_colour      = ir.frame_colour;
+                item.background        = ir.background != 0;
+                item.background_colour = ir.background_colour;
+                item.text_height       = ir.text_height_um;
+                item.text_colour       = ir.text_colour;
+                item.align_h           = ir.align_h;
+                item.align_v           = ir.align_v;
+                item.extent =
+                    core::Box2{ir.extent_min_x, ir.extent_min_y, ir.extent_max_x, ir.extent_max_y};
+                item.scale = ir.scale;
+                item.grid  = static_cast<core::GridStyle>(
+                    ir.grid <= static_cast<std::uint8_t>(core::GridStyle::Tick) ? ir.grid : 0);
+                item.grid_labels = static_cast<core::GridLabels>(
+                    ir.grid_labels <= static_cast<std::uint8_t>(core::GridLabels::Inside)
+                        ? ir.grid_labels
+                        : 0);
+                item.grid_interval    = ir.grid_interval_mm;
+                item.grid_width       = ir.grid_width_um;
+                item.grid_colour      = ir.grid_colour;
+                item.grid_text_height = ir.grid_text_height_um;
+                item.style            = ir.style;
+                item.shape            = static_cast<core::LayoutShape>(
+                    ir.shape <= static_cast<std::uint8_t>(core::LayoutShape::Line) ? ir.shape : 0);
+                item.row_limit = ir.row_limit;
+
+                if (!run_fits(ir.first_layer, ir.layer_count, name_n) ||
+                    !run_fits(ir.first_column, ir.column_count, name_n))
+                    return err(ErrorCode::ParseError,
+                               std::string(kErrConsist) + ": '" + item.id +
+                                   "' öğesinin ad listesi dosyanın dışına taşıyor.");
+                for (std::uint32_t n = 0; n < ir.layer_count; ++n) {
+                    auto one = strings.at(name_rows.value()[ir.first_layer + n], "pafta katmanı");
+                    if (!one) return one.error();
+                    item.layers.push_back(std::move(one.value()));
+                }
+                for (std::uint32_t n = 0; n < ir.column_count; ++n) {
+                    auto one = strings.at(name_rows.value()[ir.first_column + n], "pafta sütunu");
+                    if (!one) return one.error();
+                    item.columns.push_back(std::move(one.value()));
+                }
+
+                out.items.push_back(std::move(item));
+                out.item_pages.push_back(ir.page);
+            }
+            sheets.push_back(std::move(out));
+        }
+
+        if (auto st = tx.set_layouts(std::move(sheets)); !st) return st.error();
+    }
+
     // ---- block definitions (model.md R45), before the entities they own ----
     //
     // A member is created INSIDE its block (`add_kind`'s `in_block`), so the

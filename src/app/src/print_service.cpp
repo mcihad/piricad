@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/print_service.hpp"
 
+#include "kentos_cad/app/layout_render.hpp"
+
 #include "kentos_cad/app/backend_factory.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/io/pdf_encrypt.hpp"
@@ -9,6 +11,7 @@
 #include "kentos_cad/render/scene.hpp"
 #include "kentos_cad/render/view.hpp"
 
+#include <QDate>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -248,6 +251,11 @@ command::Task<core::Result<std::string>> PrintService::handle(command::PrintRequ
 
     case Verb::ToPdf:
     case Verb::ToPrinter: {
+        // A PAFTA IS ITS OWN SHEET. It carries paper, margin, resolution and a
+        // map frame that knows where it looks, so it takes neither a profile nor
+        // a window and goes down its own path (`layout_render.hpp`).
+        if (!request.layout.empty()) co_return printLayout(request);
+
         auto resolved = profiles_.resolve(request);
         if (!resolved) co_return resolved.error();
 
@@ -269,6 +277,91 @@ command::Task<core::Result<std::string>> PrintService::handle(command::PrintRequ
     }
     }
     co_return core::err(core::ErrorCode::Internal, "İşlenmemiş yazdırma isteği.");
+}
+
+core::Result<std::string> PrintService::printLayout(const command::PrintRequest& request)
+{
+    const core::Layout* sheet = document_.layouts().find(request.layout);
+    if (sheet == nullptr)
+        return core::err(core::ErrorCode::NotFound, "Pafta yok: '" + request.layout + "'.");
+    if (sheet->pages.empty())
+        return core::err(core::ErrorCode::InvalidArgument,
+                         "'" + sheet->name + "' paftasının hiç sayfası yok.");
+
+    LayoutFacts facts;
+    facts.sheet = utf8(sheet->name);
+    facts.project =
+        bus_.on_current_file ? QFileInfo(utf8(bus_.on_current_file())).fileName() : QString();
+    facts.crs  = utf8(document_.crs().id());
+    facts.date = QDate::currentDate().toString(QStringLiteral("dd.MM.yyyy"));
+
+    // THE PAGE SIZE IS THE PAFTA'S OWN, in paper millimetres, and the margin is
+    // NOT given to Qt: the layout places its items in the full page and draws
+    // its own margin guide. A Qt margin here would inset the whole sheet a
+    // second time and move every item (`paint_layout_page`).
+    const core::LayoutPage& first = sheet->pages.front();
+    const QPageSize size(QSizeF(first.w / 1000.0, first.h / 1000.0), QPageSize::Millimeter,
+                         QString(), QPageSize::ExactMatch);
+    const QPageLayout page(size, QPageLayout::Portrait, QMarginsF(0, 0, 0, 0),
+                           QPageLayout::Millimeter);
+
+    const auto draw = [&](QPaintDevice& device, int resolution) {
+        QPainter painter(&device);
+        for (std::size_t i = 0; i < sheet->pages.size(); ++i) {
+            if (i > 0) {
+                if (auto* writer = dynamic_cast<QPdfWriter*>(&device); writer != nullptr)
+                    writer->newPage();
+                else if (auto* printer = dynamic_cast<QPrinter*>(&device); printer != nullptr)
+                    printer->newPage();
+            }
+            const core::LayoutPage& one = sheet->pages[i];
+            const double w_px           = one.w / 1000.0 / kMmPerInch * resolution;
+            const double h_px           = one.h / 1000.0 / kMmPerInch * resolution;
+            paint_layout_page(painter, QRectF(0, 0, w_px, h_px), document_, *sheet,
+                              static_cast<int>(i), static_cast<double>(resolution), facts);
+        }
+    };
+
+    if (request.verb == command::PrintRequest::Verb::ToPdf) {
+        const QString path = utf8(request.path);
+        if (path.isEmpty())
+            return core::err(core::ErrorCode::InvalidArgument, "PDF dosyasının yolu boş.");
+        const QFileInfo target(path);
+        if (!target.absoluteDir().exists())
+            return core::err(core::ErrorCode::IoFailure,
+                             "PDF yazılamadı: dizin yok — " + target.absolutePath().toStdString());
+
+        {
+            QPdfWriter writer(path);
+            writer.setPageLayout(page);
+            writer.setResolution(sheet->dpi > 0 ? sheet->dpi : 300);
+            writer.setCreator(QStringLiteral("KentOSCad"));
+            writer.setTitle(request.title.empty() ? utf8(sheet->name) : utf8(request.title));
+            draw(writer, writer.resolution());
+        }
+        if (!QFileInfo::exists(path) || QFileInfo(path).size() == 0)
+            return core::err(core::ErrorCode::IoFailure, "PDF yazılamadı: " + path.toStdString());
+
+        const core::LayoutItem* map = sheet->first_map();
+        std::string said = "Pafta yazıldı: " + path.toStdString() + " — " + sheet->name + ", " +
+                           std::to_string(first.w / 1000) + "×" + std::to_string(first.h / 1000) +
+                           " mm, " + std::to_string(sheet->pages.size()) + " sayfa";
+        if (map != nullptr && core::map_scale(*map) > 0)
+            said += ", ölçek 1:" + std::to_string(core::map_scale(*map));
+        return said;
+    }
+
+    QPrinterInfo info = request.printer.empty() ? QPrinterInfo::defaultPrinter()
+                                                : QPrinterInfo::printerInfo(utf8(request.printer));
+    if (info.isNull())
+        return core::err(core::ErrorCode::NotFound,
+                         request.printer.empty() ? "Sistemde varsayılan yazıcı tanımlı değil."
+                                                 : "Yazıcı bulunamadı: '" + request.printer + "'.");
+    QPrinter printer(info, QPrinter::HighResolution);
+    printer.setPageLayout(page);
+    printer.setResolution(sheet->dpi > 0 ? sheet->dpi : 300);
+    draw(printer, printer.resolution());
+    return "Pafta yazıcıya gönderildi: " + info.printerName().toStdString() + " — " + sheet->name;
 }
 
 core::Result<std::string> PrintService::toPdf(const command::PrintRequest& request,

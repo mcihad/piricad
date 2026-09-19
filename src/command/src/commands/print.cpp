@@ -112,7 +112,34 @@ Task<void> run_print(Context& ctx)
     const Value centre = ctx.argument("merkez");
     Value::Points corners;
 
-    if (!centre.empty()) {
+    // ---- a pafta prints ITSELF, and takes no window ------------------------
+    //
+    // A layout carries its own paper, its own margin and a map frame that knows
+    // where it looks (`core/layout.hpp`), so `pencere`, `merkez`, `olcek` and
+    // `profil` have nothing left to decide. Giving one anyway is REFUSED rather
+    // than ignored: an argument silently dropped is an argument the user
+    // believed in (command.md P15).
+    if (const Value sheet = ctx.argument("pafta"); !sheet.empty()) {
+        for (const char* other : {"pencere", "merkez", "olcek", "profil"})
+            if (!ctx.argument(other).empty()) {
+                ctx.session().fail(
+                    core::err(core::ErrorCode::InvalidArgument,
+                              "pafta ile '" + std::string(other) +
+                                  "' birlikte verilmez: pafta kendi kâğıdını ve kendi harita "
+                                  "penceresini taşır."));
+                co_return;
+            }
+
+        const std::string named = sheet.as_text();
+        if (ctx.session().bus().document().layouts().find(named) == nullptr) {
+            ctx.session().fail(
+                core::err(core::ErrorCode::NotFound,
+                          "Pafta yok: '" + named + "'. PAFTA islem=listele ile adları görün."));
+            co_return;
+        }
+        request.layout = named;
+        ctx.record("pafta", sheet);
+    } else if (!centre.empty()) {
         request.has_centre = true;
         request.centre     = centre.as_point();
         ctx.record("merkez", centre);
@@ -174,7 +201,7 @@ Task<void> run_print(Context& ctx)
     if (engine_missing(ctx, bus)) co_return;
 
     request.verb = file.empty() ? PrintRequest::Verb::ToPrinter : PrintRequest::Verb::ToPdf;
-    if (!request.has_centre)
+    if (!request.has_centre && request.layout.empty())
         request.window =
             core::Box2{std::min(corners[0].x, corners[1].x), std::min(corners[0].y, corners[1].y),
                        std::max(corners[0].x, corners[1].x), std::max(corners[0].y, corners[1].y)};
@@ -313,6 +340,10 @@ KENTOS_COMMAND(print)
                 Param::integer("olcek", Arity::optional(),
                                "Ölçek paydası (1000 = 1/1000); merkez ile kullanılır, "
                                "verilmezse projenin plan ölçeği"),
+                Param::text("pafta", Arity::optional(),
+                            "Basılacak paftanın adı (PAFTA ile kurulur). Verildiğinde kâğıt, "
+                            "kenar ve harita penceresi paftadan gelir; pencere, merkez, "
+                            "olcek ve profil ile birlikte verilmez"),
                 Param::text("dosya", Arity::optional(),
                             "PDF yazılacak dosya; yazici ile birlikte verilmez"),
                 Param::text("yazici", Arity::optional(),

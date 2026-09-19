@@ -312,6 +312,22 @@ enum BlockId : std::uint32_t {
     /// what it was.
     kBlkAttachments = 0x0089, ///< AttachRecord[]
 
+    // ---- sheet layouts (core/layout.hpp). All four or none. ------------------
+    //
+    // A PAFTA IS DOCUMENT CONTENT, so it is in the file rather than beside it,
+    // and it is written only when the drawing has one: a drawing with no layout
+    // costs no bytes and its file stays byte for byte what it was before layouts
+    // existed (R10 makes an unknown block skippable, so this is not a version
+    // bump).
+    kBlkLayouts     = 0x008A, ///< LayoutRecord[]
+    kBlkLayoutPages = 0x008B, ///< LayoutPageRecord[], per layout a contiguous run
+    kBlkLayoutItems = 0x008C, ///< LayoutItemRecord[], per layout a contiguous run
+    /// The layer and column name lists an item carries, as indices into the
+    /// string pool, per item two contiguous runs. The same shape
+    /// `kBlkBlockMembers` uses, and for the same reason: a nested list in a
+    /// fixed record is a run plus a first/count pair.
+    kBlkLayoutNames = 0x008D, ///< u32[]
+
     // ---- reserved. Declared here so the ids can never be re-meant. ----------
     /// Precomputed Douglas–Peucker LOD levels in quadtree tiles (io.md R6).
     /// Phase 1: no simplifier exists yet. See CLAUDE.md Article 8.
@@ -570,6 +586,81 @@ struct AttachRecord
 };
 
 static_assert(sizeof(AttachRecord) == 64, "wire record");
+
+/// One sheet layout. Its pages, items and name runs live in the three blocks
+/// beside it.
+struct LayoutRecord
+{
+    std::uint32_t name;        ///<  0  into the string pool
+    std::uint32_t paper;       ///<  4  into the string pool; 0 = empty
+    std::int32_t dpi;          ///<  8  export resolution
+    std::int32_t margin_um;    ///< 12  the designer's guide, paper micrometres
+    std::uint32_t first_page;  ///< 16  into kBlkLayoutPages
+    std::uint32_t page_count;  ///< 20
+    std::uint32_t first_item;  ///< 24  into kBlkLayoutItems
+    std::uint32_t item_count;  ///< 28
+    std::uint8_t landscape;    ///< 32
+    std::uint8_t reserved[15]; ///< 33  zero-filled
+};
+
+static_assert(sizeof(LayoutRecord) == 48, "wire record");
+
+/// One page, already oriented, in paper micrometres.
+struct LayoutPageRecord
+{
+    std::int32_t w; ///< 0
+    std::int32_t h; ///< 4
+};
+
+static_assert(sizeof(LayoutPageRecord) == 8, "wire record");
+
+/// One item on a page. Every field of `core::LayoutItem` that a kind reads, in
+/// one fixed record — the kinds share a record because the document model shares
+/// a struct, and for the same reason (core/layout.hpp).
+struct LayoutItemRecord
+{
+    std::uint32_t id;                 ///<   0  into the string pool
+    std::uint32_t text;               ///<   4  into the string pool; 0 = empty
+    std::int32_t x_um;                ///<   8  the frame, from the page's TOP-LEFT
+    std::int32_t y_um;                ///<  12
+    std::int32_t w_um;                ///<  16
+    std::int32_t h_um;                ///<  20
+    std::int32_t z;                   ///<  24  paint order
+    std::int32_t rotation_udeg;       ///<  28
+    std::int32_t page;                ///<  32  which page of its layout
+    std::int32_t frame_width_um;      ///<  36
+    std::uint32_t frame_colour;       ///<  40  0xAARRGGBB
+    std::uint32_t background_colour;  ///<  44
+    std::int32_t text_height_um;      ///<  48
+    std::uint32_t text_colour;        ///<  52
+    std::int64_t extent_min_x;        ///<  56  the map's ground window, Mm
+    std::int64_t extent_min_y;        ///<  64
+    std::int64_t extent_max_x;        ///<  72
+    std::int64_t extent_max_y;        ///<  80
+    std::int64_t scale;               ///<  88  1:N; 0 = follows the extent
+    std::int64_t grid_interval_mm;    ///<  96  0 = chosen for the scale
+    std::int32_t grid_width_um;       ///< 104
+    std::uint32_t grid_colour;        ///< 108
+    std::int32_t grid_text_height_um; ///< 112
+    std::int32_t style;               ///< 116  ScaleBar segments / NorthArrow variant
+    std::int32_t row_limit;           ///< 120
+    std::uint32_t first_layer;        ///< 124  into kBlkLayoutNames
+    std::uint32_t layer_count;        ///< 128
+    std::uint32_t first_column;       ///< 132  into kBlkLayoutNames
+    std::uint32_t column_count;       ///< 136
+    std::uint8_t kind;                ///< 140  core::LayoutItemKind
+    std::uint8_t locked;              ///< 141
+    std::uint8_t frame_visible;       ///< 142
+    std::uint8_t background;          ///< 143
+    std::uint8_t align_h;             ///< 144
+    std::uint8_t align_v;             ///< 145
+    std::uint8_t grid;                ///< 146  core::GridStyle
+    std::uint8_t grid_labels;         ///< 147  core::GridLabels
+    std::uint8_t shape;               ///< 148  core::LayoutShape
+    std::uint8_t reserved[11];        ///< 149  zero-filled
+};
+
+static_assert(sizeof(LayoutItemRecord) == 160, "wire record");
 
 /// One block definition (model.md R45). Members and uses are runs into their
 /// own columns, so a block with neither costs a record and nothing else.

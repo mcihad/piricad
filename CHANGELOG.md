@@ -6,6 +6,80 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — Pafta düzeni (sayfa sistemi)
+
+- **Pafta çizimin içindedir** (`core/layout.hpp`): kâğıt boyu, yönü, kenar boşluğu ve
+  üzerine yerleştirilmiş öğeler. Yazdırma profilinden farkı budur — profil bu
+  bilgisayarın ayarıdır, pafta teslim edilen işin parçasıdır: dosyayla gider, çizimin
+  parmak izine girer ve her düzenlemesi tek `Ctrl+Z` ile geri alınır. Konumlar **kâğıt
+  mikrometresi** (`int32`, model.md R20) ve sayfanın sol **ÜST** köşesinden ölçülür;
+  zemin/kâğıt çevrimi yalnız harita öğesinin içinde yapılır.
+- **Sekiz öğe türü**: harita çerçevesi (kendi kapsamı, ölçeği ve **koordinat
+  ızgarası** ile), metin, ölçek çubuğu, kuzey oku, lejant, resim, şekil, tablo. Metin
+  öğesinin `<pafta>`, `<olcek>`, `<tarih>`, `<crs>`, `<proje>`, `<kagit>` yer
+  tutucuları **çizim anında** çözülür ve asla çözülmüş hâlde saklanmaz — ölçek
+  değiştiğinde yeniden bastığınız pafta yeni ölçeği yazar.
+- **İki yeni komut**: **`PAFTA`** (`islem=listele|ekle|sil|ad|sayfa`) sayfaları,
+  **`PAFTAÖĞE`** (`islem=listele|ekle|sil|tasi|ayarla`) üzerindeki öğeleri yönetir.
+  Yeni bir pafta boş değildir: harita, başlık, ölçek çubuğu ve kuzey oku ile gelir.
+  Kâğıdı değiştirmek öğeleri **yeniden ölçeklemez** — üstten 20 mm'deki başlık A3'te
+  de üstten 20 mm'dedir. Her çağrı tek işlem, tek geri alma adımıdır; liste bütün
+  hâlinde geri yüklenir, çünkü bir öğe silindiğinde dizinler kayar.
+- **Bildirilen ölçek kazanır**: `olcek=1000` verildiğinde pencere çerçevenin kâğıt
+  boyundan hesaplanır, kapsamın merkezine oturur. Bu yüzden 1:1000 bir paftanın
+  kâğıdını büyütmek daha ÇOK zemin gösterir; bir pafta ölçeğinin anlamı budur.
+  `olcek=0` ise pencere neredeyse odur ve ölçek ondan çıkar. Tek fonksiyon
+  (`core::map_scale` / `core::map_window`), dolayısıyla çizilen harita, ölçülen
+  ölçek çubuğu ve basılan `<olcek>` asla birbirinden ayrılamaz.
+- **Pafta çizen tek boyacı** (`app/layout_render.hpp`): tasarımcının sayfası, baskı
+  önizlemesi ve dışa aktarılan PDF aynı fonksiyondan geçer. Harita çerçevesi tuvalin
+  kendi render boru hattından (`render::build_scene`) çizilir, yani paftadaki çizgi
+  kalınlıkları ekrandakiyle aynı kuralla hesaplanır. Izgara aralığı verilmezse 1-2-5
+  basamaklarından seçilir: 37 metrelik aralık kimsenin koordinat okuyamayacağı bir
+  ızgaradır.
+- **Dosya biçimi**: dört yeni **isteğe bağlı** blok (`kBlkLayouts`, `…Pages`,
+  `…Items`, `…Names`). Paftası olmayan bir çizim tek bayt ödemez ve dosyası
+  paftalardan önceki hâliyle bayt bayt aynıdır (io.md R10), dolayısıyla sürüm
+  yükseltmesi değildir. Bilinmeyen bir öğe türü **reddedilir**, sessizce metne
+  çevrilmez: ileri sürümden gelen bir paftayı kaydetmek veri kaybı olurdu.
+- ISO 216 kâğıt tablosu `/src/io`'dan **`/src/core`'a taşındı**: A4'ün 210×297 olması
+  bir dosya biçimi değil geometrik olgudur, ve hem yazdırma profillerinin hem pafta
+  komutlarının okuduğu tek tablo olması gerekir (CLAUDE.md 5.10).
+
+- **Pafta tasarımcısı** (`app/layout_designer.hpp`): solda çizim sırasına göre öğe
+  listesi, ortada sayfa, sağda seçili öğenin özellikleri, altta **PDF'e aktar** ve
+  **Yazdır**. Öğeye tıklamak seçer, sürüklemek taşır, köşe tutamağı boyutlandırır, ok
+  tuşları birer milimetre (Shift ile on) kaydırır. **Her jest bırakıldığında tek bir
+  `PAFTAÖĞE` satırı yazar** — sürükleme boyunca değil: sayfanın bir ucundan öbürüne
+  taşınan kutu tek `Ctrl+Z` ile döner, dört yüz adımda değil. Kendi düzenleme yolu
+  yoktur; pencerenin yaptığı her şey komut günlüğünde durur ve bir betiğin
+  yazabileceği satırlardır (CLAUDE.md 1.1, 1.2).
+- **İstenen akış tamam**: araç çubuğundaki yazdırma okunun listesinde profillerin
+  altında **çizimin paftaları** durur. Bir pafta seçilince tuval o paftanın **harita
+  çerçevesinin en-boy oranında** bir seçme çerçevesi açar — kâğıdın değil, haritanın
+  oranında, çünkü çerçevelenen şey haritanın göstereceği alandır — ve alan bırakılınca
+  **tasarımcı açılır, harita o alana bakıyor olur**. Aynı listede **Yeni pafta…** var.
+- **`YAZDIR pafta=<ad>`**: pafta kendi kâğıdını, kenarını, sayfalarını ve harita
+  penceresini taşıdığı için `pencere`, `merkez`, `olcek` ve `profil` ile birlikte
+  verilmez — birlikte verilirse **reddedilir**, sessizce biri kazanmaz. Çok sayfalı
+  pafta çok sayfalı PDF olur.
+- Yeni bütünleşme sınaması **`layout-designer`**: tasarımcıyı bir el gibi sürer —
+  öğe seç, sürükle, metin yaz, ızgara ve ölçek ayarla, öğe ekle — sonra tek `GERİAL`in
+  son jesti geri aldığını ve paftanın PDF olarak yazıldığını doğrular.
+
+- **Öznitelik tablosu doluyor**: başlıklar katmanın şemasından, değerler çizimden.
+  Kutuya kaç satır sığıyorsa o kadarı yazılır ve **sığmayanlar sayılarak bildirilir**
+  (`… 14 satır daha sığmadı`) — sessizce ilk on biri gösteren bir tablo, eksiksiz
+  sanılarak dosyalanan bir tablodur.
+- Sohbet probe'unda bulunan bir kusur düzeltildi: okuma aracından sonra turu sürdüren
+  panel, bulut profilinin anahtarını **GUI iş parçasında** okuyordu; macOS'ta bu
+  Security çerçevesine girip bloke oluyor ve başsız sınama iki dakikada öldürülüyordu.
+  Sınama artık anahtarsız yerel bir uca bakıyor. (Anahtar okumasının GUI iş parçasından
+  çıkarılması ayrı bir iş olarak ayrıldı.)
+
+> **Bu turda yok**: pafta şablon kitaplığı (kurumun standart paftalarını çizimden
+> bağımsız saklamak). Kılavuzda gelecek zamanla yazılıdır.
+
 ### Eklendi — Gömülü MCP sunucusu, yapay zeka sohbeti ve üretilmiş `llms.txt`
 
 - **Yedi yeni komut** (`src/ai/src/commands/`). Beşi hiçbir şeyi değiştirmeyen okuma

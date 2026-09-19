@@ -27,6 +27,7 @@
 #include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/image_store.hpp"
 #include "kentos_cad/core/layer.hpp"
+#include "kentos_cad/core/layout.hpp"
 #include "kentos_cad/core/result.hpp"
 #include "kentos_cad/core/style.hpp"
 #include "kentos_cad/core/text_store.hpp"
@@ -139,6 +140,14 @@ struct Op
         /// a dozen guides, not a million — so replacing it whole is both correct
         /// and cheaper than the bookkeeping any finer record would need.
         SetGuides, ///< guide_axes, guide_coords
+
+        /// The WHOLE layout list, restored as it was — the same bargain
+        /// `SetGuides` makes, for the same reason. An item is named by an id
+        /// inside a layout and a layout by a name, so a finer record would have
+        /// to describe a rename, a reorder and a delete separately; a drawing
+        /// carries a handful of sheets, so putting the previous list back is
+        /// both correct and smaller than that bookkeeping would be.
+        SetLayouts, ///< layouts_arg
     };
 
     Kind kind{Kind::None};
@@ -172,6 +181,9 @@ struct Op
     /// The guide list as it was before the change; see `Kind::SetGuides`.
     std::vector<GuideAxis> guide_axes;
     std::vector<Mm> guide_coords;
+
+    /// The layout list as it was before the change; see `Kind::SetLayouts`.
+    std::vector<Layout> layouts_arg;
 
     /// The foreign bytes to put back; see `Kind::AttachForeign`.
     std::vector<std::uint8_t> bytes_arg;
@@ -244,6 +256,13 @@ public:
     /// with the file and invisible to selection, culling, export and area sums
     /// (see `core/guide.hpp`).
     const GuideStore& guides() const noexcept { return guides_; }
+
+    /// The sheet layouts this drawing carries.
+    ///
+    /// CONTENT, NOT FURNITURE, unlike guides: a pafta is part of the submitted
+    /// work, so it is in `content_hash`, it travels in the file, and every edit
+    /// to it is a transaction like any other (see `core/layout.hpp`).
+    const LayoutStore& layouts() const noexcept { return layouts_; }
 
     CatalogueSet& catalogues() noexcept { return catalogues_; }
 
@@ -428,6 +447,17 @@ public:
     /// would leave the document naming a system it cannot describe (R36).
     Status set_crs(Crs crs, Op& undo_out);
 
+    /// Replaces the whole layout list, recording the previous one for undo.
+    ///
+    /// WHOLE-LIST, and every layout command goes through it: add, remove,
+    /// rename, move an item, retype a title. The caller reads `layouts().all()`,
+    /// changes its copy and hands it back, so one mutator and one Op kind cover
+    /// a subsystem that would otherwise need a dozen of each.
+    Status set_layouts(std::vector<Layout> layouts, Op& undo_out);
+
+    /// Puts a layout list back without recording anything — what undo calls.
+    void load_layouts(std::vector<Layout> layouts);
+
     /// Declares a column. NOT undoable and deliberately so, for the same reason
     /// a layer is not: the schema is what rows are addressed against, and undoing
     /// a declaration would invalidate every row index the journal already holds.
@@ -542,6 +572,7 @@ private:
     BlockTable blocks_{};
     AttachTable attachments_{};
     GuideStore guides_{};
+    LayoutStore layouts_{};
     ImageStore images_{};
     DashStore dashes_{};
     KeyAllocator keys_{};

@@ -60,6 +60,8 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.label`](label.md) | `ETİKET`, `ETIKET`, `LABEL`, `ETK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmandaki nesneleri özniteliklerinden okuyarak etiketler. |
 | [`core.layer`](layer.md) | `KATMAN`, `LAYER`, `KAT` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
 | [`core.layer_visibility`](layer_visibility.md) | `KATMANGÖRÜNÜM`, `KATMANGORUNUM`, `LAYERVIEW`, `KGÖ`, `KGO` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir. |
+| [`core.layout`](layout.md) | `PAFTA`, `LAYOUT`, `PFT` | Dosya | tek işlem | etkileşimli, betiklenebilir | Çizimin pafta düzenlerini yönetir: yeni pafta açar, siler, adlandırır ve kâğıdını değiştirir. Pafta çizimle birlikte kaydedilir ve geri alınabilir. |
+| [`core.layout_item`](layout_item.md) | `PAFTAÖĞE`, `PAFTAOGE`, `LAYOUTITEM`, `PÖĞ`, `POG` | Dosya | tek işlem | etkileşimli, betiklenebilir | Bir paftanın üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler. |
 | [`core.style`](style.md) | `STİL`, `STIL`, `STYLE`, `ST` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar. |
 | [`core.symbol`](symbol.md) | `SEMBOL`, `SEMBOLLER`, `SYMBOL`, `SMB` | Katman | geri alınmaz | betiklenebilir, AI erişimli | Gösterim rafını yükler, ağacında gezer ve içinde arar. |
 | [`core.zoom`](zoom.md) | `YAKINLAŞ`, `YAKINLAS`, `ZOOM`, `Z` | Görünüm | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü çizim kapsamına veya verilen çarpana ayarlar. |
@@ -720,6 +722,50 @@ Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya
 
 Ayrıntılı kullanım: [KATMANGÖRÜNÜM](layer_visibility.md)
 
+### `core.layout` — PAFTA
+
+Çizimin pafta düzenlerini yönetir: yeni pafta açar, siler, adlandırır ve kâğıdını değiştirir. Pafta çizimle birlikte kaydedilir ve geri alınabilir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `islem` | text | 1 | Ne yapılacağı |
+| `ad` | text | isteğe bağlı | Pafta adı; listele dışında gerekir |
+| `yeni_ad` | text | isteğe bağlı | islem=ad için yeni pafta adı |
+| `kagit` | text | isteğe bağlı | A5, A4, A3, A2, A1, A0 ya da ozel (varsayılan A4) |
+| `genislik` | integer | isteğe bağlı | ozel kâğıt için sayfa genişliği, mm |
+| `yukseklik` | integer | isteğe bağlı | ozel kâğıt için sayfa yüksekliği, mm |
+| `yon` | text | isteğe bağlı | Sayfa yönü (varsayılan dikey) |
+| `kenar` | integer | isteğe bağlı | Kenar boşluğu, mm (varsayılan 10) |
+| `dpi` | integer | isteğe bağlı | Çıktı çözünürlüğü (varsayılan 300) |
+
+Ayrıntılı kullanım: [PAFTA](layout.md)
+
+### `core.layout_item` — PAFTAÖĞE
+
+Bir paftanın üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `islem` | text | 1 | Ne yapılacağı |
+| `pafta` | text | isteğe bağlı | Hangi pafta; çizimde tek pafta varsa gerekmez |
+| `ad` | text | isteğe bağlı | Öğe adı; ekle dışında gerekir, ekle'de verilmezse türetilir |
+| `tur` | text | isteğe bağlı | islem=ekle için öğe türü |
+| `x` | integer | isteğe bağlı | Sol kenardan uzaklık, mm |
+| `y` | integer | isteğe bağlı | ÜST kenardan uzaklık, mm |
+| `genislik` | integer | isteğe bağlı | Genişlik, mm |
+| `yukseklik` | integer | isteğe bağlı | Yükseklik, mm |
+| `metin` | text | isteğe bağlı | Metin öğesinin yazısı; <pafta>, <olcek>, <tarih>, <crs> yer tutucuları çizim anında çözülür |
+| `yazi` | integer | isteğe bağlı | Yazı yüksekliği, mm |
+| `olcek` | integer | isteğe bağlı | Harita öğesinin ölçeği 1:N; 0 kapsama uyar |
+| `pencere` | point_list | 0–2 | Harita çerçevesinin bakacağı alanın iki köşesi, anahtar iki kez yazılarak: pencere=x1,y1 pencere=x2,y2. Tuvalden çerçeve seçmek bu satırı yazar |
+| `izgara` | text | isteğe bağlı | Harita öğesinin koordinat ızgarası |
+| `izgara_aralik` | integer | isteğe bağlı | Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir |
+| `kilit` | bool | isteğe bağlı | Öğeyi taşımaya kapatır |
+| `cerceve` | bool | isteğe bağlı | Öğenin çevresine çerçeve çizer |
+| `sira` | integer | isteğe bağlı | Çizim sırası; büyük olan üstte |
+
+Ayrıntılı kullanım: [PAFTAÖĞE](layout_item.md)
+
 ### `core.style` — STİL
 
 Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar.
@@ -887,6 +933,7 @@ Ayrıntılı kullanım: [VERİTABANI](database.md)
 | `pencere` | point_list | 0–2 | Yazdırılacak alanın iki köşesi; merkez verilmezse ve bu da verilmezse tıklatılır |
 | `merkez` | point | isteğe bağlı | Kâğıdın ortalanacağı nokta; pencere yerine kullanılır |
 | `olcek` | integer | isteğe bağlı | Ölçek paydası (1000 = 1/1000); merkez ile kullanılır, verilmezse projenin plan ölçeği |
+| `pafta` | text | isteğe bağlı | Basılacak paftanın adı (PAFTA ile kurulur). Verildiğinde kâğıt, kenar ve harita penceresi paftadan gelir; pencere, merkez, olcek ve profil ile birlikte verilmez |
 | `dosya` | text | isteğe bağlı | PDF yazılacak dosya; yazici ile birlikte verilmez |
 | `yazici` | text | isteğe bağlı | Yazıcının adı; "" sistem varsayılanı. dosya ile birlikte verilmez |
 | `profil` | text | isteğe bağlı | Yazdırma profili; verilmezse varsayılan profil |

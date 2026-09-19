@@ -23,6 +23,7 @@ add_library(kentos_core STATIC
     src/geometry.cpp
     src/ellipse.cpp
     src/guide.cpp
+    src/layout.cpp
     src/offset.cpp
     src/json.cpp
     src/layer.cpp

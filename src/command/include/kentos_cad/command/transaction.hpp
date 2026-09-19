@@ -172,6 +172,15 @@ public:
 
     /// Removes the guide at `index`.
     Status remove_guide(std::size_t index);
+
+    /// Replaces the whole layout list (`core/layout.hpp`).
+    ///
+    /// WHOLE-LIST, and every layout command goes through it: the caller reads
+    /// `document().layouts().all()`, changes its copy and hands it back. One
+    /// mutator covers adding a sheet, deleting one, renaming it, moving an item
+    /// and retyping a title — and each is one transaction, one journal line and
+    /// one Ctrl+Z, like every other edit (Article 1.5).
+    Status set_layouts(std::vector<core::Layout> layouts);
     /// Sets the document's CRS. The whole record, so undo restores the metadata
     /// the geodesy module resolved along with the id.
     Status set_crs(core::Crs crs);

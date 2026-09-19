@@ -137,6 +137,12 @@ std::uint64_t Document::content_hash() const
     h = blocks_.fold(h);
     h = attachments_.fold(h);
 
+    // THE PAFTA IS CONTENT. A drawing whose sheet layout differs is a different
+    // deliverable, even when every parcel in it is identical. Folding an EMPTY
+    // store returns the seed untouched, so every fingerprint written before
+    // layouts existed still stands (the same bargain the kind fold makes below).
+    h = layouts_.fold(h);
+
     for (EntityId e = 0; e < entities_.size(); ++e) {
         if (!entities_.alive(e)) continue;
 
@@ -1046,6 +1052,31 @@ Status Document::remove_guide(std::size_t index, Op& undo_out)
     return ok();
 }
 
+Status Document::set_layouts(std::vector<Layout> layouts, Op& undo_out)
+{
+    // VALIDATED BEFORE ANYTHING IS RECORDED. `upsert` is the floor — a name, a
+    // page with area, unique item ids — and a list that fails it must leave the
+    // document exactly as it was, or a refused edit would still have produced an
+    // undo entry (Article 1.6).
+    LayoutStore next;
+    for (Layout& one : layouts)
+        if (Status held = next.upsert(std::move(one)); !held) return held;
+
+    undo_out             = Op{};
+    undo_out.kind        = Op::Kind::SetLayouts;
+    undo_out.layouts_arg = layouts_.all();
+
+    layouts_ = std::move(next);
+    ++revision_;
+    return ok();
+}
+
+void Document::load_layouts(std::vector<Layout> layouts)
+{
+    layouts_.load(std::move(layouts));
+    ++revision_;
+}
+
 void Document::set_guides(std::vector<GuideAxis> axes, std::vector<Mm> coords)
 {
     guides_.load(std::move(axes), std::move(coords));
@@ -1322,6 +1353,15 @@ Status Document::apply(const Op& op, Op* undo_out)
         inverse.guide_axes   = guides_.axes();
         inverse.guide_coords = guides_.coordinates();
         set_guides(op.guide_axes, op.guide_coords);
+        return ok();
+    }
+    case Op::Kind::SetLayouts: {
+        // The inverse of "restore this list" is "restore the one that is here
+        // now", which is what makes a layout edit redoable as well as undoable.
+        inverse             = Op{};
+        inverse.kind        = Op::Kind::SetLayouts;
+        inverse.layouts_arg = layouts_.all();
+        load_layouts(op.layouts_arg);
         return ok();
     }
     case Op::Kind::SetGeometry: return restore_geometry(op.entity, op.geometry_slot, inverse);

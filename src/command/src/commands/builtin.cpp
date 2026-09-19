@@ -61,6 +61,8 @@ namespace kentos::command {
     X(label)                                                                                       \
     X(layer)                                                                                       \
     X(layer_visibility)                                                                            \
+    X(layout)                                                                                      \
+    X(layout_item)                                                                                 \
     X(style)                                                                                       \
     X(symbol)                                                                                      \
     X(zoom)                                                                                        \

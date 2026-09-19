@@ -25,6 +25,7 @@
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/guide.hpp"
 #include "kentos_cad/core/hatch.hpp"
+#include "kentos_cad/core/layout.hpp"
 #include "kentos_cad/core/outline.hpp"
 #include "kentos_cad/core/spline.hpp"
 
@@ -613,6 +614,121 @@ TEST_CASE("IO: kılavuzu olmayan bir çizim kılavuz bloğu yazmaz")
     // feature it does not use, which is what keeps an old file readable and a
     // golden fixture stable (io.md R10).
     CHECK(fs::file_size(with) > fs::file_size(without));
+}
+
+TEST_CASE("IO: pafta dosyayla gider, öğeleriyle birlikte geri gelir")
+{
+    // A pafta is document CONTENT, not a setting of this machine: it travels in
+    // the file, it is in the content hash and it is undone like any other edit
+    // (core/layout.hpp). Its block is OPTIONAL, which the case below pins.
+    TempDir tmp("pafta");
+    const std::string path = tmp.file("paftali.pcad");
+
+    Rig written;
+    REQUIRE(written.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(written.bus.execute_line("ALAN noktalar=0,0 100,0 100,80 0,80", Origin::Test).ok());
+    REQUIRE(written.bus
+                .execute_line("PAFTA islem=ekle ad=\"Ada 1284\" kagit=A3 yon=yatay "
+                              "kenar=15",
+                              Origin::Test)
+                .ok());
+    REQUIRE(written.bus
+                .execute_line("PAFTAÖĞE islem=ayarla ad=harita olcek=1000 izgara=cizgi "
+                              "pencere=0,0 pencere=100,80",
+                              Origin::Test)
+                .ok());
+    REQUIRE(written.bus
+                .execute_line("PAFTAÖĞE islem=ayarla ad=baslik metin=\"<pafta> — <olcek>\"",
+                              Origin::Test)
+                .ok());
+    REQUIRE(
+        written.bus.execute_line("PAFTAÖĞE islem=ekle tur=lejant ad=lejant", Origin::Test).ok());
+
+    const std::uint64_t hash_before = written.doc.content_hash();
+
+    auto saved = written.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test);
+    if (!saved) FAIL_WITH("FARKLIKAYDET", saved.error().message);
+
+    Rig reloaded;
+    auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+
+    REQUIRE(reloaded.doc.layouts().size() == 1);
+    const core::Layout* back = reloaded.doc.layouts().find("Ada 1284");
+    REQUIRE(back != nullptr);
+    CHECK(back->paper == "A3");
+    CHECK(back->landscape == true);
+    CHECK(back->margin == core::um_from_mm(15));
+    REQUIRE(back->pages.size() == 1);
+    CHECK(back->pages.front().w == core::um_from_mm(420));
+    CHECK(back->pages.front().h == core::um_from_mm(297));
+    CHECK(back->items.size() == 5); // the four a new sheet has, plus the legend
+
+    const core::LayoutItem* map = back->find("harita");
+    REQUIRE(map != nullptr);
+    CHECK(map->kind == core::LayoutItemKind::Map);
+    CHECK(map->scale == 1000);
+    CHECK(map->grid == core::GridStyle::Line);
+    CHECK(map->extent.min_x == 0);
+    CHECK(map->extent.max_x == 100000); // 100 m on the line, millimetres in the file
+    CHECK(map->frame_visible == true);
+
+    const core::LayoutItem* title = back->find("baslik");
+    REQUIRE(title != nullptr);
+    // THE PLACEHOLDERS SURVIVE UNRESOLVED, which is the whole point of them: a
+    // title flattened to `1:1000` on save would print the old scale for ever.
+    CHECK(title->text == "<pafta> — <olcek>");
+
+    REQUIRE(back->find("lejant") != nullptr);
+
+    // AND THE FINGERPRINT AGREES, which is the claim that matters: the pafta is
+    // content, so two documents that differ only in their sheet are different
+    // documents, and a round trip must not change one into the other.
+    CHECK(reloaded.doc.content_hash() == hash_before);
+}
+
+TEST_CASE("IO: paftası olmayan bir çizim pafta bloğu yazmaz")
+{
+    TempDir tmp("paftasiz");
+    const std::string with    = tmp.file("paftali.pcad");
+    const std::string without = tmp.file("paftasiz.pcad");
+
+    Rig a;
+    REQUIRE(a.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(a.bus.execute_line("FARKLIKAYDET \"" + without + "\"", Origin::Test).ok());
+
+    Rig b;
+    REQUIRE(b.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("PAFTA islem=ekle ad=Kroki", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("FARKLIKAYDET \"" + with + "\"", Origin::Test).ok());
+
+    // A drawing with no pafta pays nothing for the feature, which is what keeps
+    // every file written before layouts existed byte for byte what it was
+    // (io.md R10).
+    CHECK(fs::file_size(with) > fs::file_size(without));
+}
+
+TEST_CASE("Pafta: tek bir Ctrl+Z bütün sayfayı geri alır")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("PAFTA islem=ekle ad=Kroki kagit=A4", Origin::Test).ok());
+    REQUIRE(r.doc.layouts().size() == 1);
+    const std::size_t items = r.doc.layouts().find("Kroki")->items.size();
+    REQUIRE(items == 4);
+
+    REQUIRE(r.bus.execute_line("PAFTAÖĞE islem=ekle tur=lejant ad=lejant", Origin::Test).ok());
+    CHECK(r.doc.layouts().find("Kroki")->items.size() == items + 1);
+
+    REQUIRE(r.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK(r.doc.layouts().find("Kroki")->items.size() == items);
+
+    REQUIRE(r.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK(r.doc.layouts().empty());
+
+    // And redo puts the whole sheet back, items and all.
+    REQUIRE(r.bus.execute_line("YİNELE", Origin::Test).ok());
+    REQUIRE(r.doc.layouts().size() == 1);
+    CHECK(r.doc.layouts().find("Kroki")->items.size() == items);
 }
 
 TEST_CASE("IO: boş belge de gidip geliyor")

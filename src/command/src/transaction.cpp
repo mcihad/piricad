@@ -281,6 +281,15 @@ Status Transaction::add_guide(core::GuideAxis axis, core::Mm coordinate)
     return core::ok();
 }
 
+Status Transaction::set_layouts(std::vector<core::Layout> layouts)
+{
+    core::Op undo;
+    auto st = doc_.set_layouts(std::move(layouts), undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
 Status Transaction::remove_guide(std::size_t index)
 {
     core::Op undo;

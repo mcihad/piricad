@@ -548,6 +548,85 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     dr.ring_count         = static_cast<std::uint64_t>(geo.ring_count_total());
     dr.vertex_count       = static_cast<std::uint64_t>(geo.vertex_count());
 
+    // The sheet layouts, on the same bargain as the guides above: written only
+    // when the drawing has one, so a file without a pafta is byte for byte what
+    // it was before layouts existed. The pages, the items and the two name runs
+    // per item go in three blocks beside the layout row, exactly as a block
+    // definition's members do (`kBlkBlockMembers`).
+    std::vector<LayoutRecord> layout_rows;
+    std::vector<LayoutPageRecord> page_rows;
+    std::vector<LayoutItemRecord> item_rows;
+    std::vector<std::uint32_t> name_rows;
+    {
+
+        for (const core::Layout& l : doc.layouts().all()) {
+            LayoutRecord row{};
+            row.name       = pool.intern(l.name);
+            row.paper      = pool.intern(l.paper);
+            row.dpi        = l.dpi;
+            row.margin_um  = l.margin;
+            row.landscape  = l.landscape ? 1u : 0u;
+            row.first_page = static_cast<std::uint32_t>(page_rows.size());
+            row.page_count = static_cast<std::uint32_t>(l.pages.size());
+            row.first_item = static_cast<std::uint32_t>(item_rows.size());
+            row.item_count = static_cast<std::uint32_t>(l.items.size());
+
+            for (const core::LayoutPage& page : l.pages)
+                page_rows.push_back(LayoutPageRecord{page.w, page.h});
+
+            for (std::size_t i = 0; i < l.items.size(); ++i) {
+                const core::LayoutItem& item = l.items[i];
+                LayoutItemRecord out{};
+                out.id                  = pool.intern(item.id);
+                out.text                = pool.intern(item.text);
+                out.x_um                = item.frame.x;
+                out.y_um                = item.frame.y;
+                out.w_um                = item.frame.w;
+                out.h_um                = item.frame.h;
+                out.z                   = item.z;
+                out.rotation_udeg       = item.rotation_udeg;
+                out.page                = l.page_of(i);
+                out.frame_width_um      = item.frame_width;
+                out.frame_colour        = item.frame_colour;
+                out.background_colour   = item.background_colour;
+                out.text_height_um      = item.text_height;
+                out.text_colour         = item.text_colour;
+                out.extent_min_x        = item.extent.min_x;
+                out.extent_min_y        = item.extent.min_y;
+                out.extent_max_x        = item.extent.max_x;
+                out.extent_max_y        = item.extent.max_y;
+                out.scale               = item.scale;
+                out.grid_interval_mm    = item.grid_interval;
+                out.grid_width_um       = item.grid_width;
+                out.grid_colour         = item.grid_colour;
+                out.grid_text_height_um = item.grid_text_height;
+                out.style               = item.style;
+                out.row_limit           = item.row_limit;
+                out.kind                = static_cast<std::uint8_t>(item.kind);
+                out.locked              = item.locked ? 1u : 0u;
+                out.frame_visible       = item.frame_visible ? 1u : 0u;
+                out.background          = item.background ? 1u : 0u;
+                out.align_h             = item.align_h;
+                out.align_v             = item.align_v;
+                out.grid                = static_cast<std::uint8_t>(item.grid);
+                out.grid_labels         = static_cast<std::uint8_t>(item.grid_labels);
+                out.shape               = static_cast<std::uint8_t>(item.shape);
+
+                out.first_layer = static_cast<std::uint32_t>(name_rows.size());
+                out.layer_count = static_cast<std::uint32_t>(item.layers.size());
+                for (const std::string& layer : item.layers)
+                    name_rows.push_back(pool.intern(layer));
+                out.first_column = static_cast<std::uint32_t>(name_rows.size());
+                out.column_count = static_cast<std::uint32_t>(item.columns.size());
+                for (const std::string& col : item.columns)
+                    name_rows.push_back(pool.intern(col));
+
+                item_rows.push_back(out);
+            }
+            layout_rows.push_back(row);
+        }
+    }
+
     // ---- the block list, in id order so a hex dump reads like the spec ----
     std::vector<Pending> blocks;
 
@@ -609,6 +688,16 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
     if (!guide_axes.empty()) {
         blocks.push_back(column(kBlkGuideAxis, guide_axes));
         blocks.push_back(column(kBlkGuideCoord, guide_coords));
+    }
+
+    // The four layout blocks. The rows were built above, before the string pool
+    // was snapshotted, because interning a name after that point would move the
+    // bytes the pool block already points at.
+    if (!layout_rows.empty()) {
+        blocks.push_back(column(kBlkLayouts, layout_rows));
+        blocks.push_back(column(kBlkLayoutPages, page_rows));
+        if (!item_rows.empty()) blocks.push_back(column(kBlkLayoutItems, item_rows));
+        if (!name_rows.empty()) blocks.push_back(column(kBlkLayoutNames, name_rows));
     }
 
     blocks.push_back(column(kBlkEntityMinX, ents.min_x));

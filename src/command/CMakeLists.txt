@@ -32,6 +32,7 @@ add_library(kentos_command STATIC
     src/commands/label.cpp
     src/commands/layer.cpp
     src/commands/layer_visibility.cpp
+    src/commands/layout.cpp
     src/commands/area.cpp
     src/commands/rectangle.cpp
     src/commands/arc.cpp
