@@ -71,11 +71,28 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   Kutuya kaç satır sığıyorsa o kadarı yazılır ve **sığmayanlar sayılarak bildirilir**
   (`… 14 satır daha sığmadı`) — sessizce ilk on biri gösteren bir tablo, eksiksiz
   sanılarak dosyalanan bir tablodur.
-- Sohbet probe'unda bulunan bir kusur düzeltildi: okuma aracından sonra turu sürdüren
-  panel, bulut profilinin anahtarını **GUI iş parçasında** okuyordu; macOS'ta bu
-  Security çerçevesine girip bloke oluyor ve başsız sınama iki dakikada öldürülüyordu.
-  Sınama artık anahtarsız yerel bir uca bakıyor. (Anahtar okumasının GUI iş parçasından
-  çıkarılması ayrı bir iş olarak ayrıldı.)
+### Düzeltildi — Anahtar okuması pencereyi donduruyordu
+
+- **`SecretStore::read` GUI iş parçasından çıktı** (`app/secret_resolver.hpp`).
+  `AiTransport::send` bir sohbet isteğinden hemen önce, daha tek bayt çıkmadan,
+  platformun anahtar deposunu **GUI iş parçasında** sorguluyordu. Üç platformun üçü de
+  istediği kadar bekleyebilir: macOS'ta `SecItemCopyMatching` Security çerçevesine
+  girip kullanıcı izin verene kadar bloke olur — klavyede kimse yoksa öylece durur ve
+  başsız bir koşu `SecurityServer::ClientSession::decrypt` içinde **iki dakikadan
+  fazla** ölçüldü; libsecret kilitli bir anahtarlığa D-Bus turu bekler. Pencere bu süre
+  boyunca donuyordu, ki `.claude/ai.md` R18 uygulamanın kullanılabilir kalmasını şart
+  koşar ve P8 UI iş parçasında bloke beklemeyi doğrudan yasaklar.
+- Arama artık kendi iş parçasında yapılıyor ve çözülen anahtar **oturum boyunca
+  bellekte** tutuluyor — dosyaya, `SettingSpec`'e, komut argümanına, günlüğe, denetim
+  kaydına ya da hata mesajına değil (CLAUDE.md 5.21 bu listeyi sayar ve bu sınıf ona
+  yeni bir yer eklemez). Bellek sayesinde sohbetin ikinci turu anahtar deposuna hiç
+  dokunmuyor ve bir kez izin vermeyen kullanıcı her cümlede yeniden sorgulanmıyor.
+- **İzin penceresi kişinin beklediği anda** çıkıyor: sohbet seçicisinden model
+  seçildiğinde istenmiş bir penceredir, üç cümle sonra çıkanı kimse açıklayamaz.
+  Kullanıcının az önce yazdığı anahtar ise işletim sistemine hiç sorulmadan hatırlanıyor.
+- Aynı kusurun sınamadaki yüzü de kapatıldı: sohbet probe'u paneli anahtarsız yerel bir
+  uca yönlendiriyor, yani bir geliştiricinin kendi makinesindeki gerçek bulut profiline
+  ve gerçek anahtar deposuna hiçbir yoldan ulaşamıyor.
 
 - **Ana menüye girdi**: **`Dosya ▸ Paftalar`** — QGIS'in `Project ▸ Layouts`'unun
   durduğu yer, ve aynı sebeple `Dosya` altında: pafta belgeye aittir, dosyayla gider ve
