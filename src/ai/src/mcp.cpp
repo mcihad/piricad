@@ -1103,6 +1103,25 @@ McpServer::Answer McpServer::resources_read(const JsonRpcRequest& rpc,
                         for (const std::string& line : ran.value().lines)
                             notes.push(Json::string(line));
                     sheet.set("satirlar", std::move(notes));
+
+                    // A REFUSAL IS SAID, NOT SWALLOWED. An empty `satirlar`
+                    // reads as "nothing wrong with this sheet", which is the
+                    // one answer a preflight must never give by accident —
+                    // and it is what this resource gave for every sheet while
+                    // the check could not run at all (A-05).
+                    if (!ran)
+                        sheet.set("hata", Json::string(ran.error().message));
+                    else if (ran.value().report.is_object()) {
+                        // THE STRUCTURED HALF TOO: an agent asked "is the
+                        // legend under something" should not have to parse a
+                        // Turkish sentence to find out.
+                        if (const Json* covers = ran.value().report.find("ust_uste_binen");
+                            covers != nullptr)
+                            sheet.set("ust_uste_binen", *covers);
+                        if (const Json* faults = ran.value().report.find("sorunlar");
+                            faults != nullptr)
+                            sheet.set("sorunlar", *faults);
+                    }
                     sheets.push(std::move(sheet));
                 }
         }

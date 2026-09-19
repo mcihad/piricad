@@ -619,6 +619,38 @@ LayoutItem default_item(LayoutItemKind kind);
 /// belong to `/src/app` and are added to this list there.
 std::vector<std::string> layout_trouble(const Layout& layout);
 
+/// One item drawn over another, and how much of the lower one it hides.
+///
+/// WHY OVERLAPS ARE REPORTED SEPARATELY FROM TROUBLE. Most of them are the
+/// design: a title, a scale bar and a north arrow sit ON the map frame, which is
+/// the sheet's background, and a preflight that called that a defect would cry
+/// wolf on every correctly built sheet. But "lejat haritanın üstüne binmiş" is a
+/// real thing a person says, and answering it needs the program to be able to
+/// say WHAT covers WHAT (TODOS A-05).
+///
+/// So this is an OBSERVATION, not a verdict. `layout_trouble` keeps the one case
+/// that is never intended — an item completely hidden behind an opaque one,
+/// which prints nothing at all — and this answers the rest when somebody asks.
+struct LayoutOverlap
+{
+    std::string over;     ///< the item drawn later; it is the one on top
+    std::string under;    ///< the item it covers
+    std::int32_t page{0}; ///< which page, 1-based, as a person counts
+
+    /// How much of `under`'s box is inside `over`'s, in percent, 0..100.
+    std::uint8_t covered_percent{0};
+
+    /// Whether `over` actually HIDES what is under it: its background is opaque.
+    /// A transparent legend over a map covers nothing a reader loses.
+    bool opaque{false};
+};
+
+/// Every pair where one item is drawn over another, most-covered first.
+///
+/// Deterministic: ties break on the pair's names, so two runs and two machines
+/// produce the same list (Article 2.5's reason, applied to an ordering).
+std::vector<LayoutOverlap> layout_overlaps(const Layout& layout);
+
 /// THE FILES THIS SHEET NEEDS THAT ARE NOT IN IT.
 ///
 /// A template is mailed between offices, and a sheet whose logo lives at

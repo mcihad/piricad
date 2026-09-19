@@ -222,11 +222,32 @@ core::Result<ai::ToolOutcome> AiService::run_read_only(const std::string& comman
     if (spec == nullptr)
         return core::err(core::ErrorCode::NotFound, "Bilinmeyen komut: '" + command_id + "'.");
 
-    // THE DOOR CHECKS THE FLAG, not the caller. `Flags::NoEffect` is the narrow
-    // claim — changes no document, no file, no setting — and `ReadOnly` is not
-    // it: `core.undo`, `core.save` and `core.export` all carry `ReadOnly` and
-    // none of them may run for an agent without a person deciding.
-    if (!has_flag(spec->flags, command::Flags::NoEffect))
+    // THE DOOR CHECKS WHAT THIS CALL WOULD DO, not what its command can do.
+    //
+    // `Flags::NoEffect` is the narrow claim — changes no document, no file, no
+    // setting — and `ReadOnly` is not it: `core.undo`, `core.save` and
+    // `core.export` all carry `ReadOnly` and none may run for an agent without a
+    // person deciding.
+    //
+    // BUT A FLAG IS PER COMMAND AND SOME COMMANDS ARE BOTH. `ÇIKTIYERLEŞİMİ` adds
+    // pages and deletes them — and it also answers `islem=denetle`, which reads a
+    // sheet and reports what will print wrong. The flag cannot say "this verb
+    // reads", so the whole command was refused and the MCP preflight resource,
+    // which runs exactly that verb, silently answered with an empty list for
+    // every sheet: a preflight that reported nothing and looked like a clean
+    // one (TODOS A-05, L-15).
+    //
+    // `command::effect_of(spec, args)` is the answer built for this (C-02): it
+    // reads the verb out of THESE arguments and falls back to the command's
+    // whole effect when the verb is not one it declared — so a command with an
+    // incomplete verb table is refused rather than let through.
+    //
+    // MOVING THE VIEW COUNTS AS NO EFFECT, and that is CLAUDE.md 2.10's own
+    // wording: an agent "may read anything and move the view".
+    constexpr command::Effect harmless = command::Effect::Query | command::Effect::ViewChange;
+    const command::Effect would        = command::effect_of(*spec, args);
+    const auto outside = static_cast<std::uint32_t>(would) & ~static_cast<std::uint32_t>(harmless);
+    if (!has_flag(spec->flags, command::Flags::NoEffect) && outside != 0u)
         return core::err(core::ErrorCode::Unsupported,
                          "'" + command_id +
                              "' bir şeyi değiştirir; doğrudan çalıştırılamaz, öneri olur.");

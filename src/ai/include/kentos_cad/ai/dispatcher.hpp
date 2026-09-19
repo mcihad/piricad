@@ -91,6 +91,12 @@ public:
     /// `core.export` all carry it. An agent allowed to run them without approval
     /// could reverse the drawing or write over a file.
     ///
+    /// NEITHER IS THE FLAG ALONE. Some commands both edit and answer — the
+    /// layout command adds pages AND reports what will print wrong — so the test
+    /// is `command::effect_of(spec, args)`, which reads the verb out of these
+    /// arguments (C-02). Moving the view counts as no effect, in CLAUDE.md
+    /// 2.10's own words: an agent "may read anything and move the view".
+    ///
     /// Handles minted from the answer land in `requester`'s store, which is why
     /// the label is needed even by a call that only reads.
     virtual core::Result<ToolOutcome> run_read_only(const std::string& command_id,

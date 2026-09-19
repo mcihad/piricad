@@ -708,12 +708,81 @@ std::vector<std::string> layout_trouble(const Layout& layout)
             out.push_back(who + " bir resim ama dosya yolu verilmemiş.");
     }
 
+    // ---- something that will print nothing at all ---------------------------
+    //
+    // THE ONE OVERLAP THAT IS NEVER INTENDED. A title over a map is the design;
+    // a legend buried under an opaque table is a legend the reader never sees,
+    // and the sheet prints and looks finished all the same. `layout_overlaps`
+    // answers the rest when somebody asks (A-05).
+    for (const LayoutOverlap& hidden : layout_overlaps(layout)) {
+        if (!hidden.opaque || hidden.covered_percent < 100) continue;
+        out.push_back("'" + hidden.under + "' tamamen '" + hidden.over +
+                      "' öğesinin altında kalıyor; hiç görünmeyecek.");
+    }
+
     // ---- a sheet with nothing to show -------------------------------------
     if (layout.first_map() == nullptr)
         out.push_back("'" + layout.name +
                       "' yerleşiminde harita çerçevesi yok; ölçek çubuğu ve "
                       "kuzey oku neyi anlatacağını bilemez.");
 
+    return out;
+}
+
+std::vector<LayoutOverlap> layout_overlaps(const Layout& layout)
+{
+    std::vector<LayoutOverlap> out;
+
+    for (std::size_t a = 0; a < layout.items.size(); ++a) {
+        for (std::size_t b = 0; b < layout.items.size(); ++b) {
+            if (a == b) continue;
+            const LayoutItem& lower = layout.items[a];
+            const LayoutItem& upper = layout.items[b];
+            if (lower.frame.empty() || upper.frame.empty()) continue;
+
+            // ON THE SAME PAGE, or they never meet.
+            const std::int32_t page = layout.page_of(a);
+            if (page != layout.page_of(b)) continue;
+
+            // WHICH ONE IS ON TOP. `z` decides, and the array index breaks a tie
+            // the same way the painter does — so the answer matches what a person
+            // sees rather than what the model happens to hold first.
+            const bool upper_is_over = upper.z > lower.z || (upper.z == lower.z && b > a);
+            if (!upper_is_over) continue;
+
+            const Um left   = std::max(lower.frame.x, upper.frame.x);
+            const Um top    = std::max(lower.frame.y, upper.frame.y);
+            const Um right  = std::min(lower.frame.right(), upper.frame.right());
+            const Um bottom = std::min(lower.frame.bottom(), upper.frame.bottom());
+            if (right <= left || bottom <= top) continue;
+
+            // PERCENT OF THE LOWER ONE, not of the page: what matters is how much
+            // of the covered item a reader loses.
+            const std::int64_t hidden =
+                static_cast<std::int64_t>(right - left) * static_cast<std::int64_t>(bottom - top);
+            const std::int64_t whole =
+                static_cast<std::int64_t>(lower.frame.w) * static_cast<std::int64_t>(lower.frame.h);
+            if (whole <= 0) continue;
+
+            LayoutOverlap one;
+            one.over  = upper.id;
+            one.under = lower.id;
+            one.page  = page + 1;
+            one.covered_percent =
+                static_cast<std::uint8_t>(std::min<std::int64_t>(100, hidden * 100 / whole));
+            // OPAQUE MEANS IT ACTUALLY HIDES. A transparent legend over a map
+            // covers nothing a reader loses, and calling that a problem would be
+            // crying wolf on a correctly built sheet.
+            one.opaque = (upper.background_colour >> 24) == 0xFFu;
+            out.push_back(std::move(one));
+        }
+    }
+
+    std::stable_sort(out.begin(), out.end(), [](const LayoutOverlap& x, const LayoutOverlap& y) {
+        if (x.covered_percent != y.covered_percent) return x.covered_percent > y.covered_percent;
+        if (x.over != y.over) return x.over < y.over;
+        return x.under < y.under;
+    });
     return out;
 }
 

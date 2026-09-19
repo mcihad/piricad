@@ -174,6 +174,31 @@ bu yüzden söylenmeleri gerekiyor:
 - Katmanı verilmemiş tablo, dosyası verilmemiş resim
 - Eni ya da boyu sıfır olan kutu
 - Hiç harita çerçevesi olmayan yerleşim
+- Tamamen başka bir öğenin altında kalan ve **hiç görünmeyecek** olan öğe
+
+#### Ne neyin üstünde
+
+Denetim, sorunların ardından **üst üste binen öğeleri** de sayar — ama bunları
+sorun ilan etmez:
+
+```
+Üst üste binen öğeler (sorun olmayabilir):
+  · 'baslik' 'harita' üzerinde, sayfa 1, %4 (altındakini gizliyor)
+  · 'lejant' 'harita' üzerinde, sayfa 1, %9 (saydam)
+```
+
+Çünkü çoğu çakışma **tasarımın kendisidir**: başlık, ölçek çubuğu ve kuzey oku
+harita çerçevesinin üstünde durur. Bunları kusur saymak, doğru kurulmuş her
+sayfada boşuna alarm vermek olurdu.
+
+Ama "lejant haritanın üstüne binmiş" insanın söylediği bir cümledir, ve buna
+cevap verebilmek için programın **neyin neyi kapattığını** söyleyebilmesi gerekir.
+Bu yüzden ikisi ayrı: sorun listesi yalnız hiç istenmeyen hâli — bir öğenin
+tamamen görünmez kalmasını — taşır, geri kalanı sorulduğunda cevaplanır.
+
+Yapılandırılmış sonuçta `sorunlar` ve `ust_uste_binen` alanları bulunur;
+ikincisinin her satırı `ustte`, `altta`, `sayfa`, `kapanan_yuzde` ve `gizliyor`
+taşır. Liste **en çok kapanan** üstte sıralıdır.
 
 `YAZDIR yerlesim=` aynı denetimi kendiliğinden yapar ve bulduklarını sonucunun
 **uyarıları** olarak döndürür; baskıyı durdurmaz.

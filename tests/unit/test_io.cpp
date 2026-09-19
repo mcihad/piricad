@@ -4536,6 +4536,83 @@ TEST_CASE("Çıktı yerleşimi: denetle basmaya engel olmayan sorunları söyler
     CHECK(said.value().lines.size() > 1);
 }
 
+TEST_CASE("A-05: ne neyin üstünde — çakışma söylenebilir, ama sorun ilan edilmez")
+{
+    // "LEJANT HARİTANIN ÜSTÜNE BİNMİŞ" is a thing a person says, and answering
+    // it needs the program to be able to name WHAT covers WHAT (TODOS A-05).
+    // But most overlaps are the design — a title, a scale bar and a north arrow
+    // all sit ON the map frame — so a preflight that called them defects would
+    // cry wolf on every correctly built sheet.
+    Rig r;
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Kroki kagit=A4", Origin::Test).ok());
+
+    const auto sheet    = [&]() -> const core::Layout& { return *r.doc.layouts().find("Kroki"); };
+    const auto overlaps = [&] { return core::layout_overlaps(sheet()); };
+    const auto trouble  = [&] { return core::layout_trouble(sheet()); };
+
+    // The seeded sheet already has a title over the map: reported, and NOT a
+    // problem.
+    const auto seeded = overlaps();
+    CHECK_FALSE(seeded.empty());
+    CHECK(std::none_of(seeded.begin(), seeded.end(), [](const core::LayoutOverlap& one) {
+        return one.covered_percent == 100 && one.opaque;
+    }));
+    const auto clean = trouble();
+    CHECK(std::none_of(clean.begin(), clean.end(), [](const std::string& one) {
+        return one.find("altında kalıyor") != std::string::npos;
+    }));
+
+    // ---- ONE ITEM COMPLETELY BEHIND AN OPAQUE ONE --------------------------
+    //
+    // THE ONE OVERLAP THAT IS NEVER INTENDED: the sheet prints, looks finished,
+    // and the buried item is simply not there. That one IS trouble.
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=ekle tur=lejant ad=lejant", Origin::Test).ok());
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIÖĞE islem=tasi ad=lejant x=20 y=20 genislik=40 yukseklik=30",
+                              Origin::Test)
+                .ok());
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=ekle tur=tablo ad=liste", Origin::Test).ok());
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIÖĞE islem=tasi ad=liste x=10 y=10 genislik=80 yukseklik=60",
+                              Origin::Test)
+                .ok());
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=ayarla ad=liste sira=900", Origin::Test).ok());
+
+    const auto buried = overlaps();
+    const auto hides =
+        std::find_if(buried.begin(), buried.end(), [](const core::LayoutOverlap& one) {
+            return one.over == "liste" && one.under == "lejant";
+        });
+    REQUIRE(hides != buried.end());
+    CHECK_EQ(hides->covered_percent, 100);
+    CHECK_EQ(hides->page, 1);
+
+    if (hides->opaque) {
+        const auto said = trouble();
+        CHECK(std::any_of(said.begin(), said.end(), [](const std::string& one) {
+            return one.find("'lejant' tamamen") != std::string::npos;
+        }));
+    }
+
+    // ---- AND THE COMMAND HANDS IT BACK AS DATA -----------------------------
+    //
+    // An agent asked "is the legend under something" must not have to parse a
+    // Turkish sentence to find out.
+    auto checked = r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=denetle ad=Kroki", Origin::Test);
+    REQUIRE(checked.ok());
+    const core::Json* rows = checked.value().report.find("ust_uste_binen");
+    REQUIRE(rows != nullptr);
+    CHECK_FALSE(rows->as_array().empty());
+    const core::Json& first = rows->as_array()[0];
+    CHECK(first.find("ustte") != nullptr);
+    CHECK(first.find("altta") != nullptr);
+    CHECK(first.find("kapanan_yuzde") != nullptr);
+    CHECK(first.find("gizliyor") != nullptr);
+    // MOST-COVERED FIRST, and the order is deterministic so two runs agree.
+    CHECK_EQ(core::layout_overlaps(sheet()).front().covered_percent,
+             static_cast<std::uint8_t>(first.find("kapanan_yuzde")->as_int()));
+}
+
 TEST_CASE("Çıktı yerleşimi: kâğıt ölçüsü ondalık milimetre kabul eder")
 {
     // TODOS L-03's acceptance, verbatim: "0,35 mm konum ve 0,18 mm çizgi

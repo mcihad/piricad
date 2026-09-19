@@ -615,7 +615,23 @@ motor kabiliyeti eklenir; GUI, AI ve MCP aynı sürümde bu kabiliyeti kullanır
   devam etsin. Araç bağımlılıklarını sırala; eksik plan adımını sessiz atlama.
   **Kabul:** katman oluştur → nesne ekle → layout kur → PDF çıkar → dosyayı doğrula
   tek kullanıcı talebinden tamamlanır; her tool-call kimliği doğru tek sonuç alır.
-- [ ] **A-05 / P1 — Görsel ve yapısal önizleme.** Çizim/layout snapshot'ı, değişim
+- [~] **A-05 / P1 — Görsel ve yapısal önizleme.** *(yapısal yarısı 19 Eylül 2026)*
+  **Yapıldı:** `core::layout_overlaps` — hangi öğe hangisinin üstünde, hangi
+  sayfada, altındakinin yüzde kaçını kapatıyor, gizliyor mu. Çakışma **sorun
+  ilan edilmiyor**: çoğu tasarımın kendisidir (başlık haritanın üstündedir) ve
+  kusur saymak doğru kurulmuş her sayfada boşuna alarm olurdu; hiç istenmeyen
+  tek hâl — mat bir öğenin altında tamamen kalmak — sorun listesinde.
+  `islem=denetle` ikisini de hem insana hem makineye veriyor.
+  **Yol üstünde bulunan kusur:** MCP'nin önizleme kaynağı aylardır her sayfa için
+  boş liste döndürüyordu, yani "sorun yok" — okuma kapısı komut başına bir
+  bayrağa baktığı için `denetle` hiç çalışmıyordu. Kapı artık `effect_of(spec,
+  args)` ile bu çağrının ne yapacağına bakıyor, ret yutulmuyor, ve
+  `KENTOS_MCP_PROBE` gerçek sokette sınıyor.
+  **Kalan:** görsel yarısı — çizim/yerleşim anlık görüntüsünün sohbette
+  gösterilmesi ve destekleyen modele görsel girdi olarak sunulması; değişim
+  özeti ve etkilenen nesne sayısının kartta görünmesi. Bunlar sohbet
+  penceresinin işi ve A-04'ün iş yürütücüsüne bağlı.
+  **Eski metin:** Çizim/layout snapshot'ı, değişim
   özeti, etkilenen nesne sayısı ve preflight raporunu sohbet içinde göster; destekleyen
   modele görsel girdi sun. Çok modlu olmayan model yapısal raporla çalışabilsin.
   **Kabul:** “lejant haritanın üstüne binmiş” talebinde çakışma saptanır, düzeltilir

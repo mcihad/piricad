@@ -395,15 +395,53 @@ Task<void> run_layout(Context& ctx)
                 core::err(core::ErrorCode::NotFound, "Çıktı yerleşimi yok: '" + *named + "'."));
             co_return;
         }
-        const std::vector<std::string> trouble = core::layout_trouble(*found);
-        if (trouble.empty()) {
-            ctx.echo("'" + found->name + "' yerleşiminde basmaya engel bir şey görünmüyor.");
-            co_return;
-        }
-        ctx.echo("'" + found->name + "' yerleşiminde " + std::to_string(trouble.size()) +
-                 " sorun var:");
+        const std::vector<std::string> trouble      = core::layout_trouble(*found);
+        const std::vector<core::LayoutOverlap> over = core::layout_overlaps(*found);
+
+        // WHAT COVERS WHAT, as structured data beside the prose. Most overlaps
+        // are the design — a title sits ON the map frame — so they are not
+        // "sorun"; but "lejant haritanın üstüne binmiş" is a thing a person
+        // says, and answering it needs the program to be able to say which item
+        // is over which and how much of it is hidden (TODOS A-05).
+        core::Json report;
+        report.set("yerlesim", core::Json::string(found->name));
+        core::Json notes = core::Json::array({});
         for (const std::string& one : trouble)
-            ctx.echo("  · " + one);
+            notes.push(core::Json::string(one));
+        report.set("sorunlar", std::move(notes));
+
+        core::Json covers = core::Json::array({});
+        for (const core::LayoutOverlap& one : over) {
+            core::Json row;
+            row.set("ustte", core::Json::string(one.over));
+            row.set("altta", core::Json::string(one.under));
+            row.set("sayfa", core::Json::integer(one.page));
+            row.set("kapanan_yuzde", core::Json::integer(one.covered_percent));
+            row.set("gizliyor", core::Json::boolean(one.opaque));
+            covers.push(std::move(row));
+        }
+        report.set("ust_uste_binen", std::move(covers));
+        ctx.report(std::move(report));
+
+        if (trouble.empty())
+            ctx.echo("'" + found->name + "' yerleşiminde basmaya engel bir şey görünmüyor.");
+        else {
+            ctx.echo("'" + found->name + "' yerleşiminde " + std::to_string(trouble.size()) +
+                     " sorun var:");
+            for (const std::string& one : trouble)
+                ctx.echo("  · " + one);
+        }
+
+        // SAID AFTER THE PROBLEMS AND MARKED AS NOT ONE. An overlap that hides
+        // something is already in `trouble`; these are the ones a person may
+        // have meant, listed so they can decide.
+        if (!over.empty()) {
+            ctx.echo("Üst üste binen öğeler (sorun olmayabilir):");
+            for (const core::LayoutOverlap& one : over)
+                ctx.echo("  · '" + one.over + "' '" + one.under + "' üzerinde, sayfa " +
+                         std::to_string(one.page) + ", %" + std::to_string(one.covered_percent) +
+                         (one.opaque ? " (altındakini gizliyor)" : " (saydam)"));
+        }
         co_return;
     }
 

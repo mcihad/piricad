@@ -1591,6 +1591,30 @@ int main(int argc, char** argv)
             say("wrong token", status, QByteArray());
             check(status == 401 || status == 403 || status == 404, "yanlış belirteç kabul edildi");
 
+            // 8b. THE PREFLIGHT RESOURCE ACTUALLY REPORTS SOMETHING.
+            //
+            // IT REPORTED NOTHING FOR MONTHS AND LOOKED FINE. The resource runs
+            // `ÇIKTIYERLEŞİMİ islem=denetle` through the read-only door, and
+            // that door tested a per-COMMAND flag: the layout command also adds
+            // and deletes pages, so it was refused — and the answer was an empty
+            // `satirlar` for every sheet, which reads as "nothing wrong". Only a
+            // real request over a real socket shows that (A-05, L-15).
+            window.runScriptLine(QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=Sınama kagit=A4"));
+            const QByteArray preflight =
+                post(base,
+                     envelope("resources/read",
+                              "{\"uri\":\"kentoscad://yerlesim/denetim\"," + meta + "}"),
+                     "resources/read", "kentoscad://yerlesim/denetim", &status);
+            say("preflight", status, preflight);
+            check(status == 200, "önizleme kaynağı 200 vermedi");
+            check(preflight.contains("Sınama"), "önizleme kaynağı yerleşimi saymadı");
+            check(!preflight.contains("\\\"hata\\\""), "önizleme kaynağı hata bildirdi");
+            check(preflight.contains("satirlar"), "önizleme kaynağı satır alanı vermedi");
+            // THE ONE THAT WOULD HAVE CAUGHT THE BUG: a sheet that was just
+            // created has an unaimed map frame, so the list cannot be empty.
+            check(preflight.contains("nereye bakacağı"),
+                  "ÖNİZLEME BOŞ — denetle çalışmadı ve temiz görünüyor");
+
             // 9. THE LEDGER SAW EVERY ONE OF THEM (TODOS M-08). Nothing here is
             //    a session — 2026-07-28 has none — so what a person is shown is
             //    who SPOKE and when, and this is where that is proved over a

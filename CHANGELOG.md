@@ -6,6 +6,37 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — önizleme aylardır hiçbir şey bildirmiyordu ve temiz görünüyordu (TODOS A-05, L-15)
+
+- MCP'nin `kentoscad://yerlesim/denetim` kaynağı `ÇIKTIYERLEŞİMİ islem=denetle`
+  komutunu okuma kapısından çalıştırıyor — ve o kapı **komut başına** bir bayrağa
+  bakıyordu. Yerleşim komutu sayfa da eklediği için reddediliyordu, sonuç da her
+  sayfa için **boş bir `satirlar` listesi**: yani "bu sayfada sorun yok". Bir
+  önizlemenin asla kazara veremeyeceği tek cevap.
+- Kapı artık **bu çağrının** ne yapacağına bakıyor: `command::effect_of(spec, args)`
+  fiili argümanlardan okuyor ve tanımsız bir fiilde komutun bütününe düşüyor —
+  yani eksik fiil tablosu olan bir komut geçmiyor, reddediliyor (C-02).
+  Görünümü gezmek etkisiz sayılıyor, CLAUDE.md 2.10'un kendi sözleriyle.
+- Ret artık **söyleniyor**: `hata` alanı. Yutulmuş bir ret, temiz bir sayfa gibi
+  okunuyordu.
+- `KENTOS_MCP_PROBE` bunu gerçek sokette sınıyor: taze bir sayfanın hedeflenmemiş
+  harita çerçevesi vardır, dolayısıyla liste boş olamaz.
+
+### Eklendi — ne neyin üstünde (TODOS A-05)
+
+- **`core::layout_overlaps`**: hangi öğe hangisinin üstünde, hangi sayfada,
+  altındakinin yüzde kaçını kapatıyor, ve **gizliyor mu** (üstteki öğenin zemini
+  mat mı). En çok kapanan üstte, sıralama belirlenimli.
+- **Çakışma sorun ilan edilmiyor** ve bu bilinçli: çoğu çakışma tasarımın kendisi —
+  başlık, ölçek çubuğu ve kuzey oku harita çerçevesinin üstünde durur. Bunları
+  kusur saymak doğru kurulmuş her sayfada boşuna alarm vermek olurdu.
+- **Hiç istenmeyen tek hâl sorun listesinde**: bir öğe mat bir öğenin altında
+  tamamen kalıyorsa hiç görünmez, sayfa da basılır ve bitmiş görünür.
+- "Lejant haritanın üstüne binmiş" insanın söylediği bir cümledir; buna cevap
+  verebilmek için programın neyin neyi kapattığını söyleyebilmesi gerekiyordu.
+  `islem=denetle` artık `sorunlar` ve `ust_uste_binen` alanlarını hem insana hem
+  makineye veriyor.
+
 ### Eklendi — uzun işler: nerede kaldı, ve aynı isteği iki kez sormak (TODOS M-06)
 
 - **`PlanState::Running` (`uygulaniyor`)**: bir karar değil, kararla sonuç
