@@ -224,6 +224,10 @@ KENTOS_COMMAND(database)
         .flags = Flags::Interactive | Flags::Scriptable,
         .summary = "PostGIS veritabanına bağlanır; katmanları tablo, projeleri kayıt olarak yazar.",
         .run = &run,
+        // THE ONE COMMAND THAT REACHES OFF THIS MACHINE. Reading a table edits
+        // the drawing; writing one changes somebody else's database, and that is
+        // not something an undo stack can take back (C-05).
+        .effect = Effect::Query | Effect::DocumentEdit | Effect::ExternalWrite,
     };
 }
 

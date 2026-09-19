@@ -82,6 +82,7 @@ KENTOS_COMMAND(help)
         .flags    = Flags::Scriptable | Flags::ReadOnly,
         .summary  = "Komut listesini veya tek bir komutun ayrıntısını gösterir.",
         .run      = &run_help,
+        .effect   = Effect::Query,
     };
 }
 
@@ -96,6 +97,11 @@ KENTOS_COMMAND(script)
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
         .summary = "Bir betik dosyasını komut veri yolu üzerinden çalıştırır.",
         .run     = &run_script,
+        // A SCRIPT IS WHATEVER IT CONTAINS. Nothing here can narrow that, so the
+        // worst case is every effect a command in it could have — which is also
+        // why an agent may not run one (5.22).
+        .effect = Effect::Query | Effect::ViewChange | Effect::DocumentEdit | Effect::FileRead |
+                  Effect::FileWrite | Effect::ExternalWrite | Effect::SettingsChange,
     };
 }
 

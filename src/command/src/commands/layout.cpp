@@ -720,6 +720,19 @@ KENTOS_COMMAND(layout)
         .summary = "Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve "
                    "kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir.",
         .run = &run_layout,
+        // LISTING IS A READ. Collapsing the five words into the command's worst
+        // case would make `islem=listele` ask a person for approval, which a read
+        // must never do (.claude/ai.md R3).
+        .effect      = Effect::Query | Effect::DocumentEdit,
+        .effect_verb = "islem",
+        .verb_effects =
+            {
+                {"listele", Effect::Query},
+                {"ekle", Effect::DocumentEdit},
+                {"sil", Effect::DocumentEdit},
+                {"ad", Effect::DocumentEdit},
+                {"sayfa", Effect::DocumentEdit},
+            },
     };
 }
 
@@ -773,7 +786,17 @@ KENTOS_COMMAND(layout_item)
             "Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek "
             "çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar "
             "ve siler.",
-        .run = &run_item,
+        .run         = &run_item,
+        .effect      = Effect::Query | Effect::DocumentEdit,
+        .effect_verb = "islem",
+        .verb_effects =
+            {
+                {"listele", Effect::Query},
+                {"ekle", Effect::DocumentEdit},
+                {"sil", Effect::DocumentEdit},
+                {"tasi", Effect::DocumentEdit},
+                {"ayarla", Effect::DocumentEdit},
+            },
     };
 }
 
@@ -803,6 +826,19 @@ KENTOS_COMMAND(layout_template)
             "kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni "
             "taşır, zemin koordinatlarını taşımaz.",
         .run = &run_template,
+        // A TEMPLATE LIVES OUTSIDE THE DRAWING, in the user's profile — so
+        // `kaydet` and `sil` write a FILE and leave the document alone, while
+        // `uygula` reads a file and edits the document. One command, three
+        // different things to the world.
+        .effect      = Effect::Query | Effect::FileRead | Effect::FileWrite | Effect::DocumentEdit,
+        .effect_verb = "islem",
+        .verb_effects =
+            {
+                {"listele", Effect::Query | Effect::FileRead},
+                {"kaydet", Effect::Query | Effect::FileWrite},
+                {"uygula", Effect::FileRead | Effect::DocumentEdit},
+                {"sil", Effect::FileWrite},
+            },
     };
 }
 

@@ -138,6 +138,9 @@ KENTOS_COMMAND(undo)
         .flags    = Flags::Scriptable | Flags::ReadOnly,
         .summary  = "Son işlemi geri alır.",
         .run      = &run_undo,
+        // REVERSES THE DRAWING. `ReadOnly` is on it because it opens no
+        // transaction of its own; the document is different afterwards.
+        .effect = Effect::DocumentEdit,
     };
 }
 
@@ -152,6 +155,7 @@ KENTOS_COMMAND(redo)
         .flags    = Flags::Scriptable | Flags::ReadOnly,
         .summary  = "Geri alınan işlemi yineler.",
         .run      = &run_redo,
+        .effect   = Effect::DocumentEdit,
     };
 }
 

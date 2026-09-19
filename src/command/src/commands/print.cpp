@@ -382,6 +382,11 @@ KENTOS_COMMAND(print)
         .summary = "Çizimin bir penceresini bir yazdırma profilinin kâğıdına yerleştirip PDF "
                    "dosyasına yazar ya da yazıcıya gönderir.",
         .run = &run_print,
+        // THE WORST CASE, AND IT IS NOT VERB-SHAPED. `dosya=` writes a file and
+        // `yazici=` sends the sheet to a printer, which is a thing that cannot be
+        // taken back — so both are declared and the policy narrows by argument.
+        // `ReadOnly` said nothing about either.
+        .effect = Effect::Query | Effect::FileWrite | Effect::ExternalWrite,
     };
 }
 
@@ -409,6 +414,17 @@ KENTOS_COMMAND(print_profile)
         .summary = "Yazdırma profillerini listeler, ekler, siler ya da birini varsayılan yapar; "
                    "profil kâğıdı, yönü, çözünürlüğü ve kenar boşluğunu taşır.",
         .run     = &run_print_profile,
+        // A PROFILE IS THIS MACHINE'S SETTING, not the drawing's: it is stored
+        // beside the preferences and travels with neither the file nor the sheet.
+        .effect      = Effect::Query | Effect::SettingsChange,
+        .effect_verb = "islem",
+        .verb_effects =
+            {
+                {"listele", Effect::Query},
+                {"ekle", Effect::SettingsChange},
+                {"sil", Effect::SettingsChange},
+                {"varsayilan", Effect::SettingsChange},
+            },
     };
 }
 

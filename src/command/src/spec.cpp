@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/text.hpp"
+
 namespace kentos::command {
 
 const char* category_name(Category c)
@@ -94,6 +96,90 @@ Param Param::integer_range(std::string name, Arity a, std::int64_t low, std::int
     p.high    = high;
     p.bounded = true;
     return p;
+}
+
+// ------------------------------------------------------------- the effect --
+
+const char* effect_name(Effect one)
+{
+    switch (one) {
+    case Effect::None: return "bildirilmemis";
+    case Effect::Query: return "sorgu";
+    case Effect::ViewChange: return "gorunum";
+    case Effect::DocumentEdit: return "belge_duzenleme";
+    case Effect::FileRead: return "dosya_okuma";
+    case Effect::FileWrite: return "dosya_yazma";
+    case Effect::ExternalWrite: return "dis_yazma";
+    case Effect::SettingsChange: return "ayar_degisikligi";
+    }
+    return "bilinmiyor";
+}
+
+namespace {
+
+/// The answer when a spec states nothing. NOT a guess at harmlessness: the only
+/// flag that claims a command changed nothing is `NoEffect`, and everything else
+/// falls to what its category can do.
+Effect from_flags(const CommandSpec& spec)
+{
+    const auto carries = [&](Flags bit) {
+        return (static_cast<std::uint32_t>(spec.flags) & static_cast<std::uint32_t>(bit)) != 0U;
+    };
+
+    if (carries(Flags::NoEffect))
+        return carries(Flags::Transparent) ? Effect::Query | Effect::ViewChange : Effect::Query;
+
+    // THE CATEGORY, NOT THE FLAG. `ReadOnly` without `NoEffect` is the trap this
+    // whole type exists for — `core.save`, `core.saveas` and `core.export` all
+    // carry it and all write over a file — so reading anything into it beyond
+    // "skips the transaction path" is how the wrong answer gets produced
+    // confidently. The category is what the command SAYS it is about; a command
+    // whose category misleads declares `.effect` itself.
+    switch (spec.category) {
+    case Category::View: return Effect::Query | Effect::ViewChange;
+    case Category::Query: return Effect::Query;
+    case Category::File: return Effect::Query | Effect::FileRead | Effect::FileWrite;
+    case Category::Draw:
+    case Category::Modify:
+    case Category::Layer:
+    case Category::Processing: return Effect::DocumentEdit;
+    case Category::Script:
+    case Category::System: break;
+    }
+    // A system or script command that opens no transaction still changes
+    // something a person would notice, and nobody has said what. The cautious
+    // answer names both the stored preference and the drawing.
+    if (carries(Flags::ReadOnly)) return Effect::Query | Effect::SettingsChange;
+    return Effect::DocumentEdit;
+}
+
+} // namespace
+
+Effect effect_of(const CommandSpec& spec)
+{
+    Effect worst = spec.effect == Effect::None ? from_flags(spec) : spec.effect;
+    for (const VerbEffect& one : spec.verb_effects)
+        worst = worst | one.effect;
+    return worst;
+}
+
+Effect effect_of(const CommandSpec& spec, const Args& args)
+{
+    const Effect stated = spec.effect == Effect::None ? from_flags(spec) : spec.effect;
+    if (spec.effect_verb.empty() || spec.verb_effects.empty()) return stated;
+
+    const Value* given = args.find(spec.effect_verb);
+    // NOT GIVEN IS NOT "HARMLESS". An interactive run asks for the verb after
+    // validation, so the honest answer before it is asked is the worst case.
+    if (given == nullptr || given->empty()) return effect_of(spec);
+
+    const std::string word = core::turkish_fold_key(given->as_text());
+    for (const VerbEffect& one : spec.verb_effects)
+        if (core::turkish_fold_key(one.word) == word) return one.effect;
+
+    // A WORD NOBODY DECLARED. The validator will refuse it in a moment, but
+    // until it does the cautious answer is the command's worst case.
+    return effect_of(spec);
 }
 
 } // namespace kentos::command

@@ -256,6 +256,7 @@ KENTOS_COMMAND(exportstyle)
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
         .summary = "Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar.",
         .run     = &run_export_style,
+        .effect  = Effect::Query | Effect::FileWrite,
     };
 }
 
@@ -279,6 +280,9 @@ KENTOS_COMMAND(open)
         // out of reach of a suggestion.
         .summary = "Bir KentOSCad proje dosyasını açar ve çizimin yerine koyar.",
         .run     = &run_open,
+        // READS A FILE AND REPLACES THE DRAWING. `ReadOnly` is on it because it
+        // opens no transaction, which says nothing about either half.
+        .effect = Effect::Query | Effect::FileRead | Effect::DocumentEdit,
     };
 }
 
@@ -296,6 +300,9 @@ KENTOS_COMMAND(save)
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
         .summary = "Çizimi bağlı olduğu KentOSCad proje dosyasına kaydeder.",
         .run     = &run_save,
+        // WRITES OVER A FILE. This is the command CLAUDE.md's `ReadOnly` note
+        // names first: the flag means "skips the transaction path", never "safe".
+        .effect = Effect::Query | Effect::FileWrite,
     };
 }
 
@@ -310,6 +317,7 @@ KENTOS_COMMAND(saveas)
         .flags  = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
         .summary = "Çizimi yeni bir KentOSCad proje dosyasına kaydeder ve ona bağlar.",
         .run     = &run_save_as,
+        .effect  = Effect::Query | Effect::FileWrite,
     };
 }
 
@@ -337,6 +345,7 @@ KENTOS_COMMAND(import)
         .flags   = Flags::Interactive | Flags::Scriptable,
         .summary = "Dış bir veri dosyasını çizime ekler.",
         .run     = &run_import,
+        .effect  = Effect::Query | Effect::FileRead | Effect::DocumentEdit,
     };
 }
 
@@ -358,6 +367,7 @@ KENTOS_COMMAND(exportfile)
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
         .summary = "Çizimi dış bir veri biçimine yazar.",
         .run     = &run_export,
+        .effect  = Effect::Query | Effect::FileWrite,
     };
 }
 

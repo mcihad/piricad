@@ -6,6 +6,27 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — etki sözleşmesi (TODOS C-02)
+
+- **`command::Effect`**: yedi bit — `sorgu`, `gorunum`, `belge_duzenleme`,
+  `dosya_okuma`, `dosya_yazma`, `dis_yazma`, `ayar_degisikligi`. `Flags` "hangi
+  istemci ulaşabilir" sorusunu cevaplar; bu, bir politikanın sormak zorunda olduğu
+  farklı soruyu: **geriye ne değişmiş kalıyor, ve nerede.** İkisi tek bir boolean'dı
+  (`!NoEffect`) ve o boolean bir yerleşimi listelemekle basmayı ayırt edemiyordu.
+- **Karma fiiller argümandan türetiliyor.** `ÇIKTIYERLEŞİMİ islem=listele` yalnız
+  okur; `islem=sil` belgeyi düzenler. Beş sözcüğü komutun en kötü hâline çökertmek,
+  bir okumaya onay sordurmak olurdu — `.claude/ai.md` R3 bunu yasaklıyor. Fiil
+  verilmemişse cevap yine en kötü hâl, çünkü etkileşimli çalıştırma fiili
+  doğrulamadan sonra sorar.
+- **`core.save`, `core.saveas`, `core.export` `ReadOnly` taşır ve dosyanın üstüne
+  yazar.** O bayrak "işlem yolunu atlar" demek, "zararsız" değil; artık üçü de
+  `dosya_yazma` diyor. `core.print` `dis_yazma` diyor: bir yazıcı geri alma yığını
+  değildir.
+- Bildirilmemiş bir komutun etkisi kategorisinden okunuyor. **İlk geri düşüş
+  yanlıştı**: `ReadOnly && !Dosya → ayar_degisikligi` diyordu ve `core.zoom` ile
+  `core.pan`'i "ayar değiştirir" yapıyordu. Envanterin dağılımına bakınca görüldü.
+
+
 ### Düzeltildi — çıktı yerleşimi sayfasında üç görünür kusur
 
 Basılan sayfanın kendisine bakarak bulundu; üçü de kâğıda çıkan kusurlardı.

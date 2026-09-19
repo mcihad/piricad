@@ -444,6 +444,10 @@ KENTOS_COMMAND(select)
         // removes without ever emitting SİL itself (.claude/ai.md, §5.1).
         .summary = "Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta.",
         .run     = &run_select,
+        // NOT A QUERY, THOUGH IT WRITES NOTHING. A changed highlight changes
+        // what the next SİL deletes, so it is treated as an edit to the thing
+        // the next edit will act on — which is also why it is closed to agents.
+        .effect = Effect::Query | Effect::DocumentEdit,
     };
 }
 

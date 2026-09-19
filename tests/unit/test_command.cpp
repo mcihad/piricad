@@ -4030,3 +4030,73 @@ TEST_CASE("Yeni türler: TAŞI, DÖNDÜR, ÖLÇEKLE ve AYNALA yükü de dönüş
     REQUIRE(hdef.ok());
     CHECK_EQ(hdef.value().angle_udeg, 15'000'000);
 }
+
+// ---------------------------------------------------------- the effect ------
+
+TEST_CASE("Etki: listelemek okumadır, kaydetmek diske yazmadır")
+{
+    // THE TWO CLAIMS TODOS C-02 IS ABOUT. `Flags` answers "which clients may
+    // reach it"; `Effect` answers the different question a policy has to ask
+    // before letting a non-human run it — and the single boolean it replaces
+    // (`!NoEffect`) could tell neither of these apart.
+    Fixture f;
+
+    const CommandSpec* layout = f.reg.by_id("core.layout");
+    REQUIRE(layout != nullptr);
+
+    Args listele;
+    listele.set("islem", Value::text("listele"));
+    CHECK(has_effect(effect_of(*layout, listele), Effect::Query));
+    // LISTING MUST NOT ASK FOR APPROVAL (.claude/ai.md R3).
+    CHECK_FALSE(has_effect(effect_of(*layout, listele), Effect::DocumentEdit));
+
+    Args sil;
+    sil.set("islem", Value::text("sil"));
+    CHECK(has_effect(effect_of(*layout, sil), Effect::DocumentEdit));
+
+    // SAVING CARRIES `ReadOnly` AND WRITES OVER A FILE. That flag means "skips
+    // the transaction path", and reading it as "harmless" is the mistake this
+    // whole type exists to make impossible.
+    const CommandSpec* save = f.reg.by_id("core.save");
+    REQUIRE(save != nullptr);
+    CHECK(has_effect(effect_of(*save), Effect::FileWrite));
+
+    const CommandSpec* undo = f.reg.by_id("core.undo");
+    REQUIRE(undo != nullptr);
+    CHECK(has_effect(effect_of(*undo), Effect::DocumentEdit));
+
+    // A PRINTER IS NOT AN UNDO STACK.
+    const CommandSpec* print = f.reg.by_id("core.print");
+    REQUIRE(print != nullptr);
+    CHECK(has_effect(effect_of(*print), Effect::ExternalWrite));
+}
+
+TEST_CASE("Etki: hiçbir komut bildirilmemiş etkiyle kalmaz")
+{
+    // `Effect::None` means "nobody said", and `effect_of` never passes it on:
+    // an unstated command falls back to what its flags and its category can do,
+    // which is cautious rather than silent.
+    Fixture f;
+    for (const CommandSpec& spec : f.reg.all()) {
+        INFO("komut: ", spec.id);
+        CHECK(effect_of(spec) != Effect::None);
+    }
+}
+
+TEST_CASE("Etki: verilmemiş fiil en kötü hâli verir")
+{
+    // An interactive run asks for the verb AFTER validation, so the honest
+    // answer before it is asked is the worst case — not "harmless".
+    Fixture f;
+    const CommandSpec* layout = f.reg.by_id("core.layout");
+    REQUIRE(layout != nullptr);
+
+    const Args nothing;
+    CHECK(has_effect(effect_of(*layout, nothing), Effect::DocumentEdit));
+
+    // And a word nobody declared is refused by the validator in a moment; until
+    // then it is read as the worst case too.
+    Args nonsense;
+    nonsense.set("islem", Value::text("zıpla"));
+    CHECK(has_effect(effect_of(*layout, nonsense), Effect::DocumentEdit));
+}

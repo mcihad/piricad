@@ -252,6 +252,7 @@ KENTOS_COMMAND(setting)
         .flags   = Flags::Scriptable,
         .summary = "Proje ayarlarını listeler, okur ve değiştirir.",
         .run     = &run_setting,
+        .effect  = Effect::Query | Effect::SettingsChange,
     };
 }
 
@@ -277,6 +278,9 @@ KENTOS_COMMAND(mode)
         .summary = "Oturum modlarını (yakalama, dik mod, kutupsal izleme) listeler, okur "
                    "ve değiştirir.",
         .run     = &run_mode,
+        // A MODE CHANGES WHAT THE NEXT COMMAND MEANS — which snap fires, which
+        // ortho constraint applies — so it is a stored preference, not a view.
+        .effect = Effect::Query | Effect::SettingsChange,
     };
 }
 
@@ -298,6 +302,7 @@ KENTOS_COMMAND(preference)
         .flags   = Flags::Scriptable | Flags::ReadOnly,
         .summary = "Uygulama tercihlerini listeler, okur ve değiştirir.",
         .run     = &run_preference,
+        .effect  = Effect::Query | Effect::SettingsChange,
     };
 }
 

@@ -172,6 +172,58 @@ enum class Flags : std::uint32_t {
 /// becomes a suggestion. The two flags are set together on a command that is
 /// both, and `ReadOnly` keeps its old meaning untouched.
 
+/// WHAT A COMMAND DOES TO THE WORLD, as opposed to how it runs.
+///
+/// `Flags` answers "which clients may reach it and how". This answers the
+/// different question a policy has to ask before letting a non-human run it:
+/// what is left changed afterwards, and where. The two were one boolean —
+/// `!NoEffect` — and that boolean cannot tell listing a layout apart from
+/// printing one, nor `core.save` (which carries `ReadOnly` and writes over a
+/// file) apart from `core.zoom`.
+///
+/// A command may carry several: `core.export` reads the document and writes a
+/// file. `Effect::None` means the effect has not been stated yet, which is a
+/// defect rather than a claim of harmlessness — `effect_of` never returns it.
+enum class Effect : std::uint32_t {
+    None           = 0,
+    Query          = 1u << 0, ///< reads the document, the catalogues or the view
+    ViewChange     = 1u << 1, ///< moves the view; no document, no disk, no setting
+    DocumentEdit   = 1u << 2, ///< changes the drawing, inside a transaction
+    FileRead       = 1u << 3, ///< reads a file the caller names
+    FileWrite      = 1u << 4, ///< writes a file the caller names
+    ExternalWrite  = 1u << 5, ///< a database, a printer, a network peer
+    SettingsChange = 1u << 6, ///< changes a stored preference or profile
+};
+
+/// Combines effects: a command may do several things at once.
+constexpr Effect operator|(Effect a, Effect b)
+{
+    return static_cast<Effect>(static_cast<std::uint32_t>(a) | static_cast<std::uint32_t>(b));
+}
+
+/// Whether `value` carries `bit`.
+constexpr bool has_effect(Effect value, Effect bit)
+{
+    return (static_cast<std::uint32_t>(value) & static_cast<std::uint32_t>(bit)) != 0U;
+}
+
+/// Stable machine name for one bit, for schemas, the inventory and the audit
+/// record. Not user-facing.
+const char* effect_name(Effect one);
+
+/// THE EFFECT OF ONE WORD OF A VERB PARAMETER.
+///
+/// Half of this program's file and settings commands are `islem=listele|ekle|sil`
+/// shaped, and those three words do three different things to the world: listing
+/// reads, adding edits, removing edits. Collapsing them into the command's worst
+/// case would make `ÇIKTIYERLEŞİMİ islem=listele` ask for approval, which
+/// `.claude/ai.md` R3 says a read must never do.
+struct VerbEffect
+{
+    std::string word; ///< the word, ASCII-folded lowercase, as `Param::choices` holds it
+    Effect effect{Effect::Query}; ///< what that word does
+};
+
 /// Combines flags, so a spec can declare several in one expression.
 constexpr Flags operator|(Flags a, Flags b)
 {
@@ -216,12 +268,43 @@ struct CommandSpec
     std::string summary;                            ///< one line, Turkish, user-facing
     CommandFn run{nullptr};                         ///< the body; null means the spec is incomplete
 
+    /// What running it leaves changed. `Effect::None` means "not stated", and
+    /// `effect_of` fills it in from the flags rather than treating it as a claim
+    /// that the command is harmless.
+    Effect effect{Effect::None};
+
+    /// The parameter that holds the verb, when one word decides the effect.
+    /// Empty when the command does one thing.
+    std::string effect_verb;
+
+    /// The effect of each word of `effect_verb`. A word missing from this list
+    /// falls back to `effect`, which is the command's worst case — so forgetting
+    /// a word is over-cautious rather than unsafe.
+    std::vector<VerbEffect> verb_effects;
+
     // NO `to_schema()` HERE EITHER. It emitted this program's own vocabulary —
     // `"type": "point"`, a min/max/required triple — which reads well in a
     // Turkish reference table and is not a JSON Schema. `ai::build_catalog`
     // (/src/ai) does the projection now, once, for the server, the documents and
     // the chat alike.
 };
+
+/// WHAT THIS CALL LEAVES CHANGED, for these arguments.
+///
+/// Never `Effect::None`. A spec that states nothing is read from its flags —
+/// `NoEffect` means it touched nothing, `ReadOnly` alone means it skipped the
+/// transaction path and says NOTHING about whether it wrote a file, so it falls
+/// to the command's category — and a verb parameter narrows the answer to the
+/// word that was actually given.
+///
+/// This is the one place the question is answered. A policy, an audit record and
+/// the inventory all ask it here, so they cannot disagree (CLAUDE.md 5.10).
+Effect effect_of(const CommandSpec& spec, const Args& args);
+
+/// The same question with no arguments in hand: the command's WORST CASE over
+/// every word its verb can take. What a catalogue tells a client before it has
+/// decided what to send.
+Effect effect_of(const CommandSpec& spec);
 
 /// Declares the factory for one built-in command. The body returns its CommandSpec.
 /// Registration happens in exactly one place (commands/builtin.cpp) from one list,

@@ -30,6 +30,7 @@
 namespace {
 
 using kentos::command::CommandSpec;
+using kentos::command::Effect;
 using kentos::command::Flags;
 using kentos::command::Param;
 using kentos::command::Registry;
@@ -104,6 +105,33 @@ Json command_json(const CommandSpec& spec)
     flags.set("salt_okunur", Json::boolean(has(spec.flags, Flags::ReadOnly)));
     flags.set("etkisiz", Json::boolean(has(spec.flags, Flags::NoEffect)));
     out.set("bayraklar", std::move(flags));
+
+    // WHAT IT LEAVES CHANGED, which is a different question from which client
+    // may reach it. `effect_of` is the one place that answers it, so the
+    // inventory, a policy and an audit record cannot disagree (CLAUDE.md 5.10).
+    const Effect worst = kentos::command::effect_of(spec);
+    std::vector<Json> etkiler;
+    for (const Effect bit :
+         {Effect::Query, Effect::ViewChange, Effect::DocumentEdit, Effect::FileRead,
+          Effect::FileWrite, Effect::ExternalWrite, Effect::SettingsChange})
+        if (kentos::command::has_effect(worst, bit))
+            etkiler.push_back(Json::string(kentos::command::effect_name(bit)));
+    out.set("etki", Json::array(std::move(etkiler)));
+
+    if (!spec.effect_verb.empty()) {
+        Json per;
+        for (const kentos::command::VerbEffect& one : spec.verb_effects) {
+            std::vector<Json> words;
+            for (const Effect bit :
+                 {Effect::Query, Effect::ViewChange, Effect::DocumentEdit, Effect::FileRead,
+                  Effect::FileWrite, Effect::ExternalWrite, Effect::SettingsChange})
+                if (kentos::command::has_effect(one.effect, bit))
+                    words.push_back(Json::string(kentos::command::effect_name(bit)));
+            per.set(one.word, Json::array(std::move(words)));
+        }
+        out.set("fiil_parametresi", Json::string(spec.effect_verb));
+        out.set("fiil_etkileri", std::move(per));
+    }
 
     out.set("ozet", Json::string(spec.summary));
     return out;

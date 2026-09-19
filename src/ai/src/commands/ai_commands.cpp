@@ -34,6 +34,7 @@ namespace {
 using command::Arity;
 using command::CommandSpec;
 using command::Context;
+using command::Effect;
 using command::Flags;
 using command::Param;
 using command::Task;
@@ -204,6 +205,17 @@ std::vector<CommandSpec> detail::ai_command_specs()
         .summary = "Yapay zeka ajanlarının bağlanacağı MCP sunucusunu başlatır, durdurur, "
                    "durumunu söyler ya da yeni bir erişim belirteci üretir.",
         .run     = &run_mcp,
+        // STARTING A LISTENER IS AN OUTWARD ACT. It binds a port on this machine
+        // and hands a token to whoever is given it; no undo stack reaches that.
+        .effect      = Effect::Query | Effect::ExternalWrite | Effect::SettingsChange,
+        .effect_verb = "islem",
+        .verb_effects =
+            {
+                {"durum", Effect::Query},
+                {"baslat", Effect::ExternalWrite},
+                {"durdur", Effect::ExternalWrite},
+                {"belirtec", Effect::SettingsChange},
+            },
     });
 
     // AND WHICH MODEL RUNS, which is a third thing that must not be mouse-only

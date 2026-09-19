@@ -170,12 +170,25 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   duran bir satır kapıyı kırıyor. Üretici derlenmemişse **atlamıyor, kırıyor**.
   **Kalan:** menü/panel/etkileşimli araç tarafı — Qt gerektirdiği için ayrı bir uygulama
   probe'u olacak; "her satırda test" sütunu; MCP erişim sütunu (M-03 ile birlikte).
-- [ ] **C-02 / P0 — Etki sözleşmesi.** `NoEffect`, `ReadOnly` ve `mutates` ayrımı
-  korunarak `query`, `view_change`, `document_edit`, `file_read`, `file_write`,
-  `external_write`, `settings_change` gibi açık etkiler ve hedefler tanımla. Karma
-  `islem=listele/ekle/sil` komutlarında etki argümandan türetilsin veya Registry'den
-  üretilen alt işlemlere ayrılsın. **Kabul:** listelemek onay doğurmaz; PDF kaydetmek
-  “read-only” sayıldığı için disk politikası dışına çıkamaz.
+- [x] **C-02 / P0 — Etki sözleşmesi.** *(19 Eylül 2026)*
+  `command::Effect` yedi biti taşıyor: `sorgu`, `gorunum`, `belge_duzenleme`,
+  `dosya_okuma`, `dosya_yazma`, `dis_yazma`, `ayar_degisikligi`. `Flags` "hangi
+  istemci ulaşabilir" sorusunu cevaplıyor; `Effect` bir politikanın sormak zorunda
+  olduğu **farklı** soruyu: geriye ne değişmiş kalıyor, ve nerede.
+  **Karma fiiller argümandan türetiliyor**: `CommandSpec::effect_verb` + `verb_effects`,
+  ve `effect_of(spec, args)` verilen sözcüğün etkisini döndürüyor —
+  `ÇIKTIYERLEŞİMİ islem=listele` yalnız `sorgu`, `islem=sil` `belge_duzenleme`.
+  Fiil verilmemişse ya da tanınmayan bir sözcükse cevap **en kötü hâl**, çünkü
+  etkileşimli bir çalıştırma fiili doğrulamadan sonra sorar.
+  `Effect::None` "kimse söylemedi" demek ve `effect_of` onu asla döndürmüyor:
+  bildirilmemiş bir komut kategorisinden okunuyor. **İlk geri düşüş yanlıştı** —
+  `ReadOnly && !Dosya → ayar_degisikligi` diyordu ve `core.zoom` ile `core.pan`'i
+  "ayar değiştirir" yapıyordu; kategoriye çevrildi.
+  **Kabul karşılandı:** üç test — listelemek onay doğurmaz, `core.save` `ReadOnly`
+  taşımasına rağmen `dosya_yazma` der, `core.print` `dis_yazma` der (bir yazıcı geri
+  alma yığını değildir), ve 93 komutun hiçbiri bildirilmemiş kalmaz.
+  Envanter her komutun etkisini ve fiil başına etkisini yazıyor.
+  **Kalan:** bu sözleşmeyi TÜKETEN politika motoru S-01'dir.
 - [ ] **C-03 / P0 — Plan ve sonuç sözleşmesi.** Plan; belge kimliği/revizyonu, adım
   bağımlılıkları, hedef nesneler, varsayımlar, etki özeti, önizleme ve policy sürümü
   taşısın. Sonuç; `status`, değişen kimlikler, yeni revizyon, uyarılar, doğrulama sonucu,
