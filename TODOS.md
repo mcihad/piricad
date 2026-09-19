@@ -323,7 +323,20 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   Kâğıt ölçüleri birimi açık ondalık mm olarak girilebilsin, içeride `Um` saklansın.
   **Kabul:** 0,35 mm konum ve 0,18 mm çizgi kalınlığı UI/komut/AI/MCP'de aynı değere
   gider; tek sürükleme veya toplu hizalama tek undo oluşturur.
-- [ ] **L-04 / P0 — Bağımsız harita çerçevesi.** Extent, merkez, ölçek, içerik
+- [~] **L-04 / P0 — Bağımsız harita çerçevesi.** *(katman süzgeci 19 Eylül 2026)*
+  **Yapıldı:** `render::SceneOptions::layer_allowed` — katman başına bir bayt,
+  çünkü sahne bunu nesne başına bir kez okuyor ve orada bir ad karşılaştırması
+  kare bütçesinin içine girerdi (§10.1). `paint_map` maskeyi `item.layers`'tan
+  kuruyor. Maske **daraltıyor, genişletmiyor**: belgenin gizlediği katman ne
+  olursa olsun gizli kalıyor (model.md R7) — yani "ana tuval görünürlüğündeki
+  değişiklik kilitlenmiş çerçeveyi etkilemez" kabulünün yarısı henüz yok, çünkü
+  çerçeve bugün belgenin görünürlüğünü devralıyor.
+  `ÇIKTIÖĞE islem=ayarla katmanlar=` her istemciden çalışıyor (`Value::Kind::TextList`
+  bunun için eklendi); `hepsi` listeyi boşaltıyor. Ölçek zaten çerçeveye özeldi.
+  **Kalan:** stil anlık görüntüsü ya da tema takibi (çerçevenin belgenin
+  görünürlüğünden bağımsızlaşması); çerçeveye özel CRS; harita içeriğini kaydırma
+  ile kutuyu taşımanın ayrı araçlar olması; içerik dönüşü.
+  Eski madde metni: Extent, merkez, ölçek, içerik
   dönüşü, katman listesi/sırası, stil anlık görüntüsü veya tema takibi ve çerçeveye
   özel CRS tanımla. Harita içeriğini kaydırma ile kâğıttaki kutuyu taşıma ayrı araçlar
   olsun. `paint_map` gerçek katman filtresini kullansın. **Kabul:** aynı sayfadaki
