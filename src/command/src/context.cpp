@@ -241,4 +241,14 @@ void Context::report(core::Json data) const
     session_.set_report(std::move(data));
 }
 
+void Context::wrote(std::string path) const
+{
+    session_.add_output(std::move(path));
+}
+
+void Context::warn(std::string note) const
+{
+    session_.add_warning(std::move(note));
+}
+
 } // namespace kentos::command

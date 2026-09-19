@@ -167,6 +167,11 @@ core::Status AiService::applyPlan(const ai::Plan& plan)
     // second chance for them to differ.
     if (auto opened = bus_.begin_batch("Yapay zeka önerisi"); !opened) return opened.error();
 
+    // WHAT THE STEPS PRODUCED, collected as they run. A client that has to read
+    // "uygulandı" and then guess whether a file appeared will guess wrong.
+    std::vector<std::string> wrote;
+    std::vector<std::string> notes;
+
     for (const ai::PlanStep& step : plan.steps) {
         auto ran =
             bus_.dispatch(command::Invocation{step.command_id, step.args, command::Origin::Ai});
@@ -174,10 +179,24 @@ core::Status AiService::applyPlan(const ai::Plan& plan)
             bus_.abort_batch();
             return ran.error();
         }
+        for (const std::string& one : ran.value().outputs)
+            wrote.push_back(one);
+        for (const std::string& one : ran.value().warnings)
+            notes.push_back(one);
     }
 
     auto done = bus_.end_batch();
     if (!done) return done.error();
+
+    // `plan` IS CONST HERE because applying must not be able to rewrite what was
+    // approved; the outcome goes back through the store, which is the only thing
+    // allowed to move a plan (`PlanStore::settle`).
+    if (ai::Plan* filed = plans_.find(plan.id); filed != nullptr) {
+        filed->applied_revision = bus_.document().revision();
+        filed->outputs          = std::move(wrote);
+        filed->warnings         = std::move(notes);
+        filed->undo_label       = "Yapay zeka önerisi";
+    }
     return core::ok();
 }
 

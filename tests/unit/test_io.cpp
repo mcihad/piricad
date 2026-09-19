@@ -4449,3 +4449,38 @@ TEST_CASE("Çıktı yerleşimi: harita çerçevesinin katmanları komuttan veril
     CHECK_FALSE(
         r.bus.execute_line("ÇIKTIÖĞE islem=ayarla ad=baslik katmanlar=parsel", Origin::Test).ok());
 }
+
+TEST_CASE("Sonuç sözleşmesi: yazılan dosya, yeni sürüm ve geri alma adı döner")
+{
+    // TODOS C-03. A query answers with data and a drawing command answers with a
+    // drawing; `YAZDIR`, `DIŞAAKTAR` and `FARKLIKAYDET` answer with a FILE, and a
+    // client told only "tamam" has no way to find it or check it.
+    Rig r;
+    REQUIRE(r.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+
+    TempDir tmp("sonuc-sozlesmesi");
+    const std::string path = tmp.file("cikti.pcad");
+    auto saved             = r.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test);
+    REQUIRE(saved.ok());
+    REQUIRE_EQ(saved.value().outputs.size(), std::size_t{1});
+    CHECK_EQ(saved.value().outputs.front(), path);
+
+    // THE REVISION AFTER, so a client can compose its next call against what is
+    // now there rather than asking afterwards and racing another client.
+    CHECK_EQ(saved.value().revision, r.doc.revision());
+
+    // A DRAWING COMMAND NAMES WHAT IT PUT ON THE UNDO STACK. Counting entries
+    // would not do: a person may have drawn something in between.
+    auto drawn = r.bus.execute_line("ÇİZGİ 0,0 5,5", Origin::Test);
+    REQUIRE(drawn.ok());
+    CHECK(drawn.value().mutated);
+    CHECK(!drawn.value().undo_label.empty());
+    CHECK_EQ(drawn.value().revision, r.doc.revision());
+
+    // AND A READ NAMES NO FILE AND NO UNDO ENTRY: it produced neither.
+    auto read = r.bus.execute_line("ÖLÇÜM_ALAN nesneler=1", Origin::Test);
+    if (read.ok()) {
+        CHECK(read.value().outputs.empty());
+        CHECK(read.value().undo_label.empty());
+    }
+}

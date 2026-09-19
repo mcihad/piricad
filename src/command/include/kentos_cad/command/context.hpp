@@ -187,6 +187,21 @@ public:
     /// undoable. It rides out on `DispatchResult::report`.
     void report(core::Json data) const;
 
+    /// NAMES A FILE THIS CALL WROTE. Rides out on `DispatchResult::outputs`.
+    ///
+    /// A query answers with data and a drawing command answers with a drawing;
+    /// `YAZDIR`, `DIŞAAKTAR` and `FARKLIKAYDET` answer with a FILE, and a client
+    /// told only "tamam" has no way to find it or check it (TODOS C-03).
+    void wrote(std::string path) const;
+
+    /// SOMETHING THE CALL COULD NOT HONOUR WITHOUT FAILING. Rides out on
+    /// `DispatchResult::warnings`.
+    ///
+    /// A sheet that printed with one broken map link, a table that did not fit
+    /// its box. Not an error — the call did what it could — and not nothing: a
+    /// client that reports success without it reports something untrue.
+    void warn(std::string note) const;
+
     Session& session() noexcept { return session_; }
 
 private:

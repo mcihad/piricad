@@ -189,7 +189,25 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   alma yığını değildir), ve 93 komutun hiçbiri bildirilmemiş kalmaz.
   Envanter her komutun etkisini ve fiil başına etkisini yazıyor.
   **Kalan:** bu sözleşmeyi TÜKETEN politika motoru S-01'dir.
-- [ ] **C-03 / P0 — Plan ve sonuç sözleşmesi.** Plan; belge kimliği/revizyonu, adım
+- [~] **C-03 / P0 — Plan ve sonuç sözleşmesi.** *(sonuç 19 Eylül 2026)*
+  **Sonuç tarafı yapıldı.** `DispatchResult` dört yeni alan taşıyor: `revision`
+  (çalıştıktan SONRAKİ belge sürümü — sonradan sormak bir yarıştır, araya başka
+  bir istemci girebilir), `undo_label` (sayarak değil **adıyla**, çünkü arada bir
+  insan bir şey çizmiş olabilir), `outputs` (bu çağrının yazdığı dosyalar) ve
+  `warnings` (başarısız olmadan yerine getirilemeyen şeyler — bunlar hata değil
+  ve hiçbir şey de değil: onları söylemeden başarı bildiren istemci olmayan bir
+  şey bildirir).
+  `Context::wrote` ve `Context::warn` eklendi; `YAZDIR`, `FARKLIKAYDET`,
+  `DIŞAAKTAR`, `STİLDIŞAAKTAR` ve `NOKTADIŞAAKTAR` yazdıkları dosyayı söylüyor —
+  **okuyan fiiller söylemiyor**, çünkü bir okumayı çıktı diye adlandırmak
+  istemciye üretmediği bir şeyi üretti demektir.
+  **Plan tarafı yapıldı:** `Plan` artık `applied_revision`, `undo_label`,
+  `outputs`, `warnings` ve `decided_by` taşıyor ve `to_json` bunları yazıyor —
+  yani **"uygulandı" ile "çıktı üretildi" ayrı şeyler**, istemcinin birini
+  öbüründen çıkarması gerekmiyor. Kabul ölçütü buydu.
+  **Kalan:** adım bağımlılıkları ve varsayımlar; policy sürümünün plana yazılması
+  (S-06 ile birlikte, ki o engelli).
+  Eski madde metni: Plan; belge kimliği/revizyonu, adım
   bağımlılıkları, hedef nesneler, varsayımlar, etki özeti, önizleme ve policy sürümü
   taşısın. Sonuç; `status`, değişen kimlikler, yeni revizyon, uyarılar, doğrulama sonucu,
   undo referansı ve çıktı URI'ları döndürsün. **Kabul:** “planlandı”, “onay bekliyor”,

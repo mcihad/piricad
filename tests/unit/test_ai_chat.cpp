@@ -1127,3 +1127,43 @@ TEST_CASE("Öneri: çizim değiştiyse eski plan uygulanmaz")
     CHECK(core::ErrorCode::Conflict != core::ErrorCode::ValidationFailed);
     CHECK(core::ErrorCode::Conflict != core::ErrorCode::InvalidArgument);
 }
+
+TEST_CASE("Plan: uygulandı ile dosya üretildi ayrı şeyler")
+{
+    // TODOS C-03's acceptance, said as the four states it names: "planlandı",
+    // "onay bekliyor", "uygulandı" and "çıktı üretildi" are different machine
+    // states, and a client must not have to infer the last from the third.
+    ai::Plan plan;
+    plan.id    = "p0000000000000002";
+    plan.state = ai::PlanState::Pending;
+
+    // PENDING SAYS NOTHING ABOUT AN OUTCOME, and its answer carries none.
+    const core::Json waiting = plan.to_json();
+    CHECK(waiting.find("yeni_surum") == nullptr);
+    CHECK(waiting.find("yazilan_dosyalar") == nullptr);
+    CHECK(waiting.find("geri_alma") == nullptr);
+
+    // APPLIED WITHOUT WRITING A FILE: a revision and an undo entry, no files.
+    plan.state            = ai::PlanState::Applied;
+    plan.applied_revision = 12;
+    plan.undo_label       = "Yapay zeka önerisi";
+    const core::Json drew = plan.to_json();
+    REQUIRE(drew.find("yeni_surum") != nullptr);
+    CHECK_EQ(drew.find("yeni_surum")->as_int(), 12);
+    CHECK(drew.find("geri_alma") != nullptr);
+    CHECK(drew.find("yazilan_dosyalar") == nullptr);
+
+    // AND APPLIED HAVING WRITTEN ONE: the file is named, so a client can find it
+    // and check it rather than trusting a Turkish sentence.
+    plan.outputs          = {"/tmp/ada1284.pdf"};
+    plan.warnings         = {"'olcek' öğesi bağlı olduğu haritayı bulamadı."};
+    const core::Json made = plan.to_json();
+    REQUIRE(made.find("yazilan_dosyalar") != nullptr);
+    REQUIRE_EQ(made.find("yazilan_dosyalar")->as_array().size(), std::size_t{1});
+    CHECK_EQ(made.find("yazilan_dosyalar")->as_array()[0].as_string(), "/tmp/ada1284.pdf");
+
+    // A WARNING IS NOT AN ERROR AND NOT NOTHING: the sheet printed, and it
+    // printed with something the program could not honour.
+    REQUIRE(made.find("uyarilar") != nullptr);
+    CHECK_EQ(made.find("uyarilar")->as_array().size(), std::size_t{1});
+}

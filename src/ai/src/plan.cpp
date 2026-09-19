@@ -46,6 +46,26 @@ core::Json Plan::to_json() const
 
     if (!refusal.empty()) out.set("gerekce", core::Json::string(refusal));
 
+    // WHAT APPLYING IT LEFT BEHIND, said rather than inferred. A client that has
+    // to read "uygulandı" and then guess whether a file appeared is a client that
+    // will guess wrong (TODOS C-03).
+    if (applied_revision != 0)
+        out.set("yeni_surum", core::Json::integer(static_cast<std::int64_t>(applied_revision)));
+    if (!undo_label.empty()) out.set("geri_alma", core::Json::string(undo_label));
+    if (!decided_by.empty()) out.set("karar_veren", core::Json::string(decided_by));
+    if (!outputs.empty()) {
+        core::Json files = core::Json::array({});
+        for (const std::string& one : outputs)
+            files.push(core::Json::string(one));
+        out.set("yazilan_dosyalar", std::move(files));
+    }
+    if (!warnings.empty()) {
+        core::Json notes = core::Json::array({});
+        for (const std::string& one : warnings)
+            notes.push(core::Json::string(one));
+        out.set("uyarilar", std::move(notes));
+    }
+
     // SAID EVERY TIME, in the answer itself. An agent that does not know its
     // write is waiting for a person reads the empty result as a failure and
     // tries again — which is how a careful protocol turns into eleven duplicate

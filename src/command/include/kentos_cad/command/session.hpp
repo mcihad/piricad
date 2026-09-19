@@ -130,6 +130,16 @@ public:
 
     void set_report(core::Json report) { report_ = std::move(report); }
 
+    /// Files this run wrote, and what it could not honour. Both ride out on
+    /// `DispatchResult` so a client learns them without parsing Turkish prose.
+    const std::vector<std::string>& outputs() const noexcept { return outputs_; }
+
+    const std::vector<std::string>& warnings() const noexcept { return warnings_; }
+
+    void add_output(std::string path) { outputs_.push_back(std::move(path)); }
+
+    void add_warning(std::string note) { warnings_.push_back(std::move(note)); }
+
     const core::Error& error() const noexcept { return error_; }
 
     void fail(core::Error e);
@@ -164,6 +174,8 @@ private:
     SessionState state_{SessionState::Ready};
     Prompt prompt_{};
     core::Json report_{};
+    std::vector<std::string> outputs_{};
+    std::vector<std::string> warnings_{};
     std::coroutine_handle<> parked_{};
     std::optional<Value> supplied_{};
     Args resolved_{};

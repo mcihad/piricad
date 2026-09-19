@@ -73,6 +73,31 @@ struct Plan
     std::uint64_t revision{0}; ///< the document revision it was composed against
     std::string refusal;       ///< why it failed or was rejected, when it was
 
+    // ---- what applying it left behind (TODOS C-03) --------------------------
+    //
+    // "PLANNED", "WAITING", "APPLIED" AND "PRODUCED A FILE" ARE DIFFERENT STATES.
+    // `PlanState` says the first three; these say the fourth and what it cost, so
+    // a client does not have to infer a result from a state word.
+
+    /// The document revision after it was applied. Zero until it was.
+    std::uint64_t applied_revision{0};
+
+    /// What the whole plan put on the undo stack — one entry, because a plan is
+    /// one batch (ai.md R4). Empty until it was applied.
+    std::string undo_label;
+
+    /// Files the plan wrote, in the order they were written. Empty for a plan
+    /// that only drew.
+    std::vector<std::string> outputs;
+
+    /// What the plan could not honour without failing. Not errors: a sheet that
+    /// printed with one broken map link did print.
+    std::vector<std::string> warnings;
+
+    /// Which policy decided, and why. Empty when a person decided, in which case
+    /// the audit record names them instead (S-06).
+    std::string decided_by;
+
     /// What the client is told: id, state, the lines, and the rule that a person
     /// must apply it. Never the raw arguments — the lines are the readable form.
     core::Json to_json() const;

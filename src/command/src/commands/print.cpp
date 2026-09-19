@@ -45,6 +45,8 @@ Task<void> submit(Context& ctx, Bus& bus, const PrintRequest& request)
         ctx.session().fail(result.error());
         co_return;
     }
+    // THE SHEET IS THE ANSWER, and a client told only "tamam" cannot find it.
+    if (!request.path.empty()) ctx.wrote(request.path);
     ctx.echo(result.value());
 }
 

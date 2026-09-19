@@ -383,6 +383,37 @@ struct DispatchResult
     /// carrier for data — an agent should not have to parse a Turkish sentence to
     /// learn a layer's object count.
     core::Json report;
+
+    /// THE DOCUMENT'S REVISION AFTER THIS RAN.
+    ///
+    /// A client that just changed the drawing has to be able to compose its next
+    /// call against what is now there, and asking afterwards is a race: another
+    /// client can edit in between. Zero when nothing was touched.
+    std::uint64_t revision{0};
+
+    /// WHAT THIS CALL PUT ON THE UNDO STACK, by the label the stack holds.
+    ///
+    /// Empty when nothing was recorded. A client that has to say "undo what I
+    /// just did" needs to name it rather than count entries, because a person at
+    /// the workstation may have drawn something in between (TODOS C-03).
+    std::string undo_label;
+
+    /// FILES THIS CALL WROTE, as paths. Empty for almost everything.
+    ///
+    /// A `Query` answers with data and a drawing command answers with a drawing;
+    /// `core.print`, `core.export` and `core.saveas` answer with a FILE, and a
+    /// client told only "tamam" has no way to find it or check it. This is what
+    /// TODOS C-03 means by output URIs, said in the form this program has: a path
+    /// on the machine the program is running on.
+    std::vector<std::string> outputs;
+
+    /// WHAT THE CALL COULD NOT HONOUR WITHOUT FAILING.
+    ///
+    /// A layout that printed with one broken map link, a table that did not fit
+    /// its box, an export that dropped a kind the format has no word for. These
+    /// are not errors — the call did what it could — and they are not nothing:
+    /// a client that reports success without them reports something untrue.
+    std::vector<std::string> warnings;
 };
 
 /// What the viewport is showing, answered by the shell.

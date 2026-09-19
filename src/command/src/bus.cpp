@@ -596,7 +596,18 @@ core::Result<DispatchResult> Bus::finish(Session& session)
     if (result.mutated && spec.undo == UndoPolicy::SingleTransaction &&
         session.owns_transaction()) {
         undo_.push(UndoEntry{result.label, session.transaction().release()});
+        // NAMED, NOT COUNTED. A client that has to say "undo what I just did"
+        // cannot count stack entries: a person at the workstation may have drawn
+        // something in between (TODOS C-03).
+        result.undo_label = result.label;
     }
+
+    // THE REVISION AFTER, so a client can compose its next call against what is
+    // now there. Asking afterwards is a race — another client can edit in the
+    // gap — and C-04 refuses a plan composed against a revision that has moved.
+    result.revision = doc_.revision();
+    result.outputs  = session.outputs();
+    result.warnings = session.warnings();
 
     if (!read_only) journal_entry(session);
 

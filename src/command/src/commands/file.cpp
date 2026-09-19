@@ -45,6 +45,21 @@ Task<void> submit(Context& ctx, Bus& bus, const FileRequest& request)
         ctx.session().fail(result.error());
         co_return;
     }
+    // A FILE THIS CALL WROTE IS PART OF ITS ANSWER. Only the verbs that write
+    // one: opening and importing READ a file, and naming a read as an output
+    // would tell a client it produced something it did not (TODOS C-03).
+    switch (request.verb) {
+    case FileRequest::Verb::Save:
+    case FileRequest::Verb::SaveAs:
+    case FileRequest::Verb::Export:
+    case FileRequest::Verb::ExportStyle:
+    case FileRequest::Verb::ExportPoints:
+        if (!request.path.empty()) ctx.wrote(request.path);
+        break;
+    case FileRequest::Verb::Open:
+    case FileRequest::Verb::Import:
+    case FileRequest::Verb::ImportPoints: break;
+    }
     ctx.echo(result.value());
 }
 
