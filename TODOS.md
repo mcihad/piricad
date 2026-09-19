@@ -708,7 +708,24 @@ motor kabiliyeti eklenir; GUI, AI ve MCP aynı sürümde bu kabiliyeti kullanır
   deneme, rate limit ve zaman aşımını tek iş durumu üzerinden yönet. **Kabul:**
   parçalanmış akış/bozuk argüman/araç reddi modele tipli sonuç olarak döner;
   aynı hataya sınırsız tur harcanmaz, iptal tüm alt işleri sonlandırır.
-- [ ] **A-08 / P1 — Türkçe uçtan uca değerlendirme.** Katalog sayısına ek olarak
+- [~] **A-08 / P1 — Türkçe uçtan uca değerlendirme.** *(set, koşucu ve sayaç 19 Eylül 2026)*
+  **Yapıldı:** `tests/ai-eval` bir README'den ibaretti, oysa CLAUDE.md Article 8.9
+  başlangıç setinin harness'ı ve saklanan temeliyle geldiğini ve `make check`'in
+  vaka sayısını bildirdiğini söylüyordu — hiçbiri yoktu.
+  Set (16 vaka, 28 terim), koşucu ve `ci-gate-eval.sh` geldi. Koşucu iki soruyu
+  ayrı soruyor: dizi **canlı kütüğe** karşı hâlâ geçerli mi (cevap anahtarı
+  çürümesin diye — yazdığım ilk on altı vakada beş hata yakaladı), ve **üç istemci
+  aynı belgeyi ve aynı günlüğü mü üretiyor** (A-08 kabulü; argümanlar yol üstünde
+  `Value` JSON turunu da yapıyor, yani Article 1.4 de sınanıyor).
+  **Yol üstünde bulunan kusur:** atlas nişanı `content_hash`'e girmiyordu — iki
+  ayrı katmana nişanlanmış iki çizim aynı parmak izini taşıyordu.
+  **Kalan:** setin 200 vakaya ve §5.6 sözcük dağarcığına ulaşması — bu **alan
+  işidir**, ifrazı tevhitten ayıran birinin yazması gerekir, ve Article 8.9 açığı
+  onaylı sayıyor (sayaç her koşuda yazıyor). Bir de gereksiz soru/onay sayısı,
+  tamamlanma ve tekrar yürütme başarısı gibi **model** ölçümleri: bunlar canlı bir
+  sağlayıcıya bağlanan ayrı bir koşucunun işi ve hiçbir test canlı sağlayıcıya
+  bağlanamaz (ai.md P10).
+  **Eski metin:** Katalog sayısına ek olarak
   gerçek iş senaryoları, gereksiz soru sayısı, gereksiz onay sayısı, tamamlanma,
   doğruluk ve tekrar yürütme başarısı ölç. **Kabul:** bölüm 9'daki ortak fixture'lar
   GUI, sohbet ve MCP için aynı beklenen proje/çıktı durumunu üretir.

@@ -21,6 +21,7 @@ add_executable(kentos_tests
     unit/test_surface.cpp
     unit/test_geodesy.cpp
     unit/test_geometry.cpp
+    unit/test_ai_eval.cpp
     unit/test_golden.cpp
     unit/test_index.cpp
     unit/test_io.cpp
@@ -51,6 +52,7 @@ target_compile_definitions(kentos_tests PRIVATE
     KENTOS_GOLDEN_DIR="${CMAKE_SOURCE_DIR}/tests/golden"
     KENTOS_DATA_DIR="${CMAKE_SOURCE_DIR}/data"
     KENTOS_FUZZ_DIR="${CMAKE_SOURCE_DIR}/tests/fuzz"
+    KENTOS_EVAL_DIR="${CMAKE_SOURCE_DIR}/tests/ai-eval"
 )
 
 if(KENTOS_WITH_DWG)

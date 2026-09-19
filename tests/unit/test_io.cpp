@@ -4536,6 +4536,48 @@ TEST_CASE("Çıktı yerleşimi: denetle basmaya engel olmayan sorunları söyler
     CHECK(said.value().lines.size() > 1);
 }
 
+TEST_CASE("A-08: atlas nişanı içeriktir — iki ayrı çıktı aynı parmak izini taşıyamaz")
+{
+    // FOUND BY THE EVALUATION HARNESS, not by reading the code: an atlas
+    // scenario ran, the sheet count changed, and `content_hash` did not move at
+    // all. The atlas block was simply not folded in.
+    //
+    // WHY IT IS CONTENT. The atlas decides HOW MANY sheets print and WHAT EACH
+    // ONE SHOWS. Two drawings aimed at different layers print two different
+    // documents; a fingerprint they share is a fingerprint that cannot tell them
+    // apart — the same argument that put `linked_map` in the fold.
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ALAN 0,0 40,0 40,30 0,30", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("KATMAN ad=BİNA", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ALAN 60,0 80,0 80,20 60,20", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A3", Origin::Test).ok());
+
+    const std::uint64_t unaimed = r.doc.content_hash();
+
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=atlas ad=Pafta katman=PARSEL", Origin::Test).ok());
+    const std::uint64_t at_parsel = r.doc.content_hash();
+    CHECK_NE(at_parsel, unaimed);
+
+    // AIMED SOMEWHERE ELSE IS A DIFFERENT DOCUMENT. This is the pair the hole
+    // could not tell apart.
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=atlas ad=Pafta katman=BİNA", Origin::Test).ok());
+    CHECK_NE(r.doc.content_hash(), at_parsel);
+
+    // AND IT SURVIVES THE FILE: a hash that changed only in memory would mean
+    // the saved drawing and the open one disagree about what they are.
+    TempDir tmp("atlas-ozet");
+    const std::string path = tmp.file("atlasli.pcad");
+    REQUIRE(r.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+    const std::uint64_t saved = r.doc.content_hash();
+
+    Rig back;
+    REQUIRE(back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
+    CHECK_EQ(back.doc.content_hash(), saved);
+}
+
 TEST_CASE("A-05: ne neyin üstünde — çakışma söylenebilir, ama sorun ilan edilmez")
 {
     // "LEJANT HARİTANIN ÜSTÜNE BİNMİŞ" is a thing a person says, and answering

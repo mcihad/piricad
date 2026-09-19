@@ -6,6 +6,37 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — atlas nişanı belge özetine girmiyordu (içerik karması)
+
+- `Document::content_hash` yerleşimin **atlas bloğunu** katlamıyordu. Atlas kaç
+  sayfanın basılacağına ve her birinin neyi göstereceğine karar verir; iki ayrı
+  katmana nişanlanmış iki çizim iki ayrı belge basar, dolayısıyla aynı parmak izini
+  taşıyamazlar. `linked_map`'i bu katlamaya koyan gerekçenin aynısı.
+- **Değerlendirme koşucusu buldu**, kodu okuyarak değil: bir atlas senaryosu
+  çalıştı, sayfa sayısı değişti ve içerik özeti hiç kıpırdamadı.
+
+### Eklendi — Türkçe değerlendirme seti, koşucusu ve sayacı (TODOS A-08, kısmi)
+
+- `tests/ai-eval` bir README'den ibaretti — ama CLAUDE.md Article 8.9 "başlangıç
+  seti harness'ı ve saklanan temeliyle birlikte geliyor" ve "`make check` vaka
+  sayısını bildiriyor" diyordu. **Hiçbiri yoktu**; madde, ağacın sahip olmadığı bir
+  düzeneği anlatıyordu. Bugün düzelttiğim dördüncü "olmayan şeyi anlatan metin".
+- **Set** (`senaryolar.json`, 16 vaka, 28 terim): gerçek Türkçe istek + beklenen
+  komut dizisi.
+- **Koşucu** (`test_ai_eval.cpp`) iki soruyu ayrı sorar. (1) Dizi hâlâ geçerli mi:
+  her adım **canlı kütüğe** karşı ayrıştırılıp çözülüyor, yani cevap anahtarı
+  programla birlikte çürümüyor — yazdığım ilk on altı vakadaki **beş hatayı** aynı
+  gün yakaladı. (2) Üç istemci aynı şeyi mi üretiyor: aynı çözülmüş çağrı komut
+  satırından, JSON betiğinden ve ajan yolundan geçiyor; içerik özeti ve günlük
+  satırları birebir aynı olmalı (A-08 kabulü). Argümanlar yol üstünde
+  `Value::to_json`/`from_json` turunu da yapıyor, yani Article 1.4 de sınanmış
+  oluyor.
+- **Modelin doğruluğu burada ölçülmez ve ölçülemez**: hiçbir test canlı bir
+  sağlayıcıya bağlanmaz (ai.md P10). Set doğru cevabı tanımlar.
+- **`scripts/ci-gate-eval.sh`** her koşuda vaka sayısını ve hedefe kalanı yazıyor —
+  Article 8.9'un sapmaya bağladığı koşul buydu. Küçük sette **kırmıyor**: kıran bir
+  kapı yalnızca devre dışı bırakılır, ve sapma zaten onaylı.
+
 ### Eklendi — denetim kaydı hangi iznin hangi işi yürüttüğünü söylüyor (TODOS S-06, kısmi)
 
 - İki alan: **`karar_veren`** (kararı ne verdi) ve **`onay_politikasi`** (karar

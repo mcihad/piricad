@@ -215,6 +215,18 @@ std::uint64_t LayoutStore::fold(std::uint64_t seed) const
         h = fold_text(h, l.paper);
         h = fnv1a_int(l.landscape ? 1 : 0, h);
 
+        // THE ATLAS IS CONTENT, and leaving it out was a real hole: it decides
+        // HOW MANY sheets print and WHAT EACH ONE SHOWS. Two drawings aimed at
+        // different layers print two different documents, so they must not share
+        // a fingerprint — the same argument that put `linked_map` in this fold.
+        //
+        // Found by the A-08 harness: an atlas scenario ran, the sheet count
+        // changed, and the content hash did not move at all.
+        h = fold_text(h, l.atlas.coverage_layer);
+        h = fold_text(h, l.atlas.sort_by);
+        h = fnv1a_int(l.atlas.margin_percent, h);
+        h = fnv1a_int(l.atlas.single_file ? 1 : 0, h);
+
         for (const LayoutPage& page : l.pages) {
             h = fnv1a_int(page.w, h);
             h = fnv1a_int(page.h, h);

@@ -1,0 +1,267 @@
+{
+ "_": [
+  "TÜRKÇE UÇTAN UCA DEĞERLENDİRME SETİ (TODOS A-08, kentoscad.md §5.6/§14).",
+  "",
+  "Her satır bir gerçek istek ve onun BEKLENEN KOMUT DİZİSİDİR. Set iki soruyu",
+  "ayrı ayrı cevaplar ve ikisini karıştırmaz:",
+  "",
+  "  1. DİZİ GEÇERLİ Mİ? Her adım canlı komut kütüğüne karşı ayrıştırılır ve",
+  "     çözülür. Var olmayan bir komut ya da tanımsız bir argüman yapıyı kırar,",
+  "     yani set programla birlikte çürümez.",
+  "  2. ÜÇ İSTEMCİ AYNI ŞEYİ Mİ ÜRETİR? Aynı dizi komut satırından, JSON",
+  "     betiğinden ve yapay zeka planından çalıştırılır; belge içerik özeti ve",
+  "     günlük satırları birebir aynı olmalıdır (A-08 kabulü).",
+  "",
+  "MODELİN DOĞRULUĞU BURADA ÖLÇÜLMEZ ve ölçülemez: hiçbir test canlı bir",
+  "sağlayıcıya bağlanmaz (.claude/ai.md P10). Bu set, modelin ÜRETMESİ GEREKEN",
+  "doğru cevabı tanımlar; bir model koşucusu onu ayrıca kullanır.",
+  "",
+  "`istek` alanı modelin göreceği Türkçe cümledir. `komutlar` beklenen dizidir.",
+  "`kurulum` diziyi anlamlı kılan hazırlıktır ve ölçüme girmez.",
+  "`terimler` o vakanın sınadığı alan sözcükleridir (§5.6 kapsaması)."
+ ],
+ "surum": 1,
+ "paket_surumu": "0.1.0",
+ "senaryolar": [
+  {
+   "id": "katman-ac",
+   "istek": "Parsel adında bir katman aç.",
+   "terimler": [
+    "katman",
+    "parsel"
+   ],
+   "kurulum": [],
+   "komutlar": [
+    "KATMAN ad=PARSEL"
+   ]
+  },
+  {
+   "id": "parsel-ciz",
+   "istek": "Parsel katmanına 40 metreye 30 metrelik bir alan çiz.",
+   "terimler": [
+    "alan",
+    "parsel"
+   ],
+   "kurulum": [
+    "KATMAN ad=PARSEL"
+   ],
+   "komutlar": [
+    "ALAN 0,0 40,0 40,30 0,30"
+   ]
+  },
+  {
+   "id": "yol-cizgisi",
+   "istek": "Yol katmanına 60 metrelik bir eksen çizgisi at.",
+   "terimler": [
+    "çizgi",
+    "yol",
+    "eksen"
+   ],
+   "kurulum": [
+    "KATMAN ad=YOL"
+   ],
+   "komutlar": [
+    "ÇİZGİ 0,40 60,40"
+   ]
+  },
+  {
+   "id": "oznitelik-sutunu",
+   "istek": "Ada ve parsel numarası için sütun tanımla.",
+   "terimler": [
+    "öznitelik",
+    "ada",
+    "parsel"
+   ],
+   "kurulum": [],
+   "komutlar": [
+    "SÜTUN kimlik=ada_no tur=tam_sayi ad=\"Ada No\"",
+    "SÜTUN kimlik=parsel_no tur=tam_sayi ad=\"Parsel No\""
+   ]
+  },
+  {
+   "id": "oznitelik-yaz",
+   "istek": "Bu parselin ada numarasını 1284, parsel numarasını 21 yap.",
+   "terimler": [
+    "öznitelik",
+    "ada",
+    "parsel"
+   ],
+   "kurulum": [
+    "KATMAN ad=PARSEL",
+    "ALAN 0,0 40,0 40,30 0,30",
+    "SÜTUN kimlik=ada_no tur=tam_sayi ad=\"Ada No\"",
+    "SÜTUN kimlik=parsel_no tur=tam_sayi ad=\"Parsel No\""
+   ],
+   "komutlar": [
+    "ÖZNİTELİK ad=ada_no nesne=1 deger=1284",
+    "ÖZNİTELİK ad=parsel_no nesne=1 deger=21"
+   ]
+  },
+  {
+   "id": "yerlesim-a3",
+   "istek": "A3 yatay bir çıktı yerleşimi kur.",
+   "terimler": [
+    "çıktı yerleşimi",
+    "kâğıt",
+    "A3"
+   ],
+   "kurulum": [],
+   "komutlar": [
+    "ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A3 yon=yatay"
+   ]
+  },
+  {
+   "id": "yerlesim-lejant-kuzey",
+   "istek": "Paftadaki lejantı sağ üste al.",
+   "terimler": [
+    "lejant",
+    "pafta"
+   ],
+   "kurulum": [
+    "ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A3 yon=yatay"
+   ],
+   "komutlar": [
+    "ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=lejant ad=lejant2",
+    "ÇIKTIÖĞE islem=tasi yerlesim=Pafta ad=lejant2 x=300 y=20 genislik=80 yukseklik=50"
+   ]
+  },
+  {
+   "id": "haritayi-nisanla",
+   "istek": "Haritayı 0,0 ile 60,45 arasına baktır.",
+   "terimler": [
+    "harita çerçevesi",
+    "pencere"
+   ],
+   "kurulum": [
+    "ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A3 yon=yatay"
+   ],
+   "komutlar": [
+    "ÇIKTIÖĞE islem=ayarla yerlesim=Pafta ad=harita pencere=0,0 pencere=60,45"
+   ]
+  },
+  {
+   "id": "atlas-nisanla",
+   "istek": "Her parsel için bir sayfa üret.",
+   "terimler": [
+    "atlas",
+    "parsel",
+    "sayfa"
+   ],
+   "kurulum": [
+    "KATMAN ad=PARSEL",
+    "ALAN 0,0 40,0 40,30 0,30",
+    "ALAN 60,0 100,0 100,30 60,30",
+    "ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A3 yon=yatay"
+   ],
+   "komutlar": [
+    "ÇIKTIYERLEŞİMİ islem=atlas ad=Pafta katman=PARSEL"
+   ]
+  },
+  {
+   "id": "katman-gizle",
+   "istek": "Yol katmanını gizle.",
+   "terimler": [
+    "katman",
+    "görünürlük"
+   ],
+   "kurulum": [
+    "KATMAN ad=YOL"
+   ],
+   "komutlar": [
+    "KATMANGÖRÜNÜM islem=gizle katman=YOL"
+   ]
+  },
+  {
+   "id": "olcek-cubugu",
+   "istek": "Paftaya ölçek çubuğu ekle ve haritaya bağla.",
+   "terimler": [
+    "ölçek çubuğu",
+    "harita"
+   ],
+   "kurulum": [
+    "ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A3 yon=yatay"
+   ],
+   "komutlar": [
+    "ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=olcek ad=olcek2",
+    "ÇIKTIÖĞE islem=ayarla yerlesim=Pafta ad=olcek2 harita=harita"
+   ]
+  },
+  {
+   "id": "tablo-katmani",
+   "istek": "Parsel listesini tablo olarak koy.",
+   "terimler": [
+    "tablo",
+    "parsel",
+    "liste"
+   ],
+   "kurulum": [
+    "KATMAN ad=PARSEL",
+    "ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A3 yon=yatay"
+   ],
+   "komutlar": [
+    "ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=tablo ad=liste",
+    "ÇIKTIÖĞE islem=ayarla yerlesim=Pafta ad=liste metin=PARSEL"
+   ]
+  },
+  {
+   "id": "sayfa-ekle",
+   "istek": "Paftaya bir A4 dikey sayfa daha ekle.",
+   "terimler": [
+    "sayfa",
+    "kâğıt"
+   ],
+   "kurulum": [
+    "ÇIKTIYERLEŞİMİ islem=ekle ad=Pafta kagit=A3 yon=yatay"
+   ],
+   "komutlar": [
+    "ÇIKTIYERLEŞİMİ islem=sayfaekle ad=Pafta kagit=A4 yon=dikey"
+   ]
+  },
+  {
+   "id": "daire-ciz",
+   "istek": "Merkezi 10,10 olan, çevresi 15,10'dan geçen bir daire çiz.",
+   "terimler": [
+    "daire",
+    "merkez",
+    "çevre"
+   ],
+   "kurulum": [],
+   "komutlar": [
+    "DAİRE merkez=10,10 cevre=15,10"
+   ]
+  },
+  {
+   "id": "olcu-at",
+   "istek": "İki nokta arasına, 5 metre yukarıdan geçen bir ölçü at.",
+   "terimler": [
+    "ölçü",
+    "ölçülendirme"
+   ],
+   "kurulum": [],
+   "komutlar": [
+    "ÖLÇÜ 0,0 40,0 20,5"
+   ]
+  },
+  {
+   "id": "etiket-yaz",
+   "istek": "Parselleri ada/parsel numaralarıyla etiketle.",
+   "terimler": [
+    "etiket",
+    "ada",
+    "parsel",
+    "öznitelik"
+   ],
+   "kurulum": [
+    "KATMAN ad=PARSEL",
+    "ALAN 0,0 40,0 40,30 0,30",
+    "SÜTUN kimlik=ada_no tur=tam_sayi ad=\"Ada No\"",
+    "SÜTUN kimlik=parsel_no tur=tam_sayi ad=\"Parsel No\"",
+    "ÖZNİTELİK ad=ada_no nesne=1 deger=1284",
+    "ÖZNİTELİK ad=parsel_no nesne=1 deger=21"
+   ],
+   "komutlar": [
+    "ETİKET katman=PARSEL bicim=\"{ada_no}/{parsel_no}\""
+   ]
+  }
+ ]
+}
