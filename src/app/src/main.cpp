@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // KentOSCad — application entry point.
 #include "kentos_cad/app/attribute_panel.hpp"
+#include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/import_wizard.hpp"
 #include "kentos_cad/app/main_window.hpp"
 #include "kentos_cad/app/map_canvas.hpp"
+#include "kentos_cad/app/provider_dialog.hpp"
+#include "kentos_cad/app/settings_dialog.hpp"
+#include "kentos_cad/app/suggestion_card.hpp"
 #include "kentos_cad/app/theme.hpp"
 #include "kentos_cad/command/log.hpp"
 #include "kentos_cad/core/circle.hpp"
@@ -27,6 +31,7 @@
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QDir>
+#include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
@@ -34,6 +39,9 @@
 #include <QLineEdit>
 #include <QLocale>
 #include <QMouseEvent>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QPainter>
 #include <QSettings>
 #include <QStandardPaths>
@@ -193,6 +201,20 @@ int main(int argc, char** argv)
     // for the same reason.
     QApplication app(argc, argv);
 
+    // THE SHELL DRAWS ITS OWN MENUS (design.md 7: they sit in the title bar),
+    // so no window ever wants the platform's menu bar — and on macOS a native
+    // `QMenuBar` is not merely unwanted, it BLANKS THE CANVAS. Qt's
+    // `QMenuBarPrivate::handleReparent` forces `createWinId()` on the window a
+    // native menu bar is parented into, so the main window's native window was
+    // created the moment `TitleBar` was — before `MapCanvas` existed. Qt decides
+    // ONCE, at that creation, whether the window composites through QRhi
+    // (`QWidgetPrivate::create` → `q_evaluateRhiConfig`), found no `QRhiWidget`
+    // child yet, and never asked again: every frame then ended in "QRhiWidget:
+    // No QRhi" and the drawing, the grid and the rulers were simply not there.
+    // Linux has no native menu bar, so the same code drew fine — which is why it
+    // was found on a Mac. The smoke test below asserts the canvas has its RHI.
+    QApplication::setAttribute(Qt::AA_DontUseNativeMenuBar);
+
     // THE NAME THE USER SEES, and the one Qt derives every per-user path from:
     // the settings file, the config directory the style library writes into, and
     // the data directory the autosave uses. Changing it moves all three, so the
@@ -272,6 +294,14 @@ int main(int argc, char** argv)
                            "[kentos] %.*s\n", static_cast<int>(message.size()), message.data());
     });
 
+    // THE PRINT PROBE MUST NOT TOUCH THE USER'S PROFILES. It adds a profile and
+    // makes it the default, and both are persisted — into the very file the
+    // person's own sheets live in. Qt's test mode redirects every
+    // `QStandardPaths` lookup into a sandbox, and it has to be set BEFORE the
+    // window is built, because the print service resolves its path once in its
+    // constructor.
+    if (qEnvironmentVariableIsSet("KENTOS_PRINT_PROBE")) QStandardPaths::setTestModeEnabled(true);
+
     kentos::app::MainWindow window;
     window.show();
 
@@ -322,6 +352,62 @@ int main(int argc, char** argv)
     // WHY IT EXISTS. `shell-starts` proved the main window comes up, and a
     // dialog that crashed the moment it opened still passed it — twice. A window
     // that is never constructed in any test is a window nothing is checking.
+    // ONE SETTINGS PAGE, PHOTOGRAPHED. `KENTOS_SMOKE` proves every window opens
+    // and says nothing about what is ON one — which is how a page shipped
+    // carrying two switches and none of the block that was the point of it. The
+    // variable names a directory; `KENTOS_SETTINGS_PAGE` names the page, and the
+    // picture lands as `ayarlar.png`. Developer tooling, same category as
+    // `KENTOS_FRAME_DUMP`.
+    // THE MODEL PROFILE WINDOW, photographed on its own. Same category as the
+    // settings shot beside it: it is the window this change is about, and a
+    // window nothing looks at is a window nobody checked.
+    if (qEnvironmentVariableIsSet("KENTOS_PROVIDER_SHOT")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            const QString dir = qEnvironmentVariable("KENTOS_PROVIDER_SHOT");
+            kentos::app::ProviderDialog dialog(
+                *window.controller(), qEnvironmentVariable("KENTOS_PROVIDER_EDIT"), &window);
+            dialog.applyTheme(window.themeMode());
+            dialog.show();
+            QCoreApplication::processEvents();
+            // WHAT THE MODEL CHOOSER IS ACTUALLY OFFERING, printed: the defect
+            // this window was built for was a model list that stayed on one
+            // vendor's names whatever endpoint was chosen, and a screenshot of
+            // a closed combo cannot show that.
+            for (const QString& line : dialog.probeModels())
+                (void)std::fprintf(stdout, "[profil] model %s\n", line.toUtf8().constData());
+            QDir().mkpath(dir);
+            const bool saved = dialog.grab().save(dir + QStringLiteral("/model-profili.png"));
+            (void)std::fprintf(stdout, "[profil] %s\n",
+                               saved ? "kare: model-profili.png" : "kare yazılamadı");
+            (void)std::fflush(stdout);
+            QApplication::exit(saved ? 0 : 1);
+        });
+    }
+
+    if (qEnvironmentVariableIsSet("KENTOS_SETTINGS_SHOT")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            const QString dir = qEnvironmentVariable("KENTOS_SETTINGS_SHOT");
+            const QString page =
+                qEnvironmentVariable("KENTOS_SETTINGS_PAGE", QStringLiteral("MCP Sunucusu"));
+            window.openSettingsSection(page);
+            QCoreApplication::processEvents();
+            QDir().mkpath(dir);
+            int rc = 1;
+            // FOUND AS A CHILD, not as the active window: the settings window is
+            // MODELESS, so on a fresh start the platform has not given it focus
+            // yet and `activeWindow()` is still the shell — which grabs the wrong
+            // picture, or none at all.
+            if (QWidget* top = window.findChild<kentos::app::SettingsDialog*>(); top != nullptr) {
+                rc = top->grab().save(dir + QStringLiteral("/ayarlar.png")) ? 0 : 1;
+                (void)std::fprintf(stdout, "[ayarlar] %s — %s\n",
+                                   rc == 0 ? "kare: ayarlar.png" : "kare yazılamadı",
+                                   page.toUtf8().constData());
+                (void)std::fflush(stdout);
+            }
+            QApplication::exit(rc);
+        });
+    }
+
     if (qEnvironmentVariableIsSet("KENTOS_SMOKE")) {
         int at           = 0;
         const auto later = [&window, &at](auto&& step) {
@@ -349,12 +435,38 @@ int main(int argc, char** argv)
         later([] {
             if (QWidget* top = QApplication::activeModalWidget()) top->close();
         });
+        // THE PRINT PREVIEW, constructed like every other window: it renders a
+        // sheet on construction, and a sheet renderer that crashes on an empty
+        // drawing is exactly what this test is for.
+        later([&window] { window.openPrintDialog(kentos::core::Box2{0, 0, 40000, 30000}); });
         later([] {
+            if (QWidget* top = QApplication::activeModalWidget()) top->close();
+        });
+        later([&window] {
             if (sheet_refused) {
                 (void)std::fprintf(stderr, "[kentos] duman testi: stil sayfası REDDEDİLDİ\n");
                 QApplication::exit(2);
                 return;
             }
+#if KENTOS_HAVE_RHI
+            // THE CANVAS HAS ITS GPU CONTEXT. A `QRhiWidget` whose window was
+            // created before it existed paints nothing and says so only on
+            // stderr (see `AA_DontUseNativeMenuBar` above); a shell test that
+            // opened every window and never noticed the drawing was missing
+            // is the test this line makes honest. Not under a platform that
+            // has no graphics API at all — `offscreen`, which ctest uses, says
+            // "QRhi is not supported on this platform" for every QRhiWidget —
+            // because there the absence proves nothing about the window.
+            const QString platform = QGuiApplication::platformName();
+            const bool can_have_rhi =
+                platform != QLatin1String("offscreen") && platform != QLatin1String("minimal");
+            if (can_have_rhi && window.canvas() != nullptr && !window.canvas()->hasGpuContext()) {
+                (void)std::fprintf(stderr, "[kentos] duman testi: tuval GPU bağlamı ALAMADI "
+                                           "(QRhiWidget: No QRhi) — çizim boş kalır\n");
+                QApplication::exit(2);
+                return;
+            }
+#endif
             (void)std::fprintf(stdout, "[kentos] duman testi: bütün pencereler açıldı\n");
             QApplication::exit(0);
         });
@@ -399,6 +511,19 @@ int main(int argc, char** argv)
         later([] {
             if (QWidget* top = QApplication::activeModalWidget()) top->close();
         });
+        later([&window] { window.openPrintDialog(kentos::core::Box2{0, 0, 40000, 30000}); });
+        later([shot] { shot(QStringLiteral("2b-yazdir"), QApplication::activeModalWidget()); });
+        later([] {
+            if (QWidget* top = QApplication::activeModalWidget()) top->close();
+        });
+        // AND THE FRAME ON THE CANVAS, which is the half of printing that
+        // happens before the window: the sheet-shaped hole the user aims with.
+        later([&window] { window.printWithProfile(); });
+        later([&window, shot] { shot(QStringLiteral("2c-yazdirma-alani"), &window); });
+        later([&window] { window.canvas()->endPrintFrame(); });
+        later([] {
+            if (QWidget* top = QApplication::activeModalWidget()) top->close();
+        });
 
         later([&window] { window.openAttributeTable(); });
         later(
@@ -409,6 +534,10 @@ int main(int argc, char** argv)
 
         later([&window] { window.openSettings(); });
         later([shot] { shot(QStringLiteral("4-secenekler"), QApplication::activeWindow()); });
+        // The plot page, because the print profiles live on it and a table
+        // nobody has photographed is a table nobody has looked at.
+        later([&window] { window.openSettingsSection(QStringLiteral("Plot ve Çıktı")); });
+        later([shot] { shot(QStringLiteral("4b-plot-ve-cikti"), QApplication::activeWindow()); });
         later([] {
             if (QWidget* top = QApplication::activeWindow()) top->close();
         });
@@ -424,9 +553,7 @@ int main(int argc, char** argv)
         // is nothing to list on the second one.
         static kentos::app::ImportWizard* wizard = nullptr;
         later([&window] { wizard = window.openImportWizard(); });
-        later([&window] {
-            wizard->setPath(QString::fromLocal8Bit(qgetenv("KENTOS_IMPORT_SAMPLE")));
-        });
+        later([] { wizard->setPath(QString::fromLocal8Bit(qgetenv("KENTOS_IMPORT_SAMPLE"))); });
         later([shot] {
             shot(QStringLiteral("6-ice-aktarma-dosya"), QApplication::activeModalWidget());
         });
@@ -601,6 +728,15 @@ int main(int argc, char** argv)
 
     // Presses every button on the tool column and prints what came back. Same
     // category as KENTOS_EDIT_PROBE below: developer tooling, not a feature.
+    // THE CHAT DOCK, driven by a recorded provider stream. Same category as the
+    // probes around it: developer tooling, not a feature. It is what proves the
+    // seam no unit test can reach — a decoded tool call becoming a bubble, a
+    // card and an undo entry in a running shell.
+    if (qEnvironmentVariableIsSet("KENTOS_CHAT_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window,
+                           [&window] { QApplication::exit(window.probeChat()); });
+    }
+
     if (qEnvironmentVariableIsSet("KENTOS_TOOL_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             window.probeToolBox();
@@ -696,6 +832,393 @@ int main(int argc, char** argv)
         });
     }
 
+    // THE PLOT, ASSERTED. `/tests` links no Qt and a PDF is written by Qt, so
+    // the only place this can be proved is here (the reason KENTOS_EDIT_PROBE
+    // lives here too). Draws a parcel, prints it to a PDF on the named profile,
+    // and checks what came out: one page, the sheet's own size in points, and
+    // — with a password — an encrypted file. Exits non-zero on any of it.
+    // Developer tooling and an environment variable, not a feature.
+    if (const QByteArray into = qgetenv("KENTOS_PRINT_PROBE"); !into.isEmpty()) {
+        const QString dir = QString::fromLocal8Bit(into);
+        QDir().mkpath(dir);
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window, dir] {
+            int failures     = 0;
+            const auto check = [&failures](bool ok, const char* what) {
+                if (ok) return;
+                ++failures;
+                (void)std::fprintf(stderr, "[kentos] BAŞARISIZ: %s\n", what);
+            };
+
+            window.runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+            window.runScriptLine(QStringLiteral("ALAN 0,0 40,0 40,30 0,30"));
+            window.runScriptLine(QStringLiteral(
+                "YAZDIRMAPROFİLİ islem=ekle ad=\"Sınama A3\" kagit=A3 yon=yatay dpi=150 kenar=5"));
+
+            const QString plain  = dir + QStringLiteral("/duz.pdf");
+            const QString sealed = dir + QStringLiteral("/sifreli.pdf");
+
+            // REMOVED FIRST, and this is not tidiness. Both files are checked by
+            // existence and by content, so a leftover from an earlier run makes
+            // every one of those checks pass without a single byte being written
+            // this time — which is exactly what happened: the probe went green
+            // over a stale encrypted PDF while the command it was testing was
+            // refusing an argument that no longer exists.
+            QFile::remove(plain);
+            QFile::remove(sealed);
+            window.runScriptLine(
+                QStringLiteral("YAZDIR pencere=-5,-5 pencere=45,35 profil=\"Sınama A3\" "
+                               "dosya=\"%1\" baslik=\"Sınama paftası\" yazar=KentOSCad")
+                    .arg(plain));
+            window.runScriptLine(
+                QStringLiteral("YAZDIR pencere=-5,-5 pencere=45,35 profil=\"Sınama A3\" "
+                               "dosya=\"%1\" sifre=gizli kopyalanabilir=hayır")
+                    .arg(sealed));
+            QCoreApplication::processEvents();
+
+            // A3 landscape is 420×297 mm, which is 1190.55×841.89 PostScript
+            // points. The MediaBox is what a plotter reads, so that is what is
+            // checked rather than the file's size on disk.
+            const auto media_box = [](const QString& path) {
+                QFile file(path);
+                if (!file.open(QIODevice::ReadOnly)) return QSizeF();
+                const QByteArray bytes = file.readAll();
+                // `qsizetype` rather than `int`: a byte offset into a file is
+                // 64-bit and narrowing it is a warning this tree does not carry.
+                const qsizetype at = bytes.indexOf("/MediaBox");
+                if (at < 0) return QSizeF();
+                const qsizetype open  = bytes.indexOf('[', at);
+                const qsizetype close = bytes.indexOf(']', open);
+                if (open < 0 || close < 0) return QSizeF();
+                const QList<QByteArray> parts =
+                    bytes.mid(open + 1, close - open - 1).simplified().split(' ');
+                if (parts.size() < 4) return QSizeF();
+                return QSizeF(parts[2].toDouble(), parts[3].toDouble());
+            };
+
+            check(QFileInfo::exists(plain), "PDF yazılmadı");
+            const QSizeF box = media_box(plain);
+            check(std::abs(box.width() - 1190.55) < 2.0 && std::abs(box.height() - 841.89) < 2.0,
+                  "PDF sayfa ölçüsü A3 yatay değil");
+            const QByteArray plain_bytes = [&plain] {
+                QFile f(plain);
+                return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+            }();
+            check(plain_bytes.contains("/Author (KentOSCad)"), "PDF yazar alanı yazılmadı");
+            check(!plain_bytes.contains("/Encrypt"), "şifresiz PDF şifreli çıktı");
+
+            check(QFileInfo::exists(sealed), "şifreli PDF yazılmadı");
+            const QByteArray sealed_bytes = [&sealed] {
+                QFile f(sealed);
+                return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+            }();
+            check(sealed_bytes.contains("/Encrypt"), "şifreli PDF şifrelenmedi");
+
+            // ---- THE FRAME, DRIVEN BY THE MOUSE ----------------------------
+            //
+            // A REGRESSION TEST FOR A REPORTED BUG: the frame pans with the LEFT
+            // button, and the release handler only cleared `panning_` for the
+            // MIDDLE one — so taking hold of the map to aim it meant the map
+            // followed the mouse for ever after. Nothing in a unit test can see
+            // that; it needs real press, move and release events on the widget.
+            kentos::app::MapCanvas* canvas = window.canvas();
+            check(canvas != nullptr, "tuval yok");
+            if (canvas != nullptr) {
+                const auto send = [canvas](QEvent::Type type, const QPointF& at,
+                                           Qt::MouseButton button, Qt::MouseButtons held) {
+                    QMouseEvent event(type, at, canvas->mapToGlobal(at), button, held,
+                                      Qt::NoModifier);
+                    QCoreApplication::sendEvent(canvas, &event);
+                    QCoreApplication::processEvents();
+                };
+
+                window.printWithProfile();
+                check(canvas->printFraming(), "yazdırma çerçevesi açılmadı");
+                const kentos::core::Box2 framed = canvas->printFrameWindow();
+                check(!framed.empty(), "çerçeve boş bir pencere verdi");
+
+                const QPointF from(canvas->width() / 2.0, canvas->height() / 2.0);
+                send(QEvent::MouseButtonPress, from, Qt::LeftButton, Qt::LeftButton);
+                send(QEvent::MouseMove, from + QPointF(60, 40), Qt::NoButton, Qt::LeftButton);
+                send(QEvent::MouseButtonRelease, from + QPointF(60, 40), Qt::LeftButton,
+                     Qt::NoButton);
+                const kentos::core::Point2 settled = canvas->view().centre();
+
+                // THE BUTTON IS UP: moving the mouse must move nothing.
+                send(QEvent::MouseMove, from + QPointF(200, 150), Qt::NoButton, Qt::NoButton);
+                check(canvas->view().centre() == settled,
+                      "düğme bırakıldıktan sonra harita fareyi izlemeye devam etti");
+                check(canvas->printFraming(), "çerçeve sürükleme sonunda kapandı");
+
+                // And Esc puts it away.
+                QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+                QCoreApplication::sendEvent(canvas, &esc);
+                QCoreApplication::processEvents();
+                check(!canvas->printFraming(), "Esc çerçeveyi kapatmadı");
+
+                // ---- WHAT THE FRAME HELD IS WHAT THE SHEET GETS ------------
+                //
+                // REPORTED BY HAND: the preview covered more ground than the
+                // frame. The window took the frame's scale, rounded it UP to the
+                // nearest plan scale and printed THAT — 1:184 became 1:200, so
+                // the sheet held a fifth more than had been aimed at. The line
+                // the preview would send is where the frame and the sheet meet,
+                // so the line is what is read here: the frame's own corners, no
+                // scale, and a box that still has the frame's centre and size.
+                const QString aimed = window.probePrintLine(
+                    framed, QString(), dir + QStringLiteral("/onizleme.pdf"), false);
+                check(aimed.contains(QStringLiteral("pencere=")),
+                      "önizleme çerçevenin penceresini göndermiyor");
+                check(!aimed.contains(QStringLiteral("olcek=")),
+                      "önizleme çerçeveyi kendi başına bir ölçeğe çevirdi");
+
+                // The two corners back out of the line, in millimetres.
+                const auto corners = [](const QString& line) {
+                    QList<double> out;
+                    for (const QString& part : line.split(QLatin1Char(' ')))
+                        if (part.startsWith(QStringLiteral("pencere=")))
+                            for (const QString& number : part.mid(8).split(QLatin1Char(',')))
+                                out << number.toDouble() * 1000.0;
+                    return out;
+                }(aimed);
+                check(corners.size() == 4, "gönderilen satırda iki köşe yok");
+                if (corners.size() == 4) {
+                    const double sent_w  = corners[2] - corners[0];
+                    const double sent_h  = corners[3] - corners[1];
+                    const auto framed_w  = static_cast<double>(framed.max_x - framed.min_x);
+                    const auto framed_h  = static_cast<double>(framed.max_y - framed.min_y);
+                    const double sent_cx = (corners[0] + corners[2]) / 2.0;
+                    const double sent_cy = (corners[1] + corners[3]) / 2.0;
+                    // A PERCENT, because fitting the box to the paper's aspect
+                    // moves one edge by the hair the frame's pixel size rounds
+                    // to — and the bug this guards against was a fifth.
+                    check(std::abs(sent_w - framed_w) < framed_w * 0.01 &&
+                              std::abs(sent_h - framed_h) < framed_h * 0.01,
+                          "kâğıda giden alan çerçevenin alanı değil");
+                    check(std::abs(sent_cx -
+                                   static_cast<double>(framed.min_x + framed.max_x) / 2.0) < 2.0 &&
+                              std::abs(sent_cy - static_cast<double>(framed.min_y + framed.max_y) /
+                                                     2.0) < 2.0,
+                          "kâğıda giden alan çerçevenin merkezinde değil");
+                }
+
+                // AND THE ROUND FIGURE IS A PRESS: the button turns the same
+                // frame into a plan scale, and then the line says so.
+                const QString rounded = window.probePrintLine(
+                    framed, QString(), dir + QStringLiteral("/onizleme.pdf"), true);
+                check(rounded.contains(QStringLiteral("olcek=")),
+                      "yuvarlama düğmesi ölçeğe çevirmedi");
+                check(!rounded.contains(QStringLiteral("pencere=")),
+                      "yuvarlamadan sonra satır hem pencere hem ölçek taşıyor");
+            }
+
+            (void)std::fprintf(stdout, "[yazdir] %s — sayfa %.0f×%.0f pt, sifreli %s\n",
+                               failures == 0 ? "TAMAM" : "BASARISIZ", box.width(), box.height(),
+                               sealed_bytes.contains("/Encrypt") ? "evet" : "hayir");
+            QApplication::exit(failures == 0 ? 0 : 1);
+        });
+    }
+
+#if KENTOS_HAVE_MCP
+    // ---- THE AGENT SERVER, OVER A REAL SOCKET --------------------------------
+    //
+    // The protocol itself is proved by 23 Qt-free cases over `ai::McpServer`
+    // (tests/unit/test_ai_mcp.cpp): a socket cannot tell you whether a header
+    // rule is right. What a socket CAN tell you is whether the listener, the
+    // routing, the Qt request conversion and the response writing are wired
+    // together at all — which is what this one case is for (.claude/test.md R24).
+    //
+    // AND IT PROVES THE CONSTITUTIONAL CLAIM END TO END: a write tool called
+    // over HTTP changes nothing until a person decides. That is CLAUDE.md 5.7 and
+    // .claude/ai.md R3/P1, and it is the sentence a reviewer will most want to
+    // see demonstrated rather than asserted.
+    if (qEnvironmentVariableIsSet("KENTOS_MCP_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            int failures     = 0;
+            const auto check = [&failures](bool ok, const char* what) {
+                if (ok) return;
+                ++failures;
+                (void)std::fprintf(stderr, "[kentos] BAŞARISIZ: %s\n", what);
+            };
+
+            kentos::app::Controller* controller = window.controller();
+            check(controller != nullptr, "denetleyici yok");
+            if (controller == nullptr) {
+                QApplication::exit(1);
+                return;
+            }
+            auto* server = controller->mcpService();
+            check(server != nullptr, "MCP servisi yok");
+            if (server == nullptr) {
+                QApplication::exit(1);
+                return;
+            }
+
+            window.runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+            window.runScriptLine(QStringLiteral("ALAN 0,0 40,0 40,30 0,30"));
+
+            // An ephemeral-ish port well above the privileged range; the
+            // configured default is left alone so a developer's own listener is
+            // not disturbed.
+            auto started = server->start(18765);
+            check(started.ok(), "sunucu başlamadı");
+            if (!started.ok()) {
+                (void)std::fprintf(stderr, "[kentos]   %s\n", started.error().message.c_str());
+                QApplication::exit(1);
+                return;
+            }
+            check(server->listening(), "sunucu dinlemiyor");
+
+            const QString base = QStringLiteral("http://127.0.0.1:%1/mcp/%2")
+                                     .arg(server->port())
+                                     .arg(server->token());
+
+            QNetworkAccessManager net;
+            // ONE REQUEST, SYNCHRONOUSLY, and the nested loop is what makes it
+            // readable: this is a test, not the program's own client, and the
+            // program's own client (the chat) is asynchronous exactly as ai.md
+            // R18 demands.
+            const auto post = [&net](const QString& url, const QByteArray& body,
+                                     const QByteArray& method, const QByteArray& name,
+                                     int* status) {
+                // Braces, not parentheses: `QNetworkRequest request(QUrl(url))`
+                // declares a FUNCTION taking a QUrl (the most vexing parse), and
+                // the errors that follow talk about member access on a function
+                // type rather than about the line that is wrong.
+                QNetworkRequest request{QUrl(url)};
+                request.setRawHeader("Content-Type", "application/json");
+                request.setRawHeader("Accept", "application/json, text/event-stream");
+                request.setRawHeader("MCP-Protocol-Version", "2026-07-28");
+                request.setRawHeader("Mcp-Method", method);
+                if (!name.isEmpty()) request.setRawHeader("Mcp-Name", name);
+                QNetworkReply* reply = net.post(request, body);
+                QEventLoop loop;
+                QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+                loop.exec();
+                if (status != nullptr)
+                    *status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+                const QByteArray answer = reply->readAll();
+                reply->deleteLater();
+                return answer;
+            };
+
+            // Every answer is printed while the probe is being read by a person:
+            // a status and the first line of a body turn "it failed" into "it
+            // failed with -32602 because the tool name was wrong".
+            const auto say = [](const char* what, int code, const QByteArray& body) {
+                (void)std::fprintf(stdout, "[mcp] %-22s %3d  %s\n", what, code,
+                                   body.left(220).constData());
+                // FLUSHED, because the first run of this probe crashed and took
+                // every buffered diagnostic with it — leaving two failures and
+                // no evidence.
+                (void)std::fflush(stdout);
+            };
+
+            const auto envelope = [](const char* method, const QByteArray& params) {
+                return QByteArray("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"") + method +
+                       "\",\"params\":" + params + "}";
+            };
+            const QByteArray meta =
+                "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\","
+                "\"io.modelcontextprotocol/clientInfo\":{\"name\":\"kentos-probe\","
+                "\"version\":\"1\"}}";
+
+            // 1. DISCOVERY, which is mandatory in this revision.
+            int status                  = 0;
+            const QByteArray discovered = post(base, envelope("server/discover", "{" + meta + "}"),
+                                               "server/discover", {}, &status);
+            say("server/discover", status, discovered);
+            check(status == 200, "server/discover 200 vermedi");
+            check(discovered.contains("2026-07-28"), "server/discover sürümü bildirmedi");
+
+            // 2. THE CATALOGUE, generated from the registry.
+            const QByteArray listed =
+                post(base, envelope("tools/list", "{" + meta + "}"), "tools/list", {}, &status);
+            say("tools/list", status, listed);
+            check(status == 200, "tools/list 200 vermedi");
+            check(listed.contains("katmanlari_listele"), "okuma aracı katalogda yok");
+            check(listed.contains("core_line"), "çizim aracı katalogda yok");
+
+            // 3. A READ TOOL RUNS NOW and answers with data.
+            const QByteArray read =
+                post(base,
+                     envelope("tools/call",
+                              "{\"name\":\"katmanlari_listele\",\"arguments\":{}," + meta + "}"),
+                     "tools/call", "katmanlari_listele", &status);
+            say("read tool", status, read);
+            check(status == 200, "okuma aracı 200 vermedi");
+            check(read.contains("PARSEL"), "okuma aracı katmanı bildirmedi");
+
+            // 4. A WRITE TOOL CHANGES NOTHING. It answers with a plan id and the
+            //    command lines, and the drawing is untouched until a person acts.
+            const std::size_t before = controller->document().live_entity_count();
+            const QByteArray wrote   = post(
+                base,
+                envelope("tools/call",
+                           "{\"name\":\"core_layer\",\"arguments\":{\"ad\":\"AJAN\"}," + meta + "}"),
+                "tools/call", "core_layer", &status);
+            say("write tool", status, wrote);
+            check(status == 200, "yazma aracı 200 vermedi");
+            check(wrote.contains("oneri") || wrote.contains("öneri"),
+                  "yazma aracı öneri kimliği döndürmedi");
+            check(controller->document().find_layer("AJAN") == kentos::core::kNoLayer,
+                  "YAZMA ARACI UYGULANDI — onay beklemesi gerekirdi");
+            check(controller->document().live_entity_count() == before, "çizim değişti");
+            check(controller->aiService().plans().pending().size() == 1,
+                  "öneri defterinde bekleyen öneri yok");
+
+            // 5. A COORDINATE LITERAL IS REFUSED where a handle is declared.
+            const QByteArray literal = post(
+                base,
+                envelope("tools/call",
+                         "{\"name\":\"core_line\",\"arguments\":{\"noktalar\":[[0,0],[1000,0]]}," +
+                             meta + "}"),
+                "tools/call", "core_line", &status);
+            say("coordinate literal", status, literal);
+            check(literal.contains("isError") || literal.contains("tutamak"),
+                  "koordinat literali reddedilmedi");
+
+            // 6. AND THE PERSON'S DECISION IS WHAT APPLIES IT — THROUGH THE CARD.
+            //    The probe builds the same `SuggestionCard` the panel does and
+            //    presses its `Uygula`, because that widget is the only thing in
+            //    the program that can mint an `ai::Approval` (ai.md P15). A
+            //    probe that called a service method instead would be proving a
+            //    path no user has.
+            const std::vector<const kentos::ai::Plan*> open =
+                controller->aiService().plans().pending();
+            if (!open.empty()) {
+                const QString plan = QString::fromStdString(open.front()->id);
+                kentos::app::SuggestionCard card(controller->aiService(), plan);
+                check(card.pending(), "öneri kartı bekleyen öneriyi bulamadı");
+                const auto decided = card.probeApply();
+                check(decided.ok(), "onaylanan öneri uygulanamadı");
+                check(!card.pending(), "karar verilen kart hâlâ bekliyor");
+                check(controller->document().find_layer("AJAN") != kentos::core::kNoLayer,
+                      "onaydan sonra katman yok");
+            }
+
+            // 7. THE HEADER RULES REACH THE SOCKET: a mismatch is 400.
+            (void)post(base, envelope("tools/list", "{" + meta + "}"), "tools/call", {}, &status);
+            check(status == 400, "başlık uyuşmazlığı 400 vermedi");
+
+            // 8. AND A WRONG TOKEN IS REFUSED.
+            const QString wrong = QStringLiteral("http://127.0.0.1:%1/mcp/%2")
+                                      .arg(server->port())
+                                      .arg(QStringLiteral("00000000000000000000000000000000"));
+            (void)post(wrong, envelope("tools/list", "{" + meta + "}"), "tools/list", {}, &status);
+            say("wrong token", status, QByteArray());
+            check(status == 401 || status == 403 || status == 404, "yanlış belirteç kabul edildi");
+
+            server->stop();
+            check(!server->listening(), "sunucu kapanmadı");
+
+            (void)std::fprintf(stdout, "[mcp] %s — port %u, %zu araç\n",
+                               failures == 0 ? "TAMAM" : "BASARISIZ", static_cast<unsigned>(18765),
+                               controller->aiService().catalog().tools.size());
+            QApplication::exit(failures == 0 ? 0 : 1);
+        });
+    }
+#endif
+
     if (qEnvironmentVariableIsSet("KENTOS_EDIT_PROBE")) {
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             auto* canvas = window.canvas();
@@ -705,19 +1228,42 @@ int main(int argc, char** argv)
                 return;
             }
 
-            window.runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
-            window.runScriptLine(QStringLiteral("ALAN 485300,4310200 485360,4310200 "
-                                                "485360,4310245 485300,4310245"));
-            canvas->zoomToExtents();
-            window.runScriptLine(QStringLiteral("SEÇ nesneler=1"));
-            QCoreApplication::processEvents();
-
             const auto send = [&](QEvent::Type t, const QPointF& at, Qt::MouseButton b,
                                   Qt::MouseButtons held) {
                 QMouseEvent ev(t, at, canvas->mapToGlobal(at), b, held, Qt::NoModifier);
                 QCoreApplication::sendEvent(canvas, &ev);
                 QCoreApplication::processEvents();
             };
+
+            window.runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+            window.runScriptLine(QStringLiteral("ALAN 485300,4310200 485360,4310200 "
+                                                "485360,4310245 485300,4310245"));
+
+            // AND THE RIGHT BUTTON FINISHES IT. `ALAN` is open-ended — it asks
+            // for corner after corner — so a typed line with four of them parks
+            // the command on the fifth prompt rather than drawing the parcel.
+            // Without this the probe went on to select an object that did not
+            // exist yet and then read row 0 of an empty table: a crash, in the
+            // one test that exists to prove the mouse reaches the document.
+            const QPointF middle(canvas->width() / 2.0, canvas->height() / 2.0);
+            send(QEvent::MouseButtonPress, middle, Qt::RightButton, Qt::RightButton);
+            send(QEvent::MouseButtonRelease, middle, Qt::RightButton, Qt::NoButton);
+
+            // AND THEN ESC, because the right button FINISHES a shape and leaves
+            // the tool in the hand for the next one (`Controller::finishInteractive`).
+            // A re-armed ALAN is a command waiting for a corner, and every press
+            // below would have gone to it as one — which is exactly what happened:
+            // the grip drags fed corners to ALAN, nothing moved, and ALAN then
+            // refused a two-corner face. Esc is what puts a tool away.
+            {
+                QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+                QCoreApplication::sendEvent(canvas, &esc);
+                QCoreApplication::processEvents();
+            }
+
+            canvas->zoomToExtents();
+            window.runScriptLine(QStringLiteral("SEÇ nesneler=1"));
+            QCoreApplication::processEvents();
 
             /// One press-drag-release on the canvas, in widget coordinates.
             const auto drag = [&](const QPointF& from, const QPointF& to) {
@@ -804,12 +1350,20 @@ int main(int argc, char** argv)
                 send(QEvent::MouseButtonPress, QPointF(220, 220), Qt::LeftButton, Qt::LeftButton);
                 send(QEvent::MouseButtonRelease, QPointF(220, 220), Qt::LeftButton, Qt::NoButton);
 
-                esc();
+                // THE RIGHT BUTTON FINISHES AND THE TOOL STAYS IN THE HAND; Esc
+                // is what puts it away. This used to press Esc here and then
+                // expect the tool to still be lit, which is the OTHER model —
+                // the one the shell had before a tool became modal — so the
+                // check failed against behaviour that is deliberately this way
+                // (`Controller::finishInteractive` versus `cancelInteractive`,
+                // and `docs/baslangic/arayuz.md`).
+                send(QEvent::MouseButtonPress, QPointF(220, 220), Qt::RightButton, Qt::RightButton);
+                send(QEvent::MouseButtonRelease, QPointF(220, 220), Qt::RightButton, Qt::NoButton);
                 check(doc.live_entity_count() == drawn_before + 1, "arayüzden alan çizilemedi");
                 check(polygon->isChecked(), "alan bitince araç sönüyor (yeniden kurulmuyor)");
 
                 esc();
-                check(!polygon->isChecked(), "boş Esc'ten sonra araç hâlâ yanıyor");
+                check(!polygon->isChecked(), "Esc'ten sonra araç hâlâ yanıyor");
             }
 
             // 5. THE GUIDE SHOWS THE SHAPE. A circle previewed as a line from the

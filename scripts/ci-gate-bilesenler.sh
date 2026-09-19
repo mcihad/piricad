@@ -140,8 +140,10 @@ else
     bekle "[bilesen] secondary · regular · 30 px"
     bekle "[bilesen] secondary · large · 36 px"
 
-    # The input's states, every one at the regular height.
-    for state in "varsayılan" "değiştirilmiş" "hatalı" "salt okunur" "devre dışı" "türetilmiş" "açılır liste" "tarih"; do
+    # The input's states, every one at the regular height — and the two that are
+    # answered from the scene (a coordinate, an object), which carry the pick
+    # button.
+    for state in "varsayılan" "değiştirilmiş" "hatalı" "salt okunur" "devre dışı" "türetilmiş" "açılır liste" "tarih" "nokta" "nesne"; do
         bekle "[bilesen] girdi · $state · 30 px"
     done
 
@@ -160,6 +162,23 @@ else
     bekle "[bilesen] açılır liste · 3 seçenek · 30 px"
     bekle "[bilesen] ifade · renkli · 30 px"
     bekle "[bilesen] tablo · 3 satır"
+
+    # The conversation. Four of the five speakers, the waiting bubble, the dots,
+    # an attachment that can still be taken off and one that cannot, and the
+    # context meter in all three of its readings — including the one where the
+    # window is unknown and the meter therefore draws NO bar.
+    bekle "[bilesen] döküm · 5 ileti"
+    bekle "[bilesen] ileti · kişi"
+    bekle "[bilesen] ileti · model"
+    bekle "[bilesen] ileti · araç"
+    bekle "[bilesen] ileti · bekliyor"
+    bekle "[bilesen] ileti · uyarı"
+    bekle "[bilesen] düşünme · etkin · 14 px"
+    bekle "[bilesen] ek · kaldırılabilir · 26 px"
+    bekle "[bilesen] ek · gönderilmiş · 26 px"
+    bekle "[bilesen] bağlam · ölçüldü · 18 px"
+    bekle "[bilesen] bağlam · tahmin · 18 px"
+    bekle "[bilesen] bağlam · pencere bilinmiyor · 18 px"
 fi
 
 if [[ $fail -ne 0 ]]; then

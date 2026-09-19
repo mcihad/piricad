@@ -23,6 +23,8 @@ add_library(kentos_io STATIC
     src/project_reader.cpp
     src/project_writer.cpp
     src/postgis.cpp
+    src/pdf_encrypt.cpp
+    src/print_profiles.cpp
     src/prj_sidecar.cpp
     src/qgis_style.cpp
     src/service.cpp
@@ -129,4 +131,12 @@ if(KENTOS_WITH_POSTGIS)
     # dependency lives inside src/postgis.cpp, behind the pimpl in its header.
     target_link_libraries(kentos_io PRIVATE libpqxx::pqxx)
     target_compile_definitions(kentos_io PRIVATE KENTOS_HAVE_POSTGIS=1)
+endif()
+
+if(KENTOS_WITH_QPDF)
+    # PRIVATE, like every library here: a qpdf header stays inside
+    # src/pdf_encrypt.cpp; the facade in io/pdf_encrypt.hpp is what the product
+    # sees (io.md R2/P2, CLAUDE.md Article 9).
+    target_link_libraries(kentos_io PRIVATE qpdf::libqpdf)
+    target_compile_definitions(kentos_io PRIVATE KENTOS_HAVE_QPDF=1)
 endif()

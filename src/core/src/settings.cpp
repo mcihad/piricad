@@ -357,9 +357,9 @@ KENTOS_SETTING(olcu_stil_katalogu)
         .scope    = SettingScope::App,
         .fallback = text_value("data/catalogs/dxf/olcu-stili.json"), // catalog-key: a path into
                                                                      // /data/catalogs, not a value
-        .range   = SettingRange::unbounded(),
-        .values  = {},
-        .unit    = "",
+        .range  = SettingRange::unbounded(),
+        .values = {},
+        .unit   = "",
         .summary = "ÖLÇÜ ve LİDER komutlarının ok boyunu, uzatma çizgilerini ve yazı " // ui-label
                    "yüksekliğini aldığı ölçü stili kataloğu (ISO-25, STANDARD, MIMARI). "
                    "Değerler kâğıt mikrometresidir ve plan ölçeğiyle zemine iner. Bu "
@@ -379,9 +379,9 @@ KENTOS_SETTING(vektor_kutuphanesi)
         .fallback = text_value(
             "data/catalogs/mpyy-vektor/plan-gosterim.json"), // catalog-key: a path into
                                                              // /data/catalogs, not a value
-        .range   = SettingRange::unbounded(),
-        .values  = {},
-        .unit    = "",
+        .range  = SettingRange::unbounded(),
+        .values = {},
+        .unit   = "",
         .summary = "Resimli paketin ÜSTÜNE yüklenecek vektör gösterim paketi. Raf her " // ui-label
                    "kimlikten bir satır tutar ve aynı kimliği yeniden bildiren paket "
                    "öncekinin yerine geçer: burada yeniden çizilmiş bir satır "
@@ -402,6 +402,11 @@ KENTOS_SETTING(cizim_birimi);
 KENTOS_SETTING(cizgi_tipi_olcegi);
 KENTOS_SETTING(metin_yuksekligi);
 KENTOS_SETTING(veri_paketi_surumu);
+KENTOS_SETTING(mcp_port);
+KENTOS_SETTING(mcp_belirtec_zorunlu);
+KENTOS_SETTING(mcp_otomatik);
+KENTOS_SETTING(ai_hassas);
+KENTOS_SETTING(ai_dusunme_goster);
 KENTOS_SETTING(tema);
 KENTOS_SETTING(dil);
 KENTOS_SETTING(otomatik_kayit);
@@ -457,6 +462,11 @@ KENTOS_SETTING(alan_birimi);
     X(cizgi_tipi_olcegi)                                                                           \
     X(metin_yuksekligi)                                                                            \
     X(veri_paketi_surumu)                                                                          \
+    X(mcp_port)                                                                                    \
+    X(mcp_belirtec_zorunlu)                                                                        \
+    X(mcp_otomatik)                                                                                \
+    X(ai_hassas)                                                                                   \
+    X(ai_dusunme_goster)                                                                           \
     X(dugum_toleransi)                                                                             \
     X(en_kucuk_alan)                                                                               \
     X(tema)                                                                                        \
@@ -599,13 +609,13 @@ KENTOS_SETTING(yakalama_uzanti)
         .range    = SettingRange::between(0, 200),
         .values   = {},
         .unit     = "× açıklık",
-        .summary  = "UZANTI, PARALEL ve UZATILMIŞ KESİŞİM modlarının, yakalama açıklığının "
-                    "kaç katı ötesindeki kenarlardan nokta kurabileceği. Bu üç mod "
-                    "imlecin altında olmayan bir kenardan nokta üretir, açıklık tek "
-                    "başına o kenarı hiç bulamaz. 0 yazılırsa üç mod da maskede açık "
-                    "olsa bile çalışmaz. Görüşe bağlı bir tercih olduğu için uygulama "
-                    "kapsamındadır.",
-        .section  = "Çizim ve Yakalama", // ui-label
+        .summary = "UZANTI, PARALEL ve UZATILMIŞ KESİŞİM modlarının, yakalama açıklığının "
+                   "kaç katı ötesindeki kenarlardan nokta kurabileceği. Bu üç mod "
+                   "imlecin altında olmayan bir kenardan nokta üretir, açıklık tek "
+                   "başına o kenarı hiç bulamaz. 0 yazılırsa üç mod da maskede açık "
+                   "olsa bile çalışmaz. Görüşe bağlı bir tercih olduğu için uygulama "
+                   "kapsamındadır.",
+        .section = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -700,9 +710,9 @@ KENTOS_SETTING(izgara_ana_rengi)
 KENTOS_SETTING(izgara_adimi_y)
 {
     return SettingSpec{
-        .id       = "core.izgara.adim_y",
-        .names    = {"ızgara_dikey_adımı", "izgara_dikey_adimi", "ızgara_adımı_y", "izgara_adimi_y",
-                     "gridunity"},
+        .id = "core.izgara.adim_y",
+        .names = {"ızgara_dikey_adımı", "izgara_dikey_adimi", "ızgara_adımı_y", "izgara_adimi_y",
+                  "gridunity"},
         .type     = SettingType::Length,
         .scope    = SettingScope::App,
         .fallback = SettingValue::length(0),
@@ -801,11 +811,11 @@ KENTOS_SETTING(harita_kalinlik)
         .range    = SettingRange::unbounded(),
         .values   = {},
         .unit     = "",
-        .summary  = "Çizgi kalınlıkları ekranda paftadaki ölçüsüyle çizilir; kapalıyken her "
-                    "çizgi tek piksel (kıl çizgi) olur, kalınlık nesnede ve çıktıda durur. "
-                    "Yalnız ekranı etkilediği için uygulama kapsamındadır (durum çubuğu "
-                    "KALINLIK).",
-        .section  = "Görünüm ve Tema", // ui-label
+        .summary = "Çizgi kalınlıkları ekranda paftadaki ölçüsüyle çizilir; kapalıyken her "
+                   "çizgi tek piksel (kıl çizgi) olur, kalınlık nesnede ve çıktıda durur. "
+                   "Yalnız ekranı etkilediği için uygulama kapsamındadır (durum çubuğu "
+                   "KALINLIK).",
+        .section = "Görünüm ve Tema", // ui-label
     };
 }
 
@@ -1027,11 +1037,11 @@ KENTOS_SETTING(aci_birimi)
         .range    = SettingRange::unbounded(),
         .values   = {"grad", "derece", "radyan"},
         .unit     = "",
-        .summary  = "Açıların yazıldığı ve okunduğu birim. Varsayılan GRAD'dır: Türkiye'de "
-                    "nirengi, poligon ve aplikasyon hesapları grad ile yürür ve tam daire "
-                    "400'dür. Belgenin sayılarının nasıl okunacağını söylediği için proje "
-                    "kapsamındadır.",
-        .section  = "Genel", // ui-label
+        .summary = "Açıların yazıldığı ve okunduğu birim. Varsayılan GRAD'dır: Türkiye'de "
+                   "nirengi, poligon ve aplikasyon hesapları grad ile yürür ve tam daire "
+                   "400'dür. Belgenin sayılarının nasıl okunacağını söylediği için proje "
+                   "kapsamındadır.",
+        .section = "Genel", // ui-label
     };
 }
 
@@ -1356,11 +1366,11 @@ KENTOS_SETTING(izgara_modu)
         .range    = SettingRange::between(0, 1),
         .values   = {"uyarlanır", "sabit"},
         .unit     = "",
-        .summary  = "Izgara adımının seçilme biçimi. 'uyarlanır' ölçeğe göre 1/2/5×10ⁿ "
-                    "adımlarından okunabilir olanı seçer; 'sabit' her ölçekte "
-                    "ızgara_adımı değerini kullanır. Paftaya basılmayan bir görünüm "
-                    "tercihi olduğu için uygulama kapsamındadır.",
-        .section  = "Çizim ve Yakalama", // ui-label
+        .summary = "Izgara adımının seçilme biçimi. 'uyarlanır' ölçeğe göre 1/2/5×10ⁿ "
+                   "adımlarından okunabilir olanı seçer; 'sabit' her ölçekte "
+                   "ızgara_adımı değerini kullanır. Paftaya basılmayan bir görünüm "
+                   "tercihi olduğu için uygulama kapsamındadır.",
+        .section = "Çizim ve Yakalama", // ui-label
     };
 }
 
@@ -1670,11 +1680,11 @@ KENTOS_SETTING(veritabani_ad)
         .range    = SettingRange::unbounded(),
         .values   = {},
         .unit     = "",
-        .summary  = "Bağlanılacak veritabanının adı. Boş bırakılırsa kullanıcı adıyla aynı "
-                    "kabul edilir; libpq'nun kendi kuralıdır. Hangi veritabanına "
-                    "bağlanıldığı çizimin verisi değil kurulumun bilgisidir, bu yüzden "
-                    "uygulama kapsamındadır.",
-        .section  = "Veri Kaynakları", // ui-label
+        .summary = "Bağlanılacak veritabanının adı. Boş bırakılırsa kullanıcı adıyla aynı "
+                   "kabul edilir; libpq'nun kendi kuralıdır. Hangi veritabanına "
+                   "bağlanıldığı çizimin verisi değil kurulumun bilgisidir, bu yüzden "
+                   "uygulama kapsamındadır.",
+        .section = "Veri Kaynakları", // ui-label
     };
 }
 
@@ -1697,6 +1707,135 @@ KENTOS_SETTING(veritabani_kullanici)
     };
 }
 
+KENTOS_SETTING(mcp_port)
+{
+    return SettingSpec{
+        .id       = "core.mcp.port",
+        .names    = {"ajan_sunucu_portu", "mcp_port", "araci_port", "mcp_portu"},
+        .type     = SettingType::Int,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::integer(8765),
+        .range    = SettingRange::between(1024, 65535),
+        .values   = {},
+        .unit     = "",
+        .summary  = "Yapay zeka ajanlarının bağlandığı MCP sunucusunun portu. Sunucu yalnız "
+                    "bu makineye (127.0.0.1) bağlanır; port makineye ait olduğu için "
+                    "uygulama kapsamındadır.",
+        .section  = "MCP Sunucusu", // ui-label
+    };
+}
+
+KENTOS_SETTING(mcp_belirtec_zorunlu)
+{
+    return SettingSpec{
+        .id    = "core.mcp.belirtec_zorunlu",
+        .names = {"belirteç_zorunlu", "belirtec_zorunlu", "token_required"},
+        .type  = SettingType::Bool,
+        .scope = SettingScope::App,
+        // ON, and this default is a security decision rather than a preference:
+        // without a token every process on this machine can drive the drawing.
+        // Clearing it is deliberate, and the status strip then says KORUMASIZ in
+        // words (ui.md R45).
+        .fallback = SettingValue::boolean(true),
+        .range    = {},
+        .values   = {},
+        .unit     = "",
+        .summary  = "MCP sunucusuna bağlanmak için erişim belirteci istenir. Kapatılırsa uç "
+                    "nokta bu makinedeki her sürece açık olur ve durum çubuğu bunu KORUMASIZ "
+                    "diye yazar. Bu makinenin güvenlik kararı olduğu için uygulama "
+                    "kapsamındadır: çizimle taşınmaz.",
+        .section  = "MCP Sunucusu", // ui-label
+    };
+}
+
+KENTOS_SETTING(mcp_otomatik)
+{
+    return SettingSpec{
+        .id = "core.mcp.otomatik",
+        .names = {"kendiliğinden_başlat", "kendiliginden_baslat", "mcp_otomatik", "araci_otomatik",
+                  "mcp_autostart"},
+        .type  = SettingType::Bool,
+        .scope = SettingScope::App,
+        // OFF: a listening port is something a user turns on, not something a
+        // program opens because it was installed (CLAUDE.md 2.10).
+        .fallback = SettingValue::boolean(false),
+        .range    = {},
+        .values   = {},
+        .unit     = "",
+        .summary  = "MCP sunucusu program açılırken kendiliğinden başlar. Kapalı olması "
+                    "öntanımlıdır: dinleyen bir portu kullanıcı açar. Bu kurulumun alışkanlığı "
+                    "olduğu için uygulama kapsamındadır.",
+        .section  = "MCP Sunucusu", // ui-label
+    };
+}
+
+KENTOS_SETTING(ai_hassas)
+{
+    return SettingSpec{
+        .id    = "core.ai.hassas",
+        .names = {"hassas_proje", "hassas", "sensitive"},
+        .type  = SettingType::Bool,
+        // PROJECT SCOPE, because sensitivity is a fact about THIS drawing's data
+        // and travels with the file: a pafta that may not leave the institution
+        // must still say so on the machine it is opened on next (model.md R40).
+        .scope    = SettingScope::Project,
+        .fallback = SettingValue::boolean(false),
+        .range    = {},
+        .values   = {},
+        .unit     = "",
+        .summary = "Bu çizimin verisi kurum dışına çıkamaz. Açıkken yalnız yerel ya da kurum "
+                   "içi model sağlayıcıları kullanılabilir ve MCP sunucusu başlatılmaz. "
+                   "Verinin kendisine ait bir nitelik olduğu için proje kapsamındadır ve "
+                   "dosyayla birlikte taşınır.",
+        .section = "Yapay Zeka Modelleri", // ui-label
+    };
+}
+
+KENTOS_SETTING(ai_dusunme_goster)
+{
+    return SettingSpec{
+        .id       = "core.ai.dusunme_goster",
+        .names    = {"düşünmeyi_göster", "dusunmeyi_goster", "show_reasoning"},
+        .type     = SettingType::Bool,
+        .scope    = SettingScope::App,
+        .fallback = SettingValue::boolean(false),
+        .range    = {},
+        .values   = {},
+        .unit     = "",
+        .summary  = "Modelin düşünme metni sohbet penceresinde katlanabilir bir blokta "
+                    "gösterilir. Kapalıyken yalnız düşündüğünü söyleyen bir gösterge çıkar. "
+                    "Kullanıcının okuma tercihi olduğu için uygulama kapsamındadır.",
+        .section  = "Yapay Zeka Modelleri", // ui-label
+    };
+}
+
+KENTOS_SETTING(ai_sorumlu)
+{
+    return SettingSpec{
+        .id    = "core.ai.sorumlu",
+        .names = {"sorumlu", "sorumlu_mühendis", "sorumlu_muhendis", "operator"},
+        .type  = SettingType::Text,
+        // APP SCOPE: it is who sits at THIS workstation, not a property of the
+        // drawing. A pafta carried to another office is approved by whoever is
+        // there, and their name is the one that must reach that machine's audit
+        // record (model.md R40).
+        .scope    = SettingScope::App,
+        .fallback = text_value(""),
+        .range    = SettingRange::unbounded(),
+        .values   = {},
+        .unit     = "",
+        // THE NAME THAT GOES IN THE AUDIT RECORD. `.claude/ai.md` R8 requires the
+        // approving operator to be named, because "bu parseli kim onayladı" is a
+        // question BÖHHBÜY makes somebody answer; empty falls back to the
+        // operating system's user name, which is honest but not a signature.
+        .summary = "Yapay zeka önerisini onaylayan kişinin adı. Her onay ve her ret "
+                   "denetim kaydına bu adla yazılır. Boş bırakılırsa işletim sisteminin "
+                   "kullanıcı adı kullanılır. Bu makinede çalışan kişiyi adlandırdığı "
+                   "için uygulama kapsamındadır.",
+        .section = "Yapay Zeka Modelleri", // ui-label
+    };
+}
+
 // ---- the pages of the settings window, design.md 10 --------------------------
 //
 // Declared HERE, beside the settings, because the window is generated from the
@@ -1711,6 +1850,8 @@ void register_sections(SettingCatalog& into)
     into.add_section({"Koordinat Sistemleri", "", ""});
     into.add_section({"Veri Kaynakları", "", ""});
     into.add_section({"Plot ve Çıktı", "", ""});
+    into.add_section({"Yapay Zeka Modelleri", "", ""});
+    into.add_section({"MCP Sunucusu", "", ""});
     into.add_section({"Etiketleme", "Faz 2",
                       "Etiket yerleşimi, çakışma çözümü ve ölçek aralıkları buraya gelecek. "
                       "Bugün etiketler ETİKET komutuyla yazılır."});

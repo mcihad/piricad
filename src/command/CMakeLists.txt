@@ -28,8 +28,10 @@ add_library(kentos_command STATIC
     src/commands/database.cpp
     src/commands/edit.cpp
     src/commands/file.cpp
+    src/commands/print.cpp
     src/commands/label.cpp
     src/commands/layer.cpp
+    src/commands/layer_visibility.cpp
     src/commands/area.cpp
     src/commands/rectangle.cpp
     src/commands/arc.cpp
@@ -83,7 +85,19 @@ add_executable(kentos_docgen tools/docgen.cpp)
 # The generator lists every command the program ships, and the processing
 # tools are commands: the module sits above command, so the executable links it
 # rather than the library reaching up (Article 3.2).
-target_link_libraries(kentos_docgen PRIVATE kentos_command kentos_processing kentos_flags)
+# The generator walks EVERY registry the program has — builtin, processing and the
+# three domain modules — and projects the agent catalogue through `kentos_ai`. It
+# is an executable at the top of the graph, so it may link what the command
+# library must not (Article 3.2); nothing here makes `kentos_command` depend on
+# anything above it.
+target_link_libraries(kentos_docgen PRIVATE
+    kentos_command
+    kentos_processing
+    kentos_ai
+    kentos_domain_geodesy
+    kentos_domain_cadastre
+    kentos_domain_surface
+    kentos_flags)
 set_target_properties(kentos_docgen PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )

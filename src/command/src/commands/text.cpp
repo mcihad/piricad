@@ -250,10 +250,10 @@ KENTOS_COMMAND(edittext)
                 Param::text("hizalama", Arity::optional(),
                             "sol, orta, sag veya merkez; verilmezse değişmez"),
             },
-        .undo    = UndoPolicy::SingleTransaction,
-        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo  = UndoPolicy::SingleTransaction,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir.",
-        .run     = &run_edit,
+        .run = &run_edit,
     };
 }
 

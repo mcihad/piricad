@@ -44,12 +44,12 @@ namespace kentos::io {
 /// same numbers are what the wizard prints beside each tick box.
 struct ImportProbe
 {
-    std::string driver;                                        ///< DXF, DWG, GPKG…
-    std::string crs;                                           ///< what the file declared
-    std::uint64_t entities{0};                                 ///< across every layer
-    std::vector<std::pair<std::string, std::uint64_t>> layers; ///< name, entity count
-    ImportDiagnostics diagnostics;                             ///< the reader's own words, levelled
-    std::vector<VectorField> fields;                           ///< every attribute field, per layer
+    std::string driver;                                      ///< DXF, DWG, GPKG…
+    std::string crs;                                         ///< what the file declared
+    std::uint64_t entities{0};                               ///< across every layer
+    std::vector<std::pair<std::string, std::size_t>> layers; ///< name, entity count
+    ImportDiagnostics diagnostics;                           ///< the reader's own words, levelled
+    std::vector<VectorField> fields;                         ///< every attribute field, per layer
 };
 
 /// Reads `path` into `scratch` — a document the caller owns and the user has never

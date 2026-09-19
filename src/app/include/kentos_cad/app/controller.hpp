@@ -7,6 +7,12 @@
 // There is no other path.
 #pragma once
 
+#include "kentos_cad/app/ai_service.hpp"
+#if KENTOS_HAVE_MCP
+#include "kentos_cad/app/mcp_service.hpp"
+#endif
+#include "kentos_cad/app/print_service.hpp"
+#include "kentos_cad/app/provider_service.hpp"
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/journal.hpp"
 #include "kentos_cad/command/registry.hpp"
@@ -24,6 +30,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QStringList>
 
 #include <cstdint>
 #include <memory>
@@ -33,6 +40,10 @@
 class QThread;
 
 namespace kentos::app {
+
+/// The outbound wire, held by pointer so the socket does not reach every
+/// translation unit that includes this header; see ai_transport.hpp.
+class AiTransport;
 
 class Controller : public QObject
 {
@@ -46,6 +57,22 @@ public:
 
     // ---- the only ways a widget may act on the document ----
     void runLine(const QString& line, command::Origin origin = command::Origin::CommandLine);
+
+    /// Runs several lines as ONE gesture: one validation pass, one undo step,
+    /// one line in the echo (`Bus::begin_batch`, kentoscad.md §10.4).
+    ///
+    /// WHAT IT IS FOR. Some things a user does in one click are several commands
+    /// — hiding eleven picked layers is eleven `KATMANGÖRÜNÜM` calls — and eleven
+    /// undo steps for one click is not what Ctrl+Z means. `label` is what the
+    /// batch is called.
+    ///
+    /// IT IS NOT A PRIVATE ROAD. The lines are the lines a script would carry,
+    /// through the same parser and the same bus, and a script already runs inside
+    /// a batch for the same reason (ui.md P3, script.md). A failure part way
+    /// through rolls the WHOLE batch back rather than leaving half of it applied
+    /// (Article 1.6).
+    void runLines(const QStringList& lines, const QString& label,
+                  command::Origin origin = command::Origin::Gui);
 
     /// Runs one command line and returns its bus result to an interaction that
     /// must keep its dialog open on failure. Other UI clients use `runLine()`.
@@ -143,6 +170,42 @@ public:
     /// connection is up belongs on screen next to the frame budget.
     const io::DatabaseService& database() const noexcept { return database_; }
 
+    /// The print engine behind `YAZDIR`: the profiles, and the sheet renderer
+    /// the toolbar menu, the settings page and the print dialog read.
+    /// The AI layer's machinery: the plan store, the audit log, the handles and
+    /// the tool catalogue. Read by the suggestion card, the chat dock and the
+    /// MCP listener; written only through the bus and through `decide`.
+    AiService& aiService() noexcept { return ai_; }
+
+#if KENTOS_HAVE_MCP
+    /// The agent listener, or null in a build without Qt HttpServer. The status
+    /// strip and the settings page both ask it for its state.
+    McpService* mcpService() noexcept { return mcp_.get(); }
+#endif
+
+    const AiService& aiService() const noexcept { return ai_; }
+
+    PrintService& printService() noexcept { return prints_; }
+
+    const PrintService& printService() const noexcept { return prints_; }
+
+    /// The model provider profiles behind `YAPAYZEKAMODELİ`: the store, the file
+    /// they live in and the key store their API keys live in. Read by the
+    /// settings page and the chat dock; written only through the bus.
+    ProviderService& providerService() noexcept { return providers_; }
+
+    const ProviderService& providerService() const noexcept { return providers_; }
+
+    /// The ONE outbound wire, shared by the connection test and the chat panel.
+    ///
+    /// ONE, BECAUSE A SECOND ONE IS A SECOND CREDENTIAL PATH. The transport is
+    /// the only object in the program that reads a key out of the key store
+    /// (CLAUDE.md 5.21), and two of them would be two places to audit. It is
+    /// told which profile it is serving immediately before each send, through
+    /// `AiTransport::useProfile` — which is why `ProviderService` takes a binder
+    /// rather than making that call itself.
+    AiTransport& aiTransport() noexcept { return *transport_; }
+
     command::Journal& journal() noexcept { return journal_; }
 
     command::UndoStack& undoStack() noexcept { return undo_; }
@@ -238,6 +301,25 @@ private:
     // only puts the hook in place, so `VERİTABANI` can answer instead of the bus
     // reporting that no engine is attached.
     io::DatabaseService database_;
+
+    // Installs Bus::on_print_request, in the same shape and with the same
+    // lifetime rule as the two above.
+    PrintService prints_;
+    AiService ai_;
+
+    /// Built before `providers_`, because the service is handed this transport
+    /// in the constructor body and a member built after it would not exist yet.
+    std::unique_ptr<AiTransport> transport_;
+
+    // Installs Bus::on_ai_provider_request, in the same shape and with the same
+    // lifetime rule. It loads the provider profiles from the user's
+    // configuration directory; the outbound transport is handed over later with
+    // `ProviderService::setTransport`, because the wire is not needed to edit a
+    // profile and a build without one still has to be able to.
+    ProviderService providers_;
+#if KENTOS_HAVE_MCP
+    std::unique_ptr<McpService> mcp_;
+#endif
 
     /// Resolves a CRS id into its EPSG code and zone. Held as an optional because
     /// a build whose /data/crs package is missing has no catalogue to answer from,

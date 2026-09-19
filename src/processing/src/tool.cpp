@@ -118,6 +118,15 @@ ToolParam ToolParam::point(std::string name, std::string help)
     return p;
 }
 
+ToolParam ToolParam::object(std::string name, std::string help)
+{
+    ToolParam p;
+    p.name = std::move(name);
+    p.kind = command::ParamKind::Selection;
+    p.help = std::move(help);
+    return p;
+}
+
 ToolParam ToolParam::boolean(std::string name, std::string help, bool fallback)
 {
     ToolParam p;
@@ -154,25 +163,41 @@ command::CommandSpec ToolSpec::to_command_spec() const
             help += ")";
         }
         if (!p.fallback.empty()) help += "; varsayılan " + p.fallback;
+
+        // THE WORD LIST AND THE RANGE TRAVEL WITH THE PARAMETER NOW. They were
+        // declared here and dropped on the way out, so the bus could not check
+        // them, the generated schema had no `enum` and every tool body checked
+        // its own words a second time (CLAUDE.md 5.10). `Param` carries both.
+        const auto carry = [&p](command::Param out) {
+            out.choices = p.choices;
+            out.low     = p.low;
+            out.high    = p.high;
+            out.bounded = p.bounded;
+            return out;
+        };
         switch (p.kind) {
         case ParamKind::Integer:
-            spec.params.push_back(Param::integer(p.name, Arity{0, 1}, help));
+            spec.params.push_back(carry(Param::integer(p.name, Arity{0, 1}, help)));
             break;
         case ParamKind::Number:
-            spec.params.push_back(Param::number(p.name, Arity{0, 1}, help));
+            spec.params.push_back(carry(Param::number(p.name, Arity{0, 1}, help)));
             break;
         case ParamKind::Bool:
-            spec.params.push_back(Param::boolean(p.name, Arity{0, 1}, help));
+            spec.params.push_back(carry(Param::boolean(p.name, Arity{0, 1}, help)));
             break;
         case ParamKind::Point:
-            spec.params.push_back(Param{p.name, ParamKind::Point, Arity{0, 1}, help});
+            spec.params.push_back(carry(Param{p.name, ParamKind::Point, Arity{0, 1}, help}));
             break;
         case ParamKind::PointList:
-            spec.params.push_back(Param::points(p.name, Arity{0, 0xFFFFFFFFu}, help));
+            spec.params.push_back(carry(Param::points(p.name, Arity{0, 0xFFFFFFFFu}, help)));
             break;
         case ParamKind::Text:
+            spec.params.push_back(carry(Param::text(p.name, Arity{0, 1}, help)));
+            break;
         case ParamKind::Selection:
-            spec.params.push_back(Param::text(p.name, Arity{0, 1}, help));
+            // ONE object: the parser reads `kaynak=12` as an id, a script writes
+            // `[12]`, and the bus knows it is a key rather than a number.
+            spec.params.push_back(carry(Param{p.name, ParamKind::Selection, Arity{0, 1}, help}));
             break;
         }
     }

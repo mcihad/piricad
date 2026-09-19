@@ -24,6 +24,7 @@
 #include "kentos_cad/render/scene.hpp"
 #include "kentos_cad/render/view.hpp"
 
+#include <QCursor>
 #include <QImage>
 #include <QRectF>
 
@@ -35,6 +36,7 @@
 
 #include <initializer_list>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -158,6 +160,16 @@ public:
     /// meaningful where it does; see `render::FrameStats::draw_calls`.
     bool backendIsGpu() const;
 
+    /// Whether the ON-SCREEN canvas has the graphics context it paints with.
+    ///
+    /// A `QRhiWidget` gets its `QRhi` from the top-level window, and the window
+    /// decides ONCE, when its native window is created, whether it composites
+    /// through QRhi at all. A window created before this widget existed never
+    /// does, the widget paints nothing and says so only on stderr ("QRhiWidget:
+    /// No QRhi"). The smoke test asks this after the first paint. Always true on
+    /// the QPainter surface, which needs no context.
+    bool hasGpuContext() const;
+
     /// The document this canvas draws. READ ONLY, like every other reader outside
     /// a command (Article 5.9): the canvas edits through the bus and so does
     /// anyone holding this.
@@ -176,6 +188,57 @@ public:
     /// lands the figure exactly. True when it did; false when nothing of the
     /// kind is being asked, so the caller can go on to what Enter means next.
     bool acceptGuide();
+
+    /// Opens the PRINT FRAME: an inner window of the viewport at `aspect`
+    /// (printable width over printable height), with everything outside it
+    /// greyed. The frame keeps its size on screen — it is the SHEET, not a
+    /// rectangle in the drawing — and the map moves under it: dragging pans,
+    /// the wheel zooms, exactly as they do with no frame up. Pressing YAZDIR
+    /// again captures what is inside (`printFrameWindow`); Esc or the right
+    /// button puts it away.
+    ///
+    /// This is a VIEW state and nothing else (model.md R43): no command runs,
+    /// the document is not touched, and the selection is left alone.
+    void beginPrintFrame(double aspect);
+
+    /// Changes the frame's shape without closing it — the print dialog's paper
+    /// or orientation changed while the frame was up.
+    void setPrintFrameAspect(double aspect);
+
+    /// Puts the frame away. `printFrameEnded` follows when one was up.
+    void endPrintFrame();
+
+    bool printFraming() const noexcept { return print_aspect_ > 0.0; }
+
+    /// What is inside the frame, in document millimetres — the window a plot
+    /// prints. An empty box when no frame is up.
+    core::Box2 printFrameWindow() const;
+
+    /// What a FORM FIELD can ask the scene for (fields.hpp `FieldKind::Point`
+    /// and `FieldKind::Object`).
+    enum class Capture : std::uint8_t {
+        Point,  ///< one coordinate, with the snap aids so a corner is a corner
+        Object, ///< one object under the click
+    };
+
+    /// Arms the canvas for ONE pick of `kind` on behalf of a form field. The
+    /// pointer becomes the pick mark, the status line says what is wanted, and
+    /// the next left click answers: `pointCaptured` or `objectCaptured`. A
+    /// click on more than one object asks the shell (`captureAmbiguous`), Esc
+    /// and the right button give up. NOT a command and not a selection: the
+    /// value goes into a text box, and the document is not touched (model.md
+    /// R43). A field's pick and a running command's prompt are never both live:
+    /// the pick takes the click while it is armed.
+    void beginCapture(Capture kind);
+
+    /// Puts the pick away with no answer. `captureEnded` follows.
+    void cancelCapture();
+
+    /// Answers an object pick with `key` — what the shell chose from the list it
+    /// opened on `captureAmbiguous`.
+    void finishCapture(core::EntityKey key);
+
+    bool capturing() const noexcept { return capture_.has_value(); }
 
     /// The dynamic-input label the guide last carried, for `KENTOS_EDIT_PROBE`.
     /// Empty when nothing is being dragged or the reading is switched off.
@@ -220,6 +283,33 @@ signals:
     /// pressed with nothing picked while a command was asking which objects to act
     /// on. Everything else a user reads comes from a command, and must.
     void echoRequested(const QString& text);
+
+    /// A form field's pick began; `prompt` is what the status line should say.
+    void captureBegan(const QString& prompt);
+
+    /// The pick landed on a coordinate (`Capture::Point`), aids applied.
+    void pointCaptured(core::Point2 world);
+
+    /// The pick landed on exactly one object (`Capture::Object`).
+    void objectCaptured(core::EntityKey key);
+
+    /// The pick landed on several objects, nearest first. The shell asks which
+    /// and answers with `finishCapture`, or gives up with `cancelCapture`.
+    void captureAmbiguous(const std::vector<core::EntityId>& candidates);
+
+    /// The pick is over, answered or not. The status line goes back to what the
+    /// running command says, if one is running.
+    void captureEnded();
+
+    /// The print frame opened; `prompt` is what the status line should say.
+    void printFrameBegan(const QString& prompt);
+
+    /// The print frame went away, captured or cancelled.
+    void printFrameEnded();
+
+    /// Enter was pressed while the frame was up: take this sheet. The same
+    /// thing the toolbar's second press means, from the keyboard.
+    void printFrameAccepted();
 
 protected:
     /// Qt event handlers. Every one of them either changes the VIEW — which is
@@ -467,6 +557,25 @@ private:
     QPointF pan_anchor_{};
     QPointF cursor_{};
     bool cursor_valid_{false};
+
+    /// The form-field pick under way, if any; see `beginCapture`.
+    std::optional<Capture> capture_{};
+
+    /// The print frame's printable aspect, or 0 when no frame is up. See
+    /// `beginPrintFrame`.
+    double print_aspect_{0.0};
+
+    /// The frame's rectangle in widget pixels: the largest one of the current
+    /// aspect that fits the viewport, inset and centred. Empty with no frame.
+    QRectF printFrameRect() const;
+
+    /// Draws the frame: the grey mask outside it, its hairline and the four
+    /// corner marks.
+    void buildPrintFrame();
+
+    /// The platform pointer for a pick: a cross for a point, a pick box for an
+    /// object, in the theme's accent. Drawn once per theme and kind.
+    QCursor captureCursor() const;
 
     /// Rubber-band selection gesture. Session state, drawn only (model.md R43).
     bool selecting_{false};

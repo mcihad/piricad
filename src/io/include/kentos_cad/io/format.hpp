@@ -306,6 +306,12 @@ enum BlockId : std::uint32_t {
     kBlkBlockMembers = 0x0087, ///< u64[] member entity keys, per block a contiguous run
     kBlkBlockUses    = 0x0088, ///< u32[] block ids a block's members reference, per block a run
 
+    // ---- attachments (core/attach.hpp): which captions follow which objects. ----
+    /// One record per attached entity, by KEY on both ends (model.md R1/R5).
+    /// Written only when there is one, so a drawing with none is byte for byte
+    /// what it was.
+    kBlkAttachments = 0x0089, ///< AttachRecord[]
+
     // ---- reserved. Declared here so the ids can never be re-meant. ----------
     /// Precomputed Douglas–Peucker LOD levels in quadtree tiles (io.md R6).
     /// Phase 1: no simplifier exists yet. See CLAUDE.md Article 8.
@@ -540,6 +546,30 @@ struct ForeignRecord
 };
 
 static_assert(sizeof(ForeignRecord) == 24, "wire record");
+
+/// One attachment (core/attach.hpp): the dependent, its source and the rule.
+/// Both ends are persistent KEYS — a slot is valid only inside one in-memory
+/// document (model.md R1) — and no field is floating point (R21).
+struct AttachRecord
+{
+    std::uint64_t dependent_key; ///<  0  the entity that follows
+    std::uint64_t source_key;    ///<  8  the entity it follows
+    std::int64_t gap_mm;         ///< 16  core::Attachment::gap
+    std::int64_t along_mm;       ///< 24  the hand's offset along the reading direction
+    std::int64_t across_mm;      ///< 32  and across it
+    std::uint32_t index;         ///< 40  the vertex, or the edge's first vertex
+    std::uint32_t format_string; ///< 44  into the string pool; 0 = empty
+    std::uint16_t ring;          ///< 48  which ring of the source
+    std::uint8_t anchor;         ///< 50  core::AttachAnchor
+    std::uint8_t side;           ///< 51  core::AttachSide
+    std::uint8_t derive;         ///< 52  core::AttachDerive
+    std::uint8_t unit;           ///< 53  core::DrawingUnit, for a derived length
+    std::uint8_t precision;      ///< 54  its decimals
+    std::uint8_t separator;      ///< 55  its decimal separator, as a byte
+    std::uint8_t reserved[8];    ///< 56  zero-filled
+};
+
+static_assert(sizeof(AttachRecord) == 64, "wire record");
 
 /// One block definition (model.md R45). Members and uses are runs into their
 /// own columns, so a block with neither costs a record and nothing else.

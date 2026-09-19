@@ -1,0 +1,1381 @@
+{
+  "schema_version": 1,
+  "package_version": "2026.9.19",
+  "id": "ai-saglayicilar",
+  "source": "Sağlayıcıların kendi API başvuru belgeleri; her kaydın 'belge' alanı kaynağını gösterir. 2026-09-19 tarihinde derlendi.",
+  "published": "2026-09-19",
+  "licence": "Bu dosya KentOSCad'in kendi derlemesidir (GPL-3.0-or-later). Model ve marka adları sahiplerine aittir.",
+  "aciklama": "Model kimlikleri ve adresler hızla eskir. Bu dosya programın BİLDİĞİ listedir; uç noktanın o an SUNDUĞU liste 'Modelleri getir' ile alınır ve bunun yerine geçer.",
+  "saglayicilar": [
+    {
+      "kimlik": "ollama",
+      "ad": "Ollama",
+      "lehce": "ollama_native",
+      "adres": "http://localhost:11434",
+      "yol": "/api/chat",
+      "kimlik_baslik": "",
+      "kimlik_onek": "",
+      "model_listesi_yolu": "/api/tags",
+      "model_listesi_bicimi": "ollama",
+      "belge": "https://github.com/ollama/ollama/blob/main/docs/api.md",
+      "yerel": true,
+      "baslangic": true,
+      "modeller": [
+        {
+          "kimlik": "llama3.1",
+          "etiket": "Llama 3.1 8B",
+          "baglam": 131072
+        },
+        {
+          "kimlik": "qwen2.5:14b",
+          "etiket": "Qwen2.5 14B",
+          "baglam": 32768
+        },
+        {
+          "kimlik": "gemma3:12b",
+          "etiket": "Gemma 3 12B",
+          "baglam": 131072
+        },
+        {
+          "kimlik": "mistral-nemo",
+          "etiket": "Mistral NeMo",
+          "baglam": 131072
+        },
+        {
+          "kimlik": "deepseek-r1:14b",
+          "etiket": "DeepSeek-R1 damıtık",
+          "baglam": 131072,
+          "dusunur": true
+        },
+        {
+          "kimlik": "phi4",
+          "etiket": "Phi-4",
+          "baglam": 16384
+        }
+      ]
+    },
+    {
+      "kimlik": "ollama_openai",
+      "ad": "Ollama (OpenAI uyumlu)",
+      "lehce": "openai_chat",
+      "adres": "http://localhost:11434/v1",
+      "yol": "/chat/completions",
+      "kimlik_baslik": "",
+      "kimlik_onek": "",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://github.com/ollama/ollama/blob/main/docs/openai.md",
+      "yerel": true,
+      "modeller": [
+        {
+          "kimlik": "llama3.1",
+          "etiket": "Llama 3.1 8B",
+          "baglam": 131072
+        },
+        {
+          "kimlik": "qwen2.5:14b",
+          "etiket": "Qwen2.5 14B",
+          "baglam": 32768
+        }
+      ]
+    },
+    {
+      "kimlik": "llamacpp",
+      "ad": "llama.cpp (llama-server)",
+      "lehce": "openai_chat",
+      "adres": "http://localhost:8080/v1",
+      "yol": "/chat/completions",
+      "kimlik_baslik": "",
+      "kimlik_onek": "",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://github.com/ggml-org/llama.cpp/tree/master/tools/server",
+      "yerel": true,
+      "not": "Model adı yok sayılır; sunucu komut satırında yüklenen modeli kullanır.",
+      "modeller": [
+        {
+          "kimlik": "local-model",
+          "etiket": "Sunucuya yüklenmiş model"
+        }
+      ]
+    },
+    {
+      "kimlik": "lmstudio",
+      "ad": "LM Studio",
+      "lehce": "openai_chat",
+      "adres": "http://localhost:1234/v1",
+      "yol": "/chat/completions",
+      "kimlik_baslik": "",
+      "kimlik_onek": "",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://lmstudio.ai/docs/app/api/endpoints/openai",
+      "yerel": true,
+      "modeller": [
+        {
+          "kimlik": "local-model",
+          "etiket": "Yüklü model"
+        }
+      ]
+    },
+    {
+      "kimlik": "vllm",
+      "ad": "vLLM",
+      "lehce": "openai_chat",
+      "adres": "http://localhost:8000/v1",
+      "yol": "/chat/completions",
+      "kimlik_baslik": "",
+      "kimlik_onek": "",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html",
+      "yerel": true,
+      "not": "vLLM SUNULAN model adını birebir arar; başka bir ad 404 verir.",
+      "modeller": [
+        {
+          "kimlik": "Qwen/Qwen2.5-7B-Instruct",
+          "etiket": "Örnek; --model ile ne yüklediyseniz o",
+          "baglam": 32768
+        }
+      ]
+    },
+    {
+      "kimlik": "sglang",
+      "ad": "SGLang",
+      "lehce": "openai_chat",
+      "adres": "http://localhost:30000/v1",
+      "yol": "/chat/completions",
+      "kimlik_baslik": "",
+      "kimlik_onek": "",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://docs.sglang.ai/basic_usage/openai_api.html",
+      "yerel": true,
+      "modeller": [
+        {
+          "kimlik": "default",
+          "etiket": "Sunucuya yüklenmiş model"
+        }
+      ]
+    },
+    {
+      "kimlik": "tgi",
+      "ad": "Hugging Face TGI",
+      "lehce": "openai_chat",
+      "adres": "http://localhost:8080/v1",
+      "yol": "/chat/completions",
+      "kimlik_baslik": "",
+      "kimlik_onek": "",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://huggingface.co/docs/text-generation-inference/messages_api",
+      "yerel": true,
+      "modeller": [
+        {
+          "kimlik": "tgi",
+          "etiket": "Sunucuya yüklenmiş model"
+        }
+      ]
+    },
+    {
+      "kimlik": "localai",
+      "ad": "LocalAI",
+      "lehce": "openai_chat",
+      "adres": "http://localhost:8080/v1",
+      "yol": "/chat/completions",
+      "kimlik_baslik": "",
+      "kimlik_onek": "",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://localai.io/features/openai-functions/",
+      "yerel": true,
+      "modeller": [
+        {
+          "kimlik": "gpt-4",
+          "etiket": "LocalAI takma adı"
+        }
+      ]
+    },
+    {
+      "kimlik": "jan",
+      "ad": "Jan",
+      "lehce": "openai_chat",
+      "adres": "http://localhost:1337/v1",
+      "yol": "/chat/completions",
+      "kimlik_baslik": "",
+      "kimlik_onek": "",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://jan.ai/docs/api-server",
+      "yerel": true,
+      "modeller": [
+        {
+          "kimlik": "local-model",
+          "etiket": "Yüklü model"
+        }
+      ]
+    },
+    {
+      "kimlik": "litellm",
+      "ad": "LiteLLM ağ geçidi",
+      "lehce": "openai_chat",
+      "adres": "http://localhost:4000/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "litellm",
+      "anahtar_ortam": "LITELLM_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://docs.litellm.ai/docs/simple_proxy",
+      "yerel": true,
+      "not": "Model adı geçidin kendi yapılandırmasındaki addır, sağlayıcının değil.",
+      "modeller": [
+        {
+          "kimlik": "gpt-4o",
+          "etiket": "Geçidin config.yaml'inde tanımlı ad"
+        }
+      ]
+    },
+    {
+      "kimlik": "openai_responses",
+      "ad": "OpenAI (Responses)",
+      "lehce": "openai_responses",
+      "adres": "https://api.openai.com/v1",
+      "yol": "/responses",
+      "anahtar_ref": "openai",
+      "anahtar_ortam": "OPENAI_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://platform.openai.com/docs/api-reference/responses",
+      "baslangic": true,
+      "modeller": [
+        {
+          "kimlik": "gpt-5",
+          "etiket": "GPT-5",
+          "baglam": 400000,
+          "azami_cikti": 128000,
+          "dusunur": true
+        },
+        {
+          "kimlik": "gpt-5-mini",
+          "etiket": "GPT-5 mini",
+          "baglam": 400000,
+          "azami_cikti": 128000,
+          "dusunur": true
+        },
+        {
+          "kimlik": "gpt-5-nano",
+          "etiket": "GPT-5 nano",
+          "baglam": 400000,
+          "azami_cikti": 128000,
+          "dusunur": true
+        },
+        {
+          "kimlik": "o4-mini",
+          "etiket": "o4-mini",
+          "baglam": 200000,
+          "azami_cikti": 100000,
+          "dusunur": true
+        },
+        {
+          "kimlik": "o3",
+          "etiket": "o3",
+          "baglam": 200000,
+          "azami_cikti": 100000,
+          "dusunur": true
+        },
+        {
+          "kimlik": "gpt-4.1",
+          "etiket": "GPT-4.1",
+          "baglam": 1047576,
+          "azami_cikti": 32768
+        },
+        {
+          "kimlik": "gpt-4.1-mini",
+          "etiket": "GPT-4.1 mini",
+          "baglam": 1047576,
+          "azami_cikti": 32768
+        },
+        {
+          "kimlik": "gpt-4o",
+          "etiket": "GPT-4o",
+          "baglam": 128000,
+          "azami_cikti": 16384
+        }
+      ]
+    },
+    {
+      "kimlik": "openai_chat",
+      "ad": "OpenAI (Sohbet)",
+      "lehce": "openai_chat",
+      "adres": "https://api.openai.com/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "openai",
+      "anahtar_ortam": "OPENAI_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://platform.openai.com/docs/api-reference/chat",
+      "modeller": [
+        {
+          "kimlik": "gpt-4.1",
+          "etiket": "GPT-4.1",
+          "baglam": 1047576,
+          "azami_cikti": 32768
+        },
+        {
+          "kimlik": "gpt-4.1-mini",
+          "etiket": "GPT-4.1 mini",
+          "baglam": 1047576,
+          "azami_cikti": 32768
+        },
+        {
+          "kimlik": "gpt-4o",
+          "etiket": "GPT-4o",
+          "baglam": 128000,
+          "azami_cikti": 16384
+        },
+        {
+          "kimlik": "gpt-4o-mini",
+          "etiket": "GPT-4o mini",
+          "baglam": 128000,
+          "azami_cikti": 16384
+        },
+        {
+          "kimlik": "gpt-5",
+          "etiket": "GPT-5",
+          "baglam": 400000,
+          "azami_cikti": 128000,
+          "dusunur": true
+        }
+      ]
+    },
+    {
+      "kimlik": "azure_openai",
+      "ad": "Azure OpenAI",
+      "lehce": "openai_chat",
+      "adres": "https://KAYNAK.openai.azure.com/openai/v1",
+      "yol": "/chat/completions",
+      "kimlik_baslik": "api-key",
+      "kimlik_onek": "",
+      "anahtar_ref": "azure_openai",
+      "anahtar_ortam": "AZURE_OPENAI_API_KEY",
+      "belge": "https://learn.microsoft.com/azure/ai-services/openai/reference",
+      "not": "KAYNAK yerine kendi kaynak adınızı yazın. Model adı, Azure'da açtığınız DAĞITIM adıdır.",
+      "modeller": [
+        {
+          "kimlik": "gpt-4.1",
+          "etiket": "Dağıtım adınız",
+          "baglam": 1047576,
+          "azami_cikti": 32768
+        },
+        {
+          "kimlik": "gpt-4o",
+          "etiket": "Dağıtım adınız",
+          "baglam": 128000,
+          "azami_cikti": 16384
+        }
+      ]
+    },
+    {
+      "kimlik": "anthropic",
+      "ad": "Anthropic",
+      "lehce": "anthropic_messages",
+      "adres": "https://api.anthropic.com/v1",
+      "yol": "/messages",
+      "kimlik_baslik": "x-api-key",
+      "kimlik_onek": "",
+      "ek_basliklar": [
+        {
+          "ad": "anthropic-version",
+          "deger": "2023-06-01"
+        }
+      ],
+      "anahtar_ref": "anthropic",
+      "anahtar_ortam": "ANTHROPIC_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "anthropic",
+      "belge": "https://docs.anthropic.com/en/api/messages",
+      "baslangic": true,
+      "not": "anthropic-version başlığı zorunludur; olmadan uç nokta 400 verir.",
+      "modeller": [
+        {
+          "kimlik": "claude-sonnet-4-5",
+          "etiket": "Claude Sonnet 4.5",
+          "baglam": 200000,
+          "azami_cikti": 64000,
+          "dusunur": true
+        },
+        {
+          "kimlik": "claude-opus-4-1",
+          "etiket": "Claude Opus 4.1",
+          "baglam": 200000,
+          "azami_cikti": 32000,
+          "dusunur": true
+        },
+        {
+          "kimlik": "claude-haiku-4-5",
+          "etiket": "Claude Haiku 4.5",
+          "baglam": 200000,
+          "azami_cikti": 64000,
+          "dusunur": true
+        },
+        {
+          "kimlik": "claude-sonnet-4-0",
+          "etiket": "Claude Sonnet 4",
+          "baglam": 200000,
+          "azami_cikti": 64000,
+          "dusunur": true
+        },
+        {
+          "kimlik": "claude-3-5-haiku-latest",
+          "etiket": "Claude 3.5 Haiku",
+          "baglam": 200000,
+          "azami_cikti": 8192
+        }
+      ]
+    },
+    {
+      "kimlik": "gemini",
+      "ad": "Google Gemini (OpenAI uyumlu)",
+      "lehce": "openai_chat",
+      "adres": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "yol": "/chat/completions",
+      "anahtar_ref": "gemini",
+      "anahtar_ortam": "GEMINI_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://ai.google.dev/gemini-api/docs/openai",
+      "baslangic": true,
+      "modeller": [
+        {
+          "kimlik": "gemini-2.5-pro",
+          "etiket": "Gemini 2.5 Pro",
+          "baglam": 1048576,
+          "azami_cikti": 65536,
+          "dusunur": true
+        },
+        {
+          "kimlik": "gemini-2.5-flash",
+          "etiket": "Gemini 2.5 Flash",
+          "baglam": 1048576,
+          "azami_cikti": 65536,
+          "dusunur": true
+        },
+        {
+          "kimlik": "gemini-2.5-flash-lite",
+          "etiket": "Gemini 2.5 Flash-Lite",
+          "baglam": 1048576,
+          "azami_cikti": 65536
+        },
+        {
+          "kimlik": "gemini-2.0-flash",
+          "etiket": "Gemini 2.0 Flash",
+          "baglam": 1048576,
+          "azami_cikti": 8192
+        }
+      ]
+    },
+    {
+      "kimlik": "deepseek",
+      "ad": "DeepSeek",
+      "lehce": "openai_chat",
+      "adres": "https://api.deepseek.com",
+      "yol": "/chat/completions",
+      "anahtar_ref": "deepseek",
+      "anahtar_ortam": "DEEPSEEK_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://api-docs.deepseek.com/",
+      "baslangic": true,
+      "not": "https://api.deepseek.com/v1 de aynı uca gider; /v1 sürüm değil uyumluluk ekidir. deepseek-reasoner düşünmesini delta.reasoning_content ile akıtır.",
+      "modeller": [
+        {
+          "kimlik": "deepseek-chat",
+          "etiket": "DeepSeek-V3",
+          "baglam": 131072,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "deepseek-reasoner",
+          "etiket": "DeepSeek-R1",
+          "baglam": 131072,
+          "azami_cikti": 65536,
+          "dusunur": true
+        }
+      ]
+    },
+    {
+      "kimlik": "dashscope",
+      "ad": "Qwen (DashScope)",
+      "lehce": "openai_chat",
+      "adres": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "dashscope",
+      "anahtar_ortam": "DASHSCOPE_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://www.alibabacloud.com/help/en/model-studio/compatibility-of-openai-with-dashscope",
+      "not": "Çin anakarası için adres: https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "modeller": [
+        {
+          "kimlik": "qwen-max",
+          "etiket": "Qwen-Max",
+          "baglam": 32768,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "qwen-plus",
+          "etiket": "Qwen-Plus",
+          "baglam": 131072,
+          "azami_cikti": 8192,
+          "dusunur": true
+        },
+        {
+          "kimlik": "qwen-turbo",
+          "etiket": "Qwen-Turbo",
+          "baglam": 1000000,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "qwen3-235b-a22b",
+          "etiket": "Qwen3 235B",
+          "baglam": 131072,
+          "azami_cikti": 16384,
+          "dusunur": true
+        },
+        {
+          "kimlik": "qwq-plus",
+          "etiket": "QwQ-Plus",
+          "baglam": 131072,
+          "azami_cikti": 8192,
+          "dusunur": true
+        }
+      ]
+    },
+    {
+      "kimlik": "moonshot",
+      "ad": "Moonshot (Kimi)",
+      "lehce": "openai_chat",
+      "adres": "https://api.moonshot.ai/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "moonshot",
+      "anahtar_ortam": "MOONSHOT_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://platform.moonshot.ai/docs/api/chat",
+      "not": "Çin anakarası için adres: https://api.moonshot.cn/v1",
+      "modeller": [
+        {
+          "kimlik": "kimi-k2-0905-preview",
+          "etiket": "Kimi K2",
+          "baglam": 262144,
+          "azami_cikti": 16384
+        },
+        {
+          "kimlik": "moonshot-v1-128k",
+          "etiket": "Moonshot v1 128k",
+          "baglam": 131072,
+          "azami_cikti": 4096
+        },
+        {
+          "kimlik": "moonshot-v1-32k",
+          "etiket": "Moonshot v1 32k",
+          "baglam": 32768,
+          "azami_cikti": 4096
+        }
+      ]
+    },
+    {
+      "kimlik": "zhipu",
+      "ad": "Z.ai (GLM)",
+      "lehce": "openai_chat",
+      "adres": "https://api.z.ai/api/paas/v4",
+      "yol": "/chat/completions",
+      "anahtar_ref": "zhipu",
+      "anahtar_ortam": "ZHIPUAI_API_KEY",
+      "model_listesi_bicimi": "yok",
+      "belge": "https://docs.z.ai/api-reference/llm/chat-completion",
+      "not": "Çin anakarası için adres: https://open.bigmodel.cn/api/paas/v4",
+      "modeller": [
+        {
+          "kimlik": "glm-4.6",
+          "etiket": "GLM-4.6",
+          "baglam": 204800,
+          "azami_cikti": 131072,
+          "dusunur": true
+        },
+        {
+          "kimlik": "glm-4.5",
+          "etiket": "GLM-4.5",
+          "baglam": 131072,
+          "azami_cikti": 98304,
+          "dusunur": true
+        },
+        {
+          "kimlik": "glm-4.5-air",
+          "etiket": "GLM-4.5-Air",
+          "baglam": 131072,
+          "azami_cikti": 98304,
+          "dusunur": true
+        },
+        {
+          "kimlik": "glm-4-flash",
+          "etiket": "GLM-4-Flash",
+          "baglam": 131072,
+          "azami_cikti": 4096
+        }
+      ]
+    },
+    {
+      "kimlik": "minimax",
+      "ad": "MiniMax",
+      "lehce": "openai_chat",
+      "adres": "https://api.minimax.io/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "minimax",
+      "anahtar_ortam": "MINIMAX_API_KEY",
+      "model_listesi_bicimi": "yok",
+      "belge": "https://platform.minimax.io/docs/api-reference/text-chatcompletion-v2",
+      "not": "Çin anakarası için adres: https://api.minimaxi.com/v1",
+      "modeller": [
+        {
+          "kimlik": "MiniMax-M2",
+          "etiket": "MiniMax-M2",
+          "baglam": 204800,
+          "azami_cikti": 131072,
+          "dusunur": true
+        },
+        {
+          "kimlik": "MiniMax-Text-01",
+          "etiket": "MiniMax-Text-01",
+          "baglam": 1000192,
+          "azami_cikti": 8192
+        }
+      ]
+    },
+    {
+      "kimlik": "doubao",
+      "ad": "Volcengine Ark (Doubao)",
+      "lehce": "openai_chat",
+      "adres": "https://ark.cn-beijing.volces.com/api/v3",
+      "yol": "/chat/completions",
+      "anahtar_ref": "ark",
+      "anahtar_ortam": "ARK_API_KEY",
+      "model_listesi_bicimi": "yok",
+      "belge": "https://www.volcengine.com/docs/82379",
+      "not": "Model adı yerine Ark'ta açtığınız çıkarım uç noktası kimliği (ep-...) de yazılabilir.",
+      "modeller": [
+        {
+          "kimlik": "doubao-seed-1-6-250615",
+          "etiket": "Doubao Seed 1.6",
+          "baglam": 262144,
+          "azami_cikti": 32768,
+          "dusunur": true
+        },
+        {
+          "kimlik": "doubao-1-5-pro-32k-250115",
+          "etiket": "Doubao 1.5 Pro 32k",
+          "baglam": 32768,
+          "azami_cikti": 12288
+        }
+      ]
+    },
+    {
+      "kimlik": "stepfun",
+      "ad": "StepFun",
+      "lehce": "openai_chat",
+      "adres": "https://api.stepfun.com/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "stepfun",
+      "anahtar_ortam": "STEPFUN_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://platform.stepfun.com/docs/api-reference/chat",
+      "modeller": [
+        {
+          "kimlik": "step-2-16k",
+          "etiket": "Step-2 16k",
+          "baglam": 16384,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "step-1-8k",
+          "etiket": "Step-1 8k",
+          "baglam": 8192,
+          "azami_cikti": 4096
+        }
+      ]
+    },
+    {
+      "kimlik": "mistral",
+      "ad": "Mistral AI",
+      "lehce": "openai_chat",
+      "adres": "https://api.mistral.ai/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "mistral",
+      "anahtar_ortam": "MISTRAL_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://docs.mistral.ai/api/",
+      "baslangic": true,
+      "modeller": [
+        {
+          "kimlik": "mistral-large-latest",
+          "etiket": "Mistral Large",
+          "baglam": 131072,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "mistral-medium-latest",
+          "etiket": "Mistral Medium 3",
+          "baglam": 131072,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "mistral-small-latest",
+          "etiket": "Mistral Small 3",
+          "baglam": 131072,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "magistral-medium-latest",
+          "etiket": "Magistral Medium",
+          "baglam": 40960,
+          "azami_cikti": 8192,
+          "dusunur": true
+        },
+        {
+          "kimlik": "codestral-latest",
+          "etiket": "Codestral",
+          "baglam": 262144,
+          "azami_cikti": 8192
+        }
+      ]
+    },
+    {
+      "kimlik": "cohere",
+      "ad": "Cohere",
+      "lehce": "openai_chat",
+      "adres": "https://api.cohere.ai/compatibility/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "cohere",
+      "anahtar_ortam": "CO_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://docs.cohere.com/docs/compatibility-api",
+      "not": "Cohere'in kendi v2 uç noktası ayrı bir biçimdedir; burada OpenAI uyumluluk katmanı kullanılır.",
+      "modeller": [
+        {
+          "kimlik": "command-a-03-2025",
+          "etiket": "Command A",
+          "baglam": 262144,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "command-r-plus",
+          "etiket": "Command R+",
+          "baglam": 131072,
+          "azami_cikti": 4096
+        },
+        {
+          "kimlik": "command-r7b-12-2024",
+          "etiket": "Command R7B",
+          "baglam": 131072,
+          "azami_cikti": 4096
+        }
+      ]
+    },
+    {
+      "kimlik": "ai21",
+      "ad": "AI21",
+      "lehce": "openai_chat",
+      "adres": "https://api.ai21.com/studio/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "ai21",
+      "anahtar_ortam": "AI21_API_KEY",
+      "model_listesi_bicimi": "yok",
+      "belge": "https://docs.ai21.com/reference/jamba-chat-api-ref",
+      "modeller": [
+        {
+          "kimlik": "jamba-large-1.7",
+          "etiket": "Jamba Large 1.7",
+          "baglam": 262144,
+          "azami_cikti": 4096
+        },
+        {
+          "kimlik": "jamba-mini-1.7",
+          "etiket": "Jamba Mini 1.7",
+          "baglam": 262144,
+          "azami_cikti": 4096
+        }
+      ]
+    },
+    {
+      "kimlik": "xai",
+      "ad": "xAI (Grok)",
+      "lehce": "openai_chat",
+      "adres": "https://api.x.ai/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "xai",
+      "anahtar_ortam": "XAI_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://docs.x.ai/docs/api-reference",
+      "modeller": [
+        {
+          "kimlik": "grok-4",
+          "etiket": "Grok 4",
+          "baglam": 256000,
+          "dusunur": true
+        },
+        {
+          "kimlik": "grok-4-fast-reasoning",
+          "etiket": "Grok 4 Fast",
+          "baglam": 2000000,
+          "dusunur": true
+        },
+        {
+          "kimlik": "grok-3",
+          "etiket": "Grok 3",
+          "baglam": 131072
+        },
+        {
+          "kimlik": "grok-3-mini",
+          "etiket": "Grok 3 mini",
+          "baglam": 131072,
+          "dusunur": true
+        },
+        {
+          "kimlik": "grok-code-fast-1",
+          "etiket": "Grok Code Fast",
+          "baglam": 256000,
+          "dusunur": true
+        }
+      ]
+    },
+    {
+      "kimlik": "groq",
+      "ad": "Groq",
+      "lehce": "openai_chat",
+      "adres": "https://api.groq.com/openai/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "groq",
+      "anahtar_ortam": "GROQ_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://console.groq.com/docs/api-reference",
+      "baslangic": true,
+      "modeller": [
+        {
+          "kimlik": "llama-3.3-70b-versatile",
+          "etiket": "Llama 3.3 70B",
+          "baglam": 131072,
+          "azami_cikti": 32768
+        },
+        {
+          "kimlik": "openai/gpt-oss-120b",
+          "etiket": "GPT-OSS 120B",
+          "baglam": 131072,
+          "azami_cikti": 65536,
+          "dusunur": true
+        },
+        {
+          "kimlik": "openai/gpt-oss-20b",
+          "etiket": "GPT-OSS 20B",
+          "baglam": 131072,
+          "azami_cikti": 65536,
+          "dusunur": true
+        },
+        {
+          "kimlik": "moonshotai/kimi-k2-instruct-0905",
+          "etiket": "Kimi K2",
+          "baglam": 262144,
+          "azami_cikti": 16384
+        },
+        {
+          "kimlik": "qwen/qwen3-32b",
+          "etiket": "Qwen3 32B",
+          "baglam": 131072,
+          "azami_cikti": 40960,
+          "dusunur": true
+        },
+        {
+          "kimlik": "llama-3.1-8b-instant",
+          "etiket": "Llama 3.1 8B",
+          "baglam": 131072,
+          "azami_cikti": 131072
+        }
+      ]
+    },
+    {
+      "kimlik": "cerebras",
+      "ad": "Cerebras",
+      "lehce": "openai_chat",
+      "adres": "https://api.cerebras.ai/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "cerebras",
+      "anahtar_ortam": "CEREBRAS_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://inference-docs.cerebras.ai/api-reference/chat-completions",
+      "modeller": [
+        {
+          "kimlik": "llama-3.3-70b",
+          "etiket": "Llama 3.3 70B",
+          "baglam": 65536
+        },
+        {
+          "kimlik": "qwen-3-235b-a22b-instruct-2507",
+          "etiket": "Qwen3 235B",
+          "baglam": 131072
+        },
+        {
+          "kimlik": "gpt-oss-120b",
+          "etiket": "GPT-OSS 120B",
+          "baglam": 131072,
+          "dusunur": true
+        },
+        {
+          "kimlik": "llama3.1-8b",
+          "etiket": "Llama 3.1 8B",
+          "baglam": 32768
+        }
+      ]
+    },
+    {
+      "kimlik": "sambanova",
+      "ad": "SambaNova",
+      "lehce": "openai_chat",
+      "adres": "https://api.sambanova.ai/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "sambanova",
+      "anahtar_ortam": "SAMBANOVA_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://docs.sambanova.ai/cloud/api-reference/",
+      "modeller": [
+        {
+          "kimlik": "Meta-Llama-3.3-70B-Instruct",
+          "etiket": "Llama 3.3 70B",
+          "baglam": 131072,
+          "azami_cikti": 4096
+        },
+        {
+          "kimlik": "DeepSeek-R1-Distill-Llama-70B",
+          "etiket": "DeepSeek-R1 damıtık",
+          "baglam": 131072,
+          "azami_cikti": 4096,
+          "dusunur": true
+        },
+        {
+          "kimlik": "Qwen3-32B",
+          "etiket": "Qwen3 32B",
+          "baglam": 8192,
+          "azami_cikti": 4096,
+          "dusunur": true
+        }
+      ]
+    },
+    {
+      "kimlik": "openrouter",
+      "ad": "OpenRouter",
+      "lehce": "openai_chat",
+      "adres": "https://openrouter.ai/api/v1",
+      "yol": "/chat/completions",
+      "ek_basliklar": [
+        {
+          "ad": "X-Title",
+          "deger": "KentOSCad"
+        }
+      ],
+      "anahtar_ref": "openrouter",
+      "anahtar_ortam": "OPENROUTER_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://openrouter.ai/docs/api-reference/overview",
+      "baslangic": true,
+      "modeller": [
+        {
+          "kimlik": "openai/gpt-5",
+          "etiket": "GPT-5",
+          "baglam": 400000,
+          "azami_cikti": 128000,
+          "dusunur": true
+        },
+        {
+          "kimlik": "anthropic/claude-sonnet-4.5",
+          "etiket": "Claude Sonnet 4.5",
+          "baglam": 200000,
+          "azami_cikti": 64000,
+          "dusunur": true
+        },
+        {
+          "kimlik": "google/gemini-2.5-pro",
+          "etiket": "Gemini 2.5 Pro",
+          "baglam": 1048576,
+          "azami_cikti": 65536,
+          "dusunur": true
+        },
+        {
+          "kimlik": "deepseek/deepseek-chat-v3.1",
+          "etiket": "DeepSeek V3.1",
+          "baglam": 131072,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "meta-llama/llama-3.3-70b-instruct",
+          "etiket": "Llama 3.3 70B",
+          "baglam": 131072,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "qwen/qwen3-235b-a22b",
+          "etiket": "Qwen3 235B",
+          "baglam": 131072,
+          "azami_cikti": 16384,
+          "dusunur": true
+        }
+      ]
+    },
+    {
+      "kimlik": "together",
+      "ad": "Together AI",
+      "lehce": "openai_chat",
+      "adres": "https://api.together.xyz/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "together",
+      "anahtar_ortam": "TOGETHER_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://docs.together.ai/reference/chat-completions-1",
+      "modeller": [
+        {
+          "kimlik": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+          "etiket": "Llama 3.3 70B",
+          "baglam": 131072,
+          "azami_cikti": 4096
+        },
+        {
+          "kimlik": "deepseek-ai/DeepSeek-V3",
+          "etiket": "DeepSeek V3",
+          "baglam": 131072,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "Qwen/Qwen2.5-72B-Instruct-Turbo",
+          "etiket": "Qwen2.5 72B",
+          "baglam": 32768,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+          "etiket": "Mixtral 8x7B",
+          "baglam": 32768,
+          "azami_cikti": 8192
+        }
+      ]
+    },
+    {
+      "kimlik": "fireworks",
+      "ad": "Fireworks AI",
+      "lehce": "openai_chat",
+      "adres": "https://api.fireworks.ai/inference/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "fireworks",
+      "anahtar_ortam": "FIREWORKS_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://docs.fireworks.ai/api-reference/post-chatcompletions",
+      "modeller": [
+        {
+          "kimlik": "accounts/fireworks/models/llama-v3p3-70b-instruct",
+          "etiket": "Llama 3.3 70B",
+          "baglam": 131072,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "accounts/fireworks/models/deepseek-v3",
+          "etiket": "DeepSeek V3",
+          "baglam": 131072,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "accounts/fireworks/models/qwen3-235b-a22b",
+          "etiket": "Qwen3 235B",
+          "baglam": 131072,
+          "azami_cikti": 16384,
+          "dusunur": true
+        }
+      ]
+    },
+    {
+      "kimlik": "deepinfra",
+      "ad": "DeepInfra",
+      "lehce": "openai_chat",
+      "adres": "https://api.deepinfra.com/v1/openai",
+      "yol": "/chat/completions",
+      "anahtar_ref": "deepinfra",
+      "anahtar_ortam": "DEEPINFRA_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://deepinfra.com/docs/openai_api",
+      "modeller": [
+        {
+          "kimlik": "meta-llama/Llama-3.3-70B-Instruct",
+          "etiket": "Llama 3.3 70B",
+          "baglam": 131072,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "deepseek-ai/DeepSeek-R1",
+          "etiket": "DeepSeek R1",
+          "baglam": 65536,
+          "azami_cikti": 8192,
+          "dusunur": true
+        },
+        {
+          "kimlik": "Qwen/Qwen2.5-72B-Instruct",
+          "etiket": "Qwen2.5 72B",
+          "baglam": 32768,
+          "azami_cikti": 8192
+        }
+      ]
+    },
+    {
+      "kimlik": "nebius",
+      "ad": "Nebius AI Studio",
+      "lehce": "openai_chat",
+      "adres": "https://api.studio.nebius.com/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "nebius",
+      "anahtar_ortam": "NEBIUS_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://docs.nebius.com/studio/inference/api",
+      "modeller": [
+        {
+          "kimlik": "meta-llama/Llama-3.3-70B-Instruct",
+          "etiket": "Llama 3.3 70B",
+          "baglam": 131072,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "deepseek-ai/DeepSeek-R1",
+          "etiket": "DeepSeek R1",
+          "baglam": 131072,
+          "azami_cikti": 8192,
+          "dusunur": true
+        },
+        {
+          "kimlik": "Qwen/Qwen3-235B-A22B",
+          "etiket": "Qwen3 235B",
+          "baglam": 131072,
+          "azami_cikti": 16384,
+          "dusunur": true
+        }
+      ]
+    },
+    {
+      "kimlik": "novita",
+      "ad": "Novita AI",
+      "lehce": "openai_chat",
+      "adres": "https://api.novita.ai/v3/openai",
+      "yol": "/chat/completions",
+      "anahtar_ref": "novita",
+      "anahtar_ortam": "NOVITA_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://novita.ai/docs/api-reference/model-apis-llm-chat-completions-api",
+      "modeller": [
+        {
+          "kimlik": "meta-llama/llama-3.3-70b-instruct",
+          "etiket": "Llama 3.3 70B",
+          "baglam": 131072,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "deepseek/deepseek-r1",
+          "etiket": "DeepSeek R1",
+          "baglam": 65536,
+          "azami_cikti": 8192,
+          "dusunur": true
+        }
+      ]
+    },
+    {
+      "kimlik": "hyperbolic",
+      "ad": "Hyperbolic",
+      "lehce": "openai_chat",
+      "adres": "https://api.hyperbolic.xyz/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "hyperbolic",
+      "anahtar_ortam": "HYPERBOLIC_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://docs.hyperbolic.xyz/docs/rest-api",
+      "modeller": [
+        {
+          "kimlik": "meta-llama/Llama-3.3-70B-Instruct",
+          "etiket": "Llama 3.3 70B",
+          "baglam": 131072,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "deepseek-ai/DeepSeek-V3",
+          "etiket": "DeepSeek V3",
+          "baglam": 131072,
+          "azami_cikti": 8192
+        }
+      ]
+    },
+    {
+      "kimlik": "perplexity",
+      "ad": "Perplexity",
+      "lehce": "openai_chat",
+      "adres": "https://api.perplexity.ai",
+      "yol": "/chat/completions",
+      "anahtar_ref": "perplexity",
+      "anahtar_ortam": "PERPLEXITY_API_KEY",
+      "model_listesi_bicimi": "yok",
+      "belge": "https://docs.perplexity.ai/api-reference/chat-completions-post",
+      "not": "Cevaplar web araması içerir; kadastro verisi için dış arama istemiyorsanız uygun değildir.",
+      "modeller": [
+        {
+          "kimlik": "sonar",
+          "etiket": "Sonar",
+          "baglam": 128000
+        },
+        {
+          "kimlik": "sonar-pro",
+          "etiket": "Sonar Pro",
+          "baglam": 200000
+        },
+        {
+          "kimlik": "sonar-reasoning-pro",
+          "etiket": "Sonar Reasoning Pro",
+          "baglam": 128000,
+          "dusunur": true
+        }
+      ]
+    },
+    {
+      "kimlik": "nvidia",
+      "ad": "NVIDIA NIM",
+      "lehce": "openai_chat",
+      "adres": "https://integrate.api.nvidia.com/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "nvidia",
+      "anahtar_ortam": "NVIDIA_API_KEY",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://docs.api.nvidia.com/nim/reference/llm-apis",
+      "modeller": [
+        {
+          "kimlik": "meta/llama-3.3-70b-instruct",
+          "etiket": "Llama 3.3 70B",
+          "baglam": 131072,
+          "azami_cikti": 4096
+        },
+        {
+          "kimlik": "deepseek-ai/deepseek-r1",
+          "etiket": "DeepSeek R1",
+          "baglam": 131072,
+          "azami_cikti": 8192,
+          "dusunur": true
+        },
+        {
+          "kimlik": "qwen/qwen3-235b-a22b",
+          "etiket": "Qwen3 235B",
+          "baglam": 131072,
+          "azami_cikti": 16384,
+          "dusunur": true
+        }
+      ]
+    },
+    {
+      "kimlik": "github_models",
+      "ad": "GitHub Models",
+      "lehce": "openai_chat",
+      "adres": "https://models.github.ai/inference",
+      "yol": "/chat/completions",
+      "anahtar_ref": "github",
+      "anahtar_ortam": "GITHUB_TOKEN",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://docs.github.com/en/github-models",
+      "modeller": [
+        {
+          "kimlik": "openai/gpt-4.1",
+          "etiket": "GPT-4.1",
+          "baglam": 1047576,
+          "azami_cikti": 32768
+        },
+        {
+          "kimlik": "openai/gpt-4o",
+          "etiket": "GPT-4o",
+          "baglam": 128000,
+          "azami_cikti": 16384
+        },
+        {
+          "kimlik": "meta/Llama-3.3-70B-Instruct",
+          "etiket": "Llama 3.3 70B",
+          "baglam": 131072,
+          "azami_cikti": 4096
+        }
+      ]
+    },
+    {
+      "kimlik": "cloudflare",
+      "ad": "Cloudflare Workers AI",
+      "lehce": "openai_chat",
+      "adres": "https://api.cloudflare.com/client/v4/accounts/HESAP/ai/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "cloudflare",
+      "anahtar_ortam": "CLOUDFLARE_API_TOKEN",
+      "model_listesi_bicimi": "yok",
+      "belge": "https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/",
+      "not": "HESAP yerine Cloudflare hesap kimliğinizi yazın.",
+      "modeller": [
+        {
+          "kimlik": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+          "etiket": "Llama 3.3 70B",
+          "baglam": 24000,
+          "azami_cikti": 4096
+        },
+        {
+          "kimlik": "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
+          "etiket": "DeepSeek-R1 damıtık",
+          "baglam": 80000,
+          "azami_cikti": 4096,
+          "dusunur": true
+        }
+      ]
+    },
+    {
+      "kimlik": "hf_router",
+      "ad": "Hugging Face Inference",
+      "lehce": "openai_chat",
+      "adres": "https://router.huggingface.co/v1",
+      "yol": "/chat/completions",
+      "anahtar_ref": "huggingface",
+      "anahtar_ortam": "HF_TOKEN",
+      "model_listesi_yolu": "/models",
+      "model_listesi_bicimi": "openai",
+      "belge": "https://huggingface.co/docs/inference-providers/index",
+      "modeller": [
+        {
+          "kimlik": "meta-llama/Llama-3.3-70B-Instruct",
+          "etiket": "Llama 3.3 70B",
+          "baglam": 131072,
+          "azami_cikti": 8192
+        },
+        {
+          "kimlik": "deepseek-ai/DeepSeek-R1",
+          "etiket": "DeepSeek R1",
+          "baglam": 65536,
+          "azami_cikti": 8192,
+          "dusunur": true
+        }
+      ]
+    }
+  ]
+}

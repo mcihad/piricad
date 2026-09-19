@@ -56,8 +56,12 @@ done < <(grep -rnE '\b(TODO|TBD|XXX|FIXME|Lorem ipsum)\b' "$docs" --include='*.m
 ids=()
 while IFS= read -r line; do ids+=("$line"); done \
     < <(grep -rhoE '\.id[[:space:]]*=[[:space:]]*"[a-z0-9_.]+"' \
-            "$root/src/command/src/commands" | grep -oE '"[^"]+"' | tr -d '"' | sort -u)
+            "$root/src/command/src/commands" "$root/src/ai/src/commands" \
+            | grep -oE '"[^"]+"' | tr -d '"' | sort -u)
 
+# THE AI LAYER'S COMMANDS COUNT TOO. Article 11.4 puts a page on every command in
+# `Registry`, not on every command that happens to live under /src/command, and
+# the read tools an agent uses are exactly the ones a user most needs explained.
 if [[ ${#ids[@]} -eq 0 ]]; then
     echo "docs: no command ids found under src/command/src/commands — gate cannot verify coverage" >&2
     fail=1
@@ -111,8 +115,10 @@ else
     if [[ -n "$docgen" ]]; then
         tmp="$(mktemp)"
         tmp_kinds="$(mktemp)"
-        trap 'rm -f "$tmp" "$tmp_kinds"' EXIT
-        if "$docgen" "$tmp" "$tmp_kinds" >/dev/null 2>&1; then
+        tmp_llms="$(mktemp)"
+        tmp_llms_full="$(mktemp)"
+        trap 'rm -f "$tmp" "$tmp_kinds" "$tmp_llms" "$tmp_llms_full"' EXIT
+        if "$docgen" "$tmp" "$tmp_kinds" "$tmp_llms" "$tmp_llms_full" >/dev/null 2>&1; then
             if ! diff -q "$reference" "$tmp" >/dev/null; then
                 echo "docs: docs/komutlar/referans.md is stale or hand-edited -> docs/komutlar/referans.md:1  (run: make reference)" >&2
                 fail=1
@@ -133,9 +139,40 @@ else
                     fail=1
                 }
             done < <(grep -oE '\]\([a-z0-9_-]+\.md\)' "$tmp_kinds" | sed -E 's/^\]\((.*)\.md\)$/\1/')
+
+            # THE TWO DOCUMENTS AN AGENT READS, held to the same standard as the
+            # reference (CLAUDE.md 5.20, 6.14): generated, never hand-edited, and
+            # regenerated in the same commit as any registry change. The
+            # fingerprint inside llms.txt moves when the smallest declared field
+            # of any command moves, so this diff IS the rule the maintainer asked
+            # for rather than a promise about it.
+            for pair in "llms.txt:$tmp_llms" "llms-full.txt:$tmp_llms_full"; do
+                name="${pair%%:*}"
+                fresh="${pair#*:}"
+                have="$docs/$name"
+                if [[ ! -f "$have" ]]; then
+                    echo "docs: generated $name missing -> docs/$name:1  (run: make reference)" >&2
+                    fail=1
+                elif ! head -n1 "$have" | grep -q 'ÜRETİLMİŞ DOSYA'; then
+                    echo "docs: $name lost its do-not-edit header -> docs/$name:1" >&2
+                    fail=1
+                elif ! diff -q "$have" "$fresh" >/dev/null; then
+                    echo "docs: docs/$name is stale or hand-edited -> docs/$name:1  (run: make reference)" >&2
+                    fail=1
+                fi
+            done
         fi
     else
-        echo "docs: note — kentos_docgen is not built, so referans.md freshness was not verified"
+        # A MISSING GENERATOR IS NOW A FAILURE, not a note. This branch used to
+        # print a line and carry on, so on a cold tree — every CI runner, every
+        # fresh clone — the freshness of four generated artefacts was never
+        # checked at all and the gate reported OK. A gate that cannot measure
+        # must say so loudly; `make check` builds before it runs the gates, so
+        # the only way to reach this is to run the gate on a tree with no build.
+        echo "docs: kentos_docgen is not built, so the four generated artefacts could not be" >&2
+        echo "docs:   verified. Build it first (make build) — a freshness check that silently" >&2
+        echo "docs:   skips is a freshness check that has never run." >&2
+        fail=1
     fi
     # Every command in the reference must resolve to a page.
     while IFS= read -r slug; do

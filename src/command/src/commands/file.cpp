@@ -305,11 +305,11 @@ KENTOS_COMMAND(saveas)
         .id       = "core.saveas",
         .names    = {"FARKLIKAYDET", "SAVEAS", "FKAYDET"},
         .category = Category::File,
-        .params   = {Param::text("dosya", Arity::exactly(1), "Yeni proje dosyasının yolu (.pcad)")},
-        .undo     = UndoPolicy::None,
-        .flags    = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
-        .summary  = "Çizimi yeni bir KentOSCad proje dosyasına kaydeder ve ona bağlar.",
-        .run      = &run_save_as,
+        .params = {Param::text("dosya", Arity::exactly(1), "Yeni proje dosyasının yolu (.pcad)")},
+        .undo   = UndoPolicy::None,
+        .flags  = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
+        .summary = "Çizimi yeni bir KentOSCad proje dosyasına kaydeder ve ona bağlar.",
+        .run     = &run_save_as,
     };
 }
 

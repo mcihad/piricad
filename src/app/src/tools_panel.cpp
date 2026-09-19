@@ -16,6 +16,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPainter>
+#include <QPointer>
 #include <QRegularExpression>
 #include <QScrollArea>
 #include <QTreeWidget>
@@ -66,6 +67,12 @@ QString value_text(const command::Value& v)
         const core::Point2 p = v.as_point();
         return metres(p.x) + QLatin1Char(',') + metres(p.y);
     }
+    case Value::Kind::IdList: {
+        QStringList ids;
+        for (const std::int64_t id : v.as_ids())
+            ids << QString::number(id);
+        return ids.join(QLatin1Char(' '));
+    }
     default: return QString();
     }
 }
@@ -110,12 +117,13 @@ FieldSpec field_for(const processing::ToolParam& p)
             spec = field_of(FieldKind::Text);
         }
         break;
+    // FROM THE SCENE. A coordinate and an object are the two things a form
+    // asks for that the drawing can answer better than the keyboard: the field
+    // carries a pick button, and a click on the canvas fills it (fields.hpp).
+    case ParamKind::Point: spec = field_of(FieldKind::Point); break;
+    case ParamKind::Selection: spec = field_of(FieldKind::Object); break;
     default: spec = field_of(FieldKind::Text); break;
     }
-    // The placeholder says what the box WANTS, never what it holds: a default
-    // is put in as the value, so it reads as a value, and the help line under
-    // the row already says what the box is for.
-    if (p.kind == ParamKind::Point) spec.placeholder = QStringLiteral("x,y");
     return spec;
 }
 
@@ -207,6 +215,11 @@ void ToolCard::setViewportProvider(std::function<core::Box2()> provider)
     viewport_ = std::move(provider);
 }
 
+void ToolCard::setScenePicker(ScenePicker picker)
+{
+    picker_ = std::move(picker);
+}
+
 void ToolCard::setRunButtonVisible(bool on)
 {
     run_->setVisible(on);
@@ -274,6 +287,27 @@ void ToolCard::setTool(const processing::ProcessingTool* tool)
             if (const command::Value* v = last->find(param.name); v != nullptr && !v->empty())
                 field->setValue(value_text(*v));
         connect(field, &Field::committed, this, [this](const QString&) { rebuildPreview(); });
+        // A PICK FROM THE SCENE. The field asks; the card hands the question to
+        // whoever wired it to a canvas and puts the answer back in the box. A
+        // second press while picking is "never mind": the shell is told to stop
+        // by being asked again with the field already picking, and answers with
+        // nothing.
+        connect(field, &Field::pickRequested, this,
+                [this, guard = QPointer<Field>(field)](FieldKind kind) {
+                    if (!guard || !picker_) return;
+                    if (guard->picking()) {
+                        guard->setPicking(false);
+                        return;
+                    }
+                    guard->setPicking(true);
+                    picker_(kind, [this, guard](std::optional<QString> answer) {
+                        if (!guard) return;
+                        guard->setPicking(false);
+                        if (!answer) return;
+                        guard->setValue(*answer);
+                        rebuildPreview();
+                    });
+                });
         auto* row = new FormRow(utf8(param.name), field, params_);
         row->setHelp(utf8(param.help));
         paramsLayout_->addWidget(row);
@@ -370,7 +404,7 @@ void ToolCard::applyTheme(ThemeMode mode)
 // =============================================================================
 
 ToolDialog::ToolDialog(Controller& controller, const processing::ProcessingTool* tool,
-                       std::function<core::Box2()> viewport, QWidget* parent)
+                       std::function<core::Box2()> viewport, ScenePicker picker, QWidget* parent)
     : DialogFrame(parent)
 {
     setObjectName(QStringLiteral("toolDialog"));
@@ -387,6 +421,7 @@ ToolDialog::ToolDialog(Controller& controller, const processing::ProcessingTool*
     scroll->viewport()->setAutoFillBackground(false);
     card_ = new ToolCard(controller, scroll);
     card_->setViewportProvider(std::move(viewport));
+    card_->setScenePicker(std::move(picker));
     card_->setRunButtonVisible(false);
     card_->setTool(tool);
     scroll->setWidget(card_);
@@ -487,6 +522,13 @@ void ToolsPanel::setViewportProvider(std::function<core::Box2()> provider)
     if (dialog_) dialog_->card()->setViewportProvider(viewport_);
 }
 
+void ToolsPanel::setScenePicker(ScenePicker picker)
+{
+    picker_ = std::move(picker);
+    card_->setScenePicker(picker_);
+    if (dialog_) dialog_->card()->setScenePicker(picker_);
+}
+
 bool ToolsPanel::opensInWindow() const
 {
     return controller_.bus().app_settings().get("core.islem.pencere").as_bool();
@@ -534,7 +576,7 @@ void ToolsPanel::showTool(const processing::ProcessingTool* tool)
     // IN A WINDOW, when the preference says so: one window, re-pointed at the
     // tool clicked, never a stack of them.
     if (!dialog_) {
-        dialog_ = new ToolDialog(controller_, tool, viewport_, window());
+        dialog_ = new ToolDialog(controller_, tool, viewport_, picker_, window());
         connect(dialog_, &ToolDialog::runRequested, this, &ToolsPanel::runRequested);
         dialog_->applyTheme(theme_);
     } else {

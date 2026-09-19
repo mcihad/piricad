@@ -85,7 +85,7 @@ struct VectorReport
     /// Every layer NAME the file holds, in the order it holds them, with how many
     /// entities each produced. Filled whether or not `only` filtered anything, so
     /// one read answers both "what is in here" and "what did I just get".
-    std::vector<std::pair<std::string, std::uint64_t>> layer_names;
+    std::vector<std::pair<std::string, std::size_t>> layer_names;
     std::uint64_t features{0}; ///< features read or written
     std::uint64_t entities{0}; ///< entities created in the document
     std::uint64_t layers{0};   ///< layers read or written

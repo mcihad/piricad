@@ -79,48 +79,21 @@ Param Param::boolean(std::string name, Arity a, std::string help)
     return Param{std::move(name), ParamKind::Bool, a, std::move(help)};
 }
 
-core::Json CommandSpec::to_schema() const
+Param Param::choice(std::string name, Arity a, std::vector<std::string> choices, std::string help)
 {
-    using core::Json;
+    Param p{std::move(name), ParamKind::Text, a, std::move(help)};
+    p.choices = std::move(choices);
+    return p;
+}
 
-    Json out;
-    out.set("id", Json::string(id));
-
-    Json names_json;
-    for (const auto& n : names)
-        names_json.push(Json::string(n));
-    if (names.empty()) names_json = Json::array({});
-    out.set("names", std::move(names_json));
-
-    out.set("category", Json::string(category_name(category)));
-    out.set("summary", Json::string(summary));
-
-    Json params_json = Json::array({});
-    for (const auto& p : params) {
-        Json pj;
-        pj.set("name", Json::string(p.name));
-        pj.set("type", Json::string(param_kind_name(p.kind)));
-        pj.set("min", Json::integer(p.arity.min));
-        pj.set("max", Json::integer(p.arity.max == 0xFFFFFFFFu ? -1 : std::int64_t(p.arity.max)));
-        pj.set("required", Json::boolean(p.arity.min > 0));
-        pj.set("help", Json::string(p.help));
-        params_json.push(std::move(pj));
-    }
-    out.set("params", std::move(params_json));
-
-    Json flags_json = Json::array({});
-    if (has_flag(flags, Flags::Interactive)) flags_json.push(Json::string("interactive"));
-    if (has_flag(flags, Flags::Scriptable)) flags_json.push(Json::string("scriptable"));
-    if (has_flag(flags, Flags::AiAccessible)) flags_json.push(Json::string("ai_accessible"));
-    if (has_flag(flags, Flags::Transparent)) flags_json.push(Json::string("transparent"));
-    if (has_flag(flags, Flags::ReadOnly)) flags_json.push(Json::string("read_only"));
-    out.set("flags", std::move(flags_json));
-
-    const char* undo_name = undo == UndoPolicy::SingleTransaction ? "single_transaction"
-                            : undo == UndoPolicy::None            ? "none"
-                                                                  : "custom";
-    out.set("undo", Json::string(undo_name));
-    return out;
+Param Param::integer_range(std::string name, Arity a, std::int64_t low, std::int64_t high,
+                           std::string help)
+{
+    Param p{std::move(name), ParamKind::Integer, a, std::move(help)};
+    p.low     = low;
+    p.high    = high;
+    p.bounded = true;
+    return p;
 }
 
 } // namespace kentos::command

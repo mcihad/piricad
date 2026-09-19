@@ -244,10 +244,10 @@ KENTOS_COMMAND(hatch)
                 Param::text("katalog", Arity::optional(),
                             "Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu"),
             },
-        .undo    = UndoPolicy::SingleTransaction,
-        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo  = UndoPolicy::SingleTransaction,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar.",
-        .run     = &run,
+        .run = &run,
     };
 }
 

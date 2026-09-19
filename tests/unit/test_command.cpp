@@ -165,21 +165,40 @@ TEST_CASE("registry refuses duplicate ids and shadowed names")
     CHECK(!st.ok());
 }
 
-TEST_CASE("ai tool schema is generated from the registry, not hand written")
+TEST_CASE("registry fingerprint moves with every declared field")
 {
+    // THE CATALOGUE ITSELF IS TESTED IN test_ai_catalog.cpp, where it now lives
+    // (`ai::build_catalog`). What belongs to the registry is the FINGERPRINT, and
+    // what has to be true of it is that the smallest declared change moves it —
+    // that is the whole mechanism behind "a parameter changed, so the tool
+    // surface and llms.txt are stale" (CLAUDE.md 6.14).
     Fixture f;
-    const core::Json schema = f.reg.ai_tool_schema();
+    const std::uint64_t before = f.reg.fingerprint();
+    CHECK(before != 0);
+    CHECK_EQ(before, f.reg.fingerprint()); // stable within a run
 
-    const core::Json* tools = schema.find("tools");
-    CHECK(tools != nullptr);
-    CHECK(tools->is_array());
+    Registry other;
+    register_builtin_commands(other);
+    CHECK_EQ(before, other.fingerprint()); // and across two registries alike
 
-    std::size_t flagged = 0;
-    for (const auto& spec : f.reg.all())
-        if (has_flag(spec.flags, Flags::AiAccessible)) ++flagged;
+    CommandSpec extra;
+    extra.id      = "test.fingerprint";
+    extra.names   = {"PARMAKİZİ"};
+    extra.params  = {Param::text("ad", Arity::exactly(1), "bir ad")};
+    extra.summary = "Sınama komutu.";
+    extra.run     = other.by_id("core.line")->run;
+    REQUIRE(other.add(extra).ok());
+    const std::uint64_t with_command = other.fingerprint();
+    CHECK(with_command != before);
 
-    CHECK_EQ(tools->as_array().size(), flagged);
-    CHECK(flagged > 0);
+    // And a parameter's HELP alone is enough to move it, because the help is
+    // what a model reads to decide what to pass.
+    Registry third;
+    register_builtin_commands(third);
+    CommandSpec reworded = extra;
+    reworded.params      = {Param::text("ad", Arity::exactly(1), "başka bir açıklama")};
+    REQUIRE(third.add(reworded).ok());
+    CHECK(third.fingerprint() != with_command);
 }
 
 TEST_CASE("parser handles absolute, relative, polar and inline expressions")
@@ -384,6 +403,135 @@ TEST_CASE("tırnak sınırlar, türü değiştirmez")
 
     // What is NOT a number still fails, and says so.
     CHECK(!f.bus.execute_line("KATMAN ad=BOZUK renk=\"mavi filan\"", Origin::Test).ok());
+}
+
+TEST_CASE("KATMANGÖRÜNÜM: bir katmanı gösterir, gizler ve yalnız bırakır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KATMAN ad=BİNA", Origin::Test).ok());
+    const core::LayerId parcel = f.doc.find_layer("PARSEL");
+    const core::LayerId road   = f.doc.find_layer("YOL");
+    REQUIRE(parcel != core::kNoLayer);
+    REQUIRE(road != core::kNoLayer);
+
+    REQUIRE(f.bus.execute_line("KATMANGÖRÜNÜM islem=gizle katman=PARSEL", Origin::Test).ok());
+    CHECK_FALSE(f.doc.layer(parcel)->visible);
+    CHECK(f.doc.layer(road)->visible);
+
+    REQUIRE(f.bus.execute_line("KATMANGÖRÜNÜM islem=goster katman=PARSEL", Origin::Test).ok());
+    CHECK(f.doc.layer(parcel)->visible);
+
+    // `yalniz`: the named one up, everything else down — layer 0 included,
+    // because "only this" means only this.
+    REQUIRE(f.bus.execute_line("KGO islem=yalniz katman=YOL", Origin::Test).ok());
+    for (const core::Layer& l : f.doc.layers())
+        CHECK_EQ(l.visible, l.name == "YOL");
+}
+
+TEST_CASE("KATMANGÖRÜNÜM: tumu ve tersine bütün tabloya bakar")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL gorunur=hayır", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL gorunur=hayır", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KATMAN ad=BİNA", Origin::Test).ok());
+
+    REQUIRE(f.bus.execute_line("KATMANGÖRÜNÜM islem=tersine", Origin::Test).ok());
+    CHECK(f.doc.layer(f.doc.find_layer("PARSEL"))->visible);
+    CHECK(f.doc.layer(f.doc.find_layer("YOL"))->visible);
+    CHECK_FALSE(f.doc.layer(f.doc.find_layer("BİNA"))->visible);
+    // Layer 0 was showing and is now hidden, which is what "invert" says.
+    CHECK_FALSE(f.doc.layer(0)->visible);
+
+    REQUIRE(f.bus.execute_line("KATMANGÖRÜNÜM islem=tumu", Origin::Test).ok());
+    for (const core::Layer& l : f.doc.layers())
+        CHECK(l.visible);
+
+    // And one layer on its own, with the same word.
+    REQUIRE(f.bus.execute_line("KATMANGÖRÜNÜM islem=tersine katman=YOL", Origin::Test).ok());
+    CHECK_FALSE(f.doc.layer(f.doc.find_layer("YOL"))->visible);
+    CHECK(f.doc.layer(f.doc.find_layer("PARSEL"))->visible);
+}
+
+TEST_CASE("KATMANGÖRÜNÜM: aktif katmanı DEĞİŞTİRMEZ")
+{
+    // THE REASON THIS COMMAND EXISTS BESIDE `KATMAN`. Naming a layer with `KATMAN`
+    // makes it active, because that is how a user picks one to draw on. Hiding
+    // forty layers is not picking one, and the fortieth is certainly not the
+    // choice — so the panel's visibility menu goes out as this command.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    const core::LayerId road = f.doc.find_layer("YOL");
+    REQUIRE(f.bus.active_layer() == road);
+
+    REQUIRE(f.bus.execute_line("KATMANGÖRÜNÜM islem=gizle katman=PARSEL", Origin::Test).ok());
+    CHECK_EQ(f.bus.active_layer(), road);
+    REQUIRE(f.bus.execute_line("KATMANGÖRÜNÜM islem=yalniz katman=PARSEL", Origin::Test).ok());
+    CHECK_EQ(f.bus.active_layer(), road);
+}
+
+TEST_CASE("KATMANGÖRÜNÜM: bir çağrı bir geri alma adımı")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL gorunur=hayır", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KATMAN ad=YOL gorunur=hayır", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KATMAN ad=BİNA gorunur=hayır", Origin::Test).ok());
+
+    REQUIRE(f.bus.execute_line("KATMANGÖRÜNÜM islem=tumu", Origin::Test).ok());
+    CHECK(f.doc.layer(f.doc.find_layer("PARSEL"))->visible);
+
+    // Three layers changed, ONE step back (CLAUDE.md 1.5).
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_FALSE(f.doc.layer(f.doc.find_layer("PARSEL"))->visible);
+    CHECK_FALSE(f.doc.layer(f.doc.find_layer("YOL"))->visible);
+    CHECK_FALSE(f.doc.layer(f.doc.find_layer("BİNA"))->visible);
+}
+
+TEST_CASE("KATMANGÖRÜNÜM: söylenmeyeni yapmaz, sessizce yutmaz")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+
+    // A layer that is not there is NOT created — this command changes what is
+    // showing, it does not make layers.
+    CHECK(!f.bus.execute_line("KATMANGÖRÜNÜM islem=gizle katman=YOKBÖYLE", Origin::Test).ok());
+    CHECK_EQ(f.doc.find_layer("YOKBÖYLE"), core::kNoLayer);
+
+    // A word that is not a verb is refused with the list of the ones that are.
+    auto bad = f.bus.execute_line("KATMANGÖRÜNÜM islem=parlat katman=PARSEL", Origin::Test);
+    CHECK(!bad.ok());
+    CHECK(bad.error().message.find("goster") != std::string::npos);
+
+    // `tumu` looks at every layer, so a layer name with it is a misunderstanding
+    // and is REFUSED rather than dropped on the floor (command.md P15).
+    CHECK(!f.bus.execute_line("KATMANGÖRÜNÜM islem=tumu katman=PARSEL", Origin::Test).ok());
+
+    // And the verbs that name a layer insist on one.
+    CHECK(!f.bus.execute_line("KATMANGÖRÜNÜM islem=yalniz", Origin::Test).ok());
+}
+
+TEST_CASE("KATMANGÖRÜNÜM: arayüz = komut satırı = betik")
+{
+    // Article 1.2: three clients, one document, one journal line.
+    const auto hide = [](Origin origin) {
+        Fixture f;
+        REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", origin).ok());
+        REQUIRE(f.bus.execute_line("KATMAN ad=YOL", origin).ok());
+        REQUIRE(f.bus.execute_line("KATMANGÖRÜNÜM islem=yalniz katman=PARSEL", origin).ok());
+        return std::pair{f.doc.content_hash(), f.journal.entries().back().args.to_json().dump()};
+    };
+    const auto gui    = hide(Origin::Gui);
+    const auto cli    = hide(Origin::CommandLine);
+    const auto script = hide(Origin::Script);
+    CHECK_EQ(gui.first, cli.first);
+    CHECK_EQ(cli.first, script.first);
+    CHECK_EQ(gui.second, cli.second);
+    CHECK_EQ(cli.second, script.second);
+    // The recorded arguments are the resolved words, not whatever was typed.
+    CHECK(gui.second.find("yalniz") != std::string::npos);
+    CHECK(gui.second.find("PARSEL") != std::string::npos);
 }
 
 TEST_CASE("validation rejects a polyline with fewer than two points")
@@ -3245,7 +3393,9 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // command that vanished bumps it down by accident, and that is the case worth
     // catching.
     Fixture f;
-    CHECK_EQ(f.reg.size(), std::size_t{65}); // 59 + SPLINE, TARAMA, BLOK, BLOKEKLE, ÖLÇÜ, LİDER
+    // 59 + SPLINE, TARAMA, BLOK, BLOKEKLE, ÖLÇÜ, LİDER + YAZDIR, YAZDIRMAPROFİLİ
+    // + KATMANGÖRÜNÜM
+    CHECK_EQ(f.reg.size(), std::size_t{68});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

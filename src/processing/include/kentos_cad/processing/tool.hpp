@@ -23,6 +23,7 @@
 #include "kentos_cad/command/spec.hpp"
 #include "kentos_cad/command/task.hpp"
 #include "kentos_cad/command/value.hpp"
+#include "kentos_cad/core/attach.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/result.hpp"
@@ -31,6 +32,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <stop_token>
 #include <string>
 #include <string_view>
@@ -106,6 +108,10 @@ struct ToolParam
     static ToolParam point(std::string name, std::string help);
     /// A yes/no switch.
     static ToolParam boolean(std::string name, std::string help, bool fallback);
+    /// ONE object of the drawing, by its persistent key. On the panel the field
+    /// is picked from the scene; at the command line it is `ad=<kimlik>`. The
+    /// runner puts the object's snapshot in `ToolInput::references`.
+    static ToolParam object(std::string name, std::string help);
 };
 
 /// What a tool produces.
@@ -165,13 +171,19 @@ struct InputEntity
     std::vector<Ring> rings;              ///< its rings, in R11 order
     std::string text;                     ///< its caption, or empty
     core::Mm text_height{0};              ///< the caption's height
+    /// What it FOLLOWS, when it is attached to another object (core/attach.hpp).
+    std::optional<core::Attachment> attach;
 };
 
 /// What a tool is handed.
 struct ToolInput
 {
     std::vector<InputEntity> entities; ///< the objects in scope that the tool applies to
-    command::Args args;                ///< every tool parameter, defaults applied and validated
+    /// The objects the tool's OBJECT parameters name (`ToolParam::object`),
+    /// snapshotted like the entities but outside the scope: the line a caption
+    /// is to be attached to, a reference the tool measures from. Found by key.
+    std::vector<InputEntity> references;
+    command::Args args; ///< every tool parameter, defaults applied and validated
     core::DrawingUnit unit{core::DrawingUnit::Metre}; ///< the project's drawing unit
     std::int64_t plan_scale{1000}; ///< the plan scale's denominator, for paper sizes
 };
@@ -187,6 +199,10 @@ struct ToolOutput
         double dir_y{0.0};     ///< and y
         std::string text;      ///< what it says
         core::Mm height{2500}; ///< ground millimetres
+        /// The object the caption FOLLOWS, when it does: the runner records it,
+        /// and the command that later moves the source re-places the caption
+        /// (core/attach.hpp). Nothing for a free caption.
+        std::optional<core::Attachment> attach;
     };
 
     /// A run of points, open or closed.
@@ -196,12 +212,16 @@ struct ToolOutput
         bool closed{false};               ///< a face (exterior ring) rather than a line
     };
 
-    /// One input object's new geometry, for `OutputShape::InPlace`: the same
-    /// object (its key) with these rings instead of its own.
+    /// One input object CHANGED IN PLACE, for `OutputShape::InPlace`: the same
+    /// object (its key) with new rings, new words, or a new attachment — each
+    /// part optional, so a tool that only attaches leaves the geometry alone.
     struct Replacement
     {
-        std::int64_t key{0};                  ///< which object
-        std::vector<InputEntity::Ring> rings; ///< its new rings, R11 order
+        std::int64_t key{0};                    ///< which object
+        std::vector<InputEntity::Ring> rings;   ///< its new rings, R11 order; empty = keep
+        std::optional<std::string> text;        ///< its new caption; nothing = keep
+        std::optional<core::Attachment> attach; ///< what it is to follow; nothing = keep
+        bool detach{false};                     ///< it is to follow nothing
     };
 
     std::vector<Caption> captions;         ///< text objects to create

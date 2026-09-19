@@ -217,7 +217,7 @@ KENTOS_COMMAND(coordinate)
         .undo     = UndoPolicy::None,
         .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible | Flags::ReadOnly,
         .summary = "Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.",
-        .run     = &run_coordinate,
+        .run = &run_coordinate,
     };
 }
 

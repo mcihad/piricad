@@ -38,6 +38,7 @@ class QStackedWidget;
 class QFrame;
 class QDockWidget;
 class QLabel;
+class QMenu;
 class QPlainTextEdit;
 class QToolBar;
 
@@ -101,6 +102,26 @@ public:
     /// constructs is a window nothing is checking.
     void openSettings();
 
+    /// Opens `Seçenekler` on the section whose title is `title` — what the
+    /// print menu's "Profilleri Yönet…" asks for. An unknown title opens the
+    /// window on its first section.
+    void openSettingsSection(const QString& title);
+
+    /// WHAT THE TOOLBAR'S YAZDIR DOES, and it does two different things by
+    /// design. With no print frame up it OPENS ONE: a sheet-shaped window in
+    /// the middle of the canvas at the default profile's printable aspect, the
+    /// rest greyed, the map free to be dragged and zoomed under it. Pressed
+    /// again it CAPTURES what is inside the frame and opens the preview window.
+    /// Esc or the right button puts the frame away without printing.
+    ///
+    /// `profile` names the profile to frame and print with; empty is the
+    /// default one (`PrintService`). The menu beside the button passes a name.
+    void printWithProfile(const QString& profile = QString());
+
+    /// Opens the preview window directly on `window` — the frame's capture, or
+    /// the current view when something else asks.
+    void openPrintDialog(core::Box2 window, const QString& profile = QString());
+
     /// Opens `Proje Ayarları`: what the .pcad file carries, and its schema.
     void openProjectSettings();
 
@@ -116,6 +137,10 @@ public:
     /// Public for the same reason the three windows above are: `KENTOS_PICK_PROBE`
     /// drives it, and a chooser nothing constructs is a chooser nothing checks.
     void choosePick(const std::vector<core::EntityId>& candidates, Qt::KeyboardModifiers modifiers);
+
+    /// A form field's object pick landed on several objects: the same "Hangisi?"
+    /// list as a click on the drawing, and the row chosen answers the field.
+    void chooseCapture(const std::vector<core::EntityId>& candidates);
 
     /// Clicks the middle of the canvas with a REAL mouse event, answers the
     /// chooser that opens by taking its SECOND row, and prints what the document
@@ -197,9 +222,31 @@ public:
     /// only then start the read. A caller with no such need ignores it.
     ImportWizard* openImportWizard(const QString& path = QString());
 
+    /// The controller behind this window, for a probe that must reach a service
+    /// the shell owns (the AI layer's plan store, the agent listener).
+    ///
+    /// NOT A BACK DOOR FOR THE UI: every widget in this program reaches the
+    /// document through a command, and this accessor exists so that an
+    /// app-level test can assert what a service did without a socket of its own.
+    Controller* controller() noexcept { return controller_; }
+
     /// Clicks the layer panel's eye and lock with real mouse events and prints
     /// what the document did. See `LayerPanel::probeByHand`.
     void probeLayerPanel();
+
+    /// Opens the print preview on `box`, runs nothing, and returns the command
+    /// line it would send. `round` presses the rounding button first.
+    ///
+    /// THE CHECK NOTHING ELSE MAKES. The frame and the sheet are joined by one
+    /// thing — the area — and when the preview rounded the frame's scale up by
+    /// itself the two stopped agreeing: the sheet covered a fifth more ground
+    /// than the frame the user had just dragged. Every test stayed green, because
+    /// each one asked the command to print whatever the window had already
+    /// decided. The line is where the two meet, so the line is what has to be
+    /// read.
+    ///
+    /// Developer tooling behind `KENTOS_PRINT_PROBE`.
+    QString probePrintLine(core::Box2 box, const QString& profile, const QString& pdf, bool round);
 
     /// Presses every button on the tool column in turn and prints what the
     /// program answered, one line per tool.
@@ -215,6 +262,19 @@ public:
     /// Developer tooling behind `KENTOS_TOOL_PROBE`, the same category as
     /// `KENTOS_EDIT_PROBE`; nothing user-facing calls it.
     void probeToolBox();
+
+    /// Drives a RECORDED provider stream into the chat dock and reports what the
+    /// panel did with it, one line at a time.
+    ///
+    /// THE CHECK NOTHING ELSE MAKES. `tests/unit/test_ai_chat.cpp` proves every
+    /// dialect decodes and `test_ai_tools.cpp` proves a plan applies, both
+    /// without a window; what neither can reach is the seam between them — that
+    /// a decoded tool call becomes a bubble, a card and an undo entry in a
+    /// running shell, and that a write call leaves the drawing untouched until
+    /// the card is pressed. Returns 0 when everything held.
+    ///
+    /// Developer tooling behind `KENTOS_CHAT_PROBE`.
+    int probeChat();
 
     /// Drives the six modify tools with REAL mouse and key events, the way a hand
     /// does — `action->trigger()`, then presses on the canvas, then Enter sent to
@@ -361,6 +421,11 @@ private:
     void applyTheme();
     void refreshStatus();
 
+    /// Repaints the status strip's agent cell and the menu entry's wording from
+    /// what the listener is actually doing. Called on `McpService::stateChanged`,
+    /// so the cell cannot claim a port that is closed.
+    void refreshAgentCell();
+
     /// R38: persistence, validation, UI and documentation all come from the one
     /// SettingSpec declaration. QSettings is the backing FILE and nothing more —
     /// it is keyed by SettingSpec::id and its contents are validated by
@@ -370,8 +435,18 @@ private:
     void savePreferences();
     ThemeMode themeFromPreferences() const;
 
+public:
+    /// The theme the shell is painting in, for a window a probe opens outside
+    /// the shell's own `openSettings`-style helpers.
+    ThemeMode themeMode() const noexcept { return theme_; }
+
+private:
     Controller* controller_{nullptr};
     MapCanvas* canvas_{nullptr};
+
+    /// The form field waiting for a scene pick, as the function that takes the
+    /// answer; empty when none is (`ScenePicker`, tools_panel.hpp).
+    std::function<void(std::optional<QString>)> pendingPick_;
     TitleBar* titleBar_      = nullptr;
     CommandPalette* palette_ = nullptr;
     CommandLine* commandLine_{nullptr};
@@ -400,6 +475,12 @@ private:
     QDockWidget* layerDock_{nullptr};
     QDockWidget* propertyDock_{nullptr};
     QDockWidget* transcriptDock_{nullptr};
+
+    /// The conversation panel and its dock. Built with the window rather than on
+    /// demand, so the toolbar mark and `Pencere ▸ Yapay Zeka` both just show it.
+    class ChatPanel* chatPanel_{nullptr};
+    PanelHeader* chatHeader_{nullptr};
+    QDockWidget* chatDock_{nullptr};
     QDockWidget* journalDock_{nullptr};
 
     // ---- actions, each of which dispatches one command ----
@@ -483,6 +564,24 @@ private:
     // ---- sonraki fazlarda gelecek eylemler, pasif ----
     QAction* actNew_{nullptr};
     QAction* actPrint_{nullptr};
+
+    /// The profile the frame was opened with, so the preview window opens on the
+    /// same one the frame was shaped by. Empty means the default profile.
+    QString printProfile_;
+
+    /// Rebuilds the print button's menu from `PrintService::profiles()`. There
+    /// is no second profile list: the menu is the store, drawn (CLAUDE.md 5.10).
+    void rebuildPrintMenu();
+
+    QMenu* printMenu_{nullptr};
+
+    /// The narrow button BESIDE YAZDIR that opens the profile list. Its own
+    /// action rather than `QToolButton::MenuButtonPopup`: with the shell's one
+    /// stylesheet on `QToolButton`, Qt draws a menu button's indicator as a
+    /// triangle in the icon's corner — it sat on the printer glyph. Two buttons
+    /// is also what a print control looks like everywhere else: the face prints,
+    /// the arrow chooses.
+    QAction* actPrintMenu_{nullptr};
     QAction* actPolyline_{nullptr};
     QAction* actArc_{nullptr};
     QAction* actCircle_{nullptr};
@@ -517,6 +616,11 @@ private:
     QAction* actTable_{nullptr};
     QAction* actLayerManager_{nullptr};
     QAction* actAi_{nullptr};
+
+    /// Starts and stops the agent listener. One entry whose WORDING follows the
+    /// state, because a `Başlat/Durdur` label makes the reader work out which of
+    /// the two they are about to do.
+    QAction* actMcp_{nullptr};
 
     // ---- arayüz eylemleri ----
     QAction* actTheme_{nullptr};

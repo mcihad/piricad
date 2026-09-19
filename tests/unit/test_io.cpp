@@ -37,8 +37,11 @@
 #include "kentos_cad/io/dwg.hpp"
 #include "kentos_cad/io/dxf.hpp"
 #include "kentos_cad/io/format.hpp"
+#include "kentos_cad/io/pdf_encrypt.hpp"
+#include "kentos_cad/io/print_profiles.hpp"
 #include "kentos_cad/io/service.hpp"
 #include "kentos_cad/io/vector.hpp"
+#include "kentos_cad/processing/registry.hpp"
 #include "kentos_cad/script/json_runner.hpp"
 
 #include <algorithm>
@@ -3474,4 +3477,305 @@ TEST_CASE("DXF gidiş-dönüş: her tür, yazı ve öznitelik geri gelir; surum=
     CHECK_EQ(faces, 1u);
     CHECK_EQ(captions, 2u); // the METİN and the leader's own caption
     CHECK_EQ(sisli, 1u);
+}
+
+// =============================================================================
+// Attachments — a caption that follows its line still follows it after a reload
+// =============================================================================
+
+TEST_CASE("IO: bağlar dosyaya yazılır ve okunur; yeniden açılan çizimde yazı çizgiyi izler")
+{
+    TempDir tmp("bag-gidis-donus");
+    const std::string path = tmp.file("bag.pcad");
+
+    Rig written;
+    // The processing tools live in their own registry and this rig has the
+    // builtins only, so the tools are registered for this case: the attachment
+    // is made the way a user makes one, by the length tool over a line.
+    kentos::processing::register_processing_commands(written.reg);
+    REQUIRE(written.bus.execute_line("KATMAN ad=YOL", Origin::Test).ok());
+    REQUIRE(written.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok());
+    REQUIRE(written.bus.execute_line("UZUNLUKYAZ nesneler=1 bicim=\"L={}\"", Origin::Test).ok());
+    REQUIRE_EQ(written.doc.attachments().size(), std::size_t{1});
+    const std::uint64_t hash = written.doc.content_hash();
+
+    auto saved = written.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test);
+    REQUIRE(saved.ok());
+
+    Rig reloaded;
+    kentos::processing::register_processing_commands(reloaded.reg);
+    auto opened = reloaded.bus.execute_line("AÇ \"" + path + "\"", Origin::Test);
+    if (!opened) FAIL_WITH("AÇ", opened.error().message);
+    CHECK_EQ(reloaded.doc.content_hash(), hash);
+    REQUIRE_EQ(reloaded.doc.attachments().size(), std::size_t{1});
+
+    // The attachment came back whole: the caption follows the line it names,
+    // and re-words itself, exactly as it did before the save.
+    const core::EntityId line = reloaded.doc.slot_of(static_cast<core::EntityKey>(1));
+    REQUIRE(line != core::kNoEntity);
+    REQUIRE(reloaded.bus.execute_line("ÖLÇEKLE nesneler=1 merkez=0,0 carpan=2", Origin::Test).ok());
+    bool relabelled = false;
+    for (core::EntityId e = 0; e < reloaded.doc.entities().size(); ++e) {
+        if (!reloaded.doc.alive(e)) continue;
+        const std::uint32_t slot = reloaded.doc.entities().slot[e];
+        if (reloaded.doc.texts().has(slot) && reloaded.doc.texts().text(slot) == "L=20,00")
+            relabelled = true;
+    }
+    CHECK(relabelled);
+
+    // A drawing WITHOUT attachments writes no attachment block: the file is what
+    // it was before attachments existed (golden fixtures stay valid).
+    Rig plain;
+    REQUIRE(plain.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok());
+    const std::string plain_path = tmp.file("duz.pcad");
+    REQUIRE(plain.bus.execute_line("FARKLIKAYDET \"" + plain_path + "\"", Origin::Test).ok());
+    std::ifstream in(plain_path, std::ios::binary);
+    std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    // The directory lists block ids as little-endian u32 at 32-byte stride; the
+    // attachment id 0x0089 must not be among them.
+    bool has_attach_block = false;
+    for (std::size_t at = 0; at + 4 <= bytes.size(); at += 8) {
+        const auto b0 = static_cast<unsigned char>(bytes[at]);
+        const auto b1 = static_cast<unsigned char>(bytes[at + 1]);
+        const auto b2 = static_cast<unsigned char>(bytes[at + 2]);
+        const auto b3 = static_cast<unsigned char>(bytes[at + 3]);
+        // 0x00000089 followed by the 64-byte stride of AttachRecord.
+        if (b0 == 0x89 && b1 == 0 && b2 == 0 && b3 == 0 && at + 8 <= bytes.size() &&
+            static_cast<unsigned char>(bytes[at + 4]) == 64)
+            has_attach_block = true;
+    }
+    CHECK_FALSE(has_attach_block);
+}
+
+// =============================================================================
+// Print profiles — the named sheets a plot goes on (io/print_profiles.hpp)
+// =============================================================================
+
+TEST_CASE("YAZDIRMA PROFİLİ: kâğıt tablosu, yön, kenar payı ve reddedilen değerler")
+{
+    // The built-in set: six sheets, A4 dikey the default.
+    io::PrintProfiles store = io::PrintProfiles::builtin();
+    CHECK_EQ(store.all().size(), std::size_t{6});
+    REQUIRE(store.fallback() != nullptr);
+    CHECK_EQ(store.fallback()->name, std::string("A4 Dikey"));
+    CHECK_EQ(store.default_name(), std::string("A4 Dikey"));
+
+    // The paper table is ISO 216, portrait, and the SHEET turns with `landscape`.
+    const io::PrintProfile* a3 = store.find("a3 yatay"); // Turkish-folded lookup
+    REQUIRE(a3 != nullptr);
+    CHECK_EQ(a3->width_mm, 297);
+    CHECK_EQ(a3->height_mm, 420);
+    CHECK(a3->landscape);
+    CHECK_EQ(a3->sheet_width_mm(), 420);
+    CHECK_EQ(a3->sheet_height_mm(), 297);
+    CHECK_EQ(a3->printable_width_mm(), 400); // 420 - 2 × 10
+    CHECK_EQ(a3->printable_height_mm(), 277);
+
+    // A paper name the table does not hold is refused BY NAME, with the list.
+    io::PrintProfile bad;
+    bad.name     = "Yok";
+    bad.paper    = "A9";
+    auto refused = store.upsert(bad);
+    CHECK_FALSE(refused.ok());
+    CHECK(refused.error().message.find("Tanınmayan kâğıt") != std::string::npos);
+
+    // A custom sheet keeps the size it is given, and a size of zero is refused.
+    // "The user did not give one" is a question only the COMMAND can answer —
+    // the store always holds some pair — so `YAZDIRMAPROFİLİ` is where
+    // `kagit=ozel` without a size is refused (commands/print.cpp).
+    io::PrintProfile custom;
+    custom.name      = "Rulo";
+    custom.paper     = "ozel";
+    custom.width_mm  = 0;
+    custom.height_mm = 0;
+    CHECK_FALSE(store.upsert(custom).ok());
+    custom.width_mm  = 900;
+    custom.height_mm = 1200;
+    CHECK(store.upsert(custom).ok());
+    REQUIRE(store.find("Rulo") != nullptr);
+    CHECK_EQ(store.find("Rulo")->width_mm, 900);
+    CHECK_EQ(store.find("Rulo")->sheet_width_mm(), 900); // upright: no turn
+
+    // A margin that leaves no paper, and a resolution off the scale, are refused.
+    io::PrintProfile tight;
+    tight.name      = "Sıkı";
+    tight.paper     = "A4";
+    tight.margin_mm = 200;
+    CHECK_FALSE(store.upsert(tight).ok());
+    io::PrintProfile coarse;
+    coarse.name = "Kaba";
+    coarse.dpi  = 10;
+    CHECK_FALSE(store.upsert(coarse).ok());
+
+    // An empty name is not a profile.
+    CHECK_FALSE(store.upsert(io::PrintProfile{}).ok());
+
+    // `ekle` on a name that exists REPLACES it and keeps the first spelling.
+    io::PrintProfile again;
+    again.name      = "rulo"; // typed in lower case this time
+    again.paper     = "ozel";
+    again.width_mm  = 700;
+    again.height_mm = 1000;
+    CHECK(store.upsert(again).ok());
+    CHECK_EQ(store.all().size(), std::size_t{7});
+    REQUIRE(store.find("Rulo") != nullptr);
+    CHECK_EQ(store.find("Rulo")->name, std::string("Rulo"));
+    CHECK_EQ(store.find("Rulo")->width_mm, 700);
+
+    // The default moves when the default is removed, and the last one cannot go.
+    CHECK(store.set_default("A3 Yatay").ok());
+    CHECK_EQ(store.default_name(), std::string("A3 Yatay"));
+    CHECK_FALSE(store.set_default("Yok Böyle").ok());
+    CHECK(store.remove("A3 Yatay").ok());
+    CHECK_EQ(store.default_name(), std::string("A4 Dikey"));
+    CHECK_FALSE(store.remove("Yok Böyle").ok());
+
+    io::PrintProfiles lonely;
+    io::PrintProfile only;
+    only.name = "Tek";
+    CHECK(lonely.upsert(only).ok());
+    CHECK_EQ(lonely.default_name(), std::string("Tek"));
+    CHECK_FALSE(lonely.remove("Tek").ok());
+
+    // The description names the SHEET, after the turn: a landscape A3 is 420 wide.
+    CHECK(io::describe_print_profile(*store.find("A2 Yatay")).find("594×420 mm, yatay") !=
+          std::string::npos);
+}
+
+TEST_CASE("YAZDIRMA PROFİLİ: istek profili geçersiz kılar; dosya gidiş dönüşü birebir")
+{
+    TempDir tmp("yazdirma-profilleri");
+    io::PrintProfiles store = io::PrintProfiles::builtin();
+
+    // A request with nothing in it resolves to the DEFAULT profile.
+    command::PrintRequest ask;
+    auto plain = store.resolve(ask);
+    REQUIRE(plain.ok());
+    CHECK_EQ(plain.value().name, std::string("A4 Dikey"));
+    CHECK_FALSE(plain.value().landscape);
+
+    // Every field the request names lays over the profile, and nothing else moves.
+    ask.profile   = "A3 Yatay";
+    ask.dpi       = 150;
+    ask.margin_mm = 5;
+    ask.landscape = 0;
+    auto laid     = store.resolve(ask);
+    REQUIRE(laid.ok());
+    CHECK_EQ(laid.value().paper, std::string("A3"));
+    CHECK_EQ(laid.value().dpi, 150);
+    CHECK_EQ(laid.value().margin_mm, 5);
+    CHECK_FALSE(laid.value().landscape); // the request turned it back upright
+    CHECK_EQ(laid.value().sheet_width_mm(), 297);
+
+    // An override the STORE would have refused is refused here too.
+    command::PrintRequest silly;
+    silly.margin_mm = 300;
+    CHECK_FALSE(store.resolve(silly).ok());
+    command::PrintRequest unknown;
+    unknown.profile = "Yok Böyle";
+    auto missing    = store.resolve(unknown);
+    CHECK_FALSE(missing.ok());
+    CHECK(missing.error().message.find("Böyle bir yazdırma profili yok") != std::string::npos);
+
+    // The file: written, read back, identical — including which one is default.
+    CHECK(store.set_default("A1 Yatay").ok());
+    const std::string path = tmp.file("yazdirma-profilleri.json");
+    REQUIRE(store.save(path).ok());
+    auto read = io::PrintProfiles::load(path);
+    REQUIRE(read.ok());
+    CHECK_EQ(read.value().default_name(), std::string("A1 Yatay"));
+    REQUIRE_EQ(read.value().all().size(), store.all().size());
+    for (std::size_t i = 0; i < store.all().size(); ++i)
+        CHECK(read.value().all()[i] == store.all()[i]);
+
+    // A missing file is the built-in set, not an error: a fresh installation has
+    // profiles before it has ever written any.
+    auto fresh = io::PrintProfiles::load(tmp.file("yok-boyle-bir-dosya.json"));
+    REQUIRE(fresh.ok());
+    CHECK_EQ(fresh.value().all().size(), std::size_t{6});
+
+    // A file that does not parse SAYS SO rather than silently starting over: a
+    // user whose profiles disappeared must be told why.
+    {
+        std::ofstream broken(tmp.file("bozuk.json"), std::ios::binary);
+        broken << "{ bu json degil";
+    }
+    auto bad = io::PrintProfiles::load(tmp.file("bozuk.json"));
+    CHECK_FALSE(bad.ok());
+    CHECK(bad.error().message.find("okunamadı") != std::string::npos);
+}
+
+TEST_CASE("PDF ŞİFRELEME: qpdf varsa AES-256 ile şifreler, yoksa nedenini söyler")
+{
+    if (!io::pdf_encryption_available())
+        PENDING("KENTOS_WITH_QPDF kapalı; PDF şifreleme sınanamıyor.");
+
+    // The smallest VALID PDF: one empty A4 page, with a real cross-reference
+    // table. Written by hand rather than by Qt, because this test links no Qt
+    // (test.md P11) — what is being proved is the ENCRYPTION, not the drawing —
+    // and written properly rather than approximately, because a file qpdf has
+    // to repair produces warnings that make a green run look worried.
+    TempDir tmp("pdf-sifre");
+    const std::string plain = tmp.file("duz.pdf");
+    {
+        const std::array<std::string, 3> objects{
+            "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+            "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
+            "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] "
+            "/Resources << >> >>\nendobj\n"};
+
+        std::string pdf = "%PDF-1.7\n";
+        std::array<std::size_t, 3> offset{};
+        for (std::size_t i = 0; i < objects.size(); ++i) {
+            offset[i] = pdf.size();
+            pdf += objects[i];
+        }
+        const std::size_t xref = pdf.size();
+        pdf += "xref\n0 4\n0000000000 65535 f \n";
+        for (const std::size_t at : offset) {
+            std::string ten = std::to_string(at);
+            ten.insert(0, 10 - ten.size(), '0');
+            pdf += ten + " 00000 n \n";
+        }
+        pdf +=
+            "trailer\n<< /Size 4 /Root 1 0 R >>\nstartxref\n" + std::to_string(xref) + "\n%%EOF\n";
+
+        std::ofstream out(plain, std::ios::binary);
+        out << pdf;
+    }
+
+    io::PdfEncryption options;
+    options.user_password = "gizli";
+    options.allow_print   = true;
+    options.allow_copy    = false;
+    options.allow_modify  = false;
+    options.author        = "KentOSCad";
+
+    const std::string sealed = tmp.file("sifreli.pdf");
+    auto sealed_ok           = io::pdf_encrypt(plain, sealed, options);
+    if (!sealed_ok) FAIL_WITH("pdf_encrypt", sealed_ok.error().message);
+
+    auto is_sealed = io::pdf_is_encrypted(sealed);
+    REQUIRE(is_sealed.ok());
+    CHECK(is_sealed.value());
+    auto was_plain = io::pdf_is_encrypted(plain);
+    REQUIRE(was_plain.ok());
+    CHECK_FALSE(was_plain.value());
+
+    // The author is written even with no password at all: it is the same pass.
+    io::PdfEncryption only_author;
+    only_author.author      = "Harita Mühendisi";
+    const std::string named = tmp.file("yazarli.pdf");
+    REQUIRE(io::pdf_encrypt(plain, named, only_author).ok());
+    auto named_sealed = io::pdf_is_encrypted(named);
+    REQUIRE(named_sealed.ok());
+    CHECK_FALSE(named_sealed.value());
+    std::ifstream back(named, std::ios::binary);
+    const std::string bytes((std::istreambuf_iterator<char>(back)),
+                            std::istreambuf_iterator<char>());
+    const bool has_author = bytes.find("/Author") != std::string::npos;
+    CHECK(has_author);
+
+    // The same path twice is refused rather than truncating the file it reads.
+    CHECK_FALSE(io::pdf_encrypt(plain, plain, options).ok());
 }

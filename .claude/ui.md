@@ -7,7 +7,7 @@
 **Shell & composition (§6.3)**
 - **R1** The shell — menus, toolbars, docking, tables, dialogs — SHALL be Qt Widgets.
 - **R2** The map canvas SHALL be a `QRhiWidget` hosting the `render::Backend` pipeline. The Phase-0 `QPainter` `MapCanvas` is a documented deviation; see `.claude/render.md`. No Qt painting inside the canvas rect.
-- **R3** QML via `QQuickWidget` SHALL be used only for: AI chat panel, welcome screen, animated property panels. Any additional QML panel needs an explicit entry in this rule.
+- **R3** QML via `QQuickWidget` SHALL be used only for: welcome screen, animated property panels. Any additional QML panel needs an explicit entry in this rule. **This supersedes the earlier reading that listed the AI chat panel here**: the maintainer chose Qt Widgets for it, so the chat surface is built from the component set (R29) and painted by the one stylesheet in `theme.cpp` from `tokens.hpp` like every other surface. A QML chat would have been a second styling system, outside `buildComponentSheet` and `scripts/ci-gate-bilesenler.sh`, with the weaker accessibility §6.1 already warns about — and R21/R22 demand full keyboard operation and an `accessibleName` on every widget.
 - **R4** Docking SHALL use Qt Advanced Docking System (LGPLv2.1, §9.4) and MUST support tabbed groups, floating windows, and named perspectives saved/restored via `QSettings`.
 - **R5** Dear ImGui MUST be confined to a developer debug overlay inside the canvas, behind `KENTOS_WITH_IMGUI` and never in a release build; the option is defined once in `.claude/render.md` R17.
 
@@ -46,6 +46,25 @@
 - **R31** No state SHALL be told by colour alone: every state carries a shape too — a glyph, a badge's text, a ring, the knob's side — and the keyboard focus ring appears only for keyboard focus (§13).
 - **R32** A component added to the set SHALL appear in the living standard (`buildComponentSheet`, opened by `KENTOS_WIDGETS_PROBE`), in `scripts/ci-gate-bilesenler.sh`'s expected inventory and in `docs/baslangic/bilesenler.md`, in the same change.
 
+**Printing (§6.3, §13)**
+- **R33** The PRINT FRAME is view state and nothing else (model.md R43): a sheet-shaped window of the viewport at the profile's printable aspect, the rest dimmed, the map panning and zooming under it exactly as it does with no frame up. It keeps its SIZE ON SCREEN — it is the paper, not a rectangle in the drawing — so zooming changes the scale rather than the frame. It runs no command, touches no document and does not disturb the selection. Esc, the right button, or capturing it puts it away; Enter and the button's second press capture it.
+- **R34** The frame MUST show its centre: a cross at the exact middle and that point's `Sağa (Y)` / `Yukarı (X)` reading (model.md R37a). A sheet is placed by its centre, and `YAZDIR merkez=` is the same placement said as a coordinate — so the centre has to be both visible and typeable.
+- **R35** THE SHEET'S MEASUREMENTS HAVE ONE HOME: the profile. The preview window shows the paper the chosen profile describes and MUST NOT offer paper, orientation, resolution or margin a second time; it links to the profile editor instead. Two places to set the orientation is two answers to one question, and the one the user did not look at wins.
+- **R36** The preview MUST be rendered by the SAME pipeline the plot uses (`render::build_scene` plus the backend, through `PrintService::renderPreview`), at the preview's own pixel count. A window that drew an approximation of the sheet would be a window that lies about the sheet.
+- **R37** THE CAPTURED AREA IS THE PRINTED AREA. The preview MUST put on the sheet exactly the box the frame held and MUST send it as `pencere=…` while its scale and centre fields are untouched; both fields REPORT that box until one of them is typed over, after which the area is that centre at that scale and the line says `merkez=… olcek=…`. A round plan scale (1, 2, 2.5 or 5 × a power of ten) is OFFERED by a button beside the scale and MUST NOT be applied on its own. This supersedes the earlier reading that the frame's scale arrives rounded up: rounding up enlarges the area, so the sheet covered ground the user had not aimed at — as much as twice it, from 1:101 to 1:200 — and the window silently overruled the gesture it exists to capture.
+- **R38** A password field MUST be `FieldSpec::secret` (dots on screen), MUST NOT be echoed anywhere, and the window MUST show the command line it will send with the password in it — because the line is what is sent — while the COMMAND keeps it out of the journal (io.md P5a).
+
+**The AI surfaces (§5, `.claude/ai.md`)**
+- **R41** The chat surface is a DOCK built from the component set, not a window: the preview of a suggestion is drawn on the CANVAS (kentoscad.md §5.1's own diagram puts them side by side), and a modal window over the drawing would hide the thing being judged.
+- **R42** Every model output carries the word **öneri** in every state, including loading, error and partial (ai.md R8), and no string from ai.md P4's blocklist appears anywhere near it. The control that applies a suggestion is labelled **Uygula**; "Onayla" is not used, because P4 reserves the vocabulary of approval for a licensed engineer's signature.
+- **R43** Reasoning text is shown only when the profile configures it; otherwise an animated indicator says the model is thinking and nothing pretends to quote it. A streamed token appears as it arrives, and the surface stays usable while it does (ai.md R18, P8).
+- **R44** The context readout is honest about being an estimate while a turn streams, and settles to the provider's own reported usage when the turn ends. A number presented as exact when it is a guess is worse than no number.
+- **R45** The MCP server's state is visible whenever it is running: a status-strip cell naming the port, with a SHAPE as well as a colour (R31) — and when the endpoint has no token it says `KORUMASIZ` in words, because a colour nobody looks at is not a warning. Clicking the cell runs the same command the menu entry runs.
+
+**Panels that take several rows**
+- **R39** A panel with multi-selection SHALL act on the WHOLE selection, and a right-click on a row outside the selection acts on that row alone — what every file manager does and what a user expects after right-clicking something they had not selected. How many rows are in play MUST be in the entry's own label, not on a line of its own. A highlight is view state (model.md R43): it changes no document data and never makes anything active.
+- **R40** Several commands sent for ONE gesture SHALL go through ONE batch (`Controller::runLines`, which is `Bus::begin_batch`): one undo step for one click, and a refusal part way through rolls the whole gesture back (Article 1.6). A widget MUST NOT loop `runLine` over a selection — eleven undo steps for one click is not what Ctrl+Z means. The lines MUST be lines a script could carry unchanged (P3).
+
 ## Absolute Prohibitions
 
 - **P1** NEVER mutate `Document`, `Layer` or entity data from a widget, slot or event handler. Only a command inside a `Transaction` may.
@@ -60,6 +79,7 @@
 - **P10** NEVER read or write the `Journal`, `UndoStack` or on-disk project format directly from `/src/app`; go through the command/io APIs (`.claude/command.md`, `.claude/io.md`).
 - **P11** NEVER `#include` a `/src/domain` internal header in the UI; the UI knows command ids and `Value`, nothing more.
 - **P12** NEVER let AI output act on the UI without preview + explicit user approval; see `.claude/ai.md`.
+- **P15** NEVER let the chat or the suggestion panel load a remote resource, follow a link from model output, or render anything as clickable that the model named. A rendered suggestion fetches nothing off the machine (CLAUDE.md 5.22).
 - **P13** NEVER construct a raw `QPushButton`, `QCheckBox`, `QRadioButton`, `QSlider`, `QSpinBox`, `QDoubleSpinBox`, `QProgressBar`, `QGroupBox` or `QDialogButtonBox` outside `widgets.cpp` and `fields.cpp`, and never give a widget a private stylesheet (CLAUDE.md 5.19). The single allowance — the style designer's three numeric property editors — is named in `scripts/ci-gate-bilesenler.sh` with its removal condition and a ceiling that may only fall.
 
 ## Definitions of Done

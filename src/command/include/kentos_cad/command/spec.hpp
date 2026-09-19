@@ -79,10 +79,38 @@ struct Arity
 
 struct Param
 {
+    /// A CONSTRUCTOR RATHER THAN AGGREGATE INITIALISATION, because the four
+    /// declared facts about a parameter are its name, kind, arity and help, and
+    /// everything after them is optional. Without it, the 46 places that write
+    /// `Param{name, kind, arity, help}` would each have to name every field the
+    /// struct ever gains — and `-Wmissing-field-initializers` is an error here.
+    Param() = default;
+
+    Param(std::string param_name, ParamKind param_kind, Arity param_arity,
+          std::string param_help = {})
+        : name(std::move(param_name)), kind(param_kind), arity(param_arity),
+          help(std::move(param_help))
+    {}
+
     std::string name; ///< Turkish, matching the script/CLI keyword
     ParamKind kind{ParamKind::Text};
     Arity arity{Arity::exactly(1)};
     std::string help; ///< one line, shown by the CLI and fed to the AI schema
+
+    /// For a `Text` parameter: the only words accepted, ASCII-folded lowercase.
+    ///
+    /// DECLARED RATHER THAN CHECKED IN THE BODY, for the reason `Arity` is: the
+    /// bus validates before the coroutine starts (Article 1.3), the generated
+    /// tool schema needs a real `enum` and the command line needs the list to
+    /// print. A body that held the words privately made the caller guess from a
+    /// help string, which is what an agent cannot do. `ToolParam` has carried
+    /// this all along and `to_command_spec` dropped it on the floor.
+    std::vector<std::string> choices;
+
+    /// For an `Integer` or `Number` parameter: the closed range, when `bounded`.
+    std::int64_t low{0};
+    std::int64_t high{0};
+    bool bounded{false};
 
     static Param points(std::string name, Arity a, std::string help = {});
     static Param point(std::string name, std::string help = {});
@@ -90,6 +118,14 @@ struct Param
     static Param integer(std::string name, Arity a, std::string help = {});
     static Param text(std::string name, Arity a, std::string help = {});
     static Param boolean(std::string name, Arity a, std::string help = {});
+
+    /// A `Text` parameter that accepts one of a fixed set of words.
+    static Param choice(std::string name, Arity a, std::vector<std::string> choices,
+                        std::string help = {});
+
+    /// An `Integer` parameter with a closed range the bus enforces.
+    static Param integer_range(std::string name, Arity a, std::int64_t low, std::int64_t high,
+                               std::string help = {});
 };
 
 /// Bit flags. Flags::AiAccessible is the ONLY switch that puts a command into the
@@ -102,7 +138,20 @@ enum class Flags : std::uint32_t {
     AiAccessible = 1u << 2, ///< appears in the generated AI tool schema
     Transparent  = 1u << 3, ///< may interrupt another running command (ZOOM, PAN)
     ReadOnly     = 1u << 4, ///< mutates nothing; skips the transaction path
+    NoEffect     = 1u << 5, ///< changes no document and no file: safe without approval
 };
+
+/// WHY `NoEffect` EXISTS BESIDE `ReadOnly`, and the difference is load-bearing.
+/// `ReadOnly` says "skips the transaction path" — and `core.undo`, `core.redo`,
+/// `core.save`, `core.saveas`, `core.export` and `core.preference` all carry it,
+/// because none of them opens a transaction. None of them is harmless: they
+/// reverse the drawing, write over a file, or change how the program behaves.
+///
+/// `NoEffect` is the narrower claim a non-human client needs: this command leaves
+/// the document, the disk and the settings exactly as they were, so it may run
+/// for an agent with no human approval (.claude/ai.md R3, R11). Everything else
+/// becomes a suggestion. The two flags are set together on a command that is
+/// both, and `ReadOnly` keeps its old meaning untouched.
 
 /// Combines flags, so a spec can declare several in one expression.
 constexpr Flags operator|(Flags a, Flags b)
@@ -148,9 +197,11 @@ struct CommandSpec
     std::string summary;                            ///< one line, Turkish, user-facing
     CommandFn run{nullptr};                         ///< the body; null means the spec is incomplete
 
-    /// Machine-readable form. The AI tool schema and the generated documentation
-    /// both come from here — there is no second description of a command.
-    core::Json to_schema() const;
+    // NO `to_schema()` HERE EITHER. It emitted this program's own vocabulary —
+    // `"type": "point"`, a min/max/required triple — which reads well in a
+    // Turkish reference table and is not a JSON Schema. `ai::build_catalog`
+    // (/src/ai) does the projection now, once, for the server, the documents and
+    // the chat alike.
 };
 
 /// Declares the factory for one built-in command. The body returns its CommandSpec.

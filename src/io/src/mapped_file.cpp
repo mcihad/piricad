@@ -136,7 +136,11 @@ core::Result<MappedFile> MappedFile::open(const std::string& path)
                                                    ". Yolu ve okuma iznini denetleyin.");
     m.handle_ = fd;
 
-    struct stat st{};
+    // `= {}` rather than `st{}`: clang-format reads `struct stat st{}` as the
+    // START OF A STRUCT DEFINITION and breaks the brace onto its own line, which
+    // is valid C++ and unreadable. The `=` form says "a variable, zeroed".
+    struct stat st = {};
+
     if (::fstat(fd, &st) != 0)
         return core::err(ErrorCode::IoFailure,
                          "'" + path + "' boyutu okunamadı: " + system_reason());

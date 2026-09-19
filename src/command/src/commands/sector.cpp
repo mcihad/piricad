@@ -180,10 +180,10 @@ KENTOS_COMMAND(sector)
                 Param::point("baslangic", "İlk kenarın ucu; yarıçapı bu belirler"),
                 Param::point("bitis", "İkinci kenarın yönü; süpürme saat yönünün tersinedir"),
             },
-        .undo    = UndoPolicy::SingleTransaction,
-        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .undo  = UndoPolicy::SingleTransaction,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir.",
-        .run     = &run_sector,
+        .run = &run_sector,
     };
 }
 

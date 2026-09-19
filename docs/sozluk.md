@@ -114,6 +114,18 @@ Ayrıntı: [Koordinat sistemleri](veri/koordinat-sistemleri.md).
 
 ## KentOSCad terimleri
 
+**Yazdırma profili** — Adlandırılmış bir kâğıt: kâğıt boyu, yön (dikey/yatay),
+çözünürlük ve kenar boşluğu. Bir tanesi varsayılandır ve Yazdır düğmesi onu kullanır.
+Kullanıcıya aittir, çizim dosyasıyla gitmez.
+
+**Yazdırma alanı** — Yazdırılacak yerin tuvalde seçildiği, kâğıt oranındaki çerçeve.
+Ekranda hep aynı boydadır; harita altında kayar ve yaklaştıkça kâğıda daha az yer
+girer.
+
+**Bağlı nesne** — Başka bir nesneyi (kaynağını) izleyen nesne: kaynağın bir köşesine ya da
+kenarına bağlıdır, kaynak taşınınca onunla yerleşir, gerekiyorsa sözü yenilenir. Bugün
+kenar uzunluğu ve köşe numarası yazıları böyledir; `BAĞLA` kurar, `BAĞÇÖZ` çözer.
+
 **Komut** — Çizimin durumunu değiştiren her işlem. Arayüz düğmesi, komut satırı, betik ve
 AI aynı komutları çağırır. Bkz. [Komut sistemi](komutlar/README.md).
 
@@ -288,3 +300,35 @@ seferde uygulayan komut; QGIS'in Processing araçlarının karşılığı. Hangi
 türlerine uygulandığını bildirir, ayrı iş parçacığında koşar, durdurulabilir ve sonucunu
 seçilen katmana yazar (`UZUNLUKYAZ`, `KÖŞENUMARALA`). Bkz. [İşlem araçları](islem/README.md).
 
+
+**Ajan** — Programa kendi başına bağlanıp araçlarını çağıran yapay zeka istemcisi. Okuma
+araçlarını doğrudan çalıştırır; çizimi değiştiren bir araç çağrısı bir öneriye dönüşür ve
+bilgisayar başındaki mühendisi bekler. Bkz. [Yapay zeka ve ajanlar](yapay-zeka/README.md).
+
+**MCP** — Model Context Protocol: bir yapay zeka modelinin ya da ajanının bir programın
+yeteneklerine araç olarak erişmesi için kullanılan açık protokol. KentOSCad yalnız
+yerel döngüyü dinleyen bir MCP sunucusu gömer. Bkz. [MCP sunucusu](yapay-zeka/mcp-sunucusu.md).
+
+**Öneri** — Bir yapay zeka istemcisinin çizimde yapılmasını istediği işin kaydı: bir
+kimlik, bir durum ve uygulanacak komut satırları. Açıldığında hiçbir şey uygulanmaz;
+onaylanırsa tamamı tek bir işlem ve tek geri alma adımı olur. Bkz. [`ÖNERİ`](komutlar/suggestion.md).
+
+**Tutamak** — Bir okuma aracının döndürdüğü sonuca verilen kimlik: `@` ve on altı
+onaltılık hane, istenirse listenin bir elemanı için `.N`. Bir ajan nokta, nokta listesi
+ya da nesne seçimi isteyen bir parametreye yalnız tutamak yazabilir; koordinat
+yazamaz. Tutamak alındığı çizim sürümüne bağlıdır ve çizim değişirse reddedilir.
+Bkz. [Onay ve denetim](yapay-zeka/onay.md).
+
+**Denetim kaydı** — Her yapay zeka kararının — uygula, reddet, geri çekme ve koordinat
+reddi — kullanıcı yapılandırma dizinine yazılan JSONL kaydı: ne istendiği, hangi model,
+hangi uç nokta, hangi komut satırları, kimin karar verdiği ve ne zaman. "Bu sınırı buraya
+kim koydu?" sorusunun cevabı budur. İçine hiçbir anahtar ya da belirteç yazılmaz.
+
+**Lehçe** — Bir model uç noktasının konuştuğu telli dil. KentOSCad dört tane konuşur:
+`openai_chat`, `openai_responses`, `anthropic_messages`, `ollama_native`. Yeni bir
+satıcı bunlardan birini konuşuyorsa eklenmesi bir kayıt yazmaktır.
+Bkz. [Model sağlayıcıları](yapay-zeka/modeller.md).
+
+**Bağlam penceresi** — Bir modelin bir turda tutabildiği en fazla jeton sayısı. Programa
+gömülemez, çünkü sağlayıcıların çoğu bunu bildirmez; bu yüzden sayı, kimin söylediğini
+belirten bir işaretle birlikte tutulur: bilinmiyor, yerleşik, kullanıcı ya da bildirilen.

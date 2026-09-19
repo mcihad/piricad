@@ -60,6 +60,7 @@ namespace kentos::command {
     X(select)                                                                                      \
     X(label)                                                                                       \
     X(layer)                                                                                       \
+    X(layer_visibility)                                                                            \
     X(style)                                                                                       \
     X(symbol)                                                                                      \
     X(zoom)                                                                                        \
@@ -72,6 +73,8 @@ namespace kentos::command {
     X(exportfile)                                                                                  \
     X(script)                                                                                      \
     X(database)                                                                                    \
+    X(print)                                                                                       \
+    X(print_profile)                                                                               \
     X(setting)                                                                                     \
     X(preference)                                                                                  \
     X(mode)                                                                                        \

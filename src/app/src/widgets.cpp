@@ -11,6 +11,7 @@
 
 #include <QAbstractTableModel>
 #include <QButtonGroup>
+#include <QCoreApplication>
 #include <QFocusEvent>
 #include <QFontMetrics>
 #include <QGridLayout>
@@ -20,6 +21,8 @@
 #include <QMenu>
 #include <QPainter>
 #include <QPainterPath>
+#include <QScrollArea>
+#include <QScrollBar>
 #include <QShowEvent>
 #include <QSlider>
 #include <QStyle>
@@ -47,6 +50,22 @@ constexpr int kIconPx      = 16;
 constexpr int kIconButton  = 32;
 constexpr int kReadoutW    = 44;
 constexpr int kBannerPad   = 12;
+
+// ---- the conversation, measured against the same standard ------------------
+constexpr int kBubblePad    = 12; ///< inside a bubble, all four sides
+constexpr int kBubbleRadius = 6;  ///< one step above the 4 px of a control
+constexpr int kBubbleGap    = 10; ///< between two bubbles in the transcript
+constexpr int kFollowSlack  = 24; ///< how far from the end still counts as "at the end"
+constexpr int kDotSize      = 4;  ///< one thinking dot
+constexpr int kDotGap       = 5;
+constexpr int kDotRise      = 3; ///< how far a dot lifts at the top of its arc
+constexpr int kDotTickMs    = 120;
+constexpr int kDotPhases    = 4;  ///< three dots and one rest
+constexpr int kAttachH      = 26; ///< an attachment chip, a step above the 22 px `Chip`
+constexpr int kAttachPadX   = 8;
+constexpr int kMeterH       = 18;
+constexpr int kMeterBarH    = 3;
+constexpr int kMeterPx      = 10;
 
 /// §11: the indeterminate strip moves; nothing else in the shell animates.
 constexpr int kStripTickMs   = 16;
@@ -98,6 +117,20 @@ void restyle(QWidget* w, const char* name, const QVariant& value)
     w->setProperty(name, value);
     w->style()->unpolish(w);
     w->style()->polish(w);
+}
+
+/// The `tone` property value the stylesheet's `QLabel#formHelp[tone="…"]` rules
+/// read, or an invalid variant for the default faint note.
+QVariant toneProperty(Tone tone)
+{
+    switch (tone) {
+    case Tone::Danger: return QStringLiteral("danger");
+    case Tone::Warn: return QStringLiteral("warn");
+    case Tone::Accent: return QStringLiteral("accent");
+    case Tone::Ok: return QStringLiteral("ok");
+    case Tone::Neutral: break;
+    }
+    return {};
 }
 
 const char* roleName(ButtonRole role)
@@ -612,6 +645,19 @@ void ComboBox::paintEvent(QPaintEvent*)
         p.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), 4.0, 4.0);
     }
 
+    // AN EDITABLE COMBO ALREADY HAS SOMETHING DRAWING ITS TEXT: its own
+    // `QLineEdit`. Painting the current text here too put two strings in the
+    // same pixels, which on the model chooser read as `llama3.1` over
+    // `llama3.1 · Llama 3.1 8B · 131 b`. The chrome is still this widget's; the
+    // words belong to the editor, and only the arrow is added after it.
+    if (isEditable()) {
+        const QRectF arrow(width() - kComboPadX - kComboArrow, (height() - kComboArrow) / 2.0,
+                           kComboArrow, kComboArrow);
+        p.drawPixmap(arrow.toRect(), glyph_pixmap(Glyph::ChevronDown, on ? t.textDim : t.textFaint,
+                                                  kComboArrow, devicePixelRatioF()));
+        return;
+    }
+
     // The value, with the item's icon before it when it has one.
     int x            = kComboPadX;
     const QIcon mark = currentIndex() >= 0 ? itemIcon(currentIndex()) : QIcon();
@@ -1025,6 +1071,648 @@ void ProgressStrip::paintEvent(QPaintEvent*)
 }
 
 // =============================================================================
+// Conversation — ThinkingDot, MessageBubble, Transcript, AttachmentChip,
+//                ContextMeter
+// =============================================================================
+
+QString formatTokenCount(qint64 tokens)
+{
+    if (tokens < 1000) return QString::number(tokens);
+    // One decimal up to a hundred thousand, none above it: `12.4 b` is a number
+    // a reader uses, `128.0 b` is noise around a number they already know.
+    if (tokens < 100000)
+        return QStringLiteral("%1 b").arg(
+            QString::number(static_cast<double>(tokens) / 1000.0, 'f', 1));
+    return QStringLiteral("%1 b").arg(tokens / 1000);
+}
+
+QString formatByteCount(qint64 bytes)
+{
+    if (bytes < 1024) return QStringLiteral("%1 B").arg(bytes);
+    if (bytes < 1024 * 1024)
+        return QStringLiteral("%1 KB").arg(
+            QString::number(static_cast<double>(bytes) / 1024.0, 'f', 0));
+    return QStringLiteral("%1 MB").arg(
+        QString::number(static_cast<double>(bytes) / (1024.0 * 1024.0), 'f', 1));
+}
+
+// ---- ThinkingDot ------------------------------------------------------------
+
+namespace {
+
+/// `Düşünüyor · 4 s`, or the label alone before a turn is worth timing.
+QString dotCaption(const QString& label, int elapsed)
+{
+    if (elapsed < 0) return label;
+    return QStringLiteral("%1 · %2 s").arg(label).arg(elapsed);
+}
+
+} // namespace
+
+ThinkingDot::ThinkingDot(QWidget* parent) : QWidget(parent), label_(tr("Düşünüyor"))
+{
+    setFixedHeight(kBoxSize);
+    setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    setAccessibleName(label_);
+
+    clock_ = new QTimer(this);
+    clock_->setInterval(kDotTickMs);
+    connect(clock_, &QTimer::timeout, this, [this] {
+        phase_ = (phase_ + 1) % kDotPhases;
+        update();
+    });
+}
+
+void ThinkingDot::setActive(bool on)
+{
+    if (active_ == on) return;
+    active_ = on;
+    if (on) {
+        phase_ = 0;
+        clock_->start();
+    } else {
+        clock_->stop();
+        elapsed_ = -1;
+    }
+    update();
+}
+
+void ThinkingDot::setLabel(const QString& text)
+{
+    label_ = text;
+    setAccessibleName(text);
+    updateGeometry();
+    update();
+}
+
+void ThinkingDot::setElapsedSeconds(int seconds)
+{
+    if (elapsed_ == seconds) return;
+    elapsed_ = seconds;
+    updateGeometry();
+    update();
+}
+
+void ThinkingDot::applyTheme(ThemeMode mode)
+{
+    theme_ = mode;
+    update();
+}
+
+QSize ThinkingDot::sizeHint() const
+{
+    const QString words = dotCaption(label_, elapsed_);
+    const int dots      = 3 * kDotSize + 2 * kDotGap;
+    return {dots + kBoxGap + QFontMetrics(sans(kBadgePx + 1)).horizontalAdvance(words), kBoxSize};
+}
+
+void ThinkingDot::showEvent(QShowEvent* event)
+{
+    QWidget::showEvent(event);
+    setActive(true);
+}
+
+void ThinkingDot::hideEvent(QHideEvent* event)
+{
+    setActive(false);
+    QWidget::hideEvent(event);
+}
+
+void ThinkingDot::paintEvent(QPaintEvent*)
+{
+    if (!active_) return;
+
+    const Tokens& t = tokensOf(theme_);
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    p.setPen(Qt::NoPen);
+
+    const int mid = height() / 2;
+    for (int i = 0; i < 3; ++i) {
+        // The lifted dot is the accent at full strength and the others are the
+        // same colour held back, so the motion reads as one dot travelling
+        // rather than three lights blinking.
+        const bool up = i == phase_;
+        QColor ink    = t.accent;
+        if (!up) ink.setAlphaF(0.45F);
+        p.setBrush(ink);
+        const int x = i * (kDotSize + kDotGap);
+        const int y = mid - kDotSize / 2 - (up ? kDotRise : 0);
+        p.drawEllipse(QRect(x, y, kDotSize, kDotSize));
+    }
+
+    p.setFont(sans(kBadgePx + 1));
+    p.setPen(t.textDim);
+    const int words = 3 * kDotSize + 2 * kDotGap + kBoxGap;
+    p.drawText(QRect(words, 0, width() - words, height()), Qt::AlignVCenter | Qt::AlignLeft,
+               dotCaption(label_, elapsed_));
+}
+
+// ---- MessageBubble ----------------------------------------------------------
+
+namespace {
+
+/// What a speaker is CALLED and what tone it carries. One table, so the head, the
+/// wash and the badge cannot disagree about who is talking.
+///
+/// THE WORDS ARE BUILT WITH `QCoreApplication::translate`, not handed out as
+/// `const char*` for a caller to `tr()`. `tr(variable)` is invisible to
+/// `lupdate`, so a table of raw pointers would have quietly kept four visible
+/// strings out of `kentos_tr.ts` and out of Article 6.9's reach.
+struct SpeakerFace
+{
+    QString who;
+    QString mark; ///< the badge's text, empty for none
+    Tone tone;
+};
+
+SpeakerFace faceOf(Speaker speaker)
+{
+    const auto say = [](const char* text) {
+        return QCoreApplication::translate("kentos::app::MessageBubble", text);
+    };
+    switch (speaker) {
+    case Speaker::Person: return {say("Siz"), QString(), Tone::Neutral};
+    // `ÖNERİ` IS NOT OPTIONAL AND NOT CONDITIONAL. ai.md R17 requires every piece
+    // of model output to be labelled a suggestion, and P4 forbids the words that
+    // would make it sound like anything else. The badge is built with the bubble,
+    // before any text has arrived, so there is no state in which a model turn is
+    // on screen without it.
+    case Speaker::Model: return {say("Model"), say("ÖNERİ"), Tone::Accent};
+    case Speaker::ToolResult: return {say("Araç"), say("SONUÇ"), Tone::Neutral};
+    case Speaker::Notice: return {say("KentOSCad"), QString(), Tone::Warn};
+    }
+    return {QString(), QString(), Tone::Neutral};
+}
+
+} // namespace
+
+MessageBubble::MessageBubble(Speaker speaker, QWidget* parent) : QWidget(parent), speaker_(speaker)
+{
+    setObjectName(QStringLiteral("messageBubble"));
+    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
+
+    column_ = new QVBoxLayout(this);
+    column_->setContentsMargins(kBubblePad, kBubblePad - 2, kBubblePad, kBubblePad - 2);
+    column_->setSpacing(6);
+
+    const SpeakerFace face = faceOf(speaker_);
+
+    auto* head = new QHBoxLayout;
+    head->setContentsMargins(0, 0, 0, 0);
+    head->setSpacing(6);
+    who_ = new QLabel(face.who, this);
+    who_->setObjectName(QStringLiteral("bubbleWho"));
+    head->addWidget(who_);
+    if (!face.mark.isEmpty()) {
+        mark_ = new Badge(face.mark, face.tone, this);
+        head->addWidget(mark_);
+    }
+    head->addStretch(1);
+    column_->addLayout(head);
+
+    body_ = new QLabel(this);
+    body_->setObjectName(QStringLiteral("bubbleBody"));
+    body_->setWordWrap(true);
+    body_->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+    // AN EMPTY BODY TAKES NO ROOM. A bubble that is only waiting, or only a
+    // refusal, would otherwise carry a blank line where its words will go, and
+    // the head would float away from what it introduces.
+    body_->setVisible(false);
+    // MONO FOR A TOOL'S OUTPUT, because it is a command's echo: aligned columns,
+    // coordinates and object counts, and prose type would break every one of them.
+    if (speaker_ == Speaker::ToolResult) body_->setObjectName(QStringLiteral("bubbleBodyMono"));
+    column_->addWidget(body_);
+
+    setAccessibleName(tr("%1 iletisi").arg(face.who));
+}
+
+void MessageBubble::setText(const QString& text)
+{
+    body_->setText(text);
+    body_->setVisible(!text.isEmpty());
+}
+
+void MessageBubble::appendText(const QString& text)
+{
+    if (text.isEmpty()) return;
+    body_->setText(body_->text() + text);
+    body_->setVisible(true);
+}
+
+QString MessageBubble::text() const
+{
+    return body_->text();
+}
+
+void MessageBubble::appendReasoning(const QString& text)
+{
+    if (text.isEmpty()) return;
+    reasoning_ += text;
+
+    if (fold_ == nullptr) {
+        // THE BUTTON GOES IN THE COLUMN, not in a row widget of its own. A
+        // wrapper `QWidget` here painted a grey band across the whole bubble —
+        // its own ground, inherited from the panel's rule — behind a button that
+        // is 140 px wide. One widget, aligned left, and the bubble's wash is the
+        // only ground in the bubble.
+        foldButton_ =
+            new Button(ButtonRole::Ghost, tr("Düşünme süreci"), Glyph::ChevronRight, this);
+        foldButton_->setControlSize(ControlSize::Compact);
+
+        fold_ = new QLabel(this);
+        fold_->setObjectName(QStringLiteral("bubbleReasoning"));
+        fold_->setWordWrap(true);
+        fold_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        fold_->setVisible(false);
+
+        // THE FOLD GOES ABOVE THE ANSWER, where the thinking happened. A reader
+        // scrolling a finished turn wants the answer at the bottom, next to what
+        // they type; a reader watching one arrive wants the thinking where it is
+        // being written. Both want it in the order it occurred.
+        const int at = column_->indexOf(body_);
+        column_->insertWidget(at, foldButton_, 0, Qt::AlignLeft);
+        column_->insertWidget(at + 1, fold_);
+
+        connect(foldButton_, &QPushButton::clicked, this,
+                [this] { setReasoningOpen(!fold_->isVisible()); });
+        applyTheme(theme_);
+    }
+    fold_->setText(reasoning_);
+}
+
+void MessageBubble::setReasoningOpen(bool open)
+{
+    if (fold_ == nullptr) return;
+    fold_->setVisible(open);
+    foldButton_->setIcon(icon(open ? Glyph::ChevronDown : Glyph::ChevronRight,
+                              tokensOf(theme_).textDim, tokensOf(theme_).accent, kIconPx));
+}
+
+bool MessageBubble::hasReasoning() const noexcept
+{
+    return fold_ != nullptr;
+}
+
+void MessageBubble::setWaiting(bool waiting)
+{
+    if (!waiting) {
+        if (dots_ != nullptr) dots_->setVisible(false);
+        return;
+    }
+    if (dots_ == nullptr) {
+        dots_ = new ThinkingDot(this);
+        column_->addWidget(dots_);
+        applyTheme(theme_);
+    }
+    dots_->setVisible(true);
+}
+
+void MessageBubble::setNote(const QString& text, Tone tone)
+{
+    if (note_ == nullptr) {
+        note_ = new QLabel(this);
+        note_->setObjectName(QStringLiteral("formHelp"));
+        note_->setWordWrap(true);
+        column_->addWidget(note_);
+    }
+    note_->setText(text);
+    note_->setVisible(!text.isEmpty());
+    // The SAME name and the SAME property `FormRow` uses, so one stylesheet rule
+    // colours the note under a field and the note under a bubble.
+    restyle(note_, "tone", toneProperty(tone));
+}
+
+void MessageBubble::setFooter(QWidget* footer)
+{
+    if (footer_ != nullptr) {
+        column_->removeWidget(footer_);
+        footer_->deleteLater();
+    }
+    footer_ = footer;
+    if (footer_ == nullptr) return;
+    footer_->setParent(this);
+    column_->addWidget(footer_);
+    applyTheme(theme_);
+}
+
+void MessageBubble::applyTheme(ThemeMode mode)
+{
+    theme_ = mode;
+    if (fold_ != nullptr) setReasoningOpen(fold_->isVisible());
+    applyThemeToChildren(this, mode);
+    update();
+}
+
+void MessageBubble::paintEvent(QPaintEvent*)
+{
+    const Tokens& t = tokensOf(theme_);
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing, true);
+
+    // THE WASH SAYS WHO IS TALKING and the outline keeps the bubble legible on a
+    // panel that is itself the same family of greys. A person's turn is the
+    // accent wash — it is the one thing on the transcript they wrote themselves;
+    // the model's is the panel's own raised ground, because an answer labelled
+    // ÖNERİ must not also be dressed as the program's own voice.
+    QColor wash = t.bgRaised;
+    QColor edge = t.border;
+    switch (speaker_) {
+    case Speaker::Person:
+        wash = t.accentWash;
+        edge = t.accentEdge;
+        break;
+    case Speaker::Model: break;
+    case Speaker::ToolResult: wash = t.bgSunken; break;
+    case Speaker::Notice:
+        wash = t.warnWash;
+        edge = t.warn;
+        break;
+    }
+
+    p.setPen(QPen(edge, 1.0));
+    p.setBrush(wash);
+    p.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), kBubbleRadius, kBubbleRadius);
+}
+
+// ---- Transcript -------------------------------------------------------------
+
+Transcript::Transcript(QWidget* parent) : QWidget(parent)
+{
+    setObjectName(QStringLiteral("transcript"));
+
+    auto* frame = new QVBoxLayout(this);
+    frame->setContentsMargins(0, 0, 0, 0);
+
+    scroll_ = new QScrollArea(this);
+    scroll_->setObjectName(QStringLiteral("transcriptScroll"));
+    scroll_->setWidgetResizable(true);
+    scroll_->setFrameShape(QFrame::NoFrame);
+    scroll_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    frame->addWidget(scroll_);
+
+    column_ = new QWidget(scroll_);
+    column_->setObjectName(QStringLiteral("transcriptColumn"));
+    stack_ = new QVBoxLayout(column_);
+    stack_->setContentsMargins(12, 12, 12, 12);
+    stack_->setSpacing(kBubbleGap);
+
+    placeholder_ = new QLabel(column_);
+    placeholder_->setObjectName(QStringLiteral("formHelp"));
+    placeholder_->setWordWrap(true);
+    placeholder_->setAlignment(Qt::AlignCenter);
+    stack_->addWidget(placeholder_);
+    stack_->addStretch(1);
+
+    scroll_->setWidget(column_);
+}
+
+void Transcript::append(QWidget* bubble)
+{
+    const bool follow = atEnd();
+    placeholder_->setVisible(false);
+    bubble->setParent(column_);
+    // Before the trailing stretch, which is what keeps a short transcript at the
+    // top of the panel rather than centred in it.
+    stack_->insertWidget(stack_->count() - 1, bubble);
+    bubble->show();
+    if (follow) toEnd();
+}
+
+QWidget* Transcript::last() const noexcept
+{
+    for (int i = stack_->count() - 2; i >= 0; --i) {
+        QWidget* w = stack_->itemAt(i)->widget();
+        if (w != nullptr && w != placeholder_) return w;
+    }
+    return nullptr;
+}
+
+int Transcript::count() const
+{
+    int n = 0;
+    for (int i = 0; i < stack_->count(); ++i) {
+        QWidget* w = stack_->itemAt(i)->widget();
+        if (w != nullptr && w != placeholder_) ++n;
+    }
+    return n;
+}
+
+void Transcript::clear()
+{
+    for (int i = stack_->count() - 2; i >= 0; --i) {
+        QWidget* w = stack_->itemAt(i)->widget();
+        if (w == nullptr || w == placeholder_) continue;
+        stack_->removeWidget(w);
+        w->deleteLater();
+    }
+    placeholder_->setVisible(true);
+}
+
+void Transcript::bumped()
+{
+    if (atEnd()) toEnd();
+}
+
+bool Transcript::atEnd() const
+{
+    const QScrollBar* bar = scroll_->verticalScrollBar();
+    return bar->value() >= bar->maximum() - kFollowSlack;
+}
+
+void Transcript::toEnd()
+{
+    // AFTER THE LAYOUT, NOT BEFORE IT. The bubble that was just added has no
+    // height until the layout has run, so scrolling now would scroll to the old
+    // maximum and stop one bubble short — which looked exactly like a transcript
+    // that does not follow.
+    QTimer::singleShot(0, this, [this] {
+        QScrollBar* bar = scroll_->verticalScrollBar();
+        bar->setValue(bar->maximum());
+    });
+}
+
+void Transcript::toStart()
+{
+    QTimer::singleShot(0, this, [this] { scroll_->verticalScrollBar()->setValue(0); });
+}
+
+void Transcript::setPlaceholder(const QString& text)
+{
+    placeholder_->setText(text);
+}
+
+void Transcript::applyTheme(ThemeMode mode)
+{
+    theme_ = mode;
+    applyThemeToChildren(this, mode);
+    update();
+}
+
+// ---- AttachmentChip ---------------------------------------------------------
+
+AttachmentChip::AttachmentChip(const QString& name, qint64 bytes, const QString& media,
+                               QWidget* parent)
+    : QWidget(parent), name_(name), bytes_(bytes)
+{
+    setObjectName(QStringLiteral("attachmentChip"));
+    setFixedHeight(kAttachH);
+    setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+
+    // The glyph is the media type's, from the type alone: a chip must not have to
+    // guess from an extension, and a file the user renamed is still a PNG.
+    glyph_ = Glyph::Document;
+    if (media.startsWith(QStringLiteral("image/")))
+        glyph_ = Glyph::Palette;
+    else if (media.startsWith(QStringLiteral("text/")))
+        glyph_ = Glyph::Text;
+
+    // The name is elided in the middle: the beginning says what it is and the
+    // extension says what kind, and a tail-elided name loses the second.
+    shown_ = QFontMetrics(sans(kBadgePx + 2)).elidedText(name_, Qt::ElideMiddle, 160);
+
+    auto* row = new QHBoxLayout(this);
+    row->setContentsMargins(kAttachPadX, 0, 4, 0);
+    row->setSpacing(4);
+    row->addStretch(1);
+    drop_ = new Button(Glyph::Close, tr("Eki kaldır"), this);
+    drop_->setFixedSize(kBoxSize + 4, kBoxSize + 4);
+    row->addWidget(drop_);
+    connect(drop_, &QPushButton::clicked, this, &AttachmentChip::removeRequested);
+
+    setAccessibleName(tr("Ek: %1, %2").arg(name_, formatByteCount(bytes_)));
+    setToolTip(accessibleName());
+}
+
+void AttachmentChip::setRemovable(bool on)
+{
+    drop_->setVisible(on);
+    updateGeometry();
+}
+
+void AttachmentChip::applyTheme(ThemeMode mode)
+{
+    theme_ = mode;
+    applyThemeToChildren(this, mode);
+    update();
+}
+
+QSize AttachmentChip::sizeHint() const
+{
+    const QFontMetrics words(sans(kBadgePx + 2));
+    const int text =
+        words.horizontalAdvance(shown_) + 6 + words.horizontalAdvance(formatByteCount(bytes_));
+    const int drop = drop_->isVisibleTo(this) ? kBoxSize + 8 : 0;
+    return {kAttachPadX + kIconPx + 6 + text + drop + 4, kAttachH};
+}
+
+void AttachmentChip::paintEvent(QPaintEvent*)
+{
+    const Tokens& t = tokensOf(theme_);
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    p.setPen(QPen(t.border, 1.0));
+    p.setBrush(t.bgInput);
+    p.drawRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), kRadius, kRadius);
+
+    const int mid = height() / 2;
+    p.drawPixmap(QRect(kAttachPadX, mid - kIconPx / 2, kIconPx, kIconPx),
+                 glyph_pixmap(glyph_, t.textDim, kIconPx, devicePixelRatioF()));
+
+    const QFontMetrics words(sans(kBadgePx + 2));
+    int x = kAttachPadX + kIconPx + 6;
+    p.setFont(sans(kBadgePx + 2));
+    p.setPen(t.text);
+    p.drawText(QRect(x, 0, words.horizontalAdvance(shown_), height()),
+               Qt::AlignVCenter | Qt::AlignLeft, shown_);
+    x += words.horizontalAdvance(shown_) + 6;
+    p.setPen(t.textFaint);
+    p.drawText(QRect(x, 0, words.horizontalAdvance(formatByteCount(bytes_)), height()),
+               Qt::AlignVCenter | Qt::AlignLeft, formatByteCount(bytes_));
+}
+
+// ---- ContextMeter -----------------------------------------------------------
+
+ContextMeter::ContextMeter(QWidget* parent) : QWidget(parent)
+{
+    setObjectName(QStringLiteral("contextMeter"));
+    setFixedHeight(kMeterH);
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    setAccessibleName(tr("Bağlam kullanımı"));
+}
+
+void ContextMeter::setUsage(qint64 used, qint64 window, bool measured)
+{
+    used_     = used;
+    window_   = window;
+    measured_ = measured;
+    setToolTip(caption());
+    update();
+}
+
+QString ContextMeter::caption() const
+{
+    // THE SENTENCE NAMES WHICH NUMBER IT IS, always. `tahmin` while the program
+    // is counting for itself, `ölçüldü` once the provider has reported — the one
+    // distinction a context readout must never blur (`ai/chat.hpp`,
+    // `Conversation::reconcile`).
+    const QString kind = measured_ ? tr("ölçüldü") : tr("tahmin");
+    // THE WINDOW FACT FIRST, then whose number it is: a reader scanning the line
+    // needs to know there is no denominator before they weigh the numerator.
+    if (window_ <= 0)
+        return tr("%1 belirteç · pencere bilinmiyor · %2").arg(formatTokenCount(used_), kind);
+    return tr("%1 / %2 belirteç · %3")
+        .arg(formatTokenCount(used_), formatTokenCount(window_), kind);
+}
+
+void ContextMeter::applyTheme(ThemeMode mode)
+{
+    theme_ = mode;
+    update();
+}
+
+QSize ContextMeter::sizeHint() const
+{
+    return {180, kMeterH};
+}
+
+void ContextMeter::paintEvent(QPaintEvent*)
+{
+    const Tokens& t = tokensOf(theme_);
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing, true);
+
+    p.setFont(sans(kMeterPx));
+    p.setPen(measured_ ? t.textDim : t.textFaint);
+    p.drawText(QRect(0, 0, width(), height() - kMeterBarH - 2), Qt::AlignVCenter | Qt::AlignLeft,
+               caption());
+
+    // NO BAR WITHOUT A DENOMINATOR. An unknown window is the ordinary case for a
+    // cloud endpoint and a bar drawn anyway would have to invent the one number
+    // the user is deciding on.
+    if (window_ <= 0) return;
+
+    const QRectF track(0, height() - kMeterBarH, width(), kMeterBarH);
+    p.setPen(Qt::NoPen);
+    p.setBrush(t.bgSunken);
+    p.drawRoundedRect(track, kMeterBarH / 2.0, kMeterBarH / 2.0);
+
+    const double fill =
+        std::clamp(static_cast<double>(used_) / static_cast<double>(window_), 0.0, 1.0);
+    // The colour is the statement: accent while there is room, warn past four
+    // fifths, danger when the next turn will not fit. A number a user reads to
+    // decide whether to start a new chat should not need arithmetic.
+    QColor ink = t.accent;
+    if (fill >= 0.95)
+        ink = t.danger;
+    else if (fill >= 0.8)
+        ink = t.warn;
+    p.setBrush(ink);
+    p.drawRoundedRect(QRectF(track.left(), track.top(), track.width() * fill, track.height()),
+                      kMeterBarH / 2.0, kMeterBarH / 2.0);
+}
+
+// =============================================================================
 // FormRow
 // =============================================================================
 
@@ -1413,6 +2101,24 @@ QWidget* buildComponentSheet(ThemeMode mode, QWidget* parent)
         grid->addWidget(combo, 2, 0);
         grid->addWidget(date, 2, 1);
         grid->addWidget(listRow, 2, 2);
+
+        // FROM THE SCENE: a coordinate and an object, each typed or picked. The
+        // second is shown armed, so the pressed pick button is on the sheet.
+        auto* point = new FormRow(
+            QStringLiteral("Nokta (sahneden)"),
+            shown(field(field_of(FieldKind::Point), QStringLiteral("485320.150,4310220.000"),
+                        FieldState::Normal, std::nullopt),
+                  "girdi", "nokta"),
+            sheet);
+        point->setHelp(QStringLiteral("x,y yazın ya da nişan düğmesiyle tuvalden tıklayın."));
+        auto* objectField =
+            field(field_of(FieldKind::Object), QString(), FieldState::Normal, std::nullopt);
+        objectField->setPicking(true);
+        auto* object = new FormRow(QStringLiteral("Nesne (sahneden, seçiliyor)"),
+                                   shown(objectField, "girdi", "nesne"), sheet);
+        object->setHelp(QStringLiteral("Nesne kimliğini yazın ya da tuvalden bir nesne tıklayın."));
+        grid->addWidget(point, 3, 0);
+        grid->addWidget(object, 3, 1);
         page->addLayout(grid);
     }
 
@@ -1559,6 +2265,84 @@ QWidget* buildComponentSheet(ThemeMode mode, QWidget* parent)
         grid->setColumnWidth(3, 160);
         grid->selectRow(1);
         page->addWidget(grid);
+    }
+
+    // ---- SOHBET, design.md §12 and CLAUDE.md's "modern chat window" ----------
+    {
+        page->addWidget(
+            new FormSection(QStringLiteral("SOHBET — DÖKÜM · İLETİ · DÜŞÜNME · EK · BAĞLAM"),
+                            QStringLiteral("model çıktısı her durumda ÖNERİ etiketli"), sheet));
+
+        auto* transcript = shown(new Transcript(sheet), "döküm", "5 ileti");
+        transcript->setPlaceholder(
+            QStringLiteral("Ne yapmak istediğinizi Türkçe yazın; model komut önerir."));
+        // Tall enough for every bubble below, so the living standard shows all
+        // five rather than the tail of a scroll.
+        transcript->setFixedHeight(460);
+
+        auto* asked = new MessageBubble(Speaker::Person, sheet);
+        asked->setText(QStringLiteral(
+            "1284 ada 7 parseli iki eşit parçaya böl, bölme çizgisi kuzey cepheye dik olsun."));
+        transcript->append(shown(asked, "ileti", "kişi"));
+
+        auto* answered = new MessageBubble(Speaker::Model, sheet);
+        answered->setText(QStringLiteral(
+            "Parselin alanı 3 482.64 m²; iki eşit parça 1 741.32 m² olur. Kuzey cephe "
+            "azimutu 118°, bölme çizgisi buna dik. Aşağıdaki iki komutu öneriyorum."));
+        answered->appendReasoning(QStringLiteral(
+            "Cephe kenarını kuzeyden seçtim, azimutunu hesapladım, dik doğrultuda alanı "
+            "ikiye bölen konumu ikili arama ile buldum."));
+        answered->setNote(QStringLiteral("2 adım öneri olarak kaydedildi (KG-4)."), Tone::Accent);
+        transcript->append(shown(answered, "ileti", "model"));
+
+        auto* reported = new MessageBubble(Speaker::ToolResult, sheet);
+        reported->setText(QStringLiteral("sorgula: 1 nesne · alan 3482.64 m² · @9f3c1a82b7d04e56"));
+        transcript->append(shown(reported, "ileti", "araç"));
+
+        auto* thought = new MessageBubble(Speaker::Model, sheet);
+        thought->setWaiting(true);
+        transcript->append(shown(thought, "ileti", "bekliyor"));
+
+        auto* refused = new MessageBubble(Speaker::Notice, sheet);
+        refused->setNote(
+            QStringLiteral("Koordinat reddedildi: bu parametre yalnız araç sonucu tutamağı "
+                           "kabul eder (ai.md R10)."),
+            Tone::Danger);
+        transcript->append(shown(refused, "ileti", "uyarı"));
+        // THE TOP, not the tail: a standard is read from the beginning, and the
+        // follow-the-end rule that is right in a live panel would photograph the
+        // last bubble and hide the four above it.
+        transcript->toStart();
+        page->addWidget(transcript);
+
+        auto* row = new QHBoxLayout;
+        row->setSpacing(8);
+        auto* dots = shown(new ThinkingDot(sheet), "düşünme", "etkin");
+        dots->setElapsedSeconds(4);
+        dots->setActive(true);
+        row->addWidget(dots);
+        row->addWidget(shown(new AttachmentChip(QStringLiteral("olcum_listesi.csv"), 248 * 1024,
+                                                QStringLiteral("text/csv"), sheet),
+                             "ek", "kaldırılabilir"));
+        auto* sent = new AttachmentChip(QStringLiteral("kroki.png"), 1536 * 1024,
+                                        QStringLiteral("image/png"), sheet);
+        sent->setRemovable(false);
+        row->addWidget(shown(sent, "ek", "gönderilmiş"));
+        row->addStretch(1);
+        page->addLayout(row);
+
+        auto* meters = new QHBoxLayout;
+        meters->setSpacing(24);
+        auto* measured = shown(new ContextMeter(sheet), "bağlam", "ölçüldü");
+        measured->setUsage(12400, 128000, true);
+        meters->addWidget(measured);
+        auto* guessed = shown(new ContextMeter(sheet), "bağlam", "tahmin");
+        guessed->setUsage(3200, 8192, false);
+        meters->addWidget(guessed);
+        auto* unknown = shown(new ContextMeter(sheet), "bağlam", "pencere bilinmiyor");
+        unknown->setUsage(9100, 0, true);
+        meters->addWidget(unknown);
+        page->addLayout(meters);
     }
 
     page->addStretch(1);

@@ -3,6 +3,7 @@
 
 #include "kentos_cad/app/attribute_panel.hpp"
 #include "kentos_cad/app/attribute_table.hpp"
+#include "kentos_cad/app/chat_panel.hpp"
 #include "kentos_cad/app/command_line.hpp"
 #include "kentos_cad/app/command_palette.hpp"
 #include "kentos_cad/app/controller.hpp"
@@ -14,10 +15,13 @@
 #include "kentos_cad/app/map_canvas.hpp"
 #include "kentos_cad/app/panels.hpp"
 #include "kentos_cad/app/pick_list.hpp"
+#include "kentos_cad/app/print_dialog.hpp"
+#include "kentos_cad/app/print_service.hpp"
 #include "kentos_cad/app/schema_page.hpp"
 #include "kentos_cad/app/settings_dialog.hpp"
 #include "kentos_cad/app/shell_chrome.hpp"
 #include "kentos_cad/app/style_designer.hpp"
+#include "kentos_cad/app/suggestion_card.hpp"
 #include "kentos_cad/app/title_bar.hpp"
 #include "kentos_cad/app/toolbox.hpp"
 #include "kentos_cad/app/tools_panel.hpp"
@@ -273,6 +277,51 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     connect(canvas_, &MapCanvas::echoRequested, this, &MainWindow::onEcho);
     connect(canvas_, &MapCanvas::pickAmbiguous, this, &MainWindow::choosePick);
 
+    // A FORM FIELD PICKED FROM THE SCENE (tools_panel.hpp `ScenePicker`). The
+    // canvas says what landed; the field that asked gets the text the command
+    // line would take for it. The status line says what is wanted meanwhile and
+    // goes back to the running command's prompt after.
+    connect(canvas_, &MapCanvas::captureBegan, this,
+            [this](const QString& prompt) { commandLine_->setPrompt(prompt); });
+    connect(canvas_, &MapCanvas::pointCaptured, this, [this](core::Point2 world) {
+        if (!pendingPick_) return;
+        auto done    = std::move(pendingPick_);
+        pendingPick_ = nullptr;
+        done(QStringLiteral("%1,%2").arg(
+            QString::number(static_cast<double>(world.x) / 1000.0, 'f', 3),
+            QString::number(static_cast<double>(world.y) / 1000.0, 'f', 3)));
+    });
+    connect(canvas_, &MapCanvas::objectCaptured, this, [this](core::EntityKey key) {
+        if (!pendingPick_) return;
+        auto done    = std::move(pendingPick_);
+        pendingPick_ = nullptr;
+        done(QString::number(static_cast<qulonglong>(core::raw(key))));
+    });
+    connect(canvas_, &MapCanvas::captureAmbiguous, this, &MainWindow::chooseCapture);
+
+    // THE PRINT FRAME says what it wants on the status line, and clears it when
+    // it goes — the same two lines the field pick uses.
+    connect(canvas_, &MapCanvas::printFrameBegan, this,
+            [this](const QString& prompt) { commandLine_->setPrompt(prompt); });
+    connect(canvas_, &MapCanvas::printFrameAccepted, this, [this] { printWithProfile(); });
+    connect(canvas_, &MapCanvas::printFrameEnded, this, [this] {
+        const command::Session* session = controller_->session();
+        commandLine_->setPrompt(session != nullptr && session->waiting()
+                                    ? QString::fromStdString(session->prompt().message)
+                                    : QString());
+    });
+    connect(canvas_, &MapCanvas::captureEnded, this, [this] {
+        if (pendingPick_) {
+            auto done    = std::move(pendingPick_);
+            pendingPick_ = nullptr;
+            done(std::nullopt);
+        }
+        const command::Session* session = controller_->session();
+        commandLine_->setPrompt(session != nullptr && session->waiting()
+                                    ? QString::fromStdString(session->prompt().message)
+                                    : QString());
+    });
+
     // Enter on an empty command line is "done pointing". Focus is here far more
     // often than on the canvas, so without this the gesture had nowhere to land.
     connect(commandLine_, &CommandLine::accepted, this, [this] {
@@ -497,7 +546,19 @@ void MainWindow::buildActions()
     actExport_->setData(static_cast<int>(Glyph::Export));
     connect(actExport_, &QAction::triggered, this, &MainWindow::exportData);
 
-    actPrint_ = placeholder(Glyph::Print, tr("Yazdır"), QStringLiteral("YAZDIR"), tr("Faz 2"));
+    // YAZDIR, and it is two presses rather than one window: the first opens the
+    // sheet-shaped frame on the canvas so the user can aim, the second captures
+    // what is in it (see `printWithProfile`). The arrow beside the button opens
+    // the profile list.
+    actPrint_ = new QAction(tr("Yazdır"), this);
+    actPrint_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_P));
+    actPrint_->setToolTip(tr("YAZDIR — yazdırma alanını aç, sonra önizlemeye geç (Ctrl+P)"));
+    actPrint_->setData(static_cast<int>(Glyph::Print));
+    connect(actPrint_, &QAction::triggered, this, [this] { printWithProfile(); });
+
+    actPrintMenu_ = new QAction(tr("Yazdırma profilleri"), this);
+    actPrintMenu_->setToolTip(tr("Yazdırma profilleri — hangi kâğıda, hangi çözünürlükte"));
+    actPrintMenu_->setData(static_cast<int>(Glyph::ChevronDown));
 
     actScript_ = new QAction(tr("Betik Çalıştır…"), this);
     actScript_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
@@ -879,9 +940,9 @@ void MainWindow::buildActions()
     });
 
     // ---- seçim ----
-    actSelectAll_  = commandAction(Glyph::Select, tr("Tümünü Seç"), QStringLiteral("SEÇ TÜMÜ"),
-                                   tr("SEÇ TÜMÜ — görünür bütün nesneleri seçer"),
-                                   QKeySequence(Qt::CTRL | Qt::Key_A));
+    actSelectAll_ = commandAction(Glyph::Select, tr("Tümünü Seç"), QStringLiteral("SEÇ TÜMÜ"),
+                                  tr("SEÇ TÜMÜ — görünür bütün nesneleri seçer"),
+                                  QKeySequence(Qt::CTRL | Qt::Key_A));
     actSelectNone_ = commandAction(
         Glyph::Select, tr("Seçimi Temizle"), QStringLiteral("SEÇ TEMİZLE"),
         tr("SEÇ TEMİZLE — seçimi boşaltır"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
@@ -931,8 +992,21 @@ void MainWindow::buildActions()
     // what the empty name asks for.
     connect(actTable_, &QAction::triggered, this, [this] { openAttributeTable(); });
 
-    actAi_ = placeholder(Glyph::Ai, tr("AI Asistan"), QString(), tr("Faz 3"));
-    actAi_->setToolTip(tr("AI komut önerisi — önizleme ve onay ile (Faz 3)"));
+    // THE CONVERSATION. Was a `Faz 3` placeholder; it is the panel now. The mark
+    // is `Chat` rather than `Ai` because what the button opens is a conversation
+    // and `Glyph::Ai` is what an AI-authored SUGGESTION is marked with — two
+    // different things that must not share a picture.
+    actAi_ = new QAction(tr("Yapay Zeka"), this);
+    actAi_->setData(static_cast<int>(Glyph::Chat));
+    actAi_->setToolTip(tr("Yapay zeka sohbeti — model komut önerir, uygulayan sizsiniz"));
+    actAi_->setStatusTip(actAi_->toolTip());
+    actAi_->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+A")));
+    connect(actAi_, &QAction::triggered, this, [this] {
+        if (chatDock_ == nullptr) return;
+        chatDock_->show();
+        chatDock_->raise();
+        if (chatPanel_ != nullptr) chatPanel_->refreshProfiles();
+    });
 
     // ---- arayüz ----
     actTheme_ = new QAction(tr("Koyu Tema"), this);
@@ -971,10 +1045,26 @@ void MainWindow::buildToolBars()
     tbMain_->setMovable(false);
     tbMain_->setFloatable(false);
 
-    // file
+    // file. YAZDIR sits with them, to the right of Kaydet: printing is what a
+    // drafter does with a file, and it belongs in the group the file lives in.
     tbMain_->addAction(actNew_);
     tbMain_->addAction(actOpen_);
     tbMain_->addAction(actSave_);
+    tbMain_->addAction(actPrint_);
+    tbMain_->addAction(actPrintMenu_);
+    if (auto* arrow = qobject_cast<QToolButton*>(tbMain_->widgetForAction(actPrintMenu_))) {
+        printMenu_ = new QMenu(arrow);
+        arrow->setIconSize(QSize(12, 12));
+        arrow->setFixedWidth(20);
+        // The list drops from the arrow's own bottom-left, so it reads as
+        // belonging to the button beside it rather than to the bar.
+        connect(actPrintMenu_, &QAction::triggered, this, [this, arrow] {
+            printMenu_->popup(arrow->mapToGlobal(QPoint(0, arrow->height())));
+        });
+        rebuildPrintMenu();
+        connect(&controller_->printService(), &PrintService::profilesChanged, this,
+                &MainWindow::rebuildPrintMenu);
+    }
     tbMain_->addSeparator();
 
     // undo / redo
@@ -1007,8 +1097,8 @@ void MainWindow::buildToolBars()
     tbMain_->addAction(actTable_);
     tbMain_->addSeparator();
 
-    // output
-    tbMain_->addAction(actPrint_);
+    // the conversation, then the settings
+    tbMain_->addAction(actAi_);
     tbMain_->addAction(actSettings_);
 
     // The two readings sit at the far right, so a spacer eats everything between.
@@ -1168,12 +1258,57 @@ void MainWindow::buildMenus()
     analyse->addSeparator();
     analyse->addAction(actAi_);
 
+    // ---- THE AGENT LISTENER, one entry that toggles ----
+    //
+    // It runs `MCPSUNUCU`, exactly as the status cell does, so there is one road
+    // to the listener and a script can take it too (Article 1.2, 5.15). The
+    // wording follows the state rather than describing both: a menu that says
+    // `Başlat/Durdur` makes the reader work out which one they are about to do.
+    actMcp_ = new QAction(tr("MCP Sunucusunu Başlat"), this);
+    actMcp_->setData(static_cast<int>(Glyph::Server));
+    actMcp_->setStatusTip(tr("Yapay zeka ajanlarının bağlanacağı yerel sunucuyu açar"));
+    connect(actMcp_, &QAction::triggered, this, [this] {
+#if KENTOS_HAVE_MCP
+        const bool up =
+            controller_->mcpService() != nullptr && controller_->mcpService()->listening();
+        controller_->runLine(up ? QStringLiteral("MCPSUNUCU islem=durdur")
+                                : QStringLiteral("MCPSUNUCU islem=baslat"),
+                             command::Origin::Gui);
+#else
+        onEcho(tr("Bu yapıda MCP sunucusu yok (KENTOS_WITH_MCP kapalı)."));
+#endif
+    });
+    analyse->addAction(actMcp_);
+    QAction* mcpToken = analyse->addAction(tr("MCP Belirteci Üret"));
+    mcpToken->setStatusTip(tr("Yeni bir erişim belirteci üretir; eskisi geçersiz olur"));
+    connect(mcpToken, &QAction::triggered, this, [this] {
+        controller_->runLine(QStringLiteral("MCPSUNUCU islem=belirtec"), command::Origin::Gui);
+    });
+
     auto* layer = bar->addMenu(tr("&Katman"));
     layer->addAction(actLayer_);
     layer->addAction(actLayerManager_);
 
+    // THE TWO THAT NEED NO ROW. `Tümünü göster` and `Gösterimi ters çevir` are
+    // about the whole table, so they belong where a user looks for something that
+    // is not about one layer — and a user whose layers are all hidden has no row
+    // left to right-click. The per-layer visibility entries stay in the panel's
+    // own `Görünüm` submenu, beside the layer they act on.
+    layer->addSeparator();
+    QAction* showAll = layer->addAction(tr("Tümünü Göster"));
+    showAll->setToolTip(tr("KATMANGÖRÜNÜM islem=tumu — gizli bütün katmanları geri getirir"));
+    connect(showAll, &QAction::triggered, this, [this] {
+        controller_->runLine(QStringLiteral("KATMANGÖRÜNÜM islem=tumu"), command::Origin::Gui);
+    });
+    QAction* flipAll = layer->addAction(tr("Gösterimi Ters Çevir")); // ui-label
+    flipAll->setToolTip(tr("KATMANGÖRÜNÜM islem=tersine — görünenleri gizler, gizlileri gösterir"));
+    connect(flipAll, &QAction::triggered, this, [this] {
+        controller_->runLine(QStringLiteral("KATMANGÖRÜNÜM islem=tersine"), command::Origin::Gui);
+    });
+
     auto* window = bar->addMenu(tr("&Pencere"));
-    for (QDockWidget* dock : {layerDock_, propertyDock_, transcriptDock_, journalDock_}) {
+    for (QDockWidget* dock :
+         {layerDock_, propertyDock_, chatDock_, transcriptDock_, journalDock_}) {
         if (dock) window->addAction(dock->toggleViewAction());
     }
     window->addSeparator();
@@ -1322,6 +1457,42 @@ void MainWindow::buildPanels()
     // ---- the tools panel: the processing registry as a tree and a form ----
     toolsPanel_ = new ToolsPanel(*controller_, this);
     toolsPanel_->setViewportProvider([this] { return canvas_->view().visible_box(); });
+
+    // WHAT THE VIEWPORT IS SHOWING, for the client that cannot see the screen.
+    // The write hooks (`on_view_request`, `on_pan_request`) have always let a
+    // command MOVE the view; nothing could read it, so no command could answer
+    // "which corner coordinates am I looking at" — the first question any agent,
+    // script or macro asks before it draws. Installed beside the provider above
+    // and from the same source, so the two cannot disagree. View state is not
+    // document state (model.md R43): read here, never hashed, never journalled.
+    controller_->bus().on_view_query = [this] {
+        const render::ViewTransform& view = canvas_->view();
+        command::ViewInfo info;
+        info.window       = view.visible_box();
+        info.centre       = view.centre();
+        info.mm_per_pixel = view.mm_per_pixel();
+        info.width_px     = view.width();
+        info.height_px    = view.height();
+        // The denominator the status bar shows, at this screen's own DPI: a 1:N
+        // taken at a guessed DPI is a different plan scale on every monitor.
+        const double dpi = canvas_->logicalDpiX() > 0 ? canvas_->logicalDpiX() : 96.0;
+        info.scale       = static_cast<std::int64_t>(view.scale_denominator(dpi) + 0.5);
+        info.crs         = controller_->document().crs().id();
+        return info;
+    };
+    toolsPanel_->setScenePicker(
+        [this](FieldKind kind, std::function<void(std::optional<QString>)> done) {
+            // One pick at a time: a field that asks while another is waiting
+            // takes the pick over, and the first is answered with nothing.
+            if (pendingPick_) {
+                auto earlier = std::move(pendingPick_);
+                pendingPick_ = nullptr;
+                earlier(std::nullopt);
+            }
+            pendingPick_ = std::move(done);
+            canvas_->beginCapture(kind == FieldKind::Object ? MapCanvas::Capture::Object
+                                                            : MapCanvas::Capture::Point);
+        });
     connect(toolsPanel_, &ToolsPanel::runRequested, this,
             [this](const QString& line) { controller_->runLine(line, command::Origin::Gui); });
 
@@ -1357,6 +1528,26 @@ void MainWindow::buildPanels()
     layerDock_ = makeDock(QStringLiteral("layerDock"), layerHeader_, layerPanel_);
     layerDock_->toggleViewAction()->setText(tr("Katmanlar"));
 
+    // ---- the conversation, hidden until asked for ----
+    //
+    // A DOCK AND NOT A WINDOW: the drawing is what the conversation is about, and
+    // a modal chat would put the program's own subject behind the talk about it.
+    // It opens on the RIGHT, under the layers, because that is where the panels
+    // the user reads while drawing live.
+    chatPanel_ =
+        new ChatPanel(*controller_, controller_->aiService(), controller_->aiTransport(), this);
+    chatPanel_->setProfileSource([this] { return controller_->providerService().profiles(); });
+    connect(&controller_->providerService(), &ProviderService::profilesChanged, chatPanel_,
+            &ChatPanel::refreshProfiles);
+    connect(chatPanel_, &ChatPanel::said, this, &MainWindow::onEcho);
+
+    chatHeader_ = new PanelHeader(this);
+    chatHeader_->addTab(tr("Yapay Zeka"), static_cast<int>(Glyph::Chat));
+    chatHeader_->setButtons(PanelHeader::Grip | PanelHeader::Float | PanelHeader::Close);
+
+    chatDock_ = makeDock(QStringLiteral("chatDock"), chatHeader_, chatPanel_);
+    chatDock_->toggleViewAction()->setText(tr("Yapay Zeka"));
+
     // ---- the command journal, hidden until asked for ----
     journalHeader_ = new PanelHeader(this);
     journalHeader_->addTab(tr("Komut Günlüğü"), static_cast<int>(Glyph::Script));
@@ -1367,11 +1558,15 @@ void MainWindow::buildPanels()
 
     addDockWidget(Qt::RightDockWidgetArea, propertyDock_);
     addDockWidget(Qt::RightDockWidgetArea, layerDock_);
+    addDockWidget(Qt::RightDockWidgetArea, chatDock_);
     addDockWidget(Qt::BottomDockWidgetArea, journalDock_);
 
     // The reference has no bottom panel open: the command line carries the
-    // conversation and the journal is there when a user asks for it.
+    // conversation and the journal is there when a user asks for it. The chat is
+    // closed for the same reason — an assistant panel nobody opened is an
+    // assistant panel taking a third of the screen.
     journalDock_->hide();
+    chatDock_->hide();
 
     // 312 px wide, and the layers panel 268 px tall — both from design.md 7.
     resizeDocks({propertyDock_, layerDock_}, {312, 312}, Qt::Horizontal);
@@ -1379,7 +1574,7 @@ void MainWindow::buildPanels()
 
     // These fire during TEARDOWN as well as during use — see the note in
     // `~MainWindow`, which is where the connection is severed.
-    for (QDockWidget* dock : {propertyDock_, layerDock_, journalDock_}) {
+    for (QDockWidget* dock : {propertyDock_, layerDock_, chatDock_, journalDock_}) {
         connect(dock, &QDockWidget::topLevelChanged, this, [this] { syncDockTitles(); });
         connect(dock, &QDockWidget::visibilityChanged, this, [this] { syncDockTitles(); });
     }
@@ -1497,6 +1692,40 @@ void MainWindow::loadSymbolLibrary()
     }
 }
 
+void MainWindow::refreshAgentCell()
+{
+#if KENTOS_HAVE_MCP
+    McpService* server = controller_->mcpService();
+    if (server == nullptr) {
+        statusStrip_->setAgent(tr("MCP yok"), StatusStrip::AgentState::Off);
+        return;
+    }
+    if (!server->listening()) {
+        statusStrip_->setAgent(tr("MCP kapalı"), StatusStrip::AgentState::Off);
+        if (actMcp_ != nullptr) actMcp_->setText(tr("MCP Sunucusunu Başlat"));
+        return;
+    }
+    if (actMcp_ != nullptr) actMcp_->setText(tr("MCP Sunucusunu Durdur"));
+
+    // AN OPEN ENDPOINT IS NAMED, EVERY TIME THE OPERATOR LOOKS. The token is
+    // required by default and only a deliberately cleared setting takes it away;
+    // when it is gone, every process on this machine can drive the drawing, and
+    // the cell says so in a word rather than in a shade of red (ui.md R31).
+    if (!server->tokenRequired()) {
+        statusStrip_->setAgent(tr("MCP %1 KORUMASIZ").arg(server->port()),
+                               StatusStrip::AgentState::Unprotected);
+        return;
+    }
+    statusStrip_->setAgent(tr("MCP %1").arg(server->port()), StatusStrip::AgentState::Guarded);
+#else
+    // A BUILD WITHOUT THE LISTENER SAYS SO rather than showing nothing: an empty
+    // space where a state belongs reads as "off", and off and absent are
+    // different answers to "can an agent connect to this machine".
+    statusStrip_->setAgent(tr("MCP yok"), StatusStrip::AgentState::Off);
+    if (actMcp_ != nullptr) actMcp_->setEnabled(false);
+#endif
+}
+
 void MainWindow::syncDockTitles()
 {
     // Every dock now wears a `PanelHeader` permanently (design.md 6), so there is
@@ -1557,6 +1786,21 @@ void MainWindow::buildStatusBar()
     statusStrip_->addToggle(tr("OSNAP"), QString::fromLatin1(kChipOsnap));
     statusStrip_->addToggle(tr("DİNAMİK GİRDİ"), QStringLiteral("core.arayuz.dinamik_girdi"));
     statusStrip_->addToggle(tr("KALINLIK"), QStringLiteral("core.harita.kalinlik"));
+
+    // ---- the agent listener's cell ----
+    //
+    // CLICKING IT RUNS THE COMMAND, which is the same thing the menu entry and a
+    // script do (Article 1.2). The cell follows `McpService::stateChanged`, so it
+    // cannot claim a port that is closed — and it says `KORUMASIZ` in words, not
+    // only in red, when the listener is open with no token.
+    connect(statusStrip_, &StatusStrip::agentClicked, this, [this] {
+        if (actMcp_ != nullptr) actMcp_->trigger();
+    });
+#if KENTOS_HAVE_MCP
+    if (McpService* server = controller_->mcpService(); server != nullptr)
+        connect(server, &McpService::stateChanged, this, &MainWindow::refreshAgentCell);
+#endif
+    refreshAgentCell();
 
     connect(statusStrip_, &StatusStrip::configureRequested, this, [this](const QString& id) {
         if (id == QString::fromLatin1(kChipOsnap) || id == QString::fromLatin1(kChipPolar)) {
@@ -1921,7 +2165,7 @@ void MainWindow::probePickList()
     // ARMED BEFORE THE CLICK, because the click opens a MODAL window and does not
     // return until it closes. The timer fires inside that nested event loop,
     // which is the only place the chooser can be answered from.
-    QTimer::singleShot(200, this, [this, say] {
+    QTimer::singleShot(200, this, [say] {
         auto* chooser = qobject_cast<PickList*>(QApplication::activeModalWidget());
         if (chooser == nullptr) {
             say(QStringLiteral("liste açılmadı"));
@@ -2748,6 +2992,45 @@ void MainWindow::resetLayout()
     syncDockTitles();
 }
 
+void MainWindow::chooseCapture(const std::vector<core::EntityId>& candidates)
+{
+    if (candidates.empty()) {
+        canvas_->cancelCapture();
+        return;
+    }
+
+    // The same window as `choosePick`, and the same care about the selection: the
+    // list highlights rows by SELECTING them, so whatever was selected before is
+    // put back either way — a field's pick is not a selection (model.md R43).
+    const std::vector<core::EntityKey> before = controller_->bus().selection().keys();
+    const auto send                           = [this](const std::vector<core::EntityKey>& keys) {
+        command::Args args;
+        if (keys.empty()) {
+            args.set("mod", command::Value::text("TEMİZLE"));
+        } else {
+            std::vector<std::int64_t> ids;
+            ids.reserve(keys.size());
+            for (const core::EntityKey key : keys)
+                ids.push_back(static_cast<std::int64_t>(static_cast<std::uint64_t>(key)));
+            args.set("mod", command::Value::text("NESNE"));
+            args.set("nesneler", command::Value::ids(std::move(ids)));
+        }
+        controller_->runInvocation(
+            command::Invocation{"core.select", std::move(args), command::Origin::Gui});
+    };
+
+    PickList chooser(*controller_, candidates, this);
+    chooser.applyTheme(theme_);
+    connect(&chooser, &PickList::highlighted, this, [&send](core::EntityKey key) { send({key}); });
+    const bool accepted = chooser.exec() == QDialog::Accepted;
+    send(before);
+    if (!accepted || chooser.picked() == core::EntityKey::None) {
+        canvas_->cancelCapture();
+        return;
+    }
+    canvas_->finishCapture(chooser.picked());
+}
+
 void MainWindow::onEcho(const QString& text)
 {
     transcript_->appendPlainText(text);
@@ -3171,6 +3454,106 @@ void MainWindow::exportData()
     window.exec();
 }
 
+void MainWindow::rebuildPrintMenu()
+{
+    if (printMenu_ == nullptr) return;
+    printMenu_->clear();
+
+    const io::PrintProfiles& store = controller_->printService().profiles();
+    for (const io::PrintProfile& p : store.all()) {
+        const QString name  = QString::fromStdString(p.name);
+        const bool fallback = controller_->printService().profiles().default_name() == p.name;
+        // The default is MARKED rather than named in the label: a bullet beside
+        // one row of a list is read at a glance, and the word "varsayılan" in
+        // the row would make the list read as the profile's name.
+        QAction* entry = printMenu_->addAction(fallback ? tr("● %1").arg(name)
+                                                        : QStringLiteral("    %1").arg(name));
+        entry->setToolTip(QString::fromStdString(io::describe_print_profile(p)));
+        connect(entry, &QAction::triggered, this, [this, name] { printWithProfile(name); });
+    }
+    printMenu_->addSeparator();
+    QAction* manage = printMenu_->addAction(tr("Profilleri Yönet…"));
+    manage->setToolTip(tr("YAZDIRMAPROFİLİ — Seçenekler ▸ Plot ve Çıktı"));
+    connect(manage, &QAction::triggered, this,
+            [this] { openSettingsSection(QStringLiteral("Plot ve Çıktı")); });
+}
+
+void MainWindow::printWithProfile(const QString& profile)
+{
+    if (canvas_ == nullptr) return;
+
+    // THE SECOND PRESS CAPTURES. A frame that is already up is the user's aim;
+    // taking it is what the button means then, and opening a second frame would
+    // throw away the aiming they just did.
+    if (canvas_->printFraming()) {
+        const core::Box2 window = canvas_->printFrameWindow();
+        canvas_->endPrintFrame();
+        openPrintDialog(window, printProfile_);
+        return;
+    }
+
+    const io::PrintProfiles& store = controller_->printService().profiles();
+    const io::PrintProfile* p =
+        profile.isEmpty() ? store.fallback() : store.find(profile.toStdString());
+    if (p == nullptr) {
+        onEcho(tr("Yazdırma profili yok: YAZDIRMAPROFİLİ ekle ile bir profil tanımlayın."));
+        return;
+    }
+    printProfile_ = QString::fromStdString(p->name);
+
+    const auto w = static_cast<double>(p->printable_width_mm());
+    const auto h = static_cast<double>(p->printable_height_mm());
+    if (w <= 0.0 || h <= 0.0) {
+        onEcho(tr("'%1' profilinde kâğıtta yazdırılacak alan kalmıyor; kenar boşluğunu "
+                  "küçültün.")
+                   .arg(printProfile_));
+        return;
+    }
+    canvas_->beginPrintFrame(w / h);
+}
+
+void MainWindow::openPrintDialog(core::Box2 window, const QString& profile)
+{
+    if (window.empty()) {
+        onEcho(tr("Yazdırılacak alan boş."));
+        return;
+    }
+    PrintDialog dialog(*controller_, window, profile, this);
+    dialog.applyTheme(theme_);
+    // The two ways out that are not a plot: the profile editor, and aiming
+    // again on the canvas. Queued, so the dialog is closed before either opens.
+    connect(
+        &dialog, &PrintDialog::manageProfilesRequested, this,
+        [this] { openSettingsSection(QStringLiteral("Plot ve Çıktı")); }, Qt::QueuedConnection);
+    connect(
+        &dialog, &PrintDialog::reaimRequested, this, [this, profile] { printWithProfile(profile); },
+        Qt::QueuedConnection);
+    dialog.exec();
+}
+
+QString MainWindow::probePrintLine(core::Box2 box, const QString& profile, const QString& pdf,
+                                   bool round)
+{
+    PrintDialog dialog(*controller_, box, profile, this);
+    // AN OUTPUT, because a preview with nowhere to write says nothing: the line
+    // is deliberately empty until the plot has a destination, and this probe is
+    // reading the line.
+    if (auto* file = dialog.findChild<Field*>(QStringLiteral("printPdfPath"))) file->setValue(pdf);
+    if (round) {
+        // PRESSED, not called: the probe reaches the button the way a hand does,
+        // so a button that is there but unreachable fails here.
+        if (auto* offer = dialog.findChild<Button*>(QStringLiteral("printRoundScale")))
+            offer->click();
+    }
+    return dialog.commandLine();
+}
+
+void MainWindow::openSettingsSection(const QString& title)
+{
+    openSettings();
+    if (settings_ != nullptr) settings_->showSection(title);
+}
+
 void MainWindow::openScript()
 {
     runScriptFile(QFileDialog::getOpenFileName(this, tr("Betik seç"),
@@ -3195,6 +3578,128 @@ void MainWindow::showAbout()
 // =============================================================================
 // KENTOS_TOOL_PROBE — the tool column, pressed
 // =============================================================================
+
+int MainWindow::probeChat()
+{
+    int failures     = 0;
+    const auto check = [&failures](bool held, const char* what) {
+        if (held) return;
+        ++failures;
+        (void)std::fprintf(stdout, "[sohbet] BASARISIZ — %s\n", what);
+        (void)std::fflush(stdout);
+    };
+    const auto say = [](const char* what, const QString& detail) {
+        (void)std::fprintf(stdout, "[sohbet] %-22s %s\n", what, detail.toUtf8().constData());
+        (void)std::fflush(stdout);
+    };
+
+    check(chatPanel_ != nullptr, "sohbet paneli kurulmadı");
+    if (chatPanel_ == nullptr) return 1;
+    chatDock_->show();
+
+    // A PROFILE THAT IS NEVER CALLED. The bytes below are recorded, so the
+    // endpoint is never reached; the profile exists so the panel can pick a
+    // dialect and name a model on the message (ai.md P10: no test calls a live
+    // provider).
+    ai::ProviderProfile profile;
+    profile.name     = "Sınama";
+    profile.dialect  = ai::Dialect::OpenAiChat;
+    profile.base_url = "http://127.0.0.1:1";
+    profile.path     = "/chat/completions";
+    profile.model    = "sinama-1";
+
+    // 1. TEXT AND REASONING. Two deltas of prose and one of thinking, framed the
+    //    way `chat/completions` frames them.
+    const std::string prose =
+        "data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"Kuzey cepheyi seçtim.\"}}]}\n\n"
+        "data: {\"choices\":[{\"delta\":{\"content\":\"Parselin alanı 3482.64 m². \"}}]}\n\n"
+        "data: {\"choices\":[{\"delta\":{\"content\":\"İki eşit parça 1741.32 m² olur.\"}}]}\n\n"
+        "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],"
+        "\"usage\":{\"prompt_tokens\":1200,\"completion_tokens\":64}}\n\n"
+        "data: [DONE]\n\n";
+    const int before = chatPanel_->transcript()->count();
+    chatPanel_->probeStream(profile, prose);
+    say("text + reasoning", tr("%1 ileti").arg(chatPanel_->transcript()->count()));
+    check(chatPanel_->transcript()->count() == before + 1, "yanıt dökümde görünmedi");
+    auto* answer = qobject_cast<MessageBubble*>(chatPanel_->transcript()->last());
+    check(answer != nullptr, "son ileti bir ileti balonu değil");
+    if (answer != nullptr) {
+        check(answer->text().contains(QStringLiteral("3482.64")), "yanıt metni eksik");
+        check(answer->speaker() == Speaker::Model, "yanıt model iletisi değil");
+    }
+
+    // 2. A READ TOOL RUNS AT ONCE and its result comes back as a tool message.
+    const std::string read =
+        "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"c1\","
+        "\"function\":{\"name\":\"katmanlari_listele\",\"arguments\":\"\"}}]}}]}\n\n"
+        "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,"
+        "\"function\":{\"arguments\":\"{}\"}}]}}]}\n\n"
+        "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"tool_calls\"}]}\n\n"
+        "data: [DONE]\n\n";
+    chatPanel_->probeStream(profile, read);
+    QString told;
+    for (MessageBubble* bubble : chatPanel_->transcript()->findChildren<MessageBubble*>())
+        if (bubble->speaker() == Speaker::ToolResult) told = bubble->text();
+    say("read tool", told.isEmpty() ? tr("araç sonucu YOK") : told);
+    check(!told.isEmpty(), "okuma aracı sonucunu dökme yazmadı");
+    check(told.contains(QStringLiteral("katman")) || told.contains(QStringLiteral("KATMAN")),
+          "okuma aracı katmanları bildirmedi");
+
+    // 3. A WRITE TOOL CHANGES NOTHING and leaves a card that does.
+    const std::size_t layersBefore = controller_->document().layers().size();
+    const std::string write =
+        "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"c2\","
+        "\"function\":{\"name\":\"core_layer\",\"arguments\":\"\"}}]}}]}\n\n"
+        "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,"
+        "\"function\":{\"arguments\":\"{\\\"ad\\\":\\\"SOHBET\\\"}\"}}]}}]}\n\n"
+        "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"tool_calls\"}]}\n\n"
+        "data: [DONE]\n\n";
+    chatPanel_->probeStream(profile, write);
+    check(controller_->document().find_layer("SOHBET") == core::kNoLayer,
+          "YAZMA ARACI UYGULANDI — onay beklemesi gerekirdi");
+    check(controller_->document().layers().size() == layersBefore, "çizim değişti");
+
+    auto* card = chatPanel_->findChild<SuggestionCard*>();
+    say("write tool",
+        card != nullptr ? tr("öneri kartı %1").arg(card->planId()) : tr("öneri kartı YOK"));
+    check(card != nullptr, "yazma aracı öneri kartı bırakmadı");
+
+    // 4. AND THE CARD IS WHAT APPLIES IT, in one undo entry.
+    if (card != nullptr) {
+        const std::size_t depth = controller_->undoStack().undo_depth();
+        const auto decided      = card->probeApply();
+        check(decided.ok(), "onaylanan öneri uygulanamadı");
+        check(controller_->document().find_layer("SOHBET") != core::kNoLayer,
+              "onaydan sonra katman yok");
+        // KATMAN IS DELIBERATELY NOT UNDOABLE — `ensure_layer` is idempotent and
+        // creating a layer leaves no undo entry (`layer.cpp`) — so the depth is
+        // REPORTED rather than asserted here. That one approved plan of geometry
+        // is one undo entry is proved where it can be proved without a window,
+        // in `tests/unit/test_ai_tools.cpp`.
+        say("apply", tr("katman geldi; geri alma yığını %1 → %2 (KATMAN geri alınmaz)")
+                         .arg(depth)
+                         .arg(controller_->undoStack().undo_depth()));
+    }
+
+    // 5. A COORDINATE LITERAL IS REFUSED where a handle is declared.
+    const std::string literal =
+        "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"c3\","
+        "\"function\":{\"name\":\"core_line\",\"arguments\":\"\"}}]}}]}\n\n"
+        "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":"
+        "{\"arguments\":\"{\\\"noktalar\\\":[[0,0],[1000,0]]}\"}}]}}]}\n\n"
+        "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"tool_calls\"}]}\n\n"
+        "data: [DONE]\n\n";
+    const int cardsBefore = static_cast<int>(chatPanel_->findChildren<SuggestionCard*>().size());
+    chatPanel_->probeStream(profile, literal);
+    const int cardsAfter = static_cast<int>(chatPanel_->findChildren<SuggestionCard*>().size());
+    say("coordinate literal", tr("kart sayısı %1 → %2").arg(cardsBefore).arg(cardsAfter));
+    check(cardsAfter == cardsBefore, "koordinat literali öneri oldu — reddedilmeliydi");
+
+    (void)std::fprintf(stdout, "[sohbet] %s — %d ileti\n", failures == 0 ? "TAMAM" : "BASARISIZ",
+                       chatPanel_->transcript()->count());
+    (void)std::fflush(stdout);
+    return failures == 0 ? 0 : 1;
+}
 
 void MainWindow::probeToolBox()
 {
@@ -3372,21 +3877,65 @@ void MainWindow::probeLayerPanel()
     // `probeByHand` above was written for.
     const core::Document& doc = controller_->document();
 
-    QString on;
-    for (core::EntityId e = 0; e < doc.entities().size() && on.isEmpty(); ++e) {
+    QStringList busy; // the layers that actually hold something, in order
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
         if (!doc.alive(e)) continue;
         const core::LayerId slot = doc.entities().layer[e];
-        if (slot < doc.layers().size()) on = QString::fromStdString(doc.layers()[slot].name);
+        if (slot >= doc.layers().size()) continue;
+        const QString name = QString::fromStdString(doc.layers()[slot].name);
+        if (!busy.contains(name)) busy << name;
     }
-    if (on.isEmpty()) {
+    if (busy.isEmpty()) {
         say(QStringLiteral("çizimde nesne yok; menü denenmedi"));
         return;
     }
+    const QString on = busy.front();
 
     // THE WHOLE MENU, in order. One entry firing says nothing about the two that
     // were taken out of it.
     say(QStringLiteral("menü · %1: %2")
             .arg(on, layerPanel_->contextEntries(on).join(QStringLiteral(" | "))));
+
+    // ---- THE GÖRÜNÜM SUBMENU, AND WHAT IT DOES TO SEVERAL ROWS -------------
+    //
+    // A submenu shows up in the line above as its own title and nothing else, so
+    // its shape is printed on its own line. Then it is USED, on two rows at once,
+    // because "birden fazla katman seçilebilmeli" is only true if something acts
+    // on the set — and because the set goes out as one command per layer inside
+    // one batch, the undo after it is the proof that it was one gesture.
+    const QString submenu = tr("Görünüm");
+    say(QStringLiteral("görünüm · %1: %2")
+            .arg(on, layerPanel_->contextEntries(on, submenu).join(QStringLiteral(" | "))));
+
+    const auto hidden = [&doc] {
+        int n = 0;
+        for (const core::Layer& l : doc.layers())
+            if (!l.visible) ++n;
+        return n;
+    };
+
+    // From a known state, whatever the eye clicks above left behind.
+    if (!layerPanel_->triggerContextEntry(on, tr("Tümünü göster"), submenu))
+        say(QStringLiteral("'%1' görünüm menüsünde 'Tümünü göster' yok").arg(on));
+    else
+        say(QStringLiteral("tümünü göster → %1 katman gizli").arg(hidden()));
+
+    if (busy.size() > 1) {
+        const QString other = busy.at(1);
+        layerPanel_->probeSelect({on, other});
+        const QString many = tr("Seçili %1 katmanı gizle").arg(2);
+        if (!layerPanel_->triggerContextEntry(on, many, submenu)) {
+            say(QStringLiteral("çoklu seçimde '%1' girişi yok").arg(many));
+        } else {
+            say(QStringLiteral("çoklu gizle · %1 + %2 → %3 katman gizli")
+                    .arg(on, other)
+                    .arg(hidden()));
+            // ONE GESTURE, ONE STEP BACK (CLAUDE.md 1.5, Bus::begin_batch).
+            controller_->runLine(QStringLiteral("GERİAL"), command::Origin::Gui);
+            say(QStringLiteral("çoklu gizle geri alındı → %1 katman gizli").arg(hidden()));
+        }
+        layerPanel_->probeSelect({on});
+    }
 
     if (!layerPanel_->triggerContextEntry(on, tr("Tümünü seç")))
         say(QStringLiteral("'%1' satırında 'Tümünü seç' yok").arg(on));
@@ -3635,8 +4184,11 @@ void MainWindow::probeToolsByHand()
         propertyHeader_->setCurrent(2);
         propertyStack_->setCurrentIndex(2);
         QCoreApplication::processEvents();
-        for (const char* id : {"islem.uzunluk_yaz", "islem.kose_numarala", "islem.alan_duzenle"}) {
-            if (!toolsPanel_->selectTool(QString::fromUtf8(id))) continue;
+        // EVERY tool the registry lists, so a tool added tomorrow is probed today
+        // (processing.md, "Adding a tool", step 4).
+        for (const processing::ProcessingTool* tool : processing::processing_tools()) {
+            const std::string id = tool->spec().id;
+            if (!toolsPanel_->selectTool(QString::fromStdString(id))) continue;
             QCoreApplication::processEvents();
             // With `TERCİH araç_penceresi evet` the card opened in its own window,
             // which the main window's frame cannot show: it is photographed itself.
@@ -3646,15 +4198,17 @@ void MainWindow::probeToolsByHand()
                     QStringLiteral("%1/%2-pencere-%3.png")
                         .arg(into)
                         .arg(frame++, 2, 10, QLatin1Char('0'))
-                        .arg(QString::fromUtf8(id).section(QLatin1Char('.'), 1)));
+                        .arg(QString::fromStdString(id).section(QLatin1Char('.'), 1)));
             }
             const auto before = static_cast<int>(transcript_->toPlainText().size());
             runScriptLine(QStringLiteral("SEÇ mod=KUTU noktalar=-1,-1 41,31"));
             QString line = toolsPanel_->commandLine();
-            if (QString::fromUtf8(id) == QLatin1String("islem.alan_duzenle"))
-                line += QStringLiteral(" alan=1500 mod=kenar");
+            if (id == "islem.alan_duzenle") line += QStringLiteral(" alan=1500 mod=kenar");
+            // BAĞLA wants the object its captions are to follow: the box the
+            // probe drew is object 1.
+            if (id == "islem.bagla") line += QStringLiteral(" kaynak=1");
             controller_->runLine(line, command::Origin::Gui);
-            if (QString::fromUtf8(id) == QLatin1String("islem.alan_duzenle")) {
+            if (id == "islem.alan_duzenle") {
                 // The tool asks which edge, then where: the top edge, pulled up,
                 // photographed with the ghost following the hand, then Enter.
                 click(at(core::Point2{20'000, 30'000}));
@@ -3679,9 +4233,10 @@ void MainWindow::probeToolsByHand()
             QCoreApplication::processEvents();
             QString said = transcript_->toPlainText().mid(before).trimmed();
             said.replace(QLatin1Char('\n'), QLatin1Char(' '));
-            (void)std::fprintf(stdout, "[el] araç %-20s satır=\"%s\" :: %s\n", id,
+            (void)std::fprintf(stdout, "[el] araç %-20s satır=\"%s\" :: %s\n", id.c_str(),
                                qPrintable(toolsPanel_->commandLine()), qPrintable(said.right(120)));
-            shot(QStringLiteral("araclar-") + QString::fromUtf8(id).section(QLatin1Char('.'), 1));
+            shot(QStringLiteral("araclar-") +
+                 QString::fromStdString(id).section(QLatin1Char('.'), 1));
         }
         propertyHeader_->setCurrent(0);
         propertyStack_->setCurrentIndex(0);

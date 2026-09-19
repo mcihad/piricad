@@ -4,7 +4,11 @@
 # Shell: Qt Widgets. Canvas: render::Backend (QRhiWidget target, QPainter in Phase 0).
 # Docking: QDockWidget in Phase 0; Qt Advanced Docking System in Phase 1 (§6.3).
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Widgets Svg Xml)
+# Qt6::Network is REQUIRED rather than optional: the AI chat's provider client is
+# one of the program's own surfaces (an institution's local Ollama is the default
+# provider), and the MCP probe drives the embedded server through it. It ships
+# inside qtbase, so requiring it adds no package to any platform's install line.
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Widgets Svg Xml PrintSupport Network)
 
 qt_standard_project_setup()
 
@@ -27,6 +31,15 @@ qt_add_executable(kentos_cad
     src/database_dialog.cpp
     src/expression_edit.cpp
     src/export_dialog.cpp
+    src/print_dialog.cpp
+    src/print_service.cpp
+    src/ai_service.cpp
+    src/suggestion_card.cpp
+    src/chat_panel.cpp
+    src/ai_transport.cpp
+    src/provider_service.cpp
+    src/provider_dialog.cpp
+    src/secret_store.cpp
     src/flow_layout.cpp
     src/icons.cpp
     src/import_wizard.cpp
@@ -52,6 +65,15 @@ qt_add_executable(kentos_cad
     include/kentos_cad/app/datagrid.hpp
     include/kentos_cad/app/expression_edit.hpp
     include/kentos_cad/app/export_dialog.hpp
+    include/kentos_cad/app/print_dialog.hpp
+    include/kentos_cad/app/print_service.hpp
+    include/kentos_cad/app/ai_service.hpp
+    include/kentos_cad/app/suggestion_card.hpp
+    include/kentos_cad/app/chat_panel.hpp
+    include/kentos_cad/app/ai_transport.hpp
+    include/kentos_cad/app/provider_service.hpp
+    include/kentos_cad/app/provider_dialog.hpp
+    include/kentos_cad/app/secret_store.hpp
     include/kentos_cad/app/fields.hpp
     include/kentos_cad/app/widgets.hpp
     include/kentos_cad/app/schema_page.hpp
@@ -91,11 +113,14 @@ target_link_libraries(kentos_cad PRIVATE
     kentos_domain_surface
     kentos_render
     kentos_script
+    kentos_ai
     kentos_flags
     Qt6::Core
     Qt6::Gui
+    Qt6::PrintSupport
     Qt6::Svg
     Qt6::Widgets
+    Qt6::Network
 )
 
 set_target_properties(kentos_cad PROPERTIES
@@ -142,6 +167,71 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/data/"
     DESTINATION share/kentos_cad/data
     PATTERN "*.md" EXCLUDE
 )
+
+# ---- the agent server, behind its own option ---------------------------------
+if(KENTOS_WITH_MCP)
+    find_package(Qt6 6.8 QUIET COMPONENTS HttpServer)
+    if(NOT Qt6HttpServer_FOUND)
+        message(FATAL_ERROR
+            "KENTOS_WITH_MCP=ON but Qt HttpServer was not found, so the embedded "
+            "MCP server cannot be built.\n"
+            "  Debian/Ubuntu: sudo apt install qt6-httpserver-dev\n"
+            "  macOS (brew):  brew install qt   (the module ships with qt 6.8+)\n"
+            "  vcpkg:         qthttpserver\n"
+            "  Or configure with -DKENTOS_WITH_MCP=OFF; the program then runs "
+            "without an agent listener and MCPSUNUCU says so.")
+    endif()
+    target_sources(kentos_cad PRIVATE
+        src/mcp_service.cpp
+        include/kentos_cad/app/mcp_service.hpp)
+    target_link_libraries(kentos_cad PRIVATE Qt6::HttpServer)
+    target_compile_definitions(kentos_cad PRIVATE KENTOS_HAVE_MCP=1)
+endif()
+
+# ---- the system key store, behind its own option -----------------------------
+# WHY THERE IS AN OPTION AT ALL. An API key must not be in a settings file, a
+# journal line or a log (CLAUDE.md 5.21), so it lives in the store the operating
+# system already has. All three backends are SYSTEM APIs — no new dependency, no
+# /NOTICE entry — but a Linux machine may genuinely not have a Secret Service, and
+# a build there still has to work: with this OFF the store reads an environment
+# variable named by the profile and refuses to write, saying so out loud
+# (`app/secret_store.hpp`). The source is compiled either way; only the backend is
+# behind the macro.
+if(KENTOS_WITH_KEYCHAIN)
+    if(APPLE)
+        # A FRAMEWORK, not a package: SecItemAdd / SecItemCopyMatching /
+        # SecItemDelete live in Security.framework, which every macOS has.
+        find_library(KENTOS_SECURITY_FRAMEWORK Security)
+        if(NOT KENTOS_SECURITY_FRAMEWORK)
+            message(FATAL_ERROR
+                "KENTOS_WITH_KEYCHAIN=ON but Security.framework was not found, so API keys "
+                "cannot be held in the macOS keychain.\n"
+                "  Install the Xcode command line tools: xcode-select --install\n"
+                "  Or configure with -DKENTOS_WITH_KEYCHAIN=OFF; keys are then read from "
+                "environment variables named by each provider profile.")
+        endif()
+        target_link_libraries(kentos_cad PRIVATE ${KENTOS_SECURITY_FRAMEWORK})
+    elseif(WIN32)
+        # CredReadW / CredWriteW / CredDeleteW ship in advapi32, part of the SDK.
+        target_link_libraries(kentos_cad PRIVATE advapi32)
+    else()
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(KENTOS_SECRET QUIET IMPORTED_TARGET libsecret-1)
+        if(NOT KENTOS_SECRET_FOUND)
+            message(FATAL_ERROR
+                "KENTOS_WITH_KEYCHAIN=ON but libsecret-1 was not found, so API keys cannot be "
+                "held in the system key store.\n"
+                "  Debian/Ubuntu: sudo apt install libsecret-1-dev\n"
+                "  Fedora:        sudo dnf install libsecret-devel\n"
+                "  Arch:          sudo pacman -S libsecret\n"
+                "  Or configure with -DKENTOS_WITH_KEYCHAIN=OFF; keys are then read from "
+                "environment variables named by each provider profile.")
+        endif()
+        target_link_libraries(kentos_cad PRIVATE PkgConfig::KENTOS_SECRET)
+        target_compile_definitions(kentos_cad PRIVATE KENTOS_KEYCHAIN_SECRET_SERVICE=1)
+    endif()
+    target_compile_definitions(kentos_cad PRIVATE KENTOS_HAVE_KEYCHAIN=1)
+endif()
 
 if(KENTOS_WITH_RHI)
     # THE GPU CANVAS (kentoscad.md §6.3, CLAUDE.md Article 8.1). Three things must

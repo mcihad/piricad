@@ -6,31 +6,20 @@
 // surveyor names), runs one way round, and is written in the office's own form
 // — `A00001`, `K-7`, `1`. The tool writes each number outside the corner, along
 // the corner's outward bisector, so it never sits on the parcel's own line.
+//
+// AND THE NUMBER FOLLOWS ITS CORNER. Unless told not to, every number written is
+// ATTACHED to the corner it names (core/attach.hpp): the command that later moves
+// the corner — KÖŞETAŞI, TAŞI, DÖNDÜR — re-places the number beside it. The text
+// itself stays what it was; a corner keeps its number when it moves.
 #include "kentos_cad/processing/registry.hpp"
 
-#include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/attach.hpp"
 #include "kentos_cad/core/units.hpp"
 
-#include <cmath>
 #include <string>
 
 namespace kentos::processing {
 namespace {
-
-struct Dir
-{
-    double x{0.0};
-    double y{0.0};
-};
-
-Dir unit_between(core::Point2 from, core::Point2 to)
-{
-    const auto dx  = static_cast<double>(to.x - from.x);
-    const auto dy  = static_cast<double>(to.y - from.y);
-    const double l = std::sqrt(dx * dx + dy * dy);
-    if (l == 0.0) return Dir{};
-    return Dir{dx / l, dy / l};
-}
 
 /// `number` as `prefix + padded digits + suffix`.
 std::string label(std::int64_t number, const std::string& prefix, std::int64_t width,
@@ -44,6 +33,19 @@ std::string label(std::int64_t number, const std::string& prefix, std::int64_t w
            width)
         pad += one;
     return prefix + pad + digits + suffix;
+}
+
+/// Twice the signed area: positive for a counter-clockwise ring.
+double twice_area(const std::vector<core::Point2>& v)
+{
+    double twice = 0.0;
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const core::Point2 a = v[i];
+        const core::Point2 b = v[(i + 1) % v.size()];
+        twice += static_cast<double>(a.x - v[0].x) * static_cast<double>(b.y - v[0].y) -
+                 static_cast<double>(b.x - v[0].x) * static_cast<double>(a.y - v[0].y);
+    }
+    return twice;
 }
 
 class NumberVertices final : public ProcessingTool
@@ -61,6 +63,7 @@ public:
         const std::int64_t first = input.args.get("ilk").as_int();
         const bool clockwise     = input.args.get("yon").as_text() == "saat";
         const bool has_start     = input.args.has("baslangic");
+        const bool attach        = input.args.get("bagla").as_bool(true);
         const core::Point2 start =
             has_start ? input.args.get("baslangic").as_points().front() : core::Point2{};
 
@@ -69,7 +72,6 @@ public:
             height = std::max<core::Mm>(1, core::mul_div_round(2500, input.plan_scale, 1000));
         core::Mm gap = input.args.get("bosluk").as_int();
         if (gap <= 0) gap = height / 2;
-        const auto offset = static_cast<double>(gap) + static_cast<double>(height) / 2.0;
 
         std::size_t done = 0;
         for (const InputEntity& e : input.entities) {
@@ -82,17 +84,7 @@ public:
             const std::vector<core::Point2>& v = ring.points;
             const std::size_t n                = v.size();
             const bool closed                  = ring.role != core::RingRole::Open;
-
-            // The ring's turn, for "counter-clockwise" and for which side is out.
-            double twice = 0.0;
-            if (closed)
-                for (std::size_t i = 0; i < n; ++i) {
-                    const core::Point2 a = v[i];
-                    const core::Point2 b = v[(i + 1) % n];
-                    twice += static_cast<double>(a.x) * static_cast<double>(b.y) -
-                             static_cast<double>(b.x) * static_cast<double>(a.y);
-                }
-            const bool ccw = twice > 0.0;
+            const bool ccw                     = closed && twice_area(v) > 0.0;
 
             // Where the count starts: the corner nearest the given point, else
             // the first; on an open line only an END can start it.
@@ -119,12 +111,15 @@ public:
             else
                 step = begin == 0 ? 1 : -1;
 
-            std::vector<core::Mm> xs(n);
-            std::vector<core::Mm> ys(n);
-            for (std::size_t i = 0; i < n; ++i) {
-                xs[i] = v[i].x;
-                ys[i] = v[i].y;
-            }
+            // THE RULE, once per corner: the outward bisector placement lives in
+            // `core::attach_place`, so the number written here and the number
+            // re-placed after the corner moved stand in the same spot.
+            core::Attachment rule;
+            rule.source = static_cast<core::EntityKey>(static_cast<std::uint64_t>(e.key));
+            rule.anchor = core::AttachAnchor::Vertex;
+            rule.derive = core::AttachDerive::Keep;
+            rule.ring   = 0;
+            rule.gap    = gap;
 
             for (std::size_t k = 0; k < n; ++k) {
                 const std::size_t i = static_cast<std::size_t>(
@@ -132,39 +127,15 @@ public:
                      static_cast<long long>(step) * static_cast<long long>(k) +
                      static_cast<long long>(n) * static_cast<long long>(k + 1)) %
                     static_cast<long long>(n));
-                const core::Point2 corner = v[i];
-
-                // The outward bisector: away from both neighbours; for a reflex
-                // corner that points inside, so the ring is asked.
-                Dir out{};
-                const bool has_prev = closed || i > 0;
-                const bool has_next = closed || i + 1 < n;
-                const Dir to_prev   = has_prev ? unit_between(corner, v[(i + n - 1) % n]) : Dir{};
-                const Dir to_next   = has_next ? unit_between(corner, v[(i + 1) % n]) : Dir{};
-                Dir d{to_prev.x + to_next.x, to_prev.y + to_next.y};
-                const double dl = std::sqrt(d.x * d.x + d.y * d.y);
-                if (dl > 1e-9) {
-                    out = Dir{-d.x / dl, -d.y / dl};
-                    if (closed) {
-                        const core::Point2 probe{corner.x + core::mm_round(out.x * offset * 2.0),
-                                                 corner.y + core::mm_round(out.y * offset * 2.0)};
-                        if (core::ring_contains(xs, ys, probe)) out = Dir{-out.x, -out.y};
-                    }
-                } else {
-                    // Straight through (or an end of a line): the right of the
-                    // walk is outside a counter-clockwise ring.
-                    const Dir u = has_next ? to_next : Dir{-to_prev.x, -to_prev.y};
-                    out         = Dir{u.y, -u.x};
-                    if (closed && !ccw) out = Dir{-out.x, -out.y};
-                    if (!closed && !has_next) out = Dir{-to_prev.x, -to_prev.y};
-                    if (!closed && !has_prev) out = Dir{-to_next.x, -to_next.y};
-                }
+                rule.index       = static_cast<std::uint32_t>(i);
+                const auto place = core::attach_place(v, closed, rule, height);
+                if (!place) continue;
 
                 ToolOutput::Caption cap;
-                cap.centre = core::Point2{corner.x + core::mm_round(out.x * offset),
-                                          corner.y + core::mm_round(out.y * offset)};
+                cap.centre = place->centre;
                 cap.height = height;
                 cap.text = label(first + static_cast<std::int64_t>(k), prefix, width, fill, suffix);
+                if (attach) cap.attach = rule;
                 output.captions.push_back(std::move(cap));
             }
             ++output.touched;
@@ -175,11 +146,12 @@ public:
 
 private:
     const ToolSpec spec_{
-        .id      = "islem.kose_numarala",
-        .names   = {"KÖŞENUMARALA", "KOSENUMARALA", "NUMBERVERTICES", "KNM"},
-        .title   = "Köşeleri numarala",
+        .id    = "islem.kose_numarala",
+        .names = {"KÖŞENUMARALA", "KOSENUMARALA", "NUMBERVERTICES", "KNM"},
+        .title = "Köşeleri numarala",
         .summary = "Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak "
-                   "sırayla numaralar ve numarayı köşenin dışına yazar.",
+                   "sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, "
+                   "köşe taşınınca izler.",
         .group   = "Etiketleme",
         .icon    = "koordinat",
         .applies = Applies::Faces | Applies::Lines,
@@ -201,6 +173,8 @@ private:
                 ToolParam::integer("bosluk",
                                    "Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı", 0, 0,
                                    100000000),
+                ToolParam::boolean("bagla", "Numarayı köşesine bağla: köşe taşınınca numara izler",
+                                   true),
             },
         .output        = OutputShape::NewEntities,
         .output_suffix = "kose",

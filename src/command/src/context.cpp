@@ -236,4 +236,9 @@ void Context::record(std::string param, Value v)
     session_.record(std::move(param), std::move(v));
 }
 
+void Context::report(core::Json data) const
+{
+    session_.set_report(std::move(data));
+}
+
 } // namespace kentos::command

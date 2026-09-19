@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/command/transaction.hpp"
 
+#include "kentos_cad/core/attach.hpp"
+#include "kentos_cad/core/dimension.hpp"
+
 #include <algorithm>
 #include <map>
 #include <string>
@@ -303,6 +306,192 @@ Status Transaction::set_crs(core::Crs crs)
     if (!st) return st;
     inverse_.push_back(std::move(undo));
     return core::ok();
+}
+
+Status Transaction::set_attachment(EntityId e, const core::Attachment& a)
+{
+    core::Op undo;
+    auto st = doc_.set_attachment(e, &a, undo);
+    if (!st) return st;
+    inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
+Status Transaction::clear_attachment(EntityId e)
+{
+    core::Op undo;
+    auto st = doc_.set_attachment(e, nullptr, undo);
+    if (!st) return st;
+    if (undo.kind != core::Op::Kind::None) inverse_.push_back(std::move(undo));
+    return core::ok();
+}
+
+namespace {
+
+/// One ring of a geometry slot, copied out so it can be compared with a later
+/// slot of the same entity.
+struct RingCopy
+{
+    std::vector<Point2> points;
+    bool closed{false};
+    bool ok{false};
+};
+
+RingCopy ring_copy(const RingGeometry& geom, std::uint32_t slot, std::uint16_t ring)
+{
+    RingCopy out;
+    if (slot >= geom.slot_count()) return out;
+    const core::RingSpan rs = geom.rings_of(slot);
+    if (ring >= rs.count) return out;
+    const std::uint32_t r = rs.first + ring;
+    const auto xs         = geom.ring_xs(r);
+    const auto ys         = geom.ring_ys(r);
+    out.points.reserve(xs.size());
+    for (std::size_t i = 0; i < xs.size(); ++i)
+        out.points.push_back(Point2{xs[i], ys[i]});
+    out.closed = geom.ring_role[r] != core::RingRole::Open;
+    out.ok     = true;
+    return out;
+}
+
+bool contains(const std::vector<EntityId>& sorted, EntityId e)
+{
+    return std::binary_search(sorted.begin(), sorted.end(), e);
+}
+
+} // namespace
+
+Transaction::SettleReport Transaction::settle_attachments()
+{
+    SettleReport rep;
+    const core::AttachTable& tab = doc_.attachments();
+    if (tab.empty()) {
+        settled_upto_ = inverse_.size();
+        return rep;
+    }
+    const core::EntityTable& ents = doc_.entities();
+    const RingGeometry& geom      = doc_.geometry();
+    const core::TextTable& texts  = doc_.texts();
+
+    // ROUNDS, because a dependent may itself be followed: what this round
+    // re-places is what the next round reads as moved. A round that reads
+    // nothing new ends it; the cap is a guard against a cycle the document
+    // refused to store but a file might still carry.
+    std::vector<EntityId> deps;
+    for (int round = 0; round < 16; ++round) {
+        std::vector<EntityId> moved;
+        std::vector<EntityId> erased;
+        std::map<EntityId, std::uint32_t> before; // the slot an entity had before this range
+        for (std::size_t i = settled_upto_; i < inverse_.size(); ++i) {
+            const Op& op = inverse_[i];
+            if (op.kind == Op::Kind::SetGeometry) {
+                moved.push_back(op.entity);
+                before.emplace(op.entity, op.geometry_slot); // the OLDEST wins
+            } else if (op.kind == Op::Kind::SetEntityAlive && op.bool_arg) {
+                // The inverse restores it, so the command erased it.
+                erased.push_back(op.entity);
+            }
+        }
+        settled_upto_ = inverse_.size();
+        if (moved.empty() && erased.empty()) break;
+        std::sort(moved.begin(), moved.end());
+        moved.erase(std::unique(moved.begin(), moved.end()), moved.end());
+        std::sort(erased.begin(), erased.end());
+        erased.erase(std::unique(erased.begin(), erased.end()), erased.end());
+
+        // ---- an erased source takes its dependents with it ----
+        for (const EntityId src : erased) {
+            if (src >= ents.size() || ents.alive(src)) continue; // restored again meanwhile
+            tab.dependents_of(doc_.key_of(src), deps);
+            for (const EntityId d : deps)
+                if (doc_.alive(d) && erase_entity(d)) ++rep.erased;
+        }
+
+        // ---- a dependent moved BY HAND keeps that offset ----
+        //
+        // Its source did not move, so the rule's place is where it was and the
+        // difference to where the caption now stands is what the user meant.
+        // Measured in the rule's reading frame, so it survives the source
+        // turning later.
+        for (const EntityId d : moved) {
+            const core::Attachment* a = tab.get(d);
+            if (a == nullptr || !doc_.alive(d)) continue;
+            const EntityId src = doc_.slot_of(a->source);
+            if (src == core::kNoEntity || !doc_.alive(src)) continue;
+            if (contains(moved, src) || contains(erased, src)) continue;
+            const std::uint32_t dslot = ents.slot[d];
+            if (!texts.has(dslot)) continue;
+            const RingCopy ring = ring_copy(geom, ents.slot[src], a->ring);
+            if (!ring.ok) continue;
+            const auto rule =
+                core::attach_place(ring.points, ring.closed, *a, texts.height(dslot), false);
+            if (!rule) continue;
+            const core::RingSpan rs = geom.rings_of(dslot);
+            if (rs.count == 0 || geom.ring_count[rs.first] == 0) continue;
+            core::Attachment next = *a;
+            core::attach_measure_offset(*rule, geom.vertex(rs.first, 0), next);
+            if (next != *a && set_attachment(d, next)) ++rep.reoffset;
+        }
+
+        // ---- a moved source carries its dependents ----
+        for (const EntityId src : moved) {
+            if (!doc_.alive(src)) continue;
+            tab.dependents_of(doc_.key_of(src), deps);
+            if (deps.empty()) continue;
+            const std::uint32_t now_slot = ents.slot[src];
+            const auto was               = before.find(src);
+            for (const EntityId d : deps) {
+                if (!doc_.alive(d) || !doc_.editable(d)) continue;
+                const core::Attachment* stored = tab.get(d);
+                if (stored == nullptr) continue;
+                core::Attachment a = *stored;
+
+                const RingCopy now = ring_copy(geom, now_slot, a.ring);
+                if (!now.ok) continue;
+                if (was != before.end() && was->second != now_slot) {
+                    const RingCopy old = ring_copy(geom, was->second, a.ring);
+                    if (old.ok && old.points.size() != now.points.size())
+                        a = core::attach_reanchor(old.points, old.closed, now.points, now.closed,
+                                                  a);
+                }
+
+                const std::uint32_t dslot = ents.slot[d];
+                if (!texts.has(dslot)) continue; // only captions follow today
+                const core::Mm height = texts.height(dslot);
+                const auto place      = core::attach_place(now.points, now.closed, a, height, true);
+                if (!place) continue;
+
+                std::string text(texts.text(dslot));
+                if (const auto derived = core::attach_text(now.points, now.closed, a); derived)
+                    text = *derived;
+                const auto base = core::dimension_baseline(place->centre, place->dir_x,
+                                                           place->dir_y, height, text);
+
+                // Nothing is written that is already so: a caption the command
+                // moved together with its source is already where the rule puts
+                // it, and appending an identical slot would be an edit that
+                // changed nothing but the file.
+                const core::RingSpan rs = geom.rings_of(dslot);
+                const bool same_place   = rs.count == 1 && geom.ring_count[rs.first] == 2 &&
+                                        geom.ring_role[rs.first] == core::RingRole::Open &&
+                                        geom.vertex(rs.first, 0) == base[0] &&
+                                        geom.vertex(rs.first, 1) == base[1];
+                const bool same_text = text == texts.text(dslot);
+
+                if (a != *stored && !set_attachment(d, a)) continue;
+                if (!same_text) {
+                    if (!set_text(d, text, height, texts.anchor(dslot))) continue;
+                    ++rep.relabelled;
+                }
+                if (!same_place) {
+                    const core::RingGeometry::RingInput ring{base, core::RingRole::Open, 0};
+                    if (set_geometry(d, std::span<const core::RingGeometry::RingInput>(&ring, 1)))
+                        ++rep.followed;
+                }
+            }
+        }
+    }
+    return rep;
 }
 
 void Transaction::rollback()

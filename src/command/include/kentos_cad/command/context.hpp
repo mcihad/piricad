@@ -12,6 +12,7 @@
 #include "kentos_cad/command/task.hpp"
 #include "kentos_cad/command/transaction.hpp"
 #include "kentos_cad/command/value.hpp"
+#include "kentos_cad/core/json.hpp"
 
 #include <coroutine>
 #include <cstdint>
@@ -173,6 +174,18 @@ public:
     /// Records the effective value of a parameter so the journal entry replays
     /// identically no matter which client supplied it.
     void record(std::string param, Value v);
+
+    /// The command's STRUCTURED answer, for a client that is not a person.
+    ///
+    /// `echo` is for the transcript and is prose; a query's answer is data, and
+    /// an agent should not have to parse a Turkish sentence to read a layer's
+    /// object count. A command reports at most once and MUST still echo the
+    /// human sentence — this is an addition to what it says, never a
+    /// replacement, because the person at the keyboard is still the main reader.
+    ///
+    /// It goes nowhere near the document: not hashed, not journalled, not
+    /// undoable. It rides out on `DispatchResult::report`.
+    void report(core::Json data) const;
 
     Session& session() noexcept { return session_; }
 

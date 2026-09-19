@@ -30,10 +30,17 @@ if [[ -z "$exe" ]]; then
     exit 0
 fi
 
+# NO SCREEN IS NOT NO TEST, and this replaces the BEKLEMEDE this gate used to
+# print. What is measured here is what the menu DOES — which entries it has, and
+# what firing one leaves behind in the document — and Qt's offscreen platform
+# builds a real menu and fires real actions. Requiring a display made the gate
+# dormant in exactly the three places it was written for: no CI runner has one,
+# and neither does a terminal on macOS. The app-level ctests next door
+# (`shell-starts`, `canvas-edits`, `print-pdf`) have run offscreen all along.
 if [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
-    echo "katman-menu: BEKLEMEDE — ortamda ekran yok. Bir menü ancak açıldığı yerde"
-    echo "katman-menu:   ölçülür; açılmamış bir menü hiçbir şeyi kanıtlamaz."
-    exit 0
+    export QT_QPA_PLATFORM=offscreen
+    echo "katman-menu: ekranda pencere yok — menü offscreen açılıyor (ölçülen şey"
+    echo "katman-menu:   menünün çizimi değil, davranışı)"
 fi
 
 # TWO LAYERS WITH DIFFERENT COUNTS, which is the whole test: a scope that is
@@ -89,7 +96,22 @@ bekle "[katman] Öznitelik tablosu · PARSEL → 2 satır"
 # Checked as a whole line rather than entry by entry, because the order is part
 # of the claim: a properties entry in the middle of the list is the thing this
 # replaced.
-bekle "[katman] menü · PARSEL: Yeni katman… | — | Tümünü seç | Öznitelik tablosu | Aktif katman yap | Özniteliklerden etiketle… | — | Gizle | Kilidi aç | — | Gruba taşı… | — | Katman Özellikleri…"
+bekle "[katman] menü · PARSEL: Yeni katman… | — | Tümünü seç | Öznitelik tablosu | Aktif katman yap | Özniteliklerden etiketle… | — | Görünüm | Kilidi aç | — | Gruba taşı… | — | Katman Özellikleri…"
+
+# THE GÖRÜNÜM SUBMENU. In the line above a submenu is its title and nothing more,
+# so its own shape is a line of its own. `Gizle` used to be a top-level entry
+# whose word flipped with the row's state; it is inside this menu now, beside the
+# five things that are about the OTHER layers.
+bekle "[katman] görünüm · PARSEL: Göster | Gizle | Yalnız bunu göster | — | Tümünü göster | Gösterimi ters çevir"
+
+# AND THE SUBMENU USED, on two rows at once. The panel takes several rows now, so
+# the claim to check is that something ACTS on the set: two layers picked, one
+# entry fired, two layers down. The undo line after it is the other half of the
+# claim — the set went out as one command per layer inside one batch, so one
+# Ctrl+Z brings all of them back (CLAUDE.md 1.5).
+bekle "[katman] tümünü göster → 0 katman gizli"
+bekle "[katman] çoklu gizle · PARSEL + YOL → 2 katman gizli"
+bekle "[katman] çoklu gizle geri alındı → 0 katman gizli"
 
 if [[ $fail -ne 0 ]]; then
     exit 1
@@ -97,4 +119,5 @@ fi
 
 echo "katman-menu: OK — sağ tuş menüsü 'Tümünü seç' ve 'Öznitelik tablosu' girişlerini"
 echo "katman-menu:   açtığı katmana bağlıyor: beşin ikisi, her ikisinde de;"
-echo "katman-menu:   stil kalemleri çıktı, en altta 'Katman Özellikleri…' duruyor"
+echo "katman-menu:   stil kalemleri çıktı, en altta 'Katman Özellikleri…' duruyor;"
+echo "katman-menu:   Görünüm alt menüsü iki katmanı birlikte gizliyor, tek geri alma"

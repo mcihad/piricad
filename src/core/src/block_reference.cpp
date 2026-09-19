@@ -329,8 +329,8 @@ void br_key_points(const RingGeometry& geom, std::uint32_t slot, KeyPointSink& i
 KENTOS_KIND(block_reference)
 {
     KindSpec s{};
-    s.id         = kBlockReferenceKind;
-    s.stable_id  = "core.block_reference";
+    s.id        = kBlockReferenceKind;
+    s.stable_id = "core.block_reference";
     s.summary_tr = "Bir blok tanımını noktaya, ölçekle, açıyla ve dizi olarak yerleştiren nesne.";
     s.names[0]   = "BLOKREFERANSI";
     s.names[1]   = "BLOKREFERANSI";

@@ -196,6 +196,31 @@ public:
     /// an empty `content` detaches it. Undoable like any other edit.
     Status set_text(EntityId e, std::string content, core::Mm height, core::TextAnchor anchor);
 
+    /// Makes `e` FOLLOW `a.source` (`core/attach.hpp`, `Document::set_attachment`).
+    Status set_attachment(EntityId e, const core::Attachment& a);
+
+    /// Makes `e` follow nothing. Undoable: the previous attachment comes back.
+    Status clear_attachment(EntityId e);
+
+    /// What `settle_attachments` did.
+    struct SettleReport
+    {
+        std::size_t followed{0};   ///< dependents re-placed after their source moved
+        std::size_t relabelled{0}; ///< dependents whose derived text changed
+        std::size_t erased{0};     ///< dependents erased because their source was
+        std::size_t reoffset{0};   ///< dependents moved by hand, offset re-measured
+    };
+
+    /// Brings every dependent up to date with what this transaction did to its
+    /// source — THE ONE PLACE it happens, at commit, never per frame (model.md
+    /// R14's pattern applied to geometry). Reads the inverse record since the
+    /// last call: a source whose geometry changed has its dependents re-placed
+    /// and, for a derived text, re-worded; a source that was erased takes its
+    /// dependents with it; a dependent moved on its own keeps that offset. Every
+    /// write lands in this same transaction, so one undo step covers the command
+    /// and what followed from it. Idempotent: a second call finds nothing to do.
+    SettleReport settle_attachments();
+
     /// Reverts every edit made through this transaction, newest first.
     void rollback();
 
@@ -216,6 +241,10 @@ private:
     Document& doc_;
     std::string label_;
     std::vector<Op> inverse_; ///< newest last
+
+    /// How far `settle_attachments` has read `inverse_`; the ops before it were
+    /// already answered.
+    std::size_t settled_upto_{0};
 };
 
 struct UndoEntry

@@ -72,6 +72,8 @@ enum class FieldKind : std::uint8_t {
     Date,        ///< a calendar day, `YYYY-AA-GG`, with a picker
     Range,       ///< a bounded number, dragged rather than typed
     Colour,      ///< `0xAARRGGBB`, with the platform picker
+    Point,       ///< a coordinate, `x,y` in metres, or PICKED from the scene
+    Object,      ///< one drawing object, by its persistent key, or PICKED from the scene
 };
 
 /// What a value IS RIGHT NOW, from `bileşen_standardı.png`'s seven states —
@@ -142,6 +144,10 @@ struct FieldSpec
     /// Whether this editor is a form control or a cell. Defaults to the form,
     /// because that is the one that looks wrong when it is silently omitted.
     FieldFrame frame{FieldFrame::Box};
+
+    /// A `Text` field whose value must not be read off the screen — a PDF
+    /// password. Typed characters show as dots; the value itself is unchanged.
+    bool secret{false};
 };
 
 /// The same spec, framed as a table cell rather than as a form control.
@@ -373,6 +379,14 @@ public:
     /// editor it has is the editor it now needs.
     FieldKind kind() const noexcept { return spec_.kind; }
 
+    /// A `Point` or `Object` field is being answered from the scene: the pick
+    /// button reads as pressed and the box says so, until the owner puts the
+    /// answer in with `setValue` and turns this off. The field itself never
+    /// touches the canvas — it asks (`pickRequested`) and waits.
+    void setPicking(bool on);
+
+    bool picking() const noexcept { return picking_; }
+
     void applyTheme(ThemeMode mode) override;
 
 signals:
@@ -381,6 +395,12 @@ signals:
 
     /// The user backed out with Esc. The owner puts nothing anywhere.
     void cancelled();
+
+    /// The pick button of a `Point` or `Object` field was pressed (or F4 /
+    /// Alt+Down on the keyboard): the owner is to take one pick from the scene
+    /// and hand it back through `setValue`. Pressed again while picking, it
+    /// means "never mind".
+    void pickRequested(FieldKind kind);
 
 protected:
     /// Watches the inner widget for Enter, Esc and focus leaving, so every kind
@@ -417,9 +437,11 @@ private:
     QLabel* lead_{nullptr};            ///< the mark at the left edge, when there is one
     QLabel* unit_{nullptr};            ///< the unit at the right edge, when there is one
     FieldState state_{FieldState::Normal};
-    QSlider* slider_{nullptr}; ///< Range
-    QStringList ticked_;       ///< MultiSelect
-    QString colour_;           ///< Colour, as `0xAARRGGBB`
+    bool picking_{false};         ///< Point, Object: a scene pick is under way
+    QString resting_placeholder_; ///< what the box said before a pick began
+    QSlider* slider_{nullptr};    ///< Range
+    QStringList ticked_;          ///< MultiSelect
+    QString colour_;              ///< Colour, as `0xAARRGGBB`
     ThemeMode theme_{ThemeMode::Dark};
 };
 

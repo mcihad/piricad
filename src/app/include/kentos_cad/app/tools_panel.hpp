@@ -13,10 +13,12 @@
 #pragma once
 
 #include "kentos_cad/app/dialog_chrome.hpp"
+#include "kentos_cad/app/fields.hpp"
 #include "kentos_cad/app/theme.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #include <functional>
+#include <optional>
 #include <vector>
 
 #include <QPointer>
@@ -40,8 +42,14 @@ namespace kentos::app {
 
 class Button;     ///< the run button (widgets.hpp)
 class Controller; ///< the bus the panel sends its line to
-class Field;      ///< one parameter's editor (fields.hpp)
 class Segment;    ///< the scope chooser (widgets.hpp)
+
+/// How a card gets a value FROM THE SCENE for a `Point` or `Object` field: the
+/// shell arms the canvas for one pick of `kind` and calls `done` with the text
+/// the field takes — `485320.150,4310220.000` or `12` — or with nothing when the
+/// user gave up. The panel knows no canvas; the window that owns both wires it.
+using ScenePicker =
+    std::function<void(FieldKind kind, std::function<void(std::optional<QString>)> done)>;
 
 /// One tool's card: what it is, what it will be run with, and the line that
 /// runs it. Lives under the tree or inside `ToolDialog`; the two never differ.
@@ -63,6 +71,9 @@ public:
     /// Where the viewport is, for the `gorunum` scope: the two corners go on the
     /// command line as `pencere=`, so a script can say the same.
     void setViewportProvider(std::function<core::Box2()> provider);
+
+    /// How a field's pick button reaches the scene; see `ScenePicker`.
+    void setScenePicker(ScenePicker picker);
 
     /// Whether the card carries its own run button. Off inside the dialog,
     /// whose footer holds it.
@@ -88,6 +99,7 @@ private:
 
     Controller& controller_;
     std::function<core::Box2()> viewport_;
+    ScenePicker picker_;
     const processing::ProcessingTool* shown_{nullptr};
 
     QLabel* title_{nullptr};
@@ -121,7 +133,7 @@ class ToolDialog : public DialogFrame
 public:
     /// Builds the window over `tool`.
     ToolDialog(Controller& controller, const processing::ProcessingTool* tool,
-               std::function<core::Box2()> viewport, QWidget* parent = nullptr);
+               std::function<core::Box2()> viewport, ScenePicker picker, QWidget* parent = nullptr);
 
     /// The card inside, so the panel can point it at another tool.
     ToolCard* card() const noexcept { return card_; }
@@ -146,6 +158,10 @@ public:
 
     /// Tells the panel where the viewport is; passed on to every card it makes.
     void setViewportProvider(std::function<core::Box2()> provider);
+
+    /// Tells the panel how a field is picked from the scene; passed on to every
+    /// card it makes (`ScenePicker`).
+    void setScenePicker(ScenePicker picker);
 
     /// Re-reads the selection count and the `core.islem.pencere` preference.
     void refresh();
@@ -175,6 +191,7 @@ private:
 
     Controller& controller_;
     std::function<core::Box2()> viewport_;
+    ScenePicker picker_;
 
     QLineEdit* search_{nullptr};
     QTreeWidget* tree_{nullptr};

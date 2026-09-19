@@ -221,9 +221,9 @@ KENTOS_COMMAND(database)
         // be able to cost a user work they cannot get back. The AI reaches a
         // PostGIS layer the same way it reaches everything else: by drawing and
         // measuring on a document somebody else opened for it.
-        .flags   = Flags::Interactive | Flags::Scriptable,
+        .flags = Flags::Interactive | Flags::Scriptable,
         .summary = "PostGIS veritabanına bağlanır; katmanları tablo, projeleri kayıt olarak yazar.",
-        .run     = &run,
+        .run = &run,
     };
 }
 

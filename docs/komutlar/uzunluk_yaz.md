@@ -11,6 +11,12 @@ uzunluğunu yazar. Yazı kenara **paraleldir**, soldan sağa okunur, kenarın or
 oturur ve kenarın seçtiğiniz yanına yüksekliğinin yarısı kadar açıkta durur. Ürettiği
 her yazı sıradan bir [`METİN`](text.md) nesnesidir: taşınır, düzenlenir, silinir.
 
+Yazı kenarına **bağlıdır** (`bagla=evet`, varsayılan): çizgi taşınınca, dönünce ya da bir
+köşesi çekilince yazı kenarının yanına yeniden yerleşir ve kenar uzayınca sayı yeniden
+yazılır — aynı işlem, aynı geri alma adımı içinde. Ne olduğu ve nasıl kapatılacağı
+[Bağlı nesneler](../islem/bagli-nesneler.md) sayfasındadır; `bagla=hayır` serbest yazı
+üretir.
+
 Bu bir [işlem aracıdır](../islem/README.md): kapsamı seçim, görünüm ya da bütün
 projedir; iş ayrı iş parçacığında koşar ve **Durdur** ile kesilir; sonuç tek geri alma
 adımıdır ve istenirse ayrı bir katmana yazılır.
@@ -49,6 +55,7 @@ UZUNLUKYAZ kapsam=gorunum pencere=485300,4310200 pencere=485400,4310300
 | `yukseklik` | Yazı yüksekliği, zemin milimetresi; `0` = plan ölçeğinde 2,5 mm |
 | `bosluk` | Kenar ile yazı arası, milimetre; `0` = yüksekliğin yarısı |
 | `enaz` | Bundan kısa kenarlara yazılmaz, milimetre; varsayılan 0 |
+| `bagla` | `evet` (varsayılan): yazı kenarına bağlı, kenar değişince izler ve yenilenir; `hayır`: serbest yazı |
 
 ## Örnekler
 

@@ -21,6 +21,7 @@
 #include "kentos_cad/command/validation.hpp"
 #include "kentos_cad/core/crs.hpp"
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/json.hpp"
 #include "kentos_cad/core/settings.hpp"
 #include "kentos_cad/core/style_library.hpp"
 
@@ -149,6 +150,150 @@ struct DatabaseRequest
     Transaction* tx{nullptr};
 };
 
+/// What a PRINT is: a window of the drawing onto a sheet of paper, or the profile
+/// that describes such a sheet.
+///
+/// The same seam as `FileRequest` and `DatabaseRequest`, for the same reason:
+/// `/src/command` owns the commands (`YAZDIR`, `YAZDIRMAPROFİLİ`) and knows
+/// nothing about Qt, printers or PDF; the application owns the WORK — a
+/// `QPdfWriter`, a `QPrinter`, the profile file in the user's configuration
+/// directory — and installs `Bus::on_print_request`. A headless client has no
+/// engine and the commands say so.
+///
+/// A PROFILE is a named sheet: paper, orientation, resolution, margin. Exactly
+/// one is the default, and it is what the toolbar's plain YAZDIR uses. Profiles
+/// are APPLICATION state, like a printer preference (model.md R39): they do not
+/// travel with the document, and the journal records what a print RESOLVED
+/// them to (profile name plus every explicit override) rather than the sheet's
+/// bytes.
+struct PrintRequest
+{
+    /// What to do. Deliberately small, like `DatabaseRequest::Verb`: this is the
+    /// command surface a script and the AI see, and each verb is one sentence a
+    /// user would say out loud.
+    enum class Verb : std::uint8_t {
+        Profiles,      ///< list the profiles, the default marked
+        SetProfile,    ///< add a profile, or replace the one of that name
+        RemoveProfile, ///< remove one; the last one cannot go
+        SetDefault,    ///< make one the default
+        ToPdf,         ///< write `window` onto a sheet, as a PDF at `path`
+        ToPrinter,     ///< send `window` onto a sheet, to `printer`
+    };
+
+    Verb verb{Verb::Profiles}; ///< which operation to carry out
+
+    /// The profile named — to add, remove or make default; for a print, the one
+    /// to start from (empty = the default).
+    std::string profile;
+
+    // ---- the sheet, as a profile field or as a print's override --------------
+    // An empty string, a zero and a `-1` each mean NOT GIVEN: the profile's own
+    // value stands. Paper dimensions are the PORTRAIT ones; `landscape` turns them.
+    std::string paper;          ///< `A4`, `A3`, `A2`, `A1`, `A0`, `A5`, or `ozel`
+    std::int64_t width_mm{0};   ///< for `ozel`; otherwise the paper's
+    std::int64_t height_mm{0};  ///< for `ozel`; otherwise the paper's
+    std::int8_t landscape{-1};  ///< 1 yatay, 0 dikey, -1 not given
+    std::int64_t dpi{0};        ///< output resolution
+    std::int64_t margin_mm{-1}; ///< the same on all four sides
+
+    // ---- the print -----------------------------------------------------------
+    core::Box2 window; ///< the part of the drawing that goes on the sheet
+
+    /// THE OTHER WAY TO SAY THE SAME THING, and the one a surveyor means: the
+    /// sheet's CENTRE and its SCALE. A pafta is "1:1000, centred on this
+    /// corner", not "these two arbitrary corners" — and only the print engine
+    /// can turn the pair into a window, because the third number is the
+    /// profile's printable size in millimetres of paper.
+    ///
+    /// When `has_centre` is set the window is computed from these and
+    /// `window` is ignored.
+    bool has_centre{false};
+    core::Point2 centre{};
+    std::int64_t scale{0}; ///< the denominator of 1:N; 0 = the project's plan scale
+    std::string path;      ///< ToPdf: where the file goes
+    std::string printer;   ///< ToPrinter: the printer's name; empty = the system default
+    std::string title;     ///< PDF metadata
+    std::string author;    ///< PDF metadata
+
+    /// PDF encryption. Never journalled: `YAZDIR` reads them and records
+    /// nothing, exactly as `VERİTABANI` redacts its password (`redact_conninfo`).
+    std::string user_password;  ///< needed to OPEN the file; empty = none
+    std::string owner_password; ///< needed to change permissions; empty = none
+    bool allow_print{true};     ///< what a reader without the owner password may do
+    bool allow_copy{true};
+    bool allow_modify{true};
+};
+
+/// What `YAPAYZEKAMODELİ` asks the application to do with a model profile.
+///
+/// THE SAME SEAM AS `PrintRequest`, AND FOR THE SAME REASON. A provider profile
+/// is an endpoint, a dialect and the NAME of a keychain entry (`ai/provider.hpp`):
+/// `/src/ai` owns that record and can neither read a file nor open a socket
+/// (`.claude/ai.md` P10), and `/src/command` owns the command, its parameters and
+/// what the journal records. The application owns the machinery — the JSON file in
+/// the user's configuration directory, the operating system's key store, the
+/// network — and installs `Bus::on_ai_provider_request`. A build with nothing
+/// attached says so rather than pretending it saved a profile.
+///
+/// THE KEY IS NOT IN HERE, IN EITHER DIRECTION, and that is the whole point.
+/// `key_ref` is the NAME of the entry that holds the credential; the credential
+/// itself never travels as a command argument, a `Value`, a journal line or an
+/// answer (CLAUDE.md 5.21, ai.md P11). The API key is typed into the key store
+/// through the settings page and read at use by the transport.
+struct AiProviderRequest
+{
+    /// What to do. Deliberately small, like `PrintRequest::Verb`: each verb is
+    /// one sentence a user would say out loud, and the words are the command's
+    /// own `islem` values.
+    enum class Verb : std::uint8_t {
+        Profiles,      ///< list the profiles, the default marked
+        SetProfile,    ///< add a profile, or replace the one of that name
+        RemoveProfile, ///< remove one; the last one cannot go
+        SetDefault,    ///< make one the default
+        Test,          ///< speak to the endpoint and report what came back
+    };
+
+    Verb verb{Verb::Profiles}; ///< which operation to carry out
+
+    /// The profile named — to add, remove, make default or test.
+    std::string name;
+
+    // ---- the profile's fields, as `SetProfile` overrides ---------------------
+    // An empty string, a zero and a `-1` each mean NOT GIVEN, exactly as
+    // `PrintRequest` spells it: the built-in default stands for anything the
+    // line did not say.
+
+    /// The dialect's wire id — `openai_chat`, `openai_responses`,
+    /// `anthropic_messages`, `ollama_native`. A STRING rather than an enum
+    /// because Article 3.2 forbids `/src/command` from naming `/src/ai`, and the
+    /// four words are `ai::dialect_id`'s own (the command resolves the word
+    /// before sending, so an unknown one never reaches here).
+    std::string dialect;
+
+    std::string base_url; ///< scheme, host, port and the vendor's prefix
+    std::string path;     ///< the endpoint under the base: `/chat/completions`
+    std::string model;    ///< the model id exactly as the endpoint names it
+
+    /// WHICH KEY-STORE ENTRY HOLDS THE KEY — never the key (ai.md P11).
+    std::string key_ref;
+
+    std::int64_t context{0}; ///< context window in tokens; 0 = not given
+
+    /// The output cap. `-1` IS "NOT GIVEN" HERE, not 0: a profile's 0 means "do
+    /// not send the field at all" (`ai::ProviderProfile::max_tokens`), so the
+    /// two cannot share a value.
+    std::int64_t max_tokens{-1};
+
+    /// Sampling temperature, or a negative number for NOT GIVEN — which is a
+    /// real configuration of its own, because the o-series and gpt-5 reject any
+    /// value but the default. The accepted span is 0–2, so -1 cannot collide.
+    double temperature{-1.0};
+
+    std::int8_t stream{-1};         ///< 1 streamed, 0 whole, -1 not given
+    std::int8_t reasoning_text{-1}; ///< 1 show the thinking text, 0 hide it, -1 not given
+    std::int8_t tools{-1};          ///< 1 send the tool catalogue, 0 do not, -1 not given
+};
+
 /// A PostgreSQL connection string with its password taken out.
 ///
 /// ONE implementation, shared by everything that shows or stores a connection
@@ -178,6 +323,41 @@ struct DispatchResult
     std::size_t ops{0};     ///< primitive edits recorded
     bool mutated{false};    ///< whether the document changed at all
     std::string message;    ///< user-facing summary, Turkish
+
+    /// EVERY LINE THE COMMAND SAID, in order, captured for THIS dispatch only.
+    ///
+    /// `Bus::on_echo` is one sink for the whole program: it puts a line on the
+    /// transcript and tells the caller nothing. So a client that is not a person
+    /// — a script collecting a report, an agent reading a tool result — had no
+    /// way to learn what a read-only command answered, and `message` is empty on
+    /// success. These are the same strings the transcript shows, teed.
+    std::vector<std::string> lines;
+
+    /// The command's own STRUCTURED answer, when it has one (`Context::report`).
+    ///
+    /// Empty for almost every command, and that is right: a drawing command's
+    /// answer is the drawing. A query answers with data, and prose is a poor
+    /// carrier for data — an agent should not have to parse a Turkish sentence to
+    /// learn a layer's object count.
+    core::Json report;
+};
+
+/// What the viewport is showing, answered by the shell.
+///
+/// NOT DOCUMENT STATE (model.md R43): never hashed, never journalled, never
+/// undoable. It is here because it is the one thing a client cannot work out for
+/// itself — the document does not know how big the window is — and because
+/// "which corner coordinates am I looking at" is the first question any agent,
+/// script or macro asks before it draws anything.
+struct ViewInfo
+{
+    core::Box2 window{};    ///< the visible rectangle in document millimetres
+    core::Point2 centre{};  ///< its centre
+    double mm_per_pixel{0}; ///< document millimetres per screen pixel
+    std::int64_t scale{0};  ///< denominator of the drawing scale, 1:N, 0 when unknown
+    int width_px{0};        ///< viewport width, in pixels
+    int height_px{0};       ///< viewport height, in pixels
+    std::string crs;        ///< the CRS the coordinates are expressed in
 };
 
 class Bus
@@ -383,6 +563,13 @@ public:
     /// a toolbar button reach the viewport by the same route.
     std::function<void(std::string_view mode, double factor)> on_view_request;
 
+    /// WHAT THE VIEW IS SHOWING. The write hooks above move it; nothing could
+    /// read it, so no command could answer "where am I looking" and no agent
+    /// could frame a window before drawing in it. Unset means no viewport is
+    /// attached — a headless run — and the reading command says so rather than
+    /// inventing a rectangle.
+    std::function<ViewInfo()> on_view_query;
+
     /// KAYDIR asks the view to move so that `from` ends up where `to` is.
     ///
     /// A separate hook rather than another `on_view_request` mode, because this
@@ -390,6 +577,65 @@ public:
     /// double would be inventing a second, lossy encoding for a coordinate
     /// (Article 1.4). A headless client leaves it unset and the command says so.
     std::function<void(core::Point2 from, core::Point2 to)> on_pan_request;
+
+    /// What an AI-facing command asks the application to do.
+    ///
+    /// TWO FAMILIES BEHIND ONE SHAPE, for the reason `PrintRequest` has one: the
+    /// command layer owns the words, the parameters and what the journal
+    /// records, and the application owns the machinery — the plan store, the
+    /// suggestion card, the listener's socket. A build with nothing attached
+    /// says so rather than pretending (`on_ai_request` unset).
+    struct AiRequest
+    {
+        /// What is being asked. The words are the command's own `islem` values.
+        enum class Verb : std::uint8_t {
+            SuggestionApply,  ///< ÖNERİ islem=uygula
+            SuggestionReject, ///< ÖNERİ islem=reddet
+            SuggestionState,  ///< ÖNERİ islem=durum
+            SuggestionList,   ///< ÖNERİ islem=listele
+            ServerStart,      ///< MCPSUNUCU islem=baslat
+            ServerStop,       ///< MCPSUNUCU islem=durdur
+            ServerState,      ///< MCPSUNUCU islem=durum
+            ServerToken,      ///< MCPSUNUCU islem=belirtec — mints a new one
+        };
+
+        Verb verb{Verb::SuggestionList}; ///< which of the eight this request is
+        std::string plan;                ///< which suggestion, for the four suggestion verbs
+        std::int64_t port{0};            ///< an override for this start only; 0 = the setting
+    };
+
+    /// Installed by `app::AiService`. Returns the Turkish line the command
+    /// echoes, or the refusal the user sees.
+    ///
+    /// A TOKEN IS NEVER IN HERE, in either direction: minting one returns its
+    /// fingerprint and where to read it, never the secret (CLAUDE.md 5.21).
+    /// What both AI hooks answer with: the Turkish line the command echoes, or
+    /// the refusal the user sees.
+    using AiReply = Task<core::Result<std::string>>;
+
+    /// The suggestion and server hook itself.
+    std::function<AiReply(const AiRequest&)> on_ai_request;
+
+    /// Installed by `app::ProviderService`. Returns the Turkish line
+    /// `YAPAYZEKAMODELİ` echoes, or the refusal the user sees.
+    ///
+    /// A SECOND HOOK RATHER THAN A VERB ON `AiRequest`, because the two address
+    /// different things and sharing a field would mean naming one `plan` and
+    /// meaning "profile name" half the time — the reason `DatabaseRequest` is not
+    /// extra verbs on `FileRequest`. It is also a different OWNER: the plan store
+    /// and the listener belong to `AiService`, the profile file and the key store
+    /// to `ProviderService`, and one `std::function` has one installer.
+    ///
+    /// NO CREDENTIAL CROSSES IT (CLAUDE.md 5.21): a profile carries the NAME of
+    /// its key-store entry, and the answer names the endpoint and the model.
+    /// Named, because the unaliased type wraps and a wrapped declaration reads
+    /// as two: the continuation line looks like a declaration of its own to a
+    /// reader and to `scripts/ci-gate-comments.sh` alike.
+    using AiProviderHandler = std::function<AiReply(const AiProviderRequest&)>;
+
+    /// The hook itself. See the paragraphs above for who installs it and why it
+    /// is separate from `on_ai_request`.
+    AiProviderHandler on_ai_provider_request;
 
     /// Installed by the script layer. Keeps the dependency direction intact:
     /// script depends on command, never the reverse (Constitution Article 3).
@@ -406,6 +652,12 @@ public:
     /// rather than pretending the save happened.
     std::function<Task<core::Result<std::string>>(const FileRequest&)> on_file_request;
 
+    /// Installed by the application's print service (`app::PrintService`), in the
+    /// same shape. Unset means nothing can print here — a headless test, a build
+    /// without a printing engine — and `YAZDIR` says so rather than pretending
+    /// a sheet came out.
+    std::function<Task<core::Result<std::string>>(const PrintRequest&)> on_print_request;
+
     /// Asked by `core.saveas` and `core.export` before they build their request:
     /// the file the document currently belongs to, so the transcript and the GUI
     /// dialog can start where the user last was. NOT document state (model.md
@@ -413,6 +665,27 @@ public:
     std::function<std::string()> on_current_file;
 
     void echo(std::string_view message) const;
+
+    /// Collects every `echo` into `sink` until the returned guard dies.
+    ///
+    /// A GUARD RATHER THAN A FLAG, because dispatches nest: a batch runs commands
+    /// inside a command, and a sink left switched on would hand the outer caller
+    /// the inner command's lines. The guard restores whatever was there before.
+    class EchoCapture
+    {
+    public:
+        /// Starts collecting into `sink`; both outlive the guard.
+        EchoCapture(const Bus& bus, std::vector<std::string>& sink);
+        ~EchoCapture();
+        /// Not copyable: two guards over one sink would restore it twice.
+        EchoCapture(const EchoCapture&) = delete;
+        /// Not assignable, for the same reason.
+        EchoCapture& operator=(const EchoCapture&) = delete;
+
+    private:
+        const Bus& bus_;
+        std::vector<std::string>* previous_{nullptr};
+    };
 
 private:
     core::Result<DispatchResult> run_to_completion(Session& session);
@@ -424,6 +697,10 @@ private:
     UndoStack& undo_;
     Validator validator_;
     core::LayerId active_layer_{0};
+
+    /// Where `echo` also writes while an `EchoCapture` is alive. `mutable`
+    /// because `echo` is const and saying a line is not a change to the bus.
+    mutable std::vector<std::string>* echo_sink_{nullptr};
 
     core::Settings project_settings_{core::builtin_settings(), core::SettingScopeMask::Project};
     core::Settings app_settings_{core::builtin_settings(), core::SettingScopeMask::App};

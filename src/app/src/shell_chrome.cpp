@@ -398,6 +398,14 @@ void StatusStrip::setConnection(const QString& text, bool connected)
     update();
 }
 
+void StatusStrip::setAgent(const QString& text, AgentState state)
+{
+    if (agent_ == text && agentState_ == state) return;
+    agent_      = text;
+    agentState_ = state;
+    update();
+}
+
 void StatusStrip::setPerformance(const QString& text)
 {
     if (performance_ == text) return;
@@ -469,12 +477,16 @@ void StatusStrip::mouseMoveEvent(QMouseEvent* event)
         if (at >= chips_[i].left && at < chips_[i].left + chips_[i].width) hot_ = i;
     const bool stopWas = stopHot_;
     stopHot_ = busy_ && !stopRect_.isEmpty() && stopRect_.contains(event->position().toPoint());
-    if (hot_ != was || stopHot_ != stopWas) update();
+    const bool agentWas = agentHot_;
+    agentHot_           = !agentRect_.isEmpty() && agentRect_.contains(event->position().toPoint());
+    setCursor(agentHot_ ? Qt::PointingHandCursor : Qt::ArrowCursor);
+    if (hot_ != was || stopHot_ != stopWas || agentHot_ != agentWas) update();
 }
 
 void StatusStrip::leaveEvent(QEvent*)
 {
-    hot_ = -1;
+    hot_      = -1;
+    agentHot_ = false;
     update();
 }
 
@@ -483,6 +495,10 @@ void StatusStrip::mousePressEvent(QMouseEvent* event)
     // DURDUR, while a job runs: the one control on the strip that is not an aid.
     if (busy_ && !stopRect_.isEmpty() && stopRect_.contains(event->position().toPoint())) {
         if (event->button() == Qt::LeftButton) emit stopRequested();
+        return;
+    }
+    if (!agentRect_.isEmpty() && agentRect_.contains(event->position().toPoint())) {
+        if (event->button() == Qt::LeftButton) emit agentClicked();
         return;
     }
     if (hot_ < 0) return;
@@ -605,6 +621,54 @@ void StatusStrip::paintEvent(QPaintEvent*)
     p.drawText(QRect(x + kStatusPadX + kStatusIcon + kStatusGap, 1, connWidth, kStatusHeight - 1),
                Qt::AlignVCenter | Qt::AlignLeft, connection_);
     p.fillRect(QRect(x, 1, 1, kStatusHeight - 1), t.lineSoft);
+
+    // ---- the agent listener ----
+    //
+    // A MARK WITH A SHAPE, not a colour with a meaning (ui.md R31). Down is a
+    // hollow ring, up-and-guarded is a filled dot, and up-with-no-token is a
+    // filled TRIANGLE — the one shape in the shell that means "look at this" —
+    // beside the word `KORUMASIZ`. Clicking the cell runs `MCPSUNUCU`, which is
+    // the same command the menu entry runs.
+    if (!agent_.isEmpty()) {
+        const int agentWidth = cellWidth(agent_, true);
+        x -= agentWidth;
+        agentRect_ = QRect(x, 1, agentWidth, kStatusHeight - 1);
+        if (agentHot_) p.fillRect(agentRect_, t.hoverRow);
+
+        const QRectF mark(x + kStatusPadX, (kStatusHeight - kStatusIcon) / 2.0 + 1.0,
+                          kStatusIcon - 2, kStatusIcon - 2);
+        p.save();
+        p.setRenderHint(QPainter::Antialiasing, true);
+        switch (agentState_) {
+        case AgentState::Off:
+            p.setPen(QPen(t.textFaint, 1.4));
+            p.setBrush(Qt::NoBrush);
+            p.drawEllipse(mark);
+            break;
+        case AgentState::Guarded:
+            p.setPen(Qt::NoPen);
+            p.setBrush(t.ok);
+            p.drawEllipse(mark);
+            break;
+        case AgentState::Unprotected:
+            p.setPen(Qt::NoPen);
+            p.setBrush(t.danger);
+            p.drawPolygon(QPolygonF({QPointF(mark.center().x(), mark.top()),
+                                     QPointF(mark.right(), mark.bottom()),
+                                     QPointF(mark.left(), mark.bottom())}));
+            break;
+        }
+        p.restore();
+
+        p.setFont(mono(kStatusPx));
+        p.setPen(agentState_ == AgentState::Unprotected ? t.danger : t.textDim);
+        p.drawText(
+            QRect(x + kStatusPadX + kStatusIcon + kStatusGap, 1, agentWidth, kStatusHeight - 1),
+            Qt::AlignVCenter | Qt::AlignLeft, agent_);
+        p.fillRect(QRect(x, 1, 1, kStatusHeight - 1), t.lineSoft);
+    } else {
+        agentRect_ = QRect();
+    }
 }
 
 // =============================================================================

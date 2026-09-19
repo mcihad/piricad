@@ -12,6 +12,7 @@
 #include "kentos_cad/command/spec.hpp"
 #include "kentos_cad/command/task.hpp"
 #include "kentos_cad/command/transaction.hpp"
+#include "kentos_cad/core/json.hpp"
 
 #include <coroutine>
 #include <cstdint>
@@ -123,6 +124,12 @@ public:
 
     void record(std::string param, Value v);
 
+    /// The command's structured answer, or an empty `Json` when it gave none.
+    /// Set through `Context::report`; carried out on `DispatchResult::report`.
+    const core::Json& report() const noexcept { return report_; }
+
+    void set_report(core::Json report) { report_ = std::move(report); }
+
     const core::Error& error() const noexcept { return error_; }
 
     void fail(core::Error e);
@@ -156,6 +163,7 @@ private:
 
     SessionState state_{SessionState::Ready};
     Prompt prompt_{};
+    core::Json report_{};
     std::coroutine_handle<> parked_{};
     std::optional<Value> supplied_{};
     Args resolved_{};

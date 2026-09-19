@@ -25,6 +25,8 @@
 #include <QLineEdit>
 #include <QMouseEvent>
 #include <QPaintDevice>
+#include <QPainter>
+#include <QPixmap>
 #include <QScreen>
 #include <QShortcut>
 #include <QWheelEvent>
@@ -83,6 +85,15 @@ void MapCanvas::applyTheme(ThemeMode mode)
     palette_ = themePalette(mode);
     tokens_  = mode == ThemeMode::Dark ? &darkTokens() : &lightTokens();
     update();
+}
+
+bool MapCanvas::hasGpuContext() const
+{
+#if KENTOS_HAVE_RHI
+    return rhi() != nullptr;
+#else
+    return true;
+#endif
 }
 
 QString MapCanvas::backendName() const
@@ -289,7 +300,8 @@ void MapCanvas::updateSnapPreview()
     // can keep.
     command::Session* session = controller_.session();
     const bool asking         = session && session->waiting();
-    if (!asking && !dragging_grip_) return;
+    const bool picking_point  = capture_ == Capture::Point;
+    if (!asking && !dragging_grip_ && !picking_point) return;
 
     command::Bus& bus                = controller_.bus();
     const command::AidSettings& aids = bus.aid_settings();
@@ -1336,7 +1348,9 @@ void MapCanvas::addGhost(std::size_t batch, core::Mm dx, core::Mm dy)
 
 void MapCanvas::buildCrosshair()
 {
-    if (!cursor_valid_ || look_.cursor == 2 || panning_) return;
+    // Not while a form field is picking: the platform pointer is the pick mark
+    // then, and two pointers for one hand is the thing this cross exists to end.
+    if (!cursor_valid_ || look_.cursor == 2 || panning_ || capture_ || print_aspect_ > 0.0) return;
 
     const std::size_t batch      = nextBatch(palette_.crosshair.rgba(), 1.0f, false);
     const render::ScreenPointF c = toScreenF(cursor_);
@@ -1705,6 +1719,10 @@ void MapCanvas::buildOverlay()
 
     buildSelectionBox();
     buildGuides();
+    // THE PRINT FRAME OVER THE DRAWING and under the rulers: it is a window on
+    // the drawing, so it has to sit on top of it, and the rulers and the scale
+    // bar are the shell's furniture and stay readable over everything.
+    buildPrintFrame();
     buildRuler();
     buildScaleBar();
     buildNorthArrow();
@@ -1861,6 +1879,58 @@ void MapCanvas::mousePressEvent(QMouseEvent* event)
         }
     }
 
+    // THE PRINT FRAME takes the right button and nothing else: the left drag
+    // pans the map under the frame, which is the whole gesture (see
+    // `beginPrintFrame`). Esc does the same through `keyPressEvent`.
+    if (print_aspect_ > 0.0 && event->button() == Qt::RightButton) {
+        endPrintFrame();
+        return;
+    }
+    if (print_aspect_ > 0.0 && event->button() == Qt::LeftButton) {
+        panning_    = true;
+        pan_anchor_ = event->position();
+        setCursor(Qt::ClosedHandCursor);
+        return;
+    }
+
+    // A FORM FIELD'S PICK OWNS THE CLICK while it is armed: the answer goes into
+    // the box that asked, and nothing else moves (see `beginCapture`).
+    if (capture_ && event->button() == Qt::LeftButton) {
+        cursor_       = event->position();
+        cursor_valid_ = true;
+        if (*capture_ == Capture::Point) {
+            updateSnapPreview();
+            const core::Point2 world = cursorWorld();
+            capture_.reset();
+            snap_preview_valid_ = false;
+            applyPointer();
+            emit pointCaptured(world);
+            emit captureEnded();
+            update();
+            return;
+        }
+        const core::Point2 at =
+            view_.to_world(render::ScreenPoint{event->position().x(), event->position().y()});
+        std::vector<core::EntityId> under;
+        core::pick_all(controller_.document(), at, controller_.bus().aid_settings().pick_radius,
+                       under);
+        if (under.empty()) {
+            emit echoRequested(
+                tr("Burada nesne yok; bir nesnenin üzerine tıklayın, Esc vazgeçer."));
+            return;
+        }
+        if (under.size() > 1) {
+            emit captureAmbiguous(under);
+            return;
+        }
+        finishCapture(controller_.document().key_of(under.front()));
+        return;
+    }
+    if (capture_ && event->button() == Qt::RightButton) {
+        cancelCapture();
+        return;
+    }
+
     if (event->button() == Qt::LeftButton) {
         // A COMMAND ASKING FOR OBJECTS DOES NOT OWN THE CLICK — the selection
         // does. Picking during a command is the same picking as when none is
@@ -1969,6 +2039,16 @@ void MapCanvas::applyPointer()
         setCursor(Qt::ClosedHandCursor);
         return;
     }
+    if (capture_) {
+        setCursor(captureCursor());
+        return;
+    }
+    if (print_aspect_ > 0.0) {
+        // An open hand: while the frame is up the gesture is panning the map
+        // under it, and the drawn crosshair would say a click places something.
+        setCursor(Qt::OpenHandCursor);
+        return;
+    }
     if (look_.cursor == 2 || (text_editor_ != nullptr && text_editor_->isVisible())) {
         unsetCursor();
         return;
@@ -2047,6 +2127,20 @@ void MapCanvas::mouseReleaseEvent(QMouseEvent* event)
     if (event->button() == Qt::MiddleButton) {
         panning_ = false;
         applyPointer();
+        return;
+    }
+
+    // A LEFT-BUTTON PAN ENDS HERE TOO, and it has to be said separately: the
+    // middle button is the only one that used to start one, so the release
+    // handler only cleared `panning_` for that button. The print frame pans with
+    // the LEFT button (`beginPrintFrame`), and without this line the map went on
+    // following the mouse after the button came up — a drag that never let go,
+    // which is exactly how it was reported.
+    if (event->button() == Qt::LeftButton && panning_) {
+        panning_ = false;
+        cursor_  = event->position();
+        applyPointer();
+        update();
         return;
     }
 
@@ -2192,6 +2286,13 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
     // `NoFocus`, so `CommandLine` sees the key first and `MainWindow` routes it to
     // the same body. Both roads, one answer.
     if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+        // ENTER TAKES THE SHEET. The button's second press does the same thing;
+        // this is the keyboard's road to it, because every operation has to be
+        // reachable without a mouse (ui.md R21).
+        if (print_aspect_ > 0.0) {
+            emit printFrameAccepted();
+            return;
+        }
         if (controller_.supplyPickedObjects()) {
             update();
             return;
@@ -2203,6 +2304,16 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
     }
 
     if (event->key() == Qt::Key_Escape) {
+        // A form field's pick is the innermost thing of all: Esc puts it away and
+        // leaves the command, if one is running, exactly where it was.
+        if (capture_) {
+            cancelCapture();
+            return;
+        }
+        if (print_aspect_ > 0.0) {
+            endPrintFrame();
+            return;
+        }
         // The text box first: it is the innermost thing open, and ESC in it means
         // "not this caption" rather than "not this command". A second ESC then
         // cancels METİN, which is the nesting a user expects.
@@ -2235,6 +2346,223 @@ void MapCanvas::keyPressEvent(QKeyEvent* event)
         return;
     }
     QWidget::keyPressEvent(event);
+}
+
+// ------------------------------------------------------- the print frame ----
+
+void MapCanvas::beginPrintFrame(double aspect)
+{
+    if (aspect <= 0.0) return;
+    print_aspect_ = aspect;
+    applyPointer();
+    setFocus(Qt::OtherFocusReason); // so Esc lands here
+    emit printFrameBegan(tr("Yazdırma alanı: haritayı sürükleyip tekerlekle yaklaşın, çerçeveye "
+                            "ne giriyorsa yazdırılır. Yazdır'a basmak önizlemeyi açar, Esc "
+                            "vazgeçer."));
+    update();
+}
+
+void MapCanvas::setPrintFrameAspect(double aspect)
+{
+    if (print_aspect_ <= 0.0 || aspect <= 0.0) return;
+    print_aspect_ = aspect;
+    update();
+}
+
+void MapCanvas::endPrintFrame()
+{
+    if (print_aspect_ <= 0.0) return;
+    print_aspect_ = 0.0;
+    applyPointer();
+    emit printFrameEnded();
+    update();
+}
+
+QRectF MapCanvas::printFrameRect() const
+{
+    if (print_aspect_ <= 0.0) return {};
+
+    // INSET FROM THE VIEWPORT, and past the rulers when they are on: a frame
+    // whose edge sat under the ruler would be a frame whose corner cannot be
+    // seen. The inset is a fraction of the shorter side, so the frame is the
+    // same size relative to the window on every screen.
+    const auto band = look_.ruler ? static_cast<double>(look_.ruler_px) : 0.0;
+    // A BAND ON ALL FOUR SIDES, whatever the window's shape: an inset of a few
+    // fixed pixels left no grey at all along the two sides the sheet's aspect
+    // happened to fill, and a sheet whose edge is the window's edge does not
+    // read as a sheet. A fraction of the shorter side keeps it the same
+    // proportion on a laptop and on a 4K panel.
+    const double shorter =
+        std::min(static_cast<double>(width()) - band, static_cast<double>(height()) - band);
+    const double inset = std::max(18.0, shorter * 0.05);
+    const double x0    = band + inset;
+    const double y0    = band + inset;
+    const double w     = static_cast<double>(width()) - x0 - inset;
+    const double h     = static_cast<double>(height()) - y0 - inset;
+    if (w <= 8.0 || h <= 8.0) return {};
+
+    double fw = w;
+    double fh = w / print_aspect_;
+    if (fh > h) {
+        fh = h;
+        fw = h * print_aspect_;
+    }
+    return QRectF(x0 + (w - fw) / 2.0, y0 + (h - fh) / 2.0, fw, fh);
+}
+
+core::Box2 MapCanvas::printFrameWindow() const
+{
+    const QRectF frame = printFrameRect();
+    if (frame.isEmpty()) return {};
+
+    // The two opposite corners through the view transform. y is DOWN on screen
+    // and UP in the document, so the top-left pixel is the top-left of the box
+    // in easting and the TOP in northing — hence the min/max below rather than
+    // a straight copy.
+    const core::Point2 a = view_.to_world(render::ScreenPoint{frame.left(), frame.top()});
+    const core::Point2 b = view_.to_world(render::ScreenPoint{frame.right(), frame.bottom()});
+    return core::Box2{std::min(a.x, b.x), std::min(a.y, b.y), std::max(a.x, b.x),
+                      std::max(a.y, b.y)};
+}
+
+void MapCanvas::buildPrintFrame()
+{
+    const QRectF frame = printFrameRect();
+    if (frame.isEmpty()) return;
+
+    // THE MASK: four rectangles around the frame, filled with the same colour
+    // they are outlined in, so the four seams between them are invisible.
+    //
+    // A MID GREY, not the theme's own background: `bgApp` is nearly white in
+    // the light theme, and a nearly-white wash over a white canvas is a wash
+    // nobody can see — the first cut of this drew a frame with no dimming
+    // outside it at all. A neutral grey darkens a light canvas and lightens a
+    // dark one, so "outside the sheet" reads the same in both themes, and the
+    // alpha keeps the drawing out there legible because the user is aiming with
+    // it.
+    QColor veil(0x80, 0x84, 0x88, 132);
+    const std::size_t mask = nextBatch(veil.rgba(), 1.0f, false, veil.rgba());
+    const auto W           = static_cast<float>(width());
+    const auto H           = static_cast<float>(height());
+    const auto l           = static_cast<float>(frame.left());
+    const auto t           = static_cast<float>(frame.top());
+    const auto r           = static_cast<float>(frame.right());
+    const auto b           = static_cast<float>(frame.bottom());
+    addRun(mask, {{0.0f, 0.0f}, {W, 0.0f}, {W, t}, {0.0f, t}}, true);
+    addRun(mask, {{0.0f, b}, {W, b}, {W, H}, {0.0f, H}}, true);
+    addRun(mask, {{0.0f, t}, {l, t}, {l, b}, {0.0f, b}}, true);
+    addRun(mask, {{r, t}, {W, t}, {W, b}, {r, b}}, true);
+
+    // The sheet's own edge: a hairline, so it reads as the paper's boundary
+    // rather than as something drawn.
+    QColor edge = tokens_->accent;
+    edge.setAlpha(190);
+    const std::size_t line = nextBatch(edge.rgba(), 1.0f, false);
+    addRun(line, {{l, t}, {r, t}, {r, b}, {l, b}}, true);
+
+    // AND THE FOUR CORNERS, as L marks in the accent: the crop marks a plotter
+    // sheet has, and the thing that says "this is a sheet" at a glance.
+    const auto arm =
+        static_cast<float>(std::min(28.0, std::min(frame.width(), frame.height()) / 6.0));
+    const std::size_t mark = nextBatch(tokens_->accent.rgba(), 2.0f, false);
+    addRun(mark, {{l, t + arm}, {l, t}, {l + arm, t}}, false);
+    addRun(mark, {{r - arm, t}, {r, t}, {r, t + arm}}, false);
+    addRun(mark, {{r, b - arm}, {r, b}, {r - arm, b}}, false);
+    addRun(mark, {{l + arm, b}, {l, b}, {l, b - arm}}, false);
+
+    // THE SHEET'S CENTRE, as a cross with a gap in it. A pafta is placed by its
+    // centre — `YAZDIR merkez=` is the same sheet said as a coordinate — so the
+    // point the paper turns around has to be visible, and its coordinates have
+    // to be readable off the screen rather than worked out from the corners.
+    const auto cx            = static_cast<float>(frame.center().x());
+    const auto cy            = static_cast<float>(frame.center().y());
+    const float reach        = 13.0f;
+    const float hole         = 4.0f;
+    const std::size_t centre = nextBatch(tokens_->accent.rgba(), 1.4f, false);
+    addRun(centre, {{cx - reach, cy}, {cx - hole, cy}}, false);
+    addRun(centre, {{cx + hole, cy}, {cx + reach, cy}}, false);
+    addRun(centre, {{cx, cy - reach}, {cx, cy - hole}}, false);
+    addRun(centre, {{cx, cy + hole}, {cx, cy + reach}}, false);
+
+    // The reading, in the Turkish convention: `Sağa (Y)` is the easting and
+    // `Yukarı (X)` the northing, whatever the members are called in code
+    // (model.md R37a). Printing `X` beside a 485 km value tells a surveyor
+    // something false.
+    const core::Point2 at =
+        view_.to_world(render::ScreenPoint{frame.center().x(), frame.center().y()});
+    char reading[96];
+    (void)std::snprintf(reading, sizeof reading, "Y %.3f  X %.3f", core::mm_to_metres(at.x),
+                        core::mm_to_metres(at.y));
+    overlay_.labels.push_back(render::OverlayLabel{tokens_->accent.rgba(), cx + reach + 6.0f,
+                                                   cy + 4.0f, static_cast<float>(look_.hint_px),
+                                                   true, reading});
+}
+
+// ------------------------------------------------------ a field's pick ----
+
+void MapCanvas::beginCapture(Capture kind)
+{
+    capture_            = kind;
+    snap_preview_valid_ = false;
+    applyPointer();
+    setFocus(Qt::OtherFocusReason); // so Esc lands here
+    emit captureBegan(kind == Capture::Point
+                          ? tr("Sahneden bir nokta tıklayın; köşeler yakalanır. Esc vazgeçer.")
+                          : tr("Sahneden bir nesne tıklayın. Esc vazgeçer."));
+    update();
+}
+
+void MapCanvas::cancelCapture()
+{
+    if (!capture_) return;
+    capture_.reset();
+    snap_preview_valid_ = false;
+    applyPointer();
+    emit captureEnded();
+    update();
+}
+
+void MapCanvas::finishCapture(core::EntityKey key)
+{
+    if (!capture_) return;
+    capture_.reset();
+    applyPointer();
+    if (key != core::EntityKey::None) emit objectCaptured(key);
+    emit captureEnded();
+    update();
+}
+
+QCursor MapCanvas::captureCursor() const
+{
+    // DRAWN, in the accent, at the screen's own ratio: a cross whose arms stop
+    // short of the centre for a point, and the same cross with the pick box in
+    // the gap for an object — the mark the canvas's own crosshair draws while a
+    // command asks the same question, so the two readings agree.
+    const qreal dpr = devicePixelRatioF();
+    const int size  = 32;
+    QPixmap pix(static_cast<int>(size * dpr), static_cast<int>(size * dpr));
+    pix.setDevicePixelRatio(dpr);
+    pix.fill(Qt::transparent);
+    QPainter p(&pix);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    const QColor ink = tokens_->accent;
+    QPen pen(ink, 1.5);
+    p.setPen(pen);
+    const qreal c   = size / 2.0;
+    const qreal gap = capture_ == Capture::Object ? 6.0 : 3.0;
+    p.drawLine(QPointF(c, 1.0), QPointF(c, c - gap));
+    p.drawLine(QPointF(c, c + gap), QPointF(c, size - 1.0));
+    p.drawLine(QPointF(1.0, c), QPointF(c - gap, c));
+    p.drawLine(QPointF(c + gap, c), QPointF(size - 1.0, c));
+    if (capture_ == Capture::Object) {
+        p.setBrush(Qt::NoBrush);
+        p.drawRect(QRectF(c - 5.0, c - 5.0, 10.0, 10.0));
+    } else {
+        p.setBrush(ink);
+        p.drawEllipse(QPointF(c, c), 1.2, 1.2);
+    }
+    p.end();
+    return QCursor(pix, size / 2, size / 2);
 }
 
 // ------------------------------------------------------ the text editor ----

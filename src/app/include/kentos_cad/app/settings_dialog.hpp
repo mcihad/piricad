@@ -31,6 +31,7 @@
 class QLabel;
 class QLineEdit;
 class QStackedWidget;
+class QStandardItemModel;
 class QVBoxLayout;
 class QWidget;
 
@@ -38,6 +39,13 @@ namespace kentos::app {
 
 /// The one road from a widget to the document; see controller.hpp.
 class Controller;
+
+/// The component set; see widgets.hpp, fields.hpp and datagrid.hpp.
+class Button;
+class ComboBox;
+class DataGrid;
+class Field;
+class Segment;
 
 /// Shows declared settings, grouped by topic, and writes changes through the
 /// command bus.
@@ -67,6 +75,10 @@ public:
                             QWidget* parent = nullptr);
 
     /// The sidebar's section titles, in order, for `KENTOS_SETTINGS_PROBE`.
+    /// Opens the page whose section title is `title`; an unknown title leaves
+    /// the window where it is. What the print menu's "Profilleri Yönet…" asks.
+    void showSection(const QString& title);
+
     QStringList probeSections() const;
 
     /// The ids of the settings the `Proje Ayarları` page carries, in order.
@@ -99,6 +111,68 @@ private:
     /// Builds the page for one group and returns it. Never null: a group only
     /// exists because a setting declared it.
     QWidget* buildGroup(const std::string& section, const QString& title);
+
+    /// The PRINT PROFILES block, at the top of the `Plot ve Çıktı` page.
+    ///
+    /// Not a setting and so not generated from the catalogue: a profile is a
+    /// NAMED SHEET and `SettingSpec` holds one value of one type (model.md
+    /// R38). It is not a second list either — the store is
+    /// `PrintService::profiles()` and this draws it — and every edit leaves
+    /// through `YAZDIRMAPROFİLİ`, so the window has no road the command line
+    /// lacks (Article 1.2, CLAUDE.md 5.10).
+    QWidget* buildPrintProfiles();
+
+    /// Refills the profile table from the store. Called when the window opens
+    /// and whenever `PrintService::profilesChanged` fires — including for an
+    /// edit made at the command line while this window is open.
+    void refreshPrintProfiles();
+
+    /// The MODEL PROVIDER block, at the top of the `Yapay Zeka Modelleri` page.
+    ///
+    /// Not a setting, for the reason the print profiles are not: a provider
+    /// profile is a named endpoint and a `SettingSpec` holds one value of one
+    /// type (model.md R38) — and its text holds 48 bytes, which is another
+    /// reason an API key can never be one (CLAUDE.md 5.21). The store is
+    /// `ProviderService::profiles()` and this draws it; every edit leaves
+    /// through `YAPAYZEKAMODELİ`, so the window has no road the command line
+    /// lacks (Article 1.2, CLAUDE.md 5.10).
+    ///
+    /// THE ONE EXCEPTION IS THE KEY ITSELF, and it is an exception in the other
+    /// direction: it must NOT become a command, because a command's arguments
+    /// are journalled. The secret field writes straight to the operating
+    /// system's key store (`secret_store.hpp`) and the profile keeps only the
+    /// NAME of that entry.
+    QWidget* buildProviderProfiles();
+
+    /// Refills the provider table from the store. Called when the window opens
+    /// and whenever `ProviderService::profilesChanged` fires — including for a
+    /// profile added at the command line while this window is open.
+    void refreshProviderProfiles();
+
+    /// Opens `ProviderDialog` on a new profile, or on `edit` when it names one
+    /// in the store. The window writes through `YAPAYZEKAMODELİ` like every
+    /// other control on this page, so the table refreshes on `profilesChanged`
+    /// rather than being told directly.
+    void openProviderDialog(const QString& edit);
+
+    /// The LISTENER block, at the top of the `MCP Sunucusu` page.
+    ///
+    /// WHY THE ADDRESS IS A WIDGET AND NOT A SETTING. What a person has to hand
+    /// to an agent is one string — `http://127.0.0.1:8765/mcp/<belirteç>` — and
+    /// it is assembled from a setting, a running port and a secret. The secret
+    /// is the reason it cannot be a `SettingSpec`: a token in a settings value
+    /// would be written to the settings file, read back into a `Value` and
+    /// echoed by `AYAR` (CLAUDE.md 5.21). So the token lives in the listener,
+    /// this block shows it once for copying, and everything else that talks
+    /// about it uses the fingerprint.
+    ///
+    /// Every button here runs `MCPSUNUCU`, so the window has no road the command
+    /// line lacks (Article 1.2).
+    QWidget* buildAgentServer();
+
+    /// Redraws the listener block from what the listener is actually doing.
+    /// Called when the window opens and on `McpService::stateChanged`.
+    void refreshAgentServer();
 
     /// The page that gathers every PROJECT-scoped setting, whatever topic it was
     /// declared under.
@@ -157,6 +231,42 @@ private:
     QLabel* summary_{nullptr};
     QLabel* profile_{nullptr};
     std::vector<Section> order_;
+
+    /// The print profile table and the fields that add one; null in
+    /// `Mode::Project`, which has no such page.
+    DataGrid* profiles_table_{nullptr};
+    QStandardItemModel* profiles_model_{nullptr};
+    Field* profile_name_{nullptr};
+    ComboBox* profile_paper_{nullptr};
+    Segment* profile_orientation_{nullptr};
+    Field* profile_dpi_{nullptr};
+    Field* profile_margin_{nullptr};
+    Button* profile_default_{nullptr};
+    Button* profile_remove_{nullptr};
+
+    /// The model provider table, the fields that add one and the key field;
+    /// null in `Mode::Project`, which has no such page.
+    DataGrid* providers_table_{nullptr};
+    QStandardItemModel* providers_model_{nullptr};
+
+    /// The API key, and the only control in this window whose value never
+    /// becomes a command (see `buildProviderProfiles`). `FieldSpec::secret`, so
+    /// it shows dots and is never echoed.
+    Field* provider_key_{nullptr};
+    QLabel* provider_key_note_{nullptr};
+
+    /// The listener block's own widgets; null on the pages that do not have it.
+    QLabel* mcp_state_{nullptr};
+    Field* mcp_address_{nullptr};
+    Button* mcp_toggle_{nullptr};
+    Button* mcp_token_{nullptr};
+    Button* mcp_copy_{nullptr};
+    QLabel* mcp_note_{nullptr};
+    Button* provider_edit_{nullptr};
+    Button* provider_default_{nullptr};
+    Button* provider_remove_{nullptr};
+    Button* provider_test_{nullptr};
+    Button* provider_key_save_{nullptr};
 
     /// Guards the editors while `refresh()` fills them, so a programmatic write
     /// does not read straight back as a user edit.

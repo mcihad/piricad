@@ -30,6 +30,7 @@ kullanın.
 | **Blok tanımları**: ad, açıklama, taban noktası, üye nesnelerin anahtarları | Bir kez çizilip çok kez yerleştirilen sembol (rögar kapağı, kuzey oku, antet). Tanımın nesneleri aynı nesne tablosunda "blok içinde" bayrağıyla durur; kendi başlarına çizilmez, seçilmez, düzenlenmez — yerleştiren blok referansı (Faz 2) çizer |
 | **Yabancı veri**: başka bir programın nesneye bağladığı baytlar (DXF XDATA) | Bu program okuyamaz ama kaybedemez: dosya geldiği baytlarla geri gider. Öznitelik paneli yalnız sayısını gösterir ("ek_veri: 2 kayıt") |
 | **Tür yükü**: bir nesne türünün halkalarının söyleyemediğini taşıyan baytlar | Yaylı çoklu çizginin yayları, spline'ın düğümleri, taramanın deseni, blok referansının dönüşümü, ölçünün sayıları buradadır; yükü olmayan bir çizim bu sütunları hiç yazmaz. Bu sürümün **tanımadığı bir tür** de bu yolla korunur: nesne görünür, halkaları ve yükü bayt bayt aynı kalır, düzenlenmeye kalkışılırsa "Bu yapının tanımadığı türdeki nesne düzenlenemez; olduğu gibi korunur." denir |
+| **Bağlar**: hangi yazının hangi nesneyi izlediği, hangi köşe ya da kenar, hangi yan, el payı, sözünün türü | Kenar uzunluğu ve köşe numarası kaynağına bağlı yazılır ([bağlı nesneler](../islem/bagli-nesneler.md)); iki uç da kalıcı anahtarla saklanır, bağı olmayan çizim bu bloğu hiç yazmaz |
 | **Proje kapsamlı ayarlar** | Dışa aktarılan belgenin baytını değiştirebilen her ayar |
 
 Taşınmayan, kasten:

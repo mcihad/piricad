@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/command/validation.hpp"
 
+#include "kentos_cad/core/text.hpp"
+
 namespace kentos::command {
 namespace {
 
@@ -74,6 +76,39 @@ core::Status Validator::check_against_spec(const CommandSpec& spec, const Args& 
                              "'" + spec.id + "': '" + p.name + "' parametresi en fazla " +
                                  std::to_string(p.arity.max) + " değer alır, " + std::to_string(n) +
                                  " değer geldi.");
+        }
+
+        // A DECLARED WORD LIST IS CHECKED HERE, before the body runs, because that
+        // is where every other part of the contract is checked (Article 1.3). The
+        // comparison folds Turkish, so `yalnız` reaches `yalniz` and `GİZLE`
+        // reaches `gizle` — the same folding the registry resolves a name with
+        // (CLAUDE.md 5.6).
+        if (!p.choices.empty() && v->kind() == Value::Kind::Text) {
+            const std::string& given = v->as_text();
+            bool known               = false;
+            for (const std::string& word : p.choices)
+                if (core::turkish_key_equals(given, word)) known = true;
+            if (!known) {
+                std::string list;
+                for (const std::string& word : p.choices) {
+                    if (!list.empty()) list += " / ";
+                    list += word;
+                }
+                return core::err(ErrorCode::ValidationFailed,
+                                 "'" + spec.id + "': '" + p.name + "' için tanınmayan değer '" +
+                                     given + "'. Kabul edilenler: " + list);
+            }
+        }
+
+        // And a declared range, for the same reason.
+        if (p.bounded && (v->kind() == Value::Kind::Int || v->kind() == Value::Kind::Number)) {
+            const std::int64_t got = v->as_int();
+            if (got < p.low || got > p.high) {
+                return core::err(ErrorCode::ValidationFailed,
+                                 "'" + spec.id + "': '" + p.name + "' " + std::to_string(p.low) +
+                                     " ile " + std::to_string(p.high) + " arasında olmalı, " +
+                                     std::to_string(got) + " geldi.");
+            }
         }
     }
 

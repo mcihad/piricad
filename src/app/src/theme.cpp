@@ -576,6 +576,10 @@ QString themeStyleSheet(ThemeMode mode)
         QToolButton#fieldPicker          { background: transparent; color: %(textDim)s;
                                            border: none; border-left: 1px solid %(border)s; }
         QToolButton#fieldPicker:hover    { background: %(hoverIcon)s; color: %(onHover)s; }
+        /* A scene pick under way: the button reads as pressed, in the accent,
+           for as long as the canvas is waiting for the click. */
+        QToolButton#fieldPicker[picking="true"] { background: %(wash)s;
+                                           border-left: 1px solid %(accent)s; }
 
         QToolButton#fieldMulti           { background: transparent; color: %(text)s;
                                            border: none; padding: 0px 8px;
@@ -639,7 +643,8 @@ QString themeStyleSheet(ThemeMode mode)
          * wrong. `FormRow` writes these names; `FormSection` paints itself.
          */
         QLabel#formRowLabel               { color: %(textDim)s; font-size: 11px; }
-        QLabel#formHelp                   { color: %(textFaint)s; font-size: 10.5px; }
+        QLabel#formHelp                   { color: %(textFaint)s; font-size: 10.5px;
+                                            background: transparent; }
         QLabel#formHelp[tone="danger"]    { color: %(danger)s; }
         QLabel#sliderReadout              { color: %(readoutDim)s;
                                             font-family: "IBM Plex Mono", monospace;
@@ -648,7 +653,36 @@ QString themeStyleSheet(ThemeMode mode)
                                             background: transparent; }
         QLabel#bannerText                 { color: %(textDim)s; font-size: 11.5px;
                                             background: transparent; }
+        QLabel#formHelp[tone="warn"]      { color: %(warn)s; }
+        QLabel#formHelp[tone="accent"]    { color: %(accentHi)s; }
+        QLabel#formHelp[tone="ok"]        { color: %(ok)s; }
         QWidget#componentSheet            { background: %(window)s; }
+
+        /* ---- the conversation, CLAUDE.md's chat surface --------------------- */
+        /*
+         * The bubble paints its own wash and outline (`MessageBubble::paintEvent`,
+         * where the speaker decides both); the sheet styles only the words in it.
+         * The transcript's scroll area must add NOTHING — no frame, no ground of
+         * its own — or the panel gets a second border inside the dock's.
+         */
+        QScrollArea#transcriptScroll      { background: %(panel)s; border: none; }
+        QWidget#transcriptColumn          { background: %(panel)s; }
+        QWidget#transcript                { background: %(panel)s; }
+        /* The editor inside an EDITABLE combo: the combo paints the box, so this
+         * adds only ink and the room the chevron needs. */
+        QLineEdit#comboLine               { background: transparent; border: none;
+                                            color: %(text)s; font-size: 12px;
+                                            padding-left: 10px; padding-right: 26px; }
+        QLabel#bubbleWho                  { color: %(textDim)s; font-size: 10.5px;
+                                            background: transparent; }
+        QLabel#bubbleBody                 { color: %(text)s; font-size: 12px;
+                                            background: transparent; }
+        QLabel#bubbleBodyMono             { color: %(readout)s; font-size: 11.5px;
+                                            font-family: "IBM Plex Mono", monospace;
+                                            background: transparent; }
+        QLabel#bubbleReasoning            { color: %(textFaint)s; font-size: 11px;
+                                            font-style: italic;
+                                            background: transparent; }
 
         /* ---- layers panel, §7 ---------------------------------------------- */
         /* The row is painted by LayerRowDelegate; the view must add nothing. */

@@ -104,7 +104,7 @@ struct Rig
 TEST_CASE("SettingSpec: her bildirim eksiksiz ve kataloğa kabul edilmiş")
 {
     const SettingCatalog& cat = builtin_settings();
-    CHECK(cat.size() == 62); // her X-makro satırı kabul edildi
+    CHECK(cat.size() == 67); // her X-makro satırı kabul edildi (62 + MCP ve yapay zeka)
 
     for (const auto& spec : cat.all()) {
         CHECK(!spec.id.empty());

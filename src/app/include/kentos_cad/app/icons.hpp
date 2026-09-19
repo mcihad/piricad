@@ -116,6 +116,14 @@ enum class Glyph {
     PageLast,    ///< its mirror: the pager's `last`
     ChevronUp,   ///< the stack's `move up`
     DataObject,  ///< `{ }`: a property driven by a column — QGIS's data-defined override
+
+    // ---- the conversation and the agent server -------------------------------
+    Send,   ///< a paper plane: the composer's own action
+    Attach, ///< a paperclip: add a file to the turn
+    Stop,   ///< a filled square: cancel the turn in flight
+    Chat,   ///< a speech bubble: the panel's own mark on the tool bar
+    Server, ///< a stack of two boxes: the MCP listener
+    Plug,   ///< a two-pin plug: a client connected to it
 };
 
 /// Renders `glyph` at `size` logical pixels in `colour`, with a checked variant

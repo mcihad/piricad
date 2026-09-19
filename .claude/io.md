@@ -27,6 +27,10 @@ R20. Every dataset MUST carry an explicit `Crs`; a missing or unrecognised CRS M
 R21. Every `/src/io` dependency MUST be pinned to an exact version in `vcpkg.json` with its LICENSE recorded and MUST appear in the CycloneDX SBOM produced for each release (§9.11).
 R22. All optional format backends MUST sit behind `KENTOS_WITH_*` CMake options defaulting to OFF that hard-fail with an actionable message when ON but missing (canon Phase-0 deviation 2).
 R23. OGC service clients — WMS, WMTS, WFS-T, WCS, CSW and OGC API Features — MUST be implemented in `/src/io` behind `KENTOS_WITH_OGC`, MUST expose each service as a registered command (R4), and MUST each carry a conformance-class case in `/tests/golden`; an unconformant response MUST return `Error`, never a partial layer (§12 Veri ve Kurumsal). Export-side theme/metadata obligations stay in `.claude/domain.md` R22.
+R24. Print profiles — a named sheet: paper, orientation, resolution, margin — live in `io::PrintProfiles` (`io/print_profiles.hpp`) as JSON in the user's configuration directory, NEVER in the document (model.md R39: they are application state, like a printer preference). The store owns the ISO 216 paper table, the floor every profile has to clear (a known paper or an explicit custom size, 72–4800 dpi, a margin that leaves printable area) and the `resolve` that lays a request's overrides on a profile. Exactly one profile is the default. A missing file is the built-in set; a file that does not parse is REPORTED and the user's file is left alone (R42's spirit: never silently start over).
+R25. A PDF is written by the application (Qt has the page geometry and the painter) and encrypted by `io::pdf_encrypt` (qpdf, `KENTOS_WITH_QPDF`): AES-256 (R6 revision), the two passwords and the three permission flags, plus the `/Author` field in the same pass. Encryption is never hand-rolled (CLAUDE.md 5.16) and the qpdf headers stay inside `src/pdf_encrypt.cpp` (R2/P2). A build without it says so and writes an unencrypted file only when no password was asked for.
+
+R26. A record store the program writes outside `/src/io` still obeys R24's shape and P5's version field: `ai-modelleri.json` and the audit log each carry `sürüm`, live in the user's configuration directory, are never part of the document, and are never journalled. A configuration file with no version is a file a later build cannot read safely.
 
 ## Absolute Prohibitions
 
@@ -35,6 +39,7 @@ P2. NEVER let a GDAL/OGR symbol or header (`gdal*.h`, `ogr*.h`, `cpl_*.h`) appea
 P3. NEVER parse, decode, or read a file on the UI thread (§10.3).
 P4. NEVER feed unvalidated external XML to the domain layer, and NEVER enable DTD loading, external entities, or XInclude in libxml2 (XXE) (§9.9, §13).
 P5. NEVER write a format without a version field (§13).
+P5a. NEVER put a PDF password, a user password or an owner password into a journal line, a log line, a transcript line or an error message. `core.print` is read-only and therefore never journalled; that is the mechanism, and it must stay the mechanism.
 P6. NEVER trust extents, feature counts, or block sizes declared in a file header.
 P7. NEVER ship the full GDAL driver set — drivers come from an explicit allow-list in `/cmake`, and adding one requires an entry there in the same PR (§9.2).
 P8. NEVER ship a native DWG writer while R14's coverage report stands unrevised — LibreDWG write support is not adequate today (§9.8, §15).

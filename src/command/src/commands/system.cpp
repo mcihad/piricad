@@ -92,8 +92,8 @@ KENTOS_COMMAND(script)
         .names    = {"BETİK", "BETIK", "SCRIPT"},
         .category = Category::Script,
         .params = {Param::text("dosya", Arity::exactly(1), "Çalıştırılacak betik dosyasının yolu")},
-        .undo   = UndoPolicy::Custom,
-        .flags  = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
+        .undo    = UndoPolicy::Custom,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
         .summary = "Bir betik dosyasını komut veri yolu üzerinden çalıştırır.",
         .run     = &run_script,
     };

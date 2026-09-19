@@ -39,6 +39,8 @@ namespace kentos::processing {
 KENTOS_PROCESSING_TOOL(label_length);
 KENTOS_PROCESSING_TOOL(number_vertices);
 KENTOS_PROCESSING_TOOL(area_edit);
+KENTOS_PROCESSING_TOOL(attach);
+KENTOS_PROCESSING_TOOL(detach);
 
 namespace {
 
@@ -51,9 +53,8 @@ const std::vector<const ProcessingTool*>& all_tools()
 {
     static const std::vector<const ProcessingTool*> tools = [] {
         std::vector<const ProcessingTool*> out{
-            &kentos_tool_label_length(),
-            &kentos_tool_number_vertices(),
-            &kentos_tool_area_edit(),
+            &kentos_tool_label_length(), &kentos_tool_number_vertices(), &kentos_tool_area_edit(),
+            &kentos_tool_attach(),       &kentos_tool_detach(),
         };
         std::stable_sort(out.begin(), out.end(),
                          [](const ProcessingTool* a, const ProcessingTool* b) {
@@ -96,6 +97,20 @@ std::string resolve_params(Context& ctx, const ToolSpec& spec, command::Args& ou
         if (v.empty()) {
             if (p.fallback.empty()) continue;
             v = value_from_text(p, p.fallback);
+        }
+        if (p.kind == command::ParamKind::Selection) {
+            // BOTH SHAPES A KEY ARRIVES IN (see `want_objects`): a lone number
+            // parses as an integer, a list as ids. One object is what the tool
+            // declared, so the journal carries exactly one.
+            Value::Ints ids = v.as_ids();
+            if (ids.empty() && v.kind() == Value::Kind::Int) ids.push_back(v.as_int());
+            if (ids.size() != 1)
+                return "'" + p.name + "' tek bir nesne kimliği ister; " +
+                       std::to_string(ids.size()) + " verildi.";
+            if (ids.front() <= 0)
+                return "Geçersiz nesne kimliği: " + std::to_string(ids.front()) +
+                       ". Kimlikler 1'den başlar.";
+            v = Value::ids(std::move(ids));
         }
         if (!p.choices.empty()) {
             const std::string& word = v.as_text();
@@ -152,6 +167,7 @@ InputEntity snapshot(const core::Document& doc, core::EntityId e, Applies cls)
         out.text        = std::string(doc.texts().text(ents.slot[e]));
         out.text_height = doc.texts().height(ents.slot[e]);
     }
+    if (const core::Attachment* a = doc.attachments().get(e); a != nullptr) out.attach = *a;
     return out;
 }
 
@@ -178,6 +194,21 @@ Task<void> run_tool(Context& ctx)
         ctx.echo(why);
         co_return;
     }
+    // ---- the objects the tool's OBJECT parameters name, snapshotted too ----
+    for (const ToolParam& p : spec.params) {
+        if (p.kind != command::ParamKind::Selection) continue;
+        const Value* v = input.args.find(p.name);
+        if (v == nullptr || v->as_ids().empty()) continue;
+        const std::int64_t raw = v->as_ids().front();
+        const core::EntityId e =
+            doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(raw)));
+        if (e == core::kNoEntity || !doc.alive(e)) {
+            ctx.echo("'" + p.name + "' nesnesi bulunamadı veya silinmiş: " + std::to_string(raw));
+            co_return;
+        }
+        input.references.push_back(snapshot(doc, e, classify(doc, e)));
+    }
+
     command::Bus& bus = ctx.session().bus();
     input.unit        = core::drawing_unit_from_setting(
         static_cast<std::uint16_t>(bus.project_settings().get("core.cizim.birim").as_enum()));
@@ -317,6 +348,11 @@ Task<void> run_tool(Context& ctx)
             ctx.echo(st.error().message);
             co_return;
         }
+        if (c.attach)
+            if (auto st = ctx.transaction().set_attachment(created.value(), *c.attach); !st) {
+                ctx.echo(st.error().message);
+                co_return;
+            }
         ++made;
     }
     for (const ToolOutput::Polyline& p : output.polylines) {
@@ -341,13 +377,36 @@ Task<void> run_tool(Context& ctx)
         const core::EntityId e =
             doc.slot_of(static_cast<core::EntityKey>(static_cast<std::uint64_t>(r.key)));
         if (e == core::kNoEntity || !doc.alive(e)) continue;
-        std::vector<core::RingGeometry::RingInput> rings;
-        rings.reserve(r.rings.size());
-        for (const InputEntity::Ring& ring : r.rings)
-            rings.push_back(core::RingGeometry::RingInput{ring.points, ring.role, 0});
-        if (auto st = ctx.transaction().set_geometry(e, rings); !st) {
-            ctx.echo(st.error().message);
-            co_return;
+        // Each part of the object the tool changed, and only those: the words
+        // first, so a geometry write that follows carries the new caption with it.
+        if (r.text && doc.texts().has(doc.entities().slot[e]))
+            if (auto st = ctx.transaction().set_text(e, *r.text,
+                                                     doc.texts().height(doc.entities().slot[e]),
+                                                     doc.texts().anchor(doc.entities().slot[e]));
+                !st) {
+                ctx.echo(st.error().message);
+                co_return;
+            }
+        if (!r.rings.empty()) {
+            std::vector<core::RingGeometry::RingInput> rings;
+            rings.reserve(r.rings.size());
+            for (const InputEntity::Ring& ring : r.rings)
+                rings.push_back(core::RingGeometry::RingInput{ring.points, ring.role, 0});
+            if (auto st = ctx.transaction().set_geometry(e, rings); !st) {
+                ctx.echo(st.error().message);
+                co_return;
+            }
+        }
+        if (r.detach) {
+            if (auto st = ctx.transaction().clear_attachment(e); !st) {
+                ctx.echo(st.error().message);
+                co_return;
+            }
+        } else if (r.attach) {
+            if (auto st = ctx.transaction().set_attachment(e, *r.attach); !st) {
+                ctx.echo(st.error().message);
+                co_return;
+            }
         }
         ++made;
     }

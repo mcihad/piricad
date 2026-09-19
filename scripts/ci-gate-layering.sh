@@ -41,10 +41,21 @@ for rule in "${rules[@]}"; do
                      '#[[:space:]]*include[[:space:]]*[<"]Q|\b(QString|QObject|QWidget|QVariant|QByteArray|Q_OBJECT|qDebug)\b' \
                      "$dir" || true)
     fi
+    # A GENERATOR EXECUTABLE IS NOT PART OF ITS MODULE'S LIBRARY, and the arrow
+    # does not bind it. `src/command/tools/docgen.cpp` walks every registry the
+    # program has — builtin, processing, the three domain modules — and projects
+    # the agent catalogue through `kentos_ai`; it is an `add_executable` that
+    # links UP, exactly like /src/app, and nothing it includes reaches
+    # `kentos_command` itself. Before this, the reference it generates was missing
+    # the nine domain commands and there was no way to fix that without either
+    # breaking this gate or inventing a second generator.
+    #
+    # The Qt ban above still applies to it: a generator runs in CI with no
+    # display, and a tool that needed a QGuiApplication could not run there.
     while IFS= read -r hit; do
         echo "layering: reverse or lateral dependency out of /src/$mod -> $hit" >&2
         fail=1
-    done < <(grep -rn "${sources[@]}" -E \
+    done < <(grep -rn "${sources[@]}" --exclude-dir=tools -E \
                  "#[[:space:]]*include[[:space:]]*\"kentos_cad/(${rule#*:})/" "$dir" || true)
 done
 

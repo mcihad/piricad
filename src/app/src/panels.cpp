@@ -183,6 +183,11 @@ LayerPanel::LayerPanel(Controller& controller, QWidget* parent)
     // alternating row washes out in the dark theme. The delegate draws the row.
     tree_->setAlternatingRowColors(false);
     tree_->setUniformRowHeights(true);
+    // SEVERAL ROWS AT ONCE. Ctrl and Shift pick a set, and the `Görünüm` menu
+    // acts on the set — which is the whole point of picking one. Nothing else
+    // about a highlighted row changes: a highlight is not an edit and does not
+    // make a layer active (model.md R43, and `selectLayer`).
+    tree_->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     rows_ = new LayerRowDelegate(this);
     tree_->setItemDelegate(rows_);
@@ -256,6 +261,29 @@ void LayerPanel::applyFilter()
     }
 }
 
+QStringList LayerPanel::selectedLayerNames() const
+{
+    QStringList out;
+    for (const QTreeWidgetItem* item : tree_->selectedItems())
+        if (item->data(0, Qt::UserRole).isValid()) // a group row carries no layer
+            out << item->text(0);
+    return out;
+}
+
+QStringList LayerPanel::subjectOf(const QString& clicked) const
+{
+    const QStringList picked = selectedLayerNames();
+    return picked.contains(clicked) ? picked : QStringList{clicked};
+}
+
+void LayerPanel::probeSelect(const QStringList& layerNames)
+{
+    tree_->clearSelection();
+    for (QTreeWidgetItemIterator it(tree_); *it; ++it)
+        if ((*it)->data(0, Qt::UserRole).isValid() && layerNames.contains((*it)->text(0)))
+            (*it)->setSelected(true);
+}
+
 core::LayerId LayerPanel::selectedLayer() const
 {
     const auto items = tree_->selectedItems();
@@ -281,15 +309,26 @@ void LayerPanel::toggleRow(QTreeWidgetItem* item, bool visibility)
     if (!id.isValid()) return; // a group row has no layer to toggle
 
     const QString name = item->text(0);
-    const bool on      = item->data(0, visibility ? Qt::UserRole + 1 : Qt::UserRole + 2).toBool();
-    const QString off  = on ? QStringLiteral("hayır") : QStringLiteral("evet");
 
     // Toggling is an edit, so it leaves through the command bus like everything
     // else — never a direct Document write (CLAUDE.md 5.9).
-    controller_.runLine(
-        QStringLiteral("KATMAN ad=\"%1\" %2=%3")
-            .arg(name, visibility ? QStringLiteral("gorunur") : QStringLiteral("kilitli"), off),
-        command::Origin::Gui);
+    //
+    // THE EYE SENDS `KATMANGÖRÜNÜM`, not `KATMAN … gorunur=`, and the difference
+    // is one the user feels: `KATMAN` makes the layer it touched ACTIVE, so
+    // glancing at a layer by putting its eye out used to move the drawing's
+    // active layer with it. It also needs no `evet`/`hayır` worked out here —
+    // `tersine` on one named layer is exactly what an eye does
+    // (commands/layer_visibility.cpp).
+    if (visibility) {
+        controller_.runLine(QStringLiteral("KATMANGÖRÜNÜM islem=tersine katman=\"%1\"").arg(name),
+                            command::Origin::Gui);
+        return;
+    }
+
+    const bool on     = item->data(0, Qt::UserRole + 2).toBool();
+    const QString off = on ? QStringLiteral("hayır") : QStringLiteral("evet");
+    controller_.runLine(QStringLiteral("KATMAN ad=\"%1\" kilitli=%2").arg(name, off),
+                        command::Origin::Gui);
 }
 
 void LayerPanel::onItemActivated(QTreeWidgetItem* item, int)
@@ -593,39 +632,124 @@ void LayerPanel::showContextMenu(const QPoint& where)
     delete menu;
 }
 
-bool LayerPanel::triggerContextEntry(const QString& layerName, const QString& entry)
+namespace {
+
+/// The submenu of `menu` titled `title`, or null. A submenu is an action that
+/// owns a menu, which is why this cannot be a name lookup on the menu itself.
+QMenu* submenu_of(const QMenu* menu, const QString& title)
+{
+    for (QAction* action : menu->actions())
+        if (action->menu() != nullptr && action->text() == title) return action->menu();
+    return nullptr;
+}
+
+} // namespace
+
+bool LayerPanel::triggerContextEntry(const QString& layerName, const QString& entry,
+                                     const QString& submenu)
 {
     for (QTreeWidgetItemIterator it(tree_); *it; ++it) {
         if (!(*it)->data(0, Qt::UserRole).isValid()) continue;
         if ((*it)->text(0) != layerName) continue;
 
-        QMenu* menu = buildContextMenu(*it);
-        for (QAction* action : menu->actions()) {
-            if (action->text() != entry) continue;
-            action->trigger();
-            delete menu;
-            return true;
-        }
+        QMenu* menu   = buildContextMenu(*it);
+        QMenu* inside = submenu.isEmpty() ? menu : submenu_of(menu, submenu);
+        if (inside != nullptr)
+            for (QAction* action : inside->actions()) {
+                if (action->text() != entry) continue;
+                action->trigger();
+                delete menu;
+                return true;
+            }
         delete menu;
         return false;
     }
     return false;
 }
 
-QStringList LayerPanel::contextEntries(const QString& layerName)
+QStringList LayerPanel::contextEntries(const QString& layerName, const QString& submenu)
 {
     for (QTreeWidgetItemIterator it(tree_); *it; ++it) {
         if (!(*it)->data(0, Qt::UserRole).isValid()) continue;
         if ((*it)->text(0) != layerName) continue;
 
-        QMenu* menu = buildContextMenu(*it);
+        QMenu* menu   = buildContextMenu(*it);
+        QMenu* inside = submenu.isEmpty() ? menu : submenu_of(menu, submenu);
         QStringList texts;
-        for (const QAction* action : menu->actions())
-            texts << (action->isSeparator() ? QStringLiteral("—") : action->text());
+        if (inside != nullptr)
+            for (const QAction* action : inside->actions())
+                texts << (action->isSeparator() ? QStringLiteral("—") : action->text());
         delete menu;
         return texts;
     }
     return {};
+}
+
+QMenu* LayerPanel::visibilityMenu(const QStringList& subject, bool visible, QWidget* parent)
+{
+    auto* menu     = new QMenu(tr("Görünüm"), parent);
+    const auto how = static_cast<int>(subject.size());
+
+    // ONE LINE PER LAYER, and `KATMANGÖRÜNÜM` rather than `KATMAN … gorunur=`:
+    // the layer command makes what it touched ACTIVE, and hiding eleven layers is
+    // not choosing one to draw on. `Controller::runLines` puts them in one batch,
+    // so eleven layers go back with one Ctrl+Z and a script can carry the same
+    // eleven lines (commands/layer_visibility.cpp, ui.md P3).
+    const auto lines_for = [&subject](const QString& verb) {
+        QStringList out;
+        for (const QString& name : subject)
+            out << QStringLiteral("KATMANGÖRÜNÜM islem=%1 katman=\"%2\"").arg(verb, name);
+        return out;
+    };
+    const QStringList showing = lines_for(QStringLiteral("goster"));
+    const QStringList hiding  = lines_for(QStringLiteral("gizle"));
+
+    // YALNIZ BUNLAR is one `yalniz` and then a `goster` for each of the rest:
+    // the first call puts everything else down, and each one after it brings one
+    // more of the chosen back up. Said as two words on one line it would need a
+    // list-valued argument, which the command model does not have.
+    QStringList only = lines_for(QStringLiteral("goster"));
+    if (!only.isEmpty())
+        only[0] = QStringLiteral("KATMANGÖRÜNÜM islem=yalniz katman=\"%1\"").arg(subject.front());
+
+    QAction* up =
+        menu->addAction(how == 1 ? tr("Göster") : tr("Seçili %1 katmanı göster").arg(how));
+    QAction* down =
+        menu->addAction(how == 1 ? tr("Gizle") : tr("Seçili %1 katmanı gizle").arg(how));
+    if (how == 1) {
+        // The state carries a SHAPE and not only a word (ui.md R31): the tick says
+        // which of the two the layer already is.
+        for (QAction* both : {up, down})
+            both->setCheckable(true);
+        up->setChecked(visible);
+        down->setChecked(!visible);
+    }
+    connect(up, &QAction::triggered, this,
+            [this, showing] { controller_.runLines(showing, tr("Katmanları göster")); });
+    connect(down, &QAction::triggered, this,
+            [this, hiding] { controller_.runLines(hiding, tr("Katmanları gizle")); });
+
+    QAction* solo = menu->addAction(how == 1 ? tr("Yalnız bunu göster")
+                                             : tr("Yalnız seçili %1 katmanı göster").arg(how));
+    solo->setToolTip(tr("Diğer bütün katmanları gizler"));
+    connect(solo, &QAction::triggered, this,
+            [this, only] { controller_.runLines(only, tr("Yalnız seçili katmanlar")); });
+
+    menu->addSeparator();
+
+    QAction* all = menu->addAction(tr("Tümünü göster"));
+    all->setToolTip(tr("Gizli bütün katmanları geri getirir"));
+    connect(all, &QAction::triggered, this, [this] {
+        controller_.runLine(QStringLiteral("KATMANGÖRÜNÜM islem=tumu"), command::Origin::Gui);
+    });
+
+    QAction* flip = menu->addAction(tr("Gösterimi ters çevir")); // ui-label
+    flip->setToolTip(tr("Görünenleri gizler, gizlileri gösterir"));
+    connect(flip, &QAction::triggered, this, [this] {
+        controller_.runLine(QStringLiteral("KATMANGÖRÜNÜM islem=tersine"), command::Origin::Gui);
+    });
+
+    return menu;
 }
 
 QMenu* LayerPanel::buildContextMenu(QTreeWidgetItem* item)
@@ -682,14 +806,12 @@ QMenu* LayerPanel::buildContextMenu(QTreeWidgetItem* item)
 
         menu.addSeparator();
 
+        // GÖRÜNÜM, a submenu, and it acts on the SELECTION. Six ways to change
+        // what is showing — this one, these ones, only these, all of them,
+        // everything swapped — are more than a flat menu can hold legibly, and
+        // five of them are about layers other than the row that was clicked.
         const bool visible = item->data(0, Qt::UserRole + 1).toBool();
-        QAction* show      = menu.addAction(visible ? tr("Gizle") : tr("Göster"));
-        connect(show, &QAction::triggered, this, [this, name, visible] {
-            controller_.runLine(
-                QStringLiteral("KATMAN ad=\"%1\" gorunur=%2")
-                    .arg(name, visible ? QStringLiteral("hayır") : QStringLiteral("evet")),
-                command::Origin::Gui);
-        });
+        menu.addMenu(visibilityMenu(subjectOf(name), visible, owned));
 
         const bool locked = item->data(0, Qt::UserRole + 2).toBool();
         QAction* lock     = menu.addAction(locked ? tr("Kilidi aç") : tr("Kilitle"));

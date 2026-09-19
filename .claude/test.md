@@ -32,6 +32,10 @@ R20. A test exercising `/src/core` or any other Qt-free target MUST compare Turk
 R21. `make test` MUST cover unit + golden + ai-eval and complete within the <20 min-per-PR budget on the 3 OS × (Debug + Release) matrix (§14).
 R22. Each CI gate script in `/scripts` MUST have a `/tests/unit` case feeding it a known-violating fixture and asserting a non-zero exit; an untested gate is an absent gate.
 
+R23. Agent protocol conformance is a Qt-FREE `unit` suite over the protocol engine (`ai::McpServer::handle`), because the protocol is a pure function of a request and a socket proves nothing about it. Every status code, every header rule and every JSON-RPC error code the server can produce has a case.
+R24. The listener's SOCKET half is covered by ONE app-level `ctest`, offscreen, on an ephemeral port: it starts the real binary, discovers, lists, runs a read tool, and proves that a write tool changes nothing until a person applies it. One case, because what is being tested there is the wiring, not the protocol.
+R25. A test for an AI surface MUST prove a refusal as well as a success: a coordinate literal rejected before validation, an unapproved plan applying nothing, an audit record written for a rejection. A suite that only shows the happy path cannot tell a working approval gate from an absent one.
+
 ## Absolute Prohibitions
 
 P1. NEVER commit a failing, disabled or skipped test without a linked issue id in the skip reason.

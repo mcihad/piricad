@@ -32,8 +32,14 @@ add_executable(kentos_tests
     unit/test_style_rule.cpp
     unit/test_symbology.cpp
     unit/test_text_atlas.cpp
+    unit/test_print.cpp
     unit/test_proof.cpp
     unit/test_processing.cpp
+    unit/test_ai_catalog.cpp
+    unit/test_ai_tools.cpp
+    unit/test_ai_mcp.cpp
+    unit/test_ai_chat.cpp
+    unit/test_ai_provider.cpp
 )
 
 # The manual's examples are executed straight out of the Markdown, so there is no
@@ -63,6 +69,7 @@ target_link_libraries(kentos_tests PRIVATE
     kentos_command
     kentos_io
     kentos_processing
+    kentos_ai
     kentos_domain_geodesy
     kentos_domain_cadastre
     kentos_domain_surface
@@ -131,6 +138,47 @@ if(TARGET kentos_cad)
                 "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
                 $<TARGET_FILE:kentos_cad>)
     set_tests_properties(canvas-edits PROPERTIES TIMEOUT 120)
+
+    # AND THE PLOT. A PDF is written by Qt, so `unit` cannot see one: this runs
+    # the real binary, prints a parcel onto an A3 profile, and checks the page
+    # box, the author field and the encryption of what came out — plus the print
+    # frame's own gesture, press-drag-release, which is where a stuck pan hid.
+    # The probe turns on `QStandardPaths` test mode, so the profiles it adds land
+    # in a sandbox rather than in the user's own file.
+    add_test(NAME print-pdf
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                "KENTOS_PRINT_PROBE=${CMAKE_CURRENT_BINARY_DIR}/yazdirma-denemesi"
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(print-pdf PROPERTIES TIMEOUT 120)
+
+    # AND THE AGENT LISTENER, over a real socket. `unit` proves every conformance
+    # rule of MCP 2026-07-28 as a Qt-free function (`test_ai_mcp.cpp`) and none
+    # of them over TCP: the probe starts the real listener on an ephemeral port,
+    # speaks the protocol to it, and checks the two claims a socket can refute —
+    # that a write tool applies NOTHING, and that a wrong token is refused.
+    add_test(NAME mcp-server
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_MCP_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(mcp-server PROPERTIES TIMEOUT 120)
+
+    # AND THE CHAT DOCK, driven by a recorded stream. `test_ai_chat.cpp` proves
+    # the four dialects decode and `test_ai_tools.cpp` proves a plan applies;
+    # what neither can reach is the seam — a decoded tool call becoming a bubble,
+    # a suggestion card and an undo entry in a running shell, and a write leaving
+    # the drawing untouched until the card is pressed. No socket: the bytes are
+    # recorded, because no test in this program calls a live provider (ai.md P10).
+    add_test(NAME chat
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_CHAT_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(chat PROPERTIES TIMEOUT 120)
 endif()
 
 # Every gate script runs as a test, so a violation fails `ctest`, not only CI.

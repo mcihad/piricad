@@ -3,6 +3,7 @@
 # Constitution Article 3: no reverse dependency, and no <Q...> include ever.
 
 add_library(kentos_core STATIC
+    src/attach.cpp
     src/attribute.cpp
     src/document.cpp
     src/arc.cpp

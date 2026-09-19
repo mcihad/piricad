@@ -85,6 +85,58 @@ if(Qt6ShaderTools_FOUND AND TARGET Qt6::GuiPrivate)
 endif()
 option(KENTOS_WITH_RHI "Enable the QRhi GPU canvas backend" ${KENTOS_RHI_AVAILABLE})
 
+# ---- the embedded agent server (CLAUDE.md 2.10, .claude/ai.md R28) ------------
+#
+# PROBED, like the canvas above and PROJ before it: a machine with Qt HttpServer
+# gets the MCP listener without being told to ask, and a machine without it still
+# configures, still builds and simply cannot serve agents — `MCPSUNUCU` says so
+# rather than opening nothing. Asking for ON without the module is a hard error
+# naming the package (`src/app/CMakeLists.txt`).
+#
+# 6.8 IS THE FLOOR. `QHttpServer` existed earlier, but `QHttpServerResponder`'s
+# chunked writing — which an SSE response needs — and `QAbstractHttpServer::bind`
+# are what this code is written against.
+set(KENTOS_MCP_AVAILABLE FALSE)
+find_package(Qt6 6.8 QUIET COMPONENTS HttpServer)
+if(Qt6HttpServer_FOUND)
+    set(KENTOS_MCP_AVAILABLE TRUE)
+endif()
+
+option(KENTOS_WITH_MCP "Embed the MCP server so AI agents can drive the program"
+       ${KENTOS_MCP_AVAILABLE})
+
+# ---- the system key store (CLAUDE.md 5.21, .claude/ai.md P11) -----------------
+#
+# WHERE AN API KEY LIVES. A model provider profile carries the NAME of a
+# credential entry and never the credential (`ai/provider.hpp`), so something has
+# to hold the secret — and the only right answer is the store the operating system
+# already has: the macOS keychain, the Secret Service on Linux, the Windows
+# credential store. All three are SYSTEM APIs, so nothing here is added to
+# `/vcpkg.json` and nothing to `/NOTICE`.
+#
+# PROBED, like the MCP listener above: macOS and Windows always have theirs, and
+# a Linux machine has one when libsecret-1 is installed. A machine without it
+# still configures and still builds — the store then reads an ENVIRONMENT
+# VARIABLE named by the profile and refuses to write, saying so (see
+# `app/secret_store.hpp`), which is the same shape the PostGIS path has with
+# `~/.pgpass`. Asking for ON without libsecret is a hard error naming the package
+# (`src/app/CMakeLists.txt`).
+set(KENTOS_KEYCHAIN_AVAILABLE FALSE)
+if(APPLE OR WIN32)
+    set(KENTOS_KEYCHAIN_AVAILABLE TRUE)
+else()
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(KENTOS_SECRET_PROBE QUIET libsecret-1)
+        if(KENTOS_SECRET_PROBE_FOUND)
+            set(KENTOS_KEYCHAIN_AVAILABLE TRUE)
+        endif()
+    endif()
+endif()
+
+option(KENTOS_WITH_KEYCHAIN "Hold API keys in the operating system's key store"
+       ${KENTOS_KEYCHAIN_AVAILABLE})
+
 # The text atlas needs FreeType and HarfBuzz from the system, and msdfgen and
 # stb from pinned commits. The system half is probed; the pinned half is only
 # defaulted ON when downloading is allowed, because a default that starts a

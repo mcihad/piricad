@@ -5,9 +5,15 @@
 // still needs a complete reference table, so it is GENERATED from `Registry`
 // here and written into /docs. Editing the output by hand is a defect; the gate
 // scripts/ci-gate-docs.sh regenerates it and fails on any difference.
+#include "kentos_cad/ai/catalog.hpp"
+#include "kentos_cad/ai/commands.hpp"
+#include "kentos_cad/ai/llmstxt.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/text.hpp"
+#include "kentos_cad/domain/cadastre/commands.hpp"
+#include "kentos_cad/domain/geodesy/commands.hpp"
+#include "kentos_cad/domain/surface/commands.hpp"
 #include "kentos_cad/processing/registry.hpp"
 
 #include <cstdio>
@@ -107,11 +113,15 @@ std::string build(const Registry& reg)
         out += "Ayrıntılı kullanım: [" + spec.names.front() + "](" + slug(spec.id) + ".md)\n\n";
     }
 
+    // THE CATALOGUE AS AN AGENT RECEIVES IT, from `ai::build_catalog` and from
+    // nowhere else. It used to be a second projection living on `Registry`; two
+    // projections of one registry are two answers to one question
+    // (.claude/ai.md P7), so that one is gone and this is the survivor.
     out += "## AI araç kataloğu\n\n";
     out += "AI'ın görebildiği komutlar `Flags::AiAccessible` bayrağından üretilir.\n";
     out += "Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).\n\n";
     out += "```json\n";
-    out += reg.ai_tool_schema().dump_pretty(2);
+    out += kentos::ai::build_catalog(reg).to_tools_list().dump_pretty(2);
     out += "\n```\n";
 
     return out;
@@ -167,13 +177,32 @@ int main(int argc, char** argv)
 {
     if (argc < 2) {
         (void)std::fprintf(stderr,
-                           "kullanım: kentos_docgen <komut-referans.md> [<nesne-referans.md>]\n");
+                           "kullanım: kentos_docgen <komut-referans.md> [<nesne-referans.md>] "
+                           "[<llms.txt>] [<llms-full.txt>]\n");
         return 2;
     }
 
+    // EVERY REGISTRY THE PROGRAM HAS, and the domain ones were missing: the
+    // generator saw 73 of the 82 commands, so the nine commands that the geodesy,
+    // cadastre and surface modules register — parcel division and merging,
+    // topology, fitting, reprojection, stake-out, contours and earthwork — were
+    // absent from the reference a user reads and from the catalogue an agent
+    // reads. A generator that walks an incomplete registry documents an
+    // incomplete program. `docgen` is an executable at the top of the dependency
+    // graph, so it may link the domain modules the command library must not
+    // (Article 3.2).
     Registry reg;
     register_builtin_commands(reg);
     kentos::processing::register_processing_commands(reg);
+    kentos::domain::geodesy::register_geodesy_commands(reg);
+    kentos::domain::cadastre::register_cadastre_commands(reg);
+    kentos::domain::surface::register_surface_commands(reg);
+    // AND THE AI LAYER'S OWN COMMANDS: the five read tools plus ÖNERİ and
+    // MCPSUNUCU. They are commands like any others (Article 1.2), so they belong
+    // in the reference a user reads and in the catalogue an agent reads — and
+    // `llms.txt` would be describing a surface that lacked its own read tools
+    // without them.
+    kentos::ai::register_ai_commands(reg);
 
     std::ofstream out(argv[1], std::ios::out | std::ios::binary);
     if (!out) {
@@ -193,6 +222,29 @@ int main(int argc, char** argv)
         kinds << build_kinds();
         (void)std::fprintf(stdout, "docgen: %zu nesne türü -> %s\n",
                            kentos::core::builtin_kinds().size(), argv[2]);
+    }
+
+    // THE TWO DOCUMENTS A MODEL READS. Generated from the same registry as the
+    // reference and in the same run, because a tool surface and its description
+    // that can be regenerated separately are a surface and a description that
+    // will disagree (CLAUDE.md 5.20, 6.14).
+    if (argc >= 4) {
+        std::ofstream llms(argv[3], std::ios::out | std::ios::binary);
+        if (!llms) {
+            (void)std::fprintf(stderr, "docgen: '%s' yazılamadı\n", argv[3]);
+            return 1;
+        }
+        llms << kentos::ai::llms_txt(reg);
+        (void)std::fprintf(stdout, "docgen: llms.txt -> %s\n", argv[3]);
+    }
+    if (argc >= 5) {
+        std::ofstream full(argv[4], std::ios::out | std::ios::binary);
+        if (!full) {
+            (void)std::fprintf(stderr, "docgen: '%s' yazılamadı\n", argv[4]);
+            return 1;
+        }
+        full << kentos::ai::llms_full_txt(reg);
+        (void)std::fprintf(stdout, "docgen: llms-full.txt -> %s\n", argv[4]);
     }
     return 0;
 }

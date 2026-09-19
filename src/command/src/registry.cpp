@@ -76,19 +76,43 @@ std::vector<std::string> Registry::complete(std::string_view prefix, std::size_t
     return out;
 }
 
-core::Json Registry::ai_tool_schema() const
+std::uint64_t Registry::fingerprint() const
 {
-    core::Json tools = core::Json::array({});
-    for (const auto& spec : specs_) {
-        if (!has_flag(spec.flags, Flags::AiAccessible)) continue;
-        tools.push(spec.to_schema());
-    }
+    // The seed names what is being hashed, the way every other content hash in
+    // this program does (io/format.hpp). Sorted by id first, so the registration
+    // ORDER cannot change the answer: two builds that register the same commands
+    // must agree, and the roster's order is not part of the surface.
+    std::vector<const CommandSpec*> sorted;
+    sorted.reserve(specs_.size());
+    for (const auto& spec : specs_)
+        sorted.push_back(&spec);
+    std::sort(sorted.begin(), sorted.end(),
+              [](const CommandSpec* a, const CommandSpec* b) { return a->id < b->id; });
 
-    core::Json out;
-    out.set("version", core::Json::integer(1));
-    out.set("generated_from", core::Json::string("kentos::command::Registry"));
-    out.set("tools", std::move(tools));
-    return out;
+    std::uint64_t h = core::fnv1a("kentos.ai.catalog");
+    for (const CommandSpec* spec : sorted) {
+        h = core::fnv1a(spec->id, h);
+        for (const std::string& name : spec->names)
+            h = core::fnv1a(name, h);
+        h = core::fnv1a_int(static_cast<std::int64_t>(spec->category), h);
+        h = core::fnv1a_int(static_cast<std::int64_t>(spec->flags), h);
+        h = core::fnv1a_int(static_cast<std::int64_t>(spec->undo), h);
+        h = core::fnv1a(spec->summary, h);
+        for (const Param& p : spec->params) {
+            h = core::fnv1a(p.name, h);
+            h = core::fnv1a_int(static_cast<std::int64_t>(p.kind), h);
+            h = core::fnv1a_int(p.arity.min, h);
+            h = core::fnv1a_int(p.arity.max, h);
+            h = core::fnv1a(p.help, h);
+            for (const std::string& word : p.choices)
+                h = core::fnv1a(word, h);
+            if (p.bounded) {
+                h = core::fnv1a_int(p.low, h);
+                h = core::fnv1a_int(p.high, h);
+            }
+        }
+    }
+    return h;
 }
 
 std::string Registry::markdown_reference() const

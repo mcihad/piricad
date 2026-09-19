@@ -85,9 +85,18 @@ public:
 
     void applyTheme(ThemeMode mode) override;
 
-    /// The layer the user has picked, or `kNoLayer`. This is SELECTION state and
-    /// therefore not document state (model.md R43).
+    /// The layer the user has picked, or `kNoLayer`; the FIRST one when several
+    /// are picked. This is SELECTION state and therefore not document state
+    /// (model.md R43).
     core::LayerId selectedLayer() const;
+
+    /// Every layer the user has picked, by name, in list order.
+    ///
+    /// SEVERAL ROWS AT ONCE, because hiding eleven layers one row at a time is
+    /// the work this panel exists to save. What is done with them is still one
+    /// command per layer inside one batch — one undo step, and the same lines a
+    /// script would carry (`Controller::runLines`, ui.md P3).
+    QStringList selectedLayerNames() const;
 
     /// Clicks the eye and the lock of the first rows with a REAL mouse event and
     /// prints what the document did, one line each.
@@ -107,7 +116,11 @@ public:
     /// whether the menu a user opens can reach it. The menu it opens is built by
     /// the same function the right-click builds it with — there is no second
     /// menu for the probe to be right about.
-    bool triggerContextEntry(const QString& layerName, const QString& entry);
+    /// With `submenu`, the entry is looked for inside that submenu instead of at
+    /// the top level — the `Görünüm` menu is a submenu and a probe that could
+    /// only reach the top level could not test it.
+    bool triggerContextEntry(const QString& layerName, const QString& entry,
+                             const QString& submenu = QString());
 
     /// The texts of the row's context menu, in order, separators as `—`.
     ///
@@ -115,7 +128,14 @@ public:
     /// because two entries were taken out of it — `Stili düzenle…` and `Stili
     /// temizle`, both pieces of the Katman Özellikleri window shown as menu items
     /// — and a removal nothing checks is a removal that comes back.
-    QStringList contextEntries(const QString& layerName);
+    /// With `submenu`, the texts of that submenu rather than of the menu itself.
+    /// A submenu shows up in the top-level list as its own title, so the two
+    /// calls together are the whole shape.
+    QStringList contextEntries(const QString& layerName, const QString& submenu = QString());
+
+    /// Highlights exactly the rows named, for `KENTOS_LAYER_PROBE`: a menu that
+    /// acts on the selection can only be tested with a selection in place.
+    void probeSelect(const QStringList& layerNames);
 
     /// Highlights `layer` in the list without sending anything to the bus.
     ///
@@ -191,6 +211,21 @@ private:
     /// Builds that menu for one row, owned by the caller. Separate from
     /// `showContextMenu` only so `triggerContextEntry` can open the same one.
     QMenu* buildContextMenu(QTreeWidgetItem* item);
+
+    /// The `Görünüm` submenu for `subject` — the layers the entry will act on.
+    ///
+    /// WHY A SUBMENU AND NOT SIX MORE ENTRIES. Five of the six are about layers
+    /// other than the one clicked, and a flat menu gives no clue which is which;
+    /// `Gizle` and `Tümünü göster` side by side read as the same kind of thing.
+    /// The submenu is also the keyboard's answer: one item to arrow onto instead
+    /// of six to pass over on the way to `Gruba taşı…`.
+    QMenu* visibilityMenu(const QStringList& subject, bool visible, QWidget* parent);
+
+    /// The layers a menu entry acts on: the whole selection when the row that was
+    /// right-clicked is part of it, and that row alone when it is not — which is
+    /// what every file manager does and what a user expects after right-clicking
+    /// something they had not selected.
+    QStringList subjectOf(const QString& clicked) const;
 
     /// A small preview of what this layer draws, rendered by the CANVAS backend
     /// so the swatch and the map cannot disagree.

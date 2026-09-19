@@ -6,6 +6,337 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — Gömülü MCP sunucusu, yapay zeka sohbeti ve üretilmiş `llms.txt`
+
+- **Yedi yeni komut** (`src/ai/src/commands/`). Beşi hiçbir şeyi değiştirmeyen okuma
+  aracıdır (`ReadOnly | NoEffect`) ve bir ajan onları onay beklemeden çalıştırır:
+  **`KATMANLAR`** (katmanlar, nesne sayıları, görünürlük, kilit, baskı, grup; aktif
+  katman ve CRS), **`ÖZNİTELİKŞEMASI`** (sütunlar, tipleri, etiketleri, katalogları,
+  zorunluluk), **`SORGULA`** (`katman` / `alan` / `deger` / `sinir`; sayı kırpılmaz,
+  yalnız bildirim sınırlanır), **`SEÇİMBİLGİSİ`** (o anki seçim ve çizim sürümü),
+  **`GÖRÜNÜMBİLGİSİ`** (görünen dikdörtgen, merkez, ölçek, ekran boyu, CRS; pencere
+  yoksa açıkça söyler). Kalan ikisi arayüzün kendi düğmelerinin veri yoluna ulaşma
+  yoludur: **`ÖNERİ`** (`islem=uygula|reddet|durum|listele`) ve **`MCPSUNUCU`**
+  (`islem=baslat|durdur|durum|belirtec`, `port`). Her okuma aracı **iki kere** yanıt
+  verir: insana bir satır Türkçe, istemciye yapılandırılmış veri.
+  `SORGULA`'nın koşulu bir ifade değil **bildirilmiş parametrelerdir**, çünkü bu
+  programda tek bir ayrıştırıcı vardır (CLAUDE.md 5.11).
+- **MCP sunucusu** (`src/ai/src/mcp.cpp`, AGPL-3.0-or-later — bkz. `/NOTICE`): yalnız
+  yerel döngü (`127.0.0.1`, `::1`), tek uç nokta, yalnız `POST`, varsayılan olarak
+  **belirteç zorunlu**. Belirteç `Authorization: Bearer` başlığında ya da
+  `/mcp/<belirteç>` yolunda kabul edilir; yol biçimi bilinçli bir yerel kolaylıktır ve
+  belirteç hiçbir günlüğe girmez — kayda sekiz haneli bir parmak izi yazılır.
+  Karşılaştırma sabit zamanlıdır. Belirteçsiz uç nokta yalnız ayar kasıtlı
+  temizlendiğinde açılır ve durum çubuğu o zaman **KORUMASIZ** der. `Origin` her şeyden
+  önce denetlenir (DNS yeniden bağlama; tanınmayan köken `403`).
+- **Protokol yalnız `2026-07-28`**: oturumsuz, `initialize` el sıkışması yok, `GET`
+  akışı yok. Her istek sürümünü hem başlıkta hem `_meta` içinde söyler ve ikisi aynı
+  olmak zorundadır. Eski istemci, konuşulan sürümü adıyla söyleyen bir retle karşılanır.
+  Karşılanan yöntemler: `server/discover`, `tools/list`, `tools/call`,
+  `resources/list`, `resources/read`, `subscriptions/listen`.
+- **Okuyan araç çalışır, yazan araç önerir.** Çizimi ya da diski değiştiren bir araç
+  çağrısı **uygulanmaz**: bir öneri kaydı açar ve istemciye kimliği, durumu ve
+  uygulanacak **komut satırlarının tamamını** hemen döndürür. Cevap bunu Türkçe olarak da
+  söyler — yazdığının bir insanı beklediğini bilmeyen bir ajan boş sonucu başarısızlık
+  sayıp yeniden dener. Bir istemci `_meta` içindeki `plan` alanıyla adımları tek
+  öneride toplayabilir; akışı kapatmak iptaldir ve öneriyi geri çeker.
+- **Onay zorlanamaz** (`src/ai/gate.hpp`): `ai::Approval`'ın yapıcısı özeldir, tek
+  üreticisi `Gate::approve`'dur ve onun tek çağıranının öneri kartı olduğu
+  `scripts/ci-gate-ai.sh` ile denetlenir. `ÖNERİ islem=uygula` komut satırından karar
+  **vermez**; kararı taşır. Onaylanan öneri tek bir toplu iştir: tek `Ctrl+Z`, aradaki
+  ret hepsini geri sarar.
+- **Koordinat uydurulamaz** (`src/ai/handles.hpp`): ajana sunulan şemada nokta, nokta
+  listesi ve nesne seçimi **tutamak dizesidir** (`@` + 16 onaltılık hane, istenirse
+  `.N`), dolayısıyla sayı **ifade edilemez** ve ret argümanlar hâlâ JSON iken gerçekleşir.
+  Tutamağı yalnız okuma araçları üretir, alındığı çizim sürümünü taşır ve eskiyen tutamak
+  sessizce kullanılmaz — reddedilir. İstemciye koordinat listesi söylenmez; tek istisna,
+  ekranın kendi köşelerini taşıyan pencere tutamağıdır.
+- **Denetim kaydı** (`src/ai/audit.hpp`): kullanıcı yapılandırma dizininde aya bir JSONL
+  dosyası (`denetim/YYYY-AA.jsonl`), `sürüm` alanı başta, her kararda diske boşaltılır.
+  Ne istendiği, model, uç nokta, isteyen, komut satırları, karar, kararı veren kişi,
+  UTC zaman, sonuç ve oluşan **kalıcı nesne anahtarları**. Reddedilen öneriler ve
+  **koordinat reddi** de yazılır; hiçbir anahtar ya da belirteç yazılmaz.
+- **`YAPAYZEKAMODELİ`** (`core.ai_provider`, `islem=listele|ekle|sil|varsayilan|dene`):
+  sağlayıcı profillerini komut satırından, betikten ve ayar sayfasından aynı cümleyle
+  yönetir — hangi modelin çalıştığı bir pencereye değil komut veri yoluna aittir
+  (CLAUDE.md 5.15). **Anahtar bu komutun parametresi değildir**: `anahtar_ref` yalnız
+  anahtarı tutan kaydın adını taşır, dolayısıyla anahtar `Args`'a, günlüğün
+  `{cmd, args}` satırına, dökümüne ya da bir hata mesajına hiç ulaşamaz; anahtara
+  benzeyen bir "anahtar adı" reddedilir. Komut **AI erişimine kapalıdır**: hangi
+  modelin çalıştığını değiştirebilen bir model, kendisini sınırlayan çerçeveyi
+  düzenliyor olurdu.
+- **Profiller artık kalıcı ve düzenlenebilir** (`app/provider_service.hpp`,
+  `app/secret_store.hpp`): profiller kullanıcı profilindeki `ai-modelleri.json`
+  dosyasında sürüm alanıyla tutulur (okunamayan bir dosya **bildirilir** ve o oturumda
+  yerleşik set kullanılır, kullanıcının dosyası olduğu gibi bırakılır);
+  `Seçenekler ▸ Yapay Zeka Modelleri` sayfası profilleri tabloda gösterir — bağlam
+  penceresinin yanında **kimin söylediği** yazar — ve her düzenleme
+  `YAPAYZEKAMODELİ` satırı olarak veri yolundan geçer. **Anahtar bunun tek
+  istisnasıdır ve ters yönde:** bir komuta dönüşmez, çünkü komut argümanları günlüğe
+  yazılır. Anahtar işletim sisteminin deposuna gider — macOS Anahtar Zinciri
+  (Security framework), Windows kimlik deposu, Linux'ta libsecret; hepsi sistem
+  API'si, dolayısıyla yeni bağımlılık yok — ve **her yapıda** açık olan ikinci yol
+  ortam değişkenidir: anahtar adı bir değişkeni adlandırır, değişken kullanım anında
+  okunur ve hiçbir yere yazılmaz (`KENTOS_WITH_KEYCHAIN` kapalıysa kaydetme **reddedilir
+  ve nedenini söyler**). `islem=dene` gerçek bir istek gönderir ve cevabı geldiğinde
+  komut dökümüne yazar: bir modelden cevap beklerken pencere donmaz (ai.md R18, P8),
+  ve hassasiyet işareti ile eksik anahtar istek gönderilmeden **önce** söylenir.
+- **Model sağlayıcıları** (`src/ai/provider.hpp`): bir sağlayıcı **veridir**, lehçe
+  **koddur** — `openai_chat`, `openai_responses`, `anthropic_messages`,
+  `ollama_native`. Profil adres, yol, model, kimlik başlığı, ek başlık ve gövde, akış,
+  düşünme ayarı, çıktı sınırı, sıcaklık, bağlam penceresi ve **anahtar adını** taşır;
+  anahtarın kendisi işletim sisteminin anahtar zincirindedir ve bir API anahtarına
+  benzeyen bir "anahtar adı" reddedilir. Yeni kurulumda on beş profil gelir ve
+  **varsayılan yerel olan Ollama'dır**, çünkü kadastro verisi çoğu zaman kurumdan
+  çıkamaz. Hassasiyet işareti bir **tiple** zorlanır: `permit_for` dışında hiçbir yerden
+  uç nokta izni üretilemez, izin adresin makinesinden okunur ve hassas projede MCP
+  dinleyicisi başlamaz.
+- **Bağlam penceresi bir profil alanıdır**, gömülü bir sayı değil: sağlayıcıların çoğu
+  bildirmez, bu yüzden sayı "kim söyledi" işaretiyle (bilinmiyor / yerleşik / kullanıcı /
+  bildirilen) birlikte durur. Jeton tahmini dört **bayta** birdir, yani Türkçede
+  yüksekten sayar; sağlayıcının bildirdiği sayı geldiğinde tahmin atılır, ortalanmaz.
+- **`docs/llms.txt` ve `docs/llms-full.txt` üretilmiş dosyalardır** (`kentos_docgen`,
+  `make reference`): birimler, eksen adları, Türkçe adlandırma, tutamak kuralı, uygulama
+  kuralı ve araçların kullanım sırası. Aynı metin bağlanan istemciye
+  `kentoscad://llms.txt` kaynağı ve `llms_txt` aracı olarak da sunulur. Üretilmiş
+  referans gibi elle düzenlenmezler; `scripts/ci-gate-docs.sh` tazeliklerini diff ile
+  denetler ve üretici derlenmemişse **atlamaz, kırar**.
+- Kılavuza yeni bir bölüm: **Yapay zeka** (`docs/yapay-zeka/`) — ajanlar ve dört kural,
+  MCP sunucusu, onay ve denetim, panel, model sağlayıcıları, lisans ve ağ yükümlülüğü;
+  yedi komutun kendi sayfaları; sözlüğe MCP, ajan, öneri, tutamak, denetim kaydı, lehçe
+  ve bağlam penceresi terimleri.
+- **Sağlayıcı listesi artık veri** (`data/catalogs/ai/saglayicilar.json`, `ai/provider_catalog.hpp`):
+  41 uç nokta ve 124 model kimliği — adres, kimlik başlığı, lehçe, bağlam penceresi ve
+  hangi modelin düşündüğü. Bir model kimliği haftalar içinde eskir; artık bir satırın
+  düzeltilmesi yeter, yeniden derleme gerekmez. `ProviderProfiles::builtin()`'in on beş
+  C++ sabiti **silindi**: başlangıç profilleri, pencere şablonları ve model listeleri
+  artık aynı dosyanın üç görünümüdür (CLAUDE.md 5.10). Katalog bulunamazsa program
+  bunu söyler ve boş listeyle açılır — derlemeye gömülü bayat bir kopyaya düşmez.
+- **Model profili penceresi** (`app/provider_dialog.hpp`): tablonun altındaki beş alanlık
+  satır kaldırıldı. Satır bir profilin on dört alanından beşini ifade edebiliyordu ve
+  düşürdüğü dokuzu — çıktı sınırı, sıcaklık, bağlam penceresi, düşünme kipi, sağlayıcının
+  zorunlu başlıkları — uç noktanın cevap verip vermeyeceğine karar verenlerdi. Pencere
+  hepsini taşır; **Düzenle** ve satıra çift tıklama aynı pencereyi mevcut profille açar.
+- **Model artık seçilir, yazılmaz.** Şablonu seçtiğinizde model açılır listesi o
+  sağlayıcının kendi modelleriyle dolar — yanlarında bağlam penceresi ve düşünüp
+  düşünmediği — ve **Modelleri getir** uç noktaya sorup gelen listeyi yerine koyar
+  (`/models`, Ollama için `/api/tags`). Kutu yazılabilir kalır: kurum içi bir sunucunun
+  sunduğu ad hiçbir katalogda olmayabilir. Liste profilin KENDİ adresine sorulur, şablonun
+  adresine değil.
+- **Sohbet paneli** (`app/chat_panel.hpp`): araç çubuğundaki konuşma ikonu ya da
+  **Ctrl+Shift+A** sağ tarafta bir panel açar. Akış canlı yazılır; ayarda **düşünmeyi
+  göster** açıksa düşünme metni yanıtın üstünde katlanabilir bir blokta durur, kapalıysa
+  üç noktalı gösterge ve geçen saniye çıkar. Dosya eklenir (metin, görüntü, PDF; en çok
+  8 MB), bağlam sayacı kullanımı ve **hangi tür sayı olduğunu** yazar, **Dur** akışı
+  keser ve yarı kalmış tur konuşmaya hiç girmez. Model bir okuma aracı çağırırsa panel
+  onu hemen çalıştırır ve sonucu — ürettiği tutamaklarla — modele geri verir; en çok
+  sekiz tur, sonra durur ve nedenini söyler. Yazan çağrıların tümü **turun tek
+  önerisinde** toplanır ve yanıtın kendi balonunda bir **öneri kartı** olarak görünür.
+  Panel modelin konuşacağı adresi kendi seçmez: izin `permit_for`'dan gelir, yani hassas
+  projede bulut ucu istek gönderilmeden reddedilir.
+- **Öneri kartı** (`app/suggestion_card.hpp`): kesikli çerçeve — çizimin parçası
+  olmadığını bir şekil söyler, renk değil — `ÖNERİ` rozeti, uygulanacak komut
+  satırlarının tamamı, **koordinatların geldiği tutamaklar**, isteyen ve model,
+  çizim öneriden sonra değiştiyse bir uyarı şeridi, ve iki düğme: ikincil **Reddet**,
+  birincil **Uygula**. Düğmenin sözcüğü `Uygula`'dır; `Onayla` kullanılmaz, çünkü onay
+  sözcüğü ruhsatlı mühendisin imzasına ayrılmıştır (ai.md P4). Kararı veren kişinin adı
+  yeni **`core.ai.sorumlu`** ayarından gelir, boşsa işletim sisteminin kullanıcı adı
+  "işletim sistemi kullanıcısı" işaretiyle yazılır — denetim kaydı kimin onayladığını
+  adlandırmak zorundadır (ai.md R8).
+- **Beş yeni bileşen** (`app/widgets.hpp`): **döküm** (yalnız sonunda durursanız sonu
+  izler), **ileti balonu** (dört konuşmacı, model balonu kurulurken `ÖNERİ` rozetini
+  takar), **düşünme göstergesi**, **ek pençesi** (boyut etiketin parçasıdır) ve
+  **bağlam ölçeri** (pencere bilinmiyorsa çubuk hiç çizilmez). Hepsi canlı standartta
+  (`KENTOS_WIDGETS_PROBE`), `scripts/ci-gate-bilesenler.sh` envanterinde ve
+  `docs/baslangic/bilesenler.md`'de (CLAUDE.md 6.13).
+- **Durum çubuğunda dinleyici hücresi**: kapalıyken içi boş halka ve `MCP kapalı`,
+  açıkken dolu nokta ve `MCP 8765`, belirteçsizken dolu üçgen ve **`MCP 8765
+  KORUMASIZ`** — durum renkle değil şekille de söylenir (ui.md R31). Hücreye tıklamak
+  menü üyesinin çalıştırdığı `MCPSUNUCU` satırını çalıştırır. **Analiz** menüsüne
+  duruma göre sözcüğünü değiştiren `MCP Sunucusunu Başlat/Durdur` ve
+  `MCP Belirteci Üret` girişleri eklendi.
+- **İki yeni bütünleşme sınaması**: `mcp-server` gerçek dinleyiciyi geçici bir portta
+  açıp protokolü konuşur ve yazan aracın **hiçbir şey uygulamadığını** doğrular;
+  `chat` kayıtlı bir akışı sohbet paneline sürer ve çözülen bir araç çağrısının balona,
+  karta ve — kart basıldıktan sonra — çizime dönüştüğünü doğrular. İkisi de ağa
+  çıkmaz: hiçbir sınama canlı bir sağlayıcıyı aramaz (ai.md P10).
+- **Henüz yok, ve kılavuzda gelecek zamanla yazılı:** `mevzuat_ara` (mevzuat derlemi
+  dolmadan gelemez — madde numarası ve yayım tarihi taşımayan cevap bastırılır),
+  bir önerinin **sonucunun** tuvalde hayalet önizlemesi (bugün vurgulanan şey
+  girdilerdir) ve kullanıcının ölçüm listesini onaylayarak tutamağa çevirmesi.
+
+### Eklendi — Yazdırma, PDF ve yazdırma profilleri
+
+- **Yazdırma profilleri** (`io/print_profiles.hpp`): adlandırılmış kâğıt — kâğıt boyu
+  (A5–A0 ya da `ozel`), yön, çözünürlük, kenar boşluğu. Biri varsayılandır. Kullanıcı
+  profilinde JSON olarak tutulur (`yazdirma-profilleri.json`); çizime yazılmaz,
+  günlüğe girmez, geri alınmaz. Yeni kurulumda altı profil gelir.
+  **`YAZDIRMAPROFİLİ`** (`islem=listele|ekle|sil|varsayilan`) yönetir; `Seçenekler ▸
+  Plot ve Çıktı` sayfasının başındaki tablo da aynı listeye bakar ve her düzenlemesini
+  bu komutla yapar.
+- **`YAZDIR`**: çizimin bir penceresini profilin kâğıdına yerleştirip PDF dosyasına
+  yazar ya da yazıcıya gönderir. Alan iki biçimde verilir: **`merkez` + `olcek`**
+  (paftanın dili; `olcek` yoksa projenin plan ölçeği) ya da iki köşe (`pencere`).
+  Kâğıdın en-boy oranına **büyütülerek** oturtulur, çizim gerilmez. Kâğıt, yön, dpi
+  ve kenar boşluğu satırdan geçersiz kılınabilir. Çizim ekrandaki boru hattından
+  geçer: aynı semboloji, aynı kalınlıklar, profilin çözünürlüğünde.
+- **PDF şifreleme** (qpdf, `KENTOS_WITH_QPDF`, yeni bağımlılık — Apache-2.0, `/NOTICE`):
+  AES-256, açma ve sahip şifresi, `yazdirilabilir` / `kopyalanabilir` /
+  `degistirilebilir` izinleri, `baslik` ve `yazar` alanları. **Şifreler günlüğe
+  yazılmaz**: yazdırma salt okunur bir komuttur ve günlüğe hiç girmez — yeniden
+  oynatılan bir yazdırma birinin PDF'ini yeniden yazardı (aynı karar `AÇ` ve
+  `KAYDET` için de geçerli).
+- **Yazdırma alanı çerçevesi**: araç çubuğundaki Yazdır'ın ilk basışı tuvalin
+  ortasında kâğıt oranında bir çerçeve açar, dışını griler, köşelerine L işaretleri
+  ve **merkezine + işareti** ile o noktanın `Sağa (Y)` / `Yukarı (X)` değerlerini
+  koyar. Harita altında kayar (sol tuşla sürükleme), tekerlek yaklaştırır; çerçeve
+  ekranda aynı boyda kalır. İkinci basış ya da **Enter** görüntüyü yakalayıp
+  **önizleme penceresini** açar; **Esc** ya da sağ tık vazgeçer.
+- **Önizleme penceresi**: solda kâğıdın kendisi (aynı çizim borusundan geçmiş),
+  sağda profil, **elle yazılabilen ölçek** (çerçevenin ölçeği 1/200 gibi yuvarlak bir
+  değere yuvarlanarak gelir) ve **merkez**, çıktı yeri, PDF alanları ve şifreleme.
+  Altta gönderilecek komut satırı yazılı. Kâğıdın ölçüleri **yalnız profilde** durur:
+  yön iki yerde sorulmaz.
+- Araç çubuğunda Yazdır **Kaydet'in sağında**; yanındaki küçük ok profilleri listeler
+  (varsayılan `●` ile) ve **Profilleri Yönet…** ayarlar sayfasını açar.
+- Bileşen setine **sahneden seçme girdisi** eklendi (`FieldKind::Point` / `Object`,
+  bkz. aşağıdaki madde) ve **gizli girdi** (`FieldSpec::secret`): şifre kutusundaki
+  karakterler nokta görünür.
+- `KENTOS_PRINT_PROBE` ve `print-pdf` ctest'i: gerçek ikili bir parseli A3 yatay bir
+  profile basar, çıkan PDF'in sayfa ölçüsünü (1191×842 pt), yazar alanını ve
+  şifrelenmiş olmasını doğrular; çerçevenin fare hareketini de sürer. Probe iki
+  dosyayı **önce siler**: eski bir çıktı, hiçbir bayt yazılmasa da bütün
+  denetimleri geçirir — bir kez tam bunu yaptı.
+
+### Düzeltildi — Ağaç clang-format 18'e geri hizalandı
+
+- 15 dosya clang-format **23** ile biçimlendirilmiş hâlde duruyordu ve CI'ın kullandığı
+  **18** bunları ihlal sayıyordu; `make format-check` bu yüzden kırmızıydı (yazdırma
+  değişikliğiyle ilgisi yoktu). Ağaç 18 ile yeniden biçimlendirildi; değişikliklerin
+  tamamı tasarlanmış ilklendiricilerin ve satır sonu yorumlarının hizasıdır. Tek
+  istisna: `mapped_file.cpp`'de `struct stat st{}` artık `= {}` ile yazılıyor, çünkü
+  clang-format onu bir yapı TANIMININ başı sanıp süslü parantezi alt satıra indiriyordu.
+
+### Eklendi — Katman görünürlüğü: çoklu seçim ve Görünüm menüsü
+
+- **`KATMANGÖRÜNÜM`** (`KGÖ`, `LAYERVIEW`): bir katmanı gösterir (`islem=goster`),
+  gizler (`gizle`), **yalnız** onu bırakır (`yalniz`), **hepsini** gösterir (`tumu`) ya
+  da gösterimi **ters çevirir** (`tersine`). `KATMAN`'ın yanında ayrı bir komut olmasının
+  sebebi iki şeyi YAPMAMASI: aktif katmanı değiştirmez (kırk katmanı gizlemek bir katman
+  seçmek değildir) ve olmayan katmanı yaratmaz. Bir çağrı bir geri alma adımıdır.
+- **Katmanlar panelinde çoklu seçim**: Ctrl ile tek tek, Shift ile aralık. Vurgulamak
+  hâlâ bir düzenleme değildir — aktif katmanı değiştirmez (model.md R43).
+- **Sağ tuş menüsünde `Görünüm` alt menüsü**: göster, gizle, yalnız bunu göster, tümünü
+  göster, gösterimi ters çevir. **Seçimin tamamına** uygulanır; seçili olmayan bir satıra
+  sağ tıklarsanız yalnız o satıra. Başlıklar kaç katman seçili olduğunu yazar. Eski
+  tek satırlık `Gizle`/`Göster` girişi bu menünün içine taşındı.
+- **Menü çubuğunda `Katman ▸ Tümünü Göster` ve `Gösterimi Ters Çevir`**: bir satıra bağlı
+  olmadıkları için orada da var — bütün katmanlarını gizlemiş birinin sağ tıklayacak
+  satırı kalmaz.
+- Panelin gözü de artık `KATMANGÖRÜNÜM` gönderiyor, yani göze basmak katmanı aktif
+  yapmıyor.
+- `Controller::runLines`: bir jest, birden çok satır, **tek geri alma adımı**
+  (`Bus::begin_batch`). On bir katmanı gizlemek on bir komuttur ve tek Ctrl+Z'dir; aradan
+  biri reddedilirse hiçbiri uygulanmaz (Article 1.6).
+- `scripts/ci-gate-katman-menu.sh` menüyü artık **gerçekten** ölçüyor: ekran yoksa
+  offscreen platformla açıyor (eskiden "BEKLEMEDE" deyip geçiyordu, yani CI'da ve
+  macOS'ta hiç çalışmıyordu). Yeni beklenen satırlar: alt menünün şekli, iki katmanın
+  birlikte gizlenmesi ve tek geri almayla geri gelmesi.
+
+### Düzeltildi — Çerçevede seçilen alan ile kâğıda giden alan aynı değildi
+
+- Önizleme penceresi, çerçevenin ölçeğini **pafta ölçeğine yuvarlayıp** onu
+  yazdırıyordu: 1/184 → 1/200, yani kâğıda çerçevede görülenden **beşte bir fazla
+  zemin** giriyordu; en kötü durumda (1/101 → 1/200) alan neredeyse iki katına
+  çıkıyordu. Artık **çerçevenin alanı kâğıda giden alandır**: pencere ölçek ve
+  merkeze dokunulmadıkça çerçevenin iki köşesini olduğu gibi kullanır ve komut
+  satırını da `pencere=… pencere=…` olarak gönderir.
+- Pafta ölçeği kaybolmadı, **düğme oldu**: ölçeğin yanındaki **Yuvarla** bir üst
+  pafta ölçeğine çıkarır (ölçek zaten yuvarlaksa görünmez), o anda satır
+  `merkez=… olcek=…` olur ve büyüyen alan solda kâğıtta görülür. Ölçek ve merkez
+  alanları, elle yazılmadıkça çerçevenin değerlerini **bildirir**; profil
+  değişince yeniden hesaplanır.
+- `KENTOS_PRINT_PROBE` çerçeveyi sürdükten sonra önizlemenin göndereceği satırı da
+  **okuyor**: iki köşe var mı, ölçeğe çevrilmiş mi, gönderilen alanın merkezi ve
+  boyu çerçevenin mi (%1 tolerans, çünkü kâğıdın en-boy oranına oturtmak bir
+  kenarı kıl payı oynatır). Eski davranış geri konduğunda probe üç ayrı satırla
+  düşüyor — denendi.
+
+### Düzeltildi — `make check` IWYU aşamasında çöküyordu
+
+- IWYU 0.26, libc++'ın `std::find` içindeki SIMD hızlı yolunu (`__simd_vector`,
+  clang'ın `ext_vector_type` uzantısı) tanımadığı için **kendisi çöküyordu**:
+  `iwyu.cc:1967: Assertion failed: TODO(csilvers): for objc and clang lang
+  extensions`. Makefile'a bu, hiçbir şey anlatmayan `Error 250` (SIGABRT) olarak
+  geliyor ve `make check`'i düşürüyordu. 258 dosyadan yalnız biri — `style.cpp`,
+  64 bitlik tam sayılar üzerinde `std::find` çağıran sıradan bir derleme birimi —
+  yetiyordu; bu değişiklikle ilgisi yoktu.
+- `scripts/run-iwyu.sh` çözümlemeyi artık `-D__OPTIMIZE_SIZE__=1` ile çalıştırıyor:
+  bu, libc++'ın kendi okuduğu anahtardır (`_LIBCPP_VECTORIZE_ALGORITHMS` 0 olur) ve
+  skaler yol derlenir, böylece IWYU o türle hiç karşılaşmaz. Bayrak **yalnız
+  çözümlemeye** girer, derlemeye giremez: `make build` bu betiği çağırmaz. Gate
+  gevşetilmedi — hiçbir çıkış kodu yutulmuyor. `-Os` işe yaramıyor, çünkü IWYU
+  eniyileme bayraklarını makro türetilmeden önce atıyor. IWYU `ExtVectorType`'ı
+  ele alan bir sürüm çıkarınca kaldırılacak.
+
+### Düzeltildi — `canvas-edits` sınaması çöküyordu (yazdırmadan önce de)
+
+- Tuval sınaması (`KENTOS_EDIT_PROBE`, `canvas-edits`) bu değişiklikten **önce de**
+  çöküyordu: probe `ALAN`'ı dört köşeli bir satırla çağırıyor, komut beşinci köşeyi
+  beklerken parklanıyor, sonra `SEÇ nesneler=1` var olmayan nesneyi arıyor ve boş
+  tablonun sıfırıncı satırı okunuyordu. Probe artık şekli **sağ tuşla bitirip Esc ile
+  aracı bırakıyor**; ayrıca son bölümü belgelenmiş araç modeline hizalandı (sağ tuş
+  bitirir ve araç elde kalır, Esc bırakır) — eskiden Esc'ten sonra aracın yanık
+  kalmasını bekliyordu, ki bu modal araçlardan önceki modeldi.
+
+### Düzeltildi — Sürüklenen harita bırakılmıyordu
+
+- Yazdırma çerçevesi açıkken haritayı sol tuşla sürükleyip bırakmak haritayı
+  bırakmıyordu: tuval yalnız **orta** tuş için `panning_` bayrağını temizliyordu, sol
+  tuşla başlayan kaydırma bırakıldıktan sonra da fareyi izlemeye devam ediyordu.
+  `print-pdf` testi bu davranışı sürüyor: düzeltme geri alınınca test kırılıyor.
+
+### Eklendi — Bağlı nesneler ve sahneden seçme girdisi
+
+- **Bağlı nesneler** (`core/attach.hpp`): bir nesne başka bir nesnenin bir köşesini ya da
+  kenarını izler. `UZUNLUKYAZ`'ın yazdığı uzunluklar kenarlarına, `KÖŞENUMARALA`'nın
+  yazdığı numaralar köşelerine bağlı doğar (`bagla=evet` varsayılan; `hayır` serbest yazı).
+  Kaynağı değiştiren komut — `TAŞI`, `DÖNDÜR`, `ÖLÇEKLE`, `KÖŞETAŞI`, `KÖŞEEKLE`,
+  `ALANDÜZENLE`, tutamak — bittiğinde bağlı yazılar **aynı işlem ve aynı geri alma adımı
+  içinde** yeniden yerleşir; uzunluk yazısının sayısı yenilenir; köşe sayısı değişince
+  en yakın kenara/köşeye yeniden bağlanır; kaynak silinince bağlı yazılar da silinir ve
+  bu söylenir. Elle taşınan yazının **el payı** saklanır, kaynak sonra taşınsa da korunur.
+  Günlükte yalnız verilen komut vardır; yeniden oynatma aynı sonucu verir. Bağlar
+  `.pcad` dosyasında `0x0089` bloğunda, kalıcı anahtarlarla saklanır; bağı olmayan çizimin
+  dosyası değişmez. `content_hash()` bağları katlar (bağ yokken değişmez).
+- **`BAĞLA`** (`islem.bagla`): kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya
+  da köşesine bağlar (`bag=kenar|kose`); yazı yerinden oynamaz; `tur=uzunluk` ile sözü
+  kenarın uzunluğu olur. **`BAĞÇÖZ`** (`islem.bag_coz`): bağı çözer. İkisi de Araçlar
+  panelinde **Etiketleme** altında.
+- İşlem araçları bir **nesne parametresi** bildirebilir (`ToolParam::object`); çalıştırıcı
+  o nesnenin kopyasını `ToolInput::references` olarak araca verir. Yerinde değiştirme
+  çıktısı artık yazıyı, bağı ve bağ çözmeyi de taşır.
+- **Sahneden seçme girdisi** (bileşen seti, `FieldKind::Point` / `FieldKind::Object`):
+  Araçlar kartındaki nokta ve nesne alanlarının yanında bir nişan düğmesi; basınca işaretçi
+  seçim işaretçisine döner, durum satırı ne istendiğini söyler, tuvaldeki tık alanı
+  doldurur (nokta seçerken köşeler yakalanır; birden çok nesnede "Hangisi?" listesi).
+  Klavyeden **F4** / **Alt+↓** başlatır, **Esc** vazgeçer; değer elle de yazılır. Canlı
+  bileşen standardında, kapıda ve `docs/baslangic/bilesenler.md`'de.
+
+### Düzeltildi — macOS'ta tuval boştu
+
+- macOS'ta çizim, ızgara ve cetveller **hiç çizilmiyordu**: `TitleBar` içindeki
+  `QMenuBar` yerel menü çubuğu varsayılanıyla kurulduğundan Qt ana pencerenin yerel
+  penceresini canvas var olmadan yaratıyor (`QMenuBarPrivate::handleReparent` →
+  `createWinId`), QRhi ile birleştirme kararı o anda "hayır" olarak donuyor ve
+  `QRhiWidget` her karede "No QRhi" diyordu. Uygulama `Qt::AA_DontUseNativeMenuBar`
+  ile açılıyor (kabuk menülerini zaten kendi çiziyor), menü çubuğu ebeveynsiz kurulup
+  sonra bağlanıyor, ve duman testi (`KENTOS_SMOKE`) tuvalin GPU bağlamını aldığını
+  doğruluyor. Linux'ta yerel menü çubuğu olmadığı için sorun görünmüyordu.
+- macOS derlemesi: `io::VectorReport::layer_names` ve `ProbeReport::layers` çiftleri
+  `std::size_t` oldu; `std::uint64_t` ile `std::size_t` bu platformda farklı türler ve
+  atama derlenmiyordu.
+
 ### Eklendi — İşlem araçları (Processing)
 
 - **`kentos_processing`** modülü ve `ProcessingTool` arayüzü (`.claude/processing.md`):

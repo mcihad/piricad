@@ -167,10 +167,29 @@ public:
     /// that counts calls as its figure moves (`Controller::jobPermille`).
     void setBusyLabel(const QString& label);
     void setConnection(const QString& text, bool connected);
+
+    /// What the agent listener is doing. Three states, and each has its own
+    /// SHAPE as well as its own colour, because a green dot and a red dot are
+    /// the same cell to a colour-blind reader (ui.md R31): a hollow ring when
+    /// the listener is down, a filled dot when it is up and a token is
+    /// required, and a filled triangle when it is up with NO token — which the
+    /// text spells out as `KORUMASIZ`, since an open local endpoint is a
+    /// decision the operator should be reminded of every time they look.
+    enum class AgentState : std::uint8_t {
+        Off,         ///< no listener
+        Guarded,     ///< listening, a token is required
+        Unprotected, ///< listening, no token — every local process may connect
+    };
+    /// Puts `text` in the agent cell and draws `state`'s mark beside it.
+    void setAgent(const QString& text, AgentState state);
+
+    /// The frame time and the entity count at the far right.
     void setPerformance(const QString& text);
 
+    /// Repaints in `mode`'s tokens.
     void applyTheme(ThemeMode mode) override;
 
+    /// One 26 px strip, as wide as the window.
     QSize sizeHint() const override;
 
 signals:
@@ -181,6 +200,10 @@ signals:
 
     /// The `Durdur` chip was clicked while busy.
     void stopRequested();
+
+    /// The agent cell was clicked. The shell runs `MCPSUNUCU`, so the cell and
+    /// the menu entry reach the listener by exactly one road (Article 1.2).
+    void agentClicked();
 
     /// A chip was right-clicked: the user wants to CONFIGURE the aid rather than
     /// switch it. `OSNAP` is on/off as a chip and thirteen separate modes
@@ -218,6 +241,10 @@ private:
     QVector<Chip> chips_;
     QString coordinate_;
     QString connection_;
+    QString agent_;
+    AgentState agentState_{AgentState::Off};
+    QRect agentRect_; ///< where the agent cell was last painted
+    bool agentHot_{false};
     QString performance_;
     bool connected_  = false;
     int hot_         = -1;

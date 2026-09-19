@@ -144,10 +144,11 @@ yanında renk kutucuğu, katmanın adı, sağda nesne sayısı ve **kilit**.
 
 | Nerede | Ne yapar |
 |---|---|
-| **Göz** simgesine tek tık | Görünürlüğü ters çevirir |
+| **Göz** simgesine tek tık | Görünürlüğü ters çevirir — bu, `KATMAN` değil [`KATMANGÖRÜNÜM`](layer_visibility.md) satırıdır ve aktif katmanı değiştirmez |
 | **Kilit** simgesine tek tık | Kilidi ters çevirir |
 | Satıra çift tık | O katmanı **aktif** yapar |
-| Satıra sağ tık | Katman menüsü: **Tümünü seç**, **Öznitelik tablosu**, aktif yap, gruba taşı… ve en altta **Katman Özellikleri…** |
+| Ctrl / Shift ile tık | **Birden fazla katman** seçer |
+| Satıra sağ tık | Katman menüsü: **Tümünü seç**, **Öznitelik tablosu**, aktif yap, [**Görünüm**](layer_visibility.md) alt menüsü, gruba taşı… ve en altta **Katman Özellikleri…** |
 
 **Tümünü seç**, o katmandaki bütün nesneleri seçer — çalıştırdığı satır
 [`SEÇ mod=KATMAN katman="..."`](select.md) satırıdır.
@@ -165,8 +166,14 @@ Seçimde birden çok katmandan nesne varsa tek doğru cevap olmadığı için i�
 yerinde bırakılır. Bu işaretleme yalnızca listedeki vurgudur: katmanı **aktif
 yapmaz**, çünkü aktif katmanı değiştirmek kimsenin istemediği bir düzenlemedir.
 
-Panelden yapılan her değişiklik arka planda `KATMAN` komutunu gönderir. Yani
-buradan yaptığınız değişiklik de günlüğe yazılır ve **Ctrl+Z** ile geri alınır.
+**Görünüm** alt menüsü göster, gizle, yalnız bunu göster, tümünü göster ve gösterimi
+ters çevir girişlerini taşır; seçili katmanların tamamına uygulanır ve tek bir Ctrl+Z ile
+geri gelir. Ayrıntısı [`KATMANGÖRÜNÜM`](layer_visibility.md) sayfasındadır. Kilit tek
+satıra uygulanır.
+
+Panelden yapılan her değişiklik arka planda bir komut gönderir — görünürlük
+[`KATMANGÖRÜNÜM`](layer_visibility.md), geri kalanı `KATMAN`. Yani buradan yaptığınız
+değişiklik de günlüğe yazılır ve **Ctrl+Z** ile geri alınır.
 
 Aktif katman panelde **kalın** yazılır ve durum çubuğunun **Katman:** bölmesinde görünür.
 

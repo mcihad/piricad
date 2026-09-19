@@ -12,6 +12,7 @@ Daha önce KentOSCad kullanmadıysanız sırayla okuyun:
 3. [Arayüz](baslangic/arayuz.md) — pencerede ne nerede
 4. [Bileşenler](baslangic/bilesenler.md) — düğmeler, girdiler ve seçim denetimleri; durumları ve klavyesi
 5. [Stil tasarımcısı](baslangic/stil-tasarimcisi.md) — bir katmanın nasıl çizileceğini tasarlayın
+6. [Yazdırma ve PDF](baslangic/yazdirma.md) — yazdırma alanını seçin, ölçeği verin, PDF alın
 6. [Komut sistemi](komutlar/README.md) — KentOSCad'in çalışma mantığı
 
 ## Komutlar
@@ -31,6 +32,8 @@ Tek tek komutlar:
 | `FARKLIKAYDET` | [Yeni ada kaydetme](komutlar/saveas.md) |
 | `İÇEAKTAR` | [Dış veri alma](komutlar/import.md) |
 | `DIŞAAKTAR` | [Dış biçime yazma](komutlar/export.md) |
+| `YAZDIR` | [Yazdırma ve PDF](komutlar/print.md) |
+| `YAZDIRMAPROFİLİ` | [Yazdırma profilleri](komutlar/print_profile.md) |
 | `VERİTABANI` | [PostGIS ile çalışma](komutlar/database.md) |
 | `ÇİZGİ` | [Çizgi çizme](komutlar/line.md) |
 | `ÇOKLUÇİZGİ` | [Tek nesne olarak çoklu çizgi](komutlar/polyline.md) |
@@ -45,6 +48,8 @@ Tek tek komutlar:
 | `KÖŞEEKLE` | [Kenara köşe ekleme](komutlar/vertex_insert.md) |
 | `UZUNLUKYAZ` | [Kenar uzunluklarını yazma](komutlar/uzunluk_yaz.md) |
 | `KÖŞENUMARALA` | [Köşe numaralama](komutlar/kose_numarala.md) |
+| `BAĞLA` | [Yazıyı nesneye bağlama](komutlar/bagla.md) |
+| `BAĞÇÖZ` | [Yazının bağını çözme](komutlar/bag_coz.md) |
 | `ALANDÜZENLE` | [Alanı istenen değere getirme](komutlar/alan_duzenle.md) |
 | `ALANAÇEVİR` | [Çizgileri kapalı alana çevirme](komutlar/to_area.md) |
 | `TAŞI` | [Nesne taşıma](komutlar/move.md) |
@@ -67,6 +72,7 @@ Tek tek komutlar:
 | `SEÇ` | [Nesne seçme](komutlar/select.md) |
 | `SİL` | [Nesne silme](komutlar/erase.md) |
 | `KATMAN` | [Katman yönetimi](komutlar/layer.md) |
+| `KATMANGÖRÜNÜM` | [Katman görünürlüğü](komutlar/layer_visibility.md) |
 | `STİL` | [Nesne stili ve gösterim kataloğu](komutlar/style.md) |
 | `SEMBOL` | [Gösterim rafı](komutlar/symbol.md) |
 | `ETİKET` | [Özniteliklerden yazı](komutlar/label.md) |
@@ -103,6 +109,14 @@ Tek tek komutlar:
 | `TERCİH` | [Uygulama tercihleri](komutlar/preference.md) |
 | `MOD` | [Oturum modları](komutlar/mode.md) |
 | `YARDIM` | [Yardım](komutlar/help.md) |
+| `KATMANLAR` | [Katman dökümü](komutlar/layers.md) |
+| `ÖZNİTELİKŞEMASI` | [Öznitelik sütunlarının dökümü](komutlar/attr_schema.md) |
+| `SORGULA` | [Koşula uyan nesneleri sayma](komutlar/query.md) |
+| `SEÇİMBİLGİSİ` | [O anki seçimi okuma](komutlar/selection_info.md) |
+| `GÖRÜNÜMBİLGİSİ` | [Ekranda görünen alan](komutlar/view_info.md) |
+| `ÖNERİ` | [Bekleyen yapay zeka önerileri](komutlar/suggestion.md) |
+| `MCPSUNUCU` | [Ajan sunucusunu yönetme](komutlar/mcp.md) |
+| `YAPAYZEKAMODELİ` | [Model sağlayıcıları](komutlar/ai_provider.md) |
 
 ## Nesne türleri
 
@@ -126,11 +140,26 @@ noktaları ve ölçüleri türün kendisi söyler. Türlerin tablosu çekirdeği
 | [Ölçü](nesneler/olcu.md) | Uzunluk, yarıçap, çap, açı; stil kataloğu; yazı tam sayıdan |
 | [Lider](nesneler/lider.md) | Oklu not çizgisi |
 
+## Yapay zeka
+
+Yapay zeka bu programda geometri üretmez, **komut üretir**; ürettiği her şey bir
+**öneridir** ve çizime ancak bilgisayar başındaki mühendisin onayıyla girer.
+
+| Sayfa | İçerik |
+|---|---|
+| [Yapay zeka ve ajanlar](yapay-zeka/README.md) | Dört kural, hiçbir şeyi değiştirmeyen beş araç, sorumluluk |
+| [MCP sunucusu](yapay-zeka/mcp-sunucusu.md) | Bir ajanı bağlama: adres, belirteç, protokol sürümü, hatalar |
+| [Onay ve denetim](yapay-zeka/onay.md) | Öneri boru hattı, tutamaklar, tek işlem–tek Ctrl+Z, denetim kaydı |
+| [Yapay Zeka paneli](yapay-zeka/sohbet.md) | Uygulama içi sohbet, öneri kartı, bağlam ölçeri |
+| [Model sağlayıcıları](yapay-zeka/modeller.md) | Hangi model, hangi adres, hangi lehçe; anahtar nerede durur |
+| [Lisans ve ağ yükümlülüğü](yapay-zeka/lisans.md) | Sunucu bileşeni neden AGPLv3, kimi bağlar |
+
 ## İleri konular
 
 | Sayfa | İçerik |
 |---|---|
 | [İşlem araçları](islem/README.md) | Araçlar paneli; kapsam, asenkron çalışma ve Durdur, çıktı katmanı; araç listesi |
+| [Bağlı nesneler](islem/bagli-nesneler.md) | Kaynağını izleyen yazılar: uzunluk ve köşe numarası nasıl taşınır, yenilenir, çözülür |
 | [Betik yazma](betik/README.md) | JSON betik biçimi, toplu işlem, kum havuzu |
 | [Lua betikleri](betik/lua.md) | Döngü, koşul ve hesapla betik yazma; `h` API'si |
 | [Komut günlüğü](mimari/gunluk.md) | Yaptığınız işi geri izleme, makro, oturum kaydı |

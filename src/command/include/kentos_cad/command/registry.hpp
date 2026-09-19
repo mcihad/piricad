@@ -33,9 +33,27 @@ public:
 
     const std::vector<CommandSpec>& all() const noexcept { return specs_; }
 
-    /// Every command carrying Flags::AiAccessible, as a JSON tool catalogue.
-    /// This is the AI's entire view of the application (kentoscad.md §5.1).
-    core::Json ai_tool_schema() const;
+    // THE AI TOOL CATALOGUE IS NOT HERE, and its absence is deliberate.
+    // `ai_tool_schema()` used to project the registry into a JSON tool list from
+    // this class, and `/src/ai` needed a different projection — a real JSON
+    // Schema, handles instead of coordinate literals, MCP annotations. Two
+    // projections of one registry are two answers to one question
+    // (.claude/ai.md P7), so the survivor is `ai::build_catalog`, which is what
+    // the server serves, what `llms.txt` is written from and what the generated
+    // reference embeds. `Registry` keeps what belongs to it: the commands, the
+    // names, and the fingerprint below.
+
+    /// A fingerprint over EVERY declared field of every command.
+    ///
+    /// WHY A RUNNING PROGRAM NEEDS ONE. An agent caches the tool list it was
+    /// served; the moment a command gains a parameter, that cache is a lie. The
+    /// fingerprint is what `tools/list` carries and what tells a client its copy
+    /// is stale, and it is what the freshness gate hashes so that "the smallest
+    /// change to a parameter regenerates the surface" is a check rather than a
+    /// hope (CLAUDE.md 6.14). Stable across runs and platforms: it hashes
+    /// declared text and integers, never an address or an iteration order that
+    /// could differ.
+    std::uint64_t fingerprint() const;
 
     /// Generated command reference, Markdown. Never hand-written.
     std::string markdown_reference() const;

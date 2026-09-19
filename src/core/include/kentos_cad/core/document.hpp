@@ -16,6 +16,7 @@
 // reach them through a Transaction, which the command bus owns (Article 1).
 #pragma once
 
+#include "kentos_cad/core/attach.hpp"
 #include "kentos_cad/core/attribute.hpp"
 #include "kentos_cad/core/block.hpp"
 #include "kentos_cad/core/crs.hpp"
@@ -128,6 +129,7 @@ struct Op
         SetEntityLayer,     ///< entity, layer
         AttachForeign,      ///< entity, str_arg (the tag), bytes_arg
         DetachForeign,      ///< entity, str_arg (the tag)
+        SetAttachment,      ///< entity, has_attach, attach_arg — what it followed before
 
         /// The WHOLE guide list, restored as it was.
         ///
@@ -173,6 +175,11 @@ struct Op
 
     /// The foreign bytes to put back; see `Kind::AttachForeign`.
     std::vector<std::uint8_t> bytes_arg;
+
+    /// The attachment to put back, when `has_attach`; a false `has_attach` puts
+    /// back "attached to nothing" (see `Document::set_attachment`).
+    bool has_attach{false};
+    Attachment attach_arg{};
 };
 
 class Document
@@ -227,6 +234,11 @@ public:
 
     /// The block definitions this document holds (model.md R45).
     const BlockTable& blocks() const noexcept { return blocks_; }
+
+    /// Which entities FOLLOW which (core/attach.hpp), keyed by the dependent's
+    /// row. Never read by the frame path: a dependent is re-placed by the
+    /// command that moved its source, at that command's commit.
+    const AttachTable& attachments() const noexcept { return attachments_; }
 
     /// The drafting guides this document carries. Furniture, not geometry: saved
     /// with the file and invisible to selection, culling, export and area sums
@@ -453,6 +465,13 @@ public:
     /// An empty `content` detaches it.
     Status set_text(EntityId e, std::string content, Mm height, TextAnchor anchor, Op& undo_out);
 
+    /// Makes `e` follow `a->source` as `a` says, or follow nothing when `a` is
+    /// null. Refused for a dead or non-editable dependent, a source that does not
+    /// exist or is dead, a self-reference, and a chain that would come back to
+    /// `e` — a dependent may itself be followed, a cycle may not. The inverse
+    /// restores what `e` followed before.
+    Status set_attachment(EntityId e, const Attachment* a, Op& undo_out);
+
     /// Interns an appearance and returns its id, for a command building a style.
     StyleId intern_style(const Appearance& a);
 
@@ -521,6 +540,7 @@ private:
     TextTable texts_{};
     ForeignTable foreign_{};
     BlockTable blocks_{};
+    AttachTable attachments_{};
     GuideStore guides_{};
     ImageStore images_{};
     DashStore dashes_{};

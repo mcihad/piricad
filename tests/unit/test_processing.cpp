@@ -91,7 +91,7 @@ std::string what_happened(const Journal& j)
 TEST_CASE("İŞLEM: her araç bir komuttur; dört ortak parametre önde, kendi parametreleri arkada")
 {
     Rig f;
-    REQUIRE_EQ(processing::processing_tools().size(), 3u);
+    REQUIRE_EQ(processing::processing_tools().size(), 5u);
 
     const CommandSpec* uz = f.reg.resolve("UZUNLUKYAZ");
     REQUIRE(uz != nullptr);
@@ -157,12 +157,23 @@ TEST_CASE("UZUNLUKYAZ: çizginin uzunluğunu kenara paralel, üstüne, istenen b
     CHECK_EQ(caps[0].layer, f.doc.find_layer("ETİKET"));
     CHECK(f.doc.find_layer("ETİKET") != f.doc.find_layer("YOL"));
 
-    // A bad choice is refused by name, and nothing is drawn.
+    // A BAD CHOICE IS NOW REFUSED BY THE BUS, before the tool's body runs, and
+    // the refusal is an ERROR rather than a line in the transcript: `birim`
+    // declares its words (`ToolParam::choice` → `Param::choices`) and the bus
+    // validates what a parameter declares (Article 1.3). The tool's own private
+    // check would have said the same thing one stage later, to a body that had
+    // already started.
     f.run("GERİAL");
     f.said.clear();
-    f.run("UZUNLUKYAZ nesneler=1 birim=parsek");
+    auto refused = f.bus.execute_line("UZUNLUKYAZ nesneler=1 birim=parsek", Origin::Test);
+    CHECK(!refused.ok());
+    if (!refused.ok()) {
+        CHECK(refused.error().message.find("'birim' için tanınmayan değer 'parsek'") !=
+              std::string::npos);
+        // And it names the words that WOULD have worked.
+        CHECK(refused.error().message.find("metre") != std::string::npos);
+    }
     CHECK(captions_of(f.doc).empty());
-    CHECK(f.said.find("'birim' için tanınmayan değer: 'parsek'") != std::string::npos);
 }
 
 TEST_CASE("UZUNLUKYAZ: kapalı alanda her kenar dışa yazılır; kısa kenar atlanır")
@@ -493,4 +504,270 @@ TEST_CASE(
     REQUIRE(spec != nullptr);
     CHECK_EQ(spec->category, Category::Modify);
     CHECK(f.reg.resolve("ADJUSTAREA") == spec);
+}
+
+// ============================================================================
+// Attached objects — captions that FOLLOW what they are about (core/attach.hpp)
+// ============================================================================
+
+namespace {
+
+/// The centre of the caption whose text is `text`, or (0,0) with a failure.
+core::Point2 centre_of(const core::Document& doc, const std::string& text)
+{
+    for (const Caption& c : captions_of(doc))
+        if (c.text == text) return c.at;
+    FAIL_WITH("yazı bulunamadı", text);
+    return {};
+}
+
+/// The entity row of the caption saying `text`, or kNoEntity.
+core::EntityId caption_entity(const core::Document& doc, const std::string& text)
+{
+    for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+        if (!doc.alive(e)) continue;
+        const std::uint32_t slot = doc.entities().slot[e];
+        if (doc.texts().has(slot) && doc.texts().text(slot) == text) return e;
+    }
+    return core::kNoEntity;
+}
+
+} // namespace
+
+TEST_CASE("BAĞ: UZUNLUKYAZ'ın yazısı çizgiyi izler; taşınınca yer, ölçeklenince sayı değişir")
+{
+    Rig f;
+    f.run("KATMAN ad=YOL");
+    f.run("ÇİZGİ 0,0 10,0"); // 1
+    f.run("UZUNLUKYAZ nesneler=1");
+    REQUIRE_EQ(captions_of(f.doc).size(), 1u);
+    const core::Point2 before = centre_of(f.doc, "10,00 m");
+    CHECK(f.doc.attachments().has(caption_entity(f.doc, "10,00 m")));
+
+    // TAŞI the line alone: the caption comes along, by the same offset, still
+    // saying the same length — in the SAME undo step.
+    f.run("TAŞI nesneler=1 baslangic=0,0 bitis=5,20");
+    core::Point2 after = centre_of(f.doc, "10,00 m");
+    CHECK_EQ(after.x - before.x, core::Mm{5000});
+    CHECK_EQ(after.y - before.y, core::Mm{20000});
+    f.run("GERİAL");
+    CHECK_EQ(centre_of(f.doc, "10,00 m"), before);
+    f.run("YİNELE");
+    CHECK_EQ(centre_of(f.doc, "10,00 m"), after);
+
+    // ÖLÇEKLE: the edge is 20 m now, and the caption SAYS so.
+    f.run("ÖLÇEKLE nesneler=1 merkez=5,20 carpan=2");
+    REQUIRE_EQ(captions_of(f.doc).size(), 1u);
+    CHECK_EQ(captions_of(f.doc)[0].text, std::string("20,00 m"));
+    f.run("GERİAL");
+    CHECK_EQ(captions_of(f.doc)[0].text, std::string("10,00 m"));
+
+    // DÖNDÜR: the caption turns with its edge — still parallel to it.
+    f.run("DÖNDÜR nesneler=1 merkez=5,20 aci=90");
+    const auto turned = captions_of(f.doc);
+    REQUIRE_EQ(turned.size(), 1u);
+    CHECK_EQ(turned[0].at.x, turned[0].end.x); // a vertical baseline
+    f.run("GERİAL");
+
+    // The journal holds only the commands the user gave: the follow is what
+    // those commands DO, not a line of its own, so a replay reproduces it.
+    // (GERİAL and YİNELE are not journalled — they are read-only to the record —
+    // so the replay is proved on a run without them.)
+    Rig plain;
+    plain.run("KATMAN ad=YOL");
+    plain.run("ÇİZGİ 0,0 10,0");
+    plain.run("UZUNLUKYAZ nesneler=1");
+    plain.run("TAŞI nesneler=1 baslangic=0,0 bitis=5,20");
+    plain.run("ÖLÇEKLE nesneler=1 merkez=5,20 carpan=2");
+    Rig replay;
+    for (const auto& e : plain.journal.entries()) {
+        auto r = replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch});
+        if (!r) FAIL_WITH(e.command_id.c_str(), r.error().message);
+    }
+    CHECK_EQ(replay.doc.content_hash(), plain.doc.content_hash());
+    CHECK_EQ(centre_of(replay.doc, "20,00 m"), centre_of(plain.doc, "20,00 m"));
+}
+
+TEST_CASE(
+    "BAĞ: KÖŞENUMARALA'nın numarası köşesini izler; KÖŞETAŞI bir köşeyi taşıyınca yalnız o gider")
+{
+    Rig f;
+    f.run("KATMAN ad=PARSEL");
+    f.run("ALAN 0,0 10,0 10,10 0,10"); // 1
+    f.run("KÖŞENUMARALA nesneler=1 baslangic=10,10");
+    REQUIRE_EQ(captions_of(f.doc).size(), 4u);
+    const core::Point2 one   = centre_of(f.doc, "1"); // at (10,10), outside up-right
+    const core::Point2 two   = centre_of(f.doc, "2"); // at (0,10)
+    const core::Point2 three = centre_of(f.doc, "3"); // at (0,0), opposite the moved corner
+
+    // Corner 3 of the ring is (10,10): move it up and to the right. Its number
+    // follows; the number at the OPPOSITE corner (0,0) has neither neighbour
+    // moved and stays put (a neighbour's bisector turns a little, on purpose).
+    f.run("KÖŞETAŞI nesne=1 kose=3 nokta=14,14");
+    const core::Point2 moved = centre_of(f.doc, "1");
+    CHECK(moved.x > one.x);
+    CHECK(moved.y > one.y);
+    CHECK_EQ(centre_of(f.doc, "3"), three);
+    CHECK_EQ(captions_of(f.doc)[0].text, std::string("1")); // the text is its own
+    f.run("GERİAL");
+    CHECK_EQ(centre_of(f.doc, "1"), one);
+    CHECK_EQ(centre_of(f.doc, "2"), two);
+
+    // A corner inserted on the bottom edge re-anchors by proximity: the numbers
+    // keep their own corners, nothing jumps to a neighbouring one. The two
+    // corners of the split edge get a new neighbour and their bisectors turn;
+    // the two on the top edge are untouched.
+    f.run("KÖŞEEKLE nesne=1 kose=1 nokta=5,-1");
+    CHECK_EQ(captions_of(f.doc).size(), 4u);
+    CHECK_EQ(centre_of(f.doc, "1"), one);
+    CHECK_EQ(centre_of(f.doc, "2"), two);
+    f.run("GERİAL");
+    CHECK_EQ(centre_of(f.doc, "3"), three);
+}
+
+TEST_CASE(
+    "BAĞ: elle taşınan yazı yerini korur; kaynak silinince bağlı yazılar da gider, geri alınır")
+{
+    Rig f;
+    f.run("KATMAN ad=YOL");
+    f.run("ÇİZGİ 0,0 10,0");        // 1
+    f.run("UZUNLUKYAZ nesneler=1"); // 2
+    const core::Point2 rule = centre_of(f.doc, "10,00 m");
+
+    // The user drags the label 3 m up: that is where it reads best, and the
+    // program remembers it — moving the LINE afterwards keeps the hand's offset.
+    f.run("TAŞI nesneler=2 baslangic=0,0 bitis=0,3");
+    CHECK_EQ(centre_of(f.doc, "10,00 m").y - rule.y, core::Mm{3000});
+    f.run("TAŞI nesneler=1 baslangic=0,0 bitis=20,0");
+    const core::Point2 kept = centre_of(f.doc, "10,00 m");
+    CHECK_EQ(kept.x - rule.x, core::Mm{20000});
+    CHECK_EQ(kept.y - rule.y, core::Mm{3000});
+
+    // Moving BOTH together changes nothing about their relation.
+    f.run("TAŞI nesneler=1 nesneler=2 baslangic=0,0 bitis=0,-7");
+    CHECK_EQ(centre_of(f.doc, "10,00 m").y - rule.y, core::Mm{3000 - 7000});
+
+    // SİL the line: its caption goes with it, said on the transcript, and one
+    // GERİAL brings both back.
+    f.said.clear();
+    f.run("SİL nesneler=1");
+    CHECK(captions_of(f.doc).empty());
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+    CHECK(f.said.find("bağlı 1 nesne de silindi") != std::string::npos);
+    f.run("GERİAL");
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{2});
+    CHECK_EQ(captions_of(f.doc).size(), 1u);
+
+    // `bagla=hayır` writes a free caption: the line moves, the caption stays.
+    f.run("SİL nesneler=2");
+    f.run("UZUNLUKYAZ nesneler=1 bagla=hayır"); // 3
+    CHECK_FALSE(f.doc.attachments().has(caption_entity(f.doc, "10,00 m")));
+    const core::Point2 free_at = centre_of(f.doc, "10,00 m");
+    f.run("TAŞI nesneler=1 baslangic=0,0 bitis=0,50");
+    CHECK_EQ(centre_of(f.doc, "10,00 m"), free_at);
+}
+
+TEST_CASE(
+    "BAĞLA ve BAĞÇÖZ: serbest bir yazı bir nesneye bağlanır, çözülür; kaynak sahneden seçilir")
+{
+    Rig f;
+    f.run("KATMAN ad=YOL");
+    f.run("ÇİZGİ 0,0 10,0");      // 1
+    f.run("METİN 5,2 \"kenar\""); // 2: a free caption near the line's top side
+    REQUIRE_EQ(captions_of(f.doc).size(), 1u);
+    const core::Point2 typed = centre_of(f.doc, "kenar");
+
+    // The spec: an object parameter, a Modify command, the Turkish names.
+    const CommandSpec* spec = f.reg.resolve("BAĞLA");
+    REQUIRE(spec != nullptr);
+    CHECK_EQ(spec->id, std::string("islem.bagla"));
+    CHECK_EQ(spec->category, Category::Modify);
+    CHECK(f.reg.resolve("BAGLA") == spec);
+    CHECK(f.reg.resolve("ATTACH") == spec);
+    bool has_source = false;
+    for (const Param& p : spec->params)
+        if (p.name == "kaynak") {
+            has_source = true;
+            CHECK_EQ(p.kind, ParamKind::Selection);
+        }
+    CHECK(has_source);
+
+    // Without a source: refused by name, nothing changes.
+    const std::uint64_t before = f.doc.content_hash();
+    f.said.clear();
+    f.run("BAĞLA nesneler=2");
+    CHECK_EQ(f.doc.content_hash(), before);
+    CHECK(f.said.find("kaynak=<kimlik>") != std::string::npos);
+
+    // Attached to the nearest edge of line 1: the caption does not move on
+    // attach, and from now on it follows the line.
+    f.run("BAĞLA nesneler=2 kaynak=1");
+    CHECK_EQ(centre_of(f.doc, "kenar"), typed);
+    REQUIRE(f.doc.attachments().has(caption_entity(f.doc, "kenar")));
+    CHECK_EQ(core::raw(f.doc.attachments().get(caption_entity(f.doc, "kenar"))->source),
+             std::uint64_t{1});
+    f.run("TAŞI nesneler=1 baslangic=0,0 bitis=100,0");
+    CHECK_EQ(centre_of(f.doc, "kenar").x - typed.x, core::Mm{100000});
+    CHECK_EQ(centre_of(f.doc, "kenar").y, typed.y);
+    f.run("GERİAL");
+
+    // As a LENGTH: the words become the edge's length, and follow the edge.
+    f.run("BAĞLA nesneler=2 kaynak=1 tur=uzunluk");
+    REQUIRE_EQ(captions_of(f.doc).size(), 1u);
+    CHECK_EQ(captions_of(f.doc)[0].text, std::string("10,00 m"));
+    f.run("ÖLÇEKLE nesneler=1 merkez=0,0 carpan=3");
+    CHECK_EQ(captions_of(f.doc)[0].text, std::string("30,00 m"));
+    f.run("GERİAL");
+    f.run("GERİAL");
+    CHECK_EQ(captions_of(f.doc)[0].text, std::string("kenar"));
+
+    // BAĞÇÖZ: free again; the line moves alone. A free caption is counted.
+    f.run("BAĞLA nesneler=2 kaynak=1");
+    f.said.clear();
+    f.run("BAĞÇÖZ nesneler=2");
+    CHECK_FALSE(f.doc.attachments().has(caption_entity(f.doc, "kenar")));
+    f.run("TAŞI nesneler=1 baslangic=0,0 bitis=0,50");
+    CHECK_EQ(centre_of(f.doc, "kenar"), typed);
+    f.said.clear();
+    f.run("BAĞÇÖZ nesneler=2");
+    CHECK(f.said.find("zaten hiçbir nesneye bağlı değildi") != std::string::npos);
+
+    // A self-reference is refused.
+    f.said.clear();
+    f.run("BAĞLA nesneler=2 kaynak=2");
+    CHECK_FALSE(f.doc.attachments().has(caption_entity(f.doc, "kenar")));
+
+    // The equality proof: command line and script, one document, one journal;
+    // and the journal replays.
+    Rig cli;
+    cli.run("KATMAN ad=YOL");
+    cli.run("ÇİZGİ 0,0 10,0");
+    cli.run("METİN 5,2 \"kenar\"");
+    cli.run("BAĞLA nesneler=2 kaynak=1 tur=uzunluk");
+    cli.run("TAŞI nesneler=1 baslangic=0,0 bitis=5,5");
+    Rig scr;
+    scr.run("KATMAN ad=YOL");
+    scr.run("ÇİZGİ 0,0 10,0");
+    scr.run("METİN 5,2 \"kenar\"");
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Bağ kanıtı",
+            "komutlar": [
+                {"cmd": "islem.bagla", "args": {"nesneler": [2], "kaynak": [1], "tur": "uzunluk"}},
+                {"cmd": "core.move", "args": {"nesneler": [2], "baslangic": [0, 0], "bitis": [5000, 5000]}}
+            ]
+        })");
+        if (!r) FAIL_WITH("betik", r.error().message);
+    }
+    // The script moved the CAPTION, the command line moved the LINE: different
+    // documents on purpose, to prove the two clients agree about the attach.
+    CHECK_EQ(what_happened(cli.journal).substr(0, what_happened(cli.journal).find("core.move")),
+             what_happened(scr.journal).substr(0, what_happened(scr.journal).find("core.move")));
+    Rig replay;
+    for (const auto& e : cli.journal.entries()) {
+        auto r = replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch});
+        if (!r) FAIL_WITH(e.command_id.c_str(), r.error().message);
+    }
+    CHECK_EQ(replay.doc.content_hash(), cli.doc.content_hash());
 }

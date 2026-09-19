@@ -335,10 +335,10 @@ KENTOS_COMMAND(column)
         // NOT undoable, and for the same reason a layer is not: the schema is what
         // rows are addressed against, and undoing a declaration would invalidate
         // every row index the journal already holds.
-        .undo    = UndoPolicy::None,
-        .flags   = Flags::Scriptable,
+        .undo  = UndoPolicy::None,
+        .flags = Flags::Scriptable,
         .summary = "Öznitelik sütunu tanımlar, düzenler, siler; argümansız çağrılınca listeler.",
-        .run     = &run_column,
+        .run = &run_column,
     };
 }
 

@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Türkiye odaklı CBS + CAD harita yazılımı",
   "homepage": "https://github.com/mcihad/kentos_cad",
-  "license": "GPL-3.0-or-later",
+  "license": "GPL-3.0-or-later AND AGPL-3.0-or-later",
 
   "$comment": [
     "Manifest mode against a real pinned baseline (CLAUDE.md 5.12).",
@@ -56,6 +56,10 @@
     "spatial-index": {
       "description": "R-tree spatial indexing",
       "dependencies": [{ "name": "boost-geometry", "version>=": "1.85.0" }]
+    },
+    "qpdf": {
+      "description": "PDF encryption (AES-256, permissions) for YAZDIR output — KENTOS_WITH_QPDF. Linked; licence recorded in /NOTICE.",
+      "dependencies": [{ "name": "qpdf", "version>=": "11.9.1" }]
     },
     "tests": {
       "description": "doctest, replacing tests/support/microtest.hpp",

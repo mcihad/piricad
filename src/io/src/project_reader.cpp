@@ -1228,6 +1228,46 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
         }
     }
 
+    // ---- attachments (core/attach.hpp): after the entities and their text ----
+    if (view.has(kBlkAttachments)) {
+        auto rows =
+            view.column<AttachRecord>(kBlkAttachments, view.count_of(kBlkAttachments), "bağlar");
+        if (!rows) return rows.error();
+        for (const AttachRecord& r : rows.value()) {
+            const core::EntityId dependent =
+                doc.slot_of(static_cast<core::EntityKey>(r.dependent_key));
+            const core::EntityId source = doc.slot_of(static_cast<core::EntityKey>(r.source_key));
+            if (dependent == core::kNoEntity || source == core::kNoEntity ||
+                !doc.alive(dependent) || !doc.alive(source)) {
+                report.warnings.push_back(
+                    Warning{"io.attach_row", "Dosyadaki bir bağ var olmayan ya da silinmiş bir "
+                                             "nesneye işaret ediyor; yok sayıldı."});
+                continue;
+            }
+            core::Attachment a;
+            a.source    = static_cast<core::EntityKey>(r.source_key);
+            a.anchor    = r.anchor == 0 ? core::AttachAnchor::Vertex : core::AttachAnchor::Edge;
+            a.side      = static_cast<core::AttachSide>(r.side > 3 ? 0 : r.side);
+            a.derive    = r.derive == 1 ? core::AttachDerive::Length : core::AttachDerive::Keep;
+            a.ring      = r.ring;
+            a.index     = r.index;
+            a.gap       = r.gap_mm;
+            a.along     = r.along_mm;
+            a.across    = r.across_mm;
+            a.unit      = r.unit;
+            a.precision = r.precision;
+            a.separator = static_cast<char>(r.separator);
+            if (r.format_string != 0) {
+                auto format = strings.at(r.format_string, "bağ biçimi");
+                if (!format) return format.error();
+                a.format = format.value();
+            }
+            if (auto st = tx.set_attachment(dependent, a); !st)
+                report.warnings.push_back(
+                    Warning{"io.attach", "Bir bağ yüklenemedi: " + st.error().message});
+        }
+    }
+
     // ---- the allocator must not hand out a key the file already used ----
     if (doc.keys().peek_entity() != dr.next_entity_key ||
         doc.keys().peek_layer() != dr.next_layer_key)

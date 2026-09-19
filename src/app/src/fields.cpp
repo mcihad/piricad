@@ -133,10 +133,10 @@ QRect DatePopup::arrowRect(int which) const
     const int left = kCalShadow;
     const int card = width() - kCalShadow * 2;
     switch (which) {
-    case 0: return {left + kCalPad, top + 4, kArrowW, kCalHead - 8};                      // ‹ month
-    case 1: return {left + kCalPad + kArrowW, top + 4, kArrowW, kCalHead - 8};            // › month
+    case 0: return {left + kCalPad, top + 4, kArrowW, kCalHead - 8};           // ‹ month
+    case 1: return {left + kCalPad + kArrowW, top + 4, kArrowW, kCalHead - 8}; // › month
     case 2: return {left + card - kCalPad - kArrowW * 2, top + 4, kArrowW, kCalHead - 8}; // ‹ year
-    case 3: return {left + card - kCalPad - kArrowW, top + 4, kArrowW, kCalHead - 8};     // › year
+    case 3: return {left + card - kCalPad - kArrowW, top + 4, kArrowW, kCalHead - 8}; // › year
     default: return {};
     }
 }
@@ -412,6 +412,7 @@ Field::Field(const FieldSpec& spec, QWidget* parent) : QWidget(parent), spec_(sp
         frameOf(line_);
         line_->setFrame(false);
         line_->setPlaceholderText(spec_.placeholder);
+        if (spec_.secret) line_->setEchoMode(QLineEdit::Password);
         line_->installEventFilter(this);
         row->addWidget(line_, 1);
         return line_;
@@ -587,6 +588,34 @@ Field::Field(const FieldSpec& spec, QWidget* parent) : QWidget(parent), spec_(sp
         break;
     }
 
+    case FieldKind::Point:
+    case FieldKind::Object: {
+        // PICKED FROM THE SCENE, OR TYPED. The box takes `x,y` in metres, or an
+        // object's key, exactly as the command line does; the button beside it
+        // arms the canvas for ONE pick and the answer lands in the box the same
+        // way (ui.md P7: the keyboard road is the typed one, the pick is the
+        // convenience). The field asks its owner for the pick and never reaches
+        // the canvas itself — a component knows nothing about the shell it sits
+        // in.
+        plainLine();
+        if (spec_.placeholder.isEmpty())
+            line_->setPlaceholderText(spec_.kind == FieldKind::Point ? QStringLiteral("x,y")
+                                                                     : tr("nesne kimliği"));
+        applyValidator();
+        picker_ = squareButton(QString());
+        picker_->setCheckable(true);
+        picker_->setToolTip(spec_.kind == FieldKind::Point ? tr("Sahneden nokta seç")
+                                                           : tr("Sahneden nesne seç"));
+        picker_->setAccessibleName(picker_->toolTip());
+        connect(picker_, &QToolButton::clicked, this, [this] {
+            // The button toggled itself on the click; the owner decides what the
+            // state IS, so it is put back and asked for.
+            picker_->setChecked(picking_);
+            emit pickRequested(spec_.kind);
+        });
+        break;
+    }
+
     case FieldKind::Colour:
         plainLine();
         line_->setReadOnly(true);
@@ -698,7 +727,47 @@ void Field::applyValidator()
         // separators on purpose — see `core::decimal_from_text`.
         line_->setValidator(new QRegularExpressionValidator(
             QRegularExpression(decimalPattern(spec_.decimals)), line_));
+        return;
     }
+    if (spec_.kind == FieldKind::Point) {
+        // Two numbers and a comma between them, in either decimal separator,
+        // with the relative and polar forms the command line reads (`@50,30`,
+        // `@100<45`) allowed through — the parser is the judge of those.
+        line_->setValidator(new QRegularExpressionValidator(
+            QRegularExpression(
+                QStringLiteral("^@?[+-]?\\d*(?:[.,]\\d*)?(?:[,<][+-]?\\d*(?:[.,]\\d*)?)?$")),
+            line_));
+        return;
+    }
+    if (spec_.kind == FieldKind::Object) {
+        // A key: whole, positive. Keys start at 1 (identity.hpp).
+        line_->setValidator(new QRegularExpressionValidator(
+            QRegularExpression(QStringLiteral("^[1-9]\\d*$")), line_));
+    }
+}
+
+void Field::setPicking(bool on)
+{
+    if (picking_ == on) return;
+    picking_ = on;
+    if (picker_ != nullptr) {
+        picker_->setChecked(on);
+        picker_->setProperty("picking", on ? QStringLiteral("true") : QVariant());
+        picker_->style()->unpolish(picker_);
+        picker_->style()->polish(picker_);
+    }
+    if (line_ != nullptr) {
+        // THE BOX SAYS WHAT IS HAPPENING, in words, not only in the button's
+        // colour (ui.md R31). The placeholder is used so the value already in
+        // the box, if any, is not thrown away by a pick the user then cancels.
+        if (on) {
+            resting_placeholder_ = line_->placeholderText();
+            line_->setPlaceholderText(tr("sahneden seçiliyor…"));
+        } else {
+            line_->setPlaceholderText(resting_placeholder_);
+        }
+    }
+    applyTheme(theme_);
 }
 
 void Field::refreshMultiFace()
@@ -907,6 +976,16 @@ void Field::applyTheme(ThemeMode mode)
 {
     theme_ = mode;
     refreshLead();
+
+    // The pick button wears its glyph in the theme's ink — the accent while a
+    // pick is under way, so the armed state has a shape AND a colour.
+    if ((spec_.kind == FieldKind::Point || spec_.kind == FieldKind::Object) && picker_ != nullptr) {
+        const Tokens& t = tokensOf(mode);
+        picker_->setIcon(QIcon(
+            glyph_pixmap(spec_.kind == FieldKind::Point ? Glyph::Locate : Glyph::Select,
+                         picking_ ? t.accentHi : t.textDim, kLeadGlyph, devicePixelRatioF())));
+        picker_->setIconSize(QSize(kLeadGlyph, kLeadGlyph));
+    }
 
     // The colour picker paints the value it holds, so it has to be repainted
     // when the tokens change — its border comes from them.

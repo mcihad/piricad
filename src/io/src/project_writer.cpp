@@ -446,6 +446,34 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
         }
     }
 
+    // ---- attachments (core/attach.hpp): live dependents of live sources ----
+    std::vector<AttachRecord> attach_rows;
+    {
+        const core::AttachTable& attachments = doc.attachments();
+        for (const core::EntityId e : attachments.attached()) {
+            if (!doc.alive(e)) continue;
+            const core::Attachment* a = attachments.get(e);
+            const core::EntityId src  = doc.slot_of(a->source);
+            if (src == core::kNoEntity || !doc.alive(src)) continue;
+            AttachRecord r{};
+            r.dependent_key = core::raw(doc.key_of(e));
+            r.source_key    = core::raw(a->source);
+            r.gap_mm        = a->gap;
+            r.along_mm      = a->along;
+            r.across_mm     = a->across;
+            r.index         = a->index;
+            r.format_string = a->format.empty() ? 0u : pool.intern(a->format);
+            r.ring          = a->ring;
+            r.anchor        = static_cast<std::uint8_t>(a->anchor);
+            r.side          = static_cast<std::uint8_t>(a->side);
+            r.derive        = static_cast<std::uint8_t>(a->derive);
+            r.unit          = a->unit;
+            r.precision     = a->precision;
+            r.separator     = static_cast<std::uint8_t>(a->separator);
+            attach_rows.push_back(r);
+        }
+    }
+
     // ---- block definitions (model.md R45) ----
     std::vector<BlockRecord> block_rows;
     std::vector<std::uint64_t> block_members;
@@ -632,6 +660,7 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
         blocks.push_back(column(kBlkBlockMembers, block_members));
         blocks.push_back(column(kBlkBlockUses, block_uses));
     }
+    if (!attach_rows.empty()) blocks.push_back(column(kBlkAttachments, attach_rows));
 
     // An empty column carries no information a reader needs and its absence is
     // the encoding of "zero of these" (BlockView::column accepts that), so an

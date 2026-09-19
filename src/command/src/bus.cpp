@@ -310,10 +310,24 @@ std::string redact_conninfo(std::string_view conninfo)
 
 void Bus::echo(std::string_view message) const
 {
+    // TEED, NOT REROUTED: the transcript still gets every line. The sink exists
+    // so the CALLER can read what its own dispatch said (DispatchResult::lines).
+    if (echo_sink_ != nullptr) echo_sink_->emplace_back(message);
     if (on_echo)
         on_echo(message);
     else
         log_info(message);
+}
+
+Bus::EchoCapture::EchoCapture(const Bus& bus, std::vector<std::string>& sink)
+    : bus_(bus), previous_(bus.echo_sink_)
+{
+    bus_.echo_sink_ = &sink;
+}
+
+Bus::EchoCapture::~EchoCapture()
+{
+    bus_.echo_sink_ = previous_;
 }
 
 core::Result<DispatchResult> Bus::dispatch(const Invocation& inv)
@@ -360,7 +374,15 @@ core::Result<DispatchResult> Bus::dispatch(const Invocation& inv)
                                  doc_, spec->summary.empty() ? spec->id : spec->summary),
                     borrow ? batch_.get() : nullptr);
 
-    auto result = run_to_completion(session);
+    std::vector<std::string> said;
+    core::Result<DispatchResult> result = [&] {
+        const EchoCapture capture(*this, said);
+        return run_to_completion(session);
+    }();
+    if (result) {
+        result.value().lines  = std::move(said);
+        result.value().report = session.report();
+    }
     if (result && borrow) ++batch_commands_;
     return result;
 }
@@ -498,7 +520,21 @@ core::Result<DispatchResult> Bus::finish(Session& session)
         }
     }
 
-    result.ops = session.owns_transaction() ? ops : 0;
+    // WHAT FOLLOWS FROM THE EDIT lands in the same transaction: a caption
+    // attached to a line the command moved is re-placed here, once, at commit
+    // (core/attach.hpp). Not per frame, not by the client — by the bus, for every
+    // client alike, so the GUI, the command line and a script end with one
+    // document (Article 1.2). A source that was erased takes its dependents with
+    // it, and that is said, because a deletion the user did not name is the one
+    // thing here they should hear about.
+    if (!read_only) {
+        const auto followed = session.transaction().settle_attachments();
+        if (followed.erased != 0 && on_echo)
+            on_echo("Silinen nesnelere bağlı " + std::to_string(followed.erased) +
+                    " nesne de silindi.");
+    }
+
+    result.ops = session.owns_transaction() ? session.transaction().size() : 0;
     // A borrowed transaction belongs to a batch. Its single visible mutation is
     // reported by end_batch(), not once per nested command, so the canvas and
     // layer panel repaint only after the whole edit is coherent.
@@ -545,6 +581,9 @@ core::Status Bus::begin_batch(std::string label)
 core::Result<DispatchResult> Bus::end_batch()
 {
     if (!batch_) return core::err(ErrorCode::InvalidArgument, "Açık toplu iş yok");
+
+    // The last word on what the batch moved (see `finish`).
+    (void)batch_->settle_attachments();
 
     DispatchResult result;
     result.command_id = "core.batch";

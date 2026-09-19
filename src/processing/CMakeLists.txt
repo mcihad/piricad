@@ -8,6 +8,8 @@ add_library(kentos_processing STATIC
     src/tools/label_length.cpp
     src/tools/number_vertices.cpp
     src/tools/area_edit.cpp
+    src/tools/attach.cpp
+    src/tools/detach.cpp
 )
 
 target_include_directories(kentos_processing PUBLIC include)

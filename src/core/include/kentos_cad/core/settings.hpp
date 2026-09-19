@@ -229,8 +229,8 @@ struct SettingSpec
     SettingValue fallback{};               ///< the declared default; "default" is a keyword
     SettingRange range{};                  ///< scalar range; ignored for Text
     std::vector<std::string> values;       ///< Enum value names, index order
-    std::string unit;                      ///< "mm", "µderece", "‰", "sn" — empty when unitless
-    std::string summary;                   ///< one line, Turkish, and it justifies the scope (R40)
+    std::string unit;    ///< "mm", "µderece", "‰", "sn" — empty when unitless
+    std::string summary; ///< one line, Turkish, and it justifies the scope (R40)
 
     /// The page of the settings window this belongs on, in Turkish.
     ///

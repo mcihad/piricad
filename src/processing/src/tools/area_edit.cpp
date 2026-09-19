@@ -93,8 +93,8 @@ public:
         request.key    = face.key;
         request.mode   = mode_of(mode);
         request.target = target;
-        auto picked    = co_await ctx.point("nokta", mode == "kenar" ? "Çekilecek kenarı tıklayın"
-                                                                     : "Çekilecek köşeyi tıklayın");
+        auto picked = co_await ctx.point("nokta", mode == "kenar" ? "Çekilecek kenarı tıklayın"
+                                                                  : "Çekilecek köşeyi tıklayın");
         if (!picked)
             co_return core::err(core::ErrorCode::InvalidArgument,
                                 std::string(mode == "kenar" ? "Kenar" : "Köşe") +

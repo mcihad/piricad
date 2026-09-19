@@ -920,6 +920,94 @@ void draw(QPainter& p, Glyph g, const QColor& c)
             p.drawLine(QPointF(3.6, v), QPointF(20.4, v));
         }
         break;
+
+        // ---- the conversation and the agent server -------------------------------
+
+    case Glyph::Send:
+        // A paper plane, as one outline and one fold line, so the mark still
+        // reads at 16 px where a filled plane becomes a blob.
+        p.setPen(stroke(c, 1.6));
+        p.drawPolygon(QPolygonF(
+            {QPointF(3.2, 11.0), QPointF(20.8, 3.6), QPointF(13.6, 20.4), QPointF(10.6, 13.4)}));
+        p.drawLine(QPointF(10.6, 13.4), QPointF(20.8, 3.6));
+        break;
+
+    case Glyph::Attach:
+        // A paperclip: one hairpin inside another, which is the shape a reader
+        // recognises as "a file came with this".
+        p.setPen(stroke(c, 1.7));
+        {
+            QPainterPath clip;
+            clip.moveTo(15.4, 7.0);
+            clip.lineTo(7.8, 14.6);
+            clip.quadTo(5.4, 17.0, 7.8, 19.0);
+            clip.quadTo(10.0, 20.8, 12.2, 18.6);
+            clip.lineTo(19.0, 11.8);
+            clip.quadTo(21.8, 9.0, 19.0, 6.0);
+            clip.quadTo(16.0, 3.0, 13.2, 5.8);
+            clip.lineTo(6.6, 12.4);
+            p.drawPath(clip);
+        }
+        break;
+
+    case Glyph::Stop:
+        // A FILLED SQUARE, not a cross: a cross closes something, a square stops
+        // it, and what this button stops is still on screen afterwards.
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        p.drawRoundedRect(QRectF(6.4, 6.4, 11.2, 11.2), 1.6, 1.6);
+        break;
+
+    case Glyph::Chat:
+        // A rounded bubble with a tail at the lower left, and three dots in it.
+        p.setPen(stroke(c, 1.6));
+        {
+            QPainterPath bubble;
+            bubble.moveTo(6.0, 4.2);
+            bubble.lineTo(18.0, 4.2);
+            bubble.quadTo(20.8, 4.2, 20.8, 7.0);
+            bubble.lineTo(20.8, 13.6);
+            bubble.quadTo(20.8, 16.4, 18.0, 16.4);
+            bubble.lineTo(9.6, 16.4);
+            bubble.lineTo(5.6, 20.2);
+            bubble.lineTo(5.6, 16.4);
+            bubble.quadTo(3.2, 16.2, 3.2, 13.6);
+            bubble.lineTo(3.2, 7.0);
+            bubble.quadTo(3.2, 4.2, 6.0, 4.2);
+            p.drawPath(bubble);
+        }
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        for (int k = 0; k < 3; ++k)
+            p.drawEllipse(QPointF(8.0 + k * 4.0, 10.3), 1.15, 1.15);
+        break;
+
+    case Glyph::Server:
+        // Two stacked units with a status lamp each: the picture every operator
+        // already reads as a listening service.
+        p.setPen(stroke(c, 1.6));
+        p.drawRoundedRect(QRectF(3.6, 4.6, 16.8, 6.2), 1.6, 1.6);
+        p.drawRoundedRect(QRectF(3.6, 13.2, 16.8, 6.2), 1.6, 1.6);
+        p.setPen(Qt::NoPen);
+        p.setBrush(c);
+        p.drawEllipse(QPointF(7.2, 7.7), 1.2, 1.2);
+        p.drawEllipse(QPointF(7.2, 16.3), 1.2, 1.2);
+        break;
+
+    case Glyph::Plug:
+        // A two-pin plug on its lead: a client that is actually connected.
+        p.setPen(stroke(c, 1.7));
+        p.drawLine(QPointF(9.0, 2.8), QPointF(9.0, 7.0));
+        p.drawLine(QPointF(15.0, 2.8), QPointF(15.0, 7.0));
+        p.drawRoundedRect(QRectF(6.2, 7.0, 11.6, 6.0), 1.4, 1.4);
+        {
+            QPainterPath lead;
+            lead.moveTo(12.0, 13.0);
+            lead.lineTo(12.0, 16.4);
+            lead.quadTo(12.0, 20.6, 16.6, 20.6);
+            p.drawPath(lead);
+        }
+        break;
     }
 }
 

@@ -59,6 +59,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.select`](select.md) | `SEÇ`, `SEC`, `SELECT`, `S` | Düzenleme | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta. |
 | [`core.label`](label.md) | `ETİKET`, `ETIKET`, `LABEL`, `ETK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmandaki nesneleri özniteliklerinden okuyarak etiketler. |
 | [`core.layer`](layer.md) | `KATMAN`, `LAYER`, `KAT` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
+| [`core.layer_visibility`](layer_visibility.md) | `KATMANGÖRÜNÜM`, `KATMANGORUNUM`, `LAYERVIEW`, `KGÖ`, `KGO` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir. |
 | [`core.style`](style.md) | `STİL`, `STIL`, `STYLE`, `ST` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar. |
 | [`core.symbol`](symbol.md) | `SEMBOL`, `SEMBOLLER`, `SYMBOL`, `SMB` | Katman | geri alınmaz | betiklenebilir, AI erişimli | Gösterim rafını yükler, ağacında gezer ve içinde arar. |
 | [`core.zoom`](zoom.md) | `YAKINLAŞ`, `YAKINLAS`, `ZOOM`, `Z` | Görünüm | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü çizim kapsamına veya verilen çarpana ayarlar. |
@@ -71,13 +72,34 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.export`](export.md) | `DIŞAAKTAR`, `DISAAKTAR`, `EXPORT`, `DAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi dış bir veri biçimine yazar. |
 | [`core.script`](script.md) | `BETİK`, `BETIK`, `SCRIPT` | Betik | komuta özel | etkileşimli, betiklenebilir, salt okunur | Bir betik dosyasını komut veri yolu üzerinden çalıştırır. |
 | [`core.database`](database.md) | `VERİTABANI`, `VERITABANI`, `DATABASE`, `VT` | Dosya | geri alınmaz | etkileşimli, betiklenebilir | PostGIS veritabanına bağlanır; katmanları tablo, projeleri kayıt olarak yazar. |
+| [`core.print`](print.md) | `YAZDIR`, `PRINT`, `PLOT`, `YZDR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimin bir penceresini bir yazdırma profilinin kâğıdına yerleştirip PDF dosyasına yazar ya da yazıcıya gönderir. |
+| [`core.print_profile`](print_profile.md) | `YAZDIRMAPROFİLİ`, `YAZDIRMAPROFILI`, `PRINTPROFILE`, `YZP` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Yazdırma profillerini listeler, ekler, siler ya da birini varsayılan yapar; profil kâğıdı, yönü, çözünürlüğü ve kenar boşluğunu taşır. |
 | [`core.setting`](setting.md) | `AYAR`, `SETTING`, `AY` | Sistem | tek işlem | betiklenebilir | Proje ayarlarını listeler, okur ve değiştirir. |
 | [`core.preference`](preference.md) | `TERCİH`, `TERCIH`, `PREFERENCE`, `PREF` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Uygulama tercihlerini listeler, okur ve değiştirir. |
 | [`core.mode`](mode.md) | `MOD`, `MODE`, `MD` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Oturum modlarını (yakalama, dik mod, kutupsal izleme) listeler, okur ve değiştirir. |
 | [`core.help`](help.md) | `YARDIM`, `HELP`, `?` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Komut listesini veya tek bir komutun ayrıntısını gösterir. |
 | [`islem.alan_duzenle`](alan_duzenle.md) | `ALANDÜZENLE`, `ALANDUZENLE`, `ADJUSTAREA`, `ADZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp genişleterek, bir kenarı kaydırarak ya da bir köşeyi çekerek; şekil bozulmaz. |
-| [`islem.uzunluk_yaz`](uzunluk_yaz.md) | `UZUNLUKYAZ`, `UZUNLUKYAZ`, `LABELLENGTH`, `UZY` | İşlem | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar. |
-| [`islem.kose_numarala`](kose_numarala.md) | `KÖŞENUMARALA`, `KOSENUMARALA`, `NUMBERVERTICES`, `KNM` | İşlem | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar. |
+| [`islem.uzunluk_yaz`](uzunluk_yaz.md) | `UZUNLUKYAZ`, `UZUNLUKYAZ`, `LABELLENGTH`, `UZY` | İşlem | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar; yazı kenara bağlıdır, kenar değişince izler ve yenilenir. |
+| [`islem.kose_numarala`](kose_numarala.md) | `KÖŞENUMARALA`, `KOSENUMARALA`, `NUMBERVERTICES`, `KNM` | İşlem | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, köşe taşınınca izler. |
+| [`islem.bag_coz`](bag_coz.md) | `BAĞÇÖZ`, `BAGCOZ`, `DETACH`, `BÇ`, `BC` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne bundan sonra tek başına taşınır. |
+| [`islem.bagla`](bagla.md) | `BAĞLA`, `BAGLA`, `ATTACH`, `BĞ`, `BG` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur. |
+| [`core.fit`](fit.md) | `OTURT`, `FIT`, `GEOREF`, `OTR` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert). |
+| [`core.stakeout`](stakeout.md) | `APLİKASYON`, `APLIKASYON`, `STAKEOUT`, `APL` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | İstasyondan her noktaya mesafe ve açı listesi çıkarır (aplikasyon). |
+| [`core.reproject`](reproject.md) | `DÖNÜŞTÜR`, `DONUSTUR`, `REPROJECT`, `DNS` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Çizimin tamamını bir koordinat sisteminden diğerine dönüştürür. |
+| [`core.merge`](merge.md) | `TEVHİT`, `TEVHIT`, `MERGE`, `TVH` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Komşu parselleri tek parselde birleştirir (tevhit). |
+| [`core.split_parcel`](split_parcel.md) | `İFRAZ`, `IFRAZ`, `SUBDIVIDE`, `İFR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz). |
+| [`core.split_area`](split_area.md) | `ALANİFRAZ`, `ALANIFRAZ`, `SPLITAREA`, `ALİF` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Parselden verilen yöne paralel, istenen alanda bir parça ayırır. |
+| [`core.topology`](topology.md) | `TOPOLOJİ`, `TOPOLOJI`, `TOPOLOGY`, `TPL` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Kendini kesen sınır, sıfır alan ve örtüşen parselleri raporlar. |
+| [`core.contour`](contour.md) | `EŞYÜKSELTİ`, `ESYUKSELTI`, `CONTOUR`, `EŞY` | Çizim | tek işlem | betiklenebilir, AI erişimli | Kotlu noktalardan eş yükselti eğrileri çizer. |
+| [`core.earthwork`](earthwork.md) | `HACİM`, `HACIM`, `EARTHWORK`, `HCM` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar. |
+| [`core.layers`](layers.md) | `KATMANLAR`, `LAYERS`, `KTL` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Katmanları, nesne sayılarını, görünürlük ve kilit durumlarını listeler. |
+| [`core.attr_schema`](attr_schema.md) | `ÖZNİTELİKŞEMASI`, `OZNITELIKSEMASI`, `ATTRSCHEMA`, `ÖŞ` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Çizimde tanımlı öznitelik sütunlarını ve tiplerini listeler. |
+| [`core.query`](query.md) | `SORGULA`, `QUERY`, `SRG` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Katman ve öznitelik koşuluna uyan nesneleri sayar ve anahtarlarını bildirir. |
+| [`core.selection_info`](selection_info.md) | `SEÇİMBİLGİSİ`, `SECIMBILGISI`, `SELECTIONINFO`, `SÇB` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Kullanıcının o anki seçimini bildirir: kaç nesne ve hangi anahtarlar. |
+| [`core.view_info`](view_info.md) | `GÖRÜNÜMBİLGİSİ`, `GORUNUMBILGISI`, `VIEWINFO`, `GRB` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Ekranda görünen alanın köşe koordinatlarını, merkezini, ölçeğini ve CRS'ini bildirir. |
+| [`core.suggestion`](suggestion.md) | `ÖNERİ`, `ONERI`, `SUGGESTION`, `ÖN` | Sistem | komuta özel | etkileşimli, betiklenebilir | Bekleyen yapay zeka önerilerini listeler, durumunu söyler, uygular ya da reddeder. |
+| [`core.mcp`](mcp.md) | `MCPSUNUCU`, `MCPSERVER`, `MCP` | Sistem | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Yapay zeka ajanlarının bağlanacağı MCP sunucusunu başlatır, durdurur, durumunu söyler ya da yeni bir erişim belirteci üretir. |
+| [`core.ai_provider`](ai_provider.md) | `YAPAYZEKAMODELİ`, `YAPAYZEKAMODELI`, `AIMODEL`, `YZM` | Sistem | geri alınmaz | etkileşimli, betiklenebilir | Yapay zeka model sağlayıcılarını listeler, ekler, siler, birini varsayılan yapar ya da bağlantısını dener; profil adresi, lehçesi, modeli ve anahtar adını taşır. |
 
 ## Parametreler
 
@@ -687,6 +709,17 @@ Katman oluşturur, aktif yapar ve özelliklerini değiştirir.
 
 Ayrıntılı kullanım: [KATMAN](layer.md)
 
+### `core.layer_visibility` — KATMANGÖRÜNÜM
+
+Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `islem` | text | 1 | goster, gizle, yalniz (yalnız bu katman), tumu (hepsini göster) ya da tersine |
+| `katman` | text | isteğe bağlı | Katman adı; goster, gizle ve yalniz için gerekir, tersine için isteğe bağlı (verilmezse bütün katmanlar), tumu ile verilemez |
+
+Ayrıntılı kullanım: [KATMANGÖRÜNÜM](layer_visibility.md)
+
 ### `core.style` — STİL
 
 Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar.
@@ -845,6 +878,51 @@ PostGIS veritabanına bağlanır; katmanları tablo, projeleri kayıt olarak yaz
 
 Ayrıntılı kullanım: [VERİTABANI](database.md)
 
+### `core.print` — YAZDIR
+
+Çizimin bir penceresini bir yazdırma profilinin kâğıdına yerleştirip PDF dosyasına yazar ya da yazıcıya gönderir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `pencere` | point_list | 0–2 | Yazdırılacak alanın iki köşesi; merkez verilmezse ve bu da verilmezse tıklatılır |
+| `merkez` | point | isteğe bağlı | Kâğıdın ortalanacağı nokta; pencere yerine kullanılır |
+| `olcek` | integer | isteğe bağlı | Ölçek paydası (1000 = 1/1000); merkez ile kullanılır, verilmezse projenin plan ölçeği |
+| `dosya` | text | isteğe bağlı | PDF yazılacak dosya; yazici ile birlikte verilmez |
+| `yazici` | text | isteğe bağlı | Yazıcının adı; "" sistem varsayılanı. dosya ile birlikte verilmez |
+| `profil` | text | isteğe bağlı | Yazdırma profili; verilmezse varsayılan profil |
+| `kagit` | text | isteğe bağlı | Kâğıt: A5, A4, A3, A2, A1, A0 ya da ozel (genislik ve yukseklik ile) |
+| `genislik` | integer | isteğe bağlı | ozel kâğıdın eni, milimetre (dikey duruşta) |
+| `yukseklik` | integer | isteğe bağlı | ozel kâğıdın boyu, milimetre (dikey duruşta) |
+| `yon` | text | isteğe bağlı | dikey ya da yatay |
+| `dpi` | integer | isteğe bağlı | Çözünürlük, inç başına nokta (72–4800) |
+| `kenar` | integer | isteğe bağlı | Dört yandaki kenar boşluğu, milimetre |
+| `baslik` | text | isteğe bağlı | PDF belge başlığı |
+| `yazar` | text | isteğe bağlı | PDF yazar alanı |
+| `sifre` | text | isteğe bağlı | PDF açma şifresi (kullanıcı şifresi); günlüğe yazılmaz |
+| `sahip_sifresi` | text | isteğe bağlı | PDF izinlerini değiştirme şifresi (sahip şifresi); günlüğe yazılmaz |
+| `yazdirilabilir` | bool | isteğe bağlı | Şifreli PDF: sahip şifresi olmayan yazdırabilir mi; varsayılan evet |
+| `kopyalanabilir` | bool | isteğe bağlı | Şifreli PDF: metin ve grafik kopyalanabilir mi; varsayılan evet |
+| `degistirilebilir` | bool | isteğe bağlı | Şifreli PDF: belge değiştirilebilir mi; varsayılan evet |
+
+Ayrıntılı kullanım: [YAZDIR](print.md)
+
+### `core.print_profile` — YAZDIRMAPROFİLİ
+
+Yazdırma profillerini listeler, ekler, siler ya da birini varsayılan yapar; profil kâğıdı, yönü, çözünürlüğü ve kenar boşluğunu taşır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `islem` | text | 1 | listele, ekle, sil ya da varsayilan |
+| `ad` | text | isteğe bağlı | Profilin adı (ekle, sil, varsayilan) |
+| `kagit` | text | isteğe bağlı | Kâğıt: A5, A4, A3, A2, A1, A0 ya da ozel; ekle için, varsayılan A4 |
+| `genislik` | integer | isteğe bağlı | ozel kâğıdın eni, milimetre |
+| `yukseklik` | integer | isteğe bağlı | ozel kâğıdın boyu, milimetre |
+| `yon` | text | isteğe bağlı | dikey ya da yatay; varsayılan dikey |
+| `dpi` | integer | isteğe bağlı | Çözünürlük; varsayılan 300 |
+| `kenar` | integer | isteğe bağlı | Kenar boşluğu, milimetre; varsayılan 10 |
+
+Ayrıntılı kullanım: [YAZDIRMAPROFİLİ](print_profile.md)
+
 ### `core.setting` — AYAR
 
 Proje ayarlarını listeler, okur ve değiştirir.
@@ -908,7 +986,7 @@ Ayrıntılı kullanım: [ALANDÜZENLE](alan_duzenle.md)
 
 ### `islem.uzunluk_yaz` — UZUNLUKYAZ
 
-Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar.
+Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar; yazı kenara bağlıdır, kenar değişince izler ve yenilenir.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -924,12 +1002,13 @@ Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bi
 | `yukseklik` | integer | isteğe bağlı | Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 |
 | `bosluk` | integer | isteğe bağlı | Kenar ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 |
 | `enaz` | integer | isteğe bağlı | Bundan kısa kenarlara yazı yazılmaz, milimetre; varsayılan 0 |
+| `bagla` | bool | isteğe bağlı | Yazıyı kenarına bağla: kenar taşınınca yazı izler, uzunluk yeniden yazılır; varsayılan evet |
 
 Ayrıntılı kullanım: [UZUNLUKYAZ](uzunluk_yaz.md)
 
 ### `islem.kose_numarala` — KÖŞENUMARALA
 
-Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar.
+Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, köşe taşınınca izler.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
@@ -946,8 +1025,231 @@ Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayara
 | `sonek` | text | isteğe bağlı | Numaranın arkasına gelen yazı |
 | `yukseklik` | integer | isteğe bağlı | Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 |
 | `bosluk` | integer | isteğe bağlı | Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 |
+| `bagla` | bool | isteğe bağlı | Numarayı köşesine bağla: köşe taşınınca numara izler; varsayılan evet |
 
 Ayrıntılı kullanım: [KÖŞENUMARALA](kose_numarala.md)
+
+### `islem.bag_coz` — BAĞÇÖZ
+
+Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne bundan sonra tek başına taşınır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz |
+| `kapsam` | text | isteğe bağlı | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır |
+| `pencere` | point_list | 0–2 | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir |
+| `katman` | text | isteğe bağlı | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
+
+Ayrıntılı kullanım: [BAĞÇÖZ](bag_coz.md)
+
+### `islem.bagla` — BAĞLA
+
+Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz |
+| `kapsam` | text | isteğe bağlı | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır |
+| `pencere` | point_list | 0–2 | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir |
+| `katman` | text | isteğe bağlı | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman |
+| `kaynak` | selection | isteğe bağlı | Yazıların bağlanacağı nesne (çizgi ya da alan) |
+| `bag` | text | isteğe bağlı | Neye bağlanacağı: en yakın kenar ya da en yakın köşe (kenar / kose); varsayılan kenar |
+| `tur` | text | isteğe bağlı | Yazının sözü: kendi yazısı kalır ya da kenarın uzunluğu olur (sabit / uzunluk); varsayılan sabit |
+| `birim` | text | isteğe bağlı | Uzunluğun birimi (tur=uzunluk) (metre / santimetre / milimetre / kilometre); varsayılan metre |
+| `ondalik` | integer | isteğe bağlı | Virgülden sonraki basamak sayısı (tur=uzunluk); varsayılan 2 |
+| `bicim` | text | isteğe bağlı | Uzunluk yazısının kalıbı; {} sayının yerini tutar (tur=uzunluk) |
+| `ayrac` | text | isteğe bağlı | Ondalık ayracı (tur=uzunluk) (virgul / nokta); varsayılan virgul |
+
+Ayrıntılı kullanım: [BAĞLA](bagla.md)
+
+### `core.fit` — OTURT
+
+Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert).
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `noktalar` | point_list | en az 4 | Kontrol çiftleri: yerel, harita, yerel, harita... |
+| `olcek_kilitli` | bool | isteğe bağlı | Ölçeği 1'de tutar; saha ölçüsü yeniden ölçeklenmez |
+| `sistem` | text | isteğe bağlı | Oturtulduktan sonraki koordinat sistemi, örnek TUREF/TM36 |
+
+Ayrıntılı kullanım: [OTURT](fit.md)
+
+### `core.stakeout` — APLİKASYON
+
+İstasyondan her noktaya mesafe ve açı listesi çıkarır (aplikasyon).
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `istasyon` | point | 1 | Aletin durduğu nokta |
+| `baglama` | point_list | isteğe bağlı | Bağlama (arka görüş) noktası; verilirse açılar ondan ölçülür |
+| `nesneler` | selection | en az 0 | Aplike edilecek noktalar; yoksa seçim, o da boşsa çizimdeki bütün noktalar |
+
+Ayrıntılı kullanım: [APLİKASYON](stakeout.md)
+
+### `core.reproject` — DÖNÜŞTÜR
+
+Çizimin tamamını bir koordinat sisteminden diğerine dönüştürür.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `hedef` | text | 1 | Hedef koordinat sistemi, örnek EPSG:5256 ya da TUREF/TM36 |
+| `kaynak` | text | isteğe bağlı | Kaynak sistem; yoksa çizimin kendi koordinat sistemi |
+
+Ayrıntılı kullanım: [DÖNÜŞTÜR](reproject.md)
+
+### `core.merge` — TEVHİT
+
+Komşu parselleri tek parselde birleştirir (tevhit).
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Birleştirilecek parseller; yoksa etkin seçim |
+
+Ayrıntılı kullanım: [TEVHİT](merge.md)
+
+### `core.split_parcel` — İFRAZ
+
+Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz).
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `noktalar` | point_list | 0–2 | Ayırma çizgisinin iki ucu |
+| `nesneler` | selection | en az 0 | Ayrılacak parsel; yoksa etkin seçim |
+
+Ayrıntılı kullanım: [İFRAZ](split_parcel.md)
+
+### `core.split_area` — ALANİFRAZ
+
+Parselden verilen yöne paralel, istenen alanda bir parça ayırır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `yon` | point_list | 0–2 | Ayırma çizgisinin YÖNÜ: iki nokta (yol cephesi, mevcut sınır) |
+| `nesneler` | selection | en az 0 | Ayrılacak parsel; yoksa etkin seçim |
+| `alan` | integer | isteğe bağlı | Ayrılacak alan, mm² (400 m² = 400000000) |
+| `tolerans` | integer | isteğe bağlı | Kabul toleransı, mm²; varsayılan 10000 (0,01 m²) |
+
+Ayrıntılı kullanım: [ALANİFRAZ](split_area.md)
+
+### `core.topology` — TOPOLOJİ
+
+Kendini kesen sınır, sıfır alan ve örtüşen parselleri raporlar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim |
+
+Ayrıntılı kullanım: [TOPOLOJİ](topology.md)
+
+### `core.contour` — EŞYÜKSELTİ
+
+Kotlu noktalardan eş yükselti eğrileri çizer.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `aralik` | integer | isteğe bağlı | Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m) |
+| `katman` | text | isteğe bağlı | Eğrilerin çizileceği katman; varsayılan ESYUKSELTI |
+
+Ayrıntılı kullanım: [EŞYÜKSELTİ](contour.md)
+
+### `core.earthwork` — HACİM
+
+Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `kot` | integer | 1 | Karşılaştırma kotu, milimetre (845 m = 845000) |
+
+Ayrıntılı kullanım: [HACİM](earthwork.md)
+
+### `core.layers` — KATMANLAR
+
+Katmanları, nesne sayılarını, görünürlük ve kilit durumlarını listeler.
+
+Parametre almaz.
+
+Ayrıntılı kullanım: [KATMANLAR](layers.md)
+
+### `core.attr_schema` — ÖZNİTELİKŞEMASI
+
+Çizimde tanımlı öznitelik sütunlarını ve tiplerini listeler.
+
+Parametre almaz.
+
+Ayrıntılı kullanım: [ÖZNİTELİKŞEMASI](attr_schema.md)
+
+### `core.query` — SORGULA
+
+Katman ve öznitelik koşuluna uyan nesneleri sayar ve anahtarlarını bildirir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `katman` | text | isteğe bağlı | Hangi katmanda aranacağı; verilmezse bütün çizim |
+| `alan` | text | isteğe bağlı | Öznitelik sütunu; verilirse o sütunu taşıyan nesneler |
+| `deger` | text | isteğe bağlı | Sütunun eşit olması istenen değer; yalnız 'alan' ile birlikte |
+| `sinir` | integer | isteğe bağlı | En çok kaç nesne bildirileceği; varsayılan 200 |
+
+Ayrıntılı kullanım: [SORGULA](query.md)
+
+### `core.selection_info` — SEÇİMBİLGİSİ
+
+Kullanıcının o anki seçimini bildirir: kaç nesne ve hangi anahtarlar.
+
+Parametre almaz.
+
+Ayrıntılı kullanım: [SEÇİMBİLGİSİ](selection_info.md)
+
+### `core.view_info` — GÖRÜNÜMBİLGİSİ
+
+Ekranda görünen alanın köşe koordinatlarını, merkezini, ölçeğini ve CRS'ini bildirir.
+
+Parametre almaz.
+
+Ayrıntılı kullanım: [GÖRÜNÜMBİLGİSİ](view_info.md)
+
+### `core.suggestion` — ÖNERİ
+
+Bekleyen yapay zeka önerilerini listeler, durumunu söyler, uygular ya da reddeder.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `islem` | text | 1 | Ne yapılacağı: uygula, reddet, durum ya da listele |
+| `oneri` | text | isteğe bağlı | Öneri kimliği; uygula, reddet ve durum için gerekir |
+
+Ayrıntılı kullanım: [ÖNERİ](suggestion.md)
+
+### `core.mcp` — MCPSUNUCU
+
+Yapay zeka ajanlarının bağlanacağı MCP sunucusunu başlatır, durdurur, durumunu söyler ya da yeni bir erişim belirteci üretir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `islem` | text | 1 | Ne yapılacağı: baslat, durdur, durum ya da belirtec (yeni belirteç üretir) |
+| `port` | integer | isteğe bağlı | Yalnız bu başlatma için port; verilmezse ayardaki port |
+
+Ayrıntılı kullanım: [MCPSUNUCU](mcp.md)
+
+### `core.ai_provider` — YAPAYZEKAMODELİ
+
+Yapay zeka model sağlayıcılarını listeler, ekler, siler, birini varsayılan yapar ya da bağlantısını dener; profil adresi, lehçesi, modeli ve anahtar adını taşır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `islem` | text | 1 | Ne yapılacağı: listele, ekle, sil, varsayilan ya da dene (bağlantıyı dener) |
+| `ad` | text | isteğe bağlı | Profilin adı; ekle, sil, varsayilan ve dene için gerekir |
+| `lehce` | text | isteğe bağlı | Uç noktanın konuştuğu telli dil; ekle için, varsayılan openai_chat |
+| `adres` | text | isteğe bağlı | Uç noktanın adresi: http:// ya da https:// ile başlar, satıcının ön eki dahil |
+| `yol` | text | isteğe bağlı | Adresin altındaki uç nokta; '/' ile başlar: /chat/completions, /messages, /api/chat |
+| `model` | text | isteğe bağlı | Model kimliği, uç noktanın yazdığı gibi |
+| `anahtar_ref` | text | isteğe bağlı | Anahtarı tutan kaydın adı — anahtar zincirindeki kayıt ya da bir ortam değişkeni (örnek: DEEPSEEK_API_KEY). Anahtarın kendisi buraya yazılmaz |
+| `baglam` | integer | isteğe bağlı | Bağlam penceresi, jeton; 0 bilinmiyor demektir |
+| `azami` | integer | isteğe bağlı | Çıktı jeton sınırı; 0 demek 'bu alanı hiç gönderme' |
+| `sicaklik` | number | isteğe bağlı | Örnekleme sıcaklığı, 0 ile 2 arasında; verilmezse hiç gönderilmez |
+| `akis` | bool | isteğe bağlı | Cevap parça parça mı istensin; varsayılan evet |
+| `dusunme` | bool | isteğe bağlı | Modelin düşünme metni gösterilsin mi |
+| `araclar` | bool | isteğe bağlı | Uç noktaya araç kataloğu gönderilsin mi; varsayılan evet |
+
+Ayrıntılı kullanım: [YAPAYZEKAMODELİ](ai_provider.md)
 
 ## AI araç kataloğu
 
@@ -955,2743 +1257,3324 @@ AI'ın görebildiği komutlar `Flags::AiAccessible` bayrağından üretilir.
 Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
 
 ```json
-{
-  "version": 1,
-  "generated_from": "kentos::command::Registry",
-  "tools": [
-    {
-      "id": "core.line",
-      "names": [
-        "ÇİZGİ",
-        "CIZGI",
-        "LINE",
-        "Ç",
-        "L"
-      ],
-      "category": "Çizim",
-      "summary": "İki veya daha fazla nokta arasında doğru parçaları çizer.",
-      "params": [
-        {
-          "name": "noktalar",
-          "type": "point_list",
-          "min": 2,
-          "max": -1,
-          "required": true,
-          "help": "Ardışık doğru parçalarının köşe noktaları"
+[
+  {
+    "name": "core_annulus",
+    "title": "HALKA",
+    "description": "Merkez, iç ve dış yarıçaptan delikli halka çizer.\nKomut: HALKA (ANNULUS, HLK)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "merkez": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Halkanın merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "ic": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "İç çember üzerinde bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "dis": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Dış çember üzerinde bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         }
+      },
+      "required": [
+        "merkez",
+        "ic",
+        "dis"
       ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
+      "additionalProperties": false
     },
-    {
-      "id": "core.polyline",
-      "names": [
-        "ÇOKLUÇİZGİ",
-        "COKLUCIZGI",
-        "POLYLINE",
-        "ÇÇ",
-        "PL"
-      ],
-      "category": "Çizim",
-      "summary": "Birden çok noktadan TEK bir çizgi nesnesi çizer.",
-      "params": [
-        {
-          "name": "noktalar",
-          "type": "point_list",
-          "min": 2,
-          "max": -1,
-          "required": true,
-          "help": "Çoklu çizginin köşe noktaları; hepsi tek nesne olur"
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.annulus",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "HALKA",
+        "ANNULUS",
+        "HLK"
+      ]
+    }
+  },
+  {
+    "name": "core_arc_draw",
+    "title": "YAY",
+    "description": "Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir.\nKomut: YAY (ARC, YY)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "merkez": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Yayın merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "baslangic": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Yayın başlangıç noktası; yarıçapı bu belirler — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "bitis": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Yayın bitiş yönü; süpürme saat yönünün tersinedir — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         }
+      },
+      "required": [
+        "merkez",
+        "baslangic",
+        "bitis"
       ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
+      "additionalProperties": false
     },
-    {
-      "id": "core.point_draw",
-      "names": [
-        "NOKTA",
-        "POINT",
-        "NK"
-      ],
-      "category": "Çizim",
-      "summary": "Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper.",
-      "params": [
-        {
-          "name": "noktalar",
-          "type": "point_list",
-          "min": 1,
-          "max": -1,
-          "required": true,
-          "help": "Yerleştirilecek noktalar"
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.arc_draw",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "YAY",
+        "ARC",
+        "YY"
+      ]
+    }
+  },
+  {
+    "name": "core_area",
+    "title": "ALAN",
+    "description": "Kapalı bir alan çizer; istenirse içine delik açar.\nKomut: ALAN (AREA, POLİGON, POLIGON, AL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noktalar": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Alanın köşe noktaları; kapanış noktası tekrarlanmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "bolum": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "Halka uzunlukları: ilki dış sınır, sonrakiler delik (tam sayı)"
         }
+      },
+      "required": [
+        "noktalar"
       ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
+      "additionalProperties": false
     },
-    {
-      "id": "core.text",
-      "names": [
-        "METİN",
-        "METIN",
-        "YAZI",
-        "TEXT",
-        "MT"
-      ],
-      "category": "Çizim",
-      "summary": "Çizime metin yazar; yükseklik ve hizalama verilebilir.",
-      "params": [
-        {
-          "name": "noktalar",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Yazının başlangıç noktası"
-        },
-        {
-          "name": "yazi",
-          "type": "text",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Yazılacak metin"
-        },
-        {
-          "name": "yukseklik",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı"
-        },
-        {
-          "name": "bitis",
-          "type": "point_list",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Taban çizgisinin bitişi; yoksa yatay"
-        },
-        {
-          "name": "hizalama",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "sol, orta, sag veya merkez"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
     },
-    {
-      "id": "core.edittext",
-      "names": [
-        "YAZIDÜZENLE",
-        "YAZIDUZENLE",
-        "EDITTEXT",
-        "YZD"
-      ],
-      "category": "Düzenleme",
-      "summary": "Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir.",
-      "params": [
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Düzenlenecek yazılar; verilmezse seçim"
-        },
-        {
-          "name": "yazi",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Yeni metin; verilmezse değişmez"
-        },
-        {
-          "name": "yukseklik",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Yeni yükseklik, zeminde milimetre; verilmezse değişmez"
-        },
-        {
-          "name": "hizalama",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "sol, orta, sag veya merkez; verilmezse değişmez"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.area",
-      "names": [
+    "_meta": {
+      "cad.kentos/commandId": "core.area",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
         "ALAN",
         "AREA",
         "POLİGON",
         "POLIGON",
         "AL"
-      ],
-      "category": "Çizim",
-      "summary": "Kapalı bir alan çizer; istenirse içine delik açar.",
-      "params": [
-        {
-          "name": "noktalar",
-          "type": "point_list",
-          "min": 3,
-          "max": -1,
-          "required": true,
-          "help": "Alanın köşe noktaları; kapanış noktası tekrarlanmaz"
+      ]
+    }
+  },
+  {
+    "name": "core_array",
+    "title": "DİZİ",
+    "description": "Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır.\nKomut: DİZİ (DIZI, ARRAY, DZ)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Dizilecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
-        {
-          "name": "bolum",
+        "mod": {
+          "type": "string",
+          "description": "KUTUPSAL için kutupsal dizi; verilmezse satır/sütun dizisi (metin)"
+        },
+        "satir": {
           "type": "integer",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Halka uzunlukları: ilki dış sınır, sonrakiler delik"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.rectangle",
-      "names": [
-        "DİKDÖRTGEN",
-        "DIKDORTGEN",
-        "RECTANGLE",
-        "DKD",
-        "REC"
-      ],
-      "category": "Çizim",
-      "summary": "Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer.",
-      "params": [
-        {
-          "name": "noktalar",
-          "type": "point_list",
-          "min": 2,
-          "max": 2,
-          "required": true,
-          "help": "Karşılıklı iki köşe; kalan ikisi bunlardan türetilir"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.circle_draw",
-      "names": [
-        "DAİRE",
-        "DAIRE",
-        "CIRCLE",
-        "DR"
-      ],
-      "category": "Çizim",
-      "summary": "Merkez ve çember üzerindeki bir noktadan daire çizer.",
-      "params": [
-        {
-          "name": "merkez",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Dairenin merkezi"
+          "description": "Satır sayısı (dikdörtgen dizi) (tam sayı)"
         },
-        {
-          "name": "cevre",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Çember üzerinde bir nokta; yarıçapı bu belirler"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.arc_draw",
-      "names": [
-        "YAY",
-        "ARC",
-        "YY"
-      ],
-      "category": "Çizim",
-      "summary": "Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir.",
-      "params": [
-        {
-          "name": "merkez",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Yayın merkezi"
-        },
-        {
-          "name": "baslangic",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Yayın başlangıç noktası; yarıçapı bu belirler"
-        },
-        {
-          "name": "bitis",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Yayın bitiş yönü; süpürme saat yönünün tersinedir"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.vertex_move",
-      "names": [
-        "KÖŞETAŞI",
-        "KOSETASI",
-        "MOVEVERTEX",
-        "KT"
-      ],
-      "category": "Düzenleme",
-      "summary": "Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.",
-      "params": [
-        {
-          "name": "nesne",
-          "type": "selection",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Köşesi taşınacak nesnenin kimliği"
-        },
-        {
-          "name": "kose",
+        "sutun": {
           "type": "integer",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Taşınacak köşenin sırası; ilk köşe 1'dir"
+          "description": "Sütun sayısı (dikdörtgen dizi) (tam sayı)"
         },
-        {
-          "name": "nokta",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Köşenin yeni yeri"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.vertex_insert",
-      "names": [
-        "KÖŞEEKLE",
-        "KOSEEKLE",
-        "ADDVERTEX",
-        "KE"
-      ],
-      "category": "Düzenleme",
-      "summary": "Bir kenarın ortasına yeni köşe ekler.",
-      "params": [
-        {
-          "name": "nesne",
-          "type": "selection",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Köşe eklenecek nesnenin kimliği"
+        "satir_aralik": {
+          "type": "number",
+          "description": "Satır aralığı, metre; kuzeye artı (sayı)"
         },
-        {
-          "name": "kose",
+        "sutun_aralik": {
+          "type": "number",
+          "description": "Sütun aralığı, metre; doğuya artı (sayı)"
+        },
+        "merkez": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Dizinin merkezi (kutupsal dizi) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "sayi": {
           "type": "integer",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Yeni köşenin ardına geleceği köşe; ilk köşe 1'dir"
+          "description": "Toplam kopya sayısı, özgün dahil (kutupsal dizi) (tam sayı)"
         },
-        {
-          "name": "nokta",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Yeni köşenin yeri"
+        "aci": {
+          "type": "number",
+          "description": "Süpürülecek toplam açı, derece; verilmezse tam tur (sayı)"
         }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
+      },
+      "required": [],
+      "additionalProperties": false
     },
-    {
-      "id": "core.to_area",
-      "names": [
-        "ALANAÇEVİR",
-        "ALANACEVIR",
-        "TOAREA",
-        "ALÇ"
-      ],
-      "category": "Düzenleme",
-      "summary": "Uç uca değen çizgileri tek bir kapalı alana çevirir.",
-      "params": [
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim"
-        }
-      ],
-      "flags": [
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
     },
-    {
-      "id": "core.move",
-      "names": [
-        "TAŞI",
-        "TASI",
-        "MOVE",
-        "TŞ"
-      ],
-      "category": "Düzenleme",
-      "summary": "Seçilen nesneleri iki nokta arasındaki kadar taşır.",
-      "params": [
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Taşınacak nesnelerin kimlikleri; yoksa etkin seçim"
-        },
-        {
-          "name": "baslangic",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Taşımanın başlangıç noktası"
-        },
-        {
-          "name": "bitis",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Taşımanın bitiş noktası"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.copy",
-      "names": [
-        "KOPYALA",
-        "COPY",
-        "KP"
-      ],
-      "category": "Düzenleme",
-      "summary": "Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.",
-      "params": [
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Kopyalanacak nesnelerin kimlikleri; yoksa etkin seçim"
-        },
-        {
-          "name": "baslangic",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Kopyalamanın başlangıç noktası"
-        },
-        {
-          "name": "bitis",
-          "type": "point_list",
-          "min": 1,
-          "max": -1,
-          "required": true,
-          "help": "Kopyaların geleceği noktalar; her nokta bir kopya"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.array",
-      "names": [
+    "_meta": {
+      "cad.kentos/commandId": "core.array",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
         "DİZİ",
         "DIZI",
         "ARRAY",
         "DZ"
-      ],
-      "category": "Düzenleme",
-      "summary": "Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır.",
-      "params": [
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Dizilecek nesnelerin kimlikleri; yoksa etkin seçim"
+      ]
+    }
+  },
+  {
+    "name": "core_attribute",
+    "title": "ÖZNİTELİK",
+    "description": "Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar.\nKomut: ÖZNİTELİK (OZNITELIK, ATTRIBUTE, ÖZN, OZN)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ad": {
+          "type": "string",
+          "description": "Öznitelik kimliği; yoksa tanımlı sütunlar listelenir (metin)"
         },
-        {
-          "name": "mod",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "KUTUPSAL için kutupsal dizi; verilmezse satır/sütun dizisi"
-        },
-        {
-          "name": "satir",
+        "nesne": {
           "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Satır sayısı (dikdörtgen dizi)"
+          "description": "Nesnenin kalıcı kimliği (tam sayı)"
         },
-        {
-          "name": "sutun",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Sütun sayısı (dikdörtgen dizi)"
-        },
-        {
-          "name": "satir_aralik",
-          "type": "number",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Satır aralığı, metre; kuzeye artı"
-        },
-        {
-          "name": "sutun_aralik",
-          "type": "number",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Sütun aralığı, metre; doğuya artı"
-        },
-        {
-          "name": "merkez",
-          "type": "point",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Dizinin merkezi (kutupsal dizi)"
-        },
-        {
-          "name": "sayi",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Toplam kopya sayısı, özgün dahil (kutupsal dizi)"
-        },
-        {
-          "name": "aci",
-          "type": "number",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Süpürülecek toplam açı, derece; verilmezse tam tur"
+        "deger": {
+          "type": "string",
+          "description": "Yeni değer; yoksa yalnızca okur. 'yok' hücreyi boşaltır (metin)"
         }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
+      },
+      "required": [],
+      "additionalProperties": false
     },
-    {
-      "id": "core.combine",
-      "names": [
-        "BİRLEŞTİR",
-        "BIRLESTIR",
-        "COMBINE",
-        "BRL"
-      ],
-      "category": "Düzenleme",
-      "summary": "Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar.",
-      "params": [
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
     },
-    {
-      "id": "core.split",
-      "names": [
-        "BÖL",
-        "BOL",
-        "SPLIT",
-        "BL"
-      ],
-      "category": "Düzenleme",
-      "summary": "Nesneleri çizilen bir kesme çizgisiyle böler.",
-      "params": [
-        {
-          "name": "nesne",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Kesilecek nesneler; yoksa etkin seçim"
-        },
-        {
-          "name": "noktalar",
-          "type": "point_list",
-          "min": 0,
-          "max": 2,
-          "required": false,
-          "help": "Kesme çizgisinin iki noktası; arayüzde çizilir"
-        },
-        {
-          "name": "nokta",
-          "type": "point",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Bölme noktası (tek çizgi; eski biçim)"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.trim",
-      "names": [
-        "BUDA",
-        "TRIM",
-        "BD"
-      ],
-      "category": "Düzenleme",
-      "summary": "Bir çizgiyi kestiği sınır çizgisine kadar budar.",
-      "params": [
-        {
-          "name": "nesne",
-          "type": "selection",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Budanacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan"
-        },
-        {
-          "name": "sinir",
-          "type": "selection",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri"
-        },
-        {
-          "name": "nokta",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Atılacak parçanın üzerindeki bir nokta"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.extend",
-      "names": [
-        "UZAT",
-        "EXTEND",
-        "UZ"
-      ],
-      "category": "Düzenleme",
-      "summary": "Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.",
-      "params": [
-        {
-          "name": "nesne",
-          "type": "selection",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Uzatılacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan"
-        },
-        {
-          "name": "sinir",
-          "type": "selection",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri"
-        },
-        {
-          "name": "nokta",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Uzatılacak ucun yakınında bir nokta"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.chamfer",
-      "names": [
-        "PAH",
-        "CHAMFER",
-        "PH"
-      ],
-      "category": "Düzenleme",
-      "summary": "Bir köşeyi düz bir kenarla keser (pah kırar).",
-      "params": [
-        {
-          "name": "nesne",
-          "type": "selection",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Köşesi kesilecek nesnenin kimliği"
-        },
-        {
-          "name": "nokta",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "İşlem yapılacak köşe"
-        },
-        {
-          "name": "mesafe",
-          "type": "number",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Köşeden her iki kenar boyunca kesilecek mesafe, metre"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.fillet",
-      "names": [
-        "YUVARLA",
-        "FILLET",
-        "YV"
-      ],
-      "category": "Düzenleme",
-      "summary": "Bir köşeyi verilen yarıçapta yay ile yuvarlatır.",
-      "params": [
-        {
-          "name": "nesne",
-          "type": "selection",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Köşesi yuvarlatılacak nesnenin kimliği"
-        },
-        {
-          "name": "nokta",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "İşlem yapılacak köşe"
-        },
-        {
-          "name": "yaricap",
-          "type": "number",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Yuvarlatma yarıçapı, metre"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.set_layer",
-      "names": [
-        "KATMANAT",
-        "KATMANATA",
-        "SETLAYER",
-        "KA"
-      ],
-      "category": "Düzenleme",
-      "summary": "Seçilen nesneleri başka bir katmana taşır.",
-      "params": [
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Taşınacak nesnelerin kimlikleri; yoksa etkin seçim"
-        },
-        {
-          "name": "katman",
-          "type": "text",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Hedef katmanın adı; yoksa oluşturulur"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.match_style",
-      "names": [
-        "STİLKOPYALA",
-        "STILKOPYALA",
-        "MATCHPROP",
-        "SK"
-      ],
-      "category": "Düzenleme",
-      "summary": "Bir nesnenin stilini seçilen nesnelere uygular.",
-      "params": [
-        {
-          "name": "kaynak",
-          "type": "selection",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Stili kopyalanacak nesnenin kimliği; yoksa tıklanan nesne"
-        },
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Stili alacak nesnelerin kimlikleri; yoksa etkin seçim"
-        },
-        {
-          "name": "nokta",
-          "type": "point",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Kaynak nesnenin üzerinde bir nokta; yalnız kaynak verilmediğinde"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.rotate",
-      "names": [
-        "DÖNDÜR",
-        "DONDUR",
-        "ROTATE",
-        "DÖN"
-      ],
-      "category": "Düzenleme",
-      "summary": "Seçilen nesneleri bir merkez etrafında döndürür.",
-      "params": [
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Döndürülecek nesnelerin kimlikleri; yoksa etkin seçim"
-        },
-        {
-          "name": "merkez",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Döndürme merkezi"
-        },
-        {
-          "name": "aci",
-          "type": "number",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Dönme açısı, derece; artı yön saat yönünün tersi"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.scale",
-      "names": [
-        "ÖLÇEKLE",
-        "OLCEKLE",
-        "SCALE",
-        "ÖLÇEK",
-        "OLCEK"
-      ],
-      "category": "Düzenleme",
-      "summary": "Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.",
-      "params": [
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Ölçeklenecek nesnelerin kimlikleri; yoksa etkin seçim"
-        },
-        {
-          "name": "merkez",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Ölçekleme merkezi; bu nokta yerinde kalır"
-        },
-        {
-          "name": "carpan",
-          "type": "number",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Ölçek çarpanı; sıfırdan büyük"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.mirror",
-      "names": [
-        "AYNALA",
-        "MIRROR",
-        "AYN"
-      ],
-      "category": "Düzenleme",
-      "summary": "Seçilen nesneleri iki noktadan geçen eksende aynalar.",
-      "params": [
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Aynalanacak nesnelerin kimlikleri; yoksa etkin seçim"
-        },
-        {
-          "name": "baslangic",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Ayna ekseninin ilk noktası"
-        },
-        {
-          "name": "bitis",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Ayna ekseninin ikinci noktası"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.measure",
-      "names": [
-        "ÖLÇ",
-        "OLC",
-        "MEASURE",
-        "MS"
-      ],
-      "category": "Sorgu",
-      "summary": "İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar.",
-      "params": [
-        {
-          "name": "baslangic",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Ölçümün ilk noktası"
-        },
-        {
-          "name": "bitis",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Ölçümün ikinci noktası"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible",
-        "read_only"
-      ],
-      "undo": "none"
-    },
-    {
-      "id": "core.measure_area",
-      "names": [
-        "ALANÖLÇ",
-        "ALANOLC",
-        "AREAOF",
-        "AÖ"
-      ],
-      "category": "Sorgu",
-      "summary": "Seçilen nesnelerin alanını ve çevresini yazar.",
-      "params": [
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible",
-        "read_only"
-      ],
-      "undo": "none"
-    },
-    {
-      "id": "core.coordinate",
-      "names": [
-        "KOORDİNAT",
-        "KOORDINAT",
-        "COORDINATE",
-        "KRD"
-      ],
-      "category": "Sorgu",
-      "summary": "Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.",
-      "params": [
-        {
-          "name": "nokta",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Okunacak nokta"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible",
-        "read_only"
-      ],
-      "undo": "none"
-    },
-    {
-      "id": "core.pan",
-      "names": [
-        "KAYDIR",
-        "PAN",
-        "KY"
-      ],
-      "category": "Görünüm",
-      "summary": "Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır.",
-      "params": [
-        {
-          "name": "baslangic",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Kaydırmanın tutulacağı nokta"
-        },
-        {
-          "name": "bitis",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "O noktanın taşınacağı yer"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible",
-        "transparent",
-        "read_only"
-      ],
-      "undo": "none"
-    },
-    {
-      "id": "core.offset",
-      "names": [
-        "OFSET",
-        "OFFSET",
-        "OF"
-      ],
-      "category": "Düzenleme",
-      "summary": "Seçili nesnelerin verilen mesafede paralelini çizer.",
-      "params": [
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Ofseti alınacak nesneler; yoksa etkin seçim"
-        },
-        {
-          "name": "mesafe",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Ofset mesafesi, milimetre; eksi değer içeri"
-        },
-        {
-          "name": "kose",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "KÖŞE | YUVARLAK | PAH — dış köşenin biçimi"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.sector",
-      "names": [
-        "DİLİM",
-        "DILIM",
-        "SECTOR",
-        "DL"
-      ],
-      "category": "Çizim",
-      "summary": "Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir.",
-      "params": [
-        {
-          "name": "merkez",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Dilimin merkezi"
-        },
-        {
-          "name": "baslangic",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "İlk kenarın ucu; yarıçapı bu belirler"
-        },
-        {
-          "name": "bitis",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "İkinci kenarın yönü; süpürme saat yönünün tersinedir"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.annulus",
-      "names": [
-        "HALKA",
-        "ANNULUS",
-        "HLK"
-      ],
-      "category": "Çizim",
-      "summary": "Merkez, iç ve dış yarıçaptan delikli halka çizer.",
-      "params": [
-        {
-          "name": "merkez",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Halkanın merkezi"
-        },
-        {
-          "name": "ic",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "İç çember üzerinde bir nokta"
-        },
-        {
-          "name": "dis",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Dış çember üzerinde bir nokta"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.ellipse_draw",
-      "names": [
-        "ELİPS",
-        "ELIPS",
-        "ELLIPSE",
-        "EL"
-      ],
-      "category": "Çizim",
-      "summary": "Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir.",
-      "params": [
-        {
-          "name": "merkez",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Elipsin merkezi"
-        },
-        {
-          "name": "birinci",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Birinci eksenin ucu"
-        },
-        {
-          "name": "ikinci",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "İkinci eksenin uzaklığı; eksene dik ölçülür"
-        },
-        {
-          "name": "baslangic",
-          "type": "number",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Kısmi elips: başlangıç açısı, derece, birinci eksenden saat yönünün tersine"
-        },
-        {
-          "name": "bitis",
-          "type": "number",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Kısmi elips: bitiş açısı, derece; baslangic ile birlikte"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.spline",
-      "names": [
-        "SPLINE",
-        "SPLINE",
-        "SPLINE",
-        "SPL"
-      ],
-      "category": "Çizim",
-      "summary": "Kontrol noktalarından NURBS eğrisi (spline) çizer.",
-      "params": [
-        {
-          "name": "noktalar",
-          "type": "point_list",
-          "min": 2,
-          "max": -1,
-          "required": true,
-          "help": "Kontrol noktaları"
-        },
-        {
-          "name": "derece",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Eğrinin derecesi, 1–15; varsayılan 3"
-        },
-        {
-          "name": "kapali",
-          "type": "bool",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Son noktadan ilkine kapansın mı; varsayılan hayır"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.hatch",
-      "names": [
-        "TARAMA",
-        "TARAMA",
-        "HATCH",
-        "TRM"
-      ],
-      "category": "Çizim",
-      "summary": "Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar.",
-      "params": [
-        {
-          "name": "noktalar",
-          "type": "point_list",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Sınır köşeleri, nesne seçmek yerine; en az üç nokta"
-        },
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Sınırı verecek kapalı nesneler; yoksa etkin seçim ya da noktalar="
-        },
-        {
-          "name": "desen",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Katalogdaki desen adı: SOLID, ANSI31, NET…; varsayılan SOLID"
-        },
-        {
-          "name": "aci",
-          "type": "number",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Desenin dönme açısı, derece; varsayılan 0"
-        },
-        {
-          "name": "olcek",
-          "type": "number",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Desen ölçeği; varsayılan pafta ölçeğinin paydası (AYAR plan_ölçeği)"
-        },
-        {
-          "name": "katalog",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.block",
-      "names": [
-        "BLOK",
-        "BLOK",
-        "BLOCK",
-        "BLK"
-      ],
-      "category": "Çizim",
-      "summary": "Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar.",
-      "params": [
-        {
-          "name": "ad",
-          "type": "text",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Bloğun adı; Türkçe katlanmış hâliyle benzersiz"
-        },
-        {
-          "name": "taban",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Taban noktası: referansların yerleştirildiği nokta"
-        },
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Bloğa girecek nesneler; yoksa etkin seçim"
-        },
-        {
-          "name": "aciklama",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Serbest açıklama"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.insert",
-      "names": [
-        "BLOKEKLE",
-        "BLOKEKLE",
-        "INSERT",
-        "BE"
-      ],
-      "category": "Çizim",
-      "summary": "Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.",
-      "params": [
-        {
-          "name": "ad",
-          "type": "text",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Yerleştirilecek bloğun adı"
-        },
-        {
-          "name": "nokta",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Ekleme noktası"
-        },
-        {
-          "name": "olcek",
-          "type": "number",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Ölçek; eksi değer x'te aynalar; varsayılan 1"
-        },
-        {
-          "name": "olcek_y",
-          "type": "number",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Y ölçeği, farklıysa; varsayılan olcek"
-        },
-        {
-          "name": "aci",
-          "type": "number",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Dönme açısı, derece; varsayılan 0"
-        },
-        {
-          "name": "sutun",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Dizi sütun sayısı; varsayılan 1"
-        },
-        {
-          "name": "satir",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Dizi satır sayısı; varsayılan 1"
-        },
-        {
-          "name": "sutun_aralik",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Sütunlar arası, milimetre, döndürülmüş eksende"
-        },
-        {
-          "name": "satir_aralik",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Satırlar arası, milimetre, döndürülmüş eksende"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.dimension",
-      "names": [
-        "ÖLÇÜ",
-        "OLCU",
-        "DIMENSION",
-        "ÖÇ"
-      ],
-      "category": "Çizim",
-      "summary": "İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer.",
-      "params": [
-        {
-          "name": "birinci",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Birinci nokta; açısal ölçüde birinci kolun ucu"
-        },
-        {
-          "name": "ikinci",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "İkinci nokta; açısal ölçüde ikinci kolun ucu"
-        },
-        {
-          "name": "konum",
-          "type": "point",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta"
-        },
-        {
-          "name": "tur",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "hizali (varsayılan), dogrusal, yaricap, cap, acisal"
-        },
-        {
-          "name": "tepe",
-          "type": "point_list",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Açısal ölçünün tepe noktası"
-        },
-        {
-          "name": "stil",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI"
-        },
-        {
-          "name": "metin",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Ölçülen değer yerine yazılacak metin"
-        },
-        {
-          "name": "katalog",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.leader",
-      "names": [
-        "LİDER",
-        "LIDER",
-        "LEADER",
-        "LD"
-      ],
-      "category": "Çizim",
-      "summary": "Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.",
-      "params": [
-        {
-          "name": "noktalar",
-          "type": "point_list",
-          "min": 2,
-          "max": -1,
-          "required": true,
-          "help": "Okun ucundan yazının yanına köşeler"
-        },
-        {
-          "name": "metin",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Son köşenin yanına yazılacak metin"
-        },
-        {
-          "name": "stil",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25"
-        },
-        {
-          "name": "katalog",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.points",
-      "names": [
-        "NOKTALAR",
-        "POINTS",
-        "NKL"
-      ],
-      "category": "Dosya",
-      "summary": "Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod).",
-      "params": [
-        {
-          "name": "dosya",
-          "type": "text",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Nokta listesi dosyasının yolu"
-        },
-        {
-          "name": "yon",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "oku (varsayılan) | yaz"
-        },
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "yon=yaz ile: köşeleri yazılacak nesneler; verilmezse çizimdeki noktalar"
-        },
-        {
-          "name": "eksen",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Sütun sırası: YX (varsayılan, Türkiye'de olağan) | XY"
-        }
-      ],
-      "flags": [
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.guide",
-      "names": [
-        "KILAVUZ",
-        "GUIDE",
-        "KLV"
-      ],
-      "category": "Çizim",
-      "summary": "Cetvel kılavuzu ekler, listeler ve siler.",
-      "params": [
-        {
-          "name": "yon",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "yatay | düşey; yoksa kılavuzlar listelenir"
-        },
-        {
-          "name": "deger",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa"
-        },
-        {
-          "name": "sil",
-          "type": "bool",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Verilen yerdeki kılavuzu siler"
-        }
-      ],
-      "flags": [
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
-    },
-    {
-      "id": "core.attribute",
-      "names": [
+    "_meta": {
+      "cad.kentos/commandId": "core.attribute",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
         "ÖZNİTELİK",
         "OZNITELIK",
         "ATTRIBUTE",
         "ÖZN",
         "OZN"
-      ],
-      "category": "Düzenleme",
-      "summary": "Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar.",
-      "params": [
-        {
-          "name": "ad",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Öznitelik kimliği; yoksa tanımlı sütunlar listelenir"
+      ]
+    }
+  },
+  {
+    "name": "core_block",
+    "title": "BLOK",
+    "description": "Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar.\nKomut: BLOK (BLOK, BLOCK, BLK)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ad": {
+          "type": "string",
+          "description": "Bloğun adı; Türkçe katlanmış hâliyle benzersiz (metin)"
         },
-        {
-          "name": "nesne",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Nesnenin kalıcı kimliği"
+        "taban": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Taban noktası: referansların yerleştirildiği nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
-        {
-          "name": "deger",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Yeni değer; yoksa yalnızca okur. 'yok' hücreyi boşaltır"
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Bloğa girecek nesneler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "aciklama": {
+          "type": "string",
+          "description": "Serbest açıklama (metin)"
         }
+      },
+      "required": [
+        "ad",
+        "taban"
       ],
-      "flags": [
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
+      "additionalProperties": false
     },
-    {
-      "id": "core.erase",
-      "names": [
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.block",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "BLOK",
+        "BLOK",
+        "BLOCK",
+        "BLK"
+      ]
+    }
+  },
+  {
+    "name": "core_chamfer",
+    "title": "PAH",
+    "description": "Bir köşeyi düz bir kenarla keser (pah kırar).\nKomut: PAH (CHAMFER, PH)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Köşesi kesilecek nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "İşlem yapılacak köşe — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "mesafe": {
+          "type": "number",
+          "description": "Köşeden her iki kenar boyunca kesilecek mesafe, metre (sayı)"
+        }
+      },
+      "required": [
+        "nesne",
+        "nokta",
+        "mesafe"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.chamfer",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "PAH",
+        "CHAMFER",
+        "PH"
+      ]
+    }
+  },
+  {
+    "name": "core_circle_draw",
+    "title": "DAİRE",
+    "description": "Merkez ve çember üzerindeki bir noktadan daire çizer.\nKomut: DAİRE (DAIRE, CIRCLE, DR)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "merkez": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Dairenin merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "cevre": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Çember üzerinde bir nokta; yarıçapı bu belirler — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "merkez",
+        "cevre"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.circle_draw",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "DAİRE",
+        "DAIRE",
+        "CIRCLE",
+        "DR"
+      ]
+    }
+  },
+  {
+    "name": "core_combine",
+    "title": "BİRLEŞTİR",
+    "description": "Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar.\nKomut: BİRLEŞTİR (BIRLESTIR, COMBINE, BRL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.combine",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "BİRLEŞTİR",
+        "BIRLESTIR",
+        "COMBINE",
+        "BRL"
+      ]
+    }
+  },
+  {
+    "name": "core_contour",
+    "title": "EŞYÜKSELTİ",
+    "description": "Kotlu noktalardan eş yükselti eğrileri çizer.\nKomut: EŞYÜKSELTİ (ESYUKSELTI, CONTOUR, EŞY)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "aralik": {
+          "type": "integer",
+          "description": "Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m) (tam sayı)"
+        },
+        "katman": {
+          "type": "string",
+          "description": "Eğrilerin çizileceği katman; varsayılan ESYUKSELTI (metin)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.contour",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "EŞYÜKSELTİ",
+        "ESYUKSELTI",
+        "CONTOUR",
+        "EŞY"
+      ]
+    }
+  },
+  {
+    "name": "core_coordinate",
+    "title": "KOORDİNAT",
+    "description": "Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.\nKomut: KOORDİNAT (KOORDINAT, COORDINATE, KRD)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Okunacak nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "nokta"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.coordinate",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "KOORDİNAT",
+        "KOORDINAT",
+        "COORDINATE",
+        "KRD"
+      ]
+    }
+  },
+  {
+    "name": "core_copy",
+    "title": "KOPYALA",
+    "description": "Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.\nKomut: KOPYALA (COPY, KP)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kopyalanacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "baslangic": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kopyalamanın başlangıç noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "bitis": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kopyaların geleceği noktalar; her nokta bir kopya — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "baslangic",
+        "bitis"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.copy",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "KOPYALA",
+        "COPY",
+        "KP"
+      ]
+    }
+  },
+  {
+    "name": "core_dimension",
+    "title": "ÖLÇÜ",
+    "description": "İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer.\nKomut: ÖLÇÜ (OLCU, DIMENSION, ÖÇ)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "birinci": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Birinci nokta; açısal ölçüde birinci kolun ucu — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "ikinci": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "İkinci nokta; açısal ölçüde ikinci kolun ucu — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "konum": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "tur": {
+          "type": "string",
+          "description": "hizali (varsayılan), dogrusal, yaricap, cap, acisal (metin)"
+        },
+        "tepe": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Açısal ölçünün tepe noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "stil": {
+          "type": "string",
+          "description": "Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI (metin)"
+        },
+        "metin": {
+          "type": "string",
+          "description": "Ölçülen değer yerine yazılacak metin (metin)"
+        },
+        "katalog": {
+          "type": "string",
+          "description": "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin)"
+        }
+      },
+      "required": [
+        "birinci",
+        "ikinci",
+        "konum"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.dimension",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "ÖLÇÜ",
+        "OLCU",
+        "DIMENSION",
+        "ÖÇ"
+      ]
+    }
+  },
+  {
+    "name": "core_earthwork",
+    "title": "HACİM",
+    "description": "Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar.\nKomut: HACİM (HACIM, EARTHWORK, HCM)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "kot": {
+          "type": "integer",
+          "description": "Karşılaştırma kotu, milimetre (845 m = 845000) (tam sayı)"
+        }
+      },
+      "required": [
+        "kot"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.earthwork",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "HACİM",
+        "HACIM",
+        "EARTHWORK",
+        "HCM"
+      ]
+    }
+  },
+  {
+    "name": "core_edittext",
+    "title": "YAZIDÜZENLE",
+    "description": "Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir.\nKomut: YAZIDÜZENLE (YAZIDUZENLE, EDITTEXT, YZD)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Düzenlenecek yazılar; verilmezse seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "yazi": {
+          "type": "string",
+          "description": "Yeni metin; verilmezse değişmez (metin)"
+        },
+        "yukseklik": {
+          "type": "integer",
+          "description": "Yeni yükseklik, zeminde milimetre; verilmezse değişmez (tam sayı)"
+        },
+        "hizalama": {
+          "type": "string",
+          "description": "sol, orta, sag veya merkez; verilmezse değişmez (metin)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.edittext",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "YAZIDÜZENLE",
+        "YAZIDUZENLE",
+        "EDITTEXT",
+        "YZD"
+      ]
+    }
+  },
+  {
+    "name": "core_ellipse_draw",
+    "title": "ELİPS",
+    "description": "Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir.\nKomut: ELİPS (ELIPS, ELLIPSE, EL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "merkez": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Elipsin merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "birinci": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Birinci eksenin ucu — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "ikinci": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "İkinci eksenin uzaklığı; eksene dik ölçülür — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "baslangic": {
+          "type": "number",
+          "description": "Kısmi elips: başlangıç açısı, derece, birinci eksenden saat yönünün tersine (sayı)"
+        },
+        "bitis": {
+          "type": "number",
+          "description": "Kısmi elips: bitiş açısı, derece; baslangic ile birlikte (sayı)"
+        }
+      },
+      "required": [
+        "merkez",
+        "birinci",
+        "ikinci"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.ellipse_draw",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "ELİPS",
+        "ELIPS",
+        "ELLIPSE",
+        "EL"
+      ]
+    }
+  },
+  {
+    "name": "core_erase",
+    "title": "SİL",
+    "description": "Seçilen nesneleri siler.\nKomut: SİL (SIL, ERASE, E)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Silinecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.erase",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
         "SİL",
         "SIL",
         "ERASE",
         "E"
-      ],
-      "category": "Düzenleme",
-      "summary": "Seçilen nesneleri siler.",
-      "params": [
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Silinecek nesnelerin kimlikleri; yoksa etkin seçim"
+      ]
+    }
+  },
+  {
+    "name": "core_extend",
+    "title": "UZAT",
+    "description": "Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.\nKomut: UZAT (EXTEND, UZ)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Uzatılacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "sinir": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Uzatılacak ucun yakınında bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         }
+      },
+      "required": [
+        "nokta"
       ],
-      "flags": [
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
+      "additionalProperties": false
     },
-    {
-      "id": "core.label",
-      "names": [
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.extend",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "UZAT",
+        "EXTEND",
+        "UZ"
+      ]
+    }
+  },
+  {
+    "name": "core_fillet",
+    "title": "YUVARLA",
+    "description": "Bir köşeyi verilen yarıçapta yay ile yuvarlatır.\nKomut: YUVARLA (FILLET, YV)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Köşesi yuvarlatılacak nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "İşlem yapılacak köşe — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "yaricap": {
+          "type": "number",
+          "description": "Yuvarlatma yarıçapı, metre (sayı)"
+        }
+      },
+      "required": [
+        "nesne",
+        "nokta",
+        "yaricap"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.fillet",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "YUVARLA",
+        "FILLET",
+        "YV"
+      ]
+    }
+  },
+  {
+    "name": "core_fit",
+    "title": "OTURT",
+    "description": "Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert).\nKomut: OTURT (FIT, GEOREF, OTR)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noktalar": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kontrol çiftleri: yerel, harita, yerel, harita... — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "olcek_kilitli": {
+          "type": "boolean",
+          "description": "Ölçeği 1'de tutar; saha ölçüsü yeniden ölçeklenmez (evet/hayır)"
+        },
+        "sistem": {
+          "type": "string",
+          "description": "Oturtulduktan sonraki koordinat sistemi, örnek TUREF/TM36 (metin)"
+        }
+      },
+      "required": [
+        "noktalar"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.fit",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "OTURT",
+        "FIT",
+        "GEOREF",
+        "OTR"
+      ]
+    }
+  },
+  {
+    "name": "core_guide",
+    "title": "KILAVUZ",
+    "description": "Cetvel kılavuzu ekler, listeler ve siler.\nKomut: KILAVUZ (GUIDE, KLV)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "yon": {
+          "type": "string",
+          "description": "yatay | düşey; yoksa kılavuzlar listelenir (metin)"
+        },
+        "deger": {
+          "type": "integer",
+          "description": "Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa (tam sayı)"
+        },
+        "sil": {
+          "type": "boolean",
+          "description": "Verilen yerdeki kılavuzu siler (evet/hayır)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.guide",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "KILAVUZ",
+        "GUIDE",
+        "KLV"
+      ]
+    }
+  },
+  {
+    "name": "core_hatch",
+    "title": "TARAMA",
+    "description": "Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar.\nKomut: TARAMA (TARAMA, HATCH, TRM)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noktalar": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Sınır köşeleri, nesne seçmek yerine; en az üç nokta — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Sınırı verecek kapalı nesneler; yoksa etkin seçim ya da noktalar= — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "desen": {
+          "type": "string",
+          "description": "Katalogdaki desen adı: SOLID, ANSI31, NET…; varsayılan SOLID (metin)"
+        },
+        "aci": {
+          "type": "number",
+          "description": "Desenin dönme açısı, derece; varsayılan 0 (sayı)"
+        },
+        "olcek": {
+          "type": "number",
+          "description": "Desen ölçeği; varsayılan pafta ölçeğinin paydası (AYAR plan_ölçeği) (sayı)"
+        },
+        "katalog": {
+          "type": "string",
+          "description": "Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu (metin)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.hatch",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "TARAMA",
+        "TARAMA",
+        "HATCH",
+        "TRM"
+      ]
+    }
+  },
+  {
+    "name": "core_insert",
+    "title": "BLOKEKLE",
+    "description": "Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.\nKomut: BLOKEKLE (BLOKEKLE, INSERT, BE)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ad": {
+          "type": "string",
+          "description": "Yerleştirilecek bloğun adı (metin)"
+        },
+        "nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Ekleme noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "olcek": {
+          "type": "number",
+          "description": "Ölçek; eksi değer x'te aynalar; varsayılan 1 (sayı)"
+        },
+        "olcek_y": {
+          "type": "number",
+          "description": "Y ölçeği, farklıysa; varsayılan olcek (sayı)"
+        },
+        "aci": {
+          "type": "number",
+          "description": "Dönme açısı, derece; varsayılan 0 (sayı)"
+        },
+        "sutun": {
+          "type": "integer",
+          "description": "Dizi sütun sayısı; varsayılan 1 (tam sayı)"
+        },
+        "satir": {
+          "type": "integer",
+          "description": "Dizi satır sayısı; varsayılan 1 (tam sayı)"
+        },
+        "sutun_aralik": {
+          "type": "integer",
+          "description": "Sütunlar arası, milimetre, döndürülmüş eksende (tam sayı)"
+        },
+        "satir_aralik": {
+          "type": "integer",
+          "description": "Satırlar arası, milimetre, döndürülmüş eksende (tam sayı)"
+        }
+      },
+      "required": [
+        "ad",
+        "nokta"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.insert",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "BLOKEKLE",
+        "BLOKEKLE",
+        "INSERT",
+        "BE"
+      ]
+    }
+  },
+  {
+    "name": "core_label",
+    "title": "ETİKET",
+    "description": "Katmandaki nesneleri özniteliklerinden okuyarak etiketler.\nKomut: ETİKET (ETIKET, LABEL, ETK)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "katman": {
+          "type": "string",
+          "description": "Etiketlenecek katmanın adı (metin)"
+        },
+        "bicim": {
+          "type": "string",
+          "description": "Etiket biçimi; {sutun} o sütunun değeriyle değişir, \\n satır kırar. Sembol alan bildiriyorsa gerekmez (metin)"
+        },
+        "hedef": {
+          "type": "string",
+          "description": "Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET' (metin)"
+        },
+        "yukseklik": {
+          "type": "integer",
+          "description": "Yazı yüksekliği, zemin milimetresi (tam sayı)"
+        },
+        "kaydirma": {
+          "type": "integer",
+          "description": "Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı (tam sayı)"
+        }
+      },
+      "required": [
+        "katman"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.label",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
         "ETİKET",
         "ETIKET",
         "LABEL",
         "ETK"
-      ],
-      "category": "Çizim",
-      "summary": "Katmandaki nesneleri özniteliklerinden okuyarak etiketler.",
-      "params": [
-        {
-          "name": "katman",
-          "type": "text",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Etiketlenecek katmanın adı"
+      ]
+    }
+  },
+  {
+    "name": "core_layer",
+    "title": "KATMAN",
+    "description": "Katman oluşturur, aktif yapar ve özelliklerini değiştirir.\nKomut: KATMAN (LAYER, KAT)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "ad": {
+          "type": "string",
+          "description": "Katman adı; yoksa oluşturulur ve aktif yapılır (metin)"
         },
-        {
-          "name": "bicim",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Etiket biçimi; {sutun} o sütunun değeriyle değişir, \\n satır kırar. Sembol alan bildiriyorsa gerekmez"
+        "grup": {
+          "type": "string",
+          "description": "Katman ağacındaki yer, düzeyler '>' ile ayrılır; boş = kök (metin)"
         },
-        {
-          "name": "hedef",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET'"
+        "gorunur": {
+          "type": "boolean",
+          "description": "Katmanın görünürlüğü (evet/hayır)"
         },
-        {
-          "name": "yukseklik",
+        "kilitli": {
+          "type": "boolean",
+          "description": "Katmanın kilit durumu (evet/hayır)"
+        },
+        "renk": {
           "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Yazı yüksekliği, zemin milimetresi"
-        },
-        {
-          "name": "kaydirma",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı"
+          "description": "Çizim rengi, 0xAARRGGBB (tam sayı)"
         }
+      },
+      "required": [
+        "ad"
       ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
+      "additionalProperties": false
     },
-    {
-      "id": "core.layer",
-      "names": [
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.layer",
+      "cad.kentos/category": "Katman",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
         "KATMAN",
         "LAYER",
         "KAT"
-      ],
-      "category": "Katman",
-      "summary": "Katman oluşturur, aktif yapar ve özelliklerini değiştirir.",
-      "params": [
-        {
-          "name": "ad",
-          "type": "text",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Katman adı; yoksa oluşturulur ve aktif yapılır"
+      ]
+    }
+  },
+  {
+    "name": "core_layer_visibility",
+    "title": "KATMANGÖRÜNÜM",
+    "description": "Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir.\nKomut: KATMANGÖRÜNÜM (KATMANGORUNUM, LAYERVIEW, KGÖ, KGO)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "islem": {
+          "type": "string",
+          "description": "goster, gizle, yalniz (yalnız bu katman), tumu (hepsini göster) ya da tersine (metin)"
         },
-        {
-          "name": "grup",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Katman ağacındaki yer, düzeyler '>' ile ayrılır; boş = kök"
-        },
-        {
-          "name": "gorunur",
-          "type": "bool",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Katmanın görünürlüğü"
-        },
-        {
-          "name": "kilitli",
-          "type": "bool",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Katmanın kilit durumu"
-        },
-        {
-          "name": "renk",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Çizim rengi, 0xAARRGGBB"
+        "katman": {
+          "type": "string",
+          "description": "Katman adı; goster, gizle ve yalniz için gerekir, tersine için isteğe bağlı (verilmezse bütün katmanlar), tumu ile verilemez (metin)"
         }
+      },
+      "required": [
+        "islem"
       ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
+      "additionalProperties": false
     },
-    {
-      "id": "core.style",
-      "names": [
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.layer_visibility",
+      "cad.kentos/category": "Katman",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "KATMANGÖRÜNÜM",
+        "KATMANGORUNUM",
+        "LAYERVIEW",
+        "KGÖ",
+        "KGO"
+      ]
+    }
+  },
+  {
+    "name": "core_leader",
+    "title": "LİDER",
+    "description": "Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.\nKomut: LİDER (LIDER, LEADER, LD)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noktalar": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Okun ucundan yazının yanına köşeler — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "metin": {
+          "type": "string",
+          "description": "Son köşenin yanına yazılacak metin (metin)"
+        },
+        "stil": {
+          "type": "string",
+          "description": "Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25 (metin)"
+        },
+        "katalog": {
+          "type": "string",
+          "description": "Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin)"
+        }
+      },
+      "required": [
+        "noktalar"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.leader",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "LİDER",
+        "LIDER",
+        "LEADER",
+        "LD"
+      ]
+    }
+  },
+  {
+    "name": "core_line",
+    "title": "ÇİZGİ",
+    "description": "İki veya daha fazla nokta arasında doğru parçaları çizer.\nKomut: ÇİZGİ (CIZGI, LINE, Ç, L)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noktalar": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Ardışık doğru parçalarının köşe noktaları — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "noktalar"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.line",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "ÇİZGİ",
+        "CIZGI",
+        "LINE",
+        "Ç",
+        "L"
+      ]
+    }
+  },
+  {
+    "name": "core_match_style",
+    "title": "STİLKOPYALA",
+    "description": "Bir nesnenin stilini seçilen nesnelere uygular.\nKomut: STİLKOPYALA (STILKOPYALA, MATCHPROP, SK)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "kaynak": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Stili kopyalanacak nesnenin kimliği; yoksa tıklanan nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Stili alacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kaynak nesnenin üzerinde bir nokta; yalnız kaynak verilmediğinde — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.match_style",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "STİLKOPYALA",
+        "STILKOPYALA",
+        "MATCHPROP",
+        "SK"
+      ]
+    }
+  },
+  {
+    "name": "core_measure",
+    "title": "ÖLÇ",
+    "description": "İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar.\nKomut: ÖLÇ (OLC, MEASURE, MS)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "baslangic": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Ölçümün ilk noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "bitis": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Ölçümün ikinci noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "baslangic",
+        "bitis"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.measure",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "ÖLÇ",
+        "OLC",
+        "MEASURE",
+        "MS"
+      ]
+    }
+  },
+  {
+    "name": "core_measure_area",
+    "title": "ALANÖLÇ",
+    "description": "Seçilen nesnelerin alanını ve çevresini yazar.\nKomut: ALANÖLÇ (ALANOLC, AREAOF, AÖ)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.measure_area",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "ALANÖLÇ",
+        "ALANOLC",
+        "AREAOF",
+        "AÖ"
+      ]
+    }
+  },
+  {
+    "name": "core_merge",
+    "title": "TEVHİT",
+    "description": "Komşu parselleri tek parselde birleştirir (tevhit).\nKomut: TEVHİT (TEVHIT, MERGE, TVH)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Birleştirilecek parseller; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.merge",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "TEVHİT",
+        "TEVHIT",
+        "MERGE",
+        "TVH"
+      ]
+    }
+  },
+  {
+    "name": "core_mirror",
+    "title": "AYNALA",
+    "description": "Seçilen nesneleri iki noktadan geçen eksende aynalar.\nKomut: AYNALA (MIRROR, AYN)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Aynalanacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "baslangic": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Ayna ekseninin ilk noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "bitis": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Ayna ekseninin ikinci noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "baslangic",
+        "bitis"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.mirror",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "AYNALA",
+        "MIRROR",
+        "AYN"
+      ]
+    }
+  },
+  {
+    "name": "core_move",
+    "title": "TAŞI",
+    "description": "Seçilen nesneleri iki nokta arasındaki kadar taşır.\nKomut: TAŞI (TASI, MOVE, TŞ)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Taşınacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "baslangic": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Taşımanın başlangıç noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "bitis": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Taşımanın bitiş noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "baslangic",
+        "bitis"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.move",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "TAŞI",
+        "TASI",
+        "MOVE",
+        "TŞ"
+      ]
+    }
+  },
+  {
+    "name": "core_offset",
+    "title": "OFSET",
+    "description": "Seçili nesnelerin verilen mesafede paralelini çizer.\nKomut: OFSET (OFFSET, OF)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Ofseti alınacak nesneler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "mesafe": {
+          "type": "integer",
+          "description": "Ofset mesafesi, milimetre; eksi değer içeri (tam sayı)"
+        },
+        "kose": {
+          "type": "string",
+          "description": "KÖŞE | YUVARLAK | PAH — dış köşenin biçimi (metin)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.offset",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "OFSET",
+        "OFFSET",
+        "OF"
+      ]
+    }
+  },
+  {
+    "name": "core_pan",
+    "title": "KAYDIR",
+    "description": "Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır.\nKomut: KAYDIR (PAN, KY)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "baslangic": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kaydırmanın tutulacağı nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "bitis": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "O noktanın taşınacağı yer — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "baslangic",
+        "bitis"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.pan",
+      "cad.kentos/category": "Görünüm",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "KAYDIR",
+        "PAN",
+        "KY"
+      ]
+    }
+  },
+  {
+    "name": "core_point_draw",
+    "title": "NOKTA",
+    "description": "Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper.\nKomut: NOKTA (POINT, NK)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noktalar": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Yerleştirilecek noktalar — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "noktalar"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.point_draw",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "NOKTA",
+        "POINT",
+        "NK"
+      ]
+    }
+  },
+  {
+    "name": "core_points",
+    "title": "NOKTALAR",
+    "description": "Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod).\nKomut: NOKTALAR (POINTS, NKL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "dosya": {
+          "type": "string",
+          "description": "Nokta listesi dosyasının yolu (metin)"
+        },
+        "yon": {
+          "type": "string",
+          "description": "oku (varsayılan) | yaz (metin)"
+        },
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "yon=yaz ile: köşeleri yazılacak nesneler; verilmezse çizimdeki noktalar — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "eksen": {
+          "type": "string",
+          "description": "Sütun sırası: YX (varsayılan, Türkiye'de olağan) | XY (metin)"
+        }
+      },
+      "required": [
+        "dosya"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.points",
+      "cad.kentos/category": "Dosya",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "NOKTALAR",
+        "POINTS",
+        "NKL"
+      ]
+    }
+  },
+  {
+    "name": "core_polyline",
+    "title": "ÇOKLUÇİZGİ",
+    "description": "Birden çok noktadan TEK bir çizgi nesnesi çizer.\nKomut: ÇOKLUÇİZGİ (COKLUCIZGI, POLYLINE, ÇÇ, PL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noktalar": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Çoklu çizginin köşe noktaları; hepsi tek nesne olur — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "noktalar"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.polyline",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "ÇOKLUÇİZGİ",
+        "COKLUCIZGI",
+        "POLYLINE",
+        "ÇÇ",
+        "PL"
+      ]
+    }
+  },
+  {
+    "name": "core_rectangle",
+    "title": "DİKDÖRTGEN",
+    "description": "Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer.\nKomut: DİKDÖRTGEN (DIKDORTGEN, RECTANGLE, DKD, REC)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noktalar": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Karşılıklı iki köşe; kalan ikisi bunlardan türetilir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "noktalar"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.rectangle",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "DİKDÖRTGEN",
+        "DIKDORTGEN",
+        "RECTANGLE",
+        "DKD",
+        "REC"
+      ]
+    }
+  },
+  {
+    "name": "core_reproject",
+    "title": "DÖNÜŞTÜR",
+    "description": "Çizimin tamamını bir koordinat sisteminden diğerine dönüştürür.\nKomut: DÖNÜŞTÜR (DONUSTUR, REPROJECT, DNS)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "hedef": {
+          "type": "string",
+          "description": "Hedef koordinat sistemi, örnek EPSG:5256 ya da TUREF/TM36 (metin)"
+        },
+        "kaynak": {
+          "type": "string",
+          "description": "Kaynak sistem; yoksa çizimin kendi koordinat sistemi (metin)"
+        }
+      },
+      "required": [
+        "hedef"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.reproject",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "DÖNÜŞTÜR",
+        "DONUSTUR",
+        "REPROJECT",
+        "DNS"
+      ]
+    }
+  },
+  {
+    "name": "core_rotate",
+    "title": "DÖNDÜR",
+    "description": "Seçilen nesneleri bir merkez etrafında döndürür.\nKomut: DÖNDÜR (DONDUR, ROTATE, DÖN)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Döndürülecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "merkez": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Döndürme merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "aci": {
+          "type": "number",
+          "description": "Dönme açısı, derece; artı yön saat yönünün tersi (sayı)"
+        }
+      },
+      "required": [
+        "merkez",
+        "aci"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.rotate",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "DÖNDÜR",
+        "DONDUR",
+        "ROTATE",
+        "DÖN"
+      ]
+    }
+  },
+  {
+    "name": "core_scale",
+    "title": "ÖLÇEKLE",
+    "description": "Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.\nKomut: ÖLÇEKLE (OLCEKLE, SCALE, ÖLÇEK, OLCEK)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Ölçeklenecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "merkez": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Ölçekleme merkezi; bu nokta yerinde kalır — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "carpan": {
+          "type": "number",
+          "description": "Ölçek çarpanı; sıfırdan büyük (sayı)"
+        }
+      },
+      "required": [
+        "merkez",
+        "carpan"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.scale",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "ÖLÇEKLE",
+        "OLCEKLE",
+        "SCALE",
+        "ÖLÇEK",
+        "OLCEK"
+      ]
+    }
+  },
+  {
+    "name": "core_sector",
+    "title": "DİLİM",
+    "description": "Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir.\nKomut: DİLİM (DILIM, SECTOR, DL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "merkez": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Dilimin merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "baslangic": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "İlk kenarın ucu; yarıçapı bu belirler — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "bitis": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "İkinci kenarın yönü; süpürme saat yönünün tersinedir — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "merkez",
+        "baslangic",
+        "bitis"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.sector",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "DİLİM",
+        "DILIM",
+        "SECTOR",
+        "DL"
+      ]
+    }
+  },
+  {
+    "name": "core_set_layer",
+    "title": "KATMANAT",
+    "description": "Seçilen nesneleri başka bir katmana taşır.\nKomut: KATMANAT (KATMANATA, SETLAYER, KA)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Taşınacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "katman": {
+          "type": "string",
+          "description": "Hedef katmanın adı; yoksa oluşturulur (metin)"
+        }
+      },
+      "required": [
+        "katman"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.set_layer",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "KATMANAT",
+        "KATMANATA",
+        "SETLAYER",
+        "KA"
+      ]
+    }
+  },
+  {
+    "name": "core_spline",
+    "title": "SPLINE",
+    "description": "Kontrol noktalarından NURBS eğrisi (spline) çizer.\nKomut: SPLINE (SPLINE, SPLINE, SPL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noktalar": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kontrol noktaları — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "derece": {
+          "type": "integer",
+          "description": "Eğrinin derecesi, 1–15; varsayılan 3 (tam sayı)"
+        },
+        "kapali": {
+          "type": "boolean",
+          "description": "Son noktadan ilkine kapansın mı; varsayılan hayır (evet/hayır)"
+        }
+      },
+      "required": [
+        "noktalar"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.spline",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "SPLINE",
+        "SPLINE",
+        "SPLINE",
+        "SPL"
+      ]
+    }
+  },
+  {
+    "name": "core_split",
+    "title": "BÖL",
+    "description": "Nesneleri çizilen bir kesme çizgisiyle böler.\nKomut: BÖL (BOL, SPLIT, BL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kesilecek nesneler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "noktalar": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kesme çizgisinin iki noktası; arayüzde çizilir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Bölme noktası (tek çizgi; eski biçim) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.split",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "BÖL",
+        "BOL",
+        "SPLIT",
+        "BL"
+      ]
+    }
+  },
+  {
+    "name": "core_split_area",
+    "title": "ALANİFRAZ",
+    "description": "Parselden verilen yöne paralel, istenen alanda bir parça ayırır.\nKomut: ALANİFRAZ (ALANIFRAZ, SPLITAREA, ALİF)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "yon": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Ayırma çizgisinin YÖNÜ: iki nokta (yol cephesi, mevcut sınır) — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Ayrılacak parsel; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "alan": {
+          "type": "integer",
+          "description": "Ayrılacak alan, mm² (400 m² = 400000000) (tam sayı)"
+        },
+        "tolerans": {
+          "type": "integer",
+          "description": "Kabul toleransı, mm²; varsayılan 10000 (0,01 m²) (tam sayı)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.split_area",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "ALANİFRAZ",
+        "ALANIFRAZ",
+        "SPLITAREA",
+        "ALİF"
+      ]
+    }
+  },
+  {
+    "name": "core_split_parcel",
+    "title": "İFRAZ",
+    "description": "Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz).\nKomut: İFRAZ (IFRAZ, SUBDIVIDE, İFR)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noktalar": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Ayırma çizgisinin iki ucu — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Ayrılacak parsel; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.split_parcel",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "İFRAZ",
+        "IFRAZ",
+        "SUBDIVIDE",
+        "İFR"
+      ]
+    }
+  },
+  {
+    "name": "core_stakeout",
+    "title": "APLİKASYON",
+    "description": "İstasyondan her noktaya mesafe ve açı listesi çıkarır (aplikasyon).\nKomut: APLİKASYON (APLIKASYON, STAKEOUT, APL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "istasyon": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Aletin durduğu nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "baglama": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Bağlama (arka görüş) noktası; verilirse açılar ondan ölçülür — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Aplike edilecek noktalar; yoksa seçim, o da boşsa çizimdeki bütün noktalar — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "istasyon"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.stakeout",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "APLİKASYON",
+        "APLIKASYON",
+        "STAKEOUT",
+        "APL"
+      ]
+    }
+  },
+  {
+    "name": "core_style",
+    "title": "STİL",
+    "description": "Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar.\nKomut: STİL (STIL, STYLE, ST)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "katman": {
+          "type": "string",
+          "description": "Stilin yazılacağı katmanın adı; katman var olmalı (metin)"
+        },
+        "paket": {
+          "type": "string",
+          "description": "Stil kataloğu paketinin dosya yolu (metin)"
+        },
+        "olcek_min": {
+          "type": "integer",
+          "description": "Bu ölçek paydasından daha yakında çizilmez (1:N'deki N) (tam sayı)"
+        },
+        "olcek_max": {
+          "type": "integer",
+          "description": "Bu ölçek paydasından daha uzakta çizilmez (tam sayı)"
+        },
+        "sinifla": {
+          "type": "string",
+          "description": "Sınıflandırmada kullanılacak öznitelik; her nesne kendi değerine göre stillenir (metin)"
+        },
+        "kod": {
+          "type": "string",
+          "description": "Katalogdaki satırın kimliği; verilmezse katalog kuralları eşleşir (metin)"
+        },
+        "olcek": {
+          "type": "integer",
+          "description": "Ölçek paydası (1:N); 0 = ölçekten bağımsız (tam sayı)"
+        },
+        "renk": {
+          "type": "integer",
+          "description": "Çizgi rengi, 0xAARRGGBB (tam sayı)"
+        },
+        "kalinlik": {
+          "type": "integer",
+          "description": "Çizgi kalınlığı, kâğıt mikrometresi (1000 = 1 mm) (tam sayı)"
+        },
+        "dolgu": {
+          "type": "integer",
+          "description": "Dolgu rengi, 0xAARRGGBB; 0 = dolgusuz (tam sayı)"
+        },
+        "sira": {
+          "type": "integer",
+          "description": "Çizim sırası; büyük olan üste gelir (tam sayı)"
+        },
+        "sifirla": {
+          "type": "boolean",
+          "description": "Stili siler; nesneler katman varsayılanına döner (evet/hayır)"
+        },
+        "tip": {
+          "type": "string",
+          "description": "Sembol katmanı tipi: cizgi, isaretci-cizgi, tarak-cizgi, dolgu, cizgi-desen-dolgu, nokta-desen-dolgu, merkez-isaretci, isaretci (metin)"
+        },
+        "ekle": {
+          "type": "boolean",
+          "description": "Katmanı mevcut sembolün üstüne ekler; yoksa sembolü değiştirir (evet/hayır)"
+        },
+        "sekil": {
+          "type": "string",
+          "description": "İşaretçi şekli: daire, kare, ucgen, baklava, yildiz, arti, carpi, ok, yarim-daire, besgen, altigen, cizik (metin)"
+        },
+        "yerlesim": {
+          "type": "string",
+          "description": "İşaretçinin çizgi üzerindeki yeri: aralik, tepe, ilk, son, orta (metin)"
+        },
+        "birim": {
+          "type": "string",
+          "description": "Ölçülerin birimi: kagit (µm), zemin (mm), piksel (metin)"
+        },
+        "boyut_birim": {
+          "type": "string",
+          "description": "Yalnız `boyut` için birim; verilmezse `birim` geçerlidir (metin)"
+        },
+        "aralik_birim": {
+          "type": "string",
+          "description": "Yalnız `aralik` için birim; verilmezse `birim` geçerlidir (metin)"
+        },
+        "aralik_y_birim": {
+          "type": "string",
+          "description": "Yalnız `aralik_y` için birim; verilmezse `birim` geçerlidir (metin)"
+        },
+        "kaydirma_birim": {
+          "type": "string",
+          "description": "Yalnız `kaydirma` için birim; verilmezse `birim` geçerlidir (metin)"
+        },
+        "boyut": {
+          "type": "integer",
+          "description": "İşaretçi çapı ya da tarak dişinin boyu, `birim` cinsinden (tam sayı)"
+        },
+        "aralik": {
+          "type": "integer",
+          "description": "Çizgi boyunca ya da desende birinci eksende aralık (tam sayı)"
+        },
+        "aralik_y": {
+          "type": "integer",
+          "description": "Nokta deseninde ikinci eksen; verilmezse kare desen (tam sayı)"
+        },
+        "aci": {
+          "type": "integer",
+          "description": "Desen açısı ya da işaretçi dönüklüğü, mikro derece (tam sayı)"
+        },
+        "kaydirma": {
+          "type": "integer",
+          "description": "Geometriden dik kaydırma, `birim` cinsinden (tam sayı)"
+        },
+        "faz": {
+          "type": "integer",
+          "description": "İlk işaretçinin çizgi boyunca kaç birim ileride başlayacağı; verilmezse aralığın yarısı (tam sayı)"
+        },
+        "faz_birim": {
+          "type": "string",
+          "description": "Yalnız `faz` için birim; verilmezse `birim` geçerlidir (metin)"
+        },
+        "saydamlik": {
+          "type": "integer",
+          "description": "Katman saydamlığı 0-255; 255 tam opak (tam sayı)"
+        },
+        "desen": {
+          "type": "string",
+          "description": "Çizgi tipi: sürekli, ya da çizgi kalınlığının katı olarak çizgi/boşluk uzunlukları — '8 1 1 1' gibi (kesik-nokta) (metin)"
+        },
+        "yazi": {
+          "type": "string",
+          "description": "yazi-isaretci katmanının yazdığı sabit metin (metin)"
+        },
+        "alan": {
+          "type": "string",
+          "description": "Nesneden alınacak parametreler, virgülle: sütun[:özellik[:tür]] — 'kod:yazi:metin, kat:kalinlik'. Sütun yoksa tanımlanır (metin)"
+        }
+      },
+      "required": [
+        "katman"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.style",
+      "cad.kentos/category": "Katman",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
         "STİL",
         "STIL",
         "STYLE",
         "ST"
-      ],
-      "category": "Katman",
-      "summary": "Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar.",
-      "params": [
-        {
-          "name": "katman",
-          "type": "text",
-          "min": 1,
-          "max": 1,
-          "required": true,
-          "help": "Stilin yazılacağı katmanın adı; katman var olmalı"
+      ]
+    }
+  },
+  {
+    "name": "core_symbol",
+    "title": "SEMBOL",
+    "description": "Gösterim rafını yükler, ağacında gezer ve içinde arar.\nKomut: SEMBOL (SEMBOLLER, SYMBOL, SMB)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "paket": {
+          "type": "string",
+          "description": "Yüklenecek gösterim paketinin dosya yolu (metin)"
         },
-        {
-          "name": "paket",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Stil kataloğu paketinin dosya yolu"
+        "grup": {
+          "type": "string",
+          "description": "Gezilecek grup yolu, düzeyler '>' ile ayrılır (metin)"
         },
-        {
-          "name": "olcek_min",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Bu ölçek paydasından daha yakında çizilmez (1:N'deki N)"
+        "ara": {
+          "type": "string",
+          "description": "Etikette, kimlikte ve grup yolunda arar (metin)"
         },
-        {
-          "name": "olcek_max",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Bu ölçek paydasından daha uzakta çizilmez"
-        },
-        {
-          "name": "sinifla",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Sınıflandırmada kullanılacak öznitelik; her nesne kendi değerine göre stillenir"
-        },
-        {
-          "name": "kod",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Katalogdaki satırın kimliği; verilmezse katalog kuralları eşleşir"
-        },
-        {
-          "name": "olcek",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Ölçek paydası (1:N); 0 = ölçekten bağımsız"
-        },
-        {
-          "name": "renk",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Çizgi rengi, 0xAARRGGBB"
-        },
-        {
-          "name": "kalinlik",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Çizgi kalınlığı, kâğıt mikrometresi (1000 = 1 mm)"
-        },
-        {
-          "name": "dolgu",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Dolgu rengi, 0xAARRGGBB; 0 = dolgusuz"
-        },
-        {
-          "name": "sira",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Çizim sırası; büyük olan üste gelir"
-        },
-        {
-          "name": "sifirla",
-          "type": "bool",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Stili siler; nesneler katman varsayılanına döner"
-        },
-        {
-          "name": "tip",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Sembol katmanı tipi: cizgi, isaretci-cizgi, tarak-cizgi, dolgu, cizgi-desen-dolgu, nokta-desen-dolgu, merkez-isaretci, isaretci"
-        },
-        {
-          "name": "ekle",
-          "type": "bool",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Katmanı mevcut sembolün üstüne ekler; yoksa sembolü değiştirir"
-        },
-        {
-          "name": "sekil",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "İşaretçi şekli: daire, kare, ucgen, baklava, yildiz, arti, carpi, ok, yarim-daire, besgen, altigen, cizik"
-        },
-        {
-          "name": "yerlesim",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "İşaretçinin çizgi üzerindeki yeri: aralik, tepe, ilk, son, orta"
-        },
-        {
-          "name": "birim",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Ölçülerin birimi: kagit (µm), zemin (mm), piksel"
-        },
-        {
-          "name": "boyut_birim",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Yalnız `boyut` için birim; verilmezse `birim` geçerlidir"
-        },
-        {
-          "name": "aralik_birim",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Yalnız `aralik` için birim; verilmezse `birim` geçerlidir"
-        },
-        {
-          "name": "aralik_y_birim",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Yalnız `aralik_y` için birim; verilmezse `birim` geçerlidir"
-        },
-        {
-          "name": "kaydirma_birim",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Yalnız `kaydirma` için birim; verilmezse `birim` geçerlidir"
-        },
-        {
-          "name": "boyut",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "İşaretçi çapı ya da tarak dişinin boyu, `birim` cinsinden"
-        },
-        {
-          "name": "aralik",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Çizgi boyunca ya da desende birinci eksende aralık"
-        },
-        {
-          "name": "aralik_y",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Nokta deseninde ikinci eksen; verilmezse kare desen"
-        },
-        {
-          "name": "aci",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Desen açısı ya da işaretçi dönüklüğü, mikro derece"
-        },
-        {
-          "name": "kaydirma",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Geometriden dik kaydırma, `birim` cinsinden"
-        },
-        {
-          "name": "faz",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "İlk işaretçinin çizgi boyunca kaç birim ileride başlayacağı; verilmezse aralığın yarısı"
-        },
-        {
-          "name": "faz_birim",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Yalnız `faz` için birim; verilmezse `birim` geçerlidir"
-        },
-        {
-          "name": "saydamlik",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Katman saydamlığı 0-255; 255 tam opak"
-        },
-        {
-          "name": "desen",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Çizgi tipi: sürekli, ya da çizgi kalınlığının katı olarak çizgi/boşluk uzunlukları — '8 1 1 1' gibi (kesik-nokta)"
-        },
-        {
-          "name": "yazi",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "yazi-isaretci katmanının yazdığı sabit metin"
-        },
-        {
-          "name": "alan",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Nesneden alınacak parametreler, virgülle: sütun[:özellik[:tür]] — 'kod:yazi:metin, kat:kalinlik'. Sütun yoksa tanımlanır"
+        "kod": {
+          "type": "string",
+          "description": "Tek bir gösterimin ayrıntısı (metin)"
         }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
+      },
+      "required": [],
+      "additionalProperties": false
     },
-    {
-      "id": "core.symbol",
-      "names": [
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.symbol",
+      "cad.kentos/category": "Katman",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
         "SEMBOL",
         "SEMBOLLER",
         "SYMBOL",
         "SMB"
-      ],
-      "category": "Katman",
-      "summary": "Gösterim rafını yükler, ağacında gezer ve içinde arar.",
-      "params": [
-        {
-          "name": "paket",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Yüklenecek gösterim paketinin dosya yolu"
+      ]
+    }
+  },
+  {
+    "name": "core_text",
+    "title": "METİN",
+    "description": "Çizime metin yazar; yükseklik ve hizalama verilebilir.\nKomut: METİN (METIN, YAZI, TEXT, MT)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "noktalar": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Yazının başlangıç noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
-        {
-          "name": "grup",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Gezilecek grup yolu, düzeyler '>' ile ayrılır"
+        "yazi": {
+          "type": "string",
+          "description": "Yazılacak metin (metin)"
         },
-        {
-          "name": "ara",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Etikette, kimlikte ve grup yolunda arar"
+        "yukseklik": {
+          "type": "integer",
+          "description": "Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı (tam sayı)"
         },
-        {
-          "name": "kod",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Tek bir gösterimin ayrıntısı"
+        "bitis": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Taban çizgisinin bitişi; yoksa yatay — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "hizalama": {
+          "type": "string",
+          "description": "sol, orta, sag veya merkez (metin)"
         }
+      },
+      "required": [
+        "noktalar",
+        "yazi"
       ],
-      "flags": [
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "none"
+      "additionalProperties": false
     },
-    {
-      "id": "core.zoom",
-      "names": [
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.text",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "METİN",
+        "METIN",
+        "YAZI",
+        "TEXT",
+        "MT"
+      ]
+    }
+  },
+  {
+    "name": "core_to_area",
+    "title": "ALANAÇEVİR",
+    "description": "Uç uca değen çizgileri tek bir kapalı alana çevirir.\nKomut: ALANAÇEVİR (ALANACEVIR, TOAREA, ALÇ)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.to_area",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "ALANAÇEVİR",
+        "ALANACEVIR",
+        "TOAREA",
+        "ALÇ"
+      ]
+    }
+  },
+  {
+    "name": "core_topology",
+    "title": "TOPOLOJİ",
+    "description": "Kendini kesen sınır, sıfır alan ve örtüşen parselleri raporlar.\nKomut: TOPOLOJİ (TOPOLOJI, TOPOLOGY, TPL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.topology",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "TOPOLOJİ",
+        "TOPOLOJI",
+        "TOPOLOGY",
+        "TPL"
+      ]
+    }
+  },
+  {
+    "name": "core_trim",
+    "title": "BUDA",
+    "description": "Bir çizgiyi kestiği sınır çizgisine kadar budar.\nKomut: BUDA (TRIM, BD)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Budanacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "sinir": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Atılacak parçanın üzerindeki bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "nokta"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.trim",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "BUDA",
+        "TRIM",
+        "BD"
+      ]
+    }
+  },
+  {
+    "name": "core_vertex_insert",
+    "title": "KÖŞEEKLE",
+    "description": "Bir kenarın ortasına yeni köşe ekler.\nKomut: KÖŞEEKLE (KOSEEKLE, ADDVERTEX, KE)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Köşe eklenecek nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "kose": {
+          "type": "integer",
+          "description": "Yeni köşenin ardına geleceği köşe; ilk köşe 1'dir (tam sayı)"
+        },
+        "nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Yeni köşenin yeri — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "nesne",
+        "kose",
+        "nokta"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.vertex_insert",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "KÖŞEEKLE",
+        "KOSEEKLE",
+        "ADDVERTEX",
+        "KE"
+      ]
+    }
+  },
+  {
+    "name": "core_vertex_move",
+    "title": "KÖŞETAŞI",
+    "description": "Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.\nKomut: KÖŞETAŞI (KOSETASI, MOVEVERTEX, KT)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Köşesi taşınacak nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "kose": {
+          "type": "integer",
+          "description": "Taşınacak köşenin sırası; ilk köşe 1'dir (tam sayı)"
+        },
+        "nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Köşenin yeni yeri — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "nesne",
+        "kose",
+        "nokta"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.vertex_move",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "KÖŞETAŞI",
+        "KOSETASI",
+        "MOVEVERTEX",
+        "KT"
+      ]
+    }
+  },
+  {
+    "name": "core_zoom",
+    "title": "YAKINLAŞ",
+    "description": "Görünümü çizim kapsamına veya verilen çarpana ayarlar.\nKomut: YAKINLAŞ (YAKINLAS, ZOOM, Z)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "mod": {
+          "type": "string",
+          "description": "KAPSAM | ÇARPAN | SIFIRLA (metin)"
+        },
+        "carpan": {
+          "type": "number",
+          "description": "ÇARPAN modunda ölçek katsayısı (sayı)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.zoom",
+      "cad.kentos/category": "Görünüm",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
         "YAKINLAŞ",
         "YAKINLAS",
         "ZOOM",
         "Z"
-      ],
-      "category": "Görünüm",
-      "summary": "Görünümü çizim kapsamına veya verilen çarpana ayarlar.",
-      "params": [
-        {
-          "name": "mod",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "KAPSAM | ÇARPAN | SIFIRLA"
-        },
-        {
-          "name": "carpan",
-          "type": "number",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "ÇARPAN modunda ölçek katsayısı"
-        }
-      ],
-      "flags": [
-        "scriptable",
-        "ai_accessible",
-        "transparent",
-        "read_only"
-      ],
-      "undo": "none"
+      ]
+    }
+  },
+  {
+    "name": "gorunum_bilgisi",
+    "title": "GÖRÜNÜMBİLGİSİ",
+    "description": "Ekranda görünen alanın köşe koordinatlarını, merkezini, ölçeğini ve CRS'ini bildirir.\nKomut: GÖRÜNÜMBİLGİSİ (GORUNUMBILGISI, VIEWINFO, GRB)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
     },
-    {
-      "id": "islem.alan_duzenle",
-      "names": [
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.view_info",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "none",
+      "cad.kentos/names": [
+        "GÖRÜNÜMBİLGİSİ",
+        "GORUNUMBILGISI",
+        "VIEWINFO",
+        "GRB"
+      ]
+    }
+  },
+  {
+    "name": "islem_alan_duzenle",
+    "title": "ALANDÜZENLE",
+    "description": "Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp genişleterek, bir kenarı kaydırarak ya da bir köşeyi çekerek; şekil bozulmaz.\nKomut: ALANDÜZENLE (ALANDUZENLE, ADJUSTAREA, ADZ)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "kapsam": {
+          "type": "string",
+          "description": "secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin)"
+        },
+        "pencere": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "katman": {
+          "type": "string",
+          "description": "Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin)"
+        },
+        "alan": {
+          "type": "number",
+          "description": "Hedef alan, metrekare (sayı)"
+        },
+        "mod": {
+          "type": "string",
+          "enum": [
+            "hepsi",
+            "kenar",
+            "kose"
+          ],
+          "description": "Nasıl getirileceği (hepsi / kenar / kose); varsayılan hepsi (metin)"
+        },
+        "kenar": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000,
+          "description": "Kaydırılacak kenar (ilk köşeden çıkan kenar 1); mod=kenar (tam sayı)"
+        },
+        "kose": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000,
+          "description": "Çekilecek köşe; mod=kose (tam sayı)"
+        },
+        "nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kenarın ya da köşenin gideceği yer; verilmezse arayüz sürükletir, komut satırı hedefe tam oturtur — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "islem.alan_duzenle",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
         "ALANDÜZENLE",
         "ALANDUZENLE",
         "ADJUSTAREA",
         "ADZ"
-      ],
-      "category": "Düzenleme",
-      "summary": "Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp genişleterek, bir kenarı kaydırarak ya da bir köşeyi çekerek; şekil bozulmaz.",
-      "params": [
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz"
+      ]
+    }
+  },
+  {
+    "name": "islem_bag_coz",
+    "title": "BAĞÇÖZ",
+    "description": "Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne bundan sonra tek başına taşınır.\nKomut: BAĞÇÖZ (BAGCOZ, DETACH, BÇ, BC)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
-        {
-          "name": "kapsam",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "secili (varsayılan), gorunum ya da proje: nesneler nereden alınır"
+        "kapsam": {
+          "type": "string",
+          "description": "secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin)"
         },
-        {
-          "name": "pencere",
-          "type": "point_list",
-          "min": 0,
-          "max": 2,
-          "required": false,
-          "help": "gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir"
+        "pencere": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
-        {
-          "name": "katman",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman"
-        },
-        {
-          "name": "alan",
-          "type": "number",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Hedef alan, metrekare"
-        },
-        {
-          "name": "mod",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Nasıl getirileceği (hepsi / kenar / kose); varsayılan hepsi"
-        },
-        {
-          "name": "kenar",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Kaydırılacak kenar (ilk köşeden çıkan kenar 1); mod=kenar"
-        },
-        {
-          "name": "kose",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Çekilecek köşe; mod=kose"
-        },
-        {
-          "name": "nokta",
-          "type": "point",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Kenarın ya da köşenin gideceği yer; verilmezse arayüz sürükletir, komut satırı hedefe tam oturtur"
+        "katman": {
+          "type": "string",
+          "description": "Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin)"
         }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
+      },
+      "required": [],
+      "additionalProperties": false
     },
-    {
-      "id": "islem.uzunluk_yaz",
-      "names": [
-        "UZUNLUKYAZ",
-        "UZUNLUKYAZ",
-        "LABELLENGTH",
-        "UZY"
-      ],
-      "category": "İşlem",
-      "summary": "Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar.",
-      "params": [
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz"
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "islem.bag_coz",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "BAĞÇÖZ",
+        "BAGCOZ",
+        "DETACH",
+        "BÇ",
+        "BC"
+      ]
+    }
+  },
+  {
+    "name": "islem_bagla",
+    "title": "BAĞLA",
+    "description": "Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur.\nKomut: BAĞLA (BAGLA, ATTACH, BĞ, BG)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
-        {
-          "name": "kapsam",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "secili (varsayılan), gorunum ya da proje: nesneler nereden alınır"
+        "kapsam": {
+          "type": "string",
+          "description": "secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin)"
         },
-        {
-          "name": "pencere",
-          "type": "point_list",
-          "min": 0,
-          "max": 2,
-          "required": false,
-          "help": "gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir"
+        "pencere": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
-        {
-          "name": "katman",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman"
+        "katman": {
+          "type": "string",
+          "description": "Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin)"
         },
-        {
-          "name": "birim",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Uzunluğun yazılacağı birim (metre / santimetre / milimetre / kilometre); varsayılan metre"
+        "kaynak": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Yazıların bağlanacağı nesne (çizgi ya da alan) — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
-        {
-          "name": "ondalik",
+        "bag": {
+          "type": "string",
+          "enum": [
+            "kenar",
+            "kose"
+          ],
+          "description": "Neye bağlanacağı: en yakın kenar ya da en yakın köşe (kenar / kose); varsayılan kenar (metin)"
+        },
+        "tur": {
+          "type": "string",
+          "enum": [
+            "sabit",
+            "uzunluk"
+          ],
+          "description": "Yazının sözü: kendi yazısı kalır ya da kenarın uzunluğu olur (sabit / uzunluk); varsayılan sabit (metin)"
+        },
+        "birim": {
+          "type": "string",
+          "enum": [
+            "metre",
+            "santimetre",
+            "milimetre",
+            "kilometre"
+          ],
+          "description": "Uzunluğun birimi (tur=uzunluk) (metre / santimetre / milimetre / kilometre); varsayılan metre (metin)"
+        },
+        "ondalik": {
           "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Virgülden sonraki basamak sayısı; varsayılan 2"
+          "minimum": 0,
+          "maximum": 6,
+          "description": "Virgülden sonraki basamak sayısı (tur=uzunluk); varsayılan 2 (tam sayı)"
         },
-        {
-          "name": "bicim",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Yazının kalıbı; {} sayının yerini tutar (örnek: \"{} m\", \"L={}\")"
+        "bicim": {
+          "type": "string",
+          "description": "Uzunluk yazısının kalıbı; {} sayının yerini tutar (tur=uzunluk) (metin)"
         },
-        {
-          "name": "ayrac",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Ondalık ayracı (virgul / nokta); varsayılan virgul"
-        },
-        {
-          "name": "taraf",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Yazının kenarın hangi yanına düşeceği (otomatik / sol / sag / dis / ic); varsayılan otomatik"
-        },
-        {
-          "name": "yukseklik",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0"
-        },
-        {
-          "name": "bosluk",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Kenar ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0"
-        },
-        {
-          "name": "enaz",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Bundan kısa kenarlara yazı yazılmaz, milimetre; varsayılan 0"
+        "ayrac": {
+          "type": "string",
+          "enum": [
+            "virgul",
+            "nokta"
+          ],
+          "description": "Ondalık ayracı (tur=uzunluk) (virgul / nokta); varsayılan virgul (metin)"
         }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
+      },
+      "required": [],
+      "additionalProperties": false
     },
-    {
-      "id": "islem.kose_numarala",
-      "names": [
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "islem.bagla",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "BAĞLA",
+        "BAGLA",
+        "ATTACH",
+        "BĞ",
+        "BG"
+      ]
+    }
+  },
+  {
+    "name": "islem_kose_numarala",
+    "title": "KÖŞENUMARALA",
+    "description": "Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, köşe taşınınca izler.\nKomut: KÖŞENUMARALA (KOSENUMARALA, NUMBERVERTICES, KNM)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "kapsam": {
+          "type": "string",
+          "description": "secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin)"
+        },
+        "pencere": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "katman": {
+          "type": "string",
+          "description": "Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin)"
+        },
+        "baslangic": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Sayımın başlayacağı köşeye en yakın nokta; verilmezse ilk köşe — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "yon": {
+          "type": "string",
+          "enum": [
+            "ters",
+            "saat"
+          ],
+          "description": "Sayım yönü (ters / saat); varsayılan ters (metin)"
+        },
+        "onek": {
+          "type": "string",
+          "description": "Numaranın önüne gelen yazı (örnek: A, K-) (metin)"
+        },
+        "basamak": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 12,
+          "description": "Numaranın en az basamak sayısı; eksikler dolgu ile tamamlanır; varsayılan 0 (tam sayı)"
+        },
+        "dolgu": {
+          "type": "string",
+          "description": "Basamak dolgusu; varsayılan 0 (metin)"
+        },
+        "ilk": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000,
+          "description": "İlk köşenin numarası; varsayılan 1 (tam sayı)"
+        },
+        "sonek": {
+          "type": "string",
+          "description": "Numaranın arkasına gelen yazı (metin)"
+        },
+        "yukseklik": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000,
+          "description": "Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 (tam sayı)"
+        },
+        "bosluk": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000,
+          "description": "Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 (tam sayı)"
+        },
+        "bagla": {
+          "type": "boolean",
+          "description": "Numarayı köşesine bağla: köşe taşınınca numara izler; varsayılan evet (evet/hayır)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "islem.kose_numarala",
+      "cad.kentos/category": "İşlem",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
         "KÖŞENUMARALA",
         "KOSENUMARALA",
         "NUMBERVERTICES",
         "KNM"
-      ],
-      "category": "İşlem",
-      "summary": "Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar.",
-      "params": [
-        {
-          "name": "nesneler",
-          "type": "selection",
-          "min": 0,
-          "max": -1,
-          "required": false,
-          "help": "Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz"
-        },
-        {
-          "name": "kapsam",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "secili (varsayılan), gorunum ya da proje: nesneler nereden alınır"
-        },
-        {
-          "name": "pencere",
-          "type": "point_list",
-          "min": 0,
-          "max": 2,
-          "required": false,
-          "help": "gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir"
-        },
-        {
-          "name": "katman",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman"
-        },
-        {
-          "name": "baslangic",
-          "type": "point",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Sayımın başlayacağı köşeye en yakın nokta; verilmezse ilk köşe"
-        },
-        {
-          "name": "yon",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Sayım yönü (ters / saat); varsayılan ters"
-        },
-        {
-          "name": "onek",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Numaranın önüne gelen yazı (örnek: A, K-)"
-        },
-        {
-          "name": "basamak",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Numaranın en az basamak sayısı; eksikler dolgu ile tamamlanır; varsayılan 0"
-        },
-        {
-          "name": "dolgu",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Basamak dolgusu; varsayılan 0"
-        },
-        {
-          "name": "ilk",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "İlk köşenin numarası; varsayılan 1"
-        },
-        {
-          "name": "sonek",
-          "type": "text",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Numaranın arkasına gelen yazı"
-        },
-        {
-          "name": "yukseklik",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0"
-        },
-        {
-          "name": "bosluk",
-          "type": "integer",
-          "min": 0,
-          "max": 1,
-          "required": false,
-          "help": "Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0"
-        }
-      ],
-      "flags": [
-        "interactive",
-        "scriptable",
-        "ai_accessible"
-      ],
-      "undo": "single_transaction"
+      ]
     }
-  ]
-}
+  },
+  {
+    "name": "islem_uzunluk_yaz",
+    "title": "UZUNLUKYAZ",
+    "description": "Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar; yazı kenara bağlıdır, kenar değişince izler ve yenilenir.\nKomut: UZUNLUKYAZ (UZUNLUKYAZ, LABELLENGTH, UZY)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "kapsam": {
+          "type": "string",
+          "description": "secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin)"
+        },
+        "pencere": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "katman": {
+          "type": "string",
+          "description": "Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin)"
+        },
+        "birim": {
+          "type": "string",
+          "enum": [
+            "metre",
+            "santimetre",
+            "milimetre",
+            "kilometre"
+          ],
+          "description": "Uzunluğun yazılacağı birim (metre / santimetre / milimetre / kilometre); varsayılan metre (metin)"
+        },
+        "ondalik": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6,
+          "description": "Virgülden sonraki basamak sayısı; varsayılan 2 (tam sayı)"
+        },
+        "bicim": {
+          "type": "string",
+          "description": "Yazının kalıbı; {} sayının yerini tutar (örnek: \"{} m\", \"L={}\") (metin)"
+        },
+        "ayrac": {
+          "type": "string",
+          "enum": [
+            "virgul",
+            "nokta"
+          ],
+          "description": "Ondalık ayracı (virgul / nokta); varsayılan virgul (metin)"
+        },
+        "taraf": {
+          "type": "string",
+          "enum": [
+            "otomatik",
+            "sol",
+            "sag",
+            "dis",
+            "ic"
+          ],
+          "description": "Yazının kenarın hangi yanına düşeceği (otomatik / sol / sag / dis / ic); varsayılan otomatik (metin)"
+        },
+        "yukseklik": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000,
+          "description": "Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 (tam sayı)"
+        },
+        "bosluk": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000,
+          "description": "Kenar ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 (tam sayı)"
+        },
+        "enaz": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000,
+          "description": "Bundan kısa kenarlara yazı yazılmaz, milimetre; varsayılan 0 (tam sayı)"
+        },
+        "bagla": {
+          "type": "boolean",
+          "description": "Yazıyı kenarına bağla: kenar taşınınca yazı izler, uzunluk yeniden yazılır; varsayılan evet (evet/hayır)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "islem.uzunluk_yaz",
+      "cad.kentos/category": "İşlem",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "UZUNLUKYAZ",
+        "UZUNLUKYAZ",
+        "LABELLENGTH",
+        "UZY"
+      ]
+    }
+  },
+  {
+    "name": "katmanlari_listele",
+    "title": "KATMANLAR",
+    "description": "Katmanları, nesne sayılarını, görünürlük ve kilit durumlarını listeler.\nKomut: KATMANLAR (LAYERS, KTL)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.layers",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "none",
+      "cad.kentos/names": [
+        "KATMANLAR",
+        "LAYERS",
+        "KTL"
+      ]
+    }
+  },
+  {
+    "name": "oznitelik_semasi",
+    "title": "ÖZNİTELİKŞEMASI",
+    "description": "Çizimde tanımlı öznitelik sütunlarını ve tiplerini listeler.\nKomut: ÖZNİTELİKŞEMASI (OZNITELIKSEMASI, ATTRSCHEMA, ÖŞ)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.attr_schema",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "none",
+      "cad.kentos/names": [
+        "ÖZNİTELİKŞEMASI",
+        "OZNITELIKSEMASI",
+        "ATTRSCHEMA",
+        "ÖŞ"
+      ]
+    }
+  },
+  {
+    "name": "secimi_al",
+    "title": "SEÇİMBİLGİSİ",
+    "description": "Kullanıcının o anki seçimini bildirir: kaç nesne ve hangi anahtarlar.\nKomut: SEÇİMBİLGİSİ (SECIMBILGISI, SELECTIONINFO, SÇB)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.selection_info",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "none",
+      "cad.kentos/names": [
+        "SEÇİMBİLGİSİ",
+        "SECIMBILGISI",
+        "SELECTIONINFO",
+        "SÇB"
+      ]
+    }
+  },
+  {
+    "name": "sorgula",
+    "title": "SORGULA",
+    "description": "Katman ve öznitelik koşuluna uyan nesneleri sayar ve anahtarlarını bildirir.\nKomut: SORGULA (QUERY, SRG)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "katman": {
+          "type": "string",
+          "description": "Hangi katmanda aranacağı; verilmezse bütün çizim (metin)"
+        },
+        "alan": {
+          "type": "string",
+          "description": "Öznitelik sütunu; verilirse o sütunu taşıyan nesneler (metin)"
+        },
+        "deger": {
+          "type": "string",
+          "description": "Sütunun eşit olması istenen değer; yalnız 'alan' ile birlikte (metin)"
+        },
+        "sinir": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "En çok kaç nesne bildirileceği; varsayılan 200 (tam sayı)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.query",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "none",
+      "cad.kentos/names": [
+        "SORGULA",
+        "QUERY",
+        "SRG"
+      ]
+    }
+  }
+]
 ```

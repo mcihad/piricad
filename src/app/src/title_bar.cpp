@@ -156,9 +156,18 @@ TitleBar::TitleBar(QWidget* parent) : QWidget(parent)
     row->setContentsMargins(kSidePad, 0, kSidePad, kBarHeight - kGradient);
     row->setSpacing(0);
 
-    menus_ = new QMenuBar(this);
+    // PARENTLESS FIRST, then made non-native, then parented — in that order.
+    // A `QMenuBar` constructed with a parent while the platform menu bar is on
+    // forces the parent window's native creation (`createWinId`) inside its own
+    // constructor, before `setNativeMenuBar(false)` can run, and a window created
+    // that early never composites through QRhi (main.cpp explains the blank
+    // canvas this made on macOS). The application attribute in main.cpp already
+    // turns the native bar off; this order keeps the shell safe if that line
+    // ever moves.
+    menus_ = new QMenuBar();
     menus_->setObjectName(QStringLiteral("shellMenuBar"));
     menus_->setNativeMenuBar(false);
+    menus_->setParent(this);
     menus_->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Preferred);
     row->addWidget(menus_, 0, Qt::AlignVCenter);
 

@@ -468,6 +468,51 @@ if(KENTOS_WITH_POSTGIS)
 endif()
 
 
+# ------------------------------------------------------------------------ qpdf --
+#
+# The PDF a plot writes is Qt's (`QPdfWriter`); encrypting it is not something
+# Qt does, and not something this program may hand-roll (CLAUDE.md 5.16 names
+# hashing and encryption). qpdf is the mature, cross-platform answer: it reads a
+# finished PDF and writes it back with AES-256 and the permission flags the user
+# asked for. Apache-2.0, GPLv3-compatible, recorded in /NOTICE. Behind an option
+# and defaulting ON where found, like every optional library (Article 8.2).
+option(KENTOS_WITH_QPDF "Encrypt exported PDFs with a password (qpdf)" ON)
+
+# The minimum this code needs: `setR6EncryptionParameters` (AES-256) and the
+# CMake package, both of which qpdf has had since 11.x. Recorded here as a
+# variable rather than as a `find_package` version argument, for the reason
+# below (CLAUDE.md 5.12 wants the minimum written down, not the mechanism).
+set(KENTOS_QPDF_MIN_VERSION 11.9.1)
+
+if(KENTOS_WITH_QPDF)
+    # NO VERSION ARGUMENT TO find_package, AND THE CHECK RIGHT AFTER IT.
+    # qpdf ships a SameMajorVersion package version file, so
+    # `find_package(qpdf 11)` REFUSES qpdf 12 — "not compatible" — on a machine
+    # that has a perfectly good newer qpdf, and a version RANGE is refused the
+    # same way. Asking for no version and comparing ourselves is the only form
+    # that both accepts 12 and still enforces a floor.
+    find_package(qpdf CONFIG QUIET)
+    if(qpdf_FOUND AND qpdf_VERSION VERSION_LESS KENTOS_QPDF_MIN_VERSION)
+        message(WARNING
+            "KENTOS_WITH_QPDF=ON but qpdf ${qpdf_VERSION} is older than "
+            "${KENTOS_QPDF_MIN_VERSION}; PDF encryption is off.")
+        set(qpdf_FOUND FALSE)
+    endif()
+    if(NOT qpdf_FOUND)
+        message(WARNING
+            "KENTOS_WITH_QPDF=ON but qpdf ${KENTOS_QPDF_MIN_VERSION}+ was not found; "
+            "PDF encryption is off.\n"
+            "  Debian/Ubuntu: sudo apt install libqpdf-dev\n"
+            "  macOS:         brew install qpdf\n"
+            "  vcpkg:         vcpkg install qpdf\n"
+            "  elsewhere:     configure with -D qpdf_DIR=<prefix>/lib/cmake/qpdf")
+        set(KENTOS_WITH_QPDF OFF CACHE BOOL "" FORCE)
+    else()
+        message(STATUS "  PDF şifreleme ... etkin (qpdf ${qpdf_VERSION})")
+    endif()
+endif()
+
+
 # ----------------------------------------------------------------- Lua + sol2 --
 #
 # `.claude/script.md` R5 fixes the layer roles: every expression evaluator, style

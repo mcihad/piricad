@@ -1,20 +1,35 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/settings_dialog.hpp"
 
+#include "kentos_cad/app/datagrid.hpp"
 #include "kentos_cad/app/fields.hpp"
 #include "kentos_cad/app/icons.hpp"
+#include "kentos_cad/app/print_service.hpp"
+#include "kentos_cad/app/provider_dialog.hpp"
+#include "kentos_cad/app/provider_service.hpp"
 #include "kentos_cad/app/widgets.hpp"
+
+#include "kentos_cad/ai/provider.hpp"
 
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/schema_page.hpp"
 
 #include "kentos_cad/command/bus.hpp"
 
+#if KENTOS_HAVE_MCP
+// AGPL, and included only where the listener exists. A build without it has no
+// `McpService` to ask, and the block says so rather than pretending.
+#include "kentos_cad/app/mcp_service.hpp"
+#endif
+
+#include <QClipboard>
 #include <QColorDialog>
 #include <QComboBox>
 #include <QFont>
 #include <QFormLayout>
+#include <QGuiApplication>
 #include <QHBoxLayout>
+#include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QLocale>
@@ -25,6 +40,7 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QStackedWidget>
+#include <QStandardItemModel>
 #include <QTabWidget>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -93,6 +109,8 @@ QString group_title(const std::string& group)
         {"harita", "Harita"},
         {"veritabani", "Veritabanı"},
         {"duzenleme", "Düzenleme"},
+        {"ai", "Yapay zeka"},
+        {"mcp", "MCP sunucusu"},
     };
 
     for (const auto& [id, title] : kTitles)
@@ -457,6 +475,22 @@ QWidget* SettingsDialog::buildGroup(const std::string& section, const QString& t
 
     (void)title;
 
+    // THE PROFILES COME FIRST on the plot page, because they are what the rest
+    // of it is about: the plan scale below decides what a paper millimetre
+    // means, and a profile decides which paper.
+    if (mode_ == Mode::All && section == "Plot ve Çıktı") layout->addWidget(buildPrintProfiles());
+
+    // AND THE MODEL PROFILES COME FIRST on the AI page, for the same reason:
+    // the two settings below it — whether the project is sensitive, whether the
+    // thinking text is shown — are about the model the profiles choose.
+    if (mode_ == Mode::All && section == "Yapay Zeka Modelleri")
+        layout->addWidget(buildProviderProfiles());
+
+    // AND THE LISTENER COMES FIRST on the agent page: the port and the token
+    // requirement below it are what the address above is made of, and the
+    // address is what a person came to this page to copy.
+    if (mode_ == Mode::All && section == "MCP Sunucusu") layout->addWidget(buildAgentServer());
+
     // Inside a page the settings keep their NAMESPACE grouping, which is the
     // second axis: `Çizim ve Yakalama` holds a YAKALAMA block and a TOPOLOJİ
     // block, exactly as the reference draws it.
@@ -486,6 +520,616 @@ QWidget* SettingsDialog::buildGroup(const std::string& section, const QString& t
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
     return scroll;
+}
+
+QWidget* SettingsDialog::buildPrintProfiles()
+{
+    auto* block  = new QWidget(this);
+    auto* column = new QVBoxLayout(block);
+    column->setContentsMargins(0, 0, 0, 14);
+    column->setSpacing(8);
+
+    column->addWidget(new FormSection(
+        QStringLiteral("YAZDIRMA PROFİLLERİ"),
+        QStringLiteral("her satır bir kâğıt; ● olan varsayılandır ve Yazdır düğmesi onu kullanır"),
+        block));
+
+    // THE ONE TABLE (ui.md R29), over a plain item model: the rows are the
+    // store's and nothing is edited in place — a cell that could be typed into
+    // would be a second road to a profile, and the road is `YAZDIRMAPROFİLİ`.
+    profiles_model_ = new QStandardItemModel(0, 5, block);
+    profiles_model_->setHorizontalHeaderLabels({QStringLiteral("Ad"), QStringLiteral("Kâğıt"),
+                                                QStringLiteral("Yön"), QStringLiteral("dpi"),
+                                                QStringLiteral("Kenar")});
+    profiles_table_ = new DataGrid(block);
+    profiles_table_->setModel(profiles_model_);
+    profiles_table_->setRowNumbers(false);
+    profiles_table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    profiles_table_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    profiles_table_->setSelectionMode(QAbstractItemView::SingleSelection);
+    profiles_table_->horizontalHeader()->setStretchLastSection(true);
+    profiles_table_->setMinimumHeight(148);
+    profiles_table_->setAccessibleName(QStringLiteral("Yazdırma profilleri"));
+    profiles_table_->gridDelegate()->setTheme(theme());
+    column->addWidget(profiles_table_);
+
+    // ---- what the selected row can have done to it --------------------------
+    auto* rowActions = new QWidget(block);
+    auto* actionRow  = new QHBoxLayout(rowActions);
+    actionRow->setContentsMargins(0, 0, 0, 0);
+    actionRow->setSpacing(8);
+    profile_default_ = new Button(ButtonRole::Secondary, QStringLiteral("Varsayılan yap"),
+                                  Glyph::Check, rowActions);
+    profile_remove_ =
+        new Button(ButtonRole::Danger, QStringLiteral("Sil"), Glyph::Trash, rowActions);
+    for (Button* b : {profile_default_, profile_remove_}) {
+        b->setControlSize(ControlSize::Compact);
+        b->setEnabled(false);
+        actionRow->addWidget(b);
+    }
+    actionRow->addStretch(1);
+    column->addWidget(rowActions);
+
+    const auto selected = [this]() -> QString {
+        const QModelIndexList rows = profiles_table_->selectionModel()->selectedRows();
+        if (rows.isEmpty()) return {};
+        return profiles_model_->item(rows.front().row(), 0)->data(Qt::UserRole + 1).toString();
+    };
+    connect(profiles_table_->selectionModel(), &QItemSelectionModel::selectionChanged, this,
+            [this, selected](const QItemSelection&, const QItemSelection&) {
+                const bool any = !selected().isEmpty();
+                profile_default_->setEnabled(any);
+                profile_remove_->setEnabled(any &&
+                                            controller_.printService().profiles().all().size() > 1);
+            });
+    connect(profile_default_, &QPushButton::clicked, this, [this, selected] {
+        const QString name = selected();
+        if (name.isEmpty()) return;
+        controller_.runLine(QStringLiteral("YAZDIRMAPROFİLİ islem=varsayilan ad=\"%1\"").arg(name),
+                            command::Origin::Gui);
+    });
+    connect(profile_remove_, &QPushButton::clicked, this, [this, selected] {
+        const QString name = selected();
+        if (name.isEmpty()) return;
+        // A DANGER BUTTON ALWAYS ASKS (design.md: the role confirms), and a
+        // profile is a thing somebody set up once and uses every week.
+        if (QMessageBox::question(this, QStringLiteral("Profili sil"),
+                                  QStringLiteral("'%1' profili silinsin mi?").arg(name)) !=
+            QMessageBox::Yes)
+            return;
+        controller_.runLine(QStringLiteral("YAZDIRMAPROFİLİ islem=sil ad=\"%1\"").arg(name),
+                            command::Origin::Gui);
+    });
+
+    // ---- and the row that adds one ------------------------------------------
+    column->addWidget(new FormSection(QStringLiteral("YENİ PROFİL"), QString(), block));
+    auto* form    = new QWidget(block);
+    auto* formRow = new QHBoxLayout(form);
+    formRow->setContentsMargins(0, 0, 0, 0);
+    formRow->setSpacing(8);
+
+    FieldSpec nameSpec   = field_of(FieldKind::Text);
+    nameSpec.placeholder = QStringLiteral("profil adı");
+    profile_name_        = new Field(nameSpec, form);
+    profile_name_->setFixedHeight(static_cast<int>(ControlSize::Regular));
+    profile_name_->setAccessibleName(QStringLiteral("Profil adı"));
+    formRow->addWidget(profile_name_, 2);
+
+    profile_paper_ = new ComboBox(form);
+    for (const char* paper : io::paper_names())
+        profile_paper_->addItem(QString::fromUtf8(paper));
+    profile_paper_->setCurrentText(QStringLiteral("A4"));
+    profile_paper_->setAccessibleName(QStringLiteral("Kâğıt"));
+    formRow->addWidget(profile_paper_, 1);
+
+    profile_orientation_ = new Segment(form);
+    profile_orientation_->addOption(QStringLiteral("Dikey"), QStringLiteral("Uzun kenar yukarı"));
+    profile_orientation_->addOption(QStringLiteral("Yatay"), QStringLiteral("Uzun kenar yana"));
+    profile_orientation_->setControlSize(ControlSize::Regular);
+    profile_orientation_->setAccessibleName(QStringLiteral("Yön"));
+    formRow->addWidget(profile_orientation_, 1);
+
+    profile_dpi_ = new Field(number_of(72, 4800, QStringLiteral("dpi")), form);
+    profile_dpi_->setValue(QStringLiteral("300"));
+    profile_dpi_->setFixedHeight(static_cast<int>(ControlSize::Regular));
+    profile_dpi_->setAccessibleName(QStringLiteral("Çözünürlük"));
+    formRow->addWidget(profile_dpi_, 1);
+
+    profile_margin_ = new Field(number_of(0, 200, QStringLiteral("mm")), form);
+    profile_margin_->setValue(QStringLiteral("10"));
+    profile_margin_->setFixedHeight(static_cast<int>(ControlSize::Regular));
+    profile_margin_->setAccessibleName(QStringLiteral("Kenar boşluğu"));
+    formRow->addWidget(profile_margin_, 1);
+
+    auto* add = new Button(ButtonRole::Secondary, QStringLiteral("Ekle"), Glyph::Plus, form);
+    connect(add, &QPushButton::clicked, this, [this] {
+        const QString name = profile_name_->value().trimmed();
+        if (name.isEmpty()) {
+            profile_name_->setState(FieldState::Invalid);
+            return;
+        }
+        profile_name_->setState(FieldState::Normal);
+        // ONE LINE, and it is the line a script would type. An existing name
+        // replaces that profile, which is what `ekle` means (print_profiles.hpp).
+        controller_.runLine(QStringLiteral("YAZDIRMAPROFİLİ islem=ekle ad=\"%1\" kagit=%2 "
+                                           "yon=%3 dpi=%4 kenar=%5")
+                                .arg(name, profile_paper_->currentText(),
+                                     profile_orientation_->current() == 1 ? QStringLiteral("yatay")
+                                                                          : QStringLiteral("dikey"),
+                                     profile_dpi_->value(), profile_margin_->value()),
+                            command::Origin::Gui);
+        profile_name_->setValue(QString());
+    });
+    formRow->addWidget(add);
+    column->addWidget(form);
+
+    auto* note = new QLabel(QStringLiteral("Profiller kullanıcı profilinizde tutulur: %1")
+                                .arg(controller_.printService().profilesPath()),
+                            block);
+    note->setObjectName(QStringLiteral("formHelp"));
+    note->setWordWrap(true);
+    column->addWidget(note);
+
+    // The store is the source: an edit made at the command line while this
+    // window is open redraws the table (Article 1.2).
+    connect(&controller_.printService(), &PrintService::profilesChanged, this,
+            &SettingsDialog::refreshPrintProfiles);
+    refreshPrintProfiles();
+    return block;
+}
+
+void SettingsDialog::refreshPrintProfiles()
+{
+    if (profiles_model_ == nullptr) return;
+    const io::PrintProfiles& store = controller_.printService().profiles();
+
+    profiles_model_->removeRows(0, profiles_model_->rowCount());
+    for (const io::PrintProfile& p : store.all()) {
+        const QString name    = QString::fromStdString(p.name);
+        const bool is_default = store.default_name() == p.name;
+        QList<QStandardItem*> row;
+        // The default is MARKED, not coloured: a state told by colour alone is
+        // a state a colour-blind reader cannot read (design.md §13, ui.md R31).
+        auto* first = new QStandardItem(is_default ? QStringLiteral("● %1").arg(name) : name);
+        first->setData(name, Qt::UserRole + 1);
+        row << first;
+        row << new QStandardItem(QString::fromStdString(p.paper) +
+                                 QStringLiteral(" %1×%2").arg(p.width_mm).arg(p.height_mm));
+        row << new QStandardItem(p.landscape ? QStringLiteral("Yatay") : QStringLiteral("Dikey"));
+        row << new QStandardItem(QString::number(p.dpi));
+        row << new QStandardItem(QStringLiteral("%1 mm").arg(p.margin_mm));
+        profiles_model_->appendRow(row);
+    }
+    profiles_table_->resizeColumnsToContents();
+    profile_default_->setEnabled(false);
+    profile_remove_->setEnabled(false);
+}
+
+QWidget* SettingsDialog::buildAgentServer()
+{
+    auto* block  = new QWidget(this);
+    auto* column = new QVBoxLayout(block);
+    column->setContentsMargins(0, 0, 0, 14);
+    column->setSpacing(8);
+
+    column->addWidget(new FormSection(
+        tr("DİNLEYİCİ"), tr("yalnız bu makineden erişilir; ajana verilecek adres aşağıdadır"),
+        block));
+
+    mcp_state_ = new QLabel(block);
+    mcp_state_->setObjectName(QStringLiteral("formRowLabel"));
+    mcp_state_->setWordWrap(true);
+    column->addWidget(mcp_state_);
+
+    // THE ADDRESS, IN A READ-ONLY FIELD so it can be selected and copied but not
+    // typed into: what is in it is assembled from the port and the listener's own
+    // token, and a person editing it would be editing nothing.
+    FieldSpec address = field_of(FieldKind::Text);
+    address.frame     = FieldFrame::Box;
+    mcp_address_      = new Field(address, block);
+    mcp_address_->setState(FieldState::ReadOnly);
+    mcp_address_->setFixedHeight(static_cast<int>(ControlSize::Regular));
+    column->addWidget(new FormRow(tr("Ajanın bağlanacağı adres"), mcp_address_, block));
+
+    auto* actions = new QWidget(block);
+    auto* row     = new QHBoxLayout(actions);
+    row->setContentsMargins(0, 0, 0, 0);
+    row->setSpacing(8);
+    mcp_toggle_ = new Button(ButtonRole::Secondary, tr("Başlat"), Glyph::Server, actions);
+    mcp_token_ =
+        new Button(ButtonRole::Secondary, tr("Yeni belirteç üret"), Glyph::Refresh, actions);
+    mcp_token_->setToolTip(
+        tr("Eski belirteç geçersiz olur; bağlı ajanların adresi yenilenmelidir."));
+    mcp_copy_ = new Button(ButtonRole::Ghost, tr("Adresi kopyala"), Glyph::Copy, actions);
+    for (Button* b : {mcp_toggle_, mcp_token_, mcp_copy_}) {
+        b->setControlSize(ControlSize::Compact);
+        row->addWidget(b);
+    }
+    row->addStretch(1);
+    column->addWidget(actions);
+
+    mcp_note_ = new QLabel(block);
+    mcp_note_->setObjectName(QStringLiteral("formHelp"));
+    mcp_note_->setWordWrap(true);
+    column->addWidget(mcp_note_);
+
+    // EVERY BUTTON IS THE COMMAND. The menu entry, the status cell and these
+    // three all run `MCPSUNUCU`, so the listener has exactly one road in and a
+    // script can take it (Article 1.2, CLAUDE.md 5.15).
+    connect(mcp_toggle_, &QPushButton::clicked, this, [this] {
+#if KENTOS_HAVE_MCP
+        const McpService* server = controller_.mcpService();
+        controller_.runLine(server != nullptr && server->listening()
+                                ? QStringLiteral("MCPSUNUCU islem=durdur")
+                                : QStringLiteral("MCPSUNUCU islem=baslat"),
+                            command::Origin::Gui);
+#endif
+        refreshAgentServer();
+    });
+    connect(mcp_token_, &QPushButton::clicked, this, [this] {
+        controller_.runLine(QStringLiteral("MCPSUNUCU islem=belirtec"), command::Origin::Gui);
+        refreshAgentServer();
+    });
+    connect(mcp_copy_, &QPushButton::clicked, this, [this] {
+        QGuiApplication::clipboard()->setText(mcp_address_->value());
+        mcp_note_->setText(tr("Adres panoya kopyalandı. Belirteci bir sohbete, bir hata "
+                              "bildirimine ya da paylaşılan bir dosyaya yapıştırmayın."));
+    });
+
+#if KENTOS_HAVE_MCP
+    if (McpService* server = controller_.mcpService(); server != nullptr)
+        connect(server, &McpService::stateChanged, this, &SettingsDialog::refreshAgentServer);
+#endif
+
+    refreshAgentServer();
+    return block;
+}
+
+void SettingsDialog::refreshAgentServer()
+{
+    if (mcp_state_ == nullptr) return;
+
+#if KENTOS_HAVE_MCP
+    McpService* server = controller_.mcpService();
+    if (server == nullptr) {
+        mcp_state_->setText(tr("Bu yapıda MCP sunucusu yok."));
+        mcp_address_->setValue(QString());
+        for (Button* b : {mcp_toggle_, mcp_token_, mcp_copy_})
+            b->setEnabled(false);
+        mcp_note_->setText(tr("Sunucu KENTOS_WITH_MCP seçeneğiyle derlenir."));
+        return;
+    }
+
+    const bool up = server->listening();
+    mcp_toggle_->setText(up ? tr("Durdur") : tr("Başlat"));
+    mcp_copy_->setEnabled(up);
+
+    if (!up) {
+        mcp_state_->setText(tr("Sunucu kapalı. Açılana kadar hiçbir ajan bu çizime erişemez."));
+        mcp_address_->setValue(QString());
+        mcp_note_->setText(tr("Port ve belirteç zorunluluğu aşağıdaki ayarlardan gelir; "
+                              "sunucu bir sonraki başlatmada onları okur."));
+        return;
+    }
+
+    // THE ADDRESS IS THE TOKENED FORM when a token is required, because that is
+    // the one a client can use without setting a header. It is shown ONCE, here,
+    // in a field the person copies from; everything else in the program —
+    // the transcript, the status cell, the audit record — sees the fingerprint
+    // and never the token (CLAUDE.md 5.21).
+    const QString base = QStringLiteral("http://127.0.0.1:%1/mcp").arg(server->port());
+    if (server->tokenRequired()) {
+        mcp_state_->setText(tr("Sunucu açık — port %1, belirteç zorunlu (%2).")
+                                .arg(server->port())
+                                .arg(server->tokenFingerprint()));
+        mcp_address_->setValue(base + QStringLiteral("/") + server->token());
+        mcp_note_->setText(tr("Bu adres bir paroladır: belirteci taşır. İstemci isterse "
+                              "belirteci 'Authorization: Bearer' başlığında da verebilir; o "
+                              "zaman adres %1 olur.")
+                               .arg(base));
+    } else {
+        // AN OPEN ENDPOINT IS SAID IN WORDS, on the page where it was turned off.
+        mcp_state_->setText(
+            tr("Sunucu açık — port %1, KORUMASIZ: belirteç istenmiyor.").arg(server->port()));
+        mcp_address_->setValue(base);
+        mcp_note_->setText(tr("Belirteç zorunluluğu kapalı olduğu için bu makinedeki HER program "
+                              "çizimi okuyabilir ve öneri açabilir. Aşağıdaki 'belirteç zorunlu' "
+                              "ayarını açıp sunucuyu yeniden başlatın."));
+    }
+#else
+    mcp_state_->setText(tr("Bu yapıda MCP sunucusu yok."));
+    mcp_address_->setValue(QString());
+    for (Button* b : {mcp_toggle_, mcp_token_, mcp_copy_})
+        b->setEnabled(false);
+    mcp_note_->setText(tr("Sunucu KENTOS_WITH_MCP seçeneğiyle derlenir."));
+#endif
+}
+
+QWidget* SettingsDialog::buildProviderProfiles()
+{
+    auto* block  = new QWidget(this);
+    auto* column = new QVBoxLayout(block);
+    column->setContentsMargins(0, 0, 0, 14);
+    column->setSpacing(8);
+
+    column->addWidget(new FormSection(
+        tr("YAPAY ZEKA MODELLERİ"),
+        tr("her satır bir model uç noktası; ● olan varsayılandır ve sohbet onu kullanır"), block));
+
+    // THE ONE TABLE (ui.md R29), over a plain item model, and nothing is edited
+    // in place: a cell that could be typed into would be a second road to a
+    // profile, and the road is `YAPAYZEKAMODELİ`.
+    providers_model_ = new QStandardItemModel(0, 4, block);
+    providers_model_->setHorizontalHeaderLabels({tr("Ad"), tr("Lehçe"), tr("Model"), tr("Bağlam")});
+    providers_table_ = new DataGrid(block);
+    providers_table_->setModel(providers_model_);
+    providers_table_->setRowNumbers(false);
+    providers_table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    providers_table_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    providers_table_->setSelectionMode(QAbstractItemView::SingleSelection);
+    providers_table_->horizontalHeader()->setStretchLastSection(true);
+    providers_table_->setMinimumHeight(148);
+    providers_table_->setAccessibleName(tr("Yapay zeka model profilleri"));
+    providers_table_->gridDelegate()->setTheme(theme());
+    column->addWidget(providers_table_);
+
+    // ---- what the selected row can have done to it --------------------------
+    auto* rowActions = new QWidget(block);
+    auto* actionRow  = new QHBoxLayout(rowActions);
+    actionRow->setContentsMargins(0, 0, 0, 0);
+    actionRow->setSpacing(8);
+    provider_edit_ = new Button(ButtonRole::Secondary, tr("Düzenle"), Glyph::Pencil, rowActions);
+    provider_default_ =
+        new Button(ButtonRole::Secondary, tr("Varsayılan yap"), Glyph::Check, rowActions);
+    provider_test_ =
+        new Button(ButtonRole::Secondary, tr("Bağlantıyı dene"), Glyph::Cloud, rowActions);
+    provider_test_->setToolTip(tr("Uç noktaya tek sözcüklük bir istek gönderir; sonuç komut "
+                                  "dökümüne yazılır."));
+    provider_remove_ = new Button(ButtonRole::Danger, tr("Sil"), Glyph::Trash, rowActions);
+    for (Button* b : {provider_edit_, provider_default_, provider_test_, provider_remove_}) {
+        b->setControlSize(ControlSize::Compact);
+        b->setEnabled(false);
+        actionRow->addWidget(b);
+    }
+    actionRow->addStretch(1);
+    column->addWidget(rowActions);
+
+    /// The profile name of the selected row, or empty when nothing is selected.
+    const auto selected = [this]() -> QString {
+        const QModelIndexList rows = providers_table_->selectionModel()->selectedRows();
+        if (rows.isEmpty()) return {};
+        return providers_model_->item(rows.front().row(), 0)->data(Qt::UserRole + 1).toString();
+    };
+
+    connect(providers_table_->selectionModel(), &QItemSelectionModel::selectionChanged, this,
+            [this, selected](const QItemSelection&, const QItemSelection&) {
+                const QString name                = selected();
+                const ai::ProviderProfiles& store = controller_.providerService().profiles();
+                const ai::ProviderProfile* p      = store.find(name.toStdString());
+                provider_edit_->setEnabled(p != nullptr);
+                provider_default_->setEnabled(p != nullptr);
+                provider_test_->setEnabled(p != nullptr);
+                // The last profile cannot go (`ProviderProfiles::remove`): a
+                // chat with no endpoint cannot be configured back into existence
+                // from inside itself, so the button says so by being off.
+                provider_remove_->setEnabled(p != nullptr && store.all().size() > 1);
+
+                // WHICH ENTRY THE KEY FIELD WOULD WRITE TO, in words, before
+                // anything is typed. A secret field that does not say where its
+                // value goes is a secret field nobody should type into.
+                const QString ref = p == nullptr ? QString() : QString::fromStdString(p->key_ref);
+                provider_key_->setEnabled(!ref.isEmpty());
+                provider_key_save_->setEnabled(!ref.isEmpty());
+                if (p == nullptr)
+                    provider_key_note_->setText(tr("Anahtarı girmek için bir profil seçin."));
+                else if (ref.isEmpty())
+                    provider_key_note_->setText(
+                        tr("'%1' profilinin anahtar adı yok: yerel bir model anahtar "
+                           "istemez. Bulut için önce anahtar adı verin.")
+                            .arg(name));
+                else
+                    provider_key_note_->setText(
+                        tr("Anahtar '%1' kaydına yazılacak. %2").arg(ref, SecretStore::describe()));
+            });
+
+    connect(provider_edit_, &QPushButton::clicked, this, [this, selected] {
+        const QString name = selected();
+        if (!name.isEmpty()) openProviderDialog(name);
+    });
+    // A DOUBLE CLICK OPENS IT TOO, because a table of records every other window
+    // in this program edits that way would be the one table that does not.
+    connect(providers_table_, &QAbstractItemView::doubleClicked, this,
+            [this, selected](const QModelIndex&) {
+                const QString name = selected();
+                if (!name.isEmpty()) openProviderDialog(name);
+            });
+
+    connect(provider_default_, &QPushButton::clicked, this, [this, selected] {
+        const QString name = selected();
+        if (name.isEmpty()) return;
+        controller_.runLine(
+            QStringLiteral("YAPAYZEKAMODELİ islem=varsayilan ad=%1").arg(quoted(name)),
+            command::Origin::Gui);
+    });
+    connect(provider_test_, &QPushButton::clicked, this, [this, selected] {
+        const QString name = selected();
+        if (name.isEmpty()) return;
+        // THE ANSWER ARRIVES ON THE TRANSCRIPT, not here: the request is
+        // asynchronous and this window must not wait on a model (ai.md P8).
+        controller_.runLine(QStringLiteral("YAPAYZEKAMODELİ islem=dene ad=%1").arg(quoted(name)),
+                            command::Origin::Gui);
+    });
+    connect(provider_remove_, &QPushButton::clicked, this, [this, selected] {
+        const QString name = selected();
+        if (name.isEmpty()) return;
+        // A DANGER BUTTON ALWAYS ASKS (design.md: the role confirms), and the
+        // question says what is NOT removed: the key stays in the key store,
+        // because it may well be the same key another profile uses.
+        if (QMessageBox::question(this, tr("Model profilini sil"),
+                                  tr("'%1' profili silinsin mi? Anahtar deposundaki kayıt "
+                                     "olduğu gibi kalır.")
+                                      .arg(name)) != QMessageBox::Yes)
+            return;
+        controller_.runLine(QStringLiteral("YAPAYZEKAMODELİ islem=sil ad=%1").arg(quoted(name)),
+                            command::Origin::Gui);
+    });
+
+    // ---- adding and editing, both in the one window -------------------------
+    //
+    // WAS A ROW OF FIVE FIELDS at the foot of the table, and the row is gone.
+    // A profile has fourteen fields and the row could express five; the nine it
+    // dropped — the output cap, the temperature, the context window, the
+    // thinking knob, the vendor's mandatory headers — are the ones that decide
+    // whether the endpoint answers at all. `ProviderDialog` carries all of them
+    // and fills the model list from the catalogue, so a model is CHOSEN rather
+    // than spelled (provider_dialog.hpp).
+    auto* addRow    = new QWidget(block);
+    auto* addLayout = new QHBoxLayout(addRow);
+    addLayout->setContentsMargins(0, 0, 0, 0);
+    addLayout->setSpacing(8);
+    auto* newProfile = new Button(ButtonRole::Secondary, tr("Yeni profil…"), Glyph::Plus, addRow);
+    newProfile->setControlSize(ControlSize::Compact);
+    connect(newProfile, &QPushButton::clicked, this, [this] { openProviderDialog(QString()); });
+    addLayout->addWidget(newProfile);
+    addLayout->addStretch(1);
+    column->addWidget(addRow);
+
+    // ---- the key, and it is the one value that is NOT a command --------------
+    // CLAUDE.md 5.21: a credential may not be in a command argument, a journal
+    // line, a log line or a transcript. Every other control on this page writes
+    // through the bus precisely so the journal records it; this one must not, so
+    // it writes to the operating system's key store and the profile keeps only
+    // the NAME of the entry (`secret_store.hpp`).
+    column->addWidget(new FormSection(tr("API ANAHTARI"), QString(), block));
+    auto* keyRow    = new QWidget(block);
+    auto* keyLayout = new QHBoxLayout(keyRow);
+    keyLayout->setContentsMargins(0, 0, 0, 0);
+    keyLayout->setSpacing(8);
+
+    FieldSpec keySpec   = field_of(FieldKind::Text);
+    keySpec.placeholder = tr("anahtarı yapıştırın");
+    keySpec.secret      = true; // dots on screen, never echoed (ui.md R38's rule)
+    keySpec.glyph       = Glyph::Lock;
+    provider_key_       = new Field(keySpec, keyRow);
+    provider_key_->setFixedHeight(static_cast<int>(ControlSize::Regular));
+    provider_key_->setAccessibleName(tr("API anahtarı"));
+    provider_key_->setEnabled(false);
+    keyLayout->addWidget(provider_key_, 3);
+
+    provider_key_save_ =
+        new Button(ButtonRole::Secondary, tr("Anahtarı kaydet"), Glyph::Lock, keyRow);
+    provider_key_save_->setEnabled(false);
+    keyLayout->addWidget(provider_key_save_);
+    keyLayout->addStretch(1);
+    column->addWidget(keyRow);
+
+    provider_key_note_ = new QLabel(tr("Anahtarı girmek için bir profil seçin."), block);
+    provider_key_note_->setObjectName(QStringLiteral("formHelp"));
+    provider_key_note_->setWordWrap(true);
+    column->addWidget(provider_key_note_);
+
+    connect(provider_key_save_, &QPushButton::clicked, this, [this, selected] {
+        const QString name = selected();
+        const ai::ProviderProfile* p =
+            controller_.providerService().profiles().find(name.toStdString());
+        if (p == nullptr || p->key_ref.empty()) return;
+        const QString secret = provider_key_->value();
+        if (secret.isEmpty()) {
+            provider_key_->setState(FieldState::Invalid);
+            return;
+        }
+        const QString ref      = QString::fromStdString(p->key_ref);
+        const core::Status put = controller_.providerService().secrets().write(ref, secret);
+        // CLEARED WHETHER IT WORKED OR NOT. A key left sitting in a field is a
+        // key on somebody's screen, and the failure message says what to do
+        // instead (an environment variable, when this build has no key store).
+        provider_key_->setValue(QString());
+        provider_key_->setState(FieldState::Normal);
+        if (!put) {
+            QMessageBox::warning(this, tr("Anahtar kaydedilemedi"),
+                                 QString::fromStdString(put.error().message));
+            return;
+        }
+        provider_key_note_->setText(
+            tr("Anahtar '%1' kaydına yazıldı. %2").arg(ref, SecretStore::describe()));
+    });
+
+    auto* note =
+        new QLabel(tr("Profiller kullanıcı profilinizde tutulur: %1\nAnahtarlar programın "
+                      "dosyalarında değil, işletim sisteminde durur: %2")
+                       .arg(controller_.providerService().profilesPath(), SecretStore::describe()),
+                   block);
+    note->setObjectName(QStringLiteral("formHelp"));
+    note->setWordWrap(true);
+    column->addWidget(note);
+
+    // The store is the source: a profile added at the command line while this
+    // window is open redraws the table (Article 1.2).
+    connect(&controller_.providerService(), &ProviderService::profilesChanged, this,
+            &SettingsDialog::refreshProviderProfiles);
+    refreshProviderProfiles();
+    return block;
+}
+
+void SettingsDialog::openProviderDialog(const QString& edit)
+{
+    ProviderDialog window(controller_, edit, this);
+    window.applyTheme(theme());
+    (void)window.exec();
+    // Nothing to do on the way out: the window wrote through the bus, and the
+    // table follows `ProviderService::profilesChanged` like every other reader.
+}
+
+void SettingsDialog::refreshProviderProfiles()
+{
+    if (providers_model_ == nullptr) return;
+    const ai::ProviderProfiles& store = controller_.providerService().profiles();
+
+    providers_model_->removeRows(0, providers_model_->rowCount());
+    for (const ai::ProviderProfile& p : store.all()) {
+        const QString name    = QString::fromStdString(p.name);
+        const bool is_default = store.default_name() == p.name;
+        QList<QStandardItem*> row;
+        // The default is MARKED, not coloured: a state told by colour alone is a
+        // state a colour-blind reader cannot read (design.md §13, ui.md R31).
+        auto* first = new QStandardItem(is_default ? QStringLiteral("● %1").arg(name) : name);
+        first->setData(name, Qt::UserRole + 1);
+        row << first;
+        row << new QStandardItem(QString::fromUtf8(ai::dialect_id(p.dialect)));
+        row << new QStandardItem(QString::fromStdString(p.model));
+        // WHO SAID SO, beside the number. "The server reported 128 000" and
+        // "somebody typed 128 000" are not the same fact (`ai::ContextSource`),
+        // and a window that printed only the number would hide the difference.
+        row << new QStandardItem(
+            p.context.tokens == 0
+                ? tr("bilinmiyor")
+                : tr("%1 (%2)").arg(QLocale(QLocale::Turkish).toString(qlonglong{p.context.tokens}),
+                                    QString::fromUtf8(ai::context_source_label(p.context.source))));
+        providers_model_->appendRow(row);
+    }
+    providers_table_->resizeColumnsToContents();
+
+    // Nothing is selected after a rebuild, so nothing may be acted on. The
+    // selection handler turns these back on.
+    provider_edit_->setEnabled(false);
+    provider_default_->setEnabled(false);
+    provider_test_->setEnabled(false);
+    provider_remove_->setEnabled(false);
+    provider_key_->setEnabled(false);
+    provider_key_save_->setEnabled(false);
+    provider_key_note_->setText(tr("Anahtarı girmek için bir profil seçin."));
+}
+
+void SettingsDialog::showSection(const QString& title)
+{
+    for (int index = 0; index < static_cast<int>(order_.size()); ++index) {
+        if (order_[static_cast<std::size_t>(index)].title != title) continue;
+        // Through the list's own signal, so the heading, the page and the
+        // highlighted row cannot disagree — the same road a click takes.
+        sections_->setCurrent(index);
+        emit sections_->currentChanged(index);
+        return;
+    }
 }
 
 QStringList SettingsDialog::probeSections() const

@@ -11,6 +11,11 @@ sırayla numaralar ve her numarayı köşenin **dışına**, köşenin açıorta
 yazı yataydır. Açık **çizgiler** de numaralanır: sayım başlangıç noktasına yakın uçtan
 başlar. Ürettiği her numara sıradan bir [`METİN`](text.md) nesnesidir.
 
+Numara köşesine **bağlıdır** (`bagla=evet`, varsayılan): köşe [`KÖŞETAŞI`](vertex_move.md)
+ile çekilince ya da parsel taşınınca numara köşesinin yanına yeniden yerleşir; sözü
+değişmez, köşe numarasını taşır. Ayrıntı [Bağlı nesneler](../islem/bagli-nesneler.md)
+sayfasında; `bagla=hayır` serbest yazı üretir.
+
 Numaranın biçimi sizindir: önek, en az basamak sayısı ve dolgu, ilk numara, sonek. `A`
 öneki, 5 basamak ve `0` dolgusu `A00001, A00002, …` verir.
 
@@ -52,6 +57,7 @@ KÖŞENUMARALA kapsam=proje yon=saat ilk=1 katman=NUMARA
 | `sonek` | Numaranın arkası: `"."` (nokta tırnak içinde yazılır; tırnaksız nokta sayı okunur) |
 | `yukseklik` | Yazı yüksekliği, zemin milimetresi; `0` = plan ölçeğinde 2,5 mm |
 | `bosluk` | Köşe ile yazı arası, milimetre; `0` = yüksekliğin yarısı |
+| `bagla` | `evet` (varsayılan): numara köşesine bağlı, köşe taşınınca izler; `hayır`: serbest yazı |
 
 ## Örnekler
 
@@ -72,9 +78,11 @@ KÖŞENUMARALA nesneler=1 yon=saat ilk=7 sonek="." katman=NUMARA
 
 ### Arayüz
 
-Sağ panelde **Araçlar ▸ Etiketleme ▸ Köşeleri numarala**. Başlangıç noktasını `x,y`
-olarak yazın ya da boş bırakın, öneki ve basamak sayısını verin, **Çalıştır**'a basın.
-Kartın altındaki satır komut satırına yazılacak olanın kendisidir.
+Sağ panelde **Araçlar ▸ Etiketleme ▸ Köşeleri numarala**. **baslangic** alanının yanındaki
+nişan düğmesine basın (ya da alandayken **F4**): işaretçi seçim işaretçisine döner,
+parselin numaralamanın başlayacağı köşesine tıklayın — köşe yakalanır ve koordinatı alana
+yazılır. `x,y` yazmak ya da boş bırakmak da olur. Öneki ve basamak sayısını verin,
+**Çalıştır**'a basın. Kartın altındaki satır komut satırına yazılacak olanın kendisidir.
 
 ### Betik
 

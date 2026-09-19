@@ -74,12 +74,25 @@ günlüğünden okunur, ayrı bir yerde tutulmaz. İstemiyorsanız `AYAR son_de�
 Bir araç, işi başlamadan **soru sorabilir**: `ALANDÜZENLE` kenarı ya da köşeyi
 tıklatır ve sürükletir. Sorduğu her şey günlüğe yazılır; yeniden oynatma el gerektirmez.
 
+Karttaki bir **nokta** ya da **nesne** alanı sahneden doldurulabilir: alanın yanındaki
+nişan düğmesine basınca (ya da alandayken **F4**) işaretçi seçim işaretçisine döner,
+durum satırı ne istendiğini söyler, tuvaldeki bir tık alanı doldurur — `KÖŞENUMARALA`'nın
+**baslangic** köşesi, `BAĞLA`'nın **kaynak** nesnesi böyle seçilir. Bir nokta seçilirken
+köşeler yakalanır; tıklanan yerde birden çok nesne varsa "Hangisi?" listesi açılır;
+**Esc** vazgeçer. Değeri elle yazmak her zaman mümkündür ([Bileşenler](../baslangic/bilesenler.md)).
+
+Etiketleme araçlarının yazdığı yazılar kaynaklarına **bağlıdır**: çizgi taşınınca yazı
+izler, kenar uzayınca uzunluk yenilenir. Ne olduğu, nasıl kapatılacağı ve elle
+taşınan yazının başına gelen [Bağlı nesneler](bagli-nesneler.md) sayfasında anlatılır.
+
 ## Araçlar
 
 | Grup | Araç | Komut | Sayfa |
 |---|---|---|---|
 | Etiketleme | Kenar uzunluklarını yaz | `UZUNLUKYAZ` | [Kenar uzunluklarını yazma](../komutlar/uzunluk_yaz.md) |
 | Etiketleme | Köşeleri numarala | `KÖŞENUMARALA` | [Köşe numaralama](../komutlar/kose_numarala.md) |
+| Etiketleme | Yazıyı nesneye bağla | `BAĞLA` | [Yazıyı nesneye bağlama](../komutlar/bagla.md) |
+| Etiketleme | Yazının bağını çöz | `BAĞÇÖZ` | [Yazının bağını çözme](../komutlar/bag_coz.md) |
 | Düzenleme | Alanı düzenle | `ALANDÜZENLE` | [Alanı istenen değere getirme](../komutlar/alan_duzenle.md) |
 
 Yeni bir araç eklendiğinde ağaçta, **Analiz** menüsünde ve

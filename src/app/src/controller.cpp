@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/controller.hpp"
 
+#include "kentos_cad/app/ai_transport.hpp"
+
+#include "kentos_cad/ai/commands.hpp"
+
 #include "kentos_cad/command/job.hpp"
 
 #include "kentos_cad/command/log.hpp"
@@ -47,6 +51,7 @@ private:
 
 Controller::Controller(QObject* parent)
     : QObject(parent), bus_(document_, registry_, journal_, undo_), files_(bus_), database_(bus_),
+      prints_(bus_, document_, this), ai_(bus_, this), providers_(bus_, nullptr, this),
       runner_(bus_, script::Sandbox::Project)
 #if KENTOS_HAVE_LUA
       ,
@@ -62,6 +67,13 @@ Controller::Controller(QObject* parent)
     domain::cadastre::register_cadastre_commands(registry_);
     processing::register_processing_commands(registry_);
     domain::surface::register_surface_commands(registry_);
+
+    // AND THE AI LAYER'S OWN: the five read tools an agent sees the drawing
+    // through, plus ÖNERİ and MCPSUNUCU. Registered here for the same reason the
+    // domain commands are — `/src/command` may not name `/src/ai` (Article 3.2)
+    // — and they are ordinary commands, so the command line and a script reach
+    // them exactly as an agent does (Article 1.2).
+    ai::register_ai_commands(registry_);
 
     // The CRS resolver, so a drawing knows that TUREF/TM30 is EPSG:5254 without
     // the user restating it. A missing or unreadable /data/crs package leaves the
@@ -90,6 +102,35 @@ Controller::Controller(QObject* parent)
     script::install(bus_, runner_);
 #endif
     wireBus();
+
+    // Now that the bus can be heard: anything the print service could not say
+    // while it was being constructed (a profile file that would not parse).
+    prints_.announce();
+    ai_.announce();
+
+    // THE WIRE, ONCE, FOR BOTH ROADS. The transport is created here rather than
+    // in the initialiser list because it needs the key store the provider
+    // service owns, and it is handed straight back to that service with the
+    // binder that names a profile to it (`ProviderService::ProfileBinder`).
+    transport_ = std::make_unique<AiTransport>(&providers_.secrets(), this);
+    providers_.setTransport(transport_.get(), [this](const ai::ProviderProfile& profile) {
+        transport_->useProfile(profile);
+    });
+    providers_.announce();
+
+#if KENTOS_HAVE_MCP
+    // THE LISTENER IS BUILT BUT NOT STARTED. A port that opens because the
+    // program was installed is not something a user asked for (CLAUDE.md 2.10);
+    // `core.mcp.otomatik` is off by default and the menu entry is the usual way
+    // in. Building it here is what makes `MCPSUNUCU` answer at all.
+    mcp_ = std::make_unique<McpService>(bus_, ai_, this);
+    if (bus_.app_settings().get("core.mcp.otomatik").as_bool()) {
+        if (auto started = mcp_->start(0); !started)
+            command::log_warn("MCP sunucusu otomatik başlatılamadı: " + started.error().message);
+        else
+            bus_.echo(started.value().toStdString());
+    }
+#endif
 
     // The journal is written asynchronously on its own thread; the UI never waits
     // on a disk flush (kentoscad.md §10.4).
@@ -154,6 +195,57 @@ void Controller::settle()
 void Controller::runLine(const QString& line, command::Origin origin)
 {
     (void)runLineResult(line, origin);
+}
+
+void Controller::runLines(const QStringList& lines, const QString& label, command::Origin origin)
+{
+    if (lines.isEmpty()) return;
+
+    // ONE LINE IS NOT A BATCH. A batch with a single command in it would put a
+    // label on the undo stack where the command's own name belongs.
+    if (lines.size() == 1) {
+        runLine(lines.front(), origin);
+        return;
+    }
+
+    // A PARKED COMMAND IS FINISHED FIRST, which is what typing another command
+    // while one waits already does: `Bus::begin_batch` refuses only a second
+    // batch, so a batch opened while a session held a transaction would be two
+    // writers on one document.
+    if (session_) cancelInteractive();
+
+    // AND IF IT IS STILL THERE, it is a command whose WORKER was asked to stop
+    // and has not returned yet (`cancelInteractive` leaves it alive on purpose).
+    // The lines then go the ordinary way, one by one, which is the road a typed
+    // line takes and is therefore always safe; the only thing lost is the single
+    // undo step, and this is the one case where that is the lesser cost.
+    if (session_) {
+        for (const QString& line : lines)
+            runLine(line, origin);
+        return;
+    }
+
+    if (auto opened = bus_.begin_batch(label.toStdString()); !opened) {
+        emit echoed(tr("Hata: %1").arg(QString::fromStdString(opened.error().message)));
+        return;
+    }
+    for (const QString& line : lines) {
+        auto step = bus_.execute_line(line.trimmed().toStdString(), origin);
+        if (!step) {
+            // WHOLE, OR NOT AT ALL (Article 1.6). Nine layers hidden and the tenth
+            // refused is a state nobody asked for.
+            bus_.abort_batch();
+            emit echoed(tr("Hata: %1").arg(QString::fromStdString(step.error().message)));
+            settle();
+            return;
+        }
+    }
+    auto done = bus_.end_batch();
+    if (!done)
+        emit echoed(tr("Hata: %1").arg(QString::fromStdString(done.error().message)));
+    else if (!done.value().message.empty())
+        emit echoed(QString::fromStdString(done.value().message));
+    settle();
 }
 
 core::Result<command::DispatchResult> Controller::runLineResult(const QString& line,

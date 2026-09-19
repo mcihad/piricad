@@ -1,0 +1,1078 @@
+<!-- ÜRETİLMİŞ DOSYA — elle düzenlemeyin. Kaynak: komut kataloğu (Registry). Yeniden üretmek için: make reference -->
+
+# KentOSCad
+
+> Türkiye odaklı CBS + CAD masaüstü programı: jeodezi, kadastro, imar ve yüzey işleri.
+> Programın durumunu değiştiren her şey bir KOMUTtur; arayüz, komut satırı, betik ve
+> yapay zeka aynı komut veri yolunun eşit istemcileridir. Bu dosya bir ajanın programı
+> kullanmadan önce bilmesi gerekenleri anlatır; araçların tam şeması `tools/list` ile
+> alınır ve tek kaynağı komut kataloğudur.
+
+## Önce bunlar
+
+- **Birim milimetredir ve tam sayıdır.** Bütün koordinatlar `int64` sabit noktalı
+  milimetre (`Mm`). Ondalık yoktur; 485320.15 metre `485320150` demektir. Alan
+  milimetrekaredir.
+- **Eksen adları:** `Sağa (Y)` doğuya doğru (easting), `Yukarı (X)` kuzeye doğru
+  (northing). Bir nokta **doğu önce** yazılır: `[485320150, 4310220000]`.
+- **Türkçe adlar katlanır.** `GİZLE`, `gizle`, `GIZLE` ve `gızle` aynı sözcüktür; i/ı
+  ve büyük/küçük ayrımı ad çözümlemede yok sayılır. Her komutun Türkçe birincil adı,
+  ASCII karşılığı, İngilizce karşılığı ve kısaltması vardır.
+- **Koordinat uyduramazsınız.** Nokta, nokta listesi ya da nesne seçimi isteyen bir
+  parametre yalnız **tutamak** kabul eder: bir okuma aracının döndürdüğü
+  `@0123456789abcdef.3` biçiminde bir dize. Sayı yazmak reddedilir — konum her zaman
+  bir araç sonucundan gelir, modelin metninden değil.
+- **Yazan araçlar çağrıldığında uygulamaz.** Belgeyi ya da diski değiştiren bir araç
+  çağrısı bir ÖNERİ kaydı açar, uygulanacak komut satırlarını döndürür ve bilgisayar
+  başındaki harita mühendisi uygulayana kadar bekler. Onaylanan bir öneri tek bir
+  işlemdir ve tek `Ctrl+Z` ile geri alınır. Kadastro ve imar çıktısı hukuki belgedir;
+  imzayı yapay zeka atamaz.
+- **Hiçbir şeyi değiştirmeyen araçlar** (`no_effect`) doğrudan çalışır ve sonucunu
+  döndürür: katman listesi, öznitelik şeması, sorgu, seçim, görünüm bilgisi.
+
+## Sıra
+
+1. `gorunum_bilgisi` — ekranda hangi alanı görüyorsunuz, hangi ölçekte, hangi CRS'te.
+2. `katmanlari_listele` — katmanlar, geometri türleri, nesne sayıları.
+3. `oznitelik_semasi` — bir katmanın öznitelik alanları ve tipleri.
+4. `sorgula` — koşula uyan nesneler; sonuç sayısı sınırlıdır, tutamak döndürür.
+5. `secimi_al` — kullanıcının o anki seçimi, tutamak olarak.
+6. Bir yazma aracı — tutamaklarla; dönen öneriyi kullanıcı uygular.
+
+## Araç yüzeyi
+
+- Araç sayısı: 69 (64 tanesi onay ister)
+- Katalog parmak izi: `2986882347707222029`
+- MCP sürümü: `2026-07-28`
+- Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
+
+## Kılavuz
+
+- [Komut referansı](komutlar/referans.md): her komut, adları, parametreleri
+- [Nesne türleri](nesneler/referans.md): çizimdeki nesne türleri
+- [Sözlük](sozluk.md): ifraz, tevhit, irtifak ve diğer alan terimleri
+- [Arayüz](baslangic/arayuz.md): pencerede ne nerede
+- [Koordinat sistemleri](veri/koordinat-sistemleri.md): TUREF/TM3, dönüşümler
+
+## Araçlar
+
+### `core_annulus` — HALKA
+
+Merkez, iç ve dış yarıçaptan delikli halka çizer.
+Komut: HALKA (ANNULUS, HLK)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `merkez` | string | evet | Halkanın merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `ic` | string | evet | İç çember üzerinde bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `dis` | string | evet | Dış çember üzerinde bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_arc_draw` — YAY
+
+Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir.
+Komut: YAY (ARC, YY)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `merkez` | string | evet | Yayın merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baslangic` | string | evet | Yayın başlangıç noktası; yarıçapı bu belirler — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `bitis` | string | evet | Yayın bitiş yönü; süpürme saat yönünün tersinedir — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_area` — ALAN
+
+Kapalı bir alan çizer; istenirse içine delik açar.
+Komut: ALAN (AREA, POLİGON, POLIGON, AL)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `noktalar` | string | evet | Alanın köşe noktaları; kapanış noktası tekrarlanmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `bolum` | array | hayır | Halka uzunlukları: ilki dış sınır, sonrakiler delik (tam sayı) |
+
+### `core_array` — DİZİ
+
+Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır.
+Komut: DİZİ (DIZI, ARRAY, DZ)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Dizilecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `mod` | string | hayır | KUTUPSAL için kutupsal dizi; verilmezse satır/sütun dizisi (metin) |
+| `satir` | integer | hayır | Satır sayısı (dikdörtgen dizi) (tam sayı) |
+| `sutun` | integer | hayır | Sütun sayısı (dikdörtgen dizi) (tam sayı) |
+| `satir_aralik` | number | hayır | Satır aralığı, metre; kuzeye artı (sayı) |
+| `sutun_aralik` | number | hayır | Sütun aralığı, metre; doğuya artı (sayı) |
+| `merkez` | string | hayır | Dizinin merkezi (kutupsal dizi) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `sayi` | integer | hayır | Toplam kopya sayısı, özgün dahil (kutupsal dizi) (tam sayı) |
+| `aci` | number | hayır | Süpürülecek toplam açı, derece; verilmezse tam tur (sayı) |
+
+### `core_attribute` — ÖZNİTELİK
+
+Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar.
+Komut: ÖZNİTELİK (OZNITELIK, ATTRIBUTE, ÖZN, OZN)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `ad` | string | hayır | Öznitelik kimliği; yoksa tanımlı sütunlar listelenir (metin) |
+| `nesne` | integer | hayır | Nesnenin kalıcı kimliği (tam sayı) |
+| `deger` | string | hayır | Yeni değer; yoksa yalnızca okur. 'yok' hücreyi boşaltır (metin) |
+
+### `core_block` — BLOK
+
+Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar.
+Komut: BLOK (BLOK, BLOCK, BLK)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `ad` | string | evet | Bloğun adı; Türkçe katlanmış hâliyle benzersiz (metin) |
+| `taban` | string | evet | Taban noktası: referansların yerleştirildiği nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nesneler` | string | hayır | Bloğa girecek nesneler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `aciklama` | string | hayır | Serbest açıklama (metin) |
+
+### `core_chamfer` — PAH
+
+Bir köşeyi düz bir kenarla keser (pah kırar).
+Komut: PAH (CHAMFER, PH)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesne` | string | evet | Köşesi kesilecek nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | string | evet | İşlem yapılacak köşe — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `mesafe` | number | evet | Köşeden her iki kenar boyunca kesilecek mesafe, metre (sayı) |
+
+### `core_circle_draw` — DAİRE
+
+Merkez ve çember üzerindeki bir noktadan daire çizer.
+Komut: DAİRE (DAIRE, CIRCLE, DR)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `merkez` | string | evet | Dairenin merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `cevre` | string | evet | Çember üzerinde bir nokta; yarıçapı bu belirler — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_combine` — BİRLEŞTİR
+
+Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar.
+Komut: BİRLEŞTİR (BIRLESTIR, COMBINE, BRL)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_contour` — EŞYÜKSELTİ
+
+Kotlu noktalardan eş yükselti eğrileri çizer.
+Komut: EŞYÜKSELTİ (ESYUKSELTI, CONTOUR, EŞY)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `aralik` | integer | hayır | Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m) (tam sayı) |
+| `katman` | string | hayır | Eğrilerin çizileceği katman; varsayılan ESYUKSELTI (metin) |
+
+### `core_coordinate` — KOORDİNAT
+
+Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.
+Komut: KOORDİNAT (KOORDINAT, COORDINATE, KRD)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nokta` | string | evet | Okunacak nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_copy` — KOPYALA
+
+Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.
+Komut: KOPYALA (COPY, KP)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Kopyalanacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baslangic` | string | evet | Kopyalamanın başlangıç noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `bitis` | string | evet | Kopyaların geleceği noktalar; her nokta bir kopya — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_dimension` — ÖLÇÜ
+
+İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer.
+Komut: ÖLÇÜ (OLCU, DIMENSION, ÖÇ)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `birinci` | string | evet | Birinci nokta; açısal ölçüde birinci kolun ucu — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `ikinci` | string | evet | İkinci nokta; açısal ölçüde ikinci kolun ucu — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `konum` | string | evet | Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `tur` | string | hayır | hizali (varsayılan), dogrusal, yaricap, cap, acisal (metin) |
+| `tepe` | string | hayır | Açısal ölçünün tepe noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `stil` | string | hayır | Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI (metin) |
+| `metin` | string | hayır | Ölçülen değer yerine yazılacak metin (metin) |
+| `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
+
+### `core_earthwork` — HACİM
+
+Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar.
+Komut: HACİM (HACIM, EARTHWORK, HCM)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `kot` | integer | evet | Karşılaştırma kotu, milimetre (845 m = 845000) (tam sayı) |
+
+### `core_edittext` — YAZIDÜZENLE
+
+Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir.
+Komut: YAZIDÜZENLE (YAZIDUZENLE, EDITTEXT, YZD)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Düzenlenecek yazılar; verilmezse seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yazi` | string | hayır | Yeni metin; verilmezse değişmez (metin) |
+| `yukseklik` | integer | hayır | Yeni yükseklik, zeminde milimetre; verilmezse değişmez (tam sayı) |
+| `hizalama` | string | hayır | sol, orta, sag veya merkez; verilmezse değişmez (metin) |
+
+### `core_ellipse_draw` — ELİPS
+
+Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir.
+Komut: ELİPS (ELIPS, ELLIPSE, EL)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `merkez` | string | evet | Elipsin merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `birinci` | string | evet | Birinci eksenin ucu — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `ikinci` | string | evet | İkinci eksenin uzaklığı; eksene dik ölçülür — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baslangic` | number | hayır | Kısmi elips: başlangıç açısı, derece, birinci eksenden saat yönünün tersine (sayı) |
+| `bitis` | number | hayır | Kısmi elips: bitiş açısı, derece; baslangic ile birlikte (sayı) |
+
+### `core_erase` — SİL
+
+Seçilen nesneleri siler.
+Komut: SİL (SIL, ERASE, E)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Silinecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_extend` — UZAT
+
+Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.
+Komut: UZAT (EXTEND, UZ)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesne` | string | hayır | Uzatılacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `sinir` | string | hayır | Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | string | evet | Uzatılacak ucun yakınında bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_fillet` — YUVARLA
+
+Bir köşeyi verilen yarıçapta yay ile yuvarlatır.
+Komut: YUVARLA (FILLET, YV)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesne` | string | evet | Köşesi yuvarlatılacak nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | string | evet | İşlem yapılacak köşe — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yaricap` | number | evet | Yuvarlatma yarıçapı, metre (sayı) |
+
+### `core_fit` — OTURT
+
+Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert).
+Komut: OTURT (FIT, GEOREF, OTR)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `noktalar` | string | evet | Kontrol çiftleri: yerel, harita, yerel, harita... — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `olcek_kilitli` | boolean | hayır | Ölçeği 1'de tutar; saha ölçüsü yeniden ölçeklenmez (evet/hayır) |
+| `sistem` | string | hayır | Oturtulduktan sonraki koordinat sistemi, örnek TUREF/TM36 (metin) |
+
+### `core_guide` — KILAVUZ
+
+Cetvel kılavuzu ekler, listeler ve siler.
+Komut: KILAVUZ (GUIDE, KLV)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `yon` | string | hayır | yatay | düşey; yoksa kılavuzlar listelenir (metin) |
+| `deger` | integer | hayır | Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa (tam sayı) |
+| `sil` | boolean | hayır | Verilen yerdeki kılavuzu siler (evet/hayır) |
+
+### `core_hatch` — TARAMA
+
+Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar.
+Komut: TARAMA (TARAMA, HATCH, TRM)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `noktalar` | string | hayır | Sınır köşeleri, nesne seçmek yerine; en az üç nokta — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nesneler` | string | hayır | Sınırı verecek kapalı nesneler; yoksa etkin seçim ya da noktalar= — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `desen` | string | hayır | Katalogdaki desen adı: SOLID, ANSI31, NET…; varsayılan SOLID (metin) |
+| `aci` | number | hayır | Desenin dönme açısı, derece; varsayılan 0 (sayı) |
+| `olcek` | number | hayır | Desen ölçeği; varsayılan pafta ölçeğinin paydası (AYAR plan_ölçeği) (sayı) |
+| `katalog` | string | hayır | Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu (metin) |
+
+### `core_insert` — BLOKEKLE
+
+Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
+Komut: BLOKEKLE (BLOKEKLE, INSERT, BE)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `ad` | string | evet | Yerleştirilecek bloğun adı (metin) |
+| `nokta` | string | evet | Ekleme noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `olcek` | number | hayır | Ölçek; eksi değer x'te aynalar; varsayılan 1 (sayı) |
+| `olcek_y` | number | hayır | Y ölçeği, farklıysa; varsayılan olcek (sayı) |
+| `aci` | number | hayır | Dönme açısı, derece; varsayılan 0 (sayı) |
+| `sutun` | integer | hayır | Dizi sütun sayısı; varsayılan 1 (tam sayı) |
+| `satir` | integer | hayır | Dizi satır sayısı; varsayılan 1 (tam sayı) |
+| `sutun_aralik` | integer | hayır | Sütunlar arası, milimetre, döndürülmüş eksende (tam sayı) |
+| `satir_aralik` | integer | hayır | Satırlar arası, milimetre, döndürülmüş eksende (tam sayı) |
+
+### `core_label` — ETİKET
+
+Katmandaki nesneleri özniteliklerinden okuyarak etiketler.
+Komut: ETİKET (ETIKET, LABEL, ETK)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `katman` | string | evet | Etiketlenecek katmanın adı (metin) |
+| `bicim` | string | hayır | Etiket biçimi; {sutun} o sütunun değeriyle değişir, \n satır kırar. Sembol alan bildiriyorsa gerekmez (metin) |
+| `hedef` | string | hayır | Etiketlerin yazılacağı katman; yoksa '<katman> ETİKET' (metin) |
+| `yukseklik` | integer | hayır | Yazı yüksekliği, zemin milimetresi (tam sayı) |
+| `kaydirma` | integer | hayır | Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı (tam sayı) |
+
+### `core_layer` — KATMAN
+
+Katman oluşturur, aktif yapar ve özelliklerini değiştirir.
+Komut: KATMAN (LAYER, KAT)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `ad` | string | evet | Katman adı; yoksa oluşturulur ve aktif yapılır (metin) |
+| `grup` | string | hayır | Katman ağacındaki yer, düzeyler '>' ile ayrılır; boş = kök (metin) |
+| `gorunur` | boolean | hayır | Katmanın görünürlüğü (evet/hayır) |
+| `kilitli` | boolean | hayır | Katmanın kilit durumu (evet/hayır) |
+| `renk` | integer | hayır | Çizim rengi, 0xAARRGGBB (tam sayı) |
+
+### `core_layer_visibility` — KATMANGÖRÜNÜM
+
+Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir.
+Komut: KATMANGÖRÜNÜM (KATMANGORUNUM, LAYERVIEW, KGÖ, KGO)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `islem` | string | evet | goster, gizle, yalniz (yalnız bu katman), tumu (hepsini göster) ya da tersine (metin) |
+| `katman` | string | hayır | Katman adı; goster, gizle ve yalniz için gerekir, tersine için isteğe bağlı (verilmezse bütün katmanlar), tumu ile verilemez (metin) |
+
+### `core_leader` — LİDER
+
+Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.
+Komut: LİDER (LIDER, LEADER, LD)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `noktalar` | string | evet | Okun ucundan yazının yanına köşeler — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `metin` | string | hayır | Son köşenin yanına yazılacak metin (metin) |
+| `stil` | string | hayır | Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25 (metin) |
+| `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
+
+### `core_line` — ÇİZGİ
+
+İki veya daha fazla nokta arasında doğru parçaları çizer.
+Komut: ÇİZGİ (CIZGI, LINE, Ç, L)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `noktalar` | string | evet | Ardışık doğru parçalarının köşe noktaları — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_match_style` — STİLKOPYALA
+
+Bir nesnenin stilini seçilen nesnelere uygular.
+Komut: STİLKOPYALA (STILKOPYALA, MATCHPROP, SK)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `kaynak` | string | hayır | Stili kopyalanacak nesnenin kimliği; yoksa tıklanan nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nesneler` | string | hayır | Stili alacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | string | hayır | Kaynak nesnenin üzerinde bir nokta; yalnız kaynak verilmediğinde — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_measure` — ÖLÇ
+
+İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar.
+Komut: ÖLÇ (OLC, MEASURE, MS)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `baslangic` | string | evet | Ölçümün ilk noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `bitis` | string | evet | Ölçümün ikinci noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_measure_area` — ALANÖLÇ
+
+Seçilen nesnelerin alanını ve çevresini yazar.
+Komut: ALANÖLÇ (ALANOLC, AREAOF, AÖ)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_merge` — TEVHİT
+
+Komşu parselleri tek parselde birleştirir (tevhit).
+Komut: TEVHİT (TEVHIT, MERGE, TVH)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Birleştirilecek parseller; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_mirror` — AYNALA
+
+Seçilen nesneleri iki noktadan geçen eksende aynalar.
+Komut: AYNALA (MIRROR, AYN)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Aynalanacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baslangic` | string | evet | Ayna ekseninin ilk noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `bitis` | string | evet | Ayna ekseninin ikinci noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_move` — TAŞI
+
+Seçilen nesneleri iki nokta arasındaki kadar taşır.
+Komut: TAŞI (TASI, MOVE, TŞ)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Taşınacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baslangic` | string | evet | Taşımanın başlangıç noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `bitis` | string | evet | Taşımanın bitiş noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_offset` — OFSET
+
+Seçili nesnelerin verilen mesafede paralelini çizer.
+Komut: OFSET (OFFSET, OF)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Ofseti alınacak nesneler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `mesafe` | integer | hayır | Ofset mesafesi, milimetre; eksi değer içeri (tam sayı) |
+| `kose` | string | hayır | KÖŞE | YUVARLAK | PAH — dış köşenin biçimi (metin) |
+
+### `core_pan` — KAYDIR
+
+Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır.
+Komut: KAYDIR (PAN, KY)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `baslangic` | string | evet | Kaydırmanın tutulacağı nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `bitis` | string | evet | O noktanın taşınacağı yer — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_point_draw` — NOKTA
+
+Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper.
+Komut: NOKTA (POINT, NK)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `noktalar` | string | evet | Yerleştirilecek noktalar — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_points` — NOKTALAR
+
+Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod).
+Komut: NOKTALAR (POINTS, NKL)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `dosya` | string | evet | Nokta listesi dosyasının yolu (metin) |
+| `yon` | string | hayır | oku (varsayılan) | yaz (metin) |
+| `nesneler` | string | hayır | yon=yaz ile: köşeleri yazılacak nesneler; verilmezse çizimdeki noktalar — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `eksen` | string | hayır | Sütun sırası: YX (varsayılan, Türkiye'de olağan) | XY (metin) |
+
+### `core_polyline` — ÇOKLUÇİZGİ
+
+Birden çok noktadan TEK bir çizgi nesnesi çizer.
+Komut: ÇOKLUÇİZGİ (COKLUCIZGI, POLYLINE, ÇÇ, PL)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `noktalar` | string | evet | Çoklu çizginin köşe noktaları; hepsi tek nesne olur — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_rectangle` — DİKDÖRTGEN
+
+Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer.
+Komut: DİKDÖRTGEN (DIKDORTGEN, RECTANGLE, DKD, REC)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `noktalar` | string | evet | Karşılıklı iki köşe; kalan ikisi bunlardan türetilir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_reproject` — DÖNÜŞTÜR
+
+Çizimin tamamını bir koordinat sisteminden diğerine dönüştürür.
+Komut: DÖNÜŞTÜR (DONUSTUR, REPROJECT, DNS)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `hedef` | string | evet | Hedef koordinat sistemi, örnek EPSG:5256 ya da TUREF/TM36 (metin) |
+| `kaynak` | string | hayır | Kaynak sistem; yoksa çizimin kendi koordinat sistemi (metin) |
+
+### `core_rotate` — DÖNDÜR
+
+Seçilen nesneleri bir merkez etrafında döndürür.
+Komut: DÖNDÜR (DONDUR, ROTATE, DÖN)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Döndürülecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `merkez` | string | evet | Döndürme merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `aci` | number | evet | Dönme açısı, derece; artı yön saat yönünün tersi (sayı) |
+
+### `core_scale` — ÖLÇEKLE
+
+Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.
+Komut: ÖLÇEKLE (OLCEKLE, SCALE, ÖLÇEK, OLCEK)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Ölçeklenecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `merkez` | string | evet | Ölçekleme merkezi; bu nokta yerinde kalır — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `carpan` | number | evet | Ölçek çarpanı; sıfırdan büyük (sayı) |
+
+### `core_sector` — DİLİM
+
+Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir.
+Komut: DİLİM (DILIM, SECTOR, DL)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `merkez` | string | evet | Dilimin merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baslangic` | string | evet | İlk kenarın ucu; yarıçapı bu belirler — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `bitis` | string | evet | İkinci kenarın yönü; süpürme saat yönünün tersinedir — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_set_layer` — KATMANAT
+
+Seçilen nesneleri başka bir katmana taşır.
+Komut: KATMANAT (KATMANATA, SETLAYER, KA)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Taşınacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `katman` | string | evet | Hedef katmanın adı; yoksa oluşturulur (metin) |
+
+### `core_spline` — SPLINE
+
+Kontrol noktalarından NURBS eğrisi (spline) çizer.
+Komut: SPLINE (SPLINE, SPLINE, SPL)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `noktalar` | string | evet | Kontrol noktaları — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `derece` | integer | hayır | Eğrinin derecesi, 1–15; varsayılan 3 (tam sayı) |
+| `kapali` | boolean | hayır | Son noktadan ilkine kapansın mı; varsayılan hayır (evet/hayır) |
+
+### `core_split` — BÖL
+
+Nesneleri çizilen bir kesme çizgisiyle böler.
+Komut: BÖL (BOL, SPLIT, BL)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesne` | string | hayır | Kesilecek nesneler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `noktalar` | string | hayır | Kesme çizgisinin iki noktası; arayüzde çizilir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | string | hayır | Bölme noktası (tek çizgi; eski biçim) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_split_area` — ALANİFRAZ
+
+Parselden verilen yöne paralel, istenen alanda bir parça ayırır.
+Komut: ALANİFRAZ (ALANIFRAZ, SPLITAREA, ALİF)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `yon` | string | hayır | Ayırma çizgisinin YÖNÜ: iki nokta (yol cephesi, mevcut sınır) — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nesneler` | string | hayır | Ayrılacak parsel; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `alan` | integer | hayır | Ayrılacak alan, mm² (400 m² = 400000000) (tam sayı) |
+| `tolerans` | integer | hayır | Kabul toleransı, mm²; varsayılan 10000 (0,01 m²) (tam sayı) |
+
+### `core_split_parcel` — İFRAZ
+
+Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz).
+Komut: İFRAZ (IFRAZ, SUBDIVIDE, İFR)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `noktalar` | string | hayır | Ayırma çizgisinin iki ucu — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nesneler` | string | hayır | Ayrılacak parsel; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_stakeout` — APLİKASYON
+
+İstasyondan her noktaya mesafe ve açı listesi çıkarır (aplikasyon).
+Komut: APLİKASYON (APLIKASYON, STAKEOUT, APL)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `istasyon` | string | evet | Aletin durduğu nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baglama` | string | hayır | Bağlama (arka görüş) noktası; verilirse açılar ondan ölçülür — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nesneler` | string | hayır | Aplike edilecek noktalar; yoksa seçim, o da boşsa çizimdeki bütün noktalar — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_style` — STİL
+
+Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar.
+Komut: STİL (STIL, STYLE, ST)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `katman` | string | evet | Stilin yazılacağı katmanın adı; katman var olmalı (metin) |
+| `paket` | string | hayır | Stil kataloğu paketinin dosya yolu (metin) |
+| `olcek_min` | integer | hayır | Bu ölçek paydasından daha yakında çizilmez (1:N'deki N) (tam sayı) |
+| `olcek_max` | integer | hayır | Bu ölçek paydasından daha uzakta çizilmez (tam sayı) |
+| `sinifla` | string | hayır | Sınıflandırmada kullanılacak öznitelik; her nesne kendi değerine göre stillenir (metin) |
+| `kod` | string | hayır | Katalogdaki satırın kimliği; verilmezse katalog kuralları eşleşir (metin) |
+| `olcek` | integer | hayır | Ölçek paydası (1:N); 0 = ölçekten bağımsız (tam sayı) |
+| `renk` | integer | hayır | Çizgi rengi, 0xAARRGGBB (tam sayı) |
+| `kalinlik` | integer | hayır | Çizgi kalınlığı, kâğıt mikrometresi (1000 = 1 mm) (tam sayı) |
+| `dolgu` | integer | hayır | Dolgu rengi, 0xAARRGGBB; 0 = dolgusuz (tam sayı) |
+| `sira` | integer | hayır | Çizim sırası; büyük olan üste gelir (tam sayı) |
+| `sifirla` | boolean | hayır | Stili siler; nesneler katman varsayılanına döner (evet/hayır) |
+| `tip` | string | hayır | Sembol katmanı tipi: cizgi, isaretci-cizgi, tarak-cizgi, dolgu, cizgi-desen-dolgu, nokta-desen-dolgu, merkez-isaretci, isaretci (metin) |
+| `ekle` | boolean | hayır | Katmanı mevcut sembolün üstüne ekler; yoksa sembolü değiştirir (evet/hayır) |
+| `sekil` | string | hayır | İşaretçi şekli: daire, kare, ucgen, baklava, yildiz, arti, carpi, ok, yarim-daire, besgen, altigen, cizik (metin) |
+| `yerlesim` | string | hayır | İşaretçinin çizgi üzerindeki yeri: aralik, tepe, ilk, son, orta (metin) |
+| `birim` | string | hayır | Ölçülerin birimi: kagit (µm), zemin (mm), piksel (metin) |
+| `boyut_birim` | string | hayır | Yalnız `boyut` için birim; verilmezse `birim` geçerlidir (metin) |
+| `aralik_birim` | string | hayır | Yalnız `aralik` için birim; verilmezse `birim` geçerlidir (metin) |
+| `aralik_y_birim` | string | hayır | Yalnız `aralik_y` için birim; verilmezse `birim` geçerlidir (metin) |
+| `kaydirma_birim` | string | hayır | Yalnız `kaydirma` için birim; verilmezse `birim` geçerlidir (metin) |
+| `boyut` | integer | hayır | İşaretçi çapı ya da tarak dişinin boyu, `birim` cinsinden (tam sayı) |
+| `aralik` | integer | hayır | Çizgi boyunca ya da desende birinci eksende aralık (tam sayı) |
+| `aralik_y` | integer | hayır | Nokta deseninde ikinci eksen; verilmezse kare desen (tam sayı) |
+| `aci` | integer | hayır | Desen açısı ya da işaretçi dönüklüğü, mikro derece (tam sayı) |
+| `kaydirma` | integer | hayır | Geometriden dik kaydırma, `birim` cinsinden (tam sayı) |
+| `faz` | integer | hayır | İlk işaretçinin çizgi boyunca kaç birim ileride başlayacağı; verilmezse aralığın yarısı (tam sayı) |
+| `faz_birim` | string | hayır | Yalnız `faz` için birim; verilmezse `birim` geçerlidir (metin) |
+| `saydamlik` | integer | hayır | Katman saydamlığı 0-255; 255 tam opak (tam sayı) |
+| `desen` | string | hayır | Çizgi tipi: sürekli, ya da çizgi kalınlığının katı olarak çizgi/boşluk uzunlukları — '8 1 1 1' gibi (kesik-nokta) (metin) |
+| `yazi` | string | hayır | yazi-isaretci katmanının yazdığı sabit metin (metin) |
+| `alan` | string | hayır | Nesneden alınacak parametreler, virgülle: sütun[:özellik[:tür]] — 'kod:yazi:metin, kat:kalinlik'. Sütun yoksa tanımlanır (metin) |
+
+### `core_symbol` — SEMBOL
+
+Gösterim rafını yükler, ağacında gezer ve içinde arar.
+Komut: SEMBOL (SEMBOLLER, SYMBOL, SMB)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `paket` | string | hayır | Yüklenecek gösterim paketinin dosya yolu (metin) |
+| `grup` | string | hayır | Gezilecek grup yolu, düzeyler '>' ile ayrılır (metin) |
+| `ara` | string | hayır | Etikette, kimlikte ve grup yolunda arar (metin) |
+| `kod` | string | hayır | Tek bir gösterimin ayrıntısı (metin) |
+
+### `core_text` — METİN
+
+Çizime metin yazar; yükseklik ve hizalama verilebilir.
+Komut: METİN (METIN, YAZI, TEXT, MT)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `noktalar` | string | evet | Yazının başlangıç noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yazi` | string | evet | Yazılacak metin (metin) |
+| `yukseklik` | integer | hayır | Yazı yüksekliği, zeminde milimetre; yoksa proje ayarı (tam sayı) |
+| `bitis` | string | hayır | Taban çizgisinin bitişi; yoksa yatay — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `hizalama` | string | hayır | sol, orta, sag veya merkez (metin) |
+
+### `core_to_area` — ALANAÇEVİR
+
+Uç uca değen çizgileri tek bir kapalı alana çevirir.
+Komut: ALANAÇEVİR (ALANACEVIR, TOAREA, ALÇ)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_topology` — TOPOLOJİ
+
+Kendini kesen sınır, sıfır alan ve örtüşen parselleri raporlar.
+Komut: TOPOLOJİ (TOPOLOJI, TOPOLOGY, TPL)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_trim` — BUDA
+
+Bir çizgiyi kestiği sınır çizgisine kadar budar.
+Komut: BUDA (TRIM, BD)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesne` | string | hayır | Budanacak çizginin kimliği; yoksa seçili iki çizgiden tıklanan — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `sinir` | string | hayır | Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `nokta` | string | evet | Atılacak parçanın üzerindeki bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_vertex_insert` — KÖŞEEKLE
+
+Bir kenarın ortasına yeni köşe ekler.
+Komut: KÖŞEEKLE (KOSEEKLE, ADDVERTEX, KE)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesne` | string | evet | Köşe eklenecek nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kose` | integer | evet | Yeni köşenin ardına geleceği köşe; ilk köşe 1'dir (tam sayı) |
+| `nokta` | string | evet | Yeni köşenin yeri — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_vertex_move` — KÖŞETAŞI
+
+Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.
+Komut: KÖŞETAŞI (KOSETASI, MOVEVERTEX, KT)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesne` | string | evet | Köşesi taşınacak nesnenin kimliği — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kose` | integer | evet | Taşınacak köşenin sırası; ilk köşe 1'dir (tam sayı) |
+| `nokta` | string | evet | Köşenin yeni yeri — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_zoom` — YAKINLAŞ
+
+Görünümü çizim kapsamına veya verilen çarpana ayarlar.
+Komut: YAKINLAŞ (YAKINLAS, ZOOM, Z)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `mod` | string | hayır | KAPSAM | ÇARPAN | SIFIRLA (metin) |
+| `carpan` | number | hayır | ÇARPAN modunda ölçek katsayısı (sayı) |
+
+### `gorunum_bilgisi` — GÖRÜNÜMBİLGİSİ
+
+Ekranda görünen alanın köşe koordinatlarını, merkezini, ölçeğini ve CRS'ini bildirir.
+Komut: GÖRÜNÜMBİLGİSİ (GORUNUMBILGISI, VIEWINFO, GRB)
+Bu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.
+
+Doğrudan çalışır.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+
+### `islem_alan_duzenle` — ALANDÜZENLE
+
+Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp genişleterek, bir kenarı kaydırarak ya da bir köşeyi çekerek; şekil bozulmaz.
+Komut: ALANDÜZENLE (ALANDUZENLE, ADJUSTAREA, ADZ)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kapsam` | string | hayır | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin) |
+| `pencere` | string | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `katman` | string | hayır | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin) |
+| `alan` | number | hayır | Hedef alan, metrekare (sayı) |
+| `mod` | string | hayır | Nasıl getirileceği (hepsi / kenar / kose); varsayılan hepsi (metin) |
+| `kenar` | integer | hayır | Kaydırılacak kenar (ilk köşeden çıkan kenar 1); mod=kenar (tam sayı) |
+| `kose` | integer | hayır | Çekilecek köşe; mod=kose (tam sayı) |
+| `nokta` | string | hayır | Kenarın ya da köşenin gideceği yer; verilmezse arayüz sürükletir, komut satırı hedefe tam oturtur — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `islem_bag_coz` — BAĞÇÖZ
+
+Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne bundan sonra tek başına taşınır.
+Komut: BAĞÇÖZ (BAGCOZ, DETACH, BÇ, BC)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kapsam` | string | hayır | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin) |
+| `pencere` | string | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `katman` | string | hayır | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin) |
+
+### `islem_bagla` — BAĞLA
+
+Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur.
+Komut: BAĞLA (BAGLA, ATTACH, BĞ, BG)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kapsam` | string | hayır | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin) |
+| `pencere` | string | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `katman` | string | hayır | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin) |
+| `kaynak` | string | hayır | Yazıların bağlanacağı nesne (çizgi ya da alan) — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `bag` | string | hayır | Neye bağlanacağı: en yakın kenar ya da en yakın köşe (kenar / kose); varsayılan kenar (metin) |
+| `tur` | string | hayır | Yazının sözü: kendi yazısı kalır ya da kenarın uzunluğu olur (sabit / uzunluk); varsayılan sabit (metin) |
+| `birim` | string | hayır | Uzunluğun birimi (tur=uzunluk) (metre / santimetre / milimetre / kilometre); varsayılan metre (metin) |
+| `ondalik` | integer | hayır | Virgülden sonraki basamak sayısı (tur=uzunluk); varsayılan 2 (tam sayı) |
+| `bicim` | string | hayır | Uzunluk yazısının kalıbı; {} sayının yerini tutar (tur=uzunluk) (metin) |
+| `ayrac` | string | hayır | Ondalık ayracı (tur=uzunluk) (virgul / nokta); varsayılan virgul (metin) |
+
+### `islem_kose_numarala` — KÖŞENUMARALA
+
+Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, köşe taşınınca izler.
+Komut: KÖŞENUMARALA (KOSENUMARALA, NUMBERVERTICES, KNM)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kapsam` | string | hayır | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin) |
+| `pencere` | string | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `katman` | string | hayır | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin) |
+| `baslangic` | string | hayır | Sayımın başlayacağı köşeye en yakın nokta; verilmezse ilk köşe — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yon` | string | hayır | Sayım yönü (ters / saat); varsayılan ters (metin) |
+| `onek` | string | hayır | Numaranın önüne gelen yazı (örnek: A, K-) (metin) |
+| `basamak` | integer | hayır | Numaranın en az basamak sayısı; eksikler dolgu ile tamamlanır; varsayılan 0 (tam sayı) |
+| `dolgu` | string | hayır | Basamak dolgusu; varsayılan 0 (metin) |
+| `ilk` | integer | hayır | İlk köşenin numarası; varsayılan 1 (tam sayı) |
+| `sonek` | string | hayır | Numaranın arkasına gelen yazı (metin) |
+| `yukseklik` | integer | hayır | Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 (tam sayı) |
+| `bosluk` | integer | hayır | Köşe ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 (tam sayı) |
+| `bagla` | boolean | hayır | Numarayı köşesine bağla: köşe taşınınca numara izler; varsayılan evet (evet/hayır) |
+
+### `islem_uzunluk_yaz` — UZUNLUKYAZ
+
+Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar; yazı kenara bağlıdır, kenar değişince izler ve yenilenir.
+Komut: UZUNLUKYAZ (UZUNLUKYAZ, LABELLENGTH, UZY)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Uygulanacak nesnelerin kimlikleri; verilirse kapsam okunmaz — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kapsam` | string | hayır | secili (varsayılan), gorunum ya da proje: nesneler nereden alınır (metin) |
+| `pencere` | string | hayır | gorunum kapsamı için görünümün iki köşesi; arayüz kendisi verir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `katman` | string | hayır | Sonucun yazılacağı katman; yoksa oluşturulur, verilmezse etkin katman (metin) |
+| `birim` | string | hayır | Uzunluğun yazılacağı birim (metre / santimetre / milimetre / kilometre); varsayılan metre (metin) |
+| `ondalik` | integer | hayır | Virgülden sonraki basamak sayısı; varsayılan 2 (tam sayı) |
+| `bicim` | string | hayır | Yazının kalıbı; {} sayının yerini tutar (örnek: "{} m", "L={}") (metin) |
+| `ayrac` | string | hayır | Ondalık ayracı (virgul / nokta); varsayılan virgul (metin) |
+| `taraf` | string | hayır | Yazının kenarın hangi yanına düşeceği (otomatik / sol / sag / dis / ic); varsayılan otomatik (metin) |
+| `yukseklik` | integer | hayır | Yazı yüksekliği, zemin milimetresi; 0 = plan ölçeğinde 2,5 mm; varsayılan 0 (tam sayı) |
+| `bosluk` | integer | hayır | Kenar ile yazı arası, milimetre; 0 = yüksekliğin yarısı; varsayılan 0 (tam sayı) |
+| `enaz` | integer | hayır | Bundan kısa kenarlara yazı yazılmaz, milimetre; varsayılan 0 (tam sayı) |
+| `bagla` | boolean | hayır | Yazıyı kenarına bağla: kenar taşınınca yazı izler, uzunluk yeniden yazılır; varsayılan evet (evet/hayır) |
+
+### `katmanlari_listele` — KATMANLAR
+
+Katmanları, nesne sayılarını, görünürlük ve kilit durumlarını listeler.
+Komut: KATMANLAR (LAYERS, KTL)
+Bu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.
+
+Doğrudan çalışır.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+
+### `oznitelik_semasi` — ÖZNİTELİKŞEMASI
+
+Çizimde tanımlı öznitelik sütunlarını ve tiplerini listeler.
+Komut: ÖZNİTELİKŞEMASI (OZNITELIKSEMASI, ATTRSCHEMA, ÖŞ)
+Bu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.
+
+Doğrudan çalışır.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+
+### `secimi_al` — SEÇİMBİLGİSİ
+
+Kullanıcının o anki seçimini bildirir: kaç nesne ve hangi anahtarlar.
+Komut: SEÇİMBİLGİSİ (SECIMBILGISI, SELECTIONINFO, SÇB)
+Bu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.
+
+Doğrudan çalışır.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+
+### `sorgula` — SORGULA
+
+Katman ve öznitelik koşuluna uyan nesneleri sayar ve anahtarlarını bildirir.
+Komut: SORGULA (QUERY, SRG)
+Bu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.
+
+Doğrudan çalışır.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `katman` | string | hayır | Hangi katmanda aranacağı; verilmezse bütün çizim (metin) |
+| `alan` | string | hayır | Öznitelik sütunu; verilirse o sütunu taşıyan nesneler (metin) |
+| `deger` | string | hayır | Sütunun eşit olması istenen değer; yalnız 'alan' ile birlikte (metin) |
+| `sinir` | integer | hayır | En çok kaç nesne bildirileceği; varsayılan 200 (tam sayı) |
+

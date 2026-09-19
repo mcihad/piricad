@@ -6,6 +6,29 @@ terms of the GNU General Public License as published by the Free Software
 Foundation, either version 3 of the License, or (at your option) any later
 version. See LICENSE for the full text.
 
+TWO LICENCES, AND THE SPLIT IS DELIBERATE. Article 2.1 of CLAUDE.md, following §1
+of kentoscad.md, puts any SERVER component under the GNU Affero General Public
+License. The program embeds an MCP server so that AI agents can connect to a
+running session, and the files that ARE that server are therefore licensed
+
+    SPDX-License-Identifier: AGPL-3.0-or-later
+
+with the full text in LICENSES/AGPL-3.0-or-later.txt. Those files are:
+
+    src/ai/include/kentos_cad/ai/jsonrpc.hpp    src/ai/src/jsonrpc.cpp
+    src/ai/include/kentos_cad/ai/endpoint.hpp   src/ai/src/endpoint.cpp
+    src/ai/include/kentos_cad/ai/mcp.hpp        src/ai/src/mcp.cpp
+    src/app/include/kentos_cad/app/mcp_service.hpp
+    src/app/src/mcp_service.cpp
+    tests/unit/test_ai_mcp.cpp
+
+Everything else in this repository stays GPL-3.0-or-later. The two licences are
+compatible in both directions by their own §13, so the combined program can be
+conveyed; the practical consequence of the AGPL half is §13's network clause,
+which is exactly the obligation a server component is meant to carry.
+`scripts/ci-gate-ai.sh` checks that the list above and the SPDX lines in those
+files agree, so neither can drift from the other.
+
 --------------------------------------------------------------------------------
 THIRD-PARTY COMPONENTS
 --------------------------------------------------------------------------------
@@ -242,6 +265,25 @@ Currently linked
 
                           Headers appear ONLY in src/io/src/postgis.cpp, behind
                           the pimpl in its public header (io.md R2/P2).
+
+  qpdf                    Apache-2.0            >= 11.9   system    (KENTOS_WITH_QPDF)
+                          Encrypts the PDF that YAZDIR writes: AES-256 with a
+                          user password, an owner password and the permission
+                          flags (print, copy, modify) the user chose, and sets
+                          the document's author. Qt's QPdfWriter produces the
+                          file and knows no passwords; CLAUDE.md 5.16 forbids
+                          hand-rolling encryption, and qpdf is the mature,
+                          cross-platform library whose whole job this is.
+                          Found with find_package(qpdf CONFIG) — apt libqpdf-dev,
+                          brew qpdf, vcpkg qpdf — and confined to
+                          src/io/src/pdf_encrypt.cpp behind the facade in
+                          kentos_cad/io/pdf_encrypt.hpp.
+
+                          LICENCE FINDING: Apache License 2.0 — retain the
+                          notice and the LICENSE text, state changes if any,
+                          patent grant included. GPLv3-compatible (the FSF
+                          lists Apache 2.0 as compatible with GPLv3 only, which
+                          is this project's licence floor, Article 2.1).
 
   GDAL/OGR                MIT (X11) + others    >= 3.8   (KENTOS_WITH_GDAL)
                           Vector format I/O for /src/io: DXF and GeoPackage

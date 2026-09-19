@@ -86,7 +86,7 @@ açar; altçizgi, ekranı boş yere doldurmasın diye gizlidir.
 | **Değiştir** | Sil, Taşı, Kopyala, Döndür, Ofset |
 | **Harita** | Sorgula, Ölç, Veritabanı… |
 | **Analiz** | Öznitelik Tablosu (**F6**), Yapay Zekâ Önerisi |
-| **Katman** | Katman, Katman Yöneticisi |
+| **Katman** | Katman, Katman Yöneticisi · Tümünü Göster, Gösterimi Ters Çevir |
 | **Pencere** | Panellerin açık/kapalı durumu, Yerleşimi Sıfırla |
 | **Yardım** | Komut Listesi, Hakkında |
 
@@ -131,6 +131,10 @@ nesneleri elinizde kalmaz.
 | **düzenleme** | Böl/Buda · Birleştir (tevhit) · Parsel Böl (ifraz) · Taşı · Ofset |
 | **ölçüm** | Uzunluk Ölç ▸ *(aile)* |
 | **yardımcı** | Stil Kopyala · Topoloji Denetimi |
+
+Üst araç çubuğunda **Kaydet**'in sağında **Yazdır** durur; yanındaki küçük ok
+yazdırma profillerini listeler. İlk basış tuvalde [yazdırma alanı](yazdirma.md)
+çerçevesini açar, ikincisi önizlemeye geçer.
 
 ### Araç aileleri
 
@@ -445,7 +449,9 @@ alanları, çıktı katmanı, gönderilecek **komut satırı** ve **Çalıştır
 seçilince görünümün iki köşesi satıra `pencere=` olarak yazılır; kartta okuduğunuz
 satırı komut satırına yazmak aynı işi yapar. Aynı araçlar **Analiz ▸ İşlem Araçları**
 menüsünde de durur. `TERCİH araç_penceresi evet` ile kart panelin içinde değil kendi
-penceresinde açılır.
+penceresinde açılır. Bir **nokta** ya da **nesne** alanı tuvalden doldurulur: yanındaki
+nişan düğmesi işaretçiyi seçim işaretçisine çevirir, tıkladığınız yer ya da nesne alana
+yazılır ([Bileşenler](bilesenler.md)).
 
 ### Öznitelikler
 
@@ -614,8 +620,21 @@ karışmaz.
 
 Altta bir sayaç: kaç katman var ve kaçı düzenlenebilir.
 
-Sağ tuş menüsü katman komutlarını sunar: adlandır, renk, kilit, stil düzenle. Hepsi
-`KATMAN` komutuyla gider.
+**Birden fazla katman seçebilirsiniz**: Ctrl ile tek tek, Shift ile aralık. Vurgulamak
+bir düzenleme değildir — aktif katmanı değiştirmez.
+
+Sağ tuş menüsü, tıkladığınız satırın komutlarını sunar: **Tümünü seç**, **Öznitelik
+tablosu**, **Aktif katman yap**, **Özniteliklerden etiketle…**, **Görünüm** alt menüsü,
+kilit, **Gruba taşı…** ve en altta **Katman Özellikleri…**.
+
+**Görünüm** alt menüsü gösterme ve gizlemeye dairdir: göster, gizle, yalnız bunu göster,
+tümünü göster, gösterimi ters çevir. Seçimin **tamamına** uygulanır — seçili olmayan bir
+satıra sağ tıklarsanız yalnız o satıra — ve kaç katman seçili olduğu giriş başlığında
+yazar. Onbir katman tek bir Ctrl+Z ile geri gelir.
+
+Her giriş bir komutla gider: görünürlük [`KATMANGÖRÜNÜM`](../komutlar/layer_visibility.md),
+geri kalanı [`KATMAN`](../komutlar/layer.md), `SEÇ` ve `ETİKET`. Panelin yapıp komut
+satırının yapamadığı bir şey yoktur.
 
 ## Durum çubuğu
 

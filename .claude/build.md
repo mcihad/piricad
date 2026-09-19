@@ -32,6 +32,9 @@ R24. Every blocking gate MUST be a script named `scripts/ci-gate-<job>.sh`; the 
 R25. `/SECURITY.md` MUST be published, naming the security contact, the coordinated-disclosure process and a stated response SLA in days; a release job MUST fail if the file or the SLA figure is absent (§13).
 R26. CI MUST publish Doxygen API documentation and MkDocs user documentation as blocking jobs, and the repository MUST carry `/CONTRIBUTING.md`, `/CODE_OF_CONDUCT.md`, plus a documented RFC process, a public roadmap with a release calendar, and sample datasets with tutorial content under `/docs` (§13).
 
+R27. The two new options are PROBED, not assumed: `KENTOS_WITH_MCP` (the embedded agent server, needs Qt HttpServer) and `KENTOS_WITH_KEYCHAIN` (the OS key store for provider keys). Each defaults ON where its toolchain is found, hard-fails with the package name when explicitly ON and missing, and sets a `KENTOS_HAVE_<X>` define — the qpdf shape (`cmake/KentOSCadDependencies.cmake`). A build without either still builds and says what it cannot do.
+R28. CI installs the Qt modules the program actually links. `.github/workflows/ci.yml` pinned Qt `6.7.*` with `modules: qtshadertools` only, so `qthttpserver` would be absent and the server would not compile there — a target that CI cannot build is a target Article 6.1's green matrix cannot cover.
+
 ## Absolute Prohibitions
 
 P1. NEVER `-ffast-math`, `/fp:fast`, `-ffp-contract=fast`, or any per-target override of the R9 flag strings.

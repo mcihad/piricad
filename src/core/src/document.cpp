@@ -135,6 +135,7 @@ std::uint64_t Document::content_hash() const
     h = dashes_.fold(h);
     h = foreign_.fold(h);
     h = blocks_.fold(h);
+    h = attachments_.fold(h);
 
     for (EntityId e = 0; e < entities_.size(); ++e) {
         if (!entities_.alive(e)) continue;
@@ -312,6 +313,7 @@ Result<EntityId> Document::push_entity(LayerId lyr, std::uint32_t geometry_slot,
     // same, or the fingerprint is not about the document.
     attributes_.resize(geometry_.slot_count());
     texts_.resize(geometry_.slot_count());
+    attachments_.resize(entities_.size());
 
     ++live_count_;
     ++layer_live_[lyr];
@@ -1094,6 +1096,54 @@ Status Document::set_text(EntityId e, std::string content, Mm height, TextAnchor
     return ok();
 }
 
+Status Document::set_attachment(EntityId e, const Attachment* a, Op& undo_out)
+{
+    if (e >= entities_.size())
+        return err(ErrorCode::NotFound, "Bilinmeyen nesne kimliği: " + std::to_string(e));
+    if (!entities_.alive(e))
+        return err(ErrorCode::InvalidArgument,
+                   "Silinmiş nesne bir nesneye bağlanamaz: " + std::to_string(e));
+    if (a != nullptr) {
+        if (auto st = editable(e); !st) return st;
+        const EntityId src = slot_of(a->source);
+        if (src == kNoEntity || !entities_.alive(src))
+            return err(ErrorCode::NotFound, "Bağlanılacak nesne bulunamadı veya silinmiş: " +
+                                                std::to_string(raw(a->source)));
+        if (src == e) return err(ErrorCode::InvalidArgument, "Bir nesne kendisine bağlanamaz.");
+        // A chain is allowed — a caption may follow a line that itself follows
+        // something — but a cycle would make the commit-time update chase its
+        // own tail. Walk up from the source; coming back to `e` is the refusal.
+        EntityId cur = src;
+        for (int hops = 0; hops < 64 && attachments_.has(cur); ++hops) {
+            cur = slot_of(attachments_.get(cur)->source);
+            if (cur == e || cur == kNoEntity)
+                return err(ErrorCode::InvalidArgument,
+                           "Bağ döngüsü: " + std::to_string(raw(entities_.key[e])) +
+                               " zaten dolaylı olarak " + std::to_string(raw(a->source)) +
+                               " tarafından izleniyor.");
+        }
+    }
+
+    undo_out        = Op{};
+    undo_out.kind   = Op::Kind::SetAttachment;
+    undo_out.entity = e;
+    if (const Attachment* was = attachments_.get(e); was != nullptr) {
+        undo_out.has_attach = true;
+        undo_out.attach_arg = *was;
+    }
+
+    if (a == nullptr) {
+        if (!attachments_.clear(e)) {
+            undo_out = Op{}; // followed nothing, follows nothing: no change, no inverse
+            return ok();
+        }
+    } else {
+        attachments_.set(e, *a);
+    }
+    ++revision_;
+    return ok();
+}
+
 void Document::refresh_box(EntityId e)
 {
     if (e >= entities_.size()) return;
@@ -1279,6 +1329,8 @@ Status Document::apply(const Op& op, Op* undo_out)
     case Op::Kind::AttachForeign:
         return attach_foreign(op.entity, op.str_arg, op.bytes_arg, inverse);
     case Op::Kind::DetachForeign: return detach_foreign(op.entity, op.str_arg, inverse);
+    case Op::Kind::SetAttachment:
+        return set_attachment(op.entity, op.has_attach ? &op.attach_arg : nullptr, inverse);
     }
     return err(ErrorCode::Internal, "İşlenmemiş Op::Kind");
 }

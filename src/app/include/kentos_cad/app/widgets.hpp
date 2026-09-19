@@ -49,6 +49,7 @@
 class QButtonGroup;
 class QHBoxLayout;
 class QMenu;
+class QScrollArea;
 class QSlider;
 class QTimer;
 class QVBoxLayout;
@@ -609,6 +610,304 @@ private:
     QString note_;
     ThemeMode theme_{ThemeMode::Dark};
 };
+
+// =============================================================================
+// Conversation — the five parts a chat is drawn from
+// =============================================================================
+
+/// Who a bubble is from. The UI's own four, deliberately NOT `ai::Role`:
+/// `widgets.hpp` is the component set and may not know what an AI is, exactly as
+/// it does not know what a parcel is. The chat panel maps one to the other in one
+/// function, and the living standard can draw all four without linking the model.
+enum class Speaker : std::uint8_t {
+    Person,     ///< the engineer at the workstation — accent wash, right-aligned head
+    Model,      ///< the model's answer, which is ALWAYS labelled `ÖNERİ` (ai.md R17)
+    ToolResult, ///< what a tool reported, in mono, folded away by default
+    Notice,     ///< the program speaking for itself: a refusal, a cancellation
+};
+
+/// Three dots that rise in turn: what the program shows while it is waiting on a
+/// model that has not said anything yet.
+///
+/// THE ONLY ANIMATION BESIDE `ProgressStrip`, and it exists for the same reason:
+/// a stream can be silent for several seconds before the first token — a reasoning
+/// model is silent for thirty — and a panel that showed nothing in that time reads
+/// as a panel that is broken. It reports no fraction, because there is none. When
+/// the profile shows thinking text the dots give way to the text; when it does
+/// not, they are all the user gets — which is the interactive "thinking" mark
+/// the brief asked for in place of reasoning text.
+class ThinkingDot : public QWidget, public Themed
+{
+    Q_OBJECT
+    Q_INTERFACES(kentos::app::Themed)
+
+public:
+    /// Builds stopped dots; they start when the widget is shown.
+    explicit ThinkingDot(QWidget* parent = nullptr);
+
+    /// Starts or stops the dots. Stopped, the widget draws nothing.
+    void setActive(bool on);
+
+    bool isActive() const noexcept { return active_; }
+
+    /// The word beside the dots, `Düşünüyor` by default. A caller replaces it
+    /// with what is actually happening: `Bağlanıyor`, `Araç çalışıyor`.
+    void setLabel(const QString& text);
+
+    /// Shows `s` seconds beside the label once a turn has run long enough to be
+    /// worth timing. Negative hides it.
+    void setElapsedSeconds(int seconds);
+
+    void applyTheme(ThemeMode mode) override;
+    QSize sizeHint() const override;
+
+protected:
+    /// Draws the three dots and the word beside them, and nothing when stopped.
+    void paintEvent(QPaintEvent* event) override;
+
+    /// Being shown IS being active, for the reason `ProgressStrip` says: a
+    /// widget its owner reveals while waiting and hides when done must not also
+    /// need to be told to start, or the two disagree.
+    void showEvent(QShowEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
+
+private:
+    QTimer* clock_{nullptr};
+    QString label_;
+    int phase_{0};
+    int elapsed_{-1};
+    bool active_{false};
+    ThemeMode theme_{ThemeMode::Dark};
+};
+
+/// One turn in the transcript: a head with the speaker and its badge, the words
+/// under it, and — for a model turn — a fold holding the reasoning.
+///
+/// TEXT ARRIVES IN PIECES, WHICH IS WHY `appendText` EXISTS. A streamed answer
+/// grows a few characters at a time and `setText` on every fragment would
+/// re-layout the whole bubble sixty times a second; `appendText` adds to the
+/// document instead. The bubble reports `wantsScroll()` so the transcript can
+/// decide whether to follow — a person who scrolled up to read is not dragged
+/// back down by an answer still arriving.
+class MessageBubble : public QWidget, public Themed
+{
+    Q_OBJECT
+    Q_INTERFACES(kentos::app::Themed)
+
+public:
+    /// Builds an empty bubble for `speaker`. A `Model` bubble carries the `ÖNERİ`
+    /// badge from the moment it is built, before a single character has arrived:
+    /// the label is not a verdict on the content, it is what the content IS
+    /// (ai.md R17, P4).
+    explicit MessageBubble(Speaker speaker, QWidget* parent = nullptr);
+
+    Speaker speaker() const noexcept { return speaker_; }
+
+    /// Replaces the words.
+    void setText(const QString& text);
+
+    /// Adds to them, for a stream.
+    void appendText(const QString& text);
+
+    /// The words as they stand.
+    QString text() const;
+
+    /// Adds reasoning text to the fold, creating it on the first call. Only a
+    /// `Model` bubble has one, and only when the profile asked for the thinking
+    /// to be shown (`core.ai.dusunme_goster`).
+    void appendReasoning(const QString& text);
+
+    /// Opens or closes the reasoning fold. Closed is the default: the answer is
+    /// what the reader came for.
+    void setReasoningOpen(bool open);
+
+    bool hasReasoning() const noexcept;
+
+    /// Shows the moving dots under the words while the turn is in flight, and the
+    /// elapsed time beside them once it has run for more than a second.
+    void setWaiting(bool waiting);
+
+    /// A one-line note under the words, in `tone`: the turn was cancelled, the
+    /// provider failed, the steps were filed as a suggestion.
+    void setNote(const QString& text, Tone tone = Tone::Neutral);
+
+    /// Puts a widget at the foot of the bubble — the suggestion card goes here,
+    /// so a proposal is read inside the turn that made it rather than in a modal
+    /// somewhere else. Takes ownership.
+    void setFooter(QWidget* footer);
+
+    void applyTheme(ThemeMode mode) override;
+
+protected:
+    /// Draws the wash and the rounded outline; every word in it is a child label.
+    void paintEvent(QPaintEvent* event) override;
+
+private:
+    Speaker speaker_;
+    QLabel* who_{nullptr};
+    Badge* mark_{nullptr};
+    QLabel* body_{nullptr};
+    Button* foldButton_{nullptr};
+    QLabel* fold_{nullptr};
+    ThinkingDot* dots_{nullptr};
+    QLabel* note_{nullptr};
+    QWidget* footer_{nullptr};
+    QVBoxLayout* column_{nullptr};
+    QString reasoning_;
+    ThemeMode theme_{ThemeMode::Dark};
+};
+
+/// The scrolling column of bubbles.
+///
+/// IT FOLLOWS THE END ONLY WHILE THE READER IS AT THE END. A transcript that
+/// always scrolled down would yank the view away from somebody reading an earlier
+/// answer every time a token arrived; one that never scrolled would hide the
+/// answer being written. So `append` and `bumped()` scroll only when the view was
+/// already within `kFollowSlack` pixels of the bottom, which is the same rule a
+/// terminal uses.
+class Transcript : public QWidget, public Themed
+{
+    Q_OBJECT
+    Q_INTERFACES(kentos::app::Themed)
+
+public:
+    /// Builds an empty transcript showing its placeholder.
+    explicit Transcript(QWidget* parent = nullptr);
+
+    /// Adds a bubble at the end and takes ownership of it.
+    void append(QWidget* bubble);
+
+    /// The last bubble, or null when the transcript is empty.
+    QWidget* last() const noexcept;
+
+    /// How many bubbles are in it.
+    int count() const;
+
+    /// Removes and destroys every bubble. What "yeni sohbet" does.
+    void clear();
+
+    /// Tells the transcript that the last bubble grew, so it can follow the end
+    /// if the reader is there.
+    void bumped();
+
+    /// Whether the view is at the end, within the follow slack.
+    bool atEnd() const;
+
+    /// Scrolls to the end regardless — what the send button does, because a
+    /// person who just pressed Enter is asking to see the answer.
+    void toEnd();
+
+    /// Scrolls to the beginning. What the living standard uses, so the sheet
+    /// shows every bubble rather than the tail of a scroll.
+    void toStart();
+
+    /// The placeholder shown while there is nothing to read: a sentence naming
+    /// what the panel is for, replaced by the first bubble.
+    void setPlaceholder(const QString& text);
+
+    void applyTheme(ThemeMode mode) override;
+
+private:
+    QScrollArea* scroll_{nullptr};
+    QWidget* column_{nullptr};
+    QVBoxLayout* stack_{nullptr};
+    QLabel* placeholder_{nullptr};
+    ThemeMode theme_{ThemeMode::Dark};
+};
+
+/// One attached file, before it is sent: a kind glyph, the name, the size, and an
+/// × that takes it off again.
+///
+/// SIZE IS PART OF THE LABEL, not a tooltip. An attachment is charged to the
+/// context window and a 4 MB screenshot is most of a small one, so the number a
+/// user needs in order to decide is on the chip.
+class AttachmentChip : public QWidget, public Themed
+{
+    Q_OBJECT
+    Q_INTERFACES(kentos::app::Themed)
+
+public:
+    /// `name` is the file's own name and `bytes` its size; `media` is its media
+    /// type, which picks the glyph.
+    AttachmentChip(const QString& name, qint64 bytes, const QString& media,
+                   QWidget* parent = nullptr);
+
+    const QString& fileName() const noexcept { return name_; }
+
+    qint64 byteCount() const noexcept { return bytes_; }
+
+    /// Hides the × — what a chip in a message already sent looks like, since an
+    /// attachment cannot be taken out of a turn the model has read.
+    void setRemovable(bool on);
+
+    void applyTheme(ThemeMode mode) override;
+    QSize sizeHint() const override;
+
+signals:
+    /// The × was pressed. The owner drops the attachment and deletes the chip.
+    void removeRequested();
+
+protected:
+    /// Draws the ground, the kind glyph, the elided name and the size; the × is
+    /// a child button.
+    void paintEvent(QPaintEvent* event) override;
+
+private:
+    QString name_;
+    QString shown_;
+    qint64 bytes_;
+    Glyph glyph_;
+    Button* drop_{nullptr};
+    ThemeMode theme_{ThemeMode::Dark};
+};
+
+/// How much of the model's context the conversation is using: a bar, the two
+/// numbers, and — the part that matters — WHICH KIND OF NUMBER it is.
+///
+/// AN ESTIMATE AND A MEASUREMENT ARE NOT THE SAME READING. During a turn the only
+/// count available is this program's own, four bytes to the token; when the turn
+/// ends the provider reports what it actually charged. The meter therefore says
+/// `tahmin` or `ölçüldü` beside the numbers, and never shows a bar at all when
+/// the window is unknown — which is the ordinary case for a cloud endpoint,
+/// because no vendor's model listing reports it (`ai/provider.hpp`,
+/// `ContextSource`). A meter that invented a denominator would be inventing the
+/// one number the user is deciding on.
+class ContextMeter : public QWidget, public Themed
+{
+    Q_OBJECT
+    Q_INTERFACES(kentos::app::Themed)
+
+public:
+    /// Builds a meter reading zero of an unknown window.
+    explicit ContextMeter(QWidget* parent = nullptr);
+
+    /// `used` tokens of `window` (0 = unknown), `measured` saying whether the
+    /// provider reported the number or this program estimated it.
+    void setUsage(qint64 used, qint64 window, bool measured);
+
+    /// The line the meter is showing, for a tooltip and for the probe.
+    QString caption() const;
+
+    void applyTheme(ThemeMode mode) override;
+    QSize sizeHint() const override;
+
+protected:
+    /// Draws the line, and the bar only when the window is known.
+    void paintEvent(QPaintEvent* event) override;
+
+private:
+    qint64 used_{0};
+    qint64 window_{0};
+    bool measured_{false};
+    ThemeMode theme_{ThemeMode::Dark};
+};
+
+/// `12.4 b` / `128 b` — a token count in Turkish, as the meter prints it.
+/// `b` is `bin`, and a count under a thousand is printed whole.
+QString formatTokenCount(qint64 tokens);
+
+/// `248 KB`, `1.4 MB` — a file size in Turkish, as an attachment chip prints it.
+QString formatByteCount(qint64 bytes);
 
 // =============================================================================
 // The living standard

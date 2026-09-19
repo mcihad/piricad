@@ -81,6 +81,15 @@ kutusuyla aynı durumları söyler: odaklanınca mavi, değiştirilince turuncu,
 dışıysa soluk. Program boyunca — Seçenekler, stil tasarımcısı, sütun formu — aynı
 liste kullanılır; başka görünüşte bir açılır liste görürseniz bu bir hatadır.
 
+**Sahneden seçme girdisi**, bir **nokta** ya da bir **nesne** isteyen alandır; Araçlar
+panelindeki kartlarda karşınıza çıkar (`KÖŞENUMARALA`'nın başlangıç köşesi, `BAĞLA`'nın
+kaynak nesnesi). Kutuya değeri yazabilirsiniz — nokta için `x,y` metre, nesne için kimlik —
+ya da sağdaki **nişan düğmesine** basarsınız: düğme basılı kalır, kutu "sahneden
+seçiliyor…" der, durum satırı ne istendiğini söyler ve fare işaretçisi seçim işaretçisine
+döner. Tuvalde bir tık kutuyu doldurur: nokta seçerken köşeler yakalanır, nesne seçerken
+tıkladığınız yerde birden çok nesne varsa "Hangisi?" listesi açılır. **Esc** ya da sağ tık
+vazgeçer, düğmeye yeniden basmak da. Seçim yapılırken çizim seçimi değişmez.
+
 **Değiştirilmiş ile Hatalı farklı şeyler söyler.** Turuncu "bunu siz değiştirdiniz ve
 kaydedilmedi", kırmızı "bu değer kabul edilmez" demektir. Turuncu bir kutuyu
 kaydetmek yeter; kırmızı bir kutu düzeltilmeden pencere kapanmaz.
@@ -95,7 +104,7 @@ kaydetmek yeter; kırmızı bir kutu düzeltilmeden pencere kapanmaz.
 - Açılır listede **Alt+↓** ya da **Space** listeyi açar; bir harf yazmak o harfle
   başlayan seçeneğe gider.
 - Tarih alanında **Alt+↓** ya da **F4** takvimi açar; çok seçimli alanda aynı tuşlar
-  listeyi açar. Takvimde ok tuşları gün gün, **PgUp / PgDn** ay ay yürür; **Home**
+  listeyi açar; sahneden seçme girdisinde sahneden seçmeyi başlatır, **Esc** vazgeçer. Takvimde ok tuşları gün gün, **PgUp / PgDn** ay ay yürür; **Home**
   bugüne gider, **Enter** seçer, **Delete** alanı boşaltır, **Esc** kapatır.
 
 Girdilerin öznitelik tablosunda nasıl davrandığı — düzenleme kipi, satır satır
@@ -133,6 +142,57 @@ bilgi (mavi, `i` simgesi), dikkat (turuncu, üçgen) ya da hata (kırmızı) ola
 Program bir şeyin ne kadar süreceğini bilmediğinde — dosya okunurken, sunucuya
 bağlanırken — yüzde uydurmaz, bu çizgiyi akıtır. Altında geçen saniye ve çalışan bir
 `İptal` düğmesi bulunur.
+
+## Sohbet bileşenleri
+
+Yapay zeka panelinin beş bileşeni de aynı setin üyesidir; başka hiçbir yerde
+kullanılmasa bile kuralları buradan gelir.
+
+**Döküm**, iletilerin alt alta dizildiği kaydırılabilir sütundur. Bir kuralı vardır ve
+o kural okumayı korur: **döküm ancak siz zaten sonunda duruyorsanız sonu izler.** Daha
+önceki bir yanıtı okumak için yukarı kaydırdıysanız, gelen yeni sözcükler görüşü aşağı
+çekmez; aşağı indiğinizde izlemeye geri döner. `Gönder`e bastığınızda ise her durumda
+sona iner, çünkü soruyu soran kişi yanıtı görmek istiyordur.
+
+**İleti balonu** bir konuşma sırasıdır: üstte kimin konuştuğu, altında sözler. Dört
+konuşmacının her biri kendi zeminiyle çizilir:
+
+| Konuşmacı | Zemin | Rozet |
+|---|---|---|
+| **Siz** | mavi yıkama | — |
+| **Model** | panelin kendi yükseltilmiş zemini | `ÖNERİ`, her zaman |
+| **Araç** | çukur zemin, tek aralıklı yazı | `SONUÇ` |
+| **KentOSCad** | turuncu yıkama | — |
+
+Model balonunun `ÖNERİ` rozeti, balon kurulurken — tek harf gelmeden — takılır. Rozet
+içeriğe verilmiş bir not değil, içeriğin ne olduğudur: model çizim yapmaz, komut önerir.
+Ayarlarda **düşünme sürecini göster** açıksa, yanıtın üstünde katlanabilir bir
+**Düşünme süreci** bloğu belirir; kapalı gelir, çünkü okuyucunun aradığı yanıttır.
+
+**Düşünme göstergesi**, sırayla yükselen üç noktadır. Model henüz konuşmadığı sürece —
+akıl yürüten bir modelde bu otuz saniye olabilir — noktaların yanında `Düşünüyor · 12 s`
+yazar. Yüzde göstermez, çünkü yüzde yoktur. Düşünme metni gösteriliyorsa yerini metne
+bırakır.
+
+**Ek pençesi**, gönderilmeden önce eklediğiniz dosyayı gösterir: türünün simgesi, adı
+(uzunsa ortadan kısaltılır, uzantısı görünür kalır), **boyutu** ve onu geri çıkaran bir
+`×`. Boyut etiketin parçasıdır, ipucunda saklı değildir: bir ek bağlam penceresinden
+düşülür ve 4 MB'lık bir ekran görüntüsü küçük bir pencerenin çoğudur. Gönderilmiş bir
+iletinin pençesinde `×` yoktur — modelin okuduğu bir sıradan ek geri alınamaz.
+
+**Bağlam ölçeri** konuşmanın modelin penceresinin ne kadarını kullandığını söyler ve —
+önemli olan kısım — **hangi tür sayıyı** gösterdiğini yazar:
+
+| Yazı | Anlamı |
+|---|---|
+| `12.4 b / 128 b belirteç · tahmin` | sayan programın kendisi, dört bayt bir belirteç sayılarak |
+| `13.1 b / 128 b belirteç · ölçüldü` | sağlayıcının tur sonunda bildirdiği gerçek sayı |
+| `9.1 b belirteç · pencere bilinmiyor · ölçüldü` | pencere bilinmiyor; **çubuk hiç çizilmez** |
+
+Çubuk, yer varken mavi, beşte dördü geçince turuncu, dolmaya bir tur kalınca kırmızıdır.
+Pencere bilinmiyorsa çubuk yoktur: bir bölen uydurmak, kullanıcının karar verdiği tek
+sayıyı uydurmak olurdu. Bulut uçlarının çoğu pencere boyunu bildirmez; o sayı model
+profilinin bir alanıdır ve **Yapay Zeka Modelleri** sayfasından yazılır.
 
 ## Tablo
 
@@ -175,6 +235,9 @@ bir not — `TAKBİS'ten çekildi · 14.03.2019` — vardır.
 | **İçe Aktar** | ikincil `Gözat…`, yükleme çizgisi, birincil `İleri` |
 | **Veritabanı** | bölüm başlıkları, etiketi üstte alanlar, birincil `Bağlan`, hayalet `Yenile`, yıkıcı `Projeyi Sil` |
 | **Hangisi?** | birincil `Seç`, ikincil `Vazgeç` |
+| **Yapay Zeka** paneli | döküm, ileti balonu, düşünme göstergesi, ek pençesi, bağlam ölçeri, açılır liste (model seçimi), ikon düğmeler (`Dosya ekle`, `Yeni sohbet`), ikincil `Dur`, birincil `Gönder` |
+| **Öneri kartı** | kesikli çerçeve, `ÖNERİ` rozeti, tek aralıklı komut satırları, uyarı şeridi (çizim değiştiyse), ikincil `Reddet`, birincil `Uygula` |
+| **Araçlar kartı** | segment (Kapsam), parametre alanları, sahneden seçme girdileri (nokta, nesne), birincil `Çalıştır` |
 
 ## Bileşen standardını görmek
 
@@ -195,7 +258,7 @@ Bu sayfadaki resim o dosyanın kopyasıdır; bileşenler değişince aynı komut
 |---|---|
 | **Tab / Shift+Tab** | sonraki / önceki denetime gider |
 | **Space** | düğmeye basar, kutuyu işaretler, anahtarı çevirir, açılır listeyi açar |
-| **Alt+↓ / F4** | tarih alanında takvimi, çok seçimli alanda listeyi açar |
+| **Alt+↓ / F4** | tarih alanında takvimi, çok seçimli alanda listeyi açar, sahneden seçme girdisinde seçmeyi başlatır |
 | **Enter** | girişi onaylar; pencerede varsayılan düğmeyi çalıştırır |
 | **Esc** | girişi iptal eder; pencereyi kapatır |
 | **↑ ↓ ← →** | radyo seçeneği, kaydırıcı değeri, takvimde gün |

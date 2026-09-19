@@ -165,10 +165,10 @@ KENTOS_COMMAND(fit)
                 Param::text("sistem", Arity::optional(),
                             "Oturtulduktan sonraki koordinat sistemi, örnek TUREF/TM36"),
             },
-        .undo    = UndoPolicy::SingleTransaction,
-        .flags   = Flags::Scriptable | Flags::AiAccessible,
+        .undo  = UndoPolicy::SingleTransaction,
+        .flags = Flags::Scriptable | Flags::AiAccessible,
         .summary = "Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert).",
-        .run     = &run,
+        .run = &run,
     };
 }
 

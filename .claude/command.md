@@ -31,6 +31,9 @@ R23. `TOPLU_BASLA` / `TOPLU_BITIR` MUST collapse N commands into one validation 
 R24. `kentos_command` MUST compile Qt-free and link only `kentos_core`; see `.claude/core.md` for the core purity rules.
 R25. Commands owned by `/src/domain` (ifraz, tevhit, yola terk, DOP) MUST be registered through the same `Registry` and obey R1–R23; their domain semantics live in `.claude/domain.md`.
 
+R26. A command's STRUCTURED answer is `Context::report`, surfaced on `DispatchResult::report`; what it SAID is `DispatchResult::lines`, captured per dispatch. A client that is not a person MUST NOT have to parse Turkish prose to learn a count, and `DispatchResult::message` is empty on success — which is why a read command's answer used to be unreachable to anything but the transcript.
+R27. `Param` declares its word list (`choices`) and its numeric range, and the BUS validates both before the body runs (Article 1.3). A body MUST NOT be the only place a keyword list exists: the generated schema needs it as an `enum`, the command line needs it to print, and an agent cannot guess it from a help string. `ToolParam` has always carried both and `to_command_spec` used to drop them.
+
 ## Absolute Prohibitions
 
 P1. NEVER add a mutation path reachable from the GUI that is not reachable from CLI, script and AI. (§2.1)
