@@ -112,7 +112,7 @@ constexpr const char* kToolCommand = kToolCommandProperty;
 constexpr const char* kToolRepeats = "piricad.repeats";
 
 /// The same swatch the layer panel draws, so the combo and the panel agree.
-/// `1 000 000` — thin-space thousands, the way a Turkish pafta prints a scale.
+/// `1 000 000` — thin-space thousands, the way a Turkish layout prints a scale.
 /// Not `QLocale::toString`: that puts a full stop in tr_TR, and the reference
 /// (and every map sheet) uses a space.
 QString groupedNumber(qint64 value)
@@ -309,7 +309,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
             [this](const QString& prompt) { commandLine_->setPrompt(prompt); });
     connect(canvas_, &MapCanvas::printFrameAccepted, this, [this] {
         // ONE GESTURE, TWO DESTINATIONS. The frame does not know whether a
-        // profile or a pafta started it; `pendingLayout_` is what remembers,
+        // profile or a layout started it; `pendingLayout_` is what remembers,
         // and it is cleared as soon as it is used.
         if (!pendingLayout_.isEmpty())
             layoutWithFrame(pendingLayout_);
@@ -1140,14 +1140,14 @@ void MainWindow::buildMenus()
     file->addAction(actExport_);
     file->addAction(actPrint_);
 
-    // ---- PAFTALAR, where a QGIS user looks for layouts -----------------------
+    // ---- ÇIKTIYERLEŞİMİLAR, where a QGIS user looks for layouts -----------------------
     //
-    // UNDER `Dosya` AND NOT UNDER `Görünüm`, because a pafta belongs to the
+    // UNDER `Dosya` AND NOT UNDER `Görünüm`, because a layout belongs to the
     // DOCUMENT: it is saved in the file, it is in the content hash, and it is
     // part of what gets signed. QGIS puts its layouts under `Project` for the
     // same reason. The submenu is rebuilt whenever the document changes, so a
     // sheet added at the command line appears here without anything being told.
-    layoutMenu_ = file->addMenu(tr("&Paftalar"));
+    layoutMenu_ = file->addMenu(tr("&Çıktı Yerleşimleri"));
     connect(layoutMenu_, &QMenu::aboutToShow, this, &MainWindow::rebuildLayoutMenu);
     rebuildLayoutMenu();
     file->addSeparator();
@@ -3316,7 +3316,7 @@ void MainWindow::refreshStatus()
     statusStrip_->setPerformance(canvas_->backendName());
 
     // The PLOT scale, not a pixel size: how many ground millimetres one paper
-    // millimetre carries. That is the number printed in a pafta's title block and
+    // millimetre carries. That is the number printed in a layout's title block and
     // the number an engineer means by "ölçek".
     const double ground_mm_per_paper_mm =
         canvas_->view().mm_per_pixel() * canvas_->pixelsPerPaperMm();
@@ -3482,14 +3482,16 @@ void MainWindow::rebuildLayoutMenu()
     if (layoutMenu_ == nullptr) return;
     layoutMenu_->clear();
 
-    QAction* fresh = layoutMenu_->addAction(tr("Yeni Pafta…"));
-    fresh->setStatusTip(tr("PAFTA islem=ekle — başlık, harita, ölçek çubuğu ve kuzey oku ile "
-                           "gelir"));
+    QAction* fresh = layoutMenu_->addAction(tr("Yeni Çıktı Yerleşimi…"));
+    fresh->setStatusTip(
+        tr("ÇIKTIYERLEŞİMİ islem=ekle — başlık, harita, ölçek çubuğu ve kuzey oku ile "
+           "gelir"));
     connect(fresh, &QAction::triggered, this, [this] { newLayout(); });
 
-    QAction* manage = layoutMenu_->addAction(tr("Pafta Yöneticisi…"));
+    QAction* manage = layoutMenu_->addAction(tr("Çıktı Yerleşimi Yöneticisi…"));
     manage->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+P")));
-    manage->setStatusTip(tr("Çizimdeki paftaları listeler: aç, yeniden adlandır, çoğalt, sil"));
+    manage->setStatusTip(
+        tr("Çizimdeki çıktı yerleşimlerini listeler: aç, yeniden adlandır, çoğalt, sil"));
     connect(manage, &QAction::triggered, this, &MainWindow::openLayoutManager);
 
     // ---- the office's templates ---------------------------------------------
@@ -3506,20 +3508,20 @@ void MainWindow::rebuildLayoutMenu()
     } else {
         for (const QString& one : library) {
             QAction* apply = templates->addAction(one);
-            apply->setStatusTip(tr("PAFTAŞABLON islem=uygula — bu çizimde bu şablondan bir "
-                                   "pafta kurar"));
+            apply->setStatusTip(tr("ÇIKTIŞABLON islem=uygula — bu çizimde bu şablondan bir "
+                                   "yerleşim kurar"));
             connect(apply, &QAction::triggered, this, [this, one] { applyLayoutTemplate(one); });
         }
     }
     templates->addSeparator();
-    QAction* store = templates->addAction(tr("Paftayı Şablon Olarak Kaydet…"));
+    QAction* store = templates->addAction(tr("Yerleşimi Şablon Olarak Kaydet…"));
     store->setEnabled(!controller_->document().layouts().empty());
     connect(store, &QAction::triggered, this, &MainWindow::saveLayoutTemplate);
 
     const core::LayoutStore& sheets = controller_->document().layouts();
     if (sheets.empty()) {
         layoutMenu_->addSeparator();
-        QAction* none = layoutMenu_->addAction(tr("(çizimde pafta yok)"));
+        QAction* none = layoutMenu_->addAction(tr("(çizimde çıktı yerleşimi yok)"));
         none->setEnabled(false);
         return;
     }
@@ -3557,7 +3559,7 @@ void MainWindow::rebuildLayoutMenu()
 QStringList MainWindow::probeLayoutMenu()
 {
     QStringList out;
-    if (layoutMenu_ == nullptr) return {QStringLiteral("Paftalar menüsü yok")};
+    if (layoutMenu_ == nullptr) return {QStringLiteral("Çıktı Yerleşimleri menüsü yok")};
 
     // THE MENU IS BUILT ON `aboutToShow`, so the probe raises that signal rather
     // than reading a menu nobody has opened — which is exactly the state a user
@@ -3579,7 +3581,7 @@ void MainWindow::applyLayoutTemplate(const QString& templateName)
 {
     bool accepted = false;
     const QString named =
-        QInputDialog::getText(this, tr("Şablondan pafta"), tr("Kurulacak paftanın adı:"),
+        QInputDialog::getText(this, tr("Şablondan yerleşim"), tr("Kurulacak yerleşimin adı:"),
                               QLineEdit::Normal, templateName, &accepted);
     if (!accepted || named.trimmed().isEmpty()) return;
 
@@ -3591,7 +3593,7 @@ void MainWindow::applyLayoutTemplate(const QString& templateName)
     from.replace('"', QStringLiteral("\\\""));
 
     controller_->runLine(
-        QStringLiteral("PAFTAŞABLON islem=uygula ad=\"%1\" pafta=\"%2\"").arg(from, sheet),
+        QStringLiteral("ÇIKTIŞABLON islem=uygula ad=\"%1\" yerleşim=\"%2\"").arg(from, sheet),
         command::Origin::Gui);
     // STRAIGHT INTO THE DESIGNER: a sheet made from a template still needs its
     // map aimed, and that is the next thing the user was going to do.
@@ -3612,8 +3614,8 @@ void MainWindow::saveLayoutTemplate()
     const QString from =
         choices.size() == 1
             ? choices.front()
-            : QInputDialog::getItem(this, tr("Şablon olarak kaydet"), tr("Hangi pafta:"), choices,
-                                    0, false, &accepted);
+            : QInputDialog::getItem(this, tr("Şablon olarak kaydet"), tr("Hangi yerleşim:"),
+                                    choices, 0, false, &accepted);
     if (choices.size() > 1 && !accepted) return;
 
     const QString named = QInputDialog::getText(
@@ -3628,7 +3630,7 @@ void MainWindow::saveLayoutTemplate()
     as.replace('"', QStringLiteral("\\\""));
 
     controller_->runLine(
-        QStringLiteral("PAFTAŞABLON islem=kaydet ad=\"%1\" pafta=\"%2\"").arg(as, sheet),
+        QStringLiteral("ÇIKTIŞABLON islem=kaydet ad=\"%1\" yerleşim=\"%2\"").arg(as, sheet),
         command::Origin::Gui);
 }
 
@@ -3648,8 +3650,9 @@ void MainWindow::openLayoutManager()
 
 void MainWindow::exportLayout(const QString& layout)
 {
-    const QString path = QFileDialog::getSaveFileName(
-        this, tr("Paftayı PDF olarak kaydet"), layout + QStringLiteral(".pdf"), tr("PDF (*.pdf)"));
+    const QString path =
+        QFileDialog::getSaveFileName(this, tr("Yerleşimi PDF olarak kaydet"),
+                                     layout + QStringLiteral(".pdf"), tr("PDF (*.pdf)"));
     if (path.isEmpty()) return;
 
     QString quotedName = layout;
@@ -3659,7 +3662,7 @@ void MainWindow::exportLayout(const QString& layout)
     quotedPath.replace('\\', QStringLiteral("\\\\"));
     quotedPath.replace('"', QStringLiteral("\\\""));
     controller_->runLine(
-        QStringLiteral("YAZDIR pafta=\"%1\" dosya=\"%2\"").arg(quotedName, quotedPath),
+        QStringLiteral("YAZDIR yerlesim=\"%1\" dosya=\"%2\"").arg(quotedName, quotedPath),
         command::Origin::Gui);
 }
 
@@ -3680,16 +3683,16 @@ void MainWindow::rebuildPrintMenu()
         entry->setToolTip(QString::fromStdString(io::describe_print_profile(p)));
         connect(entry, &QAction::triggered, this, [this, name] { printWithProfile(name); });
     }
-    // ---- and the drawing's own paftas ---------------------------------------
+    // ---- and the drawing's own layouts ---------------------------------------
     //
     // THE SHEET SITS BESIDE THE PROFILES because that is where a user looks for
-    // "what am I printing onto". A profile is a blank sheet of paper; a pafta is
+    // "what am I printing onto". A profile is a blank sheet of paper; a layout is
     // a sheet with a title block, a legend and a map frame already on it. Picking
     // either starts the same gesture — drag a rectangle on the drawing — and the
     // difference is only what opens afterwards.
     if (const core::LayoutStore& sheets = controller_->document().layouts(); !sheets.empty()) {
         printMenu_->addSeparator();
-        auto* heading = printMenu_->addAction(tr("Paftalar"));
+        auto* heading = printMenu_->addAction(tr("Çıktı Yerleşimleri"));
         heading->setEnabled(false);
         for (const core::Layout& l : sheets.all()) {
             const QString name = QString::fromStdString(l.name);
@@ -3702,13 +3705,14 @@ void MainWindow::rebuildPrintMenu()
                                   .arg(l.items.size()));
             connect(entry, &QAction::triggered, this, [this, name] { layoutWithFrame(name); });
         }
-        QAction* fresh = printMenu_->addAction(tr("    Yeni pafta…"));
+        QAction* fresh = printMenu_->addAction(tr("    Yeni çıktı yerleşimi…"));
         connect(fresh, &QAction::triggered, this, [this] { newLayout(); });
     } else {
         printMenu_->addSeparator();
-        QAction* fresh = printMenu_->addAction(tr("Yeni pafta…"));
-        fresh->setToolTip(tr("PAFTA islem=ekle — başlık, harita, ölçek çubuğu ve kuzey oku "
-                             "ile gelir"));
+        QAction* fresh = printMenu_->addAction(tr("Yeni çıktı yerleşimi…"));
+        fresh->setToolTip(
+            tr("ÇIKTIYERLEŞİMİ islem=ekle — başlık, harita, ölçek çubuğu ve kuzey oku "
+               "ile gelir"));
         connect(fresh, &QAction::triggered, this, [this] { newLayout(); });
     }
 
@@ -3770,15 +3774,15 @@ void MainWindow::layoutWithFrame(const QString& layout)
 
     const core::Layout* l = controller_->document().layouts().find(layout.toStdString());
     if (l == nullptr) {
-        onEcho(tr("Pafta yok: %1").arg(layout));
+        onEcho(tr("Çıktı yerleşimi yok: %1").arg(layout));
         return;
     }
     const core::LayoutItem* map = l->first_map();
     if (map == nullptr) {
         // NO MAP FRAME MEANS NOTHING TO AIM. Opening the designer is the useful
         // answer — that is where one is added — rather than a refusal.
-        onEcho(
-            tr("'%1' paftasında harita çerçevesi yok; tasarımcıda ekleyebilirsiniz.").arg(layout));
+        onEcho(tr("'%1' yerleşiminde harita çerçevesi yok; tasarımcıda ekleyebilirsiniz.")
+                   .arg(layout));
         openLayoutDesigner(layout);
         return;
     }
@@ -3808,15 +3812,15 @@ void MainWindow::newLayout()
     // changes them.
     bool accepted       = false;
     const QString named = QInputDialog::getText(
-        this, tr("Yeni pafta"), tr("Pafta adı:"), QLineEdit::Normal,
-        tr("Pafta %1").arg(controller_->document().layouts().size() + 1), &accepted);
+        this, tr("Yeni çıktı yerleşimi"), tr("Yerleşim adı:"), QLineEdit::Normal,
+        tr("Yerleşim %1").arg(controller_->document().layouts().size() + 1), &accepted);
     if (!accepted || named.trimmed().isEmpty()) return;
 
     QString quoted = named.trimmed();
     quoted.replace('\\', QStringLiteral("\\\\"));
     quoted.replace('"', QStringLiteral("\\\""));
     controller_->runLine(
-        QStringLiteral("PAFTA islem=ekle ad=\"%1\" kagit=A3 yon=yatay").arg(quoted),
+        QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=\"%1\" kagit=A3 yon=yatay").arg(quoted),
         command::Origin::Gui);
     rebuildPrintMenu();
     openLayoutDesigner(named.trimmed());

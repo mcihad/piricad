@@ -149,13 +149,15 @@ Layout* LayoutStore::find(std::string_view name)
 
 Status LayoutStore::upsert(Layout layout)
 {
-    if (layout.name.empty()) return err(ErrorCode::InvalidArgument, "Pafta adı boş olamaz.");
+    if (layout.name.empty()) return err(ErrorCode::InvalidArgument, "Yerleşim adı boş olamaz.");
     if (layout.pages.empty())
-        return err(ErrorCode::InvalidArgument, "'" + layout.name + "' paftasının hiç sayfası yok.");
+        return err(ErrorCode::InvalidArgument,
+                   "'" + layout.name + "' yerleşiminin hiç sayfası yok.");
     for (const LayoutPage& page : layout.pages)
         if (page.w <= 0 || page.h <= 0)
             return err(ErrorCode::InvalidArgument,
-                       "'" + layout.name + "' paftasının bir sayfasının boyu sıfır ya da negatif.");
+                       "'" + layout.name +
+                           "' yerleşiminin bir sayfasının boyu sıfır ya da negatif.");
 
     // ITEM IDS ARE UNIQUE INSIDE A LAYOUT, because a command names an item by id
     // and two boxes answering to one name is a command whose meaning depends on
@@ -163,11 +165,11 @@ Status LayoutStore::upsert(Layout layout)
     for (std::size_t i = 0; i < layout.items.size(); ++i) {
         if (layout.items[i].id.empty())
             return err(ErrorCode::InvalidArgument,
-                       "'" + layout.name + "' paftasında adsız bir öğe var.");
+                       "'" + layout.name + "' yerleşiminde adsız bir öğe var.");
         for (std::size_t j = i + 1; j < layout.items.size(); ++j)
             if (turkish_key_equals(layout.items[i].id, layout.items[j].id))
                 return err(ErrorCode::InvalidArgument,
-                           "'" + layout.name + "' paftasında iki öğe aynı adı taşıyor: '" +
+                           "'" + layout.name + "' yerleşiminde iki öğe aynı adı taşıyor: '" +
                                layout.items[i].id + "'.");
     }
 
@@ -349,15 +351,15 @@ Result<Layout> layout_from_json(std::string_view text, std::string name)
 {
     auto parsed = Json::parse(text);
     if (!parsed)
-        return err(ErrorCode::ParseError, "Pafta şablonu okunamadı: " + parsed.error().message);
+        return err(ErrorCode::ParseError, "Çıktı şablonu okunamadı: " + parsed.error().message);
     const Json& root = parsed.value();
     if (!root.is_object())
-        return err(ErrorCode::ParseError, "Pafta şablonu bir JSON nesnesi değil.");
+        return err(ErrorCode::ParseError, "Çıktı şablonu bir JSON nesnesi değil.");
 
     const Json* version         = root.find("surum");
     const std::int64_t declared = version != nullptr ? version->as_int() : 0;
     if (declared > kTemplateVersion)
-        return err(ErrorCode::Unsupported, "Pafta şablonu bu sürümden yeni (dosya " +
+        return err(ErrorCode::Unsupported, "Çıktı şablonu bu sürümden yeni (dosya " +
                                                std::to_string(declared) + ", bu sürüm " +
                                                std::to_string(kTemplateVersion) +
                                                "). Programı güncelleyin.");
@@ -395,7 +397,7 @@ Result<Layout> layout_from_json(std::string_view text, std::string name)
             LayoutItem item;
             item.id = text_of(one, "ad");
             if (item.id.empty())
-                return err(ErrorCode::ParseError, "Pafta şablonunda adsız bir öğe var.");
+                return err(ErrorCode::ParseError, "Çıktı şablonunda adsız bir öğe var.");
 
             const std::optional<LayoutItemKind> kind =
                 layout_item_kind_from_id(text_of(one, "tur"));
@@ -524,7 +526,7 @@ Layout default_layout(std::string name, Um width, Um height, Um margin)
     title.kind        = LayoutItemKind::Label;
     title.frame       = PaperRect{margin, margin, width - 2 * margin, title_h};
     title.z           = 10;
-    title.text        = "<pafta>";
+    title.text        = "<yerlesim>";
     title.text_height = std::max(um_from_mm(4), title_h / 2);
     title.align_h     = 1; // centred
     title.align_v     = 1;

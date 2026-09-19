@@ -799,19 +799,19 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
     // them, exactly as every empty column is.
     if (view.has(kBlkLayouts)) {
         const std::uint64_t layout_n = view.count_of(kBlkLayouts);
-        auto layout_rows             = view.column<LayoutRecord>(kBlkLayouts, layout_n, "pafta");
+        auto layout_rows = view.column<LayoutRecord>(kBlkLayouts, layout_n, "çıktı yerleşimi");
         if (!layout_rows) return layout_rows.error();
 
         const std::uint64_t page_n = view.count_of(kBlkLayoutPages);
-        auto page_rows = view.column<LayoutPageRecord>(kBlkLayoutPages, page_n, "pafta sayfasi");
+        auto page_rows = view.column<LayoutPageRecord>(kBlkLayoutPages, page_n, "yerleşim sayfası");
         if (!page_rows) return page_rows.error();
 
         const std::uint64_t item_n = view.count_of(kBlkLayoutItems);
-        auto item_rows = view.column<LayoutItemRecord>(kBlkLayoutItems, item_n, "pafta ogesi");
+        auto item_rows = view.column<LayoutItemRecord>(kBlkLayoutItems, item_n, "yerleşim ögesi");
         if (!item_rows) return item_rows.error();
 
         const std::uint64_t name_n = view.count_of(kBlkLayoutNames);
-        auto name_rows = view.column<std::uint32_t>(kBlkLayoutNames, name_n, "pafta ad listesi");
+        auto name_rows = view.column<std::uint32_t>(kBlkLayoutNames, name_n, "yerleşim ad listesi");
         if (!name_rows) return name_rows.error();
 
         /// A run inside one of the side blocks, checked before it is walked: a
@@ -829,10 +829,10 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             const LayoutRecord& r = layout_rows.value()[static_cast<std::size_t>(li)];
             core::Layout out;
 
-            auto name = strings.at(r.name, "pafta adı");
+            auto name = strings.at(r.name, "yerleşim adı");
             if (!name) return name.error();
             out.name   = std::move(name.value());
-            auto paper = strings.at(r.paper, "pafta kâğıdı");
+            auto paper = strings.at(r.paper, "yerleşim kâğıdı");
             if (!paper) return paper.error();
             out.paper     = std::move(paper.value());
             out.dpi       = r.dpi;
@@ -842,7 +842,7 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             if (!run_fits(r.first_page, r.page_count, page_n))
                 return err(ErrorCode::ParseError,
                            std::string(kErrConsist) + ": '" + out.name +
-                               "' paftasının sayfa aralığı dosyanın dışına taşıyor.");
+                               "' yerleşiminin sayfa aralığı dosyanın dışına taşıyor.");
             out.pages.clear();
             for (std::uint32_t p = 0; p < r.page_count; ++p) {
                 const LayoutPageRecord& pr = page_rows.value()[r.first_page + p];
@@ -852,16 +852,16 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             if (!run_fits(r.first_item, r.item_count, item_n))
                 return err(ErrorCode::ParseError,
                            std::string(kErrConsist) + ": '" + out.name +
-                               "' paftasının öğe aralığı dosyanın dışına taşıyor.");
+                               "' yerleşiminin öğe aralığı dosyanın dışına taşıyor.");
 
             for (std::uint32_t ii = 0; ii < r.item_count; ++ii) {
                 const LayoutItemRecord& ir = item_rows.value()[r.first_item + ii];
                 core::LayoutItem item;
 
-                auto id = strings.at(ir.id, "pafta öğesi adı");
+                auto id = strings.at(ir.id, "yerleşim öğesi adı");
                 if (!id) return id.error();
                 item.id   = std::move(id.value());
-                auto text = strings.at(ir.text, "pafta öğesi metni");
+                auto text = strings.at(ir.text, "yerleşim öğesi metni");
                 if (!text) return text.error();
                 item.text = std::move(text.value());
 
@@ -876,7 +876,7 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                         : std::nullopt;
                 if (!kind)
                     return err(ErrorCode::ParseError, std::string(kErrConsist) + ": '" + out.name +
-                                                          "' paftasındaki '" + item.id +
+                                                          "' yerleşimindeki '" + item.id +
                                                           "' öğesinin türü bu sürümde yok (" +
                                                           std::to_string(ir.kind) + ").");
                 item.kind = *kind;
@@ -918,12 +918,14 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
                                std::string(kErrConsist) + ": '" + item.id +
                                    "' öğesinin ad listesi dosyanın dışına taşıyor.");
                 for (std::uint32_t n = 0; n < ir.layer_count; ++n) {
-                    auto one = strings.at(name_rows.value()[ir.first_layer + n], "pafta katmanı");
+                    auto one =
+                        strings.at(name_rows.value()[ir.first_layer + n], "yerleşim katmanı");
                     if (!one) return one.error();
                     item.layers.push_back(std::move(one.value()));
                 }
                 for (std::uint32_t n = 0; n < ir.column_count; ++n) {
-                    auto one = strings.at(name_rows.value()[ir.first_column + n], "pafta sütunu");
+                    auto one =
+                        strings.at(name_rows.value()[ir.first_column + n], "yerleşim sütunu");
                     if (!one) return one.error();
                     item.columns.push_back(std::move(one.value()));
                 }

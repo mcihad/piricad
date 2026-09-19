@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// core.layout (PAFTA), core.layout_item (PAFTAÖĞE)
+// core.layout (ÇIKTIYERLEŞİMİ), core.layout_item (ÇIKTIÖĞE),
+// core.layout_template (ÇIKTIŞABLON)
 //
-// THE SHEET IS A COMMAND SURFACE, not a window's private state. A pafta is
+// THE SHEET IS A COMMAND SURFACE, not a window's private state. An output
+// layout is
 // composed by dragging boxes on a page, and a designer that owned that
 // composition would be a capability no script, no batch job and no model could
 // ever reach (CLAUDE.md 5.15, 1.2). So every edit a hand makes in the designer
 // leaves as one of these two lines: the window is a client that types.
 //
-// TWO COMMANDS, ALONG THE SEAM A USER ALREADY FEELS. `PAFTA` is about SHEETS —
-// make one, remove one, rename it, change its paper. `PAFTAÖĞE` is about what is
+// TWO COMMANDS, ALONG THE SEAM A USER ALREADY FEELS. `ÇIKTIYERLEŞİMİ` is about
+// SHEETS — make one, remove one, rename it, change its paper. `ÇIKTIÖĞE` is about what is
 // ON one — add a map frame, move it, retype the title. Merging them would make
 // `ad=` mean two things depending on another argument, which is the shape the
 // parameter validator cannot check and a reader cannot remember.
@@ -74,27 +76,27 @@ const char* canonical_verb(std::string_view typed, std::span<const char* const> 
     return nullptr;
 }
 
-/// The layout the `pafta` argument names, or the only one when there is one and
+/// The layout the `yerlesim` argument names, or the only one when there is one and
 /// the argument is empty.
 ///
-/// A DRAWING USUALLY HAS ONE SHEET, and making every `PAFTAÖĞE` line name it
+/// A DRAWING USUALLY HAS ONE SHEET, and making every `ÇIKTIÖĞE` line name it
 /// would be ceremony. Two or more and the argument is required, because guessing
-/// which of two paftas a command meant is how the wrong sheet gets edited.
+/// which of two layouts a command meant is how the wrong sheet gets edited.
 const Layout* resolve(const core::LayoutStore& store, const std::string& named,
                       std::string& trouble)
 {
     if (!named.empty()) {
         const Layout* found = store.find(named);
-        if (found == nullptr) trouble = "Pafta yok: '" + named + "'.";
+        if (found == nullptr) trouble = "Çıktı yerleşimi yok: '" + named + "'.";
         return found;
     }
     if (store.empty()) {
-        trouble = "Çizimde hiç pafta yok. Önce PAFTA islem=ekle ad=<ad> yazın.";
+        trouble = "Çizimde hiç çıktı yerleşimi yok. Önce ÇIKTIYERLEŞİMİ islem=ekle ad=<ad> yazın.";
         return nullptr;
     }
     if (store.size() > 1) {
         trouble = "Çizimde " + std::to_string(store.size()) +
-                  " pafta var; hangisi olduğunu yazın: pafta=<ad>";
+                  " çıktı yerleşimi var; hangisi olduğunu yazın: yerlesim=<ad>";
         return nullptr;
     }
     return &store.all().front();
@@ -122,7 +124,7 @@ std::string describe(const Layout& l)
     return out;
 }
 
-// ============================================================== PAFTA ========
+// ==================================================== ÇIKTIYERLEŞİMİ ========
 
 Task<void> run_layout(Context& ctx)
 {
@@ -144,20 +146,20 @@ Task<void> run_layout(Context& ctx)
 
     if (op == "listele") {
         if (have.empty()) {
-            ctx.echo("Çizimde pafta yok.");
+            ctx.echo("Çizimde çıktı yerleşimi yok.");
             co_return;
         }
-        std::string said = std::to_string(have.size()) + " pafta:";
+        std::string said = std::to_string(have.size()) + " çıktı yerleşimi:";
         for (const Layout& l : have.all())
             said += "\n  " + describe(l);
         ctx.echo(said);
         co_return;
     }
 
-    auto named = co_await ctx.text("ad", "Pafta adı");
+    auto named = co_await ctx.text("ad", "Çıktı yerleşiminin adı");
     if (!named || named->empty()) {
         ctx.session().fail(
-            core::err(core::ErrorCode::InvalidArgument, "Pafta adı gerekir: ad=<ad>"));
+            core::err(core::ErrorCode::InvalidArgument, "Yerleşim adı gerekir: ad=<ad>"));
         co_return;
     }
     ctx.record("ad", Value::text(*named));
@@ -170,7 +172,7 @@ Task<void> run_layout(Context& ctx)
         });
         if (at == next.end()) {
             ctx.session().fail(
-                core::err(core::ErrorCode::NotFound, "Pafta yok: '" + *named + "'."));
+                core::err(core::ErrorCode::NotFound, "Çıktı yerleşimi yok: '" + *named + "'."));
             co_return;
         }
         next.erase(at);
@@ -178,7 +180,7 @@ Task<void> run_layout(Context& ctx)
             ctx.session().fail(st.error());
             co_return;
         }
-        ctx.echo("Pafta silindi: " + *named + ".");
+        ctx.echo("Çıktı yerleşimi silindi: " + *named + ".");
         co_return;
     }
 
@@ -194,7 +196,7 @@ Task<void> run_layout(Context& ctx)
             if (core::turkish_key_equals(l.name, *named)) target = &l;
         if (target == nullptr) {
             ctx.session().fail(
-                core::err(core::ErrorCode::NotFound, "Pafta yok: '" + *named + "'."));
+                core::err(core::ErrorCode::NotFound, "Çıktı yerleşimi yok: '" + *named + "'."));
             co_return;
         }
         ctx.record("yeni_ad", fresh);
@@ -203,7 +205,7 @@ Task<void> run_layout(Context& ctx)
             ctx.session().fail(st.error());
             co_return;
         }
-        ctx.echo("Pafta adı: " + *named + " → " + fresh.as_text());
+        ctx.echo("Yerleşim adı: " + *named + " → " + fresh.as_text());
         co_return;
     }
 
@@ -290,7 +292,7 @@ Task<void> run_layout(Context& ctx)
             ctx.session().fail(st.error());
             co_return;
         }
-        ctx.echo("Pafta: " + describe(*bus.document().layouts().find(*named)));
+        ctx.echo("Çıktı yerleşimi: " + describe(*bus.document().layouts().find(*named)));
         co_return;
     }
 
@@ -300,7 +302,7 @@ Task<void> run_layout(Context& ctx)
             if (core::turkish_key_equals(l.name, *named)) target = &l;
         if (target == nullptr) {
             ctx.session().fail(
-                core::err(core::ErrorCode::NotFound, "Pafta yok: '" + *named + "'."));
+                core::err(core::ErrorCode::NotFound, "Çıktı yerleşimi yok: '" + *named + "'."));
             co_return;
         }
         // THE ITEMS ARE NOT RESCALED. A title block placed 20 mm from the top of
@@ -318,7 +320,7 @@ Task<void> run_layout(Context& ctx)
             ctx.session().fail(st.error());
             co_return;
         }
-        ctx.echo("Pafta: " + describe(*bus.document().layouts().find(*named)));
+        ctx.echo("Çıktı yerleşimi: " + describe(*bus.document().layouts().find(*named)));
         co_return;
     }
 
@@ -329,7 +331,7 @@ Task<void> run_layout(Context& ctx)
         core::err(core::ErrorCode::Internal, "'" + op + "' işlemi tanımlı ama uygulanmamış."));
 }
 
-// =========================================================== PAFTAÖĞE ========
+// =========================================================== ÇIKTIÖĞE ========
 
 Task<void> run_item(Context& ctx)
 {
@@ -350,21 +352,21 @@ Task<void> run_item(Context& ctx)
     ctx.record("islem", Value::text(op));
 
     std::string trouble;
-    const Layout* found = resolve(have, ctx.argument("pafta").as_text(), trouble);
+    const Layout* found = resolve(have, ctx.argument("yerlesim").as_text(), trouble);
     if (found == nullptr) {
         ctx.session().fail(core::err(core::ErrorCode::NotFound, trouble));
         co_return;
     }
     const std::string sheet = found->name;
-    ctx.record("pafta", Value::text(sheet));
+    ctx.record("yerlesim", Value::text(sheet));
 
     if (op == "listele") {
         if (found->items.empty()) {
-            ctx.echo("'" + sheet + "' paftasında öğe yok.");
+            ctx.echo("'" + sheet + "' yerleşiminde öğe yok.");
             co_return;
         }
         std::string said =
-            "'" + sheet + "' paftasında " + std::to_string(found->items.size()) + " öğe:";
+            "'" + sheet + "' yerleşiminde " + std::to_string(found->items.size()) + " öğe:";
         for (const LayoutItem& item : found->items)
             said += "\n  " + item.id + " — " + core::layout_item_kind_label(item.kind) + ", " +
                     std::to_string(mm(item.frame.x)) + "," + std::to_string(mm(item.frame.y)) +
@@ -380,7 +382,7 @@ Task<void> run_item(Context& ctx)
         if (core::turkish_key_equals(l.name, sheet)) target = &l;
     if (target == nullptr) {
         ctx.session().fail(
-            core::err(core::ErrorCode::Internal, "Pafta kayboldu: '" + sheet + "'."));
+            core::err(core::ErrorCode::Internal, "Çıktı yerleşimi kayboldu: '" + sheet + "'."));
         co_return;
     }
 
@@ -402,9 +404,9 @@ Task<void> run_item(Context& ctx)
         item.id =
             id_arg.empty() ? free_id(*target, core::layout_item_kind_id(*kind)) : id_arg.as_text();
         if (target->find(item.id) != nullptr) {
-            ctx.session().fail(
-                core::err(core::ErrorCode::InvalidArgument,
-                          "'" + sheet + "' paftasında '" + item.id + "' adlı bir öğe zaten var."));
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         "'" + sheet + "' yerleşiminde '" + item.id +
+                                             "' adlı bir öğe zaten var."));
             co_return;
         }
         ctx.record("ad", Value::text(item.id));
@@ -435,8 +437,9 @@ Task<void> run_item(Context& ctx)
                 target->items.begin(), target->items.end(),
                 [&](const LayoutItem& one) { return core::turkish_key_equals(one.id, *id); });
             if (at == target->items.end()) {
-                ctx.session().fail(core::err(core::ErrorCode::NotFound,
-                                             "'" + sheet + "' paftasında öğe yok: '" + *id + "'."));
+                ctx.session().fail(
+                    core::err(core::ErrorCode::NotFound,
+                              "'" + sheet + "' yerleşiminde öğe yok: '" + *id + "'."));
                 co_return;
             }
             const std::size_t index = static_cast<std::size_t>(at - target->items.begin());
@@ -447,15 +450,16 @@ Task<void> run_item(Context& ctx)
         } else if (op == "tasi" || op == "ayarla") {
             LayoutItem* item = target->find(*id);
             if (item == nullptr) {
-                ctx.session().fail(core::err(core::ErrorCode::NotFound,
-                                             "'" + sheet + "' paftasında öğe yok: '" + *id + "'."));
+                ctx.session().fail(
+                    core::err(core::ErrorCode::NotFound,
+                              "'" + sheet + "' yerleşiminde öğe yok: '" + *id + "'."));
                 co_return;
             }
             if (item->locked && op == "tasi") {
                 ctx.session().fail(
                     core::err(core::ErrorCode::InvalidArgument, "'" + *id +
                                                                     "' kilitli; önce kilidi açın: "
-                                                                    "PAFTAÖĞE islem=ayarla ad=" +
+                                                                    "ÇIKTIÖĞE islem=ayarla ad=" +
                                                                     *id + " kilit=hayır"));
                 co_return;
             }
@@ -486,7 +490,7 @@ Task<void> run_item(Context& ctx)
 
             // WHERE THE MAP FRAME LOOKS. Two ground corners, the same shape
             // `YAZDIR pencere=` takes — which is what lets the canvas's print
-            // frame aim a pafta: the user drags a rectangle and the window types
+            // frame aim a layout: the user drags a rectangle and the window types
             // this line (Article 1.2, and the reason the frame is not a private
             // road into the designer).
             if (const Value v = ctx.argument("pencere"); !v.empty()) {
@@ -562,18 +566,18 @@ Task<void> run_item(Context& ctx)
         co_return;
     }
     const Layout* after = bus.document().layouts().find(sheet);
-    ctx.echo("'" + sheet +
-             "' paftası: " + std::to_string(after != nullptr ? after->items.size() : 0) + " öğe.");
+    ctx.echo("'" + sheet + "' yerleşimi: " +
+             std::to_string(after != nullptr ? after->items.size() : 0) + " öğe.");
 }
 
-// ========================================================= PAFTAŞABLON ======
+// ========================================================= ÇIKTIŞABLON ======
 
 Task<void> run_template(Context& ctx)
 {
     Bus& bus = ctx.session().bus();
     if (!bus.on_layout_template_request) {
-        ctx.session().fail(
-            core::err(core::ErrorCode::Unsupported, "Bu yapıda pafta şablonu deposu yok."));
+        ctx.session().fail(core::err(core::ErrorCode::Unsupported,
+                                     "Bu yapıda çıktı yerleşimi şablonu deposu yok."));
         co_return;
     }
 
@@ -628,12 +632,12 @@ Task<void> run_template(Context& ctx)
         // is — and a test can prove the round trip with no file at all.
         std::string trouble;
         const Layout* source =
-            resolve(bus.document().layouts(), ctx.argument("pafta").as_text(), trouble);
+            resolve(bus.document().layouts(), ctx.argument("yerlesim").as_text(), trouble);
         if (source == nullptr) {
             ctx.session().fail(core::err(core::ErrorCode::NotFound, trouble));
             co_return;
         }
-        ctx.record("pafta", Value::text(source->name));
+        ctx.record("yerlesim", Value::text(source->name));
         request.verb   = LayoutTemplateRequest::Verb::Save;
         request.layout = source->name;
         request.json   = core::layout_to_json(*source, *named);
@@ -649,9 +653,9 @@ Task<void> run_template(Context& ctx)
 
     // ---- uygula: the template becomes a sheet of THIS drawing ---------------
     request.verb   = LayoutTemplateRequest::Verb::Apply;
-    const Value as = ctx.argument("pafta");
+    const Value as = ctx.argument("yerlesim");
     request.layout = as.empty() ? *named : as.as_text();
-    if (!as.empty()) ctx.record("pafta", as);
+    if (!as.empty()) ctx.record("yerlesim", as);
 
     auto json = co_await bus.on_layout_template_request(request);
     if (!json) {
@@ -682,7 +686,8 @@ Task<void> run_template(Context& ctx)
         co_return;
     }
     const Layout* made = bus.document().layouts().find(request.layout);
-    ctx.echo("Şablondan pafta kuruldu: " + (made != nullptr ? describe(*made) : request.layout));
+    ctx.echo("Şablondan çıktı yerleşimi kuruldu: " +
+             (made != nullptr ? describe(*made) : request.layout));
 }
 
 } // namespace
@@ -691,14 +696,14 @@ KENTOS_COMMAND(layout)
 {
     return CommandSpec{
         .id       = "core.layout",
-        .names    = {"PAFTA", "LAYOUT", "PFT"},
+        .names    = {"ÇIKTIYERLEŞİMİ", "CIKTIYERLESIMI", "LAYOUT", "ÇYR", "CYR"},
         .category = Category::File,
         .params =
             {
                 Param::choice("islem", Arity::exactly(1), {"listele", "ekle", "sil", "ad", "sayfa"},
                               "Ne yapılacağı"),
-                Param::text("ad", Arity::optional(), "Pafta adı; listele dışında gerekir"),
-                Param::text("yeni_ad", Arity::optional(), "islem=ad için yeni pafta adı"),
+                Param::text("ad", Arity::optional(), "Yerleşimin adı; listele dışında gerekir"),
+                Param::text("yeni_ad", Arity::optional(), "islem=ad için yeni yerleşim adı"),
                 Param::text("kagit", Arity::optional(),
                             "A5, A4, A3, A2, A1, A0 ya da ozel (varsayılan A4)"),
                 Param::integer_range("genislik", Arity::optional(), 1, 10000,
@@ -712,11 +717,11 @@ KENTOS_COMMAND(layout)
                 Param::integer_range("dpi", Arity::optional(), 72, 4800,
                                      "Çıktı çözünürlüğü (varsayılan 300)"),
             },
-        .undo    = UndoPolicy::SingleTransaction,
-        .flags   = Flags::Interactive | Flags::Scriptable,
-        .summary = "Çizimin pafta düzenlerini yönetir: yeni pafta açar, siler, adlandırır ve "
-                   "kâğıdını değiştirir. Pafta çizimle birlikte kaydedilir ve geri alınabilir.",
-        .run     = &run_layout,
+        .undo  = UndoPolicy::SingleTransaction,
+        .flags = Flags::Interactive | Flags::Scriptable,
+        .summary = "Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve "
+                   "kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir.",
+        .run = &run_layout,
     };
 }
 
@@ -724,14 +729,14 @@ KENTOS_COMMAND(layout_item)
 {
     return CommandSpec{
         .id       = "core.layout_item",
-        .names    = {"PAFTAÖĞE", "PAFTAOGE", "LAYOUTITEM", "PÖĞ", "POG"},
+        .names    = {"ÇIKTIÖĞE", "CIKTIOGE", "LAYOUTITEM", "ÇÖĞ", "COG"},
         .category = Category::File,
         .params =
             {
                 Param::choice("islem", Arity::exactly(1),
                               {"listele", "ekle", "sil", "tasi", "ayarla"}, "Ne yapılacağı"),
-                Param::text("pafta", Arity::optional(),
-                            "Hangi pafta; çizimde tek pafta varsa gerekmez"),
+                Param::text("yerlesim", Arity::optional(),
+                            "Hangi çıktı yerleşimi; çizimde tek yerleşim varsa gerekmez"),
                 Param::text("ad", Arity::optional(),
                             "Öğe adı; ekle dışında gerekir, ekle'de verilmezse türetilir"),
                 Param::choice(
@@ -745,7 +750,7 @@ KENTOS_COMMAND(layout_item)
                 Param::integer_range("genislik", Arity::optional(), 0, 10000, "Genişlik, mm"),
                 Param::integer_range("yukseklik", Arity::optional(), 0, 10000, "Yükseklik, mm"),
                 Param::text("metin", Arity::optional(),
-                            "Metin öğesinin yazısı; <pafta>, <olcek>, <tarih>, <crs> yer "
+                            "Metin öğesinin yazısı; <yerlesim>, <olcek>, <tarih>, <crs> yer "
                             "tutucuları çizim anında çözülür"),
                 Param::integer_range("yazi", Arity::optional(), 1, 200, "Yazı yüksekliği, mm"),
                 Param::integer_range("olcek", Arity::optional(), 0, 100000000,
@@ -765,9 +770,10 @@ KENTOS_COMMAND(layout_item)
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable,
-        .summary = "Bir paftanın üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek "
-                   "çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar "
-                   "ve siler.",
+        .summary =
+            "Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek "
+            "çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar "
+            "ve siler.",
         .run = &run_item,
     };
 }
@@ -776,26 +782,27 @@ KENTOS_COMMAND(layout_template)
 {
     return CommandSpec{
         .id       = "core.layout_template",
-        .names    = {"PAFTAŞABLON", "PAFTASABLON", "LAYOUTTEMPLATE", "PŞB", "PSB"},
+        .names    = {"ÇIKTIŞABLON", "CIKTISABLON", "LAYOUTTEMPLATE", "ÇŞB", "CSB"},
         .category = Category::File,
         .params =
             {
                 Param::choice("islem", Arity::exactly(1), {"listele", "kaydet", "uygula", "sil"},
                               "Ne yapılacağı"),
                 Param::text("ad", Arity::optional(), "Şablonun adı; listele dışında gerekir"),
-                Param::text("pafta", Arity::optional(),
-                            "kaydet: hangi pafta saklanacak (tek pafta varsa gerekmez). "
-                            "uygula: kurulacak paftanın adı (verilmezse şablonun adı)"),
+                Param::text("yerlesim", Arity::optional(),
+                            "kaydet: hangi yerleşim saklanacak (tek yerleşim varsa gerekmez). "
+                            "uygula: kurulacak yerleşimin adı (verilmezse şablonun adı)"),
             },
         .undo = UndoPolicy::SingleTransaction,
-        // NOT `AiAccessible`, for the reason `PAFTA` gives: a sheet carries a
+        // NOT `AiAccessible`, for the reason `ÇIKTIYERLEŞİMİ` gives: a sheet carries a
         // ground extent and the handle machinery has no answer yet for a command
         // that takes both paper and ground (CLAUDE.md 5.8).
-        .flags   = Flags::Interactive | Flags::Scriptable,
-        .summary = "Kurumun standart paftalarını saklar ve uygular. Şablon çizimin dışında, "
-                   "kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni "
-                   "taşır, zemin koordinatlarını taşımaz.",
-        .run     = &run_template,
+        .flags = Flags::Interactive | Flags::Scriptable,
+        .summary =
+            "Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, "
+            "kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni "
+            "taşır, zemin koordinatlarını taşımaz.",
+        .run = &run_template,
     };
 }
 

@@ -486,7 +486,7 @@ QString resolve_placeholders(const QString& text, const core::Layout& layout,
                              const core::LayoutItem* map, const LayoutFacts& facts)
 {
     QString out = text;
-    out.replace(QStringLiteral("<pafta>"), facts.sheet);
+    out.replace(QStringLiteral("<yerlesim>"), facts.sheet);
     out.replace(QStringLiteral("<proje>"), facts.project);
     out.replace(QStringLiteral("<crs>"), facts.crs);
     out.replace(QStringLiteral("<tarih>"), facts.date);

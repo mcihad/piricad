@@ -1,21 +1,26 @@
-# PAFTA — Sayfa Düzeni
+# ÇIKTIYERLEŞİMİ — Çıktı Yerleşimi
 
-Çizimini kâğıda dökecek herkes için; bu sayfayı bitirdiğinizde bir pafta açmayı,
-kâğıdını ve yönünü seçmeyi, adını değiştirmeyi ve silmeyi bileceksiniz.
+Çizimini kâğıda dökecek herkes için; bu sayfayı bitirdiğinizde bir çıktı yerleşimi
+açmayı, kâğıdını ve yönünü seçmeyi, adını değiştirmeyi ve silmeyi bileceksiniz.
 
 ## Ne yapar
 
-Bir **pafta**, çiziminizin basılacağı sayfa düzenidir: kâğıt boyu, yönü, kenar
-boşluğu ve üzerine yerleştirilmiş öğeler — harita çerçevesi, başlık, ölçek çubuğu,
-kuzey oku, lejant. `PAFTA` bu sayfaların kendisini yönetir; üzerindeki öğeleri
-[`PAFTAÖĞE`](layout_item.md) yönetir.
+Bir **çıktı yerleşimi**, çiziminizin basılacağı sayfa düzenidir: kâğıt boyu, yönü,
+kenar boşluğu ve üzerine yerleştirilmiş öğeler — harita çerçevesi, başlık, ölçek
+çubuğu, kuzey oku, lejant. `ÇIKTIYERLEŞİMİ` bu sayfaların kendisini yönetir;
+üzerindeki öğeleri [`ÇIKTIÖĞE`](layout_item.md) yönetir.
 
-**Pafta çizimle birlikte kaydedilir.** Yazdırma profillerinden farkı budur: bir
-profil bu bilgisayarın ayarıdır, bir pafta ise teslim edilen işin parçasıdır.
-Dosyayı bir meslektaşınıza gönderdiğinizde pafta da gider, çizimin parmak izine
+> Bu programda **pafta**, kadastronun böldüğü harita sayfasıdır — `29-30-K` gibi bir
+> adı olan, paylaşılan bir paftalama sisteminin karesi. Bastığınız sayfaya ise
+> **çıktı yerleşimi** denir. İkisi karışmasın diye ayrı adlandırılmıştır: bir çıktı
+> yerleşimi bir paftayı gösterebilir, ama bir pafta değildir.
+
+**Çıktı yerleşimi çizimle birlikte kaydedilir.** Yazdırma profillerinden farkı budur:
+bir profil bu bilgisayarın ayarıdır, bir yerleşim ise teslim edilen işin parçasıdır.
+Dosyayı bir meslektaşınıza gönderdiğinizde yerleşim de gider, çizimin parmak izine
 (`content_hash`) girer ve her düzenlemesi **tek `Ctrl+Z` ile geri alınır**.
 
-Yeni bir pafta boş bir sayfa değildir: içinde bir harita çerçevesi, bir başlık, bir
+Yeni bir yerleşim boş bir sayfa değildir: içinde bir harita çerçevesi, bir başlık, bir
 ölçek çubuğu ve bir kuzey oku ile gelir. Hepsi taşınabilir, değiştirilebilir ve
 silinebilir; amaç ilk anda basılabilir bir şey görmenizdir.
 
@@ -23,19 +28,20 @@ silinebilir; amaç ilk anda basılabilir bir şey görmenizdir.
 
 | Ad | Açıklama |
 |---|---|
-| `PAFTA` | Türkçe birincil ad |
+| `ÇIKTIYERLEŞİMİ` | Türkçe birincil ad |
+| `CIKTIYERLESIMI` | ASCII karşılığı |
 | `LAYOUT` | İngilizce karşılığı |
-| `PFT` | Kısaltma |
+| `ÇYR`, `CYR` | Kısaltma |
 
 ## Sözdizimi
 
 ```
-PAFTA islem=listele
-PAFTA islem=ekle ad=<ad> [kagit=A4] [yon=dikey] [kenar=10] [dpi=300]
-PAFTA islem=ekle ad=<ad> kagit=ozel genislik=<mm> yukseklik=<mm>
-PAFTA islem=sil ad=<ad>
-PAFTA islem=ad ad=<ad> yeni_ad=<ad>
-PAFTA islem=sayfa ad=<ad> kagit=A3 yon=yatay [kenar=<mm>]
+ÇIKTIYERLEŞİMİ islem=listele
+ÇIKTIYERLEŞİMİ islem=ekle ad=<ad> [kagit=A4] [yon=dikey] [kenar=10] [dpi=300]
+ÇIKTIYERLEŞİMİ islem=ekle ad=<ad> kagit=ozel genislik=<mm> yukseklik=<mm>
+ÇIKTIYERLEŞİMİ islem=sil ad=<ad>
+ÇIKTIYERLEŞİMİ islem=ad ad=<ad> yeni_ad=<ad>
+ÇIKTIYERLEŞİMİ islem=sayfa ad=<ad> kagit=A3 yon=yatay [kenar=<mm>]
 ```
 
 ## Parametreler
@@ -43,8 +49,8 @@ PAFTA islem=sayfa ad=<ad> kagit=A3 yon=yatay [kenar=<mm>]
 | Parametre | Zorunlu | Anlamı |
 |---|---|---|
 | `islem` | evet | `listele`, `ekle`, `sil`, `ad`, `sayfa` |
-| `ad` | `listele` dışında | Paftanın adı. Türkçe katlamayla tekildir: `Ada 1284` ile `ada 1284` aynı paftadır |
-| `yeni_ad` | `islem=ad` için | Paftanın yeni adı |
+| `ad` | `listele` dışında | Yerleşimin adı. Türkçe katlamayla tekildir: `Ada 1284` ile `ada 1284` aynı yerleşimdir |
+| `yeni_ad` | `islem=ad` için | Yerleşimin yeni adı |
 | `kagit` | hayır | `A5`, `A4`, `A3`, `A2`, `A1`, `A0` ya da `ozel` (varsayılan `A4`) |
 | `genislik`, `yukseklik` | `ozel` için | Sayfa boyu, milimetre |
 | `yon` | hayır | `dikey` ya da `yatay` (varsayılan `dikey`) |
@@ -58,71 +64,72 @@ ve `YAPAYZEKAMODELİ` ile aynı davranış.
 
 ### Komut satırı
 
-Bir ada için A3 yatay pafta:
+Bir ada için A3 yatay yerleşim:
 
 ```
-PAFTA islem=ekle ad="Ada 1284" kagit=A3 yon=yatay
+ÇIKTIYERLEŞİMİ islem=ekle ad="Ada 1284" kagit=A3 yon=yatay
 ```
 
 Program şunu yazar:
 
 ```
-Pafta: Ada 1284 — A3 420×297 mm, yatay, 4 öğe
+Çıktı yerleşimi: Ada 1284 — A3 420×297 mm, yatay, 4 öğe
 ```
 
-Çizimdeki paftaları listelemek:
+Çizimdeki yerleşimleri listelemek:
 
 ```
-PAFTA islem=listele
+ÇIKTIYERLEŞİMİ islem=listele
 ```
 
 Kâğıdı büyütmek — öğeler **yerinde kalır**, yeniden ölçeklenmez; üstten 20 mm'de
 duran bir başlık A3'te de üstten 20 mm'dedir:
 
 ```
-PAFTA islem=sayfa ad="Ada 1284" kagit=A2 yon=yatay kenar=15
+ÇIKTIYERLEŞİMİ islem=sayfa ad="Ada 1284" kagit=A2 yon=yatay kenar=15
 ```
 
 Kuruma özel bir kâğıt:
 
 ```
-PAFTA islem=ekle ad="Askı Paftası" kagit=ozel genislik=700 yukseklik=500
+ÇIKTIYERLEŞİMİ islem=ekle ad="Askı Sayfası" kagit=ozel genislik=700 yukseklik=500
 ```
 
 ### Arayüz
 
-### Menüden
+#### Menüden
 
-**`Dosya ▸ Paftalar`** paftaların ana kapısıdır:
+**`Dosya ▸ Çıktı Yerleşimleri`** yerleşimlerin ana kapısıdır:
 
 | Giriş | Ne yapar |
 |---|---|
-| **Yeni Pafta…** | Ad sorar, A3 yatay bir pafta kurar ve tasarımcıyı açar |
-| **Pafta Yöneticisi…** (`Ctrl+Shift+P`) | Çizimdeki paftaları listeler: aç, yeniden adlandır, **çoğalt**, sil |
-| *pafta adı* ▸ **Tasarımcıyı Aç** | Sayfayı düzenlemeye açar |
-| *pafta adı* ▸ **Tuvalden Alan Seç…** | Haritanın bakacağı alanı tuvalden çerçeveletir, sonra tasarımcıyı açar |
-| *pafta adı* ▸ **PDF'e Aktar…** | `YAZDIR pafta=` çalıştırır |
+| **Yeni Çıktı Yerleşimi…** | Ad sorar, A3 yatay bir yerleşim kurar ve tasarımcıyı açar |
+| **Çıktı Yerleşimi Yöneticisi…** (`Ctrl+Shift+P`) | Çizimdeki yerleşimleri listeler: aç, yeniden adlandır, **çoğalt**, sil |
+| *yerleşim adı* ▸ **Tasarımcıyı Aç** | Sayfayı düzenlemeye açar |
+| *yerleşim adı* ▸ **Tuvalden Alan Seç…** | Haritanın bakacağı alanı tuvalden çerçeveletir, sonra tasarımcıyı açar |
+| *yerleşim adı* ▸ **PDF'e Aktar…** | `YAZDIR yerlesim=` çalıştırır |
 
-Menü her açılışta çizimden yeniden kurulur: komut satırından eklediğiniz bir pafta
+Menü her açılışta çizimden yeniden kurulur: komut satırından eklediğiniz bir yerleşim
 orada olur.
 
-**Pafta Yöneticisi**'ndeki **Çoğalt**, paftayı bütün öğeleriyle kopyalar. Bunu tek bir
-"kopyala" fiiliyle değil, bir elin yazacağı satırlarla yapar — bir `PAFTA islem=ekle`
-ve her öğe için bir `PAFTAÖĞE` — hepsi tek toplu iş, yani tek `Ctrl+Z`. Günlükte
-gerçekte ne kurulduğu görünür, fiilin arkasına saklanmaz.
+**Çıktı Yerleşimi Yöneticisi**'ndeki **Çoğalt**, yerleşimi bütün öğeleriyle kopyalar.
+Bunu tek bir "kopyala" fiiliyle değil, bir elin yazacağı satırlarla yapar — bir
+`ÇIKTIYERLEŞİMİ islem=ekle` ve her öğe için bir `ÇIKTIÖĞE` — hepsi tek toplu iş, yani
+tek `Ctrl+Z`. Günlükte gerçekte ne kurulduğu görünür, fiilin arkasına saklanmaz.
 
-### Araç çubuğundan
+#### Araç çubuğundan
 
 Araç çubuğundaki **yazdırma düğmesinin yanındaki ok** hem yazdırma profillerini hem
-çizimdeki **paftaları** listeler. Listeden bir pafta seçtiğinizde:
+çizimdeki **çıktı yerleşimlerini** listeler. Listeden bir yerleşim seçtiğinizde:
 
-1. Tuval, o paftanın **harita çerçevesinin en-boy oranında** bir seçme çerçevesi açar
+1. Tuval, o yerleşimin **harita çerçevesinin en-boy oranında** bir seçme çerçevesi açar
    — çerçevelediğiniz alan haritanın göstereceği alandır, kâğıdın tamamı değil.
-2. Alanı sürükleyip bıraktığınızda **pafta tasarımcısı açılır** ve harita çerçevesi
-   o alana bakıyor olur.
+2. Alanı sürükleyip bıraktığınızda **tasarımcı açılır** ve harita çerçevesi o alana
+   bakıyor olur.
 
-Aynı listenin altında da **Yeni pafta…** vardır. Her adım `PAFTA` ve `PAFTAÖĞE`
-satırları olarak geçer: komut günlüğünde görünür, tek `Ctrl+Z` ile geri alınır.
+Aynı listenin altında da **Yeni çıktı yerleşimi…** vardır. Her adım `ÇIKTIYERLEŞİMİ` ve
+`ÇIKTIÖĞE` satırları olarak geçer: komut günlüğünde görünür, tek `Ctrl+Z` ile geri
+alınır.
 
 ### Betik
 
@@ -133,14 +140,15 @@ satırları olarak geçer: komut günlüğünde görünür, tek `Ctrl+Z` ile ger
 
 ## Geri alma
 
-Her `PAFTA` çağrısı tek bir işlemdir ve tek `Ctrl+Z` ile geri alınır: silinen pafta
-bütün öğeleriyle geri gelir, değiştirilen kâğıt eski boyuna döner. Pafta listesi
-bütün hâlinde geri yüklenir, tek tek öğe olarak değil — bir paftanın adı değiştiğinde
-ya da bir öğe silindiğinde dizinlerin kayması bunu zorunlu kılar.
+Her `ÇIKTIYERLEŞİMİ` çağrısı tek bir işlemdir ve tek `Ctrl+Z` ile geri alınır: silinen
+yerleşim bütün öğeleriyle geri gelir, değiştirilen kâğıt eski boyuna döner. Yerleşim
+listesi bütün hâlinde geri yüklenir, tek tek öğe olarak değil — bir yerleşimin adı
+değiştiğinde ya da bir öğe silindiğinde dizinlerin kayması bunu zorunlu kılar.
 
 ## Betikten kullanım
 
-Paftalar çizimin içinde durduğu için bir betik önce çizimi açar, sonra paftayı kurar:
+Yerleşimler çizimin içinde durduğu için bir betik önce çizimi açar, sonra yerleşimi
+kurar:
 
 ```json
 [
@@ -157,16 +165,17 @@ Paftalar çizimin içinde durduğu için bir betik önce çizimi açar, sonra pa
 
 | Mesaj | Sebebi | Çözümü |
 |---|---|---|
-| `Pafta adı gerekir: ad=<ad>` | `listele` dışında bir işlem adsız çağrıldı | `ad=` ekleyin |
-| `Pafta yok: 'X'.` | O adda bir pafta bulunamadı | `PAFTA islem=listele` ile adları görün |
+| `Yerleşim adı gerekir: ad=<ad>` | `listele` dışında bir işlem adsız çağrıldı | `ad=` ekleyin |
+| `Çıktı yerleşimi yok: 'X'.` | O adda bir yerleşim bulunamadı | `ÇIKTIYERLEŞİMİ islem=listele` ile adları görün |
 | `Tanınmayan kâğıt: 'X'. Kâğıtlar: A5, A4, A3, A2, A1, A0, ozel.` | Kâğıt adı tabloda yok | Listedeki adlardan birini yazın ya da `ozel` kullanın |
 | `ozel kâğıt için genislik ve yukseklik milimetre olarak verilmeli (sıfırdan büyük).` | `kagit=ozel` verildi ama boy verilmedi | `genislik=` ve `yukseklik=` ekleyin |
 | `Kenar boşluğu sayfanın içinde kalmalı: 0 ile N mm arası.` | Kenar boşluğu sayfayı yutuyor | Daha küçük bir `kenar=` verin |
 | `Yeni ad gerekir: yeni_ad=<ad>` | `islem=ad` çağrıldı ama yeni ad yok | `yeni_ad=` ekleyin |
-| `'X' paftasında iki öğe aynı adı taşıyor: 'Y'.` | Öğe adları tekil olmalı | Öğelerden birini yeniden adlandırın |
+| `'X' yerleşiminde iki öğe aynı adı taşıyor: 'Y'.` | Öğe adları tekil olmalı | Öğelerden birini yeniden adlandırın |
 
 ## İlgili
 
-- [`PAFTAÖĞE`](layout_item.md) — paftanın üzerindeki öğeler
+- [`ÇIKTIÖĞE`](layout_item.md) — yerleşimin üzerindeki öğeler
+- [`ÇIKTIŞABLON`](layout_template.md) — kurumun standart yerleşimleri
 - [`YAZDIR`](print.md) — çizimi doğrudan kâğıda dökmek
 - [`YAZDIRMAPROFİLİ`](print_profile.md) — kâğıt profilleri

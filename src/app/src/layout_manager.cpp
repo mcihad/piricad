@@ -44,7 +44,7 @@ QString describe(const core::Layout& l)
 LayoutManager::LayoutManager(Controller& controller, QWidget* parent)
     : DialogFrame(parent), controller_(controller)
 {
-    setHeading(Glyph::Print, tr("Paftalar"));
+    setHeading(Glyph::Print, tr("Çıktı Yerleşimleri"));
     setBody(buildBody());
     resize(560, 420);
 
@@ -52,18 +52,18 @@ LayoutManager::LayoutManager(Controller& controller, QWidget* parent)
     connect(close, &QPushButton::clicked, this, &QDialog::accept);
     footer()->addWidget(close);
 
-    auto* fresh = new Button(ButtonRole::Primary, tr("Yeni pafta…"), Glyph::Plus, this);
+    auto* fresh = new Button(ButtonRole::Primary, tr("Yeni çıktı yerleşimi…"), Glyph::Plus, this);
     connect(fresh, &QPushButton::clicked, this, [this] {
         bool accepted       = false;
         const QString named = QInputDialog::getText(
-            this, tr("Yeni pafta"), tr("Pafta adı:"), QLineEdit::Normal,
-            tr("Pafta %1").arg(controller_.document().layouts().size() + 1), &accepted);
+            this, tr("Yeni çıktı yerleşimi"), tr("Yerleşim adı:"), QLineEdit::Normal,
+            tr("Yerleşim %1").arg(controller_.document().layouts().size() + 1), &accepted);
         if (!accepted || named.trimmed().isEmpty()) return;
-        controller_.runLine(QStringLiteral("PAFTA islem=ekle ad=%1 kagit=A3 yon=yatay")
+        controller_.runLine(QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=%1 kagit=A3 yon=yatay")
                                 .arg(quoted(named.trimmed())),
                             command::Origin::Gui);
         refresh();
-        // STRAIGHT INTO THE DESIGNER, because nobody makes a pafta in order to
+        // STRAIGHT INTO THE DESIGNER, because nobody makes a layout in order to
         // look at its name in a list.
         emit openRequested(named.trimmed());
         accept();
@@ -82,8 +82,8 @@ QWidget* LayoutManager::buildBody()
     column->setContentsMargins(20, 16, 20, 12);
     column->setSpacing(10);
 
-    column->addWidget(new FormSection(tr("ÇİZİMDEKİ PAFTALAR"),
-                                      tr("pafta çizimle birlikte kaydedilir ve geri alınabilir"),
+    column->addWidget(new FormSection(tr("ÇİZİMDEKİ ÇIKTIYERLEŞİMİLAR"),
+                                      tr("yerleşim çizimle birlikte kaydedilir ve geri alınabilir"),
                                       body));
 
     list_ = new QListWidget(body);
@@ -94,7 +94,7 @@ QWidget* LayoutManager::buildBody()
         for (Button* b : {open_, rename_, copy_})
             b->setEnabled(any);
         // THE LAST SHEET MAY GO, unlike the last print profile: a drawing with
-        // no pafta is an ordinary drawing, and one that could not lose its last
+        // no layout is an ordinary drawing, and one that could not lose its last
         // sheet would be a drawing you cannot undo a mistake out of.
         remove_->setEnabled(any);
     });
@@ -123,10 +123,10 @@ QWidget* LayoutManager::buildBody()
         if (was.isEmpty()) return;
         bool accepted = false;
         const QString now =
-            QInputDialog::getText(this, tr("Paftayı yeniden adlandır"), tr("Yeni ad:"),
+            QInputDialog::getText(this, tr("Yerleşimi yeniden adlandır"), tr("Yeni ad:"),
                                   QLineEdit::Normal, was, &accepted);
         if (!accepted || now.trimmed().isEmpty() || now.trimmed() == was) return;
-        controller_.runLine(QStringLiteral("PAFTA islem=ad ad=%1 yeni_ad=%2")
+        controller_.runLine(QStringLiteral("ÇIKTIYERLEŞİMİ islem=ad ad=%1 yeni_ad=%2")
                                 .arg(quoted(was), quoted(now.trimmed())),
                             command::Origin::Gui);
         refresh();
@@ -144,7 +144,7 @@ QWidget* LayoutManager::buildBody()
         // that hides it. One batch, so it is still one Ctrl+Z.
         const QString fresh = tr("%1 kopyası").arg(selected());
         QStringList lines;
-        lines << QStringLiteral("PAFTA islem=ekle ad=%1 kagit=%2 yon=%3 kenar=%4")
+        lines << QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=%1 kagit=%2 yon=%3 kenar=%4")
                      .arg(quoted(fresh),
                           source->paper.empty() ? QStringLiteral("A4")
                                                 : QString::fromStdString(source->paper),
@@ -154,15 +154,15 @@ QWidget* LayoutManager::buildBody()
         // The new sheet arrives with the four default items; the copy's own
         // items replace them, so those are removed first.
         for (const char* born : {"baslik", "harita", "olcek", "kuzey"})
-            lines << QStringLiteral("PAFTAÖĞE islem=sil pafta=%1 ad=%2")
+            lines << QStringLiteral("ÇIKTIÖĞE islem=sil yerlesim=%1 ad=%2")
                          .arg(quoted(fresh), QString::fromUtf8(born));
 
         for (const core::LayoutItem& item : source->items) {
-            lines << QStringLiteral("PAFTAÖĞE islem=ekle pafta=%1 tur=%2 ad=%3")
+            lines << QStringLiteral("ÇIKTIÖĞE islem=ekle yerlesim=%1 tur=%2 ad=%3")
                          .arg(quoted(fresh),
                               QString::fromUtf8(core::layout_item_kind_id(item.kind)),
                               quoted(QString::fromStdString(item.id)));
-            QString set = QStringLiteral("PAFTAÖĞE islem=ayarla pafta=%1 ad=%2 "
+            QString set = QStringLiteral("ÇIKTIÖĞE islem=ayarla yerlesim=%1 ad=%2 "
                                          "x=%3 y=%4 genislik=%5 yukseklik=%6 sira=%7")
                               .arg(quoted(fresh), quoted(QString::fromStdString(item.id)))
                               .arg(item.frame.x / 1000.0, 0, 'f', 1)
@@ -177,7 +177,7 @@ QWidget* LayoutManager::buildBody()
             if (item.locked) set += QStringLiteral(" kilit=evet");
             lines << set;
         }
-        controller_.runLines(lines, tr("Pafta çoğaltıldı"));
+        controller_.runLines(lines, tr("Çıktı yerleşimi çoğaltıldı"));
         refresh();
     });
 
@@ -185,12 +185,12 @@ QWidget* LayoutManager::buildBody()
     connect(remove_, &QPushButton::clicked, this, [this] {
         const QString name = selected();
         if (name.isEmpty()) return;
-        if (QMessageBox::question(this, tr("Paftayı sil"),
-                                  tr("'%1' paftası bütün öğeleriyle silinsin mi? Tek Ctrl+Z "
+        if (QMessageBox::question(this, tr("Yerleşimi sil"),
+                                  tr("'%1' yerleşimi bütün öğeleriyle silinsin mi? Tek Ctrl+Z "
                                      "ile geri alınabilir.")
                                       .arg(name)) != QMessageBox::Yes)
             return;
-        controller_.runLine(QStringLiteral("PAFTA islem=sil ad=%1").arg(quoted(name)),
+        controller_.runLine(QStringLiteral("ÇIKTIYERLEŞİMİ islem=sil ad=%1").arg(quoted(name)),
                             command::Origin::Gui);
         refresh();
     });
@@ -203,9 +203,9 @@ QWidget* LayoutManager::buildBody()
     row->addStretch(1);
     column->addWidget(actions);
 
-    auto* note = new QLabel(
-        tr("Her düğme bir PAFTA satırı çalıştırır; komut günlüğünde görünür ve geri alınır."),
-        body);
+    auto* note = new QLabel(tr("Her düğme bir ÇIKTIYERLEŞİMİ satırı çalıştırır; komut günlüğünde "
+                               "görünür ve geri alınır."),
+                            body);
     note->setObjectName(QStringLiteral("formHelp"));
     note->setWordWrap(true);
     column->addWidget(note);
@@ -232,8 +232,8 @@ void LayoutManager::refresh()
     }
 
     if (list_->count() == 0) {
-        auto* none =
-            new QListWidgetItem(tr("Çizimde pafta yok. “Yeni pafta…” ile başlayın."), list_);
+        auto* none = new QListWidgetItem(
+            tr("Çizimde çıktı yerleşimi yok. “Yeni çıktı yerleşimi…” ile başlayın."), list_);
         none->setFlags(Qt::NoItemFlags);
     }
     const bool any = !selected().isEmpty();

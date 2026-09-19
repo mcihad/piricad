@@ -186,11 +186,12 @@ struct PrintRequest
     /// to start from (empty = the default).
     std::string profile;
 
-    /// WHICH PAFTA TO PRINT, or empty for the plain window-onto-a-sheet print.
+    /// WHICH OUTPUT LAYOUT TO PRINT, or empty for the plain window-onto-a-sheet
+    /// print.
     ///
     /// A LAYOUT REPLACES THE PROFILE AND THE WINDOW BOTH: it carries its own
     /// paper, its own margin and a map frame that already knows where it looks
-    /// (`core/layout.hpp`). So `pafta=` and `pencere=`/`merkez=` are alternatives,
+    /// (`core/layout.hpp`). So `yerlesim=` and `pencere=`/`merkez=` are alternatives,
     /// and giving both is refused rather than silently letting one win.
     std::string layout;
 
@@ -232,10 +233,10 @@ struct PrintRequest
     bool allow_modify{true};
 };
 
-/// What `PAFTAŞABLON` asks the application to do with a sheet template.
+/// What `ÇIKTIŞABLON` asks the application to do with a sheet template.
 ///
 /// THE SAME SEAM AS `PrintRequest`, AND FOR THE SAME REASON. A template is a
-/// pafta stored OUTSIDE any drawing — the office's standard sheet, kept in the
+/// layout stored OUTSIDE any drawing — the office's standard sheet, kept in the
 /// user's configuration directory and copied between machines — so `/src/command`
 /// owns the command and the journal line, and the application owns the file.
 /// `/src/core` owns the shape and its JSON (`core/layout.hpp`), so a test can
@@ -245,22 +246,22 @@ struct LayoutTemplateRequest
     /// What to do. Each verb is one sentence a user would say out loud.
     enum class Verb : std::uint8_t {
         List,   ///< list the templates the office has
-        Save,   ///< store a pafta of this drawing as a template
-        Apply,  ///< make a pafta in this drawing from a template
+        Save,   ///< store a layout of this drawing as a template
+        Apply,  ///< make a layout in this drawing from a template
         Remove, ///< throw a template away
     };
 
     Verb verb{Verb::List}; ///< which operation to carry out
     std::string name;      ///< the TEMPLATE's name
-    std::string layout;    ///< Save: which pafta to store. Apply: what to call the new one
-    std::string json;      ///< Save: the pafta already serialised, so the app writes bytes
+    std::string layout;    ///< Save: which layout to store. Apply: what to call the new one
+    std::string json;      ///< Save: the layout already serialised, so the app writes bytes
 };
 
-/// Installed by `app::LayoutTemplates`. Returns the Turkish line `PAFTAŞABLON`
+/// Installed by `app::LayoutTemplates`. Returns the Turkish line `ÇIKTIŞABLON`
 /// echoes, or the refusal the user sees.
 ///
 /// APPLY ANSWERS WITH JSON, not with a layout: `/src/command` builds the sheet
-/// from it and writes it through `Transaction::set_layouts`, so making a pafta
+/// from it and writes it through `Transaction::set_layouts`, so making a layout
 /// from a template is an ordinary undoable edit rather than something the
 /// application did behind the command's back (Article 1.1).
 using LayoutTemplateHandler =

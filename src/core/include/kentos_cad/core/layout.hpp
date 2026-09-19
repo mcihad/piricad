@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the pafta, as data.
+// KentOSCad — core: the output layout, as data.
 //
 // WHAT A LAYOUT IS. A named sheet composition: pages of a given size, and items
 // placed on them in PAPER coordinates — a map frame with its own ground extent
 // and scale, a title, a scale bar, a north arrow, a legend, a logo, a frame line,
 // an attribute table. It is what QGIS calls a print layout and what a surveyor
-// calls a pafta, and it is the thing that actually gets signed and filed.
+// calls a pafta — a plan sheet — and it is the thing that gets signed and filed.
 //
-// IT LIVES IN THE DRAWING, and that is the decision this file records. A pafta
+// THE PROGRAM CALLS IT AN `ÇIKTI YERLEŞİMİ`, an output layout, and not a pafta.
+// In this country `pafta` also names a SHEET OF A SUBDIVIDED MAP — the unit a
+// cadastral archive is indexed by — and a program about cadastre must not use
+// one word for both. The English identifiers stay `Layout`.
+//
+// IT LIVES IN THE DRAWING, and that is the decision this file records. A layout
 // is not a setting of the machine it was drawn on: the sheet layout of an
 // 18. madde application is part of the submitted work, it is reviewed with the
 // drawing, and a colleague who opens the file must see the same sheet. So a
@@ -107,7 +112,7 @@ struct PaperRect
     friend bool operator==(const PaperRect&, const PaperRect&) = default;
 };
 
-/// What an item IS. The pafta set, and nothing speculative.
+/// What an item IS. What a sheet needs, and nothing speculative.
 enum class LayoutItemKind : std::uint8_t {
     Map,        ///< a window onto the drawing, with its own extent, scale and grid
     Label,      ///< text: the title, the ada/parsel line, a note, a date
@@ -194,7 +199,7 @@ struct LayoutItem
     // ---- Label, and the caption of ScaleBar / Legend / Table ----------------
 
     /// `Label`: the text, which may carry the placeholders `<ada>`, `<parsel>`,
-    /// `<olcek>`, `<tarih>`, `<pafta>`, `<crs>` — resolved when the sheet is
+    /// `<olcek>`, `<tarih>`, `<yerlesim>`, `<crs>` — resolved when the sheet is
     /// drawn, never stored resolved, so a re-export after an edit says the truth.
     /// `Picture`: the file path. `Table`: the layer name. `Legend`/`ScaleBar`:
     /// the caption above it.
@@ -215,7 +220,7 @@ struct LayoutItem
 
     /// The denominator of 1:N. 0 means the scale FOLLOWS the extent and the
     /// frame; a non-zero value pins it and the extent is recomputed about its
-    /// centre — which is what a pafta at a declared scale needs.
+    /// centre — which is what a sheet at a declared scale needs.
     std::int64_t scale{0};
 
     GridStyle grid{GridStyle::None};
@@ -265,7 +270,7 @@ struct Layout
     /// the print profile list shows and the name `YAZDIR` takes.
     std::string name;
 
-    /// At least one. A pafta series is several pages of one size; a report is a
+    /// At least one. A sheet series is several pages of one size; a report is a
     /// map page and a table page.
     std::vector<LayoutPage> pages{LayoutPage{}};
 
@@ -348,7 +353,7 @@ private:
 ///
 /// WHY JSON AND NOT THE DOCUMENT'S OWN BLOCKS. A template lives outside any
 /// drawing, in the office's own file, and is edited by hand more often than
-/// anybody admits — a firm's standard pafta is copied between machines, put in
+/// anybody admits — a firm's standard sheet is copied between machines, put in
 /// version control and patched when the title block changes. The document's
 /// binary blocks are right for a file the program writes and reads a thousand
 /// times; a template is written once and read by people (`io.md` P5's rule about
@@ -356,7 +361,7 @@ private:
 ///
 /// THE GROUND EXTENT IS DELIBERATELY NOT WRITTEN. A template says how a sheet is
 /// ARRANGED, not where it looks: carrying one drawing's coordinates into another
-/// drawing's pafta is how a template for Ankara aims a sheet at Ankara in a file
+/// drawing's layout is how a template for Ankara aims a sheet at Ankara in a file
 /// about Trabzon.
 std::string layout_to_json(const Layout& layout, std::string_view name);
 
@@ -377,14 +382,14 @@ std::int64_t map_scale(const LayoutItem& item);
 ///
 /// With a declared scale this is the frame's own paper size multiplied by it,
 /// centred on the stored extent's centre — which is why changing the paper of a
-/// 1:1000 pafta shows MORE ground rather than the same ground smaller. With no
+/// 1:1000 sheet shows MORE ground rather than the same ground smaller. With no
 /// declared scale it is the stored extent, widened to the frame's aspect so the
 /// picture is not stretched.
 Box2 map_window(const LayoutItem& item);
 
 /// A layout for `paper` at `width` × `height` paper micrometres, with one page,
 /// a map frame inside the margin, a title at the top and a scale bar under the
-/// map: the sheet a new layout starts as, so `Yeni pafta` produces something
+/// map: the sheet a new layout starts as, so a new layout produces something
 /// printable rather than an empty page.
 Layout default_layout(std::string name, Um width, Um height, Um margin);
 

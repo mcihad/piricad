@@ -1,18 +1,18 @@
-# PAFTAÖĞE — Pafta Öğeleri
+# ÇIKTIÖĞE — Çıktı Yerleşimi Öğeleri
 
-Paftasını kuran herkes için; bu sayfayı bitirdiğinizde bir paftaya harita çerçevesi,
-başlık, ölçek çubuğu, kuzey oku ve lejant eklemeyi, bunları taşımayı ve haritanın
-nereye bakacağını söylemeyi bileceksiniz.
+Çıktı yerleşimini kuran herkes için; bu sayfayı bitirdiğinizde bir yerleşime harita
+çerçevesi, başlık, ölçek çubuğu, kuzey oku ve lejant eklemeyi, bunları taşımayı ve
+haritanın nereye bakacağını söylemeyi bileceksiniz.
 
 ## Ne yapar
 
-Bir paftanın üzerindeki **öğeleri** yönetir. Sekiz tür vardır:
+Bir çıktı yerleşiminin üzerindeki **öğeleri** yönetir. Sekiz tür vardır:
 
 | Tür | Ne çizer |
 |---|---|
 | `harita` | Çizimin bir penceresi — kendi ölçeği ve koordinat ızgarasıyla |
 | `metin` | Başlık, ada/parsel satırı, not, tarih |
-| `olcek` | Ölçek çubuğu; ölçeğini paftanın haritasından alır |
+| `olcek` | Ölçek çubuğu; ölçeğini yerleşimin haritasından alır |
 | `kuzey` | Kuzey oku |
 | `lejant` | Hangi gösterimin ne demek olduğu |
 | `resim` | Logo ya da taranmış bir damga, dosya yolundan |
@@ -29,31 +29,31 @@ buluşur ve çevirme orada yapılır.
 
 | Ad | Açıklama |
 |---|---|
-| `PAFTAÖĞE` | Türkçe birincil ad |
-| `PAFTAOGE` | ASCII karşılığı |
+| `ÇIKTIÖĞE` | Türkçe birincil ad |
+| `CIKTIOGE` | ASCII karşılığı |
 | `LAYOUTITEM` | İngilizce karşılığı |
-| `PÖĞ` / `POG` | Kısaltma |
+| `ÇÖĞ` / `COG` | Kısaltma |
 
 ## Sözdizimi
 
 ```
-PAFTAÖĞE islem=listele [pafta=<ad>]
-PAFTAÖĞE islem=ekle [pafta=<ad>] tur=<tür> [ad=<ad>]
-PAFTAÖĞE islem=sil [pafta=<ad>] ad=<ad>
-PAFTAÖĞE islem=tasi [pafta=<ad>] ad=<ad> x=<mm> y=<mm> genislik=<mm> yukseklik=<mm>
-PAFTAÖĞE islem=ayarla [pafta=<ad>] ad=<ad> [metin=<yazı>] [olcek=<N>]
+ÇIKTIÖĞE islem=listele [yerlesim=<ad>]
+ÇIKTIÖĞE islem=ekle [yerlesim=<ad>] tur=<tür> [ad=<ad>]
+ÇIKTIÖĞE islem=sil [yerlesim=<ad>] ad=<ad>
+ÇIKTIÖĞE islem=tasi [yerlesim=<ad>] ad=<ad> x=<mm> y=<mm> genislik=<mm> yukseklik=<mm>
+ÇIKTIÖĞE islem=ayarla [yerlesim=<ad>] ad=<ad> [metin=<yazı>] [olcek=<N>]
          [pencere=x1,y1 pencere=x2,y2] [izgara=<biçim>] [kilit=evet] …
 ```
 
-`pafta=` **çizimde tek pafta varsa gerekmez**. İki ya da daha fazlası varsa
-zorunludur: hangisinin kastedildiğini tahmin etmek, yanlış paftanın düzenlenmesidir.
+`yerlesim=` **çizimde tek yerleşim varsa gerekmez**. İki ya da daha fazlası varsa
+zorunludur: hangisinin kastedildiğini tahmin etmek, yanlış yerleşimin düzenlenmesidir.
 
 ## Parametreler
 
 | Parametre | Anlamı |
 |---|---|
 | `islem` | `listele`, `ekle`, `sil`, `tasi`, `ayarla` |
-| `pafta` | Hangi pafta; tek pafta varsa gerekmez |
+| `yerlesim` | Hangi yerleşim; tek yerleşim varsa gerekmez |
 | `ad` | Öğenin adı. `ekle`'de verilmezse türünden türetilir (`harita`, `harita2`…) |
 | `tur` | `islem=ekle` için: `harita`, `metin`, `olcek`, `kuzey`, `lejant`, `resim`, `sekil`, `tablo` |
 | `x`, `y` | Sol ve **üst** kenardan uzaklık, milimetre |
@@ -79,9 +79,9 @@ gösteren bir tablo, eksiksiz sanılarak dosyalanan bir tablodur.
 ### Metin yer tutucuları
 
 Bir metin öğesinin yazısında şunlar **çizim anında** çözülür ve asla çözülmüş hâlde
-saklanmaz — ölçek değiştiğinde yeniden bastığınız pafta yeni ölçeği yazar:
+saklanmaz — ölçek değiştiğinde yeniden bastığınız yerleşim yeni ölçeği yazar:
 
-`<pafta>` · `<proje>` · `<olcek>` · `<tarih>` · `<crs>` · `<kagit>`
+`<yerlesim>` · `<proje>` · `<olcek>` · `<tarih>` · `<crs>` · `<kagit>`
 
 ### Ölçek mi pencere mi
 
@@ -89,50 +89,50 @@ saklanmaz — ölçek değiştiğinde yeniden bastığınız pafta yeni ölçeğ
 
 - `olcek=0` (varsayılan): pencere neredeyse odur; ölçek ondan hesaplanır.
 - `olcek=1000`: çerçevenin kâğıt boyu ölçekle çarpılır ve pencerenin **merkezine**
-  oturtulur. Bu yüzden 1:1000 bir paftanın kâğıdını büyütmek daha ÇOK zemin gösterir,
-  aynı zemini küçültmez — bir pafta ölçeğinin anlamı budur.
+  oturtulur. Bu yüzden 1:1000 bir yerleşimin kâğıdını büyütmek daha ÇOK zemin gösterir,
+  aynı zemini küçültmez — bir harita ölçeğinin anlamı budur.
 
 ## Örnekler
 
 ### Komut satırı
 
-Paftadaki öğeleri görmek:
+Yerleşimdeki öğeleri görmek:
 
 ```
-PAFTAÖĞE islem=listele
+ÇIKTIÖĞE islem=listele
 ```
 
 Haritayı bir alana bakacak şekilde hedeflemek — köşeler **metre** cinsindendir ve
 anahtar iki kez yazılır:
 
 ```
-PAFTAÖĞE islem=ayarla ad=harita pencere=485200,4310100 pencere=485420,4310200
+ÇIKTIÖĞE islem=ayarla ad=harita pencere=485200,4310100 pencere=485420,4310200
 ```
 
 Haritayı 1:1000'e sabitlemek ve çizgi ızgarası vermek:
 
 ```
-PAFTAÖĞE islem=ayarla ad=harita olcek=1000 izgara=cizgi izgara_aralik=50000
+ÇIKTIÖĞE islem=ayarla ad=harita olcek=1000 izgara=cizgi izgara_aralik=50000
 ```
 
 Lejant eklemek ve sağ üste koymak:
 
 ```
-PAFTAÖĞE islem=ekle tur=lejant ad=lejant
-PAFTAÖĞE islem=tasi ad=lejant x=300 y=40 genislik=80 yukseklik=60
+ÇIKTIÖĞE islem=ekle tur=lejant ad=lejant
+ÇIKTIÖĞE islem=tasi ad=lejant x=300 y=40 genislik=80 yukseklik=60
 ```
 
 Başlığı yazmak:
 
 ```
-PAFTAÖĞE islem=ayarla ad=baslik metin="<pafta> — <olcek> — <tarih>"
+ÇIKTIÖĞE islem=ayarla ad=baslik metin="<yerlesim> — <olcek> — <tarih>"
 ```
 
 ### Arayüz
 
-**Pafta tasarımcısında** (araç çubuğu ▸ yazdırma oku ▸ bir pafta) sol sütun öğeleri
-çizim sırasına göre listeler, orta sütun sayfayı gösterir, sağ sütun seçili öğenin
-özelliklerini taşır.
+**Çıktı yerleşimi tasarımcısında** (araç çubuğu ▸ yazdırma oku ▸ bir yerleşim) sol
+sütun öğeleri çizim sırasına göre listeler, orta sütun sayfayı gösterir, sağ sütun
+seçili öğenin özelliklerini taşır.
 
 - Bir öğeye tıklamak seçer; **sürüklemek taşır**, köşe tutamağından çekmek boyutlandırır.
 - **Ok tuşları** birer milimetre kaydırır, **Shift+ok** on milimetre.
@@ -159,14 +159,14 @@ ile kilidi açabilirsiniz.
 
 ## Betikten kullanım
 
-Bir paftayı baştan sona kuran betik:
+Bir yerleşimi baştan sona kuran betik:
 
 ```json
 [
   { "cmd": "core.layout", "args": { "islem": "ekle", "ad": "Ada 1284",
                                     "kagit": "A3", "yon": "yatay" } },
   { "cmd": "core.layout_item", "args": { "islem": "ayarla", "ad": "baslik",
-                                         "metin": "<pafta> — <olcek>" } },
+                                         "metin": "<yerlesim> — <olcek>" } },
   { "cmd": "core.layout_item", "args": { "islem": "ayarla", "ad": "harita",
                                          "olcek": 1000, "izgara": "arti" } },
   { "cmd": "core.layout_item", "args": { "islem": "ekle", "tur": "lejant",
@@ -181,17 +181,17 @@ Bir paftayı baştan sona kuran betik:
 
 | Mesaj | Sebebi | Çözümü |
 |---|---|---|
-| `Çizimde hiç pafta yok. Önce PAFTA islem=ekle ad=<ad> yazın.` | Ortada pafta yok | Önce bir pafta açın |
-| `Çizimde N pafta var; hangisi olduğunu yazın: pafta=<ad>` | Birden çok pafta var | `pafta=` ekleyin |
+| `Çizimde hiç çıktı yerleşimi yok. Önce ÇIKTIYERLEŞİMİ islem=ekle ad=<ad> yazın.` | Ortada yerleşim yok | Önce bir yerleşim açın |
+| `Çizimde N çıktı yerleşimi var; hangisi olduğunu yazın: yerlesim=<ad>` | Birden çok yerleşim var | `yerlesim=` ekleyin |
 | `Öğe adı gerekir: ad=<ad>` | `ekle` dışında bir işlem adsız çağrıldı | `ad=` ekleyin |
-| `'X' paftasında öğe yok: 'Y'.` | O adda öğe bulunamadı | `islem=listele` ile adları görün |
-| `'X' paftasında 'Y' adlı bir öğe zaten var.` | Öğe adları tekildir | Başka bir ad verin |
-| `'X' kilitli; önce kilidi açın: PAFTAÖĞE islem=ayarla ad=X kilit=hayır` | Kilitli öğe taşınmak istendi | Kilidi açın |
+| `'X' yerleşiminde öğe yok: 'Y'.` | O adda öğe bulunamadı | `islem=listele` ile adları görün |
+| `'X' yerleşiminde 'Y' adlı bir öğe zaten var.` | Öğe adları tekildir | Başka bir ad verin |
+| `'X' kilitli; önce kilidi açın: ÇIKTIÖĞE islem=ayarla ad=X kilit=hayır` | Kilitli öğe taşınmak istendi | Kilidi açın |
 | `pencere iki köşe ister: pencere=x1,y1 x2,y2` | Anahtar bir kez yazıldı | `pencere=` anahtarını **iki kez** yazın |
 | `'X' bir harita çerçevesi değil; pencere yalnız haritaya verilir.` | `pencere=` harita olmayan bir öğeye verildi | Harita öğesinin adını verin |
 | `Izgara: yok / arti / cizgi / centik` | Tanınmayan ızgara biçimi | Listedeki sözcüklerden birini yazın |
 
 ## İlgili
 
-- [`PAFTA`](layout.md) — paftanın kendisi
+- [`ÇIKTIYERLEŞİMİ`](layout.md) — yerleşimin kendisi
 - [`YAZDIR`](print.md) — çizimi doğrudan kâğıda dökmek

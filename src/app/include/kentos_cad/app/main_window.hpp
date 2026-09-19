@@ -127,29 +127,29 @@ public:
     /// second press captures it and opens the window.
     void layoutWithFrame(const QString& layout);
 
-    /// Opens the pafta designer on `layout`, aimed at `window` when it is not
+    /// Opens the layout designer on `layout`, aimed at `window` when it is not
     /// empty.
     void openLayoutDesigner(const QString& layout, core::Box2 window = {});
 
-    /// Asks for a name, creates a pafta and opens the designer on it.
+    /// Asks for a name, creates a layout and opens the designer on it.
     void newLayout();
 
-    /// Rebuilds `Dosya ▸ Paftalar` from the document. Wired to the menu's own
+    /// Rebuilds `Dosya ▸ Çıktı Yerleşimleri` from the document. Wired to the menu's own
     /// `aboutToShow`, so a sheet added at the command line is there the next
     /// time the menu opens without anything having to be told.
     void rebuildLayoutMenu();
 
-    /// Opens the pafta list: open, rename, duplicate, remove.
+    /// Opens the layout list: open, rename, duplicate, remove.
     void openLayoutManager();
 
     /// Asks what to call the new sheet and runs `PAFTAŞABLON islem=uygula`, then
     /// opens the designer on it — a sheet from a template still needs aiming.
     void applyLayoutTemplate(const QString& templateName);
 
-    /// Asks which pafta and what to call it, then runs `islem=kaydet`.
+    /// Asks which layout and what to call it, then runs `islem=kaydet`.
     void saveLayoutTemplate();
 
-    /// Asks for a path and runs `YAZDIR pafta=`.
+    /// Asks for a path and runs `YAZDIR yerlesim=`.
     void exportLayout(const QString& layout);
 
     /// Opens the preview window directly on `window` — the frame's capture, or
@@ -310,7 +310,7 @@ public:
     /// Developer tooling behind `KENTOS_CHAT_PROBE`.
     int probeChat();
 
-    /// Every entry of `Dosya ▸ Paftalar`, as a menu walk would find it, one
+    /// Every entry of `Dosya ▸ Çıktı Yerleşimleri`, as a menu walk would find it, one
     /// line per action and indented for a submenu.
     ///
     /// THE CHECK NOTHING ELSE MAKES. A menu entry is four things that have to
@@ -612,12 +612,12 @@ private:
     /// same one the frame was shaped by. Empty means the default profile.
     QString printProfile_;
 
-    /// The pafta being aimed on the canvas, or empty when the frame belongs to a
+    /// The layout being aimed on the canvas, or empty when the frame belongs to a
     /// plain print. It is what tells the frame's acceptance which of the two
     /// windows to open.
     QString pendingLayout_;
 
-    /// `Dosya ▸ Paftalar`, rebuilt from the document each time it opens.
+    /// `Dosya ▸ Çıktı Yerleşimleri`, rebuilt from the document each time it opens.
     QMenu* layoutMenu_{nullptr};
 
     /// Rebuilds the print button's menu from `PrintService::profiles()`. There

@@ -81,3 +81,13 @@ CheckOptions:
     value: true
   - key: bugprone-unused-return-value.AllowCastToVoid
     value: true
+  # bugprone-signed-bitwise exists to catch a SIGNED VARIABLE in a bitwise
+  # expression, where the sign bit makes the result implementation-defined. It
+  # also flags `1u << 0`, because the shift COUNT is an `int` literal — and this
+  # program writes its flag words that way in `snap.hpp`, `document.hpp`,
+  # `spec.hpp` and six more headers, 3571 times. A positive literal has no sign
+  # bit to go wrong, so the option narrows the check to what it is for instead of
+  # trading a real class of bug for a spelling convention. This is a check
+  # OPTION, not a suppression: a signed `int` operand still fails the build.
+  - key: bugprone-signed-bitwise.IgnorePositiveIntegerLiterals
+    value: true

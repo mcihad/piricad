@@ -197,7 +197,7 @@ public:
 
     const ProviderService& providerService() const noexcept { return providers_; }
 
-    /// The office's pafta templates: the folder they live in and the verbs of
+    /// The office's layout templates: the folder they live in and the verbs of
     /// `PAFTAŞABLON` over it.
     LayoutTemplates& layoutTemplates() noexcept { return templates_; }
 

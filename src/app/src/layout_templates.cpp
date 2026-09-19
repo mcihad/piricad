@@ -10,7 +10,7 @@ namespace kentos::app {
 namespace {
 
 /// The extension a template file carries.
-constexpr const char* kSuffix = ".pafta.json";
+constexpr const char* kSuffix = ".yerleşim.json";
 
 QString utf8(const std::string& s)
 {
@@ -46,7 +46,7 @@ QString file_stem(const QString& name)
 LayoutTemplates::LayoutTemplates(command::Bus& bus, QObject* parent) : QObject(parent), bus_(bus)
 {
     folder_ = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) +
-              QStringLiteral("/paftalar");
+              QStringLiteral("/yerleşimler");
 
     bus_.on_layout_template_request = [this](const command::LayoutTemplateRequest& request)
         -> command::Task<core::Result<std::string>> { return this->handle(request); };
@@ -90,9 +90,10 @@ LayoutTemplates::handle(command::LayoutTemplateRequest request)
     case Verb::List: {
         const QStringList have = names();
         if (have.isEmpty())
-            co_return std::string("Kayıtlı pafta şablonu yok. Bir paftayı saklamak için: "
-                                  "PAFTAŞABLON islem=kaydet ad=<ad>");
-        std::string said = std::to_string(have.size()) + " pafta şablonu:";
+            co_return std::string(
+                "Kayıtlı çıktı yerleşimi şablonu yok. Bir yerleşimi saklamak için: "
+                "ÇIKTIŞABLON islem=kaydet ad=<ad>");
+        std::string said = std::to_string(have.size()) + " çıktı yerleşimi şablonu:";
         for (const QString& one : have)
             said += "\n  " + one.toStdString();
         said += "\nKlasör: " + folder_.toStdString();
@@ -115,8 +116,8 @@ LayoutTemplates::handle(command::LayoutTemplateRequest request)
         file.close();
 
         emit changed();
-        co_return "Pafta şablonu kaydedildi: " + request.name + " — '" + request.layout +
-            "' paftasından, " + path.value().toStdString();
+        co_return "Çıktı yerleşimi şablonu kaydedildi: " + request.name + " — '" + request.layout +
+            "' yerleşiminden, " + path.value().toStdString();
     }
 
     case Verb::Apply: {
@@ -126,7 +127,7 @@ LayoutTemplates::handle(command::LayoutTemplateRequest request)
         QFile file(path.value());
         if (!file.exists()) {
             const QStringList have = names();
-            std::string said       = "Pafta şablonu yok: '" + request.name + "'.";
+            std::string said       = "Çıktı yerleşimi şablonu yok: '" + request.name + "'.";
             if (!have.isEmpty())
                 said += " Olanlar: " + have.join(QStringLiteral(", ")).toStdString();
             co_return core::err(core::ErrorCode::NotFound, said);
@@ -146,12 +147,12 @@ LayoutTemplates::handle(command::LayoutTemplateRequest request)
         if (!path) co_return path.error();
         if (!QFile::exists(path.value()))
             co_return core::err(core::ErrorCode::NotFound,
-                                "Pafta şablonu yok: '" + request.name + "'.");
+                                "Çıktı yerleşimi şablonu yok: '" + request.name + "'.");
         if (!QFile::remove(path.value()))
             co_return core::err(core::ErrorCode::IoFailure,
                                 "Şablon silinemedi: " + path.value().toStdString());
         emit changed();
-        co_return "Pafta şablonu silindi: " + request.name;
+        co_return "Çıktı yerleşimi şablonu silindi: " + request.name;
     }
     }
     co_return core::err(core::ErrorCode::Internal, "İşlenmemiş şablon isteği.");

@@ -3394,7 +3394,7 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // catching.
     Fixture f;
     // 59 + SPLINE, TARAMA, BLOK, BLOKEKLE, ÖLÇÜ, LİDER + YAZDIR, YAZDIRMAPROFİLİ
-    // + KATMANGÖRÜNÜM + PAFTA, PAFTAÖĞE, PAFTAŞABLON
+    // + KATMANGÖRÜNÜM + ÇIKTIYERLEŞİMİ, ÇIKTIÖĞE, ÇIKTIŞABLON
     CHECK_EQ(f.reg.size(), std::size_t{71});
 
     // And the collision check itself, over the names that DID register.

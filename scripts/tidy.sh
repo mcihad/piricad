@@ -57,10 +57,43 @@ is=$(( cekirdek > 3 ? cekirdek - 2 : 1 ))
 
 echo "tidy: ${#dosyalar[@]} çeviri birimi (derleme veritabanından), $is koşut iş"
 
+# WHICH clang-tidy, AND IT IS NOT "whatever is on PATH". The tool carries its own
+# clang front end, so a clang-tidy OLDER than the compiler that built the database
+# cannot parse the system headers that compiler ships with. On this machine
+# AppleClang 21's libc++ uses `__builtin_clzg`, `__builtin_ctzg` and
+# `__builtin_popcountg`, which LLVM 18 does not have: tidy 18 reported 2599
+# `clang-diagnostic-error`s from inside <bit> and <type_traits> and every real
+# finding was buried under them. `CLANG_TIDY` names one explicitly; otherwise the
+# newest Homebrew LLVM is preferred over the bare name, and the bare name is the
+# last resort so a machine with only one still works.
+tidy="${CLANG_TIDY:-}"
+if [[ -z "$tidy" ]]; then
+    for aday in /opt/homebrew/opt/llvm/bin/clang-tidy /usr/local/opt/llvm/bin/clang-tidy; do
+        if [[ -x "$aday" ]]; then tidy="$aday"; break; fi
+    done
+fi
+[[ -n "$tidy" ]] || tidy="clang-tidy"
+if ! command -v "$tidy" >/dev/null && [[ ! -x "$tidy" ]]; then
+    echo "tidy: clang-tidy bulunamadı ($tidy)" >&2
+    exit 2
+fi
+
+# AND THE SDK, on macOS. A Homebrew clang does not know where Apple keeps its
+# headers, so without this it cannot find <cstdint> — the compile database's own
+# flags do not carry a sysroot because AppleClang does not need one told.
+ekstra=()
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    if sdk="$(xcrun --show-sdk-path 2>/dev/null)" && [[ -n "$sdk" ]]; then
+        ekstra+=("--extra-arg=-isysroot$sdk")
+    fi
+fi
+
+echo "tidy: $("$tidy" --version 2>/dev/null | sed -n 's/.*LLVM version \(.*\)/LLVM \1/p')"
+
 # xargs answers 123 when any child failed, and a finding IS a failure here, so the
 # status is mapped rather than passed through.
 if printf '%s\0' "${dosyalar[@]}" |
-        xargs -0 -n 1 -P "$is" clang-tidy -p "$yapi" --quiet; then
+        xargs -0 -n 1 -P "$is" "$tidy" -p "$yapi" --quiet "${ekstra[@]}"; then
     exit 0
 fi
 exit 1
