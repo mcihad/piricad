@@ -32,6 +32,8 @@
 #include <QString>
 #include <QWidget>
 
+#include <cstdint>
+
 namespace kentos::app {
 
 /// The plan store, the gate and the audit log; see ai_service.hpp.
@@ -94,6 +96,14 @@ private:
     QLabel* outcome_{nullptr};
     Badge* mark_{nullptr};
     bool pending_{true};
+
+    /// The fingerprint of the plan THIS CARD DREW (`Plan::content_fingerprint`).
+    ///
+    /// Carried into the approval so the decision is bound to the lines the person
+    /// read, not to whatever the plan holds when the button is pressed. A client
+    /// may append to its own pending suggestion between the two moments, and a
+    /// card showing two lines must never apply three (TODOS S-04).
+    std::uint64_t shown_content_{0};
     ThemeMode theme_{ThemeMode::Dark};
 };
 

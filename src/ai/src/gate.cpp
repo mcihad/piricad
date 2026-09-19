@@ -8,10 +8,10 @@ Gate::Gate(PlanStore& plans, AuditLog& audit, Runner runner)
 {}
 
 Approval Gate::approve(std::string plan_id, std::string operator_name, Decision decision,
-                       std::int64_t utc_ms, std::string policy)
+                       std::int64_t utc_ms, std::string policy, std::uint64_t content)
 {
     return Approval(std::move(plan_id), std::move(operator_name), decision, utc_ms,
-                    std::move(policy));
+                    std::move(policy), content);
 }
 
 core::Status Gate::decide(const Approval& approval)
@@ -24,6 +24,24 @@ core::Status Gate::decide(const Approval& approval)
         return core::err(core::ErrorCode::ValidationFailed, "Öneri '" + approval.plan_id() +
                                                                 "' zaten " +
                                                                 plan_state_name(plan->state) + ".");
+
+    // ---- IS THIS STILL THE PLAN THE PERSON READ? (TODOS S-04) --------------
+    //
+    // The card showed a list of command lines and somebody pressed Uygula for
+    // THOSE lines. The plan is looked up again here, and between the two moments
+    // the client that filed it can have appended a step — that is how a sequence
+    // becomes one undo entry (`PlanStore::append_for`). Applying the longer plan
+    // would put work nobody read into the drawing, and the audit record would
+    // say the engineer approved it.
+    //
+    // REFUSED, NOT TRIMMED. The honest answer is a fresh card showing what the
+    // plan says now; silently applying the prefix would be a different kind of
+    // lie.
+    if (approval.content() != 0 && approval.content() != plan->content_fingerprint())
+        return core::err(core::ErrorCode::Conflict,
+                         "Öneri '" + approval.plan_id() +
+                             "' karttaki hâlinden farklı: onaydan sonra adım eklenmiş. "
+                             "Uygulanmadı; kartı kapatıp yeniden açın.");
 
     AuditRecord record;
     record.plan_id       = plan->id;

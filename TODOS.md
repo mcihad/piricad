@@ -898,23 +898,89 @@ ve hiç seçim yoksa önce bağlam çözülür; çözülemiyorsa yalnız nesne s
   olarak da kaçırılamaz) ve protokol katmanı. Ret, ayarı ve kimin
   değiştirebileceğini adıyla söylüyor. `core.ai.`/`core.mcp.` içindeki yeni bir
   ayar işaretsiz eklenemiyor: test kırılıyor.
-  **Kalan — ve bu kullanıcı kararı bekliyor:** "aynı iş için onay
-  tekrarlanmasın" ve "kullanıcının önceden verdiği otomatik yetki" cümleleri,
-  onayın plana bağlanıp tekrar kullanılabilmesini istiyor. Bu, CLAUDE.md 5.7'nin
-  ("NEVER auto-apply AI output. No trust mode, setting, CLI flag or 'remember my
-  choice'") tadil edilmesi demektir ve Article 0.5 gereği neyi geçersiz kıldığını
-  yazan, kaynak değişikliğiyle aynı incelemeden geçen bir tadil ister. S-03, S-05
-  ve S-06 aynı karara bağlı. **Anayasa değişmeden bu yarı yapılamaz ve
-  yapılmamalı.**
-- [ ] **S-05 / P0 — Kural, test ve doküman migration'ı.** Mevcut `CLAUDE.md`
-  2.8/2.10/5.7, `.claude/ai.md` R2/R3 ve P1/P15, `plan.hpp`, `gate.hpp`,
-  `dispatcher.hpp` yorumları ve `scripts/ci-gate-ai.sh` zorunlu insan onayı/tek
-  fabrika çağırıcısı varsayımlarını taşıyor. Bu kullanıcı talebi yeni ürün yönünü
-  belirliyor: uygulama sırasında bu metinler ve testler policy tabanlı modele
-  birlikte geçirilmeli; kuraldan habersiz bir bypass eklenmemeli. `docs/yapay-zeka/onay.md`,
-  MCP/sohbet kılavuzları ve üretilen `docs/llms*.txt` aynı değişimde güncellensin.
+  *(20 Eylül 2026 — onay artık içeriğe bağlı.)* **"Bir onay planın
+  içeriğine/revizyonuna bağlansın" cümlesi karşılandı**, ve bu gerçek bir deliği
+  kapattı: onay yalnız öneri KİMLİĞİNE bağlıydı, oysa kart çizildikten sonra
+  öneriyi açan istemci ona adım ekleyebiliyor (bir diziyi tek geri alma adımında
+  toplamanın yolu budur). İki satır gösteren bir kart üç satır uygulayabilirdi ve
+  denetim kaydı mühendisin üçünü de onayladığını yazardı. `Plan::content_fingerprint`
+  ve `Approval::content` bunu bağlıyor; farklı bir öneri **reddediliyor**,
+  kırpılmıyor — dürüst cevap önerinin şu anki hâlini gösteren yeni bir karttır.
+  Revizyon kontrolü zaten vardı (`applyPlan`, C-04).
+  **Kalan — ve bu bir KULLANICI KARARI:** "aynı iş için onay tekrarlanmasın" ve
+  "kullanıcının önceden verdiği otomatik yetki" cümleleri, önceden verilmiş bir
+  iznin sonraki adımları da kapsamasını istiyor. Bu, CLAUDE.md 5.7'nin tadili
+  demektir. Tadilat metni **S-05'in altında yazılı ve okunmaya hazır**; karar
+  bakımcının.
+- [ ] **S-05 / P0 — Kural, test ve doküman migration'ı.** *(tadilat metni hazır — KARAR BEKLİYOR)*
+  Mevcut `CLAUDE.md` 2.8/2.10/5.7, `.claude/ai.md` R2/R3 ve P1/P15, `plan.hpp`,
+  `gate.hpp`, `dispatcher.hpp` yorumları ve `scripts/ci-gate-ai.sh` zorunlu insan
+  onayı/tek fabrika çağırıcısı varsayımlarını taşıyor. Bu kullanıcı talebi yeni
+  ürün yönünü belirliyor: uygulama sırasında bu metinler ve testler policy tabanlı
+  modele birlikte geçirilmeli; kuraldan habersiz bir bypass eklenmemeli.
+  `docs/yapay-zeka/onay.md`, MCP/sohbet kılavuzları ve üretilen `docs/llms*.txt`
+  aynı değişimde güncellensin.
   **Kabul:** CI hâlâ yetkisiz uygulamayı yakalar; yetkili otomatik uygulamayı
   “yasak onay çağırıcısı” diye reddetmez. Üretilen dosyalar elle değiştirilmez.
+
+  ---
+
+  #### Neden bu madde bir ajan tarafından kapatılamaz
+
+  Bu madde **CLAUDE.md 5.7'nin tadilini** gerektiriyor. Madde 5.7 şöyle diyor:
+  *"NEVER auto-apply AI output. No trust mode, setting, CLI flag or 'remember my
+  choice' that bypasses preview + explicit approval."* Article 2.8 gerekçesini de
+  yazıyor: kadastro ve imar çıktısı **yalnız ruhsatlı bir mühendisin
+  imzalayabileceği hukuki bir belgedir**.
+
+  Article 0.5 tadilat yolunu tanımlıyor: kaynak değişikliğiyle aynı incelemeden
+  geçer ve **neyi geçersiz kıldığını adıyla yazar**. Bu, tadilatın yasak olmadığı
+  ama bir KARAR olduğu anlamına geliyor — ve bu karar, regülasyonlu bir meslekte
+  imza sorumluluğunu değiştirdiği için bakımcının kendisinin vermesi gereken bir
+  karar. Genel bir "TODOS'u bitir" talimatı, 5.7 hakkında bilgilendirilmiş bir
+  karar değildir. Bu yüzden tadilat **yazılmadı**; aşağıda okunmaya hazır duruyor.
+
+  Bu maddenin 5.7'ye bağlı OLMAYAN her parçası yapıldı ve ayrı ayrı işaretlendi:
+  S-03'ün çelişen metni, S-04'ün yetki yükseltme yarısı ve onayın içeriğe
+  bağlanması, S-06'nın karar kaynağı alanları.
+
+  #### Önerilen tadilat (bakımcının onayına)
+
+  **1. CLAUDE.md 5.7 yerine:**
+
+  > 5.7 NEVER apply AI output outside the sanctioned decision path. A change to
+  > the document reaches it either through a preview and an explicit human
+  > approval, or through an approval policy the user set BEFOREHAND, deliberately
+  > and for themselves — never through a claim made by a client, a header, a
+  > prompt or a model. Whichever path it took is recorded in the audit record
+  > (`karar_veren`) and the policy in force is recorded with it. **This
+  > supersedes the former 5.7**, which forbade every automatic path outright; the
+  > reason it did — that a cadastral output is a legal document only a licensed
+  > engineer may sign (2.8) — is preserved by the fact that only the person at the
+  > workstation can set the policy (`ai::escalates`, S-04) and by the record
+  > naming what decided (S-06).
+
+  **2. `.claude/ai.md`:** R3/P1 aynı cümleyle yeniden yazılır; P15'in "tek fabrika
+  çağırıcısı" kuralı "onay nesnesini yalnız kart ya da politika motoru üretir,
+  ikisi de kullanıcının önceden verdiği izne dayanır" olur.
+
+  **3. `scripts/ci-gate-ai.sh`:** tek çağıran denetimi **iki** meşru çağırana
+  açılır (`suggestion_card.cpp` ve politika motoru) ve üçüncüsünü kırmaya devam
+  eder. Kabul cümlesinin ikinci yarısı budur.
+
+  **4. Kod yorumları:** `plan.hpp`, `gate.hpp`, `dispatcher.hpp` ve
+  `policy.hpp`'deki "yalnız bir insan" cümleleri aynı değişiklikte güncellenir.
+
+  **5. Belgeler:** `docs/yapay-zeka/onay.md`'nin "Onay zorlanamaz" ve "`otomatik`
+  yürürlükte değil" bölümleri; `mcp-sunucusu.md` ve `sohbet.md`; ve `make
+  reference` ile üretilen `docs/llms*.txt` (elle değil).
+
+  **6. Testler:** `test_ai_policy.cpp`'deki S-03 vakası (özet artık katılımsız
+  yürütmeyi vaat EDEBİLİR) ve `no_autoapply_test`'in yerine "yetkisiz uygulama
+  yakalanır, yetkili uygulama reddedilmez" vakası.
+
+  Tadilat kabul edilirse S-03'ün ve S-04'ün kalan yarıları da aynı değişiklikte
+  kapanır; reddedilirse bu madde kapanır ve `otomatik` değeri ayardan kaldırılır.
 - [~] **S-06 / P1 — Audit ve ayar migration'ı.** *(karar kaynağı ve policy 19 Eylül 2026)*
   **Yapıldı:** Denetim kaydı iki alan kazandı — `karar_veren` ve
   `onay_politikasi`. İlki bugün her satırda `insan` yazıyor ve **yazılması

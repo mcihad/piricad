@@ -134,6 +134,22 @@ struct Plan
     /// guessing a key (M-07).
     std::string idempotency_key;
 
+    /// A FINGERPRINT OF WHAT WOULD ACTUALLY RUN: the steps, in order, with their
+    /// command ids and their resolved arguments.
+    ///
+    /// WHY AN APPROVAL NEEDS ONE. A person approves the command lines they READ
+    /// on the card. The plan they approve is looked up again when the decision is
+    /// carried out, and between those two moments the plan can CHANGE: a client
+    /// may append a step to its own pending suggestion (`PlanStore::append_for`,
+    /// which is how a sequence becomes one undo entry). Without this, a card
+    /// drawn showing two lines could apply three — and the audit record would say
+    /// the engineer approved all of them (TODOS S-04).
+    ///
+    /// THE LINES ARE NOT WHAT IS HASHED. The arguments are: a line is what a
+    /// person reads, and the arguments are what runs. Two plans that read the
+    /// same and run differently must not share a fingerprint.
+    std::uint64_t content_fingerprint() const;
+
     /// What the client is told: id, state, the lines, and the rule that a person
     /// must apply it. Never the raw arguments — the lines are the readable form.
     core::Json to_json() const;

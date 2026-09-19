@@ -603,6 +603,77 @@ TEST_CASE("Onay kapısı: uygulanan öneri tek adım, reddedilen hiçbir şey")
         CHECK(line.find(forbidden) == std::string::npos);
 }
 
+TEST_CASE("S-04: onay karttaki satırlara bağlıdır, öneri kimliğine değil")
+{
+    // A PERSON APPROVES THE COMMAND LINES THEY READ. The plan is looked up again
+    // when the decision is carried out, and between those two moments the client
+    // that filed it can APPEND a step — that is how a sequence becomes one undo
+    // entry. A card showing two lines must never apply three, and the audit
+    // record must never say the engineer approved the third (TODOS S-04).
+    Rig f;
+    seed(f);
+
+    std::vector<std::string> log;
+    ai::AuditLog audit([&log](const std::string& line) { log.push_back(line); });
+    ai::PlanStore plans;
+    ai::Gate gate(plans, audit, [&f](const ai::Plan& plan) -> core::Status {
+        for (const ai::PlanStep& step : plan.steps)
+            if (auto ran = f.bus.dispatch(Invocation{step.command_id, step.args, Origin::Ai}); !ran)
+                return ran.error();
+        return core::ok();
+    });
+
+    Args first;
+    first.set("ad", Value::text("ONAYLANAN"));
+    ai::Plan plan;
+    plan.requester = "Ajan A";
+    plan.steps.push_back(ai::PlanStep{"core.layer", first, "KATMAN ad=ONAYLANAN", {}});
+    const std::string id = plans.add(std::move(plan));
+
+    // THE CARD READS THE PLAN and remembers what it drew.
+    const std::uint64_t as_drawn = plans.find(id)->content_fingerprint();
+    CHECK(as_drawn != 0);
+
+    // THEN THE CLIENT APPENDS. Legitimately — it owns the plan — but after the
+    // person has already read the card.
+    Args sneaked;
+    sneaked.set("ad", Value::text("OKUNMAYAN"));
+    REQUIRE(plans.append_for(id, "Ajan A",
+                             ai::PlanStep{"core.layer", sneaked, "KATMAN ad=OKUNMAYAN", {}}));
+    CHECK_NE(plans.find(id)->content_fingerprint(), as_drawn);
+
+    // THE APPROVAL IS REFUSED, not trimmed: the honest answer is a fresh card
+    // showing what the plan says now.
+    const core::Status decided = gate.decide(gate.approve(
+        id, "Mühendis", ai::Decision::Apply, 1700000000000, "her_degisiklikte", as_drawn));
+    CHECK_FALSE(decided);
+    CHECK(decided.error().message.find("adım eklenmiş") != std::string::npos);
+
+    // NOTHING WAS APPLIED and the plan is still waiting — a refusal here is not
+    // a decision, so the person can still answer the fresh card.
+    CHECK_EQ(f.doc.find_layer("ONAYLANAN"), core::kNoLayer);
+    CHECK_EQ(f.doc.find_layer("OKUNMAYAN"), core::kNoLayer);
+    CHECK_EQ(plans.find(id)->state, ai::PlanState::Pending);
+
+    // AND WITH THE CURRENT FINGERPRINT — which is what a redrawn card carries —
+    // it applies, both steps, because now the person has read both.
+    const std::uint64_t now = plans.find(id)->content_fingerprint();
+    REQUIRE(gate.decide(
+        gate.approve(id, "Mühendis", ai::Decision::Apply, 1700000000001, "her_degisiklikte", now)));
+    CHECK_NE(f.doc.find_layer("ONAYLANAN"), core::kNoLayer);
+    CHECK_NE(f.doc.find_layer("OKUNMAYAN"), core::kNoLayer);
+
+    // A CALLER THAT MAKES NO CLAIM IS NOT SILENTLY TRUSTED — it simply is not
+    // claiming, and the check does not run. That is the seam for a caller with
+    // no card behind it; the card always claims.
+    Args third;
+    third.set("ad", Value::text("İDDİASIZ"));
+    ai::Plan other;
+    other.steps.push_back(ai::PlanStep{"core.layer", third, "KATMAN ad=İDDİASIZ", {}});
+    const std::string loose = plans.add(std::move(other));
+    CHECK(gate.decide(gate.approve(loose, "Mühendis", ai::Decision::Apply, 1700000000002)));
+}
+
 TEST_CASE("Onay kapısı: ret de kayda geçer, çizim değişmez")
 {
     Rig f;

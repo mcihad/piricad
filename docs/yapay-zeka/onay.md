@@ -162,6 +162,19 @@ Adımlar, kartta okuduğunuz satırlar **yeniden ayrıştırılarak** çalışt�
 insanın okuduğu şeydir, argümanlar öneri derlenirken doğrulanmış olanlardır. İkisinin
 ayrışması için ikinci bir şans verilmez.
 
+Onay, önerinin **kimliğine değil, kartta okuduğunuz satırlara** bağlıdır. Kart
+çizildikten sonra öneriyi açan istemci ona bir adım daha ekleyebilir — bir diziyi tek
+geri alma adımında toplamanın yolu budur — ve o zaman iki satır gösteren bir kart üç
+satır uygulardı. Uygula, kartın çizdiği hâlden farklı bir öneriyi **reddeder**:
+
+```text
+Öneri p0f3a1c7b9e4d2856 karttaki hâlinden farklı: onaydan sonra adım eklenmiş.
+Uygulanmadı; kartı kapatıp yeniden açın.
+```
+
+Kırpılmaz, reddedilir: dürüst cevap önerinin şu anki hâlini gösteren yeni bir karttır.
+Bu bir karar değildir, dolayısıyla öneri beklemeye devam eder.
+
 Bir önerinin kararı **bir kere** verilir; verilmiş karar değiştirilemez.
 
 Kart onayladığı hâlde program uygulayamazsa öneri `basarisiz` olur — `reddedildi`

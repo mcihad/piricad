@@ -96,6 +96,19 @@ core::Json Plan::to_json() const
     return out;
 }
 
+std::uint64_t Plan::content_fingerprint() const
+{
+    std::uint64_t h = core::fnv1a("kentos.ai.plan.content");
+    for (const PlanStep& step : steps) {
+        h = core::fnv1a(step.command_id, h);
+        // THE ARGUMENTS, NOT THE LINE. The line is what a person reads; the
+        // arguments are what runs, and two plans that read the same while running
+        // differently must not share a fingerprint.
+        h = core::fnv1a(step.args.to_json().dump(), h);
+    }
+    return h;
+}
+
 std::string PlanStore::add(Plan plan)
 {
     ++filed_;

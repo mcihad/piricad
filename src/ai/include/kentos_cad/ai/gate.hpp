@@ -58,6 +58,20 @@ public:
     /// When, in UTC milliseconds.
     std::int64_t utc_ms() const noexcept { return utc_ms_; }
 
+    /// THE PLAN AS IT WAS WHEN THE PERSON READ IT (`Plan::content_fingerprint`).
+    ///
+    /// An approval is for the command lines on the card, not for whatever the
+    /// plan happens to hold when the decision is carried out. Between the card
+    /// being drawn and the button being pressed, the client that filed the plan
+    /// can APPEND to it — that is how a sequence becomes one undo entry — so a
+    /// card showing two lines could otherwise apply three, and the audit record
+    /// would say the engineer approved all of them (TODOS S-04).
+    ///
+    /// Zero means the caller did not say, and `Gate::decide` then applies without
+    /// this check: a caller that cannot fingerprint is not silently trusted, it
+    /// is simply not making the claim.
+    std::uint64_t content() const noexcept { return content_; }
+
     /// The approval policy that was in force at the moment of the decision, by
     /// its setting word — empty when the caller did not say.
     ///
@@ -71,14 +85,15 @@ private:
     friend class Gate;
 
     Approval(std::string plan_id, std::string operator_name, Decision decision, std::int64_t utc_ms,
-             std::string policy)
+             std::string policy, std::uint64_t content)
         : plan_id_(std::move(plan_id)), operator_(std::move(operator_name)),
-          policy_(std::move(policy)), decision_(decision), utc_ms_(utc_ms)
+          policy_(std::move(policy)), content_(content), decision_(decision), utc_ms_(utc_ms)
     {}
 
     std::string plan_id_;
     std::string operator_;
     std::string policy_;
+    std::uint64_t content_{0};
     Decision decision_{Decision::Reject};
     std::int64_t utc_ms_{0};
 };
@@ -106,8 +121,10 @@ public:
     /// its setting word. Recorded because a decision is only explicable against
     /// the rule it was made under, and that rule may change twice before anybody
     /// reads the log (TODOS S-06).
+    /// `content` is `Plan::content_fingerprint()` as the card read it. Zero means
+    /// the caller is not making that claim; see `Approval::content`.
     Approval approve(std::string plan_id, std::string operator_name, Decision decision,
-                     std::int64_t utc_ms, std::string policy = {});
+                     std::int64_t utc_ms, std::string policy = {}, std::uint64_t content = 0);
 
     /// Applies or rejects, writes the audit record, and settles the plan.
     ///

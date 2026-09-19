@@ -6,6 +6,22 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Güvenlik — onay, kartta okunan satırlara bağlandı (TODOS S-04)
+
+- Onay yalnız önerinin **kimliğine** bağlıydı. Kart çizildikten sonra öneriyi açan
+  istemci ona bir adım daha ekleyebiliyor — bir diziyi tek geri alma adımında
+  toplamanın yolu budur ve bu hafta eklendi — dolayısıyla **iki satır gösteren bir
+  kart üç satır uygulayabilirdi**, ve denetim kaydı mühendisin üçünü de
+  onayladığını yazardı.
+- `Plan::content_fingerprint` (adımların komut kimlikleri ve **çözülmüş
+  argümanları**; satırlar değil, çünkü satır okunan şeydir, argüman çalışan şey) ve
+  `Approval::content`. Kart ne çizdiyse onu taşıyor.
+- Farklı bir öneri **reddediliyor, kırpılmıyor**: dürüst cevap önerinin şu anki
+  hâlini gösteren yeni bir karttır; ön eki sessizce uygulamak başka türlü bir yalan
+  olurdu. Ret bir karar değil, öneri beklemeye devam ediyor.
+- İddiada bulunmayan bir çağıran sessizce güvenilmiyor — yalnızca iddiada
+  bulunmuyor ve denetim çalışmıyor; kart her zaman iddiada bulunuyor.
+
 ### Eklendi — grafik öğesi (TODOS L-09, kısmi)
 
 - Yeni yerleşim öğesi `grafik`: bir katmanın bir öznitelik sütununa göre **nesne

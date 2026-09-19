@@ -44,6 +44,12 @@ SuggestionCard::SuggestionCard(AiService& service, const QString& planId, QWidge
     const ai::Plan* plan = service_.plans().find(plan_.toStdString());
     pending_             = plan != nullptr && plan->state == ai::PlanState::Pending;
 
+    // WHAT THIS CARD IS ABOUT TO SHOW, remembered so the approval can be bound to
+    // it. Everything below draws the plan's command lines; if the plan changes
+    // before the button is pressed — the client that filed it may append a step —
+    // the person would be approving lines they never saw (TODOS S-04).
+    shown_content_ = plan != nullptr ? plan->content_fingerprint() : 0;
+
     auto* head = new QHBoxLayout;
     head->setContentsMargins(0, 0, 0, 0);
     head->setSpacing(6);
@@ -186,7 +192,8 @@ core::Status SuggestionCard::decide(bool apply)
         plan_.toStdString(), operatorName().toStdString(),
         apply ? ai::Decision::Apply : ai::Decision::Reject,
         QDateTime::currentDateTimeUtc().toMSecsSinceEpoch(),
-        std::string(service_.appSettings().get("core.ai.onay_politikasi").as_text()));
+        std::string(service_.appSettings().get("core.ai.onay_politikasi").as_text()),
+        shown_content_);
     // ========================================================================
 
     const core::Status settled = service_.settle(approval);
