@@ -649,6 +649,61 @@ bool Layout::rename_item(std::string_view from, std::string to)
     return true;
 }
 
+std::vector<std::string> layout_trouble(const Layout& layout)
+{
+    std::vector<std::string> out;
+    const auto mm_of = [](Um v) { return std::to_string(v / 1000); };
+
+    for (std::size_t i = 0; i < layout.items.size(); ++i) {
+        const LayoutItem& item = layout.items[i];
+        const std::string who  = "'" + item.id + "'";
+
+        // ---- the box is on the page it claims ------------------------------
+        const std::int32_t page = layout.page_of(i);
+        if (page < 0 || static_cast<std::size_t>(page) >= layout.pages.size()) {
+            out.push_back(who + " var olmayan bir sayfada duruyor.");
+            continue;
+        }
+        const LayoutPage& sheet = layout.pages[static_cast<std::size_t>(page)];
+
+        if (item.frame.w <= 0 || item.frame.h <= 0) {
+            out.push_back(who + " kutusunun eni ya da boyu sıfır; hiçbir şey çizilmeyecek.");
+        } else if (item.frame.x < 0 || item.frame.y < 0 || item.frame.x + item.frame.w > sheet.w ||
+                   item.frame.y + item.frame.h > sheet.h) {
+            // A BOX THAT HANGS OFF THE PAGE PRINTS CUT OFF, and the file still
+            // appears and still looks finished.
+            out.push_back(who + " sayfanın dışına taşıyor (sayfa " + mm_of(sheet.w) + "×" +
+                          mm_of(sheet.h) + " mm).");
+        }
+
+        // ---- a map frame that was never aimed -------------------------------
+        if (item.kind == LayoutItemKind::Map && item.extent.empty())
+            out.push_back(who + " bir harita çerçevesi ama nereye bakacağı söylenmemiş; boş "
+                                "çıkacak.");
+
+        // ---- a link that no longer resolves ---------------------------------
+        if (layout.link_is_broken(item))
+            out.push_back(who + " '" + item.linked_map +
+                          "' adlı haritaya bağlı ve o harita yok; ölçeği söyleyemez.");
+
+        // ---- a table with no layer to read ----------------------------------
+        if (item.kind == LayoutItemKind::Table && item.text.empty())
+            out.push_back(who + " bir tablo ama hangi katmanı yazacağı söylenmemiş.");
+
+        // ---- a picture with no file -----------------------------------------
+        if (item.kind == LayoutItemKind::Picture && item.text.empty())
+            out.push_back(who + " bir resim ama dosya yolu verilmemiş.");
+    }
+
+    // ---- a sheet with nothing to show -------------------------------------
+    if (layout.first_map() == nullptr)
+        out.push_back("'" + layout.name +
+                      "' yerleşiminde harita çerçevesi yok; ölçek çubuğu ve "
+                      "kuzey oku neyi anlatacağını bilemez.");
+
+    return out;
+}
+
 Layout default_layout(std::string name, Um width, Um height, Um margin)
 {
     Layout out;

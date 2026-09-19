@@ -46,13 +46,14 @@ silinebilir; amaç ilk anda basılabilir bir şey görmenizdir.
 ÇIKTIYERLEŞİMİ islem=sayfasil ad=<ad> [sayfa=<n>]
 ÇIKTIYERLEŞİMİ islem=sayfacogalt ad=<ad> [sayfa=<n>]
 ÇIKTIYERLEŞİMİ islem=sayfatasi ad=<ad> sayfa=<n> yeni_sira=<m>
+ÇIKTIYERLEŞİMİ islem=denetle ad=<ad>
 ```
 
 ## Parametreler
 
 | Parametre | Zorunlu | Anlamı |
 |---|---|---|
-| `islem` | evet | `listele`, `ekle`, `sil`, `ad`, `sayfa`, `sayfaekle`, `sayfasil`, `sayfacogalt`, `sayfatasi` |
+| `islem` | evet | `listele`, `ekle`, `sil`, `ad`, `sayfa`, `sayfaekle`, `sayfasil`, `sayfacogalt`, `sayfatasi`, `denetle` |
 | `ad` | `listele` dışında | Yerleşimin adı. Türkçe katlamayla tekildir: `Ada 1284` ile `ada 1284` aynı yerleşimdir |
 | `yeni_ad` | `islem=ad` için | Yerleşimin yeni adı |
 | `kagit` | hayır | `A5`, `A4`, `A3`, `A2`, `A1`, `A0` ya da `ozel` (varsayılan `A4`) |
@@ -127,6 +128,25 @@ Tek bir sayfanın kâğıdını ayrı değiştirmek:
 
 `sayfa=` verilmezse bütün sayfalar değişir — "kâğıdı değiştir" burada her zaman
 bunu demiştir.
+
+### Basmadan önce denetlemek
+
+```
+ÇIKTIYERLEŞİMİ islem=denetle ad="Ada 1284"
+```
+
+**Bunların hiçbiri basmayı engellemez** — dosya çıkar ve bitmiş görünür. Tam da
+bu yüzden söylenmeleri gerekiyor:
+
+- Hedeflenmemiş harita çerçevesi (boş kutu basar)
+- Sayfanın dışına taşan öğe (kesik basar)
+- Kopmuş harita bağı (ölçek çubuğu hiçbir şey söyleyemez)
+- Katmanı verilmemiş tablo, dosyası verilmemiş resim
+- Eni ya da boyu sıfır olan kutu
+- Hiç harita çerçevesi olmayan yerleşim
+
+`YAZDIR yerlesim=` aynı denetimi kendiliğinden yapar ve bulduklarını sonucunun
+**uyarıları** olarak döndürür; baskıyı durdurmaz.
 
 Kuruma özel bir kâğıt:
 

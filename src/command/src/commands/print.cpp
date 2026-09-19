@@ -141,6 +141,15 @@ Task<void> run_print(Context& ctx)
         }
         request.layout = named;
         ctx.record("yerlesim", sheet);
+
+        // PREFLIGHT, AND IT DOES NOT REFUSE. A sheet with one broken map link
+        // still has to print the rest of itself; what it could not honour rides
+        // out on `DispatchResult::warnings`, so a client that reports success
+        // reports it WITH the problems rather than instead of them (L-15, C-03).
+        const core::Layout* found = ctx.session().bus().document().layouts().find(named);
+        if (found != nullptr)
+            for (const std::string& one : core::layout_trouble(*found))
+                ctx.warn(one);
     } else if (!centre.empty()) {
         request.has_centre = true;
         request.centre     = centre.as_point();

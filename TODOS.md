@@ -413,7 +413,20 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   QGIS `.qpt` içe aktarma istenirse ayrı dönüştürücü ve destek matrisi gerekir.
   **Kabul:** kurum şablonu başka projede katman eşlemesinden sonra aynı yerleşimi kurar;
   eksik bağımlılık listelenir; eski şablonlar migration testinden geçer.
-- [ ] **L-15 / P1 — Preflight ve büyük işler.** Sayfa taşması, eksik font/resim,
+- [~] **L-15 / P1 — Preflight ve büyük işler.** *(preflight 19 Eylül 2026)*
+  **Yapıldı:** `core::layout_trouble` — Qt'siz ve dosya sistemi görmeyen, yani bir
+  betik ve başsız bir koşum tasarımcının gösterdiği raporun aynısını alıyor.
+  Saydıkları: hedeflenmemiş harita çerçevesi, sayfa dışına taşan kutu, sıfır boyutlu
+  kutu, kopmuş harita bağı, katmanı verilmemiş tablo, dosyası verilmemiş resim,
+  var olmayan sayfada duran öğe, hiç harita çerçevesi olmayan yerleşim.
+  **Hiçbiri basmayı engellemiyor** — dosya çıkar ve bitmiş görünür, tam da bu
+  yüzden söylenmeleri gerekiyor. `ÇIKTIYERLEŞİMİ islem=denetle` bunları yazıyor;
+  `YAZDIR yerlesim=` aynı denetimi kendiliğinden yapıp bulduklarını sonucunun
+  **uyarıları** olarak döndürüyor (C-03).
+  **Kalan:** eksik font/resim dosyası ve yetersiz raster çözünürlüğü (disk isteyen
+  denetimler, `/src/app`'e ait); tablo kesilmesi; sayfa bazında render/cache,
+  iptal, ilerleme ve bellek sınırı; 100 sayfalık atlasın UI'yi kilitlememesi.
+  Eski madde metni: Sayfa taşması, eksik font/resim,
   geçersiz ifade, kopuk harita bağlantısı, boş extent, tablo kesilmesi ve yetersiz
   raster çözünürlüğünü export öncesi raporla. Sayfa bazında render/cache, iptal,
   ilerleme, bellek sınırı ve UI dışı ağır hesap kullan. **Kabul:** 100 sayfalık atlas

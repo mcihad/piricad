@@ -132,18 +132,19 @@ Task<void> run_layout(Context& ctx)
     Bus& bus                      = ctx.session().bus();
     const core::LayoutStore& have = bus.document().layouts();
 
-    static constexpr const char* kVerbs[] = {"listele",  "ekle",        "sil",
-                                             "ad",       "sayfa",       "sayfaekle",
-                                             "sayfasil", "sayfacogalt", "sayfatasi"};
+    static constexpr const char* kVerbs[] = {"listele",   "ekle",      "sil",      "ad",
+                                             "sayfa",     "sayfaekle", "sayfasil", "sayfacogalt",
+                                             "sayfatasi", "denetle"};
     auto verb = co_await ctx.text("islem", "İşlem: listele / ekle / sil / ad / sayfa / sayfaekle / "
-                                           "sayfasil / sayfacogalt / sayfatasi");
+                                           "sayfasil / sayfacogalt / sayfatasi / denetle");
     if (!verb) co_return;
     const char* resolved = canonical_verb(*verb, kVerbs);
     if (resolved == nullptr) {
-        ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
-                                     "Tanınmayan işlem: '" + *verb +
-                                         "'. İşlemler: listele / ekle / sil / ad / sayfa / "
-                                         "sayfaekle / sayfasil / sayfacogalt / sayfatasi"));
+        ctx.session().fail(
+            core::err(core::ErrorCode::InvalidArgument,
+                      "Tanınmayan işlem: '" + *verb +
+                          "'. İşlemler: listele / ekle / sil / ad / sayfa / "
+                          "sayfaekle / sayfasil / sayfacogalt / sayfatasi / denetle"));
         co_return;
     }
     const std::string op = resolved;
@@ -298,6 +299,29 @@ Task<void> run_layout(Context& ctx)
             co_return;
         }
         ctx.echo("Çıktı yerleşimi: " + describe(*bus.document().layouts().find(*named)));
+        co_return;
+    }
+
+    if (op == "denetle") {
+        // READ BEFORE AN EXPORT, not after it. None of what this reports FAILS:
+        // the file appears and looks finished, which is exactly why a sheet with
+        // an unaimed map frame or a box hanging off the page has to be said out
+        // loud (TODOS L-15).
+        const Layout* found = have.find(*named);
+        if (found == nullptr) {
+            ctx.session().fail(
+                core::err(core::ErrorCode::NotFound, "Çıktı yerleşimi yok: '" + *named + "'."));
+            co_return;
+        }
+        const std::vector<std::string> trouble = core::layout_trouble(*found);
+        if (trouble.empty()) {
+            ctx.echo("'" + found->name + "' yerleşiminde basmaya engel bir şey görünmüyor.");
+            co_return;
+        }
+        ctx.echo("'" + found->name + "' yerleşiminde " + std::to_string(trouble.size()) +
+                 " sorun var:");
+        for (const std::string& one : trouble)
+            ctx.echo("  · " + one);
         co_return;
     }
 
@@ -962,7 +986,7 @@ KENTOS_COMMAND(layout)
             {
                 Param::choice("islem", Arity::exactly(1),
                               {"listele", "ekle", "sil", "ad", "sayfa", "sayfaekle", "sayfasil",
-                               "sayfacogalt", "sayfatasi"},
+                               "sayfacogalt", "sayfatasi", "denetle"},
                               "Ne yapılacağı"),
                 Param::text("ad", Arity::optional(), "Yerleşimin adı; listele dışında gerekir"),
                 Param::text("yeni_ad", Arity::optional(), "islem=ad için yeni yerleşim adı"),
@@ -1008,6 +1032,7 @@ KENTOS_COMMAND(layout)
                 {"sayfasil", Effect::DocumentEdit},
                 {"sayfacogalt", Effect::DocumentEdit},
                 {"sayfatasi", Effect::DocumentEdit},
+                {"denetle", Effect::Query},
             },
     };
 }

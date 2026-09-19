@@ -2560,7 +2560,8 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             "sayfaekle",
             "sayfasil",
             "sayfacogalt",
-            "sayfatasi"
+            "sayfatasi",
+            "denetle"
           ],
           "description": "Ne yapılacağı (metin)"
         },

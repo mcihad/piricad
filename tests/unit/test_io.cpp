@@ -4484,3 +4484,54 @@ TEST_CASE("Sonuç sözleşmesi: yazılan dosya, yeni sürüm ve geri alma adı d
         CHECK(read.value().undo_label.empty());
     }
 }
+
+TEST_CASE("Çıktı yerleşimi: denetle basmaya engel olmayan sorunları söyler")
+{
+    // TODOS L-15. None of what this reports FAILS: the file appears and looks
+    // finished. That is exactly why it has to be said out loud.
+    Rig r;
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Kroki kagit=A4", Origin::Test).ok());
+
+    const auto trouble = [&] { return core::layout_trouble(*r.doc.layouts().find("Kroki")); };
+
+    // A FRESH SHEET'S MAP FRAME WAS NEVER AIMED, and it will print an empty box.
+    const auto unaimed = trouble();
+    CHECK(std::any_of(unaimed.begin(), unaimed.end(), [](const std::string& one) {
+        return one.find("nereye bakacağı söylenmemiş") != std::string::npos;
+    }));
+
+    // Aim it and that one goes away.
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIÖĞE islem=ayarla ad=harita pencere=0,0 pencere=100,80",
+                              Origin::Test)
+                .ok());
+    const auto aimed = trouble();
+    CHECK(std::none_of(aimed.begin(), aimed.end(), [](const std::string& one) {
+        return one.find("nereye bakacağı söylenmemiş") != std::string::npos;
+    }));
+
+    // A BOX HANGING OFF THE PAGE prints cut off, and the file still looks done.
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIÖĞE islem=tasi ad=baslik x=180 y=10 genislik=100 "
+                              "yukseklik=20",
+                              Origin::Test)
+                .ok());
+    const auto spilled = trouble();
+    CHECK(std::any_of(spilled.begin(), spilled.end(), [](const std::string& one) {
+        return one.find("sayfanın dışına taşıyor") != std::string::npos;
+    }));
+
+    // AND A BROKEN LINK CANNOT STATE A SCALE.
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=ekle tur=harita ad=harita2", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=ayarla ad=olcek harita=harita2", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=sil ad=harita2", Origin::Test).ok());
+    const auto orphan = trouble();
+    CHECK(std::any_of(orphan.begin(), orphan.end(), [](const std::string& one) {
+        return one.find("ölçeği söyleyemez") != std::string::npos;
+    }));
+
+    // The command says the same thing, in the same words a person reads.
+    auto said = r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=denetle ad=Kroki", Origin::Test);
+    REQUIRE(said.ok());
+    CHECK(said.value().lines.size() > 1);
+}

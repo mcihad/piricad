@@ -545,6 +545,20 @@ Box2 map_window(const LayoutItem& item);
 /// A printed attribute table is opaque; so is a legend box.
 LayoutItem default_item(LayoutItemKind kind);
 
+/// WHAT THIS SHEET CANNOT HONOUR, in Turkish, one sentence each.
+///
+/// Read before an export rather than after it. A sheet with a map frame nobody
+/// aimed prints an empty box; one with an item hanging off the page prints a
+/// cut-off box; one with a broken map link prints a scale bar stating nothing.
+/// None of these fails — the file appears and looks finished — which is exactly
+/// why they have to be said out loud (TODOS L-15).
+///
+/// Qt-free and filesystem-free: everything here is answerable from the model, so
+/// a script and a headless run get the same report the designer shows. The
+/// checks that need a disk — a missing picture, a font that is not installed —
+/// belong to `/src/app` and are added to this list there.
+std::vector<std::string> layout_trouble(const Layout& layout);
+
 Layout default_layout(std::string name, Um width, Um height, Um margin);
 
 } // namespace kentos::core
