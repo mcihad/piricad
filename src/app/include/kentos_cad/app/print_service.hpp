@@ -89,6 +89,11 @@ signals:
 
 private:
     command::Task<core::Result<std::string>> handle(command::PrintRequest request);
+
+    /// Prints a PAFTA — its own paper, its own pages, its own map frames — to a
+    /// PDF or a printer. Takes no profile and no window: a layout carries both
+    /// (`core/layout.hpp`, and the refusal in `core.print` that says so).
+    core::Result<std::string> printLayout(const command::PrintRequest& request);
     core::Result<std::string> toPdf(const command::PrintRequest& request,
                                     const io::PrintProfile& profile);
     core::Result<std::string> toPrinter(const command::PrintRequest& request,

@@ -34,6 +34,8 @@ Tek tek komutlar:
 | `DIŞAAKTAR` | [Dış biçime yazma](komutlar/export.md) |
 | `YAZDIR` | [Yazdırma ve PDF](komutlar/print.md) |
 | `YAZDIRMAPROFİLİ` | [Yazdırma profilleri](komutlar/print_profile.md) |
+| `PAFTA` | [Sayfa düzeni](komutlar/layout.md) |
+| `PAFTAÖĞE` | [Pafta öğeleri](komutlar/layout_item.md) |
 | `VERİTABANI` | [PostGIS ile çalışma](komutlar/database.md) |
 | `ÇİZGİ` | [Çizgi çizme](komutlar/line.md) |
 | `ÇOKLUÇİZGİ` | [Tek nesne olarak çoklu çizgi](komutlar/polyline.md) |

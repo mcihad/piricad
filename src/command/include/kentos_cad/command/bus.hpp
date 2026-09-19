@@ -186,6 +186,14 @@ struct PrintRequest
     /// to start from (empty = the default).
     std::string profile;
 
+    /// WHICH PAFTA TO PRINT, or empty for the plain window-onto-a-sheet print.
+    ///
+    /// A LAYOUT REPLACES THE PROFILE AND THE WINDOW BOTH: it carries its own
+    /// paper, its own margin and a map frame that already knows where it looks
+    /// (`core/layout.hpp`). So `pafta=` and `pencere=`/`merkez=` are alternatives,
+    /// and giving both is refused rather than silently letting one win.
+    std::string layout;
+
     // ---- the sheet, as a profile field or as a print's override --------------
     // An empty string, a zero and a `-1` each mean NOT GIVEN: the profile's own
     // value stands. Paper dimensions are the PORTRAIT ones; `landscape` turns them.

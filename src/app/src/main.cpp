@@ -3,6 +3,8 @@
 #include "kentos_cad/app/attribute_panel.hpp"
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/import_wizard.hpp"
+#include "kentos_cad/app/layout_designer.hpp"
+#include "kentos_cad/app/layout_render.hpp"
 #include "kentos_cad/app/main_window.hpp"
 #include "kentos_cad/app/map_canvas.hpp"
 #include "kentos_cad/app/provider_dialog.hpp"
@@ -358,6 +360,184 @@ int main(int argc, char** argv)
     // variable names a directory; `KENTOS_SETTINGS_PAGE` names the page, and the
     // picture lands as `ayarlar.png`. Developer tooling, same category as
     // `KENTOS_FRAME_DUMP`.
+    // ONE PAFTA, RENDERED TO A PNG. The layout renderer is the one piece of this
+    // subsystem whose output cannot be asserted in a unit test — what matters is
+    // whether the sheet LOOKS like a pafta — so it gets the same treatment the
+    // canvas and the component sheet get: a probe that draws it and leaves a
+    // picture a person can look at.
+    if (qEnvironmentVariableIsSet("KENTOS_LAYOUT_SHOT")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            const QString dir                   = qEnvironmentVariable("KENTOS_LAYOUT_SHOT");
+            kentos::app::Controller* controller = window.controller();
+            window.seedProbeDrawing();
+
+            const QString sheet =
+                qEnvironmentVariable("KENTOS_LAYOUT_NAME", QStringLiteral("Deneme Paftası"));
+            controller->runLine(
+                QStringLiteral("PAFTA islem=ekle ad=\"%1\" kagit=A3 yon=yatay").arg(sheet),
+                kentos::command::Origin::Gui);
+
+            const kentos::core::Layout* layout =
+                controller->document().layouts().find(sheet.toStdString());
+            if (layout == nullptr) {
+                (void)std::fprintf(stdout, "[pafta] pafta kurulamadı\n");
+                QApplication::exit(1);
+                return;
+            }
+
+            // A TABLE OF THE SEEDED PARCELS, so the picture shows the one item
+            // whose content comes from the drawing's attributes rather than from
+            // its geometry.
+            controller->runLine(
+                QStringLiteral("PAFTAÖĞE islem=ekle pafta=\"%1\" tur=tablo ad=tablo").arg(sheet),
+                kentos::command::Origin::Gui);
+            controller->runLine(
+                QStringLiteral("PAFTAÖĞE islem=ayarla pafta=\"%1\" ad=tablo "
+                               "metin=\"Kadastro Parselleri\" x=250 y=35 genislik=155 "
+                               "yukseklik=60 yazi=3 cerceve=evet")
+                    .arg(sheet),
+                kentos::command::Origin::Gui);
+
+            // AIM THE MAP AT THE DRAWING — through the COMMAND, which is the
+            // road the canvas's print frame takes too. A probe that wrote the
+            // extent straight into the document would be proving a path no user
+            // has (Article 1.2).
+            const kentos::core::Box2 extent = controller->document().extent();
+            // METRES ON THE LINE, not `Mm`. A command line carries ground
+            // coordinates in the drawing's own unit and the parser turns them
+            // into millimetres; writing the millimetres straight out made the
+            // frame a thousand times too wide (`print_dialog.cpp` does the same
+            // conversion for `YAZDIR pencere=`).
+            const auto metres = [](kentos::core::Mm v) {
+                return QString::number(static_cast<double>(v) / 1000.0, 'f', 3);
+            };
+            controller->runLine(QStringLiteral("PAFTAÖĞE islem=ayarla pafta=\"%1\" ad=harita "
+                                               "pencere=%2,%3 pencere=%4,%5")
+                                    .arg(sheet, metres(extent.min_x), metres(extent.min_y),
+                                         metres(extent.max_x), metres(extent.max_y)),
+                                kentos::command::Origin::Gui);
+
+            const kentos::core::Layout* aimed =
+                controller->document().layouts().find(sheet.toStdString());
+            const kentos::core::LayoutPage& page = aimed->pages.front();
+
+            // 150 dpi: big enough to judge line weights and text, small enough to
+            // open in a viewer.
+            constexpr double kDpi = 150.0;
+            const int w_px        = static_cast<int>(page.w / 1000.0 * kDpi / 25.4);
+            const int h_px        = static_cast<int>(page.h / 1000.0 * kDpi / 25.4);
+            QImage out(w_px, h_px, QImage::Format_ARGB32_Premultiplied);
+            out.fill(Qt::white);
+
+            kentos::app::LayoutFacts facts;
+            facts.sheet   = sheet;
+            facts.project = QStringLiteral("deneme.pcad");
+            facts.crs     = QString::fromStdString(controller->document().crs().id());
+            facts.date    = QDate::currentDate().toString(QStringLiteral("dd.MM.yyyy"));
+
+            QPainter painter(&out);
+            kentos::app::paint_layout_page(painter, QRectF(0, 0, w_px, h_px),
+                                           controller->document(), *aimed, 0, kDpi, facts);
+            painter.end();
+
+            QDir().mkpath(dir);
+            const bool saved = out.save(dir + QStringLiteral("/pafta.png"));
+            for (const kentos::core::LayoutItem& item : aimed->items) {
+                const kentos::core::Box2 win = kentos::core::map_window(item);
+                (void)std::fprintf(
+                    stdout,
+                    "[pafta] öğe %-8s %s  kutu %d,%d %dx%d um  pencere %lld,%lld "
+                    "%lld,%lld  olcek 1:%lld\n",
+                    item.id.c_str(), kentos::core::layout_item_kind_id(item.kind), item.frame.x,
+                    item.frame.y, item.frame.w, item.frame.h, static_cast<long long>(win.min_x),
+                    static_cast<long long>(win.min_y), static_cast<long long>(win.max_x),
+                    static_cast<long long>(win.max_y),
+                    static_cast<long long>(kentos::core::map_scale(item)));
+            }
+            (void)std::fprintf(
+                stdout, "[pafta] çizim kapsamı %lld,%lld %lld,%lld — %zu nesne\n",
+                static_cast<long long>(extent.min_x), static_cast<long long>(extent.min_y),
+                static_cast<long long>(extent.max_x), static_cast<long long>(extent.max_y),
+                controller->document().live_entity_count());
+            (void)std::fprintf(stdout, "[pafta] %s — %d×%d px, %zu öğe\n",
+                               saved ? "kare: pafta.png" : "kare yazılamadı", w_px, h_px,
+                               aimed->items.size());
+            (void)std::fflush(stdout);
+            QApplication::exit(saved ? 0 : 1);
+        });
+    }
+
+    // THE PAFTA DESIGNER, driven the way a hand drives it and then exported.
+    //
+    // WHAT IT PROVES that nothing else can: that a drag on the page becomes a
+    // `PAFTAÖĞE` line, that the line reaches the document, that the window
+    // redraws from the document afterwards, and that the sheet then prints. The
+    // unit suite proves the model and the commands; this is the seam between
+    // them and the mouse.
+    if (qEnvironmentVariableIsSet("KENTOS_LAYOUT_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            const QString dir = qEnvironmentVariable("KENTOS_LAYOUT_PROBE");
+            QDir().mkpath(dir);
+            kentos::app::Controller* controller = window.controller();
+            window.seedProbeDrawing();
+
+            int failures     = 0;
+            const auto check = [&failures](bool held, const char* what) {
+                if (held) return;
+                ++failures;
+                (void)std::fprintf(stdout, "[tasarim] BASARISIZ — %s\n", what);
+                (void)std::fflush(stdout);
+            };
+
+            controller->runLine(
+                QStringLiteral("PAFTA islem=ekle ad=\"Ada 1284\" kagit=A3 yon=yatay"),
+                kentos::command::Origin::Gui);
+            check(controller->document().layouts().find("Ada 1284") != nullptr, "pafta kurulamadı");
+
+            kentos::app::LayoutDesigner designer(*controller, QStringLiteral("Ada 1284"), &window);
+            designer.applyTheme(window.themeMode());
+            designer.show();
+            QCoreApplication::processEvents();
+
+            // AIM IT, the way the canvas frame does.
+            designer.aimAt(controller->document().extent());
+            const kentos::core::LayoutItem* map =
+                controller->document().layouts().find("Ada 1284")->first_map();
+            check(map != nullptr && !map->extent.empty(), "harita hedeflenmedi");
+
+            for (const QString& line : designer.probeDrive()) {
+                (void)std::fprintf(stdout, "[tasarim] %s\n", line.toUtf8().constData());
+                (void)std::fflush(stdout);
+            }
+
+            const kentos::core::Layout* after = controller->document().layouts().find("Ada 1284");
+            check(after != nullptr && after->items.size() == 5, "lejant eklenmedi");
+            if (const kentos::core::LayoutItem* title = after->find("baslik"); title != nullptr)
+                check(title->text == "<pafta> — <olcek>", "başlık metni yazılmadı");
+
+            // AND ONE Ctrl+Z UNDOES THE LAST GESTURE, which is the claim a
+            // designer with its own edit path could not make.
+            const std::size_t before = after->items.size();
+            controller->runLine(QStringLiteral("GERİAL"), kentos::command::Origin::Gui);
+            check(controller->document().layouts().find("Ada 1284")->items.size() == before - 1,
+                  "GERİAL son jesti geri almadı");
+
+            const QString pdf = dir + QStringLiteral("/pafta.pdf");
+            controller->runLine(QStringLiteral("YAZDIR pafta=\"Ada 1284\" dosya=\"%1\"").arg(pdf),
+                                kentos::command::Origin::Gui);
+            const QFileInfo written(pdf);
+            check(written.exists() && written.size() > 1000, "PDF yazılmadı");
+            (void)std::fprintf(stdout, "[tasarim] pdf %lld bayt\n",
+                               static_cast<long long>(written.size()));
+
+            const bool shot = designer.grab().save(dir + QStringLiteral("/tasarimci.png"));
+            (void)std::fprintf(stdout, "[tasarim] %s — %s\n", failures == 0 ? "TAMAM" : "BASARISIZ",
+                               shot ? "kare: tasarimci.png" : "kare yazılamadı");
+            (void)std::fflush(stdout);
+            QApplication::exit(failures == 0 ? 0 : 1);
+        });
+    }
+
     // THE MODEL PROFILE WINDOW, photographed on its own. Same category as the
     // settings shot beside it: it is the window this change is about, and a
     // window nothing looks at is a window nobody checked.

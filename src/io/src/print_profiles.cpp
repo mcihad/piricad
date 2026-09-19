@@ -13,49 +13,28 @@
 namespace kentos::io {
 namespace {
 
-struct Paper
-{
-    const char* name;
-    std::int64_t width_mm;
-    std::int64_t height_mm;
-};
-
-/// ISO 216 A-series, portrait. A geometric fact, not a regulation.
-constexpr Paper kPapers[] = {
-    {"A5", 148, 210}, {"A4", 210, 297}, {"A3", 297, 420},
-    {"A2", 420, 594}, {"A1", 594, 841}, {"A0", 841, 1189},
-};
-
-constexpr std::array<const char*, 7> kPaperNames = {"A5", "A4", "A3", "A2", "A1", "A0", "ozel"};
-
 constexpr std::int64_t kMinDpi = 72;
 constexpr std::int64_t kMaxDpi = 4800;
 
-bool is_custom(std::string_view paper)
-{
-    return core::turkish_key_equals(paper, "ozel") || core::turkish_key_equals(paper, "custom");
-}
-
 std::string canonical_paper(std::string_view paper)
 {
-    if (is_custom(paper)) return "ozel";
-    for (const Paper& p : kPapers)
-        if (core::turkish_key_equals(paper, p.name)) return p.name;
-    return std::string(paper);
+    return core::canonical_paper(paper);
 }
 
 } // namespace
 
+// THE TABLE MOVED TO `core` and these two forward to it. They stay because the
+// print profiles, the settings page and the print command all say `io::` today
+// and a rename across four files buys nothing; what mattered was that there is
+// now ONE table rather than a second copy in the command layer (CLAUDE.md 5.10).
 std::optional<std::pair<std::int64_t, std::int64_t>> paper_size_mm(std::string_view paper)
 {
-    for (const Paper& p : kPapers)
-        if (core::turkish_key_equals(paper, p.name)) return std::make_pair(p.width_mm, p.height_mm);
-    return std::nullopt;
+    return core::paper_size_mm(paper);
 }
 
 std::span<const char* const> paper_names()
 {
-    return kPaperNames;
+    return core::paper_names();
 }
 
 std::string describe_print_profile(const PrintProfile& p)
@@ -120,7 +99,7 @@ core::Status PrintProfiles::upsert(PrintProfile p)
         const auto size = paper_size_mm(p.paper);
         if (!size) {
             std::string names;
-            for (const char* n : kPaperNames)
+            for (const char* n : core::paper_names())
                 names += (names.empty() ? "" : ", ") + std::string(n);
             return core::err(core::ErrorCode::InvalidArgument,
                              "Tanınmayan kâğıt: '" + p.paper + "'. Kâğıtlar: " + names + ".");

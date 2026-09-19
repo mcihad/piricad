@@ -118,6 +118,22 @@ public:
     /// default one (`PrintService`). The menu beside the button passes a name.
     void printWithProfile(const QString& profile = QString());
 
+    /// Starts — or finishes — aiming a PAFTA on the canvas.
+    ///
+    /// THE FLOW THE MAINTAINER ASKED FOR: pick a sheet from the print menu, drag
+    /// a rectangle on the drawing, and the designer opens with the map frame
+    /// already looking at what was dragged. The first press begins the frame at
+    /// the sheet's MAP aspect, so what is framed is what the map will hold; the
+    /// second press captures it and opens the window.
+    void layoutWithFrame(const QString& layout);
+
+    /// Opens the pafta designer on `layout`, aimed at `window` when it is not
+    /// empty.
+    void openLayoutDesigner(const QString& layout, core::Box2 window = {});
+
+    /// Asks for a name, creates a pafta and opens the designer on it.
+    void newLayout();
+
     /// Opens the preview window directly on `window` — the frame's capture, or
     /// the current view when something else asks.
     void openPrintDialog(core::Box2 window, const QString& profile = QString());
@@ -568,6 +584,11 @@ private:
     /// The profile the frame was opened with, so the preview window opens on the
     /// same one the frame was shaped by. Empty means the default profile.
     QString printProfile_;
+
+    /// The pafta being aimed on the canvas, or empty when the frame belongs to a
+    /// plain print. It is what tells the frame's acceptance which of the two
+    /// windows to open.
+    QString pendingLayout_;
 
     /// Rebuilds the print button's menu from `PrintService::profiles()`. There
     /// is no second profile list: the menu is the store, drawn (CLAUDE.md 5.10).

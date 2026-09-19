@@ -12,6 +12,7 @@
 #include "kentos_cad/app/export_dialog.hpp"
 #include "kentos_cad/app/icons.hpp"
 #include "kentos_cad/app/import_wizard.hpp"
+#include "kentos_cad/app/layout_designer.hpp"
 #include "kentos_cad/app/map_canvas.hpp"
 #include "kentos_cad/app/panels.hpp"
 #include "kentos_cad/app/pick_list.hpp"
@@ -303,7 +304,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     // it goes — the same two lines the field pick uses.
     connect(canvas_, &MapCanvas::printFrameBegan, this,
             [this](const QString& prompt) { commandLine_->setPrompt(prompt); });
-    connect(canvas_, &MapCanvas::printFrameAccepted, this, [this] { printWithProfile(); });
+    connect(canvas_, &MapCanvas::printFrameAccepted, this, [this] {
+        // ONE GESTURE, TWO DESTINATIONS. The frame does not know whether a
+        // profile or a pafta started it; `pendingLayout_` is what remembers,
+        // and it is cleared as soon as it is used.
+        if (!pendingLayout_.isEmpty())
+            layoutWithFrame(pendingLayout_);
+        else
+            printWithProfile();
+    });
     connect(canvas_, &MapCanvas::printFrameEnded, this, [this] {
         const command::Session* session = controller_->session();
         commandLine_->setPrompt(session != nullptr && session->waiting()
@@ -3471,6 +3480,38 @@ void MainWindow::rebuildPrintMenu()
         entry->setToolTip(QString::fromStdString(io::describe_print_profile(p)));
         connect(entry, &QAction::triggered, this, [this, name] { printWithProfile(name); });
     }
+    // ---- and the drawing's own paftas ---------------------------------------
+    //
+    // THE SHEET SITS BESIDE THE PROFILES because that is where a user looks for
+    // "what am I printing onto". A profile is a blank sheet of paper; a pafta is
+    // a sheet with a title block, a legend and a map frame already on it. Picking
+    // either starts the same gesture — drag a rectangle on the drawing — and the
+    // difference is only what opens afterwards.
+    if (const core::LayoutStore& sheets = controller_->document().layouts(); !sheets.empty()) {
+        printMenu_->addSeparator();
+        auto* heading = printMenu_->addAction(tr("Paftalar"));
+        heading->setEnabled(false);
+        for (const core::Layout& l : sheets.all()) {
+            const QString name = QString::fromStdString(l.name);
+            QAction* entry     = printMenu_->addAction(QStringLiteral("    %1").arg(name));
+            entry->setToolTip(tr("%1 — %2×%3 mm, %4 öğe. Seçince tuvalden alan seçilir ve "
+                                 "tasarımcı açılır.")
+                                  .arg(QString::fromStdString(l.paper))
+                                  .arg(l.pages.front().w / 1000)
+                                  .arg(l.pages.front().h / 1000)
+                                  .arg(l.items.size()));
+            connect(entry, &QAction::triggered, this, [this, name] { layoutWithFrame(name); });
+        }
+        QAction* fresh = printMenu_->addAction(tr("    Yeni pafta…"));
+        connect(fresh, &QAction::triggered, this, [this] { newLayout(); });
+    } else {
+        printMenu_->addSeparator();
+        QAction* fresh = printMenu_->addAction(tr("Yeni pafta…"));
+        fresh->setToolTip(tr("PAFTA islem=ekle — başlık, harita, ölçek çubuğu ve kuzey oku "
+                             "ile gelir"));
+        connect(fresh, &QAction::triggered, this, [this] { newLayout(); });
+    }
+
     printMenu_->addSeparator();
     QAction* manage = printMenu_->addAction(tr("Profilleri Yönet…"));
     manage->setToolTip(tr("YAZDIRMAPROFİLİ — Seçenekler ▸ Plot ve Çıktı"));
@@ -3510,6 +3551,75 @@ void MainWindow::printWithProfile(const QString& profile)
         return;
     }
     canvas_->beginPrintFrame(w / h);
+}
+
+void MainWindow::layoutWithFrame(const QString& layout)
+{
+    if (canvas_ == nullptr) return;
+
+    // THE SECOND PRESS CAPTURES, exactly as it does for a plain print: a frame
+    // already up is the user's aim, and starting a new one would throw it away.
+    if (canvas_->printFraming() && !pendingLayout_.isEmpty()) {
+        const core::Box2 window = canvas_->printFrameWindow();
+        const QString sheet     = pendingLayout_;
+        pendingLayout_.clear();
+        canvas_->endPrintFrame();
+        openLayoutDesigner(sheet, window);
+        return;
+    }
+
+    const core::Layout* l = controller_->document().layouts().find(layout.toStdString());
+    if (l == nullptr) {
+        onEcho(tr("Pafta yok: %1").arg(layout));
+        return;
+    }
+    const core::LayoutItem* map = l->first_map();
+    if (map == nullptr) {
+        // NO MAP FRAME MEANS NOTHING TO AIM. Opening the designer is the useful
+        // answer — that is where one is added — rather than a refusal.
+        onEcho(
+            tr("'%1' paftasında harita çerçevesi yok; tasarımcıda ekleyebilirsiniz.").arg(layout));
+        openLayoutDesigner(layout);
+        return;
+    }
+
+    pendingLayout_ = layout;
+    // THE FRAME TAKES THE MAP ITEM'S ASPECT, not the paper's: what the user
+    // drags is what the MAP will hold, and the paper around it is title block
+    // and legend. Framing at the paper's aspect would put ground on the sheet
+    // that the map frame never shows.
+    const double aspect = static_cast<double>(map->frame.w) /
+                          static_cast<double>(std::max<core::Um>(1, map->frame.h));
+    canvas_->beginPrintFrame(aspect);
+}
+
+void MainWindow::openLayoutDesigner(const QString& layout, core::Box2 window)
+{
+    LayoutDesigner designer(*controller_, layout, this);
+    designer.applyTheme(theme_);
+    if (!window.empty()) designer.aimAt(window);
+    designer.exec();
+}
+
+void MainWindow::newLayout()
+{
+    // The name is the only thing the command cannot guess, so it is the only
+    // thing asked for; paper and orientation are the defaults and the designer
+    // changes them.
+    bool accepted       = false;
+    const QString named = QInputDialog::getText(
+        this, tr("Yeni pafta"), tr("Pafta adı:"), QLineEdit::Normal,
+        tr("Pafta %1").arg(controller_->document().layouts().size() + 1), &accepted);
+    if (!accepted || named.trimmed().isEmpty()) return;
+
+    QString quoted = named.trimmed();
+    quoted.replace('\\', QStringLiteral("\\\\"));
+    quoted.replace('"', QStringLiteral("\\\""));
+    controller_->runLine(
+        QStringLiteral("PAFTA islem=ekle ad=\"%1\" kagit=A3 yon=yatay").arg(quoted),
+        command::Origin::Gui);
+    rebuildPrintMenu();
+    openLayoutDesigner(named.trimmed());
 }
 
 void MainWindow::openPrintDialog(core::Box2 window, const QString& profile)
@@ -3596,6 +3706,32 @@ int MainWindow::probeChat()
     check(chatPanel_ != nullptr, "sohbet paneli kurulmadı");
     if (chatPanel_ == nullptr) return 1;
     chatDock_->show();
+
+    // ONE KEYLESS PROFILE, POINTED AT A CLOSED PORT.
+    //
+    // A read tool's result goes back to the model, which means the panel starts
+    // ANOTHER round — correct behaviour, and the probe should exercise it. But
+    // the shell's own profile list has cloud endpoints in it, and reaching one
+    // makes `AiTransport` read its key: on macOS that enters the Security
+    // framework and BLOCKS, so a headless run sat in `SecurityServer::decrypt`
+    // until ctest killed it at two minutes. A test must not touch the operating
+    // system's key store, so the panel is pointed at a local endpoint with no
+    // `key_ref`; the round is still attempted and refused at the socket, which
+    // is the path worth proving.
+    chatPanel_->setProfileSource([] {
+        ai::ProviderProfiles only;
+        ai::ProviderProfile local;
+        local.name        = "Sınama";
+        local.dialect     = ai::Dialect::OpenAiChat;
+        local.base_url    = "http://127.0.0.1:1";
+        local.path        = "/chat/completions";
+        local.model       = "sinama";
+        local.auth_header = "";
+        local.auth_scheme = "";
+        (void)only.upsert(local);
+        (void)only.set_default("Sınama");
+        return only;
+    });
 
     // A PROFILE THAT IS NEVER CALLED. The bytes below are recorded, so the
     // endpoint is never reached; the profile exists so the panel can pick a
