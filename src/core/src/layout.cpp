@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/layout.hpp"
 
+#include "kentos_cad/core/json.hpp"
 #include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
@@ -252,6 +253,201 @@ std::uint64_t LayoutStore::fold(std::uint64_t seed) const
         }
     }
     return h;
+}
+
+// ------------------------------------------------------------------- JSON ----
+
+namespace {
+
+/// The template format's version. `.claude/io.md` P5: never write a format
+/// without one, and that binds every format this program writes rather than only
+/// the ones under `/src/io`.
+constexpr std::int64_t kTemplateVersion = 1;
+
+Json int_json(std::int64_t v)
+{
+    return Json::integer(v);
+}
+
+} // namespace
+
+std::string layout_to_json(const Layout& layout, std::string_view name)
+{
+    Json root = Json::object({});
+    root.set("surum", int_json(kTemplateVersion));
+    root.set("ad", Json::string(std::string(name)));
+    root.set("kagit", Json::string(layout.paper));
+    root.set("yatay", Json::boolean(layout.landscape));
+    root.set("dpi", int_json(layout.dpi));
+    root.set("kenar", int_json(layout.margin));
+
+    JsonArray pages;
+    for (const LayoutPage& page : layout.pages) {
+        Json one = Json::object({});
+        one.set("genislik", int_json(page.w));
+        one.set("yukseklik", int_json(page.h));
+        pages.push_back(std::move(one));
+    }
+    root.set("sayfalar", Json::array(std::move(pages)));
+
+    JsonArray items;
+    for (std::size_t i = 0; i < layout.items.size(); ++i) {
+        const LayoutItem& item = layout.items[i];
+        Json one               = Json::object({});
+        one.set("ad", Json::string(item.id));
+        one.set("tur", Json::string(layout_item_kind_id(item.kind)));
+        one.set("sayfa", int_json(layout.page_of(i)));
+        one.set("x", int_json(item.frame.x));
+        one.set("y", int_json(item.frame.y));
+        one.set("genislik", int_json(item.frame.w));
+        one.set("yukseklik", int_json(item.frame.h));
+        one.set("sira", int_json(item.z));
+        if (item.locked) one.set("kilit", Json::boolean(true));
+        if (item.rotation_udeg != 0) one.set("donme", int_json(item.rotation_udeg));
+        if (item.frame_visible) one.set("cerceve", Json::boolean(true));
+        if (item.frame_width != 0) one.set("cerceve_kalinlik", int_json(item.frame_width));
+        one.set("cerceve_renk", int_json(item.frame_colour));
+        if (item.background) one.set("dolgu", Json::boolean(true));
+        one.set("dolgu_renk", int_json(item.background_colour));
+        if (!item.text.empty()) one.set("metin", Json::string(item.text));
+        one.set("yazi", int_json(item.text_height));
+        one.set("yazi_renk", int_json(item.text_colour));
+        one.set("hiza_x", int_json(item.align_h));
+        one.set("hiza_y", int_json(item.align_v));
+
+        // NO `kapsam`: a template carries the arrangement, never the ground.
+        if (item.scale > 0) one.set("olcek", int_json(item.scale));
+        one.set("izgara", int_json(static_cast<std::int64_t>(item.grid)));
+        one.set("izgara_etiket", int_json(static_cast<std::int64_t>(item.grid_labels)));
+        if (item.grid_interval > 0) one.set("izgara_aralik", int_json(item.grid_interval));
+        if (item.grid_width > 0) one.set("izgara_kalinlik", int_json(item.grid_width));
+        one.set("izgara_renk", int_json(item.grid_colour));
+        one.set("izgara_yazi", int_json(item.grid_text_height));
+        if (item.style != 0) one.set("bicim", int_json(item.style));
+        one.set("sekil", int_json(static_cast<std::int64_t>(item.shape)));
+        if (item.row_limit != 0) one.set("satir_siniri", int_json(item.row_limit));
+
+        if (!item.layers.empty()) {
+            JsonArray names;
+            for (const std::string& one_layer : item.layers)
+                names.push_back(Json::string(one_layer));
+            one.set("katmanlar", Json::array(std::move(names)));
+        }
+        if (!item.columns.empty()) {
+            JsonArray names;
+            for (const std::string& column : item.columns)
+                names.push_back(Json::string(column));
+            one.set("sutunlar", Json::array(std::move(names)));
+        }
+        items.push_back(std::move(one));
+    }
+    root.set("ogeler", Json::array(std::move(items)));
+    return root.dump_pretty();
+}
+
+Result<Layout> layout_from_json(std::string_view text, std::string name)
+{
+    auto parsed = Json::parse(text);
+    if (!parsed)
+        return err(ErrorCode::ParseError, "Pafta şablonu okunamadı: " + parsed.error().message);
+    const Json& root = parsed.value();
+    if (!root.is_object())
+        return err(ErrorCode::ParseError, "Pafta şablonu bir JSON nesnesi değil.");
+
+    const Json* version         = root.find("surum");
+    const std::int64_t declared = version != nullptr ? version->as_int() : 0;
+    if (declared > kTemplateVersion)
+        return err(ErrorCode::Unsupported, "Pafta şablonu bu sürümden yeni (dosya " +
+                                               std::to_string(declared) + ", bu sürüm " +
+                                               std::to_string(kTemplateVersion) +
+                                               "). Programı güncelleyin.");
+
+    const auto text_of = [](const Json& parent, const char* key) {
+        const Json* v = parent.find(key);
+        return v != nullptr && v->is_string() ? v->as_string() : std::string();
+    };
+    const auto int_of = [](const Json& parent, const char* key, std::int64_t fallback = 0) {
+        const Json* v = parent.find(key);
+        return v != nullptr && v->is_number() ? v->as_int() : fallback;
+    };
+    const auto bool_of = [](const Json& parent, const char* key) {
+        const Json* v = parent.find(key);
+        return v != nullptr && v->is_bool() && v->as_bool();
+    };
+
+    Layout out;
+    out.name      = std::move(name);
+    out.paper     = text_of(root, "kagit");
+    out.landscape = bool_of(root, "yatay");
+    out.dpi       = static_cast<std::int32_t>(int_of(root, "dpi", 300));
+    out.margin    = static_cast<Um>(int_of(root, "kenar", um_from_mm(10)));
+
+    out.pages.clear();
+    if (const Json* pages = root.find("sayfalar"); pages != nullptr && pages->is_array())
+        for (const Json& page : pages->as_array())
+            out.pages.push_back(LayoutPage{static_cast<Um>(int_of(page, "genislik")),
+                                           static_cast<Um>(int_of(page, "yukseklik"))});
+    if (out.pages.empty()) out.pages.push_back(LayoutPage{});
+
+    if (const Json* items = root.find("ogeler"); items != nullptr && items->is_array())
+        for (const Json& one : items->as_array()) {
+            if (!one.is_object()) continue;
+            LayoutItem item;
+            item.id = text_of(one, "ad");
+            if (item.id.empty())
+                return err(ErrorCode::ParseError, "Pafta şablonunda adsız bir öğe var.");
+
+            const std::optional<LayoutItemKind> kind =
+                layout_item_kind_from_id(text_of(one, "tur"));
+            if (!kind)
+                return err(ErrorCode::Unsupported, "'" + item.id +
+                                                       "' öğesinin türü bu sürümde yok: '" +
+                                                       text_of(one, "tur") + "'.");
+            item.kind = *kind;
+            item.frame =
+                PaperRect{static_cast<Um>(int_of(one, "x")), static_cast<Um>(int_of(one, "y")),
+                          static_cast<Um>(int_of(one, "genislik")),
+                          static_cast<Um>(int_of(one, "yukseklik"))};
+            item.z             = static_cast<std::int32_t>(int_of(one, "sira"));
+            item.locked        = bool_of(one, "kilit");
+            item.rotation_udeg = static_cast<std::int32_t>(int_of(one, "donme"));
+            item.frame_visible = bool_of(one, "cerceve");
+            item.frame_width   = static_cast<Um>(int_of(one, "cerceve_kalinlik"));
+            item.frame_colour = static_cast<std::uint32_t>(int_of(one, "cerceve_renk", 0xFF000000));
+            item.background   = bool_of(one, "dolgu");
+            item.background_colour =
+                static_cast<std::uint32_t>(int_of(one, "dolgu_renk", 0xFFFFFFFF));
+            item.text          = text_of(one, "metin");
+            item.text_height   = static_cast<Um>(int_of(one, "yazi", um_from_mm(3)));
+            item.text_colour   = static_cast<std::uint32_t>(int_of(one, "yazi_renk", 0xFF000000));
+            item.align_h       = static_cast<std::uint8_t>(int_of(one, "hiza_x"));
+            item.align_v       = static_cast<std::uint8_t>(int_of(one, "hiza_y"));
+            item.scale         = int_of(one, "olcek");
+            item.grid          = static_cast<GridStyle>(std::min<std::int64_t>(
+                int_of(one, "izgara"), static_cast<std::int64_t>(GridStyle::Tick)));
+            item.grid_labels   = static_cast<GridLabels>(std::min<std::int64_t>(
+                int_of(one, "izgara_etiket"), static_cast<std::int64_t>(GridLabels::Inside)));
+            item.grid_interval = int_of(one, "izgara_aralik");
+            item.grid_width    = static_cast<Um>(int_of(one, "izgara_kalinlik"));
+            item.grid_colour   = static_cast<std::uint32_t>(int_of(one, "izgara_renk", 0xFF000000));
+            item.grid_text_height = static_cast<Um>(int_of(one, "izgara_yazi", um_from_mm(2)));
+            item.style            = static_cast<std::int32_t>(int_of(one, "bicim"));
+            item.shape            = static_cast<LayoutShape>(std::min<std::int64_t>(
+                int_of(one, "sekil"), static_cast<std::int64_t>(LayoutShape::Line)));
+            item.row_limit        = static_cast<std::int32_t>(int_of(one, "satir_siniri"));
+
+            if (const Json* names = one.find("katmanlar"); names != nullptr && names->is_array())
+                for (const Json& named : names->as_array())
+                    if (named.is_string()) item.layers.push_back(named.as_string());
+            if (const Json* names = one.find("sutunlar"); names != nullptr && names->is_array())
+                for (const Json& named : names->as_array())
+                    if (named.is_string()) item.columns.push_back(named.as_string());
+
+            out.items.push_back(std::move(item));
+            out.item_pages.push_back(static_cast<std::int32_t>(int_of(one, "sayfa")));
+        }
+
+    return out;
 }
 
 // ------------------------------------------------------------- map geometry --

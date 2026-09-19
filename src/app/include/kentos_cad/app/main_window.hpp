@@ -142,6 +142,13 @@ public:
     /// Opens the pafta list: open, rename, duplicate, remove.
     void openLayoutManager();
 
+    /// Asks what to call the new sheet and runs `PAFTAŞABLON islem=uygula`, then
+    /// opens the designer on it — a sheet from a template still needs aiming.
+    void applyLayoutTemplate(const QString& templateName);
+
+    /// Asks which pafta and what to call it, then runs `islem=kaydet`.
+    void saveLayoutTemplate();
+
     /// Asks for a path and runs `YAZDIR pafta=`.
     void exportLayout(const QString& layout);
 

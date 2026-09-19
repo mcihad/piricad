@@ -11,6 +11,7 @@
 #if KENTOS_HAVE_MCP
 #include "kentos_cad/app/mcp_service.hpp"
 #endif
+#include "kentos_cad/app/layout_templates.hpp"
 #include "kentos_cad/app/print_service.hpp"
 #include "kentos_cad/app/provider_service.hpp"
 #include "kentos_cad/command/bus.hpp"
@@ -196,6 +197,10 @@ public:
 
     const ProviderService& providerService() const noexcept { return providers_; }
 
+    /// The office's pafta templates: the folder they live in and the verbs of
+    /// `PAFTAŞABLON` over it.
+    LayoutTemplates& layoutTemplates() noexcept { return templates_; }
+
     /// The ONE outbound wire, shared by the connection test and the chat panel.
     ///
     /// ONE, BECAUSE A SECOND ONE IS A SECOND CREDENTIAL PATH. The transport is
@@ -317,6 +322,10 @@ private:
     // `ProviderService::setTransport`, because the wire is not needed to edit a
     // profile and a build without one still has to be able to.
     ProviderService providers_;
+
+    // Installs Bus::on_layout_template_request, in the same shape and with the
+    // same lifetime rule as the services above.
+    LayoutTemplates templates_;
 #if KENTOS_HAVE_MCP
     std::unique_ptr<McpService> mcp_;
 #endif

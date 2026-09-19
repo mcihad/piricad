@@ -52,7 +52,7 @@ private:
 Controller::Controller(QObject* parent)
     : QObject(parent), bus_(document_, registry_, journal_, undo_), files_(bus_), database_(bus_),
       prints_(bus_, document_, this), ai_(bus_, this), providers_(bus_, nullptr, this),
-      runner_(bus_, script::Sandbox::Project)
+      templates_(bus_, this), runner_(bus_, script::Sandbox::Project)
 #if KENTOS_HAVE_LUA
       ,
       lua_runner_(bus_, script::Sandbox::Project)

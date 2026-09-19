@@ -566,6 +566,125 @@ Task<void> run_item(Context& ctx)
              "' paftası: " + std::to_string(after != nullptr ? after->items.size() : 0) + " öğe.");
 }
 
+// ========================================================= PAFTAŞABLON ======
+
+Task<void> run_template(Context& ctx)
+{
+    Bus& bus = ctx.session().bus();
+    if (!bus.on_layout_template_request) {
+        ctx.session().fail(
+            core::err(core::ErrorCode::Unsupported, "Bu yapıda pafta şablonu deposu yok."));
+        co_return;
+    }
+
+    static constexpr const char* kVerbs[] = {"listele", "kaydet", "uygula", "sil"};
+    auto verb = co_await ctx.text("islem", "İşlem: listele / kaydet / uygula / sil");
+    if (!verb) co_return;
+    const char* resolved = canonical_verb(*verb, kVerbs);
+    if (resolved == nullptr) {
+        ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                     "Tanınmayan işlem: '" + *verb +
+                                         "'. İşlemler: listele / kaydet / uygula / sil"));
+        co_return;
+    }
+    const std::string op = resolved;
+    ctx.record("islem", Value::text(op));
+
+    LayoutTemplateRequest request;
+    if (op == "listele") {
+        request.verb = LayoutTemplateRequest::Verb::List;
+        auto said    = co_await bus.on_layout_template_request(request);
+        if (!said) {
+            ctx.session().fail(said.error());
+            co_return;
+        }
+        ctx.echo(said.value());
+        co_return;
+    }
+
+    auto named = co_await ctx.text("ad", "Şablon adı");
+    if (!named || named->empty()) {
+        ctx.session().fail(
+            core::err(core::ErrorCode::InvalidArgument, "Şablon adı gerekir: ad=<ad>"));
+        co_return;
+    }
+    ctx.record("ad", Value::text(*named));
+    request.name = *named;
+
+    if (op == "sil") {
+        request.verb = LayoutTemplateRequest::Verb::Remove;
+        auto said    = co_await bus.on_layout_template_request(request);
+        if (!said) {
+            ctx.session().fail(said.error());
+            co_return;
+        }
+        ctx.echo(said.value());
+        co_return;
+    }
+
+    if (op == "kaydet") {
+        // THE COMMAND SERIALISES, THE APPLICATION WRITES BYTES. `/src/core` owns
+        // the shape and its JSON, so the store never has to know what a layout
+        // is — and a test can prove the round trip with no file at all.
+        std::string trouble;
+        const Layout* source =
+            resolve(bus.document().layouts(), ctx.argument("pafta").as_text(), trouble);
+        if (source == nullptr) {
+            ctx.session().fail(core::err(core::ErrorCode::NotFound, trouble));
+            co_return;
+        }
+        ctx.record("pafta", Value::text(source->name));
+        request.verb   = LayoutTemplateRequest::Verb::Save;
+        request.layout = source->name;
+        request.json   = core::layout_to_json(*source, *named);
+
+        auto said = co_await bus.on_layout_template_request(request);
+        if (!said) {
+            ctx.session().fail(said.error());
+            co_return;
+        }
+        ctx.echo(said.value());
+        co_return;
+    }
+
+    // ---- uygula: the template becomes a sheet of THIS drawing ---------------
+    request.verb   = LayoutTemplateRequest::Verb::Apply;
+    const Value as = ctx.argument("pafta");
+    request.layout = as.empty() ? *named : as.as_text();
+    if (!as.empty()) ctx.record("pafta", as);
+
+    auto json = co_await bus.on_layout_template_request(request);
+    if (!json) {
+        ctx.session().fail(json.error());
+        co_return;
+    }
+
+    auto built = core::layout_from_json(json.value(), request.layout);
+    if (!built) {
+        ctx.session().fail(built.error());
+        co_return;
+    }
+
+    // THROUGH THE ORDINARY MUTATOR, so applying a template is one undoable edit
+    // like every other layout change rather than something the application did
+    // behind the command's back (Article 1.1).
+    std::vector<Layout> next = bus.document().layouts().all();
+    const auto at            = std::find_if(next.begin(), next.end(), [&](const Layout& l) {
+        return core::turkish_key_equals(l.name, request.layout);
+    });
+    if (at != next.end())
+        *at = std::move(built.value());
+    else
+        next.push_back(std::move(built.value()));
+
+    if (auto st = ctx.transaction().set_layouts(std::move(next)); !st) {
+        ctx.session().fail(st.error());
+        co_return;
+    }
+    const Layout* made = bus.document().layouts().find(request.layout);
+    ctx.echo("Şablondan pafta kuruldu: " + (made != nullptr ? describe(*made) : request.layout));
+}
+
 } // namespace
 
 KENTOS_COMMAND(layout)
@@ -650,6 +769,33 @@ KENTOS_COMMAND(layout_item)
                    "çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar "
                    "ve siler.",
         .run = &run_item,
+    };
+}
+
+KENTOS_COMMAND(layout_template)
+{
+    return CommandSpec{
+        .id       = "core.layout_template",
+        .names    = {"PAFTAŞABLON", "PAFTASABLON", "LAYOUTTEMPLATE", "PŞB", "PSB"},
+        .category = Category::File,
+        .params =
+            {
+                Param::choice("islem", Arity::exactly(1), {"listele", "kaydet", "uygula", "sil"},
+                              "Ne yapılacağı"),
+                Param::text("ad", Arity::optional(), "Şablonun adı; listele dışında gerekir"),
+                Param::text("pafta", Arity::optional(),
+                            "kaydet: hangi pafta saklanacak (tek pafta varsa gerekmez). "
+                            "uygula: kurulacak paftanın adı (verilmezse şablonun adı)"),
+            },
+        .undo = UndoPolicy::SingleTransaction,
+        // NOT `AiAccessible`, for the reason `PAFTA` gives: a sheet carries a
+        // ground extent and the handle machinery has no answer yet for a command
+        // that takes both paper and ground (CLAUDE.md 5.8).
+        .flags   = Flags::Interactive | Flags::Scriptable,
+        .summary = "Kurumun standart paftalarını saklar ve uygular. Şablon çizimin dışında, "
+                   "kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni "
+                   "taşır, zemin koordinatlarını taşımaz.",
+        .run     = &run_template,
     };
 }
 

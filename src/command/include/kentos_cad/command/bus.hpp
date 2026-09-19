@@ -232,6 +232,40 @@ struct PrintRequest
     bool allow_modify{true};
 };
 
+/// What `PAFTAŞABLON` asks the application to do with a sheet template.
+///
+/// THE SAME SEAM AS `PrintRequest`, AND FOR THE SAME REASON. A template is a
+/// pafta stored OUTSIDE any drawing — the office's standard sheet, kept in the
+/// user's configuration directory and copied between machines — so `/src/command`
+/// owns the command and the journal line, and the application owns the file.
+/// `/src/core` owns the shape and its JSON (`core/layout.hpp`), so a test can
+/// prove the round trip without a window.
+struct LayoutTemplateRequest
+{
+    /// What to do. Each verb is one sentence a user would say out loud.
+    enum class Verb : std::uint8_t {
+        List,   ///< list the templates the office has
+        Save,   ///< store a pafta of this drawing as a template
+        Apply,  ///< make a pafta in this drawing from a template
+        Remove, ///< throw a template away
+    };
+
+    Verb verb{Verb::List}; ///< which operation to carry out
+    std::string name;      ///< the TEMPLATE's name
+    std::string layout;    ///< Save: which pafta to store. Apply: what to call the new one
+    std::string json;      ///< Save: the pafta already serialised, so the app writes bytes
+};
+
+/// Installed by `app::LayoutTemplates`. Returns the Turkish line `PAFTAŞABLON`
+/// echoes, or the refusal the user sees.
+///
+/// APPLY ANSWERS WITH JSON, not with a layout: `/src/command` builds the sheet
+/// from it and writes it through `Transaction::set_layouts`, so making a pafta
+/// from a template is an ordinary undoable edit rather than something the
+/// application did behind the command's back (Article 1.1).
+using LayoutTemplateHandler =
+    std::function<Task<core::Result<std::string>>(const LayoutTemplateRequest&)>;
+
 /// What `YAPAYZEKAMODELİ` asks the application to do with a model profile.
 ///
 /// THE SAME SEAM AS `PrintRequest`, AND FOR THE SAME REASON. A provider profile
@@ -644,6 +678,9 @@ public:
     /// The hook itself. See the paragraphs above for who installs it and why it
     /// is separate from `on_ai_request`.
     AiProviderHandler on_ai_provider_request;
+
+    /// Installed by `app::LayoutTemplates`; see `LayoutTemplateRequest`.
+    LayoutTemplateHandler on_layout_template_request;
 
     /// Installed by the script layer. Keeps the dependency direction intact:
     /// script depends on command, never the reverse (Constitution Article 3).

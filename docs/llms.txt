@@ -42,7 +42,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 69 (64 tanesi onay ister)
-- Katalog parmak izi: `1437584930127897717`
+- Katalog parmak izi: `13490607360278283156`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 

@@ -49,6 +49,7 @@ qt_add_executable(kentos_cad
     src/layout_render.cpp
     src/layout_designer.cpp
     src/layout_manager.cpp
+    src/layout_templates.cpp
     src/measure_text.cpp
     src/painter_backend.cpp
     src/pick_list.cpp
@@ -92,6 +93,7 @@ qt_add_executable(kentos_cad
     include/kentos_cad/app/layout_render.hpp
     include/kentos_cad/app/layout_designer.hpp
     include/kentos_cad/app/layout_manager.hpp
+    include/kentos_cad/app/layout_templates.hpp
     include/kentos_cad/app/panels.hpp
     include/kentos_cad/app/tools_panel.hpp
     include/kentos_cad/app/pick_list.hpp

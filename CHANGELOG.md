@@ -90,8 +90,19 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 - Duman testi (`windows-open`) artık Pafta Yöneticisi'ni ve tasarımcıyı da açıyor;
   `layout-designer` sınaması menüyü gezip girişlerin bağlı olduğunu doğruluyor.
 
-> **Bu turda yok**: pafta şablon kitaplığı (kurumun standart paftalarını çizimden
-> bağımsız saklamak). Kılavuzda gelecek zamanla yazılıdır.
+- **Pafta şablon kitaplığı** (**`PAFTAŞABLON`**, `app/layout_templates.hpp`): kurumun
+  standart paftası — antedi, lejant kutusu, ızgara ayarı — her işte kullanılır,
+  dolayısıyla tek bir işin dosyasında duramaz. Şablonlar kullanıcı profilinde bir
+  klasörde, **her biri kendi JSON dosyasında** durur; tek bir büyük dosya değil, çünkü
+  bir şablon kendi başına bir belgedir: postalanır, sürüm denetimine konur, antet
+  değişince yamalanır. `Dosya ▸ Paftalar ▸ Şablonlar` uygular ve kaydeder.
+- **Şablon düzeni taşır, zemini taşımaz.** Uygulanan paftanın harita çerçevesi
+  hedefsiz gelir: Trabzon'daki bir çizimin koordinatlarını Ankara'daki bir paftaya
+  taşımak, şablonun paftayı yanlış yere hedeflemesidir. `uygula` sıradan bir pafta
+  düzenlemesidir ve tek `Ctrl+Z` ile kalkar; `kaydet` ve `sil` çizime dokunmaz.
+- Şablon adındaki dosya adı olamayacak karakterler `_` ile değiştirilir, reddedilmez —
+  kurum paftasına `18. madde / askı` demek isteyen engellenmez, ama yazılan dosya
+  klasörün dışına çıkamaz.
 
 ### Eklendi — Gömülü MCP sunucusu, yapay zeka sohbeti ve üretilmiş `llms.txt`
 

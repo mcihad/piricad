@@ -731,6 +731,96 @@ TEST_CASE("Pafta: tek bir Ctrl+Z bütün sayfayı geri alır")
     CHECK(r.doc.layouts().find("Kroki")->items.size() == items);
 }
 
+TEST_CASE("Pafta şablonu: JSON'a gidip geliyor, zemin koordinatı taşımıyor")
+{
+    // A TEMPLATE IS THE ARRANGEMENT, NOT THE GROUND. The office's standard sheet
+    // is applied to a drawing in Trabzon and one in Ankara; carrying the first
+    // drawing's extent into the second is how a template aims a sheet at the
+    // wrong province (`core/layout.hpp`).
+    core::Layout source = core::default_layout("Kurum", core::um_from_mm(420),
+                                               core::um_from_mm(297), core::um_from_mm(12));
+    source.paper        = "A3";
+    source.landscape    = true;
+    source.dpi          = 600;
+
+    core::LayoutItem* map = source.find("harita");
+    REQUIRE(map != nullptr);
+    map->scale         = 1000;
+    map->grid          = core::GridStyle::Line;
+    map->grid_interval = 50000;
+    map->extent        = core::Box2{1, 2, 3000, 4000}; // the ground that must NOT travel
+    map->layers        = {"PARSEL", "YOL"};
+
+    core::LayoutItem* title = source.find("baslik");
+    REQUIRE(title != nullptr);
+    title->text    = "<pafta> — <olcek>";
+    title->locked  = true;
+    title->align_h = 1;
+
+    const std::string json = core::layout_to_json(source, "Kurum A3");
+    // io.md P5: never write a format without a version field.
+    CHECK(json.find("\"surum\"") != std::string::npos);
+    // And the ground is genuinely absent rather than zeroed.
+    CHECK(json.find("kapsam") == std::string::npos);
+
+    const core::Result<core::Layout> back = core::layout_from_json(json, "Ada 900");
+    REQUIRE(back.ok());
+    const core::Layout& made = back.value();
+
+    // THE NAME IS THE CALLER'S, not the file's: applying a template twice must
+    // produce two sheets, not one that overwrote the other.
+    CHECK(made.name == "Ada 900");
+    CHECK(made.paper == "A3");
+    CHECK(made.landscape == true);
+    CHECK(made.dpi == 600);
+    CHECK(made.margin == core::um_from_mm(12));
+    REQUIRE(made.pages.size() == 1);
+    CHECK(made.pages.front().w == core::um_from_mm(420));
+    REQUIRE(made.items.size() == source.items.size());
+
+    const core::LayoutItem* made_map = made.find("harita");
+    REQUIRE(made_map != nullptr);
+    CHECK(made_map->scale == 1000);
+    CHECK(made_map->grid == core::GridStyle::Line);
+    CHECK(made_map->grid_interval == 50000);
+    CHECK(made_map->frame == map->frame);
+    REQUIRE(made_map->layers.size() == 2);
+    CHECK(made_map->layers[0] == "PARSEL");
+    // THE GROUND IS GONE, which is the whole claim of this case.
+    CHECK(made_map->extent.empty());
+
+    const core::LayoutItem* made_title = made.find("baslik");
+    REQUIRE(made_title != nullptr);
+    CHECK(made_title->text == "<pafta> — <olcek>");
+    CHECK(made_title->locked == true);
+    CHECK(made_title->align_h == 1);
+
+    // And the store accepts what came back — a template that cannot be upserted
+    // is a template that vanishes on apply.
+    core::LayoutStore store;
+    CHECK(store.upsert(made).ok());
+}
+
+TEST_CASE("Pafta şablonu: bozuk ve gelecekten gelen metin reddedilir")
+{
+    CHECK(core::layout_from_json("{ bu json değil", "X").ok() == false);
+    CHECK(core::layout_from_json("[]", "X").ok() == false);
+
+    const auto future = core::layout_from_json(R"({"surum": 99, "ogeler": []})", "X");
+    REQUIRE(future.ok() == false);
+    CHECK(future.error().code == core::ErrorCode::Unsupported);
+
+    // An item kind this build does not know is NAMED in the refusal rather than
+    // quietly becoming a label — the same rule the file reader follows.
+    const auto alien =
+        core::layout_from_json(R"({"surum":1,"ogeler":[{"ad":"x","tur":"hologram"}]})", "X");
+    REQUIRE(alien.ok() == false);
+    CHECK(alien.error().message.find("hologram") != std::string::npos);
+
+    // An item with no name is refused too: a command names an item by its id.
+    CHECK(core::layout_from_json(R"({"surum":1,"ogeler":[{"tur":"metin"}]})", "X").ok() == false);
+}
+
 TEST_CASE("IO: boş belge de gidip geliyor")
 {
     TempDir tmp("empty");

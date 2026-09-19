@@ -36,6 +36,7 @@ Tek tek komutlar:
 | `YAZDIRMAPROFİLİ` | [Yazdırma profilleri](komutlar/print_profile.md) |
 | `PAFTA` | [Sayfa düzeni](komutlar/layout.md) |
 | `PAFTAÖĞE` | [Pafta öğeleri](komutlar/layout_item.md) |
+| `PAFTAŞABLON` | [Pafta şablonları](komutlar/layout_template.md) |
 | `VERİTABANI` | [PostGIS ile çalışma](komutlar/database.md) |
 | `ÇİZGİ` | [Çizgi çizme](komutlar/line.md) |
 | `ÇOKLUÇİZGİ` | [Tek nesne olarak çoklu çizgi](komutlar/polyline.md) |

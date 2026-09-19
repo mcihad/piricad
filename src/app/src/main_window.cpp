@@ -3490,6 +3490,30 @@ void MainWindow::rebuildLayoutMenu()
     manage->setStatusTip(tr("Çizimdeki paftaları listeler: aç, yeniden adlandır, çoğalt, sil"));
     connect(manage, &QAction::triggered, this, &MainWindow::openLayoutManager);
 
+    // ---- the office's templates ---------------------------------------------
+    //
+    // A SUBMENU RATHER THAN A WINDOW, because the whole interaction is "make a
+    // sheet like the one we always use": a list of names, and applying one. The
+    // two verbs that are not that — saving the current sheet, throwing a
+    // template away — sit under it rather than needing a manager of their own.
+    QMenu* templates          = layoutMenu_->addMenu(tr("Şablonlar"));
+    const QStringList library = controller_->layoutTemplates().names();
+    if (library.isEmpty()) {
+        QAction* none = templates->addAction(tr("(kayıtlı şablon yok)"));
+        none->setEnabled(false);
+    } else {
+        for (const QString& one : library) {
+            QAction* apply = templates->addAction(one);
+            apply->setStatusTip(tr("PAFTAŞABLON islem=uygula — bu çizimde bu şablondan bir "
+                                   "pafta kurar"));
+            connect(apply, &QAction::triggered, this, [this, one] { applyLayoutTemplate(one); });
+        }
+    }
+    templates->addSeparator();
+    QAction* store = templates->addAction(tr("Paftayı Şablon Olarak Kaydet…"));
+    store->setEnabled(!controller_->document().layouts().empty());
+    connect(store, &QAction::triggered, this, &MainWindow::saveLayoutTemplate);
+
     const core::LayoutStore& sheets = controller_->document().layouts();
     if (sheets.empty()) {
         layoutMenu_->addSeparator();
@@ -3547,6 +3571,63 @@ QStringList MainWindow::probeLayoutMenu()
                 if (!inner->isSeparator()) out << QStringLiteral("    %1").arg(inner->text());
     }
     return out;
+}
+
+void MainWindow::applyLayoutTemplate(const QString& templateName)
+{
+    bool accepted = false;
+    const QString named =
+        QInputDialog::getText(this, tr("Şablondan pafta"), tr("Kurulacak paftanın adı:"),
+                              QLineEdit::Normal, templateName, &accepted);
+    if (!accepted || named.trimmed().isEmpty()) return;
+
+    QString sheet = named.trimmed();
+    sheet.replace('\\', QStringLiteral("\\\\"));
+    sheet.replace('"', QStringLiteral("\\\""));
+    QString from = templateName;
+    from.replace('\\', QStringLiteral("\\\\"));
+    from.replace('"', QStringLiteral("\\\""));
+
+    controller_->runLine(
+        QStringLiteral("PAFTAŞABLON islem=uygula ad=\"%1\" pafta=\"%2\"").arg(from, sheet),
+        command::Origin::Gui);
+    // STRAIGHT INTO THE DESIGNER: a sheet made from a template still needs its
+    // map aimed, and that is the next thing the user was going to do.
+    if (controller_->document().layouts().find(named.trimmed().toStdString()) != nullptr)
+        openLayoutDesigner(named.trimmed());
+}
+
+void MainWindow::saveLayoutTemplate()
+{
+    const core::LayoutStore& sheets = controller_->document().layouts();
+    if (sheets.empty()) return;
+
+    QStringList choices;
+    for (const core::Layout& l : sheets.all())
+        choices << QString::fromStdString(l.name);
+
+    bool accepted = false;
+    const QString from =
+        choices.size() == 1
+            ? choices.front()
+            : QInputDialog::getItem(this, tr("Şablon olarak kaydet"), tr("Hangi pafta:"), choices,
+                                    0, false, &accepted);
+    if (choices.size() > 1 && !accepted) return;
+
+    const QString named = QInputDialog::getText(
+        this, tr("Şablon olarak kaydet"), tr("Şablonun adı:"), QLineEdit::Normal, from, &accepted);
+    if (!accepted || named.trimmed().isEmpty()) return;
+
+    QString sheet = from;
+    sheet.replace('\\', QStringLiteral("\\\\"));
+    sheet.replace('"', QStringLiteral("\\\""));
+    QString as = named.trimmed();
+    as.replace('\\', QStringLiteral("\\\\"));
+    as.replace('"', QStringLiteral("\\\""));
+
+    controller_->runLine(
+        QStringLiteral("PAFTAŞABLON islem=kaydet ad=\"%1\" pafta=\"%2\"").arg(as, sheet),
+        command::Origin::Gui);
 }
 
 void MainWindow::openLayoutManager()

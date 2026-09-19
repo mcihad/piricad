@@ -63,6 +63,7 @@ namespace kentos::command {
     X(layer_visibility)                                                                            \
     X(layout)                                                                                      \
     X(layout_item)                                                                                 \
+    X(layout_template)                                                                             \
     X(style)                                                                                       \
     X(symbol)                                                                                      \
     X(zoom)                                                                                        \

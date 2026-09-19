@@ -62,6 +62,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.layer_visibility`](layer_visibility.md) | `KATMANGÖRÜNÜM`, `KATMANGORUNUM`, `LAYERVIEW`, `KGÖ`, `KGO` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir. |
 | [`core.layout`](layout.md) | `PAFTA`, `LAYOUT`, `PFT` | Dosya | tek işlem | etkileşimli, betiklenebilir | Çizimin pafta düzenlerini yönetir: yeni pafta açar, siler, adlandırır ve kâğıdını değiştirir. Pafta çizimle birlikte kaydedilir ve geri alınabilir. |
 | [`core.layout_item`](layout_item.md) | `PAFTAÖĞE`, `PAFTAOGE`, `LAYOUTITEM`, `PÖĞ`, `POG` | Dosya | tek işlem | etkileşimli, betiklenebilir | Bir paftanın üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler. |
+| [`core.layout_template`](layout_template.md) | `PAFTAŞABLON`, `PAFTASABLON`, `LAYOUTTEMPLATE`, `PŞB`, `PSB` | Dosya | tek işlem | etkileşimli, betiklenebilir | Kurumun standart paftalarını saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz. |
 | [`core.style`](style.md) | `STİL`, `STIL`, `STYLE`, `ST` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar. |
 | [`core.symbol`](symbol.md) | `SEMBOL`, `SEMBOLLER`, `SYMBOL`, `SMB` | Katman | geri alınmaz | betiklenebilir, AI erişimli | Gösterim rafını yükler, ağacında gezer ve içinde arar. |
 | [`core.zoom`](zoom.md) | `YAKINLAŞ`, `YAKINLAS`, `ZOOM`, `Z` | Görünüm | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü çizim kapsamına veya verilen çarpana ayarlar. |
@@ -765,6 +766,18 @@ Bir paftanın üzerindeki öğeleri yönetir: harita çerçevesi, başlık, öl�
 | `sira` | integer | isteğe bağlı | Çizim sırası; büyük olan üstte |
 
 Ayrıntılı kullanım: [PAFTAÖĞE](layout_item.md)
+
+### `core.layout_template` — PAFTAŞABLON
+
+Kurumun standart paftalarını saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `islem` | text | 1 | Ne yapılacağı |
+| `ad` | text | isteğe bağlı | Şablonun adı; listele dışında gerekir |
+| `pafta` | text | isteğe bağlı | kaydet: hangi pafta saklanacak (tek pafta varsa gerekmez). uygula: kurulacak paftanın adı (verilmezse şablonun adı) |
+
+Ayrıntılı kullanım: [PAFTAŞABLON](layout_template.md)
 
 ### `core.style` — STİL
 

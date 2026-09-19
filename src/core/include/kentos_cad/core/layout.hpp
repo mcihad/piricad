@@ -344,6 +344,26 @@ private:
     std::vector<Layout> layouts_;
 };
 
+/// A layout as JSON text — the form a TEMPLATE is stored in.
+///
+/// WHY JSON AND NOT THE DOCUMENT'S OWN BLOCKS. A template lives outside any
+/// drawing, in the office's own file, and is edited by hand more often than
+/// anybody admits — a firm's standard pafta is copied between machines, put in
+/// version control and patched when the title block changes. The document's
+/// binary blocks are right for a file the program writes and reads a thousand
+/// times; a template is written once and read by people (`io.md` P5's rule about
+/// a version field binds it all the same, and the object carries one).
+///
+/// THE GROUND EXTENT IS DELIBERATELY NOT WRITTEN. A template says how a sheet is
+/// ARRANGED, not where it looks: carrying one drawing's coordinates into another
+/// drawing's pafta is how a template for Ankara aims a sheet at Ankara in a file
+/// about Trabzon.
+std::string layout_to_json(const Layout& layout, std::string_view name);
+
+/// A layout parsed back from that text, named `name` rather than whatever the
+/// file said — the caller decides what the new sheet is called.
+Result<Layout> layout_from_json(std::string_view text, std::string name);
+
 /// The scale denominator `1 : N` a map item is actually at.
 ///
 /// A DECLARED SCALE WINS. `scale` non-zero is the surveyor saying "this sheet is
