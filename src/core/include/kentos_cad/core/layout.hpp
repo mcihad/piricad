@@ -559,6 +559,17 @@ LayoutItem default_item(LayoutItemKind kind);
 /// belong to `/src/app` and are added to this list there.
 std::vector<std::string> layout_trouble(const Layout& layout);
 
+/// THE FILES THIS SHEET NEEDS THAT ARE NOT IN IT.
+///
+/// A template is mailed between offices, and a sheet whose logo lives at
+/// `/Users/ayse/Belgeler/amblem.png` arrives at the next desk as a layout that
+/// prints an empty box. Naming the dependencies is what lets the receiving end
+/// be told what is missing instead of discovering it on the plot.
+///
+/// Paths as the items carry them; whether they EXIST is a question for the
+/// machine they land on, and `/src/core` has no filesystem (Article 3.2).
+std::vector<std::string> layout_dependencies(const Layout& layout);
+
 Layout default_layout(std::string name, Um width, Um height, Um margin);
 
 } // namespace kentos::core

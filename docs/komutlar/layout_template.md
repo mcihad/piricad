@@ -21,6 +21,23 @@ bir sayfaya taşımak, şablonun yerleşimi yanlış yere hedeflemesidir. Uygula
 yerleşim harita çerçevesi **hedefsiz** gelir; tuvalden alan seçerek ya da
 [`ÇIKTIÖĞE`](layout_item.md) ile hedeflersiniz.
 
+### Şablonun içinde ne var
+
+| Alan | Anlamı |
+|---|---|
+| `surum` | Şablon biçiminin sürümü |
+| `ad`, `kagit`, `yatay`, `dpi`, `kenar` | Sayfanın kendisi |
+| `sayfalar` | Her sayfanın ölçüsü |
+| `ogeler` | Öğeler: kutuları, yazıları, ölçekleri, ızgara ayarları |
+| `bagimliliklar` | Şablonun ihtiyaç duyduğu **dosyalar** (resim yolları) |
+
+**Zemin koordinatı yoktur.** Harita çerçevesinin `olcek`'i taşınır — "1:1000"
+düzenin bir özelliğidir, bir yerin değil — ama nereye baktığı taşınmaz.
+
+`bagimliliklar`, şablonu alan masanın bulması gereken şeyleri adlandırır:
+amblemi `/Users/ayse/Belgeler/amblem.png`'de duran bir sayfa, başka bir
+bilgisayarda boş bir kutu basan bir yerleşim olarak varır.
+
 ## Adlar
 
 | Ad | Açıklama |

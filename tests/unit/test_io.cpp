@@ -4573,3 +4573,49 @@ TEST_CASE("Çıktı yerleşimi: kâğıt ölçüsü ondalık milimetre kabul ede
     REQUIRE(back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
     CHECK_EQ(back.doc.layouts().find("Kroki")->find("baslik")->frame.x, 350);
 }
+
+TEST_CASE("Çıktı şablonu: düzeni taşır, zemini taşımaz")
+{
+    // TODOS L-14's own sentence, and the reason for it: carrying a Trabzon
+    // drawing's coordinates into an Ankara one would aim the map at the wrong
+    // country. A template says how a sheet is ARRANGED, not where it LOOKS.
+    Rig r;
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Kurum kagit=A3 yon=yatay", Origin::Test)
+            .ok());
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIÖĞE islem=ayarla ad=harita olcek=1000 "
+                              "pencere=485200,4310100 pencere=485420,4310200",
+                              Origin::Test)
+                .ok());
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=ekle tur=resim ad=amblem", Origin::Test).ok());
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIÖĞE islem=ayarla ad=amblem metin=/tmp/amblem.png", Origin::Test)
+            .ok());
+
+    const core::Layout* sheet = r.doc.layouts().find("Kurum");
+    REQUIRE(sheet != nullptr);
+    REQUIRE(!sheet->find("harita")->extent.empty());
+
+    const std::string json = core::layout_to_json(*sheet, "Kurum A3");
+
+    // THE GROUND IS NOT IN IT. The scale is — "1:1000" is a property of the
+    // arrangement, not of a place.
+    CHECK(json.find("485200") == std::string::npos);
+    CHECK(json.find("4310100") == std::string::npos);
+    CHECK(json.find("\"olcek\"") != std::string::npos);
+
+    // WHAT THE RECEIVING DESK HAS TO FIND IS NAMED. A sheet whose logo lives on
+    // somebody else's disk arrives as a layout that prints an empty box.
+    CHECK(json.find("bagimliliklar") != std::string::npos);
+    CHECK(json.find("/tmp/amblem.png") != std::string::npos);
+
+    // AND IT COMES BACK UNAIMED, which is the point: the receiving end aims it.
+    auto read = core::layout_from_json(json, "Kurum A3");
+    REQUIRE(read.ok());
+    const core::LayoutItem* map = read.value().first_map();
+    REQUIRE(map != nullptr);
+    CHECK(map->extent.empty());
+    CHECK_EQ(map->scale, 1000);
+    CHECK_EQ(core::layout_dependencies(read.value()).size(), std::size_t{1});
+}

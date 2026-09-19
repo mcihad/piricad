@@ -419,7 +419,22 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   capability olarak bildir. **Kabul:** koordinat eşlemesi bağımsız okuyucuda doğrulanır;
   iç içe katman ağacı referans projeyle karşılaştırılır; desteklenmeyen özellik
   sessiz düz PDF'ye indirgenmez. GeoPDF bağımlılık/lisans kararı ayrı teknik incelemedir.
-- [ ] **L-14 / P1 — Taşınabilir şablonlar.** Var olan kitaplığı; sürüm, küçük
+- [~] **L-14 / P1 — Taşınabilir şablonlar.** *(bağımlılıklar 19 Eylül 2026)*
+  **Doğrulandı:** şablon **zemini taşımıyor**. `layout_to_json` harita
+  çerçevesinin `olcek`'ini yazıyor — "1:1000" düzenin bir özelliğidir, bir yerin
+  değil — ama `extent`'i yazmıyor. Trabzon'daki bir çizimin koordinatlarını
+  Ankara'daki bir sayfaya taşımak, şablonun yerleşimi yanlış ülkeye hedeflemesi
+  olurdu. Test bunu açıkça sınıyor: JSON'da `485200` geçmiyor, okunan şablonun
+  harita çerçevesi hedefsiz geliyor.
+  **Eklendi:** `core::layout_dependencies` ve şablon dosyasında `bagimliliklar`
+  alanı — şablonu alan masanın bulması gereken dosyalar. Amblemi başkasının
+  diskinde duran bir sayfa, öbür bilgisayarda boş bir kutu basan bir yerleşim
+  olarak varıyor; listeyi yazmak, bunu plottan önce söyleyebilmenin yolu. Liste
+  **türetiliyor**, saklanmıyor: öğelerle asla çelişemesin diye.
+  **Kalan:** küçük önizleme; kurum/proje değişkenleri; katman/alan eşleme; içe/dışa
+  aktarma; eksik bağımlılığın uygulama anında bildirilmesi (disk isteyen kısım,
+  `/src/app`); QGIS `.qpt` dönüştürücüsü.
+  Eski madde metni: Var olan kitaplığı; sürüm, küçük
   önizleme, kurum/proje değişkenleri, font/resim bağımlılıkları, katman/alan eşleme
   ve içe/dışa aktarma ile genişlet. Şablona arazi extent'i yanlışlıkla taşınmasın.
   QGIS `.qpt` içe aktarma istenirse ayrı dönüştürücü ve destek matrisi gerekir.

@@ -304,6 +304,18 @@ std::string layout_to_json(const Layout& layout, std::string_view name)
     }
     root.set("sayfalar", Json::array(std::move(pages)));
 
+    // WHAT THE RECEIVING DESK HAS TO FIND. Derived rather than stored, so it can
+    // never disagree with the items; written into the file so somebody reading
+    // the template — or a program applying it — learns the list without walking
+    // every item themselves.
+    if (const std::vector<std::string> needs = layout_dependencies(layout); !needs.empty()) {
+        std::vector<Json> files;
+        files.reserve(needs.size());
+        for (const std::string& one : needs)
+            files.push_back(Json::string(one));
+        root.set("bagimliliklar", Json::array(std::move(files)));
+    }
+
     JsonArray items;
     for (std::size_t i = 0; i < layout.items.size(); ++i) {
         const LayoutItem& item = layout.items[i];
@@ -701,6 +713,17 @@ std::vector<std::string> layout_trouble(const Layout& layout)
                       "' yerleşiminde harita çerçevesi yok; ölçek çubuğu ve "
                       "kuzey oku neyi anlatacağını bilemez.");
 
+    return out;
+}
+
+std::vector<std::string> layout_dependencies(const Layout& layout)
+{
+    std::vector<std::string> out;
+    for (const LayoutItem& item : layout.items) {
+        if (item.kind != LayoutItemKind::Picture || item.text.empty()) continue;
+        // DEDUPLICATED, because one logo on four pages is one file to find.
+        if (std::find(out.begin(), out.end(), item.text) == out.end()) out.push_back(item.text);
+    }
     return out;
 }
 
