@@ -741,6 +741,10 @@ Ayrıntılı kullanım: [KATMANGÖRÜNÜM](layer_visibility.md)
 | `dpi` | integer | isteğe bağlı | Çıktı çözünürlüğü (varsayılan 300) |
 | `sayfa` | integer | isteğe bağlı | Hangi sayfa (1'den başlar). sayfa işleminde verilmezse bütün sayfalar değişir |
 | `yeni_sira` | integer | isteğe bağlı | sayfatasi için sayfanın gideceği sıra |
+| `katman` | text | isteğe bağlı | atlas: hangi katmanın nesneleri için bir sayfa basılacak; 'yok' atlası kapatır |
+| `sirala` | text | isteğe bağlı | atlas: sayfaların sıralanacağı ve adlandırılacağı öznitelik sütunu; verilmezse nesne anahtarı |
+| `kenar_payi` | integer | isteğe bağlı | atlas: nesnenin çevresinde bırakılacak pay, yüzde (varsayılan 10) |
+| `tek_dosya` | bool | isteğe bağlı | atlas: tek çok sayfalı belge mi, nesne başına bir dosya mı (varsayılan evet) |
 
 Ayrıntılı kullanım: [ÇIKTIYERLEŞİMİ](layout.md)
 
@@ -2600,7 +2604,8 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             "sayfasil",
             "sayfacogalt",
             "sayfatasi",
-            "denetle"
+            "denetle",
+            "atlas"
           ],
           "description": "Ne yapılacağı (metin)"
         },
@@ -2659,6 +2664,24 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "minimum": 1,
           "maximum": 10000,
           "description": "sayfatasi için sayfanın gideceği sıra (tam sayı)"
+        },
+        "katman": {
+          "type": "string",
+          "description": "atlas: hangi katmanın nesneleri için bir sayfa basılacak; 'yok' atlası kapatır (metin)"
+        },
+        "sirala": {
+          "type": "string",
+          "description": "atlas: sayfaların sıralanacağı ve adlandırılacağı öznitelik sütunu; verilmezse nesne anahtarı (metin)"
+        },
+        "kenar_payi": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200,
+          "description": "atlas: nesnenin çevresinde bırakılacak pay, yüzde (varsayılan 10) (tam sayı)"
+        },
+        "tek_dosya": {
+          "type": "boolean",
+          "description": "atlas: tek çok sayfalı belge mi, nesne başına bir dosya mı (varsayılan evet) (evet/hayır)"
         }
       },
       "required": [

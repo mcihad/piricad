@@ -42,7 +42,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 75 (69 tanesi onay ister)
-- Katalog parmak izi: `1619006915558691632`
+- Katalog parmak izi: `12528533565603269976`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -468,6 +468,10 @@ Onay ister.
 | `dpi` | integer | hayır | Çıktı çözünürlüğü (varsayılan 300) (tam sayı) |
 | `sayfa` | integer | hayır | Hangi sayfa (1'den başlar). sayfa işleminde verilmezse bütün sayfalar değişir (tam sayı) |
 | `yeni_sira` | integer | hayır | sayfatasi için sayfanın gideceği sıra (tam sayı) |
+| `katman` | string | hayır | atlas: hangi katmanın nesneleri için bir sayfa basılacak; 'yok' atlası kapatır (metin) |
+| `sirala` | string | hayır | atlas: sayfaların sıralanacağı ve adlandırılacağı öznitelik sütunu; verilmezse nesne anahtarı (metin) |
+| `kenar_payi` | integer | hayır | atlas: nesnenin çevresinde bırakılacak pay, yüzde (varsayılan 10) (tam sayı) |
+| `tek_dosya` | boolean | hayır | atlas: tek çok sayfalı belge mi, nesne başına bir dosya mı (varsayılan evet) (evet/hayır) |
 
 ### `core_layout_item` — ÇIKTIÖĞE
 

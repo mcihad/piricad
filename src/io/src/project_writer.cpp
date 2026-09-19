@@ -561,15 +561,21 @@ core::Result<ProjectReport> save_project(const core::Document& doc, const core::
 
         for (const core::Layout& l : doc.layouts().all()) {
             LayoutRecord row{};
-            row.name       = pool.intern(l.name);
-            row.paper      = pool.intern(l.paper);
-            row.dpi        = l.dpi;
-            row.margin_um  = l.margin;
-            row.landscape  = l.landscape ? 1u : 0u;
-            row.first_page = static_cast<std::uint32_t>(page_rows.size());
-            row.page_count = static_cast<std::uint32_t>(l.pages.size());
-            row.first_item = static_cast<std::uint32_t>(item_rows.size());
-            row.item_count = static_cast<std::uint32_t>(l.items.size());
+            row.name      = pool.intern(l.name);
+            row.paper     = pool.intern(l.paper);
+            row.dpi       = l.dpi;
+            row.margin_um = l.margin;
+            row.landscape = l.landscape ? 1u : 0u;
+            // 0 MEANS "not an atlas", which is what a file written before this
+            // field says in its reserved bytes.
+            row.atlas_layer       = pool.intern(l.atlas.coverage_layer);
+            row.atlas_sort        = pool.intern(l.atlas.sort_by);
+            row.atlas_single_file = l.atlas.single_file ? 1u : 0u;
+            row.atlas_margin_pct  = l.atlas.margin_percent;
+            row.first_page        = static_cast<std::uint32_t>(page_rows.size());
+            row.page_count        = static_cast<std::uint32_t>(l.pages.size());
+            row.first_item        = static_cast<std::uint32_t>(item_rows.size());
+            row.item_count        = static_cast<std::uint32_t>(l.items.size());
 
             for (const core::LayoutPage& page : l.pages)
                 page_rows.push_back(LayoutPageRecord{page.w, page.h});

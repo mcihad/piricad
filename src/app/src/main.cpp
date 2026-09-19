@@ -618,6 +618,45 @@ int main(int argc, char** argv)
                 kentos::command::Origin::Gui);
             QCoreApplication::processEvents();
             check(QFileInfo::exists(narrow), "dar tablolu PDF yazılmadı");
+
+            // ---- AN ATLAS: ONE SHEET, ONE PAGE PER PARCEL -------------------
+            //
+            // The thing a cadastral office actually asks for. The claim is about
+            // the FILE — five parcels have to produce five pages — so the file is
+            // what is read (TODOS L-10).
+            window.runScriptLine(QStringLiteral("KATMAN ad=ATLASPARSEL"));
+            for (int i = 0; i < 5; ++i)
+                window.runScriptLine(QStringLiteral("ALAN noktalar=%1,0 %2,0 %2,20 %1,20")
+                                         .arg(i * 40)
+                                         .arg(i * 40 + 20));
+            window.runScriptLine(
+                QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=Askı kagit=A4 yon=dikey"));
+            window.runScriptLine(
+                QStringLiteral("ÇIKTIYERLEŞİMİ islem=atlas ad=Askı katman=ATLASPARSEL"));
+
+            const QString atlas = dir + QStringLiteral("/atlas.pdf");
+            QFile::remove(atlas);
+            controller->runLine(QStringLiteral("YAZDIR yerlesim=Askı dosya=\"%1\"").arg(atlas),
+                                kentos::command::Origin::Gui);
+            QCoreApplication::processEvents();
+
+            check(QFileInfo::exists(atlas), "atlas PDF yazılmadı");
+            const auto page_count = [](const QString& file) {
+                QFile f(file);
+                if (!f.open(QIODevice::ReadOnly)) return qsizetype{0};
+                const QByteArray bytes = f.readAll();
+                qsizetype n            = 0;
+                qsizetype at           = 0;
+                while ((at = bytes.indexOf("/MediaBox", at)) >= 0) {
+                    ++n;
+                    at += 9;
+                }
+                return n;
+            };
+            const qsizetype atlas_pages_n = page_count(atlas);
+            (void)std::fprintf(stdout, "[tasarim] atlas sayfa sayısı: %lld\n",
+                               static_cast<long long>(atlas_pages_n));
+            check(atlas_pages_n == 5, "atlas beş parsel için beş sayfa yazmadı");
             (void)std::fprintf(stdout, "[tasarim] pdf rasterı yok, %lld bayt\n",
                                static_cast<long long>(written.size()));
             (void)std::fprintf(stdout, "[tasarim] pdf %lld bayt\n",

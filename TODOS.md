@@ -418,7 +418,25 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
 
 ### 5.3. Atlas, rapor, çıktı ve şablon
 
-- [ ] **L-10 / P1 — Atlas.** Kapsama katmanı/seçimi, filtre, sıralama, sayfa adı,
+- [~] **L-10 / P1 — Atlas.** *(çekirdek 19 Eylül 2026)*
+  **Yapıldı:** `core::Atlas` ve `core::atlas_targets` — kapsama katmanı, sıralama
+  sütunu, kenar payı ve tek dosya/nesne başına dosya tercihi. `ÇIKTIYERLEŞİMİ
+  islem=atlas` bunları kuruyor; `YAZDIR yerlesim=` her nesne için harita
+  çerçevesini yeniden hedefleyip bir sayfa basıyor. **Çizim değişmiyor** — belgeyi
+  düzenleyen bir baskı, geri alma gerektiren bir baskı olurdu.
+  Kabul ölçütleri karşılandı: **sıra belirli** (aynı çizim iki kez aynı sırayı
+  verir; 47. sayfanın tekrar basımı 47. sayfanın parselidir), **adlar benzersiz**
+  (`sirala` yoksa nesne ANAHTARI, yuva değil; çakışan ada `-2` eklenir, çünkü
+  farklı adalarda 21 numaralı iki parsel olağandır), **sıfır sonuç hata verir**
+  (sıfır dosya yazıp başarı bildirmek yerine), **boş geometri atlanır**.
+  Hedefler **çizimden önce** çözülüyor, yani sayfa sayısı biliniyor ve hiçbir şey
+  basılmadan önce söylenebiliyor. Dosya biçimi kaydın `reserved` dizisinden dört
+  alan aldı; kayıt hâlâ 48 bayt.
+  Probe PDF'ten okuyarak doğruluyor: **beş parsel → beş sayfa**.
+  **Kalan:** nesne başına ayrı dosya (`tek_dosya=hayır` saklanıyor ama baskı hep
+  tek belge yazıyor); dosya adı ifadesi; filtre; sabit/ön tanımlı ölçek seçenekleri;
+  güncel atlas nesnesini vurgulama/kırpma; ileri/geri önizleme; iptal.
+  Eski madde metni: Kapsama katmanı/seçimi, filtre, sıralama, sayfa adı,
   dosya adı ifadesi; sabit ölçek, ön tanımlı ölçek veya kenar payıyla kapsama;
   güncel atlas nesnesini gösterme/vurgulama/kırpma; ileri/geri önizleme ekle.
   Tek PDF ve nesne başına dosya destekle. **Kabul:** 100 parsel tek istekle sıralı,

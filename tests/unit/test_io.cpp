@@ -4682,3 +4682,72 @@ TEST_CASE("Tablo: sığmayan satırlar sayılarak bildirilir")
     CHECK_EQ(table->row_limit, 3);
     CHECK_EQ(table->text, "PARSEL");
 }
+
+TEST_CASE("Atlas: yüz parselin sayfaları sıralı ve benzersiz adlandırılır")
+{
+    // TODOS L-10's acceptance. The thing a cadastral office actually asks for:
+    // a hundred parcels, a hundred sheets, each aimed at its own parcel and named
+    // after it. Without it the answer is "aim, print, aim again" a hundred times.
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    for (int i = 0; i < 5; ++i) {
+        REQUIRE(r.bus
+                    .execute_line("ALAN noktalar=" + std::to_string(i * 30) + ",0 " +
+                                      std::to_string(i * 30 + 20) + ",0 " +
+                                      std::to_string(i * 30 + 20) + ",20 " +
+                                      std::to_string(i * 30) + ",20",
+                                  Origin::Test)
+                    .ok());
+    }
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Askı kagit=A4", Origin::Test).ok());
+
+    // NOT AN ATLAS UNTIL IT IS SAID TO BE ONE, which is what every layout written
+    // before this field says.
+    CHECK(core::atlas_targets(r.doc, *r.doc.layouts().find("Askı")).empty());
+
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=atlas ad=Askı katman=PARSEL", Origin::Test).ok());
+    const core::Layout* sheet = r.doc.layouts().find("Askı");
+    REQUIRE(sheet != nullptr);
+    CHECK_EQ(sheet->atlas.coverage_layer, "PARSEL");
+
+    const auto targets = core::atlas_targets(r.doc, *sheet);
+    REQUIRE_EQ(targets.size(), std::size_t{5});
+
+    // WITHOUT A SORT COLUMN the sheets are named from the object's PERSISTENT
+    // KEY, never from a slot: a slot is reused and a key is the answer to "which
+    // parcel was this" six months later (model.md R44).
+    //
+    // EVERY NAME UNIQUE, so a run does not write one file over another.
+    std::vector<std::string> names;
+    for (const core::AtlasTarget& one : targets) {
+        CHECK(!one.name.empty());
+        CHECK(!one.bounds.empty());
+        CHECK(one.key != core::EntityKey::None);
+        names.push_back(one.name);
+    }
+    std::sort(names.begin(), names.end());
+    CHECK(std::adjacent_find(names.begin(), names.end()) == names.end());
+
+    // DETERMINISTIC: the same drawing gives the same order twice. A reprint of
+    // sheet 3 has to be the parcel sheet 3 was.
+    const auto again = core::atlas_targets(r.doc, *sheet);
+    REQUIRE_EQ(again.size(), targets.size());
+    for (std::size_t i = 0; i < again.size(); ++i)
+        CHECK_EQ(again[i].key, targets[i].key);
+
+    // AND IT SURVIVES THE FILE, in bytes carved out of the record's reserved run.
+    TempDir tmp("atlas");
+    const std::string path = tmp.file("aski.pcad");
+    REQUIRE(r.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+    Rig back;
+    REQUIRE(back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
+    const core::Layout* read = back.doc.layouts().find("Askı");
+    REQUIRE(read != nullptr);
+    CHECK_EQ(read->atlas.coverage_layer, "PARSEL");
+    CHECK_EQ(core::atlas_targets(back.doc, *read).size(), std::size_t{5});
+
+    // `katman=yok` turns it off again: a filter with no way out is a trap.
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=atlas ad=Askı katman=yok", Origin::Test).ok());
+    CHECK(r.doc.layouts().find("Askı")->atlas.coverage_layer.empty());
+}

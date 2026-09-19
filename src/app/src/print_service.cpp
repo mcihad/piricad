@@ -353,30 +353,73 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
     // painting, because that is when it is known, and said in the answer.
     std::vector<std::string> trouble;
 
+    // ---- the atlas, resolved before anything is drawn -----------------------
+    //
+    // A run that would produce nothing has to say so now rather than write zero
+    // files and report success (TODOS L-10). Resolving first also means the page
+    // count is known, which is what makes one document of many pages possible.
+    const std::vector<core::AtlasTarget> targets = sheet->atlas.coverage_layer.empty()
+                                                       ? std::vector<core::AtlasTarget>{}
+                                                       : core::atlas_targets(document_, *sheet);
+    if (!sheet->atlas.coverage_layer.empty() && targets.empty())
+        return core::err(core::ErrorCode::NotFound, "'" + sheet->name + "' atlası '" +
+                                                        sheet->atlas.coverage_layer +
+                                                        "' katmanında basılacak nesne bulamadı.");
+
+    // THE MAP FRAME IS AIMED PER TARGET, and the layout itself is never touched:
+    // a print that edited the document would be a print that needs an undo.
+    core::Layout aimed = *sheet;
+    const auto aim_at  = [&](const core::AtlasTarget& one) {
+        core::LayoutItem* map = nullptr;
+        for (core::LayoutItem& item : aimed.items)
+            if (item.kind == core::LayoutItemKind::Map && map == nullptr) map = &item;
+        if (map == nullptr) return;
+        const core::Mm pad_x = one.bounds.width() * sheet->atlas.margin_percent / 100;
+        const core::Mm pad_y = one.bounds.height() * sheet->atlas.margin_percent / 100;
+        map->extent          = core::Box2{one.bounds.min_x - pad_x, one.bounds.min_y - pad_y,
+                                 one.bounds.max_x + pad_x, one.bounds.max_y + pad_y};
+        // THE DECLARED SCALE STILL WINS when there is one: an atlas at 1:1000 is
+        // a hundred sheets at 1:1000, which is the point of declaring it.
+    };
+
+    // ONE RUN OVER EVERY TARGET, or one run over nothing when this is not an
+    // atlas — written as one loop so the ordinary sheet and the hundred-parcel
+    // one go down the same path and cannot drift apart.
+    const std::size_t runs = targets.empty() ? 1 : targets.size();
+
     const auto draw = [&](QPaintDevice& device, int resolution) {
         QPainter painter(&device);
-        for (std::size_t i = 0; i < sheet->pages.size(); ++i) {
-            if (i > 0) {
-                // THE SIZE IS SET BEFORE THE PAGE IS STARTED, and per page.
-                // Setting it once from `pages.front()` wrote every page of a
-                // mixed A4/A3 layout at A4: the second page's content was drawn
-                // at A3 dimensions into an A4 MediaBox and ran off the paper.
-                // Qt applies a page layout to the NEXT page, so the order here is
-                // load-bearing.
-                if (auto* writer = dynamic_cast<QPdfWriter*>(&device); writer != nullptr) {
-                    writer->setPageLayout(device_layout(sheet->pages[i]));
-                    writer->newPage();
-                } else if (auto* printer = dynamic_cast<QPrinter*>(&device); printer != nullptr) {
-                    printer->setPageLayout(device_layout(sheet->pages[i]));
-                    printer->newPage();
-                }
+        bool started = false;
+        for (std::size_t run = 0; run < runs; ++run) {
+            if (!targets.empty()) {
+                aim_at(targets[run]);
+                facts.sheet = utf8(sheet->name) + QStringLiteral(" — ") + utf8(targets[run].name);
             }
-            const core::LayoutPage& one = sheet->pages[i];
-            const double w_px           = one.w / 1000.0 / kMmPerInch * resolution;
-            const double h_px           = one.h / 1000.0 / kMmPerInch * resolution;
-            paint_layout_page(painter, QRectF(0, 0, w_px, h_px), document_, *sheet,
-                              static_cast<int>(i), static_cast<double>(resolution), facts,
-                              /*margin_guide=*/false, &trouble);
+            for (std::size_t i = 0; i < sheet->pages.size(); ++i) {
+                if (started) {
+                    // THE SIZE IS SET BEFORE THE PAGE IS STARTED, and per page.
+                    // Setting it once from `pages.front()` wrote every page of a
+                    // mixed A4/A3 layout at A4: the second page's content was drawn
+                    // at A3 dimensions into an A4 MediaBox and ran off the paper.
+                    // Qt applies a page layout to the NEXT page, so the order here is
+                    // load-bearing.
+                    if (auto* writer = dynamic_cast<QPdfWriter*>(&device); writer != nullptr) {
+                        writer->setPageLayout(device_layout(sheet->pages[i]));
+                        writer->newPage();
+                    } else if (auto* printer = dynamic_cast<QPrinter*>(&device);
+                               printer != nullptr) {
+                        printer->setPageLayout(device_layout(sheet->pages[i]));
+                        printer->newPage();
+                    }
+                }
+                const core::LayoutPage& one = sheet->pages[i];
+                const double w_px           = one.w / 1000.0 / kMmPerInch * resolution;
+                const double h_px           = one.h / 1000.0 / kMmPerInch * resolution;
+                paint_layout_page(painter, QRectF(0, 0, w_px, h_px), document_, aimed,
+                                  static_cast<int>(i), static_cast<double>(resolution), facts,
+                                  /*margin_guide=*/false, &trouble);
+                started = true;
+            }
         }
     };
 
@@ -425,6 +468,8 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
         // REPORTED WITH THE SUCCESS, not instead of it. The sheet printed; these
         // are what it could not honour, and a caller that reports success without
         // them reports something untrue (TODOS C-03).
+        if (!targets.empty()) said += " — atlas: " + std::to_string(targets.size()) + " nesne";
+
         for (const std::string& one : trouble)
             said += "\n  · " + one;
         return said;

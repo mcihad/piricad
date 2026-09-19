@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/layout.hpp"
 
+#include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/json.hpp"
 #include "kentos_cad/core/text.hpp"
 
@@ -723,6 +724,80 @@ std::vector<std::string> layout_dependencies(const Layout& layout)
         if (item.kind != LayoutItemKind::Picture || item.text.empty()) continue;
         // DEDUPLICATED, because one logo on four pages is one file to find.
         if (std::find(out.begin(), out.end(), item.text) == out.end()) out.push_back(item.text);
+    }
+    return out;
+}
+
+std::vector<AtlasTarget> atlas_targets(const Document& document, const Layout& layout)
+{
+    std::vector<AtlasTarget> out;
+    if (layout.atlas.coverage_layer.empty()) return out;
+
+    const LayerId only = document.find_layer(layout.atlas.coverage_layer);
+    if (only == kNoLayer) return out;
+
+    const AttrId sort_by =
+        layout.atlas.sort_by.empty() ? kNoAttr : document.attributes().find(layout.atlas.sort_by);
+
+    for (EntityId slot = 0; slot < document.entities().size(); ++slot) {
+        if (!document.entities().standalone(slot)) continue;
+        if (document.entities().layer[slot] != only) continue;
+
+        const Box2 bounds = document.entities().box_of(slot);
+        // AN OBJECT WITH NO EXTENT CANNOT BE AIMED AT. Skipped here rather than
+        // producing a sheet showing nothing, and counted by the caller so the
+        // run can say how many it passed over. TODOS L-10 requires empty geometry
+        // to behave deterministically, and skipping is the deterministic answer.
+        if (bounds.empty()) continue;
+
+        AtlasTarget one;
+        one.key    = document.key_of(slot);
+        one.bounds = bounds;
+
+        if (sort_by != kNoAttr) {
+            if (const Result<AttrValue> cell =
+                    document.attributes().get(sort_by, document.entities().slot[slot]);
+                cell.ok())
+                one.name = attr_display(cell.value());
+        }
+        // FALLING BACK TO THE KEY, never to the slot: a slot is reused and a key
+        // is the answer to "which parcel was this" six months later (R44).
+        if (one.name.empty()) one.name = std::to_string(raw(one.key));
+        out.push_back(std::move(one));
+    }
+
+    // SORTED BY THE NAME THE SHEETS CARRY, and by key when two names match, so a
+    // hundred sheets come out the same way twice. A reprint of sheet 47 has to be
+    // the same parcel it was.
+    // ORDERED BY THE FOLDED NAME, so `Ada 12` and `ada 12` land together, and by
+    // key when two fold the same — there is no locale-aware collation in this
+    // tree and inventing one here would be a second answer to a question
+    // `turkish_fold_key` already settles (CLAUDE.md 5.6).
+    std::stable_sort(out.begin(), out.end(), [](const AtlasTarget& a, const AtlasTarget& b) {
+        const std::string fa = turkish_fold_key(a.name);
+        const std::string fb = turkish_fold_key(b.name);
+        if (fa != fb) return fa < fb;
+        return raw(a.key) < raw(b.key);
+    });
+
+    // A NAME THAT REPEATS GETS A SUFFIX rather than overwriting its twin: two
+    // parcels numbered 21 in different ada is an ordinary thing here, and a run
+    // that wrote one file for both would lose one of them silently.
+    for (std::size_t i = 1; i < out.size(); ++i) {
+        if (out[i].name != out[i - 1].name) continue;
+        std::size_t n          = 2;
+        const std::string stem = out[i].name;
+        while (true) {
+            const std::string tried = stem + "-" + std::to_string(n);
+            const bool taken = std::any_of(out.begin(), out.end(), [&](const AtlasTarget& other) {
+                return other.name == tried;
+            });
+            if (!taken) {
+                out[i].name = tried;
+                break;
+            }
+            ++n;
+        }
     }
     return out;
 }

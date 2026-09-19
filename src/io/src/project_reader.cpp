@@ -834,10 +834,18 @@ core::Result<ProjectReport> load(command::Transaction& tx, const std::string& pa
             out.name   = std::move(name.value());
             auto paper = strings.at(r.paper, "yerleşim kâğıdı");
             if (!paper) return paper.error();
-            out.paper     = std::move(paper.value());
-            out.dpi       = r.dpi;
-            out.margin    = r.margin_um;
-            out.landscape = r.landscape != 0;
+            out.paper        = std::move(paper.value());
+            out.dpi          = r.dpi;
+            out.margin       = r.margin_um;
+            out.landscape    = r.landscape != 0;
+            auto atlas_layer = strings.at(r.atlas_layer, "atlas kapsama katmanı");
+            if (!atlas_layer) return atlas_layer.error();
+            auto atlas_sort = strings.at(r.atlas_sort, "atlas sıralama sütunu");
+            if (!atlas_sort) return atlas_sort.error();
+            out.atlas.coverage_layer = std::move(atlas_layer.value());
+            out.atlas.sort_by        = std::move(atlas_sort.value());
+            out.atlas.single_file    = r.atlas_single_file != 0;
+            out.atlas.margin_percent = r.atlas_margin_pct;
 
             if (!run_fits(r.first_page, r.page_count, page_n))
                 return err(ErrorCode::ParseError,

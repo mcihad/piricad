@@ -40,6 +40,7 @@
 // keeps flat (model.md, and `core` links nothing).
 #pragma once
 
+#include "kentos_cad/core/identity.hpp"
 #include "kentos_cad/core/result.hpp"
 #include "kentos_cad/core/units.hpp"
 
@@ -51,6 +52,9 @@
 #include <vector>
 
 namespace kentos::core {
+
+/// Read to resolve an atlas's targets; never written here.
+class Document;
 
 /// One ISO 216 A-series paper size, portrait, in whole millimetres.
 ///
@@ -358,6 +362,50 @@ struct LayoutPage
     }
 };
 
+/// ONE SHEET, PRINTED ONCE PER OBJECT.
+///
+/// The thing a cadastral office actually asks for: a hundred parcels, a hundred
+/// sheets, each aimed at its own parcel and named after it. Without it the answer
+/// is "aim the map, print, aim it again" a hundred times, which is how a day
+/// disappears and how one of the hundred comes out aimed at the previous one.
+///
+/// Empty `coverage_layer` means the layout is not an atlas, which is what every
+/// layout written before this field says.
+struct Atlas
+{
+    /// Which layer's objects are walked. Empty = this is not an atlas.
+    std::string coverage_layer;
+
+    /// The attribute the objects are ordered by, and the one their sheets are
+    /// named after. Empty = the order the drawing holds them in, which is stable
+    /// but not meaningful to a person.
+    ///
+    /// ORDER MATTERS BEYOND TIDINESS: a hundred sheets have to come out the same
+    /// way twice, or a reprint of sheet 47 is a different parcel (TODOS L-10:
+    /// "sıralama ve dosya adları deterministik").
+    std::string sort_by;
+
+    /// How much room to leave around the object, as a percentage of its size.
+    /// Zero puts the boundary exactly on the frame's edge, which prints a parcel
+    /// touching the neatline.
+    std::uint8_t margin_percent{10};
+
+    /// Whether the run produces one document of many pages or one file per
+    /// object. Both are asked for: a single PDF is what gets mailed, and separate
+    /// files are what get filed against parcel numbers.
+    bool single_file{true};
+
+    friend bool operator==(const Atlas&, const Atlas&) = default;
+};
+
+/// One object an atlas will print, resolved before anything is drawn.
+struct AtlasTarget
+{
+    EntityKey key{EntityKey::None}; ///< which object, persistently
+    std::string name;               ///< what its sheet is called
+    Box2 bounds;                    ///< the object's own extent, before any margin
+};
+
 /// A named sheet composition.
 struct Layout
 {
@@ -376,6 +424,10 @@ struct Layout
     /// rather than a field on the item because the overwhelmingly common layout
     /// is one page, and a column of zeroes costs nothing to write or read.
     std::vector<std::int32_t> item_pages;
+
+    /// What this sheet repeats over, when it repeats. Default-constructed — an
+    /// empty coverage layer — means it does not.
+    Atlas atlas;
 
     /// The next key this layout will hand out. Its own counter, because a layout
     /// travels in a template with no document around it.
@@ -442,7 +494,7 @@ struct Layout
     {
         return a.name == b.name && a.pages == b.pages && a.items == b.items &&
                a.item_pages == b.item_pages && a.dpi == b.dpi && a.margin == b.margin &&
-               a.paper == b.paper && a.landscape == b.landscape;
+               a.paper == b.paper && a.landscape == b.landscape && a.atlas == b.atlas;
     }
 };
 
@@ -569,6 +621,18 @@ std::vector<std::string> layout_trouble(const Layout& layout);
 /// Paths as the items carry them; whether they EXIST is a question for the
 /// machine they land on, and `/src/core` has no filesystem (Article 3.2).
 std::vector<std::string> layout_dependencies(const Layout& layout);
+
+/// EVERY OBJECT THIS SHEET WILL PRINT, in the order it will print them.
+///
+/// Resolved before anything is drawn, so a run that would produce nothing says so
+/// instead of writing zero files and reporting success, and so the names can be
+/// checked for collisions while there is still something to do about it.
+///
+/// Named from `Atlas::sort_by` when it is set, and from the object's persistent
+/// key when it is not — never from a slot, which is reused (model.md R44).
+/// A NAME THAT REPEATS GETS A SUFFIX rather than overwriting its twin: two
+/// parcels numbered 21 in different ada is an ordinary thing in this country.
+std::vector<AtlasTarget> atlas_targets(const Document& document, const Layout& layout);
 
 Layout default_layout(std::string name, Um width, Um height, Um margin);
 

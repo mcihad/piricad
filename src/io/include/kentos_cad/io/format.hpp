@@ -591,16 +591,26 @@ static_assert(sizeof(AttachRecord) == 64, "wire record");
 /// beside it.
 struct LayoutRecord
 {
-    std::uint32_t name;        ///<  0  into the string pool
-    std::uint32_t paper;       ///<  4  into the string pool; 0 = empty
-    std::int32_t dpi;          ///<  8  export resolution
-    std::int32_t margin_um;    ///< 12  the designer's guide, paper micrometres
-    std::uint32_t first_page;  ///< 16  into kBlkLayoutPages
-    std::uint32_t page_count;  ///< 20
-    std::uint32_t first_item;  ///< 24  into kBlkLayoutItems
-    std::uint32_t item_count;  ///< 28
-    std::uint8_t landscape;    ///< 32
-    std::uint8_t reserved[15]; ///< 33  zero-filled
+    std::uint32_t name;       ///<  0  into the string pool
+    std::uint32_t paper;      ///<  4  into the string pool; 0 = empty
+    std::int32_t dpi;         ///<  8  export resolution
+    std::int32_t margin_um;   ///< 12  the designer's guide, paper micrometres
+    std::uint32_t first_page; ///< 16  into kBlkLayoutPages
+    std::uint32_t page_count; ///< 20
+    std::uint32_t first_item; ///< 24  into kBlkLayoutItems
+    std::uint32_t item_count; ///< 28
+    std::uint8_t landscape;   ///< 32
+    std::uint8_t reserved[3]; ///< 33  zero-filled
+    /// 36  into the string pool; 0 = this layout is not an atlas.
+    ///
+    /// CARVED OUT OF THE RESERVED RUN, which is what a reserved run is for: the
+    /// record stays 48 bytes, so a file written before atlases existed reads back
+    /// with zeros here and is not an atlas — exactly what it meant (io.md R10).
+    std::uint32_t atlas_layer;
+    std::uint32_t atlas_sort;       ///< 40  into the string pool; 0 = drawing order
+    std::uint8_t atlas_single_file; ///< 44  one document, or one file per object
+    std::uint8_t atlas_margin_pct;  ///< 45  room around the object, per cent
+    std::uint8_t reserved_atlas[2]; ///< 46  zero-filled
 };
 
 static_assert(sizeof(LayoutRecord) == 48, "wire record");

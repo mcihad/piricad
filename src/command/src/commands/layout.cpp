@@ -150,9 +150,9 @@ Task<void> run_layout(Context& ctx)
 
     static constexpr const char* kVerbs[] = {"listele",   "ekle",      "sil",      "ad",
                                              "sayfa",     "sayfaekle", "sayfasil", "sayfacogalt",
-                                             "sayfatasi", "denetle"};
+                                             "sayfatasi", "denetle",   "atlas"};
     auto verb = co_await ctx.text("islem", "İşlem: listele / ekle / sil / ad / sayfa / sayfaekle / "
-                                           "sayfasil / sayfacogalt / sayfatasi / denetle");
+                                           "sayfasil / sayfacogalt / sayfatasi / denetle / atlas");
     if (!verb) co_return;
     const char* resolved = canonical_verb(*verb, kVerbs);
     if (resolved == nullptr) {
@@ -160,7 +160,7 @@ Task<void> run_layout(Context& ctx)
             core::err(core::ErrorCode::InvalidArgument,
                       "Tanınmayan işlem: '" + *verb +
                           "'. İşlemler: listele / ekle / sil / ad / sayfa / "
-                          "sayfaekle / sayfasil / sayfacogalt / sayfatasi / denetle"));
+                          "sayfaekle / sayfasil / sayfacogalt / sayfatasi / denetle / atlas"));
         co_return;
     }
     const std::string op = resolved;
@@ -315,6 +315,72 @@ Task<void> run_layout(Context& ctx)
             co_return;
         }
         ctx.echo("Çıktı yerleşimi: " + describe(*bus.document().layouts().find(*named)));
+        co_return;
+    }
+
+    if (op == "atlas") {
+        Layout* target = nullptr;
+        for (Layout& l : next)
+            if (core::turkish_key_equals(l.name, *named)) target = &l;
+        if (target == nullptr) {
+            ctx.session().fail(
+                core::err(core::ErrorCode::NotFound, "Çıktı yerleşimi yok: '" + *named + "'."));
+            co_return;
+        }
+
+        if (const Value v = ctx.argument("katman"); !v.empty()) {
+            if (core::turkish_key_equals(v.as_text(), "yok")) {
+                target->atlas = core::Atlas{};
+            } else {
+                const auto& have_layers = bus.document().layers();
+                const bool known        = std::any_of(
+                    have_layers.begin(), have_layers.end(), [&](const core::Layer& one) {
+                        return core::turkish_key_equals(one.name, v.as_text());
+                    });
+                if (!known) {
+                    ctx.session().fail(
+                        core::err(core::ErrorCode::NotFound, "Katman yok: '" + v.as_text() + "'."));
+                    co_return;
+                }
+                target->atlas.coverage_layer = v.as_text();
+            }
+            ctx.record("katman", v);
+        }
+        if (const Value v = ctx.argument("sirala"); !v.empty()) {
+            if (bus.document().attributes().find(v.as_text()) == core::kNoAttr) {
+                ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                             "Öznitelik sütunu yok: '" + v.as_text() + "'."));
+                co_return;
+            }
+            target->atlas.sort_by = v.as_text();
+            ctx.record("sirala", v);
+        }
+        if (const Value v = ctx.argument("kenar_payi"); !v.empty()) {
+            target->atlas.margin_percent = static_cast<std::uint8_t>(v.as_int());
+            ctx.record("kenar_payi", v);
+        }
+        if (const Value v = ctx.argument("tek_dosya"); !v.empty()) {
+            target->atlas.single_file = v.as_bool();
+            ctx.record("tek_dosya", v);
+        }
+
+        if (auto st = ctx.transaction().set_layouts(std::move(next)); !st) {
+            ctx.session().fail(st.error());
+            co_return;
+        }
+
+        const Layout* settled = bus.document().layouts().find(*named);
+        if (settled == nullptr || settled->atlas.coverage_layer.empty()) {
+            ctx.echo("'" + *named + "' bir atlas değil.");
+            co_return;
+        }
+        // SAID BEFORE ANYTHING IS PRINTED. A run that would produce nothing has
+        // to say so now, not write zero files and report success (TODOS L-10).
+        const std::size_t count = core::atlas_targets(bus.document(), *settled).size();
+        ctx.echo("Atlas: '" + settled->atlas.coverage_layer + "' katmanı, " +
+                 std::to_string(count) + " sayfa, %" +
+                 std::to_string(settled->atlas.margin_percent) + " kenar payı, " +
+                 (settled->atlas.single_file ? "tek dosya" : "nesne başına dosya") + ".");
         co_return;
     }
 
@@ -1043,7 +1109,7 @@ KENTOS_COMMAND(layout)
             {
                 Param::choice("islem", Arity::exactly(1),
                               {"listele", "ekle", "sil", "ad", "sayfa", "sayfaekle", "sayfasil",
-                               "sayfacogalt", "sayfatasi", "denetle"},
+                               "sayfacogalt", "sayfatasi", "denetle", "atlas"},
                               "Ne yapılacağı"),
                 Param::text("ad", Arity::optional(), "Yerleşimin adı; listele dışında gerekir"),
                 Param::text("yeni_ad", Arity::optional(), "islem=ad için yeni yerleşim adı"),
@@ -1067,6 +1133,18 @@ KENTOS_COMMAND(layout)
                                      "bütün sayfalar değişir"),
                 Param::integer_range("yeni_sira", Arity::optional(), 1, 10000,
                                      "sayfatasi için sayfanın gideceği sıra"),
+                Param::text("katman", Arity::optional(),
+                            "atlas: hangi katmanın nesneleri için bir sayfa basılacak; "
+                            "'yok' atlası kapatır"),
+                Param::text("sirala", Arity::optional(),
+                            "atlas: sayfaların sıralanacağı ve adlandırılacağı öznitelik "
+                            "sütunu; verilmezse nesne anahtarı"),
+                Param::integer_range("kenar_payi", Arity::optional(), 0, 200,
+                                     "atlas: nesnenin çevresinde bırakılacak pay, yüzde "
+                                     "(varsayılan 10)"),
+                Param::boolean("tek_dosya", Arity::optional(),
+                               "atlas: tek çok sayfalı belge mi, nesne başına bir dosya mı "
+                               "(varsayılan evet)"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
@@ -1090,6 +1168,7 @@ KENTOS_COMMAND(layout)
                 {"sayfacogalt", Effect::DocumentEdit},
                 {"sayfatasi", Effect::DocumentEdit},
                 {"denetle", Effect::Query},
+                {"atlas", Effect::DocumentEdit},
             },
     };
 }

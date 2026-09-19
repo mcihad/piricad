@@ -47,13 +47,14 @@ silinebilir; amaç ilk anda basılabilir bir şey görmenizdir.
 ÇIKTIYERLEŞİMİ islem=sayfacogalt ad=<ad> [sayfa=<n>]
 ÇIKTIYERLEŞİMİ islem=sayfatasi ad=<ad> sayfa=<n> yeni_sira=<m>
 ÇIKTIYERLEŞİMİ islem=denetle ad=<ad>
+ÇIKTIYERLEŞİMİ islem=atlas ad=<ad> katman=<katman> [sirala=<sütun>] [kenar_payi=10] [tek_dosya=evet]
 ```
 
 ## Parametreler
 
 | Parametre | Zorunlu | Anlamı |
 |---|---|---|
-| `islem` | evet | `listele`, `ekle`, `sil`, `ad`, `sayfa`, `sayfaekle`, `sayfasil`, `sayfacogalt`, `sayfatasi`, `denetle` |
+| `islem` | evet | `listele`, `ekle`, `sil`, `ad`, `sayfa`, `sayfaekle`, `sayfasil`, `sayfacogalt`, `sayfatasi`, `denetle`, `atlas` |
 | `ad` | `listele` dışında | Yerleşimin adı. Türkçe katlamayla tekildir: `Ada 1284` ile `ada 1284` aynı yerleşimdir |
 | `yeni_ad` | `islem=ad` için | Yerleşimin yeni adı |
 | `kagit` | hayır | `A5`, `A4`, `A3`, `A2`, `A1`, `A0` ya da `ozel` (varsayılan `A4`) |
@@ -63,6 +64,10 @@ silinebilir; amaç ilk anda basılabilir bir şey görmenizdir.
 | `dpi` | hayır | Çıktı çözünürlüğü (varsayılan 300) |
 | `sayfa` | sayfa işlemlerinde | Hangi sayfa; **1'den başlar**. `islem=sayfa`'da verilmezse bütün sayfalar değişir |
 | `yeni_sira` | `sayfatasi` için | Sayfanın gideceği sıra |
+| `katman` | `atlas` için | Hangi katmanın nesneleri için sayfa basılacak; `yok` atlası kapatır |
+| `sirala` | hayır | Sayfaların sıralanacağı ve adlandırılacağı öznitelik sütunu; verilmezse nesne anahtarı |
+| `kenar_payi` | hayır | Nesnenin çevresinde bırakılacak pay, yüzde (varsayılan 10) |
+| `tek_dosya` | hayır | Tek çok sayfalı belge mi, nesne başına bir dosya mı (varsayılan evet) |
 
 `islem=ekle` var olan bir adı **değiştirir**, yenisini eklemez — `YAZDIRMAPROFİLİ`
 ve `YAPAYZEKAMODELİ` ile aynı davranış.
@@ -128,6 +133,31 @@ Tek bir sayfanın kâğıdını ayrı değiştirmek:
 
 `sayfa=` verilmezse bütün sayfalar değişir — "kâğıdı değiştir" burada her zaman
 bunu demiştir.
+
+### Atlas — her parsel için bir sayfa
+
+Bir kadastro bürosunun gerçekten istediği şey: yüz parsel, yüz sayfa, her biri
+kendi parseline hedefli ve onun adıyla.
+
+```
+ÇIKTIYERLEŞİMİ islem=atlas ad=Askı katman=PARSEL sirala=parsel_no
+YAZDIR yerlesim=Askı dosya=aski.pdf
+```
+
+Harita çerçevesi her nesne için yeniden hedeflenir; **çizim değişmez** — belgeyi
+düzenleyen bir baskı, geri alma gerektiren bir baskı olurdu.
+
+- **Sıra belirlidir.** Aynı çizim iki kez aynı sırayı verir; 47. sayfanın tekrar
+  basımı, 47. sayfanın parseli olmak zorundadır.
+- **Adlar benzersizdir.** `sirala=` verilmezse nesne **anahtarı** kullanılır
+  (yuva numarası değil). Aynı ad iki kez çıkarsa ikincisine `-2` eklenir: farklı
+  adalarda 21 numaralı iki parsel bu ülkede olağandır, ve birini öbürünün üstüne
+  yazan bir koşum onu sessizce kaybeder.
+- **Bildirilen ölçek korunur.** 1:1000 bir atlas, 1:1000 yüz sayfadır.
+- **Hiçbir nesne bulunmazsa baskı olmaz**, hata verilir — sıfır dosya yazıp
+  başarı bildirmek yerine.
+- Boş geometrili nesneler atlanır: hedeflenemeyen bir nesne için boş bir sayfa
+  basmak, boş bir sayfayı sonuç sanmaktır.
 
 ### Basmadan önce denetlemek
 
@@ -232,6 +262,7 @@ kurar:
 | `Yeni ad gerekir: yeni_ad=<ad>` | `islem=ad` çağrıldı ama yeni ad yok | `yeni_ad=` ekleyin |
 | `'X' yerleşiminde iki öğe aynı adı taşıyor: 'Y'.` | Öğe adları tekil olmalı | Öğelerden birini yeniden adlandırın |
 | `'X' yerleşiminde N sayfa var; M. sayfa yok.` | `sayfa=` aralık dışında | `islem=listele` ile sayfa sayısını görün |
+| `'X' atlası 'Y' katmanında basılacak nesne bulamadı.` | Kapsama katmanı boş ya da nesneleri geometrisiz | Katmanı denetleyin |
 | `Son sayfa silinemez; bir yerleşimin en az bir sayfası olur.` | Tek kalan sayfa silinmek istendi | Yerleşimin kendisini silin |
 | `Sayfa taşımak için sayfa=<n> ve yeni_sira=<m> gerekir.` | `sayfatasi` eksik çağrıldı | İkisini de verin |
 
