@@ -309,7 +309,7 @@ SseFrame McpServer::tools_list_changed()
 
 void McpServer::stream_closed(const StreamPlan& stream)
 {
-    if (!stream.plan_id.empty()) dispatcher_.withdraw(stream.plan_id);
+    if (!stream.plan_id.empty()) dispatcher_.withdraw(stream.plan_id, stream.requester);
 }
 
 McpServer::Answer McpServer::fault(const Json& id, int code, std::string message, Json data) const
@@ -537,7 +537,8 @@ McpServer::Answer McpServer::tools_list(const JsonRpcRequest& rpc) const
     return out;
 }
 
-McpServer::Compiled McpServer::compile(const command::CommandSpec& spec, const Json& arguments)
+McpServer::Compiled McpServer::compile(const command::CommandSpec& spec, const Json& arguments,
+                                       const std::string& requester)
 {
     Compiled out;
     const std::uint64_t revision = dispatcher_.revision();
@@ -584,7 +585,8 @@ McpServer::Compiled McpServer::compile(const command::CommandSpec& spec, const J
                 return out;
             }
 
-            core::Result<HandleValue> resolved = dispatcher_.handles().resolve(*ref, revision);
+            core::Result<HandleValue> resolved =
+                dispatcher_.handles(requester).resolve(*ref, revision);
             if (!resolved) {
                 // A DOMAIN REFUSAL, not a protocol one: the reference was
                 // well-formed and the drawing moved on under it. A client fixes
@@ -772,7 +774,7 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
                                 "Araç '" + tool_name + "' kayıtlı olmayan bir komuta bakıyor: '" +
                                     tool->command_id + "'."));
 
-    Compiled compiled = compile(*spec, arguments);
+    Compiled compiled = compile(*spec, arguments, out.audit.requester);
 
     if (compiled.coordinate_literal) {
         // ANSWERED AS A RESULT AND REPORTED FOR THE AUDIT. The client gets
@@ -797,7 +799,8 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
 
     // ---------------------------------------------------------------- reading --
     if (!tool->mutates) {
-        core::Result<ToolOutcome> ran = dispatcher_.run_read_only(tool->command_id, compiled.args);
+        core::Result<ToolOutcome> ran =
+            dispatcher_.run_read_only(tool->command_id, compiled.args, out.audit.requester);
         if (!ran) {
             // A DOMAIN ERROR: an unknown layer, an empty selection, a refusal by
             // validation. A result with `isError`, never a JSON-RPC error, so a
@@ -812,7 +815,7 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
 
         Json handles = Json::array({});
         for (const std::string& id : outcome.minted) {
-            const HandleValue* value = dispatcher_.handles().find(id);
+            const HandleValue* value = dispatcher_.handles(out.audit.requester).find(id);
             handles.push(value != nullptr ? HandleStore::describe(*value) : Json::string(id));
         }
 
@@ -915,7 +918,7 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
     out.audit.plan_id = plan_id;
     out.plan_id       = plan_id;
 
-    core::Result<Plan> state = dispatcher_.plan_state(plan_id);
+    core::Result<Plan> state = dispatcher_.plan_state(plan_id, out.audit.requester);
     std::vector<std::string> lines;
     if (state) {
         for (const PlanStep& held : state.value().steps)
@@ -988,7 +991,8 @@ McpServer::Answer McpServer::resources_list(const JsonRpcRequest& rpc) const
     return out;
 }
 
-McpServer::Answer McpServer::resources_read(const JsonRpcRequest& rpc) const
+McpServer::Answer McpServer::resources_read(const JsonRpcRequest& rpc,
+                                            const std::string& requester) const
 {
     const Json* asked = rpc.params.find("uri");
     if (asked == nullptr || !asked->is_string())
@@ -1007,7 +1011,8 @@ McpServer::Answer McpServer::resources_read(const JsonRpcRequest& rpc) const
     // (CLAUDE.md 5.10). They are read-only commands, so they run under every
     // policy including the strictest.
     const auto from_command = [&](const char* command_id, command::Args args) {
-        core::Result<ToolOutcome> ran = dispatcher_.run_read_only(command_id, std::move(args));
+        core::Result<ToolOutcome> ran =
+            dispatcher_.run_read_only(command_id, std::move(args), requester);
         if (!ran) return std::string{};
         media = "application/json";
         return ran.value().report.is_null() ? std::string("{}") : ran.value().report.dump_pretty(2);
@@ -1027,7 +1032,8 @@ McpServer::Answer McpServer::resources_read(const JsonRpcRequest& rpc) const
         // keeps: the server has no document of its own and should not grow one.
         media       = "application/json";
         Json sheets = Json::array({});
-        if (auto named = dispatcher_.run_read_only("core.context", command::Args{}); named) {
+        if (auto named = dispatcher_.run_read_only("core.context", command::Args{}, requester);
+            named) {
             const Json* listed = named.value().report.find("cikti_yerlesimleri");
             if (listed != nullptr && listed->is_array())
                 for (const Json& one : listed->as_array()) {
@@ -1037,7 +1043,7 @@ McpServer::Answer McpServer::resources_read(const JsonRpcRequest& rpc) const
                     command::Args ask;
                     ask.set("islem", command::Value::text("denetle"));
                     ask.set("ad", command::Value::text(name->as_string()));
-                    auto ran = dispatcher_.run_read_only("core.layout", std::move(ask));
+                    auto ran = dispatcher_.run_read_only("core.layout", std::move(ask), requester);
 
                     Json sheet;
                     sheet.set("yerlesim", Json::string(name->as_string()));
@@ -1204,7 +1210,7 @@ HttpOutcome McpServer::handle(const HttpRequestView& request)
     } else if (rpc.method == "resources/list") {
         answer = resources_list(rpc);
     } else if (rpc.method == "resources/read") {
-        answer = resources_read(rpc);
+        answer = resources_read(rpc, requester);
     } else if (rpc.method == "subscriptions/listen") {
         answer = subscriptions_listen(rpc);
     } else {
@@ -1237,6 +1243,12 @@ HttpOutcome McpServer::handle(const HttpRequestView& request)
         plan.keep_alive_ms = answer.keep_open ? policy_.keep_alive_ms : 0;
         plan.subscriptions = std::move(answer.subscriptions);
         plan.plan_id       = answer.plan_id;
+
+        // CARRIED SO THE CLOSE CAN BE SCOPED. When this stream ends the
+        // transport hands the plan back through `stream_closed`, and a
+        // withdrawal must name the client that filed it — otherwise closing one
+        // client's stream could cancel another client's suggestion (M-07).
+        plan.requester = answer.audit.requester.empty() ? requester : answer.audit.requester;
 
         if (!answer.payload.is_null()) {
             SseFrame final_frame;

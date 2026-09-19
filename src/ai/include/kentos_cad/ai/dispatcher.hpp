@@ -62,6 +62,26 @@ public:
     /// Virtual: the application holds the dispatcher through this interface.
     virtual ~Dispatcher() = default;
 
+    // ---- WHO IS ASKING ------------------------------------------------------
+    //
+    // Every door below takes a `requester`, and it is not decoration. Two agents
+    // on one loopback port are two strangers. A handle is minted from what one
+    // client read out of the document and a plan is composed from handles, so a
+    // client that could name another's handle would be drawing from numbers it
+    // was never shown, and one that could reach another's plan could append a
+    // step to a suggestion somebody is about to approve — and the approval a
+    // person gives is for the lines they READ (TODOS M-07).
+    //
+    // THE LABEL IS THE SCOPE. For the MCP server it is the client's declared
+    // name plus its token's fingerprint (`McpServer::requester_label`); for the
+    // chat it is `sohbet` and the profile. It is the same string that reaches
+    // the audit record, and it never contains a credential (ai.md P11).
+    //
+    // AN EMPTY LABEL IS THE PERSON AT THE KEYBOARD, who is not scoped: the
+    // suggestion panel lists every pending plan whoever filed it, because the
+    // operator is the one who applies them (`ClientScope::client`, policy.hpp).
+    // Anything that arrived over a socket carries a non-empty one.
+
     /// Runs a command that changes NOTHING, now, on the bus thread, and returns
     /// what it said. Refuses anything without `command::Flags::NoEffect` — the
     /// check is here, at the door, rather than at each caller.
@@ -70,20 +90,30 @@ public:
     /// "skips the transaction path", and `core.undo`, `core.save` and
     /// `core.export` all carry it. An agent allowed to run them without approval
     /// could reverse the drawing or write over a file.
+    ///
+    /// Handles minted from the answer land in `requester`'s store, which is why
+    /// the label is needed even by a call that only reads.
     virtual core::Result<ToolOutcome> run_read_only(const std::string& command_id,
-                                                    const command::Args& args) = 0;
+                                                    const command::Args& args,
+                                                    const std::string& requester) = 0;
 
     /// Files a plan and shows it to the person at the workstation. Returns the
     /// plan's id. Applies nothing.
+    ///
+    /// `Plan::requester` carries the label here: it is part of the record, so a
+    /// second parameter would be a second place for one fact.
     virtual core::Result<std::string> propose(Plan plan) = 0;
 
-    /// A plan's state, for a client that is waiting on a decision.
-    virtual core::Result<Plan> plan_state(const std::string& id) const = 0;
+    /// A plan's state, for a client that is waiting on a decision. Refuses a
+    /// plan `requester` does not own.
+    virtual core::Result<Plan> plan_state(const std::string& id,
+                                          const std::string& requester) const = 0;
 
     /// The client has gone (its stream closed): withdraw the plan rather than
     /// leaving it on the person's screen for ever. Closing the stream is the
     /// cancellation signal in MCP 2026-07-28, and this is what it means here.
-    virtual void withdraw(const std::string& id) = 0;
+    /// A plan `requester` does not own is left alone.
+    virtual void withdraw(const std::string& id, const std::string& requester) = 0;
 
     /// The document's revision now, so a handle can be told stale.
     virtual std::uint64_t revision() const = 0;
@@ -93,9 +123,10 @@ public:
     /// rather than inventing a rectangle.
     virtual std::optional<command::ViewInfo> view() const = 0;
 
-    /// The handles this session has been given. The store lives with the
-    /// session, so two clients cannot use each other's handles.
-    virtual HandleStore& handles() = 0;
+    /// The handles `requester` has been given. One store per client, so a
+    /// handle from one session means nothing in another — which is the shape
+    /// `HandleStore::next_id` was written for.
+    virtual HandleStore& handles(const std::string& requester) = 0;
 
     /// The catalogue as this session may see it, already filtered by policy.
     virtual const Catalog& catalog() const = 0;

@@ -135,19 +135,20 @@ DialectCapabilities capabilities_of(Dialect dialect)
 {
     DialectCapabilities out;
     switch (dialect) {
+    // THE TWO OPENAI DIALECTS CAN DO THE SAME THREE THINGS, and they are written
+    // as one label rather than two identical bodies so that a later divergence
+    // has to be a deliberate split. They differ in how they SAY it, which is the
+    // encoder's business and not this table's:
+    //
+    //  * `openai_chat` is the oldest and widest of the four. Reasoning arrives as
+    //    `delta.reasoning_content` on the providers that have it, and usage only
+    //    when `stream_options: {"include_usage": true}` was sent — which this
+    //    program sends, so the number can be trusted when it comes.
+    //  * `openai_responses` sends typed events with a sequence number, and is the
+    //    one dialect that requires an opaque payload to be replayed byte for byte
+    //    (`encrypted_content`).
     case Dialect::OpenAiChat:
-        // The oldest and widest of the four. Reasoning arrives as
-        // `delta.reasoning_content` on the providers that have it, and usage only
-        // when `stream_options: {"include_usage": true}` was sent — which this
-        // program sends, so the number can be trusted when it comes.
-        out.vision            = true;
-        out.reasoning         = true;
-        out.structured_output = true;
-        break;
-
     case Dialect::OpenAiResponses:
-        // Typed events with a sequence number, and the one dialect that requires
-        // an opaque payload to be replayed byte for byte (`encrypted_content`).
         out.vision            = true;
         out.reasoning         = true;
         out.structured_output = true;

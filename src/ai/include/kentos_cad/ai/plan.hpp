@@ -121,6 +121,37 @@ public:
     Plan* find(std::string_view id);
     const Plan* find(std::string_view id) const;
 
+    // ---- WHOSE PLAN IS IT (TODOS M-07) --------------------------------------
+    //
+    // A plan id is `p` + 16 hex digits and it travels in a client's answer, so
+    // it is not a secret and must not be treated as one. What keeps one agent
+    // out of another's suggestion is the OWNER CHECK, not the id's width.
+    //
+    // WHY IT MATTERS MORE THAN READING. The approval a person gives is for the
+    // command lines they READ on the card. A second client that could append a
+    // step to a pending plan would be having its work signed by somebody who
+    // never saw it, and the audit record would name the wrong requester for that
+    // step — which is exactly the failure ai.md R6 and R8 exist to prevent.
+
+    /// Whether `requester` may reach `plan`.
+    ///
+    /// THE PERSON AT THE KEYBOARD MAY REACH EVERYTHING, and that is not a hole:
+    /// they are the one who applies plans, and the suggestion panel has to list
+    /// what every client filed. Anything with a non-empty label — anything that
+    /// arrived over a socket, and the chat — reaches only what it filed itself.
+    static bool owned_by(const Plan& plan, std::string_view requester);
+
+    /// `find`, but only when `requester` owns it.
+    ///
+    /// ONE ANSWER FOR "NOT THERE" AND FOR "NOT YOURS": both are a null. A caller
+    /// that told the two apart would be an oracle for what another agent is
+    /// composing, and a client could walk ids to use it.
+    const Plan* find_for(std::string_view id, std::string_view requester) const;
+
+    /// `append`, but only when `requester` owns the plan. A plan it does not own
+    /// refuses with the same words an absent one does.
+    core::Status append_for(std::string_view id, std::string_view requester, PlanStep step);
+
     /// Marks the outcome. The only writer is `Gate`, and only after a person has
     /// decided; nothing else may move a plan out of `Pending`.
     core::Status settle(std::string_view id, PlanState state, std::string refusal = {});

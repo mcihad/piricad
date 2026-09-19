@@ -632,7 +632,7 @@ void paint_layout_page(QPainter& painter, const QRectF& target, const core::Docu
                                  item->text,
                                  [&] {
                                      core::SheetContext ctx = sheet_context(layout, owner, facts);
-                                     ctx.page               = index + 1;
+                                     ctx.page               = static_cast<std::int32_t>(index) + 1;
                                      return ctx;
                                  }(),
                                  trouble)));

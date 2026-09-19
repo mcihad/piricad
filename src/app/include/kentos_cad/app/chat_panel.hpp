@@ -35,6 +35,7 @@
 
 #include <functional>
 #include <memory>
+#include <string>
 #include <vector>
 
 class QPlainTextEdit;
@@ -140,6 +141,15 @@ private:
     /// in the answer's bubble. Returns the plan id, or empty when there were
     /// none.
     QString fileWrites(const std::vector<ai::Block>& calls);
+
+    /// WHAT THIS PANEL IS CALLED AS A CLIENT.
+    ///
+    /// The chat is an agent like any other: its handles are its own and its
+    /// suggestions are filed under this name, so the label has to be the SAME
+    /// string in both places or the plan it files would be composed from handles
+    /// it cannot reach (TODOS M-07). It reaches the audit record and the
+    /// suggestion card, and it never carries a key (ai.md P11).
+    std::string requesterLabel() const;
 
     /// The profile the chooser is on, or nothing when none is configured.
     const ai::ProviderProfile* chosen() const;

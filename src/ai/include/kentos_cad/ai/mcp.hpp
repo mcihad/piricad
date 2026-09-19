@@ -184,10 +184,11 @@ private:
     Answer tools_list(const JsonRpcRequest& rpc) const;
     Answer tools_call(const JsonRpcRequest& rpc, std::string requester);
     Answer resources_list(const JsonRpcRequest& rpc) const;
-    Answer resources_read(const JsonRpcRequest& rpc) const;
+    Answer resources_read(const JsonRpcRequest& rpc, const std::string& requester) const;
     Answer subscriptions_listen(const JsonRpcRequest& rpc) const;
 
-    Compiled compile(const command::CommandSpec& spec, const core::Json& arguments);
+    Compiled compile(const command::CommandSpec& spec, const core::Json& arguments,
+                     const std::string& requester);
 
     Dispatcher& dispatcher_;
     const command::Registry& registry_;

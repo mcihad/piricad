@@ -6,6 +6,32 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Güvenlik — her istemci kendi alanında çalışır (TODOS M-07)
+
+- **Tutamak defteri artık istemci başına.** `ai::HandleScopes`: bir ada bir defter.
+  Bugüne kadar tek bir defter vardı ve `HandleStore::next_id` bir **sayaç** olduğu
+  için, bir istemcinin ikinci tutamağının kimliği bir başkasının ikinci tutamağının
+  kimliğiyle aynıydı — yani bir ajan, hiç okumadığı bir geometrinin tutamağını
+  tahmin etmeden eline geçirebiliyordu. Deftere yazılmış olan yorum ("her oturumun
+  kendi sayacı") artık doğru.
+- **Bir önerinin sahibi var.** `PlanStore::owned_by`, `find_for`, `append_for`. Bir
+  istemci yalnız kendi açtığı öneriyi okuyabilir, genişletebilir ve akışını
+  kapatarak geri çektirebilir. Önemli olan madde **genişletme**: öneri kimliği
+  istemcinin cevabında geçtiği için gizli değildir, ve adım ekleyebilen ikinci bir
+  istemci, mühendisin kartta **okumadığı** bir satırı onun onayıyla uygulatırdı;
+  denetim kaydı da o adım için yanlış istemciyi gösterirdi (ai.md R6, R8).
+- **"Sizin değil" ile "yok" aynı cevabı alır.** Ayrı bir ret, bir istemciye bir
+  başkasının öneri kimliğini doğrulayan bir kâhin olurdu.
+- **Bilgisayar başındaki kişi kapsamsızdır.** Boş istemci adı operatördür: öneri
+  panosu kimin açtığına bakmadan hepsini listeler, çünkü uygulayan odur.
+- `ai::Dispatcher`'ın dört kapısı artık **kimin sorduğunu** alıyor
+  (`run_read_only`, `plan_state`, `withdraw`, `handles`); `StreamPlan` istemci adını
+  taşıyor, böylece kapanan bir akış yalnız kendi önerisini geri çekiyor.
+- `AiService::propose` **adım ekleme sözleşmesini gerçekten uyguluyor**: `mcp.cpp`
+  bunu anlatıyordu ama uygulama her çağrıda yeni öneri açıyordu.
+- Sohbet de bir istemcidir: tutamakları ve önerileri `sohbet · <profil>` adıyla,
+  tek bir yerden (`ChatPanel::requesterLabel`) geliyor.
+
 ### Eklendi — kâğıt ve zemin sayıları şemada ayrıldı, yerleşim ajana açıldı (TODOS A-03, A-02)
 
 - **`Param::unit`**: bir sayının neyle ölçüldüğü. Yapısal ayrım zaten vardı — bir

@@ -121,6 +121,25 @@ core::Status PlanStore::append(std::string_view id, PlanStep step)
     return core::ok();
 }
 
+bool PlanStore::owned_by(const Plan& plan, std::string_view requester)
+{
+    return requester.empty() || plan.requester == requester;
+}
+
+const Plan* PlanStore::find_for(std::string_view id, std::string_view requester) const
+{
+    const Plan* plan = find(id);
+    return plan != nullptr && owned_by(*plan, requester) ? plan : nullptr;
+}
+
+core::Status PlanStore::append_for(std::string_view id, std::string_view requester, PlanStep step)
+{
+    if (find_for(id, requester) == nullptr)
+        return core::err(core::ErrorCode::NotFound,
+                         "Böyle bir öneri yok: '" + std::string(id) + "'.");
+    return append(id, std::move(step));
+}
+
 Plan* PlanStore::find(std::string_view id)
 {
     for (Plan& plan : plans_)

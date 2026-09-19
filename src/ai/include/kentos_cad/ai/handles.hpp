@@ -26,9 +26,12 @@
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/json.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 namespace kentos::ai {
@@ -124,6 +127,50 @@ private:
 
     std::vector<HandleValue> values_;
     std::uint64_t minted_{0};
+};
+
+/// ONE STORE PER CLIENT, keyed by the requester label.
+///
+/// WHY THIS TYPE EXISTS RATHER THAN ONE SHARED STORE. A handle is a promise that
+/// a coordinate came out of the document a client READ (CLAUDE.md 5.8). Two
+/// agents on one loopback port sharing a store could name each other's promises
+/// — and `HandleStore::next_id` is a counter, so the second handle minted by one
+/// client has exactly the id the second handle minted by another would, which
+/// means a client could hold a handle to geometry it was never shown without
+/// even guessing. Scoping is what makes `next_id`'s own comment true (TODOS
+/// M-07).
+///
+/// AN EMPTY LABEL IS A CLIENT TOO, here. The person at the keyboard is unscoped
+/// about PLANS — they apply them, so they see all of them — but they never hold
+/// a handle: handles are minted for whoever ran the read tool. So the empty
+/// label simply gets its own store like any other name.
+class HandleScopes
+{
+public:
+    /// Beyond this many clients the OLDEST store is dropped — the first one
+    /// opened, not the largest and not the least recently touched: a program
+    /// that evicted whichever store was cheapest to evict would be unpredictable,
+    /// and a test that runs twice has to know which one went.
+    ///
+    /// A client whose store was dropped is not refused. It mints again, and its
+    /// older handles are simply unknown — the same answer a stale handle already
+    /// gets, and the same recovery: read again.
+    static constexpr std::size_t kMaxClients = 16;
+
+    /// The store `requester` owns, created on first use.
+    HandleStore& for_client(const std::string& requester);
+
+    /// The store `requester` owns, or null when it has none yet. For a caller
+    /// that must not create one by asking.
+    const HandleStore* peek(std::string_view requester) const;
+
+    /// How many clients are held; for the tests and the connection page.
+    std::size_t clients() const noexcept { return stores_.size(); }
+
+private:
+    /// INSERTION-ORDERED: a vector rather than a map because eviction is by age
+    /// and because a fixed order keeps a test's output the same twice.
+    std::vector<std::pair<std::string, HandleStore>> stores_;
 };
 
 } // namespace kentos::ai

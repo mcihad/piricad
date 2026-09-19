@@ -39,6 +39,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <string>
 
 namespace kentos::app {
 
@@ -108,13 +109,15 @@ public:
 
     // ---- ai::Dispatcher ----
     core::Result<ai::ToolOutcome> run_read_only(const std::string& command_id,
-                                                const command::Args& args) override;
+                                                const command::Args& args,
+                                                const std::string& requester) override;
     core::Result<std::string> propose(ai::Plan plan) override;
-    core::Result<ai::Plan> plan_state(const std::string& id) const override;
-    void withdraw(const std::string& id) override;
+    core::Result<ai::Plan> plan_state(const std::string& id,
+                                      const std::string& requester) const override;
+    void withdraw(const std::string& id, const std::string& requester) override;
     std::uint64_t revision() const override;
     std::optional<command::ViewInfo> view() const override;
-    ai::HandleStore& handles() override;
+    ai::HandleStore& handles(const std::string& requester) override;
     const ai::Catalog& catalog() const override;
 
 signals:
@@ -132,8 +135,10 @@ private:
 
     /// Mints handles from a read command's structured report, so the client can
     /// point at what it just learned (dispatcher.hpp explains why this is the
-    /// dispatcher's job and not the command's).
-    std::vector<std::string> mintFrom(const core::Json& report, const std::string& tool);
+    /// dispatcher's job and not the command's). They land in `requester`'s own
+    /// store.
+    std::vector<std::string> mintFrom(const core::Json& report, const std::string& tool,
+                                      const std::string& requester);
 
     /// Rebuilds the catalogue when the registry's fingerprint has moved.
     void refreshCatalog() const;
@@ -141,7 +146,10 @@ private:
     command::Bus& bus_;
 
     ai::PlanStore plans_;
-    ai::HandleStore handles_;
+
+    /// One handle store per client; see `ai::HandleScopes` for why that is not
+    /// one store with a label on each value.
+    ai::HandleScopes handles_;
     std::unique_ptr<ai::AuditLog> audit_;
     std::unique_ptr<ai::Gate> gate_;
 

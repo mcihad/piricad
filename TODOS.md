@@ -874,11 +874,30 @@ uygulanan ve müzakere edilen yetenekler ilan edilmelidir.
   uygulanıp müzakere edilirse kullan; diğer istemciler için uygulama araçlarıyla
   durum sorgulama fallback'i sun. **Kabul:** reconnect sonrasında durum bulunur,
   aynı istek tekrarı yeni iş açmaz; kısmi çıktı tamamlanmış görünmez.
-- [ ] **M-07 / P1 — İstemci kapsamı ve veri izolasyonu.** Mevcut loopback/belirteç
-  temelini koru; belge, dosya dizini ve işlem kapsamını kimliği doğrulanmış istemciye
-  bağla. Handle, plan ve kaynak erişimini bu kapsama göre denetle. UI thread'ine
-  belge erişimini mevcut dispatcher ilkesiyle taşı. **Kabul:** iki istemci birbirinin
-  handle/planını kullanamaz; aynı belgeyi düzenleyen işler revizyon kontrolünden geçer.
+- [x] **M-07 / P1 — İstemci kapsamı ve veri izolasyonu.** *(19 Eylül 2026)*
+  `ai::Dispatcher`'ın dört kapısı artık **kimin sorduğunu** alıyor: `run_read_only`,
+  `plan_state`, `withdraw`, `handles`. İstemciyi ayıran ad, `_meta` içindeki
+  `cad.kentos/client` ile belirtecin parmak izi (`McpServer::requester_label`);
+  denetim kaydına giren de o.
+  **Tutamaklar istemci başına** (`ai::HandleScopes`): tek defter varken
+  `HandleStore::next_id` bir sayaç olduğu için bir ajanın ikinci tutamağının kimliği
+  bir başkasınınkiyle aynıydı — yani hiç okumadığı geometrinin tutamağı eline
+  geçebiliyordu. Deftere yazılı olan "her oturumun kendi sayacı" yorumu artık doğru.
+  **Önerilerin sahibi var** (`PlanStore::owned_by` / `find_for` / `append_for`):
+  bir istemci yalnız kendi açtığı öneriyi okur, genişletir ve akışını kapatarak geri
+  çektirir. Asıl madde **genişletme**: öneri kimliği istemcinin cevabında geçtiği için
+  gizli değildir, ve adım ekleyebilen ikinci bir istemci mühendise kartta
+  **okumadığı** bir satırı imzalatırdı. "Sizin değil" ile "yok" aynı cevabı alıyor;
+  boş istemci adı — masadaki kişi — hepsini görüyor, çünkü uygulayan o.
+  `AiService::propose` adım ekleme sözleşmesini artık gerçekten uyguluyor.
+  Revizyon kontrolü zaten yerindeydi ve korundu: `HandleStore::resolve` eski bir
+  tutamağı reddediyor, `Plan::revision` önerinin derlendiği hâli taşıyor. Belgeye
+  erişim bus iş parçasında, `Dispatcher` ilkesiyle.
+  **Kalan:** `ClientScope`'un dosya dizini yarısı — `may_read_files`,
+  `may_write_files`, `may_write_external` bitlerinin bir köke bağlanması. Bugün
+  dosyaya dokunan hiçbir komut ajana açık değil (`tests/support/ai-kapsam.json`:
+  `core.open`, `core.save`, `core.export`… hepsi A-02'ye bağlı), ve bu bitleri
+  tüketecek politika motoru S-01/A-04 zinciri.
 - [ ] **M-08 / P1 — Kullanılabilir bağlantı yönetimi.** Settings'te sunucu durumu,
   adres, bağlı istemciler, etkin policy/kapsam, token yenile/iptal ve son hatalar
   bulunsun. Mümkün olan istemcide Bearer kimlik doğrulamasını tercih et; mevcut

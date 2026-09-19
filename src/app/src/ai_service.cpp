@@ -201,7 +201,8 @@ core::Status AiService::applyPlan(const ai::Plan& plan)
 }
 
 core::Result<ai::ToolOutcome> AiService::run_read_only(const std::string& command_id,
-                                                       const command::Args& args)
+                                                       const command::Args& args,
+                                                       const std::string& requester)
 {
     const command::CommandSpec* spec = bus_.registry().by_id(command_id);
     if (spec == nullptr)
@@ -224,16 +225,18 @@ core::Result<ai::ToolOutcome> AiService::run_read_only(const std::string& comman
     outcome.lines      = ran.value().lines;
     outcome.report     = ran.value().report;
     outcome.mutated    = ran.value().mutated;
-    outcome.minted     = mintFrom(outcome.report, command_id);
+    outcome.minted     = mintFrom(outcome.report, command_id, requester);
     return outcome;
 }
 
-std::vector<std::string> AiService::mintFrom(const core::Json& report, const std::string& tool)
+std::vector<std::string> AiService::mintFrom(const core::Json& report, const std::string& tool,
+                                             const std::string& requester)
 {
     std::vector<std::string> minted;
     if (report.is_null()) return minted;
 
-    const std::uint64_t at = revision();
+    const std::uint64_t at   = revision();
+    ai::HandleStore& handles = this->handles(requester);
 
     // OBJECT KEYS become an entity handle, so the next call can say "those" —
     // and cannot say a number it made up (ai.md R26).
@@ -241,7 +244,7 @@ std::vector<std::string> AiService::mintFrom(const core::Json& report, const std
         std::vector<std::int64_t> list;
         for (const core::Json& entry : keys->as_array())
             if (entry.is_int()) list.push_back(entry.as_int());
-        if (!list.empty()) minted.push_back(handles_.mint_entities(std::move(list), tool, at).id);
+        if (!list.empty()) minted.push_back(handles.mint_entities(std::move(list), tool, at).id);
     }
 
     // A RECTANGLE becomes a window handle. This is the maintainer's "corner
@@ -251,7 +254,7 @@ std::vector<std::string> AiService::mintFrom(const core::Json& report, const std
     if (const core::Json* box = report.find("kutu_mm"); box != nullptr && box->is_array()) {
         const core::JsonArray& corners = box->as_array();
         if (corners.size() == 4)
-            minted.push_back(handles_
+            minted.push_back(handles
                                  .mint_window(core::Box2{corners[0].as_int(), corners[1].as_int(),
                                                          corners[2].as_int(), corners[3].as_int()},
                                               tool, at)
@@ -266,7 +269,32 @@ core::Result<std::string> AiService::propose(ai::Plan plan)
         return core::err(core::ErrorCode::InvalidArgument,
                          "Boş öneri kaydedilmez; en az bir adım gerekir.");
 
-    plan.revision           = revision();
+    plan.revision = revision();
+
+    // ---- APPENDING TO A SUGGESTION THAT IS ALREADY ON SOMEBODY'S SCREEN ------
+    //
+    // A non-empty `Plan::id` names a plan to EXTEND rather than a second one to
+    // file, which is how an agent composes a sequence that one approval applies
+    // as one transaction and one Ctrl+Z (ai.md R4). The id comes back unchanged
+    // so the caller can tell an append from a new filing; `McpServer` compares
+    // the two and tells the client plainly when the extension did not happen.
+    //
+    // AND IT IS OWNERSHIP-CHECKED, which is the whole reason this is not a bare
+    // `append`. The approval a person gives is for the command lines they READ
+    // on the card. A second client that could push a step into a pending plan
+    // would be having its work signed by somebody who never saw it, and the
+    // audit record would name the wrong requester for that step (TODOS M-07).
+    if (!plan.id.empty()) {
+        const std::string target = plan.id;
+        for (ai::PlanStep& step : plan.steps)
+            if (core::Status added = plans_.append_for(target, plan.requester, std::move(step));
+                !added)
+                return added.error();
+
+        emit suggestionFiled(QString::fromStdString(target));
+        return target;
+    }
+
     const std::string filed = plans_.add(std::move(plan));
     emit suggestionFiled(QString::fromStdString(filed));
 
@@ -286,21 +314,23 @@ core::Result<std::string> AiService::propose(ai::Plan plan)
     return filed;
 }
 
-core::Result<ai::Plan> AiService::plan_state(const std::string& id) const
+core::Result<ai::Plan> AiService::plan_state(const std::string& id,
+                                             const std::string& requester) const
 {
-    const ai::Plan* plan = plans_.find(id);
+    // ONE ANSWER FOR "NOT YOURS" AND FOR "NOT THERE"; `find_for` says why.
+    const ai::Plan* plan = plans_.find_for(id, requester);
     if (plan == nullptr)
         return core::err(core::ErrorCode::NotFound, "Böyle bir öneri yok: '" + id + "'.");
     return *plan;
 }
 
-void AiService::withdraw(const std::string& id)
+void AiService::withdraw(const std::string& id, const std::string& requester)
 {
     // CLOSING THE STREAM IS THE CANCELLATION SIGNAL in MCP 2026-07-28, and this
     // is what it means here: the client that asked has gone, so the card comes
     // off the person's screen rather than waiting for a decision nobody will
     // read. The audit record says it was withdrawn, not rejected.
-    if (const ai::Plan* plan = plans_.find(id); plan == nullptr) return;
+    if (plans_.find_for(id, requester) == nullptr) return;
     (void)plans_.settle(id, ai::PlanState::Withdrawn, "İstemci bağlantıyı kapattı.");
     emit suggestionSettled(QString::fromStdString(id));
 }
@@ -316,9 +346,9 @@ std::optional<command::ViewInfo> AiService::view() const
     return bus_.on_view_query();
 }
 
-ai::HandleStore& AiService::handles()
+ai::HandleStore& AiService::handles(const std::string& requester)
 {
-    return handles_;
+    return handles_.for_client(requester);
 }
 
 void AiService::refreshCatalog() const

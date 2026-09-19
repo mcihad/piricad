@@ -225,4 +225,22 @@ core::Json HandleStore::describe(const HandleValue& value)
     return out;
 }
 
+HandleStore& HandleScopes::for_client(const std::string& requester)
+{
+    for (auto& [label, store] : stores_)
+        if (label == requester) return store;
+
+    if (stores_.size() >= kMaxClients) stores_.erase(stores_.begin());
+
+    stores_.emplace_back(requester, HandleStore{});
+    return stores_.back().second;
+}
+
+const HandleStore* HandleScopes::peek(std::string_view requester) const
+{
+    for (const auto& [label, store] : stores_)
+        if (label == requester) return &store;
+    return nullptr;
+}
+
 } // namespace kentos::ai

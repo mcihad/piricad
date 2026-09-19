@@ -115,6 +115,11 @@ struct StreamPlan
     /// stream the transport hands this back through `McpServer::stream_closed`:
     /// closing IS the cancellation signal in 2026-07-28.
     std::string plan_id;
+
+    /// Which client the stream belonged to, so a closing stream withdraws only
+    /// what that client filed. Without it, a client that closed its own stream
+    /// would cancel whatever plan id it happened to name (TODOS M-07).
+    std::string requester;
 };
 
 /// What the application must record about this exchange, whatever came back.

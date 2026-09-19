@@ -189,6 +189,29 @@ Bu protokol sürümünde **iptal, akışı kapatmaktır**. Bir istemci öneri ta
 kapattığında öneri **geri çekilir**: kimsenin okumayacağı bir karar için birinin
 ekranında beklemez. Denetim kaydı bunu "reddedildi" değil "geri çekildi" olarak yazar.
 
+## Aynı anda birden çok istemci
+
+Bir adrese birden çok ajan bağlanabilir — örneğin bir kod düzenleyicideki ajan ile
+program içindeki sohbet. **Her biri kendi alanında çalışır.** İstemciyi ayıran ad,
+`_meta` içindeki `cad.kentos/client` alanı ile belirtecin sekiz haneli parmak izidir;
+denetim kaydına giren de budur.
+
+| Ne | Kim erişir |
+|---|---|
+| **Tutamaklar** | Yalnız onları alan istemci. Başka bir istemcinin tutamağını yazmak "Böyle bir tutamak yok" cevabı alır |
+| **Öneriler** | Yalnız onu açan istemci: durumunu soramaz, adım ekleyemez, akışını kapatarak geri çektiremez |
+| **Bilgisayar başındaki kişi** | Hepsini görür ve hepsini uygulayabilir — öneriyi uygulayan kişi odur |
+
+Bunun sebebi kibarlık değil: **onayladığınız şey, kartta okuduğunuz komut satırlarıdır.**
+Başka bir istemci bekleyen bir öneriye adım ekleyebilseydi, hiç görmediğiniz bir satırı
+sizin imzanızla uygulamış olurdunuz; denetim kaydı da o adım için yanlış istemciyi
+gösterirdi. Öneri kimliği istemcinin cevabında geçtiği için gizli bir değer değildir —
+koruyan şey kimliğin uzunluğu değil, **sahiplik denetimidir**.
+
+Bir istemcinin tutamak defteri, program çok sayıda ayrı ad görürse düşebilir. O zaman
+istemci reddedilmez: okuma aracını yeniden çağırıp yeni tutamak alır — eski bir tutamağın
+zaten aldığı cevabın aynısı.
+
 ## İki ayrı hata türü
 
 Sunucunun cevapları iki gruba ayrılır ve ayrım bir istemci için önemlidir:

@@ -23,7 +23,9 @@
 #include "kentos_cad/ai/mcp.hpp"
 
 #include "kentos_cad/command/registry.hpp"
+#include "kentos_cad/core/text.hpp"
 
+#include <cstdio>
 #include <optional>
 #include <string>
 #include <vector>
@@ -45,9 +47,17 @@ struct FakeDispatcher final : ai::Dispatcher
 {
     command::Registry reg;
     ai::Catalog cat;
-    ai::HandleStore store;
+
+    /// ONE STORE PER CLIENT, exactly as `AiService` holds them: the scoping is
+    /// `ai::HandleScopes` either way, so what these cases exercise is the real
+    /// code and not a double's idea of it.
+    ai::HandleScopes scopes;
     ai::PlanStore plans;
     std::uint64_t rev{7};
+
+    /// Every requester label `run_read_only` was called with, in order. A read
+    /// that arrived without one would mint into the wrong client's store.
+    std::vector<std::string> asked_by;
 
     /// Every command id `run_read_only` was asked to run, in order. The point of
     /// the write cases is that this list stays EMPTY.
@@ -58,9 +68,11 @@ struct FakeDispatcher final : ai::Dispatcher
     bool read_fails{false};
 
     core::Result<ai::ToolOutcome> run_read_only(const std::string& command_id,
-                                                const command::Args& args) override
+                                                const command::Args& args,
+                                                const std::string& requester) override
     {
         ran.push_back(command_id);
+        asked_by.push_back(requester);
         if (read_fails)
             return core::err(core::ErrorCode::NotFound,
                              "Böyle bir katman yok: 'YOKKATMAN'. Katmanları KATMANLAR ile "
@@ -71,7 +83,8 @@ struct FakeDispatcher final : ai::Dispatcher
         out.lines.push_back("2 nesne bulundu.");
         out.report.set("adet", Json::integer(2));
         out.report.set("katman", Json::string(args.get("katman").as_text()));
-        out.minted.push_back(store.mint_entities({11, 12}, "sorgula", rev).id);
+        out.minted.push_back(
+            scopes.for_client(requester).mint_entities({11, 12}, "sorgula", rev).id);
         return out;
     }
 
@@ -86,7 +99,10 @@ struct FakeDispatcher final : ai::Dispatcher
         if (!plan.id.empty()) {
             const std::string target = plan.id;
             for (const ai::PlanStep& step : plan.steps) {
-                const core::Status appended = plans.append(target, step);
+                // OWNERSHIP-CHECKED, like the real one: a client may extend only
+                // a suggestion it filed, because the approval a person gives is
+                // for the lines they read (M-07).
+                const core::Status appended = plans.append_for(target, plan.requester, step);
                 if (!appended) return appended.error();
             }
             return target;
@@ -94,16 +110,18 @@ struct FakeDispatcher final : ai::Dispatcher
         return plans.add(std::move(plan));
     }
 
-    core::Result<ai::Plan> plan_state(const std::string& id) const override
+    core::Result<ai::Plan> plan_state(const std::string& id,
+                                      const std::string& requester) const override
     {
-        const ai::Plan* plan = plans.find(id);
+        const ai::Plan* plan = plans.find_for(id, requester);
         if (plan == nullptr)
             return core::err(core::ErrorCode::NotFound, "Böyle bir öneri yok: '" + id + "'.");
         return *plan;
     }
 
-    void withdraw(const std::string& id) override
+    void withdraw(const std::string& id, const std::string& requester) override
     {
+        if (plans.find_for(id, requester) == nullptr) return;
         (void)plans.settle(id, ai::PlanState::Withdrawn, "İstemci akışı kapattı.");
     }
 
@@ -111,7 +129,10 @@ struct FakeDispatcher final : ai::Dispatcher
 
     std::optional<command::ViewInfo> view() const override { return std::nullopt; }
 
-    ai::HandleStore& handles() override { return store; }
+    ai::HandleStore& handles(const std::string& requester) override
+    {
+        return scopes.for_client(requester);
+    }
 
     const ai::Catalog& catalog() const override { return cat; }
 };
@@ -172,16 +193,34 @@ struct Rig
     /// `McpServer` holds references into this rig and must not outlive it.
     ai::McpServer server() { return ai::McpServer(disp, disp.reg, info, policy); }
 
-    /// A points handle over two corners, minted the way a read tool would.
-    std::string points_handle()
+    /// WHAT THE SERVER WILL CALL A CLIENT that presents this rig's token and
+    /// names itself `who`. Mirrors `McpServer::requester_label`, and a handle
+    /// has to be minted into the store of the client that will use it — which
+    /// is the point of M-07 and the reason this helper exists at all.
+    std::string requester(const char* who = nullptr) const
     {
-        return disp.store
+        std::string label = who != nullptr ? std::string(who) : std::string("MCP istemcisi");
+        char buffer[24]   = {};
+        (void)std::snprintf(
+            buffer, sizeof buffer, " #%08llx",
+            static_cast<unsigned long long>(core::fnv1a(policy.token) & 0xFFFFFFFFu));
+        return label + buffer;
+    }
+
+    /// A points handle over two corners, minted the way a read tool would, into
+    /// `who`'s own store.
+    std::string points_handle(const char* who = nullptr)
+    {
+        return disp.scopes.for_client(requester(who))
             .mint_points({core::Point2{0, 0}, core::Point2{10000, 10000}}, "sorgula", disp.rev)
             .id;
     }
 
     /// An entity handle, for a command that takes a selection.
-    std::string entity_handle() { return disp.store.mint_entities({11}, "secimi_al", disp.rev).id; }
+    std::string entity_handle(const char* who = nullptr)
+    {
+        return disp.scopes.for_client(requester(who)).mint_entities({11}, "secimi_al", disp.rev).id;
+    }
 };
 
 /// A JSON-RPC body. `id` null leaves the member out entirely, which is what makes
@@ -1357,4 +1396,149 @@ TEST_CASE("MCP: canlı kaynaklar aynı komutlardan besleniyor")
     CHECK_EQ(refused.status, 400);
     CHECK(refused.body.find("kentoscad://belge/ozet") != std::string::npos);
     CHECK(refused.body.find("kentoscad://yerlesim/denetim") != std::string::npos);
+}
+
+TEST_CASE("M-07: iki istemci birbirinin tutamağını kullanamaz")
+{
+    Rig f;
+    ai::McpServer server = f.server();
+
+    // TWO AGENTS ON ONE LOOPBACK PORT ARE TWO STRANGERS. They present the same
+    // token — it is the workstation's token, not a per-agent one — and name
+    // themselves in `_meta`, so what tells them apart is the requester label.
+    const auto call_as = [&](const char* who, const char* tool, Json arguments,
+                             Json extra = Json::null()) {
+        Json meta = extra.is_object() ? extra : Json::object({});
+        meta.set(ai::kClientMetaKey, Json::string(who));
+        return server.handle(tool_call(tool, std::move(arguments), std::move(meta)).view());
+    };
+
+    // A reads the drawing. The handle is minted into A's store, and the label
+    // the server derives has to be the one the read arrived under — otherwise a
+    // client could not use the handle it was just given.
+    Json ask;
+    ask.set("katman", Json::string("0"));
+    const ai::HttpOutcome read = call_as("Ajan A", "sorgula", std::move(ask));
+    REQUIRE_EQ(read.status, 200);
+    REQUIRE_EQ(f.disp.asked_by.size(), 1u);
+    CHECK_EQ(f.disp.asked_by.front(), f.requester("Ajan A"));
+
+    const std::string a_handle = f.points_handle("Ajan A");
+
+    // A draws with it: accepted, and filed as a suggestion under A's name.
+    Json mine;
+    mine.set("noktalar", Json::string(a_handle));
+    const ai::HttpOutcome drew = call_as("Ajan A", "core_line", std::move(mine));
+    REQUIRE_EQ(drew.status, 200);
+    REQUIRE_FALSE(is_error(result_of(drew)));
+    const std::string plan_id = drew.audit.plan_id;
+    REQUIRE_FALSE(plan_id.empty());
+
+    // ---- B NAMES A'S HANDLE -------------------------------------------------
+    //
+    // It is not a protocol error — the string is well formed — and it is not
+    // silently accepted either. B never read the drawing, so it holds no
+    // promise about those coordinates (CLAUDE.md 5.8), and the answer is the
+    // same one an unknown handle already gets: read first.
+    Json stolen;
+    stolen.set("noktalar", Json::string(a_handle));
+    const ai::HttpOutcome theft = call_as("Ajan B", "core_line", std::move(stolen));
+    CHECK_EQ(theft.status, 200);
+    CHECK(is_error(result_of(theft)));
+    CHECK(text_of(result_of(theft)).find("Böyle bir tutamak yok") != std::string::npos);
+
+    // AND NOTHING WAS FILED FOR B. The refusal happened while the arguments were
+    // still JSON, so there is no half-composed suggestion on anybody's screen.
+    CHECK_EQ(f.disp.plans.pending().size(), 1u);
+
+    // ---- THE COUNTER IS THE REASON THIS MATTERS ----------------------------
+    //
+    // `HandleStore::next_id` hashes a per-store counter, so B's first handle has
+    // exactly the id A's first handle has. Two clients sharing one store would
+    // therefore collide rather than merely overlap; with a store each, the same
+    // id means a different thing to each of them, which is what the comment in
+    // `next_id` always claimed.
+    ai::HandleScopes scopes;
+    const std::string first_of_a =
+        scopes.for_client("A").mint_points({core::Point2{1, 1}}, "sorgula", 1).id;
+    const std::string first_of_b =
+        scopes.for_client("B").mint_points({core::Point2{9, 9}}, "sorgula", 1).id;
+    CHECK_EQ(first_of_a, first_of_b);
+    REQUIRE(scopes.peek("A") != nullptr);
+    REQUIRE(scopes.peek("B") != nullptr);
+    CHECK_EQ(scopes.peek("A")->find(first_of_a)->points.front().x, 1);
+    CHECK_EQ(scopes.peek("B")->find(first_of_b)->points.front().x, 9);
+}
+
+TEST_CASE("M-07: iki istemci birbirinin planını kullanamaz")
+{
+    Rig f;
+    ai::McpServer server = f.server();
+
+    const auto call_as = [&](const char* who, const char* tool, Json arguments,
+                             Json extra = Json::null()) {
+        Json meta = extra.is_object() ? extra : Json::object({});
+        meta.set(ai::kClientMetaKey, Json::string(who));
+        return server.handle(tool_call(tool, std::move(arguments), std::move(meta)).view());
+    };
+
+    Json first;
+    first.set("noktalar", Json::string(f.points_handle("Ajan A")));
+    const ai::HttpOutcome opened = call_as("Ajan A", "core_line", std::move(first));
+    REQUIRE_EQ(opened.status, 200);
+    const std::string plan_id = opened.audit.plan_id;
+    REQUIRE_FALSE(plan_id.empty());
+
+    // ---- B APPENDS TO A'S SUGGESTION ---------------------------------------
+    //
+    // THIS IS THE ONE THAT MATTERS. A plan id travels in A's answer, so it is
+    // not a secret; if an append were allowed on the strength of naming the id,
+    // B's step would be applied by the engineer who read A's lines and clicked
+    // Uygula. The audit record would name A for a step A never composed, and
+    // the drawing would carry a line nobody approved (ai.md R6, R8).
+    Json push;
+    push.set("noktalar", Json::string(f.points_handle("Ajan B")));
+    Json aim;
+    aim.set("plan", Json::string(plan_id));
+    const ai::HttpOutcome intruded =
+        call_as("Ajan B", "core_line", std::move(push), std::move(aim));
+    CHECK_EQ(intruded.status, 200);
+    CHECK(is_error(result_of(intruded)));
+
+    const ai::Plan* plan = f.disp.plans.find(plan_id);
+    REQUIRE(plan != nullptr);
+    CHECK_EQ(plan->steps.size(), 1u);
+    CHECK_EQ(plan->requester, f.requester("Ajan A"));
+
+    // ---- B CANNOT READ IT EITHER, and gets the same words an absent plan
+    // gets: a different refusal would be an oracle telling B that A is
+    // composing something, and a plan id is short enough to walk.
+    CHECK(f.disp.plan_state(plan_id, f.requester("Ajan B"))
+              .error()
+              .message.find("Böyle bir öneri yok") != std::string::npos);
+    CHECK(f.disp.plan_state(plan_id, f.requester("Ajan A")).ok());
+
+    // ---- B'S STREAM CLOSING DOES NOT CANCEL A'S SUGGESTION -----------------
+    //
+    // Closing a stream is how 2026-07-28 spells cancellation, so an unscoped
+    // withdrawal would let any client cancel any pending plan by naming its id.
+    ai::StreamPlan theirs;
+    theirs.plan_id   = plan_id;
+    theirs.requester = f.requester("Ajan B");
+    server.stream_closed(theirs);
+    CHECK_EQ(f.disp.plans.find(plan_id)->state, ai::PlanState::Pending);
+
+    // A's own close does withdraw it, which is the behaviour the scoping had to
+    // preserve rather than trade away.
+    ai::StreamPlan ours;
+    ours.plan_id   = plan_id;
+    ours.requester = f.requester("Ajan A");
+    server.stream_closed(ours);
+    CHECK_EQ(f.disp.plans.find(plan_id)->state, ai::PlanState::Withdrawn);
+
+    // ---- AND THE PERSON AT THE KEYBOARD SEES EVERYTHING --------------------
+    //
+    // An empty label is the operator, who applies the plans and therefore has to
+    // be able to list them whoever filed them (`ClientScope::client`).
+    CHECK(f.disp.plan_state(plan_id, std::string{}).ok());
 }

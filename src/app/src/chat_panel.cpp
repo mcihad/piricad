@@ -429,7 +429,8 @@ int ChatPanel::runReadTools(const std::vector<ai::Block>& calls)
             continue;
         }
 
-        auto outcome = service_.run_read_only(step.value().command_id, step.value().args);
+        auto outcome =
+            service_.run_read_only(step.value().command_id, step.value().args, requesterLabel());
         if (!outcome) {
             chat_->add(ai::tool_result_message(call, outcome.error().message, true));
             ++ran;
@@ -458,15 +459,19 @@ int ChatPanel::runReadTools(const std::vector<ai::Block>& calls)
     return ran;
 }
 
+std::string ChatPanel::requesterLabel() const
+{
+    const ai::ProviderProfile* profile = chosen();
+    return profile != nullptr ? "sohbet · " + profile->name : std::string("sohbet");
+}
+
 QString ChatPanel::fileWrites(const std::vector<ai::Block>& calls)
 {
     ai::Plan plan;
-    plan.requester = "sohbet";
+    plan.requester = requesterLabel();
     plan.model     = turn_ != nullptr ? turn_->message().model : std::string();
-    if (const ai::ProviderProfile* profile = chosen(); profile != nullptr) {
-        plan.endpoint  = ai::endpoint_url(*profile);
-        plan.requester = "sohbet · " + profile->name;
-    }
+    if (const ai::ProviderProfile* profile = chosen(); profile != nullptr)
+        plan.endpoint = ai::endpoint_url(*profile);
     for (std::size_t i = chat_->size(); i > 0; --i) {
         const ai::Message& message = chat_->messages()[i - 1];
         if (message.role == ai::Role::User) {

@@ -243,6 +243,78 @@ TEST_CASE("Tutamak: biçim, çözüm ve çizim değişince reddedilme")
     CHECK(told.find("noktalar") == nullptr);
 }
 
+TEST_CASE("M-07: istemci depoları ayrıdır ve en eskisi düşer")
+{
+    ai::HandleScopes scopes;
+
+    // ASKING CREATES, so the first call from a client is not a special case at
+    // the call site.
+    CHECK(scopes.peek("bir") == nullptr);
+    (void)scopes.for_client("bir");
+    CHECK(scopes.peek("bir") != nullptr);
+    CHECK_EQ(scopes.clients(), 1u);
+
+    // Asking twice is the same store, or a client would lose its handles
+    // between two calls of one turn.
+    const std::string minted =
+        scopes.for_client("bir").mint_points({core::Point2{5, 5}}, "sorgula", 3).id;
+    CHECK(scopes.for_client("bir").find(minted) != nullptr);
+
+    // BOUNDED, because a caller that keeps inventing names must not grow the
+    // program's memory. The cap is reached exactly once `bir` plus fifteen
+    // others are held; the sixteenth newcomer is what pushes one out, and the
+    // one pushed out is the FIRST opened — `bir` — never whichever store was
+    // cheapest to drop.
+    for (std::size_t i = 0; i + 1 < ai::HandleScopes::kMaxClients; ++i)
+        (void)scopes.for_client("istemci-" + std::to_string(i));
+    CHECK_EQ(scopes.clients(), ai::HandleScopes::kMaxClients);
+    CHECK(scopes.peek("bir") != nullptr);
+
+    (void)scopes.for_client("bir-fazla");
+    CHECK_EQ(scopes.clients(), ai::HandleScopes::kMaxClients);
+    CHECK(scopes.peek("bir") == nullptr);
+    CHECK(scopes.peek("istemci-0") != nullptr);
+    CHECK(scopes.peek("bir-fazla") != nullptr);
+
+    // A DROPPED CLIENT IS NOT REFUSED. It gets a fresh store and mints again —
+    // the same recovery a stale handle already asks for.
+    CHECK(scopes.for_client("bir").find(minted) == nullptr);
+    CHECK(scopes.for_client("bir").size() == 0u);
+}
+
+TEST_CASE("M-07: bir planın sahibi vardır, masadaki kişi hepsini görür")
+{
+    ai::PlanStore plans;
+
+    ai::Plan mine;
+    mine.requester = "Ajan A";
+    ai::PlanStep step;
+    step.command_id = "core.layer";
+    step.line       = "KATMAN ad=parsel";
+    mine.steps.push_back(step);
+    const std::string id = plans.add(std::move(mine));
+
+    // The owner reaches it; another client does not, and gets a NULL rather
+    // than a different error — telling the two apart would say that somebody
+    // else's plan exists.
+    CHECK(plans.find_for(id, "Ajan A") != nullptr);
+    CHECK(plans.find_for(id, "Ajan B") == nullptr);
+
+    // AN EMPTY LABEL IS THE PERSON AT THE KEYBOARD, who applies the plans and
+    // therefore has to see every one of them (`ai::ClientScope::client`).
+    CHECK(plans.find_for(id, "") != nullptr);
+
+    // Appending follows the same rule, and that is the clause that matters: the
+    // approval a person gives is for the lines they READ.
+    ai::PlanStep intruder;
+    intruder.command_id = "core.erase";
+    intruder.line       = "SİL nesneler=11";
+    CHECK_FALSE(plans.append_for(id, "Ajan B", intruder));
+    CHECK_EQ(plans.find(id)->steps.size(), 1u);
+    CHECK(plans.append_for(id, "Ajan A", intruder));
+    CHECK_EQ(plans.find(id)->steps.size(), 2u);
+}
+
 TEST_CASE("Öneri defteri: ekle, adım ekle, tek karar")
 {
     ai::PlanStore plans;
