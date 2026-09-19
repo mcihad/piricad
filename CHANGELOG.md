@@ -6,6 +6,23 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — dosyadan okunan çıktı yerleşimi araç çubuğunun listesinde çıkmıyordu
+
+- Bir yerleşim kaydedilip proje tekrar açıldığında `Dosya ▸ Çıktı Yerleşimleri`
+  altında görünüyor, **araç çubuğundaki yazdırma düğmesinin yanındaki listede
+  görünmüyordu**.
+- Sebep: o liste üç yerden yeniden kuruluyordu — açılışta bir kez, bir yazdırma
+  **profili** değişince, ve yerleşim kuran tek menü girdisinden. Proje açmak
+  bunların hiçbiri değil. Komut satırından, betikten, şablondan ve MCP'den kurulan
+  yerleşimler de aynı sebeple görünmüyordu.
+- Artık `aboutToShow`'a bağlı, yani her açılışta belgeye soruyor — `Dosya ▸ Çıktı
+  Yerleşimleri` menüsünün baştan beri yaptığı şey, ve o menünün doğru olmasının
+  sebebi. Çağrı yerlerini kovalamak, biri yeni bir yerleşim kurma yolu eklediğinde
+  yine yanlış olacak bir listedir.
+- `layout-designer` probe'u üç yolu da yürüyor: menüden kurulan, komut satırından
+  kurulan ve **kaydedilip tekrar açılan**. Düzeltme kapatılınca üçü de kırılıyor.
+
+
 ### Eklendi — öğeler kendi haritasına bağlanıyor (TODOS L-05)
 
 - Bir ölçek çubuğu bir haritanın ölçeğini, bir `<olcek>` yer tutucusu onun

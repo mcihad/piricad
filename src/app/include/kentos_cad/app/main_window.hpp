@@ -317,6 +317,10 @@ public:
     /// agree — the submenu exists, it is rebuilt from the document, each sheet
     /// has its own entries, and each entry is CONNECTED. A screenshot shows the
     /// first; only walking the actions and triggering one shows the rest.
+    /// Every entry of the toolbar's print list, as a menu walk would find it.
+    /// For the probe that proves a layout read off disk reaches it.
+    QStringList probePrintMenu();
+
     QStringList probeLayoutMenu();
 
     /// Drives the six modify tools with REAL mouse and key events, the way a hand

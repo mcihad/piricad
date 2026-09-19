@@ -539,6 +539,40 @@ int main(int argc, char** argv)
             check(window.probeLayoutMenu().contains(QStringLiteral("    Tasarımcıyı Aç")),
                   "yerleşimin alt menüsünde Tasarımcıyı Aç yok");
 
+            // ---- AND THE TOOLBAR'S PRINT LIST, AFTER A ROUND TRIP -----------
+            //
+            // A REPORTED BUG: a layout saved into a project and read back showed
+            // up under `Dosya ▸ Çıktı Yerleşimleri` and NOT in the list beside
+            // the toolbar's print button. That list was rebuilt from three
+            // places — startup, a print PROFILE changing, and the one menu entry
+            // that makes a layout — and opening a project is none of them. It is
+            // rebuilt on `aboutToShow` now, so the round trip is what this
+            // checks: save, open, walk the menu.
+            check(window.probePrintMenu().contains(QStringLiteral("Ada 1284")),
+                  "yerleşim yazdırma listesinde yok");
+
+            // A LAYOUT MADE BY A PATH THAT NEVER TOUCHES THIS MENU, which is
+            // the shape of the bug: the command line, a script, a template and
+            // MCP all reach the document without going near the toolbar.
+            window.runScriptLine(
+                QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=\"Komuttan\" kagit=A4"));
+            QCoreApplication::processEvents();
+            check(window.probePrintMenu().contains(QStringLiteral("Komuttan")),
+                  "komut satırından kurulan yerleşim yazdırma listesinde yok");
+
+            // AND THE ROUND TRIP THE USER REPORTED: save it, open it again.
+            const QString saved = dir + QStringLiteral("/yerlesimli.pcad");
+            QFile::remove(saved);
+            window.runScriptLine(QStringLiteral("FARKLIKAYDET \"%1\"").arg(saved));
+            window.runScriptLine(QStringLiteral("AÇ \"%1\"").arg(saved));
+            QCoreApplication::processEvents();
+            for (const QString& line : window.probePrintMenu()) {
+                (void)std::fprintf(stdout, "[yazdirma-listesi] %s\n", line.toUtf8().constData());
+                (void)std::fflush(stdout);
+            }
+            check(window.probePrintMenu().contains(QStringLiteral("Ada 1284")),
+                  "dosyadan okunan yerleşim yazdırma listesinde yok");
+
             const QString pdf = dir + QStringLiteral("/yerlesim.pdf");
             controller->runLine(
                 QStringLiteral("YAZDIR yerlesim=\"Ada 1284\" dosya=\"%1\"").arg(pdf),

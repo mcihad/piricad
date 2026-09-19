@@ -1073,6 +1073,18 @@ void MainWindow::buildToolBars()
         connect(actPrintMenu_, &QAction::triggered, this, [this, arrow] {
             printMenu_->popup(arrow->mapToGlobal(QPoint(0, arrow->height())));
         });
+        // REBUILT EVERY TIME IT OPENS, like `Dosya ▸ Çıktı Yerleşimleri` (which is
+        // why that one was right and this one was not).
+        //
+        // It used to be rebuilt from three places: once at startup, when a print
+        // PROFILE changed, and from the one menu entry that creates a layout.
+        // Opening a project was none of those — so a drawing whose layouts came
+        // off disk listed none of them here, while the File menu listed them all.
+        // So could a layout made on the command line, from a script, from a
+        // template or over MCP. Chasing those call sites is a list that is wrong
+        // again the next time somebody adds a way to make a layout; asking the
+        // document when the menu opens is not.
+        connect(printMenu_, &QMenu::aboutToShow, this, &MainWindow::rebuildPrintMenu);
         rebuildPrintMenu();
         connect(&controller_->printService(), &PrintService::profilesChanged, this,
                 &MainWindow::rebuildPrintMenu);
@@ -3557,6 +3569,24 @@ void MainWindow::rebuildLayoutMenu()
     }
 }
 
+/// Every entry of the toolbar's print list, as a menu walk would find it.
+///
+/// Raises `aboutToShow` for the same reason `probeLayoutMenu` does: a menu
+/// nobody has opened is a state a user never sees, so reading it would test the
+/// wrong thing — and this list's whole defect was that it was NOT rebuilt when
+/// it opened.
+QStringList MainWindow::probePrintMenu()
+{
+    QStringList out;
+    if (printMenu_ == nullptr) return {QStringLiteral("yazdırma listesi yok")};
+    emit printMenu_->aboutToShow();
+    for (QAction* action : printMenu_->actions()) {
+        if (action->isSeparator()) continue;
+        out << action->text().trimmed();
+    }
+    return out;
+}
+
 QStringList MainWindow::probeLayoutMenu()
 {
     QStringList out;
@@ -3823,7 +3853,6 @@ void MainWindow::newLayout()
     controller_->runLine(
         QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=\"%1\" kagit=A3 yon=yatay").arg(quoted),
         command::Origin::Gui);
-    rebuildPrintMenu();
     openLayoutDesigner(named.trimmed());
 }
 
