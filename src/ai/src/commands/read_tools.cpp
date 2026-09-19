@@ -300,6 +300,97 @@ Task<void> run_view_info(Context& ctx)
     co_return;
 }
 
+/// WHAT AM I WORKING ON. The first question any agent, script or macro asks.
+///
+/// Five read tools already answer five narrower questions, and an agent that has
+/// to call all of them before it can act spends its first turn finding out that
+/// the drawing has one layout and nothing selected. This answers the whole shape
+/// in one call, so "bunu A3'e yerleştir" resolves against the one valid selection
+/// and the one layout without asking the user to pick anything (TODOS A-01).
+///
+/// IT SUMMARISES, IT DOES NOT DUMP. No geometry, no attribute rows, no layer
+/// 列: a context that grew with the drawing would put a five-million-parcel sheet
+/// into a prompt. Counts and names; the narrow tools answer the rest.
+Task<void> run_context(Context& ctx)
+{
+    command::Bus& bus         = ctx.session().bus();
+    const core::Document& doc = bus.document();
+
+    Json out;
+    out.set("surum", Json::integer(static_cast<std::int64_t>(doc.revision())));
+    out.set("crs", Json::string(doc.crs().id()));
+    out.set("nesne_sayisi", Json::integer(static_cast<std::int64_t>(doc.live_entity_count())));
+
+    const core::Box2 extent = doc.extent();
+    if (!extent.empty()) {
+        Json box = Json::array({});
+        box.push(Json::integer(extent.min_x));
+        box.push(Json::integer(extent.min_y));
+        box.push(Json::integer(extent.max_x));
+        box.push(Json::integer(extent.max_y));
+        out.set("kapsam", std::move(box));
+    }
+
+    // ---- layers, by name and count ------------------------------------------
+    Json layers = Json::array({});
+    for (const core::Layer& one : doc.layers())
+        layers.push(Json::string(one.name));
+    out.set("katmanlar", std::move(layers));
+
+    // ---- layouts, and whether each is ready to print -------------------------
+    //
+    // "IS IT AIMED" IS THE QUESTION AN AGENT ACTUALLY HAS. A layout that exists
+    // and looks at nothing prints an empty box, and finding that out after the
+    // PDF is written is finding it out too late (L-15).
+    Json sheets = Json::array({});
+    for (const core::Layout& one : doc.layouts().all()) {
+        Json sheet;
+        sheet.set("ad", Json::string(one.name));
+        sheet.set("sayfa", Json::integer(static_cast<std::int64_t>(one.pages.size())));
+        sheet.set("oge", Json::integer(static_cast<std::int64_t>(one.items.size())));
+        if (!one.paper.empty()) sheet.set("kagit", Json::string(one.paper));
+        const core::LayoutItem* map = one.first_map();
+        sheet.set("hedefli", Json::boolean(map != nullptr && !map->extent.empty()));
+        const std::size_t trouble = core::layout_trouble(one).size();
+        if (trouble != 0) sheet.set("sorun", Json::integer(static_cast<std::int64_t>(trouble)));
+        sheets.push(std::move(sheet));
+    }
+    out.set("cikti_yerlesimleri", std::move(sheets));
+
+    // ---- the selection, as a count and its keys ------------------------------
+    // THE KEYS, NOT THE SLOTS (model.md R44). A slot is reused; a key is the
+    // answer to "which parcel was this" six months later.
+    Json picked = Json::array({});
+    for (const core::EntityKey key : bus.selection().keys())
+        picked.push(Json::integer(static_cast<std::int64_t>(core::raw(key))));
+    out.set("secili", std::move(picked));
+
+    // ---- the view, when there is one ----------------------------------------
+    if (bus.on_view_query) {
+        const command::ViewInfo view = bus.on_view_query();
+        Json seen;
+        Json box = Json::array({});
+        box.push(Json::integer(view.window.min_x));
+        box.push(Json::integer(view.window.min_y));
+        box.push(Json::integer(view.window.max_x));
+        box.push(Json::integer(view.window.max_y));
+        seen.set("pencere", std::move(box));
+        if (view.scale != 0) seen.set("olcek", Json::integer(view.scale));
+        out.set("gorunum", std::move(seen));
+    } else {
+        // AN HONEST ABSENCE. A headless run has no window, and inventing one
+        // would put an agent's next drawing somewhere nobody was looking.
+        out.set("gorunum", Json::null());
+    }
+
+    ctx.report(std::move(out));
+    ctx.echo("Bağlam: " + std::to_string(doc.live_entity_count()) + " nesne, " +
+             std::to_string(doc.layers().size()) + " katman, " +
+             std::to_string(doc.layouts().size()) + " çıktı yerleşimi, " +
+             std::to_string(bus.selection().size()) + " seçili.");
+    co_return;
+}
+
 } // namespace
 
 std::vector<CommandSpec> detail::read_tool_specs()
@@ -370,6 +461,20 @@ std::vector<CommandSpec> detail::read_tool_specs()
         .summary = "Ekranda görünen alanın köşe koordinatlarını, merkezini, ölçeğini ve CRS'ini "
                    "bildirir.",
         .run = &run_view_info,
+    });
+
+    specs.push_back(CommandSpec{
+        .id       = "core.context",
+        .names    = {"BAĞLAM", "BAGLAM", "CONTEXT", "BĞL"},
+        .category = command::Category::Query,
+        .params   = {},
+        .undo     = UndoPolicy::None,
+        .flags    = Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Üzerinde çalışılan her şeyi tek çağrıda özetler: belge sürümü, koordinat "
+                   "sistemi, kapsam, katmanlar, çıktı yerleşimleri ve hedefli olup olmadıkları, "
+                   "seçili nesneler ve görünüm. Özet verir, döküm değil.",
+        .effect = command::Effect::Query,
+        .run    = &run_context,
     });
 
     return specs;

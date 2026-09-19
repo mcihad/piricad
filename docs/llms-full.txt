@@ -41,8 +41,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 73 (68 tanesi onay ister)
-- Katalog parmak izi: `15448808399476865255`
+- Araç sayısı: 74 (68 tanesi onay ister)
+- Katalog parmak izi: `7173599570416046331`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -184,6 +184,17 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesneler` | string | hayır | Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_context` — BAĞLAM
+
+Üzerinde çalışılan her şeyi tek çağrıda özetler: belge sürümü, koordinat sistemi, kapsam, katmanlar, çıktı yerleşimleri ve hedefli olup olmadıkları, seçili nesneler ve görünüm. Özet verir, döküm değil.
+Komut: BAĞLAM (BAGLAM, CONTEXT, BĞL)
+Bu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.
+
+Doğrudan çalışır.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
 
 ### `core_contour` — EŞYÜKSELTİ
 

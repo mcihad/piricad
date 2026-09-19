@@ -112,6 +112,7 @@ Tek tek komutlar:
 | `TERCİH` | [Uygulama tercihleri](komutlar/preference.md) |
 | `MOD` | [Oturum modları](komutlar/mode.md) |
 | `YARDIM` | [Yardım](komutlar/help.md) |
+| `BAĞLAM` | [Üzerinde çalışılanın özeti](komutlar/context.md) |
 | `KATMANLAR` | [Katman dökümü](komutlar/layers.md) |
 | `ÖZNİTELİKŞEMASI` | [Öznitelik sütunlarının dökümü](komutlar/attr_schema.md) |
 | `SORGULA` | [Koşula uyan nesneleri sayma](komutlar/query.md) |

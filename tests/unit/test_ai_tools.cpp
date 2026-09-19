@@ -490,3 +490,53 @@ TEST_CASE("ÖNERİ ve MCPSUNUCU motor yokken dürüst konuşur")
     // And the port is a declared range.
     CHECK(!f.bus.execute_line("MCPSUNUCU islem=baslat port=42", Origin::Test).ok());
 }
+
+TEST_CASE("Bağlam: üzerinde çalışılan her şeyi tek çağrıda söyler")
+{
+    // TODOS A-01's acceptance: "bunu A3'e yerleştir" has to resolve against the
+    // one valid selection and the one layout without asking the user to pick
+    // anything. An agent that must call five narrow tools first spends its first
+    // turn discovering that the drawing has one layout and nothing selected.
+    Rig rig;
+    REQUIRE(rig.bus.execute_line("KATMAN ad=parsel", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("ALAN noktalar=0,0 100,0 100,80 0,80", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Kroki kagit=A3", Origin::Test).ok());
+
+    auto said = rig.bus.execute_line("BAĞLAM", Origin::Test);
+    REQUIRE(said.ok());
+    const core::Json& out = said.value().report;
+
+    REQUIRE(out.find("nesne_sayisi") != nullptr);
+    CHECK_EQ(out.find("nesne_sayisi")->as_int(), 1);
+    REQUIRE(out.find("katmanlar") != nullptr);
+    CHECK(!out.find("katmanlar")->as_array().empty());
+
+    // THE LAYOUT, AND WHETHER IT IS AIMED. A layout that exists and looks at
+    // nothing prints an empty box, and finding that out after the PDF is written
+    // is finding it out too late.
+    REQUIRE(out.find("cikti_yerlesimleri") != nullptr);
+    REQUIRE_EQ(out.find("cikti_yerlesimleri")->as_array().size(), std::size_t{1});
+    const core::Json& sheet = out.find("cikti_yerlesimleri")->as_array()[0];
+    CHECK_EQ(sheet.find("ad")->as_string(), "Kroki");
+    CHECK_FALSE(sheet.find("hedefli")->as_bool());
+
+    // Aim it and the answer changes.
+    REQUIRE(rig.bus
+                .execute_line("ÇIKTIÖĞE islem=ayarla ad=harita pencere=0,0 pencere=100,80",
+                              Origin::Test)
+                .ok());
+    auto again = rig.bus.execute_line("BAĞLAM", Origin::Test);
+    REQUIRE(again.ok());
+    CHECK(
+        again.value().report.find("cikti_yerlesimleri")->as_array()[0].find("hedefli")->as_bool());
+
+    // NO WINDOW IS AN HONEST ANSWER, not an invented rectangle: a headless run
+    // has none, and guessing would put an agent's next drawing somewhere nobody
+    // was looking.
+    REQUIRE(again.value().report.find("gorunum") != nullptr);
+    CHECK(again.value().report.find("gorunum")->is_null());
+
+    // AND IT SUMMARISES RATHER THAN DUMPS: no geometry, no attribute rows.
+    CHECK(out.find("nesneler") == nullptr);
+    CHECK(out.find("geometri") == nullptr);
+}

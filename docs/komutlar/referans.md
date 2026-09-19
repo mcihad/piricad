@@ -100,6 +100,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.query`](query.md) | `SORGULA`, `QUERY`, `SRG` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Katman ve öznitelik koşuluna uyan nesneleri sayar ve anahtarlarını bildirir. |
 | [`core.selection_info`](selection_info.md) | `SEÇİMBİLGİSİ`, `SECIMBILGISI`, `SELECTIONINFO`, `SÇB` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Kullanıcının o anki seçimini bildirir: kaç nesne ve hangi anahtarlar. |
 | [`core.view_info`](view_info.md) | `GÖRÜNÜMBİLGİSİ`, `GORUNUMBILGISI`, `VIEWINFO`, `GRB` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Ekranda görünen alanın köşe koordinatlarını, merkezini, ölçeğini ve CRS'ini bildirir. |
+| [`core.context`](context.md) | `BAĞLAM`, `BAGLAM`, `CONTEXT`, `BĞL` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Üzerinde çalışılan her şeyi tek çağrıda özetler: belge sürümü, koordinat sistemi, kapsam, katmanlar, çıktı yerleşimleri ve hedefli olup olmadıkları, seçili nesneler ve görünüm. Özet verir, döküm değil. |
 | [`core.suggestion`](suggestion.md) | `ÖNERİ`, `ONERI`, `SUGGESTION`, `ÖN` | Sistem | komuta özel | etkileşimli, betiklenebilir | Bekleyen yapay zeka önerilerini listeler, durumunu söyler, uygular ya da reddeder. |
 | [`core.mcp`](mcp.md) | `MCPSUNUCU`, `MCPSERVER`, `MCP` | Sistem | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Yapay zeka ajanlarının bağlanacağı MCP sunucusunu başlatır, durdurur, durumunu söyler ya da yeni bir erişim belirteci üretir. |
 | [`core.ai_provider`](ai_provider.md) | `YAPAYZEKAMODELİ`, `YAPAYZEKAMODELI`, `AIMODEL`, `YZM` | Sistem | geri alınmaz | etkileşimli, betiklenebilir | Yapay zeka model sağlayıcılarını listeler, ekler, siler, birini varsayılan yapar ya da bağlantısını dener; profil adresi, lehçesi, modeli ve anahtar adını taşır. |
@@ -1273,6 +1274,14 @@ Parametre almaz.
 
 Ayrıntılı kullanım: [GÖRÜNÜMBİLGİSİ](view_info.md)
 
+### `core.context` — BAĞLAM
+
+Üzerinde çalışılan her şeyi tek çağrıda özetler: belge sürümü, koordinat sistemi, kapsam, katmanlar, çıktı yerleşimleri ve hedefli olup olmadıkları, seçili nesneler ve görünüm. Özet verir, döküm değil.
+
+Parametre almaz.
+
+Ayrıntılı kullanım: [BAĞLAM](context.md)
+
 ### `core.suggestion` — ÖNERİ
 
 Bekleyen yapay zeka önerilerini listeler, durumunu söyler, uygular ya da reddeder.
@@ -1740,6 +1749,34 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "BIRLESTIR",
         "COMBINE",
         "BRL"
+      ]
+    }
+  },
+  {
+    "name": "core_context",
+    "title": "BAĞLAM",
+    "description": "Üzerinde çalışılan her şeyi tek çağrıda özetler: belge sürümü, koordinat sistemi, kapsam, katmanlar, çıktı yerleşimleri ve hedefli olup olmadıkları, seçili nesneler ve görünüm. Özet verir, döküm değil.\nKomut: BAĞLAM (BAGLAM, CONTEXT, BĞL)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.context",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "none",
+      "cad.kentos/names": [
+        "BAĞLAM",
+        "BAGLAM",
+        "CONTEXT",
+        "BĞL"
       ]
     }
   },

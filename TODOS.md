@@ -452,7 +452,20 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
 Üründe henüz olmayan bir yetenek “AI destekli” gösterilmez. Önce ortak komut ve
 motor kabiliyeti eklenir; GUI, AI ve MCP aynı sürümde bu kabiliyeti kullanır.
 
-- [ ] **A-01 / P0 — Tam ve tipli bağlam.** Aktif belge/layout/sayfa, seçim,
+- [~] **A-01 / P0 — Tam ve tipli bağlam.** *(bağlam aracı 19 Eylül 2026)*
+  **Yapıldı:** `core.context` (**BAĞLAM**) — bir ajanın ilk sorduğu soruyu tek
+  çağrıda cevaplıyor: belge sürümü, CRS, çizim kapsamı, nesne sayısı, katman
+  adları, çıktı yerleşimleri ve her birinin **hedefli olup olmadığı** ve kaç
+  sorunu olduğu, seçili nesnelerin **kalıcı anahtarları** (yuva değil, model.md
+  R44), ve görünüm.
+  **Özet veriyor, döküm değil**: geometri yok, öznitelik satırı yok, nesne listesi
+  yok — çizimle birlikte büyüyen bir bağlam, beş milyon parsellik bir paftayı bir
+  isteme sokardı. Gerisini beş dar araç cevaplıyor.
+  **Ekran yoksa `gorunum` `null`** ve bu dürüst bir cevap: uydurulmuş bir
+  dikdörtgen, ajanın bir sonraki çizimini kimsenin bakmadığı bir yere koyardı.
+  **Kalan:** şablon kitaplığı, kullanılabilir işlem algoritmaları ve **etkili
+  politika** — sonuncusu S-01'in Gate'e bağlanmasına bağlı, o da engelli.
+  Eski madde metni: Aktif belge/layout/sayfa, seçim,
   katmanlar, CRS/birimler, görünüm, şablonlar, kullanılabilir algoritmalar, yetenekler
   ve etkili politikayı sorgulanabilir sun. Büyük veriyi sayfalı/sınırlandırılmış
   sorgula; bütün geometriyi prompt'a dökme. **Kabul:** “bunu A3'e yerleştir” ifadesi
