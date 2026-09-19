@@ -1,0 +1,78 @@
+{
+ "schema_version": 1,
+ "package_version": "1.0.0",
+ "id": "is-sablonlari",
+ "source": "KentOSCad komut kılavuzu (docs/komutlar) — mevzuat değeri taşımaz; bu paket, programın kendi komutlarının önerilen sırasıdır",
+ "published": "2026-09-19",
+ "licence": "GPL-3.0-or-later",
+ "aciklama": "Bir ajanın ya da bir kullanıcının sık yaptığı işleri, komut satırları hâlinde ve sırasıyla. Hiçbir şey çalıştırmaz: adımlar sıradan komutlardır ve yazan her adım yine önizlemeli bir öneriye dönüşür (CLAUDE.md 5.7). Her adım canlı komut kütüğüne karşı sınanır (tests/unit/test_ai_tools.cpp): var olmayan bir komut ya da tanımsız bir argüman yapıyı kırar.",
+ "sablonlar": [
+  {
+   "id": "atlas-pafta",
+   "ad": "Atlas: her parsel için bir sayfa",
+   "ozet": "Bir katmandaki her nesne için bir sayfa üreten çıktı yerleşimi kurar, denetler ve tek PDF'e basar.",
+   "surum": "1.0.0",
+   "parametreler": [
+    { "ad": "yerlesim", "aciklama": "Kurulacak çıktı yerleşiminin adı", "ornek": "Ada 1284 Atlası", "zorunlu": true },
+    { "ad": "katman", "aciklama": "Her nesnesi bir sayfa olacak katman", "ornek": "PARSEL", "zorunlu": true },
+    { "ad": "kagit", "aciklama": "Kâğıt boyu", "ornek": "A3", "zorunlu": false },
+    { "ad": "yon", "aciklama": "Kâğıt yönü: dikey ya da yatay", "ornek": "yatay", "zorunlu": false },
+    { "ad": "dosya", "aciklama": "Yazılacak PDF'in yolu", "ornek": "ada1284-atlas.pdf", "zorunlu": true }
+   ],
+   "adimlar": [
+    "BAĞLAM",
+    "ÇIKTIYERLEŞİMİ islem=ekle ad=\"<yerlesim>\" kagit=<kagit> yon=<yon>",
+    "ÇIKTIÖĞE islem=ekle yerlesim=\"<yerlesim>\" tur=harita ad=Harita",
+    "ÇIKTIÖĞE islem=ekle yerlesim=\"<yerlesim>\" tur=metin ad=Başlık",
+    "ÇIKTIÖĞE islem=ayarla yerlesim=\"<yerlesim>\" ad=Başlık metin=\"<ada> ada <parsel> parsel\"",
+    "ÇIKTIÖĞE islem=ekle yerlesim=\"<yerlesim>\" tur=olcek ad=Ölçek",
+    "ÇIKTIÖĞE islem=ekle yerlesim=\"<yerlesim>\" tur=kuzey ad=Kuzey",
+    "ÇIKTIYERLEŞİMİ islem=atlas ad=\"<yerlesim>\" katman=\"<katman>\"",
+    "ÇIKTIYERLEŞİMİ islem=denetle ad=\"<yerlesim>\"",
+    "YAZDIR yerlesim=\"<yerlesim>\" dosya=\"<dosya>\""
+   ],
+   "notlar": "İlk adım okumadır: BAĞLAM, çizimde zaten bir yerleşim olup olmadığını söyler — aynı adla ikinci bir `ekle` var olanı DEĞİŞTİRİR. `islem=atlas` sayfaları katmandaki nesne sayısı kadar çoğaltır; `islem=denetle` basmadan önce neyin eksik kaldığını söyler ve YAZDIR'dan önce okunmalıdır. Başlıktaki <ada> ve <parsel> şablonun parametresi değildir: sayfa basılırken o sayfanın nesnesinin özniteliklerinden çözülür."
+  },
+  {
+   "id": "kadastro-kontrol",
+   "ad": "Kadastro kontrolü: çizimi basmadan önce okumak",
+   "ozet": "Çizimin şeklini, katmanlarını, öznitelik şemasını ve çıktı yerleşimlerinin eksiklerini sırayla okur. Hiçbir adımı yazmaz.",
+   "surum": "1.0.0",
+   "parametreler": [
+    { "ad": "katman", "aciklama": "Denetlenecek katman", "ornek": "PARSEL", "zorunlu": true },
+    { "ad": "yerlesim", "aciklama": "Denetlenecek çıktı yerleşimi", "ornek": "Ada 1284", "zorunlu": false }
+   ],
+   "adimlar": [
+    "BAĞLAM",
+    "KATMANLAR",
+    "ÖZNİTELİKŞEMASI",
+    "SORGULA katman=\"<katman>\"",
+    "ÇIKTIYERLEŞİMİ islem=denetle ad=\"<yerlesim>\""
+   ],
+   "notlar": "Bu şablonun TAMAMI okumadır: hiçbir adım çizimi değiştirmez, dolayısıyla hiçbiri onay beklemez. ÖZNİTELİKŞEMASI çizimin bütün sütunlarını verir — katman başına süzmez — ve hangi sütunların dolu olduğunu SORGULA sonucundan okursunuz. SORGULA sonucu bir TUTAMAK döndürür; sonraki bir çizim adımı koordinatı ancak o tutamaktan alabilir (CLAUDE.md 5.8). Son adım, çizimde bir çıktı yerleşimi yoksa atlanır."
+  },
+  {
+   "id": "parsel-raporu",
+   "ad": "Parsel raporu: tablolu tek sayfa",
+   "ozet": "Bir katmanın özniteliklerini tablo olarak taşıyan tek sayfalık bir çıktı yerleşimi kurar ve PDF'e basar.",
+   "surum": "1.0.0",
+   "parametreler": [
+    { "ad": "yerlesim", "aciklama": "Kurulacak çıktı yerleşiminin adı", "ornek": "Parsel Raporu", "zorunlu": true },
+    { "ad": "katman", "aciklama": "Tabloya girecek katman", "ornek": "PARSEL", "zorunlu": true },
+    { "ad": "baslik", "aciklama": "Sayfanın başlığı", "ornek": "Ada 1284 parsel listesi", "zorunlu": false },
+    { "ad": "dosya", "aciklama": "Yazılacak PDF'in yolu", "ornek": "parsel-raporu.pdf", "zorunlu": true }
+   ],
+   "adimlar": [
+    "ÖZNİTELİKŞEMASI",
+    "ÇIKTIYERLEŞİMİ islem=ekle ad=\"<yerlesim>\" kagit=A4 yon=dikey",
+    "ÇIKTIÖĞE islem=ekle yerlesim=\"<yerlesim>\" tur=metin ad=Başlık",
+    "ÇIKTIÖĞE islem=ayarla yerlesim=\"<yerlesim>\" ad=Başlık metin=\"<baslik>\"",
+    "ÇIKTIÖĞE islem=ekle yerlesim=\"<yerlesim>\" tur=tablo ad=Liste",
+    "ÇIKTIÖĞE islem=ayarla yerlesim=\"<yerlesim>\" ad=Liste metin=\"<katman>\"",
+    "ÇIKTIYERLEŞİMİ islem=denetle ad=\"<yerlesim>\"",
+    "YAZDIR yerlesim=\"<yerlesim>\" dosya=\"<dosya>\""
+   ],
+   "notlar": "İlk adım şemayı okur: tabloya hangi sütunların gireceğini bilmeden kurulan bir rapor, boş sütunlar basar. Tablo öğesinin KATMANI `metin=` ile verilir — tablo öğesinde metin, yazının kendisi değil satırların geldiği katmandır; sütunları daraltmak için `sutunlar=` yazın. Tablo sayfaya sığmazsa `islem=denetle` bunu söyler — kesilmiş bir tablo basılmış hâlde fark edilirse iş yeniden yapılır."
+  }
+ ]
+}

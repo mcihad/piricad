@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kentoscad.org/data/catalogs/schema/is-sablonlari.schema.json",
+  "title": "KentOSCad iş şablonları",
+  "description": "Sık yapılan işlerin komut satırları, sırasıyla. Bir şablon hiçbir şey ÇALIŞTIRMAZ: adımlar sıradan komut satırlarıdır ve yazan her adım yine önizlemeli bir öneriye dönüşür. Önerilen sıra değiştiğinde bu dosya güncellenir; yeniden derleme gerekmez.",
+  "type": "object",
+  "required": ["schema_version", "package_version", "id", "source", "published", "licence", "sablonlar"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "package_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "id": { "type": "string" },
+    "source": { "type": "string", "description": "Şablonların hangi belgeden derlendiği." },
+    "published": { "type": "string", "format": "date" },
+    "licence": { "type": "string" },
+    "aciklama": { "type": "string" },
+    "sablonlar": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "ad", "ozet", "surum", "adimlar"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "description": "Küçük harf ASCII, tire ile ayrılmış; katalog içinde tekildir ve bir istemci şablonu BUNUNLA ister.", "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "ad": { "description": "Türkçe ad; insanın okuduğu budur.", "type": "string", "minLength": 1 },
+          "ozet": { "description": "Tek cümle: bu iş ne üretir.", "type": "string", "minLength": 1 },
+          "surum": {
+            "description": "Şablonun KENDİ sürümü, paketinkinden bağımsız. Bir istemci adımları önbelleğe almış olabilir; önerilen sıra değiştiğinde bunu buradan anlar. Bir işi güncellemek, diğer ikisinin değiştiğini söylememelidir.",
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "notlar": { "description": "Çalıştırmadan önce bilinmesi gerekenler: hangi adım yazar, sonuç nedir, bu şablonun YAPMADIĞI nedir.", "type": "string" },
+          "parametreler": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["ad", "aciklama"],
+              "additionalProperties": false,
+              "properties": {
+                "ad": { "description": "Adımlarda `<ad>` biçiminde geçen yer tutucunun adı.", "type": "string", "pattern": "^[a-z_]+$" },
+                "aciklama": { "type": "string", "minLength": 1 },
+                "ornek": { "description": "İşe yarayacak bir değer; bir ajana biçimi gösterir.", "type": "string" },
+                "zorunlu": { "description": "Değeri olmadan adımın anlamsız olup olmadığı. Verilmezse zorunludur.", "type": "boolean" }
+              }
+            }
+          },
+          "adimlar": {
+            "description": "Komut satırları, çalışacakları sırada. Her biri CANLI komut kütüğüne karşı sınanır: var olmayan bir komut ya da tanımsız bir argüman yapıyı kırar (tests/unit/test_ai_tools.cpp).",
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  }
+}

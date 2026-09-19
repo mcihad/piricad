@@ -78,6 +78,19 @@ inline constexpr const char* kDefaultDimensionStylePath = "data/catalogs/dxf/olc
 /// the file, so the caller can say which path it looked for.
 std::string resolve_catalog_path(std::string_view configured);
 
+/// The text of a catalogue file under `/data`, found the way
+/// `resolve_catalog_path` finds one.
+///
+/// WHY A RAW-TEXT READER SITS BESIDE THE TYPED LOADERS. `/src/ai` may not open a
+/// file — it is sans-IO and `scripts/ci-gate-ai.sh` refuses `<fstream>` there
+/// (ai.md P10) — but some of what it needs is shipped as data all the same: the
+/// job templates are `/data/catalogs/ai/is-sablonlari.json`, and a better way to
+/// lay out an atlas must be a data release rather than a rebuild (CLAUDE.md 3.5).
+/// So the bytes are read here, where reading a catalogue already happens, and
+/// parsed there, where the shape is known. The alternative was a `Bus` hook the
+/// application installs, which is three moving parts for one file.
+core::Result<std::string> read_catalog_text(std::string_view configured);
+
 /// Reads and validates a pattern catalogue.
 core::Result<HatchPatternCatalog> load_hatch_patterns(const std::string& path);
 

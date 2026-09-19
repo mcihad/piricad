@@ -19,11 +19,15 @@
 // flag the approval gate reads, and it is narrower than `ReadOnly` on purpose —
 // `core.undo`, `core.save` and `core.export` are all `ReadOnly` and none of them
 // is safe to hand an agent unattended.
+#include "kentos_cad/ai/catalog.hpp"
 #include "kentos_cad/ai/commands.hpp"
+#include "kentos_cad/ai/job_templates.hpp"
 
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/drawing_catalogs.hpp"
 #include "kentos_cad/command/log.hpp"
+#include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
@@ -308,9 +312,9 @@ Task<void> run_view_info(Context& ctx)
 /// in one call, so "bunu A3'e yerleştir" resolves against the one valid selection
 /// and the one layout without asking the user to pick anything (TODOS A-01).
 ///
-/// IT SUMMARISES, IT DOES NOT DUMP. No geometry, no attribute rows, no layer
-/// 列: a context that grew with the drawing would put a five-million-parcel sheet
-/// into a prompt. Counts and names; the narrow tools answer the rest.
+/// IT SUMMARISES, IT DOES NOT DUMP. No geometry, no attribute rows, no column
+/// values: a context that grew with the drawing would put a five-million-parcel
+/// sheet into a prompt. Counts and names; the narrow tools answer the rest.
 Task<void> run_context(Context& ctx)
 {
     command::Bus& bus         = ctx.session().bus();
@@ -388,6 +392,226 @@ Task<void> run_context(Context& ctx)
              std::to_string(doc.layers().size()) + " katman, " +
              std::to_string(doc.layouts().size()) + " çıktı yerleşimi, " +
              std::to_string(bus.selection().size()) + " seçili.");
+    co_return;
+}
+
+/// FINDING A TOOL IN A CATALOGUE THAT NO LONGER FITS IN A GLANCE.
+///
+/// The catalogue is generated and it grows with the program: seventy-odd tools
+/// today, and every command that gains `Flags::AiAccessible` adds one. A client
+/// that must read all of it to find `ÖLÇEKLE` is spending a turn on something a
+/// substring match answers.
+///
+/// AND IT HIDES NOTHING, which is the whole difficulty with a search over a tool
+/// surface (TODOS M-09). A filtered list that looked complete would be worse
+/// than no search at all: an agent that asked for "alan" and got three tools
+/// would conclude the other seventy do not exist. So the answer always carries
+/// how many matched, how many are being shown, and the fact that `tools/list`
+/// serves the whole catalogue — and a search that matched nothing says so
+/// plainly rather than returning an empty list that reads like an answer.
+///
+/// IT IS NOT A SECOND DESCRIPTION OF A COMMAND (CLAUDE.md 5.10). The name, the
+/// title and the summary it returns are the catalogue's own fields, and the
+/// schema — the part a client needs to CALL the tool — is not here: that is what
+/// `tools/list` is for, and the answer says so.
+Task<void> run_tool_search(Context& ctx)
+{
+    auto asked = co_await ctx.text("sorgu", "Aranan sözcük");
+    if (!asked || asked->empty()) {
+        ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                     "Aranacak bir sözcük gerekir: sorgu=<sözcük>."));
+        co_return;
+    }
+    ctx.record("sorgu", Value::text(*asked));
+
+    std::string field = "hepsi";
+    if (const Value given = ctx.argument("alan"); !given.empty()) {
+        field = given.as_text();
+        ctx.record("alan", given);
+    }
+
+    std::int64_t limit = 20;
+    if (const Value given = ctx.argument("sinir"); !given.empty()) {
+        limit = given.as_int();
+        ctx.record("sinir", given);
+    }
+
+    const Catalog catalogue = build_catalog(ctx.session().bus().registry());
+
+    // TURKISH FOLDING, not `std::tolower` (CLAUDE.md 5.6): a surveyor searching
+    // for "ölçek" must find `ÖLÇEKLE`, and `ı`/`i` must not collide the way an
+    // ASCII lowercase would make them.
+    const std::string needle = core::turkish_fold_key(*asked);
+
+    Json hits            = Json::array({});
+    std::int64_t matched = 0;
+    std::int64_t shown   = 0;
+    for (const ToolDef& tool : catalogue.tools) {
+        bool hit = false;
+        if (field == "ad" || field == "hepsi")
+            hit = core::turkish_fold_key(tool.name).find(needle) != std::string::npos ||
+                  core::turkish_fold_key(tool.title).find(needle) != std::string::npos;
+        if (!hit && (field == "ozet" || field == "hepsi"))
+            hit = core::turkish_fold_key(tool.description).find(needle) != std::string::npos;
+        if (!hit) continue;
+
+        ++matched;
+        if (shown >= limit) continue;
+        ++shown;
+
+        Json one;
+        one.set("arac", Json::string(tool.name));
+        one.set("ad", Json::string(tool.title));
+        one.set("komut", Json::string(tool.command_id));
+        one.set("degistirir", Json::boolean(tool.mutates));
+        // THE FIRST SENTENCE ONLY. The whole description carries the names, the
+        // units and the approval rule, which is what a client needs when it is
+        // about to CALL the tool — not when it is deciding which one to look at.
+        const std::size_t stop = tool.description.find('\n');
+        one.set("ozet", Json::string(stop == std::string::npos ? tool.description
+                                                               : tool.description.substr(0, stop)));
+        hits.push(std::move(one));
+    }
+
+    // THE HUMAN LINE IS BUILT BEFORE THE REPORT IS HANDED OVER, because
+    // `ctx.report` takes the object by value and reading it afterwards is a
+    // use-after-move — which is exactly how the first version of this crashed.
+    std::string told;
+    for (const Json& one : hits.as_array())
+        told += "\n  " + one.find("arac")->as_string() + " — " + one.find("ad")->as_string();
+
+    Json out;
+    out.set("sorgu", Json::string(*asked));
+    out.set("alan", Json::string(field));
+    out.set("eslesen", Json::integer(matched));
+    out.set("gosterilen", Json::integer(shown));
+    out.set("katalog", Json::integer(static_cast<std::int64_t>(catalogue.tools.size())));
+    out.set("araclar", std::move(hits));
+    // SAID IN THE ANSWER ITSELF, every time. A client holding a filtered list has
+    // to know it is filtered, and where the unfiltered one is.
+    out.set("aciklama",
+            Json::string("Bu bir ARAMA sonucudur, kataloğun tamamı değil. Araçların tam "
+                         "listesi ve çağrı şemaları `tools/list` ile alınır; bu arama "
+                         "yalnız ad ve özet üzerinde çalışır ve hiçbir aracı katalogdan "
+                         "çıkarmaz."));
+    ctx.report(std::move(out));
+
+    if (matched == 0) {
+        ctx.echo("'" + *asked + "' için eşleşen araç yok. Kataloğun tamamı " +
+                 std::to_string(catalogue.tools.size()) +
+                 " araç taşıyor; tam listeyi `tools/list` ile alın.");
+        co_return;
+    }
+
+    std::string head = std::to_string(matched) + " araç eşleşti";
+    if (shown < matched) head += ", ilk " + std::to_string(shown) + " tanesi";
+    head += " (katalog: " + std::to_string(catalogue.tools.size()) + "):";
+    if (shown < matched)
+        told += "\n  … " + std::to_string(matched - shown) +
+                " tane daha. Sınırı büyütün (sinir=…) ya da tam listeyi `tools/list` ile alın.";
+    ctx.echo(head + told);
+    co_return;
+}
+
+/// THE SHIPPED JOB TEMPLATES: what to do, in what order, as command lines.
+///
+/// AN ATLAS IS SIX COMMANDS AND THE ORDER IS THE PART NOBODY CAN GUESS. Place
+/// the sheet, put a map frame on it, aim the atlas at a layer, check the sheet,
+/// then print — and checking before printing rather than after is the whole
+/// difference between finding a broken link on screen and finding it in a PDF
+/// somebody signed. An agent that rediscovers that sequence rediscovers it
+/// differently every time (TODOS M-09).
+///
+/// IT RUNS NOTHING. It hands back lines. Every one of them goes through the
+/// ordinary tool surface afterwards, where a write still becomes a suggestion a
+/// person applies (CLAUDE.md 5.7); a template that executed itself would be a
+/// fast path, and there are none (Article 1.2).
+Task<void> run_job_template(Context& ctx)
+{
+    auto typed = co_await ctx.text("islem", "İşlem: listele / goster");
+    if (!typed) co_return;
+
+    const bool show = core::turkish_key_equals(*typed, "goster");
+    if (!show && !core::turkish_key_equals(*typed, "listele")) {
+        ctx.session().fail(
+            core::err(core::ErrorCode::InvalidArgument,
+                      "Tanınmayan işlem: '" + *typed + "'. İşlemler: listele / goster"));
+        co_return;
+    }
+    ctx.record("islem", Value::text(show ? "goster" : "listele"));
+
+    // READ AT EVERY CALL, not cached. The package is a few kilobytes and a data
+    // release must take effect without a restart — which is the reason the
+    // templates are data at all (CLAUDE.md 3.5).
+    core::Result<std::string> text =
+        command::read_catalog_text(std::string("data/") + kJobTemplatePath);
+    if (!text) {
+        ctx.session().fail(text.error());
+        co_return;
+    }
+
+    core::Result<JobTemplateCatalog> loaded = JobTemplateCatalog::from_json(text.value());
+    if (!loaded) {
+        ctx.session().fail(loaded.error());
+        co_return;
+    }
+    const JobTemplateCatalog& catalogue = loaded.value();
+
+    if (!show) {
+        Json listing     = Json::array({});
+        std::string told = std::to_string(catalogue.templates.size()) + " iş şablonu (paket " +
+                           catalogue.package_version + "):";
+        for (const JobTemplate& one : catalogue.templates) {
+            listing.push(one.to_json(false));
+            told += "\n  " + one.id + " — " + one.title;
+        }
+        told += "\nAdımları görmek için: İŞŞABLONU islem=goster sablon=<kimlik>";
+
+        Json out;
+        out.set("paket_surumu", Json::string(catalogue.package_version));
+        out.set("sablonlar", std::move(listing));
+        ctx.report(std::move(out));
+        ctx.echo(told);
+        co_return;
+    }
+
+    auto wanted = co_await ctx.text("sablon", "Şablonun kimliği");
+    if (!wanted || wanted->empty()) {
+        ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                     "Hangi şablon: sablon=<kimlik>. Kimlikleri İŞŞABLONU "
+                                     "islem=listele ile görün."));
+        co_return;
+    }
+    ctx.record("sablon", Value::text(*wanted));
+
+    const JobTemplate* one = catalogue.find(*wanted);
+    if (one == nullptr) {
+        std::string known;
+        for (const JobTemplate& held : catalogue.templates)
+            known += (known.empty() ? "" : ", ") + held.id;
+        ctx.session().fail(
+            core::err(core::ErrorCode::NotFound,
+                      "Böyle bir iş şablonu yok: '" + *wanted + "'. Olanlar: " + known));
+        co_return;
+    }
+
+    Json out = one->to_json(true);
+    out.set("paket_surumu", Json::string(catalogue.package_version));
+    // SAID IN THE ANSWER, because a client holding a list of command lines is
+    // one misreading away from believing it has already done the work.
+    out.set("aciklama",
+            Json::string("Bu adımlar ÇALIŞTIRILMADI. Her biri sıradan bir komut satırıdır: "
+                         "yer tutucuları doldurup olağan araç yüzeyinden gönderin. Yazan her "
+                         "adım yine önizlemeli bir öneriye dönüşür ve bilgisayar başındaki "
+                         "kişi uygular."));
+
+    std::string told = one->title + " (" + one->id + " " + one->version + "), " +
+                       std::to_string(one->steps.size()) + " adım:";
+    for (const std::string& step : one->steps)
+        told += "\n  " + step;
+    told += "\nBu satırlar çalıştırılmadı.";
+    ctx.report(std::move(out));
+    ctx.echo(told);
     co_return;
 }
 
@@ -475,6 +699,48 @@ std::vector<CommandSpec> detail::read_tool_specs()
                    "seçili nesneler ve görünüm. Özet verir, döküm değil.",
         .effect = command::Effect::Query,
         .run    = &run_context,
+    });
+
+    specs.push_back(CommandSpec{
+        .id       = "core.tool_search",
+        .names    = {"ARAÇARA", "ARACARA", "TOOLSEARCH", "ARA"},
+        .category = command::Category::Query,
+        .params =
+            {
+                Param::text("sorgu", Arity::exactly(1),
+                            "Aranan sözcük; ad ve özet içinde Türkçe katlamayla eşleşir"),
+                Param::choice("alan", Arity::optional(), {"hepsi", "ad", "ozet"},
+                              "Nerede aranacağı: hepsi (öntanımlı), ad ya da ozet"),
+                Param::integer_range("sinir", Arity::optional(), 1, 200,
+                                     "En çok kaç sonuç gösterilsin; öntanımlı 20. Eşleşme "
+                                     "sayısı her hâlde bildirilir"),
+            },
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Ajan araç kataloğunda ad ve özete göre arar. Sonuç her zaman kaç aracın "
+                   "eşleştiğini, kaçının gösterildiğini ve katalogdaki toplam araç sayısını "
+                   "söyler: arama hiçbir aracı gizlemez, tam liste `tools/list` ile alınır.",
+        .effect  = command::Effect::Query,
+        .run     = &run_tool_search,
+    });
+
+    specs.push_back(CommandSpec{
+        .id       = "core.job_template",
+        .names    = {"İŞŞABLONU", "ISSABLONU", "JOBTEMPLATE", "İŞŞ"},
+        .category = command::Category::Query,
+        .params =
+            {
+                Param::choice("islem", Arity::exactly(1), {"listele", "goster"},
+                              "Ne yapılacağı: listele ya da goster"),
+                Param::text("sablon", Arity::optional(), "Şablonun kimliği; goster için gerekir"),
+            },
+        .undo    = UndoPolicy::None,
+        .flags   = Flags::ReadOnly | Flags::NoEffect | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Sık yapılan işlerin — atlas, kadastro kontrolü, parsel raporu — komut "
+                   "satırlarını sırasıyla verir. Hiçbirini çalıştırmaz: adımlar olağan araç "
+                   "yüzeyinden gönderilir ve yazan her adım yine öneri olur.",
+        .effect  = command::Effect::Query,
+        .run     = &run_job_template,
     });
 
     return specs;

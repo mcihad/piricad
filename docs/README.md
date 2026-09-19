@@ -118,6 +118,8 @@ Tek tek komutlar:
 | `SORGULA` | [Koşula uyan nesneleri sayma](komutlar/query.md) |
 | `SEÇİMBİLGİSİ` | [O anki seçimi okuma](komutlar/selection_info.md) |
 | `GÖRÜNÜMBİLGİSİ` | [Ekranda görünen alan](komutlar/view_info.md) |
+| `ARAÇARA` | [Araç kataloğunda arama](komutlar/tool_search.md) |
+| `İŞŞABLONU` | [İş şablonları](komutlar/job_template.md) |
 | `ÖNERİ` | [Bekleyen yapay zeka önerileri](komutlar/suggestion.md) |
 | `MCPSUNUCU` | [Ajan sunucusunu yönetme](komutlar/mcp.md) |
 | `YAPAYZEKAMODELİ` | [Model sağlayıcıları](komutlar/ai_provider.md) |

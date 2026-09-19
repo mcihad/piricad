@@ -21,6 +21,7 @@ add_library(kentos_ai STATIC
     src/policy.cpp
     src/llmstxt.cpp
     src/handles.cpp
+    src/job_templates.cpp
     src/plan.cpp
     src/audit.cpp
     src/gate.cpp

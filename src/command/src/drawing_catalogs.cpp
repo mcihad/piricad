@@ -87,6 +87,19 @@ std::string resolve_catalog_path(std::string_view configured)
     return {};
 }
 
+core::Result<std::string> read_catalog_text(std::string_view configured)
+{
+    const std::string path = resolve_catalog_path(configured);
+    if (path.empty())
+        return err(ErrorCode::NotFound,
+                   "Veri paketi bulunamadı: '" + std::string(configured) +
+                       "'. Kurulumda eksikse KENTOS_DATA ile dizini gösterin.");
+
+    std::ifstream in(path, std::ios::binary);
+    if (!in) return err(ErrorCode::IoFailure, "'" + path + "' açılamadı.");
+    return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+}
+
 core::Result<HatchPatternCatalog> load_hatch_patterns(const std::string& path)
 {
     auto json = read_json(path);

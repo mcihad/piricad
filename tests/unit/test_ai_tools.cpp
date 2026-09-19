@@ -16,9 +16,14 @@
 #include "kentos_cad/ai/commands.hpp"
 #include "kentos_cad/ai/gate.hpp"
 #include "kentos_cad/ai/handles.hpp"
+#include "kentos_cad/ai/job_templates.hpp"
+
 #include "kentos_cad/ai/plan.hpp"
+#include "kentos_cad/core/text.hpp"
 
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/drawing_catalogs.hpp"
+#include "kentos_cad/command/parser.hpp"
 #include "kentos_cad/command/registry.hpp"
 
 using namespace kentos;
@@ -241,6 +246,158 @@ TEST_CASE("Tutamak: biçim, çözüm ve çizim değişince reddedilme")
     CHECK(told.find("tutamak") != nullptr);
     CHECK_EQ(told.find("adet")->as_int(), 2);
     CHECK(told.find("noktalar") == nullptr);
+}
+
+TEST_CASE("M-09: her iş şablonu adımı gerçek bir komut satırıdır")
+{
+    Rig f;
+
+    // THE PACKAGE IS DATA, so the test reads it the same way the command does.
+    // A template shipped with a typo would be worse than no template: an agent
+    // reading plausible-looking lines that do not run wastes a turn discovering
+    // that one by one, and a surveyor reading them cannot tell which one is
+    // wrong (TODOS M-09).
+    core::Result<std::string> text =
+        command::read_catalog_text(std::string("data/") + ai::kJobTemplatePath);
+    REQUIRE_MESSAGE(text.ok(), text.error().message);
+
+    core::Result<ai::JobTemplateCatalog> loaded = ai::JobTemplateCatalog::from_json(text.value());
+    REQUIRE_MESSAGE(loaded.ok(), loaded.error().message);
+    const ai::JobTemplateCatalog& catalogue = loaded.value();
+    CHECK(catalogue.templates.size() >= 3u);
+
+    for (const ai::JobTemplate& one : catalogue.templates) {
+        CAPTURE(one.id);
+        CHECK_FALSE(one.title.empty());
+        CHECK_FALSE(one.summary.empty());
+        CHECK_FALSE(one.version.empty());
+
+        // RENDERED WITH THE EXAMPLES, because a template is only runnable if its
+        // own examples are: `ad=<yerlesim>` with "Ada 1284 Atlası" in it must be
+        // quoted in the data or it parses as three tokens.
+        core::Json values;
+        for (const ai::JobParam& param : one.params) {
+            CHECK_FALSE(param.help.empty());
+            if (!param.example.empty()) values.set(param.name, core::Json::string(param.example));
+        }
+
+        const std::vector<std::string> lines = one.render(values);
+        REQUIRE_EQ(lines.size(), one.steps.size());
+
+        for (const std::string& line : lines) {
+            CAPTURE(line);
+            core::Result<command::ParsedLine> parsed = command::parse_line(line);
+            REQUIRE_MESSAGE(parsed.ok(), parsed.error().message);
+
+            const CommandSpec* spec = f.reg.resolve(parsed.value().command);
+            REQUIRE_MESSAGE(spec != nullptr, "bilinmeyen komut: " << parsed.value().command);
+
+            // EVERY `key=` IS A DECLARED PARAMETER. This is the mistake that
+            // actually happens — a plausible argument name the command never
+            // took — and the bus would refuse it at run time with a message
+            // about the wrong thing.
+            for (const command::Token& token : parsed.value().tokens) {
+                if (token.kind != command::Token::Kind::KeyValue) continue;
+                bool declared = false;
+                for (const command::Param& param : spec->params)
+                    if (core::turkish_key_equals(param.name, token.word) ||
+                        (!param.was.empty() && core::turkish_key_equals(param.was, token.word)))
+                        declared = true;
+                CHECK_MESSAGE(declared, "tanımsız argüman: " << token.word << " — " << spec->id);
+            }
+        }
+    }
+
+    // ---- AND THE COMMAND SERVES IT ------------------------------------------
+    const DispatchResult listed = f.must("İŞŞABLONU islem=listele");
+    REQUIRE(field(listed.report, "sablonlar") != nullptr);
+    CHECK_EQ(field(listed.report, "sablonlar")->as_array().size(), catalogue.templates.size());
+
+    const DispatchResult shown = f.must("İŞŞABLONU islem=goster sablon=atlas-pafta");
+    REQUIRE(field(shown.report, "adimlar") != nullptr);
+    CHECK(field(shown.report, "adimlar")->as_array().size() >= 5u);
+    // SAID EVERY TIME: a client holding a list of command lines is one
+    // misreading away from believing the work is already done.
+    CHECK(field(shown.report, "aciklama")->as_string().find("ÇALIŞTIRILMADI") != std::string::npos);
+
+    // An unknown id names what does exist rather than answering with nothing.
+    auto missing = f.bus.execute_line("İŞŞABLONU islem=goster sablon=yok", Origin::Test);
+    REQUIRE_FALSE(missing.ok());
+    CHECK(missing.error().message.find("atlas-pafta") != std::string::npos);
+
+    // A HALF-FILLED TEMPLATE READS AS UNFINISHED. Blanking a placeholder would
+    // produce `ad=""` — a line that looks finished and is not.
+    const ai::JobTemplate* atlas = catalogue.find("atlas-pafta");
+    REQUIRE(atlas != nullptr);
+    const std::vector<std::string> bare = atlas->render(core::Json{});
+    bool kept                           = false;
+    for (const std::string& line : bare)
+        if (line.find("<yerlesim>") != std::string::npos) kept = true;
+    CHECK(kept);
+}
+
+TEST_CASE("M-09: araç araması hiçbir aracı gizlemez")
+{
+    Rig f;
+
+    // A SEARCH OVER A TOOL SURFACE IS DANGEROUS IN ONE PARTICULAR WAY: a
+    // filtered list that LOOKS complete makes an agent conclude that the tools
+    // it did not see do not exist. So every answer carries three numbers — how
+    // many matched, how many are shown, how many the catalogue holds — and says
+    // where the unfiltered list is (TODOS M-09).
+    const DispatchResult found = f.must("ARAÇARA sorgu=katman");
+    const core::Json& report   = found.report;
+    REQUIRE(field(report, "eslesen") != nullptr);
+    REQUIRE(field(report, "gosterilen") != nullptr);
+    REQUIRE(field(report, "katalog") != nullptr);
+    CHECK(field(report, "eslesen")->as_int() > 0);
+    CHECK(field(report, "katalog")->as_int() >= field(report, "eslesen")->as_int());
+    CHECK(field(report, "aciklama")->as_string().find("tools/list") != std::string::npos);
+
+    // TURKISH FOLDING, not `std::tolower` (CLAUDE.md 5.6): a surveyor typing
+    // "olcek" must reach `ÖLÇEKLE`, and `ı`/`i` must not collide.
+    const DispatchResult folded = f.must("ARAÇARA sorgu=olcek");
+    CHECK(folded.report.find("eslesen")->as_int() > 0);
+    CHECK_EQ(f.must("ARAÇARA sorgu=ÖLÇEK").report.find("eslesen")->as_int(),
+             folded.report.find("eslesen")->as_int());
+
+    // THE LIMIT CAPS WHAT IS SHOWN, NEVER WHAT IS COUNTED. A client that asked
+    // for one result still learns there are more, and is told how to get them.
+    const DispatchResult capped = f.must("ARAÇARA sorgu=katman sinir=1");
+    CHECK_EQ(capped.report.find("gosterilen")->as_int(), 1);
+    CHECK(capped.report.find("eslesen")->as_int() >= 1);
+    REQUIRE_EQ(capped.report.find("araclar")->as_array().size(), 1u);
+    if (capped.report.find("eslesen")->as_int() > 1) {
+        std::string said;
+        for (const std::string& line : capped.lines)
+            said += line;
+        CHECK(said.find("tane daha") != std::string::npos);
+    }
+
+    // NOTHING MATCHED IS SAID IN WORDS. An empty array reads like an answer;
+    // "there is no such tool, and the catalogue holds N" is one.
+    const DispatchResult none = f.must("ARAÇARA sorgu=zzqqxx");
+    CHECK_EQ(none.report.find("eslesen")->as_int(), 0);
+    CHECK_EQ(none.report.find("araclar")->as_array().size(), 0u);
+    std::string empty_said;
+    for (const std::string& line : none.lines)
+        empty_said += line;
+    CHECK(empty_said.find("eşleşen araç yok") != std::string::npos);
+    CHECK(empty_said.find("tools/list") != std::string::npos);
+
+    // THE FIELD NARROWS, and the bus refuses a word that is not one of the
+    // three before the body runs.
+    CHECK(f.bus.execute_line("ARAÇARA sorgu=katman alan=ad", Origin::Test).ok());
+    CHECK_FALSE(f.bus.execute_line("ARAÇARA sorgu=katman alan=ne", Origin::Test).ok());
+    CHECK_FALSE(f.bus.execute_line("ARAÇARA sorgu=katman sinir=0", Origin::Test).ok());
+    CHECK_FALSE(f.bus.execute_line("ARAÇARA sorgu=katman sinir=9999", Origin::Test).ok());
+
+    // AND IT IS A READ. An agent may call it without anybody approving
+    // anything, which is only true because it carries `NoEffect`.
+    const CommandSpec* spec = f.reg.by_id("core.tool_search");
+    REQUIRE(spec != nullptr);
+    CHECK(has_flag(spec->flags, Flags::NoEffect));
+    CHECK(has_flag(spec->flags, Flags::AiAccessible));
 }
 
 TEST_CASE("M-07: istemci depoları ayrıdır ve en eskisi düşer")

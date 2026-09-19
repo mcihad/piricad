@@ -922,11 +922,26 @@ uygulanan ve müzakere edilen yetenekler ilan edilmelidir.
   sayfa kurulduğu andaki hâli gösteriyordu).
   **Kalan:** yol biçimindeki belirtecin tamamen kaldırılması — bunu bir Bearer
   gönderemeyen istemci kalmadığında yapmak gerekir, bugün değil.
-- [ ] **M-09 / P2 — Keşif ve iş şablonları.** Büyük katalog için uygulama düzeyinde
-  arama/alan filtresi; atlas, kadastro kontrolü ve rapor gibi işler için sürümlü
-  iş şablonları sun. `prompts` veya Skills uzantısı ancak gerçek destek varsa
-  ilan edilsin. **Kabul:** istemci tam katalog yolunu da kullanabilir; arama sonucu
-  gerekli araçları gizlemez; protokolün desteklemediği pagination alanları uydurulmaz.
+- [x] **M-09 / P2 — Keşif ve iş şablonları.** *(19 Eylül 2026)*
+  **`ARAÇARA`** katalogda ad ve özete göre arıyor, Türkçe katlamayla. Aramanın tek
+  gerçek tehlikesi tam görünen süzülmüş bir listedir, o yüzden her cevap üç sayı
+  taşıyor — kaç eşleşti, kaçı gösterildi, katalogda kaç var — ve tam listenin
+  `tools/list` olduğunu söylüyor; hiç eşleşme yoksa bunu sözle söylüyor. `sinir`
+  yalnız gösterileni kesiyor, sayımı değil. İstemci tam katalog yolunu kullanmaya
+  devam ediyor: `tools/list` hiçbir süzgeç tanımıyor.
+  **`İŞŞABLONU`** atlas, kadastro kontrolü ve parsel raporu işlerini komut satırları
+  hâlinde, sırasıyla veriyor; hiçbirini çalıştırmıyor. Şablonlar **veri**
+  (`data/catalogs/ai/is-sablonlari.json` + şeması), her biri paketten ayrı **kendi
+  sürümüyle**. Her adım canlı komut kütüğüne karşı sınanıyor — bu test yazıldığı
+  anda veride üç hata buldu.
+  **Uydurulmuş pagination alanı yok**: `tools/list` hâlâ `nextCursor` döndürmüyor ve
+  nedeni kodda yazılı. **`prompts` ilan edilmiyor**: `prompts/get` bir modele
+  verilecek mesajlar döndürür, bir iş şablonu ise kişinin uyguladığı bir öneriye
+  dönüşecek komut satırlarıdır; olmayan bir kabiliyeti ilan etmek sunmamaktan
+  kötüdür.
+  **Kalan:** üç şablon bir başlangıçtır. İfraz, tevhit ve 18. madde için şablonlar
+  alan işidir (A-08 ile aynı cinsten) ve bir harita mühendisinin yazması gerekir;
+  paket veri olduğu için bu bir veri yayımıdır, yeniden derleme değil.
 
 ## 9. Ölçülebilir uçtan uca kabul senaryoları
 

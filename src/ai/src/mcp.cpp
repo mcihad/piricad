@@ -469,6 +469,15 @@ McpServer::Answer McpServer::discover(const JsonRpcRequest& rpc) const
     // and no moment at which the list changes.
     capabilities.set("resources", Json::object({}));
 
+    // AND NO `prompts`, which is the capability a job template LOOKS like it
+    // should be declared under and must not be. `prompts/get` returns messages
+    // for a model to be run with; a KentOSCad job template is a list of command
+    // lines a client composes into a suggestion a PERSON applies, and nothing
+    // here runs a model on a client's behalf. A server that advertised `prompts`
+    // would be promising a method it answers with 404, which is worse than not
+    // offering the feature: a client that trusts the declaration stops looking
+    // for the tool that actually has it (`İŞŞABLONU`, TODOS M-09).
+
     Json server_info;
     server_info.set("name", Json::string(info_.name));
     server_info.set("version", Json::string(info_.version));

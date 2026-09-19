@@ -101,6 +101,8 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.selection_info`](selection_info.md) | `SEÇİMBİLGİSİ`, `SECIMBILGISI`, `SELECTIONINFO`, `SÇB` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Kullanıcının o anki seçimini bildirir: kaç nesne ve hangi anahtarlar. |
 | [`core.view_info`](view_info.md) | `GÖRÜNÜMBİLGİSİ`, `GORUNUMBILGISI`, `VIEWINFO`, `GRB` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Ekranda görünen alanın köşe koordinatlarını, merkezini, ölçeğini ve CRS'ini bildirir. |
 | [`core.context`](context.md) | `BAĞLAM`, `BAGLAM`, `CONTEXT`, `BĞL` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Üzerinde çalışılan her şeyi tek çağrıda özetler: belge sürümü, koordinat sistemi, kapsam, katmanlar, çıktı yerleşimleri ve hedefli olup olmadıkları, seçili nesneler ve görünüm. Özet verir, döküm değil. |
+| [`core.tool_search`](tool_search.md) | `ARAÇARA`, `ARACARA`, `TOOLSEARCH`, `ARA` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Ajan araç kataloğunda ad ve özete göre arar. Sonuç her zaman kaç aracın eşleştiğini, kaçının gösterildiğini ve katalogdaki toplam araç sayısını söyler: arama hiçbir aracı gizlemez, tam liste `tools/list` ile alınır. |
+| [`core.job_template`](job_template.md) | `İŞŞABLONU`, `ISSABLONU`, `JOBTEMPLATE`, `İŞŞ` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Sık yapılan işlerin — atlas, kadastro kontrolü, parsel raporu — komut satırlarını sırasıyla verir. Hiçbirini çalıştırmaz: adımlar olağan araç yüzeyinden gönderilir ve yazan her adım yine öneri olur. |
 | [`core.suggestion`](suggestion.md) | `ÖNERİ`, `ONERI`, `SUGGESTION`, `ÖN` | Sistem | komuta özel | etkileşimli, betiklenebilir, AI erişimli | Bekleyen yapay zeka önerilerini listeler, durumunu söyler, uygular ya da reddeder. |
 | [`core.mcp`](mcp.md) | `MCPSUNUCU`, `MCPSERVER`, `MCP` | Sistem | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Yapay zeka ajanlarının bağlanacağı MCP sunucusunu başlatır, durdurur, durumunu söyler, yeni bir erişim belirteci üretir, bağlı istemcileri listeler ve tek bir istemcinin yetkisini kaldırır. |
 | [`core.ai_provider`](ai_provider.md) | `YAPAYZEKAMODELİ`, `YAPAYZEKAMODELI`, `AIMODEL`, `YZM` | Sistem | geri alınmaz | etkileşimli, betiklenebilir | Yapay zeka model sağlayıcılarını listeler, ekler, siler, birini varsayılan yapar ya da bağlantısını dener; profil adresi, lehçesi, modeli ve anahtar adını taşır. |
@@ -1288,6 +1290,29 @@ Parametre almaz.
 
 Ayrıntılı kullanım: [BAĞLAM](context.md)
 
+### `core.tool_search` — ARAÇARA
+
+Ajan araç kataloğunda ad ve özete göre arar. Sonuç her zaman kaç aracın eşleştiğini, kaçının gösterildiğini ve katalogdaki toplam araç sayısını söyler: arama hiçbir aracı gizlemez, tam liste `tools/list` ile alınır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `sorgu` | text | 1 | Aranan sözcük; ad ve özet içinde Türkçe katlamayla eşleşir |
+| `alan` | text | isteğe bağlı | Nerede aranacağı: hepsi (öntanımlı), ad ya da ozet |
+| `sinir` | integer | isteğe bağlı | En çok kaç sonuç gösterilsin; öntanımlı 20. Eşleşme sayısı her hâlde bildirilir |
+
+Ayrıntılı kullanım: [ARAÇARA](tool_search.md)
+
+### `core.job_template` — İŞŞABLONU
+
+Sık yapılan işlerin — atlas, kadastro kontrolü, parsel raporu — komut satırlarını sırasıyla verir. Hiçbirini çalıştırmaz: adımlar olağan araç yüzeyinden gönderilir ve yazan her adım yine öneri olur.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `islem` | text | 1 | Ne yapılacağı: listele ya da goster |
+| `sablon` | text | isteğe bağlı | Şablonun kimliği; goster için gerekir |
+
+Ayrıntılı kullanım: [İŞŞABLONU](job_template.md)
+
 ### `core.suggestion` — ÖNERİ
 
 Bekleyen yapay zeka önerilerini listeler, durumunu söyler, uygular ya da reddeder.
@@ -2442,6 +2467,49 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "BLOKEKLE",
         "INSERT",
         "BE"
+      ]
+    }
+  },
+  {
+    "name": "core_job_template",
+    "title": "İŞŞABLONU",
+    "description": "Sık yapılan işlerin — atlas, kadastro kontrolü, parsel raporu — komut satırlarını sırasıyla verir. Hiçbirini çalıştırmaz: adımlar olağan araç yüzeyinden gönderilir ve yazan her adım yine öneri olur.\nKomut: İŞŞABLONU (ISSABLONU, JOBTEMPLATE, İŞŞ)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "islem": {
+          "type": "string",
+          "enum": [
+            "listele",
+            "goster"
+          ],
+          "description": "Ne yapılacağı: listele ya da goster (metin)"
+        },
+        "sablon": {
+          "type": "string",
+          "description": "Şablonun kimliği; goster için gerekir (metin)"
+        }
+      },
+      "required": [
+        "islem"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.job_template",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "none",
+      "cad.kentos/names": [
+        "İŞŞABLONU",
+        "ISSABLONU",
+        "JOBTEMPLATE",
+        "İŞŞ"
       ]
     }
   },
@@ -4382,6 +4450,56 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "ALANACEVIR",
         "TOAREA",
         "ALÇ"
+      ]
+    }
+  },
+  {
+    "name": "core_tool_search",
+    "title": "ARAÇARA",
+    "description": "Ajan araç kataloğunda ad ve özete göre arar. Sonuç her zaman kaç aracın eşleştiğini, kaçının gösterildiğini ve katalogdaki toplam araç sayısını söyler: arama hiçbir aracı gizlemez, tam liste `tools/list` ile alınır.\nKomut: ARAÇARA (ARACARA, TOOLSEARCH, ARA)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sorgu": {
+          "type": "string",
+          "description": "Aranan sözcük; ad ve özet içinde Türkçe katlamayla eşleşir (metin)"
+        },
+        "alan": {
+          "type": "string",
+          "enum": [
+            "hepsi",
+            "ad",
+            "ozet"
+          ],
+          "description": "Nerede aranacağı: hepsi (öntanımlı), ad ya da ozet (metin)"
+        },
+        "sinir": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200,
+          "description": "En çok kaç sonuç gösterilsin; öntanımlı 20. Eşleşme sayısı her hâlde bildirilir (tam sayı)"
+        }
+      },
+      "required": [
+        "sorgu"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.tool_search",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "none",
+      "cad.kentos/names": [
+        "ARAÇARA",
+        "ARACARA",
+        "TOOLSEARCH",
+        "ARA"
       ]
     }
   },

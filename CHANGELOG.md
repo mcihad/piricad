@@ -6,6 +6,39 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — kataloğu aramak ve bir işin sırasını bilmek (TODOS M-09)
+
+- **`ARAÇARA`** (`core.tool_search`): ajan araç kataloğunda ad ve özete göre arar,
+  Türkçe katlamayla (`olcek` → `ÖLÇEKLE`). **Arama hiçbir aracı gizlemez** — bir
+  araç yüzeyinde aramanın tek gerçek tehlikesi budur: tam görünen ama süzülmüş bir
+  liste, ajanı görmediği araçların var olmadığı sonucuna götürür. Her cevap üç sayı
+  taşıyor (kaç eşleşti, kaçı gösterildi, katalogda kaç var) ve tam listenin
+  `tools/list` olduğunu söylüyor. Hiç eşleşme yoksa bunu **sözle** söylüyor; boş bir
+  dizi cevap gibi okunur. `sinir` yalnız gösterileni kesiyor, sayımı değil.
+- **`İŞŞABLONU`** (`core.job_template`): atlas, kadastro kontrolü ve parsel raporu
+  işlerinin komut satırları, **sırasıyla**. Bir atlas altı komuttur ve sıra tahmin
+  edilemeyen kısımdır — denetlemeyi basmadan **önce** yapmak ile sonra yapmak
+  arasındaki fark, kopuk bir bağı ekranda görmek ile imzalanmış bir PDF'de görmek
+  arasındaki farktır.
+- **Hiçbir şablon kendini çalıştırmaz.** Satırları veriyor; satırlar olağan araç
+  yüzeyinden gidiyor ve yazan her adım yine önizlemeli bir öneri oluyor (5.7).
+  Doldurulmamış bir yer tutucu **olduğu gibi kalıyor**: boşaltmak `ad=""` gibi
+  bitmiş görünen ama bitmemiş bir satır üretirdi.
+- Şablonlar **veri**: `data/catalogs/ai/is-sablonlari.json` + şeması. Daha iyi bir
+  sıra bir veri yayımı, yeniden derleme değil (3.5). Her şablonun paketten ayrı
+  **kendi sürümü** var: bir işi güncellemek, diğerlerinin değiştiğini söylememeli.
+- **Her adım canlı komut kütüğüne karşı sınanıyor** (`test_ai_tools.cpp`): şablon
+  örnek değerleriyle çözülüyor, satır ayrıştırılıyor, komut çözülüyor ve her
+  `anahtar=` o komutun tanımlı parametresi mi diye bakılıyor. Bu test yazıldığı anda
+  yazdığım üç hatayı buldu — `ÖZNİTELİKŞEMASI` argüman almıyor ve tablo öğesinin
+  katmanı `metin=` ile veriliyor. Satırları çalışmayan bir şablon, hiç şablon
+  olmamasından kötüdür.
+- `command::read_catalog_text`: `/src/ai` sans-IO olduğu için (ai.md P10) baytlar
+  katalog okumanın zaten yapıldığı yerde okunuyor, şeklin bilindiği yerde ayrıştırılıyor.
+- **`prompts` ilan edilmiyor ve bu bilinçli**: `prompts/get` bir modele verilecek
+  mesajlar döndürür; bir iş şablonu ise kişinin uyguladığı bir öneriye dönüşecek
+  komut satırlarıdır. Olmayan bir kabiliyeti ilan etmek, sunmamaktan kötüdür.
+
 ### Eklendi — bağlantıyı yönetmek: kim konuştu, kimi durdurmalı (TODOS M-08)
 
 - **İstemci defteri** (`ai::ClientLedger`, AGPL): konuşmuş her ajan için ad, çağrı,

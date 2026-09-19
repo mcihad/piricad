@@ -41,8 +41,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 75 (69 tanesi onay ister)
-- Katalog parmak izi: `10642501579733912037`
+- Araç sayısı: 77 (69 tanesi onay ister)
+- Katalog parmak izi: `11290487328548073720`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -401,6 +401,19 @@ Onay ister.
 | `satir` | integer | hayır | Dizi satır sayısı; varsayılan 1 (tam sayı) |
 | `sutun_aralik` | integer | hayır | Sütunlar arası, milimetre, döndürülmüş eksende (tam sayı) |
 | `satir_aralik` | integer | hayır | Satırlar arası, milimetre, döndürülmüş eksende (tam sayı) |
+
+### `core_job_template` — İŞŞABLONU
+
+Sık yapılan işlerin — atlas, kadastro kontrolü, parsel raporu — komut satırlarını sırasıyla verir. Hiçbirini çalıştırmaz: adımlar olağan araç yüzeyinden gönderilir ve yazan her adım yine öneri olur.
+Komut: İŞŞABLONU (ISSABLONU, JOBTEMPLATE, İŞŞ)
+Bu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.
+
+Doğrudan çalışır.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `islem` | string | evet | Ne yapılacağı: listele ya da goster (metin) |
+| `sablon` | string | hayır | Şablonun kimliği; goster için gerekir (metin) |
 
 ### `core_label` — ETİKET
 
@@ -972,6 +985,20 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesneler` | string | hayır | Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_tool_search` — ARAÇARA
+
+Ajan araç kataloğunda ad ve özete göre arar. Sonuç her zaman kaç aracın eşleştiğini, kaçının gösterildiğini ve katalogdaki toplam araç sayısını söyler: arama hiçbir aracı gizlemez, tam liste `tools/list` ile alınır.
+Komut: ARAÇARA (ARACARA, TOOLSEARCH, ARA)
+Bu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.
+
+Doğrudan çalışır.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `sorgu` | string | evet | Aranan sözcük; ad ve özet içinde Türkçe katlamayla eşleşir (metin) |
+| `alan` | string | hayır | Nerede aranacağı: hepsi (öntanımlı), ad ya da ozet (metin) |
+| `sinir` | integer | hayır | En çok kaç sonuç gösterilsin; öntanımlı 20. Eşleşme sayısı her hâlde bildirilir (tam sayı) |
 
 ### `core_topology` — TOPOLOJİ
 
