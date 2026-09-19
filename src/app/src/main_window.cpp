@@ -4230,6 +4230,23 @@ int MainWindow::probeChat()
         say("apply", tr("katman geldi; geri alma yığını %1 → %2 (KATMAN geri alınmaz)")
                          .arg(depth)
                          .arg(controller_->undoStack().undo_depth()));
+
+        // 4b. AND THE JOB CARRIES ON (TODOS A-04). The loop used to END at the
+        // first card: a request needing a layer, then objects, then a sheet,
+        // then a PDF stopped after one suggestion, and the user — having just
+        // clicked Uygula — watched nothing happen.
+        //
+        // WHAT IS ASSERTED IS THE HAND-BACK, not a second model turn: the
+        // conversation must now carry what actually happened, so the model can
+        // VERIFY rather than claim. Nothing is applied by this: the person
+        // already decided.
+        const std::span<const ai::Message> said_so_far = chatPanel_->probeMessages();
+        bool carried                                   = false;
+        for (const ai::Message& one : said_so_far)
+            if (one.role == ai::Role::User &&
+                one.text().find("Öneri " + card->planId().toStdString()) != std::string::npos)
+                carried = true;
+        check(carried, "ONAYDAN SONRA İŞ DEVAM ETMEDİ — model sonucu hiç öğrenmedi");
     }
 
     // 5. A COORDINATE LITERAL IS REFUSED where a handle is declared.

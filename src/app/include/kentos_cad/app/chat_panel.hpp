@@ -35,6 +35,7 @@
 
 #include <functional>
 #include <memory>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -100,6 +101,14 @@ public:
     /// The transcript, for the probe.
     Transcript* transcript() const noexcept { return transcript_; }
 
+    /// The conversation as the PROVIDER will see it, for `KENTOS_CHAT_PROBE`.
+    ///
+    /// NOT THE SAME AS THE TRANSCRIPT. The transcript is what a person reads and
+    /// holds bubbles the model never sees; this is the message list that goes on
+    /// the wire, which is where "did the job carry on after the approval" can
+    /// actually be answered (TODOS A-04).
+    std::span<const ai::Message> probeMessages() const;
+
     /// Drives RECORDED BYTES through the panel with no socket, as if they had
     /// arrived from `profile`'s endpoint.
     ///
@@ -150,6 +159,15 @@ private:
     /// it cannot reach (TODOS M-07). It reaches the audit record and the
     /// suggestion card, and it never carries a key (ai.md P11).
     std::string requesterLabel() const;
+
+    /// Carries the job on after the person has answered a suggestion card.
+    ///
+    /// THE LOOP USED TO END AT THE FIRST CARD. A request that needs a layer,
+    /// then objects on it, then a sheet, then a PDF stopped after one
+    /// suggestion — and the user, having clicked Uygula, watched nothing
+    /// happen (TODOS A-04). Nothing is applied here: the person already
+    /// decided, and what continues is the conversation.
+    void resumeAfterDecision(const QString& planId, bool applied);
 
     /// The profile the chooser is on, or nothing when none is configured.
     const ai::ProviderProfile* chosen() const;

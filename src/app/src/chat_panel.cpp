@@ -412,7 +412,29 @@ int ChatPanel::runReadTools(const std::vector<ai::Block>& calls)
     int ran = 0;
     for (const ai::Block& call : calls) {
         const ai::ToolDef* tool = service_.catalog().find(call.tool_name);
-        if (tool == nullptr) continue;
+        if (tool == nullptr) {
+            // A NAME NOBODY SERVES STILL GETS AN ANSWER (TODOS A-04: "her
+            // tool-call kimliği doğru tek sonuç alır"). It was skipped, so the
+            // model's call id was left unanswered — and a provider handed a
+            // tool call with no result rejects the whole next turn, which the
+            // user sees as the conversation dying for no stated reason.
+            //
+            // AND IT NAMES THE WAY OUT rather than only saying no: a model that
+            // invented a name can find the real one with `ARAÇARA` (M-09).
+            chat_->add(ai::tool_result_message(
+                call,
+                "Böyle bir araç yok: '" + call.tool_name +
+                    "'. Araç listesini `tools/list` ile alın ya da `araclari_ara` ile "
+                    "arayın.",
+                true));
+            auto* unknown = new MessageBubble(Speaker::Notice, this);
+            unknown->setNote(tr("Bilinmeyen araç: %1").arg(QString::fromStdString(call.tool_name)),
+                             Tone::Danger);
+            transcript_->append(unknown);
+            unknown->applyTheme(theme_);
+            ++ran;
+            continue;
+        }
         if (tool->mutates) continue;
 
         auto step = ai::plan_step_for(call, service_.catalog());
@@ -515,7 +537,12 @@ QString ChatPanel::fileWrites(const std::vector<ai::Block>& calls)
     const QString id = QString::fromStdString(filed.value());
     for (const ai::Block& call : calls) {
         const ai::ToolDef* tool = service_.catalog().find(call.tool_name);
-        if (tool != nullptr && !tool->mutates) continue;
+        // READS AND UNKNOWN NAMES BELONG TO `runReadTools`, and the two sets
+        // are disjoint and cover every call between them. Answering one here as
+        // well would give a single call id TWO results, which is the same defect
+        // as none: the provider cannot tell which one the model should believe
+        // (A-04: "her tool-call kimliği doğru tek sonuç alır").
+        if (tool == nullptr || !tool->mutates) continue;
         chat_->add(ai::tool_result_message(
             call,
             "Öneri " + filed.value() +
@@ -578,6 +605,7 @@ void ChatPanel::finishTurn(int status, const QString& trouble)
             connect(card, &SuggestionCard::settled, this, [this](const QString& id, bool applied) {
                 emit said(applied ? tr("Öneri %1 uygulandı.").arg(id)
                                   : tr("Öneri %1 reddedildi.").arg(id));
+                resumeAfterDecision(id, applied);
             });
             bubble->setFooter(card);
             bubble->applyTheme(theme_);
@@ -602,6 +630,91 @@ void ChatPanel::finishTurn(int status, const QString& trouble)
     refreshControls();
     refreshMeter();
     transcript_->bumped();
+}
+
+std::span<const ai::Message> ChatPanel::probeMessages() const
+{
+    return chat_->messages();
+}
+
+void ChatPanel::resumeAfterDecision(const QString& planId, bool applied)
+{
+    // ---- THE WORK CONTINUES AFTER THE PERSON DECIDES (TODOS A-04) ----------
+    //
+    // The model was told "filed as a suggestion, not applied" and the turn
+    // ended there. So a request that needs a layer, then objects on it, then a
+    // sheet, then a PDF stopped after the FIRST card — and the user, having
+    // clicked Uygula, watched nothing happen. Every further step had to be
+    // asked for again, in a conversation the model no longer had the thread of.
+    //
+    // THIS IS NOT AUTO-APPLY. Nothing is applied here: the person already
+    // decided, and what continues is the CONVERSATION. Anything the model asks
+    // for next becomes another suggestion and another card (CLAUDE.md 5.7).
+    if (busy() || turn_ != nullptr) return;
+
+    // WHAT ACTUALLY HAPPENED, read back from the plan rather than assumed. A
+    // model told "applied" that is not told WHAT it produced will claim the file
+    // exists — which is the "yalnız metinle 'düzelttim'" failure A-05 names.
+    std::string told;
+    const core::Result<ai::Plan> state =
+        service_.plan_state(planId.toStdString(), requesterLabel());
+    if (state) {
+        const ai::Plan& plan = state.value();
+        told = "Öneri " + planId.toStdString() + ": " + ai::plan_state_name(plan.state) + ".";
+        if (plan.applied_revision != 0)
+            told += " Çizimin yeni sürümü: " + std::to_string(plan.applied_revision) + ".";
+        for (const std::string& one : plan.outputs)
+            told += "\nYazılan dosya: " + one;
+        for (const std::string& one : plan.warnings)
+            told += "\nUyarı: " + one;
+    } else {
+        told = "Öneri " + planId.toStdString() + ": " +
+               (applied ? std::string("uygulandı") : std::string("reddedildi")) + ".";
+    }
+
+    if (applied)
+        told += "\nİş sürüyor: kaldığın yerden devam et. Değişikliği DOĞRULA — sonucu bir "
+                "okuma aracıyla oku, dosya yazıldıysa varlığını kontrol et — ve iş bittiyse "
+                "bittiğini söyle. Yeni bir çizim adımı gerekiyorsa yine öneri olarak sun.";
+    else
+        told += "\nKullanıcı bu öneriyi istemedi. Aynı şeyi yeniden önerme; ne istediğini sor "
+                "ya da başka bir yol öner.";
+
+    // A USER-ROLE NOTE, NOT A SECOND TOOL RESULT. The tool call that filed the
+    // plan was already answered once, and a second answer for one call id is the
+    // same defect as none.
+    chat_->add(ai::text_message(ai::Role::User, told));
+
+    auto* bubble = new MessageBubble(Speaker::Notice, this);
+    bubble->setNote(QString::fromStdString(told), applied ? Tone::Ok : Tone::Warn);
+    transcript_->append(bubble);
+    bubble->applyTheme(theme_);
+
+    // A REJECTION IS RECORDED AND LEFT THERE. The note is in the conversation,
+    // so the model sees it the next time the person writes — but no round is
+    // sent: somebody who has just said no did not ask for an answer, and a model
+    // given the turn would spend it arguing with the decision. Continuing is for
+    // work the person WANTED.
+    if (!applied) {
+        refreshControls();
+        return;
+    }
+
+    // THE ROUND COUNTER IS NOT RESET. A person's decision is not a licence to
+    // start the turn budget again: a job that has already spent its rounds
+    // stops here and says so, rather than looping on somebody's approval.
+    if (++round_ >= kMaxRounds) {
+        auto* stopped = new MessageBubble(Speaker::Notice, this);
+        stopped->setNote(tr("Bu iş için tur sınırına (%1) ulaşıldı; model devam ettirilmedi. "
+                            "Kaldığı yerden sürdürmek için ne istediğinizi yazın.")
+                             .arg(kMaxRounds),
+                         Tone::Warn);
+        transcript_->append(stopped);
+        stopped->applyTheme(theme_);
+        refreshControls();
+        return;
+    }
+    sendRound();
 }
 
 void ChatPanel::stop()

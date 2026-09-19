@@ -624,7 +624,24 @@ motor kabiliyeti eklenir; GUI, AI ve MCP aynı sürümde bu kabiliyeti kullanır
   CRS ve birimi doğrulanarak provenance taşıyan handle'a dönüşsün. **Kabul:** AI
   layout öğesini yerleştirir ve kullanıcının verdiği ölçüyü işler; arazi koordinatı
   uydurmaz. Her sayı için genel bir handle zorunluluğu getirilmez.
-- [ ] **A-04 / P0 — Kalıcı iş yürütme döngüsü.** Bağlam → plan → doğrulama →
+- [~] **A-04 / P0 — Kalıcı iş yürütme döngüsü.** *(onay sonrası devam 19 Eylül 2026)*
+  **Yapıldı — ve bu maddenin asıl kusuru buydu:** konuşma **ilk kartta
+  bitiyordu**. Kullanıcı Uygula'ya basıyor ve hiçbir şey olmuyordu; kalan her
+  adım, modelin ipini kaybettiği bir konuşmada yeniden istenmek zorundaydı.
+  Artık karardan sonra modele önerinin durumu, çizimin yeni sürümü, yazılan
+  dosyalar ve uyarılar anlatılıyor ve **doğrulaması** isteniyor. Otomatik
+  uygulama değil: kararı kişi verdi, devam eden konuşma (5.7).
+  **Ret tur harcamıyor**; **tur sınırı onayla sıfırlanmıyor**.
+  **"Her tool-call kimliği doğru tek sonuç alır"** sağlandı: bilinmeyen bir araç
+  adı atlanıyordu, yani çağrı kimliği yanıtsız kalıyordu — ve cevapsız bir araç
+  çağrısı alan sağlayıcı sonraki turun tamamını reddeder. Okuma/bilinmeyen ile
+  yazma kümeleri artık ayrık ve hepsini kapsıyor.
+  **Kalan:** döngünün `ChatPanel` widget'ından **bağımsız bir servise** taşınması.
+  Bugün mantık pencerededir; bu, MCP istemcisinin de aynı döngüyü kullanabilmesi
+  ve A-06'nın iş/adım durumunu, A-07'nin yeniden deneme ve zaman aşımını tek iş
+  durumu üzerinden yönetebilmesi için gerekli. Araç bağımlılıklarının
+  sıralanması da orada.
+  **Eski metin:** Bağlam → plan → doğrulama →
   policy → uygulama → sonuç okuma → gerekirse düzeltme → tamamlanma döngüsünü
   `ChatPanel` widget'ından bağımsız servis yap. Onay sonrası aynı iş kendiliğinden
   devam etsin. Araç bağımlılıklarını sırala; eksik plan adımını sessiz atlama.

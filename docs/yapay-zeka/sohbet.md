@@ -102,6 +102,28 @@ Adımlar tek işlem olarak uygulanır; tek Ctrl+Z ile geri alınır.
 Ayrıntısı [Onay ve denetim](onay.md) ve [`ÖNERİ`](../komutlar/suggestion.md)
 sayfalarındadır.
 
+### Uyguladıktan sonra iş devam eder
+
+**Uygula** dediğinizde konuşma kaldığı yerden sürer. Modele ne olduğu anlatılır —
+önerinin durumu, çizimin yeni sürümü, yazılan dosyalar ve varsa uyarılar — ve
+değişikliği **doğrulaması**, iş bittiyse bittiğini söylemesi istenir.
+
+Sebebi şu: bir iş çoğu zaman tek adım değildir. "Şu adanın paftasını çıkar" katman
+kurmayı, nesneleri yerleştirmeyi, yerleşimi kurmayı ve PDF'i basmayı gerektirir.
+Eskiden konuşma **ilk kartta bitiyordu**: siz Uygula'ya basıyordunuz ve hiçbir şey
+olmuyordu; kalan her adımı yeniden istemek zorundaydınız.
+
+**Bu otomatik uygulama değildir.** Burada hiçbir şey uygulanmaz — kararı siz zaten
+verdiniz — devam eden **konuşmadır**. Modelin bundan sonra isteyeceği her çizim adımı
+yine bir öneri ve yine bir kart olur.
+
+**Reddet** dediğinizde tur harcanmaz. Ret konuşmaya yazılır — model bir sonraki
+mesajınızda görür — ama model o anda söz almaz: az önce hayır demiş birine cevap
+vermek, kararla tartışmaktır.
+
+Tur sınırı bir onayla sıfırlanmaz: turunu tüketmiş bir iş orada durur ve durduğunu
+söyler.
+
 ## Bir mesaj neyden oluşur
 
 Sohbetteki her mesaj **parçalardan** oluşur, düz bir metinden değil:

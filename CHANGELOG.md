@@ -6,6 +6,32 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — onaydan sonra iş devam ediyor (TODOS A-04, kısmi)
+
+- **Konuşma ilk kartta bitiyordu.** "Şu adanın paftasını çıkar" katman kurmayı,
+  nesne yerleştirmeyi, yerleşim kurmayı ve PDF basmayı gerektirir; sohbet
+  bunların **ilkini** öneriyor, kullanıcı Uygula'ya basıyor ve **hiçbir şey
+  olmuyordu**. Kalan her adım yeniden istenmek zorundaydı — üstelik modelin artık
+  ipini kaybettiği bir konuşmada.
+- Artık karardan sonra modele ne olduğu anlatılıyor — önerinin durumu, çizimin
+  yeni sürümü, yazılan dosyalar, uyarılar — ve değişikliği **doğrulaması**
+  isteniyor. Sonucu okumadan "düzelttim" demek, A-05'in adını koyduğu kusur.
+- **Bu otomatik uygulama değil**: burada hiçbir şey uygulanmıyor, kararı kişi
+  zaten verdi; devam eden **konuşma**. Modelin bundan sonra isteyeceği her çizim
+  adımı yine öneri ve yine kart (5.7).
+- **Ret tur harcamıyor**: konuşmaya yazılıyor, model o anda söz almıyor. Az önce
+  hayır demiş birine cevap vermek, kararla tartışmaktır.
+- **Tur sınırı bir onayla sıfırlanmıyor**: turunu tüketmiş bir iş orada duruyor ve
+  durduğunu söylüyor.
+- **Bilinmeyen bir araç adı artık cevapsız kalmıyor.** Atlanıyordu, yani modelin
+  çağrı kimliği yanıtsız kalıyordu — ve cevapsız bir araç çağrısı alan sağlayıcı
+  sonraki turun tamamını reddeder; kullanıcı bunu konuşmanın sebepsiz ölmesi
+  olarak görür. Cevap aracın yokluğunu söylüyor ve `araclari_ara`yı gösteriyor.
+- **Her çağrı kimliği tam bir sonuç alıyor**: okuma/bilinmeyen `runReadTools`'un,
+  yazma `fileWrites`'ın; iki küme ayrık ve hepsini kapsıyor. İkinci bir sonuç,
+  hiç sonuç olmamasıyla aynı kusurdur — sağlayıcı hangisine inanacağını bilemez.
+- `KENTOS_CHAT_PROBE` bunu sınıyor ve kusur geri konularak doğrulandı.
+
 ### Eklendi — lejant artık haritanın kendi sembollerini çiziyor (TODOS L-07, kısmi)
 
 - **Anahtar, düz renk kutusu değil.** Her katmanın yanında o katmanın **gerçek
