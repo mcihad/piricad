@@ -391,7 +391,20 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   paketleme ekle. QGIS 4.2 karşılığı olarak resim bir şekil öğesiyle kırpılabilsin.
   **Kabul:** katman adı listesi yerine baskıdaki sembollerle eşleşen lejant çıkar;
   taşınan projede logo kaybolmaz; Türkçe karakterler korunur.
-- [ ] **L-08 / P1 — Tablo ve çok çerçeveli akış.** Alan/ifade kolonları, filtre,
+- [~] **L-08 / P1 — Tablo ve çok çerçeveli akış.** *(kesilme ve sütunlar 19 Eylül 2026)*
+  **Yapıldı:** `satir_siniri` ve `sutunlar` parametreleri eklendi. İkisi de modelde
+  duruyordu ve **hiçbir istemciden ayarlanamıyordu** — üstelik
+  `docs/komutlar/layout_item.md` `satir_siniri`'ni baştan beri vaat ediyordu, yani
+  var olmayan belgelenmiş bir özellikti. `sutunlar` `Value::Kind::TextList`
+  gelince mümkün oldu; `hepsi` listeyi boşaltıyor.
+  **Kesilme artık sonuca da bildiriliyor.** Renderer kâğıdın üstüne "… N satır
+  daha sığmadı" yazıyordu; sayfayı dışa aktaran bir istemci ise "tamam" okuyup
+  tabloyu eksiksiz sanarak dosyalıyordu. Kâğıdın üstündeki not onu elinde tutan
+  için, sonuçtaki uyarı diğer herkes için.
+  **Kalan:** çok çerçeveli AKIŞ — sığmayan satırların sonraki çerçeveye/sayfaya
+  devam etmesi; filtre, sıralama, toplama, koşullu biçim, kolon genişliği,
+  yinelenen başlık; manuel tablo ve HTML/zengin metin.
+  Eski madde metni: Alan/ifade kolonları, filtre,
   sıralama, toplama, koşullu biçim, kolon genişliği, yinelenen başlık ve sayfaya
   devam destekle. Manuel tablo ve sınırlı HTML/zengin metin içeriği aynı akış
   sözleşmesine otursun. **Kabul:** 500 satırlı tablo bütün satırları sayfalara taşır;

@@ -348,6 +348,11 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
     };
     const QPageLayout page = device_layout(sheet->pages.front());
 
+    // WHAT THE SHEET COULD NOT HONOUR WHILE IT WAS BEING DRAWN — a table that ran
+    // out of box, an item pointing at a map that is gone. Collected while
+    // painting, because that is when it is known, and said in the answer.
+    std::vector<std::string> trouble;
+
     const auto draw = [&](QPaintDevice& device, int resolution) {
         QPainter painter(&device);
         for (std::size_t i = 0; i < sheet->pages.size(); ++i) {
@@ -370,7 +375,8 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
             const double w_px           = one.w / 1000.0 / kMmPerInch * resolution;
             const double h_px           = one.h / 1000.0 / kMmPerInch * resolution;
             paint_layout_page(painter, QRectF(0, 0, w_px, h_px), document_, *sheet,
-                              static_cast<int>(i), static_cast<double>(resolution), facts);
+                              static_cast<int>(i), static_cast<double>(resolution), facts,
+                              /*margin_guide=*/false, &trouble);
         }
     };
 
@@ -415,6 +421,12 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
             ", " + std::to_string(sheet->pages.size()) + " sayfa";
         if (map != nullptr && core::map_scale(*map) > 0)
             said += ", ölçek 1:" + std::to_string(core::map_scale(*map));
+
+        // REPORTED WITH THE SUCCESS, not instead of it. The sheet printed; these
+        // are what it could not honour, and a caller that reports success without
+        // them reports something untrue (TODOS C-03).
+        for (const std::string& one : trouble)
+            said += "\n  · " + one;
         return said;
     }
 

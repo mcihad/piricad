@@ -718,6 +718,47 @@ Task<void> run_item(Context& ctx)
                 ctx.record("olcek", v);
             }
 
+            // HOW MANY ROWS, AND WHICH COLUMNS. Both were on the model and
+            // reachable from no client — and `docs/komutlar/layout_item.md` has
+            // been promising `satir_siniri` the whole time, which makes it a
+            // documented feature that did not exist.
+            if (const Value v = ctx.argument("satir_siniri"); !v.empty()) {
+                if (item->kind != LayoutItemKind::Table) {
+                    ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                                 "'" + *id +
+                                                     "' bir tablo değil; satir_siniri yalnız "
+                                                     "tabloya verilir."));
+                    co_return;
+                }
+                item->row_limit = static_cast<std::int32_t>(v.as_int());
+                ctx.record("satir_siniri", v);
+            }
+
+            if (const Value v = ctx.argument("sutunlar"); !v.empty()) {
+                if (item->kind != LayoutItemKind::Table) {
+                    ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                                 "'" + *id +
+                                                     "' bir tablo değil; sutunlar yalnız tabloya "
+                                                     "verilir."));
+                    co_return;
+                }
+                std::vector<std::string> wanted;
+                for (const std::string& one : v.as_texts()) {
+                    if (core::turkish_key_equals(one, "hepsi")) {
+                        wanted.clear();
+                        break;
+                    }
+                    if (bus.document().attributes().find(one) == core::kNoAttr) {
+                        ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                                     "Öznitelik sütunu yok: '" + one + "'."));
+                        co_return;
+                    }
+                    wanted.push_back(one);
+                }
+                item->columns = std::move(wanted);
+                ctx.record("sutunlar", v);
+            }
+
             // WHICH LAYERS THIS FRAME DRAWS. The field has been on the model all
             // along with no way to set it, which made "this map draws these
             // layers" a promise the product could not keep from any client. It
@@ -1098,6 +1139,13 @@ KENTOS_COMMAND(layout_item)
                 Param::integer_range("sayfa", Arity::optional(), 1, 10000,
                                      "Öğenin duracağı sayfa (1'den başlar); tasi ile verilir"),
                 Param::text("yeni_ad", Arity::optional(), "islem=ad için öğenin yeni adı"),
+                Param::integer_range("satir_siniri", Arity::optional(), 0, 100000,
+                                     "Tablo öğesinin yazacağı en çok satır; 0 = kutuya kaç satır "
+                                     "sığıyorsa o kadar"),
+                Param::text("sutunlar", Arity{0, 64},
+                            "Tablo öğesinin yazacağı öznitelik sütunları, sırasıyla; anahtar "
+                            "birden çok kez yazılır. Verilmezse katmanın bütün sütunları, "
+                            "'hepsi' listeyi boşaltır"),
                 Param::text(
                     "katmanlar", Arity{0, 64},
                     "Harita çerçevesinin çizeceği katmanlar; anahtar birden çok kez "

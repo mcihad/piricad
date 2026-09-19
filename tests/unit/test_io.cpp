@@ -4649,3 +4649,36 @@ TEST_CASE("Yerel biçim: yarıda kalan bir yazma eski dosyayı bozmaz")
     REQUIRE(back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
     CHECK_EQ(back.doc.live_entity_count(), std::size_t{2});
 }
+
+TEST_CASE("Tablo: sığmayan satırlar sayılarak bildirilir")
+{
+    // TODOS L-08's own sentence: a table that quietly shows the first eleven of
+    // ninety parcels is a table somebody files believing it is complete.
+    //
+    // The renderer draws "… N satır daha sığmadı" on the paper, which is for the
+    // person holding it. This is the model-level half — the count a caller can
+    // read — and the two come from the same loop.
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    for (int i = 0; i < 12; ++i)
+        REQUIRE(r.bus
+                    .execute_line("ALAN noktalar=" + std::to_string(i * 20) + ",0 " +
+                                      std::to_string(i * 20 + 10) + ",0 " +
+                                      std::to_string(i * 20 + 10) + ",10 " +
+                                      std::to_string(i * 20) + ",10",
+                                  Origin::Test)
+                    .ok());
+    CHECK_EQ(r.doc.live_entity_count(), std::size_t{12});
+
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Liste kagit=A4", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=ekle tur=tablo ad=liste", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=ayarla ad=liste metin=PARSEL", Origin::Test).ok());
+
+    // A ROW LIMIT THE USER SET IS NOT A TRUNCATION TO COMPLAIN ABOUT — they asked
+    // for three — but the model still has to be able to say how many there were.
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=ayarla ad=liste satir_siniri=3", Origin::Test).ok());
+    const core::LayoutItem* table = r.doc.layouts().find("Liste")->find("liste");
+    REQUIRE(table != nullptr);
+    CHECK_EQ(table->row_limit, 3);
+    CHECK_EQ(table->text, "PARSEL");
+}

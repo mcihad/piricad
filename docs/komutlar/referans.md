@@ -768,6 +768,8 @@ Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, b
 | `cerceve` | bool | isteğe bağlı | Öğenin çevresine çerçeve çizer |
 | `sayfa` | integer | isteğe bağlı | Öğenin duracağı sayfa (1'den başlar); tasi ile verilir |
 | `yeni_ad` | text | isteğe bağlı | islem=ad için öğenin yeni adı |
+| `satir_siniri` | integer | isteğe bağlı | Tablo öğesinin yazacağı en çok satır; 0 = kutuya kaç satır sığıyorsa o kadar |
+| `sutunlar` | text | 0–64 | Tablo öğesinin yazacağı öznitelik sütunları, sırasıyla; anahtar birden çok kez yazılır. Verilmezse katmanın bütün sütunları, 'hepsi' listeyi boşaltır |
 | `katmanlar` | text | 0–64 | Harita çerçevesinin çizeceği katmanlar; anahtar birden çok kez yazılır. Verilmezse görünür bütün katmanlar, 'hepsi' listeyi boşaltır |
 | `harita` | text | isteğe bağlı | Bu öğenin bağlı olduğu harita çerçevesinin adı. Verilmezse ilk harita. 'ilk' bağı kaldırır |
 | `sira` | integer | isteğe bağlı | Çizim sırası; büyük olan üstte |
@@ -2792,6 +2794,20 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "yeni_ad": {
           "type": "string",
           "description": "islem=ad için öğenin yeni adı (metin)"
+        },
+        "satir_siniri": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000,
+          "description": "Tablo öğesinin yazacağı en çok satır; 0 = kutuya kaç satır sığıyorsa o kadar (tam sayı)"
+        },
+        "sutunlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 64,
+          "description": "Tablo öğesinin yazacağı öznitelik sütunları, sırasıyla; anahtar birden çok kez yazılır. Verilmezse katmanın bütün sütunları, 'hepsi' listeyi boşaltır (metin)"
         },
         "katmanlar": {
           "type": "array",

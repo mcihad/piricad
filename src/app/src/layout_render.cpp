@@ -422,7 +422,8 @@ void paint_legend(QPainter& painter, const QRectF& box, const core::Document& do
 // --------------------------------------------------------------- the table --
 
 void paint_table(QPainter& painter, const QRectF& box, const core::Document& document,
-                 const core::LayoutItem& item, double px_per_paper_mm)
+                 std::vector<std::string>* trouble, const core::LayoutItem& item,
+                 double px_per_paper_mm)
 {
     const QFont font = font_at(item.text_height, px_per_paper_mm);
     const QFontMetricsF metrics(font);
@@ -526,6 +527,15 @@ void paint_table(QPainter& painter, const QRectF& box, const core::Document& doc
                          QObject::tr("… %1 satır daha sığmadı").arg(skipped));
         painter.restore();
     }
+
+    // AND IT SAYS SO TO THE CALLER, not only on the paper. A client that exported
+    // the sheet gets a PDF with "… 79 more" printed on it and a result that says
+    // nothing — so a script filing the output believes it is complete. The note
+    // on the page is for the person holding it; this is for everyone else
+    // (TODOS L-08, C-03).
+    if (skipped > 0 && trouble != nullptr)
+        trouble->push_back("'" + item.id + "' tablosuna " + std::to_string(skipped) +
+                           " satır sığmadı; kutuyu büyütün ya da satir_siniri verin.");
     painter.restore();
 }
 
@@ -667,7 +677,7 @@ void paint_layout_page(QPainter& painter, const QRectF& target, const core::Docu
         }
 
         case core::LayoutItemKind::Table:
-            paint_table(painter, box, document, *item, px_per_paper_mm);
+            paint_table(painter, box, document, trouble, *item, px_per_paper_mm);
             break;
         }
 

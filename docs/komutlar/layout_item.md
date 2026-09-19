@@ -76,6 +76,8 @@ tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıd�
 | `kilit` | Öğeyi taşımaya kapatır |
 | `cerceve` | Öğenin çevresine çerçeve çizer |
 | `sira` | Çizim sırası; büyük olan üstte |
+| `satir_siniri` | Tablo öğesinin yazacağı en çok satır; `0` = kutuya sığdığı kadar |
+| `sutunlar` | Tablo öğesinin yazacağı öznitelik sütunları, sırasıyla; `hepsi` listeyi boşaltır |
 | `harita` | Bu öğenin bağlı olduğu harita çerçevesinin adı; `ilk` bağı kaldırır |
 | `yeni_ad` | `islem=ad` için öğenin yeni adı |
 | `katmanlar` | Harita çerçevesinin çizeceği katmanlar; **anahtar birden çok kez yazılır**. Verilmezse görünür bütün katmanlar, `hepsi` listeyi boşaltır |
@@ -83,11 +85,19 @@ tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıd�
 
 ### Tablo öğesi
 
-`metin=` tablonun **katman adıdır**. Sütunlar o katmanın şemasından gelir; yalnız
-bazılarını istiyorsanız — bu tur henüz komut satırından değil, dosyadan — öğenin
-sütun listesi kullanılır. `satir_siniri` verilmezse kutuya kaç satır sığıyorsa o
-kadarı yazılır ve **sığmayanlar sayılarak bildirilir**: sessizce ilk on bir parseli
-gösteren bir tablo, eksiksiz sanılarak dosyalanan bir tablodur.
+`metin=` tablonun **katman adıdır**. Sütunlar o katmanın şemasından gelir;
+yalnız bazılarını istiyorsanız `sutunlar=` ile sırasıyla yazın — anahtar birden
+çok kez yazılır, `hepsi` listeyi boşaltır:
+
+```
+ÇIKTIÖĞE islem=ayarla ad=liste metin=PARSEL sutunlar=ada sutunlar=parsel sutunlar=alan
+```
+
+`satir_siniri` verilmezse kutuya kaç satır sığıyorsa o kadarı yazılır ve
+**sığmayanlar sayılarak bildirilir** — hem kâğıdın üstünde ("… 79 satır daha
+sığmadı") hem de komutun sonucunda. Sessizce ilk on bir parseli gösteren bir
+tablo, eksiksiz sanılarak dosyalanan bir tablodur; kâğıdın üstündeki not onu
+elinde tutan içindir, sonuçtaki uyarı da diğer herkes için.
 
 ### Metin yer tutucuları
 
@@ -260,6 +270,8 @@ Bir yerleşimi baştan sona kuran betik:
 | `'X' bir harita çerçevesi değil; pencere yalnız haritaya verilir.` | `pencere=` harita olmayan bir öğeye verildi | Harita öğesinin adını verin |
 | `'X' bir harita çerçevesi değil; katmanlar yalnız haritaya verilir.` | `katmanlar=` harita olmayan bir öğeye verildi | Harita öğesinin adını verin |
 | `Katman yok: 'X'.` | `katmanlar=` çizimde olmayan bir katmanı gösteriyor | `KATMAN islem=listele` ile adları görün |
+| `Öznitelik sütunu yok: 'X'.` | `sutunlar=` tanımlı olmayan bir sütunu gösteriyor | `ÖZNİTELİKŞEMASI` ile adları görün |
+| `'X' bir tablo değil; satir_siniri yalnız tabloya verilir.` | Tablo olmayan bir öğeye verildi | Tablo öğesinin adını verin |
 | `'X' yerleşiminde 'Y' adlı bir harita çerçevesi yok.` | `harita=` olmayan bir öğeyi gösteriyor | `islem=listele` ile harita adlarını görün |
 | `Bir harita çerçevesi başka bir haritaya bağlanmaz.` | `harita=` bir harita öğesine verildi | Ölçek, kuzey, lejant ya da metne verin |
 | `'X' yerleşiminde 'Y' yeniden adlandırılamadı; öğe yok ya da 'Z' adı kullanımda.` | `islem=ad` çakışan ya da olmayan bir ada çağrıldı | Başka bir ad verin |

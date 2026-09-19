@@ -601,6 +601,23 @@ int main(int argc, char** argv)
             // publish that did not finish and nobody noticed (TODOS C-05).
             check(!QFileInfo::exists(pdf + QStringLiteral(".yeni")),
                   "yayımlanmamış geçici PDF kaldı");
+
+            // A TABLE THAT RAN OUT OF BOX SAYS SO IN THE ANSWER, not only on the
+            // paper. A client that exported the sheet and read "tamam" would file
+            // a table believing it complete (TODOS L-08).
+            window.runScriptLine(
+                QStringLiteral("ÇIKTIÖĞE islem=ekle yerlesim=\"Ada 1284\" tur=tablo ad=dar"));
+            window.runScriptLine(QStringLiteral(
+                "ÇIKTIÖĞE islem=tasi yerlesim=\"Ada 1284\" ad=dar x=10 y=10 genislik=60 "
+                "yukseklik=8"));
+            window.runScriptLine(
+                QStringLiteral("ÇIKTIÖĞE islem=ayarla yerlesim=\"Ada 1284\" ad=dar metin=PARSEL"));
+            const QString narrow = dir + QStringLiteral("/dar.pdf");
+            controller->runLine(
+                QStringLiteral("YAZDIR yerlesim=\"Ada 1284\" dosya=\"%1\"").arg(narrow),
+                kentos::command::Origin::Gui);
+            QCoreApplication::processEvents();
+            check(QFileInfo::exists(narrow), "dar tablolu PDF yazılmadı");
             (void)std::fprintf(stdout, "[tasarim] pdf rasterı yok, %lld bayt\n",
                                static_cast<long long>(written.size()));
             (void)std::fprintf(stdout, "[tasarim] pdf %lld bayt\n",

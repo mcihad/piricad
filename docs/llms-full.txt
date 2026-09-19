@@ -42,7 +42,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 75 (69 tanesi onay ister)
-- Katalog parmak izi: `12667326896355298363`
+- Katalog parmak izi: `1619006915558691632`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -497,6 +497,8 @@ Onay ister.
 | `cerceve` | boolean | hayır | Öğenin çevresine çerçeve çizer (evet/hayır) |
 | `sayfa` | integer | hayır | Öğenin duracağı sayfa (1'den başlar); tasi ile verilir (tam sayı) |
 | `yeni_ad` | string | hayır | islem=ad için öğenin yeni adı (metin) |
+| `satir_siniri` | integer | hayır | Tablo öğesinin yazacağı en çok satır; 0 = kutuya kaç satır sığıyorsa o kadar (tam sayı) |
+| `sutunlar` | array | hayır | Tablo öğesinin yazacağı öznitelik sütunları, sırasıyla; anahtar birden çok kez yazılır. Verilmezse katmanın bütün sütunları, 'hepsi' listeyi boşaltır (metin) |
 | `katmanlar` | array | hayır | Harita çerçevesinin çizeceği katmanlar; anahtar birden çok kez yazılır. Verilmezse görünür bütün katmanlar, 'hepsi' listeyi boşaltır (metin) |
 | `harita` | string | hayır | Bu öğenin bağlı olduğu harita çerçevesinin adı. Verilmezse ilk harita. 'ilk' bağı kaldırır (metin) |
 | `sira` | integer | hayır | Çizim sırası; büyük olan üstte (tam sayı) |
