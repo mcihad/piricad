@@ -522,6 +522,18 @@ int main(int argc, char** argv)
             check(controller->document().layouts().find("Ada 1284")->items.size() == before - 1,
                   "GERİAL son jesti geri almadı");
 
+            // THE MENU, WALKED. "Integrated into the main menu" means the entries
+            // are there and connected, which a picture of a closed menu cannot
+            // show.
+            for (const QString& line : window.probeLayoutMenu()) {
+                (void)std::fprintf(stdout, "[menu] %s\n", line.toUtf8().constData());
+                (void)std::fflush(stdout);
+            }
+            check(window.probeLayoutMenu().contains(QStringLiteral("Pafta Yöneticisi…")),
+                  "Pafta Yöneticisi menüde yok");
+            check(window.probeLayoutMenu().contains(QStringLiteral("    Tasarımcıyı Aç")),
+                  "paftanın alt menüsünde Tasarımcıyı Aç yok");
+
             const QString pdf = dir + QStringLiteral("/pafta.pdf");
             controller->runLine(QStringLiteral("YAZDIR pafta=\"Ada 1284\" dosya=\"%1\"").arg(pdf),
                                 kentos::command::Origin::Gui);
@@ -607,6 +619,22 @@ int main(int argc, char** argv)
         later([] {
             if (QWidget* top = QApplication::activeWindow()) top->close();
         });
+        // THE PAFTA WINDOWS, which are windows like any other and so belong in
+        // the smoke test: a dialog that crashes on construction passed
+        // `shell-starts` twice before this test existed.
+        later([&window] {
+            window.controller()->runLine(QStringLiteral("PAFTA islem=ekle ad=\"Duman\" kagit=A4"),
+                                         kentos::command::Origin::Gui);
+            window.openLayoutManager();
+        });
+        later([] {
+            if (QWidget* top = QApplication::activeModalWidget()) top->close();
+        });
+        later([&window] { window.openLayoutDesigner(QStringLiteral("Duman")); });
+        later([] {
+            if (QWidget* top = QApplication::activeModalWidget()) top->close();
+        });
+
         later([&window] { window.openCommandSearch(); });
         later([] {
             if (QWidget* top = QApplication::activePopupWidget()) top->close();

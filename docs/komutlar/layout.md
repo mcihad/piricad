@@ -91,6 +91,28 @@ PAFTA islem=ekle ad="Askı Paftası" kagit=ozel genislik=700 yukseklik=500
 
 ### Arayüz
 
+### Menüden
+
+**`Dosya ▸ Paftalar`** paftaların ana kapısıdır:
+
+| Giriş | Ne yapar |
+|---|---|
+| **Yeni Pafta…** | Ad sorar, A3 yatay bir pafta kurar ve tasarımcıyı açar |
+| **Pafta Yöneticisi…** (`Ctrl+Shift+P`) | Çizimdeki paftaları listeler: aç, yeniden adlandır, **çoğalt**, sil |
+| *pafta adı* ▸ **Tasarımcıyı Aç** | Sayfayı düzenlemeye açar |
+| *pafta adı* ▸ **Tuvalden Alan Seç…** | Haritanın bakacağı alanı tuvalden çerçeveletir, sonra tasarımcıyı açar |
+| *pafta adı* ▸ **PDF'e Aktar…** | `YAZDIR pafta=` çalıştırır |
+
+Menü her açılışta çizimden yeniden kurulur: komut satırından eklediğiniz bir pafta
+orada olur.
+
+**Pafta Yöneticisi**'ndeki **Çoğalt**, paftayı bütün öğeleriyle kopyalar. Bunu tek bir
+"kopyala" fiiliyle değil, bir elin yazacağı satırlarla yapar — bir `PAFTA islem=ekle`
+ve her öğe için bir `PAFTAÖĞE` — hepsi tek toplu iş, yani tek `Ctrl+Z`. Günlükte
+gerçekte ne kurulduğu görünür, fiilin arkasına saklanmaz.
+
+### Araç çubuğundan
+
 Araç çubuğundaki **yazdırma düğmesinin yanındaki ok** hem yazdırma profillerini hem
 çizimdeki **paftaları** listeler. Listeden bir pafta seçtiğinizde:
 
@@ -99,9 +121,8 @@ Araç çubuğundaki **yazdırma düğmesinin yanındaki ok** hem yazdırma profi
 2. Alanı sürükleyip bıraktığınızda **pafta tasarımcısı açılır** ve harita çerçevesi
    o alana bakıyor olur.
 
-Aynı listenin altındaki **Yeni pafta…** bir ad sorar, A3 yatay bir pafta kurar ve
-tasarımcıyı açar. Her adım `PAFTA` ve `PAFTAÖĞE` satırları olarak geçer: komut
-günlüğünde görünür, tek `Ctrl+Z` ile geri alınır.
+Aynı listenin altında da **Yeni pafta…** vardır. Her adım `PAFTA` ve `PAFTAÖĞE`
+satırları olarak geçer: komut günlüğünde görünür, tek `Ctrl+Z` ile geri alınır.
 
 ### Betik
 

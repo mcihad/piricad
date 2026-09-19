@@ -77,6 +77,19 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   Sınama artık anahtarsız yerel bir uca bakıyor. (Anahtar okumasının GUI iş parçasından
   çıkarılması ayrı bir iş olarak ayrıldı.)
 
+- **Ana menüye girdi**: **`Dosya ▸ Paftalar`** — QGIS'in `Project ▸ Layouts`'unun
+  durduğu yer, ve aynı sebeple `Dosya` altında: pafta belgeye aittir, dosyayla gider ve
+  imzalanan işin parçasıdır. Menü her açılışta çizimden yeniden kurulur, yani komut
+  satırından eklenen bir pafta orada olur. Her paftanın kendi alt menüsü var:
+  **Tasarımcıyı Aç**, **Tuvalden Alan Seç…**, **PDF'e Aktar…**.
+- **Pafta Yöneticisi** (`Ctrl+Shift+P`, `app/layout_manager.hpp`): çizimdeki paftaları
+  kâğıdı, yönü ve öğe sayısıyla listeler; açar, yeniden adlandırır, siler ve
+  **çoğaltır**. Çoğaltma tek bir "kopyala" fiili değildir — bir `PAFTA islem=ekle` ve
+  her öğe için bir `PAFTAÖĞE`, hepsi tek toplu iş: günlükte gerçekte ne kurulduğu
+  görünür ve tek `Ctrl+Z` geri alır.
+- Duman testi (`windows-open`) artık Pafta Yöneticisi'ni ve tasarımcıyı da açıyor;
+  `layout-designer` sınaması menüyü gezip girişlerin bağlı olduğunu doğruluyor.
+
 > **Bu turda yok**: pafta şablon kitaplığı (kurumun standart paftalarını çizimden
 > bağımsız saklamak). Kılavuzda gelecek zamanla yazılıdır.
 

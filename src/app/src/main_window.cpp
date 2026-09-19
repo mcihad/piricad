@@ -13,6 +13,7 @@
 #include "kentos_cad/app/icons.hpp"
 #include "kentos_cad/app/import_wizard.hpp"
 #include "kentos_cad/app/layout_designer.hpp"
+#include "kentos_cad/app/layout_manager.hpp"
 #include "kentos_cad/app/map_canvas.hpp"
 #include "kentos_cad/app/panels.hpp"
 #include "kentos_cad/app/pick_list.hpp"
@@ -1136,6 +1137,17 @@ void MainWindow::buildMenus()
     file->addAction(actImport_);
     file->addAction(actExport_);
     file->addAction(actPrint_);
+
+    // ---- PAFTALAR, where a QGIS user looks for layouts -----------------------
+    //
+    // UNDER `Dosya` AND NOT UNDER `Görünüm`, because a pafta belongs to the
+    // DOCUMENT: it is saved in the file, it is in the content hash, and it is
+    // part of what gets signed. QGIS puts its layouts under `Project` for the
+    // same reason. The submenu is rebuilt whenever the document changes, so a
+    // sheet added at the command line appears here without anything being told.
+    layoutMenu_ = file->addMenu(tr("&Paftalar"));
+    connect(layoutMenu_, &QMenu::aboutToShow, this, &MainWindow::rebuildLayoutMenu);
+    rebuildLayoutMenu();
     file->addSeparator();
     file->addAction(actProjectSettings_);
     file->addSeparator();
@@ -3461,6 +3473,111 @@ void MainWindow::exportData()
     ExportDialog window(*controller_, ExportSubject::Drawing, QString(), this);
     window.applyTheme(theme_);
     window.exec();
+}
+
+void MainWindow::rebuildLayoutMenu()
+{
+    if (layoutMenu_ == nullptr) return;
+    layoutMenu_->clear();
+
+    QAction* fresh = layoutMenu_->addAction(tr("Yeni Pafta…"));
+    fresh->setStatusTip(tr("PAFTA islem=ekle — başlık, harita, ölçek çubuğu ve kuzey oku ile "
+                           "gelir"));
+    connect(fresh, &QAction::triggered, this, [this] { newLayout(); });
+
+    QAction* manage = layoutMenu_->addAction(tr("Pafta Yöneticisi…"));
+    manage->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+P")));
+    manage->setStatusTip(tr("Çizimdeki paftaları listeler: aç, yeniden adlandır, çoğalt, sil"));
+    connect(manage, &QAction::triggered, this, &MainWindow::openLayoutManager);
+
+    const core::LayoutStore& sheets = controller_->document().layouts();
+    if (sheets.empty()) {
+        layoutMenu_->addSeparator();
+        QAction* none = layoutMenu_->addAction(tr("(çizimde pafta yok)"));
+        none->setEnabled(false);
+        return;
+    }
+
+    // ---- one entry per sheet, and a submenu for each ------------------------
+    //
+    // TWO WAYS INTO ONE SHEET, because they are two different intentions:
+    // `Tasarımcıyı aç` is "let me arrange the page", and `Tuvalden alan seç` is
+    // "let me say what the map looks at". The second is the flow the print
+    // menu's arrow offers, repeated here so a user who lives in the menu bar is
+    // not sent to the toolbar to find it.
+    layoutMenu_->addSeparator();
+    for (const core::Layout& l : sheets.all()) {
+        const QString name = QString::fromStdString(l.name);
+        QMenu* one         = layoutMenu_->addMenu(name);
+        one->setToolTip(QStringLiteral("%1 %2×%3 mm")
+                            .arg(QString::fromStdString(l.paper))
+                            .arg(l.pages.front().w / 1000)
+                            .arg(l.pages.front().h / 1000));
+
+        QAction* design = one->addAction(tr("Tasarımcıyı Aç"));
+        connect(design, &QAction::triggered, this, [this, name] { openLayoutDesigner(name); });
+
+        QAction* aim = one->addAction(tr("Tuvalden Alan Seç…"));
+        aim->setStatusTip(tr("Haritanın bakacağı alanı tuvalden çerçeveleyin; sonra tasarımcı "
+                             "açılır"));
+        connect(aim, &QAction::triggered, this, [this, name] { layoutWithFrame(name); });
+
+        one->addSeparator();
+        QAction* pdf = one->addAction(tr("PDF'e Aktar…"));
+        connect(pdf, &QAction::triggered, this, [this, name] { exportLayout(name); });
+    }
+}
+
+QStringList MainWindow::probeLayoutMenu()
+{
+    QStringList out;
+    if (layoutMenu_ == nullptr) return {QStringLiteral("Paftalar menüsü yok")};
+
+    // THE MENU IS BUILT ON `aboutToShow`, so the probe raises that signal rather
+    // than reading a menu nobody has opened — which is exactly the state a user
+    // never sees and therefore the wrong thing to test.
+    emit layoutMenu_->aboutToShow();
+
+    for (QAction* action : layoutMenu_->actions()) {
+        if (action->isSeparator()) continue;
+        out << QStringLiteral("%1%2").arg(
+            action->text(), action->isEnabled() ? QString() : QStringLiteral(" [kapalı]"));
+        if (QMenu* sub = action->menu(); sub != nullptr)
+            for (QAction* inner : sub->actions())
+                if (!inner->isSeparator()) out << QStringLiteral("    %1").arg(inner->text());
+    }
+    return out;
+}
+
+void MainWindow::openLayoutManager()
+{
+    LayoutManager manager(*controller_, this);
+    manager.applyTheme(theme_);
+    // QUEUED, so the manager is closed before the designer opens: two modal
+    // windows stacked on each other is how a user loses track of which one the
+    // Escape key answers.
+    QString wanted;
+    connect(&manager, &LayoutManager::openRequested, this,
+            [&wanted](const QString& name) { wanted = name; });
+    manager.exec();
+    if (!wanted.isEmpty()) openLayoutDesigner(wanted);
+}
+
+void MainWindow::exportLayout(const QString& layout)
+{
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Paftayı PDF olarak kaydet"), layout + QStringLiteral(".pdf"), tr("PDF (*.pdf)"));
+    if (path.isEmpty()) return;
+
+    QString quotedName = layout;
+    quotedName.replace('\\', QStringLiteral("\\\\"));
+    quotedName.replace('"', QStringLiteral("\\\""));
+    QString quotedPath = path;
+    quotedPath.replace('\\', QStringLiteral("\\\\"));
+    quotedPath.replace('"', QStringLiteral("\\\""));
+    controller_->runLine(
+        QStringLiteral("YAZDIR pafta=\"%1\" dosya=\"%2\"").arg(quotedName, quotedPath),
+        command::Origin::Gui);
 }
 
 void MainWindow::rebuildPrintMenu()

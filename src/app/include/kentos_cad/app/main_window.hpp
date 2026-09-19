@@ -134,6 +134,17 @@ public:
     /// Asks for a name, creates a pafta and opens the designer on it.
     void newLayout();
 
+    /// Rebuilds `Dosya ▸ Paftalar` from the document. Wired to the menu's own
+    /// `aboutToShow`, so a sheet added at the command line is there the next
+    /// time the menu opens without anything having to be told.
+    void rebuildLayoutMenu();
+
+    /// Opens the pafta list: open, rename, duplicate, remove.
+    void openLayoutManager();
+
+    /// Asks for a path and runs `YAZDIR pafta=`.
+    void exportLayout(const QString& layout);
+
     /// Opens the preview window directly on `window` — the frame's capture, or
     /// the current view when something else asks.
     void openPrintDialog(core::Box2 window, const QString& profile = QString());
@@ -291,6 +302,15 @@ public:
     ///
     /// Developer tooling behind `KENTOS_CHAT_PROBE`.
     int probeChat();
+
+    /// Every entry of `Dosya ▸ Paftalar`, as a menu walk would find it, one
+    /// line per action and indented for a submenu.
+    ///
+    /// THE CHECK NOTHING ELSE MAKES. A menu entry is four things that have to
+    /// agree — the submenu exists, it is rebuilt from the document, each sheet
+    /// has its own entries, and each entry is CONNECTED. A screenshot shows the
+    /// first; only walking the actions and triggering one shows the rest.
+    QStringList probeLayoutMenu();
 
     /// Drives the six modify tools with REAL mouse and key events, the way a hand
     /// does — `action->trigger()`, then presses on the canvas, then Enter sent to
@@ -589,6 +609,9 @@ private:
     /// plain print. It is what tells the frame's acceptance which of the two
     /// windows to open.
     QString pendingLayout_;
+
+    /// `Dosya ▸ Paftalar`, rebuilt from the document each time it opens.
+    QMenu* layoutMenu_{nullptr};
 
     /// Rebuilds the print button's menu from `PrintService::profiles()`. There
     /// is no second profile list: the menu is the store, drawn (CLAUDE.md 5.10).
