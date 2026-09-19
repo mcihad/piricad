@@ -335,14 +335,28 @@ core::Result<std::string> ProviderService::beginProbe(const ai::ProviderProfile&
     // A CREDENTIAL THAT CANNOT BE FOUND IS SAID PLAINLY, rather than sent as
     // nothing and reported back as the provider's 401. The key itself is not read
     // into any message — only whether one is there (CLAUDE.md 5.21).
-    if (!profile.key_ref.empty() && !secrets_.read(utf8(profile.key_ref)).has_value())
-        return core::err(core::ErrorCode::NotFound,
-                         "'" + profile.name + "' profilinin anahtarı bulunamadı: '" +
-                             profile.key_ref +
-                             "' adıyla ne anahtar deposunda bir kayıt ne de böyle bir ortam "
-                             "değişkeni var. Anahtarı Seçenekler ▸ Yapay Zeka Modelleri "
-                             "sayfasından girin. Anahtar deposu: " +
-                             SecretStore::describe().toStdString());
+    //
+    // ONLY WHAT IS ALREADY KNOWN IS TESTED HERE, and the lookup is STARTED rather
+    // than waited for. This is a command body: `Bus::run_to_completion` runs it
+    // on the GUI thread, and asking the platform key store from here would freeze
+    // the window for as long as an authorisation prompt goes unanswered
+    // (secret_resolver.hpp, ai.md R18/P8) — the very thing the note at the top of
+    // this file says a probe must not do. A key nobody has resolved yet therefore
+    // passes this check and is reported by the probe along with everything else:
+    // `AiTransport::send` waits for the same lookup and answers the sink when it
+    // lands, which is where the rest of this test's outcome comes from anyway.
+    if (!profile.key_ref.empty()) {
+        const SecretResolver::Answer key = secrets_.known(utf8(profile.key_ref));
+        if (key.settled && !key.secret)
+            return core::err(core::ErrorCode::NotFound,
+                             "'" + profile.name + "' profilinin anahtarı bulunamadı: '" +
+                                 profile.key_ref +
+                                 "' adıyla ne anahtar deposunda bir kayıt ne de böyle bir ortam "
+                                 "değişkeni var. Anahtarı Seçenekler ▸ Yapay Zeka Modelleri "
+                                 "sayfasından girin. Anahtar deposu: " +
+                                 SecretStore::describe().toStdString());
+        if (!key.settled) secrets_.prime(utf8(profile.key_ref));
+    }
 
     if (transport_ == nullptr)
         return core::err(core::ErrorCode::Unsupported,

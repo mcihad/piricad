@@ -11,9 +11,10 @@
 // `Bus::on_ai_provider_request` here.
 //
 // FOUR THINGS IT OWNS. The store as it stands; the JSON file under the user's
-// configuration directory; the key store the API keys live in (`secret_store.hpp`
-// — the profile file never holds one, CLAUDE.md 5.21); and the connection PROBE
-// that `YAPAYZEKAMODELİ islem=dene` runs.
+// configuration directory; the key store the API keys live in, reached through
+// `secret_resolver.hpp` so that no caller of `secrets()` can make this thread
+// wait (the profile file never holds a key, CLAUDE.md 5.21); and the connection
+// PROBE that `YAPAYZEKAMODELİ islem=dene` runs.
 //
 // THE PROBE ANSWERS LATE, AND THAT IS THE ONLY HONEST SHAPE IT CAN HAVE. A
 // command dispatch is synchronous — `Bus::run_to_completion` requires the body to
@@ -26,7 +27,7 @@
 // that reported success before the reply arrived would be a probe that lies.
 #pragma once
 
-#include "kentos_cad/app/secret_store.hpp"
+#include "kentos_cad/app/secret_resolver.hpp"
 
 #include "kentos_cad/ai/provider.hpp"
 #include "kentos_cad/ai/provider_catalog.hpp"
@@ -90,9 +91,15 @@ public:
     /// meant to end (`ai/provider_catalog.hpp`).
     const ai::ProviderCatalog& catalog() const noexcept { return catalog_; }
 
-    /// The key store, for the settings page's secret field and for the transport.
-    /// The keys themselves are never held by this service.
-    SecretStore& secrets() noexcept { return secrets_; }
+    /// The key store, for the settings page's secret field and for the
+    /// transport. The keys themselves are never held by this service.
+    ///
+    /// IT IS THE RESOLVER RATHER THAN THE STORE, so that no caller reached
+    /// through here can make the GUI thread wait on a platform key store
+    /// (secret_resolver.hpp, ai.md R18/P8). `SecretStore::describe` and
+    /// `SecretStore::available` are static and still called directly: they ask
+    /// the operating system nothing.
+    SecretResolver& secrets() noexcept { return secrets_; }
 
     /// Hands over the outbound transport after construction, with the binder
     /// that names a profile to it. Replaces whatever was there; a null transport
@@ -140,7 +147,7 @@ private:
     command::Bus& bus_;
     ai::ProviderCatalog catalog_;
     ai::ProviderProfiles profiles_;
-    SecretStore secrets_;
+    SecretResolver secrets_;
     ai::HttpTransport* transport_{nullptr};
     ProfileBinder binder_;
     QString path_;

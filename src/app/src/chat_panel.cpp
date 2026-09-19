@@ -5,6 +5,7 @@
 #include "kentos_cad/app/ai_transport.hpp"
 #include "kentos_cad/app/controller.hpp"
 #include "kentos_cad/app/flow_layout.hpp"
+#include "kentos_cad/app/provider_service.hpp"
 #include "kentos_cad/app/suggestion_card.hpp"
 #include "kentos_cad/app/tokens.hpp"
 
@@ -127,6 +128,21 @@ ChatPanel::ChatPanel(Controller& controller, AiService& service, AiTransport& tr
     chooser_ = new ComboBox(head);
     chooser_->setAccessibleName(tr("Yapay zeka modeli"));
     headRow->addWidget(chooser_, 1);
+
+    // THE KEY IS FETCHED WHEN SOMEBODY PICKS A MODEL, not when they press send.
+    // The lookup is off-thread either way (secret_resolver.hpp), so this is not
+    // about speed: it is about WHERE the operating system's authorisation prompt
+    // appears. Asked here it belongs to a deliberate act; asked three sentences
+    // later it is a prompt the user cannot account for.
+    //
+    // `activated` RATHER THAN `currentIndexChanged`: the second fires while the
+    // list is being filled from the profile store, and a keychain prompt at
+    // start-up that nobody asked for is exactly the surprise being avoided.
+    connect(chooser_, &QComboBox::activated, this, [this](int) {
+        const ai::ProviderProfile* picked = chosen();
+        if (picked == nullptr || picked->key_ref.empty()) return;
+        controller_.providerService().secrets().prime(QString::fromStdString(picked->key_ref));
+    });
     clear_ = new Button(Glyph::New, tr("Yeni sohbet"), head);
     headRow->addWidget(clear_);
     column->addWidget(head);
@@ -321,8 +337,11 @@ void ChatPanel::sendRound()
     flight_ =
         transport_.send(permitted.value(), ai::request_for(request, permitted.value()), *sink_);
     if (!flight_) {
-        // The transport refused before sending — a missing credential is the
-        // usual reason, and it has already said which one on the sink.
+        // The transport refused outright and has already said why on the sink —
+        // a profile whose key is KNOWN to be missing is the usual reason. A key
+        // nobody has looked up yet does not come back here: the request waits for
+        // the key store off-thread and the refusal, if it is one, arrives through
+        // `finishTurn` like any other ending (ai_transport.hpp).
         tick_->stop();
     }
     refreshControls();

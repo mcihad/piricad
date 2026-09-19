@@ -39,6 +39,7 @@ qt_add_executable(kentos_cad
     src/ai_transport.cpp
     src/provider_service.cpp
     src/provider_dialog.cpp
+    src/secret_resolver.cpp
     src/secret_store.cpp
     src/flow_layout.cpp
     src/icons.cpp
@@ -77,6 +78,7 @@ qt_add_executable(kentos_cad
     include/kentos_cad/app/ai_transport.hpp
     include/kentos_cad/app/provider_service.hpp
     include/kentos_cad/app/provider_dialog.hpp
+    include/kentos_cad/app/secret_resolver.hpp
     include/kentos_cad/app/secret_store.hpp
     include/kentos_cad/app/fields.hpp
     include/kentos_cad/app/widgets.hpp
