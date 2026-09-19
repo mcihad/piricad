@@ -131,6 +131,51 @@ const char* dialect_id(Dialect dialect)
     return "openai_chat";
 }
 
+DialectCapabilities capabilities_of(Dialect dialect)
+{
+    DialectCapabilities out;
+    switch (dialect) {
+    case Dialect::OpenAiChat:
+        // The oldest and widest of the four. Reasoning arrives as
+        // `delta.reasoning_content` on the providers that have it, and usage only
+        // when `stream_options: {"include_usage": true}` was sent — which this
+        // program sends, so the number can be trusted when it comes.
+        out.vision            = true;
+        out.reasoning         = true;
+        out.structured_output = true;
+        break;
+
+    case Dialect::OpenAiResponses:
+        // Typed events with a sequence number, and the one dialect that requires
+        // an opaque payload to be replayed byte for byte (`encrypted_content`).
+        out.vision            = true;
+        out.reasoning         = true;
+        out.structured_output = true;
+        break;
+
+    case Dialect::AnthropicMessages:
+        // `thinking` blocks carry a signature that must be replayed unchanged,
+        // which is why a message keeps the provider's opaque payload beside the
+        // text it rendered.
+        out.vision            = true;
+        out.reasoning         = true;
+        out.structured_output = false;
+        break;
+
+    case Dialect::OllamaNative:
+        // NDJSON, one object per line; tool calls arrive in `message.tool_calls`
+        // rather than streamed. A LOCAL RUNNER, so what it can do depends far more
+        // on the model loaded than on the wire language — `vision` is false here
+        // because the dialect has no place for an image, not because no local
+        // model can see.
+        out.vision            = false;
+        out.reasoning         = true;
+        out.structured_output = true;
+        break;
+    }
+    return out;
+}
+
 std::optional<Dialect> dialect_from_id(std::string_view id)
 {
     for (Dialect dialect : kDialects)

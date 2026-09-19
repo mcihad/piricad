@@ -61,6 +61,44 @@ std::optional<Dialect> dialect_from_id(std::string_view id);
 /// Every dialect, in the order a chooser lists them.
 std::span<const Dialect> dialects();
 
+/// WHAT A DIALECT CAN ACTUALLY DO, so the chat does not send it something it
+/// cannot read.
+///
+/// Every one of these is a FACT ABOUT THE WIRE LANGUAGE, not about a vendor or a
+/// model: `ollama_native` frames NDJSON and carries tool calls in
+/// `message.tool_calls`, whatever model is behind it. A model that cannot use
+/// tools is a different question, and it belongs to the profile (TODOS A-07).
+struct DialectCapabilities
+{
+    /// Whether the dialect can be handed a tool catalogue at all. All four can;
+    /// the field exists so a fifth that cannot is describable rather than
+    /// silently broken.
+    bool tools{true};
+
+    /// Whether a response can be streamed as it is produced.
+    bool streaming{true};
+
+    /// Whether an image can be put in a message. The chat's visual preview
+    /// (TODOS A-05) offers one only where this is true, and falls back to the
+    /// structural report everywhere else.
+    bool vision{false};
+
+    /// Whether the dialect has a place for a reasoning/thinking block that is
+    /// separate from the answer.
+    bool reasoning{false};
+
+    /// Whether it can be asked for a response matching a JSON Schema.
+    bool structured_output{false};
+
+    /// Whether it reports token usage the program can trust, as opposed to the
+    /// chat's own estimate. `ContextMeter` settles on this when it arrives.
+    bool reports_usage{true};
+};
+
+/// What that dialect can do. Stated in one place so the chat, the provider
+/// dialog and a future eval harness cannot each hold their own opinion.
+DialectCapabilities capabilities_of(Dialect dialect);
+
 /// Where a request actually goes, computed from the URL's host and never from
 /// anything a profile claims about itself.
 ///

@@ -670,3 +670,31 @@ TEST_CASE("Model listesi isteği profilin kendi adresine gider")
     silent.list_shape = ai::ModelListShape::None;
     CHECK(ai::model_list_request(mine, silent, permit.value()).has_value() == false);
 }
+
+TEST_CASE("Lehçe: ne yapabildiğini bildiriyor")
+{
+    // TODOS A-07. Without this the chat has to guess, and a chat that guesses
+    // sends an image to a dialect with no place for one — which fails at the
+    // provider, after the user waited.
+    //
+    // EVERY FIELD IS A FACT ABOUT THE WIRE LANGUAGE, not about a vendor or a
+    // model: `ollama_native` frames NDJSON whatever model is behind it.
+    for (const ai::Dialect one : ai::dialects()) {
+        const ai::DialectCapabilities caps = ai::capabilities_of(one);
+        INFO("lehçe: ", ai::dialect_id(one));
+        // All four can be handed a tool catalogue; the field exists so a fifth
+        // that cannot is describable rather than silently broken.
+        CHECK(caps.tools);
+        CHECK(caps.streaming);
+    }
+
+    // The local runner has no place for an image in its message shape — which is
+    // not the same as "no local model can see".
+    CHECK_FALSE(ai::capabilities_of(ai::Dialect::OllamaNative).vision);
+    CHECK(ai::capabilities_of(ai::Dialect::OpenAiChat).vision);
+    CHECK(ai::capabilities_of(ai::Dialect::AnthropicMessages).vision);
+
+    // Anthropic has no schema-constrained response mode in this revision.
+    CHECK_FALSE(ai::capabilities_of(ai::Dialect::AnthropicMessages).structured_output);
+    CHECK(ai::capabilities_of(ai::Dialect::OpenAiResponses).structured_output);
+}

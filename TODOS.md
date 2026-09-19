@@ -577,7 +577,19 @@ motor kabiliyeti eklenir; GUI, AI ve MCP aynı sürümde bu kabiliyeti kullanır
   süre/maliyet sınırları Settings'te olsun; sınıra gelince sonuç kaybolmasın.
   **Kabul:** sağlayıcı hatasında tamamlanmış adımlar yeniden uygulanmaz; devam
   doğru checkpoint'ten olur; “iptal edildi” mesajı gerçekten uygulanmış işleri gizlemez.
-- [ ] **A-07 / P1 — Sağlayıcı ve hata dayanıklılığı.** Mevcut lehçeler için tool-call,
+- [~] **A-07 / P1 — Sağlayıcı ve hata dayanıklılığı.** *(kabiliyet bildirimi 19 Eylül 2026)*
+  **Yapıldı:** `ai::DialectCapabilities` ve `capabilities_of(Dialect)` — dört
+  lehçenin her biri için araç çağrısı, akış, görsel, akıl yürütme, yapılandırılmış
+  çıktı ve güvenilir jeton sayımı. Tek yerde yazılı, yani sohbet, sağlayıcı
+  diyaloğu ve ileride bir eval koşucusu kendi fikirlerini tutamıyor.
+  **Her alan TEL DİLİ hakkında bir olgu**, bir satıcı ya da model hakkında değil:
+  `ollama_native` hangi model arkasında olursa olsun NDJSON çerçeveliyor ve
+  `vision`'ı yanlış, çünkü mesaj şeklinde bir resmin yeri yok — "hiçbir yerel
+  model göremez" demek değil.
+  **Kalan:** yeniden deneme, rate limit ve zaman aşımının tek iş durumu üzerinden
+  yönetilmesi; parçalanmış akış / bozuk argüman / araç reddinin modele **tipli
+  sonuç** olarak dönmesi; aynı hataya sınırsız tur harcanmaması; iptalin tüm alt
+  işleri sonlandırması — hepsi A-04'ün iş yürütücüsüne bağlı. Mevcut lehçeler için tool-call,
   streaming, görsel, context ve structured-output kabiliyetlerini bildir. Yeniden
   deneme, rate limit ve zaman aşımını tek iş durumu üzerinden yönet. **Kabul:**
   parçalanmış akış/bozuk argüman/araç reddi modele tipli sonuç olarak döner;
