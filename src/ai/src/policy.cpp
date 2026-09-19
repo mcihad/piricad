@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/ai/policy.hpp"
 
+#include "kentos_cad/core/settings.hpp"
 #include "kentos_cad/core/text.hpp"
 
 namespace kentos::ai {
@@ -191,6 +192,55 @@ PolicyDecision decide(Effect effect, const PolicyPreferences& prefs, const Clien
     }
 
     return needs_approval("Bilinmeyen onay politikası; en dar davranış uygulandı.");
+}
+
+// ---- privilege escalation (TODOS S-04) --------------------------------------
+
+std::string escalation_refusal(const command::CommandSpec& spec, const command::Args& args)
+{
+    // THE TWO COMMANDS THAT ARE AUTHORITY WHATEVER THEY ARE ASKED. One manages
+    // the model endpoints and their key references, the other starts and stops
+    // the door an agent came in through. There is no argument to either that
+    // makes the call harmless: an agent opening its own way in would walk past
+    // CLAUDE.md 2.10's "loopback only, off until a user starts it".
+    if (spec.id == "core.ai_provider")
+        return "Model sağlayıcılarını ve anahtar referanslarını yalnız bilgisayar başındaki "
+               "kullanıcı yönetir (Seçenekler ▸ Yapay Zeka Modelleri).";
+    if (spec.id == "core.mcp")
+        return "Ajan sunucusunu yalnız bilgisayar başındaki kullanıcı başlatır, durdurur ve "
+               "yetkilendirir (Seçenekler ▸ MCP Sunucusu).";
+
+    // AND THE TWO THAT DEPEND ON WHAT THEY ARE ASKED. Reading a setting is not a
+    // widening; writing one that decides who may do what is.
+    if (spec.id != "core.setting" && spec.id != "core.preference") return {};
+
+    const command::Value name = args.get("ad");
+    if (name.empty()) return {};
+
+    // WRITING, NOT READING. `AYAR ad=<...>` with no `deger` prints the value, and
+    // an agent that may not read its own policy could not explain its own
+    // behaviour — which is the opposite of what an audit record is for.
+    if (args.get("deger").empty()) return {};
+
+    const core::SettingCatalog& catalogue = core::builtin_settings();
+    const std::uint32_t at                = catalogue.find(name.as_text());
+    if (at == core::kNoSetting) return {};
+
+    // THE TRUTH IS THE SETTING'S OWN FIELD, not a list kept here: a list over
+    // here is a second list, and the day somebody adds a policy setting they
+    // will not know to edit it (CLAUDE.md 5.10, settings.hpp `authority`).
+    const core::SettingSpec& found = catalogue.all()[at];
+    if (!found.authority) return {};
+
+    return "'" + found.id +
+           "' bir YETKİ ayarıdır: kimin neyi yapabileceğini belirler. Bir istemci kendi "
+           "iznini genişletemez; bu ayarı yalnız bilgisayar başındaki kullanıcı değiştirir "
+           "(Seçenekler).";
+}
+
+bool escalates(const command::CommandSpec& spec, const command::Args& args)
+{
+    return !escalation_refusal(spec, args).empty();
 }
 
 } // namespace kentos::ai

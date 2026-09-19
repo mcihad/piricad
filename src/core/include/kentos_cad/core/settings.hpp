@@ -244,6 +244,26 @@ struct SettingSpec
     /// Empty means "put it on the page its namespace names", which is what every
     /// setting did before this field existed.
     std::string section;
+
+    /// WHETHER CHANGING THIS SETTING CHANGES WHO MAY DO WHAT.
+    ///
+    /// Most settings are preferences: a grid spacing, a decimal separator, a
+    /// theme. A few are AUTHORITY — how often a person is asked to approve, what
+    /// happens to a file that already exists, whether a listener accepts a
+    /// connection at all, whether this project's data may leave the building.
+    /// The difference is not one of importance; it is that an agent which could
+    /// change the second kind could widen its own permissions, and then every
+    /// other rule in this program rests on a decision the agent made about
+    /// itself (TODOS S-04).
+    ///
+    /// DECLARED HERE RATHER THAN LISTED IN THE AI LAYER, because a hard-coded
+    /// list of ids over there is a second list and the day somebody adds a
+    /// policy setting they will not know to edit it (CLAUDE.md 5.10). The check
+    /// is `ai::escalates`; the truth is this field.
+    ///
+    /// It does NOT make a setting unreachable: the person at the keyboard edits
+    /// it from the settings window like any other. It refuses an AGENT.
+    bool authority{false};
 };
 
 /// One page of the settings window, declared beside the settings themselves.

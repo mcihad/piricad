@@ -2,6 +2,7 @@
 #include "kentos_cad/app/ai_service.hpp"
 
 #include "kentos_cad/ai/commands.hpp"
+#include "kentos_cad/ai/policy.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/command/session.hpp"
 
@@ -217,6 +218,14 @@ core::Result<ai::ToolOutcome> AiService::run_read_only(const std::string& comman
                          "'" + command_id +
                              "' bir şeyi değiştirir; doğrudan çalıştırılamaz, öneri olur.");
 
+    // AND IT CHECKS THE WIDENING SEPARATELY, because the two refusals answer
+    // different questions. `NoEffect` asks "does this change anything"; this
+    // asks "would this change who may do what" — and a call can be both
+    // harmless-looking and a widening, which is exactly how an agent removes an
+    // obstacle it met a moment ago (TODOS S-04).
+    if (std::string why = ai::escalation_refusal(*spec, args); !why.empty())
+        return core::err(core::ErrorCode::Unsupported, why);
+
     auto ran = bus_.dispatch(command::Invocation{command_id, args, command::Origin::Ai});
     if (!ran) return ran.error();
 
@@ -270,6 +279,17 @@ core::Result<std::string> AiService::propose(ai::Plan plan)
                          "Boş öneri kaydedilmez; en az bir adım gerekir.");
 
     plan.revision = revision();
+
+    // THE SAME GUARD ON THE ROAD A WRITE TAKES. A widening cannot be smuggled in
+    // as a step of a suggestion either: a person approving a plan is approving
+    // the DRAWING work they read on the card, and "and also turn the approval
+    // policy off" is not something a card can meaningfully ask (S-04).
+    for (const ai::PlanStep& step : plan.steps) {
+        const command::CommandSpec* spec = bus_.registry().by_id(step.command_id);
+        if (spec == nullptr) continue;
+        if (std::string why = ai::escalation_refusal(*spec, step.args); !why.empty())
+            return core::err(core::ErrorCode::Unsupported, why);
+    }
 
     // ---- APPENDING TO A SUGGESTION THAT IS ALREADY ON SOMEBODY'S SCREEN ------
     //

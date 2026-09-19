@@ -264,6 +264,35 @@ ayarla üretilemez: yapıcısı özeldir, tek bir üretici işlevi vardır ve o 
 "Güven kipi", "hep onayla" ya da "bir daha sorma" diye bir ayar yoktur ve eklenemez
 (`CLAUDE.md` 5.7).
 
+## Bir istemci kendi iznini genişletemez
+
+Programın ayarlarının çoğu **tercihtir**: ızgara aralığı, ondalık ayracı, tema. Birkaçı
+ise **yetkidir** — kimin neyi yapabileceğini belirler:
+
+| Ayar | Ne belirler |
+|---|---|
+| `core.ai.onay_politikasi` | Ne sıklıkta onay sorulduğu |
+| `core.ai.soru_politikasi` | Ne sıklıkta soru sorulduğu |
+| `core.ai.uzerine_yazma` | Var olan bir dosyaya ne yapılacağı |
+| `core.ai.hassas` | Bu projenin verisinin kurum dışına çıkıp çıkamayacağı |
+| `core.mcp.port` | Dinleyicinin hangi kapıda olduğu |
+| `core.mcp.belirtec_zorunlu` | Bağlanmak için belirteç istenip istenmediği |
+| `core.mcp.otomatik` | Dinleyicinin kendiliğinden açılıp açılmadığı |
+
+Bunları **yalnız bilgisayar başındaki kullanıcı** değiştirir. Bir istemci — bir ajan, bir
+betik, sohbetteki model — değiştiremez; denemesi adıyla reddedilir ve ret denetim kaydına
+girer. Aynı kural `MCPSUNUCU` ve `YAPAYZEKAMODELİ` komutlarının **tamamı** için geçerlidir:
+bir ajanın kendi kapısını açması ya da kendi anahtar referansını yönetmesi, hangi argümanla
+olursa olsun bir yetki genişletmesidir.
+
+Sebebi kötü niyet beklemek değil. Şu davranış son derece olağandır: model bir ret alır,
+yardımcı olmaya çalışır ve reti ortadan kaldıracak ayarı değiştirir. Bu bir engeli kaldıran
+bir ajandır, saldırgan değil — ve cevabı, engelin ajanın durduğu yerden **erişilebilir
+olmamasıdır**.
+
+Okumak genişletme değildir: bir ajan kendi politikasını okuyabilir. Okuyamasaydı kendi
+davranışını açıklayamazdı, ki bu denetim kaydının amacının tam tersidir.
+
 ## İlgili
 
 - [`ÖNERİ`](../komutlar/suggestion.md) — önerileri listeleme ve durumlarını okuma

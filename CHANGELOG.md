@@ -6,6 +6,29 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Güvenlik — bir istemci kendi iznini genişletemez (TODOS S-04, kısmi)
+
+- **`SettingSpec::authority`**: bir ayarın tercih mi yetki mi olduğu, ayarın
+  **kendi alanında** yazılı. Yedi ayar yetki: üç onay/soru/üzerine-yazma
+  politikası, projenin hassaslık işareti ve üç MCP dinleyici ayarı. Liste yapay
+  zeka katmanında tutulmuyor — orada tutulan bir liste ikinci bir listedir ve
+  bir yıl sonra politika ayarı ekleyen kişi onu düzenlemesi gerektiğini bilmez.
+- **`ai::escalates` / `ai::escalation_refusal`**: bir çağrının çağıranın kendi
+  yetkisini genişletip genişletmediği. `AYAR`/`TERCİH` bir yetki ayarına **yazarsa**
+  (okumak değil), ve `MCPSUNUCU` ile `YAPAYZEKAMODELİ` hangi argümanla olursa
+  olsun. Ret, ayarı ve kimin değiştirebileceğini **adıyla** söylüyor: "yetkiniz
+  yok" bir ajanı dolaştırır, bu deneme bitirir.
+- Üç kapıda birden denetleniyor: okuma kapısında (`run_read_only`), öneri
+  kaydedilirken (bir genişletme bir önerinin **adımı** olarak da kaçırılamaz —
+  kartta çizim işini okuyan kişi "ve bu arada onay politikasını kapat"ı onaylamış
+  olmaz) ve protokol katmanında, ki istemci cevabı **şimdi** alsın.
+- **Yeni bir yetki ayarı işaretsiz eklenemez**: `core.ai.` ve `core.mcp.`
+  içindeki her ayar, testte gerekçesiyle tercih olarak adlandırılmadıkça yetki
+  sayılıyor. Sekizinci ayar yazıldığı gün test kırılıyor ve yazan kişi hangi
+  cinsten olduğuna karar veriyor.
+- Okumak genişletme değil: bir ajan kendi politikasını okuyabiliyor. Okuyamasaydı
+  kendi davranışını açıklayamazdı — denetim kaydının amacının tam tersi.
+
 ### Eklendi — kataloğu aramak ve bir işin sırasını bilmek (TODOS M-09)
 
 - **`ARAÇARA`** (`core.tool_search`): ajan araç kataloğunda ad ve özete göre arar,

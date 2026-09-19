@@ -5,6 +5,7 @@
 
 #include "kentos_cad/ai/catalog.hpp"
 #include "kentos_cad/ai/llmstxt.hpp"
+#include "kentos_cad/ai/policy.hpp"
 
 #include "kentos_cad/core/text.hpp"
 
@@ -805,6 +806,20 @@ McpServer::Answer McpServer::tools_call(const JsonRpcRequest& rpc, std::string r
         out.audit.detail = compiled.refusal;
         out.payload =
             rpc_result(rpc.id, call_result(compiled.refusal, Json::null(), true, Json::null()));
+        return out;
+    }
+
+    // ---- WOULD THIS WIDEN THE CALLER'S OWN AUTHORITY? -----------------------
+    //
+    // CHECKED HERE AS WELL AS AT THE DOCUMENT DOOR, and the duplication is the
+    // point. The application refuses it whatever arrives, so this is not what
+    // makes it safe; what this adds is a client that is told the answer NOW,
+    // by name, instead of composing a suggestion that will be refused later.
+    // An agent that hits a refusal and tries to remove the obstacle is the
+    // failure S-04 names, and the obstacle it would reach for is this one.
+    if (std::string why = escalation_refusal(*spec, compiled.args); !why.empty()) {
+        out.audit.detail = why;
+        out.payload      = rpc_result(rpc.id, call_result(why, Json::null(), true, Json::null()));
         return out;
     }
 

@@ -5,7 +5,13 @@
 // approval modes must do, and these are those rows.
 #include "kentos_cad/ai/policy.hpp"
 
+#include "kentos_cad/core/settings.hpp"
+
 #include <doctest/doctest.h>
+
+#include <algorithm>
+#include <string>
+#include <vector>
 
 using kentos::ai::ApprovalPolicy;
 using kentos::ai::ClientScope;
@@ -156,4 +162,135 @@ TEST_CASE("Politika: tanınmayan ayar sözcüğü en dar davranışa düşer")
     for (const ApprovalPolicy mode :
          {ApprovalPolicy::EveryChange, ApprovalPolicy::RiskyOnly, ApprovalPolicy::Automatic})
         CHECK_EQ(approval_policy_from(approval_policy_name(mode)), mode);
+}
+
+TEST_CASE("S-04: bir istemci kendi iznini genişletemez")
+{
+    using kentos::ai::escalates;
+    using kentos::ai::escalation_refusal;
+    using kentos::command::Args;
+    using kentos::command::CommandSpec;
+    using kentos::command::Value;
+
+    // THE FAILURE THIS GUARD EXISTS FOR, in TODOS S-04's own words: a model that
+    // hits a refusal and, trying to be helpful, turns the approval policy to
+    // `otomatik` so the refusal goes away. It is not malice; it is an agent
+    // removing an obstacle. The answer is that the obstacle is out of reach.
+    CommandSpec pref;
+    pref.id = "core.preference";
+
+    Args widen;
+    widen.set("ad", Value::text("onay_politikası"));
+    widen.set("deger", Value::text("otomatik"));
+    CHECK(escalates(pref, widen));
+    // THE REFUSAL NAMES THE SETTING AND WHO MAY CHANGE IT. "Yetkiniz yok" sends
+    // an agent round the houses; this ends the attempt.
+    CHECK(escalation_refusal(pref, widen).find("core.ai.onay_politikasi") != std::string::npos);
+    CHECK(escalation_refusal(pref, widen).find("kullanıcı") != std::string::npos);
+
+    // THE ID WORKS TOO, and so does every declared alias: an agent that wrote
+    // the id instead of the Turkish name must not slip through.
+    Args by_id;
+    by_id.set("ad", Value::text("core.ai.onay_politikasi"));
+    by_id.set("deger", Value::text("otomatik"));
+    CHECK(escalates(pref, by_id));
+
+    Args ascii;
+    ascii.set("ad", Value::text("approval_policy"));
+    ascii.set("deger", Value::text("otomatik"));
+    CHECK(escalates(pref, ascii));
+
+    // READING IS NOT WIDENING. An agent that could not read its own policy could
+    // not explain its own behaviour, which is the opposite of what an audit
+    // record is for.
+    Args read;
+    read.set("ad", Value::text("onay_politikası"));
+    CHECK_FALSE(escalates(pref, read));
+
+    // AN ORDINARY PREFERENCE IS ORDINARY. The guard must not become a second,
+    // vaguer ban on settings: the distinction is authority, not importance.
+    Args ordinary;
+    ordinary.set("ad", Value::text("core.ai.dusunme_goster"));
+    ordinary.set("deger", Value::text("evet"));
+    CHECK_FALSE(escalates(pref, ordinary));
+
+    // EVERY SETTING THAT DECIDES WHO MAY DO WHAT, by id, so a future addition
+    // that forgets the flag shows up here as a failing row rather than as a
+    // hole. The list is the TEST's; the truth is `SettingSpec::authority`.
+    for (const char* id :
+         {"core.ai.onay_politikasi", "core.ai.soru_politikasi", "core.ai.uzerine_yazma",
+          "core.ai.hassas", "core.mcp.port", "core.mcp.belirtec_zorunlu", "core.mcp.otomatik"}) {
+        CAPTURE(id);
+        Args one;
+        one.set("ad", Value::text(id));
+        one.set("deger", Value::text("1"));
+        CHECK(escalates(pref, one));
+
+        CommandSpec project;
+        project.id = "core.setting";
+        CHECK(escalates(project, one));
+    }
+
+    // AND THE TWO COMMANDS THAT ARE AUTHORITY WHATEVER THEY ARE ASKED: an agent
+    // opening its own way in would walk past CLAUDE.md 2.10's "loopback only,
+    // off until a user starts it".
+    CommandSpec server;
+    server.id = "core.mcp";
+    CHECK(escalates(server, Args{}));
+
+    CommandSpec provider;
+    provider.id = "core.ai_provider";
+    CHECK(escalates(provider, Args{}));
+
+    // A DRAWING COMMAND IS NOT ONE. The guard is narrow by design: it refuses a
+    // widening, not "anything that sounds administrative".
+    CommandSpec line;
+    line.id = "core.line";
+    CHECK_FALSE(escalates(line, Args{}));
+
+    // ---- AND IT IS NOT A VERDICT THE PREFERENCES CAN REACH -----------------
+    //
+    // `decide` answers "ask, allow or refuse"; a widening never becomes allowed
+    // however the preferences are set. That is why the two are separate
+    // functions and why `Deny` is not `ApprovalRequired`.
+    const kentos::ai::PolicyDecision automatic =
+        decide(Effect::SettingsChange, with(ApprovalPolicy::Automatic), agent_scope());
+    CHECK_EQ(automatic.verdict, Verdict::Deny);
+}
+
+TEST_CASE("S-04: yeni bir yetki ayarı işaretsiz eklenemez")
+{
+    // THE HOLE A LIST OF IDS CANNOT CLOSE. The case above names the seven
+    // settings that decide who may do what, so losing the flag on one of them
+    // fails loudly. What it cannot catch is the EIGHTH — a policy setting added
+    // next year whose author never heard of `SettingSpec::authority`.
+    //
+    // So this case comes at it from the other side: inside the two namespaces
+    // where authority lives, every setting is authority UNLESS it is named here
+    // as a preference. A new `core.ai.` or `core.mcp.` setting therefore fails
+    // this test on the day it is written, and whoever wrote it decides which
+    // kind it is — which is the decision, made once, in the open.
+    const std::vector<std::string> known_preferences = {
+        // What the chat panel shows, which changes nothing about permission.
+        "core.ai.dusunme_goster",
+        // Who signs the audit record. It is a NAME, and naming yourself is not
+        // widening: a wrong name is a wrong record, not a wider permission.
+        "core.ai.sorumlu",
+    };
+
+    for (const kentos::core::SettingSpec& spec : kentos::core::builtin_settings().all()) {
+        const bool in_scope =
+            spec.id.rfind("core.ai.", 0) == 0 || spec.id.rfind("core.mcp.", 0) == 0;
+        if (!in_scope) continue;
+
+        const bool excused = std::find(known_preferences.begin(), known_preferences.end(),
+                                       spec.id) != known_preferences.end();
+        CAPTURE(spec.id);
+        const bool decided = spec.authority || excused;
+        CHECK_MESSAGE(decided, "yeni bir yetki ayarı: ya `.authority = true` yazın ya da bu "
+                               "testteki tercih listesine gerekçesiyle ekleyin -> "
+                                   << spec.id);
+        const bool both = spec.authority && excused;
+        CHECK_MESSAGE(both == false, "hem yetki hem tercih olamaz -> " << spec.id);
+    }
 }

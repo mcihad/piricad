@@ -24,6 +24,7 @@
 #pragma once
 
 #include "kentos_cad/command/spec.hpp"
+#include "kentos_cad/command/value.hpp"
 
 #include <cstdint>
 #include <string>
@@ -143,6 +144,36 @@ struct PolicyDecision
 PolicyDecision decide(command::Effect effect, const PolicyPreferences& prefs,
                       const ClientScope& scope, const std::vector<std::string>& missing = {},
                       bool overwrites = false);
+
+// ---- PRIVILEGE ESCALATION (TODOS S-04) --------------------------------------
+//
+// THE ONE THING A CALLER MAY NEVER DECIDE ABOUT ITSELF. Everything else in this
+// file is a question of how often a person is asked; this is a question of who
+// gets to ask. A caller that could turn its own approval policy down, open a
+// listener, or clear this project's sensitivity flag would be deciding what it
+// is allowed to do — and then every other rule in this program rests on a
+// decision the agent made about itself.
+//
+// THE FAILURE THIS PREVENTS IS SPECIFIC and it is in TODOS S-04's own words: a
+// model that hits a refusal and, trying to be helpful, turns the policy to
+// `otomatik` so the refusal goes away. It is not malice; it is an agent removing
+// an obstacle. The answer is that the obstacle is not reachable from where the
+// agent stands.
+//
+// IT IS SEPARATE FROM `decide` ON PURPOSE. `decide` answers "ask, allow, or
+// refuse"; a widening never becomes allowed however the preferences are set, so
+// it cannot be a verdict the preferences can reach. `Deny` is not
+// `ApprovalRequired`.
+
+/// Why a call was refused as a widening, in Turkish — empty when it is not one.
+///
+/// A STRING RATHER THAN A BOOL, because the client has to be told WHICH setting
+/// it may not touch and by whom it can be changed. "Yetkiniz yok" sends an agent
+/// round the houses; naming the setting and the settings page ends the attempt.
+std::string escalation_refusal(const command::CommandSpec& spec, const command::Args& args);
+
+/// Whether this call would widen the caller's own authority.
+bool escalates(const command::CommandSpec& spec, const command::Args& args);
 
 /// The setting words, so `core.ai.onay_politikasi` and the engine cannot drift
 /// apart. Each returns the policy for a word, or the default when it is unknown.

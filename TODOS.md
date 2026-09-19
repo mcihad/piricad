@@ -749,6 +749,21 @@ ve hiç seçim yoksa önce bağlam çözülür; çözülemiyorsa yalnız nesne s
   erişim kapsamını genişletme işlemi ayrı, açık kullanıcı talebine dayanmalı.
   **Kabul:** model araç hatasını çözmek için kendiliğinden `otomatik` açamaz;
   kullanıcının önceden verdiği otomatik yetki de her komutta yeniden sorulmaz.
+  *(19 Eylül 2026 — yetki yükseltme yarısı yapıldı.)* `SettingSpec::authority`
+  bir ayarın tercih mi yetki mi olduğunu ayarın kendi alanında söylüyor (yedi
+  ayar: üç politika, hassaslık işareti, üç MCP ayarı). `ai::escalates` üç kapıda
+  birden denetliyor: okuma kapısı, öneri kaydı (bir genişletme bir önerinin adımı
+  olarak da kaçırılamaz) ve protokol katmanı. Ret, ayarı ve kimin
+  değiştirebileceğini adıyla söylüyor. `core.ai.`/`core.mcp.` içindeki yeni bir
+  ayar işaretsiz eklenemiyor: test kırılıyor.
+  **Kalan — ve bu kullanıcı kararı bekliyor:** "aynı iş için onay
+  tekrarlanmasın" ve "kullanıcının önceden verdiği otomatik yetki" cümleleri,
+  onayın plana bağlanıp tekrar kullanılabilmesini istiyor. Bu, CLAUDE.md 5.7'nin
+  ("NEVER auto-apply AI output. No trust mode, setting, CLI flag or 'remember my
+  choice'") tadil edilmesi demektir ve Article 0.5 gereği neyi geçersiz kıldığını
+  yazan, kaynak değişikliğiyle aynı incelemeden geçen bir tadil ister. S-03, S-05
+  ve S-06 aynı karara bağlı. **Anayasa değişmeden bu yarı yapılamaz ve
+  yapılmamalı.**
 - [ ] **S-05 / P0 — Kural, test ve doküman migration'ı.** Mevcut `CLAUDE.md`
   2.8/2.10/5.7, `.claude/ai.md` R2/R3 ve P1/P15, `plan.hpp`, `gate.hpp`,
   `dispatcher.hpp` yorumları ve `scripts/ci-gate-ai.sh` zorunlu insan onayı/tek

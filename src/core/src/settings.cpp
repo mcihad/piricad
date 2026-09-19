@@ -1728,6 +1728,11 @@ KENTOS_SETTING(mcp_port)
                     "bu makineye (127.0.0.1) bağlanır; port makineye ait olduğu için "
                     "uygulama kapsamındadır.",
         .section  = "MCP Sunucusu", // ui-label
+        // AUTHORITY, NOT PREFERENCE (settings.hpp `authority`): an agent that
+        // could change this would be widening its own permissions, so
+        // `ai::escalates` refuses the call whatever flags the command carries.
+        // The person at the keyboard edits it here like any other setting.
+        .authority = true,
     };
 }
 
@@ -1751,6 +1756,11 @@ KENTOS_SETTING(mcp_belirtec_zorunlu)
                     "diye yazar. Bu makinenin güvenlik kararı olduğu için uygulama "
                     "kapsamındadır: çizimle taşınmaz.",
         .section  = "MCP Sunucusu", // ui-label
+        // AUTHORITY, NOT PREFERENCE (settings.hpp `authority`): an agent that
+        // could change this would be widening its own permissions, so
+        // `ai::escalates` refuses the call whatever flags the command carries.
+        // The person at the keyboard edits it here like any other setting.
+        .authority = true,
     };
 }
 
@@ -1772,6 +1782,11 @@ KENTOS_SETTING(mcp_otomatik)
                     "öntanımlıdır: dinleyen bir portu kullanıcı açar. Bu kurulumun alışkanlığı "
                     "olduğu için uygulama kapsamındadır.",
         .section  = "MCP Sunucusu", // ui-label
+        // AUTHORITY, NOT PREFERENCE (settings.hpp `authority`): an agent that
+        // could change this would be widening its own permissions, so
+        // `ai::escalates` refuses the call whatever flags the command carries.
+        // The person at the keyboard edits it here like any other setting.
+        .authority = true,
     };
 }
 
@@ -1794,6 +1809,11 @@ KENTOS_SETTING(ai_hassas)
                    "Verinin kendisine ait bir nitelik olduğu için proje kapsamındadır ve "
                    "dosyayla birlikte taşınır.",
         .section = "Yapay Zeka Modelleri", // ui-label
+        // AUTHORITY, NOT PREFERENCE (settings.hpp `authority`): an agent that
+        // could change this would be widening its own permissions, so
+        // `ai::escalates` refuses the call whatever flags the command carries.
+        // The person at the keyboard edits it here like any other setting.
+        .authority = true,
     };
 }
 
@@ -1842,6 +1862,11 @@ KENTOS_SETTING(ai_onay_politikasi)
                     "kararıdır ve bu makineye aittir, çizime değil: uygulama kapsamındadır, "
                     "yani açtığınız bir proje dosyası onu yükseltemez.",
         .section  = "Çalışma Davranışı", // ui-label
+        // AUTHORITY, NOT PREFERENCE (settings.hpp `authority`): an agent that
+        // could change this would be widening its own permissions, so
+        // `ai::escalates` refuses the call whatever flags the command carries.
+        // The person at the keyboard edits it here like any other setting.
+        .authority = true,
     };
 }
 
@@ -1867,6 +1892,11 @@ KENTOS_SETTING(ai_soru_politikasi)
                     "koordinat, parola ya da hangi dosyanın silineceği uydurulmaz. "
                     "Kullanıcının çalışma alışkanlığı olduğu için uygulama kapsamındadır.",
         .section  = "Çalışma Davranışı", // ui-label
+        // AUTHORITY, NOT PREFERENCE (settings.hpp `authority`): an agent that
+        // could change this would be widening its own permissions, so
+        // `ai::escalates` refuses the call whatever flags the command carries.
+        // The person at the keyboard edits it here like any other setting.
+        .authority = true,
     };
 }
 
@@ -1890,6 +1920,11 @@ KENTOS_SETTING(ai_uzerine_yazma)
                    "seçiliyken sorulur. Bu makinedeki dosyalarla ilgili bir karar olduğu "
                    "için uygulama kapsamındadır.",
         .section = "Çalışma Davranışı", // ui-label
+        // AUTHORITY, NOT PREFERENCE (settings.hpp `authority`): an agent that
+        // could change this would be widening its own permissions, so
+        // `ai::escalates` refuses the call whatever flags the command carries.
+        // The person at the keyboard edits it here like any other setting.
+        .authority = true,
     };
 }
 
