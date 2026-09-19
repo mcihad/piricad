@@ -1228,3 +1228,43 @@ TEST_CASE("Belirteç istenmeyen yapıda da yol doğrulanır")
     CHECK_EQ(ai::decode_header_value("=?base64?c29yZ3VsYQ==?="), std::string("sorgula"));
     CHECK_EQ(ai::decode_header_value("=?base64?!!!?="), std::string("=?base64?!!!?="));
 }
+
+TEST_CASE("MCP: araç yüzeyi sohbetinkiyle aynı katalogdan gelir")
+{
+    // TODOS M-03. The surface is PROJECTED from `Registry` rather than listed
+    // anywhere (CLAUDE.md 5.10, 5.20), so opening a command to agents puts it in
+    // MCP by construction — and this is the test that says so out loud, because
+    // "by construction" is a claim that stops being true the day somebody adds a
+    // second list.
+    kentos::command::Registry reg;
+    kentos::command::register_builtin_commands(reg);
+    kentos::ai::register_ai_commands(reg);
+
+    const kentos::ai::Catalog catalog = kentos::ai::build_catalog(reg);
+
+    const auto has_tool = [&](std::string_view id) {
+        return std::any_of(catalog.tools.begin(), catalog.tools.end(),
+                           [&](const kentos::ai::ToolDef& t) { return t.command_id == id; });
+    };
+
+    // THE ONES A-02 OPENED, all four of them.
+    CHECK(has_tool("core.layout"));
+    CHECK(has_tool("core.layout_item"));
+    CHECK(has_tool("core.layout_template"));
+    CHECK(has_tool("core.print"));
+
+    // THE CONTEXT TOOL A-01 ADDED.
+    CHECK(has_tool("core.context"));
+
+    // AND THE ONES DELIBERATELY KEPT OUT stay out: a client cannot open its own
+    // way in (`core.mcp`), manage its own provider (`core.ai_provider`), or run
+    // an arbitrary file as a command sequence (`core.script`).
+    CHECK_FALSE(has_tool("core.mcp"));
+    CHECK_FALSE(has_tool("core.ai_provider"));
+    CHECK_FALSE(has_tool("core.script"));
+
+    // Every tool the catalogue carries names a command that exists: a surface
+    // describing something the program does not have is worse than a smaller one.
+    for (const kentos::ai::ToolDef& one : catalog.tools)
+        CHECK(reg.by_id(one.command_id) != nullptr);
+}

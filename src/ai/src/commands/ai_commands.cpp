@@ -182,10 +182,26 @@ std::vector<CommandSpec> detail::ai_command_specs()
         // around it. The undo entry belongs to the batch, which is what makes an
         // approved suggestion one Ctrl+Z (ai.md R4).
         .undo  = UndoPolicy::Custom,
-        .flags = Flags::Interactive | Flags::Scriptable,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary =
             "Bekleyen yapay zeka önerilerini listeler, durumunu söyler, uygular ya da reddeder.",
         .run = &run_suggestion,
+        // READING A SUGGESTION IS A READ; APPLYING ONE IS NOT.
+        //
+        // `uygula` and `reddet` are refused from every command path anyway —
+        // `AiService` answers them with "a suggestion is applied by the button on
+        // its card" — so what an agent gains here is the ability to SEE what it
+        // proposed and what came of it, which is the half of TODOS M-04 that does
+        // not wait on the approval question.
+        .effect      = Effect::Query | Effect::DocumentEdit,
+        .effect_verb = "islem",
+        .verb_effects =
+            {
+                {"listele", Effect::Query},
+                {"durum", Effect::Query},
+                {"uygula", Effect::DocumentEdit},
+                {"reddet", Effect::Query},
+            },
     });
 
     specs.push_back(CommandSpec{

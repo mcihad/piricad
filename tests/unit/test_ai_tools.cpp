@@ -540,3 +540,38 @@ TEST_CASE("Bağlam: üzerinde çalışılan her şeyi tek çağrıda söyler")
     CHECK(out.find("nesneler") == nullptr);
     CHECK(out.find("geometri") == nullptr);
 }
+
+TEST_CASE("Öneri: ajan durumunu okuyabilir, uygulayamaz")
+{
+    // TODOS M-04's read half. An agent that proposes and can never see what came
+    // of it has to guess, and a client that guesses re-proposes — which is how a
+    // careful protocol turns into eleven duplicate suggestions on a screen.
+    //
+    // The write half is refused from every command path, not by a check on WHO is
+    // calling: `AiService` answers `uygula` with "a suggestion is applied by the
+    // button on its card", so the command line and an agent get the same answer.
+    Rig rig;
+    const CommandSpec* spec = rig.reg.by_id("core.suggestion");
+    REQUIRE(spec != nullptr);
+    CHECK(has_flag(spec->flags, Flags::AiAccessible));
+
+    // READING IS A READ, in the effect the policy will read.
+    Args listing;
+    listing.set("islem", Value::text("listele"));
+    CHECK(has_effect(effect_of(*spec, listing), Effect::Query));
+    CHECK_FALSE(has_effect(effect_of(*spec, listing), Effect::DocumentEdit));
+
+    Args status;
+    status.set("islem", Value::text("durum"));
+    CHECK(has_effect(effect_of(*spec, status), Effect::Query));
+
+    // APPLYING IS NOT, and the worst case of the command as a whole says so.
+    Args applying;
+    applying.set("islem", Value::text("uygula"));
+    CHECK(has_effect(effect_of(*spec, applying), Effect::DocumentEdit));
+
+    // AND IT IS REFUSED IN FACT, not only classified: no suggestion book is
+    // wired in a headless run, and even with one the answer names the card.
+    auto tried = rig.bus.execute_line("ÖNERİ islem=uygula oneri=p0000000000000001", Origin::Test);
+    CHECK_FALSE(tried.ok());
+}

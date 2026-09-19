@@ -83,10 +83,6 @@
       "kalici": true,
       "sebep": "Sunucuyu başlatan/durduran komut. Bir ajanın kendi erişim yolunu açması, CLAUDE.md 2.10'un loopback + kullanıcı başlatır kuralını geçersiz kılardı."
     },
-    "core.suggestion": {
-      "plan": "A-04",
-      "sebep": "Öneri durumu/uygulama komutu. Ajanın kendi önerisini uygulaması 5.7'yi delerdi; okuma tarafı (`oneri_durumu`) M-04 ile gelecek."
-    },
     "core.script": {
       "kalici": true,
       "sebep": "Keyfî dosyadan betik çalıştırır. Bir ajanın diskteki herhangi bir dosyayı komut dizisi olarak çalıştırması, doğrulanmış araç yüzeyinin etrafından dolaşmaktır (5.22)."

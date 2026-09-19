@@ -722,12 +722,33 @@ uygulanan ve müzakere edilen yetenekler ilan edilmelidir.
   temizliğini uygula. Gerçekte taşınmayan bildirim kabiliyetini ilan etme.
   **Kabul:** açık abonelik katalog değişimini alır; bağlantı kopması doğru işi
   etkiler; tamamlanan `tools/call` yanıtının kapanması öneriyi geri çekmez.
-- [ ] **M-03 / P0 — Sohbetle aynı tam araç yüzeyi.** C-01/A-02 kapsamının tamamı
+- [~] **M-03 / P0 — Sohbetle aynı tam araç yüzeyi.** *(doğrulandı 19 Eylül 2026)*
+  **Yapı gereği sağlanıyor ve artık sınanıyor.** Yüzey `Registry`'den PROJEKTE
+  ediliyor, hiçbir yerde listelenmiyor (CLAUDE.md 5.10, 5.20) — yani A-02'nin
+  açtığı dört komut MCP'ye kendiliğinden girdi. "Yapı gereği" iddiası, biri ikinci
+  bir liste eklediği gün doğru olmaktan çıkan bir iddiadır; test bunu yüksek sesle
+  söylüyor: açılanlar katalogda, bilerek kapalı tutulanlar (`core.mcp`,
+  `core.ai_provider`, `core.script`) değil, ve katalogdaki her araç var olan bir
+  komutu adlandırıyor.
+  Sınırsız bir `execute` aracı yok ve olmayacak.
+  **Kalan:** kapsamın tamamı A-02'nin kalan 15 komutuna bağlı (S bloğu engelli);
+  politika bilgisinin araç açıklamasına yazılması (S-03). C-01/A-02 kapsamının tamamı
   MCP'de bulunsun. Girdi ve çıktı şemaları, birimler, enum'lar, yan etkiler ve
   policy bilgisi katalogdan gelsin. Özel bir sınırsız `execute` aracıyla doğrulama
   atlanmasın. **Kabul:** layout oluşturma, düzenleme, export ve dosya sonucu
   okuma GUI'de onay penceresine mecbur kalmadan seçilen politikayla çalışır.
-- [ ] **M-04 / P0 — Plan/iş işlemlerini tamamla.** Durum oku, plan önizle,
+- [~] **M-04 / P0 — Plan/iş işlemlerini tamamla.** *(okuma yarısı 19 Eylül 2026)*
+  **Açıldı:** `core.suggestion` (**ÖNERİ**) ajana açık. `listele` ve `durum`
+  okuma; ajan artık **ne önerdiğini ve ondan ne çıktığını görebiliyor**. Bunu
+  göremeyen bir istemci tahmin eder, tahmin eden istemci yeniden önerir — dikkatli
+  bir protokolün birinin ekranında on bir kopya öneriye dönüşmesinin yolu budur.
+  **Yazma yarısı reddediliyor ve kimin çağırdığına bakarak değil:** `AiService`
+  `uygula`/`reddet`'i her komut yolundan "bir öneri ancak kartındaki düğmeyle
+  uygulanır" diye cevaplıyor — komut satırı da ajan da aynı cevabı alıyor
+  (Article 1.2). C-03 plana `applied_revision`, `outputs` ve `warnings` eklediği
+  için `durum` artık gerçek bir sonuç döndürüyor.
+  **Kalan:** `policy kapsamında uygula` — S bloğu engelli; `_meta.plan` ekleme
+  davranışının gerçek dispatcher'la sınanması; iptal. Durum oku, plan önizle,
   policy kapsamında uygula, iptal et ve sonucu al işlemleri tanımla. `_meta.plan`
   ekleme davranışı gerçek `AiService` ile uyumlu olsun. Otomatik modda dönen
   durum gerçek `applied/running/completed` sonucu olsun; hep `pending` dönmesin.

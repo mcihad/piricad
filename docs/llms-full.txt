@@ -41,8 +41,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 74 (68 tanesi onay ister)
-- Katalog parmak izi: `12962151438287416975`
+- Araç sayısı: 75 (69 tanesi onay ister)
+- Katalog parmak izi: `12667326896355298363`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -910,6 +910,19 @@ Onay ister.
 | `desen` | string | hayır | Çizgi tipi: sürekli, ya da çizgi kalınlığının katı olarak çizgi/boşluk uzunlukları — '8 1 1 1' gibi (kesik-nokta) (metin) |
 | `yazi` | string | hayır | yazi-isaretci katmanının yazdığı sabit metin (metin) |
 | `alan` | string | hayır | Nesneden alınacak parametreler, virgülle: sütun[:özellik[:tür]] — 'kod:yazi:metin, kat:kalinlik'. Sütun yoksa tanımlanır (metin) |
+
+### `core_suggestion` — ÖNERİ
+
+Bekleyen yapay zeka önerilerini listeler, durumunu söyler, uygular ya da reddeder.
+Komut: ÖNERİ (ONERI, SUGGESTION, ÖN)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `islem` | string | evet | Ne yapılacağı: uygula, reddet, durum ya da listele (metin) |
+| `oneri` | string | hayır | Öneri kimliği; uygula, reddet ve durum için gerekir (metin) |
 
 ### `core_symbol` — SEMBOL
 
