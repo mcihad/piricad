@@ -909,9 +909,11 @@ ve hiç seçim yoksa önce bağlam çözülür; çözülemiyorsa yalnız nesne s
   Revizyon kontrolü zaten vardı (`applyPlan`, C-04).
   **Kalan — ve bu bir KULLANICI KARARI:** "aynı iş için onay tekrarlanmasın" ve
   "kullanıcının önceden verdiği otomatik yetki" cümleleri, önceden verilmiş bir
-  iznin sonraki adımları da kapsamasını istiyor. Bu, CLAUDE.md 5.7'nin tadili
-  demektir. Tadilat metni **S-05'in altında yazılı ve okunmaya hazır**; karar
-  bakımcının.
+  iznin sonraki adımları da kapsamasını istiyor. Bu, `kentoscad.md` §5.2.1'in
+  ("Otomatik uygulama yok … Kadastro ve imar çıktısı hukuki belgedir") ve ardından
+  CLAUDE.md 5.7'nin tadili demektir — bu sırayla, çünkü Article 0.4 çatışmayı
+  yukarı çözüyor. Tadilat metni **S-05'in altında yazılı ve okunmaya hazır**;
+  karar bakımcının.
 - [ ] **S-05 / P0 — Kural, test ve doküman migration'ı.** *(tadilat metni hazır — KARAR BEKLİYOR)*
   Mevcut `CLAUDE.md` 2.8/2.10/5.7, `.claude/ai.md` R2/R3 ve P1/P15, `plan.hpp`,
   `gate.hpp`, `dispatcher.hpp` yorumları ve `scripts/ci-gate-ai.sh` zorunlu insan
@@ -927,24 +929,50 @@ ve hiç seçim yoksa önce bağlam çözülür; çözülemiyorsa yalnız nesne s
 
   #### Neden bu madde bir ajan tarafından kapatılamaz
 
-  Bu madde **CLAUDE.md 5.7'nin tadilini** gerektiriyor. Madde 5.7 şöyle diyor:
-  *"NEVER auto-apply AI output. No trust mode, setting, CLI flag or 'remember my
-  choice' that bypasses preview + explicit approval."* Article 2.8 gerekçesini de
-  yazıyor: kadastro ve imar çıktısı **yalnız ruhsatlı bir mühendisin
-  imzalayabileceği hukuki bir belgedir**.
+  İlk yazdığımda bunu "CLAUDE.md 5.7'nin tadili" sandım. **Yanlıştı, ve yanlış
+  olduğu önemli:** 5.7 kendi başına duran bir tercih değil, `kentoscad.md`
+  §5.2.1'in anayasaya geçirilmiş hâli. Kaynak metin şöyle diyor:
 
-  Article 0.5 tadilat yolunu tanımlıyor: kaynak değişikliğiyle aynı incelemeden
-  geçer ve **neyi geçersiz kıldığını adıyla yazar**. Bu, tadilatın yasak olmadığı
-  ama bir KARAR olduğu anlamına geliyor — ve bu karar, regülasyonlu bir meslekte
-  imza sorumluluğunu değiştirdiği için bakımcının kendisinin vermesi gereken bir
-  karar. Genel bir "TODOS'u bitir" talimatı, 5.7 hakkında bilgilendirilmiş bir
-  karar değildir. Bu yüzden tadilat **yazılmadı**; aşağıda okunmaya hazır duruyor.
+  > **5.2 Kesinlikle Uyulacak Kurallar**
+  > 1. **Otomatik uygulama yok.** AI'nın ürettiği her komut dizisi önizlenir ve
+  >    kullanıcı onaylar. Kadastro ve imar çıktısı hukuki belgedir.
+  > 4. …BÖHHBÜY'e göre üretim kontrolü harita/geomatik mühendisinin
+  >    sorumluluğundadır. **AI imza atamaz.**
 
-  Bu maddenin 5.7'ye bağlı OLMAYAN her parçası yapıldı ve ayrı ayrı işaretlendi:
+  CLAUDE.md Article 0.3 `kentoscad.md`'yi **niyetin kaynağı** ilan ediyor ve 0.4
+  çatışmanın **yukarı** çözüldüğünü söylüyor: rulebook → anayasa → `kentoscad.md`,
+  ve *"A real contradiction is a defect — fix the document, never route around it
+  in code."*
+
+  Dolayısıyla yalnız 5.7'yi tadil etmek, anayasayı niyetin kaynağıyla **çelişkiye
+  düşürürdü** — 0.4'ün adıyla yasakladığı şey. Bu maddeyi kapatmanın tek doğru
+  yolu **`kentoscad.md` §5.2.1'den başlamaktır**, ve o belge bakımcının ürün
+  niyetini yazdığı belgedir.
+
+  Bu TODOS dosyası da hiyerarşide **altta**: Article 0.1 *"Where any document …
+  conflicts with it, this file wins"* diyor ve TODOS bir dosyadır. Yani S-05'in
+  "bu kullanıcı talebi yeni ürün yönünü belirliyor" cümlesi §5.2.1'i kendiliğinden
+  geçersiz kılmıyor — **§5.2.1'in değiştirilmesini talep ediyor**. Talebi kaydeden
+  bir satır, ruhsatlı mühendisin imza sorumluluğunu değiştiren bilgilendirilmiş bir
+  karar değildir.
+
+  Bu maddenin §5.2.1'e bağlı OLMAYAN her parçası yapıldı ve ayrı ayrı işaretlendi:
   S-03'ün çelişen metni, S-04'ün yetki yükseltme yarısı ve onayın içeriğe
   bağlanması, S-06'nın karar kaynağı alanları.
 
   #### Önerilen tadilat (bakımcının onayına)
+
+  **0. ÖNCE `kentoscad.md` §5.2.1.** Bu olmadan aşağıdakilerin hiçbiri yapılamaz;
+  yapılırsa anayasa niyetin kaynağıyla çelişir (Article 0.4). Önerilen yeni metin:
+
+  > 1. **Onaysız uygulama yok.** AI'nın ürettiği her komut dizisi ya önizlenip
+  >    kullanıcı tarafından onaylanır, ya da kullanıcının **önceden, kendisi için,
+  >    bilerek** kurduğu bir onay politikasına göre yürür. Politikayı yalnız
+  >    bilgisayar başındaki kişi kurabilir; bir istemci, bir başlık, bir prompt ya
+  >    da bir model kendi iznini genişletemez. Hangi yoldan geçtiği denetim
+  >    kaydına yazılır. Kadastro ve imar çıktısı hukuki belgedir ve §5.2.4
+  >    değişmez: **AI imza atamaz** — politika, kullanıcının imzasının kapsamını
+  >    önceden tarif etmesidir, imzanın yerine geçmesi değil.
 
   **1. CLAUDE.md 5.7 yerine:**
 
@@ -981,6 +1009,10 @@ ve hiç seçim yoksa önce bağlam çözülür; çözülemiyorsa yalnız nesne s
 
   Tadilat kabul edilirse S-03'ün ve S-04'ün kalan yarıları da aynı değişiklikte
   kapanır; reddedilirse bu madde kapanır ve `otomatik` değeri ayardan kaldırılır.
+
+  **Sıra bağlayıcıdır:** §5.2.1 → CLAUDE.md 5.7 → ai.md → kapı → yorumlar →
+  belgeler → testler. Aradan biri atlanırsa ortaya çıkan şey, kuralın kendisinin
+  yasakladığı "kuraldan habersiz bypass"tır (bu maddenin kendi cümlesi).
 - [~] **S-06 / P1 — Audit ve ayar migration'ı.** *(karar kaynağı ve policy 19 Eylül 2026)*
   **Yapıldı:** Denetim kaydı iki alan kazandı — `karar_veren` ve
   `onay_politikasi`. İlki bugün her satırda `insan` yazıyor ve **yazılması
