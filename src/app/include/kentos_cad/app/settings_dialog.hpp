@@ -174,6 +174,11 @@ private:
     /// Called when the window opens and on `McpService::stateChanged`.
     void refreshAgentServer();
 
+    /// Redraws the client table from the ledger. Separate from
+    /// `refreshAgentServer` because the two change at different times: the
+    /// listener's state on a start or a stop, the client list on every request.
+    void refreshAgentClients();
+
     /// The page that gathers every PROJECT-scoped setting, whatever topic it was
     /// declared under.
     ///
@@ -261,7 +266,28 @@ private:
     Button* mcp_toggle_{nullptr};
     Button* mcp_token_{nullptr};
     Button* mcp_copy_{nullptr};
+    Button* mcp_probe_{nullptr};
     QLabel* mcp_note_{nullptr};
+
+    // ---- who is using this listener (TODOS M-08) ----------------------------
+    //
+    // MCP 2026-07-28 IS STATELESS, so "connected clients" cannot be read off a
+    // socket table: what the ledger holds, and what this table shows, is who has
+    // SPOKEN here and when. Revoking one of them is the sharp instrument beside
+    // the blunt one — rotating the token locks out every agent, including the
+    // one the person is working with.
+    DataGrid* mcp_clients_{nullptr};
+    QStandardItemModel* mcp_clients_model_{nullptr};
+    Button* mcp_revoke_{nullptr};
+    Button* mcp_allow_{nullptr};
+    QLabel* mcp_scope_{nullptr};
+
+    /// What stands where the table does when nobody has connected yet, and the
+    /// row of actions that goes away with it. A fresh installation has no
+    /// clients and will have none until somebody points an agent at the address
+    /// above; an empty grid reads as broken.
+    QLabel* mcp_empty_{nullptr};
+    QWidget* mcp_actions_{nullptr};
     Button* provider_edit_{nullptr};
     Button* provider_default_{nullptr};
     Button* provider_remove_{nullptr};

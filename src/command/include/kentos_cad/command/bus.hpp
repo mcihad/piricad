@@ -671,11 +671,24 @@ public:
             ServerStop,       ///< MCPSUNUCU islem=durdur
             ServerState,      ///< MCPSUNUCU islem=durum
             ServerToken,      ///< MCPSUNUCU islem=belirtec — mints a new one
+            ServerClients,    ///< MCPSUNUCU islem=istemciler
+            ServerRevoke,     ///< MCPSUNUCU islem=iptal ad=…
+            ServerRestore,    ///< MCPSUNUCU islem=izin ad=…
+            ServerProbe,      ///< MCPSUNUCU islem=sina — a real loopback request
         };
 
-        Verb verb{Verb::SuggestionList}; ///< which of the eight this request is
+        Verb verb{Verb::SuggestionList}; ///< which of the twelve this request is
         std::string plan;                ///< which suggestion, for the four suggestion verbs
         std::int64_t port{0};            ///< an override for this start only; 0 = the setting
+
+        /// Which client, for `ServerRevoke` and `ServerRestore`.
+        ///
+        /// THE LABEL THE LEDGER HOLDS, which is the client's declared name plus
+        /// its token's fingerprint — the same string the audit record carries.
+        /// It is a NAME, never a credential: CLAUDE.md 5.21 keeps the token out
+        /// of every argument, journal line and record, and this field is one of
+        /// the places that rule is about.
+        std::string client;
     };
 
     /// Installed by `app::AiService`. Returns the Turkish line the command

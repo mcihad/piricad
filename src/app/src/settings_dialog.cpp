@@ -45,6 +45,7 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 
+#include <algorithm>
 #include <string>
 
 namespace kentos::app {
@@ -740,8 +741,10 @@ QWidget* SettingsDialog::buildAgentServer()
         new Button(ButtonRole::Secondary, tr("Yeni belirteç üret"), Glyph::Refresh, actions);
     mcp_token_->setToolTip(
         tr("Eski belirteç geçersiz olur; bağlı ajanların adresi yenilenmelidir."));
-    mcp_copy_ = new Button(ButtonRole::Ghost, tr("Adresi kopyala"), Glyph::Copy, actions);
-    for (Button* b : {mcp_toggle_, mcp_token_, mcp_copy_}) {
+    mcp_copy_  = new Button(ButtonRole::Ghost, tr("Adresi kopyala"), Glyph::Copy, actions);
+    mcp_probe_ = new Button(ButtonRole::Secondary, tr("Bağlantıyı sına"), Glyph::Plug, actions);
+    mcp_probe_->setToolTip(tr("Bu adrese gerçek bir istek gönderir ve cevabı okur."));
+    for (Button* b : {mcp_toggle_, mcp_probe_, mcp_token_, mcp_copy_}) {
         b->setControlSize(ControlSize::Compact);
         row->addWidget(b);
     }
@@ -775,14 +778,214 @@ QWidget* SettingsDialog::buildAgentServer()
         mcp_note_->setText(tr("Adres panoya kopyalandı. Belirteci bir sohbete, bir hata "
                               "bildirimine ya da paylaşılan bir dosyaya yapıştırmayın."));
     });
+    // SINAMA DA BİR KOMUTTUR. It opens a real socket to this listener and reads
+    // what comes back, which is the half `ai::McpServer` cannot test about
+    // itself: that the port is bound and that the address on this page is the
+    // one the listener answers to.
+    connect(mcp_probe_, &QPushButton::clicked, this, [this] {
+        controller_.runLine(QStringLiteral("MCPSUNUCU islem=sina"), command::Origin::Gui);
+        refreshAgentServer();
+    });
+
+    // ---- who has been using it ----------------------------------------------
+    column->addWidget(new FormSection(
+        tr("İSTEMCİLER"),
+        tr("bu sunucuya konuşmuş ajanlar; bu protokol sürümünde oturum yoktur, liste "
+           "“kim konuştu ve ne zaman” demektir"),
+        block));
+
+    mcp_scope_ = new QLabel(block);
+    mcp_scope_->setObjectName(QStringLiteral("formHelp"));
+    mcp_scope_->setWordWrap(true);
+    column->addWidget(mcp_scope_);
+
+    mcp_clients_model_ = new QStandardItemModel(0, 5, block);
+    mcp_clients_model_->setHorizontalHeaderLabels(
+        {tr("İstemci"), tr("Çağrı"), tr("Öneri"), tr("Son görülme"), tr("Son hata")});
+    mcp_clients_ = new DataGrid(block);
+    mcp_clients_->setModel(mcp_clients_model_);
+    mcp_clients_->setRowNumbers(false);
+    mcp_clients_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    mcp_clients_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    mcp_clients_->setSelectionMode(QAbstractItemView::SingleSelection);
+    mcp_clients_->horizontalHeader()->setStretchLastSection(true);
+    // A COLUMN NEVER NARROWER THAN ITS OWN HEADING. `resizeColumnsToContents`
+    // measures the CELLS, so a table with one short label in it squeezed
+    // "İstemci", "Çağrı" and "Son görülme" down to "İstem…", "Çağ…", "Son
+    // görül…" — three headings a person cannot read, over data they can.
+    mcp_clients_->horizontalHeader()->setMinimumSectionSize(92);
+    // THE HEIGHT FOLLOWS THE LIST, up to six rows. A fixed 120 pixels put a
+    // hand's width of empty grid under a single client — which reads as a
+    // table that failed to load rather than as one with one row in it.
+    mcp_clients_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    mcp_clients_->setAccessibleName(tr("MCP istemcileri"));
+    mcp_clients_->gridDelegate()->setTheme(theme());
+    column->addWidget(mcp_clients_);
+
+    // THE EMPTY STATE IS A SENTENCE, NOT AN EMPTY BOX. A fresh installation has
+    // no clients and will have none until somebody points an agent at the
+    // address above; a 120-pixel grid of nothing says "broken", and a line that
+    // explains what will appear there says what is true.
+    mcp_empty_ = new QLabel(tr("Bu sunucuya henüz hiçbir istemci konuşmadı. Bağlanan her ajan "
+                               "burada adı, çağrı sayısı, açtığı öneri sayısı ve son hatasıyla "
+                               "görünür."),
+                            block);
+    mcp_empty_->setObjectName(QStringLiteral("formHelp"));
+    mcp_empty_->setWordWrap(true);
+    column->addWidget(mcp_empty_);
+
+    auto* clientActions = new QWidget(block);
+    auto* clientRow     = new QHBoxLayout(clientActions);
+    clientRow->setContentsMargins(0, 0, 0, 0);
+    clientRow->setSpacing(8);
+    mcp_revoke_ =
+        new Button(ButtonRole::Danger, tr("Yetkisini kaldır"), Glyph::Stop, clientActions);
+    mcp_revoke_->setToolTip(tr("Yalnız bu istemci durur; belirteç değişmez, diğer ajanlar "
+                               "çalışmaya devam eder."));
+    mcp_allow_ =
+        new Button(ButtonRole::Secondary, tr("Yetkiyi geri ver"), Glyph::Check, clientActions);
+    for (Button* b : {mcp_revoke_, mcp_allow_}) {
+        b->setControlSize(ControlSize::Compact);
+        b->setEnabled(false);
+        clientRow->addWidget(b);
+    }
+    clientRow->addStretch(1);
+    column->addWidget(clientActions);
+    mcp_actions_ = clientActions;
+
+    const auto chosenClient = [this]() -> QString {
+        if (mcp_clients_->selectionModel() == nullptr) return {};
+        const QModelIndexList rows = mcp_clients_->selectionModel()->selectedRows();
+        if (rows.isEmpty()) return {};
+        return mcp_clients_model_->item(rows.front().row(), 0)->data(Qt::UserRole + 1).toString();
+    };
+    connect(mcp_clients_->selectionModel(), &QItemSelectionModel::selectionChanged, this,
+            [this](const QItemSelection&, const QItemSelection&) { refreshAgentClients(); });
+    // BOTH BUTTONS RUN THE COMMAND, so a script can shut an agent out too
+    // (Article 1.2, CLAUDE.md 5.15).
+    connect(mcp_revoke_, &QPushButton::clicked, this, [this, chosenClient] {
+        const QString who = chosenClient();
+        if (who.isEmpty()) return;
+        controller_.runLine(QStringLiteral("MCPSUNUCU islem=iptal ad=\"%1\"").arg(who),
+                            command::Origin::Gui);
+        refreshAgentClients();
+    });
+    connect(mcp_allow_, &QPushButton::clicked, this, [this, chosenClient] {
+        const QString who = chosenClient();
+        if (who.isEmpty()) return;
+        controller_.runLine(QStringLiteral("MCPSUNUCU islem=izin ad=\"%1\"").arg(who),
+                            command::Origin::Gui);
+        refreshAgentClients();
+    });
 
 #if KENTOS_HAVE_MCP
-    if (McpService* server = controller_.mcpService(); server != nullptr)
+    if (McpService* server = controller_.mcpService(); server != nullptr) {
         connect(server, &McpService::stateChanged, this, &SettingsDialog::refreshAgentServer);
+        connect(server, &McpService::stateChanged, this, &SettingsDialog::refreshAgentClients);
+        connect(server, &McpService::clientsChanged, this, &SettingsDialog::refreshAgentClients);
+    }
 #endif
 
     refreshAgentServer();
+    refreshAgentClients();
     return block;
+}
+
+void SettingsDialog::refreshAgentClients()
+{
+    if (mcp_clients_model_ == nullptr) return;
+
+#if KENTOS_HAVE_MCP
+    McpService* server = controller_.mcpService();
+    if (server == nullptr) {
+        mcp_clients_model_->removeRows(0, mcp_clients_model_->rowCount());
+        mcp_scope_->setText(tr("Bu yapıda MCP sunucusu yok."));
+        mcp_clients_->setVisible(false);
+        mcp_actions_->setVisible(false);
+        mcp_empty_->setVisible(false);
+        mcp_revoke_->setEnabled(false);
+        mcp_allow_->setEnabled(false);
+        return;
+    }
+
+    // WHAT EVERY CLIENT MAY DO, said once above the table rather than per row:
+    // the scope is the same for all of them today, and pretending otherwise with
+    // an identical column would be inventing a distinction that does not exist.
+    const ai::Catalog& catalogue = controller_.aiService().catalog();
+    mcp_scope_->setText(tr("Her istemci aynı kapsamda çalışır: %1 araçtan %2 tanesi çizimi "
+                           "değiştirir ve her biri önizlemeli bir öneriye dönüşür — uygulayan "
+                           "bilgisayar başındaki kişidir. Tutamaklar ve öneriler istemciye "
+                           "özeldir: hiçbir ajan bir başkasınınkini kullanamaz.")
+                            .arg(catalogue.tools.size())
+                            .arg(catalogue.mutating_count()));
+
+    const QString wasChosen =
+        mcp_clients_->selectionModel() != nullptr &&
+                !mcp_clients_->selectionModel()->selectedRows().isEmpty()
+            ? mcp_clients_model_
+                  ->item(mcp_clients_->selectionModel()->selectedRows().front().row(), 0)
+                  ->data(Qt::UserRole + 1)
+                  .toString()
+            : QString();
+
+    mcp_clients_model_->removeRows(0, mcp_clients_model_->rowCount());
+    const std::vector<ai::ClientRecord> held = server->clients().clients();
+    mcp_clients_->setVisible(!held.empty());
+    mcp_actions_->setVisible(!held.empty());
+    mcp_empty_->setVisible(held.empty());
+    for (const ai::ClientRecord& one : held) {
+        const QString label = QString::fromStdString(one.label);
+        QList<QStandardItem*> row;
+        // REVOKED IS SAID IN WORDS, never by colour alone (ui.md R31).
+        auto* first = new QStandardItem(one.revoked ? tr("%1  [YETKİSİZ]").arg(label) : label);
+        first->setData(label, Qt::UserRole + 1);
+        row << first;
+        row << new QStandardItem(
+            one.refusals != 0
+                ? tr("%1 (%2 ret)").arg(QString::number(one.calls), QString::number(one.refusals))
+                : QString::number(one.calls));
+        row << new QStandardItem(QString::number(one.plans));
+        row << new QStandardItem(
+            one.last_seen != 0 ? QDateTime::fromSecsSinceEpoch(static_cast<qint64>(one.last_seen))
+                                     .toString(QStringLiteral("dd.MM.yyyy HH:mm:ss"))
+                               : tr("—"));
+        row << new QStandardItem(QString::fromStdString(one.last_refusal));
+        mcp_clients_model_->appendRow(row);
+    }
+    mcp_clients_->resizeColumnsToContents();
+
+    // Two rows' worth at least, so the empty band under one client is not a
+    // hole; six at most, so a busy machine scrolls instead of pushing the
+    // settings below it off the page.
+    const int rows   = std::clamp(mcp_clients_model_->rowCount(), 2, 6);
+    const int perRow = mcp_clients_->verticalHeader()->defaultSectionSize();
+    mcp_clients_->setFixedHeight(mcp_clients_->horizontalHeader()->height() + rows * perRow +
+                                 2 * mcp_clients_->frameWidth());
+
+    // THE SELECTION SURVIVES A REDRAW. The table is rebuilt on every request the
+    // server serves, and a person half way through deciding to shut an agent out
+    // must not have the row pulled out from under the cursor.
+    bool revoked = false;
+    bool any     = false;
+    for (int r = 0; r < mcp_clients_model_->rowCount(); ++r) {
+        if (mcp_clients_model_->item(r, 0)->data(Qt::UserRole + 1).toString() != wasChosen)
+            continue;
+        mcp_clients_->selectRow(r);
+        any     = true;
+        revoked = server->clients().revoked(wasChosen.toStdString());
+        break;
+    }
+    mcp_revoke_->setEnabled(any && !revoked);
+    mcp_allow_->setEnabled(any && revoked);
+#else
+    mcp_clients_model_->removeRows(0, mcp_clients_model_->rowCount());
+    mcp_scope_->setText(tr("Bu yapıda MCP sunucusu yok."));
+    mcp_clients_->setVisible(false);
+    mcp_actions_->setVisible(false);
+    mcp_empty_->setVisible(false);
+    mcp_revoke_->setEnabled(false);
+    mcp_allow_->setEnabled(false);
+#endif
 }
 
 void SettingsDialog::refreshAgentServer()
@@ -794,7 +997,7 @@ void SettingsDialog::refreshAgentServer()
     if (server == nullptr) {
         mcp_state_->setText(tr("Bu yapıda MCP sunucusu yok."));
         mcp_address_->setValue(QString());
-        for (Button* b : {mcp_toggle_, mcp_token_, mcp_copy_})
+        for (Button* b : {mcp_toggle_, mcp_token_, mcp_copy_, mcp_probe_})
             b->setEnabled(false);
         mcp_note_->setText(tr("Sunucu KENTOS_WITH_MCP seçeneğiyle derlenir."));
         return;
@@ -803,6 +1006,7 @@ void SettingsDialog::refreshAgentServer()
     const bool up = server->listening();
     mcp_toggle_->setText(up ? tr("Durdur") : tr("Başlat"));
     mcp_copy_->setEnabled(up);
+    mcp_probe_->setEnabled(up);
 
     if (!up) {
         mcp_state_->setText(tr("Sunucu kapalı. Açılana kadar hiçbir ajan bu çizime erişemez."));
@@ -839,7 +1043,7 @@ void SettingsDialog::refreshAgentServer()
 #else
     mcp_state_->setText(tr("Bu yapıda MCP sunucusu yok."));
     mcp_address_->setValue(QString());
-    for (Button* b : {mcp_toggle_, mcp_token_, mcp_copy_})
+    for (Button* b : {mcp_toggle_, mcp_token_, mcp_copy_, mcp_probe_})
         b->setEnabled(false);
     mcp_note_->setText(tr("Sunucu KENTOS_WITH_MCP seçeneğiyle derlenir."));
 #endif

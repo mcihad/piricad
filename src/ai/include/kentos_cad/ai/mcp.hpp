@@ -37,6 +37,7 @@
 // mere reference to a known type. The real fix belongs in `dispatcher.hpp`.
 #include "kentos_cad/ai/catalog.hpp"
 
+#include "kentos_cad/ai/clients.hpp"
 #include "kentos_cad/ai/dispatcher.hpp"
 #include "kentos_cad/ai/endpoint.hpp"
 #include "kentos_cad/ai/jsonrpc.hpp"
@@ -149,6 +150,22 @@ public:
     /// What the server says it is; see `ServerInfo`.
     const ServerInfo& info() const noexcept { return info_; }
 
+    /// WHERE TO RECORD WHOM THIS SERVER SERVED, and whom it must turn away.
+    ///
+    /// HELD RATHER THAN OWNED, because the two have different lives. This engine
+    /// is built when the listener starts and destroyed when it stops; the ledger
+    /// has to outlive that, or stopping the server to change a port would quietly
+    /// undo a revocation a person made an hour ago. The application owns it
+    /// (`app::McpService`) and hands it in.
+    ///
+    /// NULL IS A VALID STATE and means "keep no record": every request is served
+    /// on its merits and nothing is remembered. That is what a caller that only
+    /// wants the protocol gets, and it is what most of the conformance tests use.
+    void set_ledger(ClientLedger* ledger) noexcept { ledger_ = ledger; }
+
+    /// The ledger, or null. For the settings page and for `MCPSUNUCU`.
+    ClientLedger* ledger() const noexcept { return ledger_; }
+
 private:
     // One method's answer, before `handle` frames it as JSON or as a stream.
     struct Answer
@@ -194,6 +211,7 @@ private:
     const command::Registry& registry_;
     ServerInfo info_;
     ServerPolicy policy_;
+    ClientLedger* ledger_{nullptr};
 };
 
 } // namespace kentos::ai

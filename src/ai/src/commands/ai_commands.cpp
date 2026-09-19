@@ -43,11 +43,16 @@ using command::Value;
 using Verb = command::Bus::AiRequest::Verb;
 
 /// One `islem` word and what it asks for.
+///
+/// `needs_target` is whether the verb needs the command's SECOND argument — the
+/// suggestion id for `ÖNERİ`, the client label for `MCPSUNUCU`. One bool for both
+/// rosters because the shape is the same: a word, what it asks the application
+/// for, and whether it has to name something.
 struct Operation
 {
     const char* name;
     Verb verb;
-    bool needs_plan;
+    bool needs_target;
 };
 
 constexpr Operation kSuggestionOps[] = {
@@ -58,10 +63,10 @@ constexpr Operation kSuggestionOps[] = {
 };
 
 constexpr Operation kServerOps[] = {
-    {"baslat", Verb::ServerStart, false},
-    {"durdur", Verb::ServerStop, false},
-    {"durum", Verb::ServerState, false},
-    {"belirtec", Verb::ServerToken, false},
+    {"baslat", Verb::ServerStart, false},       {"durdur", Verb::ServerStop, false},
+    {"durum", Verb::ServerState, false},        {"belirtec", Verb::ServerToken, false},
+    {"istemciler", Verb::ServerClients, false}, {"iptal", Verb::ServerRevoke, true},
+    {"izin", Verb::ServerRestore, true},        {"sina", Verb::ServerProbe, false},
 };
 
 template<std::size_t N> std::string word_list(const Operation (&ops)[N])
@@ -106,7 +111,7 @@ Task<void> run_suggestion(Context& ctx)
     command::Bus::AiRequest request;
     request.verb = op->verb;
 
-    if (op->needs_plan) {
+    if (op->needs_target) {
         auto plan = co_await ctx.text("oneri", "Öneri kimliği");
         if (!plan || plan->empty()) {
             ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
@@ -148,6 +153,24 @@ Task<void> run_mcp(Context& ctx)
     if (const Value port = ctx.argument("port"); !port.empty()) {
         request.port = port.as_int();
         ctx.record("port", port);
+    }
+
+    if (op->needs_target) {
+        auto who = co_await ctx.text("ad", "İstemcinin adı (MCPSUNUCU islem=istemciler ile görün)");
+        if (!who || who->empty()) {
+            ctx.session().fail(
+                core::err(core::ErrorCode::InvalidArgument,
+                          "'" + std::string(op->name) +
+                              "' için istemcinin adı gerekir: ad=<istemci>. Adları MCPSUNUCU "
+                              "islem=istemciler ile görün."));
+            co_return;
+        }
+        // THE LABEL IS A NAME AND NOTHING ELSE. It is the client's declared name
+        // plus its token's fingerprint, which is what the audit record already
+        // carries; no token, key or header value reaches this argument, the
+        // journal line it becomes, or the echo below (CLAUDE.md 5.21).
+        request.client = *who;
+        ctx.record("ad", Value::text(request.client));
     }
 
     if (engine_missing(ctx, "Aracı sunucusu")) co_return;
@@ -210,16 +233,23 @@ std::vector<CommandSpec> detail::ai_command_specs()
         .category = command::Category::System,
         .params =
             {
-                Param::choice("islem", Arity::exactly(1), {"baslat", "durdur", "durum", "belirtec"},
-                              "Ne yapılacağı: baslat, durdur, durum ya da belirtec (yeni "
-                              "belirteç üretir)"),
+                Param::choice("islem", Arity::exactly(1),
+                              {"baslat", "durdur", "durum", "belirtec", "istemciler", "iptal",
+                               "izin", "sina"},
+                              "Ne yapılacağı: baslat, durdur, durum, belirtec (yeni belirteç "
+                              "üretir), istemciler, iptal (bir istemcinin yetkisini kaldırır), "
+                              "izin (geri verir) ya da sina (bağlantıyı sınar)"),
                 Param::integer_range("port", Arity::optional(), 1024, 65535,
                                      "Yalnız bu başlatma için port; verilmezse ayardaki port"),
+                Param::text("ad", Arity::optional(),
+                            "İstemcinin adı; iptal ve izin için gerekir. Adları islem=istemciler "
+                            "ile görün"),
             },
         .undo    = UndoPolicy::None,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
         .summary = "Yapay zeka ajanlarının bağlanacağı MCP sunucusunu başlatır, durdurur, "
-                   "durumunu söyler ya da yeni bir erişim belirteci üretir.",
+                   "durumunu söyler, yeni bir erişim belirteci üretir, bağlı istemcileri "
+                   "listeler ve tek bir istemcinin yetkisini kaldırır.",
         .run     = &run_mcp,
         // STARTING A LISTENER IS AN OUTWARD ACT. It binds a port on this machine
         // and hands a token to whoever is given it; no undo stack reaches that.
@@ -228,8 +258,17 @@ std::vector<CommandSpec> detail::ai_command_specs()
         .verb_effects =
             {
                 {"durum", Effect::Query},
+                {"istemciler", Effect::Query},
                 {"baslat", Effect::ExternalWrite},
                 {"durdur", Effect::ExternalWrite},
+                // WHO MAY REACH THIS MACHINE is a settings change, not a query:
+                // it outlives the call and it is the decision an agent must
+                // never make for itself (S-04).
+                {"iptal", Effect::SettingsChange},
+                {"izin", Effect::SettingsChange},
+                // A PROBE IS A REAL REQUEST over a real socket — it leaves this
+                // process, so it is an external write however harmless it is.
+                {"sina", Effect::ExternalWrite},
                 {"belirtec", Effect::SettingsChange},
             },
     });

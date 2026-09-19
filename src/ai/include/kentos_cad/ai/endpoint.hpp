@@ -64,6 +64,16 @@ struct HttpRequestView
     std::string_view accept;        ///< `Accept`; decides JSON against SSE
     std::string_view authorization; ///< `Authorization`; `Bearer <token>`
     std::string_view body;          ///< the raw body bytes
+
+    /// WHEN THE TRANSPORT READ IT — seconds since the Unix epoch, or 0 when it
+    /// did not say.
+    ///
+    /// The engine is sans-IO and therefore has NO CLOCK: it cannot ask what time
+    /// it is, so a "last seen" column can only ever be what the transport told
+    /// it. Passed in the request rather than read from a global for the same
+    /// reason everything else here is a value — a test states the time and gets
+    /// the same answer twice.
+    std::uint64_t received_at{0};
 };
 
 /// How the transport must deliver the answer.

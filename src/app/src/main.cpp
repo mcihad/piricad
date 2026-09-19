@@ -1591,6 +1591,57 @@ int main(int argc, char** argv)
             say("wrong token", status, QByteArray());
             check(status == 401 || status == 403 || status == 404, "yanlış belirteç kabul edildi");
 
+            // 9. THE LEDGER SAW EVERY ONE OF THEM (TODOS M-08). Nothing here is
+            //    a session — 2026-07-28 has none — so what a person is shown is
+            //    who SPOKE and when, and this is where that is proved over a
+            //    real socket rather than against a test double.
+            const kentos::ai::ClientLedger& ledger = server->clients();
+            check(ledger.size() >= 1, "istemci defteri boş");
+            std::string probe_label;
+            for (const kentos::ai::ClientRecord& one : ledger.clients())
+                if (one.calls > 0) probe_label = one.label;
+            check(!probe_label.empty(), "defterde çağrısı olan istemci yok");
+            const kentos::ai::ClientRecord* row = ledger.find(probe_label);
+            check(row != nullptr && row->calls >= 5, "çağrılar sayılmadı");
+            check(row != nullptr && row->plans >= 1, "açılan öneri sayılmadı");
+            check(row != nullptr && row->last_seen != 0, "son görülme zamanı yazılmadı");
+            // THE TOKEN IS NOT IN THE LABEL, only its fingerprint (5.21). This
+            // is the string that reaches the audit record and the settings
+            // table, so it is checked where it is actually produced.
+            check(probe_label.find(server->token().toStdString()) == std::string::npos,
+                  "İSTEMCİ ADINDA BELİRTEÇ VAR");
+
+            // 10. THE PROBE VERB WORKS OVER THE REAL SOCKET, which is the half
+            //     the protocol engine cannot test about itself.
+            auto tried = server->probe();
+            check(tried.ok(), "MCPSUNUCU islem=sina başarısız");
+            if (!tried.ok())
+                (void)std::fprintf(stderr, "[kentos]   %s\n", tried.error().message.c_str());
+
+            // 11. ONE CLIENT IS SHUT OUT AND THE TOKEN DOES NOT MOVE. A 403 for
+            //     the revoked label, a 200 for a different one, and the address
+            //     on the settings page unchanged.
+            const QString held_token = server->token();
+            check(server->revokeClient(QString::fromStdString(probe_label)).ok(),
+                  "yetki kaldırılamadı");
+            (void)post(base, envelope("tools/list", "{" + meta + "}"), "tools/list", {}, &status);
+            say("revoked client", status, QByteArray());
+            check(status == 403, "yetkisi kaldırılan istemci 403 almadı");
+            check(server->token() == held_token, "yetki kaldırmak belirteci değiştirdi");
+
+            const QByteArray other_meta =
+                "\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\","
+                "\"cad.kentos/client\":\"baska-ajan\"}";
+            (void)post(base, envelope("tools/list", "{" + other_meta + "}"), "tools/list", {},
+                       &status);
+            say("other client", status, QByteArray());
+            check(status == 200, "başka bir istemci de durduruldu");
+
+            check(server->restoreClient(QString::fromStdString(probe_label)).ok(),
+                  "yetki geri verilemedi");
+            (void)post(base, envelope("tools/list", "{" + meta + "}"), "tools/list", {}, &status);
+            check(status == 200, "yetki geri verilince istemci hâlâ reddediliyor");
+
             server->stop();
             check(!server->listening(), "sunucu kapanmadı");
 

@@ -19,6 +19,7 @@
 #include "kentos_test.hpp"
 
 #include "kentos_cad/ai/catalog.hpp"
+#include "kentos_cad/ai/clients.hpp"
 #include "kentos_cad/ai/commands.hpp"
 #include "kentos_cad/ai/mcp.hpp"
 
@@ -1541,4 +1542,161 @@ TEST_CASE("M-07: iki istemci birbirinin planını kullanamaz")
     // An empty label is the operator, who applies the plans and therefore has to
     // be able to list them whoever filed them (`ClientScope::client`).
     CHECK(f.disp.plan_state(plan_id, std::string{}).ok());
+}
+
+TEST_CASE("M-08: defter kimin konuştuğunu ve neyle reddedildiğini tutar")
+{
+    ai::ClientLedger ledger;
+    CHECK_EQ(ledger.size(), 0u);
+
+    // A CALL WITHOUT A REQUESTER IS NOT A CLIENT. Nothing on the socket path
+    // produces one, but a caller that built an `AuditNote` by hand might, and an
+    // empty row in the settings table is worse than no row.
+    ai::AuditNote nameless;
+    nameless.method = "tools/list";
+    ledger.note(nameless, 100);
+    CHECK_EQ(ledger.size(), 0u);
+
+    ai::AuditNote call;
+    call.requester = "Ajan A #0000beef";
+    call.method    = "tools/call";
+    call.tool      = "sorgula";
+    ledger.note(call, 100);
+
+    const ai::ClientRecord* held = ledger.find("Ajan A #0000beef");
+    REQUIRE(held != nullptr);
+    CHECK_EQ(held->calls, 1u);
+    CHECK_EQ(held->refusals, 0u);
+    CHECK_EQ(held->first_seen, 100u);
+    CHECK_EQ(held->last_seen, 100u);
+    CHECK_EQ(held->last_method, std::string("tools/call"));
+
+    // A REFUSAL IS COUNTED AND ITS REASON KEPT — per client, because a person
+    // looking at a misbehaving agent wants ITS errors and not everybody's
+    // interleaved (TODOS M-08's "son hatalar").
+    call.detail = "Böyle bir katman yok: 'YOKKATMAN'.";
+    ledger.note(call, 140);
+    CHECK_EQ(ledger.find("Ajan A #0000beef")->calls, 2u);
+    CHECK_EQ(ledger.find("Ajan A #0000beef")->refusals, 1u);
+    CHECK_EQ(ledger.find("Ajan A #0000beef")->last_refusal,
+             std::string("Böyle bir katman yok: 'YOKKATMAN'."));
+    CHECK_EQ(ledger.find("Ajan A #0000beef")->last_seen, 140u);
+    CHECK_EQ(ledger.find("Ajan A #0000beef")->first_seen, 100u);
+
+    // A filed suggestion is counted separately from a call: the interesting
+    // number is how much this agent is asking a person to sign, not how chatty
+    // it is.
+    ai::AuditNote filed;
+    filed.requester = "Ajan B #0000beef";
+    filed.method    = "tools/call";
+    filed.plan_id   = "p0000000000000001";
+    ledger.note(filed, 200);
+    CHECK_EQ(ledger.find("Ajan B #0000beef")->plans, 1u);
+
+    // MOST RECENTLY SEEN FIRST, so the table and a script agree and so the agent
+    // somebody is watching right now is at the top.
+    const std::vector<ai::ClientRecord> listed = ledger.clients();
+    REQUIRE_EQ(listed.size(), 2u);
+    CHECK_EQ(listed.front().label, std::string("Ajan B #0000beef"));
+}
+
+TEST_CASE("M-08: tek bir istemcinin yetkisi kaldırılır, belirteç değişmez")
+{
+    Rig f;
+    ai::ClientLedger ledger;
+    ai::McpServer server = f.server();
+    server.set_ledger(&ledger);
+
+    const auto list_as = [&](const char* who) {
+        Json params;
+        Json meta;
+        meta.set(ai::kProtocolVersionMetaKey, Json::string(ai::Catalog::kProtocolVersion));
+        meta.set(ai::kClientMetaKey, Json::string(who));
+        params.set("_meta", std::move(meta));
+
+        Json body;
+        body.set("jsonrpc", Json::string("2.0"));
+        body.set("id", Json::integer(1));
+        body.set("method", Json::string("tools/list"));
+        body.set("params", std::move(params));
+
+        Req req;
+        req.mcp_method = "tools/list";
+        req.body       = body.dump();
+        return server.handle(req.view());
+    };
+
+    CHECK_EQ(list_as("Ajan A").status, 200);
+    CHECK_EQ(list_as("Ajan B").status, 200);
+    CHECK_EQ(ledger.size(), 2u);
+
+    // ---- ONE CLIENT, NOT ALL OF THEM ---------------------------------------
+    //
+    // Rotating the token is the blunt instrument and it locks out the agent the
+    // person is working with too. This is the sharp one: B stops, A does not
+    // notice, and the token on the settings page is untouched.
+    REQUIRE(ledger.revoke(f.requester("Ajan B")));
+
+    const ai::HttpOutcome refused = list_as("Ajan B");
+    CHECK_EQ(refused.status, 403);
+    CHECK_EQ(list_as("Ajan A").status, 200);
+
+    // SAID IN WORDS, not as a bare 403: the token is still valid, so an agent
+    // told only "forbidden" would retry it for ever. And the answer must not
+    // carry the token — the label holds its fingerprint and nothing else
+    // (CLAUDE.md 5.21).
+    CHECK(refused.body.find("yetkisi") != std::string::npos);
+    CHECK(refused.body.find("-32001") != std::string::npos);
+    CHECK(refused.body.find(f.policy.token) == std::string::npos);
+
+    // THE REFUSAL IS RECORDED against the client it was aimed at, so the page
+    // can show that the revocation is actually biting.
+    const ai::ClientRecord* held = ledger.find(f.requester("Ajan B"));
+    REQUIRE(held != nullptr);
+    CHECK(held->revoked);
+    CHECK_FALSE(held->last_refusal.empty());
+
+    // AND IT IS REVERSIBLE, because a person who shut the wrong one out has to
+    // be able to say so.
+    REQUIRE(ledger.restore(f.requester("Ajan B")));
+    CHECK_EQ(list_as("Ajan B").status, 200);
+
+    // Restoring something that was never revoked is a refusal rather than a
+    // silent no-op: it is almost always a typo in a name.
+    CHECK_FALSE(ledger.restore("kimse"));
+    CHECK_FALSE(ledger.revoke(""));
+
+    // A CLIENT THAT HAS NOT CALLED YET can still be shut out — the useful
+    // moment, not an edge case.
+    REQUIRE(ledger.revoke("Ajan C #ffffffff"));
+    CHECK(ledger.revoked("Ajan C #ffffffff"));
+
+    // ---- A TOKEN ROTATION FORGETS EVERYTHING -------------------------------
+    //
+    // Every label carries the old token's fingerprint, so after a rotation not
+    // one of them can be presented again. Keeping them would be keeping names
+    // nobody will answer to.
+    ledger.forget_all();
+    CHECK_EQ(ledger.size(), 0u);
+    CHECK_FALSE(ledger.revoked("Ajan C #ffffffff"));
+}
+
+TEST_CASE("M-08: defter sınırlıdır ama yetkisizliği unutmaz")
+{
+    ai::ClientLedger ledger;
+    REQUIRE(ledger.revoke("yasakli"));
+
+    // A CALLER THAT INVENTS A NAME PER CALL must not grow the program's memory,
+    // and — this is the half that matters — must not be able to push a person's
+    // revocation out of the list by doing so. Evicting the oldest UNREVOKED
+    // record is what makes flooding useless as an attack.
+    for (std::size_t i = 0; i < ai::ClientLedger::kMaxClients * 2; ++i) {
+        ai::AuditNote call;
+        call.requester = "gecici-" + std::to_string(i);
+        call.method    = "tools/list";
+        ledger.note(call, 1000 + i);
+    }
+
+    CHECK(ledger.size() <= ai::ClientLedger::kMaxClients);
+    CHECK(ledger.revoked("yasakli"));
 }

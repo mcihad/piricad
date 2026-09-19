@@ -189,6 +189,24 @@ Bu protokol sürümünde **iptal, akışı kapatmaktır**. Bir istemci öneri ta
 kapattığında öneri **geri çekilir**: kimsenin okumayacağı bir karar için birinin
 ekranında beklemez. Denetim kaydı bunu "reddedildi" değil "geri çekildi" olarak yazar.
 
+## Bağlantıyı sınamak
+
+`Seçenekler ▸ MCP Sunucusu` sayfasındaki **Bağlantıyı sına** düğmesi — ve aynı işi yapan
+`MCPSUNUCU islem=sina` satırı — motorun kendi kendini yoklaması **değildir**. Gerçek bir
+soket açılır, sayfadaki adrese gerçek bir `server/discover` isteği gider ve cevap okunur.
+Böylece bir istemcinin ihtiyacı olan üç şey sınanmış olur: portun bağlı olduğu,
+adresteki belirtecin dinleyicinin istediği belirteç olduğu ve o portta başka bir programın
+olmadığı.
+
+```text
+Bağlantı çalışıyor: 127.0.0.1:8765, MCP 2026-07-28, 69 araç. Ajana verilecek adres bu
+sayfadaki adrestir.
+```
+
+Cevap olumsuzsa sebebini söyler: `401` belirtecin yanlış olduğunu, cevapsızlık
+dinleyicinin takıldığını, tanınmayan bir cevap portu başka bir programın kullandığını
+anlatır.
+
 ## Aynı anda birden çok istemci
 
 Bir adrese birden çok ajan bağlanabilir — örneğin bir kod düzenleyicideki ajan ile
@@ -211,6 +229,35 @@ koruyan şey kimliğin uzunluğu değil, **sahiplik denetimidir**.
 Bir istemcinin tutamak defteri, program çok sayıda ayrı ad görürse düşebilir. O zaman
 istemci reddedilmez: okuma aracını yeniden çağırıp yeni tutamak alır — eski bir tutamağın
 zaten aldığı cevabın aynısı.
+
+### Kimin konuştuğunu görmek
+
+Ayarlar sayfasındaki **İSTEMCİLER** tablosu, `MCPSUNUCU islem=istemciler` satırının
+gösterdiğini gösterir: konuşmuş her ajan için adı, çağrı ve ret sayısı, açtığı öneri
+sayısı, son görülme zamanı ve son hatası.
+
+Bu tablo bir **oturum listesi değildir** ve olamaz: `2026-07-28` durumsuzdur — `initialize`
+el sıkışması, oturum kimliği, açık kalan akış yoktur — yani "şu anda bağlı olan" diye
+okunabilecek bir şey yoktur. Dürüst cevap "kim konuştu ve ne zaman"dır, sayfa da onu
+yazar.
+
+### Tek bir ajanı durdurmak
+
+Belirteci yenilemek **kör bir araçtır**: bütün ajanları, o sırada birlikte çalıştığınızı
+da kapatır. Bir satırı seçip **Yetkisini kaldır** demek keskin olanıdır:
+
+- yalnız o istemci durur, **belirteç değişmez**;
+- diğer ajanlar bunu fark etmez;
+- durdurulan istemci `403` alır ve **sebebini okur** — belirteci hâlâ geçerli olduğu için,
+  yalnız "yasak" diyen bir cevap onu sonsuza kadar yeniden denemeye iterdi;
+- karar **geri alınabilir**: **Yetkiyi geri ver**.
+
+Yetkisi kaldırılmış bir istemci hiçbir şeye erişemez: ne bir araca, ne bir kaynağa, ne
+kataloğa. Geri alınan şey tam olarak çizimi okuyabilmesidir.
+
+Belirteç yenilendiğinde istemci listesi **sıfırlanır**. Her ad eski belirtecin parmak izini
+taşır; yenilemeden sonra o adların hiçbiri bir daha sunulamaz, dolayısıyla listeyi
+tutmak kimsenin cevap vermeyeceği adları tutmak olurdu.
 
 ## İki ayrı hata türü
 

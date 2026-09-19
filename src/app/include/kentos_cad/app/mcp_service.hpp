@@ -25,6 +25,7 @@
 // window, so anything slow must become a `command::Job`.
 #pragma once
 
+#include "kentos_cad/ai/clients.hpp"
 #include "kentos_cad/ai/endpoint.hpp"
 #include "kentos_cad/ai/mcp.hpp"
 #include "kentos_cad/command/bus.hpp"
@@ -87,10 +88,46 @@ public:
     /// Stops and closes every open stream.
     void stop();
 
+    /// WHO HAS TALKED TO THIS SERVER, and whom a person has shut out.
+    ///
+    /// HELD HERE RATHER THAN IN THE ENGINE because the two have different lives:
+    /// `ai::McpServer` is built on start and destroyed on stop, and a revocation
+    /// must survive somebody changing the port. It does NOT survive a token
+    /// rotation, and that is deliberate — every label carries the old token's
+    /// fingerprint, so after a rotation not one of them can recur.
+    const ai::ClientLedger& clients() const noexcept { return clients_; }
+
+    /// Shuts one client out, or lets it back in. The settings page and
+    /// `MCPSUNUCU islem=iptal` go through the same two functions, because a
+    /// button must not be a privilege (Article 1.2, CLAUDE.md 5.15).
+    core::Status revokeClient(const QString& label);
+    core::Status restoreClient(const QString& label);
+
+    /// Makes one REAL request to this server over a REAL socket and reports what
+    /// came back.
+    ///
+    /// NOT A SELF-CHECK OF THE ENGINE. Calling `ai::McpServer::handle` directly
+    /// would prove the protocol layer works and nothing else — and what a person
+    /// clicking "sına" is asking about is the half the engine cannot see: that
+    /// the port is bound, that the token in the address is the one the listener
+    /// wants, and that nothing on this machine is between them. So it opens a
+    /// socket to 127.0.0.1 and speaks HTTP.
+    core::Result<QString> probe();
+
 signals:
     /// The listener came up or went down; the status strip and the settings page
     /// both follow this.
     void stateChanged();
+
+    /// A request was served, or a person changed who may send one.
+    ///
+    /// SEPARATE FROM `stateChanged` because the two move at different rates: the
+    /// listener changes when somebody starts or stops it, and the client list
+    /// changes on every call an agent makes. A settings page open while an agent
+    /// works must show the counts moving — without this it showed whatever was
+    /// true when the page was built, which on a fresh start is an empty table
+    /// that never fills.
+    void clientsChanged();
 
 private:
     /// Handles one request on the GUI thread. Separate from the lambda so the
@@ -121,6 +158,15 @@ private:
     quint16 port_{0};
     QString token_;
     bool require_token_{true};
+
+    /// See `clients()`. Outlives `mcp_`, which is handed a pointer to it.
+    ai::ClientLedger clients_;
+
+    /// Whether a probe is already running. `probe()` spins a nested event loop
+    /// so that this server — which serves on THIS thread — can answer, and a
+    /// second probe started from inside that loop would be a reentrancy nobody
+    /// asked for. The flag makes it a refusal instead.
+    bool probing_{false};
 };
 
 } // namespace kentos::app

@@ -102,7 +102,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.view_info`](view_info.md) | `GÖRÜNÜMBİLGİSİ`, `GORUNUMBILGISI`, `VIEWINFO`, `GRB` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Ekranda görünen alanın köşe koordinatlarını, merkezini, ölçeğini ve CRS'ini bildirir. |
 | [`core.context`](context.md) | `BAĞLAM`, `BAGLAM`, `CONTEXT`, `BĞL` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Üzerinde çalışılan her şeyi tek çağrıda özetler: belge sürümü, koordinat sistemi, kapsam, katmanlar, çıktı yerleşimleri ve hedefli olup olmadıkları, seçili nesneler ve görünüm. Özet verir, döküm değil. |
 | [`core.suggestion`](suggestion.md) | `ÖNERİ`, `ONERI`, `SUGGESTION`, `ÖN` | Sistem | komuta özel | etkileşimli, betiklenebilir, AI erişimli | Bekleyen yapay zeka önerilerini listeler, durumunu söyler, uygular ya da reddeder. |
-| [`core.mcp`](mcp.md) | `MCPSUNUCU`, `MCPSERVER`, `MCP` | Sistem | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Yapay zeka ajanlarının bağlanacağı MCP sunucusunu başlatır, durdurur, durumunu söyler ya da yeni bir erişim belirteci üretir. |
+| [`core.mcp`](mcp.md) | `MCPSUNUCU`, `MCPSERVER`, `MCP` | Sistem | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Yapay zeka ajanlarının bağlanacağı MCP sunucusunu başlatır, durdurur, durumunu söyler, yeni bir erişim belirteci üretir, bağlı istemcileri listeler ve tek bir istemcinin yetkisini kaldırır. |
 | [`core.ai_provider`](ai_provider.md) | `YAPAYZEKAMODELİ`, `YAPAYZEKAMODELI`, `AIMODEL`, `YZM` | Sistem | geri alınmaz | etkileşimli, betiklenebilir | Yapay zeka model sağlayıcılarını listeler, ekler, siler, birini varsayılan yapar ya da bağlantısını dener; profil adresi, lehçesi, modeli ve anahtar adını taşır. |
 
 ## Parametreler
@@ -1301,12 +1301,13 @@ Ayrıntılı kullanım: [ÖNERİ](suggestion.md)
 
 ### `core.mcp` — MCPSUNUCU
 
-Yapay zeka ajanlarının bağlanacağı MCP sunucusunu başlatır, durdurur, durumunu söyler ya da yeni bir erişim belirteci üretir.
+Yapay zeka ajanlarının bağlanacağı MCP sunucusunu başlatır, durdurur, durumunu söyler, yeni bir erişim belirteci üretir, bağlı istemcileri listeler ve tek bir istemcinin yetkisini kaldırır.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `islem` | text | 1 | Ne yapılacağı: baslat, durdur, durum ya da belirtec (yeni belirteç üretir) |
+| `islem` | text | 1 | Ne yapılacağı: baslat, durdur, durum, belirtec (yeni belirteç üretir), istemciler, iptal (bir istemcinin yetkisini kaldırır), izin (geri verir) ya da sina (bağlantıyı sınar) |
 | `port` | integer | isteğe bağlı | Yalnız bu başlatma için port; verilmezse ayardaki port |
+| `ad` | text | isteğe bağlı | İstemcinin adı; iptal ve izin için gerekir. Adları islem=istemciler ile görün |
 
 Ayrıntılı kullanım: [MCPSUNUCU](mcp.md)
 

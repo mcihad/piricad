@@ -5,12 +5,19 @@
 
 #include "kentos_cad/app/ai_service.hpp"
 
+#include <QDateTime>
+#include <QEventLoop>
 #include <QHttpHeaders>
 #include <QHttpServer>
 #include <QHttpServerRequest>
 #include <QHttpServerResponder>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QRandomGenerator>
 #include <QTcpServer>
+#include <QTimer>
+#include <QUrl>
 
 namespace kentos::app {
 namespace {
@@ -141,6 +148,11 @@ core::Result<QString> McpService::start(quint16 wanted)
     mcp_ =
         std::make_unique<ai::McpServer>(ai_, bus_.registry(), std::move(info), std::move(policy));
 
+    // THE LEDGER OUTLIVES THE ENGINE. Stopping to change a port must not undo a
+    // revocation somebody made an hour ago, so the record lives here and the
+    // engine is handed a pointer to it (`ai::McpServer::set_ledger`).
+    mcp_->set_ledger(&clients_);
+
     http_ = std::make_unique<QHttpServer>();
     // ONE HANDLER FOR EVERY REQUEST, no routes. The path rule belongs to
     // `ai::endpoint_match` — it is the thing that knows about the token segment
@@ -242,7 +254,15 @@ void McpService::serve(const QHttpServerRequest& request, QHttpServerResponder& 
     view.authorization = std::string_view(auth.constData(), static_cast<std::size_t>(auth.size()));
     view.body          = std::string_view(body.constData(), static_cast<std::size_t>(body.size()));
 
+    // THE ENGINE HAS NO CLOCK (it is sans-IO), so the "last seen" column can only
+    // be what the transport tells it. This is the transport.
+    view.received_at = static_cast<std::uint64_t>(QDateTime::currentSecsSinceEpoch());
+
     const ai::HttpOutcome outcome = mcp_->handle(view);
+
+    // THE LEDGER MOVED, so anything showing it must be told. `handle` recorded
+    // the call; this is the only place that knows the recording just happened.
+    if (!outcome.audit.requester.empty()) emit clientsChanged();
 
     // THE AUDIT NOTE IS WRITTEN WHATEVER HAPPENED, and the coordinate refusal is
     // the one the rulebook asks for by name: a call that tried to pass a number
@@ -299,6 +319,126 @@ void McpService::serve(const QHttpServerRequest& request, QHttpServerResponder& 
     }
 }
 
+core::Status McpService::revokeClient(const QString& label)
+{
+    if (auto done = clients_.revoke(label.toStdString()); !done) return done;
+    emit clientsChanged();
+    return core::ok();
+}
+
+core::Status McpService::restoreClient(const QString& label)
+{
+    if (auto done = clients_.restore(label.toStdString()); !done) return done;
+    emit clientsChanged();
+    return core::ok();
+}
+
+core::Result<QString> McpService::probe()
+{
+    if (!listening())
+        return core::err(core::ErrorCode::Unsupported,
+                         "Sunucu kapalı; sınanacak bir bağlantı yok. Açmak için: MCPSUNUCU "
+                         "islem=baslat");
+
+    // ---- WHY A NESTED EVENT LOOP, AND WHY IT IS SAFE HERE ---------------------
+    //
+    // This server serves on THIS thread (see the header: the document takes no
+    // locks). So a probe that blocked — `waitForReadyRead` on the socket — would
+    // wait for an answer that only this thread can produce: a deadlock, and one
+    // that would freeze the window rather than fail. The loop below lets the
+    // listener answer while the probe waits.
+    //
+    // USER INPUT IS EXCLUDED, which is what keeps re-entrancy out: no click, no
+    // keystroke and no menu reaches the program while the loop spins, so nothing
+    // can start a second command underneath this one. `probing_` refuses the one
+    // path that is left — a probe started by something the loop DID deliver.
+    //
+    // AND IT IS BOUNDED. Two seconds against a listener on this same machine is
+    // a long time; if nothing came back, something is wrong and saying so beats
+    // waiting.
+    if (probing_) return core::err(core::ErrorCode::Unsupported, "Bir sınama zaten sürüyor.");
+
+    struct Guard
+    {
+        bool& flag;
+
+        ~Guard() { flag = false; }
+    };
+
+    probing_ = true;
+    Guard guard{probing_};
+
+    // THE ADDRESS A CLIENT WOULD BE GIVEN, token segment and all, because what
+    // is being tested is the address on the settings page and not some other one
+    // this function made up.
+    QString path = QStringLiteral("/mcp");
+    if (require_token_ && !token_.isEmpty()) path += QStringLiteral("/") + token_;
+
+    QNetworkRequest asked{QUrl(QStringLiteral("http://127.0.0.1:%1%2").arg(port_).arg(path))};
+    asked.setHeader(QNetworkRequest::ContentTypeHeader, QByteArrayLiteral("application/json"));
+    asked.setRawHeader("Accept", "application/json");
+    asked.setRawHeader("MCP-Protocol-Version", ai::Catalog::kProtocolVersion);
+    asked.setRawHeader("Mcp-Method", "server/discover");
+
+    // `server/discover` is the one method every conforming client calls first,
+    // so a probe that succeeds has proved exactly what a client needs.
+    const QByteArray body =
+        QStringLiteral(
+            R"({"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":{"%1":"%2"}}})")
+            .arg(QString::fromLatin1(ai::kProtocolVersionMetaKey),
+                 QString::fromLatin1(ai::Catalog::kProtocolVersion))
+            .toUtf8();
+
+    QNetworkAccessManager net;
+    QNetworkReply* reply = net.post(asked, body);
+
+    QEventLoop loop;
+    QTimer deadline;
+    deadline.setSingleShot(true);
+    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    QObject::connect(&deadline, &QTimer::timeout, &loop, &QEventLoop::quit);
+    deadline.start(2000);
+    loop.exec(QEventLoop::ExcludeUserInputEvents);
+
+    const bool answered = reply->isFinished();
+    const int status    = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    const QString why   = reply->errorString();
+    const QByteArray in = reply->readAll();
+    reply->deleteLater();
+
+    if (!answered)
+        return core::err(core::ErrorCode::IoFailure,
+                         ("Sunucu 2 saniyede cevap vermedi (127.0.0.1:" + QString::number(port_) +
+                          "). Sunucuyu durdurup yeniden başlatmayı deneyin.")
+                             .toStdString());
+
+    if (status == 401)
+        return core::err(core::ErrorCode::ValidationFailed,
+                         "Sunucu açık ama belirteci kabul etmedi (401). Ayarlar sayfasındaki "
+                         "adresi yeniden kopyalayın.");
+
+    if (status != 200)
+        return core::err(core::ErrorCode::IoFailure,
+                         ("Sunucu " + QString::number(status) + " döndü: " + why).toStdString());
+
+    // THE ANSWER IS READ, not merely counted. A 200 carrying something that is
+    // not this server's discovery document means something else is on that port,
+    // and telling the person "çalışıyor" would be worse than telling them
+    // nothing.
+    if (!in.contains("\"tools\"") && !in.contains("protocolVersion"))
+        return core::err(core::ErrorCode::ValidationFailed,
+                         "127.0.0.1:" + std::to_string(port_) +
+                             " cevap verdi ama bu bir KentOSCad MCP sunucusu değil. Portu "
+                             "başka bir program kullanıyor olabilir.");
+
+    return QStringLiteral(
+               "Bağlantı çalışıyor: 127.0.0.1:%1, MCP %2, %3 araç. Ajana verilecek adres bu "
+               "sayfadaki adrestir.")
+        .arg(port_)
+        .arg(QString::fromLatin1(ai::Catalog::kProtocolVersion))
+        .arg(ai_.catalog().tools.size());
+}
+
 core::Result<std::string> McpService::handleVerb(const command::Bus::AiRequest& request)
 {
     using Verb = command::Bus::AiRequest::Verb;
@@ -330,6 +470,14 @@ core::Result<std::string> McpService::handleVerb(const command::Bus::AiRequest& 
         // may have been seen is replaced, and every client has to be told the
         // new one deliberately. The value itself is never in this answer.
         token_ = mintToken();
+
+        // AND THE CLIENT LIST GOES WITH IT. Every label carries the OLD token's
+        // fingerprint, so after this not one of them can be presented again:
+        // keeping them would be keeping names nobody will answer to, and keeping
+        // their revocations would be shutting out labels that cannot recur.
+        clients_.forget_all();
+        emit clientsChanged();
+
         if (listening()) {
             const quint16 again = port_;
             stop();
@@ -338,6 +486,49 @@ core::Result<std::string> McpService::handleVerb(const command::Bus::AiRequest& 
         return "Yeni belirteç üretildi (" + tokenFingerprint().toStdString() +
                "). Tamamını Seçenekler ▸ MCP Sunucusu sayfasından kopyalayın; eski belirteç "
                "artık geçersiz.";
+    }
+
+    case Verb::ServerClients: {
+        const std::vector<ai::ClientRecord> held = clients_.clients();
+        if (held.empty())
+            return std::string(
+                "Bu sunucuya henüz hiçbir istemci bağlanmadı. Bağlanan her ajan burada "
+                "adı, çağrı sayısı ve son hatasıyla görünür.");
+
+        // MOST RECENTLY SEEN FIRST, which the ledger already sorted. The token
+        // is not here and cannot be: a label is the client's declared name plus
+        // the token's FINGERPRINT (CLAUDE.md 5.21).
+        std::string told = std::to_string(held.size()) + " istemci (en son konuşan üstte):";
+        for (const ai::ClientRecord& one : held) {
+            told += "\n  " + one.label + (one.revoked ? "  [YETKİSİZ]" : "");
+            told += "  " + std::to_string(one.calls) + " çağrı";
+            if (one.refusals != 0) told += ", " + std::to_string(one.refusals) + " ret";
+            if (one.plans != 0) told += ", " + std::to_string(one.plans) + " öneri";
+            if (!one.last_method.empty()) told += ", son: " + one.last_method;
+            if (!one.last_refusal.empty()) told += "\n      son hata: " + one.last_refusal;
+        }
+        return told;
+    }
+
+    case Verb::ServerRevoke: {
+        if (auto done = revokeClient(QString::fromStdString(request.client)); !done)
+            return done.error();
+        return "'" + request.client +
+               "' artık bu sunucuya erişemiyor. Belirteç değişmedi: diğer ajanlar çalışmaya "
+               "devam eder. Geri vermek için: MCPSUNUCU islem=izin ad=" +
+               request.client;
+    }
+
+    case Verb::ServerRestore: {
+        if (auto done = restoreClient(QString::fromStdString(request.client)); !done)
+            return done.error();
+        return "'" + request.client + "' yeniden bu sunucuya erişebilir.";
+    }
+
+    case Verb::ServerProbe: {
+        auto answered = probe();
+        if (!answered) return answered.error();
+        return answered.value().toStdString();
     }
 
     default: break;

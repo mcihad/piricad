@@ -52,6 +52,19 @@ inline constexpr int kInternalError = -32603;
 /// -32020 and the status 400.
 inline constexpr int kHeaderMismatch = -32020;
 
+/// A person at the workstation has shut THIS client out; HTTP 403.
+///
+/// IN THE SERVER-ERROR RANGE ON PURPOSE. JSON-RPC 2.0 reserves -32000..-32099
+/// for implementation-defined server errors, and this is one: no MCP revision
+/// defines single-client revocation, so a code borrowed from beside
+/// `HeaderMismatch` would be squatting on a number the specification may yet
+/// use for something else.
+///
+/// AND IT IS SAID RATHER THAN HIDDEN. A bare 403 would leave an agent retrying
+/// a token that is still perfectly valid; the message names what happened so the
+/// agent stops and its operator can ask the person why (TODOS M-08).
+inline constexpr int kAccessRevoked = -32001;
+
 } // namespace rpc_error_code
 
 /// The `_meta` key every 2026-07-28 request states its protocol version in.

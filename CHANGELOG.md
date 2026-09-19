@@ -6,6 +6,43 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — bağlantıyı yönetmek: kim konuştu, kimi durdurmalı (TODOS M-08)
+
+- **İstemci defteri** (`ai::ClientLedger`, AGPL): konuşmuş her ajan için ad, çağrı,
+  ret, öneri sayısı, son yöntem, **son hata** ve son görülme zamanı. Bu bir oturum
+  listesi değildir ve olamaz — `2026-07-28` durumsuzdur, yani "şu anda bağlı olan"
+  diye okunabilecek bir soket tablosu yoktur. Dürüst cevap "kim konuştu ve ne zaman".
+- **Tek bir istemcinin yetkisi kaldırılabiliyor** (`MCPSUNUCU islem=iptal ad=…`,
+  ve Ayarlar'daki satır düğmesi). Belirteci yenilemek **kör bir araçtır**: o sırada
+  birlikte çalıştığınız ajanı da kapatır. Bu keskin olanı — yalnız adı verilen
+  istemci durur, belirteç yerinde kalır, karar `islem=izin` ile geri alınır.
+  Durdurulan istemci `403` ve `-32001` alır ve **sebebini okur**: belirteci hâlâ
+  geçerli olduğu için, yalnız "yasak" diyen bir cevap onu sonsuza kadar yeniden
+  denemeye iterdi.
+- **`MCPSUNUCU islem=sina`**: motorun kendi kendini yoklaması değil — gerçek bir
+  soket, ayar sayfasındaki gerçek adres, gerçek bir `server/discover`. Portun bağlı
+  olduğunu, belirtecin doğru olduğunu ve o portta başka bir program olmadığını
+  sınar. `401`, cevapsızlık ve tanınmayan cevap ayrı ayrı anlatılıyor.
+- **`MCPSUNUCU islem=istemciler`** listeyi komut satırına da veriyor: tablo bir
+  ayrıcalık değil (Article 1.2).
+- `HttpRequestView::received_at`: motor **sans-IO** olduğu için saati yok, "son
+  görülme" ancak taşımanın söylediği olabilir.
+- Ayarlar ▸ MCP Sunucusu sayfası: **İSTEMCİLER** tablosu, iki satır düğmesi,
+  **Bağlantıyı sına** ve her istemcinin aynı kapsamda çalıştığını yazan bir satır.
+- Ekrana bakarak düzeltilen iki kusur: boş tablo bir sözle değiştirildi (boş bir
+  ızgara "bozuk" diye okunuyordu) ve sütun başlıkları artık kırpılmıyor
+  ("İstem…", "Çağ…", "Son görül…"). Tablo satır sayısıyla büyüyor, iki ile altı
+  satır arasında.
+- **`McpService::clientsChanged`**: dinleyicinin durumu ile istemci listesi farklı
+  hızlarda değişiyor. Bu sinyal olmadan açık bir ayar sayfası, sayfa kurulduğu
+  andaki hâli gösteriyordu — taze bir başlatmada hiç dolmayan boş bir tablo.
+- Belirteç yenilendiğinde defter sıfırlanıyor: her ad eski belirtecin parmak izini
+  taşıyor, yenilemeden sonra hiçbiri bir daha sunulamaz.
+- Defter sınırlı ama **yetkisizliği unutmuyor**: taşma hâlinde en eski **yetkili**
+  kayıt düşüyor, böylece ad uydurarak taşırmak bir kararı geri almanın yolu olmuyor.
+- `KENTOS_MCP_PROBE` üç madde daha sınıyor: defterin gerçek sokette dolduğunu,
+  `403`'ün yalnız adı verilen istemciye geldiğini ve belirtecin yerinde kaldığını.
+
 ### Güvenlik — her istemci kendi alanında çalışır (TODOS M-07)
 
 - **Tutamak defteri artık istemci başına.** `ai::HandleScopes`: bir ada bir defter.

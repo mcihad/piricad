@@ -16,6 +16,7 @@ namespace kentos::ai {
 namespace {
 
 using core::Json;
+using rpc_error_code::kAccessRevoked;
 using rpc_error_code::kHeaderMismatch;
 using rpc_error_code::kInternalError;
 using rpc_error_code::kInvalidParams;
@@ -37,6 +38,7 @@ int status_for(int code)
     switch (code) {
     case kMethodNotFound: return 404;
     case kInternalError: return 500;
+    case kAccessRevoked: return 403;
     default: return 400;
     }
 }
@@ -1198,6 +1200,33 @@ HttpOutcome McpServer::handle(const HttpRequestView& request)
     // ---- 6. THE HEADERS, against the body.
     const std::string requester = requester_label(request, rpc);
 
+    // ---- 6a. HAS A PERSON SHUT THIS ONE OUT?
+    //
+    // AFTER THE LABEL AND BEFORE THE METHOD, because the label is what a person
+    // revoked and it cannot be known until the body's `_meta` has been read.
+    // Nothing is served past this point: not a tool, not a resource, not the
+    // catalogue — being able to read the drawing is exactly what was withdrawn.
+    //
+    // SAID IN WORDS RATHER THAN AS A BARE 403. The token is still valid, so an
+    // agent told only "forbidden" would retry it for ever; told this, it stops
+    // and its operator can go and ask why (TODOS M-08).
+    if (ledger_ != nullptr && ledger_->revoked(requester)) {
+        HttpOutcome out =
+            http_json(status_for(kAccessRevoked),
+                      rpc_error(rpc.id, kAccessRevoked,
+                                "Bu istemcinin yetkisi bilgisayar başındaki kullanıcı tarafından "
+                                "kaldırıldı: '" +
+                                    requester +
+                                    "'. Belirteç hâlâ geçerli; yetkiyi yalnız o kullanıcı geri "
+                                    "verebilir (Ayarlar → MCP sunucusu)."));
+        out.audit.method    = rpc.method;
+        out.audit.requester = requester;
+        out.audit.detail    = "İstemcinin yetkisi kaldırılmış.";
+        out.headers.emplace_back("MCP-Protocol-Version", Catalog::kProtocolVersion);
+        ledger_->note(out.audit, request.received_at);
+        return out;
+    }
+
     Answer answer;
     if (std::optional<Answer> refused = header_fault(request, rpc); refused) {
         answer = std::move(*refused);
@@ -1266,6 +1295,11 @@ HttpOutcome McpServer::handle(const HttpRequestView& request)
     // revision produced it without parsing the body.
     out.headers.emplace_back("MCP-Protocol-Version", Catalog::kProtocolVersion);
     out.audit = std::move(answer.audit);
+
+    // RECORDED LAST, because what is recorded is what was ANSWERED: the method,
+    // whether it was refused and why, and the plan it filed. The clock is the
+    // transport's — this engine has none.
+    if (ledger_ != nullptr) ledger_->note(out.audit, request.received_at);
     return out;
 }
 

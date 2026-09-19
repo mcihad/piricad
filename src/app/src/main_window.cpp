@@ -2936,6 +2936,40 @@ void MainWindow::probeDialogs()
         d.applyTheme(theme_);
         d.resize(1180, 740);
         shoot(&d, "secenekler");
+
+        // THE PAGES THAT HOLD A TABLE ARE PHOTOGRAPHED TOO, because a table is
+        // where a layout goes wrong and the first page never shows one. The
+        // listener page is the live example: it grew a client list and two row
+        // actions, and neither is visible in a shot of the page above it.
+        for (const auto& [title, name] :
+             {std::pair<const char*, const char*>{"MCP Sunucusu", "secenekler-mcp"},
+              {"Yapay Zeka Modelleri", "secenekler-modeller"},
+              {"Yazdırma", "secenekler-yazdirma"}}) {
+            d.showSection(QString::fromUtf8(title));
+            QCoreApplication::processEvents();
+            shoot(&d, name);
+        }
+
+#if KENTOS_HAVE_MCP
+        // AND THE LISTENER PAGE AGAIN WITH SOMETHING IN IT. An empty table and
+        // a full one are different pictures and both can be wrong; the empty
+        // one was — three headings elided to "İstem…", "Çağ…", "Son görül…".
+        // The rows are made the honest way, by actually talking to the server,
+        // so what is photographed is what a real client leaves behind.
+        if (McpService* server = controller_->mcpService(); server != nullptr) {
+            if (auto up = server->start(18790); up) {
+                for (int i = 0; i < 3; ++i)
+                    (void)server->probe();
+                d.showSection(QStringLiteral("MCP Sunucusu"));
+                QCoreApplication::processEvents();
+                shoot(&d, "secenekler-mcp-istemciler");
+                server->stop();
+            } else {
+                say(QStringLiteral("MCP sunucusu açılmadı: %1")
+                        .arg(QString::fromStdString(up.error().message)));
+            }
+        }
+#endif
     }
     {
         SettingsDialog d(*controller_, SettingsDialog::Mode::Project, this);

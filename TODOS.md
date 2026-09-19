@@ -898,12 +898,30 @@ uygulanan ve müzakere edilen yetenekler ilan edilmelidir.
   dosyaya dokunan hiçbir komut ajana açık değil (`tests/support/ai-kapsam.json`:
   `core.open`, `core.save`, `core.export`… hepsi A-02'ye bağlı), ve bu bitleri
   tüketecek politika motoru S-01/A-04 zinciri.
-- [ ] **M-08 / P1 — Kullanılabilir bağlantı yönetimi.** Settings'te sunucu durumu,
-  adres, bağlı istemciler, etkin policy/kapsam, token yenile/iptal ve son hatalar
-  bulunsun. Mümkün olan istemcide Bearer kimlik doğrulamasını tercih et; mevcut
-  token'lı URL desteğinin log/ekran paylaşımı riskini azalt. **Kabul:** kullanıcı
-  bağlantıyı test eder, tek istemcinin yetkisini kaldırır; gizli değer modele veya
-  audit metnine taşınmaz.
+- [x] **M-08 / P1 — Kullanılabilir bağlantı yönetimi.** *(19 Eylül 2026)*
+  `Seçenekler ▸ MCP Sunucusu` sayfası artık durumu, adresi, **Bağlantıyı sına**yı,
+  belirteç yenilemeyi, konuşmuş **istemcileri** ve her birinin son hatasını taşıyor;
+  tablonun üstündeki satır etkin kapsamı yazıyor (kaç araçtan kaçı çizimi değiştirir,
+  hepsinin önizlemeli öneriye dönüştüğü, tutamak ve önerilerin istemciye özel olduğu).
+  **Sınama motorun kendi kendini yoklaması değil**: gerçek soket, sayfadaki gerçek
+  adres, gerçek `server/discover`. `401`, cevapsızlık ve tanınmayan cevap ayrı ayrı
+  anlatılıyor.
+  **Tek istemcinin yetkisi kaldırılabiliyor** (`ai::ClientLedger`, `MCPSUNUCU
+  islem=iptal ad=…`, ve satır düğmesi): belirteci yenilemek kör araçtır ve birlikte
+  çalıştığınız ajanı da kapatır; bu keskin olanı. Durdurulan istemci `403` + `-32001`
+  alıyor ve sebebini okuyor — belirteci hâlâ geçerli olduğu için yalnız "yasak" diyen
+  bir cevap onu sonsuza kadar yeniden denemeye iterdi. Karar `islem=izin` ile geri
+  alınıyor. Defter sınırlı ama **yetkisizliği unutmuyor**: en eski *yetkili* kayıt
+  düşüyor, yani ad uydurarak taşırmak bir kararı geri almanın yolu değil.
+  **Gizli değer hiçbir yere taşınmıyor**: ad, istemcinin kendini tanıttığı ad artı
+  belirtecin sekiz haneli parmak izi — denetim kaydına giren dizenin aynısı. Bunu
+  `KENTOS_MCP_PROBE` gerçek sokette doğruluyor. Bearer başlığı sayfada **tercih edilen**
+  biçim olarak yazılı; yol biçimi başlık gönderemeyen istemciler için duruyor.
+  Ekrana bakarak düzeltilen üç kusur: boş tablo yerine bir cümle, kırpılan sütun
+  başlıkları, ve açık bir sayfayı canlı tutan `clientsChanged` sinyali (o olmadan
+  sayfa kurulduğu andaki hâli gösteriyordu).
+  **Kalan:** yol biçimindeki belirtecin tamamen kaldırılması — bunu bir Bearer
+  gönderemeyen istemci kalmadığında yapmak gerekir, bugün değil.
 - [ ] **M-09 / P2 — Keşif ve iş şablonları.** Büyük katalog için uygulama düzeyinde
   arama/alan filtresi; atlas, kadastro kontrolü ve rapor gibi işler için sürümlü
   iş şablonları sun. `prompts` veya Skills uzantısı ancak gerçek destek varsa
