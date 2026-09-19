@@ -65,10 +65,10 @@ tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıd�
 | `yerlesim` | Hangi yerleşim; tek yerleşim varsa gerekmez |
 | `ad` | Öğenin adı. `ekle`'de verilmezse türünden türetilir (`harita`, `harita2`…) |
 | `tur` | `islem=ekle` için: `harita`, `metin`, `olcek`, `kuzey`, `lejant`, `resim`, `sekil`, `tablo` |
-| `x`, `y` | Sol ve **üst** kenardan uzaklık, milimetre |
-| `genislik`, `yukseklik` | Öğenin boyu, milimetre |
+| `x`, `y` | Sol ve **üst** kenardan uzaklık, kâğıt milimetresi. **Ondalık yazılabilir**: `x=0.35` |
+| `genislik`, `yukseklik` | Öğenin boyu, kâğıt milimetresi. Ondalık yazılabilir |
 | `metin` | Metin öğesinin yazısı; resim öğesinde dosya yolu, tablo öğesinde katman adı |
-| `yazi` | Yazı yüksekliği, milimetre |
+| `yazi` | Yazı yüksekliği, kâğıt milimetresi. Ondalık yazılabilir |
 | `olcek` | Harita öğesinin ölçeği `1:N`. `0` = ölçek pencereye uyar |
 | `pencere` | Haritanın bakacağı alanın iki köşesi, anahtar **iki kez** yazılarak |
 | `izgara` | `yok`, `arti`, `cizgi`, `centik` |
@@ -97,6 +97,17 @@ saklanmaz — ölçek değiştiğinde yeniden bastığınız yerleşim yeni öl�
 `<yerlesim>` · `<proje>` · `<olcek>` · `<tarih>` · `<crs>` · `<kagit>`
 
 Eski `<pafta>` yer tutucusu da çözülmeye devam eder: bir çizimin antedine yazılmış yazı, programın bir sözcük hakkında fikir değiştirmesiyle bozulmaz.
+
+### Ondalık milimetre
+
+Kâğıt ölçüleri **ondalık yazılabilir**; model zaten mikrometre saklıyor, yalnız
+kapı tam sayıydı:
+
+```
+ÇIKTIÖĞE islem=tasi ad=baslik x=0.35 y=12.5 genislik=100.25
+```
+
+0,35 mm tam olarak 350 mikrometredir — yuvarlama yok, dosyaya da öyle gider.
 
 ### Hangi katmanları çizer
 

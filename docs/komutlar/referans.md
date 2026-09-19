@@ -754,12 +754,12 @@ Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, b
 | `yerlesim` | text | isteğe bağlı | Hangi çıktı yerleşimi; çizimde tek yerleşim varsa gerekmez |
 | `ad` | text | isteğe bağlı | Öğe adı; ekle dışında gerekir, ekle'de verilmezse türetilir |
 | `tur` | text | isteğe bağlı | islem=ekle için öğe türü |
-| `x` | integer | isteğe bağlı | Sol kenardan uzaklık |
-| `y` | integer | isteğe bağlı | ÜST kenardan uzaklık |
-| `genislik` | integer | isteğe bağlı | Genişlik |
-| `yukseklik` | integer | isteğe bağlı | Yükseklik |
+| `x` | number | isteğe bağlı | Sol kenardan uzaklık |
+| `y` | number | isteğe bağlı | ÜST kenardan uzaklık |
+| `genislik` | number | isteğe bağlı | Genişlik |
+| `yukseklik` | number | isteğe bağlı | Yükseklik |
 | `metin` | text | isteğe bağlı | Metin öğesinin yazısı; <yerlesim>, <olcek>, <tarih>, <crs> yer tutucuları çizim anında çözülür |
-| `yazi` | integer | isteğe bağlı | Yazı yüksekliği |
+| `yazi` | number | isteğe bağlı | Yazı yüksekliği |
 | `olcek` | integer | isteğe bağlı | Harita öğesinin ölçeği 1:N; 0 kapsama uyar |
 | `pencere` | point_list | 0–2 | Harita çerçevesinin bakacağı alanın iki köşesi, anahtar iki kez yazılarak: pencere=x1,y1 pencere=x2,y2. Tuvalden çerçeve seçmek bu satırı yazar |
 | `izgara` | text | isteğe bağlı | Harita öğesinin koordinat ızgarası |
@@ -2725,38 +2725,28 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "description": "islem=ekle için öğe türü (metin)"
         },
         "x": {
-          "type": "integer",
-          "minimum": -10000,
-          "maximum": 10000,
-          "description": "Sol kenardan uzaklık [kâğıt mm] (tam sayı)"
+          "type": "number",
+          "description": "Sol kenardan uzaklık [kâğıt mm] (sayı)"
         },
         "y": {
-          "type": "integer",
-          "minimum": -10000,
-          "maximum": 10000,
-          "description": "ÜST kenardan uzaklık [kâğıt mm] (tam sayı)"
+          "type": "number",
+          "description": "ÜST kenardan uzaklık [kâğıt mm] (sayı)"
         },
         "genislik": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 10000,
-          "description": "Genişlik [kâğıt mm] (tam sayı)"
+          "type": "number",
+          "description": "Genişlik [kâğıt mm] (sayı)"
         },
         "yukseklik": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 10000,
-          "description": "Yükseklik [kâğıt mm] (tam sayı)"
+          "type": "number",
+          "description": "Yükseklik [kâğıt mm] (sayı)"
         },
         "metin": {
           "type": "string",
           "description": "Metin öğesinin yazısı; <yerlesim>, <olcek>, <tarih>, <crs> yer tutucuları çizim anında çözülür (metin)"
         },
         "yazi": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 200,
-          "description": "Yazı yüksekliği [kâğıt mm] (tam sayı)"
+          "type": "number",
+          "description": "Yazı yüksekliği [kâğıt mm] (sayı)"
         },
         "olcek": {
           "type": "integer",

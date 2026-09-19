@@ -305,7 +305,19 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   `ÇIKTIÖĞE islem=tasi sayfa=<n>` bir öğeyi sayfalar arasında taşıyor; testi
   dosya gidiş-dönüşünü de kapsıyor (iki sayfa, farklı boy, doğru sayfada öğe).
   **Kalan:** bütün sayfaları bir arada görme (küçük önizleme şeridi).
-- [ ] **L-03 / P1 — Profesyonel öğe düzenleme.** Çoklu seçim, grup/çöz, kopyala/
+- [~] **L-03 / P1 — Profesyonel öğe düzenleme.** *(ondalık mm 19 Eylül 2026)*
+  **Kabul ölçütünün yarısı karşılandı:** kâğıt ölçüleri artık **ondalık
+  milimetre** kabul ediyor — `x=0.35`, `genislik=100.25`. Model baştan beri
+  mikrometre saklıyordu; yalnız kapı tam sayıydı, yani kenardan 0,35 mm'lik bir
+  kutu hiçbir istemciden söylenemiyordu. 0,35 mm tam olarak 350 µm; yuvarlama yok,
+  dosyaya da öyle gidiyor. Test bunu dosya gidiş-dönüşüyle birlikte sınıyor.
+  Ayrım da netleşti: `ParamKind` çizgisi tam sayı/ondalık değil, **çağıranın
+  yazabileceği** sayı ile **yalnız araç sonucundan devredebileceği** koordinat
+  arasında.
+  **Kalan:** çoklu seçim, grup/çöz, kopyala/yapıştır/çoğalt, hizala/dağıt, eş
+  boyutlandır, referans noktası, baskıdan hariç tutma, cetvel, kılavuz ve
+  ayarlanabilir snap; tek sürükleme ya da toplu hizalamanın tek geri alma üretmesi.
+  Eski madde metni: Çoklu seçim, grup/çöz, kopyala/
   yapıştır/çoğalt, hizala/dağıt, eş boyutlandır, referans noktası, döndürme, z sırası,
   görünürlük, baskıdan hariç tutma, kilit, cetvel, kılavuz ve ayarlanabilir snap ekle.
   Kâğıt ölçüleri birimi açık ondalık mm olarak girilebilsin, içeride `Um` saklansın.

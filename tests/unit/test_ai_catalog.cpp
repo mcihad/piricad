@@ -247,10 +247,13 @@ TEST_CASE("Katalog: kâğıt ölçüsü serbest, zemin koordinatı tutamak ister
     // GROUND, and it says so loudly.
     CHECK(described("pencere").find("ZEMİN") != std::string::npos);
 
-    // And the kinds still keep them apart structurally: an integer is a number a
-    // caller may write, a point is one it may only hand over from a tool result.
+    // AND THE KINDS STILL KEEP THEM APART STRUCTURALLY, and the line is not
+    // integer-versus-decimal: it is a number the caller may WRITE against one it
+    // may only HAND OVER from a tool result. A paper measure is a `Number` —
+    // 0.35 mm is a placement a draughtsman makes — and a ground coordinate is a
+    // `Point`, which the schema accepts only as a handle (CLAUDE.md 5.8).
     for (const Param& p : item->params) {
-        if (p.name == "x" || p.name == "y") CHECK_EQ(p.kind, ParamKind::Integer);
+        if (p.name == "x" || p.name == "y") CHECK_EQ(p.kind, ParamKind::Number);
         if (p.name == "pencere") CHECK_EQ(p.kind, ParamKind::PointList);
     }
 }

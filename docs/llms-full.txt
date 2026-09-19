@@ -42,7 +42,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 74 (68 tanesi onay ister)
-- Katalog parmak izi: `7173599570416046331`
+- Katalog parmak izi: `12962151438287416975`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -483,12 +483,12 @@ Onay ister.
 | `yerlesim` | string | hayır | Hangi çıktı yerleşimi; çizimde tek yerleşim varsa gerekmez (metin) |
 | `ad` | string | hayır | Öğe adı; ekle dışında gerekir, ekle'de verilmezse türetilir (metin) |
 | `tur` | string | hayır | islem=ekle için öğe türü (metin) |
-| `x` | integer | hayır | Sol kenardan uzaklık [kâğıt mm] (tam sayı) |
-| `y` | integer | hayır | ÜST kenardan uzaklık [kâğıt mm] (tam sayı) |
-| `genislik` | integer | hayır | Genişlik [kâğıt mm] (tam sayı) |
-| `yukseklik` | integer | hayır | Yükseklik [kâğıt mm] (tam sayı) |
+| `x` | number | hayır | Sol kenardan uzaklık [kâğıt mm] (sayı) |
+| `y` | number | hayır | ÜST kenardan uzaklık [kâğıt mm] (sayı) |
+| `genislik` | number | hayır | Genişlik [kâğıt mm] (sayı) |
+| `yukseklik` | number | hayır | Yükseklik [kâğıt mm] (sayı) |
 | `metin` | string | hayır | Metin öğesinin yazısı; <yerlesim>, <olcek>, <tarih>, <crs> yer tutucuları çizim anında çözülür (metin) |
-| `yazi` | integer | hayır | Yazı yüksekliği [kâğıt mm] (tam sayı) |
+| `yazi` | number | hayır | Yazı yüksekliği [kâğıt mm] (sayı) |
 | `olcek` | integer | hayır | Harita öğesinin ölçeği 1:N; 0 kapsama uyar (tam sayı) |
 | `pencere` | string | hayır | Harita çerçevesinin bakacağı alanın iki köşesi, anahtar iki kez yazılarak: pencere=x1,y1 pencere=x2,y2. Tuvalden çerçeve seçmek bu satırı yazar [ZEMİN koordinatı — kâğıt değil] — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `izgara` | string | hayır | Harita öğesinin koordinat ızgarası (metin) |

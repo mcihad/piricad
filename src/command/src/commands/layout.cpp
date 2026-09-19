@@ -37,6 +37,7 @@
 #include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <optional>
 #include <span>
@@ -55,6 +56,21 @@ using core::Um;
 Um um(std::int64_t mm)
 {
     return core::um_from_mm(mm);
+}
+
+/// PAPER MILLIMETRES AS A PERSON WRITES THEM, which includes a decimal point.
+///
+/// A title block at 20 mm is one somebody can describe; a box 0.35 mm from the
+/// edge is a real placement a draughtsman makes, and these parameters were whole
+/// numbers — so it could not be said at all, from the command line, from a script
+/// or from an agent. The model has been micrometres all along; only the door was
+/// integer (TODOS L-03).
+///
+/// Rounded to the micrometre, the model's own resolution: 0.35 mm is 350 µm
+/// exactly, and half a micrometre is a distance nobody can draw or measure.
+Um um_of(double mm)
+{
+    return static_cast<Um>(std::llround(mm * 1000.0));
 }
 
 /// And back, for a line a person reads.
@@ -662,7 +678,7 @@ Task<void> run_item(Context& ctx)
             const auto take_um = [&ctx](const char* name, Um& into) {
                 const Value v = ctx.argument(name);
                 if (v.empty()) return;
-                into = um(v.as_int());
+                into = um_of(v.as_number());
                 ctx.record(name, v);
             };
             take_um("x", item->frame.x);
@@ -1056,19 +1072,16 @@ KENTOS_COMMAND(layout_item)
                     "tur", Arity::optional(),
                     {"harita", "metin", "olcek", "kuzey", "lejant", "resim", "sekil", "tablo"},
                     "islem=ekle için öğe türü"),
-                Param::integer_range("x", Arity::optional(), -10000, 10000, "Sol kenardan uzaklık")
+                Param::number("x", Arity::optional(), "Sol kenardan uzaklık")
                     .measured_in("kâğıt mm"),
-                Param::integer_range("y", Arity::optional(), -10000, 10000, "ÜST kenardan uzaklık")
+                Param::number("y", Arity::optional(), "ÜST kenardan uzaklık")
                     .measured_in("kâğıt mm"),
-                Param::integer_range("genislik", Arity::optional(), 0, 10000, "Genişlik")
-                    .measured_in("kâğıt mm"),
-                Param::integer_range("yukseklik", Arity::optional(), 0, 10000, "Yükseklik")
-                    .measured_in("kâğıt mm"),
+                Param::number("genislik", Arity::optional(), "Genişlik").measured_in("kâğıt mm"),
+                Param::number("yukseklik", Arity::optional(), "Yükseklik").measured_in("kâğıt mm"),
                 Param::text("metin", Arity::optional(),
                             "Metin öğesinin yazısı; <yerlesim>, <olcek>, <tarih>, <crs> yer "
                             "tutucuları çizim anında çözülür"),
-                Param::integer_range("yazi", Arity::optional(), 1, 200, "Yazı yüksekliği")
-                    .measured_in("kâğıt mm"),
+                Param::number("yazi", Arity::optional(), "Yazı yüksekliği").measured_in("kâğıt mm"),
                 Param::integer_range("olcek", Arity::optional(), 0, 100000000,
                                      "Harita öğesinin ölçeği 1:N; 0 kapsama uyar"),
                 Param::points("pencere", Arity{0, 2},

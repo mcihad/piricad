@@ -4535,3 +4535,41 @@ TEST_CASE("Çıktı yerleşimi: denetle basmaya engel olmayan sorunları söyler
     REQUIRE(said.ok());
     CHECK(said.value().lines.size() > 1);
 }
+
+TEST_CASE("Çıktı yerleşimi: kâğıt ölçüsü ondalık milimetre kabul eder")
+{
+    // TODOS L-03's acceptance, verbatim: "0,35 mm konum ve 0,18 mm çizgi
+    // kalınlığı UI/komut/AI/MCP'de aynı değere gider". The model has been
+    // micrometres all along; only the door was integer, so a box 0.35 mm from
+    // the edge could not be said at all — from any client.
+    Rig r;
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Kroki kagit=A4", Origin::Test).ok());
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIÖĞE islem=tasi ad=baslik x=0.35 y=12.5 genislik=100.25 "
+                              "yukseklik=20",
+                              Origin::Test)
+                .ok());
+
+    const core::LayoutItem* title = r.doc.layouts().find("Kroki")->find("baslik");
+    REQUIRE(title != nullptr);
+    // EXACT, because the model's resolution IS the micrometre.
+    CHECK_EQ(title->frame.x, 350);
+    CHECK_EQ(title->frame.y, 12500);
+    CHECK_EQ(title->frame.w, 100250);
+    CHECK_EQ(title->frame.h, 20000);
+
+    // A whole number still means what it always did.
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=tasi ad=baslik x=20", Origin::Test).ok());
+    CHECK_EQ(r.doc.layouts().find("Kroki")->find("baslik")->frame.x, 20000);
+
+    // AND IT SURVIVES THE FILE: the wire record is micrometres, so 0.35 mm is
+    // not a number that has to be rounded on the way out.
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=tasi ad=baslik x=0.35", Origin::Test).ok());
+    TempDir tmp("ondalik-mm");
+    const std::string path = tmp.file("ondalik.pcad");
+    REQUIRE(r.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig back;
+    REQUIRE(back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
+    CHECK_EQ(back.doc.layouts().find("Kroki")->find("baslik")->frame.x, 350);
+}
