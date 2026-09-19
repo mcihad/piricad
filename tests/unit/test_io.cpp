@@ -4751,3 +4751,48 @@ TEST_CASE("Atlas: yüz parselin sayfaları sıralı ve benzersiz adlandırılır
     REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=atlas ad=Askı katman=yok", Origin::Test).ok());
     CHECK(r.doc.layouts().find("Askı")->atlas.coverage_layer.empty());
 }
+
+TEST_CASE("Alanlar: eksik bir alan sessiz boş metne dönmüyor")
+{
+    // TODOS L-06's acceptance, second half: "eksik alan sessiz boş metin olmaz".
+    // A title block that quietly printed "Ada , Parsel 7" would be a sheet
+    // somebody signs with a number missing from it, and the way that is found out
+    // is at the land registry.
+    core::SheetContext ctx;
+    ctx.sheet = "Ada 1284";
+    ctx.paper = "A3";
+    ctx.page  = 2;
+    ctx.pages = 5;
+    ctx.fields.emplace_back("parsel", "7");
+
+    std::vector<std::string> missing;
+    const std::string out = core::resolve_fields(
+        "<yerlesim> — Ada <ada>, Parsel <parsel> — <sayfa>/<sayfa_sayisi>", ctx, &missing);
+
+    CHECK(out.find("Ada 1284") != std::string::npos);
+    CHECK(out.find("Parsel 7") != std::string::npos);
+    CHECK(out.find("2/5") != std::string::npos);
+    // THE ONE NOBODY COULD FILL IS VISIBLE, on the paper and in the report.
+    CHECK(out.find("⟨ada?⟩") != std::string::npos);
+    REQUIRE_EQ(missing.size(), std::size_t{1});
+    CHECK(missing.front().find("<ada>") != std::string::npos);
+
+    // A KNOWN FIELD WITH NO VALUE IS MARKED TOO: "the scale of a sheet with no
+    // map" and "a scale of nothing" print the same blank otherwise.
+    std::vector<std::string> blank;
+    const std::string scaled = core::resolve_fields("Ölçek <olcek>", ctx, &blank);
+    CHECK(scaled.find("⟨olcek?⟩") != std::string::npos);
+    CHECK_EQ(blank.size(), std::size_t{1});
+
+    // AND AN UNCLOSED `<` IS A LESS-THAN SIGN. A note that says "3 < 5" is a
+    // note; refusing it would be the program reading a sentence as a syntax it
+    // invented.
+    std::vector<std::string> none;
+    CHECK_EQ(core::resolve_fields("3 < 5", ctx, &none), "3 < 5");
+    CHECK(none.empty());
+
+    // `<pafta>` still resolves: it sits in every title block written before the
+    // rename, and a document on disk does not get to be wrong because the program
+    // changed its mind about a word.
+    CHECK_EQ(core::resolve_fields("<pafta>", ctx, nullptr), "Ada 1284");
+}

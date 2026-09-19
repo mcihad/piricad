@@ -728,6 +728,59 @@ std::vector<std::string> layout_dependencies(const Layout& layout)
     return out;
 }
 
+std::string resolve_fields(std::string_view text, const SheetContext& context,
+                           std::vector<std::string>* missing)
+{
+    const auto known = [&context](std::string_view name) -> std::optional<std::string> {
+        // `<pafta>` IS STILL READ. It sits in every title block written before the
+        // rename, and a document is data on disk: it does not get to be wrong
+        // because the program changed its mind about a word (CLAUDE.md 0.5a).
+        if (name == "yerlesim" || name == "pafta") return context.sheet;
+        if (name == "proje") return context.project;
+        if (name == "crs") return context.crs;
+        if (name == "tarih") return context.date;
+        if (name == "kagit") return context.paper;
+        if (name == "olcek") return context.scale;
+        if (name == "sayfa") return std::to_string(context.page);
+        if (name == "sayfa_sayisi") return std::to_string(context.pages);
+        for (const auto& [id, value] : context.fields)
+            if (turkish_key_equals(id, name)) return value;
+        return std::nullopt;
+    };
+
+    std::string out;
+    out.reserve(text.size());
+    for (std::size_t i = 0; i < text.size();) {
+        if (text[i] != '<') {
+            out += text[i++];
+            continue;
+        }
+        const std::size_t close = text.find('>', i + 1);
+        // AN UNCLOSED `<` IS A LESS-THAN SIGN, not a broken field. A note that
+        // says "3 < 5" is a note, and refusing it would be the program reading a
+        // sentence as a syntax it invented.
+        if (close == std::string_view::npos) {
+            out += text[i++];
+            continue;
+        }
+
+        const std::string_view name = text.substr(i + 1, close - i - 1);
+        if (const std::optional<std::string> value = known(name); value) {
+            if (value->empty() && missing != nullptr)
+                missing->push_back("'<" + std::string(name) + ">' alanının değeri yok.");
+            // AN EMPTY KNOWN FIELD IS STILL MARKED, because "the scale of a sheet
+            // with no map" and "a scale of nothing" print the same blank.
+            out += value->empty() ? "⟨" + std::string(name) + "?⟩" : *value;
+        } else {
+            if (missing != nullptr)
+                missing->push_back("'<" + std::string(name) + ">' diye bir alan yok.");
+            out += "⟨" + std::string(name) + "?⟩";
+        }
+        i = close + 1;
+    }
+    return out;
+}
+
 std::vector<AtlasTarget> atlas_targets(const Document& document, const Layout& layout)
 {
     std::vector<AtlasTarget> out;
@@ -763,6 +816,20 @@ std::vector<AtlasTarget> atlas_targets(const Document& document, const Layout& l
         // FALLING BACK TO THE KEY, never to the slot: a slot is reused and a key
         // is the answer to "which parcel was this" six months later (R44).
         if (one.name.empty()) one.name = std::to_string(raw(one.key));
+
+        // EVERY ATTRIBUTE, TAKEN NOW. A title block reading `Ada <ada>` resolves
+        // against the parcel its sheet is aimed at, from the drawing as it was
+        // when the run started rather than as it is by page 80.
+        for (std::size_t c = 0; c < document.attributes().columns(); ++c) {
+            const AttrColumn* held = document.attributes().column(static_cast<AttrId>(c));
+            if (held == nullptr) continue;
+            const Result<AttrValue> cell =
+                document.attributes().get(static_cast<AttrId>(c), document.entities().slot[slot]);
+            if (!cell.ok()) continue;
+            std::string shown = attr_display(cell.value());
+            if (shown.empty()) continue;
+            one.fields.emplace_back(held->spec().id, std::move(shown));
+        }
         out.push_back(std::move(one));
     }
 

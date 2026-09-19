@@ -394,6 +394,10 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
             if (!targets.empty()) {
                 aim_at(targets[run]);
                 facts.sheet = utf8(sheet->name) + QStringLiteral(" — ") + utf8(targets[run].name);
+                // THE PARCEL'S OWN FIELDS, so `Ada <ada>, Parsel <parsel>` on the
+                // title block says what THIS sheet is about rather than what the
+                // drawing is about.
+                facts.fields = targets[run].fields;
             }
             for (std::size_t i = 0; i < sheet->pages.size(); ++i) {
                 if (started) {

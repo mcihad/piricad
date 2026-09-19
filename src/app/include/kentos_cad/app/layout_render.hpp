@@ -41,6 +41,10 @@ struct LayoutFacts
     QString project; ///< `<proje>` — the drawing's file name, without the path
     QString crs;     ///< `<crs>`   — the coordinate system's id
     QString date;    ///< `<tarih>` — today, as the user's locale writes it
+
+    /// The current object's attributes, for an atlas sheet: `<ada>`, `<parsel>`.
+    /// Empty on an ordinary sheet.
+    std::vector<std::pair<std::string, std::string>> fields;
 };
 
 /// Draws one page of `layout` into `target`, which is in DEVICE PIXELS.

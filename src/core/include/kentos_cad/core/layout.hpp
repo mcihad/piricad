@@ -404,6 +404,14 @@ struct AtlasTarget
     EntityKey key{EntityKey::None}; ///< which object, persistently
     std::string name;               ///< what its sheet is called
     Box2 bounds;                    ///< the object's own extent, before any margin
+
+    /// EVERY ATTRIBUTE THIS OBJECT CARRIES, so `Ada <ada>, Parsel <parsel>` on a
+    /// title block resolves against the parcel the sheet is aimed at.
+    ///
+    /// Taken here rather than looked up while drawing: the sheet must print the
+    /// drawing as it was when the run started, not as it is by the time page 80
+    /// is reached (TODOS L-06: "aynı snapshot'tan hesaplanır").
+    std::vector<std::pair<std::string, std::string>> fields;
 };
 
 /// A named sheet composition.
@@ -621,6 +629,46 @@ std::vector<std::string> layout_trouble(const Layout& layout);
 /// Paths as the items carry them; whether they EXIST is a question for the
 /// machine they land on, and `/src/core` has no filesystem (Article 3.2).
 std::vector<std::string> layout_dependencies(const Layout& layout);
+
+/// WHAT A SHEET KNOWS ABOUT ITSELF WHEN IT IS DRAWN.
+///
+/// A title block says `<yerlesim> — <olcek>` and an atlas sheet says
+/// `Ada <ada>, Parsel <parsel>`; both are the same question — what goes in this
+/// blank — and this is the one answer to it. Qt-free, so the designer's preview
+/// and the exported PDF resolve from the SAME values rather than from two code
+/// paths that agree until they do not (TODOS L-06).
+///
+/// NOT AN EXPRESSION LANGUAGE. CLAUDE.md 5.11 allows this program exactly one
+/// grammar — `command/parser.hpp` — and a second one for label text would be a
+/// second way to say the same things, with its own precedence and its own bugs.
+/// A field is named and substituted; arithmetic belongs in the command that
+/// produced the number.
+struct SheetContext
+{
+    std::string sheet;   ///< `<yerlesim>`, and `<pafta>` for text written before the rename
+    std::string project; ///< `<proje>`
+    std::string crs;     ///< `<crs>`
+    std::string date;    ///< `<tarih>`
+    std::string paper;   ///< `<kagit>`
+    std::string scale;   ///< `<olcek>`, already formatted as `1:N`; empty when unknown
+
+    std::int32_t page{1};  ///< `<sayfa>`, counted from one
+    std::int32_t pages{1}; ///< `<sayfa_sayisi>`
+
+    /// The current object's attributes, by column id: `<ada>`, `<parsel>`,
+    /// `<alan>`. Empty on an ordinary sheet; filled for each atlas target.
+    std::vector<std::pair<std::string, std::string>> fields;
+};
+
+/// SUBSTITUTES EVERY `<field>` IN `text`, AND SAYS WHAT IT COULD NOT.
+///
+/// A blank that could not be filled becomes `⟨ada?⟩` on the paper and a line in
+/// `missing` — never silent empty text. A title block that quietly printed
+/// "Ada , Parsel 7" would be a sheet somebody signs with a number missing from
+/// it, and the way that is found out is at the land registry (TODOS L-06:
+/// "eksik alan sessiz boş metin olmaz").
+std::string resolve_fields(std::string_view text, const SheetContext& context,
+                           std::vector<std::string>* missing = nullptr);
 
 /// EVERY OBJECT THIS SHEET WILL PRINT, in the order it will print them.
 ///

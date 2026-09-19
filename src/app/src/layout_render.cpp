@@ -541,24 +541,32 @@ void paint_table(QPainter& painter, const QRectF& box, const core::Document& doc
 
 } // namespace
 
+/// The Qt-side facts as the Qt-free resolver reads them.
+core::SheetContext sheet_context(const core::Layout& layout, const core::LayoutItem* map,
+                                 const LayoutFacts& facts)
+{
+    core::SheetContext out;
+    out.sheet   = facts.sheet.toStdString();
+    out.project = facts.project.toStdString();
+    out.crs     = facts.crs.toStdString();
+    out.date    = facts.date.toStdString();
+    out.paper   = layout.paper;
+    out.pages   = static_cast<std::int32_t>(layout.pages.size());
+    out.fields  = facts.fields;
+
+    const std::int64_t denominator = map != nullptr ? core::map_scale(*map) : 0;
+    if (denominator > 0) out.scale = "1:" + std::to_string(denominator);
+    return out;
+}
+
 QString resolve_placeholders(const QString& text, const core::Layout& layout,
                              const core::LayoutItem* map, const LayoutFacts& facts)
 {
-    QString out = text;
-    out.replace(QStringLiteral("<yerlesim>"), facts.sheet);
-    // The retired spelling, still sitting in every title block written before
-    // the rename. A document is data on disk; it does not get to be wrong
-    // because the program changed its mind about a word.
-    out.replace(QStringLiteral("<pafta>"), facts.sheet);
-    out.replace(QStringLiteral("<proje>"), facts.project);
-    out.replace(QStringLiteral("<crs>"), facts.crs);
-    out.replace(QStringLiteral("<tarih>"), facts.date);
-    out.replace(QStringLiteral("<kagit>"), QString::fromStdString(layout.paper));
-
-    const std::int64_t denominator = map != nullptr ? core::map_scale(*map) : 0;
-    out.replace(QStringLiteral("<olcek>"),
-                denominator > 0 ? QStringLiteral("1:%1").arg(denominator) : QString());
-    return out;
+    // DELEGATED TO `/src/core`, which is what makes the designer's preview and the
+    // exported PDF resolve from the same values. Two code paths agree until they
+    // do not, and the one that disagrees is always the one that got printed.
+    return QString::fromStdString(
+        core::resolve_fields(text.toStdString(), sheet_context(layout, map, facts)));
 }
 
 void paint_layout_page(QPainter& painter, const QRectF& target, const core::Document& document,
@@ -619,9 +627,15 @@ void paint_layout_page(QPainter& painter, const QRectF& target, const core::Docu
         case core::LayoutItemKind::Label: {
             painter.setPen(colour_of(item->text_colour));
             painter.setFont(font_at(item->text_height, px_per_paper_mm));
-            painter.drawText(
-                box, static_cast<int>(alignment_of(*item) | Qt::TextWordWrap),
-                resolve_placeholders(QString::fromStdString(item->text), layout, owner, facts));
+            painter.drawText(box, static_cast<int>(alignment_of(*item) | Qt::TextWordWrap),
+                             QString::fromStdString(core::resolve_fields(
+                                 item->text,
+                                 [&] {
+                                     core::SheetContext ctx = sheet_context(layout, owner, facts);
+                                     ctx.page               = index + 1;
+                                     return ctx;
+                                 }(),
+                                 trouble)));
             break;
         }
 

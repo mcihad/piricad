@@ -379,7 +379,25 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
 
 ### 5.2. Veriyle çalışan öğeler
 
-- [ ] **L-06 / P1 — İfade ve değişken altyapısı.** Proje, layout, sayfa, harita,
+- [~] **L-06 / P1 — İfade ve değişken altyapısı.** *(tipli bağlam 19 Eylül 2026)*
+  **Yapıldı:** `core::SheetContext` ve `core::resolve_fields` — Qt'siz, yani
+  tasarımcının önizlemesi ile dışa aktarılan PDF **aynı değerlerden** çözüyor.
+  İki kod yolu, ayrışana kadar aynı fikirdedir; ayrışan hep basılmış olandır.
+  Bağlam alanları: `<yerlesim>` (`<pafta>` hâlâ okunuyor), `<proje>`, `<crs>`,
+  `<tarih>`, `<kagit>`, `<olcek>`, `<sayfa>`, `<sayfa_sayisi>`, ve **atlas
+  nesnesinin bütün öznitelikleri** (`<ada>`, `<parsel>`, `<alan>`). Öznitelikler
+  hedef çözülürken alınıyor, çizilirken değil: sayfa 80'e gelindiğinde çizim
+  başlangıçtaki çizim olmalı.
+  **Kabul karşılandı:** doldurulamayan bir alan kâğıtta `⟨ada?⟩` olarak görünüyor
+  ve `trouble` listesine yazılıyor — **sessizce boş metne dönmüyor**. Sessizce
+  "Ada , Parsel 7" basan bir antet, birinin eksik bir sayıyla imzaladığı bir
+  paftadır ve bunun öğrenildiği yer tapu müdürlüğüdür.
+  **İKİNCİ BİR GRAMER EKLENMEDİ** (CLAUDE.md 5.11): bu bir alan yerine koymadır,
+  bir ifade dili değil. Aritmetik, sayıyı üreten komuta ait. Kapanmamış bir `<`
+  küçüktür işaretidir, bozuk bir alan değil.
+  **Kalan:** konum/boyut/görünürlük/renk gibi özelliklerin ifadeye bağlanması;
+  null, tarih/yerel ayar ve döngü davranışının tanımlanması.
+  Eski madde metni: Proje, layout, sayfa, harita,
   seçili/atlas nesnesi ve rapor grubu bağlamlarını tipli sun. Konum, boyut, görünürlük,
   renk, metin, dosya adı ve ölçek özellikleri sabit değer veya ifadeye bağlanabilsin.
   Birim, null, tarih/yerel ayar, hata ve döngü davranışını tanımla. İfadeler keyfî
