@@ -199,8 +199,10 @@ public:
     /// The ONE outbound wire, shared by the connection test and the chat panel.
     ///
     /// ONE, BECAUSE A SECOND ONE IS A SECOND CREDENTIAL PATH. The transport is
-    /// the only object in the program that reads a key out of the key store
-    /// (CLAUDE.md 5.21), and two of them would be two places to audit. It is
+    /// the only object in the program that puts a key on a request (CLAUDE.md
+    /// 5.21) — it gets the value from `SecretResolver`, which is the only object
+    /// that asks the operating system for one — and two of either would be two
+    /// places to audit. It is
     /// told which profile it is serving immediately before each send, through
     /// `AiTransport::useProfile` — which is why `ProviderService` takes a binder
     /// rather than making that call itself.

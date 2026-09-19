@@ -19,6 +19,16 @@
 // reframing, because the framers in `ai/sse.hpp` are the tested half and a
 // transport that delivered "whole events" would be a second framer in the one
 // layer no unit test can reach.
+//
+// THE CREDENTIAL IS PART OF THAT PROMISE AND DID NOT USED TO BE. Fetching it
+// means calling the platform key store, which is allowed to wait for an
+// authorisation prompt the user may never answer — over two minutes, measured,
+// in a headless run — and `send` used to make that call inline, freezing the
+// window before a single byte had left. It now goes through `SecretResolver`
+// (secret_resolver.hpp), which answers from memory or off the GUI thread, so
+// `send` returns at once in both cases. A request whose key is not resolved yet
+// gets its handle FIRST and its socket afterwards; cancelling in that window is
+// ordinary and answers the sink exactly once, like every other ending.
 #pragma once
 
 #include "kentos_cad/ai/provider.hpp"
@@ -32,8 +42,9 @@ class QNetworkAccessManager;
 
 namespace kentos::app {
 
-/// The key store the credential is read from; see secret_store.hpp.
-class SecretStore;
+/// The key store the credential comes from, without a wait; see
+/// secret_resolver.hpp.
+class SecretResolver;
 
 /// `ai::HttpTransport` over Qt Network.
 class AiTransport : public QObject, public ai::HttpTransport
@@ -41,10 +52,10 @@ class AiTransport : public QObject, public ai::HttpTransport
     Q_OBJECT
 
 public:
-    /// `secrets` may be null in a build with no key store; a request that needs
-    /// a credential then fails with a sentence naming the environment variable
-    /// it would have read, rather than being sent unauthenticated.
-    explicit AiTransport(SecretStore* secrets, QObject* parent = nullptr);
+    /// `secrets` may be null in a build or a test with no key store at all; a
+    /// request that needs a credential then fails with a sentence naming the
+    /// entry it would have read, rather than being sent unauthenticated.
+    explicit AiTransport(SecretResolver* secrets, QObject* parent = nullptr);
     ~AiTransport() override;
 
     AiTransport(const AiTransport&)            = delete;
@@ -59,12 +70,18 @@ public:
     void useProfile(const ai::ProviderProfile& profile);
 
     /// Sends and streams. See `ai::HttpTransport::send`.
+    ///
+    /// RETURNS BEFORE THE REQUEST NECESSARILY EXISTS. When the profile's key has
+    /// not been resolved this session, the handle comes back immediately and the
+    /// socket opens once the key store answers; the sink is told either way, and
+    /// exactly once. A null return still means "refused outright, and the sink
+    /// has already been told why".
     std::shared_ptr<ai::Cancellation> send(const ai::EndpointPermit& permit,
                                            ai::HttpRequest request, ai::StreamSink& sink) override;
 
 private:
     std::unique_ptr<QNetworkAccessManager> net_;
-    SecretStore* secrets_{nullptr};
+    SecretResolver* secrets_{nullptr};
     ai::ProviderProfile profile_{};
     bool have_profile_{false};
 };

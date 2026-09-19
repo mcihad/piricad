@@ -364,22 +364,22 @@ QString SecretStore::describe()
 {
 #if KENTOS_HAVE_KEYCHAIN && defined(Q_OS_MACOS)
     return QStringLiteral("macOS Anahtar Zinciri (servis: %1). Anahtar adı bir ortam "
-                          "değişkenini de adlandırabilir; o değişken kullanım anında okunur "
+                          "değişkenini de adlandırabilir; o değişken ilk kullanımda okunur "
                           "ve hiçbir yere yazılmaz.")
         .arg(QString::fromUtf8(kService));
 #elif KENTOS_HAVE_KEYCHAIN && defined(Q_OS_WIN)
     return QStringLiteral("Windows kimlik deposu (hedef: %1:<anahtar adı>). Anahtar adı bir "
-                          "ortam değişkenini de adlandırabilir; o değişken kullanım anında "
+                          "ortam değişkenini de adlandırabilir; o değişken ilk kullanımda "
                           "okunur ve hiçbir yere yazılmaz.")
         .arg(QString::fromUtf8(kService));
 #elif KENTOS_HAVE_KEYCHAIN && defined(KENTOS_KEYCHAIN_SECRET_SERVICE)
     return QStringLiteral("Sistem anahtar kasası (libsecret / Secret Service). Anahtar adı bir "
-                          "ortam değişkenini de adlandırabilir; o değişken kullanım anında "
+                          "ortam değişkenini de adlandırabilir; o değişken ilk kullanımda "
                           "okunur ve hiçbir yere yazılmaz.");
 #else
     return QStringLiteral("Bu yapıda sistem anahtar deposu yok: anahtar kaydedilemez. Anahtar "
                           "adı bir ortam değişkenini adlandırır (örnek: DEEPSEEK_API_KEY) ve o "
-                          "değişken kullanım anında okunur.");
+                          "değişken ilk kullanımda okunur.");
 #endif
 }
 

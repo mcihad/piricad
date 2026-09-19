@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/app/main_window.hpp"
 
+#include "kentos_cad/app/ai_transport.hpp"
 #include "kentos_cad/app/attribute_panel.hpp"
 #include "kentos_cad/app/attribute_table.hpp"
 #include "kentos_cad/app/chat_panel.hpp"
@@ -17,6 +18,7 @@
 #include "kentos_cad/app/pick_list.hpp"
 #include "kentos_cad/app/print_dialog.hpp"
 #include "kentos_cad/app/print_service.hpp"
+#include "kentos_cad/app/provider_service.hpp"
 #include "kentos_cad/app/schema_page.hpp"
 #include "kentos_cad/app/settings_dialog.hpp"
 #include "kentos_cad/app/shell_chrome.hpp"
@@ -3579,6 +3581,155 @@ void MainWindow::showAbout()
 // KENTOS_TOOL_PROBE — the tool column, pressed
 // =============================================================================
 
+namespace {
+
+/// How long the credential probe below will wait for the key store to answer an
+/// entry that is not there. Generous, because it is a bound rather than an
+/// expectation: an absent entry answers in microseconds on all three platforms,
+/// and anything approaching this number is the failure the probe exists to catch.
+constexpr int kKeyProbeWaitMs = 10'000;
+
+/// How long one pass of the wait loop blocks before looking again.
+constexpr int kKeyProbeStepMs = 50;
+
+/// The endings one probe request produced, for the credential probe below.
+struct EndingSink : ai::StreamSink
+{
+    /// Nothing is ever sent in this probe, so no chunk can arrive.
+    void on_chunk(std::string_view) override {}
+
+    /// Counts as well as keeps: `ai::StreamSink` promises EXACTLY ONE ending per
+    /// request, and the window this probe exercises is one in which two could
+    /// plausibly be produced — a cancel and then the key store's own answer.
+    void on_finished(int status, std::string_view error) override
+    {
+        ++endings;
+        code = status;
+        why.assign(error);
+    }
+
+    int endings{0};  ///< how many times the turn has ended; exactly 1 is the rule
+    int code{0};     ///< the HTTP status, or 0 when there never was one
+    std::string why; ///< the Turkish sentence, empty when nothing went wrong
+};
+
+/// Builds a profile naming a key-store entry that cannot exist, for the probe.
+///
+/// `mark` distinguishes one request from the next, so a `key_ref` settled by an
+/// earlier step cannot answer a later one out of memory and make the step look
+/// like it passed.
+ai::ProviderProfile keyedProbeProfile(const char* mark)
+{
+    ai::ProviderProfile profile;
+    profile.name        = std::string("Sınama (anahtarlı ") + mark + ")";
+    profile.dialect     = ai::Dialect::OpenAiChat;
+    profile.base_url    = "http://127.0.0.1:1";
+    profile.path        = "/chat/completions";
+    profile.model       = "sinama-1";
+    profile.key_ref     = std::string("kentos-sinama-boyle-bir-kayit-yok-") + mark;
+    profile.auth_header = "Authorization";
+    profile.auth_scheme = "Bearer";
+    return profile;
+}
+
+/// Proves that fetching a credential does not stop the GUI thread.
+///
+/// THE REGRESSION. `AiTransport::send` used to call the platform key store
+/// inline, which on macOS sits inside `SecItemCopyMatching` for as long as an
+/// authorisation prompt goes unanswered — over two minutes, in the headless run
+/// that found it — with the window frozen and not a byte sent (ai.md R18, P8).
+///
+/// WHAT IT ASSERTS IS THE SHAPE, not a stopwatch: `send` returns a handle while
+/// the sink is STILL WAITING, because the answer is coming from another thread
+/// through the event loop and cannot have arrived yet. A `send` that resolved the
+/// key itself could not possibly satisfy that. The second half asserts the other
+/// half of R18: that the window between the handle and the request is
+/// CANCELLABLE, and that cancelling it produces one ending rather than two.
+///
+/// IT NAMES ENTRIES THAT CANNOT EXIST. The key store is asked one question —
+/// "is there a record under this name?" — whose answer is no on every machine.
+/// No key of the user's is read, and no prompt can be raised, because there is
+/// nothing there to authorise. Returns the number of checks that failed.
+int probeCredentialOffThread(Controller& controller)
+{
+    int failures     = 0;
+    const auto check = [&failures](bool held, const char* what) {
+        if (held) return;
+        ++failures;
+        (void)std::fprintf(stdout, "[sohbet] BASARISIZ — %s\n", what);
+        (void)std::fflush(stdout);
+    };
+    const auto say = [](const char* what, const QString& detail) {
+        (void)std::fprintf(stdout, "[sohbet] %-22s %s\n", what, detail.toUtf8().constData());
+        (void)std::fflush(stdout);
+    };
+
+    SecretResolver& keys = controller.providerService().secrets();
+    AiTransport& wire    = controller.aiTransport();
+
+    /// Hands one request to the transport and returns without waiting for it.
+    const auto post = [&wire](const ai::ProviderProfile& profile, EndingSink& sink) {
+        // Loopback, so the permit is granted whatever the project's sensitivity
+        // is (ai.md R14, R30) — this probe is about the credential, not the
+        // policy.
+        auto permitted = ai::permit_for(profile, /*sensitive=*/false);
+        if (!permitted) return std::shared_ptr<ai::Cancellation>();
+        ai::HttpRequest request;
+        request.url  = permitted.value().url();
+        request.body = "{}";
+        wire.useProfile(profile);
+        return wire.send(permitted.value(), std::move(request), sink);
+    };
+
+    // ---- the answer arrives, and it arrives from the event loop ----
+    const ai::ProviderProfile waited = keyedProbeProfile("a");
+    const QString waitedRef          = QString::fromStdString(waited.key_ref);
+    check(!keys.known(waitedRef).settled, "sınama kaydı çözülmüş görünüyor — probe kirli");
+
+    EndingSink first;
+    const std::shared_ptr<ai::Cancellation> flight = post(waited, first);
+    check(flight != nullptr, "istek tutamağı verilmedi");
+    check(first.endings == 0, "ANAHTAR BU İŞ PARÇACIĞINDA OKUNDU — cevap send() dönmeden geldi");
+
+    const qint64 until = QDateTime::currentMSecsSinceEpoch() + kKeyProbeWaitMs;
+    while (first.endings == 0 && QDateTime::currentMSecsSinceEpoch() < until)
+        QCoreApplication::processEvents(QEventLoop::AllEvents | QEventLoop::WaitForMoreEvents,
+                                        kKeyProbeStepMs);
+
+    check(first.endings == 1, "anahtar deposunun cevabı gelmedi");
+    check(first.code == 0, "olmayan anahtar bir HTTP durumu üretti — istek gönderilmiş");
+    check(first.why.find("Anahtar bulunamad") != std::string::npos,
+          "eksik anahtar açıkça söylenmedi");
+    check(keys.known(waitedRef).settled, "cevap oturum belleğine yazılmadı");
+    say("credential off-thread", QString::fromStdString(first.why));
+
+    // ---- and the wait is cancellable, with exactly one ending ----
+    //
+    // Cancelling here is deterministic whatever the key store does: nothing has
+    // been pumped, so the lookup cannot have answered and the handle is still in
+    // the window between `send` and the socket.
+    EndingSink second;
+    const std::shared_ptr<ai::Cancellation> pending = post(keyedProbeProfile("b"), second);
+    check(pending != nullptr, "bekleyen istek tutamağı verilmedi");
+    if (pending) pending->cancel();
+    check(second.endings == 1, "anahtar beklerken iptal cevapsız kaldı");
+    check(second.why.find("iptal") != std::string::npos, "iptal öyle söylenmedi");
+
+    // The lookup is still out; when it lands it must find a cancelled turn and
+    // say nothing, or the sink has been told twice that one request ended.
+    const qint64 settle = QDateTime::currentMSecsSinceEpoch() + kKeyProbeWaitMs;
+    while (keys.known(QString::fromStdString(keyedProbeProfile("b").key_ref)).settled == false &&
+           QDateTime::currentMSecsSinceEpoch() < settle)
+        QCoreApplication::processEvents(QEventLoop::AllEvents | QEventLoop::WaitForMoreEvents,
+                                        kKeyProbeStepMs);
+    check(second.endings == 1, "iptal edilen istek İKİ KEZ bitti");
+    say("credential cancel", QString::fromStdString(second.why));
+
+    return failures;
+}
+
+} // namespace
+
 int MainWindow::probeChat()
 {
     int failures     = 0;
@@ -3597,16 +3748,40 @@ int MainWindow::probeChat()
     if (chatPanel_ == nullptr) return 1;
     chatDock_->show();
 
-    // A PROFILE THAT IS NEVER CALLED. The bytes below are recorded, so the
-    // endpoint is never reached; the profile exists so the panel can pick a
-    // dialect and name a model on the message (ai.md P10: no test calls a live
-    // provider).
+    // A LOCAL PROFILE WITH NO `key_ref`, AND IT IS THE PANEL'S ONLY ONE. Two
+    // separate reasons, both of which outlive the defect that made the second
+    // one urgent.
+    //
+    //   1. The bytes below are recorded, so the endpoint is never reached. The
+    //      profile exists so the panel can pick a dialect and name a model on the
+    //      message (ai.md P10: no test calls a live provider).
+    //
+    //   2. It is KEYLESS, so nothing here can reach the user's key store, and a
+    //      run on somebody's own machine cannot raise a keychain prompt.
+    //
+    // IT IS INSTALLED OVER THE PANEL'S PROFILE SOURCE, not merely handed to
+    // `probeStream`, and that is the part that was missing. Step 2 below feeds a
+    // read tool, and a turn whose tools were all reads CONTINUES — `finishTurn`
+    // calls `sendRound` again — through `chosen()`, which is the CHOOSER's
+    // profile rather than this one. On a developer's machine that is whatever
+    // they configured: the probe was reaching a real cloud profile, asking the
+    // real key store for its key, and would have opened a real socket if it
+    // found one. That is how this test came to sit inside the macOS Security
+    // framework for two minutes. The block itself is gone (secret_resolver.hpp);
+    // pointing the panel at a keyless loopback endpoint is what keeps the probe
+    // off both roads for good.
+    //
+    // The transport's own credential path is proved separately, in step 6.
     ai::ProviderProfile profile;
     profile.name     = "Sınama";
     profile.dialect  = ai::Dialect::OpenAiChat;
     profile.base_url = "http://127.0.0.1:1";
     profile.path     = "/chat/completions";
     profile.model    = "sinama-1";
+
+    ai::ProviderProfiles only;
+    check(only.upsert(profile).ok(), "sınama profili kurulamadı");
+    chatPanel_->setProfileSource([only] { return only; });
 
     // 1. TEXT AND REASONING. Two deltas of prose and one of thinking, framed the
     //    way `chat/completions` frames them.
@@ -3694,6 +3869,21 @@ int MainWindow::probeChat()
     const int cardsAfter = static_cast<int>(chatPanel_->findChildren<SuggestionCard*>().size());
     say("coordinate literal", tr("kart sayısı %1 → %2").arg(cardsBefore).arg(cardsAfter));
     check(cardsAfter == cardsBefore, "koordinat literali öneri oldu — reddedilmeliydi");
+
+    // 6. AND THE CREDENTIAL IS NEVER FETCHED ON THIS THREAD. The regression this
+    //    guards: `AiTransport::send` used to call the platform key store inline,
+    //    which on macOS sits inside `SecItemCopyMatching` for as long as an
+    //    authorisation prompt goes unanswered — over two minutes, in the headless
+    //    run that found it — with the window frozen and not a byte sent
+    //    (ai.md R18, P8).
+    //
+    //    WHAT IS ASSERTED IS THE SHAPE, not a stopwatch: `send` comes back with
+    //    a handle and the sink is STILL WAITING, because the answer cannot have
+    //    arrived yet — it is coming from another thread through the event loop.
+    //    The `key_ref` names an entry that cannot exist, so no key of the user's
+    //    is read and no prompt can be raised: there is nothing there to
+    //    authorise.
+    failures += probeCredentialOffThread(*controller_);
 
     (void)std::fprintf(stdout, "[sohbet] %s — %d ileti\n", failures == 0 ? "TAMAM" : "BASARISIZ",
                        chatPanel_->transcript()->count());

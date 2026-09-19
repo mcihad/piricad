@@ -149,7 +149,7 @@ değişkeni.
 
 Ortam değişkeni yolu **her yapıda** açıktır ve bu, anahtar deposu olmayan bir makinenin
 (başsız sunucu, kapsayıcı, Secret Service çalışmayan bir Linux) doğru cevabıdır:
-değişken **kullanım anında** okunur ve program onu hiçbir yere yazmaz. Aynı biçimi
+değişken **ilk kullanımda** okunur ve program onu hiçbir yere yazmaz. Aynı biçimi
 PostGIS yolu `~/.pgpass` ile zaten kullanır. Böyle bir yapıda anahtar **kaydedilemez**
 ve program bunu söyler:
 
@@ -172,6 +172,28 @@ kendisi değil, anahtar zincirindeki kaydın adı yazılır.
 
 Yerel bir sağlayıcının anahtarı yoktur ve anahtar adı boş kalır; bu doğru ve
 yaygın durumdur.
+
+### Anahtar ne zaman okunur
+
+Anahtar deposuna sorulan her soru, işletim sisteminin **izin penceresini** açabilir —
+macOS Anahtar Zinciri'nde en görünür hâliyle. Bu yüzden soru, **sizin başlattığınız bir
+anda** sorulur: sohbet panelinin üstündeki **model seçicisinden** bir profil
+seçtiğinizde ya da [`YAPAYZEKAMODELİ islem=dene`](../komutlar/ai_provider.md) ile
+bağlantıyı denediğinizde. Cevap **o oturum boyunca bellekte** tutulur, dolayısıyla aynı
+profille yazdığınız ikinci ileti anahtar deposuna hiç uğramaz ve izin penceresi bir daha
+çıkmaz.
+
+Ayar sayfasından bir anahtar kaydettiğinizde hiç sorulmaz: yazdığınız değer zaten
+bilinmektedir, programın onu işletim sisteminden geri istemesi gereksizdir.
+
+Bellekte tutulan bu kopya **hiçbir yere yazılmaz** — ne ayar dosyasına, ne günlüğe, ne
+denetim kaydına — ve program kapanınca gider. Bunun tek görünür sonucu şudur: bir
+anahtarı program çalışırken **kabuktan** değiştirirseniz (ortam değişkeni yolu), yeni
+değer o oturumda değil, programı yeniden başlattığınızda geçerli olur. Ayar
+sayfasından kaydedilen anahtar ise **hemen** geçerlidir.
+
+Anahtar hiçbir zaman arayüzün beklediği bir işlem değildir: soru sorulurken pencere
+çalışmaya devam eder ve bekleyen bir sohbet turu her an **durdurulabilir**.
 
 ## Sayfanın üç ayarı
 
