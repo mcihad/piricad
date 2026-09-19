@@ -58,6 +58,12 @@ public:
     /// so a pointer into the old list dangles the moment a command runs.
     void setSheet(const QString& layout, int page);
 
+    /// Which page it is showing, counted from zero.
+    int page() const noexcept { return page_; }
+
+    /// The page it is showing, clamped into range; null when no layout is set.
+    const core::LayoutPage* activePage() const;
+
     const QString& sheet() const noexcept { return sheet_; }
 
     /// Which item is picked, or empty.
@@ -174,6 +180,17 @@ public:
     QStringList probeDrive();
 
 private:
+    /// Which page the canvas shows, as a number the user types. Pages are counted
+    /// from one here and from zero in the array.
+    Field* pageField_{nullptr};
+
+    /// Its row, whose help line says how many pages there are and how big this
+    /// one is.
+    FormRow* pageRow_{nullptr};
+
+    /// Runs one of the page verbs of `core.layout` on the active page.
+    void pageVerb(const char* verb);
+
     QWidget* buildBody();
     QWidget* buildItemList();
     QWidget* buildProperties();

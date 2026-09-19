@@ -8,6 +8,16 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ### Eklendi — çok sayfalı çıktı yerleşimi (TODOS L-02)
 
+- **Tasarımcıda bir SAYFA bölümü**: hangi sayfada olunduğunu söyleyen bir alan,
+  "N sayfadan biri · 420×297 mm" yardım satırı ve üç düğme (ekle, çoğalt, sil).
+  Düğmeler kendi mantığını taşımıyor; bir elin yazacağı komut satırını yazıyorlar.
+- Öğe listesi **yalnız gösterilen sayfanın** öğelerini taşıyor. Her sayfanın
+  öğesini gösteren bir liste, önündeki kâğıtta olmayan bir şeyi seçtirirdi.
+- **`ÇIKTIÖĞE islem=tasi sayfa=<n>`** bir öğeyi sayfalar arasında taşıyor. Bu
+  olmadan iki sayfalı bir yerleşim kurulabiliyor ama aralarında hiçbir şey
+  taşınamıyordu; bir anteti taşımanın tek yolu silip yenisini yapmak olurdu, ki o
+  aynı antet değildir.
+
 - **Dört yeni fiil**: `ÇIKTIYERLEŞİMİ islem=sayfaekle | sayfasil | sayfacogalt |
   sayfatasi`, ve `islem=sayfa` artık `sayfa=<n>` alıyor. Bir yerleşim bir A4 dikey
   kapakla bir A3 yatay harita sayfasını aynı belgede tutabiliyor. Sayfa numaraları
@@ -17,6 +27,12 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   öğeleri sayfasıyla birlikte götürüyor**. Son sayfa silinemiyor.
 
 ### Düzeltildi — karma sayfalı PDF her sayfayı ilk sayfanın boyunda yazıyordu
+
+- **Ve tasarımcıda ikinci sayfada sürükleme kayıyordu.** `pageRect()` sayfa
+  kutusunu aktif sayfadan ölçüyordu ama `deviceFrom`, `paperFrom` ve `dragged`
+  `pages.front()` ile ölçekliyordu: ikinci sayfası farklı boyda olan bir
+  yerleşimde her kutu olduğu yerden başka bir yere çiziliyor ve sürükleniyordu.
+  Dördü de tek bir `activePage()`'e bağlandı.
 
 - `print_service` cihaz sayfa boyutunu bir kez `pages.front()`'tan alıyor ve bir
   daha atamıyordu. Karma bir A4/A3 yerleşimin **her sayfası A4 yazılıyordu**:

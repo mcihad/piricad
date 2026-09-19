@@ -765,6 +765,7 @@ Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, b
 | `izgara_aralik` | integer | isteğe bağlı | Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir |
 | `kilit` | bool | isteğe bağlı | Öğeyi taşımaya kapatır |
 | `cerceve` | bool | isteğe bağlı | Öğenin çevresine çerçeve çizer |
+| `sayfa` | integer | isteğe bağlı | Öğenin duracağı sayfa (1'den başlar); tasi ile verilir |
 | `sira` | integer | isteğe bağlı | Çizim sırası; büyük olan üstte |
 
 Ayrıntılı kullanım: [ÇIKTIÖĞE](layout_item.md)

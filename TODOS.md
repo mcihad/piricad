@@ -234,10 +234,20 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   **Kabul kanıtlandı — dosyadan okunarak:** `print-pdf` probe'u karma bir yerleşim
   basıyor ve PDF'te iki MediaBox buluyor: `595x842` (A4 dikey) ve `1191x842`
   (A3 yatay). Artı iki birim testi sayfa fiillerinin tamamını sürüyor.
-  **Kalan:** tasarımcının aktif sayfa seçicisi ve bütün sayfaları görme; öğeyi
-  sayfalar arasında taşıma (`ÇIKTIÖĞE islem=tasi sayfa=`); tasarımcıdaki üç
-  `pages.front()` yerine aktif sayfa — yani "ikinci sayfada sürükleme kaymaz"
-  yarısı henüz sınanmadı.
+  **İkinci yarı da yapıldı:** tasarımcıda bir **SAYFA** bölümü var — hangi sayfada
+  olduğunu söyleyen bir alan, "N sayfadan biri · 420×297 mm" yardım satırı ve üç
+  düğme (ekle, çoğalt, sil) — ve düğmeler kendi mantığını taşımıyor, bir elin
+  yazacağı `ÇIKTIYERLEŞİMİ islem=sayfa*` satırını yazıyor (Article 1.2).
+  Öğe listesi artık **yalnız gösterilen sayfanın** öğelerini taşıyor: her sayfanın
+  öğesini gösteren bir liste, önündeki kâğıtta olmayan bir şeyi seçtirirdi.
+  **Ve "ikinci sayfada sürükleme kayar" kusuru kapandı:** `pageRect()` sayfa
+  kutusunu aktif sayfadan ölçüyordu ama `deviceFrom`, `paperFrom` ve `dragged`
+  `pages.front()` ile ölçekliyordu — ikinci sayfası farklı boyda olan bir
+  yerleşimde her kutu olduğu yerden başka bir yere çiziliyor ve sürükleniyordu.
+  Dördü de tek bir `activePage()`'e bağlandı.
+  `ÇIKTIÖĞE islem=tasi sayfa=<n>` bir öğeyi sayfalar arasında taşıyor; testi
+  dosya gidiş-dönüşünü de kapsıyor (iki sayfa, farklı boy, doğru sayfada öğe).
+  **Kalan:** bütün sayfaları bir arada görme (küçük önizleme şeridi).
 - [ ] **L-03 / P1 — Profesyonel öğe düzenleme.** Çoklu seçim, grup/çöz, kopyala/
   yapıştır/çoğalt, hizala/dağıt, eş boyutlandır, referans noktası, döndürme, z sırası,
   görünürlük, baskıdan hariç tutma, kilit, cetvel, kılavuz ve ayarlanabilir snap ekle.

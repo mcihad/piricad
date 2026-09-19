@@ -105,9 +105,7 @@ QRectF LayoutCanvas::pageRect() const
 {
     const core::Layout* l = layout();
     if (l == nullptr || l->pages.empty()) return {};
-    const std::size_t index =
-        static_cast<std::size_t>(std::clamp<int>(page_, 0, static_cast<int>(l->pages.size()) - 1));
-    const core::LayoutPage& page = l->pages[index];
+    const core::LayoutPage& page = *activePage();
 
     // FITTED AND CENTRED with a margin of air around it, which is what makes the
     // sheet read as a sheet rather than as the window's background.
@@ -121,12 +119,27 @@ QRectF LayoutCanvas::pageRect() const
     return QRectF((width() - w) / 2.0, (height() - h) / 2.0, w, h);
 }
 
+/// THE PAGE THE CANVAS IS SHOWING, clamped, never null when a layout is set.
+///
+/// `pageRect` sized the sheet from this while `deviceFrom`, `paperFrom` and
+/// `dragged` scaled with `pages.front()`. On a layout whose second page is a
+/// different size that meant every box was drawn — and dragged — somewhere other
+/// than where it is. One question, one answer.
+const core::LayoutPage* LayoutCanvas::activePage() const
+{
+    const core::Layout* l = layout();
+    if (l == nullptr || l->pages.empty()) return nullptr;
+    const auto index =
+        static_cast<std::size_t>(std::clamp<int>(page_, 0, static_cast<int>(l->pages.size()) - 1));
+    return &l->pages[index];
+}
+
 QRectF LayoutCanvas::deviceFrom(const core::PaperRect& paper) const
 {
     const core::Layout* l = layout();
     const QRectF box      = pageRect();
     if (l == nullptr || l->pages.empty() || box.isEmpty()) return {};
-    const core::LayoutPage& page = l->pages.front();
+    const core::LayoutPage& page = *activePage();
     const double sx              = box.width() / static_cast<double>(page.w);
     const double sy              = box.height() / static_cast<double>(page.h);
     return QRectF(box.left() + paper.x * sx, box.top() + paper.y * sy, paper.w * sx, paper.h * sy);
@@ -137,7 +150,7 @@ core::PaperRect LayoutCanvas::paperFrom(const QRectF& device) const
     const core::Layout* l = layout();
     const QRectF box      = pageRect();
     if (l == nullptr || l->pages.empty() || box.isEmpty()) return {};
-    const core::LayoutPage& page = l->pages.front();
+    const core::LayoutPage& page = *activePage();
     const double sx              = static_cast<double>(page.w) / box.width();
     const double sy              = static_cast<double>(page.h) / box.height();
     return core::PaperRect{static_cast<core::Um>((device.left() - box.left()) * sx),
@@ -198,7 +211,7 @@ core::PaperRect LayoutCanvas::dragged(const QPoint& at) const
     const QRectF box      = pageRect();
     const core::Layout* l = layout();
     if (l == nullptr || box.isEmpty()) return start_;
-    const core::LayoutPage& page = l->pages.front();
+    const core::LayoutPage& page = *activePage();
 
     const double sx = static_cast<double>(page.w) / box.width();
     const double sy = static_cast<double>(page.h) / box.height();
@@ -455,6 +468,54 @@ QWidget* LayoutDesigner::buildBody()
     auto* leftColumn = new QVBoxLayout(left);
     leftColumn->setContentsMargins(12, 12, 8, 12);
     leftColumn->setSpacing(8);
+    // ---- which page, and the four things one can do to pages ---------------
+    //
+    // ONE PAGE IS SHOWN AT A TIME, which is what a sheet is: the canvas draws
+    // it, the item list holds its items and every drag is measured against its
+    // paper. Without this the designer could open a two-page layout and only
+    // ever reach the first one.
+    leftColumn->addWidget(new FormSection(tr("SAYFA"), QString(), left));
+
+    // A NUMBER, NOT A LIST. Pages are counted from one and there is no name to
+    // pick from; the row's help says how many there are and how big this one is.
+    pageField_ = new Field(number_of(1, 9999), left);
+    pageField_->setFixedHeight(static_cast<int>(ControlSize::Regular));
+    connect(pageField_, &Field::committed, this, [this](const QString& typed) {
+        if (filling_) return;
+        const core::Layout* l = layout();
+        if (l == nullptr) return;
+        const int wanted = std::clamp(typed.toInt() - 1, 0, static_cast<int>(l->pages.size()) - 1);
+        canvas_->setSheet(name_, wanted);
+        refresh();
+    });
+    pageRow_ = new FormRow(tr("Sayfa"), pageField_, left);
+    leftColumn->addWidget(pageRow_);
+
+    auto* pageButtons = new QWidget(left);
+    auto* pageRow     = new FlowLayout(pageButtons, 0, 4, 4);
+
+    struct PageVerb
+    {
+        const char* verb;
+        const char* label;
+        Glyph glyph;
+    };
+
+    static constexpr PageVerb kPageVerbs[] = {
+        {"sayfaekle", "Sayfa ekle", Glyph::Plus},
+        {"sayfacogalt", "Sayfayı çoğalt", Glyph::Copy},
+        {"sayfasil", "Sayfayı sil", Glyph::Trash},
+    };
+    for (const PageVerb& one : kPageVerbs) {
+        auto* button = new Button(one.glyph, tr(one.label), pageButtons);
+        button->setFixedSize(32, static_cast<int>(ControlSize::Regular));
+        button->setToolTip(tr(one.label));
+        button->setAccessibleName(tr(one.label));
+        connect(button, &Button::clicked, this, [this, verb = one.verb] { pageVerb(verb); });
+        pageRow->addWidget(button);
+    }
+    leftColumn->addWidget(pageButtons);
+
     leftColumn->addWidget(new FormSection(tr("ÖĞELER"), QString(), left));
     leftColumn->addWidget(buildItemList(), 1);
 
@@ -589,6 +650,31 @@ void LayoutDesigner::edit(const QString& arguments)
     refresh();
 }
 
+/// ONE PAGE VERB, ON THE PAGE THAT IS SHOWING.
+///
+/// The designer holds no page logic of its own: it writes the command line a
+/// hand would type, and the command does the work. That is what keeps the
+/// mouse and the keyboard equal clients (Article 1.2) and what puts the gesture
+/// in the journal as something a script can replay.
+void LayoutDesigner::pageVerb(const char* verb)
+{
+    const core::Layout* l = layout();
+    if (l == nullptr) return;
+    const int shown = std::clamp(canvas_->page(), 0, static_cast<int>(l->pages.size()) - 1);
+
+    controller_.runLine(QStringLiteral("ÇIKTIYERLEŞİMİ islem=%1 ad=%2 sayfa=%3")
+                            .arg(QString::fromUtf8(verb), quoted(name_))
+                            .arg(shown + 1),
+                        command::Origin::Gui);
+
+    // THE PAGE THAT IS NOW SHOWING may not be the one that was: deleting the
+    // last page has to leave the canvas on a page that exists.
+    const core::Layout* after = layout();
+    if (after != nullptr && !after->pages.empty())
+        canvas_->setSheet(name_, std::clamp(shown, 0, static_cast<int>(after->pages.size()) - 1));
+    refresh();
+}
+
 void LayoutDesigner::refresh()
 {
     const core::Layout* l = layout();
@@ -606,6 +692,9 @@ void LayoutDesigner::refresh()
     std::stable_sort(ordered.begin(), ordered.end(),
                      [&](std::size_t a, std::size_t b) { return l->items[a].z > l->items[b].z; });
     for (const std::size_t at : ordered) {
+        // ONLY THIS PAGE'S. A list that showed every page's items would let a
+        // click select something that is not on the sheet in front of it.
+        if (l->page_of(at) != canvas_->page()) continue;
         const core::LayoutItem* item = &l->items[at];
         auto* row                    = new QListWidgetItem(
             QStringLiteral("%1  ·  %2")
@@ -616,15 +705,29 @@ void LayoutDesigner::refresh()
         if (item->locked) row->setToolTip(tr("Kilitli"));
         if (QString::fromStdString(item->id) == chosen) items_->setCurrentItem(row);
     }
+    if (pageField_ != nullptr) {
+        const int shown = std::clamp(canvas_->page(), 0, static_cast<int>(l->pages.size()) - 1);
+        pageField_->setValue(QString::number(shown + 1));
+        if (pageRow_ != nullptr)
+            pageRow_->setHelp(tr("%1 sayfadan biri · %2×%3 mm")
+                                  .arg(l->pages.size())
+                                  .arg(l->pages[static_cast<std::size_t>(shown)].w / 1000)
+                                  .arg(l->pages[static_cast<std::size_t>(shown)].h / 1000));
+    }
     filling_ = false;
 
     canvas_->refresh();
     buildProperties();
 
-    status_->setText(tr("%1 — %2 sayfa, %3 öğe. Sürükleyin ya da ok tuşlarıyla kaydırın; "
-                        "Shift on kat.")
+    std::size_t here = 0;
+    for (std::size_t i = 0; i < l->items.size(); ++i)
+        if (l->page_of(i) == canvas_->page()) ++here;
+    status_->setText(tr("%1 — %2/%3 sayfa, bu sayfada %4 öğe (toplam %5). Sürükleyin ya da ok "
+                        "tuşlarıyla kaydırın; Shift on kat.")
                          .arg(QString::fromStdString(l->paper.empty() ? "" : l->paper))
+                         .arg(canvas_->page() + 1)
                          .arg(l->pages.size())
+                         .arg(here)
                          .arg(l->items.size()));
 }
 

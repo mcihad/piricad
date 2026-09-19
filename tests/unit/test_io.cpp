@@ -4163,3 +4163,47 @@ TEST_CASE("Çıktı yerleşimi: tek sayfanın kâğıdı ayrı değiştirilebili
         r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=sayfa ad=Kroki sayfa=9 kagit=A4", Origin::Test)
             .ok());
 }
+
+TEST_CASE("Çıktı yerleşimi: bir öğe sayfalar arasında taşınır")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Kroki kagit=A4", Origin::Test).ok());
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIYERLEŞİMİ islem=sayfaekle ad=Kroki kagit=A3 yon=yatay",
+                              Origin::Test)
+                .ok());
+    const auto sheet = [&] { return r.doc.layouts().find("Kroki"); };
+
+    const auto page_of_baslik = [&] {
+        for (std::size_t i = 0; i < sheet()->items.size(); ++i)
+            if (sheet()->items[i].id == "baslik") return sheet()->page_of(i);
+        return -1;
+    };
+    REQUIRE_EQ(page_of_baslik(), 0);
+
+    // Without this a two-page layout could be built but nothing could be carried
+    // from one sheet to the other.
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=tasi yerlesim=Kroki ad=baslik sayfa=2", Origin::Test)
+                .ok());
+    CHECK_EQ(page_of_baslik(), 1);
+
+    // A page that is not there is refused rather than guessed at.
+    CHECK_FALSE(
+        r.bus.execute_line("ÇIKTIÖĞE islem=tasi yerlesim=Kroki ad=baslik sayfa=7", Origin::Test)
+            .ok());
+    CHECK_EQ(page_of_baslik(), 1);
+
+    // AND IT SURVIVES A ROUND TRIP THROUGH THE FILE.
+    TempDir tmp("sayfa-tasima");
+    const std::string path = tmp.file("iki-sayfa.pcad");
+    REQUIRE(r.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig back;
+    REQUIRE(back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
+    const core::Layout* read = back.doc.layouts().find("Kroki");
+    REQUIRE(read != nullptr);
+    REQUIRE_EQ(read->pages.size(), std::size_t{2});
+    CHECK(read->pages[0].w != read->pages[1].w);
+    for (std::size_t i = 0; i < read->items.size(); ++i)
+        if (read->items[i].id == "baslik") CHECK_EQ(read->page_of(i), 1);
+}

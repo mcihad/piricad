@@ -626,6 +626,25 @@ Task<void> run_item(Context& ctx)
             take_um("genislik", item->frame.w);
             take_um("yukseklik", item->frame.h);
 
+            // MOVING BETWEEN PAGES IS A MOVE TOO. Without this a two-page layout
+            // could be built but nothing could be carried from one sheet to the
+            // other, and the only way to move a title block would be to delete it
+            // and make another one — which is not the same title block.
+            if (const Value v = ctx.argument("sayfa"); !v.empty()) {
+                const std::int64_t wanted = v.as_int();
+                if (wanted < 1 || wanted > static_cast<std::int64_t>(target->pages.size())) {
+                    ctx.session().fail(core::err(
+                        core::ErrorCode::InvalidArgument,
+                        "'" + sheet + "' yerleşiminde " + std::to_string(target->pages.size()) +
+                            " sayfa var; " + std::to_string(wanted) + ". sayfa yok."));
+                    co_return;
+                }
+                for (std::size_t i = 0; i < target->items.size(); ++i)
+                    if (&target->items[i] == item)
+                        target->item_pages[i] = static_cast<std::int32_t>(wanted - 1);
+                ctx.record("sayfa", v);
+            }
+
             if (const Value v = ctx.argument("metin"); !v.empty()) {
                 item->text = v.as_text();
                 ctx.record("metin", v);
@@ -941,6 +960,8 @@ KENTOS_COMMAND(layout_item)
                                      "Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir"),
                 Param::boolean("kilit", Arity::optional(), "Öğeyi taşımaya kapatır"),
                 Param::boolean("cerceve", Arity::optional(), "Öğenin çevresine çerçeve çizer"),
+                Param::integer_range("sayfa", Arity::optional(), 1, 10000,
+                                     "Öğenin duracağı sayfa (1'den başlar); tasi ile verilir"),
                 Param::integer_range("sira", Arity::optional(), -1000, 1000,
                                      "Çizim sırası; büyük olan üstte"),
             },
