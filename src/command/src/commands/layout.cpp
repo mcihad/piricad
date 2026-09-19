@@ -491,14 +491,14 @@ Task<void> run_item(Context& ctx)
     Bus& bus                      = ctx.session().bus();
     const core::LayoutStore& have = bus.document().layouts();
 
-    static constexpr const char* kVerbs[] = {"listele", "ekle", "sil", "tasi", "ayarla"};
-    auto verb = co_await ctx.text("islem", "İşlem: listele / ekle / sil / tasi / ayarla");
+    static constexpr const char* kVerbs[] = {"listele", "ekle", "sil", "tasi", "ayarla", "ad"};
+    auto verb = co_await ctx.text("islem", "İşlem: listele / ekle / sil / tasi / ayarla / ad");
     if (!verb) co_return;
     const char* resolved = canonical_verb(*verb, kVerbs);
     if (resolved == nullptr) {
         ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
                                      "Tanınmayan işlem: '" + *verb +
-                                         "'. İşlemler: listele / ekle / sil / tasi / ayarla"));
+                                         "'. İşlemler: listele / ekle / sil / tasi / ayarla / ad"));
         co_return;
     }
     const std::string op = resolved;
@@ -598,6 +598,26 @@ Task<void> run_item(Context& ctx)
             if (index < target->item_pages.size())
                 target->item_pages.erase(target->item_pages.begin() +
                                          static_cast<std::ptrdiff_t>(index));
+        } else if (op == "ad") {
+            // THE VERB THE KEYS EXIST FOR. Renaming an item used to be impossible,
+            // which is why a name could stand in for identity; now that it is
+            // possible, every reference to the item has to keep pointing at it —
+            // and `Layout::rename_item` is where that is made true.
+            const Value fresh = ctx.argument("yeni_ad");
+            if (fresh.empty()) {
+                ctx.session().fail(
+                    core::err(core::ErrorCode::InvalidArgument, "Yeni ad gerekir: yeni_ad=<ad>"));
+                co_return;
+            }
+            if (!target->rename_item(*id, fresh.as_text())) {
+                ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                             "'" + sheet + "' yerleşiminde '" + *id +
+                                                 "' yeniden adlandırılamadı; "
+                                                 "öğe yok ya da '" +
+                                                 fresh.as_text() + "' adı kullanımda."));
+                co_return;
+            }
+            ctx.record("yeni_ad", fresh);
         } else if (op == "tasi" || op == "ayarla") {
             LayoutItem* item = target->find(*id);
             if (item == nullptr) {
@@ -958,7 +978,7 @@ KENTOS_COMMAND(layout_item)
         .params =
             {
                 Param::choice("islem", Arity::exactly(1),
-                              {"listele", "ekle", "sil", "tasi", "ayarla"}, "Ne yapılacağı"),
+                              {"listele", "ekle", "sil", "tasi", "ayarla", "ad"}, "Ne yapılacağı"),
                 Param::text("yerlesim", Arity::optional(),
                             "Hangi çıktı yerleşimi; çizimde tek yerleşim varsa gerekmez")
                     .renamed_from("pafta"),
@@ -992,6 +1012,7 @@ KENTOS_COMMAND(layout_item)
                 Param::boolean("cerceve", Arity::optional(), "Öğenin çevresine çerçeve çizer"),
                 Param::integer_range("sayfa", Arity::optional(), 1, 10000,
                                      "Öğenin duracağı sayfa (1'den başlar); tasi ile verilir"),
+                Param::text("yeni_ad", Arity::optional(), "islem=ad için öğenin yeni adı"),
                 Param::text("harita", Arity::optional(),
                             "Bu öğenin bağlı olduğu harita çerçevesinin adı. Verilmezse ilk "
                             "harita. 'ilk' bağı kaldırır"),
@@ -1014,6 +1035,7 @@ KENTOS_COMMAND(layout_item)
                 {"sil", Effect::DocumentEdit},
                 {"tasi", Effect::DocumentEdit},
                 {"ayarla", Effect::DocumentEdit},
+                {"ad", Effect::DocumentEdit},
             },
     };
 }

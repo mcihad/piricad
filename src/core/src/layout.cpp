@@ -180,6 +180,12 @@ Status LayoutStore::upsert(Layout layout)
     for (std::int32_t& page : layout.item_pages)
         if (page < 0 || page >= static_cast<std::int32_t>(layout.pages.size())) page = 0;
 
+    // EVERY LAYOUT GOES THROUGH HERE, so this is where identity is settled: a
+    // layout arriving from a file, a template or a JSON script has names and no
+    // keys, and one arriving from an edit has keys on most of it. `relink` mints
+    // what is missing and makes the name and the key of every link agree.
+    layout.relink();
+
     if (Layout* existing = find(layout.name); existing != nullptr) {
         *existing = std::move(layout);
         return ok();
@@ -252,6 +258,11 @@ std::uint64_t LayoutStore::fold(std::uint64_t seed) const
                 h = fold_text(h, layer);
             for (const std::string& column : item.columns)
                 h = fold_text(h, column);
+            // THE MAP LINK IS CONTENT. Which frame a scale bar states the scale
+            // of decides the number that prints; two drawings that print
+            // different numbers are not the same drawing, so they may not share a
+            // fingerprint.
+            h = fold_text(h, item.linked_map);
             h = fnv1a_int(l.page_of(i), h);
         }
     }
@@ -548,6 +559,13 @@ LayoutItem default_item(LayoutItemKind kind)
 
 const LayoutItem* Layout::map_for(const LayoutItem& item) const
 {
+    // THE KEY FIRST. It is the reference that survives a rename; the name is what
+    // the file carries and what a person types.
+    if (item.linked != LayoutItemKey::None) {
+        const LayoutItem* held = find_key(item.linked);
+        if (held != nullptr && held->kind == LayoutItemKind::Map) return held;
+        return nullptr;
+    }
     if (item.linked_map.empty()) return first_map();
     const LayoutItem* named = find(item.linked_map);
     // NAMED BUT NOT THERE IS NOT "the first one". A scale bar quietly restating
@@ -559,6 +577,76 @@ const LayoutItem* Layout::map_for(const LayoutItem& item) const
 bool Layout::link_is_broken(const LayoutItem& item) const
 {
     return !item.linked_map.empty() && map_for(item) == nullptr;
+}
+
+LayoutItem* Layout::find_key(LayoutItemKey wanted)
+{
+    if (wanted == LayoutItemKey::None) return nullptr;
+    for (LayoutItem& item : items)
+        if (item.key == wanted) return &item;
+    return nullptr;
+}
+
+const LayoutItem* Layout::find_key(LayoutItemKey wanted) const
+{
+    if (wanted == LayoutItemKey::None) return nullptr;
+    for (const LayoutItem& item : items)
+        if (item.key == wanted) return &item;
+    return nullptr;
+}
+
+void Layout::relink()
+{
+    if (next_key == 0) next_key = 1;
+
+    // ---- 1. everything that came in without a key gets one ------------------
+    //
+    // A layout arrives from a file, a template or a JSON script with names and
+    // no keys, and from an edit with keys already on most of it. Both are
+    // ordinary; minting only what is missing is what makes them the same case.
+    for (LayoutPage& page : pages)
+        if (page.key == LayoutPageKey::None) page.key = static_cast<LayoutPageKey>(next_key++);
+    for (LayoutItem& item : items)
+        if (item.key == LayoutItemKey::None) item.key = static_cast<LayoutItemKey>(next_key++);
+
+    // ---- 2. the two halves of a link are made to agree ----------------------
+    //
+    // THE KEY WINS when both are set and they disagree, because the key is the
+    // one that survived a rename: the name is what the file said when it was
+    // written, and the key is what the item is.
+    for (LayoutItem& item : items) {
+        if (item.linked != LayoutItemKey::None) {
+            const LayoutItem* target = find_key(item.linked);
+            if (target != nullptr && target->kind == LayoutItemKind::Map) {
+                item.linked_map = target->id;
+                continue;
+            }
+            // The key points at something that is gone. Fall back to the name so
+            // `link_is_broken` can say so rather than the link vanishing.
+            item.linked = LayoutItemKey::None;
+        }
+        if (item.linked_map.empty()) continue;
+        const LayoutItem* named = find(item.linked_map);
+        item.linked             = (named != nullptr && named->kind == LayoutItemKind::Map)
+                                      ? named->key
+                                      : LayoutItemKey::None;
+    }
+}
+
+bool Layout::rename_item(std::string_view from, std::string to)
+{
+    LayoutItem* item = find(from);
+    if (item == nullptr || to.empty()) return false;
+    // A NAME IS UNIQUE INSIDE A LAYOUT, and renaming onto a taken one would make
+    // two items answer to one word — which is how the wrong box gets edited.
+    if (const LayoutItem* taken = find(to); taken != nullptr && taken != item) return false;
+
+    item->id = std::move(to);
+    // AND EVERY LINK STILL POINTS AT IT. This is what the keys are for: the
+    // references are by key, and `relink` writes the new name back into the
+    // `linked_map` the file will carry.
+    relink();
+    return true;
 }
 
 Layout default_layout(std::string name, Um width, Um height, Um margin)

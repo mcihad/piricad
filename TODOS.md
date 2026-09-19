@@ -209,7 +209,31 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
 
 ### 5.1. Model, tasarımcı ve haritalar
 
-- [ ] **L-01 / P0 — Kalıcı kimlik ve genişletilebilir model.** Layout, sayfa ve öğe
+- [~] **L-01 / P0 — Kalıcı kimlik ve genişletilebilir model.** *(kimlik 19 Eylül 2026)*
+  **Yapıldı:** `LayoutItemKey` ve `LayoutPageKey` — kapsamlı sayaçlar, yerleşimin
+  **kendi** `next_key`'inden basılıyor, çünkü bir yerleşim şablon dosyasında
+  belgesiz yolculuk ediyor.
+  **Oturum kimliği, saklanan kimlik değil.** Dosya adlarla konuşuyor (okunabilir
+  ve diff'lenebilir kalsın diye), anahtarlar okunurken basılıyor. Bu, evin kendi
+  cevabı: `Document::content_hash` zaten "Keys are deliberately excluded: key
+  assignment is an allocation detail" diyor. Dolayısıyla anahtarlar ne katlamada
+  ne eşitlikte — ikisi de elle yazıldı ki bu bilerek olsun.
+  `Layout::relink()` eksik anahtarı basıyor ve bağın iki yarısını (`linked_map`
+  adı, `linked` anahtarı) uzlaştırıyor; **anlaşmazlıkta anahtar kazanıyor**, çünkü
+  yeniden adlandırmadan sağ çıkan o. `LayoutStore::upsert` her yerleşimin geçtiği
+  tek kapı olduğu için kimlik orada oturuyor.
+  **`ÇIKTIÖĞE islem=ad`** eklendi — anahtarların var oluş sebebi. Bir haritayı
+  yeniden adlandırmak ona bağlı ölçek çubuğunu koparmıyor ve dosyaya hedefin
+  **yeni** adı yazılıyor. Kullanımdaki bir ada yeniden adlandırma reddediliyor.
+  Test, yeniden adlandırma + dosya gidiş-dönüşü + parmak izinin aynı kalmasını
+  birlikte sınıyor — anahtar hash'e sızsaydı sonuncusu kırılırdı.
+  **Ayrıca kendi kusurum kapandı:** `linked_map` katlamaya girmiyordu. Bağ hangi
+  haritanın ölçeğinin basılacağını belirliyor, yani içeriktir; farklı sayı basan
+  iki çizim aynı parmak izini taşıyamaz.
+  **Kalan:** grup ilişkisi (L-03 ile birlikte gelecek); `item_pages`'in indeksten
+  sayfa anahtarına çevrilmesi (bugün her sayfa fiili onu aynı işlemde onarıyor,
+  yani kırık değil).
+  Eski madde metni: Layout, sayfa ve öğe
   için yeniden adlandırmadan etkilenmeyen kimlik; açık `page_id`, grup ilişkisi,
   referans harita ve öğe bağlantıları ekle. Değer tabanlı, Qt'siz core ve sabit nokta
   modeli korunsun. Eski `item_pages` için migration tanımlansın. **Kabul:** ekle/sil/

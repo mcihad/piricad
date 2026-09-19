@@ -165,6 +165,35 @@ enum class GridLabels : std::uint8_t {
 /// leaves it at its default, and a reader that finds one set anyway ignores it —
 /// which is what keeps an added kind from being a format break (model.md 0.2a:
 /// shapes may gain fields, they may not change meaning).
+/// A LAYOUT'S OWN IDENTITY FOR ITS PAGES AND ITS ITEMS.
+///
+/// Scoped so a page key cannot be passed where an item key is expected. Minted
+/// from the layout's own counter rather than the document's: a layout travels
+/// in a template file with no document around it, so an identity that depended
+/// on one would not survive the trip.
+///
+/// SESSION IDENTITY, NOT STORED IDENTITY. The file names things by name, which
+/// is what makes a saved layout readable and diffable; keys are minted when it
+/// is read and are an allocation detail — exactly what `Document::content_hash`
+/// says about `EntityKey` ("two documents built the same way from the same input
+/// must agree"). So they are in neither the fold nor the equality.
+///
+/// What they buy is that a rename does not break a link: `ÇIKTIÖĞE islem=ad`
+/// changes what an item is called and every reference to it still finds it.
+enum class LayoutItemKey : std::uint64_t { None = 0 };
+enum class LayoutPageKey : std::uint64_t { None = 0 };
+
+constexpr std::uint64_t raw(LayoutItemKey k) noexcept
+{
+    return static_cast<std::uint64_t>(k);
+}
+
+/// The same, for a page key.
+constexpr std::uint64_t raw(LayoutPageKey k) noexcept
+{
+    return static_cast<std::uint64_t>(k);
+}
+
 struct LayoutItem
 {
     // FIELDS ARE ORDERED BY WIDTH, NOT BY MEANING. Grouped the readable way —
@@ -210,7 +239,22 @@ struct LayoutItem
     /// map: an item whose link was deleted is reported, because a scale bar
     /// silently restating a different map's scale is a wrong number on a legal
     /// document (`layout_trouble`).
+    ///
+    /// STORED AS A NAME AND RESOLVED TO A KEY. The file says the name, which is
+    /// what keeps a saved layout readable; `Layout::relink` turns it into `linked`
+    /// when the layout is loaded, and a rename rewrites the name from the key. So
+    /// renaming a map frame does not orphan the things that point at it.
     std::string linked_map;
+
+    /// The map frame this item follows, by identity. `None` means "the first map",
+    /// the same as an empty `linked_map`.
+    ///
+    /// Not part of equality or of the fold, for the reason the type says: it is an
+    /// allocation detail, and `linked_map` is the content.
+    LayoutItemKey linked{LayoutItemKey::None};
+
+    /// This item's identity inside its layout. Not part of equality.
+    LayoutItemKey key{LayoutItemKey::None};
 
     /// Map: the ground window this frame shows, in `Mm`. Empty means "not aimed
     /// yet": the designer then shows the drawing's extent and says so.
@@ -276,7 +320,25 @@ struct LayoutItem
 
     LayoutShape shape{LayoutShape::Rectangle};
 
-    friend bool operator==(const LayoutItem&, const LayoutItem&) = default;
+    /// KEYS ARE EXCLUDED, deliberately. Two items built the same way from the
+    /// same input must compare equal — the same sentence `Document::content_hash`
+    /// uses about `EntityKey` — or a saved and reloaded layout would stop being
+    /// the layout that was saved.
+    friend bool operator==(const LayoutItem& a, const LayoutItem& b)
+    {
+        return a.id == b.id && a.kind == b.kind && a.frame == b.frame && a.z == b.z &&
+               a.locked == b.locked && a.rotation_udeg == b.rotation_udeg &&
+               a.frame_visible == b.frame_visible && a.frame_width == b.frame_width &&
+               a.frame_colour == b.frame_colour && a.background == b.background &&
+               a.background_colour == b.background_colour && a.text == b.text &&
+               a.text_height == b.text_height && a.text_colour == b.text_colour &&
+               a.align_h == b.align_h && a.align_v == b.align_v && a.extent == b.extent &&
+               a.scale == b.scale && a.grid == b.grid && a.grid_labels == b.grid_labels &&
+               a.grid_interval == b.grid_interval && a.grid_width == b.grid_width &&
+               a.grid_colour == b.grid_colour && a.grid_text_height == b.grid_text_height &&
+               a.layers == b.layers && a.style == b.style && a.shape == b.shape &&
+               a.columns == b.columns && a.row_limit == b.row_limit && a.linked_map == b.linked_map;
+    }
 };
 
 /// One page of a layout, already oriented: `w` is what the sheet is wide.
@@ -285,7 +347,15 @@ struct LayoutPage
     Um w{um_from_mm(210)}; ///< how wide the sheet is, as used
     Um h{um_from_mm(297)}; ///< how tall it is
 
-    friend bool operator==(const LayoutPage&, const LayoutPage&) = default;
+    /// This page's identity inside its layout. Not part of equality: a key is an
+    /// allocation detail and two pages of the same size ARE the same page as far
+    /// as the drawing is concerned.
+    LayoutPageKey key{LayoutPageKey::None};
+
+    friend bool operator==(const LayoutPage& a, const LayoutPage& b)
+    {
+        return a.w == b.w && a.h == b.h;
+    }
 };
 
 /// A named sheet composition.
@@ -306,6 +376,12 @@ struct Layout
     /// rather than a field on the item because the overwhelmingly common layout
     /// is one page, and a column of zeroes costs nothing to write or read.
     std::vector<std::int32_t> item_pages;
+
+    /// The next key this layout will hand out. Its own counter, because a layout
+    /// travels in a template with no document around it.
+    ///
+    /// Not part of equality or of the fold: an allocation detail.
+    std::uint64_t next_key{1};
 
     std::int32_t dpi{300};     ///< export resolution
     Um margin{um_from_mm(10)}; ///< the guide the designer draws; not a clip
@@ -332,13 +408,42 @@ struct Layout
     /// Whether `item` names a map frame that is not on this layout.
     bool link_is_broken(const LayoutItem& item) const;
 
+    /// The item with this key, or null.
+    LayoutItem* find_key(LayoutItemKey key);
+
+    /// The item with this key, or null.
+    const LayoutItem* find_key(LayoutItemKey key) const;
+
+    /// MINTS WHAT IS MISSING AND MAKES THE TWO HALVES OF A LINK AGREE.
+    ///
+    /// Called after a layout arrives from anywhere that speaks names — a file, a
+    /// template, a JSON script — and after any edit that could have left the two
+    /// out of step. It gives every page and item a key if it has none, resolves
+    /// `linked_map` to `linked`, and writes `linked_map` back from `linked` so a
+    /// renamed target is named by its new name.
+    ///
+    /// `linked` WINS when both are set and they disagree, because the key is the
+    /// one that survived the rename.
+    void relink();
+
+    /// Renames an item and leaves every link to it pointing at the same item.
+    /// False when there is no such item or the new name is taken.
+    bool rename_item(std::string_view from, std::string to);
+
     /// Which page `items[i]` is on, 0 when the column is short (an older file).
     std::int32_t page_of(std::size_t i) const noexcept
     {
         return i < item_pages.size() ? item_pages[i] : 0;
     }
 
-    friend bool operator==(const Layout&, const Layout&) = default;
+    /// `next_key` is excluded for the reason the keys are: two layouts built the
+    /// same way from the same input must compare equal.
+    friend bool operator==(const Layout& a, const Layout& b)
+    {
+        return a.name == b.name && a.pages == b.pages && a.items == b.items &&
+               a.item_pages == b.item_pages && a.dpi == b.dpi && a.margin == b.margin &&
+               a.paper == b.paper && a.landscape == b.landscape;
+    }
 };
 
 /// Every layout a drawing has.
@@ -371,7 +476,14 @@ public:
     bool remove(std::string_view name);
 
     /// Replaces the whole list — what undo does.
-    void load(std::vector<Layout> layouts) { layouts_ = std::move(layouts); }
+    void load(std::vector<Layout> layouts)
+    {
+        layouts_ = std::move(layouts);
+        // THE FILE SPEAKS NAMES; memory speaks keys. Settling it here means the
+        // reader does not have to know about identity at all.
+        for (Layout& one : layouts_)
+            one.relink();
+    }
 
     /// Folds into the document's content hash. Order matters, because two
     /// drawings whose layouts differ only in order are two different documents

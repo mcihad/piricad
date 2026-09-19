@@ -6,6 +6,27 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — çıktı yerleşimi öğelerinin kalıcı kimliği (TODOS L-01)
+
+- `LayoutItemKey` ve `LayoutPageKey`. Yerleşimin **kendi** sayacından basılıyor,
+  çünkü bir yerleşim şablon dosyasında belgesiz yolculuk ediyor.
+- **Oturum kimliği, saklanan kimlik değil.** Dosya adlarla konuşuyor — okunabilir
+  ve diff'lenebilir kalsın diye — anahtarlar okunurken basılıyor. Evin kendi
+  cevabı bu: `Document::content_hash` zaten "key assignment is an allocation
+  detail" diyor. Anahtarlar ne katlamada ne eşitlikte; ikisi de elle yazıldı ki
+  dışarıda kalmaları bilerek olsun.
+- **`ÇIKTIÖĞE islem=ad`**: bir öğeyi yeniden adlandırmak ona bağlı olanları
+  koparmıyor, ve dosyaya hedefin **yeni** adı yazılıyor. Kullanımdaki bir ada
+  yeniden adlandırma reddediliyor: bir sözcüğe iki öğenin cevap vermesi, yanlış
+  kutunun düzenlenmesidir.
+
+### Düzeltildi — harita bağı parmak izine girmiyordu
+
+- `linked_map` katlamada yoktu. Bağ hangi haritanın ölçeğinin basılacağını
+  belirliyor, yani içeriktir; farklı sayı basan iki çizim aynı `content_hash`'i
+  taşıyamaz.
+
+
 ### Düzeltildi — çıktı yerleşiminin haritası PDF'e fotoğraf olarak gidiyordu (TODOS L-12)
 
 - Harita bir `QImage`'a çizilip sayfaya yapıştırılıyordu. PDF'te **tek bir

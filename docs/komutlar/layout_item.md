@@ -41,6 +41,7 @@ buluşur ve çevirme orada yapılır.
 ÇIKTIÖĞE islem=ekle [yerlesim=<ad>] tur=<tür> [ad=<ad>]
 ÇIKTIÖĞE islem=sil [yerlesim=<ad>] ad=<ad>
 ÇIKTIÖĞE islem=tasi [yerlesim=<ad>] ad=<ad> x=<mm> y=<mm> genislik=<mm> yukseklik=<mm>
+ÇIKTIÖĞE islem=ad [yerlesim=<ad>] ad=<ad> yeni_ad=<ad>
 ÇIKTIÖĞE islem=ayarla [yerlesim=<ad>] ad=<ad> [metin=<yazı>] [olcek=<N>]
          [pencere=x1,y1 pencere=x2,y2] [izgara=<biçim>] [kilit=evet] …
 ```
@@ -60,7 +61,7 @@ tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıd�
 
 | Parametre | Anlamı |
 |---|---|
-| `islem` | `listele`, `ekle`, `sil`, `tasi`, `ayarla` |
+| `islem` | `listele`, `ekle`, `sil`, `tasi`, `ayarla`, `ad` |
 | `yerlesim` | Hangi yerleşim; tek yerleşim varsa gerekmez |
 | `ad` | Öğenin adı. `ekle`'de verilmezse türünden türetilir (`harita`, `harita2`…) |
 | `tur` | `islem=ekle` için: `harita`, `metin`, `olcek`, `kuzey`, `lejant`, `resim`, `sekil`, `tablo` |
@@ -76,6 +77,7 @@ tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıd�
 | `cerceve` | Öğenin çevresine çerçeve çizer |
 | `sira` | Çizim sırası; büyük olan üstte |
 | `harita` | Bu öğenin bağlı olduğu harita çerçevesinin adı; `ilk` bağı kaldırır |
+| `yeni_ad` | `islem=ad` için öğenin yeni adı |
 | `sayfa` | Öğenin duracağı sayfa (1'den başlar); `tasi` ile verilir |
 
 ### Tablo öğesi
@@ -109,6 +111,13 @@ varken bir haritanın sayısını öbürünün altına basmak olurdu.
 
 Bağ verilmezse **ilk harita** geçerlidir — tek haritalı sayfanın doğru cevabı ve
 bu alandan önce yazılmış her yerleşimin söylediği şey. `harita=ilk` bağı kaldırır.
+
+**Bir haritayı yeniden adlandırmak ona bağlı öğeleri koparmaz.** Bağ ada göre
+değil kimliğe göre tutulur; dosyaya yazılırken hedefin **yeni** adı yazılır.
+
+```
+ÇIKTIÖĞE islem=ad ad=harita2 yeni_ad=kuzeyharita
+```
 
 **Bağlı olduğu harita silinirse öğe sessizce ilk haritaya dönmez.** Çizilmez ve
 bildirilir: imzalanan bir belgede başka bir haritanın ölçeğini sessizce yazan bir
@@ -222,6 +231,7 @@ Bir yerleşimi baştan sona kuran betik:
 | `'X' bir harita çerçevesi değil; pencere yalnız haritaya verilir.` | `pencere=` harita olmayan bir öğeye verildi | Harita öğesinin adını verin |
 | `'X' yerleşiminde 'Y' adlı bir harita çerçevesi yok.` | `harita=` olmayan bir öğeyi gösteriyor | `islem=listele` ile harita adlarını görün |
 | `Bir harita çerçevesi başka bir haritaya bağlanmaz.` | `harita=` bir harita öğesine verildi | Ölçek, kuzey, lejant ya da metne verin |
+| `'X' yerleşiminde 'Y' yeniden adlandırılamadı; öğe yok ya da 'Z' adı kullanımda.` | `islem=ad` çakışan ya da olmayan bir ada çağrıldı | Başka bir ad verin |
 | `'X' yerleşiminde N sayfa var; M. sayfa yok.` | `sayfa=` aralık dışında | Sayfa sayısını görün |
 | `Izgara: yok / arti / cizgi / centik` | Tanınmayan ızgara biçimi | Listedeki sözcüklerden birini yazın |
 | `'X' ve 'Y' aynı parametrenin iki adı; ikisi birden verilmez. Yeni adı 'Z'.` | Bir parametrenin eski ve yeni adı birlikte verildi | Yalnız yeni adı bırakın |

@@ -4324,3 +4324,88 @@ TEST_CASE("Çıktı yerleşimi: bildirilen ölçek kâğıt ile zemini tam olara
     CHECK_EQ(core::map_window(map).width(), core::Mm{200000});
     CHECK_EQ(core::map_scale(map), 1000);
 }
+
+TEST_CASE("Çıktı yerleşimi: harita bağı parmak izine giriyor")
+{
+    // A link decides WHICH map's scale a bar states, so it decides the number
+    // that prints. Two drawings that print different numbers are not the same
+    // drawing and may not share a `content_hash`.
+    Rig r;
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=İki kagit=A3", Origin::Test).ok());
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIÖĞE islem=ekle yerlesim=İki tur=harita ad=harita2", Origin::Test)
+            .ok());
+    const std::uint64_t before = r.doc.content_hash();
+
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIÖĞE islem=ayarla yerlesim=İki ad=olcek harita=harita2",
+                              Origin::Test)
+                .ok());
+    CHECK(r.doc.content_hash() != before);
+
+    // And undoing it gives the fingerprint back, bit for bit.
+    REQUIRE(r.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_EQ(r.doc.content_hash(), before);
+}
+
+TEST_CASE("Çıktı yerleşimi: öğe yeniden adlandırılınca bağlar kopmuyor")
+{
+    // TODOS L-01's acceptance, in the case that decides it: a link by NAME breaks
+    // the moment the name changes, and a link by identity does not.
+    Rig r;
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=İki kagit=A3", Origin::Test).ok());
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIÖĞE islem=ekle yerlesim=İki tur=harita ad=harita2", Origin::Test)
+            .ok());
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIÖĞE islem=ayarla yerlesim=İki ad=olcek harita=harita2",
+                              Origin::Test)
+                .ok());
+
+    const auto sheet = [&] { return r.doc.layouts().find("İki"); };
+    REQUIRE(sheet()->map_for(*sheet()->find("olcek")) != nullptr);
+    CHECK_EQ(sheet()->map_for(*sheet()->find("olcek"))->id, "harita2");
+
+    // RENAME THE TARGET. The scale bar still states the same frame's scale, and
+    // its stored name has been rewritten to the new one — which is what the file
+    // will carry.
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIÖĞE islem=ad yerlesim=İki ad=harita2 yeni_ad=kuzeyharita",
+                              Origin::Test)
+                .ok());
+    const core::LayoutItem* bar = sheet()->find("olcek");
+    REQUIRE(bar != nullptr);
+    CHECK_FALSE(sheet()->link_is_broken(*bar));
+    REQUIRE(sheet()->map_for(*bar) != nullptr);
+    CHECK_EQ(sheet()->map_for(*bar)->id, "kuzeyharita");
+    CHECK_EQ(bar->linked_map, "kuzeyharita");
+
+    // A NAME THAT IS TAKEN IS REFUSED: two items answering to one word is how the
+    // wrong box gets edited.
+    CHECK_FALSE(r.bus
+                    .execute_line("ÇIKTIÖĞE islem=ad yerlesim=İki ad=olcek yeni_ad=kuzeyharita",
+                                  Origin::Test)
+                    .ok());
+
+    // AND IT SURVIVES THE FILE, where the link travels as the new name.
+    TempDir tmp("ad-degistir");
+    const std::string path = tmp.file("adli.pcad");
+    REQUIRE(r.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+
+    Rig back;
+    REQUIRE(back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
+    const core::Layout* read = back.doc.layouts().find("İki");
+    REQUIRE(read != nullptr);
+    const core::LayoutItem* kept = read->find("olcek");
+    REQUIRE(kept != nullptr);
+    REQUIRE(read->map_for(*kept) != nullptr);
+    CHECK_EQ(read->map_for(*kept)->id, "kuzeyharita");
+    // The key was minted on load and is not the one the session had: it is an
+    // allocation detail, which is why it is in neither the fold nor the equality.
+    CHECK(kept->linked != core::LayoutItemKey::None);
+
+    // AND THE FINGERPRINT AGREES ACROSS THE ROUND TRIP, which it could not if a
+    // key had leaked into the hash.
+    CHECK_EQ(read->items.size(), sheet()->items.size());
+    CHECK_EQ(back.doc.content_hash(), r.doc.content_hash());
+}
