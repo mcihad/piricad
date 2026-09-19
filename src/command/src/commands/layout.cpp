@@ -38,6 +38,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -131,14 +132,18 @@ Task<void> run_layout(Context& ctx)
     Bus& bus                      = ctx.session().bus();
     const core::LayoutStore& have = bus.document().layouts();
 
-    static constexpr const char* kVerbs[] = {"listele", "ekle", "sil", "ad", "sayfa"};
-    auto verb = co_await ctx.text("islem", "İşlem: listele / ekle / sil / ad / sayfa");
+    static constexpr const char* kVerbs[] = {"listele",  "ekle",        "sil",
+                                             "ad",       "sayfa",       "sayfaekle",
+                                             "sayfasil", "sayfacogalt", "sayfatasi"};
+    auto verb = co_await ctx.text("islem", "İşlem: listele / ekle / sil / ad / sayfa / sayfaekle / "
+                                           "sayfasil / sayfacogalt / sayfatasi");
     if (!verb) co_return;
     const char* resolved = canonical_verb(*verb, kVerbs);
     if (resolved == nullptr) {
         ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
                                      "Tanınmayan işlem: '" + *verb +
-                                         "'. İşlemler: listele / ekle / sil / ad / sayfa"));
+                                         "'. İşlemler: listele / ekle / sil / ad / sayfa / "
+                                         "sayfaekle / sayfasil / sayfacogalt / sayfatasi"));
         co_return;
     }
     const std::string op = resolved;
@@ -296,7 +301,9 @@ Task<void> run_layout(Context& ctx)
         co_return;
     }
 
-    if (op == "sayfa") {
+    // ---- the five page verbs all need the layout and most need a page index --
+    if (op == "sayfa" || op == "sayfaekle" || op == "sayfasil" || op == "sayfacogalt" ||
+        op == "sayfatasi") {
         Layout* target = nullptr;
         for (Layout& l : next)
             if (core::turkish_key_equals(l.name, *named)) target = &l;
@@ -305,17 +312,163 @@ Task<void> run_layout(Context& ctx)
                 core::err(core::ErrorCode::NotFound, "Çıktı yerleşimi yok: '" + *named + "'."));
             co_return;
         }
-        // THE ITEMS ARE NOT RESCALED. A title block placed 20 mm from the top of
-        // an A4 is 20 mm from the top of an A3 too; stretching the composition
-        // with the paper would move every carefully placed box and is not what
-        // changing paper means.
-        for (core::LayoutPage& page : target->pages) {
-            page.w = um(width_mm);
-            page.h = um(height_mm);
+
+        // PAGES ARE COUNTED FROM ONE, because that is what is printed on them and
+        // what a person says out loud. Only the array is zero-based.
+        const Value page_arg  = ctx.argument("sayfa");
+        const auto page_count = static_cast<std::int64_t>(target->pages.size());
+        const auto page_index = [&](std::int64_t given) -> std::optional<std::size_t> {
+            if (given < 1 || given > page_count) return std::nullopt;
+            return static_cast<std::size_t>(given - 1);
+        };
+        const auto out_of_range = [&](std::int64_t given) {
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         "'" + *named + "' yerleşiminde " +
+                                             std::to_string(page_count) + " sayfa var; " +
+                                             std::to_string(given) + ". sayfa yok."));
+        };
+
+        if (op == "sayfa") {
+            // THE ITEMS ARE NOT RESCALED. A title block placed 20 mm from the top
+            // of an A4 is 20 mm from the top of an A3 too; stretching the
+            // composition with the paper would move every carefully placed box and
+            // is not what changing paper means.
+            //
+            // WITHOUT `sayfa=` EVERY PAGE CHANGES, which is what "change the
+            // paper" has always meant here; with it, one page does — and that is
+            // how a layout comes to hold an A4 and an A3 at once.
+            if (page_arg.empty()) {
+                for (core::LayoutPage& page : target->pages) {
+                    page.w = um(width_mm);
+                    page.h = um(height_mm);
+                }
+                target->paper     = paper;
+                target->landscape = landscape;
+            } else {
+                const auto at = page_index(page_arg.as_int());
+                if (!at) {
+                    out_of_range(page_arg.as_int());
+                    co_return;
+                }
+                ctx.record("sayfa", page_arg);
+                target->pages[*at].w = um(width_mm);
+                target->pages[*at].h = um(height_mm);
+                // The layout's own `paper`/`landscape` describe the sheet as a
+                // whole and stop being true the moment two pages differ, so they
+                // are left alone rather than made to name one page's answer.
+            }
+            target->margin = um(edge);
+        } else if (op == "sayfaekle") {
+            core::LayoutPage fresh{um(width_mm), um(height_mm)};
+            std::size_t at = target->pages.size();
+            if (!page_arg.empty()) {
+                const std::int64_t given = page_arg.as_int();
+                if (given < 1 || given > page_count + 1) {
+                    out_of_range(given);
+                    co_return;
+                }
+                at = static_cast<std::size_t>(given - 1);
+                ctx.record("sayfa", page_arg);
+            }
+            target->pages.insert(target->pages.begin() + static_cast<std::ptrdiff_t>(at), fresh);
+            // EVERY ITEM AFTER THE INSERTION POINT MOVES UP ONE. `item_pages`
+            // holds indices, and an index that is not repaired now is an item
+            // that silently changed page.
+            for (std::int32_t& page : target->item_pages)
+                if (page >= static_cast<std::int32_t>(at)) ++page;
+        } else if (op == "sayfasil") {
+            if (page_count <= 1) {
+                ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                             "Son sayfa silinemez; bir yerleşimin en az bir "
+                                             "sayfası olur."));
+                co_return;
+            }
+            const auto at = page_index(page_arg.empty() ? page_count : page_arg.as_int());
+            if (!at) {
+                out_of_range(page_arg.as_int());
+                co_return;
+            }
+            ctx.record("sayfa", Value::integer(static_cast<std::int64_t>(*at) + 1));
+
+            // THE ITEMS ON IT GO WITH IT. Leaving them behind would leave boxes
+            // pointing at a page that is not there, and there is no honest page
+            // to move them to — the user asked for this page to stop existing.
+            std::size_t removed = 0;
+            for (std::size_t i = target->items.size(); i-- > 0;) {
+                if (target->item_pages[i] != static_cast<std::int32_t>(*at)) continue;
+                target->items.erase(target->items.begin() + static_cast<std::ptrdiff_t>(i));
+                target->item_pages.erase(target->item_pages.begin() +
+                                         static_cast<std::ptrdiff_t>(i));
+                ++removed;
+            }
+            target->pages.erase(target->pages.begin() + static_cast<std::ptrdiff_t>(*at));
+            for (std::int32_t& page : target->item_pages)
+                if (page > static_cast<std::int32_t>(*at)) --page;
+            if (removed != 0)
+                ctx.echo("Sayfayla birlikte " + std::to_string(removed) + " öğe silindi.");
+        } else if (op == "sayfacogalt") {
+            const auto at = page_index(page_arg.empty() ? 1 : page_arg.as_int());
+            if (!at) {
+                out_of_range(page_arg.as_int());
+                co_return;
+            }
+            ctx.record("sayfa", Value::integer(static_cast<std::int64_t>(*at) + 1));
+
+            const core::LayoutPage copy = target->pages[*at];
+            target->pages.insert(target->pages.begin() + static_cast<std::ptrdiff_t>(*at) + 1,
+                                 copy);
+            for (std::int32_t& page : target->item_pages)
+                if (page > static_cast<std::int32_t>(*at)) ++page;
+
+            // THE ITEMS ARE COPIED TOO, with fresh names: duplicating a page that
+            // came back empty is not duplicating a page.
+            const std::size_t had = target->items.size();
+            for (std::size_t i = 0; i < had; ++i) {
+                if (target->item_pages[i] != static_cast<std::int32_t>(*at)) continue;
+                core::LayoutItem twin = target->items[i];
+                twin.id               = free_id(*target, twin.id);
+                target->items.push_back(std::move(twin));
+                target->item_pages.push_back(static_cast<std::int32_t>(*at) + 1);
+            }
+        } else { // sayfatasi
+            const Value to_arg = ctx.argument("yeni_sira");
+            if (page_arg.empty() || to_arg.empty()) {
+                ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                             "Sayfa taşımak için sayfa=<n> ve yeni_sira=<m> "
+                                             "gerekir."));
+                co_return;
+            }
+            const auto from = page_index(page_arg.as_int());
+            const auto to   = page_index(to_arg.as_int());
+            if (!from) {
+                out_of_range(page_arg.as_int());
+                co_return;
+            }
+            if (!to) {
+                out_of_range(to_arg.as_int());
+                co_return;
+            }
+            ctx.record("sayfa", page_arg);
+            ctx.record("yeni_sira", to_arg);
+            if (*from != *to) {
+                const core::LayoutPage moved = target->pages[*from];
+                target->pages.erase(target->pages.begin() + static_cast<std::ptrdiff_t>(*from));
+                target->pages.insert(target->pages.begin() + static_cast<std::ptrdiff_t>(*to),
+                                     moved);
+                // AND EVERY ITEM FOLLOWS ITS PAGE. Reordering pages without
+                // carrying the items is reordering blank paper.
+                for (std::int32_t& page : target->item_pages) {
+                    const auto was = static_cast<std::size_t>(page);
+                    if (was == *from)
+                        page = static_cast<std::int32_t>(*to);
+                    else if (*from < *to && was > *from && was <= *to)
+                        --page;
+                    else if (*to < *from && was >= *to && was < *from)
+                        ++page;
+                }
+            }
         }
-        target->paper     = paper;
-        target->landscape = landscape;
-        target->margin    = um(edge);
+
         if (auto st = ctx.transaction().set_layouts(std::move(next)); !st) {
             ctx.session().fail(st.error());
             co_return;
@@ -698,7 +851,9 @@ KENTOS_COMMAND(layout)
         .category = Category::File,
         .params =
             {
-                Param::choice("islem", Arity::exactly(1), {"listele", "ekle", "sil", "ad", "sayfa"},
+                Param::choice("islem", Arity::exactly(1),
+                              {"listele", "ekle", "sil", "ad", "sayfa", "sayfaekle", "sayfasil",
+                               "sayfacogalt", "sayfatasi"},
                               "Ne yapılacağı"),
                 Param::text("ad", Arity::optional(), "Yerleşimin adı; listele dışında gerekir"),
                 Param::text("yeni_ad", Arity::optional(), "islem=ad için yeni yerleşim adı"),
@@ -714,6 +869,11 @@ KENTOS_COMMAND(layout)
                                      "Kenar boşluğu, mm (varsayılan 10)"),
                 Param::integer_range("dpi", Arity::optional(), 72, 4800,
                                      "Çıktı çözünürlüğü (varsayılan 300)"),
+                Param::integer_range("sayfa", Arity::optional(), 1, 10000,
+                                     "Hangi sayfa (1'den başlar). sayfa işleminde verilmezse "
+                                     "bütün sayfalar değişir"),
+                Param::integer_range("yeni_sira", Arity::optional(), 1, 10000,
+                                     "sayfatasi için sayfanın gideceği sıra"),
             },
         .undo  = UndoPolicy::SingleTransaction,
         .flags = Flags::Interactive | Flags::Scriptable,
@@ -732,6 +892,10 @@ KENTOS_COMMAND(layout)
                 {"sil", Effect::DocumentEdit},
                 {"ad", Effect::DocumentEdit},
                 {"sayfa", Effect::DocumentEdit},
+                {"sayfaekle", Effect::DocumentEdit},
+                {"sayfasil", Effect::DocumentEdit},
+                {"sayfacogalt", Effect::DocumentEdit},
+                {"sayfatasi", Effect::DocumentEdit},
             },
     };
 }

@@ -41,14 +41,18 @@ silinebilir; amaç ilk anda basılabilir bir şey görmenizdir.
 ÇIKTIYERLEŞİMİ islem=ekle ad=<ad> kagit=ozel genislik=<mm> yukseklik=<mm>
 ÇIKTIYERLEŞİMİ islem=sil ad=<ad>
 ÇIKTIYERLEŞİMİ islem=ad ad=<ad> yeni_ad=<ad>
-ÇIKTIYERLEŞİMİ islem=sayfa ad=<ad> kagit=A3 yon=yatay [kenar=<mm>]
+ÇIKTIYERLEŞİMİ islem=sayfa ad=<ad> [sayfa=<n>] kagit=A3 yon=yatay [kenar=<mm>]
+ÇIKTIYERLEŞİMİ islem=sayfaekle ad=<ad> [kagit=A3] [yon=yatay] [sayfa=<n>]
+ÇIKTIYERLEŞİMİ islem=sayfasil ad=<ad> [sayfa=<n>]
+ÇIKTIYERLEŞİMİ islem=sayfacogalt ad=<ad> [sayfa=<n>]
+ÇIKTIYERLEŞİMİ islem=sayfatasi ad=<ad> sayfa=<n> yeni_sira=<m>
 ```
 
 ## Parametreler
 
 | Parametre | Zorunlu | Anlamı |
 |---|---|---|
-| `islem` | evet | `listele`, `ekle`, `sil`, `ad`, `sayfa` |
+| `islem` | evet | `listele`, `ekle`, `sil`, `ad`, `sayfa`, `sayfaekle`, `sayfasil`, `sayfacogalt`, `sayfatasi` |
 | `ad` | `listele` dışında | Yerleşimin adı. Türkçe katlamayla tekildir: `Ada 1284` ile `ada 1284` aynı yerleşimdir |
 | `yeni_ad` | `islem=ad` için | Yerleşimin yeni adı |
 | `kagit` | hayır | `A5`, `A4`, `A3`, `A2`, `A1`, `A0` ya da `ozel` (varsayılan `A4`) |
@@ -56,6 +60,8 @@ silinebilir; amaç ilk anda basılabilir bir şey görmenizdir.
 | `yon` | hayır | `dikey` ya da `yatay` (varsayılan `dikey`) |
 | `kenar` | hayır | Kenar boşluğu, milimetre (varsayılan 10) |
 | `dpi` | hayır | Çıktı çözünürlüğü (varsayılan 300) |
+| `sayfa` | sayfa işlemlerinde | Hangi sayfa; **1'den başlar**. `islem=sayfa`'da verilmezse bütün sayfalar değişir |
+| `yeni_sira` | `sayfatasi` için | Sayfanın gideceği sıra |
 
 `islem=ekle` var olan bir adı **değiştirir**, yenisini eklemez — `YAZDIRMAPROFİLİ`
 ve `YAPAYZEKAMODELİ` ile aynı davranış.
@@ -88,6 +94,39 @@ duran bir başlık A3'te de üstten 20 mm'dedir:
 ```
 ÇIKTIYERLEŞİMİ islem=sayfa ad="Ada 1284" kagit=A2 yon=yatay kenar=15
 ```
+
+### Çok sayfalı yerleşim
+
+Bir yerleşimin sayfaları **aynı boyda olmak zorunda değildir**. A4 dikey bir
+kapak ve A3 yatay bir harita sayfası aynı belgede durur ve PDF'e doğru ölçülerle
+çıkar:
+
+```
+ÇIKTIYERLEŞİMİ islem=ekle ad=Karma kagit=A4 yon=dikey
+ÇIKTIYERLEŞİMİ islem=sayfaekle ad=Karma kagit=A3 yon=yatay
+YAZDIR yerlesim=Karma dosya=karma.pdf
+```
+
+Bir sayfayı **öğeleriyle birlikte** çoğaltmak, sırasını değiştirmek ve silmek:
+
+```
+ÇIKTIYERLEŞİMİ islem=sayfacogalt ad=Karma sayfa=1
+ÇIKTIYERLEŞİMİ islem=sayfatasi ad=Karma sayfa=3 yeni_sira=1
+ÇIKTIYERLEŞİMİ islem=sayfasil ad=Karma sayfa=2
+```
+
+**Silinen sayfa öğelerini de götürür** ve kaç öğe gittiğini söyler: geride kalan
+kutular var olmayan bir sayfayı gösterirdi, ve onları taşıyacak dürüst bir sayfa
+yok — kullanıcı bu sayfanın var olmamasını istedi. **Son sayfa silinemez.**
+
+Tek bir sayfanın kâğıdını ayrı değiştirmek:
+
+```
+ÇIKTIYERLEŞİMİ islem=sayfa ad=Karma sayfa=2 kagit=A4
+```
+
+`sayfa=` verilmezse bütün sayfalar değişir — "kâğıdı değiştir" burada her zaman
+bunu demiştir.
 
 Kuruma özel bir kâğıt:
 
@@ -172,6 +211,9 @@ kurar:
 | `Kenar boşluğu sayfanın içinde kalmalı: 0 ile N mm arası.` | Kenar boşluğu sayfayı yutuyor | Daha küçük bir `kenar=` verin |
 | `Yeni ad gerekir: yeni_ad=<ad>` | `islem=ad` çağrıldı ama yeni ad yok | `yeni_ad=` ekleyin |
 | `'X' yerleşiminde iki öğe aynı adı taşıyor: 'Y'.` | Öğe adları tekil olmalı | Öğelerden birini yeniden adlandırın |
+| `'X' yerleşiminde N sayfa var; M. sayfa yok.` | `sayfa=` aralık dışında | `islem=listele` ile sayfa sayısını görün |
+| `Son sayfa silinemez; bir yerleşimin en az bir sayfası olur.` | Tek kalan sayfa silinmek istendi | Yerleşimin kendisini silin |
+| `Sayfa taşımak için sayfa=<n> ve yeni_sira=<m> gerekir.` | `sayfatasi` eksik çağrıldı | İkisini de verin |
 
 ## İlgili
 

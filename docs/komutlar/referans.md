@@ -738,6 +738,8 @@ Ayrıntılı kullanım: [KATMANGÖRÜNÜM](layer_visibility.md)
 | `yon` | text | isteğe bağlı | Sayfa yönü (varsayılan dikey) |
 | `kenar` | integer | isteğe bağlı | Kenar boşluğu, mm (varsayılan 10) |
 | `dpi` | integer | isteğe bağlı | Çıktı çözünürlüğü (varsayılan 300) |
+| `sayfa` | integer | isteğe bağlı | Hangi sayfa (1'den başlar). sayfa işleminde verilmezse bütün sayfalar değişir |
+| `yeni_sira` | integer | isteğe bağlı | sayfatasi için sayfanın gideceği sıra |
 
 Ayrıntılı kullanım: [ÇIKTIYERLEŞİMİ](layout.md)
 

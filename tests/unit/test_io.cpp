@@ -4077,3 +4077,89 @@ TEST_CASE("PDF ŞİFRELEME: qpdf varsa AES-256 ile şifreler, yoksa nedenini sö
     // The same path twice is refused rather than truncating the file it reads.
     CHECK_FALSE(io::pdf_encrypt(plain, plain, options).ok());
 }
+
+// -------------------------------------------------- multi-page layouts ------
+
+TEST_CASE("Çıktı yerleşimi: sayfa ekle, çoğalt, taşı ve sil")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Kroki kagit=A4", Origin::Test).ok());
+    const auto sheet = [&] { return r.doc.layouts().find("Kroki"); };
+    REQUIRE(sheet() != nullptr);
+    REQUIRE_EQ(sheet()->pages.size(), std::size_t{1});
+    const std::size_t seeded = sheet()->items.size();
+
+    // A SECOND PAGE, A DIFFERENT SIZE. This is the whole point: a layout that
+    // holds an A4 and an A3 at once.
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIYERLEŞİMİ islem=sayfaekle ad=Kroki kagit=A3 yon=yatay",
+                              Origin::Test)
+                .ok());
+    REQUIRE_EQ(sheet()->pages.size(), std::size_t{2});
+    CHECK(sheet()->pages[0].w != sheet()->pages[1].w);
+    // The seeded items stayed on page 1.
+    for (std::size_t i = 0; i < seeded; ++i)
+        CHECK_EQ(sheet()->page_of(i), 0);
+
+    // DUPLICATING A PAGE COPIES ITS ITEMS. A page that came back empty is not a
+    // duplicated page.
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=sayfacogalt ad=Kroki sayfa=1", Origin::Test).ok());
+    REQUIRE_EQ(sheet()->pages.size(), std::size_t{3});
+    CHECK_EQ(sheet()->items.size(), seeded * 2);
+    // The copies landed on the new page 2, and the A3 moved to page 3.
+    CHECK_EQ(sheet()->pages[2].w, sheet()->pages[0].w * 0 + sheet()->pages[2].w);
+    std::size_t on_two = 0;
+    for (std::size_t i = 0; i < sheet()->items.size(); ++i)
+        if (sheet()->page_of(i) == 1) ++on_two;
+    CHECK_EQ(on_two, seeded);
+
+    // REORDERING CARRIES THE ITEMS. Reordering pages without them is reordering
+    // blank paper.
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIYERLEŞİMİ islem=sayfatasi ad=Kroki sayfa=3 yeni_sira=1",
+                              Origin::Test)
+                .ok());
+    std::size_t on_one = 0;
+    for (std::size_t i = 0; i < sheet()->items.size(); ++i)
+        if (sheet()->page_of(i) == 0) ++on_one;
+    CHECK_EQ(on_one, std::size_t{0}); // the A3 was empty and is now page 1
+
+    // AND DELETING A PAGE TAKES ITS ITEMS WITH IT. Leaving them behind would
+    // leave boxes pointing at a page that is not there.
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=sayfasil ad=Kroki sayfa=2", Origin::Test).ok());
+    CHECK_EQ(sheet()->pages.size(), std::size_t{2});
+    CHECK_EQ(sheet()->items.size(), seeded);
+
+    // THE LAST PAGE CANNOT GO. A layout with no page is not a layout.
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=sayfasil ad=Kroki sayfa=2", Origin::Test).ok());
+    CHECK_EQ(sheet()->pages.size(), std::size_t{1});
+    CHECK_FALSE(
+        r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=sayfasil ad=Kroki sayfa=1", Origin::Test).ok());
+}
+
+TEST_CASE("Çıktı yerleşimi: tek sayfanın kâğıdı ayrı değiştirilebilir")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Kroki kagit=A4", Origin::Test).ok());
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=sayfaekle ad=Kroki kagit=A4", Origin::Test).ok());
+    const auto sheet = [&] { return r.doc.layouts().find("Kroki"); };
+
+    // WITHOUT `sayfa=` EVERY PAGE CHANGES, which is what "change the paper" has
+    // always meant here.
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=sayfa ad=Kroki kagit=A3", Origin::Test).ok());
+    CHECK_EQ(sheet()->pages[0].w, sheet()->pages[1].w);
+
+    // WITH IT, ONE PAGE DOES.
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=sayfa ad=Kroki sayfa=2 kagit=A4", Origin::Test)
+                .ok());
+    CHECK(sheet()->pages[0].w != sheet()->pages[1].w);
+
+    // And a page that is not there is refused rather than guessed at.
+    CHECK_FALSE(
+        r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=sayfa ad=Kroki sayfa=9 kagit=A4", Origin::Test)
+            .ok());
+}

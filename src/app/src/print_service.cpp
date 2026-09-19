@@ -300,20 +300,31 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
     // NOT given to Qt: the layout places its items in the full page and draws
     // its own margin guide. A Qt margin here would inset the whole sheet a
     // second time and move every item (`paint_layout_page`).
-    const core::LayoutPage& first = sheet->pages.front();
-    const QPageSize size(QSizeF(first.w / 1000.0, first.h / 1000.0), QPageSize::Millimeter,
-                         QString(), QPageSize::ExactMatch);
-    const QPageLayout page(size, QPageLayout::Portrait, QMarginsF(0, 0, 0, 0),
+    const auto device_layout = [](const core::LayoutPage& one) {
+        const QPageSize size(QSizeF(one.w / 1000.0, one.h / 1000.0), QPageSize::Millimeter,
+                             QString(), QPageSize::ExactMatch);
+        return QPageLayout(size, QPageLayout::Portrait, QMarginsF(0, 0, 0, 0),
                            QPageLayout::Millimeter);
+    };
+    const QPageLayout page = device_layout(sheet->pages.front());
 
     const auto draw = [&](QPaintDevice& device, int resolution) {
         QPainter painter(&device);
         for (std::size_t i = 0; i < sheet->pages.size(); ++i) {
             if (i > 0) {
-                if (auto* writer = dynamic_cast<QPdfWriter*>(&device); writer != nullptr)
+                // THE SIZE IS SET BEFORE THE PAGE IS STARTED, and per page.
+                // Setting it once from `pages.front()` wrote every page of a
+                // mixed A4/A3 layout at A4: the second page's content was drawn
+                // at A3 dimensions into an A4 MediaBox and ran off the paper.
+                // Qt applies a page layout to the NEXT page, so the order here is
+                // load-bearing.
+                if (auto* writer = dynamic_cast<QPdfWriter*>(&device); writer != nullptr) {
+                    writer->setPageLayout(device_layout(sheet->pages[i]));
                     writer->newPage();
-                else if (auto* printer = dynamic_cast<QPrinter*>(&device); printer != nullptr)
+                } else if (auto* printer = dynamic_cast<QPrinter*>(&device); printer != nullptr) {
+                    printer->setPageLayout(device_layout(sheet->pages[i]));
                     printer->newPage();
+                }
             }
             const core::LayoutPage& one = sheet->pages[i];
             const double w_px           = one.w / 1000.0 / kMmPerInch * resolution;
@@ -344,10 +355,20 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
             return core::err(core::ErrorCode::IoFailure, "PDF yazılamadı: " + path.toStdString());
 
         const core::LayoutItem* map = sheet->first_map();
-        std::string said = "Çıktı yerleşimi yazıldı: " + path.toStdString() + " — " + sheet->name +
-                           ", " + std::to_string(first.w / 1000) + "×" +
-                           std::to_string(first.h / 1000) + " mm, " +
-                           std::to_string(sheet->pages.size()) + " sayfa";
+        // THE FIRST PAGE'S SIZE, AND "karma" WHEN THEY DIFFER. Printing one size
+        // for a layout that holds two would be a report of something that did not
+        // happen.
+        const core::LayoutPage& first = sheet->pages.front();
+        const bool mixed =
+            std::any_of(sheet->pages.begin(), sheet->pages.end(), [&](const core::LayoutPage& one) {
+                return one.w != first.w || one.h != first.h;
+            });
+        std::string said =
+            "Çıktı yerleşimi yazıldı: " + path.toStdString() + " — " + sheet->name + ", " +
+            (mixed
+                 ? std::string("karma sayfa boyu")
+                 : std::to_string(first.w / 1000) + "×" + std::to_string(first.h / 1000) + " mm") +
+            ", " + std::to_string(sheet->pages.size()) + " sayfa";
         if (map != nullptr && core::map_scale(*map) > 0)
             said += ", ölçek 1:" + std::to_string(core::map_scale(*map));
         return said;

@@ -214,11 +214,30 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   referans harita ve öğe bağlantıları ekle. Değer tabanlı, Qt'siz core ve sabit nokta
   modeli korunsun. Eski `item_pages` için migration tanımlansın. **Kabul:** ekle/sil/
   yeniden sırala, kaydet/aç ve undo/redo sonrası bütün bağlantılar aynı hedefi bulur.
-- [ ] **L-02 / P0 — Gerçek çok sayfalı düzenleme.** Sayfa ekle/sil/çoğalt/sırala;
-  sayfa başına boyut, yön ve kenar; sayfa seçici ve bütün sayfaları görme; öğeyi
-  sayfalar arasında taşıma. Koordinat dönüşümleri aktif sayfayı kullansın; PDF/yazıcı
-  cihazı her sayfada doğru boyuta geçsin. **Kabul:** A4 dikey + A3 yatay aynı belgede
-  düzenlenir ve doğru MediaBox/boyutlarla çıkar; ikinci sayfada sürükleme kaymaz.
+- [~] **L-02 / P0 — Gerçek çok sayfalı düzenleme.** *(model ve çıktı 19 Eylül 2026)*
+  **Yapıldı:** dört yeni fiil — `sayfaekle`, `sayfasil`, `sayfacogalt`, `sayfatasi` —
+  ve `islem=sayfa` artık `sayfa=<n>` alıyor, yani bir yerleşim bir A4 ile bir A3'ü
+  aynı anda tutabiliyor. Sayfa indeksleri **1'den** başlıyor, çünkü sayfanın üstünde
+  yazan ve insanın söylediği o.
+  Her fiil `item_pages`'i onarıyor: ekleme sonrasındakileri bir yukarı kaydırıyor,
+  **silme öğeleri de götürüyor** (geride kalan kutu var olmayan bir sayfayı gösterirdi
+  ve onları taşıyacak dürüst bir sayfa yok) ve kaç öğe gittiğini söylüyor, **çoğaltma
+  öğeleri taze adlarla kopyalıyor** (boş dönen bir sayfa çoğaltılmış sayfa değildir),
+  **taşıma öğeleri sayfasıyla birlikte götürüyor** (öğesiz sıralama boş kâğıt
+  sıralamaktır). Son sayfa silinemiyor.
+  **Ve asıl kusur kapandı:** `print_service` cihaz sayfa boyutunu bir kez
+  `pages.front()`'tan alıyordu, bir daha atamıyordu — karma A4/A3 bir yerleşimin
+  her sayfası A4 yazılıyor ve ikinci sayfanın içeriği A4 kutusuna A3 ölçüsünde
+  çizilip kâğıttan taşıyordu. Boyut artık **her sayfadan önce** atanıyor.
+  Çıktı mesajı da karma sayfayı "karma sayfa boyu" diye söylüyor, olmayan bir
+  ölçüyü rapor etmiyor.
+  **Kabul kanıtlandı — dosyadan okunarak:** `print-pdf` probe'u karma bir yerleşim
+  basıyor ve PDF'te iki MediaBox buluyor: `595x842` (A4 dikey) ve `1191x842`
+  (A3 yatay). Artı iki birim testi sayfa fiillerinin tamamını sürüyor.
+  **Kalan:** tasarımcının aktif sayfa seçicisi ve bütün sayfaları görme; öğeyi
+  sayfalar arasında taşıma (`ÇIKTIÖĞE islem=tasi sayfa=`); tasarımcıdaki üç
+  `pages.front()` yerine aktif sayfa — yani "ikinci sayfada sürükleme kaymaz"
+  yarısı henüz sınanmadı.
 - [ ] **L-03 / P1 — Profesyonel öğe düzenleme.** Çoklu seçim, grup/çöz, kopyala/
   yapıştır/çoğalt, hizala/dağıt, eş boyutlandır, referans noktası, döndürme, z sırası,
   görünürlük, baskıdan hariç tutma, kilit, cetvel, kılavuz ve ayarlanabilir snap ekle.

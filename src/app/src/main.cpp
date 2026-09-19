@@ -1128,6 +1128,60 @@ int main(int argc, char** argv)
             }();
             check(sealed_bytes.contains("/Encrypt"), "şifreli PDF şifrelenmedi");
 
+            // ---- A LAYOUT WHOSE PAGES ARE NOT THE SAME SIZE ----------------
+            //
+            // The device page size used to be taken once from `pages.front()`
+            // and never set again, so every page of a mixed A4/A3 layout was
+            // written at A4: the second page's content was drawn at A3
+            // dimensions into an A4 MediaBox and ran off the paper. Only the
+            // file can refute that, so the file is what is read.
+            const QString mixed = dir + QStringLiteral("/karma.pdf");
+            QFile::remove(mixed);
+            window.runScriptLine(
+                QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=Karma kagit=A4 yon=dikey"));
+            window.runScriptLine(
+                QStringLiteral("ÇIKTIYERLEŞİMİ islem=sayfaekle ad=Karma kagit=A3 yon=yatay"));
+            window.runScriptLine(QStringLiteral("YAZDIR yerlesim=Karma dosya=\"%1\"").arg(mixed));
+            QCoreApplication::processEvents();
+
+            const auto every_media_box = [](const QString& path) {
+                QList<QSizeF> out;
+                QFile file(path);
+                if (!file.open(QIODevice::ReadOnly)) return out;
+                const QByteArray bytes = file.readAll();
+                qsizetype at           = 0;
+                while ((at = bytes.indexOf("/MediaBox", at)) >= 0) {
+                    const qsizetype open  = bytes.indexOf('[', at);
+                    const qsizetype close = bytes.indexOf(']', open);
+                    at                    = open < 0 ? bytes.size() : open + 1;
+                    if (open < 0 || close < 0) break;
+                    const QList<QByteArray> parts =
+                        bytes.mid(open + 1, close - open - 1).simplified().split(' ');
+                    if (parts.size() >= 4)
+                        out.append(QSizeF(parts[2].toDouble(), parts[3].toDouble()));
+                }
+                return out;
+            };
+
+            check(QFileInfo::exists(mixed), "karma sayfalı PDF yazılmadı");
+            const QList<QSizeF> boxes = every_media_box(mixed);
+            check(boxes.size() == 2, "karma PDF iki sayfa yazmadı");
+            if (boxes.size() == 2) {
+                // A4 portrait is 595×842 pt, A3 landscape 1191×842.
+                check(std::abs(boxes[0].width() - 595.0) < 2.0, "1. sayfa A4 dikey değil");
+                check(std::abs(boxes[1].width() - 1191.0) < 2.0, "2. sayfa A3 yatay değil");
+            }
+            (void)std::fprintf(stdout, "[yazdirma] karma sayfa kutuları: %s\n",
+                               [&boxes] {
+                                   QStringList said;
+                                   for (const QSizeF& one : boxes)
+                                       said << QStringLiteral("%1x%2")
+                                                   .arg(one.width(), 0, 'f', 0)
+                                                   .arg(one.height(), 0, 'f', 0);
+                                   return said.join(QStringLiteral(", ")).toUtf8();
+                               }()
+                                   .constData());
+
             // ---- THE FRAME, DRIVEN BY THE MOUSE ----------------------------
             //
             // A REGRESSION TEST FOR A REPORTED BUG: the frame pans with the LEFT

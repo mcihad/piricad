@@ -6,6 +6,28 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — çok sayfalı çıktı yerleşimi (TODOS L-02)
+
+- **Dört yeni fiil**: `ÇIKTIYERLEŞİMİ islem=sayfaekle | sayfasil | sayfacogalt |
+  sayfatasi`, ve `islem=sayfa` artık `sayfa=<n>` alıyor. Bir yerleşim bir A4 dikey
+  kapakla bir A3 yatay harita sayfasını aynı belgede tutabiliyor. Sayfa numaraları
+  **1'den** başlıyor: sayfanın üstünde yazan ve insanın söylediği o.
+- Her fiil `item_pages`'i onarıyor. **Silinen sayfa öğelerini de götürüyor** ve kaç
+  öğe gittiğini söylüyor; **çoğaltma öğeleri taze adlarla kopyalıyor**; **taşıma
+  öğeleri sayfasıyla birlikte götürüyor**. Son sayfa silinemiyor.
+
+### Düzeltildi — karma sayfalı PDF her sayfayı ilk sayfanın boyunda yazıyordu
+
+- `print_service` cihaz sayfa boyutunu bir kez `pages.front()`'tan alıyor ve bir
+  daha atamıyordu. Karma bir A4/A3 yerleşimin **her sayfası A4 yazılıyordu**:
+  ikinci sayfanın içeriği A4 kutusuna A3 ölçüsünde çizilip kâğıttan taşıyordu.
+  Boyut artık her `newPage()`'ten önce, o sayfanın kendi ölçüsünden atanıyor.
+- Çıktı mesajı karma sayfalı bir yerleşim için "karma sayfa boyu" diyor; olmayan
+  tek bir ölçüyü rapor etmiyor.
+- `print-pdf` probe'u bunu **dosyadan okuyarak** doğruluyor: PDF'te iki MediaBox
+  var, `595x842` ve `1191x842`.
+
+
 ### Eklendi — etki sözleşmesi (TODOS C-02)
 
 - **`command::Effect`**: yedi bit — `sorgu`, `gorunum`, `belge_duzenleme`,
