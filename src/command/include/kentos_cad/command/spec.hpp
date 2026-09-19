@@ -107,6 +107,20 @@ struct Param
     /// this all along and `to_command_spec` dropped it on the floor.
     std::vector<std::string> choices;
 
+    /// WHAT THE NUMBER IS MEASURED IN, in Turkish, for the reader and the schema.
+    ///
+    /// A layout's `x` and a map's `pencere` are both numbers and they are not the
+    /// same kind of number: one is a position on PAPER, which a model may work
+    /// out from a page size, and the other is a coordinate on the GROUND, which
+    /// it may not invent at all (CLAUDE.md 5.8). `ParamKind` already keeps them
+    /// apart structurally — a `Point` accepts only a handle — but a schema that
+    /// says "integer 0..10000" and nothing else leaves an agent guessing what it
+    /// is being asked for, and an agent that guesses puts a ground coordinate in
+    /// a paper field.
+    ///
+    /// Empty when the number has no unit, which is most of them.
+    std::string unit;
+
     /// THE NAME THIS PARAMETER USED TO CARRY, read but never written.
     ///
     /// A command id is stable because a journal resolves it by name six months
@@ -137,6 +151,14 @@ struct Param
     /// An `Integer` parameter with a closed range the bus enforces.
     static Param integer_range(std::string name, Arity a, std::int64_t low, std::int64_t high,
                                std::string help = {});
+
+    /// Names the unit the number is in. Chained onto a factory:
+    /// `Param::integer_range("x", ...).measured_in("kâğıt mm")`.
+    Param&& measured_in(std::string what) &&
+    {
+        unit = std::move(what);
+        return std::move(*this);
+    }
 
     /// Names what this parameter was called before it was renamed. Chained onto a
     /// factory: `Param::text("yerlesim", ...).renamed_from("pafta")`.

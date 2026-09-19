@@ -929,13 +929,16 @@ KENTOS_COMMAND(layout)
                 Param::text("kagit", Arity::optional(),
                             "A5, A4, A3, A2, A1, A0 ya da ozel (varsayılan A4)"),
                 Param::integer_range("genislik", Arity::optional(), 1, 10000,
-                                     "ozel kâğıt için sayfa genişliği, mm"),
+                                     "ozel kâğıt için sayfa genişliği")
+                    .measured_in("kâğıt mm"),
                 Param::integer_range("yukseklik", Arity::optional(), 1, 10000,
-                                     "ozel kâğıt için sayfa yüksekliği, mm"),
+                                     "ozel kâğıt için sayfa yüksekliği")
+                    .measured_in("kâğıt mm"),
                 Param::choice("yon", Arity::optional(), {"dikey", "yatay"},
                               "Sayfa yönü (varsayılan dikey)"),
                 Param::integer_range("kenar", Arity::optional(), 0, 200,
-                                     "Kenar boşluğu, mm (varsayılan 10)"),
+                                     "Kenar boşluğu (varsayılan 10)")
+                    .measured_in("kâğıt mm"),
                 Param::integer_range("dpi", Arity::optional(), 72, 4800,
                                      "Çıktı çözünürlüğü (varsayılan 300)"),
                 Param::integer_range("sayfa", Arity::optional(), 1, 10000,
@@ -945,7 +948,7 @@ KENTOS_COMMAND(layout)
                                      "sayfatasi için sayfanın gideceği sıra"),
             },
         .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary = "Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve "
                    "kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir.",
         .run = &run_layout,
@@ -988,22 +991,26 @@ KENTOS_COMMAND(layout_item)
                     "tur", Arity::optional(),
                     {"harita", "metin", "olcek", "kuzey", "lejant", "resim", "sekil", "tablo"},
                     "islem=ekle için öğe türü"),
-                Param::integer_range("x", Arity::optional(), -10000, 10000,
-                                     "Sol kenardan uzaklık, mm"),
-                Param::integer_range("y", Arity::optional(), -10000, 10000,
-                                     "ÜST kenardan uzaklık, mm"),
-                Param::integer_range("genislik", Arity::optional(), 0, 10000, "Genişlik, mm"),
-                Param::integer_range("yukseklik", Arity::optional(), 0, 10000, "Yükseklik, mm"),
+                Param::integer_range("x", Arity::optional(), -10000, 10000, "Sol kenardan uzaklık")
+                    .measured_in("kâğıt mm"),
+                Param::integer_range("y", Arity::optional(), -10000, 10000, "ÜST kenardan uzaklık")
+                    .measured_in("kâğıt mm"),
+                Param::integer_range("genislik", Arity::optional(), 0, 10000, "Genişlik")
+                    .measured_in("kâğıt mm"),
+                Param::integer_range("yukseklik", Arity::optional(), 0, 10000, "Yükseklik")
+                    .measured_in("kâğıt mm"),
                 Param::text("metin", Arity::optional(),
                             "Metin öğesinin yazısı; <yerlesim>, <olcek>, <tarih>, <crs> yer "
                             "tutucuları çizim anında çözülür"),
-                Param::integer_range("yazi", Arity::optional(), 1, 200, "Yazı yüksekliği, mm"),
+                Param::integer_range("yazi", Arity::optional(), 1, 200, "Yazı yüksekliği")
+                    .measured_in("kâğıt mm"),
                 Param::integer_range("olcek", Arity::optional(), 0, 100000000,
                                      "Harita öğesinin ölçeği 1:N; 0 kapsama uyar"),
                 Param::points("pencere", Arity{0, 2},
                               "Harita çerçevesinin bakacağı alanın iki köşesi, anahtar iki "
                               "kez yazılarak: pencere=x1,y1 pencere=x2,y2. Tuvalden çerçeve "
-                              "seçmek bu satırı yazar"),
+                              "seçmek bu satırı yazar")
+                    .measured_in("ZEMİN koordinatı — kâğıt değil"),
                 Param::choice("izgara", Arity::optional(), {"yok", "arti", "cizgi", "centik"},
                               "Harita öğesinin koordinat ızgarası"),
                 Param::integer_range("izgara_aralik", Arity::optional(), 0, 1000000000,
@@ -1020,7 +1027,7 @@ KENTOS_COMMAND(layout_item)
                                      "Çizim sırası; büyük olan üstte"),
             },
         .undo  = UndoPolicy::SingleTransaction,
-        .flags = Flags::Interactive | Flags::Scriptable,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary =
             "Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek "
             "çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar "
@@ -1060,7 +1067,7 @@ KENTOS_COMMAND(layout_template)
         // NOT `AiAccessible`, for the reason `ÇIKTIYERLEŞİMİ` gives: a sheet carries a
         // ground extent and the handle machinery has no answer yet for a command
         // that takes both paper and ground (CLAUDE.md 5.8).
-        .flags = Flags::Interactive | Flags::Scriptable,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
         .summary =
             "Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, "
             "kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni "

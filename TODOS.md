@@ -411,12 +411,36 @@ motor kabiliyeti eklenir; GUI, AI ve MCP aynı sürümde bu kabiliyeti kullanır
   ve etkili politikayı sorgulanabilir sun. Büyük veriyi sayfalı/sınırlandırılmış
   sorgula; bütün geometriyi prompt'a dökme. **Kabul:** “bunu A3'e yerleştir” ifadesi
   tek geçerli seçim ve layout bağlamında tekrar nesne seçtirmeden çözülür.
-- [ ] **A-02 / P0 — Eksik komutları erişime aç.** C-01 envanterindeki dosya,
+- [~] **A-02 / P0 — Eksik komutları erişime aç.** *(yerleşim ve yazdırma 19 Eylül 2026)*
+  **Açıldı:** `core.layout`, `core.layout_item`, `core.layout_template` ve
+  `core.print`. Kâğıt/zemin ayrımı A-03 ile şemada yazılı hâle gelince, bunları
+  kapalı tutan gerekçe ortadan kalktı — TODOS E-01'in "seçili parselleri A3 yatay
+  yerleştir ve PDF çıkar" senaryosunun komut tarafı artık ajanın elinde.
+  **Kapsam %74'ten %78'e çıktı** (93 komutun 73'ü). Kalan 20'nin 16'sı plana
+  bağlı, 4'ü bilerek kalıcı; `tests/support/ai-kapsam.json` her birinin gerekçesini
+  taşıyor ve kapı gerekçesiz olanı kırıyor.
+  **Kalan:** dosya ailesi (`open/save/saveas/import/export`), `undo/redo`,
+  ayarlar ailesi, `core.column`, `core.database` — hepsi C-02 etkileri ve S-01
+  politikası Gate'e bağlandıktan sonra açılacak, çünkü açmanın anlamı onay yolunun
+  onları doğru sınıflandırması.
+  Eski madde metni: C-01 envanterindeki dosya,
   layout, print, seçim, ayarlar, undo ve diğer aileleri C-02 etkileriyle aç. Eksik
   parametrede GUI tıklaması bekleyen coroutine'ler otomasyon yolunda tipli eksik
   girdi hatası versin. **Kabul:** parametreleri tam bir işlem pencere/modal açmadan
   hem sohbet hem MCP'den biter; yardım ve şemalar Registry'den üretilir.
-- [ ] **A-03 / P0 — Kâğıt ve arazi koordinatını ayır.** Şemada `paper_length`,
+- [~] **A-03 / P0 — Kâğıt ve arazi koordinatını ayır.** *(birim 19 Eylül 2026)*
+  **Yapıldı:** `Param::unit` — sayının neyle ölçüldüğü, Türkçe, hem okuyucuya hem
+  şemaya. Yapısal yarı zaten vardı ve kaldı: bir `Point` parametresi **yalnız
+  tutamak** kabul ediyor (`mcp.cpp`), bir `Integer` ise çağıranın yazabileceği bir
+  sayı. Eksik olan şey şemanın hangisinin hangisi olduğunu **söylememesiydi** —
+  "integer 0..10000" diyen bir şema, ajanı tahmine bırakıyordu.
+  Yerleşim komutlarının `x`, `y`, `genislik`, `yukseklik`, `yazi`, `kenar` alanları
+  artık `[kâğıt mm]`, `pencere` ise `[ZEMİN koordinatı — kâğıt değil]` diyor.
+  Birim, açıklamanın **başına** konuyor çünkü ajanın yanlış yaptığı şey o.
+  **Kalan:** `extent_ref`/`entity_ref` gibi anlamsal türler; kullanıcının verdiği
+  koordinat/CSV'nin CRS ve birim doğrulamasından geçip provenance taşıyan bir
+  tutamağa dönüşmesi (ölçüm listesi yolu).
+  Eski madde metni: Şemada `paper_length`,
   `ground_point`, `extent_ref`, `entity_ref` gibi anlamsal türler ve birimler tanımla.
   Kâğıtta 20 mm konum model tarafından üretilebilir; arazi geometrisi araç sonucuna
   veya açık kullanıcı verisine dayanmalı. Kullanıcının verdiği koordinat/CSV,

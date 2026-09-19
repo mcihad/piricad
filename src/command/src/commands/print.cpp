@@ -378,7 +378,7 @@ KENTOS_COMMAND(print)
         // Writes a file or drives a printer and touches no entity: nothing to
         // undo, nothing to journal as a document mutation.
         .undo  = UndoPolicy::None,
-        .flags = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::ReadOnly | Flags::AiAccessible,
         .summary = "Çizimin bir penceresini bir yazdırma profilinin kâğıdına yerleştirip PDF "
                    "dosyasına yazar ya da yazıcıya gönderir.",
         .run = &run_print,

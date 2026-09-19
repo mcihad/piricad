@@ -60,9 +60,9 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.label`](label.md) | `ETİKET`, `ETIKET`, `LABEL`, `ETK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmandaki nesneleri özniteliklerinden okuyarak etiketler. |
 | [`core.layer`](layer.md) | `KATMAN`, `LAYER`, `KAT` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
 | [`core.layer_visibility`](layer_visibility.md) | `KATMANGÖRÜNÜM`, `KATMANGORUNUM`, `LAYERVIEW`, `KGÖ`, `KGO` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir. |
-| [`core.layout`](layout.md) | `ÇIKTIYERLEŞİMİ`, `CIKTIYERLESIMI`, `LAYOUT`, `ÇYR`, `CYR` | Dosya | tek işlem | etkileşimli, betiklenebilir | Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir. |
-| [`core.layout_item`](layout_item.md) | `ÇIKTIÖĞE`, `CIKTIOGE`, `LAYOUTITEM`, `ÇÖĞ`, `COG` | Dosya | tek işlem | etkileşimli, betiklenebilir | Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler. |
-| [`core.layout_template`](layout_template.md) | `ÇIKTIŞABLON`, `CIKTISABLON`, `LAYOUTTEMPLATE`, `ÇŞB`, `CSB` | Dosya | tek işlem | etkileşimli, betiklenebilir | Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz. |
+| [`core.layout`](layout.md) | `ÇIKTIYERLEŞİMİ`, `CIKTIYERLESIMI`, `LAYOUT`, `ÇYR`, `CYR` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir. |
+| [`core.layout_item`](layout_item.md) | `ÇIKTIÖĞE`, `CIKTIOGE`, `LAYOUTITEM`, `ÇÖĞ`, `COG` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler. |
+| [`core.layout_template`](layout_template.md) | `ÇIKTIŞABLON`, `CIKTISABLON`, `LAYOUTTEMPLATE`, `ÇŞB`, `CSB` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz. |
 | [`core.style`](style.md) | `STİL`, `STIL`, `STYLE`, `ST` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar. |
 | [`core.symbol`](symbol.md) | `SEMBOL`, `SEMBOLLER`, `SYMBOL`, `SMB` | Katman | geri alınmaz | betiklenebilir, AI erişimli | Gösterim rafını yükler, ağacında gezer ve içinde arar. |
 | [`core.zoom`](zoom.md) | `YAKINLAŞ`, `YAKINLAS`, `ZOOM`, `Z` | Görünüm | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü çizim kapsamına veya verilen çarpana ayarlar. |
@@ -75,7 +75,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.export`](export.md) | `DIŞAAKTAR`, `DISAAKTAR`, `EXPORT`, `DAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi dış bir veri biçimine yazar. |
 | [`core.script`](script.md) | `BETİK`, `BETIK`, `SCRIPT` | Betik | komuta özel | etkileşimli, betiklenebilir, salt okunur | Bir betik dosyasını komut veri yolu üzerinden çalıştırır. |
 | [`core.database`](database.md) | `VERİTABANI`, `VERITABANI`, `DATABASE`, `VT` | Dosya | geri alınmaz | etkileşimli, betiklenebilir | PostGIS veritabanına bağlanır; katmanları tablo, projeleri kayıt olarak yazar. |
-| [`core.print`](print.md) | `YAZDIR`, `PRINT`, `PLOT`, `YZDR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimin bir penceresini bir yazdırma profilinin kâğıdına yerleştirip PDF dosyasına yazar ya da yazıcıya gönderir. |
+| [`core.print`](print.md) | `YAZDIR`, `PRINT`, `PLOT`, `YZDR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Çizimin bir penceresini bir yazdırma profilinin kâğıdına yerleştirip PDF dosyasına yazar ya da yazıcıya gönderir. |
 | [`core.print_profile`](print_profile.md) | `YAZDIRMAPROFİLİ`, `YAZDIRMAPROFILI`, `PRINTPROFILE`, `YZP` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Yazdırma profillerini listeler, ekler, siler ya da birini varsayılan yapar; profil kâğıdı, yönü, çözünürlüğü ve kenar boşluğunu taşır. |
 | [`core.setting`](setting.md) | `AYAR`, `SETTING`, `AY` | Sistem | tek işlem | betiklenebilir | Proje ayarlarını listeler, okur ve değiştirir. |
 | [`core.preference`](preference.md) | `TERCİH`, `TERCIH`, `PREFERENCE`, `PREF` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Uygulama tercihlerini listeler, okur ve değiştirir. |
@@ -733,10 +733,10 @@ Ayrıntılı kullanım: [KATMANGÖRÜNÜM](layer_visibility.md)
 | `ad` | text | isteğe bağlı | Yerleşimin adı; listele dışında gerekir |
 | `yeni_ad` | text | isteğe bağlı | islem=ad için yeni yerleşim adı |
 | `kagit` | text | isteğe bağlı | A5, A4, A3, A2, A1, A0 ya da ozel (varsayılan A4) |
-| `genislik` | integer | isteğe bağlı | ozel kâğıt için sayfa genişliği, mm |
-| `yukseklik` | integer | isteğe bağlı | ozel kâğıt için sayfa yüksekliği, mm |
+| `genislik` | integer | isteğe bağlı | ozel kâğıt için sayfa genişliği |
+| `yukseklik` | integer | isteğe bağlı | ozel kâğıt için sayfa yüksekliği |
 | `yon` | text | isteğe bağlı | Sayfa yönü (varsayılan dikey) |
-| `kenar` | integer | isteğe bağlı | Kenar boşluğu, mm (varsayılan 10) |
+| `kenar` | integer | isteğe bağlı | Kenar boşluğu (varsayılan 10) |
 | `dpi` | integer | isteğe bağlı | Çıktı çözünürlüğü (varsayılan 300) |
 | `sayfa` | integer | isteğe bağlı | Hangi sayfa (1'den başlar). sayfa işleminde verilmezse bütün sayfalar değişir |
 | `yeni_sira` | integer | isteğe bağlı | sayfatasi için sayfanın gideceği sıra |
@@ -753,12 +753,12 @@ Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, b
 | `yerlesim` | text | isteğe bağlı | Hangi çıktı yerleşimi; çizimde tek yerleşim varsa gerekmez |
 | `ad` | text | isteğe bağlı | Öğe adı; ekle dışında gerekir, ekle'de verilmezse türetilir |
 | `tur` | text | isteğe bağlı | islem=ekle için öğe türü |
-| `x` | integer | isteğe bağlı | Sol kenardan uzaklık, mm |
-| `y` | integer | isteğe bağlı | ÜST kenardan uzaklık, mm |
-| `genislik` | integer | isteğe bağlı | Genişlik, mm |
-| `yukseklik` | integer | isteğe bağlı | Yükseklik, mm |
+| `x` | integer | isteğe bağlı | Sol kenardan uzaklık |
+| `y` | integer | isteğe bağlı | ÜST kenardan uzaklık |
+| `genislik` | integer | isteğe bağlı | Genişlik |
+| `yukseklik` | integer | isteğe bağlı | Yükseklik |
 | `metin` | text | isteğe bağlı | Metin öğesinin yazısı; <yerlesim>, <olcek>, <tarih>, <crs> yer tutucuları çizim anında çözülür |
-| `yazi` | integer | isteğe bağlı | Yazı yüksekliği, mm |
+| `yazi` | integer | isteğe bağlı | Yazı yüksekliği |
 | `olcek` | integer | isteğe bağlı | Harita öğesinin ölçeği 1:N; 0 kapsama uyar |
 | `pencere` | point_list | 0–2 | Harita çerçevesinin bakacağı alanın iki köşesi, anahtar iki kez yazılarak: pencere=x1,y1 pencere=x2,y2. Tuvalden çerçeve seçmek bu satırı yazar |
 | `izgara` | text | isteğe bağlı | Harita öğesinin koordinat ızgarası |
@@ -2542,6 +2542,314 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
     }
   },
   {
+    "name": "core_layout",
+    "title": "ÇIKTIYERLEŞİMİ",
+    "description": "Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir.\nKomut: ÇIKTIYERLEŞİMİ (CIKTIYERLESIMI, LAYOUT, ÇYR, CYR)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "islem": {
+          "type": "string",
+          "enum": [
+            "listele",
+            "ekle",
+            "sil",
+            "ad",
+            "sayfa",
+            "sayfaekle",
+            "sayfasil",
+            "sayfacogalt",
+            "sayfatasi"
+          ],
+          "description": "Ne yapılacağı (metin)"
+        },
+        "ad": {
+          "type": "string",
+          "description": "Yerleşimin adı; listele dışında gerekir (metin)"
+        },
+        "yeni_ad": {
+          "type": "string",
+          "description": "islem=ad için yeni yerleşim adı (metin)"
+        },
+        "kagit": {
+          "type": "string",
+          "description": "A5, A4, A3, A2, A1, A0 ya da ozel (varsayılan A4) (metin)"
+        },
+        "genislik": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "description": "ozel kâğıt için sayfa genişliği [kâğıt mm] (tam sayı)"
+        },
+        "yukseklik": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "description": "ozel kâğıt için sayfa yüksekliği [kâğıt mm] (tam sayı)"
+        },
+        "yon": {
+          "type": "string",
+          "enum": [
+            "dikey",
+            "yatay"
+          ],
+          "description": "Sayfa yönü (varsayılan dikey) (metin)"
+        },
+        "kenar": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200,
+          "description": "Kenar boşluğu (varsayılan 10) [kâğıt mm] (tam sayı)"
+        },
+        "dpi": {
+          "type": "integer",
+          "minimum": 72,
+          "maximum": 4800,
+          "description": "Çıktı çözünürlüğü (varsayılan 300) (tam sayı)"
+        },
+        "sayfa": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "description": "Hangi sayfa (1'den başlar). sayfa işleminde verilmezse bütün sayfalar değişir (tam sayı)"
+        },
+        "yeni_sira": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "description": "sayfatasi için sayfanın gideceği sıra (tam sayı)"
+        }
+      },
+      "required": [
+        "islem"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.layout",
+      "cad.kentos/category": "Dosya",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "ÇIKTIYERLEŞİMİ",
+        "CIKTIYERLESIMI",
+        "LAYOUT",
+        "ÇYR",
+        "CYR"
+      ]
+    }
+  },
+  {
+    "name": "core_layout_item",
+    "title": "ÇIKTIÖĞE",
+    "description": "Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler.\nKomut: ÇIKTIÖĞE (CIKTIOGE, LAYOUTITEM, ÇÖĞ, COG)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "islem": {
+          "type": "string",
+          "enum": [
+            "listele",
+            "ekle",
+            "sil",
+            "tasi",
+            "ayarla",
+            "ad"
+          ],
+          "description": "Ne yapılacağı (metin)"
+        },
+        "yerlesim": {
+          "type": "string",
+          "description": "Hangi çıktı yerleşimi; çizimde tek yerleşim varsa gerekmez (metin)"
+        },
+        "ad": {
+          "type": "string",
+          "description": "Öğe adı; ekle dışında gerekir, ekle'de verilmezse türetilir (metin)"
+        },
+        "tur": {
+          "type": "string",
+          "enum": [
+            "harita",
+            "metin",
+            "olcek",
+            "kuzey",
+            "lejant",
+            "resim",
+            "sekil",
+            "tablo"
+          ],
+          "description": "islem=ekle için öğe türü (metin)"
+        },
+        "x": {
+          "type": "integer",
+          "minimum": -10000,
+          "maximum": 10000,
+          "description": "Sol kenardan uzaklık [kâğıt mm] (tam sayı)"
+        },
+        "y": {
+          "type": "integer",
+          "minimum": -10000,
+          "maximum": 10000,
+          "description": "ÜST kenardan uzaklık [kâğıt mm] (tam sayı)"
+        },
+        "genislik": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Genişlik [kâğıt mm] (tam sayı)"
+        },
+        "yukseklik": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Yükseklik [kâğıt mm] (tam sayı)"
+        },
+        "metin": {
+          "type": "string",
+          "description": "Metin öğesinin yazısı; <yerlesim>, <olcek>, <tarih>, <crs> yer tutucuları çizim anında çözülür (metin)"
+        },
+        "yazi": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200,
+          "description": "Yazı yüksekliği [kâğıt mm] (tam sayı)"
+        },
+        "olcek": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000,
+          "description": "Harita öğesinin ölçeği 1:N; 0 kapsama uyar (tam sayı)"
+        },
+        "pencere": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Harita çerçevesinin bakacağı alanın iki köşesi, anahtar iki kez yazılarak: pencere=x1,y1 pencere=x2,y2. Tuvalden çerçeve seçmek bu satırı yazar [ZEMİN koordinatı — kâğıt değil] — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "izgara": {
+          "type": "string",
+          "enum": [
+            "yok",
+            "arti",
+            "cizgi",
+            "centik"
+          ],
+          "description": "Harita öğesinin koordinat ızgarası (metin)"
+        },
+        "izgara_aralik": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000000,
+          "description": "Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir (tam sayı)"
+        },
+        "kilit": {
+          "type": "boolean",
+          "description": "Öğeyi taşımaya kapatır (evet/hayır)"
+        },
+        "cerceve": {
+          "type": "boolean",
+          "description": "Öğenin çevresine çerçeve çizer (evet/hayır)"
+        },
+        "sayfa": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "description": "Öğenin duracağı sayfa (1'den başlar); tasi ile verilir (tam sayı)"
+        },
+        "yeni_ad": {
+          "type": "string",
+          "description": "islem=ad için öğenin yeni adı (metin)"
+        },
+        "harita": {
+          "type": "string",
+          "description": "Bu öğenin bağlı olduğu harita çerçevesinin adı. Verilmezse ilk harita. 'ilk' bağı kaldırır (metin)"
+        },
+        "sira": {
+          "type": "integer",
+          "minimum": -1000,
+          "maximum": 1000,
+          "description": "Çizim sırası; büyük olan üstte (tam sayı)"
+        }
+      },
+      "required": [
+        "islem"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.layout_item",
+      "cad.kentos/category": "Dosya",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "ÇIKTIÖĞE",
+        "CIKTIOGE",
+        "LAYOUTITEM",
+        "ÇÖĞ",
+        "COG"
+      ]
+    }
+  },
+  {
+    "name": "core_layout_template",
+    "title": "ÇIKTIŞABLON",
+    "description": "Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz.\nKomut: ÇIKTIŞABLON (CIKTISABLON, LAYOUTTEMPLATE, ÇŞB, CSB)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "islem": {
+          "type": "string",
+          "enum": [
+            "listele",
+            "kaydet",
+            "uygula",
+            "sil"
+          ],
+          "description": "Ne yapılacağı (metin)"
+        },
+        "ad": {
+          "type": "string",
+          "description": "Şablonun adı; listele dışında gerekir (metin)"
+        },
+        "yerlesim": {
+          "type": "string",
+          "description": "kaydet: hangi yerleşim saklanacak (tek yerleşim varsa gerekmez). uygula: kurulacak yerleşimin adı (verilmezse şablonun adı) (metin)"
+        }
+      },
+      "required": [
+        "islem"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.layout_template",
+      "cad.kentos/category": "Dosya",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "ÇIKTIŞABLON",
+        "CIKTISABLON",
+        "LAYOUTTEMPLATE",
+        "ÇŞB",
+        "CSB"
+      ]
+    }
+  },
+  {
     "name": "core_leader",
     "title": "LİDER",
     "description": "Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.\nKomut: LİDER (LIDER, LEADER, LD)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
@@ -3071,6 +3379,117 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "POLYLINE",
         "ÇÇ",
         "PL"
+      ]
+    }
+  },
+  {
+    "name": "core_print",
+    "title": "YAZDIR",
+    "description": "Çizimin bir penceresini bir yazdırma profilinin kâğıdına yerleştirip PDF dosyasına yazar ya da yazıcıya gönderir.\nKomut: YAZDIR (PRINT, PLOT, YZDR)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "pencere": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Yazdırılacak alanın iki köşesi; merkez verilmezse ve bu da verilmezse tıklatılır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "merkez": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kâğıdın ortalanacağı nokta; pencere yerine kullanılır — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "olcek": {
+          "type": "integer",
+          "description": "Ölçek paydası (1000 = 1/1000); merkez ile kullanılır, verilmezse projenin plan ölçeği (tam sayı)"
+        },
+        "yerlesim": {
+          "type": "string",
+          "description": "Basılacak çıktı yerleşiminin adı (ÇIKTIYERLEŞİMİ ile kurulur). Verildiğinde kâğıt, kenar ve harita penceresi yerleşimden gelir; pencere, merkez, olcek ve profil ile birlikte verilmez (metin)"
+        },
+        "dosya": {
+          "type": "string",
+          "description": "PDF yazılacak dosya; yazici ile birlikte verilmez (metin)"
+        },
+        "yazici": {
+          "type": "string",
+          "description": "Yazıcının adı; \"\" sistem varsayılanı. dosya ile birlikte verilmez (metin)"
+        },
+        "profil": {
+          "type": "string",
+          "description": "Yazdırma profili; verilmezse varsayılan profil (metin)"
+        },
+        "kagit": {
+          "type": "string",
+          "description": "Kâğıt: A5, A4, A3, A2, A1, A0 ya da ozel (genislik ve yukseklik ile) (metin)"
+        },
+        "genislik": {
+          "type": "integer",
+          "description": "ozel kâğıdın eni, milimetre (dikey duruşta) (tam sayı)"
+        },
+        "yukseklik": {
+          "type": "integer",
+          "description": "ozel kâğıdın boyu, milimetre (dikey duruşta) (tam sayı)"
+        },
+        "yon": {
+          "type": "string",
+          "description": "dikey ya da yatay (metin)"
+        },
+        "dpi": {
+          "type": "integer",
+          "description": "Çözünürlük, inç başına nokta (72–4800) (tam sayı)"
+        },
+        "kenar": {
+          "type": "integer",
+          "description": "Dört yandaki kenar boşluğu, milimetre (tam sayı)"
+        },
+        "baslik": {
+          "type": "string",
+          "description": "PDF belge başlığı (metin)"
+        },
+        "yazar": {
+          "type": "string",
+          "description": "PDF yazar alanı (metin)"
+        },
+        "sifre": {
+          "type": "string",
+          "description": "PDF açma şifresi (kullanıcı şifresi); günlüğe yazılmaz (metin)"
+        },
+        "sahip_sifresi": {
+          "type": "string",
+          "description": "PDF izinlerini değiştirme şifresi (sahip şifresi); günlüğe yazılmaz (metin)"
+        },
+        "yazdirilabilir": {
+          "type": "boolean",
+          "description": "Şifreli PDF: sahip şifresi olmayan yazdırabilir mi; varsayılan evet (evet/hayır)"
+        },
+        "kopyalanabilir": {
+          "type": "boolean",
+          "description": "Şifreli PDF: metin ve grafik kopyalanabilir mi; varsayılan evet (evet/hayır)"
+        },
+        "degistirilebilir": {
+          "type": "boolean",
+          "description": "Şifreli PDF: belge değiştirilebilir mi; varsayılan evet (evet/hayır)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.print",
+      "cad.kentos/category": "Dosya",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "YAZDIR",
+        "PRINT",
+        "PLOT",
+        "YZDR"
       ]
     }
   },

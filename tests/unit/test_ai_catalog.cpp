@@ -216,3 +216,41 @@ TEST_CASE("llms.txt şemanın anlatamadığını anlatır ve üretilmiş olduğu
     CHECK(full.find("core_line") != std::string::npos);
     CHECK(index.find("core_line") == std::string::npos);
 }
+
+TEST_CASE("Katalog: kâğıt ölçüsü serbest, zemin koordinatı tutamak ister")
+{
+    // TODOS A-03's whole point. A layout's `x` is a position on PAPER, which a
+    // model may work out from a page size; a map's `pencere` is a coordinate on
+    // the GROUND, which it may not invent at all (CLAUDE.md 5.8).
+    //
+    // The structural half was always there — a `Point` parameter accepts only a
+    // handle — and what was missing is that the schema never SAID which was
+    // which, so an agent had to guess.
+    Registry reg;
+    register_builtin_commands(reg);
+
+    const CommandSpec* item = reg.by_id("core.layout_item");
+    REQUIRE(item != nullptr);
+    CHECK(has_flag(item->flags, Flags::AiAccessible));
+
+    const auto described = [&](const char* name) {
+        for (const Param& p : item->params)
+            if (p.name == name) return p.unit;
+        return std::string("<yok>");
+    };
+
+    // PAPER, and it says so.
+    CHECK(described("x").find("kâğıt") != std::string::npos);
+    CHECK(described("y").find("kâğıt") != std::string::npos);
+    CHECK(described("genislik").find("kâğıt") != std::string::npos);
+
+    // GROUND, and it says so loudly.
+    CHECK(described("pencere").find("ZEMİN") != std::string::npos);
+
+    // And the kinds still keep them apart structurally: an integer is a number a
+    // caller may write, a point is one it may only hand over from a tool result.
+    for (const Param& p : item->params) {
+        if (p.name == "x" || p.name == "y") CHECK_EQ(p.kind, ParamKind::Integer);
+        if (p.name == "pencere") CHECK_EQ(p.kind, ParamKind::PointList);
+    }
+}

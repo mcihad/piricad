@@ -41,8 +41,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 69 (64 tanesi onay ister)
-- Katalog parmak izi: `14739385280753788047`
+- Araç sayısı: 73 (68 tanesi onay ister)
+- Katalog parmak izi: `17374146325903333947`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -436,6 +436,73 @@ Onay ister.
 | `islem` | string | evet | goster, gizle, yalniz (yalnız bu katman), tumu (hepsini göster) ya da tersine (metin) |
 | `katman` | string | hayır | Katman adı; goster, gizle ve yalniz için gerekir, tersine için isteğe bağlı (verilmezse bütün katmanlar), tumu ile verilemez (metin) |
 
+### `core_layout` — ÇIKTIYERLEŞİMİ
+
+Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir.
+Komut: ÇIKTIYERLEŞİMİ (CIKTIYERLESIMI, LAYOUT, ÇYR, CYR)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `islem` | string | evet | Ne yapılacağı (metin) |
+| `ad` | string | hayır | Yerleşimin adı; listele dışında gerekir (metin) |
+| `yeni_ad` | string | hayır | islem=ad için yeni yerleşim adı (metin) |
+| `kagit` | string | hayır | A5, A4, A3, A2, A1, A0 ya da ozel (varsayılan A4) (metin) |
+| `genislik` | integer | hayır | ozel kâğıt için sayfa genişliği [kâğıt mm] (tam sayı) |
+| `yukseklik` | integer | hayır | ozel kâğıt için sayfa yüksekliği [kâğıt mm] (tam sayı) |
+| `yon` | string | hayır | Sayfa yönü (varsayılan dikey) (metin) |
+| `kenar` | integer | hayır | Kenar boşluğu (varsayılan 10) [kâğıt mm] (tam sayı) |
+| `dpi` | integer | hayır | Çıktı çözünürlüğü (varsayılan 300) (tam sayı) |
+| `sayfa` | integer | hayır | Hangi sayfa (1'den başlar). sayfa işleminde verilmezse bütün sayfalar değişir (tam sayı) |
+| `yeni_sira` | integer | hayır | sayfatasi için sayfanın gideceği sıra (tam sayı) |
+
+### `core_layout_item` — ÇIKTIÖĞE
+
+Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler.
+Komut: ÇIKTIÖĞE (CIKTIOGE, LAYOUTITEM, ÇÖĞ, COG)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `islem` | string | evet | Ne yapılacağı (metin) |
+| `yerlesim` | string | hayır | Hangi çıktı yerleşimi; çizimde tek yerleşim varsa gerekmez (metin) |
+| `ad` | string | hayır | Öğe adı; ekle dışında gerekir, ekle'de verilmezse türetilir (metin) |
+| `tur` | string | hayır | islem=ekle için öğe türü (metin) |
+| `x` | integer | hayır | Sol kenardan uzaklık [kâğıt mm] (tam sayı) |
+| `y` | integer | hayır | ÜST kenardan uzaklık [kâğıt mm] (tam sayı) |
+| `genislik` | integer | hayır | Genişlik [kâğıt mm] (tam sayı) |
+| `yukseklik` | integer | hayır | Yükseklik [kâğıt mm] (tam sayı) |
+| `metin` | string | hayır | Metin öğesinin yazısı; <yerlesim>, <olcek>, <tarih>, <crs> yer tutucuları çizim anında çözülür (metin) |
+| `yazi` | integer | hayır | Yazı yüksekliği [kâğıt mm] (tam sayı) |
+| `olcek` | integer | hayır | Harita öğesinin ölçeği 1:N; 0 kapsama uyar (tam sayı) |
+| `pencere` | string | hayır | Harita çerçevesinin bakacağı alanın iki köşesi, anahtar iki kez yazılarak: pencere=x1,y1 pencere=x2,y2. Tuvalden çerçeve seçmek bu satırı yazar [ZEMİN koordinatı — kâğıt değil] — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `izgara` | string | hayır | Harita öğesinin koordinat ızgarası (metin) |
+| `izgara_aralik` | integer | hayır | Izgara aralığı, zemin milimetresi; 0 ölçeğe göre seçilir (tam sayı) |
+| `kilit` | boolean | hayır | Öğeyi taşımaya kapatır (evet/hayır) |
+| `cerceve` | boolean | hayır | Öğenin çevresine çerçeve çizer (evet/hayır) |
+| `sayfa` | integer | hayır | Öğenin duracağı sayfa (1'den başlar); tasi ile verilir (tam sayı) |
+| `yeni_ad` | string | hayır | islem=ad için öğenin yeni adı (metin) |
+| `harita` | string | hayır | Bu öğenin bağlı olduğu harita çerçevesinin adı. Verilmezse ilk harita. 'ilk' bağı kaldırır (metin) |
+| `sira` | integer | hayır | Çizim sırası; büyük olan üstte (tam sayı) |
+
+### `core_layout_template` — ÇIKTIŞABLON
+
+Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz.
+Komut: ÇIKTIŞABLON (CIKTISABLON, LAYOUTTEMPLATE, ÇŞB, CSB)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `islem` | string | evet | Ne yapılacağı (metin) |
+| `ad` | string | hayır | Şablonun adı; listele dışında gerekir (metin) |
+| `yerlesim` | string | hayır | kaydet: hangi yerleşim saklanacak (tek yerleşim varsa gerekmez). uygula: kurulacak yerleşimin adı (verilmezse şablonun adı) (metin) |
+
 ### `core_leader` — LİDER
 
 Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.
@@ -607,6 +674,37 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `noktalar` | string | evet | Çoklu çizginin köşe noktaları; hepsi tek nesne olur — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_print` — YAZDIR
+
+Çizimin bir penceresini bir yazdırma profilinin kâğıdına yerleştirip PDF dosyasına yazar ya da yazıcıya gönderir.
+Komut: YAZDIR (PRINT, PLOT, YZDR)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `pencere` | string | hayır | Yazdırılacak alanın iki köşesi; merkez verilmezse ve bu da verilmezse tıklatılır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `merkez` | string | hayır | Kâğıdın ortalanacağı nokta; pencere yerine kullanılır — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `olcek` | integer | hayır | Ölçek paydası (1000 = 1/1000); merkez ile kullanılır, verilmezse projenin plan ölçeği (tam sayı) |
+| `yerlesim` | string | hayır | Basılacak çıktı yerleşiminin adı (ÇIKTIYERLEŞİMİ ile kurulur). Verildiğinde kâğıt, kenar ve harita penceresi yerleşimden gelir; pencere, merkez, olcek ve profil ile birlikte verilmez (metin) |
+| `dosya` | string | hayır | PDF yazılacak dosya; yazici ile birlikte verilmez (metin) |
+| `yazici` | string | hayır | Yazıcının adı; "" sistem varsayılanı. dosya ile birlikte verilmez (metin) |
+| `profil` | string | hayır | Yazdırma profili; verilmezse varsayılan profil (metin) |
+| `kagit` | string | hayır | Kâğıt: A5, A4, A3, A2, A1, A0 ya da ozel (genislik ve yukseklik ile) (metin) |
+| `genislik` | integer | hayır | ozel kâğıdın eni, milimetre (dikey duruşta) (tam sayı) |
+| `yukseklik` | integer | hayır | ozel kâğıdın boyu, milimetre (dikey duruşta) (tam sayı) |
+| `yon` | string | hayır | dikey ya da yatay (metin) |
+| `dpi` | integer | hayır | Çözünürlük, inç başına nokta (72–4800) (tam sayı) |
+| `kenar` | integer | hayır | Dört yandaki kenar boşluğu, milimetre (tam sayı) |
+| `baslik` | string | hayır | PDF belge başlığı (metin) |
+| `yazar` | string | hayır | PDF yazar alanı (metin) |
+| `sifre` | string | hayır | PDF açma şifresi (kullanıcı şifresi); günlüğe yazılmaz (metin) |
+| `sahip_sifresi` | string | hayır | PDF izinlerini değiştirme şifresi (sahip şifresi); günlüğe yazılmaz (metin) |
+| `yazdirilabilir` | boolean | hayır | Şifreli PDF: sahip şifresi olmayan yazdırabilir mi; varsayılan evet (evet/hayır) |
+| `kopyalanabilir` | boolean | hayır | Şifreli PDF: metin ve grafik kopyalanabilir mi; varsayılan evet (evet/hayır) |
+| `degistirilebilir` | boolean | hayır | Şifreli PDF: belge değiştirilebilir mi; varsayılan evet (evet/hayır) |
 
 ### `core_rectangle` — DİKDÖRTGEN
 

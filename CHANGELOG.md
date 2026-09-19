@@ -6,6 +6,20 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — kâğıt ve zemin sayıları şemada ayrıldı, yerleşim ajana açıldı (TODOS A-03, A-02)
+
+- **`Param::unit`**: bir sayının neyle ölçüldüğü. Yapısal ayrım zaten vardı — bir
+  `Point` parametresi yalnız **tutamak** kabul ediyor, bir `Integer` ise çağıranın
+  yazabileceği bir sayı — eksik olan, şemanın hangisinin hangisi olduğunu
+  **söylememesiydi**. "integer 0..10000" diyen bir şema ajanı tahmine bırakır, ve
+  tahmin eden ajan kâğıt alanına zemin koordinatı yazar.
+- Yerleşim komutlarının `x`, `y`, `genislik`, `yukseklik`, `yazi`, `kenar` alanları
+  `[kâğıt mm]`, `pencere` ise `[ZEMİN koordinatı — kâğıt değil]` diyor. Birim
+  açıklamanın başında, çünkü yanlış yapılan şey o.
+- **`core.layout`, `core.layout_item`, `core.layout_template` ve `core.print`
+  ajana açıldı.** Ajan kapsamı **%74'ten %78'e** çıktı (93 komutun 73'ü).
+
+
 ### Eklendi — çıktı yerleşimi öğelerinin kalıcı kimliği (TODOS L-01)
 
 - `LayoutItemKey` ve `LayoutPageKey`. Yerleşimin **kendi** sayacından basılıyor,

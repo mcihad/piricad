@@ -163,6 +163,13 @@ Json schema_for(const command::Param& param, Style style)
     // The declared help is the description, with the kind named after it so a
     // model that ignores `type` still reads what the value is.
     std::string described = param.help;
+    // THE UNIT FIRST, because it is the thing an agent gets wrong. A layout's `x`
+    // is a position on paper and a map's window is a coordinate on the ground,
+    // and a schema that says only "integer" leaves that to be guessed.
+    if (!param.unit.empty()) {
+        if (!described.empty()) described += " ";
+        described += "[" + param.unit + "]";
+    }
     if (const Json* had = out.find("description"); had != nullptr && had->is_string()) {
         if (!described.empty()) described += " — ";
         described += had->as_string();
