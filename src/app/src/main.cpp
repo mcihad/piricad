@@ -579,6 +579,24 @@ int main(int argc, char** argv)
                 kentos::command::Origin::Gui);
             const QFileInfo written(pdf);
             check(written.exists() && written.size() > 1000, "PDF yazılmadı");
+
+            // THE MAP IS NOT A PHOTOGRAPH OF A MAP.
+            //
+            // It used to be: the frame was rendered into a `QImage` and blitted,
+            // so a 1:1000 parcel boundary reached the PDF as pixels —
+            // unmeasurable, unselectable, and resolution-bound — on a document a
+            // licensed engineer signs. Only the file can refute that, so the file
+            // is what is read: a layout of vector geometry carries no image at
+            // all (TODOS L-12).
+            const QByteArray sheet_bytes = [&pdf] {
+                QFile f(pdf);
+                return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+            }();
+            check(!sheet_bytes.contains("/Subtype /Image") &&
+                      !sheet_bytes.contains("/Subtype/Image"),
+                  "yerleşim PDF'i haritayı raster olarak taşıyor");
+            (void)std::fprintf(stdout, "[tasarim] pdf rasterı yok, %lld bayt\n",
+                               static_cast<long long>(written.size()));
             (void)std::fprintf(stdout, "[tasarim] pdf %lld bayt\n",
                                static_cast<long long>(written.size()));
 

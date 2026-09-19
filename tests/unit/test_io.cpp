@@ -4295,3 +4295,32 @@ TEST_CASE("Çıktı yerleşimi: ölçek çubuğu kendi haritasına bağlanır")
     REQUIRE(read->map_for(*kept) != nullptr);
     CHECK_EQ(read->map_for(*kept)->id, "harita3");
 }
+
+TEST_CASE("Çıktı yerleşimi: bildirilen ölçek kâğıt ile zemini tam olarak bağlar")
+{
+    // TODOS L-12's own sentence: at 1:1000 a 100 m line is 100 mm on paper. The
+    // claim is arithmetic, so it is checked as arithmetic rather than measured
+    // off a rendered picture — `Mm` is fixed point and this is exact.
+    core::LayoutItem map = core::default_item(core::LayoutItemKind::Map);
+    map.id               = "harita";
+    // A 100 mm wide frame, 80 mm tall.
+    map.frame  = core::PaperRect{0, 0, core::um_from_mm(100), core::um_from_mm(80)};
+    map.extent = core::Box2{0, 0, 1, 1}; // aimed somewhere; the scale pins the size
+    map.scale  = 1000;
+
+    const core::Box2 shown = core::map_window(map);
+    // 100 mm of paper at 1:1000 is 100 000 mm of ground — 100 metres, exactly.
+    CHECK_EQ(shown.width(), core::Mm{100} * 1000 * 1000 / 1000);
+    CHECK_EQ(shown.width(), core::Mm{100000});
+    CHECK_EQ(shown.height(), core::Mm{80000});
+
+    // And the scale reads back the way it was declared.
+    CHECK_EQ(core::map_scale(map), 1000);
+
+    // A frame twice as wide at the same scale shows twice the ground: changing
+    // the paper at a declared scale shows MORE ground, it does not shrink the
+    // same ground onto a bigger sheet.
+    map.frame.w = core::um_from_mm(200);
+    CHECK_EQ(core::map_window(map).width(), core::Mm{200000});
+    CHECK_EQ(core::map_scale(map), 1000);
+}

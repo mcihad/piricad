@@ -6,6 +6,25 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — çıktı yerleşiminin haritası PDF'e fotoğraf olarak gidiyordu (TODOS L-12)
+
+- Harita bir `QImage`'a çizilip sayfaya yapıştırılıyordu. PDF'te **tek bir
+  fotoğraftı**: 1:1000 bir parsel sınırı piksel olarak varıyordu — ölçülemez,
+  seçilemez, çözünürlüğe bağlı — imzalanıp teslim edilen bir belgede.
+- Koddaki gerekçe gerçekti: render boru hattı hedefinin tamamına sahip, arka
+  planı dolduruyor ve hiçbir şeyi kırpmıyor; doğrudan sayfaya çizmek çerçevenin
+  altındakini siler ve dışına taşardı. **İkisi de yanıtlandı, etrafından
+  dolaşılmadı**: `FrameContext::target_is_painter` ile arka uç çağıranın
+  boyacısına çiziyor ve durumunu bulduğu gibi geri veriyor; kırpma çerçeve, arka
+  plan sıfır alfa ("orada olanı bırak").
+- **Kanıt dosyadan okundu**: aynı yerleşimin PDF'i **435.594 bayttan 8.402 bayta**
+  indi, `/Subtype /Image` sayısı **sıfır**, 34 vektör çizgi operatörü var. Basılan
+  görüntü bire bir aynı. `layout-designer` probe'u rasterı her koşumda denetliyor.
+- Ölçü ayrıca sınandı: 1:1000'de 100 mm'lik bir çerçeve tam olarak 100 000 mm
+  zemin gösteriyor. `Mm` sabit noktalı olduğu için bu aritmetik kesin, ölçülen
+  değil.
+
+
 ### Düzeltildi — dosyadan okunan çıktı yerleşimi araç çubuğunun listesinde çıkmıyordu
 
 - Bir yerleşim kaydedilip proje tekrar açıldığında `Dosya ▸ Çıktı Yerleşimleri`

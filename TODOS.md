@@ -320,7 +320,25 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   “her nesne için aynı şablon” döngüsünden ayrı rapor modeli kur. **Kabul:** ada
   bazında başlık ve toplam, parsel bazında harita/tablo içeren rapor elle sayfa
   çoğaltılmadan üretilir; boş bölümlerin davranışı ayarlanabilir.
-- [ ] **L-12 / P0 — Render ve çıktı doğruluğu.** Önizleme/PDF/SVG/raster/yazıcı
+- [~] **L-12 / P0 — Render ve çıktı doğruluğu.** *(vektör çıktı 19 Eylül 2026)*
+  **Yapıldı — asıl kusur kapandı:** harita bir `QImage`'a çizilip sayfaya
+  yapıştırılıyordu, yani PDF'e **tek bir fotoğraf** olarak gidiyordu: 1:1000 bir
+  parsel sınırı piksel olarak varıyordu — ölçülemez, seçilemez, çözünürlüğe bağlı —
+  imzalanan bir belgede.
+  Koddaki gerekçe gerçekti ve ikisi de yanıtlandı, etrafından dolaşılmadı: boru
+  hattı hedefinin tamamına sahipti (arka planı dolduruyor, hiçbir şeyi kırpmıyor).
+  Artık `FrameContext::target_is_painter` ile arka uç **çağıranın boyacısına**
+  çiziyor, durumunu bulduğu gibi geri veriyor; kırpma çerçeve, arka plan sıfır
+  alfa ("orada olanı bırak").
+  **Kanıt dosyadan:** aynı yerleşimin PDF'i **435.594 bayttan 8.402 bayta** indi,
+  `/Subtype /Image` sayısı **sıfır**, 34 vektör çizgi operatörü var. Probe bunu
+  her koşumda denetliyor. Basılan görüntü bire bir aynı.
+  Ölçü de sınandı: 1:1000'de 100 mm'lik bir çerçeve tam olarak 100 000 mm zemin
+  gösteriyor — `Mm` sabit noktalı, yani aritmetik kesin.
+  **Kalan:** SVG çıktı; font gömme/ikame ve metni kontur çıkarma seçeneği; sayfa
+  aralığı seçimi; raster gerektiren öğelerin ayrı işaretlenmesi; 0,1 mm toleranslı
+  görsel karşılaştırma; fiziksel baskıda "sayfaya sığdır"ın kapatılması.
+  Eski madde metni: Önizleme/PDF/SVG/raster/yazıcı
   aynı ölçü ve stil çözümünü kullansın. Desteklenen çizgi/metin/semboller vektör
   çıksın; raster gerektiren öğeler ayrı işaretlensin. Font gömme/ikame, metni metin
   veya kontur çıkarma ve sayfa aralığı seçenekleri tanımlansın. **Kabul:** 1:1000'de

@@ -234,10 +234,19 @@ public:
     void render(const render::DrawList& list, const render::Overlay& overlay,
                 const render::FrameContext& ctx) override
     {
-        auto* device = static_cast<QPaintDevice*>(ctx.target);
-        if (device == nullptr) return;
+        if (ctx.target == nullptr) return;
 
-        QPainter painter(device);
+        // EITHER A SURFACE OR SOMEBODY ELSE'S PAINTER. A layout's map frame has
+        // to go onto the page beside the rest of the sheet, and a paint device
+        // may have only one painter at a time — so when the caller already has
+        // one, this draws into it and gives it back as it found it.
+        QPainter owned;
+        if (!ctx.target_is_painter) owned.begin(static_cast<QPaintDevice*>(ctx.target));
+        QPainter& painter = ctx.target_is_painter ? *static_cast<QPainter*>(ctx.target) : owned;
+        if (!painter.isActive()) return;
+
+        const bool borrowed = ctx.target_is_painter;
+        if (borrowed) painter.save();
 
         // A FULLY TRANSPARENT background means "leave what is already there", and
         // the symbol preview relies on it: it paints its own checkerboard first
@@ -266,6 +275,11 @@ public:
         }
 
         paint_aids(painter, list, overlay, cx, cy);
+
+        // GIVEN BACK AS IT WAS FOUND. The caller's clip, transform, pen and font
+        // are its own; a backend that kept the last pass's pen would paint the
+        // rest of the sheet with it.
+        if (borrowed) painter.restore();
     }
 
 private:

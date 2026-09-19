@@ -109,12 +109,19 @@ void paint_map(QPainter& painter, const QRectF& box, const core::Document& docum
     const int w_px = std::max(1, static_cast<int>(std::lround(box.width())));
     const int h_px = std::max(1, static_cast<int>(std::lround(box.height())));
 
-    // INTO AN IMAGE AND THEN BLITTED, rather than painted straight onto the
-    // page: the render pipeline owns its whole target — it fills a background
-    // and it clips nothing — so painting it into the page's painter would wipe
-    // whatever is already under the frame and spill outside it.
-    QImage tile(w_px, h_px, QImage::Format_ARGB32_Premultiplied);
-    tile.fill(Qt::white);
+    // STRAIGHT ONTO THE PAGE, as vectors.
+    //
+    // It used to render into a `QImage` and blit that, because the pipeline
+    // owned its whole target: it filled a background and it clipped nothing, so
+    // painting into the page's painter would have wiped what was under the frame
+    // and spilled outside it. The cost was that the map reached a PDF as ONE
+    // PHOTOGRAPH — a 1:1000 parcel boundary arrived as pixels, unmeasurable and
+    // unselectable, on a document a licensed engineer signs (TODOS L-12).
+    //
+    // Both reasons are answered rather than worked around: the clip is set here
+    // and a zero-alpha background tells the backend to leave what is already
+    // there. The white page is already under the frame.
+    painter.fillRect(box, Qt::white);
 
     if (!window.empty()) {
         render::ViewTransform view;
@@ -147,19 +154,29 @@ void paint_map(QPainter& painter, const QRectF& box, const core::Document& docum
         render::build_scene(document, view, options, list);
 
         render::Overlay overlay;
-        overlay.background_rgba = 0xFFFFFFFFu;
+        // ZERO ALPHA: "leave what is already there". The page's white is under
+        // the frame and a clear here would cover whatever else the sheet has put
+        // down.
+        overlay.background_rgba = 0;
 
         render::FrameContext ctx;
         ctx.width_px           = w_px;
         ctx.height_px          = h_px;
         ctx.device_pixel_ratio = 1.0f;
-        ctx.target             = static_cast<QPaintDevice*>(&tile);
+
+        // THE CLIP IS THE FRAME, and the origin is its top-left: the backend
+        // centres the drawing on `width_px/2, height_px/2` of whatever space it
+        // is painting in, so the translate is what puts that centre in the box.
+        painter.save();
+        painter.setClipRect(box);
+        painter.translate(box.topLeft());
+        ctx.target            = static_cast<QPainter*>(&painter);
+        ctx.target_is_painter = true;
 
         const std::unique_ptr<render::Backend> backend = make_preview_backend();
         backend->render(list, overlay, ctx);
+        painter.restore();
     }
-
-    painter.drawImage(box.topLeft(), tile);
 
     // ---- the coordinate grid -------------------------------------------------
     if (item.grid == core::GridStyle::None || window.empty()) return;

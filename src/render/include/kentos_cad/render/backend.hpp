@@ -44,6 +44,21 @@ struct FrameContext
     /// so what a user sees on the shelf is what the canvas will draw. A second
     /// preview renderer is two implementations of one picture, and they diverge.
     void* target{nullptr};
+
+    /// Whether `target` is an ALREADY-ACTIVE painter rather than a surface.
+    ///
+    /// A layout's map frame has to go onto the page a layer at a time, inside a
+    /// clip and alongside everything else on the sheet — and a paint device may
+    /// have only one painter at a time, so a backend that opens its own cannot be
+    /// used there. It was rendered into an image and blitted instead, which is why
+    /// the map arrived in a PDF as ONE PHOTOGRAPH: a 1:1000 parcel boundary came
+    /// out as pixels, unmeasurable and unselectable, on a document somebody signs.
+    ///
+    /// When this is set the backend paints into the caller's painter, leaves its
+    /// state as it found it, and honours the clip and the transform already on it.
+    /// For the QPainter backend `target` is then a `QPainter*`; a backend that has
+    /// no such notion refuses rather than guessing.
+    bool target_is_painter{false};
 };
 
 /// What one frame COST, read back after `render`.
