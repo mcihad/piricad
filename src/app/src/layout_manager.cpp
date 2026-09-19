@@ -72,7 +72,7 @@ LayoutManager::LayoutManager(Controller& controller, QWidget* parent)
 
     connect(&controller_, &Controller::documentChanged, this, [this] { refresh(); });
     refresh();
-    applyTheme(theme());
+    LayoutManager::applyTheme(theme());
 }
 
 QWidget* LayoutManager::buildBody()

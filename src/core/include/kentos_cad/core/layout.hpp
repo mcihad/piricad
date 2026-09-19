@@ -167,36 +167,20 @@ enum class GridLabels : std::uint8_t {
 /// shapes may gain fields, they may not change meaning).
 struct LayoutItem
 {
+    // FIELDS ARE ORDERED BY WIDTH, NOT BY MEANING. Grouped the readable way —
+    // frame, then Label, then Map, then Table — the eight-byte handles and the
+    // one-byte enums interleave and the struct spends 39 bytes on padding for
+    // every item on every page. Each field still says which part of the item it
+    // belongs to, and `operator==` is defaulted, so the order is a layout
+    // decision and nothing else depends on it.
+
+    // ---- eight-byte handles and quantities ----------------------------------
+
     /// The item's name inside its layout, unique under Turkish folding. A
     /// COMMAND NAMES AN ITEM BY THIS, not by an index: an index changes when
     /// something before it is deleted, and a journal replayed six months later
     /// would move the wrong box (Article 1.4).
     std::string id;
-
-    LayoutItemKind kind{LayoutItemKind::Label};
-    PaperRect frame{};
-
-    /// Paint order, low to high. Not the array index: a user raising an item
-    /// must not renumber every command that names another one.
-    std::int32_t z{0};
-
-    /// Whether the designer refuses to move or resize it. A title block that has
-    /// been placed is usually locked so a drag on the map does not take it along.
-    bool locked{false};
-
-    /// Rotation in micro-degrees, clockwise on the page. Whole-item, around its
-    /// own centre.
-    std::int32_t rotation_udeg{0};
-
-    // ---- frame and ground, drawn by every kind ------------------------------
-
-    bool frame_visible{false};                   ///< draw an outline around the item
-    Um frame_width{um_from_mm(0)};               ///< that outline's width; 0 = a hairline
-    std::uint32_t frame_colour{0xFF000000};      ///< AARRGGBB
-    bool background{false};                      ///< fill behind the item
-    std::uint32_t background_colour{0xFFFFFFFF}; ///< the fill's colour, AARRGGBB
-
-    // ---- Label, and the caption of ScaleBar / Legend / Table ----------------
 
     /// `Label`: the text, which may carry the placeholders `<ada>`, `<parsel>`,
     /// `<olcek>`, `<tarih>`, `<yerlesim>`, `<crs>` — resolved when the sheet is
@@ -205,51 +189,77 @@ struct LayoutItem
     /// the caption above it.
     std::string text;
 
+    /// Map: which layers this frame draws. EMPTY MEANS ALL VISIBLE LAYERS, which
+    /// is what a first map item wants; naming layers is how a second frame shows
+    /// a different theme of the same ground.
+    std::vector<std::string> layers;
+
+    /// Table: the attribute columns to print, in order. Empty means every column.
+    std::vector<std::string> columns;
+
+    /// Map: the ground window this frame shows, in `Mm`. Empty means "not aimed
+    /// yet": the designer then shows the drawing's extent and says so.
+    Box2 extent{};
+
+    /// Map: the denominator of 1:N. 0 means the scale FOLLOWS the extent and the
+    /// frame; a non-zero value pins it and the extent is recomputed about its
+    /// centre — which is what a sheet at a declared scale needs.
+    std::int64_t scale{0};
+
+    /// Map: ground millimetres between grid lines; 0 = chosen for the scale.
+    Mm grid_interval{0};
+
+    // ---- four-byte geometry, colour and count -------------------------------
+
+    /// Where the item sits on the page, from the page's top-left corner.
+    PaperRect frame{};
+
+    /// Paint order, low to high. Not the array index: a user raising an item
+    /// must not renumber every command that names another one.
+    std::int32_t z{0};
+
+    /// Rotation in micro-degrees, clockwise on the page. Whole-item, around its
+    /// own centre.
+    std::int32_t rotation_udeg{0};
+
+    Um frame_width{um_from_mm(0)};               ///< the outline's width; 0 = a hairline
+    std::uint32_t frame_colour{0xFF000000};      ///< AARRGGBB
+    std::uint32_t background_colour{0xFFFFFFFF}; ///< the fill's colour, AARRGGBB
+
     Um text_height{um_from_mm(3)}; ///< cap height on paper
     std::uint32_t text_colour{0xFF000000};
+
+    /// Map: the grid line's width on paper; 0 = a hairline.
+    Um grid_width{0};
+    /// Map: the grid's colour, AARRGGBB.
+    std::uint32_t grid_colour{0xFF000000};
+    /// Map: cap height of the grid's coordinate labels, on paper.
+    Um grid_text_height{um_from_mm(2)};
+
+    /// `ScaleBar`: how many segments. `NorthArrow`: which of the drawn arrows.
+    std::int32_t style{0};
+
+    std::int32_t row_limit{0}; ///< Table: 0 = as many rows as fit
+
+    // ---- one-byte kinds and switches ----------------------------------------
+
+    LayoutItemKind kind{LayoutItemKind::Label};
+
+    /// Whether the designer refuses to move or resize it. A title block that has
+    /// been placed is usually locked so a drag on the map does not take it along.
+    bool locked{false};
+
+    bool frame_visible{false}; ///< draw an outline around the item
+    bool background{false};    ///< fill behind the item
 
     /// 0 left / 1 centre / 2 right, and 0 top / 1 middle / 2 bottom.
     std::uint8_t align_h{0};
     std::uint8_t align_v{0};
 
-    // ---- Map ----------------------------------------------------------------
-
-    /// The ground window this frame shows, in `Mm`. Empty means "not aimed yet":
-    /// the designer then shows the drawing's extent and says so.
-    Box2 extent{};
-
-    /// The denominator of 1:N. 0 means the scale FOLLOWS the extent and the
-    /// frame; a non-zero value pins it and the extent is recomputed about its
-    /// centre — which is what a sheet at a declared scale needs.
-    std::int64_t scale{0};
-
     GridStyle grid{GridStyle::None};
     GridLabels grid_labels{GridLabels::Outside};
-    Mm grid_interval{0}; ///< ground millimetres between lines; 0 = chosen for the scale
-    Um grid_width{0};    ///< the grid line's width on paper; 0 = a hairline
-    std::uint32_t grid_colour{0xFF000000};
-    Um grid_text_height{um_from_mm(2)};
-
-    /// Which layers this frame draws. EMPTY MEANS ALL VISIBLE LAYERS, which is
-    /// what a first map item wants; naming layers is how a second frame shows a
-    /// different theme of the same ground.
-    std::vector<std::string> layers;
-
-    // ---- ScaleBar / NorthArrow ----------------------------------------------
-
-    /// `ScaleBar`: how many segments. `NorthArrow`: which of the drawn arrows.
-    std::int32_t style{0};
-
-    // ---- Shape ---------------------------------------------------------------
 
     LayoutShape shape{LayoutShape::Rectangle};
-
-    // ---- Table ---------------------------------------------------------------
-
-    /// The attribute columns to print, in order. Empty means every column.
-    std::vector<std::string> columns;
-
-    std::int32_t row_limit{0}; ///< 0 = as many as fit
 
     friend bool operator==(const LayoutItem&, const LayoutItem&) = default;
 };

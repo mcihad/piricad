@@ -17,6 +17,7 @@
 #include "kentos_cad/processing/registry.hpp"
 
 #include <cstdio>
+#include <exception>
 #include <fstream>
 #include <string>
 
@@ -173,7 +174,10 @@ std::string build_kinds()
     return out;
 }
 
-int main(int argc, char** argv)
+/// The generator proper. `main` below is the boundary that turns a thrown
+/// exception into an exit code, because a generator that aborts mid-write leaves
+/// a half-written reference that `ci-gate-docs.sh` would then diff against.
+int run(int argc, char** argv)
 {
     if (argc < 2) {
         (void)std::fprintf(stderr,
@@ -247,4 +251,17 @@ int main(int argc, char** argv)
         (void)std::fprintf(stdout, "docgen: llms-full.txt -> %s\n", argv[4]);
     }
     return 0;
+}
+
+int main(int argc, char** argv)
+{
+    try {
+        return run(argc, argv);
+    } catch (const std::exception& e) {
+        (void)std::fprintf(stderr, "docgen: %s\n", e.what());
+        return 1;
+    } catch (...) {
+        (void)std::fprintf(stderr, "docgen: bilinmeyen hata\n");
+        return 1;
+    }
 }

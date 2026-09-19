@@ -46,8 +46,10 @@ namespace kentos::core {
 class SpatialIndex;
 
 /// Per-entity flag bits. The cull test reads this byte and the four bbox arrays,
-/// and nothing else (model.md R6, R7).
-enum EntityFlag : std::uint8_t {
+/// and nothing else (model.md R6, R7). The enumerators are `unsigned` so that a
+/// mask folded out of them stays unsigned — the BYTE is `EntityTable::flags`,
+/// which the file format writes as `u8[]`, and that is unchanged.
+enum EntityFlag : unsigned {
     FlagAlive       = 1u << 0,
     FlagHidden      = 1u << 1, ///< hidden on its own
     FlagLayerHidden = 1u << 2, ///< mirrored from the layer, refreshed on toggle
@@ -56,6 +58,12 @@ enum EntityFlag : std::uint8_t {
     /// more bit in the byte R6 already reads, and no new column.
     FlagInBlock = 1u << 3,
 };
+
+/// `FlagAlive` and nothing else: what `visible()` requires the byte to equal.
+inline constexpr std::uint8_t kFlagsDrawn = FlagAlive | FlagHidden | FlagLayerHidden | FlagInBlock;
+
+/// The two bits `standalone()` reads: alive, and not inside a block definition.
+inline constexpr std::uint8_t kFlagsStandalone = FlagAlive | FlagInBlock;
 
 /// Tier 1. One row per entity: POD, mmap-able, no pointers, no kind-specific data.
 class EntityTable
@@ -90,16 +98,13 @@ public:
 
     /// Drawn only when alive and hidden by neither itself nor its layer. One byte,
     /// one test — that is the whole point of mirroring the layer bit.
-    bool visible(EntityId e) const noexcept
-    {
-        return (flags[e] & (FlagAlive | FlagHidden | FlagLayerHidden | FlagInBlock)) == FlagAlive;
-    }
+    bool visible(EntityId e) const noexcept { return (flags[e] & kFlagsDrawn) == FlagAlive; }
 
     /// Alive and not inside a block definition: what the spatial index packs and
     /// what a pick or a snap may reach directly.
     bool standalone(EntityId e) const noexcept
     {
-        return (flags[e] & (FlagAlive | FlagInBlock)) == FlagAlive;
+        return (flags[e] & kFlagsStandalone) == FlagAlive;
     }
 
     /// The cached bounding box. Assembled from the four columns rather than

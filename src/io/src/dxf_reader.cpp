@@ -71,6 +71,14 @@ command::Task<core::Result<DxfReport>> import_dxf(command::Transaction& tx, std:
 
 namespace {
 
+/// libdxfrw hands out DXF group-code bit flags in a signed `int`. The bits are
+/// positive by definition of the format, so the test is done unsigned: a sign bit
+/// in a mask is a bug everywhere else in this program and must stay detectable.
+constexpr bool has_bit(int flags, unsigned bit) noexcept
+{
+    return (static_cast<unsigned>(flags) & bit) != 0U;
+}
+
 using core::Mm;
 using core::Point2;
 
@@ -185,7 +193,10 @@ struct Ocs
 /// a reference needs its definition to exist (R45) before it is placed.
 struct PendingInsert
 {
-    DRW_Insert data;
+    /// HELD BEHIND A POINTER, not by value. `DRW_Insert` inherits a container
+    /// whose move is a copy, so a vector of these allocates a whole entity every
+    /// time it grows — and a move that allocates is a move that can throw.
+    std::unique_ptr<DRW_Insert> data;
     core::BlockId in_block{core::kNoBlock};
 };
 
@@ -264,8 +275,8 @@ public:
     {
         LayerInfo info;
         info.name                                  = data.name;
-        info.frozen                                = (data.flags & 1) != 0;
-        info.locked                                = (data.flags & 4) != 0;
+        info.frozen                                = has_bit(data.flags, 1);
+        info.locked                                = has_bit(data.flags, 4);
         info.off                                   = data.color < 0;
         info.color                                 = std::abs(data.color);
         info.color24                               = data.color24;
@@ -460,7 +471,7 @@ public:
                               if (v->stawidth != 0.0 || v->endwidth != 0.0) varying = true;
                           }
                           note_tilt(e.extPoint); // vertices arrive in WCS from the library
-                          emit_polyline(e, x, in, verts, bulges, (e.flags & 1) != 0, "LWPOLYLINE",
+                          emit_polyline(e, x, in, verts, bulges, has_bit(e.flags, 1), "LWPOLYLINE",
                                         {e.elevation}, varying);
                       });
     }
@@ -473,7 +484,7 @@ public:
             // plan view is what a plan shows, and the Z goes the way every other
             // Z goes (kot or the degradation count). A mesh (16) or a polyface
             // mesh (64) is a surface this program has no kind for.
-            if ((e.flags & (16 | 64)) != 0) {
+            if (has_bit(e.flags, 16U | 64U)) {
                 skip("POLYLINE", "ağ ya da çok yüzlü ağ (mesh) bu sürümde okunmuyor");
                 return;
             }
@@ -488,7 +499,7 @@ public:
                 bulges.push_back(v->bulge);
                 if (v->stawidth != 0.0 || v->endwidth != 0.0) varying = true;
             }
-            emit_polyline(e, x, in, verts, bulges, (e.flags & 1) != 0, "POLYLINE", zs, varying);
+            emit_polyline(e, x, in, verts, bulges, has_bit(e.flags, 1), "POLYLINE", zs, varying);
         });
     }
 
@@ -510,7 +521,8 @@ public:
             // Inside a definition the reference waits for every block to be
             // known; on the drawing it is placed at once.
             if (in_block_ != core::kNoBlock) {
-                pending_inserts_.push_back(PendingInsert{e, in_block_});
+                pending_inserts_.push_back(
+                    PendingInsert{std::make_unique<DRW_Insert>(e), in_block_});
                 return;
             }
             place_insert(e, core::kNoBlock);
@@ -1318,11 +1330,11 @@ private:
 
         core::SplineDef def;
         def.degree   = static_cast<std::uint8_t>(std::clamp(e.degree, 1, 15));
-        def.closed   = (e.flags & 1) != 0;
-        def.periodic = (e.flags & 2) != 0;
-        def.rational = (e.flags & 4) != 0;
-        def.planar   = (e.flags & 8) != 0;
-        def.linear   = (e.flags & 16) != 0;
+        def.closed   = has_bit(e.flags, 1);
+        def.periodic = has_bit(e.flags, 2);
+        def.rational = has_bit(e.flags, 4);
+        def.planar   = has_bit(e.flags, 8);
+        def.linear   = has_bit(e.flags, 16);
 
         bool degraded = false;
         if (controls.size() < static_cast<std::size_t>(def.degree) + 1) {
@@ -1395,8 +1407,8 @@ private:
         core::DimensionDef def;
         def.type                = type;
         def.rotation_udeg       = dxf::udeg_from_degrees(rotation_deg);
-        def.user_text_position  = (e.type & 128) != 0;
-        def.ordinate_x          = (e.type & 64) != 0;
+        def.user_text_position  = has_bit(e.type, 128);
+        def.ordinate_x          = has_bit(e.type, 64);
         def.arrow_size          = std::max<Mm>(0, to_mm_len(fig.arrow));
         def.extension_beyond    = std::max<Mm>(0, to_mm_len(fig.extension_beyond));
         def.extension_offset    = std::max<Mm>(0, to_mm_len(fig.extension_offset));
@@ -1580,7 +1592,7 @@ private:
         pending_inserts_.clear();
         for (const PendingInsert& p : pending) {
             if (failed_ || cancelled_) break;
-            place_insert(p.data, p.in_block);
+            place_insert(*p.data, p.in_block);
         }
     }
 
@@ -1668,7 +1680,7 @@ private:
         for (const auto& lp : e.looplist) {
             if (!lp) continue;
             Loop loop;
-            if ((lp->type & 2) != 0) {
+            if (has_bit(lp->type, 2)) {
                 // A polyline loop: one LWPOLYLINE with optional bulges.
                 for (const auto& obj : lp->objlist) {
                     const auto* pl = dynamic_cast<const DRW_LWPolyline*>(obj.get());

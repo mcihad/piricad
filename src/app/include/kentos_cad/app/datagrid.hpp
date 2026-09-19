@@ -91,9 +91,9 @@ public:
     /// read-only.
     explicit GridDelegate(SpecFor specs, QObject* parent = nullptr);
 
-    /// The palette to paint with. Hides the base's, so the editors and the cells
-    /// change theme together.
-    void setTheme(ThemeMode mode);
+    /// The palette to paint with. Overrides the base's, so the editors and the
+    /// cells change theme together whichever pointer the caller holds.
+    void setTheme(ThemeMode mode) override;
 
     /// Paints the cell: zebra, hover, selection, the edited ring, the value.
     void paint(QPainter* painter, const QStyleOptionViewItem& option,

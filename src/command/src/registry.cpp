@@ -4,6 +4,7 @@
 #include "kentos_cad/core/text.hpp"
 
 #include <algorithm>
+#include <numeric>
 
 namespace kentos::command {
 
@@ -82,16 +83,15 @@ std::uint64_t Registry::fingerprint() const
     // this program does (io/format.hpp). Sorted by id first, so the registration
     // ORDER cannot change the answer: two builds that register the same commands
     // must agree, and the roster's order is not part of the surface.
-    std::vector<const CommandSpec*> sorted;
-    sorted.reserve(specs_.size());
-    for (const auto& spec : specs_)
-        sorted.push_back(&spec);
+    std::vector<std::size_t> sorted(specs_.size());
+    std::iota(sorted.begin(), sorted.end(), std::size_t{0});
     std::sort(sorted.begin(), sorted.end(),
-              [](const CommandSpec* a, const CommandSpec* b) { return a->id < b->id; });
+              [this](std::size_t a, std::size_t b) { return specs_[a].id < specs_[b].id; });
 
     std::uint64_t h = core::fnv1a("kentos.ai.catalog");
-    for (const CommandSpec* spec : sorted) {
-        h = core::fnv1a(spec->id, h);
+    for (const std::size_t at : sorted) {
+        const CommandSpec* spec = &specs_[at];
+        h                       = core::fnv1a(spec->id, h);
         for (const std::string& name : spec->names)
             h = core::fnv1a(name, h);
         h = core::fnv1a_int(static_cast<std::int64_t>(spec->category), h);

@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 namespace kentos::core {
 namespace {
@@ -464,7 +465,7 @@ std::int64_t map_scale(const LayoutItem& item)
     const double paper_mm  = static_cast<double>(item.frame.w) / 1000.0;
     const double ground_mm = static_cast<double>(item.extent.width());
     if (paper_mm <= 0.0) return 0;
-    return static_cast<std::int64_t>(ground_mm / paper_mm + 0.5);
+    return static_cast<std::int64_t>(std::llround(ground_mm / paper_mm));
 }
 
 Box2 map_window(const LayoutItem& item)

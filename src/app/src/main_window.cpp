@@ -1499,7 +1499,7 @@ void MainWindow::buildPanels()
         // The denominator the status bar shows, at this screen's own DPI: a 1:N
         // taken at a guessed DPI is a different plan scale on every monitor.
         const double dpi = canvas_->logicalDpiX() > 0 ? canvas_->logicalDpiX() : 96.0;
-        info.scale       = static_cast<std::int64_t>(view.scale_denominator(dpi) + 0.5);
+        info.scale       = static_cast<std::int64_t>(std::llround(view.scale_denominator(dpi)));
         info.crs         = controller_->document().crs().id();
         return info;
     };
@@ -1841,16 +1841,17 @@ void MainWindow::buildStatusBar()
         if (id == QString::fromLatin1(kChipOsnap)) {
             // The same words the F3 action sends: the mask remembered while
             // object snap was on, or nothing.
-            const bool on = (mask & static_cast<int>(core::SnapObjectMask)) != 0;
+            const bool on = (static_cast<unsigned>(mask) & core::SnapObjectMask) != 0U;
             controller_->runLine(
                 QStringLiteral("MOD yakalama_modları %1").arg(on ? 0 : snapMaskMemory_),
                 command::Origin::Gui);
             return;
         }
         if (id == QString::fromLatin1(kChipPolar)) {
-            controller_->runLine(QStringLiteral("MOD yakalama_modları %1")
-                                     .arg(mask ^ static_cast<int>(core::SnapPolar)),
-                                 command::Origin::Gui);
+            controller_->runLine(
+                QStringLiteral("MOD yakalama_modları %1")
+                    .arg(static_cast<int>(static_cast<unsigned>(mask) ^ core::SnapPolar)),
+                command::Origin::Gui);
             return;
         }
         const std::uint32_t index = core::builtin_settings().find(id.toStdString());
@@ -2036,7 +2037,7 @@ void MainWindow::refreshAidActions()
     const core::Settings& session = controller_->bus().session_settings();
 
     const int mask        = static_cast<int>(session.get("core.yakalama.modlar").as_int());
-    const bool objectSnap = (mask & static_cast<int>(core::SnapObjectMask)) != 0;
+    const bool objectSnap = (static_cast<unsigned>(mask) & core::SnapObjectMask) != 0U;
     if (objectSnap) snapMaskMemory_ = mask;
 
     // Blocked because the tick is DERIVED from the store: writing it back would
@@ -3302,9 +3303,9 @@ void MainWindow::refreshStatus()
             statusStrip_->setToggle(QString::fromLatin1(id), session.get(id).as_bool());
         const int mask = static_cast<int>(session.get("core.yakalama.modlar").as_int());
         statusStrip_->setToggle(QString::fromLatin1(kChipOsnap),
-                                (mask & static_cast<int>(core::SnapObjectMask)) != 0);
+                                (static_cast<unsigned>(mask) & core::SnapObjectMask) != 0U);
         statusStrip_->setToggle(QString::fromLatin1(kChipPolar),
-                                (mask & static_cast<int>(core::SnapPolar)) != 0);
+                                (static_cast<unsigned>(mask) & core::SnapPolar) != 0U);
     }
 
     const io::DatabaseService& db = controller_->database();

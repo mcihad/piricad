@@ -6,6 +6,37 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — clang-tidy kapısı gerçekten çalışıyor
+
+- **`make check` clang-tidy'yi atlıyordu.** Makefile `command -v clang-tidy` diye
+  soruyordu; Homebrew'un LLVM'i keg-only olduğu için cevap "kurulu değil" oluyor ve
+  kapı SKIPPED yazıp geçiyordu — oysa araç iki dizin ötede duruyordu. Soru artık
+  `scripts/tidy.sh --var`'a soruluyor; aracı arayan kod zaten oradaydı (Article 10:
+  Makefile'da yapı mantığı olmaz). **Atlayan bir kapı hiç çalışmamış kapıdır** (6.2).
+- Kapı açılınca ağaçta **3719 bulgu** çıktı, hepsi temizlendi. İçlerinden gerçek olanlar:
+  - **Üç yerde işaretçi sıralanıyordu** (`command/registry.cpp`, `core/settings.cpp`,
+    `processing/registry.cpp`). Karşılaştırıcılar anahtara bakıyordu, ama adres kabı
+    sıralamak bu programın bit-aynı çıktı iddiasının (Article 2.5, §7.3) yanında
+    durulacak bir şekil değil. Üçü de **indeks sıralamaya** çevrildi.
+  - `app/main.cpp` sınama sürüşünde `check()` rapor ediyor ama dönmüyordu; bir sonraki
+    satır az önce şikâyet ettiği null'ı dereference ediyordu.
+  - `app/layout_designer.cpp` kullanıcıya **yanlış yer tutucuyu** söylüyordu.
+  - `Banner::addAction` `QWidget::addAction`'ı gizliyordu → `addButton`.
+    `GridDelegate::setTheme` sanal olmayan tabanı gizliyordu → taban `virtual` oldu.
+  - `io/dxf_reader.cpp`'de `PendingInsert` her vektör büyümesinde koca bir DXF
+    varlığını kopyalıyordu; artık işaretçinin arkasında.
+  - `kentos_docgen`'in `main`'i istisna sızdırıyordu: yarım yazılmış bir referans
+    `ci-gate-docs.sh`'in karşılaştıracağı şeydir. Artık sınırda yakalanıyor.
+  - `core::LayoutItem` nesne başına **39 bayt dolgu** harcıyordu (en iyisi 7).
+- `.clang-tidy`: `bugprone-signed-bitwise` pozitif tamsayı sabitlerini yok sayıyor;
+  kontrol bit işlemindeki **işaretli değişkeni** yakalamak için var, `1u << 0` biçimindeki
+  bayrak sözcüklerini değil — ağaçta 3571 kez. İşaretli bir `int` işlenen hâlâ yapıyı kırar.
+- `scripts/tidy.sh` artık bulguyu **konumuna göre** süzüyor: `/src` dışındaki bir bulgu
+  üzerinde çalışabileceğimiz bir bulgu değil. Betiğin kendi yorumu bunu zaten söylüyordu;
+  clang-tidy'nin `HeaderFilterRegex`'i çözümleyici bulgularına ulaşmadığı için (libpqxx'in
+  `result_iter`'ı canlı örnek) politika koda taşındı.
+
+
 ### Eklendi — Çıktı yerleşimi (sayfa sistemi)
 
 - **Bu sayfaya "pafta" DENMEZ, "çıktı yerleşimi" denir.** Bu ülkede pafta, kadastronun

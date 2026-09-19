@@ -650,7 +650,7 @@ void MapCanvas::buildGrips()
                 const render::ScreenPointF p = render::to_f(view_.to_screen(grips[i].at));
                 const bool hot               = hover_grip_.valid() && !hover_grip_.insert &&
                                  hover_grip_.entity == e &&
-                                 hover_grip_.corner == static_cast<std::int64_t>(i + 1);
+                                 hover_grip_.corner == static_cast<std::int64_t>(i) + 1;
                 const core::GripRole role = grips[i].role;
                 if (role == core::GripRole::Radius || role == core::GripRole::ArcMid ||
                     role == core::GripRole::Caption)
@@ -1204,9 +1204,9 @@ void MapCanvas::buildZoomStack()
     addRun(marks, {{cx - 5.0f, out}, {cx + 5.0f, out}}, false);
 
     const float fit = top + kBox * 2.5f;
-    for (int q = 0; q < 4; ++q) {
-        const float sx = (q & 1) ? -1.0f : 1.0f;
-        const float sy = (q & 2) ? -1.0f : 1.0f;
+    for (unsigned q = 0; q < 4; ++q) {
+        const float sx = (q & 1U) != 0U ? -1.0f : 1.0f;
+        const float sy = (q & 2U) != 0U ? -1.0f : 1.0f;
         const float ox = cx + sx * 6.0f;
         const float oy = fit + sy * 5.0f;
         addRun(marks, {{ox - sx * 3.0f, oy}, {ox, oy}, {ox, oy - sy * 3.0f}}, false);

@@ -513,6 +513,10 @@ int main(int argc, char** argv)
 
             const kentos::core::Layout* after = controller->document().layouts().find("Ada 1284");
             check(after != nullptr && after->items.size() == 5, "lejant eklenmedi");
+            if (after == nullptr) {
+                QApplication::exit(1);
+                return;
+            }
             if (const kentos::core::LayoutItem* title = after->find("baslik"); title != nullptr)
                 check(title->text == "<yerlesim> — <olcek>", "başlık metni yazılmadı");
 

@@ -16,7 +16,7 @@ constexpr std::uint64_t kTextSeed = fnv1a("piricad.core.text");
 
 /// A height of zero would draw nothing and a negative one is not a height. The
 /// upper bound is the same coordinate limit every stored length obeys.
-constexpr Mm kMaxTextHeight = Mm{1} << 40;
+constexpr Mm kMaxTextHeight = static_cast<Mm>(std::uint64_t{1} << 40U);
 
 } // namespace
 

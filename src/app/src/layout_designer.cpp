@@ -23,6 +23,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numeric>
 
 namespace kentos::app {
 namespace {
@@ -433,7 +434,7 @@ LayoutDesigner::LayoutDesigner(Controller& controller, QString layout, QWidget* 
     connect(&controller_, &Controller::documentChanged, this, [this] { refresh(); });
 
     refresh();
-    applyTheme(theme());
+    LayoutDesigner::applyTheme(theme());
 }
 
 const core::Layout* LayoutDesigner::layout() const
@@ -600,17 +601,16 @@ void LayoutDesigner::refresh()
     const QString chosen = canvas_->selected();
     items_->clear();
     // PAINT ORDER, TOP FIRST: the list reads the way the sheet looks.
-    std::vector<const core::LayoutItem*> ordered;
-    for (const core::LayoutItem& item : l->items)
-        ordered.push_back(&item);
-    std::stable_sort(
-        ordered.begin(), ordered.end(),
-        [](const core::LayoutItem* a, const core::LayoutItem* b) { return a->z > b->z; });
-    for (const core::LayoutItem* item : ordered) {
-        auto* row = new QListWidgetItem(
+    std::vector<std::size_t> ordered(l->items.size());
+    std::iota(ordered.begin(), ordered.end(), std::size_t{0});
+    std::stable_sort(ordered.begin(), ordered.end(),
+                     [&](std::size_t a, std::size_t b) { return l->items[a].z > l->items[b].z; });
+    for (const std::size_t at : ordered) {
+        const core::LayoutItem* item = &l->items[at];
+        auto* row                    = new QListWidgetItem(
             QStringLiteral("%1  ·  %2")
                 .arg(QString::fromStdString(item->id),
-                     QString::fromUtf8(core::layout_item_kind_label(item->kind))),
+                                        QString::fromUtf8(core::layout_item_kind_label(item->kind))),
             items_);
         row->setData(Qt::UserRole, QString::fromStdString(item->id));
         if (item->locked) row->setToolTip(tr("Kilitli"));

@@ -434,9 +434,9 @@ void draw(QPainter& p, Glyph g, const QColor& c)
     case Glyph::Fullscreen:
         // Four corner brackets opening outward.
         p.setPen(stroke(c, 1.8));
-        for (int q = 0; q < 4; ++q) {
-            const qreal sx = (q & 1) ? -1.0 : 1.0;
-            const qreal sy = (q & 2) ? -1.0 : 1.0;
+        for (unsigned q = 0; q < 4; ++q) {
+            const qreal sx = (q & 1U) != 0U ? -1.0 : 1.0;
+            const qreal sy = (q & 2U) != 0U ? -1.0 : 1.0;
             const QPointF o(12.0 + sx * 8.4, 12.0 + sy * 8.4);
             p.drawLine(o, QPointF(o.x() - sx * 4.2, o.y()));
             p.drawLine(o, QPointF(o.x(), o.y() - sy * 4.2));

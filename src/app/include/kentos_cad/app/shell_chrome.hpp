@@ -272,15 +272,15 @@ class PanelHeader : public QWidget, public Themed
 public:
     /// `buttons` names which of the four §6 marks this header carries, in the
     /// order the reference draws them: grip, collapse, float, close.
-    enum Button {
-        Grip     = 1 << 0,
-        Collapse = 1 << 1,
-        Float    = 1 << 2,
-        Close    = 1 << 3,
+    enum Button : unsigned {
+        Grip     = 1U << 0U,
+        Collapse = 1U << 1U,
+        Float    = 1U << 2U,
+        Close    = 1U << 3U,
         /// The two the layers panel adds before the dock marks (design.md §7):
         /// a new layer, and the filter box.
-        Add    = 1 << 4,
-        Filter = 1 << 5,
+        Add    = 1U << 4U,
+        Filter = 1U << 5U,
     };
 
     explicit PanelHeader(QWidget* parent = nullptr);
@@ -288,7 +288,7 @@ public:
     /// Adds one tab. `glyph` is drawn 14 px before the label.
     void addTab(const QString& label, int glyph);
 
-    void setButtons(int mask);
+    void setButtons(unsigned mask);
     void setCurrent(int index);
 
     int current() const noexcept { return current_; }
@@ -332,11 +332,11 @@ private:
     QVector<int> buttonList() const;
 
     QVector<Tab> tabs_;
-    int buttons_     = Grip | Collapse | Float;
-    int current_     = 0;
-    int hotTab_      = -1;
-    int hotButton_   = -1;
-    ThemeMode theme_ = ThemeMode::Dark;
+    unsigned buttons_ = Grip | Collapse | Float;
+    int current_      = 0;
+    int hotTab_       = -1;
+    int hotButton_    = -1;
+    ThemeMode theme_  = ThemeMode::Dark;
 };
 
 } // namespace kentos::app

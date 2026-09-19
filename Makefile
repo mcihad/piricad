@@ -87,7 +87,7 @@ gates: ## Run every CI gate script
 check: gates build test format-check tidy-if-present iwyu-if-present ## Everything CI runs, in CI's order
 
 tidy-if-present:
-	@if command -v clang-tidy >/dev/null; then \
+	@if scripts/tidy.sh --var; then \
 	    $(MAKE) tidy; \
 	else \
 	    echo "check: clang-tidy not installed — SKIPPED"; \
@@ -108,7 +108,7 @@ format-check: ## Fail if any source is not formatted
 	@find src tests \( -name '*.cpp' -o -name '*.hpp' \) -print0 | xargs -0 clang-format --dry-run -Werror
 
 tidy: build ## Run clang-tidy over the compile database
-	@command -v clang-tidy >/dev/null || { echo "clang-tidy not installed"; exit 2; }
+	@scripts/tidy.sh --var || { echo "clang-tidy not installed"; exit 2; }
 	@scripts/tidy.sh $(BUILD)
 
 doctor: ## Report what this machine can and cannot build

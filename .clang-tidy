@@ -57,6 +57,7 @@ Checks: >
 
 WarningsAsErrors: 'bugprone-*,cert-*,clang-analyzer-*'
 HeaderFilterRegex: '.*/kentos_cad/.*'
+ExcludeHeaderFilterRegex: '.*/_deps/.*'
 FormatStyle: file
 
 CheckOptions:

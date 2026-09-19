@@ -475,8 +475,9 @@ private:
         common(sp, e);
         sp.normalVec = DRW_Coord(0.0, 0.0, 1.0);
         sp.degree    = d.degree;
-        sp.flags     = (d.closed ? 1 : 0) | (d.periodic ? 2 : 0) | (d.rational ? 4 : 0) |
-                   (d.planar ? 8 : 0) | (d.linear ? 16 : 0);
+        sp.flags =
+            static_cast<int>((d.closed ? 1U : 0U) | (d.periodic ? 2U : 0U) |
+                             (d.rational ? 4U : 0U) | (d.planar ? 8U : 0U) | (d.linear ? 16U : 0U));
         const auto cx = geo.ring_xs(span.first);
         const auto cy = geo.ring_ys(span.first);
         for (std::size_t i = 0; i < cx.size(); ++i)
@@ -586,7 +587,9 @@ private:
         }
         const auto fill = [&](DRW_Dimension& out, int type_bits) {
             common(out, e);
-            out.type = type_bits | (d.user_text_position ? 128 : 0) | (d.ordinate_x ? 64 : 0);
+            out.type =
+                static_cast<int>(static_cast<unsigned>(type_bits) |
+                                 (d.user_text_position ? 128U : 0U) | (d.ordinate_x ? 64U : 0U));
             out.setTextPoint(text_at);
             out.setStyle(d.style);
             out.setText(d.override_text);

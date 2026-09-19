@@ -119,8 +119,10 @@ bool constant_time_equals(std::string_view a, std::string_view b)
 
     unsigned char diff = 0;
     for (std::size_t i = 0; i < a.size(); ++i)
-        diff = static_cast<unsigned char>(
-            diff | (static_cast<unsigned char>(a[i]) ^ static_cast<unsigned char>(b[i])));
+        diff =
+            static_cast<unsigned char>(static_cast<unsigned>(diff) |
+                                       (static_cast<unsigned>(static_cast<unsigned char>(a[i])) ^
+                                        static_cast<unsigned>(static_cast<unsigned char>(b[i]))));
     return diff == 0;
 }
 

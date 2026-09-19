@@ -956,7 +956,7 @@ Banner::Banner(Tone tone, const QString& title, const QString& text, QWidget* pa
     setAccessibleDescription(text);
 }
 
-Button* Banner::addAction(const QString& text)
+Button* Banner::addButton(const QString& text)
 {
     auto* action = new Button(ButtonRole::Secondary, text, std::nullopt, this);
     action->setControlSize(ControlSize::Compact);
@@ -1089,7 +1089,7 @@ QString formatTokenCount(qint64 tokens)
 QString formatByteCount(qint64 bytes)
 {
     if (bytes < 1024) return QStringLiteral("%1 B").arg(bytes);
-    if (bytes < 1024 * 1024)
+    if (bytes < 1024LL * 1024)
         return QStringLiteral("%1 KB").arg(
             QString::number(static_cast<double>(bytes) / 1024.0, 'f', 0));
     return QStringLiteral("%1 MB").arg(
@@ -2239,7 +2239,7 @@ QWidget* buildComponentSheet(ThemeMode mode, QWidget* parent)
                                  "Yapı ruhsat tarihi, tapu tarihinden önce görünüyor."),
                              sheet),
                   "uyarı şeridi", "warn");
-        banner->addAction(QStringLiteral("Ayrıntı"));
+        banner->addButton(QStringLiteral("Ayrıntı"));
         page->addWidget(banner);
 
         auto* strip = shown(new ProgressStrip(sheet), "yükleniyor", "etkin");
@@ -2321,10 +2321,10 @@ QWidget* buildComponentSheet(ThemeMode mode, QWidget* parent)
         dots->setElapsedSeconds(4);
         dots->setActive(true);
         row->addWidget(dots);
-        row->addWidget(shown(new AttachmentChip(QStringLiteral("olcum_listesi.csv"), 248 * 1024,
+        row->addWidget(shown(new AttachmentChip(QStringLiteral("olcum_listesi.csv"), 248LL * 1024,
                                                 QStringLiteral("text/csv"), sheet),
                              "ek", "kaldırılabilir"));
-        auto* sent = new AttachmentChip(QStringLiteral("kroki.png"), 1536 * 1024,
+        auto* sent = new AttachmentChip(QStringLiteral("kroki.png"), 1536LL * 1024,
                                         QStringLiteral("image/png"), sheet);
         sent->setRemovable(false);
         row->addWidget(shown(sent, "ek", "gönderilmiş"));

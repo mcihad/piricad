@@ -55,7 +55,7 @@ enum class PickMode : std::uint8_t {
 /// degrades to the bounding-box answer. 2^29 mm is 536 km: four times the width
 /// of a 3-degree TM `dilim`, and eight thousand times the longest segment any
 /// cadastral or zoning drawing contains.
-inline constexpr Mm kPickExactLimit = Mm{1} << 29;
+inline constexpr Mm kPickExactLimit = static_cast<Mm>(std::uint64_t{1} << 29U);
 
 /// Squared distance in mm², as a transient double. `Mm2` would overflow for
 /// points more than ~3e9 mm apart, and a hit test must not have a range limit.

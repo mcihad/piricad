@@ -334,7 +334,7 @@ public:
 
     /// The palette the editors are themed with. Set by the window that owns the
     /// table, and remembered so editors built later match.
-    void setTheme(ThemeMode mode) { theme_ = mode; }
+    virtual void setTheme(ThemeMode mode) { theme_ = mode; }
 
 signals:
     /// One cell was finished with Enter. The window moves to the next one.

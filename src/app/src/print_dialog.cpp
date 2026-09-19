@@ -64,8 +64,9 @@ std::int64_t rounded_scale(double implied)
             const std::int64_t candidate = step * factor;
             if (static_cast<double>(candidate) >= implied - 0.5) return candidate;
             // 2.5 × the decade: 250, 2 500, 25 000 — the cadastral sheet scales.
-            if (factor == 2 && step >= 100 && static_cast<double>(step * 5 / 2) >= implied - 0.5)
-                return step * 5 / 2;
+            const std::int64_t half_step = step * 5 / 2;
+            if (factor == 2 && step >= 100 && static_cast<double>(half_step) >= implied - 0.5)
+                return half_step;
         }
         step *= 10;
     }

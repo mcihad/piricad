@@ -70,7 +70,7 @@ constexpr std::uint64_t fnv1a_int(std::int64_t v, std::uint64_t seed)
 {
     std::uint64_t h = seed;
     auto u          = static_cast<std::uint64_t>(v);
-    for (int i = 0; i < 8; ++i) {
+    for (unsigned i = 0; i < 8; ++i) {
         h ^= (u >> (i * 8)) & 0xFFu;
         h *= 1099511628211ULL;
     }

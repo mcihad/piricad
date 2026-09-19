@@ -468,8 +468,10 @@ public:
     /// weight 600 and `text` under it.
     Banner(Tone tone, const QString& title, const QString& text, QWidget* parent = nullptr);
 
-    /// Adds the one action at the right end. A banner offers at most one.
-    Button* addAction(const QString& text);
+    /// Adds the one action button at the right end. A banner offers at most one.
+    /// NOT `addAction`: that is `QWidget`'s, takes a `QAction*`, and a banner
+    /// hiding it would make `banner->addAction(someQAction)` stop compiling.
+    Button* addButton(const QString& text);
 
     void setTitle(const QString& title);
     void setText(const QString& text);

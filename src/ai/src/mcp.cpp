@@ -551,9 +551,11 @@ McpServer::Compiled McpServer::compile(const command::CommandSpec& spec, const J
             // rejection happens while the arguments are still JSON, before an
             // `Args` exists. That is what makes "rejected before validation"
             // literally true rather than a matter of ordering code carefully.
-            const bool is_handle =
-                given->is_string() && HandleRef::parse(given->as_string()).has_value();
-            if (!is_handle) {
+            // PARSED ONCE, and the parse IS the guard: two calls would let the
+            // refusal and the resolution disagree about the same string.
+            const std::optional<HandleRef> ref =
+                given->is_string() ? HandleRef::parse(given->as_string()) : std::nullopt;
+            if (!ref) {
                 out.coordinate_literal = true;
                 out.refusal            = "`" + param.name +
                               "` bir TUTAMAK bekler; koordinat ya da anahtar yazılamaz. Gelen: " +
@@ -567,7 +569,6 @@ McpServer::Compiled McpServer::compile(const command::CommandSpec& spec, const J
                 return out;
             }
 
-            const std::optional<HandleRef> ref = HandleRef::parse(given->as_string());
             core::Result<HandleValue> resolved = dispatcher_.handles().resolve(*ref, revision);
             if (!resolved) {
                 // A DOMAIN REFUSAL, not a protocol one: the reference was

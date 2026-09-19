@@ -661,8 +661,11 @@ void ChatPanel::attach(const QString& path)
     attachRow_->setVisible(true);
     chip->applyTheme(theme_);
 
-    const std::string name = pending_.back().name;
-    connect(chip, &AttachmentChip::removeRequested, this, [this, chip, name] {
+    // TWO POINTERS, NO STRING: the chip already knows its own file name, and a
+    // captured `std::string` makes the handler's own copy able to throw — inside
+    // a signal delivery, where an escaping exception ends the process.
+    connect(chip, &AttachmentChip::removeRequested, this, [this, chip] {
+        const std::string name = chip->fileName().toStdString();
         std::erase_if(pending_, [&name](const ai::Attachment& a) { return a.name == name; });
         chip->deleteLater();
         attachRow_->setVisible(!pending_.empty());

@@ -52,7 +52,7 @@ QFont sans(int px)
 bool numeric(const QModelIndex& index)
 {
     const QVariant align = index.data(Qt::TextAlignmentRole);
-    return align.isValid() && (align.toInt() & static_cast<int>(Qt::AlignRight)) != 0;
+    return align.isValid() && (static_cast<unsigned>(align.toInt()) & Qt::AlignRight) != 0U;
 }
 
 } // namespace
@@ -109,7 +109,7 @@ void GridHeader::paintSection(QPainter* painter, const QRect& rect, int logicalI
         const QVariant align =
             model()->headerData(logicalIndex, Qt::Horizontal, Qt::TextAlignmentRole);
         const bool right =
-            align.isValid() && (align.toInt() & static_cast<int>(Qt::AlignRight)) != 0;
+            align.isValid() && (static_cast<unsigned>(align.toInt()) & Qt::AlignRight) != 0U;
 
         // Mono, tracked, faint — and the sorted column in the accent ink with its
         // arrow after the label, where the eye lands after reading the name.
