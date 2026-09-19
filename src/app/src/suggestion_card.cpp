@@ -176,10 +176,16 @@ core::Status SuggestionCard::decide(bool apply)
     // Everything above this line is words on a screen; this is the line that
     // turns a person's click into a value nothing else can make. `ci-gate-ai.sh`
     // checks that this file is its only caller (ai.md P15).
-    const ai::Approval approval =
-        service_.gate().approve(plan_.toStdString(), operatorName().toStdString(),
-                                apply ? ai::Decision::Apply : ai::Decision::Reject,
-                                QDateTime::currentDateTimeUtc().toMSecsSinceEpoch());
+    //
+    // THE POLICY IN FORCE AT THE MOMENT OF THE CLICK travels with the approval,
+    // rather than being looked up when the record is written: the setting can
+    // change between the two, and what a record must preserve is the rule the
+    // decision was made UNDER (TODOS S-06).
+    const ai::Approval approval = service_.gate().approve(
+        plan_.toStdString(), operatorName().toStdString(),
+        apply ? ai::Decision::Apply : ai::Decision::Reject,
+        QDateTime::currentDateTimeUtc().toMSecsSinceEpoch(),
+        std::string(service_.appSettings().get("core.ai.onay_politikasi").as_text()));
     // ========================================================================
 
     const core::Status settled = service_.settle(approval);

@@ -25,6 +25,16 @@ core::Json AuditRecord::to_json() const
     out.set("oneri", core::Json::string(plan_id));
     out.set("zaman_utc_ms", core::Json::integer(utc_ms));
     out.set("karar", core::Json::string(decision));
+
+    // WHO OR WHAT DECIDED, WRITTEN EVERY TIME. Today only a person can (5.7), so
+    // every line carries the same word — and that is exactly why it is written
+    // now rather than when it first varies: a record that says nothing cannot be
+    // told apart from one written after the rule changes, and S-06's rule that
+    // an automatic action must never read as a click would then be
+    // unenforceable in retrospect.
+    out.set("karar_veren", core::Json::string(decided_by.empty() ? "insan" : decided_by));
+    if (!policy.empty()) out.set("onay_politikasi", core::Json::string(policy));
+
     out.set("kullanici", core::Json::string(operator_name));
     out.set("isteyen", core::Json::string(requester));
     out.set("model", core::Json::string(model));

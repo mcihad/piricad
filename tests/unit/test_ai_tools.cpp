@@ -552,8 +552,9 @@ TEST_CASE("Onay kapısı: uygulanan öneri tek adım, reddedilen hiçbir şey")
 
     const std::size_t undo_before  = f.undo.undo_depth();
     const std::size_t count_before = f.doc.live_entity_count();
-    REQUIRE(
-        gate.decide(gate.approve(id, "Harita Mühendisi", ai::Decision::Apply, 1700000000000)).ok());
+    REQUIRE(gate.decide(gate.approve(id, "Harita Mühendisi", ai::Decision::Apply, 1700000000000,
+                                     "her_degisiklikte"))
+                .ok());
 
     // TWO COMMANDS, ONE UNDO ENTRY (ai.md R4). Eleven would be the same one
     // click and the same one Ctrl+Z.
@@ -578,6 +579,28 @@ TEST_CASE("Onay kapısı: uygulanan öneri tek adım, reddedilen hiçbir şey")
     CHECK_EQ(record.find("karar")->as_string(), std::string("uygula"));
     CHECK_EQ(record.find("kullanici")->as_string(), std::string("Harita Mühendisi"));
     CHECK_EQ(record.find("komutlar")->as_array().size(), std::size_t{2});
+
+    // ---- WHICH PERMISSION CARRIED OUT THIS WORK (TODOS S-06) ---------------
+    //
+    // WRITTEN NOW, WHILE THERE IS ONLY ONE ANSWER. Today only a person can
+    // decide (CLAUDE.md 5.7), so every line says `insan` — and that is exactly
+    // why it is written rather than left implicit: a record that says nothing
+    // cannot be told apart from one written after the rule changes, and
+    // "otomatik işlem insan tıklaması gibi yazılmasın" would be unenforceable in
+    // retrospect.
+    REQUIRE(record.find("karar_veren") != nullptr);
+    CHECK_EQ(record.find("karar_veren")->as_string(), std::string("insan"));
+
+    // AND THE RULE IT WAS MADE UNDER. A decision is only explicable against the
+    // policy in force at the time, and that setting may change twice before
+    // anybody reads the log.
+    REQUIRE(record.find("onay_politikasi") != nullptr);
+    CHECK_EQ(record.find("onay_politikasi")->as_string(), std::string("her_degisiklikte"));
+
+    // NO SECRET REACHES THE RECORD, whatever was added to it (CLAUDE.md 5.21).
+    const std::string line = log.front();
+    for (const char* forbidden : {"Bearer", "api_key", "apiKey", "password", "parola"})
+        CHECK(line.find(forbidden) == std::string::npos);
 }
 
 TEST_CASE("Onay kapısı: ret de kayda geçer, çizim değişmez")

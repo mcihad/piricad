@@ -58,16 +58,27 @@ public:
     /// When, in UTC milliseconds.
     std::int64_t utc_ms() const noexcept { return utc_ms_; }
 
+    /// The approval policy that was in force at the moment of the decision, by
+    /// its setting word — empty when the caller did not say.
+    ///
+    /// CARRIED BY THE APPROVAL, not looked up when the record is written, and
+    /// the difference matters: the setting may change between the click and the
+    /// line reaching the log, and what a record has to preserve is the rule the
+    /// decision was made UNDER (TODOS S-06).
+    const std::string& policy() const noexcept { return policy_; }
+
 private:
     friend class Gate;
 
-    Approval(std::string plan_id, std::string operator_name, Decision decision, std::int64_t utc_ms)
-        : plan_id_(std::move(plan_id)), operator_(std::move(operator_name)), decision_(decision),
-          utc_ms_(utc_ms)
+    Approval(std::string plan_id, std::string operator_name, Decision decision, std::int64_t utc_ms,
+             std::string policy)
+        : plan_id_(std::move(plan_id)), operator_(std::move(operator_name)),
+          policy_(std::move(policy)), decision_(decision), utc_ms_(utc_ms)
     {}
 
     std::string plan_id_;
     std::string operator_;
+    std::string policy_;
     Decision decision_{Decision::Reject};
     std::int64_t utc_ms_{0};
 };
@@ -91,8 +102,12 @@ public:
     /// `operator_name` is who is at the workstation, as the program knows them —
     /// it reaches the audit record, because "who approved this parcel" is the
     /// question BÖHHBÜY makes somebody answer (ai.md R8, R6).
+    /// `policy` is the approval policy in force at the moment of the click, by
+    /// its setting word. Recorded because a decision is only explicable against
+    /// the rule it was made under, and that rule may change twice before anybody
+    /// reads the log (TODOS S-06).
     Approval approve(std::string plan_id, std::string operator_name, Decision decision,
-                     std::int64_t utc_ms);
+                     std::int64_t utc_ms, std::string policy = {});
 
     /// Applies or rejects, writes the audit record, and settles the plan.
     ///

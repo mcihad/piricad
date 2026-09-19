@@ -190,6 +190,8 @@ Her satır bir JSON nesnesidir ve her karar alındığı anda **diske yazılıp 
 | `zaman_utc_ms` | Kararın zamanı, UTC |
 | `karar` | `uygula`, `reddet`, `geri_cek` ya da `koordinat_reddi` |
 | `kullanici` | Bilgisayar başındaki kişi: kararı veren. `core.ai.sorumlu` ayarından gelir |
+| `karar_veren` | Kararı **ne** verdi: bugün her zaman `insan` |
+| `onay_politikasi` | Karar anında yürürlükte olan onay politikası |
 | `isteyen` | İsteyen istemcinin adı ve belirtecinin **parmak izi** |
 | `model` | Modelin kimliği ve sürümü; düz bir MCP istemcisinde boş kalır |
 | `uc_nokta` | Sağlayıcı ve uç nokta, ya da istemcinin bildirdiği ad |
@@ -197,6 +199,15 @@ Her satır bir JSON nesnesidir ve her karar alındığı anda **diske yazılıp 
 | `komutlar` | Komut satırları, çalışacakları hâliyle |
 | `sonuc` | Uygulandığında ne olduğu ya da neden uygulanmadığı |
 | `olusan_nesneler` | Onaylanan önerinin oluşturduğu **kalıcı nesne anahtarları** |
+
+`karar_veren` bugün **her satırda** `insan` yazar, çünkü bu sürümde kararı yalnız bir
+insan verebilir. Yine de yazılıyor: hiçbir şey söylemeyen bir kayıt, kuralın değiştiği
+günden sonra yazılmış bir kayıttan **ayırt edilemez** — ve "otomatik işlem insan
+tıklaması gibi yazılmasın" o zaman geriye dönük olarak denetlenemez olurdu.
+
+`onay_politikasi` kararın **hangi kural altında** verildiğini söyler. Bir karar ancak
+verildiği kurala karşı açıklanabilir, ve o ayar kayıt okunana kadar iki kez değişmiş
+olabilir.
 
 `olusan_nesneler` alanı kayıt biçiminde vardır ama henüz dolmuyor; **Faz 3'ün kalan
 işlerinden**

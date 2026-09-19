@@ -53,6 +53,28 @@ struct AuditRecord
     std::string outcome;               ///< what happened when it was applied, or why it was not
     std::vector<std::int64_t> created; ///< persistent keys the approved plan created (R7)
 
+    // ---- WHICH PERMISSION CARRIED OUT THIS WORK (TODOS S-06) ---------------
+
+    /// What made the decision: `insan` when a person pressed a button on the
+    /// card, or the name of the policy that decided instead.
+    ///
+    /// WHY IT IS A FIELD AND NOT AN ASSUMPTION. Today only a person can decide
+    /// (CLAUDE.md 5.7), so every record would carry the same word — and a record
+    /// that carries it IMPLICITLY cannot be told apart from one written after
+    /// the rule changes. S-06 asks that an automatic action never be written as
+    /// though somebody clicked, and the only way to honour that is for the human
+    /// case to say so out loud FIRST, while the human case is the only one there
+    /// is.
+    std::string decided_by;
+
+    /// The approval policy in force when it was decided, by its setting word.
+    ///
+    /// A DECISION IS ONLY EXPLICABLE AGAINST THE RULE IT WAS MADE UNDER. Six
+    /// months later "why was this applied without my seeing it" can only be
+    /// answered if the record says which policy was in force at the time, and
+    /// the setting may have changed twice since.
+    std::string policy;
+
     /// One JSONL line. `sürüm` first, because a file without a version is a file
     /// that cannot be read by a later program (.claude/io.md P5).
     core::Json to_json() const;

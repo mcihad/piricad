@@ -852,7 +852,24 @@ ve hiç seçim yoksa önce bağlam çözülür; çözülemiyorsa yalnız nesne s
   MCP/sohbet kılavuzları ve üretilen `docs/llms*.txt` aynı değişimde güncellensin.
   **Kabul:** CI hâlâ yetkisiz uygulamayı yakalar; yetkili otomatik uygulamayı
   “yasak onay çağırıcısı” diye reddetmez. Üretilen dosyalar elle değiştirilmez.
-- [ ] **S-06 / P1 — Audit ve ayar migration'ı.** Karar kaynağı `human`/`policy`,
+- [~] **S-06 / P1 — Audit ve ayar migration'ı.** *(karar kaynağı ve policy 19 Eylül 2026)*
+  **Yapıldı:** Denetim kaydı iki alan kazandı — `karar_veren` ve
+  `onay_politikasi`. İlki bugün her satırda `insan` yazıyor ve **yazılması
+  şart**: hiçbir şey söylemeyen bir kayıt, kuralın değiştiği günden sonra
+  yazılmış bir kayıttan ayırt edilemez, ve "otomatik işlem insan tıklaması gibi
+  yazılmasın" geriye dönük denetlenemez olurdu. İkincisi onayla birlikte
+  taşınıyor, kayıt yazılırken bakılmıyor: ayar tıklama ile satır arasında
+  değişebilir. Gizli değer taşımadığı da sınanıyor.
+  **Mevcut kurulumlar `her_degisiklikte` davranışını koruyor** — fallback zaten
+  en darı ve her kurulum onu alıyor.
+  **Yol üstünde:** ayarın yanındaki bir yorum yeni kurulumun "first-run path" ile
+  `riskli_islemlerde`'ye taşındığını söylüyordu; ağaçta öyle bir yol yok. Yorum
+  düzeltildi.
+  **Kalan:** kapsam, varsayım ve sonucun kayda girmesi; **ilk çalıştırma yolu**
+  (yeni kurulum için önerilen varsayılan) ve Settings'ten tek seçimle mod
+  değiştirme. Bunlar `otomatik` yürürlüğe girmeden anlamlı değil, yani S-05'in
+  anayasa kararına bağlı.
+  **Eski metin:** Karar kaynağı `human`/`policy`,
   etkili policy sürümü, kapsam, varsayım ve sonuç kaydedilsin. Otomatik işlem insan
   tıklaması gibi yazılmasın. Mevcut kurulumlar ilk yükseltmede `her_degisiklikte`
   davranışını korusun; Settings'ten tek seçimle diğer modlara geçebilsin. Yeni

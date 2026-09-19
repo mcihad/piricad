@@ -1877,10 +1877,16 @@ KENTOS_SETTING(ai_onay_politikasi)
         // you would then be enough to widen what a client may do on your
         // workstation (TODOS S-02).
         .scope = SettingScope::App,
-        // THE STRICTEST ONE IS THE DEFAULT that an existing installation keeps.
-        // A new installation is moved to `riskli_islemlerde` by the first-run
-        // path, not by this fallback: an upgrade must not silently loosen what
-        // was already in force (TODOS S-06).
+        // THE STRICTEST ONE IS THE DEFAULT, and today it is the default for EVERY
+        // installation — new and upgraded alike. An earlier note here said a new
+        // installation is moved to `riskli_islemlerde` "by the first-run path";
+        // there is no first-run path in this tree, so that note described a
+        // mechanism the program does not have and would have sent the next
+        // reader looking for it.
+        //
+        // The reason the fallback is the strictest one stands whatever the
+        // first-run decision turns out to be: an upgrade must not silently
+        // loosen what was already in force (TODOS S-06, which owns that work).
         .fallback = SettingValue::enumerated(0),
         .range    = SettingRange::between(0, 2),
         .values   = {"her_degisiklikte", "riskli_islemlerde", "otomatik"},

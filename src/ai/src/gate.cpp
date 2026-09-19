@@ -8,9 +8,10 @@ Gate::Gate(PlanStore& plans, AuditLog& audit, Runner runner)
 {}
 
 Approval Gate::approve(std::string plan_id, std::string operator_name, Decision decision,
-                       std::int64_t utc_ms)
+                       std::int64_t utc_ms, std::string policy)
 {
-    return Approval(std::move(plan_id), std::move(operator_name), decision, utc_ms);
+    return Approval(std::move(plan_id), std::move(operator_name), decision, utc_ms,
+                    std::move(policy));
 }
 
 core::Status Gate::decide(const Approval& approval)
@@ -32,6 +33,15 @@ core::Status Gate::decide(const Approval& approval)
     record.requester     = plan->requester;
     record.operator_name = approval.operator_name();
     record.utc_ms        = approval.utc_ms();
+    record.policy        = approval.policy();
+
+    // WHO OR WHAT DECIDED. An `Approval` can only be made by the suggestion card
+    // (`Gate::approve`, one caller, enforced by `scripts/ci-gate-ai.sh`), so
+    // reaching this line means a person clicked. `Plan::decided_by` is left as
+    // the seam for the day a policy may decide instead; until then it is empty
+    // and the record says `insan` — out loud, so the two can be told apart
+    // afterwards (TODOS S-06).
+    record.decided_by = plan->decided_by.empty() ? std::string("insan") : plan->decided_by;
     for (const PlanStep& step : plan->steps)
         record.commands.push_back(step.line);
 

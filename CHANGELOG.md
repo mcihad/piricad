@@ -6,6 +6,25 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — denetim kaydı hangi iznin hangi işi yürüttüğünü söylüyor (TODOS S-06, kısmi)
+
+- İki alan: **`karar_veren`** (kararı ne verdi) ve **`onay_politikasi`** (karar
+  anında yürürlükte olan kural).
+- `karar_veren` bugün her satırda `insan` yazıyor, çünkü bu sürümde kararı yalnız
+  bir insan verebilir. **Yine de yazılıyor**, ve sebebi tam olarak bu: hiçbir şey
+  söylemeyen bir kayıt, kuralın değiştiği günden sonra yazılmış bir kayıttan
+  ayırt edilemez — S-06'nın "otomatik işlem insan tıklaması gibi yazılmasın"
+  kuralı o zaman geriye dönük olarak denetlenemez olurdu. İnsan hâli, tek hâl
+  olduğu sırada kendini söylemeli.
+- `onay_politikasi` **onayla birlikte taşınıyor**, kayıt yazılırken bakılmıyor:
+  ayar tıklama ile satırın diske inmesi arasında değişebilir, ve bir kaydın
+  koruması gereken şey kararın **altında verildiği** kuraldır.
+- Kayıt satırının hiçbir gizli değer taşımadığı da sınanıyor (5.21).
+- Yol üstünde: `core.ai.onay_politikasi`'nın yanındaki bir yorum, yeni kurulumun
+  "first-run path" ile `riskli_islemlerde`'ye taşındığını söylüyordu. Ağaçta öyle
+  bir yol **yok**; yorum, programın sahip olmadığı bir mekanizmayı tarif ediyor ve
+  sonraki okuyucuyu onu aramaya gönderiyordu.
+
 ### Düzeltildi — onay politikası ayarı programın yapmadığı şeyi vaat ediyordu (TODOS S-03, kısmi)
 
 - Ayarın özeti `otomatik` için "yetki kapsamı içindeki ve girdileri tam olan iş
