@@ -6,6 +6,28 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — çıktı yerleşimi sayfasında üç görünür kusur
+
+Basılan sayfanın kendisine bakarak bulundu; üçü de kâğıda çıkan kusurlardı.
+
+- **Tablo ve lejant saydam geliyordu.** Haritanın ızgara çizgileri ve parsel
+  sınırları tablonun satırlarının içinden geçiyordu. İkisi de tasarımı gereği
+  haritanın üstünde durur; basılı bir öznitelik tablosu opaktır, lejant kutusu da.
+  Artık `core::default_item` ikisine de arka plan ve çerçeve veriyor.
+- **İki yerde iki ayrı varsayılan vardı**: `default_layout` sayfanın dört öğesini
+  kendi seçimleriyle kuruyordu, `ÇIKTIÖĞE islem=ekle` kendi seçimleriyle. Elle
+  eklenen tablonun saydam çıkmasının sebebi buydu. Tek cevap: `core::default_item`.
+- **Ölçek çubuğunun birimi son taksimat etiketinin üstüne basılıyordu.** Taksimat
+  çubuğun ucunda ORTALANMIŞ çiziliyor, yani "80"in yarısı ucun sağına taşıyor;
+  birim ise ucun yalnız dört piksel sağından başlıyordu. Sonuç "80m 1:550"nin
+  kendi üstüne binmesiydi.
+- **Izgara koordinat etiketleri hiç çizilmiyordu.** İki etiket geçişi de
+  `grid != Cross` ile korunuyordu, oysa yeni bir haritanın varsayılanı tam olarak
+  `Cross` + `Outside` — yani varsayılan sayfa, çizilmeyeceği kararlaştırılmış
+  sayılar istiyordu. Etiket artık ızgaranın stiline bağlı değil: kenarlarda
+  koordinatı olan bir artı ızgarası, bir kadastro paftasının tam olarak kendisidir.
+
+
 ### Eklendi — capability envanteri ve ajan kapsamı kapısı (TODOS C-01, komut tarafı)
 
 - **`kentos_envanter`**: canlı registry'lerden alınan makine okunur envanter. Her

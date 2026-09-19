@@ -190,18 +190,6 @@ void paint_map(QPainter& painter, const QRectF& box, const core::Document& docum
             break;
         case core::GridStyle::None: break;
         }
-
-        if (item.grid_labels != core::GridLabels::None && item.grid != core::GridStyle::Cross) {
-            const QString text = metres_of(gx);
-            const double ty    = item.grid_labels == core::GridLabels::Outside
-                                     ? box.top() - metrics.descent() - 1.0
-                                     : box.top() + metrics.height();
-            painter.save();
-            painter.setClipping(false);
-            painter.setFont(labels);
-            painter.drawText(QPointF(px - metrics.horizontalAdvance(text) / 2.0, ty), text);
-            painter.restore();
-        }
     }
 
     if (item.grid != core::GridStyle::Cross) {
@@ -213,18 +201,40 @@ void paint_map(QPainter& painter, const QRectF& box, const core::Document& docum
                 painter.drawLine(QPointF(box.left(), py), QPointF(box.left() + tick, py));
                 painter.drawLine(QPointF(box.right() - tick, py), QPointF(box.right(), py));
             }
-            if (item.grid_labels != core::GridLabels::None) {
-                const QString text = metres_of(gy);
-                painter.save();
-                painter.setClipping(false);
-                painter.setFont(labels);
-                const double tx = item.grid_labels == core::GridLabels::Outside
-                                      ? box.left() - metrics.horizontalAdvance(text) - 2.0
-                                      : box.left() + 2.0;
-                painter.drawText(QPointF(tx, py + metrics.ascent() / 2.0), text);
-                painter.restore();
-            }
         }
+    }
+
+    // ---- the coordinates, in their own pass ---------------------------------
+    //
+    // A LABEL DOES NOT DEPEND ON THE GRID'S STYLE. It used to: the two label
+    // passes were guarded by `grid != Cross`, and `default_item` gives a fresh
+    // map `Cross` with `Outside` labels — so the default sheet asked for numbers
+    // the renderer had decided not to draw. A cross grid with coordinates down
+    // the margins is exactly what a cadastral sheet looks like; the crosses mark
+    // the intersections and the numbers say which ones.
+    if (item.grid_labels != core::GridLabels::None) {
+        painter.save();
+        painter.setClipping(false);
+        painter.setFont(labels);
+        painter.setPen(QPen(colour_of(item.grid_colour)));
+
+        for (core::Mm gx = first(window.min_x); gx <= window.max_x; gx += step) {
+            const double px    = box.left() + static_cast<double>(gx - window.min_x) * sx;
+            const QString text = metres_of(gx);
+            const double ty    = item.grid_labels == core::GridLabels::Outside
+                                     ? box.top() - metrics.descent() - 1.0
+                                     : box.top() + metrics.height();
+            painter.drawText(QPointF(px - metrics.horizontalAdvance(text) / 2.0, ty), text);
+        }
+        for (core::Mm gy = first(window.min_y); gy <= window.max_y; gy += step) {
+            const double py    = box.bottom() - static_cast<double>(gy - window.min_y) * sy;
+            const QString text = metres_of(gy);
+            const double tx    = item.grid_labels == core::GridLabels::Outside
+                                     ? box.left() - metrics.horizontalAdvance(text) - 2.0
+                                     : box.left() + 2.0;
+            painter.drawText(QPointF(tx, py + metrics.ascent() / 2.0), text);
+        }
+        painter.restore();
     }
     painter.restore();
 }
@@ -275,10 +285,16 @@ void paint_scale_bar(QPainter& painter, const QRectF& box, const core::LayoutIte
                                  top + bar_h + metrics.ascent() + 1.0),
                          text);
     }
-    const QString unit = QStringLiteral("m   1:%1").arg(denominator);
-    painter.drawText(
-        QPointF(box.left() + segments * segment_px + 4.0, top + bar_h + metrics.ascent() + 1.0),
-        unit);
+    // AFTER THE LAST TICK LABEL, not after the bar. The tick is drawn CENTRED on
+    // the bar's end, so half of "80" hangs past it — and the unit started four
+    // pixels past the bar, printing "80m 1:550" on top of itself.
+    const QString last = metres_of(per_segment * segments);
+    const double last_end =
+        box.left() + segments * segment_px + metrics.horizontalAdvance(last) / 2.0;
+    const QString unit = QStringLiteral(" m   1:%1").arg(denominator);
+    painter.drawText(QPointF(last_end + metrics.horizontalAdvance(QStringLiteral(" ")),
+                             top + bar_h + metrics.ascent() + 1.0),
+                     unit);
     painter.restore();
 }
 

@@ -401,6 +401,15 @@ Box2 map_window(const LayoutItem& item);
 /// a map frame inside the margin, a title at the top and a scale bar under the
 /// map: the sheet a new layout starts as, so a new layout produces something
 /// printable rather than an empty page.
+/// A fresh item of `kind`, with everything but its name and its box.
+///
+/// ONE ANSWER, because there were two: `default_layout` seeded a sheet's four
+/// items with its own choices and `ÇIKTIÖĞE islem=ekle` made its own, so a table
+/// or a legend added by hand came out with NO BACKGROUND — and over a map that
+/// means the grid lines and the parcel boundaries run straight through the rows.
+/// A printed attribute table is opaque; so is a legend box.
+LayoutItem default_item(LayoutItemKind kind);
+
 Layout default_layout(std::string name, Um width, Um height, Um margin);
 
 } // namespace kentos::core

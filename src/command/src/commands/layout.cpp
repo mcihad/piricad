@@ -398,8 +398,10 @@ Task<void> run_item(Context& ctx)
         }
         ctx.record("tur", Value::text(core::layout_item_kind_id(*kind)));
 
-        LayoutItem item;
-        item.kind          = *kind;
+        // THE SAME DEFAULTS THE SEEDED SHEET GETS (`core::default_item`). Two
+        // answers to "what does a fresh table look like" is how one of them ends
+        // up transparent over a map.
+        LayoutItem item    = core::default_item(*kind);
         const Value id_arg = ctx.argument("ad");
         item.id =
             id_arg.empty() ? free_id(*target, core::layout_item_kind_id(*kind)) : id_arg.as_text();
@@ -416,11 +418,7 @@ Task<void> run_item(Context& ctx)
         const core::LayoutPage& page = target->pages.front();
         const Um edge                = target->margin;
         item.frame = core::PaperRect{edge, edge, (page.w - 2 * edge) / 3, (page.h - 2 * edge) / 6};
-        item.z     = *kind == LayoutItemKind::Map ? 0 : 10;
-        if (*kind == LayoutItemKind::Map) item.frame_visible = true;
 
-        for (LayoutItem& one : target->items)
-            (void)one;
         target->items.push_back(std::move(item));
         target->item_pages.push_back(0);
     } else {

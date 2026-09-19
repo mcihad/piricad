@@ -507,6 +507,43 @@ Box2 map_window(const LayoutItem& item)
 
 // ----------------------------------------------------------- default_layout --
 
+LayoutItem default_item(LayoutItemKind kind)
+{
+    LayoutItem out;
+    out.kind = kind;
+    // THE MAP GOES UNDER EVERYTHING ELSE. It is the content; the rest is the
+    // apparatus that explains it, and apparatus that hides the content is worse
+    // than no apparatus.
+    out.z = kind == LayoutItemKind::Map ? 0 : 10;
+
+    switch (kind) {
+    case LayoutItemKind::Map:
+        out.frame_visible = true;
+        out.grid          = GridStyle::Cross;
+        out.grid_labels   = GridLabels::Outside;
+        break;
+    case LayoutItemKind::Legend:
+    case LayoutItemKind::Table:
+        // OPAQUE, AND FRAMED. Both of these sit over the map by design, and a
+        // transparent one is a table whose rows have a parcel boundary drawn
+        // through them.
+        out.background    = true;
+        out.frame_visible = true;
+        break;
+    case LayoutItemKind::ScaleBar:
+        out.style = 4; // four segments
+        break;
+    case LayoutItemKind::Label:
+        out.align_h = 1; // centred
+        out.align_v = 1;
+        break;
+    case LayoutItemKind::NorthArrow:
+    case LayoutItemKind::Picture:
+    case LayoutItemKind::Shape: break;
+    }
+    return out;
+}
+
 Layout default_layout(std::string name, Um width, Um height, Um margin)
 {
     Layout out;
@@ -514,51 +551,37 @@ Layout default_layout(std::string name, Um width, Um height, Um margin)
     out.margin = margin;
     out.pages  = {LayoutPage{width, height}};
 
-    // THE SHEET A NEW PAFTA STARTS AS, and every number below is a proportion of
+    // THE SHEET A NEW LAYOUT STARTS AS, and every number below is a proportion of
     // the page rather than a constant: the same call has to produce a sensible
-    // A4 kroki and a sensible A0 pafta, and a 20 mm title block is a banner on
+    // A4 kroki and a sensible A0 sheet, and a 20 mm title block is a banner on
     // one and a whisker on the other.
     const Um title_h = std::max(um_from_mm(8), height / 28);
     const Um bar_h   = std::max(um_from_mm(6), height / 40);
     const Um gap     = std::max(um_from_mm(3), height / 90);
 
-    LayoutItem title;
+    LayoutItem title  = default_item(LayoutItemKind::Label);
     title.id          = "baslik";
-    title.kind        = LayoutItemKind::Label;
     title.frame       = PaperRect{margin, margin, width - 2 * margin, title_h};
-    title.z           = 10;
     title.text        = "<yerlesim>";
     title.text_height = std::max(um_from_mm(4), title_h / 2);
-    title.align_h     = 1; // centred
-    title.align_v     = 1;
     out.items.push_back(std::move(title));
 
-    LayoutItem map;
-    map.id            = "harita";
-    map.kind          = LayoutItemKind::Map;
-    map.frame         = PaperRect{margin, margin + title_h + gap, width - 2 * margin,
+    LayoutItem map = default_item(LayoutItemKind::Map);
+    map.id         = "harita";
+    map.frame      = PaperRect{margin, margin + title_h + gap, width - 2 * margin,
                           height - 2 * margin - title_h - bar_h - 2 * gap};
-    map.z             = 0;
-    map.frame_visible = true;
-    map.grid          = GridStyle::Cross;
-    map.grid_labels   = GridLabels::Outside;
     out.items.push_back(std::move(map));
 
-    LayoutItem bar;
+    LayoutItem bar  = default_item(LayoutItemKind::ScaleBar);
     bar.id          = "olcek";
-    bar.kind        = LayoutItemKind::ScaleBar;
     bar.frame       = PaperRect{margin, height - margin - bar_h, (width - 2 * margin) / 3, bar_h};
-    bar.z           = 10;
-    bar.style       = 4; // four segments
     bar.text_height = std::max(um_from_mm(2), bar_h / 3);
     out.items.push_back(std::move(bar));
 
-    LayoutItem north;
-    north.id    = "kuzey";
-    north.kind  = LayoutItemKind::NorthArrow;
-    const Um nw = std::max(um_from_mm(10), width / 22);
-    north.frame = PaperRect{width - margin - nw, height - margin - bar_h - gap - nw, nw, nw};
-    north.z     = 10;
+    LayoutItem north = default_item(LayoutItemKind::NorthArrow);
+    north.id         = "kuzey";
+    const Um nw      = std::max(um_from_mm(10), width / 22);
+    north.frame      = PaperRect{width - margin - nw, height - margin - bar_h - gap - nw, nw, nw};
     out.items.push_back(std::move(north));
 
     out.item_pages.assign(out.items.size(), 0);
