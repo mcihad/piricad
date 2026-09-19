@@ -34,9 +34,30 @@ public:
     /// A list of integers — entity keys for a selection, ring lengths for an area.
     using Ints = std::vector<std::int64_t>;
 
+    /// A LIST OF WORDS, for a parameter that names several things.
+    ///
+    /// A map frame draws a named set of layers and a table prints a named set of
+    /// columns, and neither could be said from a command line: `Text` replaced
+    /// rather than accumulated, so `katmanlar=parsel katmanlar=bina` kept the
+    /// last one. A comma would not do — a layer name is not validated and may
+    /// contain one, so splitting on it would be a guess about somebody's data.
+    using Texts = std::vector<std::string>;
+
     /// What this value holds. `Empty` is a real state and means "the caller did
     /// not supply this argument", which is different from supplying a zero.
-    enum class Kind : std::uint8_t { Empty, Bool, Int, Number, Text, Point, PointList, IdList };
+    enum class Kind : std::uint8_t {
+        Empty,
+        Bool,
+        Int,
+        Number,
+        Text,
+        Point,
+        PointList,
+        IdList,
+        /// Added at the END: a journal reads a kind by name, not by number, but
+        /// the enum's order is what a reader of this file learns first.
+        TextList,
+    };
 
     /// An absent argument. `empty()` is true and every accessor returns its
     /// default rather than throwing, because a command asking for an optional
@@ -54,6 +75,7 @@ public:
     static Value point(Point2 v);
     static Value points(Points v);
     static Value ids(Ints v);
+    static Value texts(Texts v);
 
     /// What this value actually holds, for a caller that must branch on it.
     Kind kind() const noexcept { return kind_; }
@@ -76,6 +98,11 @@ public:
     const Points& as_points() const;
     const Ints& as_ids() const;
 
+    /// The words, or an empty list when this holds something else. A single
+    /// `Text` reads as a one-word list, because `katmanlar=parsel` means a list
+    /// of one and a caller should not have to know which it wrote.
+    const Texts& as_texts() const;
+
     /// Canonical serialisation. Coordinates go out as integer millimetres —
     /// never as a formatted double — so a journal round-trip is lossless and
     /// byte-identical across platforms (kentoscad.md §7.3).
@@ -97,6 +124,7 @@ private:
     std::string s_{};
     Points pts_{};
     Ints ids_{};
+    Texts texts_{};
 };
 
 /// An ordered, named argument bundle. Order is preserved so that a journal line

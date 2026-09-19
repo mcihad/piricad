@@ -678,6 +678,46 @@ Task<void> run_item(Context& ctx)
                 ctx.record("olcek", v);
             }
 
+            // WHICH LAYERS THIS FRAME DRAWS. The field has been on the model all
+            // along with no way to set it, which made "this map draws these
+            // layers" a promise the product could not keep from any client. It
+            // needed `Value::Kind::TextList` first: a comma would not do, because
+            // a layer name is not validated and may contain one.
+            //
+            // `hepsi` empties the list rather than naming a layer called that:
+            // without a word for it there would be no way back from a filter once
+            // set, and "delete the item and make another one" is not an answer.
+            if (const Value v = ctx.argument("katmanlar"); !v.empty()) {
+                if (item->kind != LayoutItemKind::Map) {
+                    ctx.session().fail(
+                        core::err(core::ErrorCode::InvalidArgument,
+                                  "'" + *id +
+                                      "' bir harita çerçevesi değil; katmanlar yalnız haritaya "
+                                      "verilir."));
+                    co_return;
+                }
+                std::vector<std::string> wanted;
+                for (const std::string& one : v.as_texts()) {
+                    if (core::turkish_key_equals(one, "hepsi")) {
+                        wanted.clear();
+                        break;
+                    }
+                    const auto& have = bus.document().layers();
+                    const bool known =
+                        std::any_of(have.begin(), have.end(), [&one](const core::Layer& layer) {
+                            return core::turkish_key_equals(layer.name, one);
+                        });
+                    if (!known) {
+                        ctx.session().fail(
+                            core::err(core::ErrorCode::NotFound, "Katman yok: '" + one + "'."));
+                        co_return;
+                    }
+                    wanted.push_back(one);
+                }
+                item->layers = std::move(wanted);
+                ctx.record("katmanlar", v);
+            }
+
             // WHICH MAP THIS ITEM BELONGS TO. A scale bar states a map's scale
             // and a `<olcek>` placeholder its denominator; on a sheet with two
             // map frames at two scales, "the map" is not a question the program
@@ -1020,6 +1060,10 @@ KENTOS_COMMAND(layout_item)
                 Param::integer_range("sayfa", Arity::optional(), 1, 10000,
                                      "Öğenin duracağı sayfa (1'den başlar); tasi ile verilir"),
                 Param::text("yeni_ad", Arity::optional(), "islem=ad için öğenin yeni adı"),
+                Param::text(
+                    "katmanlar", Arity{0, 64},
+                    "Harita çerçevesinin çizeceği katmanlar; anahtar birden çok kez "
+                    "yazılır. Verilmezse görünür bütün katmanlar, 'hepsi' listeyi boşaltır"),
                 Param::text("harita", Arity::optional(),
                             "Bu öğenin bağlı olduğu harita çerçevesinin adı. Verilmezse ilk "
                             "harita. 'ilk' bağı kaldırır"),

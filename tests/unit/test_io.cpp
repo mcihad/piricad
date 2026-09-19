@@ -4409,3 +4409,43 @@ TEST_CASE("Çıktı yerleşimi: öğe yeniden adlandırılınca bağlar kopmuyor
     CHECK_EQ(read->items.size(), sheet()->items.size());
     CHECK_EQ(back.doc.content_hash(), r.doc.content_hash());
 }
+
+TEST_CASE("Çıktı yerleşimi: harita çerçevesinin katmanları komuttan verilir")
+{
+    // L-04's other half. The field was on the model and reachable from no client,
+    // because a text LIST had no `Value` kind and a comma would have been a guess
+    // about somebody's layer names.
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=parsel", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("KATMAN ad=bina", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Kroki kagit=A4", Origin::Test).ok());
+
+    const auto frame = [&] { return r.doc.layouts().find("Kroki")->find("harita"); };
+    CHECK(frame()->layers.empty()); // empty means every visible layer
+
+    // THE KEY WRITTEN TWICE IS TWO LAYERS, not the last one. Keeping only the
+    // last would draw one and silently drop the other (command.md P15).
+    REQUIRE(r.bus
+                .execute_line("ÇIKTIÖĞE islem=ayarla ad=harita katmanlar=parsel katmanlar=bina",
+                              Origin::Test)
+                .ok());
+    REQUIRE_EQ(frame()->layers.size(), std::size_t{2});
+    CHECK_EQ(frame()->layers[0], "parsel");
+    CHECK_EQ(frame()->layers[1], "bina");
+
+    // A layer that is not there is refused rather than stored as a name nothing
+    // will ever match.
+    CHECK_FALSE(
+        r.bus.execute_line("ÇIKTIÖĞE islem=ayarla ad=harita katmanlar=yok", Origin::Test).ok());
+    CHECK_EQ(frame()->layers.size(), std::size_t{2});
+
+    // `hepsi` gives the whole drawing back: without a word for it there would be
+    // no way out of a filter once set.
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIÖĞE islem=ayarla ad=harita katmanlar=hepsi", Origin::Test).ok());
+    CHECK(frame()->layers.empty());
+
+    // And it is not a thing a label can have.
+    CHECK_FALSE(
+        r.bus.execute_line("ÇIKTIÖĞE islem=ayarla ad=baslik katmanlar=parsel", Origin::Test).ok());
+}

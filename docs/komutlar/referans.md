@@ -767,6 +767,7 @@ Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, b
 | `cerceve` | bool | isteğe bağlı | Öğenin çevresine çerçeve çizer |
 | `sayfa` | integer | isteğe bağlı | Öğenin duracağı sayfa (1'den başlar); tasi ile verilir |
 | `yeni_ad` | text | isteğe bağlı | islem=ad için öğenin yeni adı |
+| `katmanlar` | text | 0–64 | Harita çerçevesinin çizeceği katmanlar; anahtar birden çok kez yazılır. Verilmezse görünür bütün katmanlar, 'hepsi' listeyi boşaltır |
 | `harita` | text | isteğe bağlı | Bu öğenin bağlı olduğu harita çerçevesinin adı. Verilmezse ilk harita. 'ilk' bağı kaldırır |
 | `sira` | integer | isteğe bağlı | Çizim sırası; büyük olan üstte |
 
@@ -2763,6 +2764,14 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "yeni_ad": {
           "type": "string",
           "description": "islem=ad için öğenin yeni adı (metin)"
+        },
+        "katmanlar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 64,
+          "description": "Harita çerçevesinin çizeceği katmanlar; anahtar birden çok kez yazılır. Verilmezse görünür bütün katmanlar, 'hepsi' listeyi boşaltır (metin)"
         },
         "harita": {
           "type": "string",

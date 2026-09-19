@@ -107,6 +107,15 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
             for (auto pt : v.as_points())
                 pts.push_back(pt);
             args.set(p.name, Value::points(std::move(pts)));
+        } else if (p.kind == ParamKind::Text && p.arity.max > 1) {
+            // A TEXT PARAMETER THAT TAKES MORE THAN ONE IS A LIST, and it
+            // accumulates for the reason a selection does: `katmanlar=parsel
+            // katmanlar=bina` means two layers, and keeping the last one would
+            // draw one of them and silently drop the other (command.md P15).
+            Value::Texts words = args.get(p.name).as_texts();
+            for (const std::string& one : v.as_texts())
+                words.push_back(one);
+            args.set(p.name, Value::texts(std::move(words)));
         } else if (p.kind == ParamKind::Selection ||
                    (p.kind == ParamKind::Integer && p.arity.max > 1)) {
             // An Integer parameter whose arity allows more than one IS a list, and

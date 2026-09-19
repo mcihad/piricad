@@ -96,6 +96,14 @@ Value Value::ids(Ints v)
     return x;
 }
 
+Value Value::texts(Texts v)
+{
+    Value x;
+    x.kind_  = Kind::TextList;
+    x.texts_ = std::move(v);
+    return x;
+}
+
 bool Value::as_bool(bool d) const
 {
     switch (kind_) {
@@ -147,6 +155,21 @@ const Value::Ints& Value::as_ids() const
     return kind_ == Kind::IdList ? ids_ : empty_ids();
 }
 
+const Value::Texts& Value::as_texts() const
+{
+    // A SINGLE WORD READS AS A LIST OF ONE. `katmanlar=parsel` means a list with
+    // one name in it, and a caller should not have to know whether the parser
+    // gave it a `Text` or a `TextList`.
+    if (kind_ == Kind::TextList) return texts_;
+    if (kind_ == Kind::Text) {
+        static thread_local Texts one;
+        one.assign(1, s_);
+        return one;
+    }
+    static const Texts none;
+    return none;
+}
+
 core::Json Value::to_json() const
 {
     using core::Json;
@@ -169,6 +192,13 @@ core::Json Value::to_json() const
         a.reserve(ids_.size());
         for (auto v : ids_)
             a.push_back(Json::integer(v));
+        return Json::array(std::move(a));
+    }
+    case Kind::TextList: {
+        core::JsonArray a;
+        a.reserve(texts_.size());
+        for (const std::string& one : texts_)
+            a.push_back(Json::string(one));
         return Json::array(std::move(a));
     }
     }
@@ -209,6 +239,21 @@ core::Result<Value> Value::from_json(const core::Json& j)
         return Value::points(std::move(pts));
     }
 
+    // AN ARRAY OF WORDS IS A WORD LIST. Decided by the first element for the same
+    // reason the point list is: the array is homogeneous or it is a mistake, and
+    // saying which one it is beats reading half of it as one kind.
+    if (a.front().is_string()) {
+        Texts words;
+        words.reserve(a.size());
+        for (const auto& item : a) {
+            if (!item.is_string())
+                return core::err(ErrorCode::ParseError,
+                                 "Sözcük listesinde metin bekleniyordu, gelen: " + item.dump());
+            words.push_back(item.as_string());
+        }
+        return Value::texts(std::move(words));
+    }
+
     Ints out;
     out.reserve(a.size());
     for (const auto& item : a) {
@@ -232,6 +277,7 @@ bool operator==(const Value& a, const Value& b)
     case Value::Kind::Point:
     case Value::Kind::PointList: return a.pts_ == b.pts_;
     case Value::Kind::IdList: return a.ids_ == b.ids_;
+    case Value::Kind::TextList: return a.texts_ == b.texts_;
     }
     return false;
 }

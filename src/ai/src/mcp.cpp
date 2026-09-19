@@ -162,6 +162,15 @@ std::string render_line(const command::CommandSpec& spec, const command::Args& a
             out += needs_quotes(text) ? '"' + text + '"' : text;
             break;
         }
+
+        case command::Value::Kind::TextList:
+            // THE KEY WRITTEN ONCE PER WORD, which is how the tokeniser reads a
+            // list — the same shape `pencere=` and `nesneler=` already use.
+            for (const std::string& word : value.as_texts()) {
+                out += ' ' + name + '=';
+                out += needs_quotes(word) ? '"' + word + '"' : word;
+            }
+            break;
         }
     }
     return out;

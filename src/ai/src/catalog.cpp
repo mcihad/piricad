@@ -147,15 +147,31 @@ Json schema_for(const command::Param& param, Style style)
         }
         break;
 
-    case command::ParamKind::Text:
-        out.set("type", Json::string("string"));
-        if (!param.choices.empty()) {
-            Json words = Json::array({});
-            for (const std::string& word : param.choices)
-                words.push(Json::string(word));
-            out.set("enum", std::move(words));
+    case command::ParamKind::Text: {
+        // A TEXT PARAMETER THAT TAKES MORE THAN ONE IS A LIST OF WORDS, and the
+        // schema has to say so or a client sends one string where several were
+        // meant. The word list, when there is one, belongs to the ITEM.
+        const bool many = param.arity.max > 1;
+        Json words      = Json::array({});
+        for (const std::string& word : param.choices)
+            words.push(Json::string(word));
+
+        if (many) {
+            out.set("type", Json::string("array"));
+            Json item;
+            item.set("type", Json::string("string"));
+            if (!param.choices.empty()) item.set("enum", std::move(words));
+            out.set("items", std::move(item));
+            if (param.arity.min > 0)
+                out.set("minItems", Json::integer(static_cast<std::int64_t>(param.arity.min)));
+            if (param.arity.max != 0xFFFFFFFFu)
+                out.set("maxItems", Json::integer(static_cast<std::int64_t>(param.arity.max)));
+        } else {
+            out.set("type", Json::string("string"));
+            if (!param.choices.empty()) out.set("enum", std::move(words));
         }
         break;
+    }
 
     case command::ParamKind::Bool: out.set("type", Json::string("boolean")); break;
     }

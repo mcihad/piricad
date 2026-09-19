@@ -78,6 +78,7 @@ tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıd�
 | `sira` | Çizim sırası; büyük olan üstte |
 | `harita` | Bu öğenin bağlı olduğu harita çerçevesinin adı; `ilk` bağı kaldırır |
 | `yeni_ad` | `islem=ad` için öğenin yeni adı |
+| `katmanlar` | Harita çerçevesinin çizeceği katmanlar; **anahtar birden çok kez yazılır**. Verilmezse görünür bütün katmanlar, `hepsi` listeyi boşaltır |
 | `sayfa` | Öğenin duracağı sayfa (1'den başlar); `tasi` ile verilir |
 
 ### Tablo öğesi
@@ -96,6 +97,23 @@ saklanmaz — ölçek değiştiğinde yeniden bastığınız yerleşim yeni öl�
 `<yerlesim>` · `<proje>` · `<olcek>` · `<tarih>` · `<crs>` · `<kagit>`
 
 Eski `<pafta>` yer tutucusu da çözülmeye devam eder: bir çizimin antedine yazılmış yazı, programın bir sözcük hakkında fikir değiştirmesiyle bozulmaz.
+
+### Hangi katmanları çizer
+
+Bir harita çerçevesi varsayılan olarak **görünür bütün katmanları** çizer. Ayrı bir
+liste vermek, aynı sayfada aynı zeminin farklı temalarını gösteren iki çerçeve
+kurmanın yoludur:
+
+```
+ÇIKTIÖĞE islem=ayarla ad=harita katmanlar=parsel katmanlar=bina
+```
+
+Anahtar **birden çok kez** yazılır; virgül kullanılmaz, çünkü bir katman adı
+doğrulanmıyor ve virgül içerebilir. `katmanlar=hepsi` listeyi boşaltır ve çerçeve
+yine bütün görünür katmanları çizer.
+
+**Liste daraltır, genişletmez:** çizimde gizlenmiş bir katman burada adı geçse de
+çizilmez.
 
 ### Hangi haritaya bağlı
 
@@ -229,6 +247,8 @@ Bir yerleşimi baştan sona kuran betik:
 | `'X' kilitli; önce kilidi açın: ÇIKTIÖĞE islem=ayarla ad=X kilit=hayır` | Kilitli öğe taşınmak istendi | Kilidi açın |
 | `pencere iki köşe ister: pencere=x1,y1 x2,y2` | Anahtar bir kez yazıldı | `pencere=` anahtarını **iki kez** yazın |
 | `'X' bir harita çerçevesi değil; pencere yalnız haritaya verilir.` | `pencere=` harita olmayan bir öğeye verildi | Harita öğesinin adını verin |
+| `'X' bir harita çerçevesi değil; katmanlar yalnız haritaya verilir.` | `katmanlar=` harita olmayan bir öğeye verildi | Harita öğesinin adını verin |
+| `Katman yok: 'X'.` | `katmanlar=` çizimde olmayan bir katmanı gösteriyor | `KATMAN islem=listele` ile adları görün |
 | `'X' yerleşiminde 'Y' adlı bir harita çerçevesi yok.` | `harita=` olmayan bir öğeyi gösteriyor | `islem=listele` ile harita adlarını görün |
 | `Bir harita çerçevesi başka bir haritaya bağlanmaz.` | `harita=` bir harita öğesine verildi | Ölçek, kuzey, lejant ya da metne verin |
 | `'X' yerleşiminde 'Y' yeniden adlandırılamadı; öğe yok ya da 'Z' adı kullanımda.` | `islem=ad` çakışan ya da olmayan bir ada çağrıldı | Başka bir ad verin |

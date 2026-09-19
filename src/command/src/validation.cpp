@@ -23,7 +23,9 @@ bool kind_accepts(const Param& p, const Value& v)
     case ParamKind::Number: return v.kind() == Value::Kind::Number || v.kind() == Value::Kind::Int;
     case ParamKind::Integer:
         return v.kind() == Value::Kind::Int || (many && v.kind() == Value::Kind::IdList);
-    case ParamKind::Text: return v.kind() == Value::Kind::Text;
+    // A ONE-WORD LIST AND A WORD ARE THE SAME THING TO A CALLER, and the arity
+    // is what says whether more than one is allowed — the check below does that.
+    case ParamKind::Text: return v.kind() == Value::Kind::Text || v.kind() == Value::Kind::TextList;
     case ParamKind::Bool: return v.kind() == Value::Kind::Bool || v.kind() == Value::Kind::Int;
     case ParamKind::Selection: return v.kind() == Value::Kind::IdList;
     }
@@ -37,6 +39,7 @@ std::size_t multiplicity(const Value& v)
     case Value::Kind::Point: return 1;
     case Value::Kind::PointList: return v.as_points().size();
     case Value::Kind::IdList: return v.as_ids().size();
+    case Value::Kind::TextList: return v.as_texts().size();
     default: return 1;
     }
 }
