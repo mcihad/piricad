@@ -39,6 +39,14 @@ yerleşim harita çerçevesi **hedefsiz** gelir; tuvalden alan seçerek ya da
 ÇIKTIŞABLON islem=sil ad=<şablon adı>
 ```
 
+
+### Eski ad: `pafta=`
+
+Bu parametrenin adı önceden `pafta` idi. Program **eski adı okur, yeni adı yazar**:
+eskiden yazılmış bir betik ya da komut günlüğü aynı işi yapmaya devam eder, ama
+programın ürettiği her satır `yerlesim=` der. İkisini bir arada vermek hatadır —
+tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıdır.
+
 ## Parametreler
 
 | Parametre | Zorunlu | Anlamı |
@@ -132,6 +140,7 @@ Bir çizimi açıp kurumun sayfasını uygulayan ve PDF üreten bir betik:
 | `Şablon adı dosya adı olarak kullanılamıyor: 'X'.` | Ad yalnız ayraç ve noktadan oluşuyor | Harf içeren bir ad verin |
 | `Çıktı şablonu bu sürümden yeni (dosya N, bu sürüm M).` | Şablon ileri bir sürümle yazılmış | Programı güncelleyin |
 | `'X' öğesinin türü bu sürümde yok: 'Y'.` | Şablon tanınmayan bir öğe türü taşıyor | Şablonu yazan sürümü kullanın |
+| `'X' ve 'Y' aynı parametrenin iki adı; ikisi birden verilmez. Yeni adı 'Z'.` | Bir parametrenin eski ve yeni adı birlikte verildi | Yalnız yeni adı bırakın |
 
 Şablon adındaki `/`, `:`, `*` gibi dosya adı olamayacak karakterler **`_` ile
 değiştirilir**, reddedilmez: kurum sayfasına `18. madde / askı` demek isteyen kimse

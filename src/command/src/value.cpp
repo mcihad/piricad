@@ -247,6 +247,15 @@ void Args::set(std::string name, Value v)
     items_.emplace_back(std::move(name), std::move(v));
 }
 
+void Args::rename(std::string_view from, std::string to)
+{
+    for (auto& [name, value] : items_)
+        if (name == from) {
+            name = std::move(to);
+            return;
+        }
+}
+
 const Value* Args::find(std::string_view name) const
 {
     for (const auto& [k, v] : items_)

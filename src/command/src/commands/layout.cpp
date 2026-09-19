@@ -736,7 +736,8 @@ KENTOS_COMMAND(layout_item)
                 Param::choice("islem", Arity::exactly(1),
                               {"listele", "ekle", "sil", "tasi", "ayarla"}, "Ne yapılacağı"),
                 Param::text("yerlesim", Arity::optional(),
-                            "Hangi çıktı yerleşimi; çizimde tek yerleşim varsa gerekmez"),
+                            "Hangi çıktı yerleşimi; çizimde tek yerleşim varsa gerekmez")
+                    .renamed_from("pafta"),
                 Param::text("ad", Arity::optional(),
                             "Öğe adı; ekle dışında gerekir, ekle'de verilmezse türetilir"),
                 Param::choice(
@@ -791,7 +792,8 @@ KENTOS_COMMAND(layout_template)
                 Param::text("ad", Arity::optional(), "Şablonun adı; listele dışında gerekir"),
                 Param::text("yerlesim", Arity::optional(),
                             "kaydet: hangi yerleşim saklanacak (tek yerleşim varsa gerekmez). "
-                            "uygula: kurulacak yerleşimin adı (verilmezse şablonun adı)"),
+                            "uygula: kurulacak yerleşimin adı (verilmezse şablonun adı)")
+                    .renamed_from("pafta"),
             },
         .undo = UndoPolicy::SingleTransaction,
         // NOT `AiAccessible`, for the reason `ÇIKTIYERLEŞİMİ` gives: a sheet carries a

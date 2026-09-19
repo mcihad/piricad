@@ -82,8 +82,19 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
     const auto param_by_name = [&](std::string_view name) -> const Param* {
         for (const auto& p : spec.params)
             if (core::turkish_iequals(p.name, name)) return &p;
+        // A RETIRED NAME (`Param::was`), so that a script or a journal line typed
+        // before a parameter was renamed still says what it said. The value is
+        // bound under the CURRENT name, so the body and the journal it writes see
+        // one spelling and only one leaves this program (Article 1.4).
+        for (const auto& p : spec.params)
+            if (!p.was.empty() && core::turkish_iequals(p.was, name)) return &p;
         return nullptr;
     };
+
+    // Which spelling each parameter was written with. Two spellings of one
+    // argument in one line is a caller that does not know which it means, and
+    // the scalar case would silently keep the last (command.md P15).
+    std::vector<std::pair<const Param*, std::string>> spelled;
 
     // A LIST parameter accumulates; a scalar one is replaced. Both point lists
     // and selections are lists, and before this only point lists accumulated —
@@ -208,6 +219,15 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
                     "'" + spec.id + "': bilinmeyen parametre '" + t.word +
                         "'. Tanımlı parametreler: " + (known.empty() ? "(yok)" : known));
             }
+            for (const auto& [seen, word] : spelled)
+                if (seen == p && !core::turkish_iequals(word, t.word))
+                    return core::err(ErrorCode::ParseError,
+                                     "'" + spec.id + "': '" + word + "' ve '" + t.word +
+                                         "' aynı parametrenin iki adı; ikisi birden verilmez. "
+                                         "Yeni adı '" +
+                                         p->name + "'.");
+            spelled.emplace_back(p, t.word);
+
             if (t.nested.empty())
                 return core::err(ErrorCode::ParseError,
                                  "'" + t.word + "=' anahtarına değer verilmemiş.");
@@ -347,6 +367,29 @@ core::Result<DispatchResult> Bus::dispatch(const Invocation& inv)
     // §10.4 dispatch budget pays a parameter-kind comparison and nothing else.
     Args repaired;
     const Args* args = &inv.args;
+
+    // A RETIRED ARGUMENT NAME, read here and nowhere else.
+    //
+    // `Param::was` names what a parameter was called before it was renamed. A
+    // journal line or a script written by an older build carries that name, and
+    // Article 1.4 says a command invocation is data that round-trips — so the old
+    // word is understood, moved onto the current one, and never written back.
+    // Giving both at once is a refusal rather than a guess: two spellings of one
+    // argument in one line is a caller that does not know which it means.
+    for (const auto& p : spec->params) {
+        if (p.was.empty()) continue;
+        const Value* old_value = args->find(p.was);
+        if (old_value == nullptr) continue;
+        if (args->find(p.name) != nullptr)
+            return core::err(ErrorCode::ValidationFailed,
+                             "'" + spec->id + "': '" + p.was + "' ve '" + p.name +
+                                 "' aynı parametrenin iki adı; ikisi birden verilmez. Yeni adı '" +
+                                 p.name + "'.");
+        if (args != &repaired) repaired = inv.args;
+        repaired.rename(p.was, p.name);
+        args = &repaired;
+    }
+
     for (const auto& p : spec->params) {
         // Selection is a list of integers, and so is an Integer parameter whose
         // arity allows more than one. Both are written `[4, 4]` in a script, and

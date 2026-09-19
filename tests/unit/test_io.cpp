@@ -708,6 +708,98 @@ TEST_CASE("IO: yerleşimi olmayan bir çizim yerleşim bloğu yazmaz")
     CHECK(fs::file_size(with) > fs::file_size(without));
 }
 
+TEST_CASE("Çıktı yerleşimi: eski 'pafta' argümanı okunur, yeni 'yerlesim' yazılır")
+{
+    // THE ACCEPTANCE TEST FOR THE RENAME. A journal written by the build before
+    // `pafta` became `yerlesim` must still reproduce its drawing: a command
+    // invocation is data, and data on disk does not change when the program
+    // changes its mind about a word (Article 1.4, CLAUDE.md 0.5a).
+    Rig old_words;
+    REQUIRE(old_words.bus
+                .execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=\"Ada 1284\" kagit=A3 yon=yatay",
+                              Origin::Test)
+                .ok());
+    // The retired spelling, exactly as an older journal line carries it.
+    REQUIRE(old_words.bus
+                .execute_line("ÇIKTIÖĞE islem=ayarla pafta=\"Ada 1284\" ad=harita olcek=1000",
+                              Origin::Test)
+                .ok());
+
+    Rig new_words;
+    REQUIRE(new_words.bus
+                .execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=\"Ada 1284\" kagit=A3 yon=yatay",
+                              Origin::Test)
+                .ok());
+    REQUIRE(new_words.bus
+                .execute_line("ÇIKTIÖĞE islem=ayarla yerlesim=\"Ada 1284\" ad=harita olcek=1000",
+                              Origin::Test)
+                .ok());
+
+    // SAME DRAWING, down to the fingerprint.
+    CHECK_EQ(old_words.doc.content_hash(), new_words.doc.content_hash());
+
+    const core::Layout* sheet = old_words.doc.layouts().find("Ada 1284");
+    REQUIRE(sheet != nullptr);
+    const core::LayoutItem* map = sheet->find("harita");
+    REQUIRE(map != nullptr);
+    CHECK_EQ(map->scale, 1000);
+
+    // AND THE JOURNAL IT WRITES SAYS `yerlesim`. The old word is read, never
+    // written: one spelling leaves this program, so a replay of a replay is
+    // still the same bytes (Article 6.4).
+    const std::string said = old_words.bus.journal().canonical();
+    CHECK(said.find("\"yerlesim\"") != std::string::npos);
+    CHECK(said.find("\"pafta\"") == std::string::npos);
+}
+
+TEST_CASE("Çıktı yerleşimi: eski günlük satırı tekrar oynatılınca aynı belgeyi kurar")
+{
+    // THE JOURNAL PATH, which is the one BR-01 is actually about: a replay does
+    // not go through the command line, it hands the bus an `Args` built straight
+    // out of the recorded JSON. `{"cmd":"core.layout_item","args":{"pafta":…}}`
+    // is exactly what the build before the rename wrote.
+    const auto replay = [](Rig& rig, const char* key) {
+        core::Json args;
+        args.set("islem", core::Json::string("ayarla"));
+        args.set(key, core::Json::string("Ada 1284"));
+        args.set("ad", core::Json::string("harita"));
+        args.set("olcek", core::Json::integer(1000));
+        auto bound = Args::from_json(args);
+        REQUIRE(bound.ok());
+        return rig.bus.dispatch(
+            Invocation{"core.layout_item", std::move(bound.value()), Origin::Test});
+    };
+
+    Rig old_journal;
+    REQUIRE(old_journal.bus
+                .execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=\"Ada 1284\" kagit=A3 yon=yatay",
+                              Origin::Test)
+                .ok());
+    REQUIRE(replay(old_journal, "pafta").ok());
+
+    Rig new_journal;
+    REQUIRE(new_journal.bus
+                .execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=\"Ada 1284\" kagit=A3 yon=yatay",
+                              Origin::Test)
+                .ok());
+    REQUIRE(replay(new_journal, "yerlesim").ok());
+
+    CHECK_EQ(old_journal.doc.content_hash(), new_journal.doc.content_hash());
+    // Byte-identical journals, so replaying the replay is the same file again.
+    CHECK_EQ(old_journal.bus.journal().canonical(), new_journal.bus.journal().canonical());
+}
+
+TEST_CASE("Çıktı yerleşimi: bir argümanın iki adı birlikte verilmez")
+{
+    Rig f;
+    REQUIRE(f.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Kroki", Origin::Test).ok());
+    // Two spellings of one argument in one line is a caller that does not know
+    // which it means, and guessing is how the wrong sheet gets edited.
+    const auto both = f.bus.execute_line(
+        "ÇIKTIÖĞE islem=ayarla pafta=Kroki yerlesim=Kroki ad=harita olcek=500", Origin::Test);
+    CHECK(!both.ok());
+}
+
 TEST_CASE("Çıktı yerleşimi: tek bir Ctrl+Z bütün sayfayı geri alır")
 {
     Rig r;

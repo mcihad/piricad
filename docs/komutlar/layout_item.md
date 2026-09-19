@@ -48,6 +48,14 @@ buluşur ve çevirme orada yapılır.
 `yerlesim=` **çizimde tek yerleşim varsa gerekmez**. İki ya da daha fazlası varsa
 zorunludur: hangisinin kastedildiğini tahmin etmek, yanlış yerleşimin düzenlenmesidir.
 
+
+### Eski ad: `pafta=`
+
+Bu parametrenin adı önceden `pafta` idi. Program **eski adı okur, yeni adı yazar**:
+eskiden yazılmış bir betik ya da komut günlüğü aynı işi yapmaya devam eder, ama
+programın ürettiği her satır `yerlesim=` der. İkisini bir arada vermek hatadır —
+tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıdır.
+
 ## Parametreler
 
 | Parametre | Anlamı |
@@ -82,6 +90,8 @@ Bir metin öğesinin yazısında şunlar **çizim anında** çözülür ve asla 
 saklanmaz — ölçek değiştiğinde yeniden bastığınız yerleşim yeni ölçeği yazar:
 
 `<yerlesim>` · `<proje>` · `<olcek>` · `<tarih>` · `<crs>` · `<kagit>`
+
+Eski `<pafta>` yer tutucusu da çözülmeye devam eder: bir çizimin antedine yazılmış yazı, programın bir sözcük hakkında fikir değiştirmesiyle bozulmaz.
 
 ### Ölçek mi pencere mi
 
@@ -190,6 +200,7 @@ Bir yerleşimi baştan sona kuran betik:
 | `pencere iki köşe ister: pencere=x1,y1 x2,y2` | Anahtar bir kez yazıldı | `pencere=` anahtarını **iki kez** yazın |
 | `'X' bir harita çerçevesi değil; pencere yalnız haritaya verilir.` | `pencere=` harita olmayan bir öğeye verildi | Harita öğesinin adını verin |
 | `Izgara: yok / arti / cizgi / centik` | Tanınmayan ızgara biçimi | Listedeki sözcüklerden birini yazın |
+| `'X' ve 'Y' aynı parametrenin iki adı; ikisi birden verilmez. Yeni adı 'Z'.` | Bir parametrenin eski ve yeni adı birlikte verildi | Yalnız yeni adı bırakın |
 
 ## İlgili
 

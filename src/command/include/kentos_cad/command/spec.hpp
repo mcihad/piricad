@@ -107,6 +107,17 @@ struct Param
     /// this all along and `to_command_spec` dropped it on the floor.
     std::vector<std::string> choices;
 
+    /// THE NAME THIS PARAMETER USED TO CARRY, read but never written.
+    ///
+    /// A command id is stable because a journal resolves it by name six months
+    /// later (Article 1.4, CLAUDE.md 0.5a) — and an ARGUMENT name is written into
+    /// that same line, so renaming one breaks every journal and script already on
+    /// disk. The bus accepts the retired name, moves it onto the current one
+    /// before validation, and `Context::record` writes only the current one. The
+    /// generated schema does not list it: an agent reading today's catalogue is
+    /// told today's name, and nobody learns the old one from us.
+    std::string was;
+
     /// For an `Integer` or `Number` parameter: the closed range, when `bounded`.
     std::int64_t low{0};
     std::int64_t high{0};
@@ -126,6 +137,14 @@ struct Param
     /// An `Integer` parameter with a closed range the bus enforces.
     static Param integer_range(std::string name, Arity a, std::int64_t low, std::int64_t high,
                                std::string help = {});
+
+    /// Names what this parameter was called before it was renamed. Chained onto a
+    /// factory: `Param::text("yerlesim", ...).renamed_from("pafta")`.
+    Param&& renamed_from(std::string old_name) &&
+    {
+        was = std::move(old_name);
+        return std::move(*this);
+    }
 };
 
 /// Bit flags. Flags::AiAccessible is the ONLY switch that puts a command into the

@@ -6,6 +6,21 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — adlandırmanın uyumluluk sözleşmesi (TODOS BR-01)
+
+- **Eski ad okunur, yeni ad yazılır.** `pafta=` → `yerlesim=` yeniden adlandırması
+  diskteki veriyi geçersiz kılamaz: bir komut çağrısı veridir (Article 1.4) ve bir
+  argümanın adı günlük satırının içine yazılır. `Param::was` bir parametrenin emekli
+  adını taşıyor; `bind_tokens` komut satırında, `Bus::dispatch` betik ve günlük
+  yolunda onu güncel adın üstüne taşıyor. Programdan **tek yazım** çıkıyor, yani
+  tekrarın tekrarı aynı baytları veriyor.
+- **İki yazımı birlikte vermek reddediliyor.** Skaler bir argümanda sessizce
+  sonuncuyu tutmak, `command.md` P15'in "bir argümanı yere düşürme" yasağıdır.
+- **`<pafta>` yer tutucusu çözülmeye devam ediyor.** Yeniden adlandırmadan önce bir
+  antede yazılmış yazı, programın bir sözcük hakkında fikir değiştirmesiyle bozulmaz.
+- Şablon dosyaları etkilenmedi: `layout_to_json` alan adları yazıyor, parametre adı değil.
+
+
 ### Düzeltildi — clang-tidy kapısı gerçekten çalışıyor
 
 - **`make check` clang-tidy'yi atlıyordu.** Makefile `command -v clang-tidy` diye

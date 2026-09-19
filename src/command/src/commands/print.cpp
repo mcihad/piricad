@@ -344,7 +344,8 @@ KENTOS_COMMAND(print)
                             "Basılacak çıktı yerleşiminin adı (ÇIKTIYERLEŞİMİ ile kurulur). "
                             "Verildiğinde kâğıt, kenar ve harita penceresi yerleşimden "
                             "gelir; pencere, merkez, olcek ve profil ile birlikte "
-                            "verilmez"),
+                            "verilmez")
+                    .renamed_from("pafta"),
                 Param::text("dosya", Arity::optional(),
                             "PDF yazılacak dosya; yazici ile birlikte verilmez"),
                 Param::text("yazici", Arity::optional(),

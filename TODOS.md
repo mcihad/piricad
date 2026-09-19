@@ -25,12 +25,19 @@ işi bitirmeli, her adımda kullanıcıya geri dönmemeli.
 Karşılaştırmada `git show main:<dosya>`, dal geçmişi ve ayrı commit/çalışma ağacı
 diff'leri kullanıldı. Bu belgeyi hazırlarken dal değiştirilmedi veya merge yapılmadı.
 
-- [ ] **BR-01 / P0 — Adlandırma geçişinin uyumluluk sözleşmesini tamamla.**
-  `core.layout`, `core.layout_item`, `core.layout_template` kimlikleri sabit kalsın.
-  Eski `pafta` parametresi, `<pafta>` yer tutucusu, şablonlar ve journal kayıtları için
-  açık bir okuma/migration kararı verilsin. Yeni çıktı `yerlesim` kullansın; eski girdinin
-  sessizce başka anlama gelmesi engellensin. **Kabul:** main ile üretilmiş proje,
-  şablon ve komut günlüğü yeni sürümde aynı düzeni yeniden oluşturur.
+- [x] **BR-01 / P0 — Adlandırma geçişinin uyumluluk sözleşmesini tamamla.** *(19 Eylül 2026)*
+  `core.layout`, `core.layout_item`, `core.layout_template` kimlikleri sabit kaldı.
+  Karar: **eski ad okunur, yeni ad yazılır.** `Param::was` alanı bir parametrenin emekli
+  adını taşıyor; `bind_tokens` (komut satırı) ve `Bus::dispatch` (betik/günlük) onu güncel
+  adın üstüne taşıyor, `Context::record` yalnız güncel adı yazıyor — yani programdan tek
+  yazım çıkıyor ve tekrarın tekrarı aynı baytları veriyor. İki yazımı birlikte vermek
+  reddediliyor (skaler bir argümanın sessizce sonuncuyu tutması `command.md` P15'in
+  yasakladığı şey). `<pafta>` yer tutucusu çözülmeye devam ediyor: bir antede yazılmış
+  yazı, programın sözcük değiştirmesiyle bozulmaz. Şablon JSON'u alan adları taşıdığı
+  için etkilenmiyor (`layout_to_json`). **Kabul karşılandı:** `test_io.cpp` içinde üç
+  vaka — eski komut satırı ile yeni komut satırı aynı `content_hash`, eski günlük satırı
+  (`{"args":{"pafta":…}}`) ile yeni günlük satırı aynı `content_hash` **ve** bayt bayt
+  aynı günlük, iki adın birlikte verilmesi reddediliyor.
 
 ## 2. Kodun bugün sundukları ve somut boşluklar
 

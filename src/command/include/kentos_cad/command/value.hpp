@@ -109,6 +109,12 @@ public:
     /// journal line it will be written to.
     void set(std::string name, Value v);
 
+    /// Renames `from` to `to` IN PLACE, keeping the argument's position. Used by
+    /// the bus for a `Param::was` retired name, so that an old journal line's
+    /// spelling reaches the body — and the journal it writes — under the current
+    /// one. Does nothing when `from` is absent.
+    void rename(std::string_view from, std::string to);
+
     /// The argument, or null when it was not supplied. Null and an `Empty` value
     /// mean the same thing to a caller; `find` exists for one that wants to tell
     /// "absent" from "present but empty" without constructing anything.

@@ -76,6 +76,11 @@ YAZDIR yerlesim=<ad> dosya=<yol>
 | `kopyalanabilir` | Şifreli PDF: metin ve grafik kopyalanabilir mi; varsayılan `evet` |
 | `degistirilebilir` | Şifreli PDF: belge değiştirilebilir mi; varsayılan `evet` |
 
+### Eski ad: `pafta=`
+
+`yerlesim=` parametresinin adı önceden `pafta` idi. Eski ad **okunur**, yeni ad
+**yazılır**; ikisi bir arada verilmez.
+
 ## Örnekler
 
 ### Komut satırı
@@ -168,6 +173,7 @@ karakterler nokta olarak görünür ve satır ekranda yazılıdır ama geçmişe
 | `Çıktının yeri verilmedi: PDF için dosya=<yol>, yazıcı için yazici=<ad> yazın …` | Ne `dosya` ne `yazici` verildi | Birini verin |
 | `yerlesim ile 'X' birlikte verilmez: çıktı yerleşimi kendi kâğıdını ve kendi harita penceresini taşır.` | `yerlesim` ile `pencere`, `merkez`, `olcek` ya da `profil` birlikte verildi | Yalnız `yerlesim=` bırakın |
 | `Çıktı yerleşimi yok: 'X'. ÇIKTIYERLEŞİMİ islem=listele ile adları görün.` | O adda yerleşim yok | Adı listeden alın |
+| `'X' ve 'Y' aynı parametrenin iki adı; ikisi birden verilmez. Yeni adı 'Z'.` | Bir parametrenin eski ve yeni adı birlikte verildi | Yalnız yeni adı bırakın |
 | `dosya ve yazici birlikte verilemez; çıktı ya PDF dosyasına ya yazıcıya gider.` | İkisi birlikte verildi | Birini silin |
 | `Yazdırma penceresinin iki köşesi bir dikdörtgen çizmeli; iki köşe aynı doğru üzerinde.` | `pencere` bir çizgi verdi | İki farklı köşe verin |
 | `Ölçek bilinmiyor: olcek=<N> verin (1:N) ya da projenin plan ölçeğini ayarlayın.` | `merkez` verildi, ölçek hiçbir yerden okunamadı | `olcek=` verin |

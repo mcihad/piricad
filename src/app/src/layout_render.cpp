@@ -487,6 +487,10 @@ QString resolve_placeholders(const QString& text, const core::Layout& layout,
 {
     QString out = text;
     out.replace(QStringLiteral("<yerlesim>"), facts.sheet);
+    // The retired spelling, still sitting in every title block written before
+    // the rename. A document is data on disk; it does not get to be wrong
+    // because the program changed its mind about a word.
+    out.replace(QStringLiteral("<pafta>"), facts.sheet);
     out.replace(QStringLiteral("<proje>"), facts.project);
     out.replace(QStringLiteral("<crs>"), facts.crs);
     out.replace(QStringLiteral("<tarih>"), facts.date);
