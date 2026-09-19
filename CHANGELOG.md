@@ -6,6 +6,27 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — capability envanteri ve ajan kapsamı kapısı (TODOS C-01, komut tarafı)
+
+- **`kentos_envanter`**: canlı registry'lerden alınan makine okunur envanter. Her
+  komut için kimlik, adlar, kategori, geri alma politikası, tam parametre şeması
+  (tür, arity, seçenek listesi, sayısal aralık, emekli ad) ve altı bayrağın her biri
+  ayrı ayrı. Kimliğe göre sıralı, yani iki makine aynı baytları üretir.
+- **Ağacı grep'leyen sayım yanlıştı.** `return CommandSpec{...}` taraması **81**
+  komut görüyordu; program **93** kaydediyor. Aradaki fark, bir modülün döngüyle ya
+  da yardımcıyla kaydettiği komutlar — ve o tarama bir parametrenin arity'sini,
+  sözcük listesini ya da aralığını zaten göremez.
+- **Gerçek ajan kapsamı: 93'ten 69'u açık (%74), 24'ü kapalı.**
+  `tests/support/ai-kapsam.json` yirmi dördünün her birinin gerekçesini ve onu
+  açacak iş paketini taşıyor. Dördü bilerek kalıcı: `core.select` (değişen bir vurgu
+  sonraki SİL'in neyi sildiğini değiştirir), `core.ai_provider` ve `core.mcp` (model
+  kendi erişim yolunu açamaz), `core.script` (diskteki herhangi bir dosyayı komut
+  dizisi olarak çalıştırmak, doğrulanmış araç yüzeyinin etrafından dolaşmaktır).
+- **`scripts/ci-gate-envanter.sh`**: gerekçesiz kapalı bir komut, ölmüş bir satır ve
+  açıldığı hâlde duran bir satır kapıyı kırıyor. Üretici derlenmemişse atlamıyor,
+  kırıyor — ölçemeyen bir kapı sessizce geçemez.
+
+
 ### Düzeltildi — adlandırmanın uyumluluk sözleşmesi (TODOS BR-01)
 
 - **Eski ad okunur, yeni ad yazılır.** `pafta=` → `yerlesim=` yeniden adlandırması

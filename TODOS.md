@@ -156,12 +156,20 @@ GUI / komut satırı / AI sohbeti / MCP
 seferinde tıklamasını gerektiren bir bariyer olmamalı. Yetkilendirme, geometri
 doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
 
-- [ ] **C-01 / P0 — Capability envanteri ve kapsam kapısı.** Registry, processing
-  registry, menüler, paneller ve etkileşimli araçlardan bütün kullanıcı eylemlerini
-  çıkar. Her satırda sabit kimlik, parametre/sonuç şeması, etki, GUI/AI/MCP erişimi,
-  headless durumu ve test olsun. Dinamik komutlar dahil edilsin. **Kabul:** kullanıcıya
-  açık bir işlevin AI veya MCP karşılığı yoksa CI başarısız; yalnız gerekçeli platform
-  bağımlılıkları ayrı raporlanır. Başarı ölçütü yalnız `AiAccessible` bitinin oranı değil.
+- [~] **C-01 / P0 — Capability envanteri ve kapsam kapısı.** *(komut tarafı 19 Eylül 2026)*
+  **Yapıldı:** `kentos_envanter` (`src/command/tools/envanter.cpp`) canlı registry'leri
+  yürüyor — builtin + processing + üç domain + ai — ve her komut için kimlik, adlar,
+  kategori, geri alma, **parametre şeması** (tür, arity, seçenek listesi, aralık,
+  emekli ad) ve altı bayrağın her birini ayrı ayrı JSON'a yazıyor. Ağacı grep'leyen
+  statik sayım **81** komut görüyordu; program **93** komut kaydediyor.
+  **Gerçek kapsam: 93 komuttan 69'u ajana açık (%74), 24'ü kapalı.**
+  `tests/support/ai-kapsam.json` bu 24'ün her birinin gerekçesini ve onu açacak iş
+  paketini taşıyor (20 plana bağlı, 4 bilerek kalıcı: `core.select`, `core.ai_provider`,
+  `core.mcp`, `core.script`). `scripts/ci-gate-envanter.sh` canlı envanteri bu listeyle
+  karşılaştırıyor: gerekçesiz kapalı bir komut, ölmüş bir satır ve açıldığı hâlde
+  duran bir satır kapıyı kırıyor. Üretici derlenmemişse **atlamıyor, kırıyor**.
+  **Kalan:** menü/panel/etkileşimli araç tarafı — Qt gerektirdiği için ayrı bir uygulama
+  probe'u olacak; "her satırda test" sütunu; MCP erişim sütunu (M-03 ile birlikte).
 - [ ] **C-02 / P0 — Etki sözleşmesi.** `NoEffect`, `ReadOnly` ve `mutates` ayrımı
   korunarak `query`, `view_change`, `document_edit`, `file_read`, `file_write`,
   `external_write`, `settings_change` gibi açık etkiler ve hedefler tanımla. Karma

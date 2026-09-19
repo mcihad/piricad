@@ -103,6 +103,22 @@ set_target_properties(kentos_docgen PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
+# The capability inventory, taken from the live registries rather than from a
+# grep of the tree. Same reasoning as `kentos_docgen`, same place in the graph:
+# it links everything and nothing links it (Article 3.2a).
+add_executable(kentos_envanter tools/envanter.cpp)
+target_link_libraries(kentos_envanter PRIVATE
+    kentos_command
+    kentos_processing
+    kentos_ai
+    kentos_domain_geodesy
+    kentos_domain_cadastre
+    kentos_domain_surface
+    kentos_flags)
+set_target_properties(kentos_envanter PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
+
 # The source tree's data, so a developer build finds the drawing catalogues with
 # no environment set (command/drawing_catalogs.hpp `resolve_catalog_path`).
 target_compile_definitions(kentos_command PRIVATE KENTOS_SOURCE_DATA_DIR="${CMAKE_SOURCE_DIR}/data")
