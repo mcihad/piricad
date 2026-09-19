@@ -1026,3 +1026,40 @@ TEST_CASE("TERCİH betikten de kalıcıdır — kapsam bildirimi her istemciye g
     REQUIRE(r.bus.execute_line("TERCİH tema varsayılan", command::Origin::Script).ok());
     CHECK_EQ(app_writes, 2);
 }
+
+TEST_CASE("S-03: bir ayarın özeti programın yapmadığı şeyi vaat edemez")
+{
+    // THE TWO TEXTS CONTRADICTED EACH OTHER, and one of them was wrong.
+    //
+    // `ai::default_instructions` tells every agent, in so many words, that
+    // nothing changes until the engineer applies it and that no setting, header
+    // or flag gets round that. The approval-policy setting told the USER the
+    // opposite: that `otomatik` runs work "onay beklemeden". CLAUDE.md 5.7
+    // forbids exactly that, and `ai::Gate` enforces it by requiring an
+    // `ai::Approval` only the suggestion card can mint — so a person who picked
+    // `otomatik` was asked every single time, by a control that had promised
+    // otherwise (TODOS S-03).
+    //
+    // WHAT IS ASSERTED IS THE NEGATIVE, so it survives rewording: the summary
+    // must not promise unattended execution while the program requires
+    // attendance. The day the constitution changes, this case changes with it —
+    // deliberately, in the same commit, which is the point.
+    const SettingCatalog& cat = builtin_settings();
+    const std::uint32_t at    = cat.find("core.ai.onay_politikasi");
+    REQUIRE(at != kNoSetting);
+    const SettingSpec& spec = cat.all()[at];
+
+    CHECK(spec.summary.find("onay beklemeden") == std::string::npos);
+
+    // AND IT SAYS SO OUT LOUD. A value a person can pick that quietly does
+    // nothing is the aspirational present tense CLAUDE.md 11.8 forbids, in the
+    // one place a user actually reads.
+    bool warned = spec.summary.find("YÜRÜRLÜKTE DEĞİL") != std::string::npos ||
+                  spec.summary.find("yürürlükte değil") != std::string::npos;
+    CHECK(warned);
+
+    // The value itself is still offered, because the policy engine is written
+    // and tested for the day the rule changes; what is refused is describing it
+    // as something the program does today.
+    CHECK(std::find(spec.values.begin(), spec.values.end(), "otomatik") != spec.values.end());
+}

@@ -803,7 +803,21 @@ ve hiç seçim yoksa önce bağlam çözülür; çözülemiyorsa yalnız nesne s
   sohbet başlığında/MCP keşfinde görülsün. Kullanıcı değişikliği yeni adımlara hemen
   uygulansın; bekleyen planlar tekrar değerlendirilsin. **Kabul:** uygulama yeniden
   açılınca tercihler korunur, başka proje dosyası bunları sessizce değiştiremez.
-- [ ] **S-03 / P0 — Prompt ve gerçek yürütmeyi eşle.** `agent_preamble`, araç
+- [~] **S-03 / P0 — Prompt ve gerçek yürütmeyi eşle.** *(çelişen metin 19 Eylül 2026)*
+  **Yapıldı:** Bu maddenin "çelişkili metin yok" cümlesi bir kusuru tarif
+  ediyordu ve kusur promptta değil **ayardaydı**. `core.ai.onay_politikasi`
+  özeti `otomatik` için "onay beklemeden yürür" diyordu; 5.7 bunu yasaklıyor ve
+  `Gate` uyguluyor, yani seçen kişiye program yine soruyordu. Aynı anda ajan
+  yönergesi "Bunu atlayan bir yol, bir başlık ya da bir AYAR yoktur" diyordu —
+  iki metin birbiriyle çelişiyordu. Özet artık `otomatik`'in **henüz yürürlükte
+  olmadığını** söylüyor; değer, motoruyla birlikte duruyor.
+  Test olumsuz biçimde yazıldı (özet katılımsız yürütme vaat edemez), böylece
+  yeniden yazılınca da geçerli ve kural değiştiği gün aynı commit'te değişiyor.
+  **Kalan:** araç açıklamalarının, MCP `instructions`'ın, hata metinlerinin ve
+  öneri kartlarının **etkili policy'den üretilmesi** — bugün hepsi doğru ama
+  SABİT metin; politika değiştiğinde kendiliğinden değişmiyorlar. Bu, S-05'in
+  anayasa kararına bağlı: `otomatik` yürürlüğe girmeden üretilecek bir şey yok.
+  **Eski metin:** `agent_preamble`, araç
   açıklamaları, MCP `instructions`, hata metinleri ve öneri kartları etkili
   policy'den üretilsin. Yalnız prompt'a “sorma” yazmak yeterli sayılmasın.
   **Kabul:** otomatik modda “mühendis uygulayana kadar bekler” gibi çelişkili

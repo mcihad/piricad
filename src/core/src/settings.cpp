@@ -1885,14 +1885,29 @@ KENTOS_SETTING(ai_onay_politikasi)
         .range    = SettingRange::between(0, 2),
         .values   = {"her_degisiklikte", "riskli_islemlerde", "otomatik"},
         .unit     = "",
-        .summary  = "Bir ajanın önerdiği işin ne sıklıkta onay bekleyeceği. "
-                    "her_degisiklikte: her plan için bir onay. riskli_islemlerde: yalnız "
-                    "üzerine yazma ve bu makinenin dışına çıkan işler. otomatik: yetki "
-                    "kapsamı içindeki ve girdileri tam olan iş onay beklemeden yürür. "
-                    "Okuma ve görünüm her üç modda da doğrudan çalışır. Bu bir güven "
-                    "kararıdır ve bu makineye aittir, çizime değil: uygulama kapsamındadır, "
-                    "yani açtığınız bir proje dosyası onu yükseltemez.",
-        .section  = "Çalışma Davranışı", // ui-label
+        // THE SUMMARY SAYS WHAT HAPPENS, NOT WHAT THE ENGINE CAN DO.
+        //
+        // It used to promise that `otomatik` runs work "onay beklemeden" — and
+        // that is FALSE in this build: CLAUDE.md 5.7 forbids applying AI output
+        // without a preview and an explicit approval, and `ai::Gate` enforces it
+        // by requiring an `ai::Approval` that only the suggestion card can mint.
+        // A person who picked `otomatik` was still asked every single time, by a
+        // control that had told them otherwise.
+        //
+        // The policy engine keeps the mode — it is written and tested for the day
+        // the rule changes (TODOS S-03..S-06) — but the SETTING must not describe
+        // a behaviour the program does not have (CLAUDE.md 11.8: no aspirational
+        // present tense in what a user reads).
+        .summary = "Bir ajanın önerdiği işin ne sıklıkta onay bekleyeceği. "
+                   "her_degisiklikte: her plan için bir onay. riskli_islemlerde: yalnız "
+                   "üzerine yazma ve bu makinenin dışına çıkan işler onay ister; geri "
+                   "alınabilir düzenleme istemez. otomatik: HENÜZ YÜRÜRLÜKTE DEĞİL — bu "
+                   "sürümde çizimi değiştiren her iş, hangi mod seçili olursa olsun, "
+                   "öneri kartında bir insanın onayını bekler; seçtiğinizde program yine "
+                   "sorar. Okuma ve görünüm her üç modda da doğrudan çalışır. Bu bir güven "
+                   "kararıdır ve bu makineye aittir, çizime değil: uygulama kapsamındadır, "
+                   "yani açtığınız bir proje dosyası onu yükseltemez.",
+        .section = "Çalışma Davranışı", // ui-label
         // AUTHORITY, NOT PREFERENCE (settings.hpp `authority`): an agent that
         // could change this would be widening its own permissions, so
         // `ai::escalates` refuses the call whatever flags the command carries.

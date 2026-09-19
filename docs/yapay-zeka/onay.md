@@ -264,6 +264,22 @@ ayarla üretilemez: yapıcısı özeldir, tek bir üretici işlevi vardır ve o 
 "Güven kipi", "hep onayla" ya da "bir daha sorma" diye bir ayar yoktur ve eklenemez
 (`CLAUDE.md` 5.7).
 
+## Onay politikası ayarı ve `otomatik`
+
+`Seçenekler ▸ Çalışma Davranışı` sayfasında bir **onay politikası** vardır ve üç değeri
+olur: `her_degisiklikte`, `riskli_islemlerde`, `otomatik`.
+
+> **`otomatik` bu sürümde yürürlükte değildir.** Hangi mod seçili olursa olsun, çizimi
+> değiştiren her iş öneri kartında bir insanın onayını bekler. Seçerseniz program yine
+> sorar.
+
+Bunu açıkça yazıyoruz çünkü bir kontrolün yaptığını söylediği şeyi yapmaması, o kontrolün
+hiç olmamasından kötüdür. Ayarın özeti de bunu söyler.
+
+Değer yine de duruyor: politika motoru yazıldı ve sınandı, ve kuralın değiştiği gün
+kullanılacak. Değişmediği sürece ajanlara verilen yönerge de aynı şeyi söylemeye devam
+eder: "Bunu atlayan bir yol, bir başlık ya da bir ayar yoktur."
+
 ## Bir istemci kendi iznini genişletemez
 
 Programın ayarlarının çoğu **tercihtir**: ızgara aralığı, ondalık ayracı, tema. Birkaçı

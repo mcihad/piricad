@@ -6,6 +6,25 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — onay politikası ayarı programın yapmadığı şeyi vaat ediyordu (TODOS S-03, kısmi)
+
+- Ayarın özeti `otomatik` için "yetki kapsamı içindeki ve girdileri tam olan iş
+  **onay beklemeden yürür**" diyordu. Bu bu sürümde **yanlış**: CLAUDE.md 5.7
+  onaysız uygulamayı yasaklıyor ve `ai::Gate` bunu ancak öneri kartının
+  üretebildiği bir `ai::Approval` isteyerek uyguluyor. `otomatik`'i seçen kişiye
+  program yine her seferinde soruyordu — ona aksini söylemiş bir kontrol
+  tarafından.
+- **Üstelik iki metin birbiriyle çelişiyordu.** Ajanlara verilen yönerge
+  (`default_instructions`) "Bunu atlayan bir yol, bir başlık ya da bir AYAR
+  yoktur" diyor. Ayar ise tam o ayarın atladığını söylüyordu.
+- Özet artık ne olduğunu söylüyor: `otomatik` **henüz yürürlükte değil**, hangi
+  mod seçili olursa olsun her değişiklik kartta bekliyor. Değer duruyor — politika
+  motoru yazıldı ve sınandı, kuralın değiştiği gün kullanılacak — ama programın
+  bugün yapmadığı bir davranış olarak anlatılmıyor (11.8).
+- Test bunu **olumsuz** biçimde tutuyor, yani yeniden yazılınca da geçerli: özet,
+  program katılım isterken katılımsız yürütme vaat edemez. Kuralın değiştiği gün
+  bu test de aynı commit'te değişir — ki maksat budur.
+
 ### Düzeltildi — "iptal edildi" mesajı uygulanmış işleri gizliyordu (TODOS A-06, kısmi)
 
 - **Dur**, "İptal edildi. Çizimde hiçbir şey değişmedi." diyordu. Bu, o konuşmada
