@@ -4536,6 +4536,90 @@ TEST_CASE("Çıktı yerleşimi: denetle basmaya engel olmayan sorunları söyler
     CHECK(said.value().lines.size() > 1);
 }
 
+TEST_CASE("L-11: rapor ada başına bölüm ve toplam üretir, atlas üretemez")
+{
+    // AN ATLAS AND A REPORT ARE DIFFERENT SHAPES. An atlas is a flat loop: the
+    // same sheet, once per parcel. A report is a hierarchy — ada 1284 gets a
+    // heading and its own totals, then each of its parcels gets a page, then ada
+    // 1285 begins. The loop cannot express the heading or the total because it
+    // has no notion of a group (TODOS L-11).
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(
+        r.bus.execute_line("SÜTUN kimlik=ada_no tur=tam_sayi ad=\"Ada No\"", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("SÜTUN kimlik=parsel_no tur=tam_sayi ad=\"Parsel No\"", Origin::Test)
+                .ok());
+
+    // Two ada, three parcels: 1284 has two, 1285 has one.
+    REQUIRE(r.bus.execute_line("ALAN 0,0 40,0 40,30 0,30", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ALAN 50,0 90,0 90,30 50,30", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ALAN 0,50 20,50 20,70 0,70", Origin::Test).ok());
+    for (const char* line :
+         {"ÖZNİTELİK ad=ada_no nesne=1 deger=1284", "ÖZNİTELİK ad=parsel_no nesne=1 deger=21",
+          "ÖZNİTELİK ad=ada_no nesne=2 deger=1284", "ÖZNİTELİK ad=parsel_no nesne=2 deger=22",
+          "ÖZNİTELİK ad=ada_no nesne=3 deger=1285", "ÖZNİTELİK ad=parsel_no nesne=3 deger=7"})
+        REQUIRE(r.bus.execute_line(line, Origin::Test).ok());
+
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Rapor kagit=A4", Origin::Test).ok());
+    REQUIRE(
+        r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=atlas ad=Rapor katman=PARSEL", Origin::Test).ok());
+
+    const core::Layout* sheet = r.doc.layouts().find("Rapor");
+    REQUIRE(sheet != nullptr);
+
+    core::Report by_ada;
+    by_ada.group_by                             = "ada_no";
+    const std::vector<core::ReportGroup> groups = core::report_groups(r.doc, *sheet, by_ada);
+
+    REQUIRE_EQ(groups.size(), 2u);
+    CHECK_EQ(groups[0].key, std::string("1284"));
+    CHECK_EQ(groups[0].count, 2u);
+    CHECK_EQ(groups[1].key, std::string("1285"));
+    CHECK_EQ(groups[1].count, 1u);
+
+    // THE TOTAL IS THE BOUNDING BOXES', and the field's name says so: two 40×30 m
+    // parcels are 2 × 40 000 × 30 000 square millimetres. It is NOT a surveyed
+    // area and must never be read as one.
+    CHECK_EQ(groups[0].bounds_area_mm2, 2LL * 40000LL * 30000LL);
+    CHECK_EQ(groups[1].bounds_area_mm2, 20000LL * 20000LL);
+
+    // AND THE GROUP HAS ITS OWN EXTENT, which is what a group-level overview map
+    // is aimed at: both parcels of ada 1284 together.
+    CHECK_EQ(groups[0].bounds.min_x, 0);
+    CHECK_EQ(groups[0].bounds.max_x, 90000);
+
+    // NO GROUPING IS ONE GROUP — which is exactly an atlas. A caller that asked
+    // for a report without saying how to group it gets an answer rather than a
+    // refusal.
+    const std::vector<core::ReportGroup> flat = core::report_groups(r.doc, *sheet, core::Report{});
+    REQUIRE_EQ(flat.size(), 1u);
+    CHECK_EQ(flat.front().count, 3u);
+
+    // A MEMBER WITH NO VALUE IS ITS OWN GROUP, never a dropped row: a parcel with
+    // no ada number is an ordinary thing in a drawing being built, and a report
+    // that silently omitted it is a report somebody signs while it is missing
+    // data.
+    REQUIRE(r.bus.execute_line("ALAN 200,200 210,200 210,210 200,210", Origin::Test).ok());
+    const std::vector<core::ReportGroup> with_orphan =
+        core::report_groups(r.doc, *r.doc.layouts().find("Rapor"), by_ada);
+    REQUIRE_EQ(with_orphan.size(), 3u);
+    const bool has_empty_key =
+        std::any_of(with_orphan.begin(), with_orphan.end(),
+                    [](const core::ReportGroup& one) { return one.key.empty(); });
+    CHECK(has_empty_key);
+
+    // ---- AND THE COMMAND ANSWERS THE SAME THING -----------------------------
+    auto said = r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=rapor ad=Rapor grup=ada_no", Origin::Test);
+    REQUIRE(said.ok());
+    const core::Json* sections = said.value().report.find("bolumler");
+    REQUIRE(sections != nullptr);
+    CHECK_EQ(sections->as_array().size(), 3u);
+    CHECK_EQ(said.value().report.find("sayfa")->as_int(), 4);
+
+    // A report reads; it prints nothing and changes nothing.
+    CHECK_FALSE(said.value().mutated);
+}
+
 TEST_CASE("A-08: atlas nişanı içeriktir — iki ayrı çıktı aynı parmak izini taşıyamaz")
 {
     // FOUND BY THE EVALUATION HARNESS, not by reading the code: an atlas

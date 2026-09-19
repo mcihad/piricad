@@ -745,6 +745,7 @@ Ayrıntılı kullanım: [KATMANGÖRÜNÜM](layer_visibility.md)
 | `yeni_sira` | integer | isteğe bağlı | sayfatasi için sayfanın gideceği sıra |
 | `katman` | text | isteğe bağlı | atlas: hangi katmanın nesneleri için bir sayfa basılacak; 'yok' atlası kapatır |
 | `sirala` | text | isteğe bağlı | atlas: sayfaların sıralanacağı ve adlandırılacağı öznitelik sütunu; verilmezse nesne anahtarı |
+| `grup` | text | isteğe bağlı | rapor: bölümlerin oluşturulacağı öznitelik sütunu (ada_no gibi); verilmezse tek bölüm |
 | `kenar_payi` | integer | isteğe bağlı | atlas: nesnenin çevresinde bırakılacak pay, yüzde (varsayılan 10) |
 | `tek_dosya` | bool | isteğe bağlı | atlas: tek çok sayfalı belge mi, nesne başına bir dosya mı (varsayılan evet) |
 
@@ -2674,7 +2675,8 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             "sayfacogalt",
             "sayfatasi",
             "denetle",
-            "atlas"
+            "atlas",
+            "rapor"
           ],
           "description": "Ne yapılacağı (metin)"
         },
@@ -2741,6 +2743,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "sirala": {
           "type": "string",
           "description": "atlas: sayfaların sıralanacağı ve adlandırılacağı öznitelik sütunu; verilmezse nesne anahtarı (metin)"
+        },
+        "grup": {
+          "type": "string",
+          "description": "rapor: bölümlerin oluşturulacağı öznitelik sütunu (ada_no gibi); verilmezse tek bölüm (metin)"
         },
         "kenar_payi": {
           "type": "integer",

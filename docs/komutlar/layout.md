@@ -48,6 +48,7 @@ silinebilir; amaç ilk anda basılabilir bir şey görmenizdir.
 ÇIKTIYERLEŞİMİ islem=sayfatasi ad=<ad> sayfa=<n> yeni_sira=<m>
 ÇIKTIYERLEŞİMİ islem=denetle ad=<ad>
 ÇIKTIYERLEŞİMİ islem=atlas ad=<ad> katman=<katman> [sirala=<sütun>] [kenar_payi=10] [tek_dosya=evet]
+ÇIKTIYERLEŞİMİ islem=rapor ad=<ad> [grup=<sütun>]
 ```
 
 ## Parametreler
@@ -158,6 +159,40 @@ düzenleyen bir baskı, geri alma gerektiren bir baskı olurdu.
   başarı bildirmek yerine.
 - Boş geometrili nesneler atlanır: hedeflenemeyen bir nesne için boş bir sayfa
   basmak, boş bir sayfayı sonuç sanmaktır.
+
+### Rapor: ada başına bölüm, parsel başına sayfa
+
+Bir **atlas** düz bir döngüdür: aynı sayfa, her nesne için bir kez. Bir **rapor**
+hiyerarşidir: ada 1284 kendi başlığını ve kendi toplamlarını alır, sonra her parseli
+için bir sayfa gelir, sonra ada 1285 başlar. Döngü bunu **anlatamaz**, çünkü bölüm diye
+bir kavramı yoktur.
+
+`islem=rapor` bölümlemeyi **okur ve bildirir**; hiçbir şey basmaz ve hiçbir şeyi
+değiştirmez. Yüz sayfa yazılmadan önce bölümlemenin doğru olup olmadığı görülsün diye:
+
+```
+ÇIKTIYERLEŞİMİ islem=atlas ad=Rapor katman=PARSEL
+ÇIKTIYERLEŞİMİ islem=rapor ad=Rapor grup=ada_no
+```
+
+```text
+Rapor: 2 bölüm, 3 sayfa ('ada_no' ile bölümlendi):
+  1284 — 2 nesne
+  1285 — 1 nesne
+```
+
+Yapılandırılmış sonuçta her bölüm `deger`, `adet` ve `kutu_alani_mm2` taşır.
+
+> **`kutu_alani_mm2` ölçülen alan DEĞİLDİR.** Nesnelerin sınır kutularının toplamıdır ve
+> adı bunu söyler. Ölçülen alan `ÖLÇÜM_ALAN`'ın cevabıdır; bir raporun üstündeki toplamın
+> hukuki alan sanılması, imzalanan bir belgede yapılabilecek en pahalı karışıklıktır.
+
+`grup=` verilmezse **tek bölüm** olur — ki bu tam olarak bir atlastır, ve cevap vermek
+reddetmekten daha yararlıdır.
+
+Grup değeri **olmayan** bir nesne kendi bölümünü oluşturur, atılmaz: ada numarası henüz
+girilmemiş bir parsel kurulmakta olan bir çizimde olağandır, ve onu sessizce atlayan bir
+rapor, eksik veriyle imzalanan bir rapordur.
 
 ### Basmadan önce denetlemek
 

@@ -475,7 +475,21 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   Tek PDF ve nesne başına dosya destekle. **Kabul:** 100 parsel tek istekle sıralı,
   benzersiz adlandırılmış çıktı verir; sıfır sonuç, boş geometri, dosya adı çakışması
   ve iptal deterministik davranır. Snapshot ve manifest yeniden üretimi mümkün kılar.
-- [ ] **L-11 / P2 — Rapor motoru.** Statik kapak, grup başlığı/altlığı, nesne
+- [~] **L-11 / P2 — Rapor motoru.** *(bölüm modeli 19 Eylül 2026)*
+  **Yapıldı:** `core::Report` / `core::report_groups` ve `ÇIKTIYERLEŞİMİ
+  islem=rapor`. Bir atlas ve bir rapor farklı şekillerdir: atlas düz bir
+  döngüdür, rapor hiyerarşidir ve döngünün bölüm diye bir kavramı yoktur — bu
+  yüzden ayrı bir model. Ada başına bölüm, adet ve kutu alanı toplamı, bölümün
+  kendi kapsamı. Üyeler `atlas_targets`'tan geliyor, yani "bu sayfa neyi
+  kapsıyor" sorusunun tek cevabı var.
+  `kutu_alani_mm2` **ölçülen alan değildir** ve adı bunu söylüyor. Grup değeri
+  olmayan nesne kendi bölümünü oluşturuyor, atılmıyor.
+  **Kalan:** bölümlerin **sayfaya dökülmesi** — statik kapak, grup başlığı/altlığı
+  ve nesne bölümünün ayrı şablonlar olması, ve bunların elle sayfa çoğaltılmadan
+  basılması. Bugün model ve sayım var, çıktı yok: `islem=rapor` okuyor ve
+  bildiriyor. Bir de `keep_empty` alanı bildirildi ama okunmuyor (kodda yazılı) —
+  bölüm bir listeden gelebildiği gün anlam kazanacak.
+  **Eski metin:** Statik kapak, grup başlığı/altlığı, nesne
   bölümü ve toplamları iç içe tanımla; ada → parsel hiyerarşisiyle çalış. Atlasın
   “her nesne için aynı şablon” döngüsünden ayrı rapor modeli kur. **Kabul:** ada
   bazında başlık ve toplam, parsel bazında harita/tablo içeren rapor elle sayfa

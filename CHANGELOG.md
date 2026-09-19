@@ -6,6 +6,27 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — rapor modeli: ada başına bölüm ve toplam (TODOS L-11, kısmi)
+
+- **Bir atlas ve bir rapor farklı şekillerdir** ve biri diğerinin işini yapamaz.
+  Atlas düz bir döngüdür: aynı sayfa, her nesne için bir kez. Rapor
+  hiyerarşidir — ada 1284 kendi başlığını ve toplamlarını alır, sonra her parseli
+  için bir sayfa gelir. Döngü bunu anlatamaz çünkü **bölüm diye bir kavramı
+  yoktur**.
+- `core::Report` ve `core::report_groups`: bölüm değeri, üyeler, adet, kutu alanı
+  toplamı ve bölümün kendi kapsamı. Üyeler `atlas_targets`'tan geliyor — adlar,
+  öznitelikler, belirlenimli sıra ve yinelenen ad ekleri orada karara bağlanıyor;
+  ikinci bir üye listesi "bu sayfa neyi kapsıyor" sorusuna ikinci bir cevap olurdu
+  (5.10).
+- **`kutu_alani_mm2` ölçülen alan değildir** ve adı bunu söylüyor. Ölçülen alan
+  cadastre alanının cevabıdır; bir raporun üstündeki toplamın hukuki alan
+  sanılması, imzalanan bir belgede yapılabilecek en pahalı karışıklıktır.
+- **Grup değeri olmayan nesne kendi bölümünü oluşturuyor**, atılmıyor: ada
+  numarası girilmemiş bir parsel kurulmakta olan bir çizimde olağandır, ve onu
+  sessizce atlayan bir rapor eksik veriyle imzalanan bir rapordur.
+- `ÇIKTIYERLEŞİMİ islem=rapor` bölümlemeyi **okur ve bildirir**, hiçbir şey
+  basmaz: yüz sayfa yazılmadan önce bölümleme görülsün diye.
+
 ### Düzeltildi — `dosya=cikti.png` bir PDF yazıp adını `cikti.png` koyuyordu (TODOS L-13)
 
 - Ve **"tamam" diyordu**. Sonra o dosyayı açmaya çalışan her şey — tarayıcı, rapor,

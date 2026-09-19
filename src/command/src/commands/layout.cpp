@@ -150,7 +150,7 @@ Task<void> run_layout(Context& ctx)
 
     static constexpr const char* kVerbs[] = {"listele",   "ekle",      "sil",      "ad",
                                              "sayfa",     "sayfaekle", "sayfasil", "sayfacogalt",
-                                             "sayfatasi", "denetle",   "atlas"};
+                                             "sayfatasi", "denetle",   "atlas",    "rapor"};
     auto verb = co_await ctx.text("islem", "İşlem: listele / ekle / sil / ad / sayfa / sayfaekle / "
                                            "sayfasil / sayfacogalt / sayfatasi / denetle / atlas");
     if (!verb) co_return;
@@ -381,6 +381,84 @@ Task<void> run_layout(Context& ctx)
                  std::to_string(count) + " sayfa, %" +
                  std::to_string(settled->atlas.margin_percent) + " kenar payı, " +
                  (settled->atlas.single_file ? "tek dosya" : "nesne başına dosya") + ".");
+        co_return;
+    }
+
+    if (op == "rapor") {
+        // A REPORT IS NOT AN ATLAS, and this verb exists because the difference
+        // cannot be expressed in the other one. An atlas is a flat loop: the
+        // same sheet, once per object. A report is a HIERARCHY — ada 1284 gets a
+        // heading and its own totals, then each of its parcels gets a page, then
+        // ada 1285 begins — and the loop has no notion of a group at all
+        // (TODOS L-11).
+        //
+        // IT READS AND REPORTS; it does not print. What it answers is the shape
+        // the run would take, so a person can see the grouping before a hundred
+        // pages are written.
+        const Layout* found = have.find(*named);
+        if (found == nullptr) {
+            ctx.session().fail(
+                core::err(core::ErrorCode::NotFound, "Çıktı yerleşimi yok: '" + *named + "'."));
+            co_return;
+        }
+
+        core::Report wanted;
+        if (const Value v = ctx.argument("grup"); !v.empty()) {
+            if (bus.document().attributes().find(v.as_text()) == core::kNoAttr) {
+                ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                             "Öznitelik sütunu yok: '" + v.as_text() + "'."));
+                co_return;
+            }
+            wanted.group_by = v.as_text();
+            ctx.record("grup", v);
+        }
+
+        if (found->atlas.coverage_layer.empty()) {
+            ctx.echo("'" + *named +
+                     "' bir kapsama katmanına nişanlanmamış; rapor neyi bölümleyeceğini "
+                     "bilemez. Önce: ÇIKTIYERLEŞİMİ islem=atlas ad=" +
+                     *named + " katman=<katman>");
+            co_return;
+        }
+
+        const std::vector<core::ReportGroup> groups =
+            core::report_groups(bus.document(), *found, wanted);
+
+        core::Json report;
+        report.set("yerlesim", core::Json::string(found->name));
+        report.set("katman", core::Json::string(found->atlas.coverage_layer));
+        if (!wanted.group_by.empty()) report.set("grup", core::Json::string(wanted.group_by));
+
+        core::Json rows   = core::Json::array({});
+        std::size_t pages = 0;
+        for (const core::ReportGroup& one : groups) {
+            pages += one.count;
+            core::Json row;
+            row.set("deger", core::Json::string(one.key));
+            row.set("adet", core::Json::integer(static_cast<std::int64_t>(one.count)));
+            // SQUARE MILLIMETRES OF BOUNDING BOX, and the field name says which.
+            // A total on a report must never be mistaken for a surveyed area.
+            row.set("kutu_alani_mm2", core::Json::integer(one.bounds_area_mm2));
+            rows.push(std::move(row));
+        }
+        report.set("bolumler", std::move(rows));
+        report.set("sayfa", core::Json::integer(static_cast<std::int64_t>(pages)));
+        ctx.report(std::move(report));
+
+        if (groups.empty()) {
+            ctx.echo("'" + found->atlas.coverage_layer +
+                     "' katmanında raporlanacak nesne yok; hiç sayfa üretilmez.");
+            co_return;
+        }
+
+        std::string said = "Rapor: " + std::to_string(groups.size()) + " bölüm, " +
+                           std::to_string(pages) + " sayfa";
+        if (!wanted.group_by.empty()) said += " ('" + wanted.group_by + "' ile bölümlendi)";
+        said += ":";
+        for (const core::ReportGroup& one : groups)
+            said += "\n  " + (one.key.empty() ? std::string("(değeri yok)") : one.key) + " — " +
+                    std::to_string(one.count) + " nesne";
+        ctx.echo(said);
         co_return;
     }
 
@@ -1147,7 +1225,7 @@ KENTOS_COMMAND(layout)
             {
                 Param::choice("islem", Arity::exactly(1),
                               {"listele", "ekle", "sil", "ad", "sayfa", "sayfaekle", "sayfasil",
-                               "sayfacogalt", "sayfatasi", "denetle", "atlas"},
+                               "sayfacogalt", "sayfatasi", "denetle", "atlas", "rapor"},
                               "Ne yapılacağı"),
                 Param::text("ad", Arity::optional(), "Yerleşimin adı; listele dışında gerekir"),
                 Param::text("yeni_ad", Arity::optional(), "islem=ad için yeni yerleşim adı"),
@@ -1177,6 +1255,9 @@ KENTOS_COMMAND(layout)
                 Param::text("sirala", Arity::optional(),
                             "atlas: sayfaların sıralanacağı ve adlandırılacağı öznitelik "
                             "sütunu; verilmezse nesne anahtarı"),
+                Param::text("grup", Arity::optional(),
+                            "rapor: bölümlerin oluşturulacağı öznitelik sütunu (ada_no gibi); "
+                            "verilmezse tek bölüm"),
                 Param::integer_range("kenar_payi", Arity::optional(), 0, 200,
                                      "atlas: nesnenin çevresinde bırakılacak pay, yüzde "
                                      "(varsayılan 10)"),
@@ -1207,6 +1288,8 @@ KENTOS_COMMAND(layout)
                 {"sayfatasi", Effect::DocumentEdit},
                 {"denetle", Effect::Query},
                 {"atlas", Effect::DocumentEdit},
+                // A REPORT READS AND REPORTS; it prints nothing and changes nothing.
+                {"rapor", Effect::Query},
             },
     };
 }

@@ -714,6 +714,81 @@ std::string resolve_fields(std::string_view text, const SheetContext& context,
 /// parcels numbered 21 in different ada is an ordinary thing in this country.
 std::vector<AtlasTarget> atlas_targets(const Document& document, const Layout& layout);
 
+// ---- THE REPORT MODEL (TODOS L-11) ------------------------------------------
+//
+// AN ATLAS AND A REPORT ARE DIFFERENT SHAPES, and trying to make one do the
+// other's job is why this is its own type. An atlas is a FLAT LOOP: the same
+// sheet, once per object, aimed somewhere else each time. A report is a
+// HIERARCHY: ada 1284 gets a heading and its own totals, then each of its
+// parcels gets a page, then ada 1285 begins. The loop cannot express the
+// heading and it cannot express the total, because it has no notion of a group
+// at all.
+//
+// WHAT THIS TYPE IS NOT. It is not a page. Nothing here knows about paper: it
+// answers "which objects, in which groups, with what totals", and the layout
+// machinery turns that into sheets. Keeping the two apart is what lets the same
+// grouping drive a printed report, a `SORGULA` answer and an agent's summary.
+
+/// One group of a report, and what its members add up to.
+struct ReportGroup
+{
+    /// The value the group is keyed on — `1284` for `grup=ada_no`. Empty when
+    /// the member carries no value for that column, which is its own group: a
+    /// parcel with no ada number is a real thing and dropping it would be a
+    /// report that silently omits data.
+    std::string key;
+
+    /// The group's members, in the order their sheets will print.
+    std::vector<AtlasTarget> members;
+
+    /// How many members. The same as `members.size()`, named because it is what
+    /// a heading prints.
+    std::size_t count{0};
+
+    /// The members' bounding boxes' total area, in SQUARE MILLIMETRES.
+    ///
+    /// A BOUNDING-BOX AREA, AND THE NAME SAYS SO. It is not the parcels'
+    /// surveyed area: that is `ÖLÇÜM_ALAN`'s answer and it belongs to the
+    /// cadastre domain. A total printed on a report must not be mistaken for a
+    /// legal area, so the field is named for what it measures and the
+    /// documentation says it plainly.
+    std::int64_t bounds_area_mm2{0};
+
+    /// The whole group's extent — every member's bounds together. What a
+    /// group-level overview map is aimed at.
+    Box2 bounds{};
+};
+
+/// How a report is grouped. Empty `group_by` means "no grouping": one group
+/// holding everything, which is exactly an atlas and is answered as such.
+struct Report
+{
+    /// The attribute column the members are grouped by: `ada_no`.
+    std::string group_by;
+
+    /// Whether a group with no members is still emitted.
+    ///
+    /// IT CANNOT HAPPEN TODAY — groups are built FROM members, so an empty one
+    /// never arises — but L-11 asks for the behaviour to be settable, and the
+    /// field is where that decision will live when a group can come from a list
+    /// rather than from the objects. Declared now so the shape does not change
+    /// later; it is not read yet and `report_groups` says so.
+    bool keep_empty{false};
+};
+
+/// The groups a report would print, in order.
+///
+/// Built on `atlas_targets`, deliberately: the members, their names, their
+/// attributes, the deterministic ordering and the duplicate-name suffixes are
+/// all decided there, and a second implementation would be a second answer to
+/// "which objects does this sheet cover" (CLAUDE.md 5.10).
+///
+/// GROUPS COME OUT IN THE MEMBERS' OWN ORDER, which `atlas_targets` has already
+/// made deterministic. Within a group the members keep that order too, so a
+/// reprint of page 47 is the same parcel it was.
+std::vector<ReportGroup> report_groups(const Document& document, const Layout& layout,
+                                       const Report& report);
+
 Layout default_layout(std::string name, Um width, Um height, Um margin);
 
 } // namespace kentos::core

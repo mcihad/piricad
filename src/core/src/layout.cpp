@@ -798,6 +798,62 @@ std::vector<LayoutOverlap> layout_overlaps(const Layout& layout)
     return out;
 }
 
+std::vector<ReportGroup> report_groups(const Document& document, const Layout& layout,
+                                       const Report& report)
+{
+    // THE MEMBERS ARE THE ATLAS'S, and that is the point: their names, their
+    // attributes, the deterministic ordering and the duplicate-name suffixes are
+    // decided in one place. A report that built its own member list would be a
+    // second answer to "which objects does this sheet cover" (5.10).
+    std::vector<AtlasTarget> members = atlas_targets(document, layout);
+
+    std::vector<ReportGroup> out;
+    if (members.empty()) return out;
+
+    // NO GROUPING IS A REPORT OF ONE GROUP. A caller that asked for a report
+    // without saying how to group it asked for an atlas, and answering with an
+    // atlas is more useful than refusing.
+    const auto key_of = [&](const AtlasTarget& one) -> std::string {
+        if (report.group_by.empty()) return std::string();
+        for (const auto& [id, value] : one.fields)
+            if (turkish_key_equals(id, report.group_by)) return value;
+        // A MEMBER WITH NO VALUE IS ITS OWN GROUP, not a dropped row. A parcel
+        // with no ada number is an ordinary thing in a drawing being built, and
+        // a report that silently omitted it would be a report somebody signs
+        // while it is missing data.
+        return std::string();
+    };
+
+    for (const AtlasTarget& one : members) {
+        const std::string key = key_of(one);
+
+        ReportGroup* into = nullptr;
+        for (ReportGroup& held : out)
+            if (held.key == key) into = &held;
+        if (into == nullptr) {
+            out.push_back(ReportGroup{});
+            out.back().key = key;
+            into           = &out.back();
+        }
+
+        // THE AREA IS THE BOUNDING BOX'S, and the field's name says so. It is
+        // not the surveyed area — that is the cadastre domain's answer — and a
+        // total on a printed report must never be mistaken for a legal area.
+        const std::int64_t w = one.bounds.width();
+        const std::int64_t h = one.bounds.height();
+        into->bounds_area_mm2 += w * h;
+        into->bounds.extend(one.bounds);
+        into->members.push_back(one);
+        into->count = into->members.size();
+    }
+
+    // `keep_empty` IS NOT READ YET, and saying so beats a field that looks live.
+    // Groups are built FROM members here, so an empty one cannot arise; the flag
+    // is the seam for the day a group comes from a list instead (L-11).
+    (void)report.keep_empty;
+    return out;
+}
+
 std::vector<std::string> layout_dependencies(const Layout& layout)
 {
     std::vector<std::string> out;
