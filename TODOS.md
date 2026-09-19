@@ -442,7 +442,24 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   devam destekle. Manuel tablo ve sınırlı HTML/zengin metin içeriği aynı akış
   sözleşmesine otursun. **Kabul:** 500 satırlı tablo bütün satırları sayfalara taşır;
   satırların sığmadığı durumda sessiz kesme yerine devam veya açık taşma raporu olur.
-- [ ] **L-09 / P2 — Grafik, profil ve 3B öğeleri.** Çubuk/çizgi/pasta grafiklerini
+- [~] **L-09 / P2 — Grafik, profil ve 3B öğeleri.** *(çubuk grafik 19 Eylül 2026)*
+  **Yapıldı:** `grafik` öğesi — bir katmanın bir öznitelik sütununa göre nesne
+  sayısı, çubuk grafik. Çubuklar katmanın kendi rengini alıyor (QGIS'in
+  sembolojiden türetmesiyle aynı gerekçe: ilgisiz renkler ikinci bir lejanttır),
+  sayı çubuğun üstünde, değersiz nesneler `(boş)` çubuğunda toplanıyor.
+  **Maddenin "desteklenmeyen kaynak için boş resimle başarı bildirilmez" cümlesi
+  karşılandı:** katman/sütun verilmemişse ya da yoksa, sayılacak nesne yoksa,
+  kutu çok küçükse — sebep kâğıda yazılıyor ve `trouble`'a giriyor, yani
+  `islem=denetle` ve dışa aktarma uyarıları taşıyor.
+  **Kalan:** çizgi ve pasta grafikleri; ifade/filtre ile bağlama; kategorilerin
+  katman sembolojisinden (yalnız renginden değil) türetilmesi; **yükseklik
+  profili** ve **3B harita** — maddenin kendisi bunların "mevcut yüzey/3B
+  motorunun yeterliliğine bağımlı paketler" olduğunu söylüyor ve bugün o motorda
+  kamera, sahne snapshot'ı ve ölçekli 3B çıktı yok. "Temel veri değişince
+  kontrollü yenilenir" yarısı da açık: grafik her çizimde belgeden yeniden
+  sayılıyor (yani hep güncel), ama pahalı bir kaynak için denetimli bir yenileme
+  yok.
+  **Eski metin:** Çubuk/çizgi/pasta grafiklerini
   alan/ifade/filtreyle bağla; QGIS 4.2 karşılığı olarak kategori ve renkleri katman
   sembolojisinden türet. Yükseklik profilinde güzergâh ve yüzey kaynağı; 3B haritada
   kamera, ölçekli çıktı ve sahne snapshot'ı tanımla. Bunlar mevcut yüzey/3B motorunun

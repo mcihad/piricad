@@ -77,6 +77,7 @@ const char* layout_item_kind_id(LayoutItemKind kind) noexcept
     case LayoutItemKind::Picture: return "resim";
     case LayoutItemKind::Shape: return "sekil";
     case LayoutItemKind::Table: return "tablo";
+    case LayoutItemKind::Chart: return "grafik";
     }
     return "metin";
 }
@@ -92,16 +93,17 @@ const char* layout_item_kind_label(LayoutItemKind kind) noexcept
     case LayoutItemKind::Picture: return "Resim";
     case LayoutItemKind::Shape: return "Şekil";
     case LayoutItemKind::Table: return "Tablo";
+    case LayoutItemKind::Chart: return "Grafik";
     }
     return "Metin";
 }
 
 std::optional<LayoutItemKind> layout_item_kind_from_id(std::string_view id) noexcept
 {
-    constexpr std::array<LayoutItemKind, 8> kKinds = {
+    constexpr std::array<LayoutItemKind, 9> kKinds = {
         LayoutItemKind::Map,        LayoutItemKind::Label,  LayoutItemKind::ScaleBar,
         LayoutItemKind::NorthArrow, LayoutItemKind::Legend, LayoutItemKind::Picture,
-        LayoutItemKind::Shape,      LayoutItemKind::Table,
+        LayoutItemKind::Shape,      LayoutItemKind::Table,  LayoutItemKind::Chart,
     };
     for (LayoutItemKind kind : kKinds)
         if (id == layout_item_kind_id(kind)) return kind;
@@ -562,6 +564,7 @@ LayoutItem default_item(LayoutItemKind kind)
         break;
     case LayoutItemKind::Legend:
     case LayoutItemKind::Table:
+    case LayoutItemKind::Chart:
         // OPAQUE, AND FRAMED. Both of these sit over the map by design, and a
         // transparent one is a table whose rows have a parcel boundary drawn
         // through them.

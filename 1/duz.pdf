@@ -4,7 +4,7 @@
 << /Metadata 3 0 R /Names 4 0 R /Pages 5 0 R /Type /Catalog >>
 endobj
 2 0 obj
-<< /Author (KentOSCad) /CreationDate (D:20260919225703+03'00') /Creator <feff004b0065006e0074004f0053004300610064> /ModDate (D:20260919225703+03'00') /Producer <feff0051007400200036002e00310031002e0031> /Title <feff00530131006e0061006d006100200070006100660074006100730131> /Trapped /False >>
+<< /Author (KentOSCad) /CreationDate (D:20260919233121+03'00') /Creator <feff004b0065006e0074004f0053004300610064> /ModDate (D:20260919233121+03'00') /Producer <feff0051007400200036002e00310031002e0031> /Title <feff00530131006e0061006d006100200070006100660074006100730131> /Trapped /False >>
 endobj
 3 0 obj
 << /Subtype /XML /Type /Metadata /Length 1289 >>
@@ -24,8 +24,8 @@ stream
             </dc:creator>
         </rdf:Description>
         <rdf:Description rdf:about="" pdf:Producer="Qt 6.11.1" pdf:Trapped="False"/>
-        <rdf:Description rdf:about="" xmp:CreatorTool="KentOSCad" xmp:CreateDate="2026-09-19T22:57:03+03:00" xmp:ModifyDate="2026-09-19T22:57:03+03:00" xmp:MetadataDate="2026-09-19T22:57:03+03:00"/>
-        <rdf:Description rdf:about="" xmpMM:DocumentID="uuid:df4ba897-5785-4320-be66-59b0c5bd883f" xmpMM:VersionID="1" xmpMM:RenditionClass="default"/>
+        <rdf:Description rdf:about="" xmp:CreatorTool="KentOSCad" xmp:CreateDate="2026-09-19T23:31:21+03:00" xmp:ModifyDate="2026-09-19T23:31:21+03:00" xmp:MetadataDate="2026-09-19T23:31:21+03:00"/>
+        <rdf:Description rdf:about="" xmpMM:DocumentID="uuid:f3131972-83aa-42a3-8c99-923b6465ab93" xmpMM:VersionID="1" xmpMM:RenditionClass="default"/>
     </rdf:RDF>
 </x:xmpmeta>
 <?xpacket end='w'?>endstream
@@ -81,7 +81,7 @@ xref
 0000002570 00000 n 
 0000002611 00000 n 
 0000002652 00000 n 
-trailer << /Info 2 0 R /Root 1 0 R /Size 14 /ID [<64663462613839372d353738352d343332302d626536362d353962306335626438383366><cf015c73b52cc52dd26dba474b292834>] >>
+trailer << /Info 2 0 R /Root 1 0 R /Size 14 /ID [<66333133313937322d383361612d343261332d386339392d393233623634363561623933><ace2b833020abaa2994372246b66effd>] >>
 startxref
 2749
 %%EOF

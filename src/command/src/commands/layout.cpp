@@ -763,7 +763,7 @@ Task<void> run_item(Context& ctx)
 
     if (op == "ekle") {
         auto kind_text = co_await ctx.text("tur", "Öğe türü: harita / metin / olcek / kuzey / "
-                                                  "lejant / resim / sekil / tablo");
+                                                  "lejant / resim / sekil / tablo / grafik");
         if (!kind_text) co_return;
         const std::optional<LayoutItemKind> kind = core::layout_item_kind_from_id(*kind_text);
         if (!kind) {
@@ -917,11 +917,16 @@ Task<void> run_item(Context& ctx)
             }
 
             if (const Value v = ctx.argument("sutunlar"); !v.empty()) {
-                if (item->kind != LayoutItemKind::Table) {
-                    ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
-                                                 "'" + *id +
-                                                     "' bir tablo değil; sutunlar yalnız tabloya "
-                                                     "verilir."));
+                // TWO KINDS TAKE COLUMNS, and they take them for different
+                // reasons: a table PRINTS them, a chart COUNTS BY the first one
+                // (TODOS L-09). The refusal names both rather than only the one
+                // this branch was written for.
+                if (item->kind != LayoutItemKind::Table && item->kind != LayoutItemKind::Chart) {
+                    ctx.session().fail(
+                        core::err(core::ErrorCode::InvalidArgument,
+                                  "'" + *id +
+                                      "' bir tablo ya da grafik değil; sutunlar yalnız onlara "
+                                      "verilir."));
                     co_return;
                 }
                 std::vector<std::string> wanted;
@@ -1309,10 +1314,10 @@ KENTOS_COMMAND(layout_item)
                     .renamed_from("pafta"),
                 Param::text("ad", Arity::optional(),
                             "Öğe adı; ekle dışında gerekir, ekle'de verilmezse türetilir"),
-                Param::choice(
-                    "tur", Arity::optional(),
-                    {"harita", "metin", "olcek", "kuzey", "lejant", "resim", "sekil", "tablo"},
-                    "islem=ekle için öğe türü"),
+                Param::choice("tur", Arity::optional(),
+                              {"harita", "metin", "olcek", "kuzey", "lejant", "resim", "sekil",
+                               "tablo", "grafik"},
+                              "islem=ekle için öğe türü"),
                 Param::number("x", Arity::optional(), "Sol kenardan uzaklık")
                     .measured_in("kâğıt mm"),
                 Param::number("y", Arity::optional(), "ÜST kenardan uzaklık")

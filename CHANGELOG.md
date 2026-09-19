@@ -6,6 +6,33 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — grafik öğesi (TODOS L-09, kısmi)
+
+- Yeni yerleşim öğesi `grafik`: bir katmanın bir öznitelik sütununa göre **nesne
+  sayısı**, çubuk grafik olarak. Kaç parsel `Arsa`, kaç parsel `Tarla` — bir imar
+  ya da kadastro paftasının gerçekten gösterdiği özet, ve ölçülen alana ihtiyaç
+  duymadığı için **hukuki alan sanılamayacak** tek özet.
+- Çubuklar **katmanın kendi rengini** alıyor: grafik ile haritadaki katman aynı şey
+  olarak okunsun diye. İlgisiz renklerde bir grafik, okuyucunun öğrenmesi gereken
+  ikinci bir lejanttır.
+- Sayı çubuğun üstünde yazılı: bir eksenden tahmin edilmesi gereken çubuk, yanlış
+  tahmin edilecek çubuktur. Değeri olmayan nesneler `(boş)` çubuğunda toplanıyor,
+  atılmıyorlar.
+- **Kaynağı kullanılamayan bir grafik boş çizmiyor, sebebini yazıyor** — kâğıdın
+  üstüne ve `trouble` listesine, yani `islem=denetle` sonucuna ve dışa aktarma
+  uyarılarına. L-09 bunu açıkça istiyor, ve imzalanan bir sayfadaki boş bir
+  dikdörtgen aylar sonra kimsenin cevaplayamayacağı bir sorudur.
+- `LayoutItemKind::Chart` **enum'un sonuna** eklendi: önceki değerler numaralarını
+  koruyor ve eski bir yapının yazdığı çizim hâlâ okunuyor (io.md R10).
+- `sutunlar=` artık tabloya **ve grafiğe** veriliyor; ret mesajı ikisini de
+  adlandırıyor.
+- `KENTOS_LAYOUT_PROBE` ikisini de sınıyor: kaynağı olan grafik gerçekten çubuk
+  çiziyor mu, kaynağı olmayan gerçekten sebebini söylüyor mu.
+- **Probe'un kendi kusuru da düzeltildi:** açık bir etkileşimli komut varken
+  pencerenin komut satırına yazılan satır o komuta GİRDİ olur — tasarım böyle — ve
+  bu, iki alandan birini yutup grafiğe yarım veri bırakıyordu. Kurulum artık veri
+  yolundan geçiyor.
+
 ### Eklendi — rapor modeli: ada başına bölüm ve toplam (TODOS L-11, kısmi)
 
 - **Bir atlas ve bir rapor farklı şekillerdir** ve biri diğerinin işini yapamaz.

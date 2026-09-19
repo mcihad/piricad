@@ -126,6 +126,20 @@ enum class LayoutItemKind : std::uint8_t {
     Picture,    ///< a logo or a scanned stamp, by path
     Shape,      ///< a rectangle, an ellipse or a line — frames and rules
     Table,      ///< rows of a layer's attributes
+
+    /// A BAR CHART OF AN ATTRIBUTE COLUMN, grouped by value.
+    ///
+    /// ADDED AT THE END, like every enum whose values reach a file: the values
+    /// before it keep the numbers they had, and a drawing written by an older
+    /// build still reads (io.md R10).
+    ///
+    /// WHAT IT CHARTS. `text` names the layer, `columns` names the one column to
+    /// group by. Each distinct value becomes a bar whose height is how many
+    /// objects carry it. That is the count a planning or cadastral sheet
+    /// actually shows — how many parcels are `Arsa`, how many `Tarla` — and it
+    /// is the one summary that needs no surveyed area and therefore cannot be
+    /// mistaken for one (TODOS L-09).
+    Chart,
 };
 
 /// The kind's stable wire word: the file, the command and the journal all use it.

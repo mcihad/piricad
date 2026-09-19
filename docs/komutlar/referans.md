@@ -2820,7 +2820,8 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             "lejant",
             "resim",
             "sekil",
-            "tablo"
+            "tablo",
+            "grafik"
           ],
           "description": "islem=ekle için öğe türü (metin)"
         },

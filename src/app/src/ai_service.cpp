@@ -108,6 +108,10 @@ AiService::AiService(command::Bus& bus, QObject* parent) : QObject(parent), bus_
         case Verb::ServerStop:
         case Verb::ServerState:
         case Verb::ServerToken:
+        case Verb::ServerClients:
+        case Verb::ServerRevoke:
+        case Verb::ServerRestore:
+        case Verb::ServerProbe:
             // DELEGATED TO THE LISTENER, which installs itself through
             // `setServerHandler`. Unset means this build genuinely has no
             // listener — the option is off, or nothing wired it — and saying so

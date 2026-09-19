@@ -461,6 +461,146 @@ void paint_legend(QPainter& painter, const QRectF& box, const core::Document& do
     painter.restore();
 }
 
+// --------------------------------------------------------------- the chart --
+
+/// Draws a bar chart of how many objects carry each value of one column.
+///
+/// WHAT IT CHARTS AND WHY THAT ONE. `item.text` names the layer, `item.columns`
+/// its first entry names the column. Each distinct value is a bar whose height is
+/// the COUNT of objects carrying it — how many parcels are `Arsa`, how many
+/// `Tarla`. That is the summary a planning sheet actually shows, and it is the
+/// one that needs no surveyed area and therefore cannot be mistaken for one
+/// (TODOS L-09).
+///
+/// AN UNUSABLE SOURCE IS SAID, NOT DRAWN AS AN EMPTY BOX. L-09 requires that an
+/// unsupported source never be reported as success with an empty picture: a chart
+/// with no layer, no column or no rows prints the reason on the paper and puts it
+/// in `trouble`, so the preflight and the export result both carry it. An empty
+/// rectangle on a signed sheet is a question nobody can answer months later.
+void paint_chart(QPainter& painter, const QRectF& box, const core::Document& document,
+                 std::vector<std::string>* trouble, const core::LayoutItem& item,
+                 double px_per_paper_mm)
+{
+    const QFont font = font_at(item.text_height, px_per_paper_mm);
+    const QFontMetricsF metrics(font);
+
+    painter.save();
+    painter.setClipRect(box);
+    painter.setFont(font);
+
+    const auto refuse = [&](const QString& why) {
+        if (trouble != nullptr) trouble->push_back("'" + item.id + "' " + why.toStdString());
+        painter.setPen(QPen(colour_of(item.text_colour), 0.8, Qt::DashLine));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRect(box);
+        painter.setPen(colour_of(item.text_colour));
+        painter.drawText(box, Qt::AlignCenter | Qt::TextWordWrap, why);
+        painter.restore();
+    };
+
+    if (item.text.empty()) {
+        refuse(QObject::tr("grafik: hangi katman olduğu söylenmemiş"));
+        return;
+    }
+    const core::LayerId on = document.find_layer(item.text);
+    if (on == core::kNoLayer) {
+        refuse(QObject::tr("grafik: '%1' adlı katman yok").arg(QString::fromStdString(item.text)));
+        return;
+    }
+    if (item.columns.empty()) {
+        refuse(QObject::tr("grafik: hangi sütuna göre sayılacağı söylenmemiş"));
+        return;
+    }
+    const core::AttrId column = document.attributes().find(item.columns.front());
+    if (column == core::kNoAttr) {
+        refuse(QObject::tr("grafik: '%1' adlı öznitelik sütunu yok")
+                   .arg(QString::fromStdString(item.columns.front())));
+        return;
+    }
+
+    // COUNTED IN THE DRAWING'S OWN ORDER, then sorted by the folded value so two
+    // runs put the bars in the same places (CLAUDE.md 5.6 for the folding).
+    std::vector<std::pair<std::string, std::int64_t>> bars;
+    const core::EntityTable& entities = document.entities();
+    for (core::EntityId slot = 0; slot < entities.size(); ++slot) {
+        if (!entities.standalone(slot)) continue;
+        if (entities.layer[slot] != on) continue;
+        const core::Result<core::AttrValue> cell =
+            document.attributes().get(column, entities.slot[slot]);
+        std::string value = cell.ok() ? core::attr_display(cell.value()) : std::string();
+        if (value.empty()) value = QObject::tr("(boş)").toStdString();
+
+        bool found = false;
+        for (auto& [name, count] : bars)
+            if (name == value) {
+                ++count;
+                found = true;
+            }
+        if (!found) bars.emplace_back(std::move(value), 1);
+    }
+
+    if (bars.empty()) {
+        refuse(QObject::tr("grafik: '%1' katmanında sayılacak nesne yok")
+                   .arg(QString::fromStdString(item.text)));
+        return;
+    }
+
+    std::stable_sort(bars.begin(), bars.end(), [](const auto& a, const auto& b) {
+        return core::turkish_fold_key(a.first) < core::turkish_fold_key(b.first);
+    });
+
+    std::int64_t tallest = 0;
+    for (const auto& [name, count] : bars)
+        tallest = std::max(tallest, count);
+    if (tallest <= 0) {
+        refuse(QObject::tr("grafik: sayılar sıfır"));
+        return;
+    }
+
+    // ---- the plot area, leaving room for the value labels under the bars ----
+    const double label_h = metrics.height() * 1.4;
+    const double top_pad = metrics.height() * 0.6;
+    QRectF plot(box.left(), box.top() + top_pad, box.width(), box.height() - top_pad - label_h);
+    if (plot.height() < 4.0 || plot.width() < 4.0) {
+        refuse(QObject::tr("grafik: kutu çok küçük"));
+        return;
+    }
+
+    const double slot_w = plot.width() / static_cast<double>(bars.size());
+    const double bar_w  = std::max(1.0, slot_w * 0.7);
+
+    const core::Layer* layer = document.layer(on);
+    const QColor ink =
+        layer != nullptr ? QColor::fromRgba(layer->appearance.rgba) : QColor(Qt::gray);
+
+    for (std::size_t i = 0; i < bars.size(); ++i) {
+        const double ratio = static_cast<double>(bars[i].second) / static_cast<double>(tallest);
+        const double h     = plot.height() * ratio;
+        const QRectF bar(plot.left() + slot_w * static_cast<double>(i) + (slot_w - bar_w) / 2.0,
+                         plot.bottom() - h, bar_w, h);
+
+        // THE LAYER'S OWN COLOUR, so a chart of a layer and the layer on the map
+        // are read as the same thing. QGIS derives chart colours from the layer's
+        // symbology and so does this; a chart in unrelated colours is a second
+        // legend the reader has to learn (L-09).
+        painter.setPen(QPen(ink.darker(130), 0.6));
+        painter.setBrush(ink);
+        painter.drawRect(bar);
+
+        painter.setPen(colour_of(item.text_colour));
+        painter.setBrush(Qt::NoBrush);
+        // THE COUNT ON TOP, the value underneath: a bar whose number a reader has
+        // to estimate off an axis is a bar that will be estimated wrong.
+        painter.drawText(QRectF(bar.left() - slot_w * 0.15, bar.top() - metrics.height(),
+                                bar_w + slot_w * 0.3, metrics.height()),
+                         Qt::AlignCenter, QString::number(bars[i].second));
+        painter.drawText(
+            QRectF(plot.left() + slot_w * static_cast<double>(i), plot.bottom(), slot_w, label_h),
+            Qt::AlignCenter, QString::fromStdString(bars[i].first));
+    }
+    painter.restore();
+}
+
 // --------------------------------------------------------------- the table --
 
 void paint_table(QPainter& painter, const QRectF& box, const core::Document& document,
@@ -746,6 +886,10 @@ void paint_layout_page(QPainter& painter, const QRectF& target, const core::Docu
 
         case core::LayoutItemKind::Table:
             paint_table(painter, box, document, trouble, *item, px_per_paper_mm);
+            break;
+
+        case core::LayoutItemKind::Chart:
+            paint_chart(painter, box, document, trouble, *item, px_per_paper_mm);
             break;
         }
 

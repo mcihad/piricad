@@ -15,6 +15,7 @@ Bir çıktı yerleşiminin üzerindeki **öğeleri** yönetir. Sekiz tür vardı
 | `olcek` | Ölçek çubuğu; ölçeğini yerleşimin haritasından alır |
 | `kuzey` | Kuzey oku |
 | `lejant` | Hangi gösterimin ne demek olduğu |
+| `grafik` | Bir öznitelik sütununa göre nesne sayısı: çubuk grafik |
 | `resim` | Logo ya da taranmış bir damga, dosya yolundan |
 | `sekil` | Dikdörtgen, elips ya da çizgi — çerçeveler ve cetveller |
 | `tablo` | Bir katmanın öznitelik satırları — başlıklar şemadan, değerler çizimden |
@@ -64,10 +65,10 @@ tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıd�
 | `islem` | `listele`, `ekle`, `sil`, `tasi`, `ayarla`, `ad` |
 | `yerlesim` | Hangi yerleşim; tek yerleşim varsa gerekmez |
 | `ad` | Öğenin adı. `ekle`'de verilmezse türünden türetilir (`harita`, `harita2`…) |
-| `tur` | `islem=ekle` için: `harita`, `metin`, `olcek`, `kuzey`, `lejant`, `resim`, `sekil`, `tablo` |
+| `tur` | `islem=ekle` için: `harita`, `metin`, `olcek`, `kuzey`, `lejant`, `resim`, `sekil`, `tablo`, `grafik` |
 | `x`, `y` | Sol ve **üst** kenardan uzaklık, kâğıt milimetresi. **Ondalık yazılabilir**: `x=0.35` |
 | `genislik`, `yukseklik` | Öğenin boyu, kâğıt milimetresi. Ondalık yazılabilir |
-| `metin` | Metin öğesinin yazısı; resim öğesinde dosya yolu, tablo öğesinde katman adı |
+| `metin` | Metin öğesinin yazısı; resim öğesinde dosya yolu, tablo ve grafik öğesinde katman adı |
 | `yazi` | Yazı yüksekliği, kâğıt milimetresi. Ondalık yazılabilir |
 | `olcek` | Harita öğesinin ölçeği `1:N`. `0` = ölçek pencereye uyar |
 | `pencere` | Haritanın bakacağı alanın iki köşesi, anahtar **iki kez** yazılarak |
@@ -77,7 +78,7 @@ tek argümanın iki yazımı, hangisinin kastedildiğini bilmeyen bir çağrıd�
 | `cerceve` | Öğenin çevresine çerçeve çizer |
 | `sira` | Çizim sırası; büyük olan üstte |
 | `satir_siniri` | Tablo öğesinin yazacağı en çok satır; `0` = kutuya sığdığı kadar |
-| `sutunlar` | Tablo öğesinin yazacağı öznitelik sütunları, sırasıyla; `hepsi` listeyi boşaltır |
+| `sutunlar` | Tablo öğesinin yazacağı öznitelik sütunları, sırasıyla (`hepsi` listeyi boşaltır); **grafik** öğesinde sayımın yapılacağı tek sütun |
 | `harita` | Bu öğenin bağlı olduğu harita çerçevesinin adı; `ilk` bağı kaldırır |
 | `yeni_ad` | `islem=ad` için öğenin yeni adı |
 | `katmanlar` | Harita çerçevesinin çizeceği katmanlar; **anahtar birden çok kez yazılır**. Verilmezse görünür bütün katmanlar, `hepsi` listeyi boşaltır |
@@ -213,6 +214,30 @@ Anahtar PDF'e **vektör** olarak gider, resim olarak değil: bir sembolün foto�
 
 `katmanlar=` verilirse yalnız o katmanlar listelenir; verilmezse **görünür** olanların
 hepsi. Sayfada görünmeyen bir katmanı anahtarda saymak, olmayan bir şeyi açıklamaktır.
+
+Grafik eklemek — bir katmanın bir sütununa göre nesne sayıları:
+
+```
+ÇIKTIÖĞE islem=ekle yerlesim=Pafta tur=grafik ad=dagilim
+ÇIKTIÖĞE islem=ayarla yerlesim=Pafta ad=dagilim metin=PARSEL sutunlar=nitelik
+```
+
+`metin=` katmanı, `sutunlar=` sayımın yapılacağı sütunu verir. Her farklı değer bir
+çubuk olur ve çubuğun yüksekliği o değeri taşıyan **nesne sayısıdır** — kaç parsel
+`Arsa`, kaç parsel `Tarla`. Sayı çubuğun üstünde yazılıdır: okuyucunun bir eksenden
+tahmin etmesi gereken çubuk, yanlış tahmin edilecek çubuktur.
+
+Çubuklar **katmanın kendi rengini** alır, böylece grafik ile haritadaki katman aynı şey
+olarak okunur; ilgisiz renklerde bir grafik, okuyucunun öğrenmesi gereken ikinci bir
+lejanttır.
+
+Değeri olmayan nesneler `(boş)` çubuğunda toplanır — atılmazlar.
+
+> **Kaynağı kullanılamayan bir grafik boş çizmez, sebebini yazar.** Katman verilmemişse,
+> katman yoksa, sütun verilmemişse, sütun yoksa ya da sayılacak nesne yoksa: sayfanın
+> üstünde kesik çizgili bir kutu ve sebebi görünür, ve aynı cümle `islem=denetle`
+> sonucuna ve dışa aktarma uyarılarına girer. İmzalanan bir sayfadaki boş bir dikdörtgen,
+> aylar sonra kimsenin cevaplayamayacağı bir sorudur.
 
 Logo koymak — **yolu projeye göre göreli yazın**:
 

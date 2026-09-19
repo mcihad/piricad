@@ -25,6 +25,7 @@ QString stateWord(ai::PlanState state)
     case ai::PlanState::Rejected: return SuggestionCard::tr("reddedildi");
     case ai::PlanState::Withdrawn: return SuggestionCard::tr("geri çekildi");
     case ai::PlanState::Failed: return SuggestionCard::tr("uygulanamadı");
+    case ai::PlanState::Running: return SuggestionCard::tr("uygulanıyor");
     }
     return {};
 }

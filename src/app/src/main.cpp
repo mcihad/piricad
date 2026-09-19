@@ -666,6 +666,119 @@ int main(int argc, char** argv)
                 check(orange, "LEJANT KATMANIN SEMBOLÜNÜ ÇİZMEDİ — anahtar boş");
             }
 
+            // ---- AND THE CHART (TODOS L-09) ---------------------------------
+            //
+            // TWO THINGS, and the second matters more. A chart with a usable
+            // source must DRAW; a chart whose source cannot be charted must SAY
+            // SO on the paper and in `trouble`. L-09 asks for exactly that: an
+            // unsupported source must never be reported as success with an empty
+            // picture, because an empty rectangle on a signed sheet is a
+            // question nobody can answer months later.
+            // ESC FIRST. An interactive command left open by the block above
+            // swallows the next line as INPUT rather than running it — which is
+            // what ate one of the two areas below and left the chart with half
+            // its data. A probe that drives the program by typing has to leave
+            // the prompt clean, exactly as a user pressing Escape does.
+            controller->cancelInteractive();
+
+            window.runScriptLine(QStringLiteral("SÜTUN kimlik=nitelik tur=metin ad=Nitelik"));
+            window.runScriptLine(
+                QStringLiteral("KATMAN ad=GRAFİK renk=%1").arg(static_cast<qint64>(0xFF2E7D32)));
+            // WELL AWAY FROM EVERYTHING ELSE ON THE SHEET. The first attempt put
+            // these at the origin, where the seeded drawing already has a parcel
+            // corner, and one of the two areas never appeared.
+            // SET UP THROUGH THE BUS, not through the window's command line.
+            // A line typed while an interactive command is open is INPUT to that
+            // command, which is the designed behaviour and exactly what ate one
+            // of these two areas the first time — leaving the chart with half its
+            // data and a green bar that still passed a naive check.
+            check(controller->bus()
+                      .execute_line("ALAN 500,500 510,500 510,510 500,510",
+                                    kentos::command::Origin::Test)
+                      .ok(),
+                  "grafik için ilk alan çizilemedi");
+            check(controller->bus()
+                      .execute_line("ALAN 530,500 540,500 540,510 530,510",
+                                    kentos::command::Origin::Test)
+                      .ok(),
+                  "grafik için ikinci alan çizilemedi");
+
+            // THE OBJECTS' OWN KEYS, read from the document rather than counted.
+            // `nesne=` takes a PERSISTENT KEY (model.md R5) and guessing it from
+            // a running total put the value on the wrong parcel the first time
+            // this was written — which is the mistake the key exists to prevent.
+            {
+                const kentos::core::Document& doc = controller->document();
+                const kentos::core::LayerId on    = doc.find_layer("GRAFİK");
+                std::vector<qint64> keys;
+                for (kentos::core::EntityId slot = 0; slot < doc.entities().size(); ++slot) {
+                    if (!doc.entities().standalone(slot)) continue;
+                    if (doc.entities().layer[slot] != on) continue;
+                    keys.push_back(static_cast<qint64>(kentos::core::raw(doc.key_of(slot))));
+                }
+                check(keys.size() == 2, "grafik katmanında iki nesne bekleniyordu");
+                for (std::size_t i = 0; i < keys.size(); ++i)
+                    window.runScriptLine(
+                        QStringLiteral("ÖZNİTELİK ad=nitelik nesne=%1 deger=%2")
+                            .arg(keys[i])
+                            .arg(i == 0 ? QStringLiteral("Arsa") : QStringLiteral("Tarla")));
+            }
+
+            window.runScriptLine(
+                QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=Grafikli kagit=A4 yon=yatay"));
+            window.runScriptLine(
+                QStringLiteral("ÇIKTIÖĞE islem=ekle yerlesim=Grafikli tur=grafik ad=dagilim"));
+            window.runScriptLine(QStringLiteral("ÇIKTIÖĞE islem=tasi yerlesim=Grafikli ad=dagilim "
+                                                "x=20 y=20 genislik=120 yukseklik=70"));
+
+            const auto render_chart_sheet = [&](std::vector<std::string>* notes) {
+                const kentos::core::Layout* made =
+                    controller->document().layouts().find("Grafikli");
+                if (made == nullptr || made->pages.empty()) return QImage();
+                QImage page(1200, 850, QImage::Format_ARGB32_Premultiplied);
+                page.fill(Qt::white);
+                QPainter into(&page);
+                kentos::app::LayoutFacts facts;
+                facts.sheet = QStringLiteral("Grafikli");
+                kentos::app::paint_layout_page(into, QRectF(0, 0, 1200, 850),
+                                               controller->document(), *made, 0, 96.0, facts, false,
+                                               notes);
+                into.end();
+                return page;
+            };
+
+            // WITH NO SOURCE NAMED, the chart must refuse in writing.
+            std::vector<std::string> unset_notes;
+            (void)render_chart_sheet(&unset_notes);
+            const bool said_unset =
+                std::any_of(unset_notes.begin(), unset_notes.end(), [](const std::string& one) {
+                    return one.find("grafik:") != std::string::npos;
+                });
+            check(said_unset, "KAYNAKSIZ GRAFİK SESSİZCE BOŞ ÇİZDİ — sebebini söylemeliydi");
+
+            // WITH A SOURCE, it must actually draw bars in the layer's colour.
+            window.runScriptLine(QStringLiteral(
+                "ÇIKTIÖĞE islem=ayarla yerlesim=Grafikli ad=dagilim metin=\"GRAFİK\""));
+            window.runScriptLine(QStringLiteral(
+                "ÇIKTIÖĞE islem=ayarla yerlesim=Grafikli ad=dagilim sutunlar=nitelik"));
+            std::vector<std::string> drawn_notes;
+            const QImage charted = render_chart_sheet(&drawn_notes);
+            bool green           = false;
+            for (int y = 0; y < charted.height() && !green; ++y)
+                for (int x = 0; x < charted.width(); ++x) {
+                    const QRgb at = charted.pixel(x, y);
+                    if (qRed(at) < 90 && qGreen(at) > 100 && qGreen(at) < 170 && qBlue(at) < 90) {
+                        green = true;
+                        break;
+                    }
+                }
+            check(green, "GRAFİK ÇİZİLMEDİ — kaynağı olan bir grafik çubuk çizmeli");
+            const bool still_complaining =
+                std::any_of(drawn_notes.begin(), drawn_notes.end(), [](const std::string& one) {
+                    return one.find("grafik:") != std::string::npos;
+                });
+            check(!still_complaining, "kaynağı olan grafik hâlâ şikâyet ediyor");
+
             // AND NOTHING WAS LEFT BESIDE IT. The sheet is written to a sibling
             // and moved into place; a `.yeni` still sitting there would mean a
             // publish that did not finish and nobody noticed (TODOS C-05).
