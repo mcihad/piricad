@@ -27,6 +27,17 @@ enum class ErrorCode : std::uint16_t {
     IoFailure,
     Cancelled,
     Internal,
+    /// THE WORLD MOVED UNDER A DECISION THAT WAS ALREADY TAKEN.
+    ///
+    /// Distinct from `ValidationFailed` because the answer is different: a
+    /// validation failure means the call was wrong and stays wrong, and this
+    /// means the call was right against a drawing that is no longer the one in
+    /// front of it. A client told "invalid" will fix its arguments; a client told
+    /// this must read again and compose afresh (TODOS C-04).
+    ///
+    /// ADDED AT THE END on purpose: the values before it keep the numbers they
+    /// had, and this enum's numbers reach a client's answer.
+    Conflict,
 };
 
 /// One failure: a machine-readable code and a sentence for the user.

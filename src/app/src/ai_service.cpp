@@ -142,6 +142,24 @@ core::Status AiService::applyPlan(const ai::Plan& plan)
     if (plan.steps.empty())
         return core::err(core::ErrorCode::InvalidArgument, "Öneri boş; uygulanacak adım yok.");
 
+    // THE DOCUMENT IS CHECKED AGAINST THE ONE THE PLAN WAS COMPOSED FOR.
+    //
+    // A plan carries the revision it was built against and nothing compared it.
+    // Between composing and applying, the drawing can move: the person typed a
+    // command, another client edited it, an undo ran. The handles inside the plan
+    // resolve against slots that have since been reused, and a suggestion about
+    // parcel 21 applies to whatever is in that slot now — which is the one way an
+    // approval can become an edit nobody approved (TODOS C-04).
+    //
+    // A STALE PLAN IS REFUSED, NOT RE-AIMED. The old intent against new ground is
+    // a guess; the honest answer is a fresh plan against what is actually there.
+    if (plan.revision != 0 && plan.revision != bus_.document().revision())
+        return core::err(core::ErrorCode::Conflict,
+                         "Bu öneri hazırlandığından beri çizim değişti (sürüm " +
+                             std::to_string(plan.revision) + " → " +
+                             std::to_string(bus_.document().revision()) +
+                             "). Öneri uygulanmadı; yeniden hazırlanması gerekiyor.");
+
     // ONE BATCH, ONE UNDO ENTRY, ALL OR NOTHING (ai.md R4, R5; Article 1.6).
     // The steps are dispatched with their resolved arguments rather than by
     // re-parsing their lines: the line is what a person reads, the arguments are

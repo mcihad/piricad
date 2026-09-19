@@ -194,7 +194,22 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   taşısın. Sonuç; `status`, değişen kimlikler, yeni revizyon, uyarılar, doğrulama sonucu,
   undo referansı ve çıktı URI'ları döndürsün. **Kabul:** “planlandı”, “onay bekliyor”,
   “uygulandı” ve “çıktı üretildi” farklı makine durumlarıdır.
-- [ ] **C-04 / P0 — Revizyon ve tekrar çalıştırma.** Commit öncesi belge kimliği,
+- [~] **C-04 / P0 — Revizyon ve tekrar çalıştırma.** *(revizyon 19 Eylül 2026)*
+  **Yapıldı:** `AiService::applyPlan` artık planın hazırlandığı belge sürümünü
+  uygulamadan **önce** karşılaştırıyor. Plan bu sürümü baştan beri taşıyordu ve
+  hiçbir şey ona bakmıyordu: hazırlamakla uygulamak arasında çizim kıpırdayabilir
+  — biri komut yazar, başka bir istemci düzenler, bir geri alma çalışır — ve
+  plandaki tutamaklar o arada yeniden kullanılmış yuvalara çözülür. Bir onayın,
+  kimsenin onaylamadığı bir düzenlemeye dönüşmesinin yolu budur.
+  **Bayat plan yeniden hedeflenmiyor, reddediliyor.** Eski niyeti yeni zemine
+  uygulamak bir tahmindir; dürüst cevap, önündeki çizime karşı taze bir plandır.
+  `core::ErrorCode::Conflict` eklendi — `ValidationFailed`'dan ayrı, çünkü cevabı
+  farklı: doğrulama hatası çağrının yanlış olduğunu ve yanlış kalacağını söyler,
+  bu ise çağrının doğru olduğunu ama artık önünde olmayan bir çizime göre doğru
+  olduğunu. Numaralar korunsun diye enum'un **sonuna** eklendi.
+  **Kalan:** istemci kimliğiyle kapsamlanmış idempotency anahtarı — aynı isteğin
+  tekrarının ikinci bir çizgi ya da ikinci bir PDF üretmemesi (M-06 ile birlikte).
+  Eski madde metni: Commit öncesi belge kimliği,
   revizyon ve referanslar yeniden doğrulansın; plan değişirse önceki onay yeni plana
   taşınmasın. İstemci kimliğiyle kapsamlanmış idempotency anahtarı ekle. **Kabul:**
   bağlantı yeniden denemesi aynı çizgiyi veya aynı PDF'yi ikinci kez üretmez;

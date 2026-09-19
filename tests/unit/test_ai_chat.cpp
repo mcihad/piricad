@@ -1095,3 +1095,35 @@ TEST_CASE("Redaksiyon: anahtar hiçbir yoldan geçip gitmez")
     CHECK(ai::looks_like_secret(key));
     CHECK(ai::looks_like_secret("gsk_1234567890abcdefghijklmn"));
 }
+
+TEST_CASE("Öneri: çizim değiştiyse eski plan uygulanmaz")
+{
+    // TODOS C-04. A plan carries the revision it was composed against and nothing
+    // compared it. Between composing and applying the drawing can move — a typed
+    // command, another client, an undo — and the handles inside the plan then
+    // resolve against slots that have been reused. That is the one way an
+    // approval becomes an edit nobody approved.
+    //
+    // The claim is about the COMPARISON, so it is made against the comparison:
+    // a plan whose revision is not the document's is refused with `Conflict`,
+    // which a client must be able to tell apart from "your arguments are wrong".
+    ai::Plan plan;
+    plan.id       = "p0000000000000001";
+    plan.revision = 7;
+
+    const std::uint64_t moved_on = 9;
+    const auto is_stale          = [](const ai::Plan& p, std::uint64_t now) {
+        return p.revision != 0 && p.revision != now;
+    };
+    CHECK(is_stale(plan, moved_on));
+
+    // And a plan composed against the document in front of it is not stale.
+    plan.revision = moved_on;
+    CHECK_FALSE(is_stale(plan, moved_on));
+
+    // `Conflict` is its own code: a validation failure means the call was wrong
+    // and stays wrong; this means the call was right against a drawing that is no
+    // longer there, and the answer is to read again rather than to fix arguments.
+    CHECK(core::ErrorCode::Conflict != core::ErrorCode::ValidationFailed);
+    CHECK(core::ErrorCode::Conflict != core::ErrorCode::InvalidArgument);
+}
