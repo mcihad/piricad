@@ -4619,3 +4619,33 @@ TEST_CASE("Çıktı şablonu: düzeni taşır, zemini taşımaz")
     CHECK_EQ(map->scale, 1000);
     CHECK_EQ(core::layout_dependencies(read.value()).size(), std::size_t{1});
 }
+
+TEST_CASE("Yerel biçim: yarıda kalan bir yazma eski dosyayı bozmaz")
+{
+    // TODOS C-05's claim for the native format, which `project_writer.cpp` has
+    // made since the format existed: the file is written to a sibling and renamed
+    // into place, so there is no moment at which the user's path holds half a
+    // drawing. The test is the one thing that keeps that true.
+    Rig r;
+    REQUIRE(r.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
+
+    TempDir tmp("atomik-yazma");
+    const std::string path = tmp.file("cizim.pcad");
+    REQUIRE(r.bus.execute_line("FARKLIKAYDET \"" + path + "\"", Origin::Test).ok());
+    const auto first = fs::file_size(path);
+
+    // NOTHING WAS LEFT BESIDE IT. A `.yeni` still sitting there would mean a
+    // publish that did not finish and nobody noticed.
+    CHECK_FALSE(fs::exists(path + ".yeni"));
+
+    // Write again, bigger, and the path never holds a partial file.
+    REQUIRE(r.bus.execute_line("ÇİZGİ 0,0 100,100", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("KAYDET", Origin::Test).ok());
+    CHECK(fs::file_size(path) > first);
+    CHECK_FALSE(fs::exists(path + ".yeni"));
+
+    // And it still opens.
+    Rig back;
+    REQUIRE(back.bus.execute_line("AÇ \"" + path + "\"", Origin::Test).ok());
+    CHECK_EQ(back.doc.live_entity_count(), std::size_t{2});
+}

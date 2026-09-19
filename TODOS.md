@@ -232,7 +232,21 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   taşınmasın. İstemci kimliğiyle kapsamlanmış idempotency anahtarı ekle. **Kabul:**
   bağlantı yeniden denemesi aynı çizgiyi veya aynı PDF'yi ikinci kez üretmez;
   `revision_conflict` yanlış nesnede işlem yapmak yerine taze plan gerektirir.
-- [ ] **C-05 / P1 — Belge işlemi ile dış etkiyi ayır.** Bir belge değişikliği grubu
+- [~] **C-05 / P1 — Belge işlemi ile dış etkiyi ayır.** *(atomik yayımlama 19 Eylül 2026)*
+  **Yapıldı:** PDF çıktısı artık **hedefin yanına yazılıp doğrulanıyor, sonra tek
+  adımda yerine konuyor**. Yarıda kalan bir plot — makine uyudu, disk doldu, biri
+  programı kapattı — kullanıcının verdiği yolda kırpılmış bir PDF bırakıyordu:
+  doğru adı ve makul bir boyu var, ve öğrenilme yeri plotterdı. `project_writer`
+  bunu yerel biçim var olduğundan beri yapıyordu; artık diğer yazdıklarımız da
+  aynı cevabı veriyor. Şifreli yol zaten bir kardeş dosya kullanıyordu; düz yol
+  doğrudan kullanıcının dosyasının üstüne yazıyordu.
+  `std::filesystem::rename` hedefi tek adımda değiştiriyor, yani ne eski ne yeni
+  dosyanın olmadığı bir an yok. Probe ayrıca **yayımlanmamış bir `.yeni` kalmadığını**
+  denetliyor: kalan bir geçici, bitmemiş ve kimsenin fark etmediği bir yayımdır.
+  **Kalan:** yazıcıya gönderme ve uzak sistem yazmasının ayrı sonuçlarla
+  izlenmesi; kısmi dış başarısızlıkların tekrar denenebilir adımlar olarak dönmesi;
+  bir belge değişikliği grubunun atomik rollback'i (bu zaten `begin_batch` ile var,
+  sınanması kaldı). Bir belge değişikliği grubu
   tek undo ve atomik rollback sunsun. Dosya çıktısı geçici hedefe yazılıp doğrulansın,
   ardından atomik yayımlansın; yazıcıya gönderme ve uzak sistem yazma ayrı sonuçlarla
   izlenmeli. **Kabul:** Ctrl+Z'nin dışarı gönderilmiş çıktıyı geri aldığı iddia edilmez;

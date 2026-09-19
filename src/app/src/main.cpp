@@ -595,6 +595,12 @@ int main(int argc, char** argv)
             check(!sheet_bytes.contains("/Subtype /Image") &&
                       !sheet_bytes.contains("/Subtype/Image"),
                   "yerleşim PDF'i haritayı raster olarak taşıyor");
+
+            // AND NOTHING WAS LEFT BESIDE IT. The sheet is written to a sibling
+            // and moved into place; a `.yeni` still sitting there would mean a
+            // publish that did not finish and nobody noticed (TODOS C-05).
+            check(!QFileInfo::exists(pdf + QStringLiteral(".yeni")),
+                  "yayımlanmamış geçici PDF kaldı");
             (void)std::fprintf(stdout, "[tasarim] pdf rasterı yok, %lld bayt\n",
                                static_cast<long long>(written.size()));
             (void)std::fprintf(stdout, "[tasarim] pdf %lld bayt\n",

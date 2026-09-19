@@ -26,7 +26,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <memory>
+#include <system_error>
 #include <utility>
 
 namespace kentos::app {
@@ -120,6 +122,44 @@ void PrintService::announce()
                          "bırakıldı.");
     trouble_.clear();
 }
+
+namespace {
+
+/// WRITTEN BESIDE THE TARGET AND MOVED INTO PLACE.
+///
+/// A plot that was interrupted — the machine slept, the disk filled, somebody
+/// closed the program — used to leave a truncated PDF at the path the user
+/// named. It has the right name and a plausible size, and the way it is found
+/// out is on the plotter. `io/project_writer.cpp` has done this since the native
+/// format existed; this is the same answer for the other things this program
+/// writes (TODOS C-05: write to a temporary, verify, then publish atomically).
+///
+/// `std::filesystem::rename` replaces the destination in one step on every
+/// filesystem this product supports, so there is no moment at which neither the
+/// old file nor the new one is there.
+QString beside(const QString& target)
+{
+    return target + QStringLiteral(".yeni");
+}
+
+core::Status publish(const QString& temp, const QString& target)
+{
+    if (!QFileInfo::exists(temp) || QFileInfo(temp).size() == 0) {
+        QFile::remove(temp);
+        return core::err(core::ErrorCode::IoFailure, "PDF yazılamadı: " + target.toStdString());
+    }
+    std::error_code ec;
+    std::filesystem::rename(std::filesystem::path(temp.toStdString()),
+                            std::filesystem::path(target.toStdString()), ec);
+    if (ec) {
+        QFile::remove(temp);
+        return core::err(core::ErrorCode::IoFailure,
+                         "PDF yerine konamadı: " + target.toStdString() + " — " + ec.message());
+    }
+    return core::ok();
+}
+
+} // namespace
 
 bool PrintService::encryptionAvailable() noexcept
 {
@@ -343,16 +383,20 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
             return core::err(core::ErrorCode::IoFailure,
                              "PDF yazılamadı: dizin yok — " + target.absolutePath().toStdString());
 
+        const QString temp = beside(path);
+        QFile::remove(temp);
         {
-            QPdfWriter writer(path);
+            QPdfWriter writer(temp);
             writer.setPageLayout(page);
             writer.setResolution(sheet->dpi > 0 ? sheet->dpi : 300);
             writer.setCreator(QStringLiteral("KentOSCad"));
             writer.setTitle(request.title.empty() ? utf8(sheet->name) : utf8(request.title));
             draw(writer, writer.resolution());
         }
-        if (!QFileInfo::exists(path) || QFileInfo(path).size() == 0)
-            return core::err(core::ErrorCode::IoFailure, "PDF yazılamadı: " + path.toStdString());
+        // VERIFIED, THEN PUBLISHED. Until this line the user's path still holds
+        // whatever it held before — an interrupted plot leaves the old sheet
+        // rather than a truncated new one (TODOS C-05).
+        if (auto st = publish(temp, path); !st) return st.error();
 
         const core::LayoutItem* map = sheet->first_map();
         // THE FIRST PAGE'S SIZE, AND "karma" WHEN THEY DIFFER. Printing one size
@@ -414,7 +458,10 @@ core::Result<std::string> PrintService::toPdf(const command::PrintRequest& reque
 
     // Qt writes the plain file; when a password or an author was asked for,
     // it goes to a sibling first and qpdf writes the final one.
-    const QString plain = post ? path + QStringLiteral(".kentos-tmp") : path;
+    // ALWAYS A SIBLING, whether or not qpdf runs afterwards: the encrypted path
+    // needed one anyway, and the plain one wrote straight onto the user's file.
+    const QString plain = post ? path + QStringLiteral(".kentos-tmp") : beside(path);
+    QFile::remove(plain);
     {
         QPdfWriter writer(plain);
         writer.setPageLayout(layout_of(profile));
@@ -436,9 +483,13 @@ core::Result<std::string> PrintService::toPdf(const command::PrintRequest& reque
         return core::err(core::ErrorCode::IoFailure, "PDF yazılamadı: " + plain.toStdString());
     }
     if (post) {
+        // qpdf READS the plain sibling and WRITES the target, which is already a
+        // publish: the user's path is untouched until qpdf succeeds.
         auto st = io::pdf_encrypt(plain.toStdString(), path.toStdString(), finish);
         QFile::remove(plain);
         if (!st) return st.error();
+    } else if (auto st = publish(plain, path); !st) {
+        return st.error();
     }
 
     const double scale = scaleDenominator(profile, fitWindow(profile, request.window));
