@@ -1022,16 +1022,23 @@ uygulanan ve müzakere edilen yetenekler ilan edilmelidir.
   alan işidir (A-08 ile aynı cinsten) ve bir harita mühendisinin yazması gerekir;
   paket veri olduğu için bu bir veri yayımıdır, yeniden derleme değil.
 
-### Gözlenen, henüz çözülmemiş
+### Gözlenen
 
-- [ ] **FLAKE-01 — `layout-designer` ctest'i seyrek olarak paralel koşuda düşüyor.**
-  19 Eylül 2026'da iki kez görüldü; iki seferinde de **tek başına koşturulunca
-  geçti**. Ardından 14 ardışık tam `ctest` koşusunda bir daha üretilemedi,
-  dolayısıyla sebebi **bilinmiyor** ve bir düzeltme iddia edilmedi. Şüpheliler:
-  probe'ların paylaştığı çıktı dizini (`yerlesim-denemesi`), eşzamanlı bir
-  `FARKLIKAYDET`/`AÇ` turu, ya da offscreen platformun paylaşılan bir kaynağı.
-  Yeniden görülürse `--output-on-failure` çıktısı ilk kanıttır; kaçırılmaması için
-  buraya yazıldı.
+- [x] **FLAKE-01 — "seyrek düşen test" bir ÇÖKMEYDİ.** *(19 Eylül 2026)*
+  `layout-designer` ctest'i arada düşüyordu ve tek başına koşturulunca geçiyordu;
+  paralellik sanılmıştı, oysa ctest bu projede **seri** koşuyor. Probe doğrudan
+  bir döngüde koşturulunca çıkış kodu **139** çıktı: SIGSEGV. Çökme raporu satırı
+  adıyla verdi — `LayoutDesigner::aimAt`, `QString::fromStdString` içinde
+  `strlen`.
+  **Sebep:** `aimAt` belgeye İŞARET EDEN bir `const LayoutItem*` tutuyor, sonra
+  `runLine` ile `ÇIKTIÖĞE islem=ayarla` çalıştırıyor — bu da yerleşimin öğe
+  dizisini yeniden yazıyor — ve ardından o işaretçiden `map->id` okuyordu. Serbest
+  bırakılmış bellek. Bu **gerçek uygulamada da** çöküyordu: kullanıcı tasarımcıda
+  harita çerçevesini nişanladığında.
+  **Düzeltme:** ad, belge kıpırdamadan önce kopyalanıyor. Düzeltmeden önce 12. ve
+  5. koşuda çöktü; sonra **60 ardışık koşu temiz**.
+  **Ders:** "seyrek düşen test" ilk açıklama olarak kabul edilmemeli. Çıkış kodu
+  139'dur ve bir çökme raporu vardır; ikisi de sebebi ilk denemede veriyor.
 
 ## 9. Ölçülebilir uçtan uca kabul senaryoları
 

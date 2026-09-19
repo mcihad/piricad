@@ -884,6 +884,15 @@ void LayoutDesigner::aimAt(core::Box2 window)
         return;
     }
 
+    // THE NAME IS TAKEN BEFORE THE DOCUMENT MOVES, and that is not tidiness.
+    //
+    // `map` points INTO the document's layout. `runLine` below dispatches
+    // `ÇIKTIÖĞE islem=ayarla`, which rewrites the layout's item vector — and the
+    // pointer is then dangling. Reading `map->id` after it crashed the program
+    // in `strlen` on a garbage address, intermittently, which is the worst shape
+    // a use-after-free takes: it looked like a flaky test for weeks.
+    const QString aimed = QString::fromStdString(map->id);
+
     // METRES ON THE LINE, and the key written twice — the parser's own shape for
     // a window (`YAZDIR pencere=`). Writing `Mm` here made the frame a thousand
     // times too wide the first time this was tried.
@@ -892,11 +901,10 @@ void LayoutDesigner::aimAt(core::Box2 window)
     };
     controller_.runLine(QStringLiteral("ÇIKTIÖĞE islem=ayarla yerlesim=%1 ad=%2 "
                                        "pencere=%3,%4 pencere=%5,%6")
-                            .arg(quoted(name_), quoted(QString::fromStdString(map->id)),
-                                 metres(window.min_x), metres(window.min_y), metres(window.max_x),
-                                 metres(window.max_y)),
+                            .arg(quoted(name_), quoted(aimed), metres(window.min_x),
+                                 metres(window.min_y), metres(window.max_x), metres(window.max_y)),
                         command::Origin::Gui);
-    canvas_->select(QString::fromStdString(map->id));
+    canvas_->select(aimed);
     refresh();
 }
 

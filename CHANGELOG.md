@@ -6,6 +6,20 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — çıktı tasarımcısında serbest bırakılmış belleğe erişim (çökme)
+
+- `LayoutDesigner::aimAt` belgeye **işaret eden** bir `const LayoutItem*` tutuyor,
+  sonra `ÇIKTIÖĞE islem=ayarla` çalıştırıyor — bu komut yerleşimin öğe dizisini
+  yeniden yazıyor — ve ardından o işaretçiden `map->id` okuyordu. `strlen`
+  çöp bir adreste patlıyordu.
+- **Gerçek uygulamada da çöküyordu**, testte değil yalnızca: kullanıcı çıktı
+  tasarımcısında harita çerçevesini nişanladığında. Ad artık belge kıpırdamadan
+  önce kopyalanıyor.
+- Haftalardır "seyrek düşen test" (`layout-designer`) sanılan şey buydu. Probe bir
+  döngüde koşturulunca çıkış kodu **139** çıktı — SIGSEGV — ve macOS'un çökme
+  raporu satırı adıyla verdi. Düzeltmeden önce 12. ve 5. koşuda çöküyordu; sonra
+  **60 ardışık koşu temiz**.
+
 ### Düzeltildi — onaydan sonra iş devam ediyor (TODOS A-04, kısmi)
 
 - **Konuşma ilk kartta bitiyordu.** "Şu adanın paftasını çıkar" katman kurmayı,
