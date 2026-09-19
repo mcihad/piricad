@@ -12,6 +12,21 @@ Report kapsamını karşılayacak derinlikte olmalı. AI'nin açıklama sorular�
 onayları birbirinden bağımsız Settings tercihleri olmalı; otomatik çalışma gerçekten
 işi bitirmeli, her adımda kullanıcıya geri dönmemeli.
 
+## 0. İşaretler
+
+| İşaret | Anlamı |
+|---|---|
+| `- [ ]` | Yapılacak. Henüz başlanmadı. |
+| `- [~]` | Kısmen yapıldı. Madde altında **Yapıldı** ve **Kalan** ayrı ayrı yazılı. |
+| `- [x]` | Bitti. |
+| `- [!]` | **Karar bekliyor.** Mühendislik tarafında yapılacak iş kalmadı; madde, bakımcının vermesi gereken bir karara bağlı ve o karar maddenin altında okunmaya hazır yazılı. |
+
+`[!]` 20 Eylül 2026'da eklendi ve tek bir madde taşıyor (S-05). Sebebi şu: bir iş
+planının "henüz yapılmadı" ile "bakımcının kararını bekliyor" durumlarını
+ayırt edememesi, ikincisini birincisi gibi göstermektir — ve o iki durumun
+gerektirdiği hamle aynı değildir. `[!]` bir madde **bitmiş sayılmaz**; ne
+yapıldığı ve neyin beklendiği maddenin kendisinde yazılıdır.
+
 ## 1. İncelenen dallar ve mevcut çalışmalar
 
 | Referans | Bulgular | Bu plandaki karşılığı |
@@ -885,7 +900,7 @@ ve hiç seçim yoksa önce bağlam çözülür; çözülemiyorsa yalnız nesne s
   policy'den üretilsin. Yalnız prompt'a “sorma” yazmak yeterli sayılmasın.
   **Kabul:** otomatik modda “mühendis uygulayana kadar bekler” gibi çelişkili
   metin yok; modeller araç başarısını bekleyip iş akışına devam eder.
-- [ ] **S-04 / P0 — İzinleri yeniden sorma ve yetki yükseltme kontrolü.** Bir
+- [~] **S-04 / P0 — İzinleri yeniden sorma ve yetki yükseltme kontrolü.** Bir
   onay planın içeriği/revizyonu/etki kapsamına bağlansın; aynı iş için onay
   tekrarlanmasın. Model genel ayarları yönetebilsin; kendi onay politikasını veya
   erişim kapsamını genişletme işlemi ayrı, açık kullanıcı talebine dayanmalı.
@@ -914,7 +929,7 @@ ve hiç seçim yoksa önce bağlam çözülür; çözülemiyorsa yalnız nesne s
   CLAUDE.md 5.7'nin tadili demektir — bu sırayla, çünkü Article 0.4 çatışmayı
   yukarı çözüyor. Tadilat metni **S-05'in altında yazılı ve okunmaya hazır**;
   karar bakımcının.
-- [ ] **S-05 / P0 — Kural, test ve doküman migration'ı.** *(tadilat metni hazır — KARAR BEKLİYOR)*
+- [!] **S-05 / P0 — Kural, test ve doküman migration'ı.** *(tadilat metni hazır — KARAR BEKLİYOR)*
   Mevcut `CLAUDE.md` 2.8/2.10/5.7, `.claude/ai.md` R2/R3 ve P1/P15, `plan.hpp`,
   `gate.hpp`, `dispatcher.hpp` yorumları ve `scripts/ci-gate-ai.sh` zorunlu insan
   onayı/tek fabrika çağırıcısı varsayımlarını taşıyor. Bu kullanıcı talebi yeni
