@@ -45,6 +45,21 @@ struct LayoutFacts
     /// The current object's attributes, for an atlas sheet: `<ada>`, `<parsel>`.
     /// Empty on an ordinary sheet.
     std::vector<std::pair<std::string, std::string>> fields;
+
+    /// THE FOLDER THE PROJECT LIVES IN, so a picture stored beside it is found.
+    ///
+    /// A picture item holds a path. An ABSOLUTE one names a place on the machine
+    /// it was typed on and breaks the moment the project is copied to a colleague
+    /// or to a server — the sheet then prints a dashed box where the kurum logo
+    /// was, and prints it without complaint. A RELATIVE one is the portable
+    /// answer, and it is only portable if it is resolved against the project
+    /// rather than against whatever directory the program happens to be running
+    /// in (TODOS L-07: "taşınan projede logo kaybolmaz").
+    ///
+    /// Empty for an unsaved drawing, which genuinely has no folder; a relative
+    /// path is then left to resolve however it can, and a picture that cannot be
+    /// found still says so on the page.
+    QString project_dir;
 };
 
 /// Draws one page of `layout` into `target`, which is in DEVICE PIXELS.

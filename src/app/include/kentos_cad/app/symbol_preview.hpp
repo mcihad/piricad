@@ -22,7 +22,10 @@
 
 #include <QIcon>
 #include <QImage>
+#include <QRectF>
 #include <QSize>
+
+class QPainter;
 
 #include <cstdint>
 
@@ -76,6 +79,21 @@ QImage symbol_preview(const core::Symbol& symbol, const core::ImageStore& images
                       const core::DashStore& dashes, QSize size, std::uint32_t background,
                       PreviewShape shape, PreviewGround ground = PreviewGround::Flat,
                       qreal dpr = 1.0);
+
+/// Draws the symbol into an ALREADY-ACTIVE painter, inside `box`.
+///
+/// WHY THIS EXISTS BESIDE THE IMAGE FORM. A legend's key has to reach a PDF as
+/// GEOMETRY. The image form is right for a list icon — a tree row is pixels
+/// anyway — but blitting it onto a sheet puts a photograph of a symbol on a
+/// document somebody signs: unmeasurable, unselectable and resolution-bound, and
+/// it is the same defect the map frame had before it was made to paint through
+/// the caller's painter (TODOS L-12, L-07).
+///
+/// The painter's state is left as it was found, and its clip and transform are
+/// honoured. `box` is in the painter's own coordinates.
+void paint_symbol(QPainter& painter, const QRectF& box, const core::Symbol& symbol,
+                  const core::ImageStore& images, const core::DashStore& dashes, PreviewShape shape,
+                  double device_pixel_ratio = 1.0);
 
 /// The same picture as an icon, for a tree row or a list item.
 QIcon symbol_icon(const core::Symbol& symbol, const core::ImageStore& images,

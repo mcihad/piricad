@@ -596,6 +596,76 @@ int main(int argc, char** argv)
                       !sheet_bytes.contains("/Subtype/Image"),
                   "yerleşim PDF'i haritayı raster olarak taşıyor");
 
+            // AND NOT AS AN INLINE IMAGE EITHER, which is the hole the check
+            // above has: a SMALL blit does not become an XObject with a
+            // `/Subtype /Image`, it becomes a `BI … ID … EI` run in the content
+            // stream with abbreviated keys. The legend's symbol chips are
+            // exactly that size, so a key drawn as a picture would have slipped
+            // past this test unnoticed (L-07, L-12).
+            check(!sheet_bytes.contains("/BPC") && !sheet_bytes.contains("/BitsPerComponent"),
+                  "yerleşim PDF'i satır içi raster taşıyor");
+
+            // ---- AND A SHEET WHOSE LEGEND ACTUALLY DRAWS SOMETHING ----------
+            //
+            // The sheet above has a legend, but its rows never reach the paper,
+            // so it cannot guard the key. This one is built for it: a legend
+            // placed well inside an A4 page over two coloured layers. The key
+            // draws the REAL symbols (L-07) and it must reach the PDF as
+            // geometry — a key blitted as a picture is a photograph of a symbol
+            // on a document somebody signs (L-12).
+            window.runScriptLine(
+                QStringLiteral("KATMAN ad=LEJANTLI renk=%1").arg(static_cast<qint64>(0xFFFF8C00)));
+            window.runScriptLine(QStringLiteral("ALAN 0,0 50,0 50,40 0,40"));
+            window.runScriptLine(
+                QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=Anahtar kagit=A4 yon=yatay"));
+            window.runScriptLine(QStringLiteral(
+                "ÇIKTIÖĞE islem=ayarla yerlesim=Anahtar ad=harita pencere=0,0 pencere=60,45"));
+            window.runScriptLine(
+                QStringLiteral("ÇIKTIÖĞE islem=ekle yerlesim=Anahtar tur=lejant ad=anahtar"));
+            window.runScriptLine(QStringLiteral("ÇIKTIÖĞE islem=tasi yerlesim=Anahtar ad=anahtar "
+                                                "x=20 y=20 genislik=70 yukseklik=50"));
+
+            const QString key_pdf = dir + QStringLiteral("/anahtar.pdf");
+            controller->runLine(QStringLiteral("YAZDIR yerlesim=Anahtar dosya=\"%1\"").arg(key_pdf),
+                                kentos::command::Origin::Gui);
+            const QByteArray key_bytes = [&key_pdf] {
+                QFile f(key_pdf);
+                return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+            }();
+            check(!key_bytes.isEmpty(), "lejantlı sayfa yazılmadı");
+            check(!key_bytes.contains("/Subtype /Image") && !key_bytes.contains("/Subtype/Image") &&
+                      !key_bytes.contains("/BPC"),
+                  "LEJANT RASTER OLARAK BASILDI — anahtar bir sembolün fotoğrafı olmamalı");
+            // AND THE KEY ACTUALLY DREW THE LAYER'S SYMBOL: a legend that drew
+            // nothing would pass the raster test above for the wrong reason.
+            // Read off a rendering rather than out of the PDF, because a PDF's
+            // text and paths are compressed and a substring search finds
+            // neither — which is exactly how "it printed" gets confused with
+            // "it printed something".
+            if (const kentos::core::Layout* key = controller->document().layouts().find("Anahtar");
+                key != nullptr && !key->pages.empty()) {
+                QImage page(1200, 850, QImage::Format_ARGB32_Premultiplied);
+                page.fill(Qt::white);
+                QPainter into(&page);
+                kentos::app::LayoutFacts facts;
+                facts.sheet = QStringLiteral("Anahtar");
+                kentos::app::paint_layout_page(into, QRectF(0, 0, 1200, 850),
+                                               controller->document(), *key, 0, 96.0, facts);
+                into.end();
+
+                bool orange = false;
+                for (int y = 0; y < page.height() && !orange; ++y)
+                    for (int x = 0; x < page.width(); ++x) {
+                        const QRgb at = page.pixel(x, y);
+                        if (qRed(at) > 200 && qGreen(at) > 110 && qGreen(at) < 175 &&
+                            qBlue(at) < 60) {
+                            orange = true;
+                            break;
+                        }
+                    }
+                check(orange, "LEJANT KATMANIN SEMBOLÜNÜ ÇİZMEDİ — anahtar boş");
+            }
+
             // AND NOTHING WAS LEFT BESIDE IT. The sheet is written to a sibling
             // and moved into place; a `.yeni` still sitting there would mean a
             // publish that did not finish and nobody noticed (TODOS C-05).

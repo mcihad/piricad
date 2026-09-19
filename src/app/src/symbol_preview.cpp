@@ -373,6 +373,43 @@ QImage symbol_preview(const core::Symbol& symbol, const core::ImageStore& images
     return canvas;
 }
 
+void paint_symbol(QPainter& painter, const QRectF& box, const core::Symbol& symbol,
+                  const core::ImageStore& images, const core::DashStore& dashes, PreviewShape shape,
+                  double device_pixel_ratio)
+{
+    if (symbol.layers.empty() || box.isEmpty()) return;
+
+    // THE SAME DRAW LIST THE IMAGE FORM BUILDS, so a key on paper and a swatch
+    // on the shelf are the same picture and cannot drift apart.
+    const QSize size = box.size().toSize();
+    if (size.isEmpty()) return;
+    render::DrawList list = build(symbol, images, dashes, size, shape);
+
+    render::Overlay overlay;
+    // ZERO ALPHA MEANS "LEAVE WHAT IS ALREADY THERE": the sheet's white ground is
+    // down, and a backend that cleared would paint a square over it.
+    overlay.background_rgba = 0u;
+
+    render::FrameContext ctx;
+    ctx.width_px           = size.width();
+    ctx.height_px          = size.height();
+    ctx.device_pixel_ratio = static_cast<float>(device_pixel_ratio);
+
+    // BORROWED, NOT OPENED. A paint device may have only one painter at a time,
+    // and the sheet's painter is the one already on it — which is exactly why
+    // the map frame had to stop blitting an image (`FrameContext`).
+    ctx.target            = static_cast<QPainter*>(&painter);
+    ctx.target_is_painter = true;
+
+    painter.save();
+    painter.setClipRect(box, Qt::IntersectClip);
+    painter.translate(box.topLeft());
+
+    const std::unique_ptr<render::Backend> backend = make_preview_backend();
+    backend->render(list, overlay, ctx);
+    painter.restore();
+}
+
 QIcon symbol_icon(const core::Symbol& symbol, const core::ImageStore& images,
                   const core::DashStore& dashes, QSize size, std::uint32_t background,
                   PreviewShape shape)

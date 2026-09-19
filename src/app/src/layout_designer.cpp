@@ -383,6 +383,12 @@ void LayoutCanvas::paintEvent(QPaintEvent*)
     facts.crs  = QString::fromStdString(controller_.document().crs().id());
     facts.date = QDate::currentDate().toString(QStringLiteral("dd.MM.yyyy"));
 
+    // AND WHERE THE PROJECT LIVES, so a logo stored beside it is found after the
+    // folder has been copied to somebody else's machine (`LayoutFacts`).
+    if (controller_.bus().on_current_file)
+        facts.project_dir =
+            QFileInfo(QString::fromStdString(controller_.bus().on_current_file())).absolutePath();
+
     // THE SCREEN'S OWN DPI, so a 0.25 mm hairline on the sheet is a hairline
     // here too — the designer shows what the printer will do, at a different
     // size (`layout_render.hpp`).

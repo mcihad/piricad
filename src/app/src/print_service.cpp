@@ -336,6 +336,12 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
     facts.crs  = utf8(document_.crs().id());
     facts.date = QDate::currentDate().toString(QStringLiteral("dd.MM.yyyy"));
 
+    // AND WHERE THE PROJECT LIVES, so a logo stored beside it is found after the
+    // folder has been copied to somebody else's machine (`LayoutFacts`).
+    if (bus_.on_current_file)
+        facts.project_dir =
+            QFileInfo(QString::fromStdString(bus_.on_current_file())).absolutePath();
+
     // THE PAGE SIZE IS THE LAYOUT'S OWN, in paper millimetres, and the margin is
     // NOT given to Qt: the layout places its items in the full page and draws
     // its own margin guide. A Qt margin here would inset the whole sheet a

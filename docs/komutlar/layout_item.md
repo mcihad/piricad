@@ -201,6 +201,31 @@ Lejant eklemek ve sağ üste koymak:
 ÇIKTIÖĞE islem=tasi ad=lejant x=300 y=40 genislik=80 yukseklik=60
 ```
 
+Lejant, her katmanın yanına **o katmanın gerçek sembolünü** çizer — düz bir renk
+kutusu değil. Sembol, haritayı çizen **aynı** boru hattından geçer (katman ağacındaki
+küçük resim de öyle), dolayısıyla anahtar ile harita birbirinden ayrılamaz: taramalı
+bir katman anahtarında da taramalı, kesik çizgili bir sınır anahtarında da kesik
+çizgili görünür. Kendi anahtarına uymayan bir lejant, hiç lejant olmamasından
+kötüdür — bu imzalanan bir belgedir.
+
+Anahtar PDF'e **vektör** olarak gider, resim olarak değil: bir sembolün fotoğrafı
+ölçülemez, seçilemez ve çözünürlüğe bağlıdır.
+
+`katmanlar=` verilirse yalnız o katmanlar listelenir; verilmezse **görünür** olanların
+hepsi. Sayfada görünmeyen bir katmanı anahtarda saymak, olmayan bir şeyi açıklamaktır.
+
+Logo koymak — **yolu projeye göre göreli yazın**:
+
+```
+ÇIKTIÖĞE islem=ekle tur=resim ad=logo
+ÇIKTIÖĞE islem=ayarla ad=logo metin=logo.png
+```
+
+Göreli bir yol **projenin klasörüne göre** çözülür. Bu, projeyi bir meslektaşa ya da
+sunucuya kopyaladığınızda logonun kaybolmamasının tek yoludur: dosya çizimin yanında
+yolculuk eder. Mutlak bir yol (`/Users/ali/…`) yalnız yazıldığı makinede çalışır, ve
+taşındığında sayfa logonun yerine kesik çizgili bir kutu basar — **şikâyet etmeden**.
+
 Başlığı yazmak:
 
 ```

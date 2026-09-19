@@ -6,6 +6,31 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — lejant artık haritanın kendi sembollerini çiziyor (TODOS L-07, kısmi)
+
+- **Anahtar, düz renk kutusu değil.** Her katmanın yanında o katmanın **gerçek
+  sembolü** duruyor ve haritayı çizen **aynı** boru hattından geçiyor
+  (`app::paint_symbol` → `render::Backend`): taramalı bir katman anahtarında da
+  taramalı, kesik çizgili bir sınır anahtarında da kesik çizgili. "Parseller
+  turuncudur" diyen bir anahtarın anlattığı katman tarama + kesik sınır +
+  işaretçi ile çiziliyorsa, o anahtar hiç anahtar olmamasından kötüdür — bu
+  imzalanan bir belge.
+- **Ve vektör olarak gidiyor.** İlk hâli `symbol_preview`'in resmini sayfaya
+  basıyordu; PDF her satır için bir raster kazandı (25.504 → 9.906 bayt fark).
+  Bu, harita çerçevesinin düzeltildiği kusurun aynısı (L-12): bir sembolün
+  fotoğrafı ölçülemez, seçilemez, çözünürlüğe bağlıdır.
+- **Kapı da sıkılaştırıldı.** `KENTOS_LAYOUT_PROBE` raster aramasında bir delik
+  vardı: küçük bir blit XObject olmaz, içerik akışında kısaltılmış anahtarlarla
+  `BI … ID … EI` olur — ve lejant çipleri tam o boyutta. Artık `/BPC` de
+  aranıyor, ve anahtarın **bir şey çizdiği** sayfayı gerçekten render edip
+  katmanın rengini arayarak doğrulanıyor: hiçbir şey çizmeyen bir anahtar, raster
+  sınamasını yanlış sebeple geçerdi. Kusur geri konularak sınandı; kapı ikisini de
+  yakalıyor.
+- **Taşınan projede logo kaybolmuyor** (`LayoutFacts::project_dir`): göreli bir
+  resim yolu artık **projenin klasörüne** göre çözülüyor, programın çalışma
+  dizinine göre değil. Göreli yol taşınabilir olmanın tek yoluydu ve tam da bu
+  yüzden çalışmıyordu.
+
 ### Düzeltildi — önizleme aylardır hiçbir şey bildirmiyordu ve temiz görünüyordu (TODOS A-05, L-15)
 
 - MCP'nin `kentoscad://yerlesim/denetim` kaynağı `ÇIKTIYERLEŞİMİ islem=denetle`

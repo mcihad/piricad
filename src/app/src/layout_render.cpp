@@ -2,6 +2,7 @@
 #include "kentos_cad/app/layout_render.hpp"
 
 #include "kentos_cad/app/backend_factory.hpp"
+#include "kentos_cad/app/symbol_preview.hpp"
 
 #include "kentos_cad/core/attribute.hpp"
 #include "kentos_cad/core/document.hpp"
@@ -10,6 +11,7 @@
 #include "kentos_cad/render/scene.hpp"
 #include "kentos_cad/render/view.hpp"
 
+#include <QDir>
 #include <QFileInfo>
 #include <QFont>
 #include <QFontMetricsF>
@@ -25,6 +27,14 @@ namespace kentos::app {
 namespace {
 
 constexpr double kMmPerInch = 25.4;
+
+/// What a paper millimetre is worth on a 96 dpi screen.
+///
+/// THE UNIT THE LEGEND'S CHIPS ARE SCALED AGAINST. `symbol_preview` renders at a
+/// device pixel ratio; on paper the ratio that matters is how much finer the
+/// sheet is than a screen, so a hatch's lines survive the trip to 1200 dpi
+/// instead of arriving as a blurred square beside crisp text (L-07).
+constexpr double kScreenPxPerPaperMm = 96.0 / kMmPerInch;
 
 /// Paper micrometres to paper millimetres.
 double mm_of(core::Um um)
@@ -407,9 +417,41 @@ void paint_legend(QPainter& painter, const QRectF& box, const core::Document& do
         if (y > box.bottom()) break;
 
         const QRectF chip(box.left(), y - metrics.ascent() * 0.85, swatch, swatch);
-        painter.setPen(QPen(QColor::fromRgba(layer.appearance.rgba), 0.8));
-        painter.setBrush(QColor::fromRgba(layer.appearance.rgba));
-        painter.drawRect(chip);
+
+        // THE SYMBOL THE MAP ACTUALLY DRAWS, through the SAME backend the canvas
+        // and the layer tree use (`symbol_preview`). It was a flat colour chip,
+        // which is a legend that says "parcels are orange" about a layer drawn
+        // with a hatch, a dashed boundary and a marker — a key that does not
+        // match its own map is worse than no key, and this is a document
+        // somebody signs (TODOS L-07).
+        //
+        // WHAT THE ENTITIES CARRY, the layer's own default otherwise — the same
+        // resolution `LayerPanel::layerIcon` makes, so the shelf, the canvas and
+        // the printed key cannot disagree.
+        const core::StyleId style =
+            layer.style != core::kByLayerStyle ? layer.style : core::kByLayerStyle;
+        const core::Symbol symbol =
+            document.styles().contains(style) && style != core::kByLayerStyle
+                ? document.styles().symbol_at(style)
+                : core::Symbol::of(layer.appearance);
+
+        // PAINTED INTO THE SHEET'S OWN PAINTER, never blitted as an image. A
+        // key drawn as a picture reaches the PDF as pixels — unmeasurable,
+        // unselectable and resolution-bound — which is precisely the defect the
+        // map frame was fixed for (`FrameContext::target_is_painter`, L-12).
+        // The first version of this legend did blit, and the PDF grew an
+        // `/Subtype /Image` for every row.
+        if (!symbol.layers.empty()) {
+            paint_symbol(painter, chip, symbol, document.images(), document.dashes(),
+                         PreviewShape::Area, std::max(1.0, px_per_paper_mm / kScreenPxPerPaperMm));
+        } else {
+            // AN HONEST FALLBACK rather than a blank: a symbol that declares
+            // nothing still gets its layer's colour, which is what the drawing
+            // will use for it.
+            painter.setPen(QPen(QColor::fromRgba(layer.appearance.rgba), 0.8));
+            painter.setBrush(QColor::fromRgba(layer.appearance.rgba));
+            painter.drawRect(chip);
+        }
 
         painter.setPen(colour_of(item.text_colour));
         painter.setBrush(Qt::NoBrush);
@@ -653,7 +695,19 @@ void paint_layout_page(QPainter& painter, const QRectF& target, const core::Docu
             break;
 
         case core::LayoutItemKind::Picture: {
-            const QString path = QString::fromStdString(item->text);
+            const QString stored = QString::fromStdString(item->text);
+
+            // RESOLVED AGAINST THE PROJECT, not against the working directory.
+            // A relative path is the portable way to carry a logo — the file
+            // travels in the folder beside the drawing — and it is only portable
+            // if this is where it is resolved (`LayoutFacts::project_dir`).
+            QString path = stored;
+            if (!stored.isEmpty() && QFileInfo(stored).isRelative() &&
+                !facts.project_dir.isEmpty()) {
+                const QString beside = QDir(facts.project_dir).filePath(stored);
+                if (QFileInfo::exists(beside)) path = beside;
+            }
+
             QImage picture(path);
             if (picture.isNull()) {
                 // A MISSING PICTURE IS SAID, not skipped: an empty rectangle on
@@ -666,7 +720,7 @@ void paint_layout_page(QPainter& painter, const QRectF& target, const core::Docu
                     box, Qt::AlignCenter | Qt::TextWordWrap,
                     path.isEmpty()
                         ? QObject::tr("resim yolu boş")
-                        : QObject::tr("resim bulunamadı: %1").arg(QFileInfo(path).fileName()));
+                        : QObject::tr("resim bulunamadı: %1").arg(QFileInfo(stored).fileName()));
             } else {
                 painter.drawImage(box, picture.scaled(box.size().toSize(), Qt::KeepAspectRatio,
                                                       Qt::SmoothTransformation));

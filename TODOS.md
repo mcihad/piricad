@@ -403,7 +403,22 @@ doğrulaması ve işlem bütünlüğü birbirinden ayrı kalmalı.
   Birim, null, tarih/yerel ayar, hata ve döngü davranışını tanımla. İfadeler keyfî
   dosya/ağ/kod yürütme sağlamasın. **Kabul:** ada/parsel başlığı ile alan toplamı
   önizleme/export'ta aynı snapshot'tan hesaplanır; eksik alan sessiz boş metin olmaz.
-- [ ] **L-07 / P1 — Tam öğe özellikleri.** Lejantta gerçek semboloji, gruplar,
+- [~] **L-07 / P1 — Tam öğe özellikleri.** *(lejant sembolojisi ve logo 19 Eylül 2026)*
+  **Yapıldı:** Lejant her katmanın yanına **gerçek sembolünü** çiziyor ve
+  haritayı çizen aynı boru hattından geçiyor, yani anahtar ile harita
+  ayrılamıyor. Anahtar PDF'e **vektör** gidiyor — ilk hâlim resmi basıyordu ve
+  L-12'nin düzelttiği kusuru geri getiriyordu.
+  **Taşınan projede logo kaybolmuyor:** göreli resim yolu projenin klasörüne göre
+  çözülüyor. Türkçe karakterler zaten korunuyordu (metin UTF-8, `QString`).
+  **Kapı:** `KENTOS_LAYOUT_PROBE` artık satır içi rasteri de arıyor (küçük bir
+  blit XObject olmaz) ve anahtarın gerçekten çizdiğini sayfayı render edip
+  katman rengini arayarak doğruluyor; ikisi de kusur geri konularak sınandı.
+  **Kalan:** lejantta gruplar, filtre, manuel ad/sıra ve kolon düzeni; ölçek
+  çubuğunda birim/segment/etiket seçenekleri; metinde font, satır aralığı ve
+  taşma; resimde SVG, en-boy oranı ve kaynağın projeye **paketlenmesi** (bugün
+  dosya klasörde taşınıyor, `.pcad` içine gömülmüyor); resmin bir şekil öğesiyle
+  kırpılması.
+  **Eski metin:** Lejantta gerçek semboloji, gruplar,
   filtre, manuel ad/sıra ve kolon düzeni; ölçek çubuğunda birim/segment/etiket;
   metinde font, satır aralığı ve taşma; resimde SVG/raster, en-boy oranı ve kaynağı
   paketleme ekle. QGIS 4.2 karşılığı olarak resim bir şekil öğesiyle kırpılabilsin.
@@ -989,6 +1004,17 @@ uygulanan ve müzakere edilen yetenekler ilan edilmelidir.
   **Kalan:** üç şablon bir başlangıçtır. İfraz, tevhit ve 18. madde için şablonlar
   alan işidir (A-08 ile aynı cinsten) ve bir harita mühendisinin yazması gerekir;
   paket veri olduğu için bu bir veri yayımıdır, yeniden derleme değil.
+
+### Gözlenen, henüz çözülmemiş
+
+- [ ] **FLAKE-01 — `layout-designer` ctest'i seyrek olarak paralel koşuda düşüyor.**
+  19 Eylül 2026'da iki kez görüldü; iki seferinde de **tek başına koşturulunca
+  geçti**. Ardından 14 ardışık tam `ctest` koşusunda bir daha üretilemedi,
+  dolayısıyla sebebi **bilinmiyor** ve bir düzeltme iddia edilmedi. Şüpheliler:
+  probe'ların paylaştığı çıktı dizini (`yerlesim-denemesi`), eşzamanlı bir
+  `FARKLIKAYDET`/`AÇ` turu, ya da offscreen platformun paylaşılan bir kaynağı.
+  Yeniden görülürse `--output-on-failure` çıktısı ilk kanıttır; kaçırılmaması için
+  buraya yazıldı.
 
 ## 9. Ölçülebilir uçtan uca kabul senaryoları
 
