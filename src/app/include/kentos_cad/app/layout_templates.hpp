@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the office's standard paftas.
+// KentOSCad — app: the office's standard layouts.
 //
-// A TEMPLATE IS A PAFTA THAT BELONGS TO NOBODY'S DRAWING. The firm's sheet — its
+// A TEMPLATE IS A ÇIKTIYERLEŞİMİ THAT BELONGS TO NOBODY'S DRAWING. The firm's sheet — its
 // title block, its legend box, its grid settings — is used on every job, so it
 // cannot live in one job's file. It lives in the user's configuration directory
 // as a folder of JSON documents, one per template, which is the form a person
@@ -11,7 +11,7 @@
 // ONE FILE PER TEMPLATE, not one file holding all of them, and that is the one
 // place this store departs from `PrintProfiles`. A template is a document in its
 // own right: it is mailed, diffed and replaced individually, and a single
-// `pafta-sablonlari.json` would make "send me your ada paftası" mean "send me
+// `yerleşimler.json` would make "send me your ada layout" mean "send me
 // your whole library".
 //
 // THIS SERVICE NEVER BUILDS A LAYOUT. It reads and writes bytes; `/src/core`
@@ -26,7 +26,7 @@
 
 namespace kentos::app {
 
-/// The template folder, and the `PAFTAŞABLON` verbs over it.
+/// The template folder, and the `ÇIKTIŞABLON` verbs over it.
 class LayoutTemplates : public QObject
 {
     Q_OBJECT

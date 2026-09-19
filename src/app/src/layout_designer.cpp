@@ -23,6 +23,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numeric>
 
 namespace kentos::app {
 namespace {
@@ -347,7 +348,7 @@ void LayoutCanvas::paintEvent(QPaintEvent*)
     const QRectF box      = pageRect();
     if (l == nullptr || box.isEmpty()) {
         p.setPen(t.textFaint);
-        p.drawText(rect(), Qt::AlignCenter, tr("Pafta yok."));
+        p.drawText(rect(), Qt::AlignCenter, tr("Çıktı yerleşimi yok."));
         return;
     }
 
@@ -411,7 +412,7 @@ namespace kentos::app {
 LayoutDesigner::LayoutDesigner(Controller& controller, QString layout, QWidget* parent)
     : DialogFrame(parent), controller_(controller), name_(std::move(layout))
 {
-    setHeading(Glyph::Print, tr("Pafta Tasarımcısı"), QStringLiteral("— %1").arg(name_));
+    setHeading(Glyph::Print, tr("Çıktı Yerleşimi Tasarımcısı"), QStringLiteral("— %1").arg(name_));
     setBody(buildBody());
     resize(1180, 760);
 
@@ -427,13 +428,13 @@ LayoutDesigner::LayoutDesigner(Controller& controller, QString layout, QWidget* 
     connect(pdf, &QPushButton::clicked, this, [this] { exportSheet(); });
     footer()->addWidget(pdf);
 
-    // THE WINDOW FOLLOWS THE DOCUMENT, not its own record of it: a `PAFTAÖĞE`
+    // THE WINDOW FOLLOWS THE DOCUMENT, not its own record of it: a `ÇIKTIÖĞE`
     // line typed on the command line while this is open redraws it, which is
     // what makes the two clients equal rather than merely both present.
     connect(&controller_, &Controller::documentChanged, this, [this] { refresh(); });
 
     refresh();
-    applyTheme(theme());
+    LayoutDesigner::applyTheme(theme());
 }
 
 const core::Layout* LayoutDesigner::layout() const
@@ -464,7 +465,7 @@ QWidget* LayoutDesigner::buildBody()
     auto* grid = new FlowLayout(adders, 0, 4, 4);
 
     // THE EIGHT KINDS, each as an icon button whose tooltip is its whole label
-    // (ui.md R22). One row, because a pafta has eight kinds and always will.
+    // (ui.md R22). One row, because a layout has eight kinds and always will.
     struct Adder
     {
         const char* kind;
@@ -494,7 +495,7 @@ QWidget* LayoutDesigner::buildBody()
     remove->setControlSize(ControlSize::Compact);
     connect(remove, &QPushButton::clicked, this, [this] {
         if (canvas_->selected().isEmpty()) return;
-        controller_.runLine(QStringLiteral("PAFTAÖĞE islem=sil pafta=%1 ad=%2")
+        controller_.runLine(QStringLiteral("ÇIKTIÖĞE islem=sil yerlesim=%1 ad=%2")
                                 .arg(quoted(name_), quoted(canvas_->selected())),
                             command::Origin::Gui);
         refresh();
@@ -513,17 +514,17 @@ QWidget* LayoutDesigner::buildBody()
         filling_ = false;
         refresh();
     });
-    connect(canvas_, &LayoutCanvas::itemMoved, this,
-            [this](const QString& id, core::PaperRect frame) {
-                // THE GESTURE BECOMES THE COMMAND. This is the line a script
-                // would type, so what a hand can do a batch job can do too.
-                controller_.runLine(QStringLiteral("PAFTAÖĞE islem=tasi pafta=%1 ad=%2 x=%3 y=%4 "
-                                                   "genislik=%5 yukseklik=%6")
-                                        .arg(quoted(name_), quoted(id), mm_text(frame.x),
-                                             mm_text(frame.y), mm_text(frame.w), mm_text(frame.h)),
-                                    command::Origin::Gui);
-                refresh();
-            });
+    connect(
+        canvas_, &LayoutCanvas::itemMoved, this, [this](const QString& id, core::PaperRect frame) {
+            // THE GESTURE BECOMES THE COMMAND. This is the line a script
+            // would type, so what a hand can do a batch job can do too.
+            controller_.runLine(QStringLiteral("ÇIKTIÖĞE islem=tasi yerlesim=%1 ad=%2 x=%3 y=%4 "
+                                               "genislik=%5 yukseklik=%6")
+                                    .arg(quoted(name_), quoted(id), mm_text(frame.x),
+                                         mm_text(frame.y), mm_text(frame.w), mm_text(frame.h)),
+                                command::Origin::Gui);
+            refresh();
+        });
     row->addWidget(canvas_, 1);
 
     // ---- right: the selected item's properties -------------------------------
@@ -568,7 +569,7 @@ QWidget* LayoutDesigner::buildItemList()
 void LayoutDesigner::addItem(const QString& kind)
 {
     controller_.runLine(
-        QStringLiteral("PAFTAÖĞE islem=ekle pafta=%1 tur=%2").arg(quoted(name_), kind),
+        QStringLiteral("ÇIKTIÖĞE islem=ekle yerlesim=%1 tur=%2").arg(quoted(name_), kind),
         command::Origin::Gui);
 
     // THE NEW ITEM IS SELECTED, because adding one and then having to find it is
@@ -582,7 +583,7 @@ void LayoutDesigner::addItem(const QString& kind)
 void LayoutDesigner::edit(const QString& arguments)
 {
     if (canvas_->selected().isEmpty()) return;
-    controller_.runLine(QStringLiteral("PAFTAÖĞE islem=ayarla pafta=%1 ad=%2 %3")
+    controller_.runLine(QStringLiteral("ÇIKTIÖĞE islem=ayarla yerlesim=%1 ad=%2 %3")
                             .arg(quoted(name_), quoted(canvas_->selected()), arguments),
                         command::Origin::Gui);
     refresh();
@@ -592,7 +593,7 @@ void LayoutDesigner::refresh()
 {
     const core::Layout* l = layout();
     if (l == nullptr) {
-        if (status_ != nullptr) status_->setText(tr("Pafta silinmiş: %1").arg(name_));
+        if (status_ != nullptr) status_->setText(tr("Çıktı yerleşimi silinmiş: %1").arg(name_));
         return;
     }
 
@@ -600,17 +601,16 @@ void LayoutDesigner::refresh()
     const QString chosen = canvas_->selected();
     items_->clear();
     // PAINT ORDER, TOP FIRST: the list reads the way the sheet looks.
-    std::vector<const core::LayoutItem*> ordered;
-    for (const core::LayoutItem& item : l->items)
-        ordered.push_back(&item);
-    std::stable_sort(
-        ordered.begin(), ordered.end(),
-        [](const core::LayoutItem* a, const core::LayoutItem* b) { return a->z > b->z; });
-    for (const core::LayoutItem* item : ordered) {
-        auto* row = new QListWidgetItem(
+    std::vector<std::size_t> ordered(l->items.size());
+    std::iota(ordered.begin(), ordered.end(), std::size_t{0});
+    std::stable_sort(ordered.begin(), ordered.end(),
+                     [&](std::size_t a, std::size_t b) { return l->items[a].z > l->items[b].z; });
+    for (const std::size_t at : ordered) {
+        const core::LayoutItem* item = &l->items[at];
+        auto* row                    = new QListWidgetItem(
             QStringLiteral("%1  ·  %2")
                 .arg(QString::fromStdString(item->id),
-                     QString::fromUtf8(core::layout_item_kind_label(item->kind))),
+                                        QString::fromUtf8(core::layout_item_kind_label(item->kind))),
             items_);
         row->setData(Qt::UserRole, QString::fromStdString(item->id));
         if (item->locked) row->setToolTip(tr("Kilitli"));
@@ -692,7 +692,7 @@ QWidget* LayoutDesigner::buildProperties()
         });
         auto* row = new FormRow(tr("Metin"), text, properties_);
         if (item->kind == core::LayoutItemKind::Label)
-            row->setHelp(tr("<pafta>, <olcek>, <tarih>, <crs>, <proje>"));
+            row->setHelp(tr("<yerlesim>, <olcek>, <tarih>, <crs>, <proje>"));
         propertyColumn_->addWidget(row);
     }
 
@@ -771,7 +771,7 @@ void LayoutDesigner::aimAt(core::Box2 window)
     const core::LayoutItem* map = l->first_map();
     if (map == nullptr) {
         if (status_ != nullptr)
-            status_->setText(tr("Bu paftada harita çerçevesi yok; ekleyip yeniden deneyin."));
+            status_->setText(tr("Bu yerleşimde harita çerçevesi yok; ekleyip yeniden deneyin."));
         return;
     }
 
@@ -781,7 +781,7 @@ void LayoutDesigner::aimAt(core::Box2 window)
     const auto metres = [](core::Mm v) {
         return QString::number(static_cast<double>(v) / 1000.0, 'f', 3);
     };
-    controller_.runLine(QStringLiteral("PAFTAÖĞE islem=ayarla pafta=%1 ad=%2 "
+    controller_.runLine(QStringLiteral("ÇIKTIÖĞE islem=ayarla yerlesim=%1 ad=%2 "
                                        "pencere=%3,%4 pencere=%5,%6")
                             .arg(quoted(name_), quoted(QString::fromStdString(map->id)),
                                  metres(window.min_x), metres(window.min_y), metres(window.max_x),
@@ -794,11 +794,12 @@ void LayoutDesigner::aimAt(core::Box2 window)
 void LayoutDesigner::exportSheet()
 {
     const QString path = QFileDialog::getSaveFileName(
-        this, tr("Paftayı PDF olarak kaydet"), name_ + QStringLiteral(".pdf"), tr("PDF (*.pdf)"));
+        this, tr("Yerleşimi PDF olarak kaydet"), name_ + QStringLiteral(".pdf"), tr("PDF (*.pdf)"));
     if (path.isEmpty()) return;
 
-    controller_.runLine(QStringLiteral("YAZDIR pafta=%1 dosya=%2").arg(quoted(name_), quoted(path)),
-                        command::Origin::Gui);
+    controller_.runLine(
+        QStringLiteral("YAZDIR yerlesim=%1 dosya=%2").arg(quoted(name_), quoted(path)),
+        command::Origin::Gui);
 }
 
 void LayoutDesigner::applyTheme(ThemeMode mode)
@@ -811,7 +812,7 @@ QStringList LayoutDesigner::probeDrive()
 {
     QStringList said;
     const core::Layout* l = layout();
-    if (l == nullptr) return {QStringLiteral("pafta yok")};
+    if (l == nullptr) return {QStringLiteral("yerleşim yok")};
     (void)l;
 
     canvas_->select(QStringLiteral("baslik"));
@@ -836,7 +837,7 @@ QStringList LayoutDesigner::probeDrive()
     // `l` is stale from here on: every `edit()` below rewrites the list.
     l = nullptr;
 
-    edit(QStringLiteral("metin=%1").arg(quoted(QStringLiteral("<pafta> — <olcek>"))));
+    edit(QStringLiteral("metin=%1").arg(quoted(QStringLiteral("<yerlesim> — <olcek>"))));
     if (const core::LayoutItem* after = layout()->find("baslik"); after != nullptr)
         said << QStringLiteral("metin: %1").arg(QString::fromStdString(after->text));
 

@@ -14,6 +14,11 @@
 namespace kentos::core {
 namespace {
 
+/// The flag bits that are CONTENT. `FlagLayerHidden` is not one of them: it is
+/// mirrored from the layer and refreshed on every toggle, so folding it in would
+/// make hiding a layer change the drawing's fingerprint (model.md R6).
+constexpr std::uint8_t kFlagsHashed = FlagAlive | FlagHidden | FlagInBlock;
+
 /// Grows geometrically, so appending N entities is O(N) rather than O(N²).
 /// Calling reserve(size() + n) unconditionally pins capacity to the exact size
 /// and turns a bulk load into quadratic copying; that cost was measured once.
@@ -148,7 +153,7 @@ std::uint64_t Document::content_hash() const
 
         h = fnv1a(layers_.all()[entities_.layer[e]].folded, h);
         h = fnv1a_int(static_cast<std::int64_t>(entities_.style[e]), h);
-        h = fnv1a_int(entities_.flags[e] & (FlagAlive | FlagHidden | FlagInBlock), h);
+        h = fnv1a_int(entities_.flags[e] & kFlagsHashed, h);
 
         // THE KIND IS CONTENT: a circle and a two-vertex line hold the same two
         // vertices and are not the same drawing. Folded only for a kind other

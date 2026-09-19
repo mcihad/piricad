@@ -48,12 +48,14 @@ YAZDIR
 YAZDIR merkez=<nokta> olcek=<N> dosya=<yol>
 YAZDIR pencere=<x1,y1> pencere=<x2,y2> yazici=<ad>
 YAZDIR merkez=<nokta> profil=<ad> dosya=<yol> sifre=<şifre> kopyalanabilir=hayır
+YAZDIR yerlesim=<ad> dosya=<yol>
 ```
 
 ## Parametreler
 
 | Parametre | Ne yapar |
 |---|---|
+| `yerlesim` | Basılacak [çıktı yerleşiminin](layout.md) adı. Kâğıt, kenar ve harita penceresi yerleşimden gelir; `pencere`, `merkez`, `olcek` ve `profil` ile birlikte verilmez |
 | `merkez` | Kâğıdın ortalanacağı nokta; `pencere` yerine kullanılır |
 | `olcek` | Ölçek paydası (1000 = 1/1000); `merkez` ile; verilmezse projenin plan ölçeği |
 | `pencere` | Yazdırılacak alanın iki köşesi; `merkez` de yoksa arayüz tıklatır |
@@ -88,6 +90,13 @@ Aynı alanı A3 yatay bir profille ve sistem varsayılanı yazıcıya:
 
 ```text
 YAZDIR merkez=485340,4310235 olcek=500 profil="A3 Yatay" yazici=""
+```
+
+Antetli, lejantlı bir çıktı yerleşimini basmak — kâğıt, kenar ve harita penceresi
+yerleşimden geldiği için başka hiçbir şey söylenmez:
+
+```text
+YAZDIR yerlesim="Ada 1284" dosya=ada1284.pdf
 ```
 
 İki köşe ile, şifreli ve sadece yazdırmaya izinli bir PDF:
@@ -157,6 +166,8 @@ karakterler nokta olarak görünür ve satır ekranda yazılıdır ama geçmişe
 | Mesaj | Sebebi | Çözümü |
 |---|---|---|
 | `Çıktının yeri verilmedi: PDF için dosya=<yol>, yazıcı için yazici=<ad> yazın …` | Ne `dosya` ne `yazici` verildi | Birini verin |
+| `yerlesim ile 'X' birlikte verilmez: çıktı yerleşimi kendi kâğıdını ve kendi harita penceresini taşır.` | `yerlesim` ile `pencere`, `merkez`, `olcek` ya da `profil` birlikte verildi | Yalnız `yerlesim=` bırakın |
+| `Çıktı yerleşimi yok: 'X'. ÇIKTIYERLEŞİMİ islem=listele ile adları görün.` | O adda yerleşim yok | Adı listeden alın |
 | `dosya ve yazici birlikte verilemez; çıktı ya PDF dosyasına ya yazıcıya gider.` | İkisi birlikte verildi | Birini silin |
 | `Yazdırma penceresinin iki köşesi bir dikdörtgen çizmeli; iki köşe aynı doğru üzerinde.` | `pencere` bir çizgi verdi | İki farklı köşe verin |
 | `Ölçek bilinmiyor: olcek=<N> verin (1:N) ya da projenin plan ölçeğini ayarlayın.` | `merkez` verildi, ölçek hiçbir yerden okunamadı | `olcek=` verin |
@@ -173,6 +184,7 @@ karakterler nokta olarak görünür ve satır ekranda yazılıdır ama geçmişe
 ## İlgili
 
 - [Yazdırma ve PDF](../baslangic/yazdirma.md) — çerçeve, önizleme ve profiller
+- [`ÇIKTIYERLEŞİMİ`](layout.md) — antetli, lejantlı, ızgaralı bir sayfa kurmak
 - [`YAZDIRMAPROFİLİ`](print_profile.md) — kâğıt, yön, çözünürlük, kenar boşluğu
 - [`DIŞAAKTAR`](export.md) — çizimi başka bir veri biçimine yazma
 - [`AYAR`](setting.md) — projenin plan ölçeği

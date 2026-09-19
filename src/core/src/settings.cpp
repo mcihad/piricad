@@ -2131,18 +2131,19 @@ std::uint64_t Settings::fold(std::uint64_t seed) const
 {
     // Sorted by id, not by registration order: inserting a setting into the middle
     // of the declaration list must not rewrite every stored golden hash.
-    std::vector<const std::pair<std::uint32_t, SettingValue>*> project;
-    for (const auto& entry : values_)
-        if (cat_->at(entry.first).scope == SettingScope::Project) project.push_back(&entry);
+    std::vector<std::size_t> project;
+    for (std::size_t at = 0; at < values_.size(); ++at)
+        if (cat_->at(values_[at].first).scope == SettingScope::Project) project.push_back(at);
 
-    std::sort(project.begin(), project.end(), [this](const auto* a, const auto* b) {
-        return cat_->at(a->first).id < cat_->at(b->first).id;
+    std::sort(project.begin(), project.end(), [this](std::size_t a, std::size_t b) {
+        return cat_->at(values_[a].first).id < cat_->at(values_[b].first).id;
     });
 
     std::uint64_t h = seed;
-    for (const auto* entry : project) {
-        h = fnv1a(cat_->at(entry->first).id, h);
-        h = entry->second.fold(h);
+    for (const std::size_t at : project) {
+        const auto* entry = &values_[at];
+        h                 = fnv1a(cat_->at(entry->first).id, h);
+        h                 = entry->second.fold(h);
     }
     return h;
 }

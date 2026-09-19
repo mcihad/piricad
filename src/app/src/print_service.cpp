@@ -251,7 +251,7 @@ command::Task<core::Result<std::string>> PrintService::handle(command::PrintRequ
 
     case Verb::ToPdf:
     case Verb::ToPrinter: {
-        // A PAFTA IS ITS OWN SHEET. It carries paper, margin, resolution and a
+        // AN OUTPUT LAYOUT IS ITS OWN SHEET. It carries paper, margin, resolution and a
         // map frame that knows where it looks, so it takes neither a profile nor
         // a window and goes down its own path (`layout_render.hpp`).
         if (!request.layout.empty()) co_return printLayout(request);
@@ -283,10 +283,11 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
 {
     const core::Layout* sheet = document_.layouts().find(request.layout);
     if (sheet == nullptr)
-        return core::err(core::ErrorCode::NotFound, "Pafta yok: '" + request.layout + "'.");
+        return core::err(core::ErrorCode::NotFound,
+                         "Çıktı yerleşimi yok: '" + request.layout + "'.");
     if (sheet->pages.empty())
         return core::err(core::ErrorCode::InvalidArgument,
-                         "'" + sheet->name + "' paftasının hiç sayfası yok.");
+                         "'" + sheet->name + "' yerleşiminin hiç sayfası yok.");
 
     LayoutFacts facts;
     facts.sheet = utf8(sheet->name);
@@ -295,7 +296,7 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
     facts.crs  = utf8(document_.crs().id());
     facts.date = QDate::currentDate().toString(QStringLiteral("dd.MM.yyyy"));
 
-    // THE PAGE SIZE IS THE PAFTA'S OWN, in paper millimetres, and the margin is
+    // THE PAGE SIZE IS THE LAYOUT'S OWN, in paper millimetres, and the margin is
     // NOT given to Qt: the layout places its items in the full page and draws
     // its own margin guide. A Qt margin here would inset the whole sheet a
     // second time and move every item (`paint_layout_page`).
@@ -343,9 +344,10 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
             return core::err(core::ErrorCode::IoFailure, "PDF yazılamadı: " + path.toStdString());
 
         const core::LayoutItem* map = sheet->first_map();
-        std::string said = "Pafta yazıldı: " + path.toStdString() + " — " + sheet->name + ", " +
-                           std::to_string(first.w / 1000) + "×" + std::to_string(first.h / 1000) +
-                           " mm, " + std::to_string(sheet->pages.size()) + " sayfa";
+        std::string said = "Çıktı yerleşimi yazıldı: " + path.toStdString() + " — " + sheet->name +
+                           ", " + std::to_string(first.w / 1000) + "×" +
+                           std::to_string(first.h / 1000) + " mm, " +
+                           std::to_string(sheet->pages.size()) + " sayfa";
         if (map != nullptr && core::map_scale(*map) > 0)
             said += ", ölçek 1:" + std::to_string(core::map_scale(*map));
         return said;
@@ -361,7 +363,8 @@ core::Result<std::string> PrintService::printLayout(const command::PrintRequest&
     printer.setPageLayout(page);
     printer.setResolution(sheet->dpi > 0 ? sheet->dpi : 300);
     draw(printer, printer.resolution());
-    return "Pafta yazıcıya gönderildi: " + info.printerName().toStdString() + " — " + sheet->name;
+    return "Çıktı yerleşimi yazıcıya gönderildi: " + info.printerName().toStdString() + " — " +
+           sheet->name;
 }
 
 core::Result<std::string> PrintService::toPdf(const command::PrintRequest& request,

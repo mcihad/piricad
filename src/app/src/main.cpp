@@ -360,7 +360,7 @@ int main(int argc, char** argv)
     // variable names a directory; `KENTOS_SETTINGS_PAGE` names the page, and the
     // picture lands as `ayarlar.png`. Developer tooling, same category as
     // `KENTOS_FRAME_DUMP`.
-    // ONE PAFTA, RENDERED TO A PNG. The layout renderer is the one piece of this
+    // ONE LAYOUT, RENDERED TO A PNG. The layout renderer is the one piece of this
     // subsystem whose output cannot be asserted in a unit test — what matters is
     // whether the sheet LOOKS like a pafta — so it gets the same treatment the
     // canvas and the component sheet get: a probe that draws it and leaves a
@@ -374,13 +374,13 @@ int main(int argc, char** argv)
             const QString sheet =
                 qEnvironmentVariable("KENTOS_LAYOUT_NAME", QStringLiteral("Deneme Paftası"));
             controller->runLine(
-                QStringLiteral("PAFTA islem=ekle ad=\"%1\" kagit=A3 yon=yatay").arg(sheet),
+                QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=\"%1\" kagit=A3 yon=yatay").arg(sheet),
                 kentos::command::Origin::Gui);
 
             const kentos::core::Layout* layout =
                 controller->document().layouts().find(sheet.toStdString());
             if (layout == nullptr) {
-                (void)std::fprintf(stdout, "[pafta] pafta kurulamadı\n");
+                (void)std::fprintf(stdout, "[yerlesim] çıktı yerleşimi kurulamadı\n");
                 QApplication::exit(1);
                 return;
             }
@@ -389,10 +389,10 @@ int main(int argc, char** argv)
             // whose content comes from the drawing's attributes rather than from
             // its geometry.
             controller->runLine(
-                QStringLiteral("PAFTAÖĞE islem=ekle pafta=\"%1\" tur=tablo ad=tablo").arg(sheet),
+                QStringLiteral("ÇIKTIÖĞE islem=ekle yerlesim=\"%1\" tur=tablo ad=tablo").arg(sheet),
                 kentos::command::Origin::Gui);
             controller->runLine(
-                QStringLiteral("PAFTAÖĞE islem=ayarla pafta=\"%1\" ad=tablo "
+                QStringLiteral("ÇIKTIÖĞE islem=ayarla yerlesim=\"%1\" ad=tablo "
                                "metin=\"Kadastro Parselleri\" x=250 y=35 genislik=155 "
                                "yukseklik=60 yazi=3 cerceve=evet")
                     .arg(sheet),
@@ -411,7 +411,7 @@ int main(int argc, char** argv)
             const auto metres = [](kentos::core::Mm v) {
                 return QString::number(static_cast<double>(v) / 1000.0, 'f', 3);
             };
-            controller->runLine(QStringLiteral("PAFTAÖĞE islem=ayarla pafta=\"%1\" ad=harita "
+            controller->runLine(QStringLiteral("ÇIKTIÖĞE islem=ayarla yerlesim=\"%1\" ad=harita "
                                                "pencere=%2,%3 pencere=%4,%5")
                                     .arg(sheet, metres(extent.min_x), metres(extent.min_y),
                                          metres(extent.max_x), metres(extent.max_y)),
@@ -441,12 +441,12 @@ int main(int argc, char** argv)
             painter.end();
 
             QDir().mkpath(dir);
-            const bool saved = out.save(dir + QStringLiteral("/pafta.png"));
+            const bool saved = out.save(dir + QStringLiteral("/yerlesim.png"));
             for (const kentos::core::LayoutItem& item : aimed->items) {
                 const kentos::core::Box2 win = kentos::core::map_window(item);
                 (void)std::fprintf(
                     stdout,
-                    "[pafta] öğe %-8s %s  kutu %d,%d %dx%d um  pencere %lld,%lld "
+                    "[yerlesim] öğe %-8s %s  kutu %d,%d %dx%d um  pencere %lld,%lld "
                     "%lld,%lld  olcek 1:%lld\n",
                     item.id.c_str(), kentos::core::layout_item_kind_id(item.kind), item.frame.x,
                     item.frame.y, item.frame.w, item.frame.h, static_cast<long long>(win.min_x),
@@ -455,22 +455,22 @@ int main(int argc, char** argv)
                     static_cast<long long>(kentos::core::map_scale(item)));
             }
             (void)std::fprintf(
-                stdout, "[pafta] çizim kapsamı %lld,%lld %lld,%lld — %zu nesne\n",
+                stdout, "[yerlesim] çizim kapsamı %lld,%lld %lld,%lld — %zu nesne\n",
                 static_cast<long long>(extent.min_x), static_cast<long long>(extent.min_y),
                 static_cast<long long>(extent.max_x), static_cast<long long>(extent.max_y),
                 controller->document().live_entity_count());
-            (void)std::fprintf(stdout, "[pafta] %s — %d×%d px, %zu öğe\n",
-                               saved ? "kare: pafta.png" : "kare yazılamadı", w_px, h_px,
+            (void)std::fprintf(stdout, "[yerlesim] %s — %d×%d px, %zu öğe\n",
+                               saved ? "kare: yerlesim.png" : "kare yazılamadı", w_px, h_px,
                                aimed->items.size());
             (void)std::fflush(stdout);
             QApplication::exit(saved ? 0 : 1);
         });
     }
 
-    // THE PAFTA DESIGNER, driven the way a hand drives it and then exported.
+    // THE LAYOUT DESIGNER, driven the way a hand drives it and then exported.
     //
     // WHAT IT PROVES that nothing else can: that a drag on the page becomes a
-    // `PAFTAÖĞE` line, that the line reaches the document, that the window
+    // `ÇIKTIÖĞE` line, that the line reaches the document, that the window
     // redraws from the document afterwards, and that the sheet then prints. The
     // unit suite proves the model and the commands; this is the seam between
     // them and the mouse.
@@ -490,9 +490,10 @@ int main(int argc, char** argv)
             };
 
             controller->runLine(
-                QStringLiteral("PAFTA islem=ekle ad=\"Ada 1284\" kagit=A3 yon=yatay"),
+                QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=\"Ada 1284\" kagit=A3 yon=yatay"),
                 kentos::command::Origin::Gui);
-            check(controller->document().layouts().find("Ada 1284") != nullptr, "pafta kurulamadı");
+            check(controller->document().layouts().find("Ada 1284") != nullptr,
+                  "çıktı yerleşimi kurulamadı");
 
             kentos::app::LayoutDesigner designer(*controller, QStringLiteral("Ada 1284"), &window);
             designer.applyTheme(window.themeMode());
@@ -512,8 +513,12 @@ int main(int argc, char** argv)
 
             const kentos::core::Layout* after = controller->document().layouts().find("Ada 1284");
             check(after != nullptr && after->items.size() == 5, "lejant eklenmedi");
+            if (after == nullptr) {
+                QApplication::exit(1);
+                return;
+            }
             if (const kentos::core::LayoutItem* title = after->find("baslik"); title != nullptr)
-                check(title->text == "<pafta> — <olcek>", "başlık metni yazılmadı");
+                check(title->text == "<yerlesim> — <olcek>", "başlık metni yazılmadı");
 
             // AND ONE Ctrl+Z UNDOES THE LAST GESTURE, which is the claim a
             // designer with its own edit path could not make.
@@ -529,14 +534,15 @@ int main(int argc, char** argv)
                 (void)std::fprintf(stdout, "[menu] %s\n", line.toUtf8().constData());
                 (void)std::fflush(stdout);
             }
-            check(window.probeLayoutMenu().contains(QStringLiteral("Pafta Yöneticisi…")),
-                  "Pafta Yöneticisi menüde yok");
+            check(window.probeLayoutMenu().contains(QStringLiteral("Çıktı Yerleşimi Yöneticisi…")),
+                  "Çıktı Yerleşimi Yöneticisi menüde yok");
             check(window.probeLayoutMenu().contains(QStringLiteral("    Tasarımcıyı Aç")),
-                  "paftanın alt menüsünde Tasarımcıyı Aç yok");
+                  "yerleşimin alt menüsünde Tasarımcıyı Aç yok");
 
-            const QString pdf = dir + QStringLiteral("/pafta.pdf");
-            controller->runLine(QStringLiteral("YAZDIR pafta=\"Ada 1284\" dosya=\"%1\"").arg(pdf),
-                                kentos::command::Origin::Gui);
+            const QString pdf = dir + QStringLiteral("/yerlesim.pdf");
+            controller->runLine(
+                QStringLiteral("YAZDIR yerlesim=\"Ada 1284\" dosya=\"%1\"").arg(pdf),
+                kentos::command::Origin::Gui);
             const QFileInfo written(pdf);
             check(written.exists() && written.size() > 1000, "PDF yazılmadı");
             (void)std::fprintf(stdout, "[tasarim] pdf %lld bayt\n",
@@ -619,12 +625,13 @@ int main(int argc, char** argv)
         later([] {
             if (QWidget* top = QApplication::activeWindow()) top->close();
         });
-        // THE PAFTA WINDOWS, which are windows like any other and so belong in
+        // THE LAYOUT WINDOWS, which are windows like any other and so belong in
         // the smoke test: a dialog that crashes on construction passed
         // `shell-starts` twice before this test existed.
         later([&window] {
-            window.controller()->runLine(QStringLiteral("PAFTA islem=ekle ad=\"Duman\" kagit=A4"),
-                                         kentos::command::Origin::Gui);
+            window.controller()->runLine(
+                QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=\"Duman\" kagit=A4"),
+                kentos::command::Origin::Gui);
             window.openLayoutManager();
         });
         later([] {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the pafta designer.
+// KentOSCad — app: the layout designer.
 //
 // WHAT IT IS. A window onto one sheet: the page in the middle, the items listed
 // on the left, the selected item's properties on the right, and a bar that adds
@@ -7,7 +7,7 @@
 // by its corner handles.
 //
 // AND EVERY ONE OF THOSE GESTURES LEAVES AS A COMMAND. Dragging a title block
-// emits `PAFTAÖĞE islem=tasi ad=baslik x=… y=…`; typing in a property field
+// emits `ÇIKTIÖĞE islem=tasi ad=baslik x=… y=…`; typing in a property field
 // emits `islem=ayarla`. Nothing here writes to the document directly, which is
 // not ceremony: it is what makes the designer undoable with the same Ctrl+Z as
 // the rest of the program, journalled, scriptable and reachable by a model
@@ -74,7 +74,7 @@ signals:
     /// The user picked an item, or cleared the pick with an empty string.
     void selectionChanged(const QString& id);
 
-    /// A drag ended. The window turns this into `PAFTAÖĞE islem=tasi`.
+    /// A drag ended. The window turns this into `ÇIKTIÖĞE islem=tasi`.
     void itemMoved(const QString& id, core::PaperRect frame);
 
     /// An item was double-clicked; the window puts the focus in its properties.
@@ -181,7 +181,7 @@ private:
     /// Refills the list and the property panel from the document.
     void refresh();
 
-    /// Runs one `PAFTAÖĞE` line for the selected item and refreshes.
+    /// Runs one `ÇIKTIÖĞE` line for the selected item and refreshes.
     void edit(const QString& arguments);
 
     /// Adds an item of `kind` and selects it.

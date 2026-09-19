@@ -6,66 +6,105 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
-### Eklendi — Pafta düzeni (sayfa sistemi)
+### Düzeltildi — clang-tidy kapısı gerçekten çalışıyor
 
-- **Pafta çizimin içindedir** (`core/layout.hpp`): kâğıt boyu, yönü, kenar boşluğu ve
+- **`make check` clang-tidy'yi atlıyordu.** Makefile `command -v clang-tidy` diye
+  soruyordu; Homebrew'un LLVM'i keg-only olduğu için cevap "kurulu değil" oluyor ve
+  kapı SKIPPED yazıp geçiyordu — oysa araç iki dizin ötede duruyordu. Soru artık
+  `scripts/tidy.sh --var`'a soruluyor; aracı arayan kod zaten oradaydı (Article 10:
+  Makefile'da yapı mantığı olmaz). **Atlayan bir kapı hiç çalışmamış kapıdır** (6.2).
+- Kapı açılınca ağaçta **3719 bulgu** çıktı, hepsi temizlendi. İçlerinden gerçek olanlar:
+  - **Üç yerde işaretçi sıralanıyordu** (`command/registry.cpp`, `core/settings.cpp`,
+    `processing/registry.cpp`). Karşılaştırıcılar anahtara bakıyordu, ama adres kabı
+    sıralamak bu programın bit-aynı çıktı iddiasının (Article 2.5, §7.3) yanında
+    durulacak bir şekil değil. Üçü de **indeks sıralamaya** çevrildi.
+  - `app/main.cpp` sınama sürüşünde `check()` rapor ediyor ama dönmüyordu; bir sonraki
+    satır az önce şikâyet ettiği null'ı dereference ediyordu.
+  - `app/layout_designer.cpp` kullanıcıya **yanlış yer tutucuyu** söylüyordu.
+  - `Banner::addAction` `QWidget::addAction`'ı gizliyordu → `addButton`.
+    `GridDelegate::setTheme` sanal olmayan tabanı gizliyordu → taban `virtual` oldu.
+  - `io/dxf_reader.cpp`'de `PendingInsert` her vektör büyümesinde koca bir DXF
+    varlığını kopyalıyordu; artık işaretçinin arkasında.
+  - `kentos_docgen`'in `main`'i istisna sızdırıyordu: yarım yazılmış bir referans
+    `ci-gate-docs.sh`'in karşılaştıracağı şeydir. Artık sınırda yakalanıyor.
+  - `core::LayoutItem` nesne başına **39 bayt dolgu** harcıyordu (en iyisi 7).
+- `.clang-tidy`: `bugprone-signed-bitwise` pozitif tamsayı sabitlerini yok sayıyor;
+  kontrol bit işlemindeki **işaretli değişkeni** yakalamak için var, `1u << 0` biçimindeki
+  bayrak sözcüklerini değil — ağaçta 3571 kez. İşaretli bir `int` işlenen hâlâ yapıyı kırar.
+- `scripts/tidy.sh` artık bulguyu **konumuna göre** süzüyor: `/src` dışındaki bir bulgu
+  üzerinde çalışabileceğimiz bir bulgu değil. Betiğin kendi yorumu bunu zaten söylüyordu;
+  clang-tidy'nin `HeaderFilterRegex`'i çözümleyici bulgularına ulaşmadığı için (libpqxx'in
+  `result_iter`'ı canlı örnek) politika koda taşındı.
+
+
+### Eklendi — Çıktı yerleşimi (sayfa sistemi)
+
+- **Bu sayfaya "pafta" DENMEZ, "çıktı yerleşimi" denir.** Bu ülkede pafta, kadastronun
+  böldüğü harita sayfasıdır — `29-30-K` gibi bir adı olan, paylaşılan bir paftalama
+  sisteminin karesi. Bastığınız kâğıt ise bambaşka bir şeydir ve ikisini aynı sözcükle
+  anmak, bir haritacıya iki farklı işi aynı adla söylemektir. Komut adları
+  `ÇIKTIYERLEŞİMİ`, `ÇIKTIÖĞE` ve `ÇIKTIŞABLON`; parametre `yerlesim=`; yer tutucu
+  `<yerlesim>`. **Komut kimlikleri (`core.layout`, `core.layout_item`,
+  `core.layout_template`) değişmedi**, çünkü onlar kaydedilmiş belgelere ve günlüğe
+  yazılır; bir yeniden adlandırma eski bir dosyayı okunamaz hâle getiremez.
+- **Çıktı yerleşimi çizimin içindedir** (`core/layout.hpp`): kâğıt boyu, yönü, kenar boşluğu ve
   üzerine yerleştirilmiş öğeler. Yazdırma profilinden farkı budur — profil bu
-  bilgisayarın ayarıdır, pafta teslim edilen işin parçasıdır: dosyayla gider, çizimin
+  bilgisayarın ayarıdır, yerleşim teslim edilen işin parçasıdır: dosyayla gider, çizimin
   parmak izine girer ve her düzenlemesi tek `Ctrl+Z` ile geri alınır. Konumlar **kâğıt
   mikrometresi** (`int32`, model.md R20) ve sayfanın sol **ÜST** köşesinden ölçülür;
   zemin/kâğıt çevrimi yalnız harita öğesinin içinde yapılır.
 - **Sekiz öğe türü**: harita çerçevesi (kendi kapsamı, ölçeği ve **koordinat
   ızgarası** ile), metin, ölçek çubuğu, kuzey oku, lejant, resim, şekil, tablo. Metin
-  öğesinin `<pafta>`, `<olcek>`, `<tarih>`, `<crs>`, `<proje>`, `<kagit>` yer
+  öğesinin `<yerlesim>`, `<olcek>`, `<tarih>`, `<crs>`, `<proje>`, `<kagit>` yer
   tutucuları **çizim anında** çözülür ve asla çözülmüş hâlde saklanmaz — ölçek
-  değiştiğinde yeniden bastığınız pafta yeni ölçeği yazar.
-- **İki yeni komut**: **`PAFTA`** (`islem=listele|ekle|sil|ad|sayfa`) sayfaları,
-  **`PAFTAÖĞE`** (`islem=listele|ekle|sil|tasi|ayarla`) üzerindeki öğeleri yönetir.
-  Yeni bir pafta boş değildir: harita, başlık, ölçek çubuğu ve kuzey oku ile gelir.
+  değiştiğinde yeniden bastığınız yerleşim yeni ölçeği yazar.
+- **İki yeni komut**: **`ÇIKTIYERLEŞİMİ`** (`islem=listele|ekle|sil|ad|sayfa`) sayfaları,
+  **`ÇIKTIÖĞE`** (`islem=listele|ekle|sil|tasi|ayarla`) üzerindeki öğeleri yönetir.
+  Yeni bir yerleşim boş değildir: harita, başlık, ölçek çubuğu ve kuzey oku ile gelir.
   Kâğıdı değiştirmek öğeleri **yeniden ölçeklemez** — üstten 20 mm'deki başlık A3'te
   de üstten 20 mm'dedir. Her çağrı tek işlem, tek geri alma adımıdır; liste bütün
   hâlinde geri yüklenir, çünkü bir öğe silindiğinde dizinler kayar.
 - **Bildirilen ölçek kazanır**: `olcek=1000` verildiğinde pencere çerçevenin kâğıt
-  boyundan hesaplanır, kapsamın merkezine oturur. Bu yüzden 1:1000 bir paftanın
-  kâğıdını büyütmek daha ÇOK zemin gösterir; bir pafta ölçeğinin anlamı budur.
+  boyundan hesaplanır, kapsamın merkezine oturur. Bu yüzden 1:1000 bir yerleşimin
+  kâğıdını büyütmek daha ÇOK zemin gösterir; bir harita ölçeğinin anlamı budur.
   `olcek=0` ise pencere neredeyse odur ve ölçek ondan çıkar. Tek fonksiyon
   (`core::map_scale` / `core::map_window`), dolayısıyla çizilen harita, ölçülen
   ölçek çubuğu ve basılan `<olcek>` asla birbirinden ayrılamaz.
-- **Pafta çizen tek boyacı** (`app/layout_render.hpp`): tasarımcının sayfası, baskı
+- **Yerleşimi çizen tek boyacı** (`app/layout_render.hpp`): tasarımcının sayfası, baskı
   önizlemesi ve dışa aktarılan PDF aynı fonksiyondan geçer. Harita çerçevesi tuvalin
-  kendi render boru hattından (`render::build_scene`) çizilir, yani paftadaki çizgi
+  kendi render boru hattından (`render::build_scene`) çizilir, yani yerleşimdeki çizgi
   kalınlıkları ekrandakiyle aynı kuralla hesaplanır. Izgara aralığı verilmezse 1-2-5
   basamaklarından seçilir: 37 metrelik aralık kimsenin koordinat okuyamayacağı bir
   ızgaradır.
 - **Dosya biçimi**: dört yeni **isteğe bağlı** blok (`kBlkLayouts`, `…Pages`,
-  `…Items`, `…Names`). Paftası olmayan bir çizim tek bayt ödemez ve dosyası
-  paftalardan önceki hâliyle bayt bayt aynıdır (io.md R10), dolayısıyla sürüm
+  `…Items`, `…Names`). Yerleşimi olmayan bir çizim tek bayt ödemez ve dosyası
+  yerleşimlerden önceki hâliyle bayt bayt aynıdır (io.md R10), dolayısıyla sürüm
   yükseltmesi değildir. Bilinmeyen bir öğe türü **reddedilir**, sessizce metne
-  çevrilmez: ileri sürümden gelen bir paftayı kaydetmek veri kaybı olurdu.
+  çevrilmez: ileri sürümden gelen bir yerleşimi kaydetmek veri kaybı olurdu.
 - ISO 216 kâğıt tablosu `/src/io`'dan **`/src/core`'a taşındı**: A4'ün 210×297 olması
-  bir dosya biçimi değil geometrik olgudur, ve hem yazdırma profillerinin hem pafta
+  bir dosya biçimi değil geometrik olgudur, ve hem yazdırma profillerinin hem yerleşim
   komutlarının okuduğu tek tablo olması gerekir (CLAUDE.md 5.10).
 
-- **Pafta tasarımcısı** (`app/layout_designer.hpp`): solda çizim sırasına göre öğe
+- **Çıktı yerleşimi tasarımcısı** (`app/layout_designer.hpp`): solda çizim sırasına göre öğe
   listesi, ortada sayfa, sağda seçili öğenin özellikleri, altta **PDF'e aktar** ve
   **Yazdır**. Öğeye tıklamak seçer, sürüklemek taşır, köşe tutamağı boyutlandırır, ok
   tuşları birer milimetre (Shift ile on) kaydırır. **Her jest bırakıldığında tek bir
-  `PAFTAÖĞE` satırı yazar** — sürükleme boyunca değil: sayfanın bir ucundan öbürüne
+  `ÇIKTIÖĞE` satırı yazar** — sürükleme boyunca değil: sayfanın bir ucundan öbürüne
   taşınan kutu tek `Ctrl+Z` ile döner, dört yüz adımda değil. Kendi düzenleme yolu
   yoktur; pencerenin yaptığı her şey komut günlüğünde durur ve bir betiğin
   yazabileceği satırlardır (CLAUDE.md 1.1, 1.2).
 - **İstenen akış tamam**: araç çubuğundaki yazdırma okunun listesinde profillerin
-  altında **çizimin paftaları** durur. Bir pafta seçilince tuval o paftanın **harita
+  altında **çizimin yerleşimleri** durur. Bir yerleşim seçilince tuval o yerleşimin **harita
   çerçevesinin en-boy oranında** bir seçme çerçevesi açar — kâğıdın değil, haritanın
   oranında, çünkü çerçevelenen şey haritanın göstereceği alandır — ve alan bırakılınca
-  **tasarımcı açılır, harita o alana bakıyor olur**. Aynı listede **Yeni pafta…** var.
-- **`YAZDIR pafta=<ad>`**: pafta kendi kâğıdını, kenarını, sayfalarını ve harita
+  **tasarımcı açılır, harita o alana bakıyor olur**. Aynı listede **Yeni çıktı yerleşimi…** var.
+- **`YAZDIR yerlesim=<ad>`**: yerleşim kendi kâğıdını, kenarını, sayfalarını ve harita
   penceresini taşıdığı için `pencere`, `merkez`, `olcek` ve `profil` ile birlikte
   verilmez — birlikte verilirse **reddedilir**, sessizce biri kazanmaz. Çok sayfalı
-  pafta çok sayfalı PDF olur.
+  yerleşim çok sayfalı PDF olur.
 - Yeni bütünleşme sınaması **`layout-designer`**: tasarımcıyı bir el gibi sürer —
   öğe seç, sürükle, metin yaz, ızgara ve ölçek ayarla, öğe ekle — sonra tek `GERİAL`in
-  son jesti geri aldığını ve paftanın PDF olarak yazıldığını doğrular.
+  son jesti geri aldığını ve yerleşimin PDF olarak yazıldığını doğrular.
 
 - **Öznitelik tablosu doluyor**: başlıklar katmanın şemasından, değerler çizimden.
   Kutuya kaç satır sığıyorsa o kadarı yazılır ve **sığmayanlar sayılarak bildirilir**
@@ -94,31 +133,31 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   uca yönlendiriyor, yani bir geliştiricinin kendi makinesindeki gerçek bulut profiline
   ve gerçek anahtar deposuna hiçbir yoldan ulaşamıyor.
 
-- **Ana menüye girdi**: **`Dosya ▸ Paftalar`** — QGIS'in `Project ▸ Layouts`'unun
-  durduğu yer, ve aynı sebeple `Dosya` altında: pafta belgeye aittir, dosyayla gider ve
+- **Ana menüye girdi**: **`Dosya ▸ Çıktı Yerleşimleri`** — QGIS'in `Project ▸ Layouts`'unun
+  durduğu yer, ve aynı sebeple `Dosya` altında: yerleşim belgeye aittir, dosyayla gider ve
   imzalanan işin parçasıdır. Menü her açılışta çizimden yeniden kurulur, yani komut
-  satırından eklenen bir pafta orada olur. Her paftanın kendi alt menüsü var:
+  satırından eklenen bir yerleşim orada olur. Her yerleşimin kendi alt menüsü var:
   **Tasarımcıyı Aç**, **Tuvalden Alan Seç…**, **PDF'e Aktar…**.
-- **Pafta Yöneticisi** (`Ctrl+Shift+P`, `app/layout_manager.hpp`): çizimdeki paftaları
+- **Çıktı Yerleşimi Yöneticisi** (`Ctrl+Shift+P`, `app/layout_manager.hpp`): çizimdeki yerleşimleri
   kâğıdı, yönü ve öğe sayısıyla listeler; açar, yeniden adlandırır, siler ve
-  **çoğaltır**. Çoğaltma tek bir "kopyala" fiili değildir — bir `PAFTA islem=ekle` ve
-  her öğe için bir `PAFTAÖĞE`, hepsi tek toplu iş: günlükte gerçekte ne kurulduğu
+  **çoğaltır**. Çoğaltma tek bir "kopyala" fiili değildir — bir `ÇIKTIYERLEŞİMİ islem=ekle` ve
+  her öğe için bir `ÇIKTIÖĞE`, hepsi tek toplu iş: günlükte gerçekte ne kurulduğu
   görünür ve tek `Ctrl+Z` geri alır.
-- Duman testi (`windows-open`) artık Pafta Yöneticisi'ni ve tasarımcıyı da açıyor;
+- Duman testi (`windows-open`) artık Çıktı Yerleşimi Yöneticisi'ni ve tasarımcıyı da açıyor;
   `layout-designer` sınaması menüyü gezip girişlerin bağlı olduğunu doğruluyor.
 
-- **Pafta şablon kitaplığı** (**`PAFTAŞABLON`**, `app/layout_templates.hpp`): kurumun
-  standart paftası — antedi, lejant kutusu, ızgara ayarı — her işte kullanılır,
+- **Çıktı yerleşimi şablon kitaplığı** (**`ÇIKTIŞABLON`**, `app/layout_templates.hpp`): kurumun
+  standart sayfası — antedi, lejant kutusu, ızgara ayarı — her işte kullanılır,
   dolayısıyla tek bir işin dosyasında duramaz. Şablonlar kullanıcı profilinde bir
   klasörde, **her biri kendi JSON dosyasında** durur; tek bir büyük dosya değil, çünkü
   bir şablon kendi başına bir belgedir: postalanır, sürüm denetimine konur, antet
-  değişince yamalanır. `Dosya ▸ Paftalar ▸ Şablonlar` uygular ve kaydeder.
-- **Şablon düzeni taşır, zemini taşımaz.** Uygulanan paftanın harita çerçevesi
-  hedefsiz gelir: Trabzon'daki bir çizimin koordinatlarını Ankara'daki bir paftaya
-  taşımak, şablonun paftayı yanlış yere hedeflemesidir. `uygula` sıradan bir pafta
+  değişince yamalanır. `Dosya ▸ Çıktı Yerleşimleri ▸ Şablonlar` uygular ve kaydeder.
+- **Şablon düzeni taşır, zemini taşımaz.** Uygulanan yerleşimin harita çerçevesi
+  hedefsiz gelir: Trabzon'daki bir çizimin koordinatlarını Ankara'daki bir sayfaya
+  taşımak, şablonun yerleşimi yanlış yere hedeflemesidir. `uygula` sıradan bir yerleşim
   düzenlemesidir ve tek `Ctrl+Z` ile kalkar; `kaydet` ve `sil` çizime dokunmaz.
 - Şablon adındaki dosya adı olamayacak karakterler `_` ile değiştirilir, reddedilmez —
-  kurum paftasına `18. madde / askı` demek isteyen engellenmez, ama yazılan dosya
+  kurum sayfasına `18. madde / askı` demek isteyen engellenmez, ama yazılan dosya
   klasörün dışına çıkamaz.
 
 ### Eklendi — Gömülü MCP sunucusu, yapay zeka sohbeti ve üretilmiş `llms.txt`

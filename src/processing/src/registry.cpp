@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
@@ -52,16 +53,24 @@ using command::Value;
 const std::vector<const ProcessingTool*>& all_tools()
 {
     static const std::vector<const ProcessingTool*> tools = [] {
-        std::vector<const ProcessingTool*> out{
+        const std::vector<const ProcessingTool*> declared{
             &kentos_tool_label_length(), &kentos_tool_number_vertices(), &kentos_tool_area_edit(),
             &kentos_tool_attach(),       &kentos_tool_detach(),
         };
-        std::stable_sort(out.begin(), out.end(),
-                         [](const ProcessingTool* a, const ProcessingTool* b) {
-                             if (a->spec().group != b->spec().group)
-                                 return a->spec().group < b->spec().group;
-                             return a->spec().title < b->spec().title;
-                         });
+        // The ORDER is sorted, never the addresses: a run that put two tools in
+        // a different place would move a row in the Araçlar tree and a line in
+        // the generated reference (CLAUDE.md 5.10).
+        std::vector<std::size_t> order(declared.size());
+        std::iota(order.begin(), order.end(), std::size_t{0});
+        std::stable_sort(order.begin(), order.end(), [&](std::size_t a, std::size_t b) {
+            if (declared[a]->spec().group != declared[b]->spec().group)
+                return declared[a]->spec().group < declared[b]->spec().group;
+            return declared[a]->spec().title < declared[b]->spec().title;
+        });
+        std::vector<const ProcessingTool*> out;
+        out.reserve(order.size());
+        for (const std::size_t at : order)
+            out.push_back(declared[at]);
         return out;
     }();
     return tools;
@@ -402,8 +411,11 @@ Task<void> run_tool(Context& ctx)
                 ctx.echo(st.error().message);
                 co_return;
             }
-        } else if (r.attach) {
-            if (auto st = ctx.transaction().set_attachment(e, *r.attach); !st) {
+            // THE BRANCH OWNS ITS OWN COPY. `r` is a reference into the tool's
+            // output and the transaction calls around here are non-const, so a
+            // test on `r.attach` is not a fact that survives to the read of it.
+        } else if (const std::optional<core::Attachment> attach = r.attach; attach) {
+            if (auto st = ctx.transaction().set_attachment(e, *attach); !st) {
                 ctx.echo(st.error().message);
                 co_return;
             }

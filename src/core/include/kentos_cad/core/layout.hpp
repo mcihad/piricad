@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — core: the pafta, as data.
+// KentOSCad — core: the output layout, as data.
 //
 // WHAT A LAYOUT IS. A named sheet composition: pages of a given size, and items
 // placed on them in PAPER coordinates — a map frame with its own ground extent
 // and scale, a title, a scale bar, a north arrow, a legend, a logo, a frame line,
 // an attribute table. It is what QGIS calls a print layout and what a surveyor
-// calls a pafta, and it is the thing that actually gets signed and filed.
+// calls a pafta — a plan sheet — and it is the thing that gets signed and filed.
 //
-// IT LIVES IN THE DRAWING, and that is the decision this file records. A pafta
+// THE PROGRAM CALLS IT AN `ÇIKTI YERLEŞİMİ`, an output layout, and not a pafta.
+// In this country `pafta` also names a SHEET OF A SUBDIVIDED MAP — the unit a
+// cadastral archive is indexed by — and a program about cadastre must not use
+// one word for both. The English identifiers stay `Layout`.
+//
+// IT LIVES IN THE DRAWING, and that is the decision this file records. A layout
 // is not a setting of the machine it was drawn on: the sheet layout of an
 // 18. madde application is part of the submitted work, it is reviewed with the
 // drawing, and a colleague who opens the file must see the same sheet. So a
@@ -107,7 +112,7 @@ struct PaperRect
     friend bool operator==(const PaperRect&, const PaperRect&) = default;
 };
 
-/// What an item IS. The pafta set, and nothing speculative.
+/// What an item IS. What a sheet needs, and nothing speculative.
 enum class LayoutItemKind : std::uint8_t {
     Map,        ///< a window onto the drawing, with its own extent, scale and grid
     Label,      ///< text: the title, the ada/parsel line, a note, a date
@@ -162,89 +167,99 @@ enum class GridLabels : std::uint8_t {
 /// shapes may gain fields, they may not change meaning).
 struct LayoutItem
 {
+    // FIELDS ARE ORDERED BY WIDTH, NOT BY MEANING. Grouped the readable way —
+    // frame, then Label, then Map, then Table — the eight-byte handles and the
+    // one-byte enums interleave and the struct spends 39 bytes on padding for
+    // every item on every page. Each field still says which part of the item it
+    // belongs to, and `operator==` is defaulted, so the order is a layout
+    // decision and nothing else depends on it.
+
+    // ---- eight-byte handles and quantities ----------------------------------
+
     /// The item's name inside its layout, unique under Turkish folding. A
     /// COMMAND NAMES AN ITEM BY THIS, not by an index: an index changes when
     /// something before it is deleted, and a journal replayed six months later
     /// would move the wrong box (Article 1.4).
     std::string id;
 
-    LayoutItemKind kind{LayoutItemKind::Label};
+    /// `Label`: the text, which may carry the placeholders `<ada>`, `<parsel>`,
+    /// `<olcek>`, `<tarih>`, `<yerlesim>`, `<crs>` — resolved when the sheet is
+    /// drawn, never stored resolved, so a re-export after an edit says the truth.
+    /// `Picture`: the file path. `Table`: the layer name. `Legend`/`ScaleBar`:
+    /// the caption above it.
+    std::string text;
+
+    /// Map: which layers this frame draws. EMPTY MEANS ALL VISIBLE LAYERS, which
+    /// is what a first map item wants; naming layers is how a second frame shows
+    /// a different theme of the same ground.
+    std::vector<std::string> layers;
+
+    /// Table: the attribute columns to print, in order. Empty means every column.
+    std::vector<std::string> columns;
+
+    /// Map: the ground window this frame shows, in `Mm`. Empty means "not aimed
+    /// yet": the designer then shows the drawing's extent and says so.
+    Box2 extent{};
+
+    /// Map: the denominator of 1:N. 0 means the scale FOLLOWS the extent and the
+    /// frame; a non-zero value pins it and the extent is recomputed about its
+    /// centre — which is what a sheet at a declared scale needs.
+    std::int64_t scale{0};
+
+    /// Map: ground millimetres between grid lines; 0 = chosen for the scale.
+    Mm grid_interval{0};
+
+    // ---- four-byte geometry, colour and count -------------------------------
+
+    /// Where the item sits on the page, from the page's top-left corner.
     PaperRect frame{};
 
     /// Paint order, low to high. Not the array index: a user raising an item
     /// must not renumber every command that names another one.
     std::int32_t z{0};
 
-    /// Whether the designer refuses to move or resize it. A title block that has
-    /// been placed is usually locked so a drag on the map does not take it along.
-    bool locked{false};
-
     /// Rotation in micro-degrees, clockwise on the page. Whole-item, around its
     /// own centre.
     std::int32_t rotation_udeg{0};
 
-    // ---- frame and ground, drawn by every kind ------------------------------
-
-    bool frame_visible{false};                   ///< draw an outline around the item
-    Um frame_width{um_from_mm(0)};               ///< that outline's width; 0 = a hairline
+    Um frame_width{um_from_mm(0)};               ///< the outline's width; 0 = a hairline
     std::uint32_t frame_colour{0xFF000000};      ///< AARRGGBB
-    bool background{false};                      ///< fill behind the item
     std::uint32_t background_colour{0xFFFFFFFF}; ///< the fill's colour, AARRGGBB
-
-    // ---- Label, and the caption of ScaleBar / Legend / Table ----------------
-
-    /// `Label`: the text, which may carry the placeholders `<ada>`, `<parsel>`,
-    /// `<olcek>`, `<tarih>`, `<pafta>`, `<crs>` — resolved when the sheet is
-    /// drawn, never stored resolved, so a re-export after an edit says the truth.
-    /// `Picture`: the file path. `Table`: the layer name. `Legend`/`ScaleBar`:
-    /// the caption above it.
-    std::string text;
 
     Um text_height{um_from_mm(3)}; ///< cap height on paper
     std::uint32_t text_colour{0xFF000000};
+
+    /// Map: the grid line's width on paper; 0 = a hairline.
+    Um grid_width{0};
+    /// Map: the grid's colour, AARRGGBB.
+    std::uint32_t grid_colour{0xFF000000};
+    /// Map: cap height of the grid's coordinate labels, on paper.
+    Um grid_text_height{um_from_mm(2)};
+
+    /// `ScaleBar`: how many segments. `NorthArrow`: which of the drawn arrows.
+    std::int32_t style{0};
+
+    std::int32_t row_limit{0}; ///< Table: 0 = as many rows as fit
+
+    // ---- one-byte kinds and switches ----------------------------------------
+
+    LayoutItemKind kind{LayoutItemKind::Label};
+
+    /// Whether the designer refuses to move or resize it. A title block that has
+    /// been placed is usually locked so a drag on the map does not take it along.
+    bool locked{false};
+
+    bool frame_visible{false}; ///< draw an outline around the item
+    bool background{false};    ///< fill behind the item
 
     /// 0 left / 1 centre / 2 right, and 0 top / 1 middle / 2 bottom.
     std::uint8_t align_h{0};
     std::uint8_t align_v{0};
 
-    // ---- Map ----------------------------------------------------------------
-
-    /// The ground window this frame shows, in `Mm`. Empty means "not aimed yet":
-    /// the designer then shows the drawing's extent and says so.
-    Box2 extent{};
-
-    /// The denominator of 1:N. 0 means the scale FOLLOWS the extent and the
-    /// frame; a non-zero value pins it and the extent is recomputed about its
-    /// centre — which is what a pafta at a declared scale needs.
-    std::int64_t scale{0};
-
     GridStyle grid{GridStyle::None};
     GridLabels grid_labels{GridLabels::Outside};
-    Mm grid_interval{0}; ///< ground millimetres between lines; 0 = chosen for the scale
-    Um grid_width{0};    ///< the grid line's width on paper; 0 = a hairline
-    std::uint32_t grid_colour{0xFF000000};
-    Um grid_text_height{um_from_mm(2)};
-
-    /// Which layers this frame draws. EMPTY MEANS ALL VISIBLE LAYERS, which is
-    /// what a first map item wants; naming layers is how a second frame shows a
-    /// different theme of the same ground.
-    std::vector<std::string> layers;
-
-    // ---- ScaleBar / NorthArrow ----------------------------------------------
-
-    /// `ScaleBar`: how many segments. `NorthArrow`: which of the drawn arrows.
-    std::int32_t style{0};
-
-    // ---- Shape ---------------------------------------------------------------
 
     LayoutShape shape{LayoutShape::Rectangle};
-
-    // ---- Table ---------------------------------------------------------------
-
-    /// The attribute columns to print, in order. Empty means every column.
-    std::vector<std::string> columns;
-
-    std::int32_t row_limit{0}; ///< 0 = as many as fit
 
     friend bool operator==(const LayoutItem&, const LayoutItem&) = default;
 };
@@ -265,7 +280,7 @@ struct Layout
     /// the print profile list shows and the name `YAZDIR` takes.
     std::string name;
 
-    /// At least one. A pafta series is several pages of one size; a report is a
+    /// At least one. A sheet series is several pages of one size; a report is a
     /// map page and a table page.
     std::vector<LayoutPage> pages{LayoutPage{}};
 
@@ -348,7 +363,7 @@ private:
 ///
 /// WHY JSON AND NOT THE DOCUMENT'S OWN BLOCKS. A template lives outside any
 /// drawing, in the office's own file, and is edited by hand more often than
-/// anybody admits — a firm's standard pafta is copied between machines, put in
+/// anybody admits — a firm's standard sheet is copied between machines, put in
 /// version control and patched when the title block changes. The document's
 /// binary blocks are right for a file the program writes and reads a thousand
 /// times; a template is written once and read by people (`io.md` P5's rule about
@@ -356,7 +371,7 @@ private:
 ///
 /// THE GROUND EXTENT IS DELIBERATELY NOT WRITTEN. A template says how a sheet is
 /// ARRANGED, not where it looks: carrying one drawing's coordinates into another
-/// drawing's pafta is how a template for Ankara aims a sheet at Ankara in a file
+/// drawing's layout is how a template for Ankara aims a sheet at Ankara in a file
 /// about Trabzon.
 std::string layout_to_json(const Layout& layout, std::string_view name);
 
@@ -377,14 +392,14 @@ std::int64_t map_scale(const LayoutItem& item);
 ///
 /// With a declared scale this is the frame's own paper size multiplied by it,
 /// centred on the stored extent's centre — which is why changing the paper of a
-/// 1:1000 pafta shows MORE ground rather than the same ground smaller. With no
+/// 1:1000 sheet shows MORE ground rather than the same ground smaller. With no
 /// declared scale it is the stored extent, widened to the frame's aspect so the
 /// picture is not stretched.
 Box2 map_window(const LayoutItem& item);
 
 /// A layout for `paper` at `width` × `height` paper micrometres, with one page,
 /// a map frame inside the margin, a title at the top and a scale bar under the
-/// map: the sheet a new layout starts as, so `Yeni pafta` produces something
+/// map: the sheet a new layout starts as, so a new layout produces something
 /// printable rather than an empty page.
 Layout default_layout(std::string name, Um width, Um height, Um margin);
 

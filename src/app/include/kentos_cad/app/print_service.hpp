@@ -90,7 +90,7 @@ signals:
 private:
     command::Task<core::Result<std::string>> handle(command::PrintRequest request);
 
-    /// Prints a PAFTA — its own paper, its own pages, its own map frames — to a
+    /// Prints an OUTPUT LAYOUT — its own paper, its own pages, its own map frames — to a
     /// PDF or a printer. Takes no profile and no window: a layout carries both
     /// (`core/layout.hpp`, and the refusal in `core.print` that says so).
     core::Result<std::string> printLayout(const command::PrintRequest& request);

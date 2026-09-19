@@ -45,7 +45,7 @@ using Mm3 = std::int64_t;
 /// magnitude past a `dilim`-prefixed TUREF/TM3 `sağa değer` (3.05e10 mm), so no
 /// legitimate Turkish coordinate is anywhere near it, and a value beyond it is a
 /// corrupt import rather than a place.
-inline constexpr Mm kMmCoordinateLimit = Mm{1} << 61;
+inline constexpr Mm kMmCoordinateLimit = static_cast<Mm>(std::uint64_t{1} << 61U);
 
 enum class RingRole : std::uint8_t {
     Open     = 0, ///< a polyline: first and last vertex are not joined

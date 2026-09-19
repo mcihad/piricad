@@ -486,7 +486,7 @@ QString resolve_placeholders(const QString& text, const core::Layout& layout,
                              const core::LayoutItem* map, const LayoutFacts& facts)
 {
     QString out = text;
-    out.replace(QStringLiteral("<pafta>"), facts.sheet);
+    out.replace(QStringLiteral("<yerlesim>"), facts.sheet);
     out.replace(QStringLiteral("<proje>"), facts.project);
     out.replace(QStringLiteral("<crs>"), facts.crs);
     out.replace(QStringLiteral("<tarih>"), facts.date);
@@ -515,18 +515,18 @@ void paint_layout_page(QPainter& painter, const QRectF& target, const core::Docu
 
     // PAINT ORDER IS `z`, NOT ARRAY ORDER (core/layout.hpp): a user who sent the
     // map behind the title block means it to stay there whatever the file says.
-    std::vector<const core::LayoutItem*> ordered;
+    std::vector<std::size_t> ordered;
     for (std::size_t i = 0; i < layout.items.size(); ++i)
-        if (layout.page_of(i) == static_cast<std::int32_t>(index))
-            ordered.push_back(&layout.items[i]);
-    std::stable_sort(
-        ordered.begin(), ordered.end(),
-        [](const core::LayoutItem* a, const core::LayoutItem* b) { return a->z < b->z; });
+        if (layout.page_of(i) == static_cast<std::int32_t>(index)) ordered.push_back(i);
+    std::stable_sort(ordered.begin(), ordered.end(), [&](std::size_t a, std::size_t b) {
+        return layout.items[a].z < layout.items[b].z;
+    });
 
     const core::LayoutItem* first_map = layout.first_map();
 
-    for (const core::LayoutItem* item : ordered) {
-        const QRectF box = frame_in(target, sheet, item->frame);
+    for (const std::size_t at : ordered) {
+        const core::LayoutItem* item = &layout.items[at];
+        const QRectF box             = frame_in(target, sheet, item->frame);
         if (box.width() < 0.5 || box.height() < 0.5) continue;
 
         painter.save();
@@ -546,7 +546,7 @@ void paint_layout_page(QPainter& painter, const QRectF& target, const core::Docu
             painter.setPen(colour_of(item->text_colour));
             painter.setFont(font_at(item->text_height, px_per_paper_mm));
             painter.drawText(
-                box, static_cast<int>(alignment_of(*item)) | Qt::TextWordWrap,
+                box, static_cast<int>(alignment_of(*item) | Qt::TextWordWrap),
                 resolve_placeholders(QString::fromStdString(item->text), layout, first_map, facts));
             break;
         }

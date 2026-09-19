@@ -616,33 +616,33 @@ TEST_CASE("IO: kılavuzu olmayan bir çizim kılavuz bloğu yazmaz")
     CHECK(fs::file_size(with) > fs::file_size(without));
 }
 
-TEST_CASE("IO: pafta dosyayla gider, öğeleriyle birlikte geri gelir")
+TEST_CASE("IO: çıktı yerleşimi dosyayla gider, öğeleriyle birlikte geri gelir")
 {
-    // A pafta is document CONTENT, not a setting of this machine: it travels in
+    // A layout is document CONTENT, not a setting of this machine: it travels in
     // the file, it is in the content hash and it is undone like any other edit
     // (core/layout.hpp). Its block is OPTIONAL, which the case below pins.
-    TempDir tmp("pafta");
-    const std::string path = tmp.file("paftali.pcad");
+    TempDir tmp("yerlesim");
+    const std::string path = tmp.file("yerlesimli.pcad");
 
     Rig written;
     REQUIRE(written.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
     REQUIRE(written.bus.execute_line("ALAN noktalar=0,0 100,0 100,80 0,80", Origin::Test).ok());
     REQUIRE(written.bus
-                .execute_line("PAFTA islem=ekle ad=\"Ada 1284\" kagit=A3 yon=yatay "
+                .execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=\"Ada 1284\" kagit=A3 yon=yatay "
                               "kenar=15",
                               Origin::Test)
                 .ok());
     REQUIRE(written.bus
-                .execute_line("PAFTAÖĞE islem=ayarla ad=harita olcek=1000 izgara=cizgi "
+                .execute_line("ÇIKTIÖĞE islem=ayarla ad=harita olcek=1000 izgara=cizgi "
                               "pencere=0,0 pencere=100,80",
                               Origin::Test)
                 .ok());
     REQUIRE(written.bus
-                .execute_line("PAFTAÖĞE islem=ayarla ad=baslik metin=\"<pafta> — <olcek>\"",
+                .execute_line("ÇIKTIÖĞE islem=ayarla ad=baslik metin=\"<yerlesim> — <olcek>\"",
                               Origin::Test)
                 .ok());
     REQUIRE(
-        written.bus.execute_line("PAFTAÖĞE islem=ekle tur=lejant ad=lejant", Origin::Test).ok());
+        written.bus.execute_line("ÇIKTIÖĞE islem=ekle tur=lejant ad=lejant", Origin::Test).ok());
 
     const std::uint64_t hash_before = written.doc.content_hash();
 
@@ -677,21 +677,21 @@ TEST_CASE("IO: pafta dosyayla gider, öğeleriyle birlikte geri gelir")
     REQUIRE(title != nullptr);
     // THE PLACEHOLDERS SURVIVE UNRESOLVED, which is the whole point of them: a
     // title flattened to `1:1000` on save would print the old scale for ever.
-    CHECK(title->text == "<pafta> — <olcek>");
+    CHECK(title->text == "<yerlesim> — <olcek>");
 
     REQUIRE(back->find("lejant") != nullptr);
 
-    // AND THE FINGERPRINT AGREES, which is the claim that matters: the pafta is
+    // AND THE FINGERPRINT AGREES, which is the claim that matters: the layout is
     // content, so two documents that differ only in their sheet are different
     // documents, and a round trip must not change one into the other.
     CHECK(reloaded.doc.content_hash() == hash_before);
 }
 
-TEST_CASE("IO: paftası olmayan bir çizim pafta bloğu yazmaz")
+TEST_CASE("IO: yerleşimi olmayan bir çizim yerleşim bloğu yazmaz")
 {
-    TempDir tmp("paftasiz");
-    const std::string with    = tmp.file("paftali.pcad");
-    const std::string without = tmp.file("paftasiz.pcad");
+    TempDir tmp("yerlesimsiz");
+    const std::string with    = tmp.file("yerlesimli.pcad");
+    const std::string without = tmp.file("yerlesimsiz.pcad");
 
     Rig a;
     REQUIRE(a.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
@@ -699,24 +699,24 @@ TEST_CASE("IO: paftası olmayan bir çizim pafta bloğu yazmaz")
 
     Rig b;
     REQUIRE(b.bus.execute_line("ALAN noktalar=0,0 10,0 10,10 0,10", Origin::Test).ok());
-    REQUIRE(b.bus.execute_line("PAFTA islem=ekle ad=Kroki", Origin::Test).ok());
+    REQUIRE(b.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Kroki", Origin::Test).ok());
     REQUIRE(b.bus.execute_line("FARKLIKAYDET \"" + with + "\"", Origin::Test).ok());
 
-    // A drawing with no pafta pays nothing for the feature, which is what keeps
+    // A drawing with no layout pays nothing for the feature, which is what keeps
     // every file written before layouts existed byte for byte what it was
     // (io.md R10).
     CHECK(fs::file_size(with) > fs::file_size(without));
 }
 
-TEST_CASE("Pafta: tek bir Ctrl+Z bütün sayfayı geri alır")
+TEST_CASE("Çıktı yerleşimi: tek bir Ctrl+Z bütün sayfayı geri alır")
 {
     Rig r;
-    REQUIRE(r.bus.execute_line("PAFTA islem=ekle ad=Kroki kagit=A4", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇIKTIYERLEŞİMİ islem=ekle ad=Kroki kagit=A4", Origin::Test).ok());
     REQUIRE(r.doc.layouts().size() == 1);
     const std::size_t items = r.doc.layouts().find("Kroki")->items.size();
     REQUIRE(items == 4);
 
-    REQUIRE(r.bus.execute_line("PAFTAÖĞE islem=ekle tur=lejant ad=lejant", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ÇIKTIÖĞE islem=ekle tur=lejant ad=lejant", Origin::Test).ok());
     CHECK(r.doc.layouts().find("Kroki")->items.size() == items + 1);
 
     REQUIRE(r.bus.execute_line("GERİAL", Origin::Test).ok());
@@ -731,7 +731,7 @@ TEST_CASE("Pafta: tek bir Ctrl+Z bütün sayfayı geri alır")
     CHECK(r.doc.layouts().find("Kroki")->items.size() == items);
 }
 
-TEST_CASE("Pafta şablonu: JSON'a gidip geliyor, zemin koordinatı taşımıyor")
+TEST_CASE("Çıktı şablonu: JSON'a gidip geliyor, zemin koordinatı taşımıyor")
 {
     // A TEMPLATE IS THE ARRANGEMENT, NOT THE GROUND. The office's standard sheet
     // is applied to a drawing in Trabzon and one in Ankara; carrying the first
@@ -753,7 +753,7 @@ TEST_CASE("Pafta şablonu: JSON'a gidip geliyor, zemin koordinatı taşımıyor"
 
     core::LayoutItem* title = source.find("baslik");
     REQUIRE(title != nullptr);
-    title->text    = "<pafta> — <olcek>";
+    title->text    = "<yerlesim> — <olcek>";
     title->locked  = true;
     title->align_h = 1;
 
@@ -791,7 +791,7 @@ TEST_CASE("Pafta şablonu: JSON'a gidip geliyor, zemin koordinatı taşımıyor"
 
     const core::LayoutItem* made_title = made.find("baslik");
     REQUIRE(made_title != nullptr);
-    CHECK(made_title->text == "<pafta> — <olcek>");
+    CHECK(made_title->text == "<yerlesim> — <olcek>");
     CHECK(made_title->locked == true);
     CHECK(made_title->align_h == 1);
 
@@ -801,7 +801,7 @@ TEST_CASE("Pafta şablonu: JSON'a gidip geliyor, zemin koordinatı taşımıyor"
     CHECK(store.upsert(made).ok());
 }
 
-TEST_CASE("Pafta şablonu: bozuk ve gelecekten gelen metin reddedilir")
+TEST_CASE("Çıktı şablonu: bozuk ve gelecekten gelen metin reddedilir")
 {
     CHECK(core::layout_from_json("{ bu json değil", "X").ok() == false);
     CHECK(core::layout_from_json("[]", "X").ok() == false);

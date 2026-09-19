@@ -1295,7 +1295,8 @@ void AttributeTable::refreshCounts()
 
 void AttributeTable::refreshStatistics()
 {
-    if (statistics_ == nullptr || !statistics_->isVisibleTo(this)) return;
+    if (statistics_ == nullptr || model_ == nullptr || view_ == nullptr) return;
+    if (!statistics_->isVisibleTo(this)) return;
 
     const QModelIndex current = view_->currentIndex();
     const int column          = current.isValid() ? current.column() : 1;

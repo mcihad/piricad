@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: drawing a pafta.
+// KentOSCad — app: drawing an output layout.
 //
 // ONE PAINTER FOR THE THREE PLACES A SHEET APPEARS: the designer's page, the
 // print preview and the exported PDF. They differ only in the paint device and
 // the resolution handed in — which is the same bargain `PrintService`'s
 // `paint_window` already makes for a plain print, and for the same reason: three
-// painters would be three answers to "what does this pafta look like", and the
+// painters would be three answers to "what does this sheet look like", and the
 // one that matters is the one that comes out of the printer.
 //
 // IT NEEDS Qt, so it lives here. `core::Layout` is the model and knows nothing
 // about painting; `render::build_scene` draws the DRAWING; this file draws the
 // paper, places the items and asks the render pipeline for the map inside the
-// map frame. Nothing below `/src/app` learns that a pafta can be painted.
+// map frame. Nothing below `/src/app` learns that a layout can be painted.
 #pragma once
 
 #include "kentos_cad/core/layout.hpp"
@@ -29,12 +29,12 @@ namespace kentos::app {
 
 /// What the `<...>` placeholders in a label resolve to.
 ///
-/// RESOLVED AT DRAWING TIME, NEVER STORED RESOLVED (core/layout.hpp): a pafta
+/// RESOLVED AT DRAWING TIME, NEVER STORED RESOLVED (core/layout.hpp): a sheet
 /// re-exported after the scale changed must print the new scale, and a title
 /// that had been flattened to text would print the old one for ever.
 struct LayoutFacts
 {
-    QString sheet;   ///< `<pafta>` — the layout's own name
+    QString sheet;   ///< `<yerlesim>` — the layout's own name
     QString project; ///< `<proje>` — the drawing's file name, without the path
     QString crs;     ///< `<crs>`   — the coordinate system's id
     QString date;    ///< `<tarih>` — today, as the user's locale writes it

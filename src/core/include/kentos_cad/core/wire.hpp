@@ -33,7 +33,7 @@ inline void put_u8(std::vector<std::uint8_t>& out, std::uint8_t v)
 /// Appends a 16-bit unsigned integer, little-endian.
 inline void put_u16(std::vector<std::uint8_t>& out, std::uint16_t v)
 {
-    for (int i = 0; i < 2; ++i)
+    for (unsigned i = 0; i < 2; ++i)
         out.push_back(
             static_cast<std::uint8_t>((static_cast<std::uint32_t>(v) >> (i * 8)) & 0xFFu));
 }
@@ -41,14 +41,14 @@ inline void put_u16(std::vector<std::uint8_t>& out, std::uint16_t v)
 /// Appends a 32-bit unsigned integer, little-endian.
 inline void put_u32(std::vector<std::uint8_t>& out, std::uint32_t v)
 {
-    for (int i = 0; i < 4; ++i)
+    for (unsigned i = 0; i < 4; ++i)
         out.push_back(static_cast<std::uint8_t>((v >> (i * 8)) & 0xFFu));
 }
 
 /// Appends a 64-bit unsigned integer, little-endian.
 inline void put_u64(std::vector<std::uint8_t>& out, std::uint64_t v)
 {
-    for (int i = 0; i < 8; ++i)
+    for (unsigned i = 0; i < 8; ++i)
         out.push_back(static_cast<std::uint8_t>((v >> (i * 8)) & 0xFFu));
 }
 
@@ -102,8 +102,8 @@ public:
     std::uint16_t u16()
     {
         std::uint32_t v = 0;
-        for (int i = 0; i < 2; ++i)
-            v |= static_cast<std::uint32_t>(bytes_[at_ + static_cast<std::size_t>(i)]) << (i * 8);
+        for (unsigned i = 0; i < 2; ++i)
+            v |= static_cast<std::uint32_t>(bytes_[at_ + i]) << (i * 8);
         at_ += 2;
         return static_cast<std::uint16_t>(v);
     }
@@ -112,8 +112,8 @@ public:
     std::uint32_t u32()
     {
         std::uint32_t v = 0;
-        for (int i = 0; i < 4; ++i)
-            v |= static_cast<std::uint32_t>(bytes_[at_ + static_cast<std::size_t>(i)]) << (i * 8);
+        for (unsigned i = 0; i < 4; ++i)
+            v |= static_cast<std::uint32_t>(bytes_[at_ + i]) << (i * 8);
         at_ += 4;
         return v;
     }
@@ -122,8 +122,8 @@ public:
     std::uint64_t u64()
     {
         std::uint64_t u = 0;
-        for (int i = 0; i < 8; ++i)
-            u |= static_cast<std::uint64_t>(bytes_[at_ + static_cast<std::size_t>(i)]) << (i * 8);
+        for (unsigned i = 0; i < 8; ++i)
+            u |= static_cast<std::uint64_t>(bytes_[at_ + i]) << (i * 8);
         at_ += 8;
         return u;
     }

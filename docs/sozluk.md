@@ -37,6 +37,13 @@ tesis veya ağaç gibi unsurlar.
 uygulama imar planına esas oluşturan üst ölçekli plan.
 
 **Pafta** — Haritanın belirli bir ölçekte bölümlenmiş her bir parçası ve ona verilen ad.
+Programın bastığı sayfa buna benzer ama bu değildir; ona **çıktı yerleşimi** denir.
+
+**Çıktı yerleşimi** — Çizimin basılacağı sayfanın düzeni: kâğıt boyu, yönü, kenar
+boşluğu ve üzerine yerleştirilen öğeler (harita çerçevesi, başlık, ölçek çubuğu, kuzey
+oku, lejant, tablo). Çizimle birlikte kaydedilir ve tek `Ctrl+Z` ile geri alınır.
+Bir paftayı gösterebilir, ama bir pafta değildir —
+[`ÇIKTIYERLEŞİMİ`](komutlar/layout.md).
 
 **Parselasyon** — İmar planına göre arazinin imar parsellerine ayrılması işlemi.
 

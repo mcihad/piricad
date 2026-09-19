@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// KentOSCad — app: the list of a drawing's paftas.
+// KentOSCad — app: the list of a drawing's layouts.
 //
 // WHY A LIST WINDOW EXISTS AT ALL. The designer edits ONE sheet. Everything
 // about the SET of them — how many there are, which to open, renaming one,
@@ -8,7 +8,7 @@
 // calls it the Layout Manager; this is the same thing under the name a surveyor
 // uses.
 //
-// EVERY BUTTON IS A COMMAND, like everywhere else: `PAFTA islem=ekle`, `=sil`,
+// EVERY BUTTON IS A COMMAND, like everywhere else: `ÇIKTIYERLEŞİMİ islem=ekle`, `=sil`,
 // `=ad`. Copying is the one that is two lines rather than one, and it is honest
 // about that — there is no `islem=kopyala`, so the window does what a user would
 // do by hand and says so in the journal (Article 1.2).
@@ -27,7 +27,7 @@ class Controller;
 /// The component set's button; see widgets.hpp.
 class Button;
 
-/// Lists the drawing's paftas and opens, renames, copies or removes one.
+/// Lists the drawing's layouts and opens, renames, copies or removes one.
 class LayoutManager : public DialogFrame
 {
     Q_OBJECT

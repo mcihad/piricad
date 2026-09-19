@@ -712,7 +712,7 @@ void PanelHeader::addTab(const QString& label, int glyph)
     update();
 }
 
-void PanelHeader::setButtons(int mask)
+void PanelHeader::setButtons(unsigned mask)
 {
     buttons_ = mask;
     update();
@@ -746,8 +746,8 @@ QVector<int> PanelHeader::buttonList() const
 {
     QVector<int> out;
     // The panel's own marks first, the dock's after: `+ ⧩ ⋮` reads left to right.
-    for (int bit : {Add, Filter, Grip, Collapse, Float, Close})
-        if (buttons_ & bit) out.push_back(bit);
+    for (unsigned bit : {Add, Filter, Grip, Collapse, Float, Close})
+        if ((buttons_ & bit) != 0U) out.push_back(static_cast<int>(bit));
     return out;
 }
 

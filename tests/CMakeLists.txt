@@ -172,16 +172,16 @@ if(TARGET kentos_cad)
     # a suggestion card and an undo entry in a running shell, and a write leaving
     # the drawing untouched until the card is pressed. No socket: the bytes are
     # recorded, because no test in this program calls a live provider (ai.md P10).
-    # AND THE PAFTA DESIGNER, driven the way a hand drives it. `unit` proves the
+    # AND THE LAYOUT DESIGNER, driven the way a hand drives it. `unit` proves the
     # layout model, the file round trip and the two commands; what it cannot
     # reach is the seam between the mouse and those commands — that a drag on the
-    # page becomes a `PAFTAÖĞE` line, that the window redraws from the document
+    # page becomes a `ÇIKTIÖĞE` line, that the window redraws from the document
     # afterwards, that one Ctrl+Z undoes the gesture, and that the sheet then
     # prints. The probe drives all four and writes a PDF.
     add_test(NAME layout-designer
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen
-                "KENTOS_LAYOUT_PROBE=${CMAKE_CURRENT_BINARY_DIR}/pafta-denemesi"
+                "KENTOS_LAYOUT_PROBE=${CMAKE_CURRENT_BINARY_DIR}/yerlesim-denemesi"
                 "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
                 $<TARGET_FILE:kentos_cad>)
     set_tests_properties(layout-designer PROPERTIES TIMEOUT 120)
