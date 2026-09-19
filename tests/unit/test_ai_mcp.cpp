@@ -1268,3 +1268,40 @@ TEST_CASE("MCP: araç yüzeyi sohbetinkiyle aynı katalogdan gelir")
     for (const kentos::ai::ToolDef& one : catalog.tools)
         CHECK(reg.by_id(one.command_id) != nullptr);
 }
+
+TEST_CASE("MCP: taşınmayan bir bildirim kabiliyeti ilan edilmiyor")
+{
+    // TODOS M-02 says it plainly: do not advertise a notification capability the
+    // program does not carry. The protocol layer BUILDS `tools/list_changed` frames
+    // and the live transport cannot deliver them — `mcp_service.cpp` writes an
+    // SSE response once and closes it — so a client that subscribed would hold a
+    // socket waiting for something that can never arrive.
+    //
+    // Declaring a capability the program does not have is worse than lacking it:
+    // a client that trusts the declaration stops polling.
+    //
+    // THIS TEST IS ALSO THE REMINDER. When `McpService` grows a stored responder
+    // and a keep-alive timer, this fails — and that failure is the prompt to turn
+    // the declaration back on in the same change.
+    Rig f;
+    ai::McpServer server = f.server();
+
+    Req req;
+    req.mcp_method = "server/discover";
+    req.body       = rpc_body("server/discover");
+
+    const ai::HttpOutcome out = server.handle(req.view());
+    REQUIRE_EQ(out.status, 200);
+    const Json answer = result_of(out);
+
+    const Json* caps = answer.find("capabilities");
+    REQUIRE(caps != nullptr);
+
+    const Json* tools = caps->find("tools");
+    REQUIRE(tools != nullptr);
+    REQUIRE(tools->find("listChanged") != nullptr);
+    CHECK_FALSE(tools->find("listChanged")->as_bool());
+
+    // And no subscriptions capability at all, for the same reason.
+    CHECK(caps->find("subscriptions") == nullptr);
+}

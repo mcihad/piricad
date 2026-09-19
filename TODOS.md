@@ -712,12 +712,31 @@ uygulanan ve müzakere edilen yetenekler ilan edilmelidir.
 [Tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools),
 [Resources](https://modelcontextprotocol.io/specification/2026-07-28/server/resources)
 
-- [ ] **M-01 / P0 — Gerçek istemci uyumu.** Modern discover, metadata/header
+- [~] **M-01 / P0 — Gerçek istemci uyumu.** *(kısmen)*
+  Protokol uygunluğu Qt'siz olarak sınanıyor (`test_ai_mcp.cpp`): POST/GET/405/202,
+  `403` yanlış `Origin`'de, `400` + `-32020` başlık uyuşmazlığında, `404` + `-32601`
+  bilinmeyen yöntemde, SSE çerçeveleme, ve `server/discover`'ın zorunlu alanları.
+  Canlı soket yarısı `mcp-server` ctest'inde.
+  **Kalan — ve bu mühendislik değil, erişim meselesi:** gerçek istemcilerle
+  (Claude Code, Cursor, vb.) elle bağlanma denemesi ve **hedef istemci listesinin
+  sürümleriyle kaydedilmesi**. Bunu bir istemci elde olmadan yapmak mümkün değil;
+  kullanıcının hangi istemcileri hedeflediğini söylemesi gerekiyor. Modern discover, metadata/header
   doğrulaması, yetenek bildirimi ve anlaşılır sürüm hataları korunup gerçek
   istemcilerle test edilsin. Hedef istemci listesi ve sürümleri kaydedilsin;
   ihtiyaç varsa legacy adaptör eklensin. **Kabul:** en az iki bağımsız istemci
   discover → araç keşfi → sorgu → izinli yazma → sonuç doğrulama akışını tamamlar.
-- [ ] **M-02 / P0 — Canlı taşıma ve yaşam döngüsü.** `mcp_service.cpp` içinde
+- [~] **M-02 / P0 — Canlı taşıma ve yaşam döngüsü.** *(dürüstlük 19 Eylül 2026)*
+  **Gerçek bir kusur kapandı:** sunucu `tools.listChanged: true` ve bir
+  `subscriptions` kabiliyeti **ilan ediyordu**, oysa canlı taşıma SSE yanıtını bir
+  kez yazıp kapatıyor. Abone olan bir istemci, hiç gelemeyecek bir bildirimi
+  bekleyerek soket tutardı — ve bunu yapacağı ona bu nesne tarafından söylenmişti.
+  **Sahip olunmayan bir kabiliyeti ilan etmek, ona sahip olmamaktan kötüdür**:
+  bildirime güvenen istemci yoklamayı bırakır. İkisi de kapatıldı.
+  Test aynı zamanda **hatırlatıcı**: `McpService` saklanan bir responder ve bir
+  keep-alive zamanlayıcısı kazandığında bu test kırılacak, ve o kırılma ilanı aynı
+  değişimde geri açmanın işareti.
+  **Kalan:** açık SSE responder yaşamı, keepalive, disconnect, backpressure ve
+  kapanma temizliği — asıl taşıma işi. `mcp_service.cpp` içinde
   açık SSE responder yaşamı, keepalive, disconnect, backpressure ve kapanma
   temizliğini uygula. Gerçekte taşınmayan bildirim kabiliyetini ilan etme.
   **Kabul:** açık abonelik katalog değişimini alır; bağlantı kopması doğru işi

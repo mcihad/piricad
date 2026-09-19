@@ -445,13 +445,20 @@ McpServer::Answer McpServer::discover(const JsonRpcRequest& rpc) const
         versions.push(Json::string(version));
 
     Json tools;
-    tools.set("listChanged", Json::boolean(true));
-
-    Json subscriptions = Json::array({});
-    subscriptions.push(Json::string(kToolsListChanged));
-
-    Json listen;
-    listen.set("methods", std::move(subscriptions));
+    // NOT ADVERTISED, BECAUSE IT IS NOT CARRIED.
+    //
+    // The protocol layer builds `notifications/tools/list_changed` frames and the
+    // live transport cannot deliver them: `mcp_service.cpp` writes an SSE
+    // response once and closes it, so a client that subscribed would hold a
+    // socket waiting for something that can never arrive — and would have been
+    // told by this very object that it would. TODOS M-02 says it plainly: do not
+    // advertise a notification capability the program does not carry.
+    //
+    // Declaring a capability the program does not have is worse than lacking it:
+    // a client that trusts the declaration stops polling. Turn both of these back
+    // on in the same change that gives `McpService` a stored responder and a
+    // keep-alive timer, and the conformance test below will stop failing then.
+    tools.set("listChanged", Json::boolean(false));
 
     Json capabilities;
     capabilities.set("tools", std::move(tools));
@@ -459,7 +466,6 @@ McpServer::Answer McpServer::discover(const JsonRpcRequest& rpc) const
     // resources are generated on every read, so there is nothing to subscribe to
     // and no moment at which the list changes.
     capabilities.set("resources", Json::object({}));
-    capabilities.set("subscriptions", std::move(listen));
 
     Json server_info;
     server_info.set("name", Json::string(info_.name));
