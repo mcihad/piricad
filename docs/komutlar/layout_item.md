@@ -275,13 +275,19 @@ ayarlarını taşır.
   ölçüsünü verir; komut satırının `ad=` ile andığı kimlik satırın ipucundadır ve
   sağdaki **Ad** alanından değiştirilir.
 
-Sağ sütun **hiçbir zaman boş kalmaz**. Bir öğe seçili değilken sayfanın kendi
+Sağ sütun **hiçbir zaman boş kalmaz** ve en üstünde neye baktığınızın **adı**
+yazar, altında türü, kimliği ve ölçüsü. Bir öğe seçili değilken sayfanın kendi
 ayarlarını gösterir — kâğıt, yön, kenar boşluğu, çözünürlük ve yerleşimin adı —
-çünkü sayfa her zaman vardır. Bir öğe seçiliyken `ayarla`nın kabul ettiği her ayar
-oradadır: konum ve boyut, öğenin durduğu sayfa, çizim sırası, adı, ve türüne özel
-olanlar (harita için ölçek, ızgara, ızgara aralığı ve katmanlar; tablo için sütunlar
-ve satır sınırı; ölçek çubuğu, kuzey oku, lejant ve grafik için hangi haritaya bağlı
-olduğu).
+çünkü sayfa her zaman vardır.
+
+Bir öğe seçiliyken `ayarla`nın kabul ettiği her ayar oradadır, iki bölüm hâlinde:
+
+| Bölüm | Ne karara bağlar |
+|---|---|
+| **Yerleştirme** | Konum ve boyut, öğenin durduğu sayfa, çizim sırası, adı |
+| **İçerik** | Kutunun ne gösterdiği: harita için ölçek, ızgara, ızgara aralığı ve katmanlar; tablo için sütunlar ve satır sınırı; ölçek çubuğu, kuzey oku, lejant ve grafik için hangi haritaya bağlı olduğu |
+
+Kuzey okunun İçerik bölümü yoktur: kuzeyi gösterir, hepsi bu.
 
 Her jest **bırakıldığında tek bir komut** yazar — sürükleme boyunca değil. Bu yüzden
 sayfanın bir ucundan öbürüne taşıdığınız bir kutu tek `Ctrl+Z` ile eski yerine döner,

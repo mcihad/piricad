@@ -277,8 +277,12 @@ private:
     /// Draws the item rows; see `ItemRow` in the source.
     QStyledItemDelegate* rows_{nullptr};
 
-    /// The inspector's heading: what is being inspected, with its id as note.
-    FormSection* propertiesHead_{nullptr};
+    /// The inspector's heading: the name of what is being inspected, one step
+    /// larger than the body — the only type in this window that is.
+    QLabel* headName_{nullptr};
+
+    /// The dim line under it: the kind, the id and the size.
+    QLabel* headKind_{nullptr};
 
     /// The `ÖĞELER` heading, whose note carries the count.
     FormSection* itemsHead_{nullptr};

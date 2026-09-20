@@ -6,6 +6,33 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — yerleşim tasarımcısı: kâğıt kahraman, panel bir ad taşıyor
+
+Kullanıcının hükmü hâlâ "kötü" idi. Sebebi de dürüstçe şuydu: pencerede
+birbirinin aynı ağırlıkta yirmi altı kutu vardı ve hiçbiri diğerinden önemli
+görünmüyordu.
+
+- **Sağ sütunun başlığı artık bir AD.** `ÖZELLİKLER` yerine bakılan şeyin adı,
+  cümle düzeninde, gövdeden bir punto büyük — bu penceredeki tek büyük tipografi,
+  ve sütuna bir tepe veren şey. Altında türü, kimliği ve ölçüsü. Her üretilmiş
+  panelin ilk uzandığı "aralıklı BÜYÜK HARF etiket" kalıbı böylece bir eksildi.
+- **Öğenin ayarları iki bölüme ayrıldı:** *Yerleştirme* (nerede durduğu) ve
+  *İçerik* (ne gösterdiği). İkincisi türün adını tekrarlamaz — üstteki başlık
+  zaten söylüyor. Kuzey okunun İçerik bölümü yoktur, çünkü ayarı yoktur.
+- **Sayfa şeridi ve sıra düğmeleri kutusuz oldu** (`Ghost`): altı 32 pikselik
+  kutu, sayfanın kendisiyle göz için yarışıyordu. Bunlar satır içi eylem, ki
+  `Ghost`'un tanımı bu.
+- **Kâğıt büyüdü**: iki sütun daraldı, tuvalin nefes payı yarıya indi.
+- **Havanın yeri değişti**: sol sütunda listeyle ekleme çubuğunun ARASINDA açılan
+  boşluk artık en altta toplanıyor.
+- İki anahtarın altındaki açıklamalar kaldırıldı: `Çerçeve` ve `Kilit` etiketli
+  bir anahtar ne yaptığını söyler.
+
+Denenip **kesilen**: kâğıdın altına, cetvellerle aynı adımda bir kesim altlığı.
+Fikir konuya aitti ama yaşayacak yeri yoktu — kâğıt tuvali neredeyse doldurduğu
+için altlık yalnız birkaç piksellik şeritlerde görünüyordu.
+
+
 ### Düzeltildi — tasarımcı, haritanın içini çıktıda olmayan bir griyle dolduruyordu
 
 Kullanıcının sorusu: "harita arkaplanı neden gri oluyor çıktı yerleşiminde".

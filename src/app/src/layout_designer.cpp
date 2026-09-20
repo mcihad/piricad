@@ -13,6 +13,7 @@
 #include <QDate>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFont>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QImage>
@@ -46,7 +47,7 @@ constexpr int kGripPx = 7;
 /// keyhole. The ruler is the cheapest way to make the unit visible at all
 /// times, and it is the one piece of chrome here that would be wrong on any
 /// other panel in this program.
-constexpr int kRulerPx = 22;
+constexpr int kRulerPx = 24;
 
 /// A drag snaps to whole paper millimetres. A title block at 20.0 mm is a title
 /// block somebody can describe; one at 19.83 mm is an accident.
@@ -173,6 +174,16 @@ private:
 /// A LABEL IS CALLED BY WHAT IT SAYS. `baslik` is a key; "Ada 1284 / Pafta 3" is
 /// the thing on the paper. Everything else has no text of its own and is called
 /// by its kind, which is what a user would point at it and say.
+/// Whether a kind has any settings of its own past the frame.
+///
+/// A north arrow has none: it points north and that is the whole of it, so a
+/// heading over an empty group would be a promise of rows that never come.
+bool has_content_rows(core::LayoutItemKind kind)
+{
+    using core::LayoutItemKind;
+    return kind != LayoutItemKind::NorthArrow;
+}
+
 QString item_name(const core::LayoutItem& item)
 {
     const QString written = QString::fromStdString(item.text).simplified();
@@ -190,6 +201,20 @@ QString joined(const std::vector<std::string>& words)
     for (const std::string& one : words)
         out << QString::fromStdString(one);
     return out.join(QStringLiteral(", "));
+}
+
+/// The coarsest whole step whose marks stay at least `apart` pixels from each
+/// other, at `per_mm` device pixels to the paper millimetre.
+///
+/// ONE LADDER FOR THE RULER'S TICKS, ITS NUMBERS AND THE MAT, so a square of
+/// the mat is exactly the distance between two numbers on the scale. Three
+/// separate answers to "how far apart" would drift the moment one was tuned.
+core::Um ruler_step(double per_mm, double apart)
+{
+    static constexpr core::Um kLadder[] = {1000, 5000, 10000, 25000, 50000, 100000, 250000};
+    for (const core::Um candidate : kLadder)
+        if (per_mm * (static_cast<double>(candidate) / 1000.0) >= apart) return candidate;
+    return kLadder[std::size(kLadder) - 1];
 }
 
 QString quoted(const QString& raw)
@@ -257,7 +282,7 @@ QRectF LayoutCanvas::pageRect() const
     // The rulers take a gutter off the top and the left, so the paper is
     // centred in what is LEFT, not in the widget: centring it in the widget
     // would slide it half a gutter under the scale and the two would disagree.
-    const double air     = 18.0;
+    const double air     = 10.0;
     const double left    = kRulerPx;
     const double top     = kRulerPx;
     const double avail_w = std::max(1.0, width() - left - 2 * air);
@@ -539,18 +564,8 @@ void LayoutCanvas::paintRulers(QPainter& p, const QRectF& box, const core::Layou
     // legible at four pixels apart; a three-digit number needs closer to fifty,
     // and pinning the numbers to "every fifth tick" put 25 mm labels shoulder to
     // shoulder on an A3 and left an A0 with almost none.
-    static constexpr core::Um kLadder[] = {1000, 5000, 10000, 25000, 50000, 100000, 250000};
-    const auto coarsest                 = [&](double apart) {
-        core::Um chosen = kLadder[std::size(kLadder) - 1];
-        for (const core::Um candidate : kLadder)
-            if (per_mm * (static_cast<double>(candidate) / 1000.0) >= apart) {
-                chosen = candidate;
-                break;
-            }
-        return chosen;
-    };
-    const core::Um step     = coarsest(4.0);
-    const core::Um labelled = std::max(coarsest(46.0), step);
+    const core::Um step     = ruler_step(per_mm, 4.0);
+    const core::Um labelled = std::max(ruler_step(per_mm, 46.0), step);
 
     p.setPen(Qt::NoPen);
     p.setBrush(t.bgStrip);
@@ -757,7 +772,7 @@ QWidget* LayoutDesigner::buildBody()
 
     // ---- left: what is on the sheet, and what can be added -------------------
     auto* left = new QWidget(body);
-    left->setFixedWidth(236);
+    left->setFixedWidth(212);
     auto* leftColumn = new QVBoxLayout(left);
     leftColumn->setContentsMargins(12, 12, 8, 12);
     leftColumn->setSpacing(8);
@@ -780,7 +795,11 @@ QWidget* LayoutDesigner::buildBody()
     pagerRow->setSpacing(4);
 
     const auto stepper = [&](Glyph glyph, const QString& tip, int by) {
-        auto* button = new Button(ButtonRole::Icon, QString(), glyph, pager);
+        // GHOST, NOT ICON. `Icon` draws a 32 px box, and six boxes in a row at
+        // the top of the panel are six rectangles competing with the sheet for
+        // a reader's eye. These are inline actions, which is what Ghost is for
+        // (`widgets.hpp`): the glyph alone, chrome only under the pointer.
+        auto* button = new Button(ButtonRole::Ghost, QString(), glyph, pager);
         button->setToolTip(tip);
         button->setAccessibleName(tip);
         button->setControlSize(ControlSize::Compact);
@@ -832,7 +851,7 @@ QWidget* LayoutDesigner::buildBody()
         {"sayfasil", "Sayfayı sil", Glyph::Trash},
     };
     for (const PageVerb& one : kPageVerbs) {
-        auto* button = new Button(ButtonRole::Icon, QString(), one.glyph, pager);
+        auto* button = new Button(ButtonRole::Ghost, QString(), one.glyph, pager);
         button->setToolTip(tr(one.label));
         button->setAccessibleName(tr(one.label));
         button->setControlSize(ControlSize::Compact);
@@ -843,6 +862,9 @@ QWidget* LayoutDesigner::buildBody()
 
     itemsHead_ = new FormSection(tr("ÖĞELER"), QString(), left);
     leftColumn->addWidget(itemsHead_);
+    // THE LIST TAKES WHAT IT NEEDS AND NO MORE, so the air in this column
+    // gathers UNDER the add bar instead of opening a hole between the four
+    // names on the sheet and the nine words that add a fifth.
     leftColumn->addWidget(buildItemList(), 1);
 
     // ---- what can be added ---------------------------------------------------
@@ -885,6 +907,7 @@ QWidget* LayoutDesigner::buildBody()
         refresh();
     });
     leftColumn->addWidget(remove_);
+    leftColumn->addStretch(1);
     row->addWidget(left);
 
     // ---- middle: the page ----------------------------------------------------
@@ -931,17 +954,29 @@ QWidget* LayoutDesigner::buildBody()
 
     // ---- right: the selected item's properties -------------------------------
     auto* right = new QWidget(body);
-    right->setFixedWidth(302);
+    right->setFixedWidth(288);
     auto* rightColumn = new QVBoxLayout(right);
     rightColumn->setContentsMargins(8, 12, 12, 12);
     rightColumn->setSpacing(8);
-    // A HEADING THAT SAYS WHAT IS BEING INSPECTED, not one that says the panel
-    // is a panel. `ÖZELLİKLER` over a column of property rows is a label naming
-    // the obvious; `HARİTA ÇERÇEVESİ · harita` tells the reader which of the
-    // eleven boxes on the sheet these numbers belong to, and its note carries
-    // the id a command line would take.
-    propertiesHead_ = new FormSection(tr("SAYFA"), QString(), right);
-    rightColumn->addWidget(propertiesHead_);
+    // A NAME, NOT AN EYEBROW.
+    //
+    // This was `ÖZELLİKLER` in tracked-out capitals over a column of property
+    // rows: a label naming the obvious, in the one typographic treatment that
+    // every generated panel reaches for. What a reader needs here is WHICH of
+    // the eleven boxes on the sheet these numbers belong to, so the heading is
+    // the thing's name in sentence case, with its id and its size under it in
+    // the dim line. It is also the only type in this window larger than the
+    // body, which is what gives the column a top.
+    headName_   = new QLabel(right);
+    QFont named = headName_->font();
+    named.setPointSizeF(named.pointSizeF() + 2.0);
+    headName_->setFont(named);
+    rightColumn->addWidget(headName_);
+
+    headKind_ = new QLabel(right);
+    headKind_->setObjectName(QStringLiteral("formHelp"));
+    rightColumn->addWidget(headKind_);
+    rightColumn->addSpacing(4);
 
     auto* scroll = new QScrollArea(right);
     scroll->setWidgetResizable(true);
@@ -1262,10 +1297,10 @@ void LayoutDesigner::buildSheetProperties(const core::Layout& l)
     const int shown = std::clamp(canvas_->page(), 0, static_cast<int>(l.pages.size()) - 1);
     const core::LayoutPage& page = l.pages[static_cast<std::size_t>(shown)];
 
-    if (propertiesHead_ != nullptr) {
-        propertiesHead_->setTitle(tr("SAYFA %1").arg(shown + 1));
-        propertiesHead_->setNote(tr("%1 × %2 mm").arg(page.w / 1000).arg(page.h / 1000));
-    }
+    if (headName_ != nullptr) headName_->setText(tr("Sayfa %1").arg(shown + 1));
+    if (headKind_ != nullptr)
+        headKind_->setText(
+            tr("%1 × %2 mm · %3 sayfa").arg(page.w / 1000).arg(page.h / 1000).arg(l.pages.size()));
 
     // WHICH PAPER. The command takes the six ISO sizes and `ozel`; a sheet that
     // came from a custom size shows it and keeps it until the user picks
@@ -1365,10 +1400,16 @@ void LayoutDesigner::buildItemProperties(const core::Layout& l, const core::Layo
 {
     using core::LayoutItemKind;
 
-    if (propertiesHead_ != nullptr) {
-        propertiesHead_->setTitle(
-            QString::fromUtf8(core::layout_item_kind_label(item.kind)).toUpper());
-        propertiesHead_->setNote(QString::fromStdString(item.id));
+    const QString shownAs  = item_name(item);
+    const QString kindWord = QString::fromUtf8(core::layout_item_kind_label(item.kind));
+    if (headName_ != nullptr) headName_->setText(shownAs);
+    if (headKind_ != nullptr) {
+        // THE KIND IS SAID ONCE. An item with no writing of its own is CALLED
+        // by its kind, so repeating it underneath reads as `Harita · Harita`.
+        const QString size =
+            tr("%1 · %2×%3 mm")
+                .arg(QString::fromStdString(item.id), mm_text(item.frame.w), mm_text(item.frame.h));
+        headKind_->setText(shownAs == kindWord ? size : kindWord + QStringLiteral(" · ") + size);
     }
 
     propertyColumn_->addWidget(new FormSection(tr("YERLEŞTİRME"), QString(), properties_));
@@ -1393,7 +1434,7 @@ void LayoutDesigner::buildItemProperties(const core::Layout& l, const core::Layo
     orderRow->setContentsMargins(0, 0, 0, 0);
     orderRow->setSpacing(4);
     const auto shove = [&](Glyph glyph, const QString& tip, int to) {
-        auto* button = new Button(ButtonRole::Icon, QString(), glyph, order);
+        auto* button = new Button(ButtonRole::Ghost, QString(), glyph, order);
         button->setToolTip(tip);
         button->setAccessibleName(tip);
         button->setControlSize(ControlSize::Regular);
@@ -1447,9 +1488,14 @@ void LayoutDesigner::buildItemProperties(const core::Layout& l, const core::Layo
 
     // ---- what only some kinds have ------------------------------------------
     //
-    // NO HEADING HERE. The panel's own heading already says which kind this is,
-    // and a second `HARİTA` four rows under the first is a label repeating what
-    // the reader has not had time to forget.
+    // `İÇERİK` RATHER THAN THE KIND'S NAME. The heading at the top of the panel
+    // already says this is a map frame; writing `HARİTA` again four rows under
+    // it repeats what the reader has not had time to forget. What these rows
+    // have in common across every kind is that they decide what the box SHOWS —
+    // a map's scale and layers, a table's columns, a legend's map — as against
+    // the rows above, which decide where it sits.
+    if (has_content_rows(item.kind))
+        propertyColumn_->addWidget(new FormSection(tr("İÇERİK"), QString(), properties_));
 
     if (item.kind == LayoutItemKind::Label || item.kind == LayoutItemKind::Picture ||
         item.kind == LayoutItemKind::Table || item.kind == LayoutItemKind::Legend) {
@@ -1487,7 +1533,7 @@ void LayoutDesigner::buildItemProperties(const core::Layout& l, const core::Layo
         });
 
         auto* spacing = countRow(tr("Aralık"), item.grid_interval, "izgara_aralik", 1000000000);
-        spacing->setHelp(tr("zemin mm · 0 = otomatik"));
+        spacing->setHelp(tr("zemin mm"));
         propertyColumn_->addWidget(pairOf(new FormRow(tr("Izgara"), grid, properties_), spacing));
 
         // WHICH LAYERS IT DRAWS. Empty means every visible one, which is the
@@ -1539,8 +1585,10 @@ void LayoutDesigner::buildItemProperties(const core::Layout& l, const core::Layo
     // pushed into a horizontal strip, which made them the only two controls in
     // the window that did not read like the rest of the form — and made the
     // panel's own rebuild bug show up here first.
-    const auto toggle = [&](const QString& label, bool on, const char* argument,
-                            const QString& help) {
+    // NO HELP LINES UNDER THESE TWO. A switch labelled `Çerçeve` and a switch
+    // labelled `Kilit` say what they do; a dim line under each repeating it in
+    // other words is the most decoration per fact anywhere in this panel.
+    const auto toggle = [&](const QString& label, bool on, const char* argument) {
         auto* box = new ToggleSwitch(properties_);
         box->setChecked(on);
         box->setAccessibleName(label);
@@ -1550,13 +1598,10 @@ void LayoutDesigner::buildItemProperties(const core::Layout& l, const core::Layo
             edit(QStringLiteral("%1=%2").arg(key, checked ? QStringLiteral("evet")
                                                           : QStringLiteral("hayir")));
         });
-        auto* row = new FormRow(label, box, properties_);
-        row->setHelp(help);
-        return row;
+        return new FormRow(label, box, properties_);
     };
-    propertyColumn_->addWidget(
-        pairOf(toggle(tr("Çerçeve"), item.frame_visible, "cerceve", tr("kutuyu çizer")),
-               toggle(tr("Kilit"), item.locked, "kilit", tr("taşımayı kapatır"))));
+    propertyColumn_->addWidget(pairOf(toggle(tr("Çerçeve"), item.frame_visible, "cerceve"),
+                                      toggle(tr("Kilit"), item.locked, "kilit")));
 }
 
 void LayoutDesigner::showItem(const QString& id)
