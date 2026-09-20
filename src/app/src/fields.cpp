@@ -1046,14 +1046,20 @@ QWidget* FieldDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem
     auto* editor = new Field(spec, parent);
     editor->applyTheme(theme_);
 
-    // COMMIT, CLOSE, THEN MOVE, in that order and through Qt's own signals. A
-    // delegate that wrote the model itself would bypass `setModelData`, which is
-    // the one place the value becomes a command.
-    connect(editor, &Field::committed, this, [this, editor, index](const QString&) {
+    // COMMIT AND CLOSE, through Qt's own signals. A delegate that wrote the
+    // model itself would bypass `setModelData`, which is the one place the value
+    // becomes a command.
+    //
+    // AND NOTHING ELSE. Enter used to commit, close, and then open the next
+    // cell's editor — the ledger pattern, type-Enter-type-Enter. The person who
+    // asked for it asked for it back out: a key that moves the cursor as a side
+    // effect of confirming a value is a key that decides where you are going,
+    // and the arrows and the mouse already say that better. Enter confirms what
+    // was typed and stops.
+    connect(editor, &Field::committed, this, [this, editor](const QString&) {
         auto* self = const_cast<FieldDelegate*>(this);
         emit self->commitData(editor);
         emit self->closeEditor(editor, QAbstractItemDelegate::NoHint);
-        emit self->advanced(index);
     });
     connect(editor, &Field::cancelled, this, [this, editor] {
         auto* self = const_cast<FieldDelegate*>(this);

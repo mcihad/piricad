@@ -291,10 +291,10 @@ FieldSpec field_for(const core::AttrSpec& column);
 /// height — which is the same "bolted-on widget" the inspector had before
 /// `Field` existed, and the same wrong editor for a date or a yes/no.
 ///
-/// ENTER MOVES ON, which is the other half. A table of attributes is filled in
-/// the way a ledger is filled in: type, Enter, type, Enter. The delegate reports
-/// each finished cell through `advanced` and the window decides where the next
-/// one is — the delegate knows about editors, not about the shape of the grid.
+/// ENTER CONFIRMS AND STOPS. It used to open the next cell as well — the ledger
+/// pattern — and that was taken back out at the user's request: confirming a
+/// value and choosing where to go next are two decisions, and only one of them
+/// was asked for.
 class FieldDelegate : public QStyledItemDelegate
 {
     Q_OBJECT
@@ -335,10 +335,6 @@ public:
     /// The palette the editors are themed with. Set by the window that owns the
     /// table, and remembered so editors built later match.
     virtual void setTheme(ThemeMode mode) { theme_ = mode; }
-
-signals:
-    /// One cell was finished with Enter. The window moves to the next one.
-    void advanced(const QModelIndex& from);
 
 private:
     SpecFor specs_;

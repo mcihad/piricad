@@ -80,10 +80,18 @@ bekle "[tablo] kip kapalıyken: açılmadı"
 bekle "[tablo] kip: açık"
 bekle "[tablo] kip açıkken: açıldı"
 
-# Across, across, then wrap to the next row's first editable column.
-bekle "[tablo] enter 1 -> 0,2"
-bekle "[tablo] enter 2 -> 0,3"
-bekle "[tablo] enter 3 -> 1,1"
+# ENTER CONFIRMS AND STAYS PUT. It used to open the next cell as well and these
+# three read 0,2 / 0,3 / 1,1 — the walk across the row and the wrap to the next.
+# That was taken back out at the user's request: confirming a value and choosing
+# where to go next are two decisions and only one was asked for.
+#
+# "Stays put" is not free. Committing runs a command, the document changes and
+# the grid resets, which leaves the view with no current cell at all — invisible
+# while the advance set a fresh one, and a cursor that vanished the moment it
+# did not. Each line below is the cell that was typed into.
+bekle "[tablo] enter 1 -> 0,1"
+bekle "[tablo] enter 2 -> 0,2"
+bekle "[tablo] enter 3 -> 0,3"
 
 # Refused before it was sent, with the column named.
 bekle "[tablo] reddedilen: 'ada' özniteliği tam sayı bekliyor. Girilen: 'abc'"

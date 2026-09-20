@@ -597,7 +597,31 @@ AttributeTable::AttributeTable(Controller& controller, QString layerName, QWidge
     view_->horizontalHeader()->setSortIndicator(0, Qt::AscendingOrder);
     view_->setEditors([this](int column) { return model_->fieldFor(column); });
     view_->gridDelegate()->setTheme(theme_);
-    connect(view_->gridDelegate(), &FieldDelegate::advanced, this, &AttributeTable::advanceFrom);
+
+    // THE CURSOR SURVIVES A RELOAD.
+    //
+    // A reset clears the view's current index, and this grid resets whenever the
+    // document changes — which committing a cell does, because the value becomes
+    // a command. That was invisible while Enter opened the NEXT cell: the move
+    // set a fresh index straight after. With Enter confirming and stopping, the
+    // highlight simply vanished and the arrow keys had nowhere to start from.
+    //
+    // Remembered on every move and put back after every reset, rather than
+    // patched into the commit: the cursor is lost by the RESET, and a document
+    // that changes for any other reason loses it the same way.
+    // TAKEN BEFORE THE RESET, PUT BACK AFTER IT. Reading the current cell after
+    // the fact reads whatever the view moved to on its own — which is the first
+    // cell of the grid, so the cursor came back but in the wrong place.
+    connect(model_, &QAbstractItemModel::modelAboutToBeReset, this, [this] {
+        const QModelIndex at = view_->currentIndex();
+        lastCell_ = at.isValid() ? QPair<int, int>{at.row(), at.column()} : QPair<int, int>{-1, -1};
+    });
+    connect(model_, &QAbstractItemModel::modelReset, this, [this] {
+        if (lastCell_.first < 0) return;
+        if (lastCell_.first >= model_->rowCount() || lastCell_.second >= model_->columnCount())
+            return;
+        view_->setCurrentIndex(model_->index(lastCell_.first, lastCell_.second));
+    });
 
     // Sized by type, then left alone: a column the user widened must stay
     // widened, so this runs once per reset rather than on every repaint. The
@@ -1136,31 +1160,6 @@ void AttributeTable::setEditing(bool on)
 
     if (on && view_->currentIndex().isValid() && view_->currentIndex().column() == 0)
         view_->setCurrentIndex(model_->index(view_->currentIndex().row(), 1));
-}
-
-void AttributeTable::advanceFrom(const QModelIndex& from)
-{
-    if (!from.isValid() || !model_->editing()) return;
-
-    // ACROSS, THEN DOWN, THEN STOP. Column 0 is `fid` and never opens, so a wrap
-    // lands on column 1 — the first cell of the next row that a person can type
-    // into. The last cell of the last row stays put rather than wrapping to the
-    // top, because "I have reached the end" is information and a silent jump to
-    // row one is a value entered in the wrong place.
-    int at     = from.row();
-    int column = from.column() + 1;
-    while (column < model_->columnCount() && view_->isColumnHidden(column))
-        ++column;
-    if (column >= model_->columnCount()) {
-        column = 1;
-        ++at;
-    }
-    if (at >= model_->rowCount() || column >= model_->columnCount()) return;
-
-    const QModelIndex next = model_->index(at, column);
-    view_->setCurrentIndex(next);
-    view_->scrollTo(next);
-    view_->edit(next);
 }
 
 QString AttributeTable::probeGrid(const QString& action, const QString& value)

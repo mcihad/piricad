@@ -6,6 +6,29 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — Enter artık yalnız onaylıyor (öznitelik tablosu ve nesne müfettişi)
+
+Enter, değeri aldıktan sonra **sonraki alanı** da açıyordu — defter kalıbı: yaz,
+Enter, yaz, Enter. Kullanıcı bunu geri istedi ve haklı: bir değeri onaylamak ile
+nereye gideceğine karar vermek iki ayrı karardır, ikincisini ok tuşları ve fare
+zaten daha iyi söylüyor. Enter yazılanı onaylıyor ve duruyor.
+
+Kaldırılanlar: `AttributePanel::commitAndAdvance` ve `nextEditable`,
+`AttributeTable::advanceFrom`, ve bunları birbirine bağlayan
+`FieldDelegate::advanced` sinyali.
+
+**"Durmak" bedava değildi.** Bir hücreyi onaylamak komut çalıştırıyor, belge
+değişiyor ve tablo kendini sıfırlıyor — bu da görünümü hiç geçerli hücresi olmayan
+bir hâlde bırakıyor. İlerletme her seferinde yeni bir hücre seçtiği için bu
+görünmüyordu; ilerletme kalkınca imleç onaydan sonra tamamen kayboldu ve ok tuşları
+başlayacak yer bulamadı. Tablo artık imlecin bulunduğu hücreyi sıfırlamadan **önce**
+saklıyor ve sonrasında geri koyuyor — sonradan okumak görünümün kendi kendine
+gittiği yeri, yani ilk hücreyi okumak demekti.
+
+`ci-gate-tablo-giris.sh` üç satırı da yeni davranışa göre doğruluyor: yazılan hücre
+neresiyse imleç orada kalıyor.
+
+
 ### Düzeltildi — sağ sütun bozulmuştu: kayıtlı yerleşim, dev sekmeler, sıfırlama
 
 Üç kusur bir araya gelince sağ taraf komple gitti. Sürükleme çalışır hâle geldiği

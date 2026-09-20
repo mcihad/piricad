@@ -2726,12 +2726,20 @@ void MainWindow::probeAttributeGrid()
     drive("ac");
     say(QStringLiteral("kip açıkken: %1").arg(table.probeGrid(QStringLiteral("ac"), QString())));
 
+    // ENTER CONFIRMS AND STAYS PUT — and the line each write reports is where
+    // the cursor ended up, which must be the cell that was just confirmed.
+    //
+    // Enter used to open the next cell too, and the probe walked the row by
+    // pressing it; that was taken back out at the user's request, so the cursor
+    // is moved here the way a person moves it. Committing resets the model, so
+    // "stays put" is not free: without the grid putting the cursor back, every
+    // one of these reported `yok`.
     say(QStringLiteral("enter 1 -> %1").arg(drive("yaz", QStringLiteral("128"))));
+    drive("git", QStringLiteral("0,2"));
     drive("ac");
     say(QStringLiteral("enter 2 -> %1").arg(drive("yaz", QStringLiteral("0,40"))));
+    drive("git", QStringLiteral("0,3"));
     drive("ac");
-
-    // ---- 3. the last column wraps to the next row's first ----
     say(QStringLiteral("enter 3 -> %1").arg(drive("yaz", QStringLiteral("2026-09-08"))));
 
     // ---- 4. and a bad value is refused before it is sent ----

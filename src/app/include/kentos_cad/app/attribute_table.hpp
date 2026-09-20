@@ -22,6 +22,7 @@
 #include "kentos_cad/core/identity.hpp"
 
 #include <QAbstractTableModel>
+#include <QPair>
 #include <QSet>
 #include <QString>
 #include <QVector>
@@ -220,13 +221,6 @@ private:
     /// somebody else's save.
     void setEditing(bool on);
 
-    /// Moves to the cell after `from` and opens it.
-    ///
-    /// ACROSS, THEN DOWN, THEN STOP — the way a ledger is filled in. The last
-    /// column wraps to the next row's first editable column, which is column 1:
-    /// `fid` is identity and never opens.
-    void advanceFrom(const QModelIndex& from);
-
     /// Says something in the footer, in the warn colour, until the next entry.
     void complain(const QString& text);
 
@@ -258,6 +252,11 @@ private:
 
     Controller& controller_;
     QString layerName_;
+
+    /// The cell the cursor was last on, as row and column. Put back after a
+    /// model reset, which otherwise leaves the grid with no current cell at all
+    /// — see the constructor.
+    QPair<int, int> lastCell_{-1, -1};
 
     AttributeModel* model_{nullptr};
     DataGrid* view_{nullptr};

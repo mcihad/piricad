@@ -651,7 +651,7 @@ void AttributePanel::beginEdit(int group, int index)
         // box that appeared on top of the panel — see `FieldFrame`.
         editor_ = new Field(as_cell(row.field), this);
         editor_->applyTheme(theme_);
-        connect(editor_, &Field::committed, this, &AttributePanel::commitAndAdvance);
+        connect(editor_, &Field::committed, this, &AttributePanel::commitEdit);
         connect(editor_, &Field::cancelled, this, [this] { closeEditor(); });
     }
 
@@ -666,47 +666,6 @@ void AttributePanel::beginEdit(int group, int index)
     editor_->show();
     editor_->beginEditing();
     update();
-}
-
-bool AttributePanel::nextEditable(int group, int index, int& outGroup, int& outIndex)
-{
-    int g = group;
-    int r = index + 1;
-    for (; g < groups_.size(); ++g, r = 0)
-        for (; r < groups_[g].rows.size(); ++r) {
-            if (groups_[g].rows[r].command.isEmpty()) continue;
-
-            // OPENED ON THE WAY PAST. A collapsed group has no row rectangle and
-            // `beginEdit` would refuse it — and a row the user cannot see is not
-            // a row they were about to fill in.
-            groups_[g].open = true;
-            outGroup        = g;
-            outIndex        = r;
-            return true;
-        }
-    return false;
-}
-
-void AttributePanel::commitAndAdvance(const QString& value)
-{
-    // WHERE WE WERE, taken before the commit: `commitEdit` refreshes, which
-    // rebuilds `groups_` and clears the editing position.
-    const int wasGroup = editingGroup_;
-    const int wasRow   = editingRow_;
-
-    commitEdit(value);
-
-    if (wasGroup < 0) return;
-
-    int nextGroup = -1;
-    int nextRow   = -1;
-    if (!nextEditable(wasGroup, wasRow, nextGroup, nextRow)) return;
-
-    // AFTER THE LAYOUT HAS CAUGHT UP. The group above may have just been opened,
-    // and `beginEdit` asks for a rectangle that only exists once the panel has
-    // laid itself out again.
-    update();
-    beginEdit(nextGroup, nextRow);
 }
 
 void AttributePanel::commitEdit(const QString& value)
