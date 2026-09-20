@@ -356,35 +356,6 @@ private:
     ThemeMode theme_{ThemeMode::Dark};
 };
 
-QIcon geometry_glyph(PreviewShape shape, const QColor& ink)
-{
-    QPixmap glyph(16, 16);
-    glyph.fill(Qt::transparent);
-
-    QPainter painter(&glyph);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.setPen(QPen(ink, 1.4));
-
-    switch (shape) {
-    case PreviewShape::Area:
-        painter.setBrush(QColor(ink.red(), ink.green(), ink.blue(), 60));
-        painter.drawRect(2, 3, 11, 9);
-        break;
-    case PreviewShape::Line:
-        painter.drawPolyline(
-            std::array<QPointF, 4>{QPointF(2, 11), QPointF(6, 4), QPointF(10, 11), QPointF(14, 4)}
-                .data(),
-            4);
-        break;
-    case PreviewShape::Point:
-        painter.setBrush(ink);
-        painter.drawEllipse(QPointF(8, 8), 3.0, 3.0);
-        break;
-    }
-    painter.end();
-    return QIcon(glyph);
-}
-
 QColor from_rgba(std::uint32_t rgba)
 {
     return QColor::fromRgba(static_cast<QRgb>(rgba));
