@@ -79,6 +79,18 @@ constexpr int kTabButtons = 2; ///< split view and expand, at the right end
 constexpr int kTabBtnBox  = 26;
 constexpr int kTabBtnPad  = 8;
 constexpr int kTabAccent  = 2; ///< design.md §7: the active tab's top edge
+constexpr int kTabPlusGap = 6; ///< between the last tab and the `+`
+
+/// Where the split-view and expand buttons start, given the strip's width.
+///
+/// THREE CALLERS AND ONE ARITHMETIC. The layout, the hover test and the painter
+/// each need this edge, and three copies of it drift the day the button count
+/// changes — which is also the day the `+` would start being drawn underneath
+/// them.
+constexpr int buttons_left(int strip_width)
+{
+    return strip_width - kTabBtnPad - (kTabButtons * kTabBtnBox);
+}
 
 } // namespace
 
@@ -227,6 +239,19 @@ int DocumentTabs::tabAt(QPoint at) const
     return -1;
 }
 
+QRect DocumentTabs::plusRect() const
+{
+    // AFTER THE LAST TAB, not pinned to the right end beside split and expand.
+    // Those two act on the window; this one makes another of the things to its
+    // left, and every strip of tabs a user has ever used puts it there.
+    const int left =
+        tabs_.isEmpty() ? kTabPlusGap : tabs_.back().left + tabs_.back().width + kTabPlusGap;
+
+    if (left + kTabBtnBox > buttons_left(width())) return {};
+
+    return {left, (kTabHeight - kTabBtnBox) / 2, kTabBtnBox, kTabBtnBox};
+}
+
 void DocumentTabs::applyTheme(ThemeMode mode)
 {
     theme_ = mode;
@@ -237,10 +262,12 @@ void DocumentTabs::mouseMoveEvent(QMouseEvent* event)
 {
     const QPoint at  = event->position().toPoint();
     const int wasTab = hot_, wasClose = hotClose_, wasBtn = hotButton_;
+    const bool wasPlus = hotPlus_;
 
     hot_       = tabAt(at);
     hotClose_  = -1;
     hotButton_ = -1;
+    hotPlus_   = plusRect().contains(at);
 
     if (hot_ == active_ && hot_ >= 0 && closable()) {
         const Tab& tab = tabs_[hot_];
@@ -248,15 +275,27 @@ void DocumentTabs::mouseMoveEvent(QMouseEvent* event)
         if (at.x() >= cx && at.x() < cx + kTabIcon) hotClose_ = hot_;
     }
 
-    const int right = width() - kTabBtnPad - kTabButtons * kTabBtnBox;
+    const int right = buttons_left(width());
     if (at.x() >= right) hotButton_ = std::min(kTabButtons - 1, (at.x() - right) / kTabBtnBox);
 
-    if (hot_ != wasTab || hotClose_ != wasClose || hotButton_ != wasBtn) update();
+    // A BARE GLYPH EXPLAINS NOTHING. The strip carries no other tooltip because
+    // a tab says what it is by carrying the drawing's name; `+` does not, and
+    // the shortcut is the half a user most wants.
+    if (hotPlus_ != wasPlus) setToolTip(hotPlus_ ? tr("Yeni çizim — YENİ (Ctrl+N)") : QString());
+
+    if (hot_ != wasTab || hotClose_ != wasClose || hotButton_ != wasBtn || hotPlus_ != wasPlus)
+        update();
 }
 
 void DocumentTabs::leaveEvent(QEvent*)
 {
     hot_ = hotClose_ = hotButton_ = -1;
+    hotPlus_                      = false;
+
+    // The tooltip goes WITH the hover it belongs to. Left set, it would still be
+    // the widget's tooltip when the pointer came back over a TAB, where the next
+    // move event has nothing to change and so never clears it.
+    setToolTip(QString());
     update();
 }
 
@@ -266,6 +305,10 @@ void DocumentTabs::mousePressEvent(QMouseEvent* event)
 
     if (hotClose_ >= 0) {
         emit closeRequested(hotClose_);
+        return;
+    }
+    if (plusRect().contains(event->position().toPoint())) {
+        emit newRequested();
         return;
     }
     if (hotButton_ == 0) {
@@ -341,9 +384,22 @@ void DocumentTabs::paintEvent(QPaintEvent*)
         }
     }
 
+    // THE `+`, in the same 26x26 box the right-end buttons use, so the strip has
+    // one button size rather than two. It hovers the same way they do.
+    if (const QRect plus = plusRect(); !plus.isNull()) {
+        if (hotPlus_) {
+            p.setPen(Qt::NoPen);
+            p.setBrush(t.hoverIcon);
+            p.drawRoundedRect(plus, 4, 4);
+        }
+        p.drawPixmap(
+            QRect(plus.left() + 5, plus.top() + 5, 16, 16),
+            glyph_pixmap(Glyph::Plus, hotPlus_ ? t.text : t.textDim, 16, devicePixelRatioF()));
+    }
+
     // Split view and expand, pinned to the right end of the strip.
     static const Glyph kButtons[kTabButtons] = {Glyph::SplitView, Glyph::Fullscreen};
-    int bx                                   = width() - kTabBtnPad - kTabButtons * kTabBtnBox;
+    int bx                                   = buttons_left(width());
     for (int i = 0; i < kTabButtons; ++i) {
         const QRect box(bx, (kTabHeight - kTabBtnBox) / 2, kTabBtnBox, kTabBtnBox);
         if (hotButton_ == i) {

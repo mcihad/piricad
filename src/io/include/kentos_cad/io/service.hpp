@@ -138,6 +138,16 @@ private:
     /// suspend for.
     core::Result<std::string> export_style(std::string path, std::string layer_name);
 
+    /// Puts an EMPTY document in place of the live one — `YENİ`.
+    ///
+    /// The same swap `open` makes, minus the read, so it is here beside it: what
+    /// goes with a document when it is replaced (the undo stack, the active
+    /// layer, the selection, the file it belonged to) is one list, and a second
+    /// copy of that list is a second place to forget an entry.
+    ///
+    /// Not a coroutine: there is no file to read and nothing to suspend for.
+    core::Result<std::string> create_new();
+
     command::Task<core::Result<std::string>> open(std::string path);
     core::Result<std::string> save(const std::string& path, bool save_as);
 

@@ -79,7 +79,7 @@ açar; altçizgi, ekranı boş yere doldurmasın diye gizlidir.
 
 | Menü | İçerik |
 |---|---|
-| **Dosya** | Yeni, Aç (**Ctrl+O**), Kaydet (**Ctrl+S**), Farklı Kaydet… (**Ctrl+Shift+S**), İçe/Dışa Aktar…, Yazdır, **Proje Ayarları…**, Veritabanı… (**Ctrl+Shift+D**), Betik Çalıştır… (**Ctrl+R**), Çıkış |
+| **Dosya** | Yeni (**Ctrl+N**), Aç (**Ctrl+O**), Kaydet (**Ctrl+S**), Farklı Kaydet… (**Ctrl+Shift+S**), İçe/Dışa Aktar…, Yazdır, **Proje Ayarları…**, Veritabanı… (**Ctrl+Shift+D**), Betik Çalıştır… (**Ctrl+R**), Çıkış |
 | **Düzen** | Geri Al (**Ctrl+Z**), Yinele (**Ctrl+Shift+Z**), Tümünü Seç (**Ctrl+A**), Seçimi Temizle (**Ctrl+Shift+A**), Ayarlar… (**Ctrl+,**) |
 | **Görünüm** | Kapsama Yakınlaş (**Ctrl+0**), Yakınlaştır, Uzaklaştır, Nesne Yakalama (**F3**), Dik Mod (**F8**), Yüzey Normali (**F10**), Izgaraya Yakala (**F9**), Araç Çubuğu, Paneller, Koyu Tema, Geliştirici Bilgisi (**F12**) |
 | **Çizim** | Çizgi, Çoklu Çizgi, Yay, Daire, Dikdörtgen, Nokta, Metin |
@@ -187,12 +187,17 @@ Tuvalin üstünde, 30 piksel. Her açık çizim bir sekmedir. Etkin sekme üst k
 çizgi onun altında kesilir, böylece sekme gösterdiği çizime bağlanır. Sağ uçta
 bölünmüş görünüm ve tam ekran düğmeleri bulunur.
 
+Son sekmenin hemen ardında **+** düğmesi vardır: boş bir çizim başlatır ve
+[`YENİ`](../komutlar/new.md) komutunu gönderir — `Dosya ▸ Yeni` ile ve **Ctrl+N**
+ile aynı komuttur. Kaydedilmemiş değişikliğiniz varsa önce **Kaydet / Atla /
+Vazgeç** sorusu gelir.
+
 **Bugün tek sekme görünür** ve **kapatma işareti yoktur.** Tek çizimin kapatılacağı
 bir yer yok: kapatmak programı belgesiz bırakırdı, ki öyle bir durumu yok. İşaret,
 ikinci bir sekme var olabildiği gün geri gelir.
 
-Yeni bir çizim başlatmak (`Dosya ▸ Yeni`) ve birden çok çizimi aynı anda açmak henüz
-gelmedi; menüdeki giriş bu yüzden sönüktür.
+Birden çok çizimi **aynı anda** açmak henüz gelmedi: `YENİ` yeni bir sekme açmaz,
+açık olanın yerine geçer.
 
 ## Harita alanı
 

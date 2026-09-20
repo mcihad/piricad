@@ -6,6 +6,44 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — `YENİ`: yeni çizim başlatmanın bir yolu var
+
+`Dosya ▸ Yeni` bugüne kadar sönük bir Faz 1 yer tutucusuydu ve `YENİ` diye bir
+komut yoktu; yani programda boş bir sayfaya geçmenin hiçbir yolu yoktu.
+
+- **`core.new` (`YENİ` · `YENI` · `NEW`).** Ekrandaki çizimin yerine boş bir çizim
+  koyar. `AÇ` ile aynı yer değiştirme, eksik olan tek şey okunacak dosya:
+  `FileRequest::Verb::New` ile aynı seamden geçer ve `io::FileService` yürütür.
+  Belgeyi, geri alma yığınını, aktif katmanı, seçimi, bağlı olunan dosya yolunu,
+  proje ayarlarını ve görünümü sıfırlar; uygulama tercihlerine, sembol
+  kitaplığına, yazdırma profillerine ve oturum modlarına dokunmaz. Geri
+  alınamaz (`UndoPolicy::None`) ve `AÇ` gibi yapay zekâya kapalıdır.
+- **Soruyu pencere sorar, komut değil.** Kaydedilmemiş çalışma varsa
+  `Dosya ▸ Yeni`, `Ctrl+N` ve şeritteki `+` **Kaydet / Atla / Vazgeç** diye sorar;
+  komut satırı ve betik sorusuz geçer, tıpkı `AÇ` gibi. Bir komut gövdesi fare,
+  klavye, betik ve yapay zekâ için aynı çalışır ve toplu bir çalıştırmada kipli
+  soruyu yanıtlayacak kimse yoktur. Pencerenin bu üç seçenekli sorusu artık tek
+  kopyadır (`MainWindow::confirmDiscard`); kapatma da onu kullanır.
+- **Sekme şeridine `+` geldi** ve bunu ancak komut gerçek olduğu gün yapabildi.
+  Bir önceki sürümde kapatma işareti tam da bu yüzden kaldırılmıştı: "Faz 2'de
+  gelecek" diyen bir düğme, pencerenin tutamadığı bir sözdür. `+`, `DocumentTabs`
+  üzerinde `newRequested()` olarak çıkar ve `closeRequested`/`splitRequested` ile
+  aynı hattan geçer.
+
+### Düzeltildi — belge yer değiştirince eski belgenin geri alma adımı kalıyordu
+
+Bir betik tek bir birleşik geri alma adımıdır (§2.5). Betiğin ortasında bir `AÇ`
+çalıştığında, o ana kadar biriken **eski** belgeye ait ters işlemler açık toplu
+işte duruyordu ve `end_batch` onları yeni belgenin üzerine bir geri alma adımı
+olarak yığına itiyordu — kadastro çiziminde bu, komşu parselin üzerine yazmaktır
+(model.md R5). Yer değiştirmenin unuttuğu liste artık tek yerde:
+`Bus::document_replaced()` yığını, aktif katmanı ve seçimi temizler, açık toplu
+işin işlemlerini *geri sarmadan* düşürür ve toplu işi yeni belgeye göre yeniden
+temellendirir — böylece betik çalışmaya devam eder ve kalanı yine tek adımda
+birleşir. `AÇ`, `YENİ` ve `VERİTABANI projeac` bu tek çağrıdan geçer; yan etkisi
+olarak `AÇ` artık seçimi de temizliyor (eski belgenin anahtarları yeni belgede
+başka nesnelere çözülürdü).
+
 ### Değişti — doküman sekmesi artık sekme gibi görünüyor
 
 - **`design.md` §7'nin istediği 2 px vurgu çizgisi hiç çizilmiyordu.** Şerit onu
@@ -23,10 +61,8 @@ birlikte kaydedilir (CLAUDE.md Article 9).
   Tek çizimin kapatılacağı bir yer yok. İşaret, ikinci bir sekme var olabildiği gün
   kendiliğinden geri gelir (`DocumentTabs::closable`).
 
-**Yeni proje hâlâ açılamıyor ve bu bir düğme eksiği değil:** `YENİ` diye bir komut
-yok. `Dosya ▸ Yeni` Faz 1 yer tutucusu olarak sönük duruyor. Şerite "yeni çizim"
-düğmesi koymak, az önce kaldırılan kapatma işaretiyle aynı yalanı eklemek olurdu;
-komut geldiğinde düğme de gelir.
+*(Bu bölümün "yeni proje hâlâ açılamıyor" notu artık geçerli değil: komut da,
+düğme de yukarıdaki `YENİ` girdisiyle geldi — söylendiği gibi, aynı değişiklikte.)*
 
 
 ### Değişti — Enter artık yalnız onaylıyor (öznitelik tablosu ve nesne müfettişi)

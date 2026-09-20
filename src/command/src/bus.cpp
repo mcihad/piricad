@@ -629,6 +629,21 @@ void Bus::journal_entry(const Session& session)
     journal_.append(std::move(e));
 }
 
+void Bus::document_replaced()
+{
+    undo_.clear();
+    active_layer_ = 0;
+    selection_.clear();
+
+    if (batch_) {
+        // `release` hands the inverse record away and clears it; the vector is
+        // dropped here on purpose. `rollback` would be the wrong verb — it would
+        // replay those inverses against the document that has just arrived.
+        (void)batch_->release();
+        batch_revision_at_start_ = doc_.revision();
+    }
+}
+
 core::Status Bus::begin_batch(std::string label)
 {
     if (batch_)

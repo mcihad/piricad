@@ -43,10 +43,12 @@ command::Task<core::Result<ProjectReport>> adopt_project(command::Bus& bus, std:
     bus.project_settings() = std::move(loaded_settings);
 
     // Opening is not undoable and the stack's slots belong to a document that no
-    // longer exists, so it goes. This is the same thing every CAD and GIS
-    // application the users know does on File > Open.
-    bus.undo_stack().clear();
-    bus.set_active_layer(0);
+    // longer exists, so it goes — along with the active layer, the selection and
+    // any batch a script had open around this call. `Bus::document_replaced`
+    // holds that list, because `YENİ` needs exactly the same one and two copies
+    // of it would be two places to forget an entry. This is the same thing every
+    // CAD and GIS application the users know does on File > Open.
+    bus.document_replaced();
 
     if (bus.on_document_changed) bus.on_document_changed();
 

@@ -15,6 +15,10 @@
   ],
   "surum": 1,
   "kapali": {
+    "core.new": {
+      "kalici": true,
+      "sebep": "Kaydedilmemiş çalışmayı sorgusuz atar ve geri alınamaz; `AÇ` ile aynı sebeple kapalıdır. Bir öneri, insanın imzaladığı belgeyi yok edemez (ai.md R3)."
+    },
     "core.open": {
       "plan": "A-02",
       "sebep": "Dosya açmak çalışma oturumunu değiştirir; hedef, seçenek ve sonuç URI sözleşmesi C-02 etkileriyle birlikte tanımlanacak."

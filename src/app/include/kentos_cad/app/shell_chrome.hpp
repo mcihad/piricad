@@ -82,6 +82,15 @@ signals:
     /// A tab was clicked. The shell decides what switching means.
     void activated(int index);
 
+    /// The `+` at the end of the strip was clicked: start a new drawing.
+    ///
+    /// IT ARRIVED WITH THE COMMAND BEHIND IT, and that order is the rule this
+    /// strip has already been taught once. The close mark was removed because
+    /// pressing it answered "Faz 2'de gelecek" — a control that refuses is a
+    /// control that lies (`closable`) — so a `+` went in only in the change
+    /// that made `YENİ` real.
+    void newRequested();
+
     /// The close mark on the active tab was clicked.
     void closeRequested(int index);
 
@@ -111,6 +120,12 @@ private:
     void relayout();
     int tabAt(QPoint at) const;
 
+    /// Where the `+` sits: immediately after the last tab, 26x26 like the
+    /// buttons at the right end. Empty when the strip is too narrow to hold it
+    /// without running under those buttons — a control drawn on top of another
+    /// control is one the user cannot aim at.
+    QRect plusRect() const;
+
     /// Whether a tab can be closed at all — true only once there is more than
     /// one drawing open. A close mark that answers "not yet" is an offer this
     /// window cannot keep; see the source.
@@ -121,6 +136,7 @@ private:
     int hot_         = -1;
     int hotClose_    = -1;
     int hotButton_   = -1; ///< 0 = split, 1 = expand
+    bool hotPlus_    = false;
     ThemeMode theme_ = ThemeMode::Dark;
 };
 
