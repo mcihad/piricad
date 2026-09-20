@@ -975,7 +975,7 @@ void LayoutDesigner::edit(const QString& arguments, const QString& verb)
     refresh();
 }
 
-void LayoutDesigner::sheetEdit(const QString& arguments)
+void LayoutDesigner::sheetEdit(const QString& change)
 {
     const core::Layout* l = layout();
     if (l == nullptr) return;
@@ -985,11 +985,37 @@ void LayoutDesigner::sheetEdit(const QString& arguments)
     // stops being true the moment two pages differ. On a one-page layout the
     // two readings are the same change, so the command is written without it
     // and the sheet keeps a name — `A3 yatay` rather than `420 × 297 mm`.
-    const int shown  = std::clamp(canvas_->page(), 0, static_cast<int>(l->pages.size()) - 1);
+    const int shown = std::clamp(canvas_->page(), 0, static_cast<int>(l->pages.size()) - 1);
+    const core::LayoutPage& page = l->pages[static_cast<std::size_t>(shown)];
     const QString at = l->pages.size() > 1 ? QStringLiteral(" sayfa=%1").arg(shown + 1) : QString();
-    controller_.runLine(
-        QStringLiteral("ÇIKTIYERLEŞİMİ islem=sayfa ad=%1%2 %3").arg(quoted(name_), at, arguments),
-        command::Origin::Gui);
+
+    // ALL FOUR, EVERY TIME — and this is not belt and braces.
+    //
+    // `islem=sayfa` DEFAULTS what it is not told: an omitted `kagit` is A4, an
+    // omitted `yon` is dikey, an omitted `kenar` is 10. So a line that says only
+    // `yon=yatay` does not turn an A3 sideways — it turns it into an A4 and
+    // resets the margin on the way. Four fields that each quietly undid the
+    // other three is not a panel anybody can use, so the panel writes the sheet
+    // as it should END UP, with the field the user touched overriding what is
+    // there now. The line is also what a hand would type to get this sheet.
+    const QString paper =
+        l->paper.empty() ? QStringLiteral("ozel") : QString::fromStdString(l->paper);
+    QString whole =
+        QStringLiteral("kagit=%1 yon=%2 kenar=%3 dpi=%4")
+            .arg(paper, page.w > page.h ? QStringLiteral("yatay") : QStringLiteral("dikey"))
+            .arg(l->margin / 1000)
+            .arg(l->dpi);
+    // A CUSTOM PAPER CARRIES ITS SIZE, because `ozel` without one is refused.
+    // The command swaps the two for `yon=yatay`, so they are given the way it
+    // expects them: the portrait pair.
+    if (l->paper.empty())
+        whole += QStringLiteral(" genislik=%1 yukseklik=%2")
+                     .arg(std::min(page.w, page.h) / 1000)
+                     .arg(std::max(page.w, page.h) / 1000);
+
+    controller_.runLine(QStringLiteral("ÇIKTIYERLEŞİMİ islem=sayfa ad=%1%2 %3 %4")
+                            .arg(quoted(name_), at, whole, change),
+                        command::Origin::Gui);
     refresh();
 }
 
@@ -1619,6 +1645,36 @@ QStringList LayoutDesigner::probeDrive()
                     .arg(map->scale)
                     .arg(static_cast<int>(map->grid));
 
+    // ---- THE SHEET'S OWN SETTINGS, THROUGH THE PANEL'S OWN PATH -------------
+    //
+    // WHAT THIS GUARDS. `islem=sayfa` DEFAULTS every argument it is not given,
+    // so a line carrying only `kenar=15` also makes the sheet A4 and turns it
+    // upright. Four inspector fields that each undid the other three would have
+    // shipped as "changing the margin resized my paper". One field is touched
+    // here and the other three are checked for having stayed put.
+    sheetEdit(QStringLiteral("kenar=15"));
+    if (const core::Layout* sheet = layout(); sheet != nullptr)
+        said << QStringLiteral("sayfa: %1 %2 · kenar %3 mm · %4 dpi · %5×%6")
+                    .arg(QString::fromStdString(sheet->paper),
+                         sheet->landscape ? QStringLiteral("yatay") : QStringLiteral("dikey"))
+                    .arg(sheet->margin / 1000)
+                    .arg(sheet->dpi)
+                    .arg(sheet->pages.front().w / 1000)
+                    .arg(sheet->pages.front().h / 1000);
+
+    // AND THE RESOLUTION, which until now no client could change after the
+    // layout was made.
+    //
+    // BOTH BEFORE THE LEGEND IS ADDED, deliberately: the caller's next step is
+    // a `GERİAL` that must undo the LAST gesture this makes, and it checks the
+    // item count. A settings change landing after it would be what came back.
+    sheetEdit(QStringLiteral("dpi=600"));
+    if (const core::Layout* sheet = layout(); sheet != nullptr)
+        said << QStringLiteral("sayfa: %1 %2 · kenar %3 mm · %4 dpi")
+                    .arg(QString::fromStdString(sheet->paper),
+                         sheet->landscape ? QStringLiteral("yatay") : QStringLiteral("dikey"))
+                    .arg(sheet->margin / 1000)
+                    .arg(sheet->dpi);
     addItem(QStringLiteral("lejant"));
     said << QStringLiteral("öğe sayısı: %1").arg(layout()->items.size());
     return said;

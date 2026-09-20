@@ -218,12 +218,13 @@ private:
     /// which is a move and goes through `tasi` like every other one.
     void edit(const QString& arguments, const QString& verb = QStringLiteral("ayarla"));
 
-    /// Runs one `ÇIKTIYERLEŞİMİ islem=sayfa` line for the page on screen.
+    /// Runs one `ÇIKTIYERLEŞİMİ islem=sayfa` line for the page on screen, with
+    /// `change` overriding the sheet as it stands.
     ///
-    /// THE PAGE ON SCREEN, NOT ALL OF THEM. The command changes every page when
-    /// `sayfa=` is left out, which is almost never what somebody looking at one
-    /// page means.
-    void sheetEdit(const QString& arguments);
+    /// THE WHOLE PAGE IS RESTATED, not just what moved: the command defaults
+    /// every argument it is not given, so a line saying only `kenar=15` would
+    /// also resize the sheet to A4. See the source for the rest.
+    void sheetEdit(const QString& change);
 
     /// Fills the inspector with the sheet's own settings — paper, orientation,
     /// margin, resolution and name. Shown whenever no item is picked, because a

@@ -513,6 +513,19 @@ int main(int argc, char** argv)
 
             const kentos::core::Layout* after = controller->document().layouts().find("Ada 1284");
             check(after != nullptr && after->items.size() == 5, "lejant eklenmedi");
+
+            // THE SHEET SURVIVED ITS OWN SETTINGS PANEL. `probeDrive` changed
+            // the margin and then the resolution, one field at a time; the
+            // paper, the orientation and the page size must be exactly what
+            // they were. `islem=sayfa` defaults what it is not told, so a panel
+            // that sent one argument at a time would have made this an A4.
+            check(after != nullptr && after->paper == "A3" && after->landscape,
+                  "KÂĞIT AYARI KENDİ PANELİNDE KAYBOLDU — A3 yatay değil");
+            check(after != nullptr && after->pages.front().w == kentos::core::um_from_mm(420),
+                  "sayfa boyu ayar sırasında değişti");
+            check(after != nullptr && after->margin == kentos::core::um_from_mm(15),
+                  "kenar boşluğu yazılmadı");
+            check(after != nullptr && after->dpi == 600, "çözünürlük yazılmadı");
             if (after == nullptr) {
                 QApplication::exit(1);
                 return;

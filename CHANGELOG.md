@@ -54,6 +54,21 @@ Kullanıcının tarifi "çok kısır ve kötü" idi, ve sebebi bir üslup mesele
 - Aynı gerçek üç yerde yazılıyordu (sayfa boyu, sayfa sayısı, öğe sayısı); her biri tek
   yerde kaldı ve tuvalin altındaki satır yalnız jestleri anlatıyor.
 
+### Düzeltildi — sayfa ayarları birbirini siliyordu
+
+`ÇIKTIYERLEŞİMİ islem=sayfa` kendisine **verilmeyen** her argümanı varsayılana
+düşürür: `kagit` yoksa A4, `yon` yoksa dikey, `kenar` yoksa 10. Yani yalnız
+`yon=yatay` yazan bir satır A3'ü yan çevirmez — onu A4'e çevirir ve kenar boşluğunu
+da sıfırlar. Tasarımcının yeni sayfa alanları her biri tek argüman gönderseydi
+dördü birbirini bozardı ("kenar boşluğunu değiştirdim, kâğıdım küçüldü"). Panel
+artık sayfayı **olması gereken hâliyle** bütün yazıyor; dokunulan alan duranı
+geçersiz kılar. `KENTOS_LAYOUT_PROBE` tek alanı değiştirip diğer üçünün yerinde
+durduğunu doğruluyor.
+
+Komut satırında aynı tuzak duruyor ve ayrı bir değişikliğin konusu: `islem=sayfa`
+değiştiren bir fiildir, kuran değil, ve verilmeyen argümanın duranı koruması
+beklenir.
+
 ### Eklendi — `ÇIKTIYERLEŞİMİ islem=sayfa` artık `dpi` kabul ediyor
 
 Çözünürlük yalnız `islem=ekle` sırasında seçilebiliyordu. Model onu taşıyor, `YAZDIR`
