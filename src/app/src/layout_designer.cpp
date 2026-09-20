@@ -744,7 +744,21 @@ QWidget* LayoutDesigner::buildProperties()
     // and a panel that hid half its widgets would be a panel whose layout
     // depends on what was selected before.
     while (QLayoutItem* old = propertyColumn_->takeAt(0)) {
-        if (QWidget* w = old->widget(); w != nullptr) w->deleteLater();
+        if (QWidget* w = old->widget(); w != nullptr) {
+            // UNPARENTED FIRST, THEN DELETED LATER — and the order is the whole
+            // bug. `takeAt` removes the widget from the LAYOUT immediately, but
+            // `deleteLater` leaves it a visible CHILD of the panel until the
+            // event loop next spins. In between it is unmanaged: it keeps
+            // drawing at whatever coordinates it last had.
+            //
+            // So every rebuild painted the new rows ON TOP OF the old ones:
+            // the empty-state hint and both toggle rows landed in the same few
+            // pixels, which is the pile-up a user sees as a broken panel after
+            // touching a switch. Nothing was laid out wrong; the previous panel
+            // had simply never left.
+            w->setParent(nullptr);
+            w->deleteLater();
+        }
         delete old;
     }
 

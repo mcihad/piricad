@@ -3792,12 +3792,31 @@ void MainWindow::printWithProfile(const QString& profile)
 {
     if (canvas_ == nullptr) return;
 
+    // AN EXPLICIT PROFILE PICK IS A CHANGE OF MIND. Choosing a paper from the
+    // menu after having chosen a layout means the user wants the paper; the
+    // pending sheet is dropped rather than quietly overriding what they just
+    // clicked.
+    if (!profile.isEmpty()) pendingLayout_.clear();
+
     // THE SECOND PRESS CAPTURES. A frame that is already up is the user's aim;
     // taking it is what the button means then, and opening a second frame would
     // throw away the aiming they just did.
     if (canvas_->printFraming()) {
         const core::Box2 window = canvas_->printFrameWindow();
         canvas_->endPrintFrame();
+
+        // AND IT CAPTURES INTO WHATEVER THE FRAME WAS STARTED FOR. A frame begun
+        // from a layout belongs to that layout, whichever control the user
+        // presses to take it — the toolbar's printer icon is the obvious one to
+        // reach for, and it used to open the plain print dialog instead, throwing
+        // the sheet away without a word. Pressing the layout's own menu entry
+        // again worked, which made the icon look broken rather than different.
+        if (!pendingLayout_.isEmpty()) {
+            const QString sheet = pendingLayout_;
+            pendingLayout_.clear();
+            openLayoutDesigner(sheet, window);
+            return;
+        }
         openPrintDialog(window, printProfile_);
         return;
     }
@@ -3860,6 +3879,34 @@ void MainWindow::layoutWithFrame(const QString& layout)
     const double aspect = static_cast<double>(map->frame.w) /
                           static_cast<double>(std::max<core::Um>(1, map->frame.h));
     canvas_->beginPrintFrame(aspect);
+}
+
+void MainWindow::probeBeginLayoutFrame(const QString& layout)
+{
+    // THE REAL ENTRY POINT, not a shortcut past it: this is the function the
+    // menu's layout row is connected to, so the probe exercises the road a user
+    // takes rather than a parallel one that could drift from it.
+    layoutWithFrame(layout);
+}
+
+void MainWindow::probeBeginPlainFrame()
+{
+    // THE FRAME UP IS DROPPED FIRST. With one still up, `printWithProfile` takes
+    // it — that is its job — and opens a MODAL dialog, which a headless probe
+    // cannot answer. Ending it here is what a user pressing Escape does, and it
+    // leaves the function to do the thing being tested: start a fresh frame for
+    // a paper profile.
+    if (canvas_ != nullptr && canvas_->printFraming()) canvas_->endPrintFrame();
+
+    const std::string fallback = controller_->printService().profiles().default_name();
+    printWithProfile(fallback.empty() ? QString() : QString::fromStdString(fallback));
+}
+
+QString MainWindow::probeFrameDestination() const
+{
+    if (canvas_ == nullptr || !canvas_->printFraming()) return {};
+    return pendingLayout_.isEmpty() ? QStringLiteral("yazdir")
+                                    : QStringLiteral("yerlesim:") + pendingLayout_;
 }
 
 void MainWindow::openLayoutDesigner(const QString& layout, core::Box2 window)

@@ -282,6 +282,24 @@ public:
     /// Developer tooling behind `KENTOS_PRINT_PROBE`.
     QString probePrintLine(core::Box2 box, const QString& profile, const QString& pdf, bool round);
 
+    /// What a second press on a print control would open, for the print probe.
+    ///
+    /// `yerlesim:<ad>` when the frame up was started from a layout, `yazdir` when
+    /// it was started from a paper profile, and empty when no frame is up.
+    ///
+    /// WHY THE DECISION IS EXPOSED RATHER THAN THE DIALOG. Both destinations are
+    /// modal, so a headless probe cannot let either open — but the routing is
+    /// exactly where the bug was: the toolbar's printer icon captured a frame
+    /// begun for a layout into the plain print dialog, throwing the sheet away
+    /// without a word, while the layout's own menu entry did the right thing.
+    QString probeFrameDestination() const;
+
+    /// Starts a print frame the way the layout menu entry does, for the probe.
+    void probeBeginLayoutFrame(const QString& layout);
+
+    /// Starts one the way a paper profile does, for the probe.
+    void probeBeginPlainFrame();
+
     /// Presses every button on the tool column in turn and prints what the
     /// program answered, one line per tool.
     ///

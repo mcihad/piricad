@@ -1577,6 +1577,33 @@ int main(int argc, char** argv)
                       "yuvarlamadan sonra satır hem pencere hem ölçek taşıyor");
             }
 
+            // ---- A FRAME BEGUN FOR A LAYOUT STAYS A LAYOUT ------------------
+            //
+            // Pick a layout from the print dropdown, drag an area on the drawing,
+            // then press the toolbar's PRINTER ICON: the sheet was thrown away
+            // and the plain print dialog opened instead. Pressing the layout's
+            // own menu entry again worked, which made the icon look broken
+            // rather than different — and the user lost the aim they had just
+            // made, with nothing said.
+            //
+            // Both destinations are modal, so what is asserted is the ROUTING,
+            // which is where the defect was.
+            {
+                window.runScriptLine(QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=Nişan kagit=A4"));
+                check(window.probeFrameDestination().isEmpty(),
+                      "çerçeve yokken bir hedef bildirildi");
+
+                window.probeBeginLayoutFrame(QStringLiteral("Nişan"));
+                check(window.probeFrameDestination() == QStringLiteral("yerlesim:Nişan"),
+                      "YERLEŞİM İÇİN AÇILAN ÇERÇEVE YERLEŞİMİ UNUTTU");
+
+                // And an explicit paper pick is a change of mind: the sheet is
+                // dropped rather than quietly overriding what was just clicked.
+                window.probeBeginPlainFrame();
+                check(window.probeFrameDestination() == QStringLiteral("yazdir"),
+                      "kâğıt seçildiği hâlde hâlâ yerleşim nişanlanıyor");
+            }
+
             // ---- WHAT THE FILE NAME ASKED FOR (TODOS L-13) ------------------
             //
             // `dosya=cikti.png` used to write a PDF, call it `cikti.png` and
