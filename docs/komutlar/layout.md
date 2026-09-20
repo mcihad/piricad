@@ -41,7 +41,7 @@ silinebilir; amaç ilk anda basılabilir bir şey görmenizdir.
 ÇIKTIYERLEŞİMİ islem=ekle ad=<ad> kagit=ozel genislik=<mm> yukseklik=<mm>
 ÇIKTIYERLEŞİMİ islem=sil ad=<ad>
 ÇIKTIYERLEŞİMİ islem=ad ad=<ad> yeni_ad=<ad>
-ÇIKTIYERLEŞİMİ islem=sayfa ad=<ad> [sayfa=<n>] kagit=A3 yon=yatay [kenar=<mm>]
+ÇIKTIYERLEŞİMİ islem=sayfa ad=<ad> [sayfa=<n>] kagit=A3 yon=yatay [kenar=<mm>] [dpi=<n>]
 ÇIKTIYERLEŞİMİ islem=sayfaekle ad=<ad> [kagit=A3] [yon=yatay] [sayfa=<n>]
 ÇIKTIYERLEŞİMİ islem=sayfasil ad=<ad> [sayfa=<n>]
 ÇIKTIYERLEŞİMİ islem=sayfacogalt ad=<ad> [sayfa=<n>]
@@ -62,7 +62,7 @@ silinebilir; amaç ilk anda basılabilir bir şey görmenizdir.
 | `genislik`, `yukseklik` | `ozel` için | Sayfa boyu, milimetre |
 | `yon` | hayır | `dikey` ya da `yatay` (varsayılan `dikey`) |
 | `kenar` | hayır | Kenar boşluğu, milimetre (varsayılan 10) |
-| `dpi` | hayır | Çıktı çözünürlüğü (varsayılan 300) |
+| `dpi` | hayır | Çıktı çözünürlüğü (varsayılan 300). `islem=ekle` ile kurulur, `islem=sayfa` ile sonradan değiştirilir |
 | `sayfa` | sayfa işlemlerinde | Hangi sayfa; **1'den başlar**. `islem=sayfa`'da verilmezse bütün sayfalar değişir |
 | `yeni_sira` | `sayfatasi` için | Sayfanın gideceği sıra |
 | `katman` | `atlas` için | Hangi katmanın nesneleri için sayfa basılacak; `yok` atlası kapatır |
@@ -279,6 +279,27 @@ Araç çubuğundaki **yazdırma düğmesinin yanındaki ok** hem yazdırma profi
 Aynı listenin altında da **Yeni çıktı yerleşimi…** vardır. Her adım `ÇIKTIYERLEŞİMİ` ve
 `ÇIKTIÖĞE` satırları olarak geçer: komut günlüğünde görünür, tek `Ctrl+Z` ile geri
 alınır.
+
+#### Tasarımcıdan
+
+Tasarımcının **sağ sütunu**, hiçbir öğe seçili değilken sayfanın kendi ayarlarını
+gösterir ve her biri bir `ÇIKTIYERLEŞİMİ islem=sayfa` satırı yazar:
+
+| Alan | Yazdığı satır |
+|---|---|
+| **Kâğıt** | `kagit=A3` |
+| **Yön** | `yon=yatay` |
+| **Kenar boşluğu** | `kenar=15` |
+| **Çözünürlük** | `dpi=600` |
+| **Ad** | `islem=ad yeni_ad=…` |
+
+Tek sayfalı bir yerleşimde satır `sayfa=` almaz, yani kâğıdın **adı** da değişir ve
+sayfa `A3 yatay` olarak anılmaya devam eder. Çok sayfalı bir yerleşimde ekranda duran
+sayfa `sayfa=` ile hedeflenir; bu durumda yerleşimin kâğıt adı olduğu gibi kalır,
+çünkü iki sayfa farklı boyda olduğu anda tek bir ad artık doğru değildir.
+
+Sol üstteki şerit sayfalar arasında gezer: `‹`, yazılabilir sayfa numarası, kaç sayfa
+olduğu, `›`, sonra sayfa ekleme, çoğaltma ve silme.
 
 ### Betik
 

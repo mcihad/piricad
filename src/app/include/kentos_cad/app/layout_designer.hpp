@@ -29,8 +29,10 @@
 #include <QString>
 #include <QWidget>
 
+class QPainter;
 class QListWidget;
 class QScrollArea;
+class QStyledItemDelegate;
 class QVBoxLayout;
 
 namespace kentos::app {
@@ -130,8 +132,17 @@ private:
     /// The layout as it stands, or null when the document has no such sheet.
     const core::Layout* layout() const;
 
-    /// The page's rectangle inside this widget, fitted and centred.
+    /// The page's rectangle inside this widget, fitted and centred inside the
+    /// rulers' gutter.
     QRectF pageRect() const;
+
+    /// Draws the two millimetre scales and lights `item`'s span on them.
+    ///
+    /// THE SPAN IS THE POINT, not the ticks: it says where on the paper the
+    /// selection sits and how wide it is, as one picture rather than as four
+    /// numbers read one at a time — and it follows a drag, so the gesture is
+    /// measured while it happens.
+    void paintRulers(QPainter& p, const QRectF& box, const core::LayoutItem* item) const;
 
     /// A paper point from a widget point, and back.
     core::PaperRect paperFrom(const QRectF& device) const;
@@ -170,6 +181,13 @@ public:
 
     void applyTheme(ThemeMode mode) override;
 
+    /// Picks the item of that id and opens its settings, as clicking it does.
+    ///
+    /// A WINDOW THAT CAN BE OPENED ON SOMETHING. The manager and the menu both
+    /// know which box a user came here for; without this they could only hand
+    /// over a sheet and leave the user to find it again.
+    void showItem(const QString& id);
+
     /// Aims the sheet's first map frame at `window` and redraws — what picking a
     /// frame on the canvas does before this window opens.
     void aimAt(core::Box2 window);
@@ -184,10 +202,6 @@ private:
     /// from one here and from zero in the array.
     Field* pageField_{nullptr};
 
-    /// Its row, whose help line says how many pages there are and how big this
-    /// one is.
-    FormRow* pageRow_{nullptr};
-
     /// Runs one of the page verbs of `core.layout` on the active page.
     void pageVerb(const char* verb);
 
@@ -199,7 +213,38 @@ private:
     void refresh();
 
     /// Runs one `ÇIKTIÖĞE` line for the selected item and refreshes.
-    void edit(const QString& arguments);
+    ///
+    /// `verb` is `ayarla` for everything except moving an item to another page,
+    /// which is a move and goes through `tasi` like every other one.
+    void edit(const QString& arguments, const QString& verb = QStringLiteral("ayarla"));
+
+    /// Runs one `ÇIKTIYERLEŞİMİ islem=sayfa` line for the page on screen.
+    ///
+    /// THE PAGE ON SCREEN, NOT ALL OF THEM. The command changes every page when
+    /// `sayfa=` is left out, which is almost never what somebody looking at one
+    /// page means.
+    void sheetEdit(const QString& arguments);
+
+    /// Fills the inspector with the sheet's own settings — paper, orientation,
+    /// margin, resolution and name. Shown whenever no item is picked, because a
+    /// sheet always exists and "select an item" is not worth a column.
+    void buildSheetProperties(const core::Layout& l);
+
+    /// Fills the inspector with every setting `ÇIKTIÖĞE` takes for `item`.
+    void buildItemProperties(const core::Layout& l, const core::LayoutItem& item);
+
+    /// Two form rows on one line — position is a pair, size is a pair.
+    QWidget* pairOf(QWidget* left, QWidget* right);
+
+    /// A paper-millimetre row that writes `name=` on the selected item.
+    FormRow* mmRow(const QString& label, core::Um value, const char* name);
+
+    /// A whole-number row that writes `name=` on the selected item.
+    FormRow* countRow(const QString& label, long long value, const char* name, int most);
+
+    /// A text row that writes a quoted `name=` on the selected item.
+    FormRow* textRow(const QString& label, const QString& value, const char* name,
+                     const QString& hint);
 
     /// Adds an item of `kind` and selects it.
     void addItem(const QString& kind);
@@ -214,6 +259,21 @@ private:
 
     LayoutCanvas* canvas_{nullptr};
     QListWidget* items_{nullptr};
+
+    /// Draws the item rows; see `ItemRow` in the source.
+    QStyledItemDelegate* rows_{nullptr};
+
+    /// The inspector's heading: what is being inspected, with its id as note.
+    FormSection* propertiesHead_{nullptr};
+
+    /// The `ÖĞELER` heading, whose note carries the count.
+    FormSection* itemsHead_{nullptr};
+
+    /// `2 / 7`, beside the page number rather than in a help line under it.
+    QLabel* pageCount_{nullptr};
+
+    /// Lit only while something is picked.
+    Button* remove_{nullptr};
     QWidget* properties_{nullptr};
     QVBoxLayout* propertyColumn_{nullptr};
     QLabel* status_{nullptr};

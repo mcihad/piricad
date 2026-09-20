@@ -580,6 +580,16 @@ Task<void> run_layout(Context& ctx)
                 // are left alone rather than made to name one page's answer.
             }
             target->margin = um(edge);
+
+            // AND THE EXPORT RESOLUTION, which until now could only be chosen
+            // when the layout was CREATED. The model carries it, `YAZDIR` reads
+            // it, and no client of any kind — command line, script, designer or
+            // agent — could change it afterwards; a sheet made at the default
+            // 300 dpi was stuck there for good. Left out, it stays as it was.
+            if (const Value dpi_arg = ctx.argument("dpi"); !dpi_arg.empty()) {
+                target->dpi = static_cast<std::int32_t>(dpi_arg.as_int());
+                ctx.record("dpi", dpi_arg);
+            }
         } else if (op == "sayfaekle") {
             core::LayoutPage fresh{um(width_mm), um(height_mm)};
             std::size_t at = target->pages.size();
@@ -970,9 +980,9 @@ Task<void> run_item(Context& ctx)
                         wanted.clear();
                         break;
                     }
-                    const auto& have = bus.document().layers();
+                    const auto& drawn = bus.document().layers();
                     const bool known =
-                        std::any_of(have.begin(), have.end(), [&one](const core::Layer& layer) {
+                        std::any_of(drawn.begin(), drawn.end(), [&one](const core::Layer& layer) {
                             return core::turkish_key_equals(layer.name, one);
                         });
                     if (!known) {

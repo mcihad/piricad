@@ -1825,6 +1825,12 @@ void FormSection::setNote(const QString& note)
     update();
 }
 
+void FormSection::setTitle(const QString& title)
+{
+    title_ = title;
+    update();
+}
+
 QSize FormSection::sizeHint() const
 {
     return {200, kSectionH};

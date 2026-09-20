@@ -1037,6 +1037,37 @@ int main(int argc, char** argv)
             if (QWidget* top = QApplication::activeModalWidget()) top->close();
         });
 
+        // AND THE LAYOUT DESIGNER, which is a whole editor and had never been
+        // photographed. It opens modal, so the steps after it run inside its
+        // own event loop — which is fine: a `singleShot` fires in a nested loop
+        // like any other.
+        later([&window] {
+            window.runScriptLine(
+                QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=\"Ada 1284 / Pafta 3\" kagit=A3 "
+                               "yon=yatay"));
+        });
+        later([&window] {
+            window.openLayoutDesigner(QStringLiteral("Ada 1284 / Pafta 3"),
+                                      window.controller()->document().extent());
+        });
+        later([shot] {
+            shot(QStringLiteral("2d-yerlesim-tasarimcisi"), QApplication::activeModalWidget());
+        });
+        // AND WITH A BOX PICKED, which is the state the window is in for most of
+        // its life. The empty inspector is the state a reviewer sees by
+        // accident; the full one is the state they need to look at.
+        later([] {
+            if (auto* designer =
+                    qobject_cast<kentos::app::LayoutDesigner*>(QApplication::activeModalWidget()))
+                designer->showItem(QStringLiteral("harita"));
+        });
+        later([shot] {
+            shot(QStringLiteral("2e-yerlesim-ogesi"), QApplication::activeModalWidget());
+        });
+        later([] {
+            if (QWidget* top = QApplication::activeModalWidget()) top->close();
+        });
+
         later([&window] { window.openAttributeTable(); });
         later(
             [shot] { shot(QStringLiteral("3-oznitelik-tablosu"), QApplication::activeWindow()); });

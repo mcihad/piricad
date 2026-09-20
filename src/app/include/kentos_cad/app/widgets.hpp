@@ -598,6 +598,10 @@ public:
     /// Replaces the note at the far end.
     void setNote(const QString& note);
 
+    /// Replaces the heading itself, for a section that names what it is looking
+    /// at rather than what it contains.
+    void setTitle(const QString& title);
+
     /// Repaints in `mode`'s tokens.
     void applyTheme(ThemeMode mode) override;
     /// One heading row, at the standard's section height.

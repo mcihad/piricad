@@ -6,6 +6,61 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — yerleşim tasarımcısı: üst üste binen panel ve yanlış yazdırma yolu
+
+İki hata, ikisi de kullanıcının bildirdiği hâliyle:
+
+- **Sağdaki anahtar seçilince düzen bozuluyordu.** Özellik paneli her yeniden
+  kurulduğunda eski satırlar düzenden çıkarılıp `deleteLater` ile siliniyordu; ama
+  `deleteLater` olay döngüsü dönene kadar widget'ı panelin **görünür** bir çocuğu
+  bırakır ve o aralıkta widget en son bulunduğu koordinatlarda çizmeye devam eder.
+  Yani her yeniden kurulum yeni satırları eskilerin **üstüne** boyuyordu. Düzen yanlış
+  kurulmuyordu; önceki panel hiç gitmemişti.
+- **Yerleşim için başlatılan çerçeve normal yazdırmaya gidiyordu.** Bir yerleşim seçip
+  sahneden alan seçtikten sonra yazıcı ikonuna basmak çerçeveyi yakalıyor ama neden
+  açıldığını unutuyordu. Çerçeve artık ne için açıldıysa oraya teslim ediliyor; kâğıt
+  profilinin açıkça seçilmesi fikir değişikliği sayılıp yerleşimi temizliyor.
+- **Cetvel fırçayı geri bırakmıyordu** (bu turda eklenen cetvelin ilk hâli): seçili
+  kutu cetvelin şerit rengiyle doluyordu — açık temada zor fark edilir, koyu temada
+  harita çerçevesinin yerinde siyah bir delik.
+
+### Değişti — yerleşim tasarımcısı baştan düzenlendi
+
+Kullanıcının tarifi "çok kısır ve kötü" idi, ve sebebi bir üslup meselesi değildi:
+`ÇIKTIÖĞE` on yedi öğe ayarı, `ÇIKTIYERLEŞİMİ` dokuz sayfa ayarı kabul ederken panel
+öğe ayarlarının dokuzunu, sayfa ayarlarının **hiçbirini** gösteriyordu.
+
+- **Kâğıdın üstünde ve solunda milimetre cetveli.** Seçili öğenin kapladığı açıklık iki
+  cetvelde de vurgulanır ve sürükleme boyunca onunla hareket eder — dört sayıyı tek tek
+  okumak yerine tek bakışta görülür. Adım ölçeğe göre seçilir, A0'da da A5'te de okunur.
+- **Sağ sütun asla boş kalmaz.** Seçim yokken sayfanın kendi ayarları açılır: kâğıt,
+  yön, kenar boşluğu, çözünürlük, yerleşim adı. Dördü de bu pencereden hiç
+  ulaşılamıyordu.
+- **Öğenin bütün ayarları erişilebilir oldu:** durduğu sayfa, çizim sırası (`sira`),
+  adı (`yeni_ad`), ızgara aralığı, harita çerçevesinin çizdiği katmanlar, tablonun
+  sütunları ve satır sınırı, ve ölçek çubuğu / kuzey oku / lejant / grafiğin hangi
+  haritaya bağlı olduğu.
+- **`tur=grafik` ekleme çubuğuna girdi.** Komut kabul ediyordu, fare ile istenemiyordu
+  (CLAUDE.md 5.15).
+- **Öğe listesi bir içindekiler tablosu oldu:** tür glifi, öğenin **adı**, ve kutunun
+  ölçüsü. Kimlik ipucuna taşındı; komut satırının andığı kimlik sağdaki **Ad**
+  alanından değiştirilir.
+- **Ekleme çubuğu etiketlendi:** iki sütun, dokuz sözcük — sekiz simge karesi yerine.
+- **Sayfa bölümü bir şeride indi:** `‹ 2 / 7 ›` artı üç sayfa fiili; başlıklı bir form
+  alanı ve üç satır yerine.
+- **Yeniden kurulan satırlar temayı alıyor.** `DialogFrame` çocukları bir kez gezer;
+  sonradan kurulan her denetim `Themed`'in varsayılanını, yani **koyu**yu tutuyordu —
+  ızgara açılır listesi açık temada siyah çiziliyordu.
+- Aynı gerçek üç yerde yazılıyordu (sayfa boyu, sayfa sayısı, öğe sayısı); her biri tek
+  yerde kaldı ve tuvalin altındaki satır yalnız jestleri anlatıyor.
+
+### Eklendi — `ÇIKTIYERLEŞİMİ islem=sayfa` artık `dpi` kabul ediyor
+
+Çözünürlük yalnız `islem=ekle` sırasında seçilebiliyordu. Model onu taşıyor, `YAZDIR`
+onu okuyor, ve **hiçbir istemci** — komut satırı, betik, tasarımcı ya da ajan — sonradan
+değiştiremiyordu: varsayılan 300 dpi ile kurulmuş bir yerleşim orada kalıyordu.
+
+
 ### Değişti — onay modeli: tek yol yerine iki yol (TODOS S-05, S-04; §5.2.1 tadili)
 
 **Bu bir kural değişikliğidir ve kullanıcının kararıyla yapıldı.** Zincir, hiyerarşinin
