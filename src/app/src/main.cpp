@@ -526,6 +526,16 @@ int main(int argc, char** argv)
             check(after != nullptr && after->margin == kentos::core::um_from_mm(15),
                   "kenar boşluğu yazılmadı");
             check(after != nullptr && after->dpi == 600, "çözünürlük yazılmadı");
+
+            // AND THE PREVIEW DREW THE SHEET, NOT THE WINDOW'S OWN CHROME.
+            //
+            // The canvas used to hand `paint_layout_page` — the function the
+            // PDF and the printer go through — a painter with the sheet's drop
+            // shadow brush still set, so every parcel came out filled with
+            // black at ten percent. Untouched paper on this sheet: 94% with the
+            // painter given back, 49% without.
+            check(designer.probeBlankPaper() > 80,
+                  "ÖNIZLEME KÂĞIDI BOYADI — çıktıda olmayan bir dolgu çiziliyor");
             if (after == nullptr) {
                 QApplication::exit(1);
                 return;
@@ -1055,6 +1065,7 @@ int main(int argc, char** argv)
         // own event loop — which is fine: a `singleShot` fires in a nested loop
         // like any other.
         later([&window] {
+            window.seedProbeDrawing();
             window.runScriptLine(
                 QStringLiteral("ÇIKTIYERLEŞİMİ islem=ekle ad=\"Ada 1284 / Pafta 3\" kagit=A3 "
                                "yon=yatay"));

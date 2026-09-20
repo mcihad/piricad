@@ -15,6 +15,7 @@
 #include <QFileInfo>
 #include <QGridLayout>
 #include <QHBoxLayout>
+#include <QImage>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QListWidget>
@@ -274,6 +275,11 @@ QRectF LayoutCanvas::pageRect() const
 /// `dragged` scaled with `pages.front()`. On a layout whose second page is a
 /// different size that meant every box was drawn — and dragged — somewhere other
 /// than where it is. One question, one answer.
+QRect LayoutCanvas::sheetRect() const
+{
+    return pageRect().toAlignedRect().intersected(rect());
+}
+
 const core::LayoutPage* LayoutCanvas::activePage() const
 {
     const core::Layout* l = layout();
@@ -630,11 +636,26 @@ void LayoutCanvas::paintEvent(QPaintEvent*)
     // paper on a table" without a word. Three falling passes rather than one
     // hard offset — a single 40% rectangle reads as a second sheet behind the
     // first, which is the opposite of what a shadow is for.
+    //
+    // SAVED AND RESTORED, AND THAT IS NOT TIDINESS.
+    //
+    // `paint_layout_page` below is the SAME function the PDF, the printer and
+    // the image export go through, and it draws into the painter it is handed.
+    // Handed one with a brush still set, it filled every parcel on the sheet
+    // with that brush — the shadow's black at 10% over white paper, which is
+    // the pale grey a user sees inside the map frame and nowhere in the file
+    // they print. A preview that claims a fill the sheet does not have is a
+    // preview lying about a document a licensed engineer signs.
+    //
+    // The SCOPE is what fixes it. A bare `setBrush(Qt::NoBrush)` after the loop
+    // works until the next piece of chrome is added above this line.
+    p.save();
     p.setPen(Qt::NoPen);
     for (const auto& [drop, alpha] : {std::pair{6.0, 12}, std::pair{4.0, 18}, std::pair{2.0, 26}}) {
         p.setBrush(QColor(0, 0, 0, alpha));
         p.drawRect(box.adjusted(-drop + 2, -drop + 4, drop + 2, drop + 4));
     }
+    p.restore();
 
     LayoutFacts facts;
     facts.sheet = QString::fromStdString(l->name);
@@ -1645,6 +1666,34 @@ QStringList LayoutDesigner::probeDrive()
         said << QStringLiteral("harita: ölçek 1:%1, ızgara %2")
                     .arg(map->scale)
                     .arg(static_cast<int>(map->grid));
+
+    // ---- THE PREVIEW DOES NOT FILL WHAT THE SHEET LEAVES EMPTY --------------
+    //
+    // WHAT THIS CAUGHT, and it was on screen for months. The canvas drew the
+    // sheet's drop shadow and then called `paint_layout_page` — the SAME
+    // function the PDF and the printer go through — without giving the painter
+    // back. The shadow's brush was still set, so every parcel on the sheet came
+    // out filled with black at ten percent: a pale grey inside the map frame
+    // that appears in no file this program writes. A user reported it as "why
+    // is the map background grey", which is exactly what it looked like.
+    //
+    // MEASURED AS THE SHARE OF UNTOUCHED PAPER. The probe's drawing puts two
+    // parcels across most of the map frame; filled, they cover a quarter of the
+    // page and the share falls well under the bar, and outlined they leave it
+    // white. It is a blunt measure on purpose: a subtler one would need the
+    // sheet rendered twice and compared, which is a test that fails on a
+    // font-hinting difference between two machines.
+    if (canvas_ != nullptr && canvas_->sheetRect().width() > 100) {
+        const QImage sheet = canvas_->grab(canvas_->sheetRect()).toImage();
+        std::size_t paper  = 0;
+        const std::size_t all =
+            static_cast<std::size_t>(sheet.width()) * static_cast<std::size_t>(sheet.height());
+        for (int y = 0; y < sheet.height(); ++y)
+            for (int x = 0; x < sheet.width(); ++x)
+                if (sheet.pixelColor(x, y) == QColor(Qt::white)) ++paper;
+        blankPaperPercent_ = all == 0 ? 0 : static_cast<int>(100 * paper / all);
+        said << QStringLiteral("boş kâğıt: %%1").arg(blankPaperPercent_);
+    }
 
     // ---- THE SHEET'S OWN SETTINGS, THROUGH THE PANEL'S OWN PATH -------------
     //

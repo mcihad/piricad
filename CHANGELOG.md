@@ -6,6 +6,25 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — tasarımcı, haritanın içini çıktıda olmayan bir griyle dolduruyordu
+
+Kullanıcının sorusu: "harita arkaplanı neden gri oluyor çıktı yerleşiminde".
+
+Tuval önce kâğıdın gölgesini çiziyor, sonra `paint_layout_page`'i çağırıyordu —
+PDF'in, yazıcının ve resim dışa aktarmanın geçtiği **aynı** fonksiyon. Gölgenin
+fırçası hâlâ takılıydı ve o fonksiyon kendisine verilen boyacıyla çiziyor, yani
+sayfadaki her parsel o fırçayla doluyordu: beyaz kâğıt üzerinde %10 siyah, yani
+harita çerçevesinin içindeki soluk gri. Aynı yerleşimin PDF'inde o dolgu yok.
+
+Önizlemenin, imzalanacak bir belgede var olmayan bir dolgu göstermesiydi. Düzeltme
+kapsamla: gölge `save()`/`restore()` arasına alındı — döngüden sonra konacak yalın
+bir `setBrush(Qt::NoBrush)`, bu satırın üstüne eklenecek ilk yeni çizime kadar
+dayanırdı.
+
+`KENTOS_LAYOUT_PROBE` artık kâğıdın ne kadarının dokunulmadan kaldığını ölçüyor:
+boyacı geri verildiğinde %94, verilmediğinde %49.
+
+
 ### Düzeltildi — yerleşim tasarımcısı: üst üste binen panel ve yanlış yazdırma yolu
 
 İki hata, ikisi de kullanıcının bildirdiği hâliyle:

@@ -71,6 +71,14 @@ public:
     /// Which item is picked, or empty.
     const QString& selected() const noexcept { return selected_; }
 
+    /// The sheet's rectangle inside this widget, in device pixels.
+    ///
+    /// Public because a test needs to look at the PAPER and not at the chrome
+    /// around it: the rulers and the surround are this window's, and a check
+    /// that what the preview draws matches what the printer draws has to
+    /// compare the same area.
+    QRect sheetRect() const;
+
     void select(const QString& id);
 
     /// Re-reads the document. Called after any command touches the layout.
@@ -197,6 +205,11 @@ public:
     /// up with.
     QStringList probeDrive();
 
+    /// What share of the sheet `probeDrive` last found still untouched paper,
+    /// as a percentage. See `probeDrive` for the defect this measures; -1 until
+    /// it has run.
+    int probeBlankPaper() const noexcept { return blankPaperPercent_; }
+
 private:
     /// Which page the canvas shows, as a number the user types. Pages are counted
     /// from one here and from zero in the array.
@@ -278,6 +291,9 @@ private:
     QWidget* properties_{nullptr};
     QVBoxLayout* propertyColumn_{nullptr};
     QLabel* status_{nullptr};
+
+    /// See `probeBlankPaper`.
+    int blankPaperPercent_{-1};
 
     /// True while `refresh()` is filling the widgets, so a `valueChanged` from
     /// setting a field does not run a command and refresh again.
