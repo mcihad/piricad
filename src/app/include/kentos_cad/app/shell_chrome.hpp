@@ -111,6 +111,11 @@ private:
     void relayout();
     int tabAt(QPoint at) const;
 
+    /// Whether a tab can be closed at all — true only once there is more than
+    /// one drawing open. A close mark that answers "not yet" is an offer this
+    /// window cannot keep; see the source.
+    bool closable() const;
+
     QVector<Tab> tabs_;
     int active_      = 0;
     int hot_         = -1;

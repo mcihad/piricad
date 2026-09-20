@@ -78,6 +78,7 @@ constexpr int kTabLabelPx = 12;
 constexpr int kTabButtons = 2; ///< split view and expand, at the right end
 constexpr int kTabBtnBox  = 26;
 constexpr int kTabBtnPad  = 8;
+constexpr int kTabAccent  = 2; ///< design.md §7: the active tab's top edge
 
 } // namespace
 
@@ -192,15 +193,31 @@ void DocumentTabs::relayout()
         Tab& tab = tabs_[i];
 
         // The active tab carries a close mark, so it is wider than the same name
-        // would be sitting inactive. That is the reference's own arithmetic.
+        // would be sitting inactive. That is the reference's own arithmetic —
+        // and it only applies while there IS something to close. See `closable`.
         int w = kTabPadX + kTabIcon + kTabGap +
                 static_cast<int>(label.horizontalAdvance(tab.name)) + kTabPadX;
-        if (i == active_) w += kTabGap + kTabIcon;
+        if (i == active_ && closable()) w += kTabGap + kTabIcon;
 
         tab.left  = x;
         tab.width = w;
         x += w + 1; // the 1 px hard rule between tabs
     }
+}
+
+bool DocumentTabs::closable() const
+{
+    // A CONTROL THAT REFUSES IS A CONTROL THAT LIES.
+    //
+    // The strip drew a close mark on the only tab, and pressing it answered
+    // "several drawings come in Phase 2" — so the one thing this window says
+    // about the document it is showing was an offer it could not keep. A single
+    // drawing has nothing to close TO: closing it would leave the program with
+    // no document, which is a state it does not have.
+    //
+    // The mark comes back the day a second tab can exist, and it comes back
+    // here rather than by someone remembering to re-add it.
+    return tabs_.size() > 1;
 }
 
 int DocumentTabs::tabAt(QPoint at) const
@@ -225,7 +242,7 @@ void DocumentTabs::mouseMoveEvent(QMouseEvent* event)
     hotClose_  = -1;
     hotButton_ = -1;
 
-    if (hot_ == active_ && hot_ >= 0) {
+    if (hot_ == active_ && hot_ >= 0 && closable()) {
         const Tab& tab = tabs_[hot_];
         const int cx   = tab.left + tab.width - kTabPadX - kTabIcon;
         if (at.x() >= cx && at.x() < cx + kTabIcon) hotClose_ = hot_;
@@ -276,16 +293,33 @@ void DocumentTabs::paintEvent(QPaintEvent*)
         const bool isActive = i == active_;
         const QRect box(tab.left, 0, tab.width, kTabHeight);
 
-        if (isActive)
-            p.fillRect(box, t.bgTabActive);
-        else if (i == hot_)
+        if (isActive) {
+            // THE ACTIVE TAB IS THE SURFACE BELOW IT, brought up into the strip.
+            // That is what makes a tab a tab rather than a lighter rectangle:
+            // it takes the canvas's own ground, and the rule along the foot of
+            // the strip is broken under it so the two are one shape. Left as a
+            // box on a continuous line, the tab read as a label with a name in
+            // it and the strip read as a title bar.
+            p.fillRect(box, t.bgCanvas);
+
+            // AND THE 2 px ACCENT ALONG ITS TOP — `design.md` §7 asks for it in
+            // so many words and the strip never drew it. It is the one mark
+            // that says WHICH drawing the window is showing, and without it the
+            // active tab differed from an inactive one by a shade of grey.
+            p.fillRect(QRect(box.left(), 0, box.width(), kTabAccent), t.accent);
+        } else if (i == hot_) {
             p.fillRect(box, t.hoverRow);
+        }
 
         // fillRect, never drawLine, for a 1 px rule. Antialiasing is on for the
         // glyphs, and an antialiased hairline spreads itself over two rows at
         // half intensity — which is a 2 px grey smear where the reference has one
         // crisp line, and one pixel of drift for everything below it.
-        p.fillRect(QRect(box.right() + 1, 0, 1, kTabHeight), t.lineHard);
+        //
+        // BETWEEN tabs and nowhere else. It used to run after the LAST one too,
+        // which on a window with a single drawing drew a stray vertical line
+        // standing in empty strip with nothing on either side of it.
+        if (i + 1 < tabs_.size()) p.fillRect(QRect(box.right() + 1, 0, 1, kTabHeight), t.lineHard);
 
         int x = box.left() + kTabPadX;
         p.drawPixmap(QRect(x, (kTabHeight - kTabIcon) / 2, kTabIcon, kTabIcon),
@@ -293,13 +327,13 @@ void DocumentTabs::paintEvent(QPaintEvent*)
                                   devicePixelRatioF()));
         x += kTabIcon + kTabGap;
 
-        p.setFont(sans(kTabLabelPx));
+        p.setFont(sans(kTabLabelPx, isActive ? QFont::DemiBold : QFont::Normal));
         p.setPen(isActive ? t.text : t.textDim);
         const QFontMetrics label(p.font());
         p.drawText(QRect(x, 0, label.horizontalAdvance(tab.name), kTabHeight),
                    Qt::AlignVCenter | Qt::AlignLeft, tab.name);
 
-        if (isActive) {
+        if (isActive && closable()) {
             const int cx = box.right() + 1 - kTabPadX - kTabIcon;
             p.drawPixmap(QRect(cx, (kTabHeight - kTabIcon) / 2, kTabIcon, kTabIcon),
                          glyph_pixmap(Glyph::Close, hotClose_ == i ? t.text : t.textFaint, kTabIcon,
@@ -323,7 +357,12 @@ void DocumentTabs::paintEvent(QPaintEvent*)
         bx += kTabBtnBox;
     }
 
+    // THE RULE ALONG THE FOOT, BROKEN UNDER THE ACTIVE TAB. Drawn straight
+    // across, it cut the tab off from the drawing it names; the gap is what
+    // joins them.
     p.fillRect(QRect(0, kTabHeight - 1, width(), 1), t.lineHard);
+    if (active_ >= 0 && active_ < tabs_.size())
+        p.fillRect(QRect(tabs_[active_].left, kTabHeight - 1, tabs_[active_].width, 1), t.bgCanvas);
 }
 
 // =============================================================================

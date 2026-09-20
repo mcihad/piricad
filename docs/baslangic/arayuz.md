@@ -182,10 +182,17 @@ alt kutu "dolgu yok" demektir.
 
 ## Doküman sekmeleri
 
-Tuvalin üstünde, 30 piksel. Her açık çizim bir sekmedir; etkin sekmenin kapatma
-işareti vardır. Sağ uçta bölünmüş görünüm ve tam ekran düğmeleri bulunur.
+Tuvalin üstünde, 30 piksel. Her açık çizim bir sekmedir. Etkin sekme üst kenarındaki
+**2 piksel vurgu çizgisiyle** işaretlenir ve zemini tuvalin zeminidir — altındaki
+çizgi onun altında kesilir, böylece sekme gösterdiği çizime bağlanır. Sağ uçta
+bölünmüş görünüm ve tam ekran düğmeleri bulunur.
 
-Birden çok çizimi aynı anda açmak Faz 2'de gelecek; bugün tek sekme görünür.
+**Bugün tek sekme görünür** ve **kapatma işareti yoktur.** Tek çizimin kapatılacağı
+bir yer yok: kapatmak programı belgesiz bırakırdı, ki öyle bir durumu yok. İşaret,
+ikinci bir sekme var olabildiği gün geri gelir.
+
+Yeni bir çizim başlatmak (`Dosya ▸ Yeni`) ve birden çok çizimi aynı anda açmak henüz
+gelmedi; menüdeki giriş bu yüzden sönüktür.
 
 ## Harita alanı
 

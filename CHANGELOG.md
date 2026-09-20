@@ -6,6 +6,29 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — doküman sekmesi artık sekme gibi görünüyor
+
+- **`design.md` §7'nin istediği 2 px vurgu çizgisi hiç çizilmiyordu.** Şerit onu
+  "aktif sekmede 2 px `--accent` üst çizgi" diye tarif ediyor; kod yalnız zemini
+  biraz açıyordu, yani etkin sekme etkisizden bir gri tonuyla ayrılıyordu. Hangi
+  çizimin gösterildiğini söyleyen tek işaret buydu.
+- **Etkin sekme tuvale bağlandı.** Zemini artık tuvalin zemini ve şeridin ayağındaki
+  çizgi onun altında kesiliyor, böylece ikisi tek bir şekil. Sürekli bir çizginin
+  üstünde duran kutu, içinde ad yazan bir etiket gibi okunuyordu.
+- **Son sekmeden sonraki başıboş dikey çizgi kaldırıldı.** Ayraç her sekmeden sonra
+  çiziliyordu; tek çizimli bir pencerede bu, iki yanında hiçbir şey olmayan boş
+  şeritte duran bir çizgi demekti.
+- **Tek sekmede kapatma işareti yok.** Basınca "birden çok çizim Faz 2'de gelecek"
+  diyordu — yani pencerenin belge hakkında söylediği tek şey, tutamadığı bir sözdü.
+  Tek çizimin kapatılacağı bir yer yok. İşaret, ikinci bir sekme var olabildiği gün
+  kendiliğinden geri gelir (`DocumentTabs::closable`).
+
+**Yeni proje hâlâ açılamıyor ve bu bir düğme eksiği değil:** `YENİ` diye bir komut
+yok. `Dosya ▸ Yeni` Faz 1 yer tutucusu olarak sönük duruyor. Şerite "yeni çizim"
+düğmesi koymak, az önce kaldırılan kapatma işaretiyle aynı yalanı eklemek olurdu;
+komut geldiğinde düğme de gelir.
+
+
 ### Değişti — Enter artık yalnız onaylıyor (öznitelik tablosu ve nesne müfettişi)
 
 Enter, değeri aldıktan sonra **sonraki alanı** da açıyordu — defter kalıbı: yaz,
