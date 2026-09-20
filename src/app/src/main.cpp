@@ -551,6 +551,28 @@ int main(int argc, char** argv)
             check(controller->document().layouts().find("Ada 1284")->items.size() == before - 1,
                   "GERİAL son jesti geri almadı");
 
+            // ---- A FLOATED PANEL CAN BE MOVED (reported defect) -------------
+            //
+            // The panel headers ARE the docks' title bars, and one that keeps
+            // the press it is given is a panel nothing can move: docked it
+            // cannot be re-docked, floated it cannot be moved at all. The lines
+            // say where the panel started, where the drag left it, and whether
+            // a tab still switches.
+            const QStringList dragged = window.probeDockDrag();
+            for (const QString& line : dragged) {
+                (void)std::fprintf(stdout, "[dock] %s\n", line.toUtf8().constData());
+                (void)std::fflush(stdout);
+            }
+            check(std::any_of(dragged.begin(), dragged.end(),
+                              [](const QString& line) {
+                                  return line.startsWith(QStringLiteral("panel")) &&
+                                         !line.contains(QStringLiteral("320,240 → 320,240"));
+                              }),
+                  "YÜZEN PANEL SÜRÜKLENEMİYOR — başlık basışı dock'a ulaşmıyor");
+            check(dragged.contains(
+                      QStringLiteral("sekme: ilkine basınca 0, ikincideyken ilkine basınca 0")),
+                  "başlıktaki sekmeler artık geçiş yapmıyor");
+
             // THE MENU, WALKED. "Integrated into the main menu" means the entries
             // are there and connected, which a picture of a closed menu cannot
             // show.

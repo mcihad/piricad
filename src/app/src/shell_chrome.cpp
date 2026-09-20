@@ -757,26 +757,81 @@ void PanelHeader::applyTheme(ThemeMode mode)
     update();
 }
 
-void PanelHeader::mouseMoveEvent(QMouseEvent* event)
+QPoint PanelHeader::handlePoint() const
 {
-    const QPoint at  = event->position().toPoint();
-    const int wasTab = hotTab_, wasBtn = hotButton_;
+    // THE GRIP FIRST, because it is the handle design.md §6 draws — the
+    // `drag_indicator` mark at the left of the dock's three. A header with tabs
+    // in it often has no bare strip at all: the properties panel carries three
+    // tabs and four marks and they meet in the middle.
+    const QVector<int> marks = buttonList();
+    const int first =
+        width() - kHeaderRight - static_cast<int>(marks.size()) * (kHeaderBtn + kHeaderBtnGap);
+    for (int i = 0; i < marks.size(); ++i)
+        if (marks[i] == static_cast<int>(Grip))
+            return {first + i * (kHeaderBtn + kHeaderBtnGap) + kHeaderBtn / 2, kHeaderHeight / 2};
 
-    hotTab_    = -1;
-    hotButton_ = -1;
+    int after = 0;
+    for (const Tab& tab : tabs_)
+        after = std::max(after, tab.left + tab.width);
+    if (first - after < 8) return {-1, -1};
+    return {(after + first) / 2, kHeaderHeight / 2};
+}
 
+PanelHeader::Hit PanelHeader::hitAt(QPoint at) const
+{
+    Hit found;
     for (int i = 0; i < tabs_.size(); ++i)
-        if (at.x() >= tabs_[i].left && at.x() < tabs_[i].left + tabs_[i].width) hotTab_ = i;
+        if (at.x() >= tabs_[i].left && at.x() < tabs_[i].left + tabs_[i].width) found.tab = i;
 
     const QVector<int> marks = buttonList();
     const int first =
         width() - kHeaderRight - static_cast<int>(marks.size()) * (kHeaderBtn + kHeaderBtnGap);
     if (at.x() >= first) {
         const int index = (at.x() - first) / (kHeaderBtn + kHeaderBtnGap);
-        if (index >= 0 && index < marks.size()) hotButton_ = marks[index];
+        if (index >= 0 && index < marks.size()) found.button = marks[index];
     }
 
+    // A MARK BEATS A TAB. They are drawn over the same strip and the marks go
+    // down last, so the tab's claim on that x is a claim about pixels somebody
+    // else painted. Reported as both, a press on the grip fell through the
+    // mark branch into the tab branch and switched tabs instead of dragging.
+    if (found.button > 0) found.tab = -1;
+    return found;
+}
+
+void PanelHeader::mouseMoveEvent(QMouseEvent* event)
+{
+    // A GESTURE HANDED TO THE DOCK STAYS HANDED OVER.
+    //
+    // Qt delivers every move of a press to the widget the press landed on, even
+    // when that widget refused the press. Swallowing them here would let the
+    // dock begin a drag and then never hear where the pointer went.
+    if (handedOver_) {
+        event->ignore();
+        return;
+    }
+
+    const int wasTab = hotTab_, wasBtn = hotButton_;
+    const Hit under = hitAt(event->position().toPoint());
+    hotTab_         = under.tab;
+    hotButton_      = under.button;
+
+    // THE POINTER SAYS WHAT CAN BE GRABBED, before anything is pressed. A
+    // handle nobody can see is a handle nobody uses.
+    const bool grabbable = under.bare() || under.button == static_cast<int>(Grip);
+    setCursor(grabbable ? Qt::OpenHandCursor : Qt::ArrowCursor);
+
     if (hotTab_ != wasTab || hotButton_ != wasBtn) update();
+}
+
+void PanelHeader::mouseReleaseEvent(QMouseEvent* event)
+{
+    if (!handedOver_) {
+        QWidget::mouseReleaseEvent(event);
+        return;
+    }
+    handedOver_ = false;
+    event->ignore();
 }
 
 void PanelHeader::leaveEvent(QEvent*)
@@ -788,12 +843,51 @@ void PanelHeader::leaveEvent(QEvent*)
 
 void PanelHeader::mousePressEvent(QMouseEvent* event)
 {
-    if (event->button() != Qt::LeftButton) return;
-    if (hotButton_ > 0) {
-        emit buttonPressed(hotButton_);
+    if (event->button() != Qt::LeftButton) {
+        QWidget::mousePressEvent(event);
         return;
     }
-    if (hotTab_ >= 0) setCurrent(hotTab_);
+
+    // HIT-TESTED FROM THE PRESS, not from whatever the last move left behind.
+    // `hotTab_` and `hotButton_` are hover state, and a press can arrive with
+    // no move before it — a click on a panel that has just appeared under the
+    // pointer, or a tap — in which case the stale values decided what was
+    // pressed.
+    const Hit under = hitAt(event->position().toPoint());
+    if (under.button > 0 && under.button != static_cast<int>(Grip)) {
+        emit buttonPressed(under.button);
+        return;
+    }
+    if (under.button < 0 && under.tab >= 0) {
+        setCurrent(under.tab);
+        return;
+    }
+
+    // ---- THE GRIP IS THE HANDLE, AND SO IS THE BARE STRIP -------------------
+    //
+    // A REPORTED DEFECT: a floated panel could not be dragged anywhere.
+    //
+    // TWO THINGS WERE WRONG AND BOTH HAD TO GO.
+    //
+    // `QDockWidget` starts its own drag from a press on its title area, and
+    // this widget IS that title area — `setTitleBarWidget` put it there. But a
+    // `mousePressEvent` that returns without ignoring the event has ACCEPTED
+    // it, so the press stopped here and the dock never heard one. Docked, that
+    // cost the user the drag that re-docks a panel elsewhere; floated, where
+    // the header is the whole window's title bar, it left a window that could
+    // not be moved at all.
+    //
+    // And handing back only the BARE strip would have fixed nothing for the
+    // panel that was reported: design.md §6 gives every header a
+    // `drag_indicator` mark and the properties panel carries three tabs and
+    // four marks, which meet in the middle with no bare strip between them.
+    // The grip was drawn and wired to nothing. It is the handle §6 says it is:
+    // a press on it goes to the dock exactly as a press on the bare strip does.
+    //
+    // The tabs and the other three marks keep their press, because a press on
+    // them means something else.
+    handedOver_ = true;
+    event->ignore();
 }
 
 void PanelHeader::paintEvent(QPaintEvent*)

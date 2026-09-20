@@ -131,6 +131,15 @@ public:
     /// empty.
     void openLayoutDesigner(const QString& layout, core::Box2 window = {});
 
+    /// Floats the properties panel and drags it by its header, reporting where
+    /// it started and where it ended up.
+    ///
+    /// WHAT IT GUARDS. The panel headers ARE the docks' title bars, and a title
+    /// bar that keeps the press it is given is a panel that cannot be moved —
+    /// docked it cannot be re-docked, floated it cannot be moved at all. Only a
+    /// real press and a real drag can tell whether the press reached the dock.
+    QStringList probeDockDrag();
+
     /// Asks for a name, creates a layout and opens the designer on it.
     void newLayout();
 

@@ -303,6 +303,13 @@ public:
     /// height is stated here, where the dock actually reads it.
     QSize minimumSizeHint() const override;
 
+    /// The middle of the bare strip — the part of the header that is a drag
+    /// handle — or `{-1, -1}` when the tabs and the marks leave none.
+    ///
+    /// Public so a test can press where a user would grab. Guessing a point
+    /// and landing on a tab tests the tab.
+    QPoint handlePoint() const;
+
 signals:
     /// A different tab was chosen. The shell switches its stack.
     void tabChanged(int index);
@@ -316,7 +323,14 @@ protected:
 
     /// Tracks which tab or mark the pointer is over.
     void mouseMoveEvent(QMouseEvent* event) override;
+
+    /// Switches a tab, fires a mark — or, on the bare strip between them,
+    /// HANDS THE PRESS BACK so the dock can start a drag. See the source.
     void mousePressEvent(QMouseEvent* event) override;
+
+    /// Ends a hand-back begun by `mousePressEvent`.
+    void mouseReleaseEvent(QMouseEvent* event) override;
+
     void leaveEvent(QEvent* event) override;
 
 private:
@@ -331,12 +345,29 @@ private:
     void relayout();
     QVector<int> buttonList() const;
 
+    /// What is under `at`: a tab index, a `Button` value, or neither.
+    struct Hit
+    {
+        int tab    = -1;
+        int button = -1;
+
+        /// True on the bare strip — the part of the header that is a handle.
+        bool bare() const noexcept { return tab < 0 && button < 0; }
+    };
+
+    Hit hitAt(QPoint at) const;
+
     QVector<Tab> tabs_;
     unsigned buttons_ = Grip | Collapse | Float;
     int current_      = 0;
     int hotTab_       = -1;
     int hotButton_    = -1;
-    ThemeMode theme_  = ThemeMode::Dark;
+
+    /// A press landed on the bare strip and was handed to the dock; every event
+    /// of that gesture goes the same way until the button comes up.
+    bool handedOver_ = false;
+
+    ThemeMode theme_ = ThemeMode::Dark;
 };
 
 } // namespace kentos::app

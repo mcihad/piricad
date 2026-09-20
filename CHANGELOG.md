@@ -6,6 +6,36 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — yüzen paneller sürüklenemiyordu
+
+Panel başlıkları dock'ların başlık çubuğudur (`setTitleBarWidget`). `QDockWidget`
+sürüklemeyi başlık alanına gelen bir fare basışından başlatır; `PanelHeader` ise o
+basışı her durumda **tüketiyordu**. Yerleşik panelde bu, paneli başka bir kenara
+taşıyan sürüklemeyi; yüzen panelde ise pencereyi taşımanın tek yolunu götürüyordu.
+
+Basış artık sahibine iade ediliyor. Yalnız bunu yapmak yetmezdi: `design.md` §6 her
+başlığa bir `drag_indicator` (**tutamak**) koyuyor, kod onu çiziyor ve **hiçbir şeye
+bağlamamıştı** — Öznitelikler paneli üç sekme ve dört işaret taşıdığı için aralarında
+tutulacak boşluk da kalmıyordu. Tutamak artık §6'nın söylediği şey: üzerindeki basış
+doğrudan dock'a gidiyor, imleç de üzerinde açık ele dönüyor.
+
+Yol boyunca iki hata daha çıktı:
+
+- **İşaretler sekmeyi yenmiyordu.** İkisi aynı şeridin üzerine çiziliyor, işaretler
+  en son gidiyor; ama isabet sınaması ikisini birden bildiriyordu. Tutamağa basmak
+  bu yüzden işaret dalını atlayıp sekme dalına düşüyor ve sürükleme yerine sekme
+  değiştiriyordu.
+- **Basış, hover durumundan karar veriyordu.** `mousePressEvent`, `mouseMoveEvent`'in
+  bıraktığı `hotTab_`/`hotButton_` değerlerini okuyordu; öncesinde hareket olmayan bir
+  basış — imlecin altında yeni beliren bir panele tıklamak gibi — bayat değerle karar
+  veriyordu. Artık basışın kendi konumundan sınanıyor.
+
+`KENTOS_LAYOUT_PROBE` paneli yüzdürüp tutamağından gerçekten sürüklüyor ve yerinin
+değiştiğini doğruluyor; ayrıca sekmelerin hâlâ geçiş yaptığını. Probe'un ilk hâli,
+tutamak yerine başlığın ortasına — yani bir sekmenin üzerine — bastığı için panel
+kıpırdamadığı hâlde geçiyordu.
+
+
 ### Değişti — rafın hizalamaları ve seçim şeridi
 
 Rafta üç şey üç ayrı yerden başlıyordu: bölüm başlığı 10 pikselden, gösterim

@@ -3909,6 +3909,97 @@ QString MainWindow::probeFrameDestination() const
                                     : QStringLiteral("yerlesim:") + pendingLayout_;
 }
 
+QStringList MainWindow::probeDockDrag()
+{
+    QStringList said;
+    if (propertyDock_ == nullptr || propertyHeader_ == nullptr) return {QStringLiteral("dock yok")};
+
+    propertyDock_->setFloating(true);
+    propertyDock_->move(320, 240);
+    QCoreApplication::processEvents();
+
+    // THE HANDLE, ASKED OF THE HEADER rather than guessed. A guessed point that
+    // lands on a tab tests the tab — which is exactly how the first version of
+    // this probe passed while the panel still could not be dragged.
+    PanelHeader* bar  = propertyHeader_;
+    const QPoint bare = bar->handlePoint();
+    if (bare.x() < 0) return {QStringLiteral("başlıkta tutamak yok")};
+
+    const QPoint before = propertyDock_->pos();
+    const auto atScreen = [&](QPoint local) { return bar->mapToGlobal(local); };
+
+    const auto send = [&](QEvent::Type what, QPoint local, Qt::MouseButton button,
+                          Qt::MouseButtons held) {
+        QMouseEvent event(what, QPointF(local), QPointF(atScreen(local)), button, held,
+                          Qt::NoModifier);
+        QCoreApplication::sendEvent(bar, &event);
+        return event.isAccepted();
+    };
+
+    // COUNTED AT THE DOCK. "The press was accepted" does not say WHO accepted
+    // it; only a filter on the dock says whether it ever got there.
+    struct Counter : QObject
+    {
+        int presses = 0, moves = 0;
+
+        bool eventFilter(QObject*, QEvent* e) override
+        {
+            if (e->type() == QEvent::MouseButtonPress) ++presses;
+            if (e->type() == QEvent::MouseMove) ++moves;
+            return false;
+        }
+    } seen;
+
+    propertyDock_->installEventFilter(&seen);
+
+    const bool kept = send(QEvent::MouseButtonPress, bare, Qt::LeftButton, Qt::LeftButton);
+    said << QStringLiteral("tutamaktaki basışı alan oldu mu: %1")
+                .arg(kept ? QStringLiteral("evet") : QStringLiteral("hayır"));
+
+    // Two moves: Qt's dock starts the drag on the first one that passes its
+    // threshold and follows the pointer on the rest.
+    (void)send(QEvent::MouseMove, bare + QPoint(30, 24), Qt::NoButton, Qt::LeftButton);
+    (void)send(QEvent::MouseMove, bare + QPoint(90, 70), Qt::NoButton, Qt::LeftButton);
+    QCoreApplication::processEvents();
+
+    said << QStringLiteral("dock'a ulaşan: %1 basış, %2 hareket").arg(seen.presses).arg(seen.moves);
+    propertyDock_->removeEventFilter(&seen);
+
+    const QPoint after = propertyDock_->pos();
+    said << QStringLiteral("panel %1,%2 → %3,%4")
+                .arg(before.x())
+                .arg(before.y())
+                .arg(after.x())
+                .arg(after.y());
+
+    (void)send(QEvent::MouseButtonRelease, bare + QPoint(90, 70), Qt::LeftButton, Qt::NoButton);
+    QCoreApplication::processEvents();
+
+    // AND A TAB STILL SWITCHES. Handing the bare strip back must not hand back
+    // the parts that mean something else.
+    // A TAB STILL SWITCHES. Handing the grip back must not hand back the parts
+    // that mean something else — and the two overlap, because the marks are
+    // painted over the strip the tabs claim.
+    //
+    // FROM A KNOWN TAB TO A DIFFERENT ONE. Pressing the tab that is already
+    // current proves nothing.
+    propertyHeader_->setCurrent(0);
+    const QPoint onTab(12, bar->height() / 2);
+    (void)send(QEvent::MouseButtonPress, onTab, Qt::LeftButton, Qt::LeftButton);
+    (void)send(QEvent::MouseButtonRelease, onTab, Qt::LeftButton, Qt::NoButton);
+    const int first = propertyHeader_->current();
+
+    propertyHeader_->setCurrent(1);
+    (void)send(QEvent::MouseButtonPress, onTab, Qt::LeftButton, Qt::LeftButton);
+    (void)send(QEvent::MouseButtonRelease, onTab, Qt::LeftButton, Qt::NoButton);
+    said << QStringLiteral("sekme: ilkine basınca %1, ikincideyken ilkine basınca %2")
+                .arg(first)
+                .arg(propertyHeader_->current());
+
+    propertyDock_->setFloating(false);
+    return said;
+}
+
 void MainWindow::openLayoutDesigner(const QString& layout, core::Box2 window)
 {
     LayoutDesigner designer(*controller_, layout, this);

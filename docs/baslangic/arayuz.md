@@ -440,6 +440,13 @@ Ayrıntı için bkz. [Komut satırı](../komutlar/komut-satiri.md).
 başlıkta sekmelerle birlikte üç işaret bulunur: **tutamak** (sürükle), **daralt**
 ve **yüzdür**.
 
+**Paneli taşımak.** Tutamaktan basılı tutup sürükleyin: imleç tutamağın üzerinde
+açık ele döner. Panel yerleşik durumdayken bu onu başka bir kenara ya da başka bir
+panelin yanına taşır; **yüzdür** ile pencereye dönüştüğünde de aynı tutamak o
+pencereyi taşır. Başlıkta sekmelerin bittiği yerde boşluk varsa oradan da
+sürükleyebilirsiniz; sekmelerin ve diğer işaretlerin üzeri sürükleme alanı değildir,
+çünkü oradaki basış başka bir şey yapar.
+
 ### Araçlar
 
 Üçüncü sekme: [işlem araçları](../islem/README.md), gruplar hâlinde bir ağaçta. Üstteki
