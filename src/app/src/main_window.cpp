@@ -137,7 +137,31 @@ QString groupedNumber(qint64 value)
 /// strip, so the drawing looked like the whole shell had come apart. It was the
 /// STATE that was stale, not the renderer — which took an afternoon to establish,
 /// because a saved layout survives a rebuild and looks exactly like a new bug.
-constexpr int kLayoutVersion = 4;
+/// 5: the right column is never TABIFIED. `resetLayout` used to tabify the
+/// layers panel with the properties panel, which is not what the constructor
+/// builds and not what the panels are drawn for: each carries its own
+/// `PanelHeader`, and Qt's tab bar over the top of them is a second row of tabs
+/// nobody designed — reported as "huge tabs at the top of the right sidebar,
+/// meaningless". Any state saved while they were tabbed has to be declined or
+/// it comes back on the next start.
+constexpr int kLayoutVersion = 5;
+
+/// Whether this process is a probe driving the real shell.
+///
+/// Named here because the shell is what must not write. See the save path.
+bool probe_run()
+{
+    for (const char* probe :
+         {"KENTOS_PRINT_PROBE",    "KENTOS_LAYOUT_PROBE",  "KENTOS_SHOT_DIR",
+          "KENTOS_DESIGNER_PROBE", "KENTOS_WIDGETS_PROBE", "KENTOS_DIALOG_PROBE",
+          "KENTOS_HAND_PROBE",     "KENTOS_LAYER_PROBE",   "KENTOS_PICK_PROBE",
+          "KENTOS_TABLE_PROBE",    "KENTOS_SCHEMA_PROBE",  "KENTOS_CHAT_PROBE",
+          "KENTOS_TOOL_PROBE",     "KENTOS_NORMAL_PROBE",  "KENTOS_FAMILY_PROBE",
+          "KENTOS_BUDGET_PROBE",   "KENTOS_PROBE_LINE",    "KENTOS_FRAME_DUMP",
+          "KENTOS_MCP_PROBE",      "KENTOS_EDIT_PROBE"})
+        if (qEnvironmentVariableIsSet(probe)) return true;
+    return false;
+}
 
 QString format_metres(core::Mm v)
 {
@@ -165,9 +189,19 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     search->setShortcutContext(Qt::ApplicationShortcut);
     connect(search, &QAction::triggered, this, &MainWindow::openCommandSearch);
     addAction(search);
-    setDockOptions(QMainWindow::AnimatedDocks | QMainWindow::AllowTabbedDocks |
-                   QMainWindow::AllowNestedDocks);
-    setTabPosition(Qt::AllDockWidgetAreas, QTabWidget::North);
+    // NO `AllowTabbedDocks`, and that is a decision rather than an omission.
+    //
+    // Every panel here wears its own `PanelHeader`, which draws the tabs this
+    // program has: the properties dock carries three of them over one
+    // `QStackedWidget`. Let Qt tabify two DOCKS on top of that and it adds a tab
+    // bar of its own above their headers — two rows of tabs, one of them nobody
+    // styled, which is what a user reported the moment dragging a panel started
+    // working and they could drop one onto another.
+    //
+    // design.md §6 does want a merge-as-tab drop target eventually; what it
+    // describes is tabs drawn in the panel's own language, not Qt's strip. Until
+    // that is drawn, dropping a panel on another docks it beside or under.
+    setDockOptions(QMainWindow::AnimatedDocks | QMainWindow::AllowNestedDocks);
 
     canvas_ = new MapCanvas(*controller_, this);
 
@@ -393,6 +427,17 @@ MainWindow::~MainWindow()
     // senders that emit on the way out, and they are named here for that reason.
     for (QDockWidget* dock : {propertyDock_, layerDock_, journalDock_})
         if (dock != nullptr) dock->disconnect(this);
+
+    // A PROBE RUN WRITES NOTHING. Every probe drives the REAL shell, and the
+    // shell saves its preferences, its geometry and its dock layout here on the
+    // way out — so a probe that floats a panel and re-docks it saved THAT over
+    // the person's own arrangement, and they opened the program next to find
+    // the right column rebuilt around whatever the test had left.
+    //
+    // `QStandardPaths::setTestModeEnabled` does not cover this: on macOS
+    // `QSettings` writes through CFPreferences, which test mode does not
+    // redirect. The only reliable guard is not writing.
+    if (isProbeRun()) return;
 
     savePreferences();
 
@@ -3055,10 +3100,28 @@ void MainWindow::openCommandSearch()
 
 void MainWindow::resetLayout()
 {
-    addDockWidget(Qt::RightDockWidgetArea, layerDock_);
-    addDockWidget(Qt::RightDockWidgetArea, propertyDock_);
-    tabifyDockWidget(layerDock_, propertyDock_);
-    layerDock_->raise();
+    // THE LAYOUT THE PROGRAM STARTS WITH, not a third arrangement of its own.
+    //
+    // This used to put two of the four docks back, tabify them, and forget the
+    // chat and the journal entirely — so the one command a user reaches for
+    // when the shell looks wrong LEFT it wrong, with Qt's tab bar over the two
+    // it did restore and two panels still missing. It now rebuilds exactly what
+    // the constructor builds, in the same order and at the same sizes.
+    for (QDockWidget* dock : {propertyDock_, layerDock_, chatDock_})
+        if (dock != nullptr) {
+            dock->setFloating(false);
+            addDockWidget(Qt::RightDockWidgetArea, dock);
+            dock->show();
+        }
+    if (journalDock_ != nullptr) {
+        journalDock_->setFloating(false);
+        addDockWidget(Qt::BottomDockWidgetArea, journalDock_);
+    }
+
+    if (propertyDock_ != nullptr && layerDock_ != nullptr) {
+        resizeDocks({propertyDock_, layerDock_}, {312, 312}, Qt::Horizontal);
+        resizeDocks({propertyDock_, layerDock_}, {600, 268}, Qt::Vertical);
+    }
     syncDockTitles();
 }
 
@@ -3909,10 +3972,25 @@ QString MainWindow::probeFrameDestination() const
                                     : QStringLiteral("yerlesim:") + pendingLayout_;
 }
 
+bool MainWindow::isProbeRun()
+{
+    return probe_run();
+}
+
 QStringList MainWindow::probeDockDrag()
 {
     QStringList said;
     if (propertyDock_ == nullptr || propertyHeader_ == nullptr) return {QStringLiteral("dock yok")};
+
+    // THE LAYOUT IS PUT BACK EXACTLY AS IT WAS FOUND.
+    //
+    // This probe floats a panel, drags it across the screen and re-docks it,
+    // and the shell saves its dock layout on the way out — so without this the
+    // arrangement this probe happened to leave behind became the user's, and
+    // the panels it did not touch came back in the wrong places or not at all.
+    // Test mode keeps it out of the real profile; this keeps it out of the
+    // running program's own state, which the rest of the probe goes on to use.
+    const QByteArray before_state = saveState(kLayoutVersion);
 
     propertyDock_->setFloating(true);
     propertyDock_->move(320, 240);
@@ -3997,6 +4075,8 @@ QStringList MainWindow::probeDockDrag()
                 .arg(propertyHeader_->current());
 
     propertyDock_->setFloating(false);
+    (void)restoreState(before_state, kLayoutVersion);
+    QCoreApplication::processEvents();
     return said;
 }
 

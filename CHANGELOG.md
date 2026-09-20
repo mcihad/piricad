@@ -6,6 +6,37 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — sağ sütun bozulmuştu: kayıtlı yerleşim, dev sekmeler, sıfırlama
+
+Üç kusur bir araya gelince sağ taraf komple gitti. Sürükleme çalışır hâle geldiği
+an ortaya çıktılar.
+
+- **Probe koşuları kabuğun durumunu kaydediyordu.** Her probe GERÇEK kabuğu
+  sürüyor ve kabuk çıkarken tercihlerini, pencere geometrisini ve dock yerleşimini
+  yazıyor. Paneli yüzdürüp sürükleyen yeni sürükleme probe'u, bıraktığı düzeni
+  kullanıcının kendi düzeninin üstüne kaydetti; programı sonra açan kişi sağ
+  sütunu testin bıraktığı hâlde buldu. `QStandardPaths::setTestModeEnabled` bunu
+  kapatmıyor: macOS'ta `QSettings` CFPreferences üzerinden yazıyor ve test kipi
+  orayı yönlendirmiyor. Tek güvenilir koruma yazmamak — probe koşusu artık hiçbir
+  şey kaydetmiyor. Ayrıca probe, dock düzenini bulduğu gibi geri koyuyor.
+- **Qt'nin kendi dock sekme çubuğu.** `AllowTabbedDocks` açıktı; iki panel
+  sekmeleşince Qt kendi sekme şeridini onların başlıklarının ÜSTÜNE ekliyordu —
+  iki sıra sekme, biri kimsenin tasarlamadığı. Kullanıcının "üstte kocaman
+  sekmeler, anlamsız" dediği şey buydu. Her panel zaten kendi `PanelHeader`'ını
+  taşıyor; `AllowTabbedDocks` kaldırıldı. `design.md` §6'nın "sekme olarak
+  birleştir" hedefi duruyor, ama o panelin kendi dilinde çizilmiş sekmeler
+  demektir, Qt'nin şeridi değil; çizilene kadar bir paneli diğerinin üstüne
+  bırakmak onu yanına ya da altına yerleştirir.
+- **`Yerleşimi Sıfırla` yerleşimi düzeltmiyordu.** Dört dock'un ikisini geri
+  koyuyor, onları sekmeleştiriyor, sohbeti ve günlüğü tamamen unutuyordu — yani
+  kabuk bozuk göründüğünde başvurulacak tek komut onu bozuk BIRAKIYORDU. Artık
+  yapıcının kurduğu yerleşimin aynısını kuruyor.
+
+`kLayoutVersion` 5'e çıkarıldı: sekmeleşmiş hâlde kaydedilmiş bir durum artık
+reddediliyor, yani etkilenen herkes bir sonraki açılışta düzgün yerleşimi geri
+alıyor — kimsenin ayar dosyasına dokunmadan.
+
+
 ### Düzeltildi — yüzen paneller sürüklenemiyordu
 
 Panel başlıkları dock'ların başlık çubuğudur (`setTitleBarWidget`). `QDockWidget`

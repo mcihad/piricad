@@ -140,6 +140,10 @@ public:
     /// real press and a real drag can tell whether the press reached the dock.
     QStringList probeDockDrag();
 
+    /// Whether this process is a probe driving the real shell, in which case it
+    /// persists nothing: no preference, no geometry, no dock layout.
+    static bool isProbeRun();
+
     /// Asks for a name, creates a layout and opens the designer on it.
     void newLayout();
 

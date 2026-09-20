@@ -297,13 +297,33 @@ int main(int argc, char** argv)
                            "[kentos] %.*s\n", static_cast<int>(message.size()), message.data());
     });
 
-    // THE PRINT PROBE MUST NOT TOUCH THE USER'S PROFILES. It adds a profile and
-    // makes it the default, and both are persisted — into the very file the
-    // person's own sheets live in. Qt's test mode redirects every
-    // `QStandardPaths` lookup into a sandbox, and it has to be set BEFORE the
-    // window is built, because the print service resolves its path once in its
-    // constructor.
-    if (qEnvironmentVariableIsSet("KENTOS_PRINT_PROBE")) QStandardPaths::setTestModeEnabled(true);
+    // ---- NO PROBE TOUCHES THE PERSON'S OWN PROFILE -------------------------
+    //
+    // This used to name the print probe alone, because that one adds a print
+    // profile and makes it the default — into the very file the person's own
+    // sheets live in.
+    //
+    // THE HOLE THAT LEFT, AND HOW IT WAS FOUND. Every one of these runs the
+    // REAL shell, and the shell writes its window geometry and its dock layout
+    // on the way out. The layout probe floats a panel, drags it and re-docks it;
+    // when it closed, that arrangement was saved over the user's — who opened
+    // the program next and found the Katmanlar and Yapay Zeka panels gone, with
+    // the properties panel filling the right column on its own. A test that
+    // changes the machine it ran on is not a test, and the name of the variable
+    // is not what decides that: running the real shell is.
+    //
+    // Set BEFORE the window is built: the print service resolves its path once,
+    // in its constructor.
+    for (const char* probe :
+         {"KENTOS_PRINT_PROBE", "KENTOS_LAYOUT_PROBE", "KENTOS_SHOT_DIR", "KENTOS_DESIGNER_PROBE",
+          "KENTOS_WIDGETS_PROBE", "KENTOS_DIALOG_PROBE", "KENTOS_HAND_PROBE", "KENTOS_LAYER_PROBE",
+          "KENTOS_PICK_PROBE", "KENTOS_TABLE_PROBE", "KENTOS_SCHEMA_PROBE", "KENTOS_CHAT_PROBE",
+          "KENTOS_TOOL_PROBE", "KENTOS_NORMAL_PROBE", "KENTOS_FAMILY_PROBE", "KENTOS_BUDGET_PROBE",
+          "KENTOS_PROBE_LINE"})
+        if (qEnvironmentVariableIsSet(probe)) {
+            QStandardPaths::setTestModeEnabled(true);
+            break;
+        }
 
     kentos::app::MainWindow window;
     window.show();
