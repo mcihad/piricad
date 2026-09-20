@@ -6,6 +6,49 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — Katman Simgeleyici: raf artık ekin kendisi gibi okunuyor
+
+Kullanıcının hükmü "yerleşimler berbat" idi ve üç ayrı yerleşim hatası vardı.
+
+- **Üst şeritteki kanyon.** `design.md` §8 bu şeridi *dört kontrol* olarak tarif
+  ediyor; kod araya bir `addStretch` koymuştu. Dördü birden görünürken bu §8'in
+  şeridi gibi okunuyordu, ama Tek Sembol'de DEĞER ile RENK SKALASI gizli olduğu
+  için geriye kalan iki kontrol bin yüz pikselin iki ucunda kalıyordu — tek bir
+  banda benzemeyen bir bant. Esneme kaldırıldı.
+- **Öksüz geometri sekmeleri.** Raf başlığıyla simgeleyici şeridi arasında,
+  ikisine de ait olmayan bir bant hâlinde duruyorlardı. Sembolün *ne olduğuna*
+  dair üçüncü karardır; artık o kararların verildiği şeritte, birimle aynı
+  bileşenle (`Segment`). Sekme olarak okunmalarını sağlamak için yazılmış bütün
+  aparat da gitti: onları hiçbir şeye benzetmeyen şey çizim değil, yerdi.
+- **Raf gruplandı.** Yüz on üç düz satır yerine, ekin kendi bölümleri başlık
+  olarak bir kez yazılıyor (`EK-1a / SINIRLAR / İDARİ SINIRLAR`) ve altında o
+  bölümün gösterimleri duruyor. Satırların sağ ucundaki dört yüz piksellik boşluk
+  böylece kendiliğinden kapandı ve uzun adlar artık kesilmiyor.
+
+### Düzeltildi — koyu temada siyah gösterimler görünmüyordu
+
+Raftaki gösterim görselleri pencerenin kendi girdi rengini zemin alıyordu; koyu
+temada bu `#171B1E`, ve yayımlanmış bir gösterim çoğunlukla siyah bir çizgidir.
+`SINIRLAR` bölümünün on bir satırı koyu temada okunamıyordu.
+
+Bir gösterim bu pencerenin kromu değil, imzalanacak bir paftaya basılacak
+mürekkeptir ve o pafta beyazdır. Görseller artık her temada **beyaz kâğıt**
+üzerinde çiziliyor.
+
+### Değişti — `Seçileni kullan` uyguladığı şeyin yanına taşındı
+
+Bin yüz piksel genişliğinde bir sütunun sağ alt köşesinde tek başına duruyordu,
+aynı satırın sol ucunda kısa bir sayım ve arada hiçbir şey vardı — üst şeridin
+kanyonunun aynısı. Artık rafın **sol altında**, gözün seçim yaparken zaten
+bulunduğu yerde; yanında seçili satırın künyesi — yönetmelik, ek, madde, yayım
+tarihi — aynı satırda duruyor. Bir satır seçilene kadar sönük: eskiden her zaman
+yanıyor ve boş seçimle basıldığında sessizce hiçbir şey yapmıyordu.
+
+Gösterim sayımı da arama kutusunun yanına, onu değiştiren iki kontrolün yanına
+taşındı; böylece rafın altındaki üç bant tek bir satıra indi. Boş raf artık ne
+yapılacağını söylüyor.
+
+
 ### Değişti — yerleşim tasarımcısı: kâğıt kahraman, panel bir ad taşıyor
 
 Kullanıcının hükmü hâlâ "kötü" idi. Sebebi de dürüstçe şuydu: pencerede

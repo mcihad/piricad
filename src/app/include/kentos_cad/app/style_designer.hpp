@@ -55,8 +55,8 @@ class QLabel;
 class QLineEdit;
 class QListWidget;
 class QStackedWidget;
+class QStyledItemDelegate;
 class QSpinBox;
-class QTabBar;
 class QToolButton;
 class QTreeWidget;
 
@@ -298,7 +298,17 @@ private:
     /// change it does not redraw.
     int previewWidth_{0};
 
-    QTabBar* geometry_{nullptr};
+    /// Draws the shelf rows; see `ShelfRow` in the source.
+    QStyledItemDelegate* shelfRows_{nullptr};
+
+    /// Which geometry the symbol is drawn on, in the top strip.
+    Segment* geometry_{nullptr};
+
+    /// Its cell, hidden when the layer's own geometry already answers.
+    QWidget* geometryCell_{nullptr};
+
+    /// Whether the layer left the question open, decided once at construction.
+    bool geometryAsked_{false};
     QLabel* preview_{nullptr};
 
     /// What the header says about the geometry the tabs have chosen.

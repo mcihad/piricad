@@ -17,20 +17,20 @@ taşıyorsa o, taşımıyorsa katmanın kendi görünümü.
 
 ```text
 ┌ 🎨 Katman Özellikleri — Kadastro Parselleri ─────────────── ? ✕ ┐
-│ Bilgi        │ SİMGELEYİCİ                    SEMBOL BOYUT BİRİMİ│
-│ Kaynak       │ [Tek Sembol]           [Milimetre|Harita|Piksel] │
+│ Bilgi        │ SİMGELEYİCİ  SEMBOL BOYUT BİRİMİ  GEOMETRİ       │
+│ Kaynak       │ [Tek Sembol] [mm|harita|piksel]  [Alan|Çizgi|Nkt]│
 │ ▸Simgeleyici │──────────────────────────┬───────────────────────│
-│ Etiketler    │ [Alan] [Çizgi] [Nokta]   │ ┌──────┐ SEMBOL KATMANLARI│
-│ 3B Görünüm   │ ┌ hazır gösterimler ───┐ │ │önizl.│ ▾ Sembol       │
-│ Şeffaflık    │ │ arama                │ │ │      │   ✓ Nokta deseni│
-│ Ölçek        │ │ ▸ EK-1a  ▸ EK-1b     │ │ └──────┘   ✓ Dolgu      │
-│ Öznitelik F. │ │ ┌──┐ ┌──┐ ┌──┐ ┌──┐  │ │  +  ⧉  −         ▲  ▼ │
-│ Geçerlilik   │ │ └──┘ └──┘ └──┘ └──┘  │ │ KATMAN                 │
-│ Eylemler     │ │                      │ │ Katman tipi  [Dolgu   ]│
-│ Bağlantılar  │ │                      │ │ DOLGU                  │
-│ Sürüm        │ │ 335 gösterim         │ │ Dolgu rengi  [#228B22 ]│
-│              │ │ [ Seçileni kullan ]  │ │ KENAR                  │
-│              │ └──────────────────────┘ │ Çizgi rengi  [#000000 ]│
+│ Etiketler    │ HAZIR GÖSTERİMLER        │ ┌──────┐ SEMBOL KATMANLARI│
+│ 3B Görünüm   │ [grup ▾][ara…] 113 göst. │ │önizl.│ ▾ Sembol       │
+│ Şeffaflık    │ ┌──────────────────────┐ │ │      │   ✓ Nokta deseni│
+│ Ölçek        │ │ EK-1a / SINIRLAR /…  │ │ └──────┘   ✓ Dolgu      │
+│ Öznitelik F. │ │  ▬  ÜLKE SINIRI      │ │  +  ⧉  −         ▲  ▼ │
+│ Geçerlilik   │ │  ▬  İL SINIRI        │ │ KATMAN                 │
+│ Eylemler     │ │ EK-1a / SINIRLAR /…  │ │ Katman tipi  [Dolgu   ]│
+│ Bağlantılar  │ │  ◯◯ PLAN ONAMA SINIRI│ │ DOLGU                  │
+│ Sürüm        │ └──────────────────────┘ │ Dolgu rengi  [#228B22 ]│
+│              │ [Seçileni kullan] MPYY…  │ KENAR                  │
+│              │                          │ Çizgi rengi  [#000000 ]│
 │              │                          │ Kalınlık     [0 µm    ]│
 ├──────────────┴──────────────────────────┴───────────────────────┤
 │ Stil ▾                              Yardım    İptal Uygula [Tamam]│
@@ -136,16 +136,18 @@ her sütun seçilebilir.
 Seçim sembolün **bütün** katmanlarını birden değiştirir. Katmanlar farklı
 birimler kullanıyorsa hiçbiri işaretli görünmez ve alttaki not bunu söyler.
 
-### Geometri sekmeleri
+### Geometri
 
-İlk karar bu: sembol hangi geometri için. Sekme iki şeyi birden belirler —
-önizlemenin hangi şekil üzerinde çizileceğini ve rafın hangi çekmecesinin açık
-olduğunu. `Çizgi` sekmesindeyken raf size alan gösterimi vermez.
+İlk karar bu: sembol hangi geometri için. Üstteki şeritte, simgeleyici ve boyut
+biriminin yanında durur — üçü de sembolün *ne olduğuna* dair kararlardır, nasıl
+göründüğüne dair değil. İki şeyi birden belirler: önizlemenin hangi şekil
+üzerinde çizileceğini ve rafın hangi çekmecesinin açık olduğunu. `Çizgi`
+seçiliyken raf size alan gösterimi vermez.
 
-Sekmeler yalnız **katman kendisi söylemiyorsa** görünür: boş bir katmanda ya da
-hem çizgi hem alan taşıyan bir katmanda. Parsel katmanı alandır, yol ekseni
-katmanı çizgidir; çizim bunu zaten söylüyorsa sekme satırı gösterilmez ve sembol
-o geometri için kurulur.
+Yalnız **katman kendisi söylemiyorsa** görünür: boş bir katmanda ya da hem çizgi
+hem alan taşıyan bir katmanda. Parsel katmanı alandır, yol ekseni katmanı
+çizgidir; çizim bunu zaten söylüyorsa bu kontrol gösterilmez ve sembol o
+geometri için kurulur.
 
 Önizleme şekli de bilerek seçilmiştir: alan için dikdörtgen, çizgi için **zikzak**
 (düz çizgi bir desenin köşede ne yaptığını gizler), nokta için tek nokta. Kare
@@ -156,8 +158,19 @@ resmin hangi geometri üzerinde çizildiğini söyler; sekmeyi değiştirince o 
 
 Orta sütundaki raf, mevzuatın yayımladığı gösterim setidir; grupları da
 mevzuatın kendisinindir: EK-1a ortak, EK-1b MSP, EK-1c ÇDP, EK-1ç NİP, EK-1d
-UİP, her ekin altında kendi bölümleri. Raf bir **liste**dir: her satırda
-gösterimin gerçek görseli ve tam adı, üzerine gelince kimliği ve dayanağı.
+UİP, her ekin altında kendi bölümleri. Raf bir **liste**dir ve **ekin kendisi
+gibi bölümlenmiştir**: her grup yolu bir başlık olarak bir kez yazılır
+(`EK-1a / SINIRLAR / İDARİ SINIRLAR`), altında o bölümün gösterimleri. Her
+satırda gösterimin gerçek görseli ve tam adı; üzerine gelince kimliği ve
+dayanağı.
+
+Gösterim görselleri **her temada beyaz kâğıt üzerinde** çizilir. Bir gösterim
+imzalanacak bir pafta üzerindeki mürekkeptir ve o pafta beyazdır; koyu temanın
+zemininde çizilseydi siyah çizgili gösterimlerin yarısı görünmezdi.
+
+Yürürlükten kalkmış bir gösterim satırın sağ ucunda **yürürlükte değil** diye
+işaretlenir. Yüklenebilir olarak kalır — emekliye ayrılmış bir kimlik hiç
+düşürülmez — ama yeni bir paftada seçilmemelidir.
 
 - Arama kutusunun yanındaki açılır listeden bir ek ya da bölüm seçin, ya da
 - Arama kutusuna yazın — arama **grubu dinlemez**, bir kelimeyi nerede olursa
@@ -168,8 +181,13 @@ görselleridir**; renk değil. `Seçileni kullan` ya da çift tıklama, o göste
 yığına **koyar** — üstüne eklemez, çünkü yayımlanmış bir gösterimi seçmek "bu
 böyle görünmeli" demektir.
 
-Raf çok kalabalıksa altındaki not kaç tanesinin gösterildiğini yazar. Sessizce
-kesilmez.
+`Seçileni kullan` rafın **sol altındadır** ve bir satır seçilene kadar sönüktür;
+yanında o satırın dayanağı yazar — yönetmelik, ek, madde ve yayım tarihi. Düğme
+ile basınca uygulanacak şeyin künyesi aynı satırdadır.
+
+Kaç gösterimin listelendiği **arama kutusunun yanında** yazar: sayıyı değiştiren
+iki kontrolün yanında. Raf çok kalabalıksa ilk kaç tanesinin gösterildiğini de
+orası söyler; sessizce kesilmez.
 
 ### Sembol katmanları
 

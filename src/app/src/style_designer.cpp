@@ -47,11 +47,11 @@
 #include <QSignalBlocker>
 #include <QSpinBox>
 #include <QSplitter>
+#include <QStyledItemDelegate>
 
 #include <QHeaderView>
 #include <QStackedWidget>
 #include <QStandardPaths>
-#include <QTabBar>
 #include <QToolButton>
 #include <QTreeWidget>
 
@@ -232,6 +232,90 @@ template<class Table> typename Table::value_type pick(const Table& table, const 
 /// preview will use, which is a different statement from what a symbol looks
 /// like, and a shape drawn with the symbol's own colours would go invisible
 /// exactly when the symbol is white on white.
+/// Draws one shelf row: the swatch, the published name, and the gösterim's id
+/// at the right end in the width the name does not use.
+///
+/// A DELEGATE AND NOT A SECOND COLUMN, because the shelf is one list of one
+/// thing. A two-column view would want headers, a splitter and a sort order for
+/// what is a single line per symbol.
+class ShelfRow : public QStyledItemDelegate
+{
+public:
+    /// A heading row carries its whole group path here and nothing else.
+    static constexpr int kGroupRole = Qt::UserRole + 1;
+
+    /// A gösterim the annex has withdrawn.
+    static constexpr int kRetiredRole = Qt::UserRole + 2;
+
+    explicit ShelfRow(QObject* parent = nullptr) : QStyledItemDelegate(parent) {}
+
+    void setTheme(ThemeMode mode) { theme_ = mode; }
+
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
+        const QSize base = QStyledItemDelegate::sizeHint(option, index);
+        return index.data(kGroupRole).toString().isEmpty() ? base : QSize(base.width(), 30);
+    }
+
+    void paint(QPainter* p, const QStyleOptionViewItem& option,
+               const QModelIndex& index) const override
+    {
+        const Tokens& t = theme_ == ThemeMode::Dark ? darkTokens() : lightTokens();
+
+        // ---- a group heading ------------------------------------------------
+        const QString group = index.data(kGroupRole).toString();
+        if (!group.isEmpty()) {
+            p->save();
+            p->fillRect(option.rect, t.bgHeader);
+            QFont small = option.font;
+            small.setPixelSize(11);
+            p->setFont(small);
+            p->setPen(t.textDim);
+            p->drawText(
+                option.rect.adjusted(10, 0, -10, -1), Qt::AlignLeft | Qt::AlignVCenter,
+                option.fontMetrics.elidedText(group, Qt::ElideMiddle, option.rect.width() - 20));
+            p->setPen(QPen(t.lineSoft, 1.0));
+            p->drawLine(option.rect.bottomLeft(), option.rect.bottomRight());
+            p->restore();
+            return;
+        }
+
+        // ---- an ordinary row -------------------------------------------------
+        //
+        // The name and the swatch are the base class's job, so a row keeps the
+        // shelf's own selection and hover exactly as the stylesheet draws them.
+        // Only the withdrawal mark is this delegate's.
+        if (!index.data(kRetiredRole).toBool()) {
+            QStyledItemDelegate::paint(p, option, index);
+            return;
+        }
+
+        QFont small = option.font;
+        small.setPixelSize(11);
+        const QFontMetrics metrics(small);
+        const QString said = tr("yürürlükte değil");
+        const int wide     = metrics.horizontalAdvance(said) + 20;
+
+        QStyleOptionViewItem trimmed = option;
+        trimmed.rect.setRight(option.rect.right() - wide);
+        QStyledItemDelegate::paint(p, trimmed, index);
+
+        // A WITHDRAWN ROW IS MARKED WHERE IT IS SCANNED, not only after it has
+        // been picked: it is still loadable, because a retired id is never
+        // dropped, but it must not be chosen for a new sheet.
+        p->save();
+        p->setFont(small);
+        p->setPen(t.warn);
+        p->drawText(
+            QRect(option.rect.right() - wide, option.rect.top(), wide - 10, option.rect.height()),
+            Qt::AlignRight | Qt::AlignVCenter, said);
+        p->restore();
+    }
+
+private:
+    ThemeMode theme_{ThemeMode::Dark};
+};
+
 QIcon geometry_glyph(PreviewShape shape, const QColor& ink)
 {
     QPixmap glyph(16, 16);
@@ -678,50 +762,40 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     if (symbol_.layers.empty()) symbol_ = core::Symbol::of(core::Appearance{});
     original_ = symbol_;
 
-    // ---- geometry tabs and the big preview ----
+    // ---- the geometry the symbol is drawn on, and the big preview ----
     //
-    // The tabs come FIRST because they are the first decision: what geometry is
-    // this symbol for. They choose the shape the preview is drawn on AND the
-    // drawer of the shelf that is open — the classification QGIS puts in a
-    // separate window's tab bar.
+    // A SEGMENT IN THE TOP STRIP, not a tab bar of its own above the shelf.
     //
-    // DRAWN AS TABS, AND SIZED TO THEIR LABELS. Stretched edge to edge over a bare
-    // dialog background they read as three flat grey buttons — reported as "you
-    // cannot even tell those are tabs" — which is a bad look for the control that
-    // carries the first decision. Three things fix it and all three are needed: a
-    // tab-shaped border, a width that comes from the text, and a PANE underneath
-    // for the selected tab to join, so the pair reads as one object.
-    const QColor ink = palette().color(QPalette::WindowText);
-
-    geometry_ = new QTabBar(this);
-    geometry_->setExpanding(false);
-    geometry_->setDrawBase(false);
-    geometry_->setUsesScrollButtons(false);
-    geometry_->setIconSize(QSize(16, 16));
-    geometry_->addTab(geometry_glyph(PreviewShape::Area, ink), tr("Alan"));
-    geometry_->addTab(geometry_glyph(PreviewShape::Line, ink), tr("Çizgi"));
-    geometry_->addTab(geometry_glyph(PreviewShape::Point, ink), tr("Nokta"));
-    geometry_->setTabToolTip(0, tr("Parsel, ada, yapı — kapalı alanlar"));
-    geometry_->setTabToolTip(1, tr("Sınır, yol ekseni, kanal — çizgiler"));
-    geometry_->setTabToolTip(2, tr("Nirengi, poligon, ağaç — noktalar"));
+    // It was drawn as three tabs joined to a pane, and a great deal of care went
+    // into making them read as tabs — because a row of three buttons floating
+    // over a dialog background reads as nothing at all. But the reason they read
+    // as nothing was never the drawing: it was the PLACE. They sat alone between
+    // the renderer strip and the shelf's caption, a band belonging to neither,
+    // and they are the same kind of decision as the three controls above them —
+    // what this symbol IS, before anything about how it looks.
+    //
+    // So they go where that decision is made, as the component the strip already
+    // uses for a small closed choice (`SEMBOL BOYUT BİRİMİ` is the same control).
+    // One band of decisions, one component for a choice of three, and the orphan
+    // row is gone rather than dressed up.
+    geometry_ = new Segment(this);
+    geometry_->addOption(tr("Alan"), tr("Parsel, ada, yapı — kapalı alanlar"));
+    geometry_->addOption(tr("Çizgi"), tr("Sınır, yol ekseni, kanal — çizgiler"));
+    geometry_->addOption(tr("Nokta"), tr("Nirengi, poligon, ağaç — noktalar"));
     geometry_->setAccessibleName(tr("Sembolün çizileceği geometri"));
     const std::optional<PreviewShape> known = shape_of_layer(
         controller_.document(), controller_.document().find_layer(layerName_.toStdString()));
-    geometry_->setCurrentIndex(static_cast<int>(known.value_or(natural_shape(symbol_))));
-    // SHOWN ONLY WHEN THE LAYER DOES NOT SAY. A parcel layer is areas and a road
-    // axis layer is lines; asking which of the three to draw is a question the
-    // drawing has answered, and the reference has no such row. An empty layer,
-    // or one holding lines and areas both, still gets asked.
-    geometry_->setVisible(!known.has_value());
-    connect(geometry_, &QTabBar::currentChanged, this, [this](int) {
+    geometry_->setCurrent(static_cast<int>(known.value_or(natural_shape(symbol_))));
+    geometryAsked_ = !known.has_value();
+    connect(geometry_, &Segment::currentChanged, this, [this](int) {
         adopt_geometry_default(symbol_, shape());
         refreshGalleryItems();
         refresh();
         updateHeaderNote();
     });
 
-    // And once for the tab the dialog OPENED on, which is the case a user meets
-    // first: a point layer with no symbology of its own.
+    // And once for the geometry the dialog OPENED on, which is the case a user
+    // meets first: a point layer with no symbology of its own.
     adopt_geometry_default(symbol_, shape());
 
     // THE SWATCH AND ITS ONE-WORD CAPTION. No title: the dialog's own title bar
@@ -755,14 +829,6 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     previewLayout->addWidget(headerNote_);
     previewLayout->addStretch(1);
 
-    // No gap between the bar and the pane: the selected tab has to touch what it
-    // opens, or the two are just a row of buttons above a box.
-    auto* tabRow = new QHBoxLayout;
-    tabRow->setContentsMargins(1, 0, 0, 0);
-    tabRow->setSpacing(0);
-    tabRow->addWidget(geometry_);
-    tabRow->addStretch(1);
-
     // ---- TWO COLUMNS, not four stacked bands -------------------------------
     //
     // This page used to be a vertical stack: the renderer row, the geometry
@@ -782,7 +848,6 @@ StyleDesigner::StyleDesigner(Controller& controller, QString layerName, QWidget*
     auto* leftColumn = new QVBoxLayout(left);
     leftColumn->setContentsMargins(0, 0, 0, 0);
     leftColumn->setSpacing(0);
-    leftColumn->addLayout(tabRow);
 
     // THE SHELF OR THE TABLE. A single symbol is chosen FROM the shelf of
     // published gösterim; a categorized or graduated one is a table of classes,
@@ -2003,6 +2068,10 @@ QStringList StyleDesigner::probeRenderer(const QString& column)
 
 void StyleDesigner::applyTheme(ThemeMode mode)
 {
+    // THE SHELF ROWS TOO. A delegate is not a widget, so the walk over the
+    // children never reaches it and it keeps the tokens it was built with.
+    if (shelfRows_ != nullptr) static_cast<ShelfRow*>(shelfRows_)->setTheme(mode);
+
     DialogFrame::applyTheme(mode);
     if (sections_) sections_->applyTheme(mode);
     if (schema_) schema_->applyTheme(mode);
@@ -2046,7 +2115,7 @@ void StyleDesigner::updateHeaderNote()
 
 PreviewShape StyleDesigner::shape() const
 {
-    return static_cast<PreviewShape>(std::clamp(geometry_->currentIndex(), 0, 2));
+    return static_cast<PreviewShape>(std::clamp(geometry_->current(), 0, 2));
 }
 
 // ------------------------------------------------------------- the shelf ----
@@ -2150,8 +2219,6 @@ QWidget* StyleDesigner::buildRendererRow()
     rampCell_ = field(tr("RENK SKALASI"), ramp_);
     rampCell_->setVisible(false);
 
-    row->addStretch(1);
-
     // The unit as ONE segmented control rather than a combo: three choices a
     // user switches between constantly read faster side by side than in a list,
     // and the reference draws them that way. One control, not three checkable
@@ -2185,6 +2252,26 @@ QWidget* StyleDesigner::buildRendererRow()
         updatePreview();
     });
     field(tr("SEMBOL BOYUT BİRİMİ"), units_);
+
+    // AND THE GEOMETRY, at the end of the same strip.
+    //
+    // SHOWN ONLY WHEN THE LAYER DOES NOT SAY. A parcel layer is areas and a road
+    // axis layer is lines; asking which of the three to draw is a question the
+    // drawing has already answered, and §8 has no such control. An empty layer,
+    // or one holding lines and areas both, still gets asked.
+    geometryCell_ = field(tr("GEOMETRİ"), geometry_);
+    geometryCell_->setVisible(geometryAsked_);
+
+    // AND NOTHING PUSHES THEM APART.
+    //
+    // A `addStretch` used to sit between the renderer and the unit, "so the unit
+    // sits at the right end where the eye lands last". With all four controls
+    // showing that reads as §8's strip; with a single-symbol renderer, where
+    // DEĞER and RENK SKALASI are both hidden, it left two controls at opposite
+    // ends of eleven hundred pixels with a canyon between them — one band that
+    // looks like two, which is what a reader reports as a broken window. §8 says
+    // four controls in a strip, and a strip is what they are.
+    row->addStretch(1);
 
     return bar;
 }
@@ -2294,12 +2381,17 @@ QWidget* StyleDesigner::buildGallery()
     gallery_->setObjectName(QStringLiteral("designerGallery"));
     gallery_->setViewMode(QListView::ListMode);
     gallery_->setIconSize(QSize(44, 26));
-    gallery_->setUniformItemSizes(true);
-    gallery_->setAlternatingRowColors(true);
+    // NEITHER UNIFORM NOR STRIPED. A heading row is taller than a gösterim
+    // row, and the groups do the banding that the stripes used to do — both at
+    // once is two grids over one list.
+    gallery_->setUniformItemSizes(false);
+    gallery_->setAlternatingRowColors(false);
     gallery_->setWordWrap(false);
     gallery_->setSpacing(0);
     gallery_->setMouseTracking(true);
     gallery_->setAccessibleName(tr("Hazır gösterim listesi")); // ui-label
+    shelfRows_ = new ShelfRow(gallery_);
+    gallery_->setItemDelegate(shelfRows_);
     connect(gallery_, &QListWidget::itemDoubleClicked, this,
             [this](QListWidgetItem*) { applyGalleryPick(); });
 
@@ -2321,10 +2413,14 @@ QWidget* StyleDesigner::buildGallery()
     // been picked, and with nothing selected that was a strip of blank between the
     // thumbnails and the button under them — the gap a reader takes for a layout
     // fault. It takes the height of its own text now, and hides when it has none.
-    provenance_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+    provenance_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    provenance_->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 
     connect(gallery_, &QListWidget::currentItemChanged, this,
-            [this](QListWidgetItem*, QListWidgetItem*) { showProvenance(); });
+            [this](QListWidgetItem* now, QListWidgetItem*) {
+                use_->setEnabled(now != nullptr && now->data(Qt::UserRole).isValid());
+                showProvenance();
+            });
 
     // Secondary, though it is the page's main action: the window's one primary
     // is `Tamam` in the footer, and the standard allows a screen exactly one.
@@ -2340,18 +2436,42 @@ QWidget* StyleDesigner::buildGallery()
     filterRow->setSpacing(8);
     filterRow->addWidget(groups_);
     filterRow->addWidget(search_, 1);
+    // HOW MANY THE FILTERS LEFT, beside the filters. It had a band of its own
+    // under the list, which is as far from the two controls that change it as
+    // this column goes.
+    filterRow->addSpacing(4);
+    filterRow->addWidget(galleryNote_);
     layout->addLayout(filterRow);
     layout->addWidget(gallery_, 1);
-    layout->addWidget(galleryNote_);
-    layout->addWidget(provenance_);
 
     // RIGHT, AND ITS OWN WIDTH. A button stretched across seven hundred pixels
     // reads as a banner rather than as something to press, and it is the one
     // action in this half of the window — §15.1's single primary.
+    // THE ACTION SITS WITH WHAT IT ACTS ON.
+    //
+    // It was alone in the bottom-right corner of a column eleven hundred pixels
+    // wide, with a short count at the far left of the same line and nothing in
+    // between — the same canyon the top strip had, and a press a user has to
+    // travel the width of the window to make. It is at the LEFT of the foot
+    // now, under the swatches, where the eye already is when a row is picked,
+    // and the row's citation runs beside it: the button and the sentence
+    // saying what pressing it will apply are one line.
+    //
+    // DISABLED UNTIL SOMETHING IS PICKED. It used to be lit at all times and to
+    // do nothing when pressed with an empty selection.
+    use_->setEnabled(false);
+    // ITS OWN WIDTH, ALWAYS. The citation beside it is hidden until a row is
+    // picked, and a hidden widget's stretch is not shared out — so with nothing
+    // selected the button was the only thing left on the line and the layout
+    // drew it eleven hundred pixels wide, a banner rather than something to
+    // press.
+    use_->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
     auto* useRow = new QHBoxLayout;
-    useRow->setContentsMargins(0, 0, 0, 0);
-    useRow->addStretch(1);
+    useRow->setContentsMargins(0, 2, 0, 0);
+    useRow->setSpacing(12);
     useRow->addWidget(use_);
+    useRow->addWidget(provenance_, 1);
+    useRow->addStretch(0);
     layout->addLayout(useRow);
     return box;
 }
@@ -2413,8 +2533,20 @@ void StyleDesigner::fillTypeChoices(core::SymbolLayerType current)
 void StyleDesigner::refreshGalleryItems()
 {
     const core::StyleLibrary& shelf = controller_.bus().style_library();
-    const std::uint32_t paper       = palette().color(QPalette::Base).rgba();
-    const core::SymbolKind kind     = kind_of(shape());
+    // INK ON PAPER, IN BOTH THEMES.
+    //
+    // The swatches used to take the window's own input colour as their ground,
+    // which in the dark theme is #171B1E — and a published gösterim is, far more
+    // often than not, a black line. A shelf of black ink on a near-black ground
+    // is a shelf a user in the dark theme cannot read, and the eleven rows of
+    // `SINIRLAR` are all exactly that.
+    //
+    // A gösterim is not a piece of this window's chrome. It is what will be
+    // printed on a sheet somebody signs, and that sheet is white: the swatch is
+    // drawn on paper here for the same reason the sheet in the layout designer
+    // is white in both themes.
+    const std::uint32_t paper   = 0xFFFFFFFFu;
+    const core::SymbolKind kind = kind_of(shape());
 
     // The SHELF's pictures, not the document's: a gösterim on the shelf has not
     // been applied to anything yet, so its hatch lives in the library's own store.
@@ -2482,14 +2614,62 @@ void StyleDesigner::refreshGalleryItems()
         if (e->kind == kind) matching.push_back(e);
 
     const int shown = std::min(static_cast<int>(matching.size()), kGalleryCap);
+
+    // ---- THE SHELF IS GROUPED, NOT A HUNDRED AND THIRTEEN FLAT LINES --------
+    //
+    // WHAT THIS REPLACES, AND WHY IT IS THE SECOND ANSWER TO ONE QUESTION.
+    // The right end of every row was blank — four hundred pixels of nothing on
+    // every line — so the row was given the annex path it came from. It read
+    // correctly and it was useless: consecutive rows share a group, so the
+    // column repeated `EK-1a / SINIRLAR / İDARİ SINIRLAR` five times running
+    // and put a second wall of capitals beside the first.
+    //
+    // A fact that repeats down a run of rows is the run's, not the row's. It is
+    // a heading now: said once, where the run starts, and a reader scrolling a
+    // hundred and thirteen published gösterim has something to count by. This
+    // is what the annex itself looks like.
+    QString openGroup;
     for (int i = 0; i < shown; ++i) {
         const core::LibraryEntry* e = matching[at(i)];
+
+        QStringList where;
+        for (const std::string& part : e->group)
+            where << QString::fromStdString(part);
+        if (const QString path = where.join(QStringLiteral(" / ")); path != openGroup) {
+            openGroup  = path;
+            auto* head = new QListWidgetItem(gallery_);
+            head->setData(ShelfRow::kGroupRole, path.isEmpty() ? tr("Grupsuz") : path);
+            // NOT SELECTABLE AND NOT A TAB STOP: a heading is not a gösterim,
+            // and arrowing through the shelf must not stop on one.
+            head->setFlags(Qt::NoItemFlags);
+        }
 
         auto* item = new QListWidgetItem(gallery_);
         item->setText(QString::fromStdString(e->label.empty() ? e->id : e->label));
         item->setIcon(symbol_icon(e->symbol, images, shelf.dashes(), QSize(44, 26), paper,
                                   shape_of(e->kind)));
         item->setData(Qt::UserRole, QString::fromStdString(e->id));
+        // WHERE THE ROW COMES FROM, AT THE RIGHT END OF IT.
+        //
+        // The longest published name here reaches about two thirds of the way
+        // across a row and the rest was blank — four hundred pixels of nothing
+        // on every one of a hundred and thirteen lines.
+        //
+        // NOT THE ID. The id is the name slugified — `ÜLKE SINIRI` is
+        // `ortak-ulke-siniri` — so a column of ids is the same column of names
+        // written twice. The GROUP is the thing a reader cannot get from the
+        // name and had to select a row to see: which annex and which section of
+        // it this gösterim was printed in. Two rows can carry the same name in
+        // two annexes and mean different things.
+        //
+        // The full citation — regulation, annex, madde, date — stays under the
+        // list for the selected row, verbatim and unshortened (CLAUDE.md 11.7).
+        // WITHDRAWN ROWS ONLY. `uncertain` marks fourteen rows whose appearance
+        // the package could not read with confidence, and that is a warning
+        // about the DRAWING, which the note under the list gives in full once a
+        // row is picked. A withdrawn gösterim is different in kind: it must not
+        // be chosen at all for a new sheet, so it is marked where it is scanned.
+        item->setData(ShelfRow::kRetiredRole, e->deprecated);
         // The name again, with the id and the citation: a row elides a very long
         // published name, and the id is what a script writes.
         item->setToolTip(QString::fromStdString((e->label.empty() ? e->id : e->label) + "\n" +
@@ -2497,7 +2677,13 @@ void StyleDesigner::refreshGalleryItems()
     }
 
     if (matching.empty())
-        galleryNote_->setText(tr("Bu geometride eşleşen gösterim yok.")); // ui-label
+        // AN EMPTY SHELF IS A PLACE TO ACT, not a statement of absence: the two
+        // things that emptied it are both one click away and both named.
+        galleryNote_->setText(
+            search_->text().trimmed().isEmpty()
+                ? tr("Bu geometride gösterim yok. Üstteki GEOMETRİ'yi değiştirin.") // ui-label
+                : tr("Aramayla eşleşen gösterim yok. Aramayı temizleyin ya da "     // ui-label
+                     "grubu Tümü yapın."));
     else if (shown < static_cast<int>(matching.size()))
         galleryNote_->setText(tr("%1 gösterimden ilk %2 tanesi. Aramayı daraltın.") // ui-label
                                   .arg(matching.size())
@@ -2555,7 +2741,7 @@ void StyleDesigner::resetToLayer()
         editingCategory_ = -1;
         setRenderer(Renderer::Single);
     }
-    geometry_->setCurrentIndex(static_cast<int>(natural_shape(symbol_)));
+    geometry_->setCurrent(static_cast<int>(natural_shape(symbol_)));
     refresh();
     selectTopLayer();
 }
@@ -2575,7 +2761,7 @@ void StyleDesigner::applyGalleryPick()
     symbol_         = e->symbol;
     galleryCode_    = QString::fromStdString(e->id);
     galleryPackage_ = QString::fromStdString(e->package_path);
-    geometry_->setCurrentIndex(static_cast<int>(shape_of(e->kind)));
+    geometry_->setCurrent(static_cast<int>(shape_of(e->kind)));
     refresh();
     selectTopLayer();
 }

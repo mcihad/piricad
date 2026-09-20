@@ -39,6 +39,7 @@
 #include <QGuiApplication>
 #include <QImage>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QLocale>
 #include <QMouseEvent>
 #include <QNetworkAccessManager>
@@ -1040,6 +1041,11 @@ int main(int argc, char** argv)
         later([&window, shot] { shot(QStringLiteral("1-ana-ekran"), &window); });
 
         later([&window] { window.openStyleDesigner(QStringLiteral("PARSEL")); });
+        later([] {
+            if (QWidget* top = QApplication::activeModalWidget())
+                if (auto* list = top->findChild<QListWidget*>(QStringLiteral("designerGallery")))
+                    list->setCurrentRow(1);
+        });
         later([shot] {
             shot(QStringLiteral("2-stil-tasarimcisi"), QApplication::activeModalWidget());
         });
