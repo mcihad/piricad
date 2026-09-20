@@ -247,6 +247,21 @@ public:
     /// A gösterim the annex has withdrawn.
     static constexpr int kRetiredRole = Qt::UserRole + 2;
 
+    /// ONE LEFT EDGE FOR EVERY WORD IN THE SHELF.
+    ///
+    /// The three things in a row used to start at three different places: the
+    /// group heading at 10 px, the specimen at 13, the name at 57. None of them
+    /// lined up with any other, which is the kind of near-miss a reader sees as
+    /// sloppiness without being able to name it. The specimen now hangs in a
+    /// gutter of its own and EVERY line of text — heading and name alike —
+    /// starts where the gutter ends, so the annex's sections and the gösterim
+    /// under them share one edge and the hierarchy is read as indentation.
+    static constexpr int kGutter = 66;
+
+    /// The paper the specimen is printed on, inside the gutter.
+    static constexpr int kCardW = 50;
+    static constexpr int kCardH = 30;
+
     explicit ShelfRow(QObject* parent = nullptr) : QStyledItemDelegate(parent) {}
 
     void setTheme(ThemeMode mode) { theme_ = mode; }
@@ -254,61 +269,86 @@ public:
     QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         const QSize base = QStyledItemDelegate::sizeHint(option, index);
-        return index.data(kGroupRole).toString().isEmpty() ? base : QSize(base.width(), 30);
+        return {base.width(), index.data(kGroupRole).toString().isEmpty() ? 38 : 30};
     }
 
     void paint(QPainter* p, const QStyleOptionViewItem& option,
                const QModelIndex& index) const override
     {
         const Tokens& t = theme_ == ThemeMode::Dark ? darkTokens() : lightTokens();
+        p->save();
+        p->setRenderHint(QPainter::Antialiasing, false);
 
         // ---- a group heading ------------------------------------------------
         const QString group = index.data(kGroupRole).toString();
         if (!group.isEmpty()) {
-            p->save();
             p->fillRect(option.rect, t.bgHeader);
             QFont small = option.font;
             small.setPixelSize(11);
             p->setFont(small);
             p->setPen(t.textDim);
-            p->drawText(
-                option.rect.adjusted(10, 0, -10, -1), Qt::AlignLeft | Qt::AlignVCenter,
-                option.fontMetrics.elidedText(group, Qt::ElideMiddle, option.rect.width() - 20));
+            const QRect where = option.rect.adjusted(kGutter, 0, -10, -1);
+            p->drawText(where, Qt::AlignLeft | Qt::AlignVCenter,
+                        QFontMetrics(small).elidedText(group, Qt::ElideMiddle, where.width()));
             p->setPen(QPen(t.lineSoft, 1.0));
             p->drawLine(option.rect.bottomLeft(), option.rect.bottomRight());
             p->restore();
             return;
         }
 
-        // ---- an ordinary row -------------------------------------------------
-        //
-        // The name and the swatch are the base class's job, so a row keeps the
-        // shelf's own selection and hover exactly as the stylesheet draws them.
-        // Only the withdrawal mark is this delegate's.
-        if (!index.data(kRetiredRole).toBool()) {
-            QStyledItemDelegate::paint(p, option, index);
-            return;
+        // ---- the row's own ground -------------------------------------------
+        const bool picked = (option.state & QStyle::State_Selected) != 0;
+        if (picked) {
+            p->fillRect(option.rect, t.accentWash);
+            p->fillRect(QRect(option.rect.left(), option.rect.top(), 2, option.rect.height()),
+                        t.accent);
+        } else if ((option.state & QStyle::State_MouseOver) != 0) {
+            p->fillRect(option.rect, t.hoverRow);
         }
 
+        // ---- the specimen, on paper -----------------------------------------
+        //
+        // DRAWN HERE AND NOT BY THE VIEW, so the selection's wash stops at the
+        // card's edge. Painted under the icon it tinted the paper blue, and a
+        // gösterim is judged by the ink on it: a picked row must not show a
+        // different colour from the eleven around it.
+        const QRect card(option.rect.left() + (kGutter - kCardW) / 2,
+                         option.rect.top() + (option.rect.height() - kCardH) / 2, kCardW, kCardH);
+        p->fillRect(card, Qt::white);
+        p->setPen(QPen(t.lineHard, 1.0));
+        p->drawRect(card.adjusted(0, 0, -1, -1));
+        if (const auto art = index.data(Qt::DecorationRole).value<QIcon>(); !art.isNull()) {
+            const QPixmap drawn = art.pixmap(QSize(44, 26), p->device()->devicePixelRatioF());
+            const QSize at      = drawn.deviceIndependentSize().toSize();
+            p->drawPixmap(card.left() + (kCardW - at.width()) / 2,
+                          card.top() + (kCardH - at.height()) / 2, drawn);
+        }
+
+        // ---- the published name, and the withdrawal mark ---------------------
         QFont small = option.font;
         small.setPixelSize(11);
-        const QFontMetrics metrics(small);
+        const QFontMetrics tiny(small);
         const QString said = tr("yürürlükte değil");
-        const int wide     = metrics.horizontalAdvance(said) + 20;
+        const bool retired = index.data(kRetiredRole).toBool();
+        const int reserved = retired ? tiny.horizontalAdvance(said) + 20 : 10;
 
-        QStyleOptionViewItem trimmed = option;
-        trimmed.rect.setRight(option.rect.right() - wide);
-        QStyledItemDelegate::paint(p, trimmed, index);
+        QRect words = option.rect.adjusted(kGutter, 0, -reserved, 0);
+        p->setFont(option.font);
+        p->setPen(t.text);
+        p->drawText(words, Qt::AlignLeft | Qt::AlignVCenter,
+                    option.fontMetrics.elidedText(index.data(Qt::DisplayRole).toString(),
+                                                  Qt::ElideRight, words.width()));
 
         // A WITHDRAWN ROW IS MARKED WHERE IT IS SCANNED, not only after it has
         // been picked: it is still loadable, because a retired id is never
         // dropped, but it must not be chosen for a new sheet.
-        p->save();
-        p->setFont(small);
-        p->setPen(t.warn);
-        p->drawText(
-            QRect(option.rect.right() - wide, option.rect.top(), wide - 10, option.rect.height()),
-            Qt::AlignRight | Qt::AlignVCenter, said);
+        if (retired) {
+            p->setFont(small);
+            p->setPen(t.warn);
+            p->drawText(QRect(option.rect.right() - reserved, option.rect.top(), reserved - 10,
+                              option.rect.height()),
+                        Qt::AlignRight | Qt::AlignVCenter, said);
+        }
         p->restore();
     }
 
@@ -2417,14 +2457,15 @@ QWidget* StyleDesigner::buildGallery()
     provenance_->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 
     connect(gallery_, &QListWidget::currentItemChanged, this,
-            [this](QListWidgetItem* now, QListWidgetItem*) {
-                use_->setEnabled(now != nullptr && now->data(Qt::UserRole).isValid());
-                showProvenance();
-            });
+            [this](QListWidgetItem*, QListWidgetItem*) { showProvenance(); });
 
     // Secondary, though it is the page's main action: the window's one primary
     // is `Tamam` in the footer, and the standard allows a screen exactly one.
-    use_ = new Button(ButtonRole::Secondary, tr("Seçileni kullan"), Glyph::Check, box);
+    // NO GLYPH. A tick means "done" and nothing here is done yet — it is the
+    // sign a reader meets on the page AFTER pressing something. The words say
+    // what the press does, the strip beside them says which row it will do it
+    // to, and a third mark on the same line is one thing too many.
+    use_ = new Button(ButtonRole::Secondary, tr("Seçileni kullan"), std::nullopt, box);
     use_->setToolTip(tr("Seçili gösterimi düzenlenebilir sembol yığını olarak alır")); // ui-label
     connect(use_, &QPushButton::clicked, this, &StyleDesigner::applyGalleryPick);
 
@@ -2459,20 +2500,34 @@ QWidget* StyleDesigner::buildGallery()
     //
     // DISABLED UNTIL SOMETHING IS PICKED. It used to be lit at all times and to
     // do nothing when pressed with an empty selection.
-    use_->setEnabled(false);
-    // ITS OWN WIDTH, ALWAYS. The citation beside it is hidden until a row is
-    // picked, and a hidden widget's stretch is not shared out — so with nothing
-    // selected the button was the only thing left on the line and the layout
-    // drew it eleven hundred pixels wide, a banner rather than something to
-    // press.
+    // ---- WHAT IS PICKED, AND THE BUTTON THAT TAKES IT ----------------------
+    //
+    // ONE STRIP ATTACHED TO THE LIST, not two things floating under it.
+    //
+    // The button has now been in three places and the first two were both
+    // wrong for the same reason: it was ALONE. In the bottom-right corner it
+    // sat a thousand pixels from the count at the far left with nothing
+    // between them; moved to the bottom-left it hung past the list's own edge,
+    // centred against a two-line citation, and stayed lit and useless with
+    // nothing selected.
+    //
+    // What it needed was not a better corner but something to belong to. The
+    // citation of the picked row and the button that applies that row are one
+    // object: the strip is flush against the foot of the list, it carries the
+    // regulation, annex, madde and date at its left and the button at its
+    // right, and it is not there at all until a row is picked. Nothing floats,
+    // nothing is greyed out waiting, and the sentence saying what will be
+    // applied sits on the same line as the control that applies it.
     use_->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
-    auto* useRow = new QHBoxLayout;
-    useRow->setContentsMargins(0, 2, 0, 0);
-    useRow->setSpacing(12);
-    useRow->addWidget(use_);
+
+    pickFoot_    = new QWidget(box);
+    auto* useRow = new QHBoxLayout(pickFoot_);
+    useRow->setContentsMargins(0, 8, 0, 0);
+    useRow->setSpacing(16);
     useRow->addWidget(provenance_, 1);
-    useRow->addStretch(0);
-    layout->addLayout(useRow);
+    useRow->addWidget(use_, 0, Qt::AlignVCenter);
+    pickFoot_->setVisible(false);
+    layout->addWidget(pickFoot_);
     return box;
 }
 
@@ -2561,11 +2616,14 @@ void StyleDesigner::refreshGalleryItems()
     groups_->setVisible(stocked);
     search_->setVisible(stocked);
     gallery_->setVisible(stocked);
-    // Only when there is a citation to show; an empty one is a blank strip
-    // between the thumbnails and the button under them.
-    provenance_->setVisible(stocked && !provenance_->text().isEmpty());
+    // THE STRIP IS ONE THING AND IT IS SHOWN IN ONE PLACE (`showProvenance`).
+    // The citation used to be hidden here too, whenever the shelf was refilled
+    // while its text happened to be empty — and nothing put it back when the
+    // selection returned, so the strip came up holding a button and no
+    // sentence, with the button drifting to the middle of the line where the
+    // sentence should have been.
+    if (pickFoot_ != nullptr && !stocked) pickFoot_->setVisible(false);
     galleryNote_->setAlignment(stocked ? Qt::AlignLeft | Qt::AlignTop : Qt::AlignCenter);
-    use_->setEnabled(stocked);
 
     if (!stocked) {
         // The annotation rides the line it describes — the gate reads the offending
@@ -2694,18 +2752,24 @@ void StyleDesigner::refreshGalleryItems()
 
 void StyleDesigner::showProvenance()
 {
+    // THE WHOLE STRIP APPEARS AND GOES WITH THE PICK. The citation and the
+    // button are one thing; a button offering to apply nothing is a control
+    // that lies about what it does.
+    const auto nothingPicked = [this] {
+        provenance_->clear();
+        if (pickFoot_ != nullptr) pickFoot_->setVisible(false);
+    };
+
     QListWidgetItem* item = gallery_->currentItem();
     if (item == nullptr) {
-        provenance_->clear();
-        provenance_->setVisible(false);
+        nothingPicked();
         return;
     }
 
     const core::LibraryEntry* e =
         controller_.bus().style_library().find(item->data(Qt::UserRole).toString().toStdString());
     if (e == nullptr) {
-        provenance_->clear();
-        provenance_->setVisible(false);
+        nothingPicked();
         return;
     }
 
@@ -2726,8 +2790,8 @@ void StyleDesigner::showProvenance()
     if (e->deprecated) text = tr("⚠ Yürürlükten kalkmış.\n") + text;
 
     provenance_->setText(text);
-    provenance_->setVisible(true);
     provenance_->setToolTip(QString::fromStdString(e->id));
+    if (pickFoot_ != nullptr) pickFoot_->setVisible(true);
 }
 
 void StyleDesigner::resetToLayer()

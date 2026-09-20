@@ -6,6 +6,36 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — rafın hizalamaları ve seçim şeridi
+
+Rafta üç şey üç ayrı yerden başlıyordu: bölüm başlığı 10 pikselden, gösterim
+görseli 13'ten, adı 57'den. Hiçbiri diğeriyle hizalı değildi — okurun
+adlandırameden "özensiz" diye gördüğü türden bir ıska. Görsel artık kendi
+sütununda, ince çerçeveli bir **numune kartı** olarak duruyor; başlık ve ad dâhil
+raftaki bütün yazı kartların bittiği yerden başlıyor, yani tek bir sol kenarı
+paylaşıyor ve ekin bölümleri girinti olarak okunuyor.
+
+Seçim rengi de kâğıdı boyuyordu: seçili satırın görseli, çevresindeki on bir
+satırdan farklı renkte bir zemin üzerinde duruyordu. Satır artık elle çiziliyor ve
+vurgu kartın kenarında duruyor.
+
+### Değişti — `Seçileni kullan` bir şeye ait oldu
+
+Düğme üç yer değiştirdi ve ilk ikisi aynı sebeple yanlıştı: **yalnızdı**. Sağ alt
+köşede, aynı satırın sol ucundaki kısa sayımdan bin piksel uzakta; sola alınınca
+da listenin kendi kenarını aşarak, iki satırlık bir künyenin karşısında ortalanmış
+ve hiçbir şey seçili değilken yanık ve işlevsiz duruyordu.
+
+İhtiyacı olan şey daha iyi bir köşe değil, ait olacağı bir nesneydi. Seçili
+satırın künyesi ile o satırı uygulayan düğme tek bir nesnedir: **seçim şeridi**
+rafın ayağına yapışık durur, solunda yönetmelik/ek/madde/tarih, sağında düğme, ve
+bir satır seçilene kadar hiç yoktur. Hiçbir şey havada durmuyor, hiçbir şey
+beklerken sönük değil.
+
+Düğmedeki ✓ de kaldırıldı: tik "yapıldı" demektir ve burada henüz yapılmış bir şey
+yok — basıldıktan SONRA karşılaşılan işarettir.
+
+
 ### Değişti — Katman Simgeleyici: raf artık ekin kendisi gibi okunuyor
 
 Kullanıcının hükmü "yerleşimler berbat" idi ve üç ayrı yerleşim hatası vardı.

@@ -298,6 +298,10 @@ private:
     /// change it does not redraw.
     int previewWidth_{0};
 
+    /// The strip under the shelf: what is picked, and the button that takes it.
+    /// Absent until a row is picked.
+    QWidget* pickFoot_{nullptr};
+
     /// Draws the shelf rows; see `ShelfRow` in the source.
     QStyledItemDelegate* shelfRows_{nullptr};
 

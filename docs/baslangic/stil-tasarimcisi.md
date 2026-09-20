@@ -29,7 +29,7 @@ taşıyorsa o, taşımıyorsa katmanın kendi görünümü.
 │ Eylemler     │ │ EK-1a / SINIRLAR /…  │ │ Katman tipi  [Dolgu   ]│
 │ Bağlantılar  │ │  ◯◯ PLAN ONAMA SINIRI│ │ DOLGU                  │
 │ Sürüm        │ └──────────────────────┘ │ Dolgu rengi  [#228B22 ]│
-│              │ [Seçileni kullan] MPYY…  │ KENAR                  │
+│              │ MPYY, EK-1a… [Seç.kullan]│ KENAR                  │
 │              │                          │ Çizgi rengi  [#000000 ]│
 │              │                          │ Kalınlık     [0 µm    ]│
 ├──────────────┴──────────────────────────┴───────────────────────┤
@@ -164,7 +164,10 @@ gibi bölümlenmiştir**: her grup yolu bir başlık olarak bir kez yazılır
 satırda gösterimin gerçek görseli ve tam adı; üzerine gelince kimliği ve
 dayanağı.
 
-Gösterim görselleri **her temada beyaz kâğıt üzerinde** çizilir. Bir gösterim
+Gösterim görselleri **her temada beyaz kâğıt üzerinde** çizilir ve satırın
+solundaki kendi sütununda, ince çerçeveli birer numune kartı olarak durur. Raftaki
+bütün yazı — bölüm başlıkları ve gösterim adları — kartların bittiği yerden
+başlar, yani tek bir sol kenarı paylaşır. Bir gösterim
 imzalanacak bir pafta üzerindeki mürekkeptir ve o pafta beyazdır; koyu temanın
 zemininde çizilseydi siyah çizgili gösterimlerin yarısı görünmezdi.
 
@@ -181,9 +184,10 @@ görselleridir**; renk değil. `Seçileni kullan` ya da çift tıklama, o göste
 yığına **koyar** — üstüne eklemez, çünkü yayımlanmış bir gösterimi seçmek "bu
 böyle görünmeli" demektir.
 
-`Seçileni kullan` rafın **sol altındadır** ve bir satır seçilene kadar sönüktür;
-yanında o satırın dayanağı yazar — yönetmelik, ek, madde ve yayım tarihi. Düğme
-ile basınca uygulanacak şeyin künyesi aynı satırdadır.
+Bir satır seçtiğinizde rafın altına **seçim şeridi** yapışır: solda o satırın
+dayanağı — yönetmelik, ek, madde ve yayım tarihi — sağda `Seçileni kullan`.
+Hiçbir satır seçili değilken şerit yoktur. Basınca uygulanacak şeyin künyesi
+düğmeyle aynı satırda durur.
 
 Kaç gösterimin listelendiği **arama kutusunun yanında** yazar: sayıyı değiştiren
 iki kontrolün yanında. Raf çok kalabalıksa ilk kaç tanesinin gösterildiğini de
