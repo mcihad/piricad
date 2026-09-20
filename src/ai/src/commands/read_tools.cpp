@@ -697,8 +697,8 @@ std::vector<CommandSpec> detail::read_tool_specs()
         .summary = "Üzerinde çalışılan her şeyi tek çağrıda özetler: belge sürümü, koordinat "
                    "sistemi, kapsam, katmanlar, çıktı yerleşimleri ve hedefli olup olmadıkları, "
                    "seçili nesneler ve görünüm. Özet verir, döküm değil.",
-        .effect = command::Effect::Query,
         .run    = &run_context,
+        .effect = command::Effect::Query,
     });
 
     specs.push_back(CommandSpec{
@@ -720,8 +720,8 @@ std::vector<CommandSpec> detail::read_tool_specs()
         .summary = "Ajan araç kataloğunda ad ve özete göre arar. Sonuç her zaman kaç aracın "
                    "eşleştiğini, kaçının gösterildiğini ve katalogdaki toplam araç sayısını "
                    "söyler: arama hiçbir aracı gizlemez, tam liste `tools/list` ile alınır.",
-        .effect  = command::Effect::Query,
         .run     = &run_tool_search,
+        .effect  = command::Effect::Query,
     });
 
     specs.push_back(CommandSpec{
@@ -739,8 +739,8 @@ std::vector<CommandSpec> detail::read_tool_specs()
         .summary = "Sık yapılan işlerin — atlas, kadastro kontrolü, parsel raporu — komut "
                    "satırlarını sırasıyla verir. Hiçbirini çalıştırmaz: adımlar olağan araç "
                    "yüzeyinden gönderilir ve yazan her adım yine öneri olur.",
-        .effect  = command::Effect::Query,
         .run     = &run_job_template,
+        .effect  = command::Effect::Query,
     });
 
     return specs;
