@@ -83,7 +83,7 @@ constexpr Kind kKinds[] = {
     {"metin", core::LayoutItemKind::Label, "Metin", Glyph::Text},
     {"olcek", core::LayoutItemKind::ScaleBar, "Ölçek", Glyph::Measure},
     {"kuzey", core::LayoutItemKind::NorthArrow, "Kuzey", Glyph::Locate},
-    {"lejant", core::LayoutItemKind::Legend, "Lejant", Glyph::Table},
+    {"lejant", core::LayoutItemKind::Legend, "Lejant", Glyph::Layer},
     {"resim", core::LayoutItemKind::Picture, "Resim", Glyph::Palette},
     {"sekil", core::LayoutItemKind::Shape, "Şekil", Glyph::Polygon},
     {"tablo", core::LayoutItemKind::Table, "Tablo", Glyph::Grid},
@@ -1298,8 +1298,9 @@ void LayoutDesigner::buildSheetProperties(const core::Layout& l)
         if (filling_) return;
         sheetEdit(QStringLiteral("dpi=%1").arg(typed.toInt()));
     });
+    // NO HELP LINE: the label says `Çözünürlük` and the field says `dpi`, and a
+    // third line saying "export resolution" is the same fact a third time.
     auto* dpiRow = new FormRow(tr("Çözünürlük"), dpi, properties_);
-    dpiRow->setHelp(tr("dışa aktarma"));
 
     propertyColumn_->addWidget(pairOf(edgeRow, dpiRow));
 
