@@ -26,9 +26,11 @@ namespace kentos::io {
 /// happens into a local document and a local settings store, and the swap is the
 /// last thing that happens (io.md P11).
 ///
-/// Clears the undo stack, because its slots refer to a document that no longer
-/// exists, and resets the active layer. That is what every CAD and GIS
-/// application these users know does on File > Open.
+/// Forgets everything that pointed at the departed document — the undo stack,
+/// the active layer, the selection, and any batch a script had open around the
+/// call — through `command::Bus::document_replaced`, which holds that list for
+/// every swap. That is what every CAD and GIS application these users know does
+/// on File > Open.
 ///
 /// Does NOT touch `FileService::current_path_`: where the project came FROM is
 /// the caller's business, and for a database project the answer is "not a file".

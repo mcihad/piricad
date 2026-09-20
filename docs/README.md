@@ -27,6 +27,7 @@ Tek tek komutlar:
 
 | Komut | Sayfa |
 |---|---|
+| `YENİ` | [Boş çizim başlatma](komutlar/new.md) |
 | `AÇ` | [Proje dosyası açma](komutlar/open.md) |
 | `KAYDET` | [Çizimi kaydetme](komutlar/save.md) |
 | `FARKLIKAYDET` | [Yeni ada kaydetme](komutlar/saveas.md) |

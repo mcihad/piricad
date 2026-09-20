@@ -57,6 +57,12 @@ struct FileRequest
 {
     /// What kind of file operation this is.
     enum class Verb : std::uint8_t {
+        /// Replace the document with an empty one. The same swap `Open` makes,
+        /// minus the file read — which is why it is a verb here and not a
+        /// command of its own somewhere else: whatever puts a drawing in front
+        /// of the user is one seam, so there is one place for it to go wrong.
+        New,
+
         Open,        ///< replace the document with a native project file
         Save,        ///< write the native project file the document belongs to
         SaveAs,      ///< write it somewhere else and belong there from now on
@@ -490,6 +496,33 @@ public:
     core::LayerId active_layer() const noexcept { return active_layer_; }
 
     void set_active_layer(core::LayerId l) { active_layer_ = l; }
+
+    /// A DIFFERENT DRAWING IS NOW BEHIND `document()`. Forget everything that
+    /// pointed at the old one.
+    ///
+    /// Called by whatever performs the swap — `YENİ`, `AÇ` and
+    /// `VERİTABANI projeac` — and it is one routine rather than a list each of
+    /// them keeps, because forgetting ONE of these is silent and the symptom
+    /// appears later in somebody's parcel. It moves nothing on disk and it does
+    /// not notify: the caller owns the swap and says so.
+    ///
+    /// What it forgets, and why each one is unsafe to keep (model.md R1, R44 —
+    /// a slot is valid only inside one in-memory `Document`):
+    ///   * the undo stack, whose inverse `Op`s address rows of a table that no
+    ///     longer exists;
+    ///   * the active layer, which was a slot in the old layer table;
+    ///   * the selection, whose keys would resolve against whatever now holds
+    ///     them — in a cadastral drawing, the neighbour's parcel.
+    ///
+    /// AND THE OPEN BATCH, which is the case that is easy to miss. A script is
+    /// one merged undo step (§2.5), so a swap in the middle of one leaves a
+    /// transaction holding the inverse of edits made to the DEPARTED document;
+    /// pushed at `end_batch` it becomes an undo entry that rewrites the new
+    /// drawing. Those ops are dropped — never rolled back, since rolling them
+    /// back would apply them to the wrong document — and the batch stays OPEN
+    /// and re-based, so the rest of the script still merges into one step and
+    /// `end_batch` still has a batch to close.
+    void document_replaced();
 
     // ---- settings, one store per SCOPE (model.md R39, R41) ----
     //

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The file commands — AÇ, KAYDET, FARKLIKAYDET, İÇEAKTAR, DIŞAAKTAR.
+// The file commands — YENİ, AÇ, KAYDET, FARKLIKAYDET, İÇEAKTAR, DIŞAAKTAR.
 //
-// Opening and saving are COMMANDS, like everything else that changes application
-// state (Article 1.1). The file dialog is not the feature; it collects one
+// Starting, opening and saving are COMMANDS, like everything else that changes
+// application state (Article 1.1). The file dialog is not the feature; it collects one
 // argument and hands it to the same bus a script uses, so every one of these runs
 // headless, from the command line, from a JSON script and from the AI schema with
 // no privileged path for the mouse (Article 1.2, 5.15).
@@ -56,6 +56,7 @@ Task<void> submit(Context& ctx, Bus& bus, const FileRequest& request)
     case FileRequest::Verb::ExportPoints:
         if (!request.path.empty()) ctx.wrote(request.path);
         break;
+    case FileRequest::Verb::New:
     case FileRequest::Verb::Open:
     case FileRequest::Verb::Import:
     case FileRequest::Verb::ImportPoints: break;
@@ -70,6 +71,40 @@ std::string resolve_target(Bus& bus, const std::string& typed)
 {
     if (!typed.empty()) return typed;
     return bus.on_current_file ? bus.on_current_file() : std::string{};
+}
+
+// ----------------------------------------------------------------- YENİ -----
+
+/// YENİ — an empty drawing in place of the current one.
+///
+/// IT ASKS NOTHING, and that is the decision rather than an omission. A drawing
+/// with unsaved work in it must not be thrown away silently, but the question
+/// cannot live here: a command body is the one thing in this program that runs
+/// identically for a mouse, a typed line, a script and an agent (kentoscad.md
+/// §2.4), and "kaydedilsin mi?" has no answer in a batch run. `AÇ` settled this
+/// the same way — it replaces the document without asking, and `docs/komutlar/
+/// open.md` says so in one sentence — and the shell asks AROUND the command:
+/// `MainWindow::newProject` puts the three-button question up first and
+/// dispatches this only once the user has answered, exactly as `closeEvent`
+/// does. So the person at the workstation is protected by the window, and a
+/// script that says YENİ gets what it asked for.
+Task<void> run_new(Context& ctx)
+{
+    Bus& bus = ctx.session().bus();
+    if (engine_missing(ctx, bus)) co_return;
+
+    FileRequest request;
+    request.verb = FileRequest::Verb::New;
+    co_await submit(ctx, bus, request);
+    if (ctx.session().state() == SessionState::Failed) co_return;
+
+    // AND THE VIEW GOES BACK TO WHERE A DRAWING STARTS. Left alone it would
+    // still be framing a corner of the parcel that is no longer there, so an
+    // empty canvas would look like a lost one. It is a view request like
+    // `YAKINLAŞ SIFIRLA`'s, so it touches no document and no journal line — and
+    // it is HERE rather than in the window, because a capability reachable only
+    // by mouse is the one thing Article 5.15 forbids outright.
+    if (bus.on_view_request) bus.on_view_request("SIFIRLA", 1.0);
 }
 
 // ------------------------------------------------------------------- AÇ -----
@@ -272,6 +307,47 @@ KENTOS_COMMAND(exportstyle)
         .summary = "Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar.",
         .run     = &run_export_style,
         .effect  = Effect::Query | Effect::FileWrite,
+    };
+}
+
+KENTOS_COMMAND(newfile)
+{
+    return CommandSpec{
+        .id       = "core.new",
+        .names    = {"YENİ", "YENI", "NEW"},
+        .category = Category::File,
+        .params   = {},
+        // NOT UNDOABLE, and `None` is the only honest answer rather than the
+        // convenient one. An undo step is an inverse `Op` list over ONE document
+        // (transaction.hpp); this command does not edit a document, it puts a
+        // different one in the window, so there is no inverse to record and the
+        // steps already on the stack point at slots that no longer exist. That
+        // is why the stack is cleared rather than left standing: a GERİAL over a
+        // stale entry would apply the previous drawing's edits to this one, and
+        // in a cadastral drawing the slot that used to be a parcel is now
+        // somebody else's parcel (model.md R5). `AÇ` carries `None` for exactly
+        // this reason and the two must not disagree.
+        .undo = UndoPolicy::None,
+        // NOT `Interactive`, unlike every other file command: that flag means
+        // "can ask the user for input mid-run" and this one asks nothing, having
+        // no parameters to ask about. `GERİAL` is the precedent. It costs no
+        // client anything — the flag gates nothing, it DESCRIBES — and the
+        // generated reference would otherwise tell a reader this command
+        // prompts.
+        .flags = Flags::Scriptable,
+        // NOT `ReadOnly`, although it opens no transaction: `Bus::finish` skips
+        // the journal entry for a ReadOnly command, and a replay that silently
+        // dropped the YENİ would rebuild the new drawing's commands on top of
+        // the old drawing (Article 6.4).
+        //
+        // Deliberately NOT AiAccessible, for the reason AÇ is not: it discards
+        // unsaved work and cannot be undone, and .claude/ai.md keeps a
+        // destructive, non-undoable act out of reach of a suggestion.
+        .summary = "Boş bir çizim açar; ekrandaki çizimin yerine geçer.",
+        .run     = &run_new,
+        // REPLACES THE DRAWING AND RESETS THE VIEW. No file is read and none is
+        // written — that is what separates it from AÇ.
+        .effect = Effect::DocumentEdit | Effect::ViewChange,
     };
 }
 

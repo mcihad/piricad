@@ -406,8 +406,32 @@ private slots:
     void openScript();
     void openDatabase();
 
-    // The five file actions. Each one collects a path and dispatches the SAME
+    // The six file actions. Each one collects a path and dispatches the SAME
     // command a user could type; the dialog is not the feature (Article 1.2).
+
+    /// Asks whether unsaved work should be saved, and reports whether to go on.
+    ///
+    /// ONE COPY, because there are now two ways to lose a drawing — closing the
+    /// window and starting a new one — and the delicate part is the same for
+    /// both: THREE answers, not two. A person who reached for the wrong control
+    /// must be able to say "no, I did not mean that", and a Save that was itself
+    /// cancelled at the file dialog must not become a silent discard.
+    ///
+    /// `question` is the second line, naming what is about to happen. Returns
+    /// true when the caller may proceed — including the ordinary case where
+    /// nothing was dirty and nothing was asked.
+    bool confirmDiscard(const QString& question);
+
+    /// Starts an empty drawing — `YENİ` — asking first when work would be lost.
+    ///
+    /// THE QUESTION IS HERE AND NOT IN THE COMMAND. `core.new` replaces the
+    /// document without asking, because a command body runs identically for a
+    /// script, an agent and a hand, and "kaydedilsin mi?" has no answer in a
+    /// batch run. So the window asks the same three-button question
+    /// `closeEvent` asks — Kaydet, Atla, Vazgeç — and dispatches only once the
+    /// user has answered. `AÇ` settles it the same way.
+    void newProject();
+
     void openProject();
     void saveProject();
     void saveProjectAs();

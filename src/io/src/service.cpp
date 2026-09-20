@@ -257,6 +257,8 @@ core::Result<ImportOutcome> read_into_scratch(command::Transaction& tx, const st
 command::Task<core::Result<std::string>> FileService::handle(command::FileRequest request)
 {
     switch (request.verb) {
+    case command::FileRequest::Verb::New: co_return create_new();
+
     case command::FileRequest::Verb::Open: co_return co_await open(std::move(request.path));
 
     case command::FileRequest::Verb::Save:
@@ -345,6 +347,53 @@ core::Result<std::string> FileService::export_style(std::string path, std::strin
                 "biçiminde yazıldı ve ilk nesnenin stilini taşıyor. Kategorize dışa aktarım "
                 "Faz 1'de gelecek.";
     return note;
+}
+
+// ------------------------------------------------------------------ YENİ ----
+
+core::Result<std::string> FileService::create_new()
+{
+    // A DEFAULT-CONSTRUCTED DOCUMENT IS THE WHOLE DEFINITION OF "new": layer 0
+    // present, the program's default coordinate system, the key allocators at
+    // their start (core/document.hpp). Writing that list out here instead would
+    // be a second answer to "what does an empty drawing look like", and the two
+    // would drift.
+    bus_.document() = core::Document{};
+
+    // The project's own settings go with the project. They are the drawing's
+    // scale, its unit, its coordinate system — model.md R40 puts them at project
+    // scope precisely because they belong to THIS drawing — so carrying them
+    // into the next one would hand a new file the last one's settings. The APP
+    // and SESSION stores are untouched on purpose: those are the user's
+    // preferences and this session's drawing aids, and neither belongs to a
+    // document. So do the style library and the print profiles, which are what
+    // the user has installed rather than what the drawing contains.
+    bus_.project_settings() =
+        core::Settings{core::builtin_settings(), core::SettingScopeMask::Project};
+
+    // Everything that pointed at the OLD document, in one call — the same one
+    // `AÇ` makes, and for the same reason: a slot is valid only inside one
+    // in-memory `Document` (model.md R1), so an undo entry, an active layer or a
+    // selected key left standing would resolve against whatever now holds that
+    // row. The stack goes, the active layer goes back to 0, the selection
+    // empties, and a script's open batch is re-based rather than pushed.
+    bus_.document_replaced();
+
+    // AND IT BELONGS TO NO FILE. `KAYDET` must ask for a name rather than
+    // writing this empty drawing over the project that was open a moment ago —
+    // which is exactly what it would do if this line were missing, since
+    // `Bus::on_current_file` is what it resolves its target from.
+    current_path_.clear();
+
+    // NOT DIRTY. Nothing has been done to this drawing yet, so the window must
+    // not ask to save it on the way out; `Controller::isDirty` compares these
+    // two numbers.
+    saved_revision_ = bus_.document().revision();
+
+    if (bus_.on_document_changed) bus_.on_document_changed();
+    if (bus_.on_selection_changed) bus_.on_selection_changed();
+
+    return std::string("Yeni çizim açıldı. Adsız — KAYDET bir dosya adı soracak.");
 }
 
 // -------------------------------------------------------------------- AÇ ----

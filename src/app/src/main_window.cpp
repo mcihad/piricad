@@ -214,6 +214,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
     // right edge exactly as the reference draws it.
     docTabs_ = new DocumentTabs(this);
     connect(docTabs_, &DocumentTabs::activated, this, [this](int) { refreshWindowTitle(); });
+    connect(docTabs_, &DocumentTabs::newRequested, this, &MainWindow::newProject);
     connect(docTabs_, &DocumentTabs::closeRequested, this, [this](int) {
         onEcho(tr("Birden çok çizim Faz 2'de gelecek; şimdilik tek belge açıktır."));
     });
@@ -573,7 +574,11 @@ QAction* MainWindow::placeholder(Glyph glyph, const QString& text, const QString
 void MainWindow::buildActions()
 {
     // ---- dosya ----
-    actNew_ = placeholder(Glyph::New, tr("Yeni"), QStringLiteral("YENİ"), tr("Faz 1"));
+    actNew_ = new QAction(tr("Yeni"), this);
+    actNew_->setShortcut(QKeySequence::New);
+    actNew_->setToolTip(tr("YENİ — boş bir çizim açar"));
+    actNew_->setData(static_cast<int>(Glyph::New));
+    connect(actNew_, &QAction::triggered, this, &MainWindow::newProject);
 
     actOpen_ = new QAction(tr("Aç…"), this);
     actOpen_->setShortcut(QKeySequence::Open);
@@ -2803,42 +2808,10 @@ void MainWindow::probeAttributeGrid()
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
-    if (!controller_->isDirty()) {
-        QMainWindow::closeEvent(event);
-        return;
-    }
-
-    // THREE ANSWERS, and the third one is the point: a person who reaches for the
-    // X by accident must be able to say "no, I did not mean that". A two-button
-    // dialog with Save and Discard makes the accident unrecoverable.
-    const QString name = controller_->currentFile().isEmpty()
-                             ? tr("Adsız çizim")
-                             : QFileInfo(controller_->currentFile()).fileName();
-
-    const auto answer = QMessageBox::question(
-        this, tr("Kaydedilsin mi?"),
-        tr("%1 üzerinde kaydedilmemiş değişiklikler var.\n\n"
-           "Kapatmadan önce kaydedilsin mi?")
-            .arg(name),
-        QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
-
-    if (answer == QMessageBox::Cancel) {
+    if (!confirmDiscard(tr("Kapatmadan önce kaydedilsin mi?"))) {
         event->ignore();
         return;
     }
-
-    if (answer == QMessageBox::Save) {
-        // `saveProject` already turns "no file yet" into the Save As dialog, and
-        // that dialog can itself be cancelled — a cancelled save must not become
-        // a silent discard, which is what the check below is for.
-        saveProject();
-
-        if (controller_->isDirty()) {
-            event->ignore();
-            return;
-        }
-    }
-
     QMainWindow::closeEvent(event);
 }
 
@@ -3497,6 +3470,47 @@ void MainWindow::refreshWindowTitle()
     setWindowTitle(tr("%1 — KentOSCad").arg(name));
     docTabs_->setDocuments({QFileInfo(name).completeBaseName()}, 0);
     titleBar_->setDocumentName(tr("%1 — KentOSCad %2").arg(name, QStringLiteral(KENTOS_VERSION)));
+}
+
+bool MainWindow::confirmDiscard(const QString& question)
+{
+    if (!controller_->isDirty()) return true;
+
+    // THREE ANSWERS, and the third one is the point: a person who reaches for
+    // the wrong control by accident must be able to say "no, I did not mean
+    // that". A two-button dialog with Save and Discard makes the accident
+    // unrecoverable.
+    const QString name = controller_->currentFile().isEmpty()
+                             ? tr("Adsız çizim")
+                             : QFileInfo(controller_->currentFile()).fileName();
+
+    const auto answer = QMessageBox::question(
+        this, tr("Kaydedilsin mi?"),
+        tr("%1 üzerinde kaydedilmemiş değişiklikler var.\n\n%2").arg(name, question),
+        QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+
+    if (answer == QMessageBox::Cancel) return false;
+
+    if (answer == QMessageBox::Save) {
+        // `saveProject` already turns "no file yet" into the Save As dialog, and
+        // that dialog can itself be cancelled — a cancelled save must not become
+        // a silent discard, which is what the check below is for.
+        saveProject();
+        if (controller_->isDirty()) return false;
+    }
+    return true;
+}
+
+void MainWindow::newProject()
+{
+    if (!confirmDiscard(tr("Yeni çizime geçmeden önce kaydedilsin mi?"))) return;
+
+    // AND THEN THE COMMAND, exactly as typed. The window's whole contribution is
+    // the question above it: the drawing, the undo stack, the file the document
+    // belonged to and the view are reset by `YENİ` itself, so a script gets the
+    // same reset without a dialog it could not answer (Article 1.2).
+    controller_->runLine(QStringLiteral("YENİ"), command::Origin::Gui);
+    refreshWindowTitle();
 }
 
 void MainWindow::openProject()

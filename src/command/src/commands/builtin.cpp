@@ -69,6 +69,7 @@ namespace kentos::command {
     X(zoom)                                                                                        \
     X(undo)                                                                                        \
     X(redo)                                                                                        \
+    X(newfile)                                                                                     \
     X(open)                                                                                        \
     X(save)                                                                                        \
     X(saveas)                                                                                      \
