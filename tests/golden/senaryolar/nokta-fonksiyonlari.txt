@@ -1,0 +1,32 @@
+# Nokta fonksiyonları (TODOS-CAD P1a): bir koordinatın yazıldığı her yere yazılan
+# inşa. Hepsi ayrıştırma anında tek bir Point2'ye çözülür, komut çözülmüş noktayı
+# görür ve günlük onu tutar. Trigonometri core/trig.hpp'nin belirlenimci
+# sin_cos_udeg'i, yuvarlama tek bir mm_round: üç platformda bit-özdeş olmalı.
+# n(...) çizimdeki numaralı noktayı bulur: NOKTALAR'ın doldurduğu nokta_no
+# sütunu. Önce okunur ki kalıcı kimlikler 1 ve 2 olsun.
+KATMAN ad=NİRENGİ renk=4284310640
+NOKTA 485320.150,4310220.400
+NOKTA 485370.150,4310250.400
+SÜTUN nokta_no metin "nokta no"
+ÖZNİTELİK nokta_no 1 1284
+ÖZNİTELİK nokta_no 2 1285
+ÇİZGİ n(1284) n(1285) orta(n(1284),n(1285))
+KATMAN ad=ALIM renk=4281944491
+# Bilinen 3-4-5 üçgeni: A başlangıçta, B 30 m doğu 40 m kuzey, |AB| tam 50 m.
+ÇİZGİ orta(0,0,30,40) ara(0,0,30,40,0.25) ara(0,0,30,40,25 m) uzanti(0,0,30,40,25)
+# Dik ayak ve dik boy: sol pozitif, sağ negatif.
+ÇİZGİ dik(0,0,30,40,50,10) dik(0,0,30,40,50,-10) dik(0,0,100,0,30,5) dik(0,0,100,0,30,-5)
+# Semt: sıfır kuzey, 100 grad doğu; sonek ayarı ezer. Son üç nokta aynı yere
+# düşer — üç yazımın tek anlamı olduğunun kanıtı, sıfır boylu iki segment.
+ÇİZGİ semt(0,0,0,100) semt(0,0,100,100) semt(0,0,90d,100) semt(0,0,(50+50),100)
+# Kesişim: iki doğrultu, iki doğru, iki mesafe (iki çözüm, yön söylenir).
+ÇİZGİ kes(0,0,100,100,100,200) kes(0,0,100,100,0,100,100,0)
+ÇİZGİ kes(0,0,60,100,0,80,sol) kes(0,0,60,100,0,80,sağ) kes(0,0,60,100,0,80,yon=40,40)
+# son, göreli argüman, süzgeç ve iç içe çağrı.
+ÇİZGİ 10,20 ile(son,@5,5) xy(10,20,30,40) orta(orta(0,0,100,0),orta(0,100,100,100))
+# Açı kuralı canlı metni etkiler: aynı fonksiyon başka kuralda başka nokta verir.
+MOD kural matematik
+AYAR açı_birimi derece
+ÇİZGİ semt(0,0,0,100) semt(0,0,90,100) kes(0,0,0,100,100,270)
+MOD kural varsayilan
+AYAR açı_birimi varsayilan

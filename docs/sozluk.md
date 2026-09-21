@@ -192,6 +192,16 @@ yardımı. Kısayolu **F8**.
 **Kutupsal izleme** — İmleci önceki noktadan çıkan, belirli açı adımlarındaki ışınlara
 oturtan girdi yardımı.
 
+**Nokta fonksiyonu** — Bir koordinatı yazmak yerine nasıl bulunduğunu yazmaya yarayan
+gramer: `orta(A,B)`, `dik(A,B,ayak,boy)`, `kes(...)`, `n(1284)`. Komut çalışmadan önce
+tek bir noktaya çözülür ve komut satırında, betikte, çalışan bir komutun isteminde aynı
+şeyi yapar. Bkz. [Komut satırı](komutlar/komut-satiri.md#nokta-fonksiyonları).
+
+**Dik ayak · dik boy** — Bir tabana (AB doğrusuna) göre bir noktanın yerini söyleyen
+ikili: **ayak** tabanda A'dan kaç metre gidildiği, **boy** oradan kaç metre dik
+çıkıldığı. A'dan B'ye bakarken **sol pozitif, sağ negatiftir**. Cephe alımının
+alfabesidir; `dik(A,B,ayak,boy)` ile yazılır.
+
 **Açı kuralı** — Bir açının nereden ve hangi yöne sayıldığını söyleyen oturum modu
 (`açı_kuralı`, kısa adı `kural`): `semt` kuzeyden saat yönüne (varsayılan), `matematik`
 doğudan saat yönünün tersine. Yalnız yazılan metni etkiler; komut günlüğü çözülmüş

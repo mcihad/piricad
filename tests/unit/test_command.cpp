@@ -220,16 +220,16 @@ TEST_CASE("parser handles absolute, relative, polar and inline expressions")
     CHECK_EQ(t[3].a, 300.0);
 
     const core::AngleConvention semt_grad{};
-    auto p0 = resolve_point(t[0], core::Point2{}, semt_grad);
+    auto p0 = resolve_point(t[0], core::Point2{}, ResolveContext{semt_grad});
     CHECK(p0.ok());
     CHECK_EQ(p0.value(), (core::Point2{485320150, 4310220400}));
 
-    auto p1 = resolve_point(t[1], p0.value(), semt_grad);
+    auto p1 = resolve_point(t[1], p0.value(), ResolveContext{semt_grad});
     CHECK(p1.ok());
     CHECK_EQ(p1.value(), (core::Point2{485370150, 4310250400}));
 
     // 45 grad clockwise from north is 40.5°: north-east, more north than east.
-    auto p2 = resolve_point(t[2], p1.value(), semt_grad);
+    auto p2 = resolve_point(t[2], p1.value(), ResolveContext{semt_grad});
     CHECK(p2.ok());
     CHECK(p2.value().x > p1.value().x);
     CHECK(p2.value().y > p1.value().y);
@@ -276,7 +276,7 @@ core::Result<core::Point2> polar(const std::string& token, core::AngleConvention
     auto parsed = parse_line("YANIT " + token);
     if (!parsed) return parsed.error();
     REQUIRE_EQ(parsed.value().tokens.size(), std::size_t{1});
-    return resolve_point(parsed.value().tokens.front(), core::Point2{}, convention);
+    return resolve_point(parsed.value().tokens.front(), core::Point2{}, ResolveContext{convention});
 }
 
 } // namespace
@@ -375,20 +375,21 @@ TEST_CASE("AÇI KURALI: parse_point bir metni tek gramerle okur")
 {
     const core::AngleConvention semt_grad{};
 
-    CHECK_EQ(parse_point("  @100<50 ", core::Point2{}, semt_grad).value(),
+    CHECK_EQ(parse_point("  @100<50 ", core::Point2{}, ResolveContext{semt_grad}).value(),
              (core::Point2{70711, 70711}));
-    CHECK_EQ(parse_point("485320.150,4310220.400", core::Point2{}, semt_grad).value(),
-             (core::Point2{485320150, 4310220400}));
-    CHECK_EQ(parse_point("@50,30", core::Point2{1000, 2000}, semt_grad).value(),
+    CHECK_EQ(
+        parse_point("485320.150,4310220.400", core::Point2{}, ResolveContext{semt_grad}).value(),
+        (core::Point2{485320150, 4310220400}));
+    CHECK_EQ(parse_point("@50,30", core::Point2{1000, 2000}, ResolveContext{semt_grad}).value(),
              (core::Point2{51000, 32000}));
 
-    auto word = parse_point("abc", core::Point2{}, semt_grad);
+    auto word = parse_point("abc", core::Point2{}, ResolveContext{semt_grad});
     CHECK(!word.ok());
     CHECK(word.error().message.find("Beklenen: koordinat") != std::string::npos);
     CHECK(word.error().message.find("abc") != std::string::npos);
 
-    CHECK(!parse_point("", core::Point2{}, semt_grad).ok());
-    CHECK(!parse_point("@100<", core::Point2{}, semt_grad).ok());
+    CHECK(!parse_point("", core::Point2{}, ResolveContext{semt_grad}).ok());
+    CHECK(!parse_point("@100<", core::Point2{}, ResolveContext{semt_grad}).ok());
 }
 
 TEST_CASE("AÇI KURALI: MOD kural ve AYAR açı_birimi komut satırının okuduğunu değiştirir")
@@ -464,6 +465,426 @@ TEST_CASE("AÇI KURALI: betik dizesindeki koordinat aynı gramerle, aynı kurall
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{2}); // nothing half-drawn
 }
 
+// ------------------------------------------------------ point functions ----
+//
+// TODOS-CAD P1a. `orta(A,B)`, `dik(A,B,ayak,boy)`, `kes(…)` and the rest are
+// part of THE grammar, so they are tested where the grammar is tested and
+// through the same two entry points every client uses. The triangles are chosen
+// so the answer is a whole millimetre and can be written down: a 3-4-5 with legs
+// of 30 and 40 metres, and the axes, where `sin_cos_udeg` is exact.
+
+namespace {
+
+/// One point function read and resolved exactly as a typed line resolves it:
+/// through `parse_line` and `resolve_point`, under semt + grad, with the point
+/// before at the origin unless `last` says otherwise.
+core::Result<core::Point2> fn(const std::string& text, core::Point2 last = {},
+                              ResolveContext ctx = {})
+{
+    auto parsed = parse_line("YANIT " + text);
+    if (!parsed) return parsed.error();
+    if (parsed.value().tokens.size() != 1)
+        return core::err(core::ErrorCode::ParseError, "tek belirteç bekleniyordu: " + text);
+    return resolve_point(parsed.value().tokens.front(), last, ctx);
+}
+
+/// The same text through the OTHER entry point — one coordinate as a string,
+/// which is the road a JSON script takes.
+core::Result<core::Point2> fn_text(const std::string& text, core::Point2 last = {},
+                                   ResolveContext ctx = {})
+{
+    return parse_point(text, last, ctx);
+}
+
+/// A drawing with three numbered points in it, for `n(…)`.
+ResolveContext with_points()
+{
+    ResolveContext ctx;
+    ctx.named_point = [](std::int64_t number) -> std::optional<core::Point2> {
+        switch (number) {
+        case 1284: return core::Point2{485320150, 4310220400};
+        case 1285: return core::Point2{485370150, 4310250400};
+        case 0: return core::Point2{0, 0};
+        default: return std::nullopt;
+        }
+    };
+    return ctx;
+}
+
+} // namespace
+
+TEST_CASE("NOKTA FONKSİYONU: gramer çağrıyı tanır, biçimini seçer ve tarif eder")
+{
+    auto parsed = parse_line("ÇİZGİ orta(0,0,100,0) dik(0,0,30,40,50,10)");
+    REQUIRE(parsed.ok());
+    REQUIRE_EQ(parsed.value().tokens.size(), std::size_t{2});
+    CHECK(parsed.value().tokens[0].kind == Token::Kind::Call);
+    CHECK(parsed.value().tokens[1].kind == Token::Kind::Call);
+    CHECK(is_coordinate(parsed.value().tokens[0]));
+
+    // The FORM is recorded, not re-derived: `kes` has three and the matcher
+    // decides once.
+    CHECK_EQ(parsed.value().tokens[0].word, std::string("orta"));
+    CHECK_EQ(parse_line("YANIT kes(0,0,100,100,0,100,100,0)").value().tokens.front().word,
+             std::string("kes.dogru"));
+    CHECK_EQ(parse_line("YANIT kes(0,0,100,100,100,200)").value().tokens.front().word,
+             std::string("kes.dogrultu"));
+    CHECK_EQ(parse_line("YANIT kes(0,0,60,100,0,80,sol)").value().tokens.front().word,
+             std::string("kes.mesafe"));
+
+    // A point argument written as bare coordinates spends two comma-separated
+    // fields; `orta(A,B)` therefore carries two tokens, not four.
+    CHECK_EQ(parsed.value().tokens[0].nested.size(), std::size_t{2});
+    CHECK_EQ(parsed.value().tokens[1].nested.size(), std::size_t{4});
+
+    CHECK_EQ(describe(parsed.value().tokens[0]),
+             std::string("orta(point(0.000000,0.000000),point(100.000000,0.000000))"));
+
+    // A name the grammar does not declare stays an ordinary word, so a layer or
+    // a caption with brackets in it still works.
+    auto plain = parse_line("KATMAN ad=YOL(ESKİ)");
+    REQUIRE(plain.ok());
+    CHECK(plain.value().tokens.front().kind == Token::Kind::KeyValue);
+    CHECK(parse_line("YANIT yokboyle(1,2)").value().tokens.front().kind == Token::Kind::Word);
+}
+
+TEST_CASE("NOKTA FONKSİYONU: bilinen üçgende her fonksiyon milimetresine kadar")
+{
+    // A 3-4-5 triangle in metres: A at the origin, B thirty east and forty
+    // north, so |AB| is exactly 50 m and the unit vector is (0,6 · 0,8).
+    const core::Point2 kB{30000, 40000};
+
+    CHECK_EQ(fn("orta(0,0,30,40)").value(), (core::Point2{15000, 20000}));
+    CHECK_EQ(fn("xy(10,20,30,40)").value(), (core::Point2{10000, 40000}));
+    CHECK_EQ(fn("ile(10,20,@5,5)").value(), (core::Point2{15000, 25000}));
+    CHECK_EQ(fn("ile(0,0,@100<100)").value(), (core::Point2{100000, 0})); // 100 grad = east
+    CHECK_EQ(fn("ara(0,0,30,40,0.5)").value(), (core::Point2{15000, 20000}));
+    CHECK_EQ(fn("ara(0,0,30,40,25 m)").value(), (core::Point2{15000, 20000}));
+    CHECK_EQ(fn("ara(0,0,30,40,25m)").value(), (core::Point2{15000, 20000}));
+    CHECK_EQ(fn("uzanti(0,0,30,40,25)").value(), (core::Point2{45000, 60000}));
+    CHECK_EQ(fn("semt(0,0,0,100)").value(), (core::Point2{0, 100000}));   // semt zero is north
+    CHECK_EQ(fn("semt(0,0,100,100)").value(), (core::Point2{100000, 0})); // 100 grad is east
+
+    // DİK AYAK / DİK BOY. Fifty metres along A→B is B itself; ten metres to the
+    // LEFT of that direction is the positive side (P1a-6), the right the
+    // negative. Left of (0,6 · 0,8) is (−0,8 · 0,6).
+    CHECK_EQ(fn("dik(0,0,30,40,50,10)").value(), (core::Point2{22000, 46000}));
+    CHECK_EQ(fn("dik(0,0,30,40,50,-10)").value(), (core::Point2{38000, 34000}));
+    CHECK_EQ(fn("dik(0,0,30,40,50,0)").value(), kB);
+
+    // The sign again on an axis, where it is impossible to misread: walking east
+    // along A→B, the left hand points north.
+    CHECK_EQ(fn("dik(0,0,100,0,30,5)").value(), (core::Point2{30000, 5000}));
+    CHECK_EQ(fn("dik(0,0,100,0,30,-5)").value(), (core::Point2{30000, -5000}));
+
+    // Two directions: east from the origin meets south from (100,100).
+    CHECK_EQ(fn("kes(0,0,100,100,100,200)").value(), (core::Point2{100000, 0}));
+
+    // Two lines: the diagonals of a hundred-metre square meet in the middle.
+    CHECK_EQ(fn("kes(0,0,100,100,0,100,100,0)").value(), (core::Point2{50000, 50000}));
+
+    // Two distances, the 3-4-5 the other way round: 60 m from the origin and
+    // 80 m from (100,0) meet at (36, ±48). Left of A→B is north here.
+    CHECK_EQ(fn("kes(0,0,60,100,0,80,sol)").value(), (core::Point2{36000, 48000}));
+    CHECK_EQ(fn("kes(0,0,60,100,0,80,sağ)").value(), (core::Point2{36000, -48000}));
+    CHECK_EQ(fn("kes(0,0,60,100,0,80,sag)").value(), (core::Point2{36000, -48000}));
+
+    // …or by a point near the one that was meant, which has to be written
+    // `yon=` because a bare coordinate here reads equally well as the third and
+    // fourth point of `kes(A,B,C,D)`.
+    CHECK_EQ(fn("kes(0,0,60,100,0,80,yon=40,40)").value(), (core::Point2{36000, 48000}));
+    CHECK_EQ(fn("kes(0,0,60,100,0,80,yon=40,-40)").value(), (core::Point2{36000, -48000}));
+    CHECK_EQ(fn("kes(0,0,60,100,0,80,yön=@40,-40)").value(), (core::Point2{36000, -48000}));
+
+    // Tangent circles have one solution and both words find it.
+    CHECK_EQ(fn("kes(0,0,60,100,0,40,sol)").value(), (core::Point2{60000, 0}));
+    CHECK_EQ(fn("kes(0,0,60,100,0,40,sağ)").value(), (core::Point2{60000, 0}));
+}
+
+TEST_CASE("NOKTA FONKSİYONU: son, göreli argüman ve iç içe çağrı")
+{
+    // `son` is the point before — the same point `@` is measured from.
+    CHECK_EQ(fn("orta(son,100,0)", core::Point2{0, 40000}).value(), (core::Point2{50000, 20000}));
+    CHECK_EQ(fn("son()", core::Point2{7, 9}).value(), (core::Point2{7, 9}));
+
+    // A BARE `son` IS A COORDINATE ONLY INSIDE AN ARGUMENT LIST. On its own it
+    // stays an ordinary word, because `KATMAN son` names a layer and turning
+    // every `son` on a command line into a point would take that spelling away;
+    // nothing is lost, because `son()` and `@0,0` both say the point before.
+    CHECK(parse_line("YANIT son").value().tokens.front().kind == Token::Kind::Word);
+    CHECK(!fn("son", core::Point2{7, 9}).ok());
+    CHECK_EQ(fn("@0,0", core::Point2{7, 9}).value(), (core::Point2{7, 9}));
+    {
+        Fixture f;
+        REQUIRE(f.bus.execute_line("KATMAN son", Origin::CommandLine).ok());
+        CHECK(f.doc.find_layer("son") != core::kNoLayer);
+    }
+
+    // A `@` argument inside a call is measured from the point before, exactly as
+    // it is outside one.
+    CHECK_EQ(fn("orta(@0,0,@100,0)", core::Point2{1000, 2000}).value(),
+             (core::Point2{51000, 2000}));
+
+    // Nested: the midpoint of two midpoints.
+    CHECK_EQ(fn("orta(orta(0,0,100,0),orta(0,100,100,100))").value(), (core::Point2{50000, 50000}));
+    CHECK_EQ(fn("dik(orta(0,0,0,80),100,40,0,10)").value(), (core::Point2{0, 50000}));
+
+    // An angle inside a call takes the same suffix a polar coordinate takes.
+    CHECK_EQ(fn("semt(0,0,90d,100)").value(), (core::Point2{100000, 0}));
+    CHECK_EQ(fn("semt(0,0,100g,100)").value(), (core::Point2{100000, 0}));
+    CHECK_EQ(fn("semt(0,0,(50+50),100)").value(), (core::Point2{100000, 0}));
+
+    // …and the session's rule still decides where zero is when no suffix says.
+    const ResolveContext matematik{
+        core::AngleConvention{core::AngleUnit::Degree, core::AngleRule::Matematik}, {}};
+    CHECK_EQ(fn("semt(0,0,0,100)", {}, matematik).value(), (core::Point2{100000, 0}));
+    CHECK_EQ(fn("semt(0,0,90,100)", {}, matematik).value(), (core::Point2{0, 100000}));
+
+    // The nesting limit is a limit, not a crash.
+    std::string deep;
+    for (int i = 0; i < 40; ++i)
+        deep += "orta(";
+    deep += "0,0,1,1";
+    for (int i = 0; i < 40; ++i)
+        deep += ",0,0)";
+    CHECK(!fn(deep).ok());
+}
+
+TEST_CASE("NOKTA FONKSİYONU: n(1284) çizimdeki numaralı noktayı bulur")
+{
+    const ResolveContext drawing = with_points();
+
+    CHECK_EQ(fn("n(1284)", {}, drawing).value(), (core::Point2{485320150, 4310220400}));
+    CHECK_EQ(fn("orta(n(1284),n(1285))", {}, drawing).value(),
+             (core::Point2{485345150, 4310235400}));
+
+    // A number that is not in the drawing says so, and says where numbers come
+    // from (R19).
+    auto missing = fn("n(9999)", {}, drawing);
+    CHECK(!missing.ok());
+    CHECK(missing.error().message.find("9999 numaralı nokta yok") != std::string::npos);
+    CHECK(missing.error().message.find("NOKTALAR") != std::string::npos);
+
+    // NO DRAWING, NO LOOKUP. A caller with no document hands an empty function
+    // and `n()` is inert by construction — it does not reach for a global and
+    // it does not answer a wrong point.
+    auto headless = fn("n(1284)");
+    CHECK(!headless.ok());
+    CHECK(headless.error().message.find("bu bağlamda çizim yok") != std::string::npos);
+
+    // …and every other function is unaffected by the absence.
+    CHECK_EQ(fn("orta(0,0,100,0)").value(), (core::Point2{50000, 0}));
+
+    // A point number is a whole number.
+    auto fraction = fn("n(12.5)", {}, drawing);
+    CHECK(!fraction.ok());
+    CHECK(fraction.error().message.find("tam sayı") != std::string::npos);
+}
+
+TEST_CASE("NOKTA FONKSİYONU: hata metinleri beklenen ve verileni söyler")
+{
+    // No shape of `kes` fits, so the message lists all three rather than the
+    // complaint of whichever was tried last.
+    auto none = fn("kes(0,0,50)");
+    CHECK(!none.ok());
+    CHECK(none.error().message.find("kes(A,açı1,B,açı2)") != std::string::npos);
+    CHECK(none.error().message.find("kes(A,r1,B,r2,sol|sağ|yon=<nokta>)") != std::string::npos);
+    CHECK(none.error().message.find("kes(A,B,C,D)") != std::string::npos);
+    CHECK(none.error().message.find("kes(0,0,50)") != std::string::npos);
+
+    // One shape, so the message is about the argument that went wrong.
+    auto bad_point = fn("orta(abc,0,0)");
+    CHECK(!bad_point.ok());
+    CHECK(bad_point.error().message.find("orta(): 1. argüman") != std::string::npos);
+    CHECK(bad_point.error().message.find("abc") != std::string::npos);
+
+    auto too_many = fn("orta(0,0,10,10,20,20)");
+    CHECK(!too_many.ok());
+    CHECK(too_many.error().message.find("fazla argüman") != std::string::npos);
+
+    // PARALLEL DIRECTIONS ARE REFUSED, not answered with a point past the moon.
+    // Decided in whole micro-degrees, so a half turn apart is caught exactly.
+    auto parallel_dirs = fn("kes(0,0,100,100,0,100)");
+    CHECK(!parallel_dirs.ok());
+    CHECK(parallel_dirs.error().message.find("paralel") != std::string::npos);
+    CHECK(!fn("kes(0,0,100,100,0,300)").ok()); // the same direction reversed
+
+    auto parallel_lines = fn("kes(0,0,100,0,0,50,100,50)");
+    CHECK(!parallel_lines.ok());
+    CHECK(parallel_lines.error().message.find("paralel") != std::string::npos);
+
+    // CIRCLES THAT DO NOT MEET NAME BOTH RADII AND THE CENTRE DISTANCE (R19).
+    auto apart = fn("kes(0,0,10,100,0,20,sol)");
+    CHECK(!apart.ok());
+    CHECK(apart.error().message.find("10,000") != std::string::npos);
+    CHECK(apart.error().message.find("20,000") != std::string::npos);
+    CHECK(apart.error().message.find("100,000") != std::string::npos);
+
+    auto inside = fn("kes(0,0,100,10,0,10,sol)");
+    CHECK(!inside.ok());
+    CHECK(inside.error().message.find("içinde") != std::string::npos);
+
+    CHECK(!fn("kes(0,0,-60,100,0,80,sol)").ok()); // a distance has no sign
+    CHECK(!fn("kes(0,0,60,0,0,80,sol)").ok());    // one centre, two circles
+    CHECK(!fn("dik(0,0,0,0,10,10)").ok());        // no direction to drop onto
+    CHECK(!fn("uzanti(0,0,0,0,10)").ok());
+    CHECK(!fn("ara(0,0,0,0,10 m)").ok());
+
+    // A nearby point exactly between the two solutions is not a choice.
+    auto astride = fn("kes(0,0,60,100,0,80,yon=36,0)");
+    CHECK(!astride.ok());
+    CHECK(astride.error().message.find("eşit uzaklıkta") != std::string::npos);
+
+    // `ile` measures FROM its first argument, so its second must be written as
+    // an offset; an absolute pair would silently ignore the point it was given.
+    auto not_relative = fn("ile(10,20,30,40)");
+    CHECK(!not_relative.ok());
+    CHECK(not_relative.error().message.find("@dx,dy") != std::string::npos);
+
+    // The direction word is one of two, and anything else says which two.
+    auto bad_side = fn("kes(0,0,60,100,0,80,yukari)");
+    CHECK(!bad_side.ok());
+    CHECK(bad_side.error().message.find("sol") != std::string::npos);
+
+    // And the coordinate error a non-coordinate gets now names the functions.
+    auto word = parse_point("abc", core::Point2{}, ResolveContext{});
+    CHECK(!word.ok());
+    CHECK(word.error().message.find("nokta fonksiyonu") != std::string::npos);
+}
+
+TEST_CASE("NOKTA FONKSİYONU: çıktı geri beslenince aynı nokta çıkar")
+{
+    // Idempotence, function by function: every construction below has a fixed
+    // point, and feeding its own answer back in must land on it again rather
+    // than drifting by a millimetre a round. A rounding rule that were not
+    // half-away-from-zero at every step would show up here.
+    const core::Point2 kA{0, 0};
+    const core::Point2 kB{30000, 40000};
+
+    const core::Point2 mid = fn("orta(0,0,30,40)").value();
+    CHECK_EQ(fn("orta(15,20,15,20)").value(), mid);
+    CHECK_EQ(fn("orta(orta(0,0,30,40),orta(0,0,30,40))").value(), mid);
+
+    CHECK_EQ(fn("ara(0,0,30,40,0)").value(), kA);
+    CHECK_EQ(fn("ara(0,0,30,40,1)").value(), kB);
+    CHECK_EQ(fn("ara(0,0,30,40,50 m)").value(), kB);
+    CHECK_EQ(fn("uzanti(0,0,30,40,0)").value(), kB);
+    CHECK_EQ(fn("dik(0,0,30,40,0,0)").value(), kA);
+    CHECK_EQ(fn("xy(30,40,30,40)").value(), kB);
+    CHECK_EQ(fn("ile(30,40,@0,0)").value(), kB);
+    CHECK_EQ(fn("semt(30,40,0,0)").value(), kB);
+    CHECK_EQ(fn("son()", kB).value(), kB);
+
+    // The foot of a perpendicular with no offset IS the point that far along,
+    // so the two functions must agree to the millimetre.
+    for (const char* along : {"0", "10", "25", "50", "-12.5"}) {
+        const std::string foot = std::string("dik(0,0,30,40,") + along + ",0)";
+        const std::string walk = std::string("ara(0,0,30,40,") + along + " m)";
+        CHECK_MESSAGE(fn(foot).value() == fn(walk).value(), foot << " = " << walk);
+    }
+
+    // An intersection fed back as one of its own lines' points is still itself.
+    const core::Point2 cross = fn("kes(0,0,100,100,0,100,100,0)").value();
+    CHECK_EQ(cross, (core::Point2{50000, 50000}));
+    CHECK_EQ(fn("kes(0,0,50,50,0,100,100,0)").value(), cross);
+
+    // A bearing and a distance read back off the drawing rebuild the point.
+    const core::Point2 target{48000, -36000};
+    const double turns = core::direction_turns(core::Point2{}, target, core::AngleRule::Semt);
+    const std::string bearing = std::to_string(turns * 400.0);
+    CHECK_EQ(fn("semt(0,0," + bearing + ",60)").value(), target);
+}
+
+TEST_CASE("NOKTA FONKSİYONU: komut satırı ve betik dizesi tek gramerden geçer")
+{
+    // The two entry points, same text, same answer — `bind_tokens` reads a typed
+    // token, `parse_point` reads a script's string, and both land in
+    // `resolve_point` (CLAUDE.md 5.11).
+    for (const char* text : {"orta(0,0,30,40)", "dik(0,0,30,40,50,10)",
+                             "kes(0,0,100,100,0,100,100,0)", "kes(0,0,60,100,0,80,sol)",
+                             "uzanti(0,0,30,40,25)", "semt(0,0,100,100)", "xy(10,20,30,40)"}) {
+        auto typed  = fn(text);
+        auto script = fn_text(text);
+        REQUIRE_MESSAGE(typed.ok(), text);
+        REQUIRE_MESSAGE(script.ok(), text);
+        CHECK_MESSAGE(typed.value() == script.value(), text);
+    }
+
+    // And both chain from the point before in the same way.
+    CHECK_EQ(fn_text("orta(son,100,0)", core::Point2{0, 40000}).value(),
+             (core::Point2{50000, 20000}));
+
+    // A KEYWORD ARGUMENT TAKES ONE TOO. `hedef=orta(…)` is a `KeyValue` whose
+    // nested token is a call, and it goes down the same road: nothing about
+    // where a coordinate sits on the line changes how it is read.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("NOKTA noktalar=orta(0,0,30,40)", Origin::CommandLine).ok());
+    const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+    CHECK_EQ((core::Point2{f.doc.geometry().ring_xs(span.first)[0],
+                           f.doc.geometry().ring_ys(span.first)[0]}),
+             (core::Point2{15000, 20000}));
+}
+
+TEST_CASE("NOKTA FONKSİYONU: komut satırından çizilen belge çözülmüş noktayı günlükler")
+{
+    Fixture f;
+
+    // Drawn from the command line: the line's two corners are the construction's
+    // answers, and what reaches the journal is the POINT, not the call — an
+    // `Args` carries `Value`s and a journal replays without a grammar
+    // (CLAUDE.md 1.4, TODOS-CAD P0 decision on the journal).
+    REQUIRE(
+        f.bus.execute_line("ÇİZGİ orta(0,0,100,0) dik(0,0,100,0,30,-5)", Origin::CommandLine).ok());
+
+    const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+    const auto xs   = f.doc.geometry().ring_xs(span.first);
+    const auto ys   = f.doc.geometry().ring_ys(span.first);
+    REQUIRE_EQ(xs.size(), std::size_t{2});
+    CHECK_EQ((core::Point2{xs[0], ys[0]}), (core::Point2{50000, 0}));
+    CHECK_EQ((core::Point2{xs[1], ys[1]}), (core::Point2{30000, -5000}));
+
+    REQUIRE_EQ(f.journal.entries().size(), std::size_t{1});
+    const Value::Points recorded = f.journal.entries().front().args.get("noktalar").as_points();
+    REQUIRE_EQ(recorded.size(), std::size_t{2});
+    CHECK_EQ(recorded[0], (core::Point2{50000, 0}));
+    CHECK_EQ(recorded[1], (core::Point2{30000, -5000}));
+    CHECK(f.journal.entries().front().args.to_json().dump().find("orta") == std::string::npos);
+}
+
+TEST_CASE("NOKTA FONKSİYONU: n(1284) çizimdeki noktayı komutlar üzerinden bulur")
+{
+    // The whole road, through commands only (CLAUDE.md 5.9): a point is drawn,
+    // the `nokta_no` column is declared and filled — which is what `NOKTALAR`
+    // does when it reads a list from the field — and then `n(1284)` finds it
+    // from the command line.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("NOKTA 485320.150,4310220.400", Origin::CommandLine).ok());
+    const auto key = static_cast<std::uint64_t>(core::raw(f.doc.entities().key[0]));
+
+    REQUIRE(f.bus.execute_line("SÜTUN nokta_no metin \"nokta no\"", Origin::CommandLine).ok());
+    REQUIRE(f.bus
+                .execute_line("ÖZNİTELİK nokta_no " + std::to_string(key) + " 1284",
+                              Origin::CommandLine)
+                .ok());
+
+    CHECK_EQ(f.bus.numbered_point(1284).value(), (core::Point2{485320150, 4310220400}));
+    CHECK(!f.bus.numbered_point(1285).has_value());
+
+    REQUIRE(f.bus.execute_line("ÇİZGİ n(1284) @50,30", Origin::CommandLine).ok());
+    const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[1]);
+    const auto xs   = f.doc.geometry().ring_xs(span.first);
+    const auto ys   = f.doc.geometry().ring_ys(span.first);
+    CHECK_EQ((core::Point2{xs[0], ys[0]}), (core::Point2{485320150, 4310220400}));
+    CHECK_EQ((core::Point2{xs[1], ys[1]}), (core::Point2{485370150, 4310250400}));
+
+    // A number nobody drew is refused before anything is drawn.
+    const std::size_t before = f.doc.live_entity_count();
+    auto missing             = f.bus.execute_line("ÇİZGİ n(4242) @50,30", Origin::CommandLine);
+    CHECK(!missing.ok());
+    CHECK(missing.error().message.find("4242 numaralı nokta yok") != std::string::npos);
+    CHECK_EQ(f.doc.live_entity_count(), before);
+}
+
 TEST_CASE("GRAMER: fuzz tohum korpusundaki her satır çökmeden ayrıştırılır")
 {
     // CLAUDE.md 6.7 ships the harness and the corpus with the grammar. The
@@ -484,6 +905,10 @@ TEST_CASE("GRAMER: fuzz tohum korpusundaki her satır çökmeden ayrıştırıl�
         return std::string("1284");
     };
 
+    // The same stand-in drawing the libFuzzer harness uses, so `n(…)` is walked
+    // on both roads: a number that is there and a number that is not.
+    const ResolveContext drawing = with_points();
+
     std::size_t lines = 0;
     for (const fs::path& seed : seeds) {
         std::ifstream in(seed);
@@ -499,18 +924,24 @@ TEST_CASE("GRAMER: fuzz tohum korpusundaki her satır çökmeden ayrıştırıl�
                         for (int rule = 0; rule < 2; ++rule) {
                             auto p = resolve_point(
                                 t, last,
-                                core::AngleConvention{static_cast<core::AngleUnit>(unit),
-                                                      static_cast<core::AngleRule>(rule)});
+                                ResolveContext{
+                                    core::AngleConvention{static_cast<core::AngleUnit>(unit),
+                                                          static_cast<core::AngleRule>(rule)},
+                                    drawing.named_point});
                             if (p) last = p.value();
                         }
                 }
             }
             (void)evaluate_expression(line);
             (void)evaluate_predicate(line, row);
-            (void)parse_point(line, core::Point2{}, core::AngleConvention{});
+            (void)parse_point(line, core::Point2{}, drawing);
+
+            // And once with no document behind it at all, which is the context
+            // a headless caller hands down and where `n()` must refuse.
+            (void)parse_point(line, core::Point2{}, ResolveContext{});
         }
     }
-    CHECK(seeds.size() >= 12);
+    CHECK(seeds.size() >= 17);
     CHECK(lines >= seeds.size());
 }
 

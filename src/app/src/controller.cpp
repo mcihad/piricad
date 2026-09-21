@@ -296,7 +296,7 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
             if (answer && !answer.value().tokens.empty() &&
                 command::is_coordinate(answer.value().tokens.front())) {
                 auto pt = command::resolve_point(answer.value().tokens.front(),
-                                                 asking.rubber_origin, bus_.angle_convention());
+                                                 asking.rubber_origin, bus_.resolve_context());
                 if (pt) {
                     supplyPoint(pt.value());
                     return command::DispatchResult{};

@@ -6,6 +6,52 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — nokta fonksiyonları: koordinatı yazmak yerine nasıl bulunduğunu yazmak
+
+Bir harita mühendisi araziden koordinatla dönmez; iki bilinen noktadan ölçülmüş
+bir dikle, bir semt ve kenarla, iki şerit mesafesiyle döner. Bugüne kadar bu
+inşalar elde ya da hesap makinesinde yapılıp sonuç yazılıyordu. Artık **bir
+koordinatın yazıldığı her yere** yazılabiliyorlar — komut satırına, betiğe,
+çalışan bir komutun istemine — çünkü hepsi tek gramerin (`command/parser.hpp`)
+parçası (TODOS-CAD P1a, CLAUDE.md 5.11).
+
+- **On iki biçim, tek tablo:** `son`, `n(1284)`, `orta(A,B)`, `ile(P,@dx,dy)`,
+  `dik(A,B,ayak,boy)`, `semt(S,açı,kenar)`, `kes(A,açı1,B,açı2)`,
+  `kes(A,r1,B,r2,sol|sağ|yon=<nokta>)`, `kes(A,B,C,D)`,
+  `ara(A,B,oran)` / `ara(A,B,mesafe m)`, `uzanti(A,B,mesafe)`, `xy(P,Q)`. Adlar
+  `turkish_fold_key` ile eşleşir: `ORTA`, `orta`, `uzantı`, `uzanti` aynı şey.
+- **Yeni komut yok.** Fonksiyon, dispatch'ten ÖNCE tek bir `Point2`'ye çözülür;
+  komut, doğrulayıcı ve günlük yalnız çözülmüş noktayı görür, dolayısıyla eski
+  günlükler ve betikler aynen oynar (Article 1.4).
+- **Argüman kuralı belgelendi:** argümanlar virgülle ayrılır ve koordinat da
+  virgülle yazılır, bu yüzden mutlak bir nokta **iki** argüman yeri harcar.
+  Argüman listesi sayılmaz, **imzaya karşı eşlenir**; `kes`'in üç biçimi böyle
+  ayrılır ve iki biçim birden uyarsa çağrı reddedilir.
+- **`dik`'in işareti: sol pozitif** (Netcad ile aynı), komut sayfasında yazılı ve
+  iki yönde de testli. `kes(A,r1,B,r2,…)` iki çözümlüdür ve **sessiz seçim
+  yoktur**: `sol`, `sağ` ya da `yon=<yakın nokta>`. Çemberler kesişmiyorsa hata
+  iki yarıçapı ve merkezler arası mesafeyi birlikte söyler (command.md R19).
+  Yakın nokta `yon=` ile yazılır, çünkü çıplak bir koordinat orada
+  `kes(A,B,C,D)` okumasından ayırt edilemez.
+- **Paralel doğrultu tam sayıda yakalanır:** iki açı mikro-derece cinsinden
+  karşılaştırılır, yuvarlanmış bir ışın ucunun çapraz çarpımıyla değil — yoksa
+  tam ters iki doğrultu kesişimi Ay'ın ötesinde bir nokta verirdi.
+- **`n(1284)` çizimi arar ama gramer çizimi tanımaz:** arama, çağıranın verdiği
+  bir `ResolveContext::named_point` işlevidir (`core::ImageResolver` kalıbı).
+  `Bus::resolve_context()` tek yerde kurar, koordinat çözen üç dikiş de onu
+  kullanır; çizimi olmayan bir çağıran boş verir ve `n()` bunu söyleyerek
+  reddeder — yapısı gereği etkisiz, istemcinin kontrol etmesiyle değil.
+- `core::circle_intersection` (`core/pick.hpp`) — iki çemberin kesişimi, sol ve
+  sağ çözümüyle ve neden buluşmadıklarını söyleyen `CircleMeet`'iyle. P2'nin
+  `ttr` dairesi ve P1b'nin `KESİŞİMNOKTA yontem=mesafe`'si de bunu kullanacak.
+- Belgeler: `komut-satiri.md`'ye "Nokta fonksiyonları" bölümü (tablo, argüman
+  kuralı, işaret kuralı, çizim örnekleri), `ilk-adimlar.md`'ye dik ayak örneği,
+  `betik/README.md`'ye metin koordinat satırı, `sozluk.md`'ye iki terim,
+  `sorun-giderme.md`'ye dokuz hata. Testler: `test_command.cpp`'de bilinen
+  üçgenlerle `Mm` eşitliği, idempotens ve hata metinleri; `test_proof.cpp`'de
+  arayüz = komut satırı = betik eşitlik kanıtı ve günlük replay'i;
+  `nokta-fonksiyonlari` altın senaryosu; fuzz korpusuna üç tohum (17).
+
 ### Değişti — `@mesafe<açı` artık semt açısı okur: kuzeyden saat yönüne, grad
 
 Kutupsal koordinatın açısı bugüne kadar sabit bir matematik kuralıyla — derece,

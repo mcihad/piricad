@@ -75,17 +75,22 @@ verir. Ayrıntı: [Koordinat sistemleri](../veri/koordinat-sistemleri.md).
 ### Metin olarak koordinat
 
 Bir nokta parametresine **komut satırında yazdığınız biçimde** bir metin de verebilirsiniz:
-mutlak (`"485320.150,4310220.400"`), göreli (`"@50,30"`) ve kutupsal (`"@100<45g"`). Bu
-metinler komut satırının tek gramerinden geçer, dolayısıyla **metre** cinsindendir; kutupsal
-açı `açı_kuralı` ve `açı_birimi` ayarlarıyla okunur — komut satırıyla birebir aynı (bkz.
-[Komut satırı](../komutlar/komut-satiri.md)). Göreli biçim listede kendinden önceki noktaya
-göredir. Günlüğe yine çözülmüş milimetre yazılır.
+mutlak (`"485320.150,4310220.400"`), göreli (`"@50,30"`), kutupsal (`"@100<45g"`) ve
+[nokta fonksiyonu](../komutlar/komut-satiri.md#nokta-fonksiyonları) (`"dik(0,0,100,0,30,-5)"`,
+`"orta(n(1284),n(1285))"`). Bu metinler komut satırının tek gramerinden geçer, dolayısıyla
+**metre** cinsindendir; kutupsal açı `açı_kuralı` ve `açı_birimi` ayarlarıyla okunur — komut
+satırıyla birebir aynı (bkz. [Komut satırı](../komutlar/komut-satiri.md)). Göreli biçim
+listede kendinden önceki noktaya göredir; `son` da odur. Günlüğe yine çözülmüş milimetre
+yazılır, fonksiyonun kendisi değil — bu yüzden bir günlük, gramerin ne dediğinden bağımsız
+olarak aynı çizimi verir.
 
 ```json
 {
   "komutlar": [
     { "cmd": "core.line",
-      "args": { "noktalar": ["485320.150,4310220.400", "@50,30", "@100<45g"] } }
+      "args": { "noktalar": ["485320.150,4310220.400", "@50,30", "@100<45g"] } },
+    { "cmd": "core.line",
+      "args": { "noktalar": ["dik(0,0,100,0,30,-5)", "orta(0,0,100,0)"] } }
   ]
 }
 ```
@@ -94,8 +99,8 @@ göredir. Günlüğe yine çözülmüş milimetre yazılır.
 
 | Parametre tipi | JSON karşılığı | Örnek |
 |---|---|---|
-| nokta | İki elemanlı sayı dizisi (milimetre), ya da komut satırı yazımında metin (metre) | `[485320150, 4310220400]` · `"485320.150,4310220.400"` · `"@100<45g"` |
-| nokta listesi | Nokta dizisi, ya da metin dizisi | `[[0,0],[10000,0],[10000,10000]]` · `["0,0", "@10,0", "@10<100"]` |
+| nokta | İki elemanlı sayı dizisi (milimetre), ya da komut satırı yazımında metin (metre) | `[485320150, 4310220400]` · `"485320.150,4310220.400"` · `"@100<45g"` · `"kes(n(1),n(2),n(3),n(4))"` |
+| nokta listesi | Nokta dizisi, ya da metin dizisi | `[[0,0],[10000,0],[10000,10000]]` · `["0,0", "@10,0", "@10<100", "orta(son,@20,0)"]` |
 | sayı | JSON sayısı | `1.25` |
 | tam sayı | JSON tam sayısı | `4281236786` |
 | metin | JSON metni | `"PARSEL"` |

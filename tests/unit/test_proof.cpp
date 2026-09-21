@@ -197,7 +197,7 @@ TEST_CASE("PROOF: `@100<50` arayüzden, komut satırından ve betikten aynı bel
             auto answer = parse_line(std::string("YANIT ") + typed);
             REQUIRE(answer.ok());
             auto pt = resolve_point(answer.value().tokens.front(), session.prompt().rubber_origin,
-                                    gui.bus.angle_convention());
+                                    gui.bus.resolve_context());
             REQUIRE_MESSAGE(pt.ok(), pt.error().message);
             CHECK(session.supply(Value::point(pt.value())).ok());
         }
@@ -275,6 +275,102 @@ TEST_CASE("PROOF: `@100<50` arayüzden, komut satırından ve betikten aynı bel
     CHECK(other.bus.execute_line("AYAR açı_birimi derece", Origin::Test).ok());
     CHECK(other.bus.execute_line("ÇİZGİ 0,0 @100<50", Origin::CommandLine).ok());
     CHECK(other.doc.content_hash() != cli.doc.content_hash());
+}
+
+TEST_CASE("PROOF: `dik(...)` arayüzden, komut satırından ve betikten aynı belge, aynı günlük")
+{
+    // TODOS-CAD P1a. A point function is a CONSTRUCTION written where a
+    // coordinate is written, and the three clients read it through the three
+    // seams that resolve a coordinate: `bind_tokens` for a typed line,
+    // `dispatch` for a script string, and the shell for an answer typed into a
+    // running prompt. One `resolve_point`, one `Bus::resolve_context()` — and
+    // if a fourth road to a point were ever added, this is the test that fails.
+    //
+    // The line drawn is the perpendicular a surveyor sets out every day: from
+    // the base 0,0 → 100,0, thirty metres along and five to the right, then the
+    // midpoint of the base. `boy` is negative because right is negative and
+    // left is positive (P1a-6), which is what the command page says too.
+    constexpr core::Point2 kFoot{30000, -5000};
+    constexpr core::Point2 kMid{50000, 0};
+    const char* const kTyped[] = {"dik(0,0,100,0,30,-5)", "orta(0,0,100,0)"};
+
+    // ---- client 1: the GUI, answering each prompt with typed text exactly as
+    //      the controller does ----
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("ÇİZGİ");
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+
+        for (const char* typed : kTyped) {
+            REQUIRE(session.waiting());
+            auto answer = parse_line(std::string("YANIT ") + typed);
+            REQUIRE(answer.ok());
+            REQUIRE(is_coordinate(answer.value().tokens.front()));
+            auto pt = resolve_point(answer.value().tokens.front(), session.prompt().rubber_origin,
+                                    gui.bus.resolve_context());
+            REQUIRE_MESSAGE(pt.ok(), pt.error().message);
+            CHECK(session.supply(Value::point(pt.value())).ok());
+        }
+        session.cancel(); // ESC
+        CHECK(gui.bus.finish(session).ok());
+    }
+
+    // ---- client 2: the command line ----
+    Rig cli;
+    CHECK(
+        cli.bus
+            .execute_line(std::string("ÇİZGİ ") + kTyped[0] + " " + kTyped[1], Origin::CommandLine)
+            .ok());
+
+    // ---- client 3: a JSON script carrying the constructions as text ----
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        // A CUSTOM DELIMITER, because the script text contains `)"`: a point
+        // function's closing bracket sits right before the JSON string's quote.
+        auto r = runner.run_text(R"betik({
+            "ad": "Dik ayak kanıtı",
+            "komutlar": [
+                {"cmd": "core.line",
+                 "args": {"noktalar": ["dik(0,0,100,0,30,-5)", "orta(0,0,100,0)"]}}
+            ]
+        })betik");
+        REQUIRE_MESSAGE(r.ok(), r.error().message);
+    }
+
+    // ---- the proof ----
+    for (Rig* rig : {&gui, &cli, &scr}) {
+        REQUIRE_EQ(rig->doc.live_entity_count(), std::size_t{1});
+        const auto& doc = rig->doc;
+        const auto span = doc.geometry().rings_of(doc.entities().slot[0]);
+        const auto xs   = doc.geometry().ring_xs(span.first);
+        const auto ys   = doc.geometry().ring_ys(span.first);
+        REQUIRE_EQ(xs.size(), std::size_t{2});
+        CHECK_EQ((core::Point2{xs[0], ys[0]}), kFoot);
+        CHECK_EQ((core::Point2{xs[1], ys[1]}), kMid);
+    }
+
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+
+    // The journal holds the RESOLVED millimetres and no trace of the
+    // construction — a replay must not need a grammar, a document or a session
+    // setting to mean what it meant (CLAUDE.md 1.4).
+    REQUIRE_EQ(cli.journal.entries().size(), std::size_t{1});
+    const std::string recorded = cli.journal.entries().front().args.to_json().dump();
+    CHECK_EQ(recorded, gui.journal.entries().front().args.to_json().dump());
+    CHECK_EQ(recorded, scr.journal.entries().front().args.to_json().dump());
+    CHECK(recorded.find("dik") == std::string::npos);
+    CHECK(recorded.find("-5000") != std::string::npos);
+
+    // ---- replay: the same journal rebuilds the same document ----
+    Rig replay;
+    for (const auto& e : cli.journal.entries())
+        CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(replay.doc.content_hash(), cli.doc.content_hash());
 }
 
 TEST_CASE("PROOF: undo collapses each client's run into exactly one step")

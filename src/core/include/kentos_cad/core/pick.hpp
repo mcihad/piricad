@@ -105,6 +105,39 @@ bool closest_point_on_line(Point2 a, Point2 b, Point2 p, Point2& out, double& t)
 bool line_intersection(Point2 a, Point2 b, Point2 c, Point2 d, Point2& out, double& t,
                        double& u) noexcept;
 
+/// Why two circles of given radii did or did not meet — the answer
+/// `circle_intersection` has to give, because "false" is four different
+/// mistakes and a surveyor needs to be told which one they made.
+enum class CircleMeet : std::uint8_t {
+    Two,        ///< they cross: `left` and `right` are distinct points
+    Tangent,    ///< they touch: `left` and `right` are the same point
+    TooFar,     ///< the centres are further apart than the radii reach
+    Nested,     ///< one circle is wholly inside the other
+    SameCentre, ///< the centres coincide: no circle, or infinitely many points
+};
+
+/// Where the circle of radius `radius_a` about `a` meets the circle of radius
+/// `radius_b` about `b`.
+///
+/// THE TWO-DISTANCE INTERSECTION, which is how a corner is re-established from
+/// two tape measurements off two known monuments and how `kes(A,r1,B,r2,…)` and a
+/// tangent-tangent-radius circle are built. `left` is the solution on the LEFT of
+/// the direction a→b and `right` the one on its right, so a caller picks by a
+/// word rather than by an index nobody can remember; both are written only when
+/// the answer is `Two` or `Tangent`.
+///
+/// THERE ARE TWO SOLUTIONS AND CHOOSING ONE IS NOT THIS FUNCTION'S JOB. Handing
+/// back the nearer, the first, or the one with the larger northing is the silent
+/// pick that puts a boundary on the wrong side of a road; the caller says which
+/// it wants or asks the user.
+///
+/// A negative radius is read as its magnitude: a distance has no sign, and a
+/// caller that computed one from a difference should not get a mirrored corner
+/// for it. Determinism: one `std::sqrt`, which IEEE-754 rounds correctly, and one
+/// `mm_round` per coordinate (§7.3, core.md R20).
+CircleMeet circle_intersection(Point2 a, Mm radius_a, Point2 b, Mm radius_b, Point2& left,
+                               Point2& right) noexcept;
+
 /// The four corners of the band a caption occupies, or false when `e` carries no
 /// text. Corners run baseline-start, baseline-end, then back along the top.
 ///

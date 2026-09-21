@@ -28,7 +28,7 @@ doğru şekilde `ÇİZGİ` olur.
 
 ## Koordinat girmek
 
-Dört biçim vardır. Hepsi hem komut argümanı olarak hem de bir komut nokta beklerken
+Beş biçim vardır. Hepsi hem komut argümanı olarak hem de bir komut nokta beklerken
 kullanılabilir.
 
 ### Mutlak koordinat
@@ -110,10 +110,143 @@ Koordinatın herhangi bir bileşeni parantezli bir hesap olabilir:
 
 Böylece hesap makinesi açmadan koordinat üretirsiniz.
 
+### Nokta fonksiyonu
+
+```
+orta(485320,4310220,485370,4310250)
+```
+
+Koordinatı **hesaplatmak** yerine **tarif etmek**: iki noktanın ortası, bir doğruya
+indirilen dik, iki doğrultunun kesişimi. Kâğıt üzerinde yaptığınız inşa, koordinatın
+yazıldığı her yere yazılır. Ayrıntı ve bütün liste: [Nokta fonksiyonları](#nokta-fonksiyonları).
+
 ### Hepsi bir arada
 
 ```
-ÇİZGİ 485320.150,4310220.400 @50,30 @100<45 @(100*3),0 @80<90d
+ÇİZGİ 485320.150,4310220.400 @50,30 @100<45 @(100*3),0 @80<90d orta(son,@50,0)
+```
+
+## Nokta fonksiyonları
+
+Bir nokta yerine **onu nasıl bulduğunuzu** yazarsınız. Fonksiyon, komut çalışmadan
+önce tek bir koordinata çözülür: komut çözülmüş noktayı görür, komut günlüğü de onu
+tutar. Bu yüzden nokta fonksiyonu komut satırında, betikte ve çalışan bir komutun
+istemine yazdığınız yanıtta aynı şeydir — üçü de aynı gramerden geçer.
+
+```
+ÇİZGİ orta(0,0,100,0) dik(0,0,100,0,30,-5)
+```
+
+### Bütün fonksiyonlar
+
+| Yazım | Ne verir |
+|---|---|
+| `son` | Bir önceki nokta. Yalnız argüman içinde; tek başına `son()` ya da `@0,0` yazın |
+| `n(1284)` | Çizimdeki 1284 numaralı ölçü noktası |
+| `orta(A,B)` | A ile B'nin tam ortası |
+| `ile(P,@dx,dy)` · `ile(P,@d<a)` | P'den ölçülen göreli nokta |
+| `dik(A,B,ayak,boy)` | AB doğrultusunda A'dan `ayak` metre, oradan `boy` metre dik |
+| `semt(S,açı,kenar)` | S istasyonundan `açı` semtinde `kenar` metre |
+| `kes(A,açı1,B,açı2)` | A'dan ve B'den çıkan iki **doğrultunun** kesişimi |
+| `kes(A,r1,B,r2,yön)` | A'ya `r1`, B'ye `r2` metre olan nokta — iki çözüm, `yön` seçer |
+| `kes(A,B,C,D)` | AB **doğrusu** ile CD doğrusunun kesişimi |
+| `ara(A,B,oran)` · `ara(A,B,mesafe m)` | AB üzerinde oranla ya da metreyle |
+| `uzanti(A,B,mesafe)` | AB doğrultusunda B'den `mesafe` metre öte |
+| `xy(P,Q)` | P'nin sağa değeri, Q'nun yukarı değeri |
+
+Adlar büyük/küçük harf ve noktalı/noktasız i farkı gözetmez: `ORTA`, `orta`,
+`uzantı` ve `uzanti` aynı fonksiyondur.
+
+### Argüman yazmanın kuralı
+
+Argümanlar virgülle ayrılır — ve **koordinat da virgülle yazılır**. Bu yüzden bir
+nokta argümanı mutlak yazıldığında **iki** argüman yeri harcar:
+
+```
+orta(0,0,100,0)           iki nokta: (0,0) ve (100,0)
+dik(0,0,100,0,30,-5)      iki nokta, sonra iki sayı: ayak 30, boy −5
+```
+
+Bir nokta argümanı tek yer harcayan biçimlerde de yazılabilir — kutupsal, `son`, ya da
+başka bir fonksiyon:
+
+```
+orta(son,@100<50)
+dik(n(1284),n(1285),12.5,3)
+orta(orta(0,0,100,0),orta(0,100,100,100))
+```
+
+Bir argüman **sayı** ise satır içi ifade olabilir (`(40+5)`), **açı** ise `g`, `d`, `r`
+sonekini alır (`semt(0,0,45g,100)`) ve soneksizse `açı_birimi` ile `açı_kuralı`
+ayarlarından okunur — kutupsal koordinatla tıpatıp aynı kural.
+
+`ile`'nin ikinci argümanı `@` ile başlamak zorundadır: ölçüm P'den yapılır ve mutlak
+bir çift verilseydi P sessizce boşa giderdi.
+
+### Dik ayak ve dik boy — işaret kuralı
+
+`dik(A,B,ayak,boy)`, A'dan B'ye **yürürken** düşünülür: `ayak` bu yönde kaç metre
+gidildiği, `boy` oradan kaç metre yana çıkıldığıdır. **Sol pozitif, sağ negatiftir**
+(Netcad'deki kuralın aynısı).
+
+```
+ÇİZGİ dik(0,0,100,0,30,5) dik(0,0,100,0,30,-5)
+```
+
+Taban `0,0` → `100,0`, yani doğu. Doğuya yürürken sol el kuzeyi gösterir, bu yüzden
+ilk nokta `(30, 5)`, ikincisi `(30, −5)` olur.
+
+Bir ölçü krokisindeki cephe alımı tek satırdır — taban bir kez yazılır, cepheye ait
+ayak/boy çiftleri sırayla gelir:
+
+```
+ÇOKLUÇİZGİ dik(0,0,40,0,0,0) dik(0,0,40,0,12.4,3.1) dik(0,0,40,0,27.8,3.1) dik(0,0,40,0,40,0)
+```
+
+Gerçek bir krokide taban iki ölçü noktasıdır; `0,0` ve `40,0` yerine `n(1)` ve `n(2)`
+yazarsınız. Aynı işin fareyle yapılan hâli P1b'de `DİKAYAK` komutu olarak gelecek.
+
+### İki mesafe kesişimi — iki çözüm vardır
+
+İki bilinen noktadan şeritle ölçülmüş iki mesafe **iki** noktada kesişir: doğrunun
+solundaki ve sağındaki. Program kendiliğinden birini seçmez; hangisi olduğunu
+söylersiniz:
+
+```
+NOKTA kes(0,0,60,100,0,80,sol) kes(0,0,60,100,0,80,sağ) kes(0,0,60,100,0,80,yon=40,40)
+```
+
+Sırasıyla `(36, 48)`, `(36, −48)` ve yine `(36, 48)` — sonuncusunda çözümü yönle değil,
+aradığınıza yakın bir noktayla seçtiniz.
+
+`sol` ve `sağ`, A'dan B'ye bakarken hangi el tarafı olduğunu söyler. Yakın bir nokta
+verecekseniz **`yon=` ile yazmak zorundasınız**: çıplak bir koordinat orada
+`kes(A,B,C,D)` okumasından ayırt edilemez ve program iki okumadan birini sessizce
+seçmez. Çemberler birbirine ulaşmıyorsa hata iki yarıçapı ve merkezler arası mesafeyi
+birlikte yazar, böylece hangi ölçünün yanlış olduğunu görürsünüz.
+
+### Çizim örnekleri
+
+Ölçü listesini okuduktan sonra noktalarınıza numarasıyla ulaşırsınız:
+
+```
+NOKTALAR dosya="olcu.txt"
+```
+
+```
+ÇİZGİ n(1284) n(1285)                        ← iki ölçü noktası arasına
+ÇİZGİ orta(n(1),n(2)) @0,25                  ← kenar ortasından kuzeye 25 m
+ÇİZGİ kes(n(1),n(2),n(3),n(4)) @10<0         ← iki cephe hattının köşesinden
+NOKTA semt(n(10),128.4560,62.317)            ← istasyondan semt ve kenar
+NOKTA kes(n(1),34.28,n(2),51.06,sol)         ← iki şerit ölçüsünden
+NOKTA ara(n(1),n(2),0.5) ara(n(1),n(2),12 m) ← kenar üzerinde oran ve metre
+```
+
+Aynı inşalar numarasız da yazılır; `n(...)` yerine koordinatı, `son`'u ya da başka bir
+fonksiyonu koyabilirsiniz:
+
+```
+ÇİZGİ 10,20 orta(son,@40,0) kes(0,0,100,100,0,100,100,0) uzanti(0,0,30,40,25)
 ```
 
 ## İfade değerlendirici
@@ -207,7 +340,16 @@ Hata mesajları ne beklendiğini ve ne geldiğini birlikte söyler.
 | `'core.line': 'noktalar' parametresi nokta listesi bekliyor. Girilen: 'abc'` | Koordinat yerine metin yazılmış | Koordinat biçimlerinden birini kullanın |
 | `Beklenen: '@dx,dy' veya '@mesafe<açı'. Girilen: '@50'` | `@` sonrası eksik | `@50,0` veya `@50<0` yazın |
 | `Kutupsal açı: beklenmeyen 'x' karakteri (konum 2)` | Açı sonekinde `g`, `d`, `r` dışında bir harf, ya da iki harf | Soneki düzeltin ya da kaldırın: `@100<45g` |
-| `Beklenen: koordinat (x,y \| @dx,dy \| @mesafe<açı). Girilen: 'abc'` | Nokta beklenen yere koordinat olmayan bir şey girilmiş | Koordinat girin |
+| `Beklenen: koordinat (x,y \| @dx,dy \| @mesafe<açı \| nokta fonksiyonu: …). Girilen: 'abc'` | Nokta beklenen yere koordinat olmayan bir şey girilmiş | Koordinat ya da nokta fonksiyonu girin |
+| `kes(): argümanlar hiçbir biçime uymuyor. Biçimler: …` | `kes` üç biçimden hiçbirine uymayan argüman almış | Mesajdaki üç biçimden birini yazın |
+| `orta(): 1. argüman nokta olmalı (…). Girilen: 'abc'` | Nokta beklenen argümana koordinat olmayan bir şey girilmiş | Koordinat, `son` ya da başka bir fonksiyon yazın |
+| `orta(): fazla argüman. Beklenen: orta(A,B)` | Fonksiyona biçiminden çok argüman verilmiş | Fazlalığı çıkarın; mutlak bir noktanın iki argüman yeri harcadığını unutmayın |
+| `1284 numaralı nokta yok. Nokta listesini NOKTALAR ile okuyun.` | `n(1284)` çizimde bulunamadı | Listeyi `NOKTALAR` ile okuyun ya da numarayı düzeltin |
+| `n(): bu bağlamda çizim yok, numaralı nokta aranamaz.` | `n()` çizimi olmayan bir yerde çağrılmış | Numaralı noktayı çizim açıkken kullanın |
+| `kes(): iki doğrultu paralel, kesişmiyorlar. Açılar: …` | İki doğrultu aynı ya da tam ters | Açılardan birini düzeltin |
+| `kes(): çemberler birbirine ulaşmıyor. Yarıçaplar … merkezler arası …` | İki mesafe ölçüsü kesişmiyor | Mesafeleri ve merkez noktalarını karşılaştırın |
+| `kes(): yön noktası iki çözüme eşit uzaklıkta…` | Verilen yakın nokta iki çözümün tam ortasında | `yon=sol` ya da `yon=sağ` yazın |
+| `Nokta fonksiyonları en fazla 16 kat iç içe yazılır.` | İç içe fonksiyon çok derin | İnşayı birkaç komuta bölün |
 | `'(1+2' ifadesi: kapanmamış parantez` | Parantez kapatılmamış | Parantezi kapatın |
 | `'1/0' ifadesi: sıfıra bölme` | Sıfıra bölme | İfadeyi düzeltin |
 | `'abc' ifadesi: sayı bekleniyordu (konum 0)` | İfadede sayı olmayan bir şey var | İfadeyi düzeltin |

@@ -75,27 +75,36 @@ kullanıcısının refleks olarak aradığı inşa/düzenleme fiillerini, hepsin
 Sözdizimi `ad(arg, …)`; argüman: nokta (mutlak, `@`, fonksiyon, `son`, `n(no)`), sayı (ifade), açı
 (P0 kuralı). Hepsi saf; sonuç `Point2`, dispatch'ten önce.
 
-- [ ] **P1a-1** `Token::Kind::Call` ve çözücü (`parser.cpp`), `parser.hpp` gramer yorumu (R17 listesi
+**Argüman ayırıcısı koordinat ayırıcısıyla aynı karakterdir.** `orta(0,0,100,0)` dört sayı değil
+iki noktadır, `dik(0,0,100,0,30,-5)` iki nokta ve iki sayıdır. Bu yüzden argümanlar sayılmaz,
+**imzaya karşı eşlenir**: mutlak yazılan bir nokta iki alan, `@100<50` / `son` / iç içe bir çağrı
+tek alan harcar. Bir ada birden çok biçim düşüyorsa (`kes`) hepsi denenir ve tam olarak biri
+uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
+
+- [x] **P1a-1** `Token::Kind::Call` ve çözücü (`parser.cpp`), `parser.hpp` gramer yorumu (R17 listesi
   güncellenir), `context.cpp`.
-- [ ] **P1a-2** `son` — son verilen nokta (`@`'ın tabanı).
-- [ ] **P1a-3** `n(1284)` — 1284 numaralı ölçü noktası (`NOKTALAR` → `SnapNode`); yoksa "1284 numaralı
+- [x] **P1a-2** `son` — son verilen nokta (`@`'ın tabanı). **Çıplak `son` yalnız argüman listesinde koordinattır**; tek başına bir istemde `son()` ya da `@0,0` yazılır, çünkü `KATMAN son` bir katman adıdır ve her `son`'u noktaya çevirmek o yazımı elden alırdı.
+- [x] **P1a-3** `n(1284)` — 1284 numaralı ölçü noktası (`NOKTALAR` → `SnapNode`); yoksa "1284 numaralı
   nokta yok".
-- [ ] **P1a-4** `orta(A,B)` — iki nokta ortası.
-- [ ] **P1a-5** `ile(P, @dx,dy)` / `ile(P, @d<a)` — P tabanlı göreli.
-- [ ] **P1a-6** `dik(A,B,ayak,boy)` — **dik ayak / dik boy**: AB üzerinde A'dan `ayak`, sola pozitif `boy`
+- [x] **P1a-4** `orta(A,B)` — iki nokta ortası.
+- [x] **P1a-5** `ile(P, @dx,dy)` / `ile(P, @d<a)` — P tabanlı göreli.
+- [x] **P1a-6** `dik(A,B,ayak,boy)` — **dik ayak / dik boy**: AB üzerinde A'dan `ayak`, sola pozitif `boy`
   dik. İşaret kuralı belgelenir (sol +, Netcad ile aynı).
-- [ ] **P1a-7** `semt(S,açı,kenar)` — istasyondan semt + kenar (P0 kuralı; sonek alır).
-- [ ] **P1a-8** `kes(A,açı1,B,açı2)` — iki doğrultu (`line_intersection`; paralelse hata adlarıyla).
-- [ ] **P1a-9** `kes(A,r1,B,r2,yön)` — iki mesafe, iki çözüm; `yön`: `sol`|`sağ` ya da yakın nokta;
-  kesişmiyorsa hata mesafeleri söyler. Sessiz seçim yok.
-- [ ] **P1a-10** `kes(A,B,C,D)` — iki doğru.
-- [ ] **P1a-11** `ara(A,B,t)` / `ara(A,B,d m)` — oran ya da metre.
-- [ ] **P1a-12** `uzanti(A,B,d)` — B'den öteye.
-- [ ] **P1a-13** `xy(P,Q)` — P'nin sağa, Q'nun yukarı değeri (`.x/.y` süzgeci).
-- [ ] **P1a-14** Hata metinleri beklenen/verileni söyler (R19).
-- [ ] **P1a-15** Docs: `komut-satiri.md` "Nokta fonksiyonları" bölümü (tablo + çizim örnekleri);
+- [x] **P1a-7** `semt(S,açı,kenar)` — istasyondan semt + kenar (P0 kuralı; sonek alır).
+- [x] **P1a-8** `kes(A,açı1,B,açı2)` — iki doğrultu (`line_intersection`; paralelse hata adlarıyla).
+- [x] **P1a-9** `kes(A,r1,B,r2,yön)` — iki mesafe, iki çözüm; `yön`: `sol`|`sağ` ya da yakın nokta;
+  kesişmiyorsa hata mesafeleri söyler. Sessiz seçim yok. **Yakın nokta `yon=` ile yazılır:**
+  çıplak bir koordinat orada `kes(A,B,C,D)` okumasıyla aynı alan sayısını harcar ve iki okumadan
+  birini sıraya bakarak seçmek tam da bu maddenin yasakladığı şeydir; `sol`/`sağ` çıplak yazılır,
+  çünkü sözcük alanını başka hiçbir biçim tüketemez.
+- [x] **P1a-10** `kes(A,B,C,D)` — iki doğru.
+- [x] **P1a-11** `ara(A,B,t)` / `ara(A,B,d m)` — oran ya da metre.
+- [x] **P1a-12** `uzanti(A,B,d)` — B'den öteye.
+- [x] **P1a-13** `xy(P,Q)` — P'nin sağa, Q'nun yukarı değeri (`.x/.y` süzgeci).
+- [x] **P1a-14** Hata metinleri beklenen/verileni söyler (R19).
+- [x] **P1a-15** Docs: `komut-satiri.md` "Nokta fonksiyonları" bölümü (tablo + çizim örnekleri);
   `ilk-adimlar.md`'ye dik ayak örneği.
-- [ ] **P1a-16** Test: `test_command.cpp` her fonksiyon için bilinen üçgenle `Mm` eşitliği; idempotens;
+- [x] **P1a-16** Test: `test_command.cpp` her fonksiyon için bilinen üçgenle `Mm` eşitliği; idempotens;
   fuzz korpusu (iç içe fonksiyon, paralel doğrultu, sonekli açı).
 
 ## P1b — Alım komutları (fonksiyonların etkileşimli, çizen hâli)

@@ -11,6 +11,7 @@ add_library(kentos_command STATIC
     src/journal.cpp
     src/log.cpp
     src/parser.cpp
+    src/point_function.cpp
     src/registry.cpp
     src/selection.cpp
     src/session.cpp
