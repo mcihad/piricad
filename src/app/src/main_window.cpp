@@ -1446,6 +1446,32 @@ void MainWindow::buildMenus()
     modify->addAction(actStyleCopy_);
     modify->addSeparator();
     modify->addAction(actOffset_);
+    modify->addSeparator();
+    // THE SEVEN VERBS P3 ADDED, on the menu a hand already opens for the others.
+    // A generated tail would have put them behind `Diğer komutlar`, which is the
+    // right place for a command nobody reaches for and the wrong one for KIR.
+    modify->addAction(commandAction(Glyph::Cut, tr("Kır"), QStringLiteral("KIR"),
+                                    tr("KIR — iki nokta arasındaki parçayı çıkarır; tek nokta "
+                                       "boşluksuz böler  ·  kısaltma: KR")));
+    modify->addAction(commandAction(Glyph::Line, tr("Uç Uca Ekle"), QStringLiteral("UÇUCA"),
+                                    tr("UÇUCA — uçları değen çizgileri tek çizgiye ekler; "
+                                       "BİRLEŞTİR ile karıştırmayın  ·  kısaltma: UÇE")));
+    modify->addAction(commandAction(Glyph::Ruler, tr("Uzunluk"), QStringLiteral("UZUNLUK"),
+                                    tr("UZUNLUK — bir ucu kendi doğrultusunda hareket ettirir  ·  "
+                                       "kısaltma: UZN")));
+    modify->addAction(commandAction(Glyph::Duplicate, tr("Patlat"), QStringLiteral("PATLAT"),
+                                    tr("PATLAT — çizgiyi kenarlara, alanı sınırına, bloğu "
+                                       "bileşenlerine ayırır  ·  kısaltma: PTL")));
+    modify->addAction(commandAction(Glyph::Move, tr("Hizala"), QStringLiteral("HİZALA"),
+                                    tr("HİZALA — bir ya da iki nokta çiftiyle taşır, döndürür ve "
+                                       "istenirse ölçekler  ·  kısaltma: HZL")));
+    modify->addAction(commandAction(Glyph::Point, tr("Bölümle"), QStringLiteral("BÖLÜMLE"),
+                                    tr("BÖLÜMLE — nesne boyunca eşit parçalara ya da sabit "
+                                       "aralıkla nokta koyar  ·  kısaltma: BLM")));
+    modify->addAction(commandAction(Glyph::Polyline, tr("Çizgi Düzenle"),
+                                    QStringLiteral("ÇİZGİDÜZENLE"),
+                                    tr("ÇİZGİDÜZENLE — kapatır, açar, yönünü çevirir ya da "
+                                       "sadeleştirir  ·  kısaltma: ÇZD")));
 
     // A MENU OF THEIR OWN, because they are a different kind of thing. Each of
     // these is an act with a regulation behind it, and grouping them says so; the

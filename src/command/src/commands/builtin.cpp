@@ -19,6 +19,13 @@ namespace kentos::command {
     X(intersect_point)                                                                             \
     X(point_along)                                                                                 \
     X(polygon_regular)                                                                             \
+    X(break_line)                                                                                  \
+    X(join_lines)                                                                                  \
+    X(lengthen)                                                                                    \
+    X(explode)                                                                                     \
+    X(align)                                                                                       \
+    X(divide)                                                                                      \
+    X(pedit)                                                                                       \
     X(text)                                                                                        \
     X(edittext)                                                                                    \
     X(exportstyle)                                                                                 \

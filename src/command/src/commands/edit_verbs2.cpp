@@ -1,0 +1,635 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// core.explode — PATLAT, core.align — HİZALA,
+// core.divide — BÖLÜMLE, core.pedit — ÇİZGİDÜZENLE.
+//
+// PATLAT TAKES A THING APART into the pieces it is drawn from: a run of edges
+// into single edges, a face into its boundary, a block reference into its
+// members placed where they stand. It is what a drafter reaches for when the
+// grouping is in the way — one corner of a parcel has to move and the parcel is
+// a face, one leg of a fence has to go and the fence is one run.
+//
+// WHAT IT REFUSES AND WHY. A definition holding a circle, an arc or a caption is
+// named rather than half-placed: those kinds carry a payload whose transform
+// under a mirrored or non-uniform scale is not a circle, an arc or a caption,
+// and placing their drawn outline instead would turn a circle into a 128-gon
+// with an area that is not πr² — which is exactly the number a tapu reads
+// (§12). Phase 2's `BLOKDÜZENLE` is where that gets a real answer.
+//
+// HİZALA IS NOT OTURT. `OTURT` is a least-squares Helmert fit over many common
+// points and belongs to geodesy; this is the drafting verb — one or two point
+// pairs, move and turn (and scale when asked), no adjustment. Each page names
+// the other, because the two are easy to confuse and picking the wrong one
+// silently changes what a drawing claims.
+//
+// BÖLÜMLE PUTS MARKS ALONG SOMETHING THAT EXISTS. `ARANOKTA` divides a line
+// given by two points; this divides an OBJECT — a surveyed kerb, a road centre
+// line — which is the form a station peg list is actually asked for.
+//
+// ÇİZGİDÜZENLE is the small edits a run needs and nothing else does: close it,
+// open it, reverse it, thin it out.
+#include "kentos_cad/command/context.hpp"
+#include "kentos_cad/command/session.hpp"
+#include "kentos_cad/command/spec.hpp"
+
+#include "kentos_cad/core/angle.hpp"
+#include "kentos_cad/core/block.hpp"
+#include "kentos_cad/core/block_reference.hpp"
+#include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/text.hpp"
+#include "kentos_cad/core/trig.hpp"
+#include "kentos_cad/core/units.hpp"
+
+#include <algorithm>
+#include <cmath>
+#include <string>
+#include <vector>
+
+namespace kentos::command {
+namespace {
+
+/// One ring of an entity, as points.
+std::vector<core::Point2> ring_points(const core::Document& doc, std::uint32_t ring)
+{
+    const auto xs = doc.geometry().ring_xs(ring);
+    const auto ys = doc.geometry().ring_ys(ring);
+    std::vector<core::Point2> out;
+    out.reserve(xs.size());
+    for (std::size_t v = 0; v < xs.size(); ++v)
+        out.push_back(core::Point2{xs[v], ys[v]});
+    return out;
+}
+
+/// The name of a kind, for a refusal that says what it found.
+const char* kind_word(core::KindId k)
+{
+    switch (k) {
+    case core::kPolylineKind: return "çizgi";
+    case core::kCircleKind: return "daire";
+    case core::kArcKind: return "yay";
+    case core::kPointKind: return "nokta";
+    case core::kEllipseKind: return "elips";
+    case core::kArcPolylineKind: return "yaylı çizgi";
+    case core::kSplineKind: return "spline";
+    case core::kHatchKind: return "tarama";
+    case core::kBlockReferenceKind: return "blok referansı";
+    case core::kDimensionKind: return "ölçü";
+    case core::kLeaderKind: return "lider";
+    default: return "bilinmeyen tür";
+    }
+}
+
+// ----------------------------------------------------------------- PATLAT ----
+
+Task<void> run_explode(Context& ctx)
+{
+    std::vector<std::int64_t> chosen;
+    if (!co_await want_objects(ctx, "nesne", "Patlatılacak nesneleri seçin, Enter'a basın", chosen,
+                               0, "PATLAT nesneler=1"))
+        co_return;
+    if (chosen.empty()) co_return;
+
+    const core::Document& doc = ctx.document();
+    std::size_t made          = 0;
+    std::size_t gone          = 0;
+
+    for (const std::int64_t id : chosen) {
+        const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(id));
+        const core::EntityId slot = doc.slot_of(key);
+        if (slot == core::kNoEntity || !doc.alive(slot)) {
+            ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                         "Nesne bulunamadı veya silinmiş: " + std::to_string(id)));
+            co_return;
+        }
+        if (auto st = doc.editable(slot); !st) {
+            ctx.session().fail(st.error());
+            co_return;
+        }
+
+        const core::KindId kind   = doc.entities().kind[slot];
+        const core::LayerId home  = doc.entities().layer[slot];
+        const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[slot]);
+
+        if (kind == core::kBlockReferenceKind) {
+            auto ref = core::block_reference_of(doc.geometry(), doc.entities().slot[slot]);
+            if (!ref) {
+                ctx.session().fail(ref.error());
+                co_return;
+            }
+            if (ref.value().block >= doc.blocks().all().size()) {
+                ctx.session().fail(core::err(core::ErrorCode::NotFound, "Blok tanımı bulunamadı."));
+                co_return;
+            }
+            const core::BlockDef* def = &doc.blocks().at(ref.value().block);
+            const core::Point2 insertion =
+                core::block_reference_insertion(doc.geometry(), doc.entities().slot[slot]);
+
+            // EVERY COPY OF THE GRID, because a grid reference is that many
+            // placements and exploding one of them would leave the rest as a
+            // reference nobody can tell from the pieces.
+            for (int row = 0; row < static_cast<int>(ref.value().rows); ++row)
+                for (int column = 0; column < static_cast<int>(ref.value().columns); ++column)
+                    for (const core::EntityKey member_key : def->members) {
+                        const core::EntityId member = doc.slot_of(member_key);
+                        if (member == core::kNoEntity) continue;
+                        const core::KindId member_kind = doc.entities().kind[member];
+                        if (member_kind != core::kPolylineKind) {
+                            ctx.session().fail(core::err(
+                                core::ErrorCode::Unsupported,
+                                std::string("Blok '") + def->name + "' içinde bir " +
+                                    kind_word(member_kind) +
+                                    " var ve bu sürüm onu yerine koyamıyor: bir daire ya da "
+                                    "yay, aynalı veya eşit olmayan bir ölçekte artık daire "
+                                    "ya da yay değildir ve çizilmiş dış çizgisini koymak "
+                                    "alanını bozar. Bileşenleri tek tek düzenlemek için "
+                                    "Faz 2'nin BLOKDÜZENLE komutu gelecek."));
+                            co_return;
+                        }
+                        const core::RingSpan member_span =
+                            doc.geometry().rings_of(doc.entities().slot[member]);
+                        for (std::uint32_t r = member_span.first;
+                             r < member_span.first + member_span.count; ++r) {
+                            std::vector<core::Point2> pts = ring_points(doc, r);
+                            for (core::Point2& p : pts)
+                                p = core::place_block_point(ref.value(), insertion, def->base, p,
+                                                            column, row);
+                            auto one = ctx.transaction().add_polyline(home, pts);
+                            if (!one) {
+                                ctx.session().fail(one.error());
+                                co_return;
+                            }
+                            ++made;
+                        }
+                    }
+        } else if (kind == core::kPolylineKind) {
+            // A RUN OF EDGES INTO SINGLE EDGES. A face's boundary becomes an
+            // open run per ring, which is what "take the face apart" means: a
+            // face is a closed thing and its pieces are not.
+            for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+                std::vector<core::Point2> pts = ring_points(doc, r);
+                const bool closed             = doc.geometry().ring_role[r] != core::RingRole::Open;
+                if (closed && pts.size() >= 3) pts.push_back(pts.front());
+                for (std::size_t i = 0; i + 1 < pts.size(); ++i) {
+                    const core::Point2 pair[2]{pts[i], pts[i + 1]};
+                    auto one = ctx.transaction().add_polyline(home, pair);
+                    if (!one) {
+                        ctx.session().fail(one.error());
+                        co_return;
+                    }
+                    ++made;
+                }
+            }
+        } else {
+            ctx.session().fail(
+                core::err(core::ErrorCode::Unsupported,
+                          std::string("Nesne ") + std::to_string(id) + " bir " + kind_word(kind) +
+                              "; PATLAT bu sürümde çizgileri, alanları ve blok referanslarını "
+                              "patlatır."));
+            co_return;
+        }
+
+        auto st = ctx.transaction().erase_entity(slot);
+        if (!st) {
+            ctx.session().fail(st.error());
+            co_return;
+        }
+        ++gone;
+    }
+
+    ctx.record("nesne", Value::ids(chosen));
+    ctx.echo(std::to_string(gone) + " nesne patlatıldı, " + std::to_string(made) + " parça çıktı.");
+}
+
+// ----------------------------------------------------------------- HİZALA ----
+
+Task<void> run_align(Context& ctx)
+{
+    std::vector<std::int64_t> chosen;
+    if (!co_await want_objects(ctx, "nesne", "Hizalanacak nesneleri seçin, Enter'a basın", chosen,
+                               0, "HİZALA nesneler=1 kaynak=0,0 hedef=10,10"))
+        co_return;
+    if (chosen.empty()) co_return;
+
+    auto from1 = co_await ctx.point("kaynak", "Birinci kaynak nokta");
+    if (!from1) co_return;
+    auto to1 = co_await ctx.point("hedef", "Birinci kaynağın gideceği yer",
+                                  PointOptions{.rubber_band   = true,
+                                               .rubber_origin = *from1,
+                                               .rubber_shape  = RubberShape::Line});
+    if (!to1) co_return;
+
+    // THE SECOND PAIR IS OPTIONAL AND IT IS WHAT ADDS THE TURN. One pair is a
+    // move; two are a move and a rotation, and a rotation needs two.
+    const Value from2_arg = ctx.argument("kaynak2");
+    const Value to2_arg   = ctx.argument("hedef2");
+    const bool turning = !from2_arg.empty() && !from2_arg.as_points().empty() && !to2_arg.empty() &&
+                         !to2_arg.as_points().empty();
+
+    double turn_turns = 0.0;
+    double factor     = 1.0;
+    if (turning) {
+        const core::Point2 from2 = from2_arg.as_points().front();
+        const core::Point2 to2   = to2_arg.as_points().front();
+        const core::Mm was       = core::segment_length(*from1, from2);
+        const core::Mm becomes   = core::segment_length(*to1, to2);
+        if (was == 0 || becomes == 0) {
+            ctx.session().fail(core::err(
+                core::ErrorCode::InvalidArgument,
+                "İki kaynak ya da iki hedef nokta aynı; doğrultu ve ölçek hesaplanamaz."));
+            co_return;
+        }
+        turn_turns = core::direction_turns(*to1, to2, core::AngleRule::Matematik) -
+                     core::direction_turns(*from1, from2, core::AngleRule::Matematik);
+
+        bool scaling = false;
+        if (const Value v = ctx.argument("olcekle"); !v.empty()) scaling = v.as_bool();
+        if (scaling) factor = static_cast<double>(becomes) / static_cast<double>(was);
+    }
+
+    // The transform is `p -> to1 + factor · rotate(p - from1)`, built once and
+    // applied to every vertex. `sin_cos_udeg` rather than libm, so a quarter
+    // turn is exact and every platform agrees (§7.3).
+    const core::SinCos t =
+        core::sin_cos_udeg(core::mm_round(turn_turns * static_cast<double>(core::kUDegFullCircle)));
+
+    const core::Document& doc = ctx.document();
+    std::size_t moved         = 0;
+    for (const std::int64_t id : chosen) {
+        const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(id));
+        const core::EntityId slot = doc.slot_of(key);
+        if (slot == core::kNoEntity || !doc.alive(slot)) {
+            ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                         "Nesne bulunamadı veya silinmiş: " + std::to_string(id)));
+            co_return;
+        }
+        if (auto st = doc.editable(slot); !st) {
+            ctx.session().fail(st.error());
+            co_return;
+        }
+        if (doc.entities().kind[slot] != core::kPolylineKind) {
+            ctx.session().fail(core::err(core::ErrorCode::Unsupported,
+                                         std::string("Nesne ") + std::to_string(id) + " bir " +
+                                             kind_word(doc.entities().kind[slot]) +
+                                             "; HİZALA bu sürümde çizgileri ve alanları hizalar."));
+            co_return;
+        }
+
+        const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[slot]);
+        std::vector<std::vector<core::Point2>> store;
+        std::vector<core::RingGeometry::RingInput> rings;
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+            std::vector<core::Point2> pts = ring_points(doc, r);
+            for (core::Point2& p : pts) {
+                const double dx = static_cast<double>(p.x - from1->x) * factor;
+                const double dy = static_cast<double>(p.y - from1->y) * factor;
+                p               = core::Point2{to1->x + core::mm_round(dx * t.cos - dy * t.sin),
+                                 to1->y + core::mm_round(dx * t.sin + dy * t.cos)};
+            }
+            store.push_back(std::move(pts));
+            rings.push_back(core::RingGeometry::RingInput{
+                {}, doc.geometry().ring_role[r], doc.geometry().ring_part[r]});
+        }
+        for (std::size_t i = 0; i < rings.size(); ++i)
+            rings[i].points = store[i];
+
+        auto st = ctx.transaction().set_geometry(slot, rings);
+        if (!st) {
+            ctx.session().fail(st.error());
+            co_return;
+        }
+        ++moved;
+    }
+
+    ctx.record("nesne", Value::ids(chosen));
+    ctx.echo(std::to_string(moved) + " nesne hizalandı" +
+             (turning ? (factor == 1.0 ? " (taşındı ve döndürüldü)."
+                                       : " (taşındı, döndürüldü ve ölçeklendi).")
+                      : " (taşındı)."));
+}
+
+// --------------------------------------------------- BÖLÜMLE / İŞARETLE ----
+
+Task<void> run_divide(Context& ctx)
+{
+    std::vector<std::int64_t> chosen;
+    if (!co_await want_objects(ctx, "nesne", "Bölünecek nesneyi seçin, Enter'a basın", chosen, 1,
+                               "BÖLÜMLE nesne=1 sayi=4"))
+        co_return;
+    if (chosen.size() != 1) {
+        ctx.session().fail(
+            core::err(core::ErrorCode::InvalidArgument, "BÖLÜMLE tek bir nesneyle çalışır."));
+        co_return;
+    }
+
+    const core::Document& doc = ctx.document();
+    const auto key = static_cast<core::EntityKey>(static_cast<std::uint64_t>(chosen.front()));
+    const core::EntityId slot = doc.slot_of(key);
+    if (slot == core::kNoEntity || !doc.alive(slot)) {
+        ctx.session().fail(core::err(core::ErrorCode::NotFound, "Nesne bulunamadı."));
+        co_return;
+    }
+    if (doc.entities().kind[slot] != core::kPolylineKind) {
+        ctx.session().fail(
+            core::err(core::ErrorCode::Unsupported,
+                      std::string("Nesne bir ") + kind_word(doc.entities().kind[slot]) +
+                          "; BÖLÜMLE bu sürümde çizgileri ve alan sınırlarını böler."));
+        co_return;
+    }
+
+    const core::RingSpan span     = doc.geometry().rings_of(doc.entities().slot[slot]);
+    std::vector<core::Point2> pts = ring_points(doc, span.first);
+    if (doc.geometry().ring_role[span.first] != core::RingRole::Open && pts.size() >= 3)
+        pts.push_back(pts.front());
+    if (pts.size() < 2) {
+        ctx.session().fail(core::err(core::ErrorCode::InvalidArgument, "Nesnenin iki köşesi yok."));
+        co_return;
+    }
+
+    // The cumulative length at each vertex, so a station can be found by reading
+    // along rather than by walking the run again per mark.
+    std::vector<double> at;
+    at.push_back(0.0);
+    for (std::size_t i = 0; i + 1 < pts.size(); ++i)
+        at.push_back(at.back() + core::mm_to_metres(core::segment_length(pts[i], pts[i + 1])));
+    const double total = at.back();
+    if (total <= 0.0) {
+        ctx.session().fail(core::err(core::ErrorCode::InvalidArgument, "Nesnenin uzunluğu sıfır."));
+        co_return;
+    }
+
+    // EITHER A COUNT OR A SPACING, AND EXACTLY ONE. `sayi` cuts into that many
+    // equal parts and marks the joins; `aralik` walks a fixed distance from the
+    // start, which is what a chainage list is.
+    const Value count   = ctx.argument("sayi");
+    const Value spacing = ctx.argument("aralik");
+    if (count.empty() == spacing.empty()) {
+        ctx.session().fail(core::err(
+            core::ErrorCode::InvalidArgument,
+            "Tam olarak birini verin: sayi= (kaç eşit parça) ya da aralik= (sabit aralık, m). "
+            "Nesnenin uzunluğu " +
+                std::to_string(total) + " m."));
+        co_return;
+    }
+
+    std::vector<double> stations;
+    if (!count.empty()) {
+        const std::int64_t parts = count.as_int();
+        for (std::int64_t i = 1; i < parts; ++i)
+            stations.push_back(total * static_cast<double>(i) / static_cast<double>(parts));
+    } else {
+        const double step = spacing.as_number();
+        if (step <= 0.0) {
+            ctx.session().fail(
+                core::err(core::ErrorCode::InvalidArgument, "Aralık sıfır ya da eksi olamaz."));
+            co_return;
+        }
+        for (double s = step; s < total; s += step)
+            stations.push_back(s);
+    }
+
+    std::size_t placed = 0;
+    for (const double station : stations) {
+        // Which segment the station falls on, and where along it.
+        std::size_t i = 0;
+        while (i + 2 < at.size() && at[i + 1] < station)
+            ++i;
+        const double span_m = at[i + 1] - at[i];
+        const double along  = span_m > 0.0 ? (station - at[i]) / span_m : 0.0;
+        const double dx     = static_cast<double>(pts[i + 1].x - pts[i].x);
+        const double dy     = static_cast<double>(pts[i + 1].y - pts[i].y);
+        const core::Point2 mark{pts[i].x + core::mm_round(along * dx),
+                                pts[i].y + core::mm_round(along * dy)};
+
+        auto one = ctx.transaction().add_point(ctx.active_layer(), mark);
+        if (!one) {
+            ctx.session().fail(one.error());
+            co_return;
+        }
+        ++placed;
+    }
+
+    ctx.record("nesne", Value::ids({chosen.front()}));
+    ctx.echo(std::to_string(placed) + " işaret yerleştirildi (uzunluk " + std::to_string(total) +
+             " m).");
+}
+
+// --------------------------------------------------------- ÇİZGİDÜZENLE ----
+
+Task<void> run_pedit(Context& ctx)
+{
+    std::vector<std::int64_t> chosen;
+    if (!co_await want_objects(ctx, "nesne", "Düzenlenecek çizgileri seçin, Enter'a basın", chosen,
+                               0, "ÇİZGİDÜZENLE nesneler=1 islem=kapat"))
+        co_return;
+    if (chosen.empty()) co_return;
+
+    auto verb = co_await ctx.text("islem", "İşlem: kapat / ac / ters / sadelestir",
+                                  {"kapat", "ac", "ters", "sadelestir"});
+    if (!verb) co_return;
+    const auto is = [&verb](const char* word) { return core::turkish_key_equals(*verb, word); };
+
+    core::Mm tolerance = 0;
+    if (is("sadelestir")) {
+        double given = 0.0;
+        if (const Value v = ctx.argument("tolerans"); !v.empty())
+            given = v.as_number();
+        else {
+            auto asked =
+                co_await ctx.number("tolerans", "Sadeleştirme toleransı (m); bundan yakın köşeler "
+                                                "atılır");
+            if (!asked) co_return;
+            given = *asked;
+        }
+        tolerance = core::mm_from_metres(given);
+        if (tolerance <= 0) {
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         "Sadeleştirme toleransı sıfırdan büyük olmalı."));
+            co_return;
+        }
+    }
+
+    const core::Document& doc = ctx.document();
+    std::size_t touched       = 0;
+    std::size_t dropped       = 0;
+
+    for (const std::int64_t id : chosen) {
+        const auto key            = static_cast<core::EntityKey>(static_cast<std::uint64_t>(id));
+        const core::EntityId slot = doc.slot_of(key);
+        if (slot == core::kNoEntity || !doc.alive(slot)) {
+            ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                         "Nesne bulunamadı veya silinmiş: " + std::to_string(id)));
+            co_return;
+        }
+        if (auto st = doc.editable(slot); !st) {
+            ctx.session().fail(st.error());
+            co_return;
+        }
+        if (doc.entities().kind[slot] != core::kPolylineKind) {
+            ctx.session().fail(
+                core::err(core::ErrorCode::Unsupported,
+                          std::string("Nesne ") + std::to_string(id) + " bir " +
+                              kind_word(doc.entities().kind[slot]) +
+                              "; ÇİZGİDÜZENLE yalnız çizgilerle ve alanlarla çalışır."));
+            co_return;
+        }
+
+        const core::RingSpan span = doc.geometry().rings_of(doc.entities().slot[slot]);
+        std::vector<std::vector<core::Point2>> store;
+        std::vector<core::RingGeometry::RingInput> rings;
+
+        for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+            std::vector<core::Point2> pts = ring_points(doc, r);
+            core::RingRole role           = doc.geometry().ring_role[r];
+
+            if (is("ters")) {
+                std::reverse(pts.begin(), pts.end());
+            } else if (is("kapat")) {
+                role = r == span.first ? core::RingRole::Exterior : core::RingRole::Interior;
+            } else if (is("ac")) {
+                role = core::RingRole::Open;
+            } else {
+                // SADELEŞTİR: a vertex whose perpendicular distance from the
+                // line between its neighbours is under the tolerance carries no
+                // information about the shape. The ends are never dropped —
+                // they are where the run meets whatever it meets.
+                std::vector<core::Point2> kept;
+                kept.push_back(pts.front());
+                for (std::size_t i = 1; i + 1 < pts.size(); ++i) {
+                    core::Point2 foot{};
+                    double t = 0.0;
+                    if (!core::closest_point_on_line(kept.back(), pts[i + 1], pts[i], foot, t)) {
+                        kept.push_back(pts[i]);
+                        continue;
+                    }
+                    const core::Mm off = core::segment_length(pts[i], foot);
+                    if (off > tolerance)
+                        kept.push_back(pts[i]);
+                    else
+                        ++dropped;
+                }
+                if (pts.size() >= 2) kept.push_back(pts.back());
+                pts = std::move(kept);
+            }
+
+            store.push_back(std::move(pts));
+            rings.push_back(core::RingGeometry::RingInput{{}, role, doc.geometry().ring_part[r]});
+        }
+        for (std::size_t i = 0; i < rings.size(); ++i)
+            rings[i].points = store[i];
+
+        auto st = ctx.transaction().set_geometry(slot, rings);
+        if (!st) {
+            ctx.session().fail(st.error());
+            co_return;
+        }
+        ++touched;
+    }
+
+    ctx.record("nesne", Value::ids(chosen));
+    ctx.record("islem", Value::text(*verb));
+    ctx.echo(std::to_string(touched) + " çizgi düzenlendi (" + *verb + ")" +
+             (is("sadelestir") ? ", " + std::to_string(dropped) + " köşe atıldı." : "."));
+}
+
+} // namespace
+
+KENTOS_COMMAND(explode)
+{
+    return CommandSpec{
+        .id       = "core.explode",
+        .names    = {"PATLAT", "EXPLODE", "PTL"},
+        .title    = "Patlat",
+        .category = Category::Modify,
+        .params   = {Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
+                         "Patlatılacak nesneler"}},
+        .undo     = UndoPolicy::SingleTransaction,
+        .flags    = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine "
+                   "ayırır.",
+        .run    = &run_explode,
+        .effect = Effect::DocumentEdit,
+    };
+}
+
+KENTOS_COMMAND(align)
+{
+    return CommandSpec{
+        .id       = "core.align",
+        .names    = {"HİZALA", "HIZALA", "ALIGN", "HZL"},
+        .title    = "Hizala",
+        .category = Category::Modify,
+        .params =
+            {
+                Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu}, "Hizalanacak nesneler"},
+                Param::point("kaynak", "Birinci kaynak nokta"),
+                Param::point("hedef", "Birinci kaynağın gideceği yer"),
+                Param::points("kaynak2", Arity::optional(),
+                              "İkinci kaynak nokta; verilirse döndürme de yapılır"),
+                Param::points("hedef2", Arity::optional(), "İkinci kaynağın gideceği yer"),
+                Param::boolean("olcekle", Arity::optional(),
+                               "İki çiftin uzunluk oranıyla ölçekler de"),
+            },
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Bir ya da iki nokta çiftiyle nesneleri taşır, döndürür ve istenirse "
+                   "ölçekler.",
+        .run     = &run_align,
+        .effect  = Effect::DocumentEdit,
+    };
+}
+
+KENTOS_COMMAND(divide)
+{
+    return CommandSpec{
+        .id       = "core.divide",
+        .names    = {"BÖLÜMLE", "BOLUMLE", "DIVIDE", "BLM"},
+        .title    = "Bölümle",
+        .category = Category::Modify,
+        .params =
+            {
+                Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu}, "Bölünecek nesne"},
+                Param::integer_range("sayi", Arity::optional(), 2, 10000,
+                                     "Kaç eşit parçaya bölünecek"),
+                Param::number("aralik", Arity::optional(),
+                              "Sabit aralık (m); başlangıçtan itibaren yürür")
+                    .measured_in("m"),
+            },
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta "
+                   "yerleştirir.",
+        .run     = &run_divide,
+        .effect  = Effect::DocumentEdit,
+    };
+}
+
+KENTOS_COMMAND(pedit)
+{
+    return CommandSpec{
+        .id       = "core.pedit",
+        .names    = {"ÇİZGİDÜZENLE", "CIZGIDUZENLE", "PEDIT", "ÇZD", "CZD"},
+        .title    = "Çizgi Düzenle",
+        .category = Category::Modify,
+        .params =
+            {
+                Param{"nesne", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
+                      "Düzenlenecek çizgiler"},
+                Param::choice("islem", Arity::optional(), {"kapat", "ac", "ters", "sadelestir"},
+                              "kapat: kapalı alana çevir · ac: aç · ters: yönünü çevir · "
+                              "sadelestir: yakın köşeleri at"),
+                Param::number("tolerans", Arity::optional(),
+                              "sadelestir: bu uzaklıktan yakın köşeler atılır (m)")
+                    .measured_in("m"),
+            },
+        .undo    = UndoPolicy::SingleTransaction,
+        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Çizgiyi kapatır, açar, yönünü çevirir ya da yakın köşelerini atarak "
+                   "sadeleştirir.",
+        .run     = &run_pedit,
+        .effect  = Effect::DocumentEdit,
+    };
+}
+
+} // namespace kentos::command

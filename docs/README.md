@@ -48,6 +48,13 @@ Tek tek komutlar:
 | `ARANOKTA` | [Doğru üzerinde ara nokta](komutlar/point_along.md) |
 | `POLİGON` | [Poligon hesabı ve kapanma](komutlar/traverse.md) |
 | `ÇOKGEN` | [Düzgün çokgen](komutlar/polygon_regular.md) |
+| `KIR` | [Parça çıkar](komutlar/break.md) |
+| `UÇUCA` | [Uç uca ekle](komutlar/join.md) |
+| `UZUNLUK` | [Uzunluğu değiştir](komutlar/lengthen.md) |
+| `PATLAT` | [Parçalarına ayır](komutlar/explode.md) |
+| `HİZALA` | [Taşı, döndür, ölçekle](komutlar/align.md) |
+| `BÖLÜMLE` | [Nesne boyunca işaret](komutlar/divide.md) |
+| `ÇİZGİDÜZENLE` | [Çizgiyi düzenle](komutlar/pedit.md) |
 | `ALAN` | [Kapalı alan çizme](komutlar/area.md) |
 | `DİKDÖRTGEN` | [İki köşeden dörtgen ve kare çizme](komutlar/rectangle.md) |
 | `DAİRE` | [Daire çizme](komutlar/circle_draw.md) |

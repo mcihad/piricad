@@ -262,21 +262,42 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
   bölümü ve yeni sözdizimi; `make reference`. Her yöntem için sayısal test (bilinen çember, çeyrek
   çember, kare, altıgen, 3-4-5 kenar); arayüz: **Çizim > Düzgün Çokgen** ve Dikdörtgen ailesi.
 
-## P3 — Düzenleme fiilleri
+## P3 — Düzenleme fiilleri (tamamlandı)
 
-- [ ] **P3-1** `core.break` — `KIR`, `BREAK`, `KR`: bir noktada ya da iki nokta arası; parça silinir.
-- [ ] **P3-2** `core.join` — `UÇUCA`, `UCUCA`, `JOIN`, `UÇ`: uç uca değenler tek çokluçizgi; `tolerans=` Mm
-  (varsayılan 1); `BİRLEŞTİR`(boolean) ile farkı docs'ta yan yana.
-- [ ] **P3-3** `core.stretch` — `ESNET`, `STRETCH`, `ES`: KESEN pencere içindeki köşeler taşınır.
-- [ ] **P3-4** `core.lengthen` — `UZUNLUK`, `LENGTHEN`, `UZN`: `delta=|yuzde=|toplam=|dinamik`.
-- [ ] **P3-5** `core.explode` — `PATLAT`, `EXPLODE`, `PT`: blok → bileşen, çokluçizgi/alan → çizgiler; tek undo.
-- [ ] **P3-6** `core.align` — `HİZALA`, `HIZALA`, `ALIGN`, `HZ`: 1–2 nokta çifti, `olcekle=evet`; `OTURT`
-  (Helmert) ile farkı docs'ta.
-- [ ] **P3-7** `core.divide` / `core.measure_along` — `BÖLÜMLE`/`İŞARETLE`: eşit parça / sabit aralık;
-  `nokta` ya da `blok=`.
-- [ ] **P3-8** `core.pedit` — `ÇİZGİDÜZENLE`, `PEDIT`, `ÇD`: `islem=kapat|ac|ters|kalinlik|sadelestir`;
-  sadeleştirme Clipper2 `SimplifyPath`.
-- [ ] **P3-9** Kilitli katman reddi `TAŞI` kalıbıyla; eşitlik + iptal + `Value` testleri.
+- [x] `core.break` — **KIR**, `BREAK`, `KR`: iki nokta arasındaki parçayı çıkarır; tek nokta
+      boşluksuz böler (AutoCAD'in *break at point*'i). Tıklama sırası önemsiz. `BÖL`'den farkı
+      sayfada: BÖL parça atmaz.
+- [x] `core.join` — **UÇUCA**, `UCUCA`, `JOIN`, `UÇE`: uçları değen çizgileri tek çizgiye ekler,
+      gerekeni çevirir, her iki uçtan zincirler. `tolerans=` metre cinsinden bir PARAMETRE
+      (varsayılan 1 mm) ve seçim toleransı değil: ne kadar yakının "değmiş" sayıldığı ölçünün
+      özelliğidir, farenin değil. Zincire değmeyen çizgi olduğu gibi bırakılıyor. `BİRLEŞTİR` ile
+      yan yana anlatıldı — adı karışan iki komut ikisini de kullanılmaz kılar.
+- [x] `core.lengthen` — **UZUNLUK**, `LENGTHEN`, `UZN`: `delta=` | `yuzde=` | `toplam=`, tam olarak
+      biri (ret cümlesi şimdiki uzunluğu söyler), `uc=son|bas`. Çok köşeli çizgide yalnız son parça
+      değişiyor: ölçülmüş köşeler yerinde kalıyor.
+- [x] `core.explode` — **PATLAT**, `EXPLODE`, `PTL`: çizgi→kenarlar, alan→sınırı (kapanış kenarı
+      dâhil), blok referansı→bileşenleri, dizinin her kopyası için. Tanımında daire/yay/yazı olan
+      blok ADIYLA REDDEDİLİYOR: bu türler yük taşır ve aynalı ya da eşit olmayan ölçekte artık
+      daire/yay değildir; çizilmiş dış çizgisini koymak bir daireyi alanı πr² olmayan bir 128-gen'e
+      çevirir ve bu tapuya giden sayıdır. Faz 2'nin `BLOKDÜZENLE`'si gerçek cevaptır.
+- [x] `core.align` — **HİZALA**, `HIZALA`, `ALIGN`, `HZL`: bir çift taşır, iki çift döndürür,
+      `olcekle=evet` uzunluk oranıyla ölçekler. Dönüş `sin_cos_udeg`'den, libm'den değil.
+      `OTURT` ile farkı iki sayfada: OTURT çok noktalı en küçük kareler Helmert'idir.
+- [x] `core.divide` — **BÖLÜMLE**, `BOLUMLE`, `DIVIDE`, `BLM`: `sayi=k` (k−1 nokta) ya da
+      `aralik=` (kilometraj), tam olarak biri. Aralık bir KÖŞEYİ GEÇEBİLİR: istasyon run boyunca
+      okunuyor, tek kenar boyunca değil. `ARANOKTA` iki noktayı böler, bu bir NESNEYİ böler.
+- [x] `core.pedit` — **ÇİZGİDÜZENLE**, `CIZGIDUZENLE`, `PEDIT`, `ÇZD`, `CZD`:
+      `islem=kapat|ac|ters|sadelestir`. Sadeleştirme dik uzaklığa bakıyor ve UÇLARI hiç atmıyor.
+- [x] Hepsi `Category::Modify`, `AiAccessible`, tek işlem tek undo; kilitli katman reddi; yedi sayfa
+      + `docs/README.md` satırları + `make reference`; arayüzde **Değiştir** menüsünde yedi giriş
+      (§2.6a); yirmi iki sayısal test.
+- [ ] **ESNET (`core.stretch`) yapılmadı ve sebebi:** KESEN pencere içindeki köşelerin taşınması,
+      bir pencerenin İÇİNDEKİ köşeleri seçmeyi gerektiriyor — bugünkü seçim nesne düzeyinde çalışıyor,
+      köşe düzeyinde değil. P4'ün çokgen/çit seçim kipleri bu altyapıyı getiriyor; ESNET onun üstüne
+      oturur ve o pakette yapılacak.
+- [ ] **İŞARETLE (`core.measure_along`) yapılmadı:** `BÖLÜMLE aralik=` tam olarak onun işini yapıyor.
+      İkinci bir ad ikinci bir komut demek olurdu ve `blok=` ile blok yerleştirme (planın ayırt edici
+      maddesi) P6'nın pano altyapısıyla birlikte gelecek.
 
 ## P4 — Yakalama ve seçim
 

@@ -6,6 +6,48 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — yedi düzenleme fiili (P3)
+
+Bir drafter'ın sürekli kullandığı ve bu programın adı bile olmayan yedi fiil.
+
+- **KIR** iki nokta arasındaki parçayı **çıkarır** — bir çite kapı boşluğu, bir
+  duvarın geçtiği yerde bir kesinti. `BÖL` ikiye ayırır ve iki parçayı da tutar;
+  bu aradakini atar. Tek nokta verilirse boşluksuz böler. Tıklama sırası
+  önemsiz: bir el uzak ucu önce tıklar.
+- **UÇUCA** uçları değen çizgileri tek çizgiye ekler, gerekeni çevirir ve her iki
+  uçtan zincirler — sayısallaştırılmış bir harita tam olarak böyle görünür.
+  `tolerans=` bir **parametre** ve seçim toleransı değil: ne kadar yakının
+  "değmiş" sayıldığı ölçünün özelliğidir, farenin değil. `BİRLEŞTİR` poligon
+  boolean'ıdır ve iki sayfa birbirini adıyla anıyor — adı karışan iki komut
+  ikisini de kullanılmaz kılar.
+- **UZUNLUK** bir ucu kendi doğrultusunda hareket ettirir: `delta=`, `yuzde=` ya
+  da `toplam=`, tam olarak biri. Çok köşeli bir çizgide yalnız son parça değişir,
+  ölçülmüş köşeler yerinde kalır.
+- **PATLAT** çizgiyi kenarlara, alanı sınırına (kapanış kenarı dâhil), blok
+  referansını bileşenlerine ayırır. Tanımında daire, yay ya da yazı olan bir blok
+  **adıyla reddedilir**: bu türler bir yük taşır ve aynalı ya da eşit olmayan bir
+  ölçekte artık daire, yay ya da yazı değildir; çizilmiş dış çizgisini koymak bir
+  daireyi çevresi 2πr, alanı πr² olmayan bir 128-gen'e çevirir — ve bunlar tapuya
+  giden sayılardır.
+- **HİZALA** bir ya da iki nokta çiftiyle taşır, döndürür, `olcekle=evet` ile
+  ölçekler. `OTURT` çok noktalı en küçük kareler Helmert'idir ve jeodezik bir
+  işlemdir; bu çizim fiilidir. Yanlışını seçmek bir çizimin *neyi iddia ettiğini*
+  sessizce değiştirir, bu yüzden iki sayfa birbirini anıyor.
+- **BÖLÜMLE** bir nesne boyunca `sayi=k` eşit parça ya da `aralik=` kilometraj
+  işareti koyar. Aralık bir **köşeyi geçebilir**: 60 metrelik istasyon bir L'nin
+  ikinci ayağına düşerse, onu bulmak run boyunca okumak demektir ve komut bunu
+  yapıyor. `ARANOKTA` iki noktayı böler; bu bir nesneyi böler.
+- **ÇİZGİDÜZENLE**: `kapat`, `ac`, `ters`, `sadelestir`. Sadeleştirme bir köşenin
+  komşuları arasındaki doğruya olan dik uzaklığına bakıyor ve **uçları hiç
+  atmıyor** — onlar çizginin neye değdiği yerdir.
+- Yedi sayfa, `docs/README.md` satırları, `make reference`, **Değiştir**
+  menüsünde yedi giriş (§2.6a) ve yirmi iki sayısal test.
+
+**Yapılmayan ikisi ve sebepleri planda yazılı:** `ESNET` köşe düzeyinde seçim
+gerektiriyor ve bugünkü seçim nesne düzeyinde çalışıyor — P4'ün çokgen/çit
+kipleri o altyapıyı getiriyor. `İŞARETLE` ise `BÖLÜMLE aralik=`'in tam olarak
+yaptığı şey; ikinci bir ad ikinci bir komut demek olurdu.
+
 ### Eklendi — klasik çizim inşa yöntemleri (P2-1…P2-4, P2-6)
 
 Bir daire, bir yay, bir dikdörtgen ve bir elips bir çizime birden çok şekilde

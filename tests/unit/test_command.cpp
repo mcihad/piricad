@@ -1005,6 +1005,420 @@ TEST_CASE("ALIM: kapalı bir çokgen okunup birleştirilir")
     CHECK_EQ(f.undo.undo_depth(), std::size_t{1});
 }
 
+TEST_CASE("PATLAT: çizgi kenarlara, alan sınırına ayrılır")
+{
+    {
+        // A three-segment run becomes three lines, and the run itself goes.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0 20,0 30,0", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(
+            f.bus.execute_line("PATLAT nesne=" + std::to_string(key), Origin::CommandLine).ok());
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{3});
+        for (std::size_t i = 0; i < 3; ++i) {
+            const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[i + 1]);
+            CHECK_EQ(f.doc.geometry().ring_xs(span.first).size(), std::size_t{2});
+        }
+        // One command, one step: undoing puts the run back whole.
+        REQUIRE(f.bus.execute_line("GERİAL", Origin::CommandLine).ok());
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
+    }
+    {
+        // A FACE'S BOUNDARY IS CLOSED, so exploding it gives FOUR edges for four
+        // corners — the closing edge included, which is the one a naive walk
+        // over the vertices forgets.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ALAN 0,0 10,0 10,10 0,10", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(
+            f.bus.execute_line("PATLAT nesne=" + std::to_string(key), Origin::CommandLine).ok());
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{4});
+    }
+    {
+        // A kind it cannot place is NAMED rather than half-exploded.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("DAİRE 0,0 10,0", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        const auto refused =
+            f.bus.execute_line("PATLAT nesne=" + std::to_string(key), Origin::CommandLine);
+        CHECK_FALSE(refused.ok());
+        CHECK(refused.error().message.find("daire") != std::string::npos);
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
+    }
+}
+
+TEST_CASE("HİZALA: bir çift taşır, iki çift döndürür, olcekle ölçekler")
+{
+    {
+        // One pair is a move and nothing else.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(
+            f.bus
+                .execute_line("HİZALA nesne=" + std::to_string(key) + " kaynak=0,0 hedef=100,50",
+                              Origin::CommandLine)
+                .ok());
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        const auto xs   = f.doc.geometry().ring_xs(span.first);
+        const auto ys   = f.doc.geometry().ring_ys(span.first);
+        CHECK_EQ((core::Point2{xs[0], ys[0]}), (core::Point2{100'000, 50'000}));
+        CHECK_EQ((core::Point2{xs[1], ys[1]}), (core::Point2{110'000, 50'000}));
+    }
+    {
+        // TWO PAIRS ADD THE TURN. An east-pointing line asked to point north
+        // turns a quarter and keeps its length, because `olcekle` was not given.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(f.bus
+                    .execute_line("HİZALA nesne=" + std::to_string(key) +
+                                      " kaynak=0,0 hedef=0,0 kaynak2=10,0 hedef2=0,20",
+                                  Origin::CommandLine)
+                    .ok());
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        const auto xs   = f.doc.geometry().ring_xs(span.first);
+        const auto ys   = f.doc.geometry().ring_ys(span.first);
+        CHECK_EQ((core::Point2{xs[0], ys[0]}), (core::Point2{0, 0}));
+        CHECK_EQ((core::Point2{xs[1], ys[1]}), (core::Point2{0, 10'000})); ///< turned, not scaled
+    }
+    {
+        // AND `olcekle` TAKES THE LENGTH RATIO TOO: the same turn, and the line
+        // stretched to reach the second target.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(f.bus
+                    .execute_line("HİZALA nesne=" + std::to_string(key) +
+                                      " kaynak=0,0 hedef=0,0 kaynak2=10,0 hedef2=0,20 "
+                                      "olcekle=evet",
+                                  Origin::CommandLine)
+                    .ok());
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        CHECK_EQ(f.doc.geometry().ring_ys(span.first)[1], 20'000);
+    }
+}
+
+TEST_CASE("BÖLÜMLE: sayi eşit parçaya böler, aralik sabit aralıkla yürür")
+{
+    {
+        // A 100 m line into four parts: three marks at 25, 50 and 75.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 100,0", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(f.bus
+                    .execute_line("BÖLÜMLE nesne=" + std::to_string(key) + " sayi=4",
+                                  Origin::CommandLine)
+                    .ok());
+        REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{4}); ///< the line and three marks
+        const core::Mm want[3]{25'000, 50'000, 75'000};
+        for (std::size_t i = 0; i < 3; ++i) {
+            const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[i + 1]);
+            CHECK_EQ(f.doc.geometry().ring_xs(span.first)[0], want[i]);
+        }
+    }
+    {
+        // A FIXED SPACING ACROSS A CORNER, which is what a chainage list is: the
+        // station at 60 m falls on the second leg of an L, and finding it means
+        // reading along the run rather than along one segment.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 50,0 50,50", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(f.bus
+                    .execute_line("BÖLÜMLE nesne=" + std::to_string(key) + " aralik=20",
+                                  Origin::CommandLine)
+                    .ok());
+        // 20, 40, 60, 80 along a 100 m run: four marks.
+        REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{5});
+        const auto third = f.doc.geometry().rings_of(f.doc.entities().slot[3]);
+        CHECK_EQ(f.doc.geometry().ring_xs(third.first)[0], 50'000);
+        CHECK_EQ(f.doc.geometry().ring_ys(third.first)[0], 10'000);
+    }
+    {
+        // Both or neither is a caller that does not know which it means.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 100,0", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        CHECK_FALSE(f.bus
+                        .execute_line("BÖLÜMLE nesne=" + std::to_string(key) + " sayi=4 aralik=20",
+                                      Origin::CommandLine)
+                        .ok());
+        CHECK_FALSE(
+            f.bus.execute_line("BÖLÜMLE nesne=" + std::to_string(key), Origin::CommandLine).ok());
+    }
+}
+
+TEST_CASE("ÇİZGİDÜZENLE: kapat, ac, ters ve sadelestir")
+{
+    {
+        // `kapat` turns an open run into a face, and `ac` turns it back.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0 10,10", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(f.bus
+                    .execute_line("ÇİZGİDÜZENLE nesne=" + std::to_string(key) + " islem=kapat",
+                                  Origin::CommandLine)
+                    .ok());
+        const auto closed = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        CHECK(f.doc.geometry().ring_role[closed.first] != core::RingRole::Open);
+
+        REQUIRE(f.bus
+                    .execute_line("ÇİZGİDÜZENLE nesne=" + std::to_string(key) + " islem=ac",
+                                  Origin::CommandLine)
+                    .ok());
+        const auto open = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        CHECK_EQ(f.doc.geometry().ring_role[open.first], core::RingRole::Open);
+    }
+    {
+        // `ters` reverses the run, which is what an offset to the other side and
+        // a station list counted from the far end both need.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0 20,0", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(f.bus
+                    .execute_line("ÇİZGİDÜZENLE nesne=" + std::to_string(key) + " islem=ters",
+                                  Origin::CommandLine)
+                    .ok());
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        const auto xs   = f.doc.geometry().ring_xs(span.first);
+        CHECK_EQ(xs[0], 20'000);
+        CHECK_EQ(xs[2], 0);
+    }
+    {
+        // `sadelestir` drops a vertex that carries no shape: a point 1 mm off a
+        // straight run between its neighbours. The ENDS are never dropped.
+        Fixture f;
+        REQUIRE(
+            f.bus.execute_line("ÇOKLUÇİZGİ 0,0 50,0.001 100,0 100,50", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(f.bus
+                    .execute_line("ÇİZGİDÜZENLE nesne=" + std::to_string(key) +
+                                      " islem=sadelestir tolerans=0.01",
+                                  Origin::CommandLine)
+                    .ok());
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        const auto xs   = f.doc.geometry().ring_xs(span.first);
+        REQUIRE_EQ(xs.size(), std::size_t{3});
+        CHECK_EQ(xs[0], 0);
+        CHECK_EQ(xs[1], 100'000);
+        CHECK_EQ(xs[2], 100'000);
+    }
+}
+
+TEST_CASE("KIR: iki nokta arasındaki parça çıkar, tek nokta boşluksuz böler")
+{
+    {
+        // A 100 m line with a 20 m gate cut out of the middle: two pieces, one
+        // 0–40 and one 60–100. This is the verb BÖL does not have — BÖL keeps
+        // both halves touching.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 100,0", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(f.bus
+                    .execute_line("KIR nesne=" + std::to_string(key) + " birinci=40,0 ikinci=60,0",
+                                  Origin::CommandLine)
+                    .ok());
+
+        REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{2});
+        const auto head = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        CHECK_EQ(f.doc.geometry().ring_xs(head.first)[0], 0);
+        CHECK_EQ(f.doc.geometry().ring_xs(head.first)[1], 40'000);
+        const auto tail = f.doc.geometry().rings_of(f.doc.entities().slot[1]);
+        CHECK_EQ(f.doc.geometry().ring_xs(tail.first)[0], 60'000);
+        CHECK_EQ(f.doc.geometry().ring_xs(tail.first)[1], 100'000);
+
+        // ONE COMMAND, ONE STEP: undoing the break restores the whole line,
+        // not one of its two pieces.
+        CHECK_EQ(f.undo.undo_depth(), std::size_t{2}); ///< the line, then the break
+        REQUIRE(f.bus.execute_line("GERİAL", Origin::CommandLine).ok());
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
+        const auto whole = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        CHECK_EQ(f.doc.geometry().ring_xs(whole.first)[1], 100'000);
+    }
+    {
+        // THE ORDER OF THE CLICKS DOES NOT MATTER: a hand clicks the far end
+        // first as often as not, and a gap is a gap either way.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 100,0", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(f.bus
+                    .execute_line("KIR nesne=" + std::to_string(key) + " birinci=60,0 ikinci=40,0",
+                                  Origin::CommandLine)
+                    .ok());
+        const auto head = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        CHECK_EQ(f.doc.geometry().ring_xs(head.first)[1], 40'000);
+    }
+    {
+        // ONE POINT SPLITS WITH NO GAP, which is the degenerate case of the same
+        // verb: two pieces that still touch.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 100,0", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(f.bus
+                    .execute_line("KIR nesne=" + std::to_string(key) + " birinci=40,0 ikinci=40,0",
+                                  Origin::CommandLine)
+                    .ok());
+        REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{2});
+        const auto head = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        const auto tail = f.doc.geometry().rings_of(f.doc.entities().slot[1]);
+        CHECK_EQ(f.doc.geometry().ring_xs(head.first)[1], 40'000);
+        CHECK_EQ(f.doc.geometry().ring_xs(tail.first)[0], 40'000);
+    }
+}
+
+TEST_CASE("UÇUCA: uçları değen çizgiler tek çizgi olur, değmeyenler kalır")
+{
+    {
+        // Three runs drawn end to end in the wrong ORDER and one of them
+        // BACKWARDS, which is what a digitised map looks like. The join has to
+        // flip what needs flipping and chain from either end.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::CommandLine).ok());
+        REQUIRE(f.bus.execute_line("ÇİZGİ 30,0 20,0", Origin::CommandLine).ok());
+        REQUIRE(f.bus.execute_line("ÇİZGİ 10,0 20,0", Origin::CommandLine).ok());
+        std::vector<std::int64_t> ids;
+        for (std::size_t i = 0; i < 3; ++i)
+            ids.push_back(static_cast<std::int64_t>(core::raw(f.doc.entities().key[i])));
+
+        REQUIRE(f.bus
+                    .execute_line("UÇUCA nesne=" + std::to_string(ids[0]) + " nesne=" +
+                                      std::to_string(ids[1]) + " nesne=" + std::to_string(ids[2]),
+                                  Origin::CommandLine)
+                    .ok());
+
+        REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{1});
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        const auto xs   = f.doc.geometry().ring_xs(span.first);
+        REQUIRE_EQ(xs.size(), std::size_t{4});
+        CHECK_EQ(xs[0], 0);
+        CHECK_EQ(xs[1], 10'000);
+        CHECK_EQ(xs[2], 20'000);
+        CHECK_EQ(xs[3], 30'000);
+    }
+    {
+        // A GAP BEYOND THE TOLERANCE IS NOT A JOIN, and the run that did not
+        // reach is left exactly as it was rather than dragged into place.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::CommandLine).ok());
+        REQUIRE(f.bus.execute_line("ÇİZGİ 10,0 20,0", Origin::CommandLine).ok());
+        REQUIRE(f.bus.execute_line("ÇİZGİ 25,0 35,0", Origin::CommandLine).ok());
+        std::vector<std::int64_t> ids;
+        for (std::size_t i = 0; i < 3; ++i)
+            ids.push_back(static_cast<std::int64_t>(core::raw(f.doc.entities().key[i])));
+
+        REQUIRE(f.bus
+                    .execute_line("UÇUCA nesne=" + std::to_string(ids[0]) + " nesne=" +
+                                      std::to_string(ids[1]) + " nesne=" + std::to_string(ids[2]),
+                                  Origin::CommandLine)
+                    .ok());
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{2}); ///< the chain and the stray
+
+        // AND A BIG ENOUGH TOLERANCE TAKES IT. 5 m closes the gap.
+        Fixture g;
+        REQUIRE(g.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::CommandLine).ok());
+        REQUIRE(g.bus.execute_line("ÇİZGİ 15,0 25,0", Origin::CommandLine).ok());
+        std::vector<std::int64_t> two;
+        for (std::size_t i = 0; i < 2; ++i)
+            two.push_back(static_cast<std::int64_t>(core::raw(g.doc.entities().key[i])));
+        REQUIRE(g.bus
+                    .execute_line("UÇUCA nesne=" + std::to_string(two[0]) +
+                                      " nesne=" + std::to_string(two[1]) + " tolerans=5",
+                                  Origin::CommandLine)
+                    .ok());
+        CHECK_EQ(g.doc.live_entity_count(), std::size_t{1});
+    }
+    {
+        // Nothing touching at all is a refusal that names the tolerance.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::CommandLine).ok());
+        REQUIRE(f.bus.execute_line("ÇİZGİ 50,0 60,0", Origin::CommandLine).ok());
+        std::vector<std::int64_t> ids;
+        for (std::size_t i = 0; i < 2; ++i)
+            ids.push_back(static_cast<std::int64_t>(core::raw(f.doc.entities().key[i])));
+        const auto refused = f.bus.execute_line("UÇUCA nesne=" + std::to_string(ids[0]) +
+                                                    " nesne=" + std::to_string(ids[1]),
+                                                Origin::CommandLine);
+        CHECK_FALSE(refused.ok());
+        CHECK(refused.error().message.find("tolerans") != std::string::npos);
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{2});
+    }
+}
+
+TEST_CASE("UZUNLUK: delta, yuzde ve toplam; tam olarak biri")
+{
+    const auto line_length = [](Fixture& f) {
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        const auto xs   = f.doc.geometry().ring_xs(span.first);
+        return xs[xs.size() - 1] - xs[0];
+    };
+
+    {
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 100,0", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(f.bus
+                    .execute_line("UZUNLUK nesne=" + std::to_string(key) + " delta=20",
+                                  Origin::CommandLine)
+                    .ok());
+        CHECK_EQ(line_length(f), 120'000);
+    }
+    {
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 100,0", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(f.bus
+                    .execute_line("UZUNLUK nesne=" + std::to_string(key) + " yuzde=150",
+                                  Origin::CommandLine)
+                    .ok());
+        CHECK_EQ(line_length(f), 150'000);
+    }
+    {
+        // `toplam` on a MULTI-VERTEX line changes only the last segment: the
+        // rest of the run is untouched, which is what "make it 60 m" means on a
+        // line whose first leg is already surveyed.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 40,0 50,0", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(f.bus
+                    .execute_line("UZUNLUK nesne=" + std::to_string(key) + " toplam=60",
+                                  Origin::CommandLine)
+                    .ok());
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        const auto xs   = f.doc.geometry().ring_xs(span.first);
+        REQUIRE_EQ(xs.size(), std::size_t{3});
+        CHECK_EQ(xs[1], 40'000); ///< the surveyed vertex did not move
+        CHECK_EQ(xs[2], 60'000);
+    }
+    {
+        // THE START END CAN MOVE INSTEAD.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 100,0", Origin::CommandLine).ok());
+        const auto key = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        REQUIRE(f.bus
+                    .execute_line("UZUNLUK nesne=" + std::to_string(key) + " toplam=120 uc=bas",
+                                  Origin::CommandLine)
+                    .ok());
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        const auto xs   = f.doc.geometry().ring_xs(span.first);
+        CHECK_EQ(xs[0], -20'000);
+        CHECK_EQ(xs[1], 100'000);
+    }
+    {
+        // Two of the three, or none, is a caller that does not know which it
+        // means — and the refusal says what the length is now.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 100,0", Origin::CommandLine).ok());
+        const auto key  = static_cast<std::int64_t>(core::raw(f.doc.entities().key[0]));
+        const auto both = f.bus.execute_line(
+            "UZUNLUK nesne=" + std::to_string(key) + " delta=5 toplam=50", Origin::CommandLine);
+        CHECK_FALSE(both.ok());
+        CHECK(both.error().message.find("Tam olarak birini") != std::string::npos);
+        const auto none =
+            f.bus.execute_line("UZUNLUK nesne=" + std::to_string(key), Origin::CommandLine);
+        CHECK_FALSE(none.ok());
+    }
+}
+
 TEST_CASE("ELİPS: eksen yöntemi merkezi iki ucun ortası alır")
 {
     // The same ellipse two ways: centred on (50,0) with a 50 m half-axis east,
@@ -4996,7 +5410,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // 59 + SPLINE, TARAMA, BLOK, BLOKEKLE, ÖLÇÜ, LİDER + YAZDIR, YAZDIRMAPROFİLİ
     // + KATMANGÖRÜNÜM + ÇIKTIYERLEŞİMİ, ÇIKTIÖĞE, ÇIKTIŞABLON + YENİ
     // + DİKAYAK, ALIM, KESİŞİMNOKTA, ARANOKTA, ÇOKGEN
-    CHECK_EQ(f.reg.size(), std::size_t{77});
+    // + KIR, UÇUCA, UZUNLUK, PATLAT, HİZALA, BÖLÜMLE, ÇİZGİDÜZENLE
+    CHECK_EQ(f.reg.size(), std::size_t{84});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

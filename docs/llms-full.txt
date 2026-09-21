@@ -41,8 +41,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 83 (75 tanesi onay ister)
-- Katalog parmak izi: `5456301814645417354`
+- Araç sayısı: 90 (82 tanesi onay ister)
+- Katalog parmak izi: `9113513143420808644`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -55,6 +55,23 @@
 - [Koordinat sistemleri](veri/koordinat-sistemleri.md): TUREF/TM3, dönüşümler
 
 ## Araçlar
+
+### `core_align` — Hizala
+
+Bir ya da iki nokta çiftiyle nesneleri taşır, döndürür ve istenirse ölçekler.
+Komut: HİZALA (HIZALA, ALIGN, HZL)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesne` | string | hayır | Hizalanacak nesneler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kaynak` | string | evet | Birinci kaynak nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `hedef` | string | evet | Birinci kaynağın gideceği yer — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kaynak2` | string | hayır | İkinci kaynak nokta; verilirse döndürme de yapılır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `hedef2` | string | hayır | İkinci kaynağın gideceği yer — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `olcekle` | boolean | hayır | İki çiftin uzunluk oranıyla ölçekler de (evet/hayır) |
 
 ### `core_annulus` — Halka
 
@@ -150,6 +167,20 @@ Onay ister.
 | `taban` | string | evet | Taban noktası: referansların yerleştirildiği nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `nesneler` | string | hayır | Bloğa girecek nesneler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `aciklama` | string | hayır | Serbest açıklama (metin) |
+
+### `core_break` — Kır
+
+Çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta verilirse boşluk bırakmadan böler.
+Komut: KIR (BREAK, KR)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesne` | string | hayır | Kırılacak çizgi — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `birinci` | string | evet | Kırılacak parçanın ilk noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `ikinci` | string | hayır | Kırılacak parçanın ikinci noktası; verilmezse boşluk bırakmadan böler — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
 ### `core_chamfer` — Pah
 
@@ -266,6 +297,20 @@ Onay ister.
 | `metin` | string | hayır | Ölçülen değer yerine yazılacak metin (metin) |
 | `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
 
+### `core_divide` — Bölümle
+
+Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta yerleştirir.
+Komut: BÖLÜMLE (BOLUMLE, DIVIDE, BLM)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesne` | string | hayır | Bölünecek nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `sayi` | integer | hayır | Kaç eşit parçaya bölünecek (tam sayı) |
+| `aralik` | number | hayır | Sabit aralık (m); başlangıçtan itibaren yürür [m] (sayı) |
+
 ### `core_earthwork` — Hacim Hesabı
 
 Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar.
@@ -322,6 +367,18 @@ Onay ister.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 | `nesneler` | string | hayır | Silinecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_explode` — Patlat
+
+Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine ayırır.
+Komut: PATLAT (EXPLODE, PTL)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesne` | string | hayır | Patlatılacak nesneler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
 ### `core_extend` — Uzat
 
@@ -450,6 +507,19 @@ Doğrudan çalışır.
 |---|---|---|---|
 | `islem` | string | evet | Ne yapılacağı: listele ya da goster (metin) |
 | `sablon` | string | hayır | Şablonun kimliği; goster için gerekir (metin) |
+
+### `core_join` — Uç Uca Ekle
+
+Uçları birbirine değen çizgileri tek bir çizgiye ekler.
+Komut: UÇUCA (UCUCA, JOIN, UÇE)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesne` | string | hayır | Uç uca eklenecek çizgiler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `tolerans` | number | hayır | Uçların değmiş sayılması için en büyük açıklık (m); varsayılan 0,001 [m] (sayı) |
 
 ### `core_label` — Etiket
 
@@ -586,6 +656,22 @@ Onay ister.
 | `stil` | string | hayır | Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25 (metin) |
 | `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
 
+### `core_lengthen` — Uzunluk
+
+Çizginin bir ucunu kendi doğrultusunda hareket ettirerek uzunluğunu değiştirir.
+Komut: UZUNLUK (LENGTHEN, UZN)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesne` | string | hayır | Uzunluğu değişecek çizgi — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `delta` | number | hayır | Eklenecek uzunluk (m); eksi kısaltır [m] (sayı) |
+| `yuzde` | number | hayır | İstenen uzunluk, şimdikinin yüzdesi (sayı) |
+| `toplam` | number | hayır | İstenen toplam uzunluk (m) [m] (sayı) |
+| `uc` | string | hayır | Hangi uç hareket eder; varsayılan son (metin) |
+
 ### `core_line` — Çizgi
 
 İki veya daha fazla nokta arasında doğru parçaları çizer.
@@ -703,6 +789,20 @@ Onay ister.
 |---|---|---|---|
 | `baslangic` | string | evet | Kaydırmanın tutulacağı nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `bitis` | string | evet | O noktanın taşınacağı yer — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_pedit` — Çizgi Düzenle
+
+Çizgiyi kapatır, açar, yönünü çevirir ya da yakın köşelerini atarak sadeleştirir.
+Komut: ÇİZGİDÜZENLE (CIZGIDUZENLE, PEDIT, ÇZD, CZD)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesne` | string | hayır | Düzenlenecek çizgiler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `islem` | string | hayır | kapat: kapalı alana çevir · ac: aç · ters: yönünü çevir · sadelestir: yakın köşeleri at (metin) |
+| `tolerans` | number | hayır | sadelestir: bu uzaklıktan yakın köşeler atılır (m) [m] (sayı) |
 
 ### `core_perp_offset` — Dik Ayak
 

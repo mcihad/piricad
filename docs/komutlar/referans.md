@@ -18,6 +18,13 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.intersect_point`](intersect_point.md) | Kesişim Noktası | `KESİŞİMNOKTA`, `KESISIMNOKTA`, `INTERSECTPT`, `KSN` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki doğrultunun, iki uzaklığın ya da iki doğrunun kesişimine nokta koyar. |
 | [`core.point_along`](point_along.md) | Ara Nokta | `ARANOKTA`, `POINTALONG`, `ARN` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki nokta arasındaki doğru üzerinde oran, uzaklık ya da eşit bölmeyle nokta koyar. |
 | [`core.polygon_regular`](polygon_regular.md) | Düzgün Çokgen | `ÇOKGEN`, `COKGEN`, `POLYGONREG`, `ÇKG`, `CKG` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve kenar sayısından düzgün çokgen çizer: içten, dıştan ya da kenar uzunluğundan. |
+| [`core.break`](break.md) | Kır | `KIR`, `BREAK`, `KR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta verilirse boşluk bırakmadan böler. |
+| [`core.join`](join.md) | Uç Uca Ekle | `UÇUCA`, `UCUCA`, `JOIN`, `UÇE` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Uçları birbirine değen çizgileri tek bir çizgiye ekler. |
+| [`core.lengthen`](lengthen.md) | Uzunluk | `UZUNLUK`, `LENGTHEN`, `UZN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizginin bir ucunu kendi doğrultusunda hareket ettirerek uzunluğunu değiştirir. |
+| [`core.explode`](explode.md) | Patlat | `PATLAT`, `EXPLODE`, `PTL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine ayırır. |
+| [`core.align`](align.md) | Hizala | `HİZALA`, `HIZALA`, `ALIGN`, `HZL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir ya da iki nokta çiftiyle nesneleri taşır, döndürür ve istenirse ölçekler. |
+| [`core.divide`](divide.md) | Bölümle | `BÖLÜMLE`, `BOLUMLE`, `DIVIDE`, `BLM` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta yerleştirir. |
+| [`core.pedit`](pedit.md) | Çizgi Düzenle | `ÇİZGİDÜZENLE`, `CIZGIDUZENLE`, `PEDIT`, `ÇZD`, `CZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizgiyi kapatır, açar, yönünü çevirir ya da yakın köşelerini atarak sadeleştirir. |
 | [`core.text`](text.md) | Metin | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
 | [`core.edittext`](edittext.md) | Yazıyı Düzenle | `YAZIDÜZENLE`, `YAZIDUZENLE`, `EDITTEXT`, `YZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir. |
 | [`core.exportstyle`](exportstyle.md) | Stil Aktar | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
@@ -222,6 +229,92 @@ Merkez ve kenar sayısından düzgün çokgen çizer: içten, dıştan ya da ken
 | `aci` | number | isteğe bağlı | İlk köşenin merkeze göre doğrultusu; varsayılan 0 |
 
 Ayrıntılı kullanım: [ÇOKGEN](polygon_regular.md)
+
+### `core.break` — KIR (Kır)
+
+Çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta verilirse boşluk bırakmadan böler.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesne` | selection | en az 0 | Kırılacak çizgi |
+| `birinci` | point | 1 | Kırılacak parçanın ilk noktası |
+| `ikinci` | point_list | isteğe bağlı | Kırılacak parçanın ikinci noktası; verilmezse boşluk bırakmadan böler |
+
+Ayrıntılı kullanım: [KIR](break.md)
+
+### `core.join` — UÇUCA (Uç Uca Ekle)
+
+Uçları birbirine değen çizgileri tek bir çizgiye ekler.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesne` | selection | en az 0 | Uç uca eklenecek çizgiler |
+| `tolerans` | number | isteğe bağlı | Uçların değmiş sayılması için en büyük açıklık (m); varsayılan 0,001 |
+
+Ayrıntılı kullanım: [UÇUCA](join.md)
+
+### `core.lengthen` — UZUNLUK (Uzunluk)
+
+Çizginin bir ucunu kendi doğrultusunda hareket ettirerek uzunluğunu değiştirir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesne` | selection | en az 0 | Uzunluğu değişecek çizgi |
+| `delta` | number | isteğe bağlı | Eklenecek uzunluk (m); eksi kısaltır |
+| `yuzde` | number | isteğe bağlı | İstenen uzunluk, şimdikinin yüzdesi |
+| `toplam` | number | isteğe bağlı | İstenen toplam uzunluk (m) |
+| `uc` | text | isteğe bağlı | Hangi uç hareket eder; varsayılan son |
+
+Ayrıntılı kullanım: [UZUNLUK](lengthen.md)
+
+### `core.explode` — PATLAT (Patlat)
+
+Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine ayırır.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesne` | selection | en az 0 | Patlatılacak nesneler |
+
+Ayrıntılı kullanım: [PATLAT](explode.md)
+
+### `core.align` — HİZALA (Hizala)
+
+Bir ya da iki nokta çiftiyle nesneleri taşır, döndürür ve istenirse ölçekler.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesne` | selection | en az 0 | Hizalanacak nesneler |
+| `kaynak` | point | 1 | Birinci kaynak nokta |
+| `hedef` | point | 1 | Birinci kaynağın gideceği yer |
+| `kaynak2` | point_list | isteğe bağlı | İkinci kaynak nokta; verilirse döndürme de yapılır |
+| `hedef2` | point_list | isteğe bağlı | İkinci kaynağın gideceği yer |
+| `olcekle` | bool | isteğe bağlı | İki çiftin uzunluk oranıyla ölçekler de |
+
+Ayrıntılı kullanım: [HİZALA](align.md)
+
+### `core.divide` — BÖLÜMLE (Bölümle)
+
+Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta yerleştirir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesne` | selection | en az 0 | Bölünecek nesne |
+| `sayi` | integer | isteğe bağlı | Kaç eşit parçaya bölünecek |
+| `aralik` | number | isteğe bağlı | Sabit aralık (m); başlangıçtan itibaren yürür |
+
+Ayrıntılı kullanım: [BÖLÜMLE](divide.md)
+
+### `core.pedit` — ÇİZGİDÜZENLE (Çizgi Düzenle)
+
+Çizgiyi kapatır, açar, yönünü çevirir ya da yakın köşelerini atarak sadeleştirir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesne` | selection | en az 0 | Düzenlenecek çizgiler |
+| `islem` | text | isteğe bağlı | kapat: kapalı alana çevir · ac: aç · ters: yönünü çevir · sadelestir: yakın köşeleri at |
+| `tolerans` | number | isteğe bağlı | sadelestir: bu uzaklıktan yakın köşeler atılır (m) |
+
+Ayrıntılı kullanım: [ÇİZGİDÜZENLE](pedit.md)
 
 ### `core.text` — METİN (Metin)
 
@@ -1492,6 +1585,67 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
 ```json
 [
   {
+    "name": "core_align",
+    "title": "Hizala",
+    "description": "Bir ya da iki nokta çiftiyle nesneleri taşır, döndürür ve istenirse ölçekler.\nKomut: HİZALA (HIZALA, ALIGN, HZL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Hizalanacak nesneler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "kaynak": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Birinci kaynak nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "hedef": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Birinci kaynağın gideceği yer — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "kaynak2": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "İkinci kaynak nokta; verilirse döndürme de yapılır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "hedef2": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "İkinci kaynağın gideceği yer — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "olcekle": {
+          "type": "boolean",
+          "description": "İki çiftin uzunluk oranıyla ölçekler de (evet/hayır)"
+        }
+      },
+      "required": [
+        "kaynak",
+        "hedef"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.align",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "HİZALA",
+        "HIZALA",
+        "ALIGN",
+        "HZL"
+      ]
+    }
+  },
+  {
     "name": "core_annulus",
     "title": "Halka",
     "description": "Merkez, iç ve dış yarıçaptan delikli halka çizer.\nKomut: HALKA (ANNULUS, HLK)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
@@ -1810,6 +1964,51 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "BLOK",
         "BLOCK",
         "BLK"
+      ]
+    }
+  },
+  {
+    "name": "core_break",
+    "title": "Kır",
+    "description": "Çizgiden iki nokta arasındaki parçayı çıkarır; tek nokta verilirse boşluk bırakmadan böler.\nKomut: KIR (BREAK, KR)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kırılacak çizgi — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "birinci": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kırılacak parçanın ilk noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "ikinci": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kırılacak parçanın ikinci noktası; verilmezse boşluk bırakmadan böler — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "birinci"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.break",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "KIR",
+        "BREAK",
+        "KR"
       ]
     }
   },
@@ -2188,6 +2387,50 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
     }
   },
   {
+    "name": "core_divide",
+    "title": "Bölümle",
+    "description": "Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta yerleştirir.\nKomut: BÖLÜMLE (BOLUMLE, DIVIDE, BLM)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Bölünecek nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "sayi": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 10000,
+          "description": "Kaç eşit parçaya bölünecek (tam sayı)"
+        },
+        "aralik": {
+          "type": "number",
+          "description": "Sabit aralık (m); başlangıçtan itibaren yürür [m] (sayı)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.divide",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "BÖLÜMLE",
+        "BOLUMLE",
+        "DIVIDE",
+        "BLM"
+      ]
+    }
+  },
+  {
     "name": "core_earthwork",
     "title": "Hacim Hesabı",
     "description": "Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar.\nKomut: HACİM (HACIM, EARTHWORK, HCM)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
@@ -2364,6 +2607,39 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "SIL",
         "ERASE",
         "E"
+      ]
+    }
+  },
+  {
+    "name": "core_explode",
+    "title": "Patlat",
+    "description": "Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine ayırır.\nKomut: PATLAT (EXPLODE, PTL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Patlatılacak nesneler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.explode",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "PATLAT",
+        "EXPLODE",
+        "PTL"
       ]
     }
   },
@@ -2795,6 +3071,44 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "ISSABLONU",
         "JOBTEMPLATE",
         "İŞŞ"
+      ]
+    }
+  },
+  {
+    "name": "core_join",
+    "title": "Uç Uca Ekle",
+    "description": "Uçları birbirine değen çizgileri tek bir çizgiye ekler.\nKomut: UÇUCA (UCUCA, JOIN, UÇE)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Uç uca eklenecek çizgiler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "tolerans": {
+          "type": "number",
+          "description": "Uçların değmiş sayılması için en büyük açıklık (m); varsayılan 0,001 [m] (sayı)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.join",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "UÇUCA",
+        "UCUCA",
+        "JOIN",
+        "UÇE"
       ]
     }
   },
@@ -3334,6 +3648,59 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
     }
   },
   {
+    "name": "core_lengthen",
+    "title": "Uzunluk",
+    "description": "Çizginin bir ucunu kendi doğrultusunda hareket ettirerek uzunluğunu değiştirir.\nKomut: UZUNLUK (LENGTHEN, UZN)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Uzunluğu değişecek çizgi — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "delta": {
+          "type": "number",
+          "description": "Eklenecek uzunluk (m); eksi kısaltır [m] (sayı)"
+        },
+        "yuzde": {
+          "type": "number",
+          "description": "İstenen uzunluk, şimdikinin yüzdesi (sayı)"
+        },
+        "toplam": {
+          "type": "number",
+          "description": "İstenen toplam uzunluk (m) [m] (sayı)"
+        },
+        "uc": {
+          "type": "string",
+          "enum": [
+            "son",
+            "bas"
+          ],
+          "description": "Hangi uç hareket eder; varsayılan son (metin)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.lengthen",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "UZUNLUK",
+        "LENGTHEN",
+        "UZN"
+      ]
+    }
+  },
+  {
     "name": "core_line",
     "title": "Çizgi",
     "description": "İki veya daha fazla nokta arasında doğru parçaları çizer.\nKomut: ÇİZGİ (CIZGI, LINE, Ç, L)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
@@ -3696,6 +4063,55 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "KAYDIR",
         "PAN",
         "KY"
+      ]
+    }
+  },
+  {
+    "name": "core_pedit",
+    "title": "Çizgi Düzenle",
+    "description": "Çizgiyi kapatır, açar, yönünü çevirir ya da yakın köşelerini atarak sadeleştirir.\nKomut: ÇİZGİDÜZENLE (CIZGIDUZENLE, PEDIT, ÇZD, CZD)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesne": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Düzenlenecek çizgiler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "islem": {
+          "type": "string",
+          "enum": [
+            "kapat",
+            "ac",
+            "ters",
+            "sadelestir"
+          ],
+          "description": "kapat: kapalı alana çevir · ac: aç · ters: yönünü çevir · sadelestir: yakın köşeleri at (metin)"
+        },
+        "tolerans": {
+          "type": "number",
+          "description": "sadelestir: bu uzaklıktan yakın köşeler atılır (m) [m] (sayı)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.pedit",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "ÇİZGİDÜZENLE",
+        "CIZGIDUZENLE",
+        "PEDIT",
+        "ÇZD",
+        "CZD"
       ]
     }
   },
