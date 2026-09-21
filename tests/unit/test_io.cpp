@@ -364,6 +364,45 @@ TEST_CASE("NOKTALAR: yon=yaz nesneler= ile bir nesnenin köşeleri yazılır")
     (void)missing;
 }
 
+TEST_CASE("NOKTALAR: birden çok nesne anahtar yinelenerek yazılır, virgülle değil")
+{
+    // `nesneler=1,2` is ONE COORDINATE to the one grammar this program has
+    // (CLAUDE.md 5.11), never two ids, and `1,2,3` is not even that. The form
+    // that carries a list is the keyword repeated — what `docs/komutlar/points.md`
+    // teaches and what the export window writes. It used to join the keys
+    // with a comma, so exporting two objects' corners silently exported NONE:
+    // the pair bound as a point, `as_ids()` yielded nothing, and the empty list
+    // read as "no objects given" all the way down.
+    Rig r;
+    TempDir dir("koseler-cok");
+    REQUIRE(r.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ALAN 0,0 100,0 100,80 0,80", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line("ALAN 200,0 300,0 300,80", Origin::Test).ok());
+
+    const std::string path = dir.file("koseler.txt");
+    auto wrote = r.bus.execute_line("NOKTALAR dosya=\"" + path + "\" yon=yaz nesneler=1 nesneler=2",
+                                    Origin::Test);
+    if (!wrote) FAIL_WITH("NOKTALAR yaz iki nesne", wrote.error().message);
+
+    std::ifstream in(path);
+    std::vector<std::string> rows;
+    for (std::string line; std::getline(in, line);)
+        if (!line.empty() && line[0] != '#') rows.push_back(line);
+
+    // Four corners from the square and three from the triangle, each numbered
+    // under its own object.
+    REQUIRE_EQ(rows.size(), std::size_t{7});
+    CHECK(rows.front().rfind("1.1;", 0) == 0);
+    CHECK(rows[4].rfind("2.1;", 0) == 0);
+
+    // And the comma form is refused outright rather than writing one object or
+    // an empty file, with the working form named in the message.
+    auto comma = r.bus.execute_line(
+        "NOKTALAR dosya=\"" + dir.file("virgul.txt") + "\" yon=yaz nesneler=1,2", Origin::Test);
+    CHECK(!comma.ok());
+    CHECK(comma.error().message.find("nesneler=1 nesneler=2") != std::string::npos);
+}
+
 TEST_CASE("NOKTALAR: milimetre tam okunur, çift duyarlıktan geçmez")
 {
     TempDir tmp("nokta-hassas");

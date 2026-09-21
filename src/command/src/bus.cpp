@@ -176,7 +176,25 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
     };
 
     const auto value_from_token = [&](const Param& p, const Token& t) -> core::Result<Value> {
-        if (is_coordinate(t)) {
+        // A COORDINATE IS ONE ONLY WHERE A POINT IS ASKED FOR. This ran before
+        // the `switch` below and so turned `x,y` into a point for EVERY kind of
+        // parameter. `Validator::check_against_spec` caught the mistake
+        // afterwards for a number, a text or a boolean — and did not catch
+        // it for a SELECTION: `append` reads the value with `as_ids()`, a point
+        // yields none, and the empty id list that was stored passes a selection's
+        // `arity.min == 0` as though the argument had never been written. So
+        // `SİL nesneler=1,2` deleted nothing and
+        // `KOPYALA … 485640,4310200 485660,4310200` made ONE copy where three
+        // were asked for, both reporting success. Dropping an argument on the
+        // floor is exactly what `.claude/command.md` P15 forbids.
+        //
+        // More than one value is given by REPEATING THE KEYWORD —
+        // `nesneler=1 nesneler=2` — which is the form every `/docs/komutlar`
+        // page teaches and the only one that can carry a third id: `1,2,3` never
+        // reaches here, because `classify` refuses it as a coordinate. A comma
+        // pair at a selection is therefore a user error, and the error at the
+        // end of this lambda now names it and says what to write instead.
+        if (is_coordinate(t) && (p.kind == ParamKind::Point || p.kind == ParamKind::PointList)) {
             auto pt = resolve_point(t, last, ctx);
             if (!pt) return pt.error();
             last      = pt.value();
@@ -249,9 +267,15 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
         case ParamKind::Point:
         case ParamKind::PointList: break;
         }
-        return core::err(ErrorCode::ParseError, "'" + spec.id + "': '" + p.name + "' parametresi " +
-                                                    param_kind_label(p.kind) +
-                                                    " bekliyor. Girilen: " + describe(t));
+        std::string why = "'" + spec.id + "': '" + p.name + "' parametresi " +
+                          param_kind_label(p.kind) + " bekliyor. Girilen: " + describe(t);
+        // `1,2` IS THE COMMONEST WAY TO GET A LIST WRONG, because a comma pair
+        // reads as one coordinate and not as two values. The form that works is
+        // the keyword repeated, so the message says it rather than leaving a
+        // trap with no lesson in it.
+        if (is_coordinate(t) && p.arity.max > 1)
+            why += ". Birden çok değer için anahtarı yineleyin: " + p.name + "=1 " + p.name + "=2";
+        return core::err(ErrorCode::ParseError, why);
     };
 
     for (const auto& t : tokens) {

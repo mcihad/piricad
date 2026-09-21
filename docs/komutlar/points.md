@@ -110,8 +110,9 @@ NOKTALAR dosya="koseler.txt" yon=yaz nesneler=4128
 4128.4;485300.000;4310245.000;Kadastro Parselleri
 ```
 
-Birden çok nesne virgülle verilir: `nesneler=4128,4129`. Delikli bir parselin iç
-halkası dış halkanın ardından, numara sırasıyla devam eder.
+Birden çok nesne için anahtar yinelenir: `nesneler=4128 nesneler=4129`. Virgül
+koordinat ayıracıdır, kimlik ayıracı değil — `nesneler=4128,4129` reddedilir.
+Delikli bir parselin iç halkası dış halkanın ardından, numara sırasıyla devam eder.
 
 ### Arayüz
 

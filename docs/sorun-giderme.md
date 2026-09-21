@@ -55,6 +55,15 @@ parametreleri listeler.
 **Çözüm.** Mesaj beklenen tipi söylüyor: nokta, nokta listesi, sayı, tam sayı, metin,
 evet/hayır veya nesne seçimi.
 
+### `'core.erase': 'nesneler' parametresi nesne seçimi bekliyor. Girilen: point(1.000000,2.000000). Birden çok değer için anahtarı yineleyin: nesneler=1 nesneler=2`
+
+**Sebep.** Birden çok kimlik virgülle yazılmış. `1,2` bu programın tek dilbilgisinde
+bir koordinattır — iki kimlik değil — ve üç kimlik (`1,2,3`) koordinat olarak da
+okunamaz.
+
+**Çözüm.** Anahtarı yineleyin: `SİL nesneler=1 nesneler=2 nesneler=3`. Aynı kural
+çok değerli her parametre için geçerlidir. Betikte liste dizidir: `"nesneler": [1, 2, 3]`.
+
 ### `'core.line' daha fazla argüman almıyor. Fazlalık: 'xyz'`
 
 **Sebep.** Komutun bütün parametreleri dolmuş, ama satırda argüman kalmış.

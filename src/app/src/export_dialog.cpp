@@ -41,19 +41,16 @@ ExportDialog::ExportDialog(Controller& controller, ExportSubject subject, QStrin
     // selection is session state (model.md R43); a journal line that said "what
     // was selected" would replay differently on another day.
     if (subject_ == ExportSubject::Coordinates) {
-        QStringList ids;
         for (const core::EntityKey key : controller_.bus().selection().keys())
-            ids << QString::number(static_cast<qulonglong>(key));
-        selection_ = ids.join(QLatin1Char(','));
+            selection_ << QString::number(static_cast<qulonglong>(key));
     }
 
     QString what;
     switch (subject_) {
     case ExportSubject::Drawing: what = tr("— çizim"); break;
     case ExportSubject::Coordinates:
-        what = selection_.contains(QLatin1Char(','))
-                   ? tr("— %1 nesnenin köşeleri").arg(selection_.count(QLatin1Char(',')) + 1)
-                   : tr("— nesne %1 köşeleri").arg(selection_);
+        what = selection_.size() > 1 ? tr("— %1 nesnenin köşeleri").arg(selection_.size())
+                                     : tr("— nesne %1 köşeleri").arg(selection_.join(QString()));
         break;
     case ExportSubject::Style: what = tr("— %1 stili").arg(context_); break;
     }
@@ -232,7 +229,10 @@ QString ExportDialog::commandLine() const
         return QStringLiteral("DIŞAAKTAR dosya=%1 bicim=%2").arg(quoted(path), f.id);
     case ExportSubject::Coordinates: {
         QString line = QStringLiteral("NOKTALAR dosya=%1 yon=yaz").arg(quoted(path));
-        if (!selection_.isEmpty()) line += QStringLiteral(" nesneler=%1").arg(selection_);
+        // ONE `nesneler=` PER OBJECT. `nesneler=1,2` is the coordinate `1,2` to
+        // the one parser this program has, never two ids (see `bind_tokens`).
+        for (const QString& id : selection_)
+            line += QStringLiteral(" nesneler=%1").arg(id);
         if (axes_ != nullptr && axes_->current() == 1) line += QStringLiteral(" eksen=XY");
         return line;
     }
