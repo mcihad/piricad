@@ -234,8 +234,14 @@ std::string tool_name_for(const command::CommandSpec& spec)
 ToolDef tool_for(const command::CommandSpec& spec, Style style)
 {
     ToolDef tool;
-    tool.name       = tool_name_for(spec);
-    tool.title      = spec.names.empty() ? spec.id : spec.names.front();
+    tool.name = tool_name_for(spec);
+    // MCP's `title` IS A DISPLAY NAME, and it used to carry the shouted primary
+    // name — `ÇIKTIYERLEŞİMİ` — which is the word to type rather than a label.
+    // The command declares a label now (`CommandSpec::title`) and a client that
+    // shows a tool list gets the same words a menu does.
+    tool.title      = !spec.title.empty()  ? spec.title
+                      : spec.names.empty() ? spec.id
+                                           : spec.names.front();
     tool.command_id = spec.id;
     tool.mutates    = !has_flag(spec.flags, command::Flags::NoEffect);
 

@@ -418,6 +418,7 @@ KENTOS_COMMAND(select)
     return CommandSpec{
         .id       = "core.select",
         .names    = {"SEÇ", "SEC", "SELECT", "S"},
+        .title    = "Seç",
         .category = Category::Modify,
         .params =
             {

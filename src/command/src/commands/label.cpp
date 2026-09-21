@@ -111,7 +111,12 @@ struct Slot
 
 Task<void> run(Context& ctx)
 {
-    auto source_name = co_await ctx.text("katman", "Etiketlenecek katman");
+    // THE LAYERS THIS DRAWING HAS. A prompt for a name is unanswerable by a
+    // mouse; the shell offers what the command names (`Prompt::choices`).
+    std::vector<std::string> known;
+    for (const core::Layer& l : ctx.document().layers())
+        known.push_back(l.name);
+    auto source_name = co_await ctx.text("katman", "Etiketlenecek katman", known);
     if (!source_name || source_name->empty()) co_return;
 
     Bus& bus                   = ctx.session().bus();
@@ -348,6 +353,7 @@ KENTOS_COMMAND(label)
     return CommandSpec{
         .id       = "core.label",
         .names    = {"ETİKET", "ETIKET", "LABEL", "ETK"},
+        .title    = "Etiket",
         .category = Category::Draw,
         .params =
             {

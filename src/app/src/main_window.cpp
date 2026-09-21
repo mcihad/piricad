@@ -501,6 +501,13 @@ ThemeMode MainWindow::themeFromPreferences() const
                : ThemeMode::Light;
 }
 
+// EVERY ACTION THAT RUNS A COMMAND SAYS WHICH ONE. It is not decoration: the
+// flyout prints the word beside the name so the mouse teaches the keyboard,
+// `syncToolSelection` lights the right button when the same command arrives from
+// the prompt or a script, and `KENTOS_TOOL_PROBE` answers "how much of this
+// program can a hand reach" by walking the actions rather than by a hand-kept
+// list of what has a button — which would be the second command list CLAUDE.md
+// 5.10 exists to forbid.
 QAction* MainWindow::commandAction(Glyph glyph, const QString& text, const QString& line,
                                    const QString& tip, const QKeySequence& shortcut)
 {
@@ -515,8 +522,26 @@ QAction* MainWindow::commandAction(Glyph glyph, const QString& text, const QStri
     // and then leave the column that teaches its name blank.
     action->setProperty(kToolCommand, line.section(QLatin1Char(' '), 0, 0));
 
-    connect(action, &QAction::triggered, this,
-            [this, line] { controller_->runLine(line, command::Origin::Gui); });
+    connect(action, &QAction::triggered, this, [this, line] {
+        // WHERE THE ANSWER LANDS HAS TO BE VISIBLE. A query command answers by
+        // writing to the transcript and changes nothing on the canvas, so with
+        // the transcript panel closed — which is how it starts — pressing a
+        // listing or an info command looked exactly like pressing a dead menu
+        // row. The user said as much: they could not tell why the items were
+        // there.
+        //
+        // The panel is brought up BEFORE the line runs, so the answer arrives in
+        // front of somebody. Only for a command that answers in words: one that
+        // draws, moves or deletes shows its work on the canvas and a panel
+        // opening over it would be in the way.
+        const command::CommandSpec* spec =
+            controller_->registry().resolve(line.section(QLatin1Char(' '), 0, 0).toStdString());
+        const bool answers_in_words =
+            spec != nullptr && has_flag(spec->flags, command::Flags::ReadOnly) &&
+            spec->category != command::Category::View && spec->category != command::Category::File;
+        if (answers_in_words) showTranscript();
+        controller_->runLine(line, command::Origin::Gui);
+    });
     return action;
 }
 
@@ -558,16 +583,31 @@ QAction* MainWindow::modifyTool(Glyph glyph, const QString& text, const QString&
 }
 
 QAction* MainWindow::placeholder(Glyph glyph, const QString& text, const QString& command,
-                                 const QString& phase)
+                                 const QString& phase, const QString& explains)
 {
     auto* action = new QAction(text, this);
-    action->setEnabled(false);
     action->setData(static_cast<int>(glyph));
 
     const QString tip = command.isEmpty() ? tr("%1 — %2'de gelecek").arg(text, phase)
                                           : tr("%1 — %2'de gelecek").arg(command, phase);
     action->setToolTip(tip);
     action->setStatusTip(tip);
+
+    // LIVE, AND IT SAYS WHY IT IS THERE. A disabled row answers nothing when it
+    // is clicked, so an entry for work that has not landed read as an entry that
+    // was simply broken. It now opens a box naming the feature, the phase it
+    // arrives in and what to use today — which is what a user asked for when
+    // they could not tell what these items were for.
+    connect(action, &QAction::triggered, this, [this, text, command, phase, explains] {
+        QMessageBox box(this);
+        box.setIcon(QMessageBox::Information);
+        box.setWindowTitle(text);
+        box.setText(tr("<b>%1</b> — henüz yok, %2'de gelecek.").arg(text, phase));
+        box.setInformativeText(explains);
+        box.setStandardButtons(QMessageBox::Ok);
+        applyThemeToChildren(&box, theme_);
+        box.exec();
+    });
     return action;
 }
 
@@ -578,34 +618,40 @@ void MainWindow::buildActions()
     actNew_->setShortcut(QKeySequence::New);
     actNew_->setToolTip(tr("YENİ — boş bir çizim açar"));
     actNew_->setData(static_cast<int>(Glyph::New));
+    actNew_->setProperty(kToolCommand, QStringLiteral("YENİ"));
     connect(actNew_, &QAction::triggered, this, &MainWindow::newProject);
 
     actOpen_ = new QAction(tr("Aç…"), this);
     actOpen_->setShortcut(QKeySequence::Open);
     actOpen_->setToolTip(tr("AÇ — bir KentOSCad proje dosyası açar"));
     actOpen_->setData(static_cast<int>(Glyph::Open));
+    actOpen_->setProperty(kToolCommand, QStringLiteral("AÇ"));
     connect(actOpen_, &QAction::triggered, this, &MainWindow::openProject);
 
     actSave_ = new QAction(tr("Kaydet"), this);
     actSave_->setShortcut(QKeySequence::Save);
     actSave_->setToolTip(tr("KAYDET — çizimi bağlı olduğu dosyaya yazar"));
     actSave_->setData(static_cast<int>(Glyph::Save));
+    actSave_->setProperty(kToolCommand, QStringLiteral("KAYDET"));
     connect(actSave_, &QAction::triggered, this, &MainWindow::saveProject);
 
     actSaveAs_ = new QAction(tr("Farklı Kaydet…"), this);
     actSaveAs_->setShortcut(QKeySequence::SaveAs);
     actSaveAs_->setToolTip(tr("FARKLIKAYDET — çizimi yeni bir dosyaya yazar"));
     actSaveAs_->setData(static_cast<int>(Glyph::Save));
+    actSaveAs_->setProperty(kToolCommand, QStringLiteral("FARKLIKAYDET"));
     connect(actSaveAs_, &QAction::triggered, this, &MainWindow::saveProjectAs);
 
     actImport_ = new QAction(tr("İçe Aktar…"), this);
     actImport_->setToolTip(tr("İÇEAKTAR — dış bir veri dosyasını çizime ekler"));
     actImport_->setData(static_cast<int>(Glyph::Open));
+    actImport_->setProperty(kToolCommand, QStringLiteral("İÇEAKTAR"));
     connect(actImport_, &QAction::triggered, this, &MainWindow::importData);
 
     actExport_ = new QAction(tr("Dışa Aktar…"), this);
     actExport_->setToolTip(tr("DIŞAAKTAR — çizimi dış bir veri biçimine yazar"));
     actExport_->setData(static_cast<int>(Glyph::Export));
+    actExport_->setProperty(kToolCommand, QStringLiteral("DIŞAAKTAR"));
     connect(actExport_, &QAction::triggered, this, &MainWindow::exportData);
 
     // YAZDIR, and it is two presses rather than one window: the first opens the
@@ -616,6 +662,7 @@ void MainWindow::buildActions()
     actPrint_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_P));
     actPrint_->setToolTip(tr("YAZDIR — yazdırma alanını aç, sonra önizlemeye geç (Ctrl+P)"));
     actPrint_->setData(static_cast<int>(Glyph::Print));
+    actPrint_->setProperty(kToolCommand, QStringLiteral("YAZDIR"));
     connect(actPrint_, &QAction::triggered, this, [this] { printWithProfile(); });
 
     actPrintMenu_ = new QAction(tr("Yazdırma profilleri"), this);
@@ -626,6 +673,7 @@ void MainWindow::buildActions()
     actScript_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
     actScript_->setToolTip(tr("BETİK — bir JSON betiğini komut veri yolundan çalıştırır"));
     actScript_->setData(static_cast<int>(Glyph::Script));
+    actScript_->setProperty(kToolCommand, QStringLiteral("BETİK"));
     connect(actScript_, &QAction::triggered, this, &MainWindow::openScript);
 
     actDatabase_ = new QAction(tr("Veritabanı…"), this);
@@ -633,6 +681,7 @@ void MainWindow::buildActions()
     actDatabase_->setToolTip(tr("VERİTABANI — PostGIS sunucusuna bağlanır, katmanları tablo, "
                                 "projeleri kayıt olarak yazar"));
     actDatabase_->setData(static_cast<int>(Glyph::Open));
+    actDatabase_->setProperty(kToolCommand, QStringLiteral("VERİTABANI"));
     connect(actDatabase_, &QAction::triggered, this, &MainWindow::openDatabase);
 
     // THE PROJECT'S OWN WINDOW, in the Dosya menu because the project IS the
@@ -642,6 +691,7 @@ void MainWindow::buildActions()
     actProjectSettings_->setData(static_cast<int>(Glyph::Document));
     actProjectSettings_->setToolTip(
         tr("Çizimle birlikte giden ayarlar ve projenin öznitelik sütunları"));
+    actProjectSettings_->setProperty(kToolCommand, QStringLiteral("AYAR"));
     connect(actProjectSettings_, &QAction::triggered, this, &MainWindow::openProjectSettings);
 
     actSettings_ = new QAction(tr("Ayarlar…"), this);
@@ -649,6 +699,7 @@ void MainWindow::buildActions()
     actSettings_->setShortcut(QKeySequence::Preferences);
     actSettings_->setToolTip(tr("Bildirilen her ayarı kapsamına göre gösterir; her "
                                 "değişiklik AYAR, TERCİH ya da MOD komutu olarak geçer"));
+    actSettings_->setProperty(kToolCommand, QStringLiteral("TERCİH"));
     connect(actSettings_, &QAction::triggered, this, &MainWindow::openSettings);
 
     actQuit_ = new QAction(tr("Çıkış"), this);
@@ -794,6 +845,7 @@ void MainWindow::buildActions()
     actErase_->setShortcutContext(Qt::WindowShortcut);
     addAction(actErase_);
 
+    actErase_->setProperty(kToolCommand, QStringLiteral("SİL"));
     connect(actErase_, &QAction::triggered, this, [this] {
         // With a selection the button IS the command, exactly as typing `SİL`
         // would be. With nothing selected there is nothing to name, so the button
@@ -813,10 +865,24 @@ void MainWindow::buildActions()
     // The clipboard group. `KES`/`YAPIŞTIR` are Phase 2 commands; the buttons
     // exist now so the bar has the shape design.md 7 draws, and each is disabled
     // with the phase named in its tooltip rather than silently absent.
-    actCut_      = placeholder(Glyph::Cut, tr("Kes"), QStringLiteral("KES"), tr("Faz 2"));
-    actCopyClip_ = placeholder(Glyph::Duplicate, tr("Panoya Kopyala"),
-                               QStringLiteral("PANOKOPYALA"), tr("Faz 2"));
-    actPaste_ = placeholder(Glyph::Paste, tr("Yapıştır"), QStringLiteral("YAPIŞTIR"), tr("Faz 2"));
+    actCut_ =
+        placeholder(Glyph::Cut, tr("Kes"), QStringLiteral("KES"), tr("Faz 2"),
+                    tr("Seçili nesneleri panoya alıp çizimden silecek. Pano yükü çizimin kendi "
+                       "JSON biçiminde olacak, yani başka bir KentOSCad penceresine ve bir dosyaya "
+                       "aynı şekilde yapıştırılabilecek.\n\nBugün: nesneleri KOPYALA ile "
+                       "çoğaltabilir, SİL ile silebilirsiniz."));
+    actCopyClip_ = placeholder(
+        Glyph::Duplicate, tr("Panoya Kopyala"), QStringLiteral("PANOKOPYALA"), tr("Faz 2"),
+        tr("Seçili nesneleri çizimden silmeden panoya alacak. Yük, dosyaya yazılan "
+           "biçimin aynısı olacak — ikinci bir pano biçimi olmayacak.\n\nBugün: aynı "
+           "çizim içinde çoğaltmak için KOPYALA, başka bir dosyaya taşımak için "
+           "DIŞAAKTAR / İÇEAKTAR."));
+    actPaste_ =
+        placeholder(Glyph::Paste, tr("Yapıştır"), QStringLiteral("YAPIŞTIR"), tr("Faz 2"),
+                    tr("Panodaki nesneleri tıkladığınız noktaya, yeni kimliklerle koyacak. Aynı "
+                       "komut bir JSON dosyasından da yapıştırabilecek, böylece betikten ve "
+                       "başsız çalıştırmada da kullanılabilecek.\n\nBugün: dış veriyi İÇEAKTAR "
+                       "ile alabilirsiniz."));
 
     // A MODAL TOOL that collects its own two corners. It shipped disabled because
     // SEÇ could take a box as arguments and could not ask for one.
@@ -913,6 +979,7 @@ void MainWindow::buildActions()
     actUndo_->setShortcut(QKeySequence::Undo);
     actUndo_->setToolTip(tr("GERİAL — son işlemi geri alır"));
     actUndo_->setData(static_cast<int>(Glyph::Undo));
+    actUndo_->setProperty(kToolCommand, QStringLiteral("GERİAL"));
     connect(actUndo_, &QAction::triggered, this,
             [this] { controller_->runCommand(QStringLiteral("GERİAL")); });
 
@@ -920,6 +987,7 @@ void MainWindow::buildActions()
     actRedo_->setShortcut(QKeySequence::Redo);
     actRedo_->setToolTip(tr("YİNELE — geri alınan işlemi yineler"));
     actRedo_->setData(static_cast<int>(Glyph::Redo));
+    actRedo_->setProperty(kToolCommand, QStringLiteral("YİNELE"));
     connect(actRedo_, &QAction::triggered, this,
             [this] { controller_->runCommand(QStringLiteral("YİNELE")); });
 
@@ -1013,11 +1081,19 @@ void MainWindow::buildActions()
     actLayer_ = new QAction(tr("Katman"), this);
     actLayer_->setToolTip(tr("KATMAN — katman oluşturur ve aktif yapar"));
     actLayer_->setData(static_cast<int>(Glyph::Layer));
+    actLayer_->setProperty(kToolCommand, QStringLiteral("KATMAN"));
     connect(actLayer_, &QAction::triggered, this,
             [this] { controller_->runCommand(QStringLiteral("KATMAN")); });
 
-    actLayerManager_ = placeholder(Glyph::LayerManager, tr("Katman Yöneticisi"),
-                                   QStringLiteral("KATMANYÖNETİCİSİ"), tr("Faz 1"));
+    actLayerManager_ =
+        placeholder(Glyph::LayerManager, tr("Katman Yöneticisi"),
+                    QStringLiteral("KATMANYÖNETİCİSİ"), tr("Faz 1"),
+                    tr("Bütün katmanları tek pencerede gösterecek: adı, görünürlüğü, kilidi, "
+                       "rengi, çizgi tipi ve nesne sayısı bir tabloda; çoklu seçimle topluca "
+                       "değiştirilebilecek.\n\nBugün: sağdaki Katmanlar paneli katmanları "
+                       "listeler ve görünürlüğü ile kilidi oradan değiştirilir; adı, rengi ve "
+                       "stili için KATMAN ve STİL komutları; hepsini birden açıp kapatmak için "
+                       "Katman menüsü."));
     // A MODAL TOOL like every other two-click tool. It was a plain action, so it
     // ran but never lit: the user clicked twice on a canvas that gave no sign a
     // measurement was in progress, and the answer went to a hidden tab.
@@ -1042,9 +1118,14 @@ void MainWindow::buildActions()
     connect(actCoordinate_, &QAction::triggered, this,
             [this] { controller_->runCommand(QStringLiteral("KOORDİNAT")); });
     drawingTools_->addAction(actCoordinate_);
-    actIdentify_ =
-        placeholder(Glyph::Identify, tr("Sorgula"), QStringLiteral("SORGULA"), tr("Faz 2"));
-    actTable_ = new QAction(tr("Öznitelik Tablosu"), this);
+    // THE COMMAND EXISTS, so the button is not a placeholder any more. `SORGULA`
+    // shipped with the read tools and the menu still carried a disabled `Faz 2`
+    // stub beside it — a dead entry with a live command's name, which is worse
+    // than no entry at all because it says the feature is missing.
+    actIdentify_ = commandAction(Glyph::Identify, tr("Sorgula"), QStringLiteral("SORGULA"),
+                                 tr("SORGULA — katman ve öznitelik koşuluna uyan nesneleri "
+                                    "sayar ve seçer  ·  kısaltma: SRG"));
+    actTable_    = new QAction(tr("Öznitelik Tablosu"), this);
     actTable_->setData(static_cast<int>(Glyph::Table));
     actTable_->setToolTip(tr("Katmanın satırlarını ve sütunlarını aç"));
     actTable_->setShortcut(QKeySequence(Qt::Key_F6));
@@ -1063,6 +1144,7 @@ void MainWindow::buildActions()
     actAi_->setToolTip(tr("Yapay zeka sohbeti — model komut önerir, uygulayan sizsiniz"));
     actAi_->setStatusTip(actAi_->toolTip());
     actAi_->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+A")));
+    actAi_->setProperty(kToolCommand, QStringLiteral("ÖNERİ"));
     connect(actAi_, &QAction::triggered, this, [this] {
         if (chatDock_ == nullptr) return;
         chatDock_->show();
@@ -1252,7 +1334,7 @@ void MainWindow::buildMenus()
     if (tbMain_) view->addAction(tbMain_->toggleViewAction());
 
     auto* panels = view->addMenu(tr("Paneller"));
-    for (QDockWidget* dock : {layerDock_, propertyDock_, transcriptDock_, journalDock_}) {
+    for (QDockWidget* dock : {layerDock_, propertyDock_, journalDock_}) {
         if (dock) panels->addAction(dock->toggleViewAction());
     }
     panels->addSeparator();
@@ -1280,6 +1362,22 @@ void MainWindow::buildMenus()
     draw->addAction(actInsert_);
     draw->addAction(actDimension_);
     draw->addAction(actLeader_);
+    draw->addSeparator();
+    // THE THREE THAT HAD NO ENTRY AT ALL. A guide line, a label read from a
+    // layer's own attributes and a contour set are drawing tools a surveyor
+    // reaches for, and all three were reachable only by typing their names.
+    // Curated here rather than left to the generated tail, because a tool this
+    // ordinary belongs on the menu a hand already opens.
+    draw->addAction(commandAction(Glyph::Line, tr("Kılavuz"), QStringLiteral("KILAVUZ"),
+                                  tr("KILAVUZ — cetvel kılavuzu ekler, listeler ve siler  ·  "
+                                     "kısaltma: KLV")));
+    draw->addAction(commandAction(Glyph::Text, tr("Etiket"), QStringLiteral("ETİKET"),
+                                  tr("ETİKET — katmandaki nesneleri özniteliklerinden okuyarak "
+                                     "etiketler  ·  kısaltma: ETK")));
+    draw->addAction(
+        commandAction(Glyph::Function, tr("Eşyükselti Eğrileri"), QStringLiteral("EŞYÜKSELTİ"),
+                      tr("EŞYÜKSELTİ — kotlu noktalardan eş yükselti eğrileri çizer  ·  "
+                         "kısaltma: EŞY")));
 
     auto* modify = bar->addMenu(tr("D&eğiştir"));
     modify->addAction(actErase_);
@@ -1316,6 +1414,23 @@ void MainWindow::buildMenus()
     auto* map = bar->addMenu(tr("&Harita"));
     map->addAction(actIdentify_);
     map->addAction(actMeasure_);
+    map->addAction(actMeasureArea_);
+    map->addAction(actCoordinate_);
+    map->addSeparator();
+    // THE SURVEY COMPUTATIONS. `APLİKASYON` is what a crew takes to the field
+    // and `HACİM` is what an earthwork report is made of; neither had a way in.
+    map->addAction(commandAction(Glyph::Locate, tr("Aplikasyon"), QStringLiteral("APLİKASYON"),
+                                 tr("APLİKASYON — istasyondan hedefe semt açısı ve kenar  ·  "
+                                    "kısaltma: APL")));
+    map->addAction(commandAction(Glyph::Function, tr("Hacim Hesabı"), QStringLiteral("HACİM"),
+                                 tr("HACİM — iki yüzey arasındaki kazı ve dolgu hacmi  ·  "
+                                    "kısaltma: HCM")));
+    map->addAction(commandAction(Glyph::Function, tr("Oturt (Helmert)"), QStringLiteral("OTURT"),
+                                 tr("OTURT — ortak noktalardan Helmert dönüşümüyle çizimi "
+                                    "oturtur  ·  kısaltma: OTR")));
+    map->addAction(commandAction(Glyph::Layer, tr("Dönüştür"), QStringLiteral("DÖNÜŞTÜR"),
+                                 tr("DÖNÜŞTÜR — çizimi başka bir koordinat sistemine "
+                                    "dönüştürür  ·  kısaltma: DNS")));
     map->addSeparator();
     map->addAction(actDatabase_);
 
@@ -1352,6 +1467,7 @@ void MainWindow::buildMenus()
     actMcp_ = new QAction(tr("MCP Sunucusunu Başlat"), this);
     actMcp_->setData(static_cast<int>(Glyph::Server));
     actMcp_->setStatusTip(tr("Yapay zeka ajanlarının bağlanacağı yerel sunucuyu açar"));
+    actMcp_->setProperty(kToolCommand, QStringLiteral("MCPSUNUCU"));
     connect(actMcp_, &QAction::triggered, this, [this] {
 #if KENTOS_HAVE_MCP
         const bool up =
@@ -1392,8 +1508,7 @@ void MainWindow::buildMenus()
     });
 
     auto* window = bar->addMenu(tr("&Pencere"));
-    for (QDockWidget* dock :
-         {layerDock_, propertyDock_, chatDock_, transcriptDock_, journalDock_}) {
+    for (QDockWidget* dock : {layerDock_, propertyDock_, chatDock_, journalDock_}) {
         if (dock) window->addAction(dock->toggleViewAction());
     }
     window->addSeparator();
@@ -1414,11 +1529,148 @@ void MainWindow::buildMenus()
     // `YARDIM` rather than calling the page directly keeps the menu an ordinary
     // client: the same line, the same transcript, the same page a typed `YARDIM`
     // or `Ctrl+K` gets (Article 1.2).
+    ref->setProperty(kToolCommand, QStringLiteral("YARDIM"));
     connect(ref, &QAction::triggered, this,
             [this] { controller_->runLine(QStringLiteral("YARDIM"), command::Origin::Gui); });
     about->addSeparator();
     auto* info = about->addAction(tr("Hakkında"));
     connect(info, &QAction::triggered, this, &MainWindow::showAbout);
+
+    // AND EVERYTHING ELSE THE REGISTRY KNOWS, so the bar is complete rather than
+    // remembered. Last, because it reads what the curated entries above already
+    // offer.
+    completeMenusFromRegistry();
+}
+
+namespace {
+
+/// The mark a generated menu entry wears: its category's, because a generated
+/// entry has no drawing of its own and a wrong picture is worse than a generic
+/// one. A command that deserves its own mark gets a curated entry instead.
+Glyph glyph_of(command::Category c)
+{
+    switch (c) {
+    case command::Category::Draw: return Glyph::Line;
+    case command::Category::Modify: return Glyph::Move;
+    case command::Category::View: return Glyph::ZoomExtents;
+    case command::Category::Layer: return Glyph::Layer;
+    case command::Category::File: return Glyph::Save;
+    case command::Category::Query: return Glyph::Identify;
+    case command::Category::Processing: return Glyph::Function;
+    case command::Category::Script: return Glyph::Script;
+    case command::Category::System: return Glyph::Settings;
+    }
+    return Glyph::Function;
+}
+
+/// `EŞYÜKSELTİ` -> `Eşyükselti`, with Turkish casing.
+///
+/// `QLocale(QLocale::Turkish)` rather than `<cctype>`: the dotted and dotless i
+/// are two letters in this language and `std::tolower('İ')` gets both of them
+/// wrong (CLAUDE.md 5.6). `İŞŞABLONU` lower-cases to `işşablonu` and its first
+/// letter upper-cases back to `İ`, which is the point.
+QString turkish_title(const QString& shouted)
+{
+    static const QLocale tr_TR(QLocale::Turkish, QLocale::Turkey);
+    const QString lower = tr_TR.toLower(shouted);
+    if (lower.isEmpty()) return lower;
+    return tr_TR.toUpper(lower.left(1)) + lower.mid(1);
+}
+
+} // namespace
+
+void MainWindow::completeMenusFromRegistry()
+{
+    QMenuBar* bar = titleBar_->menus();
+
+    // WHICH MENU A CATEGORY BELONGS TO, declared once. The bar has ten titles and
+    // the registry has nine categories, and they are not the same cut: `Kadastro`
+    // is a workflow and `Sorgu` is a kind of command. The curated entries above
+    // already put the regulated cadastral acts where a surveyor looks for them;
+    // this only decides where a command with NO chosen place goes.
+    struct Home
+    {
+        const char* menu;        ///< the menu title, as `addMenu` wrote it
+        command::Category takes; ///< the category whose leftovers land there
+        QAction* before;         ///< the entry it must stay above; null appends
+    };
+
+    // QUIT IS LAST. An entry appended to the file menu lands under it, which is
+    // where nothing belongs: Quit is the floor of that menu on every platform,
+    // and a generated tail below it reads as a mistake — a user reported exactly
+    // that, curious items showing up below the last row. A menu with a terminal
+    // entry names it here and the tail goes above.
+    const Home homes[] = {
+        {"Çi&zim", command::Category::Draw, nullptr},
+        {"D&eğiştir", command::Category::Modify, nullptr},
+        {"&Görünüm", command::Category::View, actTheme_},
+        {"&Katman", command::Category::Layer, nullptr},
+        {"&Dosya", command::Category::File, actQuit_},
+        {"&Harita", command::Category::Query, nullptr},
+        {"&Analiz", command::Category::Processing, nullptr},
+        {"D&üzen", command::Category::System, actSettings_},
+        {"&Dosya", command::Category::Script, actQuit_},
+    };
+
+    // Every command any action in this window can already start, resolved through
+    // the registry so an alias on a button counts as the command it names.
+    QSet<QString> already;
+    for (QAction* action : findChildren<QAction*>()) {
+        QString word = action->property(kToolCommand).toString();
+        if (word.isEmpty() && action->objectName().startsWith(QStringLiteral("toolAction.")))
+            word = action->objectName().section(QLatin1Char('.'), 1);
+        if (word.isEmpty()) continue;
+        if (const command::CommandSpec* spec =
+                controller_->registry().resolve(word.section(QLatin1Char(' '), 0, 0).toStdString());
+            spec != nullptr)
+            already.insert(QString::fromStdString(spec->id));
+    }
+
+    for (const Home& home : homes) {
+        QMenu* menu = nullptr;
+        for (QAction* action : bar->actions())
+            if (action->menu() != nullptr && action->text() == QString::fromUtf8(home.menu))
+                menu = action->menu();
+        if (menu == nullptr) continue;
+
+        QList<QAction*> added;
+        for (const command::CommandSpec& spec : controller_->registry().all()) {
+            if (spec.category != home.takes || spec.names.empty()) continue;
+            if (already.contains(QString::fromStdString(spec.id))) continue;
+
+            const QString word = QString::fromStdString(spec.names.front());
+            // THE SPEC'S OWN LABEL. A name is one word by design (`ÇIKTIYERLEŞİMİ`)
+            // and a menu built from it reads as one word, which is not Turkish;
+            // `title` is where the spaces live. The fallback is right for a
+            // one-word command and the only honest guess for any other.
+            const QString label =
+                spec.title.empty() ? turkish_title(word) : QString::fromStdString(spec.title);
+            QAction* entry =
+                commandAction(glyph_of(spec.category), label, word,
+                              word + QStringLiteral(" — ") + QString::fromStdString(spec.summary));
+            added << entry;
+        }
+        if (added.isEmpty()) continue;
+
+        // ONE ROW, ALWAYS A SUBMENU. `Düzenleme` alone has thirty-one commands
+        // and a menu that runs off the screen is the problem this change is
+        // fixing, not a milder version of it — and a tail of loose rows changes
+        // the shape of a menu the user has learned. One labelled row does not.
+        auto* rest = new QMenu(tr("Diğer komutlar"), menu);
+        for (QAction* entry : added)
+            rest->addAction(entry);
+
+        if (home.before != nullptr && menu->actions().contains(home.before)) {
+            // A rule of its own above the anchor, then the row above that rule:
+            // the result is `… | Diğer komutlar | ─── | Çıkış`, with the menu's
+            // own foot untouched.
+            QAction* rule = menu->insertSeparator(home.before);
+            menu->insertMenu(rule, rest);
+        } else {
+            menu->addSeparator();
+            menu->addMenu(rest);
+        }
+    }
 }
 
 void MainWindow::buildToolBox()
@@ -2992,6 +3244,323 @@ int MainWindow::probeHelpPage()
     return failures;
 }
 
+int MainWindow::probeAnswerable()
+{
+    // A DIRECTORY MEANS PHOTOGRAPH IT. What a user sees when a tool asks for a
+    // name is the whole point of this probe, and a pass/fail line does not show
+    // it: the frame does.
+    const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_ANSWER_PROBE"));
+    const bool shooting = into.size() > 1;
+    if (shooting) QDir().mkpath(into);
+
+    int failures     = 0;
+    const auto check = [&failures](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[cevap] %s: %s\n", ok ? "tamam" : "BAŞARISIZ",
+                           what.toUtf8().constData());
+        if (!ok) ++failures;
+    };
+
+    // A drawing with a block in it, because BLOKEKLE's answer IS the drawing's
+    // own blocks and an empty drawing would make "nothing offered" correct.
+    runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
+    runScriptLine(QStringLiteral("SİL"));
+    runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+    runScriptLine(QStringLiteral("ALAN 0,0 40,0 40,30 0,30"));
+    runScriptLine(QStringLiteral("ÇİZGİ 100,100 110,105"));
+    runScriptLine(QStringLiteral("SEÇ mod=KUTU noktalar=99,99 111,106"));
+    runScriptLine(QStringLiteral("BLOK ad=OK taban=100,100"));
+    runScriptLine(QStringLiteral("SEÇ TEMİZLE"));
+    QCoreApplication::processEvents();
+
+    struct Case
+    {
+        const char* command; ///< the command a button sends
+        const char* wants;   ///< a fragment of the prompt it must reach
+        const char* offers;  ///< a word its choices must contain, or nullptr
+        const char* answer;  ///< what a hand would type to satisfy it
+        bool selection;      ///< it asks which objects FIRST, so give it some
+    };
+
+    // Every tool whose typed question is the one that looked dead: the prompt
+    // arrived and the keyboard did not follow it. `selection` marks the ones that
+    // ask which objects first — a selection is handed over before the trigger so
+    // the typed prompt is the one under test, which is how a user works anyway
+    // (pick, then reach for the tool).
+    const Case cases[] = {
+        {"BLOKEKLE", "bloğun adı", "OK", "OK", false},
+        {"BLOK", "Bloğun adı", nullptr, "YENİBLOK", false},
+        {"KATMAN", "Katman adı", "PARSEL", "PARSEL", false},
+        {"KATMANAT", "katmanın adı", "PARSEL", "PARSEL", true},
+        {"ETİKET", "Etiketlenecek katman", "PARSEL", "PARSEL", false},
+        {"KATMANGÖRÜNÜM", "İşlem", nullptr, "tumu", false},
+        {"OFSET", "mesafesi", nullptr, "5", true},
+    };
+
+    for (const Case& c : cases) {
+        controller_->cancelInteractive();
+        runScriptLine(c.selection ? QStringLiteral("SEÇ mod=KUTU noktalar=-1,-1 41,31")
+                                  : QStringLiteral("SEÇ TEMİZLE"));
+        QCoreApplication::processEvents();
+
+        QAction* action =
+            findChild<QAction*>(QStringLiteral("toolAction.") + QString::fromUtf8(c.command));
+        // Not every one has a column button; the menu entry is the same road.
+        if (action == nullptr)
+            for (QAction* candidate : findChildren<QAction*>())
+                if (candidate->property(kToolCommand).toString() == QString::fromUtf8(c.command))
+                    action = candidate;
+        if (action == nullptr) {
+            check(false, QStringLiteral("%1 için bir eylem var").arg(QString::fromUtf8(c.command)));
+            continue;
+        }
+
+        action->trigger();
+        QCoreApplication::processEvents();
+
+        const command::Session* live = controller_->session();
+        if (live == nullptr || !live->waiting()) {
+            check(false, QStringLiteral("%1 bir şey sordu").arg(QString::fromUtf8(c.command)));
+            continue;
+        }
+
+        const QString asked = QString::fromStdString(live->prompt().message);
+        check(asked.contains(QString::fromUtf8(c.wants)),
+              QStringLiteral("%1 sordu: \"%2\"").arg(QString::fromUtf8(c.command), asked));
+
+        // THE KEYBOARD IS WHERE THE ANSWER GOES. This is the defect: the prompt
+        // appeared and the focus stayed on the canvas, so typing went nowhere.
+        check(QApplication::focusWidget() == commandLine_,
+              QStringLiteral("%1: odak komut satırında").arg(QString::fromUtf8(c.command)));
+
+        if (shooting) {
+            QImage picture = grab().toImage();
+            if (!picture.isNull() && canvas_ != nullptr && canvas_->isVisible()) {
+                const QImage drawn = canvas_->grabCanvas();
+                if (!drawn.isNull()) {
+                    QPainter painter(&picture);
+                    painter.drawImage(QRect(canvas_->mapTo(this, QPoint(0, 0)), canvas_->size()),
+                                      drawn);
+                }
+            }
+            // The completer's own popup is a window of its own, so it is grabbed
+            // separately and pasted where it sits — otherwise the one thing the
+            // frame exists to show is the one thing missing from it.
+            if (QWidget* popup = QApplication::activePopupWidget();
+                popup != nullptr && !picture.isNull()) {
+                const QImage list = popup->grab().toImage();
+                if (!list.isNull()) {
+                    QPainter painter(&picture);
+                    painter.drawImage(mapFromGlobal(popup->mapToGlobal(QPoint(0, 0))), list);
+                }
+            }
+            (void)picture.save(into + QStringLiteral("/sorar-") + QString::fromUtf8(c.command) +
+                               QStringLiteral(".png"));
+        }
+
+        if (c.offers != nullptr) {
+            QStringList offered;
+            for (const std::string& word : live->prompt().choices)
+                offered << QString::fromStdString(word);
+            check(offered.contains(QString::fromUtf8(c.offers)),
+                  QStringLiteral("%1 seçenekleri sunuyor: %2")
+                      .arg(QString::fromUtf8(c.command), offered.join(QStringLiteral(", "))));
+        }
+
+        // AND THE ANSWER LANDS. Typed into the field a hand would type into,
+        // through the road a hand has — not `supplyText`, which would prove the
+        // session accepts a value and nothing about whether a user can give one.
+        commandLine_->setText(QString::fromUtf8(c.answer));
+        QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+        QCoreApplication::sendEvent(commandLine_, &enter);
+        QCoreApplication::processEvents();
+
+        const command::Session* after = controller_->session();
+        const QString now             = after != nullptr && after->waiting()
+                                            ? QString::fromStdString(after->prompt().message)
+                                            : QStringLiteral("(bitti)");
+        check(now != asked, QStringLiteral("%1: cevap geçti, sırada \"%2\"")
+                                .arg(QString::fromUtf8(c.command), now));
+
+        controller_->cancelInteractive();
+        QCoreApplication::processEvents();
+    }
+
+    // ---- AND THE ROWS THAT DO NOT RUN A COMMAND AT ALL --------------------
+    //
+    // Two kinds looked dead for two different reasons, and a user reported both
+    // as the same thing: "I do not understand why these menu items are there."
+    //
+    //   * a feature that has not landed — a disabled row answers nothing when it
+    //     is clicked, so it reads as broken rather than as not-yet;
+    //   * a query command — it answers in the transcript, and the transcript
+    //     panel starts closed, so the answer arrived where nobody was looking.
+    for (const char* named : {"Kes", "Panoya Kopyala", "Yapıştır", "Katman Yöneticisi"}) {
+        QAction* row = nullptr;
+        for (QAction* candidate : findChildren<QAction*>())
+            if (candidate->text() == QString::fromUtf8(named)) row = candidate;
+        if (row == nullptr) {
+            check(false, QStringLiteral("%1 satırı var").arg(QString::fromUtf8(named)));
+            continue;
+        }
+        check(row->isEnabled(), QStringLiteral("%1 tıklanabilir").arg(QString::fromUtf8(named)));
+
+        // Opened on a timer because `QMessageBox::exec` blocks: the box is read
+        // and closed from inside its own event loop.
+        QString said;
+        QTimer::singleShot(0, this, [&said, named, shooting, into] {
+            auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget());
+            if (box == nullptr) return;
+            said = box->text() + QLatin1Char(' ') + box->informativeText();
+            if (shooting)
+                (void)box->grab().save(into + QStringLiteral("/anlat-") + QString::fromUtf8(named) +
+                                       QStringLiteral(".png"));
+            box->accept();
+        });
+        row->trigger();
+        QCoreApplication::processEvents();
+
+        check(said.contains(QStringLiteral("gelecek")),
+              QStringLiteral("%1 hangi fazda geleceğini söylüyor").arg(QString::fromUtf8(named)));
+        check(said.contains(QStringLiteral("Bugün")),
+              QStringLiteral("%1 bugün ne kullanılacağını söylüyor").arg(QString::fromUtf8(named)));
+    }
+
+    // A query command run from its menu row brings its own answer into view: the
+    // properties dock, on the tab the transcript is on.
+    {
+        propertyDock_->hide();
+        propertyHeader_->setCurrent(0);
+        propertyStack_->setCurrentIndex(0);
+        QCoreApplication::processEvents();
+
+        QAction* listing = nullptr;
+        for (QAction* candidate : findChildren<QAction*>())
+            if (candidate->property(kToolCommand).toString() == QLatin1String("KATMANLAR"))
+                listing = candidate;
+        if (listing == nullptr) {
+            check(false, QStringLiteral("Katmanları Listele satırı var"));
+        } else {
+            listing->trigger();
+            QCoreApplication::processEvents();
+            check(propertyDock_->isVisible(), QStringLiteral("KATMANLAR paneli açtı"));
+            check(propertyStack_->currentWidget() == transcript_,
+                  QStringLiteral("KATMANLAR Geçmiş sekmesine geçti"));
+            check(transcript_->toPlainText().contains(QStringLiteral("PARSEL")),
+                  QStringLiteral("cevap görünür yerde: katman adı yazıldı"));
+        }
+    }
+
+    (void)std::fprintf(stdout, "[cevap] %d kusur\n", failures);
+    return failures;
+}
+
+int MainWindow::probeReach()
+{
+    // Every command any action in this window can start, resolved through the
+    // registry so an alias on a button counts as the command it names and a
+    // rename cannot silently orphan a button.
+    QSet<QString> reachable;
+    for (QAction* action : findChildren<QAction*>()) {
+        QString word = action->property(kToolCommand).toString();
+        if (word.isEmpty() && action->objectName().startsWith(QStringLiteral("toolAction.")))
+            word = action->objectName().section(QLatin1Char('.'), 1);
+        if (word.isEmpty()) continue;
+        if (!action->isEnabled()) continue; ///< a disabled placeholder is not a road
+        if (const command::CommandSpec* spec =
+                controller_->registry().resolve(word.section(QLatin1Char(' '), 0, 0).toStdString());
+            spec != nullptr)
+            reachable.insert(QString::fromStdString(spec->id));
+    }
+
+    int total   = 0;
+    int missing = 0;
+    for (const command::CommandSpec& spec : controller_->registry().all()) {
+        if (spec.names.empty()) continue;
+        ++total;
+        if (reachable.contains(QString::fromStdString(spec.id))) continue;
+        ++missing;
+        (void)std::fprintf(stderr, "[erişim] BAŞARISIZ: %s (%s) düğmesiz ve menüsüz\n",
+                           spec.names.front().c_str(), spec.id.c_str());
+    }
+
+    (void)std::fprintf(stdout, "[erişim] %d komuttan %d'i fareyle başlatılabiliyor\n", total,
+                       total - missing);
+    return missing;
+}
+
+int MainWindow::probeMenus()
+{
+    const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_MENU_PROBE"));
+    const bool shooting = into.size() > 1;
+    if (shooting) QDir().mkpath(into);
+
+    int failures  = 0;
+    int index     = 0;
+    QMenuBar* bar = titleBar_->menus();
+
+    /// Every entry on a menu, one line each, submenus indented under their own.
+    const auto walk = [](QMenu* menu, const QString& lead, auto&& self) -> int {
+        int leaves = 0;
+        for (QAction* action : menu->actions()) {
+            if (action->isSeparator()) continue;
+            if (action->menu() != nullptr) {
+                (void)std::fprintf(stdout, "[menü] %s%s  >\n", lead.toUtf8().constData(),
+                                   action->text().toUtf8().constData());
+                leaves += self(action->menu(), lead + QStringLiteral("    "), self);
+                continue;
+            }
+            ++leaves;
+            const QString word = action->property(kToolCommand).toString();
+            (void)std::fprintf(stdout, "[menü] %s%-28s %-14s %s\n", lead.toUtf8().constData(),
+                               action->text().toUtf8().constData(), word.toUtf8().constData(),
+                               action->isEnabled() ? "" : "(kapalı)");
+        }
+        return leaves;
+    };
+
+    for (QAction* title : bar->actions()) {
+        QMenu* menu = title->menu();
+        if (menu == nullptr) continue;
+        ++index;
+
+        // OPENED, not read: a menu that cannot be shown is a menu nobody can use,
+        // and its own size is only decided once it lays itself out.
+        menu->popup(mapToGlobal(QPoint(10, 40)));
+        QCoreApplication::processEvents();
+
+        const QString clean = QString(title->text()).remove(QLatin1Char('&'));
+        (void)std::fprintf(stdout, "[menü] ==== %s (%d px) ====\n", clean.toUtf8().constData(),
+                           menu->height());
+        const int leaves = walk(menu, QString(), walk);
+
+        // A MENU TALLER THAN A SCREEN is the defect this probe exists for. 900 px
+        // is a short laptop; a menu past it has rows a user cannot reach.
+        if (menu->height() > 900) {
+            (void)std::fprintf(stderr, "[menü] BAŞARISIZ: %s menüsü %d px — ekranı aşıyor\n",
+                               clean.toUtf8().constData(), menu->height());
+            ++failures;
+        }
+        if (leaves == 0) {
+            (void)std::fprintf(stderr, "[menü] BAŞARISIZ: %s menüsü boş\n",
+                               clean.toUtf8().constData());
+            ++failures;
+        }
+
+        if (shooting) {
+            const QImage picture = menu->grab().toImage();
+            (void)picture.save(QStringLiteral("%1/menu-%2-%3.png")
+                                   .arg(into)
+                                   .arg(index, 2, 10, QLatin1Char('0'))
+                                   .arg(clean));
+        }
+        menu->close();
+        QCoreApplication::processEvents();
+    }
+
+    (void)std::fprintf(stdout, "[menü] %d menü, %d kusur\n", index, failures);
+    return failures;
+}
+
 void MainWindow::probeDialogs()
 {
     const auto say = [](const QString& text) {
@@ -3277,6 +3846,21 @@ void MainWindow::onDocumentChanged()
     canvas_->update();
 }
 
+void MainWindow::showTranscript()
+{
+    if (propertyDock_ == nullptr || propertyStack_ == nullptr) return;
+
+    propertyDock_->show();
+    propertyDock_->raise();
+    // The tab AND the stack: the header draws the tabs and the stack holds the
+    // pages, and moving one without the other shows a panel labelled `Geçmiş`
+    // with the attribute table in it.
+    const int at = propertyStack_->indexOf(transcript_);
+    if (at < 0) return;
+    propertyStack_->setCurrentIndex(at);
+    if (propertyHeader_ != nullptr) propertyHeader_->setCurrent(at);
+}
+
 bool MainWindow::confirmErase()
 {
     if (!controller_->bus().app_settings().get("core.duzenleme.silme_onayi").as_bool()) return true;
@@ -3344,6 +3928,42 @@ void MainWindow::syncToolSelection()
 void MainWindow::onPromptChanged(const QString& prompt)
 {
     commandLine_->setPrompt(prompt);
+
+    // WHERE THE KEYBOARD GOES WHEN THE MOUSE CANNOT ANSWER.
+    //
+    // A command waiting for a POINT or for OBJECTS is answered by pointing, and
+    // focus belongs on the canvas — that is where Esc, the arrow keys and the
+    // rubber band live. A command waiting for a NAME or a NUMBER cannot be
+    // answered by pointing at anything, and until now nothing moved: pressing
+    // Blok Ekle put "Yerleştirilecek bloğun adı" on the status line with the
+    // focus still on the canvas, so typing went nowhere and the button looked
+    // dead. That is what the user meant by the block and measuring tools not
+    // working.
+    //
+    // The command says what it wants and the shell decides where the keyboard
+    // has to be; no command looks at `InputSource` (command.md P10).
+    const command::Session* live = controller_->session();
+    if (live != nullptr && live->waiting()) {
+        const command::Prompt& asked = live->prompt();
+        const bool typed             = asked.kind == command::ParamKind::Text ||
+                           asked.kind == command::ParamKind::Number ||
+                           asked.kind == command::ParamKind::Integer;
+        if (typed) {
+            showCommandLine(true);
+            commandLine_->setFocus(Qt::OtherFocusReason);
+        }
+
+        // AND THE WORDS THAT WOULD ANSWER IT, when the command knows the set:
+        // the blocks in the drawing, the layers, a verb list. The shell offers
+        // what the command named and nothing it did not (`Prompt::choices`).
+        QStringList words;
+        for (const std::string& word : asked.choices)
+            words << QString::fromStdString(word);
+        commandLine_->offerChoices(words);
+    } else {
+        commandLine_->offerChoices(QStringList());
+    }
+
     syncToolSelection();
     canvas_->update();
 }
@@ -4751,6 +5371,70 @@ void MainWindow::probeToolBox()
     (void)std::fprintf(stdout,
                        "[araç] ---- %d araç x2 geçiş: %d çalıştı, %d girdi sordu, %d kırık\n",
                        static_cast<int>(buttons.size()), ok_ran, ok_armed, dead);
+
+    // ---- WHAT A HAND CANNOT REACH AT ALL -----------------------------------
+    //
+    // The column tests above press what is there. This asks the other question,
+    // which is the one the user asked: how much of the program has no button and
+    // no menu entry — how many commands exist only for somebody who already
+    // knows their name and can type it.
+    //
+    // CLAUDE.md 5.15 forbids a feature reachable only by mouse. Its mirror is
+    // just as bad and is what shipped: a command reachable only by keyboard is a
+    // command the mouse user does not have, and Article 1.2 makes the GUI an
+    // equal client rather than a poorer one. The registry is walked because it is
+    // the one command list (5.10); the actions are found rather than listed,
+    // because a hand-kept list of "what has a button" is the second list that
+    // rule exists to prevent.
+    {
+        // Every command any action in this window can start, however it says so:
+        // the tool property the column and the draw menus use, the object name
+        // the probes reach buttons by, and the processing submenu's own property.
+        QSet<QString> reachable;
+        for (QAction* a : findChildren<QAction*>()) {
+            const QString by_property = a->property(kToolCommand).toString();
+            if (!by_property.isEmpty())
+                reachable.insert(by_property.section(QLatin1Char(' '), 0, 0));
+            const QString by_name = a->objectName();
+            if (by_name.startsWith(QStringLiteral("toolAction.")))
+                reachable.insert(by_name.section(QLatin1Char('.'), 1));
+        }
+
+        // Resolved through the registry, so an alias on a button counts as the
+        // command it resolves to and a rename cannot silently orphan a button.
+        QSet<QString> ids;
+        for (const QString& word : reachable)
+            if (const command::CommandSpec* spec =
+                    controller_->registry().resolve(word.toStdString());
+                spec != nullptr)
+                ids.insert(QString::fromStdString(spec->id));
+
+        int total = 0;
+        int have  = 0;
+        QMap<QString, QStringList> missing;
+        for (const command::CommandSpec& spec : controller_->registry().all()) {
+            if (spec.names.empty()) continue;
+            // A command a hand has no business starting from a button: the ones
+            // whose whole job is to carry a typed argument (AYAR, TERCİH, MOD have
+            // their own windows) are still counted, because "it has a window" is
+            // a reachability answer and this probe only reports.
+            ++total;
+            if (ids.contains(QString::fromStdString(spec.id))) {
+                ++have;
+                continue;
+            }
+            missing[QString::fromUtf8(command::category_name(spec.category))]
+                << QString::fromStdString(spec.names.front());
+        }
+
+        (void)std::fprintf(stdout,
+                           "[kapsam] %d komuttan %d'i bir düğme ya da menüden başlatılıyor\n",
+                           total, have);
+        for (auto it = missing.constBegin(); it != missing.constEnd(); ++it)
+            (void)std::fprintf(stdout, "[kapsam] %-12s %2d eksik: %s\n",
+                               it.key().toUtf8().constData(), static_cast<int>(it.value().size()),
+                               it.value().join(QStringLiteral(", ")).toUtf8().constData());
+    }
 }
 
 // =============================================================================

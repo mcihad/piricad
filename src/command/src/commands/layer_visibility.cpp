@@ -104,7 +104,12 @@ Task<void> run(Context& ctx)
 
     core::LayerId named = core::kNoLayer;
     if (op->needs_layer || !given.empty()) {
-        auto name = co_await ctx.text("katman", "Katman adı");
+        // THE LAYERS THIS DRAWING HAS. A prompt for a name is unanswerable by a
+        // mouse; the shell offers what the command names (`Prompt::choices`).
+        std::vector<std::string> known;
+        for (const core::Layer& l : ctx.document().layers())
+            known.push_back(l.name);
+        auto name = co_await ctx.text("katman", "Katman adı", known);
         if (!name || name->empty()) {
             ctx.session().fail(
                 core::err(core::ErrorCode::InvalidArgument,
@@ -183,6 +188,7 @@ KENTOS_COMMAND(layer_visibility)
     return CommandSpec{
         .id       = "core.layer_visibility",
         .names    = {"KATMANGÖRÜNÜM", "KATMANGORUNUM", "LAYERVIEW", "KGÖ", "KGO"},
+        .title    = "Katman Görünümü",
         .category = Category::Layer,
         .params =
             {

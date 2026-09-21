@@ -6,6 +6,53 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — 97 komutun 33'ü fareyle başlatılamıyordu
+
+Kullanıcının bildirdiği kusur: *"toolbox üzerindeki araçlar da mouse ile
+çalıştıramadım mesela blok blokekle, ölçüm araçları ve diğerleri çok kötü ve
+çalışmıyorlar"*. Ölçüldü, tahmin edilmedi (`KENTOS_TOOL_PROBE`): **97 komutun
+33'ü yalnız adını yazarak başlatılabiliyordu.** Fare kullanıcısının o komutları
+hiç yoktu.
+
+CLAUDE.md 5.15 fareyle erişilebilen tek yollu bir özelliği yasaklar; aynadaki
+hâli — yalnız klavyeden erişilebilen komut — Article 1.2'nin (GUI eşit istemci,
+daha yoksulu değil) ihlaliydi. Menüler elle tutuluyordu, ki o da 5.10'un
+yasakladığı ikinci komut listesidir.
+
+- **Menüler artık `Registry`'den tamamlanıyor.** Küratörlü girişlerin altına, her
+  kategorinin menüsüne, tek bir **Diğer komutlar** satırı olarak. Sonraki komut
+  menüsüne kendiliğinden gelir. Son satırı olan menüde (Dosya'nın `Çıkış`'ı)
+  kuyruk onun ÜSTÜNE girer.
+- **`CommandSpec::title`** — insan okuyacağı Türkçe etiket. Ad tek kelimedir
+  (`ÇIKTIYERLEŞİMİ`) ve ondan üretilen menü Türkçe değildir; `ToolSpec` bu alanı
+  zaten taşıyordu. 92 komutun hepsi dolduruldu. Etiket menüye, üretilmiş
+  referansın yeni **Adı** sütununa ve ajan kataloğunun MCP `title` alanına gidiyor.
+- **Klavye, yazılacak yere taşınıyor.** `BLOK`, `BLOKEKLE`, `KATMAN`, `KATMANAT`,
+  `ETİKET` ilk olarak bir AD soruyor. İstem durum satırına yazılıyor, odak tuvalde
+  kalıyordu: tuşlar hiçbir yere gitmiyordu ve düğme ölü görünüyordu. Yazı, sayı ya
+  da tamsayı isteminde komut satırı açılıp odaklanıyor; nokta ve nesne isteminde
+  odak tuvalde kalıyor, çünkü cevap oradan geliyor.
+- **`Prompt::choices`** — cevabı bilinen bir kümeden olan istem o kümeyi sunuyor:
+  çizimdeki bloklar, katmanlar, fiil listeleri. Komut bilir, kabuk sunar. Kısıt
+  değil öneri: yeni bir bloğun adı tanımı gereği listede olamaz.
+- **Sözle cevap veren komut cevabını görünür kılıyor.** Sorgu komutları transkripte
+  yazar ve o panel kapalı başlar, yani `Katmanları Listele`'ye basmak ölü bir satıra
+  basmakla aynı görünüyordu. Menü satırı artık **Geçmiş** sekmesini önce açıyor.
+  (Bu arada `transcriptDock_` üyesinin hiç atanmadığı ve iki tema döngüsünün onu
+  sessizce atladığı ortaya çıktı; kaldırıldı — transkript `propertyDock_`'un bir
+  sekmesi.)
+- **Henüz olmayan özellik kendini anlatıyor.** KES, PANOYA KOPYALA, YAPIŞTIR ve
+  KATMAN YÖNETİCİSİ `setEnabled(false)` idi: tıklanınca hiçbir şey olmuyordu, yani
+  bozuk görünüyorlardı. Artık ne yapacağını, hangi fazda geleceğini ve bugün ne
+  kullanılacağını söyleyen bir kutu açıyorlar.
+- **`SORGULA`** gerçek komutu çalıştırıyor; yanında duran `Faz 2` ölü satır kalktı.
+  Küratörlü girişler eklendi: KILAVUZ, ETİKET, EŞYÜKSELTİ (Çizim); APLİKASYON,
+  HACİM, OTURT, DÖNÜŞTÜR, ALANÖLÇ, KOORDİNAT (Harita).
+- **Üç yeni kapı**, hepsi gerçek ikiliyi çalıştırır çünkü `/tests` Qt bağlamaz:
+  `tool-reach` (97/97), `tool-answerable` (istem geldi, odak doğru yerde, seçenekler
+  sunuldu, cevap geçti, henüz-yok satırları kendini anlatıyor, sorgu cevabı görünür),
+  `menu-bar` (on bir menü açılıyor, boş değil, ekranı aşmıyor).
+
 ### Değişti — komut listesi: doksan sekiz transkript satırı ve bir taşan pencere yerine bir sayfa
 
 `YARDIM` bütün komutları transkripte döküyordu — her komut için adı, bütün

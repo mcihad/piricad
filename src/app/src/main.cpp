@@ -315,11 +315,13 @@ int main(int argc, char** argv)
     // Set BEFORE the window is built: the print service resolves its path once,
     // in its constructor.
     for (const char* probe :
-         {"KENTOS_PRINT_PROBE", "KENTOS_LAYOUT_PROBE", "KENTOS_SHOT_DIR", "KENTOS_DESIGNER_PROBE",
-          "KENTOS_HELP_PROBE", "KENTOS_WIDGETS_PROBE", "KENTOS_DIALOG_PROBE", "KENTOS_HAND_PROBE",
-          "KENTOS_LAYER_PROBE", "KENTOS_PICK_PROBE", "KENTOS_TABLE_PROBE", "KENTOS_SCHEMA_PROBE",
-          "KENTOS_CHAT_PROBE", "KENTOS_TOOL_PROBE", "KENTOS_NORMAL_PROBE", "KENTOS_FAMILY_PROBE",
-          "KENTOS_BUDGET_PROBE", "KENTOS_PROBE_LINE"})
+         {"KENTOS_PRINT_PROBE",    "KENTOS_LAYOUT_PROBE", "KENTOS_SHOT_DIR",
+          "KENTOS_DESIGNER_PROBE", "KENTOS_HELP_PROBE",   "KENTOS_MENU_PROBE",
+          "KENTOS_REACH_PROBE",    "KENTOS_ANSWER_PROBE", "KENTOS_WIDGETS_PROBE",
+          "KENTOS_DIALOG_PROBE",   "KENTOS_HAND_PROBE",   "KENTOS_LAYER_PROBE",
+          "KENTOS_PICK_PROBE",     "KENTOS_TABLE_PROBE",  "KENTOS_SCHEMA_PROBE",
+          "KENTOS_CHAT_PROBE",     "KENTOS_TOOL_PROBE",   "KENTOS_NORMAL_PROBE",
+          "KENTOS_FAMILY_PROBE",   "KENTOS_BUDGET_PROBE", "KENTOS_PROBE_LINE"})
         if (qEnvironmentVariableIsSet(probe)) {
             QStandardPaths::setTestModeEnabled(true);
             break;
@@ -1444,6 +1446,26 @@ int main(int argc, char** argv)
             window.probeDesigner();
             QApplication::exit(0);
         });
+    }
+
+    // AND WHETHER A HAND CAN ANSWER what a pressed tool asks.
+    if (qEnvironmentVariableIsSet("KENTOS_ANSWER_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            QApplication::exit(window.probeAnswerable() == 0 ? 0 : 1);
+        });
+    }
+
+    // HOW MUCH OF THE PROGRAM A HAND CAN REACH.
+    if (qEnvironmentVariableIsSet("KENTOS_REACH_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window,
+                           [&window] { QApplication::exit(window.probeReach() == 0 ? 0 : 1); });
+    }
+
+    // THE MENU BAR, OPENED. A menu is not in the window until it is opened, so
+    // nothing else in this program can show you one.
+    if (qEnvironmentVariableIsSet("KENTOS_MENU_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window,
+                           [&window] { QApplication::exit(window.probeMenus() == 0 ? 0 : 1); });
     }
 
     // YARDIM → KOMUT LİSTESİ, ASSERTED. `/tests` links no Qt, so nothing there

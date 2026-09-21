@@ -202,6 +202,7 @@ KENTOS_COMMAND(text)
     return CommandSpec{
         .id       = "core.text",
         .names    = {"METİN", "METIN", "YAZI", "TEXT", "MT"},
+        .title    = "Metin",
         .category = Category::Draw,
         .params =
             {
@@ -239,6 +240,7 @@ KENTOS_COMMAND(edittext)
     return CommandSpec{
         .id       = "core.edittext",
         .names    = {"YAZIDÜZENLE", "YAZIDUZENLE", "EDITTEXT", "YZD"},
+        .title    = "Yazıyı Düzenle",
         .category = Category::Modify,
         .params =
             {

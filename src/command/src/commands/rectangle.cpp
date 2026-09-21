@@ -82,6 +82,7 @@ KENTOS_COMMAND(rectangle)
     return CommandSpec{
         .id       = "core.rectangle",
         .names    = {"DİKDÖRTGEN", "DIKDORTGEN", "RECTANGLE", "DKD", "REC"},
+        .title    = "Dikdörtgen",
         .category = Category::Draw,
         .params =
             {

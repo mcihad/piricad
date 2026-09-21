@@ -184,6 +184,7 @@ KENTOS_COMMAND(measure)
     return CommandSpec{
         .id       = "core.measure",
         .names    = {"ÖLÇ", "OLC", "MEASURE", "MS"},
+        .title    = "Ölç",
         .category = Category::Query,
         .params =
             {
@@ -202,6 +203,7 @@ KENTOS_COMMAND(measure_area)
     return CommandSpec{
         .id       = "core.measure_area",
         .names    = {"ALANÖLÇ", "ALANOLC", "AREAOF", "AÖ"},
+        .title    = "Alan Ölç",
         .category = Category::Query,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                          "Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim"}},
@@ -217,6 +219,7 @@ KENTOS_COMMAND(coordinate)
     return CommandSpec{
         .id       = "core.coordinate",
         .names    = {"KOORDİNAT", "KOORDINAT", "COORDINATE", "KRD"},
+        .title    = "Koordinat Oku",
         .category = Category::Query,
         .params   = {Param::point("nokta", "Okunacak nokta")},
         .undo     = UndoPolicy::None,

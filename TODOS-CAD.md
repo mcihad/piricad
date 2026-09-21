@@ -67,6 +67,52 @@ kullanıcısının refleks olarak aradığı inşa/düzenleme fiillerini, hepsin
 
 ---
 
+## PU — Arayüzden erişim: fareyle çalışmayan araçlar (tamamlandı, 2026-09-21)
+
+**Neden bir paket:** kullanıcı araç kutusundaki araçları fareyle çalıştıramadı — *"toolbox
+üzerindeki araçlar da mouse ile çalıştıramadım mesela blok blokekle, ölçüm araçları ve diğerleri
+çok kötü ve çalışmıyorlar"*. Ölçüldü, tahmin edilmedi (`KENTOS_TOOL_PROBE`): **97 komutun 33'ü
+yalnız adını yazarak başlatılabiliyordu.** Fare kullanıcısının o komutları hiç yoktu. Bu 5.15'in
+aynadaki hâli ve 1.2'nin (GUI eşit istemci) ihlali; ayrıca elle tutulan bir menü tablosu 5.10'un
+yasakladığı ikinci komut listesidir.
+
+- [x] **Menüler `Registry`'den tamamlanıyor** (`MainWindow::completeMenusFromRegistry`): küratörlü
+      girişlerin altına, kategorisinin menüsüne, tek bir **Diğer komutlar** satırı olarak. Sonraki
+      paketin komutu menüsüne kendiliğinden gelir — kimseye söylemek gerekmez. `Çıkış` gibi son
+      satırı olan menüde kuyruk onun ÜSTÜNE girer.
+- [x] **`CommandSpec::title`** — insan okuyacağı Türkçe etiket (`Blok Ekle`, `Çıktı Yerleşimi`).
+      Ad tek kelimedir (`ÇIKTIYERLEŞİMİ`); ondan üretilen menü Türkçe değildir. `ToolSpec` bunu
+      zaten taşıyordu. 92 komutun hepsi doldu; `test_command.cpp` boş başlığı reddediyor.
+      Etiket menüye, üretilmiş referansa ve ajan kataloğunun MCP `title` alanına gidiyor.
+- [x] **Küratörlü girişler**: KILAVUZ, ETİKET, EŞYÜKSELTİ (Çizim); APLİKASYON, HACİM, OTURT,
+      DÖNÜŞTÜR, ALANÖLÇ, KOORDİNAT (Harita). `SORGULA` artık gerçek komutu çalıştırıyor — yanında
+      duran `Faz 2` ölü satır kaldırıldı.
+- [x] **Yazı isteyen komut, klavyeyi yazılacak yere taşıyor.** `BLOK`, `BLOKEKLE`, `KATMAN`,
+      `KATMANAT`, `ETİKET` ilk olarak bir AD soruyor; istem durum satırına yazılıyor ve odak
+      tuvalde kalıyordu, yani tuşlar hiçbir yere gitmiyordu. `onPromptChanged` artık `Text`,
+      `Number`, `Integer` isteminde komut satırını açıp odaklıyor; `Point`/`Selection`'da
+      dokunmuyor (Esc, lastik bant ve oklar tuvalde).
+- [x] **`Prompt::choices`** — cevabı bilinen kümeden olan istem o kümeyi sunuyor: çizimdeki
+      bloklar, katmanlar, fiil listeleri. Komut bilir (belgeyi tutar), kabuk sunar
+      (`CommandLine::offerChoices`). Kısıt değil, öneri: yeni bir bloğun adı tanımı gereği listede
+      olamaz.
+- [x] **Sözle cevap veren komut cevabını görünür kılıyor.** Sorgu komutları transkripte yazıyor ve
+      o panel kapalı başlıyor: `Katmanları Listele`'ye basmak ölü bir satıra basmakla aynı
+      görünüyordu. Menü satırı artık `Geçmiş` sekmesini önce açıyor. (Bu arada `transcriptDock_`
+      üyesinin hiç atanmadığı ve iki tema döngüsünün onu sessizce atladığı ortaya çıktı — kaldırıldı.)
+- [x] **Henüz olmayan özellik kendini anlatıyor.** KES, PANOYA KOPYALA, YAPIŞTIR, KATMAN YÖNETİCİSİ
+      `setEnabled(false)` idi; tıklanınca hiçbir şey olmuyordu. Artık ne yapacağını, hangi fazda
+      geleceğini ve bugün ne kullanılacağını söyleyen bir kutu açıyor.
+- [x] **Kapılar** (üçü de gerçek ikiliyi çalıştırır; `/tests` Qt bağlamaz):
+      `tool-reach` (97/97 fareyle başlatılabiliyor), `tool-answerable` (istem geldi, odak doğru
+      yerde, seçenekler sunuldu, cevap geçti), `menu-bar` (on bir menü açılıyor, boş değil, ekranı
+      aşmıyor).
+
+**Sonraki paketler için bağlayıcı:** §2.6a. Bir komut eklendiğinde menü girişi kendiliğinden gelir,
+ama `title`, küratörlü yer, gereken düğme ve komut sayfasının **Arayüz** bölümü paketin işidir.
+
+---
+
 ## P0 — Açı kuralı: semt ve grad (önkoşul, tek commit)
 
 - [x] **P0-1** `core.aci.kural` oturum ayarı (`semt` varsayılan | `matematik`), `settings.cpp`'de

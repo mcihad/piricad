@@ -10,7 +10,12 @@ namespace {
 
 Task<void> run(Context& ctx)
 {
-    auto name = co_await ctx.text("ad", "Katman adı");
+    // THE LAYERS THIS DRAWING HAS. A prompt for a name is unanswerable by a
+    // mouse; the shell offers what the command names (`Prompt::choices`).
+    std::vector<std::string> known;
+    for (const core::Layer& l : ctx.document().layers())
+        known.push_back(l.name);
+    auto name = co_await ctx.text("ad", "Katman adı", known);
     if (!name || name->empty()) co_return;
 
     Bus& bus = ctx.session().bus();
@@ -71,6 +76,7 @@ KENTOS_COMMAND(layer)
     return CommandSpec{
         .id       = "core.layer",
         .names    = {"KATMAN", "LAYER", "KAT"},
+        .title    = "Katman",
         .category = Category::Layer,
         .params =
             {

@@ -141,6 +141,7 @@ KENTOS_COMMAND(attribute)
     return CommandSpec{
         .id       = "core.attribute",
         .names    = {"ÖZNİTELİK", "OZNITELIK", "ATTRIBUTE", "ÖZN", "OZN"},
+        .title    = "Öznitelik",
         .category = Category::Modify,
         .params =
             {
@@ -313,6 +314,7 @@ KENTOS_COMMAND(column)
     return CommandSpec{
         .id       = "core.column",
         .names    = {"SÜTUN", "SUTUN", "COLUMN", "STN"},
+        .title    = "Sütun",
         .category = Category::Modify,
         .params =
             {

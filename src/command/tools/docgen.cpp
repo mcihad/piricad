@@ -79,11 +79,15 @@ std::string build(const Registry& reg)
     out += "Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası\n";
     out += "`docs/komutlar/` altındadır ve tablodan bağlanır.\n\n";
 
-    out += "| Komut | Adlar | Kategori | Geri alma | Özellikler | Açıklama |\n";
-    out += "|---|---|---|---|---|---|\n";
+    out += "| Komut | Adı | Adlar | Kategori | Geri alma | Özellikler | Açıklama |\n";
+    out += "|---|---|---|---|---|---|---|\n";
 
     for (const auto& spec : reg.all()) {
         out += "| [`" + spec.id + "`](" + slug(spec.id) + ".md) | ";
+        // The human label beside the id. A menu, a panel and a page all name the
+        // command this way; the reference is the one place a reader can see the
+        // label and the word to type side by side (`CommandSpec::title`).
+        out += (spec.title.empty() ? "—" : spec.title) + " | ";
         for (std::size_t i = 0; i < spec.names.size(); ++i) {
             if (i) out += ", ";
             out += "`" + spec.names[i] + "`";
@@ -98,7 +102,8 @@ std::string build(const Registry& reg)
     out += "\n## Parametreler\n\n";
 
     for (const auto& spec : reg.all()) {
-        out += "### `" + spec.id + "` — " + spec.names.front() + "\n\n";
+        out += "### `" + spec.id + "` — " + spec.names.front() +
+               (spec.title.empty() ? "" : " (" + spec.title + ")") + "\n\n";
         out += spec.summary + "\n\n";
 
         if (spec.params.empty()) {

@@ -34,6 +34,16 @@ public:
     /// Shows what the running command is waiting for. Empty when none is.
     void setPrompt(const QString& prompt);
 
+    /// Offers `words` instead of the command names, for as long as a command is
+    /// waiting for one of them.
+    ///
+    /// A prompt for a name — a block, a layer, a pattern — is unanswerable by a
+    /// mouse, and the field's completer already knows how to offer a set. The
+    /// command says which set (`command::Prompt::choices`); an empty list puts
+    /// the command names back, which is what the field offers when nothing is
+    /// running.
+    void offerChoices(const QStringList& words);
+
     void applyTheme(ThemeMode mode) override;
 
 signals:

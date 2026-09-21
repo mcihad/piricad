@@ -146,6 +146,7 @@ KENTOS_COMMAND(reproject)
     return CommandSpec{
         .id       = "core.reproject",
         .names    = {"DÖNÜŞTÜR", "DONUSTUR", "REPROJECT", "DNS"},
+        .title    = "Dönüştür",
         .category = Category::Modify,
         .params =
             {

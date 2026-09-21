@@ -224,6 +224,7 @@ KENTOS_COMMAND(hatch)
     return CommandSpec{
         .id       = "core.hatch",
         .names    = {"TARAMA", "TARAMA", "HATCH", "TRM"},
+        .title    = "Tarama",
         .category = Category::Draw,
         .params =
             {

@@ -115,6 +115,7 @@ KENTOS_COMMAND(erase)
     return CommandSpec{
         .id       = "core.erase",
         .names    = {"SİL", "SIL", "ERASE", "E"},
+        .title    = "Sil",
         .category = Category::Modify,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                          "Silinecek nesnelerin kimlikleri; yoksa etkin seçim"}},
@@ -132,6 +133,7 @@ KENTOS_COMMAND(undo)
     return CommandSpec{
         .id       = "core.undo",
         .names    = {"GERİAL", "GERIAL", "UNDO", "U"},
+        .title    = "Geri Al",
         .category = Category::System,
         .params   = {},
         .undo     = UndoPolicy::None,
@@ -149,6 +151,7 @@ KENTOS_COMMAND(redo)
     return CommandSpec{
         .id       = "core.redo",
         .names    = {"YİNELE", "YINELE", "REDO"},
+        .title    = "Yinele",
         .category = Category::System,
         .params   = {},
         .undo     = UndoPolicy::None,

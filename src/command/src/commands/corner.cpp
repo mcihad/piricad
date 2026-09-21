@@ -374,6 +374,7 @@ KENTOS_COMMAND(chamfer)
     return CommandSpec{
         .id       = "core.chamfer",
         .names    = {"PAH", "CHAMFER", "PH"},
+        .title    = "Pah",
         .category = Category::Modify,
         .params =
             {
@@ -395,6 +396,7 @@ KENTOS_COMMAND(fillet)
     return CommandSpec{
         .id       = "core.fillet",
         .names    = {"YUVARLA", "FILLET", "YV"},
+        .title    = "Yuvarla",
         .category = Category::Modify,
         .params =
             {

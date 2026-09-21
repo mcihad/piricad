@@ -96,6 +96,7 @@ KENTOS_COMMAND(spline)
     return CommandSpec{
         .id       = "core.spline",
         .names    = {"SPLINE", "SPLINE", "SPLINE", "SPL"},
+        .title    = "Spline",
         .category = Category::Draw,
         .params =
             {

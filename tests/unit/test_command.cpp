@@ -1554,6 +1554,38 @@ TEST_CASE("YARDIM sayfayı açtırır, ama metni her istemciye yine yazar")
     CHECK_EQ(opened.size(), std::size_t{2});
 }
 
+TEST_CASE("her komutun insan okuyacağı bir Türkçe başlığı var")
+{
+    Fixture f;
+
+    // A NAME IS NOT A LABEL. `names.front()` is the word typed at the prompt and
+    // it is one word by design — `ÇIKTIYERLEŞİMİ`, `ÖZNİTELİKŞEMASI` — so a menu
+    // built from it reads as one run-together word, which is not Turkish. The
+    // generated menu entries of `MainWindow::completeMenusFromRegistry` read this
+    // field, and a command declared without one arrives in the menu bar with a
+    // label no Turkish speaker would write.
+    //
+    // Checked here rather than by a script because the registries are linked
+    // here: `/src/command`, the three domains and `/src/ai` all declare commands
+    // and a grep over one of them would pass while another shipped untitled.
+    std::vector<std::string> untitled;
+    for (const CommandSpec& spec : f.bus.registry().all()) {
+        if (spec.names.empty()) continue;
+        if (spec.title.empty()) untitled.push_back(spec.id);
+
+        // And it is a LABEL, not the name again: a title equal to the shouted
+        // primary name is the fallback written out by hand, which defeats the
+        // point of the field.
+        CHECK_MESSAGE(spec.title != spec.names.front(), spec.id);
+    }
+    CHECK_MESSAGE(untitled.empty(), [&] {
+        std::string all;
+        for (const std::string& id : untitled)
+            all += (all.empty() ? "" : ", ") + id;
+        return "başlığı olmayan komutlar: " + all;
+    }());
+}
+
 TEST_CASE("read-only commands never become an undo step")
 {
     Fixture f;

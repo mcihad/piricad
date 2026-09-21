@@ -39,7 +39,7 @@ struct ToolAnnotations
 struct ToolDef
 {
     std::string name;        ///< the wire name: `core_line`, `gorunum_bilgisi`
-    std::string title;       ///< the Turkish primary name: `ÇİZGİ`
+    std::string title;       ///< the Turkish LABEL: `Çizgi`, `Blok Ekle`
     std::string description; ///< what it does, its names, its units, its approval rule
     core::Json input_schema; ///< a real JSON Schema object
     ToolAnnotations annotations;

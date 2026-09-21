@@ -262,6 +262,35 @@ public:
     /// command rather than by a private path.
     int probeHelpPage();
 
+    /// `KENTOS_MENU_PROBE`: opens every menu in turn, photographs it and prints
+    /// what it holds. Returns the failure count.
+    ///
+    /// A menu is the one part of a shell nothing else can show you: it is not in
+    /// the window until it is opened, so a screenshot of the program proves
+    /// nothing about it. This opens them, so the bar can be looked at rather
+    /// than reasoned about.
+    int probeMenus();
+
+    /// `KENTOS_REACH_PROBE`: how much of the program a hand can reach. Returns
+    /// the number of commands with no button and no menu entry.
+    ///
+    /// CLAUDE.md 5.15 forbids a feature reachable only by mouse. Its mirror is
+    /// what shipped: of 97 commands, 33 could be started ONLY by typing a name,
+    /// so a mouse user did not have them — and Article 1.2 makes the GUI an
+    /// equal client, not a poorer one. This is the gate that keeps it at zero as
+    /// commands are added.
+    int probeReach();
+
+    /// `KENTOS_ANSWER_PROBE`: presses the tools that ask for a NAME or a NUMBER
+    /// and checks a hand could answer. Returns the failure count.
+    ///
+    /// Reachability (`probeReach`) says a button exists. This says pressing it
+    /// leaves the user somewhere they can act: the keyboard in the field that
+    /// takes the answer, and — when the set of answers is known — that set
+    /// offered rather than remembered. Both were missing, which is why the block
+    /// and measuring tools looked dead when pressed.
+    int probeAnswerable();
+
     void probeDialogs();
 
     /// Builds the drawing every window probe photographs: a named layer, three
@@ -490,11 +519,25 @@ private:
     /// first and then sends exactly the command a script would send (Article 1.2).
     bool confirmErase();
 
-    /// Creates a disabled action for a command that does not exist yet. The
-    /// tooltip names the phase it arrives in, so the interface never shows a
-    /// button that silently does nothing (.claude/ui.md).
+    /// Brings the transcript in front: the properties dock, on its `Geçmiş` tab.
+    ///
+    /// THE TRANSCRIPT IS A TAB, not a dock of its own — which is why a
+    /// `transcriptDock_` member sat null for its whole life and two theme loops
+    /// quietly skipped it. A query command answers here and changes nothing on
+    /// the canvas, so a menu row that runs one has to put its answer where
+    /// somebody is looking.
+    void showTranscript();
+
+    /// Creates an action for a feature that does not exist yet: it stays live and
+    /// EXPLAINS ITSELF when pressed.
+    ///
+    /// It used to be `setEnabled(false)` with the phase in a tooltip, and a
+    /// disabled menu row answers nothing when clicked — the user's words were
+    /// that they could not tell why the item was there. So the row opens a box
+    /// that says what the feature will do, which phase it lands in, and what to
+    /// use in the meantime. `explains` is that sentence, in Turkish.
     QAction* placeholder(Glyph glyph, const QString& text, const QString& command,
-                         const QString& phase);
+                         const QString& phase, const QString& explains);
 
     /// Creates a button for a command that EDITS THE SELECTION and then finishes.
     ///
@@ -530,6 +573,22 @@ private:
 
     void syncDockTitles();
     void buildMenus();
+
+    /// Appends every command the menus do not already offer, to the menu of its
+    /// category — GENERATED FROM `Registry`, run once after the menus are built.
+    ///
+    /// The curated entries above it are the ones with a chosen place, a shortcut
+    /// and a hand-written label; this is what makes the bar COMPLETE. Without it
+    /// the menus were a hand-kept list of the commands somebody remembered, and
+    /// what that cost was measurable: of 97 commands, 64 could be started from a
+    /// button or a menu and 33 could be started only by typing their name. A
+    /// mouse user simply did not have them.
+    ///
+    /// That is CLAUDE.md 5.10 read the way it is written — a menu table not
+    /// generated from `Registry` is forbidden — and Article 1.2, which makes the
+    /// GUI an equal client rather than a poorer one. It also means the next
+    /// command to be declared arrives in its menu with nothing told to do it.
+    void completeMenusFromRegistry();
     void buildToolBox();
     void buildPanels();
     void buildStatusBar();
@@ -589,7 +648,6 @@ private:
 
     QDockWidget* layerDock_{nullptr};
     QDockWidget* propertyDock_{nullptr};
-    QDockWidget* transcriptDock_{nullptr};
 
     /// The conversation panel and its dock. Built with the window rather than on
     /// demand, so the toolbar mark and `Pencere ▸ Yapay Zeka` both just show it.

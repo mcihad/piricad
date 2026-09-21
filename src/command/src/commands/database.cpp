@@ -190,6 +190,7 @@ KENTOS_COMMAND(database)
     return CommandSpec{
         .id       = "core.database",
         .names    = {"VERİTABANI", "VERITABANI", "DATABASE", "VT"},
+        .title    = "Veritabanı",
         .category = Category::File,
         .params =
             {

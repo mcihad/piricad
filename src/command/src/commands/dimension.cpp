@@ -266,6 +266,7 @@ KENTOS_COMMAND(dimension)
     return CommandSpec{
         .id       = "core.dimension",
         .names    = {"ÖLÇÜ", "OLCU", "DIMENSION", "ÖÇ"},
+        .title    = "Ölçü",
         .category = Category::Draw,
         .params =
             {
@@ -294,6 +295,7 @@ KENTOS_COMMAND(leader)
     return CommandSpec{
         .id       = "core.leader",
         .names    = {"LİDER", "LIDER", "LEADER", "LD"},
+        .title    = "Lider",
         .category = Category::Draw,
         .params =
             {

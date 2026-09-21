@@ -115,6 +115,7 @@ KENTOS_COMMAND(points)
     return CommandSpec{
         .id       = "core.points",
         .names    = {"NOKTALAR", "POINTS", "NKL"},
+        .title    = "Nokta Listesi",
         .category = Category::File,
         .params =
             {

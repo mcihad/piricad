@@ -430,6 +430,7 @@ KENTOS_COMMAND(combine)
     return CommandSpec{
         .id       = "core.combine",
         .names    = {"BİRLEŞTİR", "BIRLESTIR", "COMBINE", "BRL"},
+        .title    = "Birleştir",
         .category = Category::Modify,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                          "Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim"}},

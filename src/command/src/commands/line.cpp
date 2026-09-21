@@ -59,6 +59,7 @@ KENTOS_COMMAND(line)
     return CommandSpec{
         .id       = "core.line",
         .names    = {"ÇİZGİ", "CIZGI", "LINE", "Ç", "L"},
+        .title    = "Çizgi",
         .category = Category::Draw,
         .params   = {Param::points("noktalar", Arity::at_least(2),
                                    "Ardışık doğru parçalarının köşe noktaları")},

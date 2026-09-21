@@ -337,6 +337,7 @@ KENTOS_COMMAND(print)
     return CommandSpec{
         .id       = "core.print",
         .names    = {"YAZDIR", "PRINT", "PLOT", "YZDR"},
+        .title    = "Yazdır",
         .category = Category::File,
         .params =
             {
@@ -406,6 +407,7 @@ KENTOS_COMMAND(print_profile)
     return CommandSpec{
         .id       = "core.print_profile",
         .names    = {"YAZDIRMAPROFİLİ", "YAZDIRMAPROFILI", "PRINTPROFILE", "YZP"},
+        .title    = "Yazdırma Profili",
         .category = Category::File,
         .params =
             {

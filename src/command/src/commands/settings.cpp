@@ -237,6 +237,7 @@ KENTOS_COMMAND(setting)
     return CommandSpec{
         .id       = "core.setting",
         .names    = {"AYAR", "SETTING", "AY"},
+        .title    = "Proje Ayarı",
         .category = Category::System,
         .params =
             {
@@ -265,6 +266,7 @@ KENTOS_COMMAND(mode)
     return CommandSpec{
         .id       = "core.mode",
         .names    = {"MOD", "MODE", "MD"},
+        .title    = "Çizim Modları",
         .category = Category::System,
         .params =
             {
@@ -289,6 +291,7 @@ KENTOS_COMMAND(preference)
     return CommandSpec{
         .id       = "core.preference",
         .names    = {"TERCİH", "TERCIH", "PREFERENCE", "PREF"},
+        .title    = "Uygulama Tercihi",
         .category = Category::System,
         .params =
             {

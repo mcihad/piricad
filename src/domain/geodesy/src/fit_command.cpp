@@ -155,6 +155,7 @@ KENTOS_COMMAND(fit)
     return CommandSpec{
         .id       = "core.fit",
         .names    = {"OTURT", "FIT", "GEOREF", "OTR"},
+        .title    = "Oturt (Helmert)",
         .category = Category::Modify,
         .params =
             {

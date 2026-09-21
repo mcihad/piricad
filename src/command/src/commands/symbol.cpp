@@ -224,6 +224,7 @@ KENTOS_COMMAND(symbol)
     return CommandSpec{
         .id       = "core.symbol",
         .names    = {"SEMBOL", "SEMBOLLER", "SYMBOL", "SMB"},
+        .title    = "Sembol",
         .category = Category::Layer,
         .params =
             {

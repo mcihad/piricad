@@ -142,6 +142,45 @@ if(TARGET kentos_cad)
                 $<TARGET_FILE:kentos_cad>)
     set_tests_properties(canvas-edits PROPERTIES TIMEOUT 120)
 
+    # HOW MUCH OF THE PROGRAM A HAND CAN REACH, and it has to be all of it.
+    # CLAUDE.md 5.15 forbids a feature reachable only by mouse; the mirror of it
+    # is what shipped, and it was measured rather than guessed: of 97 commands,
+    # 33 could be started only by typing a name. A mouse user did not have them.
+    # The menus are generated from `Registry` now, so this stays at zero as
+    # commands are added — which is the point of the gate.
+    add_test(NAME tool-reach
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_REACH_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(tool-reach PROPERTIES TIMEOUT 120)
+
+    # AND WHETHER A HAND CAN ANSWER what a pressed tool asks. Reachability says
+    # the button exists; this says pressing it leaves the user somewhere they can
+    # act. Pressing Blok Ekle used to put "Yerleştirilecek bloğun adı" on the
+    # status line with the focus still on the canvas and the list of blocks
+    # nowhere — a question only somebody who already knew the answer could give.
+    add_test(NAME tool-answerable
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_ANSWER_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(tool-answerable PROPERTIES TIMEOUT 120)
+
+    # AND THE MENUS THEMSELVES, opened. A menu is not in the window until it is
+    # opened, so no screenshot of the program shows one: this pops each of the
+    # eleven, prints what it holds and fails on an empty menu or one taller than
+    # a laptop screen — which is how the help window came to be unusable.
+    add_test(NAME menu-bar
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_MENU_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(menu-bar PROPERTIES TIMEOUT 120)
+
     # AND YARDIM → KOMUT LİSTESİ. The answer used to be the whole generated
     # reference inside a `QMessageBox`, whose text has no scroll area: the window
     # grew taller than the screen with no way to move it. `unit` links no Qt and

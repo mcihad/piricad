@@ -193,6 +193,7 @@ KENTOS_COMMAND(split_parcel)
     return CommandSpec{
         .id       = "core.split_parcel",
         .names    = {"İFRAZ", "IFRAZ", "SUBDIVIDE", "İFR"},
+        .title    = "İfraz",
         .category = Category::Modify,
         .params =
             {

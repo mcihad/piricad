@@ -378,6 +378,7 @@ KENTOS_COMMAND(vertex_move)
     return CommandSpec{
         .id       = "core.vertex_move",
         .names    = {"KÖŞETAŞI", "KOSETASI", "MOVEVERTEX", "KT"},
+        .title    = "Köşe Taşı",
         .category = Category::Modify,
         .params =
             {
@@ -399,6 +400,7 @@ KENTOS_COMMAND(vertex_insert)
     return CommandSpec{
         .id       = "core.vertex_insert",
         .names    = {"KÖŞEEKLE", "KOSEEKLE", "ADDVERTEX", "KE"},
+        .title    = "Köşe Ekle",
         .category = Category::Modify,
         .params =
             {

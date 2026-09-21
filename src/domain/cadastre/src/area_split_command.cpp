@@ -328,6 +328,7 @@ KENTOS_COMMAND(split_area)
     return CommandSpec{
         .id       = "core.split_area",
         .names    = {"ALANİFRAZ", "ALANIFRAZ", "SPLITAREA", "ALİF"},
+        .title    = "Alana Göre İfraz",
         .category = Category::Modify,
         .params =
             {

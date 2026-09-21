@@ -85,7 +85,12 @@ Task<void> run_set_layer(Context& ctx)
     std::vector<core::EntityId> slots;
     if (!co_await gather(ctx, requested, slots, "KATMANAT nesneler=1 katman=PARSEL")) co_return;
 
-    auto name = co_await ctx.text("katman", "Taşınacak katmanın adı");
+    // THE LAYERS THIS DRAWING HAS. A prompt for a name is unanswerable by a
+    // mouse; the shell offers what the command names (`Prompt::choices`).
+    std::vector<std::string> known;
+    for (const core::Layer& l : ctx.document().layers())
+        known.push_back(l.name);
+    auto name = co_await ctx.text("katman", "Taşınacak katmanın adı", known);
     if (!name) co_return;
 
     if (name->empty()) {
@@ -228,6 +233,7 @@ KENTOS_COMMAND(set_layer)
     return CommandSpec{
         .id       = "core.set_layer",
         .names    = {"KATMANAT", "KATMANATA", "SETLAYER", "KA"},
+        .title    = "Katmana Ata",
         .category = Category::Modify,
         .params =
             {
@@ -247,6 +253,7 @@ KENTOS_COMMAND(match_style)
     return CommandSpec{
         .id       = "core.match_style",
         .names    = {"STİLKOPYALA", "STILKOPYALA", "MATCHPROP", "SK"},
+        .title    = "Stil Kopyala",
         .category = Category::Modify,
         .params =
             {

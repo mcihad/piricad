@@ -72,6 +72,7 @@ KENTOS_COMMAND(circle_draw)
     return CommandSpec{
         .id       = "core.circle_draw",
         .names    = {"DAİRE", "DAIRE", "CIRCLE", "DR"},
+        .title    = "Daire",
         .category = Category::Draw,
         .params =
             {

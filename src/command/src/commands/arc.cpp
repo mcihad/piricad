@@ -86,6 +86,7 @@ KENTOS_COMMAND(arc_draw)
     return CommandSpec{
         .id       = "core.arc_draw",
         .names    = {"YAY", "ARC", "YY"},
+        .title    = "Yay",
         .category = Category::Draw,
         .params =
             {

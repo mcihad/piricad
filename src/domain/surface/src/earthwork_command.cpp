@@ -135,6 +135,7 @@ KENTOS_COMMAND(earthwork)
     return CommandSpec{
         .id       = "core.earthwork",
         .names    = {"HACİM", "HACIM", "EARTHWORK", "HCM"},
+        .title    = "Hacim Hesabı",
         .category = Category::Query,
         .params   = {Param::integer("kot", Arity::exactly(1),
                                     "Karşılaştırma kotu, milimetre (845 m = 845000)")},

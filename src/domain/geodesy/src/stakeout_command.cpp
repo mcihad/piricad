@@ -176,6 +176,7 @@ KENTOS_COMMAND(stakeout)
     return CommandSpec{
         .id       = "core.stakeout",
         .names    = {"APLİKASYON", "APLIKASYON", "STAKEOUT", "APL"},
+        .title    = "Aplikasyon",
         .category = Category::Query,
         .params =
             {

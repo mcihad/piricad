@@ -73,6 +73,22 @@ void CommandLine::refreshCompletions()
     model_->setStringList(names);
 }
 
+void CommandLine::offerChoices(const QStringList& words)
+{
+    if (words.isEmpty()) {
+        refreshCompletions();
+        return;
+    }
+    QStringList sorted = words;
+    sorted.sort();
+    model_->setStringList(sorted);
+
+    // SHOWN, not merely available. The point is that a user who does not know
+    // the names can see them; a completer that waits to be typed into first has
+    // not answered the question.
+    if (completer_ != nullptr) completer_->complete();
+}
+
 void CommandLine::setPrompt(const QString& prompt)
 {
     prompt_ = prompt;

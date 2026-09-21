@@ -123,6 +123,7 @@ KENTOS_COMMAND(area)
     return CommandSpec{
         .id       = "core.area",
         .names    = {"ALAN", "AREA", "POLİGON", "POLIGON", "AL"},
+        .title    = "Alan",
         .category = Category::Draw,
         .params =
             {

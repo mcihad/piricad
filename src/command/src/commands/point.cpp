@@ -53,6 +53,7 @@ KENTOS_COMMAND(point_draw)
     return CommandSpec{
         .id       = "core.point_draw",
         .names    = {"NOKTA", "POINT", "NK"},
+        .title    = "Nokta",
         .category = Category::Draw,
         .params   = {Param::points("noktalar", Arity::at_least(1), "Yerleştirilecek noktalar")},
         .undo     = UndoPolicy::SingleTransaction,

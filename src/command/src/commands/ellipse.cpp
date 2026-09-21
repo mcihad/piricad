@@ -127,6 +127,7 @@ KENTOS_COMMAND(ellipse_draw)
     return CommandSpec{
         .id       = "core.ellipse_draw",
         .names    = {"ELİPS", "ELIPS", "ELLIPSE", "EL"},
+        .title    = "Elips",
         .category = Category::Draw,
         .params =
             {

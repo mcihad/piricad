@@ -78,6 +78,23 @@ struct Prompt
     /// document, and drawing them twice is what a preview must not do.
     std::vector<Point2> rubber_chain{};
 
+    /// The words that would answer this prompt, when the set is known and
+    /// SMALL: the blocks a drawing has, the patterns a catalogue holds, the
+    /// layers, the styles.
+    ///
+    /// A prompt whose answer is a name is unanswerable by a mouse — and a name
+    /// is what BLOK, BLOKEKLE, TARAMA and STİL each ask for first. Pressing
+    /// their buttons put a question on the status line that only somebody who
+    /// already knew the answer could give, which is what the user meant by "I
+    /// could not run them". The command knows the set because it holds the
+    /// document; the shell knows how to offer a set. So the command says, and
+    /// the shell offers.
+    ///
+    /// EMPTY IS NOT "NO RESTRICTION". These are suggestions, not a word list:
+    /// the validator still decides what is acceptable, because a new block's
+    /// name is by definition not among the ones a drawing already has.
+    std::vector<std::string> choices{};
+
     /// The kind payload of the thing about to be made, for a preview that needs
     /// more than points: the block reference BLOKEKLE will place (its block,
     /// scale and turn), the dimension ÖLÇÜ will lay out (its type and figures),

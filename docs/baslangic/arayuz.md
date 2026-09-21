@@ -79,6 +79,26 @@ Arama Türkçe katlamayla çalışır: `cizgi` yazınca `ÇİZGİ`, `olcek` yaz�
 bulunur. `↑` `↓` gezinir, `Enter` seçili komutu komut satırına yazıp imleci sonuna
 koyar — çünkü argümanı olan bir komutun argümanı yazılmalıdır — `Esc` kapatır.
 
+### Komutun istediği şeyi vermek
+
+Çalışan bir komut ne istediğini komut satırının solunda yazar. İstediği şeye göre
+klavyenin nerede olacağı değişir:
+
+| Komut ne istiyor | Nasıl verilir |
+|---|---|
+| **Nokta** | Tuvale tıklayın; ya da koordinatı komut satırına yazın (`485320,4310220`, `@50,30`, `@100<45`) |
+| **Nesne** | Tuvalde seçin, sonra **Enter** |
+| **Ad** (blok, katman, desen) ya da **sayı** | Odak kendiliğinden komut satırına geçer ve yazılacak yer hazır olur |
+
+Cevabı belli bir kümeden olan istemler o kümeyi de gösterir: **Blok Ekle**
+çizimdeki blokların adlarını, **Katman** ve **Etiket** katman adlarını,
+**Katman Görünümü** alabileceği işlem sözcüklerini listeler. Listeden seçmek de
+yazmak da olur.
+
+Sözle cevap veren komutlar (Katmanları Listele, Görünüm Bilgisi, Seçim Bilgisi,
+Sorgula) cevabı sağ panelin **Geçmiş** sekmesine yazar ve o sekmeyi kendiliğinden
+öne getirir.
+
 ## Menü çubuğu
 
 On menü, hep bu sırayla: **Dosya · Düzen · Görünüm · Çizim · Değiştir · Harita ·
@@ -100,6 +120,17 @@ açar; altçizgi, ekranı boş yere doldurmasın diye gizlidir.
 | **Katman** | Katman, Katman Yöneticisi · Tümünü Göster, Gösterimi Ters Çevir |
 | **Pencere** | Panellerin açık/kapalı durumu, Yerleşimi Sıfırla |
 | **Yardım** | Komut Listesi (**F1**), Hakkında |
+
+Menülerin sonundaki **Diğer komutlar** alt menüsü o kategorinin geri kalan
+komutlarını taşır. Kendi yeri, kısayolu ve simgesi olan komutlar yukarıda
+listelenir; **Diğer komutlar** ise komut kaydından üretilir, yani yeni eklenen
+her komut kendiliğinden oraya düşer. Böylece bir komutun yalnız adını yazarak
+erişilebildiği bir durum kalmaz: her komut ya bir düğmeden ya bir menüden
+başlatılabilir.
+
+Henüz yazılmamış bir özelliğin satırı (Kes, Panoya Kopyala, Yapıştır, Katman
+Yöneticisi) tıklanınca ne yapacağını, hangi fazda geleceğini ve bugün onun
+yerine ne kullanılacağını söyleyen bir pencere açar.
 
 ## Araç çubuğu
 

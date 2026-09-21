@@ -271,7 +271,12 @@ Task<void> run_export(Context& ctx)
 /// the drawing, which is the kind of surprise a file command must not hold.
 Task<void> run_export_style(Context& ctx)
 {
-    auto layer = co_await ctx.text("katman", "Stili aktarılacak katman");
+    // THE LAYERS THIS DRAWING HAS. A prompt for a name is unanswerable by a
+    // mouse; the shell offers what the command names (`Prompt::choices`).
+    std::vector<std::string> known;
+    for (const core::Layer& l : ctx.document().layers())
+        known.push_back(l.name);
+    auto layer = co_await ctx.text("katman", "Stili aktarılacak katman", known);
     if (!layer || layer->empty()) co_return;
 
     auto path = co_await ctx.text("dosya", "Yazılacak QML dosyası");
@@ -294,6 +299,7 @@ KENTOS_COMMAND(exportstyle)
     return CommandSpec{
         .id       = "core.exportstyle",
         .names    = {"STİLAKTAR", "STILAKTAR", "EXPORTSTYLE", "STAKTAR"},
+        .title    = "Stil Aktar",
         .category = Category::File,
         .params =
             {
@@ -315,6 +321,7 @@ KENTOS_COMMAND(newfile)
     return CommandSpec{
         .id       = "core.new",
         .names    = {"YENİ", "YENI", "NEW"},
+        .title    = "Yeni",
         .category = Category::File,
         .params   = {},
         // NOT UNDOABLE, and `None` is the only honest answer rather than the
@@ -356,6 +363,7 @@ KENTOS_COMMAND(open)
     return CommandSpec{
         .id       = "core.open",
         .names    = {"AÇ", "AC", "OPEN"},
+        .title    = "Aç",
         .category = Category::File,
         .params   = {Param::text("dosya", Arity::exactly(1),
                                  "Açılacak KentOSCad proje dosyasının yolu (.pcad)")},
@@ -382,6 +390,7 @@ KENTOS_COMMAND(save)
     return CommandSpec{
         .id       = "core.save",
         .names    = {"KAYDET", "SAVE", "KYD"},
+        .title    = "Kaydet",
         .category = Category::File,
         .params   = {Param::text("dosya", Arity::optional(),
                                  "Hedef yol; verilmezse çizimin bağlı olduğu dosyaya yazılır")},
@@ -402,6 +411,7 @@ KENTOS_COMMAND(saveas)
     return CommandSpec{
         .id       = "core.saveas",
         .names    = {"FARKLIKAYDET", "SAVEAS", "FKAYDET"},
+        .title    = "Farklı Kaydet",
         .category = Category::File,
         .params = {Param::text("dosya", Arity::exactly(1), "Yeni proje dosyasının yolu (.pcad)")},
         .undo   = UndoPolicy::None,
@@ -417,6 +427,7 @@ KENTOS_COMMAND(import)
     return CommandSpec{
         .id       = "core.import",
         .names    = {"İÇEAKTAR", "ICEAKTAR", "IMPORT", "IAKTAR"},
+        .title    = "İçe Aktar",
         .category = Category::File,
         .params =
             {
@@ -445,6 +456,7 @@ KENTOS_COMMAND(exportfile)
     return CommandSpec{
         .id       = "core.export",
         .names    = {"DIŞAAKTAR", "DISAAKTAR", "EXPORT", "DAKTAR"},
+        .title    = "Dışa Aktar",
         .category = Category::File,
         .params =
             {

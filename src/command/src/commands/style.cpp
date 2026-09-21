@@ -1049,6 +1049,7 @@ KENTOS_COMMAND(style)
     return CommandSpec{
         .id       = "core.style",
         .names    = {"STİL", "STIL", "STYLE", "ST"},
+        .title    = "Stil",
         .category = Category::Layer,
         .params =
             {

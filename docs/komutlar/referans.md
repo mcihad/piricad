@@ -8,109 +8,109 @@
 Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 `docs/komutlar/` altındadır ve tablodan bağlanır.
 
-| Komut | Adlar | Kategori | Geri alma | Özellikler | Açıklama |
-|---|---|---|---|---|---|
-| [`core.line`](line.md) | `ÇİZGİ`, `CIZGI`, `LINE`, `Ç`, `L` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki veya daha fazla nokta arasında doğru parçaları çizer. |
-| [`core.polyline`](polyline.md) | `ÇOKLUÇİZGİ`, `COKLUCIZGI`, `POLYLINE`, `ÇÇ`, `PL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Birden çok noktadan TEK bir çizgi nesnesi çizer. |
-| [`core.point_draw`](point_draw.md) | `NOKTA`, `POINT`, `NK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper. |
-| [`core.text`](text.md) | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
-| [`core.edittext`](edittext.md) | `YAZIDÜZENLE`, `YAZIDUZENLE`, `EDITTEXT`, `YZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir. |
-| [`core.exportstyle`](exportstyle.md) | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
-| [`core.area`](area.md) | `ALAN`, `AREA`, `POLİGON`, `POLIGON`, `AL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alan çizer; istenirse içine delik açar. |
-| [`core.rectangle`](rectangle.md) | `DİKDÖRTGEN`, `DIKDORTGEN`, `RECTANGLE`, `DKD`, `REC` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer. |
-| [`core.circle_draw`](circle_draw.md) | `DAİRE`, `DAIRE`, `CIRCLE`, `DR` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve çember üzerindeki bir noktadan daire çizer. |
-| [`core.arc_draw`](arc_draw.md) | `YAY`, `ARC`, `YY` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir. |
-| [`core.vertex_move`](vertex_move.md) | `KÖŞETAŞI`, `KOSETASI`, `MOVEVERTEX`, `KT` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır. |
-| [`core.vertex_insert`](vertex_insert.md) | `KÖŞEEKLE`, `KOSEEKLE`, `ADDVERTEX`, `KE` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir kenarın ortasına yeni köşe ekler. |
-| [`core.to_area`](to_area.md) | `ALANAÇEVİR`, `ALANACEVIR`, `TOAREA`, `ALÇ` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Uç uca değen çizgileri tek bir kapalı alana çevirir. |
-| [`core.move`](move.md) | `TAŞI`, `TASI`, `MOVE`, `TŞ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki nokta arasındaki kadar taşır. |
-| [`core.copy`](copy.md) | `KOPYALA`, `COPY`, `KP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
-| [`core.array`](array.md) | `DİZİ`, `DIZI`, `ARRAY`, `DZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır. |
-| [`core.combine`](combine.md) | `BİRLEŞTİR`, `BIRLESTIR`, `COMBINE`, `BRL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar. |
-| [`core.split`](split.md) | `BÖL`, `BOL`, `SPLIT`, `BL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Nesneleri çizilen bir kesme çizgisiyle böler. |
-| [`core.trim`](trim.md) | `BUDA`, `TRIM`, `BD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizgiyi kestiği sınır çizgisine kadar budar. |
-| [`core.extend`](extend.md) | `UZAT`, `EXTEND`, `UZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizgiyi sınır çizgisine ulaşana kadar uzatır. |
-| [`core.chamfer`](chamfer.md) | `PAH`, `CHAMFER`, `PH` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi düz bir kenarla keser (pah kırar). |
-| [`core.fillet`](fillet.md) | `YUVARLA`, `FILLET`, `YV` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi verilen yarıçapta yay ile yuvarlatır. |
-| [`core.set_layer`](set_layer.md) | `KATMANAT`, `KATMANATA`, `SETLAYER`, `KA` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri başka bir katmana taşır. |
-| [`core.match_style`](match_style.md) | `STİLKOPYALA`, `STILKOPYALA`, `MATCHPROP`, `SK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesnenin stilini seçilen nesnelere uygular. |
-| [`core.rotate`](rotate.md) | `DÖNDÜR`, `DONDUR`, `ROTATE`, `DÖN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkez etrafında döndürür. |
-| [`core.scale`](scale.md) | `ÖLÇEKLE`, `OLCEKLE`, `SCALE`, `ÖLÇEK`, `OLCEK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkeze göre büyütür ya da küçültür. |
-| [`core.mirror`](mirror.md) | `AYNALA`, `MIRROR`, `AYN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
-| [`core.measure`](measure.md) | `ÖLÇ`, `OLC`, `MEASURE`, `MS` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar. |
-| [`core.measure_area`](measure_area.md) | `ALANÖLÇ`, `ALANOLC`, `AREAOF`, `AÖ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Seçilen nesnelerin alanını ve çevresini yazar. |
-| [`core.coordinate`](coordinate.md) | `KOORDİNAT`, `KOORDINAT`, `COORDINATE`, `KRD` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
-| [`core.pan`](pan.md) | `KAYDIR`, `PAN`, `KY` | Görünüm | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır. |
-| [`core.offset`](offset.md) | `OFSET`, `OFFSET`, `OF` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili nesnelerin verilen mesafede paralelini çizer. |
-| [`core.sector`](sector.md) | `DİLİM`, `DILIM`, `SECTOR`, `DL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir. |
-| [`core.annulus`](annulus.md) | `HALKA`, `ANNULUS`, `HLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez, iç ve dış yarıçaptan delikli halka çizer. |
-| [`core.ellipse_draw`](ellipse_draw.md) | `ELİPS`, `ELIPS`, `ELLIPSE`, `EL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir. |
-| [`core.spline`](spline.md) | `SPLINE`, `SPLINE`, `SPLINE`, `SPL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kontrol noktalarından NURBS eğrisi (spline) çizer. |
-| [`core.hatch`](hatch.md) | `TARAMA`, `TARAMA`, `HATCH`, `TRM` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar. |
-| [`core.block`](block.md) | `BLOK`, `BLOK`, `BLOCK`, `BLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar. |
-| [`core.insert`](insert.md) | `BLOKEKLE`, `BLOKEKLE`, `INSERT`, `BE` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir. |
-| [`core.dimension`](dimension.md) | `ÖLÇÜ`, `OLCU`, `DIMENSION`, `ÖÇ` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
-| [`core.leader`](leader.md) | `LİDER`, `LIDER`, `LEADER`, `LD` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar. |
-| [`core.points`](points.md) | `NOKTALAR`, `POINTS`, `NKL` | Dosya | tek işlem | betiklenebilir, AI erişimli | Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod). |
-| [`core.guide`](guide.md) | `KILAVUZ`, `GUIDE`, `KLV` | Çizim | tek işlem | betiklenebilir, AI erişimli | Cetvel kılavuzu ekler, listeler ve siler. |
-| [`core.attribute`](attribute.md) | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
-| [`core.column`](column.md) | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Öznitelik sütunu tanımlar, düzenler, siler; argümansız çağrılınca listeler. |
-| [`core.erase`](erase.md) | `SİL`, `SIL`, `ERASE`, `E` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Seçilen nesneleri siler. |
-| [`core.select`](select.md) | `SEÇ`, `SEC`, `SELECT`, `S` | Düzenleme | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta. |
-| [`core.label`](label.md) | `ETİKET`, `ETIKET`, `LABEL`, `ETK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmandaki nesneleri özniteliklerinden okuyarak etiketler. |
-| [`core.layer`](layer.md) | `KATMAN`, `LAYER`, `KAT` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
-| [`core.layer_visibility`](layer_visibility.md) | `KATMANGÖRÜNÜM`, `KATMANGORUNUM`, `LAYERVIEW`, `KGÖ`, `KGO` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir. |
-| [`core.layout`](layout.md) | `ÇIKTIYERLEŞİMİ`, `CIKTIYERLESIMI`, `LAYOUT`, `ÇYR`, `CYR` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir. |
-| [`core.layout_item`](layout_item.md) | `ÇIKTIÖĞE`, `CIKTIOGE`, `LAYOUTITEM`, `ÇÖĞ`, `COG` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler. |
-| [`core.layout_template`](layout_template.md) | `ÇIKTIŞABLON`, `CIKTISABLON`, `LAYOUTTEMPLATE`, `ÇŞB`, `CSB` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz. |
-| [`core.style`](style.md) | `STİL`, `STIL`, `STYLE`, `ST` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar. |
-| [`core.symbol`](symbol.md) | `SEMBOL`, `SEMBOLLER`, `SYMBOL`, `SMB` | Katman | geri alınmaz | betiklenebilir, AI erişimli | Gösterim rafını yükler, ağacında gezer ve içinde arar. |
-| [`core.zoom`](zoom.md) | `YAKINLAŞ`, `YAKINLAS`, `ZOOM`, `Z` | Görünüm | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü çizim kapsamına veya verilen çarpana ayarlar. |
-| [`core.undo`](undo.md) | `GERİAL`, `GERIAL`, `UNDO`, `U` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Son işlemi geri alır. |
-| [`core.redo`](redo.md) | `YİNELE`, `YINELE`, `REDO` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Geri alınan işlemi yineler. |
-| [`core.new`](new.md) | `YENİ`, `YENI`, `NEW` | Dosya | geri alınmaz | betiklenebilir | Boş bir çizim açar; ekrandaki çizimin yerine geçer. |
-| [`core.open`](open.md) | `AÇ`, `AC`, `OPEN` | Dosya | geri alınmaz | etkileşimli, betiklenebilir | Bir KentOSCad proje dosyasını açar ve çizimin yerine koyar. |
-| [`core.save`](save.md) | `KAYDET`, `SAVE`, `KYD` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi bağlı olduğu KentOSCad proje dosyasına kaydeder. |
-| [`core.saveas`](saveas.md) | `FARKLIKAYDET`, `SAVEAS`, `FKAYDET` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi yeni bir KentOSCad proje dosyasına kaydeder ve ona bağlar. |
-| [`core.import`](import.md) | `İÇEAKTAR`, `ICEAKTAR`, `IMPORT`, `IAKTAR` | Dosya | tek işlem | etkileşimli, betiklenebilir | Dış bir veri dosyasını çizime ekler. |
-| [`core.export`](export.md) | `DIŞAAKTAR`, `DISAAKTAR`, `EXPORT`, `DAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi dış bir veri biçimine yazar. |
-| [`core.script`](script.md) | `BETİK`, `BETIK`, `SCRIPT` | Betik | komuta özel | etkileşimli, betiklenebilir, salt okunur | Bir betik dosyasını komut veri yolu üzerinden çalıştırır. |
-| [`core.database`](database.md) | `VERİTABANI`, `VERITABANI`, `DATABASE`, `VT` | Dosya | geri alınmaz | etkileşimli, betiklenebilir | PostGIS veritabanına bağlanır; katmanları tablo, projeleri kayıt olarak yazar. |
-| [`core.print`](print.md) | `YAZDIR`, `PRINT`, `PLOT`, `YZDR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Çizimin bir penceresini bir yazdırma profilinin kâğıdına yerleştirip PDF dosyasına yazar ya da yazıcıya gönderir. |
-| [`core.print_profile`](print_profile.md) | `YAZDIRMAPROFİLİ`, `YAZDIRMAPROFILI`, `PRINTPROFILE`, `YZP` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Yazdırma profillerini listeler, ekler, siler ya da birini varsayılan yapar; profil kâğıdı, yönü, çözünürlüğü ve kenar boşluğunu taşır. |
-| [`core.setting`](setting.md) | `AYAR`, `SETTING`, `AY` | Sistem | tek işlem | betiklenebilir | Proje ayarlarını listeler, okur ve değiştirir. |
-| [`core.preference`](preference.md) | `TERCİH`, `TERCIH`, `PREFERENCE`, `PREF` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Uygulama tercihlerini listeler, okur ve değiştirir. |
-| [`core.mode`](mode.md) | `MOD`, `MODE`, `MD` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Oturum modlarını (yakalama, dik mod, kutupsal izleme) listeler, okur ve değiştirir. |
-| [`core.help`](help.md) | `YARDIM`, `HELP`, `?` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Komut listesini veya tek bir komutun ayrıntısını gösterir. |
-| [`islem.alan_duzenle`](alan_duzenle.md) | `ALANDÜZENLE`, `ALANDUZENLE`, `ADJUSTAREA`, `ADZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp genişleterek, bir kenarı kaydırarak ya da bir köşeyi çekerek; şekil bozulmaz. |
-| [`islem.uzunluk_yaz`](uzunluk_yaz.md) | `UZUNLUKYAZ`, `UZUNLUKYAZ`, `LABELLENGTH`, `UZY` | İşlem | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar; yazı kenara bağlıdır, kenar değişince izler ve yenilenir. |
-| [`islem.kose_numarala`](kose_numarala.md) | `KÖŞENUMARALA`, `KOSENUMARALA`, `NUMBERVERTICES`, `KNM` | İşlem | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, köşe taşınınca izler. |
-| [`islem.bag_coz`](bag_coz.md) | `BAĞÇÖZ`, `BAGCOZ`, `DETACH`, `BÇ`, `BC` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne bundan sonra tek başına taşınır. |
-| [`islem.bagla`](bagla.md) | `BAĞLA`, `BAGLA`, `ATTACH`, `BĞ`, `BG` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur. |
-| [`core.fit`](fit.md) | `OTURT`, `FIT`, `GEOREF`, `OTR` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert). |
-| [`core.stakeout`](stakeout.md) | `APLİKASYON`, `APLIKASYON`, `STAKEOUT`, `APL` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | İstasyondan her noktaya mesafe ve açı listesi çıkarır (aplikasyon). |
-| [`core.reproject`](reproject.md) | `DÖNÜŞTÜR`, `DONUSTUR`, `REPROJECT`, `DNS` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Çizimin tamamını bir koordinat sisteminden diğerine dönüştürür. |
-| [`core.merge`](merge.md) | `TEVHİT`, `TEVHIT`, `MERGE`, `TVH` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Komşu parselleri tek parselde birleştirir (tevhit). |
-| [`core.split_parcel`](split_parcel.md) | `İFRAZ`, `IFRAZ`, `SUBDIVIDE`, `İFR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz). |
-| [`core.split_area`](split_area.md) | `ALANİFRAZ`, `ALANIFRAZ`, `SPLITAREA`, `ALİF` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Parselden verilen yöne paralel, istenen alanda bir parça ayırır. |
-| [`core.topology`](topology.md) | `TOPOLOJİ`, `TOPOLOJI`, `TOPOLOGY`, `TPL` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Kendini kesen sınır, sıfır alan ve örtüşen parselleri raporlar. |
-| [`core.contour`](contour.md) | `EŞYÜKSELTİ`, `ESYUKSELTI`, `CONTOUR`, `EŞY` | Çizim | tek işlem | betiklenebilir, AI erişimli | Kotlu noktalardan eş yükselti eğrileri çizer. |
-| [`core.earthwork`](earthwork.md) | `HACİM`, `HACIM`, `EARTHWORK`, `HCM` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar. |
-| [`core.layers`](layers.md) | `KATMANLAR`, `LAYERS`, `KTL` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Katmanları, nesne sayılarını, görünürlük ve kilit durumlarını listeler. |
-| [`core.attr_schema`](attr_schema.md) | `ÖZNİTELİKŞEMASI`, `OZNITELIKSEMASI`, `ATTRSCHEMA`, `ÖŞ` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Çizimde tanımlı öznitelik sütunlarını ve tiplerini listeler. |
-| [`core.query`](query.md) | `SORGULA`, `QUERY`, `SRG` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Katman ve öznitelik koşuluna uyan nesneleri sayar ve anahtarlarını bildirir. |
-| [`core.selection_info`](selection_info.md) | `SEÇİMBİLGİSİ`, `SECIMBILGISI`, `SELECTIONINFO`, `SÇB` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Kullanıcının o anki seçimini bildirir: kaç nesne ve hangi anahtarlar. |
-| [`core.view_info`](view_info.md) | `GÖRÜNÜMBİLGİSİ`, `GORUNUMBILGISI`, `VIEWINFO`, `GRB` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Ekranda görünen alanın köşe koordinatlarını, merkezini, ölçeğini ve CRS'ini bildirir. |
-| [`core.context`](context.md) | `BAĞLAM`, `BAGLAM`, `CONTEXT`, `BĞL` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Üzerinde çalışılan her şeyi tek çağrıda özetler: belge sürümü, koordinat sistemi, kapsam, katmanlar, çıktı yerleşimleri ve hedefli olup olmadıkları, seçili nesneler ve görünüm. Özet verir, döküm değil. |
-| [`core.tool_search`](tool_search.md) | `ARAÇARA`, `ARACARA`, `TOOLSEARCH`, `ARA` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Ajan araç kataloğunda ad ve özete göre arar. Sonuç her zaman kaç aracın eşleştiğini, kaçının gösterildiğini ve katalogdaki toplam araç sayısını söyler: arama hiçbir aracı gizlemez, tam liste `tools/list` ile alınır. |
-| [`core.job_template`](job_template.md) | `İŞŞABLONU`, `ISSABLONU`, `JOBTEMPLATE`, `İŞŞ` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Sık yapılan işlerin — atlas, kadastro kontrolü, parsel raporu — komut satırlarını sırasıyla verir. Hiçbirini çalıştırmaz: adımlar olağan araç yüzeyinden gönderilir ve yazan her adım yine öneri olur. |
-| [`core.suggestion`](suggestion.md) | `ÖNERİ`, `ONERI`, `SUGGESTION`, `ÖN` | Sistem | komuta özel | etkileşimli, betiklenebilir, AI erişimli | Bekleyen yapay zeka önerilerini listeler, durumunu söyler, uygular ya da reddeder. |
-| [`core.mcp`](mcp.md) | `MCPSUNUCU`, `MCPSERVER`, `MCP` | Sistem | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Yapay zeka ajanlarının bağlanacağı MCP sunucusunu başlatır, durdurur, durumunu söyler, yeni bir erişim belirteci üretir, bağlı istemcileri listeler ve tek bir istemcinin yetkisini kaldırır. |
-| [`core.ai_provider`](ai_provider.md) | `YAPAYZEKAMODELİ`, `YAPAYZEKAMODELI`, `AIMODEL`, `YZM` | Sistem | geri alınmaz | etkileşimli, betiklenebilir | Yapay zeka model sağlayıcılarını listeler, ekler, siler, birini varsayılan yapar ya da bağlantısını dener; profil adresi, lehçesi, modeli ve anahtar adını taşır. |
+| Komut | Adı | Adlar | Kategori | Geri alma | Özellikler | Açıklama |
+|---|---|---|---|---|---|---|
+| [`core.line`](line.md) | Çizgi | `ÇİZGİ`, `CIZGI`, `LINE`, `Ç`, `L` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki veya daha fazla nokta arasında doğru parçaları çizer. |
+| [`core.polyline`](polyline.md) | Çoklu Çizgi | `ÇOKLUÇİZGİ`, `COKLUCIZGI`, `POLYLINE`, `ÇÇ`, `PL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Birden çok noktadan TEK bir çizgi nesnesi çizer. |
+| [`core.point_draw`](point_draw.md) | Nokta | `NOKTA`, `POINT`, `NK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper. |
+| [`core.text`](text.md) | Metin | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
+| [`core.edittext`](edittext.md) | Yazıyı Düzenle | `YAZIDÜZENLE`, `YAZIDUZENLE`, `EDITTEXT`, `YZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir. |
+| [`core.exportstyle`](exportstyle.md) | Stil Aktar | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
+| [`core.area`](area.md) | Alan | `ALAN`, `AREA`, `POLİGON`, `POLIGON`, `AL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alan çizer; istenirse içine delik açar. |
+| [`core.rectangle`](rectangle.md) | Dikdörtgen | `DİKDÖRTGEN`, `DIKDORTGEN`, `RECTANGLE`, `DKD`, `REC` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer. |
+| [`core.circle_draw`](circle_draw.md) | Daire | `DAİRE`, `DAIRE`, `CIRCLE`, `DR` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve çember üzerindeki bir noktadan daire çizer. |
+| [`core.arc_draw`](arc_draw.md) | Yay | `YAY`, `ARC`, `YY` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir. |
+| [`core.vertex_move`](vertex_move.md) | Köşe Taşı | `KÖŞETAŞI`, `KOSETASI`, `MOVEVERTEX`, `KT` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır. |
+| [`core.vertex_insert`](vertex_insert.md) | Köşe Ekle | `KÖŞEEKLE`, `KOSEEKLE`, `ADDVERTEX`, `KE` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir kenarın ortasına yeni köşe ekler. |
+| [`core.to_area`](to_area.md) | Alana Çevir | `ALANAÇEVİR`, `ALANACEVIR`, `TOAREA`, `ALÇ` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Uç uca değen çizgileri tek bir kapalı alana çevirir. |
+| [`core.move`](move.md) | Taşı | `TAŞI`, `TASI`, `MOVE`, `TŞ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki nokta arasındaki kadar taşır. |
+| [`core.copy`](copy.md) | Kopyala | `KOPYALA`, `COPY`, `KP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar. |
+| [`core.array`](array.md) | Dizi | `DİZİ`, `DIZI`, `ARRAY`, `DZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır. |
+| [`core.combine`](combine.md) | Birleştir | `BİRLEŞTİR`, `BIRLESTIR`, `COMBINE`, `BRL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar. |
+| [`core.split`](split.md) | Böl | `BÖL`, `BOL`, `SPLIT`, `BL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Nesneleri çizilen bir kesme çizgisiyle böler. |
+| [`core.trim`](trim.md) | Buda | `BUDA`, `TRIM`, `BD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizgiyi kestiği sınır çizgisine kadar budar. |
+| [`core.extend`](extend.md) | Uzat | `UZAT`, `EXTEND`, `UZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çizgiyi sınır çizgisine ulaşana kadar uzatır. |
+| [`core.chamfer`](chamfer.md) | Pah | `PAH`, `CHAMFER`, `PH` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi düz bir kenarla keser (pah kırar). |
+| [`core.fillet`](fillet.md) | Yuvarla | `YUVARLA`, `FILLET`, `YV` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir köşeyi verilen yarıçapta yay ile yuvarlatır. |
+| [`core.set_layer`](set_layer.md) | Katmana Ata | `KATMANAT`, `KATMANATA`, `SETLAYER`, `KA` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri başka bir katmana taşır. |
+| [`core.match_style`](match_style.md) | Stil Kopyala | `STİLKOPYALA`, `STILKOPYALA`, `MATCHPROP`, `SK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesnenin stilini seçilen nesnelere uygular. |
+| [`core.rotate`](rotate.md) | Döndür | `DÖNDÜR`, `DONDUR`, `ROTATE`, `DÖN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkez etrafında döndürür. |
+| [`core.scale`](scale.md) | Ölçekle | `ÖLÇEKLE`, `OLCEKLE`, `SCALE`, `ÖLÇEK`, `OLCEK` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri bir merkeze göre büyütür ya da küçültür. |
+| [`core.mirror`](mirror.md) | Aynala | `AYNALA`, `MIRROR`, `AYN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesneleri iki noktadan geçen eksende aynalar. |
+| [`core.measure`](measure.md) | Ölç | `ÖLÇ`, `OLC`, `MEASURE`, `MS` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar. |
+| [`core.measure_area`](measure_area.md) | Alan Ölç | `ALANÖLÇ`, `ALANOLC`, `AREAOF`, `AÖ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Seçilen nesnelerin alanını ve çevresini yazar. |
+| [`core.coordinate`](coordinate.md) | Koordinat Oku | `KOORDİNAT`, `KOORDINAT`, `COORDINATE`, `KRD` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar. |
+| [`core.pan`](pan.md) | Kaydır | `KAYDIR`, `PAN`, `KY` | Görünüm | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır. |
+| [`core.offset`](offset.md) | Ofset | `OFSET`, `OFFSET`, `OF` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili nesnelerin verilen mesafede paralelini çizer. |
+| [`core.sector`](sector.md) | Daire Dilimi | `DİLİM`, `DILIM`, `SECTOR`, `DL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir. |
+| [`core.annulus`](annulus.md) | Halka | `HALKA`, `ANNULUS`, `HLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez, iç ve dış yarıçaptan delikli halka çizer. |
+| [`core.ellipse_draw`](ellipse_draw.md) | Elips | `ELİPS`, `ELIPS`, `ELLIPSE`, `EL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir. |
+| [`core.spline`](spline.md) | Spline | `SPLINE`, `SPLINE`, `SPLINE`, `SPL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kontrol noktalarından NURBS eğrisi (spline) çizer. |
+| [`core.hatch`](hatch.md) | Tarama | `TARAMA`, `TARAMA`, `HATCH`, `TRM` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar. |
+| [`core.block`](block.md) | Blok Tanımla | `BLOK`, `BLOK`, `BLOCK`, `BLK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar. |
+| [`core.insert`](insert.md) | Blok Ekle | `BLOKEKLE`, `BLOKEKLE`, `INSERT`, `BE` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir. |
+| [`core.dimension`](dimension.md) | Ölçü | `ÖLÇÜ`, `OLCU`, `DIMENSION`, `ÖÇ` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer. |
+| [`core.leader`](leader.md) | Lider | `LİDER`, `LIDER`, `LEADER`, `LD` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar. |
+| [`core.points`](points.md) | Nokta Listesi | `NOKTALAR`, `POINTS`, `NKL` | Dosya | tek işlem | betiklenebilir, AI erişimli | Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod). |
+| [`core.guide`](guide.md) | Kılavuz | `KILAVUZ`, `GUIDE`, `KLV` | Çizim | tek işlem | betiklenebilir, AI erişimli | Cetvel kılavuzu ekler, listeler ve siler. |
+| [`core.attribute`](attribute.md) | Öznitelik | `ÖZNİTELİK`, `OZNITELIK`, `ATTRIBUTE`, `ÖZN`, `OZN` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar. |
+| [`core.column`](column.md) | Sütun | `SÜTUN`, `SUTUN`, `COLUMN`, `STN` | Düzenleme | geri alınmaz | betiklenebilir | Öznitelik sütunu tanımlar, düzenler, siler; argümansız çağrılınca listeler. |
+| [`core.erase`](erase.md) | Sil | `SİL`, `SIL`, `ERASE`, `E` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Seçilen nesneleri siler. |
+| [`core.select`](select.md) | Seç | `SEÇ`, `SEC`, `SELECT`, `S` | Düzenleme | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta. |
+| [`core.label`](label.md) | Etiket | `ETİKET`, `ETIKET`, `LABEL`, `ETK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmandaki nesneleri özniteliklerinden okuyarak etiketler. |
+| [`core.layer`](layer.md) | Katman | `KATMAN`, `LAYER`, `KAT` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katman oluşturur, aktif yapar ve özelliklerini değiştirir. |
+| [`core.layer_visibility`](layer_visibility.md) | Katman Görünümü | `KATMANGÖRÜNÜM`, `KATMANGORUNUM`, `LAYERVIEW`, `KGÖ`, `KGO` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir. |
+| [`core.layout`](layout.md) | Çıktı Yerleşimi | `ÇIKTIYERLEŞİMİ`, `CIKTIYERLESIMI`, `LAYOUT`, `ÇYR`, `CYR` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir. |
+| [`core.layout_item`](layout_item.md) | Çıktı Öğesi | `ÇIKTIÖĞE`, `CIKTIOGE`, `LAYOUTITEM`, `ÇÖĞ`, `COG` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler. |
+| [`core.layout_template`](layout_template.md) | Çıktı Şablonu | `ÇIKTIŞABLON`, `CIKTISABLON`, `LAYOUTTEMPLATE`, `ÇŞB`, `CSB` | Dosya | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz. |
+| [`core.style`](style.md) | Stil | `STİL`, `STIL`, `STYLE`, `ST` | Katman | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar. |
+| [`core.symbol`](symbol.md) | Sembol | `SEMBOL`, `SEMBOLLER`, `SYMBOL`, `SMB` | Katman | geri alınmaz | betiklenebilir, AI erişimli | Gösterim rafını yükler, ağacında gezer ve içinde arar. |
+| [`core.zoom`](zoom.md) | Yakınlaş | `YAKINLAŞ`, `YAKINLAS`, `ZOOM`, `Z` | Görünüm | geri alınmaz | betiklenebilir, AI erişimli, şeffaf, salt okunur | Görünümü çizim kapsamına veya verilen çarpana ayarlar. |
+| [`core.undo`](undo.md) | Geri Al | `GERİAL`, `GERIAL`, `UNDO`, `U` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Son işlemi geri alır. |
+| [`core.redo`](redo.md) | Yinele | `YİNELE`, `YINELE`, `REDO` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Geri alınan işlemi yineler. |
+| [`core.new`](new.md) | Yeni | `YENİ`, `YENI`, `NEW` | Dosya | geri alınmaz | betiklenebilir | Boş bir çizim açar; ekrandaki çizimin yerine geçer. |
+| [`core.open`](open.md) | Aç | `AÇ`, `AC`, `OPEN` | Dosya | geri alınmaz | etkileşimli, betiklenebilir | Bir KentOSCad proje dosyasını açar ve çizimin yerine koyar. |
+| [`core.save`](save.md) | Kaydet | `KAYDET`, `SAVE`, `KYD` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi bağlı olduğu KentOSCad proje dosyasına kaydeder. |
+| [`core.saveas`](saveas.md) | Farklı Kaydet | `FARKLIKAYDET`, `SAVEAS`, `FKAYDET` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi yeni bir KentOSCad proje dosyasına kaydeder ve ona bağlar. |
+| [`core.import`](import.md) | İçe Aktar | `İÇEAKTAR`, `ICEAKTAR`, `IMPORT`, `IAKTAR` | Dosya | tek işlem | etkileşimli, betiklenebilir | Dış bir veri dosyasını çizime ekler. |
+| [`core.export`](export.md) | Dışa Aktar | `DIŞAAKTAR`, `DISAAKTAR`, `EXPORT`, `DAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Çizimi dış bir veri biçimine yazar. |
+| [`core.script`](script.md) | Betik Çalıştır | `BETİK`, `BETIK`, `SCRIPT` | Betik | komuta özel | etkileşimli, betiklenebilir, salt okunur | Bir betik dosyasını komut veri yolu üzerinden çalıştırır. |
+| [`core.database`](database.md) | Veritabanı | `VERİTABANI`, `VERITABANI`, `DATABASE`, `VT` | Dosya | geri alınmaz | etkileşimli, betiklenebilir | PostGIS veritabanına bağlanır; katmanları tablo, projeleri kayıt olarak yazar. |
+| [`core.print`](print.md) | Yazdır | `YAZDIR`, `PRINT`, `PLOT`, `YZDR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Çizimin bir penceresini bir yazdırma profilinin kâğıdına yerleştirip PDF dosyasına yazar ya da yazıcıya gönderir. |
+| [`core.print_profile`](print_profile.md) | Yazdırma Profili | `YAZDIRMAPROFİLİ`, `YAZDIRMAPROFILI`, `PRINTPROFILE`, `YZP` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Yazdırma profillerini listeler, ekler, siler ya da birini varsayılan yapar; profil kâğıdı, yönü, çözünürlüğü ve kenar boşluğunu taşır. |
+| [`core.setting`](setting.md) | Proje Ayarı | `AYAR`, `SETTING`, `AY` | Sistem | tek işlem | betiklenebilir | Proje ayarlarını listeler, okur ve değiştirir. |
+| [`core.preference`](preference.md) | Uygulama Tercihi | `TERCİH`, `TERCIH`, `PREFERENCE`, `PREF` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Uygulama tercihlerini listeler, okur ve değiştirir. |
+| [`core.mode`](mode.md) | Çizim Modları | `MOD`, `MODE`, `MD` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Oturum modlarını (yakalama, dik mod, kutupsal izleme) listeler, okur ve değiştirir. |
+| [`core.help`](help.md) | Komut Listesi | `YARDIM`, `HELP`, `?` | Sistem | geri alınmaz | betiklenebilir, salt okunur | Komut listesini veya tek bir komutun ayrıntısını gösterir. |
+| [`islem.alan_duzenle`](alan_duzenle.md) | — | `ALANDÜZENLE`, `ALANDUZENLE`, `ADJUSTAREA`, `ADZ` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alanı istenen alana getirir: bütün kenarları eşit daraltıp genişleterek, bir kenarı kaydırarak ya da bir köşeyi çekerek; şekil bozulmaz. |
+| [`islem.uzunluk_yaz`](uzunluk_yaz.md) | — | `UZUNLUKYAZ`, `UZUNLUKYAZ`, `LABELLENGTH`, `UZY` | İşlem | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki her çizginin ve alanın her kenarına uzunluğunu, kenara paralel bir yazı olarak yazar; yazı kenara bağlıdır, kenar değişince izler ve yenilenir. |
+| [`islem.kose_numarala`](kose_numarala.md) | — | `KÖŞENUMARALA`, `KOSENUMARALA`, `NUMBERVERTICES`, `KNM` | İşlem | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki her alanın (ve çizginin) köşelerini seçilen köşeden başlayarak sırayla numaralar ve numarayı köşenin dışına yazar; numara köşesine bağlıdır, köşe taşınınca izler. |
+| [`islem.bag_coz`](bag_coz.md) | — | `BAĞÇÖZ`, `BAGCOZ`, `DETACH`, `BÇ`, `BC` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki yazıların bağını çözer: yazı yerinde kalır, bağlı olduğu nesne bundan sonra tek başına taşınır. |
+| [`islem.bagla`](bagla.md) | — | `BAĞLA`, `BAGLA`, `ATTACH`, `BĞ`, `BG` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine bağlar: nesne taşınınca yazı izler; istenirse yazı kenarın uzunluğu olur. |
+| [`core.fit`](fit.md) | Oturt (Helmert) | `OTURT`, `FIT`, `GEOREF`, `OTR` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert). |
+| [`core.stakeout`](stakeout.md) | Aplikasyon | `APLİKASYON`, `APLIKASYON`, `STAKEOUT`, `APL` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | İstasyondan her noktaya mesafe ve açı listesi çıkarır (aplikasyon). |
+| [`core.reproject`](reproject.md) | Dönüştür | `DÖNÜŞTÜR`, `DONUSTUR`, `REPROJECT`, `DNS` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Çizimin tamamını bir koordinat sisteminden diğerine dönüştürür. |
+| [`core.merge`](merge.md) | Tevhit | `TEVHİT`, `TEVHIT`, `MERGE`, `TVH` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Komşu parselleri tek parselde birleştirir (tevhit). |
+| [`core.split_parcel`](split_parcel.md) | İfraz | `İFRAZ`, `IFRAZ`, `SUBDIVIDE`, `İFR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz). |
+| [`core.split_area`](split_area.md) | Alana Göre İfraz | `ALANİFRAZ`, `ALANIFRAZ`, `SPLITAREA`, `ALİF` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Parselden verilen yöne paralel, istenen alanda bir parça ayırır. |
+| [`core.topology`](topology.md) | Topoloji Denetimi | `TOPOLOJİ`, `TOPOLOJI`, `TOPOLOGY`, `TPL` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Kendini kesen sınır, sıfır alan ve örtüşen parselleri raporlar. |
+| [`core.contour`](contour.md) | Eşyükselti Eğrileri | `EŞYÜKSELTİ`, `ESYUKSELTI`, `CONTOUR`, `EŞY` | Çizim | tek işlem | betiklenebilir, AI erişimli | Kotlu noktalardan eş yükselti eğrileri çizer. |
+| [`core.earthwork`](earthwork.md) | Hacim Hesabı | `HACİM`, `HACIM`, `EARTHWORK`, `HCM` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar. |
+| [`core.layers`](layers.md) | Katmanları Listele | `KATMANLAR`, `LAYERS`, `KTL` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Katmanları, nesne sayılarını, görünürlük ve kilit durumlarını listeler. |
+| [`core.attr_schema`](attr_schema.md) | Öznitelik Şeması | `ÖZNİTELİKŞEMASI`, `OZNITELIKSEMASI`, `ATTRSCHEMA`, `ÖŞ` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Çizimde tanımlı öznitelik sütunlarını ve tiplerini listeler. |
+| [`core.query`](query.md) | Sorgula | `SORGULA`, `QUERY`, `SRG` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Katman ve öznitelik koşuluna uyan nesneleri sayar ve anahtarlarını bildirir. |
+| [`core.selection_info`](selection_info.md) | Seçim Bilgisi | `SEÇİMBİLGİSİ`, `SECIMBILGISI`, `SELECTIONINFO`, `SÇB` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Kullanıcının o anki seçimini bildirir: kaç nesne ve hangi anahtarlar. |
+| [`core.view_info`](view_info.md) | Görünüm Bilgisi | `GÖRÜNÜMBİLGİSİ`, `GORUNUMBILGISI`, `VIEWINFO`, `GRB` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Ekranda görünen alanın köşe koordinatlarını, merkezini, ölçeğini ve CRS'ini bildirir. |
+| [`core.context`](context.md) | Bağlam | `BAĞLAM`, `BAGLAM`, `CONTEXT`, `BĞL` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Üzerinde çalışılan her şeyi tek çağrıda özetler: belge sürümü, koordinat sistemi, kapsam, katmanlar, çıktı yerleşimleri ve hedefli olup olmadıkları, seçili nesneler ve görünüm. Özet verir, döküm değil. |
+| [`core.tool_search`](tool_search.md) | Araç Ara | `ARAÇARA`, `ARACARA`, `TOOLSEARCH`, `ARA` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Ajan araç kataloğunda ad ve özete göre arar. Sonuç her zaman kaç aracın eşleştiğini, kaçının gösterildiğini ve katalogdaki toplam araç sayısını söyler: arama hiçbir aracı gizlemez, tam liste `tools/list` ile alınır. |
+| [`core.job_template`](job_template.md) | İş Şablonu | `İŞŞABLONU`, `ISSABLONU`, `JOBTEMPLATE`, `İŞŞ` | Sorgu | geri alınmaz | betiklenebilir, AI erişimli, salt okunur | Sık yapılan işlerin — atlas, kadastro kontrolü, parsel raporu — komut satırlarını sırasıyla verir. Hiçbirini çalıştırmaz: adımlar olağan araç yüzeyinden gönderilir ve yazan her adım yine öneri olur. |
+| [`core.suggestion`](suggestion.md) | Yapay Zeka Önerisi | `ÖNERİ`, `ONERI`, `SUGGESTION`, `ÖN` | Sistem | komuta özel | etkileşimli, betiklenebilir, AI erişimli | Bekleyen yapay zeka önerilerini listeler, durumunu söyler, uygular ya da reddeder. |
+| [`core.mcp`](mcp.md) | MCP Sunucusu | `MCPSUNUCU`, `MCPSERVER`, `MCP` | Sistem | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Yapay zeka ajanlarının bağlanacağı MCP sunucusunu başlatır, durdurur, durumunu söyler, yeni bir erişim belirteci üretir, bağlı istemcileri listeler ve tek bir istemcinin yetkisini kaldırır. |
+| [`core.ai_provider`](ai_provider.md) | Yapay Zeka Modeli | `YAPAYZEKAMODELİ`, `YAPAYZEKAMODELI`, `AIMODEL`, `YZM` | Sistem | geri alınmaz | etkileşimli, betiklenebilir | Yapay zeka model sağlayıcılarını listeler, ekler, siler, birini varsayılan yapar ya da bağlantısını dener; profil adresi, lehçesi, modeli ve anahtar adını taşır. |
 
 ## Parametreler
 
-### `core.line` — ÇİZGİ
+### `core.line` — ÇİZGİ (Çizgi)
 
 İki veya daha fazla nokta arasında doğru parçaları çizer.
 
@@ -120,7 +120,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 
 Ayrıntılı kullanım: [ÇİZGİ](line.md)
 
-### `core.polyline` — ÇOKLUÇİZGİ
+### `core.polyline` — ÇOKLUÇİZGİ (Çoklu Çizgi)
 
 Birden çok noktadan TEK bir çizgi nesnesi çizer.
 
@@ -130,7 +130,7 @@ Birden çok noktadan TEK bir çizgi nesnesi çizer.
 
 Ayrıntılı kullanım: [ÇOKLUÇİZGİ](polyline.md)
 
-### `core.point_draw` — NOKTA
+### `core.point_draw` — NOKTA (Nokta)
 
 Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper.
 
@@ -140,7 +140,7 @@ Ayrıntılı kullanım: [ÇOKLUÇİZGİ](polyline.md)
 
 Ayrıntılı kullanım: [NOKTA](point_draw.md)
 
-### `core.text` — METİN
+### `core.text` — METİN (Metin)
 
 Çizime metin yazar; yükseklik ve hizalama verilebilir.
 
@@ -154,7 +154,7 @@ Ayrıntılı kullanım: [NOKTA](point_draw.md)
 
 Ayrıntılı kullanım: [METİN](text.md)
 
-### `core.edittext` — YAZIDÜZENLE
+### `core.edittext` — YAZIDÜZENLE (Yazıyı Düzenle)
 
 Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir.
 
@@ -167,7 +167,7 @@ Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir
 
 Ayrıntılı kullanım: [YAZIDÜZENLE](edittext.md)
 
-### `core.exportstyle` — STİLAKTAR
+### `core.exportstyle` — STİLAKTAR (Stil Aktar)
 
 Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar.
 
@@ -178,7 +178,7 @@ Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar.
 
 Ayrıntılı kullanım: [STİLAKTAR](exportstyle.md)
 
-### `core.area` — ALAN
+### `core.area` — ALAN (Alan)
 
 Kapalı bir alan çizer; istenirse içine delik açar.
 
@@ -189,7 +189,7 @@ Kapalı bir alan çizer; istenirse içine delik açar.
 
 Ayrıntılı kullanım: [ALAN](area.md)
 
-### `core.rectangle` — DİKDÖRTGEN
+### `core.rectangle` — DİKDÖRTGEN (Dikdörtgen)
 
 Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer.
 
@@ -199,7 +199,7 @@ Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer.
 
 Ayrıntılı kullanım: [DİKDÖRTGEN](rectangle.md)
 
-### `core.circle_draw` — DAİRE
+### `core.circle_draw` — DAİRE (Daire)
 
 Merkez ve çember üzerindeki bir noktadan daire çizer.
 
@@ -210,7 +210,7 @@ Merkez ve çember üzerindeki bir noktadan daire çizer.
 
 Ayrıntılı kullanım: [DAİRE](circle_draw.md)
 
-### `core.arc_draw` — YAY
+### `core.arc_draw` — YAY (Yay)
 
 Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir.
 
@@ -222,7 +222,7 @@ Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir.
 
 Ayrıntılı kullanım: [YAY](arc_draw.md)
 
-### `core.vertex_move` — KÖŞETAŞI
+### `core.vertex_move` — KÖŞETAŞI (Köşe Taşı)
 
 Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.
 
@@ -234,7 +234,7 @@ Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.
 
 Ayrıntılı kullanım: [KÖŞETAŞI](vertex_move.md)
 
-### `core.vertex_insert` — KÖŞEEKLE
+### `core.vertex_insert` — KÖŞEEKLE (Köşe Ekle)
 
 Bir kenarın ortasına yeni köşe ekler.
 
@@ -246,7 +246,7 @@ Bir kenarın ortasına yeni köşe ekler.
 
 Ayrıntılı kullanım: [KÖŞEEKLE](vertex_insert.md)
 
-### `core.to_area` — ALANAÇEVİR
+### `core.to_area` — ALANAÇEVİR (Alana Çevir)
 
 Uç uca değen çizgileri tek bir kapalı alana çevirir.
 
@@ -256,7 +256,7 @@ Uç uca değen çizgileri tek bir kapalı alana çevirir.
 
 Ayrıntılı kullanım: [ALANAÇEVİR](to_area.md)
 
-### `core.move` — TAŞI
+### `core.move` — TAŞI (Taşı)
 
 Seçilen nesneleri iki nokta arasındaki kadar taşır.
 
@@ -268,7 +268,7 @@ Seçilen nesneleri iki nokta arasındaki kadar taşır.
 
 Ayrıntılı kullanım: [TAŞI](move.md)
 
-### `core.copy` — KOPYALA
+### `core.copy` — KOPYALA (Kopyala)
 
 Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.
 
@@ -280,7 +280,7 @@ Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya k
 
 Ayrıntılı kullanım: [KOPYALA](copy.md)
 
-### `core.array` — DİZİ
+### `core.array` — DİZİ (Dizi)
 
 Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır.
 
@@ -298,7 +298,7 @@ Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır.
 
 Ayrıntılı kullanım: [DİZİ](array.md)
 
-### `core.combine` — BİRLEŞTİR
+### `core.combine` — BİRLEŞTİR (Birleştir)
 
 Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar.
 
@@ -308,7 +308,7 @@ Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi 
 
 Ayrıntılı kullanım: [BİRLEŞTİR](combine.md)
 
-### `core.split` — BÖL
+### `core.split` — BÖL (Böl)
 
 Nesneleri çizilen bir kesme çizgisiyle böler.
 
@@ -320,7 +320,7 @@ Nesneleri çizilen bir kesme çizgisiyle böler.
 
 Ayrıntılı kullanım: [BÖL](split.md)
 
-### `core.trim` — BUDA
+### `core.trim` — BUDA (Buda)
 
 Bir çizgiyi kestiği sınır çizgisine kadar budar.
 
@@ -332,7 +332,7 @@ Bir çizgiyi kestiği sınır çizgisine kadar budar.
 
 Ayrıntılı kullanım: [BUDA](trim.md)
 
-### `core.extend` — UZAT
+### `core.extend` — UZAT (Uzat)
 
 Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.
 
@@ -344,7 +344,7 @@ Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.
 
 Ayrıntılı kullanım: [UZAT](extend.md)
 
-### `core.chamfer` — PAH
+### `core.chamfer` — PAH (Pah)
 
 Bir köşeyi düz bir kenarla keser (pah kırar).
 
@@ -356,7 +356,7 @@ Bir köşeyi düz bir kenarla keser (pah kırar).
 
 Ayrıntılı kullanım: [PAH](chamfer.md)
 
-### `core.fillet` — YUVARLA
+### `core.fillet` — YUVARLA (Yuvarla)
 
 Bir köşeyi verilen yarıçapta yay ile yuvarlatır.
 
@@ -368,7 +368,7 @@ Bir köşeyi verilen yarıçapta yay ile yuvarlatır.
 
 Ayrıntılı kullanım: [YUVARLA](fillet.md)
 
-### `core.set_layer` — KATMANAT
+### `core.set_layer` — KATMANAT (Katmana Ata)
 
 Seçilen nesneleri başka bir katmana taşır.
 
@@ -379,7 +379,7 @@ Seçilen nesneleri başka bir katmana taşır.
 
 Ayrıntılı kullanım: [KATMANAT](set_layer.md)
 
-### `core.match_style` — STİLKOPYALA
+### `core.match_style` — STİLKOPYALA (Stil Kopyala)
 
 Bir nesnenin stilini seçilen nesnelere uygular.
 
@@ -391,7 +391,7 @@ Bir nesnenin stilini seçilen nesnelere uygular.
 
 Ayrıntılı kullanım: [STİLKOPYALA](match_style.md)
 
-### `core.rotate` — DÖNDÜR
+### `core.rotate` — DÖNDÜR (Döndür)
 
 Seçilen nesneleri bir merkez etrafında döndürür.
 
@@ -403,7 +403,7 @@ Seçilen nesneleri bir merkez etrafında döndürür.
 
 Ayrıntılı kullanım: [DÖNDÜR](rotate.md)
 
-### `core.scale` — ÖLÇEKLE
+### `core.scale` — ÖLÇEKLE (Ölçekle)
 
 Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.
 
@@ -415,7 +415,7 @@ Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.
 
 Ayrıntılı kullanım: [ÖLÇEKLE](scale.md)
 
-### `core.mirror` — AYNALA
+### `core.mirror` — AYNALA (Aynala)
 
 Seçilen nesneleri iki noktadan geçen eksende aynalar.
 
@@ -427,7 +427,7 @@ Seçilen nesneleri iki noktadan geçen eksende aynalar.
 
 Ayrıntılı kullanım: [AYNALA](mirror.md)
 
-### `core.measure` — ÖLÇ
+### `core.measure` — ÖLÇ (Ölç)
 
 İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar.
 
@@ -438,7 +438,7 @@ Ayrıntılı kullanım: [AYNALA](mirror.md)
 
 Ayrıntılı kullanım: [ÖLÇ](measure.md)
 
-### `core.measure_area` — ALANÖLÇ
+### `core.measure_area` — ALANÖLÇ (Alan Ölç)
 
 Seçilen nesnelerin alanını ve çevresini yazar.
 
@@ -448,7 +448,7 @@ Seçilen nesnelerin alanını ve çevresini yazar.
 
 Ayrıntılı kullanım: [ALANÖLÇ](measure_area.md)
 
-### `core.coordinate` — KOORDİNAT
+### `core.coordinate` — KOORDİNAT (Koordinat Oku)
 
 Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.
 
@@ -458,7 +458,7 @@ Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yaz
 
 Ayrıntılı kullanım: [KOORDİNAT](coordinate.md)
 
-### `core.pan` — KAYDIR
+### `core.pan` — KAYDIR (Kaydır)
 
 Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır.
 
@@ -469,7 +469,7 @@ Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır.
 
 Ayrıntılı kullanım: [KAYDIR](pan.md)
 
-### `core.offset` — OFSET
+### `core.offset` — OFSET (Ofset)
 
 Seçili nesnelerin verilen mesafede paralelini çizer.
 
@@ -481,7 +481,7 @@ Seçili nesnelerin verilen mesafede paralelini çizer.
 
 Ayrıntılı kullanım: [OFSET](offset.md)
 
-### `core.sector` — DİLİM
+### `core.sector` — DİLİM (Daire Dilimi)
 
 Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir.
 
@@ -493,7 +493,7 @@ Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir
 
 Ayrıntılı kullanım: [DİLİM](sector.md)
 
-### `core.annulus` — HALKA
+### `core.annulus` — HALKA (Halka)
 
 Merkez, iç ve dış yarıçaptan delikli halka çizer.
 
@@ -505,7 +505,7 @@ Merkez, iç ve dış yarıçaptan delikli halka çizer.
 
 Ayrıntılı kullanım: [HALKA](annulus.md)
 
-### `core.ellipse_draw` — ELİPS
+### `core.ellipse_draw` — ELİPS (Elips)
 
 Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir.
 
@@ -519,7 +519,7 @@ Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir.
 
 Ayrıntılı kullanım: [ELİPS](ellipse_draw.md)
 
-### `core.spline` — SPLINE
+### `core.spline` — SPLINE (Spline)
 
 Kontrol noktalarından NURBS eğrisi (spline) çizer.
 
@@ -531,7 +531,7 @@ Kontrol noktalarından NURBS eğrisi (spline) çizer.
 
 Ayrıntılı kullanım: [SPLINE](spline.md)
 
-### `core.hatch` — TARAMA
+### `core.hatch` — TARAMA (Tarama)
 
 Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar.
 
@@ -546,7 +546,7 @@ Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tara
 
 Ayrıntılı kullanım: [TARAMA](hatch.md)
 
-### `core.block` — BLOK
+### `core.block` — BLOK (Blok Tanımla)
 
 Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar.
 
@@ -559,7 +559,7 @@ Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar.
 
 Ayrıntılı kullanım: [BLOK](block.md)
 
-### `core.insert` — BLOKEKLE
+### `core.insert` — BLOKEKLE (Blok Ekle)
 
 Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
 
@@ -577,7 +577,7 @@ Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
 
 Ayrıntılı kullanım: [BLOKEKLE](insert.md)
 
-### `core.dimension` — ÖLÇÜ
+### `core.dimension` — ÖLÇÜ (Ölçü)
 
 İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer.
 
@@ -594,7 +594,7 @@ Ayrıntılı kullanım: [BLOKEKLE](insert.md)
 
 Ayrıntılı kullanım: [ÖLÇÜ](dimension.md)
 
-### `core.leader` — LİDER
+### `core.leader` — LİDER (Lider)
 
 Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.
 
@@ -607,7 +607,7 @@ Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.
 
 Ayrıntılı kullanım: [LİDER](leader.md)
 
-### `core.points` — NOKTALAR
+### `core.points` — NOKTALAR (Nokta Listesi)
 
 Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod).
 
@@ -620,7 +620,7 @@ Ayrıntılı kullanım: [LİDER](leader.md)
 
 Ayrıntılı kullanım: [NOKTALAR](points.md)
 
-### `core.guide` — KILAVUZ
+### `core.guide` — KILAVUZ (Kılavuz)
 
 Cetvel kılavuzu ekler, listeler ve siler.
 
@@ -632,7 +632,7 @@ Cetvel kılavuzu ekler, listeler ve siler.
 
 Ayrıntılı kullanım: [KILAVUZ](guide.md)
 
-### `core.attribute` — ÖZNİTELİK
+### `core.attribute` — ÖZNİTELİK (Öznitelik)
 
 Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar.
 
@@ -644,7 +644,7 @@ Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar.
 
 Ayrıntılı kullanım: [ÖZNİTELİK](attribute.md)
 
-### `core.column` — SÜTUN
+### `core.column` — SÜTUN (Sütun)
 
 Öznitelik sütunu tanımlar, düzenler, siler; argümansız çağrılınca listeler.
 
@@ -662,7 +662,7 @@ Ayrıntılı kullanım: [ÖZNİTELİK](attribute.md)
 
 Ayrıntılı kullanım: [SÜTUN](column.md)
 
-### `core.erase` — SİL
+### `core.erase` — SİL (Sil)
 
 Seçilen nesneleri siler.
 
@@ -672,7 +672,7 @@ Seçilen nesneleri siler.
 
 Ayrıntılı kullanım: [SİL](erase.md)
 
-### `core.select` — SEÇ
+### `core.select` — SEÇ (Seç)
 
 Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta.
 
@@ -688,7 +688,7 @@ Nesneleri seçer: tümü, kimlikle, pencere, kesen kutu veya tek nokta.
 
 Ayrıntılı kullanım: [SEÇ](select.md)
 
-### `core.label` — ETİKET
+### `core.label` — ETİKET (Etiket)
 
 Katmandaki nesneleri özniteliklerinden okuyarak etiketler.
 
@@ -702,7 +702,7 @@ Katmandaki nesneleri özniteliklerinden okuyarak etiketler.
 
 Ayrıntılı kullanım: [ETİKET](label.md)
 
-### `core.layer` — KATMAN
+### `core.layer` — KATMAN (Katman)
 
 Katman oluşturur, aktif yapar ve özelliklerini değiştirir.
 
@@ -716,7 +716,7 @@ Katman oluşturur, aktif yapar ve özelliklerini değiştirir.
 
 Ayrıntılı kullanım: [KATMAN](layer.md)
 
-### `core.layer_visibility` — KATMANGÖRÜNÜM
+### `core.layer_visibility` — KATMANGÖRÜNÜM (Katman Görünümü)
 
 Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir.
 
@@ -727,7 +727,7 @@ Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya
 
 Ayrıntılı kullanım: [KATMANGÖRÜNÜM](layer_visibility.md)
 
-### `core.layout` — ÇIKTIYERLEŞİMİ
+### `core.layout` — ÇIKTIYERLEŞİMİ (Çıktı Yerleşimi)
 
 Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir.
 
@@ -752,7 +752,7 @@ Ayrıntılı kullanım: [KATMANGÖRÜNÜM](layer_visibility.md)
 
 Ayrıntılı kullanım: [ÇIKTIYERLEŞİMİ](layout.md)
 
-### `core.layout_item` — ÇIKTIÖĞE
+### `core.layout_item` — ÇIKTIÖĞE (Çıktı Öğesi)
 
 Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler.
 
@@ -784,7 +784,7 @@ Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, b
 
 Ayrıntılı kullanım: [ÇIKTIÖĞE](layout_item.md)
 
-### `core.layout_template` — ÇIKTIŞABLON
+### `core.layout_template` — ÇIKTIŞABLON (Çıktı Şablonu)
 
 Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz.
 
@@ -796,7 +796,7 @@ Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin d�
 
 Ayrıntılı kullanım: [ÇIKTIŞABLON](layout_template.md)
 
-### `core.style` — STİL
+### `core.style` — STİL (Stil)
 
 Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar.
 
@@ -837,7 +837,7 @@ Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden
 
 Ayrıntılı kullanım: [STİL](style.md)
 
-### `core.symbol` — SEMBOL
+### `core.symbol` — SEMBOL (Sembol)
 
 Gösterim rafını yükler, ağacında gezer ve içinde arar.
 
@@ -850,7 +850,7 @@ Gösterim rafını yükler, ağacında gezer ve içinde arar.
 
 Ayrıntılı kullanım: [SEMBOL](symbol.md)
 
-### `core.zoom` — YAKINLAŞ
+### `core.zoom` — YAKINLAŞ (Yakınlaş)
 
 Görünümü çizim kapsamına veya verilen çarpana ayarlar.
 
@@ -861,7 +861,7 @@ Görünümü çizim kapsamına veya verilen çarpana ayarlar.
 
 Ayrıntılı kullanım: [YAKINLAŞ](zoom.md)
 
-### `core.undo` — GERİAL
+### `core.undo` — GERİAL (Geri Al)
 
 Son işlemi geri alır.
 
@@ -869,7 +869,7 @@ Parametre almaz.
 
 Ayrıntılı kullanım: [GERİAL](undo.md)
 
-### `core.redo` — YİNELE
+### `core.redo` — YİNELE (Yinele)
 
 Geri alınan işlemi yineler.
 
@@ -877,7 +877,7 @@ Parametre almaz.
 
 Ayrıntılı kullanım: [YİNELE](redo.md)
 
-### `core.new` — YENİ
+### `core.new` — YENİ (Yeni)
 
 Boş bir çizim açar; ekrandaki çizimin yerine geçer.
 
@@ -885,7 +885,7 @@ Parametre almaz.
 
 Ayrıntılı kullanım: [YENİ](new.md)
 
-### `core.open` — AÇ
+### `core.open` — AÇ (Aç)
 
 Bir KentOSCad proje dosyasını açar ve çizimin yerine koyar.
 
@@ -895,7 +895,7 @@ Bir KentOSCad proje dosyasını açar ve çizimin yerine koyar.
 
 Ayrıntılı kullanım: [AÇ](open.md)
 
-### `core.save` — KAYDET
+### `core.save` — KAYDET (Kaydet)
 
 Çizimi bağlı olduğu KentOSCad proje dosyasına kaydeder.
 
@@ -905,7 +905,7 @@ Ayrıntılı kullanım: [AÇ](open.md)
 
 Ayrıntılı kullanım: [KAYDET](save.md)
 
-### `core.saveas` — FARKLIKAYDET
+### `core.saveas` — FARKLIKAYDET (Farklı Kaydet)
 
 Çizimi yeni bir KentOSCad proje dosyasına kaydeder ve ona bağlar.
 
@@ -915,7 +915,7 @@ Ayrıntılı kullanım: [KAYDET](save.md)
 
 Ayrıntılı kullanım: [FARKLIKAYDET](saveas.md)
 
-### `core.import` — İÇEAKTAR
+### `core.import` — İÇEAKTAR (İçe Aktar)
 
 Dış bir veri dosyasını çizime ekler.
 
@@ -928,7 +928,7 @@ Dış bir veri dosyasını çizime ekler.
 
 Ayrıntılı kullanım: [İÇEAKTAR](import.md)
 
-### `core.export` — DIŞAAKTAR
+### `core.export` — DIŞAAKTAR (Dışa Aktar)
 
 Çizimi dış bir veri biçimine yazar.
 
@@ -940,7 +940,7 @@ Ayrıntılı kullanım: [İÇEAKTAR](import.md)
 
 Ayrıntılı kullanım: [DIŞAAKTAR](export.md)
 
-### `core.script` — BETİK
+### `core.script` — BETİK (Betik Çalıştır)
 
 Bir betik dosyasını komut veri yolu üzerinden çalıştırır.
 
@@ -950,7 +950,7 @@ Bir betik dosyasını komut veri yolu üzerinden çalıştırır.
 
 Ayrıntılı kullanım: [BETİK](script.md)
 
-### `core.database` — VERİTABANI
+### `core.database` — VERİTABANI (Veritabanı)
 
 PostGIS veritabanına bağlanır; katmanları tablo, projeleri kayıt olarak yazar.
 
@@ -962,7 +962,7 @@ PostGIS veritabanına bağlanır; katmanları tablo, projeleri kayıt olarak yaz
 
 Ayrıntılı kullanım: [VERİTABANI](database.md)
 
-### `core.print` — YAZDIR
+### `core.print` — YAZDIR (Yazdır)
 
 Çizimin bir penceresini bir yazdırma profilinin kâğıdına yerleştirip PDF dosyasına yazar ya da yazıcıya gönderir.
 
@@ -991,7 +991,7 @@ Ayrıntılı kullanım: [VERİTABANI](database.md)
 
 Ayrıntılı kullanım: [YAZDIR](print.md)
 
-### `core.print_profile` — YAZDIRMAPROFİLİ
+### `core.print_profile` — YAZDIRMAPROFİLİ (Yazdırma Profili)
 
 Yazdırma profillerini listeler, ekler, siler ya da birini varsayılan yapar; profil kâğıdı, yönü, çözünürlüğü ve kenar boşluğunu taşır.
 
@@ -1008,7 +1008,7 @@ Yazdırma profillerini listeler, ekler, siler ya da birini varsayılan yapar; pr
 
 Ayrıntılı kullanım: [YAZDIRMAPROFİLİ](print_profile.md)
 
-### `core.setting` — AYAR
+### `core.setting` — AYAR (Proje Ayarı)
 
 Proje ayarlarını listeler, okur ve değiştirir.
 
@@ -1019,7 +1019,7 @@ Proje ayarlarını listeler, okur ve değiştirir.
 
 Ayrıntılı kullanım: [AYAR](setting.md)
 
-### `core.preference` — TERCİH
+### `core.preference` — TERCİH (Uygulama Tercihi)
 
 Uygulama tercihlerini listeler, okur ve değiştirir.
 
@@ -1030,7 +1030,7 @@ Uygulama tercihlerini listeler, okur ve değiştirir.
 
 Ayrıntılı kullanım: [TERCİH](preference.md)
 
-### `core.mode` — MOD
+### `core.mode` — MOD (Çizim Modları)
 
 Oturum modlarını (yakalama, dik mod, kutupsal izleme) listeler, okur ve değiştirir.
 
@@ -1041,7 +1041,7 @@ Oturum modlarını (yakalama, dik mod, kutupsal izleme) listeler, okur ve deği�
 
 Ayrıntılı kullanım: [MOD](mode.md)
 
-### `core.help` — YARDIM
+### `core.help` — YARDIM (Komut Listesi)
 
 Komut listesini veya tek bir komutun ayrıntısını gösterir.
 
@@ -1147,7 +1147,7 @@ Kapsamdaki yazıları seçilen nesnenin en yakın kenarına ya da köşesine ba�
 
 Ayrıntılı kullanım: [BAĞLA](bagla.md)
 
-### `core.fit` — OTURT
+### `core.fit` — OTURT (Oturt (Helmert))
 
 Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert).
 
@@ -1159,7 +1159,7 @@ Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert).
 
 Ayrıntılı kullanım: [OTURT](fit.md)
 
-### `core.stakeout` — APLİKASYON
+### `core.stakeout` — APLİKASYON (Aplikasyon)
 
 İstasyondan her noktaya mesafe ve açı listesi çıkarır (aplikasyon).
 
@@ -1171,7 +1171,7 @@ Ayrıntılı kullanım: [OTURT](fit.md)
 
 Ayrıntılı kullanım: [APLİKASYON](stakeout.md)
 
-### `core.reproject` — DÖNÜŞTÜR
+### `core.reproject` — DÖNÜŞTÜR (Dönüştür)
 
 Çizimin tamamını bir koordinat sisteminden diğerine dönüştürür.
 
@@ -1182,7 +1182,7 @@ Ayrıntılı kullanım: [APLİKASYON](stakeout.md)
 
 Ayrıntılı kullanım: [DÖNÜŞTÜR](reproject.md)
 
-### `core.merge` — TEVHİT
+### `core.merge` — TEVHİT (Tevhit)
 
 Komşu parselleri tek parselde birleştirir (tevhit).
 
@@ -1192,7 +1192,7 @@ Komşu parselleri tek parselde birleştirir (tevhit).
 
 Ayrıntılı kullanım: [TEVHİT](merge.md)
 
-### `core.split_parcel` — İFRAZ
+### `core.split_parcel` — İFRAZ (İfraz)
 
 Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz).
 
@@ -1203,7 +1203,7 @@ Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz).
 
 Ayrıntılı kullanım: [İFRAZ](split_parcel.md)
 
-### `core.split_area` — ALANİFRAZ
+### `core.split_area` — ALANİFRAZ (Alana Göre İfraz)
 
 Parselden verilen yöne paralel, istenen alanda bir parça ayırır.
 
@@ -1216,7 +1216,7 @@ Parselden verilen yöne paralel, istenen alanda bir parça ayırır.
 
 Ayrıntılı kullanım: [ALANİFRAZ](split_area.md)
 
-### `core.topology` — TOPOLOJİ
+### `core.topology` — TOPOLOJİ (Topoloji Denetimi)
 
 Kendini kesen sınır, sıfır alan ve örtüşen parselleri raporlar.
 
@@ -1226,7 +1226,7 @@ Kendini kesen sınır, sıfır alan ve örtüşen parselleri raporlar.
 
 Ayrıntılı kullanım: [TOPOLOJİ](topology.md)
 
-### `core.contour` — EŞYÜKSELTİ
+### `core.contour` — EŞYÜKSELTİ (Eşyükselti Eğrileri)
 
 Kotlu noktalardan eş yükselti eğrileri çizer.
 
@@ -1237,7 +1237,7 @@ Kotlu noktalardan eş yükselti eğrileri çizer.
 
 Ayrıntılı kullanım: [EŞYÜKSELTİ](contour.md)
 
-### `core.earthwork` — HACİM
+### `core.earthwork` — HACİM (Hacim Hesabı)
 
 Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar.
 
@@ -1247,7 +1247,7 @@ Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar.
 
 Ayrıntılı kullanım: [HACİM](earthwork.md)
 
-### `core.layers` — KATMANLAR
+### `core.layers` — KATMANLAR (Katmanları Listele)
 
 Katmanları, nesne sayılarını, görünürlük ve kilit durumlarını listeler.
 
@@ -1255,7 +1255,7 @@ Parametre almaz.
 
 Ayrıntılı kullanım: [KATMANLAR](layers.md)
 
-### `core.attr_schema` — ÖZNİTELİKŞEMASI
+### `core.attr_schema` — ÖZNİTELİKŞEMASI (Öznitelik Şeması)
 
 Çizimde tanımlı öznitelik sütunlarını ve tiplerini listeler.
 
@@ -1263,7 +1263,7 @@ Parametre almaz.
 
 Ayrıntılı kullanım: [ÖZNİTELİKŞEMASI](attr_schema.md)
 
-### `core.query` — SORGULA
+### `core.query` — SORGULA (Sorgula)
 
 Katman ve öznitelik koşuluna uyan nesneleri sayar ve anahtarlarını bildirir.
 
@@ -1276,7 +1276,7 @@ Katman ve öznitelik koşuluna uyan nesneleri sayar ve anahtarlarını bildirir.
 
 Ayrıntılı kullanım: [SORGULA](query.md)
 
-### `core.selection_info` — SEÇİMBİLGİSİ
+### `core.selection_info` — SEÇİMBİLGİSİ (Seçim Bilgisi)
 
 Kullanıcının o anki seçimini bildirir: kaç nesne ve hangi anahtarlar.
 
@@ -1284,7 +1284,7 @@ Parametre almaz.
 
 Ayrıntılı kullanım: [SEÇİMBİLGİSİ](selection_info.md)
 
-### `core.view_info` — GÖRÜNÜMBİLGİSİ
+### `core.view_info` — GÖRÜNÜMBİLGİSİ (Görünüm Bilgisi)
 
 Ekranda görünen alanın köşe koordinatlarını, merkezini, ölçeğini ve CRS'ini bildirir.
 
@@ -1292,7 +1292,7 @@ Parametre almaz.
 
 Ayrıntılı kullanım: [GÖRÜNÜMBİLGİSİ](view_info.md)
 
-### `core.context` — BAĞLAM
+### `core.context` — BAĞLAM (Bağlam)
 
 Üzerinde çalışılan her şeyi tek çağrıda özetler: belge sürümü, koordinat sistemi, kapsam, katmanlar, çıktı yerleşimleri ve hedefli olup olmadıkları, seçili nesneler ve görünüm. Özet verir, döküm değil.
 
@@ -1300,7 +1300,7 @@ Parametre almaz.
 
 Ayrıntılı kullanım: [BAĞLAM](context.md)
 
-### `core.tool_search` — ARAÇARA
+### `core.tool_search` — ARAÇARA (Araç Ara)
 
 Ajan araç kataloğunda ad ve özete göre arar. Sonuç her zaman kaç aracın eşleştiğini, kaçının gösterildiğini ve katalogdaki toplam araç sayısını söyler: arama hiçbir aracı gizlemez, tam liste `tools/list` ile alınır.
 
@@ -1312,7 +1312,7 @@ Ajan araç kataloğunda ad ve özete göre arar. Sonuç her zaman kaç aracın e
 
 Ayrıntılı kullanım: [ARAÇARA](tool_search.md)
 
-### `core.job_template` — İŞŞABLONU
+### `core.job_template` — İŞŞABLONU (İş Şablonu)
 
 Sık yapılan işlerin — atlas, kadastro kontrolü, parsel raporu — komut satırlarını sırasıyla verir. Hiçbirini çalıştırmaz: adımlar olağan araç yüzeyinden gönderilir ve yazan her adım yine öneri olur.
 
@@ -1323,7 +1323,7 @@ Sık yapılan işlerin — atlas, kadastro kontrolü, parsel raporu — komut sa
 
 Ayrıntılı kullanım: [İŞŞABLONU](job_template.md)
 
-### `core.suggestion` — ÖNERİ
+### `core.suggestion` — ÖNERİ (Yapay Zeka Önerisi)
 
 Bekleyen yapay zeka önerilerini listeler, durumunu söyler, uygular ya da reddeder.
 
@@ -1334,7 +1334,7 @@ Bekleyen yapay zeka önerilerini listeler, durumunu söyler, uygular ya da redde
 
 Ayrıntılı kullanım: [ÖNERİ](suggestion.md)
 
-### `core.mcp` — MCPSUNUCU
+### `core.mcp` — MCPSUNUCU (MCP Sunucusu)
 
 Yapay zeka ajanlarının bağlanacağı MCP sunucusunu başlatır, durdurur, durumunu söyler, yeni bir erişim belirteci üretir, bağlı istemcileri listeler ve tek bir istemcinin yetkisini kaldırır.
 
@@ -1346,7 +1346,7 @@ Yapay zeka ajanlarının bağlanacağı MCP sunucusunu başlatır, durdurur, dur
 
 Ayrıntılı kullanım: [MCPSUNUCU](mcp.md)
 
-### `core.ai_provider` — YAPAYZEKAMODELİ
+### `core.ai_provider` — YAPAYZEKAMODELİ (Yapay Zeka Modeli)
 
 Yapay zeka model sağlayıcılarını listeler, ekler, siler, birini varsayılan yapar ya da bağlantısını dener; profil adresi, lehçesi, modeli ve anahtar adını taşır.
 
@@ -1377,7 +1377,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
 [
   {
     "name": "core_annulus",
-    "title": "HALKA",
+    "title": "Halka",
     "description": "Merkez, iç ve dış yarıçaptan delikli halka çizer.\nKomut: HALKA (ANNULUS, HLK)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -1424,7 +1424,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_arc_draw",
-    "title": "YAY",
+    "title": "Yay",
     "description": "Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir.\nKomut: YAY (ARC, YY)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -1471,7 +1471,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_area",
-    "title": "ALAN",
+    "title": "Alan",
     "description": "Kapalı bir alan çizer; istenirse içine delik açar.\nKomut: ALAN (AREA, POLİGON, POLIGON, AL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -1515,7 +1515,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_array",
-    "title": "DİZİ",
+    "title": "Dizi",
     "description": "Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır.\nKomut: DİZİ (DIZI, ARRAY, DZ)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -1582,7 +1582,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_attribute",
-    "title": "ÖZNİTELİK",
+    "title": "Öznitelik",
     "description": "Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar.\nKomut: ÖZNİTELİK (OZNITELIK, ATTRIBUTE, ÖZN, OZN)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -1624,7 +1624,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_block",
-    "title": "BLOK",
+    "title": "Blok Tanımla",
     "description": "Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar.\nKomut: BLOK (BLOK, BLOCK, BLK)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -1674,7 +1674,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_chamfer",
-    "title": "PAH",
+    "title": "Pah",
     "description": "Bir köşeyi düz bir kenarla keser (pah kırar).\nKomut: PAH (CHAMFER, PH)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -1720,7 +1720,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_circle_draw",
-    "title": "DAİRE",
+    "title": "Daire",
     "description": "Merkez ve çember üzerindeki bir noktadan daire çizer.\nKomut: DAİRE (DAIRE, CIRCLE, DR)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -1762,7 +1762,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_combine",
-    "title": "BİRLEŞTİR",
+    "title": "Birleştir",
     "description": "Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar.\nKomut: BİRLEŞTİR (BIRLESTIR, COMBINE, BRL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -1796,7 +1796,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_context",
-    "title": "BAĞLAM",
+    "title": "Bağlam",
     "description": "Üzerinde çalışılan her şeyi tek çağrıda özetler: belge sürümü, koordinat sistemi, kapsam, katmanlar, çıktı yerleşimleri ve hedefli olup olmadıkları, seçili nesneler ve görünüm. Özet verir, döküm değil.\nKomut: BAĞLAM (BAGLAM, CONTEXT, BĞL)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
     "inputSchema": {
       "type": "object",
@@ -1824,7 +1824,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_contour",
-    "title": "EŞYÜKSELTİ",
+    "title": "Eşyükselti Eğrileri",
     "description": "Kotlu noktalardan eş yükselti eğrileri çizer.\nKomut: EŞYÜKSELTİ (ESYUKSELTI, CONTOUR, EŞY)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -1861,7 +1861,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_coordinate",
-    "title": "KOORDİNAT",
+    "title": "Koordinat Oku",
     "description": "Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.\nKomut: KOORDİNAT (KOORDINAT, COORDINATE, KRD)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -1897,7 +1897,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_copy",
-    "title": "KOPYALA",
+    "title": "Kopyala",
     "description": "Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.\nKomut: KOPYALA (COPY, KP)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -1943,7 +1943,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_dimension",
-    "title": "ÖLÇÜ",
+    "title": "Ölçü",
     "description": "İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer.\nKomut: ÖLÇÜ (OLCU, DIMENSION, ÖÇ)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -2012,7 +2012,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_earthwork",
-    "title": "HACİM",
+    "title": "Hacim Hesabı",
     "description": "Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar.\nKomut: HACİM (HACIM, EARTHWORK, HCM)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -2047,7 +2047,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_edittext",
-    "title": "YAZIDÜZENLE",
+    "title": "Yazıyı Düzenle",
     "description": "Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir.\nKomut: YAZIDÜZENLE (YAZIDUZENLE, EDITTEXT, YZD)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -2093,7 +2093,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_ellipse_draw",
-    "title": "ELİPS",
+    "title": "Elips",
     "description": "Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir.\nKomut: ELİPS (ELIPS, ELLIPSE, EL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -2149,7 +2149,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_erase",
-    "title": "SİL",
+    "title": "Sil",
     "description": "Seçilen nesneleri siler.\nKomut: SİL (SIL, ERASE, E)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -2183,7 +2183,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_extend",
-    "title": "UZAT",
+    "title": "Uzat",
     "description": "Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.\nKomut: UZAT (EXTEND, UZ)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -2228,7 +2228,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_fillet",
-    "title": "YUVARLA",
+    "title": "Yuvarla",
     "description": "Bir köşeyi verilen yarıçapta yay ile yuvarlatır.\nKomut: YUVARLA (FILLET, YV)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -2274,7 +2274,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_fit",
-    "title": "OTURT",
+    "title": "Oturt (Helmert)",
     "description": "Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert).\nKomut: OTURT (FIT, GEOREF, OTR)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -2318,7 +2318,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_guide",
-    "title": "KILAVUZ",
+    "title": "Kılavuz",
     "description": "Cetvel kılavuzu ekler, listeler ve siler.\nKomut: KILAVUZ (GUIDE, KLV)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -2358,7 +2358,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_hatch",
-    "title": "TARAMA",
+    "title": "Tarama",
     "description": "Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar.\nKomut: TARAMA (TARAMA, HATCH, TRM)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -2413,7 +2413,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_insert",
-    "title": "BLOKEKLE",
+    "title": "Blok Ekle",
     "description": "Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.\nKomut: BLOKEKLE (BLOKEKLE, INSERT, BE)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -2482,7 +2482,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_job_template",
-    "title": "İŞŞABLONU",
+    "title": "İş Şablonu",
     "description": "Sık yapılan işlerin — atlas, kadastro kontrolü, parsel raporu — komut satırlarını sırasıyla verir. Hiçbirini çalıştırmaz: adımlar olağan araç yüzeyinden gönderilir ve yazan her adım yine öneri olur.\nKomut: İŞŞABLONU (ISSABLONU, JOBTEMPLATE, İŞŞ)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
     "inputSchema": {
       "type": "object",
@@ -2525,7 +2525,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_label",
-    "title": "ETİKET",
+    "title": "Etiket",
     "description": "Katmandaki nesneleri özniteliklerinden okuyarak etiketler.\nKomut: ETİKET (ETIKET, LABEL, ETK)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -2576,7 +2576,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_layer",
-    "title": "KATMAN",
+    "title": "Katman",
     "description": "Katman oluşturur, aktif yapar ve özelliklerini değiştirir.\nKomut: KATMAN (LAYER, KAT)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -2626,7 +2626,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_layer_visibility",
-    "title": "KATMANGÖRÜNÜM",
+    "title": "Katman Görünümü",
     "description": "Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir.\nKomut: KATMANGÖRÜNÜM (KATMANGORUNUM, LAYERVIEW, KGÖ, KGO)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -2666,7 +2666,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_layout",
-    "title": "ÇIKTIYERLEŞİMİ",
+    "title": "Çıktı Yerleşimi",
     "description": "Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir.\nKomut: ÇIKTIYERLEŞİMİ (CIKTIYERLESIMI, LAYOUT, ÇYR, CYR)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -2794,7 +2794,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_layout_item",
-    "title": "ÇIKTIÖĞE",
+    "title": "Çıktı Öğesi",
     "description": "Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler.\nKomut: ÇIKTIÖĞE (CIKTIOGE, LAYOUTITEM, ÇÖĞ, COG)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -2962,7 +2962,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_layout_template",
-    "title": "ÇIKTIŞABLON",
+    "title": "Çıktı Şablonu",
     "description": "Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz.\nKomut: ÇIKTIŞABLON (CIKTISABLON, LAYOUTTEMPLATE, ÇŞB, CSB)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3012,7 +3012,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_leader",
-    "title": "LİDER",
+    "title": "Lider",
     "description": "Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.\nKomut: LİDER (LIDER, LEADER, LD)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3060,7 +3060,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_line",
-    "title": "ÇİZGİ",
+    "title": "Çizgi",
     "description": "İki veya daha fazla nokta arasında doğru parçaları çizer.\nKomut: ÇİZGİ (CIZGI, LINE, Ç, L)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3097,7 +3097,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_match_style",
-    "title": "STİLKOPYALA",
+    "title": "Stil Kopyala",
     "description": "Bir nesnenin stilini seçilen nesnelere uygular.\nKomut: STİLKOPYALA (STILKOPYALA, MATCHPROP, SK)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3141,7 +3141,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_measure",
-    "title": "ÖLÇ",
+    "title": "Ölç",
     "description": "İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar.\nKomut: ÖLÇ (OLC, MEASURE, MS)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3183,7 +3183,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_measure_area",
-    "title": "ALANÖLÇ",
+    "title": "Alan Ölç",
     "description": "Seçilen nesnelerin alanını ve çevresini yazar.\nKomut: ALANÖLÇ (ALANOLC, AREAOF, AÖ)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3217,7 +3217,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_merge",
-    "title": "TEVHİT",
+    "title": "Tevhit",
     "description": "Komşu parselleri tek parselde birleştirir (tevhit).\nKomut: TEVHİT (TEVHIT, MERGE, TVH)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3251,7 +3251,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_mirror",
-    "title": "AYNALA",
+    "title": "Aynala",
     "description": "Seçilen nesneleri iki noktadan geçen eksende aynalar.\nKomut: AYNALA (MIRROR, AYN)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3297,7 +3297,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_move",
-    "title": "TAŞI",
+    "title": "Taşı",
     "description": "Seçilen nesneleri iki nokta arasındaki kadar taşır.\nKomut: TAŞI (TASI, MOVE, TŞ)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3344,7 +3344,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_offset",
-    "title": "OFSET",
+    "title": "Ofset",
     "description": "Seçili nesnelerin verilen mesafede paralelini çizer.\nKomut: OFSET (OFFSET, OF)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3385,7 +3385,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_pan",
-    "title": "KAYDIR",
+    "title": "Kaydır",
     "description": "Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır.\nKomut: KAYDIR (PAN, KY)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3426,7 +3426,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_point_draw",
-    "title": "NOKTA",
+    "title": "Nokta",
     "description": "Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper.\nKomut: NOKTA (POINT, NK)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3461,7 +3461,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_points",
-    "title": "NOKTALAR",
+    "title": "Nokta Listesi",
     "description": "Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod).\nKomut: NOKTALAR (POINTS, NKL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3508,7 +3508,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_polyline",
-    "title": "ÇOKLUÇİZGİ",
+    "title": "Çoklu Çizgi",
     "description": "Birden çok noktadan TEK bir çizgi nesnesi çizer.\nKomut: ÇOKLUÇİZGİ (COKLUCIZGI, POLYLINE, ÇÇ, PL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3545,7 +3545,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_print",
-    "title": "YAZDIR",
+    "title": "Yazdır",
     "description": "Çizimin bir penceresini bir yazdırma profilinin kâğıdına yerleştirip PDF dosyasına yazar ya da yazıcıya gönderir.\nKomut: YAZDIR (PRINT, PLOT, YZDR)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3656,7 +3656,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_rectangle",
-    "title": "DİKDÖRTGEN",
+    "title": "Dikdörtgen",
     "description": "Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer.\nKomut: DİKDÖRTGEN (DIKDORTGEN, RECTANGLE, DKD, REC)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3693,7 +3693,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_reproject",
-    "title": "DÖNÜŞTÜR",
+    "title": "Dönüştür",
     "description": "Çizimin tamamını bir koordinat sisteminden diğerine dönüştürür.\nKomut: DÖNÜŞTÜR (DONUSTUR, REPROJECT, DNS)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3732,7 +3732,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_rotate",
-    "title": "DÖNDÜR",
+    "title": "Döndür",
     "description": "Seçilen nesneleri bir merkez etrafında döndürür.\nKomut: DÖNDÜR (DONDUR, ROTATE, DÖN)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3778,7 +3778,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_scale",
-    "title": "ÖLÇEKLE",
+    "title": "Ölçekle",
     "description": "Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.\nKomut: ÖLÇEKLE (OLCEKLE, SCALE, ÖLÇEK, OLCEK)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3825,7 +3825,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_sector",
-    "title": "DİLİM",
+    "title": "Daire Dilimi",
     "description": "Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir.\nKomut: DİLİM (DILIM, SECTOR, DL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3873,7 +3873,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_set_layer",
-    "title": "KATMANAT",
+    "title": "Katmana Ata",
     "description": "Seçilen nesneleri başka bir katmana taşır.\nKomut: KATMANAT (KATMANATA, SETLAYER, KA)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3913,7 +3913,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_spline",
-    "title": "SPLINE",
+    "title": "Spline",
     "description": "Kontrol noktalarından NURBS eğrisi (spline) çizer.\nKomut: SPLINE (SPLINE, SPLINE, SPL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -3957,7 +3957,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_split",
-    "title": "BÖL",
+    "title": "Böl",
     "description": "Nesneleri çizilen bir kesme çizgisiyle böler.\nKomut: BÖL (BOL, SPLIT, BL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -4001,7 +4001,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_split_area",
-    "title": "ALANİFRAZ",
+    "title": "Alana Göre İfraz",
     "description": "Parselden verilen yöne paralel, istenen alanda bir parça ayırır.\nKomut: ALANİFRAZ (ALANIFRAZ, SPLITAREA, ALİF)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -4048,7 +4048,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_split_parcel",
-    "title": "İFRAZ",
+    "title": "İfraz",
     "description": "Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz).\nKomut: İFRAZ (IFRAZ, SUBDIVIDE, İFR)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -4087,7 +4087,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_stakeout",
-    "title": "APLİKASYON",
+    "title": "Aplikasyon",
     "description": "İstasyondan her noktaya mesafe ve açı listesi çıkarır (aplikasyon).\nKomut: APLİKASYON (APLIKASYON, STAKEOUT, APL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -4133,7 +4133,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_style",
-    "title": "STİL",
+    "title": "Stil",
     "description": "Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar.\nKomut: STİL (STIL, STYLE, ST)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -4292,7 +4292,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_suggestion",
-    "title": "ÖNERİ",
+    "title": "Yapay Zeka Önerisi",
     "description": "Bekleyen yapay zeka önerilerini listeler, durumunu söyler, uygular ya da reddeder.\nKomut: ÖNERİ (ONERI, SUGGESTION, ÖN)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -4337,7 +4337,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_symbol",
-    "title": "SEMBOL",
+    "title": "Sembol",
     "description": "Gösterim rafını yükler, ağacında gezer ve içinde arar.\nKomut: SEMBOL (SEMBOLLER, SYMBOL, SMB)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -4382,7 +4382,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_text",
-    "title": "METİN",
+    "title": "Metin",
     "description": "Çizime metin yazar; yükseklik ve hizalama verilebilir.\nKomut: METİN (METIN, YAZI, TEXT, MT)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -4437,7 +4437,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_to_area",
-    "title": "ALANAÇEVİR",
+    "title": "Alana Çevir",
     "description": "Uç uca değen çizgileri tek bir kapalı alana çevirir.\nKomut: ALANAÇEVİR (ALANACEVIR, TOAREA, ALÇ)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -4471,7 +4471,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_tool_search",
-    "title": "ARAÇARA",
+    "title": "Araç Ara",
     "description": "Ajan araç kataloğunda ad ve özete göre arar. Sonuç her zaman kaç aracın eşleştiğini, kaçının gösterildiğini ve katalogdaki toplam araç sayısını söyler: arama hiçbir aracı gizlemez, tam liste `tools/list` ile alınır.\nKomut: ARAÇARA (ARACARA, TOOLSEARCH, ARA)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
     "inputSchema": {
       "type": "object",
@@ -4521,7 +4521,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_topology",
-    "title": "TOPOLOJİ",
+    "title": "Topoloji Denetimi",
     "description": "Kendini kesen sınır, sıfır alan ve örtüşen parselleri raporlar.\nKomut: TOPOLOJİ (TOPOLOJI, TOPOLOGY, TPL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -4555,7 +4555,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_trim",
-    "title": "BUDA",
+    "title": "Buda",
     "description": "Bir çizgiyi kestiği sınır çizgisine kadar budar.\nKomut: BUDA (TRIM, BD)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -4600,7 +4600,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_vertex_insert",
-    "title": "KÖŞEEKLE",
+    "title": "Köşe Ekle",
     "description": "Bir kenarın ortasına yeni köşe ekler.\nKomut: KÖŞEEKLE (KOSEEKLE, ADDVERTEX, KE)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -4647,7 +4647,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_vertex_move",
-    "title": "KÖŞETAŞI",
+    "title": "Köşe Taşı",
     "description": "Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.\nKomut: KÖŞETAŞI (KOSETASI, MOVEVERTEX, KT)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -4694,7 +4694,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "core_zoom",
-    "title": "YAKINLAŞ",
+    "title": "Yakınlaş",
     "description": "Görünümü çizim kapsamına veya verilen çarpana ayarlar.\nKomut: YAKINLAŞ (YAKINLAS, ZOOM, Z)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
@@ -4731,7 +4731,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "gorunum_bilgisi",
-    "title": "GÖRÜNÜMBİLGİSİ",
+    "title": "Görünüm Bilgisi",
     "description": "Ekranda görünen alanın köşe koordinatlarını, merkezini, ölçeğini ve CRS'ini bildirir.\nKomut: GÖRÜNÜMBİLGİSİ (GORUNUMBILGISI, VIEWINFO, GRB)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
     "inputSchema": {
       "type": "object",
@@ -5189,7 +5189,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "katmanlari_listele",
-    "title": "KATMANLAR",
+    "title": "Katmanları Listele",
     "description": "Katmanları, nesne sayılarını, görünürlük ve kilit durumlarını listeler.\nKomut: KATMANLAR (LAYERS, KTL)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
     "inputSchema": {
       "type": "object",
@@ -5216,7 +5216,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "oznitelik_semasi",
-    "title": "ÖZNİTELİKŞEMASI",
+    "title": "Öznitelik Şeması",
     "description": "Çizimde tanımlı öznitelik sütunlarını ve tiplerini listeler.\nKomut: ÖZNİTELİKŞEMASI (OZNITELIKSEMASI, ATTRSCHEMA, ÖŞ)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
     "inputSchema": {
       "type": "object",
@@ -5244,7 +5244,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "secimi_al",
-    "title": "SEÇİMBİLGİSİ",
+    "title": "Seçim Bilgisi",
     "description": "Kullanıcının o anki seçimini bildirir: kaç nesne ve hangi anahtarlar.\nKomut: SEÇİMBİLGİSİ (SECIMBILGISI, SELECTIONINFO, SÇB)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
     "inputSchema": {
       "type": "object",
@@ -5272,7 +5272,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   },
   {
     "name": "sorgula",
-    "title": "SORGULA",
+    "title": "Sorgula",
     "description": "Katman ve öznitelik koşuluna uyan nesneleri sayar ve anahtarlarını bildirir.\nKomut: SORGULA (QUERY, SRG)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
     "inputSchema": {
       "type": "object",

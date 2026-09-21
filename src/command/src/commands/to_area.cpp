@@ -236,6 +236,7 @@ KENTOS_COMMAND(to_area)
     return CommandSpec{
         .id       = "core.to_area",
         .names    = {"ALANAÇEVİR", "ALANACEVIR", "TOAREA", "ALÇ"},
+        .title    = "Alana Çevir",
         .category = Category::Modify,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                          "Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim"}},

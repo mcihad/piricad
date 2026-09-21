@@ -232,6 +232,7 @@ KENTOS_COMMAND(topology)
     return CommandSpec{
         .id       = "core.topology",
         .names    = {"TOPOLOJİ", "TOPOLOJI", "TOPOLOGY", "TPL"},
+        .title    = "Topoloji Denetimi",
         .category = Category::Query,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                          "Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim"}},

@@ -173,6 +173,7 @@ KENTOS_COMMAND(sector)
     return CommandSpec{
         .id       = "core.sector",
         .names    = {"DİLİM", "DILIM", "SECTOR", "DL"},
+        .title    = "Daire Dilimi",
         .category = Category::Draw,
         .params =
             {
@@ -192,6 +193,7 @@ KENTOS_COMMAND(annulus)
     return CommandSpec{
         .id       = "core.annulus",
         .names    = {"HALKA", "ANNULUS", "HLK"},
+        .title    = "Halka",
         .category = Category::Draw,
         .params =
             {

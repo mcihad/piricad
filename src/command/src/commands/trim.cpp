@@ -608,6 +608,7 @@ KENTOS_COMMAND(split)
     return CommandSpec{
         .id       = "core.split",
         .names    = {"BÖL", "BOL", "SPLIT", "BL"},
+        .title    = "Böl",
         .category = Category::Modify,
         .params =
             {
@@ -633,6 +634,7 @@ KENTOS_COMMAND(trim)
     return CommandSpec{
         .id       = "core.trim",
         .names    = {"BUDA", "TRIM", "BD"},
+        .title    = "Buda",
         .category = Category::Modify,
         .params =
             {
@@ -654,6 +656,7 @@ KENTOS_COMMAND(extend)
     return CommandSpec{
         .id       = "core.extend",
         .names    = {"UZAT", "EXTEND", "UZ"},
+        .title    = "Uzat",
         .category = Category::Modify,
         .params =
             {

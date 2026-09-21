@@ -196,6 +196,7 @@ KENTOS_COMMAND(merge)
     return CommandSpec{
         .id       = "core.merge",
         .names    = {"TEVHİT", "TEVHIT", "MERGE", "TVH"},
+        .title    = "Tevhit",
         .category = Category::Modify,
         .params   = {Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                          "Birleştirilecek parseller; yoksa etkin seçim"}},

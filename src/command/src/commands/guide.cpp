@@ -123,6 +123,7 @@ KENTOS_COMMAND(guide)
     return CommandSpec{
         .id       = "core.guide",
         .names    = {"KILAVUZ", "GUIDE", "KLV"},
+        .title    = "Kılavuz",
         .category = Category::Draw,
         .params =
             {

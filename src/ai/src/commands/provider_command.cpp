@@ -253,6 +253,7 @@ CommandSpec detail::provider_command_spec()
     return CommandSpec{
         .id       = "core.ai_provider",
         .names    = {"YAPAYZEKAMODELİ", "YAPAYZEKAMODELI", "AIMODEL", "YZM"},
+        .title    = "Yapay Zeka Modeli",
         .category = command::Category::System,
         .params =
             {

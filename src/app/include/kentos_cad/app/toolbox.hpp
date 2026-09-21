@@ -172,6 +172,15 @@ public:
     /// Re-tints every button when the theme changes.
     void applyTheme(ThemeMode mode) override;
 
+    /// Every button in the column, top to bottom, for `KENTOS_TOOLBOX_PROBE`.
+    ///
+    /// The reported defect is that pressing a tool does nothing a user can see,
+    /// and the only honest way to check that is to press all of them the way a
+    /// hand does and read what came back. A test cannot press a button it cannot
+    /// reach, and the column is built by the main window rather than declared
+    /// anywhere a test could walk.
+    const QVector<QToolButton*>& buttons() const noexcept { return buttons_; }
+
 protected:
     /// Fills the column and draws the 1 px rule along its right edge.
     void paintEvent(QPaintEvent* event) override;

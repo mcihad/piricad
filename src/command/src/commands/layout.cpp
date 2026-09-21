@@ -1235,6 +1235,7 @@ KENTOS_COMMAND(layout)
     return CommandSpec{
         .id       = "core.layout",
         .names    = {"ÇIKTIYERLEŞİMİ", "CIKTIYERLESIMI", "LAYOUT", "ÇYR", "CYR"},
+        .title    = "Çıktı Yerleşimi",
         .category = Category::File,
         .params =
             {
@@ -1314,6 +1315,7 @@ KENTOS_COMMAND(layout_item)
     return CommandSpec{
         .id       = "core.layout_item",
         .names    = {"ÇIKTIÖĞE", "CIKTIOGE", "LAYOUTITEM", "ÇÖĞ", "COG"},
+        .title    = "Çıktı Öğesi",
         .category = Category::File,
         .params =
             {
@@ -1397,6 +1399,7 @@ KENTOS_COMMAND(layout_template)
     return CommandSpec{
         .id       = "core.layout_template",
         .names    = {"ÇIKTIŞABLON", "CIKTISABLON", "LAYOUTTEMPLATE", "ÇŞB", "CSB"},
+        .title    = "Çıktı Şablonu",
         .category = Category::File,
         .params =
             {

@@ -56,7 +56,7 @@
 
 ## Araçlar
 
-### `core_annulus` — HALKA
+### `core_annulus` — Halka
 
 Merkez, iç ve dış yarıçaptan delikli halka çizer.
 Komut: HALKA (ANNULUS, HLK)
@@ -70,7 +70,7 @@ Onay ister.
 | `ic` | string | evet | İç çember üzerinde bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `dis` | string | evet | Dış çember üzerinde bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_arc_draw` — YAY
+### `core_arc_draw` — Yay
 
 Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir.
 Komut: YAY (ARC, YY)
@@ -84,7 +84,7 @@ Onay ister.
 | `baslangic` | string | evet | Yayın başlangıç noktası; yarıçapı bu belirler — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `bitis` | string | evet | Yayın bitiş yönü; süpürme saat yönünün tersinedir — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_area` — ALAN
+### `core_area` — Alan
 
 Kapalı bir alan çizer; istenirse içine delik açar.
 Komut: ALAN (AREA, POLİGON, POLIGON, AL)
@@ -97,7 +97,7 @@ Onay ister.
 | `noktalar` | string | evet | Alanın köşe noktaları; kapanış noktası tekrarlanmaz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `bolum` | array | hayır | Halka uzunlukları: ilki dış sınır, sonrakiler delik (tam sayı) |
 
-### `core_array` — DİZİ
+### `core_array` — Dizi
 
 Seçilen nesneleri satır/sütun ya da bir merkez etrafında çoğaltır.
 Komut: DİZİ (DIZI, ARRAY, DZ)
@@ -117,7 +117,7 @@ Onay ister.
 | `sayi` | integer | hayır | Toplam kopya sayısı, özgün dahil (kutupsal dizi) (tam sayı) |
 | `aci` | number | hayır | Süpürülecek toplam açı, derece; verilmezse tam tur (sayı) |
 
-### `core_attribute` — ÖZNİTELİK
+### `core_attribute` — Öznitelik
 
 Nesnelerin özniteliklerini listeler, okur ve yazar; yeni sütun tanımlar.
 Komut: ÖZNİTELİK (OZNITELIK, ATTRIBUTE, ÖZN, OZN)
@@ -131,7 +131,7 @@ Onay ister.
 | `nesne` | integer | hayır | Nesnenin kalıcı kimliği (tam sayı) |
 | `deger` | string | hayır | Yeni değer; yoksa yalnızca okur. 'yok' hücreyi boşaltır (metin) |
 
-### `core_block` — BLOK
+### `core_block` — Blok Tanımla
 
 Seçilen nesnelerden adlı bir blok tanımlar ve yerlerine bir referans koyar.
 Komut: BLOK (BLOK, BLOCK, BLK)
@@ -146,7 +146,7 @@ Onay ister.
 | `nesneler` | string | hayır | Bloğa girecek nesneler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `aciklama` | string | hayır | Serbest açıklama (metin) |
 
-### `core_chamfer` — PAH
+### `core_chamfer` — Pah
 
 Bir köşeyi düz bir kenarla keser (pah kırar).
 Komut: PAH (CHAMFER, PH)
@@ -160,7 +160,7 @@ Onay ister.
 | `nokta` | string | evet | İşlem yapılacak köşe — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `mesafe` | number | evet | Köşeden her iki kenar boyunca kesilecek mesafe, metre (sayı) |
 
-### `core_circle_draw` — DAİRE
+### `core_circle_draw` — Daire
 
 Merkez ve çember üzerindeki bir noktadan daire çizer.
 Komut: DAİRE (DAIRE, CIRCLE, DR)
@@ -173,7 +173,7 @@ Onay ister.
 | `merkez` | string | evet | Dairenin merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `cevre` | string | evet | Çember üzerinde bir nokta; yarıçapı bu belirler — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_combine` — BİRLEŞTİR
+### `core_combine` — Birleştir
 
 Seçili alanları tek alanda birleştirir, uç uca değen çizgileri tek çizgi yapar.
 Komut: BİRLEŞTİR (BIRLESTIR, COMBINE, BRL)
@@ -185,7 +185,7 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Birleştirilecek alanlar ya da çizgiler; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_context` — BAĞLAM
+### `core_context` — Bağlam
 
 Üzerinde çalışılan her şeyi tek çağrıda özetler: belge sürümü, koordinat sistemi, kapsam, katmanlar, çıktı yerleşimleri ve hedefli olup olmadıkları, seçili nesneler ve görünüm. Özet verir, döküm değil.
 Komut: BAĞLAM (BAGLAM, CONTEXT, BĞL)
@@ -196,7 +196,7 @@ Doğrudan çalışır.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 
-### `core_contour` — EŞYÜKSELTİ
+### `core_contour` — Eşyükselti Eğrileri
 
 Kotlu noktalardan eş yükselti eğrileri çizer.
 Komut: EŞYÜKSELTİ (ESYUKSELTI, CONTOUR, EŞY)
@@ -209,7 +209,7 @@ Onay ister.
 | `aralik` | integer | hayır | Eş yükselti aralığı, milimetre; varsayılan 1000 (1 m) (tam sayı) |
 | `katman` | string | hayır | Eğrilerin çizileceği katman; varsayılan ESYUKSELTI (metin) |
 
-### `core_coordinate` — KOORDİNAT
+### `core_coordinate` — Koordinat Oku
 
 Tıklanan noktanın sağa ve yukarı değerini belgenin koordinat sisteminde yazar.
 Komut: KOORDİNAT (KOORDINAT, COORDINATE, KRD)
@@ -221,7 +221,7 @@ Onay ister.
 |---|---|---|---|
 | `nokta` | string | evet | Okunacak nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_copy` — KOPYALA
+### `core_copy` — Kopyala
 
 Seçilen nesnelerin kopyasını verilen her noktaya, başlangıçtan o noktaya kadar öteleyerek koyar.
 Komut: KOPYALA (COPY, KP)
@@ -235,7 +235,7 @@ Onay ister.
 | `baslangic` | string | evet | Kopyalamanın başlangıç noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `bitis` | string | evet | Kopyaların geleceği noktalar; her nokta bir kopya — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_dimension` — ÖLÇÜ
+### `core_dimension` — Ölçü
 
 İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer.
 Komut: ÖLÇÜ (OLCU, DIMENSION, ÖÇ)
@@ -254,7 +254,7 @@ Onay ister.
 | `metin` | string | hayır | Ölçülen değer yerine yazılacak metin (metin) |
 | `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
 
-### `core_earthwork` — HACİM
+### `core_earthwork` — Hacim Hesabı
 
 Kotlu noktalardan bir kota göre kazı ve dolgu hacmini hesaplar.
 Komut: HACİM (HACIM, EARTHWORK, HCM)
@@ -266,7 +266,7 @@ Onay ister.
 |---|---|---|---|
 | `kot` | integer | evet | Karşılaştırma kotu, milimetre (845 m = 845000) (tam sayı) |
 
-### `core_edittext` — YAZIDÜZENLE
+### `core_edittext` — Yazıyı Düzenle
 
 Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir.
 Komut: YAZIDÜZENLE (YAZIDUZENLE, EDITTEXT, YZD)
@@ -281,7 +281,7 @@ Onay ister.
 | `yukseklik` | integer | hayır | Yeni yükseklik, zeminde milimetre; verilmezse değişmez (tam sayı) |
 | `hizalama` | string | hayır | sol, orta, sag veya merkez; verilmezse değişmez (metin) |
 
-### `core_ellipse_draw` — ELİPS
+### `core_ellipse_draw` — Elips
 
 Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir.
 Komut: ELİPS (ELIPS, ELLIPSE, EL)
@@ -297,7 +297,7 @@ Onay ister.
 | `baslangic` | number | hayır | Kısmi elips: başlangıç açısı, derece, birinci eksenden saat yönünün tersine (sayı) |
 | `bitis` | number | hayır | Kısmi elips: bitiş açısı, derece; baslangic ile birlikte (sayı) |
 
-### `core_erase` — SİL
+### `core_erase` — Sil
 
 Seçilen nesneleri siler.
 Komut: SİL (SIL, ERASE, E)
@@ -309,7 +309,7 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Silinecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_extend` — UZAT
+### `core_extend` — Uzat
 
 Bir çizgiyi sınır çizgisine ulaşana kadar uzatır.
 Komut: UZAT (EXTEND, UZ)
@@ -323,7 +323,7 @@ Onay ister.
 | `sinir` | string | hayır | Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `nokta` | string | evet | Uzatılacak ucun yakınında bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_fillet` — YUVARLA
+### `core_fillet` — Yuvarla
 
 Bir köşeyi verilen yarıçapta yay ile yuvarlatır.
 Komut: YUVARLA (FILLET, YV)
@@ -337,7 +337,7 @@ Onay ister.
 | `nokta` | string | evet | İşlem yapılacak köşe — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `yaricap` | number | evet | Yuvarlatma yarıçapı, metre (sayı) |
 
-### `core_fit` — OTURT
+### `core_fit` — Oturt (Helmert)
 
 Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert).
 Komut: OTURT (FIT, GEOREF, OTR)
@@ -351,7 +351,7 @@ Onay ister.
 | `olcek_kilitli` | boolean | hayır | Ölçeği 1'de tutar; saha ölçüsü yeniden ölçeklenmez (evet/hayır) |
 | `sistem` | string | hayır | Oturtulduktan sonraki koordinat sistemi, örnek TUREF/TM36 (metin) |
 
-### `core_guide` — KILAVUZ
+### `core_guide` — Kılavuz
 
 Cetvel kılavuzu ekler, listeler ve siler.
 Komut: KILAVUZ (GUIDE, KLV)
@@ -365,7 +365,7 @@ Onay ister.
 | `deger` | integer | hayır | Kılavuzun koordinatı, milimetre — yatayda yukarı, düşeyde sağa (tam sayı) |
 | `sil` | boolean | hayır | Verilen yerdeki kılavuzu siler (evet/hayır) |
 
-### `core_hatch` — TARAMA
+### `core_hatch` — Tarama
 
 Kapalı nesnelerin ya da verilen köşelerin içini katalogdaki bir desenle tarar.
 Komut: TARAMA (TARAMA, HATCH, TRM)
@@ -382,7 +382,7 @@ Onay ister.
 | `olcek` | number | hayır | Desen ölçeği; varsayılan pafta ölçeğinin paydası (AYAR plan_ölçeği) (sayı) |
 | `katalog` | string | hayır | Desen kataloğu dosyası; varsayılan TERCİH desen_kataloğu (metin) |
 
-### `core_insert` — BLOKEKLE
+### `core_insert` — Blok Ekle
 
 Tanımlı bir bloğu bir noktaya ölçek, açı ve diziyle yerleştirir.
 Komut: BLOKEKLE (BLOKEKLE, INSERT, BE)
@@ -402,7 +402,7 @@ Onay ister.
 | `sutun_aralik` | integer | hayır | Sütunlar arası, milimetre, döndürülmüş eksende (tam sayı) |
 | `satir_aralik` | integer | hayır | Satırlar arası, milimetre, döndürülmüş eksende (tam sayı) |
 
-### `core_job_template` — İŞŞABLONU
+### `core_job_template` — İş Şablonu
 
 Sık yapılan işlerin — atlas, kadastro kontrolü, parsel raporu — komut satırlarını sırasıyla verir. Hiçbirini çalıştırmaz: adımlar olağan araç yüzeyinden gönderilir ve yazan her adım yine öneri olur.
 Komut: İŞŞABLONU (ISSABLONU, JOBTEMPLATE, İŞŞ)
@@ -415,7 +415,7 @@ Doğrudan çalışır.
 | `islem` | string | evet | Ne yapılacağı: listele ya da goster (metin) |
 | `sablon` | string | hayır | Şablonun kimliği; goster için gerekir (metin) |
 
-### `core_label` — ETİKET
+### `core_label` — Etiket
 
 Katmandaki nesneleri özniteliklerinden okuyarak etiketler.
 Komut: ETİKET (ETIKET, LABEL, ETK)
@@ -431,7 +431,7 @@ Onay ister.
 | `yukseklik` | integer | hayır | Yazı yüksekliği, zemin milimetresi (tam sayı) |
 | `kaydirma` | integer | hayır | Nesnenin ortasından dikey kaydırma, zemin milimetresi; artı yukarı (tam sayı) |
 
-### `core_layer` — KATMAN
+### `core_layer` — Katman
 
 Katman oluşturur, aktif yapar ve özelliklerini değiştirir.
 Komut: KATMAN (LAYER, KAT)
@@ -447,7 +447,7 @@ Onay ister.
 | `kilitli` | boolean | hayır | Katmanın kilit durumu (evet/hayır) |
 | `renk` | integer | hayır | Çizim rengi, 0xAARRGGBB (tam sayı) |
 
-### `core_layer_visibility` — KATMANGÖRÜNÜM
+### `core_layer_visibility` — Katman Görünümü
 
 Katmanların görünürlüğünü toptan değiştirir: bir katmanı gösterir ya da gizler, yalnız onu bırakır, hepsini gösterir veya görünürlüğü ters çevirir.
 Komut: KATMANGÖRÜNÜM (KATMANGORUNUM, LAYERVIEW, KGÖ, KGO)
@@ -460,7 +460,7 @@ Onay ister.
 | `islem` | string | evet | goster, gizle, yalniz (yalnız bu katman), tumu (hepsini göster) ya da tersine (metin) |
 | `katman` | string | hayır | Katman adı; goster, gizle ve yalniz için gerekir, tersine için isteğe bağlı (verilmezse bütün katmanlar), tumu ile verilemez (metin) |
 
-### `core_layout` — ÇIKTIYERLEŞİMİ
+### `core_layout` — Çıktı Yerleşimi
 
 Çizimin çıktı yerleşimlerini yönetir: yeni yerleşim açar, siler, adlandırır ve kâğıdını değiştirir. Yerleşim çizimle birlikte kaydedilir ve geri alınabilir.
 Komut: ÇIKTIYERLEŞİMİ (CIKTIYERLESIMI, LAYOUT, ÇYR, CYR)
@@ -487,7 +487,7 @@ Onay ister.
 | `kenar_payi` | integer | hayır | atlas: nesnenin çevresinde bırakılacak pay, yüzde (varsayılan 10) (tam sayı) |
 | `tek_dosya` | boolean | hayır | atlas: tek çok sayfalı belge mi, nesne başına bir dosya mı (varsayılan evet) (evet/hayır) |
 
-### `core_layout_item` — ÇIKTIÖĞE
+### `core_layout_item` — Çıktı Öğesi
 
 Bir çıktı yerleşiminin üzerindeki öğeleri yönetir: harita çerçevesi, başlık, ölçek çubuğu, kuzey oku, lejant, resim, şekil ve tablo ekler, taşır, ayarlar ve siler.
 Komut: ÇIKTIÖĞE (CIKTIOGE, LAYOUTITEM, ÇÖĞ, COG)
@@ -521,7 +521,7 @@ Onay ister.
 | `harita` | string | hayır | Bu öğenin bağlı olduğu harita çerçevesinin adı. Verilmezse ilk harita. 'ilk' bağı kaldırır (metin) |
 | `sira` | integer | hayır | Çizim sırası; büyük olan üstte (tam sayı) |
 
-### `core_layout_template` — ÇIKTIŞABLON
+### `core_layout_template` — Çıktı Şablonu
 
 Kurumun standart çıktı yerleşimlerini saklar ve uygular. Şablon çizimin dışında, kullanıcı profilinde durur; her çizime uygulanabilir. Şablon düzeni taşır, zemin koordinatlarını taşımaz.
 Komut: ÇIKTIŞABLON (CIKTISABLON, LAYOUTTEMPLATE, ÇŞB, CSB)
@@ -535,7 +535,7 @@ Onay ister.
 | `ad` | string | hayır | Şablonun adı; listele dışında gerekir (metin) |
 | `yerlesim` | string | hayır | kaydet: hangi yerleşim saklanacak (tek yerleşim varsa gerekmez). uygula: kurulacak yerleşimin adı (verilmezse şablonun adı) (metin) |
 
-### `core_leader` — LİDER
+### `core_leader` — Lider
 
 Bir noktayı gösteren oklu çizgi çizer, istenirse yanına yazı koyar.
 Komut: LİDER (LIDER, LEADER, LD)
@@ -550,7 +550,7 @@ Onay ister.
 | `stil` | string | hayır | Ok ve yazı boyunu veren ölçü stili; varsayılan ISO-25 (metin) |
 | `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |
 
-### `core_line` — ÇİZGİ
+### `core_line` — Çizgi
 
 İki veya daha fazla nokta arasında doğru parçaları çizer.
 Komut: ÇİZGİ (CIZGI, LINE, Ç, L)
@@ -562,7 +562,7 @@ Onay ister.
 |---|---|---|---|
 | `noktalar` | string | evet | Ardışık doğru parçalarının köşe noktaları — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_match_style` — STİLKOPYALA
+### `core_match_style` — Stil Kopyala
 
 Bir nesnenin stilini seçilen nesnelere uygular.
 Komut: STİLKOPYALA (STILKOPYALA, MATCHPROP, SK)
@@ -576,7 +576,7 @@ Onay ister.
 | `nesneler` | string | hayır | Stili alacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `nokta` | string | hayır | Kaynak nesnenin üzerinde bir nokta; yalnız kaynak verilmediğinde — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_measure` — ÖLÇ
+### `core_measure` — Ölç
 
 İki nokta arasındaki mesafeyi, koordinat farkını ve açıyı yazar.
 Komut: ÖLÇ (OLC, MEASURE, MS)
@@ -589,7 +589,7 @@ Onay ister.
 | `baslangic` | string | evet | Ölçümün ilk noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `bitis` | string | evet | Ölçümün ikinci noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_measure_area` — ALANÖLÇ
+### `core_measure_area` — Alan Ölç
 
 Seçilen nesnelerin alanını ve çevresini yazar.
 Komut: ALANÖLÇ (ALANOLC, AREAOF, AÖ)
@@ -601,7 +601,7 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Ölçülecek nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_merge` — TEVHİT
+### `core_merge` — Tevhit
 
 Komşu parselleri tek parselde birleştirir (tevhit).
 Komut: TEVHİT (TEVHIT, MERGE, TVH)
@@ -613,7 +613,7 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Birleştirilecek parseller; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_mirror` — AYNALA
+### `core_mirror` — Aynala
 
 Seçilen nesneleri iki noktadan geçen eksende aynalar.
 Komut: AYNALA (MIRROR, AYN)
@@ -627,7 +627,7 @@ Onay ister.
 | `baslangic` | string | evet | Ayna ekseninin ilk noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `bitis` | string | evet | Ayna ekseninin ikinci noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_move` — TAŞI
+### `core_move` — Taşı
 
 Seçilen nesneleri iki nokta arasındaki kadar taşır.
 Komut: TAŞI (TASI, MOVE, TŞ)
@@ -641,7 +641,7 @@ Onay ister.
 | `baslangic` | string | evet | Taşımanın başlangıç noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `bitis` | string | evet | Taşımanın bitiş noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_offset` — OFSET
+### `core_offset` — Ofset
 
 Seçili nesnelerin verilen mesafede paralelini çizer.
 Komut: OFSET (OFFSET, OF)
@@ -655,7 +655,7 @@ Onay ister.
 | `mesafe` | integer | hayır | Ofset mesafesi, milimetre; eksi değer içeri (tam sayı) |
 | `kose` | string | hayır | KÖŞE | YUVARLAK | PAH — dış köşenin biçimi (metin) |
 
-### `core_pan` — KAYDIR
+### `core_pan` — Kaydır
 
 Görünümü, tutulan noktayı verilen noktaya getirecek biçimde kaydırır.
 Komut: KAYDIR (PAN, KY)
@@ -668,7 +668,7 @@ Onay ister.
 | `baslangic` | string | evet | Kaydırmanın tutulacağı nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `bitis` | string | evet | O noktanın taşınacağı yer — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_point_draw` — NOKTA
+### `core_point_draw` — Nokta
 
 Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper.
 Komut: NOKTA (POINT, NK)
@@ -680,7 +680,7 @@ Onay ister.
 |---|---|---|---|
 | `noktalar` | string | evet | Yerleştirilecek noktalar — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_points` — NOKTALAR
+### `core_points` — Nokta Listesi
 
 Ölçülmüş nokta listesini okur ve yazar (nokta no, Y, X, Z, kod).
 Komut: NOKTALAR (POINTS, NKL)
@@ -695,7 +695,7 @@ Onay ister.
 | `nesneler` | string | hayır | yon=yaz ile: köşeleri yazılacak nesneler; verilmezse çizimdeki noktalar — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `eksen` | string | hayır | Sütun sırası: YX (varsayılan, Türkiye'de olağan) | XY (metin) |
 
-### `core_polyline` — ÇOKLUÇİZGİ
+### `core_polyline` — Çoklu Çizgi
 
 Birden çok noktadan TEK bir çizgi nesnesi çizer.
 Komut: ÇOKLUÇİZGİ (COKLUCIZGI, POLYLINE, ÇÇ, PL)
@@ -707,7 +707,7 @@ Onay ister.
 |---|---|---|---|
 | `noktalar` | string | evet | Çoklu çizginin köşe noktaları; hepsi tek nesne olur — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_print` — YAZDIR
+### `core_print` — Yazdır
 
 Çizimin bir penceresini bir yazdırma profilinin kâğıdına yerleştirip PDF dosyasına yazar ya da yazıcıya gönderir.
 Komut: YAZDIR (PRINT, PLOT, YZDR)
@@ -738,7 +738,7 @@ Onay ister.
 | `kopyalanabilir` | boolean | hayır | Şifreli PDF: metin ve grafik kopyalanabilir mi; varsayılan evet (evet/hayır) |
 | `degistirilebilir` | boolean | hayır | Şifreli PDF: belge değiştirilebilir mi; varsayılan evet (evet/hayır) |
 
-### `core_rectangle` — DİKDÖRTGEN
+### `core_rectangle` — Dikdörtgen
 
 Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer.
 Komut: DİKDÖRTGEN (DIKDORTGEN, RECTANGLE, DKD, REC)
@@ -750,7 +750,7 @@ Onay ister.
 |---|---|---|---|
 | `noktalar` | string | evet | Karşılıklı iki köşe; kalan ikisi bunlardan türetilir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_reproject` — DÖNÜŞTÜR
+### `core_reproject` — Dönüştür
 
 Çizimin tamamını bir koordinat sisteminden diğerine dönüştürür.
 Komut: DÖNÜŞTÜR (DONUSTUR, REPROJECT, DNS)
@@ -763,7 +763,7 @@ Onay ister.
 | `hedef` | string | evet | Hedef koordinat sistemi, örnek EPSG:5256 ya da TUREF/TM36 (metin) |
 | `kaynak` | string | hayır | Kaynak sistem; yoksa çizimin kendi koordinat sistemi (metin) |
 
-### `core_rotate` — DÖNDÜR
+### `core_rotate` — Döndür
 
 Seçilen nesneleri bir merkez etrafında döndürür.
 Komut: DÖNDÜR (DONDUR, ROTATE, DÖN)
@@ -777,7 +777,7 @@ Onay ister.
 | `merkez` | string | evet | Döndürme merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `aci` | number | evet | Dönme açısı, derece; artı yön saat yönünün tersi (sayı) |
 
-### `core_scale` — ÖLÇEKLE
+### `core_scale` — Ölçekle
 
 Seçilen nesneleri bir merkeze göre büyütür ya da küçültür.
 Komut: ÖLÇEKLE (OLCEKLE, SCALE, ÖLÇEK, OLCEK)
@@ -791,7 +791,7 @@ Onay ister.
 | `merkez` | string | evet | Ölçekleme merkezi; bu nokta yerinde kalır — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `carpan` | number | evet | Ölçek çarpanı; sıfırdan büyük (sayı) |
 
-### `core_sector` — DİLİM
+### `core_sector` — Daire Dilimi
 
 Merkez ve iki kenardan daire dilimi çizer; süpürme saat yönünün tersinedir.
 Komut: DİLİM (DILIM, SECTOR, DL)
@@ -805,7 +805,7 @@ Onay ister.
 | `baslangic` | string | evet | İlk kenarın ucu; yarıçapı bu belirler — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `bitis` | string | evet | İkinci kenarın yönü; süpürme saat yönünün tersinedir — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_set_layer` — KATMANAT
+### `core_set_layer` — Katmana Ata
 
 Seçilen nesneleri başka bir katmana taşır.
 Komut: KATMANAT (KATMANATA, SETLAYER, KA)
@@ -818,7 +818,7 @@ Onay ister.
 | `nesneler` | string | hayır | Taşınacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `katman` | string | evet | Hedef katmanın adı; yoksa oluşturulur (metin) |
 
-### `core_spline` — SPLINE
+### `core_spline` — Spline
 
 Kontrol noktalarından NURBS eğrisi (spline) çizer.
 Komut: SPLINE (SPLINE, SPLINE, SPL)
@@ -832,7 +832,7 @@ Onay ister.
 | `derece` | integer | hayır | Eğrinin derecesi, 1–15; varsayılan 3 (tam sayı) |
 | `kapali` | boolean | hayır | Son noktadan ilkine kapansın mı; varsayılan hayır (evet/hayır) |
 
-### `core_split` — BÖL
+### `core_split` — Böl
 
 Nesneleri çizilen bir kesme çizgisiyle böler.
 Komut: BÖL (BOL, SPLIT, BL)
@@ -846,7 +846,7 @@ Onay ister.
 | `noktalar` | string | hayır | Kesme çizgisinin iki noktası; arayüzde çizilir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `nokta` | string | hayır | Bölme noktası (tek çizgi; eski biçim) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_split_area` — ALANİFRAZ
+### `core_split_area` — Alana Göre İfraz
 
 Parselden verilen yöne paralel, istenen alanda bir parça ayırır.
 Komut: ALANİFRAZ (ALANIFRAZ, SPLITAREA, ALİF)
@@ -861,7 +861,7 @@ Onay ister.
 | `alan` | integer | hayır | Ayrılacak alan, mm² (400 m² = 400000000) (tam sayı) |
 | `tolerans` | integer | hayır | Kabul toleransı, mm²; varsayılan 10000 (0,01 m²) (tam sayı) |
 
-### `core_split_parcel` — İFRAZ
+### `core_split_parcel` — İfraz
 
 Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz).
 Komut: İFRAZ (IFRAZ, SUBDIVIDE, İFR)
@@ -874,7 +874,7 @@ Onay ister.
 | `noktalar` | string | hayır | Ayırma çizgisinin iki ucu — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `nesneler` | string | hayır | Ayrılacak parsel; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_stakeout` — APLİKASYON
+### `core_stakeout` — Aplikasyon
 
 İstasyondan her noktaya mesafe ve açı listesi çıkarır (aplikasyon).
 Komut: APLİKASYON (APLIKASYON, STAKEOUT, APL)
@@ -888,7 +888,7 @@ Onay ister.
 | `baglama` | string | hayır | Bağlama (arka görüş) noktası; verilirse açılar ondan ölçülür — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `nesneler` | string | hayır | Aplike edilecek noktalar; yoksa seçim, o da boşsa çizimdeki bütün noktalar — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_style` — STİL
+### `core_style` — Stil
 
 Bir katmandaki nesnelerin stilini katalogdan veya doğrudan verilen değerlerden yazar.
 Komut: STİL (STIL, STYLE, ST)
@@ -931,7 +931,7 @@ Onay ister.
 | `yazi` | string | hayır | yazi-isaretci katmanının yazdığı sabit metin (metin) |
 | `alan` | string | hayır | Nesneden alınacak parametreler, virgülle: sütun[:özellik[:tür]] — 'kod:yazi:metin, kat:kalinlik'. Sütun yoksa tanımlanır (metin) |
 
-### `core_suggestion` — ÖNERİ
+### `core_suggestion` — Yapay Zeka Önerisi
 
 Bekleyen yapay zeka önerilerini listeler, durumunu söyler, uygular ya da reddeder.
 Komut: ÖNERİ (ONERI, SUGGESTION, ÖN)
@@ -944,7 +944,7 @@ Onay ister.
 | `islem` | string | evet | Ne yapılacağı: uygula, reddet, durum ya da listele (metin) |
 | `oneri` | string | hayır | Öneri kimliği; uygula, reddet ve durum için gerekir (metin) |
 
-### `core_symbol` — SEMBOL
+### `core_symbol` — Sembol
 
 Gösterim rafını yükler, ağacında gezer ve içinde arar.
 Komut: SEMBOL (SEMBOLLER, SYMBOL, SMB)
@@ -959,7 +959,7 @@ Onay ister.
 | `ara` | string | hayır | Etikette, kimlikte ve grup yolunda arar (metin) |
 | `kod` | string | hayır | Tek bir gösterimin ayrıntısı (metin) |
 
-### `core_text` — METİN
+### `core_text` — Metin
 
 Çizime metin yazar; yükseklik ve hizalama verilebilir.
 Komut: METİN (METIN, YAZI, TEXT, MT)
@@ -975,7 +975,7 @@ Onay ister.
 | `bitis` | string | hayır | Taban çizgisinin bitişi; yoksa yatay — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `hizalama` | string | hayır | sol, orta, sag veya merkez (metin) |
 
-### `core_to_area` — ALANAÇEVİR
+### `core_to_area` — Alana Çevir
 
 Uç uca değen çizgileri tek bir kapalı alana çevirir.
 Komut: ALANAÇEVİR (ALANACEVIR, TOAREA, ALÇ)
@@ -987,7 +987,7 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Birleştirilecek çizgilerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_tool_search` — ARAÇARA
+### `core_tool_search` — Araç Ara
 
 Ajan araç kataloğunda ad ve özete göre arar. Sonuç her zaman kaç aracın eşleştiğini, kaçının gösterildiğini ve katalogdaki toplam araç sayısını söyler: arama hiçbir aracı gizlemez, tam liste `tools/list` ile alınır.
 Komut: ARAÇARA (ARACARA, TOOLSEARCH, ARA)
@@ -1001,7 +1001,7 @@ Doğrudan çalışır.
 | `alan` | string | hayır | Nerede aranacağı: hepsi (öntanımlı), ad ya da ozet (metin) |
 | `sinir` | integer | hayır | En çok kaç sonuç gösterilsin; öntanımlı 20. Eşleşme sayısı her hâlde bildirilir (tam sayı) |
 
-### `core_topology` — TOPOLOJİ
+### `core_topology` — Topoloji Denetimi
 
 Kendini kesen sınır, sıfır alan ve örtüşen parselleri raporlar.
 Komut: TOPOLOJİ (TOPOLOJI, TOPOLOGY, TPL)
@@ -1013,7 +1013,7 @@ Onay ister.
 |---|---|---|---|
 | `nesneler` | string | hayır | Denetlenecek nesneler; yoksa seçim, o da boşsa bütün çizim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_trim` — BUDA
+### `core_trim` — Buda
 
 Bir çizgiyi kestiği sınır çizgisine kadar budar.
 Komut: BUDA (TRIM, BD)
@@ -1027,7 +1027,7 @@ Onay ister.
 | `sinir` | string | hayır | Sınır çizgisinin kimliği; yoksa seçili iki çizgiden diğeri — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `nokta` | string | evet | Atılacak parçanın üzerindeki bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_vertex_insert` — KÖŞEEKLE
+### `core_vertex_insert` — Köşe Ekle
 
 Bir kenarın ortasına yeni köşe ekler.
 Komut: KÖŞEEKLE (KOSEEKLE, ADDVERTEX, KE)
@@ -1041,7 +1041,7 @@ Onay ister.
 | `kose` | integer | evet | Yeni köşenin ardına geleceği köşe; ilk köşe 1'dir (tam sayı) |
 | `nokta` | string | evet | Yeni köşenin yeri — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_vertex_move` — KÖŞETAŞI
+### `core_vertex_move` — Köşe Taşı
 
 Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır.
 Komut: KÖŞETAŞI (KOSETASI, MOVEVERTEX, KT)
@@ -1055,7 +1055,7 @@ Onay ister.
 | `kose` | integer | evet | Taşınacak köşenin sırası; ilk köşe 1'dir (tam sayı) |
 | `nokta` | string | evet | Köşenin yeni yeri — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
-### `core_zoom` — YAKINLAŞ
+### `core_zoom` — Yakınlaş
 
 Görünümü çizim kapsamına veya verilen çarpana ayarlar.
 Komut: YAKINLAŞ (YAKINLAS, ZOOM, Z)
@@ -1068,7 +1068,7 @@ Onay ister.
 | `mod` | string | hayır | KAPSAM | ÇARPAN | SIFIRLA (metin) |
 | `carpan` | number | hayır | ÇARPAN modunda ölçek katsayısı (sayı) |
 
-### `gorunum_bilgisi` — GÖRÜNÜMBİLGİSİ
+### `gorunum_bilgisi` — Görünüm Bilgisi
 
 Ekranda görünen alanın köşe koordinatlarını, merkezini, ölçeğini ve CRS'ini bildirir.
 Komut: GÖRÜNÜMBİLGİSİ (GORUNUMBILGISI, VIEWINFO, GRB)
@@ -1185,7 +1185,7 @@ Onay ister.
 | `enaz` | integer | hayır | Bundan kısa kenarlara yazı yazılmaz, milimetre; varsayılan 0 (tam sayı) |
 | `bagla` | boolean | hayır | Yazıyı kenarına bağla: kenar taşınınca yazı izler, uzunluk yeniden yazılır; varsayılan evet (evet/hayır) |
 
-### `katmanlari_listele` — KATMANLAR
+### `katmanlari_listele` — Katmanları Listele
 
 Katmanları, nesne sayılarını, görünürlük ve kilit durumlarını listeler.
 Komut: KATMANLAR (LAYERS, KTL)
@@ -1196,7 +1196,7 @@ Doğrudan çalışır.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 
-### `oznitelik_semasi` — ÖZNİTELİKŞEMASI
+### `oznitelik_semasi` — Öznitelik Şeması
 
 Çizimde tanımlı öznitelik sütunlarını ve tiplerini listeler.
 Komut: ÖZNİTELİKŞEMASI (OZNITELIKSEMASI, ATTRSCHEMA, ÖŞ)
@@ -1207,7 +1207,7 @@ Doğrudan çalışır.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 
-### `secimi_al` — SEÇİMBİLGİSİ
+### `secimi_al` — Seçim Bilgisi
 
 Kullanıcının o anki seçimini bildirir: kaç nesne ve hangi anahtarlar.
 Komut: SEÇİMBİLGİSİ (SECIMBILGISI, SELECTIONINFO, SÇB)
@@ -1218,7 +1218,7 @@ Doğrudan çalışır.
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
 
-### `sorgula` — SORGULA
+### `sorgula` — Sorgula
 
 Katman ve öznitelik koşuluna uyan nesneleri sayar ve anahtarlarını bildirir.
 Komut: SORGULA (QUERY, SRG)

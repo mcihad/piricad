@@ -281,10 +281,25 @@ using CommandFn = Task<void> (*)(Context&);
 /// is written down twice.
 struct CommandSpec
 {
-    std::string id;                      ///< stable, namespaced: "core.line"
-    std::vector<std::string> names;      ///< Turkish primary, English equivalent, abbreviations
+    std::string id;                 ///< stable, namespaced: "core.line"
+    std::vector<std::string> names; ///< Turkish primary, English equivalent, abbreviations
+    /// The human Turkish label: `Blok Ekle`, `Yazdırma Profili`, `Eşyükselti`.
+    ///
+    /// A NAME IS NOT A LABEL. `names.front()` is the word typed at the prompt and
+    /// it is one word by design — `ÇIKTIYERLEŞİMİ`, `ÖZNİTELİKŞEMASI` — so a menu
+    /// built from it reads `Çıktıyerleşimi`, which is not Turkish. There is no
+    /// rule that recovers the spaces, because the name never had any.
+    ///
+    /// `ToolSpec` has carried a `title` since the processing tools shipped and
+    /// its menu reads `Kenar uzunluklarını yaz`; this is the same field for the
+    /// same reason. Empty falls back to the Turkish title-casing of the primary
+    /// name, which is right for a one-word command and the only honest guess for
+    /// any other.
+    std::string title;
+
     Category category{Category::System}; ///< where it appears in menus and docs
-    std::vector<Param> params;           ///< validated by the bus before `run`
+
+    std::vector<Param> params;                      ///< validated by the bus before `run`
     UndoPolicy undo{UndoPolicy::SingleTransaction}; ///< how it lands on the stack
     Flags flags{Flags::None};                       ///< which clients may reach it, and how
     std::string summary;                            ///< one line, Turkish, user-facing

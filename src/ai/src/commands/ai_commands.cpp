@@ -192,6 +192,7 @@ std::vector<CommandSpec> detail::ai_command_specs()
     specs.push_back(CommandSpec{
         .id       = "core.suggestion",
         .names    = {"ÖNERİ", "ONERI", "SUGGESTION", "ÖN"},
+        .title    = "Yapay Zeka Önerisi",
         .category = command::Category::System,
         .params =
             {
@@ -230,6 +231,7 @@ std::vector<CommandSpec> detail::ai_command_specs()
     specs.push_back(CommandSpec{
         .id       = "core.mcp",
         .names    = {"MCPSUNUCU", "MCPSERVER", "MCP"},
+        .title    = "MCP Sunucusu",
         .category = command::Category::System,
         .params =
             {

@@ -163,6 +163,7 @@ KENTOS_COMMAND(contour)
     return CommandSpec{
         .id       = "core.contour",
         .names    = {"EŞYÜKSELTİ", "ESYUKSELTI", "CONTOUR", "EŞY"},
+        .title    = "Eşyükselti Eğrileri",
         .category = Category::Draw,
         .params =
             {

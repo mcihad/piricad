@@ -66,6 +66,7 @@ KENTOS_COMMAND(polyline)
     return CommandSpec{
         .id       = "core.polyline",
         .names    = {"ÇOKLUÇİZGİ", "COKLUCIZGI", "POLYLINE", "ÇÇ", "PL"},
+        .title    = "Çoklu Çizgi",
         .category = Category::Draw,
         .params   = {Param::points("noktalar", Arity::at_least(2),
                                    "Çoklu çizginin köşe noktaları; hepsi tek nesne olur")},

@@ -181,7 +181,14 @@ Task<void> run_block(Context& ctx)
 
 Task<void> run_insert(Context& ctx)
 {
-    auto name = co_await ctx.text("ad", "Yerleştirilecek bloğun adı");
+    // THE BLOCKS THIS DRAWING HAS, offered rather than remembered. Pressing the
+    // Blok Ekle button used to ask for a name and wait: a question only somebody
+    // who already knew the answer could give, with the list one refused attempt
+    // away in the error message below.
+    std::vector<std::string> defined;
+    for (const core::BlockDef& d : ctx.document().blocks().all())
+        defined.push_back(d.name);
+    auto name = co_await ctx.text("ad", "Yerleştirilecek bloğun adı", defined);
     if (!name || name->empty()) co_return;
     const core::BlockId block = ctx.document().blocks().find(*name);
     if (block == core::kNoBlock) {
@@ -271,6 +278,7 @@ KENTOS_COMMAND(block)
     return CommandSpec{
         .id       = "core.block",
         .names    = {"BLOK", "BLOK", "BLOCK", "BLK"},
+        .title    = "Blok Tanımla",
         .category = Category::Draw,
         .params =
             {
@@ -293,6 +301,7 @@ KENTOS_COMMAND(insert)
     return CommandSpec{
         .id       = "core.insert",
         .names    = {"BLOKEKLE", "BLOKEKLE", "INSERT", "BE"},
+        .title    = "Blok Ekle",
         .category = Category::Draw,
         .params =
             {

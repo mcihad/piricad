@@ -809,6 +809,7 @@ KENTOS_COMMAND(move)
     return CommandSpec{
         .id       = "core.move",
         .names    = {"TAŞI", "TASI", "MOVE", "TŞ"},
+        .title    = "Taşı",
         .category = Category::Modify,
         .params =
             {
@@ -829,6 +830,7 @@ KENTOS_COMMAND(copy_objects)
     return CommandSpec{
         .id       = "core.copy",
         .names    = {"KOPYALA", "COPY", "KP"},
+        .title    = "Kopyala",
         .category = Category::Modify,
         .params =
             {
@@ -851,6 +853,7 @@ KENTOS_COMMAND(array_objects)
     return CommandSpec{
         .id       = "core.array",
         .names    = {"DİZİ", "DIZI", "ARRAY", "DZ"},
+        .title    = "Dizi",
         .category = Category::Modify,
         .params =
             {
@@ -883,6 +886,7 @@ KENTOS_COMMAND(rotate)
     return CommandSpec{
         .id       = "core.rotate",
         .names    = {"DÖNDÜR", "DONDUR", "ROTATE", "DÖN"},
+        .title    = "Döndür",
         .category = Category::Modify,
         .params =
             {
@@ -904,6 +908,7 @@ KENTOS_COMMAND(scale)
     return CommandSpec{
         .id       = "core.scale",
         .names    = {"ÖLÇEKLE", "OLCEKLE", "SCALE", "ÖLÇEK", "OLCEK"},
+        .title    = "Ölçekle",
         .category = Category::Modify,
         .params =
             {
@@ -924,6 +929,7 @@ KENTOS_COMMAND(mirror)
     return CommandSpec{
         .id       = "core.mirror",
         .names    = {"AYNALA", "MIRROR", "AYN"},
+        .title    = "Aynala",
         .category = Category::Modify,
         .params =
             {

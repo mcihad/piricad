@@ -131,6 +131,7 @@ KENTOS_COMMAND(help)
     return CommandSpec{
         .id       = "core.help",
         .names    = {"YARDIM", "HELP", "?"},
+        .title    = "Komut Listesi",
         .category = Category::System,
         .params   = {Param::text("komut", Arity::optional(), "Ayrıntısı istenen komut adı")},
         .undo     = UndoPolicy::None,
@@ -146,6 +147,7 @@ KENTOS_COMMAND(script)
     return CommandSpec{
         .id       = "core.script",
         .names    = {"BETİK", "BETIK", "SCRIPT"},
+        .title    = "Betik Çalıştır",
         .category = Category::Script,
         .params = {Param::text("dosya", Arity::exactly(1), "Çalıştırılacak betik dosyasının yolu")},
         .undo    = UndoPolicy::Custom,

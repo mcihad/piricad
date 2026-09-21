@@ -143,7 +143,11 @@ public:
     InputAwaiter<Point2> point(std::string param, std::string message, PointOptions o = {});
     InputAwaiter<double> number(std::string param, std::string message);
     InputAwaiter<std::int64_t> integer(std::string param, std::string message);
-    InputAwaiter<std::string> text(std::string param, std::string message);
+    /// Asks for a word. `choices` are the words a client may OFFER — the blocks
+    /// in the drawing, the patterns in the catalogue — never a restriction on
+    /// what is acceptable (`Prompt::choices`).
+    InputAwaiter<std::string> text(std::string param, std::string message,
+                                   std::vector<std::string> choices = {});
     InputAwaiter<bool> boolean(std::string param, std::string message);
 
     /// Asks which objects the command is to act on.

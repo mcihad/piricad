@@ -119,10 +119,14 @@ InputAwaiter<std::int64_t> Context::integer(std::string param, std::string messa
     return InputAwaiter<std::int64_t>(session_, std::move(p), std::move(prompt), &to_integer);
 }
 
-InputAwaiter<std::string> Context::text(std::string param, std::string message)
+InputAwaiter<std::string> Context::text(std::string param, std::string message,
+                                        std::vector<std::string> choices)
 {
     Param p = Param::text(param, Arity::exactly(1));
-    Prompt prompt{.message = std::move(message), .kind = ParamKind::Text, .param = param};
+    Prompt prompt{.message = std::move(message),
+                  .kind    = ParamKind::Text,
+                  .param   = param,
+                  .choices = std::move(choices)};
     return InputAwaiter<std::string>(session_, std::move(p), std::move(prompt), &to_text);
 }
 

@@ -71,6 +71,7 @@ KENTOS_COMMAND(pan)
     return CommandSpec{
         .id       = "core.pan",
         .names    = {"KAYDIR", "PAN", "KY"},
+        .title    = "Kaydır",
         .category = Category::View,
         .params =
             {
@@ -90,6 +91,7 @@ KENTOS_COMMAND(zoom)
     return CommandSpec{
         .id       = "core.zoom",
         .names    = {"YAKINLAŞ", "YAKINLAS", "ZOOM", "Z"},
+        .title    = "Yakınlaş",
         .category = Category::View,
         .params =
             {

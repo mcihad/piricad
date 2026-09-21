@@ -624,6 +624,7 @@ std::vector<CommandSpec> detail::read_tool_specs()
     specs.push_back(CommandSpec{
         .id       = "core.layers",
         .names    = {"KATMANLAR", "LAYERS", "KTL"},
+        .title    = "Katmanları Listele",
         .category = command::Category::Query,
         .params   = {},
         .undo     = UndoPolicy::None,
@@ -635,6 +636,7 @@ std::vector<CommandSpec> detail::read_tool_specs()
     specs.push_back(CommandSpec{
         .id       = "core.attr_schema",
         .names    = {"ÖZNİTELİKŞEMASI", "OZNITELIKSEMASI", "ATTRSCHEMA", "ÖŞ"},
+        .title    = "Öznitelik Şeması",
         .category = command::Category::Query,
         .params   = {},
         .undo     = UndoPolicy::None,
@@ -646,6 +648,7 @@ std::vector<CommandSpec> detail::read_tool_specs()
     specs.push_back(CommandSpec{
         .id       = "core.query",
         .names    = {"SORGULA", "QUERY", "SRG"},
+        .title    = "Sorgula",
         .category = command::Category::Query,
         .params =
             {
@@ -667,6 +670,7 @@ std::vector<CommandSpec> detail::read_tool_specs()
     specs.push_back(CommandSpec{
         .id       = "core.selection_info",
         .names    = {"SEÇİMBİLGİSİ", "SECIMBILGISI", "SELECTIONINFO", "SÇB"},
+        .title    = "Seçim Bilgisi",
         .category = command::Category::Query,
         .params   = {},
         .undo     = UndoPolicy::None,
@@ -678,6 +682,7 @@ std::vector<CommandSpec> detail::read_tool_specs()
     specs.push_back(CommandSpec{
         .id       = "core.view_info",
         .names    = {"GÖRÜNÜMBİLGİSİ", "GORUNUMBILGISI", "VIEWINFO", "GRB"},
+        .title    = "Görünüm Bilgisi",
         .category = command::Category::Query,
         .params   = {},
         .undo     = UndoPolicy::None,
@@ -690,6 +695,7 @@ std::vector<CommandSpec> detail::read_tool_specs()
     specs.push_back(CommandSpec{
         .id       = "core.context",
         .names    = {"BAĞLAM", "BAGLAM", "CONTEXT", "BĞL"},
+        .title    = "Bağlam",
         .category = command::Category::Query,
         .params   = {},
         .undo     = UndoPolicy::None,
@@ -704,6 +710,7 @@ std::vector<CommandSpec> detail::read_tool_specs()
     specs.push_back(CommandSpec{
         .id       = "core.tool_search",
         .names    = {"ARAÇARA", "ARACARA", "TOOLSEARCH", "ARA"},
+        .title    = "Araç Ara",
         .category = command::Category::Query,
         .params =
             {
@@ -727,6 +734,7 @@ std::vector<CommandSpec> detail::read_tool_specs()
     specs.push_back(CommandSpec{
         .id       = "core.job_template",
         .names    = {"İŞŞABLONU", "ISSABLONU", "JOBTEMPLATE", "İŞŞ"},
+        .title    = "İş Şablonu",
         .category = command::Category::Query,
         .params =
             {
