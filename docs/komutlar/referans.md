@@ -777,8 +777,9 @@ Ayrıntılı kullanım: [BLOKEKLE](insert.md)
 | `birinci` | point | 1 | Birinci nokta; açısal ölçüde birinci kolun ucu |
 | `ikinci` | point | 1 | İkinci nokta; açısal ölçüde ikinci kolun ucu |
 | `konum` | point | 1 | Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta |
-| `tur` | text | isteğe bağlı | hizali (varsayılan), dogrusal, yaricap, cap, acisal |
+| `tur` | text | isteğe bağlı | hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, yay |
 | `tepe` | point_list | isteğe bağlı | Açısal ölçünün tepe noktası |
+| `bitis` | point_list | isteğe bağlı | Yay uzunluğu ölçüsünün bitiş noktası |
 | `stil` | text | isteğe bağlı | Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI |
 | `metin` | text | isteğe bağlı | Ölçülen değer yerine yazılacak metin |
 | `katalog` | text | isteğe bağlı | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri |
@@ -2341,12 +2342,17 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         },
         "tur": {
           "type": "string",
-          "description": "hizali (varsayılan), dogrusal, yaricap, cap, acisal (metin)"
+          "description": "hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, yay (metin)"
         },
         "tepe": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
           "description": "Açısal ölçünün tepe noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "bitis": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Yay uzunluğu ölçüsünün bitiş noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "stil": {
           "type": "string",

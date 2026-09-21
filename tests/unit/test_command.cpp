@@ -1005,6 +1005,87 @@ TEST_CASE("ALIM: kapalı bir çokgen okunup birleştirilir")
     CHECK_EQ(f.undo.undo_depth(), std::size_t{1});
 }
 
+TEST_CASE("ÖLÇÜ tur=koordinat: ordinat okumasını ve eksenini jest belirler")
+{
+    // A building corner 30 m east and 20 m north of the block origin. A leader
+    // taken SIDEWAYS reads its easting; one taken UP reads its northing — that is
+    // the gesture an ordinate table is built with and it costs no extra answer.
+    {
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("ÖLÇÜ tur=koordinat birinci=0,0 ikinci=30,20 konum=45,20",
+                                  Origin::CommandLine)
+                    .ok());
+        REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{1});
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        (void)span;
+        const auto& doc    = f.doc;
+        const auto payload = doc.geometry().payload_of(doc.entities().slot[0]);
+        const auto def     = core::decode_dimension(payload);
+        REQUIRE(def.ok());
+        CHECK(def.value().ordinate_x); ///< the easting
+        CHECK_EQ(def.value().measurement, 30'000);
+    }
+    {
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("ÖLÇÜ tur=koordinat birinci=0,0 ikinci=30,20 konum=30,40",
+                                  Origin::CommandLine)
+                    .ok());
+        const auto& doc = f.doc;
+        const auto def  = core::decode_dimension(doc.geometry().payload_of(doc.entities().slot[0]));
+        REQUIRE(def.ok());
+        CHECK_FALSE(def.value().ordinate_x); ///< the northing
+        CHECK_EQ(def.value().measurement, 20'000);
+    }
+    {
+        // A POINT WEST OF THE ORIGIN READS NEGATIVE. The sign is part of the
+        // answer: printing it positive would put the corner on the wrong side.
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("ÖLÇÜ tur=koordinat birinci=0,0 ikinci=-15,0 konum=-30,0",
+                                  Origin::CommandLine)
+                    .ok());
+        const auto& doc = f.doc;
+        const auto def  = core::decode_dimension(doc.geometry().payload_of(doc.entities().slot[0]));
+        REQUIRE(def.ok());
+        CHECK_EQ(def.value().measurement, -15'000);
+    }
+}
+
+TEST_CASE("ÖLÇÜ tur=yay: yay boyunca uzunluk, kirişi değil")
+{
+    // A QUARTER OF A 50 m CIRCLE IS 78,540 m ALONG AND 70,711 m ACROSS, and a
+    // drawing that printed the chord would have somebody order the wrong length
+    // of kerbstone. π·50/2 = 78,5398 m, which rounds to 78540 mm.
+    Fixture f;
+    REQUIRE(f.bus
+                .execute_line("ÖLÇÜ tur=yay birinci=0,0 ikinci=50,0 bitis=0,50 konum=45,45",
+                              Origin::CommandLine)
+                .ok());
+    REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{1});
+
+    const auto def = core::decode_dimension(f.doc.geometry().payload_of(f.doc.entities().slot[0]));
+    REQUIRE(def.ok());
+    CHECK_EQ(def.value().measurement, 78'540);
+    CHECK_EQ(static_cast<int>(def.value().type), static_cast<int>(core::DimensionType::ArcLength));
+
+    // AND THE TEXT SAYS SO IN METRES, which is what the sheet prints.
+    const std::string text = core::dimension_text(def.value(), core::DrawingUnit::Metre);
+    CHECK_EQ(text, "78,54");
+
+    // A half turn is half the circumference: π·50 = 157,0796 m.
+    Fixture half;
+    REQUIRE(half.bus
+                .execute_line("ÖLÇÜ tur=yay birinci=0,0 ikinci=50,0 bitis=-50,0 konum=0,60",
+                              Origin::CommandLine)
+                .ok());
+    const auto other =
+        core::decode_dimension(half.doc.geometry().payload_of(half.doc.entities().slot[0]));
+    REQUIRE(other.ok());
+    CHECK_EQ(other.value().measurement, 157'080);
+}
+
 TEST_CASE("SEÇ: çokgen ve kesen çokgen, kutunun alamayacağı şekli alır")
 {
     // Three parcels in a row. An L-shaped polygon takes the first and the third

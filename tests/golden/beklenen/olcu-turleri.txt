@@ -1,0 +1,71 @@
+crs TUREF/TM36
+katman-sayisi 2
+nesne-sayisi 6
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=0
+katman OLCU gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=6
+nesne 0 katman=OLCU stil=0 halka=2 tur=10 yuk=01000000000000000100022c0000000000000000409c000000000000c409000000000000e204000000000000710200000000000071020000000000000600000049534f2d323500000000
+  halka rol=0 parca=0 tepe=2
+    20000 -9875
+    27500 -9875
+  halka rol=0 parca=0 tepe=3
+    0 0
+    40000 0
+    20000 -8000
+  alan_mm2 0  cevre_mm 0
+nesne 1 katman=OLCU stil=0 halka=2 tur=10 yuk=01000000000000000000022c0000000000000000409c000000000000c409000000000000e204000000000000710200000000000071020000000000000600000049534f2d323500000000
+  halka rol=0 parca=0 tepe=2
+    20000 -21875
+    27500 -21875
+  halka rol=0 parca=0 tepe=3
+    0 0
+    40000 30000
+    20000 -20000
+  alan_mm2 0  cevre_mm 0
+nesne 2 katman=OLCU stil=0 halka=2 tur=10 yuk=01000200000000000600022c00000000000000003075000000000000c409000000000000e204000000000000710200000000000071020000000000000600000049534f2d323500000000
+  halka rol=0 parca=0 tepe=2
+    46875 20000
+    54375 20000
+  halka rol=0 parca=0 tepe=3
+    0 0
+    30000 20000
+    45000 20000
+  alan_mm2 0  cevre_mm 0
+nesne 3 katman=OLCU stil=0 halka=2 tur=10 yuk=01000000000000000600022c0000000000000000204e000000000000c409000000000000e204000000000000710200000000000071020000000000000600000049534f2d323500000000
+  halka rol=0 parca=0 tepe=2
+    30000 41875
+    37500 41875
+  halka rol=0 parca=0 tepe=3
+    0 0
+    30000 20000
+    30000 40000
+  alan_mm2 0  cevre_mm 0
+nesne 4 katman=OLCU stil=0 halka=2 tur=10 yuk=01000000000000000700022c0000000000000000cc32010000000000c409000000000000e204000000000000710200000000000071020000000000000600000049534f2d323500000000
+  halka rol=0 parca=0 tepe=2
+    146326 46326
+    151629 41023
+  halka rol=0 parca=0 tepe=4
+    100000 0
+    150000 0
+    100000 50000
+    145000 45000
+  alan_mm2 0  cevre_mm 0
+nesne 5 katman=OLCU stil=0 halka=2 tur=10 yuk=01000000000000000700022c00000000000000009865020000000000c409000000000000e204000000000000710200000000000071020000000000000600000049534f2d323500000000
+  halka rol=0 parca=0 tepe=2
+    100000 -38125
+    109000 -38125
+  halka rol=0 parca=0 tepe=4
+    100000 -100000
+    150000 -100000
+    50000 -100000
+    100000 -40000
+  alan_mm2 0  cevre_mm 0
+kapsam 0 -100000 153397 50000
+icerik-ozeti 571a67ed3db5b214
+gunluk
+  {"seq":1,"cmd":"core.layer","args":{"ad":"OLCU"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}
+  {"seq":2,"cmd":"core.dimension","args":{"birinci":[0,0],"ikinci":[40000,0],"konum":[20000,-8000],"tur":"hizali","stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}
+  {"seq":3,"cmd":"core.dimension","args":{"birinci":[0,0],"ikinci":[40000,30000],"konum":[20000,-20000],"tur":"dogrusal","stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}
+  {"seq":4,"cmd":"core.dimension","args":{"tur":"ordinat","birinci":[0,0],"ikinci":[30000,20000],"konum":[45000,20000],"stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}
+  {"seq":5,"cmd":"core.dimension","args":{"tur":"ordinat","birinci":[0,0],"ikinci":[30000,20000],"konum":[30000,40000],"stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}
+  {"seq":6,"cmd":"core.dimension","args":{"tur":"yay","birinci":[100000,0],"ikinci":[150000,0],"bitis":[100000,50000],"konum":[145000,45000],"stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}
+  {"seq":7,"cmd":"core.dimension","args":{"tur":"yay","birinci":[100000,-100000],"ikinci":[150000,-100000],"bitis":[50000,-100000],"konum":[100000,-40000],"stil":"ISO-25"},"origin":"test","crs":"TUREF/TM36","katman":"OLCU"}

@@ -42,7 +42,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 90 (82 tanesi onay ister)
-- Katalog parmak izi: `17899099570465442602`
+- Katalog parmak izi: `14354613283252454611`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -291,8 +291,9 @@ Onay ister.
 | `birinci` | string | evet | Birinci nokta; açısal ölçüde birinci kolun ucu — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `ikinci` | string | evet | İkinci nokta; açısal ölçüde ikinci kolun ucu — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `konum` | string | evet | Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `tur` | string | hayır | hizali (varsayılan), dogrusal, yaricap, cap, acisal (metin) |
+| `tur` | string | hayır | hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, yay (metin) |
 | `tepe` | string | hayır | Açısal ölçünün tepe noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `bitis` | string | hayır | Yay uzunluğu ölçüsünün bitiş noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `stil` | string | hayır | Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI (metin) |
 | `metin` | string | hayır | Ölçülen değer yerine yazılacak metin (metin) |
 | `katalog` | string | hayır | Stil kataloğu dosyası; varsayılan TERCİH ölçü_stilleri (metin) |

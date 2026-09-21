@@ -106,9 +106,19 @@ Task<void> run_dimension(Context& ctx)
             type = core::DimensionType::Diametric;
         else if (core::turkish_key_equals(w, "acisal") || core::turkish_key_equals(w, "angular"))
             type = core::DimensionType::Angular3P;
+        else if (core::turkish_key_equals(w, "koordinat") ||
+                 core::turkish_key_equals(w, "ordinat") || core::turkish_key_equals(w, "ordinate"))
+            // THE MODEL HELD THIS ALL ALONG. `DimensionType::Ordinate` was
+            // declared, encoded, decoded and drawn, and no word reached it — so
+            // an ordinate table, which is how a building's corners are given on
+            // a Turkish application sheet, could not be drawn at all. The same
+            // shape CLAUDE.md 5.15 forbids: a capability nobody can ask for.
+            type = core::DimensionType::Ordinate;
+        else if (core::turkish_key_equals(w, "yay") || core::turkish_key_equals(w, "arclength"))
+            type = core::DimensionType::ArcLength;
         else {
             ctx.echo("Tanınmayan ölçü türü: '" + w +
-                     "'. Türler: hizali, dogrusal, yaricap, cap, acisal.");
+                     "'. Türler: hizali, dogrusal, yaricap, cap, acisal, koordinat, yay.");
             co_return;
         }
     }
@@ -120,11 +130,24 @@ Task<void> run_dimension(Context& ctx)
     def.type               = type;
     if (const Value m = ctx.argument("metin"); !m.empty()) def.override_text = m.as_text();
 
-    const bool angular = type == core::DimensionType::Angular3P;
-    auto p1 = co_await ctx.point("birinci", angular ? "Birinci kolun ucu" : "Birinci nokta");
+    const bool angular   = type == core::DimensionType::Angular3P;
+    const bool ordinate  = type == core::DimensionType::Ordinate;
+    const bool arclength = type == core::DimensionType::ArcLength;
+
+    // WHAT EACH TYPE ASKS FOR FIRST, in its own words. A prompt that said
+    // "birinci nokta" for an ordinate would be asking for the origin without
+    // saying so, and an origin picked by mistake moves every figure on the sheet.
+    auto p1 = co_await ctx.point("birinci", angular ? "Birinci kolun ucu"
+                                            : ordinate ? "Ordinatların okunduğu başlangıç noktası"
+                                            : arclength ? "Yayın merkezi"
+                                                        : "Birinci nokta");
     if (!p1) co_return;
     auto p2 = co_await ctx.point(
-        "ikinci", angular ? "İkinci kolun ucu" : "İkinci nokta",
+        "ikinci",
+        angular     ? "İkinci kolun ucu"
+        : ordinate  ? "Ölçülecek nokta"
+        : arclength ? "Yayın başlangıç noktası"
+                    : "İkinci nokta",
         PointOptions{.rubber_band = true, .rubber_origin = *p1, .rubber_shape = RubberShape::Line});
     if (!p2) co_return;
     std::vector<core::Point2> picks{*p1, *p2};
@@ -133,10 +156,23 @@ Task<void> run_dimension(Context& ctx)
         if (!v) co_return;
         picks.push_back(*v);
     }
+    if (arclength) {
+        auto e = co_await ctx.point("bitis", "Yayın bitiş noktası (saat yönünün tersine)",
+                                    PointOptions{.rubber_band   = true,
+                                                 .rubber_origin = *p1,
+                                                 .rubber_shape  = RubberShape::Arc,
+                                                 .rubber_chain  = {*p2}});
+        if (!e) co_return;
+        picks.push_back(*e);
+    }
     // The whole dimension under the cursor — line, extension lines, arrows —
     // laid out by the same function that will lay it out on the click.
     auto where = co_await ctx.point(
-        "konum", angular ? "Ölçü yayının geçeceği nokta" : "Ölçü çizgisinin yeri",
+        "konum",
+        angular ? "Ölçü yayının geçeceği nokta"
+        : ordinate ? "Yazının geleceği yer; yana çekmek sağa, yukarı çekmek yukarı değerini okur"
+        : arclength ? "Yazının geleceği yer"
+                    : "Ölçü çizgisinin yeri",
         PointOptions{.rubber_band    = true,
                      .rubber_origin  = *p1,
                      .rubber_shape   = RubberShape::Dimension,
@@ -274,8 +310,10 @@ KENTOS_COMMAND(dimension)
                 Param::point("ikinci", "İkinci nokta; açısal ölçüde ikinci kolun ucu"),
                 Param::point("konum", "Ölçü çizgisinin yeri; açısal ölçüde yayın geçtiği nokta"),
                 Param::text("tur", Arity::optional(),
-                            "hizali (varsayılan), dogrusal, yaricap, cap, acisal"),
+                            "hizali (varsayılan), dogrusal, yaricap, cap, acisal, koordinat, "
+                            "yay"),
                 Param::points("tepe", Arity::optional(), "Açısal ölçünün tepe noktası"),
+                Param::points("bitis", Arity::optional(), "Yay uzunluğu ölçüsünün bitiş noktası"),
                 Param::text("stil", Arity::optional(),
                             "Katalogdaki ölçü stili: ISO-25 (varsayılan), STANDARD, MIMARI"),
                 Param::text("metin", Arity::optional(), "Ölçülen değer yerine yazılacak metin"),

@@ -39,6 +39,20 @@ enum class DimensionType : std::uint8_t {
     Radial    = 4, ///< a circle's radius; defs: centre, on_circle
     Angular3P = 5, ///< the angle at a vertex between two points; defs: vertex, p1, p2, arc
     Ordinate  = 6, ///< a point's x or y from an origin; defs: origin, feature, leader_end
+
+    /// ARCLENGTH — the length ALONG an arc, not the chord across it.
+    ///
+    /// A transition curve, a kerb return and a pipe bend are all dimensioned by
+    /// the distance a wheel travels, and that is not the straight line between
+    /// the ends: a 100 grad arc of radius 50 m is 78,540 m along and 70,711 m
+    /// across. A drawing that printed the chord would have somebody order the
+    /// wrong length of kerbstone.
+    ///
+    /// ADDED AT THE END, which is what makes it additive: a file written before
+    /// this existed never contains the value, so an older drawing reads exactly
+    /// as it did (model.md — a shape may gain a case, it may not change one).
+    /// defs: centre, start, end, arc_point.
+    ArcLength = 7,
 };
 
 /// Stable machine name, for a file, a message or a test.
@@ -125,8 +139,10 @@ std::size_t dimension_point_count(DimensionType t) noexcept;
 /// The value the definition points measure: a length in millimetres, or an
 /// angle in micro-degrees for the angular types. From integer differences and
 /// `atan2_udeg`, never libm (§7.3).
+/// `ordinate_x` reads an ordinate's axis: true for the easting, false for the
+/// northing. Ignored by every other type.
 std::int64_t dimension_measure(DimensionType t, std::span<const Point2> defs,
-                               std::int64_t rotation_udeg) noexcept;
+                               std::int64_t rotation_udeg, bool ordinate_x = false) noexcept;
 
 /// The measured text: `12500` mm in metres with 2 decimals and `,` is `12,50`;
 /// an angle of 90 000 000 µ° with 2 decimals is `90,00°`. Integer arithmetic

@@ -23,6 +23,8 @@ birimindedir: 12 500 mm metrede `12,50`.
 | `yaricap` | Merkezden çember üstü noktaya | `birinci` merkez, `ikinci` çember üstü, `konum` yazı yeri |
 | `cap` | İki karşı nokta arasını | `birinci`, `ikinci`, `konum` yazı yeri |
 | `acisal` | Tepeden çıkan iki kol arasındaki açıyı | `birinci`, `ikinci` kol uçları, `tepe`, `konum` yayın geçtiği nokta |
+| `koordinat` | Bir noktanın başlangıçtan **sağa** ya da **yukarı** değerini | `birinci` başlangıç, `ikinci` ölçülecek nokta, `konum` yazının yeri |
+| `yay` | Bir yayın **boyunca** uzunluğunu | `birinci` merkez, `ikinci` başlangıç, `bitis` bitiş, `konum` yazının yeri |
 
 ## Adlar
 
@@ -37,13 +39,40 @@ birimindedir: 12 500 mm metrede `12,50`.
 ÖLÇÜ birinci=<sağa>,<yukarı> ikinci=<sağa>,<yukarı> tepe=<sağa>,<yukarı> konum=<sağa>,<yukarı> tur=acisal
 ```
 
+### Koordinat (ordinat) ölçüsü
+
+Bir Türk aplikasyon paftasında bir binanın köşeleri bir ordinat tablosuyla
+verilir: her köşenin bir başlangıç noktasından **sağa** ve **yukarı** değerleri.
+`tur=koordinat` bunu tek tek çizer.
+
+**Ekseni jest belirler.** Yazıyı noktadan **yana** çekerseniz sağa değerini,
+**yukarı/aşağı** çekerseniz yukarı değerini okur. Bir ordinat tablosu tam böyle
+kurulur ve bu size fazladan bir cevap maliyeti çıkarmaz.
+
+Başlangıcın batısındaki bir nokta **eksi** okur; işaret cevabın parçasıdır,
+çünkü artı yazmak köşeyi paftanın öbür tarafına koymak olur.
+
+### Yay uzunluğu ölçüsü
+
+`tur=yay` yayın **boyunca** uzunluğu verir, üzerindeki kirişi değil. 50 metre
+yarıçaplı bir çeyrek yay **boyunca 78,540 m**, kirişi ise **70,711 m**'dir —
+kirişi basan bir pafta yanlış boyda bordür sipariş ettirir.
+
+Bir yol geçiş eğrisi, bir bordür dönüşü ve bir boru dirseği hep tekerleğin
+katettiği mesafeyle ölçülendirilir.
+
+DXF'te R2007 öncesi bir yay uzunluğu ölçüsü yoktur; dışa aktarımda **açısal**
+ölçü olarak yazılır (aynı üç nokta: yay, iki yarıçapı ve bir yazı) ve uzunluğun
+kendisi xdata'da gider — yani bu programdan çıkıp geri girince aynen korunur,
+başka bir program ise bir açı görüp onu söyler, bir kiriş görüp ona inanmaz.
+
 ## Parametreler
 
 | Parametre | Ne yapar |
 |---|---|
 | `birinci`, `ikinci` | Ölçülen iki nokta; açısalda kolların uçları |
 | `konum` | Ölçü çizgisinin yeri; yarıçap ve çapta yazının yeri; açısalda yayın geçtiği nokta |
-| `tur` | `hizali`, `dogrusal`, `yaricap`, `cap`, `acisal`; varsayılan `hizali` |
+| `tur` | `hizali`, `dogrusal`, `yaricap`, `cap`, `acisal`, `koordinat`, `yay`; varsayılan `hizali` |
 | `tepe` | Açısal ölçünün tepe noktası |
 | `stil` | Katalogdaki ölçü stili; varsayılan `ISO-25` |
 | `metin` | Ölçülen değer yerine yazılacak metin |
@@ -96,7 +125,7 @@ tekrar yeniden ölçer.
 
 ## Hatalar
 
-> `Tanınmayan ölçü türü: 'yatay'. Türler: hizali, dogrusal, yaricap, cap, acisal.`
+> `Tanınmayan ölçü türü: 'yatay'. Türler: hizali, dogrusal, yaricap, cap, acisal, koordinat, yay.`
 
 `tur` listede yok.
 

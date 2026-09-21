@@ -1,0 +1,17 @@
+# Yedi ölçü türü, bilinen sayılarla — ve ikisi bu turda geldi.
+#
+# `koordinat` bir ordinat okur: 30 metre sağa, 20 metre yukarı. Ekseni yazının
+# çekildiği yön belirler, yani aynı iki nokta iki farklı ölçü verir ve fikstür
+# ikisini de tutar.
+#
+# `yay` yay BOYUNCA uzunluğu verir, kirişi değil: 50 metre yarıçaplı bir çeyrek
+# yay boyunca 78,540 m, kirişi 70,711 m'dir. Aradaki fark yanlış boyda bordür
+# sipariş ettirir, ve bu satır o farkın üç platformda da aynı milimetrede
+# durduğunu söyler — π bir çarpma ve bir yuvarlama içerir (§7.3).
+KATMAN ad=OLCU
+ÖLÇÜ birinci=0,0 ikinci=40,0 konum=20,-8 tur=hizali
+ÖLÇÜ birinci=0,0 ikinci=40,30 konum=20,-20 tur=dogrusal
+ÖLÇÜ tur=koordinat birinci=0,0 ikinci=30,20 konum=45,20
+ÖLÇÜ tur=koordinat birinci=0,0 ikinci=30,20 konum=30,40
+ÖLÇÜ tur=yay birinci=100,0 ikinci=150,0 bitis=100,50 konum=145,45
+ÖLÇÜ tur=yay birinci=100,-100 ikinci=150,-100 bitis=50,-100 konum=100,-40

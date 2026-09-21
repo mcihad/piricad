@@ -669,6 +669,25 @@ private:
             remember_xdata(out);
             break;
         }
+        case core::DimensionType::ArcLength: {
+            // DXF HAS NO ARC-LENGTH DIMENSION BEFORE R2007's `DIMARC`, and
+            // libdxfrw does not write one. Exported as an ANGULAR dimension over
+            // the same three points, which is the shape a reader can make sense
+            // of: the arc, its two radii and a figure. The length itself travels
+            // in the xdata this writer already attaches, so a round trip through
+            // this program keeps it exactly; another program sees an angle and
+            // says so rather than seeing a chord and believing it.
+            DRW_DimAngular out;
+            fill(out, 2);
+            out.setFirstLine1(defs[0]);
+            out.setFirstLine2(defs[1]);
+            out.setSecondLine1(defs[0]);
+            out.setSecondLine2(defs[2]);
+            out.setDimPoint(defs.size() > 3 ? defs[3] : defs[2]);
+            out_.writeDimension(&out);
+            remember_xdata(out);
+            break;
+        }
         }
     }
 

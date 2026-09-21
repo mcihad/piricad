@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/core/dimension.hpp"
 
+#include "kentos_cad/core/angle.hpp"
+
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/trig.hpp"
 #include "kentos_cad/core/wire.hpp"
@@ -317,6 +319,7 @@ const char* dimension_type_name(DimensionType t) noexcept
     case DimensionType::Radial: return "yaricap";
     case DimensionType::Angular3P: return "acisal3";
     case DimensionType::Ordinate: return "ordinat";
+    case DimensionType::ArcLength: return "yay";
     }
     return "hizali";
 }
@@ -328,6 +331,7 @@ std::size_t dimension_point_count(DimensionType t) noexcept
     case DimensionType::Diametric:
     case DimensionType::Radial: return 2;
     case DimensionType::Angular3P: return 4;
+    case DimensionType::ArcLength: return 4;
     case DimensionType::Linear:
     case DimensionType::Aligned:
     case DimensionType::Ordinate: break;
@@ -375,7 +379,7 @@ Result<DimensionDef> decode_dimension(std::span<const std::uint8_t> payload)
     def.ordinate_x           = (h.flags & kFlagOrdinateX) != 0;
     const std::uint8_t type  = in.u8();
     const std::uint8_t arrow = in.u8();
-    if (type > static_cast<std::uint8_t>(DimensionType::Ordinate))
+    if (type > static_cast<std::uint8_t>(DimensionType::ArcLength))
         return err(ErrorCode::ValidationFailed, "Bilinmeyen ölçü türü: " + std::to_string(type));
     if (arrow > static_cast<std::uint8_t>(ArrowStyle::Tick))
         return err(ErrorCode::ValidationFailed, "Bilinmeyen ok biçimi: " + std::to_string(arrow));
@@ -412,7 +416,7 @@ Result<DimensionDef> dimension_of(const RingGeometry& geom, std::uint32_t slot)
 }
 
 std::int64_t dimension_measure(DimensionType t, std::span<const Point2> defs,
-                               std::int64_t rotation_udeg) noexcept
+                               std::int64_t rotation_udeg, bool ordinate_x) noexcept
 {
     if (defs.size() < dimension_point_count(t)) return 0;
     switch (t) {
@@ -435,7 +439,26 @@ std::int64_t dimension_measure(DimensionType t, std::span<const Point2> defs,
         bool from_p1 = false;
         return angle_at(vertex, defs[1], defs[3], defs[4], from_p1);
     }
-    case DimensionType::Ordinate: return 0; // decided by the flag; see dimension_text
+    case DimensionType::Ordinate:
+        // THE READING, ALREADY SIGNED. An ordinate is the feature's easting or
+        // northing measured FROM the origin, and the sign is part of the answer:
+        // a point west of the origin reads negative and printing it as positive
+        // would put it on the wrong side of the sheet.
+        if (defs.size() < 2) return 0;
+        return ordinate_x ? defs[1].x - defs[0].x : defs[1].y - defs[0].y;
+
+    case DimensionType::ArcLength: {
+        // THE LENGTH ALONG, not the chord across. r · θ, with θ the swept angle
+        // in turns — so the one rounding is the final one and a quarter of a
+        // 50 m circle comes out 78,540 m rather than 78,539 or 78,541.
+        if (defs.size() < 3) return 0;
+        const Mm radius = segment_length(defs[0], defs[1]);
+        if (radius <= 0) return 0;
+        double sweep = direction_turns(defs[0], defs[2], AngleRule::Matematik) -
+                       direction_turns(defs[0], defs[1], AngleRule::Matematik);
+        sweep -= std::floor(sweep); ///< counter-clockwise, as an arc is stored
+        return mm_round(static_cast<double>(radius) * sweep * 2.0 * std::acos(-1.0));
+    }
     }
     return 0;
 }
@@ -569,9 +592,48 @@ bool dimension_layout(DimensionDef& def, std::span<const Point2> picks, Point2 w
         out.text_dir_y  = outward.x;
         break;
     }
+    case DimensionType::Ordinate: {
+        // ORIGIN, FEATURE, LEADER END. The origin is the point every ordinate on
+        // the sheet is read from — a block corner, a station — and the leader
+        // end is where the figure is written.
+        out.defs = {p1, p2, where};
+
+        // WHICH AXIS, DECIDED BY THE JOG. A leader taken sideways from the
+        // feature reads its easting; one taken up or down reads its northing.
+        // That is the gesture an ordinate table is built with and it costs the
+        // user no extra answer.
+        const Mm run   = where.x > p2.x ? where.x - p2.x : p2.x - where.x;
+        const Mm rise  = where.y > p2.y ? where.y - p2.y : p2.y - where.y;
+        def.ordinate_x = run >= rise;
+
+        const Dir outward = unit_between(p2, where);
+        if (outward.zero()) return false;
+        out.text_centre = along(where, outward, half_text);
+        out.text_dir_x  = 1.0;
+        out.text_dir_y  = 0.0;
+        break;
+    }
+
+    case DimensionType::ArcLength: {
+        // CENTRE, START, END, and where the figure goes. The first three are the
+        // arc itself; the fourth is the caption, outside the curve on the
+        // bisector, the way an angular dimension's is.
+        if (picks.size() < 3) return false;
+        const Point2 end = picks[2];
+        if (end == p1) return false;
+        out.defs = {p1, p2, end, where};
+
+        const Dir outward = unit_between(p1, where);
+        if (outward.zero()) return false;
+        out.text_centre = along(where, outward, half_text);
+        out.text_dir_x  = -outward.y;
+        out.text_dir_y  = outward.x;
+        break;
+    }
+
     default: return false;
     }
-    def.measurement = dimension_measure(def.type, out.defs, def.rotation_udeg);
+    def.measurement = dimension_measure(def.type, out.defs, def.rotation_udeg, def.ordinate_x);
     return true;
 }
 
@@ -593,6 +655,14 @@ bool dimension_picks(DimensionType type, std::span<const Point2> defs, Point2 ba
         return true;
     case DimensionType::Angular3P:
         picks = {defs[1], defs[2], defs[0]};
+        where = defs[3];
+        return true;
+    case DimensionType::Ordinate:
+        picks = {defs[0], defs[1]};
+        where = defs[2];
+        return true;
+    case DimensionType::ArcLength:
+        picks = {defs[0], defs[1], defs[2]};
         where = defs[3];
         return true;
     default: return false;
@@ -708,6 +778,26 @@ void dimension_outline(const RingGeometry& geom, std::uint32_t slot, EmitBuffer&
                               Point2{xs[xs.size() - 2], ys[ys.size() - 2]}, def.arrow_size,
                               def.arrow, into);
         }
+        break;
+    }
+    case DimensionType::ArcLength: {
+        // THE ARC ITSELF, then the two ticks that say where it is measured from.
+        // Drawn by the arc's own outline so a dimensioned curve and the curve it
+        // dimensions are the same picture (CLAUDE.md 5.10).
+        if (defs.size() < 3) break;
+        const Mm radius = segment_length(defs[0], defs[1]);
+        if (radius <= 0) break;
+        std::vector<Mm> xs;
+        std::vector<Mm> ys;
+        arc_outline(defs[0], radius, defs[1], defs[2], xs, ys);
+        into.begin_run(false);
+        for (std::size_t v = 0; v < xs.size(); ++v)
+            into.push_vertex(xs[v], ys[v]);
+
+        // The two radii that say where the length is measured from and to: an
+        // arc on its own does not state its own ends.
+        line(into, defs[0], defs[1]);
+        line(into, defs[0], defs[2]);
         break;
     }
     case DimensionType::Ordinate: {

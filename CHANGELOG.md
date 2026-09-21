@@ -6,6 +6,37 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — koordinat (ordinat) ve yay uzunluğu ölçüsü (P5)
+
+- **`ÖLÇÜ tur=koordinat`** — ve model bunu **baştan beri taşıyordu**.
+  `DimensionType::Ordinate` bildirilmiş, kodlanmış, çözülmüş ve çizilmişti; ama
+  `dimension_layout` ile `dimension_picks` onu `default: return false` ile
+  geçiyor ve hiçbir sözcük ona ulaşmıyordu. Bir Türk aplikasyon paftasının
+  ordinat tablosu bu yüzden hiç çizilemiyordu — CLAUDE.md 5.15'in aynısı:
+  kimsenin isteyemediği bir yetenek.
+  **Ekseni jest belirliyor**: yazıyı noktadan yana çekerseniz sağa değerini,
+  yukarı çekerseniz yukarı değerini okur. Bir ordinat tablosu tam böyle kurulur.
+  Başlangıcın batısındaki bir nokta **eksi** okur; işaret cevabın parçasıdır,
+  çünkü artı yazmak köşeyi paftanın öbür tarafına koymaktır.
+- **`ÖLÇÜ tur=yay`** — yay **boyunca** uzunluk, kirişi değil. 50 m yarıçaplı bir
+  çeyrek yay boyunca **78,540 m**, kirişi **70,711 m**'dir ve kirişi basan bir
+  pafta yanlış boyda bordür sipariş ettirir. Bir yol geçiş eğrisi, bir bordür
+  dönüşü ve bir boru dirseği hep tekerleğin katettiği mesafeyle ölçülendirilir.
+  `DimensionType::ArcLength` enum'un **sonuna** eklendi ve bu onu toplamalı kılan
+  şey: bundan önce yazılmış bir dosya bu değeri hiç içermez, yani eski bir çizim
+  aynen okunur (model.md — bir şekil bir durum kazanabilir, bir durumu
+  değiştiremez).
+  DXF'te R2007 öncesi karşılığı yoktur; dışa aktarımda açısal ölçü olarak yazılır
+  ve uzunluk xdata'da gider — bu programdan çıkıp geri girince aynen korunur,
+  başka bir program bir açı görüp onu söyler, bir kiriş görüp ona inanmaz.
+- **Altın fikstür** (`tests/golden/senaryolar/olcu-turleri.txt`): kaydedilen
+  sayılar 40000, 30000, 20000, 78540 ve 157080. π bir çarpma ve bir yuvarlama
+  içerir, yani bu satır farkın üç platformda da aynı milimetrede durduğunu
+  söylüyor.
+- Ölçü stili kataloğu **zaten vardı** ve `ÖLÇÜ` onu okuyordu
+  (`data/catalogs/dxf/olcu-stili.json`: ISO-25, STANDARD, MİMARİ); bu maddede
+  yapılacak bir şey kalmamıştı.
+
 ### Eklendi — ÇEYREK ve TEĞET yakalama, beş yeni seçim kipi (P4)
 
 - **ÇEYREK**: bir eğrinin eksenleri kestiği dört nokta — 0, 100, 200, 300 grad.

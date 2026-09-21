@@ -330,12 +330,33 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
       bir durum koymak, bu paketin geri kalanı gibi tek dosyalık bir iş değil; kendi commit'ini
       hak ediyor ve `xy(P,Q)` bugün aynı noktayı yazarak veriyor.
 
-## P5 — Ölçülendirme
+## P5 — Ölçülendirme (tamamlandı)
 
-- [ ] **P5-1** `ÖLÇÜ tur=koordinat`, `tur=yay`.
-- [ ] **P5-2** `/data/catalogs/olcu-stilleri.json` — BÖHHBÜY/MPYY metin yükseklikleri, ok/çentik, birim;
-  `ÖLÇÜ stil=` bunu okur (5.13).
-- [ ] **P5-3** Golden: bilinen iki nokta → ölçü metni.
+- [x] **`ÖLÇÜ tur=koordinat`** (ordinat). **Model bunu baştan beri taşıyordu**:
+      `DimensionType::Ordinate` bildirilmiş, kodlanmış, çözülmüş ve ÇİZİLMİŞTİ — ama `dimension_layout`
+      ve `dimension_picks` onu `default: return false` ile geçiyordu ve hiçbir sözcük ona ulaşmıyordu.
+      Yani bir Türk aplikasyon paftasının ordinat tablosu hiç çizilemiyordu. 5.15'in aynısı: kimsenin
+      isteyemediği bir yetenek. Yerleşim, ölçü ve ters dönüşüm bağlandı.
+      **Ekseni JEST belirliyor:** yazı yana çekilirse sağa, yukarı çekilirse yukarı değeri okunuyor —
+      bir ordinat tablosu tam böyle kurulur ve kullanıcıya fazladan bir cevap maliyeti çıkmıyor.
+      Başlangıcın batısındaki nokta EKSİ okuyor; işaret cevabın parçası.
+- [x] **`ÖLÇÜ tur=yay`** (yay uzunluğu). `DimensionType::ArcLength` enum'un SONUNA eklendi — bu onu
+      toplamalı kılan şey: bundan önce yazılmış bir dosya bu değeri hiç içermez, yani eski bir çizim
+      aynen okunur (model.md: bir şekil bir durum KAZANABİLİR, bir durumu DEĞİŞTİREMEZ). r·θ, tek
+      yuvarlamayla: 50 m yarıçaplı çeyrek yay boyunca **78,540 m**, kirişi 70,711 m — kirişi basan bir
+      pafta yanlış boyda bordür sipariş ettirir.
+      DXF'te R2007 öncesi karşılığı yok; dışa aktarımda **açısal** ölçü olarak yazılıyor (aynı üç
+      nokta) ve uzunluk xdata'da gidiyor — bu programdan çıkıp geri girince aynen korunuyor, başka bir
+      program bir açı görüp onu söylüyor, bir kiriş görüp ona inanmıyor.
+- [x] **Ölçü stili kataloğu** zaten vardı ve `ÖLÇÜ` onu okuyordu: `data/catalogs/dxf/olcu-stili.json`
+      (ISO-25, STANDARD, MİMARİ), `core.olcu.stil_katalogu` ayarıyla ve `katalog=` parametresiyle.
+      5.13 karşılanmış durumda; bu maddede yapılacak bir şey kalmamıştı.
+- [x] **Altın fikstür:** `tests/golden/senaryolar/olcu-turleri.txt` — yedi ölçü, ve iki `koordinat`
+      satırı aynı iki noktadan iki farklı eksen okuyor. Kaydedilen sayılar 40000, 30000, 20000,
+      **78540** ve **157080**; π bir çarpma ve bir yuvarlama içerir, yani bu satır farkın üç
+      platformda da aynı milimetrede durduğunu söylüyor (§7.3).
+- [x] **Docs:** `dimension.md`'ye iki tür satırı, iki bölüm (ordinat jesti ve yay-kiriş farkı, DXF
+      notuyla), parametre ve hata satırları. `make reference`.
 
 ## P6 — Pano: KES / PANOYAKOPYALA / YAPIŞTIR
 
