@@ -1,0 +1,61 @@
+# P2'nin klasik inşa yöntemleri, bilinen sayılarla.
+#
+# HER BİRİ TRİGONOMETRİ İÇERİR VE HER BİRİ BİT-ÖZDEŞ OLMAK ZORUNDA (§7.3): bu
+# satırların çizdiği noktalar `sin_cos_udeg`, `atan2_udeg` ve `mm_round`'dan
+# geçiyor, yani x86 ile Apple Silicon'un aynı milimetreyi vermesi bir tesadüf
+# değil bir gereklilik. Bir paftaya çizilen çevrel çember yarım milimetre
+# kayarsa, o pafta iki makinede iki farklı belge olur.
+#
+# `3n` daire: 60-80-100 dik üçgeninin çevrel çemberi. Merkez hipotenüsün orta
+# noktası (30, 40), yarıçap 50 — harita mühendisinin ezbere bildiği 3-4-5.
+#
+# `ttr` iki DOĞRU + yarıçap + gösterilen köşe: dört çözüm hesaplanır (her iki
+# doğrunun iki yana ofseti) ve en yakını alınır. Sessiz seçim yok; hangisinin
+# istendiği gösterilerek söylenir.
+#
+# `bby` yayı: 100 m kirişe 50 m yarıçap bir yarım turdur — iki çözümün de aynı
+# boyda olduğu tek okuma, yani `yon`'un ayırt ettiği şeyin testi.
+#
+# `bma` süpürmeyi İŞARETİYLE alır: semt kuralında artı süpürme saat yönündedir,
+# model ise yayı saat yönünün tersine saklar. İki satır iki yönü tutar.
+#
+# ÇOKGEN'in ilk köşesi varsayılan kuralda (semt) KUZEYDEDİR: `aci=0` kuzeyden
+# saat yönüne sayar, yani beş köşeli bir çokgenin tepesi yukarı bakar.
+KATMAN ad=INSA
+
+# Üç noktadan daire — çevrel çember
+DAİRE yontem=3n birinci=0,0 ikinci=60,0 ucuncu=0,80
+
+# Çapın iki ucundan daire
+DAİRE yontem=2n birinci=200,0 ikinci=300,0
+
+# İki doğruya teğet, 20 m yarıçap; köşe gösterilerek seçilir
+DAİRE yontem=ttr birinci=400,0 ikinci=500,0 ucuncu=400,0 dorduncu=400,100 yaricap=20 yon=430,30
+
+# Üç noktadan yay
+YAY yontem=3n baslangic=0,200 uzerinden=50,250 bitis=100,200
+
+# Başlangıç-bitiş-yarıçap, iki yarım tur
+YAY yontem=bby baslangic=200,200 bitis=300,200 yaricap=50 yon=sol
+YAY yontem=bby baslangic=400,200 bitis=500,200 yaricap=50 yon=sag
+
+# Başlangıç-merkez-açı, iki yön
+YAY yontem=bma baslangic=0,400 merkez=50,400 supurme=100
+YAY yontem=bma baslangic=200,400 merkez=250,400 supurme=-100
+
+# Düzgün çokgenler: içten, dıştan ve kenar uzunluğundan
+ÇOKGEN yontem=ic merkez=0,600 kenar_sayisi=5 yaricap=30
+ÇOKGEN yontem=dis merkez=100,600 kenar_sayisi=6 yaricap=30
+ÇOKGEN yontem=kenar merkez=200,600 kenar_sayisi=8 kenar_uzunlugu=20
+ÇOKGEN yontem=ic merkez=300,600 kenar_sayisi=3 yaricap=30 aci=50
+
+# Döndürülmüş dikdörtgen: bir kenarın iki köşesi ve yüksekliği veren üçüncü
+# nokta. Üçüncü nokta bir KÖŞE DEĞİL — kenarın normaline izdüşürülür, yani eli
+# birkaç milimetre kayan kullanıcı paralelkenar değil dikdörtgen alır.
+DİKDÖRTGEN yontem=3n 0,800 60,830 20,850
+
+# Elips, eksenin İKİ UCUNDAN: merkez ikisinin ortasıdır
+# İkinci nokta ana eksenin ÜZERİNDE olamaz: o zaman ikinci yarıçap sıfırdır ve
+# elips diye bir şey kalmaz. Merkez (50, 1000) — iki ucun ortası — ve ikinci
+# eksen ondan 20 m yukarı.
+ELİPS yontem=eksen birinci=0,1000 ikinci_uc=100,1000 ikinci=50,1020

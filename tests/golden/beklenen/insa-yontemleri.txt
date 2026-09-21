@@ -1,0 +1,120 @@
+crs TUREF/TM36
+katman-sayisi 2
+nesne-sayisi 14
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=0
+katman INSA gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=14
+nesne 0 katman=INSA stil=0 halka=1 tur=2
+  halka rol=0 parca=0 tepe=2
+    30000 40000
+    80000 40000
+  alan_mm2 7853981634  cevre_mm 314159
+nesne 1 katman=INSA stil=0 halka=1 tur=2
+  halka rol=0 parca=0 tepe=2
+    250000 0
+    300000 0
+  alan_mm2 7853981634  cevre_mm 314159
+nesne 2 katman=INSA stil=0 halka=1 tur=2
+  halka rol=0 parca=0 tepe=2
+    420000 20000
+    440000 20000
+  alan_mm2 1256637061  cevre_mm 125664
+nesne 3 katman=INSA stil=0 halka=1 tur=3
+  halka rol=0 parca=0 tepe=4
+    50000 200000
+    100000 200000
+    100000 200000
+    0 200000
+  alan_mm2 0  cevre_mm 157080
+nesne 4 katman=INSA stil=0 halka=1 tur=3
+  halka rol=0 parca=0 tepe=4
+    250000 200000
+    300000 200000
+    200000 200000
+    300000 200000
+  alan_mm2 0  cevre_mm 157080
+nesne 5 katman=INSA stil=0 halka=1 tur=3
+  halka rol=0 parca=0 tepe=4
+    450000 200000
+    500000 200000
+    500000 200000
+    400000 200000
+  alan_mm2 0  cevre_mm 157080
+nesne 6 katman=INSA stil=0 halka=1 tur=3
+  halka rol=0 parca=0 tepe=4
+    50000 400000
+    100000 400000
+    50000 450000
+    0 400000
+  alan_mm2 0  cevre_mm 78540
+nesne 7 katman=INSA stil=0 halka=1 tur=3
+  halka rol=0 parca=0 tepe=4
+    250000 400000
+    300000 400000
+    200000 400000
+    250000 350000
+  alan_mm2 0  cevre_mm 78540
+nesne 8 katman=INSA stil=0 halka=1
+  halka rol=1 parca=0 tepe=5
+    0 630000
+    -28532 609271
+    -17634 575729
+    17634 575729
+    28532 609271
+  alan_mm2 2139939800  cevre_mm 176338
+nesne 9 katman=INSA stil=0 halka=1
+  halka rol=1 parca=0 tepe=6
+    100000 634641
+    70000 617321
+    70000 582679
+    100000 565359
+    130000 582679
+    130000 617321
+  alan_mm2 3117720000  cevre_mm 207848
+nesne 10 katman=INSA stil=0 halka=1
+  halka rol=1 parca=0 tepe=8
+    200000 626131
+    181522 618478
+    173869 600000
+    181522 581522
+    200000 573869
+    218478 581522
+    226131 600000
+    218478 618478
+  alan_mm2 1931394472  cevre_mm 160000
+nesne 11 katman=INSA stil=0 halka=1
+  halka rol=1 parca=0 tepe=3
+    321213 621213
+    271022 607765
+    307765 571022
+  alan_mm2 1169143889  cevre_mm 155884
+nesne 12 katman=INSA stil=0 halka=1
+  halka rol=1 parca=0 tepe=4
+    0 800000
+    60000 830000
+    44000 862000
+    -16000 832000
+  alan_mm2 2400000000  cevre_mm 205718
+nesne 13 katman=INSA stil=0 halka=1 tur=5
+  halka rol=0 parca=0 tepe=3
+    50000 1000000
+    100000 1000000
+    50000 1020000
+  alan_mm2 3141592654  cevre_mm 230131
+kapsam -28532 -50000 500000 1020000
+icerik-ozeti 06870fdacedfa1b4
+gunluk
+  {"seq":1,"cmd":"core.layer","args":{"ad":"INSA"},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
+  {"seq":2,"cmd":"core.circle_draw","args":{"yontem":"3n","birinci":[0,0],"ikinci":[60000,0],"ucuncu":[0,80000]},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
+  {"seq":3,"cmd":"core.circle_draw","args":{"yontem":"2n","birinci":[200000,0],"ikinci":[300000,0]},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
+  {"seq":4,"cmd":"core.circle_draw","args":{"yontem":"ttr","birinci":[400000,0],"ikinci":[500000,0],"ucuncu":[400000,0],"dorduncu":[400000,100000],"yaricap":20.0,"yon":[430000,30000]},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
+  {"seq":5,"cmd":"core.arc_draw","args":{"baslangic":[0,200000],"bitis":[100000,200000],"yontem":"3n","uzerinden":[50000,250000]},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
+  {"seq":6,"cmd":"core.arc_draw","args":{"baslangic":[200000,200000],"bitis":[300000,200000],"yontem":"bby","yaricap":50.0,"yon":"sol"},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
+  {"seq":7,"cmd":"core.arc_draw","args":{"baslangic":[400000,200000],"bitis":[500000,200000],"yontem":"bby","yaricap":50.0,"yon":"sag"},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
+  {"seq":8,"cmd":"core.arc_draw","args":{"merkez":[50000,400000],"baslangic":[0,400000],"yontem":"bma","supurme":100.0},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
+  {"seq":9,"cmd":"core.arc_draw","args":{"merkez":[250000,400000],"baslangic":[200000,400000],"yontem":"bma","supurme":-100.0},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
+  {"seq":10,"cmd":"core.polygon_regular","args":{"merkez":[0,600000],"kenar_sayisi":5,"yontem":"ic","yaricap":30.0},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
+  {"seq":11,"cmd":"core.polygon_regular","args":{"merkez":[100000,600000],"kenar_sayisi":6,"yontem":"dis","yaricap":30.0},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
+  {"seq":12,"cmd":"core.polygon_regular","args":{"merkez":[200000,600000],"kenar_sayisi":8,"yontem":"kenar","kenar_uzunlugu":20.0},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
+  {"seq":13,"cmd":"core.polygon_regular","args":{"merkez":[300000,600000],"kenar_sayisi":3,"yontem":"ic","yaricap":30.0,"aci":50.0},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
+  {"seq":14,"cmd":"core.rectangle","args":{"noktalar":[[0,800000],[60000,830000],[-16000,832000]],"yontem":"3n"},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
+  {"seq":15,"cmd":"core.ellipse_draw","args":{"merkez":[50000,1000000],"birinci":[100000,1000000],"ikinci":[50000,1020000],"yontem":"eksen","ikinci_uc":[100000,1000000]},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}

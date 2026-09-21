@@ -519,6 +519,19 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
   * `UZUNLUK` ve `BÖLÜMLE` okumalarını **sormuyordu** (POLİGON'la aynı kusur, 5.15).
   * Günlükte bir tam sayı **geldiği yola göre** `25` ya da `25.0` yazılıyordu; kayıt artık bildirilen
     türe çevriliyor. Hiçbir altın fikstür değişmedi.
+- [x] **`3n` daire altın fikstürü yazıldı** — ve planın istediğinden genişi:
+  `tests/golden/senaryolar/insa-yontemleri.txt` P2'nin BÜTÜN inşa yöntemlerini tutuyor (3n/2n/ttr
+  daire, 3n/bby×2/bma×2 yay, ic/dis/kenar/açılı çokgen, 3n dikdörtgen, eksen elipsi). Her biri
+  trigonometri içeriyor, yani her biri bit-özdeş olmak zorunda (§7.3). **Her sayı elle
+  doğrulandı**: 3-4-5 üçgeninin çevrel çemberi (30, 40) r=50; altıgenin dış yarıçapı
+  30/cos30 = 34,641; sekizgenin çevresi tam 160 m; 50 grad'lık üçgenin ilk köşesi kuzeyden
+  45° ile (321213, 621213); 3n dikdörtgenin alanı tam 2400 m²; elipsin alanı tam π·1000 m².
+  **Fikstür üretilip OKUNDUĞU için bir kusur çıktı**: elipsin ikinci nokta parametresini ana
+  eksenin üzerinde vermişim, komut sessizce hiçbir şey çizmemiş ve 14 nesne yerine 13 gelmiş.
+- [x] **F3 yakalama listesi gerçek ikiliden doğrulandı** (release listesi maddesi 3): `probeMenus`
+  artık yakalama açılır menüsünü de yazıyor ve satır sayısını motorun mod sayısıyla karşılaştırıyor.
+  18 mod listeleniyor, **çeyrek nokta ve teğet nokta dâhil** — aralık düzeltilene kadar bitleri
+  ayardan yazılamıyordu. "Tutar" yarısı `test_snap.cpp`'de.
 - [x] **Fuzz korpusu güncel**: P0'ın açı sonekleri (`04-kutupsal-sonekli`, `08-bozuk` içinde
   `@100<45x`, `@100<45gg`) ve P1a'nın nokta fonksiyonları (`15`, `16`, `17`) tohumda.
 

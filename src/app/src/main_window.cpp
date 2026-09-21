@@ -4205,6 +4205,34 @@ int MainWindow::probeMenus()
         QCoreApplication::processEvents();
     }
 
+    // AND THE SNAP-MODE POPUP, which is not on the menu bar and so is not in the
+    // loop above. It is built from `core::SnapAllMask`, so every mode the engine
+    // declares has a row — the release list asks for ÇEYREK and TEĞET by name,
+    // and their bits were unreachable through the setting until the range was
+    // widened. A list generated from the mask cannot drift; a list nobody ever
+    // opened can still be empty.
+    {
+        QMenu probe(this);
+        const core::Settings& session = controller_->bus().session_settings();
+        const auto mask  = static_cast<std::uint32_t>(session.get("core.yakalama.modlar").as_int());
+        std::size_t rows = 0;
+        for (std::uint32_t bit = 1; bit != 0; bit = static_cast<std::uint32_t>(bit << 1)) {
+            if ((core::SnapAllMask & bit) == 0) continue;
+            ++rows;
+            (void)std::fprintf(stdout, "[yakalama] %-22s %-18s %s\n", core::snap_mode_label(bit),
+                               core::snap_mode_id(bit), (mask & bit) != 0 ? "açık" : "");
+        }
+        std::size_t declared = 0;
+        for (const std::uint32_t* bit = core::snap_mode_bits(); *bit != core::SnapNone; ++bit)
+            if ((core::SnapAllMask & *bit) != 0) ++declared;
+        if (rows != declared) {
+            (void)std::fprintf(stderr, "[yakalama] BAŞARISIZ: %zu satır, motorun %zu modu var\n",
+                               rows, declared);
+            ++failures;
+        }
+        (void)std::fprintf(stdout, "[yakalama] %zu mod listelenebiliyor\n", rows);
+    }
+
     (void)std::fprintf(stdout, "[menü] %d menü, %d kusur\n", index, failures);
     return failures;
 }

@@ -6,6 +6,27 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — inşa yöntemleri altın fikstürü ve F3 listesinin kanıtı
+
+- **`tests/golden/senaryolar/insa-yontemleri.txt`** — plan `3n` daire için bir
+  altın fikstür istiyordu; P2'nin **bütün** inşa yöntemleri girdi: 3n/2n/ttr
+  daire, 3n/bby×2/bma×2 yay, ic/dis/kenar/açılı çokgen, 3n dikdörtgen, eksen
+  elipsi. Her biri trigonometri içeriyor, yani her biri üç platformda bit-özdeş
+  olmak zorunda (§7.3): bir paftaya çizilen çevrel çember yarım milimetre kayarsa
+  o pafta iki makinede iki farklı belge olur.
+- **Her sayı elle doğrulandı**: 3-4-5 üçgeninin çevrel çemberi (30, 40) ve r=50;
+  altıgenin dış yarıçapı 30/cos30 = 34,641; sekizgenin çevresi tam 160 m; 50
+  grad'lık üçgenin ilk köşesi kuzeyden 45° ile (321213, 621213); 3n dikdörtgenin
+  alanı tam 2400 m²; elipsin alanı tam π·1000 m².
+- **Fikstür üretilip okunduğu için bir kusur çıktı**: elipsin ikinci nokta
+  parametresini ana eksenin üzerinde vermişim, komut sessizce hiçbir şey
+  çizmemiş ve 14 nesne yerine 13 gelmişti. Bir altın fikstürü üretip bakmadan
+  kabul etmek, yanlış bir beklentiyi üç platforma birden yaymaktır.
+- **F3 yakalama listesi artık gerçek ikiliden doğrulanıyor**: `probeMenus`
+  yakalama açılır menüsünü de yazıyor ve satır sayısını motorun mod sayısıyla
+  karşılaştırıyor. 18 mod listeleniyor, **çeyrek nokta ve teğet nokta dâhil** —
+  aralık düzeltilene kadar bu ikisinin bitleri ayardan yazılamıyordu.
+
 ### Eklendi — eksik eşitlik kanıtları, ve onların ortaya çıkardığı üç kusur
 
 Planın **Doğrulama** bölümü "her yeni/değişen komut için `test_proof.cpp`
