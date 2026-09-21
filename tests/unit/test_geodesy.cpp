@@ -1115,3 +1115,113 @@ TEST_CASE("PROOF: POLİGON günlükten yeniden oynatılabilir")
     // used to come back from the journal as 42 and 56.
     CHECK_EQ(again.doc.content_hash(), first.doc.content_hash());
 }
+
+TEST_CASE("POLİGON istasyonlarını numaralar ve n(no) onlara ulaşır")
+{
+    // THE PLAN SAYS IT IN FOUR WORDS: "noktalar `NOKTA` olarak, **numaralı**". A
+    // traverse station is what every detail after it is measured FROM — the next
+    // command says `n(2)` and gets this station, the point list writes it out with
+    // its number, `APLİKASYON` reads the number back. A station with no number is
+    // a dot a surveyor cannot refer to, and they had none.
+    struct Rig
+    {
+        kentos::core::Document doc;
+        kentos::command::Registry reg;
+        kentos::command::Journal journal;
+        kentos::command::UndoStack undo;
+        kentos::command::Bus bus{doc, reg, journal, undo};
+
+        Rig()
+        {
+            kentos::command::register_builtin_commands(reg);
+            kentos::domain::geodesy::register_geodesy_commands(reg);
+        }
+    };
+
+    using kentos::command::Origin;
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
+    REQUIRE(r.bus
+                .execute_line("POLİGON baslangic=0,0 baglama=0,100 aci=300 kenar=100 "
+                              "aci=300 kenar=100 aci=300 kenar=100 aci=300 kenar=100 "
+                              "cizgi=hayır",
+                              Origin::Test)
+                .ok());
+
+    // The column is `nokta_no` — the one `NOKTALAR` reads and writes and the one
+    // `n(…)` resolves through. Not a second column meaning the same thing.
+    const kentos::core::AttrId col = r.doc.attributes().find("nokta_no");
+    REQUIRE(col != kentos::core::kNoAttr);
+
+    std::vector<std::string> numbers;
+    for (kentos::core::EntityId e = 0; e < r.doc.entities().size(); ++e) {
+        if (!r.doc.alive(e) || r.doc.entities().kind[e] != kentos::core::kPointKind) continue;
+        const auto cell = r.doc.attribute(col, e);
+        REQUIRE(cell.ok());
+        REQUIRE(cell.value().present);
+        numbers.push_back(cell.value().text);
+    }
+    CHECK_EQ(numbers, std::vector<std::string>{"1", "2", "3", "4"});
+
+    // AND `n(…)` REACHES THEM, which is the whole point of the number.
+    auto second = r.bus.resolve_context().named_point(2);
+    REQUIRE(second.has_value());
+    CHECK_EQ(*second, (kentos::core::Point2{100'000, -100'000}));
+}
+
+TEST_CASE("POLİGON ikinci güzergâhı bir sonraki numaradan sürdürür")
+{
+    struct Rig
+    {
+        kentos::core::Document doc;
+        kentos::command::Registry reg;
+        kentos::command::Journal journal;
+        kentos::command::UndoStack undo;
+        kentos::command::Bus bus{doc, reg, journal, undo};
+
+        Rig()
+        {
+            kentos::command::register_builtin_commands(reg);
+            kentos::domain::geodesy::register_geodesy_commands(reg);
+        }
+    };
+
+    using kentos::command::Origin;
+
+    const char* kLeg = "POLİGON baslangic=0,0 baglama=0,100 aci=300 kenar=100 "
+                       "aci=300 kenar=100 cizgi=hayır";
+
+    Rig r;
+    REQUIRE(r.bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
+    REQUIRE(r.bus.execute_line(kLeg, Origin::Test).ok());
+    REQUIRE(r.bus.execute_line(kLeg, Origin::Test).ok());
+
+    // TWO STATIONS WITH ONE NAME is what restarting at 1 would give, and `n(2)`
+    // would then mean whichever the search reached first.
+    const kentos::core::AttrId col = r.doc.attributes().find("nokta_no");
+    REQUIRE(col != kentos::core::kNoAttr);
+    std::vector<std::string> numbers;
+    for (kentos::core::EntityId e = 0; e < r.doc.entities().size(); ++e) {
+        if (!r.doc.alive(e) || r.doc.entities().kind[e] != kentos::core::kPointKind) continue;
+        const auto cell = r.doc.attribute(col, e);
+        if (cell.ok() && cell.value().present) numbers.push_back(cell.value().text);
+    }
+    CHECK_EQ(numbers, std::vector<std::string>{"1", "2", "3", "4"});
+
+    // AND THE RESOLVED START IS IN THE RECORD, which is what makes the default
+    // safe: a replay into a document holding other numbered points must number
+    // these stations the same way (Article 1.4, model.md P4).
+    REQUIRE_EQ(r.journal.entries().size(), std::size_t{3}); ///< layer + two legs
+    CHECK_EQ(r.journal.entries()[1].args.find("ilk_no")->as_int(), 1);
+    CHECK_EQ(r.journal.entries()[2].args.find("ilk_no")->as_int(), 3);
+
+    // A CREW'S OWN NUMBERING OVERRIDES IT.
+    Rig named;
+    REQUIRE(named.bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
+    REQUIRE(named.bus.execute_line(std::string(kLeg) + " ilk_no=1284", Origin::Test).ok());
+    const kentos::core::AttrId c2 = named.doc.attributes().find("nokta_no");
+    REQUIRE(c2 != kentos::core::kNoAttr);
+    auto first = named.bus.resolve_context().named_point(1284);
+    CHECK(first.has_value());
+}

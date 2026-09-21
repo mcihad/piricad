@@ -36,11 +36,13 @@
 #include "kentos_cad/command/spec.hpp"
 
 #include "kentos_cad/core/angle.hpp"
+#include "kentos_cad/core/attribute.hpp"
 #include "kentos_cad/core/json.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #include <cmath>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -316,12 +318,74 @@ Task<void> run(Context& ctx)
     }
 
     // ---- the drawing and the sheet ----------------------------------------
+    //
+    // NUMBERED, and that is the point of computing them. A traverse station is
+    // what every detail after it is measured FROM: the next command says
+    // `n(2)` and gets this station, the point list writes it out with its number,
+    // and `APLİKASYON` reads the number back. A station with no number is a dot
+    // a surveyor cannot refer to.
+    //
+    // The column is `nokta_no`, the same one `NOKTALAR` reads and writes and the
+    // one `Bus::numbered_point` resolves `n(…)` through — declared here only if
+    // the drawing has not got it yet, never a second column meaning the same
+    // thing (CLAUDE.md 5.10).
+    core::AttrId number_column = ctx.document().attributes().find("nokta_no");
+    if (number_column == core::kNoAttr) {
+        core::AttrSpec spec;
+        spec.id      = "nokta_no";
+        spec.name_tr = "nokta no";
+        spec.type    = core::AttrType::Text;
+        auto made    = ctx.transaction().declare_attribute(std::move(spec));
+        if (!made) {
+            ctx.session().fail(made.error());
+            co_return;
+        }
+        number_column = made.value();
+    }
+
+    // WHERE THE NUMBERS START. A traverse is one leg of a job whose earlier legs
+    // already used numbers, so the default is ONE PAST THE HIGHEST the drawing
+    // already carries: a second run that restarted at 1 would give two stations
+    // one name, and `n(2)` would then mean whichever the search reached first.
+    // `ilk_no` overrides it, because a crew's numbering is theirs.
+    std::int64_t next_number = 0;
+    {
+        const core::Document& doc = ctx.document();
+        for (core::EntityId e = 0; e < doc.entities().size(); ++e) {
+            if (!doc.alive(e) || doc.entities().kind[e] != core::kPointKind) continue;
+            const auto cell = doc.attribute(number_column, e);
+            if (!cell || !cell.value().present) continue;
+            // WHOLE NUMBERS ONLY. A point list may carry `R12` or `NIR-3` as a
+            // number and those are names, not counters: the highest COUNTER is
+            // what a next station follows, and a name is left alone.
+            const std::string& text = cell.value().text;
+            if (text.empty() || text.find_first_not_of("0123456789") != std::string::npos) continue;
+            const std::int64_t held = std::strtoll(text.c_str(), nullptr, 10);
+            if (held > next_number) next_number = held;
+        }
+    }
+    ++next_number;
+    if (const Value v = ctx.argument("ilk_no"); !v.empty()) next_number = v.as_int();
+
+    // RECORDED RESOLVED, and that is what makes the default safe. Without it a
+    // replay into a document holding other numbered points would number these
+    // stations differently — the journal would describe a traverse and rebuild
+    // another one (Article 1.4, model.md P4).
+    ctx.record("ilk_no", Value::integer(next_number));
+
     for (const core::Point2& p : computed) {
         auto created = ctx.transaction().add_point(ctx.active_layer(), p);
         if (!created) {
             ctx.session().fail(created.error());
             co_return;
         }
+        if (auto st = ctx.transaction().set_attribute(number_column, created.value(),
+                                                      core::attr_text(std::to_string(next_number)));
+            !st) {
+            ctx.session().fail(st.error());
+            co_return;
+        }
+        ++next_number;
     }
 
     bool join = true;
@@ -408,6 +472,8 @@ KENTOS_COMMAND(traverse)
                               "Bitişteki bağlama noktası; açı kapanması için gerekir"),
                 Param::choice("sinif", Arity::optional(), {"ana", "ara", "tamamlayici"},
                               "Tolerans sınıfı; katalogdan okunur"),
+                Param::integer("ilk_no", Arity::optional(),
+                               "İlk istasyonun nokta numarası; varsayılan 1"),
                 Param::choice("dagitim", Arity::optional(), {"esit", "kenar"},
                               "Kenar kapanmasının dağıtımı: eşit ya da kenar orantılı"),
                 Param::boolean("cizgi", Arity::optional(),

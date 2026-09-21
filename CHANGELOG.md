@@ -6,6 +6,30 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — POLİGON istasyonlarını numaralıyor
+
+Plan bunu dört sözcükle istiyordu: *"noktalar `NOKTA` olarak, **numaralı**"*. Numara
+hiç yazılmıyordu.
+
+Bir poligon istasyonu, ondan sonraki **her detayın ölçüldüğü yerdir**: sonraki
+komut `n(2)` der ve o istasyonu alır, nokta listesi onu numarasıyla yazar,
+`APLİKASYON` numarayı geri okur. Numarası olmayan bir istasyon, bir mühendisin
+atıfta bulunamadığı bir noktadır.
+
+- Sütun **`nokta_no`** — [`NOKTALAR`](docs/komutlar/points.md)'ın okuyup yazdığı ve
+  `n(…)` nokta fonksiyonunun çözdüğü sütunun aynısı. Aynı şeyi anlatan ikinci bir
+  sütun açılmadı (5.10).
+- **Varsayılan, çizimdeki en büyük numaranın bir fazlası.** Bir poligon bir işin
+  tek ayağıdır ve önceki ayaklar numara kullanmış olur: 1'den yeniden başlayan
+  ikinci bir güzergâh iki istasyona tek ad verir ve `n(2)` o zaman aramanın önce
+  ulaştığını gösterir. `ilk_no=` ekibin kendi numaralamasını dayatır.
+- `R12` ya da `NIR-3` gibi **ad** taşıyan noktalar sayılmaz: en büyük **sayaç**
+  aranır, bir ad değil.
+- **Çözülmüş `ilk_no` günlüğe yazılıyor**, ve varsayılanı güvenli kılan şey budur:
+  başka numaralı noktalar taşıyan bir belgeye oynatılan bir günlük, bu
+  istasyonları aynı şekilde numaralamak zorundadır (Article 1.4, model.md P4).
+  Altın fikstür `ilk_no: 1` ve `ilk_no: 5` yazıyor.
+
 ### Eklendi — "tek yol" kapısı: hiçbir komut hangi istemcinin sorduğuna bakmaz
 
 Planın ikinci ilkesi şöyleydi: *"Hiçbir komut `InputSource`'a bakmaz

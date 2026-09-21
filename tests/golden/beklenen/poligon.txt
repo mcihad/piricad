@@ -45,9 +45,9 @@ nesne 8 katman=POLIGON2 stil=0 halka=1
     20 0
   alan_mm2 0  cevre_mm 400000
 kapsam 0 -100000 100010 0
-icerik-ozeti f6d5c2da32513d86
+icerik-ozeti 21adef1d825243b6
 gunluk
   {"seq":1,"cmd":"core.layer","args":{"ad":"POLIGON"},"origin":"test","crs":"TUREF/TM36","katman":"POLIGON"}
-  {"seq":2,"cmd":"geodesy.traverse","args":{"baslangic":[0,0],"baglama":[0,100000],"aci":[300.0,300.0,300.0,300.0],"kenar":[100.0,100.0,100.0,100.0],"sinif":"ana","cizgi":false},"origin":"test","crs":"TUREF/TM36","katman":"POLIGON"}
+  {"seq":2,"cmd":"geodesy.traverse","args":{"baslangic":[0,0],"baglama":[0,100000],"aci":[300.0,300.0,300.0,300.0],"kenar":[100.0,100.0,100.0,100.0],"sinif":"ana","ilk_no":1,"cizgi":false},"origin":"test","crs":"TUREF/TM36","katman":"POLIGON"}
   {"seq":3,"cmd":"core.layer","args":{"ad":"POLIGON2"},"origin":"test","crs":"TUREF/TM36","katman":"POLIGON2"}
-  {"seq":4,"cmd":"geodesy.traverse","args":{"baslangic":[0,0],"baglama":[0,100000],"aci":[300.0,300.0,300.0,300.0],"kenar":[100.0,100.0,100.0,100.0],"bitis":[[20,0]],"dagitim":"kenar","cizgi":true},"origin":"test","crs":"TUREF/TM36","katman":"POLIGON2"}
+  {"seq":4,"cmd":"geodesy.traverse","args":{"baslangic":[0,0],"baglama":[0,100000],"aci":[300.0,300.0,300.0,300.0],"kenar":[100.0,100.0,100.0,100.0],"bitis":[[20,0]],"ilk_no":5,"dagitim":"kenar","cizgi":true},"origin":"test","crs":"TUREF/TM36","katman":"POLIGON2"}

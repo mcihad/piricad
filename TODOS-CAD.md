@@ -523,6 +523,21 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
 
 ## Plan metninin ikinci denetimi (2026-09-21)
 
+- [x] **`POLİGON` istasyonlarını NUMARALIYOR.** Plan bunu dört sözcükle istiyordu ("noktalar
+  `NOKTA` olarak, **numaralı**") ve numara hiç yazılmıyordu. Bir poligon istasyonu, ondan sonraki
+  her detayın ölçüldüğü yerdir: numarası olmayan bir istasyon, bir mühendisin **atıfta
+  bulunamadığı** bir noktadır. Sütun `nokta_no` — `NOKTALAR`'ın okuyup yazdığı ve `n(…)`'nin
+  çözdüğü sütunun aynısı, ikinci bir sütun açılmadı (5.10). **Varsayılan, çizimdeki en büyük
+  numaranın bir fazlası**: 1'den yeniden başlayan ikinci bir güzergâh iki istasyona tek ad verir ve
+  `n(2)` o zaman aramanın önce ulaştığını gösterir. `R12` gibi AD taşıyanlar sayılmaz, sayaç
+  aranır. **Çözülmüş `ilk_no` günlüğe yazılıyor** ve varsayılanı güvenli kılan şey bu: başka
+  numaralı noktalar taşıyan bir belgeye oynatılan günlük aynı numaraları vermek zorunda
+  (Article 1.4). Altın fikstür `ilk_no: 1` ve `ilk_no: 5` yazıyor — ikinci güzergâh dördün ardından
+  sürüyor.
+- [~] **Gözlem, iş değil:** altın fikstürlerin belge dökümü **öznitelik hücrelerini yazmıyor**.
+  `icerik-ozeti` onları katlıyor, yani bit-özdeşlik kanıtlanıyor; ama fikstür kırıldığında diff
+  "hangi hücre değişti" demiyor, yalnız "hash farklı" diyor. Köşeler için dökümün kendi yorumu tam
+  bu gerekçeyi veriyor. Planın istediği bit-özdeşlik karşılandığı için burada bırakıldı.
 - [x] **Planın 2. ilkesini koruyan kapı yazıldı** (`scripts/ci-gate-tek-yol.sh`). İlke şöyleydi:
   "Hiçbir komut `InputSource`'a bakmaz (command.md P10)." Denetimde **tutuyordu** — 71 komut
   gövdesinin hiçbiri hangi istemcinin sorduğuna bakmıyor — ama onu koruyan hiçbir şey yoktu. Bu

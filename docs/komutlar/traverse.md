@@ -80,6 +80,7 @@ hesaplanmaz. `bitis_baglama` da verilirse açı kapanması da hesaplanır.
 | `bitis_baglama` | nokta | 0..1 | Bitişteki bağlama; açı kapanması için gerekir |
 | `sinif` | sözcük | 0..1 | `ana` (varsayılan), `ara`, `tamamlayici` |
 | `dagitim` | sözcük | 0..1 | `esit` (varsayılan) ya da `kenar` |
+| `ilk_no` | İlk istasyonun **nokta numarası**; verilmezse çizimdeki en büyük numaranın bir fazlası |
 | `cizgi` | mantıksal | 0..1 | Güzergâhı çizgiyle bağlar; varsayılan **evet** |
 
 ## Örnekler
@@ -173,6 +174,35 @@ verir; `tests/unit/test_geodesy.cpp` bunu sınar.
 onay durumu, istasyon sayısı, `[S]`, dağıtım, kapanma hataları ve her istasyon
 için sıra no, semt, kenar, sağa ve yukarı. Bir ajan ya da betik bu cetveli
 doğrudan okur.
+
+## İstasyonlar numaralanır
+
+Hesaplanan her istasyon bir **nokta numarası** taşır (`nokta_no` özniteliği) ve
+bu numaranın bütün anlamı şudur: bir poligon istasyonu, ondan sonraki her
+detayın ölçüldüğü **yer**dir.
+
+```text
+POLİGON baslangic=0,0 baglama=0,100 aci=300 kenar=100 aci=300 kenar=100
+ÇİZGİ n(1) n(2)          → istasyonları adıyla kullanın
+APLİKASYON istasyon=n(2) …
+```
+
+Numaralı olmayan bir istasyon, bir mühendisin **atıfta bulunamadığı** bir
+noktadır. Sütun `nokta_no`'dur — [`NOKTALAR`](points.md)'ın okuyup yazdığı ve
+`n(…)` nokta fonksiyonunun çözdüğü sütunun aynısı; aynı şeyi anlatan ikinci bir
+sütun açılmaz.
+
+**Varsayılan, çizimdeki en büyük numaranın bir fazlasıdır.** Bir poligon bir
+işin tek ayağıdır ve önceki ayaklar numara kullanmış olur: 1'den yeniden başlayan
+ikinci bir güzergâh iki istasyona tek ad verir ve `n(2)` o zaman aramanın önce
+ulaştığını gösterir. `ilk_no=` ekibin kendi numaralamasını dayatır.
+
+`R12` ya da `NIR-3` gibi **ad** taşıyan noktalar sayılmaz: en büyük **sayaç**
+aranır, bir ad değil.
+
+Çözülmüş `ilk_no` **günlüğe yazılır**, ve varsayılanı güvenli kılan şey budur:
+başka numaralı noktalar taşıyan bir belgeye oynatılan bir günlük, bu istasyonları
+aynı şekilde numaralamak zorundadır.
 
 ## Geri alma
 

@@ -1479,6 +1479,7 @@ Kırılma açısı ve kenarlardan poligon koordinatları hesaplar, kapanma hatal
 | `bitis` | point_list | isteğe bağlı | Bitiş istasyonu (bilinen); verilirse kapanma hesaplanır |
 | `bitis_baglama` | point_list | isteğe bağlı | Bitişteki bağlama noktası; açı kapanması için gerekir |
 | `sinif` | text | isteğe bağlı | Tolerans sınıfı; katalogdan okunur |
+| `ilk_no` | integer | isteğe bağlı | İlk istasyonun nokta numarası; varsayılan 1 |
 | `dagitim` | text | isteğe bağlı | Kenar kapanmasının dağıtımı: eşit ya da kenar orantılı |
 | `cizgi` | bool | isteğe bağlı | Güzergâhı çizgiyle bağlar; varsayılan evet |
 
@@ -6110,6 +6111,10 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             "tamamlayici"
           ],
           "description": "Tolerans sınıfı; katalogdan okunur (metin)"
+        },
+        "ilk_no": {
+          "type": "integer",
+          "description": "İlk istasyonun nokta numarası; varsayılan 1 (tam sayı)"
         },
         "dagitim": {
           "type": "string",
