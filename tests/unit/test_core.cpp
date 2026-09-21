@@ -4,11 +4,13 @@
 #include <algorithm>
 
 #include <cmath>
+#include <limits>
 
 #include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/trig.hpp"
 
 #include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/json.hpp"
 #include "kentos_cad/core/text.hpp"
 #include "kentos_cad/core/units.hpp"
@@ -176,6 +178,100 @@ TEST_CASE("mm rounding never rounds twice")
     static_assert(mm_from_metres(0.0005) == Mm{1});
     static_assert(mm_from_metres(-0.0005) == Mm{-1});
     static_assert(mm_from_metres(4503599627370.497) == Mm{4503599627370497});
+}
+
+TEST_CASE("mm rounding saturates instead of leaving int64 undefined")
+{
+    // `static_cast<Mm>` of a double outside Mm's range is undefined behaviour, and
+    // so is the half step that follows once the truncation has hit an endpoint.
+    // This was reachable from input already in the repository: `@(2^1000),0` in
+    // tests/fuzz/tohum/komut/14-asiri-sayi.txt is 1,07e301 metres, and
+    // mm_from_metres scales it past what Mm can hold. Nothing failed because the
+    // unit build is not sanitized; the asan preset's UBSan job is where it showed.
+    //
+    // What the hardware actually did is why the answer is stated rather than left
+    // to it. On AArch64 the cast saturates and the overflowing step then wraps, so
+    // the coordinate came back as INT64_MIN — kMmInvalid, the "no value" sentinel.
+    // One that had run off the end of the world arrived as one never read at all,
+    // and RingGeometry::append would have refused it for the wrong reason.
+    CHECK_EQ(mm_round(1e308), kMmSaturated);
+    CHECK_EQ(mm_round(-1e308), -kMmSaturated);
+    CHECK_EQ(mm_from_metres(1e308), kMmSaturated); // × 1000 is already infinite
+    CHECK_EQ(mm_from_metres(-1e308), -kMmSaturated);
+
+    constexpr double inf = std::numeric_limits<double>::infinity();
+    CHECK_EQ(mm_round(inf), kMmSaturated);
+    CHECK_EQ(mm_round(-inf), -kMmSaturated);
+
+    // NaN takes the same road +inf does. Zero would look like the principled
+    // answer and is the trap: zero is the ORIGIN, which in TUREF is a thousand
+    // kilometres from any parcel, so a NaN answered as zero puts a corner there
+    // silently. Saturated, it is out of range and the store refuses it.
+    CHECK_EQ(mm_round(std::numeric_limits<double>::quiet_NaN()), kMmSaturated);
+
+    // Saturation is symmetric ON PURPOSE: it must never land on the sentinel,
+    // which RingGeometry::append reads as "the source data held a coordinate it
+    // could not read" rather than as one that was merely too large.
+    CHECK_NE(-kMmSaturated, kMmInvalid);
+
+    // Nor is saturating a way of ACCEPTING the value — it is four times the limit
+    // a ring will take, so it is still refused, by the range message and not by
+    // undefined behaviour (test_geometry.cpp, "temsil edilebilir aralığın dışında").
+    static_assert(kMmSaturated > kMmCoordinateLimit);
+
+    // The edge, exactly. kMmSaturated is 2^63 - 1024, the largest Mm that is also
+    // exactly a double; 2^63 is the first magnitude past it and saturates, and the
+    // neighbour below — doubles are 1024 apart up there — goes down the ordinary
+    // path untouched.
+    CHECK_EQ(mm_round(kMmSaturatedReal), kMmSaturated);
+    CHECK_EQ(mm_round(-kMmSaturatedReal), -kMmSaturated);
+    CHECK_EQ(mm_round(0x1p63), kMmSaturated);
+    CHECK_EQ(mm_round(-0x1p63), -kMmSaturated);
+    CHECK_EQ(mm_round(0x1.ffffffffffffep62), Mm{9223372036854773760});
+    CHECK_EQ(mm_round(-0x1.ffffffffffffep62), Mm{-9223372036854773760});
+
+    // The contract of the function this guards is unchanged for everything that
+    // was already in range — including the two cases the half-away-from-zero rule
+    // is written the way it is to get right.
+    CHECK_EQ(mm_round(0.5), Mm{1});
+    CHECK_EQ(mm_round(-0.5), Mm{-1});
+    CHECK_EQ(mm_from_metres(4503599627370.497), Mm{4503599627370497});
+
+    // Still constexpr, which units.hpp promises: a coordinate folded at compile
+    // time must agree with one computed at run time, saturated ones included.
+    static_assert(mm_round(1e308) == kMmSaturated);
+    static_assert(mm_round(-1e308) == -kMmSaturated);
+    static_assert(mm_round(0x1p63) == kMmSaturated);
+    static_assert(mm_round(0x1.ffffffffffffep62) == Mm{9223372036854773760});
+}
+
+TEST_CASE("AÇI: aşırı bir açı tanımsız davranış değil, doymuş bir açıdır")
+{
+    // The same defect on the other helper — udeg_from_angle kept its own copy of
+    // the cast, and a typed `@0<(2^1000)` reaches it first. It now rounds through
+    // mm_round, so the saturation is the same one, at the same magnitude.
+    CHECK_EQ(udeg_from_angle(1e308, AngleUnit::Grad), kMmSaturated);
+    CHECK_EQ(udeg_from_angle(-1e308, AngleUnit::Grad), -kMmSaturated);
+    CHECK_EQ(udeg_from_angle(1e308, AngleUnit::Degree), kMmSaturated);
+    CHECK_EQ(udeg_from_angle(-1e308, AngleUnit::Radian), -kMmSaturated);
+    CHECK_EQ(udeg_from_angle(std::numeric_limits<double>::infinity(), AngleUnit::Grad),
+             kMmSaturated);
+    CHECK_EQ(udeg_from_angle(std::numeric_limits<double>::quiet_NaN(), AngleUnit::Grad),
+             kMmSaturated);
+
+    // A saturated angle is still an angle: sin_cos_udeg folds it into one circle
+    // by exact integer arithmetic, so the direction is defined and finite.
+    const SinCos t = sin_cos_udeg(udeg_from_angle(1e308, AngleUnit::Grad));
+    CHECK(t.sin >= -1.0);
+    CHECK(t.sin <= 1.0);
+    CHECK(t.cos >= -1.0);
+    CHECK(t.cos <= 1.0);
+
+    // And the rounding every ordinary angle goes through is the one it always was.
+    CHECK_EQ(udeg_from_angle(45.0, AngleUnit::Grad), std::int64_t{40500000});
+    CHECK_EQ(udeg_from_angle(45.1234, AngleUnit::Grad), std::int64_t{40611060});
+    static_assert(udeg_from_angle(45.0, AngleUnit::Grad) == std::int64_t{40500000});
+    static_assert(udeg_from_angle(1e308, AngleUnit::Grad) == kMmSaturated);
 }
 
 TEST_CASE("mm addition is order independent")

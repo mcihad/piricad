@@ -6,6 +6,54 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — aşırı bir koordinat tanımsız davranıştı, artık doymuş bir değer
+
+`mm_round` (`core/units.hpp`) ve `udeg_from_angle` (`core/angle.hpp`) ikisi de,
+çağıranın sınırlamadığı bir `double`'ı `static_cast<std::int64_t>` ile
+çeviriyordu. int64 aralığının dışındaki bir değer için bu çevrim **tanımsız
+davranıştır** — doyuran bir komut değil — ve ardından gelen yarım adım
+(`truncated + 1`) da taşar.
+
+Depodaki girdiden erişilebilirdi. `tests/fuzz/tohum/komut/14-asiri-sayi.txt`
+`@(2^1000),0` yazar; `^` işleci 1,07e301 döndürür ve `mm_from_metres` onu
+1,07e304 mm'ye büyütür. AArch64'te çevrim doyuruyor, ardından gelen adım taşıp
+sarıyordu, ve sonuç **-9223372036854775808** — yani `kMmInvalid` — oluyordu:
+dünyanın ucuna kaçmış bir koordinat, "değer yok" işaretini taşıyarak geliyordu.
+`RingGeometry::append` böyle bir tepe noktasını "kaynak veride okunamayan bir
+koordinat var" diye reddeder; oysa o koordinat okunamamış değil, temsil
+edilemeyecek kadar büyüktü.
+
+- **Doyma, taşma değil.** Her iki yardımcı da `±kMmSaturated` — 2^63 − 1024,
+  yani aynı zamanda tam bir `double` olan en büyük `Mm` — yanıtlar. `constexpr`
+  olmaları ve yarıyı sıfırdan uzağa yuvarlama sözleşmesi aynen korunur: aralık
+  içindeki hiçbir değerin sonucu değişmedi, bit bile.
+- **Doyma simetriktir, çünkü `kMmInvalid` INT64_MIN'dir.** `min()`'e doymak,
+  temsil edilemeyecek kadar büyük bir sayıyı hiç okunamamış bir sayıya
+  çevirirdi. Cevabın işareti de sorunun işaretiyle aynı kalır.
+- **Kapı üç dal değil, iki seçim.** `mm_round` teğetleyicilerde tepe noktası
+  başına çağrılıyor (`arc.cpp`, `circle.cpp`, `ellipse.cpp`, `transform.cpp`,
+  `snap.cpp`), yani Article 7 hemen yanıbaşında. Üç erken `return` ile —
+  bariz yazım — M serisi bir çekirdekte çağrı başına +4,2 ns; aşağıdaki iki
+  seçimle +0,10 ns. Karşılaştırma yönü (`v < …`) NaN'ı üçüncü bir teste gerek
+  kalmadan aynı yola sokar.
+- **NaN da `+kMmSaturated` yanıtlar, ve doğru cevap zaten bu.** Sıfır ilkeli
+  görünür ve tuzaktır: sıfır BAŞLANGIÇ NOKTASIDIR, TUREF'te herhangi bir
+  parselden bin kilometre uzakta (`Box2`'nin kendi notu bunu anlatır). NaN'a
+  sıfır demek, bir köşeyi oraya sessizce koymaktır; doymuş demek onu aralık
+  dışına koyar ve depo reddeder.
+- **Doymak kabul etmek değildir.** 2^63 − 1024 mm, `kMmCoordinateLimit`'in dört
+  katıdır; `RingGeometry::append` onu hak ettiği aralık mesajıyla reddeder.
+  Kapı o reddi *erişilebilir* kılar — tanımsız davranış bir ret değildir.
+- `udeg_from_angle` çevrimin ikinci bir kopyasını tutuyordu; artık tek
+  yuvarlama yardımcısına iniyor (core.md R20).
+- **Tohum korpusu bu yolu artık gerçekten oynatıyor.** `14-asiri-sayi.txt`'nin
+  tek satırı ilk belirtecinde — `@1e308<1e308g`, sayı dilbilgisinde üs biçimi
+  yok — `parse_line`'ı düşürüyordu, ve replay satırın tamamını atladığı için
+  aynı satırdaki `@(2^1000),0` hiç çözülmüyordu. Dört satır eklendi: mutlak
+  koordinat iki işarette, ve `@0<(2^1000)` üç birim sonekiyle.
+- Testler: `test_core.cpp`'de ±1e308, ±inf, NaN, int64 sınırının iki yanındaki
+  komşu değerler, `kMmInvalid`'den ayrı durduğu, ve `constexpr` katlama.
+
 ### Değişti — `@mesafe<açı` artık semt açısı okur: kuzeyden saat yönüne, grad
 
 Kutupsal koordinatın açısı bugüne kadar sabit bir matematik kuralıyla — derece,
