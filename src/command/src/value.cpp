@@ -104,6 +104,14 @@ Value Value::texts(Texts v)
     return x;
 }
 
+Value Value::numbers(Numbers v)
+{
+    Value x;
+    x.kind_    = Kind::NumberList;
+    x.numbers_ = std::move(v);
+    return x;
+}
+
 bool Value::as_bool(bool d) const
 {
     switch (kind_) {
@@ -170,6 +178,41 @@ const Value::Texts& Value::as_texts() const
     return none;
 }
 
+const Value::Numbers& Value::as_numbers() const
+{
+    if (kind_ == Kind::NumberList) return numbers_;
+
+    // A SINGLE NUMBER READS AS A RUN OF ONE, for the reason a lone word reads as
+    // a list of one: `ayak=10` is a run with one reading in it.
+    if (kind_ == Kind::Number || kind_ == Kind::Int) {
+        static thread_local Numbers one;
+        one.assign(1, kind_ == Kind::Number ? d_ : static_cast<double>(i_));
+        return one;
+    }
+
+    // AND AN ID LIST DOES TOO, which is not a conflation but the JSON coming
+    // back. `[10, 30, 60]` in a journal line is an array of whole numbers and
+    // nothing in it says whether it was a run of readings or a list of ids;
+    // `from_json` reads such an array as ids, because that is what it has always
+    // meant and a golden fixture depends on it. A `Number` parameter asking for
+    // its run has to be answered anyway, or a journal written with whole-metre
+    // readings would not replay (Article 1.4). The round trip stays
+    // byte-identical: the run goes out as `[10, 30, 60]`, comes back as ids, is
+    // read here as the same three numbers, and is recorded as `[10, 30, 60]`
+    // again.
+    if (kind_ == Kind::IdList) {
+        static thread_local Numbers whole;
+        whole.clear();
+        whole.reserve(ids_.size());
+        for (const std::int64_t one : ids_)
+            whole.push_back(static_cast<double>(one));
+        return whole;
+    }
+
+    static const Numbers none;
+    return none;
+}
+
 core::Json Value::to_json() const
 {
     using core::Json;
@@ -199,6 +242,13 @@ core::Json Value::to_json() const
         a.reserve(texts_.size());
         for (const std::string& one : texts_)
             a.push_back(Json::string(one));
+        return Json::array(std::move(a));
+    }
+    case Kind::NumberList: {
+        core::JsonArray a;
+        a.reserve(numbers_.size());
+        for (const double one : numbers_)
+            a.push_back(Json::number(one));
         return Json::array(std::move(a));
     }
     }
@@ -278,6 +328,7 @@ bool operator==(const Value& a, const Value& b)
     case Value::Kind::PointList: return a.pts_ == b.pts_;
     case Value::Kind::IdList: return a.ids_ == b.ids_;
     case Value::Kind::TextList: return a.texts_ == b.texts_;
+    case Value::Kind::NumberList: return a.numbers_ == b.numbers_;
     }
     return false;
 }

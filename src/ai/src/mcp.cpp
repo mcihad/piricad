@@ -174,6 +174,17 @@ std::string render_line(const command::CommandSpec& spec, const command::Args& a
                 out += needs_quotes(word) ? '"' + word + '"' : word;
             }
             break;
+
+        case command::Value::Kind::NumberList:
+            // Once per reading, the same shape: `ayak=10 ayak=30 ayak=60`. The
+            // tokeniser reads repeated keys as a run and `bind_tokens`
+            // accumulates them, so what is rendered here parses back to what was
+            // held (Article 1.4).
+            for (const double one : value.as_numbers()) {
+                out += ' ' + name + '=';
+                out += format_number(one);
+            }
+            break;
         }
     }
     return out;

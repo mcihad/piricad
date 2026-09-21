@@ -800,6 +800,11 @@ void MainWindow::buildActions()
                               "kısaltma: HLK"));
     drawingTools_->addAction(actAnnulus_);
 
+    actPerpOffset_ =
+        drawTool(Glyph::Ruler, tr("Dik Ayak"), QStringLiteral("DİKAYAK"),
+                 tr("DİKAYAK — taban çizgisi, sonra ayak ve boy çiftleri; A→B yönünde SOL "
+                    "pozitiftir  ·  kısaltma: DA"));
+    drawingTools_->addAction(actPerpOffset_);
     actPoint_ = drawTool(Glyph::Point, tr("Nokta"), QStringLiteral("NOKTA"),
                          tr("NOKTA — ölçülmüş nokta: nirengi, poligon noktası, röper  ·  "
                             "kısaltma: NK"));
@@ -1369,6 +1374,12 @@ void MainWindow::buildMenus()
     // reaches for, and all three were reachable only by typing their names.
     // Curated here rather than left to the generated tail, because a tool this
     // ordinary belongs on the menu a hand already opens.
+    // THE SURVEY ENTRY, where a drawing actually starts for a crew with a tape.
+    // Curated rather than left to the generated tail: this is the first tool a
+    // Turkish surveyor reaches for, not an occasional one (TODOS-CAD P1b).
+    draw->addAction(commandAction(Glyph::Ruler, tr("Dik Ayak"), QStringLiteral("DİKAYAK"),
+                                  tr("DİKAYAK — taban çizgisine göre dik ayak ve dik boy vererek "
+                                     "nokta yerleştirir  ·  kısaltma: DA")));
     draw->addAction(commandAction(Glyph::Line, tr("Kılavuz"), QStringLiteral("KILAVUZ"),
                                   tr("KILAVUZ — cetvel kılavuzu ekler, listeler ve siler  ·  "
                                      "kısaltma: KLV")));
@@ -1722,7 +1733,10 @@ void MainWindow::buildToolBox()
     // YAY was built as a full draw tool and then left out of the column, so the
     // one curve this program can draw was reachable only by typing its name.
     toolBox_->addFamily({actArc_, actSector_});
-    toolBox_->addTool(actPoint_);
+    // NOKTA AND THE TWO WAYS A MEASURED POINT ARRIVES. A point clicked on the
+    // canvas and a point computed from a baseline are the same kind of thing to
+    // a surveyor, and the second is what a tape survey produces all day.
+    toolBox_->addFamily({actPoint_, actPerpOffset_});
     toolBox_->addTool(actText_);
     toolBox_->addFamily({actInsert_, actBlock_});
     toolBox_->addFamily({actDimension_, actLeader_});

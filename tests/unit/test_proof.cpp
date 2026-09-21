@@ -536,6 +536,94 @@ TEST_CASE("PROOF: a failing script leaves nothing behind")
     CHECK_EQ(scr.undo.undo_depth(), std::size_t{0});
 }
 
+TEST_CASE("PROOF: DİKAYAK gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    // Article 6.4 for `core.perp_offset`. A baseline along the east axis and two
+    // details off it: (10 m along, 5 m left) and (30 m along, 5 m right). The
+    // three clients differ only in the road the readings take — a session the
+    // window drives with one answer per click and keystroke, a typed line with
+    // repeated keys, and a JSON script with a run of numbers.
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("DİKAYAK", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+
+        REQUIRE(session.waiting());
+        CHECK(session.supply(Value::point(core::Point2{0, 0})).ok());
+        CHECK(session.supply(Value::point(core::Point2{100'000, 0})).ok());
+        CHECK(session.supply(Value::number(10.0)).ok());
+        CHECK(session.supply(Value::number(5.0)).ok());
+        CHECK(session.supply(Value::number(30.0)).ok());
+        CHECK(session.supply(Value::number(-5.0)).ok());
+        CHECK(gui.bus.finish(session).ok()); ///< ESC / right button ends the run
+    }
+
+    Rig cli;
+    CHECK(
+        cli.bus.execute_line("DİKAYAK 0,0 100,0 ayak=10 boy=5 ayak=30 boy=-5", Origin::CommandLine)
+            .ok());
+
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Dik ayak kanıtı",
+            "komutlar": [ {"cmd": "core.perp_offset", "args": {
+                "baslangic": [0, 0], "bitis": [100000, 0],
+                "ayak": [10, 30], "boy": [5, -5] }} ]
+        })");
+        CHECK(r.ok());
+    }
+
+    // ---- the proof ----
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        CHECK_EQ(rig->doc.live_entity_count(), std::size_t{2});
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{1}); ///< one command, one step
+    }
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+
+    // AND THE POINTS ARE THE ONES A TAPE WOULD HAVE PUT THERE. Without this the
+    // three could agree on the same wrong answer.
+    const auto span = cli.doc.geometry().rings_of(cli.doc.entities().slot[0]);
+    CHECK_EQ((core::Point2{cli.doc.geometry().ring_xs(span.first)[0],
+                           cli.doc.geometry().ring_ys(span.first)[0]}),
+             (core::Point2{10'000, 5'000}));
+
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    CHECK(what_happened(gui.journal).find("core.perp_offset") != std::string::npos);
+
+    // THE RUN OF READINGS IS IN THE JOURNAL AS A RUN. A `Number` parameter used
+    // to be the one list-shaped kind `bind_tokens` replaced instead of
+    // accumulating, so the second pair never reached the document and never
+    // reached this line either (`Value::Kind::NumberList`).
+    const JournalEntry& wrote = cli.journal.entries().back();
+    CHECK_EQ(wrote.args.get("ayak").as_numbers().size(), std::size_t{2});
+    CHECK_EQ(wrote.args.get("boy").as_numbers().size(), std::size_t{2});
+}
+
+TEST_CASE("PROOF: DİKAYAK günlükten yeniden oynatılabilir")
+{
+    Rig live;
+    REQUIRE(live.bus
+                .execute_line("DİKAYAK 0,0 100,0 ayak=10 boy=5 ayak=30 boy=-5 cizgi=evet",
+                              Origin::CommandLine)
+                .ok());
+    const std::uint64_t golden = live.doc.content_hash();
+
+    // Replayed into an empty drawing from the journal's own JSON, which is what a
+    // crash recovery and a macro both do (kentoscad.md §16.5).
+    Rig again;
+    for (const auto& e : live.journal.entries()) {
+        const auto ran = again.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch});
+        REQUIRE(ran.ok());
+    }
+    CHECK_EQ(again.doc.content_hash(), golden);
+    CHECK_EQ(what_happened(live.journal), what_happened(again.journal));
+}
+
 TEST_CASE("PROOF: replaying a journal reproduces the document exactly")
 {
     // This is the foundation of the nightly journal regression pack and of crash

@@ -185,24 +185,37 @@ void Session::record(std::string param, Value v)
 
 namespace {
 
-/// Whether the SPEC declares `name` as a parameter that holds a RUN of points.
+/// Whether the SPEC declares `name` as a parameter that holds a RUN, and of what.
 ///
 /// The awaiter cannot read this off its own `Param`: `Context::point` builds a
 /// throwaway `Param::point(name)` because one await asks for one point, whatever
 /// the parameter it is filling holds. The declaration is the only thing that
-/// tells `merkez`, which is a point, from `noktalar`, which is a run of them.
-bool declares_point_run(const CommandSpec& spec, const std::string& name)
+/// tells `merkez`, which is a point, from `noktalar`, which is a run of them —
+/// and `ayak`, which is a run of readings, from `mesafe`, which is one.
+ParamKind declared_run_kind(const CommandSpec& spec, const std::string& name)
 {
-    for (const Param& p : spec.params)
-        if (p.name == name) return p.kind == ParamKind::PointList && p.arity.max > 1;
-    return false;
+    for (const Param& p : spec.params) {
+        if (p.name != name) continue;
+        if (p.arity.max <= 1) break;
+        if (p.kind == ParamKind::PointList || p.kind == ParamKind::Number) return p.kind;
+        break;
+    }
+    return ParamKind::Bool; ///< "not a run": no run is ever declared as a boolean
 }
 
 } // namespace
 
 void Session::record_awaited(const std::string& param, Value v)
 {
-    if (v.kind() != Value::Kind::Point || !declares_point_run(*spec_, param)) {
+    const ParamKind run_of = declared_run_kind(*spec_, param);
+
+    // NOT A RUN, or an answer of the wrong shape for the run it declares: kept
+    // as it came. A command that asked for one point into `merkez` records one
+    // point, and a `cizgi=evet` into a boolean records a boolean.
+    const bool of_run = (run_of == ParamKind::PointList && v.kind() == Value::Kind::Point) ||
+                        (run_of == ParamKind::Number &&
+                         (v.kind() == Value::Kind::Number || v.kind() == Value::Kind::Int));
+    if (!of_run) {
         resolved_.set(param, std::move(v));
         return;
     }
@@ -210,19 +223,29 @@ void Session::record_awaited(const std::string& param, Value v)
     bool begun = false;
     for (const std::string& name : runs_begun_)
         if (name == param) begun = true;
+    if (!begun) runs_begun_.push_back(param);
 
-    Value::Points run;
-    if (begun) {
-        if (const Value* had = resolved_.find(param); had != nullptr && !had->empty())
-            run = had->as_points();
-    } else {
-        runs_begun_.push_back(param);
+    // GROWN ONE AWAIT AT A TIME, and `set` keeps a replaced argument's POSITION,
+    // so a run cannot reorder the journal line it will be written to.
+    //
+    // A RUN OF READINGS ACCUMULATES FOR THE REASON A RUN OF POINTS DOES. It did
+    // not, and `DİKAYAK 0,0 100,0 ayak=10 boy=5 ayak=30 boy=-5` journalled the
+    // LAST pair: two details went into the drawing and one came out of the
+    // journal, so the replay drew a different drawing (Article 6.4). Exactly the
+    // defect `NOKTA` had before `record_awaited` existed.
+    const Value* had = begun ? resolved_.find(param) : nullptr;
+    if (run_of == ParamKind::PointList) {
+        Value::Points run;
+        if (had != nullptr && !had->empty()) run = had->as_points();
+        run.push_back(v.as_point());
+        resolved_.set(param, Value::points(std::move(run)));
+        return;
     }
-    run.push_back(v.as_point());
 
-    // `set` keeps a replaced argument's POSITION, so a run that grows one await
-    // at a time cannot reorder the journal line it will be written to.
-    resolved_.set(param, Value::points(std::move(run)));
+    Value::Numbers run;
+    if (had != nullptr && !had->empty()) run = had->as_numbers();
+    run.push_back(v.as_number());
+    resolved_.set(param, Value::numbers(std::move(run)));
 }
 
 void Session::fail(core::Error e)

@@ -14,6 +14,7 @@ namespace kentos::command {
     X(line)                                                                                        \
     X(polyline)                                                                                    \
     X(point_draw)                                                                                  \
+    X(perp_offset)                                                                                 \
     X(text)                                                                                        \
     X(edittext)                                                                                    \
     X(exportstyle)                                                                                 \

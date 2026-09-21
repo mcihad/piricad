@@ -61,6 +61,21 @@ std::optional<Value> next_of(const Args& args,
         return Value::point(pts[(*pos)++]);
     }
 
+    // A RUN OF NUMBERS IS DRAINED ONE READING PER REQUEST, exactly as a point
+    // list is: `DİKAYAK 0,0 100,0 ayak=10 boy=5 ayak=30 boy=-5` is two details
+    // off one baseline and the loop asks for `ayak` twice. An `IdList` answers a
+    // `Number` parameter too, because `[10, 30, 60]` is what a journal line
+    // holds and nothing in it says which of the two it was (`Value::as_numbers`).
+    if (param.kind == ParamKind::Number &&
+        (v->kind() == Value::Kind::NumberList || v->kind() == Value::Kind::IdList)) {
+        const auto& run = v->as_numbers();
+        if (*pos >= run.size()) {
+            ran_out = true;
+            return std::nullopt;
+        }
+        return Value::number(run[(*pos)++]);
+    }
+
     if (v->kind() == Value::Kind::IdList) {
         const auto& ids = v->as_ids();
         if (param.kind == ParamKind::Selection) {

@@ -41,8 +41,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 77 (69 tanesi onay ister)
-- Katalog parmak izi: `8705639183905196490`
+- Araç sayısı: 78 (70 tanesi onay ister)
+- Katalog parmak izi: `6675156031940636389`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -667,6 +667,22 @@ Onay ister.
 |---|---|---|---|
 | `baslangic` | string | evet | Kaydırmanın tutulacağı nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `bitis` | string | evet | O noktanın taşınacağı yer — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_perp_offset` — Dik Ayak
+
+Taban çizgisine göre dik ayak ve dik boy vererek nokta yerleştirir.
+Komut: DİKAYAK (DIKAYAK, PERPOFFSET, DA)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `baslangic` | string | evet | Taban çizgisinin ilk noktası (A) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `bitis` | string | evet | Taban çizgisinin ikinci noktası (B) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `ayak` | number | hayır | A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir (sayı) |
+| `boy` | number | hayır | Tabana dik uzaklık (m); A→B yönünde SOL pozitiftir (sayı) |
+| `cizgi` | boolean | hayır | Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir (evet/hayır) |
 
 ### `core_point_draw` — Nokta
 

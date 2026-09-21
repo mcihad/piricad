@@ -156,6 +156,17 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
             for (const std::string& one : v.as_texts())
                 words.push_back(one);
             args.set(p.name, Value::texts(std::move(words)));
+        } else if (p.kind == ParamKind::Number && p.arity.max > 1) {
+            // A NUMBER PARAMETER THAT TAKES MORE THAN ONE IS A RUN, and it
+            // accumulates for the reason the four kinds below do. This was the
+            // one list-shaped kind that replaced instead: a baseline survey
+            // given two foot/offset pairs kept the LAST pair and placed one
+            // point where the crew had read two, which is dropping an argument
+            // on the floor (command.md P15).
+            Value::Numbers run = args.get(p.name).as_numbers();
+            for (const double one : v.as_numbers())
+                run.push_back(one);
+            args.set(p.name, Value::numbers(std::move(run)));
         } else if (p.kind == ParamKind::Selection ||
                    (p.kind == ParamKind::Integer && p.arity.max > 1)) {
             // An Integer parameter whose arity allows more than one IS a list, and
@@ -475,6 +486,24 @@ core::Result<DispatchResult> Bus::dispatch(const Invocation& inv)
         if (args != &repaired) repaired = inv.args;
         const core::Point2 pair = v->as_point();
         repaired.set(p.name, Value::ids({pair.x, pair.y}));
+        args = &repaired;
+    }
+
+    // AND A RUN OF TWO READINGS IS READ AS A POINT for the same reason: `"ayak":
+    // [10, 30]` is a JSON array of two whole numbers and `Value::from_json` has
+    // no spec in hand when it reads one, so it gives the answer that is right
+    // far more often. With the spec in hand it is a run — `DİKAYAK` asks for
+    // `ayak` twice — and the two readings are put back. Whole numbers only: a
+    // fractional array never looked like a point.
+    for (const auto& p : spec->params) {
+        if (p.kind != ParamKind::Number || p.arity.max <= 1) continue;
+        const Value* v = args->find(p.name);
+        if (!v || v->kind() != Value::Kind::Point) continue;
+
+        if (args != &repaired) repaired = inv.args;
+        const core::Point2 pair = v->as_point();
+        repaired.set(p.name,
+                     Value::numbers({static_cast<double>(pair.x), static_cast<double>(pair.y)}));
         args = &repaired;
     }
 

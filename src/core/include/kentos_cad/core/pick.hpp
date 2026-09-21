@@ -105,6 +105,22 @@ bool closest_point_on_line(Point2 a, Point2 b, Point2 p, Point2& out, double& t)
 bool line_intersection(Point2 a, Point2 b, Point2 c, Point2 d, Point2& out, double& t,
                        double& u) noexcept;
 
+/// `offset_mm` to the LEFT of a→b, `foot_mm` along it from `a`. False when a and
+/// b coincide, which leaves no direction to drop a perpendicular from.
+///
+/// DİK AYAK / DİK BOY, the way a Turkish survey crew records a detail off a
+/// baseline: walk `foot` along the line from A, turn left, go out `offset`. LEFT
+/// IS POSITIVE, which is Netcad's sign and the same side `circle_intersection`
+/// calls its left solution — one convention for the whole program.
+///
+/// Shared by `dik(A,B,ayak,boy)` in the one grammar and by the `DİKAYAK` command
+/// that draws the same points interactively, because two copies of a sign
+/// convention is how one of them ends up mirrored (CLAUDE.md 5.10).
+///
+/// Determinism: one `std::sqrt`, which IEEE-754 rounds correctly, and one
+/// `mm_round` per coordinate (§7.3, core.md R20).
+bool perpendicular_offset(Point2 a, Point2 b, Mm foot_mm, Mm offset_mm, Point2& out) noexcept;
+
 /// Why two circles of given radii did or did not meet — the answer
 /// `circle_intersection` has to give, because "false" is four different
 /// mistakes and a surveyor needs to be told which one they made.

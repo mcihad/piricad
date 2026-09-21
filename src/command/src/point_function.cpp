@@ -497,20 +497,16 @@ core::AngleConvention applied_to(const Token& angle, const ResolveContext& ctx)
 /// and tested both ways (TODOS-CAD P1a-6).
 core::Result<Point2> perpendicular(Point2 a, Point2 b, double foot_m, double offset_m)
 {
-    const double dx  = static_cast<double>(b.x - a.x);
-    const double dy  = static_cast<double>(b.y - a.y);
-    const double len = std::sqrt(dx * dx + dy * dy);
-    if (len == 0.0)
+    // THE CONSTRUCTION IS `core`'S, not this file's. The `DİKAYAK` command draws
+    // the same points from a hand rather than from a typed expression, and a sign
+    // convention written twice is how one of the two ends up mirrored
+    // (`core::perpendicular_offset`, CLAUDE.md 5.10).
+    Point2 out{};
+    if (!core::perpendicular_offset(a, b, core::mm_from_metres(foot_m),
+                                    core::mm_from_metres(offset_m), out))
         return err(ErrorCode::InvalidArgument,
                    "dik(): A ve B aynı nokta, dik indirilecek bir doğrultu yok.");
-
-    const double ux   = dx / len;
-    const double uy   = dy / len;
-    const double foot = foot_m * static_cast<double>(core::kMmPerMetre);
-    const double off  = offset_m * static_cast<double>(core::kMmPerMetre);
-
-    return Point2{a.x + core::mm_round(foot * ux - off * uy),
-                  a.y + core::mm_round(foot * uy + off * ux)};
+    return out;
 }
 
 /// `distance` metres past B, along A→B.

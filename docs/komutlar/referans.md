@@ -13,6 +13,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.line`](line.md) | Çizgi | `ÇİZGİ`, `CIZGI`, `LINE`, `Ç`, `L` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki veya daha fazla nokta arasında doğru parçaları çizer. |
 | [`core.polyline`](polyline.md) | Çoklu Çizgi | `ÇOKLUÇİZGİ`, `COKLUCIZGI`, `POLYLINE`, `ÇÇ`, `PL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Birden çok noktadan TEK bir çizgi nesnesi çizer. |
 | [`core.point_draw`](point_draw.md) | Nokta | `NOKTA`, `POINT`, `NK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper. |
+| [`core.perp_offset`](perp_offset.md) | Dik Ayak | `DİKAYAK`, `DIKAYAK`, `PERPOFFSET`, `DA` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Taban çizgisine göre dik ayak ve dik boy vererek nokta yerleştirir. |
 | [`core.text`](text.md) | Metin | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
 | [`core.edittext`](edittext.md) | Yazıyı Düzenle | `YAZIDÜZENLE`, `YAZIDUZENLE`, `EDITTEXT`, `YZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir. |
 | [`core.exportstyle`](exportstyle.md) | Stil Aktar | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
@@ -139,6 +140,20 @@ Ayrıntılı kullanım: [ÇOKLUÇİZGİ](polyline.md)
 | `noktalar` | point_list | en az 1 | Yerleştirilecek noktalar |
 
 Ayrıntılı kullanım: [NOKTA](point_draw.md)
+
+### `core.perp_offset` — DİKAYAK (Dik Ayak)
+
+Taban çizgisine göre dik ayak ve dik boy vererek nokta yerleştirir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `baslangic` | point | 1 | Taban çizgisinin ilk noktası (A) |
+| `bitis` | point | 1 | Taban çizgisinin ikinci noktası (B) |
+| `ayak` | number | en az 0 | A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir |
+| `boy` | number | en az 0 | Tabana dik uzaklık (m); A→B yönünde SOL pozitiftir |
+| `cizgi` | bool | isteğe bağlı | Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir |
+
+Ayrıntılı kullanım: [DİKAYAK](perp_offset.md)
 
 ### `core.text` — METİN (Metin)
 
@@ -3421,6 +3436,60 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "KAYDIR",
         "PAN",
         "KY"
+      ]
+    }
+  },
+  {
+    "name": "core_perp_offset",
+    "title": "Dik Ayak",
+    "description": "Taban çizgisine göre dik ayak ve dik boy vererek nokta yerleştirir.\nKomut: DİKAYAK (DIKAYAK, PERPOFFSET, DA)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "baslangic": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Taban çizgisinin ilk noktası (A) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "bitis": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Taban çizgisinin ikinci noktası (B) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "ayak": {
+          "type": "number",
+          "description": "A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir (sayı)"
+        },
+        "boy": {
+          "type": "number",
+          "description": "Tabana dik uzaklık (m); A→B yönünde SOL pozitiftir (sayı)"
+        },
+        "cizgi": {
+          "type": "boolean",
+          "description": "Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir (evet/hayır)"
+        }
+      },
+      "required": [
+        "baslangic",
+        "bitis"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.perp_offset",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "DİKAYAK",
+        "DIKAYAK",
+        "PERPOFFSET",
+        "DA"
       ]
     }
   },

@@ -852,6 +852,81 @@ TEST_CASE("NOKTA FONKSİYONU: komut satırından çizilen belge çözülmüş no
     CHECK(f.journal.entries().front().args.to_json().dump().find("orta") == std::string::npos);
 }
 
+TEST_CASE("DİKAYAK: taban çizgisine göre dik ayak ve dik boy nokta koyar")
+{
+    Fixture f;
+
+    // A baseline along the east axis makes every answer readable by eye: a foot
+    // of 30 m and an offset of 5 m is (30, +5), and LEFT IS POSITIVE, so the
+    // negative offset lands on the other side. The same numbers the `dik()`
+    // point function is tested with, because both call
+    // `core::perpendicular_offset` and a second copy of the sign convention is
+    // how one of them would end up mirrored.
+    REQUIRE(f.bus
+                .execute_line("DİKAYAK 0,0 100,0 ayak=10 boy=5 ayak=30 boy=-5 ayak=60 boy=5",
+                              Origin::CommandLine)
+                .ok());
+
+    REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{3});
+    const core::Point2 expected[3]{{10'000, 5'000}, {30'000, -5'000}, {60'000, 5'000}};
+    for (std::size_t i = 0; i < 3; ++i) {
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[i]);
+        const auto xs   = f.doc.geometry().ring_xs(span.first);
+        const auto ys   = f.doc.geometry().ring_ys(span.first);
+        REQUIRE_EQ(xs.size(), std::size_t{1});
+        CHECK_EQ((core::Point2{xs[0], ys[0]}), expected[i]);
+    }
+
+    // AND THE SAME POINTS THE ONE GRAMMAR GIVES. Two clients, one construction.
+    Fixture g;
+    REQUIRE(g.bus
+                .execute_line("NOKTA dik(0,0,100,0,10,5) dik(0,0,100,0,30,-5) "
+                              "dik(0,0,100,0,60,5)",
+                              Origin::CommandLine)
+                .ok());
+    REQUIRE_EQ(g.doc.live_entity_count(), std::size_t{3});
+    for (std::size_t i = 0; i < 3; ++i) {
+        const auto span = g.doc.geometry().rings_of(g.doc.entities().slot[i]);
+        CHECK_EQ((core::Point2{g.doc.geometry().ring_xs(span.first)[0],
+                               g.doc.geometry().ring_ys(span.first)[0]}),
+                 expected[i]);
+    }
+}
+
+TEST_CASE("DİKAYAK: cizgi=evet noktaları verildikleri sırayla birleştirir")
+{
+    Fixture f;
+    REQUIRE(f.bus
+                .execute_line("DİKAYAK 0,0 100,0 ayak=10 boy=5 ayak=30 boy=-5 cizgi=evet",
+                              Origin::CommandLine)
+                .ok());
+
+    // Two points and the line through them, and the line's vertices are the
+    // points in the order the crew read them — that order IS the shape.
+    REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{3});
+    const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[2]);
+    const auto xs   = f.doc.geometry().ring_xs(span.first);
+    const auto ys   = f.doc.geometry().ring_ys(span.first);
+    REQUIRE_EQ(xs.size(), std::size_t{2});
+    CHECK_EQ((core::Point2{xs[0], ys[0]}), (core::Point2{10'000, 5'000}));
+    CHECK_EQ((core::Point2{xs[1], ys[1]}), (core::Point2{30'000, -5'000}));
+
+    // One command, one undo step (CLAUDE.md 1.5): the points and the line go
+    // together or not at all.
+    CHECK_EQ(f.undo.undo_depth(), std::size_t{1});
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::CommandLine).ok());
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+}
+
+TEST_CASE("DİKAYAK: aynı iki taban noktası reddedilir")
+{
+    Fixture f;
+    const auto refused = f.bus.execute_line("DİKAYAK 0,0 0,0 ayak=10 boy=5", Origin::CommandLine);
+    CHECK_FALSE(refused.ok());
+    CHECK(refused.error().message.find("aynı") != std::string::npos);
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+}
+
 TEST_CASE("NOKTA FONKSİYONU: n(1284) çizimdeki noktayı komutlar üzerinden bulur")
 {
     // The whole road, through commands only (CLAUDE.md 5.9): a point is drawn,
@@ -4309,8 +4384,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // catching.
     Fixture f;
     // 59 + SPLINE, TARAMA, BLOK, BLOKEKLE, ÖLÇÜ, LİDER + YAZDIR, YAZDIRMAPROFİLİ
-    // + KATMANGÖRÜNÜM + ÇIKTIYERLEŞİMİ, ÇIKTIÖĞE, ÇIKTIŞABLON + YENİ
-    CHECK_EQ(f.reg.size(), std::size_t{72});
+    // + KATMANGÖRÜNÜM + ÇIKTIYERLEŞİMİ, ÇIKTIÖĞE, ÇIKTIŞABLON + YENİ + DİKAYAK
+    CHECK_EQ(f.reg.size(), std::size_t{73});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

@@ -43,6 +43,16 @@ public:
     /// contain one, so splitting on it would be a guess about somebody's data.
     using Texts = std::vector<std::string>;
 
+    /// A RUN OF NUMBERS, for a parameter whose arity allows more than one.
+    ///
+    /// `DİKAYAK 0,0 100,0 ayak=10 boy=5 ayak=30 boy=-5` is two details off one
+    /// baseline, and before this kind existed a `Number` parameter was the one
+    /// list-shaped thing `bind_tokens` replaced instead of accumulating: the
+    /// second pair was dropped on the floor, which is exactly what
+    /// `.claude/command.md` P15 forbids. Points, texts, ids and selections all
+    /// accumulated; numbers did not, because there was nothing to put them in.
+    using Numbers = std::vector<double>;
+
     /// What this value holds. `Empty` is a real state and means "the caller did
     /// not supply this argument", which is different from supplying a zero.
     enum class Kind : std::uint8_t {
@@ -57,6 +67,7 @@ public:
         /// Added at the END: a journal reads a kind by name, not by number, but
         /// the enum's order is what a reader of this file learns first.
         TextList,
+        NumberList,
     };
 
     /// An absent argument. `empty()` is true and every accessor returns its
@@ -76,6 +87,7 @@ public:
     static Value points(Points v);
     static Value ids(Ints v);
     static Value texts(Texts v);
+    static Value numbers(Numbers v);
 
     /// What this value actually holds, for a caller that must branch on it.
     Kind kind() const noexcept { return kind_; }
@@ -103,6 +115,12 @@ public:
     /// of one and a caller should not have to know which it wrote.
     const Texts& as_texts() const;
 
+    /// The numbers, or an empty list when this holds something else. A single
+    /// `Number` reads as a one-element list, for the reason a lone `Text` reads
+    /// as a one-word list: `ayak=10` means a run of one and a caller should not
+    /// have to know which it wrote.
+    const Numbers& as_numbers() const;
+
     /// Canonical serialisation. Coordinates go out as integer millimetres —
     /// never as a formatted double — so a journal round-trip is lossless and
     /// byte-identical across platforms (kentoscad.md §7.3).
@@ -125,6 +143,7 @@ private:
     Points pts_{};
     Ints ids_{};
     Texts texts_{};
+    Numbers numbers_{};
 };
 
 /// An ordered, named argument bundle. Order is preserved so that a journal line

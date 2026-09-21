@@ -378,6 +378,23 @@ bool closest_point_on_line(Point2 a, Point2 b, Point2 p, Point2& out, double& t)
     return true;
 }
 
+bool perpendicular_offset(Point2 a, Point2 b, Mm foot_mm, Mm offset_mm, Point2& out) noexcept
+{
+    const double dx  = static_cast<double>(b.x - a.x);
+    const double dy  = static_cast<double>(b.y - a.y);
+    const double len = std::sqrt(dx * dx + dy * dy);
+    if (len == 0.0) return false;
+
+    const double ux = dx / len;
+    const double uy = dy / len;
+    const auto foot = static_cast<double>(foot_mm);
+    const auto off  = static_cast<double>(offset_mm);
+
+    // LEFT IS POSITIVE: the left normal of (ux, uy) is (-uy, ux).
+    out = Point2{a.x + mm_round(foot * ux - off * uy), a.y + mm_round(foot * uy + off * ux)};
+    return true;
+}
+
 void pick_candidates(const Document& doc, const Box2& box, std::vector<EntityId>& out)
 {
     out.clear();

@@ -820,6 +820,7 @@ private:
     QAction* actFillet_{nullptr};
     QAction* actSetLayer_{nullptr};
     QAction* actPoint_{nullptr};
+    QAction* actPerpOffset_{nullptr};
     QAction* actText_{nullptr};
     QAction* actMove_{nullptr};
     QAction* actCopy_{nullptr};

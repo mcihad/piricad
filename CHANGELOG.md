@@ -6,6 +6,48 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — DİKAYAK: şerit metreyle alınan detay çizime böyle girer (P1b-1)
+
+İki bilinen noktadan geçen bir taban çizgisi ve o çizgiye göre okunan her detay:
+taban üzerinde kaç metre ilerlediğiniz (**ayak**) ve oradan dik olarak kaç metre
+çıktığınız (**boy**). Bir Türk ölçü karnesinde bir duvar, bir bordür, bir direk
+ya da bir bina köşesi tam bu iki sayıyla yazılır.
+
+- **Boy'un işareti: A→B yönünde sol pozitif** — Netcad'in işaretiyle aynı, komut
+  sayfasında yazılı ve iki yönde de testli.
+- **Hesap paylaşılıyor.** `core::perpendicular_offset`: aynı yapıyı hem tek
+  gramerdeki `dik(A,B,ayak,boy)` hem bu komut çağırır. Bir işaret kuralının iki
+  kopyası, ikisinden birinin aynalanmasının yoludur (5.10).
+- **Arayüz aynı değişiklikte** (TODOS-CAD §2.6a): **Çizim > Dik Ayak** ve araç
+  kutusunda Nokta ailesinin ikinci üyesi.
+- Sayfası, `docs/README.md` satırı, `make reference`, eşitlik kanıtı (GUI = komut
+  satırı = betik, aynı belge + bayt bayt aynı günlük), günlük replay kanıtı, iptal
+  ve aynı-iki-nokta reddi testleri.
+
+### Düzeltildi — sayı dizisi diye bir şey yoktu: ikinci okuma sessizce düşüyordu
+
+`DİKAYAK`ın `ayak`/`boy` çiftleri girdi katmanında dört yerde birden kayboluyordu
+ve hepsi aynı sebeptendi: **bir `Number` parametresi liste olabiliyordu ama
+`Value`'nun sayı dizisi yoktu.** Nokta, metin, kimlik ve seçim birikiyordu;
+sayı **değiştiriyordu** — yani `.claude/command.md` P15'in kaçırdığı tür.
+
+- `Value::Kind::NumberList` ve `Value::numbers()` / `as_numbers()`. Enum'un
+  SONUNA eklendi (günlük türü ada göre okur).
+- `bind_tokens` sayı dizisini biriktiriyor. Öncesinde `ayak=10 boy=5 ayak=30
+  boy=-5` SON çifti tutuyor ve ekibin iki okuduğu yere bir nokta koyuyordu.
+- `record_awaited` sayı dizisini günlüğe **dizi** olarak yazıyor. Öncesinde son
+  okumayı yazıyordu: çizime iki detay giriyor, günlükten biri çıkıyor, replay
+  başka bir çizim üretiyordu (Article 6.4).
+- `next_of` diziyi istek başına bir okuma tüketiyor — nokta dizisinin yaptığının
+  aynısı.
+- `Validator` dizinin sayısını sayıyor ve arity'si birden fazlaya izin veren bir
+  `Number`a dizi geldiğinde kabul ediyor.
+- İki okumalık bir dizi JSON'da bir noktadan ayırt edilemez (`[10, 30]`), bu yüzden
+  `bus.cpp` onu spec elde olduğunda geri çeviriyor — tamsayı listesi için zaten
+  yapılanın aynısı.
+- `ai::render_line` bir sayı dizisini tekrarlanan anahtar olarak yazıyor, yani
+  yazdığı satır tuttuğu şeye geri ayrıştırılıyor (Article 1.4).
+
 ### Düzeltildi — ölçüm satırı durum çubuğunun sağındaki hücrelerin üstüne biniyordu
 
 Kullanıcının bildirdiği kusur: *"sadece mesafe ölçme çalışıyor o da bozuk"*.

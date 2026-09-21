@@ -166,8 +166,15 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
 
 ## P1b — Alım komutları (fonksiyonların etkileşimli, çizen hâli)
 
-- [ ] **P1b-1** `core.perp_offset` — `DİKAYAK`, `DIKAYAK`, `PERPOFFSET`, `DA`: taban A,B; tekrar `ayak boy`
-  çiftleri → `NOKTA`; `cizgi=evet` ile `ÇOKLUÇİZGİ`; sağ tık/Esc bitirir; lastik bant taban + dik iz.
+- [x] **P1b-1** `core.perp_offset` — `DİKAYAK`, `DIKAYAK`, `PERPOFFSET`, `DA`: taban A,B; tekrar `ayak boy`
+  çiftleri → `NOKTA`; `cizgi=evet` ile `ÇOKLUÇİZGİ`; sağ tık/Esc bitirir; lastik bant taban çizgisinde.
+  Hesap `core::perpendicular_offset`'e taşındı ve `dik()` nokta fonksiyonuyla **paylaşılıyor** — işaret
+  kuralının ikinci kopyası yok. Arayüz: **Çizim > Dik Ayak** ve araç kutusunda Nokta ailesinde (§2.6a).
+  **Girdi katmanında üç boşluk kapandı:** `Value::Kind::NumberList` eklendi (sayı dizisi yoktu),
+  `bind_tokens` sayı dizisini biriktiriyor (tek liste-biçimli tür `değiştiriyordu` — command.md P15),
+  `record_awaited` sayı dizisini günlüğe dizi olarak yazıyor (son çifti yazıyordu, yani replay başka
+  bir çizim üretiyordu), `next_of` diziyi istek başına bir okuma tüketiyor, ve iki okumalık bir dizinin
+  JSON'da nokta gibi görünmesi `bus.cpp`'de tamir ediliyor (tamsayı listesi için zaten yapılanın aynısı).
 - [ ] **P1b-2** `core.survey_polar` — `ALIM`, `SURVEY`, `AL`: istasyon S, isteğe bağlı bağlama noktası
   (semt sıfırı); tekrar `açı kenar` → nokta. `stakeout_command.cpp`'deki semt hesabı **ortak yardımcıya**
   taşınır — iki kopya yok.

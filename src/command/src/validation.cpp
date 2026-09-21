@@ -20,7 +20,15 @@ bool kind_accepts(const Param& p, const Value& v)
                (v.kind() == Value::Kind::PointList && v.as_points().size() == 1);
     case ParamKind::PointList:
         return v.kind() == Value::Kind::PointList || v.kind() == Value::Kind::Point;
-    case ParamKind::Number: return v.kind() == Value::Kind::Number || v.kind() == Value::Kind::Int;
+    // A RUN OF READINGS SATISFIES A NUMBER PARAMETER WHOSE ARITY ALLOWS MORE THAN
+    // ONE, exactly as an id list satisfies such an `Integer`. `IdList` is
+    // accepted for the same reason `Value::as_numbers` reads one: `[10, 30, 60]`
+    // in a journal line is an array of whole numbers and nothing in it says
+    // which of the two kinds wrote it, so refusing it here would mean a journal
+    // written with whole-metre readings could not replay (Article 1.4).
+    case ParamKind::Number:
+        return v.kind() == Value::Kind::Number || v.kind() == Value::Kind::Int ||
+               (many && (v.kind() == Value::Kind::NumberList || v.kind() == Value::Kind::IdList));
     case ParamKind::Integer:
         return v.kind() == Value::Kind::Int || (many && v.kind() == Value::Kind::IdList);
     // A ONE-WORD LIST AND A WORD ARE THE SAME THING TO A CALLER, and the arity
@@ -40,6 +48,7 @@ std::size_t multiplicity(const Value& v)
     case Value::Kind::PointList: return v.as_points().size();
     case Value::Kind::IdList: return v.as_ids().size();
     case Value::Kind::TextList: return v.as_texts().size();
+    case Value::Kind::NumberList: return v.as_numbers().size();
     default: return 1;
     }
 }
