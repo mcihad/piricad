@@ -291,6 +291,28 @@ public:
     /// and measuring tools looked dead when pressed.
     int probeAnswerable();
 
+    /// `KENTOS_FLYOUT_PROBE`: opens every tool family with a real mouse and runs
+    /// every member. Returns the failure count.
+    ///
+    /// Eleven tools live behind a family button — ÇOKLUÇİZGİ, SPLINE, ÇOKGEN,
+    /// TARAMA, ELİPS, HALKA, DİLİM, BLOK, LİDER, ALANÖLÇ, KOORDİNAT — and the
+    /// column's own probe presses only the face, so none of them had ever been
+    /// pressed by a test. They are also the ones the user could not run. The card
+    /// is opened the three ways a hand opens it (hold, right click, corner mark)
+    /// and each member is then chosen from it.
+    int probeFlyouts();
+
+    /// `KENTOS_REALMOUSE_PROBE`: drawing driven the way a REAL mouse arrives.
+    /// Returns the failure count.
+    ///
+    /// Every other probe sends its events straight to the widget it means, which
+    /// bypasses the two things a real click goes through first: the hit test that
+    /// decides which widget is under the pointer, and the press-to-release
+    /// interval. A user reported that drawing never works with the mouse and that
+    /// no guide follows it, while all of those probes were green — so what they
+    /// do not cover is exactly where the defect has to be.
+    int probeRealMouse();
+
     void probeDialogs();
 
     /// Builds the drawing every window probe photographs: a named layer, three

@@ -156,6 +156,36 @@ if(TARGET kentos_cad)
                 $<TARGET_FILE:kentos_cad>)
     set_tests_properties(tool-reach PROPERTIES TIMEOUT 120)
 
+    # DRAWING, THE WAY A REAL MOUSE ARRIVES. Every other probe sends its events
+    # straight to the widget it means, which skips the two things a real click
+    # goes through first: the hit test that decides which widget is under the
+    # pointer, and the press-to-release interval. A user reported that drawing
+    # never worked with the mouse while all those probes were green, and the
+    # defect was exactly in what they skipped — a family button opened its card
+    # on any click over 280 ms and ran nothing, and an open Qt popup grabs the
+    # mouse, so the next press only dismissed the card and was swallowed.
+    add_test(NAME real-mouse
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_REALMOUSE_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(real-mouse PROPERTIES TIMEOUT 180)
+
+    # AND THE TOOL FAMILIES, opened with a real mouse. Eleven tools live only
+    # behind a family card — ÇOKLUÇİZGİ, SPLINE, ALAN, TARAMA, ELİPS, HALKA,
+    # DİLİM, BLOK, LİDER, ALANÖLÇ, KOORDİNAT — and the column's own probe presses
+    # only the face, so none of them had ever been pressed by a test. This opens
+    # each card the three ways a hand opens it (hold, right click, corner mark)
+    # and runs every member from it.
+    add_test(NAME tool-flyouts
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_FLYOUT_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(tool-flyouts PROPERTIES TIMEOUT 180)
+
     # AND WHETHER A HAND CAN ANSWER what a pressed tool asks. Reachability says
     # the button exists; this says pressing it leaves the user somewhere they can
     # act. Pressing Blok Ekle used to put "Yerleştirilecek bloğun adı" on the

@@ -6,6 +6,43 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — ağır bir tıklama aracı hiç çalıştırmıyordu (çizim araçları)
+
+Kullanıcının bildirdiği kusur: *"çizim asla çalışmıyor, üçü de hem de"*,
+*"mouse ile çalışmıyor kesinlikle"*, *"mouse takip eden ne kılavuz var ne de
+başka bir şey"*. "Üçü de" tam olarak Çizgi ailesinin üç üyesi: ÇİZGİ,
+ÇOKLUÇİZGİ, SPLINE — hepsi TEK bir aile düğmesinin arkasında.
+
+Sebep `kHoldMs = 280`. Bir tıklama bir basış ve bir bırakıştır ve elin tıklaması
+anlık değildir: bir araç düğmesine yapılan kararlı bir tıklama rahatlıkla 280
+ms'yi geçiyordu. Geçtiğinde araç değil **kart** açılıyor, ve açık bir Qt popup'ı
+fareyi yakaladığı için aynı düğmeye yapılan sonraki basış yalnız kartı kapatıp
+yutuluyordu. Ağır tıklama → kart. Tekrar tıkla → kart kapanır, hiçbir şey
+çalışmaz. Tekrar tıkla → kart. Tıklamaları hep ağır olan bir kullanıcı o araca
+hiç ulaşamıyordu.
+
+- **`kHoldMs` 280 → 500 ms**: her platformun uzlaştığı uzun-basış süresi.
+- **Ağır tıklama yine tıklamadır.** Düğmeden hiç ayrılmadan bırakıldıysa
+  kullanıcı ARACA uzanmıştır ve eli sadece bir zamanlayıcıdan yavaştır: kart
+  kapanır ve yüzdeki araç çalışır. Yalnız düğmeden AYRILAN el — ya da köşe
+  işaretiyle veya sağ tıkla kartı isteyen el — aileye uzanmış sayılır.
+- **Köşe işaretinin hedefi büyütüldü** (5 px çizim, 14 px hedef): 46 px'lik bir
+  düğmede 5 piksellik hedef kimsenin tutamadığı hedeftir.
+- **Yeni kapı `real-mouse`** (`KENTOS_REALMOUSE_PROBE`). Diğer bütün probe'lar
+  olaylarını doğrudan kastettikleri öğeye gönderiyordu; bu, gerçek bir tıklamanın
+  önce geçtiği iki şeyi atlıyor: imlecin altındaki öğeyi seçen isabet testi ve
+  basış-bırakış aralığı. Kusur tam olarak atladıkları yerdeydi. Yeni probe 40,
+  150, 260, 320, 500, 700 ve 1000 ms'lik tıklamaların hepsinin aracı
+  çalıştırdığını, tuvalin üstünde tıklamayı yiyen başka bir öğe olmadığını,
+  ilk tıklamanın geçtiğini, kılavuzun fareyi izlediğini ve çizilen çizginin
+  belgeye girdiğini doğruluyor. Kılavuzun EKRANDA olduğu ancak gerçek pencerede
+  sınanır ve probe bunu açıkça **BEKLEMEDE** diye yazar: offscreen platform bir
+  `QRhiWidget`'a `QRhi` vermez, hiç çizmez, dolayısıyla sahneyi de kurmaz.
+- **Yeni kapı `tool-flyouts`** (`KENTOS_FLYOUT_PROBE`): on bir araç yalnız aile
+  kartının arkasında yaşıyor ve hiçbiri bir testte hiç basılmamıştı. Yedi aile,
+  on sekiz üye; kart üç jestin hepsiyle açılıyor (basılı tutma, sağ tık, köşe
+  işareti) ve her üye kartından seçilince çalışıyor.
+
 ### Düzeltildi — 97 komutun 33'ü fareyle başlatılamıyordu
 
 Kullanıcının bildirdiği kusur: *"toolbox üzerindeki araçlar da mouse ile

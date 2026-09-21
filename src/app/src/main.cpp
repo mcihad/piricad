@@ -315,13 +315,14 @@ int main(int argc, char** argv)
     // Set BEFORE the window is built: the print service resolves its path once,
     // in its constructor.
     for (const char* probe :
-         {"KENTOS_PRINT_PROBE",    "KENTOS_LAYOUT_PROBE", "KENTOS_SHOT_DIR",
-          "KENTOS_DESIGNER_PROBE", "KENTOS_HELP_PROBE",   "KENTOS_MENU_PROBE",
-          "KENTOS_REACH_PROBE",    "KENTOS_ANSWER_PROBE", "KENTOS_WIDGETS_PROBE",
-          "KENTOS_DIALOG_PROBE",   "KENTOS_HAND_PROBE",   "KENTOS_LAYER_PROBE",
-          "KENTOS_PICK_PROBE",     "KENTOS_TABLE_PROBE",  "KENTOS_SCHEMA_PROBE",
-          "KENTOS_CHAT_PROBE",     "KENTOS_TOOL_PROBE",   "KENTOS_NORMAL_PROBE",
-          "KENTOS_FAMILY_PROBE",   "KENTOS_BUDGET_PROBE", "KENTOS_PROBE_LINE"})
+         {"KENTOS_PRINT_PROBE",     "KENTOS_LAYOUT_PROBE",  "KENTOS_SHOT_DIR",
+          "KENTOS_DESIGNER_PROBE",  "KENTOS_HELP_PROBE",    "KENTOS_MENU_PROBE",
+          "KENTOS_REACH_PROBE",     "KENTOS_ANSWER_PROBE",  "KENTOS_FLYOUT_PROBE",
+          "KENTOS_REALMOUSE_PROBE", "KENTOS_WIDGETS_PROBE", "KENTOS_DIALOG_PROBE",
+          "KENTOS_HAND_PROBE",      "KENTOS_LAYER_PROBE",   "KENTOS_PICK_PROBE",
+          "KENTOS_TABLE_PROBE",     "KENTOS_SCHEMA_PROBE",  "KENTOS_CHAT_PROBE",
+          "KENTOS_TOOL_PROBE",      "KENTOS_NORMAL_PROBE",  "KENTOS_FAMILY_PROBE",
+          "KENTOS_BUDGET_PROBE",    "KENTOS_PROBE_LINE"})
         if (qEnvironmentVariableIsSet(probe)) {
             QStandardPaths::setTestModeEnabled(true);
             break;
@@ -1446,6 +1447,22 @@ int main(int argc, char** argv)
             window.probeDesigner();
             QApplication::exit(0);
         });
+    }
+
+    // DRAWING, THE WAY A REAL MOUSE ARRIVES: through the hit test that decides
+    // which widget is under the pointer, and with a press-to-release interval a
+    // hand actually produces.
+    if (qEnvironmentVariableIsSet("KENTOS_REALMOUSE_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window,
+                           [&window] { QApplication::exit(window.probeRealMouse() == 0 ? 0 : 1); });
+    }
+
+    // THE TOOL FAMILIES, OPENED WITH A MOUSE. Eleven tools live only behind a
+    // family card, and the column's own probe presses only the face — so none of
+    // them had ever been pressed by a test.
+    if (qEnvironmentVariableIsSet("KENTOS_FLYOUT_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window,
+                           [&window] { QApplication::exit(window.probeFlyouts() == 0 ? 0 : 1); });
     }
 
     // AND WHETHER A HAND CAN ANSWER what a pressed tool asks.

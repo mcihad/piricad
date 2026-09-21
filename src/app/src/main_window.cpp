@@ -54,6 +54,7 @@
 #include <QComboBox>
 #include <QDir>
 #include <QDockWidget>
+#include <QElapsedTimer>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFrame>
@@ -3241,6 +3242,359 @@ int MainWindow::probeHelpPage()
     check(on_one.detail == QStringLiteral("ÖLÇÜ"), QStringLiteral("sağ bölme ÖLÇÜ'yü anlatıyor"));
 
     palette_->hide();
+    return failures;
+}
+
+int MainWindow::probeRealMouse()
+{
+    const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_REALMOUSE_PROBE"));
+    const bool shooting = into.size() > 1;
+    if (shooting) QDir().mkpath(into);
+
+    int failures     = 0;
+    const auto check = [&failures](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[fare] %s: %s\n", ok ? "tamam" : "BAŞARISIZ",
+                           what.toUtf8().constData());
+        (void)std::fflush(stdout);
+        if (!ok) ++failures;
+    };
+
+    resize(1600, 1000);
+    QCoreApplication::processEvents();
+    runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
+    runScriptLine(QStringLiteral("SİL"));
+    runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+    QCoreApplication::processEvents();
+
+    // ---- 1. WHAT IS ACTUALLY UNDER THE POINTER -----------------------------
+    //
+    // A real click is delivered to whatever widget the platform finds at that
+    // point. A probe that sends to `canvas_` proves the canvas HANDLES a click
+    // and nothing about whether one ever reaches it.
+    {
+        int wrong = 0;
+        for (const QPointF& where :
+             {QPointF(0.35, 0.35), QPointF(0.5, 0.5), QPointF(0.65, 0.6), QPointF(0.5, 0.8)}) {
+            const QPoint at =
+                canvas_->mapToGlobal(QPoint(static_cast<int>(canvas_->width() * where.x()),
+                                            static_cast<int>(canvas_->height() * where.y())));
+            QWidget* found      = QApplication::widgetAt(at);
+            const QString named = found == nullptr
+                                      ? QStringLiteral("(hiç)")
+                                      : (found->objectName().isEmpty()
+                                             ? QString::fromLatin1(found->metaObject()->className())
+                                             : found->objectName());
+            // NO ANSWER IS NOT A WRONG ANSWER. Under the offscreen platform there
+            // is no window manager, a resize is a request rather than a fact, and
+            // `widgetAt` returns nothing for a point the platform does not place.
+            // A DIFFERENT widget is the defect this looks for — something sitting
+            // over the canvas and eating the click; nothing at all says only that
+            // there is no window to ask.
+            if (found != nullptr && found != canvas_) ++wrong;
+            (void)std::fprintf(stdout, "[fare] tuvalin %.0f%%,%.0f%% noktasında: %s%s\n",
+                               where.x() * 100, where.y() * 100, named.toUtf8().constData(),
+                               found == nullptr ? "  (platform yerleştirmedi, sayılmadı)" : "");
+        }
+        check(wrong == 0, QStringLiteral("tuvalin üstünde başka bir öğe yok"));
+    }
+
+    // ---- 2. A SLOW CLICK ON A FAMILY BUTTON --------------------------------
+    //
+    // A family button opens its card on a press held past `kHoldMs`. A human
+    // click is not instant, so a slow one runs nothing at all: the card opens,
+    // the release lands on the card, and the tool the user reached for never
+    // starts. That is what "drawing never works, all three of them" looks like —
+    // all three are the members of ONE family button.
+    const auto clickButton = [](QToolButton* button, int heldMs) {
+        const QPointF centre(button->width() / 2.0, button->height() / 2.0);
+        QMouseEvent down(QEvent::MouseButtonPress, centre, button->mapToGlobal(centre),
+                         Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(button, &down);
+
+        QElapsedTimer waited;
+        waited.start();
+        while (waited.elapsed() < heldMs)
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
+
+        QWidget* card     = QApplication::activePopupWidget();
+        const bool opened = card != nullptr && card->property("kentos.rows").isValid();
+
+        // RELEASED WHERE IT WAS PRESSED, which is what a click is. A hand that
+        // wanted the card moves onto it first; this one did not move at all.
+        QMouseEvent up(QEvent::MouseButtonRelease, centre, button->mapToGlobal(centre),
+                       Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(button, &up);
+        QCoreApplication::processEvents();
+        return opened;
+    };
+
+    QToolButton* lineButton = nullptr;
+    for (QToolButton* button : toolBox_->buttons())
+        if (QAction* face = button->defaultAction();
+            face != nullptr && face->property(kToolCommand).toString() == QLatin1String("ÇİZGİ"))
+            lineButton = button;
+    // The face follows the last member used, so ask for the family by membership.
+    if (lineButton == nullptr)
+        for (QToolButton* button : toolBox_->buttons())
+            if (button->property("kentos.family").toBool() && lineButton == nullptr)
+                lineButton = button;
+
+    if (lineButton == nullptr) {
+        check(false, QStringLiteral("Çizgi düğmesi bulundu"));
+        return failures;
+    }
+
+    // A HAND'S CLICK IS NOT INSTANT. Every one of these intervals is a click a
+    // person makes, and every one of them has to leave the tool in the hand.
+    for (const int heldMs : {40, 150, 260, 320, 500, 700, 1000}) {
+        controller_->cancelInteractive();
+        if (QWidget* open = QApplication::activePopupWidget(); open != nullptr) open->close();
+        QCoreApplication::processEvents();
+
+        const bool opened            = clickButton(lineButton, heldMs);
+        const command::Session* live = controller_->session();
+        const bool running           = live != nullptr && live->waiting();
+        (void)std::fprintf(stdout, "[fare] %3d ms basılı: kart=%s komut=%s\n", heldMs,
+                           opened ? "açıldı" : "hayır", running ? "çalıştı" : "HAYIR");
+        if (QWidget* open = QApplication::activePopupWidget(); open != nullptr) open->close();
+        QCoreApplication::processEvents();
+
+        // A CLICK IS A CLICK, at any interval a hand produces. Not "something
+        // happened": the TOOL has to run. A card opening in place of the tool is
+        // the defect — an open Qt popup grabs the mouse, so the next press on the
+        // same button only dismisses the card and is swallowed, and a user whose
+        // clicks are all slow never reaches the tool at all.
+        check(running, QStringLiteral("%1 ms'lik tıklama aracı çalıştırdı").arg(heldMs));
+    }
+
+    // ---- 3. DRAWING, THROUGH THE HIT TEST ----------------------------------
+    controller_->cancelInteractive();
+    QCoreApplication::processEvents();
+    runScriptLine(QStringLiteral("ÇİZGİ"));
+    QCoreApplication::processEvents();
+
+    const auto onCanvas = [this](QEvent::Type t, QPointF at, Qt::MouseButton b) {
+        const QPoint global = canvas_->mapToGlobal(at.toPoint());
+        QWidget* target     = QApplication::widgetAt(global);
+        if (target == nullptr) target = canvas_;
+        const QPointF local = target->mapFromGlobal(global);
+        QMouseEvent ev(t, local, global, b, t == QEvent::MouseButtonRelease ? Qt::NoButton : b,
+                       Qt::NoModifier);
+        QCoreApplication::sendEvent(target, &ev);
+        QCoreApplication::processEvents();
+    };
+
+    const QPointF first(canvas_->width() * 0.35, canvas_->height() * 0.4);
+    const QPointF second(canvas_->width() * 0.6, canvas_->height() * 0.6);
+
+    onCanvas(QEvent::MouseMove, first, Qt::NoButton);
+    onCanvas(QEvent::MouseButtonPress, first, Qt::LeftButton);
+    onCanvas(QEvent::MouseButtonRelease, first, Qt::LeftButton);
+
+    const command::Session* after = controller_->session();
+    check(after != nullptr && after->waiting() &&
+              QString::fromStdString(after->prompt().message).contains(QStringLiteral("Sonraki")),
+          QStringLiteral("ilk tıklama geçti, sıradaki nokta soruluyor"));
+    check(after != nullptr && after->waiting() && after->prompt().has_rubber_band,
+          QStringLiteral("ikinci nokta için kılavuz isteniyor"));
+
+    // THE GUIDE FOLLOWS THE POINTER, and that is a pixel question: the scene can
+    // hold a guide the backend never draws.
+    onCanvas(QEvent::MouseMove, second, Qt::NoButton);
+    const int drawn = static_cast<int>(canvas_->guideVertexCountForProbe());
+    (void)std::fprintf(stdout, "[fare] fare izleyen kılavuz: %d köşe\n", drawn);
+    // ASSERTED ONLY WHERE THERE IS A CANVAS TO DRAW ON. The scene is built in
+    // `paintEvent`, and the offscreen platform gives a `QRhiWidget` no `QRhi`:
+    // it paints nothing, so it builds nothing, and a guide count of zero there
+    // is the absence of a backend rather than the absence of a guide. Run with a
+    // real window — `KENTOS_REALMOUSE_PROBE` and no `QT_QPA_PLATFORM` — and this
+    // is the check that matters.
+    if (!canvas_->grabCanvas().isNull())
+        check(drawn > 0, QStringLiteral("kılavuz fareyi izliyor"));
+    else
+        (void)std::fprintf(stdout, "[fare] BEKLEMEDE: tuval çizmiyor (QRhi yok); kılavuzun "
+                                   "ekranda olduğu ancak gerçek pencerede sınanır\n");
+
+    if (shooting) {
+        QImage picture = grab().toImage();
+        if (const QImage live = canvas_->grabCanvas(); !live.isNull() && !picture.isNull()) {
+            QPainter painter(&picture);
+            painter.drawImage(QRect(canvas_->mapTo(this, QPoint(0, 0)), canvas_->size()), live);
+        }
+        (void)picture.save(into + QStringLiteral("/cizgi-kilavuz.png"));
+    }
+
+    onCanvas(QEvent::MouseButtonPress, second, Qt::LeftButton);
+    onCanvas(QEvent::MouseButtonRelease, second, Qt::LeftButton);
+    onCanvas(QEvent::MouseButtonPress, second, Qt::RightButton);
+    onCanvas(QEvent::MouseButtonRelease, second, Qt::RightButton);
+    QCoreApplication::processEvents();
+
+    check(controller_->document().live_entity_count() > 0,
+          QStringLiteral("fareyle çizilen çizgi belgeye girdi (%1 nesne)")
+              .arg(controller_->document().live_entity_count()));
+
+    (void)std::fprintf(stdout, "[fare] %d kusur\n", failures);
+    return failures;
+}
+
+int MainWindow::probeFlyouts()
+{
+    const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_FLYOUT_PROBE"));
+    const bool shooting = into.size() > 1;
+    if (shooting) QDir().mkpath(into);
+
+    int failures     = 0;
+    const auto check = [&failures](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[kart] %s: %s\n", ok ? "tamam" : "BAŞARISIZ",
+                           what.toUtf8().constData());
+        (void)std::fflush(stdout);
+        if (!ok) ++failures;
+    };
+
+    runScriptLine(QStringLiteral("SEÇ mod=TÜMÜ"));
+    runScriptLine(QStringLiteral("SİL"));
+    runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+    runScriptLine(QStringLiteral("ALAN 0,0 40,0 40,30 0,30"));
+    QCoreApplication::processEvents();
+
+    /// One of the three gestures that open a family card, on a real button.
+    /// Returns the card, which is ours rather than whatever popup happened to be
+    /// up: a completer list is a popup too.
+    enum class How { Hold, RightClick, Mark };
+    const auto ours = [] {
+        QWidget* popup = QApplication::activePopupWidget();
+        return popup != nullptr && popup->property("kentos.rows").isValid() ? popup : nullptr;
+    };
+    const auto open = [&ours](QToolButton* button, How how) {
+        const QPointF centre(button->width() / 2.0, button->height() / 2.0);
+        // The mark is the wedge in the bottom-right corner, so the press has to
+        // land inside it rather than near it.
+        const QPointF corner(button->width() - 2.0, button->height() - 2.0);
+        const QPointF at            = how == How::Mark ? corner : centre;
+        const Qt::MouseButton which = how == How::RightClick ? Qt::RightButton : Qt::LeftButton;
+
+        QMouseEvent down(QEvent::MouseButtonPress, at, button->mapToGlobal(at), which, which,
+                         Qt::NoModifier);
+        QCoreApplication::sendEvent(button, &down);
+        if (how == How::Hold) {
+            // The hold timer IS the gesture, so it is waited out rather than
+            // faked: a change to its interval shows up here instead of in the
+            // field. Bounded, because a card that never opens must not hang.
+            QElapsedTimer waited;
+            waited.start();
+            while (waited.elapsed() < 600 && ours() == nullptr)
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+        }
+        QCoreApplication::processEvents();
+
+        // A HAND REACHING FOR THE CARD MOVES OFF THE BUTTON, and that is what
+        // tells the button this was a hold rather than a slow click: released in
+        // place, a hold runs the face tool instead (see `FamilyButton`). The move
+        // has to happen here, or this probe would be testing a gesture it is not
+        // making.
+        if (how == How::Hold && ours() != nullptr) {
+            const QPointF off(button->width() + 20.0, button->height() / 2.0);
+            QMouseEvent away(QEvent::MouseMove, off, button->mapToGlobal(off), Qt::NoButton,
+                             Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(button, &away);
+            QCoreApplication::processEvents();
+        }
+
+        QMouseEvent up(QEvent::MouseButtonRelease, at, button->mapToGlobal(at), which, Qt::NoButton,
+                       Qt::NoModifier);
+        QCoreApplication::sendEvent(button, &up);
+        QCoreApplication::processEvents();
+        return ours();
+    };
+
+    /// Chooses the `index`-th row on an open card, the way a hand does.
+    const auto choose = [](QWidget* card, int index) {
+        const QPoint first = card->property("kentos.rowCentre").toPoint();
+        const int pitch    = card->property("kentos.rowPitch").toInt();
+        const QPointF on(first.x(), first.y() + (index * pitch));
+        for (const QEvent::Type t :
+             {QEvent::MouseMove, QEvent::MouseButtonPress, QEvent::MouseButtonRelease}) {
+            QMouseEvent ev(t, on, card->mapToGlobal(on),
+                           t == QEvent::MouseMove ? Qt::NoButton : Qt::LeftButton,
+                           t == QEvent::MouseButtonRelease ? Qt::NoButton : Qt::LeftButton,
+                           Qt::NoModifier);
+            QCoreApplication::sendEvent(card, &ev);
+        }
+        QCoreApplication::processEvents();
+    };
+
+    int families = 0;
+    int members  = 0;
+    for (QToolButton* button : toolBox_->buttons()) {
+        if (!button->property("kentos.family").toBool()) continue;
+        ++families;
+
+        QAction* face       = button->defaultAction();
+        const QString label = face == nullptr ? QStringLiteral("?") : face->text();
+
+        QWidget* card = open(button, How::Hold);
+        check(card != nullptr, QStringLiteral("%1: basılı tutmak kartı açıyor").arg(label));
+        if (card == nullptr) continue;
+
+        const int rows = card->property("kentos.rows").toInt();
+        check(rows > 1, QStringLiteral("%1: kartta %2 üye var").arg(label).arg(rows));
+        if (shooting)
+            (void)card->grab().save(into + QStringLiteral("/kart-") + label +
+                                    QStringLiteral(".png"));
+        card->close();
+        QCoreApplication::processEvents();
+
+        // THE OTHER TWO GESTURES OPEN IT TOO. A card that only answers a hold is
+        // a card most users never see: the wedge is drawn in the corner, so it
+        // has to be a target, and a right click is what a CAD hand tries first.
+        for (const auto& [how, named] :
+             {std::pair{How::RightClick, "sağ tık"}, std::pair{How::Mark, "köşe işareti"}}) {
+            QWidget* again = open(button, how);
+            check(again != nullptr,
+                  QStringLiteral("%1: %2 kartı açıyor").arg(label, QString::fromUtf8(named)));
+            if (again != nullptr) {
+                again->close();
+                QCoreApplication::processEvents();
+            }
+        }
+
+        // AND EVERY MEMBER RUNS. Chosen from the card rather than triggered,
+        // because choosing is what a hand does and the card's own signal is what
+        // carries it — eleven tools live only here and none had been pressed.
+        for (int i = 0; i < rows; ++i) {
+            controller_->cancelInteractive();
+            QCoreApplication::processEvents();
+
+            QWidget* live = open(button, How::Hold);
+            if (live == nullptr) {
+                check(false,
+                      QStringLiteral("%1: %2. üye için kart açılmadı").arg(label).arg(i + 1));
+                break;
+            }
+            choose(live, i);
+            ++members;
+
+            // The face follows the choice, and the chosen tool is what started.
+            QAction* armed = button->defaultAction();
+            const QString word =
+                armed == nullptr ? QString() : armed->property(kToolCommand).toString();
+            // WHAT "IT RAN" MEANS. A modal draw tool suspends on its first
+            // question and the session is waiting; one that works on the
+            // selection finishes on the spot and lights its button. Either is
+            // the tool having run; neither happening is the card doing nothing.
+            const command::Session* running = controller_->session();
+            const bool started =
+                (running != nullptr && (running->waiting() || running->working())) ||
+                (armed != nullptr && armed->isChecked());
+            check(!word.isEmpty() && started,
+                  QStringLiteral("%1 > %2. üye (%3) çalıştı").arg(label).arg(i + 1).arg(word));
+        }
+        controller_->cancelInteractive();
+        QCoreApplication::processEvents();
+    }
+
+    (void)std::fprintf(stdout, "[kart] %d aile, %d üye, %d kusur\n", families, members, failures);
     return failures;
 }
 

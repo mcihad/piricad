@@ -51,15 +51,31 @@ constexpr int kFlyNub    = 6;  ///< the little wedge that points back at the but
 constexpr int kFlyBar    = 3;  ///< the accent bar marking the member in force
 constexpr int kFlyMinW   = 190;
 
-/// Press and hold this long and the family opens instead of the tool running.
-/// Below ~200 ms a deliberate click starts opening it; above ~400 ms the hold
-/// feels broken. Windows uses 400, macOS 250; this sits where a CAD user's
-/// stab at a tool button lands.
-constexpr int kHoldMs = 280;
+/// Press and hold this long and the family card opens.
+///
+/// IT WAS 280 ms AND THAT BROKE THE TOOL. A click is a press and a release, and
+/// a hand's is not instant: a deliberate stab at a tool button routinely takes
+/// longer than 280 ms. Past it the card opened instead of the tool running, and
+/// because an open Qt popup grabs the mouse, the next press on the same button
+/// only dismissed the card and was swallowed. Slow click, card. Click again,
+/// card closes, nothing ran. Click again, card. A user reported exactly that —
+/// drawing never works, all three of them — and all three were the members of
+/// ONE family button.
+///
+/// 500 ms is the long-press every platform agrees on (macOS, Android, and every
+/// tool palette that has one). The release rule below is the other half of the
+/// fix and matters more: a slow click still runs the tool.
+constexpr int kHoldMs = 500;
 
-/// The corner mark: a small wedge in the bottom-right of a button that holds a
-/// family. Every tool palette since the first one has drawn one.
+/// The corner mark: a wedge in the bottom-right of a button that holds a family,
+/// and a TARGET as well as a sign. Every tool palette since the first one has
+/// drawn one.
 constexpr int kMark = 5;
+
+/// How far into the button the corner mark's target reaches. The wedge is drawn
+/// 5 px across; a 5 px target in a 46 px button is a target nobody hits, so the
+/// hit area is the corner quarter-ish while the drawing stays small.
+constexpr int kMarkTarget = 14;
 
 const Tokens& tokensOf(ThemeMode mode)
 {
@@ -114,13 +130,15 @@ public:
 protected:
     void mousePressEvent(QMouseEvent* event) override
     {
-        held_ = false;
+        held_  = false;
+        moved_ = false;
         // The corner mark is a target of its own: a user who can see the wedge
         // should not have to discover that holding does the same thing.
-        const bool onMark = event->position().x() > width() - (kMark * 2) &&
-                            event->position().y() > height() - (kMark * 2);
+        const bool onMark = event->position().x() > width() - kMarkTarget &&
+                            event->position().y() > height() - kMarkTarget;
         if (event->button() == Qt::RightButton || onMark) {
-            held_ = true;
+            held_  = true;
+            moved_ = true; ///< asked for the card on purpose; the release keeps it
             open_(this);
             return;
         }
@@ -128,13 +146,30 @@ protected:
         QToolButton::mousePressEvent(event);
     }
 
+    void mouseMoveEvent(QMouseEvent* event) override
+    {
+        // LEAVING THE BUTTON IS WHAT MAKES IT A HOLD. A hand on its way to the
+        // card moves off the button; a hand making a slow click does not.
+        if (!rect().contains(event->position().toPoint())) moved_ = true;
+        QToolButton::mouseMoveEvent(event);
+    }
+
     void mouseReleaseEvent(QMouseEvent* event) override
     {
         hold_.stop();
-        // A release after the card opened must not ALSO run the tool: the user
-        // was reaching for the family, not for the face.
         if (held_) {
             setDown(false);
+            // A SLOW CLICK IS STILL A CLICK. Released on the button without ever
+            // leaving it, the user reached for the TOOL and their hand was merely
+            // slower than a timer: the card goes away and the face runs. Only a
+            // hand that moved off the button — or asked for the card by its mark
+            // or the right button — is reaching for the family.
+            if (!moved_ && rect().contains(event->position().toPoint())) {
+                if (QWidget* card = QApplication::activePopupWidget();
+                    card != nullptr && card->property("kentos.rows").isValid())
+                    card->close();
+                if (QAction* face = defaultAction(); face != nullptr) face->trigger();
+            }
             return;
         }
         QToolButton::mouseReleaseEvent(event);
@@ -161,6 +196,10 @@ private:
     std::function<void(FamilyButton*)> open_;
     QTimer hold_;
     bool held_{false};
+
+    /// Whether the pointer left the button after the press: a hand on its way to
+    /// the card, rather than one making a slow click.
+    bool moved_{false};
     ThemeMode theme_ = ThemeMode::Dark;
 };
 
@@ -262,6 +301,16 @@ void ToolFlyout::reveal(const QVector<QAction*>& family, QAction* current, const
     }
     move(anchor.x(), top);
     nub_ = anchor.y() - top;
+
+    // WHERE ITS ROWS ARE, for `KENTOS_FLYOUT_PROBE`. Eleven tools live only
+    // behind these cards and no test had ever pressed one, because a test cannot
+    // click a row whose position it has no way to learn. Dynamic properties
+    // rather than an accessor: the class is private to this file and the probe
+    // is the only reader.
+    setProperty("kentos.rows", static_cast<int>(family_.size()));
+    setProperty("kentos.rowPitch", kFlyRow);
+    setProperty("kentos.rowCentre",
+                QPoint(kFlyShadow + (kFlyMinW / 2), kFlyShadow + kFlyPadV + (kFlyRow / 2)));
 
     show();
     setFocus(Qt::PopupFocusReason);
@@ -509,6 +558,11 @@ void ToolBox::addFamily(const QVector<QAction*>& family)
         });
 
     button->setObjectName(QStringLiteral("toolBoxButton"));
+    // IT IS A FAMILY, and a probe has to be able to tell. Pressing an ordinary
+    // tool button runs its command; pressing a family button and holding opens a
+    // card. A probe that could not tell them apart had to press everything to
+    // find out, which starts nineteen commands to open four cards.
+    button->setProperty("kentos.family", true);
     button->setDefaultAction(family.front());
     button->setIconSize(QSize(kIcon, kIcon));
     button->setFixedSize(kButton, kButton);
