@@ -1,0 +1,1 @@
+SEÇ ifade="alan_m2" > 2000 AND "plan_fonksiyon" = 'Konut'

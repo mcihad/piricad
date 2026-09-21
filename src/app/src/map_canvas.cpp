@@ -3,6 +3,7 @@
 
 #include "kentos_cad/app/backend_factory.hpp"
 #include "kentos_cad/app/controller.hpp"
+#include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/core/area_edit.hpp"
 #include "kentos_cad/core/block_reference.hpp"
@@ -201,8 +202,12 @@ void MapCanvas::reloadGridSettings()
     look_.pick_px         = static_cast<double>(store.get("core.secim.tolerans").as_int());
     options_.line_weights = store.get("core.harita.kalinlik").as_bool();
     if (underMouse()) applyPointer();
-    look_.angle_unit = static_cast<int>(store.get("core.aci.birim").as_enum());
-    look_.step       = controller_.bus().session_settings().get("core.yakalama.adim").as_length();
+    // Through the bus, which knows which store each of the two settings lives
+    // in: the unit is a PROJECT setting and reading it from the app store — as
+    // this did — answered the fallback, so `AYAR açı_birimi derece` never
+    // reached the readout.
+    look_.angle = controller_.bus().angle_convention();
+    look_.step  = controller_.bus().session_settings().get("core.yakalama.adim").as_length();
 
     look_.marker_rgba     = colour("core.yakalama.isaret_rengi");
     look_.grid_rgba       = colour("core.izgara.renk");
@@ -897,17 +902,16 @@ std::string spaced(double value)
     return whole < 0 ? "-" + digits : digits;
 }
 
-/// The bearing from `a` to `b`, written in the project's angle unit.
+/// The direction from `a` to `b`, written under the session's angle convention.
 ///
-/// AZIMUT, which is measured CLOCKWISE FROM NORTH — not the mathematical angle
-/// counter-clockwise from east. That is the number a Turkish surveyor reads off a
-/// total station, writes in a traverse sheet and types into a setting-out list,
-/// and getting it wrong by ninety degrees or by a sign is the kind of mistake
-/// that reaches a parsel corner.
-///
-/// GRAD by default (`core.aci.birim`), because a full circle is 400 grad in
-/// Turkish triangulation, traverse and setting-out arithmetic.
-std::string bearing_text(core::Point2 a, core::Point2 b, int unit);
+/// AZIMUT by default — CLOCKWISE FROM NORTH, in GRAD — not the mathematical
+/// angle counter-clockwise from east. That is the number a Turkish surveyor reads
+/// off a total station, writes in a traverse sheet and types into a setting-out
+/// list, and getting it wrong by ninety degrees or by a sign is the kind of
+/// mistake that reaches a parsel corner. A user who set `MOD kural matematik`
+/// reads the mathematical angle here too, because what the readout shows and
+/// what `@mesafe<açı` means must be one convention (TODOS-CAD P0-4).
+std::string bearing_text(core::Point2 a, core::Point2 b, core::AngleConvention convention);
 
 std::string trimmed(double value, int places)
 {
@@ -919,28 +923,14 @@ std::string trimmed(double value, int places)
     return out;
 }
 
-std::string bearing_text(core::Point2 a, core::Point2 b, int unit)
+std::string bearing_text(core::Point2 a, core::Point2 b, core::AngleConvention convention)
 {
-    const double dx = static_cast<double>(b.x - a.x);
-    const double dy = static_cast<double>(b.y - a.y);
-    if (dx == 0.0 && dy == 0.0) return {};
+    if (a == b) return {};
 
-    // Clockwise from north: atan2(east, north), not atan2(north, east). A reading
-    // taken the other way round is the mathematical angle, and a surveyor
-    // comparing it against an instrument would find every value mirrored about
-    // the 50-grad line.
-    //
-    // This is a LABEL, not a stored value, so `atan2` is allowed here: nothing in
-    // §7.3's bit-identity requirement passes through it. The engine's own
-    // constraints use `sin_cos_udeg` for exactly that reason.
-    double turns = std::atan2(dx, dy) / (2.0 * 3.14159265358979323846);
-    if (turns < 0.0) turns += 1.0;
-
-    switch (unit) {
-    case 1: return trimmed(turns * 360.0, 3) + "°";
-    case 2: return trimmed(turns * 2.0 * 3.14159265358979323846, 5) + " rad";
-    default: return trimmed(turns * 400.0, 3) + " grad";
-    }
+    // The one direction-and-text pair the whole program uses — ÖLÇ and
+    // APLİKASYON print through the same two functions — so the figure on the
+    // dragged line is the figure the report will show.
+    return core::angle_text(core::direction_turns(a, b, convention.rule), convention.unit);
 }
 
 } // namespace
@@ -1702,7 +1692,7 @@ void MapCanvas::buildOverlay()
             const core::Mm length = core::segment_length(from_world, to_world);
             if (length > 0) {
                 std::string text = trimmed(static_cast<double>(length) / 1000.0, 3) + " m";
-                text += "  " + bearing_text(from_world, to_world, look_.angle_unit);
+                text += "  " + bearing_text(from_world, to_world, look_.angle);
 
                 // ON the line, at its middle, lifted clear of it. Beside the
                 // cursor it would fight the snap marker and its mode name, which

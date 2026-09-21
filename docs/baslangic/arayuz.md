@@ -362,12 +362,15 @@ bir uzunluktan her zaman önceliklidir.
 Kılavuz çizgi sürüklenirken üzerinde **uzunluk** ve **azimut** yazar:
 
 ```text
-24,000 m  62,500 grad
+24,000 m  62,5000 grad
 ```
 
-Azimut **kuzeyden saat yönünde** ölçülür — aletten okuduğunuz değerdir, matematik
-açısı değil. Birim `açı_birimi` tercihine uyar ve varsayılanı **grad**'dır: tam
-daire 400. `Seçenekler ▸ Genel ▸ Açı birimi` ile derece ya da radyana çevirirsiniz.
+Açı varsayılan olarak **azimuttur**: kuzeyden saat yönünde ölçülür — aletten okuduğunuz
+değer, matematik açısı değil. Birimi `açı_birimi` ayarına uyar ve varsayılanı **grad**'dır:
+tam daire 400. `Seçenekler ▸ Genel ▸ Açı birimi` ile derece ya da radyana çevirirsiniz.
+`MOD kural matematik` yazılmışsa açı doğudan saat yönünün tersine yazılır — komut satırına
+yazdığınız `@mesafe<açı` ile aynı kural, tek ayardan (bkz.
+[Oturum modları](../komutlar/mode.md)).
 
 Durum çubuğundaki **DİNAMİK GİRDİ** anahtarı bu okumayı kapatır.
 

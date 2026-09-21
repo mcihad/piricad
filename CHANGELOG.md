@@ -6,6 +6,40 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Değişti — `@mesafe<açı` artık semt açısı okur: kuzeyden saat yönüne, grad
+
+Kutupsal koordinatın açısı bugüne kadar sabit bir matematik kuralıyla — derece,
+doğudan saat yönünün tersine — okunuyordu ve `açı_birimi` ayarı (varsayılanı
+`grad`) bu yolda hiç okunmuyordu. Bir harita mühendisinin aletten okuduğu açı
+semt açısıdır; `@100<45` artık 45 grad kuzeyden saat yönüne demektir
+(TODOS-CAD P0).
+
+- **`core.aci.kural` oturum modu** (`semt` varsayılan · `matematik`; adları
+  `açı_kuralı`, `aci_kurali`, `anglerule`, `kural`). `MOD kural matematik`
+  eski yöne, `AYAR açı_birimi derece` eski birime döner. Komut günlüğü çözülmüş
+  koordinatı tuttuğu için kayıtlı hiçbir oturum ve betik değişmez; yalnız canlı
+  metnin — komut satırı, betik dizesi, öneri — anlamı değişti.
+- **Kutupsal çözüm iki ayarı okur.** `@100<0` semt'te kuzeye, matematik'te doğuya
+  gider; `@100<50` (grad) köşegen. Ayarlar ayrıştırıcıya `core::AngleConvention`
+  olarak geçer, global okunmaz. Trigonometri `core/trig.hpp`'nin belirlenimci
+  `sin_cos_udeg`'i: kutupsal biçim libm'e giden son yoldu, artık üç platformda
+  bit-özdeştir (§7.3).
+- **Açık birim soneki:** `@100<45g`, `@100<45d`, `@100<0.7r` — büyük harf de
+  olur, parantezli ifadeden sonra da (`@100<(40+5)g`). Yanlış harf adıyla
+  reddedilir, sessizce sonek sayılmaz.
+- **`ÖLÇ`, `APLİKASYON` ve sürüklerken okunan açı** aynı iki ayarla yazılır:
+  `40,9666 grad (kuzeyden saat yönünde)`. Üç ayrı biçimleyici tek
+  `core::angle_text`'e indi. Tuval, proje kapsamındaki `açı_birimi`'ni uygulama
+  deposundan okuyordu ve hep varsayılanı görüyordu — düzeltildi; `MOD kural` ve
+  `AYAR açı_birimi` okumayı anında yeniler.
+- **Betik dizesinde koordinat.** `"noktalar": ["0,0", "@100<50"]` komut
+  satırıyla aynı gramerle, aynı kuralla okunur (metre). Eşitlik kanıtı: arayüz =
+  komut satırı = betik, aynı belge ve aynı günlük; günlük başka kuralda aynen
+  oynar.
+- Gramer fuzz hedefi `kentos_fuzz_komut` ve 14 tohumluk korpus (her yapıda
+  yeniden oynatılır); `koordinat-bicimleri` altın senaryosu iki kural ve üç
+  birimle yeniden kaydedildi.
+
 ### Eklendi — `YENİ`: yeni çizim başlatmanın bir yolu var
 
 `Dosya ▸ Yeni` bugüne kadar sönük bir Faz 1 yer tutucusuydu ve `YENİ` diye bir

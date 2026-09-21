@@ -732,10 +732,12 @@ void Field::applyValidator()
     if (spec_.kind == FieldKind::Point) {
         // Two numbers and a comma between them, in either decimal separator,
         // with the relative and polar forms the command line reads (`@50,30`,
-        // `@100<45`) allowed through — the parser is the judge of those.
+        // `@100<45`, `@100<45g` with its unit suffix) allowed through — the
+        // parser is the judge of those. A form that refused the suffix would be
+        // a weaker client than the command line (Article 1.2).
         line_->setValidator(new QRegularExpressionValidator(
-            QRegularExpression(
-                QStringLiteral("^@?[+-]?\\d*(?:[.,]\\d*)?(?:[,<][+-]?\\d*(?:[.,]\\d*)?)?$")),
+            QRegularExpression(QStringLiteral(
+                "^@?[+-]?\\d*(?:[.,]\\d*)?(?:[,<][+-]?\\d*(?:[.,]\\d*)?[gdrGDR]?)?$")),
             line_));
         return;
     }

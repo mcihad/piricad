@@ -1,0 +1,1 @@
+YAZI 0,0 bicim="{taks}\n{kaks}" ad="a\"b\\c" hedef="host=localhost dbname=x"

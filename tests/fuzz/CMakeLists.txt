@@ -40,6 +40,11 @@ endfunction()
 
 kentos_fuzz_target(kentos_fuzz_proje fuzz_proje.cpp)
 
+# THE grammar (command/parser.hpp): the one parser the command line, the script
+# engine and the AI share (CLAUDE.md 5.11), so a crash in it is reachable from
+# every client. test.md R9 lists it by name.
+kentos_fuzz_target(kentos_fuzz_komut fuzz_komut.cpp)
+
 # The DXF harness exercises the KentOSCad side of the GDAL seam, so it only exists
 # when that seam is compiled in.
 if(KENTOS_WITH_GDAL)
@@ -58,12 +63,17 @@ endif()
 # reason about, and a genuinely interesting find is copied in deliberately
 # (test.md R10).
 set(KENTOS_FUZZ_SCRATCH "${CMAKE_BINARY_DIR}/fuzz-corpus")
-file(MAKE_DIRECTORY "${KENTOS_FUZZ_SCRATCH}/proje" "${KENTOS_FUZZ_SCRATCH}/dxf"
-                    "${KENTOS_FUZZ_SCRATCH}/shp")
+file(MAKE_DIRECTORY "${KENTOS_FUZZ_SCRATCH}/proje" "${KENTOS_FUZZ_SCRATCH}/komut"
+                    "${KENTOS_FUZZ_SCRATCH}/dxf" "${KENTOS_FUZZ_SCRATCH}/shp")
 
 add_test(NAME fuzz_proje_smoke
     COMMAND kentos_fuzz_proje "${KENTOS_FUZZ_SCRATCH}/proje"
             "${CMAKE_CURRENT_SOURCE_DIR}/tohum/proje"
+            -runs=2000 -max_total_time=30 -seed=1)
+
+add_test(NAME fuzz_komut_smoke
+    COMMAND kentos_fuzz_komut "${KENTOS_FUZZ_SCRATCH}/komut"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tohum/komut"
             -runs=2000 -max_total_time=30 -seed=1)
 
 if(KENTOS_WITH_GDAL)

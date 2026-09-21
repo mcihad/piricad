@@ -9,13 +9,20 @@
 //   command                       ÇİZGİ | LINE | Ç | L
 //   absolute point                485320.150,4310220.400          (metres)
 //   relative point                @50,30
-//   polar point                   @100<45                          (metres, degrees CCW)
+//   polar point                   @100<45   @100<45g  @100<30d  @100<0.7r
+//                                 metres, then the angle: bare, it is read in the
+//                                 session's unit and rule — `core.aci.birim` and
+//                                 `core.aci.kural`, SEMT + GRAD by default, so
+//                                 `@100<45` is 45 grad clockwise from north — or
+//                                 in the unit its g/d/r suffix names. The rule is
+//                                 never written on the coordinate (TODOS-CAD P0).
 //   inline expression             @(100*3),0
 //   keyword argument              `katman`=SINIR   mesafe=-3.0
 //   text                          "yol kenarı"
 #pragma once
 
 #include "kentos_cad/command/value.hpp"
+#include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/result.hpp"
 #include "kentos_cad/core/units.hpp"
 
@@ -44,16 +51,22 @@ struct Token
         Text,     ///< "quoted string"
         Absolute, ///< x,y in metres
         Relative, ///< @dx,dy in metres, from the last point
-        Polar,    ///< @distance<angle, metres and degrees
+        Polar,    ///< @distance<angle[g|d|r], metres and an angle (see `angle_unit`)
         KeyValue, ///< key=<nested token>
     };
 
     Kind kind{Kind::Word};     ///< which of the fields below carry meaning
     std::string word;          ///< Word text, or the key of a KeyValue
     double a{0.0};             ///< Number value, x, dx, or distance
-    double b{0.0};             ///< y, dy, or angle in degrees
+    double b{0.0};             ///< y, dy, or the angle exactly as written
     std::string text;          ///< Text payload
     std::vector<Token> nested; ///< KeyValue payload (exactly one element)
+
+    /// The unit a Polar angle's suffix named — `@100<45g` grad, `d` degree, `r`
+    /// radian — or empty when the angle was written bare and the session's
+    /// `core.aci.birim` decides. Carried on the token rather than applied here,
+    /// because the tokeniser has no convention in hand: `resolve_point` does.
+    std::optional<core::AngleUnit> angle_unit;
 };
 
 struct ParsedLine
@@ -107,7 +120,26 @@ core::Result<bool> evaluate_predicate(std::string_view expr, const FieldReader& 
 
 /// Converts a coordinate token to an absolute point, resolving @ forms against
 /// `last`. Returns an error for a non-coordinate token.
-core::Result<core::Point2> resolve_point(const Token& t, core::Point2 last);
+///
+/// A polar token is resolved under `convention` — the unit a bare angle is in and
+/// which way it grows — with the token's own suffix overriding the unit. The
+/// convention is a PARAMETER: the bus reads it from the session settings once per
+/// line and hands it down, so the parser holds no global and the script engine,
+/// the command line and a typed answer cannot resolve the same text two ways
+/// (CLAUDE.md 5.11, TODOS-CAD P0-2).
+core::Result<core::Point2> resolve_point(const Token& t, core::Point2 last,
+                                         core::AngleConvention convention);
+
+/// Reads ONE coordinate written as text — `485320,4310220`, `@50,30`, `@100<45g`,
+/// exactly what the command line accepts — and resolves it against `last`.
+///
+/// The same grammar, entered from a string rather than a line: it is how a JSON
+/// script or any other client that carries a coordinate as text gets it read by
+/// `classify` and `resolve_point` and nothing else (CLAUDE.md 5.11). Surrounding
+/// blanks are ignored; anything that is not a coordinate is refused with the
+/// message a typed line would get.
+core::Result<core::Point2> parse_point(std::string_view text, core::Point2 last,
+                                       core::AngleConvention convention);
 
 /// True when the token can become a point.
 bool is_coordinate(const Token& t);

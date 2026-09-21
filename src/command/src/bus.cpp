@@ -37,6 +37,14 @@ core::SettingValue Bus::setting(std::string_view id) const
     return store == nullptr ? core::SettingValue{} : store->get(id);
 }
 
+core::AngleConvention Bus::angle_convention() const
+{
+    return core::AngleConvention{
+        .unit = core::angle_unit_from_setting(setting("core.aci.birim").as_enum()),
+        .rule = core::angle_rule_from_setting(setting("core.aci.kural").as_enum()),
+    };
+}
+
 core::Result<core::SettingChange> Bus::set_setting(std::string_view id,
                                                    const core::SettingValue& value)
 {
@@ -69,7 +77,8 @@ std::int64_t now_ms()
 /// Folds the token stream of one command line into the command's declared
 /// parameters. The CLI, macro playback and the script engine share this, because
 /// they share the grammar (kentoscad.md §3).
-core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>& tokens)
+core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>& tokens,
+                               core::AngleConvention convention)
 {
     Args args;
     core::Point2 last{};
@@ -137,7 +146,7 @@ core::Result<Args> bind_tokens(const CommandSpec& spec, const std::vector<Token>
 
     const auto value_from_token = [&](const Param& p, const Token& t) -> core::Result<Value> {
         if (is_coordinate(t)) {
-            auto pt = resolve_point(t, last);
+            auto pt = resolve_point(t, last, convention);
             if (!pt) return pt.error();
             last      = pt.value();
             have_last = true;
@@ -414,6 +423,56 @@ core::Result<DispatchResult> Bus::dispatch(const Invocation& inv)
         args = &repaired;
     }
 
+    // TEXT FOR A POINT IS READ BY THE ONE GRAMMAR. A JSON script may write a
+    // coordinate the way the command line does — `"0,0"`, `"@100<50"`, in
+    // metres — and it means exactly what it means typed (CLAUDE.md 5.11, Article
+    // 1.2): read by `parse_point` under the session's angle convention, chained
+    // from one point to the next in declaration order as a typed line is, and
+    // turned into points BEFORE validation so the validator and the body see
+    // what they always saw. A word that is not a coordinate is refused with the
+    // parser's own message. The AI and MCP layers never reach this branch: both
+    // refuse a textual position while it is still JSON (CLAUDE.md 5.8, ai.md
+    // R10), so nothing here lets a coordinate originate in model text.
+    {
+        core::Point2 last{};
+        const core::AngleConvention convention = angle_convention();
+        for (const auto& p : spec->params) {
+            if (p.kind != ParamKind::Point && p.kind != ParamKind::PointList) continue;
+            const Value* v = args->find(p.name);
+            if (v == nullptr) continue;
+            if (v->kind() == Value::Kind::Point) {
+                last = v->as_point();
+                continue;
+            }
+            if (v->kind() == Value::Kind::PointList) {
+                if (!v->as_points().empty()) last = v->as_points().back();
+                continue;
+            }
+            if (v->kind() != Value::Kind::Text && v->kind() != Value::Kind::TextList) continue;
+
+            Value::Points points;
+            const auto read = [&](const std::string& text) -> core::Status {
+                auto pt = parse_point(text, last, convention);
+                if (!pt) return pt.error();
+                last = pt.value();
+                points.push_back(pt.value());
+                return core::ok();
+            };
+            if (v->kind() == Value::Kind::Text) {
+                if (const auto st = read(v->as_text()); !st) return st.error();
+            } else {
+                for (const std::string& text : v->as_texts())
+                    if (const auto st = read(text); !st) return st.error();
+            }
+
+            if (args != &repaired) repaired = inv.args;
+            repaired.set(p.name, p.kind == ParamKind::Point && points.size() == 1
+                                     ? Value::point(points.front())
+                                     : Value::points(std::move(points)));
+            args = &repaired;
+        }
+    }
+
     // Validation runs on the bus, for every client, with no opt-out (§2.6).
     ValidationRequest req{*spec, *args, inv.origin, doc_};
     if (auto st = validator_.run(req); !st) return st.error();
@@ -449,7 +508,7 @@ core::Result<DispatchResult> Bus::execute_line(std::string_view line, Origin ori
         return core::err(ErrorCode::NotFound, "Bilinmeyen komut: '" + parsed.value().command +
                                                   "'. YARDIM yazarak komut listesini görün.");
 
-    auto args = bind_tokens(*spec, parsed.value().tokens);
+    auto args = bind_tokens(*spec, parsed.value().tokens, angle_convention());
     if (!args) return args.error();
 
     return dispatch(Invocation{spec->id, std::move(args.value()), origin});
@@ -472,7 +531,7 @@ core::Result<std::unique_ptr<Session>> Bus::begin_interactive(std::string_view l
         return core::err(ErrorCode::NotFound, "Bilinmeyen komut: '" + parsed.value().command +
                                                   "'. YARDIM yazarak komut listesini görün.");
 
-    auto args = bind_tokens(*spec, parsed.value().tokens);
+    auto args = bind_tokens(*spec, parsed.value().tokens, angle_convention());
     if (!args) return args.error();
 
     auto tx = std::make_unique<Transaction>(doc_, spec->summary.empty() ? spec->id : spec->summary);

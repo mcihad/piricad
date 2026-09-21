@@ -84,10 +84,12 @@ Aynı iki uç ters sırayla: dairenin öteki yayı, yani 270 derecelik olan:
 YAY merkez=485300,4310200 baslangic=485300,4310230 bitis=485330,4310200
 ```
 
-Kutupsal koordinatla, yarıçapı tam 50 metre olan 90 derecelik kurp:
+Başlangıç kutupsal koordinatla — merkezden 50 metre kuzeye (`@50<0`: semt açısı sıfır,
+kuzey) — bitiş yönü mutlak koordinatla, merkezin tam doğusu: yarıçapı tam 50 metre olan
+100 gradlık (90°) kurp:
 
 ```text
-YAY 485300,4310200 @50<0 @50<90
+YAY 485300,4310200 @50<0 485350,4310200
 ```
 
 ### Arayüz

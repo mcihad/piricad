@@ -12,6 +12,7 @@
 #include "kentos_test.hpp"
 
 #include "kentos_cad/command/bus.hpp"
+#include "kentos_cad/command/parser.hpp"
 #include "kentos_cad/command/registry.hpp"
 #include "kentos_cad/io/service.hpp"
 #include "kentos_cad/script/json_runner.hpp"
@@ -169,6 +170,111 @@ TEST_CASE("PROOF: gui, command line and script produce identical state and journ
     CHECK(gui.journal.entries().at(0).origin == Origin::Gui);
     CHECK(cli.journal.entries().at(0).origin == Origin::CommandLine);
     CHECK(scr.journal.entries().at(0).origin == Origin::Script);
+}
+
+TEST_CASE("PROOF: `@100<50` arayüzden, komut satırından ve betikten aynı belge, aynı günlük")
+{
+    // TODOS-CAD P0-6. The polar form is the one coordinate whose meaning depends
+    // on a setting, so it is the one that could split the three clients: the
+    // command line resolves it in `bind_tokens`, a script string in `dispatch`,
+    // and a typed answer to a prompt in the controller — three call sites, one
+    // `resolve_point`, one `Bus::angle_convention()`. Under the default semt +
+    // grad, 50 grad is 45° from north: the north-east diagonal.
+    constexpr core::Point2 kOrigin{0, 0};
+    constexpr core::Point2 kDiagonal{70711, 70711};
+
+    // ---- client 1: the GUI, answering the prompts with typed text exactly as
+    //      the controller does — parsed, resolved against the rubber origin under
+    //      the bus's convention, supplied as a point. ----
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("ÇİZGİ");
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+
+        for (const char* typed : {"0,0", "@100<50"}) {
+            REQUIRE(session.waiting());
+            auto answer = parse_line(std::string("YANIT ") + typed);
+            REQUIRE(answer.ok());
+            auto pt = resolve_point(answer.value().tokens.front(), session.prompt().rubber_origin,
+                                    gui.bus.angle_convention());
+            REQUIRE_MESSAGE(pt.ok(), pt.error().message);
+            CHECK(session.supply(Value::point(pt.value())).ok());
+        }
+        session.cancel(); // ESC
+        CHECK(gui.bus.finish(session).ok());
+    }
+
+    // ---- client 2: the command line ----
+    Rig cli;
+    CHECK(cli.bus.execute_line("ÇİZGİ 0,0 @100<50", Origin::CommandLine).ok());
+
+    // ---- client 3: a JSON script carrying the coordinates as TEXT, the way the
+    //      command line writes them, in metres ----
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Kutupsal kanıt",
+            "komutlar": [
+                {"cmd": "core.line", "args": {"noktalar": ["0,0", "@100<50"]}}
+            ]
+        })");
+        REQUIRE_MESSAGE(r.ok(), r.error().message);
+    }
+
+    // ---- the proof ----
+    for (Rig* rig : {&gui, &cli, &scr}) {
+        REQUIRE_EQ(rig->doc.live_entity_count(), std::size_t{1});
+        const auto& doc = rig->doc;
+        const auto span = doc.geometry().rings_of(doc.entities().slot[0]);
+        const auto xs   = doc.geometry().ring_xs(span.first);
+        const auto ys   = doc.geometry().ring_ys(span.first);
+        REQUIRE_EQ(xs.size(), std::size_t{2});
+        CHECK_EQ((core::Point2{xs[0], ys[0]}), kOrigin);
+        CHECK_EQ((core::Point2{xs[1], ys[1]}), kDiagonal);
+    }
+
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+
+    // The recorded arguments are byte-identical, and they carry the RESOLVED
+    // millimetres — no `@`, no `<`, no grad — which is what keeps every journal
+    // written before this change replaying unchanged. (`origin` is the one field
+    // that legitimately differs, and `what_happened` above already leaves it out.)
+    REQUIRE_EQ(cli.journal.entries().size(), std::size_t{1});
+    const std::string recorded = cli.journal.entries().front().args.to_json().dump();
+    CHECK_EQ(recorded, scr.journal.entries().front().args.to_json().dump());
+    CHECK_EQ(recorded, gui.journal.entries().front().args.to_json().dump());
+    CHECK(recorded.find("70711") != std::string::npos);
+    CHECK(recorded.find('<') == std::string::npos);
+
+    // ---- replay safety: the same journal reproduces the same document in a
+    //      session holding the OTHER convention, because a journal argument is a
+    //      resolved point and the convention never reaches it (journal.hpp). ----
+    Rig replay;
+    CHECK(replay.bus.execute_line("MOD kural matematik", Origin::Test).ok());
+    CHECK(replay.bus.execute_line("AYAR açı_birimi derece", Origin::Test).ok());
+    CHECK(replay.bus.angle_convention() ==
+          core::AngleConvention{core::AngleUnit::Degree, core::AngleRule::Matematik});
+    for (const auto& e : cli.journal.entries()) {
+        auto r = replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch});
+        CHECK(r.ok());
+    }
+    CHECK_EQ(replay.doc.content_hash(), cli.doc.content_hash());
+
+    // And the same TEXT, under another convention, is a different line — which
+    // is the whole point of the setting, and why only live text changed meaning.
+    // (50 grad is 45°, the one direction both RULES agree on, so the unit is
+    // what is changed here: 50° counter-clockwise from east is not the diagonal.)
+    Rig other;
+    CHECK(other.bus.execute_line("MOD kural matematik", Origin::Test).ok());
+    CHECK(other.bus.execute_line("AYAR açı_birimi derece", Origin::Test).ok());
+    CHECK(other.bus.execute_line("ÇİZGİ 0,0 @100<50", Origin::CommandLine).ok());
+    CHECK(other.doc.content_hash() != cli.doc.content_hash());
 }
 
 TEST_CASE("PROOF: undo collapses each client's run into exactly one step")

@@ -5,7 +5,10 @@
 #include "kentos_cad/core/grips.hpp"
 #include "kentos_cad/core/text.hpp"
 
+#include <filesystem>
+#include <fstream>
 #include <map>
+#include <sstream>
 
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/job.hpp"
@@ -212,16 +215,303 @@ TEST_CASE("parser handles absolute, relative, polar and inline expressions")
     CHECK(t[0].kind == Token::Kind::Absolute);
     CHECK(t[1].kind == Token::Kind::Relative);
     CHECK(t[2].kind == Token::Kind::Polar);
+    CHECK(!t[2].angle_unit.has_value()); // bare: the convention decides
     CHECK(t[3].kind == Token::Kind::Relative);
     CHECK_EQ(t[3].a, 300.0);
 
-    auto p0 = resolve_point(t[0], core::Point2{});
+    const core::AngleConvention semt_grad{};
+    auto p0 = resolve_point(t[0], core::Point2{}, semt_grad);
     CHECK(p0.ok());
     CHECK_EQ(p0.value(), (core::Point2{485320150, 4310220400}));
 
-    auto p1 = resolve_point(t[1], p0.value());
+    auto p1 = resolve_point(t[1], p0.value(), semt_grad);
     CHECK(p1.ok());
     CHECK_EQ(p1.value(), (core::Point2{485370150, 4310250400}));
+
+    // 45 grad clockwise from north is 40.5°: north-east, more north than east.
+    auto p2 = resolve_point(t[2], p1.value(), semt_grad);
+    CHECK(p2.ok());
+    CHECK(p2.value().x > p1.value().x);
+    CHECK(p2.value().y > p1.value().y);
+    CHECK(p2.value().y - p1.value().y > p2.value().x - p1.value().x);
+}
+
+// ------------------------------------------------------ the angle rule ----
+//
+// TODOS-CAD P0: `@mesafe<açı` is read under `core.aci.kural` and `core.aci.birim`,
+// SEMT + GRAD by default. Four quadrants × three units × two rules, each once
+// bare under the matching convention and once with its suffix under a FOREIGN
+// convention, so the suffix is proven to win. The axes must come out exact,
+// because `polar_offset` goes through `sin_cos_udeg` whose quadrant reduction is
+// integer arithmetic (§7.3).
+
+namespace {
+
+/// The quarter-turn multiples in each unit, written as a user would type them.
+const char* quarter_angle(core::AngleUnit unit, int k)
+{
+    static const char* const grad[]   = {"0", "100", "200", "300"};
+    static const char* const degree[] = {"0", "90", "180", "270"};
+    static const char* const radian[] = {"0", "1.5707963267948966", "3.141592653589793",
+                                         "4.71238898038469"};
+    switch (unit) {
+    case core::AngleUnit::Grad: return grad[k];
+    case core::AngleUnit::Degree: return degree[k];
+    case core::AngleUnit::Radian: return radian[k];
+    }
+    return grad[k];
+}
+
+/// Where 100 metres along the k-th quarter turn lands, from the origin, under
+/// `rule`: semt walks N, E, S, W; matematik walks E, N, W, S.
+core::Point2 quarter_target(core::AngleRule rule, int k)
+{
+    static const core::Point2 semt[]      = {{0, 100000}, {100000, 0}, {0, -100000}, {-100000, 0}};
+    static const core::Point2 matematik[] = {{100000, 0}, {0, 100000}, {-100000, 0}, {0, -100000}};
+    return rule == core::AngleRule::Semt ? semt[k] : matematik[k];
+}
+
+core::Result<core::Point2> polar(const std::string& token, core::AngleConvention convention)
+{
+    auto parsed = parse_line("YANIT " + token);
+    if (!parsed) return parsed.error();
+    REQUIRE_EQ(parsed.value().tokens.size(), std::size_t{1});
+    return resolve_point(parsed.value().tokens.front(), core::Point2{}, convention);
+}
+
+} // namespace
+
+TEST_CASE("AÇI KURALI: dört çeyrek × üç birim × iki kural, soneksiz ve sonekli")
+{
+    const core::AngleUnit units[] = {core::AngleUnit::Grad, core::AngleUnit::Degree,
+                                     core::AngleUnit::Radian};
+    const core::AngleRule rules[] = {core::AngleRule::Semt, core::AngleRule::Matematik};
+
+    for (core::AngleRule rule : rules)
+        for (core::AngleUnit unit : units)
+            for (int k = 0; k < 4; ++k) {
+                const core::Point2 want = quarter_target(rule, k);
+                const std::string angle = quarter_angle(unit, k);
+
+                // Bare, under the convention that names this unit.
+                auto bare = polar("@100<" + angle, core::AngleConvention{unit, rule});
+                REQUIRE_MESSAGE(bare.ok(), bare.error().message);
+                CHECK_MESSAGE(bare.value() == want, "@100<" << angle
+                                                            << " birim=" << static_cast<int>(unit)
+                                                            << " kural=" << static_cast<int>(rule));
+
+                // Suffixed, under a convention whose unit is DIFFERENT — the
+                // suffix names the unit, the convention still names the rule.
+                for (core::AngleUnit foreign : units) {
+                    if (foreign == unit) continue;
+                    const std::string token =
+                        "@100<" + angle + std::string(1, core::angle_unit_suffix(unit));
+                    auto suffixed = polar(token, core::AngleConvention{foreign, rule});
+                    REQUIRE_MESSAGE(suffixed.ok(), suffixed.error().message);
+                    CHECK_MESSAGE(suffixed.value() == want,
+                                  token << " yabancı birim=" << static_cast<int>(foreign));
+                }
+            }
+}
+
+TEST_CASE("AÇI KURALI: @100<0 semt'te kuzey, matematik'te doğu; varsayılan semt + grad")
+{
+    // The default convention is the one a Turkish surveyor holds: zero is north.
+    CHECK_EQ(polar("@100<0", core::AngleConvention{}).value(), (core::Point2{0, 100000}));
+    CHECK_EQ(
+        polar("@100<0", core::AngleConvention{core::AngleUnit::Grad, core::AngleRule::Matematik})
+            .value(),
+        (core::Point2{100000, 0}));
+
+    // 50 grad is 45°: the diagonal, and both axes round to the same millimetre.
+    CHECK_EQ(polar("@100<50", core::AngleConvention{}).value(), (core::Point2{70711, 70711}));
+
+    // The OLD meaning — degrees counter-clockwise from east — is one rule and one
+    // unit away, and the `d` suffix reaches the unit without touching the setting.
+    const core::AngleConvention old_way{core::AngleUnit::Degree, core::AngleRule::Matematik};
+    CHECK_EQ(polar("@100<45", old_way).value(), (core::Point2{70711, 70711}));
+    CHECK_EQ(polar("@100<90", old_way).value(), (core::Point2{0, 100000}));
+    CHECK_EQ(
+        polar("@100<90d", core::AngleConvention{core::AngleUnit::Grad, core::AngleRule::Matematik})
+            .value(),
+        (core::Point2{0, 100000}));
+
+    // Negative and over-full angles wrap like an instrument's circle does.
+    CHECK_EQ(polar("@100<-100", core::AngleConvention{}).value(), (core::Point2{-100000, 0}));
+    CHECK_EQ(polar("@100<500", core::AngleConvention{}).value(), (core::Point2{100000, 0}));
+}
+
+TEST_CASE("AÇI KURALI: sonek büyük harfle de okunur, ifadeden sonra da; yanlış harf reddedilir")
+{
+    const core::AngleConvention semt_grad{};
+
+    CHECK_EQ(polar("@100<90D", semt_grad).value(), (core::Point2{100000, 0}));
+    CHECK_EQ(polar("@100<100G", semt_grad).value(), (core::Point2{100000, 0}));
+    CHECK_EQ(polar("@100<3.141592653589793R", semt_grad).value(), (core::Point2{0, -100000}));
+    CHECK_EQ(polar("@100<(40+50)d", semt_grad).value(), (core::Point2{100000, 0}));
+    CHECK_EQ(polar("@(50*2)<(400/4)g", semt_grad).value(), (core::Point2{100000, 0}));
+
+    // A letter that is not a suffix is a typo and is reported by name, never read
+    // as a suffix and never dropped (command.md R19).
+    auto bad = polar("@100<45x", semt_grad);
+    CHECK(!bad.ok());
+    CHECK(bad.error().message.find("Kutupsal açı") != std::string::npos);
+    CHECK(bad.error().message.find('x') != std::string::npos);
+
+    // Two suffix letters are one suffix too many.
+    CHECK(!polar("@100<45gg", semt_grad).ok());
+
+    // A suffix with no number in front of it is not an angle.
+    CHECK(!polar("@100<g", semt_grad).ok());
+
+    // The token remembers its suffix and says so when described.
+    auto parsed = parse_line("YANIT @100<45g");
+    REQUIRE(parsed.ok());
+    CHECK(parsed.value().tokens.front().angle_unit == core::AngleUnit::Grad);
+    CHECK(describe(parsed.value().tokens.front()).back() == 'g');
+}
+
+TEST_CASE("AÇI KURALI: parse_point bir metni tek gramerle okur")
+{
+    const core::AngleConvention semt_grad{};
+
+    CHECK_EQ(parse_point("  @100<50 ", core::Point2{}, semt_grad).value(),
+             (core::Point2{70711, 70711}));
+    CHECK_EQ(parse_point("485320.150,4310220.400", core::Point2{}, semt_grad).value(),
+             (core::Point2{485320150, 4310220400}));
+    CHECK_EQ(parse_point("@50,30", core::Point2{1000, 2000}, semt_grad).value(),
+             (core::Point2{51000, 32000}));
+
+    auto word = parse_point("abc", core::Point2{}, semt_grad);
+    CHECK(!word.ok());
+    CHECK(word.error().message.find("Beklenen: koordinat") != std::string::npos);
+    CHECK(word.error().message.find("abc") != std::string::npos);
+
+    CHECK(!parse_point("", core::Point2{}, semt_grad).ok());
+    CHECK(!parse_point("@100<", core::Point2{}, semt_grad).ok());
+}
+
+TEST_CASE("AÇI KURALI: MOD kural ve AYAR açı_birimi komut satırının okuduğunu değiştirir")
+{
+    // The two settings reach the parser only through `Bus::angle_convention()`,
+    // read once per line; here the same text draws three different lines.
+    Fixture f;
+    const auto second_vertex = [&](std::size_t entity) {
+        const auto& doc = f.doc;
+        const auto span = doc.geometry().rings_of(doc.entities().slot[entity]);
+        const auto xs   = doc.geometry().ring_xs(span.first);
+        const auto ys   = doc.geometry().ring_ys(span.first);
+        return core::Point2{xs[1], ys[1]};
+    };
+
+    CHECK(f.bus.angle_convention() == core::AngleConvention{});
+
+    CHECK(f.bus.execute_line("ÇİZGİ 0,0 @100<0", Origin::Test).ok());
+    CHECK_EQ(second_vertex(0), (core::Point2{0, 100000})); // north
+
+    CHECK(f.bus.execute_line("MOD kural matematik", Origin::Test).ok());
+    CHECK(f.bus.angle_convention().rule == core::AngleRule::Matematik);
+    CHECK(f.bus.execute_line("ÇİZGİ 0,0 @100<0", Origin::Test).ok());
+    CHECK_EQ(second_vertex(1), (core::Point2{100000, 0})); // east
+
+    CHECK(f.bus.execute_line("AYAR açı_birimi derece", Origin::Test).ok());
+    CHECK(f.bus.angle_convention().unit == core::AngleUnit::Degree);
+    CHECK(f.bus.execute_line("ÇİZGİ 0,0 @100<90", Origin::Test).ok());
+    CHECK_EQ(second_vertex(2), (core::Point2{0, 100000})); // 90° counter-clockwise from east
+
+    // Back to the default by name, the way a script undoes a mode.
+    CHECK(f.bus.execute_line("MOD açı_kuralı varsayilan", Origin::Test).ok());
+    CHECK(f.bus.execute_line("AYAR aci_birimi varsayilan", Origin::Test).ok());
+    CHECK(f.bus.angle_convention() == core::AngleConvention{});
+
+    // The mode is a session aid: not a document mutation, not in the journal.
+    for (const auto& e : f.journal.entries())
+        CHECK(e.command_id != "core.mode");
+}
+
+TEST_CASE("AÇI KURALI: betik dizesindeki koordinat aynı gramerle, aynı kuralla okunur")
+{
+    // A script may carry a coordinate as the command line writes it. It goes
+    // through `parse_point` on the bus, under the session convention, chained
+    // from the point before — so a script and a typed line cannot disagree.
+    Fixture f;
+    Args args;
+    args.set("noktalar", Value::texts({"0,0", "@100<0", "@100<100"}));
+    auto r = f.bus.dispatch(Invocation{"core.line", args, Origin::Script});
+    REQUIRE_MESSAGE(r.ok(), r.error().message);
+    REQUIRE_EQ(f.journal.entries().size(), std::size_t{1});
+
+    // COPIED, not bound by reference: `Args::get` returns a `Value` by value and
+    // `as_points()` a reference into it — the stakeout command's own footnote.
+    const Value::Points pts = f.journal.entries().front().args.get("noktalar").as_points();
+    REQUIRE_EQ(pts.size(), std::size_t{3});
+    CHECK_EQ(pts[0], (core::Point2{0, 0}));
+    CHECK_EQ(pts[1], (core::Point2{0, 100000}));
+    CHECK_EQ(pts[2], (core::Point2{100000, 100000}));
+
+    // A single-point parameter takes a text too, and a word that is not a
+    // coordinate is refused with the parser's message, before the body runs.
+    Args one;
+    one.set("baslangic", Value::text("10,20"));
+    one.set("bitis", Value::text("@5,5"));
+    CHECK(f.bus.dispatch(Invocation{"core.measure", one, Origin::Script}).ok());
+
+    Args bad;
+    bad.set("noktalar", Value::texts({"0,0", "buraya"}));
+    auto refused = f.bus.dispatch(Invocation{"core.line", bad, Origin::Script});
+    CHECK(!refused.ok());
+    CHECK(refused.error().message.find("Beklenen: koordinat") != std::string::npos);
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{2}); // nothing half-drawn
+}
+
+TEST_CASE("GRAMER: fuzz tohum korpusundaki her satır çökmeden ayrıştırılır")
+{
+    // CLAUDE.md 6.7 ships the harness and the corpus with the grammar. The
+    // libFuzzer target in /tests/fuzz needs Clang; this replays the same seeds
+    // through the same entry points on every build, so the corpus is never dead
+    // weight — the same arrangement test_io.cpp keeps for the format corpora.
+    namespace fs          = std::filesystem;
+    const fs::path corpus = fs::path(KENTOS_FUZZ_DIR) / "tohum" / "komut";
+    REQUIRE_MESSAGE(fs::exists(corpus), corpus.string());
+
+    std::vector<fs::path> seeds;
+    for (const auto& entry : fs::directory_iterator(corpus))
+        if (entry.is_regular_file()) seeds.push_back(entry.path());
+    std::sort(seeds.begin(), seeds.end()); // test.md R19: sorted directory iteration
+
+    const FieldReader row = [](std::string_view column) -> std::optional<std::string> {
+        if (column == "beyan") return std::nullopt;
+        return std::string("1284");
+    };
+
+    std::size_t lines = 0;
+    for (const fs::path& seed : seeds) {
+        std::ifstream in(seed);
+        std::string line;
+        while (std::getline(in, line)) {
+            ++lines;
+            if (auto parsed = parse_line(line)) {
+                core::Point2 last{};
+                for (const Token& t : parsed.value().tokens) {
+                    (void)describe(t);
+                    if (!is_coordinate(t)) continue;
+                    for (int unit = 0; unit < 3; ++unit)
+                        for (int rule = 0; rule < 2; ++rule) {
+                            auto p = resolve_point(
+                                t, last,
+                                core::AngleConvention{static_cast<core::AngleUnit>(unit),
+                                                      static_cast<core::AngleRule>(rule)});
+                            if (p) last = p.value();
+                        }
+                }
+            }
+            (void)evaluate_expression(line);
+            (void)evaluate_predicate(line, row);
+            (void)parse_point(line, core::Point2{}, core::AngleConvention{});
+        }
+    }
+    CHECK(seeds.size() >= 12);
+    CHECK(lines >= seeds.size());
 }
 
 TEST_CASE("expression evaluator respects precedence and reports errors")

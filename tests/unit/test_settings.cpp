@@ -104,8 +104,9 @@ struct Rig
 TEST_CASE("SettingSpec: her bildirim eksiksiz ve kataloğa kabul edilmiş")
 {
     const SettingCatalog& cat = builtin_settings();
-    CHECK(cat.size() ==
-          71); // her X-makro satırı kabul edildi (62 + MCP, yapay zeka ve çalışma davranışı)
+    // Every X-macro line was accepted: 62, plus MCP, the AI settings, the run
+    // behaviour and the angle rule (`core.aci.kural`).
+    CHECK(cat.size() == 72);
 
     for (const auto& spec : cat.all()) {
         CHECK(!spec.id.empty());
@@ -188,6 +189,10 @@ TEST_CASE("R40: dışa aktarılan belgenin baytını değiştiren her ayar proje
     CHECK(scope_of("core.yakalama.dik_mod") == SettingScope::Session);
     CHECK(scope_of("core.yakalama.kutupsal_aci") == SettingScope::Session);
     CHECK(scope_of("core.yakalama.izgara") == SettingScope::Session);
+    // The angle RULE reads live text and the journal keeps the resolved point, so
+    // it is an aid like dik mod — while the angle UNIT above stays with the
+    // document, whose numbers it says how to read (TODOS-CAD P0-1).
+    CHECK(scope_of("core.aci.kural") == SettingScope::Session);
 
     // The list above is a snapshot: it locks today's named answers but applies
     // R40 to nothing new, so a later setting gets no scrutiny from it. This
@@ -886,6 +891,40 @@ TEST_CASE("R41: her kapsamın bir komutu var — oturum ayarları artık ulaşı
 
     CHECK(r.line("TERCİH ızgaraya_yakala evet").ok());
     CHECK(mentions(r.echoed, "oturum"));
+}
+
+TEST_CASE("P0-1: açı kuralı MOD ile değişir, semt varsayılandır, kısa adı `kural`")
+{
+    Rig r;
+    const SettingCatalog& cat = builtin_settings();
+    const std::uint32_t index = cat.find("core.aci.kural");
+    REQUIRE(index != kNoSetting);
+    CHECK(cat.at(index).type == SettingType::Enum);
+    CHECK_EQ(cat.at(index).values.size(), std::size_t{2});
+    CHECK_EQ(cat.at(index).values[0], std::string("semt"));
+    CHECK_EQ(cat.at(index).values[1], std::string("matematik"));
+    CHECK_EQ(cat.at(index).fallback.as_enum(), std::uint16_t{0});
+
+    // Every declared spelling reaches the one setting.
+    for (const char* name : {"açı_kuralı", "aci_kurali", "anglerule", "kural", "core.aci.kural"})
+        CHECK_MESSAGE(cat.find(name) == index, name);
+
+    CHECK_EQ(r.bus.session_settings().get("core.aci.kural").as_enum(), std::uint16_t{0});
+    CHECK(r.line("MOD kural matematik").ok());
+    CHECK_EQ(r.bus.session_settings().get("core.aci.kural").as_enum(), std::uint16_t{1});
+    CHECK(mentions(r.echoed, "matematik"));
+
+    // A project command may not write a session aid, and says which scope owns it.
+    CHECK(r.line("AYAR kural semt").ok());
+    CHECK(mentions(r.echoed, "oturum"));
+    CHECK_EQ(r.bus.session_settings().get("core.aci.kural").as_enum(), std::uint16_t{1});
+
+    CHECK(r.line("MOD kural varsayilan").ok());
+    CHECK_EQ(r.bus.session_settings().get("core.aci.kural").as_enum(), std::uint16_t{0});
+
+    // An unknown rule is refused by the catalogue, and the value stays.
+    CHECK(r.line("MOD kural saatyönü").ok());
+    CHECK_EQ(r.bus.session_settings().get("core.aci.kural").as_enum(), std::uint16_t{0});
 }
 
 TEST_CASE("R39: oturum modu ne belgeye ne tercih dosyasına sızar")

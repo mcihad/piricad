@@ -1,9 +1,22 @@
-# Komut satırının bütün koordinat biçimleri. Kutupsal biçim std::cos/std::sin
-# kullanır; milimetre yuvarlaması platformlar arası libm farkını yutmalıdır.
+# Komut satırının bütün koordinat biçimleri. Kutupsal biçim varsayılan olarak
+# SEMT + GRAD okur (core.aci.kural, core.aci.birim): açı kuzeyden saat yönüne,
+# tam daire 400. Trigonometri core/trig.hpp'nin belirlenimci sin_cos_udeg'idir;
+# std::cos/std::sin bu yolda artık yoktur, dolayısıyla üç platformda bit-özdeştir.
 KATMAN ad=SINIR renk=4281944491
 ÇİZGİ 485320.150,4310220.400 @50,30 @100<45
 ÇİZGİ 485300,4310200 @(100*3),0 @(45.5+12.25),(80/2)
-ÇİZGİ 485400,4310400 @100<0 @100<90 @100<180 @100<270
+# Dört ana yön grad ile — kuzey, doğu, güney, batı — eksenler tam çıkar.
+ÇİZGİ 485400,4310400 @100<0 @100<100 @100<200 @100<300
 ÇİZGİ 485500,4310500 @100<30 @100<60 @100<120 @100<210 @100<330
+# Açık birim soneki ayarı ezer: derece, radyan, grad, büyük harf.
+ÇİZGİ 485600,4310600 @100<90d @100<1.5707963267948966r @100<50g @100<45D
+# Matematik kuralı: doğudan saat yönünün tersine — aynı metin başka bir şekil çizer.
+MOD kural matematik
+ÇİZGİ 485700,4310700 @100<0 @100<100 @100<200 @100<300
+# Birim de ayardan: derece ile eski anlam geri gelir.
+AYAR açı_birimi derece
+ÇİZGİ 485800,4310800 @100<0 @100<90 @100<180 @100<270 @100<45
+MOD kural varsayilan
+AYAR açı_birimi varsayilan
 KATMAN ad=YOL renk=4284310640
 ÇİZGİ 485280.125,4310255.875 485420.875,4310255.125

@@ -457,6 +457,7 @@ KENTOS_SETTING(silme_onayi);
 KENTOS_SETTING(secim_vurgu_rengi);
 KENTOS_SETTING(plan_olcegi);
 KENTOS_SETTING(aci_birimi);
+KENTOS_SETTING(aci_kurali);
 KENTOS_SETTING(alan_birimi);
 
 #define KENTOS_BUILTIN_SETTINGS(X)                                                                 \
@@ -530,6 +531,7 @@ KENTOS_SETTING(alan_birimi);
     X(secim_vurgu_rengi)                                                                           \
     X(plan_olcegi)                                                                                 \
     X(aci_birimi)                                                                                  \
+    X(aci_kurali)                                                                                  \
     X(alan_birimi)
 
 // ---- SNAP: what the aid layer looks for, and what the canvas draws when it ----
@@ -1049,6 +1051,35 @@ KENTOS_SETTING(aci_birimi)
                    "nirengi, poligon ve aplikasyon hesapları grad ile yürür ve tam daire "
                    "400'dür. Belgenin sayılarının nasıl okunacağını söylediği için proje "
                    "kapsamındadır.",
+        .section = "Genel", // ui-label
+    };
+}
+
+// SESSION, not project, and beside the unit on purpose. The unit says how the
+// document's own numbers are read and travels with the file (above). The RULE
+// says how a line of live text — a typed `@mesafe<açı`, a script string, a
+// suggestion — is turned into a coordinate, and the journal keeps the RESOLVED
+// coordinate (journal.hpp), so a saved drawing and a recorded session replay
+// identically whatever the rule was. That makes it an input aid, like dik mod:
+// the ruler on the desk, not the drawing (TODOS-CAD P0-1).
+KENTOS_SETTING(aci_kurali)
+{
+    return SettingSpec{
+        .id       = "core.aci.kural",
+        .names    = {"açı_kuralı", "aci_kurali", "anglerule", "kural"},
+        .type     = SettingType::Enum,
+        .scope    = SettingScope::Session,
+        .fallback = SettingValue::enumerated(0),
+        .range    = SettingRange::unbounded(),
+        .values   = {"semt", "matematik"},
+        .unit     = "",
+        .summary = "Bir açının nereden ve hangi yöne sayıldığı. SEMT (varsayılan): kuzeyden "
+                   "saat yönüne — aletin okuduğu semt açısıdır, `@100<0` kuzeye gider. "
+                   "MATEMATİK: doğudan saat yönünün tersine — `@100<0` doğuya gider. Komut "
+                   "satırına, betiğe ve öneriye yazılan her `@mesafe<açı` bu kuralla "
+                   "okunur; ÖLÇ, APLİKASYON ve sürüklerken okunan açı bu kuralla yazılır. "
+                   "Günlük çözülmüş koordinatı tuttuğu için bu bir girdi yardımıdır ve "
+                   "oturum kapsamındadır.",
         .section = "Genel", // ui-label
     };
 }

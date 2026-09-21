@@ -13,29 +13,29 @@
 // tripod, in the sun — which is exactly where a mistake becomes a boundary.
 //
 // GRAD BY DEFAULT (`core.aci.birim`), because a Turkish traverse, triangulation
-// and setting-out sheet is written in grad and a full circle is 400.
+// and setting-out sheet is written in grad and a full circle is 400 — and
+// CLOCKWISE FROM NORTH by default (`core.aci.kural`), which is what `@mesafe<açı`
+// reads too: what the engineer types and what this sheet prints are one
+// convention (TODOS-CAD P0-4). The direction and the text come from
+// core/angle.hpp, shared with ÖLÇ and the canvas readout, so there is one copy.
 //
-// READ-ONLY. It computes and reports; it changes nothing. `atan2` is allowed here
-// for the reason the canvas label uses it — nothing is stored and no golden
-// fixture passes through this number (§7.3).
+// READ-ONLY. It computes and reports; it changes nothing.
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/units.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <string>
 #include <vector>
 
 namespace kentos::command {
 namespace {
-
-constexpr double kPi = 3.14159265358979323846;
 
 /// Metres with three decimals, in integers, the way ÖLÇ prints one.
 std::string metres(core::Mm v)
@@ -47,42 +47,17 @@ std::string metres(core::Mm v)
     return (negative ? "-" : "") + std::to_string(abs_mm / 1000) + "," + frac;
 }
 
-/// A turn of a full circle, written in the project's angle unit.
-std::string angle_text(double turns, int unit)
-{
-    turns -= std::floor(turns); // into [0, 1) whatever came in
-
-    const double scaled = unit == 1 ? turns * 360.0 : unit == 2 ? turns * 2.0 * kPi : turns * 400.0;
-    const int places    = unit == 2 ? 5 : 4;
-
-    const double rounded = scaled * std::pow(10.0, places);
-    const auto whole     = static_cast<std::int64_t>(std::llround(rounded));
-    const auto divisor   = static_cast<std::int64_t>(std::llround(std::pow(10.0, places)));
-
-    std::string frac = std::to_string(whole % divisor);
-    frac             = std::string(static_cast<std::size_t>(places) - frac.size(), '0') + frac;
-
-    const char* suffix = unit == 1 ? "°" : unit == 2 ? " rad" : " grad";
-    return std::to_string(whole / divisor) + "," + frac + suffix;
-}
-
-/// Azimuth from `from` to `to`, as a fraction of a full turn, CLOCKWISE FROM
-/// NORTH — `atan2(east, north)`, which is what an instrument reads.
-double azimuth_turns(core::Point2 from, core::Point2 to)
-{
-    const auto east  = static_cast<double>(to.x - from.x);
-    const auto north = static_cast<double>(to.y - from.y);
-    if (east == 0.0 && north == 0.0) return 0.0;
-
-    double turns = std::atan2(east, north) / (2.0 * kPi);
-    if (turns < 0.0) turns += 1.0;
-    return turns;
-}
-
 Task<void> run(Context& ctx)
 {
     auto station = co_await ctx.point("istasyon", "Aletin durduğu nokta");
     if (!station) co_return; // ESC before anything was computed
+
+    // The unit and the rule the whole sheet is written in, read once. Under the
+    // default semt rule every direction is an azimuth and a relative angle is
+    // turned clockwise from the backsight; under matematik both are counted
+    // counter-clockwise from east, which is what a user who chose that rule
+    // expects to compare against.
+    const core::AngleConvention convention = ctx.session().bus().angle_convention();
 
     // The backsight is optional and changes what the angle column MEANS, so the
     // report says which it is rather than leaving the reader to work it out.
@@ -94,7 +69,7 @@ Task<void> run(Context& ctx)
     if (!backsight_arg.empty() && !backsight_arg.as_points().empty()) {
         backsight  = backsight_arg.as_points().front();
         relative   = true;
-        zero_turns = azimuth_turns(*station, backsight);
+        zero_turns = core::direction_turns(*station, backsight, convention.rule);
     }
 
     const core::Document& doc = ctx.document();
@@ -134,16 +109,18 @@ Task<void> run(Context& ctx)
         co_return;
     }
 
-    const int unit =
-        static_cast<int>(ctx.session().bus().project_settings().get("core.aci.birim").as_enum());
-
     const core::AttrTable& table = doc.attributes();
     const core::AttrId no        = table.find("nokta_no");
 
     std::string report =
         "Aplikasyon — istasyon " + metres(station->x) + " / " + metres(station->y) + "\n";
-    report += relative ? "  açılar bağlama yönünden (semt açısı)\n"
-                       : "  açılar kuzeyden saat yönünde (azimut)\n";
+    const bool semt = convention.rule == core::AngleRule::Semt;
+    if (relative)
+        report += semt ? "  açılar bağlama yönünden saat yönünde (semt açısı)\n"
+                       : "  açılar bağlama yönünden saat yönünün tersine (matematik)\n";
+    else
+        report += std::string("  açılar ") + core::angle_rule_label(convention.rule) +
+                  (semt ? " (azimut)\n" : " (matematik)\n");
     report += "  nokta        mesafe (m)        açı\n";
 
     std::size_t counted = 0;
@@ -168,13 +145,20 @@ Task<void> run(Context& ctx)
             name = std::to_string(static_cast<std::uint64_t>(core::raw(doc.entities().key[slot])));
 
         const core::Mm distance = core::segment_length(*station, at);
-        const double turns      = azimuth_turns(*station, at) - (relative ? zero_turns : 0.0);
+        const double turns =
+            core::direction_turns(*station, at, convention.rule) - (relative ? zero_turns : 0.0);
 
         name.resize(std::max<std::size_t>(name.size(), 10), ' ');
         std::string length = metres(distance);
         length = std::string(16 - std::min<std::size_t>(length.size(), 16), ' ') + length;
 
-        report += "  " + name + " " + length + "   " + angle_text(turns, unit) + "\n";
+        report.append("  ")
+            .append(name)
+            .append(" ")
+            .append(length)
+            .append("   ")
+            .append(core::angle_text(turns, convention.unit))
+            .append("\n");
         ++counted;
     }
 

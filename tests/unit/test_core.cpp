@@ -5,6 +5,7 @@
 
 #include <cmath>
 
+#include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/trig.hpp"
 
 #include "kentos_cad/core/document.hpp"
@@ -15,6 +16,116 @@
 #include <span>
 
 using namespace kentos::core;
+
+// ------------------------------------------------------------- angles ----
+//
+// core/angle.hpp: how a typed angle becomes a direction and how a direction is
+// written back. The trigonometry underneath is `sin_cos_udeg` and `atan2_udeg`,
+// so every figure here is the same on every platform (§7.3).
+
+TEST_CASE("AÇI: birim → mikro derece tek yuvarlamayla, tam olduğu yerde tam")
+{
+    CHECK_EQ(udeg_from_angle(45.0, AngleUnit::Grad), std::int64_t{40500000});
+    CHECK_EQ(udeg_from_angle(45.1234, AngleUnit::Grad), std::int64_t{40611060});
+    CHECK_EQ(udeg_from_angle(-45.0, AngleUnit::Grad), std::int64_t{-40500000});
+    CHECK_EQ(udeg_from_angle(400.0, AngleUnit::Grad), kUDegFullCircle);
+    CHECK_EQ(udeg_from_angle(90.0, AngleUnit::Degree), std::int64_t{90000000});
+    CHECK_EQ(udeg_from_angle(12.345678, AngleUnit::Degree), std::int64_t{12345678});
+    CHECK_EQ(udeg_from_angle(kPi / 2.0, AngleUnit::Radian), std::int64_t{90000000});
+    CHECK_EQ(udeg_from_angle(kPi, AngleUnit::Radian), std::int64_t{180000000});
+
+    // The setting indices and the suffix letters are the enums' own values.
+    CHECK(angle_unit_from_setting(0) == AngleUnit::Grad);
+    CHECK(angle_unit_from_setting(1) == AngleUnit::Degree);
+    CHECK(angle_unit_from_setting(2) == AngleUnit::Radian);
+    CHECK(angle_unit_from_setting(7) == AngleUnit::Grad);
+    CHECK(angle_rule_from_setting(0) == AngleRule::Semt);
+    CHECK(angle_rule_from_setting(1) == AngleRule::Matematik);
+    CHECK(angle_rule_from_setting(9) == AngleRule::Semt);
+
+    AngleUnit named{};
+    CHECK((angle_unit_from_suffix('g', named) && named == AngleUnit::Grad));
+    CHECK((angle_unit_from_suffix('D', named) && named == AngleUnit::Degree));
+    CHECK((angle_unit_from_suffix('r', named) && named == AngleUnit::Radian));
+    CHECK(!angle_unit_from_suffix('x', named));
+    CHECK(!angle_unit_from_suffix('0', named));
+    CHECK_EQ(angle_unit_suffix(AngleUnit::Grad), 'g');
+    CHECK_EQ(angle_unit_suffix(AngleUnit::Degree), 'd');
+    CHECK_EQ(angle_unit_suffix(AngleUnit::Radian), 'r');
+}
+
+TEST_CASE("AÇI: kutupsal ofset eksenlerde tam, köşegende iki eksen aynı milimetre")
+{
+    const AngleConvention semt{};
+    const AngleConvention matematik{AngleUnit::Grad, AngleRule::Matematik};
+
+    CHECK_EQ(polar_offset(100.0, 0.0, semt), (Point2{0, 100000}));
+    CHECK_EQ(polar_offset(100.0, 100.0, semt), (Point2{100000, 0}));
+    CHECK_EQ(polar_offset(100.0, 200.0, semt), (Point2{0, -100000}));
+    CHECK_EQ(polar_offset(100.0, 300.0, semt), (Point2{-100000, 0}));
+    CHECK_EQ(polar_offset(100.0, 50.0, semt), (Point2{70711, 70711}));
+
+    CHECK_EQ(polar_offset(100.0, 0.0, matematik), (Point2{100000, 0}));
+    CHECK_EQ(polar_offset(100.0, 100.0, matematik), (Point2{0, 100000}));
+    CHECK_EQ(polar_offset(100.0, 200.0, matematik), (Point2{-100000, 0}));
+    CHECK_EQ(polar_offset(100.0, 300.0, matematik), (Point2{0, -100000}));
+
+    // Semt 45 grad = 40.5°: north-east, steeper than the diagonal. Under
+    // matematik the same figure is the mirror image about the diagonal.
+    const Point2 s = polar_offset(100.0, 45.0, semt);
+    const Point2 m = polar_offset(100.0, 45.0, matematik);
+    CHECK_EQ(s, (Point2{m.y, m.x}));
+    CHECK(s.y > s.x);
+
+    // A negative distance walks the other way; a zero one stays put.
+    CHECK_EQ(polar_offset(-100.0, 0.0, semt), (Point2{0, -100000}));
+    CHECK_EQ(polar_offset(0.0, 123.456, semt), (Point2{0, 0}));
+}
+
+TEST_CASE("AÇI: yön semt'te kuzeyden saat yönüne, matematik'te doğudan tersine")
+{
+    const Point2 o{0, 0};
+    CHECK_EQ(direction_turns(o, Point2{0, 1000}, AngleRule::Semt), 0.0);
+    CHECK_EQ(direction_turns(o, Point2{1000, 0}, AngleRule::Semt), 0.25);
+    CHECK_EQ(direction_turns(o, Point2{0, -1000}, AngleRule::Semt), 0.5);
+    CHECK_EQ(direction_turns(o, Point2{-1000, 0}, AngleRule::Semt), 0.75);
+
+    CHECK_EQ(direction_turns(o, Point2{1000, 0}, AngleRule::Matematik), 0.0);
+    CHECK_EQ(direction_turns(o, Point2{0, 1000}, AngleRule::Matematik), 0.25);
+    CHECK_EQ(direction_turns(o, Point2{-1000, 0}, AngleRule::Matematik), 0.5);
+    CHECK_EQ(direction_turns(o, Point2{0, -1000}, AngleRule::Matematik), 0.75);
+
+    // The diagonal is exact in both rules (atan2_udeg's octant is an integer).
+    CHECK_EQ(direction_turns(o, Point2{1000, 1000}, AngleRule::Semt), 0.125);
+    CHECK_EQ(direction_turns(o, Point2{1000, 1000}, AngleRule::Matematik), 0.125);
+
+    // A direction and the offset that produced it agree: the round trip.
+    const Point2 p    = polar_offset(100.0, 62.5, AngleConvention{});
+    const double back = direction_turns(o, p, AngleRule::Semt) * 400.0;
+    CHECK(std::abs(back - 62.5) < 0.001);
+
+    CHECK_EQ(direction_turns(o, o, AngleRule::Semt), 0.0);
+}
+
+TEST_CASE("AÇI: metin aplikasyon cetveli gibi yazılır — virgül, dört hane, birim")
+{
+    CHECK_EQ(angle_text(0.15625, AngleUnit::Grad), std::string("62,5000 grad"));
+    CHECK_EQ(angle_text(0.15625, AngleUnit::Degree), std::string("56,2500°"));
+    CHECK_EQ(angle_text(0.15625, AngleUnit::Radian), std::string("0,98175 rad"));
+    CHECK_EQ(angle_text(0.0, AngleUnit::Grad), std::string("0,0000 grad"));
+    CHECK_EQ(angle_text(0.25, AngleUnit::Grad), std::string("100,0000 grad"));
+
+    // Negative turns — a relative angle read backwards — fold into the circle.
+    CHECK_EQ(angle_text(-0.25, AngleUnit::Grad), std::string("300,0000 grad"));
+    CHECK_EQ(angle_text(1.25, AngleUnit::Degree), std::string("90,0000°"));
+
+    // A full turn is zero, never 400,0000.
+    CHECK_EQ(angle_text(0.99999999, AngleUnit::Grad), std::string("0,0000 grad"));
+
+    CHECK_EQ(std::string(angle_rule_label(AngleRule::Semt)), std::string("kuzeyden saat yönünde"));
+    CHECK_EQ(std::string(angle_rule_label(AngleRule::Matematik)),
+             std::string("doğudan saat yönünün tersine"));
+}
 
 TEST_CASE("mm fixed point is exact and symmetric")
 {

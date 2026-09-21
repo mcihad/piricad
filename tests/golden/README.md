@@ -23,10 +23,14 @@ extraction itself. Regenerate it, after reading the diff, with
 `KENTOS_GOLDEN_UPDATE=1 bash scripts/ci-gate-mpyy.sh`.
 
 The `.txt` scenarios exist because only the command line exercises the parser's
-metre-to-millimetre conversion and the polar form, which is the one place
-`std::cos`/`std::sin` enters the pipeline. Fixed-point millimetre quantisation
-absorbs the sub-ulp differences libm has between platforms, and that absorption
-is exactly what these fixtures verify.
+metre-to-millimetre conversion and the polar form. The polar form used to be the
+one place `std::cos`/`std::sin` entered the pipeline; it now resolves through
+`core::polar_offset`, whose trigonometry is the deterministic `sin_cos_udeg` of
+`core/trig.hpp`, under the session's angle convention (`core.aci.kural`,
+`core.aci.birim` — semt + grad by default). `koordinat-bicimleri.txt` locks the
+four axes exact in both rules and all three units, with and without the `g/d/r`
+suffix, so a platform that disagreed in the last bit would show up here as a
+moved vertex rather than as a surveyor's complaint.
 
 ## Running
 

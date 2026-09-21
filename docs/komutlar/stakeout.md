@@ -21,11 +21,17 @@ Rapor hangisi olduğunu her satırın üstünde yazar. Alet göreli açı okurke
 vermek, operatörü tripodun başında, güneşin altında kafadan çevirmeye
 zorlardı — bir hatanın sınıra dönüştüğü yer tam orasıdır.
 
-## Açı birimi
+## Açı birimi ve kuralı
 
-`açı_birimi` tercihine uyar, varsayılanı **grad**: Türkiye'de nirengi, poligon ve
-aplikasyon hesapları gradla yürür ve tam daire 400'dür. `Seçenekler ▸ Genel`den
+Birim `açı_birimi` proje ayarına uyar, varsayılanı **grad**: Türkiye'de nirengi, poligon
+ve aplikasyon hesapları gradla yürür ve tam daire 400'dür. `Seçenekler ▸ Genel`den
 dereceye ya da radyana çevirebilirsiniz.
+
+Yön `açı_kuralı` oturum moduna uyar, varsayılanı **semt**: açılar kuzeyden saat yönünde,
+bağlama verilmişse bağlamadan saat yönünde. `MOD kural matematik` yazılmışsa açılar doğudan
+— bağlama verilmişse bağlamadan — saat yönünün tersine sayılır ve raporun başlığı bunu
+söyler. Komut satırına yazdığınız `@mesafe<açı` ile aynı iki ayardır (bkz.
+[Oturum modları](mode.md)).
 
 ## Adlar
 
@@ -65,7 +71,7 @@ APLİKASYON istasyon=485320,4310220 baglama=485320,4310320
 
 ```text
 Aplikasyon — istasyon 485320,000 / 4310220,000
-  açılar bağlama yönünden (semt açısı)
+  açılar bağlama yönünden saat yönünde (semt açısı)
   nokta        mesafe (m)        açı
   1                    40,000   100,0000 grad
   2                    56,569   150,0000 grad
