@@ -55,7 +55,11 @@ std::string hex64(std::uint64_t v)
 /// The document as text. Millimetres are printed as integers, so nothing here
 /// passes through a floating-point formatter — the dump cannot introduce a
 /// difference the document does not have.
-std::string dump(const core::Document& doc, const Journal& journal)
+///
+/// SPLIT FROM THE JOURNAL because a REPLAY writes its own journal: the origins
+/// differ and so do the timestamps, and what a replay has to reproduce is the
+/// drawing. The fixture on disk holds both halves.
+std::string dump_document(const core::Document& doc)
 {
     std::string out;
 
@@ -125,6 +129,13 @@ std::string dump(const core::Document& doc, const Journal& journal)
     }
 
     out += "icerik-ozeti " + hex64(doc.content_hash()) + "\n";
+    return out;
+}
+
+/// The document half plus the journal — the whole fixture.
+std::string dump(const core::Document& doc, const Journal& journal)
+{
+    std::string out = dump_document(doc);
 
     out += "gunluk\n";
     std::istringstream lines(journal.canonical());
@@ -159,6 +170,12 @@ struct Rig
     }
 };
 
+/// Runs one scenario into `rig` and says what went wrong, or nothing.
+///
+/// Split out of `replay` so a caller that needs the RIG — its journal, not just
+/// its dump — does not have to run the scenario a second way.
+bool run_into(Rig& rig, const fs::path& scenario, std::string& error);
+
 /// Runs one scenario and returns its dump, or an empty string on failure.
 std::string replay(const fs::path& scenario, std::string& error)
 {
@@ -187,6 +204,32 @@ std::string replay(const fs::path& scenario, std::string& error)
         }
     }
     return dump(rig.doc, rig.journal);
+}
+
+bool run_into(Rig& rig, const fs::path& scenario, std::string& error)
+{
+    if (scenario.extension() == ".json") {
+        script::JsonRunner runner(rig.bus, script::Sandbox::Project);
+        if (auto r = runner.run_file(scenario.string()); !r) {
+            error = r.error().message;
+            return false;
+        }
+        return true;
+    }
+
+    std::istringstream lines(read_file(scenario));
+    std::string line;
+    std::size_t lineno = 0;
+    while (std::getline(lines, line)) {
+        ++lineno;
+        const auto begin = line.find_first_not_of(" \t\r");
+        if (begin == std::string::npos || line[begin] == '#') continue;
+        if (auto r = rig.bus.execute_line(line, Origin::Test); !r) {
+            error = "satır " + std::to_string(lineno) + ": " + r.error().message;
+            return false;
+        }
+    }
+    return true;
 }
 
 std::vector<fs::path> scenarios()
@@ -278,4 +321,132 @@ TEST_CASE("GOLDEN: aynı senaryo iki kez çalıştırıldığında aynı çıkt�
         const std::string second = replay(scenario, e2);
         CHECK(first == second);
     }
+}
+
+TEST_CASE("GOLDEN: her senaryonun GÜNLÜĞÜ aynı belgeyi yeniden kurar")
+{
+    // ARTICLE 6.4's replay clause, over every command any scenario uses rather
+    // than one case per command. A journal is the record this program promises:
+    // §2.2 says an invocation round-trips losslessly, and the proof of that is
+    // that replaying the record rebuilds the drawing it came from.
+    //
+    // THE SECOND DOCUMENT IS BUILT FROM THE RECORD ALONE — the resolved arguments
+    // the bus wrote, with no scenario text in sight. A command that recorded the
+    // question instead of the answer (a snap that resolved differently the second
+    // time, a `Value` that lost its fraction) shows up here and nowhere else: the
+    // fractional-sides defect `Value::from_json` carried was exactly this shape.
+    for (const auto& scenario : scenarios()) {
+        Rig first;
+        std::string error;
+        if (!run_into(first, scenario, error)) {
+            FAIL_WITH(scenario.filename().string().c_str(), "senaryo çalışmadı: " + error);
+            continue;
+        }
+
+        // A SCENARIO THAT UNDOES CANNOT BE REPLAYED FROM ITS JOURNAL, and that is
+        // the design rather than a gap. `GERİAL` is `ReadOnly`, so `Bus::finish`
+        // writes no journal line for it: the journal records what the DOCUMENT was
+        // asked to do, and undo is not such a thing — it is a move on a stack
+        // whose meaning is the stack's, not the drawing's. Replaying a journal
+        // that had an undo taken out of it would re-apply the edit the user
+        // undid.
+        //
+        // Named by scanning the scenario for a line the registry resolves to
+        // `core.undo` or `core.redo`, so the exemption cannot be claimed by a
+        // scenario that does not use one, and a new scenario that does needs no
+        // edit here. Reported out loud, because a silent skip is an exemption
+        // nobody audits.
+        if (scenario.extension() != ".json") {
+            bool undoes = false;
+            std::istringstream lines(read_file(scenario));
+            std::string line;
+            while (std::getline(lines, line)) {
+                const auto begin = line.find_first_not_of(" \t\r");
+                if (begin == std::string::npos || line[begin] == '#') continue;
+                const auto end = line.find_first_of(" \t\r", begin);
+                const std::string word =
+                    line.substr(begin, end == std::string::npos ? end : end - begin);
+                const command::CommandSpec* spec = first.reg.resolve(word);
+                if (spec != nullptr && (spec->id == "core.undo" || spec->id == "core.redo")) {
+                    undoes = true;
+                    break;
+                }
+            }
+            if (undoes) {
+                MESSAGE("günlük oynatmadan muaf (GERİAL/YİNELE içeriyor): "
+                        << scenario.filename().string());
+                continue;
+            }
+        }
+
+        Rig again;
+        bool replayed = true;
+        for (const auto& entry : first.journal.entries()) {
+            // `Origin::Batch` is the replay origin: the line is not being typed
+            // again, it is being re-applied.
+            auto r = again.bus.dispatch(
+                command::Invocation{entry.command_id, entry.args, Origin::Batch});
+            if (!r) {
+                FAIL_WITH(scenario.filename().string().c_str(),
+                          "günlük oynatılamadı (" + entry.command_id + "): " + r.error().message);
+                replayed = false;
+                break;
+            }
+        }
+        if (!replayed) continue;
+
+        // THE DOCUMENT, not the journal: a replay writes its own journal (the
+        // origins differ, and so do the timestamps), and what has to match is the
+        // drawing.
+        const std::string want = dump_document(first.doc);
+        const std::string got  = dump_document(again.doc);
+        if (want != got) {
+            // The FIRST differing line, because "başka bir belge" is not a
+            // diagnosis: the operator needs to know which vertex moved.
+            std::istringstream a(want);
+            std::istringstream b(got);
+            std::string la, lb, report;
+            std::size_t n     = 0;
+            std::size_t shown = 0;
+            while (std::getline(a, la) && shown < 8) {
+                ++n;
+                if (!std::getline(b, lb)) lb = "(satır yok)";
+                if (la == lb) continue;
+                report += "\n  satır " + std::to_string(n) + " bekleniyor: " + la + "\n  satır " +
+                          std::to_string(n) + " gelen:      " + lb;
+                ++shown;
+            }
+            FAIL_WITH(scenario.filename().string().c_str(),
+                      "günlük başka bir belge kurdu" + report);
+        }
+    }
+}
+
+TEST_CASE("GOLDEN: her günlük satırı JSON'a gidip geri dönüyor")
+{
+    // §2.2, over every command any scenario uses: an invocation is DATA, fully
+    // expressible as `Value` and round-tripping losslessly through JSON. This is
+    // the property the journal rests on — a parameter whose shape does not
+    // survive `to_json` → `from_json` is a parameter whose replay is a different
+    // command, which is how a traverse came back with its millimetres cut off.
+    std::size_t lines = 0;
+    for (const auto& scenario : scenarios()) {
+        Rig rig;
+        std::string error;
+        if (!run_into(rig, scenario, error)) continue;
+
+        for (const auto& entry : rig.journal.entries()) {
+            const core::Json as_json = entry.args.to_json();
+            auto back                = command::Args::from_json(as_json);
+            if (!back) {
+                FAIL_WITH(entry.command_id.c_str(), back.error().message);
+                continue;
+            }
+            // COMPARED AS JSON AGAIN, because that is what the file holds: two
+            // `Args` that print the same line are the same record.
+            CHECK_MESSAGE(back.value().to_json().dump() == as_json.dump(), entry.command_id);
+            ++lines;
+        }
+    }
+    CHECK(lines > 0);
 }

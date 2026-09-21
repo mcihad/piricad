@@ -546,6 +546,28 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
   toleransını okuyor (varsayılan 10 mm). Fark **toleransın nereden geldiğidir** — `UÇUCA`'da
   çağrının kendi `tolerans=`'ı (1 mm), `BİRLEŞTİR`'de projenin ayarı. Üç vakalı bir test bunu
   çiviliyor; iki belge yanlış bir cümleyi yayımlamak üzereydi.
+- [x] **Günlük oynatma ve `Value` gidiş-dönüşü, komut başına değil ÖZELLİK olarak** yazıldı
+  (`test_golden.cpp`): her senaryonun günlüğü boş bir belgeye yeniden uygulanıyor ve aynı çizimi
+  kurmak zorunda, ve her günlük satırı `to_json` → `from_json` turunu bayt bayt geçmek zorunda.
+  Komut başına vaka yerine senaryolar üzerinde döngü, çünkü altın senaryolar çizim yüzeyinin
+  büyük kısmını kullanıyor ve bir özellik testi yazılmayı bekleyen bir vaka değildir.
+  **İlk çalıştırmada iki kusur buldu** (aşağıda). `GERİAL` içeren senaryo muaf ve sebebi yazılı:
+  undo `ReadOnly` olduğu için günlüğe düşmüyor — günlük belgeye ne YAPILDIĞINI tutar, undo ise
+  yığının hamlesidir. Muafiyet senaryoyu tarayarak veriliyor, elle listelenerek değil.
+- [x] **İptal özelliği** (`her etkileşimli komut iptal edilince boş geri alma deltası bırakır`):
+  `Registry` üzerinde döngü, ~64 etkileşimli komut, hepsi Esc'te belgeyi ve yığını olduğu gibi
+  bırakıyor. Esc bir CAD programında en çok basılan tuştur; ilk isteminden önce yazan bir komut
+  her seferinde yarım bir düzenleme bırakır, hem de sessizce — çünkü kimse değiştirmemeye karar
+  verdiği çizime bakmaz.
+- [x] **Oynatma özelliğinin bulduğu iki kusur:**
+  * `ELİPS yontem=eksen` **kendi günlüğünden oynatılamıyordu.** Ortak kuyruk `birinci`'yi koşulsuz
+    kaydediyor ve `eksen` altında BİRİNCİ eksen ucunu ANA eksen ucuyla eziyordu; satır "iki uç aynı
+    nokta" diyerek gidiyor ve oynatma reddediyordu. Kuyruk artık `eksen` altında ezmiyor.
+  * `ÖLÇÜ tur=acisal` **kendi yazdığı sözcüğü okuyamıyordu**: komut modelin kararlı adını
+    (`acisal3`) kaydediyor, ayrıştırıcısı ise onu tanımıyordu. Açısal ölçü sessizce hiç
+    oynatılmıyor ve altın senaryo bir nesne eksik kuruluyordu. `acisal3`/`angular3` kabul ediliyor;
+    ad tablosundan TÜRETİLMEDİ, çünkü `acisal` öbür açısal türün (beş noktalı `Angular`) kararlı
+    adı ve türetmek bir sözcüğü iki türe bağlardı.
 - [x] **Fuzz korpusu güncel**: P0'ın açı sonekleri (`04-kutupsal-sonekli`, `08-bozuk` içinde
   `@100<45x`, `@100<45gg`) ve P1a'nın nokta fonksiyonları (`15`, `16`, `17`) tohumda.
 

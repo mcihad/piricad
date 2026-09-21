@@ -7009,3 +7009,69 @@ TEST_CASE("UÇUCA ile BİRLEŞTİR toleranslarını farklı yerden alır")
         CHECK_EQ(f.doc.live_entity_count(), std::size_t{2}); ///< now too far
     }
 }
+
+TEST_CASE("her etkileşimli komut iptal edilince boş geri alma deltası bırakır")
+{
+    // THE CANCELLATION CLAUSE OF THE DoD, over the WHOLE registry rather than one
+    // case per command. Esc is the most-pressed key in a CAD program: a user
+    // reaches for a tool, sees it is the wrong one and presses Esc, and that must
+    // leave the drawing exactly as it was. A command that wrote something before
+    // its first prompt would leave half an edit behind every time — and it would
+    // leave it behind silently, because nobody looks at a drawing they just
+    // decided not to change.
+    //
+    // Written as a loop over `Registry` so a command added tomorrow is covered
+    // the day it is declared (CLAUDE.md 5.10): a per-command case is a case
+    // somebody has to remember to write.
+    Fixture f;
+
+    // A drawing to cancel AGAINST, so a command that would act on a selection has
+    // something to act on and the test is not passing because nothing was there.
+    REQUIRE(f.bus.execute_line("KATMAN ad=İPTAL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN 0,0 20,0 20,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,30 20,30 20,40", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("DAİRE 50,50 60,50", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SEÇ HEPSİ", Origin::Test).ok());
+
+    const std::uint64_t before = f.doc.content_hash();
+    const std::size_t depth    = f.undo.undo_depth();
+
+    std::size_t started = 0;
+    std::size_t refused = 0;
+
+    for (const CommandSpec& spec : f.reg.all()) {
+        if (!has_flag(spec.flags, Flags::Interactive)) continue;
+
+        // NOT THE FILE AND VIEW COMMANDS. A file command asks the host for a path
+        // and a view command moves the camera; neither is a document edit, and
+        // both are covered by their own tests. What this pins is the drawing.
+        if (spec.category == Category::File || spec.category == Category::View) continue;
+
+        auto started_ok = f.bus.begin_interactive(spec.names.front(), Origin::Gui);
+        if (!started_ok) {
+            // A command that refuses to START on this drawing is not cancelled,
+            // it never ran. Counted so a registry where nothing starts cannot
+            // pass this test by default.
+            ++refused;
+            continue;
+        }
+        ++started;
+
+        Session& session = *started_ok.value();
+        session.cancel(); ///< Esc, before a single answer
+        const auto done = f.bus.finish(session);
+
+        // THE DOCUMENT IS UNTOUCHED AND THE STACK IS UNCHANGED. Either is enough
+        // to catch a command that wrote before it asked; both together say the
+        // drawing and its history are as the user left them.
+        CHECK_MESSAGE(f.doc.content_hash() == before, spec.id);
+        CHECK_MESSAGE(f.undo.undo_depth() == depth, spec.id);
+        if (!done.ok()) CHECK_MESSAGE(f.doc.content_hash() == before, spec.id);
+    }
+
+    // The registry really was walked, and most of it really did start.
+    CHECK(started > 30);
+    if (refused * 4 >= started)
+        FAIL_WITH("çok fazla komut hiç başlamadı",
+                  std::to_string(refused) + " / " + std::to_string(started + refused));
+}

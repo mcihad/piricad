@@ -104,7 +104,20 @@ Task<void> run_dimension(Context& ctx)
             type = core::DimensionType::Radial;
         else if (core::turkish_key_equals(w, "cap") || core::turkish_key_equals(w, "diameter"))
             type = core::DimensionType::Diametric;
-        else if (core::turkish_key_equals(w, "acisal") || core::turkish_key_equals(w, "angular"))
+        else if (core::turkish_key_equals(w, "acisal") || core::turkish_key_equals(w, "angular") ||
+                 // AND THE MODEL'S OWN STABLE NAME FOR IT, which is what this
+                 // command RECORDS (`core::dimension_type_name`) and therefore
+                 // what a journal replay hands back. It did not accept it: the
+                 // line this command wrote was a line it refused to read, so an
+                 // angular dimension replayed as nothing at all and a golden
+                 // scenario rebuilt one entity short (Article 1.4).
+                 //
+                 // Spelled out rather than derived from the name table, because
+                 // `acisal` is the stable name of the OTHER angular type — the
+                 // five-point `Angular`, which this command has never had a word
+                 // for — and deriving the list would make one word mean two
+                 // types.
+                 core::turkish_key_equals(w, "acisal3") || core::turkish_key_equals(w, "angular3"))
             type = core::DimensionType::Angular3P;
         else if (core::turkish_key_equals(w, "koordinat") ||
                  core::turkish_key_equals(w, "ordinat") || core::turkish_key_equals(w, "ordinate"))

@@ -60,9 +60,11 @@ Task<void> run(Context& ctx)
         }
         centre = core::Point2{(from->x + to->x) / 2, (from->y + to->y) / 2};
         major  = *to;
-        ctx.record("yontem", Value::text(how));
-        ctx.record("birinci", Value::point(*from));
-        ctx.record("ikinci_uc", Value::point(*to));
+
+        // NOTHING EXTRA IS RECORDED HERE: `birinci` and `ikinci_uc` were AWAITED,
+        // so they are in the record already, and `yontem` was bound. What this
+        // branch has to do is make sure the tail below does not overwrite them —
+        // see the note there.
     } else {
         centre = co_await ctx.point("merkez", "Elipsin merkezi");
         if (!centre) co_return; // ESC before anything was drawn
@@ -150,11 +152,22 @@ Task<void> run(Context& ctx)
         ctx.record("bitis", to);
     }
 
-    // RECORDED AS IT WAS ASKED, like YAY: the three points the user gave, not the
-    // perpendicular this derived from them. A replay must walk the same arithmetic
-    // rather than trust a number this run happened to round.
-    ctx.record("merkez", Value::point(*centre));
-    ctx.record("birinci", Value::point(*major));
+    // RECORDED IN THE METHOD THAT WAS ASKED, and this is a fix a journal replay
+    // found. The tail used to record `merkez` and `birinci` unconditionally, and
+    // under `yontem=eksen` that overwrote the FIRST axis end with the MAJOR end —
+    // which is the second one. The line then went out saying `birinci` and
+    // `ikinci_uc` were the same point, and replaying it refused with "Eksenin iki
+    // ucu aynı nokta". A record that cannot be replayed is not a record
+    // (Article 1.4).
+    //
+    // Under `eksen` the two ends are already in the record, awaited under their
+    // own names; under the centre method the resolved centre and major end are
+    // what this run derived and what a replay must be handed. `ikinci` means the
+    // same thing in both, so it is recorded once here.
+    if (!by_axis) {
+        ctx.record("merkez", Value::point(*centre));
+        ctx.record("birinci", Value::point(*major));
+    }
     ctx.record("ikinci", Value::point(*reach));
 }
 

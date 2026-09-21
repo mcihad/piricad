@@ -117,4 +117,4 @@ gunluk
   {"seq":12,"cmd":"core.polygon_regular","args":{"merkez":[200000,600000],"kenar_sayisi":8,"yontem":"kenar","kenar_uzunlugu":20.0},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
   {"seq":13,"cmd":"core.polygon_regular","args":{"merkez":[300000,600000],"kenar_sayisi":3,"yontem":"ic","yaricap":30.0,"aci":50.0},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
   {"seq":14,"cmd":"core.rectangle","args":{"noktalar":[[0,800000],[60000,830000],[-16000,832000]],"yontem":"3n"},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
-  {"seq":15,"cmd":"core.ellipse_draw","args":{"merkez":[50000,1000000],"birinci":[100000,1000000],"ikinci":[50000,1020000],"yontem":"eksen","ikinci_uc":[100000,1000000]},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}
+  {"seq":15,"cmd":"core.ellipse_draw","args":{"birinci":[0,1000000],"ikinci":[50000,1020000],"yontem":"eksen","ikinci_uc":[100000,1000000]},"origin":"test","crs":"TUREF/TM36","katman":"INSA"}

@@ -6,6 +6,46 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — günlük oynatma özelliği, ve bulduğu iki oynatılamaz komut
+
+Article 6.4 her komut için bir günlük-oynatma vakası istiyor. Komut başına vaka
+yerine **özellik** yazıldı: her altın senaryonun günlüğü boş bir belgeye yeniden
+uygulanıyor ve aynı çizimi kurmak zorunda; ayrıca her günlük satırı
+`to_json` → `from_json` turunu bayt bayt geçmek zorunda (§2.2). Senaryolar çizim
+yüzeyinin büyük kısmını kullanıyor, ve bir özellik testi yazılmayı bekleyen bir
+vaka değildir.
+
+**İlk çalıştırmada iki komut oynatılamaz çıktı:**
+
+- **`ELİPS yontem=eksen` kendi günlüğünden oynatılamıyordu.** Ortak kuyruk
+  `birinci`'yi koşulsuz kaydediyor ve `eksen` yönteminde **birinci** eksen ucunu
+  **ana** eksen ucuyla eziyordu — satır, iki ekseni ucunun aynı nokta olduğunu
+  söyleyerek gidiyor ve oynatma "Eksenin iki ucu aynı nokta" diye reddediyordu.
+  Oynatılamayan bir kayıt kayıt değildir (Article 1.4).
+- **`ÖLÇÜ tur=acisal` kendi yazdığı sözcüğü okuyamıyordu.** Komut modelin kararlı
+  adını kaydediyor (`acisal3`), ayrıştırıcısı ise `acisal` ve `angular`'dan
+  başkasını tanımıyordu: açısal ölçü sessizce hiç oynatılmıyor ve altın senaryo
+  bir nesne eksik kuruluyordu. `acisal3` ve `angular3` artık kabul ediliyor — ad
+  tablosundan **türetilmedi**, çünkü `acisal` öbür açısal türün (beş noktalı
+  `Angular`) kararlı adı ve türetmek bir sözcüğü iki türe bağlardı.
+
+**`GERİAL` içeren senaryo muaf ve sebebi yazılı**: undo `ReadOnly` olduğu için
+günlüğe düşmez — günlük belgeye ne YAPILDIĞINI tutar, undo ise yığının bir
+hamlesidir, çizimin değil. Günlüğünden undo çıkarılmış bir oynatma, kullanıcının
+geri aldığı düzenlemeyi yeniden uygulardı. Muafiyet senaryoyu tarayıp `core.undo`
+arayarak veriliyor, elle listelenerek değil, ve yüksek sesle bildiriliyor.
+
+### Eklendi — iptal özelliği: Esc her komutta boş delta bırakır
+
+`Registry` üzerinde döngüyle ~64 etkileşimli komut: her biri Esc'te belgeyi ve
+geri alma yığınını olduğu gibi bırakıyor. Esc bir CAD programında en çok basılan
+tuştur — kullanıcı araca uzanır, yanlış araç olduğunu görür ve Esc'e basar. İlk
+isteminden önce yazan bir komut her seferinde yarım bir düzenleme bırakır, hem de
+**sessizce**, çünkü kimse değiştirmemeye karar verdiği çizime bakmaz.
+
+Komut başına vaka değil, çünkü bir vaka yazılmayı bekler: döngü, yarın eklenen
+bir komutu bildirildiği gün kapsıyor.
+
 ### Eklendi — yakalama idempotens testi, ve iki belgenin yanlış cümlesi
 
 - **`snap(snap(p)) == snap(p)`**, planın adıyla istediği ve hiç var olmayan test.
