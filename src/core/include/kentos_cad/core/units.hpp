@@ -45,6 +45,37 @@ __extension__ using Int128 = __int128; ///< exact 128-bit integer; see the note 
 #error "Exact geometry needs a 128-bit integer; this compiler has none (core.md R3)."
 #endif
 
+/// The largest magnitude `mm_round` can answer: 2^63 - 1024.
+///
+/// Not `max()`. This is the largest `Mm` that is ALSO exactly a `double` — above
+/// 2^62 consecutive doubles are 1024 apart, so `max()` cannot even be NAMED by
+/// the type `mm_round` takes (`static_cast<double>(max())` is 2^63, a different
+/// number). Saturating on a value both types hold exactly is what lets the guard
+/// below be two selects with no arithmetic in them.
+///
+/// This value and its NEGATION, rather than the `int64` range's own two
+/// endpoints, because `kMmInvalid` IS `min()` and means "no value":
+/// `RingGeometry::append` refuses a vertex carrying it, saying the source data
+/// held a coordinate it could not read. A number too large to name is not a
+/// number that was missing, and a saturation that landed on the sentinel would
+/// turn the first into the second. Symmetry keeps them apart, and keeps the sign
+/// of the answer equal to the sign of the question.
+///
+/// Saturating is not a way of ACCEPTING the value. This is four times
+/// `kMmCoordinateLimit` (geometry.hpp), so a saturated coordinate is still
+/// refused by `RingGeometry::append`, with the out-of-range message it earned.
+/// The guard is what makes that refusal reachable; undefined behaviour is not a
+/// refusal.
+inline constexpr Mm kMmSaturated = 9223372036854774784; // 2^63 - 1024
+
+/// `kMmSaturated` as a `double` — the same number, exactly, in the type
+/// `mm_round` is handed. Written as a hex float so that is visible rather than
+/// asserted.
+inline constexpr double kMmSaturatedReal = 0x1.fffffffffffffp62;
+
+static_assert(kMmSaturatedReal == 9223372036854774784.0,
+              "kMmSaturatedReal must name kMmSaturated exactly (core.md R20).");
+
 /// THE rounding helper (core.md R20). Deterministic round-half-away-from-zero,
 /// identical on every platform: std::llround is not constexpr and std::round's
 /// mode is not pinned. Every transient `double` that becomes an `Mm` goes through
@@ -71,10 +102,51 @@ __extension__ using Int128 = __int128; ///< exact 128-bit integer; see the note 
 ///
 /// Comparing the fraction against one half never adds anything, so nothing can
 /// round on the way. The subtraction is exact for every input in range.
+///
+/// OUT OF RANGE IS ANSWERED, NOT ASSUMED AWAY. `static_cast<Mm>` of a `double`
+/// outside `Mm`'s range is undefined behaviour — not a saturating instruction —
+/// and so is the `+ 1` below once the truncation has landed on an endpoint. Both
+/// were reachable from input already in this repository: `@(2^1000),0` in
+/// `tests/fuzz/tohum/komut/14-asiri-sayi.txt` is 1,07e301 metres, which
+/// `mm_from_metres` scales past what `Mm` can hold. What the machine did with it
+/// was not merely a large number: on AArch64 the cast saturates and the
+/// overflowing step then WRAPS, so the answer came back as INT64_MIN — that is
+/// `kMmInvalid`, so a coordinate which had merely run off the end of the world
+/// arrived as one that could not be read at all, and would have been refused
+/// with the wrong reason.
+///
+/// THE CLAMP IS TWO SELECTS, NOT THREE BRANCHES, and that is a measured decision
+/// rather than a stylistic one. `mm_round` is called per vertex in the
+/// tessellators (`arc.cpp`, `circle.cpp`, `ellipse.cpp`), per point in
+/// `transform.cpp` and all over `snap.cpp`, so Article 7 is close by. Written as
+/// three early returns — the obvious way — it costs +4,2 ns per call on an M-series
+/// core, because the control flow stops the surrounding loop from overlapping
+/// iterations. Written as the two selects below it costs +0,10 ns, and the
+/// compare order is what folds NaN in with no third test: NaN answers false to
+/// `v < kMmSaturatedReal`, so it takes the same road `+inf` does.
+///
+/// NaN THEREFORE ANSWERS `+kMmSaturated`, and that is the better answer anyway.
+/// Zero would look principled — NaN has no sign and no magnitude to saturate
+/// towards — but zero is the ORIGIN, and `Box2` below explains at length why the
+/// origin is the most dangerous value in this product: in TUREF it is a thousand
+/// kilometres from any Turkish parcel, so a NaN answered as zero puts a corner
+/// there SILENTLY. Answered as a saturated value it is out of
+/// `kMmCoordinateLimit` and the store refuses it. Loud beats quiet.
+///
+/// Nothing rounds on the way in: for every `v` already in range both selects
+/// take `v` unchanged, so every value this function answered before it grew a
+/// guard it answers bit for bit today.
 constexpr Mm mm_round(double v) noexcept
 {
-    const auto truncated = static_cast<Mm>(v); // toward zero
-    const double frac    = v - static_cast<double>(truncated);
+    // `v < …` rather than `… < v`, so NaN — false to every comparison — falls
+    // through to the same answer as `+inf`.
+    const double high    = v < kMmSaturatedReal ? v : kMmSaturatedReal;
+    const double clamped = high > -kMmSaturatedReal ? high : -kMmSaturatedReal;
+
+    // |clamped| <= 2^63 - 1024, so the cast is defined; and at either bound the
+    // fraction is exactly zero, so the half step cannot reach max()/min() either.
+    const auto truncated = static_cast<Mm>(clamped); // toward zero
+    const double frac    = clamped - static_cast<double>(truncated);
 
     if (frac >= 0.5) return truncated + 1;
     if (frac <= -0.5) return truncated - 1;

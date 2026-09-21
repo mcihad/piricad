@@ -127,14 +127,21 @@ constexpr double udeg_per_angle_unit(AngleUnit unit) noexcept
 /// zero — the one rounding a typed angle goes through before the trigonometry.
 /// 45 grad is exactly 40 500 000; 45.1234 grad is exactly 40 611 060; a radian
 /// value is never exact and rounds to the nearest micro-degree.
+///
+/// The rounding itself is `mm_round`'s (units.hpp, core.md R20), which this used
+/// to keep a second copy of. `Mm` is `std::int64_t`, and round-half-away-from-zero
+/// is a rule about numbers rather than about millimetres, so the micro-degree
+/// scale borrows the one helper instead of repeating its cast — and borrows with
+/// it the saturation that keeps a typed `@0<(2^1000)` an absurd ANGLE rather than
+/// undefined behaviour. (Not `1e308`: the command line's number grammar reads
+/// digits and a point, so an exponent is refused before it ever gets here. An
+/// expression is the way an absurd magnitude actually arrives.) Past
+/// ±`kMmSaturated` micro-degrees — some seven billion turns — the answer
+/// saturates, and `sin_cos_udeg` folds it into one circle by exact integer
+/// arithmetic like any other.
 constexpr std::int64_t udeg_from_angle(double value, AngleUnit unit) noexcept
 {
-    const double scaled  = value * udeg_per_angle_unit(unit);
-    const auto truncated = static_cast<std::int64_t>(scaled);
-    const double frac    = scaled - static_cast<double>(truncated);
-    if (frac >= 0.5) return truncated + 1;
-    if (frac <= -0.5) return truncated - 1;
-    return truncated;
+    return mm_round(value * udeg_per_angle_unit(unit));
 }
 
 /// A whole number of turns from micro-degrees, as a fraction in [0, 1) — the
