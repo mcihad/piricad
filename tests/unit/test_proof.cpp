@@ -1209,3 +1209,127 @@ TEST_CASE("ESNET iptal edilince boş geri alma deltası bırakır")
     CHECK_EQ(r.doc.content_hash(), before);
     CHECK_EQ(r.undo.undo_depth(), depth);
 }
+
+TEST_CASE("PROOF: KESİŞİMNOKTA gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    // Article 6.4 for `core.intersect_point`, on the `dogru` method — the one
+    // whose answer a ruler can check. AB runs east along y = 0 and CD runs north
+    // along x = 40 m, so the crossing is (40, 0) exactly, with no rounding to
+    // argue about.
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("KESİŞİMNOKTA yontem=dogru", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+
+        REQUIRE(session.waiting());
+        CHECK(session.supply(Value::point(core::Point2{0, 0})).ok());
+        CHECK(session.supply(Value::point(core::Point2{100'000, 0})).ok());
+        CHECK(session.supply(Value::point(core::Point2{40'000, -50'000})).ok());
+        CHECK(session.supply(Value::point(core::Point2{40'000, 50'000})).ok());
+        REQUIRE(gui.bus.finish(session).ok());
+    }
+
+    Rig cli;
+    REQUIRE(
+        cli.bus
+            .execute_line("KESİŞİMNOKTA yontem=dogru 0,0 100,0 40,-50 40,50", Origin::CommandLine)
+            .ok());
+
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Kesişim kanıtı",
+            "komutlar": [ {"cmd": "core.intersect_point", "args": {
+                "yontem": "dogru",
+                "birinci": [0, 0], "ikinci": [100000, 0],
+                "ucuncu": [40000, -50000], "dorduncu": [40000, 50000] }} ]
+        })");
+        REQUIRE(r.ok());
+    }
+
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        CHECK_EQ(rig->doc.live_entity_count(), std::size_t{1});
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{1});
+    }
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+
+    // AND THE POINT A RULER WOULD HAVE PUT THERE.
+    const auto span = cli.doc.geometry().rings_of(cli.doc.entities().slot[0]);
+    CHECK_EQ((core::Point2{cli.doc.geometry().ring_xs(span.first)[0],
+                           cli.doc.geometry().ring_ys(span.first)[0]}),
+             (core::Point2{40'000, 0}));
+
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    // THE ANSWER IS IN THE JOURNAL, not just its inputs: `kesisim` is recorded so
+    // a replay lands the point this run computed rather than recomputing it.
+    CHECK(what_happened(cli.journal).find("\"kesisim\"") != std::string::npos);
+}
+
+TEST_CASE("PROOF: ARANOKTA gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    // Article 6.4 for `core.point_along`. Three readings along a 100 m line, in
+    // metres from the first point: 25, 40 and 60 — the road a hand takes with
+    // repeated keys, a typed line with a run of numbers, and a script with an
+    // array.
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("ARANOKTA yontem=mesafe", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+
+        CHECK(session.supply(Value::point(core::Point2{0, 0})).ok());
+        CHECK(session.supply(Value::point(core::Point2{100'000, 0})).ok());
+        CHECK(session.supply(Value::number(25.0)).ok());
+        CHECK(session.supply(Value::number(40.0)).ok());
+        CHECK(session.supply(Value::number(60.0)).ok());
+        REQUIRE(gui.bus.finish(session).ok()); ///< ESC / right button ends the run
+    }
+
+    Rig cli;
+    REQUIRE(cli.bus
+                .execute_line("ARANOKTA yontem=mesafe 0,0 100,0 deger=25 deger=40 deger=60",
+                              Origin::CommandLine)
+                .ok());
+
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Ara nokta kanıtı",
+            "komutlar": [ {"cmd": "core.point_along", "args": {
+                "yontem": "mesafe",
+                "birinci": [0, 0], "ikinci": [100000, 0],
+                "deger": [25, 40, 60] }} ]
+        })");
+        REQUIRE(r.ok());
+    }
+
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        CHECK_EQ(rig->doc.live_entity_count(), std::size_t{3});
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{1}); ///< three points, one step
+    }
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+
+    for (std::size_t i = 0; i < 3; ++i) {
+        const core::Mm want[3]{25'000, 40'000, 60'000};
+        const auto span = cli.doc.geometry().rings_of(cli.doc.entities().slot[i]);
+        CHECK_EQ(cli.doc.geometry().ring_xs(span.first)[0], want[i]);
+        CHECK_EQ(cli.doc.geometry().ring_ys(span.first)[0], 0);
+    }
+
+    // THE SAME ARGUMENTS IN THE SAME ORDER, across the three roads, and that is
+    // what the three lines above are written to give. `Args` keeps insertion
+    // order and `to_json` prints it, so `yontem` named before the points and
+    // named after them are two byte sequences for one invocation. What this
+    // proves is that the CLIENT does not change the record; canonicalising the
+    // record against declared order would change the journal bytes of every
+    // stored golden fixture, so it is a decision with its own change, not a
+    // side effect of this test (TODOS-CAD).
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+}

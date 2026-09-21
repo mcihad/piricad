@@ -6,6 +6,28 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — POLİGON okumaları sormuyordu; ve P1b'nin eksik üç eşitlik kanıtı
+
+- **`POLİGON` açı ve kenarı yalnız argümandan okuyordu.** Gerekçe kodun içinde
+  yazılıydı: "bir poligon ölçü karnesinden aktarılır, tıklanmaz." Bu, sayıların
+  NEREDEN geldiği için doğru ve nasıl İÇERİ GİRDİĞİ için yanlıştı — araç
+  kolonundan `POLİGON`'a basan kullanıcı iki bilinen noktayı veriyor ve sonra
+  "aci= ve kenar= gerekir" cevabını alıyordu. Fareyle ulaşılabilen ama fareyle
+  bitirilemeyen bir komut, CLAUDE.md 5.15'in yasakladığı şeydir. Artık `ALIM`'ın
+  kalıbıyla istasyon istasyon soruyor; sağ tık ya da `Esc` karneyi kapatır. Argüman
+  verildiyse hiç sorulmaz, çünkü kararı veren şey **argümanın boş olup olmadığı**,
+  `InputSource` değil (command.md P10).
+- **P1b'nin eşitlik kanıtı beşe tamamlandı** (Article 6.4). `DİKAYAK` ve `ALIM`
+  yazılıydı; `KESİŞİMNOKTA`, `ARANOKTA` ve `POLİGON` bu turda geldi. `POLİGON`
+  için ayrıca günlük replay'i **kesirli kenarlarla** — 42,315 m ve 56,72 m, yani
+  günlükten bir zamanlar 42 ve 56 olarak dönenler.
+- **Bulundu, düzeltilmedi, sebebi yazılı:** günlükteki anahtar SIRASI istemciye
+  değil yazım sırasına bağlı. `yontem` noktalardan önce yazılınca ve sonra
+  yazılınca tek çağrının iki bayt dizisi oluyor; belge ve replay ikisinde de
+  özdeş. Kaydı bildirilmiş parametre sırasına göre kanonikleştirmek saklanan her
+  altın fikstürün günlük baytlarını değiştirir — kendi değişikliği olan bir karar,
+  bir yan etki değil (TODOS-CAD).
+
 ### Eklendi — ESNET: pencere içindeki köşeleri taşıma
 
 Planın P3 paketinde ertelenmiş son fiil. Yol genişlediğinde kenarındaki parselin

@@ -132,12 +132,38 @@ Task<void> run(Context& ctx)
 
     const core::AngleConvention convention = ctx.session().bus().angle_convention();
 
-    // THE ANGLES AND THE SIDES ARE RUNS, read from the field book in order. Both
-    // are arguments rather than prompts for a reason: a traverse is transcribed
-    // from a sheet, not clicked, and the interactive form is the same command
-    // with the runs typed at the prompt.
-    const Value::Numbers angles = ctx.argument("aci").as_numbers();
-    const Value::Numbers sides  = ctx.argument("kenar").as_numbers();
+    // THE ANGLES AND THE SIDES ARE RUNS, read from the field book in order —
+    // supplied up front, or ASKED FOR one station at a time.
+    //
+    // It used to be arguments only, and the stated reason was that a traverse is
+    // transcribed from a sheet rather than clicked. That is true of where the
+    // numbers come from and false about how they get in: pressing POLİGON in the
+    // tool column asked for the two known stations and then REFUSED, telling the
+    // user to type `aci=` and `kenar=` — a command reachable by mouse that cannot
+    // be finished by one. ALIM reads its run exactly this way (survey_polar.cpp),
+    // and a capability the typed road has and the pointed road lacks is what
+    // CLAUDE.md 5.15 forbids.
+    //
+    // Supplied wins, and the loop then never runs: a script must not be asked
+    // anything, and `InputSource` is never branched on (command.md P10) — the
+    // emptiness of the argument is what decides, exactly as it does for `ALIM`'s
+    // and `DİKAYAK`'s runs.
+    Value::Numbers angles = ctx.argument("aci").as_numbers();
+    Value::Numbers sides  = ctx.argument("kenar").as_numbers();
+    if (angles.empty() && sides.empty()) {
+        while (true) {
+            auto angle =
+                co_await ctx.number("aci", "İstasyon " + std::to_string(angles.size() + 1) +
+                                               ": kırılma açısı (Enter ya da sağ tık bitirir)");
+            if (!angle) break;
+            auto side =
+                co_await ctx.number("kenar", "İstasyon " + std::to_string(sides.size() + 1) +
+                                                 ": ondan sonraki kenar (m)");
+            if (!side) break;
+            angles.push_back(*angle);
+            sides.push_back(*side);
+        }
+    }
     if (angles.empty() || sides.empty()) {
         ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
                                      "Poligon için kırılma açıları (aci=) ve kenarlar (kenar=) "

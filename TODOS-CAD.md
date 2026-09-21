@@ -222,11 +222,29 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
   diziyi kimlik listesi okuyup **kırpıyordu**: `"kenar":[42.315, 56.720]` günlükten 42 ve 56 olarak
   dönüyor, yani replay başka bir poligon çiziyordu (Article 1.4). İçinde kesir olan dizi artık
   `NumberList`; tam sayı dizisi eskisi gibi kimlik listesi kalıyor (altın fikstür ona bağlı).
-- [ ] **P1b-7** Ortak: `Category::Draw`, `AiAccessible`, tek işlem tek undo; `Param::choice` listeleri bus'ta
-  (R27).
-- [ ] **P1b-8** Docs: beş sayfa + `docs/README.md` "Çizim" satırları; `make reference`.
-- [ ] **P1b-9** Test: eşitlik kanıtı × 5; `POLİGON` `/tests/golden` — ders kitabı poligonu, üç platformda
-  bit-özdeş (6.5); tolerans kataloğu `ci-gate-catalogs.sh`; "kapanma aşıldı" hatasında madde adı.
+- [x] **P1b-7** Ortak: beşi de `Category::Draw`, `AiAccessible`, tek işlem tek undo; `yontem`, `yon`
+  ve `dagitim` sözcük listeleri `Param::choice` ile bus'ta doğrulanıyor (R27).
+- [x] **P1b-8** Docs: beş sayfa (`perp_offset`, `survey_polar`, `intersect_point`, `point_along`,
+  `traverse`) + `docs/README.md` satırları + `make reference`.
+- [x] **P1b-9** Test: **eşitlik kanıtı × 5 tamam** — `DİKAYAK` ve `ALIM` P1b'de yazıldı,
+  `KESİŞİMNOKTA`, `ARANOKTA` ve `POLİGON` bu turda. `POLİGON` için ayrıca günlük replay'i, kesirli
+  kenarlarla (42,315 m ve 56,72 m — günlükten 42 ve 56 olarak dönenler). Altın fikstür
+  `tests/golden/senaryolar/poligon.txt`, tolerans kataloğu `ci-gate-catalogs.sh`'ten geçiyor,
+  "kapanma aşıldı" reddi mevzuatı adıyla anıyor (`test_geodesy.cpp:818`).
+- [x] **P1b-10 (plan dışı, kanıt yazılırken çıktı)** `POLİGON` **okumaları sormuyordu.** Açı ve
+  kenar yalnız argümandan okunuyordu ve gerekçe "bir poligon ölçü karnesinden aktarılır, tıklanmaz"
+  diye yazılıydı. Bu, sayıların NEREDEN geldiği için doğru, nasıl İÇERİ GİRDİĞİ için yanlış: araç
+  kolonundan `POLİGON`'a basan kullanıcı iki bilinen noktayı veriyor, sonra "aci= ve kenar= gerekir"
+  cevabını alıyordu — fareyle ulaşılabilen ama fareyle bitirilemeyen bir komut (5.15). Artık
+  `ALIM`'ın kalıbıyla istasyon istasyon soruyor; argüman verildiyse hiç sorulmuyor, çünkü kararı
+  veren şey argümanın boşluğu, `InputSource` değil (command.md P10).
+- [ ] **Günlükte anahtar SIRASI, istemciye değil YAZIM sırasına bağlı** (kanıt yazılırken görüldü,
+  düzeltilmedi). `Args` ekleme sırasını tutuyor ve `to_json` onu basıyor: `yontem` noktalardan önce
+  yazılınca ve sonra yazılınca tek çağrının iki bayt dizisi oluyor. Belge ve replay ikisinde de
+  özdeş, yani 1.4 kırılmıyor; kırılan şey 6.4'ün "bayt-özdeş günlük" cümlesinin argüman sırası
+  değişince de geçerli olması. Kaydı bildirilmiş parametre sırasına göre kanonikleştirmek
+  **saklanan her altın fikstürün günlük baytlarını değiştirir**, yani kendi değişikliği olan bir
+  karar; bir yan etki olarak yapılmaz.
 
 ## P2 — Klasik çizim inşa yöntemleri
 

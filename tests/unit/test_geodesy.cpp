@@ -18,6 +18,7 @@
 #include "kentos_cad/domain/geodesy/commands.hpp"
 #include "kentos_cad/domain/geodesy/crs_service.hpp"
 #include "kentos_cad/domain/geodesy/helmert.hpp"
+#include "kentos_cad/script/json_runner.hpp"
 
 #include "kentos_cad/domain/geodesy/crs_catalog.hpp"
 #include "kentos_cad/domain/geodesy/transform.hpp"
@@ -961,4 +962,156 @@ TEST_CASE("POLİGON: kesirli kenarlar günlükten kayıpsız oynatılır")
     const std::string wrote = journal.entries().back().args.to_json().dump();
     CHECK(wrote.find("42.315") != std::string::npos);
     CHECK(wrote.find("56.72") != std::string::npos);
+}
+
+TEST_CASE("PROOF: POLİGON gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    // Article 6.4 for `geodesy.traverse`, the fifth and last of the P1b survey
+    // commands. A square traverse: four 100 m legs and four 300 grad deflection
+    // angles from a backsight due north. The three clients differ only in the
+    // road the readings take — one answer per click, a typed line with repeated
+    // keys, and a JSON script with two runs of numbers.
+    struct Rig
+    {
+        kentos::core::Document doc;
+        kentos::command::Registry reg;
+        kentos::command::Journal journal;
+        kentos::command::UndoStack undo;
+        kentos::command::Bus bus{doc, reg, journal, undo};
+
+        Rig()
+        {
+            kentos::command::register_builtin_commands(reg);
+            kentos::domain::geodesy::register_geodesy_commands(reg);
+        }
+    };
+
+    using kentos::command::Origin;
+    using kentos::command::Value;
+
+    /// Every journalled line, command and arguments, in order — the bytes
+    /// Article 6.4 compares.
+    const auto what_happened = [](const kentos::command::Journal& j) {
+        std::string out;
+        for (const auto& e : j.entries())
+            out += e.command_id + " " + e.args.to_json().dump() + "\n";
+        return out;
+    };
+
+    Rig gui;
+    {
+        REQUIRE(gui.bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
+        auto started = gui.bus.begin_interactive("POLİGON sinif=ana cizgi=hayır", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+
+        REQUIRE(session.waiting());
+        CHECK(session.supply(Value::point(kentos::core::Point2{0, 0})).ok());
+        CHECK(session.supply(Value::point(kentos::core::Point2{0, 100'000})).ok());
+        for (int leg = 0; leg < 4; ++leg) {
+            CHECK(session.supply(Value::number(300.0)).ok());
+            CHECK(session.supply(Value::number(100.0)).ok());
+        }
+        // THE RIGHT BUTTON ENDS THE READING RUN. `Session::cancel` resumes the
+        // pending await with an empty value, so the loop sees nullopt and breaks
+        // and the body computes the traverse from what it has — the same ESC path
+        // a hand takes. `finish` alone would leave the body parked at the ninth
+        // prompt, which is what a user who never pressed anything would get.
+        session.cancel();
+        REQUIRE(gui.bus.finish(session).ok());
+    }
+
+    Rig cli;
+    REQUIRE(cli.bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
+    REQUIRE(cli.bus
+                .execute_line("POLİGON sinif=ana cizgi=hayır baslangic=0,0 baglama=0,100 "
+                              "aci=300 kenar=100 aci=300 kenar=100 "
+                              "aci=300 kenar=100 aci=300 kenar=100",
+                              Origin::CommandLine)
+                .ok());
+
+    Rig scr;
+    {
+        REQUIRE(scr.bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
+        kentos::script::JsonRunner runner(scr.bus, kentos::script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Poligon kanıtı",
+            "komutlar": [ {"cmd": "geodesy.traverse", "args": {
+                "sinif": "ana", "cizgi": false,
+                "baslangic": [0, 0], "baglama": [0, 100000],
+                "aci": [300.0, 300.0, 300.0, 300.0],
+                "kenar": [100.0, 100.0, 100.0, 100.0] }} ]
+        })");
+        REQUIRE(r.ok());
+    }
+
+    // ---- the proof ----
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        CHECK_EQ(rig->doc.live_entity_count(), std::size_t{4}); ///< four stations
+        // ONE STEP, not two: declaring a layer is a schema change and leaves no
+        // undo entry, so the only thing on the stack is the traverse itself.
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{1});
+    }
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+
+    // AND THE SQUARE A TAPE WOULD HAVE MEASURED, so the three cannot agree on the
+    // same wrong answer. 300 grad from a northward backsight turns the leg east,
+    // then south, then west, then north: (100,0), (100,-100), (0,-100), (0,0) in
+    // metres.
+    const kentos::core::Point2 want[4]{{100'000, 0}, {100'000, -100'000}, {0, -100'000}, {0, 0}};
+    for (std::size_t i = 0; i < 4; ++i) {
+        const auto span = cli.doc.geometry().rings_of(cli.doc.entities().slot[i]);
+        CHECK_EQ((kentos::core::Point2{cli.doc.geometry().ring_xs(span.first)[0],
+                                       cli.doc.geometry().ring_ys(span.first)[0]}),
+                 want[i]);
+    }
+
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    CHECK(what_happened(gui.journal).find("geodesy.traverse") != std::string::npos);
+
+    // THE READINGS ARE IN THE JOURNAL AS RUNS OF FRACTIONAL NUMBERS. An array
+    // read back as ids would truncate a side length to whole metres and replay a
+    // different traverse — the defect `Value::from_json` carried (Article 1.4).
+    CHECK(what_happened(cli.journal).find("\"kenar\":[100.0,100.0,100.0,100.0]") !=
+          std::string::npos);
+}
+
+TEST_CASE("PROOF: POLİGON günlükten yeniden oynatılabilir")
+{
+    struct Rig
+    {
+        kentos::core::Document doc;
+        kentos::command::Registry reg;
+        kentos::command::Journal journal;
+        kentos::command::UndoStack undo;
+        kentos::command::Bus bus{doc, reg, journal, undo};
+
+        Rig()
+        {
+            kentos::command::register_builtin_commands(reg);
+            kentos::domain::geodesy::register_geodesy_commands(reg);
+        }
+    };
+
+    using kentos::command::Invocation;
+    using kentos::command::Origin;
+
+    Rig first;
+    REQUIRE(first.bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
+    REQUIRE(first.bus
+                .execute_line("POLİGON baslangic=0,0 baglama=0,100 aci=300 kenar=42.315 "
+                              "aci=300 kenar=56.72 aci=300 kenar=42.315 aci=300 kenar=56.72",
+                              Origin::Test)
+                .ok());
+
+    Rig again;
+    for (const auto& e : first.journal.entries()) {
+        auto r = again.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch});
+        REQUIRE_MESSAGE(r.ok(), e.command_id);
+    }
+    // FRACTIONAL SIDES ON PURPOSE: 42.315 m and 56.72 m are the readings that
+    // used to come back from the journal as 42 and 56.
+    CHECK_EQ(again.doc.content_hash(), first.doc.content_hash());
 }

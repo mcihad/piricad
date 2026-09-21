@@ -131,9 +131,28 @@ Ret hâlinde **hiçbir şey çizilmez**: işlemin tamamı geri sarılır (Articl
 ### Arayüz
 
 **Çizim > Poligon Hesabı** ya da **Harita > Poligon Hesabı**. Komut başlangıç
-istasyonunu ve bağlamayı sorar; açı ve kenar dizileri komut satırına `aci=` ve
-`kenar=` ile yazılır, çünkü bir poligon bir ölçü karnesinden **aktarılır**,
-tıklanmaz.
+istasyonunu ve bağlamayı sorar, sonra **her istasyon için sırayla kırılma açısını
+ve ondan sonraki kenarı sorar**:
+
+```text
+İstasyon 1: kırılma açısı (Enter ya da sağ tık bitirir)
+İstasyon 1: ondan sonraki kenar (m)
+İstasyon 2: kırılma açısı (Enter ya da sağ tık bitirir)
+…
+```
+
+Karneyi bitirdiğinizde **sağ tık** ya da `Esc` okumayı kapatır ve hesap çalışır.
+
+`aci=` ve `kenar=` dizilerini baştan verirseniz hiç sorulmaz: bir betik hiçbir şey
+sorulmadan çalışmalıdır ve kararı veren şey **argümanın boş olup olmadığıdır**,
+istemcinin kim olduğu değil (CLAUDE.md 1.2).
+
+> Bu komut bir süre yalnız argüman okuyordu — gerekçe "bir poligon ölçü
+> karnesinden aktarılır, tıklanmaz" idi. Bu, sayıların NEREDEN geldiği için doğru,
+> nasıl İÇERİ GİRDİĞİ için yanlıştı: araç kolonundan `POLİGON`'a basan kullanıcı
+> iki bilinen noktayı veriyor ve sonra "aci= ve kenar= gerekir" cevabını alıyordu.
+> Fareyle ulaşılabilen ama fareyle bitirilemeyen bir komut, CLAUDE.md 5.15'in
+> yasakladığı şeydir.
 
 ### Betik
 
@@ -170,7 +189,7 @@ doğrular.
 
 | Mesaj | Sebep | Çözüm |
 |---|---|---|
-| `Poligon için kırılma açıları (aci=) ve kenarlar (kenar=) gerekir` | Diziler verilmedi | Ölçü karnesindeki sırayla verin |
+| `Poligon için kırılma açıları (aci=) ve kenarlar (kenar=) gerekir` | Ne dizi verildi ne de okuma sorulabildi (betik ya da tek okuma bile girilmeden bitirildi) | Ölçü karnesindeki sırayla verin |
 | `Kırılma açısı ve kenar sayısı eşit olmalı: …` | Bir açı ya da kenar eksik | Karneyi sayın: her istasyonda bir açı, bir kenar |
 | `Açı kapanma hatası toleransı aşıyor: … cc ölçüldü, en çok … cc olabilir` | `f_β > c·√n` | Açıları kontrol edin ya da sınıfı gözden geçirin |
 | `Kenar kapanma hatası toleransı aşıyor: … m ölçüldü, en çok … m olabilir` | `f_s/[S] > 1/o` | Kenarları ve bitiş noktasını kontrol edin |
