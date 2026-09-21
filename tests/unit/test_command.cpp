@@ -6965,3 +6965,47 @@ TEST_CASE("SEÇ ÇİT baştan verilen noktaları ikinci kez toplamaz")
     REQUIRE(f.bus.execute_line("SEÇ ÇİT 5,-5 5,25", Origin::Test).ok());
     CHECK_EQ(f.bus.selection().size(), std::size_t{2}); ///< the third is not crossed
 }
+
+TEST_CASE("UÇUCA ile BİRLEŞTİR toleranslarını farklı yerden alır")
+{
+    // THE DIFFERENCE BOTH PAGES CLAIM, asserted rather than asserted in prose —
+    // and the first version of that prose was WRONG. It said BİRLEŞTİR joins only
+    // ends that touch exactly; it does not, it uses the PROJECT's node tolerance
+    // (default 10 mm). Two documents were about to ship a sentence this test
+    // refuted on the first run. Names that get confused make both commands
+    // unusable, and so does a table that explains them incorrectly.
+    {
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0", Origin::Test).ok());
+        REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 10.004,0 20,0", Origin::Test).ok()); ///< 4 mm gap
+
+        // UÇUCA's own default is 1 mm, so 4 mm is too far — and the refusal names
+        // the way out.
+        const auto tight = f.bus.execute_line("UÇUCA nesne=1 nesne=2", Origin::Test);
+        CHECK_FALSE(tight.ok());
+        CHECK(tight.error().message.find("değmiyor") != std::string::npos);
+
+        // Named wider AT THE CALL, it joins. The project's setting is untouched.
+        REQUIRE(f.bus.execute_line("UÇUCA nesne=1 nesne=2 tolerans=10", Origin::Test).ok());
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
+    }
+    {
+        // BİRLEŞTİR reads the PROJECT's node tolerance, which is 10 mm by
+        // default: the same 4 mm gap closes without anybody naming a number.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0", Origin::Test).ok());
+        REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 10.004,0 20,0", Origin::Test).ok());
+        REQUIRE(f.bus.execute_line("BİRLEŞTİR nesneler=1 nesneler=2", Origin::Test).ok());
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{1});
+    }
+    {
+        // AND TIGHTENING THE PROJECT'S SETTING TIGHTENS BİRLEŞTİR, which is the
+        // half of the claim that says where its decision comes from.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("AYAR düğüm_toleransı 1", Origin::Test).ok());
+        REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0", Origin::Test).ok());
+        REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 10.004,0 20,0", Origin::Test).ok());
+        (void)f.bus.execute_line("BİRLEŞTİR nesneler=1 nesneler=2", Origin::Test);
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{2}); ///< now too far
+    }
+}

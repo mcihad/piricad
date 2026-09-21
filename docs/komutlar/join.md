@@ -13,8 +13,15 @@ olarak böyle görünür.
 
 | Komut | Ne yapar |
 |---|---|
-`UÇUCA` | Uçları değen **çizgileri** tek çizgi yapar (topolojik ekleme) |
-`BİRLEŞTİR` | Örtüşen **alanları** tek alan yapar (poligon boolean) |
+`UÇUCA` | Yalnız **çizgileri** ekler; toleransı **çağrının kendi** `tolerans=`'ı (varsayılan 1 mm) |
+`BİRLEŞTİR` | Örtüşen **alanları** da birleştirir (poligon boolean); çizgide toleransı **projenin** düğüm toleransı (`AYAR düğüm_toleransı`, varsayılan 10 mm) |
+
+İkisi de uçları birkaç milimetre kaçmış bir zinciri toparlar; fark **toleransın
+nereden geldiğidir**. Tek bir zinciri bilerek daha gevşek toparlamak istiyorsanız
+`UÇUCA tolerans=` o kararı o çağrıda verir ve projenin ayarına dokunmaz; bütün
+ölçü işi aynı hassasiyetteyse düğüm toleransını bir kez ayarlayıp
+[`BİRLEŞTİR`](combine.md) kullanmak doğrudur. Alanlarda yalnız `BİRLEŞTİR`
+çalışır.
 
 Adları karıştırmak, ikisini de kullanılmaz kılar; bu yüzden her iki sayfa
 öbürünü adıyla anar.

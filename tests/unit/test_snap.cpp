@@ -2001,3 +2001,125 @@ TEST_CASE("izleme: yakalama modu listesinde ve ayarın aralığında")
     // AND ON BY DEFAULT, which costs nothing: with no mark the mode does nothing.
     CHECK((cat.at(index).fallback.as_int() & core::SnapTracking) != 0);
 }
+
+// ============================================================================
+// Idempotence: snapping an already-snapped point must not move it
+// ============================================================================
+
+TEST_CASE("YAKALAMA: her mod idempotent — snap(snap(p)) == snap(p)")
+{
+    // THE PROPERTY EVERY MODE OWES. A point that has already been snapped is
+    // resolved again more often than it looks: a re-dispatch resolves it, a
+    // journal replay resolves it, a script that hands a whole run over resolves
+    // each point against the one before it, and a `KOPYALA` with several targets
+    // resolves each one. A mode that moved an already-snapped point would make
+    // the same command give a different drawing the second time it ran — and the
+    // drift would be a millimetre, which is the size nobody notices until a
+    // parcel fails to close.
+    //
+    // Written as a LOOP OVER THE MASK rather than a case per mode, so a mode
+    // added to the engine is covered the day it is declared (CLAUDE.md 5.10). A
+    // mode that finds nothing in this scene is COUNTED and reported: a silent
+    // skip would let a mode claim the property without ever being asked for it.
+    core::Document doc;
+    core::Op undo;
+
+    // A scene with something for nearly every mode: a closed run (corners,
+    // midpoints, a centroid, intersections), a circle (centre, quadrants,
+    // tangents), a lone point (a node), and two guides.
+    const core::Point2 ring[4]{{0, 0}, {40'000, 0}, {40'000, 30'000}, {0, 30'000}};
+    const core::RingGeometry::RingInput face{std::span<const core::Point2>(ring, 4),
+                                             core::RingRole::Exterior, 0};
+    REQUIRE(doc.add_area(0, std::span<const core::RingGeometry::RingInput>(&face, 1), undo).ok());
+    const core::Point2 crossing[2]{{-10'000, 15'000}, {50'000, 15'000}};
+    REQUIRE(doc.add_polyline(0, std::span<const core::Point2>(crossing, 2), undo).ok());
+    REQUIRE(doc.add_circle(0, core::Point2{20'000, 60'000}, 10'000, undo).ok());
+    REQUIRE(doc.add_point(0, core::Point2{70'000, 70'000}, undo).ok());
+    REQUIRE(doc.add_guide(core::GuideAxis::Horizontal, 90'000, undo).ok());
+    REQUIRE(doc.add_guide(core::GuideAxis::Vertical, 90'000, undo).ok());
+
+    // A SLANTED SEGMENT, so an apparent intersection exists at all: the ring is a
+    // rectangle and its edges' lines cross only at its own corners, which a
+    // corner already answers. This one's line meets the bottom edge's line at
+    // (60 000, 0) — a point neither segment contains, which is exactly what
+    // UZATILMIŞ KESİŞİM is for.
+    const core::Point2 slant[2]{{50'000, 20'000}, {55'000, 10'000}};
+    REQUIRE(doc.add_polyline(0, std::span<const core::Point2>(slant, 2), undo).ok());
+
+    // Every aim worth trying: near each interesting feature of the scene, and one
+    // nowhere in particular. Several modes need an aim near the point they BUILD
+    // rather than near the geometry that implies it.
+    const core::Point2 aims[]{
+        {1'200, 900},     ///< a corner
+        {20'400, 600},    ///< a midpoint and the nearest edge
+        {19'600, 14'800}, ///< the centroid
+        {39'600, 15'200}, ///< where the crossing run meets the right edge
+        {400, 15'300},    ///< and where it meets the left edge
+        {5'200, 400},     ///< the foot of the perpendicular from the base
+        {30'000, 5'200},  ///< a ray from the base, parallel to the bottom edge
+        {59'800, 300},    ///< where the slant's line would meet the bottom edge's
+        {29'000, 55'600}, ///< a tangent foot from the base to the circle
+        {10'100, 60'700}, ///< the other tangent foot
+        {20'300, 50'400}, ///< a circle's lower quadrant
+        {20'400, 59'700}, ///< a circle's centre
+        {69'400, 70'600}, ///< a node
+        {89'600, 89'700}, ///< two guides crossing
+        {41'000, 31'000}, ///< an extension, past a corner
+        {12'345, 23'456}, ///< nowhere in particular
+    };
+
+    const core::Point2 marks[2]{{40'000, 0}, {0, 30'000}};
+    std::size_t checked = 0;
+    std::size_t silent  = 0;
+
+    for (const std::uint32_t* bit = core::snap_mode_bits(); *bit != core::SnapNone; ++bit) {
+        if ((core::SnapAllMask & *bit) == 0) continue;
+
+        bool fired_once = false;
+        for (const core::Point2 aim : aims) {
+            core::SnapQuery q;
+            q.modes  = *bit;
+            q.aim    = aim;
+            q.radius = 2'000;
+            q.reach  = 20'000;
+            // A base, because the constructed modes are built from the previous
+            // point and have nothing to build from without one.
+            q.has_base       = true;
+            q.base           = core::Point2{5'000, 5'000};
+            q.grid_step      = 5'000;
+            q.polar_step     = 50'000'000; ///< micro-degrees: 50°
+            q.tracking       = std::span<const core::Point2>(marks, 2);
+            q.tracking_reach = 2'000;
+
+            const core::SnapResult once = core::snap(doc, q);
+            if (once.mode == core::SnapNone) continue;
+            fired_once = true;
+
+            // AND AGAIN, from where it landed. Everything else about the query is
+            // the same, because the caller's settings do not change between two
+            // resolutions of one point.
+            q.aim                        = once.point;
+            const core::SnapResult twice = core::snap(doc, q);
+
+            CHECK_MESSAGE(twice.point == once.point, core::snap_mode_id(*bit));
+            ++checked;
+        }
+        if (fired_once) continue;
+
+        // EKLEME IS THE ONE EXEMPTION, and it is exempt because nothing can offer
+        // it yet: the bit is declared and no built-in kind publishes an insertion
+        // point through `KindSpec::key_points` (snap.hpp says so, and the block
+        // reference will be the first). A mode that cannot fire is not a mode
+        // this test failed to ask — it is a mode with nothing to answer.
+        if (*bit == core::SnapInsertion) continue;
+
+        ++silent;
+        MESSAGE("bu sahnede hiç tutmayan mod: " << core::snap_mode_id(*bit));
+    }
+
+    CHECK(checked > 0);
+    // Every mode in the mask found something to answer with. A mode that answers
+    // nothing here is not proven idempotent by this test, and saying so out loud
+    // is the difference between a test and a claim.
+    CHECK_EQ(silent, std::size_t{0});
+}

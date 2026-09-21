@@ -29,6 +29,28 @@ reddedeceği bir kayıt üretir — bu yüzden tevhit ayrı bir komuttur ve kom�
 
 Parsel birleştirecekseniz [`TEVHİT`](merge.md) kullanın.
 
+## `UÇUCA` ile karıştırmayın
+
+İki komut da çizgi uçlarını ekliyor gibi görünür ve **farklı sorulardır**:
+
+| | `BİRLEŞTİR` | [`UÇUCA`](join.md) |
+|---|---|---|
+| Ne üzerinde | Alan **ya da** çizgi | Yalnız çizgi |
+| Alanlarda | Poligon **boolean** birleşimi (Clipper2): dikiş kalkar | Çalışmaz |
+| Uç aralığı toleransı | **Projenin** düğüm toleransı (`AYAR düğüm_toleransı`, varsayılan 10 mm) | **Çağrının** kendi `tolerans=`'ı (varsayılan 1 mm) |
+| Kararı kim verir | Çizim için bir kez, ayarla | Her çağrıda, komutun içinde |
+
+İkisi de uçları birkaç milimetre kaçmış bir zinciri toparlar; fark **toleransın
+nereden geldiğidir**. Bir projede bütün ölçü işi aynı hassasiyetteyse düğüm
+toleransını bir kez ayarlayıp `BİRLEŞTİR` kullanmak doğrudur; tek bir zinciri
+bilerek daha gevşek toparlamak istiyorsanız [`UÇUCA tolerans=`](join.md) o kararı
+o çağrıda verir ve projenin ayarına dokunmaz.
+
+**Örtüşen alanları** yalnız `BİRLEŞTİR` birleştirir; `UÇUCA` alanda çalışmaz.
+
+Adları karıştırmak ikisini de kullanılmaz kılar; bu yüzden her iki sayfa
+öbürünü adıyla anar.
+
 ### Öznitelikler — uydurmaz
 
 - Bütün girdilerde **aynı** olan sütun değerini korur.
@@ -147,6 +169,7 @@ Daire, yay ve nokta birleştirilmez; önce [`DÖNÜŞTÜR`](reproject.md) ile ç
 
 ## İlgili
 
+- [UÇUCA](join.md) — uçları **aralıklı** çizgi zincirini toparlar, bu ise alanları birleştirir
 - [BÖL](split.md) — çizgiyi bir noktadan ikiye böler
 - [TEVHİT](merge.md) — parsel birleştirme (kadastro)
 - [ALANAÇEVİR](to_area.md) — kapalı çizgi zincirini alana çevirir

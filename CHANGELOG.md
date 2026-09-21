@@ -6,6 +6,29 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — yakalama idempotens testi, ve iki belgenin yanlış cümlesi
+
+- **`snap(snap(p)) == snap(p)`**, planın adıyla istediği ve hiç var olmayan test.
+  Bir noktayı ikinci kez çözmek göründüğünden sık olur: yeniden dispatch,
+  günlük replay, bir betiğin bütün noktaları sırayla çözmesi, birkaç hedefli bir
+  `KOPYALA`. Zaten yakalanmış bir noktayı oynatan bir mod, aynı komutun ikinci
+  çalıştırmada başka bir çizim vermesi demektir — ve kayma bir milimetre olur,
+  yani bir parsel kapanmayana kadar kimsenin görmediği boy.
+- **Maske üzerinde döngüyle** yazıldı, mod başına vaka değil: motora eklenen bir
+  mod bildirildiği gün kapsanıyor. Tutmayan bir mod **sayılıp bildiriliyor**;
+  sessiz bir atlama, özelliği kanıtlanmamış bir modu kanıtlanmış saymaktır.
+  `ekleme` tek istisna ve sebebi yazılı — hiçbir yerleşik tür henüz ekleme
+  noktası yayınlamıyor, yani cevaplayacağı bir şey yok. **Tutan her mod
+  idempotent çıktı.**
+- **`UÇUCA` ile `BİRLEŞTİR` artık iki sayfada yan yana.** `join.md` "her iki sayfa
+  öbürünü adıyla anar" diyordu ve `combine.md` `UÇUCA`'yı hiç anmıyordu.
+- **Ve düzeltirken yazdığım ilk tablo da yanlıştı**: BİRLEŞTİR'in çizgide "yalnız
+  tam değen uçları eklediğini" yazmışım, oysa **projenin** düğüm toleransını
+  okuyor (varsayılan 10 mm). Fark toleransın nereden geldiğidir — `UÇUCA`'da
+  çağrının kendi `tolerans=`'ı, `BİRLEŞTİR`'de projenin ayarı. Üç vakalı bir test
+  bunu çiviliyor. İki belge yanlış bir cümleyi yayımlamak üzereydi ve testi
+  yazmak onu ilk çalıştırmada çürüttü.
+
 ### Eklendi — inşa yöntemleri altın fikstürü ve F3 listesinin kanıtı
 
 - **`tests/golden/senaryolar/insa-yontemleri.txt`** — plan `3n` daire için bir

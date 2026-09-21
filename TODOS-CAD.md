@@ -532,6 +532,20 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
   artık yakalama açılır menüsünü de yazıyor ve satır sayısını motorun mod sayısıyla karşılaştırıyor.
   18 mod listeleniyor, **çeyrek nokta ve teğet nokta dâhil** — aralık düzeltilene kadar bitleri
   ayardan yazılamıyordu. "Tutar" yarısı `test_snap.cpp`'de.
+- [x] **Yakalama idempotens testi yazıldı** (`snap(snap(p)) == snap(p)`) — planın Birim maddesinin
+  adıyla istediği ve **hiç var olmayan** test. Maske üzerinde döngüyle yazıldı, mod başına vaka
+  değil: motora eklenen bir mod bildirildiği gün kapsanıyor (5.10). Onaltı hedef ve bir sahne, her
+  modun tutacağı bir şey içeriyor; **tutmayan bir mod sayılıp bildiriliyor**, çünkü sessiz bir atlama
+  o modun özelliği kanıtlanmadan kanıtlanmış sayılması demektir. `ekleme` tek istisna ve sebebi
+  yazılı: hiçbir yerleşik tür henüz ekleme noktası yayınlamıyor (`snap.hpp`), yani cevaplayacağı bir
+  şey yok. **Tutan her mod idempotent çıktı.**
+- [x] **`UÇUCA` ile `BİRLEŞTİR` iki sayfada yan yana anlatıldı** (planın "Bilinmesi gerekenler"
+  maddesi). `join.md` "her iki sayfa öbürünü adıyla anar" diyordu ve `combine.md` `UÇUCA`'yı hiç
+  anmıyordu — cümle bir yönde yanlıştı. **Ve düzeltirken yazdığım ilk tablo da yanlıştı**:
+  BİRLEŞTİR'in çizgide "yalnız tam değen uçları eklediğini" yazmışım, oysa PROJENİN düğüm
+  toleransını okuyor (varsayılan 10 mm). Fark **toleransın nereden geldiğidir** — `UÇUCA`'da
+  çağrının kendi `tolerans=`'ı (1 mm), `BİRLEŞTİR`'de projenin ayarı. Üç vakalı bir test bunu
+  çiviliyor; iki belge yanlış bir cümleyi yayımlamak üzereydi.
 - [x] **Fuzz korpusu güncel**: P0'ın açı sonekleri (`04-kutupsal-sonekli`, `08-bozuk` içinde
   `@100<45x`, `@100<45gg`) ve P1a'nın nokta fonksiyonları (`15`, `16`, `17`) tohumda.
 
