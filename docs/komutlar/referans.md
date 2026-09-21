@@ -23,7 +23,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.lengthen`](lengthen.md) | Uzunluk | `UZUNLUK`, `LENGTHEN`, `UZN` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizginin bir ucunu kendi doğrultusunda hareket ettirerek uzunluğunu değiştirir. |
 | [`core.explode`](explode.md) | Patlat | `PATLAT`, `EXPLODE`, `PTL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizgiyi tek tek kenarlara, alanı sınırına, blok referansını bileşenlerine ayırır. |
 | [`core.align`](align.md) | Hizala | `HİZALA`, `HIZALA`, `ALIGN`, `HZL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir ya da iki nokta çiftiyle nesneleri taşır, döndürür ve istenirse ölçekler. |
-| [`core.divide`](divide.md) | Bölümle | `BÖLÜMLE`, `BOLUMLE`, `DIVIDE`, `BLM` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta yerleştirir. |
+| [`core.divide`](divide.md) | Bölümle | `BÖLÜMLE`, `BOLUMLE`, `DIVIDE`, `BLM` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta veya blok yerleştirir. |
 | [`core.pedit`](pedit.md) | Çizgi Düzenle | `ÇİZGİDÜZENLE`, `CIZGIDUZENLE`, `PEDIT`, `ÇZD`, `CZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizgiyi kapatır, açar, yönünü çevirir ya da yakın köşelerini atarak sadeleştirir. |
 | [`core.copy_clip`](copy_clip.md) | Panoya Kopyala | `PANOYAKOPYALA`, `PANOKOPYALA`, `COPYCLIP`, `PKP` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Seçili nesneleri çizimin kendi biçiminde panoya yazar. |
 | [`core.cut`](cut.md) | Kes | `KES`, `CUT`, `KS` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili nesneleri panoya alır ve çizimden siler; tek geri alma adımı. |
@@ -300,13 +300,15 @@ Ayrıntılı kullanım: [HİZALA](align.md)
 
 ### `core.divide` — BÖLÜMLE (Bölümle)
 
-Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta yerleştirir.
+Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta veya blok yerleştirir.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
 | `nesne` | selection | en az 0 | Bölünecek nesne |
 | `sayi` | integer | isteğe bağlı | Kaç eşit parçaya bölünecek |
 | `aralik` | number | isteğe bağlı | Sabit aralık (m); başlangıçtan itibaren yürür |
+| `blok` | text | isteğe bağlı | Nokta yerine bu bloğu koyar; blok önceden tanımlı olmalı |
+| `hizala` | bool | isteğe bağlı | Bloğu üzerinde durduğu kenarın doğrultusuna çevirir |
 
 Ayrıntılı kullanım: [BÖLÜMLE](divide.md)
 
@@ -2547,7 +2549,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_divide",
     "title": "Bölümle",
-    "description": "Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta yerleştirir.\nKomut: BÖLÜMLE (BOLUMLE, DIVIDE, BLM)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "description": "Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta veya blok yerleştirir.\nKomut: BÖLÜMLE (BOLUMLE, DIVIDE, BLM)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -2565,6 +2567,14 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "aralik": {
           "type": "number",
           "description": "Sabit aralık (m); başlangıçtan itibaren yürür [m] (sayı)"
+        },
+        "blok": {
+          "type": "string",
+          "description": "Nokta yerine bu bloğu koyar; blok önceden tanımlı olmalı (metin)"
+        },
+        "hizala": {
+          "type": "boolean",
+          "description": "Bloğu üzerinde durduğu kenarın doğrultusuna çevirir (evet/hayır)"
         }
       },
       "required": [],

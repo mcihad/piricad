@@ -42,6 +42,9 @@
 #include "kentos_cad/core/settings.hpp"
 
 #include <QAction>
+#include <QClipboard>
+#include <QGuiApplication>
+#include <QMimeData>
 #include <QToolButton>
 
 #include <cmath>
@@ -3372,6 +3375,73 @@ int MainWindow::probeHelpPage()
     check(on_one.detail == QStringLiteral("ÖLÇÜ"), QStringLiteral("sağ bölme ÖLÇÜ'yü anlatıyor"));
 
     palette_->hide();
+    return failures;
+}
+
+int MainWindow::probeClipboard()
+{
+    // WHAT ONLY A WINDOW CAN ANSWER. `/tests` links no Qt, so nothing there can
+    // see whether the payload reached `QClipboard` under the agreed type and came
+    // back out of it. The temp file is DELETED between the copy and the paste, so
+    // a paste that still worked can only have come from the system clipboard.
+    int failures   = 0;
+    const auto say = [&](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[pano] %s: %s\n", ok ? "tamam" : "BAŞARISIZ",
+                           what.toUtf8().constData());
+        if (!ok) ++failures;
+    };
+
+    // ONE LINE AT A TIME, each settled before the next is read. `runScriptLine`
+    // goes through the bus the way the command line does and the window keeps
+    // running in between, so counting straight after the call counts a document
+    // that has not been written yet — which is what made the first run of this
+    // probe report one parcel out of two.
+    const auto run = [this](const QString& line) {
+        runScriptLine(line);
+        QCoreApplication::processEvents();
+        // AND ENDED, the way the right button ends one. A draw command takes an
+        // unbounded run of points and PARKS waiting for the next; the line after
+        // it would then be swallowed as input rather than run as a command — the
+        // first version of this probe drew one parcel out of two and the second
+        // ALAN never appeared in the transcript at all.
+        controller_->finishInteractive();
+        QCoreApplication::processEvents();
+    };
+
+    // FROM AN EMPTY DRAWING, because the window opens on sample content and
+    // `SEÇ HEPSİ` would then copy that too.
+    run(QStringLiteral("YENİ"));
+    run(QStringLiteral("KATMAN ad=PANO"));
+    run(QStringLiteral("ALAN 0,0 10,0 10,10 0,10"));
+    run(QStringLiteral("ALAN 20,0 30,0 30,10 20,10"));
+    run(QStringLiteral("SEÇ HEPSİ"));
+    const std::size_t before = controller_->document().live_entity_count();
+    say(before == 2, QStringLiteral("iki parsel çizildi: %1").arg(static_cast<int>(before)));
+
+    run(QStringLiteral("PANOYAKOPYALA"));
+
+    const QMimeData* held = QGuiApplication::clipboard()->mimeData();
+    const QString mime    = QString::fromUtf8(io::FileService::kClipboardMime);
+    say(held != nullptr && held->hasFormat(mime),
+        QStringLiteral("yük işletim sistemi panosunda, kendi MIME türüyle"));
+    const qsizetype bytes = held != nullptr && held->hasFormat(mime) ? held->data(mime).size() : 0;
+    say(bytes > 0, QStringLiteral("yük boş değil: %1 bayt").arg(bytes));
+
+    // THE TEMP FILE GOES AWAY, so the paste below cannot read it. Whatever comes
+    // back has come out of the system clipboard and nowhere else.
+    const QString scratch = QString::fromStdString(controller_->clipboardPath());
+    QFile::remove(scratch);
+    say(!QFile::exists(scratch), QStringLiteral("geçici dosya silindi"));
+
+    run(QStringLiteral("YENİ"));
+    say(controller_->document().live_entity_count() == 0, QStringLiteral("yeni çizim boş"));
+
+    run(QStringLiteral("YAPIŞTIR yerinde=evet"));
+    const std::size_t after = controller_->document().live_entity_count();
+    say(after == 2, QStringLiteral("pano yalnız sistem panosundan yapıştırdı: %1 nesne")
+                        .arg(static_cast<int>(after)));
+
+    (void)std::fprintf(stdout, "[pano] %d kusur\n", failures);
     return failures;
 }
 

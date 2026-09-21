@@ -389,6 +389,29 @@ Task<void> run_divide(Context& ctx)
             stations.push_back(s);
     }
 
+    // A POINT, OR A BLOCK AT EVERY STATION. A row of manholes, poles, trees or
+    // kerb markers is what a chainage list is FOR, and placing them one INSERT at
+    // a time is the work this command exists to remove. The definition has to
+    // exist already — minting one here would be `BLOK`'s job done twice (5.10).
+    core::BlockId definition = core::kNoBlock;
+    if (const Value named = ctx.argument("blok"); !named.empty()) {
+        definition = doc.blocks().find(named.as_text());
+        if (definition == core::kNoBlock) {
+            ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                         "'" + named.as_text() +
+                                             "' adlı blok yok. BLOK ile tanımlayın, sonra "
+                                             "BÖLÜMLE blok=" +
+                                             named.as_text() + " ile dizin."));
+            co_return;
+        }
+    }
+
+    // ALIGNED MEANS TURNED TO THE SEGMENT IT SITS ON, which is what a kerb
+    // marker or an arrow wants and what a manhole cover does not care about.
+    // Default off, because a block drawn upright stays upright unless asked.
+    bool aligned = false;
+    if (const Value v = ctx.argument("hizala"); !v.empty()) aligned = v.as_bool();
+
     std::size_t placed = 0;
     for (const double station : stations) {
         // Which segment the station falls on, and where along it.
@@ -402,17 +425,42 @@ Task<void> run_divide(Context& ctx)
         const core::Point2 mark{pts[i].x + core::mm_round(along * dx),
                                 pts[i].y + core::mm_round(along * dy)};
 
-        auto one = ctx.transaction().add_point(ctx.active_layer(), mark);
-        if (!one) {
-            ctx.session().fail(one.error());
+        if (definition == core::kNoBlock) {
+            auto one = ctx.transaction().add_point(ctx.active_layer(), mark);
+            if (!one) {
+                ctx.session().fail(one.error());
+                co_return;
+            }
+            ++placed;
+            continue;
+        }
+
+        core::BlockReference ref;
+        ref.block = definition;
+        // THE SEGMENT'S OWN DIRECTION, from `atan2_udeg` and not from libm: a
+        // reference's rotation is stored in micro-degrees counter-clockwise, which
+        // is exactly what that function answers (§7.3).
+        if (aligned)
+            ref.rotation_udeg = core::atan2_udeg(pts[i + 1].y - pts[i].y, pts[i + 1].x - pts[i].x);
+        ref.bounds = core::block_reference_bounds(doc, mark, ref);
+
+        const core::Point2 one_point[1]{mark};
+        const core::RingGeometry::RingInput ring{std::span<const core::Point2>(one_point, 1),
+                                                 core::RingRole::Open, 0};
+        const std::vector<std::uint8_t> payload = core::encode_block_reference(ref);
+        auto made                               = ctx.transaction().add_kind(
+            ctx.active_layer(), core::kBlockReferenceKind,
+            std::span<const core::RingGeometry::RingInput>(&ring, 1), payload);
+        if (!made) {
+            ctx.session().fail(made.error());
             co_return;
         }
         ++placed;
     }
 
     ctx.record("nesne", Value::ids({chosen.front()}));
-    ctx.echo(std::to_string(placed) + " işaret yerleştirildi (uzunluk " + std::to_string(total) +
-             " m).");
+    ctx.echo(std::to_string(placed) + (definition == core::kNoBlock ? " işaret" : " blok") +
+             " yerleştirildi (uzunluk " + std::to_string(total) + " m).");
 }
 
 // --------------------------------------------------------- ÇİZGİDÜZENLE ----
@@ -595,11 +643,15 @@ KENTOS_COMMAND(divide)
                 Param::number("aralik", Arity::optional(),
                               "Sabit aralık (m); başlangıçtan itibaren yürür")
                     .measured_in("m"),
+                Param::text("blok", Arity::optional(),
+                            "Nokta yerine bu bloğu koyar; blok önceden tanımlı olmalı"),
+                Param::boolean("hizala", Arity::optional(),
+                               "Bloğu üzerinde durduğu kenarın doğrultusuna çevirir"),
             },
         .undo    = UndoPolicy::SingleTransaction,
         .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta "
-                   "yerleştirir.",
+        .summary = "Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta veya "
+                   "blok yerleştirir.",
         .run     = &run_divide,
         .effect  = Effect::DocumentEdit,
     };

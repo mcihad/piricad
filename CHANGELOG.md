@@ -6,6 +6,34 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — işletim sistemi panosu ve BÖLÜMLE blok=
+
+Planın kalan iki maddesi, ikisi de "kendi commit'ini hak ediyor" koşuluyla
+bekliyordu.
+
+- **`KES` / `PANOYAKOPYALA` / `YAPIŞTIR` artık işletim sistemi panosunu
+  kullanıyor**, MIME türü `application/x-kentoscad-project`. Kanca
+  `io::FileService` üzerinde iki `std::function`: biri yazılan yükü app'e verir
+  (app okur ve sisteme sunar), öbürü yapıştırma öncesi app'e sorar (sistemde
+  bizim türümüzden bir yük varsa okuyucunun bakacağı yola yazar). `/src/io` Qt
+  bağlamamaya devam ediyor (Article 3.2) — Qt tarafı pencere katmanında,
+  `Controller`'da.
+- **Sistemde tutulan yük kazanır.** Başka bir pencerede kopyalayan kullanıcı
+  ONU bekler, bu sürecin temp dizininde bıraktığı eski yükü değil. Kullanıcı bir
+  dosya adı verdiyse panoya dokunulmaz: istemediği bir yan etki olurdu.
+- **Uçtan uca kanıt** (`KENTOS_CLIP_PROBE`, `os-clipboard` ctest'i): iki parsel
+  kopyalanıyor, **geçici dosya siliniyor**, yeni çizim açılıyor ve yapıştırma
+  yine iki nesne getiriyor — yani yük yalnız sistem panosundan gelebilir. `/tests`
+  Qt bağlamadığı için bu yarıyı başka hiçbir şey göremez.
+- **`BÖLÜMLE blok=` ve `hizala=`.** Bir güzergâh boyunca direk, rögar, ağaç ya da
+  bordür işareti dizmek bu parametrenin bütün varlık sebebi; her istasyona tek tek
+  `BLOKEKLE` yazmak aynı işi elle yapmaktır. `hizala=evet` bloğu üzerinde durduğu
+  kenarın doğrultusuna çevirir (`atan2_udeg`, libm değil), varsayılan kapalı —
+  dik çizilmiş bir blok istenmedikçe dik kalır. Blok önceden tanımlı olmalı:
+  burada yeni tanım üretmek `BLOK`'un işini ikinci bir yerde yapmak olurdu (5.10).
+  Planın `İŞARETLE`si ayrı bir komut olarak **yazılmadı** ve yazılmayacak: aynı
+  işin ikinci adı, ikisini de kullanılmaz kılar.
+
 ### Eklendi — açılı kılavuz: `KILAVUZ yon=<açı> nokta= tur=isin` (P2-5)
 
 Planın ertelenmiş son maddesi, ertelemenin gerektirdiği **veri göçüyle** birlikte

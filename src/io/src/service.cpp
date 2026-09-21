@@ -290,15 +290,30 @@ command::Task<core::Result<std::string>> FileService::handle(command::FileReques
         co_return export_points(std::move(request.path), request.swapped_axes,
                                 std::move(request.entities));
 
-    case command::FileRequest::Verb::ClipboardCopy:
-        co_return clipboard_copy(request.path.empty() ? default_clipboard_path()
-                                                      : std::move(request.path),
-                                 std::move(request.entities));
+    case command::FileRequest::Verb::ClipboardCopy: {
+        const bool own_path = request.path.empty();
+        std::string where   = own_path ? default_clipboard_path() : std::move(request.path);
+        auto wrote          = clipboard_copy(where, std::move(request.entities));
+        // AND ONTO THE OPERATING SYSTEM'S CLIPBOARD, through the window layer.
+        // Only for the payload this program owns: a user who named a file asked
+        // for a file, and hijacking their clipboard because of it would be a side
+        // effect they did not request.
+        if (wrote && own_path && on_clipboard_written) on_clipboard_written(where);
+        co_return wrote;
+    }
 
-    case command::FileRequest::Verb::ClipboardPaste:
-        co_return co_await clipboard_paste(
-            request.tx, request.path.empty() ? default_clipboard_path() : std::move(request.path),
-            request.at, request.in_place);
+    case command::FileRequest::Verb::ClipboardPaste: {
+        const bool own_path = request.path.empty();
+        std::string where   = own_path ? default_clipboard_path() : std::move(request.path);
+        // WHAT THE OPERATING SYSTEM HOLDS WINS, when it holds one of ours: a user
+        // who copied in another window of this program expects THAT, not the
+        // older payload this process left in the temp directory. The app answers
+        // false when the OS clipboard has nothing of ours, and then the file is
+        // read as before.
+        if (own_path && on_clipboard_wanted) (void)on_clipboard_wanted(where);
+        co_return co_await clipboard_paste(request.tx, std::move(where), request.at,
+                                           request.in_place);
+    }
     }
     co_return err(ErrorCode::Internal, "Bilinmeyen dosya işlemi.");
 }

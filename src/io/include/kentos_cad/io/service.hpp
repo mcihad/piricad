@@ -29,6 +29,7 @@
 #include "kentos_cad/io/vector.hpp"
 
 #include <cstdint>
+#include <functional>
 #include <stop_token>
 #include <string>
 #include <utility>
@@ -126,6 +127,38 @@ public:
     /// running. io.md R15: a cancelled read returns within 100 ms.
     void request_stop();
 
+    /// THE OPERATING SYSTEM'S CLIPBOARD, reached through the window layer.
+    ///
+    /// The payload itself is a native project file this module writes and reads
+    /// (`clipboard_copy`, `clipboard_paste`), because it is a drawing and this
+    /// module is the one that knows how to write a drawing. Putting those bytes
+    /// on the OS clipboard is a WINDOW's job: `/src/io` links no Qt (Article
+    /// 3.2), so the app installs these two and this module calls them.
+    ///
+    /// `on_clipboard_written` is handed the file just written; the app reads it
+    /// and offers it under the agreed MIME type. `on_clipboard_wanted` is asked
+    /// before a paste: the app writes whatever the OS clipboard holds to that
+    /// path and answers true, or answers false and the paste reads the file this
+    /// program left there itself. Unset on both sides means the clipboard works
+    /// between two windows of this program and nowhere else, which is what it did
+    /// before these existed.
+    std::function<void(const std::string& path)> on_clipboard_written;
+    std::function<bool(const std::string& path)> on_clipboard_wanted;
+
+    /// The MIME type the payload is offered under. Named here so the app and any
+    /// test agree on one string rather than two spellings of it.
+    static constexpr const char* kClipboardMime = "application/x-kentoscad-project";
+
+    /// Where a clipboard payload lives when the caller named no file: one path
+    /// per user, so two windows of this program share a clipboard and a crash
+    /// leaves the payload behind rather than losing it.
+    ///
+    /// Public because the window layer needs it twice — to read the bytes it is
+    /// about to offer the system, and to write the system's bytes where the
+    /// reader will look — and because a probe has to be able to delete it to
+    /// prove a paste came from the system clipboard and not from this file.
+    static std::string default_clipboard_path();
+
 private:
     /// The request is taken BY VALUE: a coroutine does not copy its reference
     /// parameters into its frame, and this one is called through a `std::function`
@@ -193,10 +226,6 @@ private:
     /// Reads such a file and places what is in it, as ONE undo step.
     command::Task<core::Result<std::string>>
     clipboard_paste(command::Transaction* tx, std::string path, core::Point2 at, bool in_place);
-
-    /// Where a clipboard payload lives when the caller named no file: one path
-    /// per user, so two windows of this program share it.
-    static std::string default_clipboard_path();
 
     command::Bus& bus_;
     std::string current_path_;

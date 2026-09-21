@@ -322,7 +322,8 @@ int main(int argc, char** argv)
           "KENTOS_DIALOG_PROBE",    "KENTOS_HAND_PROBE",   "KENTOS_LAYER_PROBE",
           "KENTOS_PICK_PROBE",      "KENTOS_TABLE_PROBE",  "KENTOS_SCHEMA_PROBE",
           "KENTOS_CHAT_PROBE",      "KENTOS_TOOL_PROBE",   "KENTOS_NORMAL_PROBE",
-          "KENTOS_FAMILY_PROBE",    "KENTOS_BUDGET_PROBE", "KENTOS_PROBE_LINE"})
+          "KENTOS_FAMILY_PROBE",    "KENTOS_BUDGET_PROBE", "KENTOS_CLIP_PROBE",
+          "KENTOS_PROBE_LINE"})
         if (qEnvironmentVariableIsSet(probe)) {
             QStandardPaths::setTestModeEnabled(true);
             break;
@@ -1441,6 +1442,14 @@ int main(int argc, char** argv)
             window.probeSurfaceNormal();
             QApplication::exit(0);
         });
+    }
+
+    // THE OPERATING SYSTEM'S CLIPBOARD, end to end. `/tests` links no Qt, so the
+    // half that puts bytes on `QClipboard` and takes them back is only answerable
+    // here.
+    if (qEnvironmentVariableIsSet("KENTOS_CLIP_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window,
+                           [&window] { QApplication::exit(window.probeClipboard() == 0 ? 0 : 1); });
     }
 
     // The tool family flyout, opened from the button rather than by a call.

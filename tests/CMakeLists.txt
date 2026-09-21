@@ -207,6 +207,19 @@ if(TARGET kentos_cad)
     # act. Pressing Blok Ekle used to put "Yerleştirilecek bloğun adı" on the
     # status line with the focus still on the canvas and the list of blocks
     # nowhere — a question only somebody who already knew the answer could give.
+    # THE OPERATING SYSTEM'S CLIPBOARD, end to end. `/tests` links no Qt, so the
+    # half that puts bytes on `QClipboard` under our own MIME type and takes them
+    # back is only answerable from the real binary. The probe deletes the temp
+    # file between the copy and the paste, so a paste that still works can only
+    # have come from the system clipboard.
+    add_test(NAME os-clipboard
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_CLIP_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(os-clipboard PROPERTIES TIMEOUT 120)
+
     add_test(NAME tool-answerable
         COMMAND "${CMAKE_COMMAND}" -E env
                 QT_QPA_PLATFORM=offscreen

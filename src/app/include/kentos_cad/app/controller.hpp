@@ -234,6 +234,11 @@ public:
     /// cheaper than losing somebody's afternoon.
     bool isDirty() const;
 
+    /// Where a clipboard payload lives when nobody named a file — the io
+    /// service's own scratch path, exposed so `KENTOS_CLIP_PROBE` can delete it
+    /// and prove the paste came out of the system clipboard.
+    std::string clipboardPath() const;
+
     QString activeLayerName() const;
 
 signals:

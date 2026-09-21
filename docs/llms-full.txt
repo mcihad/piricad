@@ -42,7 +42,7 @@
 ## Araç yüzeyi
 
 - Araç sayısı: 96 (86 tanesi onay ister)
-- Katalog parmak izi: `2672762748459890739`
+- Katalog parmak izi: `8172757302228136015`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -326,7 +326,7 @@ Onay ister.
 
 ### `core_divide` — Bölümle
 
-Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta yerleştirir.
+Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta veya blok yerleştirir.
 Komut: BÖLÜMLE (BOLUMLE, DIVIDE, BLM)
 Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
 
@@ -337,6 +337,8 @@ Onay ister.
 | `nesne` | string | hayır | Bölünecek nesne — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `sayi` | integer | hayır | Kaç eşit parçaya bölünecek (tam sayı) |
 | `aralik` | number | hayır | Sabit aralık (m); başlangıçtan itibaren yürür [m] (sayı) |
+| `blok` | string | hayır | Nokta yerine bu bloğu koyar; blok önceden tanımlı olmalı (metin) |
+| `hizala` | boolean | hayır | Bloğu üzerinde durduğu kenarın doğrultusuna çevirir (evet/hayır) |
 
 ### `core_earthwork` — Hacim Hesabı
 

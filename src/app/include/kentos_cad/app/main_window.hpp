@@ -336,6 +336,13 @@ public:
     /// the message says.
     int probeStatusStrip();
 
+    /// THE OPERATING SYSTEM'S CLIPBOARD, end to end. `/tests` links no Qt, so
+    /// nothing there can see whether the payload reached `QClipboard` under the
+    /// agreed MIME type and came back out of it. Copies two parcels, clears the
+    /// temp file the io side would otherwise read, and pastes from the system
+    /// clipboard alone. Returns the number of defects.
+    int probeClipboard();
+
     void probeDialogs();
 
     /// Builds the drawing every window probe photographs: a named layer, three

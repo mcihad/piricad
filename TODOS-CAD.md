@@ -344,9 +344,14 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
       yoludur ve oraya konan bir kilit denetimi, kullanıcı katmanı kilitlediği anda daha önceki
       silmeyi geri alma yığınında hapsederdi. `restore_geometry` ve öbür ters yollar bilerek
       denetimsiz: kilitlemek geçmişi dondurmaz (iki test bunu da çiviliyor).
-- [ ] **İŞARETLE (`core.measure_along`) yapılmadı:** `BÖLÜMLE aralik=` tam olarak onun işini yapıyor.
-      İkinci bir ad ikinci bir komut demek olurdu ve `blok=` ile blok yerleştirme (planın ayırt edici
-      maddesi) P6'nın pano altyapısıyla birlikte gelecek.
+- [x] **İŞARETLE ayrı bir komut olarak yazılmadı, ama ayırt edici maddesi geldi:** `BÖLÜMLE aralik=`
+      zaten sabit aralıkla işaretliyordu; eksik olan `blok=` idi ve şimdi var. **Bir güzergâh boyunca
+      direk, rögar, ağaç ya da bordür işareti dizmek** bu parametrenin bütün varlık sebebi — her
+      istasyona tek tek `BLOKEKLE` yazmak aynı işi elle yapmaktır. `hizala=evet` bloğu üzerinde
+      durduğu kenarın doğrultusuna çeviriyor (`atan2_udeg`, libm değil); varsayılan kapalı, çünkü
+      bir rögar kapağı dönmek istemez. Blok **önceden tanımlı** olmalı: burada yeni tanım üretmek
+      `BLOK`'un işini ikinci bir yerde yapmak olurdu (5.10). İkinci bir AD hâlâ yok ve olmayacak —
+      aynı işin ikinci komutu, ikisini de kullanılmaz kılar.
 
 ## P4 — Yakalama ve seçim (büyük kısmı tamamlandı)
 
@@ -440,11 +445,16 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
 - [x] Üç sayfa, `docs/README.md` satırları, `make reference`, üç eşitlik/geri-alma testi
       (kopyala→yapıştır aynı içerik hash'i; KES tek adım ve pano dolu kalıyor; boş seçim ve boş pano
       sebebiyle reddediliyor).
-- [ ] **İŞLETİM SİSTEMİ PANOSU (`QClipboard`) bağlanmadı ve sebebi:** `/src/io` Qt bağlamaz
-      (Article 3.2), dolayısıyla baytları işletim sistemi panosuna koymak `/src/app`'in işi ve bir
-      app-tarafı kanca daha istiyor. Bugün pano dosyası bu programın iki penceresi arasında
-      çalışıyor; BAŞKA bir uygulamaya kopyalamak o kancayı bekliyor. Kendi commit'ini hak ediyor ve
-      MIME türü `application/x-kentoscad-project` olarak kararlaştırıldı.
+- [x] **İŞLETİM SİSTEMİ PANOSU (`QClipboard`) bağlandı.** Kanca `io::FileService` üzerinde iki
+      `std::function`: `on_clipboard_written` (yazılan dosyayı app okur ve
+      `application/x-kentoscad-project` türüyle sisteme sunar) ve `on_clipboard_wanted` (yapıştırma
+      öncesi app, sistemde bizim türümüzden bir yük varsa onu okuyucunun bakacağı yola yazar).
+      `/src/io` Qt bağlamamaya devam ediyor (Article 3.2); Qt tarafı `Controller`'da, yani pencere
+      katmanında. **Sistemde tutulan yük kazanır**: başka bir pencerede kopyalayan kullanıcı ONU
+      bekler, bu sürecin temp dizininde bıraktığı eski yükü değil. Kullanıcı bir dosya adı verdiyse
+      panoya dokunulmaz — istemediği bir yan etki olurdu.
+      `KENTOS_CLIP_PROBE` + `os-clipboard` ctest'i uçtan uca kanıtlıyor: kopyaladıktan sonra
+      **geçici dosya siliniyor**, yani geri gelen yük yalnız sistem panosundan gelebilir.
 
 ## P7 — Sorgu ve araç çubuğu artıkları
 

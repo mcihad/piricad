@@ -45,6 +45,8 @@ BÖLÜMLE nesne=<kimlik> aralik=<m>
 | `nesne` | seçim | 1 | Bölünecek nesne |
 | `sayi` | tamsayı | 0..1 | 2–10000: kaç eşit parçaya bölünecek |
 | `aralik` | sayı | 0..1 | Sabit aralık (m) |
+| `blok` | Nokta yerine **bu bloğu** koyar; blok önceden `BLOK` ile tanımlı olmalı |
+| `hizala` | Bloğu üzerinde durduğu **kenarın doğrultusuna** çevirir; varsayılan hayır |
 
 ## Örnekler
 
@@ -76,6 +78,32 @@ BÖLÜMLE nesne=1 aralik=20
 ```json
 { "cmd": "core.divide", "args": { "nesne": [1], "aralik": 25 } }
 ```
+
+## Nokta yerine blok
+
+Bir güzergâh boyunca **direk, rögar, ağaç ya da bordür işareti** dizmek — bu
+parametrenin bütün varlık sebebi budur. Her istasyona tek tek `BLOKEKLE` yazmak
+aynı işi elle yapmaktır.
+
+```text
+BLOK ad=DİREK nesneler=1 taban=0,0
+BÖLÜMLE nesne=2 aralik=25 blok=DİREK
+```
+
+```text
+3 blok yerleştirildi (uzunluk 100.000000 m).
+```
+
+Blok **önceden tanımlı** olmalıdır: burada yeni bir tanım üretmek
+[`BLOK`](block.md)'un işini ikinci bir yerde yapmak olurdu. Tanımsız bir ad
+reddedilir ve ret ne yapılacağını söyler.
+
+`hizala=evet` bloğu, üzerinde durduğu **kenarın doğrultusuna** çevirir — bir okun
+ya da bordür işaretinin istediği şey budur. Bir rögar kapağı için gereksizdir, bu
+yüzden varsayılan kapalıdır: dik çizilmiş bir blok, istenmedikçe dik kalır.
+
+Doğrultu `atan2_udeg`'den gelir, libm'den değil: bir blok referansının dönüşü
+mikro-derece olarak saklanır ve o fonksiyon tam olarak onu verir (§7.3).
 
 ## Geri alma
 

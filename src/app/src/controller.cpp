@@ -17,7 +17,11 @@
 
 #include "kentos_cad/core/identity.hpp"
 
+#include <QClipboard>
 #include <QDir>
+#include <QFile>
+#include <QGuiApplication>
+#include <QMimeData>
 #include <QStandardPaths>
 
 #include <filesystem>
@@ -101,6 +105,43 @@ Controller::Controller(QObject* parent)
 #else
     script::install(bus_, runner_);
 #endif
+    // THE OPERATING SYSTEM'S CLIPBOARD, which only a window can reach. The
+    // payload is a native project file `/src/io` writes and reads; putting those
+    // bytes where another application — or another instance of this one — can
+    // take them is Qt's job, and `/src/io` links no Qt (Article 3.2). So the two
+    // hooks are installed here and the io service calls them.
+    files_.on_clipboard_written = [](const std::string& path) {
+        QFile payload(QString::fromStdString(path));
+        if (!payload.open(QIODevice::ReadOnly)) return;
+        const QByteArray bytes = payload.readAll();
+        payload.close();
+
+        // THE BYTES UNDER OUR OWN TYPE, and the path as text beside them. The
+        // text is a courtesy to a file manager or an editor the user might paste
+        // into; the bytes are what this program reads back.
+        auto* data = new QMimeData();
+        data->setData(QString::fromUtf8(io::FileService::kClipboardMime), bytes);
+        data->setText(QString::fromStdString(path));
+        QGuiApplication::clipboard()->setMimeData(data);
+    };
+
+    files_.on_clipboard_wanted = [](const std::string& path) {
+        const QMimeData* data = QGuiApplication::clipboard()->mimeData();
+        if (data == nullptr) return false;
+        const QString mime = QString::fromUtf8(io::FileService::kClipboardMime);
+        if (!data->hasFormat(mime)) return false;
+
+        // WHAT THE SYSTEM HOLDS WINS. Written to the path the io side is about to
+        // read, so the reader stays one reader: a second road into a drawing is a
+        // second description of one (CLAUDE.md 5.10).
+        QFile payload(QString::fromStdString(path));
+        if (!payload.open(QIODevice::WriteOnly | QIODevice::Truncate)) return false;
+        const QByteArray bytes = data->data(mime);
+        const bool whole       = payload.write(bytes) == bytes.size();
+        payload.close();
+        return whole;
+    };
+
     wireBus();
 
     // Now that the bus can be heard: anything the print service could not say
@@ -649,6 +690,11 @@ QString Controller::currentFile() const
 bool Controller::isDirty() const
 {
     return document_.revision() != files_.saved_revision();
+}
+
+std::string Controller::clipboardPath() const
+{
+    return io::FileService::default_clipboard_path();
 }
 
 QString Controller::activeLayerName() const

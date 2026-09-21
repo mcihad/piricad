@@ -6711,3 +6711,91 @@ TEST_CASE("kilidi açılınca düzenleme yeniden çalışır")
     REQUIRE(f.bus.execute_line("TAŞI nesneler=1 baslangic=0,0 bitis=5,0", Origin::Test).ok());
     CHECK(f.doc.content_hash() != locked_state);
 }
+
+TEST_CASE("BÖLÜMLE blok= ile her istasyona blok koyar")
+{
+    Fixture f;
+    // A row of poles down a 100 m line, every 25 m. Placing them one INSERT at a
+    // time is the work this parameter exists to remove.
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 100,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("BLOK ad=DİREK nesneler=1 taban=0,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok());
+
+    const auto count_references = [&f] {
+        std::size_t n = 0;
+        for (core::EntityId e = 0; e < f.doc.entities().size(); ++e)
+            if (f.doc.alive(e) && f.doc.entities().kind[e] == core::kBlockReferenceKind) ++n;
+        return n;
+    };
+    const std::size_t entities_before   = f.doc.live_entity_count();
+    const std::size_t references_before = count_references(); ///< BLOK leaves one behind
+
+    // `nesne` names the POLYLINE, whichever key it got: BLOK consumes what it
+    // defines, so the key is read rather than assumed.
+    core::EntityKey line = core::EntityKey::None;
+    for (core::EntityId e = 0; e < f.doc.entities().size(); ++e)
+        if (f.doc.alive(e) && f.doc.entities().kind[e] == core::kPolylineKind)
+            line = f.doc.key_of(e);
+    REQUIRE(line != core::EntityKey::None);
+
+    REQUIRE(f.bus
+                .execute_line("BÖLÜMLE nesne=" + std::to_string(core::raw(line)) +
+                                  " aralik=25 blok=DİREK",
+                              Origin::Test)
+                .ok());
+
+    // Three interior stations at 25, 50 and 75 m; 100 is the end and is not one.
+    CHECK_EQ(f.doc.live_entity_count(), entities_before + 3);
+    CHECK_EQ(count_references(), references_before + 3);
+}
+
+TEST_CASE("BÖLÜMLE hizala=evet bloğu kenarın doğrultusuna çevirir")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("BLOK ad=OK nesneler=1 taban=0,0", Origin::Test).ok());
+    // A line running due NORTH: an aligned block turns a quarter turn with it.
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 0,100", Origin::Test).ok());
+
+    core::EntityKey line = core::EntityKey::None;
+    for (core::EntityId e = 0; e < f.doc.entities().size(); ++e)
+        if (f.doc.alive(e) && f.doc.entities().kind[e] == core::kPolylineKind)
+            line = f.doc.key_of(e);
+    REQUIRE(line != core::EntityKey::None);
+
+    REQUIRE(f.bus
+                .execute_line("BÖLÜMLE nesne=" + std::to_string(core::raw(line)) +
+                                  " sayi=2 blok=OK hizala=evet",
+                              Origin::Test)
+                .ok());
+
+    // THE ONE AT THE MIDPOINT is the one this command placed; BLOK's own
+    // reference sits at the origin with no rotation and is not the subject.
+    bool checked = false;
+    for (core::EntityId e = 0; e < f.doc.entities().size(); ++e) {
+        if (!f.doc.alive(e) || f.doc.entities().kind[e] != core::kBlockReferenceKind) continue;
+        const core::RingSpan span = f.doc.geometry().rings_of(f.doc.entities().slot[e]);
+        if (f.doc.geometry().ring_ys(span.first)[0] != 50'000) continue;
+
+        const auto payload = f.doc.geometry().payload_of(f.doc.entities().slot[e]);
+        auto ref           = core::decode_block_reference(payload);
+        REQUIRE(ref.ok());
+        // `atan2_udeg` is exact on the axes: due north is a quarter circle.
+        CHECK_EQ(ref.value().rotation_udeg, core::kUDegFullCircle / 4);
+        checked = true;
+    }
+    CHECK(checked);
+}
+
+TEST_CASE("BÖLÜMLE tanımsız bloğu adıyla reddeder")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok());
+
+    const auto r = f.bus.execute_line("BÖLÜMLE nesne=1 sayi=4 blok=YOKBÖYLE", Origin::Test);
+    REQUIRE_FALSE(r.ok());
+    CHECK(r.error().message.find("YOKBÖYLE") != std::string::npos);
+    // The refusal says what to do about it, which is BLOK's job and not this one's.
+    CHECK(r.error().message.find("BLOK ile tanımlayın") != std::string::npos);
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{1}); ///< nothing half-placed
+}
