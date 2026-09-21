@@ -304,14 +304,36 @@ core::Result<Value> Value::from_json(const core::Json& j)
         return Value::texts(std::move(words));
     }
 
-    Ints out;
-    out.reserve(a.size());
+    // AN ARRAY WITH A FRACTION IN IT IS A RUN OF READINGS, not a list of ids.
+    //
+    // This read every numeric array as ids and truncated: a traverse journalled
+    // with `"kenar":[42.315, 56.720]` came back as 42 and 56, so replaying it
+    // drew a different traverse. Article 1.4 says an invocation round-trips
+    // losslessly, and a side length with its millimetres cut off is exactly what
+    // that forbids. A WHOLE-NUMBER array still reads as ids, because that is
+    // what it has always meant and a golden fixture depends on it — and a
+    // `Number` parameter reads an id list as its run anyway
+    // (`Value::as_numbers`), so nothing is lost either way round.
+    bool fractional = false;
     for (const auto& item : a) {
         if (!item.is_number())
             return core::err(ErrorCode::ParseError,
-                             "Kimlik listesinde sayı bekleniyordu, gelen: " + item.dump());
-        out.push_back(item.as_int());
+                             "Sayı listesinde sayı bekleniyordu, gelen: " + item.dump());
+        if (!item.is_int()) fractional = true;
     }
+
+    if (fractional) {
+        Numbers run;
+        run.reserve(a.size());
+        for (const auto& item : a)
+            run.push_back(item.as_double());
+        return Value::numbers(std::move(run));
+    }
+
+    Ints out;
+    out.reserve(a.size());
+    for (const auto& item : a)
+        out.push_back(item.as_int());
     return Value::ids(std::move(out));
 }
 

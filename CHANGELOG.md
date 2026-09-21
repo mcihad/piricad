@@ -6,6 +6,65 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — POLİGON: her ölçünün üzerine oturduğu iskelet (P1b-5, P1b-6)
+
+Poligon güzergâhını ölçü karnesinden koordinata çevirir: açı kapanmasını
+hesaplar ve istasyonlara eşit dağıtır, düzeltilmiş semtlerle koordinatları
+hesaplar, kenar kapanmasını hesaplar ve eşit ya da kenar orantılı (Bowditch)
+dağıtır. Rapor yapılandırılmıştır (`Context::report`): sınıf, kaynak, onay
+durumu, `[S]`, kapanma hataları ve her istasyon için semt, kenar, sağa, yukarı.
+
+- **Kapanmanın kabul edilebilirliği mevzuat kararıdır ve bu dosya onu vermez.**
+  Toleranslar `/data/catalogs/geodesy/poligon-toleranslari.json`'dan okunur
+  (CLAUDE.md 5.13); aşan bir güzergâh **reddedilir**, ret yönetmeliği adıyla ve
+  oranıyla söyler, ve reddedilen bir güzergâh çizime hiçbir şey bırakmaz
+  (Article 1.6).
+- **HARİTA MÜHENDİSİ ONAYI BEKLİYOR (CLAUDE.md 6.11).** Tolerans paketinin
+  `kapsam.onay` alanı `BEKLİYOR`: değerler BÖHHBÜY'ün poligon bölümünden bir
+  harita mühendisi tarafından teyit edilmemiştir. Komut **her retinde** bunu
+  yazar ve rapor `onay` alanında taşır, yani imzalanmamış bir sayı kural gibi
+  görünmüyor. Kod, şema, `data/LICENCES.md` izin satırı, kapılar ve testler
+  tamamdır; eksik olan yalnız o onaydır ve paket o gelene kadar bir üretim işinin
+  kabulü için kullanılmaz.
+- **`POLİGON` `ALAN`'dan alındı.** Bir yanlış çeviriydi: Türkçe haritacılıkta
+  *poligon* bir güzergâhtır, `ALAN`'ın çizdiği şekil ise *çokgen*'dir. `ALAN`,
+  `AREA` ve `AL` değişmedi ve günlükler komut kimliğini sakladığı için replay
+  etkilenmedi.
+- **Altın fikstür** (`tests/golden/senaryolar/poligon.txt`): kare bir güzergâh ve
+  20 mm'lik bir kapanmanın kenar orantılı dağıtımı — düzeltme payları 5, 10, 15,
+  20 mm. Dağıtım bir bölme içerir ve bölmenin yuvarlaması üç platformda aynı
+  olmak zorundadır (§7.3).
+- Arayüz: **Çizim > Poligon Hesabı** ve **Harita > Poligon Hesabı**. Sayfası,
+  `docs/README.md` satırı, `make reference`, beş test.
+
+### Düzeltildi — günlük kesirli bir kenarı kırpıyordu
+
+`Value::from_json` her sayısal diziyi kimlik listesi olarak okuyup **tam sayıya
+kırpıyordu**. `"kenar":[42.315, 56.720]` günlükten 42 ve 56 olarak dönüyordu:
+replay başka bir poligon çiziyor, başka bir içerik hash'i veriyor ve imza yanlış
+çizimin üstüne düşüyordu. Bir kenar milimetresine kadar ölçülür ve yalnız
+metresini tutan bir günlük günlük değildir (Article 1.4).
+
+İçinde kesir olan bir dizi artık `NumberList` olarak okunuyor; tam sayı dizisi
+eskisi gibi kimlik listesi kalıyor, çünkü her zaman o anlama geldi ve bir altın
+fikstür ona bağlı — bir `Number` parametresi kimlik listesini kendi dizisi olarak
+okuduğu için iki yönde de kayıp yok.
+
+### Düzeltildi — bir domain komutunun ad çakışması hiçbir yerde yakalanmıyordu
+
+`test_command.cpp`'nin tripwire'ı yalnız `/src/command` kaydını sayar; bir domain
+modülünü **göremez**, çünkü `/src/command` bir domain modülüne bağımlı olamaz
+(Article 3.2). `geodesy.traverse` bu yüzden `POLİGON` `ALAN`'ın eşadıyken
+kaydolamıyor, başarısız kayıt yalnız bir log satırı yazıp devam ettiği için
+program traverse olmadan — temiz derlemeyle ve yeşil bir suite ile —
+başlıyordu.
+
+Yeni kapı (`test_geodesy.cpp`, "kayıt: bütün kayıtlar birlikte") uygulamanın
+kaydettiği her şeyi birlikte kaydediyor, bildirilen her adın onu bildiren komuta
+çözüldüğünü denetliyor ve dört domain komutunu **adıyla** arıyor — bir sayı bir
+şeyin değiştiğini söyler, bir ad neyin eksik olduğunu söyler. Kapı eski koda
+karşı denendi ve onda "kayıtta yok: geodesy.traverse" diye düşüyor.
+
 ### Eklendi — KESİŞİMNOKTA ve ARANOKTA: kaybolan köşe ve kazık dizisi (P1b-3, P1b-4)
 
 `KESİŞİMNOKTA` taş taşı gitmiş bir köşeyi üç yoldan geri kurar: iki doğrultunun

@@ -180,6 +180,7 @@ namespace kentos::command {
 /// below is the one place this module's commands are named.
 KENTOS_COMMAND(stakeout);
 KENTOS_COMMAND(reproject);
+KENTOS_COMMAND(traverse);
 } // namespace kentos::command
 
 namespace kentos::domain::geodesy {
@@ -192,6 +193,7 @@ void register_geodesy_commands(kentos::command::Registry& r)
     (void)r.add(kentos::command::kentos_command_fit());
     (void)r.add(kentos::command::kentos_command_stakeout());
     (void)r.add(kentos::command::kentos_command_reproject());
+    (void)r.add(kentos::command::kentos_command_traverse());
 }
 
 } // namespace kentos::domain::geodesy

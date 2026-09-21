@@ -1389,6 +1389,10 @@ void MainWindow::buildMenus()
     // THE SURVEY ENTRY, where a drawing actually starts for a crew with a tape.
     // Curated rather than left to the generated tail: this is the first tool a
     // Turkish surveyor reaches for, not an occasional one (TODOS-CAD P1b).
+    draw->addAction(commandAction(Glyph::Function, tr("Poligon Hesabı"), QStringLiteral("POLİGON"),
+                                  tr("POLİGON — kırılma açısı ve kenarlardan poligon "
+                                     "koordinatları, kapanma dağıtımı ve mevzuat toleransı  ·  "
+                                     "kısaltma: PLG")));
     draw->addAction(commandAction(Glyph::Point, tr("Kesişim Noktası"),
                                   QStringLiteral("KESİŞİMNOKTA"),
                                   tr("KESİŞİMNOKTA — iki doğrultunun, iki uzaklığın ya da iki "
@@ -1453,6 +1457,10 @@ void MainWindow::buildMenus()
     map->addSeparator();
     // THE SURVEY COMPUTATIONS. `APLİKASYON` is what a crew takes to the field
     // and `HACİM` is what an earthwork report is made of; neither had a way in.
+    map->addAction(commandAction(Glyph::Function, tr("Poligon Hesabı"), QStringLiteral("POLİGON"),
+                                 tr("POLİGON — poligon güzergâhını hesaplar, kapanma hatalarını "
+                                    "dağıtır ve mevzuat toleransına karşı denetler  ·  "
+                                    "kısaltma: PLG")));
     map->addAction(commandAction(Glyph::Locate, tr("Aplikasyon"), QStringLiteral("APLİKASYON"),
                                  tr("APLİKASYON — istasyondan hedefe semt açısı ve kenar  ·  "
                                     "kısaltma: APL")));

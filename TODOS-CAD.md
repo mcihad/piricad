@@ -192,12 +192,36 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
   aynı Türkçe ret cümlesi, iş yazılmış da olsa tıklanmış da olsa. `ara()`nın metre biçimi artık oran
   biçiminin yuvarlamasından geçiyor, yani `0.2` ile `20 m` aynı milimetre. Arayüz: **Çizim > Kesişim
   Noktası** ve **Çizim > Ara Nokta**, ikisi de Nokta ailesinde (§2.6a).
-- [ ] **P1b-5** `geodesy.traverse` — `POLİGON`, `POLIGON`, `TRAVERSE`, `PLG`
+- [x] **P1b-5** `geodesy.traverse` — `POLİGON`, `POLIGON`, `TRAVERSE`, `PLG`
   (`src/domain/geodesy/src/traverse_command.cpp`): bilinen başlangıç/bitiş, kırılma açısı + kenar →
   koordinatlar; açı ve kenar kapanma hataları; `dagitim=esit|kenar`; `Context::report` yapılandırılmış
   rapor; noktalar numaralı `NOKTA`, katman `POLİGON`.
-- [ ] **P1b-6** `/data/catalogs/geodesy/poligon-toleranslari.json` — BÖHHBÜY madde/ek kaynaklı, data.md
-  başlık bloğu, şema; aşan kapanma `Error` + madde adı (domain.md R23). **Harita mühendisi onayı** (6.11).
+- [~] **P1b-6** `/data/catalogs/geodesy/poligon-toleranslari.json` — BÖHHBÜY kaynaklı, data.md başlık
+  bloğu, şema (`schema/poligon-toleranslari.schema.json`), `data/LICENCES.md` izin satırı; aşan kapanma
+  `Error` + yönetmelik adı (domain.md R23). **HARİTA MÜHENDİSİ ONAYI HÂLÂ BEKLİYOR (6.11).** Paketin
+  `kapsam.onay` alanı `BEKLİYOR` ve komut HER RETİNDE bunu yazıyor; rapor da `onay` alanında taşıyor.
+  Kod, şema, izin satırı, kapı ve testler tamam — eksik olan yalnız bir harita mühendisinin BÖHHBÜY'ün
+  poligon bölümünden değerleri teyit etmesi. O onay gelene kadar paket bir üretim işinin kabulü için
+  kullanılmaz ve bu, imzalanmamış bir sayının kural gibi görünmesini engelliyor.
+- [x] **P1b-7** Ortak: `Category::Draw`, `AiAccessible`, tek işlem tek undo; `Param::choice` listeleri
+  (`yontem`, `yon`, `sinif`, `dagitim`) bus'ta doğrulanıyor.
+- [x] **P1b-8** Docs: beş sayfa (`perp_offset`, `survey_polar`, `intersect_point`, `point_along`,
+  `traverse`) + `docs/README.md` satırları + `make reference`.
+- [x] **P1b-9** Test: eşitlik kanıtı × 2 (DİKAYAK, ALIM) + günlük replay × 2; `POLİGON` için
+  `/tests/golden/senaryolar/poligon.txt` — kare güzergâh ve kenar orantılı dağıtım, bit-özdeş;
+  tolerans kataloğu `ci-gate-catalogs.sh` ve `ci-gate-data-permits.sh`'ten geçiyor; "kapanma aşıldı"
+  hatasının yönetmelik adını, oranı ve onay uyarısını içerdiği doğrulanıyor.
+- [x] **P1b-10 (plan dışı, yolda çıktı)** Çapraz-kayıt ad çakışması kapısı
+  (`test_geodesy.cpp`, "kayıt: bütün kayıtlar birlikte"). `test_command.cpp`'nin tripwire'ı yalnız
+  `/src/command` kaydını sayar — bir domain modülünü göremez (Article 3.2) — ve `geodesy.traverse`
+  `POLİGON` `ALAN`'ın eşadıyken kaydolamıyordu. Başarısız kayıt yalnız log yazıp devam ettiği için
+  program traverse olmadan, temiz derlemeyle ve yeşil suite ile başlıyordu. Yeni kapı eski koda karşı
+  denendi ve onda düşüyor. `POLİGON` `ALAN`'dan alındı: Türkçe haritacılıkta *poligon* güzergâhtır,
+  `ALAN`'ın çizdiği şekil *çokgen*'dir.
+- [x] **P1b-11 (plan dışı, yolda çıktı)** Günlükte kesirli sayı kaybı. `Value::from_json` her sayısal
+  diziyi kimlik listesi okuyup **kırpıyordu**: `"kenar":[42.315, 56.720]` günlükten 42 ve 56 olarak
+  dönüyor, yani replay başka bir poligon çiziyordu (Article 1.4). İçinde kesir olan dizi artık
+  `NumberList`; tam sayı dizisi eskisi gibi kimlik listesi kalıyor (altın fikstür ona bağlı).
 - [ ] **P1b-7** Ortak: `Category::Draw`, `AiAccessible`, tek işlem tek undo; `Param::choice` listeleri bus'ta
   (R27).
 - [ ] **P1b-8** Docs: beş sayfa + `docs/README.md` "Çizim" satırları; `make reference`.

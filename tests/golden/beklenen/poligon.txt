@@ -1,0 +1,53 @@
+crs TUREF/TM36
+katman-sayisi 3
+nesne-sayisi 9
+katman 0 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=0
+katman POLIGON gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=4
+katman POLIGON2 gorunur=1 kilitli=0 renk=ff000000 kalinlik_um=0 nesne=5
+nesne 0 katman=POLIGON stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    100000 0
+  alan_mm2 0  cevre_mm 0
+nesne 1 katman=POLIGON stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    100000 -100000
+  alan_mm2 0  cevre_mm 0
+nesne 2 katman=POLIGON stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    0 -100000
+  alan_mm2 0  cevre_mm 0
+nesne 3 katman=POLIGON stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    0 0
+  alan_mm2 0  cevre_mm 0
+nesne 4 katman=POLIGON2 stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    100005 0
+  alan_mm2 0  cevre_mm 0
+nesne 5 katman=POLIGON2 stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    100010 -100000
+  alan_mm2 0  cevre_mm 0
+nesne 6 katman=POLIGON2 stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    15 -100000
+  alan_mm2 0  cevre_mm 0
+nesne 7 katman=POLIGON2 stil=0 halka=1 tur=4
+  halka rol=0 parca=0 tepe=1
+    20 0
+  alan_mm2 0  cevre_mm 0
+nesne 8 katman=POLIGON2 stil=0 halka=1
+  halka rol=0 parca=0 tepe=5
+    0 0
+    100005 0
+    100010 -100000
+    15 -100000
+    20 0
+  alan_mm2 0  cevre_mm 400000
+kapsam 0 -100000 100010 0
+icerik-ozeti f6d5c2da32513d86
+gunluk
+  {"seq":1,"cmd":"core.layer","args":{"ad":"POLIGON"},"origin":"test","crs":"TUREF/TM36","katman":"POLIGON"}
+  {"seq":2,"cmd":"geodesy.traverse","args":{"baslangic":[0,0],"baglama":[0,100000],"aci":[300.0,300.0,300.0,300.0],"kenar":[100.0,100.0,100.0,100.0],"sinif":"ana","cizgi":false},"origin":"test","crs":"TUREF/TM36","katman":"POLIGON"}
+  {"seq":3,"cmd":"core.layer","args":{"ad":"POLIGON2"},"origin":"test","crs":"TUREF/TM36","katman":"POLIGON2"}
+  {"seq":4,"cmd":"geodesy.traverse","args":{"baslangic":[0,0],"baglama":[0,100000],"aci":[300.0,300.0,300.0,300.0],"kenar":[100.0,100.0,100.0,100.0],"bitis":[[20,0]],"dagitim":"kenar","cizgi":true},"origin":"test","crs":"TUREF/TM36","katman":"POLIGON2"}

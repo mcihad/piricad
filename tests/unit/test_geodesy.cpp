@@ -718,3 +718,247 @@ TEST_CASE("DÖNÜŞTÜR: aynı sistem istenirse hiçbir şey yapmaz")
     CHECK(r.said.find("Yapılacak bir şey yok") != std::string::npos);
     CHECK(r.doc.content_hash() == before);
 }
+
+// =============================================================================
+// POLİGON — the traverse: closure, distribution, and the regulation's limits
+// =============================================================================
+
+TEST_CASE("POLİGON: kapalı bir kare güzergâh hatasız kapanır")
+{
+    kentos::core::Document doc;
+    kentos::command::Registry reg;
+    kentos::command::Journal journal;
+    kentos::command::UndoStack undo;
+    kentos::command::Bus bus{doc, reg, journal, undo};
+    kentos::command::register_builtin_commands(reg);
+    kentos::domain::geodesy::register_geodesy_commands(reg);
+    using kentos::command::Origin;
+
+    // A PERFECT SQUARE, so every number in the sheet is checkable by eye. The
+    // crew stands at (0,0) with a backsight due north and walks four 100 m sides,
+    // turning 300 grad — a right angle to the right — at each station. Under the
+    // default semt rule a breaking angle carries the line by a half turn less the
+    // angle, so 300 grad turns east, then south, then west, then north again, and
+    // the fourth station lands back on the start.
+    REQUIRE(bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
+    const auto ran =
+        bus.execute_line("POLİGON baslangic=0,0 baglama=0,100 aci=300 kenar=100 aci=300 kenar=100 "
+                         "aci=300 kenar=100 aci=300 kenar=100 sinif=ana cizgi=hayır",
+                         Origin::Test);
+    REQUIRE(ran.ok());
+
+    // Four stations: (100,0), (100,-100), (0,-100), (0,0).
+    REQUIRE_EQ(doc.live_entity_count(), std::size_t{4});
+    const kentos::core::Point2 expected[4]{
+        {100'000, 0}, {100'000, -100'000}, {0, -100'000}, {0, 0}};
+    for (std::size_t i = 0; i < 4; ++i) {
+        const auto span = doc.geometry().rings_of(doc.entities().slot[i]);
+        CHECK_EQ((kentos::core::Point2{doc.geometry().ring_xs(span.first)[0],
+                                       doc.geometry().ring_ys(span.first)[0]}),
+                 expected[i]);
+    }
+
+    // AND THE SHEET IS A SHEET (command.md R26): the class, the source, the
+    // approval state and a row per station.
+    const kentos::core::Json& sheet = ran.value().report;
+    const kentos::core::Json* rows  = sheet.find("istasyonlar");
+    REQUIRE(rows != nullptr);
+    CHECK_EQ(rows->as_array().size(), std::size_t{4});
+    const kentos::core::Json* source = sheet.find("kaynak");
+    REQUIRE(source != nullptr);
+    CHECK(source->as_string().find("BÖHHBÜY") != std::string::npos);
+
+    // The tolerance package is not signed yet, and the command says so rather
+    // than letting an unsigned number look like a rule (CLAUDE.md 6.11).
+    const kentos::core::Json* approval = sheet.find("onay");
+    REQUIRE(approval != nullptr);
+    CHECK_EQ(approval->as_string(), "BEKLİYOR");
+}
+
+TEST_CASE("POLİGON: kenar kapanma hatası dağıtılır ve bitiş noktasına oturur")
+{
+    kentos::core::Document doc;
+    kentos::command::Registry reg;
+    kentos::command::Journal journal;
+    kentos::command::UndoStack undo;
+    kentos::command::Bus bus{doc, reg, journal, undo};
+    kentos::command::register_builtin_commands(reg);
+    kentos::domain::geodesy::register_geodesy_commands(reg);
+    using kentos::command::Origin;
+
+    REQUIRE(bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
+
+    // The same square, but the closing point is published 20 mm away from where
+    // the measurements put it: a small misclosure to be distributed. THE LAST
+    // STATION MUST LAND ON THE PUBLISHED POINT — that is what distributing a
+    // closure means, and a traverse whose last station missed it would have been
+    // computed and not closed.
+    const auto ran = bus.execute_line(
+        "POLİGON baslangic=0,0 baglama=0,100 aci=300 kenar=100 aci=300 kenar=100 "
+        "aci=300 kenar=100 aci=300 kenar=100 bitis=0.02,0 dagitim=kenar cizgi=hayır",
+        Origin::Test);
+    REQUIRE(ran.ok());
+
+    REQUIRE_EQ(doc.live_entity_count(), std::size_t{4});
+    const auto last = doc.geometry().rings_of(doc.entities().slot[3]);
+    CHECK_EQ((kentos::core::Point2{doc.geometry().ring_xs(last.first)[0],
+                                   doc.geometry().ring_ys(last.first)[0]}),
+             (kentos::core::Point2{20, 0}));
+
+    // AND THE SHARE GROWS ALONG THE RUN. With equal sides, Bowditch gives each
+    // station a quarter more of the correction than the one before it.
+    const auto first = doc.geometry().rings_of(doc.entities().slot[0]);
+    CHECK_EQ(doc.geometry().ring_xs(first.first)[0], 100'005);
+
+    const kentos::core::Json* miss = ran.value().report.find("kenar_kapanma_mm");
+    REQUIRE(miss != nullptr);
+    CHECK_EQ(miss->as_array()[0].as_int(), 20);
+}
+
+TEST_CASE("POLİGON: toleransı aşan kenar kapanması mevzuatı adıyla reddedilir")
+{
+    kentos::core::Document doc;
+    kentos::command::Registry reg;
+    kentos::command::Journal journal;
+    kentos::command::UndoStack undo;
+    kentos::command::Bus bus{doc, reg, journal, undo};
+    kentos::command::register_builtin_commands(reg);
+    kentos::domain::geodesy::register_geodesy_commands(reg);
+    using kentos::command::Origin;
+
+    REQUIRE(bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
+
+    // 400 m of traverse against the `ana` class's 1/15000 gives 26.7 mm of
+    // allowance; the closing point is published 5 metres away. A refusal, and it
+    // has to name the regulation — a rejection a surveyor cannot trace to a
+    // madde is a rejection they cannot act on (domain.md R23).
+    const auto refused =
+        bus.execute_line("POLİGON baslangic=0,0 baglama=0,100 aci=300 kenar=100 aci=300 kenar=100 "
+                         "aci=300 kenar=100 aci=300 kenar=100 bitis=5,0",
+                         Origin::Test);
+    CHECK_FALSE(refused.ok());
+    CHECK(refused.error().message.find("Kenar kapanma") != std::string::npos);
+    CHECK(refused.error().message.find("BÖHHBÜY") != std::string::npos);
+    CHECK(refused.error().message.find("1/15000") != std::string::npos);
+    CHECK(refused.error().message.find("BEKLİYOR") != std::string::npos);
+
+    // NOTHING WAS DRAWN. A refusal rolls the whole transaction back (Article 1.6):
+    // a traverse that failed its closure must not leave three of its four
+    // stations in the drawing.
+    CHECK_EQ(doc.live_entity_count(), std::size_t{0});
+}
+
+TEST_CASE("POLİGON: açı ve kenar sayısı eşit olmalı")
+{
+    kentos::core::Document doc;
+    kentos::command::Registry reg;
+    kentos::command::Journal journal;
+    kentos::command::UndoStack undo;
+    kentos::command::Bus bus{doc, reg, journal, undo};
+    kentos::command::register_builtin_commands(reg);
+    kentos::domain::geodesy::register_geodesy_commands(reg);
+    using kentos::command::Origin;
+
+    const auto refused = bus.execute_line(
+        "POLİGON baslangic=0,0 baglama=0,100 aci=300 kenar=100 aci=300", Origin::Test);
+    CHECK_FALSE(refused.ok());
+    CHECK(refused.error().message.find("eşit olmalı") != std::string::npos);
+
+    const auto unknown = bus.execute_line(
+        "POLİGON baslangic=0,0 baglama=0,100 aci=300 kenar=100 sinif=yokboylesinif", Origin::Test);
+    CHECK_FALSE(unknown.ok());
+}
+
+TEST_CASE("kayıt: bütün kayıtlar birlikte, her bildirilen ad çözülüyor")
+{
+    // THE TRIPWIRE THE OTHER ONE CANNOT BE. `test_command.cpp` counts the
+    // builtin registry, which is `/src/command` alone — it cannot see a domain
+    // module, because `/src/command` may not depend on one (Article 3.2). So a
+    // domain command whose name collides with a builtin's DROPPED that command
+    // and nothing noticed: `geodesy.traverse` could not register while `POLİGON`
+    // was an alias of `core.area`, and a failed registration only writes a log
+    // line and carries on. The program would have started without the traverse,
+    // with a clean build and a green suite.
+    //
+    // This registers everything the application registers and checks that every
+    // declared name resolves to the command that declared it.
+    kentos::command::Registry reg;
+    kentos::command::register_builtin_commands(reg);
+    kentos::domain::geodesy::register_geodesy_commands(reg);
+
+    std::size_t names = 0;
+    for (const kentos::command::CommandSpec& spec : reg.all())
+        for (const std::string& name : spec.names) {
+            ++names;
+            const kentos::command::CommandSpec* found = reg.resolve(name);
+            if (found == nullptr)
+                FAIL_CHECK("çözülemeyen ad: " << spec.id << " / " << name);
+            else if (found->id != spec.id)
+                FAIL_CHECK("ad kaptırıldı: " << spec.id << " / " << name << " -> " << found->id);
+        }
+    CHECK(names > 200);
+
+    // AND EVERY DOMAIN COMMAND IS THERE. Named rather than counted: a count
+    // tells you something changed, a name tells you what is missing.
+    for (const char* id : {"core.fit", "core.stakeout", "core.reproject", "geodesy.traverse"}) {
+        bool present = false;
+        for (const kentos::command::CommandSpec& spec : reg.all())
+            if (spec.id == id) present = true;
+        if (!present) FAIL_CHECK("kayıtta yok: " << id);
+    }
+}
+
+TEST_CASE("POLİGON: kesirli kenarlar günlükten kayıpsız oynatılır")
+{
+    // ARTICLE 1.4, AND IT WAS BROKEN. `Value::from_json` read every numeric
+    // array as a list of ids and truncated, so a traverse journalled with
+    // `"kenar":[42.315, 56.720]` came back as 42 and 56 and the replay drew a
+    // different traverse — with a different content hash and a signature on the
+    // wrong drawing. A side length is measured to the millimetre and a journal
+    // that keeps only its metres is not a journal.
+    const auto build = [](kentos::core::Document& doc, kentos::command::Registry& reg,
+                          kentos::command::Journal& journal, kentos::command::UndoStack& undo) {
+        kentos::command::register_builtin_commands(reg);
+        kentos::domain::geodesy::register_geodesy_commands(reg);
+        (void)doc;
+        (void)journal;
+        (void)undo;
+    };
+
+    kentos::core::Document doc;
+    kentos::command::Registry reg;
+    kentos::command::Journal journal;
+    kentos::command::UndoStack undo;
+    kentos::command::Bus bus{doc, reg, journal, undo};
+    build(doc, reg, journal, undo);
+    using kentos::command::Origin;
+
+    REQUIRE(bus.execute_line("KATMAN ad=POLIGON", Origin::Test).ok());
+    REQUIRE(bus.execute_line("POLİGON baslangic=0,0 baglama=0,100 aci=312.4567 kenar=42.315 "
+                             "aci=287.1234 kenar=56.720 cizgi=hayır",
+                             Origin::Test)
+                .ok());
+    const std::uint64_t golden = doc.content_hash();
+    CHECK_EQ(doc.live_entity_count(), std::size_t{2});
+
+    // Replayed from the journal's own JSON, which is what a crash recovery does.
+    kentos::core::Document again_doc;
+    kentos::command::Registry again_reg;
+    kentos::command::Journal again_journal;
+    kentos::command::UndoStack again_undo;
+    kentos::command::Bus again{again_doc, again_reg, again_journal, again_undo};
+    build(again_doc, again_reg, again_journal, again_undo);
+
+    for (const auto& e : journal.entries()) {
+        const auto ran =
+            again.dispatch(kentos::command::Invocation{e.command_id, e.args, Origin::Batch});
+        REQUIRE(ran.ok());
+    }
+    CHECK_EQ(again_doc.content_hash(), golden);
+
+    // AND THE MILLIMETRES ARE IN THE LINE. Without this the two could agree on
+    // the same truncated drawing.
+    const std::string wrote = journal.entries().back().args.to_json().dump();
+    CHECK(wrote.find("42.315") != std::string::npos);
+    CHECK(wrote.find("56.72") != std::string::npos);
+}

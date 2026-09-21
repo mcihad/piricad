@@ -41,8 +41,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 81 (73 tanesi onay ister)
-- Katalog parmak izi: `2692376238881071683`
+- Araç sayısı: 82 (74 tanesi onay ister)
+- Katalog parmak izi: `6365236564180452445`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -87,7 +87,7 @@ Onay ister.
 ### `core_area` — Alan
 
 Kapalı bir alan çizer; istenirse içine delik açar.
-Komut: ALAN (AREA, POLİGON, POLIGON, AL)
+Komut: ALAN (AREA, AL)
 Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
 
 Onay ister.
@@ -1137,6 +1137,26 @@ Onay ister.
 |---|---|---|---|
 | `mod` | string | hayır | KAPSAM | ÇARPAN | SIFIRLA (metin) |
 | `carpan` | number | hayır | ÇARPAN modunda ölçek katsayısı (sayı) |
+
+### `geodesy_traverse` — Poligon Hesabı
+
+Kırılma açısı ve kenarlardan poligon koordinatları hesaplar, kapanma hatalarını dağıtır ve mevzuat toleransına karşı denetler.
+Komut: POLİGON (POLIGON, TRAVERSE, PLG)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `baslangic` | string | evet | Başlangıç istasyonu (bilinen) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baglama` | string | evet | Başlangıçtaki bağlama noktası (bilinen) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `aci` | number | hayır | Her istasyonda okunan kırılma açısı, ölçü karnesi sırasıyla (sayı) |
+| `kenar` | number | hayır | Her istasyondan sonraki kenar (m) [m] (sayı) |
+| `bitis` | string | hayır | Bitiş istasyonu (bilinen); verilirse kapanma hesaplanır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `bitis_baglama` | string | hayır | Bitişteki bağlama noktası; açı kapanması için gerekir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `sinif` | string | hayır | Tolerans sınıfı; katalogdan okunur (metin) |
+| `dagitim` | string | hayır | Kenar kapanmasının dağıtımı: eşit ya da kenar orantılı (metin) |
+| `cizgi` | boolean | hayır | Güzergâhı çizgiyle bağlar; varsayılan evet (evet/hayır) |
 
 ### `gorunum_bilgisi` — Görünüm Bilgisi
 

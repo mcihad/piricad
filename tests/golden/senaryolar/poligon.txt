@@ -1,0 +1,15 @@
+# BÖHHBÜY poligon hesabı: kapalı bir güzergâh, kapanma dağıtımı ve tolerans.
+#
+# Bir ders kitabı poligonu: başlangıç (0,0), kuzeye bakan bağlama, dört 100
+# metrelik kenar ve her istasyonda 300 grad kırılma açısı — yani sağa dik açı.
+# Varsayılan semt kuralında bu tam bir kare çizer ve dördüncü istasyon başlangıca
+# döner. Her sayı gözle denetlenebilir, ki bir altın fikstürün işi budur.
+#
+# İkinci güzergâh aynı kareyi 20 milimetre kaçıran bir bitiş noktasıyla kapatır:
+# kapanma hatası kenar orantılı dağıtılır ve son istasyon yayımlanmış noktaya
+# oturur. Bu satır bit-özdeşliğin asıl sınavıdır — dağıtım bir bölme içerir ve
+# bölmenin yuvarlaması üç platformda aynı olmak zorundadır (§7.3).
+KATMAN ad=POLIGON
+POLİGON baslangic=0,0 baglama=0,100 aci=300 kenar=100 aci=300 kenar=100 aci=300 kenar=100 aci=300 kenar=100 sinif=ana cizgi=hayır
+KATMAN ad=POLIGON2
+POLİGON baslangic=0,0 baglama=0,100 aci=300 kenar=100 aci=300 kenar=100 aci=300 kenar=100 aci=300 kenar=100 bitis=0.02,0 dagitim=kenar cizgi=evet

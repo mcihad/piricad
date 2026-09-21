@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "package_version": "0.1.0",
+  "id": "geodesy-poligon-toleranslari",
+  "source": "Büyük Ölçekli Harita ve Harita Bilgileri Üretim Yönetmeliği (BÖHHBÜY), Üçüncü Kısım — Poligon Ölçüleri (RG-15/7/2005-25876)",
+  "published": "2005-07-15",
+  "licence": "resmi-mevzuat-metni",
+  "aciklama": "Poligon güzergâhının açı ve kenar kapanma toleransları. Bir kapanma hatasının kabul edilebilir olup olmadığı MEVZUAT kararıdır ve C++'a giremez (CLAUDE.md 5.13): POLİGON komutu bu dosyayı okur. Açı toleransları santigrad (cc) tam sayı olarak, uzunluk toleransları milimetre tam sayı olarak saklanır; kayan nokta saklanmaz.",
+  "kapsam": {
+    "durum": "iskelet-uzman-onayi-bekliyor",
+    "iceren": [
+      "Üç poligon sınıfı için açı kapanma katsayısı ve kenar kapanma oranı.",
+      "Formüller metin olarak da saklanır ('aci_formul_metin', 'boy_formul_metin') ki çevrilmiş katsayı denetlenebilir."
+    ],
+    "eksikler": [
+      "Değerler BÖHHBÜY'ün poligon bölümünden bir HARİTA MÜHENDİSİ tarafından teyit edilmemiştir. CLAUDE.md 6.11 mevzuat değişikliği için alan uzmanı onayı şart koşar ve bu dosya o onayı BEKLİYOR.",
+      "Nirengi sınıfına göre ayrım (I., II., III. derece) ve arazi eğimine göre kenar sınırları girilmemiştir.",
+      "Dosya bugün yalnız komutun okuma yolunu ve kapanma raporunu besler; bir üretim işinin kabulü için kullanılmamalıdır."
+    ],
+    "onay": "BEKLİYOR",
+    "sonraki_surum": "0.2.0 — harita mühendisi teyidi, nirengi derecesine göre satırlar, eğim sınırları."
+  },
+  "siniflar": [
+    {
+      "id": "ana",
+      "ad": "Ana poligon",
+      "aci_formul_metin": "f_β ≤ c · √n  (n: kırılma açısı sayısı)",
+      "aci_katsayisi_cc": 100,
+      "boy_formul_metin": "f_s / [S] ≤ 1 / o",
+      "boy_orani_bolen": 15000,
+      "en_kucuk_kenar_mm": 50000,
+      "en_buyuk_kenar_mm": 600000
+    },
+    {
+      "id": "ara",
+      "ad": "Ara poligon",
+      "aci_formul_metin": "f_β ≤ c · √n",
+      "aci_katsayisi_cc": 150,
+      "boy_formul_metin": "f_s / [S] ≤ 1 / o",
+      "boy_orani_bolen": 10000,
+      "en_kucuk_kenar_mm": 30000,
+      "en_buyuk_kenar_mm": 400000
+    },
+    {
+      "id": "tamamlayici",
+      "ad": "Tamamlayıcı poligon",
+      "aci_formul_metin": "f_β ≤ c · √n",
+      "aci_katsayisi_cc": 200,
+      "boy_formul_metin": "f_s / [S] ≤ 1 / o",
+      "boy_orani_bolen": 5000,
+      "en_kucuk_kenar_mm": 20000,
+      "en_buyuk_kenar_mm": 300000
+    }
+  ]
+}

@@ -28,11 +28,14 @@ seçilir, birlikte taşınır, birlikte silinir.
 | Ad | Tür |
 |---|---|
 | `ALAN` | Türkçe, birincil |
-| `POLİGON` | Türkçe eşanlamlı |
-| `POLIGON` | ASCII karşılık |
 | `AREA` | İngilizce karşılık |
 | `AL` | Kısaltma |
 | `core.area` | Komut kimliği |
+
+`POLİGON` eskiden bu komutun eşadıydı ve artık değil. Türkçe haritacılıkta
+*poligon* bir güzergâhtır, bu komutun çizdiği şekil ise *çokgen*'dir; ad
+[POLİGON — Poligon Hesabı](traverse.md) komutuna geçti. `ALAN`, `AREA` ve `AL`
+değişmedi.
 
 ## Sözdizimi
 

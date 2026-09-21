@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kentoscad/data/catalogs/schema/poligon-toleranslari.schema.json",
+  "title": "Poligon kapanma toleransları",
+  "description": "BÖHHBÜY poligon bölümünden alınan açı ve kenar kapanma sınırları. Her değer TAM SAYIDIR: açı katsayıları santigrad (cc), uzunluklar milimetre. Bir mevzuat değeri kayan noktada saklanmaz — iki platformda farklı okunabilir (CLAUDE.md 2.4, data.md P3).",
+  "type": "object",
+  "required": ["schema_version", "package_version", "id", "source", "published", "licence", "siniflar"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "package_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "id": { "type": "string", "const": "geodesy-poligon-toleranslari" },
+    "source": { "type": "string", "minLength": 20 },
+    "published": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "licence": { "type": "string" },
+    "aciklama": { "type": "string" },
+    "kapsam": {
+      "type": "object",
+      "description": "What this package covers and what it does not. `onay` is the domain-expert sign-off CLAUDE.md 6.11 requires for a regulatory value; BEKLİYOR means the values have not been confirmed by a harita mühendisi and the package must not be used to accept production work.",
+      "required": ["durum", "onay"],
+      "properties": {
+        "durum": { "type": "string" },
+        "iceren": { "type": "array", "items": { "type": "string" } },
+        "eksikler": { "type": "array", "items": { "type": "string" } },
+        "onay": { "type": "string", "enum": ["BEKLİYOR", "ONAYLI"] },
+        "sonraki_surum": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "siniflar": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "ad", "aci_katsayisi_cc", "boy_orani_bolen"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z_]+$" },
+          "ad": { "type": "string" },
+          "aci_formul_metin": { "type": "string" },
+          "aci_katsayisi_cc": {
+            "type": "integer", "minimum": 1, "maximum": 100000,
+            "description": "f_β ≤ c·√n içindeki c, santigrad (cc) cinsinden tam sayı."
+          },
+          "boy_formul_metin": { "type": "string" },
+          "boy_orani_bolen": {
+            "type": "integer", "minimum": 100, "maximum": 1000000,
+            "description": "f_s/[S] ≤ 1/o içindeki o. Büyük olan daha sıkı toleranstır."
+          },
+          "en_kucuk_kenar_mm": { "type": "integer", "minimum": 0 },
+          "en_buyuk_kenar_mm": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

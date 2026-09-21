@@ -121,8 +121,16 @@ Task<void> run(Context& ctx)
 KENTOS_COMMAND(area)
 {
     return CommandSpec{
-        .id       = "core.area",
-        .names    = {"ALAN", "AREA", "POLİGON", "POLIGON", "AL"},
+        .id = "core.area",
+        // `POLİGON` WAS HERE AND IT WAS A MISTRANSLATION. In Turkish surveying
+        // a poligon is a TRAVERSE — a run of control stations — and the shape
+        // this command draws is a çokgen. The word belongs to
+        // `geodesy.traverse`, which could not register while it was taken; a
+        // failed registration only writes a log line, so the program would have
+        // started with the traverse silently missing. `ALAN`, `AREA` and `AL`
+        // are unaffected and are what every page, script and journal already
+        // uses (journals store the command id, so a replay is untouched).
+        .names    = {"ALAN", "AREA", "AL"},
         .title    = "Alan",
         .category = Category::Draw,
         .params =

@@ -20,7 +20,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.text`](text.md) | Metin | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
 | [`core.edittext`](edittext.md) | Yazıyı Düzenle | `YAZIDÜZENLE`, `YAZIDUZENLE`, `EDITTEXT`, `YZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir. |
 | [`core.exportstyle`](exportstyle.md) | Stil Aktar | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
-| [`core.area`](area.md) | Alan | `ALAN`, `AREA`, `POLİGON`, `POLIGON`, `AL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alan çizer; istenirse içine delik açar. |
+| [`core.area`](area.md) | Alan | `ALAN`, `AREA`, `AL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alan çizer; istenirse içine delik açar. |
 | [`core.rectangle`](rectangle.md) | Dikdörtgen | `DİKDÖRTGEN`, `DIKDORTGEN`, `RECTANGLE`, `DKD`, `REC` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer. |
 | [`core.circle_draw`](circle_draw.md) | Daire | `DAİRE`, `DAIRE`, `CIRCLE`, `DR` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve çember üzerindeki bir noktadan daire çizer. |
 | [`core.arc_draw`](arc_draw.md) | Yay | `YAY`, `ARC`, `YY` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir. |
@@ -94,6 +94,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.fit`](fit.md) | Oturt (Helmert) | `OTURT`, `FIT`, `GEOREF`, `OTR` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Yerel ölçülmüş çizimi kontrol noktalarıyla haritaya oturtur (2B Helmert). |
 | [`core.stakeout`](stakeout.md) | Aplikasyon | `APLİKASYON`, `APLIKASYON`, `STAKEOUT`, `APL` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | İstasyondan her noktaya mesafe ve açı listesi çıkarır (aplikasyon). |
 | [`core.reproject`](reproject.md) | Dönüştür | `DÖNÜŞTÜR`, `DONUSTUR`, `REPROJECT`, `DNS` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Çizimin tamamını bir koordinat sisteminden diğerine dönüştürür. |
+| [`geodesy.traverse`](traverse.md) | Poligon Hesabı | `POLİGON`, `POLIGON`, `TRAVERSE`, `PLG` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kırılma açısı ve kenarlardan poligon koordinatları hesaplar, kapanma hatalarını dağıtır ve mevzuat toleransına karşı denetler. |
 | [`core.merge`](merge.md) | Tevhit | `TEVHİT`, `TEVHIT`, `MERGE`, `TVH` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Komşu parselleri tek parselde birleştirir (tevhit). |
 | [`core.split_parcel`](split_parcel.md) | İfraz | `İFRAZ`, `IFRAZ`, `SUBDIVIDE`, `İFR` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir parseli düz bir ayırma çizgisiyle ikiye böler (ifraz). |
 | [`core.split_area`](split_area.md) | Alana Göre İfraz | `ALANİFRAZ`, `ALANIFRAZ`, `SPLITAREA`, `ALİF` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Parselden verilen yöne paralel, istenen alanda bir parça ayırır. |
@@ -1248,6 +1249,24 @@ Ayrıntılı kullanım: [APLİKASYON](stakeout.md)
 
 Ayrıntılı kullanım: [DÖNÜŞTÜR](reproject.md)
 
+### `geodesy.traverse` — POLİGON (Poligon Hesabı)
+
+Kırılma açısı ve kenarlardan poligon koordinatları hesaplar, kapanma hatalarını dağıtır ve mevzuat toleransına karşı denetler.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `baslangic` | point | 1 | Başlangıç istasyonu (bilinen) |
+| `baglama` | point | 1 | Başlangıçtaki bağlama noktası (bilinen) |
+| `aci` | number | en az 0 | Her istasyonda okunan kırılma açısı, ölçü karnesi sırasıyla |
+| `kenar` | number | en az 0 | Her istasyondan sonraki kenar (m) |
+| `bitis` | point_list | isteğe bağlı | Bitiş istasyonu (bilinen); verilirse kapanma hesaplanır |
+| `bitis_baglama` | point_list | isteğe bağlı | Bitişteki bağlama noktası; açı kapanması için gerekir |
+| `sinif` | text | isteğe bağlı | Tolerans sınıfı; katalogdan okunur |
+| `dagitim` | text | isteğe bağlı | Kenar kapanmasının dağıtımı: eşit ya da kenar orantılı |
+| `cizgi` | bool | isteğe bağlı | Güzergâhı çizgiyle bağlar; varsayılan evet |
+
+Ayrıntılı kullanım: [POLİGON](traverse.md)
+
 ### `core.merge` — TEVHİT (Tevhit)
 
 Komşu parselleri tek parselde birleştirir (tevhit).
@@ -1538,7 +1557,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_area",
     "title": "Alan",
-    "description": "Kapalı bir alan çizer; istenirse içine delik açar.\nKomut: ALAN (AREA, POLİGON, POLIGON, AL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "description": "Kapalı bir alan çizer; istenirse içine delik açar.\nKomut: ALAN (AREA, AL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -1573,8 +1592,6 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
       "cad.kentos/names": [
         "ALAN",
         "AREA",
-        "POLİGON",
-        "POLIGON",
         "AL"
       ]
     }
@@ -5046,6 +5063,87 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "YAKINLAS",
         "ZOOM",
         "Z"
+      ]
+    }
+  },
+  {
+    "name": "geodesy_traverse",
+    "title": "Poligon Hesabı",
+    "description": "Kırılma açısı ve kenarlardan poligon koordinatları hesaplar, kapanma hatalarını dağıtır ve mevzuat toleransına karşı denetler.\nKomut: POLİGON (POLIGON, TRAVERSE, PLG)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "baslangic": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Başlangıç istasyonu (bilinen) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "baglama": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Başlangıçtaki bağlama noktası (bilinen) — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "aci": {
+          "type": "number",
+          "description": "Her istasyonda okunan kırılma açısı, ölçü karnesi sırasıyla (sayı)"
+        },
+        "kenar": {
+          "type": "number",
+          "description": "Her istasyondan sonraki kenar (m) [m] (sayı)"
+        },
+        "bitis": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Bitiş istasyonu (bilinen); verilirse kapanma hesaplanır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "bitis_baglama": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Bitişteki bağlama noktası; açı kapanması için gerekir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "sinif": {
+          "type": "string",
+          "enum": [
+            "ana",
+            "ara",
+            "tamamlayici"
+          ],
+          "description": "Tolerans sınıfı; katalogdan okunur (metin)"
+        },
+        "dagitim": {
+          "type": "string",
+          "enum": [
+            "esit",
+            "kenar"
+          ],
+          "description": "Kenar kapanmasının dağıtımı: eşit ya da kenar orantılı (metin)"
+        },
+        "cizgi": {
+          "type": "boolean",
+          "description": "Güzergâhı çizgiyle bağlar; varsayılan evet (evet/hayır)"
+        }
+      },
+      "required": [
+        "baslangic",
+        "baglama"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "geodesy.traverse",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "POLİGON",
+        "POLIGON",
+        "TRAVERSE",
+        "PLG"
       ]
     }
   },
