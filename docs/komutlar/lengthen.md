@@ -70,8 +70,12 @@ UZUNLUK nesne=1 toplam=120 uc=bas
 
 ### Arayüz
 
-**Değiştir > Uzunluk**. Çizgiyi seçip Enter'a basın, sonra `delta=`, `yuzde=`
-ya da `toplam=` yazın.
+**Değiştir > Uzunluk**. Çizgiyi seçip Enter'a basın; komut **eklenecek uzunluğu
+sorar** (eksi değer kısaltır) ve şimdiki uzunluğu istemde yazar.
+
+`yuzde=` ve `toplam=` **yazılan yollardır**: bir sayı hangisi olduğunu söyleyemez,
+bu yüzden fareyle sorulan `delta`'dır — elin sorduğu soru odur ("bu ucu şu kadar
+uzat"). Baştan biri verilmişse hiç sorulmaz.
 
 ### Betik
 

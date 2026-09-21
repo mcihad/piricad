@@ -27,6 +27,7 @@
 //
 // ÇİZGİDÜZENLE is the small edits a run needs and nothing else does: close it,
 // open it, reverse it, thin it out.
+#include "kentos_cad/command/construct.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
@@ -362,8 +363,26 @@ Task<void> run_divide(Context& ctx)
     // EITHER A COUNT OR A SPACING, AND EXACTLY ONE. `sayi` cuts into that many
     // equal parts and marks the joins; `aralik` walks a fixed distance from the
     // start, which is what a chainage list is.
-    const Value count   = ctx.argument("sayi");
+    Value count         = ctx.argument("sayi");
     const Value spacing = ctx.argument("aralik");
+
+    // NEITHER GIVEN MEANS ASK, and `sayi` is the one asked for.
+    //
+    // It read both from arguments only, so pressing BÖLÜMLE in the tool column
+    // asked which object and then REFUSED, telling the user to type `sayi=` — a
+    // command reachable by mouse that cannot be finished by one (CLAUDE.md 5.15).
+    // `sayi` is this command's own meaning ("into how many equal parts"); the
+    // fixed interval is what the plan's İŞARETLE would have been and stays the
+    // typed and scripted road, because one number cannot say which of the two it
+    // is. The emptiness of the argument decides, never `InputSource`.
+    if (count.empty() && spacing.empty()) {
+        auto asked = co_await ctx.integer(
+            "sayi", "Kaç eşit parçaya bölünecek (sabit aralık için aralik=<m> yazın). Uzunluk " +
+                        metres_text(core::mm_from_metres(total)) + " m");
+        if (!asked) co_return;
+        count = Value::integer(*asked);
+    }
+
     if (count.empty() == spacing.empty()) {
         ctx.session().fail(core::err(
             core::ErrorCode::InvalidArgument,

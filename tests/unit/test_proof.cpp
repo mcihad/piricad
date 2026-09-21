@@ -9,6 +9,8 @@
 // JSON script — run the same command. This test asserts that all three produce a
 // byte-identical document and a byte-identical journal entry. If that ever stops
 // being true, the architecture has been broken and the build must fail.
+#include <algorithm>
+#include <functional>
 #include "kentos_test.hpp"
 
 #include "kentos_cad/command/bus.hpp"
@@ -1466,4 +1468,534 @@ TEST_CASE("PROOF: günlük satırı BİLDİRİLEN sıraya yazılır, yazım sır
             if (name == p.name) expected.push_back(name);
 
     CHECK_EQ(written, expected);
+}
+
+// ============================================================================
+// P2 — the classical construction methods, each proven across the three clients
+// ============================================================================
+
+TEST_CASE("PROOF: DAİRE yontem=3n gui, komut satırı ve betikten aynı belgeyi bırakır")
+{
+    // Article 6.4 for `core.circle`'s three-point method. The three points are a
+    // right triangle on the axes, so the circumcircle's centre is the midpoint of
+    // the hypotenuse and every figure is exact in millimetres — the three clients
+    // cannot agree on the same wrong answer.
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("DAİRE yontem=3n", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(core::Point2{0, 0})).ok());
+        CHECK(session.supply(Value::point(core::Point2{60'000, 0})).ok());
+        CHECK(session.supply(Value::point(core::Point2{0, 80'000})).ok());
+        REQUIRE(gui.bus.finish(session).ok());
+    }
+
+    Rig cli;
+    // NAMED, not positional, and the docs say so: `merkez` and `cevre` are
+    // declared before `birinci`, so a bare run of points would fill THOSE — the
+    // one-point-per-method ordering is what the positional slots belong to.
+    REQUIRE(cli.bus
+                .execute_line("DAİRE yontem=3n birinci=0,0 ikinci=60,0 ucuncu=0,80",
+                              Origin::CommandLine)
+                .ok());
+
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Üç noktalı daire kanıtı",
+            "komutlar": [ {"cmd": "core.circle_draw", "args": {
+                "yontem": "3n", "birinci": [0, 0], "ikinci": [60000, 0],
+                "ucuncu": [0, 80000] }} ]
+        })");
+        REQUIRE(r.ok());
+    }
+
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        CHECK_EQ(rig->doc.live_entity_count(), std::size_t{1});
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{1});
+    }
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+
+    // The circumcircle of a 60-80-100 right triangle: centre at the hypotenuse's
+    // midpoint (30, 40), radius 50 — the 3-4-5 a surveyor knows by heart.
+    REQUIRE(cli.doc.live_entity_count() == 1);
+    const auto span = cli.doc.geometry().rings_of(cli.doc.entities().slot[0]);
+    CHECK_EQ((core::Point2{cli.doc.geometry().ring_xs(span.first)[0],
+                           cli.doc.geometry().ring_ys(span.first)[0]}),
+             (core::Point2{30'000, 40'000}));
+
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+}
+
+TEST_CASE("PROOF: YAY yontem=bby gui, komut satırı ve betikten aynı belgeyi bırakır")
+{
+    // Article 6.4 for `core.arc`'s start-end-radius method, on the two-semicircle
+    // case: a 100 m chord with a 50 m radius is a half turn, which is the one
+    // reading where both solutions are the same size and `yon` is what tells them
+    // apart. The side is named, so the three clients cannot differ by luck.
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("YAY yontem=bby yon=sol", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(core::Point2{0, 0})).ok());
+        CHECK(session.supply(Value::point(core::Point2{100'000, 0})).ok());
+        CHECK(session.supply(Value::number(50.0)).ok());
+        REQUIRE(gui.bus.finish(session).ok());
+    }
+
+    Rig cli;
+    REQUIRE(cli.bus
+                .execute_line("YAY yontem=bby yon=sol baslangic=0,0 bitis=100,0 yaricap=50",
+                              Origin::CommandLine)
+                .ok());
+
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Başlangıç-bitiş-yarıçap kanıtı",
+            "komutlar": [ {"cmd": "core.arc_draw", "args": {
+                "yontem": "bby", "yon": "sol",
+                "baslangic": [0, 0], "bitis": [100000, 0], "yaricap": 50 }} ]
+        })");
+        if (!r.ok()) FAIL_WITH("YAY bby betiği", r.error().message);
+    }
+
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        CHECK_EQ(rig->doc.live_entity_count(), std::size_t{1});
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{1});
+    }
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+
+    // The centre of a half turn is the chord's own midpoint.
+    const auto span = cli.doc.geometry().rings_of(cli.doc.entities().slot[0]);
+    CHECK_EQ((core::Point2{cli.doc.geometry().ring_xs(span.first)[0],
+                           cli.doc.geometry().ring_ys(span.first)[0]}),
+             (core::Point2{50'000, 0}));
+
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+}
+
+TEST_CASE("PROOF: ÇOKGEN gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    // Article 6.4 for `core.polygon_regular`. A square on the axes: four sides,
+    // `yontem=ic` with a 10 m radius and no turn, so the corners are the four
+    // points a protractor would give and every one of them is exact.
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("ÇOKGEN yontem=ic", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(core::Point2{0, 0})).ok());
+        CHECK(session.supply(Value::integer(4)).ok());
+        CHECK(session.supply(Value::number(10.0)).ok());
+        REQUIRE(gui.bus.finish(session).ok());
+    }
+
+    Rig cli;
+    REQUIRE(cli.bus
+                .execute_line("ÇOKGEN yontem=ic merkez=0,0 kenar_sayisi=4 yaricap=10",
+                              Origin::CommandLine)
+                .ok());
+
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Çokgen kanıtı",
+            "komutlar": [ {"cmd": "core.polygon_regular", "args": {
+                "yontem": "ic", "merkez": [0, 0], "kenar_sayisi": 4, "yaricap": 10 }} ]
+        })");
+        if (!r.ok()) FAIL_WITH("ÇOKGEN betiği", r.error().message);
+    }
+
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        CHECK_EQ(rig->doc.live_entity_count(), std::size_t{1});
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{1});
+    }
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+
+    // FOUR CORNERS, and the first one where the convention puts it. Under the
+    // default semt rule an angle of zero is NORTH, so the first corner is 10 m
+    // due north and `sin_cos_udeg` is exact there.
+    const auto span = cli.doc.geometry().rings_of(cli.doc.entities().slot[0]);
+    REQUIRE_EQ(cli.doc.geometry().ring_xs(span.first).size(), std::size_t{4});
+    CHECK_EQ((core::Point2{cli.doc.geometry().ring_xs(span.first)[0],
+                           cli.doc.geometry().ring_ys(span.first)[0]}),
+             (core::Point2{0, 10'000}));
+
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+}
+
+// ============================================================================
+// P3 — the seven editing verbs, each proven across the three clients
+// ============================================================================
+
+namespace {
+
+/// Runs `setup` on a rig, then the verb three ways, and proves the three agree.
+///
+/// THE SEVEN VERBS DIFFER ONLY IN WHAT THEY ASK FOR, so the proof they each need
+/// is one shape with the answers substituted. Written once here rather than seven
+/// times below: a proof copied seven times is a proof that drifts in six of them.
+///
+/// `objects` is the selection the verb works on, `answers` what it asks for after
+/// that in order, `typed` the command line that says the same thing and `scripted`
+/// the JSON that does.
+struct VerbProof
+{
+    const char* name;                   ///< the verb, as a user types it
+    const char* id;                     ///< its command id, for the script road
+    std::vector<const char*> setup;     ///< the drawing the verb is run against
+    std::vector<std::int64_t> objects;  ///< what it works on
+    std::vector<Value> answers;         ///< every answer after the objects, in order
+    const char* typed;                  ///< the whole command line
+    const char* scripted;               ///< the whole script
+    std::size_t undo_steps_expected{1}; ///< on top of the setup's own
+};
+
+void prove_verb(const VerbProof& v)
+{
+    const auto lay_out = [&v](Rig& rig) {
+        for (const char* line : v.setup)
+            REQUIRE_MESSAGE(rig.bus.execute_line(line, Origin::Test).ok(), line);
+    };
+
+    Rig gui;
+    lay_out(gui);
+    const std::size_t depth = gui.undo.undo_depth();
+    {
+        auto started = gui.bus.begin_interactive(v.name, Origin::Gui);
+        REQUIRE_MESSAGE(started.ok(), v.name);
+        auto& session = *started.value();
+        if (!v.objects.empty()) CHECK(session.supply(Value::ids(v.objects)).ok());
+        for (const Value& answer : v.answers)
+            CHECK_MESSAGE(session.supply(answer).ok(), v.name);
+        auto done = gui.bus.finish(session);
+        if (!done.ok()) FAIL_WITH(v.name, done.error().message);
+    }
+
+    Rig cli;
+    lay_out(cli);
+    {
+        auto r = cli.bus.execute_line(v.typed, Origin::CommandLine);
+        if (!r.ok()) FAIL_WITH(v.typed, r.error().message);
+    }
+
+    Rig scr;
+    lay_out(scr);
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(v.scripted);
+        if (!r.ok()) FAIL_WITH(v.name, r.error().message);
+    }
+
+    // ---- the proof ----
+    CHECK_MESSAGE(gui.doc.content_hash() == cli.doc.content_hash(), v.name);
+    CHECK_MESSAGE(cli.doc.content_hash() == scr.doc.content_hash(), v.name);
+    if (what_happened(gui.journal) != what_happened(cli.journal))
+        FAIL_WITH("gui ile komut satırı günlüğü farklı",
+                  what_happened(gui.journal) + " ---VS--- " + what_happened(cli.journal));
+    if (what_happened(cli.journal) != what_happened(scr.journal))
+        FAIL_WITH("komut satırı ile betik günlüğü farklı",
+                  what_happened(cli.journal) + " ---VS--- " + what_happened(scr.journal));
+
+    // ONE COMMAND, ONE UNDO STEP — on every road (Article 1.5).
+    for (const Rig* rig : {&gui, &cli, &scr})
+        CHECK_MESSAGE(rig->undo.undo_depth() == depth + v.undo_steps_expected, v.name);
+
+    // AND THE EDIT ACTUALLY HAPPENED. Three clients agreeing that nothing
+    // occurred would satisfy every check above — so the verb's own journal line
+    // has to be there, on top of the setup's.
+    const bool ran = gui.journal.entries().size() > v.setup.size();
+    CHECK_MESSAGE(ran, v.name);
+    if (ran) CHECK_MESSAGE(gui.journal.entries().back().command_id == std::string(v.id), v.name);
+}
+
+} // namespace
+
+TEST_CASE("PROOF: KIR gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    prove_verb(
+        {.name     = "KIR",
+         .id       = "core.break",
+         .setup    = {"ÇOKLUÇİZGİ 0,0 100,0"},
+         .objects  = {1},
+         .answers  = {Value::point(core::Point2{30'000, 0}), Value::point(core::Point2{70'000, 0})},
+         .typed    = "KIR nesne=1 birinci=30,0 ikinci=70,0",
+         .scripted = R"({"ad":"KIR","komutlar":[{"cmd":"core.break","args":{
+                    "nesne":[1],"birinci":[30000,0],"ikinci":[70000,0]}}]})"});
+}
+
+TEST_CASE("PROOF: UZUNLUK gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    prove_verb({.name     = "UZUNLUK",
+                .id       = "core.lengthen",
+                .setup    = {"ÇOKLUÇİZGİ 0,0 100,0"},
+                .objects  = {1},
+                .answers  = {Value::number(25.0)}, ///< it ASKS for delta now
+                .typed    = "UZUNLUK nesne=1 delta=25",
+                .scripted = R"({"ad":"UZUNLUK","komutlar":[{"cmd":"core.lengthen","args":{
+                    "nesne":[1],"delta":25}}]})"});
+}
+
+TEST_CASE("PROOF: PATLAT gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    prove_verb({.name     = "PATLAT",
+                .id       = "core.explode",
+                .setup    = {"ALAN 0,0 20,0 20,10 0,10"},
+                .objects  = {1},
+                .answers  = {},
+                .typed    = "PATLAT nesne=1",
+                .scripted = R"({"ad":"PATLAT","komutlar":[{"cmd":"core.explode","args":{
+                    "nesne":[1]}}]})"});
+}
+
+TEST_CASE("PROOF: HİZALA gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    prove_verb(
+        {.name     = "HİZALA",
+         .id       = "core.align",
+         .setup    = {"ALAN 0,0 20,0 20,10 0,10"},
+         .objects  = {1},
+         .answers  = {Value::point(core::Point2{0, 0}), Value::point(core::Point2{50'000, 50'000})},
+         .typed    = "HİZALA nesne=1 kaynak=0,0 hedef=50,50",
+         .scripted = R"({"ad":"HİZALA","komutlar":[{"cmd":"core.align","args":{
+                    "nesne":[1],"kaynak":[0,0],"hedef":[50000,50000]}}]})"});
+}
+
+TEST_CASE("PROOF: BÖLÜMLE gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    prove_verb({.name     = "BÖLÜMLE",
+                .id       = "core.divide",
+                .setup    = {"ÇOKLUÇİZGİ 0,0 100,0"},
+                .objects  = {1},
+                .answers  = {Value::integer(4)}, ///< it ASKS for sayi now
+                .typed    = "BÖLÜMLE nesne=1 sayi=4",
+                .scripted = R"({"ad":"BÖLÜMLE","komutlar":[{"cmd":"core.divide","args":{
+                    "nesne":[1],"sayi":4}}]})"});
+}
+
+TEST_CASE("PROOF: ÇİZGİDÜZENLE gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    prove_verb({.name     = "ÇİZGİDÜZENLE",
+                .id       = "core.pedit",
+                .setup    = {"ÇOKLUÇİZGİ 0,0 20,0 20,10"},
+                .objects  = {1},
+                .answers  = {Value::text("kapat")}, ///< it asks which operation
+                .typed    = "ÇİZGİDÜZENLE nesne=1 islem=kapat",
+                .scripted = R"({"ad":"ÇİZGİDÜZENLE","komutlar":[{"cmd":"core.pedit","args":{
+                    "nesne":[1],"islem":"kapat"}}]})"});
+}
+
+TEST_CASE("PROOF: UÇUCA gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    prove_verb({.name     = "UÇUCA",
+                .id       = "core.join",
+                .setup    = {"ÇOKLUÇİZGİ 0,0 20,0", "ÇOKLUÇİZGİ 20,0 40,0"},
+                .objects  = {1, 2},
+                .answers  = {},
+                .typed    = "UÇUCA nesne=1 nesne=2",
+                .scripted = R"({"ad":"UÇUCA","komutlar":[{"cmd":"core.join","args":{
+                    "nesne":[1,2]}}]})"});
+}
+
+// ============================================================================
+// P4, P5, P6 and the tracking marks — the changed commands the plan also names
+// ============================================================================
+
+TEST_CASE("PROOF: SEÇ ÇİT gui, komut satırı ve betikten aynı seçimi verir")
+{
+    // Article 6.4 for `core.select`'s new modes. A SELECTION is not document
+    // state (model.md R43), so the thing that has to agree is the SELECTION — and
+    // it is what the next command would delete, so a client that selected
+    // something else would delete something else.
+    const char* kSetup[] = {"ÇOKLUÇİZGİ 0,0 10,0", "ÇOKLUÇİZGİ 0,20 10,20",
+                            "ÇOKLUÇİZGİ 0,40 10,40"};
+
+    const auto keys_of = [](const Rig& rig) {
+        std::vector<std::uint64_t> out;
+        for (const core::EntityKey k : rig.bus.selection().keys())
+            out.push_back(core::raw(k));
+        std::sort(out.begin(), out.end());
+        return out;
+    };
+
+    Rig gui;
+    Rig cli;
+    Rig scr;
+    for (Rig* rig : {&gui, &cli, &scr})
+        for (const char* line : kSetup)
+            REQUIRE(rig->bus.execute_line(line, Origin::Test).ok());
+
+    // A fence straight up the middle crosses the first two runs and misses the
+    // third, which is what a fence is FOR: picking a row of things a window would
+    // have to be drawn around.
+    {
+        auto started = gui.bus.begin_interactive("SEÇ ÇİT", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        // ONE POINT PER CLICK, then the right button. A fence takes an unbounded
+        // run, so the interactive road asks for them one at a time — a whole list
+        // supplied at once is the SCRIPT's road and the two must not be confused
+        // (the same distinction `want_objects` keeps).
+        CHECK(session.supply(Value::point(core::Point2{5'000, -5'000})).ok());
+        CHECK(session.supply(Value::point(core::Point2{5'000, 25'000})).ok());
+        session.cancel(); ///< right button: that is the fence, go
+        REQUIRE(gui.bus.finish(session).ok());
+    }
+    REQUIRE(cli.bus.execute_line("SEÇ ÇİT 5,-5 5,25", Origin::CommandLine).ok());
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Çit kanıtı",
+            "komutlar": [ {"cmd": "core.select", "args": {
+                "mod": "ÇİT", "noktalar": [[5000, -5000], [5000, 25000]] }} ]
+        })");
+        if (!r.ok()) FAIL_WITH("ÇİT betiği", r.error().message);
+    }
+
+    CHECK_EQ(keys_of(gui), keys_of(cli));
+    CHECK_EQ(keys_of(cli), keys_of(scr));
+    CHECK_EQ(keys_of(cli).size(), std::size_t{2}); ///< the third run is not crossed
+
+    // AND NOTHING WAS DRAWN. A selection is not a mutation.
+    for (const Rig* rig : {&gui, &cli, &scr})
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{3}); ///< the three runs only
+}
+
+TEST_CASE("PROOF: ÖLÇÜ tur=koordinat gui, komut satırı ve betikten aynı belgeyi bırakır")
+{
+    // Article 6.4 for `core.dimension`'s ordinate type — P5's own addition. The
+    // golden fixture pins the TEXT; this pins that the three clients produce it.
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("ÖLÇÜ tur=koordinat", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        // THREE POINTS, as every dimension type takes: the two being measured and
+        // where the caption goes.
+        CHECK(session.supply(Value::point(core::Point2{0, 0})).ok());
+        CHECK(session.supply(Value::point(core::Point2{30'000, 20'000})).ok());
+        CHECK(session.supply(Value::point(core::Point2{45'000, 20'000})).ok());
+        auto done = gui.bus.finish(session);
+        if (!done.ok()) FAIL_WITH("ÖLÇÜ koordinat", done.error().message);
+    }
+
+    Rig cli;
+    {
+        auto r = cli.bus.execute_line("ÖLÇÜ tur=koordinat birinci=0,0 ikinci=30,20 konum=45,20",
+                                      Origin::CommandLine);
+        if (!r.ok()) FAIL_WITH("ÖLÇÜ koordinat komut satırı", r.error().message);
+    }
+
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Ordinat ölçüsü kanıtı",
+            "komutlar": [ {"cmd": "core.dimension", "args": {
+                "tur": "koordinat", "birinci": [0, 0], "ikinci": [30000, 20000],
+                "konum": [45000, 20000] }} ]
+        })");
+        if (!r.ok()) FAIL_WITH("ÖLÇÜ koordinat betiği", r.error().message);
+    }
+
+    for (const Rig* rig : {&gui, &cli, &scr})
+        CHECK_EQ(rig->doc.live_entity_count(), std::size_t{1});
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+}
+
+TEST_CASE("PROOF: PANOYAKOPYALA ve YAPIŞTIR gui, komut satırı ve betikten aynı belgeyi bırakır")
+{
+    // Article 6.4 for P6's three verbs. The payload is a file, so the three
+    // clients are proven on ONE clipboard in turn: each copies, each pastes into
+    // a fresh drawing, and the three pasted drawings have to be one drawing.
+    const auto copy_and_paste = [](FileRig& rig, const std::function<void(FileRig&)>& copy) {
+        REQUIRE(rig.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+        REQUIRE(rig.bus.execute_line("ALAN 0,0 20,0 20,10 0,10", Origin::Test).ok());
+        REQUIRE(rig.bus.execute_line("SEÇ HEPSİ", Origin::Test).ok());
+        copy(rig);
+        REQUIRE(rig.bus.execute_line("YENİ", Origin::Test).ok());
+        REQUIRE(rig.bus.execute_line("YAPIŞTIR yerinde=evet", Origin::Test).ok());
+    };
+
+    FileRig gui;
+    copy_and_paste(gui, [](FileRig& rig) {
+        auto started = rig.bus.begin_interactive("PANOYAKOPYALA", Origin::Gui);
+        REQUIRE(started.ok());
+        auto done = rig.bus.finish(*started.value());
+        if (!done.ok()) FAIL_WITH("PANOYAKOPYALA arayüzden", done.error().message);
+    });
+
+    FileRig cli;
+    copy_and_paste(cli, [](FileRig& rig) {
+        REQUIRE(rig.bus.execute_line("PANOYAKOPYALA", Origin::CommandLine).ok());
+    });
+
+    FileRig scr;
+    copy_and_paste(scr, [](FileRig& rig) {
+        script::JsonRunner runner(rig.bus, script::Sandbox::Project);
+        auto r =
+            runner.run_text(R"({"ad":"Pano","komutlar":[{"cmd":"core.copy_clip","args":{}}]})");
+        if (!r.ok()) FAIL_WITH("PANOYAKOPYALA betikten", r.error().message);
+    });
+
+    for (const FileRig* rig : {&gui, &cli, &scr})
+        CHECK_EQ(rig->doc.live_entity_count(), std::size_t{1});
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+}
+
+TEST_CASE("PROOF: İZ gui, komut satırı ve betikten aynı işaretleri bırakır")
+{
+    // Article 6.4 for `core.tracking`. A mark is SESSION state (model.md R43), so
+    // what has to agree is the marks — and they are what the next point snaps to,
+    // so a client that marked something else would draw somewhere else.
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("İZ 12,8", Origin::Gui);
+        REQUIRE(started.ok());
+        auto done = gui.bus.finish(*started.value());
+        if (!done.ok()) FAIL_WITH("İZ arayüzden", done.error().message);
+    }
+    REQUIRE(gui.bus.execute_line("İZ 26,18", Origin::Gui).ok());
+
+    Rig cli;
+    REQUIRE(cli.bus.execute_line("İZ 12,8", Origin::CommandLine).ok());
+    REQUIRE(cli.bus.execute_line("İZ 26,18", Origin::CommandLine).ok());
+
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "İz kanıtı",
+            "komutlar": [ {"cmd": "core.tracking", "args": {"nokta": [12000, 8000]}},
+                          {"cmd": "core.tracking", "args": {"nokta": [26000, 18000]}} ]
+        })");
+        if (!r.ok()) FAIL_WITH("İZ betikten", r.error().message);
+    }
+
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        REQUIRE_EQ(rig->bus.tracking_marks().size(), std::size_t{2});
+        CHECK_EQ(rig->bus.tracking_marks()[0], (core::Point2{12'000, 8'000}));
+        CHECK_EQ(rig->bus.tracking_marks()[1], (core::Point2{26'000, 18'000}));
+        // A MARK IS NOT DOCUMENT STATE: no entity, no undo step, no journal line.
+        CHECK_EQ(rig->doc.live_entity_count(), std::size_t{0});
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{0});
+        for (const auto& e : rig->journal.entries())
+            CHECK(e.command_id != "core.tracking");
+    }
 }

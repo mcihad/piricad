@@ -17,6 +17,7 @@
 // UZUNLUK MOVES AN END ALONG ITS OWN DIRECTION. `UZAT` extends to a boundary,
 // which needs something to extend TO; this is the form a plan gives — "make the
 // kerb 2 m longer", "bring it to 48 m" — and it needs nothing but the line.
+#include "kentos_cad/command/construct.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
@@ -348,9 +349,29 @@ Task<void> run_lengthen(Context& ctx)
     // ONE OF THREE, AND EXACTLY ONE. `delta` adds, `yuzde` scales, `toplam`
     // states the answer; giving two is a caller that does not know which it
     // means, and guessing is what a refusal is for.
-    const Value delta   = ctx.argument("delta");
+    Value delta         = ctx.argument("delta");
     const Value percent = ctx.argument("yuzde");
     const Value target  = ctx.argument("toplam");
+
+    // NONE GIVEN MEANS ASK, and `delta` is the one asked for.
+    //
+    // It read the three from arguments only, so pressing UZUNLUK in the tool
+    // column asked which object and then REFUSED, telling the user to type
+    // `delta=` — a command reachable by mouse that cannot be finished by one
+    // (CLAUDE.md 5.15). `delta` is the question a hand asks ("lengthen this end
+    // by so much"); `yuzde` and `toplam` stay the typed and scripted roads,
+    // which is what their own page says.
+    //
+    // The emptiness of the argument decides, never `InputSource` (command.md
+    // P10): a script that gave `toplam=` is not asked anything.
+    if (delta.empty() && percent.empty() && target.empty()) {
+        auto asked =
+            co_await ctx.number("delta", "Eklenecek uzunluk (m); eksi kısaltır. Şimdiki uzunluk " +
+                                             metres_text(core::mm_from_metres(total)) + " m");
+        if (!asked) co_return;
+        delta = Value::number(*asked);
+    }
+
     const int given =
         (delta.empty() ? 0 : 1) + (percent.empty() ? 0 : 1) + (target.empty() ? 0 : 1);
     if (given != 1) {

@@ -1322,8 +1322,14 @@ TEST_CASE("BÖLÜMLE: sayi eşit parçaya böler, aralik sabit aralıkla yürür
                         .execute_line("BÖLÜMLE nesne=" + std::to_string(key) + " sayi=4 aralik=20",
                                       Origin::CommandLine)
                         .ok());
-        CHECK_FALSE(
-            f.bus.execute_line("BÖLÜMLE nesne=" + std::to_string(key), Origin::CommandLine).ok());
+        // NEITHER GIVEN IS NOT A REFUSAL ANY MORE: the command ASKS for `sayi`,
+        // because pressing BÖLÜMLE in the tool column and then being told to type
+        // an argument is a command reachable by mouse that cannot be finished by
+        // one (CLAUDE.md 5.15). A caller that answers nothing gets no edit, which
+        // is what declining looks like everywhere in this program.
+        const std::uint64_t before = f.doc.content_hash();
+        CHECK(f.bus.execute_line("BÖLÜMLE nesne=" + std::to_string(key), Origin::CommandLine).ok());
+        CHECK_EQ(f.doc.content_hash(), before);
     }
 }
 
@@ -1592,9 +1598,14 @@ TEST_CASE("UZUNLUK: delta, yuzde ve toplam; tam olarak biri")
             "UZUNLUK nesne=" + std::to_string(key) + " delta=5 toplam=50", Origin::CommandLine);
         CHECK_FALSE(both.ok());
         CHECK(both.error().message.find("Tam olarak birini") != std::string::npos);
+        // NONE GIVEN IS NOT A REFUSAL ANY MORE: the command ASKS for `delta`, for
+        // the reason BÖLÜMLE asks for `sayi` (CLAUDE.md 5.15). A caller that
+        // answers nothing gets no edit.
+        const std::uint64_t before = f.doc.content_hash();
         const auto none =
             f.bus.execute_line("UZUNLUK nesne=" + std::to_string(key), Origin::CommandLine);
-        CHECK_FALSE(none.ok());
+        CHECK(none.ok());
+        CHECK_EQ(f.doc.content_hash(), before);
     }
 }
 
@@ -6913,4 +6924,44 @@ TEST_CASE("İZ ile işaretlenen noktalar yakalamaya geçiyor")
     const auto ys             = f.doc.geometry().ring_ys(span.first);
     REQUIRE_EQ(xs.size(), std::size_t{2});
     CHECK_EQ((core::Point2{xs[1], ys[1]}), (core::Point2{10'000, 20'000}));
+}
+
+TEST_CASE("SEÇ ÇOKGEN fareyle üç köşe toplayabilir")
+{
+    // THE DEFECT: the loop that collects a fence's or a selection polygon's
+    // points read `while (supplied.empty())`, so it stopped after the FIRST point
+    // — the mode could never collect more than one from the mouse and then
+    // refused with "en az üç köşe ister". A mode reachable by mouse that cannot
+    // be used by one is what CLAUDE.md 5.15 forbids.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 5,5 6,6", Origin::Test).ok());     ///< inside
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 50,50 60,60", Origin::Test).ok()); ///< outside
+
+    auto started = f.bus.begin_interactive("SEÇ ÇOKGEN", Origin::Gui);
+    REQUIRE(started.ok());
+    auto& session = *started.value();
+
+    // Three corners of a triangle around the first run, one click each.
+    CHECK(session.supply(Value::point(core::Point2{0, 0})).ok());
+    CHECK(session.supply(Value::point(core::Point2{20'000, 0})).ok());
+    CHECK(session.supply(Value::point(core::Point2{0, 20'000})).ok());
+    session.cancel(); ///< right button: that is the polygon, go
+    REQUIRE(f.bus.finish(session).ok());
+
+    CHECK_EQ(f.bus.selection().size(), std::size_t{1});
+}
+
+TEST_CASE("SEÇ ÇİT baştan verilen noktaları ikinci kez toplamaz")
+{
+    // THE OTHER HALF, and the reason the loop was written that way: a script
+    // hands the whole run over at once and must not be asked anything — asking
+    // drains the same points a second time, and a doubled fence is not a longer
+    // one.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 10,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,20 10,20", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,40 10,40", Origin::Test).ok());
+
+    REQUIRE(f.bus.execute_line("SEÇ ÇİT 5,-5 5,25", Origin::Test).ok());
+    CHECK_EQ(f.bus.selection().size(), std::size_t{2}); ///< the third is not crossed
 }

@@ -6,6 +6,38 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — eksik eşitlik kanıtları, ve onların ortaya çıkardığı üç kusur
+
+Planın **Doğrulama** bölümü "her yeni/değişen komut için `test_proof.cpp`
+vakası" diyor (Article 6.4). Denetleyince P2'nin üç yöntemi, P3'ün yedi fiili,
+P4'ün seçim kipleri, P5'in ordinat ölçüsü, P6'nın panosu ve `İZ` kanıtsızdı.
+On yedi vaka yazıldı — ve **üç kusuru ortaya çıkardılar**, ki kanıtların
+varlık sebebi tam olarak bu.
+
+- **`SEÇ ÇİT` ve `SEÇ ÇOKGEN` fareyle tek nokta toplayabiliyordu.** Döngünün
+  koşulu `while (supplied.empty())` idi, yani BİRİNCİ noktadan sonra çıkıyordu;
+  komut sonra "Çit en az iki nokta ister" diye reddediyordu. Fareyle
+  ulaşılabilen ama fareyle kullanılamayan bir kip (5.15) — ve `select.md` zaten
+  "tıklamaya devam edersiniz, sağ tık bitirir" diye **yazıyordu**. Koşulun
+  arkasındaki niyet doğruydu, yazımı değil: baştan nokta verilmiş bir betiğe
+  sorulmamalı, çünkü sormak aynı noktaları ikinci kez topluyor ve kendi üzerine
+  katlanmış bir çokgen hiçbir şeyi içermiyor. Niyet artık bir bayrakla yazılı.
+- **`UZUNLUK` ve `BÖLÜMLE` okumalarını sormuyordu** — POLİGON'la aynı kusur.
+  Araç kolonundan basınca nesneyi soruyor, sonra "delta= yazın" / "sayi= yazın"
+  diye reddediyorlardı. Artık soruyorlar: `delta` ve `sayi`, yani elin sorduğu
+  sorular. `yuzde`, `toplam` ve `aralik` yazılan yollar olarak kalıyor, çünkü bir
+  sayı hangisi olduğunu söyleyemez. Argümanın boşluğu karar veriyor, `InputSource`
+  değil (command.md P10).
+- **Günlükte bir tam sayı, geldiği yola göre iki türlü yazılıyordu**: komut
+  satırından `delta=25` → `25.0`, betikten `"delta": 25` → `25`. Aynı sayı, iki
+  bayt dizisi. Kayıt artık **bildirilen türe** çevriliyor — sıra düzeltmesinin
+  yanında, aynı satırda ve aynı sebeple. Yalnız sayısal bir parametredeki skaler
+  değere dokunuluyor; bir sözcük, bir nokta, bir seçim ve bir liste geldiği gibi
+  kalıyor, ve **hiçbir altın fikstür değişmedi**.
+
+Yedi P3 fiilinin kanıtı **tek bir şekilde** yazıldı (`prove_verb`): yedi kez
+kopyalanmış bir kanıt, altısında kayan bir kanıttır.
+
 ### Düzeltildi — günlük satırı artık yazım sırasına bağlı değil
 
 Article 6.4'ün öbür yarısı. `Args` ekleme sırasını tutuyor ve `to_json` onu

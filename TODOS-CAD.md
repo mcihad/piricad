@@ -505,6 +505,23 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
 
 ---
 
+## Kanıt denetimi (plan sonu, 2026-09-21)
+
+- [x] **Eksik eşitlik kanıtları yazıldı.** Planın Doğrulama bölümü her yeni/değişen komut için bir
+  `test_proof.cpp` vakası istiyor (Article 6.4). Denetimde eksik çıkanlar: `DAİRE yontem=3n`,
+  `YAY yontem=bby`, `ÇOKGEN`, P3'ün yedi fiili (KIR, UÇUCA, UZUNLUK, PATLAT, HİZALA, BÖLÜMLE,
+  ÇİZGİDÜZENLE), `SEÇ ÇİT`, `ÖLÇÜ tur=koordinat`, `PANOYAKOPYALA`/`YAPIŞTIR`, `İZ`. On yedi vaka.
+  Yedi fiilin kanıtı tek şekilde yazıldı (`prove_verb`): yedi kez kopyalanmış bir kanıt, altısında
+  kayan bir kanıttır.
+- [x] **Kanıtlar üç kusur ortaya çıkardı** — varlık sebepleri tam olarak bu:
+  * `SEÇ ÇİT` ve `SEÇ ÇOKGEN` **fareyle tek nokta** toplayabiliyordu (`while (supplied.empty())`
+    birinci noktadan sonra çıkıyor). `select.md` doğru davranışı zaten yazıyordu; kod yanlıştı.
+  * `UZUNLUK` ve `BÖLÜMLE` okumalarını **sormuyordu** (POLİGON'la aynı kusur, 5.15).
+  * Günlükte bir tam sayı **geldiği yola göre** `25` ya da `25.0` yazılıyordu; kayıt artık bildirilen
+    türe çevriliyor. Hiçbir altın fikstür değişmedi.
+- [x] **Fuzz korpusu güncel**: P0'ın açı sonekleri (`04-kutupsal-sonekli`, `08-bozuk` içinde
+  `@100<45x`, `@100<45gg`) ve P1a'nın nokta fonksiyonları (`15`, `16`, `17`) tohumda.
+
 ## Doğrulama (her pakette)
 
 - **Birim:** `test_command.cpp` (gramer, fonksiyonlar — bilinen üçgenler `Mm`'de), `test_snap.cpp`

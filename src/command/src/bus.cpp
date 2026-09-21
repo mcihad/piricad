@@ -802,6 +802,26 @@ void Bus::journal_entry(const Session& session)
         declared.push_back(p.name);
     e.args.reorder_like(declared);
 
+    // AND IN THE DECLARED KIND, for the same reason and the same article. A whole
+    // number reaches a `Number` parameter as `Number` from the command line
+    // (`delta=25` → 25.0) and as `Int` from a script (`"delta": 25` → 25), so one
+    // invocation wrote `"delta":25.0` down one road and `"delta":25` down the
+    // other — byte-different for a value that is the same number.
+    //
+    // Only a SCALAR on a numeric parameter is touched, and only between the two
+    // numeric shapes: a list already round-trips through `Value::from_json`'s
+    // fractional check, and a word, a point or a selection is left exactly as it
+    // arrived. Nothing about the value changes — `25` and `25.0` are one number,
+    // and the record now says so the same way whoever asked.
+    for (const Param& p : session.spec().params) {
+        const Value* held = e.args.find(p.name);
+        if (held == nullptr) continue;
+        if (p.kind == ParamKind::Number && held->kind() == Value::Kind::Int)
+            e.args.set(p.name, Value::number(held->as_number()));
+        else if (p.kind == ParamKind::Integer && held->kind() == Value::Kind::Number)
+            e.args.set(p.name, Value::integer(held->as_int()));
+    }
+
     e.origin       = session.input().origin();
     e.crs          = doc_.crs().id();
     e.timestamp_ms = now_ms();

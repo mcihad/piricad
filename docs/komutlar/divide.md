@@ -70,8 +70,13 @@ BÖLÜMLE nesne=1 aralik=20
 
 ### Arayüz
 
-**Değiştir > Bölümle**. Nesneyi seçip Enter'a basın, sonra `sayi=` ya da
-`aralik=` yazın.
+**Değiştir > Bölümle**. Nesneyi seçip Enter'a basın; komut **kaç eşit parçaya**
+bölüneceğini sorar ve nesnenin uzunluğunu istemde yazar.
+
+`aralik=` **yazılan yoldur**: bir sayı, eşit parça sayısı mı sabit aralık mı olduğunu
+söyleyemez. Fareyle sorulan `sayi`'dır, çünkü bu komutun kendi anlamı odur —
+sabit aralık, planın `İŞARETLE`'sinin işiydi ve ayrı bir komut olarak
+[yazılmadı](#nokta-yerine-blok). Baştan biri verilmişse hiç sorulmaz.
 
 ### Betik
 

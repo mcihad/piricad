@@ -265,7 +265,18 @@ Task<void> run_select(Context& ctx)
         // a second time — which is not a longer polygon but a self-overlapping
         // one, and `ring_contains` then answers that nothing is inside it. The
         // box branch above keeps the same rule for the same reason.
-        while (supplied.empty()) {
+        // ASKED FOR ONLY WHEN NOTHING CAME UP FRONT, and then until the run ends.
+        //
+        // The condition used to be `while (supplied.empty())`, which stopped the
+        // loop after the FIRST point: a fence or a selection polygon could never
+        // collect more than one point from the mouse, and the command then
+        // refused with "Çit en az iki nokta ister" — a mode reachable by mouse
+        // that cannot be used by one (CLAUDE.md 5.15). The intent behind that
+        // condition was right and its spelling was not: a script that gave the
+        // whole run must not be asked anything, because asking drains the same
+        // points a second time and a doubled polygon overlaps itself.
+        const bool ask_for_them = supplied.empty();
+        while (ask_for_them) {
             PointOptions options;
             if (!supplied.empty()) {
                 options.rubber_band   = true;
