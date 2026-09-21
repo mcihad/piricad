@@ -37,6 +37,12 @@ Task<void> run(Context& ctx)
 
     if (placed == 0) co_return; // ESC before anything was placed
 
+    // NO `ctx.record` HERE, AND THAT IS THE POINT. ÇİZGİ keeps a parallel vector
+    // of the run and records it at the end; this body does not, and for a while
+    // that cost it its journal — `NOKTA 1,1 2,2 3,3` drew three points and
+    // recorded the third. The awaiter now fills a declared run of points as the
+    // run it is (`Session::record_awaited`), so a looping draw command journals
+    // what it resolved without keeping a second copy of it.
     ctx.echo(std::to_string(placed) + " nokta yerleştirildi.");
 }
 

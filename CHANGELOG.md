@@ -126,6 +126,31 @@ ve komut başarı bildiriyordu — `.claude/command.md` P15'in tam olarak yasakl
   ayrıştırma hatası veriyordu. Üçü de artık anahtarı yineliyor.
 - Betiğin `{"nesneler": [1, 2]}` yolu (`Bus::dispatch`'teki tür onarımı) olduğu
   gibi duruyor ve arayüz = komut satırı = betik eşitliği testle bağlandı.
+### Düzeltildi — `NOKTA` günlüğe tek nokta yazıyordu; üçünü de yazıyor
+
+`NOKTA 1,1 2,2 3,3` çizime üç nokta koyuyor, komut günlüğüne ise yalnız
+sonuncusunu yazıyordu. Günlüğü yeniden oynatmak üç noktalık belgeyi geri
+getirmiyordu — her komuttan istenen şey (CLAUDE.md 6.4) `NOKTA` için tutmuyordu.
+
+Sebep gövdede değil, bekleyicideydi. Bekleyici çözdüğü her değeri sorulduğu
+parametrenin altına kaydeder, `noktalar` ise **tek bir listedir**: döngüyle
+çözülen her nokta bir öncekinin yerine geçiyordu. `ÇİZGİ` bunu gizliyordu, çünkü
+gövdesi kendi vektörünü tutup sonunda bir kez kaydeder — noktalarını döngüyle
+çözen sekiz komutun yedisi aynı defteri elde tutuyor, sekizincisi tutmuyordu.
+
+Artık defteri bekleyici tutuyor (`Session::record_awaited`): şartnamesinde nokta
+**dizisi** olarak bildirilmiş bir parametrede, dizinin ilk değeri istemcinin
+baştan verdiği listenin yerine geçer, sonrakiler onu uzatır. Gövdesinde tam
+cevap olan bir komut yine `ctx.record` çağırır ve yine kazanır; en sonda çalışır.
+Kayıtlı hiçbir günlük ve betik değişmez: değişen tek satır, `NOKTA`'nın bugüne
+kadar eksik yazdığı satırdır.
+
+- Eşitlik kanıtı `tests/unit/test_proof.cpp`'de: `NOKTA` arayüzden, komut
+  satırından ve betikten aynı belgeyi ve aynı günlüğü bırakır, günlük üç noktayı
+  da geri oynatır, tek noktalık çalıştırma da liste olarak kaydedilir.
+- `nokta-dizileri` altın senaryosu belgeyi ve günlüğü yan yana kilitler:
+  `NOKTA`, `ÇİZGİ`, `ÇOKLUÇİZGİ`, `ALAN`, `SPLINE`, `LİDER` ve `KOPYALA`'nın
+  `bitis`'i — bugün noktalarını döngüyle çözen komutların hepsi.
 
 ### Değişti — `@mesafe<açı` artık semt açısı okur: kuzeyden saat yönüne, grad
 
