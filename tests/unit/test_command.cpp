@@ -7075,3 +7075,90 @@ TEST_CASE("her etkileşimli komut iptal edilince boş geri alma deltası bırak�
         FAIL_WITH("çok fazla komut hiç başlamadı",
                   std::to_string(refused) + " / " + std::to_string(started + refused));
 }
+
+TEST_CASE("DİKAYAK ve ALIM eşleşmeyen okuma dizisini sebebiyle reddeder")
+{
+    // THE PLAN'S RELEASE LIST NAMED A SPELLING THAT NEVER WORKED:
+    // `DİKAYAK 0,0 100,0 30 -5`. The two runs are declared one after the other,
+    // so bare numbers all bind to the FIRST of them and the second is left empty
+    // — and the command then returned in SILENCE: no point, no reason. That is
+    // the worst outcome a command has, because the user has nothing to correct.
+    //
+    // It cannot be made to work by splitting the numbers: deciding which of
+    // `30 -5` is a foot and which is an offset is a guess, and guessing which way
+    // a detail lies off a baseline is how a building ends up on the wrong side of
+    // a boundary. So the refusal names the rule instead.
+    {
+        Fixture f;
+        const auto r = f.bus.execute_line("DİKAYAK 0,0 100,0 30 -5", Origin::CommandLine);
+        CHECK_FALSE(r.ok());
+        CHECK(r.error().message.find("sırayla eşleşir") != std::string::npos);
+        CHECK(r.error().message.find("ayak=30 boy=-5") != std::string::npos);
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+    }
+    {
+        // AND THE SAME SHAPE IN ALIM, which reads the same kind of paired run.
+        Fixture f;
+        // ALIM's positional numbers are caught EARLIER and by somebody else: its
+        // third parameter is a point list (`baglama`, the backsight), so the bus's
+        // own validation refuses `50` by name before the body runs. A refusal that
+        // names the parameter and the value is the right answer and this pins it
+        // rather than asking for a second one.
+        const auto r = f.bus.execute_line("ALIM 0,0 50 42.315", Origin::CommandLine);
+        CHECK_FALSE(r.ok());
+        CHECK(r.error().message.find("baglama") != std::string::npos);
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+
+        // AND ITS OWN MISMATCHED RUN, which the body does catch.
+        const auto uneven =
+            f.bus.execute_line("ALIM 0,0 aci=50 aci=100 kenar=42.315", Origin::CommandLine);
+        CHECK_FALSE(uneven.ok());
+        CHECK(uneven.error().message.find("sırayla eşleşir") != std::string::npos);
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{0}); ///< nothing half-placed
+    }
+    {
+        // A GENUINE MISMATCH TOO, not just the positional case: three feet and
+        // two offsets is a field book somebody mis-transcribed, and the counts
+        // are in the message so they can find it.
+        Fixture f;
+        const auto r = f.bus.execute_line("DİKAYAK 0,0 100,0 ayak=10 ayak=20 ayak=30 boy=1 boy=2",
+                                          Origin::CommandLine);
+        CHECK_FALSE(r.ok());
+        CHECK(r.error().message.find("3 `ayak`") != std::string::npos);
+        CHECK(r.error().message.find("2 `boy`") != std::string::npos);
+        // WHOLE OR NOTHING. It used to place the two complete pairs and drop the
+        // third foot in silence, which is how a detail disappears from a survey.
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+    }
+    {
+        // AND ESC STAYS SILENT, which is the other half: cancelling is not an
+        // error and a user who changed their mind is told nothing.
+        Fixture f;
+        std::string said;
+        f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+        auto started  = f.bus.begin_interactive("DİKAYAK", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(core::Point2{0, 0})).ok());
+        CHECK(session.supply(Value::point(core::Point2{100'000, 0})).ok());
+        session.cancel();
+        CHECK(f.bus.finish(session).ok());
+        CHECK(said.find("sırayla eşleşir") == std::string::npos);
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+    }
+}
+
+TEST_CASE("release listesi: DİKAYAK'ın yazılı biçimi belgelenen biçimdir")
+{
+    // The form the page shows and the one both roads agree on.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("DİKAYAK 0,0 100,0 ayak=30 boy=-5", Origin::CommandLine).ok());
+
+    REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{1});
+    const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+    // 30 m along the east-running baseline, 5 m to its RIGHT — negative is right,
+    // which the page states and this pins.
+    CHECK_EQ((core::Point2{f.doc.geometry().ring_xs(span.first)[0],
+                           f.doc.geometry().ring_ys(span.first)[0]}),
+             (core::Point2{30'000, -5'000}));
+}

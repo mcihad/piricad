@@ -568,6 +568,19 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
     oynatılmıyor ve altın senaryo bir nesne eksik kuruluyordu. `acisal3`/`angular3` kabul ediliyor;
     ad tablosundan TÜRETİLMEDİ, çünkü `acisal` öbür açısal türün (beş noktalı `Angular`) kararlı
     adı ve türetmek bir sözcüğü iki türe bağlardı.
+- [x] **Release listesinin `DİKAYAK 0,0 100,0 30 -5` yazımı hiç çalışmıyordu — ve SESSİZ
+  dönüyordu.** İki dizi (`ayak`, `boy`) arka arkaya bildirildiği için çıplak sayıların hepsi
+  birincisine bağlanıyor, ikincisi boş kalıyor, döngü ilk eksik yarıda kırılıyor ve komut hiçbir şey
+  söylemeden geri dönüyordu — bir komutun verebileceği en kötü cevap, çünkü kullanıcının
+  düzeltecek bir şeyi yok. Sayıları bölmek **çözüm değil**: hangisinin ayak hangisinin boy olduğuna
+  karar vermek bir tahmindir ve bir detayın taban çizgisinin hangi tarafına düştüğünü tahmin etmek,
+  bir yapının sınırın yanlış tarafına oturması demektir. Onun yerine ret, eşleşme kuralını ve iki
+  sayıyı söylüyor.
+- [x] **Ve denetim TEK BİR POINT BİLE KOYULMADAN yapılıyor** (Article 1.6): üç `ayak` ile iki `boy`
+  eskiden tam olan iki çifti koyup üçüncüyü sessizce düşürüyordu — yanlış aktarılmış bir karne
+  satırının ölçüden kaybolma yolu. `ALIM` aynı denetimi aldı; onun konumsal yazımı ise zaten
+  bus'ın doğrulaması tarafından adıyla reddediliyor (`baglama` bir nokta listesi). İki sayfa da
+  kuralı yazıyor.
 - [x] **Fuzz korpusu güncel**: P0'ın açı sonekleri (`04-kutupsal-sonekli`, `08-bozuk` içinde
   `@100<45x`, `@100<45gg`) ve P1a'nın nokta fonksiyonları (`15`, `16`, `17`) tohumda.
 

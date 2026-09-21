@@ -6,6 +6,28 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — DİKAYAK eşleşmeyen okuma dizisinde sessiz dönüyordu
+
+Planın release listesi `DİKAYAK 0,0 100,0 30 -5` yazımını adıyla istiyordu. O
+yazım **hiç çalışmıyordu ve hiçbir şey söylemiyordu**: iki dizi (`ayak`, `boy`)
+arka arkaya bildirildiği için çıplak sayıların hepsi birincisine bağlanıyor,
+ikincisi boş kalıyor, döngü ilk eksik yarıda kırılıyor ve komut geri dönüyordu.
+Nokta yok, sebep yok — bir komutun verebileceği en kötü cevap, çünkü kullanıcının
+düzeltecek bir şeyi yok.
+
+- **Sayıları bölmek çözüm değil.** Hangisinin ayak hangisinin boy olduğuna karar
+  vermek bir tahmindir, ve bir detayın taban çizgisinin hangi tarafına düştüğünü
+  tahmin etmek bir yapının sınırın yanlış tarafına oturması demektir. Ret,
+  eşleşme kuralını ve gelen iki sayıyı söylüyor, ve doğru yazımı gösteriyor.
+- **Denetim tek bir nokta bile konmadan yapılıyor** (Article 1.6): üç `ayak` ile
+  iki `boy` eskiden tam olan iki çifti koyup üçüncüyü **sessizce düşürüyordu** —
+  yanlış aktarılmış bir karne satırının ölçüden kaybolma yolu.
+- **`ALIM` aynı denetimi aldı.** Onun konumsal yazımı zaten bus'ın doğrulaması
+  tarafından adıyla reddediliyordu (üçüncü parametresi bir nokta listesi:
+  bağlama noktası), ama kendi eşleşmeyen dizisi aynı sessizliğe düşüyordu.
+- **Esc sessiz kalıyor**, ki öbür yarısı bu: vazgeçmek bir hata değildir ve fikir
+  değiştiren kullanıcıya bir şey söylenmez. İkisi de testli.
+
 ### Eklendi — günlük oynatma özelliği, ve bulduğu iki oynatılamaz komut
 
 Article 6.4 her komut için bir günlük-oynatma vakası istiyor. Komut başına vaka

@@ -56,6 +56,30 @@ Task<void> run(Context& ctx)
     bool join = false;
     if (const Value v = ctx.argument("cizgi"); !v.empty()) join = v.as_bool();
 
+    // THE TWO RUNS MUST BE THE SAME LENGTH, and this is checked BEFORE a single
+    // point is placed. Half a field book is worse than none: three `aci` and
+    // two `kenar` is a line somebody mis-transcribed, and placing the two
+    // whole pairs and dropping the third silently is how a detail disappears
+    // from a survey (Article 1.6 — a validation failure rolls the whole thing
+    // back).
+    //
+    // It also catches the commonest positional mistake. The two runs are declared
+    // one after the other, so bare numbers all bind to the FIRST of them and the
+    // second is left empty; the command used to return in SILENCE — no point, no
+    // reason — which is the worst answer a command has, because the caller has
+    // nothing to correct. The message names the pairing rule and the counts.
+    {
+        const std::size_t firsts  = ctx.argument("aci").as_numbers().size();
+        const std::size_t seconds = ctx.argument("kenar").as_numbers().size();
+        if (firsts != seconds)
+            ctx.session().fail(core::err(
+                core::ErrorCode::InvalidArgument,
+                "`aci` ve `kenar` sayıca eşit olmalı ve sırayla eşleşir: " +
+                    std::to_string(firsts) + " `aci`, " + std::to_string(seconds) +
+                    " `kenar` geldi. Her okumayı adıyla verin: ALIM 0,0 aci=50 kenar=42.315"));
+        if (firsts != seconds) co_return;
+    }
+
     std::vector<core::Point2> shot;
     while (true) {
         auto angle = co_await ctx.number("aci", relative ? "Açı: bağlamadan itibaren okunan açı"

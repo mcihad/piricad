@@ -48,6 +48,18 @@ DİKAYAK <A> <B> ayak=<m> boy=<m> [ayak=<m> boy=<m> …] [cizgi=evet]
 `ayak` ve `boy` **sırayla eşleşir**: birinci `ayak` birinci `boy` ile, ikinci
 ikinciyle. Kaç çift verirseniz o kadar nokta çıkar.
 
+**Sayıca eşit olmalılar** ve eşit değilse komut **hiçbir şey yapmaz**: üç `ayak`
+ile iki `boy`, birinin yanlış aktarıldığı bir ölçü karnesidir, ve tam olan iki
+çifti koyup üçüncüyü sessizce düşürmek bir detayın ölçüden kaybolması demektir.
+Ret, iki sayıyı da söyler.
+
+**Okumaları adıyla verin.** `DİKAYAK 0,0 100,0 30 -5` gibi çıplak sayılar
+çalışmaz: iki dizi arka arkaya bildirildiği için çıplak sayıların hepsi
+**birincisine** bağlanır ve ikincisi boş kalır. Hangi sayının ayak hangisinin boy
+olduğuna program karar veremez — ve bir detayın taban çizgisinin hangi tarafına
+düştüğünü tahmin etmek, bir yapının sınırın yanlış tarafına oturması demektir.
+Bu yüzden ret, doğru yazımı gösterir.
+
 ## Parametreler
 
 | Parametre | Tip | Adet | Açıklama |

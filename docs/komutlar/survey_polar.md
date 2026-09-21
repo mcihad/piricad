@@ -60,6 +60,14 @@ ALIM <istasyon> [baglama=<nokta>] aci=<açı> kenar=<m> [aci=… kenar=… …] 
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
+`aci` ve `kenar` **sırayla eşleşir** ve **sayıca eşit olmalılar**; eşit değilse
+komut hiçbir şey yapmaz ve iki sayıyı da söyler. Yarım bir karne, hiç
+olmamasından kötüdür.
+
+Okumaları **adıyla** verin (`aci=50 kenar=42.315`): çıplak sayılar üçüncü
+parametreye — bağlama noktasına — bağlanmaya çalışır ve komut daha gövdesi
+çalışmadan reddedilir.
+
 ## Örnekler
 
 ### Komut satırı
