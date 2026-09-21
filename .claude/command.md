@@ -46,7 +46,7 @@ P6. NEVER commit an undo step that leaves a half-applied cadastral or imar edit.
 P7. NEVER check argument arity, type or numeric range inside a command body; those three MUST be `Param` declarations validated by `Bus` (R15).
 P8. NEVER hand-roll a state machine, `enum State` member, or callback chain for an interactive command; coroutines only. (§2.4)
 P9. NEVER use `std::function`, `std::shared_ptr`, `new`, or any container that allocates in the dispatch hot path. (§10.4)
-P10. NEVER let a command body ask, branch on, or log the `InputSource` kind. (§2.4)
+P10. NEVER let a command body ask, branch on, or log the `InputSource` kind. (§2.4) What decides behaviour instead is the EMPTINESS OF AN ARGUMENT: `POLİGON` asks for its readings when `aci=` was not supplied and does not when it was, which is "was I told" rather than "am I interactive" — the same body serves a script and a hand without knowing which is which. Enforced by `scripts/ci-gate-tek-yol.sh` over `/src/command/src/commands`, `/src/domain/*/src` and `/src/ai/src/commands`; the BUS may read the origin and does, because journalling who asked is the opposite of behaving differently because of who asked.
 P11. NEVER add a second parser or grammar for the command line. (§3)
 P12. NEVER `#include <Q...>` anywhere in `/src/command`.
 P13. NEVER call `std::toupper` / `std::tolower` on command names or Turkish arguments.

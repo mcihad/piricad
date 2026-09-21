@@ -6,6 +6,28 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — "tek yol" kapısı: hiçbir komut hangi istemcinin sorduğuna bakmaz
+
+Planın ikinci ilkesi şöyleydi: *"Hiçbir komut `InputSource`'a bakmaz
+(command.md P10)."* Denetimde **tutuyordu** — 71 komut gövdesinin hiçbiri
+bakmıyor — ama onu koruyan hiçbir şey yoktu.
+
+Bu kural bir bildirimle ölmez; **her seferinde bir `if` ile** ölür. Her biri
+kendi başına makuldür ("arayüz zaten sordu, istemi atla") ve birlikte tek ad
+taşıyan iki program olurlar — ve yalnız biri test edilmiş olur.
+
+- `scripts/ci-gate-tek-yol.sh` komut GÖVDELERİNİ tarıyor:
+  `/src/command/src/commands`, `/src/domain/*/src`, `/src/ai/src/commands`.
+- **Bus bakabilir ve bakıyor**: kim sorduysa onu günlüğe yazıyor. Kim sorduğunu
+  KAYDETMEK, kim sorduğuna göre DAVRANMANIN tam tersidir.
+- Kapı **ihlal enjekte edilerek** doğrulandı: çıkış 1; temizken 0. Yorum
+  satırlarını kod saymıyor — kendi gerekçesini açıklamayı yasaklayan bir kapı
+  olmasın.
+- Karar veren şeyin ne olduğu `command.md` P10'a yazıldı: **argümanın boşluğu**.
+  `POLİGON` okumalarını `aci=` verilmediyse soruyor, verildiyse sormuyor; bu
+  "etkileşimli miyim" değil "bana söylendi mi"dir, ve aynı gövde bir betiğe de
+  bir ele de hangisi olduğunu bilmeden hizmet ediyor.
+
 ### Eklendi — YAY yontem=devam, ve inşa yöntemleri arayüze girdi
 
 - **`YAY yontem=devam`** — planın kalan son inşa yöntemi. Bir yol geçiş eğrisi,

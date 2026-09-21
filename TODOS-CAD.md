@@ -523,6 +523,15 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
 
 ## Plan metninin ikinci denetimi (2026-09-21)
 
+- [x] **Planın 2. ilkesini koruyan kapı yazıldı** (`scripts/ci-gate-tek-yol.sh`). İlke şöyleydi:
+  "Hiçbir komut `InputSource`'a bakmaz (command.md P10)." Denetimde **tutuyordu** — 71 komut
+  gövdesinin hiçbiri hangi istemcinin sorduğuna bakmıyor — ama onu koruyan hiçbir şey yoktu. Bu
+  kural bir bildirimle ölmez; **her seferinde bir `if` ile** ölür: her biri kendi başına makul
+  ("arayüz zaten sordu, istemi atla") ve birlikte, tek ad taşıyan iki program — ve yalnız biri
+  test edilmiş oluyor. Kapı ihlal enjekte edilerek doğrulandı (çıkış 1), temizken 0, ve yorum
+  satırlarını kod saymıyor — kendi gerekçesini açıklamayı yasaklayan bir kapı olmasın.
+  `command.md` P10 kapıyı ve "argümanın boşluğu karar verir" cümlesini adıyla yazıyor.
+
 - [x] **İNŞA YÖNTEMLERİ ARAYÜZE GİRDİ (§2.6a).** P2 daire, yay, dikdörtgen, çokgen ve elipse
   klasik yöntemlerini verdi ve **hepsi yalnız `yontem=` yazılarak** erişilebiliyordu: bir el üç
   noktadan daire çizemiyordu. Komut bir düğmede olduğu için `probeReach` memnundu, yöntem değildi —
