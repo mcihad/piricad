@@ -151,8 +151,11 @@ Json schema_for(const command::Param& param, Style style)
         // A TEXT PARAMETER THAT TAKES MORE THAN ONE IS A LIST OF WORDS, and the
         // schema has to say so or a client sends one string where several were
         // meant. The word list, when there is one, belongs to the ITEM.
-        const bool many = param.arity.max > 1;
-        Json words      = Json::array({});
+        //
+        // `many` is the function's own, declared at the top: this branch used to
+        // re-declare it with the same expression, which shadowed it and said
+        // nothing new.
+        Json words = Json::array({});
         for (const std::string& word : param.choices)
             words.push(Json::string(word));
 
