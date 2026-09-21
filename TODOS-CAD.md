@@ -175,9 +175,14 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
   `record_awaited` sayı dizisini günlüğe dizi olarak yazıyor (son çifti yazıyordu, yani replay başka
   bir çizim üretiyordu), `next_of` diziyi istek başına bir okuma tüketiyor, ve iki okumalık bir dizinin
   JSON'da nokta gibi görünmesi `bus.cpp`'de tamir ediliyor (tamsayı listesi için zaten yapılanın aynısı).
-- [ ] **P1b-2** `core.survey_polar` — `ALIM`, `SURVEY`, `AL`: istasyon S, isteğe bağlı bağlama noktası
-  (semt sıfırı); tekrar `açı kenar` → nokta. `stakeout_command.cpp`'deki semt hesabı **ortak yardımcıya**
-  taşınır — iki kopya yok.
+- [x] **P1b-2** `core.survey_polar` — `ALIM`, `SURVEY`, **`ALM`**: istasyon, isteğe bağlı `baglama=`
+  (açının sıfırı); tekrar `aci kenar` → nokta; `cizgi=evet` ile birleştirir.
+  **`AL` değil `ALM`:** `AL` `ALAN`'ın kısaltmasıdır ve onu kapmak ALAN'ı gölgelemiyor, **düşürüyordu** —
+  başarısız kayıt yalnız bir log satırı yazar, yani derleme temiz, suite yeşil ve parsel çizen komut
+  yok olur. Tripwire testi tam bunun için var. Bu madde planın `AL` yazımını geçersiz kılar.
+  Semt hesabı `core::polar_offset_turns` olarak `core/angle.hpp`'ye kondu ve `APLİKASYON` ile
+  paylaşılıyor: aplike edilen nokta ile geri okunan nokta aynı milimetreye düşer. Arayüz: **Çizim >
+  Alım** ve araç kutusunda Nokta ailesinin üçüncü üyesi (§2.6a).
 - [ ] **P1b-3** `core.intersect_point` — `KESİŞİMNOKTA`, `KESISIMNOKTA`, `INTERSECTPT`, `KSN`:
   `yontem=dogrultu|mesafe|dogru`.
 - [ ] **P1b-4** `core.point_along` — `ARANOKTA`, `POINTALONG`, `ARN`: AB + oran/mesafe; `sayi=k` k eşit parça.

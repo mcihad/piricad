@@ -604,6 +604,59 @@ TEST_CASE("PROOF: DİKAYAK gui, komut satırı ve betikten aynı belgeyi ve ayn�
     CHECK_EQ(wrote.args.get("boy").as_numbers().size(), std::size_t{2});
 }
 
+TEST_CASE("PROOF: ALIM gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    // Article 6.4 for `core.survey_polar`. Two readings off a station at the
+    // origin, in the session's defaults — grad, clockwise from north — so 0 is
+    // north and 100 is east and both answers are exact.
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("ALIM", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        REQUIRE(session.waiting());
+        CHECK(session.supply(Value::point(core::Point2{0, 0})).ok());
+        CHECK(session.supply(Value::number(0.0)).ok());
+        CHECK(session.supply(Value::number(100.0)).ok());
+        CHECK(session.supply(Value::number(100.0)).ok());
+        CHECK(session.supply(Value::number(100.0)).ok());
+        CHECK(gui.bus.finish(session).ok());
+    }
+
+    Rig cli;
+    CHECK(cli.bus.execute_line("ALIM 0,0 aci=0 kenar=100 aci=100 kenar=100", Origin::CommandLine)
+              .ok());
+
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Alım kanıtı",
+            "komutlar": [ {"cmd": "core.survey_polar", "args": {
+                "istasyon": [0, 0], "aci": [0, 100], "kenar": [100, 100] }} ]
+        })");
+        CHECK(r.ok());
+    }
+
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        CHECK_EQ(rig->doc.live_entity_count(), std::size_t{2});
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{1});
+    }
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+
+    // AND THE COORDINATES A FIELD BOOK WOULD HAVE REDUCED TO. Without this the
+    // three could agree on the same rotation error.
+    const auto north = cli.doc.geometry().rings_of(cli.doc.entities().slot[0]);
+    CHECK_EQ((core::Point2{cli.doc.geometry().ring_xs(north.first)[0],
+                           cli.doc.geometry().ring_ys(north.first)[0]}),
+             (core::Point2{0, 100'000}));
+
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    CHECK(what_happened(gui.journal).find("core.survey_polar") != std::string::npos);
+}
+
 TEST_CASE("PROOF: DİKAYAK günlükten yeniden oynatılabilir")
 {
     Rig live;

@@ -163,6 +163,21 @@ constexpr double turns_from_udeg(std::int64_t udeg) noexcept
 /// bit-identical on every platform (§7.3).
 Point2 polar_offset(double distance_metres, double angle, AngleConvention convention) noexcept;
 
+/// The offset `distance` metres along a direction given as a fraction of a full
+/// turn under `rule` — the form `direction_turns` answers in.
+///
+/// WHAT AN INSTRUMENT ZEROED ON A BACKSIGHT MEASURES. The operator sights a
+/// known direction, sets the circle to zero, and every reading after that is an
+/// angle FROM there: the absolute direction is the backsight's turn plus the
+/// reading's. Turns add; angles in a unit do not add until they are turns. `ALIM`
+/// reduces a field book this way and `APLİKASYON` produces one, so the two ends
+/// of the same job share the arithmetic rather than each rounding its own way
+/// (CLAUDE.md 5.10).
+///
+/// Determinism is `polar_offset`'s: `sin_cos_udeg`, and one `mm_from_metres` per
+/// axis (§7.3).
+Point2 polar_offset_turns(double distance_metres, double turns, AngleRule rule) noexcept;
+
 /// The direction from `from` to `to` under `rule`, as a fraction of a full turn
 /// in [0, 1). Semt is clockwise from north, matematik counter-clockwise from
 /// east. The zero vector answers 0. Deterministic: `atan2_udeg`, not libm.

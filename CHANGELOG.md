@@ -6,6 +6,30 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — ALIM: bir istasyonun ölçü karnesi çizime böyle girer (P1b-2)
+
+Bilinen bir noktada duran alet her detay için bir **açı** ve bir **kenar** okur.
+`ALIM` bu iki sütunu koordinata çevirir: istasyon, isteğe bağlı bağlama noktası,
+sonra sırayla açı–kenar çiftleri.
+
+- **`APLİKASYON`un tersi**, ve ikisi aynı aritmetiği paylaşıyor: semt hesabı
+  `core::polar_offset_turns` olarak `core/angle.hpp`'ye kondu. Aplike edilen bir
+  nokta ile geri okunan aynı nokta artık aynı milimetreye düşüyor, iki ayrı
+  yuvarlamaya değil (5.10).
+- **Bağlama noktası açının anlamını değiştirir**: verilmezse açı semt açısıdır,
+  verilirse bağlamadan itibaren okunmuştur — bir aletin gerçekten okuduğu şey.
+  Hangisi olduğu her koordinatı değiştirdiği için komut hangisini kullandığını
+  yazıyor.
+- **Kısaltma `AL` değil `ALM`.** `AL` `ALAN`'ın kısaltmasıdır. Onu kapmak ALAN'ı
+  gölgelemiyor, **düşürüyordu**: başarısız bir kayıt yalnız bir log satırı yazıp
+  devam eder, yani derleme temiz kalır, suite yeşil kalır ve parsel çizen komut
+  yok olur. `registry: bildirilen her komut GERÇEKTEN kaydedilmiş` testi tam bu
+  yüzden var ve bunu yakaladı.
+- Arayüz aynı değişiklikte: **Çizim > Alım** ve araç kutusunda Nokta ailesinin
+  üçüncü üyesi. Sayfası, `docs/README.md` satırı, `make reference`, eşitlik
+  kanıtı ve dört sayısal test (dört ana yön, bağlamalı okuma, eksi kenar reddi,
+  kapalı çokgen).
+
 ### Eklendi — DİKAYAK: şerit metreyle alınan detay çizime böyle girer (P1b-1)
 
 İki bilinen noktadan geçen bir taban çizgisi ve o çizgiye göre okunan her detay:

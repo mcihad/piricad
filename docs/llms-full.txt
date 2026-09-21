@@ -41,8 +41,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 78 (70 tanesi onay ister)
-- Katalog parmak izi: `6675156031940636389`
+- Araç sayısı: 79 (71 tanesi onay ister)
+- Katalog parmak izi: `1829748219414178167`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -959,6 +959,22 @@ Onay ister.
 |---|---|---|---|
 | `islem` | string | evet | Ne yapılacağı: uygula, reddet, durum ya da listele (metin) |
 | `oneri` | string | hayır | Öneri kimliği; uygula, reddet ve durum için gerekir (metin) |
+
+### `core_survey_polar` — Alım
+
+İstasyondan okunan açı ve kenarlardan nokta hesaplar ve yerleştirir.
+Komut: ALIM (SURVEY, ALM)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `istasyon` | string | evet | Aletin durduğu bilinen nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baglama` | string | hayır | Bağlama noktası: verilirse açılar ondan itibaren okunmuş sayılır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `aci` | number | hayır | Okunan açı; kenar ile sırayla eşleşir [oturumun açı birimi] (sayı) |
+| `kenar` | number | hayır | Alete olan uzaklık (m) [m] (sayı) |
+| `cizgi` | boolean | hayır | Hesaplanan noktaları okundukları sırayla çizgiyle birleştirir (evet/hayır) |
 
 ### `core_symbol` — Sembol
 

@@ -23,6 +23,23 @@ Point2 polar_offset(double distance_metres, double angle, AngleConvention conven
     };
 }
 
+Point2 polar_offset_turns(double distance_metres, double turns, AngleRule rule) noexcept
+{
+    // A WHOLE TURN IS `kUDegFullCircle` MICRO-DEGREES, and the fraction is
+    // rounded once to that scale — the same rounding `udeg_from_angle` applies to
+    // a typed angle, so a reading reduced here and the same direction typed as
+    // `@100<45` land on the same millimetre.
+    const SinCos t = sin_cos_udeg(mm_round(turns * static_cast<double>(kUDegFullCircle)));
+
+    const double east  = rule == AngleRule::Semt ? t.sin : t.cos;
+    const double north = rule == AngleRule::Semt ? t.cos : t.sin;
+
+    return Point2{
+        .x = mm_from_metres(distance_metres * east),
+        .y = mm_from_metres(distance_metres * north),
+    };
+}
+
 double direction_turns(Point2 from, Point2 to, AngleRule rule) noexcept
 {
     const Mm dx = to.x - from.x;

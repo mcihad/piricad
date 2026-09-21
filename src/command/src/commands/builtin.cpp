@@ -15,6 +15,7 @@ namespace kentos::command {
     X(polyline)                                                                                    \
     X(point_draw)                                                                                  \
     X(perp_offset)                                                                                 \
+    X(survey_polar)                                                                                \
     X(text)                                                                                        \
     X(edittext)                                                                                    \
     X(exportstyle)                                                                                 \

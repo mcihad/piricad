@@ -800,6 +800,10 @@ void MainWindow::buildActions()
                               "kısaltma: HLK"));
     drawingTools_->addAction(actAnnulus_);
 
+    actSurvey_ = drawTool(Glyph::Locate, tr("Alım"), QStringLiteral("ALIM"),
+                          tr("ALIM — istasyon, sonra açı ve kenar çiftleri; bağlama verilirse "
+                             "açılar ondan itibaren  ·  kısaltma: ALM"));
+    drawingTools_->addAction(actSurvey_);
     actPerpOffset_ =
         drawTool(Glyph::Ruler, tr("Dik Ayak"), QStringLiteral("DİKAYAK"),
                  tr("DİKAYAK — taban çizgisi, sonra ayak ve boy çiftleri; A→B yönünde SOL "
@@ -1377,6 +1381,9 @@ void MainWindow::buildMenus()
     // THE SURVEY ENTRY, where a drawing actually starts for a crew with a tape.
     // Curated rather than left to the generated tail: this is the first tool a
     // Turkish surveyor reaches for, not an occasional one (TODOS-CAD P1b).
+    draw->addAction(commandAction(Glyph::Locate, tr("Alım"), QStringLiteral("ALIM"),
+                                  tr("ALIM — istasyondan okunan açı ve kenarlardan nokta "
+                                     "hesaplar  ·  kısaltma: ALM")));
     draw->addAction(commandAction(Glyph::Ruler, tr("Dik Ayak"), QStringLiteral("DİKAYAK"),
                                   tr("DİKAYAK — taban çizgisine göre dik ayak ve dik boy vererek "
                                      "nokta yerleştirir  ·  kısaltma: DA")));
@@ -1736,7 +1743,7 @@ void MainWindow::buildToolBox()
     // NOKTA AND THE TWO WAYS A MEASURED POINT ARRIVES. A point clicked on the
     // canvas and a point computed from a baseline are the same kind of thing to
     // a surveyor, and the second is what a tape survey produces all day.
-    toolBox_->addFamily({actPoint_, actPerpOffset_});
+    toolBox_->addFamily({actPoint_, actPerpOffset_, actSurvey_});
     toolBox_->addTool(actText_);
     toolBox_->addFamily({actInsert_, actBlock_});
     toolBox_->addFamily({actDimension_, actLeader_});

@@ -918,6 +918,93 @@ TEST_CASE("DİKAYAK: cizgi=evet noktaları verildikleri sırayla birleştirir")
     CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
 }
 
+TEST_CASE("ALIM: semt açısı ve kenardan nokta hesaplar")
+{
+    Fixture f;
+
+    // Grad and clockwise from north are the defaults (TODOS-CAD P0), so the four
+    // cardinal readings off a station at the origin are exact by construction:
+    // 0 grad is north, 100 is east, 200 is south, 300 is west. Those four are
+    // the ones `sin_cos_udeg` answers exactly, which is why they are the test.
+    REQUIRE(f.bus
+                .execute_line("ALIM 0,0 aci=0 kenar=100 aci=100 kenar=100 "
+                              "aci=200 kenar=100 aci=300 kenar=100",
+                              Origin::CommandLine)
+                .ok());
+
+    REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{4});
+    const core::Point2 expected[4]{{0, 100'000}, {100'000, 0}, {0, -100'000}, {-100'000, 0}};
+    for (std::size_t i = 0; i < 4; ++i) {
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[i]);
+        CHECK_EQ((core::Point2{f.doc.geometry().ring_xs(span.first)[0],
+                               f.doc.geometry().ring_ys(span.first)[0]}),
+                 expected[i]);
+    }
+}
+
+TEST_CASE("ALIM: bağlama verilince açılar ondan itibaren okunur")
+{
+    Fixture f;
+
+    // The instrument is zeroed on a backsight due EAST, so a reading of 0 is
+    // east and a reading of 100 grad is south — the whole station is turned by
+    // the backsight's own azimuth. Getting this wrong rotates every coordinate,
+    // which is why the command says which of the two it used.
+    REQUIRE(f.bus
+                .execute_line("ALIM 0,0 baglama=50,0 aci=0 kenar=100 aci=100 kenar=100",
+                              Origin::CommandLine)
+                .ok());
+
+    REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{2});
+    const core::Point2 expected[2]{{100'000, 0}, {0, -100'000}};
+    for (std::size_t i = 0; i < 2; ++i) {
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[i]);
+        CHECK_EQ((core::Point2{f.doc.geometry().ring_xs(span.first)[0],
+                               f.doc.geometry().ring_ys(span.first)[0]}),
+                 expected[i]);
+    }
+
+    // AND THE SAME POINT THE ONE GRAMMAR GIVES for the absolute direction, which
+    // is what `APLİKASYON` would print for it: a reading of 100 grad off an east
+    // backsight is an azimuth of 200 grad.
+    Fixture g;
+    REQUIRE(g.bus.execute_line("NOKTA @100<200", Origin::CommandLine).ok());
+    const auto span = g.doc.geometry().rings_of(g.doc.entities().slot[0]);
+    CHECK_EQ((core::Point2{g.doc.geometry().ring_xs(span.first)[0],
+                           g.doc.geometry().ring_ys(span.first)[0]}),
+             (core::Point2{0, -100'000}));
+}
+
+TEST_CASE("ALIM: eksi kenar reddedilir ve hiçbir şey çizilmez")
+{
+    Fixture f;
+    const auto refused = f.bus.execute_line("ALIM 0,0 aci=0 kenar=-100", Origin::CommandLine);
+    CHECK_FALSE(refused.ok());
+    CHECK(refused.error().message.find("eksi olamaz") != std::string::npos);
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+}
+
+TEST_CASE("ALIM: kapalı bir çokgen okunup birleştirilir")
+{
+    Fixture f;
+
+    // A boundary walked round from one station: four readings and the ring they
+    // make. `cizgi=evet` joins them in the order they were read, because that
+    // order IS the ring — a field book is not a set of points.
+    REQUIRE(f.bus
+                .execute_line("ALIM 0,0 aci=0 kenar=50 aci=100 kenar=50 aci=200 kenar=50 "
+                              "aci=300 kenar=50 cizgi=evet",
+                              Origin::CommandLine)
+                .ok());
+
+    REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{5}); ///< four points and the line
+    const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[4]);
+    CHECK_EQ(f.doc.geometry().ring_xs(span.first).size(), std::size_t{4});
+
+    // One command, one undo step: the readings and the line go together.
+    CHECK_EQ(f.undo.undo_depth(), std::size_t{1});
+}
+
 TEST_CASE("DİKAYAK: aynı iki taban noktası reddedilir")
 {
     Fixture f;
@@ -4384,8 +4471,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // catching.
     Fixture f;
     // 59 + SPLINE, TARAMA, BLOK, BLOKEKLE, ÖLÇÜ, LİDER + YAZDIR, YAZDIRMAPROFİLİ
-    // + KATMANGÖRÜNÜM + ÇIKTIYERLEŞİMİ, ÇIKTIÖĞE, ÇIKTIŞABLON + YENİ + DİKAYAK
-    CHECK_EQ(f.reg.size(), std::size_t{73});
+    // + KATMANGÖRÜNÜM + ÇIKTIYERLEŞİMİ, ÇIKTIÖĞE, ÇIKTIŞABLON + YENİ + DİKAYAK, ALIM
+    CHECK_EQ(f.reg.size(), std::size_t{74});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

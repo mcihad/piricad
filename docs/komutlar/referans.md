@@ -14,6 +14,7 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.polyline`](polyline.md) | Çoklu Çizgi | `ÇOKLUÇİZGİ`, `COKLUCIZGI`, `POLYLINE`, `ÇÇ`, `PL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Birden çok noktadan TEK bir çizgi nesnesi çizer. |
 | [`core.point_draw`](point_draw.md) | Nokta | `NOKTA`, `POINT`, `NK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper. |
 | [`core.perp_offset`](perp_offset.md) | Dik Ayak | `DİKAYAK`, `DIKAYAK`, `PERPOFFSET`, `DA` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Taban çizgisine göre dik ayak ve dik boy vererek nokta yerleştirir. |
+| [`core.survey_polar`](survey_polar.md) | Alım | `ALIM`, `SURVEY`, `ALM` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İstasyondan okunan açı ve kenarlardan nokta hesaplar ve yerleştirir. |
 | [`core.text`](text.md) | Metin | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
 | [`core.edittext`](edittext.md) | Yazıyı Düzenle | `YAZIDÜZENLE`, `YAZIDUZENLE`, `EDITTEXT`, `YZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir. |
 | [`core.exportstyle`](exportstyle.md) | Stil Aktar | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
@@ -154,6 +155,20 @@ Taban çizgisine göre dik ayak ve dik boy vererek nokta yerleştirir.
 | `cizgi` | bool | isteğe bağlı | Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir |
 
 Ayrıntılı kullanım: [DİKAYAK](perp_offset.md)
+
+### `core.survey_polar` — ALIM (Alım)
+
+İstasyondan okunan açı ve kenarlardan nokta hesaplar ve yerleştirir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `istasyon` | point | 1 | Aletin durduğu bilinen nokta |
+| `baglama` | point_list | isteğe bağlı | Bağlama noktası: verilirse açılar ondan itibaren okunmuş sayılır |
+| `aci` | number | en az 0 | Okunan açı; kenar ile sırayla eşleşir |
+| `kenar` | number | en az 0 | Alete olan uzaklık (m) |
+| `cizgi` | bool | isteğe bağlı | Hesaplanan noktaları okundukları sırayla çizgiyle birleştirir |
+
+Ayrıntılı kullanım: [ALIM](survey_polar.md)
 
 ### `core.text` — METİN (Metin)
 
@@ -4401,6 +4416,58 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "ONERI",
         "SUGGESTION",
         "ÖN"
+      ]
+    }
+  },
+  {
+    "name": "core_survey_polar",
+    "title": "Alım",
+    "description": "İstasyondan okunan açı ve kenarlardan nokta hesaplar ve yerleştirir.\nKomut: ALIM (SURVEY, ALM)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "istasyon": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Aletin durduğu bilinen nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "baglama": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Bağlama noktası: verilirse açılar ondan itibaren okunmuş sayılır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "aci": {
+          "type": "number",
+          "description": "Okunan açı; kenar ile sırayla eşleşir [oturumun açı birimi] (sayı)"
+        },
+        "kenar": {
+          "type": "number",
+          "description": "Alete olan uzaklık (m) [m] (sayı)"
+        },
+        "cizgi": {
+          "type": "boolean",
+          "description": "Hesaplanan noktaları okundukları sırayla çizgiyle birleştirir (evet/hayır)"
+        }
+      },
+      "required": [
+        "istasyon"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.survey_polar",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "ALIM",
+        "SURVEY",
+        "ALM"
       ]
     }
   },
