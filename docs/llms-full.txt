@@ -41,8 +41,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 79 (71 tanesi onay ister)
-- Katalog parmak izi: `1829748219414178167`
+- Araç sayısı: 81 (73 tanesi onay ister)
+- Katalog parmak izi: `2692376238881071683`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -402,6 +402,28 @@ Onay ister.
 | `sutun_aralik` | integer | hayır | Sütunlar arası, milimetre, döndürülmüş eksende (tam sayı) |
 | `satir_aralik` | integer | hayır | Satırlar arası, milimetre, döndürülmüş eksende (tam sayı) |
 
+### `core_intersect_point` — Kesişim Noktası
+
+İki doğrultunun, iki uzaklığın ya da iki doğrunun kesişimine nokta koyar.
+Komut: KESİŞİMNOKTA (KESISIMNOKTA, INTERSECTPT, KSN)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `yontem` | string | hayır | dogrultu: iki doğrultu · mesafe: iki uzaklık · dogru: iki doğru (metin) |
+| `birinci` | string | evet | Birinci bilinen nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `ikinci` | string | hayır | İkinci bilinen nokta — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `ucuncu` | string | hayır | İkinci doğrunun ilk noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `dorduncu` | string | hayır | İkinci doğrunun ikinci noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `birinci_aci` | number | hayır | Birinci noktadan okunan doğrultu (sayı) |
+| `ikinci_aci` | number | hayır | İkinci noktadan okunan doğrultu (sayı) |
+| `birinci_mesafe` | number | hayır | Birinci noktadan ölçülen uzaklık (m) (sayı) |
+| `ikinci_mesafe` | number | hayır | İkinci noktadan ölçülen uzaklık (m) (sayı) |
+| `yon` | string | hayır | İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre (metin) |
+| `kesisim` | string | hayır | Bulunan nokta; günlüğe yazılır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
 ### `core_job_template` — İş Şablonu
 
 Sık yapılan işlerin — atlas, kadastro kontrolü, parsel raporu — komut satırlarını sırasıyla verir. Hiçbirini çalıştırmaz: adımlar olağan araç yüzeyinden gönderilir ve yazan her adım yine öneri olur.
@@ -683,6 +705,22 @@ Onay ister.
 | `ayak` | number | hayır | A'dan taban boyunca uzaklık (m); boy ile sırayla eşleşir (sayı) |
 | `boy` | number | hayır | Tabana dik uzaklık (m); A→B yönünde SOL pozitiftir (sayı) |
 | `cizgi` | boolean | hayır | Yerleştirilen noktaları verildikleri sırayla çizgiyle birleştirir (evet/hayır) |
+
+### `core_point_along` — Ara Nokta
+
+İki nokta arasındaki doğru üzerinde oran, uzaklık ya da eşit bölmeyle nokta koyar.
+Komut: ARANOKTA (POINTALONG, ARN)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `birinci` | string | evet | Doğrunun ilk noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `ikinci` | string | evet | Doğrunun ikinci noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yontem` | string | hayır | oran: 0 ile 1 arası · mesafe: ilk noktadan metre (metin) |
+| `deger` | number | hayır | Oran ya da uzaklık; birden çok verilebilir (sayı) |
+| `sayi` | integer | hayır | Doğruyu bu kadar eşit parçaya böler (tam sayı) |
 
 ### `core_point_draw` — Nokta
 

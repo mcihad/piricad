@@ -6,6 +6,31 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — KESİŞİMNOKTA ve ARANOKTA: kaybolan köşe ve kazık dizisi (P1b-3, P1b-4)
+
+`KESİŞİMNOKTA` taş taşı gitmiş bir köşeyi üç yoldan geri kurar: iki doğrultunun
+kesişimi, iki uzaklığın kesişimi, ya da iki sınırın uzatılmış hâlinin kesişimi.
+`ARANOKTA` bir doğru üzerinde oran, uzaklık ya da `sayi=k` ile eşit bölme
+yaparak nokta koyar — bir yol ekseni üzerindeki istasyon kazıkları.
+
+- **İki uzaklığın iki çözümü sessizce seçilmez.** `yon=sol|sag` istenir; biri
+  sessizce seçilse bu bir sınırı yolun yanlış tarafına koymanın yolu olurdu.
+  Test iki yönün aynadaki iki farklı köşeyi verdiğini doğruluyor.
+- **Ret cümleleri rakamı söyler** (R19): ulaşmayan iki uzaklık, iki yarıçapı ve
+  merkezler arası mesafeyi birden yazar, yani hangi ölçünün yanlış olduğu bir
+  bakışta görülür.
+- **Ortak zemin:** üç kesişim ve iki ara-nokta yapısı `command/construct.hpp`'ye
+  taşındı ve `kes()`, `ara()`, `uzanti()` nokta fonksiyonlarıyla paylaşılıyor.
+  Aynı cevap, aynı çözüm seçimi ve aynı ret cümlesi, iş yazılmış da olsa
+  tıklanmış da olsa (5.10, Article 1.2). Yan fayda: `ara()`nın metre biçimi artık
+  oran biçiminin yuvarlamasından geçiyor, yani 100 m'lik bir doğruda `0.2` ile
+  `20 m` aynı milimetreye düşüyor — önce birbirinin bir milimetre yakınındaydı.
+- `sayi=k` uçları **tekrar koymaz**: onlar zaten oradadır ve tekrar konması bir
+  taşın üstünde iki nokta bırakırdı.
+- Arayüz aynı değişiklikte, iki sayfa, `docs/README.md` satırları,
+  `make reference`, ve dokuz sayısal test (bilinen bir karenin merkezi üç
+  yöntemden de aynı milimetre).
+
 ### Eklendi — ALIM: bir istasyonun ölçü karnesi çizime böyle girer (P1b-2)
 
 Bilinen bir noktada duran alet her detay için bir **açı** ve bir **kenar** okur.

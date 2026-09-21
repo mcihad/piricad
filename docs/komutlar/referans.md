@@ -15,6 +15,8 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.point_draw`](point_draw.md) | Nokta | `NOKTA`, `POINT`, `NK` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Ölçülmüş nokta yerleştirir: nirengi, poligon noktası, röper. |
 | [`core.perp_offset`](perp_offset.md) | Dik Ayak | `DİKAYAK`, `DIKAYAK`, `PERPOFFSET`, `DA` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Taban çizgisine göre dik ayak ve dik boy vererek nokta yerleştirir. |
 | [`core.survey_polar`](survey_polar.md) | Alım | `ALIM`, `SURVEY`, `ALM` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İstasyondan okunan açı ve kenarlardan nokta hesaplar ve yerleştirir. |
+| [`core.intersect_point`](intersect_point.md) | Kesişim Noktası | `KESİŞİMNOKTA`, `KESISIMNOKTA`, `INTERSECTPT`, `KSN` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki doğrultunun, iki uzaklığın ya da iki doğrunun kesişimine nokta koyar. |
+| [`core.point_along`](point_along.md) | Ara Nokta | `ARANOKTA`, `POINTALONG`, `ARN` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki nokta arasındaki doğru üzerinde oran, uzaklık ya da eşit bölmeyle nokta koyar. |
 | [`core.text`](text.md) | Metin | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
 | [`core.edittext`](edittext.md) | Yazıyı Düzenle | `YAZIDÜZENLE`, `YAZIDUZENLE`, `EDITTEXT`, `YZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir. |
 | [`core.exportstyle`](exportstyle.md) | Stil Aktar | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
@@ -169,6 +171,40 @@ Ayrıntılı kullanım: [DİKAYAK](perp_offset.md)
 | `cizgi` | bool | isteğe bağlı | Hesaplanan noktaları okundukları sırayla çizgiyle birleştirir |
 
 Ayrıntılı kullanım: [ALIM](survey_polar.md)
+
+### `core.intersect_point` — KESİŞİMNOKTA (Kesişim Noktası)
+
+İki doğrultunun, iki uzaklığın ya da iki doğrunun kesişimine nokta koyar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `yontem` | text | isteğe bağlı | dogrultu: iki doğrultu · mesafe: iki uzaklık · dogru: iki doğru |
+| `birinci` | point | 1 | Birinci bilinen nokta |
+| `ikinci` | point_list | isteğe bağlı | İkinci bilinen nokta |
+| `ucuncu` | point_list | isteğe bağlı | İkinci doğrunun ilk noktası |
+| `dorduncu` | point_list | isteğe bağlı | İkinci doğrunun ikinci noktası |
+| `birinci_aci` | number | isteğe bağlı | Birinci noktadan okunan doğrultu |
+| `ikinci_aci` | number | isteğe bağlı | İkinci noktadan okunan doğrultu |
+| `birinci_mesafe` | number | isteğe bağlı | Birinci noktadan ölçülen uzaklık (m) |
+| `ikinci_mesafe` | number | isteğe bağlı | İkinci noktadan ölçülen uzaklık (m) |
+| `yon` | text | isteğe bağlı | İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre |
+| `kesisim` | point_list | isteğe bağlı | Bulunan nokta; günlüğe yazılır |
+
+Ayrıntılı kullanım: [KESİŞİMNOKTA](intersect_point.md)
+
+### `core.point_along` — ARANOKTA (Ara Nokta)
+
+İki nokta arasındaki doğru üzerinde oran, uzaklık ya da eşit bölmeyle nokta koyar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `birinci` | point | 1 | Doğrunun ilk noktası |
+| `ikinci` | point | 1 | Doğrunun ikinci noktası |
+| `yontem` | text | isteğe bağlı | oran: 0 ile 1 arası · mesafe: ilk noktadan metre |
+| `deger` | number | en az 0 | Oran ya da uzaklık; birden çok verilebilir |
+| `sayi` | integer | isteğe bağlı | Doğruyu bu kadar eşit parçaya böler |
+
+Ayrıntılı kullanım: [ARANOKTA](point_along.md)
 
 ### `core.text` — METİN (Metin)
 
@@ -2511,6 +2547,95 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
     }
   },
   {
+    "name": "core_intersect_point",
+    "title": "Kesişim Noktası",
+    "description": "İki doğrultunun, iki uzaklığın ya da iki doğrunun kesişimine nokta koyar.\nKomut: KESİŞİMNOKTA (KESISIMNOKTA, INTERSECTPT, KSN)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "yontem": {
+          "type": "string",
+          "enum": [
+            "dogrultu",
+            "mesafe",
+            "dogru"
+          ],
+          "description": "dogrultu: iki doğrultu · mesafe: iki uzaklık · dogru: iki doğru (metin)"
+        },
+        "birinci": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Birinci bilinen nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "ikinci": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "İkinci bilinen nokta — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "ucuncu": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "İkinci doğrunun ilk noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "dorduncu": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "İkinci doğrunun ikinci noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "birinci_aci": {
+          "type": "number",
+          "description": "Birinci noktadan okunan doğrultu (sayı)"
+        },
+        "ikinci_aci": {
+          "type": "number",
+          "description": "İkinci noktadan okunan doğrultu (sayı)"
+        },
+        "birinci_mesafe": {
+          "type": "number",
+          "description": "Birinci noktadan ölçülen uzaklık (m) (sayı)"
+        },
+        "ikinci_mesafe": {
+          "type": "number",
+          "description": "İkinci noktadan ölçülen uzaklık (m) (sayı)"
+        },
+        "yon": {
+          "type": "string",
+          "enum": [
+            "sol",
+            "sag"
+          ],
+          "description": "İki uzaklık kesişiminin hangi çözümü; birinci→ikinci yönüne göre (metin)"
+        },
+        "kesisim": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Bulunan nokta; günlüğe yazılır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "birinci"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.intersect_point",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "KESİŞİMNOKTA",
+        "KESISIMNOKTA",
+        "INTERSECTPT",
+        "KSN"
+      ]
+    }
+  },
+  {
     "name": "core_job_template",
     "title": "İş Şablonu",
     "description": "Sık yapılan işlerin — atlas, kadastro kontrolü, parsel raporu — komut satırlarını sırasıyla verir. Hiçbirini çalıştırmaz: adımlar olağan araç yüzeyinden gönderilir ve yazan her adım yine öneri olur.\nKomut: İŞŞABLONU (ISSABLONU, JOBTEMPLATE, İŞŞ)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
@@ -3505,6 +3630,65 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "DIKAYAK",
         "PERPOFFSET",
         "DA"
+      ]
+    }
+  },
+  {
+    "name": "core_point_along",
+    "title": "Ara Nokta",
+    "description": "İki nokta arasındaki doğru üzerinde oran, uzaklık ya da eşit bölmeyle nokta koyar.\nKomut: ARANOKTA (POINTALONG, ARN)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "birinci": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Doğrunun ilk noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "ikinci": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Doğrunun ikinci noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "yontem": {
+          "type": "string",
+          "enum": [
+            "oran",
+            "mesafe"
+          ],
+          "description": "oran: 0 ile 1 arası · mesafe: ilk noktadan metre (metin)"
+        },
+        "deger": {
+          "type": "number",
+          "description": "Oran ya da uzaklık; birden çok verilebilir (sayı)"
+        },
+        "sayi": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 1000,
+          "description": "Doğruyu bu kadar eşit parçaya böler (tam sayı)"
+        }
+      },
+      "required": [
+        "birinci",
+        "ikinci"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.point_along",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "ARANOKTA",
+        "POINTALONG",
+        "ARN"
       ]
     }
   },

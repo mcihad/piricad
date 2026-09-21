@@ -16,6 +16,8 @@ namespace kentos::command {
     X(point_draw)                                                                                  \
     X(perp_offset)                                                                                 \
     X(survey_polar)                                                                                \
+    X(intersect_point)                                                                             \
+    X(point_along)                                                                                 \
     X(text)                                                                                        \
     X(edittext)                                                                                    \
     X(exportstyle)                                                                                 \

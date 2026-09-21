@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "point_function.hpp"
 
+#include "kentos_cad/command/construct.hpp"
+
 #include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/pick.hpp"
@@ -35,17 +37,6 @@ std::string_view trim(std::string_view s)
     while (!s.empty() && is_blank(s.back()))
         s.remove_suffix(1);
     return s;
-}
-
-/// Metres with three decimals, written in integers so no locale and no rounding
-/// mode reaches an error message: `-1234,500`.
-std::string metres_text(Mm v)
-{
-    const bool negative = v < 0;
-    const auto abs_mm   = static_cast<std::uint64_t>(negative ? -v : v);
-    std::string frac    = std::to_string(abs_mm % 1000);
-    frac                = std::string(3 - frac.size(), '0') + frac;
-    return (negative ? "-" : "") + std::to_string(abs_mm / 1000) + "," + frac;
 }
 
 /// What a field starts like, which is all the matcher needs to know before the
@@ -471,14 +462,6 @@ bool try_form(const PointForm& form, const std::vector<std::string_view>& fields
 
 /// How far out a direction is carried before two of them are intersected.
 ///
-/// A direction has no second point, so one is made: a hundred kilometres along
-/// it. The length is not arbitrary — `polar_offset` rounds its endpoint to the
-/// millimetre, so the direction it encodes is off by at most half a millimetre
-/// in 10^8, five parts in a thousand million. At a kilometre from the station
-/// that is a hundredth of a millimetre, an order below the storage unit, and it
-/// buys the reuse of `core::line_intersection` instead of a second intersection
-/// written here (CLAUDE.md 5.16).
-constexpr double kDirectionRay = 100000.0;
 
 /// The convention an angle argument was written under: the session's, with the
 /// token's own `g`/`d`/`r` suffix winning where it has one.
@@ -509,59 +492,16 @@ core::Result<Point2> perpendicular(Point2 a, Point2 b, double foot_m, double off
     return out;
 }
 
-/// `distance` metres past B, along A→B.
-core::Result<Point2> beyond(Point2 a, Point2 b, double distance_m)
-{
-    const double dx  = static_cast<double>(b.x - a.x);
-    const double dy  = static_cast<double>(b.y - a.y);
-    const double len = std::sqrt(dx * dx + dy * dy);
-    if (len == 0.0)
-        return err(ErrorCode::InvalidArgument,
-                   "uzanti(): A ve B aynı nokta, uzatılacak bir doğrultu yok.");
-
-    const double d = distance_m * static_cast<double>(core::kMmPerMetre);
-    return Point2{b.x + core::mm_round(d * dx / len), b.y + core::mm_round(d * dy / len)};
-}
-
 /// Where the direction `ang1` from `a` crosses the direction `ang2` from `b`.
+///
+/// The token wrapper: it reads each angle's own unit suffix and hands the values
+/// to the shared construction, which is the one the `KESİŞİMNOKTA` command calls
+/// too (`construct.hpp`).
 core::Result<Point2> direction_crossing(Point2 a, const Token& ang1, Point2 b, const Token& ang2,
                                         const ResolveContext& ctx)
 {
-    const core::AngleConvention c1 = applied_to(ang1, ctx);
-    const core::AngleConvention c2 = applied_to(ang2, ctx);
-
-    // PARALLEL IS DECIDED IN INTEGERS, before any trigonometry. Two directions a
-    // half turn apart give ray endpoints whose cross product is a rounding
-    // artefact rather than zero, and `line_intersection` would then answer with
-    // a point somewhere past the moon instead of refusing.
-    const std::int64_t half = core::kUDegFullCircle / 2;
-    std::int64_t apart =
-        (core::udeg_from_angle(ang1.a, c1.unit) - core::udeg_from_angle(ang2.a, c2.unit)) % half;
-    if (apart < 0) apart += half;
-
-    const auto both_angles = [&] {
-        return " Açılar: " +
-               core::angle_text(core::turns_from_udeg(core::udeg_from_angle(ang1.a, c1.unit)),
-                                c1.unit) +
-               " ve " +
-               core::angle_text(core::turns_from_udeg(core::udeg_from_angle(ang2.a, c2.unit)),
-                                c2.unit) +
-               ".";
-    };
-
-    if (apart == 0)
-        return err(ErrorCode::InvalidArgument,
-                   "kes(): iki doğrultu paralel, kesişmiyorlar." + both_angles());
-
-    const Point2 a2 = a + core::polar_offset(kDirectionRay, ang1.a, c1);
-    const Point2 b2 = b + core::polar_offset(kDirectionRay, ang2.a, c2);
-
-    Point2 out;
-    double t = 0.0;
-    double u = 0.0;
-    if (!core::line_intersection(a, a2, b, b2, out, t, u))
-        return err(ErrorCode::InvalidArgument, "kes(): iki doğrultu kesişmiyor." + both_angles());
-    return out;
+    return command::direction_crossing(a, ang1.a, applied_to(ang1, ctx), b, ang2.a,
+                                       applied_to(ang2, ctx));
 }
 
 /// Which of the two circle solutions the fifth argument asked for.
@@ -582,56 +522,23 @@ core::Result<Point2> pick_side(const Token& which, Point2 left, Point2 right, Po
     return to_left < to_right ? left : right;
 }
 
-/// The two-distance intersection, with the message each way of missing gets.
+/// The two-distance intersection. The SIDE comes from the fifth argument — a
+/// word or a point to be near — and the construction itself is the shared one
+/// (`construct.hpp`), so a corner re-established by typing and the same corner
+/// re-established from the command land on the same millimetre and refuse with
+/// the same sentence.
 core::Result<Point2> distance_crossing(Point2 a, double r1_m, Point2 b, double r2_m,
                                        const Token& which, Point2 last, const ResolveContext& ctx)
 {
-    if (r1_m < 0.0 || r2_m < 0.0)
-        return err(
-            ErrorCode::InvalidArgument,
-            "kes(): yarıçap negatif olamaz. Girilen: " + metres_text(core::mm_from_metres(r1_m)) +
-                " m ve " + metres_text(core::mm_from_metres(r2_m)) + " m.");
+    // BOTH SOLUTIONS, then the choice. A near-point can only be compared against
+    // two answers, so the two are computed first and the word form is answered
+    // from the same pair.
+    auto left = command::distance_crossing(a, r1_m, b, r2_m, Side::Left);
+    if (!left) return left.error();
+    auto right = command::distance_crossing(a, r1_m, b, r2_m, Side::Right);
+    if (!right) return right.error();
 
-    const Mm r1 = core::mm_from_metres(r1_m);
-    const Mm r2 = core::mm_from_metres(r2_m);
-
-    Point2 left;
-    Point2 right;
-    const core::CircleMeet meet = core::circle_intersection(a, r1, b, r2, left, right);
-
-    // Every refusal names both radii AND the distance between the centres, so
-    // the user can see at a glance which measurement is the wrong one (R19).
-    const auto figures = [&] {
-        return " Yarıçaplar " + metres_text(r1) + " m ve " + metres_text(r2) +
-               " m, merkezler arası " + metres_text(core::segment_length(a, b)) + " m.";
-    };
-
-    const char* reason = "kes(): çemberler kesişmiyor.";
-    switch (meet) {
-    case core::CircleMeet::Two:
-    case core::CircleMeet::Tangent: return pick_side(which, left, right, last, ctx);
-    case core::CircleMeet::TooFar: reason = "kes(): çemberler birbirine ulaşmıyor."; break;
-    case core::CircleMeet::Nested: reason = "kes(): bir çember ötekinin tamamen içinde."; break;
-    case core::CircleMeet::SameCentre:
-        reason = "kes(): iki merkez aynı nokta, kesişim tek bir nokta değil.";
-        break;
-    }
-    return err(ErrorCode::InvalidArgument, reason + figures());
-}
-
-/// Where the line A→B crosses the line C→D.
-core::Result<Point2> line_crossing(Point2 a, Point2 b, Point2 c, Point2 d)
-{
-    if (a == b || c == d)
-        return err(ErrorCode::InvalidArgument,
-                   "kes(): bir doğrunun iki noktası aynı, doğrultu tanımsız.");
-
-    Point2 out;
-    double t = 0.0;
-    double u = 0.0;
-    if (!core::line_intersection(a, b, c, d, out, t, u))
-        return err(ErrorCode::InvalidArgument, "kes(): iki doğru paralel, kesişmiyorlar.");
-    return out;
+    return pick_side(which, left.value(), right.value(), last, ctx);
 }
 
 } // namespace
@@ -826,19 +733,10 @@ core::Result<Point2> resolve_call(const Token& t, Point2 last, const ResolveCont
         auto b = point_at(1);
         if (!b) return b.error();
 
-        const double dx = static_cast<double>(b.value().x - a.value().x);
-        const double dy = static_cast<double>(b.value().y - a.value().y);
-
-        double ratio = number_at(2);
-        if (t.nested.size() > 3) { // the `m` token: metres, not a fraction
-            const double len = std::sqrt(dx * dx + dy * dy);
-            if (len == 0.0)
-                return err(ErrorCode::InvalidArgument,
-                           "ara(): A ve B aynı nokta, üzerinde mesafe ölçülecek doğru yok.");
-            ratio = ratio * static_cast<double>(core::kMmPerMetre) / len;
-        }
-        return Point2{a.value().x + core::mm_round(ratio * dx),
-                      a.value().y + core::mm_round(ratio * dy)};
+        // The `m` token says the third argument is metres rather than a fraction
+        // of the way along; the two constructions are the shared ones.
+        return t.nested.size() > 3 ? along_distance(a.value(), b.value(), number_at(2))
+                                   : along_ratio(a.value(), b.value(), number_at(2));
     }
 
     if (form == "uzanti") {

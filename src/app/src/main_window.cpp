@@ -800,6 +800,14 @@ void MainWindow::buildActions()
                               "kısaltma: HLK"));
     drawingTools_->addAction(actAnnulus_);
 
+    actIntersect_ = drawTool(Glyph::Point, tr("Kesişim Noktası"), QStringLiteral("KESİŞİMNOKTA"),
+                             tr("KESİŞİMNOKTA — iki doğrultu, iki uzaklık ya da iki doğrunun "
+                                "kesişimi; yöntem yontem= ile  ·  kısaltma: KSN"));
+    drawingTools_->addAction(actIntersect_);
+    actAlong_ = drawTool(Glyph::Point, tr("Ara Nokta"), QStringLiteral("ARANOKTA"),
+                         tr("ARANOKTA — doğru üzerinde oran, uzaklık ya da sayi= ile eşit "
+                            "bölme  ·  kısaltma: ARN"));
+    drawingTools_->addAction(actAlong_);
     actSurvey_ = drawTool(Glyph::Locate, tr("Alım"), QStringLiteral("ALIM"),
                           tr("ALIM — istasyon, sonra açı ve kenar çiftleri; bağlama verilirse "
                              "açılar ondan itibaren  ·  kısaltma: ALM"));
@@ -1381,6 +1389,13 @@ void MainWindow::buildMenus()
     // THE SURVEY ENTRY, where a drawing actually starts for a crew with a tape.
     // Curated rather than left to the generated tail: this is the first tool a
     // Turkish surveyor reaches for, not an occasional one (TODOS-CAD P1b).
+    draw->addAction(commandAction(Glyph::Point, tr("Kesişim Noktası"),
+                                  QStringLiteral("KESİŞİMNOKTA"),
+                                  tr("KESİŞİMNOKTA — iki doğrultunun, iki uzaklığın ya da iki "
+                                     "doğrunun kesişimine nokta koyar  ·  kısaltma: KSN")));
+    draw->addAction(commandAction(Glyph::Point, tr("Ara Nokta"), QStringLiteral("ARANOKTA"),
+                                  tr("ARANOKTA — doğru üzerinde oran, uzaklık ya da eşit bölmeyle "
+                                     "nokta koyar  ·  kısaltma: ARN")));
     draw->addAction(commandAction(Glyph::Locate, tr("Alım"), QStringLiteral("ALIM"),
                                   tr("ALIM — istasyondan okunan açı ve kenarlardan nokta "
                                      "hesaplar  ·  kısaltma: ALM")));
@@ -1743,7 +1758,7 @@ void MainWindow::buildToolBox()
     // NOKTA AND THE TWO WAYS A MEASURED POINT ARRIVES. A point clicked on the
     // canvas and a point computed from a baseline are the same kind of thing to
     // a surveyor, and the second is what a tape survey produces all day.
-    toolBox_->addFamily({actPoint_, actPerpOffset_, actSurvey_});
+    toolBox_->addFamily({actPoint_, actPerpOffset_, actSurvey_, actIntersect_, actAlong_});
     toolBox_->addTool(actText_);
     toolBox_->addFamily({actInsert_, actBlock_});
     toolBox_->addFamily({actDimension_, actLeader_});

@@ -183,9 +183,15 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
   Semt hesabı `core::polar_offset_turns` olarak `core/angle.hpp`'ye kondu ve `APLİKASYON` ile
   paylaşılıyor: aplike edilen nokta ile geri okunan nokta aynı milimetreye düşer. Arayüz: **Çizim >
   Alım** ve araç kutusunda Nokta ailesinin üçüncü üyesi (§2.6a).
-- [ ] **P1b-3** `core.intersect_point` — `KESİŞİMNOKTA`, `KESISIMNOKTA`, `INTERSECTPT`, `KSN`:
-  `yontem=dogrultu|mesafe|dogru`.
-- [ ] **P1b-4** `core.point_along` — `ARANOKTA`, `POINTALONG`, `ARN`: AB + oran/mesafe; `sayi=k` k eşit parça.
+- [x] **P1b-3** `core.intersect_point` — `KESİŞİMNOKTA`, `KESISIMNOKTA`, `INTERSECTPT`, `KSN`:
+  `yontem=dogrultu|mesafe|dogru`; iki-mesafe çözümü `yon=sol|sag` ile, sessiz seçim yok.
+- [x] **P1b-4** `core.point_along` — `ARANOKTA`, `POINTALONG`, `ARN`: AB + oran/mesafe (dizi olarak);
+  `sayi=k` k eşit parçaya bölen k−1 nokta (uçları tekrar koymaz).
+- [x] **P1b-3/4 ortak zemin:** üç kesişim ve iki ara-nokta yapısı `command/construct.hpp`'ye taşındı ve
+  `kes()`, `ara()`, `uzanti()` nokta fonksiyonlarıyla **paylaşılıyor** — aynı cevap, aynı çözüm seçimi,
+  aynı Türkçe ret cümlesi, iş yazılmış da olsa tıklanmış da olsa. `ara()`nın metre biçimi artık oran
+  biçiminin yuvarlamasından geçiyor, yani `0.2` ile `20 m` aynı milimetre. Arayüz: **Çizim > Kesişim
+  Noktası** ve **Çizim > Ara Nokta**, ikisi de Nokta ailesinde (§2.6a).
 - [ ] **P1b-5** `geodesy.traverse` — `POLİGON`, `POLIGON`, `TRAVERSE`, `PLG`
   (`src/domain/geodesy/src/traverse_command.cpp`): bilinen başlangıç/bitiş, kırılma açısı + kenar →
   koordinatlar; açı ve kenar kapanma hataları; `dagitim=esit|kenar`; `Context::report` yapılandırılmış

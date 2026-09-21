@@ -1005,6 +1005,150 @@ TEST_CASE("ALIM: kapalı bir çokgen okunup birleştirilir")
     CHECK_EQ(f.undo.undo_depth(), std::size_t{1});
 }
 
+TEST_CASE("KESİŞİMNOKTA: üç yöntem, bilinen bir kareden")
+{
+    // A 100 m square with corners at (0,0), (100,0), (100,100) and (0,100). Its
+    // centre, (50, 50), is recoverable three ways and all three have to give the
+    // same millimetre — that is what makes them three roads to one place rather
+    // than three approximations.
+    {
+        // dogru: the two diagonals cross at the centre.
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("KESİŞİMNOKTA yontem=dogru birinci=0,0 ikinci=100,100 "
+                                  "ucuncu=100,0 dorduncu=0,100",
+                                  Origin::CommandLine)
+                    .ok());
+        REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{1});
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        CHECK_EQ((core::Point2{f.doc.geometry().ring_xs(span.first)[0],
+                               f.doc.geometry().ring_ys(span.first)[0]}),
+                 (core::Point2{50'000, 50'000}));
+    }
+    {
+        // mesafe: two tape readings off two corners. The centre is at
+        // sqrt(50² + 50²) = 70.710678… m from each of (0,0) and (100,0), and the
+        // LEFT solution of the direction (0,0)→(100,0) is the one to the north.
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("KESİŞİMNOKTA yontem=mesafe birinci=0,0 birinci_mesafe=70.710678 "
+                                  "ikinci=100,0 ikinci_mesafe=70.710678 yon=sol",
+                                  Origin::CommandLine)
+                    .ok());
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        const core::Point2 at{f.doc.geometry().ring_xs(span.first)[0],
+                              f.doc.geometry().ring_ys(span.first)[0]};
+        CHECK_EQ(at.x, 50'000);
+        CHECK(at.y > 49'999);
+        CHECK(at.y < 50'001);
+    }
+    {
+        // dogrultu: 50 grad from (0,0) is north-east under the default semt rule,
+        // and 350 grad from (100,0) is north-west; they cross at the centre.
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("KESİŞİMNOKTA yontem=dogrultu birinci=0,0 birinci_aci=50 "
+                                  "ikinci=100,0 ikinci_aci=350",
+                                  Origin::CommandLine)
+                    .ok());
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        const core::Point2 at{f.doc.geometry().ring_xs(span.first)[0],
+                              f.doc.geometry().ring_ys(span.first)[0]};
+        CHECK(at.x > 49'999);
+        CHECK(at.x < 50'001);
+        CHECK(at.y > 49'999);
+        CHECK(at.y < 50'001);
+    }
+}
+
+TEST_CASE("KESİŞİMNOKTA: iki uzaklığın iki çözümü sessizce seçilmez")
+{
+    // The same two readings, the two sides, two different corners. A command
+    // that answered one of them without being asked is the silent pick that puts
+    // a boundary on the wrong side of a road.
+    Fixture left;
+    REQUIRE(left.bus
+                .execute_line("KESİŞİMNOKTA yontem=mesafe birinci=0,0 birinci_mesafe=50 "
+                              "ikinci=80,0 ikinci_mesafe=50 yon=sol",
+                              Origin::CommandLine)
+                .ok());
+    Fixture right;
+    REQUIRE(right.bus
+                .execute_line("KESİŞİMNOKTA yontem=mesafe birinci=0,0 birinci_mesafe=50 "
+                              "ikinci=80,0 ikinci_mesafe=50 yon=sag",
+                              Origin::CommandLine)
+                .ok());
+
+    const auto one    = left.doc.geometry().rings_of(left.doc.entities().slot[0]);
+    const auto two    = right.doc.geometry().rings_of(right.doc.entities().slot[0]);
+    const core::Mm y1 = left.doc.geometry().ring_ys(one.first)[0];
+    const core::Mm y2 = right.doc.geometry().ring_ys(two.first)[0];
+    CHECK_EQ(y1, -y2); ///< mirrored across the baseline
+    CHECK(y1 != 0);
+
+    // AND A READING THAT CANNOT REACH IS REFUSED WITH BOTH FIGURES (R19).
+    Fixture f;
+    const auto refused =
+        f.bus.execute_line("KESİŞİMNOKTA yontem=mesafe birinci=0,0 birinci_mesafe=10 "
+                           "ikinci=80,0 ikinci_mesafe=10",
+                           Origin::CommandLine);
+    CHECK_FALSE(refused.ok());
+    CHECK(refused.error().message.find("ulaşmıyor") != std::string::npos);
+    CHECK(refused.error().message.find("80,000") != std::string::npos);
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+}
+
+TEST_CASE("ARANOKTA: oran, mesafe ve eşit bölme")
+{
+    {
+        // A run of ratios along a 100 m line: a quarter, a half, three quarters.
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("ARANOKTA 0,0 100,0 deger=0.25 deger=0.5 deger=0.75",
+                                  Origin::CommandLine)
+                    .ok());
+        REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{3});
+        const core::Mm expected[3]{25'000, 50'000, 75'000};
+        for (std::size_t i = 0; i < 3; ++i) {
+            const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[i]);
+            CHECK_EQ(f.doc.geometry().ring_xs(span.first)[0], expected[i]);
+            CHECK_EQ(f.doc.geometry().ring_ys(span.first)[0], 0);
+        }
+    }
+    {
+        // Metres instead. 20 m along a 100 m line is the same as a ratio of 0.2,
+        // and both go through `along_ratio` so they land on the same millimetre.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ARANOKTA 0,0 100,0 yontem=mesafe deger=20", Origin::CommandLine)
+                    .ok());
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        CHECK_EQ(f.doc.geometry().ring_xs(span.first)[0], 20'000);
+    }
+    {
+        // `sayi=4` cuts the line into four parts and places the THREE points
+        // between them. Placing the ends too would leave two points on one
+        // monument, which is what a station peg list must not have.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ARANOKTA 0,0 100,0 sayi=4", Origin::CommandLine).ok());
+        REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{3});
+        const core::Mm expected[3]{25'000, 50'000, 75'000};
+        for (std::size_t i = 0; i < 3; ++i) {
+            const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[i]);
+            CHECK_EQ(f.doc.geometry().ring_xs(span.first)[0], expected[i]);
+        }
+        CHECK_EQ(f.undo.undo_depth(), std::size_t{1}); ///< one command, one step
+    }
+}
+
+TEST_CASE("ARANOKTA: aynı iki nokta reddedilir")
+{
+    Fixture f;
+    const auto refused = f.bus.execute_line("ARANOKTA 0,0 0,0 deger=0.5", Origin::CommandLine);
+    CHECK_FALSE(refused.ok());
+    CHECK(refused.error().message.find("aynı") != std::string::npos);
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+}
+
 TEST_CASE("DİKAYAK: aynı iki taban noktası reddedilir")
 {
     Fixture f;
@@ -4471,8 +4615,9 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // catching.
     Fixture f;
     // 59 + SPLINE, TARAMA, BLOK, BLOKEKLE, ÖLÇÜ, LİDER + YAZDIR, YAZDIRMAPROFİLİ
-    // + KATMANGÖRÜNÜM + ÇIKTIYERLEŞİMİ, ÇIKTIÖĞE, ÇIKTIŞABLON + YENİ + DİKAYAK, ALIM
-    CHECK_EQ(f.reg.size(), std::size_t{74});
+    // + KATMANGÖRÜNÜM + ÇIKTIYERLEŞİMİ, ÇIKTIÖĞE, ÇIKTIŞABLON + YENİ
+    // + DİKAYAK, ALIM, KESİŞİMNOKTA, ARANOKTA
+    CHECK_EQ(f.reg.size(), std::size_t{76});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

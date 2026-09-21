@@ -44,6 +44,8 @@ Tek tek komutlar:
 | `NOKTA` | [Ölçülmüş nokta](komutlar/point_draw.md) |
 | `DİKAYAK` | [Dik ayak / dik boy ile nokta](komutlar/perp_offset.md) |
 | `ALIM` | [Açı ve kenarla nokta](komutlar/survey_polar.md) |
+| `KESİŞİMNOKTA` | [Kesişimden nokta](komutlar/intersect_point.md) |
+| `ARANOKTA` | [Doğru üzerinde ara nokta](komutlar/point_along.md) |
 | `ALAN` | [Kapalı alan çizme](komutlar/area.md) |
 | `DİKDÖRTGEN` | [İki köşeden dörtgen ve kare çizme](komutlar/rectangle.md) |
 | `DAİRE` | [Daire çizme](komutlar/circle_draw.md) |

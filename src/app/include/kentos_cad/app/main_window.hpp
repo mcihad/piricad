@@ -822,6 +822,8 @@ private:
     QAction* actPoint_{nullptr};
     QAction* actPerpOffset_{nullptr};
     QAction* actSurvey_{nullptr};
+    QAction* actIntersect_{nullptr};
+    QAction* actAlong_{nullptr};
     QAction* actText_{nullptr};
     QAction* actMove_{nullptr};
     QAction* actCopy_{nullptr};
