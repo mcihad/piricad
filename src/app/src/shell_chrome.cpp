@@ -479,6 +479,12 @@ void StatusStrip::setCoordinate(const QString& text)
     update();
 }
 
+int StatusStrip::probeRightCellsWidth() const
+{
+    return cellWidth(performance_, false) + cellWidth(connection_, true) +
+           (agent_.isEmpty() ? 0 : cellWidth(agent_, true));
+}
+
 void StatusStrip::setMessage(const QString& text)
 {
     if (message_ == text) return;
@@ -640,9 +646,21 @@ void StatusStrip::paintEvent(QPaintEvent*)
         p.drawText(box, Qt::AlignCenter, chip.label);
     }
 
-    // ---- the two right-hand cells ----
-    const int perfWidth = cellWidth(performance_, false);
-    const int connWidth = cellWidth(connection_, true);
+    // ---- the right-hand cells ----
+    //
+    // ALL THREE OF THEM, measured before anything is drawn. There were two when
+    // this was written and the agent listener made it three, but the gap the
+    // message is given still subtracted only two: a long line — and `ÖLÇ` writes
+    // one, "Mesafe: 58,941 m  ΔY: 57,000 m  ΔX: 15,000 m  Açı: 83,6183 grad" —
+    // was elided to a box that ran under the MCP cell and the two were drawn on
+    // top of each other. A user reported the measuring tool as broken; what was
+    // broken was where its answer landed.
+    const int perfWidth  = cellWidth(performance_, false);
+    const int connWidth  = cellWidth(connection_, true);
+    const int agentWidth = agent_.isEmpty() ? 0 : cellWidth(agent_, true);
+
+    /// The left edge of the right-hand cells: nothing may be drawn past it.
+    const int rightEdge = width() - perfWidth - connWidth - agentWidth;
 
     int x = width() - perfWidth;
 
@@ -653,7 +671,7 @@ void StatusStrip::paintEvent(QPaintEvent*)
     // chip is the only way to stop that read short of closing the window.
     if (busy_ && !chips_.isEmpty()) {
         const int from = chips_.back().left + chips_.back().width + kStatusPadX;
-        const int to   = x - connWidth - kStatusPadX;
+        const int to   = rightEdge - kStatusPadX;
         const QFontMetrics chipMetrics(sans(kStatusPx, QFont::DemiBold, 0.4));
         const int stopWidth = kStatusPadX +
                               static_cast<int>(chipMetrics.horizontalAdvance(tr("Durdur"))) +
@@ -691,7 +709,7 @@ void StatusStrip::paintEvent(QPaintEvent*)
     // place to find it. The full text is in `Geçmiş`.
     if (!busy_ && !message_.isEmpty() && !chips_.isEmpty()) {
         const int from = chips_.back().left + chips_.back().width + kStatusPadX;
-        const int to   = x - connWidth - kStatusPadX;
+        const int to   = rightEdge - kStatusPadX;
         if (to - from > kStatusPadX * 2) {
             p.setFont(mono(kStatusPx));
             p.setPen(t.readout);
@@ -725,7 +743,6 @@ void StatusStrip::paintEvent(QPaintEvent*)
     // beside the word `KORUMASIZ`. Clicking the cell runs `MCPSUNUCU`, which is
     // the same command the menu entry runs.
     if (!agent_.isEmpty()) {
-        const int agentWidth = cellWidth(agent_, true);
         x -= agentWidth;
         agentRect_ = QRect(x, 1, agentWidth, kStatusHeight - 1);
         if (agentHot_) p.fillRect(agentRect_, t.hoverRow);

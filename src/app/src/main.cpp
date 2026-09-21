@@ -315,14 +315,14 @@ int main(int argc, char** argv)
     // Set BEFORE the window is built: the print service resolves its path once,
     // in its constructor.
     for (const char* probe :
-         {"KENTOS_PRINT_PROBE",     "KENTOS_LAYOUT_PROBE",  "KENTOS_SHOT_DIR",
-          "KENTOS_DESIGNER_PROBE",  "KENTOS_HELP_PROBE",    "KENTOS_MENU_PROBE",
-          "KENTOS_REACH_PROBE",     "KENTOS_ANSWER_PROBE",  "KENTOS_FLYOUT_PROBE",
-          "KENTOS_REALMOUSE_PROBE", "KENTOS_WIDGETS_PROBE", "KENTOS_DIALOG_PROBE",
-          "KENTOS_HAND_PROBE",      "KENTOS_LAYER_PROBE",   "KENTOS_PICK_PROBE",
-          "KENTOS_TABLE_PROBE",     "KENTOS_SCHEMA_PROBE",  "KENTOS_CHAT_PROBE",
-          "KENTOS_TOOL_PROBE",      "KENTOS_NORMAL_PROBE",  "KENTOS_FAMILY_PROBE",
-          "KENTOS_BUDGET_PROBE",    "KENTOS_PROBE_LINE"})
+         {"KENTOS_PRINT_PROBE",     "KENTOS_LAYOUT_PROBE", "KENTOS_SHOT_DIR",
+          "KENTOS_DESIGNER_PROBE",  "KENTOS_HELP_PROBE",   "KENTOS_MENU_PROBE",
+          "KENTOS_REACH_PROBE",     "KENTOS_ANSWER_PROBE", "KENTOS_FLYOUT_PROBE",
+          "KENTOS_REALMOUSE_PROBE", "KENTOS_STRIP_PROBE",  "KENTOS_WIDGETS_PROBE",
+          "KENTOS_DIALOG_PROBE",    "KENTOS_HAND_PROBE",   "KENTOS_LAYER_PROBE",
+          "KENTOS_PICK_PROBE",      "KENTOS_TABLE_PROBE",  "KENTOS_SCHEMA_PROBE",
+          "KENTOS_CHAT_PROBE",      "KENTOS_TOOL_PROBE",   "KENTOS_NORMAL_PROBE",
+          "KENTOS_FAMILY_PROBE",    "KENTOS_BUDGET_PROBE", "KENTOS_PROBE_LINE"})
         if (qEnvironmentVariableIsSet(probe)) {
             QStandardPaths::setTestModeEnabled(true);
             break;
@@ -1446,6 +1446,13 @@ int main(int argc, char** argv)
         QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
             window.probeDesigner();
             QApplication::exit(0);
+        });
+    }
+
+    // THE STATUS STRIP UNDER A LONG MESSAGE, in pixels.
+    if (qEnvironmentVariableIsSet("KENTOS_STRIP_PROBE")) {
+        QTimer::singleShot(kFrameDumpSettleMs, &window, [&window] {
+            QApplication::exit(window.probeStatusStrip() == 0 ? 0 : 1);
         });
     }
 

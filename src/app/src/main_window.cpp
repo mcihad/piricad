@@ -3245,6 +3245,80 @@ int MainWindow::probeHelpPage()
     return failures;
 }
 
+int MainWindow::probeStatusStrip()
+{
+    const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_STRIP_PROBE"));
+    const bool shooting = into.size() > 1;
+    if (shooting) QDir().mkpath(into);
+
+    int failures     = 0;
+    const auto check = [&failures](bool ok, const QString& what) {
+        (void)std::fprintf(ok ? stdout : stderr, "[şerit] %s: %s\n", ok ? "tamam" : "BAŞARISIZ",
+                           what.toUtf8().constData());
+        (void)std::fflush(stdout);
+        if (!ok) ++failures;
+    };
+
+    if (statusStrip_ == nullptr) {
+        check(false, QStringLiteral("durum şeridi var"));
+        return failures;
+    }
+
+    resize(1600, 1000);
+    QCoreApplication::processEvents();
+
+    const auto frameOf = [this](const QString& message) {
+        statusStrip_->setMessage(message);
+        statusStrip_->update();
+        QCoreApplication::processEvents();
+        return statusStrip_->grab().toImage();
+    };
+
+    // The real line `ÖLÇ` writes, and then one far longer, because a status line
+    // is given whatever a command says and a command is not asked to be brief.
+    const QString measured = QStringLiteral("Mesafe: 58,941 m   ΔY: 57,000 m   ΔX: 15,000 m   "
+                                            "Açı: 83,6183 grad (kuzeyden saat yönünde)");
+    const QString absurd =
+        measured + QStringLiteral("  ") + measured + QStringLiteral("  ") + measured;
+
+    const QImage quiet = frameOf(QString());
+    const QImage some  = frameOf(measured);
+    const QImage lots  = frameOf(absurd);
+
+    check(!quiet.isNull() && !some.isNull() && !lots.isNull(),
+          QStringLiteral("şerit çiziliyor (%1×%2)").arg(quiet.width()).arg(quiet.height()));
+    if (quiet.isNull() || some.isNull() || lots.isNull()) return failures;
+
+    // THE RIGHT-HAND CELLS, PIXEL FOR PIXEL. Whatever the message says, the
+    // backend cell, the database cell and the listener cell have to come out the
+    // same: a message that changed them is a message drawn over them.
+    const int cells = statusStrip_->probeRightCellsWidth();
+    (void)std::fprintf(stdout, "[şerit] sağdaki hücreler %d px (şerit %d px)\n", cells,
+                       quiet.width());
+    check(cells > 0 && cells < quiet.width(),
+          QStringLiteral("sağdaki hücrelerin genişliği ölçülebiliyor"));
+
+    const auto rightBand = [cells](const QImage& whole) {
+        const int from = whole.width() - (cells * whole.devicePixelRatio());
+        return whole.copy(QRect(from, 0, whole.width() - from, whole.height()));
+    };
+
+    const QImage a = rightBand(quiet);
+    const QImage b = rightBand(some);
+    const QImage c = rightBand(lots);
+    check(a == b, QStringLiteral("ölçüm satırı sağdaki hücrelere dokunmuyor"));
+    check(a == c, QStringLiteral("üç katı uzun satır da dokunmuyor"));
+
+    if (shooting) {
+        (void)some.save(into + QStringLiteral("/serit-olcum.png"));
+        (void)lots.save(into + QStringLiteral("/serit-uzun.png"));
+    }
+
+    statusStrip_->setMessage(QString());
+    (void)std::fprintf(stdout, "[şerit] %d kusur\n", failures);
+    return failures;
+}
+
 int MainWindow::probeRealMouse()
 {
     const QString into  = QString::fromLocal8Bit(qgetenv("KENTOS_REALMOUSE_PROBE"));

@@ -156,6 +156,22 @@ if(TARGET kentos_cad)
                 $<TARGET_FILE:kentos_cad>)
     set_tests_properties(tool-reach PROPERTIES TIMEOUT 120)
 
+    # THE STATUS STRIP UNDER A LONG MESSAGE, in pixels. Its right end holds three
+    # cells — the render backend, the database, the agent listener — and the
+    # message beside the aid chips gets whatever gap they leave. The gap
+    # subtracted only two of the three, so a long line was elided to a box that
+    # ran under the listener cell and the two were drawn over each other. `ÖLÇ`
+    # writes one of the longest lines in the program, which is why the measuring
+    # tool was the one reported as broken. The probe was checked against the
+    # original arithmetic and fails on it, so it is a gate rather than a wish.
+    add_test(NAME status-strip
+        COMMAND "${CMAKE_COMMAND}" -E env
+                QT_QPA_PLATFORM=offscreen
+                KENTOS_STRIP_PROBE=1
+                "KENTOS_DATA=${CMAKE_SOURCE_DIR}/data"
+                $<TARGET_FILE:kentos_cad>)
+    set_tests_properties(status-strip PROPERTIES TIMEOUT 120)
+
     # DRAWING, THE WAY A REAL MOUSE ARRIVES. Every other probe sends its events
     # straight to the widget it means, which skips the two things a real click
     # goes through first: the hit test that decides which widget is under the

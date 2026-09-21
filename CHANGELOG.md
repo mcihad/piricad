@@ -6,6 +6,27 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — ölçüm satırı durum çubuğunun sağındaki hücrelerin üstüne biniyordu
+
+Kullanıcının bildirdiği kusur: *"sadece mesafe ölçme çalışıyor o da bozuk"*.
+Bozuk olan ölçüm değil, cevabının indiği yerdi.
+
+Durum şeridinin sağ ucunda üç hücre var — çizim arka ucu, veritabanı, ajan
+dinleyicisi — ve yardımcı çiplerin yanındaki mesaj bunların bıraktığı boşluğu
+alıyor. Boşluk üçün yalnız İKİSİNİ düşüyordu: uzun bir satır, dinleyici
+hücresinin altına uzanan bir kutuya kırpılıyor ve ikisi üst üste çiziliyordu.
+`ÖLÇ` programın en uzun satırlarından birini yazar —
+`Mesafe: 58,941 m  ΔY: 57,000 m  ΔX: 15,000 m  Açı: 83,6183 grad
+(kuzeyden saat yönünde)` — bu yüzden bozuk diye bildirilen araç ölçüm aracı oldu.
+
+- Üç hücrenin genişliği çizimden önce bir kez ölçülüyor ve mesajın sağ kenarı
+  üçünü de düşüyor. Aynı hata "Durdur" dalında da vardı; o da düzeldi.
+- **Yeni kapı `status-strip`** (`KENTOS_STRIP_PROBE`), ve kanıtı PİKSEL: şerit
+  boş mesajla, gerçek ölçüm satırıyla ve onun üç katı uzunlukta bir satırla
+  çiziliyor; sağdaki hücrelerin bandı üç karede bayt bayt aynı olmak zorunda.
+  Probe eski aritmetiğe karşı denendi ve onda **düşüyor** — yani bir dilek değil,
+  bir kapı.
+
 ### Düzeltildi — ağır bir tıklama aracı hiç çalıştırmıyordu (çizim araçları)
 
 Kullanıcının bildirdiği kusur: *"çizim asla çalışmıyor, üçü de hem de"*,

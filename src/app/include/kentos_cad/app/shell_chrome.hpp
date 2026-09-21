@@ -178,6 +178,15 @@ public:
     /// KOORDİNAT and every error message a command produces.
     void setMessage(const QString& text);
 
+    /// How many pixels the right-hand cells occupy, for `KENTOS_STRIP_PROBE`.
+    ///
+    /// The message beside the aid chips is given whatever gap they leave, and
+    /// the gap once subtracted only two of the three: a long line was drawn over
+    /// the listener cell. A probe cannot check that without knowing where the
+    /// cells begin, and hard-coding the answer in the probe would be a second
+    /// copy of the arithmetic this is meant to guard.
+    int probeRightCellsWidth() const;
+
     /// A command's work is running on a thread: `label` takes the message cell,
     /// a moving segment under it says the program is alive, and a `Durdur` chip
     /// beside it requests the stop (`stopRequested`). Off, the cell reads as

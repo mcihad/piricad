@@ -313,6 +313,19 @@ public:
     /// do not cover is exactly where the defect has to be.
     int probeRealMouse();
 
+    /// `KENTOS_STRIP_PROBE`: the status strip under a long message. Returns the
+    /// failure count.
+    ///
+    /// The strip's right end holds three cells — the render backend, the
+    /// database, the agent listener — and the message beside the aid chips is
+    /// given whatever gap they leave. The gap subtracted only two of them, so a
+    /// long line was elided to a box that ran under the third and the two were
+    /// drawn on top of each other. `ÖLÇ` writes one of the longest lines in the
+    /// program, which is why the measuring tool was the one reported as broken.
+    /// Proved in PIXELS: the right-hand cells must come out identical whatever
+    /// the message says.
+    int probeStatusStrip();
+
     void probeDialogs();
 
     /// Builds the drawing every window probe photographs: a named layer, three
