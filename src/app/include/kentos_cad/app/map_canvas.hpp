@@ -18,6 +18,7 @@
 
 #include "kentos_cad/app/theme.hpp"
 #include "kentos_cad/app/tokens.hpp"
+#include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/snap.hpp"
 #include "kentos_cad/render/backend.hpp"
 #include "kentos_cad/render/drawlist.hpp"
@@ -466,10 +467,11 @@ private:
         /// the interface font is sized for text read still and close.
         int hint_px{14};
 
-        /// The angle unit the reading is written in: 0 grad, 1 degree, 2 radian.
-        /// GRAD is the default because Turkish traverse, triangulation and
-        /// setting-out arithmetic is done in grad — a full circle is 400.
-        int angle_unit{0};
+        /// How the reading's angle is written: the unit (`core.aci.birim`) and
+        /// the rule (`core.aci.kural`) — semt + grad by default, so the figure on
+        /// the dragged line is the one a Turkish instrument shows, and the same
+        /// one `@mesafe<açı` typed at the command line means (TODOS-CAD P0-4).
+        core::AngleConvention angle{};
 
         /// The step the cursor's DISTANCE from the previous point is rounded to,
         /// in millimetres. 0 is off. A user who says "12 cm" gets 12, 24, 36…

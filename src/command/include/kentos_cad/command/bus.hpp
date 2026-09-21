@@ -19,6 +19,7 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/transaction.hpp"
 #include "kentos_cad/command/validation.hpp"
+#include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/crs.hpp"
 #include "kentos_cad/core/document.hpp"
 #include "kentos_cad/core/json.hpp"
@@ -578,6 +579,17 @@ public:
     /// the same answer `Settings::get` gives, because a typo in an id is a caller
     /// bug and not a reason to take the program down mid-frame.
     core::SettingValue setting(std::string_view id) const;
+
+    /// How an angle typed in live text is read and how a report writes one: the
+    /// unit from `core.aci.birim` (project) and the rule from `core.aci.kural`
+    /// (session) — SEMT + GRAD unless the user said otherwise.
+    ///
+    /// Read here, once per line, and HANDED to the parser as a parameter
+    /// (`resolve_point`), so the grammar holds no global and every client's text
+    /// — a typed line, a script string, a typed answer to a prompt — resolves
+    /// under the same convention (CLAUDE.md 5.11, TODOS-CAD P0-2). ÖLÇ,
+    /// APLİKASYON and the canvas readout write angles through the same call.
+    core::AngleConvention angle_convention() const;
 
     /// Writes a declared setting into whichever store its scope names.
     ///

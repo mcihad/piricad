@@ -55,8 +55,49 @@ Bir önceki noktadan 50 metre doğu, 30 metre kuzey. Negatif değer ters yöne g
 @100<45
 ```
 
-Bir önceki noktadan 45 derece yönünde 100 metre. Açı derece cinsindendir, doğu yönünden
-başlar ve saat yönünün tersine artar: `0` doğu, `90` kuzey, `180` batı, `270` güney.
+Bir önceki noktadan **45 grad** yönünde 100 metre. Açı, arazide aletin okuduğu gibi
+**semt açısıdır**: kuzeyden başlar, saat yönünde artar ve varsayılan birimi **grad**'dır
+(tam daire 400): `0` kuzey, `100` doğu, `200` güney, `300` batı. `@100<45` bu yüzden
+kuzeydoğuya, kuzeye daha yakın bir doğrultuya (40,5°) gider.
+
+Birimi tek bir koordinat için açıya **sonek** ekleyerek söylersiniz. Sonek büyük ya da
+küçük harf olabilir ve parantezli bir ifadeden sonra da yazılır (`@100<(40+5)g`):
+
+| Sonek | Birim | Örnek | Anlamı |
+|---|---|---|---|
+| `g` | grad | `@100<45g` | 45 grad |
+| `d` | derece | `@100<45d` | 45 derece |
+| `r` | radyan | `@100<0.7r` | 0,7 radyan |
+
+Soneksiz bir açı `açı_birimi` proje ayarıyla okunur (`AYAR açı_birimi derece`). Açının
+nereden başlayıp hangi yöne arttığını ise `açı_kuralı` oturum modu söyler; kısa adı
+`kural`. **Matematik kuralına** — açı doğudan başlar, saat yönünün tersine artar — şöyle
+geçilir:
+
+```
+MOD kural matematik
+```
+
+Bu kuralda `@100<0` doğuya, `@100<100` (grad) kuzeye gider. Önceki sürümlerin anlamı —
+derece, doğudan saat yönünün tersine — şu iki satırla geri gelir:
+
+```
+MOD kural matematik
+AYAR açı_birimi derece
+```
+
+Semt kuralına ve grada dönmek için modu ve ayarı varsayılanına alın:
+
+```
+MOD kural varsayilan
+AYAR açı_birimi varsayilan
+```
+
+Kural ve birim yalnız **yazdığınız metni** etkiler — komut satırını, betik dizesini ve
+yapay zekâ önerisini. Komut günlüğü çözülmüş koordinatı (milimetre) tutar; bu yüzden eski
+bir günlük ya da betik hangi ayarla oynatılırsa oynatılsın aynı çizimi verir. `ÖLÇ`,
+`APLİKASYON` ve sürüklerken kılavuz üzerinde okunan açı da aynı iki ayarla yazılır.
+Ayrıntı: [Oturum modları](mode.md).
 
 ### Satır içi ifade
 
@@ -72,7 +113,7 @@ Böylece hesap makinesi açmadan koordinat üretirsiniz.
 ### Hepsi bir arada
 
 ```
-ÇİZGİ 485320.150,4310220.400 @50,30 @100<45 @(100*3),0
+ÇİZGİ 485320.150,4310220.400 @50,30 @100<45 @(100*3),0 @80<90d
 ```
 
 ## İfade değerlendirici
@@ -165,6 +206,7 @@ Hata mesajları ne beklendiğini ve ne geldiğini birlikte söyler.
 | `'core.layer': zorunlu 'ad' parametresi eksik. Beklenen: metin` | Zorunlu parametre verilmemiş | Parametreyi ekleyin |
 | `'core.line': 'noktalar' parametresi nokta listesi bekliyor. Girilen: 'abc'` | Koordinat yerine metin yazılmış | Koordinat biçimlerinden birini kullanın |
 | `Beklenen: '@dx,dy' veya '@mesafe<açı'. Girilen: '@50'` | `@` sonrası eksik | `@50,0` veya `@50<0` yazın |
+| `Kutupsal açı: beklenmeyen 'x' karakteri (konum 2)` | Açı sonekinde `g`, `d`, `r` dışında bir harf, ya da iki harf | Soneki düzeltin ya da kaldırın: `@100<45g` |
 | `Beklenen: koordinat (x,y \| @dx,dy \| @mesafe<açı). Girilen: 'abc'` | Nokta beklenen yere koordinat olmayan bir şey girilmiş | Koordinat girin |
 | `'(1+2' ifadesi: kapanmamış parantez` | Parantez kapatılmamış | Parantezi kapatın |
 | `'1/0' ifadesi: sıfıra bölme` | Sıfıra bölme | İfadeyi düzeltin |

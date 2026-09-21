@@ -82,6 +82,15 @@ evet/hayır veya nesne seçimi.
 
 **Çözüm.** Göreli için `@50,0`, kutupsal için `@50<0` yazın.
 
+### `Kutupsal açı: beklenmeyen 'x' karakteri (konum 2)`
+
+**Sebep.** Açının sonunda `g` (grad), `d` (derece) ve `r` (radyan) dışında bir harf var.
+Birim soneki yalnız bu üçünden biridir ve tek harftir; `@100<45gg` de aynı sebeple
+reddedilir.
+
+**Çözüm.** Soneki düzeltin ya da kaldırın: `@100<45g`. Sonek yoksa açı `açı_birimi`
+ayarıyla okunur. Bkz. [Komut satırı](komutlar/komut-satiri.md).
+
 ### `X koordinatı: sayı bekleniyordu (konum 0)`
 
 **Sebep.** Koordinatın X bileşeni sayıya çözülemedi. `Y koordinatı:`, `Göreli dx:`,

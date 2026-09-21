@@ -8,6 +8,17 @@ kalanı bu sayfadaki tanımları kullanır.
 **Aplikasyon** — Projede hesaplanmış bir noktanın veya sınırın araziye uygulanması, yani
 kâğıttaki koordinatın zeminde işaretlenmesi.
 
+**Azimut** — Bir doğrultunun kuzeyden saat yönünde ölçülen açısı. KentOSCad'de açının
+varsayılan kuralıdır (`semt`): komut satırındaki `@mesafe<açı` böyle okunur, `ÖLÇ` ve
+`APLİKASYON` böyle yazar. Bkz. [Komut satırı](komutlar/komut-satiri.md).
+
+**Semt açısı** — Aletin sıfırlandığı bir bağlama doğrultusundan saat yönünde ölçülen açı;
+bağlama kuzey ise azimuttur. `APLİKASYON` bağlama noktası verildiğinde bunu yazar.
+
+**Grad** — Tam daireyi 400'e bölen açı birimi; dik açı 100 grad, 1 grad 0,9 derece.
+Türkiye'de nirengi, poligon ve aplikasyon hesaplarının birimi ve KentOSCad'in varsayılan
+açı birimidir (`açı_birimi`).
+
 **Cins değişikliği** — Bir taşınmazın niteliğinin (arsa, tarla, bina vb.) tapu kütüğünde
 değiştirilmesi işlemi.
 
@@ -180,6 +191,11 @@ yardımı. Kısayolu **F8**.
 
 **Kutupsal izleme** — İmleci önceki noktadan çıkan, belirli açı adımlarındaki ışınlara
 oturtan girdi yardımı.
+
+**Açı kuralı** — Bir açının nereden ve hangi yöne sayıldığını söyleyen oturum modu
+(`açı_kuralı`, kısa adı `kural`): `semt` kuzeyden saat yönüne (varsayılan), `matematik`
+doğudan saat yönünün tersine. Yalnız yazılan metni etkiler; komut günlüğü çözülmüş
+koordinatı tutar. Bkz. [Oturum modları](komutlar/mode.md).
 
 **Girdi yardımı** — Çizerken imlecin nereye oturacağını belirleyen, çizimin verisi
 olmayan ayar: nesne yakalama, dik mod, kutupsal izleme, ızgaraya yakalama.

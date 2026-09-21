@@ -45,7 +45,9 @@ Enter'a basın. Üç köşeli bir çizgi belirir. Girdiğiniz üç koordinat ü�
 
 - `485320.150,4310220.400` — mutlak koordinat, metre
 - `@50,30` — bir önceki noktadan 50 m doğu, 30 m kuzey
-- `@100<45` — bir önceki noktadan 45° yönünde 100 m
+- `@100<45` — bir önceki noktadan 45 grad yönünde 100 m. Açı **semt açısıdır**:
+  kuzeyden saat yönünde sayılır ve varsayılan birimi grad'dır (45 grad = 40,5°).
+  Derece yazmak için sonek ekleyin: `@100<45d`
 
 Komut adı yerine kısaltma da yazabilirsiniz: `Ç`, `L` ve `LINE` aynı komuttur.
 Bütün biçimler için [Komut satırı](../komutlar/komut-satiri.md) sayfasına bakın.

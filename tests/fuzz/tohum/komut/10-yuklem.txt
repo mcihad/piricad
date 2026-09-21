@@ -1,0 +1,1 @@
+"alan_m2" > 2000 AND NOT "beyan" IS NULL OR "nitelik" <> 'Tarla' AND ("ada_no" + 1) >= 1285

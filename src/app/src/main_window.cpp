@@ -2001,9 +2001,13 @@ void MainWindow::onSettingChanged(const QString& id)
     // The canvas's own look: the coordinate readout by the cursor, the line
     // weights, the scale bar and the north arrow. Re-read into the canvas, and the
     // strip's chips follow; the scene is rebuilt on the next paint.
+    //
+    // The angle unit and rule are in this list because the readout writes its
+    // bearing with them: `MOD kural matematik` or `AYAR açı_birimi derece` must
+    // change the figure on the dragged line at once, not on the next restart.
     if (id == QLatin1String("core.arayuz.dinamik_girdi") ||
         id.startsWith(QLatin1String("core.harita.")) ||
-        id.startsWith(QLatin1String("core.cetvel."))) {
+        id.startsWith(QLatin1String("core.cetvel.")) || id.startsWith(QLatin1String("core.aci."))) {
         canvas_->reloadGridSettings();
         refreshStatus();
         canvas_->update();

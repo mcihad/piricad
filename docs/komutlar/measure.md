@@ -9,9 +9,12 @@ yapmayı bileceksiniz.
 `ÖLÇ`, verdiğiniz iki nokta arasındaki **mesafeyi**, **koordinat farkını**
 (ΔY, ΔX) ve **açıyı** transkripte yazar.
 
-Açı, **kuzeyden saat yönünde** verilir — Türkiye'deki her ölçü krokisinin ve her
-aletin kullandığı yön budur, altındaki matematiğin doğudan saat yönünün tersine
-sayan yönü değil.
+Açı, varsayılan olarak **semt açısıdır**: kuzeyden saat yönünde, **grad** cinsinden —
+Türkiye'deki her ölçü krokisinin ve her aletin kullandığı yön ve birim budur. Birimi
+`açı_birimi` proje ayarı, yönü `açı_kuralı` oturum modu belirler; `MOD kural matematik`
+yazılmışsa açı doğudan saat yönünün tersine yazılır. Satır hangi kuralla yazıldığını
+parantez içinde söyler. Komut satırına yazdığınız `@mesafe<açı` ile aynı iki ayardır
+(bkz. [Komut satırı](komut-satiri.md)).
 
 `ÖLÇ` çizimi **değiştirmez**. Hiçbir şey yazmaz, geri alma adımı üretmez ve komut
 günlüğüne düzenleme olarak düşmez: soru soran bir komutun Ctrl+Z ile geri alınacak
@@ -55,7 +58,7 @@ konumlarından alınan bir ölçüm o anki yakınlaştırma kadar yanılırdı.
 ```
 
 ```text
-Mesafe: 50,000 m   ΔY: 30,000 m   ΔX: 40,000 m   Açı: 36,869° (kuzeyden saat yönünde)
+Mesafe: 50,000 m   ΔY: 30,000 m   ΔX: 40,000 m   Açı: 40,9666 grad (kuzeyden saat yönünde)
 ```
 
 ### Arayüz

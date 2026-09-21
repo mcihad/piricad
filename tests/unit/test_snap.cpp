@@ -978,7 +978,9 @@ TEST_CASE("YAKALAMA: YAKIN varsayılan olarak açık — çizginin herhangi bir 
     rig.echoed.clear();
     REQUIRE(rig.line("ÖLÇ baslangic=5,0.2 bitis=15,-0.2").ok());
     CHECK(rig.echoed.find("10,000") != std::string::npos);
-    CHECK(rig.echoed.find("90.000°") != std::string::npos);
+    // Due east, written as ÖLÇ writes an angle: the `semt açısı` in grad, the
+    // session's default convention (TODOS-CAD P0-4).
+    CHECK(rig.echoed.find("100,0000 grad (kuzeyden saat yönünde)") != std::string::npos);
 
     // And it never takes a corner away: the priority table ranks it below every
     // real feature, so an aim near the end lands ON the end.

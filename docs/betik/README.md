@@ -72,12 +72,30 @@ Komut satırında metre yazarsınız, betikte milimetre. Sebebi, betiğin doğru
 biçimini kullanmasıdır — böylece hiçbir yuvarlama olmaz ve betik her makinede aynı sonucu
 verir. Ayrıntı: [Koordinat sistemleri](../veri/koordinat-sistemleri.md).
 
+### Metin olarak koordinat
+
+Bir nokta parametresine **komut satırında yazdığınız biçimde** bir metin de verebilirsiniz:
+mutlak (`"485320.150,4310220.400"`), göreli (`"@50,30"`) ve kutupsal (`"@100<45g"`). Bu
+metinler komut satırının tek gramerinden geçer, dolayısıyla **metre** cinsindendir; kutupsal
+açı `açı_kuralı` ve `açı_birimi` ayarlarıyla okunur — komut satırıyla birebir aynı (bkz.
+[Komut satırı](../komutlar/komut-satiri.md)). Göreli biçim listede kendinden önceki noktaya
+göredir. Günlüğe yine çözülmüş milimetre yazılır.
+
+```json
+{
+  "komutlar": [
+    { "cmd": "core.line",
+      "args": { "noktalar": ["485320.150,4310220.400", "@50,30", "@100<45g"] } }
+  ]
+}
+```
+
 ## Argüman değerleri
 
 | Parametre tipi | JSON karşılığı | Örnek |
 |---|---|---|
-| nokta | İki elemanlı sayı dizisi | `[485320150, 4310220400]` |
-| nokta listesi | Nokta dizisi | `[[0,0],[10000,0],[10000,10000]]` |
+| nokta | İki elemanlı sayı dizisi (milimetre), ya da komut satırı yazımında metin (metre) | `[485320150, 4310220400]` · `"485320.150,4310220.400"` · `"@100<45g"` |
+| nokta listesi | Nokta dizisi, ya da metin dizisi | `[[0,0],[10000,0],[10000,10000]]` · `["0,0", "@10,0", "@10<100"]` |
 | sayı | JSON sayısı | `1.25` |
 | tam sayı | JSON tam sayısı | `4281236786` |
 | metin | JSON metni | `"PARSEL"` |

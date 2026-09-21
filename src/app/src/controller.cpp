@@ -295,8 +295,8 @@ core::Result<command::DispatchResult> Controller::runLineResult(const QString& l
             auto answer = command::parse_line("YANIT " + trimmed.toStdString());
             if (answer && !answer.value().tokens.empty() &&
                 command::is_coordinate(answer.value().tokens.front())) {
-                auto pt =
-                    command::resolve_point(answer.value().tokens.front(), asking.rubber_origin);
+                auto pt = command::resolve_point(answer.value().tokens.front(),
+                                                 asking.rubber_origin, bus_.angle_convention());
                 if (pt) {
                     supplyPoint(pt.value());
                     return command::DispatchResult{};

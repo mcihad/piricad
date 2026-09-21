@@ -45,8 +45,6 @@ using core::err;
 using core::ErrorCode;
 using core::Point2;
 
-constexpr double kPi = 3.14159265358979323846;
-
 bool is_space(char c)
 {
     return c == ' ' || c == '\t' || c == '\r' || c == '\n';
@@ -296,15 +294,29 @@ core::Result<Token> classify(std::string_view raw)
         std::string_view a, b;
 
         if (split_polar(body, a, b)) {
+            // `@100<45g`: a one-letter unit suffix on the ANGLE — g grad, d degree,
+            // r radian — names the unit for this one coordinate, whatever the
+            // session's `core.aci.birim` says. It is taken off before the
+            // expression is read, so `@100<(40+5)g` works too. Any other trailing
+            // letter is left for the expression parser to refuse by name, so a
+            // typo is reported and never silently read as a suffix.
+            std::optional<core::AngleUnit> unit;
+            if (core::AngleUnit named{};
+                b.size() > 1 && core::angle_unit_from_suffix(b.back(), named)) {
+                unit = named;
+                b.remove_suffix(1);
+            }
+
             ExprParser pa(a);
             const double d = pa.parse();
             ExprParser pb(b);
             const double ang = pb.parse();
             if (pa.failed) return err(ErrorCode::ParseError, "Kutupsal mesafe: " + pa.why);
             if (pb.failed) return err(ErrorCode::ParseError, "Kutupsal açı: " + pb.why);
-            t.kind = Token::Kind::Polar;
-            t.a    = d;
-            t.b    = ang;
+            t.kind       = Token::Kind::Polar;
+            t.a          = d;
+            t.b          = ang;
+            t.angle_unit = unit;
             return t;
         }
 
@@ -812,21 +824,46 @@ bool is_coordinate(const Token& t)
            t.kind == Token::Kind::Polar;
 }
 
-core::Result<Point2> resolve_point(const Token& t, Point2 last)
+core::Result<Point2> resolve_point(const Token& t, Point2 last, core::AngleConvention convention)
 {
     switch (t.kind) {
     case Token::Kind::Absolute: return Point2{core::mm_from_metres(t.a), core::mm_from_metres(t.b)};
     case Token::Kind::Relative:
         return Point2{last.x + core::mm_from_metres(t.a), last.y + core::mm_from_metres(t.b)};
     case Token::Kind::Polar: {
-        const double rad = t.b * kPi / 180.0;
-        return Point2{last.x + core::mm_from_metres(t.a * std::cos(rad)),
-                      last.y + core::mm_from_metres(t.a * std::sin(rad))};
+        // The suffix names the unit; a bare angle is in the session's. The RULE
+        // is never spelled on the coordinate: which way an angle grows is the
+        // session's decision (`core.aci.kural`), not the token's. The offset
+        // itself comes from core — `sin_cos_udeg`, one rounding per axis — so a
+        // typed polar point is the same millimetre on every platform (§7.3),
+        // where the `std::cos`/`std::sin` this used to call were not.
+        core::AngleConvention applied = convention;
+        if (t.angle_unit) applied.unit = *t.angle_unit;
+        return last + core::polar_offset(t.a, t.b, applied);
     }
     default:
         return err(ErrorCode::InvalidArgument,
                    "Beklenen: koordinat (x,y | @dx,dy | @mesafe<açı). Girilen: " + describe(t));
     }
+}
+
+core::Result<Point2> parse_point(std::string_view text, Point2 last,
+                                 core::AngleConvention convention)
+{
+    // A JSON string may carry blanks around the coordinate; a coordinate never
+    // contains one, so they are not part of what is read.
+    while (!text.empty() && is_space(text.front()))
+        text.remove_prefix(1);
+    while (!text.empty() && is_space(text.back()))
+        text.remove_suffix(1);
+
+    auto token = classify(text);
+    if (!token) return token.error();
+    if (!is_coordinate(token.value()))
+        return err(ErrorCode::InvalidArgument,
+                   "Beklenen: koordinat (x,y | @dx,dy | @mesafe<açı). Girilen: " +
+                       describe(token.value()));
+    return resolve_point(token.value(), last, convention);
 }
 
 std::string describe(const Token& t)
@@ -838,7 +875,11 @@ std::string describe(const Token& t)
     case Token::Kind::Absolute:
         return "point(" + std::to_string(t.a) + "," + std::to_string(t.b) + ")";
     case Token::Kind::Relative: return "@(" + std::to_string(t.a) + "," + std::to_string(t.b) + ")";
-    case Token::Kind::Polar: return "@" + std::to_string(t.a) + "<" + std::to_string(t.b);
+    case Token::Kind::Polar: {
+        std::string out = "@" + std::to_string(t.a) + "<" + std::to_string(t.b);
+        if (t.angle_unit) out += core::angle_unit_suffix(*t.angle_unit);
+        return out;
+    }
     case Token::Kind::KeyValue:
         return t.word + "=" + (t.nested.empty() ? std::string("?") : describe(t.nested.front()));
     }

@@ -17,6 +17,7 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/angle.hpp"
 #include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/units.hpp"
 
@@ -69,15 +70,19 @@ Task<void> run_measure(Context& ctx)
     const core::Mm distance =
         core::mm_round(std::sqrt(dx * dx + dy * dy) * static_cast<double>(core::kMmPerMetre));
 
-    // The bearing a surveyor reads: clockwise FROM NORTH, which is the convention
-    // every Turkish instrument and every ölçü krokisi uses — not the
-    // counter-clockwise-from-east of the mathematics underneath.
-    double bearing = std::atan2(dx, dy) * (180.0 / 3.14159265358979323846);
-    if (bearing < 0.0) bearing += 360.0;
+    // The angle is written the way the session reads one: in `core.aci.birim`,
+    // under `core.aci.kural` — by default the `semt açısı` a Turkish instrument
+    // shows, clockwise from north in grad — and the line says which rule it
+    // followed, so a figure copied into a kroki cannot be mistaken for the other
+    // convention. What `@mesafe<açı` reads and what ÖLÇ writes are one setting
+    // pair (TODOS-CAD P0-4), through the same core function the canvas and
+    // APLİKASYON use.
+    const core::AngleConvention convention = ctx.session().bus().angle_convention();
+    const double turns                     = core::direction_turns(*a, *b, convention.rule);
 
-    ctx.echo("Mesafe: " + metres(distance) + "   ΔY: " + metres(b->x - a->x) +
-             "   ΔX: " + metres(b->y - a->y) + "   Açı: " + std::to_string(bearing).substr(0, 6) +
-             "° (kuzeyden saat yönünde)");
+    ctx.echo("Mesafe: " + metres(distance) + "   ΔY: " + metres(b->x - a->x) + "   ΔX: " +
+             metres(b->y - a->y) + "   Açı: " + core::angle_text(turns, convention.unit) + " (" +
+             core::angle_rule_label(convention.rule) + ")");
 
     ctx.record("baslangic", Value::point(*a));
     ctx.record("bitis", Value::point(*b));

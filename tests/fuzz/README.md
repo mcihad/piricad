@@ -13,9 +13,11 @@ PR (CLAUDE.md 6.7).
 |---|---|---|
 | `kentos_fuzz_proje` | native project format (`.pcad`) | `tohum/proje/` |
 | `kentos_fuzz_dxf` | DXF import seam (GDAL/OGR + the KentOSCad conversion) | `tohum/dxf/` |
+| `kentos_fuzz_shp` | Shapefile import seam | `tohum/shp/` |
+| `kentos_fuzz_komut` | the command-line grammar (`command/parser.hpp`): line, expression, predicate and single coordinate, every coordinate resolved under all six angle conventions | `tohum/komut/` |
 
-Still to land with their formats: DWG, GML/PlanGML, LAS/LAZ, GeoJSON, the command
-line grammar and the journal reader.
+Still to land with their formats: DWG, GML/PlanGML, LAS/LAZ, GeoJSON and the
+journal reader.
 
 ## Running them
 
@@ -24,12 +26,14 @@ The targets are Clang-only (`-fsanitize=fuzzer`) and off by default:
 ```bash
 cmake -S . -B build/fuzz -G Ninja -DCMAKE_BUILD_TYPE=Debug \
       -DCMAKE_CXX_COMPILER=clang++ -DKENTOS_BUILD_FUZZ=ON -DKENTOS_BUILD_APP=OFF
-cmake --build build/fuzz --target kentos_fuzz_proje kentos_fuzz_dxf
+cmake --build build/fuzz --target kentos_fuzz_proje kentos_fuzz_dxf kentos_fuzz_komut
 
-mkdir -p build/fuzz/fuzz-corpus/proje build/fuzz/fuzz-corpus/dxf
+mkdir -p build/fuzz/fuzz-corpus/proje build/fuzz/fuzz-corpus/dxf build/fuzz/fuzz-corpus/komut
 ./build/fuzz/bin/kentos_fuzz_proje build/fuzz/fuzz-corpus/proje tests/fuzz/tohum/proje \
     -max_total_time=300
 ./build/fuzz/bin/kentos_fuzz_dxf   build/fuzz/fuzz-corpus/dxf   tests/fuzz/tohum/dxf \
+    -max_total_time=300
+./build/fuzz/bin/kentos_fuzz_komut build/fuzz/fuzz-corpus/komut tests/fuzz/tohum/komut \
     -max_total_time=300
 ```
 
@@ -43,8 +47,9 @@ crashes that happen to be fatal. `ctest` runs a short deterministic smoke run of
 each so a broken harness fails the build rather than the nightly job.
 
 **The corpora are exercised even without Clang.** `tests/unit/test_io.cpp` replays
-every seed in `tohum/proje/` through the same reader on every ordinary build, so
-the seeds never become dead weight.
+every seed in `tohum/proje/` through the same reader on every ordinary build, and
+`tests/unit/test_command.cpp` does the same for `tohum/komut/` through every entry
+point of the grammar, so the seeds never become dead weight.
 
 ## What a seed is for
 
@@ -64,6 +69,20 @@ Each seed is a shape the reader has to survive, not a file that has to load:
 | `dxf/02-koordinat-sistemsiz.dxf` | no CRS anywhere — the io.md R20 rejection path |
 | `dxf/03-kesik.dxf` | truncation mid-section |
 | `dxf/04-cop.dxf` | not a DXF at all |
+| `komut/01-mutlak.txt` | two absolute metre coordinates |
+| `komut/02-goreli.txt` | relative coordinates, negative and fractional |
+| `komut/03-kutupsal-soneksiz.txt` | bare polar angles on all four axes, the diagonal, negative and past a full turn |
+| `komut/04-kutupsal-sonekli.txt` | the `g` / `d` / `r` unit suffixes, lower and upper case |
+| `komut/05-ifade.txt` | inline expressions inside every coordinate slot, a suffix after a parenthesis |
+| `komut/06-anahtar-deger.txt` | `key=value` with a quoted value holding a space |
+| `komut/07-tirnak-kacis.txt` | escape sequences and a quoted value holding `=` |
+| `komut/08-bozuk.txt` | every malformed `@` form, a bad suffix letter, a doubled suffix, an unclosed quote |
+| `komut/09-yuklem-satiri.txt` | a filter predicate carried as a `key=` argument |
+| `komut/10-yuklem.txt` | a bare predicate: AND / OR / NOT / IS NULL / `<>` / arithmetic |
+| `komut/11-derin-parantez.txt` | deep nesting in expressions and coordinates |
+| `komut/12-unicode.txt` | Turkish letters in a command name and a quoted value |
+| `komut/13-bos-ve-yalniz-ad.txt` | an empty line, a blank line, a bare command name |
+| `komut/14-asiri-sayi.txt` | numbers at the edge of a double, an overflowing power |
 
 ## When a crash is found
 

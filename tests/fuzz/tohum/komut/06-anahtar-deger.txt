@@ -1,0 +1,1 @@
+KATMAN ad="YOL KENARI" gorunur=evet kilitli=hayır renk=4281236786 mesafe=-3.0

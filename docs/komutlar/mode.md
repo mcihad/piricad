@@ -63,7 +63,7 @@ Mod adı yerine kimliği de yazılabilir: `MOD core.yakalama.dik_mod evet`.
 
 Tipleri ve adetleri için üretilmiş [komut referansına](referans.md) bakın.
 
-Bugün oturum kapsamında altı mod vardır:
+Bugün oturum kapsamında sekiz mod vardır:
 
 | Mod | Tür | Varsayılan | Ne yapar |
 |---|---|---|---|
@@ -73,6 +73,8 @@ Bugün oturum kapsamında altı mod vardır:
 | `köşegen` | Evet/hayır | `hayır` | İmleci öncekinden 45°'nin katlarına kilitler |
 | `kutupsal_açı` | µderece | `45000000` (45°) | Kutupsal izleme açı adımı |
 | `ızgaraya_yakala` | Evet/hayır | `hayır` | Girilen noktayı en yakın ızgara kesişimine oturtur |
+| `adım` | mm | `0` | İmlecin önceki noktaya uzaklığını adımın katına yuvarlar; `0` kapatır |
+| `açı_kuralı` | Seçenek | `semt` | `@mesafe<açı` açısının nereden ve hangi yöne sayıldığı; kısa adı `kural` |
 
 `köşegen`, tuval üzerinde **Ctrl** basılı tutularak da açılır; bıraktığınızda kapanır.
 `DİKDÖRTGEN`'in ikinci köşesi böyle kilitlenince kare çıkar.
@@ -118,6 +120,36 @@ bir noktanın bütün değeri ise tam orada durmasıdır.
 
 Açı değerleri **mikro derece** cinsindendir: 45° = `45000000`. Ondalık sayı hiçbir ayarda
 kabul edilmez; bildirilen birim yeterince incedir.
+
+### Açı kuralı
+
+`@100<45` yazdığınızda açının nereden başlayıp hangi yöne arttığını `açı_kuralı` söyler
+(kısa adı `kural`):
+
+| Değer | Sıfır | Artış | `@100<0` | `@100<100` (grad) |
+|---|---|---|---|---|
+| `semt` (varsayılan) | Kuzey | Saat yönünde | kuzeye 100 m | doğuya 100 m |
+| `matematik` | Doğu | Saat yönünün tersine | doğuya 100 m | kuzeye 100 m |
+
+Varsayılan **semt**tir: aletin okuduğu, poligon ve aplikasyon cetvelinin yazdığı açı
+budur. Birimi ise proje ayarı `açı_birimi` verir (`AYAR açı_birimi derece`), ya da tek bir
+koordinat için açının soneki: `@100<45g`, `@100<45d`, `@100<0.7r`.
+
+```
+MOD kural matematik
+```
+
+Kural yalnız **yazılan metni** etkiler: komut satırına, betik dizesine ya da yapay zekâ
+önerisine yazılan `@mesafe<açı`. Komut günlüğü çözülmüş milimetreyi tuttuğu için eski
+günlükler ve betikler her kuralda aynı çizimi verir; kural bu yüzden bir girdi yardımıdır ve
+oturum kapsamındadır. `ÖLÇ`, `APLİKASYON` ve sürüklerken kılavuz üzerinde okunan açı da aynı
+kuralla yazılır.
+
+```
+MOD kural varsayilan
+```
+
+Bütün koordinat biçimleri için bkz. [Komut satırı](komut-satiri.md).
 
 ### Yakalama modları bit maskesi
 
@@ -280,6 +312,13 @@ Bir modu varsayılanına döndürün:
 MOD dik_mod varsayilan
 ```
 
+Kutupsal açıyı matematik kuralıyla okuyun — `@100<0` doğuya gider — ve sonra semte dönün:
+
+```
+MOD kural matematik
+MOD kural semt
+```
+
 **Ayarlar** penceresi (menüde `Düzen > Ayarlar…`, kısayolu **Ctrl+,**) bildirilen her
 ayarı gösterir. Pencerenin tamamı ayar kataloğundan **üretilir**: satırın adı ayarın
 kendi birincil adı, alanı bildirilen tipinden, sınırları bildirilen aralığından,
@@ -366,7 +405,8 @@ düşecektir.
   "komutlar": [
     { "cmd": "core.mode", "args": { "ad": "core.yakalama.dik_mod",     "deger": "evet" } },
     { "cmd": "core.mode", "args": { "ad": "core.yakalama.izgara",      "deger": "evet" } },
-    { "cmd": "core.mode", "args": { "ad": "core.yakalama.kutupsal_aci","deger": "30000000" } }
+    { "cmd": "core.mode", "args": { "ad": "core.yakalama.kutupsal_aci","deger": "30000000" } },
+    { "cmd": "core.mode", "args": { "ad": "core.aci.kural",              "deger": "semt" } }
   ]
 }
 ```
