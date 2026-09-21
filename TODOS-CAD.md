@@ -238,13 +238,15 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
   cevabını alıyordu — fareyle ulaşılabilen ama fareyle bitirilemeyen bir komut (5.15). Artık
   `ALIM`'ın kalıbıyla istasyon istasyon soruyor; argüman verildiyse hiç sorulmuyor, çünkü kararı
   veren şey argümanın boşluğu, `InputSource` değil (command.md P10).
-- [ ] **Günlükte anahtar SIRASI, istemciye değil YAZIM sırasına bağlı** (kanıt yazılırken görüldü,
-  düzeltilmedi). `Args` ekleme sırasını tutuyor ve `to_json` onu basıyor: `yontem` noktalardan önce
-  yazılınca ve sonra yazılınca tek çağrının iki bayt dizisi oluyor. Belge ve replay ikisinde de
-  özdeş, yani 1.4 kırılmıyor; kırılan şey 6.4'ün "bayt-özdeş günlük" cümlesinin argüman sırası
-  değişince de geçerli olması. Kaydı bildirilmiş parametre sırasına göre kanonikleştirmek
-  **saklanan her altın fikstürün günlük baytlarını değiştirir**, yani kendi değişikliği olan bir
-  karar; bir yan etki olarak yapılmaz.
+- [x] **Günlükte anahtar SIRASI artık BİLDİRİLEN sıraya göre** — kendi değişikliğiyle yapıldı.
+  `Args` ekleme sırasını tutuyor ve `to_json` onu basıyordu: `ÇOKGEN yontem=ic 0,0 6` ile
+  `ÇOKGEN 0,0 6 yontem=ic` tek çağrının iki bayt dizisiydi. Üç istemciyi bir YAZIM sırasında
+  anlaştırmak mümkün değil — `KILAVUZ yon=45g` ile başlayıp noktayı sonra soran bir araç gerçekten
+  `yon`'u önce bağlıyor, yazılan satır konumsal noktayı öne koyuyor, betik JSON'un kendi sırasını
+  veriyor. Bildirilen sıra, her istemcinin paylaştığı tek şey; kayıt onunla yazılıyor
+  (`Args::reorder_like`, `Bus::journal_entry`). Dört altın fikstür yenilendi ve **değişimin yalnız
+  anahtar sırası olduğu doğrulandı**: her satırın JSON'u eskisine eşit, hiçbir değer kıpırdamadı.
+  Bir kanıt vakası bağı kuruyor ve beklenen sırayı `Registry`'den okuyor, elle yazmıyor.
 
 ## P2 — Klasik çizim inşa yöntemleri
 
