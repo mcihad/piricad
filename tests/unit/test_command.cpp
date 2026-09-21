@@ -7162,3 +7162,214 @@ TEST_CASE("release listesi: DİKAYAK'ın yazılı biçimi belgelenen biçimdir")
                            f.doc.geometry().ring_ys(span.first)[0]}),
              (core::Point2{30'000, -5'000}));
 }
+
+TEST_CASE("SEÇ tur= seçimi türe göre daraltır, her kipte")
+{
+    // THE PLAN ASKED FOR THIS FILTER BY NAME: "`SEÇ katman= tur=` süzgeçleri
+    // varsa docs'a, yoksa eklenir." `katman` was there and `tur` was not.
+    //
+    // A window over a sheet catches the parcels, the captions, the dimensions and
+    // the road centreline together, and "the areas in that window" is a thing a
+    // surveyor asks constantly. A layer NAMES a set on its own, which is why it
+    // is a mode; a kind narrows one, which is why this is a filter and composes
+    // with every mode.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ALAN 0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("DAİRE 5,5 7,5", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("NOKTA 3,3", Origin::Test).ok());
+
+    // HEPSİ narrowed to one kind.
+    REQUIRE(f.bus.execute_line("SEÇ HEPSİ tur=DAİRE", Origin::Test).ok());
+    CHECK_EQ(f.bus.selection().size(), std::size_t{1});
+
+    // A WINDOW narrowed the same way — the filter is not a mode's privilege.
+    REQUIRE(f.bus.execute_line("SEÇ KESEN -5,-5 20,20 tur=NOKTA", Origin::Test).ok());
+    CHECK_EQ(f.bus.selection().size(), std::size_t{1});
+
+    // AND AN ALIAS REACHES THE SAME KIND, because the word is the kind table's
+    // own: `find_name` folds Turkish and accepts every alias a kind declares.
+    REQUIRE(f.bus.execute_line("SEÇ HEPSİ tur=CIRCLE", Origin::Test).ok());
+    CHECK_EQ(f.bus.selection().size(), std::size_t{1});
+
+    // Without the filter, everything the gesture caught.
+    REQUIRE(f.bus.execute_line("SEÇ HEPSİ", Origin::Test).ok());
+    CHECK_EQ(f.bus.selection().size(), std::size_t{3});
+}
+
+TEST_CASE("SEÇ tur= tanınmayan türü türleri sayarak reddeder")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ALAN 0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SEÇ HEPSİ", Origin::Test).ok());
+    const std::size_t had = f.bus.selection().size();
+
+    const auto r = f.bus.execute_line("SEÇ HEPSİ tur=YOKBÖYLETÜR", Origin::Test);
+    CHECK_FALSE(r.ok());
+    CHECK(r.error().message.find("YOKBÖYLETÜR") != std::string::npos);
+    // The list comes from the kind table, so a kind a plugin registers appears
+    // in the refusal without an edit here.
+    CHECK(r.error().message.find(core::builtin_kinds().find(core::kPolylineKind)->names[0]) !=
+          std::string::npos);
+    // AND THE SELECTION IS UNTOUCHED: a refusal does not half-select.
+    CHECK_EQ(f.bus.selection().size(), had);
+}
+
+TEST_CASE("SEÇ tur= her yazımda aynı türe gider")
+{
+    // `SEÇ` IS `ReadOnly`, so it writes no journal line — the selection is not
+    // document state (model.md R43) and undo does not step over it. What the
+    // recording is for here is the equality proof: whichever alias a client
+    // typed, the resolved record names one kind, so the GUI, the command line and
+    // a script agree on what was selected.
+    //
+    // Asserted as the behaviour rather than by reading a journal that correctly
+    // does not exist.
+    const auto selected_with = [](const char* word) {
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ALAN 0,0 10,0 10,10 0,10", Origin::Test).ok());
+        REQUIRE(f.bus.execute_line("DAİRE 5,5 7,5", Origin::Test).ok());
+        REQUIRE(f.bus.execute_line(std::string("SEÇ HEPSİ tur=") + word, Origin::Test).ok());
+        std::vector<std::uint64_t> keys;
+        for (const core::EntityKey k : f.bus.selection().keys())
+            keys.push_back(core::raw(k));
+        std::sort(keys.begin(), keys.end());
+        return keys;
+    };
+
+    const auto turkish = selected_with("DAİRE");
+    CHECK_EQ(turkish.size(), std::size_t{1});
+    CHECK_EQ(selected_with("CIRCLE"), turkish); ///< the English alias
+    CHECK_EQ(selected_with("daire"), turkish);  ///< folded case
+    CHECK_EQ(selected_with("DAIRE"), turkish);  ///< ASCII-folded Turkish
+}
+
+TEST_CASE("NOKTA FONKSİYONU: çıktısı tekrar girdi olarak aynı noktayı verir")
+{
+    // THE IDEMPOTENCE THE PLAN ASKS FOR BY NAME: a function's output, fed back in,
+    // gives the same point. It matters because these functions NEST — `orta(orta(
+    // A,B), n(1284))` is a line a surveyor writes — and a function that drifted
+    // when its own answer came back would drift by a millimetre per level, which
+    // is the size nobody notices until a boundary fails to close.
+    //
+    // Every function here has a FIXED POINT, and that is what makes the property
+    // testable rather than merely asserted: a foot of zero, a ratio of zero, a
+    // side of zero, a midpoint of one point with itself.
+    // In MILLIMETRES, which is what the resolver answers in, and written back into
+    // a call as METRES with three decimals — the unit the command line reads.
+    // Millimetres are integers, so the round trip through the text is exact and
+    // this tests the functions rather than the formatter.
+    const core::Point2 kA{485320150, 4310220400};
+    const core::Point2 kB{485370150, 4310250400};
+
+    const auto at = [](core::Point2 p) {
+        const auto one = [](core::Mm v) {
+            const bool negative = v < 0;
+            const auto abs_mm   = static_cast<std::uint64_t>(negative ? -v : v);
+            std::string frac    = std::to_string(abs_mm % 1000);
+            frac                = std::string(3 - frac.size(), '0') + frac;
+            return (negative ? "-" : "") + std::to_string(abs_mm / 1000) + "." + frac;
+        };
+        return one(p.x) + "," + one(p.y);
+    };
+
+    // ---- each function's own fixed point ----
+    {
+        // `orta` of a point with itself is that point.
+        auto r = fn("orta(" + at(kA) + "," + at(kA) + ")");
+        REQUIRE(r.ok());
+        CHECK_EQ(r.value(), kA);
+    }
+    {
+        // `ara` at ratio 0 is the first point; at 1 the second.
+        auto zero = fn("ara(" + at(kA) + "," + at(kB) + ",0)");
+        REQUIRE(zero.ok());
+        CHECK_EQ(zero.value(), kA);
+        auto one = fn("ara(" + at(kA) + "," + at(kB) + ",1)");
+        REQUIRE(one.ok());
+        CHECK_EQ(one.value(), kB);
+    }
+    {
+        // `uzanti` of zero past B is B.
+        auto r = fn("uzanti(" + at(kA) + "," + at(kB) + ",0)");
+        REQUIRE(r.ok());
+        CHECK_EQ(r.value(), kB);
+    }
+    {
+        // `dik` with no foot and no offset is the base's first point.
+        auto r = fn("dik(" + at(kA) + "," + at(kB) + ",0,0)");
+        REQUIRE(r.ok());
+        CHECK_EQ(r.value(), kA);
+    }
+    {
+        // `semt` with no side is the station itself, whatever the bearing.
+        auto r = fn("semt(" + at(kA) + ",137.5,0)");
+        REQUIRE(r.ok());
+        CHECK_EQ(r.value(), kA);
+    }
+    {
+        // `xy` of a point with itself is that point — which is also what makes it
+        // the written form of tracking's crossing.
+        auto r = fn("xy(" + at(kA) + "," + at(kA) + ")");
+        REQUIRE(r.ok());
+        CHECK_EQ(r.value(), kA);
+    }
+    {
+        // `ile` with a zero offset is the point it started from.
+        auto r = fn("ile(" + at(kA) + ",@0,0)");
+        REQUIRE(r.ok());
+        CHECK_EQ(r.value(), kA);
+    }
+    {
+        // `n` is the same monument every time it is asked for.
+        auto once  = fn("n(1284)", {}, with_points());
+        auto twice = fn("n(1284)", {}, with_points());
+        REQUIRE(once.ok());
+        REQUIRE(twice.ok());
+        CHECK_EQ(once.value(), twice.value());
+        CHECK_EQ(once.value(), kA);
+    }
+
+    // ---- FED BACK IN: the output of a call, used as an argument to the same
+    // call, gives that output again ----
+    {
+        auto middle = fn("orta(" + at(kA) + "," + at(kB) + ")");
+        REQUIRE(middle.ok());
+        auto again = fn("orta(" + at(middle.value()) + "," + at(middle.value()) + ")");
+        REQUIRE(again.ok());
+        CHECK_EQ(again.value(), middle.value());
+
+        // AND NESTED, which is how these are actually written.
+        auto nested =
+            fn("orta(orta(" + at(kA) + "," + at(kB) + "),orta(" + at(kA) + "," + at(kB) + "))");
+        REQUIRE(nested.ok());
+        CHECK_EQ(nested.value(), middle.value());
+    }
+    {
+        // A crossing, fed back: the crossing of two lines THROUGH it is itself.
+        auto cross = fn("kes(0,0,100,100,0,100,100,0)");
+        REQUIRE(cross.ok());
+        const core::Point2 x = cross.value();
+        auto again           = fn("kes(" + at(x) + ",100,100," + at(x) + ",100,0)");
+        REQUIRE(again.ok());
+        CHECK_EQ(again.value(), x);
+    }
+
+    // ---- AND THE TWO ROADS AGREE, for every one of them: a typed token and a
+    // JSON string resolve through the same grammar (CLAUDE.md 5.11) ----
+    const std::vector<std::string> calls{
+        "orta(" + at(kA) + "," + at(kB) + ")",
+        "ara(" + at(kA) + "," + at(kB) + ",0.25)",
+        "uzanti(" + at(kA) + "," + at(kB) + ",10)",
+        "dik(" + at(kA) + "," + at(kB) + ",30,-5)",
+        "semt(" + at(kA) + ",50,42.315)",
+        "xy(" + at(kA) + "," + at(kB) + ")",
+        std::string("kes(0,0,100,100,0,100,100,0)"),
+    };
+    for (const std::string& call : calls) {
+        auto typed = fn(call);
+        auto text  = fn_text(call);
+        REQUIRE_MESSAGE(typed.ok(), call);
+        REQUIRE_MESSAGE(text.ok(), call);
+        CHECK_MESSAGE(typed.value() == text.value(), call);
+    }
+}

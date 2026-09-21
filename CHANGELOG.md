@@ -6,6 +6,44 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — SEÇ tur= tür süzgeci, ve nokta fonksiyonu idempotens testi
+
+Plan belgesinin her satırı ikinci kez okundu; TODOS'a hiç girmemiş üç madde
+çıktı, ikisi iş.
+
+- **`SEÇ tur=`** — plan "`SEÇ katman= tur=` süzgeçleri varsa docs'a, yoksa
+  eklenir" diyordu: `katman` vardı, `tur` yoktu. Bir pafta üzerine atılan pencere
+  parselleri, etiketleri, ölçüleri ve yol eksenini birlikte yakalar; *"o
+  penceredeki alanlar"* bir harita mühendisinin sürekli sorduğu şeydir.
+- **`katman=` bir kip, `tur=` bir süzgeç**, ve fark şudur: bir katman kendi başına
+  bir küme adlandırır, bir tür ise bir kümeyi daraltır. Bu yüzden `tur=` her
+  kiple — `ÇİT` ve `ÖNCEKİ` dâhil — birlikte çalışıyor.
+- **Tür adı nesne türleri tablosunun kendi adıdır**: `DAİRE`, `daire`, `DAIRE` ve
+  `CIRCLE` aynı türe gider, ikinci bir tür listesi yok, ve bir eklentinin
+  tanımladığı tür eklendiği gün seçilebilir olur (5.10). Tanınmayan bir tür,
+  tanınan türleri sayan bir retle karşılanıyor ve **seçime dokunulmuyor**.
+- **Nokta fonksiyonu idempotens testi** — planın adıyla istediği ve olmayan test:
+  "fonksiyon çıktısı tekrar girdi olarak aynı noktayı verir". Her fonksiyonun
+  SABİT NOKTASI sınanıyor (`orta(P,P)=P`, `ara(A,B,0)=A`, `uzanti(A,B,0)=B`,
+  `dik(A,B,0,0)=A`, `semt(S,θ,0)=S`, `xy(P,P)=P`, `ile(P,@0,0)=P`), sonra çıktı
+  geri besleniyor ve iç içe yazılıyor. Bu fonksiyonlar iç içe yazılır —
+  `orta(orta(A,B),n(1284))` bir mühendisin yazdığı satırdır — ve kendi cevabıyla
+  kayan bir fonksiyon her düzeyde bir milimetre kayardı.
+
+### Bilinsin — ölçü stilinin BÖHHBÜY/MPYY yarısı uydurulmadı
+
+Plan P5 için "BÖHHBÜY/MPYY pafta metin yükseklikleri" istiyor. Katalog
+mekanizması var ve `ÖLÇÜ` onu okuyor (5.13 karşılanmış: komutta tek bir yükseklik
+sabiti yok), ama içindeki üç stil ISO 129-1 ve AutoCAD varsayılanları — dosyanın
+`source` alanı bunu açıkça yazıyor.
+
+Yönetmelikten geldiği söylenen bir yükseklik **uydurulmadı**: 5.13'ün yasakladığı
+şey tam olarak budur, sadece dosyaya taşınmış hâli. Resmî görünen bir sayı,
+olmayan bir sayıdan kötüdür. Kalan iş yönetmelik metni, madde/ek atfı ve bir
+harita mühendisinin onayıdır (Article 6.11) — poligon toleranslarıyla aynı sınıf
+ve aynı bekleyiş. Satır eklendiği gün `ÖLÇÜ stil=BÖHHBÜY` çalışır ve tek satır
+C++ değişmez.
+
 ### Düzeltildi — DİKAYAK eşleşmeyen okuma dizisinde sessiz dönüyordu
 
 Planın release listesi `DİKAYAK 0,0 100,0 30 -5` yazımını adıyla istiyordu. O

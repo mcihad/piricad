@@ -22,6 +22,7 @@
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 
+#include "kentos_cad/core/entity_kind.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/text.hpp"
 
@@ -487,6 +488,44 @@ Task<void> run_select(Context& ctx)
     std::sort(picked.begin(), picked.end());
     picked.erase(std::unique(picked.begin(), picked.end()), picked.end());
 
+    // ---- the kind filter, across EVERY mode ----
+    //
+    // `tur=` narrows whatever the gesture picked to one kind: a window over a
+    // sheet catches the parcels, the captions, the dimensions and the road
+    // centreline together, and "the areas in that window" is a thing a surveyor
+    // asks constantly. `katman=` is a MODE because a layer names a set on its
+    // own; a kind names no set, it narrows one — so this is a filter and it
+    // composes with all of them, `ÇİT` and `ÖNCEKİ` included.
+    //
+    // THE WORD IS THE KIND TABLE'S OWN. `find_name` folds Turkish and accepts
+    // every alias a kind declares (`ÇOKLUÇİZGİ`, `cokluçizgi`, `POLYLINE`), so
+    // there is no second list of kinds here and a kind a plugin registers is
+    // selectable the day it is added (CLAUDE.md 5.10).
+    if (const Value v = ctx.argument("tur"); !v.empty()) {
+        const std::string wanted        = v.as_text();
+        const core::KindSpec* kind_spec = core::builtin_kinds().find_name(wanted);
+        if (kind_spec == nullptr) {
+            std::string known;
+            for (const core::KindSpec& one : core::builtin_kinds().all())
+                if (one.names[0] != nullptr)
+                    known += (known.empty() ? "" : ", ") + std::string(one.names[0]);
+            ctx.session().fail(
+                core::err(core::ErrorCode::NotFound,
+                          "Tanınmayan nesne türü: '" + wanted + "'. Türler: " + known + "."));
+            co_return;
+        }
+
+        const core::EntityTable& entities = doc.entities();
+        std::vector<EntityKey> kept;
+        kept.reserve(picked.size());
+        for (const EntityKey k : picked) {
+            const core::EntityId slot = doc.slot_of(k);
+            if (slot == core::kNoEntity || !doc.alive(slot)) continue;
+            if (entities.kind[slot] == kind_spec->id) kept.push_back(k);
+        }
+        picked = std::move(kept);
+    }
+
     // ---- apply ----
     const std::size_t before = selection.size();
 
@@ -518,6 +557,11 @@ Task<void> run_select(Context& ctx)
     // index into this document's table and means nothing in a replay against
     // another one (model.md R2, R43).
     if (mode == Mode::Layer) ctx.record("katman", ctx.argument("katman"));
+    // THE KIND'S OWN PRIMARY NAME, not the alias that was typed: `POLYLINE` and
+    // `ÇOKLUÇİZGİ` name one kind and the record says which kind, once.
+    if (const Value v = ctx.argument("tur"); !v.empty())
+        if (const core::KindSpec* k = core::builtin_kinds().find_name(v.as_text()); k != nullptr)
+            ctx.record("tur", Value::text(k->names[0]));
     if (mode == Mode::Point)
         if (const Value n = ctx.argument("sira"); !n.empty()) ctx.record("sira", n);
     // The gesture too, so a replay of a WINDOW pick re-runs the same box rather
@@ -565,6 +609,8 @@ KENTOS_COMMAND(select)
                 Param::points("noktalar", Arity{0, 0xFFFFFFFFu},
                               "Kutu köşeleri (iki nokta), çokgen/çit köşeleri ya da tek tıklama "
                               "noktası"),
+                Param::text("tur", Arity::optional(),
+                            "Yalnız bu türdeki nesneler: ÇOKLUÇİZGİ, DAİRE, YAY, NOKTA, ELİPS…"),
                 Param{"nesneler", ParamKind::Selection, Arity{0, 0xFFFFFFFFu},
                       "NESNE modunda nesne kimlikleri"},
                 Param::text("katman", Arity::optional(), "KATMAN modunda katman adı"),

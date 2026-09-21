@@ -71,6 +71,7 @@ Argümansız çağrı hiçbir şeyi değiştirmez; yalnızca seçimde ne olduğu
 | `noktalar` | Kutu köşeleri (iki nokta) veya `NOKTA` modunda tek tıklama noktası |
 | `nesneler` | `NESNE` modunda nesne kimlikleri. Birden fazla `nesneler=` yazılabilir |
 | `katman` | `KATMAN` modunda katman adı. Türkçe kurallarıyla karşılaştırılır |
+| `tur` | Yalnız bu **türdeki** nesneler: `ÇOKLUÇİZGİ`, `DAİRE`, `YAY`, `NOKTA`, `ELİPS`… Her kiple birlikte çalışır |
 | `islem` | `DEĞİŞTİR` (varsayılan), `EKLE`, `ÇIKAR` veya `TERSİNE` |
 | `tolerans` | `NOKTA` modunda arama yarıçapı, **metre**. Verilmezse `seçim_toleransı` tercihi (ekran pikseli) kullanılır |
 | `sira` | `NOKTA` modunda kaçıncı nesne: `1` en yakını (varsayılan), `2` onun altındaki |
@@ -268,6 +269,30 @@ Arayüzün ayrıcalığı yoktur: fareyle çizdiğiniz kutu, komut satırına
 
 Betikte `nesneler` bir kimlik dizisidir; `noktalar` milimetre çiftlerinden oluşan bir
 dizidir. Argümansız `core.erase` etkin seçimi siler.
+
+## Tür süzgeci
+
+`tur=` seçimi **türe göre daraltır** ve **her kiple** birlikte çalışır:
+
+```text
+SEÇ KESEN -5,-5 20,20 tur=ALAN      → penceredeki yalnız alanlar
+SEÇ HEPSİ tur=DAİRE                 → çizimdeki bütün daireler
+SEÇ ÇİT 5,-5 5,25 tur=ÇOKLUÇİZGİ    → çitin kestiği yalnız çizgiler
+SEÇ ÖNCEKİ tur=NOKTA                → önceki seçimin yalnız noktaları
+```
+
+Bir pafta üzerine atılan pencere parselleri, etiketleri, ölçüleri ve yol
+eksenini birlikte yakalar; *"o penceredeki alanlar"* bir harita mühendisinin
+sürekli sorduğu şeydir.
+
+`katman=` bir **kip**, `tur=` bir **süzgeç**tir ve fark şudur: bir katman kendi
+başına bir küme adlandırır, bir tür ise bir kümeyi daraltır.
+
+Tür adı **nesne türleri tablosunun kendi adıdır**: Türkçe katlanır ve türün
+bildirdiği her eşad çalışır — `DAİRE`, `daire`, `DAIRE` ve `CIRCLE` aynı türe
+gider. Tanınmayan bir tür, tanınan türleri sayan bir retle karşılanır ve
+**seçime dokunulmaz**. Bir eklentinin tanımladığı tür, eklendiği gün
+seçilebilir olur.
 
 ## Geri alma
 

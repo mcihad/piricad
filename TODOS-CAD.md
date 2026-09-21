@@ -421,9 +421,17 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
       DXF'te R2007 öncesi karşılığı yok; dışa aktarımda **açısal** ölçü olarak yazılıyor (aynı üç
       nokta) ve uzunluk xdata'da gidiyor — bu programdan çıkıp geri girince aynen korunuyor, başka bir
       program bir açı görüp onu söylüyor, bir kiriş görüp ona inanmıyor.
-- [x] **Ölçü stili kataloğu** zaten vardı ve `ÖLÇÜ` onu okuyordu: `data/catalogs/dxf/olcu-stili.json`
-      (ISO-25, STANDARD, MİMARİ), `core.olcu.stil_katalogu` ayarıyla ve `katalog=` parametresiyle.
-      5.13 karşılanmış durumda; bu maddede yapılacak bir şey kalmamıştı.
+- [x] **Ölçü stili kataloğu mekanizması** zaten vardı ve `ÖLÇÜ` onu okuyordu:
+      `data/catalogs/dxf/olcu-stili.json` (ISO-25, STANDARD, MİMARİ), `core.olcu.stil_katalogu`
+      ayarıyla ve `katalog=` parametresiyle. 5.13 karşılanmış: komutta tek bir yükseklik sabiti yok.
+- [~] **Planın istediği BÖHHBÜY/MPYY pafta stili YOK ve uydurulmadı.** Plan "BÖHHBÜY/MPYY pafta
+      metin yükseklikleri" diyor; kataloğun `source` alanı ise açıkça "yönetmelik değeri değildir"
+      yazıyor — ISO 129-1 ve AutoCAD varsayılanları. Yönetmelikten gelen bir yükseklik uydurmak
+      5.13'ün yasakladığı şeyin ta kendisidir, sadece dosyaya taşınmış hâli: resmî görünen bir sayı,
+      olmayan bir sayıdan kötüdür. **Kalan:** yönetmelik metni + madde/ek atfı + bir harita
+      mühendisinin onayı (Article 6.11) — poligon toleransları (`kapsam.onay: "BEKLİYOR"`) ile aynı
+      sınıf ve aynı bekleyiş. Mekanizma hazır: satır eklendiği gün `ÖLÇÜ stil=BÖHHBÜY` çalışır ve
+      tek satır C++ değişmez.
 - [x] **Altın fikstür:** `tests/golden/senaryolar/olcu-turleri.txt` — yedi ölçü, ve iki `koordinat`
       satırı aynı iki noktadan iki farklı eksen okuyor. Kaydedilen sayılar 40000, 30000, 20000,
       **78540** ve **157080**; π bir çarpma ve bir yuvarlama içerir, yani bu satır farkın üç
@@ -504,6 +512,26 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
   edilen bir bayrağa değil — okuma-amaçlı olan yeni bir komut paneli kimse hatırlamadan alır.
 
 ---
+
+## Plan metninin ikinci denetimi (2026-09-21)
+
+Plan belgesinin her satırı TODOS'a karşı okundu; TODOS'a hiç girmemiş üç madde çıktı.
+
+- [x] **`SEÇ tur=` süzgeci eklendi.** Plan "`SEÇ katman= tur=` süzgeçleri varsa docs'a, yoksa
+  eklenir" diyordu: `katman` vardı, `tur` **yoktu**. Bir pafta üzerine atılan pencere parselleri,
+  etiketleri, ölçüleri ve yol eksenini birlikte yakalar; "o penceredeki alanlar" sürekli sorulan
+  şeydir. `katman=` bir KİP çünkü bir katman kendi başına bir küme adlandırır; `tur=` bir SÜZGEÇ
+  çünkü bir tür bir kümeyi daraltır — ve her kiple (`ÇİT`, `ÖNCEKİ` dâhil) birlikte çalışıyor. Tür
+  adı **nesne türleri tablosunun kendi adı** (`find_name`), yani ikinci bir tür listesi yok ve bir
+  eklentinin türü eklendiği gün seçilebilir (5.10). Üç test, `select.md`'de kendi bölümü.
+- [x] **Nokta fonksiyonu idempotens testi** — planın Test maddesinin adıyla istediği
+  ("fonksiyon çıktısı tekrar girdi olarak aynı noktayı verir") ve olmayan test. Her fonksiyonun
+  SABİT NOKTASI sınanıyor (`orta(P,P)=P`, `ara(A,B,0)=A`, `uzanti(A,B,0)=B`, `dik(A,B,0,0)=A`,
+  `semt(S,θ,0)=S`, `xy(P,P)=P`, `ile(P,@0,0)=P`, `n(no)` her seferinde aynı), sonra çıktı geri
+  besleniyor ve iç içe yazılıyor — bunlar iç içe yazıldığı için, kendi cevabıyla kayan bir fonksiyon
+  her düzeyde bir milimetre kayardı. Yedi çağrı ayrıca iki yoldan (yazılan belirteç ve JSON dizesi)
+  aynı noktayı veriyor.
+- [~] **Ölçü stilinin BÖHHBÜY/MPYY yarısı**: aşağıda, P5'te.
 
 ## Kanıt denetimi (plan sonu, 2026-09-21)
 

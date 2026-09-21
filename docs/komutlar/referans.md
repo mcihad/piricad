@@ -963,6 +963,7 @@ Nesneleri seçer: tümü, kimlikle, katman, pencere, kesen kutu, çokgen, çit, 
 |---|---|---|---|
 | `mod` | text | isteğe bağlı | TÜMÜ | TEMİZLE | NESNE | KATMAN | PENCERE | KESEN | KUTU | NOKTA | ÇOKGEN | ÇOKGENKESEN | ÇİT | ÖNCEKİ | SON |
 | `noktalar` | point_list | en az 0 | Kutu köşeleri (iki nokta), çokgen/çit köşeleri ya da tek tıklama noktası |
+| `tur` | text | isteğe bağlı | Yalnız bu türdeki nesneler: ÇOKLUÇİZGİ, DAİRE, YAY, NOKTA, ELİPS… |
 | `nesneler` | selection | en az 0 | NESNE modunda nesne kimlikleri |
 | `katman` | text | isteğe bağlı | KATMAN modunda katman adı |
 | `islem` | text | isteğe bağlı | DEĞİŞTİR | EKLE | ÇIKAR | TERSİNE |
