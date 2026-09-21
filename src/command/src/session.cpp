@@ -183,6 +183,48 @@ void Session::record(std::string param, Value v)
     resolved_.set(std::move(param), std::move(v));
 }
 
+namespace {
+
+/// Whether the SPEC declares `name` as a parameter that holds a RUN of points.
+///
+/// The awaiter cannot read this off its own `Param`: `Context::point` builds a
+/// throwaway `Param::point(name)` because one await asks for one point, whatever
+/// the parameter it is filling holds. The declaration is the only thing that
+/// tells `merkez`, which is a point, from `noktalar`, which is a run of them.
+bool declares_point_run(const CommandSpec& spec, const std::string& name)
+{
+    for (const Param& p : spec.params)
+        if (p.name == name) return p.kind == ParamKind::PointList && p.arity.max > 1;
+    return false;
+}
+
+} // namespace
+
+void Session::record_awaited(const std::string& param, Value v)
+{
+    if (v.kind() != Value::Kind::Point || !declares_point_run(*spec_, param)) {
+        resolved_.set(param, std::move(v));
+        return;
+    }
+
+    bool begun = false;
+    for (const std::string& name : runs_begun_)
+        if (name == param) begun = true;
+
+    Value::Points run;
+    if (begun) {
+        if (const Value* had = resolved_.find(param); had != nullptr && !had->empty())
+            run = had->as_points();
+    } else {
+        runs_begun_.push_back(param);
+    }
+    run.push_back(v.as_point());
+
+    // `set` keeps a replaced argument's POSITION, so a run that grows one await
+    // at a time cannot reorder the journal line it will be written to.
+    resolved_.set(param, Value::points(std::move(run)));
+}
+
 void Session::fail(core::Error e)
 {
     error_ = std::move(e);

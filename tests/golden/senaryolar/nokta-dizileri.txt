@@ -1,0 +1,27 @@
+# NOKTA DİZİLERİ: bir çalıştırmada birden çok nokta çözen her komut, çözdüğü
+# noktaların HEPSİNİ günlüğe yazar — sonuncusunu değil.
+#
+# `NOKTA 1,1 2,2 3,3` üç nesne çiziyor ve günlüğe tek nokta yazıyordu.
+# Bekleyici (awaiter) çözdüğü her değeri sorduğu parametrenin altına kaydeder,
+# `noktalar` ise tek bir listedir: her nokta bir öncekinin yerine geçiyor ve
+# günlük satırı üç nesnelik belgeyi geri getiremiyordu (CLAUDE.md 6.4). ÇİZGİ
+# bunu gizliyordu, çünkü gövdesi kendi vektörünü tutup sonunda bir kez kaydeder.
+#
+# Aşağıdaki her satır, noktalarını döngüyle çözen bir komuttur — ÇİZGİ, NOKTA,
+# ÇOKLUÇİZGİ, ALAN, SPLINE, LİDER ve KOPYALA'nın `bitis`'i, yani program bugün
+# ne kadarını yapıyorsa o. Dökümün iki yarısı yan yana kilitlenir: bir komut
+# yeniden yalnız son noktasını yazmaya başlarsa, nesne sayısıyla günlük satırı
+# burada ayrışır ve senaryo kırmızıya döner.
+KATMAN ad=ROPER
+NOKTA 485300,4310200 485360,4310245 485410,4310190
+KATMAN ad=CIZGILER
+ÇİZGİ 485300,4310300 485320,4310300 485340,4310320 485360,4310300
+ÇOKLUÇİZGİ 485300,4310400 485320,4310400 485340,4310420 485360,4310400
+ALAN 485300,4310500 485340,4310500 485340,4310540 485300,4310540
+SPLINE noktalar=485400,4310500 485410,4310520 485420,4310520 485430,4310500 derece=3
+LİDER noktalar=485500,4310500 485503,4310503 485506,4310503 metin=Röper
+# KOPYALA'nın `bitis`'i de bir dizidir: her nokta bir kopya, hepsi tek komut.
+KATMAN ad=KOPYALAR
+NOKTA 485600,4310200
+SEÇ KATMAN katman=KOPYALAR
+KOPYALA baslangic=485600,4310200 bitis=485620,4310200 bitis=485640,4310200 bitis=485660,4310200

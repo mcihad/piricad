@@ -277,6 +277,126 @@ TEST_CASE("PROOF: `@100<50` arayüzden, komut satırından ve betikten aynı bel
     CHECK(other.doc.content_hash() != cli.doc.content_hash());
 }
 
+TEST_CASE("PROOF: NOKTA'nın her noktası günlüğe geçer, sonuncusu değil")
+{
+    // A COMMAND THAT AWAITS A LIST IN A LOOP RECORDS THE WHOLE LOOP.
+    //
+    // `NOKTA 1,1 2,2 3,3` placed three points and journalled one. The awaiter
+    // records each value it resolves under the parameter it was asked for, and
+    // `noktalar` is ONE list, so every point after the first replaced the one
+    // before it: three entities in the document, `"noktalar":[3000,3000]` in the
+    // journal, and a replay that reproduced neither. That is Article 6.4 broken
+    // by a command that never wrote a line of journal code.
+    //
+    // ÇİZGİ hid it. Its body keeps a parallel vector and records the whole run
+    // at the end (line.cpp), so the proof above passed while the mechanism
+    // underneath it was wrong — which is why this case awaits the run and
+    // asserts the RECORDED points, not only that three clients agree.
+    constexpr core::Point2 kA{1000, 1000};
+    constexpr core::Point2 kB{2000, 2000};
+    constexpr core::Point2 kC{3000, 3000};
+
+    // ---- client 1: the GUI. Three clicks, then ESC. ----
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("NOKTA");
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+
+        for (const core::Point2 at : {kA, kB, kC}) {
+            REQUIRE(session.waiting());
+            CHECK(session.prompt().message == "Nokta");
+            CHECK(session.supply(Value::point(at)).ok());
+        }
+        session.cancel(); // ESC
+        CHECK(gui.bus.finish(session).ok());
+    }
+
+    // ---- client 2: the command line ----
+    Rig cli;
+    CHECK(cli.bus.execute_line("NOKTA 1,1 2,2 3,3", Origin::CommandLine).ok());
+
+    // ---- client 3: a JSON script ----
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Nokta kanıtı",
+            "komutlar": [
+                {"cmd": "core.point_draw",
+                 "args": {"noktalar": [[1000,1000],[2000,2000],[3000,3000]]}}
+            ]
+        })");
+        REQUIRE_MESSAGE(r.ok(), r.error().message);
+    }
+
+    // ---- the proof ----
+    for (Rig* rig : {&gui, &cli, &scr})
+        REQUIRE_EQ(rig->doc.live_entity_count(), std::size_t{3});
+
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+
+    // ---- the clause that actually failed: replay (Article 6.4) ----
+    Rig replay;
+    for (const auto& e : cli.journal.entries())
+        CHECK(replay.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+
+    CHECK_EQ(replay.doc.live_entity_count(), std::size_t{3});
+    CHECK_EQ(replay.doc.content_hash(), cli.doc.content_hash());
+    // And the replay's own journal is the line it replayed, so the run is a
+    // fixed point rather than something that decays a little on every pass.
+    CHECK_EQ(what_happened(replay.journal), what_happened(cli.journal));
+
+    // EVERY point, named. Three clients agreeing is not enough on its own here:
+    // before the fix all three agreed, and all three were wrong the same way.
+    REQUIRE_EQ(cli.journal.entries().size(), std::size_t{1});
+    const Value run = cli.journal.entries().front().args.get("noktalar");
+    CHECK(run.kind() == Value::Kind::PointList);
+    REQUIRE_EQ(run.as_points().size(), std::size_t{3});
+    CHECK_EQ(run.as_points()[0], kA);
+    CHECK_EQ(run.as_points()[1], kB);
+    CHECK_EQ(run.as_points()[2], kC);
+}
+
+TEST_CASE("PROOF: tek noktalık bir NOKTA da liste olarak kaydedilir")
+{
+    // The other half of the rule. A run's FIRST value replaces what the client
+    // supplied up front and the rest extend it, so a one-point run has to come
+    // out as a one-point LIST — not as the bare point the awaiter handed over,
+    // and not as the preset it happened to be drained from. One shape for the
+    // parameter, whatever the count, or a journal reader has two cases to know.
+    constexpr core::Point2 kOnly{5000, 5000};
+
+    Rig gui;
+    {
+        auto started = gui.bus.begin_interactive("NOKTA");
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        REQUIRE(session.waiting());
+        CHECK(session.supply(Value::point(kOnly)).ok());
+        session.cancel(); // ESC
+        CHECK(gui.bus.finish(session).ok());
+    }
+
+    Rig cli;
+    CHECK(cli.bus.execute_line("NOKTA 5,5", Origin::CommandLine).ok());
+
+    CHECK_EQ(gui.doc.live_entity_count(), std::size_t{1});
+    CHECK_EQ(cli.doc.live_entity_count(), std::size_t{1});
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+
+    REQUIRE_EQ(cli.journal.entries().size(), std::size_t{1});
+    const Value run = cli.journal.entries().front().args.get("noktalar");
+    CHECK(run.kind() == Value::Kind::PointList);
+    REQUIRE_EQ(run.as_points().size(), std::size_t{1});
+    CHECK_EQ(run.as_points()[0], kOnly);
+}
+
 TEST_CASE("PROOF: undo collapses each client's run into exactly one step")
 {
     Rig cli;

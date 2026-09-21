@@ -19,6 +19,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace kentos::command {
 
@@ -124,6 +125,30 @@ public:
 
     void record(std::string param, Value v);
 
+    /// Records a value the AWAITER has just resolved for `param`, as opposed to
+    /// one the body worked out for itself.
+    ///
+    /// For every parameter but one kind this is `record`. The exception is a
+    /// parameter the spec declares as a RUN of points, because a command that
+    /// awaits one in a loop is filling a single list one value at a time:
+    /// `NOKTA 1,1 2,2 3,3` is one invocation that resolved three points, and
+    /// `record` kept only the third. The journal then said one point where the
+    /// document had gained three, and replaying it reproduced neither
+    /// (Article 6.4).
+    ///
+    /// So the FIRST value of a run replaces and the rest append. Replacing first
+    /// matters as much as appending after: `resolved_` starts as a copy of
+    /// whatever the client supplied up front, and a run that is being awaited is
+    /// re-resolving that list — with the input aids applied — rather than adding
+    /// to it. Appending from the start doubled a scripted `NOKTA`.
+    ///
+    /// ÇİZGİ never showed the defect because its body keeps a parallel vector
+    /// and records the whole run at the end. That is bookkeeping every looping
+    /// command would otherwise have to remember, and `core.point_draw` is the
+    /// one that did not. A body with the complete answer still calls `record`
+    /// and still wins: it runs last, and it replaces.
+    void record_awaited(const std::string& param, Value v);
+
     /// The command's structured answer, or an empty `Json` when it gave none.
     /// Set through `Context::report`; carried out on `DispatchResult::report`.
     const core::Json& report() const noexcept { return report_; }
@@ -179,6 +204,11 @@ private:
     std::coroutine_handle<> parked_{};
     std::optional<Value> supplied_{};
     Args resolved_{};
+
+    /// Point-run parameters the awaiter has already begun resolving, so the
+    /// first value of a run can replace the client's preset and the ones after
+    /// it can extend what the run has collected so far.
+    std::vector<std::string> runs_begun_{};
     core::Error error_{};
     std::uint64_t document_revision_at_start_{0};
 
@@ -223,7 +253,7 @@ template<class T> std::optional<T> InputAwaiter<T>::await_resume()
     // is idempotent so re-resolving it changes nothing (core/snap.hpp).
     v = apply_input_aids(session_, prompt_, std::move(v));
 
-    session_.record(param_.name, v);
+    session_.record_awaited(param_.name, v);
     return conv_(v);
 }
 
