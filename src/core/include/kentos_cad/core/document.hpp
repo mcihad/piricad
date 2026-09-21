@@ -389,8 +389,13 @@ public:
     Status add_block_use(BlockId block, BlockId uses);
 
     /// Whether `e` may be edited in place: alive, of a kind this build knows
-    /// (model.md R26), and not inside a block definition (R45). The message is
-    /// what the refusing command says.
+    /// (model.md R26), not inside a block definition (R45), and NOT ON A LOCKED
+    /// LAYER. The message is what the refusing command says.
+    ///
+    /// The lock belongs here and was missing: it was checked on every `add_*` and
+    /// nowhere else, so a locked layer stopped a new parcel being drawn on it and
+    /// let every edit verb reshape the parcels already on it. Undo and redo do not
+    /// come through this, so locking a layer never traps an earlier edit.
     Status editable(EntityId e) const;
 
     /// Replaces an entity's kind payload, keeping its rings and its identity.

@@ -1214,6 +1214,21 @@ int main(int argc, char** argv)
         });
         later([&window, shot] { shot(QStringLiteral("8-sorgu-cevaplari"), &window); });
 
+        // AND A STRETCH, before and after, in the same frame. Two identical
+        // parcels; the window covers the RIGHT edge of the upper one only, so its
+        // right corners follow 8 m east and the lower one is the control.
+        later([&window] {
+            window.runScriptLine(QStringLiteral("YENİ"));
+            window.runScriptLine(QStringLiteral("KATMAN ad=PARSEL"));
+            window.runScriptLine(QStringLiteral("ALAN 0,0 20,0 20,10 0,10"));
+            window.runScriptLine(QStringLiteral("ALAN 0,15 20,15 20,25 0,25"));
+            window.runScriptLine(
+                QStringLiteral("ESNET nesneler=2 pencere=15,12 pencere=30,28 "
+                               "baslangic=0,0 bitis=8,0"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+        });
+        later([&window, shot] { shot(QStringLiteral("9-esnetme"), &window); });
+
         later([] { QApplication::exit(0); });
     }
 

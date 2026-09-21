@@ -6,6 +6,57 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — ESNET: pencere içindeki köşeleri taşıma
+
+Planın P3 paketinde ertelenmiş son fiil. Yol genişlediğinde kenarındaki parselin
+bir tarafını çekip öbür tarafını tapudaki yerinde bırakmak için.
+
+- **Erteleme sebebi yeniden okunarak karşılandı.** Erteleme notu şöyle diyordu: bir
+  köşe SEÇMEK, bu programda olmayan bir altyapı gerektiriyor — seçim nesne
+  düzeyinde çalışıyor, köşe düzeyinde değil. Ama **pencere zaten süzgecin
+  kendisidir**: içindeki köşe gider, dışındaki kalır, hiçbir köşesi içinde olmayan
+  nesneye hiç dokunulmaz. Bunun için hiçbir şeyin seçilebilir olması gerekmiyor,
+  yani köşe-düzeyi bir seçim modeli kurmadan oldu.
+- **Çokluçizgi tek yazımda, diğer her tür tutamak tutamak.** Bir çokluçizginin
+  köşeleri onun şeklidir ve pencereye giren hepsi tek `set_geometry` ile gider —
+  yarısı taşınmış bir halka hiçbir zaman denetleyiciye sunulmaz. Bir dairenin,
+  yayın, elipsin, ölçünün ve blok referansının sakladığı noktalar bir TANIMDIR ve
+  `core::move_grip` tablosundan geçer; o tablo, o türün tutamağının ne anlama
+  geldiğini bilen tek yerdir.
+- **Her hedef, hiçbir şey kıpırdamadan önce hesaplanıyor.** Dairenin merkezi zaten
+  yarıçap kolunu beraberinde taşıdığı için, canlı geometriye bakan bir ikinci taşıma
+  kolu iki kez taşır ve daire öteleme kadar büyür. Anlık görüntüye göre ikinci
+  taşıma kolu bulunduğu yere koyar: penceresine tamamen giren daire **ötelenir**,
+  yalnız yarıçap kolu girerse **boyutlanır**. İkisi de testli, çünkü ikisi de aynı
+  kuralın iki yarısı.
+- **Günlüğe çözülmüş kimlikler yazılıyor**, pencerenin şansı değil: bir replay, bu
+  çalıştırmanın esnettiğini esnetmelidir — oynatıldığı belgede aynı pencerenin
+  altında başka şeyler durabilir (model.md P4).
+- Arayüzde **Değiştir** menüsünde ve araç kolonunda, `TAŞI` ve `BUDA` ile aynı
+  münhasır grupta: kollanıp beklerken kolon onu yakabiliyor.
+
+### Düzeltildi — kilitli katman üzerindeki nesneyi korumuyordu
+
+ESNET yazılırken çıktı ve plandan büyük: **kilit yalnız her `add_*` üzerinde
+denetleniyordu ve başka hiçbir yerde.** Kilitli bir katman kullanıcının oraya YENİ
+bir parsel çizmesini engelliyor, üzerinde DURAN her parseli `TAŞI`, `KÖŞETAŞI`,
+`ESNET`, `DÖNDÜR`, `ÖLÇEKLE`, `PATLAT` ve `SİL` ile yeniden şekillendirmeye ya da
+silmeye izin veriyordu. Kadastro çiziminde bu tam tersidir: **kilit, sayfada duran
+şey için vardır.**
+
+- Denetim `Document::editable()`'a girdi — her yerinde düzenlemenin zaten sorduğu
+  tek soru, yani tek yer.
+- Silme için `Transaction::erase_entity`'ye, çünkü `Document::set_entity_alive`
+  aynı zamanda silmenin **geri alma** yoludur: oraya konan bir kilit denetimi,
+  kullanıcı katmanı kilitlediği anda daha önceki bir silmeyi geri alma yığınında
+  hapsederdi.
+- `restore_geometry` ve öbür ters yollar bilerek denetimsiz kaldı: **kilitlemek
+  geçmişi dondurmaz.** İki test bunu da çiviliyor.
+- Reddin biçimi bu ağacın kendi kalıbı: komut işi yapamayacağını **kullanıcının
+  dilinde söyler** ve hiçbir şeyi değiştirmez. Türkçe açıklanmış bir ret,
+  programcıya yazılmış bir doğrulama mesajıyla ikiye katlanmaz (`Bus::finish`,
+  `declined` yolu).
+
 ### Eklendi — iki soru: NESNEBİLGİ ve AÇIÖLÇ (P7)
 
 Planın son paketi. İkisi de **soru**dur: hiçbir şeyi değiştirmez, geri alma adımı

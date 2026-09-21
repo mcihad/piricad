@@ -1103,3 +1103,109 @@ TEST_CASE("PROOF: AÇIÖLÇ gui, komut satırı ve betikten aynı açıyı okur"
         CHECK_EQ(rig->undo.undo_depth(), std::size_t{0});
     }
 }
+
+TEST_CASE("PROOF: ESNET gui, komut satırı ve betikten aynı belgeyi ve aynı günlüğü bırakır")
+{
+    // Article 6.4 for `core.stretch`. A 20 m × 10 m parcel whose RIGHT edge is
+    // windowed and pulled 5 m east: the two right corners follow, the two left
+    // ones stay on the tapu. The three clients differ only in the road the
+    // answers take.
+    const char* kSetup = "ALAN 0,0 20,0 20,10 0,10";
+
+    Rig gui;
+    {
+        REQUIRE(gui.bus.execute_line(kSetup, Origin::Test).ok());
+        auto started = gui.bus.begin_interactive("ESNET", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+
+        REQUIRE(session.waiting());
+        CHECK(session.supply(Value::point(core::Point2{15'000, -5'000})).ok());
+        CHECK(session.supply(Value::point(core::Point2{25'000, 15'000})).ok());
+        CHECK(session.supply(Value::point(core::Point2{0, 0})).ok());
+        CHECK(session.supply(Value::point(core::Point2{5'000, 0})).ok());
+        REQUIRE(gui.bus.finish(session).ok());
+    }
+
+    Rig cli;
+    REQUIRE(cli.bus.execute_line(kSetup, Origin::Test).ok());
+    REQUIRE(cli.bus
+                .execute_line("ESNET pencere=15,-5 pencere=25,15 baslangic=0,0 bitis=5,0",
+                              Origin::CommandLine)
+                .ok());
+
+    Rig scr;
+    {
+        REQUIRE(scr.bus.execute_line(kSetup, Origin::Test).ok());
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Esnetme kanıtı",
+            "komutlar": [ {"cmd": "core.stretch", "args": {
+                "pencere": [[15000, -5000], [25000, 15000]],
+                "baslangic": [0, 0], "bitis": [5000, 0] }} ]
+        })");
+        REQUIRE(r.ok());
+    }
+
+    // ---- the proof ----
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        CHECK_EQ(rig->doc.live_entity_count(), std::size_t{1});
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{2}); ///< the ALAN, then the stretch
+    }
+    CHECK_EQ(gui.doc.content_hash(), cli.doc.content_hash());
+    CHECK_EQ(cli.doc.content_hash(), scr.doc.content_hash());
+
+    // AND THE CORNERS ARE WHERE A TAPE WOULD HAVE PUT THEM, so the three cannot
+    // agree on the same wrong answer.
+    const auto span = cli.doc.geometry().rings_of(cli.doc.entities().slot[0]);
+    const auto xs   = cli.doc.geometry().ring_xs(span.first);
+    CHECK_EQ(xs[0], 0);
+    CHECK_EQ(xs[1], 25'000);
+    CHECK_EQ(xs[2], 25'000);
+    CHECK_EQ(xs[3], 0);
+
+    CHECK_EQ(what_happened(gui.journal), what_happened(cli.journal));
+    CHECK_EQ(what_happened(cli.journal), what_happened(scr.journal));
+    CHECK(what_happened(gui.journal).find("core.stretch") != std::string::npos);
+
+    // THE RESOLVED OBJECT IS IN THE JOURNAL, not the window's luck. A replay must
+    // stretch what THIS run stretched, and a document replayed into may hold other
+    // things under the same window (model.md P4).
+    CHECK(what_happened(cli.journal).find("\"nesneler\":[1]") != std::string::npos);
+}
+
+TEST_CASE("PROOF: ESNET günlükten yeniden oynatılabilir")
+{
+    Rig first;
+    REQUIRE(first.bus.execute_line("ALAN 0,0 20,0 20,10 0,10", Origin::Test).ok());
+    REQUIRE(
+        first.bus
+            .execute_line("ESNET pencere=15,-5 pencere=25,15 baslangic=0,0 bitis=5,0", Origin::Test)
+            .ok());
+
+    Rig again;
+    for (const auto& entry : first.journal.entries()) {
+        auto r = again.bus.dispatch(Invocation{entry.command_id, entry.args, Origin::Batch});
+        REQUIRE_MESSAGE(r.ok(), entry.command_id);
+    }
+    CHECK_EQ(again.doc.content_hash(), first.doc.content_hash());
+}
+
+TEST_CASE("ESNET iptal edilince boş geri alma deltası bırakır")
+{
+    Rig r;
+    REQUIRE(r.bus.execute_line("ALAN 0,0 20,0 20,10 0,10", Origin::Test).ok());
+    const std::uint64_t before = r.doc.content_hash();
+    const std::size_t depth    = r.undo.undo_depth();
+
+    auto started = r.bus.begin_interactive("ESNET", Origin::Gui);
+    REQUIRE(started.ok());
+    auto& session = *started.value();
+    CHECK(session.supply(Value::point(core::Point2{15'000, -5'000})).ok());
+    CHECK(session.supply(Value::point(core::Point2{25'000, 15'000})).ok());
+    session.cancel(); ///< Esc after the window, before the displacement
+    REQUIRE(r.bus.finish(session).ok());
+
+    CHECK_EQ(r.doc.content_hash(), before);
+    CHECK_EQ(r.undo.undo_depth(), depth);
+}

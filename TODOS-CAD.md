@@ -291,10 +291,26 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
 - [x] Hepsi `Category::Modify`, `AiAccessible`, tek işlem tek undo; kilitli katman reddi; yedi sayfa
       + `docs/README.md` satırları + `make reference`; arayüzde **Değiştir** menüsünde yedi giriş
       (§2.6a); yirmi iki sayısal test.
-- [ ] **ESNET (`core.stretch`) yapılmadı ve sebebi:** KESEN pencere içindeki köşelerin taşınması,
-      bir pencerenin İÇİNDEKİ köşeleri seçmeyi gerektiriyor — bugünkü seçim nesne düzeyinde çalışıyor,
-      köşe düzeyinde değil. P4'ün çokgen/çit seçim kipleri bu altyapıyı getiriyor; ESNET onun üstüne
-      oturur ve o pakette yapılacak.
+- [x] **ESNET (`core.stretch`)** — erteleme koşulu karşılandı, ama sebebini yeniden okuyarak:
+      **pencere zaten süzgecin kendisidir.** İçindeki köşe gider, dışındaki kalır, hiçbir köşesi
+      içinde olmayan nesneye hiç dokunulmaz. Bunun için hiçbir şeyin *seçilebilir* olması gerekmiyor,
+      yani köşe-düzeyi seçim modeli kurmadan oldu. `pencere` (iki nokta) + `baslangic`/`bitis`
+      öteleme + isteğe bağlı `nesneler`. Çokluçizginin pencereye giren bütün köşeleri **tek yazımda**
+      gidiyor (yarısı taşınmış halka hiç denetleyiciye sunulmuyor); diğer her tür `core::move_grip`
+      tablosundan geçiyor. **Her hedef anlık görüntüden hesaplanıyor**: dairenin merkezi zaten
+      yarıçap kolunu taşıdığı için canlı geometriye bakan bir ikinci taşıma daireyi öteleme kadar
+      büyütürdü — pencereye tamamen giren daire ötelenir, yalnız yarıçap kolu girerse boyutlanır
+      (ikisi de testli). Günlüğe **çözülmüş kimlikler** yazılıyor, pencerenin şansı değil (model.md P4).
+- [x] **KİLİTLİ KATMAN KUSURU (plan dışı, ESNET yazılırken çıktı).** Kilit yalnız her `add_*`
+      üzerinde denetleniyordu ve başka hiçbir yerde: kilitli bir katman kullanıcının oraya **yeni**
+      parsel çizmesini engelliyor, üzerinde **duran** her parseli TAŞI, KÖŞETAŞI, ESNET, DÖNDÜR,
+      ÖLÇEKLE, PATLAT ve SİL ile yeniden şekillendirmeye ya da silmeye izin veriyordu. Kadastro
+      çiziminde bu tam tersi: kilit, sayfadaki şey için vardır. Denetim `Document::editable()`'a
+      girdi — her yerinde düzenlemenin zaten sorduğu tek soru — ve silme için
+      `Transaction::erase_entity`'ye, çünkü `set_entity_alive` aynı zamanda silmenin **geri alma**
+      yoludur ve oraya konan bir kilit denetimi, kullanıcı katmanı kilitlediği anda daha önceki
+      silmeyi geri alma yığınında hapsederdi. `restore_geometry` ve öbür ters yollar bilerek
+      denetimsiz: kilitlemek geçmişi dondurmaz (iki test bunu da çiviliyor).
 - [ ] **İŞARETLE (`core.measure_along`) yapılmadı:** `BÖLÜMLE aralik=` tam olarak onun işini yapıyor.
       İkinci bir ad ikinci bir komut demek olurdu ve `blok=` ile blok yerleştirme (planın ayırt edici
       maddesi) P6'nın pano altyapısıyla birlikte gelecek.

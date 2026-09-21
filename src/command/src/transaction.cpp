@@ -57,6 +57,13 @@ Status Transaction::set_entity_layer(EntityId e, LayerId layer)
 
 Status Transaction::erase_entity(EntityId e)
 {
+    // THE LAYER'S LOCK, asked here rather than in `Document::set_entity_alive`.
+    // That function is also the UNDO path for both an erase and its inverse, so a
+    // lock check inside it would trap an earlier deletion in the undo stack the
+    // moment a user locked the layer. This is the road a command takes; undo
+    // takes the other one.
+    if (auto st = doc_.editable(e); !st) return st.error();
+
     core::Op undo;
     auto st = doc_.set_entity_alive(e, false, undo);
     if (!st) return st;

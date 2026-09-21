@@ -65,6 +65,7 @@ Tek tek komutlar:
 | `METİN` | [Çizime yazı yazma](komutlar/text.md) |
 | `YAZIDÜZENLE` | [Var olan yazıyı değiştirme](komutlar/edittext.md) |
 | `KÖŞETAŞI` | [Köşe taşıma](komutlar/vertex_move.md) |
+| `ESNET` | [Pencere içindeki köşeleri taşıma](komutlar/stretch.md) |
 | `KÖŞEEKLE` | [Kenara köşe ekleme](komutlar/vertex_insert.md) |
 | `UZUNLUKYAZ` | [Kenar uzunluklarını yazma](komutlar/uzunluk_yaz.md) |
 | `KÖŞENUMARALA` | [Köşe numaralama](komutlar/kose_numarala.md) |

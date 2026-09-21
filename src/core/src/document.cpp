@@ -435,6 +435,25 @@ Status Document::editable(EntityId e) const
     if ((entities_.flags[e] & FlagInBlock) != 0)
         return err(ErrorCode::ValidationFailed,
                    "Blok tanımındaki nesne doğrudan düzenlenemez; BLOKDÜZENLE (Faz 2).");
+
+    // AND THE LAYER'S LOCK, which was missing and made `kilitli` mean almost
+    // nothing. The lock was checked on every `add_*` and on nothing else, so a
+    // locked layer stopped a user DRAWING a new parcel on it and let TAŞI,
+    // KÖŞETAŞI, ESNET and PATLAT reshape every parcel already there. In a
+    // cadastral drawing that is the wrong way round: what is on the sheet is what
+    // the lock is for.
+    //
+    // Here rather than in each setter, because this is the one question every
+    // in-place edit already asks. Undo and redo do NOT come through it —
+    // `restore_geometry` and the other inverse paths are unguarded on purpose —
+    // so locking a layer never traps an earlier edit inside the undo stack.
+    const LayerId lyr = entities_.layer[e];
+    if (lyr < layers_.size() && layers_.all()[lyr].locked)
+        return err(ErrorCode::ValidationFailed, "'" + layers_.all()[lyr].name +
+                                                    "' katmanı kilitli; üzerindeki nesne "
+                                                    "düzenlenemez. Kilidi KATMAN ad=" +
+                                                    layers_.all()[lyr].name +
+                                                    " kilitli=hayır ile açın.");
     return ok();
 }
 

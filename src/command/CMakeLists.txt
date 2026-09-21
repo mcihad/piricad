@@ -59,6 +59,7 @@ add_library(kentos_command STATIC
     src/commands/edit_verbs2.cpp
     src/commands/clipboard.cpp
     src/commands/query_info.cpp
+    src/commands/stretch.cpp
     src/commands/point.cpp
     src/commands/polyline.cpp
     src/commands/settings.cpp

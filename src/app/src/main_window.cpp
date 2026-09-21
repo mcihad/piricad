@@ -1171,6 +1171,13 @@ void MainWindow::buildActions()
     actMeasureAngle_ = modifyTool(Glyph::Measure, tr("Açı Ölç"), QStringLiteral("AÇIÖLÇ"),
                                   tr("AÇIÖLÇ — tepe ve iki kol; açıyı oturumun birim ve "
                                      "kuralıyla yazar  ·  kısaltma: AÇÖ"));
+
+    // ESNET IS A MODAL TOOL, not a menu row: it arms, then asks for a window and
+    // an offset. `modifyTool` puts it in the exclusive group with TAŞI and BUDA,
+    // which is where the tool column can light it while it waits.
+    actStretch_ = modifyTool(Glyph::Move, tr("Esnet"), QStringLiteral("ESNET"),
+                             tr("ESNET — pencere içindeki köşeleri taşır, dışındakileri "
+                                "yerinde bırakır  ·  kısaltma: ES"));
     // THE COMMAND EXISTS, so the button is not a placeholder any more. `SORGULA`
     // shipped with the read tools and the menu still carried a disabled `Faz 2`
     // stub beside it — a dead entry with a live command's name, which is worse
@@ -1491,6 +1498,7 @@ void MainWindow::buildMenus()
     modify->addAction(commandAction(Glyph::Ruler, tr("Uzunluk"), QStringLiteral("UZUNLUK"),
                                     tr("UZUNLUK — bir ucu kendi doğrultusunda hareket ettirir  ·  "
                                        "kısaltma: UZN")));
+    modify->addAction(actStretch_);
     modify->addAction(commandAction(Glyph::Duplicate, tr("Patlat"), QStringLiteral("PATLAT"),
                                     tr("PATLAT — çizgiyi kenarlara, alanı sınırına, bloğu "
                                        "bileşenlerine ayırır  ·  kısaltma: PTL")));
@@ -1850,6 +1858,7 @@ void MainWindow::buildToolBox()
     toolBox_->addTool(actCombine_);
     toolBox_->addTool(actSplit_);
     toolBox_->addTool(actMove_);
+    toolBox_->addTool(actStretch_);
     toolBox_->addTool(actOffset_);
     toolBox_->addSeparator();
 

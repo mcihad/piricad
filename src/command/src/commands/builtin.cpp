@@ -31,6 +31,7 @@ namespace kentos::command {
     X(paste)                                                                                       \
     X(entity_info)                                                                                 \
     X(measure_angle)                                                                               \
+    X(stretch)                                                                                     \
     X(text)                                                                                        \
     X(edittext)                                                                                    \
     X(exportstyle)                                                                                 \

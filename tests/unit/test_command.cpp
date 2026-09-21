@@ -5591,8 +5591,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // + DİKAYAK, ALIM, KESİŞİMNOKTA, ARANOKTA, ÇOKGEN
     // + KIR, UÇUCA, UZUNLUK, PATLAT, HİZALA, BÖLÜMLE, ÇİZGİDÜZENLE
     // + PANOYAKOPYALA, KES, YAPIŞTIR
-    // + NESNEBİLGİ, AÇIÖLÇ
-    CHECK_EQ(f.reg.size(), std::size_t{89});
+    // + NESNEBİLGİ, AÇIÖLÇ + ESNET
+    CHECK_EQ(f.reg.size(), std::size_t{90});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())
@@ -6477,4 +6477,237 @@ TEST_CASE("etkileşimli yol da yapılandırılmış cevabı taşır")
     REQUIRE(done.ok());
     REQUIRE(done.value().report.find("nesneler") != nullptr);
     CHECK_EQ(done.value().report.find("adet")->as_int(), 1);
+}
+
+// ============================================================================
+// ESNET — the window is the vertex filter
+// ============================================================================
+
+TEST_CASE("ESNET pencere içindeki köşeleri taşır, dışındakileri bırakır")
+{
+    Fixture f;
+    // A 20 m × 10 m parcel. The window covers its RIGHT edge only, so the two
+    // right corners follow and the two left ones stay on the tapu — which is the
+    // whole job: a road widens on one side.
+    REQUIRE(f.bus.execute_line("ALAN 0,0 20,0 20,10 0,10", Origin::Test).ok());
+    REQUIRE(
+        f.bus
+            .execute_line("ESNET pencere=15,-5 pencere=25,15 baslangic=0,0 bitis=5,0", Origin::Test)
+            .ok());
+
+    const core::Document& doc = f.doc;
+    const auto span           = doc.geometry().rings_of(doc.entities().slot[0]);
+    const auto xs             = doc.geometry().ring_xs(span.first);
+    const auto ys             = doc.geometry().ring_ys(span.first);
+    REQUIRE_EQ(xs.size(), std::size_t{4});
+
+    CHECK_EQ(xs[0], 0);      ///< stayed
+    CHECK_EQ(xs[1], 25'000); ///< 20 m + 5 m
+    CHECK_EQ(xs[2], 25'000); ///< 20 m + 5 m
+    CHECK_EQ(xs[3], 0);      ///< stayed
+    for (std::size_t i = 0; i < ys.size(); ++i)
+        CHECK_EQ(ys[i], i == 0 || i == 1 ? 0 : 10'000); ///< nothing moved across
+}
+
+TEST_CASE("ESNET tek geri alma adımı yer ve tamamen geri döner")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ALAN 0,0 20,0 20,10 0,10", Origin::Test).ok());
+    const std::uint64_t before = f.doc.content_hash();
+    const std::size_t depth    = f.undo.undo_depth();
+
+    REQUIRE(
+        f.bus
+            .execute_line("ESNET pencere=15,-5 pencere=25,15 baslangic=0,0 bitis=5,0", Origin::Test)
+            .ok());
+    CHECK_EQ(f.undo.undo_depth(), depth + 1); ///< one command, one step
+    CHECK(f.doc.content_hash() != before);
+
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_EQ(f.doc.content_hash(), before);
+}
+
+TEST_CASE("ESNET pencerenin tamamını kapsadığında nesneyi taşır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ALAN 0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(
+        f.bus
+            .execute_line("ESNET pencere=-5,-5 pencere=15,15 baslangic=0,0 bitis=3,4", Origin::Test)
+            .ok());
+
+    const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+    const auto xs   = f.doc.geometry().ring_xs(span.first);
+    const auto ys   = f.doc.geometry().ring_ys(span.first);
+    // Every corner inside means every corner follows, which IS a move.
+    CHECK_EQ(xs[0], 3'000);
+    CHECK_EQ(ys[0], 4'000);
+    CHECK_EQ(xs[2], 13'000);
+    CHECK_EQ(ys[2], 14'000);
+}
+
+TEST_CASE("ESNET daireyi büyütmez: pencere hepsini alınca öteler")
+{
+    Fixture f;
+    // THE CASE THE SNAPSHOT RULE EXISTS FOR. A circle's grips are its centre and
+    // a radius handle. Moving the centre already carries the handle, so a second
+    // move computed against the LIVE geometry would move it twice and the circle
+    // would grow by the displacement. Against the snapshot it lands where it
+    // already is, and a windowed circle is simply moved.
+    REQUIRE(f.bus.execute_line("DAİRE 10,10 15,10", Origin::Test).ok());
+    const core::Mm2 area_before = f.doc.entity_area(0);
+
+    REQUIRE(
+        f.bus.execute_line("ESNET pencere=0,0 pencere=25,25 baslangic=0,0 bitis=5,0", Origin::Test)
+            .ok());
+
+    CHECK_EQ(f.doc.entity_area(0), area_before); ///< same circle
+    const core::Box2 box = f.doc.entities().box_of(0);
+    CHECK_EQ((box.min_x + box.max_x) / 2, 15'000); ///< centre 10 m + 5 m
+    CHECK_EQ((box.min_y + box.max_y) / 2, 10'000);
+}
+
+TEST_CASE("ESNET dairenin yarıçap tutamağını alınca yarıçapı değiştirir")
+{
+    Fixture f;
+    // AND THE OTHER HALF OF THE SAME RULE: window only the radius handle and the
+    // circle is resized, not moved. That is what a stretch of a definition means.
+    REQUIRE(f.bus.execute_line("DAİRE 10,10 15,10", Origin::Test).ok());
+    const core::Mm2 area_before = f.doc.entity_area(0);
+
+    REQUIRE(
+        f.bus.execute_line("ESNET pencere=14,9 pencere=16,11 baslangic=0,0 bitis=5,0", Origin::Test)
+            .ok());
+
+    CHECK(f.doc.entity_area(0) > area_before); ///< 5 m radius became 10 m
+    const core::Box2 box = f.doc.entities().box_of(0);
+    CHECK_EQ((box.min_x + box.max_x) / 2, 10'000); ///< centre did not move
+}
+
+TEST_CASE("ESNET boş pencereyi ve dejenere pencereyi söyler")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ALAN 0,0 10,0 10,10 0,10", Origin::Test).ok());
+
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+
+    // A window past the drawing: nothing to move, and it says what a window has
+    // to do rather than reporting success.
+    REQUIRE(f.bus
+                .execute_line("ESNET pencere=100,100 pencere=110,110 baslangic=0,0 bitis=5,0",
+                              Origin::Test)
+                .ok());
+    CHECK(said.find("esnetilecek köşe yok") != std::string::npos);
+    CHECK_EQ(f.undo.undo_depth(), std::size_t{1}); ///< the ALAN only
+
+    // A window with no area is a line, and a line filters nothing usefully.
+    const auto bad =
+        f.bus.execute_line("ESNET pencere=5,0 pencere=5,10 baslangic=0,0 bitis=5,0", Origin::Test);
+    CHECK_FALSE(bad.ok());
+    CHECK(bad.error().message.find("bir çizgi") != std::string::npos);
+}
+
+TEST_CASE("ESNET kilitli katmanı atlar ve kaç nesne atladığını söyler")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=TAPU", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN 0,0 20,0 20,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KATMAN ad=TAPU kilitli=evet", Origin::Test).ok());
+
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+
+    REQUIRE(
+        f.bus
+            .execute_line("ESNET pencere=15,-5 pencere=25,15 baslangic=0,0 bitis=5,0", Origin::Test)
+            .ok());
+    // Counted and said: a silent skip is a stretch that looks like it worked.
+    CHECK(said.find("kilitli") != std::string::npos);
+
+    const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+    CHECK_EQ(f.doc.geometry().ring_xs(span.first)[1], 20'000); ///< untouched
+}
+
+TEST_CASE("ESNET yalnız adı verilen nesneleri esnetir")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ALAN 0,0 20,0 20,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN 0,20 20,20 20,30 0,30", Origin::Test).ok());
+
+    // The window covers the right edge of BOTH, but only the first is named.
+    REQUIRE(
+        f.bus
+            .execute_line("ESNET nesneler=1 pencere=15,-5 pencere=25,35 baslangic=0,0 bitis=5,0",
+                          Origin::Test)
+            .ok());
+
+    const auto first  = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+    const auto second = f.doc.geometry().rings_of(f.doc.entities().slot[1]);
+    CHECK_EQ(f.doc.geometry().ring_xs(first.first)[1], 25'000);  ///< named, moved
+    CHECK_EQ(f.doc.geometry().ring_xs(second.first)[1], 20'000); ///< not named, stayed
+}
+
+TEST_CASE("kilitli katman üzerindeki nesneyi de korur")
+{
+    // THE DEFECT: the lock was checked on every `add_*` and on nothing else. A
+    // locked layer stopped a user DRAWING a new parcel on it and let TAŞI,
+    // KÖŞETAŞI, ESNET, DÖNDÜR, ÖLÇEKLE and SİL reshape or erase every parcel
+    // already there. In a cadastral drawing that is exactly the wrong way round —
+    // what is on the sheet is what a lock is for.
+    //
+    // The contract asserted here is this codebase's own: a command that cannot do
+    // the work SAYS SO in the user's language and changes nothing. It is not a
+    // dispatch error, because a refusal explained in Turkish must not be doubled
+    // by a validator message addressed to a programmer (`Bus::finish`, the
+    // `declined` path).
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=TAPU", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN 0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KATMAN ad=TAPU kilitli=evet", Origin::Test).ok());
+
+    const std::uint64_t locked_state = f.doc.content_hash();
+    const std::size_t depth          = f.undo.undo_depth();
+
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+
+    for (const char* line :
+         {"TAŞI nesneler=1 baslangic=0,0 bitis=5,0", "KÖŞETAŞI nesne=1 kose=1 nokta=1,1",
+          "ESNET nesneler=1 pencere=-5,-5 pencere=15,15 baslangic=0,0 bitis=5,0", "SİL nesneler=1",
+          "DÖNDÜR nesneler=1 merkez=0,0 aci=50", "ÖLÇEKLE nesneler=1 merkez=0,0 carpan=2",
+          "PATLAT nesne=1"}) {
+        said.clear();
+        const auto r             = f.bus.execute_line(line, Origin::Test);
+        const std::string reason = r.ok() ? said : said + r.error().message;
+        CHECK_MESSAGE(reason.find("kilitli") != std::string::npos, reason);
+        // AND NOTHING HALF-APPLIED, which is Article 1.6 over every one of them.
+        CHECK_MESSAGE(f.doc.content_hash() == locked_state, line);
+        CHECK_MESSAGE(f.undo.undo_depth() == depth, line);
+    }
+
+    // AND THE UNDO STACK IS NOT TRAPPED. `Document::restore_geometry` and
+    // `set_entity_alive` are unguarded on purpose, so the edits made before the
+    // lock still undo — otherwise locking a layer would freeze history.
+    f.bus.on_echo = nullptr;
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok()); ///< the lock itself
+    REQUIRE(f.bus.execute_line("GERİAL", Origin::Test).ok()); ///< the ALAN
+    CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+}
+
+TEST_CASE("kilidi açılınca düzenleme yeniden çalışır")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=TAPU", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN 0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("KATMAN ad=TAPU kilitli=evet", Origin::Test).ok());
+
+    const std::uint64_t locked_state = f.doc.content_hash();
+    REQUIRE(f.bus.execute_line("TAŞI nesneler=1 baslangic=0,0 bitis=5,0", Origin::Test).ok());
+    CHECK_EQ(f.doc.content_hash(), locked_state); ///< said no, did nothing
+
+    // The refusal names the way to lift it, and what it names has to work.
+    REQUIRE(f.bus.execute_line("KATMAN ad=TAPU kilitli=hayır", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("TAŞI nesneler=1 baslangic=0,0 bitis=5,0", Origin::Test).ok());
+    CHECK(f.doc.content_hash() != locked_state);
 }

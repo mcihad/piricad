@@ -729,6 +729,7 @@ private:
     QAction* actCoordinate_{nullptr};
     QAction* actEntityInfo_{nullptr};   ///< NESNEBİLGİ — what is this
     QAction* actMeasureAngle_{nullptr}; ///< AÇIÖLÇ — the angle at this corner
+    QAction* actStretch_{nullptr};      ///< ESNET — the window is the vertex filter
     QAction* actStyleCopy_{nullptr};
     QAction* actTopology_{nullptr};
     QAction* actLine_{nullptr};
