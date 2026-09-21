@@ -111,8 +111,8 @@ kapsam 0 -48000 485370150 4310250400
 icerik-ozeti 5ceb44ba0fc9b806
 gunluk
   {"seq":1,"cmd":"core.layer","args":{"ad":"NİRENGİ","renk":4284310640},"origin":"test","crs":"TUREF/TM36","katman":"NİRENGİ"}
-  {"seq":2,"cmd":"core.point_draw","args":{"noktalar":[485320150,4310220400]},"origin":"test","crs":"TUREF/TM36","katman":"NİRENGİ"}
-  {"seq":3,"cmd":"core.point_draw","args":{"noktalar":[485370150,4310250400]},"origin":"test","crs":"TUREF/TM36","katman":"NİRENGİ"}
+  {"seq":2,"cmd":"core.point_draw","args":{"noktalar":[[485320150,4310220400]]},"origin":"test","crs":"TUREF/TM36","katman":"NİRENGİ"}
+  {"seq":3,"cmd":"core.point_draw","args":{"noktalar":[[485370150,4310250400]]},"origin":"test","crs":"TUREF/TM36","katman":"NİRENGİ"}
   {"seq":4,"cmd":"core.column","args":{"kimlik":"nokta_no","tur":"metin","ad":"nokta no"},"origin":"test","crs":"TUREF/TM36","katman":"NİRENGİ"}
   {"seq":5,"cmd":"core.attribute","args":{"ad":"nokta_no","nesne":1,"deger":"1284"},"origin":"test","crs":"TUREF/TM36","katman":"NİRENGİ"}
   {"seq":6,"cmd":"core.attribute","args":{"ad":"nokta_no","nesne":2,"deger":"1285"},"origin":"test","crs":"TUREF/TM36","katman":"NİRENGİ"}
