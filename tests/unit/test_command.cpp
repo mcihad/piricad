@@ -1005,6 +1005,385 @@ TEST_CASE("ALIM: kapalı bir çokgen okunup birleştirilir")
     CHECK_EQ(f.undo.undo_depth(), std::size_t{1});
 }
 
+TEST_CASE("ELİPS: eksen yöntemi merkezi iki ucun ortası alır")
+{
+    // The same ellipse two ways: centred on (50,0) with a 50 m half-axis east,
+    // and given as the two ends (0,0) and (100,0). Identical drawings, because
+    // the centre of the second IS the midpoint of its two ends.
+    Fixture by_centre;
+    REQUIRE(by_centre.bus.execute_line("ELİPS 50,0 100,0 50,20", Origin::CommandLine).ok());
+
+    Fixture by_axis;
+    REQUIRE(by_axis.bus
+                .execute_line("ELİPS yontem=eksen birinci=0,0 ikinci_uc=100,0 ikinci=50,20",
+                              Origin::CommandLine)
+                .ok());
+
+    CHECK_EQ(by_centre.doc.content_hash(), by_axis.doc.content_hash());
+
+    const core::Box2 box = by_axis.doc.entities().box_of(0);
+    CHECK_EQ(box.min_x, 0);
+    CHECK_EQ(box.max_x, 100'000);
+    CHECK_EQ(box.min_y, -20'000);
+    CHECK_EQ(box.max_y, 20'000);
+
+    // Two identical ends are no axis at all.
+    Fixture f;
+    const auto refused = f.bus.execute_line(
+        "ELİPS yontem=eksen birinci=0,0 ikinci_uc=0,0 ikinci=50,20", Origin::CommandLine);
+    CHECK_FALSE(refused.ok());
+    CHECK(refused.error().message.find("aynı nokta") != std::string::npos);
+}
+
+TEST_CASE("YAY: dört yöntem, bilinen bir çeyrek çemberden")
+{
+    // A quarter circle of radius 50 m about the origin, from due east to due
+    // north. Every method has to produce the same arc, and the bounding box is
+    // the check: a quarter in the first quadrant spans 0..50 on both axes.
+    const auto quarter = [](Fixture& f) {
+        const core::Box2 box = f.doc.entities().box_of(0);
+        CHECK_EQ(box.min_x, 0);
+        CHECK_EQ(box.max_x, 50'000);
+        CHECK_EQ(box.min_y, 0);
+        CHECK_EQ(box.max_y, 50'000);
+    };
+
+    {
+        // merkez: the default and the one the others are measured against.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("YAY 0,0 50,0 0,50", Origin::CommandLine).ok());
+        quarter(f);
+    }
+    {
+        // 3n: the two ends and a point on the sweep. 35.3553 m on both axes is
+        // the 45° point of a 50 m circle.
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("YAY yontem=3n baslangic=50,0 uzerinden=35.3553,35.3553 "
+                                  "bitis=0,50",
+                                  Origin::CommandLine)
+                    .ok());
+        quarter(f);
+    }
+    {
+        // bma: start, centre and a swept angle. A quarter turn is 100 grad, and
+        // under the default semt rule the sweep is counted the way the session
+        // reads every other angle.
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("YAY merkez=0,0 baslangic=0,50 yontem=bma supurme=100",
+                                  Origin::CommandLine)
+                    .ok());
+        quarter(f);
+    }
+    {
+        // bby: THE TWO ENDS AND A RADIUS, and the two solutions are the two
+        // semicircles on (0,0)–(100,0) when the radius is exactly half the span.
+        // One arches north and one south, which is a difference nothing can
+        // round away — and it is the difference a fillet on the wrong side of a
+        // kerb would be.
+        Fixture north;
+        REQUIRE(north.bus
+                    .execute_line("YAY yontem=bby baslangic=0,0 bitis=100,0 yaricap=50 yon=sag",
+                                  Origin::CommandLine)
+                    .ok());
+        const core::Box2 up = north.doc.entities().box_of(0);
+        CHECK_EQ(up.min_y, 0);
+        CHECK_EQ(up.max_y, 50'000);
+
+        Fixture south;
+        REQUIRE(south.bus
+                    .execute_line("YAY yontem=bby baslangic=0,0 bitis=100,0 yaricap=50 yon=sol",
+                                  Origin::CommandLine)
+                    .ok());
+        const core::Box2 down = south.doc.entities().box_of(0);
+        CHECK_EQ(down.min_y, -50'000);
+        CHECK_EQ(down.max_y, 0);
+
+        // AND THEY ARE NOT THE SAME DRAWING. Without this the two could be one
+        // arc reported twice.
+        CHECK(north.doc.content_hash() != south.doc.content_hash());
+    }
+    {
+        // A NEGATIVE SWEEP TURNS THE OTHER WAY, and it must not be folded into
+        // one turn: −100 grad is a quarter counter-clockwise, not 300 grad
+        // clockwise. From due north that lands in the SECOND quadrant.
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("YAY merkez=0,0 baslangic=0,50 yontem=bma supurme=-100",
+                                  Origin::CommandLine)
+                    .ok());
+        const core::Box2 box = f.doc.entities().box_of(0);
+        CHECK_EQ(box.min_x, -50'000);
+        CHECK_EQ(box.max_x, 0);
+        CHECK_EQ(box.min_y, 0);
+        CHECK_EQ(box.max_y, 50'000);
+    }
+    {
+        // A radius smaller than half the span joins nothing, and a sweep of zero
+        // is an arc that is a point. Both are refused with the reason.
+        Fixture f;
+        const auto too_small = f.bus.execute_line(
+            "YAY yontem=bby baslangic=0,0 bitis=100,0 yaricap=10", Origin::CommandLine);
+        CHECK_FALSE(too_small.ok());
+        CHECK(too_small.error().message.find("yarısından küçük") != std::string::npos);
+
+        const auto no_sweep = f.bus.execute_line(
+            "YAY merkez=0,0 baslangic=0,50 yontem=bma supurme=0", Origin::CommandLine);
+        CHECK_FALSE(no_sweep.ok());
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+    }
+    {
+        // 3n refuses three collinear points.
+        Fixture f;
+        const auto refused = f.bus.execute_line(
+            "YAY yontem=3n baslangic=0,0 uzerinden=50,0 bitis=100,0", Origin::CommandLine);
+        CHECK_FALSE(refused.ok());
+        CHECK(refused.error().message.find("aynı doğru") != std::string::npos);
+    }
+}
+
+TEST_CASE("DİKDÖRTGEN 3n: döndürülmüş, ve üçüncü nokta yalnız yüksekliği verir")
+{
+    {
+        // A wall along a road that runs north-east: two corners of the wall and
+        // a point off it. The result is a RECTANGLE — the third point is
+        // projected onto the edge's normal, so a hand a few millimetres off
+        // still gets four right angles rather than a parallelogram.
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("DİKDÖRTGEN yontem=3n noktalar=0,0 noktalar=100,0 "
+                                  "noktalar=100,40",
+                                  Origin::CommandLine)
+                    .ok());
+        REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{1});
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        const auto xs   = f.doc.geometry().ring_xs(span.first);
+        const auto ys   = f.doc.geometry().ring_ys(span.first);
+        REQUIRE_EQ(xs.size(), std::size_t{4});
+        CHECK_EQ((core::Point2{xs[0], ys[0]}), (core::Point2{0, 0}));
+        CHECK_EQ((core::Point2{xs[1], ys[1]}), (core::Point2{100'000, 0}));
+        CHECK_EQ((core::Point2{xs[2], ys[2]}), (core::Point2{100'000, 40'000}));
+        CHECK_EQ((core::Point2{xs[3], ys[3]}), (core::Point2{0, 40'000}));
+    }
+    {
+        // THE THIRD POINT NEED NOT BE A CORNER. Given 60 m along the edge and
+        // 40 m off it, the depth is 40 and the along-component is discarded —
+        // that is what makes this a rectangle tool rather than a parallelogram
+        // tool.
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("DİKDÖRTGEN yontem=3n noktalar=0,0 noktalar=100,0 "
+                                  "noktalar=60,40",
+                                  Origin::CommandLine)
+                    .ok());
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        const auto xs   = f.doc.geometry().ring_xs(span.first);
+        const auto ys   = f.doc.geometry().ring_ys(span.first);
+        CHECK_EQ((core::Point2{xs[2], ys[2]}), (core::Point2{100'000, 40'000}));
+        CHECK_EQ((core::Point2{xs[3], ys[3]}), (core::Point2{0, 40'000}));
+    }
+    {
+        // A SKEW EDGE, which is the whole reason this method exists: a 3-4-5
+        // edge from (0,0) to (30,40) is 50 m long, and a depth of 10 m off it
+        // lands on exact millimetres because the normal is (-0.8, 0.6).
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("DİKDÖRTGEN yontem=3n noktalar=0,0 noktalar=30,40 "
+                                  "noktalar=22,46",
+                                  Origin::CommandLine)
+                    .ok());
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        const auto xs   = f.doc.geometry().ring_xs(span.first);
+        const auto ys   = f.doc.geometry().ring_ys(span.first);
+        CHECK_EQ((core::Point2{xs[3], ys[3]}), (core::Point2{-8'000, 6'000}));
+        CHECK_EQ((core::Point2{xs[2], ys[2]}), (core::Point2{22'000, 46'000}));
+    }
+    {
+        // A third point ON the edge has no height and is refused.
+        Fixture f;
+        const auto refused = f.bus.execute_line(
+            "DİKDÖRTGEN yontem=3n noktalar=0,0 noktalar=100,0 noktalar=50,0", Origin::CommandLine);
+        CHECK_FALSE(refused.ok());
+        CHECK(refused.error().message.find("kenarın üzerinde") != std::string::npos);
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+    }
+    {
+        // AND THE OLD FORM IS UNTOUCHED. Every page, script and journal writes
+        // two corners with no method, and that still means an axis-aligned box.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("DİKDÖRTGEN 0,0 100,40", Origin::CommandLine).ok());
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        CHECK_EQ(f.doc.geometry().ring_xs(span.first).size(), std::size_t{4});
+    }
+}
+
+TEST_CASE("ÇOKGEN: kare, altıgen ve üç yöntem")
+{
+    {
+        // A SQUARE AT 0°, which is the case where every corner is exactly on a
+        // millimetre: the four axes are integer-exact in `sin_cos_udeg`, so an
+        // inscribed square of radius 50 m has its corners at ±50 m on the axes
+        // and nothing rounds.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇOKGEN 0,0 4 yaricap=50", Origin::CommandLine).ok());
+        REQUIRE_EQ(f.doc.live_entity_count(), std::size_t{1});
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        const auto xs   = f.doc.geometry().ring_xs(span.first);
+        const auto ys   = f.doc.geometry().ring_ys(span.first);
+        REQUIRE_EQ(xs.size(), std::size_t{4});
+        // Under the default semt rule the first corner is due north and the ring
+        // winds the one way the model stores.
+        CHECK_EQ((core::Point2{xs[0], ys[0]}), (core::Point2{0, 50'000}));
+        CHECK_EQ((core::Point2{xs[1], ys[1]}), (core::Point2{-50'000, 0}));
+        CHECK_EQ((core::Point2{xs[2], ys[2]}), (core::Point2{0, -50'000}));
+        CHECK_EQ((core::Point2{xs[3], ys[3]}), (core::Point2{50'000, 0}));
+    }
+    {
+        // A HEXAGON'S SIDE EQUALS ITS CIRCUMRADIUS, which is the one identity a
+        // regular polygon has that can be checked without trigonometry: an
+        // inscribed hexagon of radius 10 m and a `kenar` hexagon of side 10 m are
+        // the same hexagon.
+        Fixture inscribed;
+        REQUIRE(inscribed.bus.execute_line("ÇOKGEN 0,0 6 yaricap=10", Origin::CommandLine).ok());
+        Fixture by_side;
+        REQUIRE(
+            by_side.bus
+                .execute_line("ÇOKGEN 0,0 6 yontem=kenar kenar_uzunlugu=10", Origin::CommandLine)
+                .ok());
+        CHECK_EQ(inscribed.doc.content_hash(), by_side.doc.content_hash());
+    }
+    {
+        // CIRCUMSCRIBED IS BIGGER, by 1/cos(π/n). For a square that is √2, so a
+        // `dis` square of radius 50 m reaches 70.711 m to its corners.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇOKGEN 0,0 4 yontem=dis yaricap=50", Origin::CommandLine).ok());
+        const core::Box2 box = f.doc.entities().box_of(0);
+        CHECK(box.max_y > 70'710);
+        CHECK(box.max_y < 70'712);
+    }
+    {
+        // THE ANGLE TURNS IT. A square started at 50 grad has its first corner
+        // north-east, so the bounding box is the axis-aligned one.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇOKGEN 0,0 4 yaricap=50 aci=50", Origin::CommandLine).ok());
+        const core::Box2 box = f.doc.entities().box_of(0);
+        CHECK(box.max_x > 35'354);
+        CHECK(box.max_x < 35'356);
+    }
+    {
+        // Out of range is refused by the declared range, before the body runs.
+        Fixture f;
+        CHECK_FALSE(f.bus.execute_line("ÇOKGEN 0,0 2 yaricap=50", Origin::CommandLine).ok());
+        CHECK_FALSE(f.bus.execute_line("ÇOKGEN 0,0 4 yaricap=0", Origin::CommandLine).ok());
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+    }
+}
+
+TEST_CASE("DAİRE: dört yöntem, bilinen bir çemberden")
+{
+    // A circle of radius 50 m centred on (50, 50). Every method has to find the
+    // same circle, and the radius is checked through ALANÖLÇ rather than by
+    // reading the payload: what a user gets is the area and the perimeter, and
+    // those are the numbers that reach the tapu (§12).
+    const auto radius_of = [](Fixture& f) {
+        const auto span = f.doc.geometry().rings_of(f.doc.entities().slot[0]);
+        (void)span;
+        return f.doc.entities().box_of(0);
+    };
+
+    {
+        // merkez: the default, and the one the other three are measured against.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("DAİRE 50,50 100,50", Origin::CommandLine).ok());
+        const core::Box2 box = radius_of(f);
+        CHECK_EQ(box.min_x, 0);
+        CHECK_EQ(box.max_x, 100'000);
+        CHECK_EQ(box.min_y, 0);
+        CHECK_EQ(box.max_y, 100'000);
+    }
+    {
+        // 2n: the two ends of a diameter. The centre is their midpoint.
+        Fixture f;
+        REQUIRE(
+            f.bus.execute_line("DAİRE yontem=2n birinci=0,50 ikinci=100,50", Origin::CommandLine)
+                .ok());
+        const core::Box2 box = radius_of(f);
+        CHECK_EQ(box.min_x, 0);
+        CHECK_EQ(box.max_x, 100'000);
+        CHECK_EQ(box.min_y, 0);
+        CHECK_EQ(box.max_y, 100'000);
+    }
+    {
+        // 3n: three points on the rim — the top, the right and the bottom of the
+        // same circle, which is how a measured kerb is recovered.
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line("DAİRE yontem=3n birinci=50,100 ikinci=100,50 ucuncu=50,0",
+                                  Origin::CommandLine)
+                    .ok());
+        const core::Box2 box = radius_of(f);
+        CHECK_EQ(box.min_x, 0);
+        CHECK_EQ(box.max_x, 100'000);
+        CHECK_EQ(box.min_y, 0);
+        CHECK_EQ(box.max_y, 100'000);
+    }
+    {
+        // 3n refuses three collinear points: they have no circumcircle, and
+        // answering with the largest circle that fits in an int64 would be a
+        // wrong answer dressed as an answer.
+        Fixture f;
+        const auto refused = f.bus.execute_line(
+            "DAİRE yontem=3n birinci=0,0 ikinci=50,0 ucuncu=100,0", Origin::CommandLine);
+        CHECK_FALSE(refused.ok());
+        CHECK(refused.error().message.find("aynı doğru") != std::string::npos);
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{0});
+    }
+}
+
+TEST_CASE("DAİRE ttr: dört çözümden işaret edilen köşe alınır")
+{
+    // Two lines crossing at the origin — one along east, one along north — and a
+    // fillet of radius 10 m. There are FOUR circles of that radius tangent to
+    // both, one per quadrant, and which is wanted is not in the numbers. The
+    // pointed-at corner decides, and a silent pick would put the fillet on the
+    // wrong corner of the junction.
+    struct Want
+    {
+        const char* at;    ///< the corner pointed at
+        core::Mm centre_x; ///< the centre that must come out
+        core::Mm centre_y;
+    };
+
+    const Want wanted[4]{{"50,50", 10'000, 10'000},
+                         {"-50,50", -10'000, 10'000},
+                         {"-50,-50", -10'000, -10'000},
+                         {"50,-50", 10'000, -10'000}};
+
+    for (const Want& one : wanted) {
+        Fixture f;
+        REQUIRE(f.bus
+                    .execute_line(std::string("DAİRE yontem=ttr birinci=-100,0 ikinci=100,0 "
+                                              "ucuncu=0,-100 dorduncu=0,100 yaricap=10 yon=") +
+                                      one.at,
+                                  Origin::CommandLine)
+                    .ok());
+        const core::Box2 box = f.doc.entities().box_of(0);
+        CHECK_EQ((box.min_x + box.max_x) / 2, one.centre_x);
+        CHECK_EQ((box.min_y + box.max_y) / 2, one.centre_y);
+        CHECK_EQ((box.max_x - box.min_x) / 2, 10'000);
+    }
+
+    // Parallel lines have no tangent circle of a given radius, and the refusal
+    // says which of the two things went wrong.
+    Fixture f;
+    const auto refused = f.bus.execute_line("DAİRE yontem=ttr birinci=0,0 ikinci=100,0 ucuncu=0,50 "
+                                            "dorduncu=100,50 yaricap=10 yon=50,25",
+                                            Origin::CommandLine);
+    CHECK_FALSE(refused.ok());
+    CHECK(refused.error().message.find("paralel") != std::string::npos);
+}
+
 TEST_CASE("KESİŞİMNOKTA: üç yöntem, bilinen bir kareden")
 {
     // A 100 m square with corners at (0,0), (100,0), (100,100) and (0,100). Its
@@ -4616,8 +4995,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     Fixture f;
     // 59 + SPLINE, TARAMA, BLOK, BLOKEKLE, ÖLÇÜ, LİDER + YAZDIR, YAZDIRMAPROFİLİ
     // + KATMANGÖRÜNÜM + ÇIKTIYERLEŞİMİ, ÇIKTIÖĞE, ÇIKTIŞABLON + YENİ
-    // + DİKAYAK, ALIM, KESİŞİMNOKTA, ARANOKTA
-    CHECK_EQ(f.reg.size(), std::size_t{76});
+    // + DİKAYAK, ALIM, KESİŞİMNOKTA, ARANOKTA, ÇOKGEN
+    CHECK_EQ(f.reg.size(), std::size_t{77});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())

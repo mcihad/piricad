@@ -713,6 +713,7 @@ private:
     /// draws, with the phase named in each tooltip rather than silently absent.
     QAction* actSelectArea_{nullptr};
     QAction* actPolygon_{nullptr};
+    QAction* actRegular_{nullptr};
     QAction* actTrim_{nullptr};
     QAction* actCombine_{nullptr};     ///< BİRLEŞTİR — generic; on the tool column
     QAction* actUnion_{nullptr};       ///< TEVHİT — cadastral; Kadastro menu

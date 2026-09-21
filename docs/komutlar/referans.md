@@ -17,13 +17,14 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.survey_polar`](survey_polar.md) | Alım | `ALIM`, `SURVEY`, `ALM` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İstasyondan okunan açı ve kenarlardan nokta hesaplar ve yerleştirir. |
 | [`core.intersect_point`](intersect_point.md) | Kesişim Noktası | `KESİŞİMNOKTA`, `KESISIMNOKTA`, `INTERSECTPT`, `KSN` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki doğrultunun, iki uzaklığın ya da iki doğrunun kesişimine nokta koyar. |
 | [`core.point_along`](point_along.md) | Ara Nokta | `ARANOKTA`, `POINTALONG`, `ARN` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | İki nokta arasındaki doğru üzerinde oran, uzaklık ya da eşit bölmeyle nokta koyar. |
+| [`core.polygon_regular`](polygon_regular.md) | Düzgün Çokgen | `ÇOKGEN`, `COKGEN`, `POLYGONREG`, `ÇKG`, `CKG` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve kenar sayısından düzgün çokgen çizer: içten, dıştan ya da kenar uzunluğundan. |
 | [`core.text`](text.md) | Metin | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
 | [`core.edittext`](edittext.md) | Yazıyı Düzenle | `YAZIDÜZENLE`, `YAZIDUZENLE`, `EDITTEXT`, `YZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir. |
 | [`core.exportstyle`](exportstyle.md) | Stil Aktar | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
 | [`core.area`](area.md) | Alan | `ALAN`, `AREA`, `AL` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Kapalı bir alan çizer; istenirse içine delik açar. |
-| [`core.rectangle`](rectangle.md) | Dikdörtgen | `DİKDÖRTGEN`, `DIKDORTGEN`, `RECTANGLE`, `DKD`, `REC` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer. |
-| [`core.circle_draw`](circle_draw.md) | Daire | `DAİRE`, `DAIRE`, `CIRCLE`, `DR` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve çember üzerindeki bir noktadan daire çizer. |
-| [`core.arc_draw`](arc_draw.md) | Yay | `YAY`, `ARC`, `YY` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir. |
+| [`core.rectangle`](rectangle.md) | Dikdörtgen | `DİKDÖRTGEN`, `DIKDORTGEN`, `RECTANGLE`, `DKD`, `REC` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer. |
+| [`core.circle_draw`](circle_draw.md) | Daire | `DAİRE`, `DAIRE`, `CIRCLE`, `DR` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez+çevre, çapın iki ucu, çember üzerinde üç nokta ya da iki doğruya teğet yarıçapla daire çizer. |
+| [`core.arc_draw`](arc_draw.md) | Yay | `YAY`, `ARC`, `YY` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Merkez+iki uç, yay üzerinde üç nokta, başlangıç+merkez+süpürme ya da başlangıç+bitiş+yarıçapla yay çizer. |
 | [`core.vertex_move`](vertex_move.md) | Köşe Taşı | `KÖŞETAŞI`, `KOSETASI`, `MOVEVERTEX`, `KT` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesnenin köşesini ya da tutamağını yeni bir yere taşır. |
 | [`core.vertex_insert`](vertex_insert.md) | Köşe Ekle | `KÖŞEEKLE`, `KOSEEKLE`, `ADDVERTEX`, `KE` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir kenarın ortasına yeni köşe ekler. |
 | [`core.to_area`](to_area.md) | Alana Çevir | `ALANAÇEVİR`, `ALANACEVIR`, `TOAREA`, `ALÇ` | Düzenleme | tek işlem | betiklenebilir, AI erişimli | Uç uca değen çizgileri tek bir kapalı alana çevirir. |
@@ -207,6 +208,21 @@ Ayrıntılı kullanım: [KESİŞİMNOKTA](intersect_point.md)
 
 Ayrıntılı kullanım: [ARANOKTA](point_along.md)
 
+### `core.polygon_regular` — ÇOKGEN (Düzgün Çokgen)
+
+Merkez ve kenar sayısından düzgün çokgen çizer: içten, dıştan ya da kenar uzunluğundan.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `merkez` | point | 1 | Çokgenin merkezi |
+| `kenar_sayisi` | integer | 1 | Kenar sayısı |
+| `yontem` | text | isteğe bağlı | ic: köşeler çemberin üzerinde · dis: kenarlar çembere teğet · kenar: kenar uzunluğundan |
+| `yaricap` | number | isteğe bağlı | ic/dis yönteminin yarıçapı (m) |
+| `kenar_uzunlugu` | number | isteğe bağlı | kenar yönteminin uzunluğu (m) |
+| `aci` | number | isteğe bağlı | İlk köşenin merkeze göre doğrultusu; varsayılan 0 |
+
+Ayrıntılı kullanım: [ÇOKGEN](polygon_regular.md)
+
 ### `core.text` — METİN (Metin)
 
 Çizime metin yazar; yükseklik ve hizalama verilebilir.
@@ -258,34 +274,47 @@ Ayrıntılı kullanım: [ALAN](area.md)
 
 ### `core.rectangle` — DİKDÖRTGEN (Dikdörtgen)
 
-Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer.
+Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `noktalar` | point_list | 2 | Karşılıklı iki köşe; kalan ikisi bunlardan türetilir |
+| `noktalar` | point_list | 2–3 | 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta |
+| `yontem` | text | isteğe bağlı | 2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş |
 
 Ayrıntılı kullanım: [DİKDÖRTGEN](rectangle.md)
 
 ### `core.circle_draw` — DAİRE (Daire)
 
-Merkez ve çember üzerindeki bir noktadan daire çizer.
+Merkez+çevre, çapın iki ucu, çember üzerinde üç nokta ya da iki doğruya teğet yarıçapla daire çizer.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `merkez` | point | 1 | Dairenin merkezi |
-| `cevre` | point | 1 | Çember üzerinde bir nokta; yarıçapı bu belirler |
+| `merkez` | point_list | isteğe bağlı | Dairenin merkezi |
+| `cevre` | point_list | isteğe bağlı | Çember üzerinde bir nokta; yarıçapı bu belirler |
+| `yontem` | text | isteğe bağlı | merkez: merkez + çevre · 2n: çapın iki ucu · 3n: çember üzerinde üç nokta · ttr: iki doğruya teğet, verilen yarıçapla |
+| `birinci` | point_list | isteğe bağlı | 2n: çapın bir ucu · 3n: birinci nokta · ttr: birinci doğrunun ilk noktası |
+| `ikinci` | point_list | isteğe bağlı | İkinci nokta |
+| `ucuncu` | point_list | isteğe bağlı | 3n: üçüncü nokta · ttr: ikinci doğrunun ilk noktası |
+| `dorduncu` | point_list | isteğe bağlı | ttr: ikinci doğrunun ikinci noktası |
+| `yaricap` | number | isteğe bağlı | ttr: teğet dairenin yarıçapı (m) |
+| `yon` | point_list | isteğe bağlı | ttr: dairenin geleceği köşe; dört çözümden en yakını alınır |
 
 Ayrıntılı kullanım: [DAİRE](circle_draw.md)
 
 ### `core.arc_draw` — YAY (Yay)
 
-Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir.
+Merkez+iki uç, yay üzerinde üç nokta, başlangıç+merkez+süpürme ya da başlangıç+bitiş+yarıçapla yay çizer.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `merkez` | point | 1 | Yayın merkezi |
-| `baslangic` | point | 1 | Yayın başlangıç noktası; yarıçapı bu belirler |
-| `bitis` | point | 1 | Yayın bitiş yönü; süpürme saat yönünün tersinedir |
+| `merkez` | point_list | isteğe bağlı | Yayın merkezi |
+| `baslangic` | point_list | isteğe bağlı | Yayın başlangıç noktası; merkez yönteminde yarıçapı bu belirler |
+| `bitis` | point_list | isteğe bağlı | Yayın bitiş noktası; süpürme saat yönünün tersinedir |
+| `yontem` | text | isteğe bağlı | merkez: merkez + iki uç · 3n: yay üzerinde üç nokta · bma: başlangıç, merkez ve süpürme açısı · bby: başlangıç, bitiş ve yarıçap |
+| `uzerinden` | point_list | isteğe bağlı | 3n: yayın üzerinden geçtiği nokta |
+| `supurme` | number | isteğe bağlı | bma: süpürme açısı |
+| `yaricap` | number | isteğe bağlı | bby: yarıçap (m) |
+| `yon` | text | isteğe bağlı | bby: yayın hangi tarafa kavis yaptığı; başlangıç→bitiş yönüne göre |
 
 Ayrıntılı kullanım: [YAY](arc_draw.md)
 
@@ -578,9 +607,11 @@ Merkez ve iki eksenden elips çizer; ikinci eksen birincisine diktir.
 
 | Parametre | Tip | Adet | Açıklama |
 |---|---|---|---|
-| `merkez` | point | 1 | Elipsin merkezi |
-| `birinci` | point | 1 | Birinci eksenin ucu |
-| `ikinci` | point | 1 | İkinci eksenin uzaklığı; eksene dik ölçülür |
+| `merkez` | point_list | isteğe bağlı | Elipsin merkezi |
+| `birinci` | point_list | isteğe bağlı | merkez: birinci eksenin ucu · eksen: birinci eksenin bir ucu |
+| `ikinci` | point_list | isteğe bağlı | İkinci eksenin uzaklığı; eksene dik ölçülür |
+| `yontem` | text | isteğe bağlı | merkez: merkez + eksen ucu · eksen: eksenin iki ucu |
+| `ikinci_uc` | point_list | isteğe bağlı | eksen: birinci eksenin öteki ucu |
 | `baslangic` | number | isteğe bağlı | Kısmi elips: başlangıç açısı, derece, birinci eksenden saat yönünün tersine |
 | `bitis` | number | isteğe bağlı | Kısmi elips: bitiş açısı, derece; baslangic ile birlikte |
 
@@ -1510,31 +1541,58 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_arc_draw",
     "title": "Yay",
-    "description": "Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir.\nKomut: YAY (ARC, YY)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "description": "Merkez+iki uç, yay üzerinde üç nokta, başlangıç+merkez+süpürme ya da başlangıç+bitiş+yarıçapla yay çizer.\nKomut: YAY (ARC, YY)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "merkez": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "Yayın merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "Yayın merkezi — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "baslangic": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "Yayın başlangıç noktası; yarıçapı bu belirler — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "Yayın başlangıç noktası; merkez yönteminde yarıçapı bu belirler — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "bitis": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "Yayın bitiş yönü; süpürme saat yönünün tersinedir — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "Yayın bitiş noktası; süpürme saat yönünün tersinedir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "yontem": {
+          "type": "string",
+          "enum": [
+            "merkez",
+            "3n",
+            "bma",
+            "bby"
+          ],
+          "description": "merkez: merkez + iki uç · 3n: yay üzerinde üç nokta · bma: başlangıç, merkez ve süpürme açısı · bby: başlangıç, bitiş ve yarıçap (metin)"
+        },
+        "uzerinden": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "3n: yayın üzerinden geçtiği nokta — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "supurme": {
+          "type": "number",
+          "description": "bma: süpürme açısı (sayı)"
+        },
+        "yaricap": {
+          "type": "number",
+          "description": "bby: yarıçap (m) [m] (sayı)"
+        },
+        "yon": {
+          "type": "string",
+          "enum": [
+            "sol",
+            "sag"
+          ],
+          "description": "bby: yayın hangi tarafa kavis yaptığı; başlangıç→bitiş yönüne göre (metin)"
         }
       },
-      "required": [
-        "merkez",
-        "baslangic",
-        "bitis"
-      ],
+      "required": [],
       "additionalProperties": false
     },
     "annotations": {
@@ -1804,25 +1862,61 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_circle_draw",
     "title": "Daire",
-    "description": "Merkez ve çember üzerindeki bir noktadan daire çizer.\nKomut: DAİRE (DAIRE, CIRCLE, DR)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "description": "Merkez+çevre, çapın iki ucu, çember üzerinde üç nokta ya da iki doğruya teğet yarıçapla daire çizer.\nKomut: DAİRE (DAIRE, CIRCLE, DR)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "merkez": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "Dairenin merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "Dairenin merkezi — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "cevre": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "Çember üzerinde bir nokta; yarıçapı bu belirler — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "Çember üzerinde bir nokta; yarıçapı bu belirler — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "yontem": {
+          "type": "string",
+          "enum": [
+            "merkez",
+            "2n",
+            "3n",
+            "ttr"
+          ],
+          "description": "merkez: merkez + çevre · 2n: çapın iki ucu · 3n: çember üzerinde üç nokta · ttr: iki doğruya teğet, verilen yarıçapla (metin)"
+        },
+        "birinci": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "2n: çapın bir ucu · 3n: birinci nokta · ttr: birinci doğrunun ilk noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "ikinci": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "İkinci nokta — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "ucuncu": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "3n: üçüncü nokta · ttr: ikinci doğrunun ilk noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "dorduncu": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "ttr: ikinci doğrunun ikinci noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "yaricap": {
+          "type": "number",
+          "description": "ttr: teğet dairenin yarıçapı (m) [m] (sayı)"
+        },
+        "yon": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "ttr: dairenin geleceği köşe; dört çözümden en yakını alınır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         }
       },
-      "required": [
-        "merkez",
-        "cevre"
-      ],
+      "required": [],
       "additionalProperties": false
     },
     "annotations": {
@@ -2184,17 +2278,30 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "merkez": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "Elipsin merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "Elipsin merkezi — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "birinci": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "Birinci eksenin ucu — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "merkez: birinci eksenin ucu · eksen: birinci eksenin bir ucu — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "ikinci": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "İkinci eksenin uzaklığı; eksene dik ölçülür — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "İkinci eksenin uzaklığı; eksene dik ölçülür — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "yontem": {
+          "type": "string",
+          "enum": [
+            "merkez",
+            "eksen"
+          ],
+          "description": "merkez: merkez + eksen ucu · eksen: eksenin iki ucu (metin)"
+        },
+        "ikinci_uc": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "eksen: birinci eksenin öteki ucu — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
         },
         "baslangic": {
           "type": "number",
@@ -2205,11 +2312,7 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
           "description": "Kısmi elips: bitiş açısı, derece; baslangic ile birlikte (sayı)"
         }
       },
-      "required": [
-        "merkez",
-        "birinci",
-        "ikinci"
-      ],
+      "required": [],
       "additionalProperties": false
     },
     "annotations": {
@@ -3792,6 +3895,71 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
     }
   },
   {
+    "name": "core_polygon_regular",
+    "title": "Düzgün Çokgen",
+    "description": "Merkez ve kenar sayısından düzgün çokgen çizer: içten, dıştan ya da kenar uzunluğundan.\nKomut: ÇOKGEN (COKGEN, POLYGONREG, ÇKG, CKG)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "merkez": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Çokgenin merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "kenar_sayisi": {
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 1024,
+          "description": "Kenar sayısı (tam sayı)"
+        },
+        "yontem": {
+          "type": "string",
+          "enum": [
+            "ic",
+            "dis",
+            "kenar"
+          ],
+          "description": "ic: köşeler çemberin üzerinde · dis: kenarlar çembere teğet · kenar: kenar uzunluğundan (metin)"
+        },
+        "yaricap": {
+          "type": "number",
+          "description": "ic/dis yönteminin yarıçapı (m) [m] (sayı)"
+        },
+        "kenar_uzunlugu": {
+          "type": "number",
+          "description": "kenar yönteminin uzunluğu (m) [m] (sayı)"
+        },
+        "aci": {
+          "type": "number",
+          "description": "İlk köşenin merkeze göre doğrultusu; varsayılan 0 (sayı)"
+        }
+      },
+      "required": [
+        "merkez",
+        "kenar_sayisi"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.polygon_regular",
+      "cad.kentos/category": "Çizim",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "ÇOKGEN",
+        "COKGEN",
+        "POLYGONREG",
+        "ÇKG",
+        "CKG"
+      ]
+    }
+  },
+  {
     "name": "core_polyline",
     "title": "Çoklu Çizgi",
     "description": "Birden çok noktadan TEK bir çizgi nesnesi çizer.\nKomut: ÇOKLUÇİZGİ (COKLUCIZGI, POLYLINE, ÇÇ, PL)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
@@ -3942,14 +4110,22 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
   {
     "name": "core_rectangle",
     "title": "Dikdörtgen",
-    "description": "Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer.\nKomut: DİKDÖRTGEN (DIKDORTGEN, RECTANGLE, DKD, REC)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "description": "Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer.\nKomut: DİKDÖRTGEN (DIKDORTGEN, RECTANGLE, DKD, REC)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "noktalar": {
           "type": "string",
           "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
-          "description": "Karşılıklı iki köşe; kalan ikisi bunlardan türetilir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+          "description": "2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "yontem": {
+          "type": "string",
+          "enum": [
+            "2n",
+            "3n"
+          ],
+          "description": "2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş (metin)"
         }
       },
       "required": [

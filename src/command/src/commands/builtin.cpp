@@ -18,6 +18,7 @@ namespace kentos::command {
     X(survey_polar)                                                                                \
     X(intersect_point)                                                                             \
     X(point_along)                                                                                 \
+    X(polygon_regular)                                                                             \
     X(text)                                                                                        \
     X(edittext)                                                                                    \
     X(exportstyle)                                                                                 \

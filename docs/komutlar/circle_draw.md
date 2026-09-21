@@ -55,12 +55,35 @@ Yarıçapı değiştirmek için bugün daireyi silip yeniden çizersiniz.
 | `DR` | Kısaltma |
 | `core.circle_draw` | Komut kimliği |
 
+## Dört yöntem
+
+Bir daire bir çizime dört şekilde gelir ve `yontem` hangisi olduğunu söyler:
+
+| `yontem` | Ne ister | Nerede kullanılır |
+|---|---|---|
+| `merkez` (varsayılan) | Merkez + çember üzerinde bir nokta | Günlük olan; çekme mesafesi, röper dairesi |
+| `2n` | Çapın iki ucu | Bir kapı boşluğu, bir boru, bir sondaj |
+| `3n` | Çember üzerinde üç nokta | Ölçülmüş bir kavisin geri kurulması: bordür, ada dönüşü, duvar kavsi |
+| `ttr` | İki doğru + yarıçap + gösterilen köşe | Yol kavşağının pahı |
+
+`3n` üç noktası aynı doğru üzerindeyse **reddeder**: bir doğrunun üzerindeki üç
+noktanın çevrel çemberi sonsuz yarıçaplıdır ve int64'e sığan en büyüğünü vermek
+yanlış bir cevabı cevap kılığına sokmak olur.
+
+`ttr`'nin **dört** çözümü vardır — iki doğrunun yaptığı her çeyrekte bir tane — ve
+hangisinin istendiği sayıların içinde yoktur. Kullanıcı köşeyi gösterir ve dörtten
+en yakını alınır; sessiz bir seçim pahı kavşağın yanlış köşesine koyardı.
+
+`3n`'in hesabı `YAY yontem=3n` ile paylaşılır (`core::circumcircle`), yani bir
+daire ile ondan kesilen yay birbirine uyar.
+
 ## Sözdizimi
 
 ```text
-DAİRE
 DAİRE <merkez> <cevre>
-DAİRE merkez=<n> cevre=<n>
+DAİRE yontem=2n birinci=<nokta> ikinci=<nokta>
+DAİRE yontem=3n birinci=<nokta> ikinci=<nokta> ucuncu=<nokta>
+DAİRE yontem=ttr birinci=<n> ikinci=<n> ucuncu=<n> dorduncu=<n> yaricap=<m> yon=<nokta>
 ```
 
 Nokta yazımı [`ÇİZGİ`](line.md) ile aynıdır: mutlak koordinat (`485320,4310220`),

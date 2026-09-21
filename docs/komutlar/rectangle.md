@@ -56,12 +56,24 @@ alan her komut — [`ÇİZGİ`](line.md), [`ALAN`](area.md) — aynı kilide uya
 | `REC` | Kısaltma |
 | `core.rectangle` | Komut kimliği |
 
+## İki yöntem
+
+| `yontem` | Ne ister | Sonuç |
+|---|---|---|
+| `2n` (varsayılan) | Karşılıklı iki köşe | Eksenlere paralel dikdörtgen |
+| `3n` | Bir kenarın iki köşesi + karşı kenarın geçtiği nokta | **Döndürülmüş** dikdörtgen |
+
+`3n`, ızgaraya paralel olmayan her yapı için: yolu doğu–batı gitmeyen bir ada,
+eğik bir sınırın üzerindeki bir duvar. Üçüncü nokta bir köşe **değildir**, yalnız
+**yüksekliği** verir: kenarın kendi normaline izdüşürülür, yani eli birkaç
+milimetre kayan bir kullanıcı paralelkenar değil dikdörtgen alır. Üçüncü nokta
+kenarın üzerindeyse yükseklik sıfırdır ve komut reddeder.
+
 ## Sözdizimi
 
 ```text
-DİKDÖRTGEN
 DİKDÖRTGEN <köşe> <karşı köşe>
-DİKDÖRTGEN noktalar=<köşe> noktalar=<karşı köşe>
+DİKDÖRTGEN yontem=3n noktalar=<n> noktalar=<n> noktalar=<n>
 ```
 
 Nokta yazımı [`ÇİZGİ`](line.md) ile aynıdır: mutlak koordinat

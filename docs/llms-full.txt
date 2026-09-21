@@ -41,8 +41,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 82 (74 tanesi onay ister)
-- Katalog parmak izi: `6365236564180452445`
+- Araç sayısı: 83 (75 tanesi onay ister)
+- Katalog parmak izi: `5456301814645417354`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -72,7 +72,7 @@ Onay ister.
 
 ### `core_arc_draw` — Yay
 
-Merkez ve iki uçtan yay çizer; süpürme saat yönünün tersinedir.
+Merkez+iki uç, yay üzerinde üç nokta, başlangıç+merkez+süpürme ya da başlangıç+bitiş+yarıçapla yay çizer.
 Komut: YAY (ARC, YY)
 Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
 
@@ -80,9 +80,14 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `merkez` | string | evet | Yayın merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `baslangic` | string | evet | Yayın başlangıç noktası; yarıçapı bu belirler — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `bitis` | string | evet | Yayın bitiş yönü; süpürme saat yönünün tersinedir — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `merkez` | string | hayır | Yayın merkezi — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `baslangic` | string | hayır | Yayın başlangıç noktası; merkez yönteminde yarıçapı bu belirler — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `bitis` | string | hayır | Yayın bitiş noktası; süpürme saat yönünün tersinedir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yontem` | string | hayır | merkez: merkez + iki uç · 3n: yay üzerinde üç nokta · bma: başlangıç, merkez ve süpürme açısı · bby: başlangıç, bitiş ve yarıçap (metin) |
+| `uzerinden` | string | hayır | 3n: yayın üzerinden geçtiği nokta — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `supurme` | number | hayır | bma: süpürme açısı (sayı) |
+| `yaricap` | number | hayır | bby: yarıçap (m) [m] (sayı) |
+| `yon` | string | hayır | bby: yayın hangi tarafa kavis yaptığı; başlangıç→bitiş yönüne göre (metin) |
 
 ### `core_area` — Alan
 
@@ -162,7 +167,7 @@ Onay ister.
 
 ### `core_circle_draw` — Daire
 
-Merkez ve çember üzerindeki bir noktadan daire çizer.
+Merkez+çevre, çapın iki ucu, çember üzerinde üç nokta ya da iki doğruya teğet yarıçapla daire çizer.
 Komut: DAİRE (DAIRE, CIRCLE, DR)
 Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
 
@@ -170,8 +175,15 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `merkez` | string | evet | Dairenin merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `cevre` | string | evet | Çember üzerinde bir nokta; yarıçapı bu belirler — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `merkez` | string | hayır | Dairenin merkezi — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `cevre` | string | hayır | Çember üzerinde bir nokta; yarıçapı bu belirler — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yontem` | string | hayır | merkez: merkez + çevre · 2n: çapın iki ucu · 3n: çember üzerinde üç nokta · ttr: iki doğruya teğet, verilen yarıçapla (metin) |
+| `birinci` | string | hayır | 2n: çapın bir ucu · 3n: birinci nokta · ttr: birinci doğrunun ilk noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `ikinci` | string | hayır | İkinci nokta — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `ucuncu` | string | hayır | 3n: üçüncü nokta · ttr: ikinci doğrunun ilk noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `dorduncu` | string | hayır | ttr: ikinci doğrunun ikinci noktası — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yaricap` | number | hayır | ttr: teğet dairenin yarıçapı (m) [m] (sayı) |
+| `yon` | string | hayır | ttr: dairenin geleceği köşe; dört çözümden en yakını alınır — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
 ### `core_combine` — Birleştir
 
@@ -291,9 +303,11 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `merkez` | string | evet | Elipsin merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `birinci` | string | evet | Birinci eksenin ucu — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
-| `ikinci` | string | evet | İkinci eksenin uzaklığı; eksene dik ölçülür — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `merkez` | string | hayır | Elipsin merkezi — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `birinci` | string | hayır | merkez: birinci eksenin ucu · eksen: birinci eksenin bir ucu — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `ikinci` | string | hayır | İkinci eksenin uzaklığı; eksene dik ölçülür — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yontem` | string | hayır | merkez: merkez + eksen ucu · eksen: eksenin iki ucu (metin) |
+| `ikinci_uc` | string | hayır | eksen: birinci eksenin öteki ucu — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `baslangic` | number | hayır | Kısmi elips: başlangıç açısı, derece, birinci eksenden saat yönünün tersine (sayı) |
 | `bitis` | number | hayır | Kısmi elips: bitiş açısı, derece; baslangic ile birlikte (sayı) |
 
@@ -749,6 +763,23 @@ Onay ister.
 | `nesneler` | string | hayır | yon=yaz ile: köşeleri yazılacak nesneler; verilmezse çizimdeki noktalar — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `eksen` | string | hayır | Sütun sırası: YX (varsayılan, Türkiye'de olağan) | XY (metin) |
 
+### `core_polygon_regular` — Düzgün Çokgen
+
+Merkez ve kenar sayısından düzgün çokgen çizer: içten, dıştan ya da kenar uzunluğundan.
+Komut: ÇOKGEN (COKGEN, POLYGONREG, ÇKG, CKG)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `merkez` | string | evet | Çokgenin merkezi — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `kenar_sayisi` | integer | evet | Kenar sayısı (tam sayı) |
+| `yontem` | string | hayır | ic: köşeler çemberin üzerinde · dis: kenarlar çembere teğet · kenar: kenar uzunluğundan (metin) |
+| `yaricap` | number | hayır | ic/dis yönteminin yarıçapı (m) [m] (sayı) |
+| `kenar_uzunlugu` | number | hayır | kenar yönteminin uzunluğu (m) [m] (sayı) |
+| `aci` | number | hayır | İlk köşenin merkeze göre doğrultusu; varsayılan 0 (sayı) |
+
 ### `core_polyline` — Çoklu Çizgi
 
 Birden çok noktadan TEK bir çizgi nesnesi çizer.
@@ -794,7 +825,7 @@ Onay ister.
 
 ### `core_rectangle` — Dikdörtgen
 
-Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer.
+Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı bir alan çizer.
 Komut: DİKDÖRTGEN (DIKDORTGEN, RECTANGLE, DKD, REC)
 Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
 
@@ -802,7 +833,8 @@ Onay ister.
 
 | Parametre | Tür | Zorunlu | Açıklama |
 |---|---|---|---|
-| `noktalar` | string | evet | Karşılıklı iki köşe; kalan ikisi bunlardan türetilir — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `noktalar` | string | evet | 2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı kenarın geçtiği nokta — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yontem` | string | hayır | 2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve yükseklik, döndürülmüş (metin) |
 
 ### `core_reproject` — Dönüştür
 

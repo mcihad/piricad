@@ -31,10 +31,23 @@ köşeler çıkar (§7.3).
 |---|---|---|---|
 | `ELİPS` | `ELIPS` | `ELLIPSE` | `EL` |
 
+## İki yöntem
+
+| `yontem` | Ne ister |
+|---|---|
+| `merkez` (varsayılan) | Merkez + birinci eksenin bir ucu + ikinci eksenin uzaklığı |
+| `eksen` | Birinci eksenin **iki ucu** + ikinci eksenin uzaklığı |
+
+`eksen`, merkezin değil uçların bilindiği hâl: bir şerit metrenin ulaştığı şey
+uçlardır ve AutoCAD'in kendi varsayılanı da budur. Merkez iki ucun ortasıdır,
+dolayısıyla aynı elipsi iki şekilde yazabilirsiniz ve ikisi bayt bayt aynı çizimi
+verir — `tests/unit/test_command.cpp` bunu sınar.
+
 ## Sözdizimi
 
 ```text
-ELİPS merkez=<sağa>,<yukarı> birinci=<sağa>,<yukarı> ikinci=<sağa>,<yukarı> [baslangic=<derece> bitis=<derece>]
+ELİPS <merkez> <birinci eksen ucu> <ikinci eksen uzaklığı>
+ELİPS yontem=eksen birinci=<uç> ikinci_uc=<uç> ikinci=<uzaklık>
 ```
 
 ## Parametreler

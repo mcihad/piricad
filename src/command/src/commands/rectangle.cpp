@@ -23,7 +23,10 @@
 #include "kentos_cad/command/spec.hpp"
 
 #include "kentos_cad/core/geometry.hpp"
+#include "kentos_cad/core/pick.hpp"
+#include "kentos_cad/core/text.hpp"
 
+#include <string>
 #include <vector>
 
 namespace kentos::command {
@@ -31,32 +34,82 @@ namespace {
 
 Task<void> run(Context& ctx)
 {
-    auto first = co_await ctx.point("noktalar", "Dikdörtgenin ilk köşesi");
+    // THREE POINTS INSTEAD OF TWO, when the building is not square to the grid.
+    // A cadastral sheet is full of them: a block along a road that does not run
+    // east–west, a wall on a skewed boundary. `yontem=3n` gives one EDGE and
+    // then a height, which is how such a shape is actually measured — two
+    // corners of the wall and the depth off it (TODOS-CAD P2-4).
+    std::string how = "2n";
+    if (const Value v = ctx.argument("yontem"); !v.empty()) how = v.as_text();
+    const bool by_edge = core::turkish_key_equals(how, "3n");
+
+    auto first = co_await ctx.point("noktalar",
+                                    by_edge ? "Bir kenarın ilk köşesi" : "Dikdörtgenin ilk köşesi");
     if (!first) co_return; // ESC before anything was drawn
 
     // The rubber band starts at the first corner, so the diagonal lock — and
     // ortho, and polar, and every object snap — measure from it exactly as they
     // do for a line. Nothing here is a private input path (kentoscad.md §2.4).
-    auto second = co_await ctx.point("noktalar", "Karşı köşe",
-                                     PointOptions{.rubber_band   = true,
-                                                  .rubber_origin = *first,
-                                                  .rubber_shape  = RubberShape::Rectangle});
+    auto second = co_await ctx.point(
+        "noktalar", by_edge ? "Aynı kenarın öteki köşesi" : "Karşı köşe",
+        PointOptions{.rubber_band   = true,
+                     .rubber_origin = *first,
+                     .rubber_shape  = by_edge ? RubberShape::Line : RubberShape::Rectangle});
     if (!second) co_return;
 
-    if (first->x == second->x || first->y == second->y) {
-        ctx.echo("Bu iki köşe bir alan kapatmaz: karşı köşenin hem doğusu hem kuzeyi "
-                 "ilkinden farklı olmalı.");
-        co_return;
-    }
+    std::vector<core::Point2> corners;
 
-    // Counter-clockwise from the first corner. The ring geometry closes it, so
-    // the fourth vertex is the last one written (R11).
-    const std::vector<core::Point2> corners{
-        core::Point2{first->x, first->y},
-        core::Point2{second->x, first->y},
-        core::Point2{second->x, second->y},
-        core::Point2{first->x, second->y},
-    };
+    if (by_edge) {
+        if (*first == *second) {
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         "Kenarın iki köşesi aynı nokta; bir kenar tanımlamıyor."));
+            co_return;
+        }
+        auto across = co_await ctx.point("noktalar", "Karşı kenarın geçtiği nokta",
+                                         PointOptions{.rubber_band   = true,
+                                                      .rubber_origin = *second,
+                                                      .rubber_shape  = RubberShape::Ring});
+        if (!across) co_return;
+
+        // THE THIRD POINT GIVES THE DEPTH, not a corner: it is projected onto
+        // the edge's own normal, so a hand that is a few millimetres off still
+        // gets a rectangle rather than a parallelogram. `closest_point_on_line`
+        // is what says how far off the edge it is.
+        core::Point2 foot{};
+        double t = 0.0;
+        if (!core::closest_point_on_line(*first, *second, *across, foot, t)) {
+            ctx.session().fail(
+                core::err(core::ErrorCode::InvalidArgument, "Kenar doğrultusu hesaplanamadı."));
+            co_return;
+        }
+        const core::Mm dx = across->x - foot.x;
+        const core::Mm dy = across->y - foot.y;
+        if (dx == 0 && dy == 0) {
+            ctx.session().fail(
+                core::err(core::ErrorCode::InvalidArgument,
+                          "Üçüncü nokta kenarın üzerinde; dikdörtgenin yüksekliği sıfır olamaz."));
+            co_return;
+        }
+
+        corners = {*first, *second, core::Point2{second->x + dx, second->y + dy},
+                   core::Point2{first->x + dx, first->y + dy}};
+        ctx.record("yontem", Value::text(how));
+    } else {
+        if (first->x == second->x || first->y == second->y) {
+            ctx.echo("Bu iki köşe bir alan kapatmaz: karşı köşenin hem doğusu hem kuzeyi "
+                     "ilkinden farklı olmalı.");
+            co_return;
+        }
+
+        // Counter-clockwise from the first corner. The ring geometry closes it,
+        // so the fourth vertex is the last one written (R11).
+        corners = {
+            core::Point2{first->x, first->y},
+            core::Point2{second->x, first->y},
+            core::Point2{second->x, second->y},
+            core::Point2{first->x, second->y},
+        };
+    }
 
     std::vector<core::RingGeometry::RingInput> rings{
         core::RingGeometry::RingInput{corners, core::RingRole::Exterior, 0}};
@@ -72,7 +125,11 @@ Task<void> run(Context& ctx)
     // corners through this command derives the same four — while recording four
     // would let a later edit move one of them and leave a "rectangle" that is
     // not one (Article 1.4).
-    ctx.record("noktalar", Value::points(Value::Points{*first, *second}));
+    if (by_edge)
+        ctx.record("noktalar", Value::points(Value::Points{
+                                   *first, *second, core::Point2{corners[3].x, corners[3].y}}));
+    else
+        ctx.record("noktalar", Value::points(Value::Points{*first, *second}));
 }
 
 } // namespace
@@ -86,13 +143,18 @@ KENTOS_COMMAND(rectangle)
         .category = Category::Draw,
         .params =
             {
-                Param::points("noktalar", Arity::exactly(2),
-                              "Karşılıklı iki köşe; kalan ikisi bunlardan türetilir"),
+                Param::points("noktalar", Arity{2, 3},
+                              "2n: karşılıklı iki köşe · 3n: bir kenarın iki köşesi ve karşı "
+                              "kenarın geçtiği nokta"),
+                Param::choice("yontem", Arity::optional(), {"2n", "3n"},
+                              "2n: karşılıklı iki köşe, eksenlere paralel · 3n: bir kenar ve "
+                              "yükseklik, döndürülmüş"),
             },
-        .undo    = UndoPolicy::SingleTransaction,
-        .flags   = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
-        .summary = "Karşılıklı iki köşeden dört köşeli kapalı bir alan çizer.",
-        .run     = &run,
+        .undo  = UndoPolicy::SingleTransaction,
+        .flags = Flags::Interactive | Flags::Scriptable | Flags::AiAccessible,
+        .summary = "Karşılıklı iki köşeden ya da bir kenar ve yükseklikten dört köşeli kapalı "
+                   "bir alan çizer.",
+        .run = &run,
     };
 }
 

@@ -105,6 +105,22 @@ bool closest_point_on_line(Point2 a, Point2 b, Point2 p, Point2& out, double& t)
 bool line_intersection(Point2 a, Point2 b, Point2 c, Point2 d, Point2& out, double& t,
                        double& u) noexcept;
 
+/// The circle through three points: its centre in `centre` and its radius in
+/// `radius`. False when the three are collinear, which describes no circle.
+///
+/// THREE POINTS ON THE RIM is how a circle is recovered from a measured arc — a
+/// road kerb, a roundabout, the curve of a wall — and it is the three-point
+/// method of both the circle and the arc command. Collinear is a refusal rather
+/// than a huge
+/// circle: three points in a line have a circumcircle of infinite radius and
+/// answering with the largest one that fits in an int64 is a wrong answer
+/// dressed as an answer.
+///
+/// Determinism: the perpendicular-bisector solve is done in metres so the
+/// squares stay inside the mantissa (core.md R3), and the two results are each
+/// rounded once (§7.3).
+bool circumcircle(Point2 a, Point2 b, Point2 c, Point2& centre, Mm& radius) noexcept;
+
 /// `offset_mm` to the LEFT of a→b, `foot_mm` along it from `a`. False when a and
 /// b coincide, which leaves no direction to drop a perpendicular from.
 ///

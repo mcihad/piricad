@@ -49,12 +49,32 @@ ve [`ALANAÇEVİR`](to_area.md) yayı reddeder.
 | `YY` | Kısaltma |
 | `core.arc_draw` | Komut kimliği |
 
+## Dört yöntem
+
+| `yontem` | Ne ister | Nerede kullanılır |
+|---|---|---|
+| `merkez` (varsayılan) | Merkez + iki uç | Günlük olan |
+| `3n` | Yayın üzerindeki üç nokta | Ölçülmüş bir kavisin geri kurulması |
+| `bma` | Başlangıç + merkez + **süpürme açısı** | Bir yol kurbunun plandaki hâli |
+| `bby` | Başlangıç + bitiş + **yarıçap** + yön | Bir pah, bir birleşim kavsi |
+
+**Süpürmenin işareti oturumun kuralındandır.** Varsayılan *semt* kuralında artı
+bir süpürme **saat yönünde**dir — bir mühendisin bir süpürmeden kastettiği şey —
+*matematik* kuralında ise saat yönünün tersine. Eksi bir süpürme öbür yöne döner
+ve bir tura katlanmaz: −100 grad, 300 grad değildir.
+
+`bby`'nin **iki** çözümü vardır: yarıçap iki noktayı iki yaydan biriyle
+birleştirir, biri sola biri sağa kavis yapar. `yon=sol|sag` hangisi olduğunu
+söyler ve varsayılan `sol`dur. Yarıçap iki nokta arasının yarısından küçükse
+hiçbirini birleştirmez ve komut bunu söyler.
+
 ## Sözdizimi
 
 ```text
-YAY
 YAY <merkez> <baslangic> <bitis>
-YAY merkez=<n> baslangic=<n> bitis=<n>
+YAY yontem=3n baslangic=<n> uzerinden=<n> bitis=<n>
+YAY merkez=<n> baslangic=<n> yontem=bma supurme=<açı>
+YAY yontem=bby baslangic=<n> bitis=<n> yaricap=<m> [yon=sol|sag]
 ```
 
 Nokta yazımı [`ÇİZGİ`](line.md) ile aynıdır: mutlak koordinat (`485320,4310220`),

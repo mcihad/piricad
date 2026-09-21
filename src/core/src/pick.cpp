@@ -378,6 +378,33 @@ bool closest_point_on_line(Point2 a, Point2 b, Point2 p, Point2& out, double& t)
     return true;
 }
 
+bool circumcircle(Point2 a, Point2 b, Point2 c, Point2& centre, Mm& radius) noexcept
+{
+    // TRANSLATED TO `a` AND IN METRES. A TM3 easting is nine digits of
+    // millimetres and its square leaves the 53-bit mantissa long before it
+    // leaves int64; the circumcentre solve squares its operands twice over, so
+    // the origin moves to `a` first and the unit becomes metres (core.md R3).
+    const double bx = mm_to_metres(b.x - a.x);
+    const double by = mm_to_metres(b.y - a.y);
+    const double cx = mm_to_metres(c.x - a.x);
+    const double cy = mm_to_metres(c.y - a.y);
+
+    // Twice the signed area of the triangle. Zero means collinear — including
+    // the case where two of the three points coincide.
+    const double d = 2.0 * (bx * cy - by * cx);
+    if (d == 0.0) return false;
+
+    const double b2 = bx * bx + by * by;
+    const double c2 = cx * cx + cy * cy;
+
+    const double ux = (b2 * cy - c2 * by) / d;
+    const double uy = (c2 * bx - b2 * cx) / d;
+
+    centre = Point2{a.x + mm_from_metres(ux), a.y + mm_from_metres(uy)};
+    radius = mm_from_metres(std::sqrt(ux * ux + uy * uy));
+    return radius > 0;
+}
+
 bool perpendicular_offset(Point2 a, Point2 b, Mm foot_mm, Mm offset_mm, Point2& out) noexcept
 {
     const double dx  = static_cast<double>(b.x - a.x);

@@ -755,8 +755,14 @@ void MainWindow::buildActions()
         return action;
     };
 
-    actPolygon_ = drawTool(Glyph::Polygon, tr("Poligon"), QStringLiteral("ALAN"),
-                           tr("ALAN — kapalı bir alan çizer  ·  kısaltma: POLİGON, AL"));
+    actPolygon_ = drawTool(Glyph::Polygon, tr("Alan"), QStringLiteral("ALAN"),
+                           tr("ALAN — kapalı bir alan çizer  ·  kısaltma: AL"));
+    actRegular_ = drawTool(Glyph::Polygon, tr("Düzgün Çokgen"), QStringLiteral("ÇOKGEN"),
+                           tr("ÇOKGEN — merkez ve kenar sayısından düzgün çokgen; içten, dıştan "
+                              "ya da kenar uzunluğundan  ·  kısaltma: ÇKG"));
+    // The group is created below, so this one joins it there with the others: an
+    // `addAction` on a null group is a crash rather than a misplaced tool, and
+    // the layer-menu probe found it as a segfault rather than as a wrong menu.
     actRectangle_ =
         drawTool(Glyph::Rectangle, tr("Dikdörtgen"), QStringLiteral("DİKDÖRTGEN"),
                  tr("DİKDÖRTGEN — karşılıklı iki köşeden çizer; Ctrl basılıyken kare  ·  "
@@ -768,6 +774,7 @@ void MainWindow::buildActions()
     drawingTools_->addAction(actLine_);
     drawingTools_->addAction(actPolygon_);
     drawingTools_->addAction(actRectangle_);
+    drawingTools_->addAction(actRegular_);
 
     actPolyline_ = drawTool(Glyph::Polyline, tr("Çoklu Çizgi"), QStringLiteral("ÇOKLUÇİZGİ"),
                             tr("ÇOKLUÇİZGİ — çok köşeli TEK çizgi nesnesi  ·  kısaltma: ÇÇ"));
@@ -1371,6 +1378,7 @@ void MainWindow::buildMenus()
     draw->addAction(actSector_);
     draw->addAction(actAnnulus_);
     draw->addAction(actRectangle_);
+    draw->addAction(actRegular_);
     draw->addAction(actPoint_);
     draw->addAction(actText_);
     draw->addSeparator();
@@ -1758,7 +1766,7 @@ void MainWindow::buildToolBox()
     //   block  — placing and defining: the placement first, it is the daily one
     //   note   — a dimension and a leader both annotate: one family
     toolBox_->addFamily({actLine_, actPolyline_, actSpline_});
-    toolBox_->addFamily({actRectangle_, actPolygon_, actHatch_});
+    toolBox_->addFamily({actRectangle_, actPolygon_, actRegular_, actHatch_});
     toolBox_->addFamily({actCircle_, actEllipse_, actAnnulus_});
     // YAY was built as a full draw tool and then left out of the column, so the
     // one curve this program can draw was reachable only by typing its name.

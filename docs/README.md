@@ -47,6 +47,7 @@ Tek tek komutlar:
 | `KESİŞİMNOKTA` | [Kesişimden nokta](komutlar/intersect_point.md) |
 | `ARANOKTA` | [Doğru üzerinde ara nokta](komutlar/point_along.md) |
 | `POLİGON` | [Poligon hesabı ve kapanma](komutlar/traverse.md) |
+| `ÇOKGEN` | [Düzgün çokgen](komutlar/polygon_regular.md) |
 | `ALAN` | [Kapalı alan çizme](komutlar/area.md) |
 | `DİKDÖRTGEN` | [İki köşeden dörtgen ve kare çizme](komutlar/rectangle.md) |
 | `DAİRE` | [Daire çizme](komutlar/circle_draw.md) |

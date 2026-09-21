@@ -13,6 +13,9 @@
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
+#include "kentos_cad/core/text.hpp"
+#include <optional>
+#include <string>
 
 #include "kentos_cad/core/ellipse.hpp"
 #include "kentos_cad/core/trig.hpp"
@@ -27,18 +30,53 @@ namespace {
 
 Task<void> run(Context& ctx)
 {
-    auto centre = co_await ctx.point("merkez", "Elipsin merkezi");
-    if (!centre) co_return; // ESC before anything was drawn
+    // TWO WAYS TO FIX ONE ELLIPSE, and they are not the same gesture
+    // (TODOS-CAD P2-6):
+    //   merkez — the centre, then one end of the first axis. What a plan gives
+    //            when the centre is the known thing: a manhole, a roundabout.
+    //   eksen  — the two ENDS of the first axis, the centre being their
+    //            midpoint. What a measured ellipse gives, and AutoCAD's own
+    //            default, because the two ends are what a tape reaches.
+    std::string how = "merkez";
+    if (const Value v = ctx.argument("yontem"); !v.empty()) how = v.as_text();
+    const bool by_axis = core::turkish_key_equals(how, "eksen");
 
-    auto major = co_await ctx.point("birinci", "Birinci eksenin ucu",
-                                    PointOptions{.rubber_band   = true,
-                                                 .rubber_origin = *centre,
-                                                 .rubber_shape  = RubberShape::Line});
-    if (!major) co_return;
+    std::optional<core::Point2> centre;
+    std::optional<core::Point2> major;
 
-    if (major->x == centre->x && major->y == centre->y) {
-        ctx.echo("Birinci eksenin ucu merkezle aynı yerde; elipsin ekseni sıfır olamaz.");
-        co_return;
+    if (by_axis) {
+        auto from = co_await ctx.point("birinci", "Birinci eksenin bir ucu");
+        if (!from) co_return;
+        auto to = co_await ctx.point("ikinci_uc", "Birinci eksenin öteki ucu",
+                                     PointOptions{.rubber_band   = true,
+                                                  .rubber_origin = *from,
+                                                  .rubber_shape  = RubberShape::Line});
+        if (!to) co_return;
+        if (*from == *to) {
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         "Eksenin iki ucu aynı nokta; elipsin ekseni sıfır "
+                                         "olamaz."));
+            co_return;
+        }
+        centre = core::Point2{(from->x + to->x) / 2, (from->y + to->y) / 2};
+        major  = *to;
+        ctx.record("yontem", Value::text(how));
+        ctx.record("birinci", Value::point(*from));
+        ctx.record("ikinci_uc", Value::point(*to));
+    } else {
+        centre = co_await ctx.point("merkez", "Elipsin merkezi");
+        if (!centre) co_return; // ESC before anything was drawn
+
+        major = co_await ctx.point("birinci", "Birinci eksenin ucu",
+                                   PointOptions{.rubber_band   = true,
+                                                .rubber_origin = *centre,
+                                                .rubber_shape  = RubberShape::Line});
+        if (!major) co_return;
+
+        if (major->x == centre->x && major->y == centre->y) {
+            ctx.echo("Birinci eksenin ucu merkezle aynı yerde; elipsin ekseni sıfır olamaz.");
+            co_return;
+        }
     }
 
     auto reach = co_await ctx.point("ikinci", "İkinci eksenin uzaklığı",
@@ -131,9 +169,14 @@ KENTOS_COMMAND(ellipse_draw)
         .category = Category::Draw,
         .params =
             {
-                Param::point("merkez", "Elipsin merkezi"),
-                Param::point("birinci", "Birinci eksenin ucu"),
-                Param::point("ikinci", "İkinci eksenin uzaklığı; eksene dik ölçülür"),
+                Param::points("merkez", Arity::optional(), "Elipsin merkezi"),
+                Param::points("birinci", Arity::optional(),
+                              "merkez: birinci eksenin ucu · eksen: birinci eksenin bir ucu"),
+                Param::points("ikinci", Arity::optional(),
+                              "İkinci eksenin uzaklığı; eksene dik ölçülür"),
+                Param::choice("yontem", Arity::optional(), {"merkez", "eksen"},
+                              "merkez: merkez + eksen ucu · eksen: eksenin iki ucu"),
+                Param::points("ikinci_uc", Arity::optional(), "eksen: birinci eksenin öteki ucu"),
                 Param::number("baslangic", Arity::optional(),
                               "Kısmi elips: başlangıç açısı, derece, birinci eksenden saat "
                               "yönünün tersine"),

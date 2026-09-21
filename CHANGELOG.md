@@ -6,6 +6,53 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — klasik çizim inşa yöntemleri (P2-1…P2-4, P2-6)
+
+Bir daire, bir yay, bir dikdörtgen ve bir elips bir çizime birden çok şekilde
+gelir ve şimdiye kadar her birinin yalnız bir yolu vardı.
+
+- **DAİRE: `merkez` · `2n` · `3n` · `ttr`.** `3n` için `core::circumcircle`
+  çekirdeğe eklendi ve `YAY yontem=3n` ile paylaşılıyor, yani bir daire ile
+  ondan kesilen yay birbirine uyuyor. `ttr` iki doğruya teğet, verilen
+  yarıçapla: **dört** çözüm var — iki doğrunun yaptığı her çeyrekte bir tane — ve
+  hangisi istendiği sayıların içinde yok, bu yüzden kullanıcı köşeyi gösteriyor.
+  Sessiz bir seçim pahı kavşağın yanlış köşesine koyardı. Üç doğrusal nokta
+  reddediliyor: çevrel çemberi sonsuz yarıçaplıdır ve int64'e sığan en büyüğünü
+  vermek yanlış bir cevabı cevap kılığına sokmaktır.
+- **YAY: `merkez` · `3n` · `bma` · `bby`.** Süpürmenin işareti oturumun
+  kuralından: semt'te artı bir süpürme SAAT YÖNÜNDE — bir mühendisin kastettiği
+  şey — ve yay modelde saat yönünün TERSİNE saklandığı için uçlar ona göre takas
+  ediliyor. Bunu yanlış yapmak biraz farklı bir yay değil, çemberin öbür üç
+  çeyreğini çizer. Süpürme bir tura **katlanmıyor**: −100 grad öbür yöne döner,
+  300 grad değildir. `bby`'nin iki çözümü `yon=sol|sag` ile ayrılıyor ve
+  yarıçap iki nokta arasının yarısından küçükse komut bunu söylüyor.
+- **ÇOKGEN (yeni).** Merkez ve kenar sayısından düzgün çokgen: `ic` (köşeler
+  çemberin üzerinde), `dis` (kenarlar çembere teğet), `kenar` (kenar
+  uzunluğundan). Köşeler `sin_cos_udeg`'den geliyor ve dört ana eksende tam
+  sayıdır, yani 0°'de bir kare köşelerini milimetrenin üstüne koyuyor. Altıgenin
+  kenar=yarıçap kimliği testte: iki yöntem bayt bayt aynı çizimi veriyor.
+  Bir **çokgen**, bir *poligon* değil — o ad güzergâha ait.
+- **DİKDÖRTGEN `yontem=3n`:** bir kenarın iki köşesi ve karşı kenarın geçtiği
+  nokta. Izgaraya paralel olmayan her yapı için. Üçüncü nokta bir köşe **değil**,
+  yalnız yüksekliği veriyor: kenarın normaline izdüşürülüyor, yani eli birkaç
+  milimetre kayan bir kullanıcı paralelkenar değil dikdörtgen alıyor.
+- **ELİPS `yontem=eksen`:** eksenin iki ucu, merkez ikisinin ortası — AutoCAD'in
+  varsayılanı ve bir şerit metrenin ulaştığı şey. Aynı elips iki şekilde
+  yazılıyor ve ikisi bayt bayt aynı çizimi veriyor.
+- Yöntem parametreleri **konumsal argümanlardan sonra** bildirildi: `yontem`
+  önde olsa `DAİRE 50,50 100,50`'nin ilk koordinatını yutardı — her sayfanın,
+  betiğin ve günlüğün kullandığı biçim.
+- Beş sayfa güncel (`ÇOKGEN` yeni), `make reference`, ve yirmi sekiz sayısal
+  test (bilinen çember, çeyrek çember, kare, altıgen, 3-4-5 kenar, iki yarım
+  daire).
+
+**`KILAVUZ` açılı kılavuz (P2-5) ertelendi ve sebebi yazılı:** bugünkü
+`core::Guide` yalnız {eksen, koordinat} taşıyor ve proje dosyasında iki paralel
+dizi olarak saklanıyor. Açı ve geçtiği nokta eklemek bir **belge modeli**
+değişikliğidir (CLAUDE.md 0.2a: bir veri göçüdür, refactor değil) ve biçim sürümü,
+eski biçimi okuyan bir okuyucu ve gidiş-dönüş testi gerektirir. Komut düzeyinde
+yarım yapmak, kaydedilip açılınca kaybolan bir kılavuz demek olurdu.
+
 ### Eklendi — POLİGON: her ölçünün üzerine oturduğu iskelet (P1b-5, P1b-6)
 
 Poligon güzergâhını ölçü karnesinden koordinata çevirir: açı kapanmasını

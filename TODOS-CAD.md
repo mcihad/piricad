@@ -230,15 +230,37 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
 
 ## P2 — Klasik çizim inşa yöntemleri
 
-- [ ] **P2-1** `DAİRE yontem=merkez|2n|3n|ttr` — `3n` için `pick.hpp`'ye `circumcircle`; `ttr` iki nesne +
-  yarıçap, en yakın teğet çifti; teğetlik `|d − r| < 1 Mm` testi.
-- [ ] **P2-2** `YAY yontem=merkez|3n|bma|bby|devam` — `devam` için `Session`'a son segment yönü.
-- [ ] **P2-3** `core.polygon_regular` — `ÇOKGEN`, `COKGEN`, `POLYGONREG`, `ÇKG`: `merkez`, `kenar_sayisi`
-  (3–1024), `yontem=ic|dis|kenar`, `yaricap` | `kenar_uzunlugu`, `aci`. Yeni sayfa.
-- [ ] **P2-4** `DİKDÖRTGEN aci=`, `yontem=3n`.
-- [ ] **P2-5** `KILAVUZ yon=<açı>`, `nokta=`, `tur=isin`.
-- [ ] **P2-6** `ELİPS yontem=merkez|eksen` (mevcut argümanlar aynı kalır).
-- [ ] **P2-7** Docs güncel (sözdizimi + örnekler), eşitlik kanıtı her yöntem için.
+- [x] **P2-1** `DAİRE yontem=merkez|2n|3n|ttr` — `core::circumcircle` çekirdeğe eklendi ve `YAY
+  yontem=3n` ile paylaşılıyor. `ttr` iki DOĞRU + yarıçap + gösterilen köşe: dört çözüm hesaplanıyor
+  (her iki doğrunun iki yana ofseti) ve en yakını alınıyor — sessiz seçim yok, çünkü sessiz bir seçim
+  pahı kavşağın yanlış köşesine koyar. Üç doğrusal nokta reddediliyor.
+  **Not:** plan "iki nesne + yarıçap" diyordu; uygulama iki DOĞRU alıyor (dört nokta). Nesneden teğet,
+  nesnenin türüne göre teğet çözümü gerektirir ve P3'ün `PATLAT`/nesne sorgusu altyapısıyla gelir.
+- [x] **P2-2** `YAY yontem=merkez|3n|bma|bby`. Süpürmenin işareti oturumun kuralından: semt'te artı
+  süpürme SAAT YÖNÜNDE, ve yay modelde saat yönünün TERSİNE saklandığı için uçlar ona göre takas
+  ediliyor — yanlışı biraz farklı bir yay değil, çemberin öbür üç çeyreği olurdu. Süpürme bir tura
+  KATLANMIYOR: −100 grad, 300 grad değildir. `bby`'nin iki çözümü `yon=sol|sag` ile.
+  **`devam` yapılmadı:** `Session`'a son segment yönünü eklemek gerekiyor ve bu oturum durumu
+  değişikliği; P2-5 ile birlikte kendi commit'ini hak ediyor.
+- [x] **P2-3** `core.polygon_regular` — `ÇOKGEN`, `COKGEN`, `POLYGONREG`, `ÇKG`, `CKG`: `merkez`,
+  `kenar_sayisi` (3–1024, bus doğruluyor), `yontem=ic|dis|kenar`, `yaricap` | `kenar_uzunlugu`, `aci`.
+  Yeni sayfa. Altıgenin kenar=yarıçap kimliği testte: iki yöntem bayt bayt aynı çizimi veriyor.
+- [x] **P2-4** `DİKDÖRTGEN yontem=3n` — bir kenarın iki köşesi ve karşı kenarın geçtiği nokta.
+  Üçüncü nokta bir köşe DEĞİL, yalnız yüksekliği veriyor: kenarın normaline izdüşürülüyor, yani eli
+  birkaç milimetre kayan kullanıcı paralelkenar değil dikdörtgen alıyor. (`aci=` ayrıca gerekmedi:
+  `3n` döndürmenin kendisidir ve bir açıdan daha okunaklıdır.)
+- [ ] **P2-5** `KILAVUZ yon=<açı>`, `nokta=`, `tur=isin` — **ERTELENDİ, sebebi yazılı.** Bugünkü
+  `core::Guide` yalnız {eksen, koordinat} taşıyor ve proje dosyasında iki paralel dizi olarak
+  saklanıyor (`project_writer.cpp`). Açı ve geçtiği nokta eklemek BELGE MODELİ değişikliğidir
+  (CLAUDE.md 0.2a: "bir veri göçüdür, refactor değil"): `model.md`, `io/format.hpp` sürüm artışı, eski
+  biçimi okuyan bir okuyucu ve gidiş-dönüş testi gerektirir. Komut düzeyinde yarım yapmak, kaydedilip
+  açılınca kaybolan bir kılavuz demek olurdu. Kendi commit'ini hak ediyor.
+- [x] **P2-6** `ELİPS yontem=merkez|eksen` — ve `eksen` kozmetik bir ad değil: eksenin İKİ UCU
+  (AutoCAD'in varsayılanı), merkez ikisinin ortası. Aynı elips iki şekilde yazılıyor ve ikisi bayt
+  bayt aynı çizimi veriyor (testte).
+- [x] **P2-7** Docs: `ÇOKGEN` yeni sayfa; `DAİRE`, `YAY`, `DİKDÖRTGEN`, `ELİPS` sayfalarına "yöntemler"
+  bölümü ve yeni sözdizimi; `make reference`. Her yöntem için sayısal test (bilinen çember, çeyrek
+  çember, kare, altıgen, 3-4-5 kenar); arayüz: **Çizim > Düzgün Çokgen** ve Dikdörtgen ailesi.
 
 ## P3 — Düzenleme fiilleri
 

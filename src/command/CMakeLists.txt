@@ -54,6 +54,7 @@ add_library(kentos_command STATIC
     src/commands/perp_offset.cpp
     src/commands/survey_polar.cpp
     src/commands/intersect_point.cpp
+    src/commands/polygon_regular.cpp
     src/commands/point.cpp
     src/commands/polyline.cpp
     src/commands/settings.cpp
