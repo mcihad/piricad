@@ -6,6 +6,40 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — YAY yontem=devam, ve inşa yöntemleri arayüze girdi
+
+- **`YAY yontem=devam`** — planın kalan son inşa yöntemi. Bir yol geçiş eğrisi,
+  bir bordür dönüşü ve zincirleme pahlar hep böyle çizilir: yay, en son çizilen
+  çizginin ya da yayın ucundan **o ucun kendi doğrultusunda** ayrılır, böylece
+  birleşme yerinde kırık olmaz. Bordürde bir kırık, yeniden dökülecek bir bordür
+  demektir.
+- **Erteleme sebebi yanlış çıktı.** Not "`Session`'a son segment yönü eklemek
+  gerekiyor" diyordu; gerekmedi. `SEÇ SON` zaten "en son oluşturulan nesne"yi
+  **belgeden** okuyor, ve doğrultuyu aynı yerden okumak aynı soruyu aynı yere
+  sormaktır — geri alma, replay ve yeniden yükleme ile ayrı tutulacak bir durum
+  parçası daha olmuyor.
+- Bitiş noktası **teğetin üzerindeyse** oradan devam eden şey bir yay değil bir
+  doğrudur ve komut bunu söylüyor, sıfıra bölmüyor. Günlüğe **çözülmüş yay**
+  yazılıyor, yani replay BU yayı kuruyor — oynatıldığı belgede en yeni nesne ne
+  olursa olsun (model.md P4).
+
+### Eklendi — inşa yöntemleri artık birer araç (§2.6a)
+
+P2 daire, yay, dikdörtgen, çokgen ve elipse klasik yöntemlerini verdi ve **hepsi
+yalnız `yontem=` yazılarak** erişilebiliyordu: bir el üç noktadan daire
+çizemiyordu. Komut bir düğmede olduğu için erişim probu memnundu ve **yöntem
+değildi** — CLAUDE.md 5.15'in bir düzey aşağıdaki hâli.
+
+- Her yöntem artık ailesinde **kendi satırı**: çapın iki ucu, üç nokta, iki
+  doğruya teğet, başlangıç-merkez-açı, başlangıç-bitiş-yarıçap, teğet devam,
+  döndürülmüş dikdörtgen, dıştan ve kenardan çokgen, eksenin iki ucu elips.
+- **Tam satır düğmede duruyor**, yalnız ilk sözcük değil: kartın sağ kolonu
+  `YAY yontem=3n` yazıyor, yani kart aynı zamanda komut satırını öğretiyor. Bir
+  yöntemi fareyle bir kez kullanıp sonra yazmaya geçen kullanıcı, yazacağı şeyi
+  zaten görmüş olur.
+- Aile üyesi 26'dan **37'ye** çıktı ve `KENTOS_FLYOUT_PROBE` hepsini gerçek fare
+  olaylarıyla basıyor: **0 kusur**.
+
 ### Eklendi — SEÇ tur= tür süzgeci, ve nokta fonksiyonu idempotens testi
 
 Plan belgesinin her satırı ikinci kez okundu; TODOS'a hiç girmemiş üç madde

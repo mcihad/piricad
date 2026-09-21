@@ -260,8 +260,16 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
   süpürme SAAT YÖNÜNDE, ve yay modelde saat yönünün TERSİNE saklandığı için uçlar ona göre takas
   ediliyor — yanlışı biraz farklı bir yay değil, çemberin öbür üç çeyreği olurdu. Süpürme bir tura
   KATLANMIYOR: −100 grad, 300 grad değildir. `bby`'nin iki çözümü `yon=sol|sag` ile.
-  **`devam` yapılmadı:** `Session`'a son segment yönünü eklemek gerekiyor ve bu oturum durumu
-  değişikliği; P2-5 ile birlikte kendi commit'ini hak ediyor.
+  **`devam` yapıldı** ve erteleme sebebi yanlış çıktı: `Session`'a son segment yönü EKLEMEK
+  gerekmedi. `SEÇ SON` zaten "en son oluşturulan nesne"yi belgeden okuyor, ve doğrultuyu aynı
+  yerden okumak aynı soruyu aynı yere sormaktır — geri alma, replay ve yeniden yükleme ile ayrı
+  tutulacak bir durum parçası daha olmuyor. Bir çizginin son kenarından ya da bir yayın ucundan
+  (uç yarıçapına dik, modelin saat yönü tersi sıralamasıyla) teğet devam ediyor; merkez,
+  başlangıçtaki dikle kirişin orta dikmesinin kesişimi. **Bitiş teğetin üzerindeyse** oradan devam
+  eden şey bir yay değil bir doğrudur ve komut bunu söylüyor, sıfıra bölmüyor. Günlüğe **çözülmüş
+  yay** yazılıyor (merkez/başlangıç/bitiş), yani replay BU yayı kuruyor — oynatıldığı belgede en
+  yeni nesne ne olursa olsun (model.md P4). Dört test, altın fikstürde bir satır, `arc_draw.md`'de
+  kendi bölümü.
 - [x] **P2-3** `core.polygon_regular` — `ÇOKGEN`, `COKGEN`, `POLYGONREG`, `ÇKG`, `CKG`: `merkez`,
   `kenar_sayisi` (3–1024, bus doğruluyor), `yontem=ic|dis|kenar`, `yaricap` | `kenar_uzunlugu`, `aci`.
   Yeni sayfa. Altıgenin kenar=yarıçap kimliği testte: iki yöntem bayt bayt aynı çizimi veriyor.
@@ -514,6 +522,14 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
 ---
 
 ## Plan metninin ikinci denetimi (2026-09-21)
+
+- [x] **İNŞA YÖNTEMLERİ ARAYÜZE GİRDİ (§2.6a).** P2 daire, yay, dikdörtgen, çokgen ve elipse
+  klasik yöntemlerini verdi ve **hepsi yalnız `yontem=` yazılarak** erişilebiliyordu: bir el üç
+  noktadan daire çizemiyordu. Komut bir düğmede olduğu için `probeReach` memnundu, yöntem değildi —
+  5.15'in bir düzey aşağıdaki hâli. Her yöntem artık ailesinde kendi satırı: `MainWindow::methodTool`
+  **tam satırı** `kToolCommand`'a koyuyor, yani kartın sağ kolonu `YAY yontem=3n` yazıyor ve kart
+  aynı zamanda komut satırını öğretiyor. Aile üyesi 26'dan **37'ye** çıktı, `KENTOS_FLYOUT_PROBE`
+  hepsini fareyle basıyor: 0 kusur. `arayuz.md`'de aile tablosu ve kendi bölümü.
 
 Plan belgesinin her satırı TODOS'a karşı okundu; TODOS'a hiç girmemiş üç madde çıktı.
 

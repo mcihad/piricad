@@ -7373,3 +7373,104 @@ TEST_CASE("NOKTA FONKSİYONU: çıktısı tekrar girdi olarak aynı noktayı ver
         CHECK_MESSAGE(typed.value() == text.value(), call);
     }
 }
+
+TEST_CASE("YAY yontem=devam son çizginin ucundan teğet devam eder")
+{
+    // THE PLAN'S LAST DEFERRED CONSTRUCTION METHOD. A road transition, a kerb
+    // return and a chain of fillets are all drawn this way: the arc leaves the
+    // last thing drawn in the SAME DIRECTION it ended in, so the join has no kink
+    // in it — and a kink in a kerb is a kerb that has to be re-cast.
+    //
+    // The deferral said this needed a remembered session field. It does not: the
+    // direction is read off the drawing, which is the same place `SEÇ SON` reads
+    // "the most recently created entity" from.
+    Fixture f;
+    // A line running due EAST, ending at (100, 0).
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok());
+
+    // Continuing to a point directly NORTH of that end gives a quarter circle:
+    // the tangent is east, the centre is 50 m north of the end, radius 50.
+    REQUIRE(f.bus.execute_line("YAY yontem=devam bitis=150,50", Origin::Test).ok());
+
+    core::EntityId arc = core::kNoEntity;
+    for (core::EntityId e = 0; e < f.doc.entities().size(); ++e)
+        if (f.doc.alive(e) && f.doc.entities().kind[e] == core::kArcKind) arc = e;
+    REQUIRE(arc != core::kNoEntity);
+
+    const std::uint32_t gslot = f.doc.entities().slot[arc];
+    const core::Point2 centre = core::arc_centre_of(f.doc.geometry(), gslot);
+    // The centre is on the perpendicular at the line's end: due north of (100,0).
+    CHECK_EQ(centre, (core::Point2{100'000, 50'000}));
+    CHECK_EQ(core::segment_length(centre, core::Point2{100'000, 0}), 50'000);
+
+    // AND THE JOIN HAS NO KINK: the arc starts exactly where the line ended.
+    const core::Point2 start = core::arc_start_of(f.doc.geometry(), gslot);
+    const core::Point2 end   = core::arc_end_of(f.doc.geometry(), gslot);
+    const bool joins         = start == core::Point2{100'000, 0} || end == core::Point2{100'000, 0};
+    CHECK(joins);
+}
+
+TEST_CASE("YAY yontem=devam bir yayın ucundan da devam eder")
+{
+    Fixture f;
+    // A quarter arc centred at (0,0), from due east to due north.
+    REQUIRE(f.bus.execute_line("YAY merkez=0,0 baslangic=50,0 bitis=0,50", Origin::Test).ok());
+    // Its end tangent at (0,50) points WEST (the model stores an arc
+    // counter-clockwise, so at the end the motion is the radius turned a quarter
+    // turn the same way). A target due west would be ON that tangent — a straight
+    // line, refused — so this one is west AND north of it.
+    REQUIRE(f.bus.execute_line("YAY yontem=devam bitis=-100,100", Origin::Test).ok());
+
+    std::size_t arcs = 0;
+    for (core::EntityId e = 0; e < f.doc.entities().size(); ++e)
+        if (f.doc.alive(e) && f.doc.entities().kind[e] == core::kArcKind) ++arcs;
+    CHECK_EQ(arcs, std::size_t{2});
+}
+
+TEST_CASE("YAY yontem=devam teğet üzerindeki bitişi ve boş çizimi reddeder")
+{
+    {
+        // Nothing to continue from: the refusal says what to do first.
+        Fixture f;
+        const auto r = f.bus.execute_line("YAY yontem=devam bitis=10,10", Origin::Test);
+        CHECK_FALSE(r.ok());
+        CHECK(r.error().message.find("Devam edilecek") != std::string::npos);
+    }
+    {
+        // An end ON the tangent is a straight line, not an arc — and the command
+        // says so instead of dividing by zero.
+        Fixture f;
+        REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok());
+        const auto r = f.bus.execute_line("YAY yontem=devam bitis=200,0", Origin::Test);
+        CHECK_FALSE(r.ok());
+        CHECK(r.error().message.find("teğetin üzerinde") != std::string::npos);
+        CHECK_EQ(f.doc.live_entity_count(), std::size_t{1}); ///< nothing drawn
+    }
+}
+
+TEST_CASE("YAY yontem=devam günlüğe ÇÖZÜLMÜŞ yayı yazar")
+{
+    // A replay must build THIS arc, not whatever the newest entity happens to be
+    // in the document it is replayed into (model.md P4). So the record is the
+    // resolved centre form, which is what the default branch reads back.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇOKLUÇİZGİ 0,0 100,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("YAY yontem=devam bitis=150,50", Origin::CommandLine).ok());
+
+    bool checked = false;
+    for (const auto& e : f.journal.entries()) {
+        if (e.command_id != "core.arc_draw") continue;
+        REQUIRE(e.args.find("merkez") != nullptr);
+        CHECK_EQ(e.args.find("merkez")->as_point(), (core::Point2{100'000, 50'000}));
+        REQUIRE(e.args.find("baslangic") != nullptr);
+        REQUIRE(e.args.find("bitis") != nullptr);
+        checked = true;
+    }
+    CHECK(checked);
+
+    // AND IT REPLAYS: the record read back builds the same drawing.
+    Fixture again;
+    for (const auto& e : f.journal.entries())
+        REQUIRE(again.bus.dispatch(Invocation{e.command_id, e.args, Origin::Batch}).ok());
+    CHECK_EQ(again.doc.content_hash(), f.doc.content_hash());
+}

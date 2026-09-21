@@ -1813,7 +1813,8 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
             "merkez",
             "3n",
             "bma",
-            "bby"
+            "bby",
+            "devam"
           ],
           "description": "merkez: merkez + iki uç · 3n: yay üzerinde üç nokta · bma: başlangıç, merkez ve süpürme açısı · bby: başlangıç, bitiş ve yarıçap (metin)"
         },

@@ -193,12 +193,24 @@ yay ise açık bir kenardır ve hiçbir şeyi çevrelemez.
 | Düğme | Ailesi | Ortak yanı |
 |---|---|---|
 | Çizgi | `ÇİZGİ` · `ÇOKLUÇİZGİ` · `SPLINE` | açık kenar dizisi: düz, kırık, pürüzsüz |
-| Dikdörtgen | `DİKDÖRTGEN` · `ÇOKGEN` · `TARAMA` | kapalı yüz; tarama desenli yüzdür |
-| Daire | `DAİRE` · `ELİPS` · `HALKA` | kapalı eğri |
-| Yay | `YAY` · `DİLİM` | açık eğri ve ondan kesilen dilim |
+| Dikdörtgen | `DİKDÖRTGEN` · **döndürülmüş** · `ALAN` · `ÇOKGEN` · **dıştan** · **kenardan** · `TARAMA` | kapalı yüz; tarama desenli yüzdür |
+| Daire | `DAİRE` · **çapın iki ucu** · **üç nokta** · **iki doğruya teğet** · `ELİPS` · **eksenin iki ucu** · `HALKA` | kapalı eğri |
+| Yay | `YAY` · **üç nokta** · **başlangıç-merkez-açı** · **başlangıç-bitiş-yarıçap** · **teğet devam** · `DİLİM` | açık eğri ve ondan kesilen dilim |
+| Nokta | `NOKTA` · `DİKAYAK` · `ALIM` · `KESİŞİMNOKTA` · `ARANOKTA` | tek nokta koymanın beş yolu |
 | Blok Ekle | `BLOKEKLE` · `BLOK` | blok yerleştirmek ve tanımlamak |
 | Ölçü | `ÖLÇÜ` · `LİDER` | açıklama: ölçü ve not oku |
-| Uzunluk Ölç | `ÖLÇ` · `ALANÖLÇ` · `KOORDİNAT` | ölçme |
+| Uzunluk Ölç | `ÖLÇ` · `ALANÖLÇ` · `AÇIÖLÇ` · `KOORDİNAT` · `NESNEBİLGİ` | ölçme ve sorma |
+
+### İnşa yöntemleri de birer araçtır
+
+Kalın yazılan satırlar bir komutun **inşa yöntemleridir**: üç noktadan daire, iki
+doğruya teğet daire, teğet devam eden yay, döndürülmüş dikdörtgen. Hepsi `yontem=`
+ile yazılabilir, ama **yazmak zorunda değilsiniz** — ailede kendi satırları var.
+
+Kartın sağ kolonu her satırın **tam olarak ne gönderdiğini** yazar
+(`YAY yontem=3n`), yani kart aynı zamanda komut satırını öğretir. Bir yöntemi
+fareyle bir kez kullanıp sonra yazmaya geçmek isteyen kullanıcı, yazacağı şeyi
+zaten görmüş olur.
 
 Aileyi açmanın üç yolu vardır: düğmeyi **basılı tutmak**, köşe işaretine **tıklamak**
 ya da düğmeye **sağ tıklamak**. Kısa bir tıklama aileyi açmaz, düğmenin yüzündeki

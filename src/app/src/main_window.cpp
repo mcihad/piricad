@@ -562,6 +562,35 @@ QAction* MainWindow::commandAction(Glyph glyph, const QString& text, const QStri
     return action;
 }
 
+/// A construction METHOD as a tool: the whole line on the button.
+///
+/// P2 gave DAİRE, YAY, DİKDÖRTGEN, ÇOKGEN and ELİPS their classical methods and
+/// every one of them was reachable ONLY by typing `yontem=`: a hand could not
+/// draw a three-point circle at all. The command is on a button, so `probeReach`
+/// was satisfied and the method was not — which is the shape of CLAUDE.md 5.15
+/// one level down, and §2.6a says a tool arrives with its interface.
+///
+/// The WHOLE LINE rides in `kToolCommand`, not just the first word. The flyout
+/// prints that property in its right-hand column, so the card teaches
+/// `YAY yontem=3n` — the thing a user should learn — instead of printing `YAY`
+/// five times. `probeReach` and `Controller::runCommand` both take the first word
+/// out themselves, so nothing downstream needs telling.
+QAction* MainWindow::methodTool(Glyph glyph, const QString& text, const QString& line,
+                                const QString& tip)
+{
+    auto* action = new QAction(text, this);
+    action->setCheckable(true);
+    action->setToolTip(tip);
+    action->setStatusTip(tip);
+    action->setData(static_cast<int>(glyph));
+    action->setProperty(kToolCommand, line);
+    action->setProperty(kToolRepeats, true);
+    action->setObjectName(QStringLiteral("toolAction.") + line);
+    drawingTools_->addAction(action);
+    connect(action, &QAction::triggered, this, [this, line] { controller_->runCommand(line); });
+    return action;
+}
+
 QAction* MainWindow::modifyTool(Glyph glyph, const QString& text, const QString& command,
                                 const QString& tip)
 {
@@ -1845,11 +1874,52 @@ void MainWindow::buildToolBox()
     //   block  — placing and defining: the placement first, it is the daily one
     //   note   — a dimension and a leader both annotate: one family
     toolBox_->addFamily({actLine_, actPolyline_, actSpline_});
-    toolBox_->addFamily({actRectangle_, actPolygon_, actRegular_, actHatch_});
-    toolBox_->addFamily({actCircle_, actEllipse_, actAnnulus_});
+    toolBox_->addFamily({
+        actRectangle_,
+        methodTool(Glyph::Rectangle, tr("Dikdörtgen — döndürülmüş"),
+                   QStringLiteral("DİKDÖRTGEN yontem=3n"),
+                   tr("Bir kenarın iki köşesi ve yüksekliği veren üçüncü nokta")),
+        actPolygon_,
+        actRegular_,
+        methodTool(Glyph::Polygon, tr("Çokgen — dıştan"), QStringLiteral("ÇOKGEN yontem=dis"),
+                   tr("Kenarlar çembere teğet; yarıçap iç yarıçaptır")),
+        methodTool(Glyph::Polygon, tr("Çokgen — kenardan"), QStringLiteral("ÇOKGEN yontem=kenar"),
+                   tr("Kenar uzunluğundan; yarıçap sorulmaz")),
+        actHatch_,
+    });
+    toolBox_->addFamily({
+        actCircle_,
+        methodTool(Glyph::Circle, tr("Daire — çapın iki ucu"), QStringLiteral("DAİRE yontem=2n"),
+                   tr("İki nokta çapı verir; merkez ortalarıdır")),
+        methodTool(Glyph::Circle, tr("Daire — üç nokta"), QStringLiteral("DAİRE yontem=3n"),
+                   tr("Çevrel çember: üç noktanın hepsi çemberin üzerinde")),
+        methodTool(Glyph::Circle, tr("Daire — iki doğruya teğet"),
+                   QStringLiteral("DAİRE yontem=ttr"),
+                   tr("İki doğru, yarıçap ve dairenin geleceği köşe gösterilir")),
+        actEllipse_,
+        methodTool(Glyph::Circle, tr("Elips — eksenin iki ucu"),
+                   QStringLiteral("ELİPS yontem=eksen"),
+                   tr("Merkez iki ucun ortasıdır; üçüncü nokta ikinci ekseni verir")),
+        actAnnulus_,
+    });
     // YAY was built as a full draw tool and then left out of the column, so the
     // one curve this program can draw was reachable only by typing its name.
-    toolBox_->addFamily({actArc_, actSector_});
+    // EVERY CLASSICAL METHOD, under the face it belongs to. A family is exactly
+    // the shape this wants: one button a hand reaches for, and the variants a
+    // press-and-hold reveals.
+    toolBox_->addFamily({
+        actArc_,
+        methodTool(Glyph::Arc, tr("Yay — üç nokta"), QStringLiteral("YAY yontem=3n"),
+                   tr("Başlangıç, üzerinden geçtiği nokta ve bitiş")),
+        methodTool(Glyph::Arc, tr("Yay — başlangıç, merkez, açı"), QStringLiteral("YAY yontem=bma"),
+                   tr("Süpürme açısı oturumun birim ve kuralıyla okunur")),
+        methodTool(Glyph::Arc, tr("Yay — başlangıç, bitiş, yarıçap"),
+                   QStringLiteral("YAY yontem=bby"),
+                   tr("İki çözüm vardır; yon=sol|sag hangisi olduğunu söyler")),
+        methodTool(Glyph::Arc, tr("Yay — teğet devam"), QStringLiteral("YAY yontem=devam"),
+                   tr("Son çizilen çizginin ya da yayın ucundan teğet devam eder")),
+        actSector_,
+    });
     // NOKTA AND THE TWO WAYS A MEASURED POINT ARRIVES. A point clicked on the
     // canvas and a point computed from a baseline are the same kind of thing to
     // a surveyor, and the second is what a tape survey produces all day.

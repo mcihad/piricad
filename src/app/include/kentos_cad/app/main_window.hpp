@@ -598,6 +598,11 @@ private:
     /// complete invocation and a transform with no arguments would end before it
     /// started. They are not modal draw tools and do not join the exclusive group:
     /// nothing stays armed after one runs.
+    /// A construction METHOD as a tool (`YAY yontem=3n`): the whole line rides on
+    /// the button, so the family card teaches it. Without these, every classical
+    /// method P2 added was reachable only by typing (§2.6a, CLAUDE.md 5.15).
+    QAction* methodTool(Glyph glyph, const QString& text, const QString& line, const QString& tip);
+
     QAction* modifyTool(Glyph glyph, const QString& text, const QString& command,
                         const QString& tip);
 

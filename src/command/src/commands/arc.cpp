@@ -10,11 +10,15 @@
 // two ends given the other way round are the other arc of the same circle. That
 // is the whole direction control: no flag, no "major arc" option, and no two
 // records that could mean one picture.
+#include "kentos_cad/core/arc.hpp"
 #include "kentos_cad/command/bus.hpp"
 #include "kentos_cad/command/context.hpp"
 #include "kentos_cad/command/session.hpp"
 #include "kentos_cad/command/spec.hpp"
 #include "kentos_cad/core/angle.hpp"
+#include "kentos_cad/core/document.hpp"
+#include "kentos_cad/core/entity_kind.hpp"
+#include "kentos_cad/core/geometry.hpp"
 #include "kentos_cad/core/pick.hpp"
 #include "kentos_cad/core/text.hpp"
 
@@ -98,6 +102,124 @@ Task<void> run(Context& ctx)
         ctx.record("baslangic", Value::point(*a));
         ctx.record("uzerinden", Value::point(*b));
         ctx.record("bitis", Value::point(*c));
+        co_return;
+    }
+
+    if (is("devam")) {
+        // TANGENT CONTINUATION, which is how a road transition, a kerb return and
+        // a fillet chain are actually drawn: the arc leaves the last thing drawn
+        // in the SAME DIRECTION it ended in, so the join has no kink in it.
+        //
+        // THE SOURCE IS THE DRAWING, not a remembered session field. The deferral
+        // note said this needed "`Session`'a son segment yönü" — it does not:
+        // `SEÇ SON` already answers "the most recently created live entity" from
+        // the document, and reading the direction off that entity is the same
+        // question asked of the same place. One less piece of session state to
+        // keep in step with undo, a replay and a reload.
+        const core::Document& doc         = ctx.document();
+        const core::EntityTable& entities = doc.entities();
+        core::Point2 from{};
+        double tx  = 0.0;
+        double ty  = 0.0;
+        bool found = false;
+        for (auto e = static_cast<core::EntityId>(entities.size()); e-- > 0;) {
+            if (!doc.alive(e)) continue;
+            const core::KindId kind   = entities.kind[e];
+            const std::uint32_t gslot = entities.slot[e];
+
+            if (kind == core::kPolylineKind) {
+                const core::RingSpan span = doc.geometry().rings_of(gslot);
+                if (span.count == 0) continue;
+                const auto xs = doc.geometry().ring_xs(span.first);
+                const auto ys = doc.geometry().ring_ys(span.first);
+                if (xs.size() < 2) continue;
+                from  = core::Point2{xs.back(), ys.back()};
+                tx    = static_cast<double>(xs.back() - xs[xs.size() - 2]);
+                ty    = static_cast<double>(ys.back() - ys[ys.size() - 2]);
+                found = true;
+                break;
+            }
+            if (kind == core::kArcKind) {
+                // AN ARC'S END TANGENT is perpendicular to its end radius, and
+                // which of the two perpendiculars it is follows the stored sweep:
+                // the model keeps an arc counter-clockwise (arc.hpp), so at the
+                // end the motion is the radius turned a quarter turn the same way.
+                const core::Point2 centre = core::arc_centre_of(doc.geometry(), gslot);
+                const core::Point2 end    = core::arc_end_of(doc.geometry(), gslot);
+                from                      = end;
+                tx                        = -static_cast<double>(end.y - centre.y);
+                ty                        = static_cast<double>(end.x - centre.x);
+                found                     = true;
+                break;
+            }
+        }
+        if (!found) {
+            ctx.session().fail(core::err(core::ErrorCode::NotFound,
+                                         "Devam edilecek bir çizgi ya da yay yok. Önce bir "
+                                         "çizgi veya yay çizin, sonra YAY yontem=devam yazın."));
+            co_return;
+        }
+
+        const double t_len = std::sqrt(tx * tx + ty * ty);
+        if (t_len <= 0.0) {
+            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
+                                         "Son çizginin son kenarı sıfır uzunlukta; teğet "
+                                         "doğrultusu yok."));
+            co_return;
+        }
+        tx /= t_len;
+        ty /= t_len;
+
+        auto c = co_await ctx.point("bitis", "Yayın bitiş noktası (teğet devam)",
+                                    PointOptions{.rubber_band   = true,
+                                                 .rubber_origin = from,
+                                                 .rubber_shape  = RubberShape::Line});
+        if (!c) co_return;
+
+        // THE CENTRE IS WHERE THE PERPENDICULAR AT THE START MEETS THE CHORD'S
+        // BISECTOR, and that is one equation: the centre is `from + s·n` for the
+        // normal `n`, and equidistant from both ends, so
+        //   s = |d|² / (2 · d·n)   with d = end − start.
+        // `d·n == 0` means the end lies ALONG the tangent — a straight line, not
+        // an arc — and the command says so rather than dividing by zero.
+        const double nx = -ty;
+        const double ny = tx;
+        const double dx = static_cast<double>(c->x - from.x);
+        const double dy = static_cast<double>(c->y - from.y);
+        const double dn = dx * nx + dy * ny;
+        if (dn > -1.0 && dn < 1.0) {
+            ctx.session().fail(core::err(
+                core::ErrorCode::InvalidArgument,
+                "Bitiş noktası teğetin üzerinde: buradan devam eden şey bir yay değil bir "
+                "doğrudur. ÇİZGİ kullanın ya da yanda bir nokta seçin."));
+            co_return;
+        }
+
+        const double span_sq = dx * dx + dy * dy;
+        const double s       = span_sq / (2.0 * dn);
+        const core::Point2 centre{from.x + core::mm_round(nx * s), from.y + core::mm_round(ny * s)};
+        const core::Mm radius = core::segment_length(centre, from);
+
+        // STORED COUNTER-CLOCKWISE, like every arc in this model. The tangent
+        // turns left when the centre is on the left (`s > 0`), and that is the
+        // counter-clockwise sweep from start to end; on the right the two ends
+        // swap, exactly as `bby` swaps them by side.
+        const bool counter_clockwise = s > 0.0;
+        auto made =
+            ctx.transaction().add_arc(ctx.active_layer(), centre, radius,
+                                      counter_clockwise ? from : *c, counter_clockwise ? *c : from);
+        if (!made) {
+            ctx.session().fail(made.error());
+            co_return;
+        }
+        ctx.record("yontem", Value::text(how));
+        // THE RESOLVED ARC, not the drawing it was read from: a replay must build
+        // this arc and not whatever the newest entity happens to be in the
+        // document it is replayed into (model.md P4). Recorded as the `merkez`
+        // form, which is what the default branch reads back.
+        ctx.record("merkez", Value::point(centre));
+        ctx.record("baslangic", Value::point(counter_clockwise ? from : *c));
+        ctx.record("bitis", Value::point(counter_clockwise ? *c : from));
         co_return;
     }
 
@@ -261,7 +383,7 @@ KENTOS_COMMAND(arc_draw)
                               "Yayın başlangıç noktası; merkez yönteminde yarıçapı bu belirler"),
                 Param::points("bitis", Arity::optional(),
                               "Yayın bitiş noktası; süpürme saat yönünün tersinedir"),
-                Param::choice("yontem", Arity::optional(), {"merkez", "3n", "bma", "bby"},
+                Param::choice("yontem", Arity::optional(), {"merkez", "3n", "bma", "bby", "devam"},
                               "merkez: merkez + iki uç · 3n: yay üzerinde üç nokta · bma: "
                               "başlangıç, merkez ve süpürme açısı · bby: başlangıç, bitiş ve "
                               "yarıçap"),

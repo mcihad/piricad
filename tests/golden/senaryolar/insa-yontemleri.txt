@@ -43,6 +43,11 @@ YAY yontem=bby baslangic=400,200 bitis=500,200 yaricap=50 yon=sag
 YAY yontem=bma baslangic=0,400 merkez=50,400 supurme=100
 YAY yontem=bma baslangic=200,400 merkez=250,400 supurme=-100
 
+# Teğet devam: doğu yönünde biten bir çizginin ucundan çeyrek yay. Merkez
+# ucun tam kuzeyinde, yarıçap 50 m — birleşme yerinde kırık yok.
+ÇOKLUÇİZGİ 0,500 100,500
+YAY yontem=devam bitis=150,550
+
 # Düzgün çokgenler: içten, dıştan ve kenar uzunluğundan
 ÇOKGEN yontem=ic merkez=0,600 kenar_sayisi=5 yaricap=30
 ÇOKGEN yontem=dis merkez=100,600 kenar_sayisi=6 yaricap=30

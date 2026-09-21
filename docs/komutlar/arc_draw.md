@@ -57,6 +57,7 @@ ve [`ALANAÇEVİR`](to_area.md) yayı reddeder.
 | `3n` | Yayın üzerindeki üç nokta | Ölçülmüş bir kavisin geri kurulması |
 | `bma` | Başlangıç + merkez + **süpürme açısı** | Bir yol kurbunun plandaki hâli |
 | `bby` | Başlangıç + bitiş + **yarıçap** + yön | Bir pah, bir birleşim kavsi |
+| `devam` | Son çizilen çizginin ya da yayın ucundan **teğet** devam eder; yalnız bitiş noktası istenir |
 
 **Süpürmenin işareti oturumun kuralındandır.** Varsayılan *semt* kuralında artı
 bir süpürme **saat yönünde**dir — bir mühendisin bir süpürmeden kastettiği şey —
@@ -75,6 +76,7 @@ YAY <merkez> <baslangic> <bitis>
 YAY yontem=3n baslangic=<n> uzerinden=<n> bitis=<n>
 YAY merkez=<n> baslangic=<n> yontem=bma supurme=<açı>
 YAY yontem=bby baslangic=<n> bitis=<n> yaricap=<m> [yon=sol|sag]
+YAY yontem=devam bitis=<n>
 ```
 
 Nokta yazımı [`ÇİZGİ`](line.md) ile aynıdır: mutlak koordinat (`485320,4310220`),
@@ -142,6 +144,37 @@ Araç kalıcıdır: bir yayı bitirdiğinizde `YAY` yeniden kurulur. Aracı bır
 
 Betikte koordinatlar **milimetredir** — komut satırında metre yazılır, betikte ham
 depolama birimi kullanılır (`485300000` = 485 300 m).
+
+## Teğet devam (`yontem=devam`)
+
+Bir yol geçiş eğrisi, bir bordür dönüşü ve zincirleme pahlar hep böyle çizilir:
+yay, **en son çizilen** çizginin ya da yayın ucundan, o ucun **kendi
+doğrultusunda** ayrılır — böylece birleşme yerinde kırık olmaz. Bordürde bir
+kırık, yeniden dökülecek bir bordür demektir.
+
+```text
+ÇOKLUÇİZGİ 0,0 100,0
+YAY yontem=devam bitis=150,50
+```
+
+Yalnız **bitiş noktası** istenir; başlangıç ve teğet çizimden okunur. Merkez,
+başlangıçtaki dike ile kirişin orta dikmesinin kesiştiği yerdir.
+
+**Kaynak çizimin kendisidir**, hatırlanan bir oturum alanı değil: `SEÇ SON` da
+"en son oluşturulan nesne"yi belgeden okur, ve doğrultuyu aynı yerden okumak aynı
+soruyu aynı yere sormaktır. Geri alma, replay ve yeniden yükleme ile ayrı tutulacak
+bir durum parçası daha olmuyor.
+
+Bir yayın ucunda teğet, uç yarıçapına diktir; modelin yayı saat yönünün tersine
+sakladığı için (`core/arc.hpp`) uçtaki hareket, yarıçapın aynı yöne çeyrek tur
+döndürülmüş hâlidir.
+
+**Bitiş noktası teğetin üzerindeyse** oradan devam eden şey bir yay değil bir
+doğrudur, ve komut bunu söyler — sıfıra bölmez. [`ÇİZGİ`](line.md) kullanın ya da
+yanda bir nokta seçin.
+
+Günlüğe **çözülmüş yay** yazılır (merkez, başlangıç, bitiş): bir replay BU yayı
+kurmalıdır, oynatıldığı belgede en yeni nesne ne olursa olsun.
 
 ## Geri alma
 
