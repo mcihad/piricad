@@ -24,6 +24,7 @@
 #include "kentos_cad/app/dialog_chrome.hpp"
 
 #include <QString>
+#include <QStringList>
 #include <QVector>
 
 #include <cstdint>
@@ -94,7 +95,7 @@ private:
     Controller& controller_;
     ExportSubject subject_;
     QString context_;
-    QString selection_; ///< `1,4,9` — the corners' owners, fixed when the window opened
+    QStringList selection_; ///< the corners' owners, fixed when the window opened
 
     QVector<Format> formats_;
     QVector<RadioButton*> choices_;

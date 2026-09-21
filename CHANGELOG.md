@@ -6,6 +6,35 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Düzeltildi — nesne seçimine yazılan koordinat sessizce yutuluyordu
+
+`bind_tokens` bir koordinat belirtecini, parametrenin türüne **bakmadan** önce
+noktaya çeviriyordu. Sayı, tam sayı, metin ve evet/hayır bir kat sonra
+`Validator::check_against_spec` tarafından kurtarılıyordu; **nesne seçimi**
+kurtarılmıyordu: bir noktanın `as_ids()`'i boştur, saklanan boş kimlik listesi de
+`arity.min == 0` olan bir seçime "verilmemiş" diye okunur. Argüman yere düşüyor
+ve komut başarı bildiriyordu — `.claude/command.md` P15'in tam olarak yasakladığı
+şey.
+
+- **`SİL nesneler=1,2` hiçbir şeyi silmiyordu**, `KOPYALA … bitis=485620,4310200
+  485640,4310200 485660,4310200` ise üç kopya istenirken **bir** kopya yapıp
+  başarı yazıyordu: sondaki çıplak koordinatlar, arity'si dolmayan ilk parametre
+  olan `nesneler`'e konumdan bağlanıp yutuluyordu. İkisi de artık reddediliyor.
+- **Koordinat yalnız nokta istenen yerde koordinattır.** Kısa devre `Point` ve
+  `nokta listesi` ile sınırlandı; kalan her tür, `value_from_token`'ın kendi
+  hata iletisine düşer. Çok değerli bir parametrede hata, işe yarayan biçimi de
+  söylüyor: `Birden çok değer için anahtarı yineleyin: nesneler=1 nesneler=2`.
+- **Virgül kimlik ayıracı değil.** `1,2` tek gramerde bir koordinattır ve
+  `1,2,3` koordinat olarak da okunamaz (`classify` reddeder) — yani virgüllü
+  biçim ikiden sonra zaten çalışmıyordu. Liste komut satırında anahtar
+  yinelenerek, betikte dizi olarak yazılır: `"nesneler": [1, 2, 3]`.
+- **Arayüzün üç çağrı yeri düzeltildi.** Öznitelik tablosunun satır seçimi ve
+  satır silmesi ile Dışa Aktar penceresinin köşe listesi kimlikleri virgülle
+  birleştiriyordu; yani iki satır seçmek hiçbir şey seçmiyor, üç satır silmek
+  ayrıştırma hatası veriyordu. Üçü de artık anahtarı yineliyor.
+- Betiğin `{"nesneler": [1, 2]}` yolu (`Bus::dispatch`'teki tür onarımı) olduğu
+  gibi duruyor ve arayüz = komut satırı = betik eşitliği testle bağlandı.
+
 ### Değişti — `@mesafe<açı` artık semt açısı okur: kuzeyden saat yönüne, grad
 
 Kutupsal koordinatın açısı bugüne kadar sabit bir matematik kuralıyla — derece,

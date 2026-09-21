@@ -870,6 +870,81 @@ TEST_CASE("error messages name what was expected and what arrived")
     CHECK(bad.error().message.find("YARDIM") != std::string::npos);
 }
 
+TEST_CASE("bir koordinat nesne seçimine bağlanmaz: yutulmaz, reddedilir")
+{
+    // THE BUG THIS LOCKS DOWN. `bind_tokens` turned any coordinate token into a
+    // point BEFORE it looked at the parameter's kind, so a coordinate was
+    // accepted for a parameter of every kind. A number, a text or a boolean
+    // was rescued afterwards by `Validator::check_against_spec`; a SELECTION was
+    // not. `append` reads the value with `as_ids()`, a point yields none, and
+    // the empty id list that was stored reads as "not given" to a selection
+    // whose `arity.min` is 0 — so the argument vanished and the command reported
+    // success. `.claude/command.md` P15 forbids exactly that.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("NOKTA 485600,4310200", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("NOKTA 485610,4310200", Origin::Test).ok());
+    const std::size_t before = f.doc.live_entity_count();
+
+    // A KEYWORD COORDINATE AT A SELECTION. `1,2` is one coordinate to the one
+    // grammar this program has (CLAUDE.md 5.11), never two ids — and `1,2,3` is
+    // not even that, because `classify` refuses it. This silently deleted
+    // nothing; now it is named, and the message says what to write instead.
+    auto pair = f.bus.execute_line("SİL nesneler=1,2", Origin::Test);
+    CHECK(!pair.ok());
+    CHECK(pair.error().message.find("nesne seçimi") != std::string::npos);
+    CHECK(pair.error().message.find("nesneler=1 nesneler=2") != std::string::npos);
+    CHECK_EQ(f.doc.live_entity_count(), before);
+
+    // THE REPORTED REPRO. The bare coordinates after `bitis=` bind positionally
+    // to `nesneler`, the first declared parameter, whose arity never fills. They
+    // were swallowed and KOPYALA made ONE copy where three were asked for, with
+    // a success report and a journal line that recorded the single copy.
+    REQUIRE(f.bus.execute_line("SEÇ KATMAN katman=0", Origin::Test).ok());
+    auto copied = f.bus.execute_line("KOPYALA baslangic=485600,4310200 bitis=485620,4310200 "
+                                     "485640,4310200 485660,4310200",
+                                     Origin::Test);
+    CHECK(!copied.ok());
+    CHECK(copied.error().message.find("core.copy") != std::string::npos);
+    CHECK(copied.error().message.find("nesneler") != std::string::npos);
+    CHECK_EQ(f.doc.live_entity_count(), before);
+
+    // A COORDINATE AT THE OTHER KINDS is refused where it is read rather than one
+    // layer later, and a parameter that takes a single value gets no advice to
+    // repeat a keyword that may not be repeated.
+    auto scalar = f.bus.execute_line("KATMAN ad=RENKLİ renk=1,2", Origin::Test);
+    CHECK(!scalar.ok());
+    CHECK(scalar.error().message.find("tam sayı") != std::string::npos);
+    CHECK(scalar.error().message.find("yineleyin") == std::string::npos);
+
+    // WHAT THE DOCUMENTATION TEACHES STILL WORKS, at any count — this is the form
+    // every `/docs/komutlar` page shows and the only one that carries a third id.
+    REQUIRE(f.bus.execute_line("SİL nesneler=1 nesneler=2", Origin::Test).ok());
+    CHECK_EQ(f.doc.live_entity_count(), before - 2);
+}
+
+TEST_CASE("betikteki [1,2] hâlâ iki kimlik: komut satırının reddi JSON yolunu kapatmadı")
+{
+    // A two-element JSON array is genuinely ambiguous and `dispatch` settles it
+    // from the spec (`{"nesneler": [1, 2]}` is two ids, not a point). That repair
+    // is a different layer from `bind_tokens` and must survive its tightening:
+    // the command line writes a list by repeating the keyword, JSON writes it as
+    // an array, and both clients reach the same document (Article 1.2).
+    Fixture cli;
+    REQUIRE(cli.bus.execute_line("NOKTA 485600,4310200", Origin::CommandLine).ok());
+    REQUIRE(cli.bus.execute_line("NOKTA 485610,4310200", Origin::CommandLine).ok());
+    REQUIRE(cli.bus.execute_line("SİL nesneler=1 nesneler=2", Origin::CommandLine).ok());
+
+    Fixture script;
+    REQUIRE(script.bus.execute_line("NOKTA 485600,4310200", Origin::Script).ok());
+    REQUIRE(script.bus.execute_line("NOKTA 485610,4310200", Origin::Script).ok());
+    Args args;
+    args.set("nesneler", Value::point(core::Point2{1, 2}));
+    REQUIRE(script.bus.dispatch(Invocation{"core.erase", args, Origin::Script}).ok());
+
+    CHECK_EQ(script.doc.live_entity_count(), std::size_t{0});
+    CHECK_EQ(cli.doc.content_hash(), script.doc.content_hash());
+}
+
 TEST_CASE("undo and redo walk the whole transaction")
 {
     Fixture f;

@@ -1038,13 +1038,19 @@ void AttributeTable::applyFilter()
 void AttributeTable::pushSelection()
 {
     if (pushing_) return;
+    // ONE `nesneler=` PER ROW. Joining the keys with commas wrote
+    // `nesneler=1,2`, which the command line reads as the coordinate `1,2` and
+    // not as two ids at all — two rows selected nothing and three rows were a
+    // parse error. The keyword repeated is the form every `/docs/komutlar` page
+    // teaches, and it is the only one that carries a third id.
     QStringList keys;
     for (const QModelIndex& index : view_->selectionModel()->selectedRows())
-        keys << QString::number(static_cast<qulonglong>(model_->keyAt(index.row())));
+        keys << QStringLiteral("nesneler=%1")
+                    .arg(static_cast<qulonglong>(model_->keyAt(index.row())));
     if (keys.isEmpty()) return;
 
     pushing_ = true;
-    controller_.runLine(QStringLiteral("SEÇ nesneler=%1").arg(keys.join(QLatin1Char(','))),
+    controller_.runLine(QStringLiteral("SEÇ %1").arg(keys.join(QLatin1Char(' '))),
                         command::Origin::Gui);
     pushing_ = false;
 }
@@ -1076,14 +1082,16 @@ void AttributeTable::deleteSelectedRows()
 {
     QStringList keys;
     for (const QModelIndex& index : view_->selectionModel()->selectedRows())
-        keys << QString::number(static_cast<qulonglong>(model_->keyAt(index.row())));
+        keys << QStringLiteral("nesneler=%1")
+                    .arg(static_cast<qulonglong>(model_->keyAt(index.row())));
     if (keys.isEmpty()) {
         complain(tr("Silinecek satır seçili değil."));
         return;
     }
     // `SİL` asks its own confirmation when the preference says so, and undoes in
-    // one step — the table adds nothing to that and takes nothing from it.
-    controller_.runLine(QStringLiteral("SİL nesneler=%1").arg(keys.join(QLatin1Char(','))),
+    // one step — the table adds nothing to that and takes nothing from it. The
+    // keyword is repeated per row for the reason `pushSelection` gives.
+    controller_.runLine(QStringLiteral("SİL %1").arg(keys.join(QLatin1Char(' '))),
                         command::Origin::Gui);
 }
 
