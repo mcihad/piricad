@@ -882,3 +882,105 @@ TEST_CASE("YENİ: betiğin ortasında çalışınca eski belgenin geri alma adı
     CHECK(rig.bus.execute_line("GERİAL", Origin::Test).ok());
     CHECK_EQ(rig.doc.live_entity_count(), std::size_t{0});
 }
+
+// ==================================== PANO (P6) ==============================
+
+TEST_CASE("PANO: kopyala ve yapıştır aynı geometriyi yeni kimliklerle verir")
+{
+    const auto clip =
+        (std::filesystem::temp_directory_path() / "kentoscad-pano-kanit.pcad").string();
+    std::filesystem::remove(clip);
+
+    FileRig source;
+    REQUIRE(source.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(source.bus.execute_line("ALAN 0,0 40,0 40,30 0,30", Origin::Test).ok());
+    REQUIRE(source.bus.execute_line("ÇİZGİ 60,0 60,40", Origin::Test).ok());
+    REQUIRE(source.bus.execute_line("SEÇ mod=TÜMÜ", Origin::Test).ok());
+
+    REQUIRE(source.bus.execute_line("PANOYAKOPYALA dosya=\"" + clip + "\"", Origin::Test).ok());
+    CHECK(std::filesystem::exists(clip));
+
+    // A COPY CHANGES NOTHING and leaves no undo step: it writes a file, and R43
+    // is why that is a `File` command rather than an edit.
+    CHECK_EQ(source.doc.live_entity_count(), std::size_t{2});
+    const std::uint64_t untouched = source.doc.content_hash();
+
+    // ---- pasted IN PLACE into another drawing: the same coordinates ----
+    FileRig same;
+    REQUIRE(
+        same.bus.execute_line("YAPIŞTIR yerinde=evet dosya=\"" + clip + "\"", Origin::Test).ok());
+    CHECK_EQ(same.doc.live_entity_count(), std::size_t{2});
+    CHECK_EQ(same.doc.content_hash(), untouched); ///< byte for byte the same drawing
+
+    // THE LAYER CAME WITH IT. A parcel pasted onto layer `0` is a parcel that
+    // has lost what it is.
+    CHECK(same.doc.find_layer("PARSEL") != core::kNoLayer);
+
+    // ---- and pasted AT A POINT: moved, not re-placed ----
+    FileRig moved;
+    REQUIRE(moved.bus.execute_line("YAPIŞTIR nokta=1000,500 dosya=\"" + clip + "\"", Origin::Test)
+                .ok());
+    REQUIRE_EQ(moved.doc.live_entity_count(), std::size_t{2});
+    const core::Box2 box = moved.doc.extent();
+    CHECK_EQ(box.min_x, 1'000'000);
+    CHECK_EQ(box.min_y, 500'000);
+    // The shape is unchanged: 60 m wide and 40 m tall, wherever it landed.
+    CHECK_EQ(box.max_x - box.min_x, 60'000);
+    CHECK_EQ(box.max_y - box.min_y, 40'000);
+
+    // ONE UNDO STEP. A paste of two entities that took two steps back would be a
+    // paste the user could not take back (Article 1.5).
+    CHECK_EQ(moved.undo.undo_depth(), std::size_t{1});
+    REQUIRE(moved.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_EQ(moved.doc.live_entity_count(), std::size_t{0});
+
+    std::filesystem::remove(clip);
+}
+
+TEST_CASE("PANO: KES panoya alır ve siler, tek geri alma adımıyla")
+{
+    const auto clip = (std::filesystem::temp_directory_path() / "kentoscad-pano-kes.pcad").string();
+    std::filesystem::remove(clip);
+
+    FileRig rig;
+    REQUIRE(rig.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("ALAN 0,0 40,0 40,30 0,30", Origin::Test).ok());
+    REQUIRE(rig.bus.execute_line("ÇİZGİ 60,0 60,40", Origin::Test).ok());
+    const auto key = static_cast<std::int64_t>(core::raw(rig.doc.entities().key[0]));
+
+    REQUIRE(rig.bus
+                .execute_line("KES nesneler=" + std::to_string(key) + " dosya=\"" + clip + "\"",
+                              Origin::Test)
+                .ok());
+    CHECK(std::filesystem::exists(clip));
+    CHECK_EQ(rig.doc.live_entity_count(), std::size_t{1}); ///< the parcel is gone
+
+    // THE COPY AND THE ERASE ARE ONE STEP. A cut whose copy survived its own
+    // undo would be a cut the user could not take back.
+    REQUIRE(rig.bus.execute_line("GERİAL", Origin::Test).ok());
+    CHECK_EQ(rig.doc.live_entity_count(), std::size_t{2});
+
+    // AND WHAT WAS CUT IS STILL ON THE CLIPBOARD, which is the whole point of a
+    // cut: undoing the removal must not empty the clipboard the user is about to
+    // paste from.
+    FileRig into;
+    REQUIRE(
+        into.bus.execute_line("YAPIŞTIR yerinde=evet dosya=\"" + clip + "\"", Origin::Test).ok());
+    CHECK_EQ(into.doc.live_entity_count(), std::size_t{1});
+
+    std::filesystem::remove(clip);
+}
+
+TEST_CASE("PANO: boş seçim ve boş pano reddedilir, sebebiyle")
+{
+    FileRig rig;
+    const auto nothing = rig.bus.execute_line("PANOYAKOPYALA", Origin::Test);
+    CHECK_FALSE(nothing.ok());
+    CHECK(nothing.error().message.find("nesne yok") != std::string::npos);
+
+    const auto empty = rig.bus.execute_line(
+        "YAPIŞTIR yerinde=evet dosya=\"/tmp/kentoscad-boyle-bir-pano-yok.pcad\"", Origin::Test);
+    CHECK_FALSE(empty.ok());
+    CHECK(empty.error().message.find("Panoda bir şey yok") != std::string::npos);
+    CHECK_EQ(rig.doc.live_entity_count(), std::size_t{0});
+}

@@ -55,6 +55,9 @@ Tek tek komutlar:
 | `HİZALA` | [Taşı, döndür, ölçekle](komutlar/align.md) |
 | `BÖLÜMLE` | [Nesne boyunca işaret](komutlar/divide.md) |
 | `ÇİZGİDÜZENLE` | [Çizgiyi düzenle](komutlar/pedit.md) |
+| `PANOYAKOPYALA` | [Panoya al](komutlar/copy_clip.md) |
+| `KES` | [Panoya al ve sil](komutlar/cut.md) |
+| `YAPIŞTIR` | [Panodakini koy](komutlar/paste.md) |
 | `ALAN` | [Kapalı alan çizme](komutlar/area.md) |
 | `DİKDÖRTGEN` | [İki köşeden dörtgen ve kare çizme](komutlar/rectangle.md) |
 | `DAİRE` | [Daire çizme](komutlar/circle_draw.md) |

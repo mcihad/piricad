@@ -80,6 +80,20 @@ struct FileRequest
 
         /// Write the drawing's points back out in the same shape.
         ExportPoints,
+
+        /// Write the NAMED entities out as a native project file — the clipboard
+        /// payload, and a file a script can keep.
+        ///
+        /// TWO MORE VERBS ON THIS SEAM RATHER THAN A SEAM OF THEIR OWN, for the
+        /// reason `New` is a verb here: whatever moves a drawing in or out of
+        /// this program is one seam, so there is one place for it to go wrong.
+        /// The payload is the NATIVE FORMAT and not a JSON of its own — a second
+        /// description of a document is a second thing to keep in step, and this
+        /// program already has one that round-trips every kind (io.md).
+        ClipboardCopy,
+
+        /// Read such a file and place what is in it at `at`, as ONE undo step.
+        ClipboardPaste,
     };
 
     Verb verb{Verb::Open}; ///< which operation to carry out
@@ -121,6 +135,16 @@ struct FileRequest
 
     /// Export: the DXF release year to write (`surum=2013`); 0 means the default.
     int version{0};
+
+    /// ClipboardPaste: where what is pasted is put. The payload's own base point
+    /// — the first entity's lower-left corner as it was copied — lands here, so
+    /// a paste follows the cursor rather than landing back where it came from.
+    core::Point2 at{};
+
+    /// ClipboardPaste: true when the payload should be placed where it was
+    /// copied from, ignoring `at`. What a user means by "paste in place", and
+    /// what a copy between two drawings in the same coordinate system wants.
+    bool in_place{false};
 };
 
 /// One database operation, asked for by `VERİTABANI` and carried out by /src/io.

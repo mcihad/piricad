@@ -887,27 +887,26 @@ void MainWindow::buildActions()
         commandLine_->setFocus();
     });
 
-    // The clipboard group. `KES`/`YAPIŞTIR` are Phase 2 commands; the buttons
-    // exist now so the bar has the shape design.md 7 draws, and each is disabled
-    // with the phase named in its tooltip rather than silently absent.
-    actCut_ =
-        placeholder(Glyph::Cut, tr("Kes"), QStringLiteral("KES"), tr("Faz 2"),
-                    tr("Seçili nesneleri panoya alıp çizimden silecek. Pano yükü çizimin kendi "
-                       "JSON biçiminde olacak, yani başka bir KentOSCad penceresine ve bir dosyaya "
-                       "aynı şekilde yapıştırılabilecek.\n\nBugün: nesneleri KOPYALA ile "
-                       "çoğaltabilir, SİL ile silebilirsiniz."));
-    actCopyClip_ = placeholder(
-        Glyph::Duplicate, tr("Panoya Kopyala"), QStringLiteral("PANOKOPYALA"), tr("Faz 2"),
-        tr("Seçili nesneleri çizimden silmeden panoya alacak. Yük, dosyaya yazılan "
-           "biçimin aynısı olacak — ikinci bir pano biçimi olmayacak.\n\nBugün: aynı "
-           "çizim içinde çoğaltmak için KOPYALA, başka bir dosyaya taşımak için "
-           "DIŞAAKTAR / İÇEAKTAR."));
-    actPaste_ =
-        placeholder(Glyph::Paste, tr("Yapıştır"), QStringLiteral("YAPIŞTIR"), tr("Faz 2"),
-                    tr("Panodaki nesneleri tıkladığınız noktaya, yeni kimliklerle koyacak. Aynı "
-                       "komut bir JSON dosyasından da yapıştırabilecek, böylece betikten ve "
-                       "başsız çalıştırmada da kullanılabilecek.\n\nBugün: dış veriyi İÇEAKTAR "
-                       "ile alabilirsiniz."));
+    // THE CLIPBOARD GROUP IS REAL NOW. These three were `placeholder`s — rows
+    // that opened a box saying "Faz 2" — and the commands behind them landed with
+    // P6, so the rows run them.
+    //
+    // `Ctrl+X`, `Ctrl+C`, `Ctrl+V` are stated rather than taken from
+    // `QKeySequence::Cut` and friends: the manual prints these three and a
+    // shortcut the manual prints has to be the shortcut on all three platforms.
+    actCut_ = commandAction(Glyph::Cut, tr("Kes"), QStringLiteral("KES"),
+                            tr("KES — seçili nesneleri panoya alır ve çizimden siler; tek geri "
+                               "alma adımı  ·  kısaltma: KS"),
+                            QKeySequence(Qt::CTRL | Qt::Key_X));
+    actCopyClip_ =
+        commandAction(Glyph::Duplicate, tr("Panoya Kopyala"), QStringLiteral("PANOYAKOPYALA"),
+                      tr("PANOYAKOPYALA — seçili nesneleri çizimin kendi biçiminde panoya yazar  "
+                         "·  kısaltma: PKP"),
+                      QKeySequence(Qt::CTRL | Qt::Key_C));
+    actPaste_ = commandAction(Glyph::Paste, tr("Yapıştır"), QStringLiteral("YAPIŞTIR"),
+                              tr("YAPIŞTIR — panodaki nesneleri tıkladığınız yere koyar; "
+                                 "yerinde=evet kopyalandığı koordinatlara  ·  kısaltma: YP"),
+                              QKeySequence(Qt::CTRL | Qt::Key_V));
 
     // A MODAL TOOL that collects its own two corners. It shipped disabled because
     // SEÇ could take a box as arguments and could not ask for one.
@@ -1330,6 +1329,10 @@ void MainWindow::buildMenus()
     auto* edit = bar->addMenu(tr("D&üzen"));
     edit->addAction(actUndo_);
     edit->addAction(actRedo_);
+    edit->addSeparator();
+    edit->addAction(actCut_);
+    edit->addAction(actCopyClip_);
+    edit->addAction(actPaste_);
     edit->addSeparator();
     edit->addAction(actSelectAll_);
     edit->addAction(actSelectNone_);
@@ -3900,7 +3903,10 @@ int MainWindow::probeAnswerable()
     //     is clicked, so it reads as broken rather than as not-yet;
     //   * a query command — it answers in the transcript, and the transcript
     //     panel starts closed, so the answer arrived where nobody was looking.
-    for (const char* named : {"Kes", "Panoya Kopyala", "Yapıştır", "Katman Yöneticisi"}) {
+    // WHAT IS STILL A PLACEHOLDER, and the list shrinks as work lands: the three
+    // clipboard rows were here until P6 gave them commands, and the assertion
+    // below now checks the opposite of what it used to — that they RUN.
+    for (const char* named : {"Katman Yöneticisi"}) {
         QAction* row = nullptr;
         for (QAction* candidate : findChildren<QAction*>())
             if (candidate->text() == QString::fromUtf8(named)) row = candidate;
@@ -3929,6 +3935,23 @@ int MainWindow::probeAnswerable()
               QStringLiteral("%1 hangi fazda geleceğini söylüyor").arg(QString::fromUtf8(named)));
         check(said.contains(QStringLiteral("Bugün")),
               QStringLiteral("%1 bugün ne kullanılacağını söylüyor").arg(QString::fromUtf8(named)));
+    }
+
+    // AND WHAT STOPPED BEING ONE. A row that used to explain itself and now has a
+    // command behind it has to RUN that command — the opposite assertion, and the
+    // one that catches a placeholder left in place after its command landed.
+    for (const auto& [named, word] :
+         {std::pair{"Kes", "KES"}, std::pair{"Panoya Kopyala", "PANOYAKOPYALA"},
+          std::pair{"Yapıştır", "YAPIŞTIR"}}) {
+        QAction* row = nullptr;
+        for (QAction* candidate : findChildren<QAction*>())
+            if (candidate->text() == QString::fromUtf8(named)) row = candidate;
+        check(row != nullptr && row->isEnabled(),
+              QStringLiteral("%1 satırı canlı").arg(QString::fromUtf8(named)));
+        if (row == nullptr) continue;
+        check(row->property(kToolCommand).toString() == QString::fromUtf8(word),
+              QStringLiteral("%1 artık %2 komutunu çalıştırıyor")
+                  .arg(QString::fromUtf8(named), QString::fromUtf8(word)));
     }
 
     // A query command run from its menu row brings its own answer into view: the

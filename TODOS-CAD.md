@@ -358,15 +358,44 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
 - [x] **Docs:** `dimension.md`'ye iki tür satırı, iki bölüm (ordinat jesti ve yay-kiriş farkı, DXF
       notuyla), parametre ve hata satırları. `make reference`.
 
-## P6 — Pano: KES / PANOYAKOPYALA / YAPIŞTIR
+## P6 — Pano (tamamlandı)
 
-- [ ] **P6-1** Yük: seçili varlıkların yerel JSON'u (`io` yazıcısıyla aynı şema), MIME
-  `application/x-kentoscad+json`; `QClipboard` `/src/app`'te; `Bus::on_clipboard_request` seam'i
-  (`on_file_request` kalıbı).
-- [ ] **P6-2** `core.copy_clip` (`PANOYAKOPYALA`), `core.cut` (`KES` = kopyala + `SİL`, tek undo),
-  `core.paste` (`YAPIŞTIR nokta=` taban; `dosya=` aynı JSON dosyadan — betik yolu, Article 1.2).
-- [ ] **P6-3** `main_window.cpp` yer tutucuları gerçek eyleme (`actOpen_` kalıbı).
-- [ ] **P6-4** Test: kopyala→yapıştır aynı geometri, yeni `EntityId`; eksik katman kararı docs'ta.
+- [x] **Yük yerli biçimin kendisi**, planın dediği gibi "ikinci bir biçim yok" — ama JSON değil,
+      çünkü bir belgenin JSON tarifi bu programda YOK ve uydurmak tam olarak planın yasakladığı
+      ikinci biçim olurdu. Yük, `KAYDET`'in yazdığı proje dosyasının kendisi: aynı yazıcı yazıyor,
+      aynı okuyucu okuyor, ve bu yüzden panoya katman adı, stil, çizgi tipi, öznitelik sütunları ve
+      değerleri, blok tanımları ve koordinat sistemi birlikte gidiyor.
+- [x] **Alt küme `Transaction::adopt_from`'a bir anahtar FİLTRESİ eklenerek çıkarılıyor.** İkinci bir
+      kopyalayıcı yazmak, o kopyalayıcının çizgi tiplerini, resimleri, iç stilleri, katmanları,
+      blokları ve öznitelik sütunlarını baştan öğrenmesi ve bir tür bunlardan birini kazandığı gün
+      geride kalması demek olurdu (5.10). Filtre, bir ithalatın kullandığı fonksiyonun aynısı:
+      doğru biçimde benimsenen bir tür doğru biçimde kopyalanıyor.
+- [x] **İki yeni fiil `FileRequest`'e eklendi** (`ClipboardCopy`, `ClipboardPaste`), kendi seam'i
+      açılmadı — `New`'in orada olma gerekçesiyle: bu programa bir çizim sokan ya da ondan çıkaran ne
+      varsa tek bir seam, yani ters gitmesi için tek bir yer.
+- [x] `core.copy_clip` (**PANOYAKOPYALA**, `PANOKOPYALA`, `COPYCLIP`, `PKP`) — çizimde hiçbir şeyi
+      değiştirmiyor, geri alma adımı bırakmıyor; `Category::File`, çünkü yaptığı şey bir dosya yazmak.
+- [x] `core.cut` (**KES**, `CUT`, `KS`) — kopyalama ve silme TEK işlem, dolayısıyla tek Ctrl+Z ikisini
+      geri alıyor; ve geri alma panoyu BOŞALTMIYOR, ki bir kesmenin bütün amacı budur.
+- [x] `core.paste` (**YAPIŞTIR**, `YAPISTIR`, `PASTE`, `YP`) — `nokta=` yükün sol alt köşesini oraya
+      taşıyor (bir elin yapıştırmaktan anladığı şey), `yerinde=evet` her koordinatı olduğu gibi
+      bırakıyor (aynı sistemdeki iki çizim arasında kopyalamanın istediği şey). Tek undo adımı.
+- [x] **Pano nerede:** `dosya=` verilmezse kullanıcı başına ortak bir dosya
+      (`kentoscad-pano.pcad`), yani bu programın iki penceresi aynı panoyu paylaşıyor ve bir çökme
+      yükü kaybetmek yerine yerinde bırakıyor. `dosya=` betiğin ve başsız çalıştırmanın yolu ve
+      AYNI yol (Article 1.2).
+- [x] **`main_window.cpp` yer tutucuları gerçek oldu:** üçü de komutu çalıştırıyor, `Ctrl+X`/`C`/`V`
+      kısayollarıyla ve **Düzen** menüsünde geri al/yinele'nin yanında. `tool-answerable` kapısının
+      iddiası TERSİNE çevrildi: o üç satırın artık açıklama kutusu değil KOMUT çalıştırdığını
+      denetliyor — bir komut geldikten sonra yerinde kalmış bir yer tutucuyu yakalayan iddia bu.
+- [x] Üç sayfa, `docs/README.md` satırları, `make reference`, üç eşitlik/geri-alma testi
+      (kopyala→yapıştır aynı içerik hash'i; KES tek adım ve pano dolu kalıyor; boş seçim ve boş pano
+      sebebiyle reddediliyor).
+- [ ] **İŞLETİM SİSTEMİ PANOSU (`QClipboard`) bağlanmadı ve sebebi:** `/src/io` Qt bağlamaz
+      (Article 3.2), dolayısıyla baytları işletim sistemi panosuna koymak `/src/app`'in işi ve bir
+      app-tarafı kanca daha istiyor. Bugün pano dosyası bu programın iki penceresi arasında
+      çalışıyor; BAŞKA bir uygulamaya kopyalamak o kancayı bekliyor. Kendi commit'ini hak ediyor ve
+      MIME türü `application/x-kentoscad-project` olarak kararlaştırıldı.
 
 ## P7 — Sorgu ve araç çubuğu artıkları
 

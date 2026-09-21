@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "kentos_cad/io/service.hpp"
 
+#include "kentos_cad/command/journal.hpp"
+
+#include "kentos_cad/command/registry.hpp"
+
 #include "kentos_cad/io/dwg.hpp"
 #include "kentos_cad/io/dxf.hpp"
 
@@ -285,6 +289,16 @@ command::Task<core::Result<std::string>> FileService::handle(command::FileReques
     case command::FileRequest::Verb::ExportPoints:
         co_return export_points(std::move(request.path), request.swapped_axes,
                                 std::move(request.entities));
+
+    case command::FileRequest::Verb::ClipboardCopy:
+        co_return clipboard_copy(request.path.empty() ? default_clipboard_path()
+                                                      : std::move(request.path),
+                                 std::move(request.entities));
+
+    case command::FileRequest::Verb::ClipboardPaste:
+        co_return co_await clipboard_paste(
+            request.tx, request.path.empty() ? default_clipboard_path() : std::move(request.path),
+            request.at, request.in_place);
     }
     co_return err(ErrorCode::Internal, "Bilinmeyen dosya işlemi.");
 }
@@ -418,6 +432,136 @@ command::Task<core::Result<std::string>> FileService::open(std::string path)
     co_return "Açıldı: " + current_path_ + "  (" + std::to_string(r.entities) + " nesne, " +
         std::to_string(r.layers) + " katman, " + std::to_string(r.vertices) + " nokta, biçim " +
         std::to_string(r.format_version) + ")" + join_warnings(r.warnings);
+}
+
+// ----------------------------------------------------------------- PANO ----
+
+std::string FileService::default_clipboard_path()
+{
+    // ONE PATH PER USER, so two windows of this program share a clipboard and a
+    // crash leaves the payload behind rather than losing it. Not the OS
+    // clipboard: that is the window layer's job and it is `/src/app`'s, because
+    // `/src/io` links no Qt (Article 3.2).
+    return (std::filesystem::temp_directory_path() / "kentoscad-pano.pcad").string();
+}
+
+core::Result<std::string> FileService::clipboard_copy(std::string path,
+                                                      std::vector<std::uint64_t> entities)
+{
+    if (entities.empty())
+        return err(ErrorCode::InvalidArgument,
+                   "Panoya alınacak nesne yok. Önce nesne seçin, sonra komutu çalıştırın.");
+
+    // A SCRATCH DOCUMENT AND THE ONE COPIER. `adopt_from` with a key filter is
+    // the same function an import uses, so a kind that adopts correctly copies
+    // correctly and a kind added next month needs nothing here (CLAUDE.md 5.10).
+    core::Document scratch;
+    command::Journal journal;
+    command::UndoStack undo;
+    command::Registry registry;
+    command::Bus side{scratch, registry, journal, undo};
+
+    std::vector<core::EntityKey> keys;
+    keys.reserve(entities.size());
+    for (const std::uint64_t raw : entities)
+        keys.push_back(static_cast<core::EntityKey>(raw));
+
+    std::uint64_t copied = 0;
+    {
+        command::Transaction tx(scratch, "pano");
+        auto summary = tx.adopt_from(bus_.document(), keys);
+        if (!summary) return summary.error();
+        copied = summary.value().entities;
+    }
+    if (copied == 0)
+        return err(ErrorCode::NotFound, "Seçilen nesneler bulunamadı; panoya bir şey yazılmadı.");
+
+    // THE CRS TRAVELS WITH IT. A parcel pasted into a drawing in another zone is
+    // a parcel in the wrong place, and the payload has to be able to say which
+    // zone it came from before anything can decide what to do about it.
+    auto report = save_project(scratch, bus_.project_settings(), path);
+    if (!report) return report.error();
+
+    return "Panoya alındı: " + std::to_string(copied) + " nesne (" +
+           std::to_string(report.value().bytes) + " bayt).";
+}
+
+command::Task<core::Result<std::string>> FileService::clipboard_paste(command::Transaction* tx,
+                                                                      std::string path,
+                                                                      core::Point2 at,
+                                                                      bool in_place)
+{
+    if (tx == nullptr)
+        co_return err(ErrorCode::Internal, "YAPIŞTIR bir işlem içinde çalışmak zorunda.");
+
+    std::error_code ec;
+    if (!std::filesystem::exists(path, ec))
+        co_return err(ErrorCode::NotFound,
+                      "Panoda bir şey yok. Önce PANOYAKOPYALA ya da KES ile bir şey alın "
+                      "(pano dosyası: " +
+                          path + ").");
+
+    core::Document payload;
+    command::Journal journal;
+    command::UndoStack undo;
+    command::Registry registry;
+    command::Bus side{payload, registry, journal, undo};
+    core::Settings ignored{core::builtin_settings(), core::SettingScopeMask::Project};
+
+    {
+        command::Transaction into(payload, "pano-oku");
+        auto read = co_await read_project(into, path, ignored, stop_.get_token());
+        if (!read) co_return read.error();
+    }
+
+    // WHERE IT GOES. `in_place` leaves every coordinate as it was copied, which
+    // is what a copy between two drawings in the same system wants. Otherwise
+    // the payload's own lower-left corner is moved onto `at`, so a paste lands
+    // where the user pointed rather than back where it came from.
+    if (!in_place) {
+        const core::Box2 extent = payload.extent();
+        if (!extent.empty()) {
+            const core::Mm dx = at.x - extent.min_x;
+            const core::Mm dy = at.y - extent.min_y;
+            if (dx != 0 || dy != 0) {
+                command::Transaction shift(payload, "pano-tasi");
+                const core::EntityTable& ents = payload.entities();
+                for (core::EntityId e = 0; e < ents.size(); ++e) {
+                    if (!payload.alive(e)) continue;
+                    const core::RingSpan span = payload.geometry().rings_of(ents.slot[e]);
+                    std::vector<std::vector<core::Point2>> store;
+                    std::vector<core::RingGeometry::RingInput> rings;
+                    for (std::uint32_t r = span.first; r < span.first + span.count; ++r) {
+                        const auto xs = payload.geometry().ring_xs(r);
+                        const auto ys = payload.geometry().ring_ys(r);
+                        std::vector<core::Point2> pts;
+                        pts.reserve(xs.size());
+                        for (std::size_t v = 0; v < xs.size(); ++v)
+                            pts.push_back(core::Point2{xs[v] + dx, ys[v] + dy});
+                        store.push_back(std::move(pts));
+                        rings.push_back(core::RingGeometry::RingInput{
+                            {}, payload.geometry().ring_role[r], payload.geometry().ring_part[r]});
+                    }
+                    for (std::size_t i = 0; i < rings.size(); ++i)
+                        rings[i].points = store[i];
+                    if (auto st = shift.set_geometry(e, rings); !st) co_return st.error();
+                }
+            }
+        }
+    }
+
+    // INTO THE CALLER'S OWN TRANSACTION, so a paste is one undo step and rolls
+    // back whole (io.md R17) — the same contract an import keeps.
+    auto summary = tx->adopt_from(payload);
+    if (!summary) co_return summary.error();
+
+    const command::Transaction::AdoptSummary& s = summary.value();
+    std::string said = "Yapıştırıldı: " + std::to_string(s.entities) + " nesne";
+    if (s.layers > 0) said += ", " + std::to_string(s.layers) + " yeni katman";
+    said += in_place ? " (yerinde)." : ".";
+    for (const std::string& note : s.notes)
+        said += "  not: " + note;
+    co_return said;
 }
 
 // -------------------------------------------- KAYDET / FARKLIKAYDET ---------

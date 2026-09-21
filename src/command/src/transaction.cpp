@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <map>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -577,8 +578,21 @@ void UndoStack::clear()
     redo_.clear();
 }
 
-core::Result<Transaction::AdoptSummary> Transaction::adopt_from(const core::Document& scratch)
+core::Result<Transaction::AdoptSummary>
+Transaction::adopt_from(const core::Document& scratch, std::span<const core::EntityKey> only)
 {
+    // WHICH ENTITIES, resolved once into a slot set rather than searched per
+    // entity: a clipboard copy of five hundred parcels would otherwise be a
+    // linear scan five hundred times over.
+    std::vector<bool> wanted;
+    if (!only.empty()) {
+        wanted.assign(scratch.entities().size(), false);
+        for (const core::EntityKey k : only) {
+            const core::EntityId e = scratch.slot_of(k);
+            if (e != core::kNoEntity && e < wanted.size()) wanted[e] = true;
+        }
+    }
+
     using core::Appearance;
     using core::kByLayerStyle;
     AdoptSummary summary;
@@ -703,6 +717,7 @@ core::Result<Transaction::AdoptSummary> Transaction::adopt_from(const core::Docu
     std::vector<core::RingGeometry::RingInput> rings;
     for (EntityId e = 0; e < ents.size(); ++e) {
         if (!ents.alive(e)) continue;
+        if (!wanted.empty() && !wanted[e]) continue;
         const std::uint32_t slot  = ents.slot[e];
         const core::RingSpan span = geo.rings_of(slot);
         std::size_t total         = 0;

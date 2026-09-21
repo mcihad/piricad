@@ -147,7 +147,16 @@ public:
     /// a reader fills a scratch document on a worker thread, this copies it into
     /// the real one on the bus thread, inside the command's one transaction
     /// (io.md P3, R17). Any failure is returned; the transaction rolls back whole.
-    core::Result<AdoptSummary> adopt_from(const core::Document& scratch);
+    /// `only` names the entities to bring over, by persistent key; empty brings
+    /// every live one, which is what an import wants.
+    ///
+    /// A FILTER RATHER THAN A SECOND COPIER. `PANOYAKOPYALA` needs exactly this
+    /// function over a SELECTION, and the alternative was a second walk over the
+    /// entity table that would have to learn dash patterns, pictures, interned
+    /// styles, layers, blocks and attribute columns all over again — and would
+    /// fall behind the day a kind gains one of them (CLAUDE.md 5.10).
+    core::Result<AdoptSummary> adopt_from(const core::Document& scratch,
+                                          std::span<const core::EntityKey> only = {});
 
     /// Moves an entity to another layer, keeping its identity.
     Status set_entity_layer(EntityId e, LayerId layer);

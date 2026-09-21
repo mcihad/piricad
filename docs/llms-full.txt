@@ -41,8 +41,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 90 (82 tanesi onay ister)
-- Katalog parmak izi: `14354613283252454611`
+- Araç sayısı: 93 (85 tanesi onay ister)
+- Katalog parmak izi: `16477192571512497646`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -277,6 +277,32 @@ Onay ister.
 | `nesneler` | string | hayır | Kopyalanacak nesnelerin kimlikleri; yoksa etkin seçim — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `baslangic` | string | evet | Kopyalamanın başlangıç noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `bitis` | string | evet | Kopyaların geleceği noktalar; her nokta bir kopya — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_copy_clip` — Panoya Kopyala
+
+Seçili nesneleri çizimin kendi biçiminde panoya yazar.
+Komut: PANOYAKOPYALA (PANOKOPYALA, COPYCLIP, PKP)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Panoya alınacak nesneler; verilmezse seçim kullanılır — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `dosya` | string | hayır | Panonun yazılacağı dosya; verilmezse ortak pano dosyası (metin) |
+
+### `core_cut` — Kes
+
+Seçili nesneleri panoya alır ve çizimden siler; tek geri alma adımı.
+Komut: KES (CUT, KS)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Kesilecek nesneler; verilmezse seçim kullanılır — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `dosya` | string | hayır | Panonun yazılacağı dosya; verilmezse ortak pano dosyası (metin) |
 
 ### `core_dimension` — Ölçü
 
@@ -790,6 +816,20 @@ Onay ister.
 |---|---|---|---|
 | `baslangic` | string | evet | Kaydırmanın tutulacağı nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `bitis` | string | evet | O noktanın taşınacağı yer — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_paste` — Yapıştır
+
+Panodaki nesneleri çizime koyar; tek geri alma adımı.
+Komut: YAPIŞTIR (YAPISTIR, PASTE, YP)
+Bu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.
+
+Onay ister.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nokta` | string | hayır | Yapıştırılacak yerin sol alt köşesi; yerinde=evet ile gereksiz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `yerinde` | boolean | hayır | Kopyalandığı koordinatlara yapıştırır (evet/hayır) |
+| `dosya` | string | hayır | Okunacak pano dosyası; verilmezse ortak pano dosyası (metin) |
 
 ### `core_pedit` — Çizgi Düzenle
 

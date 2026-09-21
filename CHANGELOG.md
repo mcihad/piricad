@@ -6,6 +6,43 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — pano: KES, PANOYAKOPYALA, YAPIŞTIR (P6)
+
+Araç çubuğundaki üç yer tutucu gerçek oldu.
+
+- **Yük, çizimin kendi biçimidir.** `KAYDET`'in yazdığı proje dosyasının kendisi:
+  aynı yazıcı yazar, aynı okuyucu okur. Kendine ait bir JSON taşıyan bir pano, bir
+  belgenin ikinci tarifi olurdu ve bu programda her türü, her stili, her katmanı
+  ve her öznitelik sütununu gidiş-dönüş taşıyan bir tarif zaten var. Bu yüzden
+  panoya **her şey** gidiyor: katman adı, stil, çizgi tipi, öznitelikler, blok
+  tanımları ve koordinat sistemi.
+- **Alt küme, `Transaction::adopt_from`'a eklenen bir anahtar filtresiyle
+  çıkarılıyor** — bir ithalatın kullandığı fonksiyonun aynısı. İkinci bir
+  kopyalayıcı yazmak, onun çizgi tiplerini, resimleri, iç stilleri, katmanları,
+  blokları ve sütunları baştan öğrenmesi ve bir tür bunlardan birini kazandığı gün
+  geride kalması demek olurdu (5.10).
+- **İki yeni fiil `FileRequest`'e eklendi**, kendi seam'i açılmadı: bu programa
+  bir çizim sokan ya da ondan çıkaran ne varsa tek bir seam, yani ters gitmesi
+  için tek bir yer.
+- **KES tek işlemdir**: kopyalama ve silme birlikte geri döner, ve geri alma
+  panoyu **boşaltmaz** — bir kesmenin bütün amacı budur.
+- **YAPIŞTIR iki şekilde koyar**: `nokta=` yükün sol alt köşesini oraya taşır
+  (bir elin yapıştırmaktan anladığı şey), `yerinde=evet` koordinatları olduğu gibi
+  bırakır (aynı sistemdeki iki çizim arasında kopyalamanın istediği şey).
+- **Pano nerede:** `dosya=` verilmezse kullanıcı başına ortak bir dosya, yani bu
+  programın iki penceresi aynı panoyu paylaşıyor ve bir çökme yükü kaybetmek
+  yerine yerinde bırakıyor. `dosya=` betiğin ve başsız çalıştırmanın yolu ve aynı
+  yol.
+- `Ctrl+X` / `Ctrl+C` / `Ctrl+V`, **Düzen** menüsünde geri al/yinele'nin yanında.
+  `tool-answerable` kapısının iddiası **tersine** çevrildi: o üç satırın artık
+  açıklama kutusu değil komut çalıştırdığını denetliyor — bir komut geldikten
+  sonra yerinde kalmış bir yer tutucuyu yakalayan iddia bu.
+
+**İşletim sistemi panosu (`QClipboard`) bağlanmadı ve sebebi planda yazılı:**
+`/src/io` Qt bağlamaz, dolayısıyla baytları OS panosuna koymak `/src/app`'in işi
+ve bir app-tarafı kanca daha istiyor. Bugün pano bu programın iki penceresi
+arasında çalışıyor; başka bir uygulamaya kopyalamak o kancayı bekliyor.
+
 ### Eklendi — koordinat (ordinat) ve yay uzunluğu ölçüsü (P5)
 
 - **`ÖLÇÜ tur=koordinat`** — ve model bunu **baştan beri taşıyordu**.

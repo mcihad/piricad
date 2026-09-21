@@ -26,6 +26,9 @@ namespace kentos::command {
     X(align)                                                                                       \
     X(divide)                                                                                      \
     X(pedit)                                                                                       \
+    X(copy_clip)                                                                                   \
+    X(cut)                                                                                         \
+    X(paste)                                                                                       \
     X(text)                                                                                        \
     X(edittext)                                                                                    \
     X(exportstyle)                                                                                 \

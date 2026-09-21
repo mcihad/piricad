@@ -25,6 +25,9 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.align`](align.md) | Hizala | `HİZALA`, `HIZALA`, `ALIGN`, `HZL` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir ya da iki nokta çiftiyle nesneleri taşır, döndürür ve istenirse ölçekler. |
 | [`core.divide`](divide.md) | Bölümle | `BÖLÜMLE`, `BOLUMLE`, `DIVIDE`, `BLM` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Bir nesne boyunca eşit parçalara bölerek ya da sabit aralıkla nokta yerleştirir. |
 | [`core.pedit`](pedit.md) | Çizgi Düzenle | `ÇİZGİDÜZENLE`, `CIZGIDUZENLE`, `PEDIT`, `ÇZD`, `CZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizgiyi kapatır, açar, yönünü çevirir ya da yakın köşelerini atarak sadeleştirir. |
+| [`core.copy_clip`](copy_clip.md) | Panoya Kopyala | `PANOYAKOPYALA`, `PANOKOPYALA`, `COPYCLIP`, `PKP` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Seçili nesneleri çizimin kendi biçiminde panoya yazar. |
+| [`core.cut`](cut.md) | Kes | `KES`, `CUT`, `KS` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili nesneleri panoya alır ve çizimden siler; tek geri alma adımı. |
+| [`core.paste`](paste.md) | Yapıştır | `YAPIŞTIR`, `YAPISTIR`, `PASTE`, `YP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Panodaki nesneleri çizime koyar; tek geri alma adımı. |
 | [`core.text`](text.md) | Metin | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
 | [`core.edittext`](edittext.md) | Yazıyı Düzenle | `YAZIDÜZENLE`, `YAZIDUZENLE`, `EDITTEXT`, `YZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir. |
 | [`core.exportstyle`](exportstyle.md) | Stil Aktar | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
@@ -315,6 +318,40 @@ Ayrıntılı kullanım: [BÖLÜMLE](divide.md)
 | `tolerans` | number | isteğe bağlı | sadelestir: bu uzaklıktan yakın köşeler atılır (m) |
 
 Ayrıntılı kullanım: [ÇİZGİDÜZENLE](pedit.md)
+
+### `core.copy_clip` — PANOYAKOPYALA (Panoya Kopyala)
+
+Seçili nesneleri çizimin kendi biçiminde panoya yazar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Panoya alınacak nesneler; verilmezse seçim kullanılır |
+| `dosya` | text | isteğe bağlı | Panonun yazılacağı dosya; verilmezse ortak pano dosyası |
+
+Ayrıntılı kullanım: [PANOYAKOPYALA](copy_clip.md)
+
+### `core.cut` — KES (Kes)
+
+Seçili nesneleri panoya alır ve çizimden siler; tek geri alma adımı.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Kesilecek nesneler; verilmezse seçim kullanılır |
+| `dosya` | text | isteğe bağlı | Panonun yazılacağı dosya; verilmezse ortak pano dosyası |
+
+Ayrıntılı kullanım: [KES](cut.md)
+
+### `core.paste` — YAPIŞTIR (Yapıştır)
+
+Panodaki nesneleri çizime koyar; tek geri alma adımı.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nokta` | point_list | isteğe bağlı | Yapıştırılacak yerin sol alt köşesi; yerinde=evet ile gereksiz |
+| `yerinde` | bool | isteğe bağlı | Kopyalandığı koordinatlara yapıştırır |
+| `dosya` | text | isteğe bağlı | Okunacak pano dosyası; verilmezse ortak pano dosyası |
+
+Ayrıntılı kullanım: [YAPIŞTIR](paste.md)
 
 ### `core.text` — METİN (Metin)
 
@@ -2319,6 +2356,81 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
     }
   },
   {
+    "name": "core_copy_clip",
+    "title": "Panoya Kopyala",
+    "description": "Seçili nesneleri çizimin kendi biçiminde panoya yazar.\nKomut: PANOYAKOPYALA (PANOKOPYALA, COPYCLIP, PKP)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Panoya alınacak nesneler; verilmezse seçim kullanılır — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "dosya": {
+          "type": "string",
+          "description": "Panonun yazılacağı dosya; verilmezse ortak pano dosyası (metin)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": true
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.copy_clip",
+      "cad.kentos/category": "Dosya",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "PANOYAKOPYALA",
+        "PANOKOPYALA",
+        "COPYCLIP",
+        "PKP"
+      ]
+    }
+  },
+  {
+    "name": "core_cut",
+    "title": "Kes",
+    "description": "Seçili nesneleri panoya alır ve çizimden siler; tek geri alma adımı.\nKomut: KES (CUT, KS)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Kesilecek nesneler; verilmezse seçim kullanılır — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "dosya": {
+          "type": "string",
+          "description": "Panonun yazılacağı dosya; verilmezse ortak pano dosyası (metin)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.cut",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "KES",
+        "CUT",
+        "KS"
+      ]
+    }
+  },
+  {
     "name": "core_dimension",
     "title": "Ölçü",
     "description": "İki nokta arasını, bir yarıçapı, çapı ya da açıyı ölçüp yazısı ve oklarıyla çizer.\nKomut: ÖLÇÜ (OLCU, DIMENSION, ÖÇ)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
@@ -4069,6 +4181,48 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "KAYDIR",
         "PAN",
         "KY"
+      ]
+    }
+  },
+  {
+    "name": "core_paste",
+    "title": "Yapıştır",
+    "description": "Panodaki nesneleri çizime koyar; tek geri alma adımı.\nKomut: YAPIŞTIR (YAPISTIR, PASTE, YP)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nokta": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Yapıştırılacak yerin sol alt köşesi; yerinde=evet ile gereksiz — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "yerinde": {
+          "type": "boolean",
+          "description": "Kopyalandığı koordinatlara yapıştırır (evet/hayır)"
+        },
+        "dosya": {
+          "type": "string",
+          "description": "Okunacak pano dosyası; verilmezse ortak pano dosyası (metin)"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.paste",
+      "cad.kentos/category": "Düzenleme",
+      "cad.kentos/approval": "user-required",
+      "cad.kentos/names": [
+        "YAPIŞTIR",
+        "YAPISTIR",
+        "PASTE",
+        "YP"
       ]
     }
   },

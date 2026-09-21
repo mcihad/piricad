@@ -180,6 +180,24 @@ private:
     core::Result<std::string> export_points(std::string path, bool swapped_axes,
                                             std::vector<std::uint64_t> entities);
 
+    /// Writes the named entities out as a native project file: the clipboard
+    /// payload, and a file a script can keep.
+    ///
+    /// THE NATIVE FORMAT, NOT A SECOND ONE. A clipboard holding a JSON of its
+    /// own would be a second description of a document to keep in step, and this
+    /// program already has one that round-trips every kind. The subset is built
+    /// by `Transaction::adopt_from` with a key filter — the same function an
+    /// import uses, so a kind that adopts correctly copies correctly.
+    core::Result<std::string> clipboard_copy(std::string path, std::vector<std::uint64_t> entities);
+
+    /// Reads such a file and places what is in it, as ONE undo step.
+    command::Task<core::Result<std::string>>
+    clipboard_paste(command::Transaction* tx, std::string path, core::Point2 at, bool in_place);
+
+    /// Where a clipboard payload lives when the caller named no file: one path
+    /// per user, so two windows of this program share it.
+    static std::string default_clipboard_path();
+
     command::Bus& bus_;
     std::string current_path_;
     std::uint64_t saved_revision_{0};

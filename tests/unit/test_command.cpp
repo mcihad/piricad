@@ -5590,7 +5590,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // + KATMANGÖRÜNÜM + ÇIKTIYERLEŞİMİ, ÇIKTIÖĞE, ÇIKTIŞABLON + YENİ
     // + DİKAYAK, ALIM, KESİŞİMNOKTA, ARANOKTA, ÇOKGEN
     // + KIR, UÇUCA, UZUNLUK, PATLAT, HİZALA, BÖLÜMLE, ÇİZGİDÜZENLE
-    CHECK_EQ(f.reg.size(), std::size_t{84});
+    // + PANOYAKOPYALA, KES, YAPIŞTIR
+    CHECK_EQ(f.reg.size(), std::size_t{87});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())
