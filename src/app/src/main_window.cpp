@@ -71,6 +71,7 @@
 #include <QPixmap>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QScrollBar>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QStackedWidget>
@@ -509,6 +510,23 @@ ThemeMode MainWindow::themeFromPreferences() const
 // program can a hand reach" by walking the actions rather than by a hand-kept
 // list of what has a button — which would be the second command list CLAUDE.md
 // 5.10 exists to forbid.
+/// Whether this command's whole answer is WORDS, so the transcript has to be in
+/// front of somebody before it runs.
+///
+/// Asked of the registry rather than decided per call site: a query answers by
+/// writing and changes nothing on the canvas, so with the transcript closed —
+/// which is how the window starts — pressing one looked exactly like pressing a
+/// dead menu row. The user said so in those words. Deciding it here instead of at
+/// each `modifyTool`/`commandAction` call keeps it ONE decision (CLAUDE.md 5.10):
+/// a command that becomes read-only, or a new one that lands read-only, gets the
+/// panel without anybody remembering to ask for it.
+bool MainWindow::answersInWords(const QString& command) const
+{
+    const command::CommandSpec* spec = controller_->registry().resolve(command.toStdString());
+    return spec != nullptr && has_flag(spec->flags, command::Flags::ReadOnly) &&
+           spec->category != command::Category::View && spec->category != command::Category::File;
+}
+
 QAction* MainWindow::commandAction(Glyph glyph, const QString& text, const QString& line,
                                    const QString& tip, const QKeySequence& shortcut)
 {
@@ -535,12 +553,7 @@ QAction* MainWindow::commandAction(Glyph glyph, const QString& text, const QStri
         // front of somebody. Only for a command that answers in words: one that
         // draws, moves or deletes shows its work on the canvas and a panel
         // opening over it would be in the way.
-        const command::CommandSpec* spec =
-            controller_->registry().resolve(line.section(QLatin1Char(' '), 0, 0).toStdString());
-        const bool answers_in_words =
-            spec != nullptr && has_flag(spec->flags, command::Flags::ReadOnly) &&
-            spec->category != command::Category::View && spec->category != command::Category::File;
-        if (answers_in_words) showTranscript();
+        if (answersInWords(line.section(QLatin1Char(' '), 0, 0))) showTranscript();
         controller_->runLine(line, command::Origin::Gui);
     });
     return action;
@@ -578,8 +591,14 @@ QAction* MainWindow::modifyTool(Glyph glyph, const QString& text, const QString&
     // reach for the tool and then point at the thing, did nothing at all. The
     // commands ask for their objects now (`want_objects`), which is the order
     // every CAD trains and the one a script never sees.
-    connect(action, &QAction::triggered, this,
-            [this, command] { controller_->runCommand(command); });
+    connect(action, &QAction::triggered, this, [this, command] {
+        // A READ-ONLY TOOL ANSWERS IN WORDS, and this road used to skip the
+        // panel that `commandAction` opens — so ALANÖLÇ and NESNEBİLGİ armed
+        // from the tool column, did their work, and printed the answer into a
+        // closed drawer.
+        if (answersInWords(command)) showTranscript();
+        controller_->runCommand(command);
+    });
     return action;
 }
 
@@ -1142,6 +1161,16 @@ void MainWindow::buildActions()
     connect(actCoordinate_, &QAction::triggered, this,
             [this] { controller_->runCommand(QStringLiteral("KOORDİNAT")); });
     drawingTools_->addAction(actCoordinate_);
+
+    // THE TWO QUESTIONS OF P7, as tools rather than as menu rows only: both arm
+    // and then wait for the hand, so they belong in the exclusive group beside
+    // ÖLÇ and ALANÖLÇ, and `modifyTool` is what puts them there.
+    actEntityInfo_ = modifyTool(Glyph::Identify, tr("Nesne Bilgisi"), QStringLiteral("NESNEBİLGİ"),
+                                tr("NESNEBİLGİ — tür, katman, köşe sayısı, çevre, alan ve "
+                                   "öznitelikler  ·  kısaltma: NB"));
+    actMeasureAngle_ = modifyTool(Glyph::Measure, tr("Açı Ölç"), QStringLiteral("AÇIÖLÇ"),
+                                  tr("AÇIÖLÇ — tepe ve iki kol; açıyı oturumun birim ve "
+                                     "kuralıyla yazar  ·  kısaltma: AÇÖ"));
     // THE COMMAND EXISTS, so the button is not a placeholder any more. `SORGULA`
     // shipped with the read tools and the menu still carried a disabled `Faz 2`
     // stub beside it — a dead entry with a live command's name, which is worse
@@ -1488,8 +1517,10 @@ void MainWindow::buildMenus()
 
     auto* map = bar->addMenu(tr("&Harita"));
     map->addAction(actIdentify_);
+    map->addAction(actEntityInfo_);
     map->addAction(actMeasure_);
     map->addAction(actMeasureArea_);
+    map->addAction(actMeasureAngle_);
     map->addAction(actCoordinate_);
     map->addSeparator();
     // THE SURVEY COMPUTATIONS. `APLİKASYON` is what a crew takes to the field
@@ -1823,7 +1854,8 @@ void MainWindow::buildToolBox()
     toolBox_->addSeparator();
 
     // measurement
-    toolBox_->addFamily({actMeasure_, actMeasureArea_, actCoordinate_});
+    toolBox_->addFamily(
+        {actMeasure_, actMeasureArea_, actMeasureAngle_, actCoordinate_, actEntityInfo_});
     toolBox_->addSeparator();
 
     // helpers
@@ -3380,7 +3412,7 @@ int MainWindow::probeStatusStrip()
           QStringLiteral("sağdaki hücrelerin genişliği ölçülebiliyor"));
 
     const auto rightBand = [cells](const QImage& whole) {
-        const int from = whole.width() - (cells * whole.devicePixelRatio());
+        const int from = whole.width() - qRound(cells * whole.devicePixelRatio());
         return whole.copy(QRect(from, 0, whole.width() - from, whole.height()));
     };
 
@@ -4330,7 +4362,19 @@ void MainWindow::chooseCapture(const std::vector<core::EntityId>& candidates)
 
 void MainWindow::onEcho(const QString& text)
 {
+    // THE NEWEST LINE HAS TO BE THE VISIBLE ONE. `appendPlainText` puts the line
+    // in the document and leaves the viewport where it was, and a tab that was
+    // hidden while a hundred lines arrived comes forward showing line forty — so
+    // a query ran, answered, and the answer was off-screen in a panel that had
+    // just been opened to show it.
+    //
+    // Followed only when the tail was already in view: a user who scrolled back
+    // to read something is reading it, and yanking them to the bottom on the next
+    // echo would be the program taking the page away.
+    QScrollBar* bar       = transcript_->verticalScrollBar();
+    const bool was_at_end = bar->value() >= bar->maximum() - 4;
     transcript_->appendPlainText(text);
+    if (was_at_end) bar->setValue(bar->maximum());
 
     // THE TRANSCRIPT, ON STDOUT, FOR A PROBE RUN. Developer tooling and an
     // environment variable rather than a CLI flag, for the reason the other
@@ -4388,6 +4432,13 @@ void MainWindow::showTranscript()
     if (at < 0) return;
     propertyStack_->setCurrentIndex(at);
     if (propertyHeader_ != nullptr) propertyHeader_->setCurrent(at);
+
+    // AT THE NEWEST LINE. This is called because a command is about to answer, or
+    // has just answered, so the line worth reading is the last one — and a hidden
+    // QPlainTextEdit does not lay out, so the tab otherwise comes forward at
+    // whatever row it happened to stop at.
+    if (QScrollBar* bar = transcript_->verticalScrollBar(); bar != nullptr)
+        bar->setValue(bar->maximum());
 }
 
 bool MainWindow::confirmErase()

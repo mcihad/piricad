@@ -399,10 +399,31 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
 
 ## P7 — Sorgu ve araç çubuğu artıkları
 
-- [ ] **P7-1** Araç çubuğu **Sorgula** → `core.query`.
-- [ ] **P7-2** `core.entity_info` — `NESNEBİLGİ`, `OBJINFO`, `NB`: tür, katman, köşe, uzunluk, alan, `fid`;
-  `Context::report` (R26); AI okuma aracı.
-- [ ] **P7-3** `core.measure_angle` — `AÇIÖLÇ`: iki doğru ya da üç nokta; P0 kuralıyla yazar.
+- [x] **P7-1** Araç çubuğu **Sorgula** → `core.query`. Erişilebilirlik işinde bağlandı; menüdeki
+  `Faz 2` ölü satırı kaldırıldı.
+- [x] **P7-2** `core.entity_info` — `NESNEBİLGİ`, `NESNEBILGI`, `OBJINFO`, `NB`: tür, katman, halka,
+  köşe, çevre, alan, kapsam ve dolu öznitelik hücreleri; `Context::report` (R26); AI okuma aracı.
+  Tür adı **tür tablosundan** okunur, komutun içindeki bir `switch`'ten değil (5.10).
+- [x] **P7-3** `core.measure_angle` — `AÇIÖLÇ`, `ACIOLC`, `MEASUREANGLE`, `AÇÖ`: tepe ve iki kol
+  noktası; süpürme ve tersi birlikte, P0 kuralı ve biriminde. **İki doğru biçimi yazılmadı**: iki
+  doğru seçildiği anda üç noktaya indiriyor ve bir doğrunun ucunu imlecin altına koyan şey yakalama
+  motorunun kendisi — ikinci bir giriş biçimi aynı hesabın ikinci yolu olurdu.
+  Kısaltma `AÖ` **değil**: o `ALANÖLÇ`'ün.
+
+**Yan yolda düzeltilen üç şey** (ikisi Article 1.2 kusuru):
+
+- `Bus::finish` yapılandırılmış cevabı **taşımıyordu** — yalnız `dispatch` taşıyordu. Araç
+  kolonundan kollanıp fareyle cevaplanan bir sorgu çağırana `report` boş dönüyordu: yazılan yolun
+  sahip olduğu bir yeteneğe işaret edilen yol sahip değildi (5.15), hem de insanın kullandığı
+  istemcide. Tek satır, `tests/unit/test_command.cpp` içinde kendi vakasıyla çivilendi.
+- **Komut günlüğü paneli en yeni satıra kaymıyordu.** `appendPlainText` belgeye yazıyor,
+  görünümü olduğu yerde bırakıyor; gizliyken yüz satır gelen bir sekme öne kırkıncı satırı
+  göstererek çıkıyordu — yani sorgu çalışıyor, cevap veriyor ve cevap onu göstermek için yeni
+  açılmış panelin dışında kalıyordu. Kuyruğu ancak kuyruk zaten görünürken takip eder: geri
+  kaydırıp bir şey okuyan kullanıcının sayfasını program elinden almaz.
+- `modifyTool` ile kurulan **okuma-amaçlı araçlar paneli açmıyordu** (`ALANÖLÇ` dâhil).
+  Karar artık `Registry`'ye soruluyor (`MainWindow::answersInWords`), her çağrı yerinde tekrar
+  edilen bir bayrağa değil — okuma-amaçlı olan yeni bir komut paneli kimse hatırlamadan alır.
 
 ---
 

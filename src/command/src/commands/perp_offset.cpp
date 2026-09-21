@@ -64,8 +64,8 @@ Task<void> run(Context& ctx)
                                         core::mm_from_metres(*offset), at)) {
             // Unreachable while the two base points differ, which was checked
             // above; failing rather than asserting keeps a bad call a refusal.
-            ctx.session().fail(core::err(core::ErrorCode::InvalidArgument,
-                                         "Taban doğrultusu hesaplanamadı."));
+            ctx.session().fail(
+                core::err(core::ErrorCode::InvalidArgument, "Taban doğrultusu hesaplanamadı."));
             co_return;
         }
 

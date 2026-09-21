@@ -29,6 +29,8 @@ namespace kentos::command {
     X(copy_clip)                                                                                   \
     X(cut)                                                                                         \
     X(paste)                                                                                       \
+    X(entity_info)                                                                                 \
+    X(measure_angle)                                                                               \
     X(text)                                                                                        \
     X(edittext)                                                                                    \
     X(exportstyle)                                                                                 \

@@ -96,6 +96,16 @@ public:
     /// window; it buys no privilege — this IS the command line's own road.
     void runScriptLine(const QString& line);
 
+    /// Brings the transcript in front: the properties dock, on its `Geçmiş` tab.
+    ///
+    /// THE TRANSCRIPT IS A TAB, not a dock of its own — which is why a
+    /// `transcriptDock_` member sat null for its whole life and two theme loops
+    /// quietly skipped it. A query command answers here and changes nothing on
+    /// the canvas, so a menu row that runs one has to put its answer where
+    /// somebody is looking. Public so `KENTOS_SHOT_DIR` can photograph an answer
+    /// where a user would read it; it is the same call the menu makes.
+    void showTranscript();
+
     /// The other three windows, public for the same reason as the designer:
     /// `KENTOS_SMOKE` opens every one of them in turn, so a dialog that crashes
     /// on construction fails a test rather than a user. A window nothing
@@ -554,15 +564,6 @@ private:
     /// first and then sends exactly the command a script would send (Article 1.2).
     bool confirmErase();
 
-    /// Brings the transcript in front: the properties dock, on its `Geçmiş` tab.
-    ///
-    /// THE TRANSCRIPT IS A TAB, not a dock of its own — which is why a
-    /// `transcriptDock_` member sat null for its whole life and two theme loops
-    /// quietly skipped it. A query command answers here and changes nothing on
-    /// the canvas, so a menu row that runs one has to put its answer where
-    /// somebody is looking.
-    void showTranscript();
-
     /// Creates an action for a feature that does not exist yet: it stays live and
     /// EXPLAINS ITSELF when pressed.
     ///
@@ -583,6 +584,11 @@ private:
     /// nothing stays armed after one runs.
     QAction* modifyTool(Glyph glyph, const QString& text, const QString& command,
                         const QString& tip);
+
+    /// Whether the command's whole answer is WORDS, so the transcript has to be
+    /// open before it runs. Asked of the registry, so it is one decision rather
+    /// than a flag repeated at every call site (CLAUDE.md 5.10).
+    bool answersInWords(const QString& command) const;
 
     /// Creates an action that dispatches `line` through the bus. The GUI is a
     /// client of the command bus and gets no private path (CLAUDE.md Article 1).
@@ -721,6 +727,8 @@ private:
     QAction* actAreaSplit_{nullptr};   ///< ALANİFRAZ — cadastral; Kadastro menu
     QAction* actMeasureArea_{nullptr};
     QAction* actCoordinate_{nullptr};
+    QAction* actEntityInfo_{nullptr};   ///< NESNEBİLGİ — what is this
+    QAction* actMeasureAngle_{nullptr}; ///< AÇIÖLÇ — the angle at this corner
     QAction* actStyleCopy_{nullptr};
     QAction* actTopology_{nullptr};
     QAction* actLine_{nullptr};

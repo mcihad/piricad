@@ -984,3 +984,122 @@ TEST_CASE("PANO: boş seçim ve boş pano reddedilir, sebebiyle")
     CHECK(empty.error().message.find("Panoda bir şey yok") != std::string::npos);
     CHECK_EQ(rig.doc.live_entity_count(), std::size_t{0});
 }
+
+TEST_CASE("PROOF: NESNEBİLGİ gui, komut satırı ve betikten aynı cevabı verir")
+{
+    // Article 6.4 for `core.entity_info`. A QUESTION has no document delta, so
+    // the proof is the other half of the same claim: the three clients get the
+    // SAME ANSWER and leave the drawing and the undo stack exactly as they found
+    // them. A query that differed by client would be a query whose answer a
+    // script could not trust.
+    const char* kSetup[] = {"KATMAN ad=PARSEL", "ALAN 0,0 20,0 20,10 0,10"};
+
+    Rig gui;
+    Rig cli;
+    Rig scr;
+    for (Rig* rig : {&gui, &cli, &scr})
+        for (const char* line : kSetup)
+            REQUIRE(rig->bus.execute_line(line, Origin::Test).ok());
+
+    const std::uint64_t before = cli.doc.content_hash();
+    const std::size_t depth    = cli.undo.undo_depth();
+
+    core::Json from_gui;
+    {
+        auto started = gui.bus.begin_interactive("NESNEBİLGİ", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        REQUIRE(session.waiting());
+        CHECK(session.supply(Value::ids({1})).ok());
+        auto done = gui.bus.finish(session);
+        REQUIRE(done.ok());
+        from_gui = done.value().report;
+    }
+
+    const auto typed = cli.bus.execute_line("NESNEBİLGİ nesneler=1", Origin::CommandLine);
+    REQUIRE(typed.ok());
+
+    core::Json from_script;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Nesne bilgisi kanıtı",
+            "komutlar": [ {"cmd": "core.entity_info", "args": {"nesneler": [1]}} ]
+        })");
+        REQUIRE(r.ok());
+    }
+    // The script road answers through the same dispatch, so the same call typed
+    // by hand is the comparison that matters; the runner keeps no report.
+    const auto again = scr.bus.execute_line("NESNEBİLGİ nesneler=1", Origin::Script);
+    REQUIRE(again.ok());
+    from_script = again.value().report;
+
+    // ---- the proof: one answer, byte for byte ----
+    CHECK_EQ(from_gui.dump(), typed.value().report.dump());
+    CHECK_EQ(typed.value().report.dump(), from_script.dump());
+
+    // 20 m × 10 m: the figure a tape would have read, so the three cannot agree
+    // on the same wrong answer.
+    const core::Json& row = typed.value().report.find("nesneler")->as_array().front();
+    CHECK_EQ(row.find("alan_mm2")->as_int(), 200000000);
+    CHECK_EQ(row.find("cevre_mm")->as_int(), 60000);
+    CHECK_EQ(row.find("katman")->as_string(), std::string("PARSEL"));
+
+    // ---- and nothing moved ----
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        CHECK_EQ(rig->doc.content_hash(), before);
+        CHECK_EQ(rig->undo.undo_depth(), depth);
+    }
+}
+
+TEST_CASE("PROOF: AÇIÖLÇ gui, komut satırı ve betikten aynı açıyı okur")
+{
+    // Article 6.4 for `core.measure_angle`, and the reading is the one a hand
+    // would take: the vertex at the origin, one arm north, one arm east. Under
+    // the default convention — grad, semt, clockwise from north — the sweep from
+    // the first arm to the second is a quarter turn, 100 grad.
+    Rig gui;
+    core::Json from_gui;
+    {
+        auto started = gui.bus.begin_interactive("AÇIÖLÇ", Origin::Gui);
+        REQUIRE(started.ok());
+        auto& session = *started.value();
+        CHECK(session.supply(Value::point(core::Point2{0, 0})).ok());
+        CHECK(session.supply(Value::point(core::Point2{0, 10'000})).ok());
+        CHECK(session.supply(Value::point(core::Point2{10'000, 0})).ok());
+        auto done = gui.bus.finish(session);
+        REQUIRE(done.ok());
+        from_gui = done.value().report;
+    }
+
+    Rig cli;
+    const auto typed = cli.bus.execute_line("AÇIÖLÇ 0,0 0,10 10,0", Origin::CommandLine);
+    REQUIRE(typed.ok());
+
+    Rig scr;
+    {
+        script::JsonRunner runner(scr.bus, script::Sandbox::Project);
+        auto r = runner.run_text(R"({
+            "ad": "Açı ölçüsü kanıtı",
+            "komutlar": [ {"cmd": "core.measure_angle", "args": {
+                "tepe": [0, 0], "birinci": [0, 10000], "ikinci": [10000, 0] }} ]
+        })");
+        REQUIRE(r.ok());
+    }
+    const auto again = scr.bus.execute_line("AÇIÖLÇ 0,0 0,10 10,0", Origin::Script);
+    REQUIRE(again.ok());
+
+    // ---- the proof ----
+    CHECK_EQ(from_gui.dump(), typed.value().report.dump());
+    CHECK_EQ(typed.value().report.dump(), again.value().report.dump());
+
+    CHECK_EQ(typed.value().report.find("aci_udeg")->as_int(), core::kUDegFullCircle / 4);
+    CHECK_EQ(typed.value().report.find("aci_metin")->as_string(), std::string("100,0000 grad"));
+
+    // A QUESTION IS NOT AN EDIT. `ÖLÇÜ tur=acisal` draws an angular dimension and
+    // costs an undo step; this one costs nothing and leaves nothing behind.
+    for (const Rig* rig : {&gui, &cli, &scr}) {
+        CHECK_EQ(rig->doc.live_entity_count(), std::size_t{0});
+        CHECK_EQ(rig->undo.undo_depth(), std::size_t{0});
+    }
+}

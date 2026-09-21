@@ -1199,6 +1199,21 @@ int main(int argc, char** argv)
             if (QWidget* top = QApplication::activeModalWidget()) top->close();
         });
 
+        // THE ANSWER, in front of somebody. A query writes words and changes
+        // nothing on the canvas, so the picture worth taking is the transcript
+        // holding what it said — and the drawing it was asked about.
+        later([&window] {
+            window.runScriptLine(QStringLiteral("KATMAN ad=SORGU"));
+            window.runScriptLine(QStringLiteral("ALAN 0,0 20,0 20,10 0,10"));
+            window.runScriptLine(QStringLiteral("YAKINLAŞ KAPSAM"));
+        });
+        later([&window] {
+            window.showTranscript();
+            window.runScriptLine(QStringLiteral("NESNEBİLGİ nesneler=1"));
+            window.runScriptLine(QStringLiteral("AÇIÖLÇ 0,0 0,10 20,0"));
+        });
+        later([&window, shot] { shot(QStringLiteral("8-sorgu-cevaplari"), &window); });
+
         later([] { QApplication::exit(0); });
     }
 

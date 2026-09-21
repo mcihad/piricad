@@ -752,6 +752,16 @@ core::Result<DispatchResult> Bus::finish(Session& session)
     result.outputs  = session.outputs();
     result.warnings = session.warnings();
 
+    // AND THE STRUCTURED ANSWER, which only `dispatch` used to carry. A query
+    // driven interactively — NESNEBİLGİ armed from the tool column, answered by
+    // clicking a parcel — reached its caller with `report` still null, so the one
+    // client a person actually uses was the one client that could not read the
+    // answer it had just produced. The GUI is an equal client (Article 1.2), and
+    // a capability the typed road has and the pointed road does not is exactly
+    // what 5.15 forbids. `lines` is not restorable here: the echoes happened
+    // during the `supply` calls the host made, each outside this call.
+    result.report = session.report();
+
     if (!read_only) journal_entry(session);
 
     if (result.mutated && on_document_changed) on_document_changed();

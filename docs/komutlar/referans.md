@@ -28,6 +28,8 @@ Bu tablo komut kaydından üretilir. Her komutun ayrıntılı kullanım sayfası
 | [`core.copy_clip`](copy_clip.md) | Panoya Kopyala | `PANOYAKOPYALA`, `PANOKOPYALA`, `COPYCLIP`, `PKP` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Seçili nesneleri çizimin kendi biçiminde panoya yazar. |
 | [`core.cut`](cut.md) | Kes | `KES`, `CUT`, `KS` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Seçili nesneleri panoya alır ve çizimden siler; tek geri alma adımı. |
 | [`core.paste`](paste.md) | Yapıştır | `YAPIŞTIR`, `YAPISTIR`, `PASTE`, `YP` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Panodaki nesneleri çizime koyar; tek geri alma adımı. |
+| [`core.entity_info`](entity_info.md) | Nesne Bilgisi | `NESNEBİLGİ`, `NESNEBILGI`, `OBJINFO`, `NB` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Nesnenin türünü, katmanını, köşe sayısını, çevresini, alanını ve özniteliklerini bildirir. |
+| [`core.measure_angle`](measure_angle.md) | Açı Ölç | `AÇIÖLÇ`, `ACIOLC`, `MEASUREANGLE`, `AÇÖ` | Sorgu | geri alınmaz | etkileşimli, betiklenebilir, AI erişimli, salt okunur | Bir tepeden çıkan iki kol arasındaki açıyı ölçer, oturumun açı kuralıyla yazar. |
 | [`core.text`](text.md) | Metin | `METİN`, `METIN`, `YAZI`, `TEXT`, `MT` | Çizim | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Çizime metin yazar; yükseklik ve hizalama verilebilir. |
 | [`core.edittext`](edittext.md) | Yazıyı Düzenle | `YAZIDÜZENLE`, `YAZIDUZENLE`, `EDITTEXT`, `YZD` | Düzenleme | tek işlem | etkileşimli, betiklenebilir, AI erişimli | Var olan bir yazının metnini, yüksekliğini ya da hizalamasını değiştirir. |
 | [`core.exportstyle`](exportstyle.md) | Stil Aktar | `STİLAKTAR`, `STILAKTAR`, `EXPORTSTYLE`, `STAKTAR` | Dosya | geri alınmaz | etkileşimli, betiklenebilir, salt okunur | Bir katmanın sembolojisini QGIS QML stil dosyası olarak yazar. |
@@ -352,6 +354,28 @@ Panodaki nesneleri çizime koyar; tek geri alma adımı.
 | `dosya` | text | isteğe bağlı | Okunacak pano dosyası; verilmezse ortak pano dosyası |
 
 Ayrıntılı kullanım: [YAPIŞTIR](paste.md)
+
+### `core.entity_info` — NESNEBİLGİ (Nesne Bilgisi)
+
+Nesnenin türünü, katmanını, köşe sayısını, çevresini, alanını ve özniteliklerini bildirir.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `nesneler` | selection | en az 0 | Bilgisi istenen nesneler |
+
+Ayrıntılı kullanım: [NESNEBİLGİ](entity_info.md)
+
+### `core.measure_angle` — AÇIÖLÇ (Açı Ölç)
+
+Bir tepeden çıkan iki kol arasındaki açıyı ölçer, oturumun açı kuralıyla yazar.
+
+| Parametre | Tip | Adet | Açıklama |
+|---|---|---|---|
+| `tepe` | point | 1 | Açının tepe noktası |
+| `birinci` | point | 1 | Birinci kolun üzerinde bir nokta |
+| `ikinci` | point | 1 | İkinci kolun üzerinde bir nokta |
+
+Ayrıntılı kullanım: [AÇIÖLÇ](measure_angle.md)
 
 ### `core.text` — METİN (Metin)
 
@@ -2695,6 +2719,40 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
     }
   },
   {
+    "name": "core_entity_info",
+    "title": "Nesne Bilgisi",
+    "description": "Nesnenin türünü, katmanını, köşe sayısını, çevresini, alanını ve özniteliklerini bildirir.\nKomut: NESNEBİLGİ (NESNEBILGI, OBJINFO, NB)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "nesneler": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Bilgisi istenen nesneler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.entity_info",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "none",
+      "cad.kentos/names": [
+        "NESNEBİLGİ",
+        "NESNEBILGI",
+        "OBJINFO",
+        "NB"
+      ]
+    }
+  },
+  {
     "name": "core_erase",
     "title": "Sil",
     "description": "Seçilen nesneleri siler.\nKomut: SİL (SIL, ERASE, E)\nBu araç ÇAĞRILDIĞINDA HİÇBİR ŞEY UYGULAMAZ: bir öneri kaydı açar, komut satırlarını geri döndürür ve bilgisayar başındaki mühendis uygulayana kadar bekler.",
@@ -3938,6 +3996,54 @@ Elle tutulan ikinci bir araç şeması yoktur (kentoscad.md §2.3, §5.1).
         "OLC",
         "MEASURE",
         "MS"
+      ]
+    }
+  },
+  {
+    "name": "core_measure_angle",
+    "title": "Açı Ölç",
+    "description": "Bir tepeden çıkan iki kol arasındaki açıyı ölçer, oturumun açı kuralıyla yazar.\nKomut: AÇIÖLÇ (ACIOLC, MEASUREANGLE, AÇÖ)\nBu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "tepe": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Açının tepe noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "birinci": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "Birinci kolun üzerinde bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        },
+        "ikinci": {
+          "type": "string",
+          "pattern": "^@[0-9a-f]{16}(\\.[0-9]+)?$",
+          "description": "İkinci kolun üzerinde bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir."
+        }
+      },
+      "required": [
+        "tepe",
+        "birinci",
+        "ikinci"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "_meta": {
+      "cad.kentos/commandId": "core.measure_angle",
+      "cad.kentos/category": "Sorgu",
+      "cad.kentos/approval": "none",
+      "cad.kentos/names": [
+        "AÇIÖLÇ",
+        "ACIOLC",
+        "MEASUREANGLE",
+        "AÇÖ"
       ]
     }
   },

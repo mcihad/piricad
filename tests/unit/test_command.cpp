@@ -5591,7 +5591,8 @@ TEST_CASE("registry: bildirilen her komut GERÇEKTEN kaydedilmiş")
     // + DİKAYAK, ALIM, KESİŞİMNOKTA, ARANOKTA, ÇOKGEN
     // + KIR, UÇUCA, UZUNLUK, PATLAT, HİZALA, BÖLÜMLE, ÇİZGİDÜZENLE
     // + PANOYAKOPYALA, KES, YAPIŞTIR
-    CHECK_EQ(f.reg.size(), std::size_t{87});
+    // + NESNEBİLGİ, AÇIÖLÇ
+    CHECK_EQ(f.reg.size(), std::size_t{89});
 
     // And the collision check itself, over the names that DID register.
     for (const CommandSpec& spec : f.reg.all())
@@ -6295,4 +6296,185 @@ TEST_CASE("Etki: verilmemiş fiil en kötü hâli verir")
     Args nonsense;
     nonsense.set("islem", Value::text("zıpla"));
     CHECK(has_effect(effect_of(*layout, nonsense), Effect::DocumentEdit));
+}
+
+// ============================================================================
+// NESNEBİLGİ / AÇIÖLÇ — the two questions of P7
+// ============================================================================
+
+TEST_CASE("NESNEBİLGİ türü, katmanı, köşe sayısını ve alanı bildirir")
+{
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN 0,0 10,0 10,10 0,10", Origin::Test).ok());
+
+    said.clear();
+    REQUIRE(f.bus.execute_line("NESNEBİLGİ nesneler=1", Origin::Test).ok());
+
+    CHECK(said.find("katman PARSEL") != std::string::npos);
+    // The kind's own Turkish name, from the kind table rather than from a switch
+    // inside the command: whatever the polyline kind calls itself is printed, so
+    // the next kind a plugin registers is named too (CLAUDE.md 5.10).
+    CHECK(said.find(core::builtin_kinds().find(core::kPolylineKind)->names[0]) !=
+          std::string::npos);
+    CHECK(said.find("köşe") != std::string::npos);
+    // 10 m × 10 m = 100 m², with the tapu's two decimals.
+    CHECK(said.find("100,00") != std::string::npos);
+}
+
+TEST_CASE("NESNEBİLGİ yapılandırılmış rapor döndürür")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN 0,0 10,0 10,10 0,10", Origin::Test).ok());
+
+    const auto r = f.bus.execute_line("NESNEBİLGİ nesneler=1", Origin::Test);
+    REQUIRE(r.ok());
+
+    // R26: the answer is a table, so a script and an agent read the report and
+    // never a Turkish sentence.
+    const core::Json& rep      = r.value().report;
+    const core::Json* count    = rep.find("adet");
+    const core::Json* entities = rep.find("nesneler");
+    REQUIRE(count != nullptr);
+    REQUIRE(entities != nullptr);
+    CHECK_EQ(count->as_int(), 1);
+
+    const core::Json& row = entities->as_array().front();
+    CHECK_EQ(row.find("katman")->as_string(), std::string("PARSEL"));
+    CHECK_EQ(row.find("kose")->as_int(), 4);
+    CHECK_EQ(row.find("alan_mm2")->as_int(), 100000000);
+    CHECK_EQ(row.find("cevre_mm")->as_int(), 40000);
+    CHECK_EQ(row.find("halka")->as_int(), 1);
+    REQUIRE(row.find("kapsam") != nullptr);
+    CHECK_EQ(row.find("kapsam")->as_array().size(), std::size_t{4});
+}
+
+TEST_CASE("NESNEBİLGİ öznitelikleri de yazar")
+{
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+
+    REQUIRE(f.bus.execute_line("KATMAN ad=PARSEL", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SÜTUN kimlik=ada tur=metin ad=Ada", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ALAN 0,0 10,0 10,10 0,10", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("ÖZNİTELİK ad=ada nesne=1 deger=1453", Origin::Test).ok());
+
+    said.clear();
+    const auto r = f.bus.execute_line("NESNEBİLGİ nesneler=1", Origin::Test);
+    REQUIRE(r.ok());
+
+    // "What is this" is not answered by geometry alone: the ada number is what
+    // the parcel IS to a surveyor, and reading it used to mean opening a table.
+    const core::Json& row = r.value().report.find("nesneler")->as_array().front();
+    REQUIRE(row.find("oznitelik") != nullptr);
+    CHECK_EQ(row.find("oznitelik")->find("ada")->as_string(), std::string("1453"));
+    CHECK(said.find("1 öznitelik") != std::string::npos);
+}
+
+TEST_CASE("NESNEBİLGİ silinmiş nesneyi söyler, çökmez")
+{
+    Fixture f;
+    std::string said;
+    f.bus.on_echo = [&said](std::string_view t) { said += std::string(t) + "\n"; };
+
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 1,0", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("SİL nesneler=1", Origin::Test).ok());
+
+    said.clear();
+    REQUIRE(f.bus.execute_line("NESNEBİLGİ nesneler=1", Origin::Test).ok());
+    CHECK(said.find("silinmiş") != std::string::npos);
+}
+
+TEST_CASE("AÇIÖLÇ dik açıyı semt kuralında 100 grad okur")
+{
+    Fixture f;
+    // Default convention: grad, semt — clockwise from north. The first arm points
+    // north and the second east, so the sweep from the first to the second is a
+    // quarter turn IN THE RULE'S OWN DIRECTION: 100 grad.
+    const auto r = f.bus.execute_line("AÇIÖLÇ 0,0 0,10 10,0", Origin::Test);
+    REQUIRE(r.ok());
+
+    const core::Json& rep = r.value().report;
+    CHECK_EQ(rep.find("aci_udeg")->as_int(), core::kUDegFullCircle / 4);
+    CHECK_EQ(rep.find("ters_udeg")->as_int(), 3 * core::kUDegFullCircle / 4);
+    CHECK_EQ(rep.find("aci_metin")->as_string(), std::string("100,0000 grad"));
+    CHECK_EQ(rep.find("birinci_kenar_mm")->as_int(), 10000);
+    CHECK_EQ(rep.find("ikinci_kenar_mm")->as_int(), 10000);
+    CHECK_EQ(rep.find("birim")->as_string(), std::string("g"));
+}
+
+TEST_CASE("AÇIÖLÇ kolları değişince ters açıyı verir")
+{
+    Fixture f;
+    // Swapping the arms swaps the two readings. That is the whole reason both are
+    // reported: a corner is two angles, and the program does not decide silently
+    // which one the user meant.
+    const auto r = f.bus.execute_line("AÇIÖLÇ 0,0 10,0 0,10", Origin::Test);
+    REQUIRE(r.ok());
+    CHECK_EQ(r.value().report.find("aci_udeg")->as_int(), 3 * core::kUDegFullCircle / 4);
+    CHECK_EQ(r.value().report.find("ters_udeg")->as_int(), core::kUDegFullCircle / 4);
+}
+
+TEST_CASE("AÇIÖLÇ matematik kuralında ve derecede aynı köşeyi başka okur")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("AYAR açı_birimi derece", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("MOD kural matematik", Origin::Test).ok());
+
+    // The same three points, counter-clockwise from east: east to north is +90°.
+    // One convention pair drives the reader and the writer alike (TODOS-CAD
+    // P0-4), so this is the same corner read the other way round.
+    const auto r = f.bus.execute_line("AÇIÖLÇ 0,0 10,0 0,10", Origin::Test);
+    REQUIRE(r.ok());
+    CHECK_EQ(r.value().report.find("aci_metin")->as_string(), std::string("90,0000°"));
+    CHECK_EQ(r.value().report.find("birim")->as_string(), std::string("d"));
+    CHECK_EQ(r.value().report.find("aci_udeg")->as_int(), core::kUDegFullCircle / 4);
+}
+
+TEST_CASE("AÇIÖLÇ tepeyle çakışan kolu reddeder")
+{
+    Fixture f;
+    const auto r = f.bus.execute_line("AÇIÖLÇ 0,0 0,0 10,0", Origin::Test);
+    REQUIRE_FALSE(r.ok());
+    CHECK(r.error().message.find("doğrultusu yok") != std::string::npos);
+}
+
+TEST_CASE("NESNEBİLGİ ve AÇIÖLÇ geri alma adımı yemez")
+{
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 1,0", Origin::Test).ok());
+    const std::size_t depth = f.undo.undo_depth();
+
+    REQUIRE(f.bus.execute_line("NESNEBİLGİ nesneler=1", Origin::Test).ok());
+    REQUIRE(f.bus.execute_line("AÇIÖLÇ 0,0 0,1 1,0", Origin::Test).ok());
+
+    // A question is not an edit: Ctrl+Z after asking one undoes the drawing.
+    CHECK_EQ(f.undo.undo_depth(), depth);
+}
+
+TEST_CASE("etkileşimli yol da yapılandırılmış cevabı taşır")
+{
+    // The seam this pins: `Bus::dispatch` filled `DispatchResult::report` and
+    // `Bus::finish` did not, so a query ARMED FROM THE TOOL COLUMN and answered
+    // by pointing came back with a null report. The typed road had a capability
+    // the pointed road lacked, which is what CLAUDE.md 5.15 forbids, and the
+    // client that lost it is the one a person actually uses.
+    Fixture f;
+    REQUIRE(f.bus.execute_line("ÇİZGİ 0,0 10,0", Origin::Test).ok());
+
+    auto started = f.bus.begin_interactive("NESNEBİLGİ", Origin::Gui);
+    REQUIRE(started.ok());
+    auto& session = *started.value();
+    REQUIRE(session.waiting());
+    REQUIRE(session.supply(Value::ids({1})).ok());
+
+    const auto done = f.bus.finish(session);
+    REQUIRE(done.ok());
+    REQUIRE(done.value().report.find("nesneler") != nullptr);
+    CHECK_EQ(done.value().report.find("adet")->as_int(), 1);
 }

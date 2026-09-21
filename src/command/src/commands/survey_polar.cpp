@@ -58,8 +58,8 @@ Task<void> run(Context& ctx)
 
     std::vector<core::Point2> shot;
     while (true) {
-        auto angle = co_await ctx.number(
-            "aci", relative ? "Açı: bağlamadan itibaren okunan açı" : "Semt açısı");
+        auto angle = co_await ctx.number("aci", relative ? "Açı: bağlamadan itibaren okunan açı"
+                                                         : "Semt açısı");
         if (!angle) break;
         auto distance = co_await ctx.number("kenar", "Kenar: alete olan uzaklık (m)");
         if (!distance) break;
@@ -73,9 +73,8 @@ Task<void> run(Context& ctx)
         // and added to the backsight's — turns add, angles in a unit do not.
         const double read_turns =
             core::turns_from_udeg(core::udeg_from_angle(*angle, convention.unit));
-        const core::Point2 at =
-            *station + core::polar_offset_turns(*distance, zero_turns + read_turns,
-                                                convention.rule);
+        const core::Point2 at = *station + core::polar_offset_turns(
+                                               *distance, zero_turns + read_turns, convention.rule);
 
         auto created = ctx.transaction().add_point(ctx.active_layer(), at);
         if (!created) {
@@ -108,7 +107,7 @@ Task<void> run(Context& ctx)
 KENTOS_COMMAND(survey_polar)
 {
     return CommandSpec{
-        .id       = "core.survey_polar",
+        .id = "core.survey_polar",
         // `ALM`, NOT `AL`: `AL` is ALAN's abbreviation and has been since that
         // command shipped. Claiming it did not shadow ALAN — it DROPPED it. A
         // failed registration only writes a log line and carries on, so the
@@ -126,8 +125,7 @@ KENTOS_COMMAND(survey_polar)
                 // absent is declared the way `APLİKASYON` declares its own.
                 Param::points("baglama", Arity::optional(),
                               "Bağlama noktası: verilirse açılar ondan itibaren okunmuş sayılır"),
-                Param::number("aci", Arity::at_least(0),
-                              "Okunan açı; kenar ile sırayla eşleşir")
+                Param::number("aci", Arity::at_least(0), "Okunan açı; kenar ile sırayla eşleşir")
                     .measured_in("oturumun açı birimi"),
                 Param::number("kenar", Arity::at_least(0), "Alete olan uzaklık (m)")
                     .measured_in("m"),

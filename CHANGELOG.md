@@ -6,6 +6,59 @@ birlikte kaydedilir (CLAUDE.md Article 9).
 
 ## [Yayımlanmamış]
 
+### Eklendi — iki soru: NESNEBİLGİ ve AÇIÖLÇ (P7)
+
+Planın son paketi. İkisi de **soru**dur: hiçbir şeyi değiştirmez, geri alma adımı
+yemez, günlüğe belge değişikliği olarak düşmez.
+
+- **`NESNEBİLGİ`** (`core.entity_info`; `NESNEBILGI`, `OBJINFO`, `NB`) "bu nedir"
+  sorusuna tek soruda cevap verir: tür, katman, halka ve köşe sayısı, çevre, alan,
+  kapsam ve **dolu olan her öznitelik hücresi**. Bunların hepsi programda zaten
+  vardı ve hiçbiri tek soruda alınamıyordu — alan `ALANÖLÇ`'te, katman panelde, ada
+  numarası öznitelik tablosunda; bir bakış için üç yol.
+- **Tür adı, tür tablosundan okunur.** Komutun içinde `kPolylineKind → "çizgi"`
+  diye bir `switch` yazmak, türlerin ikinci listesi olurdu (5.10) ve bir eklentinin
+  tanımladığı ilk türde sessizce "bilinmeyen" yazardı.
+- **`AÇIÖLÇ`** (`core.measure_angle`; `ACIOLC`, `MEASUREANGLE`, `AÇÖ`) bir tepe ve
+  iki kol noktası alır. `ÖLÇÜ tur=acisal` paftaya **ölçü nesnesi çizer**; bu komut
+  elin şeritmetreyle sorup unuttuğu soruyu sorar.
+- **Bir köşe iki açıdır** ve ikisi de yazılır. Süpürme oturumun kuralının kendi
+  yönündedir; tersi yanında durur. Program hangisinin kastedildiğine sessizce karar
+  vermez, çünkü bu karar bir sınırın hangi tarafının *iç* olduğuna karar vermektir.
+- **Yazan sayı ile okunan sayı tek ayar çiftidir** (`core.aci.birim`,
+  `core.aci.kural`): `@mesafe<açı` neyi anlıyorsa `AÇIÖLÇ` onu yazar.
+- **Kısaltma `AÖ` değil, `AÇÖ`.** `AÖ` `ALANÖLÇ`'ün ve onu almak `ALANÖLÇ`'ü
+  **programdan düşürüyordu**: çakışan bir kayıt yalnız bir günlük satırı yazıp devam
+  ediyor. Derleme temiz, takım yeşil, `ALANÖLÇ` yok. Kayıt sayısı tripwire'ı
+  (`tests/unit/test_command.cpp`) tam bunu yakaladı — 87'den 89'a çıkması gerekirken
+  88'de kaldı.
+- **İkisi de arayüzde**: **Harita** menüsünde `Sorgula` ve `Ölç` satırlarının yanında,
+  ve araç kolonunun ölçüm ailesinde — yani fareyle kollanıp tuvalde cevaplanabiliyor
+  (`KENTOS_FLYOUT_PROBE`: `Ölç` ailesi 5 üye, 0 kusur; `KENTOS_REACH_PROBE`: 115
+  komuttan 115'i fareyle başlatılabiliyor).
+- İkisi de `AiAccessible`: bir ajan neyin ne olduğunu sorabildiği için çizim
+  hakkında kendisine anlatılmadan konuşabilir. Noktalar ajan yolunda yalnız araç
+  sonucu tutamağıyla gelir (5.8).
+
+### Düzeltildi — fareyle sorulan bir sorunun cevabı kayboluyordu
+
+Üçü de P7 sırasında çıktı, ikisi Article 1.2 kusuru:
+
+- **`Bus::finish` yapılandırılmış cevabı taşımıyordu**; yalnız `Bus::dispatch`
+  taşıyordu. Araç kolonundan kollanıp fareyle cevaplanan bir sorgu çağırana `report`
+  boş dönüyordu — yazılan yolun sahip olduğu bir yeteneğe işaret edilen yol sahip
+  değildi (5.15), hem de insanın gerçekten kullandığı istemcide.
+- **Komut günlüğü paneli en yeni satıra kaymıyordu.** `appendPlainText` belgeye
+  yazar, görünümü olduğu yerde bırakır; gizliyken yüz satır gelen bir sekme öne
+  kırkıncı satırı göstererek çıkıyordu. Yani sorgu çalışıyor, cevabı yazıyor ve cevap
+  onu göstermek için yeni açılmış panelin dışında kalıyordu. Kuyruğu ancak kuyruk
+  zaten görünürken takip eder — geri kaydırıp bir şey okuyan kullanıcının sayfasını
+  program elinden almaz.
+- **`modifyTool` ile kurulan okuma-amaçlı araçlar paneli hiç açmıyordu**, `ALANÖLÇ`
+  dâhil. Karar artık `Registry`'ye soruluyor (`MainWindow::answersInWords`), her çağrı
+  yerinde tekrar edilen bir bayrağa değil: okuma-amaçlı olan yeni bir komut, paneli
+  kimse hatırlamadan alır.
+
 ### Eklendi — pano: KES, PANOYAKOPYALA, YAPIŞTIR (P6)
 
 Araç çubuğundaki üç yer tutucu gerçek oldu.

@@ -41,8 +41,8 @@
 
 ## Araç yüzeyi
 
-- Araç sayısı: 93 (85 tanesi onay ister)
-- Katalog parmak izi: `16477192571512497646`
+- Araç sayısı: 95 (85 tanesi onay ister)
+- Katalog parmak izi: `5094305732254682131`
 - MCP sürümü: `2026-07-28`
 - Tam şema: `tools/list`; bu dosyanın uzun hâli: `llms-full.txt`
 
@@ -382,6 +382,18 @@ Onay ister.
 | `ikinci_uc` | string | hayır | eksen: birinci eksenin öteki ucu — nokta listesi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `baslangic` | number | hayır | Kısmi elips: başlangıç açısı, derece, birinci eksenden saat yönünün tersine (sayı) |
 | `bitis` | number | hayır | Kısmi elips: bitiş açısı, derece; baslangic ile birlikte (sayı) |
+
+### `core_entity_info` — Nesne Bilgisi
+
+Nesnenin türünü, katmanını, köşe sayısını, çevresini, alanını ve özniteliklerini bildirir.
+Komut: NESNEBİLGİ (NESNEBILGI, OBJINFO, NB)
+Bu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.
+
+Doğrudan çalışır.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `nesneler` | string | hayır | Bilgisi istenen nesneler — nesne seçimi — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
 ### `core_erase` — Sil
 
@@ -737,6 +749,20 @@ Onay ister.
 |---|---|---|---|
 | `baslangic` | string | evet | Ölçümün ilk noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 | `bitis` | string | evet | Ölçümün ikinci noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+
+### `core_measure_angle` — Açı Ölç
+
+Bir tepeden çıkan iki kol arasındaki açıyı ölçer, oturumun açı kuralıyla yazar.
+Komut: AÇIÖLÇ (ACIOLC, MEASUREANGLE, AÇÖ)
+Bu araç hiçbir şeyi değiştirmez; doğrudan çalışır ve sonucunu döndürür.
+
+Doğrudan çalışır.
+
+| Parametre | Tür | Zorunlu | Açıklama |
+|---|---|---|---|
+| `tepe` | string | evet | Açının tepe noktası — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `birinci` | string | evet | Birinci kolun üzerinde bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
+| `ikinci` | string | evet | İkinci kolun üzerinde bir nokta — nokta — bir okuma aracının döndürdüğü tutamak (@0123456789abcdef.3). Koordinat yazılamaz: konum her zaman bir araç sonucundan gelir. |
 
 ### `core_measure_area` — Alan Ölç
 

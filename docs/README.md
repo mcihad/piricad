@@ -98,6 +98,8 @@ Tek tek komutlar:
 | `ETİKET` | [Özniteliklerden yazı](komutlar/label.md) |
 | `ÖLÇ` | [Mesafe ölçme](komutlar/measure.md) |
 | `ALANÖLÇ` | [Alan ve çevre ölçme](komutlar/measure_area.md) |
+| `AÇIÖLÇ` | [Bir köşedeki açıyı ölçme](komutlar/measure_angle.md) |
+| `NESNEBİLGİ` | [Nesnenin türü, katmanı, çevresi, alanı ve öznitelikleri](komutlar/entity_info.md) |
 | `KOORDİNAT` | [Nokta koordinatı okuma](komutlar/coordinate.md) |
 | `KAYDIR` | [Görünümü kaydırma](komutlar/pan.md) |
 | `OFSET` | [Paralel çizme](komutlar/offset.md) |
