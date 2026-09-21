@@ -1,0 +1,207 @@
+# KentOSCad — Çizim, yakalama ve CAD araçları planı
+
+Plan tarihi: **21 Eylül 2026**. Ana referans: yerel `main`, **`d294809`**.
+Bu belge mevcut çizim/yakalama/düzenleme yüzeyinin incelemesini, Netcad ve AutoCAD araç setleriyle
+karşılaştırmayı ve sıralı iş paketlerini birleştirir. İşaretlenmemiş maddeler yapılacak iştir;
+uygulanmış özellik iddiası değildir. İşaretler `TODOS.md` §0 ile aynıdır: `[ ]` yapılacak, `[~]`
+kısmen (altında **Yapıldı**/**Kalan**), `[x]` bitti, `[!]` karar bekliyor.
+
+**Hedef:** bir harita mühendisinin Netcad'de her gün yaptığı alım girdisini ve bir AutoCAD
+kullanıcısının refleks olarak aradığı inşa/düzenleme fiillerini, hepsini **komut** olarak
+(CLAUDE.md 1.1), Türkçe adlarıyla (2.6), AI'nin öğrenebileceği bir yüzey hâlinde (2.8) getirmek.
+
+## 0. Verilen kararlar
+
+| Karar | Seçim | Sonucu |
+|---|---|---|
+| Açı kuralı | **Semt + grad varsayılan.** `@100<45` = 45 grad, kuzeyden saat yönüne | `core.aci.birim` (var, varsayılan grad) okunur; yeni `core.aci.kural` = `semt` \| `matematik`. Günlük **çözülmüş** argüman tutar (`journal.hpp:38`) → eski kayıtlar aynen oynar. Etkilenen yalnız canlı metin: komut satırı, betik dizeleri, AI. |
+| Öncelik | **Netcad alım girdisi önce** | P0 → P1 → P2 → … sırası bağlayıcı. P2–P7 birbirinden bağımsız. |
+| Tasarım | Alım yöntemleri **nokta fonksiyonu** olarak tek gramere girer, artı her birinin bir çizim komutu olur | Bir kez tanımlanır, her nokta isteminde çalışır (Article 1.2, 5.11). |
+
+## 1. Mevcut zemin — yeniden yazma, üstüne kur
+
+| Ne | Nerede | Kullan |
+|---|---|---|
+| Yakalama motoru, 18 mod (UÇ ORTA MERKEZ AĞIRLIK KESİŞİM DİK YAKIN DÜĞÜM UZANTI PARALEL UZATILMIŞ-KESİŞİM KILAVUZ EKLEME + ızgara/kutupsal/dik/adım/normal) | `src/core/include/kentos_cad/core/snap.hpp`, `core/src/snap.cpp` | Yeni bit = enum + `snap_mode_id/label` + `SnapObjectMask`; idempotens şart |
+| Yardımcıların uygulandığı tek yol | `command/aids.hpp`, `context.hpp` `InputAwaiter<Point2>::await_resume` | Nokta fonksiyonları buradan ÖNCE, ayrıştırma anında çözülür |
+| Tek gramer: mutlak, `@dx,dy`, `@d<a`, ifadeler, `anahtar=değer(iç içe)` | `src/command/src/parser.cpp` (`Token::Kind::Absolute/Relative/Polar/KeyValue`, `ExprParser`; `Polar` çözümü `parser.cpp:821-824`) | Fonksiyon sözdizimi `KeyValue`'nun iç içe mekanizmasını genişletir |
+| Geometri yardımcıları | `core/pick.hpp`: `line_intersection`, `closest_point_on_line`, `segment_intersection`, `ring_contains` | Elle yeniden yazma yok |
+| Lastik bant | `command/input.hpp` `RubberShape{Line,Rectangle,Ring,Circle,Arc,Ellipse,Curve,Dimension,Block}`, `context.hpp` `PointOptions` | |
+| Oturum ayarları | `src/core/src/settings.cpp`: `core.yakalama.*`, `core.aci.birim` (grad/derece/radyan), `core.cizim.birim`, `core.arayuz.dinamik_girdi`; `MOD` komutu (`settings.cpp` `run_mode`, Session kapsamı) | `core.aci.kural` buraya |
+| Eşitlik kanıtı kalıbı | `tests/unit/test_proof.cpp` (`Rig`, `execute_line`, `script::JsonRunner`, günlük replay) | Her yeni komut bir vaka |
+| Yakalama testleri | `tests/unit/test_snap.cpp` | |
+| Geodezi alanı | `src/domain/geodesy/` (`stakeout_command.cpp` semt hesabı, `helmert`, `fit`, `reproject`) | Poligon hesabı buraya, `geodesy.` kimliğiyle (domain.md R5, R15) |
+| Nokta varlığı | `core.point_draw` (`NOKTA`), `core.points` (`NOKTALAR`: no, Y, X, [Z], [kod]), `SnapNode` | Alım `n(1284)` ile buna bağlanır |
+| Seçim kipleri | `pick.cpp` `{PENCERE,KESEN,HEPSİ}`, `core/pick.hpp` `PickMode`, `pick_in_box` | ÇİT/ÇOKGEN buraya |
+| Yer tutucu araçlar | `main_window.cpp` `placeholder(...)`: KES, Panoya Kopyala, YAPIŞTIR, Katman Yöneticisi, Sorgula | P6, P7 |
+| Komut sayfası iskeleti | `docs/komutlar/line.md`: Ne yapar · Adlar · Sözdizimi · Parametreler · Örnekler (Komut satırı / Arayüz / Betik / Üçü de aynı) · Geri alma · Betikten kullanım · Hatalar | Her yeni sayfa |
+| Gramer belgesi | `docs/komutlar/komut-satiri.md`, `docs/baslangic/ilk-adimlar.md` §3 | Nokta fonksiyonları ve açı kuralı buraya |
+
+## 2. Her paket için bağlayıcı ilkeler
+
+1. **Tek gramer** (5.11, command.md R16/R17): ikinci ayrıştırıcı, ifade motoru ya da "alım modu" yok.
+2. **Tek yol** (command.md P10): fonksiyonlar dispatch'ten önce `Point2`'ye; `Bus` çözülmüş noktayı
+   günlükler; hiçbir komut `InputSource`'a bakmaz.
+3. **Kütüphane varken elle yazma yok** (Article 9, 5.16): Clipper2 ofset/boolean/sadeleştirme, CDT
+   üçgenleme, `pick.hpp` kesişim.
+4. **`Mm` int64**; trigonometri `double` yerel, sonuç yuvarlanır; iki platformda farklı bit = hata (2.5).
+5. **Mevzuat sabiti C++'a yazılmaz** (5.13): poligon toleransları, ölçü metin yükseklikleri `/data/catalogs`.
+6. **Türkçe önce** (R7), `AiAccessible` — bu komutlar AI'nin eğitim yüzeyi (2.8).
+7. **Bitti** = command.md DoD + Article 6: `KENTOS_COMMAND` tek beyan · `make reference` + dört üretilmiş
+   dosya aynı commit'te (6.14) · `docs/komutlar/<slug>.md` sekiz bölüm + `docs/README.md` satırı (6.12) ·
+   `test_proof.cpp` eşitlik kanıtı + günlük replay (6.4) · iptal testi (boş undo deltası) · `Value`
+   gidiş-dönüş · gramer değiştiyse fuzz korpusu (6.7) · CHANGELOG · `make check` yeşil (clang-tidy ağaç
+   genelinde önceden kırmızı: `dxf_reader.cpp`, `flow_layout.cpp` — kendi satırlarını süz) ·
+   clang-format **18** (`/opt/homebrew/opt/llvm@18/bin` PATH'te).
+
+---
+
+## P0 — Açı kuralı: semt ve grad (önkoşul, tek commit)
+
+- [ ] **P0-1** `core.aci.kural` oturum ayarı (`semt` varsayılan | `matematik`), `settings.cpp`'de
+  `core.aci.birim`'in yanına aynı kalıpla; `MOD kural semt` ile değişir.
+- [ ] **P0-2** `parser.cpp` `Kind::Polar` çözümü iki ayarı okur: birim (grad `×π/200`, derece `×π/180`,
+  radyan), kural `semt` → `x = d·sin θ, y = d·cos θ`; `matematik` → mevcut. Çözüm `Parser`'a bir
+  `AngleConvention` bağlamı olarak geçer — global okunmaz.
+- [ ] **P0-3** Açık birim soneki: `@100<45g`, `@100<45d`, `@100<0.7r`. Sonek yoksa ayar geçer.
+- [ ] **P0-4** Kutupsal izleme göstergesi, `ÖLÇ`/`KOORDİNAT`/`APLİKASYON` çıktıları aynı iki ayara göre yazar.
+- [ ] **P0-5** Docs: `komut-satiri.md`, `ilk-adimlar.md` §3 örneği yeni anlamıyla; `MOD kural matematik`
+  yolu gösterilir.
+- [ ] **P0-6** Test: dört çeyrek × her birim × her kural × sonek; `@100<0` semt'te kuzey, matematik'te doğu;
+  fuzz korpusu; eşitlik kanıtı (`ÇİZGİ 0,0 @100<50` komut satırı = betik).
+
+## P1a — Nokta fonksiyonları (tek gramer, her nokta isteminde)
+
+Sözdizimi `ad(arg, …)`; argüman: nokta (mutlak, `@`, fonksiyon, `son`, `n(no)`), sayı (ifade), açı
+(P0 kuralı). Hepsi saf; sonuç `Point2`, dispatch'ten önce.
+
+- [ ] **P1a-1** `Token::Kind::Call` ve çözücü (`parser.cpp`), `parser.hpp` gramer yorumu (R17 listesi
+  güncellenir), `context.cpp`.
+- [ ] **P1a-2** `son` — son verilen nokta (`@`'ın tabanı).
+- [ ] **P1a-3** `n(1284)` — 1284 numaralı ölçü noktası (`NOKTALAR` → `SnapNode`); yoksa "1284 numaralı
+  nokta yok".
+- [ ] **P1a-4** `orta(A,B)` — iki nokta ortası.
+- [ ] **P1a-5** `ile(P, @dx,dy)` / `ile(P, @d<a)` — P tabanlı göreli.
+- [ ] **P1a-6** `dik(A,B,ayak,boy)` — **dik ayak / dik boy**: AB üzerinde A'dan `ayak`, sola pozitif `boy`
+  dik. İşaret kuralı belgelenir (sol +, Netcad ile aynı).
+- [ ] **P1a-7** `semt(S,açı,kenar)` — istasyondan semt + kenar (P0 kuralı; sonek alır).
+- [ ] **P1a-8** `kes(A,açı1,B,açı2)` — iki doğrultu (`line_intersection`; paralelse hata adlarıyla).
+- [ ] **P1a-9** `kes(A,r1,B,r2,yön)` — iki mesafe, iki çözüm; `yön`: `sol`|`sağ` ya da yakın nokta;
+  kesişmiyorsa hata mesafeleri söyler. Sessiz seçim yok.
+- [ ] **P1a-10** `kes(A,B,C,D)` — iki doğru.
+- [ ] **P1a-11** `ara(A,B,t)` / `ara(A,B,d m)` — oran ya da metre.
+- [ ] **P1a-12** `uzanti(A,B,d)` — B'den öteye.
+- [ ] **P1a-13** `xy(P,Q)` — P'nin sağa, Q'nun yukarı değeri (`.x/.y` süzgeci).
+- [ ] **P1a-14** Hata metinleri beklenen/verileni söyler (R19).
+- [ ] **P1a-15** Docs: `komut-satiri.md` "Nokta fonksiyonları" bölümü (tablo + çizim örnekleri);
+  `ilk-adimlar.md`'ye dik ayak örneği.
+- [ ] **P1a-16** Test: `test_command.cpp` her fonksiyon için bilinen üçgenle `Mm` eşitliği; idempotens;
+  fuzz korpusu (iç içe fonksiyon, paralel doğrultu, sonekli açı).
+
+## P1b — Alım komutları (fonksiyonların etkileşimli, çizen hâli)
+
+- [ ] **P1b-1** `core.perp_offset` — `DİKAYAK`, `DIKAYAK`, `PERPOFFSET`, `DA`: taban A,B; tekrar `ayak boy`
+  çiftleri → `NOKTA`; `cizgi=evet` ile `ÇOKLUÇİZGİ`; sağ tık/Esc bitirir; lastik bant taban + dik iz.
+- [ ] **P1b-2** `core.survey_polar` — `ALIM`, `SURVEY`, `AL`: istasyon S, isteğe bağlı bağlama noktası
+  (semt sıfırı); tekrar `açı kenar` → nokta. `stakeout_command.cpp`'deki semt hesabı **ortak yardımcıya**
+  taşınır — iki kopya yok.
+- [ ] **P1b-3** `core.intersect_point` — `KESİŞİMNOKTA`, `KESISIMNOKTA`, `INTERSECTPT`, `KSN`:
+  `yontem=dogrultu|mesafe|dogru`.
+- [ ] **P1b-4** `core.point_along` — `ARANOKTA`, `POINTALONG`, `ARN`: AB + oran/mesafe; `sayi=k` k eşit parça.
+- [ ] **P1b-5** `geodesy.traverse` — `POLİGON`, `POLIGON`, `TRAVERSE`, `PLG`
+  (`src/domain/geodesy/src/traverse_command.cpp`): bilinen başlangıç/bitiş, kırılma açısı + kenar →
+  koordinatlar; açı ve kenar kapanma hataları; `dagitim=esit|kenar`; `Context::report` yapılandırılmış
+  rapor; noktalar numaralı `NOKTA`, katman `POLİGON`.
+- [ ] **P1b-6** `/data/catalogs/geodesy/poligon-toleranslari.json` — BÖHHBÜY madde/ek kaynaklı, data.md
+  başlık bloğu, şema; aşan kapanma `Error` + madde adı (domain.md R23). **Harita mühendisi onayı** (6.11).
+- [ ] **P1b-7** Ortak: `Category::Draw`, `AiAccessible`, tek işlem tek undo; `Param::choice` listeleri bus'ta
+  (R27).
+- [ ] **P1b-8** Docs: beş sayfa + `docs/README.md` "Çizim" satırları; `make reference`.
+- [ ] **P1b-9** Test: eşitlik kanıtı × 5; `POLİGON` `/tests/golden` — ders kitabı poligonu, üç platformda
+  bit-özdeş (6.5); tolerans kataloğu `ci-gate-catalogs.sh`; "kapanma aşıldı" hatasında madde adı.
+
+## P2 — Klasik çizim inşa yöntemleri
+
+- [ ] **P2-1** `DAİRE yontem=merkez|2n|3n|ttr` — `3n` için `pick.hpp`'ye `circumcircle`; `ttr` iki nesne +
+  yarıçap, en yakın teğet çifti; teğetlik `|d − r| < 1 Mm` testi.
+- [ ] **P2-2** `YAY yontem=merkez|3n|bma|bby|devam` — `devam` için `Session`'a son segment yönü.
+- [ ] **P2-3** `core.polygon_regular` — `ÇOKGEN`, `COKGEN`, `POLYGONREG`, `ÇKG`: `merkez`, `kenar_sayisi`
+  (3–1024), `yontem=ic|dis|kenar`, `yaricap` | `kenar_uzunlugu`, `aci`. Yeni sayfa.
+- [ ] **P2-4** `DİKDÖRTGEN aci=`, `yontem=3n`.
+- [ ] **P2-5** `KILAVUZ yon=<açı>`, `nokta=`, `tur=isin`.
+- [ ] **P2-6** `ELİPS yontem=merkez|eksen` (mevcut argümanlar aynı kalır).
+- [ ] **P2-7** Docs güncel (sözdizimi + örnekler), eşitlik kanıtı her yöntem için.
+
+## P3 — Düzenleme fiilleri
+
+- [ ] **P3-1** `core.break` — `KIR`, `BREAK`, `KR`: bir noktada ya da iki nokta arası; parça silinir.
+- [ ] **P3-2** `core.join` — `UÇUCA`, `UCUCA`, `JOIN`, `UÇ`: uç uca değenler tek çokluçizgi; `tolerans=` Mm
+  (varsayılan 1); `BİRLEŞTİR`(boolean) ile farkı docs'ta yan yana.
+- [ ] **P3-3** `core.stretch` — `ESNET`, `STRETCH`, `ES`: KESEN pencere içindeki köşeler taşınır.
+- [ ] **P3-4** `core.lengthen` — `UZUNLUK`, `LENGTHEN`, `UZN`: `delta=|yuzde=|toplam=|dinamik`.
+- [ ] **P3-5** `core.explode` — `PATLAT`, `EXPLODE`, `PT`: blok → bileşen, çokluçizgi/alan → çizgiler; tek undo.
+- [ ] **P3-6** `core.align` — `HİZALA`, `HIZALA`, `ALIGN`, `HZ`: 1–2 nokta çifti, `olcekle=evet`; `OTURT`
+  (Helmert) ile farkı docs'ta.
+- [ ] **P3-7** `core.divide` / `core.measure_along` — `BÖLÜMLE`/`İŞARETLE`: eşit parça / sabit aralık;
+  `nokta` ya da `blok=`.
+- [ ] **P3-8** `core.pedit` — `ÇİZGİDÜZENLE`, `PEDIT`, `ÇD`: `islem=kapat|ac|ters|kalinlik|sadelestir`;
+  sadeleştirme Clipper2 `SimplifyPath`.
+- [ ] **P3-9** Kilitli katman reddi `TAŞI` kalıbıyla; eşitlik + iptal + `Value` testleri.
+
+## P4 — Yakalama ve seçim
+
+- [ ] **P4-1** `SnapQuadrant` (ÇEYREK: 0/100/200/300 grad) ve `SnapTangent` (TEĞET) bitleri; `test_snap.cpp`
+  idempotens; `MOD`, F3 menüsü, ipucu tek listeden (5.10).
+- [ ] **P4-2** Geçici izleme (OTRACK): `SnapQuery::tracking` 1–2 nokta; istemde `İZ` sözcüğü (transparent,
+  R18) ve `Shift+sağ tık`; `xy(P,Q)` fonksiyonunun fare hâli.
+- [ ] **P4-3** Seçim: `ÇİT`, `ÇOKGENPENCERE`/`ÇOKGENKESEN`, `ÖNCEKİ` (Session saklar), `SON`; `pick.hpp`
+  `pick_in_polygon`/`pick_along_fence`.
+- [ ] **P4-4** Docs: `arayuz.md` "Harita alanı" ve yakalama; `secim` sayfası.
+
+## P5 — Ölçülendirme
+
+- [ ] **P5-1** `ÖLÇÜ tur=koordinat`, `tur=yay`.
+- [ ] **P5-2** `/data/catalogs/olcu-stilleri.json` — BÖHHBÜY/MPYY metin yükseklikleri, ok/çentik, birim;
+  `ÖLÇÜ stil=` bunu okur (5.13).
+- [ ] **P5-3** Golden: bilinen iki nokta → ölçü metni.
+
+## P6 — Pano: KES / PANOYAKOPYALA / YAPIŞTIR
+
+- [ ] **P6-1** Yük: seçili varlıkların yerel JSON'u (`io` yazıcısıyla aynı şema), MIME
+  `application/x-kentoscad+json`; `QClipboard` `/src/app`'te; `Bus::on_clipboard_request` seam'i
+  (`on_file_request` kalıbı).
+- [ ] **P6-2** `core.copy_clip` (`PANOYAKOPYALA`), `core.cut` (`KES` = kopyala + `SİL`, tek undo),
+  `core.paste` (`YAPIŞTIR nokta=` taban; `dosya=` aynı JSON dosyadan — betik yolu, Article 1.2).
+- [ ] **P6-3** `main_window.cpp` yer tutucuları gerçek eyleme (`actOpen_` kalıbı).
+- [ ] **P6-4** Test: kopyala→yapıştır aynı geometri, yeni `EntityId`; eksik katman kararı docs'ta.
+
+## P7 — Sorgu ve araç çubuğu artıkları
+
+- [ ] **P7-1** Araç çubuğu **Sorgula** → `core.query`.
+- [ ] **P7-2** `core.entity_info` — `NESNEBİLGİ`, `OBJINFO`, `NB`: tür, katman, köşe, uzunluk, alan, `fid`;
+  `Context::report` (R26); AI okuma aracı.
+- [ ] **P7-3** `core.measure_angle` — `AÇIÖLÇ`: iki doğru ya da üç nokta; P0 kuralıyla yazar.
+
+---
+
+## Doğrulama (her pakette)
+
+- **Birim:** `test_command.cpp` (gramer, fonksiyonlar — bilinen üçgenler `Mm`'de), `test_snap.cpp`
+  (`snap(snap(p)) == snap(p)`), `test_geodesy.cpp` (poligon, kapanma dağıtımı).
+- **Eşitlik kanıtı:** `test_proof.cpp` — GUI (`InputSource` fare) = komut satırı = JSON betik → özdeş
+  `Document`, bayt-özdeş günlük; replay altın belgeyi verir (6.4, test.md R3).
+- **Golden:** `POLİGON`, `3n` daire, ölçü metni — üç platformda bit-özdeş (6.5).
+- **Fuzz:** parser değişti → `tests/fuzz` harness ve tohum korpusu (6.7, R9).
+- **Kapılar:** `ci-gate-docs.sh`, `ci-gate-catalogs.sh`, `ci-gate-hardcoded-thresholds.sh`,
+  `ci-gate-i18n.sh`, `ci-gate-comments.sh`.
+- **Elle (release listesi):** dik ayak fareyle ve `DİKAYAK 0,0 100,0 30 -5` yazarak aynı nokta;
+  `@100<45` semt'te kuzeydoğuya 40.5°; F3'te ÇEYREK/TEĞET tutar; `ÇİT` ile seçim; KES→YAPIŞTIR.
+
+## Bilinmesi gerekenler
+
+- Açı kuralı değişimi **canlı metni** etkiler; günlükler değil. Dokümanın her `@d<a` örneği güncellenir;
+  betik yazarlarına `MOD kural matematik` ve `g/d/r` sonekleri belgelenir.
+- `ttr` ve iki-mesafe kesişimi **çok çözümlü**: seçim kuralı belgelenir ve testlenir; sessiz seçim yok.
+- Poligon toleransları mevzuat verisidir: `package_version`, `source` (BÖHHBÜY madde), `published`; harita
+  mühendisi onayıyla girer (6.11).
+- `BİRLEŞTİR` boolean birleşimdir; `UÇUCA` gelince ikisi docs'ta yan yana anlatılır.
