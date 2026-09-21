@@ -594,8 +594,14 @@ uymak zorundadır; ikisi birden uyarsa çağrı reddedilir.
 - **Fuzz:** parser değişti → `tests/fuzz` harness ve tohum korpusu (6.7, R9).
 - **Kapılar:** `ci-gate-docs.sh`, `ci-gate-catalogs.sh`, `ci-gate-hardcoded-thresholds.sh`,
   `ci-gate-i18n.sh`, `ci-gate-comments.sh`.
-- **Elle (release listesi):** dik ayak fareyle ve `DİKAYAK 0,0 100,0 30 -5` yazarak aynı nokta;
-  `@100<45` semt'te kuzeydoğuya 40.5°; F3'te ÇEYREK/TEĞET tutar; `ÇİT` ile seçim; KES→YAPIŞTIR.
+- **Elle (release listesi) — beşi de artık OTOMATİK kapsanıyor, elle değil:**
+  * dik ayak fareyle ve yazarak aynı nokta → `PROOF: DİKAYAK …` (ve planın `30 -5` yazımının
+    çalışmadığı, sessiz döndüğü orada bulundu ve düzeltildi);
+  * `@100<45` semt'te kuzeydoğuya 40,5° → `test_command.cpp:232` ve `komut-satiri.md`;
+  * F3'te ÇEYREK/TEĞET görünür → `probeMenus` gerçek ikiliden 18 modu yazıyor; tutar →
+    `test_snap.cpp` (ayrıca her mod idempotent);
+  * `ÇİT` ile seçim → `PROOF: SEÇ ÇİT …` (ve fareyle tek nokta toplayabildiği orada bulundu);
+  * KES→YAPIŞTIR → `PANO:` vakaları, `PROOF: PANOYAKOPYALA …` ve `os-clipboard` ctest'i.
 
 ## Bilinmesi gerekenler
 
